@@ -75,6 +75,10 @@ public abstract class AutoScalingInstances {
   public static Function<AutoScalingInstance,String> groupArn() {
     return AutoScalingInstanceProperties.GROUP_ARN;
   }
+  
+  public static Function<AutoScalingInstance,String> availabilityZone() {
+    return AutoScalingInstanceProperties.AVAILABILITY_ZONE; 
+  }
 
   @TypeMapper
   public enum AutoScalingInstanceTransform implements Function<AutoScalingInstance, AutoScalingInstanceDetails> {
@@ -110,6 +114,12 @@ public abstract class AutoScalingInstances {
   }
   
   private enum AutoScalingInstanceProperties implements Function<AutoScalingInstance,String> {
+    AVAILABILITY_ZONE {
+      @Override
+      public String apply( final AutoScalingInstance autoScalingInstance ) {
+        return autoScalingInstance.getAvailabilityZone();
+      }
+    },
     GROUP_ARN {
       @Override
       public String apply( final AutoScalingInstance autoScalingInstance ) {

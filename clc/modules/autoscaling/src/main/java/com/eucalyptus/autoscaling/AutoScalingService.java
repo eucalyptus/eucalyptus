@@ -637,11 +637,15 @@ public class AutoScalingService {
       if ( RestrictedTypes.filterPrivileged().apply( autoScalingGroup ) ) {
         // Terminate instances first if requested (but don't wait for success ...)
         if ( Objects.firstNonNull( request.getForceDelete(), Boolean.FALSE ) ) {
-          final List<AutoScalingInstance> instances = autoScalingInstances.listByGroup( autoScalingGroup ); 
-          if ( activityManager.terminateInstances( autoScalingGroup, instances )==null ) {
-            throw new ScalingActivityInProgressException("Scaling activity in progress");
+          final List<AutoScalingInstance> instances = autoScalingInstances.listByGroup( autoScalingGroup );
+          if ( !instances.isEmpty() ) {
+            final List<ScalingActivity> activities =
+                activityManager.terminateInstances( autoScalingGroup, instances );
+            if ( activities==null || activities.isEmpty() ) {
+              throw new ScalingActivityInProgressException("Scaling activity in progress");
+            }
+            autoScalingInstances.deleteByGroup( autoScalingGroup );
           }
-          autoScalingInstances.deleteByGroup( autoScalingGroup );
         } else {
           failIfScaling( activityManager, autoScalingGroup );
         }
@@ -814,32 +818,29 @@ public class AutoScalingService {
         throw new AutoScalingMetadataNotFoundException("Instance not found");
       }
       
-      final ScalingActivity activity = 
+      final List<ScalingActivity> activities = 
           activityManager.terminateInstances( instance.getAutoScalingGroup(), Lists.newArrayList( instance ) );
-      if ( activity == null ) {
+      if ( activities == null || activities.isEmpty() ) {
         throw new ScalingActivityInProgressException("Scaling activity in progress");
       }
       reply.getTerminateInstanceInAutoScalingGroupResult().setActivity( 
-        TypeMappers.transform( activity, Activity.class )  
+        TypeMappers.transform( activities.get( 0 ), Activity.class )  
       );
 
-      autoScalingInstances.delete( instance ); //TODO:STEVE: This should be part of the scaling activity
-      
-      final String groupArn = instance.getAutoScalingGroup().getArn();
-      final Callback<AutoScalingGroup> groupCallback = new Callback<AutoScalingGroup>() {
-        @Override
-        public void fire( final AutoScalingGroup autoScalingGroup ) {
-          autoScalingGroup.setCapacity( autoScalingGroup.getCapacity() - 1 );
-          if ( Objects.firstNonNull( request.getShouldDecrementDesiredCapacity(), Boolean.FALSE ) ) {
+      if ( Objects.firstNonNull( request.getShouldDecrementDesiredCapacity(), Boolean.FALSE ) ) {
+        final String groupArn = instance.getAutoScalingGroup().getArn();
+        final Callback<AutoScalingGroup> groupCallback = new Callback<AutoScalingGroup>() {
+          @Override
+          public void fire( final AutoScalingGroup autoScalingGroup ) {
             autoScalingGroup.setDesiredCapacity( autoScalingGroup.getDesiredCapacity() - 1 );
           }
-        }
-      };
+        };
 
-      autoScalingGroups.update(
-          ctx.getUserFullName().asAccountFullName(),
-          groupArn,
-          groupCallback);
+        autoScalingGroups.update(
+            ctx.getUserFullName().asAccountFullName(),
+            groupArn,
+            groupCallback);
+      }
     } catch ( AutoScalingMetadataNotFoundException e ) {
       throw new InvalidParameterValueException( "Auto scaling instance not found: " + request.getInstanceId( ) );
     } catch ( Exception e ) {

@@ -21,7 +21,9 @@ package com.eucalyptus.util;
 
 import java.util.Comparator;
 import java.util.List;
+import javax.annotation.Nullable;
 import com.google.common.base.Function;
+import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 
@@ -53,17 +55,74 @@ public class CollectionUtils {
       }
     };
   }
-  
-  public static <T> T reduce( final Iterable<T> iterable, 
-                              final T initialValue, 
-                              final Function<T,Function<T,T>> reducer ) {
+
+  /**
+   * Reduce a collection using an initial value and a reduction function.
+   * 
+   * @param iterable The iterable to be reduced
+   * @param initialValue The initial value
+   * @param reducer The reduction function
+   * @param <T> The result type
+   * @param <I> The iterable type
+   * @return The final value
+   */
+  public static <T,I> T reduce( final Iterable<I> iterable, 
+                                final T initialValue, 
+                                final Function<T,Function<I,T>> reducer ) {
     T value = initialValue;
-    for ( T item : iterable ) {
+    for ( I item : iterable ) {
       value = reducer.apply( value ).apply( item );      
     }    
     return value;
-  } 
-  
+  }
+
+  /**
+   * Count function suitable for use with reduce.
+   * 
+   * @param evaluator Predicate matching items to be counted.
+   * @param <I> The evaluated type
+   * @return The count function.
+   */
+  public static <I> Function<Integer,Function<I,Integer>> count( final Predicate<I> evaluator ) {
+    return sum( new Function<I,Integer>(){
+      @Override
+      public Integer apply( @Nullable final I item ) {
+        return evaluator.apply( item ) ? 1 : 0;
+      }
+    } );
+  }
+
+  /**
+   * Sum function suitable for use with reduce.
+   *
+   * @param evaluator Function to obtain an int from an I
+   * @param <I> The evaluated type
+   * @return The sum function.
+   */
+  public static <I> Function<Integer,Function<I,Integer>> sum( final Function<I,Integer> evaluator ) {
+    return new Function<Integer,Function<I,Integer>>() {
+      @Override
+      public Function<I, Integer> apply( final Integer sum ) {
+        return new Function<I, Integer>() {
+          @Override
+          public Integer apply( final I item ) {
+            return sum + evaluator.apply( item );
+          }
+        };
+      }
+    };
+  }
+
+  /**
+   * Comparator function suitable for use with reduce.
+   *
+   * <p>Use with reduce to obtain a min or max value.</p>
+   * 
+   * @param comparator The comparator to use
+   * @param <T> The compared type
+   * @return The comparator function.
+   * @see com.google.common.collect.Ordering
+   */
   public static <T> Function<T,Function<T,T>> comparator( final Comparator<T> comparator ) {
     return new Function<T,Function<T,T>>() {
       @Override

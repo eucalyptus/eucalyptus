@@ -19,87 +19,99 @@
  ************************************************************************/
 package com.eucalyptus.autoscaling
 
-import static org.junit.Assert.*
-import org.junit.Test
-import com.eucalyptus.autoscaling.configurations.LaunchConfigurations
-import com.eucalyptus.autoscaling.configurations.LaunchConfiguration
-import com.eucalyptus.util.OwnerFullName
-import com.google.common.base.Predicate
-import com.eucalyptus.context.Context
-import edu.ucsb.eucalyptus.msgs.BaseMessage
 import com.eucalyptus.auth.Accounts
 import com.eucalyptus.auth.api.AccountProvider
-import com.eucalyptus.auth.principal.Account
-import com.eucalyptus.auth.principal.User
-import java.security.cert.X509Certificate
-import com.eucalyptus.auth.principal.Group
-import com.eucalyptus.auth.principal.Certificate
 import com.eucalyptus.auth.principal.AccessKey
+import com.eucalyptus.auth.principal.Account
+import com.eucalyptus.auth.principal.Certificate
+import com.eucalyptus.auth.principal.Group
 import com.eucalyptus.auth.principal.Principals
-import edu.ucsb.eucalyptus.cloud.NotImplementedException
-import com.google.common.collect.Lists
-import com.eucalyptus.context.Contexts
-import com.eucalyptus.util.TypeMappers
-import com.eucalyptus.autoscaling.groups.AutoScalingGroups
-import com.eucalyptus.autoscaling.groups.AutoScalingGroup
-import com.eucalyptus.util.Callback
-import com.eucalyptus.autoscaling.common.LaunchConfigurationNames
-import com.eucalyptus.autoscaling.common.BlockDeviceMappings
-import com.eucalyptus.autoscaling.common.LoadBalancerNames
-import com.eucalyptus.autoscaling.common.DeleteAutoScalingGroupType
-import com.eucalyptus.autoscaling.common.InstanceMonitoring
-import com.eucalyptus.autoscaling.common.DescribeLaunchConfigurationsType
-import com.eucalyptus.autoscaling.common.CreateAutoScalingGroupType
-import com.eucalyptus.autoscaling.common.TerminationPolicies
-import com.eucalyptus.autoscaling.common.AvailabilityZones
-import com.eucalyptus.autoscaling.common.SecurityGroups
-import com.eucalyptus.autoscaling.common.LaunchConfigurationType
-import com.eucalyptus.autoscaling.common.BlockDeviceMappingType
-import com.eucalyptus.autoscaling.common.DescribeAutoScalingGroupsResponseType
-import com.eucalyptus.autoscaling.common.AutoScalingGroupType
-import com.eucalyptus.autoscaling.common.DeleteLaunchConfigurationType
+import com.eucalyptus.auth.principal.User
+import com.eucalyptus.autoscaling.activities.ActivityManager
+import com.eucalyptus.autoscaling.activities.ActivityStatusCode
+import com.eucalyptus.autoscaling.activities.ScalingActivities
+import com.eucalyptus.autoscaling.activities.ScalingActivity
+import com.eucalyptus.autoscaling.common.Activity
 import com.eucalyptus.autoscaling.common.AutoScalingGroupNames
-import com.eucalyptus.autoscaling.common.DescribeAutoScalingGroupsType
+import com.eucalyptus.autoscaling.common.AutoScalingGroupType
+import com.eucalyptus.autoscaling.common.AutoScalingInstanceDetails
+import com.eucalyptus.autoscaling.common.AvailabilityZones
+import com.eucalyptus.autoscaling.common.BlockDeviceMappingType
+import com.eucalyptus.autoscaling.common.BlockDeviceMappings
+import com.eucalyptus.autoscaling.common.CreateAutoScalingGroupType
 import com.eucalyptus.autoscaling.common.CreateLaunchConfigurationType
+import com.eucalyptus.autoscaling.common.DeleteAutoScalingGroupType
+import com.eucalyptus.autoscaling.common.DeleteLaunchConfigurationType
+import com.eucalyptus.autoscaling.common.DeletePolicyType
+import com.eucalyptus.autoscaling.common.DescribeAutoScalingGroupsResponseType
+import com.eucalyptus.autoscaling.common.DescribeAutoScalingGroupsType
+import com.eucalyptus.autoscaling.common.DescribeAutoScalingInstancesResponseType
+import com.eucalyptus.autoscaling.common.DescribeAutoScalingInstancesType
 import com.eucalyptus.autoscaling.common.DescribeLaunchConfigurationsResponseType
-import com.eucalyptus.autoscaling.policies.ScalingPolicies
-import com.eucalyptus.autoscaling.policies.ScalingPolicy
-import com.eucalyptus.autoscaling.common.PutScalingPolicyType
+import com.eucalyptus.autoscaling.common.DescribeLaunchConfigurationsType
 import com.eucalyptus.autoscaling.common.DescribePoliciesResponseType
 import com.eucalyptus.autoscaling.common.DescribePoliciesType
-import com.eucalyptus.autoscaling.common.PolicyNames
-import com.eucalyptus.autoscaling.common.ScalingPolicyType
-import com.eucalyptus.autoscaling.common.DeletePolicyType
 import com.eucalyptus.autoscaling.common.ExecutePolicyType
-import com.eucalyptus.autoscaling.metadata.AutoScalingMetadataNotFoundException
-import com.eucalyptus.autoscaling.instances.AutoScalingInstances
+import com.eucalyptus.autoscaling.common.InstanceMonitoring
+import com.eucalyptus.autoscaling.common.LaunchConfigurationNames
+import com.eucalyptus.autoscaling.common.LaunchConfigurationType
+import com.eucalyptus.autoscaling.common.LoadBalancerNames
+import com.eucalyptus.autoscaling.common.PolicyNames
+import com.eucalyptus.autoscaling.common.PutScalingPolicyType
+import com.eucalyptus.autoscaling.common.ScalingPolicyType
+import com.eucalyptus.autoscaling.common.SecurityGroups
+import com.eucalyptus.autoscaling.common.TerminateInstanceInAutoScalingGroupResponseType
+import com.eucalyptus.autoscaling.common.TerminateInstanceInAutoScalingGroupType
+import com.eucalyptus.autoscaling.common.TerminationPolicies
+import com.eucalyptus.autoscaling.configurations.LaunchConfiguration
+import com.eucalyptus.autoscaling.configurations.LaunchConfigurations
+import com.eucalyptus.autoscaling.groups.AutoScalingGroup
+import com.eucalyptus.autoscaling.groups.AutoScalingGroups
+import com.eucalyptus.autoscaling.groups.HealthCheckType
 import com.eucalyptus.autoscaling.instances.AutoScalingInstance
+import com.eucalyptus.autoscaling.instances.AutoScalingInstances
 import com.eucalyptus.autoscaling.instances.HealthStatus
 import com.eucalyptus.autoscaling.instances.LifecycleState
-import com.eucalyptus.autoscaling.common.DescribeAutoScalingInstancesType
-import com.eucalyptus.autoscaling.common.AutoScalingInstanceDetails
-import com.eucalyptus.autoscaling.common.DescribeAutoScalingInstancesResponseType
-import com.eucalyptus.autoscaling.activities.ActivityManager
-import com.eucalyptus.autoscaling.activities.ScalingActivities
-import com.eucalyptus.autoscaling.groups.HealthCheckType
-import com.eucalyptus.autoscaling.common.TerminateInstanceInAutoScalingGroupType
-import com.eucalyptus.autoscaling.common.Activity
-import com.eucalyptus.autoscaling.activities.ScalingActivity
-import com.eucalyptus.autoscaling.activities.ActivityStatusCode
+import com.eucalyptus.autoscaling.metadata.AutoScalingMetadataNotFoundException
+import com.eucalyptus.autoscaling.policies.ScalingPolicies
+import com.eucalyptus.autoscaling.policies.ScalingPolicy
+import com.eucalyptus.context.Context
+import com.eucalyptus.context.Contexts
 import com.eucalyptus.crypto.util.Timestamps
-import com.eucalyptus.autoscaling.common.TerminateInstanceInAutoScalingGroupResponseType
+import com.eucalyptus.util.Callback
+import com.eucalyptus.util.OwnerFullName
+import com.eucalyptus.util.TypeMappers
+import com.google.common.base.Predicate
+import com.google.common.collect.Lists
+import edu.ucsb.eucalyptus.cloud.NotImplementedException
+import edu.ucsb.eucalyptus.msgs.BaseMessage
+import static org.junit.Assert.*
+import org.junit.BeforeClass
+import org.junit.Test
+
+import java.security.cert.X509Certificate
 
 /**
  * 
  */
+@SuppressWarnings("GroovyAccessibility")
 class AutoScalingServiceTest {
+  
+  @BeforeClass
+  static void before() {
+    TypeMappers.TypeMapperDiscovery discovery = new TypeMappers.TypeMapperDiscovery()
+    discovery.processClass( AutoScalingGroups.AutoScalingGroupTransform.class )
+    discovery.processClass( AutoScalingInstances.AutoScalingInstanceSummaryTransform.class )
+    discovery.processClass( AutoScalingInstances.AutoScalingInstanceTransform.class )
+    discovery.processClass( LaunchConfigurations.BlockDeviceTransform.class )
+    discovery.processClass( LaunchConfigurations.LaunchConfigurationTransform.class )
+    discovery.processClass( ScalingActivities.ScalingActivityTransform.class )
+    discovery.processClass( ScalingPolicies.ScalingPolicyTransform.class )
+  }
   
   @Test
   void testLaunchConfigurations() {
     Accounts.setAccountProvider( accountProvider() )
-    TypeMappers.TypeMapperDiscovery discovery = new TypeMappers.TypeMapperDiscovery()
-    discovery.processClass( LaunchConfigurations.BlockDeviceTransform.class )
-    discovery.processClass( LaunchConfigurations.LaunchConfigurationTransform.class )
     AutoScalingService service = service()
     Contexts.threadLocal(  new Context( "", new BaseMessage() ) )
     
@@ -157,8 +169,6 @@ class AutoScalingServiceTest {
   @Test
   void testAutoScalingGroups() {
     Accounts.setAccountProvider( accountProvider() )
-    TypeMappers.TypeMapperDiscovery discovery = new TypeMappers.TypeMapperDiscovery()
-    discovery.processClass( AutoScalingGroups.AutoScalingGroupTransform.class )
     AutoScalingService service = service()
     Contexts.threadLocal(  new Context( "", new BaseMessage() ) )
 
@@ -231,9 +241,6 @@ class AutoScalingServiceTest {
   @Test
   void testScalingPolicies() {
     Accounts.setAccountProvider( accountProvider() )
-    TypeMappers.TypeMapperDiscovery discovery = new TypeMappers.TypeMapperDiscovery()
-    discovery.processClass( ScalingPolicies.ScalingPolicyTransform.class )
-    discovery.processClass( AutoScalingGroups.AutoScalingGroupTransform.class )
     AutoScalingService service = service()
     Contexts.threadLocal(  new Context( "", new BaseMessage() ) )
 
@@ -315,8 +322,6 @@ class AutoScalingServiceTest {
   @Test
   void testDescribeInstances() {
     Accounts.setAccountProvider( accountProvider() )
-    TypeMappers.TypeMapperDiscovery discovery = new TypeMappers.TypeMapperDiscovery()
-    discovery.processClass( AutoScalingInstances.AutoScalingInstanceTransform.class )
     AutoScalingService service = service( launchConfigurationStore(), autoScalingGroupStore(), autoScalingInstanceStore( [
       new AutoScalingInstance( 
           ownerAccountNumber: '000000000000', 
@@ -349,8 +354,6 @@ class AutoScalingServiceTest {
   @Test
   void testTerminateInstances() {
     Accounts.setAccountProvider( accountProvider() )
-    TypeMappers.TypeMapperDiscovery discovery = new TypeMappers.TypeMapperDiscovery()
-    discovery.processClass( ScalingActivities.ScalingActivityTransform.class )
     AutoScalingGroup group;
     AutoScalingService service = service( launchConfigurationStore(), autoScalingGroupStore( [
         group = new AutoScalingGroup(
@@ -619,7 +622,9 @@ class AutoScalingServiceTest {
 
       @Override
       List<AutoScalingInstance> listByGroup(AutoScalingGroup group) {
-        listByGroup( group.getOwner(), group.getAutoScalingGroupName() )
+        listByGroup( 
+            (OwnerFullName)group.getClass().getMethod("getOwner").invoke( group ), 
+            (String)group.getClass().getMethod("getAutoScalingGroupName").invoke( group ) )
       }
 
       @Override
@@ -719,9 +724,9 @@ class AutoScalingServiceTest {
       }
 
       @Override
-      ScalingActivity terminateInstances( AutoScalingGroup group, 
-                                          Collection<AutoScalingInstance> instances ) {
-        new ScalingActivity(
+      List<ScalingActivity> terminateInstances( AutoScalingGroup group, 
+                                                Collection<AutoScalingInstance> instances ) {
+        [ new ScalingActivity(
           naturalId: 'b7717740-7246-11e2-bcfd-0800200c9a66',
           group: group,
           autoScalingGroupName: group.getClass().getMethod("getAutoScalingGroupName").invoke( group ),
@@ -731,7 +736,7 @@ class AutoScalingServiceTest {
           description: "Description",
           details:  "Details",
           progress: 13
-        );
+        ) ];
       }
     }
   }

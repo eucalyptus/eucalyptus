@@ -97,7 +97,7 @@ public class AutoScalingGroup extends AbstractOwnedPersistent implements AutoSca
   private HealthCheckType healthCheckType;
 
   @Column( name = "metadata_status" )
-  private String status;
+  private String status;  //TODO:STEVE: status
 
   @ElementCollection
   @CollectionTable( name = "metadata_auto_scaling_group_availability_zones" )

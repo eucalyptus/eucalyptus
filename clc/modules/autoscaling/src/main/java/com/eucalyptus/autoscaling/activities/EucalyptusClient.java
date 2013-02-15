@@ -33,12 +33,15 @@ import edu.ucsb.eucalyptus.msgs.EucalyptusMessage;
  * 
  */
 class EucalyptusClient {
-  
-  private final ServiceConfiguration configuration;
+
   private final String userId;
+  private ServiceConfiguration configuration;
   
   EucalyptusClient( final String userId ) throws EucalyptusClientException {
     this.userId = userId;
+  }
+
+  void init() throws EucalyptusClientException {
     try {
       this.configuration = Topology.lookup( Eucalyptus.class );
     } catch ( final NoSuchElementException e ) {
