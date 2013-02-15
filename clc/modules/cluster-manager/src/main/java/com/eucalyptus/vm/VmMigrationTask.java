@@ -60,62 +60,76 @@
  *   NEEDED TO COMPLY WITH ANY SUCH LICENSES OR RIGHTS.
  ************************************************************************/
 
-package com.eucalyptus.cluster.callback;
+package com.eucalyptus.vm;
 
-import org.apache.log4j.Logger;
-import com.eucalyptus.cluster.Cluster;
-import com.eucalyptus.util.async.FailedRequestException;
-import com.eucalyptus.vm.VmType;
-import com.eucalyptus.vm.VmTypes;
-import edu.ucsb.eucalyptus.msgs.DescribeResourcesResponseType;
-import edu.ucsb.eucalyptus.msgs.DescribeResourcesType;
-import edu.ucsb.eucalyptus.msgs.VmTypeInfo;
+import javax.persistence.Column;
+import javax.persistence.Embeddable;
+import javax.persistence.EnumType;
+import javax.persistence.Enumerated;
+import org.hibernate.annotations.Parent;
+import com.eucalyptus.vm.VmBundleTask.BundleState;
+import com.google.common.base.Function;
 
-public class ResourceStateCallback extends StateUpdateMessageCallback<Cluster, DescribeResourcesType, DescribeResourcesResponseType> {
-  private static Logger LOG = Logger.getLogger( ResourceStateCallback.class );
-  
-  public ResourceStateCallback( ) {
-    super( new DescribeResourcesType( ) {
-      {
-        regarding( );
-        for ( VmType arg0 : VmTypes.list( ) ) {
-          getInstanceTypes( ).add( new VmTypeInfo( arg0.getName( ), arg0.getMemory( ), arg0.getDisk( ), arg0.getCpu( ), "sda1" ) {
-            {
-              this.setSwap( "sda2", 512 * 1024l * 1024l );
-            }
-          } );
-        }
-      }
-    } );
-  }
-  
-  /**
-   * @see com.eucalyptus.util.async.MessageCallback#fire(edu.ucsb.eucalyptus.msgs.BaseMessage)
-   * @param reply
-   */
-  @Override
-  public void fire( DescribeResourcesResponseType reply ) {
-    this.getSubject( ).getNodeState( ).update( reply.getResources( ) );
-    LOG.debug( "Adding node service tags: " + reply.getServiceTags( ) );
-    /**
-     * TODO:GRZE: if not present emulate {@link ClusterController.NodeController} using {@link Component#setup()}
-     * TODO:GRZE: emulate update of emulate {@link ClusterController.NodeController} state
-     * TODO:GRZE: {@link Component#destroy()} for the NodeControllers which are not reported by the CC.
-     */
-    if( !reply.getNodes( ).isEmpty( ) ) {
-      this.getSubject( ).updateNodeInfo( reply.getNodes( ) );
-    } else {
-      this.getSubject( ).updateNodeInfo( reply.getServiceTags( ) );
+/**
+ * @todo doc
+ * @author chris grzegorczyk <grze@eucalyptus.com>
+ */
+@Embeddable
+public class VmMigrationTask {
+  public enum MigrationState {
+    none( "none" );
+    private String mappedState;
+    
+    MigrationState( final String mappedState ) {
+      this.mappedState = mappedState;
     }
+    
+    public String getMappedState( ) {
+      return this.mappedState;
+    }
+    
+    public static Function<String, MigrationState> mapper = new Function<String, MigrationState>( ) {
+                                                            
+                                                            @Override
+                                                            public MigrationState apply( final String input ) {
+                                                              if ( input != null ) {
+                                                                for ( final MigrationState s : MigrationState.values( ) ) {
+                                                                  if ( ( s.getMappedState( ) != null ) && s.getMappedState( ).equals( input ) ) {
+                                                                    return s;
+                                                                  }
+                                                                }
+                                                              }
+                                                              return none;
+                                                            }
+                                                          };
   }
   
-  /**
-   * @see com.eucalyptus.cluster.callback.StateUpdateMessageCallback#fireException(com.eucalyptus.util.async.FailedRequestException)
-   * @param t
-   */
-  @Override
-  public void fireException( FailedRequestException t ) {
-    LOG.debug( "Request to " + this.getSubject( ).getName( ) + " failed: " + t.getMessage( ) );
+  @Parent
+  private VmInstance     vmInstance;
+  @Enumerated( EnumType.STRING )
+  @Column( name = "metadata_vm_bundle_state" )
+  private MigrationState state;
+  @Column( name = "metadata_vm_bundle_prefix" )
+  private String         sourceHost;
+  @Column( name = "metadata_vm_bundle_prefix" )
+  private String         destinationHost;
+  
+  private VmMigrationTask( ) {}
+  
+  private VmMigrationTask( VmInstance vmInstance, String state, String sourceHost, String destinationHost ) {
+    this.vmInstance = vmInstance;
+    this.state = MigrationState.mapper.apply( state );
+    this.sourceHost = sourceHost;
+    this.destinationHost = destinationHost;
+  }
+  
+  public static VmMigrationTask create( VmInstance vmInstance, String state, String sourceHost, String destinationHost ) {
+    return new VmMigrationTask( vmInstance, state, sourceHost, destinationHost );
   }
 
+  void updateMigrationState( String state, String sourceHost, String destinationHost ) {
+    this.state = MigrationState.mapper.apply( state );
+    this.sourceHost = sourceHost;
+    this.destinationHost = destinationHost;
+  }
 }

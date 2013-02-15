@@ -83,6 +83,10 @@ import java.util.concurrent.LinkedBlockingDeque;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReadWriteLock;
+import java.util.concurrent.locks.ReentrantLock;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
 import org.apache.log4j.Logger;
 import com.eucalyptus.auth.principal.Principals;
 import com.eucalyptus.bootstrap.Bootstrap;
@@ -162,6 +166,7 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.ObjectArrays;
 import edu.ucsb.eucalyptus.cloud.NodeInfo;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
+import edu.ucsb.eucalyptus.msgs.MigrateInstancesType;
 import edu.ucsb.eucalyptus.msgs.NodeCertInfo;
 import edu.ucsb.eucalyptus.msgs.NodeLogInfo;
 import edu.ucsb.eucalyptus.msgs.NodeType;
@@ -178,6 +183,7 @@ public class Cluster implements AvailabilityZoneMetadata, HasFullName<Cluster>, 
   private NodeLogInfo                                    lastLog        = new NodeLogInfo( );
   private boolean                                        hasClusterCert = false;
   private boolean                                        hasNodeCert    = false;
+  private final Lock                                     gateLock       = new ReentrantLock( );
   
   enum ZoneRegistration implements Predicate<Cluster> {
     REGISTER {
@@ -1326,5 +1332,39 @@ public class Cluster implements AvailabilityZoneMetadata, HasFullName<Cluster>, 
   public ConcurrentNavigableMap<String, NodeInfo> getNodeMap( ) {
     return this.nodeMap;
   }
-  
+
+  /**
+   * <ol>
+   * <li> Mark this cluster as gated.
+   * <li> Update node and resource information; describe resources.
+   * <li> Find all VMs with volume attachments and authorize every node's IQN.
+   * <li> Send the MigrateInstances operation.
+   * <li> Update node and resource information; describe resources.
+   * <li> Unmark this cluster as gated.
+   * </ol>
+   * @param sourceHost
+   * @throws Exception
+   */
+  public void migrateInstances( final String sourceHost ) throws Exception {
+    this.gateLock.lock( );
+    try {
+      //TODO:GRZE: gate cluster
+      //TODO:GRZE: describe resources
+      //TODO:GRZE: authorize all NCs for volume attachments on VMs running on sourceHost 
+      AsyncRequests.sendSync( this.getConfiguration( ), new MigrateInstancesType( ) {
+        {
+          this.setSourceHost( sourceHost );
+        }
+      } );
+      //TODO:GRZE: describe resources
+      //TODO:GRZE: ungate cluster
+    } finally {
+      this.gateLock .unlock( );
+    }
+  }
+
+  protected Lock getGateLock( ) {
+    return this.gateLock;
+  }
+
 }
