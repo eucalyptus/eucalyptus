@@ -111,11 +111,13 @@
           <mule:no-action-transformer/>
         </filtering-router>
         #foreach( $component in $components )
-        <filtering-router>
-          <outbound-endpoint ref="${component.getEntryPoint()}" synchronous="false" />
-          <payload-type-filter expectedType="${component.lookupBaseMessageType().getCanonicalName()}" />
-          <mule:no-action-transformer/>
-        </filtering-router>
+          #foreach( $msgType in ${ComponentMessages.forComponent( $component )} )
+          <filtering-router>
+            <outbound-endpoint ref="${component.getEntryPoint()}" synchronous="false" />
+            <payload-type-filter expectedType="${msgType.getCanonicalName()}" />
+            <mule:no-action-transformer/>
+          </filtering-router>
+          #end
         #end
         <filtering-router>
           <outbound-endpoint ref="EmpyreanRequestQueueEndpoint" synchronous="false" />

@@ -64,21 +64,59 @@ package com.eucalyptus.config;
 
 import java.util.List;
 import org.apache.log4j.Logger;
+import com.eucalyptus.component.ComponentId.ServiceOperation;
 import com.eucalyptus.configurable.ConfigurableFieldType;
 import com.eucalyptus.configurable.ConfigurableProperty;
 import com.eucalyptus.configurable.PropertyDirectory;
 import com.eucalyptus.context.Contexts;
+import com.eucalyptus.empyrean.ModifyServiceResponseType;
+import com.eucalyptus.empyrean.ModifyServiceType;
 import com.eucalyptus.scripting.Groovyness;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.Exceptions;
+import com.eucalyptus.ws.EmpyreanService;
+import com.google.common.base.Function;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
 
-public class Properties {
-  private static Logger LOG = Logger.getLogger( Properties.class );
+public class PropertiesManager {
+  private static Logger LOG = Logger.getLogger( PropertiesManager.class );
+  
+  @ServiceOperation
+  public enum ModifyProperty implements Function<ModifyPropertyValueType, ModifyPropertyValueResponseType> {
+    INSTANCE;
+    
+    @Override
+    public ModifyPropertyValueResponseType apply( final ModifyPropertyValueType input ) {
+      try {
+        return PropertiesManager.modifyProperty( input );
+      } catch ( final Exception ex ) {
+        throw Exceptions.toUndeclared( ex );
+      }
+    }
+    
+  }
+  
+
+  @ServiceOperation
+  public enum DescribeProperties implements Function<DescribePropertiesType, DescribePropertiesResponseType> {
+    INSTANCE;
+    
+    @Override
+    public DescribePropertiesResponseType apply( final DescribePropertiesType input ) {
+      try {
+        return PropertiesManager.describeProperties( input );
+      } catch ( final Exception ex ) {
+        throw Exceptions.toUndeclared( ex );
+      }
+    }
+    
+  }
+  
+
   
   
-  public DescribePropertiesResponseType describeProperties( final DescribePropertiesType request ) throws EucalyptusCloudException {
+  public static DescribePropertiesResponseType describeProperties( final DescribePropertiesType request ) throws EucalyptusCloudException {
     if ( !Contexts.lookup( ).hasAdministrativePrivileges( ) ) {
       throw new EucalyptusCloudException( "You are not authorized to interact with this service." );
     }
@@ -111,7 +149,7 @@ public class Properties {
     return reply;
   }
   private static final String INTERNAL_OP = "euca";
-  public ModifyPropertyValueResponseType modifyProperty( ModifyPropertyValueType request ) throws EucalyptusCloudException {
+  public static ModifyPropertyValueResponseType modifyProperty( ModifyPropertyValueType request ) throws EucalyptusCloudException {
     if ( !Contexts.lookup( ).hasAdministrativePrivileges( ) ) {
       throw new EucalyptusCloudException( "You are not authorized to interact with this service." );
     }

@@ -32,6 +32,12 @@
 	<classpathentry kind="src" path="modules/www/src/main/java"/>
 	<classpathentry kind="src" path="modules/www/conf/www"/>
 	<classpathentry kind="src" path="modules/troubleshooting/src/main/java"/>
+	<classpathentry kind="src" path="modules/autoscaling/src/main/java"/>
+	<classpathentry kind="src" path="modules/autoscaling-common/src/main/java"/>
+	<classpathentry kind="src" path="modules/cloudwatch/src/main/java"/>
+	<classpathentry kind="src" path="modules/cloudwatch-common/src/main/java"/>
+	<classpathentry kind="src" path="modules/loadbalancing/src/main/java"/>
+	<classpathentry kind="src" path="modules/loadbalancing-common/src/main/java"/>
 	<classpathentry kind="con" path="GROOVY_SUPPORT"/>
 	<classpathentry kind="lib" path="lib/activemq-core-5.4.1.jar"/>
 	<classpathentry kind="lib" path="lib/ant-1.7.jar"/>
@@ -105,7 +111,7 @@
 	<classpathentry kind="lib" path="lib/gwt-servlet-deps-2.2.jar"/>
 	<classpathentry kind="lib" path="lib/gwt-soyc-vis-2.2.jar"/>
 	<classpathentry kind="lib" path="lib/gwt-user-2.2.jar"/>
-	<classpathentry kind="lib" path="lib/ha-jdbc-2.0.16-rc-1-jdk1.6.jar"/>
+	<classpathentry kind="lib" path="lib/ha-jdbc-2.0.16-rc-1-jdk1.6.jar" sourcepath="//git/third-party/ha-jdbc-2.0.16-rc-1"/>
 	<classpathentry kind="lib" path="lib/hamcrest-all-1.2.jar"/>
 	<classpathentry kind="lib" path="lib/hibernate-3.5.6-Final.jar"/>
 	<classpathentry kind="lib" path="lib/infinispan-core-4.2.1.CR4.jar"/>

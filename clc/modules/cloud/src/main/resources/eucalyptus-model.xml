@@ -75,6 +75,7 @@
         <spring:import resource="classpath:eucalyptus-userdata.xml"/>
         <spring:import resource="classpath:eucalyptus-runtime.xml"/>
         <spring:import resource="classpath:eucalyptus-storage.xml"/>
+        <spring:import resource="classpath:eucalyptus-system.xml"/>
     </spring:beans>
 
     <model name="eucalyptus">
@@ -88,12 +89,28 @@
       <bridge-component/>
       <outbound>
         <filtering-router>
+          <outbound-endpoint ref="PrivateNetworksWS" />
+          <payload-type-filter expectedType="edu.ucsb.eucalyptus.msgs.VirtualNetworkingMessage" />
+        </filtering-router>
+        <filtering-router>
+          <outbound-endpoint ref="SpotWS" />
+          <payload-type-filter expectedType="edu.ucsb.eucalyptus.msgs.SpotInstanceMessage" />
+        </filtering-router>
+        <filtering-router>
+          <outbound-endpoint ref="ReservedWS" />
+          <payload-type-filter expectedType="edu.ucsb.eucalyptus.msgs.ReservedInstanceMessage" />
+        </filtering-router>
+        <filtering-router>
           <outbound-endpoint ref="VmControlWS" />
           <payload-type-filter expectedType="edu.ucsb.eucalyptus.msgs.VmControlMessage" />
         </filtering-router>
         <filtering-router>
           <outbound-endpoint ref="VmControlWS" /><!-- GRZE: should be different dest service -->
           <payload-type-filter expectedType="com.eucalyptus.vm.VmBundleMessage" />
+        </filtering-router>
+        <filtering-router>
+          <outbound-endpoint ref="VmTypesWS" />
+          <payload-type-filter expectedType="com.eucalyptus.vmtypes.VmTypeMessage" />
         </filtering-router>
         <filtering-router>
           <outbound-endpoint ref="ClusterEndpointWS" />

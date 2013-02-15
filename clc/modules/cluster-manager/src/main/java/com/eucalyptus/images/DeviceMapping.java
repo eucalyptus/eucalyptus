@@ -81,6 +81,9 @@ import com.eucalyptus.cloud.ImageMetadata;
 import com.eucalyptus.cloud.ImageMetadata.DeviceMappingType;
 import com.eucalyptus.entities.AbstractPersistent;
 
+/**
+ * @see <a href="http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/block-device-mapping-concepts.html">Block Device Mappings</a>
+ */
 @Entity
 @javax.persistence.Entity
 @PersistenceContext( name = "eucalyptus_cloud" )

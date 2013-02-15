@@ -63,7 +63,7 @@
 package com.eucalyptus.component;
 
 import java.lang.reflect.Modifier;
-import java.util.HashMap;
+import java.util.Collection;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import org.apache.log4j.Logger;
@@ -72,42 +72,39 @@ import com.eucalyptus.component.ComponentId.ComponentMessage;
 import com.eucalyptus.system.Ats;
 import com.eucalyptus.util.Classes;
 import com.google.common.base.Predicate;
-import com.google.common.collect.BiMap;
-import com.google.common.collect.HashBiMap;
+import com.google.common.base.Predicates;
+import com.google.common.collect.Collections2;
 import com.google.common.collect.Iterables;
+import com.google.common.collect.Maps;
+import edu.emory.mathcs.backport.java.util.Collections;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 
 public class ComponentMessages {
   private static Logger                                                                  LOG       = Logger.getLogger( ComponentMessages.class );
-  private static final BiMap<Class<? extends ComponentId>, Class<? extends BaseMessage>> compIdMap = HashBiMap.create( );
+  private static final Map<Class<? extends BaseMessage>,Class<? extends ComponentId>> compIdMap = Maps.newHashMap( );
   
-  public static Class<? extends BaseMessage> lookup( Class<? extends ComponentId> compIdClass ) {
-    if ( !compIdMap.containsKey( compIdClass ) ) {
-      throw new NoSuchElementException( "No ComponentMessage with name: " + compIdClass );
+  public static Collection<Class<? extends BaseMessage>> forComponent( ComponentId compId ) {
+    Class<? extends ComponentId> compIdClass = compId.getClass( );
+    if ( !compIdMap.containsValue( compIdClass ) ) {
+      return Collections.emptyList( );
     } else {
-      return compIdMap.get( compIdClass );
+      return Maps.filterValues( (Map) compIdMap, Predicates.equalTo( compIdClass ) ).keySet( );
     }
   }
   
   public static <T extends BaseMessage> Class<? extends ComponentId> lookup( T msg ) {
-    Class<?> msgType = Iterables.find( Classes.classAncestors( msg ), new Predicate<Class>( ) {
-      
-      @Override
-      public boolean apply( Class arg0 ) {
-        return Ats.from( arg0 ).has( ComponentMessage.class );
-      }
-    } );
-    if ( !compIdMap.containsValue( msgType ) ) {
+    Class<?> msgType = Ats.inClassHierarchy( msg ).findAncestor( ComponentMessage.class );
+    if ( !compIdMap.containsKey( msgType ) ) {
       throw new NoSuchElementException( "No ComponentMessage with name: " + msgType );
     } else {
-      return compIdMap.inverse( ).get( msgType );
+      return compIdMap.get( msgType );
     }
   }
   
   public static void register( Class<? extends BaseMessage> componentMsg ) {
     @SuppressWarnings( "unchecked" )
     Class<? extends ComponentId> componentIdClass = Ats.from( componentMsg ).get( ComponentMessage.class ).value( );
-    compIdMap.put( componentIdClass, componentMsg );
+    compIdMap.put( componentMsg, componentIdClass );
   }
   
   public static class ComponentMessageDiscovery extends ServiceJarDiscovery {
