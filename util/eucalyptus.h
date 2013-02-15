@@ -395,7 +395,6 @@ typedef enum createImage_progress_t {
     CREATEIMAGE_CANCELLED
 } createImage_progress;
 
-
 //! Enumeration of migration-related states
 typedef enum migration_states_t {
     NOT_MIGRATING = 0,

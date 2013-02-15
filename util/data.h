@@ -255,7 +255,7 @@ typedef struct virtualBootRecord_t {
     //! @name first six fields arrive in requests (RunInstance, {Attach|Detach} Volume)
     char resourceLocation[CHAR_BUFFER_SIZE];    //!< http|walrus|cloud|sc|iqn|aoe://... or none
     char guestDeviceName[SMALL_CHAR_BUFFER_SIZE];   //!< x?[vhsf]d[a-z]?[1-9]*
-    long long sizeBytes;                    //!< Size of the boot record in bytes
+    long long sizeBytes;               //!< Size of the boot record in bytes
     char formatName[SMALL_CHAR_BUFFER_SIZE];    //!< ext2|ext3|swap|none
     char id[SMALL_CHAR_BUFFER_SIZE];   //!< emi|eki|eri|vol|none
     char typeName[SMALL_CHAR_BUFFER_SIZE];  //!< machine|kernel|ramdisk|ephemeral|ebs
@@ -466,7 +466,7 @@ ncInstance *allocate_instance(const char *sUUID, const char *sInstanceId, const 
                               const char *sStateName, int stateCode, const char *sUserId, const char *sOwnerId, const char *sAccountId,
                               netConfig * pNetCfg, const char *sKeyName, const char *sUserData, const char *sLaunchIndex, const char *sPlatform,
                               int expiryTime, char **asGroupNames, int groupNamesSize) _attribute_wur_;
-ncInstance *clone_instance(const ncInstance *old_instance);
+ncInstance *clone_instance(const ncInstance * old_instance);
 void free_instance(ncInstance ** ppInstance);
 int add_instance(bunchOfInstances ** ppHead, ncInstance * pInstance);
 int remove_instance(bunchOfInstances ** ppHead, ncInstance * pInstance);

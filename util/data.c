@@ -262,7 +262,7 @@ ncInstance *allocate_instance(const char *sUUID, const char *sInstanceId, const 
                               const char *sStateName, int stateCode, const char *sUserId, const char *sOwnerId, const char *sAccountId,
                               netConfig * pNetCfg, const char *sKeyName, const char *sUserData, const char *sLaunchIndex, const char *sPlatform,
                               int expiryTime, char **asGroupNames, int groupNamesSize) _attribute_wur_;
-ncInstance *clone_instance(const ncInstance *old_instance);
+ncInstance *clone_instance(const ncInstance * old_instance);
 void free_instance(ncInstance ** ppInstance);
 int add_instance(bunchOfInstances ** ppHead, ncInstance * pInstance);
 int remove_instance(bunchOfInstances ** ppHead, ncInstance * pInstance);
@@ -550,16 +550,16 @@ ncInstance *allocate_instance(const char *sUUID, const char *sInstanceId, const 
 //!
 //! @note The caller is responsible to free the allocated instance using the free_instance() API.
 //!
-ncInstance *clone_instance(const ncInstance *old_instance)
+ncInstance *clone_instance(const ncInstance * old_instance)
 {
     ncInstance *new_instance;
-    
+
     // zeroed out for cleaner-looking checkpoints and strings that are empty unless set
     if ((new_instance = EUCA_ZALLOC(1, sizeof(ncInstance))) == NULL)
-        return (NULL);   
+        return (NULL);
 
     //! @TODO do not just copy everything
-    memcpy (new_instance, old_instance, sizeof(ncInstance));
+    memcpy(new_instance, old_instance, sizeof(ncInstance));
 
     return new_instance;
 }
@@ -1075,7 +1075,7 @@ bundleTask *allocate_bundleTask(ncInstance * pInstance)
 migration_states migration_state_from_string(const char *migration_state_name)
 {
     for (int i = 0; i < TOTAL_MIGRATION_STATES; i++) {
-        if (! strcmp(migration_state_names[i], migration_state_name)) {
+        if (!strcmp(migration_state_names[i], migration_state_name)) {
             return i;
         }
     }
