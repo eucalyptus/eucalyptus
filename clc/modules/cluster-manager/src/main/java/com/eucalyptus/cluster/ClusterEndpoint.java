@@ -177,7 +177,7 @@ public class ClusterEndpoint implements Startable {
     final DescribeAvailabilityZonesResponseType reply = ( DescribeAvailabilityZonesResponseType ) request.getReply( );
     final List<String> args = request.getAvailabilityZoneSet( );
     final Filter filter = Filters.generate( request.getFilterSet(), Cluster.class );
-
+    
     if ( Contexts.lookup( ).hasAdministrativePrivileges( ) ) {
       for ( String keyword : describeKeywords.keySet( ) ) {
         if ( args.remove( keyword ) ) {

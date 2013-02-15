@@ -171,7 +171,7 @@ static int doInitialize(struct nc_state_t *nc);
 static void *rebooting_thread(void *arg);
 static int doRebootInstance(struct nc_state_t *nc, ncMetadata * pMeta, char *instanceId);
 static int doGetConsoleOutput(struct nc_state_t *nc, ncMetadata * pMeta, char *instanceId, char **consoleOutput);
-static int doMigrateInstance (struct nc_state_t * nc, ncMetadata * pMeta, ncInstance ** instances, int instancesLen, char * action, char * credentials);
+static int doMigrateInstances (struct nc_state_t * nc, ncMetadata * pMeta, ncInstance ** instances, int instancesLen, char * action, char * credentials);
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |
@@ -196,7 +196,7 @@ struct handlers kvm_libvirt_handlers = {
     .doDetachVolume = NULL,
     .doDescribeSensors = NULL,
     .doModifyNode = NULL,
-    .doMigrateInstance = doMigrateInstance
+    .doMigrateInstances = doMigrateInstances
 };
 
 /*----------------------------------------------------------------------------*\
@@ -259,7 +259,6 @@ static void *rebooting_thread(void *arg)
 {
 #define REATTACH_RETRIES      3
 
-    int i = 0;
     int err = 0;
     int error = 0;
     int rc = 0;
@@ -333,7 +332,7 @@ static void *rebooting_thread(void *arg)
     sensor_refresh_resources(resourceName, resourceAlias, 1);   // refresh stats so we set base value accurately
 
     // re-attach each volume previously attached
-    for (i = 0; i < EUCA_MAX_VOLUMES; ++i) {
+    for (int i = 0; i < EUCA_MAX_VOLUMES; ++i) {
         volume = &instance->volumes[i];
         if (strcmp(volume->stateName, VOL_STATE_ATTACHED) && strcmp(volume->stateName, VOL_STATE_ATTACHING))
             continue;                  // skip the entry unless attached or attaching
@@ -362,16 +361,16 @@ static void *rebooting_thread(void *arg)
         if (!rc) {
             // zhill - wrap with retry in case libvirt is dumb.
             err = 0;
-            for (i = 1; i < REATTACH_RETRIES; i++) {
+            for (int j = 1; j < REATTACH_RETRIES; j++) {
                 // protect libvirt calls because we've seen problems during concurrent libvirt invocations
                 sem_p(hyp_sem);
                 {
                     err = virDomainAttachDevice(dom, xml);
                 }
                 sem_v(hyp_sem);
-
+                
                 if (err) {
-                    LOGERROR("[%s][%s] failed to reattach volume (attempt %d of %d)\n", instance->instanceId, volume->volumeId, i, REATTACH_RETRIES);
+                    LOGERROR("[%s][%s] failed to reattach volume (attempt %d of %d)\n", instance->instanceId, volume->volumeId, j, REATTACH_RETRIES);
                     LOGDEBUG("[%s][%s] error from virDomainAttachDevice: %d xml: %s\n", instance->instanceId, volume->volumeId, err, xml);
                     sleep(3);          // sleep a bit and retry
                 } else {
@@ -619,7 +618,7 @@ static void *migrating_thread(void *arg)
 //!                                                                                                                                                                              
 //! TODO: doxygen
 //!
-static int doMigrateInstance (struct nc_state_t * nc, ncMetadata * pMeta, ncInstance ** instances, int instancesLen, char * action, char * credentials)
+static int doMigrateInstances (struct nc_state_t * nc, ncMetadata * pMeta, ncInstance ** instances, int instancesLen, char * action, char * credentials)
 {
     int ret = EUCA_OK;
     assert (instancesLen>0);
