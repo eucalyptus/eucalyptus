@@ -10,7 +10,6 @@
       tag_data: null,
     },
     baseTable: null,
-    tableWrapper: null,
  
     // Set up the widget
     _create: function() {
@@ -21,7 +20,8 @@
 //      thisObj._getAllResourceTags();
       var demo = $('<table>').addClass('resource_tag_datatable_class').attr('id', 'resource_tag_datatable_id-' + thisObj.options.resource_id);
       mainDiv.append(demo);
-      demo.dataTable({
+      thisObj.baseTable = demo;
+      thisObj.baseTable.dataTable({
           "bProcessing": true,
           "sAjaxSource": "../ec2?Action=DescribeTags",
           "fnServerData": function (sSource, aoData, fnCallback) {
@@ -32,7 +32,6 @@
                     "data": "_xsrf="+$.cookie('_xsrf')+"&Filter.1.Name=resource-id&Filter.1.Value.1="+thisObj.options.resource_id,
                     "success": fnCallback
                 });
-
           },
           "sAjaxDataProp": "results",
           "bAutoWidth" : false,
@@ -41,12 +40,14 @@
           "aoColumns": [
             {
               "sTitle": "Key",
-              "fnRender": function(oObj) {
+/*              "fnRender": function(oObj) {
                 if( oObj.aData.type === "html" )
                   return asHTML(oObj.aData.name);
                 else
 		  return DefaultEncoder().encodeForHTML(oObj.aData.name);
 	       },
+*/
+              "mDataProp": "name",
             },
             {
               "sTitle": "Value",
@@ -60,17 +61,56 @@
             {
                "sTitle": "Button",
                "fnRender": function(oObj) {
-                return "button";
+                 var dualButton = $('<a>').addClass('dual-tag-button').attr('id', 'dualButton-'+oObj.aData.name).text(image_launch_btn);
+                 return asHTML(dualButton);
                },
             },
           ],
+
           "fnDrawCallback" : function() { 
              tdResourceTag = $('<td>').html('<input name="tag_key" type="text" id="tag_key" size="128">');
              tdResourceTag.append($('<td>').html('<input name="tag_value" type="text" id="tag_value" size="128">'));
-             tdResourceTag.append($('<td>').text("button"));
-             var trResourceTag = $('<tr>').addClass('resource-tag-input-row-tr').html( tdResourceTag.html() );
-             thisObj.element.find('table').find('tr').append(trResourceTag);
-             alert("hello " + thisObj.options.resource_id);
+             tdResourceTag.append($('<td>').html($('<a>').addClass('button table-button').attr('id', 'addTagButton').text(image_launch_btn)));
+             var trResourceTag = $('<tr>').addClass('resource-tag-input-row-tr').html(tdResourceTag.html());
+             var message = "";
+             thisObj.baseTable.find('tr').each(function(index, tr){
+                 var $currentRow = $(tr);
+                 var allTds = thisObj.baseTable.fnGetTds($currentRow[0]);      
+                 $(allTds).each(function(){ 
+                    message += $(this).html() + " | ";
+                  });
+                 message += " && "; 	
+              });
+              thisObj.baseTable.find('tr').last().after(trResourceTag);
+
+              thisObj.baseTable.find('tbody').delegate('.dual-tag-button', 'click', function(e){
+                var iPos = thisObj.baseTable.fnGetPosition( $(this).closest("tr").get(0) );
+                if(iPos!=null){
+                  var aData = thisObj.baseTable.fnGetData( iPos ); //get data of the clicked row
+                  var key = aData[0]; // get 'key' of the row
+                  var value = aData[1]; //get 'value' of the row
+      //            thisObj.baseTable.find('#dualButton'+key+'.dual-tag-button').text('hi');
+                  thisObj.baseTable.fnUpdate("Item Updated", iPos, 0);
+       //           thisObj.baseTable.fnDeleteRow(iPos);
+       //           thisObj.baseTable.fnClearTable(this);           
+                 alert('hover on ' + key);
+                };
+        //        alert("hi " + $(this).parent().parent().text());
+              });
+
+/*
+              thisObj.baseTable.find("tbody").delegate("tr", "click", function() {
+                var iPos = thisObj.baseTable.fnGetPosition( this );
+                if(iPos!=null){
+                  var aData = thisObj.baseTable.fnGetData( iPos ); //get data of the clicked row
+                  var key = aData[0]; // get 'key' of the row
+                  var value = aData[1]; //get 'value' of the row
+                  //thisObj.baseTable.fnDeleteRow(iPos);//delete row
+                  alert("clicked : Row "+key+"="+value+" "+$(this).text());
+                };
+              });
+*/
+       //       alert("hello " + thisObj.options.resource_id + " " + message);
           },
      });
 /*     demo.fnAddData([
@@ -81,10 +121,7 @@
       }
      ]);
 */
-     var resource_tag_table = mainDiv.find('table');
-
-     thisObj.element.append(resource_tag_table);
-
+     thisObj.element.append(thisObj.baseTable);
 //     alert("hello! ");
     },
 
