@@ -40,13 +40,12 @@
           "aoColumns": [
             {
               "sTitle": "Key",
-/*              "fnRender": function(oObj) {
+              "fnRender": function(oObj) {
                 if( oObj.aData.type === "html" )
                   return asHTML(oObj.aData.name);
                 else
 		  return DefaultEncoder().encodeForHTML(oObj.aData.name);
 	       },
-*/
               "mDataProp": "name",
             },
             {
@@ -57,14 +56,17 @@
                 else
 		  return DefaultEncoder().encodeForHTML(oObj.aData.value);
 	       },
+               "mDataProp": "value",
             },
-            {
+/*            {
                "sTitle": "Button",
                "fnRender": function(oObj) {
                  var dualButton = $('<a>').addClass('dual-tag-button').attr('id', 'dualButton-'+oObj.aData.name).text(image_launch_btn);
                  return asHTML(dualButton);
                },
+               "mDataProp": null,
             },
+*/
           ],
 
           "fnDrawCallback" : function() { 
@@ -72,32 +74,38 @@
              tdResourceTag.append($('<td>').html('<input name="tag_value" type="text" id="tag_value" size="128">'));
              tdResourceTag.append($('<td>').html($('<a>').addClass('button table-button').attr('id', 'addTagButton').text(image_launch_btn)));
              var trResourceTag = $('<tr>').addClass('resource-tag-input-row-tr').html(tdResourceTag.html());
-             var message = "";
-             thisObj.baseTable.find('tr').each(function(index, tr){
+             
+	     thisObj.baseTable.find('tbody').find('tr').each(function(index, tr){
                  var $currentRow = $(tr);
-                 var allTds = thisObj.baseTable.fnGetTds($currentRow[0]);      
+                 var key = $(tr).children().first().text();
+                 var dualButton = $('<a>').addClass('dual-tag-button').attr('id', 'dualButton-'+key).text(image_launch_btn).click(function(e){
+                   alert('clicked on ' + key);
+                 });
+                 var newTd = $('<td>').append(dualButton);
+                 $currentRow.children().last().after(newTd);
+/*                 var allTds = thisObj.baseTable.fnGetTds($currentRow[0]);      
                  $(allTds).each(function(){ 
-                    message += $(this).html() + " | ";
                   });
-                 message += " && "; 	
+*/
               });
-              thisObj.baseTable.find('tr').last().after(trResourceTag);
 
+              thisObj.baseTable.find('tr').last().after(trResourceTag);
+/*
               thisObj.baseTable.find('tbody').delegate('.dual-tag-button', 'click', function(e){
                 var iPos = thisObj.baseTable.fnGetPosition( $(this).closest("tr").get(0) );
-                if(iPos!=null){
+                if(iPos!=null || e.type=='click'){
                   var aData = thisObj.baseTable.fnGetData( iPos ); //get data of the clicked row
-                  var key = aData[0]; // get 'key' of the row
-                  var value = aData[1]; //get 'value' of the row
+                  var key = aData.name; // get 'key' of the row
+                  var value = aData.value; //get 'value' of the row
       //            thisObj.baseTable.find('#dualButton'+key+'.dual-tag-button').text('hi');
-                  thisObj.baseTable.fnUpdate("Item Updated", iPos, 0);
+                  thisObj.baseTable.fnUpdate("Item Updated", iPos, 1);
        //           thisObj.baseTable.fnDeleteRow(iPos);
        //           thisObj.baseTable.fnClearTable(this);           
-                 alert('hover on ' + key);
+                  alert('clicked on ' + key);
                 };
         //        alert("hi " + $(this).parent().parent().text());
               });
-
+*/
 /*
               thisObj.baseTable.find("tbody").delegate("tr", "click", function() {
                 var iPos = thisObj.baseTable.fnGetPosition( this );
