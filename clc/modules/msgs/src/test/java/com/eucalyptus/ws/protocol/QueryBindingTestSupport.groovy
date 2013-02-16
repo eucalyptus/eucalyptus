@@ -82,11 +82,10 @@ class QueryBindingTestSupport {
   }
 
   void assertAnnotationsRecursively( Class target ) {
-    target.getDeclaredFields().findAll{ Field field -> !field.getName().startsWith('$') && !field.getName().equals("metaClass") }.each{ Field field ->
+    target.getDeclaredFields().findAll{ Field field -> !field.getName().startsWith('_') && !field.getName().startsWith('$') && !field.getName().equals("metaClass") }.each{ Field field ->
       Class classToAssert = ArrayList.equals( field.getType() ) ?
         field.getGenericType( ).getActualTypeArguments( )[0] :
         field.getType()
-
       if ( !isSimpleType( classToAssert ) ) {
         assertTrue( "Only simple types or extensions of EucalyptusData / EucalyptusMessage are supported: " + target.getName() + "." + field.getName(), 
             EucalyptusData.class.isAssignableFrom( classToAssert) ||
@@ -130,6 +129,7 @@ class QueryBindingTestSupport {
         assertRecursiveEquality( action, prefix + field.getName() + '.', expectedValueObject, actualValueObject )
       } else if ( expectedValueObject instanceof ArrayList ) {
         ((List)expectedValueObject).eachWithIndex { Object item, Integer index ->
+          if ( ((List)actualValueObject).size() <= index ) fail( action + " property " + prefix + field.getName() + '.' + (index+1) + ' missing' );
           if ( EucalyptusData.class.isInstance( item ) ) {
             assertRecursiveEquality( action, prefix + field.getName() + '.' + (index+1) + '.', item, ((List)actualValueObject).get(index) )
           } else {
@@ -137,7 +137,11 @@ class QueryBindingTestSupport {
           }
         }
       } else if ( expectedValueObject != null ) {
-        assertEquals( action + " property " + prefix + field.getName(), expectedValueObject, actualValueObject )
+        if ( expectedValueObject instanceof Double ) {
+          assertEquals( action + " property " + prefix + field.getName(), (Double)expectedValueObject, (Double)actualValueObject, 0 )
+        } else {
+          assertEquals( action + " property " + prefix + field.getName(), expectedValueObject, actualValueObject )
+        }
       } else if ( actualValueObject != null && !(actualValueObject instanceof EucalyptusData) ) {
         fail( "Expected null for " + action + " property " + prefix + field.getName() )
       }
@@ -157,7 +161,7 @@ class QueryBindingTestSupport {
     bean.class.getDeclaredFields().findAll{ Field field -> isBoundField( field ) }.each { Field field ->
       field.setAccessible(true)
       Object valueObject = field.get( bean )
-      if ( valueObject instanceof EucalyptusData ) {
+      if ( EucalyptusData.class.isInstance( valueObject ) ) {
         putParameters( prefix + name(field) + '.', valueObject, parameters )
       } else if ( valueObject instanceof ArrayList ) {
         ((List)valueObject).eachWithIndex{ Object item, Integer index ->

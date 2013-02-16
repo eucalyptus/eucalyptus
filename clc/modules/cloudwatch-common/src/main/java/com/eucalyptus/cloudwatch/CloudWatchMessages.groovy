@@ -62,6 +62,7 @@ public class PutMetricDataType extends CloudWatchMessage {
 }
 public class EnableAlarmActionsResponseType extends CloudWatchMessage {
   public EnableAlarmActionsResponseType() {  }
+  @HttpEmbedded
   ResponseMetadata responseMetadata = new ResponseMetadata();
 }
 public class ResponseMetadata extends EucalyptusData {
