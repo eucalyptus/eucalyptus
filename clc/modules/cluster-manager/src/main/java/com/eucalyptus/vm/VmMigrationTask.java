@@ -132,4 +132,36 @@ public class VmMigrationTask {
     this.sourceHost = sourceHost;
     this.destinationHost = destinationHost;
   }
+
+  protected VmInstance getVmInstance( ) {
+    return this.vmInstance;
+  }
+
+  protected void setVmInstance( VmInstance vmInstance ) {
+    this.vmInstance = vmInstance;
+  }
+
+  protected MigrationState getState( ) {
+    return this.state;
+  }
+
+  protected void setState( MigrationState state ) {
+    this.state = state;
+  }
+
+  protected String getSourceHost( ) {
+    return this.sourceHost;
+  }
+
+  protected void setSourceHost( String sourceHost ) {
+    this.sourceHost = sourceHost;
+  }
+
+  protected String getDestinationHost( ) {
+    return this.destinationHost;
+  }
+
+  protected void setDestinationHost( String destinationHost ) {
+    this.destinationHost = destinationHost;
+  }
 }
