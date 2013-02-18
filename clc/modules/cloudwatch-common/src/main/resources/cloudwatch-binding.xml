@@ -207,10 +207,10 @@
     </collection>
   </mapping>
   <mapping class="com.eucalyptus.cloudwatch.StatisticSet" abstract="true">
-    <value name="SampleCount" field="sampleCount" usage="required"/>
-    <value name="Sum" field="sum" usage="required"/>
-    <value name="Minimum" field="minimum" usage="required"/>
-    <value name="Maximum" field="maximum" usage="required"/>
+    <value name="SampleCount" field="sampleCount" usage="optional"/>
+    <value name="Sum" field="sum" usage="optional"/>
+    <value name="Minimum" field="minimum" usage="optional"/>
+    <value name="Maximum" field="maximum" usage="optional"/>
   </mapping>
   <mapping class="com.eucalyptus.cloudwatch.DimensionFilters" abstract="true">
     <collection field="member">

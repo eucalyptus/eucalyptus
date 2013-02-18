@@ -2,6 +2,7 @@ package com.eucalyptus.cloudwatch;
 
 import java.util.Collection;
 import java.util.Date;
+import java.util.List;
 import java.util.Map;
 
 import javax.annotation.Nullable;
@@ -13,6 +14,7 @@ import com.eucalyptus.auth.Permissions;
 import com.eucalyptus.auth.policy.PolicySpec;
 import com.eucalyptus.cloudwatch.domain.listmetrics.ListMetric;
 import com.eucalyptus.cloudwatch.domain.listmetrics.ListMetricManager;
+import com.eucalyptus.cloudwatch.domain.metricdata.MetricDataQueue;
 import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.util.EucalyptusCloudException;
@@ -48,7 +50,15 @@ public class CloudWatchService {
     }
     
     final OwnerFullName ownerFullName = ctx.getUserFullName();
-    
+    final String nameSpace = request.getNamespace();
+    final List<MetricDatum> metricDatum = Lists.newArrayList(request.getMetricData().getMember());
+    //TODO: validate mon-put-data:  Malformed input-The parameter MetricData.member.1.StatisticValues.Maximum must
+    //be greater than MetricData.member.1.StatisticValues.Minimum.
+    //TODO: on-put-data:  Malformed input-The parameters MetricData.member.1.Value and
+    // MetricData.member.1.StatisticValues are mutually exclusive and you have
+    // specified both.
+    MetricDataQueue.getInstance().insertMetricData(ownerFullName.getUserId(), ownerFullName.getAccountNumber(), nameSpace, metricDatum);
+
     return reply;
   }
 

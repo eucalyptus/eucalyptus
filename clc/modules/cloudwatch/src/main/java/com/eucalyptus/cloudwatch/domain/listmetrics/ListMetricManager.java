@@ -9,6 +9,7 @@ import java.util.TreeSet;
 
 import javax.persistence.EntityTransaction;
 
+import org.apache.log4j.Logger;
 import org.hibernate.Criteria;
 import org.hibernate.criterion.Disjunction;
 import org.hibernate.criterion.Restrictions;
@@ -18,8 +19,9 @@ import com.eucalyptus.entities.Entities;
 import com.eucalyptus.records.Logs;
 
 public class ListMetricManager {
+	private static final Logger LOG = Logger.getLogger(ListMetricManager.class);
   public static void addMetric(String accountId, String metricName, String namespace, Map<String, String> dimensionMap) {
-    if (dimensionMap == null) {
+	  if (dimensionMap == null) {
       dimensionMap = new HashMap<String, String>();
     } else if (dimensionMap.size() > ListMetric.MAX_DIM_NUM) {
       throw new IllegalArgumentException("Too many dimensions for metric, " + dimensionMap.size());
