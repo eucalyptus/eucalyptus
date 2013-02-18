@@ -157,6 +157,11 @@ import edu.ucsb.eucalyptus.cloud.VirtualBootRecord;
 import edu.ucsb.eucalyptus.cloud.VmInfo;
 import edu.ucsb.eucalyptus.msgs.AttachedVolume;
 import edu.ucsb.eucalyptus.msgs.InstanceBlockDeviceMapping;
+import edu.ucsb.eucalyptus.msgs.InstanceStateType;
+import edu.ucsb.eucalyptus.msgs.InstanceStatusDetailsSetItemType;
+import edu.ucsb.eucalyptus.msgs.InstanceStatusDetailsSetType;
+import edu.ucsb.eucalyptus.msgs.InstanceStatusItemType;
+import edu.ucsb.eucalyptus.msgs.InstanceStatusType;
 import edu.ucsb.eucalyptus.msgs.RunningInstancesItemType;
 
 @Entity
@@ -1978,5 +1983,41 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
   private void setBootRecord( VmBootRecord bootRecord ) {
     this.bootRecord = bootRecord;
   }
-  
+
+  @TypeMapper
+  public enum StatusTransform implements Function<VmInstance, InstanceStatusItemType> {
+    INSTANCE;
+
+    @Override
+    public InstanceStatusItemType apply( final VmInstance instance ) {
+      final InstanceStatusItemType instanceStatusItemType = new InstanceStatusItemType();
+      final VmState displayState = instance.getDisplayState();
+
+      instanceStatusItemType.setInstanceId( instance.getInstanceId() );
+      instanceStatusItemType.setAvailabilityZone( instance.getPlacement().getPartitionName() );
+
+      final InstanceStateType state = new InstanceStateType();
+      state.setCode( displayState.getCode() );
+      state.setName( displayState.getName() );
+      instanceStatusItemType.setInstanceState( state );
+      instanceStatusItemType.setInstanceStatus( buildStatus() );
+      instanceStatusItemType.setSystemStatus( buildStatus() );
+
+      return instanceStatusItemType;
+    }
+
+    private InstanceStatusType buildStatus() {
+      final InstanceStatusDetailsSetItemType statusDetailsItem = new InstanceStatusDetailsSetItemType();
+      statusDetailsItem.setName( "reachability" );
+      statusDetailsItem.setStatus( "passed" );
+
+      final InstanceStatusDetailsSetType statusDetails = new InstanceStatusDetailsSetType();
+      statusDetails.getItem().add( statusDetailsItem );
+
+      final InstanceStatusType instanceStatus = new InstanceStatusType();
+      instanceStatus.setStatus( "ok" );
+      instanceStatus.setDetails( statusDetails );
+      return instanceStatus;
+    }
+  }
 }

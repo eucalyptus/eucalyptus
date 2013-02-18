@@ -23,9 +23,11 @@ import java.util.Collections;
 import java.util.Map;
 import javax.annotation.Nonnull;
 import org.hibernate.criterion.Criterion;
+import org.hibernate.criterion.Junction;
 import org.hibernate.criterion.Restrictions;
 import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
+import com.google.common.collect.Maps;
 
 /**
  * Filter can be used to filter collections or queries.
@@ -106,6 +108,27 @@ public class Filter {
    */
   static Filter alwaysTrue() {
     return new Filter();
+  }
+
+  /**
+   * Combine filters.
+   *
+   * @param filter The filter to combine with
+   * @return The new filter
+   */
+  public Filter and( final Filter filter ) {
+    final Map<String,String> aliases = Maps.newHashMap();
+    aliases.putAll( this.aliases );
+    aliases.putAll( filter.aliases );
+    final Junction and = Restrictions.conjunction();
+    and.add( this.criterion );
+    and.add( filter.criterion );
+    return new Filter(
+      aliases,
+      and,
+      Predicates.and( this.predicate, filter.predicate ),
+      this.filteringOnTags || filter.filteringOnTags
+    );
   }
 }
 
