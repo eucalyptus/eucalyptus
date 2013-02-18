@@ -74,10 +74,10 @@ import com.google.common.collect.Sets;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 import edu.ucsb.eucalyptus.msgs.CreateTagsResponseType;
 import edu.ucsb.eucalyptus.msgs.CreateTagsType;
-import edu.ucsb.eucalyptus.msgs.DescribeInstancesResponseType;
-import edu.ucsb.eucalyptus.msgs.DescribeInstancesType;
+import edu.ucsb.eucalyptus.msgs.DescribeInstanceStatusResponseType;
+import edu.ucsb.eucalyptus.msgs.DescribeInstanceStatusType;
 import edu.ucsb.eucalyptus.msgs.Filter;
-import edu.ucsb.eucalyptus.msgs.ReservationInfoType;
+import edu.ucsb.eucalyptus.msgs.InstanceStatusItemType;
 import edu.ucsb.eucalyptus.msgs.ResourceTag;
 import edu.ucsb.eucalyptus.msgs.RunInstancesResponseType;
 import edu.ucsb.eucalyptus.msgs.RunInstancesType;
@@ -149,7 +149,9 @@ public class ActivityManager {
     // Monitor instances
     try {
       for ( final AutoScalingGroup group : autoScalingGroups.listRequiringMonitoring( 10000L ) ) {
-        runTask( new MonitoringScalingProcessTask( group ) );
+        runTask( new MonitoringScalingProcessTask(
+            group,
+            Lists.newArrayList( Iterables.transform( autoScalingInstances.listByGroup( group ), instanceId() ) ) ) );
       }
     } catch ( Exception e ) {
       logger.error( e, e );
@@ -277,11 +279,12 @@ public class ActivityManager {
     return terminateInstances;
   }
 
-  private DescribeInstancesType monitorInstances( final String autoScalingGroupName ) {
-    final DescribeInstancesType describeInstancesType = new DescribeInstancesType();
-    describeInstancesType.getFilterSet().add( filter( "tag:aws:autoscaling:groupName", autoScalingGroupName ) );
-    describeInstancesType.getFilterSet().add( filter( "instance-state-name", "running" ) );
-    return describeInstancesType;
+  private DescribeInstanceStatusType monitorInstances( final Collection<String> instanceIds ) {
+    final DescribeInstanceStatusType describeInstanceStatusType = new DescribeInstanceStatusType();
+    describeInstanceStatusType.getInstancesSet().addAll( instanceIds );
+    describeInstanceStatusType.getFilterSet().add( filter( "system-status.status", "ok" ) );
+    describeInstanceStatusType.getFilterSet().add( filter( "instance-status.status", "ok" ) );
+    return describeInstanceStatusType;
   }
 
   private Filter filter( final String name, final String value ) {
@@ -289,22 +292,6 @@ public class ActivityManager {
     filter.setName( name );
     filter.getValueSet().add( value );
     return filter;
-  }
-
-  private void setScalingActivityFinalStatus( final ActivityStatusCode status, final ScalingActivity activity ) {
-    try {
-      scalingActivities.update( activity.getOwner(),
-          activity.getActivityId(),
-          new Callback<ScalingActivity>(){
-            @Override
-            public void fire( final ScalingActivity input ) {
-              input.setActivityStatusCode( status );
-              input.setEndTime( new Date() );
-            }
-          } );
-    } catch ( AutoScalingMetadataException e ) {
-      logger.error( e, e );
-    }
   }
 
   /**
@@ -408,10 +395,17 @@ public class ActivityManager {
 
   private abstract class ScalingActivityTask<RES extends BaseMessage> {
     private volatile ScalingActivity activity;
+    private final boolean persist;
     private volatile boolean dispatched = false;
 
     protected ScalingActivityTask( final ScalingActivity activity ) {
+      this( activity, true );
+    }
+
+    protected ScalingActivityTask( final ScalingActivity activity,
+                                   final boolean persist ) {
       this.activity = activity;
+      this.persist = persist;
     }
 
     ScalingActivity getActivity() {
@@ -428,7 +422,7 @@ public class ActivityManager {
 
     final CheckedListenableFuture<Boolean> dispatch( final ActivityContext context ) {
       try {
-        activity = scalingActivities.save( activity );
+        activity = persist ? scalingActivities.save( activity ) : activity;
         final CheckedListenableFuture<Boolean> future = Futures.newGenericeFuture();
         dispatchInternal( context, new Callback.Checked<RES>(){
           @Override
@@ -462,14 +456,34 @@ public class ActivityManager {
     void dispatchFailure( ActivityContext context, Throwable throwable ) {
       // error, assume no instances run for now
       logger.error( "Activity error", throwable ); //TODO:STEVE: Remove failure logging and record in scaling activity details/description
-      setScalingActivityFinalStatus( ActivityStatusCode.Failed, getActivity() );
+      setActivityFinalStatus( ActivityStatusCode.Failed );
     }
 
     abstract void dispatchSuccess( ActivityContext context, RES response );
 
     void failIfNotDispatched() {
-      if ( !dispatched && activity.getCreationTimestamp() != null ) {
-        setScalingActivityFinalStatus( ActivityStatusCode.Failed, getActivity() );
+      if ( !dispatched ) {
+        setActivityFinalStatus( ActivityStatusCode.Failed );
+      }
+    }
+
+    void setActivityFinalStatus( final ActivityStatusCode activityStatusCode ) {
+      final ScalingActivity activity = getActivity();
+      if ( activity.getCreationTimestamp() != null ) { // only update if persistent
+        try {
+          scalingActivities.update(
+              activity.getOwner(),
+              activity.getActivityId(),
+              new Callback<ScalingActivity>(){
+                @Override
+                public void fire( final ScalingActivity input ) {
+                  input.setActivityStatusCode( activityStatusCode );
+                  input.setEndTime( new Date() );
+                }
+              } );
+        } catch ( AutoScalingMetadataException e ) {
+          logger.error( e, e );
+        }
       }
     }
   }
@@ -618,7 +632,7 @@ public class ActivityManager {
 
       this.instanceIds.set( ImmutableList.copyOf( instanceIds ) );
 
-      setScalingActivityFinalStatus( ActivityStatusCode.Successful, getActivity() );
+      setActivityFinalStatus( ActivityStatusCode.Successful );
     }
 
     List<String> getInstanceIds() {
@@ -720,7 +734,7 @@ public class ActivityManager {
       } catch ( AutoScalingMetadataException e ) {
         logger.error( e, e );
       }
-      setScalingActivityFinalStatus( ActivityStatusCode.Successful, getActivity() );
+      setActivityFinalStatus( ActivityStatusCode.Successful );
     }
 
     boolean wasTerminated() {
@@ -824,45 +838,53 @@ public class ActivityManager {
     }
   }
 
-  private class MonitoringScalingActivityTask extends ScalingActivityTask<DescribeInstancesResponseType> {
-    private final AtomicReference<List<String>> instanceIds = new AtomicReference<List<String>>(
+  private class MonitoringScalingActivityTask extends ScalingActivityTask<DescribeInstanceStatusResponseType> {
+    private final List<String> instanceIds;
+    private final AtomicReference<List<String>> healthyInstanceIds = new AtomicReference<List<String>>(
         Collections.<String>emptyList()
     );
 
-    private MonitoringScalingActivityTask( final ScalingActivity activity ) {
-      super( activity );
+    private MonitoringScalingActivityTask( final ScalingActivity activity,
+                                           final List<String> instanceIds ) {
+      super( activity, false );
+      this.instanceIds = instanceIds;
     }
 
     @Override
     void dispatchInternal( final ActivityContext context,
-                           final Callback.Checked<DescribeInstancesResponseType> callback ) {
+                           final Callback.Checked<DescribeInstanceStatusResponseType> callback ) {
       final EucalyptusClient client = context.getEucalyptusClient();
-      client.dispatch( monitorInstances( getGroup().getAutoScalingGroupName() ), callback );
+      client.dispatch( monitorInstances( instanceIds ), callback );
     }
 
     @Override
     void dispatchSuccess( final ActivityContext context,
-                          final DescribeInstancesResponseType response ) {
-      final List<String> runningInstanceIds = Lists.newArrayList();
-      for ( final ReservationInfoType reservation : response.getReservationSet() ){
-        for ( final RunningInstancesItemType instance : reservation.getInstancesSet() ) {
-          runningInstanceIds.add( instance.getInstanceId() );
+                          final DescribeInstanceStatusResponseType response ) {
+      final List<String> healthyInstanceIds = Lists.newArrayList();
+      if ( response.getInstanceStatusSet() != null &&
+          response.getInstanceStatusSet().getItem() != null ) {
+        for ( final InstanceStatusItemType instanceStatus : response.getInstanceStatusSet().getItem() ){
+          healthyInstanceIds.add( instanceStatus.getInstanceId() );
         }
       }
 
-      this.instanceIds.set( ImmutableList.copyOf( runningInstanceIds ) );
+      this.healthyInstanceIds.set( ImmutableList.copyOf( healthyInstanceIds ) );
 
-      setScalingActivityFinalStatus( ActivityStatusCode.Successful, getActivity() );
+      setActivityFinalStatus( ActivityStatusCode.Successful );
     }
 
-    List<String> getInstanceIds() {
-      return instanceIds.get();
+    List<String> getHealthyInstanceIds() {
+      return healthyInstanceIds.get();
     }
   }
 
   private class MonitoringScalingProcessTask extends ScalingProcessTask<MonitoringScalingActivityTask> {
-    MonitoringScalingProcessTask( final AutoScalingGroup group ) {
+    private final List<String> instanceIds;
+
+    MonitoringScalingProcessTask( final AutoScalingGroup group,
+                                  final List<String> instanceIds ) {
       super( group, "Monitor" );
+      this.instanceIds = instanceIds;
     }
 
     @Override
@@ -872,14 +894,14 @@ public class ActivityManager {
 
     @Override
     List<MonitoringScalingActivityTask> buildActivityTasks() throws AutoScalingMetadataException {
-      return Collections.singletonList( new MonitoringScalingActivityTask( newActivity() ) );
+      return Collections.singletonList( new MonitoringScalingActivityTask( newActivity(), instanceIds ) );
     }
 
     @Override
     void partialSuccess( final List<MonitoringScalingActivityTask> tasks ) {
       final List<String> instanceIds = Lists.newArrayList();
       for ( final MonitoringScalingActivityTask task : tasks ) {
-        instanceIds.addAll( task.getInstanceIds() );
+        instanceIds.addAll( task.getHealthyInstanceIds() );
       }
 
       try {
