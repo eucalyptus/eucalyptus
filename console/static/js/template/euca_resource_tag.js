@@ -58,79 +58,47 @@
 	       },
                "mDataProp": "value",
             },
-/*            {
-               "sTitle": "Button",
-               "fnRender": function(oObj) {
-                 var dualButton = $('<a>').addClass('dual-tag-button').attr('id', 'dualButton-'+oObj.aData.name).text(image_launch_btn);
-                 return asHTML(dualButton);
-               },
-               "mDataProp": null,
-            },
-*/
           ],
 
           "fnDrawCallback" : function() { 
-             tdResourceTag = $('<td>').html('<input name="tag_key" type="text" id="tag_key" size="128">');
-             tdResourceTag.append($('<td>').html('<input name="tag_value" type="text" id="tag_value" size="128">'));
-             tdResourceTag.append($('<td>').html($('<a>').addClass('button table-button').attr('id', 'addTagButton').text(image_launch_btn)));
-             var trResourceTag = $('<tr>').addClass('resource-tag-input-row-tr').html(tdResourceTag.html());
-             
+            
+             // For each row of dataTable, add an extra column for the dual button. 
 	     thisObj.baseTable.find('tbody').find('tr').each(function(index, tr){
                  var $currentRow = $(tr);
-                 var key = $(tr).children().first().text();
-                 var dualButton = $('<a>').addClass('dual-tag-button').attr('id', 'dualButton-'+key).text(image_launch_btn).click(function(e){
-                   alert('clicked on ' + key);
-                 });
-                 var newTd = $('<td>').append(dualButton);
-                 $currentRow.children().last().after(newTd);
-/*                 var allTds = thisObj.baseTable.fnGetTds($currentRow[0]);      
-                 $(allTds).each(function(){ 
-                  });
-*/
-              });
+                 var key = $currentRow.children().first().text();   // Grab the key of the tag, which is the first 'tr' item
+                 var $dualButtonRow = $currentRow.children().last().text();  // Grab the last column's text value
+                 if( $dualButtonRow != 'edit' ){                             // If the dual button column was rendered previously, skip the step below. 
+                   var dualButton = $('<span>').addClass('dual-tag-button-span').attr('id', 'dualButtonSpan-'+key);
+                   var editButton = $('<a>').addClass('button dual-tag-button').attr('id', 'dualButton-edit-'+key).text('edit');
+                   editButton.bind('click', function(e){
+                     alert('clicked on ' + key);
+                   });
+                 
+                   dualButton.append(editButton);
+                   dualButton.bind('mouseenter', function(e){
+                     var removeButton = $('<a>').addClass('button dual-tag-button').attr('id', 'dualButton-remove-'+key).text('remove');
+                     removeButton.bind('click', function(e){
+                       alert('clicked to remove ' + key);
+                     });
+                     dualButton.append(removeButton);
+                   });
+                   dualButton.bind('mouseleave', function(e){
+                     dualButton.find('#dualButton-remove-'+key+'.dual-tag-button').remove();
+                   }); 
+                   // Attach the new column that contains the dualButton for this row
+                   var newTd = $('<td>').addClass('dual-tag-button-td').attr('id', 'dualButtonTd-'+key).append(dualButton);
+                   $currentRow.children().last().after(newTd);
+                 };
+             });
 
-              thisObj.baseTable.find('tr').last().after(trResourceTag);
-/*
-              thisObj.baseTable.find('tbody').delegate('.dual-tag-button', 'click', function(e){
-                var iPos = thisObj.baseTable.fnGetPosition( $(this).closest("tr").get(0) );
-                if(iPos!=null || e.type=='click'){
-                  var aData = thisObj.baseTable.fnGetData( iPos ); //get data of the clicked row
-                  var key = aData.name; // get 'key' of the row
-                  var value = aData.value; //get 'value' of the row
-      //            thisObj.baseTable.find('#dualButton'+key+'.dual-tag-button').text('hi');
-                  thisObj.baseTable.fnUpdate("Item Updated", iPos, 1);
-       //           thisObj.baseTable.fnDeleteRow(iPos);
-       //           thisObj.baseTable.fnClearTable(this);           
-                  alert('clicked on ' + key);
-                };
-        //        alert("hi " + $(this).parent().parent().text());
-              });
-*/
-/*
-              thisObj.baseTable.find("tbody").delegate("tr", "click", function() {
-                var iPos = thisObj.baseTable.fnGetPosition( this );
-                if(iPos!=null){
-                  var aData = thisObj.baseTable.fnGetData( iPos ); //get data of the clicked row
-                  var key = aData[0]; // get 'key' of the row
-                  var value = aData[1]; //get 'value' of the row
-                  //thisObj.baseTable.fnDeleteRow(iPos);//delete row
-                  alert("clicked : Row "+key+"="+value+" "+$(this).text());
-                };
-              });
-*/
-       //       alert("hello " + thisObj.options.resource_id + " " + message);
+             // Construct the last row of the table; a special case for the add-only tag row.
+             tdResourceTag = $('<td>').html('<input name="tag_key" type="text" id="tag_key" size="128">');
+             tdResourceTag.after($('<td>').html('<input name="tag_value" type="text" id="tag_value" size="256">'));
+             tdResourceTag.after($('<td>').append($('<a>').addClass('button single-tag-button').attr('id', 'singleButton-add').text('add')));
+             thisObj.baseTable.find('tr').last().after($('<tr>').addClass('resource-tag-input-row-tr').append(tdResourceTag));
           },
      });
-/*     demo.fnAddData([
-       {
-         "name": '<input name="tag_key" type="text" id="tag_key" size="128">',
-         "value": '<input name="tag_value" type="text" id="tag_value" size="256">',
-         "type": "html"
-      }
-     ]);
-*/
      thisObj.element.append(thisObj.baseTable);
-//     alert("hello! ");
     },
 
     // Use the _setOption method to respond to changes to options
