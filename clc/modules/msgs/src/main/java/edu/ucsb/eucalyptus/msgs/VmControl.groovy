@@ -237,6 +237,7 @@ public class RunInstancesType extends VmControlMessage {
   String placementGroup = "default"; //** added 2010-02-01  **/
   @HttpEmbedded (multiple = true)
   ArrayList<BlockDeviceMappingItemType> blockDeviceMapping = new ArrayList<BlockDeviceMappingItemType>(); //** added 2008-02-01  **/
+  @HttpParameterMapping (parameter = "Monitoring.Enabled")
   Boolean monitoring = false;
   String subnetId;
   Boolean disableTerminate;
@@ -325,7 +326,7 @@ public class RunningInstancesItemType extends EucalyptusData implements Comparab
   String kernel;
   String ramdisk;
   String platform;
-  Boolean monitoring = false;
+  String monitoring;
   Boolean disableApiTermination = false;
   Boolean instanceInitiatedShutdownBehavior = "stop"; //or "terminate"
   String ipAddress;
@@ -550,6 +551,7 @@ public class MonitorInstancesResponseType extends VmControlMessage {
 }
 
 public class MonitorInstancesType extends VmControlMessage {
+  @HttpParameterMapping(parameter="InstanceId")
   ArrayList<String> instancesSet = new ArrayList<String>();
   public MonitorInstancesType() {  }
 }
@@ -559,6 +561,7 @@ public class UnmonitorInstancesResponseType extends VmControlMessage {
 }
 
 public class UnmonitorInstancesType extends VmControlMessage {
+  @HttpParameterMapping(parameter="InstanceId")
   ArrayList<String> instancesSet = new ArrayList<String>();
   public MonitorInstancesType() {  }
 }

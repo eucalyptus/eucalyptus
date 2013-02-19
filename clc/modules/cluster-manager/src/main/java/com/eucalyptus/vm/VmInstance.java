@@ -433,7 +433,8 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
                                               .bootRecord( bootSet,
                                                            userData,
                                                            keyPair,
-                                                           vmType )
+                                                           vmType,
+                                                           Boolean.FALSE)
                                               .placement( partition, partition.getName( ) )
                                               .networking( networks, index )
                                               .build( launchIndex );
@@ -901,7 +902,8 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
                                                      .bootRecord( allocInfo.getBootSet( ),
                                                                   allocInfo.getUserData( ),
                                                                   allocInfo.getSshKeyPair( ),
-                                                                  allocInfo.getVmType( ) )
+                                                                  allocInfo.getVmType( ), 
+                                                                  allocInfo.isMonitoring() )
                                                      .placement( allocInfo.getPartition( ), allocInfo.getRequest( ).getAvailabilityZone( ) )
                                                      .networking( allocInfo.getNetworkGroups( ), token.getNetworkIndex( ) )
                                                      .addressing( allocInfo.isUsePrivateAddressing() )
@@ -970,8 +972,8 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
       return this;
     }
     
-    public Builder bootRecord( final BootableSet bootSet, final byte[] userData, final SshKeyPair sshKeyPair, final VmType vmType ) {
-      this.vmBootRecord = new VmBootRecord( bootSet, userData, sshKeyPair, vmType );
+    public Builder bootRecord( final BootableSet bootSet, final byte[] userData, final SshKeyPair sshKeyPair, final VmType vmType, final boolean monitoring ) {
+      this.vmBootRecord = new VmBootRecord( bootSet, userData, sshKeyPair, vmType, monitoring );
       return this;
     }
     
@@ -1822,7 +1824,13 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
           runningInstance.setPlacement( input.getPlacement( ).getPartitionName( ) );
           
           runningInstance.setLaunchTime( input.getLaunchRecord( ).getLaunchTime( ) );
-
+          
+          if (input.getBootRecord().isMonitoring()) {
+            runningInstance.setMonitoring("enabled");
+          } else {
+            runningInstance.setMonitoring("disabled");  
+          }
+          
           if ( input.isBlockStorage( ) ) {
             runningInstance.setRootDeviceType( ROOT_DEVICE_TYPE_EBS );
           }
@@ -2020,4 +2028,9 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
       return instanceStatus;
     }
   }
+
+  public Boolean getMonitoring() {
+    return this.getBootRecord().isMonitoring();
+  }
+  
 }

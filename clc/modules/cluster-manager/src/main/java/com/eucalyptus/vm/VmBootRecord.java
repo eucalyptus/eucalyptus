@@ -113,6 +113,9 @@ public class VmBootRecord {
   @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
   private Set<VmVolumeAttachment> persistentVolumes = Sets.newHashSet( );
   
+  @Column( name = "metadata_vm_monitoring")
+  private boolean 		  monitoring;
+  
   @Column( name = "metadata_vm_user_data" )
   private byte[]                  userData;
   @Lob
@@ -127,7 +130,7 @@ public class VmBootRecord {
     super( );
   }
   
-  VmBootRecord( BootableSet bootSet, byte[] userData, SshKeyPair sshKeyPair, VmType vmType ) {
+  VmBootRecord( BootableSet bootSet, byte[] userData, SshKeyPair sshKeyPair, VmType vmType, boolean monitoring ) {
     checkParam( "Bootset must not be null", bootSet, notNullValue( ) );
     if ( bootSet.getMachine() instanceof ImageInfo ) {
       this.machineImage = ( ImageInfo ) bootSet.getMachine( );
@@ -142,6 +145,7 @@ public class VmBootRecord {
     this.userData = userData;
     this.sshKeyString = sshKeyPair.getPublicKey( );
     this.vmType = vmType;
+    this.monitoring = monitoring;
   }
   
   @PreRemove
@@ -197,7 +201,11 @@ public class VmBootRecord {
     this.platform = platform;
   }
   
-  public boolean isBlockStorage( ) {
+  public final void setMonitoring(Boolean monitoring) {
+    this.monitoring = monitoring;
+  }
+
+public boolean isBlockStorage( ) {
     return this.getMachine( ) instanceof BlockStorageImageInfo;
   }
   
@@ -225,7 +233,11 @@ public class VmBootRecord {
     return this.machineImage;
   }
   
-  private void setMachineImage( ImageInfo machineImage ) {
+  public final Boolean isMonitoring() {
+    return monitoring;
+}
+
+private void setMachineImage( ImageInfo machineImage ) {
     this.machineImage = machineImage;
   }
   

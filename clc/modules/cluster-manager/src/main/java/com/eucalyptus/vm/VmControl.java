@@ -128,6 +128,8 @@ import com.google.common.collect.Maps;
 import com.google.common.collect.Multimap;
 import com.google.common.collect.Sets;
 import com.google.common.collect.TreeMultimap;
+import com.google.gwt.thirdparty.guava.common.collect.Iterators;
+
 import edu.ucsb.eucalyptus.msgs.CreatePlacementGroupResponseType;
 import edu.ucsb.eucalyptus.msgs.CreatePlacementGroupType;
 import edu.ucsb.eucalyptus.msgs.DeletePlacementGroupResponseType;
@@ -148,6 +150,7 @@ import edu.ucsb.eucalyptus.msgs.GetPasswordDataType;
 import edu.ucsb.eucalyptus.msgs.InstanceStatusItemType;
 import edu.ucsb.eucalyptus.msgs.ModifyInstanceAttributeResponseType;
 import edu.ucsb.eucalyptus.msgs.ModifyInstanceAttributeType;
+import edu.ucsb.eucalyptus.msgs.MonitorInstanceState;
 import edu.ucsb.eucalyptus.msgs.MonitorInstancesResponseType;
 import edu.ucsb.eucalyptus.msgs.MonitorInstancesType;
 import edu.ucsb.eucalyptus.msgs.RebootInstancesResponseType;
@@ -493,8 +496,21 @@ public class VmControl {
   }
   
   public UnmonitorInstancesResponseType unmonitorInstances( final UnmonitorInstancesType request ) {
-    final UnmonitorInstancesResponseType reply = request.getReply( );
-    return reply;
+
+      final UnmonitorInstancesResponseType reply = request.getReply( );
+
+      ArrayList<String> instanceSet = Lists.newArrayList( request.getInstancesSet() );
+      ArrayList<MonitorInstanceState> monitorFalseList = Lists.newArrayList();
+      
+      for(String inst : instanceSet) {
+	  final MonitorInstanceState monitorInstanceState = new MonitorInstanceState();
+	  monitorInstanceState.setInstanceId(inst);
+	  monitorInstanceState.setMonitoringState("disabled");
+	  monitorFalseList.add(monitorInstanceState);
+      }
+      
+      reply.setInstancesSet(SetMonitorFunction.INSTANCE.apply( monitorFalseList ) );
+      return reply;
   }
   
   public StartInstancesResponseType startInstances( final StartInstancesType request ) throws Exception {
@@ -590,10 +606,70 @@ public class VmControl {
   }
   
   public MonitorInstancesResponseType monitorInstances( final MonitorInstancesType request ) {
-    final MonitorInstancesResponseType reply = request.getReply( );
-    return reply;
+    
+      final MonitorInstancesResponseType reply = request.getReply();
+
+      ArrayList<String> instanceSet = Lists.newArrayList( request.getInstancesSet() );
+      ArrayList<MonitorInstanceState> monitorTrueList = Lists.newArrayList();
+      
+      for(final String inst : instanceSet) {
+	  final MonitorInstanceState monitorInstanceState = new MonitorInstanceState();
+	  monitorInstanceState.setInstanceId(inst);
+	  monitorInstanceState.setMonitoringState("enabled");
+	  monitorTrueList.add(monitorInstanceState);
+      }
+      
+      reply.setInstancesSet(SetMonitorFunction.INSTANCE.apply( monitorTrueList ) );
+      return reply;
   }
   
+  private enum SetMonitorFunction implements Function<ArrayList<MonitorInstanceState>, ArrayList<MonitorInstanceState>> {
+      INSTANCE;
+
+      @Override
+      public ArrayList<MonitorInstanceState> apply(
+	      final ArrayList<MonitorInstanceState> monitorList) {
+
+	  ArrayList<MonitorInstanceState> monitorInstanceSet = Lists
+		  .newArrayList();
+
+	  for (final MonitorInstanceState monitorInst : monitorList) {
+
+	      final EntityTransaction db = Entities.get(VmInstance.class);
+
+	      try {
+
+		  VmInstance vmInst = VmInstances.lookup(monitorInst
+			  .getInstanceId());
+
+		  if (RestrictedTypes.filterPrivileged().apply(vmInst)) {
+		      vmInst.getBootRecord()
+		      .setMonitoring(
+			      monitorInst.getMonitoringState()
+			      .equals("enabled") ? Boolean.TRUE
+				      : Boolean.FALSE);
+		      Entities.merge(vmInst);
+		      monitorInstanceSet.add(monitorInst);
+		      db.commit();
+		  }
+
+	      } catch (NoSuchElementException nse) {
+		  LOG.debug("Unable to find instance : "
+			  + monitorInst.getInstanceId());
+	      } catch (Exception ex) {
+		  LOG.debug("Unable to set monitoring state for instance : "
+			  + monitorInst.getInstanceId());
+	      } finally {
+		  if (db.isActive())
+		      db.rollback();
+	      }
+	  }
+
+	  return monitorInstanceSet;
+      }
+
+  }
+    
   public ModifyInstanceAttributeResponseType modifyInstanceAttribute( final ModifyInstanceAttributeType request ) {
     final ModifyInstanceAttributeResponseType reply = request.getReply( );
     return reply;
