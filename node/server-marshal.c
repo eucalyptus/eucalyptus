@@ -1426,7 +1426,7 @@ adb_ncMigrateInstancesResponse_t *ncMigrateInstancesMarshal(adb_ncMigrateInstanc
             goto mi_error;
         }
         for (int i = 0; i < instancesLen; i++) {
-            adb_instanceType_t *instance_adb = adb_ncMigrateInstancesType_get_instance_at(input, env, i);
+            adb_instanceType_t *instance_adb = adb_ncMigrateInstancesType_get_instances_at(input, env, i);
             ncInstance * instance = copy_instance_from_adb(instance_adb, env);
             if (instance == NULL) {
                 LOGERROR("out of memory\n");
