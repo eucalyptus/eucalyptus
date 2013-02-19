@@ -81,23 +81,30 @@ public class UnimplementedMessage extends EucalyptusMessage {
   }
 }
 /** *******************************************************************************/
-public class DescribeReservedInstancesOfferingsType extends UnimplementedMessage {
+public class ReservedInstanceMessage extends EucalyptusMessage {}
+public class DescribeReservedInstancesOfferingsType extends ReservedInstanceMessage {
   //:: reservedInstancesOfferingsSet/item/reservedInstancesOfferingId :://
   ArrayList<String> instanceIds = new ArrayList<String>();
   String instanceType;
   String availabilityZone;
   String productDescription;
 }
-public class DescribeReservedInstancesOfferingsResponseType extends UnimplementedMessage {
+public class DescribeReservedInstancesOfferingsResponseType extends ReservedInstanceMessage {
   ArrayList<String> reservedInstancesOfferingsSet = new ArrayList<String>();
 }
-public class DescribeReservedInstancesType extends UnimplementedMessage {
+public class DescribeReservedInstancesType extends ReservedInstanceMessage {
   //:: reservedInstancesSet/item/reservedInstancesId :://
   ArrayList<String> instanceIds = new ArrayList<String>();
 }
-public class DescribeReservedInstancesResponseType extends UnimplementedMessage {
+public class DescribeReservedInstancesResponseType extends ReservedInstanceMessage {
   ArrayList<String> reservedInstancesSet = new ArrayList<String>();
 }
+/** *******************************************************************************/
+public class SpotInstanceMessage extends EucalyptusMessage {}
+public class DescribeSpotPriceHistoryType extends SpotInstanceMessage {}
+public class DescribeSpotPriceHistoryResponseType extends SpotInstanceMessage {}
+public class DescribeSpotInstanceRequestsType extends SpotInstanceMessage {}
+public class DescribeSpotInstanceRequestsResponseType extends SpotInstanceMessage {}
 /** *******************************************************************************/
 
 public class CreatePlacementGroupType extends VmPlacementMessage {

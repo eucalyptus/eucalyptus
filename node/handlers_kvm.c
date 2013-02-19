@@ -708,7 +708,6 @@ static int doMigrateInstance (struct nc_state_t * nc, ncMetadata * pMeta, ncInst
 
             char localDevReal[32], localDevTag[256], remoteDevReal[132];
             char * tagBuf = localDevTag;
-            char * localDevName = localDevTag; // UNUSED
             ret = convert_dev_names(volume->localDev, localDevReal, tagBuf);
             if (ret) 
                 goto unroll;

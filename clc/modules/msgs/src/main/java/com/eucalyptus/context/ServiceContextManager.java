@@ -92,6 +92,7 @@ import com.eucalyptus.bootstrap.RunDuring;
 import com.eucalyptus.component.Component;
 import com.eucalyptus.component.ComponentId;
 import com.eucalyptus.component.ComponentIds;
+import com.eucalyptus.component.ComponentMessages;
 import com.eucalyptus.component.Components;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.empyrean.Empyrean;
@@ -239,6 +240,7 @@ public class ServiceContextManager {
         final String serviceModel = this.loadModel( componentId );
         final String outString = Templates.prepare( componentId.getServiceModelFileName( ) )
                                           .withProperty( "components", currentComponentIds )
+                                          .withProperty( "ComponentMessages", ComponentMessages.class )
                                           .withProperty( "thisComponent", componentId )
                                           .evaluate( serviceModel );
         final ConfigResource configRsc = createConfigResource( componentId, outString );

@@ -113,6 +113,18 @@
             </outbound>
         </service>
 
+        <service name="PrivateNetworks">
+            <inbound>
+                <inbound-endpoint ref="PrivateNetworksWS"/>
+            </inbound>
+            <component class="com.eucalyptus.vpc.PrivateNetworksManager"/>
+            <outbound>
+                <outbound-pass-through-router>
+                    <outbound-endpoint ref="ReplyQueueEndpoint"/>
+                </outbound-pass-through-router>
+            </outbound>
+        </service>
+
     </model>
 
 </mule>

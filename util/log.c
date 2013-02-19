@@ -141,6 +141,7 @@
  |                                                                            |
 \*----------------------------------------------------------------------------*/
 
+//! To convert the various log level IDs to a readable format
 const char *log_level_names[] = {
     "ALL",
     "EXTREME",
@@ -189,9 +190,10 @@ const char *log_level_prefix[] = {
 //! - unless do_close_fd==TRUE
 //! - unless log file is moved or removed
 //! - unless log file becomes too big and rolls over
-static FILE *LOGFH = NULL;
+static FILE *gLogFh = NULL;
 
-static ino_t log_ino = -1;             //!< the current inode
+//!< the current inode
+static ino_t log_ino = -1;
 
 //! @{
 //! @name parameters, for now unmodifiable
@@ -302,7 +304,7 @@ static FILE *get_file(boolean do_reopen)
         return LOGFH_DEFAULT;
 
     int fd = -1;
-    if (LOGFH != NULL) {               // apparently the stream is still open
+    if (gLogFh != NULL) {              // apparently the stream is still open
         boolean file_changed = FALSE;
         if (!do_reopen && do_stat_log) {    // we are not reopening for every write
             struct stat statbuf;
@@ -315,24 +317,24 @@ static FILE *get_file(boolean do_reopen)
                 file_changed = TRUE;
             }
         }
-        fd = fileno(LOGFH);            // try to get the file descriptor
+        fd = fileno(gLogFh);           // try to get the file descriptor
         if (file_changed || do_reopen || fd < 0) {
-            fclose(LOGFH);
-            LOGFH = NULL;
+            fclose(gLogFh);
+            gLogFh = NULL;
         }
     }
 
 retry:
     // open unless it is already is open
-    if (LOGFH == NULL) {
-        LOGFH = fopen(log_file_path, "a+");
-        if (LOGFH == NULL) {
+    if (gLogFh == NULL) {
+        gLogFh = fopen(log_file_path, "a+");
+        if (gLogFh == NULL) {
             return NULL;
         }
-        fd = fileno(LOGFH);
+        fd = fileno(gLogFh);
         if (fd < 0) {
-            fclose(LOGFH);
-            LOGFH = NULL;
+            fclose(gLogFh);
+            gLogFh = NULL;
             return NULL;
         }
     }
@@ -352,13 +354,13 @@ retry:
             snprintf(oldFile, EUCA_MAX_PATH, "%s", log_file_path);
             snprintf(newFile, EUCA_MAX_PATH, "%s.%d", log_file_path, 0);
             rename(oldFile, newFile);
-            fclose(LOGFH);
-            LOGFH = NULL;
+            fclose(gLogFh);
+            gLogFh = NULL;
             goto retry;
         }
     }
 
-    return LOGFH;
+    return gLogFh;
 }
 
 //!
@@ -366,9 +368,9 @@ retry:
 //!
 static void release_file(void)
 {
-    if (do_close_fd && LOGFH != NULL) {
-        fclose(LOGFH);
-        LOGFH = NULL;
+    if (do_close_fd && gLogFh != NULL) {
+        fclose(gLogFh);
+        gLogFh = NULL;
     }
 }
 
@@ -707,7 +709,7 @@ int logprintfl(const char *func, const char *file, int line, log_level_e level, 
 {
     int offset = 0;
     boolean custom_spec = FALSE;
-    char buf[LOGLINEBUF] = { 0 };
+    char buf[LOGLINEBUF] = "";
     const char *prefix_spec = NULL;
 
     // return if level is invalid or below the threshold

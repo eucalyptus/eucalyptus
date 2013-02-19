@@ -78,10 +78,10 @@
 \*----------------------------------------------------------------------------*/
 
 #include "eucalyptus.h"
-#include "data.h" // for ncInstance
+#include "data.h"                      // for ncInstance
 #include "sensor.h"
 #include "euca_string.h"
-#include "adb_instanceType.h" // for copy_instance_*
+#include "adb_instanceType.h"          // for copy_instance_*
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |
@@ -370,7 +370,7 @@ static inline adb_virtualMachineType_t *copy_vm_type_to_adb(const axutil_env_t *
                     if ((vbr_type = adb_virtualBootRecordType_create(env)) != NULL) {
                         adb_virtualBootRecordType_set_resourceLocation(vbr_type, env, vbr->resourceLocation);
                         adb_virtualBootRecordType_set_guestDeviceName(vbr_type, env, vbr->guestDeviceName);
-                        adb_virtualBootRecordType_set_size(vbr_type, env, (int64_t)vbr->sizeBytes);
+                        adb_virtualBootRecordType_set_size(vbr_type, env, (int64_t) vbr->sizeBytes);
                         adb_virtualBootRecordType_set_format(vbr_type, env, vbr->formatName);
                         adb_virtualBootRecordType_set_id(vbr_type, env, vbr->id);
                         adb_virtualBootRecordType_set_type(vbr_type, env, vbr->typeName);
