@@ -1420,7 +1420,7 @@ adb_ncMigrateInstancesResponse_t *ncMigrateInstancesMarshal(adb_ncMigrateInstanc
         nodeName = adb_ncMigrateInstancesType_get_nodeName(input, env);
 
         // get operation-specific fields from input
-        instancesLen = adb_ncMigrateInstancesType_sizeof_instance(input, env);
+        instancesLen = adb_ncMigrateInstancesType_sizeof_instances(input, env);
         if ((instances = EUCA_ZALLOC(instancesLen, sizeof(ncInstance *))) == NULL) {
             LOGERROR("out of memory\n");
             goto mi_error;
