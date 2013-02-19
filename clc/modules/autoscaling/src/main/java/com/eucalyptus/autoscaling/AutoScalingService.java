@@ -24,6 +24,7 @@ import static com.eucalyptus.autoscaling.common.AutoScalingResourceName.InvalidR
 import static com.eucalyptus.autoscaling.common.AutoScalingMetadata.AutoScalingGroupMetadata;
 import static com.eucalyptus.autoscaling.common.AutoScalingMetadata.LaunchConfigurationMetadata;
 import static com.eucalyptus.autoscaling.common.AutoScalingResourceName.Type.autoScalingGroup;
+import java.util.Collections;
 import java.util.Date;
 import java.util.EnumSet;
 import java.util.List;
@@ -307,6 +308,14 @@ public class AutoScalingService {
                   Collections2.filter( Collections2.transform( 
                     request.terminationPolicies(), Enums.valueOfFunction( TerminationPolicyType.class) ),
                     Predicates.not( Predicates.isNull() ) ) );
+
+          final List<String> referenceErrors = activityManager.validateReferences(
+              ctx.getUserFullName(),
+              request.availabilityZones()
+          );
+          if ( !referenceErrors.isEmpty() ) {
+            throw Exceptions.toUndeclared( new InvalidParameterValueException( "Invalid parameters " + referenceErrors ) );
+          }
 
           //TODO:STEVE: input validation
           return builder.persist();
@@ -608,7 +617,17 @@ public class AutoScalingService {
                   blockDeviceMappingType.getEbs() != null ? Numbers.intValue( blockDeviceMappingType.getEbs().getVolumeSize() ) : null ); 
             }
           }
-          
+
+          final List<String> referenceErrors = activityManager.validateReferences(
+              ctx.getUserFullName(),
+              Iterables.filter( Lists.newArrayList( request.getImageId(), request.getKernelId(), request.getRamdiskId() ), Predicates.notNull() ),
+              request.getKeyName(),
+              request.getSecurityGroups() == null ? Collections.<String>emptyList() : request.getSecurityGroups().getMember()
+          );
+          if ( !referenceErrors.isEmpty() ) {
+            throw Exceptions.toUndeclared( new InvalidParameterValueException( "Invalid parameters " + referenceErrors ) );
+          }
+
           //TODO:STEVE: input validation
           return builder.persist();
         } catch ( Exception ex ) {
@@ -676,7 +695,7 @@ public class AutoScalingService {
         public void fire( final AutoScalingGroup autoScalingGroup ) {
           if ( RestrictedTypes.filterPrivileged().apply( autoScalingGroup ) ) {
             if ( request.availabilityZones() != null && !request.availabilityZones().isEmpty() )
-              autoScalingGroup.setAvailabilityZones( Sets.newHashSet( request.availabilityZones() ) );
+              autoScalingGroup.setAvailabilityZones( Lists.newArrayList( Sets.newLinkedHashSet( request.availabilityZones() ) ) );
             if ( request.getDefaultCooldown() != null )
               autoScalingGroup.setDefaultCooldown( Numbers.intValue( request.getDefaultCooldown() ) );
             if ( request.getDesiredCapacity() != null )
@@ -698,10 +717,19 @@ public class AutoScalingService {
             if ( request.getMinSize() != null )
               autoScalingGroup.setMinSize( Numbers.intValue( request.getMinSize() ) );
             if ( request.terminationPolicies() != null && !request.terminationPolicies().isEmpty() )
-              autoScalingGroup.setTerminationPolicies( Sets.newHashSet( Iterables.filter( Iterables.transform(
-                  request.terminationPolicies(), Enums.valueOfFunction( TerminationPolicyType.class ) ),
-                  Predicates.not( Predicates.isNull() ) ) ) );
+              autoScalingGroup.setTerminationPolicies( Lists.newArrayList(
+                  Sets.newLinkedHashSet( Iterables.filter(
+                      Iterables.transform( request.terminationPolicies(), Enums.valueOfFunction( TerminationPolicyType.class ) ),
+                      Predicates.not( Predicates.isNull() ) ) ) ) );
             //TODO:STEVE: something for VPC zone identifier or placement group?
+
+            final List<String> referenceErrors = activityManager.validateReferences(
+                autoScalingGroup.getOwner(),
+                autoScalingGroup.getAvailabilityZones()
+            );
+            if ( !referenceErrors.isEmpty() ) {
+              throw Exceptions.toUndeclared( new InvalidParameterValueException( "Invalid parameters " + referenceErrors ) );
+            }
           }
         }
       };
@@ -709,7 +737,7 @@ public class AutoScalingService {
       autoScalingGroups.update(
           accountFullName,
           request.getAutoScalingGroupName(),
-          groupCallback);
+          groupCallback );
     } catch ( AutoScalingMetadataNotFoundException e ) {
       throw new InvalidParameterValueException( "Auto scaling group not found: " + request.getAutoScalingGroupName() );
     } catch ( Exception e ) {

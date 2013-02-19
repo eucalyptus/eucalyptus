@@ -219,11 +219,11 @@ class AutoScalingServiceTest {
     assertEquals( "Health check grace period", 4,  group.getHealthCheckGracePeriod() )
     assertEquals( "Health check type", "EC2", group.getHealthCheckType() )
     assertNotNull( "Availability zones", group.availabilityZones )
-    assertEquals( "Availability zones", [ "zone-1" ] as Set, group.availabilityZones.member as Set )
+    assertEquals( "Availability zones", [ "zone-1" ], group.availabilityZones.member)
     assertNotNull( "Load balancer names", group.loadBalancerNames )
-    assertEquals( "Load balancer names", [ "balancer-1", "balancer-2" ] as Set, group.loadBalancerNames.member as Set )
+    assertEquals( "Load balancer names", [ "balancer-1", "balancer-2" ], group.loadBalancerNames.member )
     assertNotNull( "Termination policies", group.terminationPolicies )
-    assertEquals( "Termination policies", [ "NewestInstance", "Default" ] as Set, group.terminationPolicies.member as Set )
+    assertEquals( "Termination policies", [ "NewestInstance", "Default" ], group.terminationPolicies.member )
 
     service.deleteAutoScalingGroup( new DeleteAutoScalingGroupType( autoScalingGroupName: "Test" ) )
 
@@ -360,7 +360,7 @@ class AutoScalingServiceTest {
             naturalId: '88777c80-7248-11e2-bcfd-0800200c9a66',
             ownerAccountNumber: '000000000000',
             displayName: 'Group1',
-            availabilityZones: [ 'Zone1' ] as Set,
+            availabilityZones: [ 'Zone1' ],
             maxSize: 1,
             minSize: 1,
             desiredCapacity: 1,
@@ -737,6 +737,20 @@ class AutoScalingServiceTest {
           details:  "Details",
           progress: 13
         ) ];
+      }
+
+      @Override
+      List<String> validateReferences( OwnerFullName owner,
+                                       Collection<String> availabilityZones) {
+        []
+      }
+
+      @Override
+      List<String> validateReferences( OwnerFullName owner,
+                                       Iterable<String> imageIds,
+                                       String keyName,
+                                       Iterable<String> securityGroups) {
+        []
       }
     }
   }

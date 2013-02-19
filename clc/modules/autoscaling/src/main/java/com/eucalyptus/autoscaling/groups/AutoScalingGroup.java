@@ -23,6 +23,7 @@ import static com.eucalyptus.autoscaling.common.AutoScalingMetadata.AutoScalingG
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Date;
+import java.util.List;
 import java.util.Set;
 import javax.persistence.CascadeType;
 import javax.persistence.CollectionTable;
@@ -34,6 +35,7 @@ import javax.persistence.FetchType;
 import javax.persistence.JoinColumn;
 import javax.persistence.ManyToOne;
 import javax.persistence.OneToMany;
+import javax.persistence.OrderColumn;
 import javax.persistence.PersistenceContext;
 import javax.persistence.PrePersist;
 import javax.persistence.PreUpdate;
@@ -49,6 +51,7 @@ import com.eucalyptus.autoscaling.configurations.LaunchConfiguration;
 import com.eucalyptus.autoscaling.policies.ScalingPolicy;
 import com.eucalyptus.util.OwnerFullName;
 import com.google.common.base.Objects;
+import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 
 /**
@@ -103,8 +106,9 @@ public class AutoScalingGroup extends AbstractOwnedPersistent implements AutoSca
   @CollectionTable( name = "metadata_auto_scaling_group_availability_zones" )
   @Column( name = "metadata_availability_zone" )
   @JoinColumn( name = "metadata_auto_scaling_group_id" )
+  @OrderColumn( name = "metadata_availability_zone_index")
   @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
-  private Set<String> availabilityZones = Sets.newHashSet();
+  private List<String> availabilityZones = Lists.newArrayList();
   
   //TODO:STEVE: instances?
 
@@ -112,9 +116,10 @@ public class AutoScalingGroup extends AbstractOwnedPersistent implements AutoSca
   @CollectionTable( name = "metadata_auto_scaling_group_termination_policies" )
   @Column( name = "metadata_termination_policy" )
   @JoinColumn( name = "metadata_auto_scaling_group_id" )
+  @OrderColumn( name = "metadata_policy_index")
   @Enumerated( EnumType.STRING )
   @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
-  private Set<TerminationPolicyType> terminationPolicies = Sets.newHashSet(); //TODO:STEVE: this must be ordered ...
+  private List<TerminationPolicyType> terminationPolicies = Lists.newArrayList();
   
   //TODO:STEVE: enabled metrics?
 
@@ -122,8 +127,9 @@ public class AutoScalingGroup extends AbstractOwnedPersistent implements AutoSca
   @CollectionTable( name = "metadata_auto_scaling_group_load_balancers" )
   @Column( name = "metadata_load_balancer_name" )
   @JoinColumn( name = "metadata_auto_scaling_group_id" )
+  @OrderColumn( name = "metadata_load_balancer_index")
   @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
-  private Set<String> loadBalancerNames = Sets.newHashSet(); 
+  private List<String> loadBalancerNames = Lists.newArrayList();
   
   //TODO:STEVE: tags
   
@@ -240,27 +246,27 @@ public class AutoScalingGroup extends AbstractOwnedPersistent implements AutoSca
     this.status = status;
   }
 
-  public Set<String> getAvailabilityZones() {
+  public List<String> getAvailabilityZones() {
     return availabilityZones;
   }
 
-  public void setAvailabilityZones( final Set<String> availabilityZones ) {
+  public void setAvailabilityZones( final List<String> availabilityZones ) {
     this.availabilityZones = availabilityZones;
   }
 
-  public Set<TerminationPolicyType> getTerminationPolicies() {
+  public List<TerminationPolicyType> getTerminationPolicies() {
     return terminationPolicies;
   }
 
-  public void setTerminationPolicies( final Set<TerminationPolicyType> terminationPolicies ) {
+  public void setTerminationPolicies( final List<TerminationPolicyType> terminationPolicies ) {
     this.terminationPolicies = terminationPolicies;
   }
 
-  public Set<String> getLoadBalancerNames() {
+  public List<String> getLoadBalancerNames() {
     return loadBalancerNames;
   }
 
-  public void setLoadBalancerNames( final Set<String> loadBalancerNames ) {
+  public void setLoadBalancerNames( final List<String> loadBalancerNames ) {
     this.loadBalancerNames = loadBalancerNames;
   }
 
@@ -345,9 +351,9 @@ public class AutoScalingGroup extends AbstractOwnedPersistent implements AutoSca
     private Integer healthCheckGracePeriod;
     private HealthCheckType healthCheckType;
     private LaunchConfiguration launchConfiguration;
-    private Set<String> availabilityZones = Sets.newHashSet();
-    private Set<TerminationPolicyType> terminationPolicies = Sets.newHashSet();
-    private Set<String> loadBalancerNames = Sets.newHashSet();
+    private Set<String> availabilityZones = Sets.newLinkedHashSet();
+    private Set<TerminationPolicyType> terminationPolicies = Sets.newLinkedHashSet();
+    private Set<String> loadBalancerNames = Sets.newLinkedHashSet();
 
     BaseBuilder( final OwnerFullName ownerFullName,
                  final String name,
@@ -412,11 +418,11 @@ public class AutoScalingGroup extends AbstractOwnedPersistent implements AutoSca
       group.setDesiredCapacity( Objects.firstNonNull( desiredCapacity, minSize ) );
       group.setHealthCheckGracePeriod( healthCheckGracePeriod );
       group.setHealthCheckType( Objects.firstNonNull( healthCheckType, HealthCheckType.EC2 ) );
-      group.setAvailabilityZones( availabilityZones );
+      group.setAvailabilityZones( Lists.newArrayList( availabilityZones ) );
       group.setTerminationPolicies( terminationPolicies.isEmpty() ? 
-          Collections.singleton(TerminationPolicyType.Default) : 
-          terminationPolicies );
-      group.setLoadBalancerNames( loadBalancerNames );
+          Collections.singletonList(TerminationPolicyType.Default) :
+          Lists.newArrayList( terminationPolicies ) );
+      group.setLoadBalancerNames( Lists.newArrayList( loadBalancerNames ) );
       return group;
     }
   }  

@@ -30,6 +30,9 @@ import java.util.EnumSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.UUID;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 import javax.annotation.Nullable;
@@ -72,16 +75,27 @@ import com.google.common.collect.Maps;
 import com.google.common.collect.Ordering;
 import com.google.common.collect.Sets;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
+import edu.ucsb.eucalyptus.msgs.ClusterInfoType;
 import edu.ucsb.eucalyptus.msgs.CreateTagsResponseType;
 import edu.ucsb.eucalyptus.msgs.CreateTagsType;
+import edu.ucsb.eucalyptus.msgs.DescribeAvailabilityZonesResponseType;
+import edu.ucsb.eucalyptus.msgs.DescribeAvailabilityZonesType;
+import edu.ucsb.eucalyptus.msgs.DescribeImagesResponseType;
+import edu.ucsb.eucalyptus.msgs.DescribeImagesType;
 import edu.ucsb.eucalyptus.msgs.DescribeInstanceStatusResponseType;
 import edu.ucsb.eucalyptus.msgs.DescribeInstanceStatusType;
+import edu.ucsb.eucalyptus.msgs.DescribeKeyPairsResponseType;
+import edu.ucsb.eucalyptus.msgs.DescribeKeyPairsType;
+import edu.ucsb.eucalyptus.msgs.DescribeSecurityGroupsResponseType;
+import edu.ucsb.eucalyptus.msgs.DescribeSecurityGroupsType;
 import edu.ucsb.eucalyptus.msgs.Filter;
+import edu.ucsb.eucalyptus.msgs.ImageDetails;
 import edu.ucsb.eucalyptus.msgs.InstanceStatusItemType;
 import edu.ucsb.eucalyptus.msgs.ResourceTag;
 import edu.ucsb.eucalyptus.msgs.RunInstancesResponseType;
 import edu.ucsb.eucalyptus.msgs.RunInstancesType;
 import edu.ucsb.eucalyptus.msgs.RunningInstancesItemType;
+import edu.ucsb.eucalyptus.msgs.SecurityGroupItemType;
 import edu.ucsb.eucalyptus.msgs.TerminateInstancesResponseType;
 import edu.ucsb.eucalyptus.msgs.TerminateInstancesType;
 
@@ -185,6 +199,61 @@ public class ActivityManager {
     return task.getActivities();
   }
 
+  public List<String> validateReferences( final OwnerFullName owner,
+                                          final Collection<String> availabilityZones ) {
+    return validateReferences(
+        owner,
+        availabilityZones,
+        Collections.<String>emptyList(),
+        null ,
+        Collections.<String>emptyList() );
+
+  }
+
+  public List<String> validateReferences( final OwnerFullName owner,
+                                          final Iterable<String> imageIds,
+                                          final String keyName,
+                                          final Iterable<String> securityGroups ) {
+    return validateReferences(
+        owner,
+        Collections.<String>emptyList(),
+        imageIds,
+        keyName,
+        securityGroups );
+  }
+
+  private List<String> validateReferences( final OwnerFullName owner,
+                                           final Iterable<String> availabilityZones,
+                                           final Iterable<String> imageIds,
+                                           @Nullable final String keyName,
+                                           final Iterable<String> securityGroups ) {
+    final List<String> errors = Lists.newArrayList();
+
+    final ValidationScalingProcessTask task = new ValidationScalingProcessTask(
+        owner,
+        Lists.newArrayList( availabilityZones ),
+        Lists.newArrayList( imageIds ),
+        keyName,
+        Lists.newArrayList( securityGroups ) );
+    runTask( task );
+    try {
+      final boolean success = task.getFuture().get();
+      if ( success ) {
+        errors.addAll( task.getValidationErrors() );
+      } else {
+        errors.add("Unable to validate references at this time.");
+      }
+    } catch ( ExecutionException e ) {
+      logger.error( e, e );
+      errors.add("Error during reference validation");
+    } catch ( InterruptedException e ) {
+      Thread.currentThread().interrupt();
+      errors.add("Validation interrupted");
+    }
+
+    return errors;
+  }
+
   private TerminateInstancesScalingProcessTask perhapsTerminateInstances( final AutoScalingGroup group,
                                                                           final int terminateCount ) {
     final List<String> instancesToTerminate = Lists.newArrayList();
@@ -212,12 +281,12 @@ public class ActivityManager {
                 Iterables.filter( currentInstances, withAvailabilityZone( unwantedZones ) );
             Iterables.addAll( instancesToTerminate, Iterables.transform( unwantedInstances, instanceId() ) );
             Iterables.removeAll( remainingInstances, Lists.newArrayList( unwantedInstances ) );
-            targetZones = group.getAvailabilityZones();
+            targetZones = Sets.newLinkedHashSet( group.getAvailabilityZones() );
           } else {
             targetZones = unwantedZones;
           }
         } else {
-          targetZones = group.getAvailabilityZones();
+          targetZones = Sets.newLinkedHashSet( group.getAvailabilityZones() );
         }
 
         final Map<String,Integer> zoneCounts =
@@ -291,6 +360,13 @@ public class ActivityManager {
     final Filter filter = new Filter();
     filter.setName( name );
     filter.getValueSet().add( value );
+    return filter;
+  }
+
+  private Filter filter( final String name, final Collection<String> values ) {
+    final Filter filter = new Filter();
+    filter.setName( name );
+    filter.getValueSet().addAll( values );
     return filter;
   }
 
@@ -494,13 +570,21 @@ public class ActivityManager {
     private final Supplier<String> userIdSupplier;
     private final AtomicReference<List<ScalingActivity>> activities =
         new AtomicReference<List<ScalingActivity>>( Collections.<ScalingActivity>emptyList() );
+    private volatile CheckedListenableFuture<List<Boolean>> dispatchFuture;
+    private volatile CheckedListenableFuture<Boolean> taskFuture;
 
-    ScalingProcessTask( final AutoScalingGroup group,
+    ScalingProcessTask( final String uniqueKey,
+                        final AutoScalingGroup group,
                         final String activity ) {
-      super( group.getArn(), activity );
+      super( uniqueKey, activity );
       this.group = group;
       this.activity = activity;
       this.userIdSupplier = Suppliers.memoize( userIdSupplier( group.getOwnerAccountNumber() ) );
+    }
+
+    ScalingProcessTask( final AutoScalingGroup group,
+                        final String activity ) {
+      this( group.getArn(), group, activity  );
     }
 
     List<ScalingActivity> getActivities() {
@@ -540,6 +624,14 @@ public class ActivityManager {
     void partialSuccess( final List<AT> tasks ) {
     }
 
+    Future<Boolean> getFuture() {
+      Future<Boolean> future = taskFuture;
+      if ( future == null ) {
+        future = Futures.predestinedFuture( false );
+      }
+      return future;
+    }
+
     @Override
     void runTask() {
       if ( !shouldRun() ) {
@@ -570,7 +662,8 @@ public class ActivityManager {
         if ( dispatchFutures.isEmpty() ) {
           failure();
         } else {
-          final CheckedListenableFuture<List<Boolean>> resultFuture = Futures.allAsList( dispatchFutures );
+          taskFuture = Futures.newGenericeFuture();
+          final CheckedListenableFuture<List<Boolean>> resultFuture = dispatchFuture = Futures.allAsList( dispatchFutures );
           resultFuture.addListener( new Runnable() {
             @Override
             public void run() {
@@ -583,8 +676,10 @@ public class ActivityManager {
               if ( success ) {
                 partialSuccess( activities );
                 success();
+                taskFuture.set( true );
               } else {
                 failure();
+                taskFuture.set( false );
               }
             }
           } );
@@ -889,7 +984,7 @@ public class ActivityManager {
 
     @Override
     boolean shouldRun() {
-      return true;
+      return !instanceIds.isEmpty();
     }
 
     @Override
@@ -899,16 +994,258 @@ public class ActivityManager {
 
     @Override
     void partialSuccess( final List<MonitoringScalingActivityTask> tasks ) {
-      final List<String> instanceIds = Lists.newArrayList();
+      final List<String> healthyInstanceIds = Lists.newArrayList();
       for ( final MonitoringScalingActivityTask task : tasks ) {
-        instanceIds.addAll( task.getHealthyInstanceIds() );
+        healthyInstanceIds.addAll( task.getHealthyInstanceIds() );
       }
 
       try {
-        autoScalingInstances.markMissingInstancesUnhealthy( getGroup(), instanceIds );
+        autoScalingInstances.markMissingInstancesUnhealthy( getGroup(), healthyInstanceIds );
       } catch ( AutoScalingMetadataException e ) {
         logger.error( e, e );
       }
+    }
+  }
+
+  private abstract class ValidationScalingActivityTask<RES extends BaseMessage> extends ScalingActivityTask<RES> {
+    private final String description;
+    private final AtomicReference<List<String>> validationErrors = new AtomicReference<List<String>>(
+        Collections.<String>emptyList()
+    );
+
+    private ValidationScalingActivityTask( final ScalingActivity activity,
+                                           final String description ) {
+      super( activity, false );
+      this.description = description;
+    }
+
+    @Override
+    void dispatchFailure( final ActivityContext context, final Throwable throwable ) {
+      super.dispatchFailure( context, throwable );
+      setValidationError( "Error validating " + description );
+    }
+
+    void setValidationError( final String error ) {
+      validationErrors.set( ImmutableList.of( error ) );
+    }
+
+    List<String> getValidationErrors() {
+      return validationErrors.get();
+    }
+  }
+
+  private class AZValidationScalingActivityTask extends ValidationScalingActivityTask<DescribeAvailabilityZonesResponseType> {
+    final List<String> availabilityZones;
+
+    private AZValidationScalingActivityTask( final ScalingActivity activity,
+                                             final List<String> availabilityZones ) {
+      super( activity, "availability zone(s)" );
+      this.availabilityZones = availabilityZones;
+    }
+
+    @Override
+    void dispatchInternal( final ActivityContext context,
+                           final Callback.Checked<DescribeAvailabilityZonesResponseType> callback ) {
+      final EucalyptusClient client = context.getEucalyptusClient();
+
+      final DescribeAvailabilityZonesType describeAvailabilityZonesType
+          = new DescribeAvailabilityZonesType();
+      describeAvailabilityZonesType.setAvailabilityZoneSet( Lists.newArrayList( availabilityZones ) );
+
+      client.dispatch( describeAvailabilityZonesType, callback );
+    }
+
+    @Override
+    void dispatchSuccess( final ActivityContext context,
+                          final DescribeAvailabilityZonesResponseType response ) {
+      if ( response.getAvailabilityZoneInfo() == null ) {
+        setValidationError( "Invalid availability zone(s): " + availabilityZones );
+      } else if ( response.getAvailabilityZoneInfo().size() != availabilityZones.size() ) {
+        final Set<String> zones = Sets.newHashSet();
+        for ( final ClusterInfoType clusterInfoType : response.getAvailabilityZoneInfo() ) {
+          zones.add( clusterInfoType.getZoneName() );
+        }
+        final Set<String> invalidZones = Sets.newTreeSet( availabilityZones );
+        invalidZones.removeAll( zones );
+        setValidationError( "Invalid availability zone(s): " + invalidZones );
+      }
+
+      setActivityFinalStatus( ActivityStatusCode.Successful );
+    }
+  }
+
+  private class ImageIdValidationScalingActivityTask extends ValidationScalingActivityTask<DescribeImagesResponseType> {
+    final List<String> imageIds;
+
+    private ImageIdValidationScalingActivityTask( final ScalingActivity activity,
+                                                  final List<String> imageIds ) {
+      super( activity, "image id(s)" );
+      this.imageIds = imageIds;
+    }
+
+    @Override
+    void dispatchInternal( final ActivityContext context,
+                           final Callback.Checked<DescribeImagesResponseType> callback ) {
+      final EucalyptusClient client = context.getEucalyptusClient();
+
+      final DescribeImagesType describeImagesType
+          = new DescribeImagesType();
+      describeImagesType.getFilterSet().add( filter( "image-id", imageIds ) );
+
+      client.dispatch( describeImagesType, callback );
+    }
+
+    @Override
+    void dispatchSuccess( final ActivityContext context,
+                          final DescribeImagesResponseType response ) {
+      if ( response.getImagesSet() == null ) {
+        setValidationError( "Invalid image id(s): " + imageIds );
+      } else if ( response.getImagesSet().size() != imageIds.size() ) {
+        final Set<String> images = Sets.newHashSet();
+        for ( final ImageDetails imageDetails : response.getImagesSet() ) {
+          images.add( imageDetails.getImageId() );
+        }
+        final Set<String> invalidImages = Sets.newTreeSet( imageIds );
+        invalidImages.removeAll( images );
+        setValidationError( "Invalid image id(s): " + invalidImages );
+      }
+
+      setActivityFinalStatus( ActivityStatusCode.Successful );
+    }
+  }
+
+  private class SshKeyValidationScalingActivityTask extends ValidationScalingActivityTask<DescribeKeyPairsResponseType> {
+    final String sshKey;
+
+    private SshKeyValidationScalingActivityTask( final ScalingActivity activity,
+                                                 final String sshKey ) {
+      super( activity, "ssh key" );
+      this.sshKey = sshKey;
+    }
+
+    @Override
+    void dispatchInternal( final ActivityContext context,
+                           final Callback.Checked<DescribeKeyPairsResponseType> callback ) {
+      final EucalyptusClient client = context.getEucalyptusClient();
+
+      final DescribeKeyPairsType describeKeyPairsType
+          = new DescribeKeyPairsType();
+      describeKeyPairsType.getFilterSet().add( filter( "key-name", sshKey ) );
+
+      client.dispatch( describeKeyPairsType, callback );
+    }
+
+    @Override
+    void dispatchSuccess( final ActivityContext context,
+                          final DescribeKeyPairsResponseType response ) {
+      if ( response.getKeySet() == null || response.getKeySet().size() != 1 ) {
+        setValidationError( "Invalid ssh key: " + sshKey );
+      }
+
+      setActivityFinalStatus( ActivityStatusCode.Successful );
+    }
+  }
+
+  private class SecurityGroupValidationScalingActivityTask extends ValidationScalingActivityTask<DescribeSecurityGroupsResponseType> {
+    final List<String> groupNames;
+
+    private SecurityGroupValidationScalingActivityTask( final ScalingActivity activity,
+                                                        final List<String> groupNames ) {
+      super( activity, "security group(s)" );
+      this.groupNames = groupNames;
+    }
+
+    @Override
+    void dispatchInternal( final ActivityContext context,
+                           final Callback.Checked<DescribeSecurityGroupsResponseType> callback ) {
+      final EucalyptusClient client = context.getEucalyptusClient();
+
+      final DescribeSecurityGroupsType describeSecurityGroupsType
+          = new DescribeSecurityGroupsType();
+      describeSecurityGroupsType.getFilterSet().add( filter( "group-name", groupNames ) );
+
+      client.dispatch( describeSecurityGroupsType, callback );
+    }
+
+    @Override
+    void dispatchSuccess( final ActivityContext context,
+                          final DescribeSecurityGroupsResponseType response ) {
+      if ( response.getSecurityGroupInfo() == null ) {
+        setValidationError( "Invalid security group(s): " + groupNames );
+      } else if ( response.getSecurityGroupInfo().size() != groupNames.size() ) {
+        final Set<String> groups = Sets.newHashSet();
+        for ( final SecurityGroupItemType securityGroupItemType : response.getSecurityGroupInfo() ) {
+          groups.add( securityGroupItemType.getGroupName() );
+        }
+        final Set<String> invalidGroups = Sets.newTreeSet( groupNames );
+        invalidGroups.removeAll( groups );
+        setValidationError( "Invalid security group(s): " + invalidGroups );
+      }
+
+      setActivityFinalStatus( ActivityStatusCode.Successful );
+    }
+  }
+
+  private class ValidationScalingProcessTask extends ScalingProcessTask<ValidationScalingActivityTask<?>> {
+    private final List<String> availabilityZones;
+    private final List<String> imageIds;
+    private final List<String> securityGroups;
+    @Nullable
+    private final String keyName;
+    private final AtomicReference<List<String>> validationErrors = new AtomicReference<List<String>>(
+        Collections.<String>emptyList()
+    );
+
+    ValidationScalingProcessTask( final OwnerFullName owner,
+                                  final List<String> availabilityZones,
+                                  final List<String> imageIds,
+                                  @Nullable final String keyName,
+                                  final List<String> securityGroups ) {
+      super( UUID.randomUUID().toString() + "-validation", AutoScalingGroup.withOwner(owner), "Validate" );
+      this.availabilityZones = availabilityZones;
+      this.imageIds = imageIds;
+      this.keyName = keyName;
+      this.securityGroups = securityGroups;
+    }
+
+    @Override
+    boolean shouldRun() {
+      return
+          !availabilityZones.isEmpty() ||
+          !imageIds.isEmpty() ||
+          keyName != null ||
+          !securityGroups.isEmpty();
+    }
+
+    @Override
+    List<ValidationScalingActivityTask<?>> buildActivityTasks() throws AutoScalingMetadataException {
+      final List<ValidationScalingActivityTask<?>> tasks = Lists.newArrayList();
+      if ( !availabilityZones.isEmpty() ) {
+        tasks.add( new AZValidationScalingActivityTask( newActivity(), availabilityZones ) );
+      }
+      if ( !imageIds.isEmpty() ) {
+        tasks.add( new ImageIdValidationScalingActivityTask( newActivity(), imageIds ) );
+      }
+      if ( keyName != null ) {
+        tasks.add( new SshKeyValidationScalingActivityTask( newActivity(), keyName ) );
+      }
+      if ( !securityGroups.isEmpty() ) {
+        tasks.add( new SecurityGroupValidationScalingActivityTask( newActivity(), securityGroups ) );
+      }
+      return tasks;
+    }
+
+    @Override
+    void partialSuccess( final List<ValidationScalingActivityTask<?>> tasks ) {
+      final List<String> validationErrors = Lists.newArrayList();
+      for ( final ValidationScalingActivityTask<?> task : tasks ) {
+        validationErrors.addAll( task.getValidationErrors() );
+      }
+      this.validationErrors.set( ImmutableList.copyOf( validationErrors ) );
+    }
+
+    List<String> getValidationErrors() {
+      return validationErrors.get();
     }
   }
 
