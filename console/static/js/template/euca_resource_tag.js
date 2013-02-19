@@ -65,34 +65,51 @@
              // For each row of dataTable, add an extra column for the dual button. 
 	     thisObj.baseTable.find('tbody').find('tr').each(function(index, tr){
                  var $currentRow = $(tr);
-                 var key = $currentRow.children().first().text();   // Grab the key of the tag, which is the first 'tr' item
+                 var key = $currentRow.children().first().text();   // Grab the key of the resource tag, which is the first 'td' item
+                 var value = $currentRow.children().eq(1).text();   // Grab the value of the resource tag, which is the second 'td' item
                  var $dualButtonRow = $currentRow.children().last().text();  // Grab the last column's text value
                  if( $dualButtonRow != 'edit' ){                             // If the dual button column was rendered previously, skip the step below. 
+                   
                    var dualButton = $('<span>').addClass('dual-tag-button-span').attr('id', 'dualButtonSpan-'+key);
                    var editButton = $('<a>').addClass('button dual-tag-button').attr('id', 'dualButton-edit-'+key).text('edit');
+                   
+                   // Bind the 'click' event to the button 'edit'
                    editButton.bind('click', function(e){
-                     alert('clicked on ' + key);
+            //         alert('clicked on ' + key + "=" + value);
+                     // When clicked, convert the diplay columns into input boxes, allowing user to edit                   
+                     var tdResourceTagEdit = $('<td>').html('<input name="tag_key" type="text" id="tag_key" size="128" value="'+key+'">');
+                     tdResourceTagEdit.after($('<td>').html('<input name="tag_value" type="text" id="tag_value" size="256" value="'+value+'">'));
+                     tdResourceTagEdit.after($('<td>').append($('<a>').addClass('button single-tag-button').attr('id', 'singleButton-edit').text('edit final')));
+                     $currentRow.text('');
+                     $currentRow.append(tdResourceTagEdit);
                    });
                  
-                   dualButton.append(editButton);
-                   dualButton.bind('mouseenter', function(e){
+                   dualButton.append(editButton);   // Append the 'edit' button to the dualButton span element
+ 
+                  // Bind the 'mouseenter' event to the dualButton span element
+                  dualButton.bind('mouseenter', function(e){
                      var removeButton = $('<a>').addClass('button dual-tag-button').attr('id', 'dualButton-remove-'+key).text('remove');
+                     // Bind the 'click' event to the 'remove' button
                      removeButton.bind('click', function(e){
-                       alert('clicked to remove ' + key);
+            //           alert('clicked to remove ' + key);
+                       $currentRow.text('');   // Remove the current row from the table view
                      });
                      dualButton.append(removeButton);
                    });
+
+                   // Bin the 'mouseleave' event to the dualButton span element
                    dualButton.bind('mouseleave', function(e){
-                     dualButton.find('#dualButton-remove-'+key+'.dual-tag-button').remove();
+                     dualButton.find('#dualButton-remove-'+key+'.dual-tag-button').remove();   // REmove the 'remove' button
                    }); 
-                   // Attach the new column that contains the dualButton for this row
+
+                   // Add the dualButton span element column to the current row
                    var newTd = $('<td>').addClass('dual-tag-button-td').attr('id', 'dualButtonTd-'+key).append(dualButton);
                    $currentRow.children().last().after(newTd);
                  };
              });
 
              // Construct the last row of the table; a special case for the add-only tag row.
-             tdResourceTag = $('<td>').html('<input name="tag_key" type="text" id="tag_key" size="128">');
+             var tdResourceTag = $('<td>').html('<input name="tag_key" type="text" id="tag_key" size="128">');
              tdResourceTag.after($('<td>').html('<input name="tag_value" type="text" id="tag_value" size="256">'));
              tdResourceTag.after($('<td>').append($('<a>').addClass('button single-tag-button').attr('id', 'singleButton-add').text('add')));
              thisObj.baseTable.find('tr').last().after($('<tr>').addClass('resource-tag-input-row-tr').append(tdResourceTag));
