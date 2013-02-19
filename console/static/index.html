@@ -53,6 +53,7 @@
     <script type="text/javascript" language="javascript" src="lib/moment.min.js"></script>
     <script type="text/javascript" language="javascript" src="lib/jquery.base64.js"></script>
     <script type="text/javascript" language="javascript" src="lib/jquery.ba-hashchange.js"></script>
+    <script type="text/javascript" language="javascript" src="lib/jquery.carouFredSel-6.2.0-packed.js"></script>
 
     <!-- Eucalyptus UI javascripts -->
     <script type="text/javascript" language="javascript" src="js/jquery_ext.js"></script>
@@ -1671,7 +1672,10 @@
                     <div id="launch-wizard-type-header" class="twist launch-wizard-section-header"> </div>
                     <div id="launch-wizard-type-contents" class="launch-wizard-section">
                       <div id="launch-wizard-type-main-contents">
-                        <div id="launch-wizard-type-size" style="width:100%; height:180px; overflow:auto;"> </div>
+                        <div id="launch-wizard-type-size">
+                          <div class="launch-wizard-selection">{{!>launch_instance_type_size_header}}</div>
+                          <select id="launch-instance-type-size" class="wizard-selection-content"></select>
+                        </div>
                         <div id="launch-wizard-type-options"> </div>
                       </div>
                       <div id="launch-wizard-buttons-type" class="launch-wizard-buttons"></div>

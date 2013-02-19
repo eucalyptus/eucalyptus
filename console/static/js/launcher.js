@@ -493,8 +493,6 @@
       var $size = $content.find('#launch-wizard-type-size');
       var $option = $content.find('#launch-wizard-type-options');
     
-      var $list = $('<ul>').addClass('launch-wizard-type-size clearfix'); 
-      var $legend = $('<div>').attr('id','launch-wizard-type-size-legend').addClass('wizard-type-size-legend');
       var selectedType = 'm1.small';
       var typeSelected = false;
       var numInstances = 1;
@@ -530,24 +528,40 @@
       $.each(itypes, function(type, value) {
         instType[type] = value;
       });
+      // put keys into array
+      var instNames = [];
+      for (name in instType) {
+        instNames.push(name);
+      }
+      // sort array
+      instNames.sort(function(a,b) {
+        if (instType[a][0] != instType[b][0]) return instType[a][0] - instType[b][0];
+        if (instType[a][1] != instType[b][1]) return instType[a][1] - instType[b][1];
+        if (instType[a][2] != instType[b][2]) return instType[a][2] - instType[b][2];
+      });
 
-      $.each(instType, function(type, size){
-        $list.append(
-          $('<li>').addClass('instance-type-'+type.replace('.','_')).append(
+      // iterate through array, pulling data from dictionary to populate select
+      var $list = $content.find('#launch-instance-type-size');
+      $.each(instNames, function(index, value){
+        var tmp = instType[value];
+        var legend = value + ': ' + tmp[0] + ' ' + launch_wizard_type_description_cpus + ', ' + tmp[1] + ' ' + launch_wizard_type_description_memory + ', ' +tmp[2] + ' ' + launch_wizard_type_description_disk;  
+        $list.append($('<option>').attr('value', value).text(legend));
+      });
+      $list.change(function(e){
+        selectedType = $(this).val();
+        typeSelected = true;
+        thisObj._setSummary('type', summarize());
+      });
+          /*
             $('<a>').attr('href','#').text(type).click( function(){
               selectedType = type;
               typeSelected = true;
-              var legend = type + '&nbsp;' + launch_wizard_type_description_default + '&nbsp;' + size[0] + '&nbsp;' + launch_wizard_type_description_cpus + ',&nbsp;' + size[1] + '&nbsp;' + launch_wizard_type_description_memory + ',&nbsp;' +size[2] + '&nbsp;' + launch_wizard_type_description_disk;  
               $size.find('#launch-wizard-type-size-legend').html(legend); 
-              $(this).parent().addClass('selected-type');
-              $(this).parent().siblings().removeClass('selected-type');
+//              $(this).parent().addClass('selected-type');
+//              $(this).parent().siblings().removeClass('selected-type');
               thisObj._setSummary('type', summarize());
             })));
-      });
-
-      $size.append($('<div>').addClass('wizard-section-label').html(launch_instance_type_size_header),
-                   $('<div>').addClass('wizard-section-content').append($list),
-                   $legend); 
+            */
 
       var $list = $('<div>').addClass('launch-wizard-type-option'); 
       $list.append(
@@ -678,7 +692,8 @@
         var $sg_selector = $sgroup.find('select');
         var results = describe('sgroup');
         var numOptions = $sg_selector.find('option').length;
-        if (numOptions === results.length)
+        // TODO TODO TODO
+        //if (numOptions === results.length)
           return;
         var onSelectorChange = function(groupName){
           var $rule = $section.find('div#launch-wizard-security-sg-detail');

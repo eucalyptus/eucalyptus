@@ -152,7 +152,6 @@ launch_instance_image_table_platform_linux, launch_instance_image_table_platform
     },
 
     _create : function() { 
-      alert("IMG_OPT_PARAMS:"+IMG_OPT_PARAMS);
     },
 
     _destroy : function() {
