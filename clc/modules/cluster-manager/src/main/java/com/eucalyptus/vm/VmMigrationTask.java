@@ -67,7 +67,6 @@ import javax.persistence.Embeddable;
 import javax.persistence.EnumType;
 import javax.persistence.Enumerated;
 import org.hibernate.annotations.Parent;
-import com.eucalyptus.vm.VmBundleTask.BundleState;
 import com.google.common.base.Function;
 
 /**
@@ -107,11 +106,11 @@ public class VmMigrationTask {
   @Parent
   private VmInstance     vmInstance;
   @Enumerated( EnumType.STRING )
-  @Column( name = "metadata_vm_bundle_state" )
+  @Column( name = "metadata_vm_migration_state" )
   private MigrationState state;
-  @Column( name = "metadata_vm_bundle_prefix" )
+  @Column( name = "metadata_vm_migration_prefix" )
   private String         sourceHost;
-  @Column( name = "metadata_vm_bundle_prefix" )
+  @Column( name = "metadata_vm_migration_prefix" )
   private String         destinationHost;
   
   private VmMigrationTask( ) {}
