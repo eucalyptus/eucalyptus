@@ -97,6 +97,11 @@ public class ResourceStateCallback extends StateUpdateMessageCallback<Cluster, D
   public void fire( DescribeResourcesResponseType reply ) {
     this.getSubject( ).getNodeState( ).update( reply.getResources( ) );
     LOG.debug( "Adding node service tags: " + reply.getServiceTags( ) );
+    /**
+     * TODO:GRZE: if not present emulate {@link ClusterController.NodeController} using {@link Component#setup()}
+     * TODO:GRZE: emulate update of emulate {@link ClusterController.NodeController} state
+     * TODO:GRZE: {@link Component#destroy()} for the NodeControllers which are not reported by the CC.
+     */
     if( !reply.getNodes( ).isEmpty( ) ) {
       this.getSubject( ).updateNodeInfo( reply.getNodes( ) );
     } else {

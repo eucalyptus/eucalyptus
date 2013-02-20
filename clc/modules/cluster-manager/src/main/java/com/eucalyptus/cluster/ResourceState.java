@@ -114,6 +114,9 @@ public class ResourceState {
   }
   
   public synchronized List<ResourceToken> requestResourceAllocation( Allocation allocInfo, int minAmount, int maxAmount ) throws NotEnoughResourcesException {
+    /**
+     * TODO:GRZE: this method needs try obtaining the cluster gate lock.
+     */
     VmTypeAvailability vmTypeStatus = this.typeMap.get( allocInfo.getVmType( ).getName( ) );
     Integer available = vmTypeStatus.getAvailable( );
     NavigableSet<VmTypeAvailability> sorted = this.sorted( );

@@ -1697,11 +1697,21 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
           VmInstance.this.updateVolumeAttachments( runVm.getVolumes( ) );
           VmInstance.this.updateBlockBytes( runVm.getBlockBytes( ) );
           VmInstance.this.updateNetworkBytes( runVm.getNetworkBytes( ) );
+          VmInstance.this.updateMigrationTaskState( runVm.getMigrationStateName( ), runVm.getMigrationSource( ), runVm.getMigrationDestination( )  );
         }
       }
     };
   }
   
+  /**
+   * @param migrationStateName
+   * @param migrationSource
+   * @param migrationDestination
+   */
+  protected void updateMigrationTaskState( String migrationStateName, String migrationSource, String migrationDestination ) {
+    this.getRuntimeState( ).setMigrationState( migrationStateName, migrationSource, migrationDestination );
+  }
+
   /**
    *
    */
