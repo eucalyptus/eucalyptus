@@ -11,11 +11,15 @@
     },
     baseTable: null,
     alteredRow: null,
+    removedRow: null,
+    addedRow: null,
  
     // Set up the widget
     _create: function() {
       var thisObj = this;
-      thisObj.alteredRow = $("div")[0];
+      thisObj.alteredRow = $('div')[0];
+      thisObj.removedRow = $('div')[1];
+      thisObj.addedRow = $('div')[2];
       var mainDiv = $('<div>').addClass('resource_tag_main_div_class').attr('id', 'resource_tag_main_div_id-' + thisObj.options.resource_id);
       var demo = $('<table>').addClass('resource_tag_datatable_class').attr('id', 'resource_tag_datatable_id-' + thisObj.options.resource_id);
       mainDiv.append(demo);
@@ -50,7 +54,9 @@
             {
               "sTitle": "Value",
               "fnRender": function(oObj) {
-                if( jQuery.data(thisObj.alteredRow, oObj.aData.name) != null )
+                if( jQuery.data(thisObj.removedRow, oObj.aData.name) != null )
+                  return '<del>' + DefaultEncoder().encodeForHTML(oObj.aData.value) + '</del>';
+                else if( jQuery.data(thisObj.alteredRow, oObj.aData.name) != null )
                   return jQuery.data(thisObj.alteredRow, oObj.aData.name).value;
                 else
 		  return DefaultEncoder().encodeForHTML(oObj.aData.value);
@@ -60,19 +66,26 @@
           ],
 
           "fnDrawCallback" : function() { 
-            
+
+             if( jQuery.data(thisObj.addedRow, 'addedKey') != null ){
+               var tdAddedResourceTag = $('<td>').html('<font color="blue">'+jQuery.data(thisObj.addedRow, 'addedKey').key+'</font>');
+               tdAddedResourceTag.after($('<td>').html('<font color="blue">'+jQuery.data(thisObj.addedRow, 'addedKey').value+'</font>'));
+               thisObj.baseTable.find('tr').last().after($('<tr>').addClass('resource-tag-added-row-tr').append(tdAddedResourceTag));
+             };            
+
              // For each row of dataTable, add an extra column for the dual button. 
 	     thisObj.baseTable.find('tbody').find('tr').each(function(index, tr){
                  var $currentRow = $(tr);
                  var key = $currentRow.children().first().text();   // Grab the key of the resource tag, which is the first 'td' item
                  var value = $currentRow.children().eq(1).text();   // Grab the value of the resource tag, which is the second 'td' item
-
-                 if( !($currentRow.children().last().hasClass('resource-tag-table-extra-td')) ){                
+                 
+                  // Prevent the dataTable's sorting from altering the states of the table view               
+                 if( !($currentRow.children().last().hasClass('resource-tag-table-extra-td')) ){              
  
                    var buttonSpan = $('<span>').addClass('dual-tag-button-span').attr('id', 'dualButtonSpan-'+key);
                    var editButton = $('<a>').addClass('button dual-tag-button').attr('id', 'dualButton-edit-'+key).text('edit').hide();
                    var removeButton = $('<a>').addClass('button dual-tag-button').attr('id', 'dualButton-remove-'+key).text('remove').hide();
-                 
+
                    buttonSpan.append(editButton);
                    buttonSpan.append(removeButton);
 
@@ -125,16 +138,27 @@
                    });
 
                    removeButton.bind('click', function(e){
-                     $currentRow.text('');
+        //             $currentRow.text('');
+                     jQuery.data(thisObj.removedRow, key, {key: key, value: value});
+                     thisObj.baseTable.fnReloadAjax();
                    });
                  };
              });
 
              // Construct the last row of the table; a special case for the add-only tag row.
-             var tdResourceTag = $('<td>').html('<input name="tag_key" type="text" id="tag_key" size="128">');
-             tdResourceTag.after($('<td>').html('<input name="tag_value" type="text" id="tag_value" size="256">'));
-             tdResourceTag.after($('<td>').append($('<a>').addClass('button single-tag-button').attr('id', 'singleButton-add').text('Add new tag')));
+             var addNewTagButton = $('<a>').addClass('button single-tag-button').attr('id', 'singleButton-add').text('Add new tag');
+             var tdResourceTag = $('<td>').html('<input name="added_tag_key" type="text" id="added_tag_key" size="128">');
+             tdResourceTag.after($('<td>').html('<input name="added_tag_value" type="text" id="added_tag_value" size="256">'));
+             tdResourceTag.after($('<td>').append(addNewTagButton));
              thisObj.baseTable.find('tr').last().after($('<tr>').addClass('resource-tag-input-row-tr').append(tdResourceTag));
+
+             addNewTagButton.bind('click', function(e){
+               var addedKey = tdResourceTag.find('#added_tag_key').val();
+               var addedValue = tdResourceTag.find('#added_tag_value').val();
+               jQuery.data(thisObj.addedRow, 'addedKey', {key: addedKey, value: addedValue});
+               thisObj.baseTable.fnReloadAjax();
+             });
+
           },
      });
      thisObj.element.append(thisObj.baseTable);
