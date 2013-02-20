@@ -10,14 +10,13 @@
       tag_data: null,
     },
     baseTable: null,
+    alteredRow: null,
  
     // Set up the widget
     _create: function() {
       var thisObj = this;
+      thisObj.alteredRow = $("div")[0];
       var mainDiv = $('<div>').addClass('resource_tag_main_div_class').attr('id', 'resource_tag_main_div_id-' + thisObj.options.resource_id);
-//      mainDiv.text('RESOURCE TAG PLACE HOLDER ::: RESOURCE: ' + this.options.resource + " RESOURCE_ID: " + this.options.resource_id);
-//      thisObj.element.append(mainDiv);
-//      thisObj._getAllResourceTags();
       var demo = $('<table>').addClass('resource_tag_datatable_class').attr('id', 'resource_tag_datatable_id-' + thisObj.options.resource_id);
       mainDiv.append(demo);
       thisObj.baseTable = demo;
@@ -41,8 +40,8 @@
             {
               "sTitle": "Key",
               "fnRender": function(oObj) {
-                if( oObj.aData.type === "html" )
-                  return asHTML(oObj.aData.name);
+                if( jQuery.data(thisObj.alteredRow, oObj.aData.name) != null )
+                  return jQuery.data(thisObj.alteredRow, oObj.aData.name).key;
                 else
 		  return DefaultEncoder().encodeForHTML(oObj.aData.name);
 	       },
@@ -51,8 +50,8 @@
             {
               "sTitle": "Value",
               "fnRender": function(oObj) {
-                if( oObj.aData.type === "html" )
-                  return asHTML(oObj.aData.value);
+                if( jQuery.data(thisObj.alteredRow, oObj.aData.name) != null )
+                  return jQuery.data(thisObj.alteredRow, oObj.aData.name).value;
                 else
 		  return DefaultEncoder().encodeForHTML(oObj.aData.value);
 	       },
@@ -67,51 +66,74 @@
                  var $currentRow = $(tr);
                  var key = $currentRow.children().first().text();   // Grab the key of the resource tag, which is the first 'td' item
                  var value = $currentRow.children().eq(1).text();   // Grab the value of the resource tag, which is the second 'td' item
-                 var $dualButtonRow = $currentRow.children().last().text();  // Grab the last column's text value
-                 if( $dualButtonRow != 'edit' ){                             // If the dual button column was rendered previously, skip the step below. 
-                   
-                   var dualButton = $('<span>').addClass('dual-tag-button-span').attr('id', 'dualButtonSpan-'+key);
-                   var editButton = $('<a>').addClass('button dual-tag-button').attr('id', 'dualButton-edit-'+key).text('edit');
-                   
-                   // Bind the 'click' event to the button 'edit'
+
+                 if( !($currentRow.children().last().hasClass('resource-tag-table-extra-td')) ){                
+ 
+                   var buttonSpan = $('<span>').addClass('dual-tag-button-span').attr('id', 'dualButtonSpan-'+key);
+                   var editButton = $('<a>').addClass('button dual-tag-button').attr('id', 'dualButton-edit-'+key).text('edit').hide();
+                   var removeButton = $('<a>').addClass('button dual-tag-button').attr('id', 'dualButton-remove-'+key).text('remove').hide();
+                 
+                   buttonSpan.append(editButton);
+                   buttonSpan.append(removeButton);
+
+                   var tdExtraColumn = $('<td>').addClass('resource-tag-table-extra-td').attr('id', 'extra-td');   // Create the extra column object
+                   tdExtraColumn.append(buttonSpan);
+                   $currentRow.append(tdExtraColumn);
+
+                   $currentRow.bind('mouseenter', function(e){
+                     $currentRow.children().last().find('#dualButton-edit-'+key+'.dual-tag-button').show();
+                     $currentRow.children().last().find('#dualButton-remove-'+key+'.dual-tag-button').show();
+                   });
+
+                   $currentRow.bind('mouseleave', function(e){
+                     $currentRow.children().last().find('#dualButton-edit-'+key+'.dual-tag-button').hide();
+                     $currentRow.children().last().find('#dualButton-remove-'+key+'.dual-tag-button').hide();
+                   });
+
                    editButton.bind('click', function(e){
-            //         alert('clicked on ' + key + "=" + value);
-                     // When clicked, convert the diplay columns into input boxes, allowing user to edit                   
                      var tdResourceTagEdit = $('<td>').html('<input name="tag_key" type="text" id="tag_key" size="128" value="'+key+'">');
                      tdResourceTagEdit.after($('<td>').html('<input name="tag_value" type="text" id="tag_value" size="256" value="'+value+'">'));
-                     tdResourceTagEdit.after($('<td>').append($('<a>').addClass('button single-tag-button').attr('id', 'singleButton-edit').text('edit final')));
+                     
+                     var editButtonSpan = $('<span>').addClass('dual-tag-edit-button-span').attr('id', 'dualButtonSpan-'+key);
+                     var editdoneButton = $('<a>').addClass('button dual-tag-button').attr('id', 'dualButton-editdone-'+key).text('done').show();
+                     var editcancelButton = $('<a>').addClass('button dual-tag-button').attr('id', 'dualButton-editcancel-'+key).text('cancel').show();
+
+                     editButtonSpan.append(editdoneButton);
+                     editButtonSpan.append(editcancelButton);
+                     var tdExtraColumn = $('<td>').addClass('resource-tag-table-extra-td').attr('id', 'extra-td');   // Create the extra column object
+                     tdExtraColumn.append(editButtonSpan);
+                     tdResourceTagEdit.after(tdExtraColumn);
+
                      $currentRow.text('');
                      $currentRow.append(tdResourceTagEdit);
-                   });
-                 
-                   dualButton.append(editButton);   // Append the 'edit' button to the dualButton span element
- 
-                  // Bind the 'mouseenter' event to the dualButton span element
-                  dualButton.bind('mouseenter', function(e){
-                     var removeButton = $('<a>').addClass('button dual-tag-button').attr('id', 'dualButton-remove-'+key).text('remove');
-                     // Bind the 'click' event to the 'remove' button
-                     removeButton.bind('click', function(e){
-            //           alert('clicked to remove ' + key);
-                       $currentRow.text('');   // Remove the current row from the table view
+
+                     editdoneButton.bind('click', function(e){
+                       var newKey = tdResourceTagEdit.find('#tag_key').val();
+                       var newValue = tdResourceTagEdit.find('#tag_value').val();
+                       jQuery.data(thisObj.alteredRow, key, {key: newKey, value: newValue});
+                       thisObj.baseTable.fnReloadAjax();
                      });
-                     dualButton.append(removeButton);
+
+                     editcancelButton.bind('click', function(e){
+                       var tdResourceTagEdit = $('<td>').text(key);
+                       tdResourceTagEdit.after($('<td>').text(value));
+                       $currentRow.text('');
+                       $currentRow.append(tdResourceTagEdit);
+                       thisObj.baseTable.fnReloadAjax();
+                     });
+
                    });
 
-                   // Bin the 'mouseleave' event to the dualButton span element
-                   dualButton.bind('mouseleave', function(e){
-                     dualButton.find('#dualButton-remove-'+key+'.dual-tag-button').remove();   // REmove the 'remove' button
-                   }); 
-
-                   // Add the dualButton span element column to the current row
-                   var newTd = $('<td>').addClass('dual-tag-button-td').attr('id', 'dualButtonTd-'+key).append(dualButton);
-                   $currentRow.children().last().after(newTd);
+                   removeButton.bind('click', function(e){
+                     $currentRow.text('');
+                   });
                  };
              });
 
              // Construct the last row of the table; a special case for the add-only tag row.
              var tdResourceTag = $('<td>').html('<input name="tag_key" type="text" id="tag_key" size="128">');
              tdResourceTag.after($('<td>').html('<input name="tag_value" type="text" id="tag_value" size="256">'));
-             tdResourceTag.after($('<td>').append($('<a>').addClass('button single-tag-button').attr('id', 'singleButton-add').text('add')));
+             tdResourceTag.after($('<td>').append($('<a>').addClass('button single-tag-button').attr('id', 'singleButton-add').text('Add new tag')));
              thisObj.baseTable.find('tr').last().after($('<tr>').addClass('resource-tag-input-row-tr').append(tdResourceTag));
           },
      });
