@@ -1,8 +1,8 @@
 package com.eucalyptus.cloudwatch.domain.metricdata;
 
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Executors;
@@ -11,23 +11,16 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import javax.persistence.EntityTransaction;
-
 import org.apache.log4j.Logger;
-import org.hibernate.exception.ConstraintViolationException;
 
 import com.eucalyptus.cloudwatch.Dimension;
 import com.eucalyptus.cloudwatch.MetricDatum;
 import com.eucalyptus.cloudwatch.domain.listmetrics.ListMetricManager;
 import com.eucalyptus.cloudwatch.domain.metricdata.MetricEntity.MetricType;
 import com.eucalyptus.cloudwatch.domain.metricdata.MetricEntity.Units;
-import com.eucalyptus.entities.Entities;
-import com.eucalyptus.util.OwnerFullName;
-import com.google.common.base.Function;
 import com.google.common.base.Supplier;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
-import com.google.common.collect.Ordering;
 
 public class MetricDataQueue {
   private static final Logger LOG = Logger.getLogger(MetricDataQueue.class);
@@ -78,7 +71,8 @@ public class MetricDataQueue {
           }
           dataQueue.clear();
           busy.set(false);
-        } catch (RuntimeException ex) {
+        } catch (Exception ex) {
+          ex.printStackTrace();
           LOG.error(ex,ex);
         }
       }
@@ -87,13 +81,26 @@ public class MetricDataQueue {
     dataFlushTimer.schedule(safeRunner, 1, TimeUnit.MINUTES);
   }
 
-  private static List<MetricQueueItem> aggregate(List<MetricQueueItem> dataBatch) {
-    return dataBatch;
+  public static List<MetricQueueItem> aggregate(List<MetricQueueItem> dataBatch) {
+    HashMap<PutMetricDataAggregationKey, MetricQueueItem> aggregationMap = Maps.newHashMap();
+    for (MetricQueueItem item: dataBatch) {
+      item.setTimestamp(MetricManager.stripSeconds(item.getTimestamp()));
+      PutMetricDataAggregationKey key = new PutMetricDataAggregationKey(item);
+      if (!aggregationMap.containsKey(key)) {
+        aggregationMap.put(key, new MetricQueueItem(item));
+      } else {
+        MetricQueueItem totalSoFar = aggregationMap.get(key);
+        totalSoFar.setSampleMax(Math.max(item.getSampleMax(), totalSoFar.getSampleMax()));
+        totalSoFar.setSampleMin(Math.min(item.getSampleMin(), totalSoFar.getSampleMin()));
+        totalSoFar.setSampleSize(totalSoFar.getSampleSize() + item.getSampleSize());
+        totalSoFar.setSampleSum(totalSoFar.getSampleSum() + item.getSampleSum());
+      }
+    }
+    return Lists.newArrayList(aggregationMap.values());
   }
-
   public void insertMetricData(final String ownerId,
       final String ownerAccountId, final String nameSpace,
-      final List<MetricDatum> metricDatum) {
+      final List<MetricDatum> metricDatum, final MetricType metricType) {
     Date now = new Date();
     for (final MetricDatum datum : metricDatum) {
       scrub(datum, now);
@@ -107,7 +114,7 @@ public class MetricDataQueue {
           metricMetadata.setMetricName(datum.getMetricName());
           metricMetadata.setNamespace(nameSpace);
           metricMetadata.setDimensionMap(makeDimensionMap(dimensions));
-          metricMetadata.setMetricType(MetricType.Custom);
+          metricMetadata.setMetricType(metricType);
           metricMetadata.setUnits(Units.fromValue(datum.getUnit())); 
           metricMetadata.setTimestamp(datum.getTimestamp());
           if (datum.getValue() != null) { // TODO: make sure both value and statistics sets are not set
@@ -148,118 +155,4 @@ public class MetricDataQueue {
     return returnValue;
   }
 
-  private static class MetricQueueItem {
-    private String accountId;
-    private String userId;
-    private String metricName;
-    private String namespace;
-    private Map<String, String> dimensionMap;
-    private MetricType metricType;
-    private Units units;
-    private Date timestamp;
-    private Double sampleSize;
-    private Double sampleMax;
-    private Double sampleMin;
-    private Double sampleSum;
-
-    private MetricQueueItem() {
-    }
-
-    public String getAccountId() {
-      return accountId;
-    }
-
-    public void setAccountId(String accountId) {
-      this.accountId = accountId;
-    }
-
-    public String getUserId() {
-      return userId;
-    }
-
-    public void setUserId(String userId) {
-      this.userId = userId;
-    }
-
-    public String getMetricName() {
-      return metricName;
-    }
-
-    public void setMetricName(String metricName) {
-      this.metricName = metricName;
-    }
-
-    public String getNamespace() {
-      return namespace;
-    }
-
-    public void setNamespace(String namespace) {
-      this.namespace = namespace;
-    }
-
-    public Map<String, String> getDimensionMap() {
-      return dimensionMap;
-    }
-
-    public void setDimensionMap(Map<String, String> dimensionMap) {
-      this.dimensionMap = dimensionMap;
-    }
-
-    public MetricType getMetricType() {
-      return metricType;
-    }
-
-    public void setMetricType(MetricType metricType) {
-      this.metricType = metricType;
-    }
-
-    public Units getUnits() {
-      return units;
-    }
-
-    public void setUnits(Units units) {
-      this.units = units;
-    }
-
-    public Date getTimestamp() {
-      return timestamp;
-    }
-
-    public void setTimestamp(Date timestamp) {
-      this.timestamp = timestamp;
-    }
-
-    public Double getSampleSize() {
-      return sampleSize;
-    }
-
-    public void setSampleSize(Double sampleSize) {
-      this.sampleSize = sampleSize;
-    }
-
-    public Double getSampleMax() {
-      return sampleMax;
-    }
-
-    public void setSampleMax(Double sampleMax) {
-      this.sampleMax = sampleMax;
-    }
-
-    public Double getSampleMin() {
-      return sampleMin;
-    }
-
-    public void setSampleMin(Double sampleMin) {
-      this.sampleMin = sampleMin;
-    }
-
-    public Double getSampleSum() {
-      return sampleSum;
-    }
-
-    public void setSampleSum(Double sampleSum) {
-      this.sampleSum = sampleSum;
-    }
-
-  }
 }

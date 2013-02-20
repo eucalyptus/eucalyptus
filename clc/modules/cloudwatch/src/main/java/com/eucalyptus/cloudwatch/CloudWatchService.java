@@ -1,5 +1,6 @@
 package com.eucalyptus.cloudwatch;
 
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Date;
 import java.util.List;
@@ -15,6 +16,10 @@ import com.eucalyptus.auth.policy.PolicySpec;
 import com.eucalyptus.cloudwatch.domain.listmetrics.ListMetric;
 import com.eucalyptus.cloudwatch.domain.listmetrics.ListMetricManager;
 import com.eucalyptus.cloudwatch.domain.metricdata.MetricDataQueue;
+import com.eucalyptus.cloudwatch.domain.metricdata.MetricEntity.MetricType;
+import com.eucalyptus.cloudwatch.domain.metricdata.MetricEntity.Units;
+import com.eucalyptus.cloudwatch.domain.metricdata.MetricManager;
+import com.eucalyptus.cloudwatch.domain.metricdata.MetricStatistics;
 import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.util.EucalyptusCloudException;
@@ -43,7 +48,6 @@ public class CloudWatchService {
   public PutMetricDataResponseType putMetricData(PutMetricDataType request) throws EucalyptusCloudException {
     PutMetricDataResponseType reply = request.getReply( );
     final Context ctx = Contexts.lookup( );
-    
     //IAM Action Check
     if(!hasActionPermission(PolicySpec.CLOUDWATCH_PUTMETRICDATA, ctx)) {
    	throw new EucalyptusCloudException();
@@ -57,7 +61,7 @@ public class CloudWatchService {
     //TODO: on-put-data:  Malformed input-The parameters MetricData.member.1.Value and
     // MetricData.member.1.StatisticValues are mutually exclusive and you have
     // specified both.
-    MetricDataQueue.getInstance().insertMetricData(ownerFullName.getUserId(), ownerFullName.getAccountNumber(), nameSpace, metricDatum);
+    MetricDataQueue.getInstance().insertMetricData(ownerFullName.getUserId(), ownerFullName.getAccountNumber(), nameSpace, metricDatum, MetricType.Custom);
 
     return reply;
   }
@@ -132,6 +136,16 @@ public class CloudWatchService {
     return result;
   }
 
+  private Map<String, String> transform(Dimensions dimensions) {
+    final Map<String, String> result = Maps.newHashMap();
+    if (dimensions != null && dimensions.getMember() != null) {
+      for (Dimension dimension: dimensions.getMember()) {
+        result.put(dimension.getName(), dimension.getValue());
+      }
+    }
+    return result;
+  }
+
   public GetMetricStatisticsResponseType getMetricStatistics(GetMetricStatisticsType request) throws EucalyptusCloudException {
     GetMetricStatisticsResponseType reply = request.getReply( );
     final Context ctx = Contexts.lookup( );
@@ -140,8 +154,60 @@ public class CloudWatchService {
     if(!hasActionPermission(PolicySpec.CLOUDWATCH_GETMETRICSTATISTICS, ctx)) {
    	throw new EucalyptusCloudException();
     }
-  
+    // TODO: parse statistics separately()?
+    Statistics statistics = request.getStatistics();
+    if (statistics == null || statistics.getMember() == null) {
+      throw new EucalyptusCloudException("Statistics is a required field");
+    }
+    final OwnerFullName ownerFullName = ctx.getUserFullName();
+    final String namespace = request.getNamespace();
+    final String metricName = request.getMetricName();
+    final Date startTime = request.getStartTime();
+    final Date endTime = request.getEndTime();
+    final Integer period = request.getPeriod();
+    // TODO: null units here does not mean Units.NONE but basically a wildcard.  Consider this case.
+    final Units units = (request.getUnit() != null) ? Units.fromValue(request.getUnit()) : null;
+    final Map<String, String> dimensionMap = transform(request.getDimensions());
+    boolean wantsAverage = statistics.getMember().contains("Average");
+    boolean wantsSum = statistics.getMember().contains("Sum");
+    boolean wantsSampleCount = statistics.getMember().contains("SampleCount");
+    boolean wantsMaximum = statistics.getMember().contains("Maximum");
+    boolean wantsMinimum = statistics.getMember().contains("Minimum");
+    Collection<MetricStatistics> metrics = MetricManager.getMetricStatistics(ownerFullName.getAccountNumber(), ownerFullName.getUserId(), metricName, namespace, dimensionMap, MetricType.Custom, units, startTime, endTime, period);
+    reply.getGetMetricStatisticsResult().setLabel(metricName);
+    ArrayList<Datapoint> datapoints = Lists.newArrayList();
+    for (MetricStatistics metricStatistics: metrics) {
+      Datapoint datapoint = new Datapoint();
+      datapoint.setTimestamp(metricStatistics.getTimestamp());
+      datapoint.setUnit(metricStatistics.getUnits().toString());
+      if (wantsSum) {
+        datapoint.setSum(metricStatistics.getSampleSum());
+      }
+      if (wantsSampleCount) {
+        datapoint.setSampleCount(metricStatistics.getSampleSize());
+      }
+      if (wantsMaximum) {
+        datapoint.setMaximum(metricStatistics.getSampleMax());
+      }
+      if (wantsMinimum) {
+        datapoint.setMinimum(metricStatistics.getSampleMin());
+      }
+      if (wantsAverage) {
+        datapoint.setAverage(average(metricStatistics.getSampleSum(), metricStatistics.getSampleSize()));
+      }
+      datapoints.add(datapoint);
+    }
+    if (datapoints.size() > 0) {
+      Datapoints datapointsReply = new Datapoints();
+      datapointsReply.setMember(datapoints);
+      reply.getGetMetricStatisticsResult().setDatapoints(datapointsReply);
+    }
     return reply;
+  }
+
+  private Double average(Double sum, Double size) {
+    if (Math.abs(size) < 0.9) return 0.0; // TODO: make sure size is really an int
+    return sum/size;
   }
 
   public DisableAlarmActionsResponseType disableAlarmActions(DisableAlarmActionsType request) throws EucalyptusCloudException {

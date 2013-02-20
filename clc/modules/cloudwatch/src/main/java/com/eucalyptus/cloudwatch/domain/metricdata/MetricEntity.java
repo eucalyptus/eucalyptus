@@ -142,7 +142,7 @@ public abstract class MetricEntity extends AbstractPersistentWithDimensions {
   }
 
   public void setTimestamp(Date timestamp) {
-    this.timestamp = timestamp;
+    this.timestamp = MetricManager.stripSeconds(timestamp);
   }
 
   public Double getSampleSize() {
