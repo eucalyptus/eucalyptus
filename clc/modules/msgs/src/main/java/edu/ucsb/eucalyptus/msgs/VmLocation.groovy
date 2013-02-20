@@ -83,6 +83,7 @@ public class CloudTopologyMessage extends EucalyptusMessage{
 public class MigrateInstancesType extends CloudTopologyMessage {
   String sourceHost;
   String instanceId;
+  @HttpParameterMapping (parameter = "DestinationHost")
   ArrayList<String> destinationHosts = new ArrayList<String>( );
   Boolean allowHosts = false;
   public String getServiceTag( ) {
