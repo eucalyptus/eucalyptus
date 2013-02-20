@@ -57,6 +57,10 @@ import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.event.ClockTick;
 import com.eucalyptus.event.EventListener;
 import com.eucalyptus.event.Listeners;
+import com.eucalyptus.loadbalancing.DescribeLoadBalancersResponseType;
+import com.eucalyptus.loadbalancing.DescribeLoadBalancersType;
+import com.eucalyptus.loadbalancing.LoadBalancerDescription;
+import com.eucalyptus.loadbalancing.LoadBalancerNames;
 import com.eucalyptus.util.Callback;
 import com.eucalyptus.util.CollectionUtils;
 import com.eucalyptus.util.Exceptions;
@@ -64,6 +68,7 @@ import com.eucalyptus.util.OwnerFullName;
 import com.eucalyptus.util.TypeMappers;
 import com.eucalyptus.util.async.CheckedListenableFuture;
 import com.eucalyptus.util.async.Futures;
+import com.google.common.base.Objects;
 import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
 import com.google.common.base.Supplier;
@@ -200,10 +205,12 @@ public class ActivityManager {
   }
 
   public List<String> validateReferences( final OwnerFullName owner,
-                                          final Collection<String> availabilityZones ) {
+                                          final Collection<String> availabilityZones,
+                                          final Collection<String> loadBalancerNames ) {
     return validateReferences(
         owner,
-        availabilityZones,
+        Objects.firstNonNull( availabilityZones, Collections.<String>emptyList() ),
+        Objects.firstNonNull( loadBalancerNames, Collections.<String>emptyList() ),
         Collections.<String>emptyList(),
         null ,
         Collections.<String>emptyList() );
@@ -217,13 +224,15 @@ public class ActivityManager {
     return validateReferences(
         owner,
         Collections.<String>emptyList(),
-        imageIds,
+        Collections.<String>emptyList(),
+        Objects.firstNonNull( imageIds, Collections.<String>emptyList() ),
         keyName,
-        securityGroups );
+        Objects.firstNonNull( securityGroups, Collections.<String>emptyList() ) );
   }
 
   private List<String> validateReferences( final OwnerFullName owner,
                                            final Iterable<String> availabilityZones,
+                                           final Iterable<String> loadBalancerNames,
                                            final Iterable<String> imageIds,
                                            @Nullable final String keyName,
                                            final Iterable<String> securityGroups ) {
@@ -231,10 +240,11 @@ public class ActivityManager {
 
     final ValidationScalingProcessTask task = new ValidationScalingProcessTask(
         owner,
-        Lists.newArrayList( availabilityZones ),
-        Lists.newArrayList( imageIds ),
+        Lists.newArrayList( Sets.newLinkedHashSet( availabilityZones ) ),
+        Lists.newArrayList( Sets.newLinkedHashSet( loadBalancerNames ) ),
+        Lists.newArrayList( Sets.newLinkedHashSet( imageIds ) ),
         keyName,
-        Lists.newArrayList( securityGroups ) );
+        Lists.newArrayList( Sets.newLinkedHashSet( securityGroups ) ) );
     runTask( task );
     try {
       final boolean success = task.getFuture().get();
@@ -444,7 +454,17 @@ public class ActivityManager {
       final EucalyptusClient client = new EucalyptusClient( userId );
       client.init();
       return client;
-    } catch ( EucalyptusClient.EucalyptusClientException e ) {
+    } catch ( DispatchingClient.DispatchingClientException e ) {
+      throw Exceptions.toUndeclared( e );
+    }
+  }
+
+  ElbClient createElbClientForUser( final String userId ) {
+    try {
+      final ElbClient client = new ElbClient( userId );
+      client.init();
+      return client;
+    } catch ( DispatchingClient.DispatchingClientException e ) {
       throw Exceptions.toUndeclared( e );
     }
   }
@@ -467,12 +487,12 @@ public class ActivityManager {
   private interface ActivityContext {
     String getUserId();
     EucalyptusClient getEucalyptusClient();
+    ElbClient getElbClient();
   }
 
   private abstract class ScalingActivityTask<RES extends BaseMessage> {
     private volatile ScalingActivity activity;
     private final boolean persist;
-    private volatile boolean dispatched = false;
 
     protected ScalingActivityTask( final ScalingActivity activity ) {
       this( activity, true );
@@ -519,9 +539,9 @@ public class ActivityManager {
             }
           }
         } );
-        dispatched = true;
         return future;
-      } catch ( Exception e ) {
+      } catch ( Throwable e ) {
+        dispatchFailure( context, e );
         logger.error( e, e );
       }
       return Futures.predestinedFuture( false );
@@ -536,12 +556,6 @@ public class ActivityManager {
     }
 
     abstract void dispatchSuccess( ActivityContext context, RES response );
-
-    void failIfNotDispatched() {
-      if ( !dispatched ) {
-        setActivityFinalStatus( ActivityStatusCode.Failed );
-      }
-    }
 
     void setActivityFinalStatus( final ActivityStatusCode activityStatusCode ) {
       final ScalingActivity activity = getActivity();
@@ -609,6 +623,11 @@ public class ActivityManager {
       return createEucalyptusClientForUser( getUserId() );
     }
 
+    @Override
+    public ElbClient getElbClient() {
+      return createElbClientForUser( getUserId() );
+    }
+
     ScalingActivity newActivity() {
       return ScalingActivity.create( group, activity );
     }
@@ -652,13 +671,6 @@ public class ActivityManager {
       } catch ( final Exception e ) {
         logger.error( e, e );
       } finally {
-        for ( final ScalingActivityTask activity : activities ) {
-          try {
-            activity.failIfNotDispatched();
-          } catch ( final Exception e ) {
-            logger.error( e, e );
-          }
-        }
         if ( dispatchFutures.isEmpty() ) {
           failure();
         } else {
@@ -1022,6 +1034,10 @@ public class ActivityManager {
     @Override
     void dispatchFailure( final ActivityContext context, final Throwable throwable ) {
       super.dispatchFailure( context, throwable );
+      handleValidationFailure( throwable );
+    }
+
+    void handleValidationFailure( final Throwable throwable ) {
       setValidationError( "Error validating " + description );
     }
 
@@ -1071,6 +1087,56 @@ public class ActivityManager {
       }
 
       setActivityFinalStatus( ActivityStatusCode.Successful );
+    }
+  }
+
+  private class LoadBalancerValidationScalingActivityTask extends ValidationScalingActivityTask<DescribeLoadBalancersResponseType> {
+    final List<String> loadBalancerNames;
+
+    private LoadBalancerValidationScalingActivityTask( final ScalingActivity activity,
+                                                       final List<String> loadBalancerNames ) {
+      super( activity, "load balancer name(s)" );
+      this.loadBalancerNames = loadBalancerNames;
+    }
+
+    @Override
+    void dispatchInternal( final ActivityContext context,
+                           final Callback.Checked<DescribeLoadBalancersResponseType> callback ) {
+      final ElbClient client = context.getElbClient();
+
+      final LoadBalancerNames loadBalancerNamesType = new LoadBalancerNames();
+      loadBalancerNamesType.setMember( Lists.newArrayList( loadBalancerNames ) );
+      final DescribeLoadBalancersType describeLoadBalancersType
+          = new DescribeLoadBalancersType();
+      describeLoadBalancersType.setLoadBalancerNames( loadBalancerNamesType );
+
+      client.dispatch( describeLoadBalancersType, callback );
+    }
+
+    @Override
+    void dispatchSuccess( final ActivityContext context,
+                          final DescribeLoadBalancersResponseType response ) {
+      if ( response.getDescribeLoadBalancersResult() == null ||
+          response.getDescribeLoadBalancersResult().getLoadBalancerDescriptions() == null ) {
+        setValidationError( "Invalid load balancer name(s): " + loadBalancerNames );
+      } else if ( response.getDescribeLoadBalancersResult().getLoadBalancerDescriptions().getMember().size() != loadBalancerNames.size() ) {
+        final Set<String> loadBalancers = Sets.newHashSet();
+        for ( final LoadBalancerDescription loadBalancerDescription :
+            response.getDescribeLoadBalancersResult().getLoadBalancerDescriptions().getMember() ) {
+          loadBalancers.add( loadBalancerDescription.getLoadBalancerName() );
+        }
+        final Set<String> invalidLoadBalancers = Sets.newTreeSet( loadBalancerNames );
+        invalidLoadBalancers.removeAll( loadBalancers );
+        setValidationError( "Invalid load balancer name(s): " + invalidLoadBalancers );
+      }
+
+      setActivityFinalStatus( ActivityStatusCode.Successful );
+    }
+
+    @Override
+    void handleValidationFailure( final Throwable throwable ) {
+      //TODO:STEVE: Handle AccessPointNotFound if/when ELB service implements it
+      super.handleValidationFailure( throwable );
     }
   }
 
@@ -1188,6 +1254,7 @@ public class ActivityManager {
 
   private class ValidationScalingProcessTask extends ScalingProcessTask<ValidationScalingActivityTask<?>> {
     private final List<String> availabilityZones;
+    private final List<String> loadBalancerNames;
     private final List<String> imageIds;
     private final List<String> securityGroups;
     @Nullable
@@ -1198,11 +1265,13 @@ public class ActivityManager {
 
     ValidationScalingProcessTask( final OwnerFullName owner,
                                   final List<String> availabilityZones,
+                                  final List<String> loadBalancerNames,
                                   final List<String> imageIds,
                                   @Nullable final String keyName,
                                   final List<String> securityGroups ) {
       super( UUID.randomUUID().toString() + "-validation", AutoScalingGroup.withOwner(owner), "Validate" );
       this.availabilityZones = availabilityZones;
+      this.loadBalancerNames = loadBalancerNames;
       this.imageIds = imageIds;
       this.keyName = keyName;
       this.securityGroups = securityGroups;
@@ -1212,6 +1281,7 @@ public class ActivityManager {
     boolean shouldRun() {
       return
           !availabilityZones.isEmpty() ||
+          !loadBalancerNames.isEmpty() ||
           !imageIds.isEmpty() ||
           keyName != null ||
           !securityGroups.isEmpty();
@@ -1222,6 +1292,9 @@ public class ActivityManager {
       final List<ValidationScalingActivityTask<?>> tasks = Lists.newArrayList();
       if ( !availabilityZones.isEmpty() ) {
         tasks.add( new AZValidationScalingActivityTask( newActivity(), availabilityZones ) );
+      }
+      if ( !loadBalancerNames.isEmpty() ) {
+        tasks.add( new LoadBalancerValidationScalingActivityTask( newActivity(), loadBalancerNames ) );
       }
       if ( !imageIds.isEmpty() ) {
         tasks.add( new ImageIdValidationScalingActivityTask( newActivity(), imageIds ) );

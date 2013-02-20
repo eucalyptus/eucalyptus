@@ -19,15 +19,15 @@
  ************************************************************************/
 package com.eucalyptus.autoscaling.activities;
 
-import com.eucalyptus.component.id.Eucalyptus;
-import edu.ucsb.eucalyptus.msgs.EucalyptusMessage;
+import com.eucalyptus.loadbalancing.LoadBalancing;
+import com.eucalyptus.loadbalancing.LoadBalancingMessage;
 
 /**
- * 
+ *
  */
-class EucalyptusClient extends DispatchingClient<EucalyptusMessage,Eucalyptus> {
+class ElbClient extends DispatchingClient<LoadBalancingMessage,LoadBalancing> {
 
-  EucalyptusClient( final String userId ) {
-    super( userId, Eucalyptus.class );
+  ElbClient( final String userId ) {
+    super( userId, LoadBalancing.class );
   }
 }

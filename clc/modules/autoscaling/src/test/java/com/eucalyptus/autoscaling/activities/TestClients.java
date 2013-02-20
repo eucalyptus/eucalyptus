@@ -19,15 +19,39 @@
  ************************************************************************/
 package com.eucalyptus.autoscaling.activities;
 
-import com.eucalyptus.component.id.Eucalyptus;
+import javax.annotation.Nullable;
+import com.eucalyptus.util.Callback;
+import edu.ucsb.eucalyptus.msgs.BaseMessage;
 import edu.ucsb.eucalyptus.msgs.EucalyptusMessage;
 
 /**
- * 
+ * Groovy can't handle the generics so using Java + Callback
  */
-class EucalyptusClient extends DispatchingClient<EucalyptusMessage,Eucalyptus> {
+class TestClients {
+  interface RequestHandler {
+    BaseMessage handle( BaseMessage request );
+  }
 
-  EucalyptusClient( final String userId ) {
-    super( userId, Eucalyptus.class );
+  static class TestEucalyptusClient extends EucalyptusClient {
+    private final RequestHandler handler;
+
+    TestEucalyptusClient( String userId, RequestHandler handler ) {
+      super(userId);
+      this.handler = handler;
+    }
+
+    @SuppressWarnings( "unchecked" )
+    @Override
+    <REQ extends EucalyptusMessage, RES extends EucalyptusMessage> void dispatch( REQ request,
+                                                                                  Callback.Checked<RES> callback,
+                                                                                  @Nullable Runnable then ) {
+      try {
+        callback.fire( (RES)handler.handle( request ) );
+      } catch ( Exception e ) {
+        callback.fireException( e );
+      } finally {
+        if ( then != null ) then.run();
+      }
+    }
   }
 }

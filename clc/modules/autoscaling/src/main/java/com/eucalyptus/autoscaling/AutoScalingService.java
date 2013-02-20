@@ -311,7 +311,8 @@ public class AutoScalingService {
 
           final List<String> referenceErrors = activityManager.validateReferences(
               ctx.getUserFullName(),
-              request.availabilityZones()
+              request.availabilityZones(),
+              request.loadBalancerNames()
           );
           if ( !referenceErrors.isEmpty() ) {
             throw Exceptions.toUndeclared( new InvalidParameterValueException( "Invalid parameters " + referenceErrors ) );
@@ -725,7 +726,8 @@ public class AutoScalingService {
 
             final List<String> referenceErrors = activityManager.validateReferences(
                 autoScalingGroup.getOwner(),
-                autoScalingGroup.getAvailabilityZones()
+                autoScalingGroup.getAvailabilityZones(),
+                Collections.<String>emptyList() // load balancer names cannot be updated
             );
             if ( !referenceErrors.isEmpty() ) {
               throw Exceptions.toUndeclared( new InvalidParameterValueException( "Invalid parameters " + referenceErrors ) );

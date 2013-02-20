@@ -741,7 +741,8 @@ class AutoScalingServiceTest {
 
       @Override
       List<String> validateReferences( OwnerFullName owner,
-                                       Collection<String> availabilityZones) {
+                                       Collection<String> availabilityZones,
+                                       Collection<String> loadBalancerNames) {
         []
       }
 

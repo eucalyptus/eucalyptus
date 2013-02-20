@@ -26,7 +26,6 @@ import com.google.common.base.Supplier
 import com.google.common.base.Suppliers
 import edu.ucsb.eucalyptus.cloud.NotImplementedException
 import edu.ucsb.eucalyptus.msgs.CreateTagsType
-import edu.ucsb.eucalyptus.msgs.EucalyptusMessage
 import edu.ucsb.eucalyptus.msgs.ReservationInfoType
 import edu.ucsb.eucalyptus.msgs.RunInstancesResponseType
 import edu.ucsb.eucalyptus.msgs.RunInstancesType
@@ -336,7 +335,7 @@ class ActivityManagerTest {
     assertFalse( "Group scaling required", invoke( Boolean.class, group, "getScalingRequired") )
     assertEquals( "Instance count", 3, instances.size() )
     assertEquals( "Instances 1 id", "i-00000001", invoke( String.class, instances.get(0), "getInstanceId" ) )
-    assertEquals( "Instances 1 az", "Zone3", invoke( String.class, instances.get(0), "getAvailabilityZone" ) )    
+    assertEquals( "Instances 1 az", "Zone3", invoke( String.class, instances.get(0), "getAvailabilityZone" ) )
     assertEquals( "Instances 2 id", "i-00000002", invoke( String.class, instances.get(1), "getInstanceId" ) )
     assertEquals( "Instances 2 az", "Zone1", invoke( String.class, instances.get(1), "getAvailabilityZone" ) )
     assertEquals( "Instances 3 id", "i-00000004", invoke( String.class, instances.get(2), "getInstanceId" ) )
@@ -470,35 +469,25 @@ class ActivityManagerTest {
 
       @Override
       EucalyptusClient createEucalyptusClientForUser(String userId) {
-        return new EucalyptusClient(userId) {
-          @Override
-          def <REQ extends EucalyptusMessage, RES extends EucalyptusMessage> void dispatch(final REQ request,
-                                                                                           final Callback.Checked<RES> callback,
-                                                                                           final Runnable then) {
-            if (request instanceof RunInstancesType) {
-              callback.fire(
-                  (RES) new RunInstancesResponseType(
-                      rsvInfo: new ReservationInfoType(
-                          instancesSet: [
-                              new RunningInstancesItemType(
-                                  instanceId: "i-0000000" + (++instanceCount),
-                                  placement: ((RunInstancesType) request).availabilityZone,
-                              )
-                          ]
-                      )
-                  )
-              )
-            } else if ( request instanceof CreateTagsType ||
-                        request instanceof TerminateInstancesType ) {
-              callback.fire(
-                  (RES) request.reply
-              )
-            } else {
-              callback.fireException(new Exception("Unknown request type: " + request.getClass()))
-            }
-            then?.run()
+        new TestClients.TestEucalyptusClient( userId, { request ->
+          if (request instanceof RunInstancesType) {
+                new RunInstancesResponseType(
+                    rsvInfo: new ReservationInfoType(
+                        instancesSet: [
+                            new RunningInstancesItemType(
+                                instanceId: "i-0000000" + (++instanceCount),
+                                placement: ((RunInstancesType) request).availabilityZone,
+                            )
+                        ]
+                    )
+                )
+          } else if ( request instanceof CreateTagsType ||
+              request instanceof TerminateInstancesType ) {
+                request.reply
+          } else {
+            throw new RuntimeException("Unknown request type: " + request.getClass())
           }
-        }
+        } as TestClients.RequestHandler )
       }
 
       @Override
@@ -507,8 +496,8 @@ class ActivityManagerTest {
       }
     }
     manager
-  }  
-  
+  }
+
   AccountProvider accountProvider() {
     new AccountProvider() {
       @Override
