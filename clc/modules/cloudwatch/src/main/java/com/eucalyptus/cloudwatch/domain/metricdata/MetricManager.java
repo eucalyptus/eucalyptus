@@ -185,8 +185,10 @@ public class MetricManager {
       dimensions.add(d);
     }
     Date now = new Date();
-    if (endTime == null) endTime = stripSeconds(now);
-    if (startTime == null) startTime = stripSeconds(new Date(now.getTime() - 60 * 60 * 1000L));
+    if (endTime == null) endTime = now;
+    if (startTime == null) startTime = new Date(now.getTime() - 60 * 60 * 1000L);
+    startTime = stripSeconds(startTime);
+    endTime = stripSeconds(endTime);
     if (startTime.after(endTime)) {
       throw new IllegalArgumentException("Start time must be after end time");
     }

@@ -165,6 +165,11 @@ public class CloudWatchService {
     final Date startTime = request.getStartTime();
     final Date endTime = request.getEndTime();
     final Integer period = request.getPeriod();
+    LOG.debug("namespace="+namespace);
+    LOG.debug("metricName="+metricName);
+    LOG.debug("startTime="+startTime);
+    LOG.debug("endTime="+endTime);
+    LOG.debug("period="+period);
     // TODO: null units here does not mean Units.NONE but basically a wildcard.  Consider this case.
     final Units units = (request.getUnit() != null) ? Units.fromValue(request.getUnit()) : null;
     final Map<String, String> dimensionMap = transform(request.getDimensions());
