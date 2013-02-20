@@ -108,9 +108,9 @@ public class VmMigrationTask {
   @Enumerated( EnumType.STRING )
   @Column( name = "metadata_vm_migration_state" )
   private MigrationState state;
-  @Column( name = "metadata_vm_migration_prefix" )
+  @Column( name = "metadata_vm_migration_source_host" )
   private String         sourceHost;
-  @Column( name = "metadata_vm_migration_prefix" )
+  @Column( name = "metadata_vm_migration_dest_host" )
   private String         destinationHost;
   
   private VmMigrationTask( ) {}
