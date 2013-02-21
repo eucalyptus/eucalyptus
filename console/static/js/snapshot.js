@@ -40,18 +40,15 @@
         hidden: thisObj.options['hidden'],
         dt_arg : {
           "bProcessing": true,
-          "sAjaxSource": "../ec2?Action=DescribeSnapshots",
-          "fnServerData": function (sSource, aoData, fnCallback) {
-                $.ajax( {
-                    "dataType": 'json',
-                    "type": "POST",
-                    "url": sSource,
-                    "data": "_xsrf="+$.cookie('_xsrf'),
-                    "success": fnCallback
-                });
-
+          "bServerSide": true,
+          "sAjaxDataProp": function(json) {
+            return json;
           },
-          "sAjaxDataProp": "results",
+          "sAjaxSource": 'snapshot',
+          "fnServerData": function (sSource, aoData, fnCallback) {
+                data = $('html body').eucadata('get', sSource);
+                fnCallback(data);
+          },
           "bAutoWidth" : false,
           "sPaginationType": "full_numbers",
           "aoColumns": [
@@ -134,6 +131,9 @@
         legend : ['pending', 'completed', 'error'],
       });
       this.tableWrapper.appendTo(this.element);
+      $('html body').eucadata('addCallback', 'snapshot', 'snapshot-landing', function() {
+        thisObj.tableWrapper.eucatable('redraw');
+      });
     },
 
     _create : function() { 

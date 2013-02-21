@@ -37,16 +37,15 @@
         id : 'keys', // user of this widget should customize these options,
         hidden: thisObj.options['hidden'],
         dt_arg : {
-          "sAjaxSource": "../ec2?Action=DescribeKeyPairs",
+          "bProcessing": true,
+          "bServerSide": true,
+          "sAjaxDataProp": function(json) {
+            return json;
+          },
+          "sAjaxSource": 'keypair',
           "fnServerData": function (sSource, aoData, fnCallback) {
-                $.ajax( {
-                    "dataType": 'json',
-                    "type": "POST",
-                    "url": sSource,
-                    "data": "_xsrf="+$.cookie('_xsrf'),
-                    "success": fnCallback
-                });
-
+                data = $('html body').eucadata('get', sSource);
+                fnCallback(data);
           },
           "aoColumns": [
             {
@@ -56,20 +55,20 @@
               "sClass": "checkbox-cell",
             },
             {
-	      // Display the name of the keypair in the main table
+              // Display the name of the keypair in the main table
               "fnRender": function(oObj) { 
-		return eucatableDisplayColumnTypeText (oObj.aData.name, oObj.aData.name, 75);
-	      },
+                return eucatableDisplayColumnTypeText (oObj.aData.name, oObj.aData.name, 75);
+              },
               "iDataSort": 3,
             },
             { 
-	      // Display the fingerprint of the keypair in the main table
-	      "mDataProp": "fingerprint", "bSortable": false 
-	    },
+              // Display the fingerprint of the keypair in the main table
+              "mDataProp": "fingerprint", "bSortable": false 
+            },
             { 
-	      // Create an invisible column for the name of the keypair
-	      "mDataProp": "name", "bVisible": false
-	    },
+              // Create an invisible column for the name of the keypair
+              "mDataProp": "name", "bVisible": false
+            },
           ],
         },
         text : {
@@ -99,6 +98,9 @@
         },
       });
       this.tableWrapper.appendTo(this.element);
+      $('html body').eucadata('addCallback', 'keypair', 'keypair-landing', function() {
+        thisObj.tableWrapper.eucatable('redraw');
+      });
     },
 
     _create : function() { 

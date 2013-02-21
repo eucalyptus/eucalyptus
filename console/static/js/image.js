@@ -34,81 +34,80 @@
         id : 'images', // user of this widget should customize these options,
         hidden: thisObj.options['hidden'],
         dt_arg : {
-          "sAjaxSource": "../ec2?Action=DescribeImages"+IMG_OPT_PARAMS,
+          "bProcessing": true,
+          "bServerSide": true,
+          "sAjaxDataProp": function(json) {
+            return json;
+          },
+          "sAjaxSource": 'image',
           "fnServerData": function (sSource, aoData, fnCallback) {
-                $.ajax( {
-                    "dataType": 'json',
-                    "type": "POST",
-                    "url": sSource,
-                    "data": "_xsrf="+$.cookie('_xsrf'),
-                    "success": fnCallback
-                });
-
+                data = $('html body').eucadata('get', sSource);
+                fnCallback(data);
           },
           "aoColumns": [
             {
-	      // Display the name of the image in eucatable
-	      // Allow the name to be clickable
-	      // Use 'twist' in CSS 
+              // Display the name of the image in eucatable
+              // Allow the name to be clickable
+              // Use 'twist' in CSS 
               "fnRender" : function(oObj) { 
-		return eucatableDisplayColumnTypeTwist (oObj.aData.name, oObj.aData.name, 255);
+                return eucatableDisplayColumnTypeTwist (oObj.aData.name, oObj.aData.name, 255);
               },
             },
             { 
-	      // Display the id of the image in eucatable
-	      "mDataProp": "id"
-	    },
+              // Display the id of the image in eucatable
+              "mDataProp": "id"
+            },
             { 
-	      // Display the artitecture of the image in eucatable
-	      "mDataProp": "architecture"
-	    },
+              // Display the artitecture of the image in eucatable
+              "mDataProp": "architecture"
+            },
             {
-	      // Display the description of the image in eucatable
-	      "mDataProp": "description"
-	    },
+              // Display the description of the image in eucatable
+              "mDataProp": "description"
+            },
             { 
-	      // Display the root device type of the image in eucatable
-	      "mDataProp": "root_device_type"
-	    },
+              // Display the root device type of the image in eucatable
+              "mDataProp": "root_device_type"
+            },
             {
-	      // Display the launch instance button for the image in eucatable
+              // Display the launch instance button for the image in eucatable
               "bSortable": false,
               "sClass": "centered-cell",
               "fnRender": function(oObj) {
-	        return eucatableDisplayColumnTypeLaunchInstanceButton (oObj.aData.id); 
-	      },
+              return eucatableDisplayColumnTypeLaunchInstanceButton (oObj.aData.id); 
+            },
               "sWidth": 80,
             },
             {
-	      // Hidden column for the state of the image
+              // Hidden column for the state of the image
               "bVisible": false,
               "mDataProp": "state"
             },
             {
-	      // Hidden column for the type of the image
+              // Hidden column for the type of the image
               "bVisible": false,
               "mDataProp": "type"
             },
             { 
-	      // Hidden column for the id of the image
+              // Hidden column for the id of the image
               "bVisible": false,
               "mDataProp": "id",
             },
             { 
-	      // Hidden column for the platform/OS of the image
-	      // idx = 9
+              // Hidden column for the platform/OS of the image
+              // idx = 9
               "bVisible" : false,
               "fnRender" : function(oObj) {
                 return oObj.aData.platform ? oObj.aData.platform : 'linux';
               }
             },
             {
-	      // Hidden column for the location of the image
+              // Hidden column for the location of the image
               "bVisible" : false,
               "mDataProp" : "location",
             },
             {
-	      // Hidden column for the ownership of the image ?
+              // Hidden column for the ownership of the image ?
               "bVisible": false,
               "fnRender" : function(oObj){
                 var results = describe('sgroup');
@@ -149,6 +148,9 @@ launch_instance_image_table_platform_linux, launch_instance_image_table_platform
           ],
       });
       this.tableWrapper.appendTo(this.element);
+      $('html body').eucadata('addCallback', 'image', 'image-landing', function() {
+        thisObj.tableWrapper.eucatable('redraw');
+      });
     },
 
     _create : function() { 

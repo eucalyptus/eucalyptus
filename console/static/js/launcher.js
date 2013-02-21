@@ -292,16 +292,15 @@
 
       var image_self = false; 
       var dtArg = { 
-          "sAjaxSource": "../ec2?Action=DescribeImages",
+          "bProcessing": true,
+          "bServerSide": true,
+          "sAjaxDataProp": function(json) {
+            return json;
+          },
+          "sAjaxSource": 'image',
           "fnServerData": function (sSource, aoData, fnCallback) {
-                $.ajax( {
-                    "dataType": 'json',
-                    "type": "POST",
-                    "url": sSource,
-                    "data": "_xsrf="+$.cookie('_xsrf'),
-                    "success": fnCallback
-                });
-
+                data = $('html body').eucadata('get', sSource);
+                fnCallback(data);
           },
           "bSortClasses" : false,
           "bSortable" : false,
@@ -377,8 +376,6 @@
            "sDom" : "<\"#filter-wrapper\"<\"#owner-filter\"><\"#platform-filter\"><\"clear\"><\"#arch-filter\"><\"clear\"><\"#root-filter\"><\"clear\">f><\"#table-wrapper\" <\"#wizard-img-table-size\"> tr<\"clear\">p>", 
            "sPaginationType" : "full_numbers",
            "iDisplayLength" : thisObj.options.image ? -1: 5,
-           "bProcessing" : true,
-           "sAjaxDataProp" : "results",
            "bAutoWidth" : false,
            "fnDrawCallback" : function( oSettings ) {
               drawCallback(oSettings);

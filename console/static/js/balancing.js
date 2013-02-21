@@ -41,18 +41,15 @@
         hidden: thisObj.options['hidden'],
         dt_arg : {
           "bProcessing": true,
-          "sAjaxSource": "../elb?Action=DescribeLoadBalancers",
-          "fnServerData": function (sSource, aoData, fnCallback) {
-                $.ajax( {
-                    "dataType": 'json',
-                    "type": "POST",
-                    "url": sSource,
-                    "data": "_xsrf="+$.cookie('_xsrf'),
-                    "success": fnCallback
-                });
-
+          "bServerSide": true,
+          "sAjaxDataProp": function(json) {
+            return json;
           },
-          "sAjaxDataProp": "results",
+          "sAjaxSource": 'balancer',
+          "fnServerData": function (sSource, aoData, fnCallback) {
+                data = $('html body').eucadata('get', sSource);
+                fnCallback(data);
+          },
           "bAutoWidth" : false,
           "sPaginationType": "full_numbers",
           "aoColumns": [
@@ -97,6 +94,9 @@
         }
       });
       this.tableWrapper.appendTo(this.element);
+      $('html body').eucadata('addCallback', 'balancer', 'balance-landing', function() {
+        thisObj.tableWrapper.eucatable('redraw');
+      });
     },
 
     _create : function() { 

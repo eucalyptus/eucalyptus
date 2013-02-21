@@ -45,16 +45,15 @@
         id : 'instances', // user of this widget should customize these options,
         hidden: thisObj.options['hidden'],
         dt_arg : {
-          "sAjaxSource": "../ec2?Action=DescribeInstances",
+          "bProcessing": true,
+          "bServerSide": true,
+          "sAjaxDataProp": function(json) {
+            return json;
+          },
+          "sAjaxSource": 'instance',
           "fnServerData": function (sSource, aoData, fnCallback) {
-                $.ajax( {
-                    "dataType": 'json',
-                    "type": "POST",
-                    "url": sSource,
-                    "data": "_xsrf="+$.cookie('_xsrf'),
-                    "success": fnCallback
-                });
-
+                data = $('html body').eucadata('get', sSource);
+                fnCallback(data);
           },
           "aaSorting": [[ 10, "desc" ]],
           "aoColumns": [
@@ -209,8 +208,10 @@
                    {name:"inst_type", options: ['all', 'ebs','instance-store'], text: [instance_type_selector_all, instance_type_selector_ebs, instance_type_selector_instancestore], filter_col:11}],
         legend : ['running','pending','stopping','stopped','shuttingdown','terminated']
       }) //end of eucatable
-      
       thisObj.tableWrapper.appendTo(thisObj.element);
+      $('html body').eucadata('addCallback', 'instance', 'instance-landing', function() {
+        thisObj._getTableWrapper().eucatable('redraw');
+      });
     },
     _create : function() { 
       var thisObj = this;

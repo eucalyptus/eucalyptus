@@ -73,8 +73,10 @@
         });
       }
 
-      thisObj.refreshCallback = runRepeat(function(){ return thisObj._refreshTableInterval();}, (TABLE_REFRESH_INTERVAL_SEC * 1000), false);
-      tableRefreshCallback = thisObj.refreshCallback;
+// removed callback that causes the table to auto-refresh from data. Instead
+// tables get updated automatically by data pushed from eucadata, in each landing page
+//      thisObj.refreshCallback = runRepeat(function(){ return thisObj._refreshTableInterval();}, (TABLE_REFRESH_INTERVAL_SEC * 1000), false);
+//      tableRefreshCallback = thisObj.refreshCallback;
     },
 
     _create : function() {
@@ -536,6 +538,8 @@
         return;
       if(! $('html body').eucadata('isEnabled'))
         return;
+      var oSettings = this.table.fnSettings();
+      $('html body').eucadata('refresh', oSettings.sAjaxSource);
       this.table.fnReloadAjax(undefined, undefined, true);
       
       var $checkAll = this.table.find('thead').find(':input[type="checkbox"]');
@@ -557,6 +561,10 @@
           cancelRepeat(token);
         }
       }, 2000);
+    },
+
+    redraw : function() {
+      this.table.fnDraw();
     },
 
     // (optional) columnIdx: if undefined, returns matrix [row_idx, col_key]

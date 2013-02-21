@@ -39,16 +39,15 @@
         id : 'sgroups', // user of this widget should customize these options,
         hidden: thisObj.options['hidden'],
         dt_arg : {
-          "sAjaxSource": "../ec2?Action=DescribeSecurityGroups",
+          "bProcessing": true,
+          "bServerSide": true,
+          "sAjaxDataProp": function(json) {
+            return json;
+          },
+          "sAjaxSource": 'sgroup',
           "fnServerData": function (sSource, aoData, fnCallback) {
-                $.ajax( {
-                    "dataType": 'json',
-                    "type": "POST",
-                    "url": sSource,
-                    "data": "_xsrf="+$.cookie('_xsrf'),
-                    "success": fnCallback
-                });
-
+            data = $('html body').eucadata('get', sSource);
+            fnCallback(data);
           },
           "aoColumns": [
             {
@@ -178,6 +177,9 @@
         },
       });
       this.tableWrapper.appendTo(this.element);
+      $('html body').eucadata('addCallback', 'sgroup', 'sgroup-landing', function() {
+        thisObj.tableWrapper.eucatable('redraw');
+      });
     },
 
     _createMenuActions : function() {
