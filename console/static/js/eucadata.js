@@ -23,8 +23,10 @@
     options : {  
       refresh_interval_sec : REFRESH_INTERVAL_SEC,
       max_refresh_attempt : 3,
-      endpoints: [{name:'instance', url: '/ec2?Action=DescribeInstances'},
-                  {name:'image', url: '/ec2?Action=DescribeImages'+IMG_OPT_PARAMS},
+      endpoints: [{name:'summary', url: '/ec2?Action=GetCacheSummary'},
+                  {name:'instance', url: '/ec2?Action=DescribeInstances'},
+                  //{name:'image', url: '/ec2?Action=DescribeImages&Owner=self'},
+                  {name:'image', url: '/ec2?Action=DescribeImages'},
                   {name:'volume', url: '/ec2?Action=DescribeVolumes'},
                   {name:'snapshot', url: '/ec2?Action=DescribeSnapshots'},
                   {name:'eip', url: '/ec2?Action=DescribeAddresses'},
@@ -37,7 +39,8 @@
                   {name:'scalinginst', url: '/autoscaling?Action=DescribeAutoScalingInstances'}
       ], 
     },
-    _data : {instance:null, image:null, volume:null, snapshot:null, eip:null, keypair: null, sgroup: null, zone: null},
+    //_data : {summary:[], instance:null, image:null, volume:null, snapshot:null, eip:null, keypair: null, sgroup: null, zone: null, bucket: null, balancer: null, scalinggrp: null, scalinginst: null},
+    _data : {summary:[], instance:null, image:null, volume:null, snapshot:null, eip:null, keypair: null, sgroup: null, zone: null},
     _callbacks : {}, 
     _listeners : {},
     _init : function(){ },
@@ -54,6 +57,11 @@
          if(!thisObj._enabled || thisObj.countPendingReq() > MAX_PENDING_REQ ) {
            return;
          }
+         // if summary doesn't contain this resource name, skip the update
+//         if(name != 'summary' && thisObj._data['summary'][name] == undefined) {
+//            return;
+//         }
+//         if (name == 'image' && url.search(IMG_OPT_PARAMS) != -1) { url = url + IMG_OPT_PARAMS; }
          $.ajax({
            type:"POST",
            url: url,
