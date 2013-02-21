@@ -39,6 +39,7 @@ import logging
 import uuid
 from datetime import datetime
 from datetime import timedelta
+from boto.ec2.vmtype import VmType
 
 from .botoclcinterface import BotoClcInterface
 from token import TokenAuthenticator
@@ -432,12 +433,24 @@ class LoginResponse(ProxyResponse):
         if not global_session:
             global_session = GlobalSession()
 
-        host = config.get('server', 'clchost')
-        clc = BotoClcInterface(host, self.user_session.access_key,
-                               self.user_session.secret_key,
-                               self.user_session.session_token)
-        vmtypes = clc.get_all_vmtypes()
-        global_session.parse_vmtypes(vmtypes)
+        # hopefully, solve this in boto, but for now, let's see if
+        # this is aws endpoint and use static def instead
+        if self.user_session.host_override != None:
+            global_session.parse_vmtypes({
+                VmType(name='t1.micro', cores='1', memory='512', disk='10'),
+                VmType(name='m1.small', cores='2', memory='1700', disk='160'),
+                VmType(name='m1.medium', cores='2', memory='3750', disk='410'),
+                VmType(name='m1.large', cores='4', memory='7500', disk='850'),
+                VmType(name='m1.xlarge', cores='8', memory='15000', disk='1690')
+            });
+        else:
+            host = config.get('server', 'clchost')
+            clc = BotoClcInterface(host, self.user_session.access_key,
+                                   self.user_session.secret_key,
+                                   self.user_session.session_token)
+            vmtypes = clc.get_all_vmtypes()
+            print vmtypes
+            global_session.parse_vmtypes(vmtypes)
 
         return {'global_session': global_session.get_session(),
                 'user_session': self.user_session.get_session()}

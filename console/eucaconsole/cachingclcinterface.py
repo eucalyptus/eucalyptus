@@ -101,14 +101,24 @@ class CachingClcInterface(ClcInterface):
         self.tags = Cache(freq)
 
     def get_cache_summary(self):
-        summary = {'zone':self.zones.isCacheFresh(),
-                   'image':self.images.isCacheFresh(),
-                   'instance':self.instances.isCacheFresh(),
-                   'keypair':self.keypairs.isCacheFresh(),
-                   'sgroup':self.groups.isCacheFresh(),
-                   'volume':self.volumes.isCacheFresh(),
-                   'snapshot':self.snapshots.isCacheFresh(),
-                   'eip':self.addresses.isCacheFresh()}
+        # make sparse array containing names of resource with updates
+        summary = []
+        if self.zones.isCacheFresh():
+            summary.append('zone')
+        if self.images.isCacheFresh():
+            summary.append('image')
+        if self.instances.isCacheFresh():
+            summary.append('instance')
+        if self.keypairs.isCacheFresh():
+            summary.append('keypair')
+        if self.groups.isCacheFresh():
+            summary.append('sgroup')
+        if self.volumes.isCacheFresh():
+            summary.append('volume')
+        if self.snapshots.isCacheFresh():
+            summary.append('snapshot')
+        if self.addresses.isCacheFresh():
+            summary.append('eip')
         return summary
 
     def __normalize_instances__(self, instances):
