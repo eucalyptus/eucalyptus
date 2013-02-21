@@ -21,11 +21,10 @@
 package com.eucalyptus.reporting.modules.backend;
 
 import org.apache.log4j.Logger;
-
 import com.eucalyptus.bootstrap.Bootstrap;
+import com.eucalyptus.bootstrap.BootstrapArgs;
 import com.eucalyptus.bootstrap.Hosts;
 import com.eucalyptus.cluster.callback.DescribeSensorCallback;
-
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
@@ -56,16 +55,18 @@ public class DescribeSensorsListener implements EventListener<Hertz> {
   private Integer HISTORY_SIZE = 5;
   private Integer MAX_WRITE_INTERVAL_MS = 86400000;
   private Integer SENSOR_QUERY_BATCH_SIZE = 10;
-
+  
   private static final Logger LOG = Logger.getLogger(DescribeSensorsListener.class);
-
+  
   public static void register() {
     Listeners.register( Hertz.class, new DescribeSensorsListener() );
   }
-
+  
   @Override
   public void fireEvent( Hertz event ) {
-   
+    if ( !Bootstrap.isOperational( ) || !BootstrapArgs.isCloudController( ) || !event.isAsserted( DEFAULT_POLL_INTERVAL_MINS ) ) {
+      return;
+    } else {
       if (DEFAULT_POLL_INTERVAL_MINS >= 1) {
 	  COLLECTION_INTERVAL_TIME_MS = ((int) TimeUnit.MINUTES
 		  .toMillis(DEFAULT_POLL_INTERVAL_MINS) / 2);
@@ -118,6 +119,6 @@ public class DescribeSensorsListener implements EventListener<Hertz> {
 		  + DEFAULT_POLL_INTERVAL_MINS
 		  + " must be less than 1440 minutes");
       }
-
+    }
   }
 }

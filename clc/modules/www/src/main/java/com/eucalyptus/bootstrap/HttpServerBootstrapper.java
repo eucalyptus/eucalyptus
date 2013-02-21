@@ -183,6 +183,7 @@ public class HttpServerBootstrapper extends Bootstrapper {
    */
   @Override
   public boolean stop( ) throws Exception {
+    jettyServer.stop( );
     return true;
   }
   

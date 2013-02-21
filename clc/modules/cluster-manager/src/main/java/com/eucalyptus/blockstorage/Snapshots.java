@@ -123,7 +123,7 @@ public class Snapshots {
     
     @Override
     public void fireEvent( ClockTick event ) {
-      if ( Hosts.isCoordinator( ) && ready.compareAndSet( true, false ) ) {
+      if ( Topology.isEnabledLocally( Eucalyptus.class ) && ready.compareAndSet( true, false ) ) {
         try {
           Threads.enqueue( Eucalyptus.class, Snapshots.class, this );
         } catch ( Exception ex ) {
