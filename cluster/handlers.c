@@ -3978,7 +3978,7 @@ int doModifyNode(ncMetadata * pMeta, char *nodeName, char *stateName)
     rc = ncClientCall(pMeta, timeout, resourceCacheLocal.resources[dst_index].lockidx, resourceCacheLocal.resources[dst_index].ncURL, "ncMigrateInstances",
                       &instances, 1, "Prepare", NULL);
     if (rc) {
-        LOGERROR("failed to request migration on destination\n");
+        LOGERROR("failed to request prepare migration on destination\n");
         ret = 1;
         goto out;
     }
@@ -3988,11 +3988,20 @@ int doModifyNode(ncMetadata * pMeta, char *nodeName, char *stateName)
     rc = ncClientCall(pMeta, timeout, resourceCacheLocal.resources[src_index].lockidx, resourceCacheLocal.resources[src_index].ncURL, "ncMigrateInstances",
                       &instances, 1, "Prepare", NULL);
     if (rc) {
-        LOGERROR("failed to request migration on source\n");
+        LOGERROR("failed to request prepare migration on source\n");
         ret = 1;
         goto out;
     }
 
+    // call commit on source
+    timeout = ncGetTimeout(time(NULL), OP_TIMEOUT, 1, 0);
+    rc = ncClientCall(pMeta, timeout, resourceCacheLocal.resources[src_index].lockidx, resourceCacheLocal.resources[src_index].ncURL, "ncMigrateInstances",
+                      &instances, 1, "Commit", NULL);
+    if (rc) {
+        LOGERROR("failed to request migration on source\n");
+        ret = 1;
+        goto out;
+    }
  out:
     LOGTRACE("done\n");
 
