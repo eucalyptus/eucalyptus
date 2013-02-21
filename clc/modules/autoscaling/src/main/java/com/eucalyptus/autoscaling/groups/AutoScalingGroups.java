@@ -23,12 +23,14 @@ import java.util.List;
 import javax.persistence.EntityTransaction;
 import com.eucalyptus.autoscaling.common.AutoScalingGroupType;
 import com.eucalyptus.autoscaling.common.AutoScalingMetadata;
+import com.eucalyptus.autoscaling.common.TagType;
 import com.eucalyptus.autoscaling.metadata.AutoScalingMetadataException;
 import com.eucalyptus.autoscaling.common.AutoScalingMetadatas;
 import com.eucalyptus.autoscaling.common.AvailabilityZones;
 import com.eucalyptus.autoscaling.common.LoadBalancerNames;
 import com.eucalyptus.autoscaling.common.TerminationPolicies;
 import com.eucalyptus.autoscaling.configurations.LaunchConfiguration;
+import com.eucalyptus.autoscaling.tags.AutoScalingGroupTag;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.util.Callback;
 import com.eucalyptus.util.OwnerFullName;
@@ -36,6 +38,7 @@ import com.eucalyptus.util.RestrictedTypes;
 import com.eucalyptus.util.Strings;
 import com.eucalyptus.util.TypeMapper;
 import com.google.common.base.Function;
+import com.google.common.base.Objects;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Collections2;
 
@@ -128,6 +131,20 @@ public abstract class AutoScalingGroups {
       //type.setVpcZoneIdentifier(); //TODO:STEVE: auto scaling group mapping for vpc zone identifiers?      
 
       return type;
+    }
+  }
+
+  @TypeMapper
+  public enum AutoScalingTagTransform implements Function<TagType, AutoScalingGroupTag> {
+    INSTANCE;
+
+    @Override
+    public AutoScalingGroupTag apply( final TagType tagType ) {
+      final AutoScalingGroupTag groupTag = AutoScalingGroupTag.createUnassigned();
+      groupTag.setKey( tagType.getKey() );
+      groupTag.setValue( Objects.firstNonNull( tagType.getValue(), "" ) );
+      groupTag.setPropagateAtLaunch( Objects.firstNonNull( tagType.getPropagateAtLaunch(), Boolean.FALSE ) );
+      return groupTag;
     }
   }
 

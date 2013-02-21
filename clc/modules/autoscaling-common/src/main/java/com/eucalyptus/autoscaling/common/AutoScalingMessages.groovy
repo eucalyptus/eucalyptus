@@ -557,13 +557,13 @@ public class DescribePoliciesResponseType extends AutoScalingMessage {
   DescribePoliciesResult describePoliciesResult = new DescribePoliciesResult()
   ResponseMetadata responseMetadata = new ResponseMetadata()
 }
-public class Tag extends EucalyptusData {
+public class TagType extends EucalyptusData {
   String resourceId
   String resourceType
   String key
   String value
   Boolean propagateAtLaunch
-  public Tag() {  }
+  public TagType() {  }
 }
 public class DescribeTagsResponseType extends AutoScalingMessage {
   public DescribeTagsResponseType() {  }
@@ -612,7 +612,7 @@ public class Tags extends EucalyptusData {
   public Tags() {  }
   @HttpParameterMapping(parameter="member")
   @HttpEmbedded(multiple=true)
-  ArrayList<Tag> member = new ArrayList<Tag>()
+  ArrayList<TagType> member = new ArrayList<TagType>()
 }
 public class SetDesiredCapacityResponseType extends AutoScalingMessage {
   public SetDesiredCapacityResponseType() {  }

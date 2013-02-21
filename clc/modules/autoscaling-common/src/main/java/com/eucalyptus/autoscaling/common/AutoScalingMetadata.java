@@ -51,4 +51,7 @@ public interface AutoScalingMetadata extends RestrictedType {
 
   @PolicyResourceType( "instance" )
   public interface AutoScalingInstanceMetadata extends AutoScalingMetadata {}
+
+  @PolicyResourceType( "tag" )
+  public interface AutoScalingTagMetadata extends AutoScalingMetadata {}
 }

@@ -137,7 +137,7 @@ public class AbstractOwnedPersistent extends AbstractPersistent {
     }
   }
 
-  protected void setOwner( OwnerFullName owner ) {
+  public void setOwner( OwnerFullName owner ) {
     this.ownerFullNameCached = null;
     this.setOwnerAccountNumber( owner != null
         ? owner.getAccountNumber( )

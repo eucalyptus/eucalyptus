@@ -36,6 +36,7 @@ import org.junit.BeforeClass
 import org.junit.Test
 
 import java.security.cert.X509Certificate
+import com.eucalyptus.autoscaling.tags.Tag
 
 /**
  * 
@@ -491,8 +492,13 @@ class ActivityManagerTest {
       }
 
       @Override
-      Supplier<String> userIdSupplier(final String accountNumber) {
+      Supplier<String> userIdSupplier(String accountNumber) {
         Suppliers.ofInstance(accountNumber)
+      }
+
+      @Override
+      List<Tag> getTags(AutoScalingGroup autoScalingGroup) {
+        []
       }
     }
     manager

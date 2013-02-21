@@ -90,6 +90,10 @@ import org.junit.BeforeClass
 import org.junit.Test
 
 import java.security.cert.X509Certificate
+import com.eucalyptus.autoscaling.tags.TagSupportDiscovery
+import com.eucalyptus.autoscaling.tags.AutoScalingGroupTag
+import com.eucalyptus.autoscaling.tags.Tag
+import com.eucalyptus.autoscaling.tags.Tags
 
 /**
  * 
@@ -107,6 +111,9 @@ class AutoScalingServiceTest {
     discovery.processClass( LaunchConfigurations.LaunchConfigurationTransform.class )
     discovery.processClass( ScalingActivities.ScalingActivityTransform.class )
     discovery.processClass( ScalingPolicies.ScalingPolicyTransform.class )
+    discovery.processClass(Tags.TagToTagDescription )
+    TagSupportDiscovery tagDiscovery = new TagSupportDiscovery()
+    tagDiscovery.processClass( TestAutoScalingGroupTagSupport.class )
   }
   
   @Test
@@ -758,5 +765,16 @@ class AutoScalingServiceTest {
   
   Date date( String timestamp ) {
     Timestamps.parseIso8601Timestamp( timestamp )        
+  }
+
+  public static class TestAutoScalingGroupTagSupport extends AutoScalingGroupTag.AutoScalingGroupTagSupport {
+    @Override
+    Map<String, List<Tag>> getResourceTagMap( OwnerFullName owner,
+                                              Iterable<String> identifiers,
+                                              Predicate<? super Tag> tagPredicate) {
+      Map<String,List<Tag>> map = [:]
+      identifiers.each{ String id -> map.put( id, [] ) }
+      map
+    }
   }
 }

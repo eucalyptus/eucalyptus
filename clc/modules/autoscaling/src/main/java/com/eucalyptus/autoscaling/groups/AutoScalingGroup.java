@@ -49,8 +49,10 @@ import com.eucalyptus.autoscaling.activities.ScalingActivity;
 import com.eucalyptus.autoscaling.metadata.AbstractOwnedPersistent;
 import com.eucalyptus.autoscaling.configurations.LaunchConfiguration;
 import com.eucalyptus.autoscaling.policies.ScalingPolicy;
+import com.eucalyptus.autoscaling.tags.AutoScalingGroupTag;
 import com.eucalyptus.util.OwnerFullName;
 import com.google.common.base.Objects;
+import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 
@@ -131,8 +133,6 @@ public class AutoScalingGroup extends AbstractOwnedPersistent implements AutoSca
   @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
   private List<String> loadBalancerNames = Lists.newArrayList();
   
-  //TODO:STEVE: tags
-  
   //TODO:STEVE: suspendedProcesses?
   
   //TODO:STEVE: include unsupported properties -> placementGroup, vpcZoneIdentifier
@@ -142,6 +142,9 @@ public class AutoScalingGroup extends AbstractOwnedPersistent implements AutoSca
 
   @OneToMany( fetch = FetchType.LAZY, cascade = CascadeType.REMOVE, orphanRemoval = true, mappedBy = "group" )
   private Collection<ScalingPolicy> scalingPolicies;
+
+  @OneToMany( fetch = FetchType.LAZY, cascade = CascadeType.ALL, orphanRemoval = true, mappedBy = "group" )
+  private Collection<AutoScalingGroupTag> tags = Lists.newArrayList();
 
   protected AutoScalingGroup() {
   }
@@ -297,7 +300,7 @@ public class AutoScalingGroup extends AbstractOwnedPersistent implements AutoSca
    * @return The example
    */
   public static AutoScalingGroup named( final OwnerFullName ownerFullName,
-                                           final String name ) {
+                                        final String name ) {
     return new AutoScalingGroup( ownerFullName, name );
   }
 
@@ -323,12 +326,18 @@ public class AutoScalingGroup extends AbstractOwnedPersistent implements AutoSca
                                          final String name,
                                          final LaunchConfiguration launchConfiguration,
                                          final Integer minSize,
-                                         final Integer maxSize ) {
+                                         final Integer maxSize,
+                                         final List<AutoScalingGroupTag> tags ) {
     final AutoScalingGroup autoScalingGroup = new AutoScalingGroup( ownerFullName, name );
     autoScalingGroup.setLaunchConfiguration( launchConfiguration );
     autoScalingGroup.setMinSize( minSize );
     autoScalingGroup.setMaxSize( maxSize );
     autoScalingGroup.setCapacity( 0 );
+    for ( final AutoScalingGroupTag tag : tags ) {
+      tag.setGroup( autoScalingGroup );
+      tag.setOwner( autoScalingGroup.getOwner() );
+      autoScalingGroup.tags.add( tag );
+    }
     return autoScalingGroup;
   }
 
@@ -354,6 +363,7 @@ public class AutoScalingGroup extends AbstractOwnedPersistent implements AutoSca
     private Set<String> availabilityZones = Sets.newLinkedHashSet();
     private Set<TerminationPolicyType> terminationPolicies = Sets.newLinkedHashSet();
     private Set<String> loadBalancerNames = Sets.newLinkedHashSet();
+    private List<AutoScalingGroupTag> tags = Lists.newArrayList();
 
     BaseBuilder( final OwnerFullName ownerFullName,
                  final String name,
@@ -410,10 +420,17 @@ public class AutoScalingGroup extends AbstractOwnedPersistent implements AutoSca
       return builder();
     }
 
+    public T withTags( final Iterable<AutoScalingGroupTag> tags ) {
+      if ( tags != null ) {
+        Iterables.addAll( this.tags, tags );
+      }
+      return builder();
+    }
+
     //TODO:STEVE: verify default values
     protected AutoScalingGroup build() {
       final AutoScalingGroup group =
-          AutoScalingGroup.create( ownerFullName, name, launchConfiguration, minSize, maxSize );
+          AutoScalingGroup.create( ownerFullName, name, launchConfiguration, minSize, maxSize, tags );
       group.setDefaultCooldown( Objects.firstNonNull( defaultCooldown, 300 ) ); 
       group.setDesiredCapacity( Objects.firstNonNull( desiredCapacity, minSize ) );
       group.setHealthCheckGracePeriod( healthCheckGracePeriod );

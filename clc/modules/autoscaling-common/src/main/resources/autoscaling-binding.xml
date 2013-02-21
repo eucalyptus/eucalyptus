@@ -473,7 +473,7 @@
       <value name="member" type="java.lang.String"/>
     </collection>
   </mapping>
-  <mapping class="com.eucalyptus.autoscaling.common.Tag" abstract="true">
+  <mapping class="com.eucalyptus.autoscaling.common.TagType" abstract="true">
     <value name="ResourceId" field="resourceId" usage="optional"/>
     <value name="ResourceType" field="resourceType" usage="optional"/>
     <value name="Key" field="key" usage="required"/>
@@ -567,7 +567,7 @@
   </mapping>
   <mapping class="com.eucalyptus.autoscaling.common.Tags" abstract="true">
     <collection field="member">
-      <structure name="member" type="com.eucalyptus.autoscaling.common.Tag"/>
+      <structure name="member" type="com.eucalyptus.autoscaling.common.TagType"/>
     </collection>
   </mapping>
   <mapping class="com.eucalyptus.autoscaling.common.MetricCollectionTypes" abstract="true">

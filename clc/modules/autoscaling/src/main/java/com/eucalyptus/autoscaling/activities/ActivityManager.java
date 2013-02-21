@@ -39,6 +39,7 @@ import javax.annotation.Nullable;
 import org.apache.log4j.Logger;
 import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.AuthException;
+import com.eucalyptus.auth.principal.AccountFullName;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.autoscaling.common.AutoScaling;
 import com.eucalyptus.autoscaling.configurations.LaunchConfiguration;
@@ -51,6 +52,8 @@ import com.eucalyptus.autoscaling.instances.AutoScalingInstances;
 import com.eucalyptus.autoscaling.instances.PersistenceAutoScalingInstances;
 import com.eucalyptus.autoscaling.metadata.AutoScalingMetadataException;
 import com.eucalyptus.autoscaling.metadata.AutoScalingMetadataNotFoundException;
+import com.eucalyptus.autoscaling.tags.Tag;
+import com.eucalyptus.autoscaling.tags.TagSupport;
 import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.component.Topology;
 import com.eucalyptus.component.id.Eucalyptus;
@@ -61,6 +64,7 @@ import com.eucalyptus.loadbalancing.DescribeLoadBalancersResponseType;
 import com.eucalyptus.loadbalancing.DescribeLoadBalancersType;
 import com.eucalyptus.loadbalancing.LoadBalancerDescription;
 import com.eucalyptus.loadbalancing.LoadBalancerNames;
+import com.eucalyptus.records.Logs;
 import com.eucalyptus.util.Callback;
 import com.eucalyptus.util.CollectionUtils;
 import com.eucalyptus.util.Exceptions;
@@ -345,9 +349,13 @@ public class ActivityManager {
   }
 
   private CreateTagsType tagInstances( final List<String> instanceIds,
-                                       final String autoScalingGroupName ) {
+                                       final String autoScalingGroupName,
+                                       final List<Tag> tags ) {
     final CreateTagsType createTags = new CreateTagsType();
     createTags.getTagSet().add( new ResourceTag( "aws:autoscaling:groupName", autoScalingGroupName ) );
+    for ( final Tag tag : tags ) {
+      createTags.getTagSet().add( new ResourceTag( tag.getKey(), tag.getValue() ) );
+    }
     createTags.getResourcesSet().addAll( instanceIds );
     return createTags;
   }
@@ -483,6 +491,19 @@ public class ActivityManager {
     };
   }
 
+  List<Tag> getTags( final AutoScalingGroup group ) {
+    final AccountFullName accountFullName =
+        AccountFullName.getInstance( group.getOwner().getAccountNumber() );
+    return TagSupport.forResourceClass( AutoScalingGroup.class ).getResourceTags(
+        accountFullName,
+        group.getAutoScalingGroupName(),
+        new Predicate<Tag>(){
+          @Override
+          public boolean apply( final Tag tag ) {
+            return Objects.firstNonNull( tag.getPropagateAtLaunch(), Boolean.FALSE );
+          }
+        } );
+  }
 
   private interface ActivityContext {
     String getUserId();
@@ -571,6 +592,9 @@ public class ActivityManager {
                   input.setEndTime( new Date() );
                 }
               } );
+        } catch ( AutoScalingMetadataNotFoundException e ) {
+          // this is expected when terminating instances and deleting the group
+          Logs.exhaust().debug( e, e );
         } catch ( AutoScalingMetadataException e ) {
           logger.error( e, e );
         }
@@ -798,12 +822,18 @@ public class ActivityManager {
         logger.error( e, e );
       }
 
-      getEucalyptusClient().dispatch( tagInstances( instanceIds, getGroup().getAutoScalingGroupName() ), new Callback.Failure<CreateTagsResponseType>() {
-        @Override
-        public void fireException( final Throwable e ) {
-          logger.error( e, e );
-        }
-      } );
+      getEucalyptusClient().dispatch(
+          tagInstances(
+              instanceIds,
+              getGroup().getAutoScalingGroupName(),
+              getTags( getGroup() ) ),
+          new Callback.Failure<CreateTagsResponseType>() {
+            @Override
+            public void fireException( final Throwable e ) {
+              logger.error( e, e );
+            }
+          }
+      );
     }
   }
 

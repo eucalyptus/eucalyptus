@@ -550,7 +550,10 @@ public class PolicySpec {
   // S3 resource types
   public static final String S3_RESOURCE_BUCKET = "bucket";
   public static final String S3_RESOURCE_OBJECT = "object";
-  
+
+  // Auto scaling resource types
+  public static final String AUTOSCALING_RESOURCE_TAG = "tag";
+
   public static String qualifiedName( String vendor, String name ) {
     return vendor + ":" + name;
   }
