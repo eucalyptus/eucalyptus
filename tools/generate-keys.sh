@@ -86,8 +86,11 @@ cp $WORKD/clientcert.pem $WORKD/servercert.pem /etc/pki/libvirt/
 cp $WORKD/clientkey.pem $WORKD/serverkey.pem /etc/pki/libvirt/private/
 chmod 600 /etc/pki/libvirt/private/serverkey.pem
 
-echo "Key installation complete, sending SIGHUP to libvirtd"
+echo "Key installation complete, reloading libvirtd"
 
-kill -HUP `cat $LIBVIRTPID`
+# Despite what the documentation says, sending a SIGHUP to libvirtd does
+# not appear to update its access list of DNs. So we're doing a restart.
+#kill -HUP `cat $LIBVIRTPID`
+service libvirtd restart
 
 echo "Done."
