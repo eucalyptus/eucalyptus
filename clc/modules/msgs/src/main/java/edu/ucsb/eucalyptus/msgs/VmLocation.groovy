@@ -86,9 +86,6 @@ public class MigrateInstancesType extends CloudTopologyMessage {
   @HttpParameterMapping (parameter = "DestinationHost")
   ArrayList<String> destinationHosts = new ArrayList<String>( );
   Boolean allowHosts = false;
-  public String getServiceTag( ) {
-    return "http://" + this.getSourceHost() + ":8775/axis2/services/EucalyptusNC";//construct bullshit service tag
-  }
 }
 public class MigrateInstancesResponseType extends CloudTopologyMessage {}
 /** *******************************************************************************/

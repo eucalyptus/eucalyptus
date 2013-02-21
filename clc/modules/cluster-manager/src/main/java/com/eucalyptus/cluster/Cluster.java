@@ -71,6 +71,7 @@ import java.net.UnknownHostException;
 import java.security.cert.X509Certificate;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.NavigableSet;
 import java.util.NoSuchElementException;
 import java.util.concurrent.BlockingQueue;
@@ -161,6 +162,7 @@ import com.eucalyptus.ws.WebServicesException;
 import com.google.common.base.Function;
 import com.google.common.base.Predicate;
 import com.google.common.base.Strings;
+import com.google.common.collect.ForwardingMap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.ObjectArrays;
@@ -177,6 +179,53 @@ public class Cluster implements AvailabilityZoneMetadata, HasFullName<Cluster>, 
   private final ClusterConfiguration                     configuration;
 //TODO:GRZE: sigh.  This stuff needs to be addressed by (1) move to Nodes.java for nodeMap, (2) handling it like any other registered service.
   private final ConcurrentNavigableMap<String, NodeInfo> nodeMap;
+  private final Map<String, NodeInfo>                    nodeHostAddrMap = new ForwardingMap<String, NodeInfo>( ) {
+    
+    @Override
+    protected Map<String, NodeInfo> delegate( ) {
+      return Cluster.this.nodeMap;
+    }
+    
+    @Override
+    public boolean containsKey( Object keyObject ) {
+      return delegate( ).containsKey( findRealKey( keyObject ) );
+    }
+    
+    @Override
+    public NodeInfo get( Object key ) {
+      return delegate( ).get( findRealKey( key ) );
+    }
+    
+    public String findRealKey( Object keyObject ) {
+      if ( keyObject instanceof String ) {
+        String key = ( String ) keyObject;
+        for ( String serviceTag : delegate( ).keySet( ) ) {
+          try {
+            URI tag = new URI( serviceTag );
+            String host = tag.getHost( );
+            if ( host != null && host.equals( key ) ) {
+              return serviceTag;
+            } else {
+              InetAddress addr = InetAddress.getByName( host );
+              String hostAddr = addr.getHostAddress( );
+              if ( hostAddr != null && hostAddr.equals( key ) ) {
+                return serviceTag;
+              }
+            }
+          } catch ( UnknownHostException ex ) {
+            LOG.debug( ex );
+          } catch ( URISyntaxException ex ) {
+            LOG.debug( ex );
+          }
+        }
+        return key;
+      } else {
+        return "" + keyObject;
+      }
+    }
+    
+  };
+
   private final BlockingQueue<Throwable>                 pendingErrors  = new LinkedBlockingDeque<Throwable>( );
   private final ClusterState                             state;
   private final ResourceState                            nodeState;
@@ -1331,6 +1380,14 @@ public class Cluster implements AvailabilityZoneMetadata, HasFullName<Cluster>, 
 
   public ConcurrentNavigableMap<String, NodeInfo> getNodeMap( ) {
     return this.nodeMap;
+  }
+  
+  /**
+   * GRZE:WARNING: this is a temporary method to expose the forwarding map of NC info
+   * @return
+   */
+  Map<String,NodeInfo> getNodeHostMap( ) {
+    return this.nodeHostAddrMap;
   }
 
   /**

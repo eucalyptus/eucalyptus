@@ -138,17 +138,16 @@ public class ClusterEndpoint implements Startable {
   
   public MigrateInstancesResponseType migrateInstances( final MigrateInstancesType request ) {
     MigrateInstancesResponseType reply = request.getReply( );
-    String serviceTag = request.getServiceTag( );
     for ( ServiceConfiguration c : Topology.enabledServices( ClusterController.class ) ) {
-      Cluster cluster = Clusters.lookup( c );
-      if ( cluster.getNodeMap( ).containsKey( serviceTag ) ) {
-        try {
-          final String sourceHost = request.getSourceHost( );
-          cluster.migrateInstances( sourceHost );
-          return reply.markWinning( );
-        } catch ( Exception ex ) {
-          LOG.error( ex, ex );
-        }
+      try {
+        Nodes.lookupNodeInfo( c, request.getSourceHost( ) );
+        Cluster cluster = Clusters.lookup( c );
+        cluster.migrateInstances( request.getSourceHost( ) );
+        return reply.markWinning( );
+      } catch ( NoSuchElementException ex1 ) {
+        //noop
+      } catch ( Exception ex ) {
+        LOG.error( ex, ex );
       }
     }
     return reply.markFailed( );
