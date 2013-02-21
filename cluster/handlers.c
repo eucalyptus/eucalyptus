@@ -3976,7 +3976,7 @@ int doModifyNode(ncMetadata * pMeta, char *nodeName, char *stateName)
     // notify the destination
     timeout = ncGetTimeout(time(NULL), OP_TIMEOUT, 1, 0);
     rc = ncClientCall(pMeta, timeout, resourceCacheLocal.resources[dst_index].lockidx, resourceCacheLocal.resources[dst_index].ncURL, "ncMigrateInstances",
-                      &instances, 1, "prepare", NULL);
+                      &instances, 1, "Prepare", NULL);
     if (rc) {
         LOGERROR("failed to request migration on destination\n");
         ret = 1;
@@ -3986,7 +3986,7 @@ int doModifyNode(ncMetadata * pMeta, char *nodeName, char *stateName)
     // notify source
     timeout = ncGetTimeout(time(NULL), OP_TIMEOUT, 1, 0);
     rc = ncClientCall(pMeta, timeout, resourceCacheLocal.resources[src_index].lockidx, resourceCacheLocal.resources[src_index].ncURL, "ncMigrateInstances",
-                      &instances, 1, "prepare", NULL);
+                      &instances, 1, "Prepare", NULL);
     if (rc) {
         LOGERROR("failed to request migration on source\n");
         ret = 1;
@@ -4088,7 +4088,7 @@ int doMigrateInstances(ncMetadata * pMeta, char *nodeName)
     // notify the destination
     timeout = ncGetTimeout(time(NULL), OP_TIMEOUT, 1, 0);
     rc = ncClientCall(pMeta, timeout, resourceCacheLocal.resources[dst_index].lockidx, resourceCacheLocal.resources[dst_index].ncURL, "ncMigrateInstances",
-                      &instances, 1, "prepare", NULL);
+                      &instances, 1, "Prepare", NULL);
     if (rc) {
         LOGERROR("failed to request migration on destination\n");
         ret = 1;
@@ -4098,7 +4098,7 @@ int doMigrateInstances(ncMetadata * pMeta, char *nodeName)
     // notify source
     timeout = ncGetTimeout(time(NULL), OP_TIMEOUT, 1, 0);
     rc = ncClientCall(pMeta, timeout, resourceCacheLocal.resources[src_index].lockidx, resourceCacheLocal.resources[src_index].ncURL, "ncMigrateInstances",
-                      &instances, 1, "prepare", NULL);
+                      &instances, 1, "Prepare", NULL);
     if (rc) {
         LOGERROR("failed to request migration on source\n");
         ret = 1;
