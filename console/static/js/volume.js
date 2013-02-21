@@ -49,6 +49,8 @@
           "sAjaxSource": 'volume',
           "fnServerData": function (sSource, aoData, fnCallback) {
                 data = $('html body').eucadata('get', sSource);
+                data.iTotalRecords = data.length;
+                data.iTotalDisplayRecords = data.length;
                 fnCallback(data);
           },
           "aaSorting": [[ 7, "desc" ]],

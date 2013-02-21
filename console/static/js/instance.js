@@ -53,6 +53,8 @@
           "sAjaxSource": 'instance',
           "fnServerData": function (sSource, aoData, fnCallback) {
                 data = $('html body').eucadata('get', sSource);
+                data.iTotalRecords = data.length;
+                data.iTotalDisplayRecords = data.length;
                 fnCallback(data);
           },
           "aaSorting": [[ 10, "desc" ]],
@@ -210,7 +212,7 @@
       }) //end of eucatable
       thisObj.tableWrapper.appendTo(thisObj.element);
       $('html body').eucadata('addCallback', 'instance', 'instance-landing', function() {
-        thisObj._getTableWrapper().eucatable('redraw');
+        thisObj.tableWrapper.eucatable('redraw');
       });
     },
     _create : function() { 
