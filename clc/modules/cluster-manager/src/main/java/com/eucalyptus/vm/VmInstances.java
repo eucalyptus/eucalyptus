@@ -1004,6 +1004,27 @@ public class VmInstances {
     }
   }
 
+  public static class VmInstanceStatusFilterSupport extends FilterSupport<VmInstance> {
+    public VmInstanceStatusFilterSupport() {
+      super( qualifierBuilderFor( VmInstance.class, "status" )
+          .withStringProperty( "availability-zone", VmInstanceFilterFunctions.AVAILABILITY_ZONE )
+          .withUnsupportedProperty( "event.code" )
+          .withUnsupportedProperty( "event.description" )
+          .withUnsupportedProperty( "event.not-after" )
+          .withUnsupportedProperty( "event.not-before" )
+          .withInternalStringProperty( "instance-id", CloudMetadatas.toDisplayName() )
+          .withIntegerProperty( "instance-state-code", VmInstanceIntegerFilterFunctions.INSTANCE_STATE_CODE )
+          .withStringProperty( "instance-state-name", VmInstanceFilterFunctions.INSTANCE_STATE_NAME )
+          .withConstantProperty( "system-status.status", "ok" )
+          .withConstantProperty( "system-status.reachability", "passed" )
+          .withConstantProperty( "instance-status.status", "ok" )
+          .withConstantProperty( "instance-status.reachability", "passed" )
+          .withPersistenceFilter( "availability-zone", "placement.partitionName", Collections.<String>emptySet() )
+          .withPersistenceFilter( "instance-id", "displayName" )
+      );
+    }
+  }
+
   public static class VmBundleTaskFilterSupport extends FilterSupport<VmBundleTask> {
     private enum ProgressToInteger implements Function<String,Integer> {
       INSTANCE {

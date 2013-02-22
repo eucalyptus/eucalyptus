@@ -81,6 +81,7 @@ import com.eucalyptus.auth.principal.Account;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.auth.principal.User.RegistrationStatus;
 import com.eucalyptus.autoscaling.common.AutoScaling;
+import com.eucalyptus.cloudwatch.CloudWatch;
 import com.eucalyptus.component.ServiceBuilder;
 import com.eucalyptus.component.ServiceBuilders;
 import com.eucalyptus.component.ServiceConfiguration;
@@ -262,6 +263,11 @@ public class X509Download extends HttpServlet {
         sb.append( "\nexport AWS_AUTO_SCALING_URL=" + ServiceUris.remotePublicify( AutoScaling.class ) );
       } else {
         sb.append( "\necho WARN:  Auto Scaling service URL is not configured. >&2" );
+      }
+      if ( Topology.isEnabled( CloudWatch.class ) ) {
+	sb.append( "\nexport AWS_CLOUDWATCH_URL=" + ServiceUris.remotePublicify( CloudWatch.class ) );
+      } else {
+	sb.append( "\necho WARN:  Cloud Watch service URL is not configured. >&2" );
       }
       sb.append( "\nexport EUSTORE_URL=" + StackConfiguration.DEFAULT_EUSTORE_URL );
       sb.append( "\nexport EC2_PRIVATE_KEY=${EUCA_KEY_DIR}/" + baseName + "-pk.pem" );

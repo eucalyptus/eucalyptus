@@ -19,71 +19,106 @@
  ************************************************************************/
 package com.eucalyptus.autoscaling
 
-import static org.junit.Assert.*
-import org.junit.Test
-import com.eucalyptus.autoscaling.configurations.LaunchConfigurations
-import com.eucalyptus.autoscaling.configurations.LaunchConfiguration
-import com.eucalyptus.util.OwnerFullName
-import com.google.common.base.Predicate
-import com.eucalyptus.context.Context
-import edu.ucsb.eucalyptus.msgs.BaseMessage
 import com.eucalyptus.auth.Accounts
 import com.eucalyptus.auth.api.AccountProvider
-import com.eucalyptus.auth.principal.Account
-import com.eucalyptus.auth.principal.User
-import java.security.cert.X509Certificate
-import com.eucalyptus.auth.principal.Group
-import com.eucalyptus.auth.principal.Certificate
 import com.eucalyptus.auth.principal.AccessKey
+import com.eucalyptus.auth.principal.Account
+import com.eucalyptus.auth.principal.Certificate
+import com.eucalyptus.auth.principal.Group
 import com.eucalyptus.auth.principal.Principals
-import edu.ucsb.eucalyptus.cloud.NotImplementedException
-import com.google.common.collect.Lists
-import com.eucalyptus.context.Contexts
-import com.eucalyptus.util.TypeMappers
-import com.eucalyptus.autoscaling.groups.AutoScalingGroups
-import com.eucalyptus.autoscaling.groups.AutoScalingGroup
-import com.eucalyptus.util.Callback
-import com.eucalyptus.autoscaling.common.LaunchConfigurationNames
-import com.eucalyptus.autoscaling.common.BlockDeviceMappings
-import com.eucalyptus.autoscaling.common.LoadBalancerNames
-import com.eucalyptus.autoscaling.common.DeleteAutoScalingGroupType
-import com.eucalyptus.autoscaling.common.InstanceMonitoring
-import com.eucalyptus.autoscaling.common.DescribeLaunchConfigurationsType
-import com.eucalyptus.autoscaling.common.CreateAutoScalingGroupType
-import com.eucalyptus.autoscaling.common.TerminationPolicies
-import com.eucalyptus.autoscaling.common.AvailabilityZones
-import com.eucalyptus.autoscaling.common.SecurityGroups
-import com.eucalyptus.autoscaling.common.LaunchConfigurationType
-import com.eucalyptus.autoscaling.common.BlockDeviceMappingType
-import com.eucalyptus.autoscaling.common.DescribeAutoScalingGroupsResponseType
-import com.eucalyptus.autoscaling.common.AutoScalingGroupType
-import com.eucalyptus.autoscaling.common.DeleteLaunchConfigurationType
+import com.eucalyptus.auth.principal.User
+import com.eucalyptus.autoscaling.activities.ActivityManager
+import com.eucalyptus.autoscaling.activities.ActivityStatusCode
+import com.eucalyptus.autoscaling.activities.ScalingActivities
+import com.eucalyptus.autoscaling.activities.ScalingActivity
+import com.eucalyptus.autoscaling.common.Activity
 import com.eucalyptus.autoscaling.common.AutoScalingGroupNames
-import com.eucalyptus.autoscaling.common.DescribeAutoScalingGroupsType
+import com.eucalyptus.autoscaling.common.AutoScalingGroupType
+import com.eucalyptus.autoscaling.common.AutoScalingInstanceDetails
+import com.eucalyptus.autoscaling.common.AvailabilityZones
+import com.eucalyptus.autoscaling.common.BlockDeviceMappingType
+import com.eucalyptus.autoscaling.common.BlockDeviceMappings
+import com.eucalyptus.autoscaling.common.CreateAutoScalingGroupType
 import com.eucalyptus.autoscaling.common.CreateLaunchConfigurationType
+import com.eucalyptus.autoscaling.common.DeleteAutoScalingGroupType
+import com.eucalyptus.autoscaling.common.DeleteLaunchConfigurationType
+import com.eucalyptus.autoscaling.common.DeletePolicyType
+import com.eucalyptus.autoscaling.common.DescribeAutoScalingGroupsResponseType
+import com.eucalyptus.autoscaling.common.DescribeAutoScalingGroupsType
+import com.eucalyptus.autoscaling.common.DescribeAutoScalingInstancesResponseType
+import com.eucalyptus.autoscaling.common.DescribeAutoScalingInstancesType
 import com.eucalyptus.autoscaling.common.DescribeLaunchConfigurationsResponseType
-import com.eucalyptus.autoscaling.policies.ScalingPolicies
-import com.eucalyptus.autoscaling.policies.ScalingPolicy
-import com.eucalyptus.autoscaling.common.PutScalingPolicyType
+import com.eucalyptus.autoscaling.common.DescribeLaunchConfigurationsType
 import com.eucalyptus.autoscaling.common.DescribePoliciesResponseType
 import com.eucalyptus.autoscaling.common.DescribePoliciesType
-import com.eucalyptus.autoscaling.common.PolicyNames
-import com.eucalyptus.autoscaling.common.ScalingPolicyType
-import com.eucalyptus.autoscaling.common.DeletePolicyType
 import com.eucalyptus.autoscaling.common.ExecutePolicyType
+import com.eucalyptus.autoscaling.common.InstanceMonitoring
+import com.eucalyptus.autoscaling.common.LaunchConfigurationNames
+import com.eucalyptus.autoscaling.common.LaunchConfigurationType
+import com.eucalyptus.autoscaling.common.LoadBalancerNames
+import com.eucalyptus.autoscaling.common.PolicyNames
+import com.eucalyptus.autoscaling.common.PutScalingPolicyType
+import com.eucalyptus.autoscaling.common.ScalingPolicyType
+import com.eucalyptus.autoscaling.common.SecurityGroups
+import com.eucalyptus.autoscaling.common.TerminateInstanceInAutoScalingGroupResponseType
+import com.eucalyptus.autoscaling.common.TerminateInstanceInAutoScalingGroupType
+import com.eucalyptus.autoscaling.common.TerminationPolicies
+import com.eucalyptus.autoscaling.configurations.LaunchConfiguration
+import com.eucalyptus.autoscaling.configurations.LaunchConfigurations
+import com.eucalyptus.autoscaling.groups.AutoScalingGroup
+import com.eucalyptus.autoscaling.groups.AutoScalingGroups
+import com.eucalyptus.autoscaling.groups.HealthCheckType
+import com.eucalyptus.autoscaling.instances.AutoScalingInstance
+import com.eucalyptus.autoscaling.instances.AutoScalingInstances
+import com.eucalyptus.autoscaling.instances.HealthStatus
+import com.eucalyptus.autoscaling.instances.LifecycleState
 import com.eucalyptus.autoscaling.metadata.AutoScalingMetadataNotFoundException
+import com.eucalyptus.autoscaling.policies.ScalingPolicies
+import com.eucalyptus.autoscaling.policies.ScalingPolicy
+import com.eucalyptus.context.Context
+import com.eucalyptus.context.Contexts
+import com.eucalyptus.crypto.util.Timestamps
+import com.eucalyptus.util.Callback
+import com.eucalyptus.util.OwnerFullName
+import com.eucalyptus.util.TypeMappers
+import com.google.common.base.Predicate
+import com.google.common.collect.Lists
+import edu.ucsb.eucalyptus.cloud.NotImplementedException
+import edu.ucsb.eucalyptus.msgs.BaseMessage
+import static org.junit.Assert.*
+import org.junit.BeforeClass
+import org.junit.Test
+
+import java.security.cert.X509Certificate
+import com.eucalyptus.autoscaling.tags.TagSupportDiscovery
+import com.eucalyptus.autoscaling.tags.AutoScalingGroupTag
+import com.eucalyptus.autoscaling.tags.Tag
+import com.eucalyptus.autoscaling.tags.Tags
 
 /**
  * 
  */
+@SuppressWarnings("GroovyAccessibility")
 class AutoScalingServiceTest {
+  
+  @BeforeClass
+  static void before() {
+    TypeMappers.TypeMapperDiscovery discovery = new TypeMappers.TypeMapperDiscovery()
+    discovery.processClass( AutoScalingGroups.AutoScalingGroupTransform.class )
+    discovery.processClass( AutoScalingInstances.AutoScalingInstanceSummaryTransform.class )
+    discovery.processClass( AutoScalingInstances.AutoScalingInstanceTransform.class )
+    discovery.processClass( LaunchConfigurations.BlockDeviceTransform.class )
+    discovery.processClass( LaunchConfigurations.LaunchConfigurationTransform.class )
+    discovery.processClass( ScalingActivities.ScalingActivityTransform.class )
+    discovery.processClass( ScalingPolicies.ScalingPolicyTransform.class )
+    discovery.processClass(Tags.TagToTagDescription )
+    TagSupportDiscovery tagDiscovery = new TagSupportDiscovery()
+    tagDiscovery.processClass( TestAutoScalingGroupTagSupport.class )
+  }
   
   @Test
   void testLaunchConfigurations() {
     Accounts.setAccountProvider( accountProvider() )
-    TypeMappers.TypeMapperDiscovery discovery = new TypeMappers.TypeMapperDiscovery()
-    discovery.processClass( LaunchConfigurations.BlockDeviceTransform.class )
-    discovery.processClass( LaunchConfigurations.LaunchConfigurationTransform.class )
     AutoScalingService service = service()
     Contexts.threadLocal(  new Context( "", new BaseMessage() ) )
     
@@ -141,8 +176,6 @@ class AutoScalingServiceTest {
   @Test
   void testAutoScalingGroups() {
     Accounts.setAccountProvider( accountProvider() )
-    TypeMappers.TypeMapperDiscovery discovery = new TypeMappers.TypeMapperDiscovery()
-    discovery.processClass( AutoScalingGroups.AutoScalingGroupTransform.class )
     AutoScalingService service = service()
     Contexts.threadLocal(  new Context( "", new BaseMessage() ) )
 
@@ -193,11 +226,11 @@ class AutoScalingServiceTest {
     assertEquals( "Health check grace period", 4,  group.getHealthCheckGracePeriod() )
     assertEquals( "Health check type", "EC2", group.getHealthCheckType() )
     assertNotNull( "Availability zones", group.availabilityZones )
-    assertEquals( "Availability zones", [ "zone-1" ] as Set, group.availabilityZones.member as Set )
+    assertEquals( "Availability zones", [ "zone-1" ], group.availabilityZones.member)
     assertNotNull( "Load balancer names", group.loadBalancerNames )
-    assertEquals( "Load balancer names", [ "balancer-1", "balancer-2" ] as Set, group.loadBalancerNames.member as Set )
+    assertEquals( "Load balancer names", [ "balancer-1", "balancer-2" ], group.loadBalancerNames.member )
     assertNotNull( "Termination policies", group.terminationPolicies )
-    assertEquals( "Termination policies", [ "NewestInstance", "Default" ] as Set, group.terminationPolicies.member as Set )
+    assertEquals( "Termination policies", [ "NewestInstance", "Default" ], group.terminationPolicies.member )
 
     service.deleteAutoScalingGroup( new DeleteAutoScalingGroupType( autoScalingGroupName: "Test" ) )
 
@@ -215,9 +248,6 @@ class AutoScalingServiceTest {
   @Test
   void testScalingPolicies() {
     Accounts.setAccountProvider( accountProvider() )
-    TypeMappers.TypeMapperDiscovery discovery = new TypeMappers.TypeMapperDiscovery()
-    discovery.processClass( ScalingPolicies.ScalingPolicyTransform.class )
-    discovery.processClass( AutoScalingGroups.AutoScalingGroupTransform.class )
     AutoScalingService service = service()
     Contexts.threadLocal(  new Context( "", new BaseMessage() ) )
 
@@ -295,11 +325,104 @@ class AutoScalingServiceTest {
             .describeLaunchConfigurationsResult.launchConfigurations.member.size() )
   }
 
-  AutoScalingService service() {
+  @SuppressWarnings("GroovyAssignabilityCheck")
+  @Test
+  void testDescribeInstances() {
+    Accounts.setAccountProvider( accountProvider() )
+    AutoScalingService service = service( launchConfigurationStore(), autoScalingGroupStore(), autoScalingInstanceStore( [
+      new AutoScalingInstance( 
+          ownerAccountNumber: '000000000000', 
+          displayName: 'i-00000001', 
+          availabilityZone: 'Zone1', 
+          autoScalingGroupName: 'Group1', 
+          launchConfigurationName: 'Config1', 
+          healthStatus: HealthStatus.Healthy, 
+          lifecycleState: LifecycleState.InService )    
+    ] ), scalingPolicyStore() ) 
+    Contexts.threadLocal(  new Context( "", new BaseMessage() ) )
+
+    DescribeAutoScalingInstancesResponseType describeAutoScalingInstancesResponseType =
+      service.describeAutoScalingInstances( new DescribeAutoScalingInstancesType() )
+
+    List<AutoScalingInstanceDetails> instanceDetails =
+      describeAutoScalingInstancesResponseType.describeAutoScalingInstancesResult.autoScalingInstances.member
+
+    assertEquals( "Group count", 1, instanceDetails.size() )
+    AutoScalingInstanceDetails details = instanceDetails.get( 0 )
+    assertEquals( "Instance identifier", "i-00000001", details.instanceId )
+    assertEquals( "Auto scaling group name", "Group1", details.autoScalingGroupName )
+    assertEquals( "Launch configuration name", "Config1",  details.launchConfigurationName )
+    assertEquals( "Availability zone", "Zone1",  details.availabilityZone )
+    assertEquals( "Health status", "Healthy",  details.healthStatus )
+    assertEquals( "Lifecycle state", "InService",  details.lifecycleState )    
+  }
+
+  @SuppressWarnings("GroovyAssignabilityCheck")
+  @Test
+  void testTerminateInstances() {
+    Accounts.setAccountProvider( accountProvider() )
+    AutoScalingGroup group;
+    AutoScalingService service = service( launchConfigurationStore(), autoScalingGroupStore( [
+        group = new AutoScalingGroup(
+            naturalId: '88777c80-7248-11e2-bcfd-0800200c9a66',
+            ownerAccountNumber: '000000000000',
+            displayName: 'Group1',
+            availabilityZones: [ 'Zone1' ],
+            maxSize: 1,
+            minSize: 1,
+            desiredCapacity: 1,
+            capacity: 1,
+            scalingRequired: false,
+            defaultCooldown: 300,
+            healthCheckType: HealthCheckType.EC2,
+        )    
+    ] ), autoScalingInstanceStore( [
+        new AutoScalingInstance(
+            ownerAccountNumber: '000000000000',
+            displayName: 'i-00000001',
+            availabilityZone: 'Zone1',
+            autoScalingGroup: group,
+            autoScalingGroupName: 'Group1',
+            launchConfigurationName: 'Config1',
+            healthStatus: HealthStatus.Healthy,
+            lifecycleState: LifecycleState.InService,
+        )
+    ] ), scalingPolicyStore() )
+    Contexts.threadLocal(  new Context( "", new BaseMessage() ) )
+
+    TerminateInstanceInAutoScalingGroupResponseType terminateInstanceInAutoScalingGroupResponseType =
+      service.terminateInstanceInAutoScalingGroup( new TerminateInstanceInAutoScalingGroupType(
+        instanceId: 'i-00000001',
+        shouldDecrementDesiredCapacity: true,
+      ) )
+
+    Activity activity =
+      terminateInstanceInAutoScalingGroupResponseType.terminateInstanceInAutoScalingGroupResult.activity;
+
+    assertNotNull( "Activity", activity )
+    assertEquals( "Activity identifier", 'b7717740-7246-11e2-bcfd-0800200c9a66', activity.activityId )
+    assertEquals( "Activity group name", "Group1", activity.autoScalingGroupName )
+    assertEquals( "Activity cause", "Some cause", activity.cause )
+    assertEquals( "Activity start time", date( "2013-02-01T12:34:56.789Z" ), activity.startTime )
+    assertEquals( "Activity status code", "InProgress", activity.statusCode )
+    assertEquals( "Activity description", "Description", activity.description )
+    assertEquals( "Activity details", "Details", activity.details )
+    assertEquals( "Activity progress", 13, activity.progress )
+  }
+
+  AutoScalingService service( 
+      launchConfigurationStore = launchConfigurationStore(),
+      autoScalingGroupStore = autoScalingGroupStore(),
+      autoScalingInstanceStore = autoScalingInstanceStore(),
+      scalingPolicyStore = scalingPolicyStore(),
+      activityManager = activityManager()
+  ) {
     new AutoScalingService( 
-        launchConfigurationStore(),         
-        autoScalingGroupStore(), 
-        scalingPolicyStore() )
+        launchConfigurationStore,         
+        autoScalingGroupStore, 
+        autoScalingInstanceStore,
+        scalingPolicyStore,
+        activityManager )
   }
   
   AccountProvider accountProvider() {
@@ -422,25 +545,39 @@ class AutoScalingServiceTest {
     }
   } 
   
-  AutoScalingGroups autoScalingGroupStore() {
-    List<AutoScalingGroup> groups = []
-
+  AutoScalingGroups autoScalingGroupStore( List<AutoScalingGroup> groups = [] ) {
     new AutoScalingGroups() {
       @Override
       List<AutoScalingGroup> list(OwnerFullName ownerFullName) {
-        groups.findAll { group -> group.ownerAccountNumber.equals( ownerFullName.accountNumber ) }
+        groups.findAll { group -> group.getClass().getMethod("getOwnerAccountNumber").invoke( group ).equals( ownerFullName.accountNumber ) }
       }
 
       @Override
       List<AutoScalingGroup> list(OwnerFullName ownerFullName, Predicate<? super AutoScalingGroup> filter) {
-        groups.findAll { group -> filter.apply( group ) } as List
+        list( ownerFullName ).findAll { group -> filter.apply( group ) } as List
+      }
+
+      @Override
+      List<AutoScalingGroup> listRequiringScaling() {
+        []
+      }
+
+      @Override
+      List<AutoScalingGroup> listRequiringInstanceReplacement() {
+        []
+      }
+
+      @Override
+      List<AutoScalingGroup> listRequiringMonitoring(long interval) {
+        []
       }
 
       @Override
       AutoScalingGroup lookup(OwnerFullName ownerFullName, String autoScalingGroupName) {
         AutoScalingGroup group = groups.find { AutoScalingGroup group ->
-          group.getClass().getMethod("getDisplayName").invoke( group ).equals( autoScalingGroupName ) && // work around some groovy metaclass issue
-              group.getClass().getMethod("getOwnerAccountNumber").invoke( group ).equals( ownerFullName.accountNumber )
+          group.getClass().getMethod("getArn").invoke( group ).equals( autoScalingGroupName ) ||
+          ( group.getClass().getMethod("getDisplayName").invoke( group ).equals( autoScalingGroupName ) && // work around some groovy metaclass issue
+            group.getClass().getMethod("getOwnerAccountNumber").invoke( group ).equals( ownerFullName.accountNumber ) )
         }
         if ( group == null ) {
           throw new AutoScalingMetadataNotFoundException("Group not found: " + autoScalingGroupName)
@@ -471,9 +608,78 @@ class AutoScalingServiceTest {
     }
   }
   
-  ScalingPolicies scalingPolicyStore() {
-    List<ScalingPolicy> policies = []
-    
+  AutoScalingInstances autoScalingInstanceStore( List<AutoScalingInstance> instances = [] ) {
+    new AutoScalingInstances(){
+      @Override
+      List<AutoScalingInstance> list(OwnerFullName ownerFullName) {
+        ownerFullName == null ?
+          instances :
+          instances.findAll { instance -> instance.getClass().getMethod("getOwnerAccountNumber").invoke( instance ).equals( ownerFullName.accountNumber ) }
+      }
+
+      @Override
+      List<AutoScalingInstance> list(OwnerFullName ownerFullName, Predicate<? super AutoScalingInstance> filter) {
+        list( ownerFullName ).findAll { instance -> filter.apply( instance ) } as List
+      }
+
+      @Override
+      List<AutoScalingInstance> listByGroup(OwnerFullName ownerFullName, String groupName) {
+        list( ownerFullName, { AutoScalingInstance instance -> groupName.equals(instance.autoScalingGroupName) } as Predicate )
+      }
+
+      @Override
+      List<AutoScalingInstance> listByGroup(AutoScalingGroup group) {
+        listByGroup( 
+            (OwnerFullName)group.getClass().getMethod("getOwner").invoke( group ), 
+            (String)group.getClass().getMethod("getAutoScalingGroupName").invoke( group ) )
+      }
+
+      @Override
+      List<AutoScalingInstance> listUnhealthyByGroup( AutoScalingGroup group ) {
+        []
+      }
+
+      @Override
+      AutoScalingInstance lookup(OwnerFullName ownerFullName, String instanceId) {
+        list( ownerFullName ).find { instance -> 
+          instance.getClass().getMethod("getInstanceId").invoke( instance ).equals( instanceId ) 
+        }
+      }
+
+      @Override
+      AutoScalingInstance update(OwnerFullName ownerFullName, 
+                                 String instanceId, 
+                                 Callback<AutoScalingInstance> instanceUpdateCallback) {
+        AutoScalingInstance instance = lookup( ownerFullName, instanceId )
+        instanceUpdateCallback.fire( instance )
+        instance
+      }
+
+      @Override
+      void markMissingInstancesUnhealthy(AutoScalingGroup group, 
+                                         Collection<String> instanceIds) {
+      }
+
+      @Override
+      boolean delete(AutoScalingInstance autoScalingInstance) {
+        instances.remove( 0 ) != null
+      }
+
+      @Override
+      boolean deleteByGroup(AutoScalingGroup group) {
+        instances.removeAll( instances.findAll { instance -> group.autoScalingGroupName.equals( instance.autoScalingGroupName ) } )
+      }
+
+      @Override
+      AutoScalingInstance save(AutoScalingInstance autoScalingInstance) {
+        autoScalingInstance.setId( "1" )
+        instances.add( autoScalingInstance )
+        autoScalingInstance
+      }
+    }
+  }
+  
+  ScalingPolicies scalingPolicyStore( List<ScalingPolicy> policies = [] ) {
     new ScalingPolicies() {
       @Override
       List<ScalingPolicy> list(final OwnerFullName ownerFullName) {
@@ -515,6 +721,60 @@ class AutoScalingServiceTest {
         policies.add( scalingPolicy )
         scalingPolicy
       }
+    }
+  }
+  
+  ActivityManager activityManager() {
+    new ActivityManager() {
+      @Override
+      void doScaling() {
+      }
+
+      @Override
+      List<ScalingActivity> terminateInstances( AutoScalingGroup group, 
+                                                Collection<AutoScalingInstance> instances ) {
+        [ new ScalingActivity(
+          naturalId: 'b7717740-7246-11e2-bcfd-0800200c9a66',
+          group: group,
+          autoScalingGroupName: group.getClass().getMethod("getAutoScalingGroupName").invoke( group ),
+          activityStatusCode: ActivityStatusCode.InProgress,
+          cause: "Some cause",
+          creationTimestamp: date( "2013-02-01T12:34:56.789Z" ),
+          description: "Description",
+          details:  "Details",
+          progress: 13
+        ) ];
+      }
+
+      @Override
+      List<String> validateReferences( OwnerFullName owner,
+                                       Collection<String> availabilityZones,
+                                       Collection<String> loadBalancerNames) {
+        []
+      }
+
+      @Override
+      List<String> validateReferences( OwnerFullName owner,
+                                       Iterable<String> imageIds,
+                                       String keyName,
+                                       Iterable<String> securityGroups) {
+        []
+      }
+    }
+  }
+  
+  Date date( String timestamp ) {
+    Timestamps.parseIso8601Timestamp( timestamp )        
+  }
+
+  public static class TestAutoScalingGroupTagSupport extends AutoScalingGroupTag.AutoScalingGroupTagSupport {
+    @Override
+    Map<String, List<Tag>> getResourceTagMap( OwnerFullName owner,
+                                              Iterable<String> identifiers,
+                                              Predicate<? super Tag> tagPredicate) {
+      Map<String,List<Tag>> map = [:]
+      identifiers.each{ String id -> map.put( id, [] ) }
+      map
     }
   }
 }

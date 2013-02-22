@@ -38,6 +38,7 @@ import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.util.async.BroadcastCallback;
 
 import com.eucalyptus.vm.VmInstance.VmState;
+import com.eucalyptus.vm.VmInstance;
 import com.eucalyptus.vm.VmInstances;
 
 import com.google.common.base.Function;
@@ -105,6 +106,8 @@ public class DescribeSensorCallback extends
       final Iterable<String> uuidList =
           Iterables.transform( VmInstances.list( VmState.RUNNING ), VmInstances.toInstanceUuid() );
 
+      //TODO : Find instances with monitoring enabled bit set to true
+      
       for ( final SensorsResourceType sensorData : msg.getSensorsResources() ) {
         if ( !RESOURCE_TYPE_INSTANCE.equals(sensorData.getResourceType()) ||
             !Iterables.contains( uuidList, sensorData.getResourceUuid() ) )

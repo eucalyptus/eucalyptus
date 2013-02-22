@@ -45,7 +45,7 @@ public class LoadBalancerListener extends AbstractPersistent
 {
 	private static Logger    LOG     = Logger.getLogger( LoadBalancerListener.class );
 	public enum PROTOCOL{
-		HTTP, HTTPS, TCP, SSL
+		HTTP, HTTPS, TCP, SSL, NONE
 	}
 	@Transient
 	private static final long serialVersionUID = 1L;
@@ -117,6 +117,9 @@ public class LoadBalancerListener extends AbstractPersistent
 		return this.instancePort;
 	}
 	public PROTOCOL getInstanceProtocol(){
+		if(this.instanceProtocol==null)
+			return PROTOCOL.NONE;
+		
 		return PROTOCOL.valueOf(this.instanceProtocol.toUpperCase());
 	}
 	public int getLoadbalancerPort(){
@@ -135,9 +138,10 @@ public class LoadBalancerListener extends AbstractPersistent
 				listener.getLoadBalancerPort() > 0 &&
 				!Strings.isNullOrEmpty(listener.getProtocol())))
 				return false;
-			PROTOCOL protocol = PROTOCOL.valueOf(listener.getProtocol());
+
+			PROTOCOL protocol = PROTOCOL.valueOf(listener.getProtocol().toUpperCase());
 			if(!Strings.isNullOrEmpty(listener.getInstanceProtocol()))
-				protocol = PROTOCOL.valueOf(listener.getInstanceProtocol());
+				protocol = PROTOCOL.valueOf(listener.getInstanceProtocol().toUpperCase());
 			return true;
 		}catch(Exception e){
 			return false;
@@ -181,4 +185,9 @@ public class LoadBalancerListener extends AbstractPersistent
 		}
 		return true;
   }
+	@Override
+	public String toString(){
+		return String.format("Listener for %s: %nProtocol=%s, Port=%d, InstancePort=%d, InstanceProtocol=%s, CertId=%s", 
+				this.loadbalancer.getDisplayName(), this.protocol, this.loadbalancerPort, this.instancePort, this.instanceProtocol, this.sslCertificateArn);
+	}
 }

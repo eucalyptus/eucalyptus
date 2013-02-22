@@ -19,8 +19,10 @@ reporting
 troubleshooting
 walrus
 storage-controller
-autoscaling-common
 cloudwatch-common
+autoscaling-common
 loadbalancing-common
+autoscaling
+loadbalancing
 dns
 www
