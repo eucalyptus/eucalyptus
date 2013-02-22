@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * Copyright 2009-2013 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -19,12 +19,14 @@
  ************************************************************************/
 package com.eucalyptus.tokens;
 
+import static com.eucalyptus.auth.login.AccountUsernamePasswordCredentials.AccountUsername;
 import static com.eucalyptus.auth.login.HmacCredentials.QueryIdCredential;
 import java.util.Set;
 import javax.security.auth.Subject;
 import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.principal.AccessKey;
 import com.eucalyptus.auth.AuthException;
+import com.eucalyptus.auth.principal.Account;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.auth.tokens.SecurityToken;
 import com.eucalyptus.auth.tokens.SecurityTokenManager;
@@ -55,8 +57,21 @@ public class TokensService {
       }
     }
 
+    String accessToken = null;
+    final AccountUsername accountUsername =
+        Iterables.getFirst( subject.getPublicCredentials( AccountUsername.class ), null );
+    if ( accountUsername != null ) {
+      try {
+        final Account account = Accounts.lookupAccountByName( accountUsername.getAccount() );
+        final User user = account.lookupUserByName( accountUsername.getUsername() );
+        accessToken = user.getToken();
+      } catch ( AuthException e ) {
+        throw new EucalyptusCloudException();
+      }
+    }
+
     try {
-      final SecurityToken token = SecurityTokenManager.issueSecurityToken(requestUser, accessKey, request.getDurationSeconds());
+      final SecurityToken token = SecurityTokenManager.issueSecurityToken(requestUser, accessKey, accessToken, request.getDurationSeconds());
       reply.setResult( GetSessionTokenResultType.forCredentials(
           token.getAccessKeyId(),
           token.getSecretKey(),
