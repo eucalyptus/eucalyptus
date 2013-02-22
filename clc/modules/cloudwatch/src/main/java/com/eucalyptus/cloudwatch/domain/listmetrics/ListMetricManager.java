@@ -13,6 +13,7 @@ import org.hibernate.Criteria;
 import org.hibernate.criterion.Disjunction;
 import org.hibernate.criterion.Restrictions;
 
+import com.eucalyptus.cloudwatch.domain.dimension.DimensionEntity;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.records.Logs;
 
@@ -27,9 +28,9 @@ public class ListMetricManager {
     metric.setAccountId(accountId);
     metric.setMetricName(metricName);
     metric.setNamespace(namespace);
-    TreeSet<ListMetricDimension> dimensions = new TreeSet<ListMetricDimension>();
+    TreeSet<DimensionEntity> dimensions = new TreeSet<DimensionEntity>();
     for (Map.Entry<String,String> entry: dimensionMap.entrySet()) {
-      ListMetricDimension d = new ListMetricDimension();
+      DimensionEntity d = new DimensionEntity();
       d.setName(entry.getKey());
       d.setValue(entry.getValue());
       dimensions.add(d);
@@ -44,7 +45,7 @@ public class ListMetricManager {
       
       // add dimension restrictions
       int dimIndex = 1;
-      for (ListMetricDimension d: dimensions) {
+      for (DimensionEntity d: dimensions) {
         criteria.add( Restrictions.eq( "dim" + dimIndex + "Name", d.getName() ) );
         criteria.add( Restrictions.eq( "dim" + dimIndex + "Value", d.getValue() ) );
         dimIndex++;

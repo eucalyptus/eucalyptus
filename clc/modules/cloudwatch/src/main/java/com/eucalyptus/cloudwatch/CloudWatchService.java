@@ -8,8 +8,8 @@ import javax.annotation.Nullable;
 
 import org.apache.log4j.Logger;
 
+import com.eucalyptus.cloudwatch.domain.dimension.DimensionEntity;
 import com.eucalyptus.cloudwatch.domain.listmetrics.ListMetric;
-import com.eucalyptus.cloudwatch.domain.listmetrics.ListMetricDimension;
 import com.eucalyptus.cloudwatch.domain.listmetrics.ListMetricManager;
 import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
@@ -69,16 +69,16 @@ public class CloudWatchService {
         metric.setMetricName(listMetric.getMetricName());
         metric.setNamespace(listMetric.getNamespace());
         Dimensions dimensions = new Dimensions();
-        dimensions.setMember(Lists.newArrayList(Collections2.<ListMetricDimension, Dimension>transform(listMetric.getDimensions(), ListMetricDimensionFunction.INSTANCE)));
+        dimensions.setMember(Lists.newArrayList(Collections2.<DimensionEntity, Dimension>transform(listMetric.getDimensions(), ListMetricDimensionFunction.INSTANCE)));
         metric.setDimensions(dimensions);
         return metric;
       }
     }
   }
-  private enum ListMetricDimensionFunction implements Function<ListMetricDimension, Dimension> {
+  private enum ListMetricDimensionFunction implements Function<DimensionEntity, Dimension> {
     INSTANCE {
       @Override
-      public Dimension apply(@Nullable ListMetricDimension listMetricDimension) {
+      public Dimension apply(@Nullable DimensionEntity listMetricDimension) {
         Dimension dimension = new Dimension();
         dimension.setName(listMetricDimension.getName());
         dimension.setValue(listMetricDimension.getValue());
