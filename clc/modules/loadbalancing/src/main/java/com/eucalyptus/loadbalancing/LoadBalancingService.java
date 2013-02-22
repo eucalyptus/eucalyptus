@@ -1,3 +1,23 @@
+/*************************************************************************
+ * Copyright 2009-2013 Eucalyptus Systems, Inc.
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; version 3 of the License.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see http://www.gnu.org/licenses/.
+ *
+ * Please contact Eucalyptus Systems, Inc., 6755 Hollister Ave., Goleta
+ * CA 93117, USA or visit http://www.eucalyptus.com/licenses/ if you need
+ * additional information or have any questions.
+ ************************************************************************/
+
 package com.eucalyptus.loadbalancing;
 
 import java.math.BigInteger;
@@ -18,6 +38,8 @@ import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.Transactions;
+import com.eucalyptus.event.ClockTick;
+import com.eucalyptus.event.ListenerRegistry;
 import com.eucalyptus.loadbalancing.ApplySecurityGroupsToLoadBalancerResponseType;
 import com.eucalyptus.loadbalancing.ApplySecurityGroupsToLoadBalancerType;
 import com.eucalyptus.loadbalancing.AttachLoadBalancerToSubnetsResponseType;
@@ -65,6 +87,8 @@ import com.eucalyptus.loadbalancing.SetLoadBalancerPoliciesForBackendServerType;
 import com.eucalyptus.loadbalancing.SetLoadBalancerPoliciesOfListenerResponseType;
 import com.eucalyptus.loadbalancing.SetLoadBalancerPoliciesOfListenerType;
 import com.eucalyptus.loadbalancing.LoadBalancerListener.PROTOCOL;
+import com.eucalyptus.loadbalancing.activities.NewLoadbalancerEvent;
+import com.eucalyptus.loadbalancing.activities.ActivityManager;
 import com.eucalyptus.tags.Tag;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.google.common.base.Function;
@@ -186,6 +210,18 @@ public class LoadBalancingService {
     if(lb!=null && lb.getDnsAddress()==null){
     	LOG.warn("No DNS name is assigned to a loadblancer "+lbName);
     }
+    
+    try{
+    	ActivityManager.getInstance();
+    	NewLoadbalancerEvent evt = new NewLoadbalancerEvent();
+    	evt.setLoadBalancer(lbName);
+    	evt.setContext(ctx);
+    	ListenerRegistry.getInstance( ).fireEvent(evt);
+    }catch(Exception e){
+    	LOG.error("failed to fire new loadbalancer event", e);
+    	// TODO: SPARK: should throw exception?
+    }
+    
     result.setDnsName(lb != null ? lb.getDnsAddress() : null);
     reply.setCreateLoadBalancerResult(result);
     reply.set_return(true);

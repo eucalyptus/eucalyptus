@@ -36,18 +36,18 @@ import edu.ucsb.eucalyptus.msgs.BaseMessage;
 /**
  *
  */
-abstract class DispatchingClient<MT extends BaseMessage,CT extends ComponentId> {
+abstract public class DispatchingClient<MT extends BaseMessage,CT extends ComponentId> {
   private final String userId;
   private final Class<CT> componentIdClass;
   private ServiceConfiguration configuration;
 
-  DispatchingClient( final String userId,
+  public DispatchingClient( final String userId,
                      final Class<CT> componentIdClass ) {
     this.userId = userId;
     this.componentIdClass = componentIdClass;
   }
 
-  void init() throws DispatchingClientException {
+  public void init() throws DispatchingClientException {
     try {
       final ComponentId componentId = ComponentIds.lookup( componentIdClass );
       if ( BootstrapArgs.isCloudController() && componentId.isCloudLocal() && !componentId.isRegisterable()  ) {
@@ -60,13 +60,13 @@ abstract class DispatchingClient<MT extends BaseMessage,CT extends ComponentId> 
     }
   }
 
-  <REQ extends MT,RES extends MT>
-  void dispatch( final REQ request, final Callback.Checked<RES> callback ) {
+  public <REQ extends MT,RES extends MT>
+   void dispatch( final REQ request, final Callback.Checked<RES> callback ) {
     dispatch( request, callback, null );
   }
 
-  <REQ extends MT,RES extends MT>
-  void dispatch( final REQ request,
+  public <REQ extends MT,RES extends MT>
+   void dispatch( final REQ request,
                  final Callback.Checked<RES> callback,
                  @Nullable final Runnable then ) {
     request.setEffectiveUserId( userId );
@@ -97,7 +97,7 @@ abstract class DispatchingClient<MT extends BaseMessage,CT extends ComponentId> 
     }
   }
 
-  static final class DispatchingClientException extends Exception {
+  public static final class DispatchingClientException extends Exception {
     private static final long serialVersionUID = 1L;
 
     public DispatchingClientException( final String message ) {

@@ -17,17 +17,39 @@
  * CA 93117, USA or visit http://www.eucalyptus.com/licenses/ if you need
  * additional information or have any questions.
  ************************************************************************/
-package com.eucalyptus.autoscaling.activities;
+package com.eucalyptus.loadbalancing.activities;
 
-import com.eucalyptus.component.id.Eucalyptus;
-import edu.ucsb.eucalyptus.msgs.EucalyptusMessage;
- 
+import java.util.List;
+
+import org.apache.log4j.Logger;
+
+import com.eucalyptus.util.Exceptions;
+import com.google.common.collect.Lists;
+
 /**
- * 
+ * @author Sang-Min Park
+ *
  */
-public class EucalyptusClient extends DispatchingClient<EucalyptusMessage,Eucalyptus> {
+public abstract class EventHandlerChain<T extends LoadbalancingEvent> {
+	private static Logger    LOG     = Logger.getLogger( EventHandlerChain.class );
+	private final List<EventHandler<T>> handlers =
+			Lists.newArrayList();
+	
+	protected void insert(EventHandler<T> next) {
+		handlers.add(next);
+	}
 
-  public EucalyptusClient( final String userId ) {
-    super( userId, Eucalyptus.class );
-  }
+	public void execute(T evt){
+		for (EventHandler<T> handler : this.handlers){
+			try{
+				handler.apply(evt);
+			}catch(Exception e){
+				LOG.warn(String.format("failed handling %s, in handler %s", evt, handler), e);
+				// TODO SPARK: rollback?
+				Exceptions.toUndeclared(e);
+			}
+		}
+	}
+	
+	public abstract EventHandlerChain<T> build();
 }

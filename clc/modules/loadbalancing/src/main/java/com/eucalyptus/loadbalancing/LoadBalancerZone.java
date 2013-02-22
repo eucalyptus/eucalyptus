@@ -37,6 +37,7 @@ import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
 import org.hibernate.annotations.Entity;
 import com.eucalyptus.entities.AbstractPersistent;
+import com.eucalyptus.loadbalancing.activities.LoadBalancerServoInstance;
 
 /**
  * @author Sang-Min Park

@@ -17,7 +17,7 @@
  * CA 93117, USA or visit http://www.eucalyptus.com/licenses/ if you need
  * additional information or have any questions.
  ************************************************************************/
-package com.eucalyptus.loadbalancing;
+package com.eucalyptus.loadbalancing.activities;
 
 import javax.persistence.Column;
 import javax.persistence.JoinColumn;
@@ -33,6 +33,9 @@ import org.hibernate.annotations.CacheConcurrencyStrategy;
 import org.hibernate.annotations.Entity;
 import com.eucalyptus.entities.AbstractPersistent;
 import com.eucalyptus.entities.Entities;
+import com.eucalyptus.loadbalancing.LoadBalancer;
+import com.eucalyptus.loadbalancing.LoadBalancerBackendInstance;
+import com.eucalyptus.loadbalancing.LoadBalancerZone;
 import com.eucalyptus.vm.VmInstance;
 import com.eucalyptus.vm.VmInstances;
 

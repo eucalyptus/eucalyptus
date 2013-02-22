@@ -17,17 +17,12 @@
  * CA 93117, USA or visit http://www.eucalyptus.com/licenses/ if you need
  * additional information or have any questions.
  ************************************************************************/
-package com.eucalyptus.autoscaling.activities;
+package com.eucalyptus.loadbalancing.activities;
 
-import com.eucalyptus.component.id.Eucalyptus;
-import edu.ucsb.eucalyptus.msgs.EucalyptusMessage;
- 
 /**
- * 
+ * @author Sang-Min Park
+ *
  */
-public class EucalyptusClient extends DispatchingClient<EucalyptusMessage,Eucalyptus> {
-
-  public EucalyptusClient( final String userId ) {
-    super( userId, Eucalyptus.class );
-  }
+public interface EventHandler<T extends LoadbalancingEvent> {
+	public void apply(T evt);
 }
