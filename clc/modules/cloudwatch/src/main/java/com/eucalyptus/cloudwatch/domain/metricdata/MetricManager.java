@@ -1,5 +1,6 @@
 package com.eucalyptus.cloudwatch.domain.metricdata;
 
+import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Collection;
 import java.util.Date;
@@ -7,14 +8,11 @@ import java.util.GregorianCalendar;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
-import java.util.TreeMap;
 import java.util.TreeSet;
 
 import javax.persistence.EntityTransaction;
 
 import org.hibernate.Criteria;
-import org.hibernate.criterion.Disjunction;
-import org.hibernate.criterion.Restrictions;
 
 import com.eucalyptus.cloudwatch.domain.dimension.DimensionEntity;
 import com.eucalyptus.cloudwatch.domain.listmetrics.ListMetric;
@@ -23,6 +21,8 @@ import com.eucalyptus.cloudwatch.domain.metricdata.MetricEntity.Units;
 import com.eucalyptus.cloudwatch.hashing.HashUtils;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.records.Logs;
+import com.google.common.collect.ArrayListMultimap;
+import com.google.common.collect.Multimap;
 import com.google.common.collect.Sets;
 
 public class MetricManager {
@@ -40,7 +40,6 @@ public class MetricManager {
       d.setValue(entry.getValue());
       dimensions.add(d);
     }
-    EntityTransaction db = Entities.get(MetricEntity.class);
     Set<Set<DimensionEntity>> permutations = null;
     if (metricType == MetricType.System) {
     	permutations = Sets.powerSet(dimensions);
@@ -48,31 +47,39 @@ public class MetricManager {
     	permutations = Sets.newHashSet();
     	permutations.add(dimensions);
     }
-  	try {
-  		for (Set<DimensionEntity> dimensionsPermutation: permutations) {
-  			MetricEntity metric = new MetricEntity();
-  			metric.setAccountId(accountId);
-  			metric.setUserId(userId);
-  			metric.setMetricName(metricName);
-  			metric.setNamespace(namespace);
-  			metric.setDimensions(dimensions);// arguable, but has complete list
-  			metric.setDimensionHash(hash(dimensionsPermutation));
-  			metric.setMetricType(metricType);
-  			metric.setUnits(units);
-  			metric.setTimestamp(timestamp);
-  			metric.setSampleMax(sampleMax);
-  			metric.setSampleMin(sampleMin);
-  			metric.setSampleSum(sampleSum);
-  			metric.setSampleSize(sampleSize);
-  			Entities.persist(metric);
-  		}
-      db.commit();
-    } catch (RuntimeException ex) {
-      Logs.extreme().error(ex, ex);
-      throw ex;
-    } finally {
-      if (db.isActive())
-        db.rollback();
+    Multimap<Class, MetricEntity> metricMap = ArrayListMultimap.<Class, MetricEntity>create();
+    for (Set<DimensionEntity> dimensionsPermutation: permutations) {
+      String dimensionHash = hash(dimensionsPermutation);
+        MetricEntity metric = MetricEntityFactory.getNewMetricEntity(dimensionHash);
+        metric.setAccountId(accountId);
+        metric.setUserId(userId);
+        metric.setMetricName(metricName);
+        metric.setNamespace(namespace);
+        metric.setDimensions(dimensions);// arguable, but has complete list
+        metric.setDimensionHash(dimensionHash);
+        metric.setMetricType(metricType);
+        metric.setUnits(units);
+        metric.setTimestamp(timestamp);
+        metric.setSampleMax(sampleMax);
+        metric.setSampleMin(sampleMin);
+        metric.setSampleSum(sampleSum);
+        metric.setSampleSize(sampleSize);
+        metricMap.put(MetricEntityFactory.getClassForEntitiesGet(dimensionHash), metric);
+    }
+    for (Class c: metricMap.keySet()) {
+      EntityTransaction db = Entities.get(c);
+      try {
+        for (MetricEntity me: metricMap.get(c)) {
+          Entities.persist(me);
+        }
+        db.commit();
+      } catch (RuntimeException ex) {
+        Logs.extreme().error(ex, ex);
+        throw ex;
+      } finally {
+        if (db.isActive())
+          db.rollback();
+      }
     }
   }
   private static String hash(Collection<DimensionEntity> dimensions) {
@@ -91,16 +98,18 @@ public class MetricManager {
   	return g.getTime();
   }
 	public static void deleteAllMetrics() {
-    EntityTransaction db = Entities.get(MetricEntity.class);
-    try {
-      Entities.deleteAll(MetricEntity.class);
-      db.commit();
-    } catch (RuntimeException ex) {
-      Logs.extreme().error(ex, ex);
-      throw ex;
-    } finally {
-      if (db.isActive())
+    for (Class c: MetricEntityFactory.getAllClassesForEntitiesGet()) {
+      EntityTransaction db = Entities.get(c);
+      try {
+        Entities.deleteAll(c);
+        db.commit();
+      } catch (RuntimeException ex) {
+        Logs.extreme().error(ex, ex);
+        throw ex;
+      } finally {
+        if (db.isActive())
         db.rollback();
+      }
     }
   }
 
@@ -109,35 +118,42 @@ public class MetricManager {
    * @param before the date to delete before (inclusive)
    */
   public static void deleteMetrics(Date before) {
-    EntityTransaction db = Entities.get(MetricEntity.class);
-    try {
-      Map<String, Date> criteria = new HashMap<String, Date>();
-      criteria.put("before", before);
-      Entities.deleteAllMatching(ListMetric.class, "WHERE timestamp < :before", criteria);
-      db.commit();
-    } catch (RuntimeException ex) {
-      Logs.extreme().error(ex, ex);
-      throw ex;
-    } finally {
-      if (db.isActive())
+    for (Class c: MetricEntityFactory.getAllClassesForEntitiesGet()) {
+      EntityTransaction db = Entities.get(c);
+      try {
+        Map<String, Date> criteria = new HashMap<String, Date>();
+        criteria.put("before", before);
+        Entities.deleteAllMatching(c, "WHERE timestamp < :before", criteria);
+        db.commit();
+      } catch (RuntimeException ex) {
+        Logs.extreme().error(ex, ex);
+        throw ex;
+      } finally {
+        if (db.isActive())
         db.rollback();
+      }
     }
   }
 
   public static Collection<MetricEntity> getAllMetrics() {
-    EntityTransaction db = Entities.get(MetricEntity.class);
-    try {
-    	Criteria criteria = Entities.createCriteria(MetricEntity.class);
-    	Collection<MetricEntity> dbResult = (Collection<MetricEntity>) criteria.list();
-      db.commit();
-      return dbResult;
-    } catch (RuntimeException ex) {
-      Logs.extreme().error(ex, ex);
-      throw ex;
-    } finally {
-      if (db.isActive())
+    ArrayList<MetricEntity> allResults = new ArrayList<MetricEntity>();
+    for (Class c: MetricEntityFactory.getAllClassesForEntitiesGet()) {
+      EntityTransaction db = Entities.get(c);
+      try {
+        Criteria criteria = Entities.createCriteria(c);
+        Collection dbResults = criteria.list();
+        for (Object result: dbResults) {
+          allResults.add((MetricEntity) result);
+        }
+        db.commit();
+      } catch (RuntimeException ex) {
+        Logs.extreme().error(ex, ex);
+        throw ex;
+      } finally {
+        if (db.isActive())
         db.rollback();
+      }
     }
+    return allResults;
   }
-
 }

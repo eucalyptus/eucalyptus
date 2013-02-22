@@ -5,6 +5,7 @@ import java.util.Date;
 import javax.persistence.Column;
 import javax.persistence.EnumType;
 import javax.persistence.Enumerated;
+import javax.persistence.MappedSuperclass;
 import javax.persistence.PersistenceContext;
 import javax.persistence.Table;
 
@@ -15,12 +16,8 @@ import org.hibernate.annotations.Entity;
 import com.eucalyptus.cloudwatch.domain.dimension.AbstractPersistentWithDimensions;
 
 import edu.emory.mathcs.backport.java.util.Arrays;
-
-@Entity @javax.persistence.Entity
-@PersistenceContext(name="eucalyptus_cloudwatch")
-@Table(name="metric_data")
-@Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
-public class MetricEntity extends AbstractPersistentWithDimensions {
+@MappedSuperclass
+public abstract class MetricEntity extends AbstractPersistentWithDimensions {
 
   @Column( name = "account_id" , nullable = false)
   private String accountId;
