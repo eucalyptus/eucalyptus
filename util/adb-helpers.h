@@ -78,8 +78,10 @@
 \*----------------------------------------------------------------------------*/
 
 #include "eucalyptus.h"
+#include "data.h" // for ncInstance
 #include "sensor.h"
 #include "euca_string.h"
+#include "adb_instanceType.h" // for copy_instance_*
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |
@@ -139,6 +141,8 @@ static inline int copy_sensor_counter_from_adb(sensorCounter * sc, adb_metricCou
 static inline int copy_sensor_metric_from_adb(sensorMetric * sm, adb_metricsResourceType_t * metric, axutil_env_t * env);
 static inline sensorResource *copy_sensor_resource_from_adb(adb_sensorsResourceType_t * resource, axutil_env_t * env) _attribute_wur_;
 static inline adb_sensorsResourceType_t *copy_sensor_resource_to_adb(const axutil_env_t * env, const sensorResource * sr, int history_size) _attribute_wur_;
+static inline void copy_instance_to_adb(adb_instanceType_t * instance, const axutil_env_t * env, ncInstance * outInst);
+static inline ncInstance *copy_instance_from_adb(adb_instanceType_t * instance, const axutil_env_t * env);
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |
@@ -325,8 +329,8 @@ static inline void copy_vm_type_from_adb(virtualMachine * params, adb_virtualMac
                 LOGTRACE("resource location: %s\n", params->virtualBootRecord[i].resourceLocation);
                 euca_strncpy(params->virtualBootRecord[i].guestDeviceName, adb_virtualBootRecordType_get_guestDeviceName(vbr_type, env), SMALL_CHAR_BUFFER_SIZE);
                 LOGTRACE("   guest dev name: %s\n", params->virtualBootRecord[i].guestDeviceName);
-                params->virtualBootRecord[i].size = adb_virtualBootRecordType_get_size(vbr_type, env);
-                LOGTRACE("             size: %lld\n", params->virtualBootRecord[i].size);
+                params->virtualBootRecord[i].sizeBytes = (long long)adb_virtualBootRecordType_get_size(vbr_type, env);
+                LOGTRACE("             size: %lld\n", params->virtualBootRecord[i].sizeBytes);
                 euca_strncpy(params->virtualBootRecord[i].formatName, adb_virtualBootRecordType_get_format(vbr_type, env), SMALL_CHAR_BUFFER_SIZE);
                 LOGTRACE("           format: %s\n", params->virtualBootRecord[i].formatName);
                 euca_strncpy(params->virtualBootRecord[i].id, adb_virtualBootRecordType_get_id(vbr_type, env), SMALL_CHAR_BUFFER_SIZE);
@@ -366,7 +370,7 @@ static inline adb_virtualMachineType_t *copy_vm_type_to_adb(const axutil_env_t *
                     if ((vbr_type = adb_virtualBootRecordType_create(env)) != NULL) {
                         adb_virtualBootRecordType_set_resourceLocation(vbr_type, env, vbr->resourceLocation);
                         adb_virtualBootRecordType_set_guestDeviceName(vbr_type, env, vbr->guestDeviceName);
-                        adb_virtualBootRecordType_set_size(vbr_type, env, vbr->size);
+                        adb_virtualBootRecordType_set_size(vbr_type, env, (int64_t)vbr->sizeBytes);
                         adb_virtualBootRecordType_set_format(vbr_type, env, vbr->formatName);
                         adb_virtualBootRecordType_set_id(vbr_type, env, vbr->id);
                         adb_virtualBootRecordType_set_type(vbr_type, env, vbr->typeName);
@@ -784,6 +788,162 @@ static inline adb_sensorsResourceType_t *copy_sensor_resource_to_adb(const axuti
     LOGTRACE("marshalled %d metrics %d counters %d dimensions %d sensor values\n", total_num_metrics, total_num_counters, total_num_dimensions, total_num_values);
 
     return (resource);
+}
+
+//!
+//! Helper function used by RunInstance and DescribeInstances
+//!
+//! @param[in]  instance a pointer to the instance type structure we are converting
+//! @param[in]  env pointer to the AXIS2 environment structure
+//! @param[out] outInst a pointer to the resulting instance
+//!
+static inline void copy_instance_to_adb(adb_instanceType_t * instance, const axutil_env_t * env, ncInstance * outInst)
+{
+    int i = 0;
+    adb_volumeType_t *volume = NULL;
+    axutil_date_time_t *dt = NULL;
+    adb_netConfigType_t *netconf = NULL;
+
+    // NOTE: the order of set operations reflects the order in the WSDL
+
+    // passed into runInstances
+    adb_instanceType_set_uuid(instance, env, outInst->uuid);
+    adb_instanceType_set_reservationId(instance, env, outInst->reservationId);
+    adb_instanceType_set_instanceId(instance, env, outInst->instanceId);
+    adb_instanceType_set_imageId(instance, env, outInst->imageId);
+    adb_instanceType_set_kernelId(instance, env, outInst->kernelId);
+    adb_instanceType_set_ramdiskId(instance, env, outInst->ramdiskId);
+    adb_instanceType_set_userId(instance, env, outInst->userId);
+    adb_instanceType_set_ownerId(instance, env, outInst->ownerId);
+    adb_instanceType_set_accountId(instance, env, outInst->accountId);
+    adb_instanceType_set_keyName(instance, env, outInst->keyName);
+    adb_instanceType_set_instanceType(instance, env, copy_vm_type_to_adb(env, &(outInst->params)));
+
+    netconf = adb_netConfigType_create(env);
+    adb_netConfigType_set_privateMacAddress(netconf, env, outInst->ncnet.privateMac);
+    adb_netConfigType_set_privateIp(netconf, env, outInst->ncnet.privateIp);
+    adb_netConfigType_set_publicIp(netconf, env, outInst->ncnet.publicIp);
+    adb_netConfigType_set_vlan(netconf, env, outInst->ncnet.vlan);
+    adb_netConfigType_set_networkIndex(netconf, env, outInst->ncnet.networkIndex);
+    adb_instanceType_set_netParams(instance, env, netconf);
+
+    // reported by NC
+    adb_instanceType_set_stateName(instance, env, outInst->stateName);
+    adb_instanceType_set_bundleTaskStateName(instance, env, outInst->bundleTaskStateName);
+    adb_instanceType_set_createImageStateName(instance, env, outInst->createImageTaskStateName);
+
+    dt = axutil_date_time_create_with_offset(env, outInst->launchTime - time(NULL));
+    adb_instanceType_set_launchTime(instance, env, dt);
+    adb_instanceType_set_blkbytes(instance, env, outInst->blkbytes);
+    adb_instanceType_set_netbytes(instance, env, outInst->netbytes);
+    adb_instanceType_set_migrationStateName(instance, env, migration_state_names[outInst->migration_state]);
+    adb_instanceType_set_migrationSource(instance, env, outInst->migration_src);
+    adb_instanceType_set_migrationDestination(instance, env, outInst->migration_dst);
+
+    // passed into RunInstances for safekeeping by NC
+    adb_instanceType_set_userData(instance, env, outInst->userData);
+    adb_instanceType_set_launchIndex(instance, env, outInst->launchIndex);
+    adb_instanceType_set_platform(instance, env, outInst->platform);
+
+    for (i = 0; i < outInst->groupNamesSize; i++) {
+        adb_instanceType_add_groupNames(instance, env, outInst->groupNames[i]);
+    }
+
+    // updated by NC upon Attach/DetachVolume
+    for (i = 0; i < EUCA_MAX_VOLUMES; i++) {
+        if (strlen(outInst->volumes[i].volumeId) == 0)
+            continue;
+        volume = adb_volumeType_create(env);
+        adb_volumeType_set_volumeId(volume, env, outInst->volumes[i].volumeId);
+        adb_volumeType_set_remoteDev(volume, env, outInst->volumes[i].remoteDev);
+        adb_volumeType_set_localDev(volume, env, outInst->volumes[i].localDev);
+        adb_volumeType_set_state(volume, env, outInst->volumes[i].stateName);
+        adb_instanceType_add_volumes(instance, env, volume);
+    }
+
+    // NOTE: serviceTag seen in the WSDL is unused in NC, used by CC
+}
+
+//!
+//! Converts an ADB instance to NC instance
+//!
+//! @param[in] instance a pointer to the ADB instance to convert to NC instance
+//! @param[in] env pointer to the AXIS2 environment structure
+//!
+//! @return a pointer to the instance created from the ADB instance
+//!
+static inline ncInstance *copy_instance_from_adb(adb_instanceType_t * instance, const axutil_env_t * env)
+{
+    int i = 0;
+    int groupNamesSize = 0;
+    int expiryTime = 0;
+    char *groupNames[EUCA_MAX_GROUPS] = { NULL };
+    netConfig ncnet = { 0 };
+    ncInstance *outInst = NULL;
+    virtualMachine params = { 0 };
+    axutil_date_time_t *dt = NULL;
+    adb_virtualMachineType_t *vm_type = NULL;
+    adb_netConfigType_t *netconf = NULL;
+
+    bzero(&ncnet, sizeof(ncnet));
+    bzero(&params, sizeof(params));
+
+    vm_type = adb_instanceType_get_instanceType(instance, env);
+    copy_vm_type_from_adb(&params, vm_type, env);
+    bzero(&ncnet, sizeof(netConfig));
+    if ((netconf = adb_instanceType_get_netParams(instance, env)) != NULL) {
+        ncnet.vlan = adb_netConfigType_get_vlan(netconf, env);
+        ncnet.networkIndex = adb_netConfigType_get_networkIndex(netconf, env);
+        euca_strncpy(ncnet.privateMac, adb_netConfigType_get_privateMacAddress(netconf, env), 24);
+        euca_strncpy(ncnet.privateIp, adb_netConfigType_get_privateIp(netconf, env), 24);
+        euca_strncpy(ncnet.publicIp, adb_netConfigType_get_publicIp(netconf, env), 24);
+    }
+
+    groupNamesSize = adb_instanceType_sizeof_groupNames(instance, env);
+    for (i = 0; ((i < EUCA_MAX_GROUPS) && (i < groupNamesSize)); i++) {
+        groupNames[i] = adb_instanceType_get_groupNames_at(instance, env, i);
+    }
+
+    dt = adb_instanceType_get_expiryTime(instance, env);
+    expiryTime = datetime_to_unix(dt, env);
+
+    outInst = allocate_instance((char *)adb_instanceType_get_uuid(instance, env),
+                                (char *)adb_instanceType_get_instanceId(instance, env),
+                                (char *)adb_instanceType_get_reservationId(instance, env),
+                                &params,
+                                (char *)adb_instanceType_get_stateName(instance, env),
+                                0,
+                                (char *)adb_instanceType_get_userId(instance, env),
+                                (char *)adb_instanceType_get_ownerId(instance, env),
+                                (char *)adb_instanceType_get_accountId(instance, env),
+                                &ncnet,
+                                (char *)adb_instanceType_get_keyName(instance, env),
+                                (char *)adb_instanceType_get_userData(instance, env),
+                                (char *)adb_instanceType_get_launchIndex(instance, env),
+                                (char *)adb_instanceType_get_platform(instance, env), expiryTime, groupNames, groupNamesSize);
+
+    euca_strncpy(outInst->bundleTaskStateName, (char *)adb_instanceType_get_bundleTaskStateName(instance, env), CHAR_BUFFER_SIZE);
+    outInst->blkbytes = adb_instanceType_get_blkbytes(instance, env);
+    outInst->netbytes = adb_instanceType_get_netbytes(instance, env);
+    outInst->migration_state = migration_state_from_string(adb_instanceType_get_migrationStateName(instance, env));
+    euca_strncpy(outInst->migration_src, adb_instanceType_get_migrationSource(instance, env), HOSTNAME_SIZE);
+    euca_strncpy(outInst->migration_dst, adb_instanceType_get_migrationDestination(instance, env), HOSTNAME_SIZE);
+
+    if ((dt = adb_instanceType_get_launchTime(instance, env)) != NULL) {
+        outInst->launchTime = datetime_to_unix(dt, env);
+        axutil_date_time_free(dt, env);
+    }
+
+    bzero(outInst->volumes, sizeof(ncVolume) * EUCA_MAX_VOLUMES);
+    for (i = 0; ((i < EUCA_MAX_VOLUMES) && (i < adb_instanceType_sizeof_volumes(instance, env))); i++) {
+        adb_volumeType_t *volume = adb_instanceType_get_volumes_at(instance, env, i);
+        euca_strncpy(outInst->volumes[i].volumeId, adb_volumeType_get_volumeId(volume, env), CHAR_BUFFER_SIZE);
+        euca_strncpy(outInst->volumes[i].remoteDev, adb_volumeType_get_remoteDev(volume, env), CHAR_BUFFER_SIZE);
+        euca_strncpy(outInst->volumes[i].localDev, adb_volumeType_get_localDev(volume, env), CHAR_BUFFER_SIZE);
+        euca_strncpy(outInst->volumes[i].stateName, adb_volumeType_get_state(volume, env), CHAR_BUFFER_SIZE);
+    }
+
+    return (outInst);
 }
 
 #endif /* ! _INCLUDE_ADB_HELPERS_H_ */

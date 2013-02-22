@@ -25,6 +25,7 @@
 
 import base64
 import ConfigParser
+from datetime import datetime
 import functools
 import logging
 import json
@@ -37,20 +38,402 @@ import time
 from xml.sax.saxutils import unescape
 from M2Crypto import RSA
 from boto.ec2.blockdevicemapping import BlockDeviceMapping, BlockDeviceType
+from boto.ec2.autoscale.launchconfig import LaunchConfiguration
+from boto.ec2.autoscale.group import AutoScalingGroup
+from boto.ec2.elb.healthcheck import HealthCheck
+from boto.ec2.elb.listener import Listener
 from boto.exception import EC2ResponseError
 from boto.exception import S3ResponseError
+from boto.exception import BotoServerError
 from eucaconsole.threads import Threads
 
 from .botoclcinterface import BotoClcInterface
+from .botobalanceinterface import BotoBalanceInterface
 from .botowalrusinterface import BotoWalrusInterface
+from .botowatchinterface import BotoWatchInterface
+from .botoscaleinterface import BotoScaleInterface
 from .botojsonencoder import BotoJsonEncoder
+from .botojsonencoder import BotoJsonBalanceEncoder
+from .botojsonencoder import BotoJsonWatchEncoder
+from .botojsonencoder import BotoJsonScaleEncoder
 from .cachingclcinterface import CachingClcInterface
+from .cachingbalanceinterface import CachingBalanceInterface
 from .cachingwalrusinterface import CachingWalrusInterface
+from .cachingwatchinterface import CachingWatchInterface
+from .cachingscaleinterface import CachingScaleInterface
 from .mockclcinterface import MockClcInterface
+from .mockbalanceinterface import MockBalanceInterface
+from .mockwatchinterface import MockWatchInterface
+from .mockscaleinterface import MockScaleInterface
 from .response import ClcError
 from .response import Response
 
-class StorageHandler(eucaconsole.BaseHandler):
+class BaseAPIHandler(eucaconsole.BaseHandler):
+    json_encoder = None
+
+    def get_argument_list(self, name, name_suffix=None, another_suffix=None, size=None):
+        ret = []
+        index = 1
+        index2 = 1
+        pattern = name+'.%d'
+        if name_suffix:
+            pattern = pattern+'.'+name_suffix
+        if another_suffix:
+            pattern = pattern+'.%d.'+another_suffix
+        val = ''
+        if another_suffix:
+            val = self.get_argument(pattern % (index, index2), None)
+        else:
+            val = self.get_argument(pattern % (index), None)
+        while (index < (size+1)) if size else val:
+            ret.append(val)
+            index = index + 1
+            if another_suffix:
+                val = self.get_argument(pattern % (index, index2), None)
+            else:
+                val = self.get_argument(pattern % (index), None)
+        return ret
+
+    # async calls end up back here so we can check error status and reply appropriately
+    def callback(self, response):
+        if response.error:
+            err = response.error
+            ret = '[]'
+            if isinstance(err, BotoServerError):
+                ret = ClcError(err.status, err.reason, err.message)
+                self.set_status(err.status);
+            elif issubclass(err.__class__, Exception):
+                if isinstance(err, socket.timeout):
+                    ret = ClcError(504, 'Timed out', None)
+                    self.set_status(504);
+                else:
+                    ret = ClcError(500, err.message, None)
+                    self.set_status(500);
+            self.set_header("Content-Type", "application/json;charset=UTF-8")
+            self.write(json.dumps(ret, cls=self.json_encoder))
+            self.finish()
+            logging.exception(err)
+        else:
+            try:
+                try:
+                    if(eucaconsole.config.get('test','apidelay')):
+                        time.sleep(int(eucaconsole.config.get('test','apidelay'))/1000.0);
+                except ConfigParser.NoOptionError:
+                    pass
+                ret = Response(response.data) # wrap all responses in an object for security purposes
+                data = json.dumps(ret, cls=self.json_encoder, indent=2)
+                self.set_header("Content-Type", "application/json;charset=UTF-8")
+                self.write(data)
+                self.finish()
+            except Exception, err:
+                print err
+
+class ScaleHandler(BaseAPIHandler):
+    json_encoder = BotoJsonScaleEncoder
+
+    ##
+    # This is the main entry point for API calls for AutoScaling from the browser
+    # other calls are delegated to handler methods based on resource type
+    #
+    @tornado.web.asynchronous
+    def post(self):
+        if not self.authorized():
+            raise tornado.web.HTTPError(401, "not authorized")
+        if not(self.user_session.scaling):
+            if self.should_use_mock():
+                self.user_session.scaling = MockScaleInterface()
+            else:
+                host = eucaconsole.config.get('server', 'clchost')
+                if self.user_session.host_override:
+                    host = self.user_session.host_override
+                self.user_session.scaling = BotoScaleInterface(host,
+                                                         self.user_session.access_key,
+                                                         self.user_session.secret_key,
+                                                         self.user_session.session_token)
+            # could make this conditional, but add caching always for now
+            self.user_session.scaling = CachingScaleInterface(self.user_session.scaling, eucaconsole.config)
+
+        self.user_session.session_lifetime_requests += 1
+
+        try:
+            action = self.get_argument("Action")
+            if action.find('Get') == -1:
+                self.user_session.session_last_used = time.time()
+                self.check_xsrf_cookie()
+
+            if action == 'CreateAutoScalingGroup':
+                name = self.get_argument('AutoScalingGroupName')
+                launch_config = self.get_argument('LaunchConfigurationName')
+                azones = self.get_argument_list('AvailabilityZones.member')
+                balancers = self.get_argument_list('LoadBalancerNames.member')
+                def_cooldown = self.get_argument('DefaultCooldown', None)
+                hc_type = self.get_argument('HealthCheckType', None)
+                hc_period = self.get_argument('HealthCheckGracePeriod', None)
+                desired_capacity = self.get_argument('DesiredCapacity', None)
+                min_size = self.get_argument('MinSize', 0)
+                max_size = self.get_argument('MaxSize', 0)
+                tags = self.get_argument_list('Tags.member')
+                termination_policy = self.get_argument_list('TerminationPolicies.member')
+                as_group = AutoScalingGroup(name=name, launch_config=launch_config,
+                                availability_zones=azones, load_balancers=balancers,
+                                default_cooldown=def_cooldown, health_check_type=hc_type,
+                                health_check_period=hc_period, desired_capacity=desired_capacity,
+                                min_size=min_size, max_size=max_size, tags=tags,
+                                termination_policy=termination_policy)
+                self.user_session.scaling.create_auto_scaling_group(as_group, self.callback)
+            elif action == 'DeleteAutoScalingGroup':
+                name = self.get_argument('AutoScalingGroupName')
+                force = self.get_argument('ForceDelete', '') == 'true'
+                self.user_session.scaling.delete_auto_scaling_group(name, force, self.callback)
+            elif action == 'DescribeAutoScalingGroups':
+                names = self.get_argument_list('AutoScalingGroupNames.member')
+                max_records = self.get_argument("MaxRecords", None)
+                next_token = self.get_argument("NextToken", None)
+                self.user_session.scaling.get_all_groups(names, max_records, next_token, self.callback)
+            elif action == 'DescribeAutoScalingInstances':
+                instance_ids = self.get_argument_list('InstanceIds.member')
+                max_records = self.get_argument("MaxRecords", None)
+                next_token = self.get_argument("NextToken", None)
+                self.user_session.scaling.get_all_autoscaling_instances(instance_ids, max_records, next_token, self.callback)
+            elif action == 'SetDesiredCapacity':
+                name = self.get_argument('AutoScalingGroupName')
+                desired_capacity = self.get_argument('DesiredCapacity')
+                honor_cooldown = self.get_argument('HonorCooldown', '') == 'true'
+                self.user_session.scaling.set_desired_capacity(name, desired_capacity, honor_cooldown, self.callback)
+            elif action == 'SetInstanceHealth':
+                instance_id = self.get_argument('InstanceId')
+                health_status = self.get_argument('HealthStatus')
+                respect_grace_period = self.get_argument('ShouldRespectGracePeriod', '') == 'true'
+                self.user_session.scaling.set_instance_health(instance_id, health_status, respect_grace_period, self.callback)
+            elif action == 'TerminateAutoScalingGroup':
+                instance_id = self.get_argument('InstanceId')
+                decrement_capacity = self.get_argument('ShouldDecrementDesiredCapacity', '') == 'true'
+                self.user_session.scaling.terminate_instance(instance_id, decrement_capacity, self.callback)
+            elif action == 'UpdateAutoScalingGroup':
+                name = self.get_argument('AutoScalingGroupName')
+                azones = self.get_argument_list('AvailabilityZones.member', None)
+                def_cooldown = self.get_argument('DefaultCooldown', None)
+                desired_capacity = self.get_argument('DesiredCapacity', None)
+                hc_period = self.get_argument('HealthCheckGracePeriod', None)
+                hc_type = self.get_argument('HealthCheckType', None)
+                launch_config = self.get_argument('LaunchConfigurationName', None)
+                min_size = self.get_argument('MinSize', None)
+                max_size = self.get_argument('MaxSize', None)
+                termination_policy = self.get_argument_list('TerminationPolicies.member')
+                group = AutoScalingGroup(name=name, launch_config=launch_config,
+                                availability_zones=azones, default_cooldown=def_cooldown,
+                                health_check_type=hc_type, health_check_period=hc_period,
+                                desired_capacity=desired_capacity,
+                                min_size=min_size, max_size=max_size,
+                                termination_policies=termination_policies)
+                self.user_session.scaling.update_autoscaling_group(group, self.callback)
+            elif action == 'CreateLaunchConfiguration':
+                image_id = self.get_argument('ImageId')
+                name = self.get_argument('LaunchConfigurationName')
+                instance_type = self.get_argument('InstanceType', 'm1.small')
+                key_name = self.get_argument('KeyName', None)
+                user_data = self.get_argument('UserData', None)
+                kernel_id = self.get_argument('KernelId', None)
+                ramdisk_id = self.get_argument('RamdiskId', None)
+                groups = self.get_argument_list('SecurityGroups.member')
+                bdm = self.get_argument_list('BlockDeviceMappings.member')
+                monitoring = self.get_argument('Instancemonitoring.Enabled', '') == 'true'
+                spot_price = self.get_argument('SpotPrice', None)
+                iam_instance_profile = self.get_argument('IamInstanceProfile', None)
+                config = LaunchConfiguration(image_id=image_id, name=name,
+                                instance_type=instance_type, key_name=key_name,
+                                user_data=user_data, kernel_id=kernel_id,
+                                ramdisk_id=ramdisk_id, instance_monitoring=monitoring,
+                                spot_price=spot_price,
+                                instance_profile_name=iam_instance_profile,
+                                block_device_mappings=bdm,
+                                security_groups=groups)
+                self.user_session.scaling.create_launch_configuration(config, self.callback)
+            elif action == 'DeleteLaunchConfiguration':
+                config_name = self.get_argument('LaunchConfigurationName')
+                self.user_session.scaling.delete_launch_configuration(config_name, self.callback)
+            elif action == 'DescribeLaunchConfigurations':
+                config_names = self.get_argument_list('LaunchConfigurationNames.member')
+                max_records = self.get_argument("MaxRecords", None)
+                next_token = self.get_argument("NextToken", None)
+                self.user_session.scaling.get_all_launch_configurations(config_names, max_records, next_token, self.callback)
+
+        except Exception as ex:
+            logging.error("Could not fulfill request, exception to follow")
+            logging.error("Since we got here, client likely not notified either!")
+            logging.exception(ex)
+
+class BalanceHandler(BaseAPIHandler):
+    json_encoder = BotoJsonBalanceEncoder
+
+    def get_listener_args(self):
+        ret = []
+        index = 1
+        key_p = 'Listeners.member.%d.%s'
+        done = False
+        while not(done):
+            balancer_port = self.get_argument(key_p % (index, 'LoadBalancerPort'), None)
+            instance_port = self.get_argument(key_p % (index, 'InstancePort'), 0)
+            protocol = self.get_argument(key_p % (index, 'Protocol'), '')
+            upper_proto = protocol.upper()
+            ssl_cert_id = None
+            if upper_proto == 'HTTPS' or upper_proto == 'SSL':
+                ssl_cert_id = self.get_argument(key_p % (index, 'SSLCertificateId'), None)
+
+            if not(balancer_port):
+                done = True
+                break
+            ret.append(Listener(load_balancer_port=balancer_port, instance_port=instance_port,
+                                protocol=protocol, ssl_certificate_id=ssl_cert_id))
+            index += 1
+
+        return ret
+
+
+    ##
+    # This is the main entry point for API calls for AutoScaling from the browser
+    # other calls are delegated to handler methods based on resource type
+    #
+    @tornado.web.asynchronous
+    def post(self):
+        if not self.authorized():
+            raise tornado.web.HTTPError(401, "not authorized")
+        if not(self.user_session.scaling):
+            if self.should_use_mock():
+                self.user_session.elb = MockBalanceInterface()
+            else:
+                host = eucaconsole.config.get('server', 'clchost')
+                if self.user_session.host_override:
+                    host = self.user_session.host_override
+                self.user_session.elb = BotoBalanceInterface(host,
+                                                         self.user_session.access_key,
+                                                         self.user_session.secret_key,
+                                                         self.user_session.session_token)
+            # could make this conditional, but add caching always for now
+            self.user_session.elb = CachingBalanceInterface(self.user_session.elb, eucaconsole.config)
+
+        self.user_session.session_lifetime_requests += 1
+
+        try:
+            action = self.get_argument("Action")
+            if action.find('Get') == -1:
+                self.user_session.session_last_used = time.time()
+                self.check_xsrf_cookie()
+
+            if action == 'CreateLoadBalancer':
+                azones = self.get_argument_list('AvailabilityZones.member')
+                listeners = self.get_listener_args()
+                name = self.get_argument('LoadBalancerName')
+                scheme = self.get_argument('Scheme', 'internet-facing')
+                groups = self.get_argument_list('SecurityGroups.member')
+                subnets = self.get_argument_list('Subnets.member')
+                self.user_session.elb.create_load_balancer(name, azones, listeners, subnets, groups, scheme, self.callback)
+            elif action == 'DeleteLoadBalancer':
+                name = self.get_argument('LoadBalancerName')
+                self.user_session.elb.delete_load_balancer(name, self.callback)
+            elif action == 'DescribeLoadBalancers':
+                names = self.get_argument_list('LoadBalancerNames.member')
+                self.user_session.elb.get_all_load_balancers(names, self.callback)
+            elif action == 'DeregisterInstancesFromLoadBalancer':
+                name = self.get_argument('LoadBalancerName')
+                instances = self.get_argument_list('Instances.member')
+                self.user_session.elb.deregister_instances(name, instances, self.callback)
+            elif action == 'RegisterInstancesWithLoadBalancer':
+                name = self.get_argument('LoadBalancerName')
+                instances = self.get_argument_list('Instances.member')
+                self.user_session.elb.register_instances(name, instances, self.callback)
+            elif action == 'CreateLoadBalancerListeners':
+                name = self.get_argument('LoadBalancerName')
+                listeners = self.get_listener_args()
+                self.user_session.elb.create_load_balancer_listeners(name, listeners, self.callback)
+            elif action == 'DeleteLoadBalancerListeners':
+                name = self.get_argument('LoadBalancerName')
+                ports = self.get_argument_list('LoadBalancerPorts.member')
+                self.user_session.elb.delete_load_balancer_listeners(name, ports, self.callback)
+            elif action == 'ConfigureHealthCheck':
+                name = self.get_argument('LoadBalancerName')
+                timeout = self.get_argument('HealthCheck.Timeout')
+                target = self.get_argument('HealthCheck.Target')
+                interval = self.get_argument('HealthCheck.Interval')
+                unhealthy = self.get_argument('HealthCheck.UnhealthyThreshold')
+                healthy = self.get_argument('HealthCheck.HealthyThreshold')
+                hc = HealthCheck(timeout=timeout, target=target, interval=interval,
+                                 unhealthy_threshold=unhealthy, healthy_threshold=healthy)
+                self.user_session.elb.configure_health_check(name, hc, self.callback)
+            elif action == 'DescribeInstanceHealth':
+                name = self.get_argument('LoadBalancerName')
+                instances = self.get_argument_list('Instances.member')
+                self.user_session.elb.describe_instance_health(name, instances, self.callback)
+
+        except Exception as ex:
+            logging.error("Could not fulfill request, exception to follow")
+            logging.error("Since we got here, client likely not notified either!")
+            logging.exception(ex)
+
+class WatchHandler(BaseAPIHandler):
+    ISO_FORMAT = "%Y-%m-%dT%H:%M:%S.%f"
+    json_encoder = BotoJsonWatchEncoder
+
+    ##
+    # This is the main entry point for API calls for CloudWatch from the browser
+    # other calls are delegated to handler methods based on resource type
+    #
+    @tornado.web.asynchronous
+    def post(self):
+        if not self.authorized():
+            raise tornado.web.HTTPError(401, "not authorized")
+        if not(self.user_session.cw):
+            if self.should_use_mock():
+                self.user_session.walrus = MockWatchInterface()
+            else:
+                host = eucaconsole.config.get('server', 'clchost')
+                if self.user_session.host_override:
+                    host = self.user_session.host_override
+                self.user_session.cw = BotoWatchInterface(host,
+                                                         self.user_session.access_key,
+                                                         self.user_session.secret_key,
+                                                         self.user_session.session_token)
+            # could make this conditional, but add caching always for now
+            self.user_session.cw = CachingWatchInterface(self.user_session.cw, eucaconsole.config)
+
+        self.user_session.session_lifetime_requests += 1
+
+        try:
+            action = self.get_argument("Action")
+            if action.find('Get') == -1:
+                self.user_session.session_last_used = time.time()
+                self.check_xsrf_cookie()
+
+            if action == 'GetMetricStatistics':
+                period = self.get_argument('Period')
+                start_time = datetime.strptime(self.get_argument('StartTime'), self.ISO_FORMAT)
+                end_time = datetime.strptime(self.get_argument('EndTime'), self.ISO_FORMAT)
+                metric_name = self.get_argument('MetricName')
+                namespace = self.get_argument('Namespace')
+                statistics = self.get_argument_list('Statistics.member')
+                dimensions = self.get_argument_list('Dimensions.member')
+                unit = self.get_argument('Unit')
+                self.user_session.cw.get_metric_statistics(period, start_time, end_time, metric_name, namespace, statistics, dimensions, unit, self.callback)
+            elif action == 'ListMetrics':
+                dimensions = self.get_argument_list('Dimensions.member')
+                metric_name = self.get_argument('MetricName', None)
+                namespace = self.get_argument('Namespace', None)
+                next_token = self.get_argument('NextToken', None)
+                self.user_session.cw.list_metrics(next_token, dimensions, metric_name, namespace, self.callback)
+            elif action == 'PutMetricData':
+                namespace = self.get_argument('Namespace')
+                # TODO: more args, reconcile api docs and boto
+                self.user_session.cw.put_metric_data(namespace, name, value, timestamp, unit, dimensions, statistics, self.callback)
+
+        except Exception as ex:
+            logging.error("Could not fulfill request, exception to follow")
+            logging.error("Since we got here, client likely not notified either!")
+            logging.exception(ex)
+
+class StorageHandler(BaseAPIHandler):
+#    def __init__(self):
+#        self.json_encoder = JsonBotoStorageEncoder
+
     ##
     # This is the main entry point for API calls for S3(Walrus) from the browser
     # other calls are delegated to handler methods based on resource type
@@ -64,10 +447,8 @@ class StorageHandler(eucaconsole.BaseHandler):
                 pass #self.user_session.walrus = MockClcInterface()
             else:
                 host = eucaconsole.config.get('server', 'clchost')
-                #try:
-                #    host = eucaconsole.config.get('test', 'ec2.endpoint')
-                #except ConfigParser.Error:
-                #    pass
+                if self.user_session.host_override:
+                    host = self.user_session.host_override
                 self.user_session.walrus = BotoWalrusInterface(host,
                                                          self.user_session.access_key,
                                                          self.user_session.secret_key,
@@ -94,73 +475,17 @@ class StorageHandler(eucaconsole.BaseHandler):
             logging.error("Since we got here, client likely not notified either!")
             logging.exception(ex)
 
-    # async calls end up back here so we can check error status and reply appropriately
-    def callback(self, response):
-        if response.error:
-            err = response.error
-            ret = '[]'
-            if isinstance(err, S3ResponseError):
-                ret = ClcError(err.status, err.reason, err.errors[0][1])
-                self.set_status(err.status);
-            elif issubclass(err.__class__, Exception):
-                if isinstance(err, socket.timeout):
-                    ret = ClcError(504, 'Timed out', None)
-                    self.set_status(504);
-                else:
-                    ret = ClcError(500, err.message, None)
-                    self.set_status(500);
-            self.set_header("Content-Type", "application/json;charset=UTF-8")
-            self.write(json.dumps(ret, cls=BotoJsonEncoder))
-            self.finish()
-            logging.exception(err)
-        else:
-            try:
-                try:
-                    if(eucaconsole.config.get('test','apidelay')):
-                        time.sleep(int(eucaconsole.config.get('test','apidelay'))/1000.0);
-                except ConfigParser.NoOptionError:
-                    pass
-                ret = Response(response.data) # wrap all responses in an object for security purposes
-                data = json.dumps(ret, cls=BotoJsonEncoder, indent=2)
-                self.set_header("Content-Type", "application/json;charset=UTF-8")
-                self.write(data)
-                self.finish()
-            except Exception, err:
-                print err
-
-class ComputeHandler(eucaconsole.BaseHandler):
+class ComputeHandler(BaseAPIHandler):
+    json_encoder = BotoJsonEncoder
 
     # This method unescapes values that were escaped in the jsonbotoencoder.__sanitize_and_copy__ method
     # TODO: this should not be needed when we stop escaping on the proxy and only escape in the browser as needed
-    def get_argument(self, name, default=tornado.web.RequestHandler._ARG_DEFAULT, strip=True):
-        arg = super(ComputeHandler, self).get_argument(name, default, strip)
-        if arg:
-            return unescape(arg)
-        else:
-            return arg
-
-    def get_argument_list(self, name, name_suffix=None, another_suffix=None, size=None):
-        ret = []
-        index = 1
-        index2 = 1
-        pattern = name+'.%d'
-        if name_suffix:
-            pattern = pattern+'.'+name_suffix
-        if another_suffix:
-            pattern = pattern+'.%d.'+another_suffix
-        val = ''
-        if another_suffix:
-            val = self.get_argument(pattern % (index, index2), None)
-        else:
-            val = self.get_argument(pattern % (index), None)
-        while (index < (size+1)) if size else val:
-            ret.append(val)
-            index = index + 1
-            if another_suffix:
-                val = self.get_argument(pattern % (index, index2), None)
-            else:
-                val = self.get_argument(pattern % (index), None)
-        return ret
+    #def get_argument(self, name, default=tornado.web.RequestHandler._ARG_DEFAULT, strip=True):
+    #    arg = super(ComputeHandler, self).get_argument(name, default, strip)
+    #    if arg:
+    #        return unescape(arg)
+    #    else:
+    #        return arg
 
     def get_filter_args(self):
         ret = {}
@@ -622,36 +947,3 @@ class ComputeHandler(eucaconsole.BaseHandler):
         if not(response.error):
             self.user_session.keypair_cache[name] = response.data.material
 
-    # async calls end up back here so we can check error status and reply appropriately
-    def callback(self, response):
-        if response.error:
-            err = response.error
-            ret = '[]'
-            if isinstance(err, EC2ResponseError):
-                ret = ClcError(err.status, err.reason, err.errors[0][1])
-                self.set_status(err.status);
-            elif issubclass(err.__class__, Exception):
-                if isinstance(err, socket.timeout):
-                    ret = ClcError(504, 'Timed out', None)
-                    self.set_status(504);
-                else:
-                    ret = ClcError(500, err.message, None)
-                    self.set_status(500);
-            self.set_header("Content-Type", "application/json;charset=UTF-8")
-            self.write(json.dumps(ret, cls=BotoJsonEncoder))
-            self.finish()
-            logging.exception(err)
-        else:
-            try:
-                try:
-                    if(eucaconsole.config.get('test','apidelay')):
-                        time.sleep(int(eucaconsole.config.get('test','apidelay'))/1000.0);
-                except ConfigParser.NoOptionError:
-                    pass
-                ret = Response(response.data) # wrap all responses in an object for security purposes
-                data = json.dumps(ret, cls=BotoJsonEncoder, indent=2)
-                self.set_header("Content-Type", "application/json;charset=UTF-8")
-                self.write(data)
-                self.finish()
-            except Exception, err:
-                print err

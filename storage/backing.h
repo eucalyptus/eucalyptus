@@ -125,6 +125,7 @@ int init_backing_store(const char *conf_instances_path, unsigned int conf_work_s
 int save_instance_struct(const ncInstance * instance);
 ncInstance *load_instance_struct(const char *instanceId);
 int create_instance_backing(ncInstance * instance);
+int create_migration_backing(ncInstance * instance);
 int clone_bundling_backing(ncInstance * instance, const char *filePrefix, char *blockPath);
 int destroy_instance_backing(ncInstance * instance, boolean do_destroy_files);
 

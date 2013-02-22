@@ -1,3 +1,6 @@
+// -*- mode: C; c-basic-offset: 4; tab-width: 4; indent-tabs-mode: nil -*-
+// vim: set softtabstop=4 shiftwidth=4 tabstop=4 expandtab:
+
 /*************************************************************************
  * Copyright 2009-2012 Eucalyptus Systems, Inc.
  *
@@ -59,9 +62,6 @@
  *   IDENTIFIED, OR WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT
  *   NEEDED TO COMPLY WITH ANY SUCH LICENSES OR RIGHTS.
  ************************************************************************/
-
-// -*- mode: C; c-basic-offset: 4; tab-width: 4; indent-tabs-mode: nil -*-
-// vim: set softtabstop=4 shiftwidth=4 tabstop=4 expandtab:
 
 //!
 //! @file cluster/handlers.c
@@ -274,7 +274,8 @@ int doDescribeInstances(ncMetadata * pMeta, char **instIds, int instIdsLen, ccIn
 int powerUp(ccResource * res);
 int powerDown(ncMetadata * pMeta, ccResource * node);
 void print_netConfig(char *prestr, netConfig * in);
-int ccInstance_to_ncInstance(ccInstance * dst, ncInstance * src);
+int ncInstance_to_ccInstance(ccInstance * dst, ncInstance * src);
+int ccInstance_to_ncInstance(ncInstance * dst, ccInstance * src);
 int schedule_instance(virtualMachine * vm, char *targetNode, int *outresid);
 int schedule_instance_roundrobin(virtualMachine * vm, int *outresid);
 int schedule_instance_explicit(virtualMachine * vm, char *targetNode, int *outresid);
@@ -887,8 +888,16 @@ int ncClientCall(ncMetadata * pMeta, int timeout, int ncLock, char *ncURL, char 
             rc = ncBundleRestartInstanceStub(ncs, localmeta, instanceId);
         } else if (!strcmp(ncOp, "ncCancelBundleTask")) {
             char *instanceId = va_arg(al, char *);
-
             rc = ncCancelBundleTaskStub(ncs, localmeta, instanceId);
+        } else if (!strcmp(ncOp, "ncModifyNode")) {
+            char *stateName = va_arg(al, char *);
+            rc = ncModifyNodeStub(ncs, localmeta, stateName);
+        } else if (!strcmp(ncOp, "ncMigrateInstance")) {
+            ncInstance **instances = va_arg(al, ncInstance **);
+            int instancesLen = va_arg(al, int);
+            char *action = va_arg(al, char *);
+            char *credentials = va_arg(al, char *);
+            rc = ncMigrateInstanceStub(ncs, localmeta, instances, instancesLen, action, credentials);
         } else {
             LOGWARN("\tncOps=%s ppid=%d operation '%s' not found\n", ncOp, getppid(), ncOp);
             rc = 1;
@@ -2274,7 +2283,18 @@ int refresh_instances(ncMetadata * pMeta, int timeout, int dolock)
                                 }
                             }
                             // update CC instance with instance state from NC
-                            rc = ccInstance_to_ncInstance(myInstance, ncOutInsts[j]);
+                            rc = ncInstance_to_ccInstance(myInstance, ncOutInsts[j]);
+
+                            // migration-related logic
+                            if (ncOutInsts[j]->migration_state != NOT_MIGRATING) {
+                                if (!strcmp (resourceCacheStage->resources[i].hostname, ncOutInsts[j]->migration_dst)) {
+
+                                    // TODO: for now just ignore updates from destination while migrating
+                                    LOGDEBUG("[%s] ignoring updates from destination node %s\n", myInstance->instanceId, resourceCacheStage->resources[i].hostname);
+                                    EUCA_FREE(myInstance);
+                                    break;
+                                }
+                            }
 
                             // instance info that the CC maintains
                             myInstance->ncHostIdx = i;
@@ -2695,7 +2715,7 @@ void print_netConfig(char *prestr, netConfig * in)
 //!
 //! @note
 //!
-int ccInstance_to_ncInstance(ccInstance * dst, ncInstance * src)
+int ncInstance_to_ccInstance(ccInstance * dst, ncInstance * src)
 {
     int i;
 
@@ -2731,6 +2751,60 @@ int ccInstance_to_ncInstance(ccInstance * dst, ncInstance * src)
     }
 
     memcpy(&(dst->ccvm), &(src->params), sizeof(virtualMachine));
+
+    dst->blkbytes = src->blkbytes;
+    dst->netbytes = src->netbytes;
+
+    return (0);
+}
+
+//!
+//!
+//!
+//! @param[in] dst
+//! @param[in] src
+//!
+//! @return
+//!
+//! @pre
+//!
+//! @note
+//!
+int ccInstance_to_ncInstance(ncInstance * dst, ccInstance * src)
+{
+    int i;
+
+    euca_strncpy(dst->uuid, src->uuid, 48);
+    euca_strncpy(dst->instanceId, src->instanceId, 16);
+    euca_strncpy(dst->reservationId, src->reservationId, 16);
+    euca_strncpy(dst->accountId, src->accountId, 48);
+    euca_strncpy(dst->userId, src->ownerId, 48); //! @TODO: is this right?
+    euca_strncpy(dst->ownerId, src->ownerId, 48);
+    euca_strncpy(dst->imageId, src->amiId, 16);
+    euca_strncpy(dst->kernelId, src->kernelId, 16);
+    euca_strncpy(dst->ramdiskId, src->ramdiskId, 16);
+    euca_strncpy(dst->keyName, src->keyName, 1024);
+    euca_strncpy(dst->launchIndex, src->launchIndex, 64);
+    euca_strncpy(dst->platform, src->platform, 64);
+    euca_strncpy(dst->bundleTaskStateName, src->bundleTaskStateName, 64);
+    euca_strncpy(dst->createImageTaskStateName, src->createImageTaskStateName, 64);
+    euca_strncpy(dst->userData, src->userData, 16384);
+    euca_strncpy(dst->stateName, src->state, 16);
+    dst->launchTime = src->ts;
+
+    memcpy(&(dst->ncnet), &(src->ncnet), sizeof(netConfig));
+
+    for (i = 0; i < 64; i++) {
+        snprintf(dst->groupNames[i], 64, "%s", src->groupNames[i]);
+    }
+
+    memcpy(dst->volumes, src->volumes, sizeof(ncVolume) * EUCA_MAX_VOLUMES);
+    for (i = 0; i < EUCA_MAX_VOLUMES; i++) {
+        if (strlen(dst->volumes[i].volumeId) == 0)
+            break;
+    }
+
+    memcpy(&(dst->params), &(src->ccvm), sizeof(virtualMachine));
 
     dst->blkbytes = src->blkbytes;
     dst->netbytes = src->netbytes;
@@ -3807,6 +3881,244 @@ int doDescribeSensors(ncMetadata * pMeta, int historySize, long long collectionI
     LOGTRACE("returning (outResourcesLen=%d)\n", *outResourcesLen);
 
     return 0;
+}
+
+//!
+//! Implements the CC logic of modifying state of a node controller
+//!
+//! @param[in] pMeta a pointer to the node controller (NC) metadata structure
+//! @param[in] nodeName the IP of the NC to effect
+//! @param[in] stateName the state for the NC 
+//!
+//! @return
+//!
+//! @pre
+//!
+//! @note
+//!
+int doModifyNode(ncMetadata * pMeta, char *nodeName, char *stateName)
+{
+    int i, rc, ret = 0, timeout;
+    int src_index = -1, dst_index = -1;
+    ccResourceCache resourceCacheLocal;
+
+    rc = initialize(pMeta);
+    if (rc || ccIsEnabled()) {
+        return (1);
+    }
+
+    if (!nodeName || !stateName) {
+        LOGERROR("bad input params\n");
+        return (1);
+    }
+    LOGINFO("modifying node %s with state=%s\n", SP(nodeName), SP(stateName));
+
+    sem_mywait(RESCACHE);
+    memcpy(&resourceCacheLocal, resourceCache, sizeof(ccResourceCache));
+    sem_mypost(RESCACHE);
+
+    for (i = 0; i < resourceCacheLocal.numResources && (src_index == -1 || dst_index == -1); i++) {
+        if (resourceCacheLocal.resources[i].state != RESASLEEP) {
+            if (!strcmp(resourceCacheLocal.resources[i].hostname, nodeName)) {
+                // found it
+                src_index = i;
+            } else {
+                if (dst_index == -1)
+                    dst_index = i;
+            }
+        }
+    }
+    if (src_index == -1) {
+        LOGERROR("node requested for modification (%s) cannot be found\n", SP(nodeName));
+        goto out;
+    }
+    
+    timeout = ncGetTimeout(time(NULL), OP_TIMEOUT, 1, 0);
+    rc = ncClientCall(pMeta, timeout, resourceCacheLocal.resources[src_index].lockidx, resourceCacheLocal.resources[src_index].ncURL, "ncModifyNode",
+                      stateName); // no need to pass nodeName as ncClientCall sets that up for all NC requests
+    if (rc) {
+        ret = 1;
+        goto out;
+    }
+
+    // find an instance running on the host
+    int found_instance = 0;
+    ccInstance cc_instance;
+    sem_mywait(INSTCACHE);
+    if (instanceCache->numInsts) {
+        for (i = 0; i < MAXINSTANCES_PER_CC; i++) {
+            if (instanceCache->cacheState[i] == INSTVALID 
+                && instanceCache->instances[i].ncHostIdx == src_index
+                && (!strcmp(instanceCache->instances[i].state, "Extant"))) {
+                memcpy(&cc_instance, &(instanceCache->instances[i]), sizeof(ccInstance));
+                found_instance = 1;
+                break;
+            }
+        }
+    }
+    sem_mypost(INSTCACHE);    
+    if (! found_instance) {
+        LOGINFO("no instances running on host %s\n", SP(nodeName));
+        goto out;
+    }
+
+    if (dst_index == -1) {
+        LOGERROR("have instances to migrate, but no destinations\n");
+        goto out;
+    }
+
+    ncInstance nc_instance;
+    ccInstance_to_ncInstance(&nc_instance, &cc_instance);    
+    strncpy (nc_instance.migration_src, resourceCacheLocal.resources[src_index].hostname, sizeof(nc_instance.migration_src));
+    strncpy (nc_instance.migration_dst, resourceCacheLocal.resources[dst_index].hostname, sizeof(nc_instance.migration_dst));
+    ncInstance * instances = &nc_instance;
+
+    // notify the destination
+    timeout = ncGetTimeout(time(NULL), OP_TIMEOUT, 1, 0);
+    rc = ncClientCall(pMeta, timeout, resourceCacheLocal.resources[dst_index].lockidx, resourceCacheLocal.resources[dst_index].ncURL, "ncMigrateInstance",
+                      &instances, 1, "prepare", NULL);
+    if (rc) {
+        LOGERROR("failed to request migration on destination\n");
+        ret = 1;
+        goto out;
+    }
+
+    // notify source
+    timeout = ncGetTimeout(time(NULL), OP_TIMEOUT, 1, 0);
+    rc = ncClientCall(pMeta, timeout, resourceCacheLocal.resources[src_index].lockidx, resourceCacheLocal.resources[src_index].ncURL, "ncMigrateInstance",
+                      &instances, 1, "prepare", NULL);
+    if (rc) {
+        LOGERROR("failed to request migration on source\n");
+        ret = 1;
+        goto out;
+    }
+
+ out:
+    LOGTRACE("done\n");
+
+    shawn();
+
+    return (ret);
+}
+
+
+//!
+//! Implements the CC logic of migrating instances from a node controller
+//!
+//! @param[in] pMeta a pointer to the node controller (NC) metadata structure
+//! @param[in] nodeName the IP of the NC to effect
+//!
+//! @return
+//!
+//! @pre
+//!
+//! @note
+//!
+int doMigrateInstances(ncMetadata * pMeta, char *nodeName)
+{
+    int i, rc, ret = 0, timeout;
+    int src_index = -1, dst_index = -1;
+    ccResourceCache resourceCacheLocal;
+
+    rc = initialize(pMeta);
+    if (rc || ccIsEnabled()) {
+        return (1);
+    }
+
+    if (!nodeName) {
+        LOGERROR("bad input params\n");
+        return (1);
+    }
+    LOGINFO("modifying node %s\n", SP(nodeName));
+
+    sem_mywait(RESCACHE);
+    memcpy(&resourceCacheLocal, resourceCache, sizeof(ccResourceCache));
+    sem_mypost(RESCACHE);
+
+    for (i = 0; i < resourceCacheLocal.numResources && (src_index == -1 || dst_index == -1); i++) {
+        if (resourceCacheLocal.resources[i].state != RESASLEEP) {
+            if (!strcmp(resourceCacheLocal.resources[i].hostname, nodeName)) {
+                // found it
+                src_index = i;
+            } else {
+                if (dst_index == -1)
+                    dst_index = i;
+            }
+        }
+    }
+    if (src_index == -1) {
+        LOGERROR("node requested for modification (%s) cannot be found\n", SP(nodeName));
+        goto out;
+    }
+
+    LOGINFO("migrating from %s to %s\n", SP(resourceCacheLocal.resources[src_index].hostname), SP(resourceCacheLocal.resources[dst_index].hostname));
+
+    // find an instance running on the host
+    int found_instance = 0;
+    ccInstance cc_instance;
+    sem_mywait(INSTCACHE);
+    if (instanceCache->numInsts) {
+        for (i = 0; i < MAXINSTANCES_PER_CC; i++) {
+            if (instanceCache->cacheState[i] == INSTVALID
+                && instanceCache->instances[i].ncHostIdx == src_index
+                && (!strcmp(instanceCache->instances[i].state, "Extant"))) {
+                memcpy(&cc_instance, &(instanceCache->instances[i]), sizeof(ccInstance));
+                found_instance = 1;
+                break;
+            }
+        }
+    }
+    sem_mypost(INSTCACHE);
+    if (! found_instance) {
+        LOGINFO("no instances running on host %s\n", SP(nodeName));
+        goto out;
+    }
+
+    if (dst_index == -1) {
+        LOGERROR("have instances to migrate, but no destinations\n");
+        goto out;
+    }
+
+    ncInstance nc_instance;
+    ccInstance_to_ncInstance(&nc_instance, &cc_instance);
+
+    // notify the destination
+	LOGINFO("migrating instance [%s]: prepare dest %s\n",
+			SP(nc_instance.instanceId),
+			SP(resourceCacheLocal.resources[dst_index].hostname));
+    timeout = ncGetTimeout(time(NULL), OP_TIMEOUT, 1, 0);
+    rc = ncClientCall(pMeta, timeout, resourceCacheLocal.resources[dst_index].lockidx, resourceCacheLocal.resources[dst_index].ncURL, "ncMigrateInstance",
+                      &nc_instance, resourceCacheLocal.resources[src_index].hostname, resourceCacheLocal.resources[dst_index].hostname, NULL);
+    if (rc) {
+        LOGERROR("failed to request migration on destination\n");
+        ret = 1;
+        goto out;
+    }
+
+    // notify source
+    LOGINFO("[%s] migrate source %s\n",
+    		SP(nc_instance.instanceId),
+    		SP(resourceCacheLocal.resources[src_index].hostname));
+    timeout = ncGetTimeout(time(NULL), OP_TIMEOUT, 1, 0);
+    rc = ncClientCall(pMeta, timeout, resourceCacheLocal.resources[src_index].lockidx, resourceCacheLocal.resources[src_index].ncURL, "ncMigrateInstance",
+                      &nc_instance, resourceCacheLocal.resources[src_index].hostname, resourceCacheLocal.resources[dst_index].hostname, NULL);
+ 	LOGINFO("[%s] started migration from %s to %s\n",
+ 			SP(nc_instance.instanceId),
+ 			SP(resourceCacheLocal.resources[src_index].hostname),
+ 			SP(resourceCacheLocal.resources[dst_index].hostname));
+    if (rc) {
+        LOGERROR("failed to request migration on source\n");
+        ret = 1;
+        goto out;
+    }
+
+ out:
+
+    LOGTRACE("done\n");
+
+    shawn();
+
+    return (ret);
 }
 
 //!

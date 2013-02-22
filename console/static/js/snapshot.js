@@ -56,42 +56,58 @@
           "sPaginationType": "full_numbers",
           "aoColumns": [
             {
+	      // Display the checkbox button in the main table
               "bSortable": false,
               "fnRender": function(oObj) { return '<input type="checkbox"/>' },
               "sClass": "checkbox-cell",
             },
-            { "mDataProp": "id" },
+            { 
+	       // Display the id of the snapshot in the main table
+	       "mDataProp": "id" 
+	    },
             {
+	      // Display the status of the snapshot in the main table
               "fnRender": function(oObj) { 
-                 $div = $('<div>').addClass('table-row-status').addClass('status-'+oObj.aData.status);
-                 $div.append(oObj.aData.status=='pending' ?  oObj.aData.progress : '&nbsp;');
-                 return asHTML($div);
+                 return eucatableDisplayColumnTypeSnapshotStatus(oObj.aData.status, oObj.aData.progress);
                },
               "sClass": "narrow-cell",
               "bSearchable": false,
               "iDataSort": 7, // sort on hidden status column
               "sWidth": 50,
             },
-            { "mDataProp": "volume_size" },
-            { "mDataProp": "volume_id" },
+            { 
+	      // Display the volume size of the snapshot in the main table
+	      "mDataProp": "volume_size"
+	    },
             {
-              "fnRender": function(oObj) { return oObj.aData.description == null ? "" : "<span title='"+oObj.aData.description+"'>"+addEllipsis(oObj.aData.description, 50)+"</span>" },
+	      // Display the volume id of the snapshot in the main table
+	      "mDataProp": "volume_id"
+	    },
+            {
+	      // Display the description of the snapshot in the main table
+              "fnRender": function(oObj) { 
+	         return eucatableDisplayColumnTypeText(oObj.aData.description, oObj.aData.description, 75);
+	      },
               "iDataSort": 9,
             },
             {
+	      // Display the creation time of the snapshot in the main table
               "fnRender": function(oObj) { return formatDateTime(oObj.aData.start_time); },
               "iDataSort": 8,
             },
             {
+	      // Hidden column for the status of the snapshot
               "bVisible": false,
               "mDataProp": "status"
             },
             {
+	      // Hidden column for the unprocessed creation time/start time of the snapshot
               "bVisible": false,
               "mDataProp": "start_time",
               "sType": "date"
             },
             {
+	      // Hidden column for the uncut description of the snapshot
               "bVisible": false,
               "mDataProp": "description"
             },

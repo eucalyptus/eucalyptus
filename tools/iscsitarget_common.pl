@@ -287,3 +287,50 @@ sub lookup_session {
   }
   return @sessions;
 }
+
+sub get_wrap_name {
+    my ($store) = @_;
+    
+    my $wrapped_name = "euca-" . $store;
+    $wrapped_name =~ s/[\.:]/-/g;
+
+    return $wrapped_name;
+}
+
+sub get_wrap_dev_name {
+    my ($localdev, $store) = @_;
+
+    my $wrapped_dev_name = "/dev/mapper/" . get_wrap_name($store);
+    my $size_local = `blockdev --getsz $localdev`;
+    my $size_wrapped = `blockdev --getsz $wrapped_dev_name`;
+    if ($size_local eq $size_wrapped) {
+	return $wrapped_dev_name;
+    } else {
+	return $localdev;
+    }
+}
+
+sub unwrap_device {
+    my ($store) = @_;
+
+    my $wrapped_name = get_wrap_name($store);
+    my $cmd = "dmsetup remove $wrapped_name";
+    if (system($cmd) != 0) {
+	print STDERR "'$cmd' failed with $?\n";
+    }
+}
+
+sub wrap_device {
+    my ($localdev, $store) = @_;
+
+    my $size_sectors = `blockdev --getsz $localdev`;
+    chomp($size_sectors); # remove newline
+    if ($size_sectors > 0) {
+	my $wrapped_name = get_wrap_name($store);
+	my $cmd = "echo \"0 $size_sectors linear $localdev 0\" | dmsetup create $wrapped_name";
+	if (system($cmd) != 0) {
+	    print STDERR "'$cmd' failed with $?\n";
+	}
+    }
+    return get_wrap_dev_name($localdev, $store); # return the wrapped dev name if exists or localdev
+}

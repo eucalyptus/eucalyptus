@@ -151,6 +151,9 @@ int cc_stopService(axutil_env_t * env, axis2_stub_t * pStub);
 int cc_enableService(axutil_env_t * env, axis2_stub_t * pStub);
 int cc_disableService(axutil_env_t * env, axis2_stub_t * pStub);
 int cc_shutdownService(axutil_env_t * env, axis2_stub_t * pStub);
+int cc_modifyNode(char *nodeName, char *stateName, axutil_env_t * env, axis2_stub_t * pStub);
+int cc_migrateInstances(char *nodeName, axutil_env_t * env, axis2_stub_t * pStub);
+
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |
