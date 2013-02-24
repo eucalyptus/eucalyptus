@@ -66,6 +66,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import javax.security.auth.login.CredentialExpiredException;
 import org.apache.log4j.Logger;
 import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.AuthException;
@@ -273,6 +274,8 @@ public class EuareWebBackend {
       PasswordAuthentication.authenticate( user, password );
     } catch ( final AuthException e ) {
       throw new EucalyptusServiceException( "Incorrect password" );
+    } catch ( CredentialExpiredException ex ) {
+      throw new EucalyptusServiceException( "Password has expired" );
     }
   }
 

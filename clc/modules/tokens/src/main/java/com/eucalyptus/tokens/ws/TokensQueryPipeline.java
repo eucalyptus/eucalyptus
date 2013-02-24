@@ -161,6 +161,7 @@ public class TokensQueryPipeline extends QueryPipeline {
         final MappingHttpRequest httpRequest = ( MappingHttpRequest ) event.getMessage( );
 
         boolean challenge = true;
+        //AUTHORIZATION looks like:  username@account:password[@newPassword]
         if ( httpRequest.containsHeader( HttpHeaders.Names.AUTHORIZATION ) ) {
           final String[] authorization = httpRequest.getHeader( HttpHeaders.Names.AUTHORIZATION ).split( " ", 2 );
           if ( authorization.length==2 && "basic".equalsIgnoreCase(authorization[0]) ) {
@@ -169,11 +170,13 @@ public class TokensQueryPipeline extends QueryPipeline {
             if ( basicUsernamePassword.length==2 && encodedAccountUsername.length==2 ) {
               final String account = B64.standard.decString( encodedAccountUsername[1] );
               final String username = B64.standard.decString( encodedAccountUsername[0] );
-              final String password = basicUsernamePassword[1];
-
+              final String passwordSubstring = basicUsernamePassword[1];
+              final String[] passwords = passwordSubstring.split( "@" , 2 );
+              final String password = ( passwords.length == 2 ) ? passwords[0] : passwordSubstring; 
+              final String newPassword = ( passwords.length == 2 ) ? passwords[1] : null; 
               try {
                 SecurityContext.getLoginContext(
-                    new AccountUsernamePasswordCredentials( httpRequest.getCorrelationId( ), account, username, password )
+                    new AccountUsernamePasswordCredentials( httpRequest.getCorrelationId( ), account, username, password, newPassword )
                 ).login();
 
                 challenge = false;
