@@ -25,6 +25,8 @@ import org.apache.commons.io.FileUtils;
 import org.apache.log4j.Logger;
 import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.bootstrap.Hosts;
+import com.eucalyptus.component.Topology;
+import com.eucalyptus.component.id.Walrus;
 import com.eucalyptus.event.ClockTick;
 import com.eucalyptus.event.EventListener;
 import com.eucalyptus.event.ListenerRegistry;
@@ -45,7 +47,7 @@ public class WalrusAvailabilityEventListener implements EventListener<ClockTick>
 
   @Override
   public void fireEvent( final ClockTick event ) {
-    if ( Bootstrap.isFinished() && Hosts.isCoordinator() ) {
+    if ( Topology.isEnabledLocally( Walrus.class ) && Bootstrap.isFinished() ) {
       try {
 
       	WalrusInfo wInfo = WalrusInfo.getWalrusInfo();
