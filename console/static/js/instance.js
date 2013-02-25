@@ -87,16 +87,18 @@
 	      // Display the status of the instance in the main table
               "iDataSort": 12,
               "fnRender": function(oObj) { 
-                 var state = oObj.aData.state;
+	         var state = oObj.aData.state;
                  if (state == undefined) {
                    state = oObj.aData._state.name;
                  }
                  return eucatableDisplayColumnTypeInstanceStatus(state);
-	      },
+              },
             },
             { 
 	      // Display the image id of the instance in the main table
-	      "mDataProp": "image_id"
+	      "fnRender": function(oObj) {
+                return DefaultEncoder().encodeForHTML(oObj.aData.image_id);
+              },
 	    },
             { 
               // Display the availiability zone of the instance in the main table
@@ -105,26 +107,34 @@
                 if (zone == undefined) {
                     zone = oObj.aData._placement.zone;
                 }
-                return zone;
+                return DefaultEncoder().encodeForHTML(zone);
               }
 	    }, 
             {
 	      // Display the public dns name of the instance in the main table
-	      "mDataProp": "public_dns_name",
+	      "fnRender": function(oObj) {
+                return DefaultEncoder().encodeForHTML(oObj.aData.public_dns_name);
+              },
  	      "sClass": "wrap-content"
 	    },
             {
 	      // Display the private dns name of the instance in the main table
-	      "mDataProp": "private_dns_name",
+	      "fnRender": function(oObj) {
+                return DefaultEncoder().encodeForHTML(oObj.aData.private_dns_name);
+              },
  	      "sClass": "wrap-content"
 	    },
             { 
 	      // Display the key name of the instance in the main table
-	      "mDataProp": "key_name" 
+	      "fnRender": function(oObj) {
+                return DefaultEncoder().encodeForHTML(oObj.aData.key_name);
+              },
 	    },
             {
 	      // Display the group name of the instance in the main table
-	      "mDataProp": "group_name"
+	      "fnRender": function(oObj) {
+                return DefaultEncoder().encodeForHTML(oObj.aData.group_name);
+              },
 	    },
             { 
 	      // Display the launch time of the instance in the main table
@@ -137,24 +147,28 @@
             {
 	      // Hidden column for the root device type of the instance
               "bVisible": false,
-              "mDataProp": "root_device_type"
+	      "fnRender": function(oObj) {
+                return DefaultEncoder().encodeForHTML(oObj.aData.root_device_type);
+              },
             },
             {
 	      // Hidden column for the status of the instance
               "bVisible": false,
-              "fnRender": function(oObj) { 
+	      "fnRender": function(oObj) {
                  var state = oObj.aData.state;
                  if (state == undefined) {
                    state = oObj.aData._state.name;
                  }
-                 return state;
-               }
+                return DefaultEncoder().encodeForHTML(state);
+              },
             },
             {
 	      // Hidden column for the launch time of the instance
               "asSorting" : [ 'desc', 'asc' ],
               "bVisible": false,
-              "mDataProp": "launch_time",
+	      "fnRender": function(oObj) {
+                return oObj.aData.launch_time;		// Sorting fails when encoded	013113
+              },
               "sType": "date"
             },
             {
@@ -166,18 +180,22 @@
 			if( result ){
 				image = result;
 			};
-                 	return image ? image.location.replace('&#x2f;','/') : '';
+                 	return image ? image.location : '';		
               }
             },
             {
 	      // Hidden column for the instance type of the instance
               "bVisible": false,
-              "mDataProp": "instance_type",
+	      "fnRender": function(oObj) {
+                return DefaultEncoder().encodeForHTML(oObj.aData.instance_type);
+              },
             },
             {
 	      // Hidden column for the ip address of the instance
               "bVisible": false,
-              "mDataProp": "ip_address",
+	      "fnRender": function(oObj) {
+                return DefaultEncoder().encodeForHTML(oObj.aData.ip_address);
+              },
             },
           ]
         },
@@ -511,17 +529,17 @@
               });
 
               if(toTerminate.length <=0){
-                notifySuccess(null, $.i18n.prop('instance_terminate_success', instances));
+                notifySuccess(null, $.i18n.prop('instance_terminate_success',  DefaultEncoder().encodeForHTML(instances.toString())));
                 thisObj.tableWrapper.eucatable('refreshTable');
               }else{
-                notifyError($.i18n.prop('instance_terminate_error', toTerminate), undefined_error);
+                notifyError($.i18n.prop('instance_terminate_error',  DefaultEncoder().encodeForHTML(toTerminate.toString())), undefined_error);
               }
             } else {
-              notifyError($.i18n.prop('instance_terminate_error', instances), undefined_error);
+              notifyError($.i18n.prop('instance_terminate_error',  DefaultEncoder().encodeForHTML(instances.toString())), undefined_error);
             }
           },
           error: function(jqXHR, textStatus, errorThrown){
-            notifyError($.i18n.prop('instance_terminate_error', instances), getErrorMessage(jqXHR));
+            notifyError($.i18n.prop('instance_terminate_error',  DefaultEncoder().encodeForHTML(instances.toString())), getErrorMessage(jqXHR));
           }
         });
     },
@@ -554,14 +572,14 @@
           async:true,
           success: function(data, textStatus, jqXHR){
             if ( data.results && data.results == true ) {
-              notifySuccess(null, $.i18n.prop('instance_reboot_success', instances));
+              notifySuccess(null, $.i18n.prop('instance_reboot_success',  DefaultEncoder().encodeForHTML(instances.toString())));
               thisObj.tableWrapper.eucatable('refreshTable');
             } else {
-              notifyError($.i18n.prop('instance_reboot_error', instances), undefined_error);
+              notifyError($.i18n.prop('instance_reboot_error',  DefaultEncoder().encodeForHTML(instances.toString())), undefined_error);
             }
           },
           error: function(jqXHR, textStatus, errorThrown){
-            notifyError($.i18n.prop('instance_reboot_error', instances), getErrorMessage(jqXHR));
+            notifyError($.i18n.prop('instance_reboot_error',  DefaultEncoder().encodeForHTML(instances.toString())), getErrorMessage(jqXHR));
           }
         });
     },
@@ -599,16 +617,16 @@
                   toStop.splice(stopIdx, 1);
               });
               if(toStop.length <=0){
-                notifySuccess(null, $.i18n.prop('instance_stop_success', instances));
+                notifySuccess(null, $.i18n.prop('instance_stop_success',  DefaultEncoder().encodeForHTML(instances.toString())));
                 thisObj.tableWrapper.eucatable('refreshTable');
               }else{
-                notifyError($.i18n.prop('instance_stop_error', toStop), undefined_error);
+                notifyError($.i18n.prop('instance_stop_error',  DefaultEncoder().encodeForHTML(toStop.toString())), undefined_error);
               }
             }else
-              notifyError($.i18n.prop('instance_stop_error', instances), undefined_error);
+              notifyError($.i18n.prop('instance_stop_error',  DefaultEncoder().encodeForHTML(instances.toString())), undefined_error);
           },
           error: function(jqXHR, textStatus, errorThrown){
-            notifyError($.i18n.prop('instance_stop_error', instances), getErrorMessage(jqXHR));
+            notifyError($.i18n.prop('instance_stop_error',  DefaultEncoder().encodeForHTML(instances.toString())), getErrorMessage(jqXHR));
           }
         });
     },
@@ -637,17 +655,17 @@
                 toStart.splice(startIdx, 1);
             });
             if(toStart.length <=0){
-              notifySuccess(null, $.i18n.prop('instance_start_success',instances));
+              notifySuccess(null, $.i18n.prop('instance_start_success',  DefaultEncoder().encodeForHTML(instances.toString())));
               thisObj.tableWrapper.eucatable('refreshTable');
             }else{
-              notifyError($.i18n.prop('instance_start_error', toStart), undefined_error);
+              notifyError($.i18n.prop('instance_start_error',  DefaultEncoder().encodeForHTML(toStart.toString())), undefined_error);
             }
           }else {
-            notifyError($.i18n.prop('instance_start_error', instances), undefined_error);
+            notifyError($.i18n.prop('instance_start_error',  DefaultEncoder().encodeForHTML(instances.toString())), undefined_error);
           }
         },
         error: function(jqXHR, textStatus, errorThrown){
-          notifyError($.i18n.prop('instance_start_error', instances), getErrorMessage(jqXHR));
+          notifyError($.i18n.prop('instance_start_error',  DefaultEncoder().encodeForHTML(instances.toString())), getErrorMessage(jqXHR));
         }
       });
     },
@@ -658,11 +676,19 @@
       var keyname = thisObj.tableWrapper.eucatable('getSelectedRows', 8);
       var ip = thisObj.tableWrapper.eucatable('getSelectedRows', 6);
       var group = thisObj.tableWrapper.eucatable('getSelectedRows', 9);
+      
+
       if ( instances.length > 0 ) {
         // connect is for one instance 
         var instance = instances[0];
         instance = $(instance).html();
         var os = oss[0]; 
+
+        // XSS Note: Need to encode the input strings before rendered as HTML
+        keyname = DefaultEncoder().encodeForHTML(keyname[0]);
+        ip = DefaultEncoder().encodeForHTML(ip[0]);
+        group = DefaultEncoder().encodeForHTML(group[0]);
+
         if(os === 'windows'){ 
           thisObj.connectDialog.eucadialog('addNote','instance-connect-text',$.i18n.prop('instance_dialog_connect_windows_text', group, keyname));
           thisObj.connectDialog.eucadialog('addNote','instance-connect-uname-password', 
@@ -678,14 +704,15 @@
                   thisObj.instPassword[result.instance] = result.password;
                   var parent = thisObj.connectDialog.find('a#password-link').parent();
                   parent.find('a').remove();
-                  parent.html(result.password);
+                  parent.html(DefaultEncoder().encodeForHTML(result.password));
                   thisObj.connectDialog.find('a').unbind('click');
                 });
               },
               fail : function (e, data) {
                 var parent = thisObj.connectDialog.find('a#password-link').parent();
-                parent.html('<span class="on-error">'+instance_dialog_password_error+'</span>');
-                thisObj.connectDialog.find('a').unbind('click');
+   //             parent.html('<span class="on-error">'+instance_dialog_password_error+'</span>');
+                parent.append($('<span>').addClass('on-error').text(instance_dialog_password_error));
+		thisObj.connectDialog.find('a').unbind('click');
               },
             });
             thisObj.connectDialog.find('a').click( function(e) {
@@ -694,7 +721,7 @@
           }else {
             var parent = thisObj.connectDialog.find('a#password-link').parent();
             parent.find('a').remove();
-            parent.html(thisObj.instPassword[instance]);
+            parent.html(DefaultEncoder().encodeForHTML(thisObj.instPassword[instance]));
             thisObj.connectDialog.find('a').unbind('click');
           }
         }
@@ -718,18 +745,17 @@
           async:true,
         })).done(function(data){
           if(data && data.results){
-            consoleOutput = $('<div/>').html(data.results.output).text();   
-            var newTitle = $.i18n.prop('instance_dialog_console_title', instances);
+            var newTitle = $.i18n.prop('instance_dialog_console_title',  DefaultEncoder().encodeForHTML(instances));
             thisObj.consoleDialog.data('eucadialog').option('title', newTitle);
             thisObj.consoleDialog.find('#instance-console-output').children().detach();
             thisObj.consoleDialog.find('#instance-console-output').append(
-              $('<textarea>').attr('id', 'instance-console-output-text').addClass('console-output').html(consoleOutput));
+              $('<textarea>').attr('id', 'instance-console-output-text').addClass('console-output').text(data.results.output));
             thisObj.consoleDialog.eucadialog('open');
           }else{
-            notifyError($.i18n.prop('instance_console_error', instances), undefined_error);
+            notifyError($.i18n.prop('instance_console_error',  DefaultEncoder().encodeForHTML(instances)), undefined_error);
           }
         }).fail(function(out){
-          notifyError($.i18n.prop('instance_console_error', instances), getErrorMessage(out));
+          notifyError($.i18n.prop('instance_console_error',  DefaultEncoder().encodeForHTML(instances)), getErrorMessage(out));
         });
     },
     _attachAction : function() {
@@ -745,7 +771,7 @@
       var instance = this.tableWrapper.eucatable('getSelectedRows', 2)[0];
       instance = $(instance).html();
       $msg = this.detachDialog.find('#volume-detach-msg');
-      $msg.html($.i18n.prop('inst_volume_dialog_detach_text', instance));
+      $msg.html($.i18n.prop('inst_volume_dialog_detach_text', DefaultEncoder().encodeForHTML(instance)));
       var $p = this.detachDialog.find('#volume-detach-select-all');
       $p.children().detach();
       $p.html('');
@@ -776,13 +802,14 @@
           inx = i*COL_IN_ROW + j;
           if (volumes.length > inx) {
             volId = volumes[inx];
+	    volId = DefaultEncoder().encodeForHTML(volID);
             $cb = $('<input>').attr('type', 'checkbox').attr('value', volId);
             $row.append($('<td>').append($cb,'&nbsp;', volId));
             $cb.click( function() {
               if ( thisObj.detachDialog.find("input:checked").length > 0 )
-                thisObj.detachDialog.eucadialog('enableButton',thisObj.detachButtonId);
+                thisObj.detachDialog.eucadialog('enableButton',DefaultEncoder().encodeForHTML(thisObj.detachButtonId));
               else
-                thisObj.detachDialog.eucadialog('disableButton',thisObj.detachButtonId);
+                thisObj.detachDialog.eucadialog('disableButton',DefaultEncoder().encodeForHTML(thisObj.detachButtonId));
             });
           } else {
             $row.append($('<td>'));
@@ -839,6 +866,9 @@
               if(done < all)
                 notifyMulti(100*(done/all), $.i18n.prop('volume_detach_progress', all));
               else {
+	     	// XSS Node:: 'volume_detach_fail' would contain a chunk HTML code in the failure description string.
+	     	// Message Example - Failed to send release request to Cloud for {0} IP address(es). <a href="#">Click here for details. </a>
+	      	// For this reason, the message string must be rendered as html()
                 var $msg = $('<div>').addClass('multiop-summary').append(
                   $('<div>').addClass('multiop-summary-success').html($.i18n.prop('volume_detach_done', (all-error.length), all)));
                 if (error.length > 0)
@@ -896,7 +926,7 @@
       var emi = instance.image_id;
       var type = thisObj.launchMoreDialog.find('#summary-type-insttype').children().last().text();
       var zone = thisObj.launchMoreDialog.find('#summary-type-zone').children().last().text();
-      var inst_num = asText(thisObj.launchMoreDialog.find('input#launch-more-num-instance').val());
+      var inst_num = thisObj.launchMoreDialog.find('input#launch-more-num-instance').val();
       var keyname = thisObj.launchMoreDialog.find('#summary-security-keypair').children().last().text();
       if (keyname==='None')
         keyname = null;
@@ -918,9 +948,9 @@
         var $selectedRow = $(this);
         var $cells = $selectedRow.find('td');
         var volume = $($cells[0]).find('select').val();
-        var mapping = '/dev/'+asText($($cells[1]).find('input').val());
+        var mapping = '/dev/'+$($cells[1]).find('input').val();
         var snapshot = $($cells[2]).find('select').val();
-        var size = asText($($cells[3]).find('input').val()); 
+        var size = $($cells[3]).find('input').val(); 
         var delOnTerm = $($cells[4]).find('input').is(':checked') ? true : false;
         
         snapshot = (snapshot ==='none') ? null : snapshot; 
@@ -984,11 +1014,11 @@
 
       var $header = thisObj.launchMoreDialog.find('#launch-more-summary-header');
       $header.children().detach();
-      $header.append($('<span>').html(instance.image_id));
+      $header.append($('<span>').text(instance.image_id));
 
       $header = thisObj.launchMoreDialog.find('#launch-wizard-advanced-header');
       $header.children().detach();
-      $header.append($('<a>').attr('href', '#').html(launch_instance_section_header_advanced).click( function(e) {
+      $header.append($('<a>').attr('href', '#').text(launch_instance_section_header_advanced).click( function(e) {
         var $advSection = thisObj.launchMoreDialog.find('#launch-wizard-advanced-contents');
         $advSection.slideToggle('fast');
         $header.toggleClass('expanded');
@@ -998,7 +1028,7 @@
         $header.find('a').trigger('click');
 
       var platform = image.platform ? image.platform : 'linux';
-      var imgName = inferImage(image.location.replace('&#x2f;','/'), image.description, platform);
+      var imgName = inferImage(image.location, image.description, platform);
       var $summary = $('<div>').append($('<div>').text(launch_instance_summary_platform), $('<span>').text(getImageName(imgName)));;
       var $image = thisObj.launchMoreDialog.find('#launch-more-summary-image');
       $image.removeClass().addClass('launch-more-summary-section').addClass(imgName);
@@ -1060,10 +1090,10 @@
     },
     _expandCallback : function(row){
       var thisObj = this;
-      var instId = $(row[2]).html();
-      var results = describe('instance');
+      var instId = $(row[2]).html();			// XSS Note:: Replaced .html() to text() - Kyo 020613
+      var results = describe('instance');		// Note:: describe() is such a generic name; be descriptive when naming a global function - Kyo 020613
       var instance = null; 
-      for(i in results){
+      for(i in results){				// Note:: Create a global function that performs "describe(<resource>, ID)" - Kyo 020613
         if(results[i].id === instId){
           instance = results[i];
           break;
@@ -1075,7 +1105,7 @@
       var prodCode = ''; 
       if(instance['product_codes'] && instance['product_codes'].length > 0)
         prodCode = instance['product_codes'].join(' ');
-      var image = describe('image',instance['image_id']);
+      var image = describe('image',instance['image_id']);	// Note:: If appears that this function exists. See the previous note above ^ - Kyo 020613
  
       var os = 'unknown';
       if(image && image['platform'])
@@ -1084,7 +1114,7 @@
         os = 'linux';
       var manifest = 'unknown';
       if(image && image.location)
-        manifest = image.location.replace('&#x2f;','/'); 
+        manifest = image.location; 
       var $instInfo = $('<div>').addClass('instance-table-expanded-instance').addClass('clearfix').append(
       $('<div>').addClass('expanded-section-label').text(instance_table_expanded_instance),
       $('<div>').addClass('expanded-section-content').addClass('clearfix').append(
@@ -1145,9 +1175,33 @@
           }
         });
       } 
-      $wrapper.append($instInfo);
-      if($volInfo)
-        $wrapper.append($volInfo);
+//      $wrapper.append($instInfo);
+
+//        $wrapper.append($volInfo);
+
+      // Create a widget object for displaying the resource tag information
+      $tagInfo = $('<div>').addClass('resource-tag-table-expanded-instance').addClass('clearfix').euca_resource_tag({resource: 'instance', resource_id: instance.id});
+
+      $tabspace = $('<div>').addClass('eucatabspace-main-div').eucatabspace(); 
+      $tabspace.eucatabspace('addTabPage', 'Instance', $instInfo);
+      $tabspace.eucatabspace('addTabPage', 'Volume', $volInfo);
+      $tabspace.eucatabspace('addTabPage', 'Tag', $tagInfo);
+      $wrapper.append($tabspace);
+/*
+      $wrapper.append(
+	$('<div>').attr('id', 'tabs').append(
+	   $('<ui>').append(
+	   	$('<li>').append(
+		   $('<a>').attr('href','#tabs-1').text('Instance')),
+		$('<li>').append(
+                   $('<a>').attr('href','#tabs-2').text('Volume')),
+		$('<li>').append(
+                   $('<a>').attr('href','#tabs-3').text('Tag'))),
+	   $('<div>').attr('id', 'tabs-1').append($instInfo),
+	   $('<div>').attr('id', 'tabs-2').append($volInfo),
+	  // $('<div>').attr('id', 'tabs-3').append($('<div>').text('Name: <name_here>').html())));
+	   $('<div>').attr('id', 'tabs-3').append($tabspace)));
+*/	
       return $wrapper;
     },
 /**** Public Methods ****/
