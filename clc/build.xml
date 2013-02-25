@@ -82,6 +82,7 @@
 	<property name="deps.lib" value="cloud-lib" />
 	<property name="bind.timestamp" value="target/.bind-timestamp" />
 	<property name="bind.msgs" value="modules/msgs/src/main/resources/msgs-binding.xml" />
+    <property name="ivy.jar" value="/usr/share/java/ivy.jar" />
 	<!--================================== groovy builder ==================================-->
 	<path id="groovy-classpath">
 		<fileset dir="${deps.lib.dir}">
@@ -93,7 +94,7 @@
 	</path>
 
 	<!-- Fix for RHEL bug 810067 -->
-	<taskdef uri="antlib:org.apache.ivy.ant" classpath="/usr/share/java/ivy.jar" />
+	<taskdef uri="antlib:org.apache.ivy.ant" classpath="${ivy.jar}" />
 
 	<ivy:buildlist reference="build-module-path" onmissingdescriptor="skip">
 		<fileset dir="modules" includes="**/build.xml"/>
