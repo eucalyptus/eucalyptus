@@ -19,13 +19,25 @@
  ************************************************************************/
 package com.eucalyptus.autoscaling.groups;
 
+import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
+import org.hibernate.criterion.DetachedCriteria;
+import org.hibernate.criterion.Example;
+import org.hibernate.criterion.Junction;
+import org.hibernate.criterion.Projections;
+import org.hibernate.criterion.Property;
+import org.hibernate.criterion.Restrictions;
 import com.eucalyptus.autoscaling.common.AutoScalingResourceName;
-import com.eucalyptus.autoscaling.metadata.AbstractOwnedPersistents;
+import com.eucalyptus.autoscaling.instances.AutoScalingInstance;
+import com.eucalyptus.autoscaling.instances.HealthStatus;
+import com.eucalyptus.autoscaling.metadata.AbstractOwnedPersistentsWithResourceNameSupport;
 import com.eucalyptus.autoscaling.metadata.AutoScalingMetadataException;
 import com.eucalyptus.util.Callback;
 import com.eucalyptus.util.OwnerFullName;
 import com.google.common.base.Predicate;
+import com.google.common.base.Predicates;
+import com.google.common.collect.Lists;
 
 /**
  *
@@ -43,6 +55,73 @@ public class PersistenceAutoScalingGroups extends AutoScalingGroups {
   public List<AutoScalingGroup> list( final OwnerFullName ownerFullName, 
                                       final Predicate<? super AutoScalingGroup> filter ) throws AutoScalingMetadataException {
     return persistenceSupport.list( ownerFullName, filter );
+  }
+
+  @Override
+  public List<AutoScalingGroup> listRequiringScaling() throws AutoScalingMetadataException {
+    return persistenceSupport.listByExample( AutoScalingGroup.requiringScaling(), Predicates.alwaysTrue() );
+  }
+
+  @Override
+  public List<AutoScalingGroup> listRequiringInstanceReplacement() throws AutoScalingMetadataException {
+    final DetachedCriteria criteria = DetachedCriteria.forClass( AutoScalingInstance.class )
+        .add( Example.create( AutoScalingInstance.withHealthStatus( HealthStatus.Unhealthy ) ) )
+        .setProjection( Projections.property( "autoScalingGroup" ) );
+
+    return persistenceSupport.listByExample(
+        AutoScalingGroup.withOwner( null ),
+        Predicates.alwaysTrue(),
+        Property.forName( "id" ).in( criteria ),
+        Collections.<String, String>emptyMap() );
+  }
+
+  @Override
+  public List<AutoScalingGroup> listRequiringMonitoring( final long interval ) throws AutoScalingMetadataException {
+    // We want to select some groups depending on the interval / time 
+    int group = (int)((System.currentTimeMillis() / interval) % 6 );
+
+    final Collection<String> suffixes = Lists.newArrayList();
+    switch ( group ) {
+      case 0:
+        suffixes.add( "0" );
+        suffixes.add( "1" );
+        suffixes.add( "2" );
+        break;
+      case 1:
+        suffixes.add( "3" );
+        suffixes.add( "4" );
+        suffixes.add( "5" );
+        break;
+      case 2:
+        suffixes.add( "6" );
+        suffixes.add( "7" );
+        suffixes.add( "8" );
+        break;
+      case 3:
+        suffixes.add( "9" );
+        suffixes.add( "a" );
+        suffixes.add( "b" );
+        break;
+      case 4:
+        suffixes.add( "c" );
+        suffixes.add( "d" );
+        break;
+      default:
+        suffixes.add( "e" );
+        suffixes.add( "f" );
+        break;
+    }
+    
+    final Junction likeAnyOf = Restrictions.disjunction();
+    for ( final String suffix : suffixes ) {
+      likeAnyOf.add( Restrictions.ilike( "id", "%" + suffix ) );  
+    }
+    
+    return persistenceSupport.listByExample(
+        AutoScalingGroup.withOwner( null ),
+        Predicates.alwaysTrue(),
+        likeAnyOf,
+        Collections.<String,String>emptyMap() );
   }
 
   @Override
@@ -67,7 +146,7 @@ public class PersistenceAutoScalingGroups extends AutoScalingGroups {
     return persistenceSupport.save( autoScalingGroup );
   }
 
-  private static class PersistenceSupport extends AbstractOwnedPersistents<AutoScalingGroup> {
+  private static class PersistenceSupport extends AbstractOwnedPersistentsWithResourceNameSupport<AutoScalingGroup> {
     private PersistenceSupport() {
       super( AutoScalingResourceName.Type.autoScalingGroup );
     }

@@ -105,9 +105,6 @@ public class DirectStorageInfo extends AbstractPersistent {
 	@ConfigurableIdentifier
 	@Column( name = "storage_name", unique=true)
 	private String name;
-	@ConfigurableField( description = "Storage network interface.", displayName = "Storage Interface" )
-	@Column( name = "storage_interface" )
-	private String storageInterface;
 	@ConfigurableField( description = "Storage volumes directory.", displayName = "Volumes path" )
 	@Column( name = "system_storage_volumes_dir" )
 	private String volumesDir;
@@ -133,7 +130,6 @@ public class DirectStorageInfo extends AbstractPersistent {
 			final Boolean zeroFillVolumes,
 			final Long timeoutInMillis) {
 		this.name = name;
-		this.storageInterface = storageInterface;
 		this.volumesDir = volumesDir;
 		this.zeroFillVolumes = zeroFillVolumes;
 		this.timeoutInMillis = timeoutInMillis;
@@ -145,14 +141,6 @@ public class DirectStorageInfo extends AbstractPersistent {
 
 	public void setName(String name) {
 		this.name = name;
-	}
-
-	public String getStorageInterface() {
-		return storageInterface;
-	}
-
-	public void setStorageInterface(String storageInterface) {
-		this.storageInterface = storageInterface;
 	}
 
 	public String getVolumesDir() {

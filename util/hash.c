@@ -65,7 +65,7 @@
 
 //!
 //! @file util/hash.c
-//! Implements MD5 and Jenkins hash functionality
+//! Implements various MD5 and Jenkins hash functionality
 //!
 
 /*----------------------------------------------------------------------------*\
@@ -156,11 +156,13 @@
 \*----------------------------------------------------------------------------*/
 
 int hash_b64enc_string(const char *in, char **out);
-int str2md5str(char *buf, unsigned int buf_size, const char *str);
+
+int str2md5str(char *sBuf, u32 bufSize, const char *sValue);
 
 char *file2md5str(const char *path);
-uint32_t jenkins(const char *key, size_t len);
-int hexjenkins(char *buf, unsigned int buf_size, const char *str);
+
+u32 jenkins(const char *key, size_t len);
+int hexjenkins(char *sBuf, u32 bufSize, const char *sValue);
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |
@@ -181,33 +183,40 @@ int hexjenkins(char *buf, unsigned int buf_size, const char *str);
 \*----------------------------------------------------------------------------*/
 
 //!
-//! Computes the MD5 hash of a given string and encodes it
+//! Computes the MD5 hash of a given string and encodes it on a 16 bytes string
 //!
-//! @param[in]  in  the string to encode
-//! @param[out] out the result of the encoding operation
+//! @param[in]  in  the buffer to encode
+//! @param[out] out the result of the encoding operation (MD5_DIGEST_LENGTH bytes string)
 //!
 //! @return EUCA_OK on success or EUCA_ERROR on failure
 //!
 //! @pre Both in and out parameters must not be NULL.
 //!
-//! @post On success the out parameter will contain the encoded hash
+//! @post On success the out parameter will point the encoded MD5_DIGEST_LENGTH bytes hash. On failure,
+//!       the out parameter value will be set to NULL explicitedly.
 //!
 int hash_b64enc_string(const char *in, char **out)
 {
-    unsigned char *md5ret = NULL;
-    unsigned char hash[17] = { 0 };
+    u8 *md5ret = NULL;
+    u8 hash[MD5_DIGEST_LENGTH + 1] = { 0 }; // +1 for NULL termination.
 
+    // Make sure our given parameters are valid
     if (!in || !out) {
         return (EUCA_ERROR);
     }
 
     LOGDEBUG("in=%s\n", in);
 
+    // Forces out to NULL in calse of failure
     *out = NULL;
-    bzero(hash, 17);
-    md5ret = MD5(((const unsigned char *)in), strlen(in), hash);
-    if (md5ret) {
-        if ((*out = base64_enc(hash, 16)) == NULL) {
+
+    // Make use our hash buffer is set to all 0s.
+    bzero(hash, sizeof(hash));
+
+    // Compute the MD5 hash
+    if ((md5ret = MD5(((const u8 *)in), strlen(in), hash)) != NULL) {
+        // Encode our hash value
+        if ((*out = base64_enc(hash, MD5_DIGEST_LENGTH)) == NULL) {
             return (EUCA_ERROR);
         }
     }
@@ -216,29 +225,50 @@ int hash_b64enc_string(const char *in, char **out)
 }
 
 //!
-//! Calculates the md5 hash of 'str' and places it into 'buf' in hex
+//! Calculates the md5 hash of 'sValue' and places it into 'sBuf' in human readable hex values
 //!
-//! @param[in,out] buf      the string buffer that contains the result
-//! @param[in]     buf_size the size of our string buffer
-//! @param[in]     str      the string to compute MD5 hash from
+//! @param[in,out] sBuf    the string buffer that contains the result
+//! @param[in]     bufSize the size of our output string buffer
+//! @param[in]     sValue  the string to compute MD5 hash from
 //!
-//! @return EUCA_OK on success or EUCA_ERROR on failure
+//! @return EUCA_OK on success or the following error codes:
+//!         \li EUCA_ERROR if the MD5 operation failed
+//!         \li EUCA_INVALID_ERROR if the given paramters do not match our pre-conditions
+//!         \li EUCA_NO_SPACE_ERROR if the provided sBuf is not big enough to contain the data
 //!
-int str2md5str(char *buf, unsigned int buf_size, const char *str)
+//! @pre \li Both sBuf and sValue fields must not be NULL
+//!      \li sBuf should be big enough to contain ((MD5_DIGEST_LENGTH * 2) + 1) characters.
+//!
+//! @post on success, the MD5 hash of sValue will be computed and sBuf will contain the human
+//!       readable hex values.
+//!
+int str2md5str(char *sBuf, u32 bufSize, const char *sValue)
 {
-    int i = 0;
-    char *p = NULL;
-    unsigned char md5digest[MD5_DIGEST_LENGTH] = { 0 };
+    u32 i = 0;
+    char *pBuf = NULL;
+    u8 md5digest[MD5_DIGEST_LENGTH + 1] = { 0 };    // +1 for NULL termination.
 
-    if (buf_size < (MD5_DIGEST_LENGTH * 2 + 1))
+    // Make sure our parameters are valid
+    if (!sBuf || !sValue)
+        return (EUCA_INVALID_ERROR);
+
+    // Make sure we have enough space to write the hash in the given buffer
+    if (bufSize < ((MD5_DIGEST_LENGTH * 2) + 1))
+        return (EUCA_NO_SPACE_ERROR);
+
+    // zero out out digest array
+    bzero(md5digest, sizeof(md5digest));
+
+    // Compute the MD5 hash
+    if (MD5(((const u8 *)sValue), strlen(sValue), md5digest) == NULL)
         return (EUCA_ERROR);
 
-    if (MD5(((const unsigned char *)str), strlen(str), md5digest) == NULL)
-        return (EUCA_ERROR);
+    // zero out the buffer
+    bzero(sBuf, bufSize);
 
-    for (i = 0, p = buf; i < MD5_DIGEST_LENGTH; i++) {
-        sprintf(p, "%02x", md5digest[i]);
-        p += 2;
+    // Convert the computed hash to readable hex values
+    for (i = 0, pBuf = sBuf; i < MD5_DIGEST_LENGTH; i++, pBuf += 2) {
+        sprintf(pBuf, "%02x", md5digest[i]);
     }
 
     return (EUCA_OK);
@@ -260,40 +290,43 @@ int str2md5str(char *buf, unsigned int buf_size, const char *str)
 //!
 char *file2md5str(const char *path)
 {
-    int i = 0;
+    u32 i = 0;
     int fd = -1;
     char *p = NULL;
     char *buf = NULL;
     char *md5string = NULL;
+    u8 md5digest[MD5_DIGEST_LENGTH + 1] = { 0 };
     struct stat mystat = { 0 };
-    unsigned char md5digest[MD5_DIGEST_LENGTH] = { 0 };
 
+    // Make sure our given parameter is valid
     if (path == NULL)
         return (NULL);
 
+    // Open the file for read only
     if ((fd = open(path, O_RDONLY)) < 0)
         return (NULL);
 
-    if (fstat(fd, &mystat) < 0)
-        goto cleanup;
+    // can we stat this file?
+    if (fstat(fd, &mystat) >= 0) {
+        // Create a memory map for this file descriptor for the size of this file
+        if ((buf = mmap(0, mystat.st_size, PROT_READ, MAP_SHARED, fd, 0)) != MAP_FAILED) {
+            // Zero out our digest buffer...
+            bzero(md5digest, sizeof(md5digest));
 
-    if ((buf = mmap(0, mystat.st_size, PROT_READ, MAP_SHARED, fd, 0)) == MAP_FAILED)
-        goto cleanup;
-
-    if (MD5(((unsigned char *)buf), mystat.st_size, md5digest) == NULL)
-        goto cleanup;
-
-    md5string = EUCA_ZALLOC(((MD5_DIGEST_LENGTH * 2) + 1), sizeof(char));
-    if (md5string == NULL)
-        goto cleanup;
-
-    for (i = 0, p = md5string; i < MD5_DIGEST_LENGTH; i++) {
-        sprintf(p, "%02x", md5digest[i]);
-        p += 2;
+            // Compute the MD5 checksum of the content of this file
+            if (MD5(((const u8 *)buf), mystat.st_size, md5digest) != NULL) {
+                // Allocate memory for our output string
+                if ((md5string = EUCA_ZALLOC(((MD5_DIGEST_LENGTH * 2) + 1), sizeof(char))) != NULL) {
+                    for (i = 0, p = md5string; i < MD5_DIGEST_LENGTH; i++, p += 2) {
+                        sprintf(p, "%02x", md5digest[i]);
+                    }
+                }
+            }
+            // Don't forget to free mapped memory
+            munmap(buf, mystat.st_size);
+        }
     }
-
-cleanup:
-
+    // Don't forget to close our file
     close(fd);
     return (md5string);
 }
@@ -310,10 +343,10 @@ cleanup:
 //!
 //! @post On success, the function will return the hash of the key
 //!
-uint32_t jenkins(const char *key, size_t len)
+u32 jenkins(const char *key, size_t len)
 {
-    uint32_t i = 0;
-    uint32_t hash = 0;
+    register u32 i = 0;
+    register u32 hash = 0;
 
     if (key) {
         for (hash = 0, i = 0; i < len; ++i) {
@@ -332,9 +365,9 @@ uint32_t jenkins(const char *key, size_t len)
 //!
 //! Calculates a Jenkins hash of 'str' and places it into 'buf' in hex
 //!
-//! @param[in,out] buf      the string buffer that contains the result
-//! @param[in]     buf_size the size of our string buffer
-//! @param[in]     str      the string to compute Jenkins hash from
+//! @param[in,out] sBuf    the string buffer that contains the result
+//! @param[in]     bufSize the size of our string buffer
+//! @param[in]     sValue  the string to compute Jenkins hash from
 //!
 //! @return EUCA_OK on success or the following error codes:
 //!         \li EUCA_INVALID_ERROR: If any parameter does not meet the preconditions
@@ -345,10 +378,10 @@ uint32_t jenkins(const char *key, size_t len)
 //! @post On success, the buf parameter will contain the hexadecimal string representation
 //!       of the Jenkins hash.
 //!
-int hexjenkins(char *buf, unsigned int buf_size, const char *str)
+int hexjenkins(char *sBuf, u32 bufSize, const char *sValue)
 {
-    if ((buf != NULL) && (buf_size > 0) && (str != NULL)) {
-        snprintf(buf, buf_size, "%08x", jenkins(str, strlen(str)));
+    if ((sBuf != NULL) && (bufSize > 0) && (sValue != NULL)) {
+        snprintf(sBuf, bufSize, "%08x", jenkins(sValue, strlen(sValue)));
         return (EUCA_OK);
     }
     return (EUCA_INVALID_ERROR);

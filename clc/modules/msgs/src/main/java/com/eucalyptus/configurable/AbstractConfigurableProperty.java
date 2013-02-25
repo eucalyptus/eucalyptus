@@ -71,6 +71,7 @@ import java.util.NoSuchElementException;
 
 import javax.persistence.EntityTransaction;
 
+import org.apache.activemq.store.jdbc.adapter.TransactDatabaseLocker;
 import org.apache.log4j.Logger;
 import com.eucalyptus.configurable.PropertyDirectory.NoopEventListener;
 import com.eucalyptus.entities.Entities;
@@ -185,46 +186,56 @@ public abstract class AbstractConfigurableProperty implements ConfigurableProper
     return this.defaultValue;
   }
   
-  public String getValue( ) {
-    EntityTransaction trans = Entities.get( this.getDefiningClass( ) );
-    try {
+  public String getValue( ) {	  
+	try {
+      EntityTransaction trans = Entities.get( this.getDefiningClass( ) );
+      try {
     	//Unique result gets first found value if multiple exist, should work if all are kept in sync
-      Object o = Entities.uniqueResult( this.getQueryObject( ) );
-      Object prop = this.getter.invoke( o );
-      String result = prop != null
-        ? prop.toString( )
-        : "<unset>";
-      trans.commit( );
-      return result;
-    } catch ( Exception e ) {
-      Logs.exhaust( ).error( e, e );
-      trans.rollback( );
-      return "<unset>";
-    }
+        Object o = Entities.uniqueResult( this.getQueryObject( ) );
+        Object prop = this.getter.invoke( o );
+        String result = prop != null
+          ? prop.toString( )
+          : "<unset>";
+        trans.commit( );
+        return result;
+      } catch ( Exception e ) {
+        Logs.exhaust( ).error( e, e );
+        trans.rollback( );
+        return "<unset>";
+      }
+	} catch (Exception e) {
+		Logs.exhaust().error(e, e);
+        return "<unset>";
+	}
   }
   
   public String setValue( String s ) {
-  	EntityTransaction trans = Entities.get(this.getDefiningClass());
     try {
+  	  EntityTransaction trans = Entities.get(this.getDefiningClass());
+      try {
     	//This should return all matching objects
-      List<Object> resultList = Entities.query( this.getQueryObject( ) );
-      Object prop = this.getTypeParser( ).apply( s );
+        List<Object> resultList = Entities.query( this.getQueryObject( ) );
+        Object prop = this.getTypeParser( ).apply( s );
       
-      if(resultList == null || resultList.size() == 0) {
-      	throw new NoSuchElementException("no entities found for property");
+        if(resultList == null || resultList.size() == 0) {
+        	throw new NoSuchElementException("no entities found for property");
+        }
+      
+        this.fireChange( prop ); //Fire change only once
+        LOG.debug("Running setters.");
+      
+        for(Object obj : resultList) {      	
+      	  this.setter.invoke( obj, prop );
+        }
+        trans.commit( );
+        return s;
+      } catch ( Exception e ) {
+        Logs.exhaust( ).error( e, e );
+        trans.rollback( );
+        return "Error: " + e.getMessage( );
       }
-      
-      this.fireChange( prop ); //Fire change only once
-      LOG.debug("Running setters.");
-      
-      for(Object obj : resultList) {      	
-      	this.setter.invoke( obj, prop );
-      }
-      trans.commit( );
-      return s;
-    } catch ( Exception e ) {
+    } catch (Exception e) {
       Logs.exhaust( ).error( e, e );
-      trans.rollback( );
       return "Error: " + e.getMessage( );
     }
   }

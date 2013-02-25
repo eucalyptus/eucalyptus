@@ -110,6 +110,7 @@ import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.OwnerFullName;
 import com.eucalyptus.util.RestrictedTypes;
+import com.eucalyptus.util.TypeMappers;
 import com.eucalyptus.util.async.AsyncRequests;
 import com.eucalyptus.util.async.Request;
 import com.eucalyptus.vm.Bundles.BundleCallback;
@@ -118,6 +119,7 @@ import com.eucalyptus.vm.VmInstance.VmState;
 import com.eucalyptus.vm.VmInstance.VmStateSet;
 import com.eucalyptus.vm.VmInstances.TerminatedInstanceException;
 import com.google.common.base.Function;
+import com.google.common.base.Objects;
 import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
 import com.google.common.collect.Iterables;
@@ -126,12 +128,16 @@ import com.google.common.collect.Maps;
 import com.google.common.collect.Multimap;
 import com.google.common.collect.Sets;
 import com.google.common.collect.TreeMultimap;
+import com.google.gwt.thirdparty.guava.common.collect.Iterators;
+
 import edu.ucsb.eucalyptus.msgs.CreatePlacementGroupResponseType;
 import edu.ucsb.eucalyptus.msgs.CreatePlacementGroupType;
 import edu.ucsb.eucalyptus.msgs.DeletePlacementGroupResponseType;
 import edu.ucsb.eucalyptus.msgs.DeletePlacementGroupType;
 import edu.ucsb.eucalyptus.msgs.DescribeInstanceAttributeResponseType;
 import edu.ucsb.eucalyptus.msgs.DescribeInstanceAttributeType;
+import edu.ucsb.eucalyptus.msgs.DescribeInstanceStatusResponseType;
+import edu.ucsb.eucalyptus.msgs.DescribeInstanceStatusType;
 import edu.ucsb.eucalyptus.msgs.DescribeInstancesResponseType;
 import edu.ucsb.eucalyptus.msgs.DescribeInstancesType;
 import edu.ucsb.eucalyptus.msgs.DescribePlacementGroupsResponseType;
@@ -141,8 +147,10 @@ import edu.ucsb.eucalyptus.msgs.GetConsoleOutputResponseType;
 import edu.ucsb.eucalyptus.msgs.GetConsoleOutputType;
 import edu.ucsb.eucalyptus.msgs.GetPasswordDataResponseType;
 import edu.ucsb.eucalyptus.msgs.GetPasswordDataType;
+import edu.ucsb.eucalyptus.msgs.InstanceStatusItemType;
 import edu.ucsb.eucalyptus.msgs.ModifyInstanceAttributeResponseType;
 import edu.ucsb.eucalyptus.msgs.ModifyInstanceAttributeType;
+import edu.ucsb.eucalyptus.msgs.MonitorInstanceState;
 import edu.ucsb.eucalyptus.msgs.MonitorInstancesResponseType;
 import edu.ucsb.eucalyptus.msgs.MonitorInstancesType;
 import edu.ucsb.eucalyptus.msgs.RebootInstancesResponseType;
@@ -203,9 +211,11 @@ public class VmControl {
     final ArrayList<String> instancesSet = msg.getInstancesSet( );    
     final Multimap<String, RunningInstancesItemType> instanceMap = TreeMultimap.create( );
     final Map<String, ReservationInfoType> reservations = Maps.newHashMap();
-    final Filter filter = Filters.generate( msg.getFilterSet(), VmInstance.class );
+    final Filter filter = Filters.generateFor( msg.getFilterSet(), VmInstance.class )
+        .withOptionalInternalFilter( "instance-id", msg.getInstancesSet() )
+        .generate();
     final Predicate<? super VmInstance> requestedAndAccessible = CloudMetadatas.filteringFor( VmInstance.class )
-        .byId( msg.getInstancesSet( ) )
+        .byId( msg.getInstancesSet( ) ) // filters without wildcard support
         .byPredicate( filter.asPredicate() )
         .byPredicate( filter.isFilteringOnTags() ? Predicates.not( VmState.TERMINATED ) : Predicates.<VmInstance>alwaysTrue() ) // terminated instances have no tags
         .byPrivileges()
@@ -272,7 +282,40 @@ public class VmControl {
     }
     return reply;
   }
-  
+
+  public DescribeInstanceStatusResponseType describeInstanceStatus( final DescribeInstanceStatusType msg ) throws EucalyptusCloudException {
+    final DescribeInstanceStatusResponseType reply = ( DescribeInstanceStatusResponseType ) msg.getReply( );
+    final Context ctx = Contexts.lookup();
+    final boolean showAll = msg.getInstancesSet( ).remove( "verbose" );
+    final boolean includeAllInstances = Objects.firstNonNull( msg.getIncludeAllInstances(), Boolean.FALSE );
+    final Filter filter = Filters.generateFor( msg.getFilterSet(), VmInstance.class, "status" )
+        .withOptionalInternalFilter( "instance-id", msg.getInstancesSet() )
+        .generate();
+    final Predicate<? super VmInstance> requestedAndAccessible = CloudMetadatas.filteringFor( VmInstance.class )
+        .byId( msg.getInstancesSet() ) // filters without wildcard support
+        .byPredicate( includeAllInstances ? Predicates.<VmInstance>alwaysTrue() : VmState.RUNNING )
+        .byPredicate( filter.asPredicate() )
+        .byPrivileges()
+        .buildPredicate();
+    OwnerFullName ownerFullName = ( ctx.hasAdministrativePrivileges( ) && showAll )
+        ? null
+        : ctx.getUserFullName( ).asAccountFullName( );
+    try {
+      final List<VmInstance> instances =
+          VmInstances.list( ownerFullName, filter.asCriterion(), filter.getAliases(), requestedAndAccessible );
+
+      Iterables.addAll(
+          reply.getInstanceStatusSet().getItem(),
+          Iterables.transform( instances, TypeMappers.lookup( VmInstance.class, InstanceStatusItemType.class ) ) );
+
+    } catch ( final Exception e ) {
+      LOG.error( e );
+      LOG.debug( e, e );
+      throw new EucalyptusCloudException( e.getMessage( ) );
+    }
+    return reply;
+  }
+
   public TerminateInstancesResponseType terminateInstances( final TerminateInstancesType request ) throws EucalyptusCloudException {
     final TerminateInstancesResponseType reply = request.getReply( );
     try {
@@ -453,8 +496,21 @@ public class VmControl {
   }
   
   public UnmonitorInstancesResponseType unmonitorInstances( final UnmonitorInstancesType request ) {
-    final UnmonitorInstancesResponseType reply = request.getReply( );
-    return reply;
+
+      final UnmonitorInstancesResponseType reply = request.getReply( );
+
+      ArrayList<String> instanceSet = Lists.newArrayList( request.getInstancesSet() );
+      ArrayList<MonitorInstanceState> monitorFalseList = Lists.newArrayList();
+      
+      for(String inst : instanceSet) {
+	  final MonitorInstanceState monitorInstanceState = new MonitorInstanceState();
+	  monitorInstanceState.setInstanceId(inst);
+	  monitorInstanceState.setMonitoringState("disabled");
+	  monitorFalseList.add(monitorInstanceState);
+      }
+      
+      reply.setInstancesSet(SetMonitorFunction.INSTANCE.apply( monitorFalseList ) );
+      return reply;
   }
   
   public StartInstancesResponseType startInstances( final StartInstancesType request ) throws Exception {
@@ -550,10 +606,70 @@ public class VmControl {
   }
   
   public MonitorInstancesResponseType monitorInstances( final MonitorInstancesType request ) {
-    final MonitorInstancesResponseType reply = request.getReply( );
-    return reply;
+    
+      final MonitorInstancesResponseType reply = request.getReply();
+
+      ArrayList<String> instanceSet = Lists.newArrayList( request.getInstancesSet() );
+      ArrayList<MonitorInstanceState> monitorTrueList = Lists.newArrayList();
+      
+      for(final String inst : instanceSet) {
+	  final MonitorInstanceState monitorInstanceState = new MonitorInstanceState();
+	  monitorInstanceState.setInstanceId(inst);
+	  monitorInstanceState.setMonitoringState("enabled");
+	  monitorTrueList.add(monitorInstanceState);
+      }
+      
+      reply.setInstancesSet(SetMonitorFunction.INSTANCE.apply( monitorTrueList ) );
+      return reply;
   }
   
+  private enum SetMonitorFunction implements Function<ArrayList<MonitorInstanceState>, ArrayList<MonitorInstanceState>> {
+      INSTANCE;
+
+      @Override
+      public ArrayList<MonitorInstanceState> apply(
+	      final ArrayList<MonitorInstanceState> monitorList) {
+
+	  ArrayList<MonitorInstanceState> monitorInstanceSet = Lists
+		  .newArrayList();
+
+	  for (final MonitorInstanceState monitorInst : monitorList) {
+
+	      final EntityTransaction db = Entities.get(VmInstance.class);
+
+	      try {
+
+		  VmInstance vmInst = VmInstances.lookup(monitorInst
+			  .getInstanceId());
+
+		  if (RestrictedTypes.filterPrivileged().apply(vmInst)) {
+		      vmInst.getBootRecord()
+		      .setMonitoring(
+			      monitorInst.getMonitoringState()
+			      .equals("enabled") ? Boolean.TRUE
+				      : Boolean.FALSE);
+		      Entities.merge(vmInst);
+		      monitorInstanceSet.add(monitorInst);
+		      db.commit();
+		  }
+
+	      } catch (NoSuchElementException nse) {
+		  LOG.debug("Unable to find instance : "
+			  + monitorInst.getInstanceId());
+	      } catch (Exception ex) {
+		  LOG.debug("Unable to set monitoring state for instance : "
+			  + monitorInst.getInstanceId());
+	      } finally {
+		  if (db.isActive())
+		      db.rollback();
+	      }
+	  }
+
+	  return monitorInstanceSet;
+      }
+
+  }
+    
   public ModifyInstanceAttributeResponseType modifyInstanceAttribute( final ModifyInstanceAttributeType request ) {
     final ModifyInstanceAttributeResponseType reply = request.getReply( );
     return reply;

@@ -89,8 +89,8 @@ import com.eucalyptus.network.NetworkGroup;
 import com.eucalyptus.network.NetworkGroups;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.RestrictedTypes;
-import com.eucalyptus.vm.VmType;
-import com.eucalyptus.vm.VmTypes;
+import com.eucalyptus.vmtypes.VmType;
+import com.eucalyptus.vmtypes.VmTypes;
 import com.google.common.base.Function;
 import com.google.common.base.Joiner;
 import com.google.common.base.Predicate;
@@ -141,7 +141,7 @@ public class VerifyMetadata {
       Context ctx = allocInfo.getContext( );
       User user = ctx.getUser( );
       String instanceType = allocInfo.getRequest( ).getInstanceType( );
-      VmType vmType = VmTypes.getVmType( instanceType );
+      VmType vmType = VmTypes.lookup( instanceType );
       if ( !ctx.hasAdministrativePrivileges( ) && !RestrictedTypes.filterPrivileged( ).apply( vmType ) ) {
         throw new IllegalMetadataAccessException( "Not authorized to allocate vm type " + instanceType + " for " + ctx.getUserFullName( ) );
       }

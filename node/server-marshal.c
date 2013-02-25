@@ -87,8 +87,6 @@
 #include <misc.h>
 #include <data.h>
 
-#include <windows-bundle.h>
-
 #define HANDLERS_FANOUT
 #include "handlers.h"
 #include "server-marshal.h"

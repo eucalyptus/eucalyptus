@@ -28,6 +28,8 @@ import org.apache.log4j.Logger;
 import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.bootstrap.Hosts;
 import com.eucalyptus.cluster.Clusters;
+import com.eucalyptus.component.Topology;
+import com.eucalyptus.component.id.Storage;
 import com.eucalyptus.entities.TransactionException;
 import com.eucalyptus.entities.Transactions;
 import com.eucalyptus.event.ClockTick;
@@ -45,7 +47,7 @@ import edu.ucsb.eucalyptus.cloud.entities.StorageInfo;
  * Event listener that fires resource availability events for block storage.
  */
 public class BlockStorageAvailabilityEventListener implements EventListener<ClockTick> {
-  private static Logger logger = Logger.getLogger( WalrusAvailabilityEventListener.class );
+  private static Logger logger = Logger.getLogger( BlockStorageAvailabilityEventListener.class );
 
   public static void register( ) {
     Listeners.register( ClockTick.class, new BlockStorageAvailabilityEventListener() );
@@ -53,7 +55,7 @@ public class BlockStorageAvailabilityEventListener implements EventListener<Cloc
 
   @Override
   public void fireEvent( final ClockTick event ) {
-    if ( Bootstrap.isFinished() && Hosts.isCoordinator() ) {
+    if ( Topology.isEnabledLocally( Storage.class ) && Bootstrap.isFinished() ) {
       final List<Availability> resourceAvailability = Lists.newArrayList();
       final Set<String> partitions =
           Sets.newHashSet( Iterables.transform( Clusters.getInstance().listValues(), HasFullName.GET_PARTITION ) );

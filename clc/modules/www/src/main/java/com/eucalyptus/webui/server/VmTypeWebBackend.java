@@ -67,8 +67,8 @@ import java.util.List;
 import java.util.Set;
 import org.apache.log4j.Logger;
 import com.eucalyptus.util.EucalyptusCloudException;
-import com.eucalyptus.vm.VmType;
-import com.eucalyptus.vm.VmTypes;
+import com.eucalyptus.vmtypes.VmType;
+import com.eucalyptus.vmtypes.VmTypes;
 import com.eucalyptus.webui.client.service.EucalyptusServiceException;
 import com.eucalyptus.webui.client.service.SearchResultFieldDesc;
 import com.eucalyptus.webui.client.service.SearchResultFieldDesc.TableDisplay;
@@ -175,6 +175,6 @@ public class VmTypeWebBackend {
       LOG.error( "Failed to parse disk value from UI input for " + name, e );
       return null;
     }
-    return new VmType( name, cpu, disk, memory );
+    return VmType.create( name, cpu, disk, memory );
   }
 }

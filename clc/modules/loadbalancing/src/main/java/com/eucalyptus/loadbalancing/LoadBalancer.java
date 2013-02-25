@@ -42,10 +42,12 @@ import com.eucalyptus.cloud.CloudMetadata.LoadBalancingMetadata;
 import com.eucalyptus.cloud.UserMetadata;
 import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.id.Eucalyptus;
+import com.eucalyptus.loadbalancing.activities.LoadBalancerServoInstance;
 import com.eucalyptus.util.FullName;
 import com.eucalyptus.util.OwnerFullName;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
+import com.google.common.collect.Lists;
 
 /**
  * @author Sang-Min Park
@@ -94,12 +96,17 @@ public class LoadBalancer extends UserMetadata<LoadBalancer.STATE> implements Lo
 	private Collection<LoadBalancerBackendInstance> backendInstances = null;
 	
 	@OneToMany(fetch = FetchType.LAZY, cascade = CascadeType.ALL, orphanRemoval = true, mappedBy = "loadbalancer")
+    @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
+	private Collection<LoadBalancerServoInstance> servoInstances = null;
+	
+	@OneToMany(fetch = FetchType.LAZY, cascade = CascadeType.ALL, orphanRemoval = true, mappedBy = "loadbalancer")
 	@Cache( usage= CacheConcurrencyStrategy.TRANSACTIONAL )
 	private Collection<LoadBalancerListener> listeners = null;
 	
 	@OneToMany(fetch = FetchType.LAZY, cascade = CascadeType.ALL, orphanRemoval = true, mappedBy = "loadbalancer")
 	@Cache( usage= CacheConcurrencyStrategy.TRANSACTIONAL )
 	private Collection<LoadBalancerZone> zones = null;
+	
 	
 	public void setScheme(String scheme){
 		this.scheme = scheme;
@@ -141,6 +148,10 @@ public class LoadBalancer extends UserMetadata<LoadBalancer.STATE> implements Lo
 		return this.backendInstances;
 	}
 	
+	public Collection<LoadBalancerServoInstance> getServoInstances(){
+		return this.servoInstances != null ? this.servoInstances : Lists.<LoadBalancerServoInstance>newArrayList();
+	}
+	
 	public LoadBalancerListener findListener(final int lbPort){
 		if(this.listeners!=null){
 			try{
@@ -159,6 +170,14 @@ public class LoadBalancer extends UserMetadata<LoadBalancer.STATE> implements Lo
 	
 	public boolean hasListener(final int lbPort){
 		return this.findListener(lbPort)!=null;
+	}
+	
+	public Collection<LoadBalancerListener> getListeners(){
+		return this.listeners;
+	}
+	
+	public Collection<LoadBalancerZone> getZones(){
+		return this.zones;
 	}
 	
 	void setHealthCheck(int healthyThreshold, int interval, String target, int timeout, int unhealthyThreshold)

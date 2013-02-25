@@ -64,7 +64,7 @@ include ../Makedefs
 
 EFENCE=-lefence
 #DEBUGS = -DDEBUG # -DDEBUG1
-all: euca_string.o utf8.o log.o config.o fault.o misc.o wc.o hash.o data.o sensor.o euca_auth.o euca_axis.o ipc.o windows-bundle.o euca_rootwrap euca_mountwrap euca-generate-fault
+all: euca_string.o utf8.o log.o config.o fault.o misc.o wc.o hash.o data.o sensor.o euca_auth.o euca_axis.o ipc.o euca_rootwrap euca_mountwrap euca-generate-fault
 
 build: all
 
@@ -74,8 +74,8 @@ euca_rootwrap: euca_rootwrap.c
 euca_mountwrap: euca_mountwrap.c
 	$(CC) $(CPPFLAGS) $(CFLAGS) $(INCLUDES) -o euca_mountwrap euca_mountwrap.c
 
-test: test.c ipc.o log.o misc.o euca_string.o
-	$(CC) $(CPPFLAGS) $(CFLAGS) $(INCLUDES) -o test test.c ipc.o log.o misc.o euca_string.o data.o -lpthread $(LIBS) $(LDFLAGS)
+test: test.c ipc.o log.o misc.o ../storage/diskutil.o euca_string.o
+	$(CC) $(CPPFLAGS) $(CFLAGS) $(INCLUDES) -o test test.c ipc.o log.o misc.o ../storage/diskutil.o euca_string.o data.o -lpthread $(LIBS) $(LDFLAGS)
 
 test_misc: misc.c euca_string.o log.o ../storage/diskutil.o ipc.o
 	$(CC) $(CPPFLAGS) $(CFLAGS) $(INCLUDES) -D_UNIT_TEST -o test_misc misc.c euca_string.o log.o ../storage/diskutil.o ipc.o $(LIBS) $(LDFLAGS)

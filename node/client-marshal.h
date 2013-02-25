@@ -81,8 +81,6 @@
 #include "data.h"                      /* for eucalyptus defs */
 #include "sensor.h"                    // sensorResource
 
-#include <windows-bundle.h>
-
 /*----------------------------------------------------------------------------*\
  |                                                                            |
  |                                  DEFINES                                   |

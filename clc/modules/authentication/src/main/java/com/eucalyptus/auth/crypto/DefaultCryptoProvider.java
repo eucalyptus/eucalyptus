@@ -91,12 +91,12 @@ import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
 import com.google.common.primitives.Longs;
 
-public class DefaultCryptoProvider implements CryptoProvider, CertificateProvider, HmacProvider {
-  public static String  KEY_ALGORITHM         = "RSA";
-  public static String  KEY_SIGNING_ALGORITHM = "SHA512WithRSA";
-  public static int     KEY_SIZE              = 2048;//TODO:GRZE:RELEASE: configurable
-  public static String  PROVIDER              = "BC";
-  private static Logger LOG                   = Logger.getLogger( DefaultCryptoProvider.class );
+public final class DefaultCryptoProvider implements CryptoProvider, CertificateProvider, HmacProvider {
+  public static String        KEY_ALGORITHM         = "RSA";
+  private static final String KEY_SIGNING_ALGORITHM = "SHA512WithRSA";
+  private static final int    KEY_SIZE              = 2048;
+  public static String        PROVIDER              = "BC";
+  private static Logger       LOG                   = Logger.getLogger( DefaultCryptoProvider.class );
   
   public DefaultCryptoProvider( ) {}
   

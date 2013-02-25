@@ -1,4 +1,23 @@
 <?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Copyright 2009-2013 Eucalyptus Systems, Inc.
+
+  This program is free software: you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation; version 3 of the License.
+
+  This program is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details.
+
+  You should have received a copy of the GNU General Public License
+  along with this program.  If not, see http://www.gnu.org/licenses/.
+
+  Please contact Eucalyptus Systems, Inc., 6755 Hollister Ave., Goleta
+  CA 93117, USA or visit http://www.eucalyptus.com/licenses/ if you need
+  additional information or have any questions.
+  -->
 <binding name="monitoring_amazonaws_com_doc_2010_08_01" xmlns:tns="http://monitoring.amazonaws.com/doc/2010-08-01/" force-classes="true" add-constructors="true">
   <namespace uri="http://monitoring.amazonaws.com/doc/2010-08-01/" default="elements"/>
   <mapping class="com.eucalyptus.cloudwatch.ResponseMetadata" abstract="true">
@@ -11,7 +30,8 @@
     <structure name="Detail" field="detail" usage="required" type="com.eucalyptus.cloudwatch.ErrorDetail"/>
   </mapping>
   <mapping class="com.eucalyptus.cloudwatch.ErrorDetail" abstract="true"/>
-  <mapping name="ErrorResponse" class="com.eucalyptus.cloudwatch.CloudWatchErrorResponse">
+  <mapping name="ErrorResponse" class="com.eucalyptus.cloudwatch.CloudWatchErrorResponse" extends="com.eucalyptus.cloudwatch.CloudWatchMessage">
+    <structure map-as="com.eucalyptus.cloudwatch.CloudWatchMessage"/>
     <collection field="error">
       <structure name="Error" type="com.eucalyptus.cloudwatch.Error"/>
     </collection>
@@ -187,18 +207,17 @@
     </collection>
   </mapping>
   <mapping class="com.eucalyptus.cloudwatch.StatisticSet" abstract="true">
-    <value name="SampleCount" field="sampleCount" usage="required"/>
-    <value name="Sum" field="sum" usage="required"/>
-    <value name="Minimum" field="minimum" usage="required"/>
-    <value name="Maximum" field="maximum" usage="required"/>
+    <value name="SampleCount" field="sampleCount" usage="optional"/>
+    <value name="Sum" field="sum" usage="optional"/>
+    <value name="Minimum" field="minimum" usage="optional"/>
+    <value name="Maximum" field="maximum" usage="optional"/>
   </mapping>
   <mapping class="com.eucalyptus.cloudwatch.DimensionFilters" abstract="true">
     <collection field="member">
       <structure name="member" type="com.eucalyptus.cloudwatch.DimensionFilter"/>
     </collection>
   </mapping>
-  <mapping class="com.eucalyptus.cloudwatch.Statistics" abstract="true" extends="com.eucalyptus.cloudwatch.CloudWatchMessage">
-    <structure map-as="com.eucalyptus.cloudwatch.CloudWatchMessage"/>
+  <mapping class="com.eucalyptus.cloudwatch.Statistics" abstract="true">
     <collection field="member">
       <value name="member" type="java.lang.String"/>
     </collection>
@@ -221,8 +240,7 @@
       <structure name="member" type="com.eucalyptus.cloudwatch.MetricAlarm"/>
     </collection>
   </mapping>
-  <mapping class="com.eucalyptus.cloudwatch.Metrics" abstract="true" extends="com.eucalyptus.cloudwatch.CloudWatchMessage">
-    <structure map-as="com.eucalyptus.cloudwatch.CloudWatchMessage"/>
+  <mapping class="com.eucalyptus.cloudwatch.Metrics" abstract="true">
     <collection field="member">
       <structure name="member" type="com.eucalyptus.cloudwatch.Metric"/>
     </collection>
@@ -244,8 +262,7 @@
       <structure name="member" type="com.eucalyptus.cloudwatch.Dimension"/>
     </collection>
   </mapping>
-  <mapping class="com.eucalyptus.cloudwatch.MetricAlarm" abstract="true" extends="com.eucalyptus.cloudwatch.CloudWatchMessage">
-    <structure map-as="com.eucalyptus.cloudwatch.CloudWatchMessage"/>
+  <mapping class="com.eucalyptus.cloudwatch.MetricAlarm" abstract="true">
     <value name="AlarmName" field="alarmName" usage="optional"/>
     <value name="AlarmArn" field="alarmArn" usage="optional"/>
     <value name="AlarmDescription" field="alarmDescription" usage="optional"/>
@@ -268,8 +285,7 @@
     <value name="Threshold" field="threshold" usage="optional"/>
     <value name="ComparisonOperator" field="comparisonOperator" usage="optional"/>
   </mapping>
-  <mapping class="com.eucalyptus.cloudwatch.MetricData" abstract="true" extends="com.eucalyptus.cloudwatch.CloudWatchMessage">
-    <structure map-as="com.eucalyptus.cloudwatch.CloudWatchMessage"/>
+  <mapping class="com.eucalyptus.cloudwatch.MetricData" abstract="true">
     <collection field="member">
       <structure name="member" type="com.eucalyptus.cloudwatch.MetricDatum"/>
     </collection>
@@ -287,8 +303,7 @@
       <value name="member" type="java.lang.String"/>
     </collection>
   </mapping>
-  <mapping class="com.eucalyptus.cloudwatch.Metric" abstract="true" extends="com.eucalyptus.cloudwatch.CloudWatchMessage">
-    <structure map-as="com.eucalyptus.cloudwatch.CloudWatchMessage"/>
+  <mapping class="com.eucalyptus.cloudwatch.Metric" abstract="true">
     <value name="Namespace" field="namespace" usage="optional"/>
     <value name="MetricName" field="metricName" usage="optional"/>
     <structure name="Dimensions" field="dimensions" usage="optional" type="com.eucalyptus.cloudwatch.Dimensions"/>

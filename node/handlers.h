@@ -85,8 +85,6 @@
 #include "config.h"
 #include "sensor.h"
 
-#include <windows-bundle.h>
-
 /*----------------------------------------------------------------------------*\
  |                                                                            |
  |                                  DEFINES                                   |

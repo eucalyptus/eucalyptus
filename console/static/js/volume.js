@@ -55,14 +55,19 @@
           "aaSorting": [[ 7, "desc" ]],
           "aoColumns": [
             {
+	      // Display the checkbox button in the main table
               "bSortable": false,
               "fnRender": function(oObj) { return '<input type="checkbox"/>' },
               "sClass": "checkbox-cell"
             },
-            { "mDataProp": "id" },
             {
+	      // Display the id of the volume in the main table 
+	      "mDataProp": "id" 
+	    },
+            {
+	      // Display the status of the volume in the main table
               "fnRender": function(oObj) { 
-                 return '<div class="table-row-status status-'+oObj.aData.status+'">&nbsp;</div>';
+                 return eucatableDisplayColumnTypeVolumeStatus(oObj.aData.status);
                },
               "sClass": "narrow-cell",
               "bSearchable": false,
@@ -70,22 +75,34 @@
               "sWidth": 50,
             },
             { 
+	      // Display the size of the volume in the main table
               "mDataProp": "size",
               "sClass": "centered-cell"
             },
-            { "mDataProp": "attach_data.instance_id" },
-            { "mDataProp": "snapshot_id" },
-            { "mDataProp": "zone" },
             { 
+	      // Display the instance id of the attached volume in the main table
+	      "mDataProp": "attach_data.instance_id" },
+            { 
+	      // Display the snapshot id of the volume in the main table
+	      "mDataProp": "snapshot_id"
+	    },
+            { 
+	      // Display the availibility zone of the volume in the main table
+	      "mDataProp": "zone" 
+	    },
+            { 
+	      // Display the creation time of the volume in the main table
               "asSorting" : [ 'desc', 'asc' ],
               "fnRender": function(oObj) { return formatDateTime(oObj.aData.create_time); },
               "iDataSort": 9
             },
             {
+	      // Invisible column for the status
               "bVisible": false,
               "mDataProp": "status"
             },
             {
+	      // Invisible column for the creation time
               "bVisible": false,
               "mDataProp": "create_time",
               "sType": "date"

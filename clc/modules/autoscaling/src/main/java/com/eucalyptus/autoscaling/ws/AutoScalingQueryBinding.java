@@ -32,7 +32,7 @@ public class AutoScalingQueryBinding extends BaseQueryBinding<OperationParameter
   static final String AUTOSCALING_DEFAULT_NAMESPACE = String.format( AUTOSCALING_NAMESPACE_PATTERN, AUTOSCALING_DEFAULT_VERSION );
 
   public AutoScalingQueryBinding() {
-    super( AUTOSCALING_NAMESPACE_PATTERN, AUTOSCALING_DEFAULT_VERSION, OperationParameter.Action );
+    super( AUTOSCALING_NAMESPACE_PATTERN, AUTOSCALING_DEFAULT_VERSION, OperationParameter.Action, OperationParameter.Operation );
   }
 
 }

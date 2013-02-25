@@ -473,7 +473,7 @@
       <value name="member" type="java.lang.String"/>
     </collection>
   </mapping>
-  <mapping class="com.eucalyptus.autoscaling.common.Tag" abstract="true">
+  <mapping class="com.eucalyptus.autoscaling.common.TagType" abstract="true">
     <value name="ResourceId" field="resourceId" usage="optional"/>
     <value name="ResourceType" field="resourceType" usage="optional"/>
     <value name="Key" field="key" usage="required"/>
@@ -493,13 +493,11 @@
     <value name="PropagateAtLaunch" field="propagateAtLaunch" usage="optional"/>
   </mapping>
   <mapping class="com.eucalyptus.autoscaling.common.NotificationConfiguration" abstract="true">
-    <structure map-as="com.eucalyptus.autoscaling.common.AutoScalingMessage"/>
     <value name="AutoScalingGroupName" field="autoScalingGroupName" usage="optional"/>
     <value name="TopicARN" field="topicARN" usage="optional"/>
     <value name="NotificationType" field="notificationType" usage="optional"/>
   </mapping>
   <mapping class="com.eucalyptus.autoscaling.common.AdjustmentTypes" abstract="true">
-    <structure map-as="com.eucalyptus.autoscaling.common.AutoScalingMessage"/>
     <collection field="member">
       <structure name="member" type="com.eucalyptus.autoscaling.common.AdjustmentType"/>
     </collection>
@@ -510,19 +508,16 @@
     </collection>
   </mapping>
   <mapping class="com.eucalyptus.autoscaling.common.NotificationConfigurations" abstract="true">
-    <structure map-as="com.eucalyptus.autoscaling.common.AutoScalingMessage"/>
     <collection field="member">
       <structure name="member" type="com.eucalyptus.autoscaling.common.NotificationConfiguration"/>
     </collection>
   </mapping>
   <mapping class="com.eucalyptus.autoscaling.common.LaunchConfigurationsType" abstract="true">
-    <structure map-as="com.eucalyptus.autoscaling.common.AutoScalingMessage"/>
     <collection field="member">
       <structure name="member" type="com.eucalyptus.autoscaling.common.LaunchConfigurationType"/>
     </collection>
   </mapping>
   <mapping class="com.eucalyptus.autoscaling.common.AutoScalingGroupType" abstract="true">
-    <structure map-as="com.eucalyptus.autoscaling.common.AutoScalingMessage"/>
     <value name="AutoScalingGroupName" field="autoScalingGroupName" usage="required"/>
     <value name="AutoScalingGroupARN" field="autoScalingGroupARN" usage="optional"/>
     <value name="LaunchConfigurationName" field="launchConfigurationName" usage="required"/>
@@ -561,7 +556,6 @@
     <value name="LaunchConfigurationName" field="launchConfigurationName" usage="required"/>
   </mapping>
   <mapping class="com.eucalyptus.autoscaling.common.Instances" abstract="true">
-    <structure map-as="com.eucalyptus.autoscaling.common.AutoScalingMessage"/>
     <collection field="member">
       <structure name="member" type="com.eucalyptus.autoscaling.common.Instance"/>
     </collection>
@@ -572,13 +566,11 @@
     </collection>
   </mapping>
   <mapping class="com.eucalyptus.autoscaling.common.Tags" abstract="true">
-    <structure map-as="com.eucalyptus.autoscaling.common.AutoScalingMessage"/>
     <collection field="member">
-      <structure name="member" type="com.eucalyptus.autoscaling.common.Tag"/>
+      <structure name="member" type="com.eucalyptus.autoscaling.common.TagType"/>
     </collection>
   </mapping>
   <mapping class="com.eucalyptus.autoscaling.common.MetricCollectionTypes" abstract="true">
-    <structure map-as="com.eucalyptus.autoscaling.common.AutoScalingMessage"/>
     <collection field="member">
       <structure name="member" type="com.eucalyptus.autoscaling.common.MetricCollectionType"/>
     </collection>
@@ -614,7 +606,6 @@
     <value name="Details" field="details" usage="optional"/>
   </mapping>
   <mapping class="com.eucalyptus.autoscaling.common.ScalingPolicyType" abstract="true">
-    <structure map-as="com.eucalyptus.autoscaling.common.AutoScalingMessage"/>
     <value name="AutoScalingGroupName" field="autoScalingGroupName" usage="optional"/>
     <value name="PolicyName" field="policyName" usage="optional"/>
     <value name="ScalingAdjustment" field="scalingAdjustment" usage="optional"/>
@@ -630,7 +621,6 @@
     </collection>
   </mapping>
   <mapping class="com.eucalyptus.autoscaling.common.AutoScalingInstances" abstract="true">
-    <structure map-as="com.eucalyptus.autoscaling.common.AutoScalingMessage"/>
     <collection field="member">
       <structure name="member" type="com.eucalyptus.autoscaling.common.AutoScalingInstanceDetails"/>
     </collection>
@@ -644,7 +634,6 @@
     <value name="ProcessName" field="processName" usage="required"/>
   </mapping>
   <mapping class="com.eucalyptus.autoscaling.common.Processes" abstract="true">
-    <structure map-as="com.eucalyptus.autoscaling.common.AutoScalingMessage"/>
     <collection field="member">
       <structure name="member" type="com.eucalyptus.autoscaling.common.ProcessType"/>
     </collection>
@@ -680,7 +669,6 @@
     <value name="Metric" field="metric" usage="optional"/>
   </mapping>
   <mapping class="com.eucalyptus.autoscaling.common.ScheduledUpdateGroupAction" abstract="true">
-    <structure map-as="com.eucalyptus.autoscaling.common.AutoScalingMessage"/>
     <value name="AutoScalingGroupName" field="autoScalingGroupName" usage="optional"/>
     <value name="ScheduledActionName" field="scheduledActionName" usage="optional"/>
     <value name="ScheduledActionARN" field="scheduledActionARN" usage="optional"/>
@@ -724,7 +712,6 @@
     <value name="Enabled" field="enabled" usage="optional"/>
   </mapping>
   <mapping class="com.eucalyptus.autoscaling.common.AutoScalingGroupsType" abstract="true">
-    <structure map-as="com.eucalyptus.autoscaling.common.AutoScalingMessage"/>
     <collection field="member">
       <structure name="member" type="com.eucalyptus.autoscaling.common.AutoScalingGroupType"/>
     </collection>
@@ -735,7 +722,6 @@
     </collection>
   </mapping>
   <mapping class="com.eucalyptus.autoscaling.common.AutoScalingNotificationTypes" abstract="true">
-    <structure map-as="com.eucalyptus.autoscaling.common.AutoScalingMessage"/>
     <collection field="member">
       <value name="member" type="java.lang.String"/>
     </collection>
@@ -746,7 +732,6 @@
     </collection>
   </mapping>
   <mapping class="com.eucalyptus.autoscaling.common.Activities" abstract="true">
-    <structure map-as="com.eucalyptus.autoscaling.common.AutoScalingMessage"/>
     <collection field="member">
       <structure name="member" type="com.eucalyptus.autoscaling.common.Activity"/>
     </collection>
@@ -767,7 +752,6 @@
     </collection>
   </mapping>
   <mapping class="com.eucalyptus.autoscaling.common.LaunchConfigurationType" abstract="true">
-    <structure map-as="com.eucalyptus.autoscaling.common.AutoScalingMessage"/>
     <value name="LaunchConfigurationName" field="launchConfigurationName" usage="required"/>
     <value name="LaunchConfigurationARN" field="launchConfigurationARN" usage="optional"/>
     <value name="ImageId" field="imageId" usage="required"/>

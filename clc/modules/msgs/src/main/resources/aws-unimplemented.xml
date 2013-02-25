@@ -62,10 +62,13 @@
   -->
 
 <binding force-classes="true" add-constructors="true">
-
+  <mapping class="edu.ucsb.eucalyptus.msgs.ReservedInstanceMessage" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage"
+    abstract="true">
+    <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage" />
+  </mapping>
   <mapping name="DescribeReservedInstancesOfferingsResponse" class="edu.ucsb.eucalyptus.msgs.DescribeReservedInstancesOfferingsResponseType"
-    extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
-        <!--<structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage"/>-->
+    extends="edu.ucsb.eucalyptus.msgs.ReservedInstanceMessage">
+        <!--<structure map-as="edu.ucsb.eucalyptus.msgs.ReservedInstanceMessage"/>-->
     <structure name="reservedInstancesOfferingsSet">
       <collection factory="org.jibx.runtime.Utility.arrayListFactory" field="reservedInstancesOfferingsSet"
         item-type="java.lang.String">
@@ -77,8 +80,8 @@
   </mapping>
 
   <mapping name="DescribeReservedInstancesOfferings" class="edu.ucsb.eucalyptus.msgs.DescribeReservedInstancesOfferingsType"
-    extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
-    <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage" />
+    extends="edu.ucsb.eucalyptus.msgs.ReservedInstanceMessage">
+    <!-- <structure map-as="edu.ucsb.eucalyptus.msgs.ReservedInstanceMessage" /> -->
     <structure name="reservedInstancesOfferingsSet">
       <collection factory="org.jibx.runtime.Utility.arrayListFactory" field="instanceIds" item-type="java.lang.String">
         <structure name="item">
@@ -92,8 +95,8 @@
   </mapping>
 
   <mapping name="DescribeReservedInstancesResponse" class="edu.ucsb.eucalyptus.msgs.DescribeReservedInstancesResponseType"
-    extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
-        <!--<structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage"/>-->
+    extends="edu.ucsb.eucalyptus.msgs.ReservedInstanceMessage">
+        <!--<structure map-as="edu.ucsb.eucalyptus.msgs.ReservedInstanceMessage"/>-->
     <structure name="reservedInstancesSet">
       <collection factory="org.jibx.runtime.Utility.arrayListFactory" field="reservedInstancesSet" item-type="java.lang.String">
         <structure name="item">
@@ -104,8 +107,8 @@
   </mapping>
 
   <mapping name="DescribeReservedInstances" class="edu.ucsb.eucalyptus.msgs.DescribeReservedInstancesType"
-    extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
-    <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage" />
+    extends="edu.ucsb.eucalyptus.msgs.ReservedInstanceMessage">
+    <!-- <structure map-as="edu.ucsb.eucalyptus.msgs.ReservedInstanceMessage" /> -->
     <structure name="reservedInstancesSet">
       <collection factory="org.jibx.runtime.Utility.arrayListFactory" field="instanceIds" item-type="java.lang.String">
         <structure name="item">
@@ -113,6 +116,29 @@
         </structure>
       </collection>
     </structure>
+  </mapping>
+
+  <mapping class="edu.ucsb.eucalyptus.msgs.SpotInstanceMessage" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage"
+    abstract="true">
+    <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage" />
+  </mapping>
+
+  <mapping name="DescribeSpotPriceHistoryResponseType" class="edu.ucsb.eucalyptus.msgs.DescribeSpotPriceHistoryResponseType"
+    extends="edu.ucsb.eucalyptus.msgs.SpotInstanceMessage">
+  </mapping>
+
+  <mapping name="DescribeSpotPriceHistoryType" class="edu.ucsb.eucalyptus.msgs.DescribeSpotPriceHistoryType"
+    extends="edu.ucsb.eucalyptus.msgs.SpotInstanceMessage">
+    <structure map-as="edu.ucsb.eucalyptus.msgs.SpotInstanceMessage" />
+  </mapping>
+
+  <mapping name="DescribeSpotInstanceRequestsResponse" class="edu.ucsb.eucalyptus.msgs.DescribeSpotInstanceRequestsResponseType"
+    extends="edu.ucsb.eucalyptus.msgs.SpotInstanceMessage">
+  </mapping>
+
+  <mapping name="DescribeSpotInstanceRequests" class="edu.ucsb.eucalyptus.msgs.DescribeSpotInstanceRequestsType"
+    extends="edu.ucsb.eucalyptus.msgs.SpotInstanceMessage">
+    <structure map-as="edu.ucsb.eucalyptus.msgs.SpotInstanceMessage" />
   </mapping>
 
 </binding>

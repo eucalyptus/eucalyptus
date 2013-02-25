@@ -52,20 +52,25 @@
           },
           "aoColumns": [
             {
+	      // Display the checkbox button in the main table
               "bSortable": false,
               "fnRender": function(oObj) { return '<input type="checkbox"/>' },
               "sClass": "checkbox-cell",
             },
             {
+	      // Display the name of the security group in the main table
+	      // Allow the name to be clickable
+	      // Use CSS 'twist'
               "fnRender" : function(oObj) {
-                 shortName = addEllipsis(oObj.aData.name, 75);
-                 $a = $('<a>').attr('href','#').attr('title', oObj.aData.name).addClass('twist').text(shortName);
-                 return $('<div>').append($a).html();
+		   return eucatableDisplayColumnTypeTwist(oObj.aData.name, oObj.aData.name, 75);
               },
               "iDataSort": 7,
             },
             { 
-              "fnRender": function(oObj) { return oObj.aData.description == null ? "" : "<span title='"+oObj.aData.description+"'>"+addEllipsis(oObj.aData.description, 50)+"</span>" },
+	      // Display the description of the security group in the main table
+              "fnRender": function(oObj) {
+		 return eucatableDisplayColumnTypeText(oObj.aData.description, oObj.aData.description, 50);
+		},
               "iDataSort": 6,
             },
             { // protocol to appear in search result

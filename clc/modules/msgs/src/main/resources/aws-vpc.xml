@@ -62,5 +62,26 @@
   -->
 
 <binding force-classes="true" add-constructors="true">
+  <mapping class="edu.ucsb.eucalyptus.msgs.VirtualNetworkingMessage" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage"
+    abstract="true">
+    <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage" />
+  </mapping>
 
+  <mapping name="DescribeVpcsResponseType" class="edu.ucsb.eucalyptus.msgs.DescribeVpcsResponseType"
+    extends="edu.ucsb.eucalyptus.msgs.VirtualNetworkingMessage">
+  </mapping>
+
+  <mapping name="DescribeVpcsType" class="edu.ucsb.eucalyptus.msgs.DescribeVpcsType"
+    extends="edu.ucsb.eucalyptus.msgs.VirtualNetworkingMessage">
+    <structure map-as="edu.ucsb.eucalyptus.msgs.VirtualNetworkingMessage" />
+  </mapping>
+
+  <mapping name="DescribeSubnetsResponseType" class="edu.ucsb.eucalyptus.msgs.DescribeSubnetsResponseType"
+    extends="edu.ucsb.eucalyptus.msgs.VirtualNetworkingMessage">
+  </mapping>
+
+  <mapping name="DescribeSubnetsType" class="edu.ucsb.eucalyptus.msgs.DescribeSubnetsType"
+    extends="edu.ucsb.eucalyptus.msgs.VirtualNetworkingMessage">
+    <structure map-as="edu.ucsb.eucalyptus.msgs.VirtualNetworkingMessage" />
+  </mapping>
 </binding>

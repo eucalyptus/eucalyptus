@@ -89,7 +89,7 @@ public class Eucalyptus extends ComponentId {
   
   @Override
   public String getLocalEndpointName( ) {
-    return "vm://EucalyptusRequestQueue";
+    return "vm://EucalyptusRequestQueueEndpoint";
   }
   
   @Partition( Eucalyptus.class )

@@ -84,8 +84,8 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 
-#include <euca_auth.h>
 #include <eucalyptus.h>
+#include <euca_auth.h>
 #include <misc.h>
 #include <euca_string.h>
 #include "walrus.h"

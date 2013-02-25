@@ -1,0 +1,58 @@
+[
+  {
+    "default_cooldown": 240, 
+    "tags": [], 
+    "suspended_processes": [], 
+    "autoscaling_group_arn": "arn:aws:autoscaling:us-east-1:017179026131:autoScalingGroup:64e2798f-c10a-4d66-9be2-7003d0d73835:autoScalingGroupName/my-as-group", 
+    "min_size": 1, 
+    "instances": [], 
+    "vpc_zone_identifier": "", 
+    "health_check_period": 0, 
+    "created_time": "2013-01-30T15:53:21.283Z", 
+    "load_balancers": [], 
+    "launch_config_name": "mylaunchconfig", 
+    "enabled_metrics": [], 
+    "availability_zones": [
+      "us-east-1c"
+    ], 
+    "name": "my-as-group", 
+    "__obj_name__": "AutoScalingGroup", 
+    "termination_policies": [
+      "NewestInstance"
+    ], 
+    "member": "\n      ", 
+    "desired_capacity": 2, 
+    "connection": [], 
+    "health_check_type": "EC2", 
+    "max_size": 4, 
+    "placement_group": null
+  }, 
+  {
+    "default_cooldown": 555, 
+    "tags": [], 
+    "suspended_processes": [], 
+    "autoscaling_group_arn": "arn:aws:autoscaling:us-east-1:017179026131:autoScalingGroup:086acede-f365-454a-833d-e335408f443c:autoScalingGroupName/testscalegroup", 
+    "min_size": 0, 
+    "instances": [], 
+    "vpc_zone_identifier": "", 
+    "health_check_period": 0, 
+    "created_time": "2013-01-31T18:43:33.468Z", 
+    "load_balancers": [], 
+    "launch_config_name": "testlaunchconfig", 
+    "enabled_metrics": [], 
+    "availability_zones": [
+      "us-east-1a"
+    ], 
+    "name": "testscalegroup", 
+    "__obj_name__": "AutoScalingGroup", 
+    "termination_policies": [
+      "Default"
+    ], 
+    "member": "\n      ", 
+    "desired_capacity": 0, 
+    "connection": [], 
+    "health_check_type": "EC2", 
+    "max_size": 4, 
+    "placement_group": null
+  }
+]

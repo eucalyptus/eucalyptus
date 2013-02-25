@@ -21,9 +21,33 @@ package com.eucalyptus.loadbalancing;
 
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 import edu.ucsb.eucalyptus.msgs.EucalyptusData;
+
+import com.eucalyptus.cloudwatch.MetricData;
+import java.lang.reflect.Field
 import com.eucalyptus.component.ComponentId;
 import com.eucalyptus.binding.HttpEmbedded
 import com.eucalyptus.binding.HttpParameterMapping
+
+public class PutServoStatesType extends LoadBalancingMessage {
+	String instanceId;
+	
+	@HttpEmbedded
+	Instances instances;
+	
+	@HttpEmbedded
+	MetricData metricData;
+	public PutServoceStatesType(){}
+}
+
+public class PutServoStatesResponseType extends LoadBalancingMessage {
+	public PutServoStatesResponseType() { }
+	PutServoStatesResult putServoStatesResult = new PutServoStatesResult();
+	ResponseMetadata responseMetadata = new ResponseMetadata();
+}
+
+public class PutServoStatesResult extends EucalyptusData {
+	public PutServoStatesResult() { }
+}
 
 public class CreateLoadBalancerType extends LoadBalancingMessage {
   String loadBalancerName;
@@ -41,6 +65,17 @@ public class CreateLoadBalancerType extends LoadBalancingMessage {
 
 @ComponentId.ComponentMessage(LoadBalancing.class)
 public class LoadBalancingMessage extends BaseMessage {
+	@Override
+	def <TYPE extends BaseMessage> TYPE getReply() {
+	  TYPE type = super.getReply()
+	  try {
+		Field responseMetadataField = type.class.getDeclaredField("responseMetadata")
+		responseMetadataField.setAccessible( true )
+		((ResponseMetadata) responseMetadataField.get( type )).requestId = getCorrelationId()
+	  } catch ( Exception e ) {
+	  }
+	  return type
+	}
 }
 public class CreateLoadBalancerResponseType extends LoadBalancingMessage {
   public CreateLoadBalancerResponseType() {  }
@@ -164,7 +199,7 @@ public class EnableAvailabilityZonesForLoadBalancerResponseType extends LoadBala
   EnableAvailabilityZonesForLoadBalancerResult enableAvailabilityZonesForLoadBalancerResult = new EnableAvailabilityZonesForLoadBalancerResult();
   ResponseMetadata responseMetadata = new ResponseMetadata();
 }
-public class Subnets extends LoadBalancingMessage {
+public class Subnets extends EucalyptusData {
   public Subnets() {  }  
   @HttpParameterMapping(parameter="member")
   ArrayList<String> member = new ArrayList<String>();
@@ -265,7 +300,7 @@ public class SetLoadBalancerPoliciesOfListenerResponseType extends LoadBalancing
   SetLoadBalancerPoliciesOfListenerResult setLoadBalancerPoliciesOfListenerResult = new SetLoadBalancerPoliciesOfListenerResult();
   ResponseMetadata responseMetadata = new ResponseMetadata();
 }
-public class HealthCheck extends LoadBalancingMessage {
+public class HealthCheck extends EucalyptusData {
   String target;
   BigInteger interval;
   BigInteger timeout;
@@ -295,7 +330,7 @@ public class DescribeLoadBalancersResponseType extends LoadBalancingMessage {
   DescribeLoadBalancersResult describeLoadBalancersResult = new DescribeLoadBalancersResult();
   ResponseMetadata responseMetadata = new ResponseMetadata();
 }
-public class AppCookieStickinessPolicy extends LoadBalancingMessage {
+public class AppCookieStickinessPolicy extends EucalyptusData {
   String policyName;
   String cookieName;
   public AppCookieStickinessPolicy() {  }
@@ -493,7 +528,7 @@ public class SetLoadBalancerListenerSSLCertificateResponseType extends LoadBalan
   SetLoadBalancerListenerSSLCertificateResult setLoadBalancerListenerSSLCertificateResult = new SetLoadBalancerListenerSSLCertificateResult();
   ResponseMetadata responseMetadata = new ResponseMetadata();
 }
-public class Policies extends LoadBalancingMessage {
+public class Policies extends EucalyptusData {
   @HttpEmbedded
   AppCookieStickinessPolicies appCookieStickinessPolicies;
   @HttpEmbedded
@@ -516,7 +551,7 @@ public class CreateLBCookieStickinessPolicyResponseType extends LoadBalancingMes
   CreateLBCookieStickinessPolicyResult createLBCookieStickinessPolicyResult = new CreateLBCookieStickinessPolicyResult();
   ResponseMetadata responseMetadata = new ResponseMetadata();
 }
-public class LBCookieStickinessPolicy extends LoadBalancingMessage {
+public class LBCookieStickinessPolicy extends EucalyptusData {
   String policyName;
   Long cookieExpirationPeriod;
   public LBCookieStickinessPolicy() {  }

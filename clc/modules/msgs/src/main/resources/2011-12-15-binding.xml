@@ -64,7 +64,7 @@
 <binding force-classes="true" add-constructors="true" xmlns:tns="http://ec2.amazonaws.com/doc/2011-12-15/" name="ec2_amazonaws_com_doc_2011_12_15">
   <namespace uri="http://ec2.amazonaws.com/doc/2011-12-15/" default="elements" />
   <include path="classpath:aws-base.xml" />
-  <include path="classpath:aws-instances-10-08-31.xml" />
+  <include path="classpath:aws-instances-11-11-01.xml" />
   <include path="classpath:aws-bundling.xml" />
   <include path="classpath:aws-images-10-08-31.xml" />
   <include path="classpath:aws-image-attr.xml" />
