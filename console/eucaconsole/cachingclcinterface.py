@@ -153,8 +153,9 @@ class CachingClcInterface(ClcInterface):
 
     def __get_all_zones_cb__(self, kwargs, callback):
         try:
-            self.zones.values = self.clc.get_all_zones(kwargs['filters'])
-            Threads.instance().invokeCallback(callback, Response(data=self.zones.values))
+            ret = self.clc.get_all_zones(kwargs['filters'])
+            self.zones.values = ret
+            Threads.instance().invokeCallback(callback, Response(data=ret))
         except Exception as ex:
             Threads.instance().invokeCallback(callback, Response(error=ex))
 
@@ -166,8 +167,9 @@ class CachingClcInterface(ClcInterface):
 
     def __get_all_images_cb__(self, kwargs, callback):
         try:
-            self.images.values = self.clc.get_all_images(kwargs['owners'], kwargs['filters'])
-            Threads.instance().invokeCallback(callback, Response(data=self.images.values))
+            ret = self.clc.get_all_images(kwargs['owners'], kwargs['filters'])
+            self.images.values = ret
+            Threads.instance().invokeCallback(callback, Response(data=ret))
         except Exception as ex:
             Threads.instance().invokeCallback(callback, Response(error=ex))
 
@@ -219,9 +221,10 @@ class CachingClcInterface(ClcInterface):
 
     def __get_all_instances_cb__(self, kwargs, callback):
         try:
-            self.instances.values = self.clc.get_all_instances(kwargs['filters'])
+            ret = self.clc.get_all_instances(kwargs['filters'])
+            self.instances.values = ret
             Threads.instance().invokeCallback(callback,
-                            Response(data=self.__normalize_instances__(self.instances.values)))
+                            Response(data=self.__normalize_instances__(ret)))
         except Exception as ex:
             Threads.instance().invokeCallback(callback, Response(error=ex))
 
@@ -354,8 +357,9 @@ class CachingClcInterface(ClcInterface):
 
     def __get_all_addresses_cb__(self, kwargs, callback):
         try:
-            self.addresses.values = self.clc.get_all_addresses(kwargs['filters'])
-            Threads.instance().invokeCallback(callback, Response(data=self.addresses.values))
+            ret = self.clc.get_all_addresses(kwargs['filters'])
+            self.addresses.values = ret
+            Threads.instance().invokeCallback(callback, Response(data=ret))
         except Exception as ex:
             Threads.instance().invokeCallback(callback, Response(error=ex))
 
@@ -416,8 +420,9 @@ class CachingClcInterface(ClcInterface):
 
     def __get_all_key_pairs_cb__(self, kwargs, callback):
         try:
-            self.keypairs.values = self.clc.get_all_key_pairs(kwargs['filters'])
-            Threads.instance().invokeCallback(callback, Response(data=self.keypairs.values))
+            ret = self.clc.get_all_key_pairs(kwargs['filters'])
+            self.keypairs.values = ret
+            Threads.instance().invokeCallback(callback, Response(data=ret))
         except Exception as ex:
             Threads.instance().invokeCallback(callback, Response(error=ex))
 
@@ -466,8 +471,9 @@ class CachingClcInterface(ClcInterface):
 
     def __get_all_security_groups_cb__(self, kwargs, callback):
         try:
-            self.groups.values = self.clc.get_all_security_groups(kwargs['filters'])
-            Threads.instance().invokeCallback(callback, Response(data=self.groups.values))
+            ret = self.clc.get_all_security_groups(kwargs['filters'])
+            self.groups.values = ret
+            Threads.instance().invokeCallback(callback, Response(data=ret))
         except Exception as ex:
             Threads.instance().invokeCallback(callback, Response(error=ex))
 
@@ -564,8 +570,9 @@ class CachingClcInterface(ClcInterface):
 
     def __get_all_volumes_cb__(self, kwargs, callback):
         try:
-            self.volumes.values = self.clc.get_all_volumes(kwargs['filters'])
-            Threads.instance().invokeCallback(callback, Response(data=self.volumes.values))
+            ret = self.clc.get_all_volumes(kwargs['filters'])
+            self.volumes.values = ret
+            Threads.instance().invokeCallback(callback, Response(data=ret))
         except Exception as ex:
             Threads.instance().invokeCallback(callback, Response(error=ex))
 
@@ -628,8 +635,9 @@ class CachingClcInterface(ClcInterface):
 
     def __get_all_snapshots_cb__(self, kwargs, callback):
         try:
-            self.snapshots.values = self.clc.get_all_snapshots(kwargs['filters'])
-            Threads.instance().invokeCallback(callback, Response(data=self.snapshots.values))
+            ret = self.clc.get_all_snapshots(kwargs['filters'])
+            self.snapshots.values = ret
+            Threads.instance().invokeCallback(callback, Response(data=ret))
         except Exception as ex:
             Threads.instance().invokeCallback(callback, Response(error=ex))
 
@@ -737,8 +745,9 @@ class CachingClcInterface(ClcInterface):
 
     def __get_all_tags_cb__(self, kwargs, callback):
         try:
-            self.tags.values = self.clc.get_all_tags(kwargs['filters'])
-            Threads.instance().invokeCallback(callback, Response(data=self.tags.values))
+            ret = self.clc.get_all_tags(kwargs['filters'])
+            self.tags.values = ret
+            Threads.instance().invokeCallback(callback, Response(data=ret))
         except Exception as ex:
             Threads.instance().invokeCallback(callback, Response(error=ex))
 

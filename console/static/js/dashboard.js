@@ -70,6 +70,8 @@
         $('<img>').attr('src','images/dots32.gif'));
       $instObj.find('#dashboard-instance-stopped div').prepend(
         $('<img>').attr('src','images/dots32.gif'));
+      $instObj.find('#dashboard-scaling-groups div').prepend(
+        $('<img>').attr('src','images/dots32.gif'));
 
       $instObj.find('#dashboard-instance-launch a').click( function(e) {
         var $container = $('html body').find(DOM_BINDING['main']);
@@ -148,6 +150,13 @@
     _setStorageSummary : function($storageObj) {
       var thisObj = this;
 
+      $storageObj.find('#dashboard-storage-volume').prepend(
+        $('<img>').attr('src','images/dots32.gif'));
+      $storageObj.find('#dashboard-storage-snapshot').prepend(
+        $('<img>').attr('src','images/dots32.gif'));
+      $storageObj.find('#dashboard-storage-buckets').prepend(
+        $('<img>').attr('src','images/dots32.gif'));
+
       $('html body').eucadata('addCallback', 'volume', 'dashboard-summary', function(){
         var results = describe('volume');
         var numVol = results ? results.length : 0;
@@ -193,16 +202,20 @@
       }));
 
       //az = $instObj.find('#dashboard-instance-dropbox').value();
-      $storageObj.find('#dashboard-storage-volume').prepend(
-        $('<img>').attr('src','images/dots32.gif'));
-      $storageObj.find('#dashboard-storage-snapshot').prepend(
-        $('<img>').attr('src','images/dots32.gif'));
-      $storageObj.find('#dashboard-storage-buckets').prepend(
-        $('<img>').attr('src','images/dots32.gif'));
     },
   
     _setNetSecSummary : function($netsecObj) {
       var thisObj = this;
+
+      $netsecObj.find('#dashboard-netsec-load-balancer').prepend(
+        $('<img>').attr('src','images/dots32.gif'));
+      $netsecObj.find('#dashboard-netsec-sgroup').prepend(
+        $('<img>').attr('src','images/dots32.gif'));
+      $netsecObj.find('#dashboard-netsec-eip').prepend(
+        $('<img>').attr('src','images/dots32.gif'));
+      $netsecObj.find('#dashboard-netsec-keypair').prepend(
+        $('<img>').attr('src','images/dots32.gif'));
+
       $('html body').eucadata('addCallback', 'balancer', 'dashboard-summary', function(){
         var results = describe('balancer');
         var numBalancers = results ? results.length : 0;
@@ -258,13 +271,6 @@
           return false;
       }));
       $('html body').eucadata('refresh', 'keypair');
-
-      $netsecObj.find('#dashboard-netsec-sgroup').prepend(
-        $('<img>').attr('src','images/dots32.gif'));
-      $netsecObj.find('#dashboard-netsec-eip').prepend(
-        $('<img>').attr('src','images/dots32.gif'));
-      $netsecObj.find('#dashboard-netsec-keypair').prepend(
-        $('<img>').attr('src','images/dots32.gif'));
     },
 
     close: function() {
@@ -274,7 +280,10 @@
       $('html body').eucadata('removeCallback', 'sgroup', 'dashboard-summary');
       $('html body').eucadata('removeCallback', 'eip', 'dashboard-summary');
       $('html body').eucadata('removeCallback', 'keypair', 'dashboard-summary');
-      $('html body').eucadata('removeCallback','zone','dashboard-summary');
+      $('html body').eucadata('removeCallback', 'zone','dashboard-summary');
+      $('html body').eucadata('removeCallback', 'scalinginst','dashboard-summary');
+      $('html body').eucadata('removeCallback', 'bucket','dashboard-summary');
+      $('html body').eucadata('removeCallback', 'balancer','dashboard-summary');
       this._super('close');
     }
   });

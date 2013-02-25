@@ -23,44 +23,45 @@
 # (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-from datetime import datetime, timedelta
-import threading
+import boto
+import copy
+import json
+import os
+import datetime
 
-class Cache(object):
+from operator import itemgetter
+from boto.ec2.image import Image
+from boto.ec2.instance import Instance
+from boto.ec2.keypair import KeyPair
 
-    def __init__(self, updateFreq):
-        self.updateFreq = updateFreq
-        self.lastUpdate = datetime.min
-        self._values = None
-        self._lock = threading.Lock()
-        self.freshData = True
+from .botojsonencoder import BotoJsonDecoder
+from .walrusinterface import WalrusInterface
+from .configloader import ConfigLoader
 
-    # staleness is determined by an age calculation (based on updateFreq)
-    def isCacheStale(self):
-        return ((datetime.now() - self.lastUpdate) > timedelta(seconds = self.updateFreq))
+# This class provides an implmentation of the clcinterface using canned json
+# strings. Might be better to represent as object graph so we can modify
+# values in the mock.
+class MockWalrusInterface(WalrusInterface):
+    buckets = None
+    objects = None
 
-    # freshness is defined (not as !stale, but) as new data which has not been read yet
-    def isCacheFresh(self):
-        ret = self.freshData
-        return ret
+    # load saved state to simulate CLC
+    def __init__(self):
+        self.config = ConfigLoader().getParser()
+        if self.config.has_option('server', 'mockpath'):
+            self.mockpath = self.config.get('server', 'mockpath')
+        else:
+            self.mockpath = 'mockdata'
 
-    def expireCache(self):
-        self.lastUpdate = datetime.min
+        with open(os.path.join(self.mockpath, 'Buckets.json')) as f:
+            self.buckets = json.load(f, cls=BotoJsonDecoder)
+        with open(os.path.join(self.mockpath, 'Objects.json')) as f:
+            self.objects = json.load(f, cls=BotoJsonDecoder)
 
-    @property
-    def values(self):
-        self.freshData = False
-        return self._values
+    def get_all_buckets(self, callbcack=None):
+        return self.buckets
 
-    @values.setter
-    def values(self, value):
-        self._lock.acquire()
-        try:
-            # this is a weak test, but mark cache fresh if the number of values changes
-            # should do a smarter comparison if lengths are equal to detect changes in state
-            if self._values == None or len(self._values) != len(value):
-                self.freshData = True
-            self._values = value
-            self.lastUpdate = datetime.now()
-        finally:
-            self._lock.release()
+    def get_all_objects(self, bucket, callbcack=None):
+        return self.objects[bucket]
+
+

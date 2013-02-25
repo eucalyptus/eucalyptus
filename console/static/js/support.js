@@ -27,7 +27,7 @@ var BACKSPACE_KEY_CODE = 8;
 var REFRESH_INTERVAL_SEC = 10;
 var TABLE_REFRESH_INTERVAL_SEC = 20;
 var GLOW_DURATION_SEC = 10;
-var MAX_PENDING_REQ = 12;
+var MAX_PENDING_REQ = 16;
 var ID_SEPARATOR = ',';
 
 var DOM_BINDING = {header:'.euca-container .euca-header-container .inner-container',

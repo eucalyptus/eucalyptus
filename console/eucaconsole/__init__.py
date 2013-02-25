@@ -435,7 +435,8 @@ class LoginResponse(ProxyResponse):
 
         # hopefully, solve this in boto, but for now, let's see if
         # this is aws endpoint and use static def instead
-        if self.user_session.host_override != None:
+        # btw, this comes in handy for mock mode as well
+        if self.user_session.host_override != None or use_mock:
             global_session.parse_vmtypes({
                 VmType(name='t1.micro', cores='1', memory='512', disk='10'),
                 VmType(name='m1.small', cores='2', memory='1700', disk='160'),
