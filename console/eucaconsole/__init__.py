@@ -39,7 +39,6 @@ import logging
 import uuid
 from datetime import datetime
 from datetime import timedelta
-from boto.ec2.vmtype import VmType
 
 from .botoclcinterface import BotoClcInterface
 from token import TokenAuthenticator
@@ -129,7 +128,10 @@ class GlobalSession(object):
     def parse_vmtypes(self, vmtypes):
         self.vmtypes = {}
         for vmt in vmtypes:
-            self.vmtypes[vmt.name] = [vmt.cores, vmt.memory, vmt.disk]
+            if isinstance(vmt, dict):
+                self.vmtypes[vmt['name']] = [vmt['cores'], vmt['memory'], vmt['disk']]
+            else:
+                self.vmtypes[vmt.name] = [vmt.cores, vmt.memory, vmt.disk]
 
     @property
     def language(self):
@@ -436,22 +438,31 @@ class LoginResponse(ProxyResponse):
         # hopefully, solve this in boto, but for now, let's see if
         # this is aws endpoint and use static def instead
         # btw, this comes in handy for mock mode as well
-        if self.user_session.host_override != None or use_mock:
-            global_session.parse_vmtypes({
-                VmType(name='t1.micro', cores='1', memory='512', disk='10'),
-                VmType(name='m1.small', cores='2', memory='1700', disk='160'),
-                VmType(name='m1.medium', cores='2', memory='3750', disk='410'),
-                VmType(name='m1.large', cores='4', memory='7500', disk='850'),
-                VmType(name='m1.xlarge', cores='8', memory='15000', disk='1690')
-            });
-        else:
-            host = config.get('server', 'clchost')
-            clc = BotoClcInterface(host, self.user_session.access_key,
-                                   self.user_session.secret_key,
-                                   self.user_session.session_token)
-            vmtypes = clc.get_all_vmtypes()
-            print vmtypes
-            global_session.parse_vmtypes(vmtypes)
+        vmtypes = []
+#        if (self.user_session.host_override != None) or (use_mock == True):
+            vmtypes.append(dict(name='t1.micro', cores='1', memory='256', disk='5'))
+            vmtypes.append(dict(name='m1.small', cores='1', memory='256', disk='5'))
+            vmtypes.append(dict(name='m1.medium', cores='1', memory='512', disk='10'))
+            vmtypes.append(dict(name='m1.large', cores='2', memory='512', disk='10'))
+            vmtypes.append(dict(name='c1.medium', cores='2', memory='512', disk='10'))
+            vmtypes.append(dict(name='m1.xlarge', cores='2', memory='1024', disk='10'))
+            vmtypes.append(dict(name='c1.xlarge', cores='2', memory='2048', disk='10'))
+            vmtypes.append(dict(name='m2.xlarge', cores='2', memory='2048', disk='10'))
+            vmtypes.append(dict(name='m3.xlarge', cores='4', memory='2048', disk='15'))
+            vmtypes.append(dict(name='m3.2xlarge', cores='4', memory='4096', disk='30'))
+            vmtypes.append(dict(name='m2.4xlarge', cores='8', memory='4096', disk='60'))
+            vmtypes.append(dict(name='hi1.4xlarge', cores='8', memory='6144', disk='120'))
+            vmtypes.append(dict(name='cc2.8xlarge', cores='16', memory='6144', disk='120'))
+            vmtypes.append(dict(name='cg1.4xlarge', cores='16', memory='12288', disk='200'))
+            vmtypes.append(dict(name='cr1.8xlarge', cores='16', memory='16384', disk='240'))
+            vmtypes.append(dict(name='hs1.8xlarge', cores='48', memory='119808', disk='24000'))
+#        else:
+#            host = config.get('server', 'clchost')
+#            clc = BotoClcInterface(host, self.user_session.access_key,
+#                                   self.user_session.secret_key,
+#                                   self.user_session.session_token)
+#            vmtypes = clc.get_all_vmtypes()
+        global_session.parse_vmtypes(vmtypes)
 
         return {'global_session': global_session.get_session(),
                 'user_session': self.user_session.get_session()}
