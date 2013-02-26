@@ -47,6 +47,8 @@ public abstract class AutoScalingInstances {
 
   public abstract List<AutoScalingInstance> listByGroup( AutoScalingGroup group ) throws AutoScalingMetadataException;
 
+  public abstract List<AutoScalingInstance> listByState( LifecycleState state ) throws AutoScalingMetadataException;
+
   public abstract List<AutoScalingInstance> listUnhealthyByGroup( AutoScalingGroup group ) throws AutoScalingMetadataException;
 
   public abstract AutoScalingInstance lookup( OwnerFullName ownerFullName,
@@ -57,7 +59,9 @@ public abstract class AutoScalingInstances {
                                               Callback<AutoScalingInstance> instanceUpdateCallback ) throws AutoScalingMetadataException;
 
   public abstract void markMissingInstancesUnhealthy( AutoScalingGroup group, Collection<String> instanceIds ) throws AutoScalingMetadataException;
-  
+
+  public abstract void transitionState( AutoScalingGroup group, LifecycleState from, LifecycleState to, Collection<String> instanceIds ) throws AutoScalingMetadataException;
+
   public abstract boolean delete( AutoScalingInstance autoScalingInstance ) throws AutoScalingMetadataException;
 
   public abstract boolean deleteByGroup( final AutoScalingGroup group ) throws AutoScalingMetadataException;

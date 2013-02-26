@@ -635,6 +635,11 @@ class AutoScalingServiceTest {
       }
 
       @Override
+      List<AutoScalingInstance> listByState(LifecycleState state) {
+        []
+      }
+
+      @Override
       List<AutoScalingInstance> listUnhealthyByGroup( AutoScalingGroup group ) {
         []
       }
@@ -658,6 +663,13 @@ class AutoScalingServiceTest {
       @Override
       void markMissingInstancesUnhealthy(AutoScalingGroup group, 
                                          Collection<String> instanceIds) {
+      }
+
+      @Override
+      void transitionState(AutoScalingGroup group,
+                           LifecycleState from,
+                           LifecycleState to,
+                           Collection<String> instanceIds) {
       }
 
       @Override

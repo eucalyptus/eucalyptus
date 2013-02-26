@@ -42,7 +42,7 @@ class TestClients {
 
     @SuppressWarnings( "unchecked" )
     @Override
-    <REQ extends EucalyptusMessage, RES extends EucalyptusMessage> void dispatch( REQ request,
+    public <REQ extends EucalyptusMessage, RES extends EucalyptusMessage> void dispatch( REQ request,
                                                                                   Callback.Checked<RES> callback,
                                                                                   @Nullable Runnable then ) {
       try {

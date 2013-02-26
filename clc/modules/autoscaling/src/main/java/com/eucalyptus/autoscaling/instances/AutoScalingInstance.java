@@ -176,6 +176,12 @@ public class AutoScalingInstance extends AbstractOwnedPersistent implements Auto
     return example;
   }
 
+  public static AutoScalingInstance withLifecycleState( final LifecycleState lifecycleState ) {
+    final AutoScalingInstance example = new AutoScalingInstance();
+    example.setLifecycleState( lifecycleState );
+    return example;
+  }
+
   public static AutoScalingInstance create( @Nonnull final OwnerFullName ownerFullName,
                                             @Nonnull final String instanceId,
                                             @Nonnull final String availabilityZone,
@@ -186,7 +192,7 @@ public class AutoScalingInstance extends AbstractOwnedPersistent implements Auto
     autoScalingInstance.setLaunchConfigurationName(
         AutoScalingMetadatas.toDisplayName().apply( group.getLaunchConfiguration() ) );
     autoScalingInstance.setHealthStatus( HealthStatus.Healthy );
-    autoScalingInstance.setLifecycleState( LifecycleState.InService ); //TODO:STEVE: lifecycle states    
+    autoScalingInstance.setLifecycleState( LifecycleState.Pending );
     return autoScalingInstance;
   }
 

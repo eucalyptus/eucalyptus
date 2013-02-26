@@ -23,7 +23,9 @@ import java.util.Comparator;
 import java.util.List;
 import javax.annotation.Nullable;
 import com.google.common.base.Function;
+import com.google.common.base.Functions;
 import com.google.common.base.Predicate;
+import com.google.common.base.Predicates;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 
@@ -31,7 +33,51 @@ import com.google.common.collect.Lists;
  * Utility functions for collections
  */
 public class CollectionUtils {
-  
+
+  /**
+   * Apply the given function for each item in the iterable.
+   *
+   * <p>This method is an anti-pattern as the function is really an effect (it
+   * can only be useful for its side effect)</p>
+   *
+   * @param iterable The iterable
+   * @param function The function to apply
+   * @param <T> The iterable type
+   */
+  public static <T> void each( final Iterable<T> iterable,
+                               final Function<? super T,?> function ) {
+    Iterables.size( Iterables.transform( iterable, function ) ); // transform is lazy
+  }
+
+  /**
+   * Apply the given predicate for each item in the iterable.
+   *
+   * <p>This method is an anti-pattern as the predicate is really an effect (it
+   * can only be useful for its side effect)</p>
+   *
+   * @param iterable The iterable
+   * @param predicate The predicate to apply
+   * @param <T> The iterable type
+   */
+  public static <T> void each( final Iterable<T> iterable,
+                               final Predicate<? super T> predicate ) {
+    each( iterable, Functions.forPredicate( predicate ) );
+  }
+
+  /**
+   * Convenience method for a predicate on a property value.
+   *
+   * @param propertyValue The property value to match
+   * @param propertyFunction The function to extract the property
+   * @param <T> The predicate type
+   * @param <PT> The property type
+   * @return A predicate that extracts a value to compare with the given value.
+   */
+  public static <T,PT> Predicate<T> propertyPredicate( final PT propertyValue,
+                                                       final Function<T,PT> propertyFunction ) {
+    return Predicates.compose( Predicates.equalTo( propertyValue ), propertyFunction );
+  }
+
   public static <T> Function<T,List<T>> listUnit() {
     return new Function<T,List<T>>() {
       @SuppressWarnings( "unchecked" )

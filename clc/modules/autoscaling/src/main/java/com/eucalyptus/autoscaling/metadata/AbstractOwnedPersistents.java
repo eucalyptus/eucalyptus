@@ -29,6 +29,7 @@ import com.eucalyptus.autoscaling.instances.AutoScalingInstance;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.Transactions;
 import com.eucalyptus.util.Callback;
+import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.util.OwnerFullName;
 import com.google.common.base.Function;
@@ -138,10 +139,39 @@ public abstract class AbstractOwnedPersistents<AOP extends AbstractOwnedPersiste
     }
   }
 
+  //TODO:STEVE: Use transactions with retries where ever appropriate
+  public <R> R transactionWithRetry( final Class<?> entityType,
+                                     final WorkCallback<R> work ) throws AutoScalingMetadataException {
+    final Function<Void,R> workFunction = new Function<Void,R>() {
+      @Override
+      public R apply( final Void nothing ) {
+        try {
+          return work.doWork();
+        } catch ( AutoScalingMetadataException e ) {
+          throw Exceptions.toUndeclared( e );
+        }
+      }
+    };
+
+    try {
+      return Entities.asTransaction( entityType, workFunction ).apply( null );
+    } catch ( Exception e ) {
+      final AutoScalingMetadataException cause = Exceptions.findCause( e, AutoScalingMetadataException.class );
+      if ( cause != null ) {
+        throw cause;
+      }
+      throw new AutoScalingMetadataException( "Transaction failed", e );
+    }
+  }
+
   public static Function<AutoScalingInstance,Date> createdDate() {
     return AbstractOwnedPersistentDateProperties.CREATED;  
   }
-  
+
+  public static interface WorkCallback<T> {
+    public T doWork() throws AutoScalingMetadataException;
+  }
+
   protected String describe( final AOP metadata ) {
     return metadata.getDisplayName();  
   }      

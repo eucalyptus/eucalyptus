@@ -49,6 +49,7 @@ import com.eucalyptus.autoscaling.groups.PersistenceAutoScalingGroups;
 import com.eucalyptus.autoscaling.groups.TerminationPolicyType;
 import com.eucalyptus.autoscaling.instances.AutoScalingInstance;
 import com.eucalyptus.autoscaling.instances.AutoScalingInstances;
+import com.eucalyptus.autoscaling.instances.LifecycleState;
 import com.eucalyptus.autoscaling.instances.PersistenceAutoScalingInstances;
 import com.eucalyptus.autoscaling.metadata.AutoScalingMetadataException;
 import com.eucalyptus.autoscaling.metadata.AutoScalingMetadataNotFoundException;
@@ -146,6 +147,20 @@ public class ActivityManager {
   public void doScaling() {
     timeoutScalingActivities( );
 
+    // Restore old termination attempts
+    try {
+      final List<AutoScalingInstance> failedToTerminate =
+          autoScalingInstances.listByState( LifecycleState.Terminating );
+      final Iterable<String> groupArns = Iterables.transform( failedToTerminate, AutoScalingInstances.groupArn() );
+      for ( final String groupArn : groupArns ) {
+        final Iterable<AutoScalingInstance> groupInstances =
+            Iterables.filter( failedToTerminate, CollectionUtils.propertyPredicate( groupArn, AutoScalingInstances.groupArn() ) );
+        runTask( terminateInstancesTask( groupInstances ) );
+      }
+    } catch ( Exception e ) {
+      logger.error( e, e );
+    }
+
     // Launch and terminate
     try {
       for ( final AutoScalingGroup group : autoScalingGroups.listRequiringScaling() ) {
@@ -172,9 +187,12 @@ public class ActivityManager {
     // Monitor instances
     try {
       for ( final AutoScalingGroup group : autoScalingGroups.listRequiringMonitoring( 10000L ) ) {
+        final List<AutoScalingInstance> groupInstances = autoScalingInstances.listByGroup( group );
         runTask( new MonitoringScalingProcessTask(
             group,
-            Lists.newArrayList( Iterables.transform( autoScalingInstances.listByGroup( group ), instanceId() ) ) ) );
+            Lists.newArrayList( Iterables.transform( Iterables.filter( groupInstances, LifecycleState.Pending ), instanceId() ) ),
+            Lists.newArrayList( Iterables.transform( Iterables.filter( groupInstances, LifecycleState.InService ), instanceId() ) )
+        ) );
       }
     } catch ( Exception e ) {
       logger.error( e, e );
@@ -266,6 +284,14 @@ public class ActivityManager {
     }
 
     return errors;
+  }
+
+  private TerminateInstancesScalingProcessTask terminateInstancesTask( final Iterable<AutoScalingInstance> groupInstances ) {
+    return new TerminateInstancesScalingProcessTask(
+        Iterables.get( groupInstances, 0 ).getAutoScalingGroup(),
+        Iterables.get( groupInstances, 0 ).getAutoScalingGroup().getCapacity(),
+        Lists.newArrayList( Iterables.transform( groupInstances, AutoScalingInstances.instanceId() ) ),
+        false );
   }
 
   private TerminateInstancesScalingProcessTask perhapsTerminateInstances( final AutoScalingGroup group,
@@ -857,7 +883,6 @@ public class ActivityManager {
     @Override
     void dispatchSuccess( final ActivityContext context,
                           final TerminateInstancesResponseType response ) {
-      terminated = true;
       try {
         // We ignore the response since we only requested termination of a
         // single instance. The response would be empty if the instance was
@@ -866,12 +891,17 @@ public class ActivityManager {
             getOwner(),
             instanceId );
         autoScalingInstances.delete( instance );
+        terminated = true;
       } catch ( AutoScalingMetadataNotFoundException e ) {
         // no need to delete it then
+        terminated = true;
       } catch ( AutoScalingMetadataException e ) {
         logger.error( e, e );
       }
-      setActivityFinalStatus( ActivityStatusCode.Successful );
+      setActivityFinalStatus( terminated ?
+          ActivityStatusCode.Successful :
+          ActivityStatusCode.Failed
+      );
     }
 
     boolean wasTerminated() {
@@ -907,8 +937,14 @@ public class ActivityManager {
     List<TerminateInstanceScalingActivityTask> buildActivityTasks() {
       final List<TerminateInstanceScalingActivityTask> activities = Lists.newArrayList();
 
-      for ( final String instanceId : instanceIds ) {
-        activities.add( new TerminateInstanceScalingActivityTask( newActivity(), instanceId ) );
+      try {
+        autoScalingInstances.transitionState( getGroup(), LifecycleState.InService, LifecycleState.Terminating, instanceIds );
+
+        for ( final String instanceId : instanceIds ) {
+          activities.add( new TerminateInstanceScalingActivityTask( newActivity(), instanceId ) );
+        }
+      } catch ( final AutoScalingMetadataException e ) {
+        logger.error( e, e );
       }
 
       return activities;
@@ -1016,33 +1052,54 @@ public class ActivityManager {
   }
 
   private class MonitoringScalingProcessTask extends ScalingProcessTask<MonitoringScalingActivityTask> {
-    private final List<String> instanceIds;
+    private final List<String> pendingInstanceIds;
+    private final List<String> expectedRunningInstanceIds;
 
     MonitoringScalingProcessTask( final AutoScalingGroup group,
-                                  final List<String> instanceIds ) {
+                                  final List<String> pendingInstanceIds,
+                                  final List<String> expectedRunningInstanceIds ) {
       super( group, "Monitor" );
-      this.instanceIds = instanceIds;
+      this.pendingInstanceIds = pendingInstanceIds;
+      this.expectedRunningInstanceIds = expectedRunningInstanceIds;
     }
 
     @Override
     boolean shouldRun() {
-      return !instanceIds.isEmpty();
+      return !expectedRunningInstanceIds.isEmpty() || !pendingInstanceIds.isEmpty();
     }
 
     @Override
     List<MonitoringScalingActivityTask> buildActivityTasks() throws AutoScalingMetadataException {
+      final List<String> instanceIds = Lists.newArrayList( Iterables.concat(
+          pendingInstanceIds,
+          expectedRunningInstanceIds
+      ) );
       return Collections.singletonList( new MonitoringScalingActivityTask( newActivity(), instanceIds ) );
     }
 
     @Override
     void partialSuccess( final List<MonitoringScalingActivityTask> tasks ) {
-      final List<String> healthyInstanceIds = Lists.newArrayList();
+      final Set<String> transitionToHealthy = Sets.newHashSet( pendingInstanceIds );
+      final Set<String> healthyInstanceIds = Sets.newHashSet();
+
       for ( final MonitoringScalingActivityTask task : tasks ) {
         healthyInstanceIds.addAll( task.getHealthyInstanceIds() );
       }
 
+      transitionToHealthy.retainAll( healthyInstanceIds );
+
       try {
         autoScalingInstances.markMissingInstancesUnhealthy( getGroup(), healthyInstanceIds );
+      } catch ( AutoScalingMetadataException e ) {
+        logger.error( e, e );
+      }
+
+      if ( !transitionToHealthy.isEmpty() ) try {
+        autoScalingInstances.transitionState(
+            getGroup(),
+            LifecycleState.Pending,
+            LifecycleState.InService,
+            transitionToHealthy );
       } catch ( AutoScalingMetadataException e ) {
         logger.error( e, e );
       }
