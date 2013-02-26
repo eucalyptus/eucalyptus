@@ -121,12 +121,12 @@ typedef struct configEntry_t {
  |                                                                            |
 \*----------------------------------------------------------------------------*/
 
-void configInitValues(configEntry newConfigKeysRestart[], configEntry newConfigKeysNoRestart[]);
-char *configFileValue(const char *key);
-boolean configFileValueLong(const char *key, long *val);
-int isConfigModified(char configFiles[][MAX_PATH], int numFiles);
-int readConfigFile(char configFiles[][MAX_PATH], int numFiles);
-void configReadLogParams(int *log_level_out, int *log_roll_number_out, long *log_max_size_bytes_out, char **log_prefix);
+void configInitValues(configEntry aNewConfigKeysRestart[], configEntry aNewConfigKeysNoRestart[]);
+int isConfigModified(char asConfigFiles[][MAX_PATH], u32 numFiles);
+char *configFileValue(const char *sKey);
+boolean configFileValueLong(const char *sKey, long *pVal);
+int readConfigFile(char asConfigFiles[][MAX_PATH], int numFiles);
+void configReadLogParams(int *pLogLevel, int *pLogRollNumber, long *pLogMaxSizeBytes, char **psLogPrefix);
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |

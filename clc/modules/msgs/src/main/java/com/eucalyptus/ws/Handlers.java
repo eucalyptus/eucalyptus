@@ -63,7 +63,6 @@
 package com.eucalyptus.ws;
 
 import static com.eucalyptus.component.ComponentId.ComponentMessage;
-import static com.eucalyptus.component.ComponentId.ComponentPart;
 import java.net.URI;
 import java.util.HashMap;
 import java.util.List;
@@ -128,6 +127,7 @@ import com.eucalyptus.records.Logs;
 import com.eucalyptus.system.Ats;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.ws.handlers.BindingHandler;
+import com.eucalyptus.ws.handlers.InternalImpersonationHandler;
 import com.eucalyptus.ws.handlers.InternalWsSecHandler;
 import com.eucalyptus.ws.handlers.QueryTimestampHandler;
 import com.eucalyptus.ws.handlers.SoapMarshallingHandler;
@@ -156,6 +156,7 @@ public class Handlers {
   private static final ChannelHandler                        addressingHandler        = new AddressingHandler( );
   private static final ConcurrentMap<String, BindingHandler> bindingHandlers          = new MapMaker( ).makeComputingMap( BindingHandlerLookup.INSTANCE );
   private static final ChannelHandler                        bindingHandler           = new BindingHandler( );
+  private static final ChannelHandler                        internalImpersonationHandler = new InternalImpersonationHandler();
   private static final HashedWheelTimer                      timer                    = new HashedWheelTimer( );                                                                                             //TODO:GRZE: configurable
                                                                                                                                                                                                               
   enum ServerPipelineFactory implements ChannelPipelineFactory {
@@ -557,4 +558,7 @@ public class Handlers {
     return internalWsSecHandler;
   }
   
+  public static ChannelHandler internalImpersonationHandler() {
+    return internalImpersonationHandler;
+  }
 }

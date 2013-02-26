@@ -108,6 +108,7 @@ public class OrderedShutdown {
 			ShutdownHook prehook;
 			while((prehook = preShutdownHooks.poll()) != null) {
 				try {
+		      LOG.info("Executing Pre-Shutdown Hook: " + prehook.getRunnable( ) );
 					prehook.getRunnable().run();
 				} catch (Exception e) {
 				  Exceptions.maybeInterrupted(e);
@@ -118,6 +119,7 @@ public class OrderedShutdown {
 			ShutdownHook h;
 			while((h = shutdownHooks.poll()) != null) {
 				try {
+          LOG.info("Executing Shutdown Hook: " + h.getRunnable( ) );
 					h.getRunnable().run();
 				} catch (Exception e) {
 				  Exceptions.maybeInterrupted(e);
@@ -128,6 +130,7 @@ public class OrderedShutdown {
 			ShutdownHook posthook;
 			while((posthook = postShutdownHooks.poll()) != null) {
 				try {
+          LOG.info("Executing Post-Shutdown Hook: " + posthook.getRunnable( ) );
 					posthook.getRunnable().run();
 				} catch (Exception e) {
 				  Exceptions.maybeInterrupted(e);

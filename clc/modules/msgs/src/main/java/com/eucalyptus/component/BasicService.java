@@ -70,6 +70,7 @@ import com.eucalyptus.component.Component.State;
 import com.eucalyptus.component.Component.Transition;
 import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.empyrean.Empyrean;
+import com.eucalyptus.records.Logs;
 import com.eucalyptus.util.fsm.StateMachine;
 
 public class BasicService {
@@ -96,12 +97,13 @@ public class BasicService {
         @Override
         public void run( ) {
           try {
-            LOG.warn( "SHUTDOWN Service: " + BasicService.this.serviceConfiguration.getName( ) );
             ServiceTransitions.pathTo( BasicService.this.serviceConfiguration, Component.State.PRIMORDIAL ).get( );
+            LOG.warn( "SHUTDOWN Service: " + BasicService.this.serviceConfiguration.getFullName( ) );
           } catch ( final InterruptedException ex ) {
             Thread.currentThread( ).interrupt( );
-          } catch ( final ExecutionException ex ) {
-            LOG.error( ex, ex );
+          } catch ( final Exception ex ) {
+            LOG.error( ex );
+            Logs.extreme( ).error( ex, ex );
           }
         }
       } );

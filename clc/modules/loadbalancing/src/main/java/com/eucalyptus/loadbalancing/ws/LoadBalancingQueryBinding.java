@@ -34,5 +34,4 @@ public class LoadBalancingQueryBinding extends BaseQueryBinding<OperationParamet
   public LoadBalancingQueryBinding() {
     super( LOADBALANCING_NAMESPACE_PATTERN, LOADBALANCING_DEFAULT_VERSION, OperationParameter.Action );
   }
-
 }

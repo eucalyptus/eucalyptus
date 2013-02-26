@@ -78,8 +78,8 @@ import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
 import com.eucalyptus.records.Logs;
 import com.eucalyptus.util.LogUtil;
-import com.eucalyptus.vm.VmType;
-import com.eucalyptus.vm.VmTypes;
+import com.eucalyptus.vmtypes.VmType;
+import com.eucalyptus.vmtypes.VmTypes;
 import com.google.common.base.Joiner;
 import com.google.common.collect.Lists;
 import edu.ucsb.eucalyptus.msgs.ResourceType;
@@ -114,6 +114,9 @@ public class ResourceState {
   }
   
   public synchronized List<ResourceToken> requestResourceAllocation( Allocation allocInfo, int minAmount, int maxAmount ) throws NotEnoughResourcesException {
+    /**
+     * TODO:GRZE: this method needs try obtaining the cluster gate lock.
+     */
     VmTypeAvailability vmTypeStatus = this.typeMap.get( allocInfo.getVmType( ).getName( ) );
     Integer available = vmTypeStatus.getAvailable( );
     NavigableSet<VmTypeAvailability> sorted = this.sorted( );
@@ -328,7 +331,7 @@ public class ResourceState {
     
     static class ZeroTypeAvailability extends VmTypeAvailability {
       ZeroTypeAvailability( ) {
-        super( new VmType( "ZERO", -1, -1, -1 ), 0, 0 );
+        super( VmType.create( "ZERO", -1, -1, -1 ), 0, 0 );
       }
       
       @Override

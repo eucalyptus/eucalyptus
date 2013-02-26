@@ -11,6 +11,7 @@ import java.util.NoSuchElementException;
 
 import org.apache.log4j.Logger;
 
+import com.eucalyptus.cloudwatch.domain.dimension.DimensionEntity;
 import com.google.common.collect.Lists;
 
 
@@ -66,11 +67,11 @@ public class ListMetricsTest {
       Date start = new Date();
 
       String accountId = "account_this";
-      List<List<ListMetricDimension>> dimensionChoices = new ArrayList<List<ListMetricDimension>>();
+      List<List<DimensionEntity>> dimensionChoices = new ArrayList<List<DimensionEntity>>();
       for (int i=1;i<=n;i++) {
         // create choices for dimensions
-        ListMetricDimension d1 = new ListMetricDimension("dimension_" + i, "dimension_this");
-        ListMetricDimension d2 = new ListMetricDimension("dimension_" + i, "dimension_both");
+        DimensionEntity d1 = new DimensionEntity("dimension_" + i, "dimension_this");
+        DimensionEntity d2 = new DimensionEntity("dimension_" + i, "dimension_both");
         dimensionChoices.add(Lists.newArrayList(d1, d2));
       }
 
@@ -78,7 +79,7 @@ public class ListMetricsTest {
       List<String> namespaces = Lists.newArrayList("namespace_this", "namespace_both");
       for (String metricName : metricNames) {
         for (String namespace : namespaces) {
-          for (Collection<ListMetricDimension> dimensions: new PowerChoiceIterable<ListMetricDimension>(dimensionChoices)) {
+          for (Collection<DimensionEntity> dimensions: new PowerChoiceIterable<DimensionEntity>(dimensionChoices)) {
             ListMetricManager.addMetric(accountId, metricName, namespace, toDimensionMap(dimensions));
           }
         }
@@ -86,18 +87,18 @@ public class ListMetricsTest {
 
       Date middle = new Date();
       accountId = "account_that";
-      dimensionChoices = new ArrayList<List<ListMetricDimension>>();
+      dimensionChoices = new ArrayList<List<DimensionEntity>>();
       for (int i=1;i<=n;i++) {
         // create choices for dimensions
-        ListMetricDimension d1 = new ListMetricDimension("dimension_" + i, "dimension_that");
-        ListMetricDimension d2 = new ListMetricDimension("dimension_" + i, "dimension_both");
+        DimensionEntity d1 = new DimensionEntity("dimension_" + i, "dimension_that");
+        DimensionEntity d2 = new DimensionEntity("dimension_" + i, "dimension_both");
         dimensionChoices.add(Lists.newArrayList(d1, d2));
       }
       metricNames = Lists.newArrayList("metric_name_that", "metric_name_both");
       namespaces = Lists.newArrayList("namespace_that", "namespace_both");
       for (String metricName : metricNames) {
         for (String namespace : namespaces) {
-          for (Collection<ListMetricDimension> dimensions: new PowerChoiceIterable<ListMetricDimension>(dimensionChoices)) {
+          for (Collection<DimensionEntity> dimensions: new PowerChoiceIterable<DimensionEntity>(dimensionChoices)) {
             ListMetricManager.addMetric(accountId, metricName, namespace, toDimensionMap(dimensions));
           }
         }
@@ -133,12 +134,12 @@ public class ListMetricsTest {
       befores.add(start);
       befores.add(middle);
       befores.add(end);
-      dimensionChoices = new ArrayList<List<ListMetricDimension>>();
+      dimensionChoices = new ArrayList<List<DimensionEntity>>();
       for (int i=1;i<=n;i++) {
         // create choices for dimensions
-        ListMetricDimension d1 = new ListMetricDimension("dimension_" + i, "dimension_that");
-        ListMetricDimension d2 = new ListMetricDimension("dimension_" + i, "dimension_both");
-        ListMetricDimension d3 = new ListMetricDimension("dimension_" + i, "dimension_this");
+        DimensionEntity d1 = new DimensionEntity("dimension_" + i, "dimension_that");
+        DimensionEntity d2 = new DimensionEntity("dimension_" + i, "dimension_both");
+        DimensionEntity d3 = new DimensionEntity("dimension_" + i, "dimension_this");
         dimensionChoices.add(Lists.newArrayList(d1, d2, d3));
       }
       int totalReads = 0;
@@ -148,7 +149,7 @@ public class ListMetricsTest {
           for (String namespace: namespaces) {
             for (Date after: afters) {
               for (Date before: befores) {
-                for (Collection<ListMetricDimension> dimensions: new PowerChoiceIterable<ListMetricDimension>(dimensionChoices)) {
+                for (Collection<DimensionEntity> dimensions: new PowerChoiceIterable<DimensionEntity>(dimensionChoices)) {
                   Collection<ListMetric> metrics = ListMetricManager.listMetrics(accountName, metricName, namespace, toDimensionMap(dimensions), after, before);
                   int numValues = predictedResults(accountName, metricName, 
                       namespace, toDimensionMap(dimensions), 
@@ -218,9 +219,9 @@ public class ListMetricsTest {
     return sb.toString();
   }
   private static Map<String, String> toDimensionMap(
-      Collection<ListMetricDimension> dimensions) {
+      Collection<DimensionEntity> dimensions) {
     Map<String, String> retVal = new HashMap<String, String>();
-    for (ListMetricDimension simpleDimension: dimensions) {
+    for (DimensionEntity simpleDimension: dimensions) {
       retVal.put(simpleDimension.getName(), simpleDimension.getValue());
     }
     return retVal;

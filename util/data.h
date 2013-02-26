@@ -205,6 +205,12 @@ typedef enum instance_error_codes_t {
  |                                                                            |
 \*----------------------------------------------------------------------------*/
 
+//! Bundle task structure
+typedef struct bundleTask_t {
+    char instanceId[CHAR_BUFFER_SIZE]; //!< the instance indentifier string (i-XXXXXXXX) for this bundle task
+    char state[CHAR_BUFFER_SIZE];      //!< the state of the bundling task
+} bundleTask;
+
 //! Structure defining the public address type
 typedef struct publicAddressType_t {
     char uuid[48];                     //!< Unique User Identifier string field
@@ -218,7 +224,7 @@ typedef struct serviceInfoType_t {
     char name[32];                     //!< Service name string field
     char partition[32];                //!< Assigned partition name
     char uris[8][512];                 //!< Service URI list
-    int urisLen;                       //!< Number of service URI in the list
+    int urisLen;                       //!< Number of service URI in the list (a value of -1 indicates an error with the URIS)
 } serviceInfoType;
 
 //! Structure defining the service status
@@ -238,18 +244,18 @@ typedef struct ncMetadata_t {
     serviceInfoType services[16];      //!< List of services available
     serviceInfoType disabledServices[16];   //!< List of disabled services
     serviceInfoType notreadyServices[16];   //!< List of unavailable services
-    int servicesLen;                   //!< Number of available services in the available list
-    int disabledServicesLen;           //!< Number of disabled services in the disabled list
-    int notreadyServicesLen;           //!< Number of unavailable services in the unavailable list
+    int servicesLen;                   //!< Number of available services in the available list (a value of -1 indicates an error with the services)
+    int disabledServicesLen;           //!< Number of disabled services in the disabled list (a value of -1 indicates an error with the services)
+    int notreadyServicesLen;           //!< Number of unavailable services in the not ready list (a value of -1 indicates an error with the services)
 } ncMetadata;
 
 //! Structure defining the virtual boot record
 typedef struct virtualBootRecord_t {
     //! @{
-    //! @name first six fields arrive in requests (RunInstance, {Attach|Detach}Volume)
+    //! @name first six fields arrive in requests (RunInstance, {Attach|Detach} Volume)
     char resourceLocation[CHAR_BUFFER_SIZE];    //!< http|walrus|cloud|sc|iqn|aoe://... or none
     char guestDeviceName[SMALL_CHAR_BUFFER_SIZE];   //!< x?[vhsf]d[a-z]?[1-9]*
-    long long sizeBytes;                    //!< Size of the boot record in bytes
+    long long sizeBytes;               //!< Size of the boot record in bytes
     char formatName[SMALL_CHAR_BUFFER_SIZE];    //!< ext2|ext3|swap|none
     char id[SMALL_CHAR_BUFFER_SIZE];   //!< emi|eki|eri|vol|none
     char typeName[SMALL_CHAR_BUFFER_SIZE];  //!< machine|kernel|ramdisk|ephemeral|ebs
@@ -344,7 +350,7 @@ typedef struct ncInstance_t {
     char migration_src[HOSTNAME_SIZE]; //!< Name of the host from which the instance is being or needs to be migrated
     char migration_dst[HOSTNAME_SIZE]; //!< Name of the host to which the instance is being or needs to be migrated
 
-    char keyName[CHAR_BUFFER_SIZE * 4];
+    char keyName[CHAR_BUFFER_SIZE * 4]; //!< Name of the key to use for this instance
     char privateDnsName[CHAR_BUFFER_SIZE];  //!< Private DNS name
     char dnsName[CHAR_BUFFER_SIZE];    //!< DNS name
     int launchTime;                    //!< timestamp of RunInstances request arrival
@@ -374,11 +380,11 @@ typedef struct ncInstance_t {
 
     //! @{
     //! @name passed into NC via runInstances for safekeeping
-    char userData[CHAR_BUFFER_SIZE * 32];
-    char launchIndex[CHAR_BUFFER_SIZE];
-    char platform[CHAR_BUFFER_SIZE];
-    char groupNames[EUCA_MAX_GROUPS][CHAR_BUFFER_SIZE];
-    int groupNamesSize;
+    char userData[CHAR_BUFFER_SIZE * 32];   //!< user data to pass to the instance
+    char launchIndex[CHAR_BUFFER_SIZE]; //!< the launch index for this instance
+    char platform[CHAR_BUFFER_SIZE];   //!< the platform used for this instance (typically 'windows' or 'linux')
+    char groupNames[EUCA_MAX_GROUPS][CHAR_BUFFER_SIZE]; //!< Network groups assigned to this instance.
+    int groupNamesSize;                //!< Number of network groups.
     //! @}
 
     //! @{
@@ -445,31 +451,50 @@ extern const char *ncResourceTypeName[];
  |                                                                            |
 \*----------------------------------------------------------------------------*/
 
-int allocate_virtualMachine(virtualMachine * out, const virtualMachine * in);
-int allocate_netConfig(netConfig * out, char *pvMac, char *pvIp, char *pbIp, int vlan, int networkIndex);
+int allocate_virtualMachine(virtualMachine * pVirtMachineOut, const virtualMachine * pVirtMachingIn);
+int allocate_netConfig(netConfig * pNetCfg, const char *sPvMac, const char *sPvIp, const char *sPbIp, int vlan, int networkIndex);
 
-ncMetadata *allocate_metadata(char *correlationId, char *userId);
-void free_metadata(ncMetadata ** pMeta);
+//! @{
+//! @name Metadata APIs
+ncMetadata *allocate_metadata(const char *sCorrelationId, const char *sUserId) _attribute_wur_;
+void free_metadata(ncMetadata ** ppMeta);
+//! @}
 
-ncInstance *allocate_instance(char *uuid, char *instanceId, char *reservationId, virtualMachine * params, const char *stateName, int stateCode,
-                              char *userId, char *ownerId, char *accountId, netConfig * ncnet, char *keyName, char *userData, char *launchIndex,
-                              char *platform, int expiryTime, char **groupNames, int groupNamesSize);
-ncInstance *clone_instance(const ncInstance *old_instance);
-void free_instance(ncInstance ** instp);
-int add_instance(bunchOfInstances ** headp, ncInstance * instance);
-int remove_instance(bunchOfInstances ** headp, ncInstance * instance);
-int for_each_instance(bunchOfInstances ** headp, void (*function) (bunchOfInstances **, ncInstance *, void *), void *param);
-ncInstance *find_instance(bunchOfInstances ** headp, char *instanceId);
-ncInstance *get_instance(bunchOfInstances ** headp);
-int total_instances(bunchOfInstances ** headp);
+//! @{
+//! @name Instances APIs
+ncInstance *allocate_instance(const char *sUUID, const char *sInstanceId, const char *sReservationId, virtualMachine * pVirtMachine,
+                              const char *sStateName, int stateCode, const char *sUserId, const char *sOwnerId, const char *sAccountId,
+                              netConfig * pNetCfg, const char *sKeyName, const char *sUserData, const char *sLaunchIndex, const char *sPlatform,
+                              int expiryTime, char **asGroupNames, int groupNamesSize) _attribute_wur_;
+ncInstance *clone_instance(const ncInstance * old_instance);
+void free_instance(ncInstance ** ppInstance);
+int add_instance(bunchOfInstances ** ppHead, ncInstance * pInstance);
+int remove_instance(bunchOfInstances ** ppHead, ncInstance * pInstance);
+int for_each_instance(bunchOfInstances ** ppHead, void (*pFunction) (bunchOfInstances **, ncInstance *, void *), void *pParam);
+ncInstance *find_instance(bunchOfInstances ** ppHead, const char *instanceId);
+ncInstance *get_instance(bunchOfInstances ** ppHead);
+int total_instances(bunchOfInstances ** ppHead);
+//! @}
 
-ncResource *allocate_resource(char *nodeStatus, char *iqn, int memorySizeMax, int memorySizeAvailable, int diskSizeMax, int diskSizeAvailable,
-                              int numberOfCoresMax, int numberOfCoresAvailable, char *publicSubnets);
-void free_resource(ncResource ** resp);
+//! @{
+//! @name Resources APIs
+ncResource *allocate_resource(const char *sNodeStatus, const char *sIQN, int memorySizeMax, int memorySizeAvailable, int diskSizeMax,
+                              int diskSizeAvailable, int numberOfCoresMax, int numberOfCoresAvailable, const char *sPublicSubnets) _attribute_wur_;
+void free_resource(ncResource ** ppresource);
+//! @}
 
-boolean is_volume_used(const ncVolume * v);
-ncVolume *save_volume(ncInstance * instance, const char *volumeId, const char *remoteDev, const char *localDev, const char *localDevReal, const char *stateName);
-ncVolume *free_volume(ncInstance * instance, const char *volumeId);
+//! @{
+//! @name Volumes APIs
+boolean is_volume_used(const ncVolume * pVolume);
+ncVolume *save_volume(ncInstance * pInstance, const char *sVolumeId, const char *sRemoteDev, const char *sLocalDev, const char *sLocalDevReal, const char *sStateName);
+ncVolume *free_volume(ncInstance * pInstance, const char *sVolumeId);
+//! @}
+
+//! @{
+//! @name Bundling Task APIs
+bundleTask *allocate_bundleTask(ncInstance * pInstance) _attribute_wur_;
+//! @}
+
 migration_states migration_state_from_string(const char *migration_state_name);
 
 /*----------------------------------------------------------------------------*\

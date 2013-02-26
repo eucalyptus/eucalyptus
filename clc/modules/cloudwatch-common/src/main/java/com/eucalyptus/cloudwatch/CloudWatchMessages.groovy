@@ -1,47 +1,68 @@
-
+/*************************************************************************
+ * Copyright 2009-2013 Eucalyptus Systems, Inc.
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; version 3 of the License.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see http://www.gnu.org/licenses/.
+ *
+ * Please contact Eucalyptus Systems, Inc., 6755 Hollister Ave., Goleta
+ * CA 93117, USA or visit http://www.eucalyptus.com/licenses/ if you need
+ * additional information or have any questions.
+ ************************************************************************/
 package com.eucalyptus.cloudwatch;
-import java.util.Date;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 import edu.ucsb.eucalyptus.msgs.EucalyptusData;
-import java.util.ArrayList;
-import java.math.BigInteger;
 
 import com.eucalyptus.binding.HttpEmbedded;
 import com.eucalyptus.binding.HttpParameterMapping;
 import com.eucalyptus.component.ComponentId;
 
-
 public class GetMetricStatisticsType extends CloudWatchMessage {
   String namespace;
   String metricName;
+  @HttpEmbedded
   Dimensions dimensions;
   Date startTime;
   Date endTime;
-  BigInteger period;
+  Integer period;
+  @HttpEmbedded
   Statistics statistics;
   String unit;
   public GetMetricStatisticsType() {  }
 }
 public class DescribeAlarmsType extends CloudWatchMessage {
+  @HttpEmbedded
   AlarmNames alarmNames;
   String alarmNamePrefix;
   String stateValue;
   String actionPrefix;
-  BigInteger maxRecords;
+  Integer maxRecords;
   String nextToken;
   public DescribeAlarmsType() {  }
 }
 public class Dimensions extends EucalyptusData {
   public Dimensions() {  }
+  @HttpEmbedded(multiple=true)
+  @HttpParameterMapping(parameter="member")
   ArrayList<Dimension> member = new ArrayList<Dimension>();
 }
 public class PutMetricDataType extends CloudWatchMessage {
   String namespace;
+  @HttpEmbedded(multiple=true)
   MetricData metricData;
   public PutMetricDataType() {  }
 }
 public class EnableAlarmActionsResponseType extends CloudWatchMessage {
   public EnableAlarmActionsResponseType() {  }
+  @HttpEmbedded
   ResponseMetadata responseMetadata = new ResponseMetadata();
 }
 public class ResponseMetadata extends EucalyptusData {
@@ -67,16 +88,20 @@ public class PutMetricAlarmType extends CloudWatchMessage {
   String alarmName;
   String alarmDescription;
   Boolean actionsEnabled;
+  @HttpEmbedded
   ResourceList okActions;
+  @HttpEmbedded
   ResourceList alarmActions;
+  @HttpEmbedded
   ResourceList insufficientDataActions;
   String metricName;
   String namespace;
   String statistic;
+  @HttpEmbedded
   Dimensions dimensions;
-  BigInteger period;
+  Integer period;
   String unit;
-  BigInteger evaluationPeriods;
+  Integer evaluationPeriods;
   Double threshold;
   String comparisonOperator;
   public PutMetricAlarmType() {  }
@@ -109,11 +134,14 @@ public class DescribeAlarmsResponseType extends CloudWatchMessage {
   DescribeAlarmsResult describeAlarmsResult = new DescribeAlarmsResult();
   ResponseMetadata responseMetadata = new ResponseMetadata();
 }
-public class MetricData extends CloudWatchMessage {
+public class MetricData extends EucalyptusData {
   public MetricData() {  }
+  @HttpEmbedded(multiple=true)
+  @HttpParameterMapping(parameter="member")
   ArrayList<MetricDatum> member = new ArrayList<MetricDatum>();
 }
 public class EnableAlarmActionsType extends CloudWatchMessage {
+  @HttpEmbedded
   AlarmNames alarmNames;
   public EnableAlarmActionsType() {  }
 }
@@ -132,8 +160,9 @@ public class DescribeAlarmsForMetricType extends CloudWatchMessage {
   String metricName;
   String namespace;
   String statistic;
+  @HttpEmbedded
   Dimensions dimensions;
-  BigInteger period;
+  Integer period;
   String unit;
   public DescribeAlarmsForMetricType() {  }
 }
@@ -146,17 +175,21 @@ public class Error extends EucalyptusData {
 }
 public class ResourceList extends EucalyptusData {
   public ResourceList() {  }
+  @HttpParameterMapping(parameter="member")
   ArrayList<String> member = new ArrayList<String>();
 }
 public class MetricDatum extends EucalyptusData {
   String metricName;
+  @HttpEmbedded
   Dimensions dimensions;
   Date timestamp;
   Double value;
+  @HttpEmbedded
   StatisticSet statisticValues;
   String unit;
   public MetricDatum() {  }
 }
+
 public class StatisticSet extends EucalyptusData {
   Double sampleCount;
   Double sum;
@@ -169,6 +202,7 @@ public class Datapoints extends EucalyptusData {
   ArrayList<Datapoint> member = new ArrayList<Datapoint>();
 }
 public class DeleteAlarmsType extends CloudWatchMessage {
+  @HttpEmbedded
   AlarmNames alarmNames;
   public DeleteAlarmsType() {  }
 }
@@ -177,7 +211,7 @@ public class DescribeAlarmsResult extends EucalyptusData {
   String nextToken;
   public DescribeAlarmsResult() {  }
 }
-public class Metric extends CloudWatchMessage {
+public class Metric extends EucalyptusData {
   String namespace;
   String metricName;
   Dimensions dimensions;
@@ -194,10 +228,12 @@ public class DeleteAlarmsResponseType extends CloudWatchMessage {
 }
 public class AlarmNames extends EucalyptusData {
   public AlarmNames() {  }
+  @HttpParameterMapping(parameter="member")
   ArrayList<String> member = new ArrayList<String>();
 }
-public class Statistics extends CloudWatchMessage {
+public class Statistics extends EucalyptusData {
   public Statistics() {  }
+  @HttpParameterMapping(parameter="member")
   ArrayList<String> member = new ArrayList<String>();
 }
 public class ListMetricsType extends CloudWatchMessage {
@@ -230,6 +266,7 @@ public class AlarmHistoryItems extends EucalyptusData {
   ArrayList<AlarmHistoryItem> member = new ArrayList<AlarmHistoryItem>();
 }
 public class DisableAlarmActionsType extends CloudWatchMessage {
+  @HttpEmbedded
   AlarmNames alarmNames;
   public DisableAlarmActionsType() {  }
 }
@@ -238,7 +275,7 @@ public class CloudWatchErrorResponse extends CloudWatchMessage {
   public CloudWatchErrorResponse() {  }
   ArrayList<Error> error = new ArrayList<Error>();
 }
-public class Metrics extends CloudWatchMessage {
+public class Metrics extends EucalyptusData {
   public Metrics() {  }
   ArrayList<Metric> member = new ArrayList<Metric>();
 }
@@ -275,7 +312,7 @@ public class DescribeAlarmHistoryType extends CloudWatchMessage {
   String historyItemType;
   Date startDate;
   Date endDate;
-  BigInteger maxRecords;
+  Integer maxRecords;
   String nextToken;
   public DescribeAlarmHistoryType() {  }
 }
@@ -290,7 +327,7 @@ public class DescribeAlarmsForMetricResult extends EucalyptusData {
   MetricAlarms metricAlarms;
   public DescribeAlarmsForMetricResult() {  }
 }
-public class MetricAlarm extends CloudWatchMessage {
+public class MetricAlarm extends EucalyptusData {
   String alarmName;
   String alarmArn;
   String alarmDescription;
@@ -307,9 +344,9 @@ public class MetricAlarm extends CloudWatchMessage {
   String namespace;
   String statistic;
   Dimensions dimensions;
-  BigInteger period;
+  Integer period;
   String unit;
-  BigInteger evaluationPeriods;
+  Integer evaluationPeriods;
   Double threshold;
   String comparisonOperator;
   public MetricAlarm() {  }

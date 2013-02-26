@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<binding name="elasticloadbalancing_amazonaws_com_doc_2012_06_01" xmlns:tns="http://elasticloadbalancing.amazonaws.com/doc/2012-06-01/" force-classes="true" add-constructors="true">
-  <namespace uri="http://elasticloadbalancing.amazonaws.com/doc/2012-06-01/" prefix="tns" default="elements"/>
+<binding name="elasticloadbalancing_amazonaws_com_doc_2011_04_05" xmlns:tns="http://elasticloadbalancing.amazonaws.com/doc/2011-04-05/" force-classes="true" add-constructors="true">
+  <namespace uri="http://elasticloadbalancing.amazonaws.com/doc/2011-04-05/" default="elements"/>
   <mapping class="com.eucalyptus.loadbalancing.ResponseMetadata" abstract="true">
     <value name="RequestId" field="requestId" usage="required"/>
   </mapping>
@@ -11,11 +11,25 @@
     <structure name="Detail" field="detail" usage="required" type="com.eucalyptus.loadbalancing.ErrorDetail"/>
   </mapping>
   <mapping class="com.eucalyptus.loadbalancing.ErrorDetail" abstract="true"/>
-  <mapping name="ErrorResponse" class="com.eucalyptus.loadbalancing.ErrorResponse">
+  <mapping name="ErrorResponse" class="com.eucalyptus.loadbalancing.ErrorResponse" extends="com.eucalyptus.loadbalancing.LoadBalancingMessage">
+    <structure map-as="com.eucalyptus.loadbalancing.LoadBalancingMessage"/>
     <collection field="error">
       <structure name="Error" type="com.eucalyptus.loadbalancing.Error"/>
     </collection>
     <value name="RequestId" field="requestId" usage="required"/>
+  </mapping>
+  <mapping name="PutServoStates" class="com.eucalyptus.loadbalancing.PutServoStatesType" extends="com.eucalyptus.loadbalancing.LoadBalancingMessage">
+    <structure map-as="com.eucalyptus.loadbalancing.LoadBalancingMessage"/>
+    <value name="InstanceId" field="instanceId" usage="required"/>
+    <structure name="Instances" field="instances" usage="optional" type="com.eucalyptus.loadbalancing.Instances"/>
+  <!--  <structure name="MetricData" field="metricData" usage="optional" type="com.eucalyptus.cloudwatch.MetricData"/> -->
+  </mapping>
+  <mapping name="PutServoStatesResponse" class="com.eucalyptus.loadbalancing.PutServoStatesResponseType" extends="com.eucalyptus.loadbalancing.LoadBalancingMessage">
+    <structure map-as="com.eucalyptus.loadbalancing.LoadBalancingMessage"/>
+    <structure name="PutServoStatesResult" field="putServoStatesResult" usage="required" type="com.eucalyptus.loadbalancing.PutServoStatesResult"/>
+    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.loadbalancing.ResponseMetadata"/>
+  </mapping>
+  <mapping class="com.eucalyptus.loadbalancing.PutServoStatesResult" abstract="true">
   </mapping>
   <mapping name="DescribeLoadBalancerPolicyTypes" class="com.eucalyptus.loadbalancing.DescribeLoadBalancerPolicyTypesType" extends="com.eucalyptus.loadbalancing.LoadBalancingMessage">
     <structure map-as="com.eucalyptus.loadbalancing.LoadBalancingMessage"/>
@@ -398,8 +412,7 @@
       <value name="member" type="java.lang.String"/>
     </collection>
   </mapping>
-  <mapping class="com.eucalyptus.loadbalancing.Subnets" abstract="true" extends="com.eucalyptus.loadbalancing.LoadBalancingMessage">
-    <structure map-as="com.eucalyptus.loadbalancing.LoadBalancingMessage"/>
+  <mapping class="com.eucalyptus.loadbalancing.Subnets" abstract="true">
     <collection field="member">
       <value name="member" type="java.lang.String"/>
     </collection>
@@ -418,8 +431,7 @@
     <value name="AttributeName" field="attributeName" usage="optional"/>
     <value name="AttributeValue" field="attributeValue" usage="optional"/>
   </mapping>
-  <mapping class="com.eucalyptus.loadbalancing.AppCookieStickinessPolicy" abstract="true" extends="com.eucalyptus.loadbalancing.LoadBalancingMessage">
-    <structure map-as="com.eucalyptus.loadbalancing.LoadBalancingMessage"/>
+  <mapping class="com.eucalyptus.loadbalancing.AppCookieStickinessPolicy" abstract="true">
     <value name="PolicyName" field="policyName" usage="optional"/>
     <value name="CookieName" field="cookieName" usage="optional"/>
   </mapping>
@@ -465,8 +477,7 @@
       <value name="member" type="java.lang.String"/>
     </collection>
   </mapping>
-  <mapping class="com.eucalyptus.loadbalancing.HealthCheck" abstract="true" extends="com.eucalyptus.loadbalancing.LoadBalancingMessage">
-    <structure map-as="com.eucalyptus.loadbalancing.LoadBalancingMessage"/>
+  <mapping class="com.eucalyptus.loadbalancing.HealthCheck" abstract="true">
     <value name="Target" field="target" usage="required"/>
     <value name="Interval" field="interval" usage="required"/>
     <value name="Timeout" field="timeout" usage="required"/>
@@ -491,13 +502,11 @@
     <structure name="Listener" field="listener" usage="optional" type="com.eucalyptus.loadbalancing.Listener"/>
     <structure name="PolicyNames" field="policyNames" usage="optional" type="com.eucalyptus.loadbalancing.PolicyNames"/>
   </mapping>
-  <mapping class="com.eucalyptus.loadbalancing.LBCookieStickinessPolicy" abstract="true" extends="com.eucalyptus.loadbalancing.LoadBalancingMessage">
-    <structure map-as="com.eucalyptus.loadbalancing.LoadBalancingMessage"/>
+  <mapping class="com.eucalyptus.loadbalancing.LBCookieStickinessPolicy" abstract="true">
     <value name="PolicyName" field="policyName" usage="optional"/>
     <value name="CookieExpirationPeriod" field="cookieExpirationPeriod" usage="optional"/>
   </mapping>
-  <mapping class="com.eucalyptus.loadbalancing.Policies" abstract="true" extends="com.eucalyptus.loadbalancing.LoadBalancingMessage">
-    <structure map-as="com.eucalyptus.loadbalancing.LoadBalancingMessage"/>
+  <mapping class="com.eucalyptus.loadbalancing.Policies" abstract="true">
     <structure name="AppCookieStickinessPolicies" field="appCookieStickinessPolicies" usage="optional" type="com.eucalyptus.loadbalancing.AppCookieStickinessPolicies"/>
     <structure name="LBCookieStickinessPolicies" field="lbCookieStickinessPolicies" usage="optional" type="com.eucalyptus.loadbalancing.LBCookieStickinessPolicies"/>
     <structure name="OtherPolicies" field="otherPolicies" usage="optional" type="com.eucalyptus.loadbalancing.PolicyNames"/>

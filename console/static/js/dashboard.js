@@ -102,9 +102,13 @@
         var results = describe('instance');
         $.each(results, function (idx, instance){
           if (az==='all' || instance.placement === az ){
-            if (instance.state === 'running')
+             var state = instance.state;
+             if (state == undefined) {
+               state = instance._state.name;
+             }
+            if (state === 'running')
               numRunning++;
-            else if (instance.state === 'stopped')
+            else if (state === 'stopped')
               numStopped++;
           }
         });

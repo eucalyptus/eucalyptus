@@ -142,7 +142,7 @@
 \*----------------------------------------------------------------------------*/
 
 char *euca_strreplace(char **haystack, char *source, char *value);
-int euca_lscanf(const char *haystack, const char *format, void *value);
+boolean euca_lscanf(const char *haystack, const char *format, void *value);
 char *euca_strestr(const char *haystack, const char *begin, const char *end);
 long long euca_strtoll(const char *string, const char *begin, const char *end);
 char *euca_strduptolower(const char *restrict string);
@@ -190,51 +190,51 @@ char *euca_strreplace(char **haystack, char *search, char *value)
 {
 #define MAX_BUFFER_SIZE       (32768 * 2)
 
-    char *buf = NULL;
-    char *start = NULL;
-    char *substart = NULL;
-    char *tok = NULL;
-    char *new_string = NULL;
+    char *sBuffer = NULL;
+    char *pStart = NULL;
+    char *pSubStart = NULL;
+    char *sToken = NULL;
+    char *sNewString = NULL;
 
     // Make sure all our parameters are valid
     if ((haystack == NULL) || (*haystack == NULL) || (search == NULL) || (search[0] == '\0') || (value == NULL))
         return (NULL);
 
     // Allocate some memory for processing
-    if ((buf = EUCA_ALLOC(MAX_BUFFER_SIZE, sizeof(char))) == NULL)
+    if ((sBuffer = EUCA_ALLOC(MAX_BUFFER_SIZE, sizeof(char))) == NULL)
         return (NULL);
 
     // Allocate memory for the result
-    if ((new_string = EUCA_ZALLOC(MAX_BUFFER_SIZE, sizeof(char))) == NULL) {
-        EUCA_FREE(buf);
+    if ((sNewString = EUCA_ZALLOC(MAX_BUFFER_SIZE, sizeof(char))) == NULL) {
+        EUCA_FREE(sBuffer);
         return (NULL);
     }
     // Scan our haystack for the string to replace
-    start = *haystack;
-    substart = start;
-    tok = strstr(start, search);
-    while (tok != NULL) {
-        *tok = '\0';
+    pStart = *haystack;
+    pSubStart = pStart;
+    sToken = strstr(pStart, search);
+    while (sToken != NULL) {
+        *sToken = '\0';
 
-        snprintf(buf, MAX_BUFFER_SIZE, "%s%s%s", new_string, substart, value);
-        strncpy(new_string, buf, MAX_BUFFER_SIZE);
+        snprintf(sBuffer, MAX_BUFFER_SIZE, "%s%s%s", sNewString, pSubStart, value);
+        strncpy(sNewString, sBuffer, MAX_BUFFER_SIZE);
 
-        tok += strlen(search);
-        substart = tok;
-        tok = strstr(substart, search);
+        sToken += strlen(search);
+        pSubStart = sToken;
+        sToken = strstr(pSubStart, search);
     }
 
     // Build the final result
-    snprintf(buf, MAX_BUFFER_SIZE, "%s%s", new_string, substart);
-    strncpy(new_string, buf, MAX_BUFFER_SIZE);
+    snprintf(sBuffer, MAX_BUFFER_SIZE, "%s%s", sNewString, pSubStart);
+    strncpy(sNewString, sBuffer, MAX_BUFFER_SIZE);
 
     // Free our memory
-    EUCA_FREE(buf);
+    EUCA_FREE(sBuffer);
     EUCA_FREE(*haystack);
 
     // Set the return value and we're done.
-    *haystack = new_string;
-    return (new_string);
+    *haystack = sNewString;
+    return (sNewString);
 
 #undef MAX_BUFFER_SIZE
 }
@@ -247,18 +247,18 @@ char *euca_strreplace(char **haystack, char *search, char *value)
 //! @param[in]  format The format string printf style
 //! @param[out] value the variable to set in return.
 //!
-//! @return 1 if we have a match, 0 otherwise
+//! @return TRUE if we have a match, FALSE otherwise
 //!
 //! @pre The haystack, format and value fields must not be NULL
 //!
 //! @post If we have a matching format, the value field is being updated
 //!
-int euca_lscanf(const char *haystack, const char *format, void *value)
+boolean euca_lscanf(const char *haystack, const char *format, void *value)
 {
-    int found = 0;
-    char *copy = NULL;
-    char *start = NULL;
-    char *end = NULL;
+    char *sCopy = NULL;
+    char *pStart = NULL;
+    char *pEnd = NULL;
+    boolean found = FALSE;
     boolean newline = FALSE;
 
     // Make sure our given parameters are valid
@@ -266,33 +266,33 @@ int euca_lscanf(const char *haystack, const char *format, void *value)
         return (0);
 
     // Duplicate the haystack so we can do some modifications as we go
-    if ((copy = strdup(haystack)) == NULL)
+    if ((sCopy = strdup(haystack)) == NULL)
         return (0);
 
     // Scan each lines
-    for (start = copy, found = 0; (start && (*start != '\0') && !found); start = end + 1) {
+    for (pStart = sCopy, found = FALSE; (pStart && (*pStart != '\0') && !found); pStart = pEnd + 1) {
         newline = FALSE;
 
         // Scan from start to find a '\n' or '\0'
-        for (end = start + 1; ((*end != '\n') && (*end != '\0')); end++) ;
+        for (pEnd = pStart + 1; ((*pEnd != '\n') && (*pEnd != '\0')); pEnd++) ;
 
         // If we have a new line characters, replace with a NULL-Termination
-        if (*end == '\n') {
-            *end = '\0';
+        if (*pEnd == '\n') {
+            *pEnd = '\0';
             newline = TRUE;
         }
         // Scan this substring for our format
-        if (sscanf(start, format, value) == 1) {
+        if (sscanf(pStart, format, value) == 1) {
             // Got it!!!
-            found = 1;
+            found = TRUE;
         } else if (!newline) {
             // so that start == '\0'
-            end--;
+            pEnd--;
         }
     }
 
     // Make sure we free our allocated copy before we return.
-    EUCA_FREE(copy);
+    EUCA_FREE(sCopy);
     return (found);
 }
 
@@ -318,38 +318,38 @@ int euca_lscanf(const char *haystack, const char *format, void *value)
 //!
 char *euca_strestr(const char *haystack, const char *begin, const char *end)
 {
-    int len = 0;
-    char *b = NULL;
-    char *e = NULL;
-    char *buf = NULL;
+    char *pB = NULL;
+    char *pE = NULL;
+    char *sBuffer = NULL;
+    ssize_t len = 0;
 
     // Make sure our parameters are valid
     if (!haystack || !begin || !end || (strlen(haystack) < 3) || (strlen(begin) < 1) || (strlen(end) < 1)) {
         return (NULL);
     }
     // Find the begining needle
-    if ((b = strstr(haystack, begin)) == NULL) {
+    if ((pB = strstr(haystack, begin)) == NULL) {
         return (NULL);
     }
     // Find the ending needle
-    if ((e = strstr(haystack, end)) == NULL) {
+    if ((pE = strstr(haystack, end)) == NULL) {
         return (NULL);
     }
     // Move 'b' at the end of the begining needle (we don't want
     // begin in resulting string).
-    b += strlen(begin);
+    pB += strlen(begin);
 
     // Make sure begin is located before end.
-    if ((len = e - b) < 0) {
+    if ((len = (pE - pB)) < 0) {
         return (NULL);
     }
     // Allocate memory for our resulting string
-    if ((buf = EUCA_ALLOC((len + 1), sizeof(char))) != NULL) {
-        strncpy(buf, b, len);
-        buf[len] = '\0';
+    if ((sBuffer = EUCA_ALLOC((len + 1), sizeof(char))) != NULL) {
+        strncpy(sBuffer, pB, len);
+        sBuffer[len] = '\0';
     }
 
-    return (buf);
+    return (sBuffer);
 }
 
 //!
@@ -369,13 +369,13 @@ char *euca_strestr(const char *haystack, const char *begin, const char *end)
 //!
 long long euca_strtoll(const char *string, const char *begin, const char *end)
 {
-    char *buf = NULL;
+    char *sBuffer = NULL;
     long long val = -1L;
 
     // Retrieve the long integer value from the string and convert
-    if ((buf = euca_strestr(string, begin, end)) != NULL) {
-        val = atoll(buf);
-        EUCA_FREE(buf);
+    if ((sBuffer = euca_strestr(string, begin, end)) != NULL) {
+        val = atoll(sBuffer);
+        EUCA_FREE(sBuffer);
     }
 
     return (val);
@@ -396,21 +396,21 @@ long long euca_strtoll(const char *string, const char *begin, const char *end)
 //!
 char *euca_strduptolower(const char *restrict string)
 {
-    char *lc = NULL;
+    char *sLower = NULL;
     register size_t i = 0;
     register size_t len = 0;
 
     // Was str provided?
     if (string) {
-        if ((lc = strdup(string)) != NULL) {
-            len = strlen(lc);
+        if ((sLower = strdup(string)) != NULL) {
+            len = strlen(sLower);
             for (i = 0; i < len; i++) {
-                lc[i] = tolower(lc[i]);
+                sLower[i] = tolower(sLower[i]);
             }
         }
     }
 
-    return (lc);
+    return (sLower);
 }
 
 //!
@@ -428,9 +428,9 @@ char *euca_strduptolower(const char *restrict string)
 //!
 char *euca_strdupcat(char *restrict s1, const char *restrict s2)
 {
-    int len = 0;
     int s1len = 0;
-    char *ret = NULL;
+    char *sRet = NULL;
+    size_t len = 0;
 
     // Was s1 provided?
     if (s1) {
@@ -443,18 +443,18 @@ char *euca_strdupcat(char *restrict s1, const char *restrict s2)
     }
     // Allocate the memory we need plus the NULL terminating character and concatenate
     // the two strings
-    if ((ret = EUCA_ZALLOC((len + 1), sizeof(char))) != NULL) {
+    if ((sRet = EUCA_ZALLOC((len + 1), sizeof(char))) != NULL) {
         if (s1) {
-            strncat(ret, s1, len);
+            strncat(sRet, s1, len);
             EUCA_FREE(s1);
         }
 
         if (s2) {
-            strncat(ret, s2, (len - s1len));
+            strncat(sRet, s2, (len - s1len));
         }
     }
 
-    return (ret);
+    return (sRet);
 }
 
 //!
@@ -473,14 +473,14 @@ char *euca_strdupcat(char *restrict s1, const char *restrict s2)
 //!
 char *euca_strncat(char *restrict dest, const char *restrict src, size_t size)
 {
-    int len = 0;
-    char *to = NULL;
+    char *sTo = NULL;
+    size_t len = 0;
 
     // Was dest provided?
     if (dest) {
         len = strlen(dest);
-        to = dest + len;
-        euca_strncpy(to, src, (size - len));
+        sTo = dest + len;
+        euca_strncpy(sTo, src, (size - len));
     }
 
     return (dest);
@@ -509,7 +509,7 @@ char *euca_strncat(char *restrict dest, const char *restrict src, size_t size)
 //!
 char *euca_strncpy(char *restrict to, const char *restrict from, size_t size)
 {
-    char *ret = NULL;
+    char *sRet = NULL;
 
     // Make sure we have a string to write to
     if (to != NULL) {
@@ -519,10 +519,10 @@ char *euca_strncpy(char *restrict to, const char *restrict from, size_t size)
             return (to);
         }
         // Copy from into to
-        ret = strncpy(to, from, size);
+        sRet = strncpy(to, from, size);
 
         // Make sure we're NULL-Terminated.
-        ret[size - 1] = '\0';
+        sRet[size - 1] = '\0';
     }
-    return (ret);
+    return (sRet);
 }

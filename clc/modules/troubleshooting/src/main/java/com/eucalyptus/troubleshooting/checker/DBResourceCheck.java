@@ -35,6 +35,7 @@ import org.apache.log4j.Logger;
 import org.logicalcobwebs.proxool.ProxoolException;
 import org.logicalcobwebs.proxool.ProxoolFacade;
 
+import com.eucalyptus.bootstrap.OrderedShutdown;
 import com.eucalyptus.component.ComponentId;
 import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.Faults;
@@ -57,6 +58,16 @@ import com.eucalyptus.component.id.Eucalyptus;
 public class DBResourceCheck extends Thread {
 	private final static Logger LOG = Logger.getLogger(DBResourceCheck.class);
 	private static final ScheduledExecutorService pool = Executors.newSingleThreadScheduledExecutor();
+	private static final Runnable shutdownHook = new Runnable( ) {
+
+    @Override
+    public void run( ) {
+      if ( !pool.isShutdown( ) ) {
+        pool.shutdownNow( );
+      }
+    }
+    
+  };
 	private static final int OUT_OF_DB_CONNECTIONS_FAULT_ID = 1006;
 	private final static long DEFAULT_POLL_INTERVAL = 60 * 1000;
 	private static final Class<? extends ComponentId> DEFAULT_COMPONENT_ID_CLASS = Eucalyptus.class;
@@ -65,6 +76,7 @@ public class DBResourceCheck extends Thread {
 	 * Marking the constructor private on purpose, so that no code can instantiate an object this class
 	 */
 	private DBResourceCheck() {}
+
 	/**
 	 * <p>
 	 * Kicks off an infinite series of disk resource checks with a delay in between consecutive checks. {@link ScheduledExecutorService#scheduleWithFixedDelay
@@ -81,6 +93,7 @@ public class DBResourceCheck extends Thread {
 	 * @return ScheduledFuture
 	 */
 	public static ScheduledFuture<?> start(DBChecker checker) {
+    OrderedShutdown.registerPreShutdownHook( shutdownHook );
 		return pool.scheduleWithFixedDelay(checker, 0, checker.pollInterval, TimeUnit.MILLISECONDS);
 	}
 

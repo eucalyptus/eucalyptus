@@ -120,6 +120,9 @@ def start_console():
             (r"/fonts/(.*)", tornado.web.StaticFileHandler, {'path': os.path.join(webroot, 'fonts')}),
             (r"/ec2", api.ComputeHandler),
             (r"/s3", api.StorageHandler),
+            (r"/monitor", api.WatchHandler),
+            (r"/autoscaling", api.ScaleHandler),
+            (r"/elb", api.BalanceHandler),
             (r"/checkip", eucaconsole.CheckIpHandler),
             (r"/(.*)", eucaconsole.RootHandler),
         ], **settings)
@@ -140,7 +143,8 @@ def start_console():
 
 def usage():
     print """
-    %s [-d | --daemonize] [-c <config file> | --config <config file>]
+    %s [-d | --daemonize] [-c <config file> | --config <config file>] [-p <pid file> | --pidfile <pid file>]
+
     """ % (os.path.basename(sys.argv[0]))
     sys.exit(1)
 
@@ -153,7 +157,7 @@ if __name__ == "__main__":
     config_file = None
     try:
         opts, _ = getopt.getopt(sys.argv[1:],
-            "hdc:", ["--help", "--daemonize", "--config", "--pidfile"])
+            "hdc:p:", ["help", "daemonize", "config=", "pidfile="])
         for arg, value in opts:
             if arg == "-d" or arg == "--daemonize":
                 daemon = True

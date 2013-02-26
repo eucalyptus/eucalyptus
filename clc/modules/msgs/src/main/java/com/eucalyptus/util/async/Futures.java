@@ -80,13 +80,16 @@
 package com.eucalyptus.util.async;
 
 import java.util.Arrays;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Callable;
+import java.util.concurrent.CancellationException;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 import java.util.concurrent.FutureTask;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.RunnableFuture;
+import java.util.concurrent.atomic.AtomicInteger;
 import org.apache.log4j.Logger;
 import com.eucalyptus.empyrean.Empyrean;
 import com.eucalyptus.records.Logs;
@@ -94,6 +97,8 @@ import com.eucalyptus.system.Threads;
 import com.eucalyptus.util.concurrent.GenericCheckedListenableFuture;
 import com.eucalyptus.util.concurrent.ListenableFuture;
 import com.google.common.base.Predicate;
+import com.google.common.collect.Iterables;
+import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import static com.eucalyptus.util.Parameters.checkParam;
 import static org.hamcrest.Matchers.emptyArray;
@@ -249,5 +254,37 @@ public class Futures {
       return sequence( nextCallables );
     }
   }
-  
+
+  /**
+   * TODO:GUAVA: remove and use the method available in Guava 10 
+   */
+  public static <R> CheckedListenableFuture<List<R>> allAsList( final List<CheckedListenableFuture<R>> futures ) {
+    final GenericCheckedListenableFuture<List<R>> combined = new GenericCheckedListenableFuture<List<R>>();
+    final List<R> resultList = Lists.newArrayListWithCapacity( futures.size() ); 
+    Iterables.addAll( resultList, Iterables.limit( Iterables.cycle( (R)null ), futures.size() ) );
+    final AtomicInteger completionCountdown = new AtomicInteger( futures.size() );
+    for ( int i=0; i<futures.size(); i++ ) {
+      final int resultIndex = i;
+      final CheckedListenableFuture<R> future = futures.get( i );
+      future.addListener( new Runnable() {
+        @Override
+        public void run() {
+          try {
+            resultList.set( resultIndex, future.get() ); 
+          } catch ( final ExecutionException e ){
+            combined.setException( e.getCause() );
+          } catch ( CancellationException e ) {
+            combined.cancel( false );
+          } catch ( InterruptedException e ) {
+            // complete so can't happen
+          }
+          if ( completionCountdown.decrementAndGet() == 0 ) {
+            combined.set( resultList );    
+          }
+        }
+      } );
+    }
+    
+    return combined;    
+  }
 }

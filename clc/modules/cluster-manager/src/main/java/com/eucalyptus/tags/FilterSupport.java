@@ -19,6 +19,9 @@
  ************************************************************************/
 package com.eucalyptus.tags;
 
+import static org.hamcrest.Matchers.not;
+import static org.hamcrest.Matchers.notNullValue;
+import static org.hamcrest.text.IsEmptyString.isEmptyOrNullString;
 import static com.eucalyptus.tags.FilterSupport.PersistenceFilter.persistenceFilter;
 import java.util.Collection;
 import java.util.Collections;
@@ -42,6 +45,7 @@ import com.eucalyptus.auth.login.AuthenticationException;
 import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.crypto.util.Timestamps;
+import com.eucalyptus.util.Parameters;
 import com.google.common.base.CharMatcher;
 import com.google.common.base.Function;
 import com.google.common.base.Functions;
@@ -49,6 +53,7 @@ import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
 import com.google.common.base.Splitter;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
@@ -59,12 +64,14 @@ import com.google.common.collect.Sets;
  */
 public abstract class FilterSupport<RT> {
 
-  private static final ConcurrentMap<Class<?>,FilterSupport> supportByClass = Maps.newConcurrentMap();
+  private static final ConcurrentMap<SupportKey,FilterSupport> supportMap = Maps.newConcurrentMap();
 
   private final Class<RT> resourceClass;
+  private final String qualifier;
   private Class<? extends Tag> tagClass;
   private final String tagFieldName;
   private final String resourceFieldName;
+  private final Set<String> internalFilters;
   private final Map<String,Function<? super String,Predicate<? super RT>>> predicateFunctions;
   private final Map<String,String> aliases;
   private final Map<String,PersistenceFilter> persistenceFilters;
@@ -77,9 +84,11 @@ public abstract class FilterSupport<RT> {
    */
   protected FilterSupport( @Nonnull final Builder<RT> builder ) {
     this.resourceClass = builder.resourceClass;
+    this.qualifier = builder.qualifier;
     this.tagClass = builder.tagClass;
     this.tagFieldName = builder.tagFieldName;
     this.resourceFieldName = builder.resourceFieldName;
+    this.internalFilters = builder.buildInternalFilters();
     this.predicateFunctions = builder.buildPredicateFunctions();
     this.aliases = builder.buildAliases();
     this.persistenceFilters = builder.buildPersistenceFilters();
@@ -93,7 +102,20 @@ public abstract class FilterSupport<RT> {
    * @return The builder to use
    */
   protected static <RT> Builder<RT> builderFor( final Class<RT> resourceClass ) {
-    return new Builder<RT>( resourceClass );
+    return new Builder<RT>( resourceClass, Filters.DEFAULT_FILTERS );
+  }
+
+  /**
+   * Create a configuration builder for the specified resource class.
+   *
+   * @param resourceClass The resource class
+   * @param qualifier The filter set qualifier
+   * @param <RT> The resource type
+   * @return The builder to use
+   */
+  protected static <RT> Builder<RT> qualifierBuilderFor( final Class<RT> resourceClass,
+                                                         final String qualifier ) {
+    return new Builder<RT>( resourceClass, qualifier );
   }
 
   /**
@@ -103,6 +125,8 @@ public abstract class FilterSupport<RT> {
    */
   protected static class Builder<RT> {
     private final Class<RT> resourceClass;
+    private final String qualifier;
+    private final Set<String> internalFilters = Sets.newHashSet();
     private final Map<String,Function<? super String,Predicate<? super RT>>> predicateFunctions =
         Maps.newHashMap();
     private final Map<String,String> aliases = Maps.newHashMap();
@@ -111,8 +135,12 @@ public abstract class FilterSupport<RT> {
     private String tagFieldName; // usually "tags"
     private String resourceFieldName;
 
-    private Builder( Class<RT> resourceClass ) {
+    private Builder( final Class<RT> resourceClass,
+                     final String qualifier ) {
+      Parameters.checkParam( "Resource class", resourceClass, notNullValue() );
+      Parameters.checkParam( "Qualifier", qualifier, not( isEmptyOrNullString() ) );
       this.resourceClass = resourceClass;
+      this.qualifier = qualifier;
     }
 
     /**
@@ -257,6 +285,23 @@ public abstract class FilterSupport<RT> {
      */
     public Builder<RT> withStringProperty( final String filterName,
                                            final Function<? super RT,String> stringExtractor ) {
+      predicateFunctions.put( filterName,  FilterSupport.<RT>stringFilter( stringExtractor ) );
+      return this;
+    }
+
+    /**
+     * Declare an internal filterable string property.
+     *
+     * <p>An internal property cannot be accessed via the public API but can be
+     * explicitly added.</p>
+     *
+     * @param filterName The name of the filter
+     * @param stringExtractor Function to extract the property value
+     * @return This builder for call chaining
+     */
+    public Builder<RT> withInternalStringProperty( final String filterName,
+                                                   final Function<? super RT,String> stringExtractor ) {
+      internalFilters.add( filterName );
       predicateFunctions.put( filterName,  FilterSupport.<RT>stringFilter( stringExtractor ) );
       return this;
     }
@@ -475,6 +520,10 @@ public abstract class FilterSupport<RT> {
       return ImmutableMap.copyOf( predicateFunctions );
     }
 
+    private Set<String> buildInternalFilters() {
+      return ImmutableSet.copyOf( internalFilters );
+    }
+
     private Map<String,String> buildAliases() {
       return ImmutableMap.copyOf( aliases );
     }
@@ -487,6 +536,11 @@ public abstract class FilterSupport<RT> {
   @Nonnull
   public Class<RT> getResourceClass() {
     return resourceClass;
+  }
+
+  @Nonnull
+  public String getQualifier() {
+    return qualifier;
   }
 
   @Nullable
@@ -508,23 +562,27 @@ public abstract class FilterSupport<RT> {
    * Generate a Filter for the given filters.
    *
    * @param filters The map of filter names to (multiple) values
+   * @param allowInternalFilters True to allow use of internal filters
    * @return The filter representation
    * @throws InvalidFilterException If a filter is invalid
    */
-  public Filter generate( final Map<String, Set<String>> filters ) throws InvalidFilterException  {
+  public Filter generate( final Map<String, Set<String>> filters,
+                          final boolean allowInternalFilters ) throws InvalidFilterException  {
     final Context ctx = Contexts.lookup();
     final String requestAccountId = ctx.getUserFullName( ).getAccountNumber( );
-    return generate( filters, requestAccountId );
+    return generate( filters, allowInternalFilters, requestAccountId );
   }
 
   /**
    * Generate a Filter for the given filters.
    *
    * @param filters The map of filter names to (multiple) values
+   * @param allowInternalFilters True to allow use of internal filters
    * @return The filter representation
    * @throws InvalidFilterException If a filter is invalid
    */
   public Filter generate( final Map<String, Set<String>> filters,
+                          final boolean allowInternalFilters,
                           final String accountId ) throws InvalidFilterException {
     // Construct collection filter
     final List<Predicate<Object>> and = Lists.newArrayList();
@@ -532,7 +590,7 @@ public abstract class FilterSupport<RT> {
       final List<Predicate<Object>> or = Lists.newArrayList();
       for ( final String value : filter.getValue() ) {
         final Function<? super String,Predicate<? super RT>> predicateFunction = predicateFunctions.get( filter.getKey() );
-        if ( predicateFunction == null ) {
+        if ( predicateFunction == null || (!allowInternalFilters && internalFilters.contains( filter.getKey() ) ) ) {
           throw InvalidFilterException.forName( filter.getKey() );
         }
         final Predicate<? super RT> valuePredicate = predicateFunction.apply( value );
@@ -582,8 +640,9 @@ public abstract class FilterSupport<RT> {
     return new Filter( aliases, conjunction, Predicates.and( and ), tagPresent );
   }
 
-  public static FilterSupport forResource( @Nonnull final Class<?> metadataClass ) {
-    return supportByClass.get( metadataClass );
+  public static FilterSupport forResource( @Nonnull final Class<?> metadataClass,
+                                           @Nonnull final String qualifier ) {
+    return supportMap.get( supportKey( metadataClass, qualifier ) );
   }
 
   /**
@@ -687,7 +746,16 @@ public abstract class FilterSupport<RT> {
 
   @SuppressWarnings( "unchecked" )
   static void registerFilterSupport( @Nonnull final FilterSupport filterSupport ) {
-    supportByClass.put( (Class<?>) filterSupport.getResourceClass(), filterSupport );
+    supportMap.put(
+        supportKey( filterSupport.getResourceClass(), filterSupport.getQualifier() ),
+        filterSupport );
+  }
+
+  private static SupportKey supportKey( @Nonnull final Class<?> resourceClass,
+                                        @Nonnull final String qualifier ) {
+    Parameters.checkParam( "Resource class", resourceClass, notNullValue() );
+    Parameters.checkParam( "Qualifier", qualifier, not( isEmptyOrNullString() ) );
+    return new SupportKey( resourceClass, qualifier );
   }
 
   private Predicate<Object> typedPredicate( final Predicate<? super RT> predicate ) {
@@ -1148,6 +1216,46 @@ public abstract class FilterSupport<RT> {
       public String apply( final String text ) {
         return escapeLikeWildcards( text );
       }
+    }
+  }
+
+  private static final class SupportKey {
+    private final Class<?> resourceClass;
+    private final String qualifier;
+
+    private SupportKey( final Class<?> resourceClass,
+                        final String qualifier ) {
+      this.resourceClass = resourceClass;
+      this.qualifier = qualifier;
+    }
+
+    public Class<?> getResourceClass() {
+      return resourceClass;
+    }
+
+    public String getQualifier() {
+      return qualifier;
+    }
+
+    @SuppressWarnings( "RedundantIfStatement" )
+    @Override
+    public boolean equals( final Object o ) {
+      if ( this == o ) return true;
+      if ( o == null || getClass() != o.getClass() ) return false;
+
+      final SupportKey that = (SupportKey) o;
+
+      if ( !qualifier.equals( that.qualifier ) ) return false;
+      if ( !resourceClass.equals( that.resourceClass ) ) return false;
+
+      return true;
+    }
+
+    @Override
+    public int hashCode() {
+      int result = resourceClass.hashCode();
+      result = 31 * result + qualifier.hashCode();
+      return result;
     }
   }
 }

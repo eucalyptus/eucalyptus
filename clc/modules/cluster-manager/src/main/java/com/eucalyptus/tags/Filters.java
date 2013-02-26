@@ -26,11 +26,14 @@ import com.google.common.base.Function;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
+import com.google.common.collect.Maps;
 
 /**
  * Methods for working with {@link Filter}s
  */
 public class Filters {
+
+  public static final String DEFAULT_FILTERS = "default";
 
   /**
    * Generate a Filter for the given filters.
@@ -43,16 +46,100 @@ public class Filters {
   @Nonnull
   public static Filter generate( final Iterable<edu.ucsb.eucalyptus.msgs.Filter> filters,
                                  final Class<?> resourceType ) throws InvalidFilterException {
-    final Filter filter;
+    return generate( filters, resourceType, DEFAULT_FILTERS );
+  }
 
-    final FilterSupport support = FilterSupport.forResource( resourceType );
-    if ( support == null ) {
-      filter = Filter.alwaysTrue();
-    } else {
-      filter = support.generate( toMap( filters ) );
+  /**
+    * Generate a Filter for the given filters.
+    *
+    * @param filters The filter items
+    * @param resourceType The resource class to be filtered
+    * @param qualifier The filter qualifier (in case of multiple filter sets for a type)
+    * @return The filter
+    * @throws InvalidFilterException If a filter is invalid
+    */
+  @Nonnull
+  public static Filter generate( final Iterable<edu.ucsb.eucalyptus.msgs.Filter> filters,
+                                 final Class<?> resourceType,
+                                 final String qualifier ) throws InvalidFilterException {
+    return generateFor( filters, resourceType, qualifier ).generate();
+  }
+
+
+  /**
+   * Get a FiltersBuilder for the given filters.
+   *
+   * @param filters The filter items
+   * @param resourceType The resource class to be filtered
+   * @return The filter
+   */
+  @Nonnull
+  public static FiltersBuilder generateFor( final Iterable<edu.ucsb.eucalyptus.msgs.Filter> filters,
+                                            final Class<?> resourceType ) {
+    return  generateFor( filters, resourceType, DEFAULT_FILTERS );
+  }
+
+  /**
+   * Get a FiltersBuilder for the given filters.
+   *
+   * @param filters The filter items
+   * @param resourceType The resource class to be filtered
+   * @param qualifier The filter qualifier (in case of multiple filter sets for a type)
+   * @return The filter
+   */
+  @Nonnull
+  public static FiltersBuilder generateFor( final Iterable<edu.ucsb.eucalyptus.msgs.Filter> filters,
+                                            final Class<?> resourceType,
+                                            final String qualifier ) {
+    return new FiltersBuilder( filters, resourceType, qualifier );
+  }
+
+  public static class FiltersBuilder {
+    private final Iterable<edu.ucsb.eucalyptus.msgs.Filter> filters;
+    private final Class<?> resourceType;
+    private final String qualifier;
+    private final Map<String,Set<String>> internalFilters = Maps.newHashMap();
+
+    public FiltersBuilder( final Iterable<edu.ucsb.eucalyptus.msgs.Filter> filters,
+                           final Class<?> resourceType,
+                           final String qualifier ) {
+      this.filters = filters;
+      this.resourceType = resourceType;
+      this.qualifier = qualifier;
     }
 
-    return filter;
+    /**
+     * Add internal filters with wildcard support if any values present.
+     *
+     * @param name The filter name
+     * @param values The filter values with wildcards
+     * @return This builder for call chaining
+     */
+    @Nonnull
+    public FiltersBuilder withOptionalInternalFilter( final String name,
+                                                      final Iterable<String> values ) {
+      if ( values.iterator().hasNext() ) {
+        internalFilters.put( name, ImmutableSet.copyOf( values ) );
+      }
+      return this;
+    }
+
+    @Nonnull
+    public Filter generate() throws InvalidFilterException {
+      Filter filter;
+
+      final FilterSupport support = FilterSupport.forResource( resourceType, qualifier );
+      if ( support == null ) {
+        filter = Filter.alwaysTrue();
+      } else {
+        filter = support.generate( toMap( filters ), false );
+        if ( !internalFilters.isEmpty() ) {
+          filter = filter.and( support.generate( internalFilters, true ) );
+        }
+      }
+
+      return filter;
+    }
   }
 
   private static Map<String, Set<String>> toMap( final Iterable<edu.ucsb.eucalyptus.msgs.Filter> filters ) {

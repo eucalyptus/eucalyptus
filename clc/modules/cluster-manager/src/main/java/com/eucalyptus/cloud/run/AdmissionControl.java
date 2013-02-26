@@ -211,6 +211,11 @@ public class AdmissionControl {
     private List<ResourceToken> requestResourceToken( final Allocation allocInfo, final int tryAmount, final int maxAmount ) throws Exception {
       ServiceConfiguration config = Topology.lookup( ClusterController.class, allocInfo.getPartition( ) );
       Cluster cluster = Clusters.lookup( config );
+      /**
+       * TODO:GRZE: this is the call path which needs to trigger gating.  
+       * It shouldn't be handled directly here, but instead be handled in {@link ResourceState#requestResourceAllocation().
+       * 
+       */
       final ResourceState state = cluster.getNodeState( );
       final List<ResourceToken> tokens = state.requestResourceAllocation( allocInfo, tryAmount, maxAmount );
       final Iterator<ResourceToken> tokenIterator = tokens.iterator( );

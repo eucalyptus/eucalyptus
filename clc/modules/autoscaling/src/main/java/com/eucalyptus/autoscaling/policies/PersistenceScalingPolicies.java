@@ -21,7 +21,7 @@ package com.eucalyptus.autoscaling.policies;
 
 import java.util.List;
 import com.eucalyptus.autoscaling.common.AutoScalingResourceName;
-import com.eucalyptus.autoscaling.metadata.AbstractOwnedPersistents;
+import com.eucalyptus.autoscaling.metadata.AbstractOwnedPersistentsWithResourceNameSupport;
 import com.eucalyptus.autoscaling.metadata.AutoScalingMetadataException;
 import com.eucalyptus.util.Callback;
 import com.eucalyptus.util.OwnerFullName;
@@ -70,7 +70,7 @@ public class PersistenceScalingPolicies extends ScalingPolicies {
     return persistenceSupport.save( scalingPolicy );
   }
 
-  private static class PersistenceSupport extends AbstractOwnedPersistents<ScalingPolicy> {
+  private static class PersistenceSupport extends AbstractOwnedPersistentsWithResourceNameSupport<ScalingPolicy> {
     private PersistenceSupport() {
       super( AutoScalingResourceName.Type.scalingPolicy );
     }

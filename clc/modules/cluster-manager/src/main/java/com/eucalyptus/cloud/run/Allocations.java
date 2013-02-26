@@ -90,8 +90,8 @@ import com.eucalyptus.records.Logs;
 import com.eucalyptus.util.UniqueIds;
 import com.eucalyptus.vm.VmInstance;
 import com.eucalyptus.vm.VmInstances;
-import com.eucalyptus.vm.VmType;
-import com.eucalyptus.vm.VmTypes;
+import com.eucalyptus.vmtypes.VmType;
+import com.eucalyptus.vmtypes.VmTypes;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import edu.ucsb.eucalyptus.msgs.HasRequest;
@@ -111,6 +111,8 @@ public class Allocations {
     private final int                  minCount;
     private final int                  maxCount;
     private final boolean              usePrivateAddressing;
+    private final boolean 	       monitoring;
+    
     /** verified references determined by the request **/
     private Partition                  partition;
     private SshKeyPair                 sshKeyPair;
@@ -133,6 +135,9 @@ public class Allocations {
       this.request = request;
       this.minCount = request.getMinCount( );
       this.maxCount = request.getMaxCount( );
+      
+      this.monitoring = request.getMonitoring() == null ? Boolean.FALSE : request.getMonitoring();
+     
       this.usePrivateAddressing = "private".equals(request.getAddressingType());
       this.ownerFullName = this.context.getUserFullName( );
       if ( ( this.request.getInstanceType( ) == null ) || "".equals( this.request.getInstanceType( ) ) ) {
@@ -140,6 +145,7 @@ public class Allocations {
       }
       this.reservationIndex = UniqueIds.nextIndex( VmInstance.class, ( long ) request.getMaxCount( ) );
       this.reservationId = VmInstances.getId( this.reservationIndex, 0 ).replaceAll( "i-", "r-" );
+      this.request.setMonitoring(this.monitoring);
       if ( this.request.getUserData( ) != null ) {
         try {
           this.userData = Base64.decode( this.request.getUserData( ) );
@@ -163,7 +169,9 @@ public class Allocations {
                         final BootableSet bootSet,
                         final VmType vmType,
                         final Set<NetworkGroup> networkGroups,
-                        final boolean isUsePrivateAddressing ) {
+                        final boolean isUsePrivateAddressing, 
+                        final boolean monitoring 
+                        ) {
       super( );
       this.context = Contexts.lookup( );
       this.minCount = 1;
@@ -180,6 +188,8 @@ public class Allocations {
       this.bootSet = bootSet;
       this.expiration = expiration;
       this.vmType = vmType;
+      this.monitoring = monitoring;
+      
       this.networkGroups = new HashMap<String, NetworkGroup>( ) {
         {
           for ( NetworkGroup g : networkGroups ) {
@@ -337,6 +347,10 @@ public class Allocations {
       return usePrivateAddressing;
     }
 
+    public final boolean isMonitoring() {
+        return monitoring;
+    }
+
     public String getInstanceId( int index ) {
       while ( this.instanceIds.size( ) < index + 1 ) {
         this.instanceIds.put( index, VmInstances.getId( ( long ) this.getReservationIndex( ), index ) );
@@ -368,6 +382,7 @@ public class Allocations {
                            bootSet,
                            vm.getVmType( ),
                            vm.getNetworkGroups( ),
-                           vm.isUsePrivateAddressing() );
+                           vm.isUsePrivateAddressing(),
+                           vm.getMonitoring() );
   }
 }

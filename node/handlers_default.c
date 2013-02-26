@@ -106,7 +106,6 @@
 #include <vbr.h>
 #include <iscsi.h>
 #include <sensor.h>
-#include <windows-bundle.h>
 #include <euca_string.h>
 
 #include "handlers.h"
@@ -334,10 +333,10 @@ static int doRunInstance(struct nc_state_t *nc, ncMetadata * pMeta, char *uuid, 
             return EUCA_ERROR;         //! @todo return meaningful error codes?
         }
     }
-    if (!
-        (instance =
-         allocate_instance(uuid, instanceId, reservationId, params, instance_state_names[PENDING], PENDING, pMeta->userId, ownerId, accountId, &ncnet,
-                           keyName, userData, launchIndex, platform, expiryTime, groupNames, groupNamesSize))) {
+
+    instance = allocate_instance(uuid, instanceId, reservationId, params, instance_state_names[PENDING], PENDING, pMeta->userId, ownerId, accountId,
+                                 &ncnet, keyName, userData, launchIndex, platform, expiryTime, groupNames, groupNamesSize);
+    if (instance == NULL) {
         LOGERROR("[%s] could not allocate instance struct\n", instanceId);
         return EUCA_MEMORY_ERROR;
     }
@@ -1886,13 +1885,11 @@ static int doDescribeBundleTasks(struct nc_state_t *nc, ncMetadata * pMeta, char
         sem_p(inst_sem);
         ncInstance *instance = find_instance(&global_instances, instIds[i]);
         if (instance != NULL) {
-            bundle = EUCA_ZALLOC(1, sizeof(bundleTask));
-            if (bundle == NULL) {
+            if ((bundle = allocate_bundleTask(instance)) == NULL) {
                 LOGERROR("out of memory\n");
                 sem_v(inst_sem);
                 return EUCA_MEMORY_ERROR;
             }
-            allocate_bundleTask(bundle, instIds[i], instance->bundleTaskStateName);
         }
         sem_v(inst_sem);
 

@@ -96,7 +96,6 @@ import org.hibernate.annotations.Entity;
 import org.hibernate.annotations.GenericGenerator;
 import org.hibernate.annotations.NaturalId;
 import org.hibernate.annotations.Type;
-import org.hibernate.type.StringClobType;
 import org.jboss.netty.util.internal.LinkedTransferQueue;
 import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.bootstrap.BootstrapArgs;
@@ -111,8 +110,8 @@ import com.eucalyptus.configurable.ConfigurableClass;
 import com.eucalyptus.configurable.ConfigurableField;
 import com.eucalyptus.empyrean.ServiceStatusDetail;
 import com.eucalyptus.empyrean.ServiceStatusType;
-import com.eucalyptus.event.ClockTick;
 import com.eucalyptus.event.EventListener;
+import com.eucalyptus.event.Hertz;
 import com.eucalyptus.event.Listeners;
 import com.eucalyptus.records.Logs;
 import com.eucalyptus.scripting.Groovyness;
@@ -634,17 +633,17 @@ public class Faults {
     }
   }
   
-  public static class FaultNotificationHandler implements EventListener<ClockTick>, Callable<Boolean> {
+  public static class FaultNotificationHandler implements EventListener<Hertz>, Callable<Boolean> {
     private static final AtomicBoolean ready      = new AtomicBoolean( true );
     private static final AtomicLong    lastDigest = new AtomicLong( System.currentTimeMillis( ) );
     
     public static void register( ) {
-      Listeners.register( ClockTick.class, new FaultNotificationHandler( ) );
+      Listeners.register( Hertz.class, new FaultNotificationHandler( ) );
     }
     
     @Override
-    public void fireEvent( final ClockTick event ) {
-      if ( BootstrapArgs.isCloudController( ) && ready.compareAndSet( true, false ) ) {
+    public void fireEvent( final Hertz event ) {
+      if ( Bootstrap.isOperational( ) && event.isAsserted( Faults.BATCH_DELAY_SECONDS ) && ready.compareAndSet( true, false ) ) {
         try {
           Threads.enqueue( Eucalyptus.class, Faults.class, this );
         } catch ( final Exception ex ) {
@@ -656,7 +655,6 @@ public class Faults {
     @Override
     public Boolean call( ) throws Exception {
       try {
-        TimeUnit.SECONDS.sleep( Faults.BATCH_DELAY_SECONDS );
         sendFaults( );
         sendDigest( );
       } finally {
