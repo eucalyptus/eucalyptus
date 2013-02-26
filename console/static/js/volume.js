@@ -48,10 +48,18 @@
           },
           "sAjaxSource": 'volume',
           "fnServerData": function (sSource, aoData, fnCallback) {
-                data = $('html body').eucadata('get', sSource);
-                data.iTotalRecords = data.length;
-                data.iTotalDisplayRecords = data.length;
-                fnCallback(data);
+	    require(['models/volumes'], function(Volumes) {
+		var vols = new Volumes();
+		vols.on('reset', function() {
+		   var data = vols.toJSON();
+		   console.log('RESET', data);
+                   data.iTotalRecords = data.length;
+                   data.iTotalDisplayRecords = data.length;
+		   fnCallback(data);
+		});
+		vols.fetch();
+	    });
+
           },
           "aaSorting": [[ 7, "desc" ]],
           "aoColumns": [
