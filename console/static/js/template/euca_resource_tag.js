@@ -124,6 +124,15 @@
                    });
 
                    editButton.bind('click', function(e){
+
+                     thisObj.baseTable.find('tr.resource-tag-input-row-tr').hide();   // Hide the add new tag display
+
+                     thisObj.baseTable.find('tbody').find('tr').each(function(index, tr){  // Re-display all the edit buttons
+                       var $thisCurrentRow = $(tr);
+                       $thisCurrentRow.children().show();
+                       $thisCurrentRow.find('#extra-td.resource-tag-table-extra-td').hide();
+                     });
+
                      var tdResourceTagEdit = $('<td>').html('<input name="tag_key" type="text" id="tag_key" size="128" value="'+key+'">');
                      tdResourceTagEdit.after($('<td>').html('<input name="tag_value" type="text" id="tag_value" size="256" value="'+value+'">'));
                      
@@ -149,6 +158,13 @@
                        tdResourceTagEdit.remove();
                        $currentRow.children().show();
 //                       thisObj.baseTable.fnReloadAjax();
+
+                       thisObj.baseTable.find('tbody').find('tr').each(function(index, tr){      // Re-display all the edit buttons
+                         var $thisCurrentRow = $(tr);
+                         $thisCurrentRow.children().show();
+                         $thisCurrentRow.find('#extra-td.resource-tag-table-extra-td').show();
+                       });
+
                      });
 
                      editcancelButton.bind('click', function(e){
@@ -158,8 +174,16 @@
                        $currentRow.append(tdResourceTagEdit);
    */                  
                        tdResourceTagEdit.remove();  
-                       $currentRow.children().show(); 
+          //             $currentRow.children().show();
+
+                       thisObj.baseTable.find('tbody').find('tr').each(function(index, tr){      // Re-display all the edit buttons
+                         var $thisCurrentRow = $(tr);
+                         $thisCurrentRow.children().show();
+                         $thisCurrentRow.find('#extra-td.resource-tag-table-extra-td').show();
+                       }); 
+
 //                       thisObj.baseTable.fnReloadAjax();
+                       thisObj.baseTable.find('tr.resource-tag-input-row-tr').show();   // Re-display the add new tag row  
                      });
 
                    });
