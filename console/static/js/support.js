@@ -587,6 +587,13 @@ function trim (str) {
       return str;
 }
 
+function getTagForResource(res_id) {
+  var result= $('html body').eucadata('get', 'tag');
+  console.log("res_id="+res_id);
+  console.log("tag list"+result);
+  return res_id;
+}
+
 //----------------------------------------------------------------------------
 //
 // Display Helper Functions for providing data types for eucatable rendering
