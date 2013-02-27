@@ -23,6 +23,7 @@ import java.util.List;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.NoSuchElementException;
+import java.util.concurrent.ConcurrentHashMap;
 
 import javax.persistence.EntityTransaction;
 
@@ -47,7 +48,7 @@ import com.google.common.collect.Lists;
 @ConfigurableClass(root = "loadbalancing", description = "Parameters controlling Auto Scaling")
 public class LoadbalancerInstanceLauncher implements EventHandler<NewLoadbalancerEvent> {
 	private static final Logger LOG = Logger.getLogger( LoadbalancerInstanceLauncher.class );
-	  
+	private List<String> launchedInstances = null;
 	@ConfigurableField( displayName = "loadbalancer_emi", 
 	                    description = "EMI containing haproxy and the controller",
 	                    initial = "NULL", 
@@ -62,7 +63,7 @@ public class LoadbalancerInstanceLauncher implements EventHandler<NewLoadbalance
             type = ConfigurableFieldType.KEYVALUE )
 public static String LOADBALANCER_INSTANCE_TYPE = "NULL";
 
-
+	
 	@Override
 	public void apply(NewLoadbalancerEvent evt) throws EventHandlerException {
 		final UserFullName ownerFullName = evt.getContext().getUserFullName( );
@@ -80,33 +81,43 @@ public static String LOADBALANCER_INSTANCE_TYPE = "NULL";
 		if (zones.size()>0){
 			zoneToLaunch = new ArrayList<String>(zones).get(0);
 		}
+		InstanceUserDataBuilder userDataBuilder = new InstanceUserDataBuilder();
+		
+		
 		List<String> instanceIds = null;
-		String instanceId = null;
 		try{
 			instanceIds = 
 					EucalyptusActivityTasks.getInstance().launchInstances(zoneToLaunch, 
 							LOADBALANCER_EMI, LOADBALANCER_INSTANCE_TYPE, 1);
-			LOG.info("new servo instance launched: "+instanceIds.get(0));
-			instanceId = instanceIds.get(0);
+			StringBuilder sb = new StringBuilder();
+			for (String id : instanceIds)
+				sb.append(id+" ");
+			LOG.info("new servo instance launched: "+sb.toString());
 		}catch(Exception ex){
 			throw new EventHandlerException("failed to launch the servo instance", ex);
 		}
+		launchedInstances = instanceIds;
+	}
+	public List<String> getLaunchedInstances(){
+		return  this.launchedInstances == null ? Lists.<String>newArrayList() : this.launchedInstances;
+	}
+	
+	private static class InstanceUserDataBuilder {
+		ConcurrentHashMap<String,String> dataDict= null;
+		InstanceUserDataBuilder(){
+			dataDict = new ConcurrentHashMap<String,String>();
+		}
+		void add(String name, String value){
+			dataDict.put(name, value);
+		}
 		
-		// save the servoinstance entry
-		final EntityTransaction db = Entities.get( LoadBalancerServoInstance.class );
-		// check the listener 
-		try{
-			Entities.uniqueResult(LoadBalancerServoInstance.named(instanceId));
-		}catch(NoSuchElementException ex){
-			final LoadBalancerServoInstance newInstance = 
-					LoadBalancerServoInstance.named(instanceId, zoneToLaunch);
-			newInstance.setLoadbalancer(lb);		
-			Entities.persist(newInstance);
-			db.commit();
-		}catch(Exception ex){
-			LOG.error("failed to persist the servo instance "+instanceId, ex);
-			db.rollback();
-			throw new EventHandlerException("failed to persist the servo instance", ex);
+		public String build(){
+			StringBuilder sb  = new StringBuilder();
+			for (String key : dataDict.keySet()){
+				String value = dataDict.get(key);
+				sb.append(String.format("%s:%s\n", key, value));
+			}
+			return sb.toString();
 		}
 	}
 }

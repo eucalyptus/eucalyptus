@@ -26,8 +26,7 @@ import javax.persistence.EntityTransaction;
 import org.apache.log4j.Logger;
 
 import com.eucalyptus.entities.Entities;
-import com.eucalyptus.loadbalancing.LoadBalancer;
-import com.eucalyptus.loadbalancing.LoadBalancingException;
+import com.google.common.collect.Lists;
 /**
  * @author Sang-Min Park
  *
@@ -42,14 +41,39 @@ public class EventHandlerChains {
 				@Override
 				public EventHandlerChain<NewLoadbalancerEvent> build() {
 					// TODO Auto-generated method stub
-					this.insert(new EventHandler<NewLoadbalancerEvent>(){
+				    final LoadbalancerInstanceLauncher launcher = new LoadbalancerInstanceLauncher();
+				    this.insert(launcher);
+				    // Add new servo instances DB entry
+				    this.insert(new EventHandler<NewLoadbalancerEvent>(){
 						@Override
-						public void apply(NewLoadbalancerEvent evt) {
-							// TODO Auto-generated method stub
-							LOG.info("onNewLoadbalancer");
+						public void apply(NewLoadbalancerEvent evt)
+								throws EventHandlerException {
+							// save the servoinstance entry in DB
+							final EntityTransaction db = Entities.get( LoadBalancerServoInstance.class );
+							// TODO: SPARK: Multi-zone, recycle existing servo instances
+							String zoneToLaunch = null;
+							if(evt.getZones().size()>0)
+								zoneToLaunch = Lists.newArrayList(evt.getZones()).get(0);
+							
+							for (String launched : launcher.getLaunchedInstances()){
+							// check the listener 
+								try{
+									Entities.uniqueResult(LoadBalancerServoInstance.named(launched));
+								}catch(NoSuchElementException ex){
+									final LoadBalancerServoInstance newInstance = 
+											LoadBalancerServoInstance.named(launched, zoneToLaunch );
+									newInstance.setLoadbalancer(evt.getLoadBalancer(), evt.getContext().getUserFullName());		
+									Entities.persist(newInstance);
+									db.commit();
+								}catch(Exception ex){
+									LOG.error("failed to persist the servo instance "+launched, ex);
+									db.rollback();
+									throw new EventHandlerException("failed to persist the servo instance", ex);
+								}
+							}
 						}
-					});
-					this.insert(new LoadbalancerInstanceLauncher());
+				    });
+				    
 					return this;
 				}
 			}.build();
@@ -71,24 +95,28 @@ public class EventHandlerChains {
 							LOG.info("onDeleteLoadbalancer");
 						}
 					});
-					this.insert(new LoadbalancerInstanceTerminator());
+					final LoadbalancerInstanceTerminator instTerm = new LoadbalancerInstanceTerminator();
+					this.insert(instTerm);
 					/// delete the DB entry
 					this.insert(new EventHandler<DeleteLoadbalancerEvent>(){
 						@Override
 						public void apply(DeleteLoadbalancerEvent evt)
 								throws EventHandlerException {
-							final EntityTransaction db = Entities.get( LoadBalancer.class );
-							try{
-								final LoadBalancer lb = Entities.uniqueResult( LoadBalancer.named(user, lbName));	
-								Entities.delete(lb);
-								db.commit();
-							}catch (NoSuchElementException e){
-								throw new LoadBalancingException("No loadbalancer is found with name = "+lbName, e);
-							}catch (Exception e){
-								db.rollback();
-								LOG.error("failed to delete a loadbalancer", e);
-								throw new LoadBalancingException("Failed to delete the loadbalancer "+lbName, e);
-							}							
+							final EntityTransaction db = Entities.get( LoadBalancerServoInstance.class );
+							for (String terminated : instTerm.getTerminatedInstances()){
+								try{
+									final LoadBalancerServoInstance instance = Entities.uniqueResult( 
+											LoadBalancerServoInstance.named(terminated));	
+									Entities.delete(instance);
+									db.commit();
+								}catch (NoSuchElementException e){
+									LOG.error("No servo instance named " + terminated + " found in DB");
+								}catch (Exception e){
+									db.rollback();
+									LOG.error("failed to delete a servo instance from DB", e);
+									throw new EventHandlerException("Failed to delete the servo instance "+ terminated, e);
+								}		
+							}
 						}
 					});
 					return this;

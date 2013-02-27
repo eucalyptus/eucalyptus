@@ -19,6 +19,8 @@
  ************************************************************************/
 package com.eucalyptus.loadbalancing.activities;
 
+import java.util.NoSuchElementException;
+
 import javax.persistence.Column;
 import javax.persistence.JoinColumn;
 import javax.persistence.ManyToOne;
@@ -31,11 +33,15 @@ import org.apache.log4j.Logger;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
 import org.hibernate.annotations.Entity;
+
+import com.eucalyptus.auth.principal.UserFullName;
 import com.eucalyptus.entities.AbstractPersistent;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.loadbalancing.LoadBalancer;
 import com.eucalyptus.loadbalancing.LoadBalancerBackendInstance;
 import com.eucalyptus.loadbalancing.LoadBalancerZone;
+import com.eucalyptus.loadbalancing.LoadBalancers;
+import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.vm.VmInstance;
 import com.eucalyptus.vm.VmInstances;
 
@@ -120,6 +126,16 @@ public class LoadBalancerServoInstance extends AbstractPersistent {
     
     public void setLoadbalancer(final LoadBalancer lb){
     	this.loadbalancer = lb;
+    }
+    
+    public void setLoadbalancer(final String lbName, final UserFullName owner){
+    	 try{
+	  		this.loadbalancer= LoadBalancers.getLoadbalancer(owner, lbName);
+	  	 }catch(NoSuchElementException ex){
+	  		 throw ex;
+	  	 }catch(Exception ex){
+	  		 throw Exceptions.toUndeclared(ex);
+	  	 }
     }
     
     public LoadBalancer getLoadbalancer(){

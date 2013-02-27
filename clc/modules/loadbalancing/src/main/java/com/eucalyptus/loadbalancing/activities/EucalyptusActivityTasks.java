@@ -41,12 +41,9 @@ import com.eucalyptus.util.TypeMappers;
 import com.eucalyptus.util.async.CheckedListenableFuture;
 import com.eucalyptus.util.async.Futures;
 import com.google.common.base.Function;
-import com.google.common.collect.Collections2;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
-import com.google.gwt.thirdparty.guava.common.collect.Iterables;
 
-import edu.emory.mathcs.backport.java.util.Arrays;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 import edu.ucsb.eucalyptus.msgs.RunInstancesResponseType;
 import edu.ucsb.eucalyptus.msgs.RunInstancesType;
@@ -92,8 +89,14 @@ public class EucalyptusActivityTasks {
 	
 	public List<String> launchInstances(final String availabilityZone, final String imageId, 
 			final String instanceType, int numInstance){
+		return launchInstances(availabilityZone, imageId, instanceType, numInstance, null);
+	}
+	public List<String> launchInstances(final String availabilityZone, final String imageId, 
+				final String instanceType, int numInstance, final String userData){
 		LOG.info("launching instances at zone="+availabilityZone+", imageId="+imageId);
 		EucalyptusLaunchInstanceTask launchTask = new EucalyptusLaunchInstanceTask(availabilityZone, imageId, instanceType);
+		if(userData!=null)
+			launchTask.setUserData(userData);
 		CheckedListenableFuture<Boolean> result = launchTask.dispatch(new EucalyptusSystemActivity());
 		try{
 			if(result.get()){
@@ -161,6 +164,7 @@ public class EucalyptusActivityTasks {
 		private final String availabilityZone;
 		private final String imageId;
 		private final String instanceType;
+		private String userData = null;
 		private final AtomicReference<List<String>> instanceIds = new AtomicReference<List<String>>(
 		    Collections.<String>emptyList()
 	    );
@@ -185,6 +189,8 @@ public class EucalyptusActivityTasks {
 		    if(availabilityZone != null)
 		    	runInstances.setAvailabilityZone( availabilityZone );
 		    runInstances.setMaxCount( attemptToLaunch );
+		    if(this.userData!=null)
+		    	runInstances.setUserData(this.userData);
 		    return runInstances;
 	    }
 	    
@@ -206,6 +212,9 @@ public class EucalyptusActivityTasks {
 	      this.instanceIds.set( ImmutableList.copyOf( instanceIds ) );
 	    }
 	    
+	    void setUserData(String userData){
+	    	this.userData = userData;
+	    }
 	    List<String> getInstanceIds() {
 	      return instanceIds.get();
 	    }

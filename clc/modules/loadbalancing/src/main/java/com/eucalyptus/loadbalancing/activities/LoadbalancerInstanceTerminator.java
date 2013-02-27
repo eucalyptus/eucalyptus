@@ -38,6 +38,7 @@ import com.google.common.collect.Lists;
 public class LoadbalancerInstanceTerminator implements EventHandler<DeleteLoadbalancerEvent> {
 	private static final Logger LOG = Logger.getLogger( LoadbalancerInstanceTerminator.class );
 
+	private List<String> terminatedInstances = null;
 	@Override
 	public void apply(DeleteLoadbalancerEvent evt) throws EventHandlerException {
 		// TODO Auto-generated method stub
@@ -65,6 +66,7 @@ public class LoadbalancerInstanceTerminator implements EventHandler<DeleteLoadba
 	  	}catch(Exception ex){
 	  		throw new EventHandlerException("failed to terminate the instances", ex);
 	  	}
+	  	this.terminatedInstances = terminated;
 	  	
 	  	for (String gone : terminated){
 	  		toTerminate.remove(gone);
@@ -77,11 +79,9 @@ public class LoadbalancerInstanceTerminator implements EventHandler<DeleteLoadba
 	  		LOG.error("Some instances were not terminated: "+strErrorInstances);
 	  	}
 
-// make sure caching is disabled
-		
-		// terminate all LB instances
-		
-		// delete the servo instances record
+	}
+	public List<String> getTerminatedInstances(){
+		return this.terminatedInstances == null ? Lists.<String>newArrayList() : this.terminatedInstances;
 	}
 
 }
