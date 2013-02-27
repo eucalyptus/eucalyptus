@@ -78,15 +78,25 @@ public class LoadBalancerServoInstance extends AbstractPersistent {
     @Column(name="metadata_unique_name", nullable=false, unique=true)
     private String uniqueName = null;
 
-    private LoadBalancerServoInstance(){}
+    private LoadBalancerServoInstance(){
+    	this.state= STATE.Pending.name();
+    }
     private LoadBalancerServoInstance(final String instanceId, final String zoneName){
     	this.instanceId=instanceId;
     	this.zoneName=zoneName;
+    	this.state = STATE.Pending.name();
     }
     
     public static LoadBalancerServoInstance named(String instanceId){
     	final LoadBalancerServoInstance sample = new LoadBalancerServoInstance();
     	sample.instanceId = instanceId;
+      	return sample;
+    }
+    
+    public static LoadBalancerServoInstance named(String instanceId, String zoneName){
+    	final LoadBalancerServoInstance sample = new LoadBalancerServoInstance();
+    	sample.instanceId = instanceId;
+    	sample.zoneName = zoneName;
     	return sample;
     }
     
@@ -127,6 +137,10 @@ public class LoadBalancerServoInstance extends AbstractPersistent {
     public LoadBalancerZone getAvailabilityZone(){
     	return this.zone;
     }
+    
+    public String getInstanceId(){
+    	return this.instanceId;
+    }
 
 	@PrePersist
 	private void generateOnCommit( ) {
@@ -134,7 +148,7 @@ public class LoadBalancerServoInstance extends AbstractPersistent {
 	}
 
 	private String createUniqueName(){
-		return String.format("%s-%s-servo-instance-%d", this.loadbalancer.getDisplayName(), this.zone.getName(), this.instanceId);
+		return String.format("%s-servo-instance-%s", this.zoneName, this.instanceId);
 	}
 	
 	@Override

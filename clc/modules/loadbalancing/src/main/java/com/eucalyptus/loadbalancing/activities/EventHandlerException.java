@@ -19,10 +19,28 @@
  ************************************************************************/
 package com.eucalyptus.loadbalancing.activities;
 
+import com.eucalyptus.util.EucalyptusCloudException;
+
 /**
- * @author Sang-Min Park
+ * @author root
  *
  */
-public interface EventHandler<T extends LoadbalancingEvent> {
-	public void apply(T evt) throws EventHandlerException;
+public class EventHandlerException extends EucalyptusCloudException {
+
+	private boolean isFatal = false;
+	public EventHandlerException(String message, Throwable cause){
+		super(message, cause);
+	}
+	public EventHandlerException(String message, Throwable cause, boolean isFatal){
+		super(message, cause);
+		this.isFatal = isFatal;
+	}
+	
+	public void setFatal(){
+		isFatal = true;
+	}
+	
+	public boolean isFatal(){
+		return isFatal;
+	}
 }

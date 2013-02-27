@@ -19,7 +19,15 @@
  ************************************************************************/
 package com.eucalyptus.loadbalancing.activities;
 
+import java.util.NoSuchElementException;
+
+import javax.persistence.EntityTransaction;
+
 import org.apache.log4j.Logger;
+
+import com.eucalyptus.entities.Entities;
+import com.eucalyptus.loadbalancing.LoadBalancer;
+import com.eucalyptus.loadbalancing.LoadBalancingException;
 /**
  * @author Sang-Min Park
  *
@@ -61,6 +69,26 @@ public class EventHandlerChains {
 						public void apply(DeleteLoadbalancerEvent evt) {
 						// TODO Auto-generated method stub
 							LOG.info("onDeleteLoadbalancer");
+						}
+					});
+					this.insert(new LoadbalancerInstanceTerminator());
+					/// delete the DB entry
+					this.insert(new EventHandler<DeleteLoadbalancerEvent>(){
+						@Override
+						public void apply(DeleteLoadbalancerEvent evt)
+								throws EventHandlerException {
+							final EntityTransaction db = Entities.get( LoadBalancer.class );
+							try{
+								final LoadBalancer lb = Entities.uniqueResult( LoadBalancer.named(user, lbName));	
+								Entities.delete(lb);
+								db.commit();
+							}catch (NoSuchElementException e){
+								throw new LoadBalancingException("No loadbalancer is found with name = "+lbName, e);
+							}catch (Exception e){
+								db.rollback();
+								LOG.error("failed to delete a loadbalancer", e);
+								throw new LoadBalancingException("Failed to delete the loadbalancer "+lbName, e);
+							}							
 						}
 					});
 					return this;

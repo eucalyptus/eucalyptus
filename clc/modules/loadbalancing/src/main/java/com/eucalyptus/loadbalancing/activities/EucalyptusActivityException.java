@@ -1,4 +1,4 @@
-/*************************************************************************
+ /*************************************************************************
  * Copyright 2009-2013 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
@@ -17,12 +17,18 @@
  * CA 93117, USA or visit http://www.eucalyptus.com/licenses/ if you need
  * additional information or have any questions.
  ************************************************************************/
+
 package com.eucalyptus.loadbalancing.activities;
 
-/**
- * @author Sang-Min Park
- *
- */
-public interface EventHandler<T extends LoadbalancingEvent> {
-	public void apply(T evt) throws EventHandlerException;
+import com.eucalyptus.util.EucalyptusCloudException;
+
+public class EucalyptusActivityException extends EucalyptusCloudException {
+	
+	private static final long serialVersionUID = 1L;
+	public EucalyptusActivityException(String message){
+		super(message);
+	}
+	public EucalyptusActivityException(String message, Throwable cause){
+		super(message, cause);
+	}
 }

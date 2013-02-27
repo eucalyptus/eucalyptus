@@ -19,8 +19,12 @@
  ************************************************************************/
 package com.eucalyptus.loadbalancing.activities;
 
+import java.util.List;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.NoSuchElementException;
+
+import javax.persistence.EntityTransaction;
 
 import org.apache.log4j.Logger;
 
@@ -29,9 +33,11 @@ import com.eucalyptus.configurable.ConfigurableClass;
 import com.eucalyptus.configurable.ConfigurableField;
 import com.eucalyptus.configurable.ConfigurableFieldType;
 import com.eucalyptus.entities.Entities;
+import com.eucalyptus.loadbalancing.AccessPointNotFoundException;
 import com.eucalyptus.loadbalancing.LoadBalancer;
 import com.eucalyptus.loadbalancing.LoadBalancerZone;
 import com.eucalyptus.loadbalancing.LoadBalancers;
+import com.eucalyptus.util.Exceptions;
 import com.google.common.collect.Lists;
 
 /**
@@ -58,26 +64,49 @@ public static String LOADBALANCER_INSTANCE_TYPE = "NULL";
 
 
 	@Override
-	public void apply(NewLoadbalancerEvent evt) {
-		// TODO Auto-generated method stub
-		
+	public void apply(NewLoadbalancerEvent evt) throws EventHandlerException {
 		final UserFullName ownerFullName = evt.getContext().getUserFullName( );
 	  	LoadBalancer lb=null;
 	  	 try{
 	  		lb= LoadBalancers.getLoadbalancer(ownerFullName, evt.getLoadBalancer());
-		  	Entities.refresh(lb);
 	  	 }catch(Exception ex){
-	    	LOG.warn("No loadbalancer is found with name="+evt.getLoadBalancer());    
+	    	throw new EventHandlerException("failed to find the loadbalancer", ex);
 	    }
-		final Collection<LoadBalancerZone> zones = lb.getZones();
-		String zoneToLaunch = "PARTI00";
+	  	 
+	  	 /// TODO: SPARK: implements multi-zone
+	  	 /// Will need to launch instances per zone
+		final Collection<String> zones = evt.getZones();
+		String zoneToLaunch = null;
 		if (zones.size()>0){
-			zoneToLaunch = new ArrayList<LoadBalancerZone>(zones).get(0).getName();
+			zoneToLaunch = new ArrayList<String>(zones).get(0);
 		}
+		List<String> instanceIds = null;
+		String instanceId = null;
 		try{
-			EucalyptusActivityTasks.getInstnace().launchInstance(zoneToLaunch, LOADBALANCER_EMI, LOADBALANCER_INSTANCE_TYPE);
-		}catch(Exception e){
-			LOG.error("failed to launch instance", e);
+			instanceIds = 
+					EucalyptusActivityTasks.getInstance().launchInstances(zoneToLaunch, 
+							LOADBALANCER_EMI, LOADBALANCER_INSTANCE_TYPE, 1);
+			LOG.info("new servo instance launched: "+instanceIds.get(0));
+			instanceId = instanceIds.get(0);
+		}catch(Exception ex){
+			throw new EventHandlerException("failed to launch the servo instance", ex);
+		}
+		
+		// save the servoinstance entry
+		final EntityTransaction db = Entities.get( LoadBalancerServoInstance.class );
+		// check the listener 
+		try{
+			Entities.uniqueResult(LoadBalancerServoInstance.named(instanceId));
+		}catch(NoSuchElementException ex){
+			final LoadBalancerServoInstance newInstance = 
+					LoadBalancerServoInstance.named(instanceId, zoneToLaunch);
+			newInstance.setLoadbalancer(lb);		
+			Entities.persist(newInstance);
+			db.commit();
+		}catch(Exception ex){
+			LOG.error("failed to persist the servo instance "+instanceId, ex);
+			db.rollback();
+			throw new EventHandlerException("failed to persist the servo instance", ex);
 		}
 	}
 }

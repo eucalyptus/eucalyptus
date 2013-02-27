@@ -22,7 +22,9 @@ package com.eucalyptus.loadbalancing.activities;
 
 import org.apache.log4j.Logger;
 
+import com.eucalyptus.event.EventFailedException;
 import com.eucalyptus.event.EventListener;
+import com.eucalyptus.event.ListenerRegistry;
 import com.eucalyptus.event.Listeners;
 
 public class ActivityManager {
@@ -89,6 +91,10 @@ public class ActivityManager {
 		return _instance;
 	}
 	
+	public void fire(LoadbalancingEvent evt) throws EventFailedException {
+		ListenerRegistry.getInstance().fireEvent(evt);
+	}
+	
 	enum LoadbalancerEventListener implements EventListener<LoadbalancingEvent>{
 		NewLoadbalancer(NewLoadbalancerEvent.class) {
 			@Override
@@ -130,6 +136,22 @@ public class ActivityManager {
 			public void fireEvent(LoadbalancingEvent event) {
 				// TODO Auto-generated method stub
 				EventHandlerChains.onDeregisterInstances().execute((DeregisterInstancesEvent) event);
+			}
+		},
+		EnabledZone(EnabledZoneEvent.class){
+			@Override
+			public void fireEvent(LoadbalancingEvent event) {
+				// NULL-OP event sink
+				
+				// TODO: SPARK: Should validate the zone name
+				return;
+			}
+		},
+		DisabledZone(DisabledZoneEvent.class){
+			@Override
+			public void fireEvent(LoadbalancingEvent event) {
+				// NULL-OP event sink
+				return;
 			}
 		};
 		

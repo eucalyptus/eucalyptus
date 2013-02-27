@@ -20,6 +20,8 @@
 package com.eucalyptus.loadbalancing.activities;
 
 
+import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicReference;
@@ -38,50 +40,121 @@ import com.eucalyptus.util.OwnerFullName;
 import com.eucalyptus.util.TypeMappers;
 import com.eucalyptus.util.async.CheckedListenableFuture;
 import com.eucalyptus.util.async.Futures;
+import com.google.common.base.Function;
+import com.google.common.collect.Collections2;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
+import com.google.gwt.thirdparty.guava.common.collect.Iterables;
 
+import edu.emory.mathcs.backport.java.util.Arrays;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 import edu.ucsb.eucalyptus.msgs.RunInstancesResponseType;
 import edu.ucsb.eucalyptus.msgs.RunInstancesType;
 import edu.ucsb.eucalyptus.msgs.RunningInstancesItemType;
+import edu.ucsb.eucalyptus.msgs.TerminateInstancesResponseType;
+import edu.ucsb.eucalyptus.msgs.TerminateInstancesType;
+import edu.ucsb.eucalyptus.msgs.TerminateInstancesItemType;
 
 public class EucalyptusActivityTasks {
 	private static final Logger LOG = Logger.getLogger( EucalyptusActivityTask.class );
 	private EucalyptusActivityTasks() {}
 	private static  EucalyptusActivityTasks _instance = new EucalyptusActivityTasks();
-	public static EucalyptusActivityTasks getInstnace(){
+	public static EucalyptusActivityTasks getInstance(){
 		return _instance;
 	}
-	
-	public void launchInstance(final String availabilityZone, final String imageId, final String instanceType){
-		LOG.info("launching instances at zone="+availabilityZone+", imageId="+imageId);
-		EucalyptusLaunchInstanceTask launchTask = new EucalyptusLaunchInstanceTask(availabilityZone, imageId, instanceType);
-		launchTask.dispatch(new ActivityContext() {
-			@Override
-			public String getUserId(){
-				try{
-					return Accounts.lookupSystemAdmin( ).getUserId();
-				}catch(AuthException ex){
-					throw Exceptions.toUndeclared(ex);
-				}
-			}
-			@Override
-			public EucalyptusClient getEucalyptusClient(){
-				 try {
-				      final EucalyptusClient client = new EucalyptusClient( this.getUserId() );
-				      client.init();
-				      return client;
-				    } catch ( Exception e ) {
-				      throw Exceptions.toUndeclared( e );
-				    }
-			}
-		});
-	}
-	
+
 	private interface ActivityContext {
 	  String getUserId();
 	  EucalyptusClient getEucalyptusClient();
+	}
+	
+	private class EucalyptusSystemActivity implements ActivityContext{
+		@Override
+		public String getUserId(){
+			// TODO: SPARK: Impersonation?
+			try{
+				return Accounts.lookupSystemAdmin( ).getUserId();
+			}catch(AuthException ex){
+				throw Exceptions.toUndeclared(ex);
+			}
+		}
+		@Override
+		public EucalyptusClient getEucalyptusClient(){
+			 try {
+			      final EucalyptusClient client = new EucalyptusClient( this.getUserId() );
+			      client.init();
+			      return client;
+			    } catch ( Exception e ) {
+			      throw Exceptions.toUndeclared( e );
+			    }
+		}
+	}
+	
+	public List<String> launchInstances(final String availabilityZone, final String imageId, 
+			final String instanceType, int numInstance){
+		LOG.info("launching instances at zone="+availabilityZone+", imageId="+imageId);
+		EucalyptusLaunchInstanceTask launchTask = new EucalyptusLaunchInstanceTask(availabilityZone, imageId, instanceType);
+		CheckedListenableFuture<Boolean> result = launchTask.dispatch(new EucalyptusSystemActivity());
+		try{
+			if(result.get()){
+				final List<String> instances = launchTask.getInstanceIds();
+				return instances;
+			}else
+				throw new EucalyptusActivityException("failed to launch the instance");
+		}catch(Exception ex){
+			throw Exceptions.toUndeclared(ex);
+		}
+	}
+	
+	public List<String> terminateInstances(final List<String> instances){
+		LOG.info(String.format("terminating %d instances", instances.size()));
+		EucalyptusTerminateInstanceTask terminateTask = new EucalyptusTerminateInstanceTask(instances);
+		CheckedListenableFuture<Boolean> result = terminateTask.dispatch(new EucalyptusSystemActivity());
+		try{
+			if(result.get()){
+				final List<String> terminated = terminateTask.getTerminatedInstances();
+				return terminated;
+			}else
+				throw new EucalyptusActivityException("failed to terminate the instances");
+		}catch(Exception ex){
+			throw Exceptions.toUndeclared(ex);
+		}
+	}
+	
+	private class EucalyptusTerminateInstanceTask extends EucalyptusActivityTask<TerminateInstancesResponseType>{
+		private final List<String> instanceIds;
+		private final AtomicReference<List<String>> terminatedIds = new AtomicReference<List<String>>();
+		private EucalyptusTerminateInstanceTask(final List<String> instanceId){
+			this.instanceIds = instanceId;
+		}
+		private TerminateInstancesType terminateInstances(){
+			final TerminateInstancesType req = new TerminateInstancesType();
+			req.setInstancesSet(Lists.newArrayList(this.instanceIds));
+			return req;
+		}
+		 
+		@Override
+		void dispatchInternal( ActivityContext context, Callback.Checked<TerminateInstancesResponseType> callback){
+			final EucalyptusClient client = context.getEucalyptusClient();
+			client.dispatch(terminateInstances(), callback);
+		}
+		    
+		
+		@Override
+		void dispatchSuccess( ActivityContext context, TerminateInstancesResponseType response ){
+			this.terminatedIds.set(Lists.transform(response.getInstancesSet(), 
+					new Function<TerminateInstancesItemType, String>(){
+						@Override
+						public String apply(TerminateInstancesItemType item){
+							return item.getInstanceId();
+						}
+					}));
+		}
+		
+		List<String> getTerminatedInstances(){
+			return this.terminatedIds.get();
+		}
+
 	}
 	
 	private class EucalyptusLaunchInstanceTask extends EucalyptusActivityTask<RunInstancesResponseType> {
@@ -109,7 +182,8 @@ public class EucalyptusActivityTasks {
 	    		  LaunchConfiguration.create(systemAcct, "launch_config_loadbalacing", 
 	    		  this.imageId, this.instanceType);
 		    final RunInstancesType runInstances = TypeMappers.transform( launchConfiguration, RunInstancesType.class );
-		    runInstances.setAvailabilityZone( availabilityZone );
+		    if(availabilityZone != null)
+		    	runInstances.setAvailabilityZone( availabilityZone );
 		    runInstances.setMaxCount( attemptToLaunch );
 		    return runInstances;
 	    }
@@ -131,7 +205,7 @@ public class EucalyptusActivityTasks {
 
 	      this.instanceIds.set( ImmutableList.copyOf( instanceIds ) );
 	    }
-
+	    
 	    List<String> getInstanceIds() {
 	      return instanceIds.get();
 	    }
