@@ -75,6 +75,7 @@ import org.jibx.runtime.IMarshallingContext;
 import org.jibx.runtime.JiBXException;
 import com.eucalyptus.auth.principal.Principals;
 import com.eucalyptus.auth.principal.User;
+import com.eucalyptus.binding.BindingManager;
 import com.eucalyptus.empyrean.ServiceId;
 import com.eucalyptus.http.MappingHttpMessage;
 import com.eucalyptus.util.Classes;
@@ -231,7 +232,7 @@ public class BaseMessage {
   }
     
   public String toString( ) {
-    String str = this.toString( "msgs_eucalyptus_com" );
+    String str = this.toString( BindingManager.defaultBindingName( ) );
     str = ( str != null )
       ? str
       : this.toString( "eucalyptus_ucsb_edu" );
