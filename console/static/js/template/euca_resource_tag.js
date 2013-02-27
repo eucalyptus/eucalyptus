@@ -10,14 +10,20 @@
       tag_data: null,
     },
 
-    baseTable: null,
-    alteredRow: null,
-    removedRow: null,
-    addedRow: null,
+    baseTable: null,  // an element to hold the dataTable object
+    
+    displayView: null,  // a variable to store the table's interaction mode
+    
+    alteredRow: null,   // an element to store altered row information
+    removedRow: null,   // an element to store removed row information 
+    addedRow: null,    // an element to store newly added row information
+
  
     // Set up the widget
     _create: function() {
       var thisObj = this;
+
+      thisObj.displayView = "view";   //The table is in 'view' mode by default
 
       thisObj.alteredRow = $('div')[0];   //initialize an element to store 'altered row' data
       thisObj.removedRow = $('div')[1];   //initialize an element to store 'removed row' data
@@ -124,6 +130,16 @@
                    });
 
                    editButton.bind('click', function(e){
+
+                     thisObj.displayView = "edit";   // The table is in 'edit' mode
+                     thisObj.baseTable.find('tr.resource-tag-input-row-tr').hide();   // Hide the add new tag display
+
+                     thisObj.baseTable.find('tbody').find('tr').each(function(index, tr){  // Re-display all the edit buttons
+                       var $thisCurrentRow = $(tr);
+                       $thisCurrentRow.children().show();
+                       $thisCurrentRow.find('#extra-td.resource-tag-table-extra-td').hide();
+                     });
+
                      var tdResourceTagEdit = $('<td>').html('<input name="tag_key" type="text" id="tag_key" size="128" value="'+key+'">');
                      tdResourceTagEdit.after($('<td>').html('<input name="tag_value" type="text" id="tag_value" size="256" value="'+value+'">'));
                      
@@ -142,29 +158,57 @@
                      $currentRow.append(tdResourceTagEdit);
 
                      editdoneButton.bind('click', function(e){
+
+                       thisObj.displayView = "view";   // The table is in 'view' mode
+
                        var newKey = tdResourceTagEdit.find('#tag_key').val();
                        var newValue = tdResourceTagEdit.find('#tag_value').val();
                        jQuery.data(thisObj.alteredRow, key, {key: newKey, value: newValue});
                        thisObj.baseTable.fnUpdate({"name": newKey, "value": newValue}, thisObj.baseTable.fnGetPosition($(this).closest("tr").get(0)));
                        tdResourceTagEdit.remove();
                        $currentRow.children().show();
+
+                       key = newKey;   // Update the variable 'key' with the newly edited value
+                       value = newValue;   // Update the variable 'value' with newlt edited value
+
 //                       thisObj.baseTable.fnReloadAjax();
+
+                       thisObj.baseTable.find('tbody').find('tr').each(function(index, tr){      // Re-display all the edit buttons
+                         var $thisCurrentRow = $(tr);
+                         $thisCurrentRow.children().show();
+                         $thisCurrentRow.find('#extra-td.resource-tag-table-extra-td').show();
+                       });
+
                      });
 
                      editcancelButton.bind('click', function(e){
+
+                       thisObj.displayView = "view";   // The table is in 'view' mode
+
    /*                    var tdResourceTagEdit = $('<td>').text(key);
                        tdResourceTagEdit.after($('<td>').text(value));
                        $currentRow.text('');
                        $currentRow.append(tdResourceTagEdit);
    */                  
                        tdResourceTagEdit.remove();  
-                       $currentRow.children().show(); 
+          //             $currentRow.children().show();
+
+                       thisObj.baseTable.find('tbody').find('tr').each(function(index, tr){      // Re-display all the edit buttons
+                         var $thisCurrentRow = $(tr);
+                         $thisCurrentRow.children().show();
+                         $thisCurrentRow.find('#extra-td.resource-tag-table-extra-td').show();
+                       }); 
+
+                       thisObj.baseTable.find('tr.resource-tag-input-row-tr').show();   // Re-display the add new tag row  
 //                       thisObj.baseTable.fnReloadAjax();
                      });
 
                    });
 
                    removeButton.bind('click', function(e){
+
+                     thisObj.displayView = "view";   // The table is in 'view' mode
+
                      jQuery.data(thisObj.removedRow, key, {key: key, value: value});
                      thisObj.baseTable.fnDeleteRow(thisObj.baseTable.fnGetPosition($(this).closest("tr").get(0)));
         //             thisObj.baseTable.fnReloadAjax();
@@ -186,6 +230,11 @@
                thisObj.baseTable.fnAddData({"name": addedKey, "value": addedValue});
           //     thisObj.baseTable.fnReloadAjax();
              });
+
+	     // If the table is in 'edit' mode, hide the add new tag row
+             if( thisObj.displayView != "view" ){
+               thisObj.baseTable.find('tr.resource-tag-input-row-tr').hide();       
+             };
 
           },
      });

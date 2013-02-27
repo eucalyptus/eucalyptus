@@ -1173,7 +1173,7 @@
 //        $wrapper.append($volInfo);
 
       // Create a widget object for displaying the resource tag information
-      $tagInfo = $('<div>').addClass('resource-tag-table-expanded-instance').addClass('clearfix').euca_resource_tag({resource: 'instance', resource_id: instance.id});
+      $tagInfo = $('<div>').addClass('resource-tag-table-expanded-instance').addClass('clearfix').attr('id', instance.id).euca_resource_tag({resource: 'instance', resource_id: instance.id});
 
       $tabspace = $('<div>').addClass('eucatabspace-main-div').eucatabspace(); 
       $tabspace.eucatabspace('addTabPage', 'Instance', $instInfo);
