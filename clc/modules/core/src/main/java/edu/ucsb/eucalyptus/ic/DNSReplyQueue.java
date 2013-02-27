@@ -90,7 +90,7 @@ public class DNSReplyQueue {
         {
             Object requestMsg = muleMsg.getPayload();
             String requestString = requestMsg.toString();
-            BaseMessage msg = ( BaseMessage ) BindingManager.getBinding( "msgs_eucalyptus_com" ).fromOM( requestString );
+            BaseMessage msg = ( BaseMessage ) BindingManager.getDefaultBinding( ).fromOM( requestString );
             Throwable ex = muleMsg.getException().getCause();
             BaseMessage errMsg;
 

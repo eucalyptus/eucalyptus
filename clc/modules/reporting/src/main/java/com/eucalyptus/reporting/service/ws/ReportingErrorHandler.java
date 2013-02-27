@@ -84,7 +84,7 @@ public class ReportingErrorHandler {
       return ( BaseMessage ) payload;
     } else if ( payload instanceof String ) {
       try {
-        return ( BaseMessage ) BindingManager.getBinding( BindingManager.sanitizeNamespace( ReportingQueryBinding.REPORTING_DEFAULT_NAMESPACE ) ).fromOM( ( String ) payload );
+        return ( BaseMessage ) BindingManager.getBinding( ReportingQueryBinding.REPORTING_DEFAULT_NAMESPACE ).fromOM( ( String ) payload );
       } catch ( Exception e ) {
         throw new PayloadParseException( e );
       }
