@@ -43,24 +43,7 @@
         dt_arg : {
           "bProcessing": true,
           "bServerSide": true,
-          "sAjaxDataProp": function(json) {
-            return json;
-          },
-          "sAjaxSource": 'volume',
-          "fnServerData": function (sSource, aoData, fnCallback) {
-	    require(['models/volumes'], function(Volumes) {
-		var vols = new Volumes();
-		vols.on('reset', function() {
-		   var data = vols.toJSON();
-		   console.log('RESET', data);
-                   data.iTotalRecords = data.length;
-                   data.iTotalDisplayRecords = data.length;
-		   fnCallback(data);
-		});
-		vols.fetch();
-	    });
-
-          },
+          "sAjaxSource": 'volumes',
           "aaSorting": [[ 7, "desc" ]],
           "aoColumns": [
             {

@@ -36,16 +36,7 @@
         dt_arg : {
           "bProcessing": true,
           "bServerSide": true,
-          "sAjaxDataProp": function(json) {
-            return json;
-          },
-          "sAjaxSource": 'image',
-          "fnServerData": function (sSource, aoData, fnCallback) {
-                data = $('html body').eucadata('get', sSource);
-                data.iTotalRecords = data.length;
-                data.iTotalDisplayRecords = data.length;
-                fnCallback(data);
-          },
+          "sAjaxSource": 'images',
           "aoColumns": [
             {
               // Display the name of the image in eucatable
