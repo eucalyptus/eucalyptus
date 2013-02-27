@@ -124,7 +124,7 @@ public class BindingHandler extends MessageStackHandler {
         if ( namespacePattern != null && !namespacePattern.matcher( namespace ).matches() ) {
           throw new WebServicesException( "Invalid request" );
         }
-        this.binding = BindingManager.getBinding( BindingManager.sanitizeNamespace( namespace ) );
+        this.binding = BindingManager.getBinding( namespace );
         msgType = this.binding.getElementClass( httpMessage.getOmMessage( ).getLocalName( ) );
       } catch ( BindingException ex ) {
         if ( this.defaultBinding != null ) {

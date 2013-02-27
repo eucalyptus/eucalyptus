@@ -246,7 +246,7 @@ public class Pipelines {
       pipeline.addLast( "ws-security", Handlers.internalWsSecHandler() );
       pipeline.addLast( "ws-addressing", Handlers.addressingHandler( ) );
       pipeline.addLast( "build-soap-envelope", Handlers.soapHandler( ) );
-      pipeline.addLast( "binding", Handlers.bindinghandler() );
+      pipeline.addLast( "binding", Handlers.bindingHandler( ) );
       return pipeline;
     }
     

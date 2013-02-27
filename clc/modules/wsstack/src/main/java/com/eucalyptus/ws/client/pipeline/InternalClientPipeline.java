@@ -93,7 +93,7 @@ public class InternalClientPipeline implements ChannelPipelineFactory {
     pipeline.addLast( "wssec", Handlers.internalWsSecHandler( ) );
     pipeline.addLast( "addressing", Handlers.addressingHandler( ) );
     pipeline.addLast( "soap", Handlers.soapHandler( ) );
-    pipeline.addLast( "binding", Handlers.bindingHandler( "msgs_eucalyptus_com" ) );
+    pipeline.addLast( "binding", Handlers.bindingHandler( ) );
     pipeline.addLast( "impersonation", Handlers.internalImpersonationHandler( ) );
     return pipeline;
   }

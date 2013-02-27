@@ -19,77 +19,85 @@
  ************************************************************************/
 package com.eucalyptus.reporting.domain;
 
-import java.util.List;
-
-import javax.persistence.EntityTransaction;
+import java.util.*;
 
 import org.apache.log4j.Logger;
 
-import com.eucalyptus.entities.Entities;
-import com.google.common.base.Predicates;
-import com.google.common.collect.Iterables;
-import com.google.common.collect.Lists;
+import com.eucalyptus.entities.EntityWrapper;
 
 /**
- * <p>
- * ReportingUserDao is an object for reading ReportingUser objects from the
+ * <p>ReportingUserDao is an object for reading ReportingUser objects from the
  * database.
  */
-public class ReportingUserDao {
-    private static Logger LOG = Logger.getLogger(ReportingUserDao.class);
+public class ReportingUserDao
+{
+	private static Logger LOG = Logger.getLogger( ReportingUserDao.class );
 
-    private static ReportingUserDao instance = null;
-
-    public static ReportingUserDao getInstance() {
-	if (instance == null) {
-	    instance = new ReportingUserDao();
+	private static ReportingUserDao instance = null;
+	
+	public static synchronized ReportingUserDao getInstance()
+	{
+		if (instance == null) {
+			instance = new ReportingUserDao();
+			instance.loadFromDb();
+		}
+		return instance;
 	}
-	return instance;
-    }
-
-    private ReportingUserDao() {
-    }
-
-    public ReportingUser getReportingUser(String userId) {
-	ReportingUser searchUser = new ReportingUser();
-	searchUser.setId(userId);
-	try {
-	    return searchReportingUser(searchUser).get(0);
-	} catch (Exception ex) {
-	    LOG.debug(ex, ex);
-	    return null;
-	}
-    }
-
-    public List<ReportingUser> getReportingUsersByAccount(String accountId) {
-	ReportingUser searchUser = new ReportingUser();
-	searchUser.setAccountId(accountId);
-	return searchReportingUser(searchUser);
-    }
-
-    private List<ReportingUser> searchReportingUser(
-	    final ReportingUser searchUser) {
-
-	List<ReportingUser> reportingUserList = Lists.newArrayList();
-	EntityTransaction db = Entities.get(ReportingUser.class);
-
-	try {
-	    reportingUserList = (List<ReportingUser>) Entities.query(
-		    searchUser, true);
-	    db.commit();
-	} catch (Exception ex) {
-	    LOG.error(ex, ex);
-	    reportingUserList.clear();
-	} finally {
-	    if (db.isActive())
-		db.rollback();
+	
+	private ReportingUserDao()
+	{
+		
 	}
 
-	Iterables.removeIf(reportingUserList, Predicates.isNull());
-	if (!reportingUserList.isEmpty()) {
-	    return reportingUserList;
-	} else {
-	    return null;
+	private final Map<String,ReportingUser> users = new HashMap<String,ReportingUser>();
+
+	public ReportingUser getReportingUser(String userId)
+	{
+		return users.get(userId);
 	}
-    }
+	
+	public List<ReportingUser> getReportingUsersByAccount(String accountId)
+	{
+		List<ReportingUser> rv = new ArrayList<ReportingUser>();
+		for (ReportingUser user: users.values()) {
+			if (user.getAccountId().equals(accountId)) {
+				rv.add(user);
+			}
+		}
+		return rv;
+	}
+	
+	private void loadFromDb()
+	{
+		LOG.debug("Load users from db");
+
+		EntityWrapper<ReportingUser> entityWrapper =
+			EntityWrapper.get(ReportingUser.class);
+
+		try {
+			@SuppressWarnings("rawtypes")
+			List reportingUsers = (List)
+			entityWrapper.createQuery("from ReportingUser")
+			.list();
+
+			for (Object obj: reportingUsers) {
+				ReportingUser user = (ReportingUser) obj;
+				users.put(user.getId(), user);
+				LOG.debug("load user from db, id:" + user.getId() + " name:" + user.getName());
+			}
+
+			entityWrapper.commit();
+		} catch (Exception ex) {
+			LOG.error(ex);
+			entityWrapper.rollback();
+			throw new RuntimeException(ex);
+		}			
+	}
+	
+	void putCache(ReportingUser user)
+	{
+		users.put(user.getId(), user);
+	}
+
 }
+

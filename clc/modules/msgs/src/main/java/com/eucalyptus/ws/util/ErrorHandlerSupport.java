@@ -110,7 +110,7 @@ public abstract class ErrorHandlerSupport {
       return ( BaseMessage ) payload;
     } else if ( payload instanceof String ) {
       try {
-        return ( BaseMessage ) BindingManager.getBinding( BindingManager.sanitizeNamespace( namespace ) ).fromOM( ( String ) payload );
+        return ( BaseMessage ) BindingManager.getBinding( namespace ).fromOM( ( String ) payload );
       } catch ( Exception e ) {
         throw new PayloadParseException( e );
       }
