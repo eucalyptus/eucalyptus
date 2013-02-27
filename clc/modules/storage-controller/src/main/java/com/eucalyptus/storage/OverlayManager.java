@@ -333,12 +333,8 @@ public class OverlayManager implements LogicalStorageManager {
 	}
 
 	public void startupChecks() {
-		/* zhill: removed because now we only export volumes on 'attach', so no reload needed.
-		 *  It is assumed that if the service goes down the exports are unaffected. If a reboot
-		 *  of the machine is done then it is admin responsibility to ensure that volumes are
-		 *  detached.
-		 */
-		//reload();
+		//Reload the volumes that were exported on last shutdown (of the service)
+		reload();
 	}
 
 	private void checkVolumesDir() {
@@ -1004,30 +1000,42 @@ public class OverlayManager implements LogicalStorageManager {
 
 	/**
 	 * Called on service start to load and export any volumes that should be available to clients immediately.
-	 * This is a legacy call from the old OverlayManager that always exported volumes on creation rather than
-	 * attach.
+	 * Bases that decision on the lodevName field in the DB.
 	 * 
-	 * TODO: For the new version, don't export volumes unless they were in an exported state when the service terminated
-	 * and are not exported currently. (i.e. machine reboot)
-	 * TODO: this is currently *NOT* called during startup.
 	 */
 	public void reload() {
+		LOG.info("Initiating SC Reload of iSCSI targets");
 		VolumeEntityWrapperManager volumeManager = new VolumeEntityWrapperManager();
 		List<LVMVolumeInfo> volumeInfos = volumeManager.getAllVolumeInfos();
+		LOG.info("SC Reload found " + volumeInfos.size() + " volumes in the DB");
+		
+		//Ensure that all loopbacks are properly setup.
 		for(LVMVolumeInfo foundVolumeInfo : volumeInfos) {
 			String loDevName = foundVolumeInfo.getLoDevName();
 			if(loDevName != null) {
 				String loFileName = foundVolumeInfo.getVolumeId();
+				LOG.info("SC Reload: found volume " + loFileName + " was exported at last shutdown. Ensuring export restored");
 				String absoluteLoFileName = DirectStorageInfo.getStorageInfo().getVolumesDir() + PATH_SEPARATOR + loFileName;
 				if(!new File(absoluteLoFileName).exists()) {
-					LOG.error("Backing volume: " + absoluteLoFileName + " not found. Invalidating volume."); 
+					LOG.error("SC Reload: Backing volume: " + absoluteLoFileName + " not found. Invalidating volume."); 
 					foundVolumeInfo.setStatus(StorageProperties.Status.failed.toString());
 					continue;
 				}
 				try {
+					//Ensure the loopback isn't used
 					String returnValue = getLoopback(loDevName);
 					if(returnValue.length() <= 0) {
+						LOG.info("SC Reload: volume " + loFileName + " previously used loopback " + loDevName + ". No conflict detected, reusing same loopback");
 						createLoopback(absoluteLoFileName, loDevName);
+					} else {
+						if(!returnValue.contains(loFileName)) {
+							//Use a new loopback since the old one is used by something else
+							String newLoDev = createLoopback(absoluteLoFileName);
+							foundVolumeInfo.setLoDevName(newLoDev);
+							LOG.info("SC Reload: volume " + loFileName + " previously used loopback " + loDevName + ", but loopback already in used by something else. Using new loopback: " + newLoDev);
+						} else {
+							LOG.info("SC Reload: Detection of loopback for volume " + loFileName + " got " + returnValue + ". Appears that loopback is already in-place. No losetup needed for this volume.");
+						}
 					}
 				} catch(EucalyptusCloudException ex) {
 					String error = "Unable to run command: " + ex.getMessage();
@@ -1035,20 +1043,28 @@ public class OverlayManager implements LogicalStorageManager {
 				}
 			}
 		}
+		
 		//now enable them
 		try {
-			LOG.info("Scanning volume groups. This might take a little while...");
+			LOG.info("SC Reload: Scanning volume groups. This might take a little while...");
 			scanVolumeGroups();
 		} catch (EucalyptusCloudException e) {
 			LOG.error(e);
 		}
+		
+		//Export volumes
+		LOG.info("SC Reload: ensuring configured volumes are exported via iSCSI targets");
 		for(LVMVolumeInfo foundVolumeInfo : volumeInfos) {
 			try {
-				if (foundVolumeInfo.getVgName() != null) {
+				//Only try to export volumes that have both a lodev and a vgname
+				if (foundVolumeInfo.getLoDevName() != null && foundVolumeInfo.getVgName() != null) {
+					LOG.info("SC Reload: exporting " + foundVolumeInfo.getVolumeId() + " in VG: " + foundVolumeInfo.getVgName());
 					volumeManager.exportVolume(foundVolumeInfo);
+				} else {
+					LOG.info("SC Reload: no loopback configured for " + foundVolumeInfo.getVolumeId() + ". Skipping export for this volume.");
 				}
 			} catch(EucalyptusCloudException ex) {
-				LOG.error("Unable to reload volume: " + foundVolumeInfo.getVolumeId() + ex);
+				LOG.error("SC Reload: Unable to reload volume: " + foundVolumeInfo.getVolumeId() + ex.getMessage());
 			}		
 		}
 		volumeManager.finish();

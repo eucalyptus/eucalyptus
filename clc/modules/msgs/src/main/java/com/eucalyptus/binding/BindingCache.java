@@ -541,7 +541,7 @@ public class BindingCache {
           e.printStackTrace( System.err );
           System.exit( -1 );//GRZE: special case to fail build
         }
-        this.bindingName = this.ns.replaceAll( "(http://)|(/$)", "" ).replaceAll( "/[^/]*$", "" ).replaceAll( "[./-]", "_" );
+        this.bindingName = this.ns.replaceAll( "(http://)|(/$)", "" ).replaceAll( "[./-]", "_" );
         this.out.write( "<binding xmlns:euca=\"" + this.ns + "\" name=\"" + this.bindingName + "\">\n" );
         this.out.write( "  <namespace uri=\"" + this.ns + "\" default=\"elements\" prefix=\"euca\"/>\n" );
         this.out.flush( );
