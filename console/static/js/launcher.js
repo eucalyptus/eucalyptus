@@ -693,7 +693,7 @@
         var numOptions = $sg_selector.find('option').length;
         // TODO TODO TODO
         //if (numOptions === results.length)
-          return;
+        //  return;
         var onSelectorChange = function(groupName){
           var $rule = $section.find('div#launch-wizard-security-sg-detail');
           $rule.children().detach();
