@@ -366,7 +366,7 @@ int vbr_add_ascii(const char *spec_str, virtualMachine * vm_type)
         LOGERROR("invalid 'size' specification in VBR '%s'\n", spec_str);
         goto out_error;
     }
-    vbr->sizeBytes = atoi(size_spec);
+    vbr->sizeBytes = atoll(size_spec);
 
     if (format_spec == NULL) {
         LOGERROR("invalid 'format' specification in VBR '%s'\n", spec_str);

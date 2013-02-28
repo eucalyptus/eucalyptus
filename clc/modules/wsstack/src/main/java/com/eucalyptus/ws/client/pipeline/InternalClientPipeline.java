@@ -79,13 +79,6 @@ import com.eucalyptus.ws.handlers.InternalWsSecHandler;
 @ComponentPart( Empyrean.class )
 public class InternalClientPipeline implements ChannelPipelineFactory {
   private static Logger         LOG = Logger.getLogger( InternalClientPipeline.class );
-  private static ChannelHandler wssecHandler;
-  
-  public InternalClientPipeline( ) {
-    if ( wssecHandler == null ) {
-      wssecHandler = new InternalWsSecHandler( );
-    }
-  }
   
   @Override
   public ChannelPipeline getPipeline( ) throws Exception {
@@ -97,10 +90,11 @@ public class InternalClientPipeline implements ChannelPipelineFactory {
     pipeline.addLast( "aggregator", Handlers.newHttpChunkAggregator( ) );
     pipeline.addLast( "encoder", Handlers.httpRequestEncoder( ) );
     pipeline.addLast( "serializer", Handlers.soapMarshalling( ) );
-    pipeline.addLast( "wssec", InternalClientPipeline.wssecHandler );
+    pipeline.addLast( "wssec", Handlers.internalWsSecHandler( ) );
     pipeline.addLast( "addressing", Handlers.addressingHandler( ) );
     pipeline.addLast( "soap", Handlers.soapHandler( ) );
-    pipeline.addLast( "binding", Handlers.bindingHandler( "msgs_eucalyptus_com" ) );
+    pipeline.addLast( "binding", Handlers.bindingHandler( ) );
+    pipeline.addLast( "impersonation", Handlers.internalImpersonationHandler( ) );
     return pipeline;
   }
   

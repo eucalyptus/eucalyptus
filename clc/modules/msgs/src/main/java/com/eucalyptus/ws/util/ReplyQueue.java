@@ -118,7 +118,7 @@ public class ReplyQueue {
       ret = ( ( HasRequest ) payload ).getRequest( );
     } else if ( payload instanceof String ) {
       try {
-        ret = ( BaseMessage ) BindingManager.getBinding( "msgs_eucalyptus_com" ).fromOM( ( String ) payload );
+        ret = ( BaseMessage ) BindingManager.getDefaultBinding( ).fromOM( ( String ) payload );
       } catch ( Exception ex ) {
         LOG.error( ex , ex );
       }
@@ -130,7 +130,7 @@ public class ReplyQueue {
 //        ret = ( ( Allocation ) payload ).getRequest( );
       } else if ( payload instanceof String ) {
         try {
-          ret = ( BaseMessage ) BindingManager.getBinding( "msgs_eucalyptus_com" ).fromOM( ( String ) payload );
+          ret = ( BaseMessage ) BindingManager.getDefaultBinding( ).fromOM( ( String ) payload );
         } catch ( Exception ex ) {
           LOG.error( ex , ex );
         }

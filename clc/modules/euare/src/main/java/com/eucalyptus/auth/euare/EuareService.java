@@ -1483,7 +1483,7 @@ public class EuareService {
       LOG.error( e, e );
       if ( e instanceof AuthException ) {
         if ( AuthException.ACCESS_DENIED.equals( e.getMessage( ) ) ) {
-          throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Not authorized to put account policy for " + accountFound.getName( ) + " by " + requestUser.getName( ) );
+          throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Not authorized to list account policies for " + accountFound.getName( ) + " by " + requestUser.getName( ) );
         }
       }
       throw new EucalyptusCloudException( e );

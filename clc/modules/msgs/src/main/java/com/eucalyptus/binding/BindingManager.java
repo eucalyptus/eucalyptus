@@ -65,6 +65,7 @@ package com.eucalyptus.binding;
 import java.util.HashMap;
 import java.util.Map;
 import org.apache.log4j.Logger;
+import com.eucalyptus.bootstrap.BillOfMaterials;
 import com.eucalyptus.bootstrap.BootstrapException;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
@@ -74,7 +75,7 @@ public class BindingManager {
   
   private static Logger               LOG                       = Logger.getLogger( BindingManager.class );
   private static Map<String, Binding> bindingMap                = new HashMap<String, Binding>( );
-  private static final String         DEFAULT_BINDING_NAMESPACE = "http://msgs.eucalyptus.com";
+  private static final String         DEFAULT_BINDING_NAMESPACE = "http://msgs.eucalyptus.com/" + BillOfMaterials.getVersion( );
   private static final String         DEFAULT_BINDING_NAME      = BindingManager.sanitizeNamespace( defaultBindingNamespace( ) );
   private static Binding              DEFAULT                   = null;
   

@@ -1,12 +1,12 @@
-package com.eucalyptus.cloudwatch.domain.listmetrics;
+package com.eucalyptus.cloudwatch.domain.dimension;
 
-public class ListMetricDimension implements Comparable<ListMetricDimension>{
+public class DimensionEntity implements Comparable<DimensionEntity>{
   private String name;
   private String value;
-  public ListMetricDimension() {
+  public DimensionEntity() {
     super();
   }
-  public ListMetricDimension(String name, String value) {
+  public DimensionEntity(String name, String value) {
     this.name = name;
     this.value = value;
   }
@@ -38,7 +38,7 @@ public class ListMetricDimension implements Comparable<ListMetricDimension>{
       return false;
     if (getClass() != obj.getClass())
       return false;
-    ListMetricDimension other = (ListMetricDimension) obj;
+    DimensionEntity other = (DimensionEntity) obj;
     if (name == null) {
       if (other.name != null)
         return false;
@@ -56,7 +56,7 @@ public class ListMetricDimension implements Comparable<ListMetricDimension>{
     return "Dimension [name=" + name + ", value=" + value + "]";
   }
   @Override
-  public int compareTo(ListMetricDimension other) {
+  public int compareTo(DimensionEntity other) {
     if (other == null) {
       return -1;
     } else {

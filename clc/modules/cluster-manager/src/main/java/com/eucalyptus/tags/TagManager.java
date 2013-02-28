@@ -53,6 +53,7 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Ordering;
 import edu.ucsb.eucalyptus.cloud.InvalidParameterValueException;
+import edu.ucsb.eucalyptus.msgs.BaseMessage;
 import edu.ucsb.eucalyptus.msgs.CreateTagsResponseType;
 import edu.ucsb.eucalyptus.msgs.CreateTagsType;
 import edu.ucsb.eucalyptus.msgs.DeleteResourceTag;
@@ -132,7 +133,7 @@ public class TagManager {
     return reply;
   }
 
-  public DeleteTagsResponseType deleteTags( final DeleteTagsType request ) {
+  public DeleteTagsResponseType deleteTags( final DeleteTagsType request ) throws EucalyptusCloudException {
     final DeleteTagsResponseType reply = request.getReply( );
     reply.set_return( false );
 
@@ -140,6 +141,13 @@ public class TagManager {
     final OwnerFullName ownerFullName = context.getUserFullName().asAccountFullName();
     final List<String> resourceIds = Objects.firstNonNull( request.getResourcesSet(), Collections.<String>emptyList() );
     final List<DeleteResourceTag> resourceTags = Objects.firstNonNull( request.getTagSet(), Collections.<DeleteResourceTag>emptyList() );
+
+    for ( final DeleteResourceTag resourceTag : resourceTags ) {
+      final String key = resourceTag.getKey();
+      if ( Strings.isNullOrEmpty( key ) || key.trim().length() > 128 || isReserved( key ) ) {
+        throw new InvalidParameterValueException( "Invalid key (max length 128, must not be empty, reserved prefixes "+reservedPrefixes+"): "+key );
+      }
+    }
 
     if ( resourceIds.size() > 0 && resourceIds.size() > 0 ) {
       final Predicate<Void> delete = new Predicate<Void>(){
@@ -211,7 +219,12 @@ public class TagManager {
   }
 
   private static boolean isReserved( final String text ) {
-    return Iterables.any( reservedPrefixes, prefix( text ) );          
+    //TODO:STEVE: Review impersonation mechanism.
+    //TODO:GRZE: Review impersonation mechanism. 
+    final BaseMessage request = Contexts.lookup().getRequest();      
+    return
+        request.getEffectiveUserId() == null &&
+        Iterables.any( reservedPrefixes, prefix( text ) );          
   }
   
   private static Predicate<String> prefix( final String text ) {

@@ -71,6 +71,7 @@ import java.net.UnknownHostException;
 import java.security.cert.X509Certificate;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.NavigableSet;
 import java.util.NoSuchElementException;
 import java.util.concurrent.BlockingQueue;
@@ -83,6 +84,10 @@ import java.util.concurrent.LinkedBlockingDeque;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReadWriteLock;
+import java.util.concurrent.locks.ReentrantLock;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
 import org.apache.log4j.Logger;
 import com.eucalyptus.auth.principal.Principals;
 import com.eucalyptus.bootstrap.Bootstrap;
@@ -157,11 +162,13 @@ import com.eucalyptus.ws.WebServicesException;
 import com.google.common.base.Function;
 import com.google.common.base.Predicate;
 import com.google.common.base.Strings;
+import com.google.common.collect.ForwardingMap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.ObjectArrays;
 import edu.ucsb.eucalyptus.cloud.NodeInfo;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
+import edu.ucsb.eucalyptus.msgs.MigrateInstancesType;
 import edu.ucsb.eucalyptus.msgs.NodeCertInfo;
 import edu.ucsb.eucalyptus.msgs.NodeLogInfo;
 import edu.ucsb.eucalyptus.msgs.NodeType;
@@ -172,12 +179,60 @@ public class Cluster implements AvailabilityZoneMetadata, HasFullName<Cluster>, 
   private final ClusterConfiguration                     configuration;
 //TODO:GRZE: sigh.  This stuff needs to be addressed by (1) move to Nodes.java for nodeMap, (2) handling it like any other registered service.
   private final ConcurrentNavigableMap<String, NodeInfo> nodeMap;
+  private final Map<String, NodeInfo>                    nodeHostAddrMap = new ForwardingMap<String, NodeInfo>( ) {
+    
+    @Override
+    protected Map<String, NodeInfo> delegate( ) {
+      return Cluster.this.nodeMap;
+    }
+    
+    @Override
+    public boolean containsKey( Object keyObject ) {
+      return delegate( ).containsKey( findRealKey( keyObject ) );
+    }
+    
+    @Override
+    public NodeInfo get( Object key ) {
+      return delegate( ).get( findRealKey( key ) );
+    }
+    
+    public String findRealKey( Object keyObject ) {
+      if ( keyObject instanceof String ) {
+        String key = ( String ) keyObject;
+        for ( String serviceTag : delegate( ).keySet( ) ) {
+          try {
+            URI tag = new URI( serviceTag );
+            String host = tag.getHost( );
+            if ( host != null && host.equals( key ) ) {
+              return serviceTag;
+            } else {
+              InetAddress addr = InetAddress.getByName( host );
+              String hostAddr = addr.getHostAddress( );
+              if ( hostAddr != null && hostAddr.equals( key ) ) {
+                return serviceTag;
+              }
+            }
+          } catch ( UnknownHostException ex ) {
+            LOG.debug( ex );
+          } catch ( URISyntaxException ex ) {
+            LOG.debug( ex );
+          }
+        }
+        return key;
+      } else {
+        return "" + keyObject;
+      }
+    }
+    
+  };
+
   private final BlockingQueue<Throwable>                 pendingErrors  = new LinkedBlockingDeque<Throwable>( );
   private final ClusterState                             state;
   private final ResourceState                            nodeState;
   private NodeLogInfo                                    lastLog        = new NodeLogInfo( );
   private boolean                                        hasClusterCert = false;
   private boolean                                        hasNodeCert    = false;
+  private final Lock                                     gateLock       = new ReentrantLock( );
   
   enum ZoneRegistration implements Predicate<Cluster> {
     REGISTER {
@@ -1327,4 +1382,46 @@ public class Cluster implements AvailabilityZoneMetadata, HasFullName<Cluster>, 
     return this.nodeMap;
   }
   
+  /**
+   * GRZE:WARNING: this is a temporary method to expose the forwarding map of NC info
+   * @return
+   */
+  Map<String,NodeInfo> getNodeHostMap( ) {
+    return this.nodeHostAddrMap;
+  }
+
+  /**
+   * <ol>
+   * <li> Mark this cluster as gated.
+   * <li> Update node and resource information; describe resources.
+   * <li> Find all VMs with volume attachments and authorize every node's IQN.
+   * <li> Send the MigrateInstances operation.
+   * <li> Update node and resource information; describe resources.
+   * <li> Unmark this cluster as gated.
+   * </ol>
+   * @param sourceHost
+   * @throws Exception
+   */
+  public void migrateInstances( final String sourceHost ) throws Exception {
+    this.gateLock.lock( );
+    try {
+      //TODO:GRZE: gate cluster
+      //TODO:GRZE: describe resources
+      //TODO:GRZE: authorize all NCs for volume attachments on VMs running on sourceHost 
+      AsyncRequests.sendSync( this.getConfiguration( ), new MigrateInstancesType( ) {
+        {
+          this.setSourceHost( sourceHost );
+        }
+      } );
+      //TODO:GRZE: describe resources
+      //TODO:GRZE: ungate cluster
+    } finally {
+      this.gateLock .unlock( );
+    }
+  }
+
+  protected Lock getGateLock( ) {
+    return this.gateLock;
+  }
+
 }

@@ -21,12 +21,14 @@ package com.eucalyptus.autoscaling.configurations;
 
 import static com.eucalyptus.autoscaling.common.AutoScalingMetadata.LaunchConfigurationMetadata;
 import java.util.Collection;
+import java.util.List;
 import java.util.Set;
 import javax.persistence.CollectionTable;
 import javax.persistence.Column;
 import javax.persistence.ElementCollection;
 import javax.persistence.JoinColumn;
 import javax.persistence.Lob;
+import javax.persistence.OrderColumn;
 import javax.persistence.PersistenceContext;
 import javax.persistence.Table;
 import org.hibernate.annotations.Cache;
@@ -35,6 +37,7 @@ import org.hibernate.annotations.Entity;
 import org.hibernate.annotations.Type;
 import com.eucalyptus.autoscaling.metadata.AbstractOwnedPersistent;
 import com.eucalyptus.util.OwnerFullName;
+import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 
 /**
@@ -64,8 +67,9 @@ public class LaunchConfiguration extends AbstractOwnedPersistent implements Laun
   @CollectionTable( name = "metadata_launch_configuration_security_groups" )
   @Column( name = "metadata_security_group" )
   @JoinColumn( name = "metadata_launch_configuration_id" )
+  @OrderColumn( name = "metadata_security_group_index")
   @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
-  private Set<String> securityGroups = Sets.newHashSet();
+  private List<String> securityGroups = Lists.newArrayList();
 
   @Column( name = "metadata_user_data" )
   @Lob
@@ -78,8 +82,9 @@ public class LaunchConfiguration extends AbstractOwnedPersistent implements Laun
   @ElementCollection  
   @CollectionTable( name = "metadata_launch_configuration_block_device_mappings" )
   @JoinColumn( name = "metadata_launch_configuration_id" )
+  @OrderColumn( name = "metadata_device_mapping_index")
   @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
-  private Set<BlockDeviceMapping> blockDeviceMappings = Sets.newHashSet();
+  private List<BlockDeviceMapping> blockDeviceMappings = Lists.newArrayList();
 
   @Column( name = "metadata_instance_monitoring" )
   private Boolean instanceMonitoring;
@@ -131,11 +136,11 @@ public class LaunchConfiguration extends AbstractOwnedPersistent implements Laun
     this.keyName = keyName;
   }
 
-  public Set<String> getSecurityGroups() {
+  public List<String> getSecurityGroups() {
     return securityGroups;
   }
 
-  public void setSecurityGroups( final Set<String> securityGroups ) {
+  public void setSecurityGroups( final List<String> securityGroups ) {
     this.securityGroups = securityGroups;
   }
 
@@ -155,11 +160,11 @@ public class LaunchConfiguration extends AbstractOwnedPersistent implements Laun
     this.instanceType = instanceType;
   }
 
-  public Set<BlockDeviceMapping> getBlockDeviceMappings() {
+  public List<BlockDeviceMapping> getBlockDeviceMappings() {
     return blockDeviceMappings;
   }
 
-  public void setBlockDeviceMappings( final Set<BlockDeviceMapping> blockDeviceMappings ) {
+  public void setBlockDeviceMappings( final List<BlockDeviceMapping> blockDeviceMappings ) {
     this.blockDeviceMappings = blockDeviceMappings;
   }
 
@@ -234,8 +239,8 @@ public class LaunchConfiguration extends AbstractOwnedPersistent implements Laun
     private String keyName;
     private String userData;
     private Boolean instanceMonitoring;
-    private Set<String> securityGroups = Sets.newHashSet();
-    private Set<BlockDeviceMapping> blockDeviceMappings = Sets.newHashSet();
+    private Set<String> securityGroups = Sets.newLinkedHashSet();
+    private Set<BlockDeviceMapping> blockDeviceMappings = Sets.newLinkedHashSet();
 
     BaseBuilder( final OwnerFullName ownerFullName,
                  final String name,
@@ -298,8 +303,8 @@ public class LaunchConfiguration extends AbstractOwnedPersistent implements Laun
       configuration.setKeyName( keyName );
       configuration.setUserData( userData );
       configuration.setInstanceMonitoring( instanceMonitoring );
-      configuration.setSecurityGroups( securityGroups );
-      configuration.setBlockDeviceMappings( blockDeviceMappings );      
+      configuration.setSecurityGroups( Lists.newArrayList( securityGroups ) );
+      configuration.setBlockDeviceMappings( Lists.newArrayList( blockDeviceMappings ) );
       return configuration;
     }
   }

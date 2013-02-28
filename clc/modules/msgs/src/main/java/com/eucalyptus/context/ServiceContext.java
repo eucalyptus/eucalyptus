@@ -81,6 +81,10 @@ import org.mule.config.spring.SpringXmlConfigurationBuilder;
 import org.mule.module.client.MuleClient;
 import org.mule.transport.AbstractConnector;
 import org.mule.transport.vm.VMMessageDispatcherFactory;
+import com.eucalyptus.auth.Accounts;
+import com.eucalyptus.auth.AuthException;
+import com.eucalyptus.auth.principal.Principals;
+import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.bootstrap.BootstrapException;
 import com.eucalyptus.component.ComponentId;
@@ -91,6 +95,7 @@ import com.eucalyptus.configurable.ConfigurablePropertyException;
 import com.eucalyptus.configurable.PropertyChangeListener;
 import com.eucalyptus.empyrean.Empyrean;
 import com.eucalyptus.system.Threads;
+import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.Exceptions;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 
@@ -187,6 +192,17 @@ public class ServiceContext {
     Context ctx = null;
     if ( msg instanceof BaseMessage ) {
       ctx = Contexts.createWrapped( dest, ( BaseMessage ) msg );
+      //TODO:STEVE: Review approach to impersonation
+      //TODO:GRZE: Review approach to impersonation
+      final String userId = ((BaseMessage)msg).getEffectiveUserId();
+      try {
+        if ( userId != null && !Principals.isFakeIdentify(userId) && ctx.hasAdministrativePrivileges() ) {
+          final User user= Accounts.lookupUserById( userId );
+          ctx.setUser( user );
+        }
+      } catch ( final AuthException e ) {
+        throw new EucalyptusCloudException( "User not found: " + userId );
+      }
     }
     try {
       MuleMessage reply = ServiceContextManager.getClient( ).sendDirect( dest, null, new DefaultMuleMessage( msg ) );

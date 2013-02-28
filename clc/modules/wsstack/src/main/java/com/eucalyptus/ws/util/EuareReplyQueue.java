@@ -159,7 +159,7 @@ public class EuareReplyQueue {
     if ( payload instanceof BaseMessage ) {
       return ( BaseMessage ) payload;
     } else if ( payload instanceof String ) {
-      return ( BaseMessage ) BindingManager.getBinding( BindingManager.sanitizeNamespace( "http://iam.amazonaws.com/doc/2010-05-08/" ) ).fromOM( ( String ) payload );
+      return ( BaseMessage ) BindingManager.getBinding( "http://iam.amazonaws.com/doc/2010-05-08/" ).fromOM( ( String ) payload );
     }
     return new EucalyptusErrorMessageType( "ReplyQueue", LogUtil.dumpObject( payload ) );
   }
