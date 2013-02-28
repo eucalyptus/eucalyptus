@@ -416,14 +416,6 @@ public abstract class ComponentId implements HasName<ComponentId>, HasFullName<C
     return this.capitalizedName;
   }
   
-  public Class<? extends BaseMessage> lookupBaseMessageType( ) {
-    try {
-      return ComponentMessages.lookup( this.getClass( ) );
-    } catch ( final NoSuchElementException ex ) {
-      return AnonymousMessage.class;
-    }
-  }
-
   public final String getFaultLogPrefix( ) {
 	  if ( Ats.from( this ).has( FaultLogPrefix.class ) ) {
 		  String value = Ats.from( this ).get( FaultLogPrefix.class ).value( );

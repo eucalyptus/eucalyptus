@@ -187,7 +187,9 @@ struct handlers xen_libvirt_handlers = {
     .doPowerDown = NULL,
     .doAttachVolume = NULL,
     .doDetachVolume = NULL,
-    .doDescribeSensors = NULL
+    .doDescribeSensors = NULL,
+    .doModifyNode = NULL,
+    .doMigrateInstance = NULL // no support on Xen for instance migration, currently
 };
 
 /*----------------------------------------------------------------------------*\
@@ -368,7 +370,7 @@ static int doGetConsoleOutput(struct nc_state_t *nc, ncMetadata * pMeta, char *i
     struct stat statbuf = { 0 };
     struct timeval tv = { 0 };
 
-    EUCA_FREE(*consoleOutput);
+    *consoleOutput = NULL;
 
     // find the instance record
     sem_p(inst_sem);

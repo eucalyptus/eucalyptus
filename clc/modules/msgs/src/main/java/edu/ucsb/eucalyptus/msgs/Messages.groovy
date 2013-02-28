@@ -369,11 +369,11 @@ public class VmTypeInfo extends EucalyptusData implements Cloneable {
   }
   
   public void setEbsRoot( String imageId, String iqn, Long sizeBytes ) {
-    this.virtualBootRecord.add( new VirtualBootRecord( id : imageId, size : sizeBytes/1024l, resourceLocation : "${iqn}", guestDeviceName : this.rootDeviceName, type : "ebs" ) );//TODO:GRZE: folow up on the iqn://
+    this.virtualBootRecord.add( new VirtualBootRecord( id : imageId, size : sizeBytes, resourceLocation : "${iqn}", guestDeviceName : this.rootDeviceName, type : "ebs" ) );//TODO:GRZE: folow up on the iqn://
   }
   
   public void setRoot( String imageId, String location, Long sizeBytes ) {
-    this.virtualBootRecord.add( new VirtualBootRecord( id : imageId, size : sizeBytes/1024l, resourceLocation : "walrus://${location}", guestDeviceName : this.rootDeviceName, type : "machine" ) );
+    this.virtualBootRecord.add( new VirtualBootRecord( id : imageId, size : sizeBytes, resourceLocation : "walrus://${location}", guestDeviceName : this.rootDeviceName, type : "machine" ) );
   }
   
   public void setKernel( String imageId, String location ) {
@@ -385,11 +385,11 @@ public class VmTypeInfo extends EucalyptusData implements Cloneable {
   }
   
   protected void setSwap( String deviceName, Long sizeBytes ) {
-    this.virtualBootRecord.add( new VirtualBootRecord( guestDeviceName : deviceName, size : sizeBytes/1024l, type : "swap", format : "swap" ) );
+    this.virtualBootRecord.add( new VirtualBootRecord( guestDeviceName : deviceName, size : sizeBytes, type : "swap", format : "swap" ) );
   }
   
   public void setEphemeral( Integer index, String deviceName, Long sizeBytes, String formatName ) {
-    this.virtualBootRecord.add( new VirtualBootRecord( guestDeviceName : deviceName, size : sizeBytes/1024l, type : "ephemeral", format : formatName ) );
+    this.virtualBootRecord.add( new VirtualBootRecord( guestDeviceName : deviceName, size : sizeBytes, type : "ephemeral", format : formatName ) );
   }
   
   public VirtualBootRecord lookupRoot( ) throws NoSuchElementException {

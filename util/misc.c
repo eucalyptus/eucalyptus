@@ -971,7 +971,7 @@ char *getConfString(char configFiles[][MAX_PATH], int numFiles, char *key)
 //! @pre \li The path, name and value fields must not be NULL.
 //!      \li The path field must be a valid path name.
 //!      \li The name field must not be 0 length.
-//!      \li The value field should be set to NULL. If not NULL, it'll be freed.
+//!      \li The value field should be set to NULL or potential memory leak will occur.
 //!
 //! @post On success, the value field is updated.
 //!
@@ -987,12 +987,12 @@ int get_conf_var(const char *path, const char *name, char **value)
     char *ret = NULL;
     int len = 0;
 
-    /* sanity check */
+    // sanity check
     if ((path == NULL) || (path[0] == '\0') || (name == NULL) || (name[0] == '\0') || (value == NULL)) {
         return -1;
     }
 
-    EUCA_FREE(*value);
+    *value = NULL;
 
     if ((f = fopen(path, "r")) == NULL) {
         return (-1);
@@ -2649,7 +2649,6 @@ int main(int argc, char **argv)
 {
     int p = 0;
     int ret = 0;
-    int errors = 0;
     char cwd[1024] = { 0 };
     char *s = NULL;
     FILE *fp = NULL;
@@ -2658,7 +2657,11 @@ int main(int argc, char **argv)
     char dev_path[32] = { 0 };
     char *devs[] = { "hda", "hdb", "hdc", "hdd", "sda", "sdb", "sdc", "sdd", NULL };
 
-    getcwd(cwd, sizeof(cwd));
+    if (getcwd(cwd, sizeof(cwd)) == NULL) {
+        printf("Failed to retrieve the current working directory information.\n");
+        return (1);
+    }
+
     srandom(time(NULL));
 
     printf("testing system_output() in misc.c\n");

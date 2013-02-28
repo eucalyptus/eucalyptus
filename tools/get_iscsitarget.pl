@@ -109,6 +109,7 @@ if ((@paths < 1) || ((@paths % 3) != 0)) {
   print STDERR "Target paths are not complete:$dev_string\n";
   do_exit(1);
 }
+my $first_store = $paths[2];
 $multipath = 0;
 $multipath = 1 if @paths > 3;
 if (($multipath == 1) && (!-x $MULTIPATH)) {
@@ -152,7 +153,7 @@ if ($multipath == 0) {
   sleep(2);
   $localdev = "/dev/mapper/$localdev";
 }
-print "$localdev";
+print get_wrap_dev_name($localdev, $store);
 
 ##################################################################
 sub retry_until_exists {

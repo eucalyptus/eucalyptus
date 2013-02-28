@@ -76,7 +76,7 @@ all: $(LIBDIR)/$(LVM2_SO) $(LIBDIR)/$(DAS_SO)
 
 $(LIBDIR)/$(LVM2_SO): 
 	mkdir -p $(LIBDIR)
-	gcc -shared $(CPPFLAGS) $(CFLAGS) -o $(LIBDIR)/$(LVM2_SO) com_eucalyptus_storage_OverlayManager.c com_eucalyptus_storage_AOEManager.c
+	gcc -shared $(CPPFLAGS) $(CFLAGS) -o $(LIBDIR)/$(LVM2_SO) com_eucalyptus_storage_OverlayManager.c 
 
 $(LIBDIR)/$(DAS_SO): 
 	mkdir -p $(LIBDIR)

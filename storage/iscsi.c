@@ -199,7 +199,7 @@ void init_iscsi(const char *euca_home)
     snprintf(connect_storage_cmd_path, MAX_PATH, EUCALYPTUS_CONNECT_ISCSI, home, home);
     snprintf(disconnect_storage_cmd_path, MAX_PATH, EUCALYPTUS_DISCONNECT_ISCSI, home, home);
     snprintf(get_storage_cmd_path, MAX_PATH, EUCALYPTUS_GET_ISCSI, home, home);
-    iscsi_sem = sem_alloc(1, "mutex");
+    iscsi_sem = sem_alloc(1, IPC_MUTEX_SEMAPHORE);
 }
 
 //!

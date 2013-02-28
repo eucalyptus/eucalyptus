@@ -69,10 +69,6 @@ import edu.ucsb.eucalyptus.cloud.entities.LVMVolumeInfo;
 public interface StorageExportManager {
 	public void checkPreconditions() throws EucalyptusCloudException;
 	
-    public int exportVolume(String iface, String lvName, int major, int minor);
-
-    public void unexportVolume(int vbladePid);
-
 	public void configure();
 	
 	public void allocateTarget(LVMVolumeInfo volumeInfo) throws EucalyptusCloudException;

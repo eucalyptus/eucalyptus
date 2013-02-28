@@ -30,8 +30,8 @@ import urllib
 import urllib2
 import json
 
-# This is a client to test the interface that the browser uses
 # to talk to the UI proxy. It can make all of the REST calls as you
+# This is a client to test the interface that the browser uses
 # would from the browser GUI
 
 class UIProxyClient(object):
@@ -86,8 +86,37 @@ class UIProxyClient(object):
                 j += 1
             i += 1
 
-    def __make_request__(self, action, params):
-        url = 'http://%s:%s/ec2?'%(self.host, self.port)
+    def __build_dimension_param__(self, dimension, params):
+        prefix = 'Dimensions.member'
+        i = 0
+        for dim_name in dimension:
+            dim_value = dimension[dim_name]
+            if dim_value:
+                if isinstance(dim_value, basestring):
+                    dim_value = [dim_value]
+                for value in dim_value:
+                    params['%s.%d.Name' % (prefix, i+1)] = dim_name
+                    params['%s.%d.Value' % (prefix, i+1)] = value
+                    i += 1
+            else:
+                params['%s.%d.Name' % (prefix, i+1)] = dim_name
+                i += 1
+
+    def __build_list_params__(self, params, items, label):
+        if isinstance(items, basestring):
+            items = [items]
+        for index, item in enumerate(items):
+            i = index + 1
+            if isinstance(item, dict):
+                for k, v in item.iteritems():
+                    params[label % (i, 'Name')] = k
+                    if v is not None:
+                        params[label % (i, 'Value')] = v
+            else:
+                params[label % i] = item
+
+    def __make_request__(self, action, params, endpoint='ec2'):
+        url = 'http://%s:%s/%s?'%(self.host, self.port, endpoint)
         for param in params.keys():
             if params[param]==None:
                 del params[param]
@@ -104,21 +133,16 @@ class UIProxyClient(object):
             print "Error! "+str(err.code)
 
     def __make_request_walrus__(self, action, params):
-        url = 'http://%s:%s/s3?'%(self.host, self.port)
-        for param in params.keys():
-            if params[param]==None:
-                del params[param]
-        params['Action'] = action
-        params['_xsrf'] = self.xsrf
-        data = urllib.urlencode(params)
-        print "request : "+data
-        try:
-            req = urllib2.Request(url)
-            self.__check_logged_in__(req)
-            response = urllib2.urlopen(req, data)
-            return json.loads(response.read())
-        except urllib2.URLError, err:
-            print "Error! "+str(err.code)
+        return self.__make_request__(action, params, 's3')
+
+    def __make_cw_request__(self, action, params):
+        return self.__make_request__(action, params, 'monitor')
+
+    def __make_scale_request__(self, action, params):
+        return self.__make_request__(action, params, 'autoscaling')
+
+    def __make_elb_request__(self, action, params):
+        return self.__make_request__(action, params, 'elb')
 
     ##
     # Zone methods
@@ -204,7 +228,7 @@ class UIProxyClient(object):
         if private_ip_address:
             params['PrivateIpAddress'] = private_ip_address
         if block_device_map:
-            block_device_map.build_list_params(params)
+            block_device_map.__build_list_params__(params)
         if disable_api_termination:
             params['DisableApiTermination'] = 'true'
         if instance_initiated_shutdown_behavior:
@@ -461,3 +485,283 @@ class UIProxyClient(object):
     def get_objects(self, bucket):
         params = {'Bucket': bucket}
         return self.__make_request_walrus__('DescribeObjects', params)
+
+    ##
+    # CloudWatch methods
+    ##
+    def get_metric_statistics(self, period, start_time, end_time, metric_name,
+                              namespace, statistics, dimensions=None,
+                              unit=None):
+        params = {'Period': period,
+                  'MetricName': metric_name,
+                  'Namespace': namespace,
+                  'StartTime': start_time.isoformat(),
+                  'EndTime': end_time.isoformat()}
+        self.__build_list_params__(params, statistics, 'Statistics.member.%d')
+        if dimensions:
+            self.__build_dimension_param__(dimensions, params)
+        if unit:
+            params['Unit'] = unit
+        
+        return self.__make_cw_request__('GetMetricStatistics', params)
+
+    def list_metrics(self, next_token=None, dimensions=None,
+                     metric_name=None, namespace=None):
+        params = {}
+        if next_token:
+            params['NextToken'] = next_token
+        if dimensions:
+            self.__build_dimension_param__(dimensions, params)
+        if metric_name:
+            params['MetricName'] = metric_name
+        if namespace:
+            params['Namespace'] = namespace
+
+        return self.__make_cw_request__('ListMetrics', params)
+    
+    def put_metric_data(self, namespace, name, value=None, timestamp=None,
+                        unit=None, dimensions=None, statistics=None):
+        params = {'Namespace': namespace,
+                  'Name': name}
+        if value:
+            params['Value'] = value
+        if timestamp:
+            params['Timestamp'] = timestamp.isoformat()
+        if unit:
+            params['Unit'] = unit
+        if dimensions:
+            self.__build_dimension_param__(dimensions, params)
+        # TODO: how to format stats? API doc isn't clear
+        if statistics:
+            pass
+
+        self.build_put_params(params, name, value=value, timestamp=timestamp,
+            unit=unit, dimensions=dimensions, statistics=statistics)
+
+        return self.__make_cw_request__('PutMetricData', params) 
+    
+    ##
+    # Auto Scaling methods
+    ##
+    def create_auto_scaling_group(self, name, launch_config, zones=None, load_balancers=None,
+                                  default_cooldown=None, hc_type=None, hc_period=None,
+                                  desired_capacity=None, min_size=0, max_size=0,
+                                  tags=None, termination_policies=None):
+        params = {'AutoScalingGroupName':name,
+                  'LaunchConfigurationName':launch_config,
+                  'MinSize':min_size,
+                  'MaxSize':max_size}
+        if zones != None:
+            self.__build_list_params__(params, zones, 'AvailabilityZones.member.%d')
+        if load_balancers != None:
+            self.__build_list_params__(params, load_balancers, 'LoadBalancerNames.member.%d')
+        if default_cooldown != None:
+            params['DefaultCooldown'] = default_cooldown
+        if hc_type != None:
+            params['HealthCheckType'] = hc_type
+        if hc_period != None:
+            params['HealthCheckGracePeriod'] = hc_period
+        if desired_capacity != None:
+            params['DesiredCapacity'] = desired_capacity
+        if hc_period != None:
+            params['HealthCheckGracePeriod'] = hc_period
+        if tags != None:
+            self.__build_list_params__(params, tags, 'Tags.member.%d')
+        if termination_policies != None:
+            self.__build_list_params__(params, termination_policies, 'TerminationPolicies.member.%d')
+
+        return self.__make_scale_request__('CreateAutoScalingGroup', params) 
+
+    def delete_auto_scaling_group(self, name, force_delete=False):
+        params = {'AutoScalingGroupName':name}
+        if force_delete:
+            params['ForceDelete'] = 'true'
+
+        return self.__make_scale_request__('DeleteAutoScalingGroup', params) 
+
+    def get_all_groups(self, names=None, max_records=None, next_token=None):
+        params = {}
+        if names:
+            self.__build_list_params__(params, names, 'Names.member.%d')
+        if max_records:
+            params['MaxRecords'] = max_records
+        if next_token:
+            params['NextToken'] = next_token
+
+        return self.__make_scale_request__('DescribeAutoScalingGroups', params) 
+    
+    def get_all_autoscaling_instances(self, instance_ids=None,
+                                      max_records=None, next_token=None):
+        params = {}
+        if instance_ids:
+            self.__build_list_params__(params, instance_ids, 'InstanceIds.member.%d')
+        if max_records:
+            params['MaxRecords'] = max_records
+        if next_token:
+            params['NextToken'] = next_token
+
+        return self.__make_scale_request__('DescribeAutoScalingInstances', params) 
+
+    def set_desired_capacity(self, group_name, desired_capacity, honor_cooldown=False):
+        params = {'AutoScalingGroupName':group_name,
+                  'DesiredCapacity':desired_capacity}
+        if honor_cooldown:
+            params['HonorCooldown'] = 'true'
+
+        return self.__make_scale_request__('SetDesiredCapacity', params) 
+
+    def set_instance_health(self, instance_id, health_status, should_respect_grace_period=False):
+        params = {'InstanceId':instance_id,
+                  'HealthStatus':health_status}
+        if should_respect_grace_period:
+            params['ShouldRespectGracePeriod'] = 'true'
+
+        return self.__make_scale_request__('SetInstanceHealth', params) 
+
+    def terminate_instance(self, instance_id, decrement_capacity=False):
+        params = {'InstanceId':instance_id}
+        if decrement_capacity:
+            params['ShouldDecrementDesiredCapacity'] = 'true'
+
+        return self.__make_scale_request__('TerminateInstanceInAutoScalingGroup', params) 
+
+    def create_launch_configuration(self, name, image_id, key_name=None, security_groups=None,
+                                    user_data=None, instance_type=None, kernel_id=None,
+                                    ramdisk_id=None, block_device_mappings=None,
+                                    instance_monitoring=None, spot_price=None,
+                                    instance_profile_name=None):
+        params = {'LaunchConfigurationName':name,
+                  'ImageId':image_id}
+        if key_name != None:
+            params['KeyName'] = key_name
+        if security_groups != None:
+            self.__build_list_params__(params, security_groups, 'SecurityGroups.member.%d')
+        if user_data != None:
+            params['UserData'] = user_data
+        if instance_type != None:
+            params['InstanceType'] = instance_type
+        if kernel_id != None:
+            params['KernelId'] = kernel_id
+        if ramdisk_id != None:
+            params['RamdiskId'] = ramdisk_id
+        if block_device_mappings != None:
+            self.__build_list_params__(params, block_device_mapings, 'BlockDeviceMappings.member.%d')
+        if instance_monitoring != None:
+            params['InstanceMonitoring'] = instance_monitoring
+        if spot_price != None:
+            params['SpotPrice'] = spot_price
+        if instance_profile_name != None:
+            params['IamInstanceProfile'] = instance_profile_name
+
+        return self.__make_scale_request__('CreateLaunchConfiguration', params) 
+
+    def delete_launch_configuration(self, launch_config_name):
+        params = {'LaunchConfigurationName':launch_config_name}
+
+        return self.__make_scale_request__('DeleteLaunchConfiguration', params) 
+
+    def get_all_launch_configurations(self, configuration_names=None,
+                           max_records=None, next_token=None):
+        params = {}
+        if configuration_names:
+            self.__build_list_params__(params, configuration_names,
+                                       'LaunchConfigurationNames.member.%d')
+        if max_records:
+            params['MaxRecords'] = max_records
+        if next_token:
+            params['NextToken'] = next_token
+
+        return self.__make_scale_request__('DescribeLaunchConfigurations', params) 
+    
+    
+    ##
+    # elb methods
+    ##
+    def create_load_balancer(self, name, zones, listeners, subnets=None,
+                             security_groups=None, scheme='internet-facing', callback=None):
+        params = {'LoadBalancerName': name,
+                  'Scheme': scheme}
+        for index, listener in enumerate(listeners):
+            i = index + 1
+            protocol = listener[2].upper()
+            params['Listeners.member.%d.LoadBalancerPort' % i] = listener[0]
+            params['Listeners.member.%d.InstancePort' % i] = listener[1]
+            params['Listeners.member.%d.Protocol' % i] = listener[2]
+            if protocol == 'HTTPS' or protocol == 'SSL':
+                params['Listeners.member.%d.SSLCertificateId' % i] = listener[3]
+        if zones:
+            self.__build_list_params__(params, zones, 'AvailabilityZones.member.%d')
+
+        if subnets:
+            self.__build_list_params__(params, subnets, 'Subnets.member.%d')
+
+        if security_groups:
+            self.__build_list_params__(params, security_groups,
+                                    'SecurityGroups.member.%d')
+
+        return self.__make_elb_request__('CreateLoadBalancer', params) 
+    
+    def delete_load_balancer(self, name, callback=None):
+        params = {'LoadBalancerName': name}
+        return self.__make_elb_request__('DeleteLoadBalancer', params) 
+
+    def get_all_load_balancers(self, load_balancer_names=None, callback=None):
+        params = {}
+        if load_balancer_names:
+            self.build_list_params(params, load_balancer_names,
+                                   'LoadBalancerNames.member.%d')
+        return self.__make_elb_request__('DescribeLoadBalancers', params) 
+
+    def deregister_instances(self, load_balancer_name, instances, callback=None):
+        params = {'LoadBalancerName': load_balancer_name}
+        self.build_list_params(params, instances,
+                               'Instances.member.%d.InstanceId')
+        return self.__make_elb_request__('DeregisterInstancesFromLoadBalancer', params) 
+
+    def register_instances(self, load_balancer_name, instances, callback=None):
+        params = {'LoadBalancerName': load_balancer_name}
+        self.build_list_params(params, instances,
+                               'Instances.member.%d.InstanceId')
+        return self.__make_elb_request__('RegisterInstancesFromLoadBalancer', params) 
+
+    def create_load_balancer_listeners(self, name, listeners, callback=None):
+        params = {'LoadBalancerName': name,
+                  'Scheme': scheme}
+        for index, listener in enumerate(listeners):
+            i = index + 1
+            protocol = listener[2].upper()
+            params['Listeners.member.%d.LoadBalancerPort' % i] = listener[0]
+            params['Listeners.member.%d.InstancePort' % i] = listener[1]
+            params['Listeners.member.%d.Protocol' % i] = listener[2]
+            if protocol == 'HTTPS' or protocol == 'SSL':
+                params['Listeners.member.%d.SSLCertificateId' % i] = listener[3]
+        if zones:
+            self.build_list_params(params, zones, 'AvailabilityZones.member.%d')
+
+        if subnets:
+            self.build_list_params(params, subnets, 'Subnets.member.%d')
+
+        if security_groups:
+            self.build_list_params(params, security_groups,
+                                    'SecurityGroups.member.%d')
+        return self.__make_elb_request__('CreateLoadBalancer', params) 
+    
+    def delete_load_balancer_listeners(self, name, ports, callback=None):
+        params = {'LoadBalancerName': name}
+        return self.__make_elb_request__('DeleteLoadBalancer', params) 
+
+    def configure_health_check(self, name, health_check, callback=None):
+        params = {'LoadBalancerName': name,
+                  'HealthCheck.Timeout': health_check.timeout,
+                  'HealthCheck.Target': health_check.target,
+                  'HealthCheck.Interval': health_check.interval,
+                  'HealthCheck.UnhealthyThreshold': health_check.unhealthy_threshold,
+                  'HealthCheck.HealthyThreshold': health_check.healthy_threshold}
+        return self.__make_elb_request__('ConfigureHealthCheck', params) 
+
+    def describe_instance_health(self, load_balancer_name, instances=None, callback=None):
+        params = {'LoadBalancerName': load_balancer_name}
+        if instances:
+            self.build_list_params(params, instances,
+                                   'Instances.member.%d.InstanceId')
+        return self.__make_elb_request__('DescribeInstanceHealth', params) 

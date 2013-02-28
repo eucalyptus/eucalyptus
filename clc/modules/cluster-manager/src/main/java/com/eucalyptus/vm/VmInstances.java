@@ -139,6 +139,8 @@ import com.eucalyptus.util.async.Request;
 import com.eucalyptus.vm.VmInstance.Transitions;
 import com.eucalyptus.vm.VmInstance.VmState;
 import com.eucalyptus.vm.VmInstance.VmStateSet;
+import com.eucalyptus.vmtypes.VmType;
+import com.eucalyptus.vmtypes.VmTypes;
 import com.google.common.base.Enums;
 import com.google.common.base.Function;
 import com.google.common.base.Functions;
@@ -270,6 +272,12 @@ public class VmInstances {
   @ConfigurableField( description = "Amount of time (in minutes) before a EBS volume backing the instance is created",
                       initial = "30" )
   public static Integer   EBS_VOLUME_CREATION_TIMEOUT   = 30;
+  @ConfigurableField( description = "Amount of time (in seconds) to let instance state settle after a transition to either stopping or shutting-down.",
+                      initial = "40" )
+  public static Integer   VM_STATE_SETTLE_TIME          = 40;
+  @ConfigurableField( description = "Amount of time (in seconds) since completion of the creating run instance operation that the new instance is treated as unreported if not... reported.",
+                      initial = "300" )
+  public static Integer   VM_INITIAL_REPORT_TIMEOUT     = 300;
   
   public static class SubdomainListener implements PropertyChangeListener {
     @Override
@@ -998,6 +1006,27 @@ public class VmInstances {
           .withPersistenceFilter( "owner-id", "ownerAccountNumber" )
           .withPersistenceFilter( "ramdisk-id", "image.ramdiskId", Sets.newHashSet("bootRecord.machineImage") )
           .withPersistenceFilter( "reservation-id", "vmId.reservationId", Collections.<String>emptySet() )
+      );
+    }
+  }
+
+  public static class VmInstanceStatusFilterSupport extends FilterSupport<VmInstance> {
+    public VmInstanceStatusFilterSupport() {
+      super( qualifierBuilderFor( VmInstance.class, "status" )
+          .withStringProperty( "availability-zone", VmInstanceFilterFunctions.AVAILABILITY_ZONE )
+          .withUnsupportedProperty( "event.code" )
+          .withUnsupportedProperty( "event.description" )
+          .withUnsupportedProperty( "event.not-after" )
+          .withUnsupportedProperty( "event.not-before" )
+          .withInternalStringProperty( "instance-id", CloudMetadatas.toDisplayName() )
+          .withIntegerProperty( "instance-state-code", VmInstanceIntegerFilterFunctions.INSTANCE_STATE_CODE )
+          .withStringProperty( "instance-state-name", VmInstanceFilterFunctions.INSTANCE_STATE_NAME )
+          .withConstantProperty( "system-status.status", "ok" )
+          .withConstantProperty( "system-status.reachability", "passed" )
+          .withConstantProperty( "instance-status.status", "ok" )
+          .withConstantProperty( "instance-status.reachability", "passed" )
+          .withPersistenceFilter( "availability-zone", "placement.partitionName", Collections.<String>emptySet() )
+          .withPersistenceFilter( "instance-id", "displayName" )
       );
     }
   }

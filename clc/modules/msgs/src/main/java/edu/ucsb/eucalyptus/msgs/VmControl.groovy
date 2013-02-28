@@ -124,6 +124,73 @@ public class DescribeInstancesResponseType extends VmControlMessage {
   
   ArrayList<ReservationInfoType> reservationSet = new ArrayList<ReservationInfoType>();
 }
+
+/** *******************************************************************************/
+
+public class DescribeInstanceStatusType extends VmControlMessage {
+  @HttpParameterMapping (parameter = "InstanceId")
+  ArrayList<String> instancesSet = new ArrayList<String>();
+  @HttpParameterMapping (parameter = "Filter")
+  @HttpEmbedded( multiple = true )
+  ArrayList<Filter> filterSet = new ArrayList<Filter>();
+  String nextToken;
+  Integer maxResults;
+  Boolean includeAllInstances;
+  public DescribeInstanceStatusType() {  }
+}
+
+public class InstanceStatusEventType extends EucalyptusData {
+  String code;
+  String description;
+  Date notBefore;
+  Date notAfter;
+  public InstanceStatusEventType() {  }
+}
+
+public class InstanceStatusEventsSetType extends EucalyptusData {
+  public InstanceStatusEventsSetType() {  }
+  ArrayList<InstanceStatusEventType> item = new ArrayList<InstanceStatusEventType>();
+}
+
+public class InstanceStatusDetailsSetItemType extends EucalyptusData {
+  String name;
+  String status;
+  Date impairedSince;
+  public InstanceStatusDetailsSetItemType() {  }
+}
+
+public class InstanceStatusDetailsSetType extends EucalyptusData {
+  public InstanceStatusDetailsSetType() {  }
+  ArrayList<InstanceStatusDetailsSetItemType> item = new ArrayList<InstanceStatusDetailsSetItemType>();
+}
+
+public class InstanceStatusType extends EucalyptusData {
+  String status;
+  InstanceStatusDetailsSetType details;
+  public InstanceStatusType() {  }
+}
+
+public class InstanceStatusItemType extends EucalyptusData {
+  String instanceId;
+  String availabilityZone;
+  InstanceStatusEventsSetType eventsSet;
+  InstanceStateType instanceState;
+  InstanceStatusType systemStatus;
+  InstanceStatusType instanceStatus;
+  public InstanceStatusItemType() {  }
+}
+
+public class InstanceStatusSetType extends EucalyptusData {
+  public InstanceStatusSetType() {  }
+  ArrayList<InstanceStatusItemType> item = new ArrayList<InstanceStatusItemType>();
+}
+
+public class DescribeInstanceStatusResponseType extends VmControlMessage {
+  InstanceStatusSetType instanceStatusSet = new InstanceStatusSetType();
+  String nextToken;
+  public DescribeInstanceStatusResponseType() {  }
+}
+
 /** *******************************************************************************/
 
 public class RebootInstancesType extends VmControlMessage {
@@ -170,6 +237,7 @@ public class RunInstancesType extends VmControlMessage {
   String placementGroup = "default"; //** added 2010-02-01  **/
   @HttpEmbedded (multiple = true)
   ArrayList<BlockDeviceMappingItemType> blockDeviceMapping = new ArrayList<BlockDeviceMappingItemType>(); //** added 2008-02-01  **/
+  @HttpParameterMapping (parameter = "Monitoring.Enabled")
   Boolean monitoring = false;
   String subnetId;
   Boolean disableTerminate;
@@ -258,7 +326,7 @@ public class RunningInstancesItemType extends EucalyptusData implements Comparab
   String kernel;
   String ramdisk;
   String platform;
-  Boolean monitoring = false;
+  String monitoring;
   Boolean disableApiTermination = false;
   Boolean instanceInitiatedShutdownBehavior = "stop"; //or "terminate"
   String ipAddress;
@@ -483,6 +551,7 @@ public class MonitorInstancesResponseType extends VmControlMessage {
 }
 
 public class MonitorInstancesType extends VmControlMessage {
+  @HttpParameterMapping(parameter="InstanceId")
   ArrayList<String> instancesSet = new ArrayList<String>();
   public MonitorInstancesType() {  }
 }
@@ -492,6 +561,7 @@ public class UnmonitorInstancesResponseType extends VmControlMessage {
 }
 
 public class UnmonitorInstancesType extends VmControlMessage {
+  @HttpParameterMapping(parameter="InstanceId")
   ArrayList<String> instancesSet = new ArrayList<String>();
   public MonitorInstancesType() {  }
 }

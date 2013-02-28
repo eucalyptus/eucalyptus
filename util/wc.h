@@ -68,7 +68,11 @@
 
 //!
 //! @file util/wc.h
-//! Need to provide description
+//! Defines the library that handles variable substitution within a string.
+//!
+//! Within a string, variables begins with '${' and terminates with '}'. For
+//! example, the following string "This is the ${varname} variable" has '${varname}'
+//! as a variable that can be substitured.
 //!
 
 /*----------------------------------------------------------------------------*\
@@ -104,14 +108,16 @@
  |                                                                            |
 \*----------------------------------------------------------------------------*/
 
+//! Defines a wide char key/value mapping
 typedef struct wchar_map_struct {
-    wchar_t *key;
-    wchar_t *val;
+    wchar_t *key;                      //!< The key to look for within a string
+    wchar_t *val;                      //!< The replacement value
 } wchar_map;
 
+//! Defines a simple char key/value mapping
 typedef struct char_map_struct {
-    char *key;
-    char *val;
+    char *key;                         //!< The key to look for within a string
+    char *val;                         //!< The replacement value
 } char_map;
 
 /*----------------------------------------------------------------------------*\
@@ -126,12 +132,19 @@ typedef struct char_map_struct {
  |                                                                            |
 \*----------------------------------------------------------------------------*/
 
+//! @{
+//! @name Wide characters substitution APIs
 wchar_t *varsub(const wchar_t * s, const wchar_map * vars[]);
 wchar_map **varmap_alloc(wchar_map ** map, const wchar_t * key, const wchar_t * val);
 void varmap_free(wchar_map ** map);
+//! @}
+
+//! @{
+//! @name Regular characters substitution APIs
 char *c_varsub(const char *s, const char_map * vars[]);
 char_map **c_varmap_alloc(char_map ** map, const char *key, const char *val);
 void c_varmap_free(char_map ** map);
+//! @}
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |

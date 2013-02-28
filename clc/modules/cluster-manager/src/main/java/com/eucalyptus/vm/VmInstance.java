@@ -143,6 +143,8 @@ import com.eucalyptus.vm.VmBundleTask.BundleState;
 import com.eucalyptus.vm.VmInstance.VmState;
 import com.eucalyptus.vm.VmInstances.Timeout;
 import com.eucalyptus.vm.VmVolumeAttachment.AttachmentState;
+import com.eucalyptus.vmtypes.VmType;
+import com.eucalyptus.vmtypes.VmTypes;
 import com.eucalyptus.ws.StackConfiguration;
 import com.google.common.base.Function;
 import com.google.common.base.Objects;
@@ -157,6 +159,11 @@ import edu.ucsb.eucalyptus.cloud.VirtualBootRecord;
 import edu.ucsb.eucalyptus.cloud.VmInfo;
 import edu.ucsb.eucalyptus.msgs.AttachedVolume;
 import edu.ucsb.eucalyptus.msgs.InstanceBlockDeviceMapping;
+import edu.ucsb.eucalyptus.msgs.InstanceStateType;
+import edu.ucsb.eucalyptus.msgs.InstanceStatusDetailsSetItemType;
+import edu.ucsb.eucalyptus.msgs.InstanceStatusDetailsSetType;
+import edu.ucsb.eucalyptus.msgs.InstanceStatusItemType;
+import edu.ucsb.eucalyptus.msgs.InstanceStatusType;
 import edu.ucsb.eucalyptus.msgs.RunningInstancesItemType;
 
 @Entity
@@ -428,7 +435,8 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
                                               .bootRecord( bootSet,
                                                            userData,
                                                            keyPair,
-                                                           vmType )
+                                                           vmType,
+                                                           Boolean.FALSE)
                                               .placement( partition, partition.getName( ) )
                                               .networking( networks, index )
                                               .build( launchIndex );
@@ -704,7 +712,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
     private static VmType restoreVmType( final VmInfo input ) {
       VmType vmType = null;
       try {
-        vmType = VmTypes.getVmType( input.getInstanceType( ).getName( ) );
+        vmType = VmTypes.lookup( input.getInstanceType( ).getName( ) );
       } catch ( final Exception ex ) {
         LOG.error( "Failed to lookup vm type " + input.getInstanceType( ).getName( ) + " for: " + input.getInstanceId( ) + " because of: " + ex.getMessage( ) );
         Logs.extreme( ).error( ex, ex );
@@ -896,7 +904,8 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
                                                      .bootRecord( allocInfo.getBootSet( ),
                                                                   allocInfo.getUserData( ),
                                                                   allocInfo.getSshKeyPair( ),
-                                                                  allocInfo.getVmType( ) )
+                                                                  allocInfo.getVmType( ), 
+                                                                  allocInfo.isMonitoring() )
                                                      .placement( allocInfo.getPartition( ), allocInfo.getRequest( ).getAvailabilityZone( ) )
                                                      .networking( allocInfo.getNetworkGroups( ), token.getNetworkIndex( ) )
                                                      .addressing( allocInfo.isUsePrivateAddressing() )
@@ -965,8 +974,8 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
       return this;
     }
     
-    public Builder bootRecord( final BootableSet bootSet, final byte[] userData, final SshKeyPair sshKeyPair, final VmType vmType ) {
-      this.vmBootRecord = new VmBootRecord( bootSet, userData, sshKeyPair, vmType );
+    public Builder bootRecord( final BootableSet bootSet, final byte[] userData, final SshKeyPair sshKeyPair, final VmType vmType, final boolean monitoring ) {
+      this.vmBootRecord = new VmBootRecord( bootSet, userData, sshKeyPair, vmType, monitoring );
       return this;
     }
     
@@ -1817,7 +1826,13 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
           runningInstance.setPlacement( input.getPlacement( ).getPartitionName( ) );
           
           runningInstance.setLaunchTime( input.getLaunchRecord( ).getLaunchTime( ) );
-
+          
+          if (input.getBootRecord().isMonitoring()) {
+            runningInstance.setMonitoring("enabled");
+          } else {
+            runningInstance.setMonitoring("disabled");  
+          }
+          
           if ( input.isBlockStorage( ) ) {
             runningInstance.setRootDeviceType( ROOT_DEVICE_TYPE_EBS );
           }
@@ -1977,6 +1992,47 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
   
   private void setBootRecord( VmBootRecord bootRecord ) {
     this.bootRecord = bootRecord;
+  }
+
+  @TypeMapper
+  public enum StatusTransform implements Function<VmInstance, InstanceStatusItemType> {
+    INSTANCE;
+
+    @Override
+    public InstanceStatusItemType apply( final VmInstance instance ) {
+      final InstanceStatusItemType instanceStatusItemType = new InstanceStatusItemType();
+      final VmState displayState = instance.getDisplayState();
+
+      instanceStatusItemType.setInstanceId( instance.getInstanceId() );
+      instanceStatusItemType.setAvailabilityZone( instance.getPlacement().getPartitionName() );
+
+      final InstanceStateType state = new InstanceStateType();
+      state.setCode( displayState.getCode() );
+      state.setName( displayState.getName() );
+      instanceStatusItemType.setInstanceState( state );
+      instanceStatusItemType.setInstanceStatus( buildStatus() );
+      instanceStatusItemType.setSystemStatus( buildStatus() );
+
+      return instanceStatusItemType;
+    }
+
+    private InstanceStatusType buildStatus() {
+      final InstanceStatusDetailsSetItemType statusDetailsItem = new InstanceStatusDetailsSetItemType();
+      statusDetailsItem.setName( "reachability" );
+      statusDetailsItem.setStatus( "passed" );
+
+      final InstanceStatusDetailsSetType statusDetails = new InstanceStatusDetailsSetType();
+      statusDetails.getItem().add( statusDetailsItem );
+
+      final InstanceStatusType instanceStatus = new InstanceStatusType();
+      instanceStatus.setStatus( "ok" );
+      instanceStatus.setDetails( statusDetails );
+      return instanceStatus;
+    }
+  }
+
+  public Boolean getMonitoring() {
+    return this.getBootRecord().isMonitoring();
   }
   
 }

@@ -334,7 +334,7 @@ int diskutil_init(boolean require_grub)
         }
 
         if ((initialized < 1) && (loop_sem == NULL))
-            loop_sem = sem_alloc(1, "mutex");
+            loop_sem = sem_alloc(1, IPC_MUTEX_SEMAPHORE);
         initialized = 1 + require_grub;
     }
 

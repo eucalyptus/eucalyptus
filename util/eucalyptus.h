@@ -238,11 +238,12 @@
 #define MAXLOGFILESIZE                          104857600
 #define EUCA_MAX_GROUPS                                64
 #define EUCA_MAX_VOLUMES                               27
-#define EUCA_MAX_VBRS                                  64
+#define EUCA_MAX_VBRS                                  64   //!< Number of Virtual Boot Record supported
 #define EUCA_MAX_PATH                                4096
 #define EUCA_MAX_PARTITIONS                            32   //!< partitions per disk
 #define EUCA_MAX_DISKS                                 26   //!< disks per bus: sd[a-z]
 #define MAX_PATH_SIZE                                4096   //!< Maximum path string length @TODO: remove
+#define MAXBUNDLES                               MAXINSTANCES_PER_NC
 
 //! @}
 
@@ -394,6 +395,16 @@ typedef enum createImage_progress_t {
     CREATEIMAGE_CANCELLED
 } createImage_progress;
 
+//! Enumeration of migration-related states
+typedef enum migration_states_t {
+    NOT_MIGRATING = 0,
+    MIGRATION_PREPARING,
+    MIGRATION_READY,
+    MIGRATION_IN_PROGRESS,
+    MIGRATION_CLEANING,
+    TOTAL_MIGRATION_STATES
+} migration_states;
+
 //! Various Eucalyptus standard error code.
 enum euca_error_e {
     EUCA_OK = 0,                       //!< Operation successful
@@ -436,6 +447,9 @@ extern const char *bundling_progress_names[];
 
 //! String value of each create image progress state enumeration entry
 extern const char *createImage_progress_names[];
+
+//! String value of each migrate-related state enumeration entry
+extern const char *migration_state_names[];
 
 //! String value of each error enumeration entry
 extern const char *euca_error_names[];

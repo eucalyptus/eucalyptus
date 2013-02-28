@@ -92,7 +92,7 @@
 
 #include "eucalyptus.h"
 #include "euca_auth.h"
-#include "misc.h"                      /* get_string_stats, logprintf */
+#include "misc.h"
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |
@@ -141,8 +141,8 @@
 \*----------------------------------------------------------------------------*/
 
 static boolean initialized = FALSE;    //!< Boolean to make sure we have initialized this module
-static char cert_file[FILENAME] = { 0 };    //!< Certificate file name
-static char pk_file[FILENAME] = { 0 }; //!< Private key file name
+static char sCertFileName[FILENAME] = { 0 };    //!< Certificate file name
+static char sPrivKeyFileName[FILENAME] = { 0 }; //!< Private key file name
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |
@@ -151,10 +151,11 @@ static char pk_file[FILENAME] = { 0 }; //!< Private key file name
 \*----------------------------------------------------------------------------*/
 
 int euca_init_cert(void);
-char *euca_get_cert(unsigned char options);
 
-char *base64_enc(unsigned char *in, int size);
-char *base64_dec(unsigned char *in, int size);
+char *euca_get_cert(u8 options);
+
+char *base64_enc(u8 * in, int size);
+char *base64_dec(u8 * in, int size);
 
 char *euca_sign_url(const char *verb, const char *date, const char *url);
 
@@ -178,6 +179,11 @@ char *euca_sign_url(const char *verb, const char *date, const char *url);
 
 //!
 //! Initialize the certificate authentication module.
+//!
+//! @pre The certification module should not be initialized
+//!
+//! @post If the certification module is not initialized, uppon success, it will be
+//!       initialized (ie. local initialized field set to TRUE).
 //!
 int euca_init_cert(void)
 {
@@ -205,11 +211,11 @@ int euca_init_cert(void)
         euca_home = root;
     }
 
-    snprintf(cert_file, FILENAME, EUCALYPTUS_KEYS_DIR "/node-cert.pem", euca_home);
-    snprintf(pk_file, FILENAME, EUCALYPTUS_KEYS_DIR "/node-pk.pem", euca_home);
+    snprintf(sCertFileName, FILENAME, EUCALYPTUS_KEYS_DIR "/node-cert.pem", euca_home);
+    snprintf(sPrivKeyFileName, FILENAME, EUCALYPTUS_KEYS_DIR "/node-pk.pem", euca_home);
 
-    CHK_FILE(cert_file);
-    CHK_FILE(pk_file);
+    CHK_FILE(sCertFileName);
+    CHK_FILE(sPrivKeyFileName);
 
     initialized = TRUE;
     return (EUCA_OK);
@@ -226,14 +232,18 @@ int euca_init_cert(void)
 //!
 //! @return a new string containing the certificate information or NULL if any error occured.
 //!
+//! @pre
+//!
+//! @post
+//!
 //! @note caller must free the returned string
 //!
-char *euca_get_cert(unsigned char options)
+char *euca_get_cert(u8 options)
 {
     int s = 0;
-    int fp = -1;
+    int fd = -1;
     int got = 0;
-    char *cert_str = NULL;
+    char *sCert = NULL;
     ssize_t ret = -1;
     struct stat st = { 0 };
 
@@ -243,146 +253,174 @@ char *euca_get_cert(unsigned char options)
         }
     }
 
-    if (stat(cert_file, &st) != 0) {
-        LOGERROR("cannot stat the certificate file %s\n", cert_file);
-    } else if ((s = st.st_size * 2) < 1) {  /* *2 because we'll add characters */
-        LOGERROR("certificate file %s is too small\n", cert_file);
-    } else if ((cert_str = EUCA_ALLOC((s + 1), sizeof(char))) == NULL) {
+    if (stat(sCertFileName, &st) != 0) {
+        LOGERROR("cannot stat the certificate file %s\n", sCertFileName);
+    } else if ((s = st.st_size * 2) < 1) {  // *2 because we'll add characters
+        LOGERROR("certificate file %s is too small\n", sCertFileName);
+    } else if ((sCert = EUCA_ALLOC((s + 1), sizeof(char))) == NULL) {
         LOGERROR("out of memory\n");
-    } else if ((fp = open(cert_file, O_RDONLY)) < 0) {
-        LOGERROR("failed to open certificate file %s\n", cert_file);
-        EUCA_FREE(cert_str);
-        cert_str = NULL;
+    } else if ((fd = open(sCertFileName, O_RDONLY)) < 0) {
+        LOGERROR("failed to open certificate file %s\n", sCertFileName);
+        EUCA_FREE(sCert);
+        sCert = NULL;
     } else {
-        while ((got < s) && ((ret = read(fp, cert_str + got, 1)) == 1)) {
-            if (options & CONCATENATE_CERT) {   /* omit all newlines */
-                if (cert_str[got] == '\n')
+        while ((got < s) && ((ret = read(fd, sCert + got, 1)) == 1)) {
+            if (options & CONCATENATE_CERT) {   // omit all newlines
+                if (sCert[got] == '\n')
                     continue;
             } else {
-                if (options & INDENT_CERT)  /* indent lines 2 through N with TABs */
-                    if (cert_str[got] == '\n')
-                        cert_str[++got] = '\t';
+                if (options & INDENT_CERT) {    // indent lines 2 through N with TABs
+                    if (sCert[got] == '\n')
+                        sCert[++got] = '\t';
+                }
             }
             got++;
         }
 
         if (ret != 0) {
-            LOGERROR("failed to read whole certificate file %s\n", cert_file);
-            EUCA_FREE(cert_str);
-            cert_str = NULL;
+            LOGERROR("failed to read whole certificate file %s\n", sCertFileName);
+            EUCA_FREE(sCert);
+            sCert = NULL;
         } else {
             if (options & TRIM_CERT) {
-                if (cert_str[got - 1] == '\t' || cert_str[got - 1] == '\n')
+                if ((sCert[got - 1] == '\t') || (sCert[got - 1] == '\n'))
                     got--;
-                if (cert_str[got - 1] == '\n')
-                    got--;             /* because of indenting */
+
+                if (sCert[got - 1] == '\n')
+                    got--;             // because of indenting
             }
-            cert_str[got] = '\0';
+
+            sCert[got] = '\0';
         }
-        close(fp);
+
+        close(fd);
     }
-    return (cert_str);
+    return (sCert);
 }
 
 //!
 //! Encode a given buffer
 //!
-//! @param[in] in a pointer to the string buffer to encode
+//! @param[in] sIn a pointer to the string buffer to encode
 //! @param[in] size the length of the string buffer
 //!
 //! @return a pointer to the encoded string buffer.
 //!
+//! @pre
+//!
+//! @post
+//!
 //! @note caller must free the returned string
 //!
-char *base64_enc(unsigned char *in, int size)
+char *base64_enc(u8 * sIn, int size)
 {
-    BIO *bio64 = NULL;
-    BIO *biomem = NULL;
-    char *out_str = NULL;
-    BUF_MEM *buf = NULL;
+    BIO *pBio64 = NULL;
+    BIO *pBioMem = NULL;
+    char *sEncVal = NULL;
+    BUF_MEM *pBuffer = NULL;
 
-    if ((bio64 = BIO_new(BIO_f_base64())) == NULL) {
-        LOGERROR("BIO_new(BIO_f_base64()) failed\n");
-    } else {
-        BIO_set_flags(bio64, BIO_FLAGS_BASE64_NO_NL);   /* no long-line wrapping */
-        if ((biomem = BIO_new(BIO_s_mem())) == NULL) {
-            LOGERROR("BIO_new(BIO_s_mem()) failed\n");
+    if ((sIn != NULL) && (size > 0)) {
+        if ((pBio64 = BIO_new(BIO_f_base64())) == NULL) {
+            LOGERROR("BIO_new(BIO_f_base64()) failed\n");
         } else {
-            bio64 = BIO_push(bio64, biomem);
-            if (BIO_write(bio64, in, size) != size) {
-                LOGERROR("BIO_write() failed\n");
+            BIO_set_flags(pBio64, BIO_FLAGS_BASE64_NO_NL);  // no long-line wrapping
+            if ((pBioMem = BIO_new(BIO_s_mem())) == NULL) {
+                LOGERROR("BIO_new(BIO_s_mem()) failed\n");
             } else {
-                (void)BIO_flush(bio64);
-                BIO_get_mem_ptr(bio64, &buf);
-                if ((out_str = EUCA_ALLOC((buf->length + 1), sizeof(char))) == NULL) {
-                    LOGERROR("out of memory for Base64 buf\n");
+                pBio64 = BIO_push(pBio64, pBioMem);
+                if (BIO_write(pBio64, sIn, size) != size) {
+                    LOGERROR("BIO_write() failed\n");
                 } else {
-                    memcpy(out_str, buf->data, buf->length);
-                    out_str[buf->length] = '\0';
+                    (void)BIO_flush(pBio64);
+                    BIO_get_mem_ptr(pBio64, &pBuffer);
+                    if ((sEncVal = EUCA_ALLOC((pBuffer->length + 1), sizeof(char))) == NULL) {
+                        LOGERROR("out of memory for Base64 buf\n");
+                    } else {
+                        memcpy(sEncVal, pBuffer->data, pBuffer->length);
+                        sEncVal[pBuffer->length] = '\0';
+                    }
                 }
             }
+
+            BIO_free_all(pBio64);      // frees both bio64 and biomem
         }
-        BIO_free_all(bio64);           /* frees both bio64 and biomem */
     }
-    return (out_str);
+    return (sEncVal);
 }
 
 //!
 //! Decode a given buffer
 //!
-//! @param[in] in a pointer to the string buffer to decode
+//! @param[in] sIn a pointer to the string buffer to decode
 //! @param[in] size the length of the string buffer
 //!
 //! @return a pointer to the decoded string buffer.
 //!
+//! @pre
+//!
+//! @post
+//!
 //! @note caller must free the returned string
 //!
-char *base64_dec(unsigned char *in, int size)
+char *base64_dec(u8 * sIn, int size)
 {
-    BIO *bio64 = NULL;
-    BIO *biomem = NULL;
-    char *buf = NULL;
+    BIO *pBio64 = NULL;
+    BIO *pBioMem = NULL;
+    char *sBuffer = NULL;
 
-    if ((in != NULL) && (size > 0)) {
-        if ((bio64 = BIO_new(BIO_f_base64())) == NULL) {
+    if ((sIn != NULL) && (size > 0)) {
+        if ((pBio64 = BIO_new(BIO_f_base64())) == NULL) {
             LOGERROR("BIO_new(BIO_f_base64()) failed\n");
         } else {
-            BIO_set_flags(bio64, BIO_FLAGS_BASE64_NO_NL);   /* no long-line wrapping */
+            BIO_set_flags(pBio64, BIO_FLAGS_BASE64_NO_NL);  /* no long-line wrapping */
 
-            if ((biomem = BIO_new_mem_buf(in, size)) == NULL) {
+            if ((pBioMem = BIO_new_mem_buf(sIn, size)) == NULL) {
                 LOGERROR("BIO_new_mem_buf() failed\n");
-            } else if ((buf = EUCA_ZALLOC(size, sizeof(char))) == NULL) {
+            } else if ((sBuffer = EUCA_ZALLOC(size, sizeof(char))) == NULL) {
                 LOGERROR("Memory allocation failure.\n");
             } else {
-                biomem = BIO_push(bio64, biomem);
+                pBioMem = BIO_push(pBio64, pBioMem);
 
-                if ((BIO_read(biomem, buf, size)) <= 0) {
+                if ((BIO_read(pBioMem, sBuffer, size)) <= 0) {
                     LOGERROR("BIO_read() read failed\n");
-                    EUCA_FREE(buf);
+                    EUCA_FREE(sBuffer);
                 }
             }
 
-            BIO_free_all(bio64);
+            BIO_free_all(pBio64);
         }
     }
 
-    return (buf);
+    return (sBuffer);
 }
 
 //!
 //! Signs an URL address
 //!
-//! @param[in] verb the verb for the signing algorithm
-//! @param[in] date the date
-//! @param[in] url a pointer to the URL to sign
+//! @param[in] sVerb the verb for the signing algorithm
+//! @param[in] sDate the date
+//! @param[in] sURL a pointer to the URL to sign
 //!
 //! @return a pointer to the signed URL string buffer
 //!
+//! @pre
+//!
+//! @post
+//!
 //! @note caller must free the returned string
 //!
-char *euca_sign_url(const char *verb, const char *date, const char *url)
+char *euca_sign_url(const char *sVerb, const char *sDate, const char *sURL)
 {
 #define BUFSIZE                        2024
+
+    int ret = 0;
+    char sInput[BUFSIZE] = "";
+    char *sSignature = NULL;
+    RSA *pRSA = NULL;
+    FILE *pFile = NULL;
+    u32 siglen = 0;
+    u8 *sSigBuffer = NULL;
+    u8 sSHA1[SHA_DIGEST_LENGTH] = "";
 
     if (!initialized) {
         if (euca_init_cert() != EUCA_OK) {
@@ -390,54 +428,51 @@ char *euca_sign_url(const char *verb, const char *date, const char *url)
         }
     }
 
-    int ret;
-
-    char input[BUFSIZE] = { 0 };
-    char *sig_str = NULL;
-    RSA *rsa = NULL;
-    FILE *fp = NULL;
-    unsigned int siglen = 0;
-    unsigned char *sig = NULL;
-    unsigned char sha1[SHA_DIGEST_LENGTH] = { 0 };
-
-    if (verb == NULL || date == NULL || url == NULL)
+    if ((sVerb == NULL) || (sDate == NULL) || (sURL == NULL))
         return (NULL);
 
-    if ((rsa = RSA_new()) == NULL) {
+    if ((pRSA = RSA_new()) == NULL) {
         LOGERROR("RSA_new() failed\n");
-    } else if ((fp = fopen(pk_file, "r")) == NULL) {
-        LOGERROR("failed to open private key file %s\n", pk_file);
-        RSA_free(rsa);
+    } else if ((pFile = fopen(sPrivKeyFileName, "r")) == NULL) {
+        LOGERROR("failed to open private key file %s\n", sPrivKeyFileName);
+        RSA_free(pRSA);
     } else {
-        LOGTRACE("reading private key file %s\n", pk_file);
-        PEM_read_RSAPrivateKey(fp, &rsa, NULL, NULL);   /* read the PEM-encoded file into rsa struct */
-        if (rsa == NULL) {
-            LOGERROR("failed to read private key file %s\n", pk_file);
+        LOGTRACE("reading private key file %s\n", sPrivKeyFileName);
+        PEM_read_RSAPrivateKey(pFile, &pRSA, NULL, NULL);   // read the PEM-encoded file into rsa struct
+        if (pRSA == NULL) {
+            LOGERROR("failed to read private key file %s\n", sPrivKeyFileName);
         } else {
-            // RSA_print_fp (stdout, rsa, 0); /* (for debugging) */
-            if ((sig = EUCA_ALLOC(RSA_size(rsa), sizeof(unsigned char))) == NULL) {
+#if 0
+            RSA_print_fp(stdout, rsa, 0);   // (for debugging)
+#endif /* 0 */
+            if ((sSigBuffer = EUCA_ALLOC(RSA_size(pRSA), sizeof(u8))) == NULL) {
                 LOGERROR("out of memory (for RSA key)\n");
             } else {
-                /* finally, SHA1 and sign with PK */
-                assert((strlen(verb) + strlen(date) + strlen(url) + 4) <= BUFSIZE);
-                snprintf(input, BUFSIZE, "%s\n%s\n%s\n", verb, date, url);
-                LOGEXTREME("signing input %s\n", get_string_stats(input));
-                SHA1((unsigned char *)input, strlen(input), sha1);
-                if ((ret = RSA_sign(NID_sha1, sha1, SHA_DIGEST_LENGTH, sig, &siglen, rsa)) != 1) {
+                // finally, SHA1 and sign with PK
+                assert((strlen(sVerb) + strlen(sDate) + strlen(sURL) + 4) <= BUFSIZE);
+
+                snprintf(sInput, BUFSIZE, "%s\n%s\n%s\n", sVerb, sDate, sURL);
+                LOGEXTREME("signing input %s\n", get_string_stats(sInput));
+
+                SHA1(((u8 *) sInput), strlen(sInput), sSHA1);
+                if ((ret = RSA_sign(NID_sha1, sSHA1, SHA_DIGEST_LENGTH, sSigBuffer, &siglen, pRSA)) != 1) {
                     LOGERROR("RSA_sign() failed\n");
                 } else {
-                    LOGEXTREME("signing output %d\n", sig[siglen - 1]);
-                    sig_str = base64_enc(sig, siglen);
-                    LOGEXTREME("base64 signature %s\n", get_string_stats((char *)sig_str));
+                    LOGEXTREME("signing output %d\n", sSigBuffer[siglen - 1]);
+                    sSignature = base64_enc(sSigBuffer, siglen);
+                    LOGEXTREME("base64 signature %s\n", get_string_stats((char *)sSignature));
                 }
-                EUCA_FREE(sig);
+
+                EUCA_FREE(sSigBuffer);
             }
-            RSA_free(rsa);
+
+            RSA_free(pRSA);
         }
-        fclose(fp);
+
+        fclose(pFile);
     }
 
-    return (sig_str);
+    return (sSignature);
 
 #undef BUFSIZE
 }
