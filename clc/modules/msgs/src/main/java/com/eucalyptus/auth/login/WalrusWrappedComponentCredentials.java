@@ -65,14 +65,14 @@ package com.eucalyptus.auth.login;
 public class WalrusWrappedComponentCredentials extends WrappedCredentials<String> {
 	private String queryId;
 	private String signature;
-	private String certString;
+	private String certMD5Fingerprint;
 	
 	public WalrusWrappedComponentCredentials(String correlationId, String data,
-			String accessKeyId, String signature, String certString) {
+			String accessKeyId, String signature, String certFingerprint) {
 		super( correlationId, data );
 		this.queryId = accessKeyId;
 		this.signature = signature;
-		this.certString = certString;
+		this.certMD5Fingerprint = certFingerprint;
 	}
 
 	public String getQueryId() {
@@ -83,7 +83,7 @@ public class WalrusWrappedComponentCredentials extends WrappedCredentials<String
 		return this.signature;
 	}
 
-	public String getCertString() {
-		return certString;
+	public String getCertMD5Fingerprint() {
+		return this.certMD5Fingerprint;
 	}
 }
