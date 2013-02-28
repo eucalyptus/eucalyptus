@@ -31,14 +31,6 @@ if __name__ == "__main__":
     # make some calls to proxy class to test things out
     client = UIProxyClient()
     client.login('localhost', '8888', 'ui-test-acct-03', 'admin', 'mypassword7')
-    print "=== Getting Tags ==="
-    print client.get_tags()
-#    print "=== Creating Tag ==="
-#    print client.create_tags(['ami-d54d8fbc'], {'Purpose':'PuppetDev'})
-#    print client.get_tags()
-#    print "=== Deleting Tag ==="
-#    print client.delete_tags(['ami-d54d8fbc'], {'Purpose':'PuppetDev'})
-#    print client.get_tags()
-#    print "=== Getting filtered images ==="
-#    print client.get_images({'tag:Purpose':'LifeguardDevel'});
-    print client.get_tags({'resource-type':'volume'});
+    print "=== Getting Summary ==="
+    print client.set_data_interest(['images', 'keypairs'])
+    print client.get_dash_summary()
