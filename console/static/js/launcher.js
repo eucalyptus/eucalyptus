@@ -280,6 +280,7 @@
           // when image is pre-populated (launch-wizard called from image landing)
           var emi = $currentRow.find('.image-id-arch').children().first().text();
           if(thisObj.options.image && thisObj.options.image === emi){
+            console.log(">>>>>>>>>>>>>>>>>>>> "+thisObj.options.image);
             $currentRow.trigger('click');
             $section.find('#launch-wizard-buttons-image-next').trigger('click');
             thisObj._imageTable.fnSettings()._iDisplayLength = 5;
@@ -691,9 +692,6 @@
         var $sg_selector = $sgroup.find('select');
         var results = describe('sgroup');
         var numOptions = $sg_selector.find('option').length;
-        // TODO TODO TODO
-        //if (numOptions === results.length)
-          return;
         var onSelectorChange = function(groupName){
           var $rule = $section.find('div#launch-wizard-security-sg-detail');
           $rule.children().detach();

@@ -23,7 +23,7 @@
     options : {  
       refresh_interval_sec : REFRESH_INTERVAL_SEC,
       max_refresh_attempt : 3,
-      endpoints: [{name:'summary', url: '/ec2?Action=GetCacheSummary'},
+      endpoints: [{name:'summary', url: '/ec2?Action=GetDashSummary'},
                   {name:'instance', url: '/ec2?Action=DescribeInstances'},
                   //{name:'image', url: '/ec2?Action=DescribeImages&Owner=self'},
                   {name:'image', url: '/ec2?Action=DescribeImages'},
