@@ -475,6 +475,16 @@ class UIProxyClient(object):
             i += 1
         return self.__make_request__('DeleteTags', params)
 
+    ##
+    # Optimize methods
+    ##
+    def get_dash_summary(self):
+        return self.__make_request__('GetDashSummary', {})
+
+    def set_data_interest(self, resources):
+        params = {}
+        self.__build_list_params__(params, resources, 'Resources.member.%d')
+        return self.__make_request__('SetDataInterest', params)
 
     ##
     # Walrus methods

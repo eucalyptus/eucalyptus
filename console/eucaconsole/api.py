@@ -96,6 +96,16 @@ class BaseAPIHandler(eucaconsole.BaseHandler):
                 val = self.get_argument(pattern % (index), None)
         return ret
 
+
+    def extract_ids(self, data):
+        if isinstance(data, list):
+            ret = []
+            for item in data:
+                ret.append(item.id)
+            return ret
+        else:
+            return data
+                
     # async calls end up back here so we can check error status and reply appropriately
     def callback(self, response):
         if response.error:
@@ -122,7 +132,11 @@ class BaseAPIHandler(eucaconsole.BaseHandler):
                         time.sleep(int(eucaconsole.config.get('test','apidelay'))/1000.0);
                 except ConfigParser.NoOptionError:
                     pass
-                ret = Response(response.data) # wrap all responses in an object for security purposes
+                summary = False
+                if summary:
+                    ret = Response(extract_ids(response.data))
+                else:
+                    ret = Response(response.data) # wrap all responses in an object for security purposes
                 data = json.dumps(ret, cls=self.json_encoder, indent=2)
                 self.set_header("Content-Type", "application/json;charset=UTF-8")
                 self.write(data)
@@ -897,11 +911,15 @@ class ComputeHandler(BaseAPIHandler):
                 del self.user_session.keypair_cache[name]
                 return
 
-            if action == 'GetCacheSummary':
+            if action == 'GetDashSummary':
                 ret = ""
                 if isinstance(self.user_session.clc, CachingClcInterface):
                     ret = self.user_session.clc.get_cache_summary()
-                print ret
+                self.callback(eucaconsole.cachingclcinterface.Response(data=ret))
+            elif action == 'SetDataInterest':
+                resources = self.get_argument_list('Resources.member')
+                if isinstance(self.user_session.clc, CachingClcInterface):
+                    ret = self.user_session.clc.set_data_interest(resources)
                 self.callback(eucaconsole.cachingclcinterface.Response(data=ret))
             elif action == 'RunInstances':
                 user_data_file = []

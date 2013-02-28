@@ -358,6 +358,7 @@ function formatDateTime(data) {
 
 function startLaunchWizard(filter) {
   var $container = $('html body').find(DOM_BINDING['main']);
+  console.log("image filter:"+filter);
   $container.maincontainer("changeSelected", null, { selected:'launcher', filter: filter});
 }
 
@@ -585,6 +586,13 @@ function trim (str) {
       return str.replace(/^\s\s*/, '').replace(/\s\s*$/, '');
     else
       return str;
+}
+
+function getTagForResource(res_id) {
+  var result= $('html body').eucadata('get', 'tag');
+//  console.log("res_id="+res_id);
+//  console.log("tag list"+result);
+  return res_id;
 }
 
 //----------------------------------------------------------------------------

@@ -57,7 +57,9 @@
             },
             { 
               // Display the id of the image in eucatable
-              "mDataProp": "id"
+              "fnRender" : function(oObj) { 
+                return getTagForResource(oObj.aData.id);
+              },
             },
             { 
               // Display the artitecture of the image in eucatable

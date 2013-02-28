@@ -62,9 +62,11 @@
               "sClass": "checkbox-cell"
             },
             {
-	      // Display the id of the volume in the main table 
-	      "mDataProp": "id" 
-	    },
+              // Display the id of the image in eucatable
+              "fnRender" : function(oObj) { 
+                return getTagForResource(oObj.aData.id);
+              }
+            },
             {
 	      // Display the status of the volume in the main table
               "fnRender": function(oObj) { 
