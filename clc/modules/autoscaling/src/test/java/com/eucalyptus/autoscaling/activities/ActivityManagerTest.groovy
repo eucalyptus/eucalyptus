@@ -37,6 +37,7 @@ import org.junit.Test
 
 import java.security.cert.X509Certificate
 import com.eucalyptus.autoscaling.tags.Tag
+import com.eucalyptus.auth.principal.Role
 
 /**
  * 
@@ -568,6 +569,11 @@ class ActivityManagerTest {
 
       @Override
       Group lookupGroupById(final String groupId) {
+        throw new NotImplementedException()
+      }
+
+      @Override
+      Role lookupRoleById(final String roleId) {
         throw new NotImplementedException()
       }
 

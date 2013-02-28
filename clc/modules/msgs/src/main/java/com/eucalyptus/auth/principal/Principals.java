@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * Copyright 2009-2013 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -107,8 +107,13 @@ public class Principals {
                                                 @Override
                                                 public List<Group> getGroups( ) throws AuthException {
                                                   return Lists.newArrayList( );
-                                                };
-                                                
+                                                }
+
+                                                @Override
+                                                public List<Role> getRoles( ) throws AuthException {
+                                                  return Lists.newArrayList( );
+                                                }
+
                                                 @Override
                                                 public User addUser( String userName, String path, boolean skipRegistration, boolean enabled, Map<String, String> info ) throws AuthException {
                                                   throw new AuthException( AuthException.SYSTEM_MODIFICATION );
@@ -116,7 +121,15 @@ public class Principals {
                                                 
                                                 @Override
                                                 public void deleteUser( String userName, boolean forceDeleteAdmin, boolean recursive ) throws AuthException {}
-                                                
+
+                                                @Override
+                                                public Role addRole( String roleName, String path, String assumeRolePolicy ) throws AuthException, PolicyParseException {
+                                                  throw new AuthException( AuthException.SYSTEM_MODIFICATION );
+                                                }
+
+                                                @Override
+                                                public void deleteRole( String roleName ) throws AuthException {}
+
                                                 @Override
                                                 public Group addGroup( String groupName, String path ) throws AuthException {
                                                   throw new AuthException( AuthException.SYSTEM_MODIFICATION );
@@ -129,7 +142,12 @@ public class Principals {
                                                 public Group lookupGroupByName( String groupName ) throws AuthException {
                                                   throw new AuthException( AuthException.SYSTEM_MODIFICATION );
                                                 }
-                                                
+
+                                                @Override
+                                                public Role lookupRoleByName( String roleName ) throws AuthException {
+                                                  throw new AuthException( AuthException.SYSTEM_MODIFICATION );
+                                                }
+
                                                 @Override
                                                 public User lookupUserByName( String userName ) throws AuthException {
                                                   if ( Principals.nobodyUser( ).getName( ).equals( userName ) ) {
@@ -138,7 +156,12 @@ public class Principals {
                                                     throw new AuthException( AuthException.SYSTEM_MODIFICATION );
                                                   }
                                                 }
-                                                
+
+                                                @Override
+                                                public User lookupAdmin() throws AuthException {
+                                                  return lookupUserByName( User.ACCOUNT_ADMIN );
+                                                }
+
                                                 @Override
                                                 public List<Authorization> lookupAccountGlobalAuthorizations( String resourceType ) throws AuthException {
                                                   return Lists.newArrayList( );
@@ -172,8 +195,13 @@ public class Principals {
                                                 @Override
                                                 public List<Group> getGroups( ) throws AuthException {
                                                   return Lists.newArrayList( );
-                                                };
-                                                
+                                                }
+
+                                                @Override
+                                                public List<Role> getRoles( ) throws AuthException {
+                                                  return Lists.newArrayList( );
+                                                }
+
                                                 @Override
                                                 public User addUser( String userName, String path, boolean skipRegistration, boolean enabled, Map<String, String> info ) throws AuthException {
                                                   throw new AuthException( AuthException.SYSTEM_MODIFICATION );
@@ -181,7 +209,15 @@ public class Principals {
                                                 
                                                 @Override
                                                 public void deleteUser( String userName, boolean forceDeleteAdmin, boolean recursive ) throws AuthException {}
-                                                
+
+                                                @Override
+                                                public Role addRole( String roleName, String path, String assumeRolePolicy ) throws AuthException, PolicyParseException {
+                                                  throw new AuthException( AuthException.SYSTEM_MODIFICATION );
+                                                }
+
+                                                @Override
+                                                public void deleteRole( String roleName ) throws AuthException {}
+
                                                 @Override
                                                 public Group addGroup( String groupName, String path ) throws AuthException {
                                                   throw new AuthException( AuthException.SYSTEM_MODIFICATION );
@@ -194,7 +230,12 @@ public class Principals {
                                                 public Group lookupGroupByName( String groupName ) throws AuthException {
                                                   throw new AuthException( AuthException.SYSTEM_MODIFICATION );
                                                 }
-                                                
+
+                                                @Override
+                                                public Role lookupRoleByName( String roleName ) throws AuthException {
+                                                  throw new AuthException( AuthException.SYSTEM_MODIFICATION );
+                                                }
+
                                                 @Override
                                                 public User lookupUserByName( String userName ) throws AuthException {
                                                   if ( Principals.systemUser( ).getName( ).equals( userName ) ) {
@@ -203,7 +244,12 @@ public class Principals {
                                                     throw new AuthException( AuthException.SYSTEM_MODIFICATION );
                                                   }
                                                 }
-                                                
+
+                                                @Override
+                                                public User lookupAdmin() throws AuthException {
+                                                  return lookupUserByName( User.ACCOUNT_ADMIN );
+                                                }
+
                                                 @Override
                                                 public List<Authorization> lookupAccountGlobalAuthorizations( String resourceType ) throws AuthException {
                                                   return Lists.newArrayList( );

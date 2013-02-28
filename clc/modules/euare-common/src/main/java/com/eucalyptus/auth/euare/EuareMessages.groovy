@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * Copyright 2009-2013 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -68,9 +68,10 @@ import com.eucalyptus.component.ComponentId.ComponentMessage;
 import com.eucalyptus.component.id.Euare;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 import edu.ucsb.eucalyptus.msgs.EucalyptusData;
-import java.util.ArrayList;
-import java.util.Date;
-import org.jboss.netty.handler.codec.http.HttpResponseStatus;
+
+
+import org.jboss.netty.handler.codec.http.HttpResponseStatus
+import com.eucalyptus.binding.HttpEmbedded;
 
 @ComponentMessage(Euare.class)
 public class EuareMessage extends BaseMessage {
@@ -101,7 +102,7 @@ public class ListGroupPoliciesType extends EuareMessage {
   String delegateAccount;
   String groupName;
   String marker;
-  BigInteger maxItems;
+  Integer maxItems;
   public ListGroupPoliciesType() {  }
 }
 public class ListUserPoliciesResponseType extends EuareMessage {
@@ -136,7 +137,7 @@ public class GetGroupType extends EuareMessage {
   String delegateAccount;
   String groupName;
   String marker;
-  BigInteger maxItems;
+  Integer maxItems;
   public GetGroupType() {  }
 }
 @PolicyAction( vendor = PolicySpec.VENDOR_IAM, action = PolicySpec.IAM_CREATEGROUP )
@@ -256,7 +257,7 @@ public class ListSigningCertificatesType extends EuareMessage {
   String delegateAccount;
   String userName;
   String marker;
-  BigInteger maxItems;
+  Integer maxItems;
   public ListSigningCertificatesType() {  }
 }
 public class ListServerCertificatesResponseType extends EuareMessage {
@@ -283,6 +284,7 @@ public class ListGroupsResponseType extends EuareMessage {
   public ListGroupsResponseType() {  }
 }
 public class ServerCertificateType extends EuareMessage {
+  @HttpEmbedded
   ServerCertificateMetadataType serverCertificateMetadata = new ServerCertificateMetadataType( );
   String certificateBody;
   String certificateChain;
@@ -345,7 +347,7 @@ public class ListUserPoliciesType extends EuareMessage {
   String delegateAccount;
   String userName;
   String marker;
-  BigInteger maxItems;
+  Integer maxItems;
   public ListUserPoliciesType() {  }
 }
 public class ResponseMetadataType extends EucalyptusData {
@@ -453,7 +455,7 @@ public class ResyncMFADeviceType extends EuareMessage {
   String authenticationCode2;
   public ResyncMFADeviceType() {  }
 }
-public class UserType extends EuareMessage {
+public class UserType extends EucalyptusData {
   String path;
   String userName;
   String userId;
@@ -509,7 +511,7 @@ public class DeleteSigningCertificateType extends EuareMessage {
   String certificateId;
   public DeleteSigningCertificateType() {  }
 }
-public class LoginProfileType extends EuareMessage {
+public class LoginProfileType extends EucalyptusData {
   String userName;
   public LoginProfileType() {  }
 }
@@ -542,7 +544,7 @@ public class ListGroupsType extends EuareMessage {
   String delegateAccount;
   String pathPrefix;
   String marker;
-  BigInteger maxItems;
+  Integer maxItems;
   public ListGroupsType() {  }
 }
 @PolicyAction( vendor = PolicySpec.VENDOR_IAM, action = PolicySpec.IAM_LISTGROUPSFORUSER )
@@ -550,10 +552,10 @@ public class ListGroupsForUserType extends EuareMessage {
   String delegateAccount;
   String userName;
   String marker;
-  BigInteger maxItems;
+  Integer maxItems;
   public ListGroupsForUserType() {  }
 }
-public class GroupType extends EuareMessage {
+public class GroupType extends EucalyptusData {
   String path;
   String groupName;
   String groupId;
@@ -598,7 +600,7 @@ public class DeleteLoginProfileType extends EuareMessage {
   String userName;
   public DeleteLoginProfileType() {  }
 }
-public class SigningCertificateType extends EuareMessage {
+public class SigningCertificateType extends EucalyptusData {
   String userName;
   String certificateId;
   String certificateBody;
@@ -633,7 +635,7 @@ public class ListAccessKeysType extends EuareMessage {
   String delegateAccount;
   String userName;
   String marker;
-  BigInteger maxItems;
+  Integer maxItems;
   public ListAccessKeysType() {  }
 }
 @PolicyAction( vendor = PolicySpec.VENDOR_IAM, action = PolicySpec.IAM_DELETEUSER )
@@ -713,14 +715,14 @@ public class ServerCertificateMetadataType extends EucalyptusData {
 public class ListMFADevicesType extends EuareMessage {
   String userName;
   String marker;
-  BigInteger maxItems;
+  Integer maxItems;
   public ListMFADevicesType() {  }
 }
 @PolicyAction( vendor = PolicySpec.VENDOR_IAM, action = PolicySpec.IAM_LISTSERVERCERTIFICATES )
 public class ListServerCertificatesType extends EuareMessage {
   String pathPrefix;
   String marker;
-  BigInteger maxItems;
+  Integer maxItems;
   public ListServerCertificatesType() {  }
 }
 public class ErrorResponseType extends EuareMessage {
@@ -740,7 +742,7 @@ public class ListSigningCertificatesResultType extends EucalyptusData {
   String marker;
   public ListSigningCertificatesResultType() {  }
 }
-public class MFADeviceType extends EuareMessage {
+public class MFADeviceType extends EucalyptusData {
   String userName;
   String serialNumber;
   public MFADeviceType() {  }
@@ -789,7 +791,7 @@ public class ListUsersType extends EuareMessage {
   String delegateAccount;
   String pathPrefix;
   String marker;
-  BigInteger maxItems;
+  Integer maxItems;
   public ListUsersType() {  }
 }
 @PolicyAction( vendor = PolicySpec.VENDOR_IAM, action = PolicySpec.IAM_CREATEACCOUNTALIAS )
@@ -827,7 +829,7 @@ public class ListAccountAliasesResponseType extends EuareMessage {
 public class ListAccountAliasesType extends EuareMessage {
   String delegateAccount;
   String marker;
-  BigInteger maxItems;
+  Integer maxItems;
   public ListAccountAliasesType() {  }
 }
 public class AccountAliasListTypeType extends EucalyptusData {
@@ -854,8 +856,13 @@ public class SummaryMapTypeType extends EucalyptusData {
 }
 public class SummaryMapTypeEntryType extends EucalyptusData {
   String key;
-  BigInteger value;
+  Integer value;
   public SummaryMapTypeEntryType() {  }
+
+  SummaryMapTypeEntryType(String key, Integer value) {
+    this.key = key
+    this.value = value
+  }
 }
 
 /**
@@ -874,7 +881,7 @@ public class CreateAccountResultType extends EucalyptusData {
   AccountType account = new AccountType( );
   public CreateAccountResultType() {  }
 }
-public class AccountType extends EuareMessage {
+public class AccountType extends EucalyptusData {
   String accountName;
   String accountId;
   public AccountType() {  }
@@ -941,7 +948,7 @@ public class UserInfoListTypeType extends EucalyptusData {
   ArrayList<UserInfoType> memberList = new ArrayList<UserInfoType>();
   public UserInfoListTypeType() {  }
 }
-public class UserInfoType extends EuareMessage  {
+public class UserInfoType extends EucalyptusData  {
   String key;
   String value;
   public UserInfoType() {  }
@@ -971,7 +978,7 @@ public class PutAccountPolicyResponseType extends EuareMessage {
 public class ListAccountPoliciesType extends EuareMessage {
   String accountName;
   String marker;
-  BigInteger maxItems;
+  Integer maxItems;
   public ListAccountPoliciesType() {  }
 }
 public class ListAccountPoliciesResponseType extends EuareMessage {
@@ -1023,3 +1030,301 @@ public class GetLdapSyncStatusResultType extends EucalyptusData {
   Boolean inSync;
   public GetLdapSyncStatusResultType() {  }
 }
+
+@PolicyAction( vendor = PolicySpec.VENDOR_IAM, action = PolicySpec.IAM_GETROLE )
+public class GetRoleType extends EuareMessage {
+  String delegateAccount;
+  String roleName;
+  public GetRoleType() {  }
+}
+
+public class RoleListType extends EucalyptusData {
+  public RoleListType() {  }
+  ArrayList<RoleType> member = new ArrayList<RoleType>();
+}
+
+@PolicyAction( vendor = PolicySpec.VENDOR_IAM, action = PolicySpec.IAM_DELETEROLE )
+public class DeleteRolePolicyType extends EuareMessage {
+  String delegateAccount;
+  String roleName;
+  String policyName;
+  public DeleteRolePolicyType() {  }
+}
+
+public class ListRolesResponseType extends EuareMessage {
+  public ListRolesResponseType() {  }
+  ListRolesResult listRolesResult = new ListRolesResult();
+  ResponseMetadataType responseMetadata = new ResponseMetadataType( );
+}
+
+public class GetRoleResult extends EucalyptusData {
+  RoleType role;
+  public GetRoleResult() {  }
+}
+
+public class PutRolePolicyResponseType extends EuareMessage {
+  public PutRolePolicyResponseType() {  }
+  ResponseMetadataType responseMetadata = new ResponseMetadataType( );
+}
+
+@PolicyAction( vendor = PolicySpec.VENDOR_IAM, action = PolicySpec.IAM_LISTROLEPOLICIES )
+public class ListRolePoliciesType extends EuareMessage {
+  String delegateAccount;
+  String roleName;
+  String marker;
+  Integer maxItems;
+  public ListRolePoliciesType() {  }
+}
+
+public class GetRoleResponseType extends EuareMessage {
+  public GetRoleResponseType() {  }
+  GetRoleResult getRoleResult = new GetRoleResult();
+  ResponseMetadataType responseMetadata = new ResponseMetadataType( );
+}
+
+@PolicyAction( vendor = PolicySpec.VENDOR_IAM, action = PolicySpec.IAM_PUTROLEPOLICY )
+public class PutRolePolicyType extends EuareMessage {
+  String delegateAccount;
+  String roleName;
+  String policyName;
+  String policyDocument;
+  public PutRolePolicyType() {  }
+}
+
+@PolicyAction( vendor = PolicySpec.VENDOR_IAM, action = PolicySpec.IAM_UPDATEASSUMEROLEPOLICY )
+public class UpdateAssumeRolePolicyType extends EuareMessage {
+  String delegateAccount;
+  String roleName;
+  String policyDocument;
+  public UpdateAssumeRolePolicyType() {  }
+}
+
+public class RoleType extends EucalyptusData {
+  String path;
+  String roleName;
+  String roleId;
+  String arn;
+  Date createDate;
+  String assumeRolePolicyDocument;
+  public RoleType() {  }
+}
+
+public class GetRolePolicyResult extends EucalyptusData {
+  String roleName;
+  String policyName;
+  String policyDocument;
+  public GetRolePolicyResult() {  }
+}
+
+public class ListRolePoliciesResult extends EucalyptusData {
+  PolicyNameListTypeType policyNames = new PolicyNameListTypeType();
+  Boolean isTruncated;
+  String marker;
+  public ListRolePoliciesResult() {  }
+}
+
+public class DeleteRolePolicyResponseType extends EuareMessage {
+  public DeleteRolePolicyResponseType() {  }
+  ResponseMetadataType responseMetadata = new ResponseMetadataType( );
+}
+
+public class CreateRoleResult extends EucalyptusData {
+  RoleType role;
+  public CreateRoleResult() {  }
+}
+
+public class ListRolesResult extends EucalyptusData {
+  RoleListType roles = new RoleListType();
+  Boolean isTruncated;
+  String marker;
+  public ListRolesResult() {  }
+}
+
+public class UpdateAssumeRolePolicyResponseType extends EuareMessage {
+  public UpdateAssumeRolePolicyResponseType() {  }
+  ResponseMetadataType responseMetadata = new ResponseMetadataType( );
+}
+
+@PolicyAction( vendor = PolicySpec.VENDOR_IAM, action = PolicySpec.IAM_CREATEROLE )
+public class CreateRoleType extends EuareMessage {
+  String delegateAccount;
+  String path;
+  String roleName;
+  String assumeRolePolicyDocument;
+  public CreateRoleType() {  }
+}
+
+public class ListRolePoliciesResponseType extends EuareMessage {
+  public ListRolePoliciesResponseType() {  }
+  ListRolePoliciesResult listRolePoliciesResult = new ListRolePoliciesResult();
+  ResponseMetadataType responseMetadata = new ResponseMetadataType( );
+}
+
+public class DeleteRoleResponseType extends EuareMessage {
+  public DeleteRoleResponseType() {  }
+  ResponseMetadataType responseMetadata = new ResponseMetadataType( );
+}
+
+@PolicyAction( vendor = PolicySpec.VENDOR_IAM, action = PolicySpec.IAM_DELETEROLE )
+public class DeleteRoleType extends EuareMessage {
+  String delegateAccount;
+  String roleName;
+  public DeleteRoleType() {  }
+}
+
+public class CreateRoleResponseType extends EuareMessage {
+  public CreateRoleResponseType() {  }
+  CreateRoleResult createRoleResult = new CreateRoleResult();
+  ResponseMetadataType responseMetadata = new ResponseMetadataType( );
+}
+
+@PolicyAction( vendor = PolicySpec.VENDOR_IAM, action = PolicySpec.IAM_LISTROLES )
+public class ListRolesType extends EuareMessage {
+  String delegateAccount;
+  String pathPrefix;
+  String marker;
+  Integer maxItems;
+  public ListRolesType() {  }
+}
+
+@PolicyAction( vendor = PolicySpec.VENDOR_IAM, action = PolicySpec.IAM_GETROLEPOLICY )
+public class GetRolePolicyType extends EuareMessage {
+  String delegateAccount;
+  String roleName;
+  String policyName;
+  public GetRolePolicyType() {  }
+}
+
+public class GetRolePolicyResponseType extends EuareMessage {
+  public GetRolePolicyResponseType() {  }
+  GetRolePolicyResult getRolePolicyResult = new GetRolePolicyResult();
+  ResponseMetadataType responseMetadata = new ResponseMetadataType( );
+}
+
+public class ListInstanceProfilesResult extends EucalyptusData {
+  InstanceProfileListType instanceProfiles;
+  Boolean isTruncated;
+  String marker;
+  public ListInstanceProfilesResult() {  }
+}
+
+public class ListInstanceProfilesForRoleResponseType extends EuareMessage {
+  public ListInstanceProfilesForRoleResponseType() {  }
+  ListInstanceProfilesForRoleResult listInstanceProfilesForRoleResult = new ListInstanceProfilesForRoleResult();
+  ResponseMetadataType responseMetadata = new ResponseMetadataType( );
+}
+
+@PolicyAction( vendor = PolicySpec.VENDOR_IAM, action = PolicySpec.IAM_LISTINSTANCEPROFILES )
+public class ListInstanceProfilesType extends EuareMessage {
+  String pathPrefix;
+  String marker;
+  Integer maxItems;
+  public ListInstanceProfilesType() {  }
+}
+
+public class ListInstanceProfilesResponseType extends EuareMessage {
+  public ListInstanceProfilesResponseType() {  }
+  ListInstanceProfilesResult listInstanceProfilesResult = new ListInstanceProfilesResult();
+  ResponseMetadataType responseMetadata = new ResponseMetadataType( );
+}
+
+@PolicyAction( vendor = PolicySpec.VENDOR_IAM, action = PolicySpec.IAM_REMOVEROLEFROMINSTANCEPROFILE )
+public class RemoveRoleFromInstanceProfileType extends EuareMessage {
+  String instanceProfileName;
+  String roleName;
+  public RemoveRoleFromInstanceProfileType() {  }
+}
+
+public class DeleteInstanceProfileResponseType extends EuareMessage {
+  public DeleteInstanceProfileResponseType() {  }
+  ResponseMetadataType responseMetadata = new ResponseMetadataType( );
+}
+
+public class CreateInstanceProfileResult extends EucalyptusData {
+  InstanceProfileType instanceProfile;
+  public CreateInstanceProfileResult() {  }
+}
+
+@PolicyAction( vendor = PolicySpec.VENDOR_IAM, action = PolicySpec.IAM_CREATEINSTANCEPROFILE )
+public class CreateInstanceProfileType extends EuareMessage {
+  String instanceProfileName;
+  String path;
+  public CreateInstanceProfileType() {  }
+}
+
+public class GetInstanceProfileResponseType extends EuareMessage {
+  public GetInstanceProfileResponseType() {  }
+  GetInstanceProfileResult getInstanceProfileResult = new GetInstanceProfileResult();
+  ResponseMetadataType responseMetadata = new ResponseMetadataType( );
+}
+
+public class GetInstanceProfileResult extends EucalyptusData {
+  InstanceProfileType instanceProfile;
+  public GetInstanceProfileResult() {  }
+}
+
+@PolicyAction( vendor = PolicySpec.VENDOR_IAM, action = PolicySpec.IAM_DELETEINSTANCEPROFILE )
+public class DeleteInstanceProfileType extends EuareMessage {
+  String instanceProfileName;
+  public DeleteInstanceProfileType() {  }
+}
+
+@PolicyAction( vendor = PolicySpec.VENDOR_IAM, action = PolicySpec.IAM_LISTINSTANCEPROFILESFORROLE )
+public class ListInstanceProfilesForRoleType extends EuareMessage {
+  String roleName;
+  String marker;
+  Integer maxItems;
+  public ListInstanceProfilesForRoleType() {  }
+}
+
+public class RemoveRoleFromInstanceProfileResponseType extends EuareMessage {
+  public RemoveRoleFromInstanceProfileResponseType() {  }
+  ResponseMetadataType responseMetadata = new ResponseMetadataType( );
+}
+
+public class CreateInstanceProfileResponseType extends EuareMessage {
+  public CreateInstanceProfileResponseType() {  }
+  CreateInstanceProfileResult createInstanceProfileResult = new CreateInstanceProfileResult();
+  ResponseMetadataType responseMetadata = new ResponseMetadataType( );
+}
+
+@PolicyAction( vendor = PolicySpec.VENDOR_IAM, action = PolicySpec.IAM_ADDROLETOINSTANCEPROFILE )
+public class AddRoleToInstanceProfileType extends EuareMessage {
+  String instanceProfileName;
+  String roleName;
+  public AddRoleToInstanceProfileType() {  }
+}
+
+public class ListInstanceProfilesForRoleResult extends EucalyptusData {
+  InstanceProfileListType instanceProfiles;
+  Boolean isTruncated;
+  String marker;
+  public ListInstanceProfilesForRoleResult() {  }
+}
+
+public class AddRoleToInstanceProfileResponseType extends EuareMessage {
+  public AddRoleToInstanceProfileResponseType() {  }
+  ResponseMetadataType responseMetadata = new ResponseMetadataType( );
+}
+
+@PolicyAction( vendor = PolicySpec.VENDOR_IAM, action = PolicySpec.IAM_GETINSTANCEPROFILE )
+public class GetInstanceProfileType extends EuareMessage {
+  String instanceProfileName;
+  public GetInstanceProfileType() {  }
+}
+
+public class InstanceProfileType extends EucalyptusData {
+  String path;
+  String instanceProfileName;
+  String instanceProfileId;
+  String arn;
+  Date createDate;
+  RoleListType roles;
+  public InstanceProfileType() {  }
+}
+
+public class InstanceProfileListType extends EucalyptusData {
+  public InstanceProfileListType() {  }
+  ArrayList<InstanceProfileType> member = new ArrayList<InstanceProfileType>();
+}
+

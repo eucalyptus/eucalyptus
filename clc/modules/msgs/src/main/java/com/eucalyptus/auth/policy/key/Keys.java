@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * Copyright 2009-2013 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -94,6 +94,7 @@ public class Keys {
   
   public static final String IAM_QUOTA_USER_NUMBER = "iam:quota-usernumber";
   public static final String IAM_QUOTA_GROUP_NUMBER = "iam:quota-groupnumber";
+  public static final String IAM_QUOTA_ROLE_NUMBER = "iam:quota-rolenumber";
 
   private static final Map<String, Class<? extends Key>> KEY_MAP = Maps.newHashMap( );
     

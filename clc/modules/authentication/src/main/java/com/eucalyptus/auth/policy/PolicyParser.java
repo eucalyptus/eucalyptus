@@ -79,7 +79,6 @@ import com.eucalyptus.auth.entities.StatementEntity;
 import com.eucalyptus.auth.json.JsonUtils;
 import com.eucalyptus.auth.policy.condition.ConditionOp;
 import com.eucalyptus.auth.policy.condition.Conditions;
-import com.eucalyptus.auth.policy.condition.NumericLessThanEquals;
 import com.eucalyptus.auth.policy.ern.Ern;
 import com.eucalyptus.auth.policy.key.Key;
 import com.eucalyptus.auth.policy.key.Keys;
@@ -176,10 +175,7 @@ public class PolicyParser {
     // conditions
     List<ConditionEntity> conditions = parseConditions( statement, effect );
     // Construct the statement: a list of authorizations and a list of conditions
-    StatementEntity statementEntity = new StatementEntity( sid );
-    statementEntity.setAuthorizations( authorizations );
-    statementEntity.setConditions( conditions );
-    return statementEntity;
+    return new StatementEntity( sid, authorizations, conditions );
   }
 
   /**

@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * Copyright 2009-2013 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -17,35 +17,24 @@
  * CA 93117, USA or visit http://www.eucalyptus.com/licenses/ if you need
  * additional information or have any questions.
  ************************************************************************/
-package com.eucalyptus.tokens;
+package com.eucalyptus.auth.principal;
 
-import org.jboss.netty.handler.codec.http.HttpResponseStatus;
-import com.eucalyptus.util.EucalyptusCloudException;
+import java.util.List;
+import com.eucalyptus.auth.AuthException;
+import com.eucalyptus.auth.PolicyParseException;
 
 /**
  *
  */
-public class TokensException extends EucalyptusCloudException {
+public interface AuthorizedPrincipal extends BasePrincipal {
 
-  public static final String NOT_AUTHORIZED = "NotAuthorized";
-  public static final String INVALID_PARAMETER = "InvalidParameterValue";
+  Account getAccount( ) throws AuthException;
 
-  private final HttpResponseStatus status;
-  private final String error;
+  List<Policy> getPolicies( ) throws AuthException;
+  Policy addPolicy( String name, String policy ) throws AuthException, PolicyParseException;
+  void removePolicy( String name ) throws AuthException;
 
-  public TokensException( final HttpResponseStatus status,
-                          final String error,
-                          final String message ) {
-    super( message );
-    this.status = status;
-    this.error = error;
-  }
+  List<Authorization> lookupAuthorizations( String resourceType ) throws AuthException;
+  List<Authorization> lookupQuotas( String resourceType ) throws AuthException;
 
-  public HttpResponseStatus getStatus() {
-    return status;
-  }
-
-  public String getError() {
-    return error;
-  }
 }

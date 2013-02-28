@@ -509,7 +509,7 @@ public class ActivityManager {
       public String get() {
         try {
           return Accounts.lookupAccountById( accountNumber )
-              .lookupUserByName( User.ACCOUNT_ADMIN ).getUserId();
+              .lookupAdmin().getUserId();
         } catch ( AuthException e ) {
           throw Exceptions.toUndeclared( e );
         }

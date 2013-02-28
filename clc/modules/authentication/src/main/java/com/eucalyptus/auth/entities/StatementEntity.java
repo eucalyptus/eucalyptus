@@ -64,6 +64,7 @@ package com.eucalyptus.auth.entities;
 
 import java.io.Serializable;
 import java.util.List;
+import javax.annotation.Nonnull;
 import javax.persistence.CascadeType;
 import javax.persistence.Column;
 import org.hibernate.annotations.Entity;
@@ -159,7 +160,21 @@ public class StatementEntity extends AbstractPersistent implements Serializable 
   public StatementEntity( String sid ) {
     this.sid = sid;
   }
-  
+
+  public StatementEntity( String sid,
+                          @Nonnull List<AuthorizationEntity> authorizations,
+                          @Nonnull List<ConditionEntity> conditions ) {
+    this.sid = sid;
+    this.authorizations = authorizations;
+    this.conditions = conditions;
+    for ( AuthorizationEntity auth : authorizations ) {
+      auth.setStatement( this );
+    }
+    for ( ConditionEntity cond : conditions ) {
+      cond.setStatement( this );
+    }
+  }
+
   public String getSid( ) {
     return this.sid;
   }

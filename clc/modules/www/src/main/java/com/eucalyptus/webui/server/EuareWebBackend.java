@@ -327,7 +327,7 @@ public class EuareWebBackend {
       if ( query.hasOnlySingle( ID ) ) {
         Account account = Accounts.lookupAccountById( query.getSingle( ID ).getValue( ) );
         if ( Privileged.allowReadAccount( requestUser, account ) ) {
-          User admin = account.lookupUserByName( User.ACCOUNT_ADMIN );
+          User admin = account.lookupAdmin();
           results.add( serializeAccount( account, admin.getRegistrationStatus( ) ) );
         }
       } else {
@@ -335,7 +335,7 @@ public class EuareWebBackend {
           try {
             if ( accountMatchQuery( account, query ) ) {
               if ( Privileged.allowReadAccount( requestUser, account ) ) {
-                User admin = account.lookupUserByName( User.ACCOUNT_ADMIN );
+                User admin = account.lookupAdmin();
                 results.add( serializeAccount( account, admin.getRegistrationStatus( ) ) );
               }
             }
@@ -935,7 +935,7 @@ public class EuareWebBackend {
   public static User signupAccount( String accountName, String password, String email ) throws EucalyptusServiceException {
     try {
       Account account = Privileged.createAccount( true, accountName, password, email, false/*skipRegistration*/ );
-      return account.lookupUserByName( User.ACCOUNT_ADMIN );
+      return account.lookupAdmin();
     } catch ( Exception e ) {
       LOG.error( "Failed to signup account " + accountName, e );
       LOG.debug( e, e );
@@ -1322,7 +1322,7 @@ public class EuareWebBackend {
 
   private static String getAccountAdminEmail( Account account ) {
     try {
-      User admin = account.lookupUserByName( User.ACCOUNT_ADMIN );
+      User admin = account.lookupAdmin();
       return admin.getInfo( User.EMAIL );
     } catch ( Exception e ) {
       LOG.error( "Failed to get account admin", e );
@@ -1366,7 +1366,7 @@ public class EuareWebBackend {
     for ( String accountName : accountNames ) {
       try {
         Account account = Accounts.lookupAccountByName( accountName );
-        User admin = account.lookupUserByName( User.ACCOUNT_ADMIN );
+        User admin = account.lookupAdmin();
         if ( admin.getRegistrationStatus( ).equals( RegistrationStatus.REGISTERED ) ) {
           if ( approve ) {
             admin.setRegistrationStatus( RegistrationStatus.APPROVED );

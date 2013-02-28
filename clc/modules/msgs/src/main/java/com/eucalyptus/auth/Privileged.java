@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * Copyright 2009-2013 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -73,6 +73,7 @@ import com.eucalyptus.auth.principal.Account;
 import com.eucalyptus.auth.principal.Certificate;
 import com.eucalyptus.auth.principal.Group;
 import com.eucalyptus.auth.principal.Policy;
+import com.eucalyptus.auth.principal.Role;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.auth.util.X509CertHelper;
 import com.eucalyptus.crypto.Certs;
@@ -412,7 +413,59 @@ public class Privileged {
     }
     return groups;
   }
-  
+
+  public static Role createRole( User requestUser, Account account, String roleName, String path, String assumeRolePolicy ) throws AuthException, PolicyParseException {
+    if ( !requestUser.isSystemAdmin( ) ) {
+      if ( !requestUser.getAccount( ).getAccountNumber( ).equals( account.getAccountNumber( ) ) ) {
+        throw new AuthException( AuthException.ACCESS_DENIED );
+      }
+      if ( !Permissions.isAuthorized( PolicySpec.VENDOR_IAM, PolicySpec.IAM_RESOURCE_ROLE, "", account, PolicySpec.IAM_CREATEROLE, requestUser ) ) {
+        throw new AuthException( AuthException.ACCESS_DENIED );
+      }
+      if ( !Permissions.canAllocate( PolicySpec.VENDOR_IAM, PolicySpec.IAM_RESOURCE_ROLE, "", PolicySpec.IAM_CREATEROLE, requestUser, 1L ) ) {
+        throw new AuthException( AuthException.QUOTA_EXCEEDED );
+      }
+    }
+    return account.addRole( roleName, path, assumeRolePolicy );
+  }
+
+  public static boolean allowListRole( User requestUser, Account account, Role role ) throws AuthException {
+    return requestUser.isSystemAdmin( ) || // system admin or ...
+        ( requestUser.getAccount( ).getAccountNumber( ).equals( account.getAccountNumber( ) ) && // in the same account and ...
+            Permissions.isAuthorized( PolicySpec.VENDOR_IAM, PolicySpec.IAM_RESOURCE_ROLE, Accounts.getRoleFullName( role ), account, PolicySpec.IAM_LISTROLES, requestUser ) );
+  }
+
+  public static boolean allowReadRole( User requestUser, Account account, Role role ) throws AuthException {
+    return requestUser.isSystemAdmin( ) || // system admin or ...
+        ( requestUser.getAccount( ).getAccountNumber( ).equals( account.getAccountNumber( ) ) && // same account and ...
+            // allowed to list role
+            Permissions.isAuthorized( PolicySpec.VENDOR_IAM, PolicySpec.IAM_RESOURCE_ROLE, Accounts.getRoleFullName( role ), account, PolicySpec.IAM_GETROLE, requestUser ) );
+  }
+
+  public static void deleteRole( User requestUser, Account account, Role role ) throws AuthException {
+    if ( !requestUser.isSystemAdmin( ) ) {
+      if ( !requestUser.getAccount( ).getAccountNumber( ).equals( account.getAccountNumber( ) ) ) {
+        throw new AuthException( AuthException.ACCESS_DENIED );
+      }
+      if ( !Permissions.isAuthorized( PolicySpec.VENDOR_IAM, PolicySpec.IAM_RESOURCE_ROLE, Accounts.getRoleFullName( role ), account, PolicySpec.IAM_DELETEROLE, requestUser ) ) {
+        throw new AuthException( AuthException.ACCESS_DENIED );
+      }
+    }
+    account.deleteRole( role.getName( ) );
+  }
+
+  public static void updateAssumeRolePolicy( User requestUser, Account account, Role role, String assumeRolePolicy ) throws AuthException, PolicyParseException {
+    if ( !requestUser.isSystemAdmin( ) ) {
+      if ( !requestUser.getAccount( ).getAccountNumber( ).equals( account.getAccountNumber( ) ) ) {
+        throw new AuthException( AuthException.ACCESS_DENIED );
+      }
+      if ( !Permissions.isAuthorized( PolicySpec.VENDOR_IAM, PolicySpec.IAM_RESOURCE_ROLE, Accounts.getRoleFullName( role ), account, PolicySpec.IAM_UPDATEASSUMEROLEPOLICY, requestUser ) ) {
+        throw new AuthException( AuthException.ACCESS_DENIED );
+      }
+    }
+    role.setAssumeRolePolicy( assumeRolePolicy );
+  }
+
   public static void putAccountPolicy( boolean hasAdministrativePrivilege, Account account, String name, String policy ) throws AuthException, PolicyParseException {
     if ( !hasAdministrativePrivilege ) {
       throw new AuthException( AuthException.ACCESS_DENIED );
@@ -421,7 +474,7 @@ public class Privileged {
     if ( Account.SYSTEM_ACCOUNT.equals( account.getName( ) ) ) {
       throw new AuthException( AuthException.ACCESS_DENIED );
     }
-    User admin = account.lookupUserByName( User.ACCOUNT_ADMIN );
+    User admin = account.lookupAdmin();
     admin.addPolicy( name, policy );
   }
   
@@ -446,18 +499,30 @@ public class Privileged {
       if ( !requestUser.getAccount( ).getAccountNumber( ).equals( account.getAccountNumber( ) ) ) {
         throw new AuthException( AuthException.ACCESS_DENIED );
       }
-      if ( !Permissions.isAuthorized( PolicySpec.VENDOR_IAM, PolicySpec.IAM_RESOURCE_GROUP, Accounts.getUserFullName( user ), account, PolicySpec.IAM_PUTUSERPOLICY, requestUser ) ) {
+      if ( !Permissions.isAuthorized( PolicySpec.VENDOR_IAM, PolicySpec.IAM_RESOURCE_USER, Accounts.getUserFullName( user ), account, PolicySpec.IAM_PUTUSERPOLICY, requestUser ) ) {
         throw new AuthException( AuthException.ACCESS_DENIED );
       }
     }
     user.addPolicy( name, policy );
   }
-  
+
+  public static void putRolePolicy( User requestUser, Account account, Role role, String name, String policy ) throws AuthException, PolicyParseException {
+    if ( !requestUser.isSystemAdmin( ) ) {
+      if ( !requestUser.getAccount( ).getAccountNumber( ).equals( account.getAccountNumber( ) ) ) {
+        throw new AuthException( AuthException.ACCESS_DENIED );
+      }
+      if ( !Permissions.isAuthorized( PolicySpec.VENDOR_IAM, PolicySpec.IAM_RESOURCE_ROLE, Accounts.getRoleFullName( role ), account, PolicySpec.IAM_PUTROLEPOLICY, requestUser ) ) {
+        throw new AuthException( AuthException.ACCESS_DENIED );
+      }
+    }
+    role.addPolicy( name, policy );
+  }
+
   public static void deleteAccountPolicy( boolean hasAdministrativePrivilege, Account account, String name ) throws AuthException {
     if ( !hasAdministrativePrivilege ) {
       throw new AuthException( AuthException.ACCESS_DENIED );
     }
-    User admin = account.lookupUserByName( User.ACCOUNT_ADMIN );
+    User admin = account.lookupAdmin();
     admin.removePolicy( name );
   }
   
@@ -482,18 +547,30 @@ public class Privileged {
       if ( !requestUser.getAccount( ).getAccountNumber( ).equals( account.getAccountNumber( ) ) ) {
         throw new AuthException( AuthException.ACCESS_DENIED );
       }
-      if ( !Permissions.isAuthorized( PolicySpec.VENDOR_IAM, PolicySpec.IAM_RESOURCE_GROUP, Accounts.getUserFullName( user ), account, PolicySpec.IAM_DELETEUSERPOLICY, requestUser ) ) {
+      if ( !Permissions.isAuthorized( PolicySpec.VENDOR_IAM, PolicySpec.IAM_RESOURCE_USER, Accounts.getUserFullName( user ), account, PolicySpec.IAM_DELETEUSERPOLICY, requestUser ) ) {
         throw new AuthException( AuthException.ACCESS_DENIED );
       }
     }
     user.removePolicy( name );
   }
-  
+
+  public static void deleteRolePolicy( User requestUser, Account account, Role role, String name ) throws AuthException {
+    if ( !requestUser.isSystemAdmin( ) ) {
+      if ( !requestUser.getAccount( ).getAccountNumber( ).equals( account.getAccountNumber( ) ) ) {
+        throw new AuthException( AuthException.ACCESS_DENIED );
+      }
+      if ( !Permissions.isAuthorized( PolicySpec.VENDOR_IAM, PolicySpec.IAM_RESOURCE_ROLE, Accounts.getRoleFullName( role ), account, PolicySpec.IAM_DELETEROLEPOLICY, requestUser ) ) {
+        throw new AuthException( AuthException.ACCESS_DENIED );
+      }
+    }
+    role.removePolicy( name );
+  }
+
   public static List<Policy> listAccountPolicies( User requestUser, Account account ) throws AuthException {
     if ( !allowListOrReadAccountPolicy( requestUser, account ) ) {
       throw new AuthException( AuthException.ACCESS_DENIED );
     }
-    User admin = account.lookupUserByName( User.ACCOUNT_ADMIN );
+    User admin = account.lookupAdmin();
     return admin.getPolicies( );
   }
   
@@ -515,7 +592,19 @@ public class Privileged {
     }
     return user.getPolicies( );
   }
-  
+
+  public static List<Policy> listRolePolicies( User requestUser, Account account, Role role ) throws AuthException {
+    if ( !requestUser.isSystemAdmin() ) {
+      if ( !requestUser.getAccount( ).getAccountNumber( ).equals( account.getAccountNumber( ) ) ) {
+        throw new AuthException( AuthException.ACCESS_DENIED );
+      }
+      if ( !Permissions.isAuthorized( PolicySpec.VENDOR_IAM, PolicySpec.IAM_RESOURCE_ROLE, Accounts.getRoleFullName( role ), account, PolicySpec.IAM_LISTROLEPOLICIES, requestUser ) ) {
+        throw new AuthException( AuthException.ACCESS_DENIED );
+      }
+    }
+    return role.getPolicies( );
+  }
+
   public static Policy getAccountPolicy( User requestUser, Account account, String policyName ) throws AuthException {
     if ( !allowListOrReadAccountPolicy( requestUser, account ) ) {
       throw new AuthException( AuthException.ACCESS_DENIED );
@@ -523,7 +612,7 @@ public class Privileged {
     if ( Strings.isNullOrEmpty( policyName ) ) {
       throw new AuthException( AuthException.EMPTY_POLICY_NAME );
     }
-    User admin = account.lookupUserByName( User.ACCOUNT_ADMIN );
+    User admin = account.lookupAdmin();
     Policy policy = null;
     for ( Policy p : admin.getPolicies( ) ) {
       if ( p.getName( ).equals( policyName ) ) {
@@ -567,11 +656,34 @@ public class Privileged {
     }    
     return policy;
   }
-  
+
+  public static Policy getRolePolicy( User requestUser, Account account, Role role, String policyName ) throws AuthException {
+    if ( !allowReadRolePolicy( requestUser, account, role ) ) {
+      throw new AuthException( AuthException.ACCESS_DENIED );
+    }
+    if ( Strings.isNullOrEmpty( policyName ) ) {
+      throw new AuthException( AuthException.EMPTY_POLICY_NAME );
+    }
+    Policy policy = null;
+    for ( Policy p : role.getPolicies( ) ) {
+      if ( p.getName( ).equals( policyName ) ) {
+        policy = p;
+        break;
+      }
+    }
+    return policy;
+  }
+
   public static boolean allowReadGroupPolicy( User requestUser, Account account, Group group ) throws AuthException {
     return requestUser.isSystemAdmin( ) || // system admin or ...
            ( requestUser.getAccount( ).getAccountNumber( ).equals( account.getAccountNumber( ) ) && // in the same account and ...
              Permissions.isAuthorized( PolicySpec.VENDOR_IAM, PolicySpec.IAM_RESOURCE_GROUP, Accounts.getGroupFullName( group ), account, PolicySpec.IAM_GETGROUPPOLICY, requestUser ) );
+  }
+
+  public static boolean allowReadRolePolicy( User requestUser, Account account, Role role ) throws AuthException {
+    return requestUser.isSystemAdmin( ) || // system admin or ...
+        ( requestUser.getAccount( ).getAccountNumber( ).equals( account.getAccountNumber( ) ) && // in the same account and ...
+            Permissions.isAuthorized( PolicySpec.VENDOR_IAM, PolicySpec.IAM_RESOURCE_ROLE, Accounts.getRoleFullName( role ), account, PolicySpec.IAM_GETROLEPOLICY, requestUser ) );
   }
 
   public static boolean allowListUserPolicy( User requestUser, Account account, User user ) throws AuthException {

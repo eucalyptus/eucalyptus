@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * Copyright 2009-2013 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -65,9 +65,6 @@ package com.eucalyptus.auth;
 import java.util.List;
 import java.util.Map;
 import org.apache.log4j.Logger;
-import org.hibernate.Session;
-import org.hibernate.criterion.Example;
-import org.hibernate.criterion.MatchMode;
 import org.hibernate.criterion.Restrictions;
 import com.eucalyptus.auth.checker.InvalidValueException;
 import com.eucalyptus.auth.checker.ValueChecker;
@@ -76,17 +73,18 @@ import com.eucalyptus.auth.entities.AccountEntity;
 import com.eucalyptus.auth.entities.AuthorizationEntity;
 import com.eucalyptus.auth.entities.CertificateEntity;
 import com.eucalyptus.auth.entities.GroupEntity;
+import com.eucalyptus.auth.entities.PolicyEntity;
+import com.eucalyptus.auth.entities.RoleEntity;
 import com.eucalyptus.auth.entities.UserEntity;
+import com.eucalyptus.auth.policy.PolicyParser;
 import com.eucalyptus.auth.principal.Account;
 import com.eucalyptus.auth.principal.Authorization;
 import com.eucalyptus.auth.principal.Group;
+import com.eucalyptus.auth.principal.Role;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.auth.principal.Authorization.EffectType;
 import com.eucalyptus.crypto.Crypto;
-import com.eucalyptus.crypto.Hmacs;
 import com.eucalyptus.entities.EntityWrapper;
-import com.eucalyptus.entities.Transactions;
-import java.util.concurrent.ExecutionException;
 import com.eucalyptus.util.Tx;
 import com.google.common.collect.Lists;
 
@@ -194,7 +192,30 @@ public class DatabaseAccountProxy implements Account {
       throw new AuthException( "Failed to get groups", e );
     }
   }
-  
+
+  @Override
+  public List<Role> getRoles( ) throws AuthException {
+    final List<Role> results = Lists.newArrayList( );
+    final EntityWrapper<RoleEntity> db = EntityWrapper.get( RoleEntity.class );
+    try {
+      @SuppressWarnings( "unchecked" )
+      List<RoleEntity> roles = ( List<RoleEntity> ) db
+          .createCriteria( RoleEntity.class )
+          .createCriteria( "account" ).add( Restrictions.eq( "name", this.delegate.getName( ) ) )
+          .setCacheable( true )
+          .list( );
+      for ( final RoleEntity role : roles ) {
+        results.add( new DatabaseRoleProxy( role ) );
+      }
+      return results;
+    } catch ( Exception e ) {
+      Debugging.logError( LOG, e, "Failed to get roles for " + this.delegate.getName( ) );
+      throw new AuthException( "Failed to get roles", e );
+    } finally {
+      if ( db.isActive() ) db.rollback();
+    }
+  }
+
   @Override
   public User addUser( String userName, String path, boolean skipRegistration, boolean enabled, Map<String, String> info ) throws AuthException {
     try {
@@ -262,7 +283,20 @@ public class DatabaseAccountProxy implements Account {
       throw new AuthException( AuthException.NO_SUCH_USER, e );
     }
   }
-  
+
+  private boolean roleHasResourceAttached( String roleName, String accountName ) throws AuthException {
+    final EntityWrapper<RoleEntity> db = EntityWrapper.get( RoleEntity.class );
+    try {
+      final RoleEntity roleEntity = DatabaseAuthUtils.getUniqueRole( db, roleName, accountName );
+      return roleEntity.getPolicies( ).size( ) > 0;
+    } catch ( Exception e ) {
+      Debugging.logError( LOG, e, "Failed to check role " + roleName + " in " + accountName );
+      throw new AuthException( AuthException.NO_SUCH_ROLE, e );
+    } finally {
+      if ( db.isActive() ) db.rollback();
+    }
+  }
+
   private static int getCurrentCertificateNumber( List<CertificateEntity> certs ) {
     int num = 0;
     for ( CertificateEntity cert : certs ) {
@@ -303,7 +337,67 @@ public class DatabaseAccountProxy implements Account {
       throw new AuthException( AuthException.NO_SUCH_USER, e );
     }
   }
-  
+
+  @Override
+  public Role addRole( final String roleName, final String path, final String assumeRolePolicy ) throws AuthException, PolicyParseException {
+    try {
+      USER_GROUP_NAME_CHECKER.check( roleName );
+    } catch ( InvalidValueException e ) {
+      Debugging.logError( LOG, e, "Invalid role name " + roleName );
+      throw new AuthException( AuthException.INVALID_NAME, e );
+    }
+    try {
+      PATH_CHECKER.check( path );
+    } catch ( InvalidValueException e ) {
+      Debugging.logError( LOG, e, "Invalid path " + path );
+      throw new AuthException( AuthException.INVALID_PATH, e );
+    }
+    if ( DatabaseAuthUtils.checkRoleExists( roleName, this.delegate.getName() ) ) {
+      throw new AuthException( AuthException.ROLE_ALREADY_EXISTS );
+    }
+    final PolicyEntity parsedPolicy = PolicyParser.getInstance().parse( assumeRolePolicy );
+    final EntityWrapper<AccountEntity> db = EntityWrapper.get( AccountEntity.class );
+    try {
+      final AccountEntity account = DatabaseAuthUtils.getUnique( db, AccountEntity.class, "name", this.delegate.getName( ) );
+      final RoleEntity newRole = new RoleEntity( roleName );
+      newRole.setRoleId( Crypto.generateQueryId() );
+      newRole.setPath( path );
+      newRole.setAccount( account );
+      newRole.setAssumeRolePolicy( parsedPolicy );
+      parsedPolicy.setName( "assume-role-policy-for-" + newRole.getRoleId() );
+      final RoleEntity persistedRole = db.recast( RoleEntity.class ).persist( newRole );
+      db.commit( );
+      return new DatabaseRoleProxy( persistedRole );
+    } catch ( Exception e ) {
+      Debugging.logError( LOG, e, "Failed to add role: " + roleName + " in " + this.delegate.getName() );
+      throw new AuthException( AuthException.ROLE_CREATE_FAILURE, e );
+    } finally {
+      if ( db.isActive() ) db.rollback();
+    }
+  }
+
+  @Override
+  public void deleteRole( final String roleName ) throws AuthException {
+    final String accountName = this.delegate.getName( );
+    if ( roleName == null ) {
+      throw new AuthException( AuthException.EMPTY_ROLE_NAME );
+    }
+    if ( roleHasResourceAttached( roleName, accountName ) ) {
+      throw new AuthException( AuthException.ROLE_DELETE_CONFLICT );
+    }
+    final EntityWrapper<RoleEntity> db = EntityWrapper.get( RoleEntity.class );
+    try {
+      final RoleEntity role = DatabaseAuthUtils.getUniqueRole( db, roleName, accountName );
+      db.delete( role );
+      db.commit( );
+    } catch ( Exception e ) {
+      Debugging.logError( LOG, e, "Failed to delete role: " + roleName + " in " + accountName );
+      throw new AuthException( AuthException.NO_SUCH_ROLE, e );
+    } finally {
+      if ( db.isActive() ) db.rollback();
+    }
+  }
+
   @Override
   public Group addGroup( String groupName, String path ) throws AuthException {
     try {
@@ -394,7 +488,25 @@ public class DatabaseAccountProxy implements Account {
       throw new AuthException( AuthException.NO_SUCH_GROUP, e );
     }
   }
-  
+
+  @Override
+  public Role lookupRoleByName( String roleName ) throws AuthException {
+    final String accountName = this.delegate.getName( );
+    if ( roleName == null ) {
+      throw new AuthException( AuthException.EMPTY_ROLE_NAME );
+    }
+    final EntityWrapper<RoleEntity> db = EntityWrapper.get( RoleEntity.class );
+    try {
+      final RoleEntity roleEntity = DatabaseAuthUtils.getUniqueRole( db, roleName, accountName );
+      return new DatabaseRoleProxy( roleEntity );
+    } catch ( Exception e ) {
+      Debugging.logError( LOG, e, "Failed to get role " + roleName + " for " + accountName );
+      throw new AuthException( AuthException.NO_SUCH_ROLE, e );
+    } finally {
+      if ( db.isActive() ) db.rollback();
+    }
+  }
+
   @Override
   public User lookupUserByName( String userName ) throws AuthException {
     String accountName = this.delegate.getName( );
@@ -412,7 +524,12 @@ public class DatabaseAccountProxy implements Account {
       throw new AuthException( AuthException.NO_SUCH_USER, e );
     }
   }
-  
+
+  @Override
+  public User lookupAdmin() throws AuthException {
+    return lookupUserByName( User.ACCOUNT_ADMIN );
+  }
+
   @Override
   public List<Authorization> lookupAccountGlobalAuthorizations( String resourceType ) throws AuthException {
     String accountId = this.delegate.getAccountNumber( );
