@@ -474,6 +474,33 @@ public class PolicySpec {
       .add( AUTOSCALING_UPDATEAUTOSCALINGGROUP )
       .build();
 
+  //Cloud Watch actions, based on API Reference (API Version 2010-08-01)
+  public static final String CLOUDWATCH_PUTMETRICALARM = "putmetricalarm";
+  public static final String CLOUDWATCH_PUTMETRICDATA = "putmetricdata";
+  public static final String CLOUDWATCH_LISTMETRICS = "listmetrics";
+  public static final String CLOUDWATCH_GETMETRICSTATISTICS = "getmetricstatistics";
+  public static final String CLOUDWATCH_DISABLEALARMACTIONS = "disablealarmactions";
+  public static final String CLOUDWATCH_DESCRIBEALARMS = "describealarms";
+  public static final String CLOUDWATCH_DESCRIBEALARMSFORMETRIC = "describealarmsformetric";
+  public static final String CLOUDWATCH_DESCRIBEALARMHISTORY = "describealarmhistory";
+  public static final String CLOUDWATCH_ENABLEALARMACTIONS = "enablealarmactions";
+  public static final String CLOUDWATCH_DELETEALARMS = "deletealarms";
+  public static final String CLOUDWATCH_SETALARMSTATE = "setalarmstate";
+  
+  public static final Set<String> CLOUDWATCH_ACTIONS = new ImmutableSet.Builder<String>()
+      .add(CLOUDWATCH_DELETEALARMS)
+      .add(CLOUDWATCH_DESCRIBEALARMHISTORY)
+      .add(CLOUDWATCH_DESCRIBEALARMS)
+      .add(CLOUDWATCH_DESCRIBEALARMSFORMETRIC)
+      .add(CLOUDWATCH_DISABLEALARMACTIONS)
+      .add(CLOUDWATCH_ENABLEALARMACTIONS)
+      .add(CLOUDWATCH_GETMETRICSTATISTICS)
+      .add(CLOUDWATCH_LISTMETRICS)
+      .add(CLOUDWATCH_PUTMETRICALARM)
+      .add(CLOUDWATCH_PUTMETRICDATA)
+      .add(CLOUDWATCH_SETALARMSTATE)
+      .build();
+  
   // Map vendor to actions
   public static final Map<String, Set<String>> VENDOR_ACTIONS = new ImmutableMap.Builder<String,Set<String>>()
   .put( VENDOR_IAM, IAM_ACTIONS )
@@ -481,10 +508,11 @@ public class PolicySpec {
   .put( VENDOR_S3, S3_ACTIONS )
   .put( VENDOR_STS, STS_ACTIONS )
   .put( VENDOR_AUTOSCALING, AUTOSCALING_ACTIONS )
+  .put( VENDOR_CLOUDWATCH, CLOUDWATCH_ACTIONS)
   .build();
   
   // Action syntax
-  public static final Pattern ACTION_PATTERN = Pattern.compile( "\\*|(?:(" + VENDOR_IAM + "|" + VENDOR_EC2 + "|" + VENDOR_S3 + "|" + VENDOR_STS  + "|" + VENDOR_AUTOSCALING + "):(\\S+))" );
+  public static final Pattern ACTION_PATTERN = Pattern.compile( "\\*|(?:(" + VENDOR_IAM + "|" + VENDOR_EC2 + "|" + VENDOR_S3 + "|" + VENDOR_STS  + "|" + VENDOR_AUTOSCALING + "|" + VENDOR_CLOUDWATCH + "):(\\S+))" );
   
   // Wildcard
   public static final String ALL_RESOURCE = "*";
@@ -522,7 +550,10 @@ public class PolicySpec {
   // S3 resource types
   public static final String S3_RESOURCE_BUCKET = "bucket";
   public static final String S3_RESOURCE_OBJECT = "object";
-  
+
+  // Auto scaling resource types
+  public static final String AUTOSCALING_RESOURCE_TAG = "tag";
+
   public static String qualifiedName( String vendor, String name ) {
     return vendor + ":" + name;
   }

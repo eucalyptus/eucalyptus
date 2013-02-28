@@ -167,7 +167,7 @@ public class Volumes {
     
     @Override
     public void fireEvent( final ClockTick event ) {
-      if ( Hosts.isCoordinator( ) && ready.compareAndSet( true, false ) ) {
+      if ( Topology.isEnabledLocally( Eucalyptus.class ) && ready.compareAndSet( true, false ) ) {
         try {
           Threads.enqueue( Eucalyptus.class, Volumes.class, this );
         } catch ( final Exception ex ) {

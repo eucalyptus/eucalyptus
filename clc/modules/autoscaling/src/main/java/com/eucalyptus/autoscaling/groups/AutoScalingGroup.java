@@ -22,23 +22,38 @@ package com.eucalyptus.autoscaling.groups;
 import static com.eucalyptus.autoscaling.common.AutoScalingMetadata.AutoScalingGroupMetadata;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.Date;
+import java.util.List;
 import java.util.Set;
+import javax.persistence.CascadeType;
 import javax.persistence.CollectionTable;
 import javax.persistence.Column;
 import javax.persistence.ElementCollection;
 import javax.persistence.EnumType;
 import javax.persistence.Enumerated;
+import javax.persistence.FetchType;
 import javax.persistence.JoinColumn;
 import javax.persistence.ManyToOne;
+import javax.persistence.OneToMany;
+import javax.persistence.OrderColumn;
 import javax.persistence.PersistenceContext;
+import javax.persistence.PrePersist;
+import javax.persistence.PreUpdate;
 import javax.persistence.Table;
+import javax.persistence.Temporal;
+import javax.persistence.TemporalType;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
 import org.hibernate.annotations.Entity;
+import com.eucalyptus.autoscaling.activities.ScalingActivity;
 import com.eucalyptus.autoscaling.metadata.AbstractOwnedPersistent;
 import com.eucalyptus.autoscaling.configurations.LaunchConfiguration;
+import com.eucalyptus.autoscaling.policies.ScalingPolicy;
+import com.eucalyptus.autoscaling.tags.AutoScalingGroupTag;
 import com.eucalyptus.util.OwnerFullName;
 import com.google.common.base.Objects;
+import com.google.common.collect.Iterables;
+import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 
 /**
@@ -63,28 +78,39 @@ public class AutoScalingGroup extends AbstractOwnedPersistent implements AutoSca
   @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
   private LaunchConfiguration launchConfiguration;
 
-  @Column( name = "metadata_default_cooldown", nullable = false  )
+  @Column(name = "metadata_capacity_timestamp", nullable = false )
+  @Temporal( TemporalType.TIMESTAMP)
+  Date capacityTimestamp;
+  
+  @Column( name = "metadata_default_cooldown", nullable = false )
   private Integer defaultCooldown;
 
-  @Column( name = "metadata_desired_capacity", nullable = false  )
+  @Column( name = "metadata_desired_capacity", nullable = false )
   private Integer desiredCapacity;
+
+  @Column( name = "metadata_capacity", nullable = false )
+  private Integer capacity;
+  
+  @Column( name = "metadata_scaling_required", nullable = false )
+  private Boolean scalingRequired;
 
   @Column( name = "metadata_health_check_grace_period" )
   private Integer healthCheckGracePeriod;
 
-  @Column( name = "metadata_health_check_type", nullable = false  )
+  @Column( name = "metadata_health_check_type", nullable = false )
   @Enumerated( EnumType.STRING )
   private HealthCheckType healthCheckType;
 
   @Column( name = "metadata_status" )
-  private String status;
+  private String status;  //TODO:STEVE: status
 
   @ElementCollection
   @CollectionTable( name = "metadata_auto_scaling_group_availability_zones" )
   @Column( name = "metadata_availability_zone" )
   @JoinColumn( name = "metadata_auto_scaling_group_id" )
+  @OrderColumn( name = "metadata_availability_zone_index")
   @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
-  private Set<String> availabilityZones = Sets.newHashSet();
+  private List<String> availabilityZones = Lists.newArrayList();
   
   //TODO:STEVE: instances?
 
@@ -92,9 +118,10 @@ public class AutoScalingGroup extends AbstractOwnedPersistent implements AutoSca
   @CollectionTable( name = "metadata_auto_scaling_group_termination_policies" )
   @Column( name = "metadata_termination_policy" )
   @JoinColumn( name = "metadata_auto_scaling_group_id" )
+  @OrderColumn( name = "metadata_policy_index")
   @Enumerated( EnumType.STRING )
   @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
-  private Set<TerminationPolicyType> terminationPolicies = Sets.newHashSet();
+  private List<TerminationPolicyType> terminationPolicies = Lists.newArrayList();
   
   //TODO:STEVE: enabled metrics?
 
@@ -102,14 +129,22 @@ public class AutoScalingGroup extends AbstractOwnedPersistent implements AutoSca
   @CollectionTable( name = "metadata_auto_scaling_group_load_balancers" )
   @Column( name = "metadata_load_balancer_name" )
   @JoinColumn( name = "metadata_auto_scaling_group_id" )
+  @OrderColumn( name = "metadata_load_balancer_index")
   @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
-  private Set<String> loadBalancerNames = Sets.newHashSet(); 
-  
-  //TODO:STEVE: tags
+  private List<String> loadBalancerNames = Lists.newArrayList();
   
   //TODO:STEVE: suspendedProcesses?
   
   //TODO:STEVE: include unsupported properties -> placementGroup, vpcZoneIdentifier
+
+  @OneToMany( fetch = FetchType.LAZY, cascade = CascadeType.REMOVE, orphanRemoval = true, mappedBy = "group" )
+  private Collection<ScalingActivity> scalingActivity;
+
+  @OneToMany( fetch = FetchType.LAZY, cascade = CascadeType.REMOVE, orphanRemoval = true, mappedBy = "group" )
+  private Collection<ScalingPolicy> scalingPolicies;
+
+  @OneToMany( fetch = FetchType.LAZY, cascade = CascadeType.ALL, orphanRemoval = true, mappedBy = "group" )
+  private Collection<AutoScalingGroupTag> tags = Lists.newArrayList();
 
   protected AutoScalingGroup() {
   }
@@ -150,6 +185,14 @@ public class AutoScalingGroup extends AbstractOwnedPersistent implements AutoSca
     this.launchConfiguration = launchConfiguration;
   }
 
+  public Date getCapacityTimestamp() {
+    return capacityTimestamp;
+  }
+
+  public void setCapacityTimestamp( final Date capacityTimestamp ) {
+    this.capacityTimestamp = capacityTimestamp;
+  }
+
   public Integer getDefaultCooldown() {
     return defaultCooldown;
   }
@@ -164,6 +207,22 @@ public class AutoScalingGroup extends AbstractOwnedPersistent implements AutoSca
 
   public void setDesiredCapacity( final Integer desiredCapacity ) {
     this.desiredCapacity = desiredCapacity;
+  }
+
+  public Integer getCapacity() {
+    return capacity;
+  }
+
+  public void setCapacity( final Integer capacity ) {
+    this.capacity = capacity;
+  }
+
+  public Boolean getScalingRequired() {
+    return scalingRequired;
+  }
+
+  public void setScalingRequired( final Boolean scalingRequired ) {
+    this.scalingRequired = scalingRequired;
   }
 
   public Integer getHealthCheckGracePeriod() {
@@ -190,27 +249,27 @@ public class AutoScalingGroup extends AbstractOwnedPersistent implements AutoSca
     this.status = status;
   }
 
-  public Set<String> getAvailabilityZones() {
+  public List<String> getAvailabilityZones() {
     return availabilityZones;
   }
 
-  public void setAvailabilityZones( final Set<String> availabilityZones ) {
+  public void setAvailabilityZones( final List<String> availabilityZones ) {
     this.availabilityZones = availabilityZones;
   }
 
-  public Set<TerminationPolicyType> getTerminationPolicies() {
+  public List<TerminationPolicyType> getTerminationPolicies() {
     return terminationPolicies;
   }
 
-  public void setTerminationPolicies( final Set<TerminationPolicyType> terminationPolicies ) {
+  public void setTerminationPolicies( final List<TerminationPolicyType> terminationPolicies ) {
     this.terminationPolicies = terminationPolicies;
   }
 
-  public Set<String> getLoadBalancerNames() {
+  public List<String> getLoadBalancerNames() {
     return loadBalancerNames;
   }
 
-  public void setLoadBalancerNames( final Set<String> loadBalancerNames ) {
+  public void setLoadBalancerNames( final List<String> loadBalancerNames ) {
     this.loadBalancerNames = loadBalancerNames;
   }
 
@@ -241,7 +300,7 @@ public class AutoScalingGroup extends AbstractOwnedPersistent implements AutoSca
    * @return The example
    */
   public static AutoScalingGroup named( final OwnerFullName ownerFullName,
-                                           final String name ) {
+                                        final String name ) {
     return new AutoScalingGroup( ownerFullName, name );
   }
 
@@ -257,18 +316,40 @@ public class AutoScalingGroup extends AbstractOwnedPersistent implements AutoSca
     return example;
   }
 
+  public static AutoScalingGroup requiringScaling( ) {
+    final AutoScalingGroup example = new AutoScalingGroup();
+    example.setScalingRequired( true );
+    return example;
+  }
+
   public static AutoScalingGroup create( final OwnerFullName ownerFullName,
                                          final String name,
                                          final LaunchConfiguration launchConfiguration,
                                          final Integer minSize,
-                                         final Integer maxSize ) {
+                                         final Integer maxSize,
+                                         final List<AutoScalingGroupTag> tags ) {
     final AutoScalingGroup autoScalingGroup = new AutoScalingGroup( ownerFullName, name );
     autoScalingGroup.setLaunchConfiguration( launchConfiguration );
     autoScalingGroup.setMinSize( minSize );
     autoScalingGroup.setMaxSize( maxSize );
+    autoScalingGroup.setCapacity( 0 );
+    for ( final AutoScalingGroupTag tag : tags ) {
+      tag.setGroup( autoScalingGroup );
+      tag.setOwner( autoScalingGroup.getOwner() );
+      autoScalingGroup.tags.add( tag );
+    }
     return autoScalingGroup;
   }
 
+  @PrePersist
+  @PreUpdate
+  private void preUpdate() {
+    scalingRequired = capacity == null || !capacity.equals( desiredCapacity );
+    if ( capacityTimestamp == null ) {
+      capacityTimestamp = new Date();
+    }
+  }  
+  
   protected static abstract class BaseBuilder<T extends BaseBuilder<T>> {
     private OwnerFullName ownerFullName;
     private String name;
@@ -279,9 +360,10 @@ public class AutoScalingGroup extends AbstractOwnedPersistent implements AutoSca
     private Integer healthCheckGracePeriod;
     private HealthCheckType healthCheckType;
     private LaunchConfiguration launchConfiguration;
-    private Set<String> availabilityZones = Sets.newHashSet();
-    private Set<TerminationPolicyType> terminationPolicies = Sets.newHashSet();
-    private Set<String> loadBalancerNames = Sets.newHashSet();
+    private Set<String> availabilityZones = Sets.newLinkedHashSet();
+    private Set<TerminationPolicyType> terminationPolicies = Sets.newLinkedHashSet();
+    private Set<String> loadBalancerNames = Sets.newLinkedHashSet();
+    private List<AutoScalingGroupTag> tags = Lists.newArrayList();
 
     BaseBuilder( final OwnerFullName ownerFullName,
                  final String name,
@@ -338,19 +420,26 @@ public class AutoScalingGroup extends AbstractOwnedPersistent implements AutoSca
       return builder();
     }
 
+    public T withTags( final Iterable<AutoScalingGroupTag> tags ) {
+      if ( tags != null ) {
+        Iterables.addAll( this.tags, tags );
+      }
+      return builder();
+    }
+
     //TODO:STEVE: verify default values
     protected AutoScalingGroup build() {
       final AutoScalingGroup group =
-          AutoScalingGroup.create( ownerFullName, name, launchConfiguration, minSize, maxSize );
+          AutoScalingGroup.create( ownerFullName, name, launchConfiguration, minSize, maxSize, tags );
       group.setDefaultCooldown( Objects.firstNonNull( defaultCooldown, 300 ) ); 
       group.setDesiredCapacity( Objects.firstNonNull( desiredCapacity, minSize ) );
       group.setHealthCheckGracePeriod( healthCheckGracePeriod );
       group.setHealthCheckType( Objects.firstNonNull( healthCheckType, HealthCheckType.EC2 ) );
-      group.setAvailabilityZones( availabilityZones );
+      group.setAvailabilityZones( Lists.newArrayList( availabilityZones ) );
       group.setTerminationPolicies( terminationPolicies.isEmpty() ? 
-          Collections.singleton(TerminationPolicyType.Default) : 
-          terminationPolicies );
-      group.setLoadBalancerNames( loadBalancerNames );
+          Collections.singletonList(TerminationPolicyType.Default) :
+          Lists.newArrayList( terminationPolicies ) );
+      group.setLoadBalancerNames( Lists.newArrayList( loadBalancerNames ) );
       return group;
     }
   }  

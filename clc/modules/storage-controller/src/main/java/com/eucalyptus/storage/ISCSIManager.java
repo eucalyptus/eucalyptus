@@ -318,12 +318,6 @@ public class ISCSIManager implements StorageExportManager {
 		}
 	}
 
-	public native int exportVolume(String iface, String lvName, int major, int minor);
-
-	public native void unexportVolume(int vbladePid);
-
-	public native void loadModule();
-
 	public ISCSIManager()  {}
 
 	@Override

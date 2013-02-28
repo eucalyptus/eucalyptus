@@ -852,7 +852,7 @@ public class BlockStorage {
 		for(VolumeInfo volumeInfo: volumeInfos) {
 			volumes.add(convertVolumeInfo(volumeInfo));
 			if(volumeInfo.getStatus().equals(StorageProperties.Status.failed.toString())) {
-				LOG.warn( "Volume looks like it has failed removing it: " + volumeInfo.getVolumeId() );
+				LOG.warn( "Failed volume, removing it: " + volumeInfo.getVolumeId() );
 				checker.cleanFailedVolume(volumeInfo.getVolumeId());
 			} 
 		}

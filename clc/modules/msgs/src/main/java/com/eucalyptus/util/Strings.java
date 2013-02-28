@@ -21,6 +21,8 @@ package com.eucalyptus.util;
 
 import javax.annotation.Nullable;
 import com.google.common.base.Function;
+import com.google.common.base.Predicate;
+import com.google.common.base.Predicates;
 
 /**
  * Utility functions for strings.
@@ -83,6 +85,40 @@ public class Strings {
    */
   public static Function<String,String> lower() {
     return StringFunctions.LOWER;
+  }
+
+  /**
+   * Get a Predicate for matching the start of a String.
+   *
+   * @param prefix The prefix to match
+   * @return The predicate
+   * @see String#startsWith(String)
+   */
+  public static Predicate<String> startsWith( final String prefix ) {
+    return new Predicate<String>() {
+      @Override
+      public boolean apply( @Nullable final String text ) {
+        return text != null && text.startsWith( prefix );
+      }
+    };
+  }
+
+  /**
+   * Get a Predicate for matching the start of a String.
+   *
+   * @param text The prefix to match
+   * @return The predicate
+   * @see String#startsWith(String)
+   */
+  public static Predicate<String> isPrefixOf( final String text ) {
+    return text == null ?
+        Predicates.<String>alwaysFalse() :
+        new Predicate<String>() {
+      @Override
+      public boolean apply( @Nullable final String prefix ) {
+        return prefix != null && text.startsWith( prefix );
+      }
+    };
   }
 
   /**

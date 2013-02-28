@@ -21,7 +21,7 @@ package com.eucalyptus.autoscaling.configurations;
 
 import java.util.List;
 import com.eucalyptus.autoscaling.common.AutoScalingResourceName;
-import com.eucalyptus.autoscaling.metadata.AbstractOwnedPersistents;
+import com.eucalyptus.autoscaling.metadata.AbstractOwnedPersistentsWithResourceNameSupport;
 import com.eucalyptus.autoscaling.metadata.AutoScalingMetadataException;
 import com.eucalyptus.util.OwnerFullName;
 import com.google.common.base.Predicate;
@@ -59,7 +59,7 @@ public class PersistenceLaunchConfigurations extends LaunchConfigurations {
     return persistenceSupport.save( launchConfiguration );
   }
 
-  private static class PersistenceSupport extends AbstractOwnedPersistents<LaunchConfiguration> {
+  private static class PersistenceSupport extends AbstractOwnedPersistentsWithResourceNameSupport<LaunchConfiguration> {
     private PersistenceSupport() {
       super( AutoScalingResourceName.Type.launchConfiguration );
     }
