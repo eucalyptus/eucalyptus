@@ -295,14 +295,14 @@ public class OverlayManager implements LogicalStorageManager {
 	}
 
 	private String duplicateLogicalVolume(String oldLvName, String newLvName) throws EucalyptusCloudException {
-		return SystemUtil.run(new String[]{StorageProperties.EUCA_ROOT_WRAPPER, "dd", "if=" + oldLvName, "of=" + newLvName, "bs=" + StorageProperties.blockSize});
+		return SystemUtil.run(new String[]{ StorageProperties.EUCA_ROOT_WRAPPER, "dd", "if=" + oldLvName, "of=" + newLvName, "bs=" + StorageProperties.blockSize});
 	}
 
 	private String createFile(String fileName, long size) throws EucalyptusCloudException {
 		if(!DirectStorageInfo.getStorageInfo().getZeroFillVolumes())
-			return SystemUtil.run(new String[]{StorageProperties.EUCA_ROOT_WRAPPER, "dd", "if=/dev/zero", "of=" + fileName, "count=1", "bs=" + StorageProperties.blockSize, "seek=" + (size -1)});
+			return SystemUtil.run(new String[]{"dd", "if=/dev/zero", "of=" + fileName, "count=1", "bs=" + StorageProperties.blockSize, "seek=" + (size -1)});
 		else
-			return SystemUtil.run(new String[]{StorageProperties.EUCA_ROOT_WRAPPER, "dd", "if=/dev/zero", "of=" + fileName, "count=" + size, "bs=" + StorageProperties.blockSize});
+			return SystemUtil.run(new String[]{"dd", "if=/dev/zero", "of=" + fileName, "count=" + size, "bs=" + StorageProperties.blockSize});
 	}
 
 	private String createEmptyFile(String fileName, int size) throws EucalyptusCloudException {
