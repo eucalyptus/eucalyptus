@@ -148,7 +148,7 @@ ol li {
   margin: 0 auto;
   padding: 0 10px;
   position: relative;
-  width: 1000px;
+  width: 1100;
 }
 
 .templates {
@@ -999,7 +999,7 @@ ul.ui-autocomplete {
 #dashboard-instance-launch {
   position: absolute;
   top: 2px;
-  left: 638px;
+  left: 838px;
   height: 120px;
   border-left: 2px solid #ecebeb;
 }

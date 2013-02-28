@@ -30,7 +30,8 @@ from uiproxyclient import UIProxyClient
 if __name__ == "__main__":
     # make some calls to proxy class to test things out
     client = UIProxyClient()
-    client.login('localhost', '8888', 'eucalyptus', 'admin', 'admin')
+    #client.login('localhost', '8888', 'eucalyptus', 'admin', 'admin')
+    client.login('localhost', '8888', 'ec2.us-east-1.amazonaws.com', 'AKIAIFTT7VIH27SUY2BA', 'SECRET')
     print "=== Getting Buckets ==="
     print client.get_buckets()
     print "=== Getting Objects ==="

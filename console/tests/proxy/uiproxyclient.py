@@ -708,25 +708,22 @@ class UIProxyClient(object):
     def get_all_load_balancers(self, load_balancer_names=None, callback=None):
         params = {}
         if load_balancer_names:
-            self.build_list_params(params, load_balancer_names,
+            self.__build_list_params__(params, load_balancer_names,
                                    'LoadBalancerNames.member.%d')
         return self.__make_elb_request__('DescribeLoadBalancers', params) 
 
     def deregister_instances(self, load_balancer_name, instances, callback=None):
         params = {'LoadBalancerName': load_balancer_name}
-        self.build_list_params(params, instances,
-                               'Instances.member.%d.InstanceId')
+        self.__build_list_params__(params, instances, 'Instances.member.%d')
         return self.__make_elb_request__('DeregisterInstancesFromLoadBalancer', params) 
 
     def register_instances(self, load_balancer_name, instances, callback=None):
         params = {'LoadBalancerName': load_balancer_name}
-        self.build_list_params(params, instances,
-                               'Instances.member.%d.InstanceId')
-        return self.__make_elb_request__('RegisterInstancesFromLoadBalancer', params) 
+        self.__build_list_params__(params, instances, 'Instances.member.%d')
+        return self.__make_elb_request__('RegisterInstancesWithLoadBalancer', params) 
 
     def create_load_balancer_listeners(self, name, listeners, callback=None):
-        params = {'LoadBalancerName': name,
-                  'Scheme': scheme}
+        params = {'LoadBalancerName': name}
         for index, listener in enumerate(listeners):
             i = index + 1
             protocol = listener[2].upper()
@@ -735,20 +732,14 @@ class UIProxyClient(object):
             params['Listeners.member.%d.Protocol' % i] = listener[2]
             if protocol == 'HTTPS' or protocol == 'SSL':
                 params['Listeners.member.%d.SSLCertificateId' % i] = listener[3]
-        if zones:
-            self.build_list_params(params, zones, 'AvailabilityZones.member.%d')
 
-        if subnets:
-            self.build_list_params(params, subnets, 'Subnets.member.%d')
-
-        if security_groups:
-            self.build_list_params(params, security_groups,
-                                    'SecurityGroups.member.%d')
-        return self.__make_elb_request__('CreateLoadBalancer', params) 
+        return self.__make_elb_request__('CreateLoadBalancerListeners', params) 
     
     def delete_load_balancer_listeners(self, name, ports, callback=None):
         params = {'LoadBalancerName': name}
-        return self.__make_elb_request__('DeleteLoadBalancer', params) 
+        for index, port in enumerate(ports):
+            params['LoadBalancerPorts.member.%d' % (index + 1)] = port
+        return self.__make_elb_request__('DeleteLoadBalancerListeners', params) 
 
     def configure_health_check(self, name, health_check, callback=None):
         params = {'LoadBalancerName': name,
@@ -762,6 +753,6 @@ class UIProxyClient(object):
     def describe_instance_health(self, load_balancer_name, instances=None, callback=None):
         params = {'LoadBalancerName': load_balancer_name}
         if instances:
-            self.build_list_params(params, instances,
+            self.__build_list_params__(params, instances,
                                    'Instances.member.%d.InstanceId')
         return self.__make_elb_request__('DescribeInstanceHealth', params) 

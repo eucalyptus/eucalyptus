@@ -41,17 +41,9 @@
         id : 'volumes', // user of this widget should customize these options,
         hidden : thisObj.options['hidden'],
         dt_arg : {
-          "sAjaxSource": "../ec2?Action=DescribeVolumes",
-          "fnServerData": function (sSource, aoData, fnCallback) {
-                $.ajax( {
-                    "dataType": 'json',
-                    "type": "POST",
-                    "url": sSource,
-                    "data": "_xsrf="+$.cookie('_xsrf'),
-                    "success": fnCallback
-                });
-
-          },
+          "bProcessing": true,
+          "bServerSide": true,
+          "sAjaxSource": 'volumes',
           "aaSorting": [[ 7, "desc" ]],
           "aoColumns": [
             {
@@ -130,6 +122,9 @@
         legend : ['creating', 'available', 'in-use', 'deleting', 'deleted', 'error'],
       });
       this.tableWrapper.appendTo(this.element);
+      $('html body').eucadata('addCallback', 'volume', 'volume-landing', function() {
+        thisObj.tableWrapper.eucatable('redraw');
+      });
     },
 
     _create : function() { 

@@ -23,17 +23,25 @@
     options : {  
       refresh_interval_sec : REFRESH_INTERVAL_SEC,
       max_refresh_attempt : 3,
-      endpoints: [{name:'instance', url: '/ec2?Action=DescribeInstances'},
-                  {name:'image', url: '/ec2?Action=DescribeImages'+IMG_OPT_PARAMS},
+      endpoints: [{name:'summary', url: '/ec2?Action=GetCacheSummary'},
+                  {name:'instance', url: '/ec2?Action=DescribeInstances'},
+                  //{name:'image', url: '/ec2?Action=DescribeImages&Owner=self'},
+                  {name:'image', url: '/ec2?Action=DescribeImages'},
                   {name:'volume', url: '/ec2?Action=DescribeVolumes'},
                   {name:'snapshot', url: '/ec2?Action=DescribeSnapshots'},
                   {name:'eip', url: '/ec2?Action=DescribeAddresses'},
                   {name:'keypair', url: '/ec2?Action=DescribeKeyPairs'},
                   {name:'sgroup', url: '/ec2?Action=DescribeSecurityGroups'},
-                  {name:'zone', url: '/ec2?Action=DescribeAvailabilityZones'}
+                  {name:'zone', url: '/ec2?Action=DescribeAvailabilityZones'},
+                  {name:'tag', url: '/ec2?Action=DescribeTags'},
+                  {name:'bucket', url: '/s3?Action=DescribeBuckets'},
+                  {name:'balancer', url: '/elb?Action=DescribeLoadBalancers'},
+                  {name:'scalinggrp', url: '/autoscaling?Action=DescribeAutoScalingGroups'},
+                  {name:'scalinginst', url: '/autoscaling?Action=DescribeAutoScalingInstances'}
       ], 
     },
-    _data : {instance:null, image:null, volume:null, snapshot:null, eip:null, keypair: null, sgroup: null, zone: null},
+//    _data : {summary:[], instance:null, image:null, volume:null, snapshot:null, eip:null, keypair: null, sgroup: null, zone: null, tag: null, bucket: null, balancer: null, scalinggrp: null, scalinginst: null},
+    _data : {summary:[], instance:null, image:null, volume:null, snapshot:null, eip:null, keypair: null, sgroup: null, zone: null, tag: null, bucket:null},
     _callbacks : {}, 
     _listeners : {},
     _init : function(){ },
@@ -50,6 +58,25 @@
          if(!thisObj._enabled || thisObj.countPendingReq() > MAX_PENDING_REQ ) {
            return;
          }
+         // don't skip the read if data cache is empty
+         if(thisObj._data[name] != null) {
+            // however, if we have data, should we read it again?
+
+            // if summary doesn't contain this resource name, skip the update
+             if (name != 'summary') {
+//               console.log('should pull '+name+": "+thisObj._data['summary'].results[name]);
+//               if (thisObj._data['summary'].results[name] == undefined) {
+                 // still need to hit the listeners
+//                 if(thisObj._listeners[name] && thisObj._listeners[name].length >0) {
+//                   $.each(thisObj._listeners[name], function (idx, callback){
+//                     callback['callback'].apply(thisObj);
+//                   });
+//                 }
+//                 return;
+//               }
+             }
+         }
+//         if (name == 'image' && url.search(IMG_OPT_PARAMS) != -1) { url = url + IMG_OPT_PARAMS; }
          $.ajax({
            type:"POST",
            url: url,
@@ -67,6 +94,7 @@
                  lastupdated: new Date(),
                  results: data.results,
                }
+               //console.log(data.results.length+" "+name+" returned, data.length:"+thisObj._data[name].results.length);
                if(thisObj._listeners[name] && thisObj._listeners[name].length >0) {
                  $.each(thisObj._listeners[name], function (idx, callback){
                    callback['callback'].apply(thisObj);

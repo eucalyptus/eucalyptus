@@ -44,8 +44,13 @@
     table : null, // jQuery object to the table
     tableArg : null, 
     refreshCallback : null,
+
+    fnServerData: function() {
+    },
+
     _init : function() {
       var thisObj = this; // 
+
       if(thisObj.options['hidden']){
         return;
       }
@@ -73,8 +78,10 @@
         });
       }
 
-      thisObj.refreshCallback = runRepeat(function(){ return thisObj._refreshTableInterval();}, (TABLE_REFRESH_INTERVAL_SEC * 1000), false);
-      tableRefreshCallback = thisObj.refreshCallback;
+// removed callback that causes the table to auto-refresh from data. Instead
+// tables get updated automatically by data pushed from eucadata, in each landing page
+//      thisObj.refreshCallback = runRepeat(function(){ return thisObj._refreshTableInterval();}, (TABLE_REFRESH_INTERVAL_SEC * 1000), false);
+//      tableRefreshCallback = thisObj.refreshCallback;
     },
 
     _create : function() {
@@ -90,6 +97,21 @@
       dt_arg["sAjaxDataProp"] = "results";
       dt_arg["bAutoWidth"] = false;
       dt_arg["sPaginationType"] = "full_numbers",
+      dt_arg["sAjaxDataProp"] = function(json) {
+            return json;
+      }
+      dt_arg["fnServerData"] = function (sSource, aoData, fnCallback) {
+	    require(['models/'+sSource], function(CollectionImpl) {
+		var collection = new CollectionImpl();
+		collection.on('reset', function() {
+		   var data = collection.toJSON();
+                   data.iTotalRecords = data.length;
+                   data.iTotalDisplayRecords = data.length;
+		   fnCallback(data);
+		});
+		collection.fetch();
+	    });
+          }
       dt_arg['fnDrawCallback'] = function( oSettings ) {
         thisObj._drawCallback(oSettings);
       }
@@ -536,6 +558,8 @@
         return;
       if(! $('html body').eucadata('isEnabled'))
         return;
+      var oSettings = this.table.fnSettings();
+      $('html body').eucadata('refresh', oSettings.sAjaxSource);
       this.table.fnReloadAjax(undefined, undefined, true);
       
       var $checkAll = this.table.find('thead').find(':input[type="checkbox"]');
@@ -557,6 +581,10 @@
           cancelRepeat(token);
         }
       }, 2000);
+    },
+
+    redraw : function() {
+      this.table.fnDraw();
     },
 
     // (optional) columnIdx: if undefined, returns matrix [row_idx, col_key]
