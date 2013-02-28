@@ -181,8 +181,6 @@ sub match_iscsi_session {
 
 sub get_iscsi_device {
   my ($netdev, $ip, $store, $lun) = @_;
-  #Trigger udev explicitly
-  run_cmd(0,0,"$UDEVADM trigger");
   for $session (lookup_session()) {
     if (match_iscsi_session($session, $netdev, $ip, $store)) {
       if ($lun > -1) {
