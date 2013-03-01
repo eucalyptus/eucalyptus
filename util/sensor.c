@@ -202,11 +202,10 @@ static int getstat_generate(getstat *** pstats)
             for (int j = 1;; j++, str2 = NULL) {    // iterate over tab-separated entries in the line
                 subtoken = strtok_r(str2, "\t", &saveptr2);
                 if (subtoken == NULL) {
-                    if(j == 1)
+                    if (j == 1)
                         free(gs);
                     break;
                 }
-
                 // e.g. line: i-760B43A1      1347407243789   NetworkIn       summation       total   2112765752
                 switch (j) {
                 case 1:{       // first entry is instance ID
@@ -1346,7 +1345,7 @@ int sensor_shift_metric(const char *resourceName, const char *metricName)
             continue;
 
         for (int d = 0; d < sc->dimensionsLen; d++) {
-            sensorDimension *sd = ((sensorDimension *)(sc->dimensions + d));
+            sensorDimension *sd = ((sensorDimension *) (sc->dimensions + d));
 
             if (sd->valuesLen < 0 || sd->valuesLen > MAX_SENSOR_VALUES) {   // sanity check
                 logprintfl(EUCAERROR, "inconsistency in sensor database (valuesLen=%d for %s:%s:%s:%s)\n",

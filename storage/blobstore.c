@@ -163,7 +163,7 @@ static long _open_timeout_ctr = 0L;
 static long _close_error_ctr = 0L;
 static char zero_buf[1] = "\0";
 
-const char *_blobstore_error_strings[] = { // make sure these match up with blobstore_error_t enums above
+const char *_blobstore_error_strings[] = {  // make sure these match up with blobstore_error_t enums above
     "success",
     "general error",
 
@@ -1768,7 +1768,7 @@ static long long purge_blockblobs_lru(blobstore * bs, blockblob * bb_list, long 
                     code = 'D';
                     deleted++;
                 }
-                logprintfl(EUCADEBUG, "LRU %d %08lld: %29s %c%c%c%c %c %9llu %s", iteration, purged, bb->id, (bb->in_use & BLOCKBLOB_STATUS_OPENED) ? ('o') : ('-'),  // o = open
+                logprintfl(EUCADEBUG, "LRU %d %08lld: %29s %c%c%c%c %c %9llu %s", iteration, purged, bb->id, (bb->in_use & BLOCKBLOB_STATUS_OPENED) ? ('o') : ('-'),    // o = open
                            (bb->in_use & BLOCKBLOB_STATUS_BACKED) ? ('p') : ('-'),  // p = has parents
                            (bb->in_use & BLOCKBLOB_STATUS_MAPPED) ? ('c') : ('-'),  // c = has children
                            (bb->in_use & BLOCKBLOB_STATUS_ABANDONED) ? ('a') : ('-'),   // a = was abandoned

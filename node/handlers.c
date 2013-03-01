@@ -1591,8 +1591,8 @@ static int init(void)
                            conf_work_size_mb, MIN_BLOBSTORE_SIZE_MB);
             } else {
                 if (work_bs_size_mb != -1 && work_bs_size_mb != conf_work_size_mb) {
-                    logprintfl(EUCAWARN, "specified work size (%s=%lld) differs from existing work size (%lld), will try resizing\n", CONFIG_NC_WORK_SIZE,
-                               conf_work_size_mb, work_bs_size_mb);
+                    logprintfl(EUCAWARN, "specified work size (%s=%lld) differs from existing work size (%lld), will try resizing\n",
+                               CONFIG_NC_WORK_SIZE, conf_work_size_mb, work_bs_size_mb);
                 }
                 work_size_mb = conf_work_size_mb;
             }

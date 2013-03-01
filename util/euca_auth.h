@@ -67,14 +67,14 @@
 
 /* A struct for holding a single header for sorting etc */
 struct key_value_pair {
-	char* key;
-	char* value;
+    char *key;
+    char *value;
 };
 
 /* An array of key_value_pairs, including the length */
 struct key_value_pair_array {
-	int size;
-	struct key_value_pair** data;
+    int size;
+    struct key_value_pair **data;
 };
 
 /* 
@@ -82,16 +82,16 @@ struct key_value_pair_array {
  */
 int euca_init_cert(void);
 /* options for _get_cert: */
-#define TRIM_CERT        0x01 /* remove the last newline */
-#define CONCATENATE_CERT 0x02 /* remove all newlines */
-#define INDENT_CERT      0x04 /* indent lines 2-N */
-char * euca_get_cert (unsigned char options);
-char * euca_sign_url (const char * verb, const char * date, const char * url);
-char * base64_enc (unsigned char * in, int size);
-char * base64_dec(unsigned char *in, int size);
+#define TRIM_CERT        0x01   /* remove the last newline */
+#define CONCATENATE_CERT 0x02   /* remove all newlines */
+#define INDENT_CERT      0x04   /* indent lines 2-N */
+char *euca_get_cert(unsigned char options);
+char *euca_sign_url(const char *verb, const char *date, const char *url);
+char *base64_enc(unsigned char *in, int size);
+char *base64_dec(unsigned char *in, int size);
 
 /* Will print to stdou using printf, so only use for testing */
-void print_key_value_pair_array(const struct key_value_pair_array* kv_array);
+void print_key_value_pair_array(const struct key_value_pair_array *kv_array);
 
 /* Functions for Euca2-SHA256-RSA signing of Walrus requests */
 #define URL_COMPLETE	0
@@ -114,25 +114,25 @@ void print_key_value_pair_array(const struct key_value_pair_array* kv_array);
  *
  * Caller must free the returned string.
  */
-char *process_url(const char* content, int url_component);
+char *process_url(const char *content, int url_component);
 
 /*
  * Caller must free the string returned.
  * Converts the byte array to the hex string representing it.
  */
-char* hexify(unsigned char* data, int data_len);
+char *hexify(unsigned char *data, int data_len);
 
 /*
  * Calculates the md5 fingerprint of the certificate in the specified file.
  * Fingerprint string must be freed by caller
  */
-char* calc_fingerprint(const char* cert_filename);
+char *calc_fingerprint(const char *cert_filename);
 
 /*
  * Frees an entire key_value_pair_array struct and all key_value_pair structs it contains.
  * Will free all name and value strings in the headers contained in the array.
  */
-void free_header_array(struct key_value_pair_array* hdr_array);
+void free_header_array(struct key_value_pair_array *hdr_array);
 
 /*
  * Get the header name from the full string value (expects string of format 'name: value')
@@ -140,14 +140,13 @@ void free_header_array(struct key_value_pair_array* hdr_array);
  *
  * If header_str is NULL, returns NULL
  */
-struct key_value_pair* deconstruct_header(const char* header_str, char delimiter);
+struct key_value_pair *deconstruct_header(const char *header_str, char delimiter);
 
 /*
  * Converts a linked-list of string-represented headers into an array of header structs for ease of sorting later
  * The returned pointer points to an array
  */
-struct key_value_pair_array* convert_header_list_to_array(const struct curl_slist* header_list, char delimiter);
-
+struct key_value_pair_array *convert_header_list_to_array(const struct curl_slist *header_list, char delimiter);
 
 /*
  * Constructs a string that is the Authorization header for the request to Walrus. This should be the *last* header
@@ -167,7 +166,7 @@ struct key_value_pair_array* convert_header_list_to_array(const struct curl_slis
  *
  * The caller must free the returned string.
  */
-char* eucav2_sign_request (const char * verb, const char *url, const struct curl_slist *headers);
+char *eucav2_sign_request(const char *verb, const char *url, const struct curl_slist *headers);
 
 /*
  * Caller must free returned string.
@@ -183,7 +182,7 @@ char* eucav2_sign_request (const char * verb, const char *url, const struct curl
  * E.G. construct_canonical_uri(http://192.168.1.1:8773/services/Walrus/bucket?acl) = /services/Walrus/bucket
  *
  */
-char* construct_canonical_uri(const char* url);
+char *construct_canonical_uri(const char *url);
 
 /*
  * Constructs a string that is the CanonicalQueryString for EUCAV2 internal signing.
@@ -208,7 +207,7 @@ char* construct_canonical_uri(const char* url);
  *
  *	Caller must free the returned string.
  */
-char* construct_canonical_query(const char* url);
+char *construct_canonical_query(const char *url);
 
 /*
  * Constructs the string that is the CanonicalHeaders, which is a list of all the HTTP headers that you plan to send as part of the request.
@@ -233,7 +232,7 @@ char* construct_canonical_query(const char* url);
  *
  * Caller must free the returned string.
  */
-char* construct_canonical_headers(struct key_value_pair_array* hdr_array);
+char *construct_canonical_headers(struct key_value_pair_array *hdr_array);
 
 /*
  * Constructs the SignedHeaders, which is the list of HTTP headers that you included in
@@ -246,5 +245,5 @@ char* construct_canonical_headers(struct key_value_pair_array* hdr_array);
  *
  * 	The caller must free the returned string
  */
-char* construct_signed_headers(struct key_value_pair_array* hdr_array);
+char *construct_signed_headers(struct key_value_pair_array *hdr_array);
 #endif

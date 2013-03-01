@@ -286,7 +286,7 @@ int killwait(pid_t pid)
 {
     int status = 0;
 
-    kill(pid, SIGTERM);    // should be able to do
+    kill(pid, SIGTERM);         // should be able to do
     if (timewait(pid, &status, 1) == 0) {
         logprintfl(EUCAERROR, "child process {%u} failed to terminate. Attempting SIGKILL.\n", pid);
         kill(pid, SIGKILL);
