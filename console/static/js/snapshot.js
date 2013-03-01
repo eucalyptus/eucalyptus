@@ -58,17 +58,21 @@
             {
 	      // Display the checkbox button in the main table
               "bSortable": false,
+              "aTargets":[0],
               "fnRender": function(oObj) { return '<input type="checkbox"/>' },
               "sClass": "checkbox-cell",
             },
             { 
 	       // Display the id of the snapshot in the main table
-	       "fnRender": function(oObj) {
-                return DefaultEncoder().encodeForHTML(oObj.aData.id);
+	       "aTargets":[1],
+	       "mRender": function(data) {
+                return DefaultEncoder().encodeForHTML(data);
               },
+              "mData": "id",
 	    },
             {
 	      // Display the status of the snapshot in the main table
+              "aTargets":[2],
               "fnRender": function(oObj) { 
                  return eucatableDisplayColumnTypeSnapshotStatus(oObj.aData.status, oObj.aData.progress);
                },
@@ -79,18 +83,23 @@
             },
             { 
 	      // Display the volume size of the snapshot in the main table
-	      "fnRender": function(oObj) {
-                return escape(oObj.aData.volume_size);		// failed to display when encodeForHTML		011330
+	      "aTargets":[2],
+              "mRender": function(data) {
+                return escape(data);		// failed to display when encodeForHTML		011330
               },
+              "mData": "volume_size",
 	    },
             {
 	      // Display the volume id of the snapshot in the main table
-	      "fnRender": function(oObj) {
-                return DefaultEncoder().encodeForHTML(oObj.aData.volume_id);
+	      "aTargets":[3],
+	      "mRender": function(data) {
+                return DefaultEncoder().encodeForHTML(data);
               },
+              "mData": "volume_id",
 	    },
             {
 	      // Display the description of the snapshot in the main table
+              "aTargets":[4],
               "fnRender": function(oObj) { 
 	         return eucatableDisplayColumnTypeText(oObj.aData.description, oObj.aData.description, 75);
 	      },
@@ -98,30 +107,38 @@
             },
             {
 	      // Display the creation time of the snapshot in the main table
-              "fnRender": function(oObj) { return formatDateTime(oObj.aData.start_time); },
+              "aTargets":[5],
+              "mRender": function(data) { return formatDateTime(data); },
+              "mData": "start_time",
               "iDataSort": 8,
             },
             {
 	      // Hidden column for the status of the snapshot
               "bVisible": false,
-	      "fnRender": function(oObj) {
-                return DefaultEncoder().encodeForHTML(oObj.aData.status);
+              "aTargets":[6],
+	      "mRender": function(data) {
+                return DefaultEncoder().encodeForHTML(data);
               },
+              "mData": "status",
             },
             {
 	      // Hidden column for the unprocessed creation time/start time of the snapshot
               "bVisible": false,
-	      "fnRender": function(oObj) {
-                return oObj.aData.start_time;			// sort fails when encoded	011330 -- needs to verify
+              "aTargets":[7],
+	      "mRender": function(data) {
+                return data;			// sort fails when encoded	011330 -- needs to verify
               },
+              "mData": "start_time",
               "sType": "date"
             },
             {
 	      // Hidden column for the uncut description of the snapshot
               "bVisible": false,
-	      "fnRender": function(oObj) {
-                return DefaultEncoder().encodeForHTML(oObj.aData.description);
+              "aTargets":[8],
+	      "mRender": function(data) {
+                return DefaultEncoder().encodeForHTML(data);
               },
+              "mData": "description",
             },
           ],
         },

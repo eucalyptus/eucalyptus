@@ -50,10 +50,11 @@
                 });
 
           },
-          "aoColumns": [
+          "aoColumnDefs": [
             {
 	      // Display the checkbox button in the main table
               "bSortable": false,
+              "aTargets":[0],
               "fnRender": function(oObj) { return '<input type="checkbox"/>' },
               "sClass": "checkbox-cell",
             },
@@ -61,21 +62,26 @@
 	      // Display the name of the security group in the main table
 	      // Allow the name to be clickable
 	      // Use CSS 'twist'
-              "fnRender" : function(oObj) {
-		   return eucatableDisplayColumnTypeTwist(oObj.aData.name, oObj.aData.name, 75);
+	      "aTargets":[1],
+              "mRender" : function(data) {
+		   return eucatableDisplayColumnTypeTwist(data, data, 75);
               },
+              "mData": "name",
               "iDataSort": 7,
             },
             { 
 	      // Display the description of the security group in the main table
-              "fnRender": function(oObj) {
-		 return eucatableDisplayColumnTypeText(oObj.aData.description, oObj.aData.description, 50);
-		},
+	      "aTargets":[2],
+              "mRender": function(data) {
+		 return eucatableDisplayColumnTypeText(data, data, 50);
+	      },
+              "mData": "description",
               "iDataSort": 6,
             },
             { 
 	      // Invisible column for storing the protocol variable, used in search
               "bVisible": false,
+              "aTargets":[3],
               "fnRender" : function(oObj){
                  var groupName = oObj.aData.name;
                  var results = describe('sgroup');
@@ -106,6 +112,7 @@
             { 
 	      // Invisible Column for storing the port varible, used in search
               "bVisible": false,
+              "aTargets":[4],
               "fnRender" : function(oObj){
                  var groupName = oObj.aData.name;
                  var results = describe('sgroup');
@@ -131,6 +138,7 @@
             { 
 	      // Invisible Column for storing the source variable, used in search
               "bVisible": false,
+              "aTargets":[5],
               "fnRender" : function(oObj){
                  var groupName = oObj.aData.name;
                  var results = describe('sgroup');
@@ -161,16 +169,20 @@
 	    {
 	      // Invisible column for storing the description variable, used for sorting 
 	      "bVisible": false,
-	      "fnRender" : function(oObj){
-		return DefaultEncoder().encodeForHTML(oObj.aData.description);
-	       }
+              "aTargets":[6],
+	      "mRender" : function(data){
+		return DefaultEncoder().encodeForHTML(data);
+	       },
+               "mData": "description",
 	    },
 	    { 
 	      // Invisible column for storing the name variable, used for sorting
 	      "bVisible": false,
-	      "fnRender" : function(oObj){
-		return DefaultEncoder().encodeForHTML(oObj.aData.name);
-	       }
+              "aTargets":[7],
+	      "mRender" : function(data){
+		return DefaultEncoder().encodeForHTML(data);
+	       },
+               "mData": "name",
 	    },
           ],
         },

@@ -45,42 +45,51 @@
                 });
 
           },
-          "aoColumns": [
+          "aoColumnDefs": [
             {
 	      // Display the name of the image in eucatable
 	      // Allow the name to be clickable
-	      // Use 'twist' in CSS 
+	      // Use 'twist' in CSS
+	      "aTargets":[0], 
               "fnRender" : function(oObj) { 
 		return eucatableDisplayColumnTypeTwist (oObj.aData.name, oObj.aData.name, 255);
               },
             },
             { 
 	      // Display the id of the image in eucatable
-	      "fnRender": function(oObj) {
-                return DefaultEncoder().encodeForHTML(oObj.aData.id);
+	      "aTargets":[1],
+	      "mRender": function(data) {
+                return DefaultEncoder().encodeForHTML(data);
               },
+              "mData": "id",
 	    },
             { 
 	      // Display the artitecture of the image in eucatable
-	      "fnRender": function(oObj) {
-                return DefaultEncoder().encodeForHTML(oObj.aData.architecture);
+	      "aTargets":[2],
+	      "mRender": function(data) {
+                return DefaultEncoder().encodeForHTML(data);
               },
+              "mData": "architecture",
 	    },
             {
 	      // Display the description of the image in eucatable
+	      "aTargets":[3],
 	      "fnRender": function(oObj) {
                 return eucatableDisplayColumnTypeText (oObj.aData.description, oObj.aData.description, 30);
               },
 	    },
             { 
 	      // Display the root device type of the image in eucatable
-	      "fnRender": function(oObj) {
-                return DefaultEncoder().encodeForHTML(oObj.aData.root_device_type);
+	      "aTargets":[4],
+	      "mRender": function(data) {
+                return DefaultEncoder().encodeForHTML(data);
               },
+              "mData": "root_device_type",
 	    },
             {
 	      // Display the launch instance button for the image in eucatable
               "bSortable": false,
+              "aTargets":[5],
               "sClass": "centered-cell",
               "fnRender": function(oObj) {
 	        return eucatableDisplayColumnTypeLaunchInstanceButton (oObj.aData.id); 
@@ -90,42 +99,52 @@
             {
 	      // Hidden column for the state of the image
               "bVisible": false,
-	      "fnRender": function(oObj) {
-                return DefaultEncoder().encodeForHTML(oObj.aData.state);
+              "aTargets":[6],
+	      "mRender": function(data) {
+                return DefaultEncoder().encodeForHTML(data);
               },
+              "mData": "state",
             },
             {
 	      // Hidden column for the type of the image
               "bVisible": false,
-	      "fnRender": function(oObj) {
-                return DefaultEncoder().encodeForHTML(oObj.aData.type);
+              "aTargets":[7],
+	      "mRender": function(data) {
+                return DefaultEncoder().encodeForHTML(data);
               },
+              "mData": "type",
             },
             { 
 	      // Hidden column for the id of the image
               "bVisible": false,
-	      "fnRender": function(oObj) {
-                return DefaultEncoder().encodeForHTML(oObj.aData.id);
+              "aTargets":[8],
+	      "mRender": function(data) {
+                return DefaultEncoder().encodeForHTML(data);
               },
+              "mData": "id",
             },
             { 
 	      // Hidden column for the platform/OS of the image
 	      // idx = 9
               "bVisible" : false,
+              "aTargets":[9],
               "fnRender" : function(oObj) {
                 return oObj.aData.platform ? DefaultEncoder().encodeForHTML(oObj.aData.platform) : 'linux';
-              }
+              },
             },
             {
 	      // Hidden column for the location of the image
               "bVisible" : false,
-	      "fnRender": function(oObj) {
-                return DefaultEncoder().encodeForHTML(oObj.aData.location);
+              "aTargets":[10],
+	      "mRender": function(data) {
+                return DefaultEncoder().encodeForHTML(data);
               },
+              "mData": "location",
             },
             {
 	      // Hidden column for the ownership of the image ?
               "bVisible": false,
+              "aTargets":[11],
               "fnRender" : function(oObj){
                 var results = describe('sgroup');
                 var group = null;

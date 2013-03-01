@@ -57,34 +57,38 @@
 
           },
           "aaSorting": [[ 10, "desc" ]],
-          "aoColumns": [
+          "aoColumnDefs": [
             {
 	      // Display the checkbox button in the main table
               "bSortable": false,
+              "aTargets":[0],
               "fnRender": function(oObj) { return '<input type="checkbox"/>' },
               "sClass": "checkbox-cell",
             },
             { 
 	      // Hidden column for displaying the platform of the instance
               "bVisible" : false,
+              "aTargets":[1],
               "fnRender" : function(oObj) { 
 			var result = describe('image', oObj.aData.image_id);
                		if(result && result.platform) 
 				return result.platform;
 			return "linux";
-              }
+              },
             },
             { 
 	      // Display the id of the instance in the main table
 	      // Allow the id to be clickable to display the platform data above
 	      // Use CSS 'twist'
+	      "aTargets":[2],
 	      "fnRender" : function(oObj){
                  return eucatableDisplayColumnTypeTwist(oObj.aData.id, oObj.aData.id, 255);
-	      }
+	      },
             },
             { 
 	      // Display the status of the instance in the main table
               "iDataSort": 12,
+              "aTargets":[3],
               "fnRender": function(oObj) { 
 	         var state = oObj.aData.state;
                  if (state == undefined) {
@@ -95,60 +99,77 @@
             },
             { 
 	      // Display the image id of the instance in the main table
-	      "fnRender": function(oObj) {
-                return DefaultEncoder().encodeForHTML(oObj.aData.image_id);
+	      "aTargets":[4],
+	      "mRender": function(data) {
+                return DefaultEncoder().encodeForHTML(data);
               },
+              "mData": "image_id",
 	    },
             { 
 	      // Display the availiability zone of the instance in the main table
-	      "fnRender": function(oObj) {
-                return DefaultEncoder().encodeForHTML(oObj.aData.placement);
+              "aTargets":[5],
+	      "mRender": function(data) {
+                return DefaultEncoder().encodeForHTML(data);
               },
+              "mData": "placement",
 	    }, 
             {
 	      // Display the public dns name of the instance in the main table
-	      "fnRender": function(oObj) {
-                return DefaultEncoder().encodeForHTML(oObj.aData.public_dns_name);
+	      "aTargets":[6],
+	      "mRender": function(data) {
+                return DefaultEncoder().encodeForHTML(data);
               },
+              "mData": "public_dns_name",
  	      "sClass": "wrap-content"
 	    },
             {
 	      // Display the private dns name of the instance in the main table
-	      "fnRender": function(oObj) {
-                return DefaultEncoder().encodeForHTML(oObj.aData.private_dns_name);
+              "aTargets":[7],
+	      "mRender": function(data) {
+                return DefaultEncoder().encodeForHTML(data);
               },
+              "mData": "private_dns_name",
  	      "sClass": "wrap-content"
 	    },
             { 
 	      // Display the key name of the instance in the main table
-	      "fnRender": function(oObj) {
-                return DefaultEncoder().encodeForHTML(oObj.aData.key_name);
+              "aTargets":[8],
+	      "mRender": function(data) {
+                return DefaultEncoder().encodeForHTML(data);
               },
+              "mData": "key_name",
 	    },
             {
 	      // Display the group name of the instance in the main table
-	      "fnRender": function(oObj) {
-                return DefaultEncoder().encodeForHTML(oObj.aData.group_name);
+	      "aTargets":[9],
+	      "mRender": function(data) {
+                return DefaultEncoder().encodeForHTML(data);
               },
+              "mData": "group_name",
 	    },
             { 
 	      // Display the launch time of the instance in the main table
-              "fnRender": function(oObj) {
-		return formatDateTime(oObj.aData.launch_time)
+	      "aTargets":[10],
+              "mRender": function(data) {
+		return formatDateTime(data)
 	      },
+              "mData": "launch_time",
               "iDataSort": 13,
               "asSorting" : [ 'desc', 'asc' ],
             },
             {
 	      // Hidden column for the root device type of the instance
               "bVisible": false,
-	      "fnRender": function(oObj) {
-                return DefaultEncoder().encodeForHTML(oObj.aData.root_device_type);
+              "aTargets":[11],
+	      "mRender": function(data) {
+                return DefaultEncoder().encodeForHTML(data);
               },
+              "mData": "root_device_type",
             },
             {
 	      // Hidden column for the status of the instance
               "bVisible": false,
+              "aTargets":[12],
 	      "fnRender": function(oObj) {
                  var state = oObj.aData.state;
                  if (state == undefined) {
@@ -161,14 +182,17 @@
 	      // Hidden column for the launch time of the instance
               "asSorting" : [ 'desc', 'asc' ],
               "bVisible": false,
-	      "fnRender": function(oObj) {
-                return oObj.aData.launch_time;		// Sorting fails when encoded	013113
+              "aTargets":[13],
+	      "mRender": function(data) {
+                return data;		// Sorting fails when encoded	013113
               },
-              "sType": "date"
+              "mData": "launch_time",
+              "sType": "date",
             },
             {
 	      // Hidden column for the image location of the instance
               "bVisible": false,
+              "aTargets":[14],
               "fnRender" : function(oObj) {
 			var image = null;
               		var result = describe('image', oObj.aData.image_id);
@@ -176,21 +200,25 @@
 				image = result;
 			};
                  	return image ? image.location : '';		
-              }
+              },
             },
             {
 	      // Hidden column for the instance type of the instance
               "bVisible": false,
-	      "fnRender": function(oObj) {
-                return DefaultEncoder().encodeForHTML(oObj.aData.instance_type);
+              "aTargets":[15],
+	      "mRender": function(data) {
+                return DefaultEncoder().encodeForHTML(data);
               },
+              "mData": "instance_type",
             },
             {
 	      // Hidden column for the ip address of the instance
               "bVisible": false,
-	      "fnRender": function(oObj) {
-                return DefaultEncoder().encodeForHTML(oObj.aData.ip_address);
+              "aTargets":[16],
+	      "mRender": function(data) {
+                return DefaultEncoder().encodeForHTML(data);
               },
+              "mData": "ip_address",
             },
           ]
         },

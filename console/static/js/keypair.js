@@ -48,15 +48,17 @@
                 });
 
           },
-          "aoColumns": [
+          "aoColumnDefs": [
             {
               // Display the checkbox button in the main table
               "bSortable": false,
+              "aTargets":[0],
               "fnRender": function(oObj) { return '<input type="checkbox"/>' },
               "sClass": "checkbox-cell",
             },
             {
 	      // Display the name of the keypair in the main table
+	      "aTargets":[1],
               "fnRender": function(oObj) { 
 		return eucatableDisplayColumnTypeText (oObj.aData.name, oObj.aData.name, 75);
 	      },
@@ -65,16 +67,20 @@
             { 
 	      // Display the fingerprint of the keypair in the main table
 	      "bSortable": false,
-	      "fnRender": function(oObj) {      
-		return DefaultEncoder().encodeForHTML(oObj.aData.fingerprint);
+              "aTargets":[2],
+	      "mRender": function(data) {      
+		return DefaultEncoder().encodeForHTML(data);
 	      },
+              "mData": "fingerprint",
 	    },
             { 
 	      // Create an invisible column for the name of the keypair, used for sort
 	      "bVisible": false,
-	      "fnRender": function(oObj) {
-                return DefaultEncoder().encodeForHTML(oObj.aData.name);
-              },	
+              "aTargets":[3],
+	      "mRender": function(data) {
+                return DefaultEncoder().encodeForHTML(data);
+              },
+              "mData": "name",
 	    },
           ],
         },

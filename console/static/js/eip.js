@@ -57,29 +57,35 @@
           "sAjaxDataProp": "results",
           "bAutoWidth" : false,
           "sPaginationType": "full_numbers",
-          "aoColumns": [
+          "aoColumnDefs": [
             {
 	      // Display the checkbox button in the main table
               "bSortable": false,
-              "fnRender": function(oObj) { return '<input type="checkbox"/>' },
+              "aTargets":[0],
+              "mRender": function(data) { return '<input type="checkbox"/>' },
               "sClass": "checkbox-cell"
             },
             {
 	      // Display the allocated public IP in eucatable
-      	      "fnRender": function(oObj) {
-		return DefaultEncoder().encodeForHTML(oObj.aData.public_ip);
+	      "aTargets":[1],
+      	      "mRender": function(data) {
+		return DefaultEncoder().encodeForHTML(data);
 	      },
+              "mData": "public_ip",
               "iDataSort": 4
             },
             { 
 	      // Display the instance ID in eucatable
-	      "fnRender": function(oObj) {
-                return DefaultEncoder().encodeForHTML(oObj.aData.instance_id);
-              }
+	      "aTargets":[2],
+	      "mRender": function(data) {
+                return DefaultEncoder().encodeForHTML(data);
+              },
+              "mData": "instance_id",
 	    },
             {
 	      // Invisible Column for storing the status of the IP
               "bVisible": false,
+              "aTargets":[3],
               "fnRender": function(oObj) { 
                 if (! oObj.aData.instance_id)
                   return 'unassigned';
@@ -89,14 +95,15 @@
                   return 'unallocated';
                 else
                   return 'assigned'
-              } 
+              },
             },
             {
 	      // Invisialbe Column for allowing the IPs to be sorted
               "bVisible": false,
+              "aTargets":[4],
               "fnRender": function(oObj) {
                 return ipv4AsInteger(oObj.aData.public_ip);
-              }
+              },
             }
           ],
         },
@@ -451,7 +458,7 @@
         if ( results ) {
           for( res in results) {
             var instance = results[res];
-            if ( instance.state === 'running' ) 
+            if ( instance._state.name === 'running' )		// instance.state was returning 'undefined'. Missed from David's Fix. Austin, 022813 
               inst_ids.push(instance.id);
           }
         }

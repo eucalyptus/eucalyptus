@@ -53,21 +53,25 @@
 
           },
           "aaSorting": [[ 7, "desc" ]],
-          "aoColumns": [
+          "aoColumnDefs": [
             {
 	      // Display the checkbox button in the main table
               "bSortable": false,
+              "aTargets":[0],
               "fnRender": function(oObj) { return '<input type="checkbox"/>' },
               "sClass": "checkbox-cell"
             },
             {
-	      // Display the id of the volume in the main table 
-	      "fnRender": function(oObj) {
-                return DefaultEncoder().encodeForHTML(oObj.aData.id);
+	      // Display the id of the volume in the main table
+	      "aTargets":[1], 
+	      "mRender": function(data) {
+                return DefaultEncoder().encodeForHTML(data);
               },
+              "mData": "id",
 	    },
             {
 	      // Display the status of the volume in the main table
+	      "aTargets":[2],
               "fnRender": function(oObj) { 
                  return eucatableDisplayColumnTypeVolumeStatus(oObj.aData.status);
                },
@@ -78,48 +82,62 @@
             },
             { 
 	      // Display the size of the volume in the main table
-	      "fnRender": function(oObj) {
-		return escape(oObj.aData.size);		// Strange, but it fails to show up when using encodeForHTML	013013	
+	      "aTargets":[3],
+	      "mRender": function(data) {
+		return escape(data);		// Strange, but it fails to show up when using encodeForHTML	013013	
               },
+              "mData": "size",
               "sClass": "centered-cell"
             },
             { 
 	      // Display the instance id of the attached volume in the main table
-	      "fnRender": function(oObj) {
-                return DefaultEncoder().encodeForHTML(oObj.aData.attach_data.instance_id);
+	      "aTargets":[4],
+              "mRender": function(data) {
+                return DefaultEncoder().encodeForHTML(data);
               },
+              "mData": "attach_data.instance_id",
 	    },
             { 
 	      // Display the snapshot id of the volume in the main table
-	      "fnRender": function(oObj) {
-                return DefaultEncoder().encodeForHTML(oObj.aData.snapshot_id);
+	      "aTargets":[5],
+	      "mRender": function(data) {
+                return DefaultEncoder().encodeForHTML(data);
               },
+              "mData": "snapshot_id",
 	    },
             { 
 	      // Display the availibility zone of the volume in the main table
-	      "fnRender": function(oObj) {
-                return DefaultEncoder().encodeForHTML(oObj.aData.zone);
+	      "aTargets":[6],
+	      "mRender": function(data) {
+                return DefaultEncoder().encodeForHTML(data);
               },
+              "mData": "zone",
 	    },
             { 
 	      // Display the creation time of the volume in the main table
+	      "aTargets":[7], 
               "asSorting" : [ 'desc', 'asc' ],
-              "fnRender": function(oObj) { return formatDateTime(oObj.aData.create_time); },
+              "mRender": function(data) { return formatDateTime(data); },
+              "mData": "create_time",
               "iDataSort": 9
             },
             {
 	      // Invisible column for the status, used for sort
               "bVisible": false,
-	      "fnRender": function(oObj) {
-                return DefaultEncoder().encodeForHTML(oObj.aData.status);
+              "aTargets":[8],
+	      "mRender": function(data) {
+                return DefaultEncoder().encodeForHTML(data);
               },
+              "mData": "status",
             },
             {
 	      // Invisible column for the creation time, used for sort
               "bVisible": false,
-	      "fnRender": function(oObj) {
-		return oObj.aData.create_time;			// escaping causes the sort operation to fail	013013
+              "aTargets":[9],
+	      "mRender": function(data) {
+		return data;			// escaping causes the sort operation to fail	013013
               },
+              "mData": "create_time",
               "sType": "date"
             }
           ],
