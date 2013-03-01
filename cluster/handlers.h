@@ -230,6 +230,7 @@ typedef struct instance_t {
 
     char state[16];
     char ccState[16];
+    migration_states migration_state;
     time_t ts;
 
     char ownerId[48];

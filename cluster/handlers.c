@@ -2735,6 +2735,7 @@ int ncInstance_to_ccInstance(ccInstance * dst, ncInstance * src)
     euca_strncpy(dst->userData, src->userData, 16384);
     euca_strncpy(dst->state, src->stateName, 16);
     dst->ts = src->launchTime;
+    dst->migration_state = src->migration_state;
 
     memcpy(&(dst->ncnet), &(src->ncnet), sizeof(netConfig));
 
@@ -2791,6 +2792,7 @@ int ccInstance_to_ncInstance(ncInstance * dst, ccInstance * src)
     euca_strncpy(dst->userData, src->userData, 16384);
     euca_strncpy(dst->stateName, src->state, 16);
     dst->launchTime = src->ts;
+    //dst->migration_state = src->migration_state;
 
     memcpy(&(dst->ncnet), &(src->ncnet), sizeof(netConfig));
 
@@ -3868,7 +3870,7 @@ int doDescribeSensors(ncMetadata * pMeta, int historySize, long long collectionI
                 num_results = num_slots;    // actually num_results <= num_slots, but that's OK
 
         } else {                       // report on specific instances
-            // if some instances requested by ID were not found on this CC, 
+            // if some instances requested by ID were not found on this CC,
             // we will have fewer records in outResources[] (ok, since empty ones will be ignored)
             for (int i = 0; i < num_instances; i++) {
                 if (sensor_get_instance_data(instIds[i], NULL, 0, (*outResources + num_results), 1) == 0)
@@ -3888,7 +3890,7 @@ int doDescribeSensors(ncMetadata * pMeta, int historySize, long long collectionI
 //!
 //! @param[in] pMeta a pointer to the node controller (NC) metadata structure
 //! @param[in] nodeName the IP of the NC to effect
-//! @param[in] stateName the state for the NC 
+//! @param[in] stateName the state for the NC
 //!
 //! @return
 //!
@@ -3932,7 +3934,7 @@ int doModifyNode(ncMetadata * pMeta, char *nodeName, char *stateName)
         LOGERROR("node requested for modification (%s) cannot be found\n", SP(nodeName));
         goto out;
     }
-    
+
     timeout = ncGetTimeout(time(NULL), OP_TIMEOUT, 1, 0);
     rc = ncClientCall(pMeta, timeout, resourceCacheLocal.resources[src_index].lockidx, resourceCacheLocal.resources[src_index].ncURL, "ncModifyNode",
                       stateName); // no need to pass nodeName as ncClientCall sets that up for all NC requests
@@ -3947,7 +3949,7 @@ int doModifyNode(ncMetadata * pMeta, char *nodeName, char *stateName)
     sem_mywait(INSTCACHE);
     if (instanceCache->numInsts) {
         for (i = 0; i < MAXINSTANCES_PER_CC; i++) {
-            if (instanceCache->cacheState[i] == INSTVALID 
+            if (instanceCache->cacheState[i] == INSTVALID
                 && instanceCache->instances[i].ncHostIdx == src_index
                 && (!strcmp(instanceCache->instances[i].state, "Extant"))) {
                 memcpy(&cc_instance, &(instanceCache->instances[i]), sizeof(ccInstance));
@@ -3956,7 +3958,7 @@ int doModifyNode(ncMetadata * pMeta, char *nodeName, char *stateName)
             }
         }
     }
-    sem_mypost(INSTCACHE);    
+    sem_mypost(INSTCACHE);
     if (! found_instance) {
         LOGINFO("no instances running on host %s\n", SP(nodeName));
         goto out;
@@ -3968,7 +3970,7 @@ int doModifyNode(ncMetadata * pMeta, char *nodeName, char *stateName)
     }
 
     ncInstance nc_instance;
-    ccInstance_to_ncInstance(&nc_instance, &cc_instance);    
+    ccInstance_to_ncInstance(&nc_instance, &cc_instance);
     strncpy (nc_instance.migration_src, resourceCacheLocal.resources[src_index].hostname, sizeof(nc_instance.migration_src));
     strncpy (nc_instance.migration_dst, resourceCacheLocal.resources[dst_index].hostname, sizeof(nc_instance.migration_dst));
     ncInstance * instances = &nc_instance;
@@ -3994,6 +3996,7 @@ int doModifyNode(ncMetadata * pMeta, char *nodeName, char *stateName)
     }
 
     // call commit on source
+    /* FIXME: This is only commented out for testing purposes.
     timeout = ncGetTimeout(time(NULL), OP_TIMEOUT, 1, 0);
     rc = ncClientCall(pMeta, timeout, resourceCacheLocal.resources[src_index].lockidx, resourceCacheLocal.resources[src_index].ncURL, "ncMigrateInstances",
                       &instances, 1, "commit", NULL);
@@ -4002,6 +4005,7 @@ int doModifyNode(ncMetadata * pMeta, char *nodeName, char *stateName)
         ret = 1;
         goto out;
     }
+    */
  out:
     LOGTRACE("done\n");
 
@@ -6699,10 +6703,11 @@ void print_ccInstance(char *tag, ccInstance * in)
 
     LOGDEBUG("%s instanceId=%s reservationId=%s state=%s accountId=%s ownerId=%s ts=%ld keyName=%s ccnet={privateIp=%s publicIp=%s privateMac=%s "
              "vlan=%d networkIndex=%d} ccvm={cores=%d mem=%d disk=%d} ncHostIdx=%d serviceTag=%s userData=%s launchIndex=%s platform=%s "
-             "bundleTaskStateName=%s, volumesSize=%d volumes={%s} groupNames={%s}\n", tag, in->instanceId, in->reservationId, in->state,
+             "bundleTaskStateName=%s, volumesSize=%d volumes={%s} groupNames={%s} migration_state=%s\n", tag, in->instanceId, in->reservationId, in->state,
              in->accountId, in->ownerId, in->ts, in->keyName, in->ccnet.privateIp, in->ccnet.publicIp, in->ccnet.privateMac, in->ccnet.vlan,
              in->ccnet.networkIndex, in->ccvm.cores, in->ccvm.mem, in->ccvm.disk, in->ncHostIdx, in->serviceTag, in->userData, in->launchIndex,
-             in->platform, in->bundleTaskStateName, in->volumesSize, volbuf, groupbuf);
+             in->platform, in->bundleTaskStateName, in->volumesSize, volbuf, groupbuf,
+             migration_state_names[in->migration_state]);
 
     EUCA_FREE(volbuf);
     EUCA_FREE(groupbuf);
