@@ -282,6 +282,25 @@ pid_t timewait(pid_t pid, int *status, int timeout_sec)
     return (rc);
 }
 
+int killwait(pid_t pid)
+{
+    int status = 0;
+
+    kill(pid, SIGTERM);    // should be able to do
+    if (timewait(pid, &status, 1) == 0) {
+        logprintfl(EUCAERROR, "child process {%u} failed to terminate. Attempting SIGKILL.\n", pid);
+        kill(pid, SIGKILL);
+        if (timewait(pid, &status, 1) == 0) {
+            logprintfl(EUCAERROR, "child process {%u} failed to KILL. Attempting SIGKILL again.\n", pid);
+            kill(pid, SIGKILL);
+            if (timewait(pid, &status, 1) == 0) {
+                return (1);
+            }
+        }
+    }
+    return (0);
+}
+
 int param_check(char *func, ...)
 {
     int fail;
@@ -2119,7 +2138,7 @@ int timeshell(char *command, char *stdout_str, char *stderr_str, int max_size, i
     if (rc) {
         rc = WEXITSTATUS(status);
     } else {
-        kill(child_pid, SIGKILL);
+        killwait(child_pid);
         logprintfl(EUCAERROR, "warning: shell execution timeout\n");
         return -1;
     }

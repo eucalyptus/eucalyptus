@@ -392,8 +392,7 @@ virConnectPtr *check_hypervisor_conn()
             bail = TRUE;
         }
         // terminate the child, if any
-        kill(cpid, SIGKILL);    // should be able to do
-        kill(cpid, 9);          // may not be able to do
+        killwait(cpid);
     }
     if (bail) {
         sem_v(hyp_sem);
@@ -969,22 +968,18 @@ void *startup_thread(void *arg)
             if (rc < 0) {
                 logprintfl(EUCAERROR, "[%s] failed to wait for forked process: %s\n", instance->instanceId, strerror(errno));
                 try_killing = TRUE;
-
             } else if (rc == 0) {
                 logprintfl(EUCAERROR, "[%s] timed out waiting for forked process pid=%d\n", instance->instanceId, cpid);
                 try_killing = TRUE;
-
             } else if (WEXITSTATUS(status) != 0) {
                 logprintfl(EUCAERROR, "[%s] hypervisor failed to create the instance\n", instance->instanceId);
                 invalidate_hypervisor_conn();   // guard against libvirtd connection badness
-
             } else {
                 created = TRUE;
             }
 
             if (try_killing) {
-                kill(cpid, SIGKILL);    // should be able to do
-                kill(cpid, 9);  // may not be able to do?
+                killwait(cpid);
             }
         }
 
@@ -1114,8 +1109,7 @@ void *restart_thread(void *arg)
                 }
 
                 if (tryKilling) {
-                    kill(cpid, SIGKILL);    // should be able to do
-                    kill(cpid, 9);  // may not be able to do?
+                    killwait(cpid);
                 }
             }
         }
