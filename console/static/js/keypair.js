@@ -35,20 +35,10 @@
       this.baseTable = $keyTable;
       this.tableWrapper = $keyTable.eucatable({
         id : 'keys', // user of this widget should customize these options,
+        data_deps: ['keypairs'],
         hidden: thisObj.options['hidden'],
         dt_arg : {
-          "bProcessing": true,
-          "bServerSide": true,
-          "sAjaxDataProp": function(json) {
-            return json;
-          },
           "sAjaxSource": 'keypair',
-          "fnServerData": function (sSource, aoData, fnCallback) {
-                data = $('html body').eucadata('get', sSource);
-                data.iTotalRecords = data.length;
-                data.iTotalDisplayRecords = data.length;
-                fnCallback(data);
-          },
           "aoColumns": [
             {
               // Display the checkbox button in the main table

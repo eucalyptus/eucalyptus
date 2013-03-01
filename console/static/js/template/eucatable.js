@@ -22,6 +22,7 @@
   $.widget('eucalyptus.eucatable', {
     options : { 
       id : '', // user of this widget should customize these options
+      data_deps : null,
       dt_arg : null,
       text : {
         header_title : '',
@@ -78,6 +79,7 @@
 //      thisObj.refreshCallback = runRepeat(function(){ return thisObj._refreshTableInterval();}, (TABLE_REFRESH_INTERVAL_SEC * 1000), false);
 //      tableRefreshCallback = thisObj.refreshCallback;
       this._refreshTableInterval();
+      $('html body').eucadata('setDataNeeds', thisObj.options.data_deps);
     },
 
     _create : function() {
@@ -90,11 +92,21 @@
       var thisObj = this;
       var dt_arg = {};
       dt_arg["bProcessing"] = true;
+      dt_arg["bServerSide"] = true;
       dt_arg["sAjaxDataProp"] = "results";
       dt_arg["bAutoWidth"] = false;
       dt_arg["sPaginationType"] = "full_numbers",
       dt_arg['fnDrawCallback'] = function( oSettings ) {
         thisObj._drawCallback(oSettings);
+      }
+      dt_arg['sAjaxDataProp'] = function(json) {
+        return json;
+      }
+      dt_arg['fnServerData'] = function (sSource, aoData, fnCallback) {
+        data = $('html body').eucadata('get', sSource);
+        data.iTotalRecords = data.length;
+        data.iTotalDisplayRecords = data.length;
+        fnCallback(data);
       }
       dt_arg['fnInitComplete'] = function( oSettings ) {
         oSettings.oLanguage.sZeroRecords = $.i18n.prop('resource_no_records', thisObj.options.text.resource_plural);

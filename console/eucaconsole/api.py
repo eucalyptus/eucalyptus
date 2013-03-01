@@ -913,8 +913,9 @@ class ComputeHandler(BaseAPIHandler):
 
             if action == 'GetDashSummary':
                 ret = ""
+                zone = self.get_argument('AvailabilityZone', 'all')
                 if isinstance(self.user_session.clc, CachingClcInterface):
-                    ret = self.user_session.clc.get_cache_summary()
+                    ret = self.user_session.clc.get_cache_summary(zone)
                 self.callback(eucaconsole.cachingclcinterface.Response(data=ret))
             elif action == 'SetDataInterest':
                 resources = self.get_argument_list('Resources.member')

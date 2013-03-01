@@ -43,20 +43,10 @@
       var $instHelp = $wrapper.children().last();
       thisObj.tableWrapper = $instTable.eucatable({
         id : 'instances', // user of this widget should customize these options,
+        data_deps: ['instances'],
         hidden: thisObj.options['hidden'],
         dt_arg : {
-          "bProcessing": true,
-          "bServerSide": true,
-          "sAjaxDataProp": function(json) {
-            return json;
-          },
           "sAjaxSource": 'instance',
-          "fnServerData": function (sSource, aoData, fnCallback) {
-                data = $('html body').eucadata('get', sSource);
-                data.iTotalRecords = data.length;
-                data.iTotalDisplayRecords = data.length;
-                fnCallback(data);
-          },
           "aaSorting": [[ 10, "desc" ]],
           "aoColumns": [
             {

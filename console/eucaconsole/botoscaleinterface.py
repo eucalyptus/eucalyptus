@@ -68,12 +68,14 @@ class BotoScaleInterface(ScaleInterface):
         return self.conn.delete_auto_scaling_group(name, force_delete)
 
     def get_all_groups(self, names=None, max_records=None, next_token=None):
+        return []
         obj = self.conn.get_all_groups(names, max_records, next_token)
         if self.saveclcdata:
             self.__save_json__(obj, "mockdata/AS_Groups.json")
         return obj
 
     def get_all_autoscaling_instances(self, instance_ids=None, max_records=None, next_token=None):
+        return []
         obj = self.conn.get_all_autoscaling_instances(instance_ids, max_records, next_token)
         if self.saveclcdata:
             self.__save_json__(obj, "mockdata/AS_Instances.json")

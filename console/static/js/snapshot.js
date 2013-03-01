@@ -37,22 +37,10 @@
       this.baseTable = $snapshotTable;
       this.tableWrapper = $snapshotTable.eucatable({
         id : 'snapshots', // user of this widget should customize these options,
+        data_deps: ['snapshots'],
         hidden: thisObj.options['hidden'],
         dt_arg : {
-          "bProcessing": true,
-          "bServerSide": true,
-          "sAjaxDataProp": function(json) {
-            return json;
-          },
           "sAjaxSource": 'snapshot',
-          "fnServerData": function (sSource, aoData, fnCallback) {
-                data = $('html body').eucadata('get', sSource);
-                data.iTotalRecords = data.length;
-                data.iTotalDisplayRecords = data.length;
-                fnCallback(data);
-          },
-          "bAutoWidth" : false,
-          "sPaginationType": "full_numbers",
           "aoColumns": [
             {
 	      // Display the checkbox button in the main table

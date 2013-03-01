@@ -26,6 +26,7 @@
 from cache import Cache
 import ConfigParser
 import functools
+import logging
 import threading
 
 from boto.ec2.ec2object import EC2Object
@@ -112,12 +113,30 @@ class CachingClcInterface(ClcInterface):
         self.caches['tags'] = Cache(freq)
         self.caches['get_tags'] = self.clc.get_all_tags
 
-    def get_cache_summary(self):
+        try:
+            self.min_polling = config.getboolean('server', 'min.clc.polling')
+        except ConfigParser.NoOptionError:
+            self.min_polling = False
+
+    def get_cache_summary(self, zone):
         # make sparse array containing names of resource with updates
         summary = {}
-        summary['zone'] = len(self.caches['zones'].values)if self.caches['zones'].values else 0
         summary['image'] = len(self.caches['images'].values)if self.caches['images'].values else 0
-        summary['instance'] = len(self.caches['instances'].values)if self.caches['instances'].values else 0
+        numRunning = 0;
+        numStopped = 0;
+        if self.caches['instances'].values:
+            for reservation in self.caches['instances'].values:
+                for inst in reservation.instances:
+                    if zone == 'all' or inst.placement == zone:
+                        state = inst.state
+                        if not(state):
+                            state = inst._state.name
+                        if state == 'running':
+                            numRunning += numRunning
+                        elif state == 'stopped':
+                            numStopped += numStopped 
+        summary['inst_running'] = numRunning
+        summary['inst_stopped'] = numStopped
         summary['keypair'] = len(self.caches['keypairs'].values)if self.caches['keypairs'].values else 0
         summary['sgroup'] = len(self.caches['groups'].values)if self.caches['groups'].values else 0
         summary['volume'] = len(self.caches['volumes'].values)if self.caches['volumes'].values else 0
@@ -126,21 +145,28 @@ class CachingClcInterface(ClcInterface):
         summary['tag'] = len(self.caches['tags'].values)if self.caches['tags'].values else 0
         return summary
 
-    def __cache_load_callback__(self, resource, interval):
-        self.caches[resource].values = self.caches['get_'+resource](None, None)
-        self.caches['timer_'+resource] = threading.Timer(interval, self.__cache_load_callback__, [resource, interval])
+    def __cache_load_callback__(self, resource, kwargs, interval):
+        self.caches[resource].values = self.caches['get_'+resource](kwargs)
+        self.caches['timer_'+resource] = threading.Timer(interval, self.__cache_load_callback__, [resource, kwargs, interval])
         self.caches['timer_'+resource].start()
 
     def set_data_interest(self, resources):
+
         # clear previous timers
         for res in self.caches:
             if res[:5] == 'timer':
                 self.caches[res].cancel()
                 self.caches[res] = None
 
-        # start timers for new list of resources
-        for res in resources:
-            self.__cache_load_callback__(res, self.caches[res].updateFreq)
+        if self.min_polling:
+            # start timers for new list of resources
+            for res in resources:
+                self.__cache_load_callback__(res, {}, self.caches[res].updateFreq)
+        else:
+            # start timers for all cached resources
+            for vals in self.caches:
+                if isinstance(self.caches[vals], Cache):
+                    self.__cache_load_callback__(vals, {}, self.caches[vals].updateFreq)
         return True
     
     def __normalize_instances__(self, instances):

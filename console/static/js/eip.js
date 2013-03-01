@@ -40,22 +40,10 @@
       this.baseTable = $eipTable;
       this.tableWrapper = $eipTable.eucatable({
         id : 'eips', // user of this widget should customize these options,
+        data_deps: ['addresses'],
         hidden: thisObj.options['hidden'],
         dt_arg : {
-          "bProcessing": true,
-          "bServerSide": true,
-          "sAjaxDataProp": function(json) {
-            return json;
-          },
           "sAjaxSource": 'eip',
-          "fnServerData": function (sSource, aoData, fnCallback) {
-                data = $('html body').eucadata('get', sSource);
-                data.iTotalRecords = data.length;
-                data.iTotalDisplayRecords = data.length;
-                fnCallback(data);
-          },
-          "bAutoWidth" : false,
-          "sPaginationType": "full_numbers",
           "aoColumns": [
             {
               "bSortable": false,

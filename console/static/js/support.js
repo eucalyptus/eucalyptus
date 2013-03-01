@@ -500,6 +500,23 @@ function iamBusy(){
   });
 }
 
+function setDataInterest(resources){
+  data = "&_xsrf="+$.cookie('_xsrf');
+  for (res in resources) {
+    data += "&Resources.member."+(parseInt(res)+1)+"="+resources[res];
+  }
+  $.ajax({
+    type: 'POST',
+    url: '/ec2?Action=SetDataInterest',
+    data:data,
+    dataType:"json",
+      success: function(data, textStatus, jqXHR) {
+        ;
+      }
+  });
+}
+
+
 function popOutDialogHelp(url, height){
   var width = 600;
   var height = height ? height: 400;

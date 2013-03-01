@@ -66,6 +66,7 @@ class BotoBalanceInterface(BalanceInterface):
         return self.conn.delete_load_balancer(name)
 
     def get_all_load_balancers(self, load_balancer_names=None):
+        return []
         obj = self.conn.get_all_load_balancers(load_balancer_names)
         if self.saveclcdata:
             self.__save_json__(obj, "mockdata/ELB_Balancers.json")

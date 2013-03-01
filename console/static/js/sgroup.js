@@ -37,20 +37,10 @@
       this.baseTable = $sgroupTable;
       this.tableWrapper = $sgroupTable.eucatable({
         id : 'sgroups', // user of this widget should customize these options,
+        data_deps: ['groups'],
         hidden: thisObj.options['hidden'],
         dt_arg : {
-          "bProcessing": true,
-          "bServerSide": true,
-          "sAjaxDataProp": function(json) {
-            return json;
-          },
           "sAjaxSource": 'sgroup',
-          "fnServerData": function (sSource, aoData, fnCallback) {
-            data = $('html body').eucadata('get', sSource);
-            data.iTotalRecords = data.length;
-            data.iTotalDisplayRecords = data.length;
-            fnCallback(data);
-          },
           "aoColumns": [
             {
 	      // Display the checkbox button in the main table

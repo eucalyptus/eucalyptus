@@ -32,20 +32,10 @@
       this.baseTable = $imgTable;
       this.tableWrapper = $imgTable.eucatable({
         id : 'images', // user of this widget should customize these options,
+        data_deps: ['images'],
         hidden: thisObj.options['hidden'],
         dt_arg : {
-          "bProcessing": true,
-          "bServerSide": true,
-          "sAjaxDataProp": function(json) {
-            return json;
-          },
           "sAjaxSource": 'image',
-          "fnServerData": function (sSource, aoData, fnCallback) {
-                data = $('html body').eucadata('get', sSource);
-                data.iTotalRecords = data.length;
-                data.iTotalDisplayRecords = data.length;
-                fnCallback(data);
-          },
           "aoColumns": [
             {
               // Display the name of the image in eucatable
