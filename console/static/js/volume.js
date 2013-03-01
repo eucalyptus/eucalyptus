@@ -122,9 +122,6 @@
         legend : ['creating', 'available', 'in-use', 'deleting', 'deleted', 'error'],
       });
       this.tableWrapper.appendTo(this.element);
-      $('html body').eucadata('addCallback', 'volume', 'volume-landing', function() {
-        thisObj.tableWrapper.eucatable('redraw');
-      });
     },
 
     _create : function() { 

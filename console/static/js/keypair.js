@@ -42,13 +42,7 @@
           "sAjaxDataProp": function(json) {
             return json;
           },
-          "sAjaxSource": 'keypair',
-          "fnServerData": function (sSource, aoData, fnCallback) {
-                data = $('html body').eucadata('get', sSource);
-                data.iTotalRecords = data.length;
-                data.iTotalDisplayRecords = data.length;
-                fnCallback(data);
-          },
+          "sAjaxSource": 'keypairs',
           "aoColumns": [
             {
               // Display the checkbox button in the main table
@@ -100,9 +94,6 @@
         },
       });
       this.tableWrapper.appendTo(this.element);
-      $('html body').eucadata('addCallback', 'keypair', 'keypair-landing', function() {
-        thisObj.tableWrapper.eucatable('redraw');
-      });
     },
 
     _create : function() { 

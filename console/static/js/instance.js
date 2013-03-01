@@ -47,16 +47,7 @@
         dt_arg : {
           "bProcessing": true,
           "bServerSide": true,
-          "sAjaxDataProp": function(json) {
-            return json;
-          },
-          "sAjaxSource": 'instance',
-          "fnServerData": function (sSource, aoData, fnCallback) {
-                data = $('html body').eucadata('get', sSource);
-                data.iTotalRecords = data.length;
-                data.iTotalDisplayRecords = data.length;
-                fnCallback(data);
-          },
+          "sAjaxSource": 'instances',
           "aaSorting": [[ 10, "desc" ]],
           "aoColumns": [
             {

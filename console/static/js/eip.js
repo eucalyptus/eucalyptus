@@ -44,16 +44,7 @@
         dt_arg : {
           "bProcessing": true,
           "bServerSide": true,
-          "sAjaxDataProp": function(json) {
-            return json;
-          },
           "sAjaxSource": 'eip',
-          "fnServerData": function (sSource, aoData, fnCallback) {
-                data = $('html body').eucadata('get', sSource);
-                data.iTotalRecords = data.length;
-                data.iTotalDisplayRecords = data.length;
-                fnCallback(data);
-          },
           "bAutoWidth" : false,
           "sPaginationType": "full_numbers",
           "aoColumns": [
@@ -108,9 +99,6 @@
         filters : [{name:"eip_state", options: ['all','assigned','unassigned'], filter_col:3, alias: {'assigned':'assigned','unassigned':'unassigned'}, text: [eip_state_selector_all,eip_state_selector_assigned,eip_state_selector_unassigned] }],
       });
       this.tableWrapper.appendTo(this.element);
-      $('html body').eucadata('addCallback', 'eip', 'eip-landing', function() {
-        thisObj.tableWrapper.eucatable('redraw');
-      });
     },
 
     _create : function() { 

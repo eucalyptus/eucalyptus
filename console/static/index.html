@@ -55,8 +55,15 @@
     <script type="text/javascript" language="javascript" src="lib/jquery.ba-hashchange.js"></script>
 
     <!-- Backbone support -->
-    <script type="text/javascript" language="javascript" src="lib/underscore-1.4.3.js"></script>
-    <script type="text/javascript" language="javascript" src="lib/backbone-0.9.10.js"></script>
+    <!-- Backbone support -->
+    <script>
+    var require = {
+      baseUrl: 'js'
+    };
+    </script>
+    <script type="text/javascript" language="javascript" src="js/require.js"></script>
+    <script type="text/javascript" language="javascript" src="js/underscore-1.4.3.js"></script>
+    <script type="text/javascript" language="javascript" src="js/backbone-0.9.10.js"></script>
 
     <!-- Eucalyptus UI javascripts -->
     <script type="text/javascript" language="javascript" src="js/jquery_ext.js"></script>
@@ -91,8 +98,7 @@
     <script type="text/javascript" language="javascript" src="js/template/eucatabspace.js"></script>
     <script type="text/javascript" language="javascript" src="js/template/euca_resource_tag.js"></script>
 
-    <!-- Backbone support -->
-    <script type="text/javascript" language="javascript" data-main="js/bbtest" src="lib/require.js"></script>
+    <script type="text/javascript" language="javascript" src="js/eantest.js"></script>
   </head> 
 
   <body>
@@ -1756,6 +1762,12 @@
       </script>
       <!-- END Launch Wizard & Help --> 
 
+      <!-- Launch Wizard & Help -->
+      <script id="eantestTmpl" type="text/x-jsrender"> 
+        <div id="eantest-wrapper"> <!-- rendering will remove this extra div --> 
+          <h1>Dummy component</h1>
+        </div>
+      </script>
     </div>
     <!-- END of templates --> 
 

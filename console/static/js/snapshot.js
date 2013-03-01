@@ -124,9 +124,6 @@
         legend : ['pending', 'completed', 'error'],
       });
       this.tableWrapper.appendTo(this.element);
-      $('html body').eucadata('addCallback', 'snapshot', 'snapshot-landing', function() {
-        thisObj.tableWrapper.eucatable('redraw');
-      });
     },
 
     _create : function() { 
