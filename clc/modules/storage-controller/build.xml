@@ -74,7 +74,7 @@
 		<antcall target="build-java" />
 		<antcall target="jar" />
 		<mkdir dir="include" />
-		<javah classpath="${build.dir}" destdir="include" force="yes">
+		<javah classpath="${build.dir}:${modules.dir}/core/build:${modules.dir}/msgs/build:${modules.dir}/storage-common/build:${lib.dir}/groovy-all-1.7.2.jar:${lib.dir}/hibernate-3.5.6-Final.jar" destdir="include" force="yes">
 			<class name="com.eucalyptus.storage.OverlayManager" />
 			<class name="com.eucalyptus.storage.DASManager" />
 		</javah>
