@@ -321,7 +321,10 @@
       $.each(selectedRows, function(rowIdx, row){
         $.each(row, function(key, val){
           instIds.push(row['id'].toLowerCase());
-          if(key==='state') {
+          if(key==='state' || key=='_state') {
+            if (key=='_state') {
+                val = val.name;
+            }
             if(!stateMap[val])
               stateMap[val] = [row['id'].toLowerCase()];
             else
