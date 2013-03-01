@@ -193,8 +193,8 @@ int init_backing_store(const char *conf_instances_path, unsigned int conf_work_s
     snprintf(work_path, sizeof(work_path), "%s/work", instances_path);
     if (ensure_directories_exist(work_path, 0, NULL, NULL, BACKING_DIRECTORY_PERM) == -1)
         return ERROR;
-    unsigned long long cache_limit_blocks = conf_cache_size_mb * 2048;  // convert MB to blocks
-    unsigned long long work_limit_blocks = conf_work_size_mb * 2048;
+    unsigned long long cache_limit_blocks = (unsigned long long)conf_cache_size_mb * 2048;  // convert MB to blocks
+    unsigned long long work_limit_blocks = (unsigned long long)conf_work_size_mb * 2048;
     if (work_limit_blocks == 0) {   // we take 0 as unlimited
         work_limit_blocks = ULLONG_MAX;
     }
@@ -206,6 +206,7 @@ int init_backing_store(const char *conf_instances_path, unsigned int conf_work_s
         snapshot_policy = BLOBSTORE_SNAPSHOT_NONE;
     }
     blobstore_set_error_function(&bs_errors);
+
     if (cache_limit_blocks) {
         cache_bs =
             blobstore_open(cache_path, cache_limit_blocks, BLOBSTORE_FLAG_CREAT, BLOBSTORE_FORMAT_DIRECTORY, BLOBSTORE_REVOCATION_LRU,
