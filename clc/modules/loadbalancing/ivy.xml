@@ -2,7 +2,6 @@
     <info organisation="com.eucalyptus" module="eucalyptus-loadbalancing"/>
     <dependencies>
         <dependency org="com.eucalyptus" name="eucalyptus-loadbalancing-common" rev="latest.integration"/>
-        <dependency org="com.eucalyptus" name="eucalyptus-cloudwatch" rev="latest.integration"/>
         <dependency org="com.eucalyptus" name="eucalyptus-ws" rev="latest.integration"/>
         <dependency org="com.eucalyptus" name="eucalyptus-cluster-manager" rev="latest.integration"/>
     </dependencies>
