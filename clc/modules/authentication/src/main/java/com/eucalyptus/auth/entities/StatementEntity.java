@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * Copyright 2009-2013 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -65,12 +65,14 @@ package com.eucalyptus.auth.entities;
 import java.io.Serializable;
 import java.util.List;
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import javax.persistence.CascadeType;
 import javax.persistence.Column;
 import org.hibernate.annotations.Entity;
 import javax.persistence.JoinColumn;
 import javax.persistence.ManyToOne;
 import javax.persistence.OneToMany;
+import javax.persistence.OneToOne;
 import javax.persistence.PersistenceContext;
 import javax.persistence.Table;
 import javax.persistence.Transient;
@@ -138,12 +140,16 @@ public class StatementEntity extends AbstractPersistent implements Serializable 
   // Statement ID
   @Column( name = "auth_statement_sid" )
   String sid;
-  
+
+  @OneToOne( cascade = { CascadeType.ALL }, mappedBy = "statement" )
+  @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
+  PrincipalEntity principal;
+
   // List of decomposed authorizations
   @OneToMany( cascade = { CascadeType.ALL }, mappedBy = "statement" )
   @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
   List<AuthorizationEntity> authorizations;
-  
+
   // List of decomposed conditions
   @OneToMany( cascade = { CascadeType.ALL }, mappedBy = "statement" )
   @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
@@ -162,11 +168,14 @@ public class StatementEntity extends AbstractPersistent implements Serializable 
   }
 
   public StatementEntity( String sid,
+                          @Nullable PrincipalEntity principal,
                           @Nonnull List<AuthorizationEntity> authorizations,
                           @Nonnull List<ConditionEntity> conditions ) {
     this.sid = sid;
+    this.principal = principal;
     this.authorizations = authorizations;
     this.conditions = conditions;
+    if ( principal != null ) principal.setStatement( this );
     for ( AuthorizationEntity auth : authorizations ) {
       auth.setStatement( this );
     }
@@ -182,7 +191,15 @@ public class StatementEntity extends AbstractPersistent implements Serializable 
   public void setSid( String sid ) {
     this.sid = sid;
   }
-  
+
+  public PrincipalEntity getPrincipal() {
+    return principal;
+  }
+
+  public void setPrincipal( final PrincipalEntity principal ) {
+    this.principal = principal;
+  }
+
   public List<AuthorizationEntity> getAuthorizations( ) {
     return this.authorizations;
   }

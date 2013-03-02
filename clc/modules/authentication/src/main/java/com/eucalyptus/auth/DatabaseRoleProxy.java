@@ -109,12 +109,15 @@ public class DatabaseRoleProxy implements Role {
 
   @Override
   public Policy setAssumeRolePolicy( final String policy ) throws AuthException, PolicyParseException {
-    final PolicyEntity parsedPolicy = PolicyParser.getInstance().parse( policy );
+    final PolicyEntity parsedPolicy = PolicyParser.getResourceInstance().parse( policy );
     parsedPolicy.setName( "assume-role-policy-for-" + getRoleId() );
     final EntityWrapper<RoleEntity> db = EntityWrapper.get( RoleEntity.class );
     try {
       final RoleEntity roleEntity = getRoleEntity( db );
+      // Due to https://hibernate.onjira.com/browse/HHH-6484 we must explicitly delete the old policy
+      final PolicyEntity oldAssumeRolePolicy = roleEntity.getAssumeRolePolicy();
       roleEntity.setAssumeRolePolicy( parsedPolicy );
+      db.recast( PolicyEntity.class ).delete( oldAssumeRolePolicy );
       final PolicyEntity persistedPolicyEntity =
           db.recast( PolicyEntity.class ).persist( parsedPolicy );
       db.commit( );

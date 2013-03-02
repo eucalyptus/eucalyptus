@@ -67,6 +67,8 @@ import java.util.List;
 import java.util.Set;
 import org.apache.log4j.Logger;
 import com.eucalyptus.auth.api.AccountProvider;
+import com.eucalyptus.auth.policy.PolicySpec;
+import com.eucalyptus.auth.policy.ern.EuareResourceName;
 import com.eucalyptus.auth.principal.AccessKey;
 import com.eucalyptus.auth.principal.Account;
 import com.eucalyptus.auth.principal.Certificate;
@@ -237,6 +239,25 @@ public class Accounts {
     } else {
       return role.getPath( ) + "/" + role.getName( );
     }
+  }
+
+  public static String getUserArn( final User user ) throws AuthException {
+    return buildArn( user.getAccount(), PolicySpec.IAM_RESOURCE_USER, user.getPath(), user.getName() );
+  }
+
+  public static String getGroupArn( final Group group ) throws AuthException {
+    return buildArn( group.getAccount(), PolicySpec.IAM_RESOURCE_GROUP, group.getPath(), group.getName() );
+  }
+
+  public static String getRoleArn( final Role role ) throws AuthException {
+    return buildArn( role.getAccount(), PolicySpec.IAM_RESOURCE_ROLE, role.getPath(), role.getName() );
+  }
+
+  private static String buildArn( final Account account,
+                                  final String type,
+                                  final String path,
+                                  final String name ) throws AuthException {
+    return new EuareResourceName( account.getAccountNumber(), type, path, name ).toString();
   }
 
   public static void normalizeUserInfo( ) throws AuthException {

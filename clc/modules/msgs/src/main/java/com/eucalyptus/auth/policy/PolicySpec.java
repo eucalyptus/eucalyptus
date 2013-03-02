@@ -84,6 +84,8 @@ public class PolicySpec {
   public static final String NOTACTION = "NotAction";
   public static final String RESOURCE = "Resource";
   public static final String NOTRESOURCE = "NotResource";
+  public static final String PRINCIPAL = "Principal";
+  public static final String NOTPRINCIPAL = "NotPrincipal";
   public static final String CONDITION = "Condition";
     
   // Effect
@@ -562,7 +564,12 @@ public class PolicySpec {
   .put( VENDOR_AUTOSCALING, AUTOSCALING_ACTIONS )
   .put( VENDOR_CLOUDWATCH, CLOUDWATCH_ACTIONS)
   .build();
-  
+
+  // Set of vendors with case sensitive resource names
+  public static final Set<String> VENDORS_CASE_SENSITIVE_RESOURCES = new ImmutableSet.Builder<String>()
+      .add( VENDOR_IAM )
+      .build();
+
   // Action syntax
   public static final Pattern ACTION_PATTERN = Pattern.compile( "\\*|(?:(" + VENDOR_IAM + "|" + VENDOR_EC2 + "|" + VENDOR_S3 + "|" + VENDOR_STS  + "|" + VENDOR_AUTOSCALING + "|" + VENDOR_CLOUDWATCH + "):(\\S+))" );
   
@@ -610,6 +617,14 @@ public class PolicySpec {
   public static String qualifiedName( String vendor, String name ) {
     return vendor + ":" + name;
   }
+
+  public static String vendor( final String qualifiedName ) {
+    int index = qualifiedName.indexOf( ':' );
+    if ( index <= 0 ) {
+      throw new IllegalArgumentException( "Name not qualified: " + qualifiedName );
+    }
+    return qualifiedName.substring( 0, index );
+  }
   
   /**
    * Map request to policy language's action string.
@@ -637,6 +652,13 @@ public class PolicySpec {
   
   public static String describeAction( final String vendor, final String resource ) {
     return "describe" + resource + "s";
+  }
+
+  public static String canonicalizeResourceName( final String type,
+                                                 final String name ) {
+    return VENDORS_CASE_SENSITIVE_RESOURCES.contains( vendor( type ) ) ?
+        name :
+        name.toLowerCase();
   }
   
 }

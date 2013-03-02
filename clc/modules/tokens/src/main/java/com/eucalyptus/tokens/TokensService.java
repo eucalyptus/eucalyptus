@@ -39,7 +39,9 @@ import com.eucalyptus.auth.tokens.SecurityTokenManager;
 import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.util.EucalyptusCloudException;
+import com.eucalyptus.util.RestrictedIdentity;
 import com.google.common.base.Objects;
+import com.google.common.base.Supplier;
 import com.google.common.collect.Iterables;
 
 /**
@@ -99,32 +101,27 @@ public class TokensService {
   public AssumeRoleResponseType assumeRole( final AssumeRoleType request ) throws EucalyptusCloudException {
     final AssumeRoleResponseType reply = request.getReply( );
     reply.getResponseMetadata().setRequestId( reply.getCorrelationId( ) );
-    final Context ctx = Contexts.lookup();
-    final User requestUser = ctx.getUser();
+    final Role role = lookupRole( request.getRoleArn() );
 
-    final String accountId;
-    final String roleName;
+    //TODO:STEVE: should we fail if a policy is supplied? (since we ignore it)
+    //TODO:STEVE: evaluation of assume role policy should include external id condition
     try {
-      final Ern roleArn = Ern.parse( request.getRoleArn() );
-      if ( !(roleArn instanceof EuareResourceName) ||
-          !PolicySpec.IAM_RESOURCE_ROLE.equals(((EuareResourceName) roleArn).getUserOrGroup()) ) throw new IllegalArgumentException();
-      accountId = roleArn.getNamespace();
-      roleName = ((EuareResourceName) roleArn).getName();
-    } catch ( Exception e ) {
-      throw new TokensException( HttpResponseStatus.BAD_REQUEST, TokensException.INVALID_PARAMETER, "Invalid role: " + request.getRoleArn() );
-    }
+      //TODO:STEVE: also need to evaluate users permissions to check for explicit deny ...
+      RestrictedIdentity.checkAuthorized(
+          role.getAccount(),
+          PolicySpec.qualifiedName( PolicySpec.VENDOR_IAM, PolicySpec.IAM_RESOURCE_ROLE ),
+          Accounts.getRoleFullName( role ),
+          role.getAssumeRolePolicy(),
+          new Supplier<TokensException>() {
+            @Override
+            public TokensException get() {
+              return new TokensException(
+                  HttpResponseStatus.FORBIDDEN,
+                  TokensException.NOT_AUTHORIZED,
+                  "Not permitted to assume role." );
+            }
+      } );
 
-    final Role role;
-    try {
-      final Account account = Accounts.lookupAccountById( accountId );
-      role = account.lookupRoleByName( roleName );
-    } catch ( AuthException e ) {
-      throw new TokensException( HttpResponseStatus.BAD_REQUEST, TokensException.INVALID_PARAMETER, "Invalid role: " + request.getRoleArn() );
-    }
-
-    //TODO:STEVE: evaluate assume role policy (includes external id)
-
-    try {
       final SecurityToken token = SecurityTokenManager.issueSecurityToken(
           role,
           Objects.firstNonNull( request.getDurationSeconds(), (int)TimeUnit.HOURS.toSeconds(1)) );
@@ -136,12 +133,32 @@ public class TokensService {
       ) );
       reply.getAssumeRoleResult().setAssumedRoleUser( new AssumedRoleUserType(
           role.getRoleId() + ":" + request.getRoleSessionName(), //TODO:STEVE: is this the role id?
-          "arn:aws:sts::"+accountId+":assumed-role"+(Accounts.getRoleFullName( role ))+"/"+request.getRoleSessionName()
+          assumedRoleArn( role, request.getRoleSessionName() )
       ) );
     } catch ( final AuthException e ) {
       throw new EucalyptusCloudException( e.getMessage(), e );
     }
     return reply;
+  }
+
+  private static String assumedRoleArn( final Role role,
+                                        final String roleSessionName ) throws AuthException {
+    return "arn:aws:sts::"+role.getAccount().getAccountNumber()+":assumed-role"+Accounts.getRoleFullName( role )+"/"+roleSessionName;
+  }
+
+  private static Role lookupRole( final String roleArnString ) throws TokensException {
+    try {
+      final Ern roleArn = Ern.parse( roleArnString );
+      if ( !(roleArn instanceof EuareResourceName) ||
+          !PolicySpec.IAM_RESOURCE_ROLE.equals(((EuareResourceName) roleArn).getUserOrGroup()) ) throw new IllegalArgumentException();
+      final String roleAccountId = roleArn.getNamespace();
+      final String roleName = ((EuareResourceName) roleArn).getName();
+
+      final Account account = Accounts.lookupAccountById( roleAccountId );
+      return account.lookupRoleByName( roleName );
+    } catch ( Exception e ) {
+      throw new TokensException( HttpResponseStatus.BAD_REQUEST, TokensException.INVALID_PARAMETER, "Invalid role: " + roleArnString );
+    }
   }
 
 }

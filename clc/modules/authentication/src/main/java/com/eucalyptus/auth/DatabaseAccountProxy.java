@@ -355,7 +355,7 @@ public class DatabaseAccountProxy implements Account {
     if ( DatabaseAuthUtils.checkRoleExists( roleName, this.delegate.getName() ) ) {
       throw new AuthException( AuthException.ROLE_ALREADY_EXISTS );
     }
-    final PolicyEntity parsedPolicy = PolicyParser.getInstance().parse( assumeRolePolicy );
+    final PolicyEntity parsedPolicy = PolicyParser.getResourceInstance().parse( assumeRolePolicy );
     final EntityWrapper<AccountEntity> db = EntityWrapper.get( AccountEntity.class );
     try {
       final AccountEntity account = DatabaseAuthUtils.getUnique( db, AccountEntity.class, "name", this.delegate.getName( ) );
