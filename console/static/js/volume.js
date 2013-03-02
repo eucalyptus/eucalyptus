@@ -58,7 +58,7 @@
 	      // Display the checkbox button in the main table
               "bSortable": false,
               "aTargets":[0],
-              "fnRender": function(oObj) { return '<input type="checkbox"/>' },
+              "mData": function(data) { return '<input type="checkbox"/>' },
               "sClass": "checkbox-cell"
             },
             {
@@ -72,9 +72,10 @@
             {
 	      // Display the status of the volume in the main table
 	      "aTargets":[2],
-              "fnRender": function(oObj) { 
-                 return eucatableDisplayColumnTypeVolumeStatus(oObj.aData.status);
+              "mRender": function(data) { 
+                 return eucatableDisplayColumnTypeVolumeStatus(data);
                },
+              "mData": "status",
               "sClass": "narrow-cell",
               "bSearchable": false,
               "iDataSort": 8, // sort on hidden status column
@@ -393,7 +394,7 @@
         if ( volume && results ) {
           for( res in results) {
             var instance = results[res];
-            if ( instance.state === 'running' && instance.placement === volume.zone)
+            if ( instance._state.name === 'running' && instance.placement === volume.zone)         // it was instance.state, which returns 'undefined' TEMP ADJUSTMENT. Austin, 030113  - David's fix needed
               inst_ids.push(instance.id);
           }
         }

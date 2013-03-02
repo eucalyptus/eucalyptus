@@ -62,8 +62,9 @@
 	      // Display the checkbox button in the main table
               "bSortable": false,
               "aTargets":[0],
-              "mRender": function(data) { return '<input type="checkbox"/>' },
-              "sClass": "checkbox-cell"
+              "mData": function(data) { return '<input type="checkbox"/>' },
+              "sClass": "checkbox-cell",
+              
             },
             {
 	      // Display the allocated public IP in eucatable
@@ -86,24 +87,26 @@
 	      // Invisible Column for storing the status of the IP
               "bVisible": false,
               "aTargets":[3],
-              "fnRender": function(oObj) { 
-                if (! oObj.aData.instance_id)
+              "mRender": function(data) { 
+                if (!data)
                   return 'unassigned';
-                else if (oObj.aData.instance_id.indexOf('available') >= 0)
+                else if (data.indexOf('available') >= 0)
                   return 'unassigned';
-                else if (oObj.aData.instance_id.indexOf('nobody') >= 0)
+                else if (data.indexOf('nobody') >= 0)
                   return 'unallocated';
                 else
                   return 'assigned'
               },
+              "mData": "instance_id",
             },
             {
 	      // Invisialbe Column for allowing the IPs to be sorted
               "bVisible": false,
               "aTargets":[4],
-              "fnRender": function(oObj) {
-                return ipv4AsInteger(oObj.aData.public_ip);
+              "mRender": function(data) {
+                return ipv4AsInteger(data);
               },
+              "mData": "public_ip",
             }
           ],
         },

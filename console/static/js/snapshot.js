@@ -59,7 +59,7 @@
 	      // Display the checkbox button in the main table
               "bSortable": false,
               "aTargets":[0],
-              "fnRender": function(oObj) { return '<input type="checkbox"/>' },
+              "mData": function(data) { return '<input type="checkbox"/>' },
               "sClass": "checkbox-cell",
             },
             { 
@@ -73,9 +73,13 @@
             {
 	      // Display the status of the snapshot in the main table
               "aTargets":[2],
-              "fnRender": function(oObj) { 
-                 return eucatableDisplayColumnTypeSnapshotStatus(oObj.aData.status, oObj.aData.progress);
-               },
+   //           "fnRender": function(oObj) { 
+   //              return eucatableDisplayColumnTypeSnapshotStatus(oObj.aData.status, oObj.aData.progress);
+   //            },
+              "mRender": function(data, type, full) {
+                return eucatableDisplayColumnTypeSnapshotStatus(data, full['progress']);
+              },
+              "mData": "status",
               "sClass": "narrow-cell",
               "bSearchable": false,
               "iDataSort": 7, // sort on hidden status column
@@ -100,9 +104,10 @@
             {
 	      // Display the description of the snapshot in the main table
               "aTargets":[4],
-              "fnRender": function(oObj) { 
-	         return eucatableDisplayColumnTypeText(oObj.aData.description, oObj.aData.description, 75);
+              "mRender": function(data) { 
+	         return eucatableDisplayColumnTypeText(data, data, 75);
 	      },
+              "mData": "description",
               "iDataSort": 9,
             },
             {

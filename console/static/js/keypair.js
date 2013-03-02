@@ -53,16 +53,18 @@
               // Display the checkbox button in the main table
               "bSortable": false,
               "aTargets":[0],
-              "fnRender": function(oObj) { return '<input type="checkbox"/>' },
-              "sClass": "checkbox-cell",
+            //  "fnRender": function(oObj) { return '<input type="checkbox"> abc </input>' },
+              "mData" : function(data) { return '<input type="checkbox"/>' },
+              "sClass": "checkbox-cell", 
             },
             {
 	      // Display the name of the keypair in the main table
 	      "aTargets":[1],
-              "fnRender": function(oObj) { 
-		return eucatableDisplayColumnTypeText (oObj.aData.name, oObj.aData.name, 75);
+              "mRender": function(data) { 
+		return eucatableDisplayColumnTypeText (data, data, 75);
 	      },
               "iDataSort": 3,
+              "mData": "name", 
             },
             { 
 	      // Display the fingerprint of the keypair in the main table

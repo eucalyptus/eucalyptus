@@ -51,9 +51,10 @@
 	      // Allow the name to be clickable
 	      // Use 'twist' in CSS
 	      "aTargets":[0], 
-              "fnRender" : function(oObj) { 
-		return eucatableDisplayColumnTypeTwist (oObj.aData.name, oObj.aData.name, 255);
+              "mRender" : function(data) { 
+		return eucatableDisplayColumnTypeTwist (data, data, 255);
               },
+              "mData": "name",
             },
             { 
 	      // Display the id of the image in eucatable
@@ -74,9 +75,10 @@
             {
 	      // Display the description of the image in eucatable
 	      "aTargets":[3],
-	      "fnRender": function(oObj) {
-                return eucatableDisplayColumnTypeText (oObj.aData.description, oObj.aData.description, 30);
+	      "mRender": function(data) {
+                return eucatableDisplayColumnTypeText (data, data, 30);
               },
+              "mData": "description",
 	    },
             { 
 	      // Display the root device type of the image in eucatable
@@ -91,9 +93,10 @@
               "bSortable": false,
               "aTargets":[5],
               "sClass": "centered-cell",
-              "fnRender": function(oObj) {
-	        return eucatableDisplayColumnTypeLaunchInstanceButton (oObj.aData.id); 
+              "mRender": function(data) {
+	        return eucatableDisplayColumnTypeLaunchInstanceButton (data); 
 	      },
+              "mData": "id",
               "sWidth": 80,
             },
             {
@@ -128,9 +131,10 @@
 	      // idx = 9
               "bVisible" : false,
               "aTargets":[9],
-              "fnRender" : function(oObj) {
-                return oObj.aData.platform ? DefaultEncoder().encodeForHTML(oObj.aData.platform) : 'linux';
+              "mRender" : function(data) {
+                return data ? DefaultEncoder().encodeForHTML(data) : 'linux';
               },
+              "mData": "platform",
             },
             {
 	      // Hidden column for the location of the image
@@ -145,7 +149,7 @@
 	      // Hidden column for the ownership of the image ?
               "bVisible": false,
               "aTargets":[11],
-              "fnRender" : function(oObj){
+              "mRender" : function(data){
                 var results = describe('sgroup');
                 var group = null;
                 for(i in results){
@@ -154,11 +158,12 @@
                     break;
                   }
                 } 
-                if(group && group.owner_id === oObj.aData.ownerId)
+                if(group && group.owner_id === data)
                   return 'self'; // equivalent of 'describe-images -self'
                 else
                   return 'all'; 
-              }
+              },
+              "mData": "ownerId",
             }
           ],
         },

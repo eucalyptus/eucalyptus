@@ -62,40 +62,43 @@
 	      // Display the checkbox button in the main table
               "bSortable": false,
               "aTargets":[0],
-              "fnRender": function(oObj) { return '<input type="checkbox"/>' },
+              "mData": function(data) { return '<input type="checkbox"/>' },
               "sClass": "checkbox-cell",
             },
             { 
 	      // Hidden column for displaying the platform of the instance
-              "bVisible" : false,
+              "bVisible": false,
               "aTargets":[1],
-              "fnRender" : function(oObj) { 
-			var result = describe('image', oObj.aData.image_id);
+              "mRender": function(data) { 
+			var result = describe('image', data);
                		if(result && result.platform) 
 				return result.platform;
 			return "linux";
               },
+              "mData": "image_id",
             },
             { 
 	      // Display the id of the instance in the main table
 	      // Allow the id to be clickable to display the platform data above
 	      // Use CSS 'twist'
 	      "aTargets":[2],
-	      "fnRender" : function(oObj){
-                 return eucatableDisplayColumnTypeTwist(oObj.aData.id, oObj.aData.id, 255);
+	      "mRender" : function(data){
+                 return eucatableDisplayColumnTypeTwist(data, data, 255);
 	      },
+              "mData": "id",
             },
             { 
 	      // Display the status of the instance in the main table
               "iDataSort": 12,
               "aTargets":[3],
-              "fnRender": function(oObj) { 
-	         var state = oObj.aData.state;
-                 if (state == undefined) {
-                   state = oObj.aData._state.name;
-                 }
+              "mRender": function(data) { 
+	         var state = data;
+           //      if (state == undefined) {
+           //        state = oObj.aData._state.name;
+           //      }
                  return eucatableDisplayColumnTypeInstanceStatus(state);
               },
+              "mData": "_state.name",
             },
             { 
 	      // Display the image id of the instance in the main table
@@ -170,13 +173,14 @@
 	      // Hidden column for the status of the instance
               "bVisible": false,
               "aTargets":[12],
-	      "fnRender": function(oObj) {
-                 var state = oObj.aData.state;
-                 if (state == undefined) {
-                   state = oObj.aData._state.name;
-                 }
+	      "mRender": function(data) {
+                 var state = data;
+            //     if (state == undefined) {
+            //       state = oObj.aData._state.name;
+            //     }
                 return DefaultEncoder().encodeForHTML(state);
               },
+              "mData": "_state.name",
             },
             {
 	      // Hidden column for the launch time of the instance
@@ -193,14 +197,15 @@
 	      // Hidden column for the image location of the instance
               "bVisible": false,
               "aTargets":[14],
-              "fnRender" : function(oObj) {
+              "mRender" : function(data) {
 			var image = null;
-              		var result = describe('image', oObj.aData.image_id);
+              		var result = describe('image', data);
 			if( result ){
 				image = result;
 			};
                  	return image ? image.location : '';		
               },
+              "mData": "image_id",
             },
             {
 	      // Hidden column for the instance type of the instance
