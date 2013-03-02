@@ -491,6 +491,7 @@ public class WalrusImageManager {
 			if(!icInfo.getInCache()) {
 				decryptedImageKey = icInfo.getImageName();
 			} else {
+				LOG.info("Image found in cache: " + bucketName + "/" + manifestKey);
 				db.commit();
 				return;
 			}
@@ -1082,6 +1083,7 @@ public class WalrusImageManager {
 								(!storageManager.objectExists(bucketName, imageCacheInfo.getImageName()))) {
 							db2.delete(imageCacheInfo);
 							db2.commit();
+							LOG.info("Deleted cache entry: " + bucketName + "/" + objectKey);
 							db2 = EntityWrapper.get(ImageCacheInfo.class);
 							foundImageCacheInfos = db2.queryEscape(searchImageCacheInfo);
 						}						
@@ -1090,7 +1092,7 @@ public class WalrusImageManager {
 							(!imageCachers.containsKey(bucketName + objectKey))) {
 						db2.commit();
 						//issue a cache request
-						LOG.info("Image " + bucketName + "/" + objectKey + " not found in cache. Issuing cache request (might take a while...)");
+						LOG.info("Checking if image " + bucketName + "/" + objectKey + " should be cached..."); 
 						cacheImage(bucketName, objectKey, account, ctx.hasAdministrativePrivileges());
 						//query db again
 						db2 = EntityWrapper.get(ImageCacheInfo.class);
@@ -1110,6 +1112,7 @@ public class WalrusImageManager {
 								int number_of_tries = 0;
 								do {
 									LOG.info("Waiting " + WalrusProperties.CACHE_PROGRESS_TIMEOUT + "ms for image to cache (" + number_of_tries + " out of " + WalrusProperties.IMAGE_CACHE_RETRY_LIMIT + ")");
+									//testy
 									monitor.wait(WalrusProperties.CACHE_PROGRESS_TIMEOUT);
 									if(isCached(bucketName, objectKey)) {
 										cached = true;
@@ -1139,14 +1142,17 @@ public class WalrusImageManager {
 							semaphore.release();
 							if(!imageCachers.containsKey(bucketName + objectKey)) {
 								//caching not in progress. delete image cache row.
+								LOG.info("Deleting Image Cache Info: " + bucketName + "/" + objectKey);
 								db2 = EntityWrapper.get(ImageCacheInfo.class);
                                                                 foundImageCacheInfos = db2.queryEscape(searchImageCacheInfo);
       		                                                if(foundImageCacheInfos.size() > 0) {
 									db2.delete(foundImageCacheInfos.get(0));
 								}
 								db2.commit();
+							} else {
+								LOG.info("Caching in progress: " + bucketName + "/" + objectKey + " . Try run instances request again in a while...");
 							}
-							throw new WalrusException("caching failure");
+							throw new NoSuchEntityException("Caching failure: " + bucketName + "/" + objectKey);
 						}
 						//caching may have modified the db. repeat the query
 						db2 = EntityWrapper.get(ImageCacheInfo.class);
