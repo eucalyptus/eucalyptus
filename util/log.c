@@ -84,17 +84,17 @@
 #include <sys/time.h>
 #include <sys/types.h>
 #include <unistd.h>
-#include <sys/syscall.h>               // to get thread id
-#include <sys/resource.h>              // rusage
-#include <execinfo.h>                  // backtrace
+#include <sys/syscall.h>        // to get thread id
+#include <sys/resource.h>       // rusage
+#include <execinfo.h>           // backtrace
 #include <errno.h>
-#define SYSLOG_NAMES                   // we want facilities as strings
+#define SYSLOG_NAMES            // we want facilities as strings
 #include <syslog.h>
 
 #include "eucalyptus.h"
 #include "log.h"
-#include "misc.h"                      // TRUE/FALSE
-#include "ipc.h"                       // semaphores
+#include "misc.h"               // TRUE/FALSE
+#include "ipc.h"                // semaphores
 #include "euca_string.h"
 
 /*----------------------------------------------------------------------------*\
@@ -170,13 +170,13 @@ const char *log_level_names[] = {
 //!
 const char *log_level_prefix[] = {
     "",
-    "%T %L %t9 %m-24 %F-33 |",         // EXTREME
-    "%T %L %t9 %m-24 |",               // TRACE
-    "%T %L %t9 %m-24 |",               // DEBUG
-    "%T %L |",                         // INFO
-    "%T %L |",                         // WARN
-    "%T %L |",                         // ERROR
-    "%T %L |",                         // FATAL
+    "%T %L %t9 %m-24 %F-33 |",  // EXTREME
+    "%T %L %t9 %m-24 |",        // TRACE
+    "%T %L %t9 %m-24 |",        // DEBUG
+    "%T %L |",                  // INFO
+    "%T %L |",                  // WARN
+    "%T %L |",                  // ERROR
+    "%T %L |",                  // FATAL
     ""
 };
 
@@ -197,11 +197,11 @@ static ino_t log_ino = -1;
 
 //! @{
 //! @name parameters, for now unmodifiable
-static const boolean timelog = FALSE;  //!< change to TRUE for 'TIMELOG' entries
+static const boolean timelog = FALSE;   //!< change to TRUE for 'TIMELOG' entries
 static const boolean do_close_fd = FALSE;   //!< whether to close log fd after each message
 static const boolean do_stat_log = TRUE;    //!< whether to monitor file for changes
-static char log_name[32] = "euca";     //!< name of the log, such as "euca-nc" or "euca-cc" for syslog
-static const int syslog_options = 0;   //!< flags to be passed to openlog(), such as LOG_PID
+static char log_name[32] = "euca";  //!< name of the log, such as "euca-nc" or "euca-cc" for syslog
+static const int syslog_options = 0;    //!< flags to be passed to openlog(), such as LOG_PID
 //! @}
 
 //! @{
@@ -211,8 +211,8 @@ static int log_roll_number = 10;
 static long log_max_size_bytes = MAXLOGFILESIZE;
 static char log_file_path[EUCA_MAX_PATH] = "";
 static char log_custom_prefix[34] = USE_STANDARD_PREFIX;    //!< any other string means use it as custom prefix
-static sem *log_sem = NULL;            //!< if set, the semaphore will be used when logging & rotating logs
-static int syslog_facility = -1;       //!< if not -1 then we are logging to a syslog facility
+static sem *log_sem = NULL;     //!< if set, the semaphore will be used when logging & rotating logs
+static int syslog_facility = -1;    //!< if not -1 then we are logging to a syslog facility
 //! @}
 
 /*----------------------------------------------------------------------------*\
@@ -304,12 +304,12 @@ static FILE *get_file(boolean do_reopen)
         return LOGFH_DEFAULT;
 
     int fd = -1;
-    if (gLogFh != NULL) {              // apparently the stream is still open
+    if (gLogFh != NULL) {       // apparently the stream is still open
         boolean file_changed = FALSE;
         if (!do_reopen && do_stat_log) {    // we are not reopening for every write
             struct stat statbuf;
             int err = stat(log_file_path, &statbuf);
-            if (err == -1) {           // probably file does not exist, perhaps because it was renamed
+            if (err == -1) {    // probably file does not exist, perhaps because it was renamed
                 file_changed = TRUE;
             } else if (statbuf.st_size < 1) {   // truncated externally, reopen
                 file_changed = TRUE;
@@ -317,7 +317,7 @@ static FILE *get_file(boolean do_reopen)
                 file_changed = TRUE;
             }
         }
-        fd = fileno(gLogFh);           // try to get the file descriptor
+        fd = fileno(gLogFh);    // try to get the file descriptor
         if (file_changed || do_reopen || fd < 0) {
             fclose(gLogFh);
             gLogFh = NULL;
@@ -342,7 +342,7 @@ retry:
     struct stat statbuf;
     int rc = fstat(fd, &statbuf);
     if (!rc) {
-        log_ino = statbuf.st_ino;      // record the inode number of the currently opened log
+        log_ino = statbuf.st_ino;   // record the inode number of the currently opened log
 
         if (((long)statbuf.st_size > log_max_size_bytes) && (log_roll_number > 0)) {
             char oldFile[EUCA_MAX_PATH], newFile[EUCA_MAX_PATH];
@@ -391,8 +391,8 @@ void log_params_set(int log_level_in, int log_roll_number_in, long log_max_size_
     }
 
     // update the roll number limit
-    if (log_roll_number_in >= 0 &&     // sanity check
-        log_roll_number_in < 1000 &&   // sanity check
+    if (log_roll_number_in >= 0 &&  // sanity check
+        log_roll_number_in < 1000 &&    // sanity check
         log_roll_number != log_roll_number_in) {
 
         log_roll_number = log_roll_number_in;
@@ -400,7 +400,7 @@ void log_params_set(int log_level_in, int log_roll_number_in, long log_max_size_
     // update the max size for any file
     if (log_max_size_bytes_in >= 0 && log_max_size_bytes != log_max_size_bytes_in) {
         log_max_size_bytes = log_max_size_bytes_in;
-        if (get_file(FALSE))           // that will rotate log files if needed
+        if (get_file(FALSE))    // that will rotate log files if needed
             release_file();
     }
 }
@@ -504,7 +504,7 @@ int log_facility_set(const char *facility, const char *component_name)
         syslog_facility = facility_int;
         if (component_name)
             snprintf(log_name, sizeof(log_name) - 1, "euca-%s", component_name);
-        closelog();                    // in case it was open
+        closelog();             // in case it was open
         if (syslog_facility != -1) {
             LOGINFO("opening syslog '%s' in facility '%s'\n", log_name, facility);
             openlog(log_name, syslog_options, syslog_facility);
@@ -650,26 +650,26 @@ static int print_field_truncated(const char **log_spec, char *buf, int left, con
     int in_field_len = strlen(field);
     int out_field_len = MAX_FIELD_LENGTH;
     if (in_field_len < out_field_len) {
-        out_field_len = in_field_len;  // unless specified, we'll use length of the field or max
+        out_field_len = in_field_len;   // unless specified, we'll use length of the field or max
     }
     // first, look ahead down s[] to see if we have length 
     // and alignment specified (leading '-' means left-justified)
     const char *nstart = (*log_spec) + 1;
-    if (*nstart == '-') {              // a leading zero
+    if (*nstart == '-') {       // a leading zero
         left_justify = TRUE;
         nstart++;
     }
     char *nend;
     int i = (int)strtoll(nstart, &nend, 10);
-    if (nstart != nend) {              // we have some digits
-        *log_spec = nend - 1;          // move the pointer ahead so caller will skip digits
-        if (i > 1 && i < 100) {        // sanity check
+    if (nstart != nend) {       // we have some digits
+        *log_spec = nend - 1;   // move the pointer ahead so caller will skip digits
+        if (i > 1 && i < 100) { // sanity check
             out_field_len = i;
         }
     }
     // create a format string that would truncate the field
     // to len and then print the field into 's'
-    if (left < (out_field_len + 1)) {  // not enough room left
+    if (left < (out_field_len + 1)) {   // not enough room left
         return -1;
     }
     // when right-justifying, we want to truncate the field on the left
@@ -683,7 +683,7 @@ static int print_field_truncated(const char **log_spec, char *buf, int left, con
     char format[10];
     snprintf(format, sizeof(format), "%%%s%ds", (left_justify) ? "-" : "", out_field_len);
     if (snprintf(buf, (out_field_len + 1), format, field + offset) < out_field_len)
-        return -1;                     // error in snprintf
+        return -1;              // error in snprintf
 
     return out_field_len;
 }
@@ -716,7 +716,7 @@ int logprintfl(const char *func, const char *file, int line, log_level_e level, 
     if (level < log_level) {
         return 0;
     } else if (level < 0 || level > EUCA_LOG_OFF) {
-        return -1;                     // unexpected log level
+        return -1;              // unexpected log level
     }
 
     if (strcmp(log_custom_prefix, USE_STANDARD_PREFIX) == 0) {
@@ -728,65 +728,65 @@ int logprintfl(const char *func, const char *file, int line, log_level_e level, 
     }
 
     // go over prefix format for the log level (defined in log.h or custom)
-    for (;                             // prefix_spec is initialized above
+    for (;                      // prefix_spec is initialized above
          *prefix_spec != '\0'; prefix_spec++) {
 
         char *s = buf + offset;
         int left = sizeof(buf) - offset - 1;
         if (left < 1) {
-            return -1;                 // not enough room in internal buffer for a prefix
+            return -1;          // not enough room in internal buffer for a prefix
         }
         // see if we have a formatting character or a regular one
         char c = prefix_spec[0];
         char cn = prefix_spec[1];
-        if (c != '%'                   // not a special formatting char
-            || (c == '%' && cn == '%') // formatting char, escaped
+        if (c != '%'            // not a special formatting char
+            || (c == '%' && cn == '%')  // formatting char, escaped
             || (c == '%' && cn == '\0')) {  // formatting char at the end
             s[0] = c;
             s[1] = '\0';
             offset++;
             if (c == '%' && cn == '%')
-                prefix_spec++;         // swallow the one extra '%' in input
+                prefix_spec++;  // swallow the one extra '%' in input
             continue;
         }
-        prefix_spec++;                 // move past the '%' to the formatting char
+        prefix_spec++;          // move past the '%' to the formatting char
 
         int size = 0;
         switch (*prefix_spec) {
-        case 'T':                     // timestamp
+        case 'T':              // timestamp
             size = fill_timestamp(s, left);
             break;
 
-        case 'L':{                    // log-level
+        case 'L':{             // log-level
                 char l[6];
                 euca_strncpy(l, log_level_names[level], 6); // we want hard truncation
                 size = snprintf(s, left, "%5s", l);
                 break;
             }
-        case 'p':{                    // process ID
+        case 'p':{             // process ID
                 char p[11];
                 snprintf(p, sizeof(p), "%010d", getpid());  // 10 chars is enough for max 32-bit unsigned integer
                 size = print_field_truncated(&prefix_spec, s, left, p);
                 break;
             }
-        case 't':{                    // thread ID
+        case 't':{             // thread ID
                 char t[21];
                 snprintf(t, sizeof(t), "%020d", (pid_t) syscall(SYS_gettid));   // 20 chars is enough for max 64-bit unsigned integer
                 size = print_field_truncated(&prefix_spec, s, left, t);
                 break;
             }
-        case 'm':                     // method
+        case 'm':              // method
             size = print_field_truncated(&prefix_spec, s, left, func);
             break;
 
-        case 'F':{                    // file-and-line
+        case 'F':{             // file-and-line
                 char file_and_line[64];
                 snprintf(file_and_line, sizeof(file_and_line), "%s:%d", file, line);
                 size = print_field_truncated(&prefix_spec, s, left, file_and_line);
                 break;
             }
 
-        case 's':{                    // max RSS of the process
+        case 's':{             // max RSS of the process
                 struct rusage u;
                 bzero(&u, sizeof(struct rusage));
                 getrusage(RUSAGE_SELF, &u);
@@ -798,7 +798,7 @@ int logprintfl(const char *func, const char *file, int line, log_level_e level, 
                 break;
             }
         case '?':
-            s[0] = '?';                // not supported currently
+            s[0] = '?';         // not supported currently
             s[1] = '\0';
             size = 1;
             break;
@@ -812,7 +812,7 @@ int logprintfl(const char *func, const char *file, int line, log_level_e level, 
 
         if (size < 0) {
             logprintf("error in prefix construction in logprintfl()\n");
-            return -1;                 // something went wrong in the snprintf()s above
+            return -1;          // something went wrong in the snprintf()s above
         }
         offset += size;
     }
@@ -832,7 +832,7 @@ int logprintfl(const char *func, const char *file, int line, log_level_e level, 
 
     if (syslog_facility != -1) {
         // log to syslog, at the appropriate level
-        int l = LOG_DEBUG;             // euca DEBUG, TRACE, and EXTREME use syslog's DEBUG
+        int l = LOG_DEBUG;      // euca DEBUG, TRACE, and EXTREME use syslog's DEBUG
         if (level == EUCA_LOG_ERROR)
             l = LOG_ERR;
         else if (level == EUCA_LOG_WARN)

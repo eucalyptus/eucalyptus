@@ -168,7 +168,8 @@ int ncBundleInstanceStub(ncStub * pStub, ncMetadata * pMeta, char *instanceId, c
                          char *userPublicKey, char *S3Policy, char *S3PolicySig);
 int ncBundleRestartInstanceStub(ncStub * pStub, ncMetadata * pMeta, char *instanceId);
 int ncCancelBundleTaskStub(ncStub * pStub, ncMetadata * pMeta, char *instanceId);
-int ncDescribeBundleTasksStub(ncStub * pStub, ncMetadata * pMeta, char **instIds, int instIdsLen, bundleTask *** outBundleTasks, int *outBundleTasksLen);
+int ncDescribeBundleTasksStub(ncStub * pStub, ncMetadata * pMeta, char **instIds, int instIdsLen, bundleTask *** outBundleTasks,
+                              int *outBundleTasksLen);
 int ncCreateImageStub(ncStub * pStub, ncMetadata * pMeta, char *instanceId, char *volumeId, char *remoteDev);
 int ncDescribeSensorsStub(ncStub * pStub, ncMetadata * pMeta, int historySize, long long collectionIntervalTimeMs, char **instIds, int instIdsLen,
                           char **sensorIds, int sensorIdsLen, sensorResource *** outResources, int *outResourcesLen);
@@ -235,23 +236,23 @@ ncStub *ncStubCreate(char *endpoint_uri, char *logfile, char *homedir)
     uri = endpoint_uri;
 
     // extract node name from the endpoint
-    p = strstr(uri, "://");            // find "http[s]://..."
+    p = strstr(uri, "://");     // find "http[s]://..."
     if (p == NULL) {
         LOGERROR("received invalid URI %s\n", uri);
         return NULL;
     }
 
-    node_name = strdup(p + 3);         // copy without the protocol prefix
+    node_name = strdup(p + 3);  // copy without the protocol prefix
     if (node_name == NULL) {
         LOGERROR("is out of memory\n");
         return NULL;
     }
 
     if ((p = strchr(node_name, ':')) != NULL)
-        *p = '\0';                     // cut off the port
+        *p = '\0';              // cut off the port
 
     if ((p = strchr(node_name, '/')) != NULL)
-        *p = '\0';                     // if there is no port
+        *p = '\0';              // if there is no port
 
     // see if we should redirect to a local broker
     if (strstr(uri, "EucalyptusBroker")) {
@@ -571,8 +572,8 @@ int ncTerminateInstanceStub(ncStub * pStub, ncMetadata * pMeta, char *instId, in
             status = 1;
         }
         //! @todo fix the state char->int conversion
-        *shutdownState = 0;            //strdup(adb_ncTerminateInstanceResponseType_get_shutdownState(response, env));
-        *previousState = 0;            //strdup(adb_ncTerminateInstanceResponseType_get_previousState(response, env));
+        *shutdownState = 0;     //strdup(adb_ncTerminateInstanceResponseType_get_shutdownState(response, env));
+        *previousState = 0;     //strdup(adb_ncTerminateInstanceResponseType_get_previousState(response, env));
     }
 
     return (status);
@@ -1186,7 +1187,8 @@ int ncCancelBundleTaskStub(ncStub * pStub, ncMetadata * pMeta, char *instanceId)
 //!
 //! @return Always return EUCA_OK
 //!
-int ncDescribeBundleTasksStub(ncStub * pStub, ncMetadata * pMeta, char **instIds, int instIdsLen, bundleTask *** outBundleTasks, int *outBundleTasksLen)
+int ncDescribeBundleTasksStub(ncStub * pStub, ncMetadata * pMeta, char **instIds, int instIdsLen, bundleTask *** outBundleTasks,
+                              int *outBundleTasksLen)
 {
     int i = 0;
     int status = 0;
@@ -1387,7 +1389,7 @@ int ncDescribeSensorsStub(ncStub * pStub, ncMetadata * pMeta, int historySize, l
 //!
 //! @see ncModifyNode()
 //!
-int ncModifyNodeStub (ncStub *pStub, ncMetadata *pMeta, char *stateName)
+int ncModifyNodeStub(ncStub * pStub, ncMetadata * pMeta, char *stateName)
 {
     int status = 0;
     axutil_env_t *env = NULL;
@@ -1399,27 +1401,28 @@ int ncModifyNodeStub (ncStub *pStub, ncMetadata *pMeta, char *stateName)
 
     env = pStub->env;
     stub = pStub->stub;
-    input = adb_ncModifyNode_create (env);
-    request = adb_ncModifyNodeType_create (env);
+    input = adb_ncModifyNode_create(env);
+    request = adb_ncModifyNodeType_create(env);
 
     // set standard input fields
     adb_ncModifyNodeType_set_nodeName(request, env, pStub->node_name);
     if (pMeta) {
-      if (pMeta->correlationId) { pMeta->correlationId = NULL; }
-      EUCA_MESSAGE_MARSHAL(ncModifyNodeType, request, pMeta);
+        if (pMeta->correlationId) {
+            pMeta->correlationId = NULL;
+        }
+        EUCA_MESSAGE_MARSHAL(ncModifyNodeType, request, pMeta);
     }
-
     // set op-specific input fields
     adb_ncModifyNodeType_set_stateName(request, env, stateName);
     adb_ncModifyNode_set_ncModifyNode(input, env, request);
 
     // do it
-    if ((output = axis2_stub_op_EucalyptusNC_ncModifyNode (stub, env, input)) == NULL) {
+    if ((output = axis2_stub_op_EucalyptusNC_ncModifyNode(stub, env, input)) == NULL) {
         LOGERROR(NULL_ERROR_MSG);
         status = -1;
     } else {
-        response = adb_ncModifyNodeResponse_get_ncModifyNodeResponse (output, env);
-        if ( adb_ncModifyNodeResponseType_get_return(response, env) == AXIS2_FALSE ) {
+        response = adb_ncModifyNodeResponse_get_ncModifyNodeResponse(output, env);
+        if (adb_ncModifyNodeResponseType_get_return(response, env) == AXIS2_FALSE) {
             LOGERROR("returned an error\n");
             status = 1;
         }
@@ -1443,7 +1446,7 @@ int ncModifyNodeStub (ncStub *pStub, ncMetadata *pMeta, char *stateName)
 //!
 //! @see ncMigrateInstances()
 //!
-int ncMigrateInstancesStub (ncStub *pStub, ncMetadata *pMeta, ncInstance ** instances, int instancesLen, char * action, char * credentials)
+int ncMigrateInstancesStub(ncStub * pStub, ncMetadata * pMeta, ncInstance ** instances, int instancesLen, char *action, char *credentials)
 {
     int status = 0;
     axutil_env_t *env = NULL;
@@ -1455,20 +1458,22 @@ int ncMigrateInstancesStub (ncStub *pStub, ncMetadata *pMeta, ncInstance ** inst
 
     env = pStub->env;
     stub = pStub->stub;
-    input = adb_ncMigrateInstances_create (env);
-    request = adb_ncMigrateInstancesType_create (env);
+    input = adb_ncMigrateInstances_create(env);
+    request = adb_ncMigrateInstancesType_create(env);
 
     // set standard input fields
     adb_ncMigrateInstancesType_set_nodeName(request, env, pStub->node_name);
     if (pMeta) {
-      if (pMeta->correlationId) { pMeta->correlationId = NULL; }
-      EUCA_MESSAGE_MARSHAL(ncMigrateInstancesType, request, pMeta);
+        if (pMeta->correlationId) {
+            pMeta->correlationId = NULL;
+        }
+        EUCA_MESSAGE_MARSHAL(ncMigrateInstancesType, request, pMeta);
     }
 
     LOGDEBUG("marshalling %d instance(s) [0].id=%s with action %s\n", instancesLen, instances[0]->instanceId, action);
 
     // set op-specific input fields
-    for (int i=0; i<instancesLen; i++) {
+    for (int i = 0; i < instancesLen; i++) {
         adb_instanceType_t *instance_adb = adb_instanceType_create(env);
         copy_instance_to_adb(instance_adb, env, instances[i]);
         adb_ncMigrateInstancesType_add_instances(request, env, instance_adb);
@@ -1479,12 +1484,12 @@ int ncMigrateInstancesStub (ncStub *pStub, ncMetadata *pMeta, ncInstance ** inst
     adb_ncMigrateInstances_set_ncMigrateInstances(input, env, request);
 
     // do it
-    if ((output = axis2_stub_op_EucalyptusNC_ncMigrateInstances (stub, env, input)) == NULL) {
+    if ((output = axis2_stub_op_EucalyptusNC_ncMigrateInstances(stub, env, input)) == NULL) {
         LOGERROR(NULL_ERROR_MSG);
         status = -1;
     } else {
-        response = adb_ncMigrateInstancesResponse_get_ncMigrateInstancesResponse (output, env);
-        if ( adb_ncMigrateInstancesResponseType_get_return(response, env) == AXIS2_FALSE ) {
+        response = adb_ncMigrateInstancesResponse_get_ncMigrateInstancesResponse(output, env);
+        if (adb_ncMigrateInstancesResponseType_get_return(response, env) == AXIS2_FALSE) {
             LOGERROR("returned an error\n");
             status = 1;
         }

@@ -76,16 +76,16 @@
 
 #include <stdio.h>
 #include <stdlib.h>
-#define __USE_GNU                      /* strnlen */
-#include <string.h>                    /* strlen, strcpy */
+#define __USE_GNU               /* strnlen */
+#include <string.h>             /* strlen, strcpy */
 #include <time.h>
-#include <sys/types.h>                 /* fork */
-#include <sys/wait.h>                  /* waitpid */
+#include <sys/types.h>          /* fork */
+#include <sys/wait.h>           /* waitpid */
 #include <unistd.h>
 #include <assert.h>
 #include <errno.h>
 #include <pthread.h>
-#include <signal.h>                    /* SIGINT */
+#include <signal.h>             /* SIGINT */
 #include <sys/stat.h>
 #include <fcntl.h>
 
@@ -189,7 +189,7 @@ struct handlers xen_libvirt_handlers = {
     .doDetachVolume = NULL,
     .doDescribeSensors = NULL,
     .doModifyNode = NULL,
-    .doMigrateInstances = NULL // no support on Xen for instance migration, currently
+    .doMigrateInstances = NULL  // no support on Xen for instance migration, currently
 };
 
 /*----------------------------------------------------------------------------*\
@@ -326,7 +326,7 @@ static int doRebootInstance(struct nc_state_t *nc, ncMetadata * pMeta, char *ins
 
             euca_strncpy(resourceName[0], instance->instanceId, MAX_SENSOR_NAME_LEN);
             sensor_refresh_resources(resourceName, resourceAlias, 1);   // refresh stats immediately to minimize loss
-            sensor_resume_polling();   // now that metrics have been shifted, resume polling
+            sensor_resume_polling();    // now that metrics have been shifted, resume polling
         } else {
             if (instance->state != BOOTING && instance->state != STAGING) {
                 LOGWARN("[%s] domain to be rebooted not running on hypervisor\n", instanceId);

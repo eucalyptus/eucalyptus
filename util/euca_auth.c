@@ -140,7 +140,7 @@
  |                                                                            |
 \*----------------------------------------------------------------------------*/
 
-static boolean initialized = FALSE;    //!< Boolean to make sure we have initialized this module
+static boolean initialized = FALSE; //!< Boolean to make sure we have initialized this module
 static char sCertFileName[FILENAME] = { 0 };    //!< Certificate file name
 static char sPrivKeyFileName[FILENAME] = { 0 }; //!< Private key file name
 
@@ -287,7 +287,7 @@ char *euca_get_cert(u8 options)
                     got--;
 
                 if (sCert[got - 1] == '\n')
-                    got--;             // because of indenting
+                    got--;      // because of indenting
             }
 
             sCert[got] = '\0';
@@ -342,7 +342,7 @@ char *base64_enc(u8 * sIn, int size)
                 }
             }
 
-            BIO_free_all(pBio64);      // frees both bio64 and biomem
+            BIO_free_all(pBio64);   // frees both bio64 and biomem
         }
     }
     return (sEncVal);
