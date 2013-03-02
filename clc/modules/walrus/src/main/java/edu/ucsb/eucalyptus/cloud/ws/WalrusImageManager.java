@@ -1137,6 +1137,15 @@ public class WalrusImageManager {
 							LOG.error("Tired of waiting to cache image: " + bucketName + "/" + objectKey + " giving up");
 							imageMessenger.removeMonitor(bucketName + "/" + objectKey);
 							semaphore.release();
+							if(!imageCachers.containsKey(bucketName + objectKey)) {
+								//caching not in progress. delete image cache row.
+								db2 = EntityWrapper.get(ImageCacheInfo.class);
+                                                                foundImageCacheInfos = db2.queryEscape(searchImageCacheInfo);
+      		                                                if(foundImageCacheInfos.size() > 0) {
+									db2.delete(foundImageCacheInfos.get(0));
+								}
+								db2.commit();
+							}
 							throw new WalrusException("caching failure");
 						}
 						//caching may have modified the db. repeat the query
@@ -1258,10 +1267,19 @@ public class WalrusImageManager {
 					EntityWrapper<ImageCacheInfo> db2 = EntityWrapper.get(ImageCacheInfo.class);
 					ImageCacheInfo searchImageCacheInfo = new ImageCacheInfo(bucketName, manifestKey);
 					List<ImageCacheInfo> foundImageCacheInfos = db2.queryEscape(searchImageCacheInfo);
-					db2.commit();
-					if((foundImageCacheInfos.size() == 0) || (!imageCachers.containsKey(bucketName + manifestKey))) {
+					if(!imageCachers.containsKey(bucketName + manifestKey)) {
+						if(foundImageCacheInfos.size() > 0) {
+							ImageCacheInfo cacheInfo = foundImageCacheInfos.get(0);
+							if(!cacheInfo.getInCache()) {
+							//try again
+								db2.delete(cacheInfo);
+							}							
+						}
+						db2.commit();
 						cacheImage(bucketName, manifestKey, account, Contexts.lookup( ).hasAdministrativePrivileges( ));
 						reply.setSuccess(true);
+					} else {
+						db2.rollback();
 					}
 					db.commit( );
 					return reply;
