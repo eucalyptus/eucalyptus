@@ -30,6 +30,7 @@ import javax.persistence.Table;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
 import org.hibernate.annotations.Entity;
+import com.eucalyptus.auth.policy.PolicySpec;
 import com.eucalyptus.cloud.CloudMetadata;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.TransactionException;
@@ -48,7 +49,7 @@ import com.google.common.base.Preconditions;
 @PersistenceContext( name = "eucalyptus_cloud" )
 @Table( name = "metadata_tags_network_groups" )
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
-@DiscriminatorValue( "securitygroup" )
+@DiscriminatorValue( "security-group" )
 public class NetworkGroupTag extends Tag<NetworkGroupTag> {
   private static final long serialVersionUID = 1L;
 
@@ -57,14 +58,14 @@ public class NetworkGroupTag extends Tag<NetworkGroupTag> {
   private NetworkGroup networkGroup;
 
   protected NetworkGroupTag() {
-    super( "securitygroup", ResourceIdFunction.INSTANCE );
+    super( "security-group", ResourceIdFunction.INSTANCE );
   }
 
   public NetworkGroupTag( @Nonnull final NetworkGroup networkGroup,
                           @Nonnull final OwnerFullName ownerFullName,
                           @Nullable final String key,
                           @Nullable final String value ) {
-    super( "securitygroup", ResourceIdFunction.INSTANCE, ownerFullName, key, value );
+    super( "security-group", ResourceIdFunction.INSTANCE, ownerFullName, key, value );
     setNetworkGroup( networkGroup );
   }
 
@@ -74,6 +75,11 @@ public class NetworkGroupTag extends Tag<NetworkGroupTag> {
 
   public void setNetworkGroup( final NetworkGroup networkGroup ) {
     this.networkGroup = networkGroup;
+  }
+
+  @Override
+  public String getPolicyResourceType() {
+    return PolicySpec.EC2_RESOURCE_SECURITYGROUP;
   }
 
   @Nonnull
