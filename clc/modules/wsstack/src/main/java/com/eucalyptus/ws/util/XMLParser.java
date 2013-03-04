@@ -94,6 +94,7 @@ public class XMLParser {
 	public XMLParser() {
 		xpath = XPathFactory.newInstance().newXPath();
 		docFactory = DocumentBuilderFactory.newInstance();
+		docFactory.setExpandEntityReferences(false);
 		try {
 			docBuilder = docFactory.newDocumentBuilder();
 		} catch (ParserConfigurationException ex) {
