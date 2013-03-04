@@ -74,26 +74,26 @@
  |                                                                            |
 \*----------------------------------------------------------------------------*/
 
-#define _FILE_OFFSET_BITS 64           // so large-file support works on 32-bit systems
+#define _FILE_OFFSET_BITS 64    // so large-file support works on 32-bit systems
 #include <stdio.h>
 #include <stdlib.h>
-#define __USE_GNU                      /* strnlen */
-#include <string.h>                    /* strlen, strcpy */
+#define __USE_GNU               /* strnlen */
+#include <string.h>             /* strlen, strcpy */
 #include <time.h>
 #ifndef __DARWIN_UNIX03
-#include <limits.h>                    /* INT_MAX */
+#include <limits.h>             /* INT_MAX */
 #else /* ! _DARWIN_C_SOURCE */
 #include <i386/limits.h>
 #endif /* ! _DARWIN_C_SOURCE */
-#include <sys/types.h>                 /* fork */
-#include <sys/wait.h>                  /* waitpid */
+#include <sys/types.h>          /* fork */
+#include <sys/wait.h>           /* waitpid */
 #include <unistd.h>
 #include <fcntl.h>
 #include <assert.h>
 #include <errno.h>
 #include <sys/stat.h>
 #include <pthread.h>
-#include <signal.h>                    /* SIGINT */
+#include <signal.h>             /* SIGINT */
 #include <libvirt/libvirt.h>
 #include <libvirt/virterror.h>
 
@@ -202,7 +202,8 @@ static int doPowerDown(struct nc_state_t *nc, ncMetadata * pMeta);
 static int doStartNetwork(struct nc_state_t *nc, ncMetadata * pMeta, char *uuid, char **remoteHosts, int remoteHostsLen, int port, int vlan);
 static int xen_detach_helper(struct nc_state_t *nc, char *instanceId, char *localDevReal, char *xml);
 static int doAttachVolume(struct nc_state_t *nc, ncMetadata * pMeta, char *instanceId, char *volumeId, char *remoteDev, char *localDev);
-static int doDetachVolume(struct nc_state_t *nc, ncMetadata * pMeta, char *instanceId, char *volumeId, char *remoteDev, char *localDev, int force, int grab_inst_sem);
+static int doDetachVolume(struct nc_state_t *nc, ncMetadata * pMeta, char *instanceId, char *volumeId, char *remoteDev, char *localDev, int force,
+                          int grab_inst_sem);
 static void change_createImage_state(ncInstance * instance, createImage_progress state);
 static int cleanup_createImage_task(ncInstance * instance, struct createImage_params_t *params, instance_states state, createImage_progress result);
 static void *createImage_thread(void *arg);
@@ -215,11 +216,12 @@ static int doBundleInstance(struct nc_state_t *nc, ncMetadata * pMeta, char *ins
                             char *userPublicKey, char *S3Policy, char *S3PolicySig);
 static int doBundleRestartInstance(struct nc_state_t *nc, ncMetadata * pMeta, char *instanceId);
 static int doCancelBundleTask(struct nc_state_t *nc, ncMetadata * pMeta, char *instanceId);
-static int doDescribeBundleTasks(struct nc_state_t *nc, ncMetadata * pMeta, char **instIds, int instIdsLen, bundleTask *** outBundleTasks, int *outBundleTasksLen);
+static int doDescribeBundleTasks(struct nc_state_t *nc, ncMetadata * pMeta, char **instIds, int instIdsLen, bundleTask *** outBundleTasks,
+                                 int *outBundleTasksLen);
 static int doDescribeSensors(struct nc_state_t *nc, ncMetadata * pMeta, int historySize, long long collectionIntervalTimeMs, char **instIds,
                              int instIdsLen, char **sensorIds, int sensorIdsLen, sensorResource *** outResources, int *outResourcesLen);
-static int doModifyNode(struct nc_state_t * nc, ncMetadata * pMeta, char * stateName);
-static int doMigrateInstances(struct nc_state_t * nc, ncMetadata * pMeta, ncInstance ** instances, int instancesLen, char * action, char * credentials);
+static int doModifyNode(struct nc_state_t *nc, ncMetadata * pMeta, char *stateName);
+static int doMigrateInstances(struct nc_state_t *nc, ncMetadata * pMeta, ncInstance ** instances, int instancesLen, char *action, char *credentials);
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |
@@ -249,7 +251,7 @@ struct handlers default_libvirt_handlers = {
     .doDescribeBundleTasks = doDescribeBundleTasks,
     .doDescribeSensors = doDescribeSensors,
     .doModifyNode = doModifyNode,
-    .doMigrateInstances = doMigrateInstances
+    .doMigrateInstances = doMigrateInstances,
 };
 
 /*----------------------------------------------------------------------------*\
@@ -330,7 +332,7 @@ static int doRunInstance(struct nc_state_t *nc, ncMetadata * pMeta, char *uuid, 
             free_instance(&instance);
         } else {
             LOGERROR("[%s] instance already running\n", instanceId);
-            return EUCA_ERROR;         //! @todo return meaningful error codes?
+            return EUCA_ERROR;  //! @todo return meaningful error codes?
         }
     }
 
@@ -500,7 +502,7 @@ int find_and_terminate_instance(struct nc_state_t *nc_state, ncMetadata * pMeta,
 
             sem_p(hyp_sem);
             {
-                virDomainFree(dom);    //! @todo necessary?
+                virDomainFree(dom); //! @todo necessary?
             }
             sem_v(hyp_sem);
         } else {
@@ -583,13 +585,14 @@ static int doDescribeInstances(struct nc_state_t *nc, ncMetadata * pMeta, char *
     int k = 0;
 
     LOGDEBUG("invoked userId=%s correlationId=%s epoch=%d services[0]{.name=%s .type=%s .uris[0]=%s}\n",
-             SP(pMeta->userId), SP(pMeta->correlationId), pMeta->epoch, SP(pMeta->services[0].name), SP(pMeta->services[0].type), SP(pMeta->services[0].uris[0]));
+             SP(pMeta->userId), SP(pMeta->correlationId), pMeta->epoch, SP(pMeta->services[0].name), SP(pMeta->services[0].type),
+             SP(pMeta->services[0].uris[0]));
 
     *outInstsLen = 0;
     *outInsts = NULL;
 
     sem_p(inst_copy_sem);
-    if (instIdsLen == 0)               // describe all instances
+    if (instIdsLen == 0)        // describe all instances
         total = total_instances(&global_instances_copy);
     else
         total = instIdsLen;
@@ -649,15 +652,15 @@ static int doDescribeResource(struct nc_state_t *nc, ncMetadata * pMeta, char *r
     int cores_free = 0;
 
     // intermediate sums
-    long long sum_mem = 0;             // for known domains: sum of requested memory
-    long long sum_disk = 0;            // for known domains: sum of requested disk sizes
-    int sum_cores = 0;                 // for known domains: sum of requested cores
+    long long sum_mem = 0;      // for known domains: sum of requested memory
+    long long sum_disk = 0;     // for known domains: sum of requested disk sizes
+    int sum_cores = 0;          // for known domains: sum of requested cores
 
     *outRes = NULL;
     sem_p(inst_copy_sem);
     while ((inst = get_instance(&global_instances_copy)) != NULL) {
         if (inst->state == TEARDOWN)
-            continue;                  // they don't take up resources
+            continue;           // they don't take up resources
         sum_mem += inst->params.mem;
         sum_disk += (inst->params.disk);
         sum_cores += inst->params.cores;
@@ -666,15 +669,15 @@ static int doDescribeResource(struct nc_state_t *nc, ncMetadata * pMeta, char *r
 
     disk_free = nc->disk_max - sum_disk;
     if (disk_free < 0)
-        disk_free = 0;                 // should not happen
+        disk_free = 0;          // should not happen
 
     mem_free = nc->mem_max - sum_mem;
     if (mem_free < 0)
-        mem_free = 0;                  // should not happen
+        mem_free = 0;           // should not happen
 
     cores_free = nc->cores_max - sum_cores; //! @todo should we -1 for dom0?
     if (cores_free < 0)
-        cores_free = 0;                // due to timesharing
+        cores_free = 0;         // due to timesharing
 
     // check for potential overflow - should not happen
     if (nc->mem_max > INT_MAX || mem_free > INT_MAX || nc->disk_max > INT_MAX || disk_free > INT_MAX) {
@@ -693,7 +696,8 @@ static int doDescribeResource(struct nc_state_t *nc, ncMetadata * pMeta, char *r
     }
 
     *outRes = res;
-    LOGDEBUG("returning cores=%d/%lld mem=%lld/%lld disk=%lld/%lld iqn=%s\n", cores_free, nc->cores_max, mem_free, nc->mem_max, disk_free, nc->disk_max, nc->iqn);
+    LOGDEBUG("returning cores=%d/%lld mem=%lld/%lld disk=%lld/%lld iqn=%s\n", cores_free, nc->cores_max, mem_free, nc->mem_max, disk_free,
+             nc->disk_max, nc->iqn);
     return EUCA_OK;
 }
 
@@ -837,7 +841,8 @@ static int xen_detach_helper(struct nc_state_t *nc, char *instanceId, char *loca
 
             char cmd[MAX_PATH];
             //! @todo does this work?
-            snprintf(cmd, MAX_PATH, "[%s] executing '%s %s `which virsh` %s %s %s'", instanceId, nc->detach_cmd_path, nc->rootwrap_cmd_path, instanceId, devReal, tmpfile);
+            snprintf(cmd, MAX_PATH, "[%s] executing '%s %s `which virsh` %s %s %s'", instanceId, nc->detach_cmd_path, nc->rootwrap_cmd_path,
+                     instanceId, devReal, tmpfile);
             LOGDEBUG("%s\n", cmd);
             rc = system(cmd);
             rc = rc >> 8;
@@ -1001,16 +1006,18 @@ static int doAttachVolume(struct nc_state_t *nc, ncMetadata * pMeta, char *insta
         err = virDomainAttachDevice(dom, xml);
         sem_v(hyp_sem);
         if (err) {
-            LOGERROR("[%s][%s] failed to attach host device '%s' to guest device '%s' on attempt %d of 3\n", instanceId, volumeId, remoteDevReal, localDevReal, i);
+            LOGERROR("[%s][%s] failed to attach host device '%s' to guest device '%s' on attempt %d of 3\n", instanceId, volumeId, remoteDevReal,
+                     localDevReal, i);
             LOGDEBUG("[%s][%s] virDomainAttachDevice() failed (err=%d) XML='%s'\n", instanceId, volumeId, err, xml);
-            sleep(3);                  //sleep a bit and retry.
+            sleep(3);           //sleep a bit and retry.
         } else {
             break;
         }
     }
 
     if (err) {
-        LOGERROR("[%s][%s] failed to attach host device '%s' to guest device '%s' after 3 retries\n", instanceId, volumeId, remoteDevReal, localDevReal);
+        LOGERROR("[%s][%s] failed to attach host device '%s' to guest device '%s' after 3 retries\n", instanceId, volumeId, remoteDevReal,
+                 localDevReal);
         LOGDEBUG("[%s][%s] virDomainAttachDevice() failed (err=%d) XML='%s'\n", instanceId, volumeId, err, xml);
         ret = EUCA_ERROR;
     }
@@ -1018,7 +1025,7 @@ static int doAttachVolume(struct nc_state_t *nc, ncMetadata * pMeta, char *insta
 release:
 
     sem_p(hyp_sem);
-    virDomainFree(dom);                // release libvirt resource
+    virDomainFree(dom);         // release libvirt resource
     sem_v(hyp_sem);
 
     // record volume state in memory and on disk
@@ -1032,7 +1039,7 @@ release:
     volume = save_volume(instance, volumeId, NULL, NULL, NULL, next_vol_state); // now we can record remoteDevReal
     save_instance_struct(instance);
     copy_instances();
-    update_disk_aliases(instance);     // ask sensor subsystem to track the volume
+    update_disk_aliases(instance);  // ask sensor subsystem to track the volume
     sem_v(inst_sem);
     if (volume == NULL && xml != NULL) {
         LOGERROR("[%s][%s] failed to save the volume record, aborting volume attachment (detaching)\n", instanceId, volumeId);
@@ -1084,7 +1091,8 @@ release:
 //!
 //! @see convert_dev_names()
 //!
-static int doDetachVolume(struct nc_state_t *nc, ncMetadata * pMeta, char *instanceId, char *volumeId, char *remoteDev, char *localDev, int force, int grab_inst_sem)
+static int doDetachVolume(struct nc_state_t *nc, ncMetadata * pMeta, char *instanceId, char *volumeId, char *remoteDev, char *localDev, int force,
+                          int grab_inst_sem)
 {
     int ret = EUCA_OK;
     int is_iscsi_target = 0;
@@ -1213,13 +1221,13 @@ static int doDetachVolume(struct nc_state_t *nc, ncMetadata * pMeta, char *insta
             ret = EUCA_HYPERVISOR_ERROR;
     } else {
         call_hooks(NC_EVENT_POST_DETACH, path); // invoke hooks, but do not do anything if they return error
-        unlink(lpath);                 // remove vol-XXX-libvirt.xml
-        unlink(path);                  // remove vol-XXXX.xml file
+        unlink(lpath);          // remove vol-XXX-libvirt.xml
+        unlink(path);           // remove vol-XXXX.xml file
     }
 
 release:
     sem_p(hyp_sem);
-    virDomainFree(dom);                // release libvirt resource
+    virDomainFree(dom);         // release libvirt resource
     sem_v(hyp_sem);
     // record volume state in memory and on disk
     char *next_vol_state;
@@ -1233,7 +1241,7 @@ release:
     volume = save_volume(instance, volumeId, NULL, NULL, NULL, next_vol_state);
     save_instance_struct(instance);
     copy_instances();
-    update_disk_aliases(instance);     // ask sensor subsystem to stop tracking the volume
+    update_disk_aliases(instance);  // ask sensor subsystem to stop tracking the volume
     if (grab_inst_sem)
         sem_v(inst_sem);
     if (volume == NULL) {
@@ -1294,7 +1302,7 @@ static int cleanup_createImage_task(ncInstance * instance, struct createImage_pa
     sem_p(inst_sem);
     {
         change_createImage_state(instance, result);
-        if (state != NO_STATE)         // do not touch instance state (these are early failures, before we destroyed the domain)
+        if (state != NO_STATE)  // do not touch instance state (these are early failures, before we destroyed the domain)
             change_state(instance, state);
         copy_instances();
     }
@@ -1381,7 +1389,8 @@ static int doCreateImage(struct nc_state_t *nc, ncMetadata * pMeta, char *instan
 {
     // sanity checking
     if (instanceId == NULL || remoteDev == NULL || volumeId == NULL) {
-        LOGERROR("[%s][%s] called with invalid parameters\n", ((instanceId == NULL) ? "UNKNOWN" : instanceId), ((volumeId == NULL) ? "UNKNOWN" : volumeId));
+        LOGERROR("[%s][%s] called with invalid parameters\n", ((instanceId == NULL) ? "UNKNOWN" : instanceId),
+                 ((volumeId == NULL) ? "UNKNOWN" : volumeId));
         return EUCA_ERROR;
     }
     // find the instance
@@ -1739,7 +1748,8 @@ static int doBundleInstance(struct nc_state_t *nc, ncMetadata * pMeta, char *ins
                             char *userPublicKey, char *S3Policy, char *S3PolicySig)
 {
     // sanity checking
-    if (instanceId == NULL || bucketName == NULL || filePrefix == NULL || walrusURL == NULL || userPublicKey == NULL || S3Policy == NULL || S3PolicySig == NULL) {
+    if (instanceId == NULL || bucketName == NULL || filePrefix == NULL || walrusURL == NULL || userPublicKey == NULL || S3Policy == NULL
+        || S3PolicySig == NULL) {
         LOGERROR("[%s] bundling instance called with invalid parameters\n", ((instanceId == NULL) ? "UNKNOWN" : instanceId));
         return EUCA_ERROR;
     }
@@ -1841,7 +1851,7 @@ static int doCancelBundleTask(struct nc_state_t *nc, ncMetadata * pMeta, char *i
         return EUCA_NOT_FOUND_ERROR;
     }
 
-    instance->bundleCanceled = 1;      // record the intent to cancel bundling so that bundling thread can abort
+    instance->bundleCanceled = 1;   // record the intent to cancel bundling so that bundling thread can abort
     if ((instance->bundlePid > 0) && !check_process(instance->bundlePid, "euca-bundle-upload")) {
         LOGDEBUG("[%s] found bundlePid '%d', sending kill signal...\n", instanceId, instance->bundlePid);
         kill(instance->bundlePid, 9);
@@ -1864,7 +1874,8 @@ static int doCancelBundleTask(struct nc_state_t *nc, ncMetadata * pMeta, char *i
 //! @return EUCA_OK on success or proper error code. Known error code returned include: EUCA_ERROR
 //!         and EUCA_MEMORY_ERROR.
 //!
-static int doDescribeBundleTasks(struct nc_state_t *nc, ncMetadata * pMeta, char **instIds, int instIdsLen, bundleTask *** outBundleTasks, int *outBundleTasksLen)
+static int doDescribeBundleTasks(struct nc_state_t *nc, ncMetadata * pMeta, char **instIds, int instIdsLen, bundleTask *** outBundleTasks,
+                                 int *outBundleTasksLen)
 {
     if (instIdsLen < 1 || instIds == NULL) {
         LOGDEBUG("internal error (invalid parameters to doDescribeBundleTasks)\n");
@@ -1876,7 +1887,7 @@ static int doDescribeBundleTasks(struct nc_state_t *nc, ncMetadata * pMeta, char
         return EUCA_MEMORY_ERROR;
     }
 
-    *outBundleTasksLen = 0;            // we may return fewer than instIdsLen
+    *outBundleTasksLen = 0;     // we may return fewer than instIdsLen
 
     int i, j;
     for (i = 0, j = 0; i < instIdsLen; i++) {
@@ -1928,7 +1939,7 @@ static int doDescribeSensors(struct nc_state_t *nc, ncMetadata * pMeta, int hist
         LOGERROR("failed to update sensor configuration (err=%d)\n", err);
 
     sem_p(inst_copy_sem);
-    if (instIdsLen == 0)               // describe all instances
+    if (instIdsLen == 0)        // describe all instances
         total = total_instances(&global_instances_copy);
     else
         total = instIdsLen;
@@ -1984,11 +1995,15 @@ static int doDescribeSensors(struct nc_state_t *nc, ncMetadata * pMeta, int hist
 //!
 //! Handles the node modification request.
 //!
-//! @param[in]  nc a pointer to the NC state structure
-//! @param[in]  pMeta a pointer to the node controller (NC) metadata structure
+//! @param[in] nc a pointer to the NC state structure
+//! @param[in] pMeta a pointer to the node controller (NC) metadata structure
+//! @param[in] stateName
+//!
+//! @return EUCA_OK on success or EUCA_ERROR on failure
+//!
 //! TODO: doxygen
 //!
-static int doModifyNode (struct nc_state_t * nc, ncMetadata * pMeta, char * stateName)
+static int doModifyNode(struct nc_state_t *nc, ncMetadata * pMeta, char *stateName)
 {
     LOGINFO("node state change to %s\n", stateName);
     return EUCA_OK;
@@ -1999,10 +2014,17 @@ static int doModifyNode (struct nc_state_t * nc, ncMetadata * pMeta, char * stat
 //!
 //! @param[in]  nc a pointer to the NC state structure
 //! @param[in]  pMeta a pointer to the node controller (NC) metadata structure
+//! @param[in]  instances metadata for the instance to migrate to destination
+//! @param[in]  instancesLen number of instances in the instance list
+//! @param[in]  action IP of the destination Node Controller
+//! @param[in]  credentials credentials that enable the migration
+//!
+//! @return EUCA_OK on sucess or EUCA_ERROR on failure
+//!
 //! TODO: doxygen
 //!
-static int doMigrateInstances (struct nc_state_t * nc, ncMetadata * pMeta, ncInstance ** instances, int instancesLen, char * action, char * credentials)
+static int doMigrateInstances(struct nc_state_t *nc, ncMetadata * pMeta, ncInstance ** instances, int instancesLen, char *action, char *credentials)
 {
     LOGERROR("no default for %s!\n", __func__);
-    return (EUCA_UNSUPPORTED_ERROR);   
+    return (EUCA_UNSUPPORTED_ERROR);
 }

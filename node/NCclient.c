@@ -75,7 +75,7 @@
 \*----------------------------------------------------------------------------*/
 
 #include <stdio.h>
-#include <unistd.h>                    /* getopt */
+#include <unistd.h>             /* getopt */
 
 #include <data.h>
 
@@ -134,7 +134,7 @@
  |                                                                            |
 \*----------------------------------------------------------------------------*/
 
-boolean debug = FALSE;                 //!< Enables debug mode if set to TRUE
+boolean debug = FALSE;          //!< Enables debug mode if set to TRUE
 
 #ifndef NO_COMP
 const char *euca_this_component_name = "nc";    //!< Eucalyptus Component Name
@@ -324,10 +324,10 @@ int main(int argc, char **argv)
     char *launch_index = NULL;
     char **group_names = NULL;
     int group_names_size = 0;
-    char * state_name = NULL;
-    char * src_node_name = NULL;
-    char * dst_node_name = NULL;
-    char * migration_creds = NULL;
+    char *state_name = NULL;
+    char *src_node_name = NULL;
+    char *dst_node_name = NULL;
+    char *migration_creds = NULL;
     char *timestamp_str = NULL;
     char *command = NULL;
     int local = 0;
@@ -448,7 +448,7 @@ int main(int argc, char **argv)
             timestamp_str = optarg;
             break;
         case 'h':
-            usage();                   // will exit
+            usage();            // will exit
             break;
         case 'B':
             nc_endpoint = "/services/EucalyptusBroker";
@@ -781,7 +781,7 @@ int main(int argc, char **argv)
 
         ncInstance instance;
         bzero(&instance, sizeof(ncInstance));
-        ncInstance * instances = &instance;
+        ncInstance *instances = &instance;
         strncpy(instance.instanceId, instance_id, sizeof(instance.instanceId));
         strncpy(instance.migration_src, src_node_name, sizeof(instance.migration_src));
         strncpy(instance.migration_dst, dst_node_name, sizeof(instance.migration_dst));

@@ -112,18 +112,18 @@
 
 //! Semaphore structure
 typedef struct sem_struct {
-    int sysv;                          // reference to the SYS V semaphore
-    sem_t *posix;                      // reference to the posix semaphore information
-    pthread_mutex_t mutex;             // reference to the mutex semaphore
-    pthread_cond_t cond;               // the mutex semaphore consitional information
-    int usemutex;                      // boolean indicating if this is a mutex semaphore
-    int mutwaiters;                    // number of currently mutex waiters
-    int mutcount;                      // the current mutex count
-    char *name;                        // the name of the semaphore
-    u32 flags;                         // the kernel flags for SYS V semaphores
+    int sysv;                   // reference to the SYS V semaphore
+    sem_t *posix;               // reference to the posix semaphore information
+    pthread_mutex_t mutex;      // reference to the mutex semaphore
+    pthread_cond_t cond;        // the mutex semaphore consitional information
+    int usemutex;               // boolean indicating if this is a mutex semaphore
+    int mutwaiters;             // number of currently mutex waiters
+    int mutcount;               // the current mutex count
+    char *name;                 // the name of the semaphore
+    u32 flags;                  // the kernel flags for SYS V semaphores
 } sem;
 
-#include "misc.h"                      // MUST be after this structure for boolean inclusion
+#include "misc.h"               // MUST be after this structure for boolean inclusion
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |

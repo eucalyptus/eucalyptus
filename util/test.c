@@ -76,7 +76,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
-#include <unistd.h>                    /* usleep */
+#include <unistd.h>             /* usleep */
 #include <string.h>
 #include <pthread.h>
 
@@ -239,7 +239,7 @@ void test_sem_fork(void)
             }
             sem_v(s);
         }
-        exit(0);                       /* child quits */
+        exit(0);                /* child quits */
     }
 
     SEM_FREE(s);
