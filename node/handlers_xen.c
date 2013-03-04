@@ -121,10 +121,10 @@ static int doInitialize(struct nc_state_t *nc)
     s = system_output(nc->get_info_cmd_path);
     if (get_value(s, "dom0-min-mem", &dom0_min_mem)) {
         logprintfl(EUCAFATAL, "did not find dom0-min-mem in output from %s\n", nc->get_info_cmd_path);
-        free(s);
+        EUCA_FREE(s);
         return ERROR_FATAL;
     }
-    free(s);
+    EUCA_FREE(s);
 
     // calculate the available memory
     nc->mem_max = ni.memory / 1024 - 32 - dom0_min_mem;
@@ -241,8 +241,7 @@ static int doGetConsoleOutput(struct nc_state_t *nc, ncMetadata * meta, char *in
     console_main = malloc(bufsize);
     if (!console_main) {
         logprintfl(EUCAERROR, "[%s] out of memory!\n", instanceId);
-        if (console_append)
-            free(console_append);
+        EUCA_FREE(console_append);
         return (1);
     }
     bzero(console_main, bufsize);
@@ -260,7 +259,7 @@ static int doGetConsoleOutput(struct nc_state_t *nc, ncMetadata * meta, char *in
                 tmp = file2str_seek(dest_file, bufsize, 1);
                 if (tmp) {
                     snprintf(console_main, bufsize, "%s", tmp);
-                    free(tmp);
+                    EUCA_FREE(tmp);
                 } else {
                     snprintf(console_main, bufsize, "NOT SUPPORTED");
                 }
@@ -341,13 +340,9 @@ static int doGetConsoleOutput(struct nc_state_t *nc, ncMetadata * meta, char *in
         ret = 0;
     }
 
-    if (console_append)
-        free(console_append);
-    if (console_main)
-        free(console_main);
-    if (console_output)
-        free(console_output);
-
+    EUCA_FREE(console_append);
+    EUCA_FREE(console_main);
+    EUCA_FREE(console_output);
     return (ret);
 }
 

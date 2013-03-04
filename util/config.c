@@ -71,6 +71,7 @@
 #include <errno.h>
 #include <assert.h>
 #include "string.h"
+#include "eucalyptus.h"
 #include "misc.h"
 #include "config.h"
 
@@ -158,7 +159,7 @@ int configFileValueLong(const char *key, long *val)
             *val = v;
             found = 1;
         }
-        free(tmpstr);
+        EUCA_FREE(tmpstr);
     }
     return found;
 }
@@ -177,12 +178,10 @@ int readConfigFile(char configFiles[][MAX_PATH], int numFiles)
                            "configuration file changed (KEY=%s, ORIGVALUE=%s, NEWVALUE=%s): clean restart is required before this change will take effect!\n",
                            configKeysRestart[i].key, SP(old), SP(new));
             }
-            if (new)
-                free(new);
+            EUCA_FREE(new);
         } else {
             logprintfl(EUCAINFO, "read (%s=%s, default=%s)\n", configKeysRestart[i].key, SP(new), SP(configKeysRestart[i].defaultValue));
-            if (configValuesRestart[i])
-                free(configValuesRestart[i]);
+            EUCA_FREE(configValuesRestart[i]);
             configValuesRestart[i] = new;
             ret++;
         }
@@ -198,17 +197,14 @@ int readConfigFile(char configFiles[][MAX_PATH], int numFiles)
                 logprintfl(EUCAINFO, "configuration file changed (KEY=%s, ORIGVALUE=%s, NEWVALUE=%s): change will take effect immediately.\n",
                            configKeysNoRestart[i].key, SP(old), SP(new));
                 ret++;
-                if (configValuesNoRestart[i])
-                    free(configValuesNoRestart[i]);
+                EUCA_FREE(configValuesNoRestart[i]);
                 configValuesNoRestart[i] = new;
             } else {
-                if (new)
-                    free(new);
+                EUCA_FREE(new);
             }
         } else {
             logprintfl(EUCAINFO, "read (%s=%s, default=%s)\n", configKeysNoRestart[i].key, SP(new), SP(configKeysNoRestart[i].defaultValue));
-            if (configValuesNoRestart[i])
-                free(configValuesNoRestart[i]);
+            EUCA_FREE(configValuesNoRestart[i]);
             configValuesNoRestart[i] = new;
             ret++;
         }
@@ -224,7 +220,7 @@ void configReadLogParams(int *log_level_out, int *log_roll_number_out, long *log
     char *s = configFileValue("LOGLEVEL");
     assert(s != NULL);          // configFileValue should return default
     *log_level_out = log_level_int(s);
-    free(s);
+    EUCA_FREE(s);
 
     long l;
     configFileValueLong("LOGROLLNUMBER", &l);

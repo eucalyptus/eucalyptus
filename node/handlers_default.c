@@ -179,13 +179,11 @@ static int doRunInstance(struct nc_state_t *nc, ncMetadata * meta, char *uuid, c
         remove_instance(&global_instances, instance);
         copy_instances();
         sem_v(inst_sem);
-        if (attr)
-            free(attr);
+        EUCA_FREE(attr);
         goto error;
     }
     pthread_attr_destroy(attr);
-    if (attr)
-        free(attr);
+    EUCA_FREE(attr);
 
     *outInst = instance;
     return OK;
@@ -475,8 +473,7 @@ static int doStartNetwork(struct nc_state_t *nc, ncMetadata * ccMeta, char *uuid
     } else {
         ret = 0;
         logprintfl(EUCAINFO, "started network (port=%d vlan=%d)\n", port, vlan);
-        if (brname)
-            free(brname);
+        EUCA_FREE(brname);
     }
 
     return (ret);
@@ -514,7 +511,8 @@ static int xen_detach_helper(struct nc_state_t *nc, char *instanceId, char *loca
         }
 
         if (fd > 0) {
-            write(fd, xml, strlen(xml));
+            if(write(fd, xml, strlen(xml)) != strlen(xml))
+                logprintfl(EUCAERROR, "[%s] fail to write xml output to temp file\n", instanceId);
             close(fd);
 
             char cmd[MAX_PATH];
@@ -619,8 +617,7 @@ static int doAttachVolume(struct nc_state_t *nc, ncMetadata * meta, char *instan
             snprintf(remoteDevReal, 32, "%s", remoteDevStr);
             have_remote_device = 1;
         }
-        if (remoteDevStr)
-            free(remoteDevStr);
+        EUCA_FREE(remoteDevStr);
     } else {
         snprintf(remoteDevReal, 32, "%s", remoteDev);
         have_remote_device = 1;
@@ -733,9 +730,7 @@ release:
         log_level_for_devstring = EUCADEBUG;
     logprintfl(log_level_for_devstring, "[%s][%s] remote device string: %s\n", instanceId, volumeId, remoteDev);
 
-    if (xml)
-        free(xml);
-
+    EUCA_FREE(xml);
     return ret;
 }
 
@@ -819,8 +814,7 @@ static int doDetachVolume(struct nc_state_t *nc, ncMetadata * meta, char *instan
             snprintf(remoteDevReal, 32, "%s", remoteDevStr);
             have_remote_device = 1;
         }
-        if (remoteDevStr)
-            free(remoteDevStr);
+        EUCA_FREE(remoteDevStr);
     } else {
         snprintf(remoteDevReal, 32, "%s", remoteDev);
         have_remote_device = 1;
@@ -917,8 +911,7 @@ release:
         log_level_for_devstring = EUCADEBUG;
     logprintfl(log_level_for_devstring, "[%s][%s] remote device string: %s\n", instanceId, volumeId, remoteDev);
 
-    if (xml)
-        free(xml);
+    EUCA_FREE(xml);
 
     if (force) {
         return (OK);
@@ -948,21 +941,12 @@ static int cleanup_createImage_task(ncInstance * instance, struct createImage_pa
         // if the result was failed or cancelled, clean up walrus state
         if (result == CREATEIMAGE_FAILED || result == CREATEIMAGE_CANCELLED) {
         }
-        if (params->workPath) {
-            /***
-                free_work_path (instance->instanceId, instance->userId, params->sizeMb);
-            ***/
-            free(params->workPath);
-        }
-        if (params->volumeId)
-            free(params->volumeId);
-        if (params->remoteDev)
-            free(params->remoteDev);
-        if (params->diskPath)
-            free(params->diskPath);
-        if (params->eucalyptusHomePath)
-            free(params->eucalyptusHomePath);
-        free(params);
+        EUCA_FREE(params->workPath);
+        EUCA_FREE(params->volumeId);
+        EUCA_FREE(params->remoteDev);
+        EUCA_FREE(params->diskPath);
+        EUCA_FREE(params->eucalyptusHomePath);
+        EUCA_FREE(params);
     }
 
     return (result == CREATEIMAGE_SUCCESS) ? OK : ERROR;
@@ -1053,8 +1037,7 @@ static int doCreateImage(struct nc_state_t *nc, ncMetadata * meta, char *instanc
     if (err != OK) {
         copy_instances();
         sem_v(inst_sem);
-        if (params)
-            free(params);
+        EUCA_FREE(params);
         return err;
     }
     copy_instances();
@@ -1175,20 +1158,12 @@ static int restart_instance(ncInstance * instance)
         }
         sem_v(inst_sem);
 
-        if (attr != NULL) {
-            free(attr);
-            attr = NULL;
-        }
-
+        EUCA_FREE(attr);
         goto error;
     }
 
     pthread_attr_destroy(attr);
-    if (attr != NULL) {
-        free(attr);
-        attr = NULL;
-    }
-
+    EUCA_FREE(attr);
     return (OK);
 
 error:
@@ -1255,32 +1230,17 @@ static int cleanup_bundling_task(ncInstance * instance, struct bundling_params_t
             }
         }
 
-        if (params->workPath) {
-            /***
-			free_work_path (instance->instanceId, instance->userId, params->sizeMb);
-			 ***/
-            free(params->workPath);
-        }
-
-        if (params->bucketName)
-            free(params->bucketName);
-        if (params->filePrefix)
-            free(params->filePrefix);
-        if (params->walrusURL)
-            free(params->walrusURL);
-        if (params->userPublicKey)
-            free(params->userPublicKey);
-        if (params->diskPath)
-            free(params->diskPath);
-        if (params->eucalyptusHomePath)
-            free(params->eucalyptusHomePath);
-        if (params->ncBundleUploadCmd)
-            free(params->ncBundleUploadCmd);
-        if (params->ncCheckBucketCmd)
-            free(params->ncCheckBucketCmd);
-        if (params->ncDeleteBundleCmd)
-            free(params->ncDeleteBundleCmd);
-        free(params);
+        EUCA_FREE(params->workPath);
+        EUCA_FREE(params->bucketName);
+        EUCA_FREE(params->filePrefix);
+        EUCA_FREE(params->walrusURL);
+        EUCA_FREE(params->userPublicKey);
+        EUCA_FREE(params->diskPath);
+        EUCA_FREE(params->eucalyptusHomePath);
+        EUCA_FREE(params->ncBundleUploadCmd);
+        EUCA_FREE(params->ncCheckBucketCmd);
+        EUCA_FREE(params->ncDeleteBundleCmd);
+        EUCA_FREE(params);
     }
 
     return ((result == BUNDLING_SUCCESS) ? OK : ERROR);
@@ -1454,8 +1414,7 @@ static int doBundleInstance(struct nc_state_t *nc, ncMetadata * meta, char *inst
     sem_v(inst_sem);
 
     if (err != OK) {
-        if (params)
-            free(params);
+        EUCA_FREE(params);
         return err;
     }
     // do the rest in a thread
@@ -1599,7 +1558,7 @@ doDescribeSensors(struct nc_state_t *nc,
         rss[k] = malloc(sizeof(sensorResource));
         if (sensor_get_instance_data(instance->instanceId, sensorIds, sensorIdsLen, rss + k, 1) != OK) {
             logprintfl(EUCADEBUG, "[%s] failed to retrieve sensor data\n", instance->instanceId);
-            free(rss[k]);
+            EUCA_FREE(rss[k]);
         } else {
             k++;
         }

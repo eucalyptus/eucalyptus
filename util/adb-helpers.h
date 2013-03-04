@@ -365,13 +365,13 @@ static inline sensorResource *copy_sensor_resource_from_adb(adb_sensorsResourceT
     sr->metricsLen = adb_sensorsResourceType_sizeof_metrics(resource, env);
     if (sr->metricsLen > MAX_SENSOR_METRICS) {
         logprintfl(EUCAERROR, "overflow of 'metrics' array in 'sensorResource'");
-        free(sr);
+        EUCA_FREE(sr);
         return NULL;
     }
     for (int i = 0; i < sr->metricsLen; i++) {
         adb_metricsResourceType_t *metric = adb_sensorsResourceType_get_metrics_at(resource, env, i);
         if (copy_sensor_metric_from_adb(sr->metrics + i, metric, env) != 0) {
-            free(sr);
+            EUCA_FREE(sr);
             return NULL;
         }
     }

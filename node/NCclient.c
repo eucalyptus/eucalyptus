@@ -180,12 +180,12 @@ int add_vbr(const char *spec_str, virtualMachine * vm_type)
     }
     safe_strncpy(vbr->resourceLocation, spec_str + (loc_spec - spec_copy), sizeof(vbr->resourceLocation));
 
-    free(spec_copy);
+    EUCA_FREE(spec_copy);
     return 0;
 
 out_error:
     vm_type->virtualBootRecordLen--;
-    free(spec_copy);
+    EUCA_FREE(spec_copy);
     return 1;
 }
 
@@ -580,7 +580,7 @@ int main(int argc, char **argv)
                 free_instance(&(outInsts[i]));
             }
         }
-        /* TODO: fix free(outInsts); */
+        /* TODO: fix EUCA_FREE(outInsts); */
 
     /***********************************************************/
     } else if (!strcmp(command, "describeResource")) {

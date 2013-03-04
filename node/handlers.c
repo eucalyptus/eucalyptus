@@ -274,9 +274,9 @@ int update_disk_aliases(ncInstance * instance)
             if (volumeId) {
                 sensor_set_volume(instance->instanceId, volumeId, devs[i]);
             }
-            free(devs[i]);
+            EUCA_FREE(devs[i]);
         }
-        free(devs);
+        EUCA_FREE(devs);
     }
     if (!saw_root) {
         logprintfl(EUCAWARN, "[%s] failed to find 'dev' entry for root\n", instance->instanceId);
@@ -298,9 +298,9 @@ int update_disk_aliases(ncInstance * instance)
                 logprintfl(EUCAWARN, "[%s] failed to find 'dev' entry in %s\n", lpath, instance->instanceId);
             }
             for (int j = 0; devs[j]; j++) {
-                free(devs[j]);
+                EUCA_FREE(devs[j]);
             }
-            free(devs);
+            EUCA_FREE(devs);
         } else {
             sensor_set_volume(instance->instanceId, volume->volumeId, NULL);
         }
@@ -606,7 +606,7 @@ static void refresh_instance_info(struct nc_state_t *nc, ncInstance * instance)
                 if (!rc && ip) {
                     logprintfl(EUCAINFO, "[%s] discovered public IP %s for instance\n", instance->instanceId, ip);
                     safe_strncpy(instance->ncnet.publicIp, ip, 24);
-                    free(ip);
+                    EUCA_FREE(ip);
                 }
             }
         }
@@ -615,7 +615,7 @@ static void refresh_instance_info(struct nc_state_t *nc, ncInstance * instance)
             if (!rc && ip) {
                 logprintfl(EUCAINFO, "[%s] discovered private IP %s for instance\n", instance->instanceId, ip);
                 safe_strncpy(instance->ncnet.privateIp, ip, 24);
-                free(ip);
+                EUCA_FREE(ip);
             }
         }
     }
@@ -631,8 +631,8 @@ void copy_instances(void)
         bunchOfInstances *container = head;
         ncInstance *instance = head->instance;
         head = head->next;
-        free(instance);
-        free(container);
+        EUCA_FREE(instance);
+        EUCA_FREE(container);
     }
     global_instances_copy = NULL;
 
@@ -660,15 +660,14 @@ static void update_log_params(void)
     // reconfigure the logging subsystem to use the new values, if any
     log_params_set(log_level, log_roll_number, log_max_size_bytes);
     log_prefix_set(log_prefix);
-    if (log_prefix)
-        free(log_prefix);
+    EUCA_FREE(log_prefix);
 
     char *log_facility = configFileValue("LOGFACILITY");
     if (log_facility) {
         if (strlen(log_facility) > 0) {
             log_facility_set(log_facility, "nc");
         }
-        free(log_facility);
+        EUCA_FREE(log_facility);
     }
 }
 
@@ -882,7 +881,7 @@ void *startup_thread(void *arg)
             logprintfl(EUCAWARN, "[%s] can't determine the host's bitness (%s, assuming 64)\n", instance->instanceId, s);
             instance->hypervisorBitness = 64;
         }
-        free(s);
+        EUCA_FREE(s);
     } else {
         logprintfl(EUCAWARN, "[%s] can't determine the host's bitness (assuming 64)\n", instance->instanceId);
         instance->hypervisorBitness = 64;
@@ -1020,10 +1019,8 @@ shutoff:                       // escape point for error conditions
     change_state(instance, SHUTOFF);
 
 free:
-    if (xml)
-        free(xml);
-    if (brname)
-        free(brname);
+    EUCA_FREE(xml);
+    EUCA_FREE(brname);
     return NULL;
 }
 
@@ -1156,10 +1153,8 @@ shutoff:                       // escape point for error conditions
     change_state(instance, SHUTOFF);
 
 done:
-    if (xml)
-        free(xml);
-    if (brname)
-        free(brname);
+    EUCA_FREE(xml);
+    EUCA_FREE(brname);
     return (NULL);
 }
 
@@ -1438,7 +1433,7 @@ static int init(void)
     }
     if (nc_state.H == NULL) {
         logprintfl(EUCAFATAL, "requested hypervisor type (%s) is not available\n", hypervisor);
-        free(hypervisor);
+        EUCA_FREE(hypervisor);
         return ERROR_FATAL;
     }
     // only load virtio config for kvm
@@ -1447,7 +1442,7 @@ static int init(void)
         GET_VAR_INT(nc_state.config_use_virtio_disk, CONFIG_USE_VIRTIO_DISK, 0);
         GET_VAR_INT(nc_state.config_use_virtio_root, CONFIG_USE_VIRTIO_ROOT, 0);
     }
-    free(hypervisor);
+    EUCA_FREE(hypervisor);
 
     if (sensor_init(NULL, NULL, MAX_SENSOR_RESOURCES, FALSE, NULL) != OK) {
         logprintfl(EUCAERROR, "failed to initialize sensor subsystem in this process\n");
@@ -1533,13 +1528,13 @@ static int init(void)
         char cache_path[MAX_PATH];
         snprintf(cache_path, sizeof(cache_path), "%s/cache", instances_path);
         if (ensure_directories_exist(cache_path, 0, NULL, NULL, BACKING_DIRECTORY_PERM) == -1) {
-            free(instances_path);
+            EUCA_FREE(instances_path);
             return ERROR;
         }
         char work_path[MAX_PATH];
         snprintf(work_path, sizeof(work_path), "%s/work", instances_path);
         if (ensure_directories_exist(work_path, 0, NULL, NULL, BACKING_DIRECTORY_PERM) == -1) {
-            free(instances_path);
+            EUCA_FREE(instances_path);
             return ERROR;
         }
         // determine how much is used/available in work and cache areas on the backing store
@@ -1559,7 +1554,7 @@ static int init(void)
         // sanity check
         if (work_fs_avail_mb < MIN_BLOBSTORE_SIZE_MB) {
             logprintfl(EUCAERROR, "insufficient available work space (%lld MB) under %s/work\n", work_fs_avail_mb, instances_path);
-            free(instances_path);
+            EUCA_FREE(instances_path);
             return ERROR_FATAL;
         }
         // look up configuration file settings for work and cache size
@@ -1597,8 +1592,8 @@ static int init(void)
                            conf_work_size_mb, MIN_BLOBSTORE_SIZE_MB);
             } else {
                 if (work_bs_size_mb != -1 && work_bs_size_mb != conf_work_size_mb) {
-                    logprintfl(EUCAWARN, "specified work size (%s=%lld) differs from existing work size (%lld), will try resizing\n", CONFIG_NC_WORK_SIZE,
-                               conf_work_size_mb, work_bs_size_mb);
+                    logprintfl(EUCAWARN, "specified work size (%s=%lld) differs from existing work size (%lld), will try resizing\n",
+                               CONFIG_NC_WORK_SIZE, conf_work_size_mb, work_bs_size_mb);
                 }
                 work_size_mb = conf_work_size_mb;
             }
@@ -1652,13 +1647,13 @@ static int init(void)
             cache_size_mb = 0;
         if (work_size_mb < MIN_BLOBSTORE_SIZE_MB) {
             logprintfl(EUCAERROR, "insufficient disk space for virtual machines\n");
-            free(instances_path);
+            EUCA_FREE(instances_path);
             return ERROR_FATAL;
         }
 
         if (init_backing_store(instances_path, work_size_mb, cache_size_mb)) {
             logprintfl(EUCAFATAL, "failed to initialize backing store\n");
-            free(instances_path);
+            EUCA_FREE(instances_path);
             return ERROR_FATAL;
         }
         // record the work-space limit for max_disk
@@ -1690,7 +1685,7 @@ static int init(void)
         } else {
             logprintfl(EUCAWARN, "disk cache will not be used\n");
         }
-        free(instances_path);
+        EUCA_FREE(instances_path);
     }
 
     // adopt running instances -- do this before disk integrity check so we know what can be purged
@@ -1745,12 +1740,9 @@ static int init(void)
                             tmp, nc_state.home, nc_state.config_network_path, NC, pubinterface, pubinterface, NULL, NULL, NULL, NULL, NULL, NULL,
                             NULL, NULL, NULL, bridge, NULL, NULL);
     }
-    if (pubinterface)
-        free(pubinterface);
-    if (bridge)
-        free(bridge);
-    if (tmp)
-        free(tmp);
+    EUCA_FREE(pubinterface);
+    EUCA_FREE(bridge);
+    EUCA_FREE(tmp);
 
     if (initFail)
         return ERROR_FATAL;
@@ -1759,7 +1751,7 @@ static int init(void)
     tmp = getConfString(nc_state.configFiles, 2, CONFIG_NC_BUNDLE_UPLOAD);
     if (tmp) {
         snprintf(nc_state.ncBundleUploadCmd, MAX_PATH, "%s", tmp);
-        free(tmp);
+        EUCA_FREE(tmp);
     } else {
         snprintf(nc_state.ncBundleUploadCmd, MAX_PATH, "%s", EUCALYPTUS_NC_BUNDLE_UPLOAD);  // default value
     }
@@ -1768,7 +1760,7 @@ static int init(void)
     tmp = getConfString(nc_state.configFiles, 2, CONFIG_NC_CHECK_BUCKET);
     if (tmp) {
         snprintf(nc_state.ncCheckBucketCmd, MAX_PATH, "%s", tmp);
-        free(tmp);
+        EUCA_FREE(tmp);
     } else {
         snprintf(nc_state.ncCheckBucketCmd, MAX_PATH, "%s", EUCALYPTUS_NC_CHECK_BUCKET);    // default value
     }
@@ -1777,7 +1769,7 @@ static int init(void)
     tmp = getConfString(nc_state.configFiles, 2, CONFIG_NC_DELETE_BUNDLE);
     if (tmp) {
         snprintf(nc_state.ncDeleteBundleCmd, MAX_PATH, "%s", tmp);
-        free(tmp);
+        EUCA_FREE(tmp);
     } else {
         snprintf(nc_state.ncDeleteBundleCmd, MAX_PATH, "%s", EUCALYPTUS_NC_DELETE_BUNDLE);  // default value
     }
@@ -1796,7 +1788,7 @@ static int init(void)
                     *tmp = '\0';
                 snprintf(nc_state.iqn, CHAR_BUFFER_SIZE, "%s", iqn);
             }
-            free(ptr);
+            EUCA_FREE(ptr);
         }
     }
 
@@ -1943,7 +1935,7 @@ int doDescribeInstances(ncMetadata * meta, char **instIds, int instIdsLen, ncIns
             fclose(f);
         }
     }
-    free(file_name);
+    EUCA_FREE(file_name);
 
     return ret;
 }

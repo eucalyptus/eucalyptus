@@ -117,8 +117,7 @@ static int doInitialize(struct nc_state_t *nc)
 
     GET_VALUE("nr_cores", nc->cores_max);
     GET_VALUE("total_memory", nc->mem_max);
-    if (s)
-        free(s);
+    EUCA_FREE(s);
 
     // we leave 256M to the host
     nc->mem_max -= 256;
@@ -145,7 +144,7 @@ static void *rebooting_thread(void *arg)
     if (!conn) {
         logprintfl(EUCAERROR, "[%s] cannot restart instance %s, abandoning it\n", instance->instanceId, instance->instanceId);
         change_state(instance, SHUTOFF);
-        free(xml);
+        EUCA_FREE(xml);
         return NULL;
     }
 
@@ -153,7 +152,7 @@ static void *rebooting_thread(void *arg)
     virDomainPtr dom = virDomainLookupByName(*conn, instance->instanceId);
     sem_v(hyp_sem);
     if (dom == NULL) {
-        free(xml);
+        EUCA_FREE(xml);
         return NULL;
     }
 
@@ -165,7 +164,7 @@ static void *rebooting_thread(void *arg)
     sem_v(hyp_sem);
 
     if (error) {
-        free(xml);
+        EUCA_FREE(xml);
         return NULL;
     }
     // Add a shift to values of three of the metrics: ones that
@@ -181,7 +180,7 @@ static void *rebooting_thread(void *arg)
     logprintfl(EUCAINFO, "[%s] rebooting\n", instance->instanceId);
     dom = virDomainCreateLinux(*conn, xml, 0);
     sem_v(hyp_sem);
-    free(xml);
+    EUCA_FREE(xml);
 
     safe_strncpy(resourceName[0], instance->instanceId, MAX_SENSOR_NAME_LEN);
     sensor_refresh_resources(resourceName, resourceAlias, 1);   // refresh stats so we set base value accurately
@@ -215,8 +214,7 @@ static void *rebooting_thread(void *arg)
                 rc = 1;
             }
         }
-        if (remoteDevStr)
-            free(remoteDevStr);
+        EUCA_FREE(remoteDevStr);
 
         if (!rc) {
             // zhill - wrap with retry in case libvirt is dumb.
@@ -244,8 +242,7 @@ static void *rebooting_thread(void *arg)
             logprintfl(log_level_for_devstring, "[%s][%s] remote device string: %s\n", instance->instanceId, volume->volumeId, volume->remoteDev);
         }
 
-        if (xml)
-            free(xml);
+        EUCA_FREE(xml);
     }
     if (dom == NULL) {
         logprintfl(EUCAERROR, "[%s] failed to restart instance\n", instance->instanceId);
@@ -335,8 +332,7 @@ static int doGetConsoleOutput(struct nc_state_t *nc, ncMetadata * meta, char *in
     if (rc >= 0) {
         if (diskutil_ch(console_file, nc->admin_user_id, nc->admin_user_id, 0) != OK) {
             logprintfl(EUCAERROR, "[%s] failed to change ownership of %s\n", instanceId, console_file);
-            if (console_append)
-                free(console_append);
+            EUCA_FREE(console_append);
             return (1);
         }
         fd = open(console_file, O_RDONLY);
@@ -346,8 +342,7 @@ static int doGetConsoleOutput(struct nc_state_t *nc, ncMetadata * meta, char *in
                 rc = lseek(fd, (off_t) 0, SEEK_SET);
                 if (rc < 0) {
                     logprintfl(EUCAERROR, "[%s] cannot seek to beginning of file\n", instanceId);
-                    if (console_append)
-                        free(console_append);
+                    EUCA_FREE(console_append);
                     close(fd);
                     return (1);
                 }
@@ -380,13 +375,9 @@ static int doGetConsoleOutput(struct nc_state_t *nc, ncMetadata * meta, char *in
         ret = 0;
     }
 
-    if (console_append)
-        free(console_append);
-    if (console_main)
-        free(console_main);
-    if (console_output)
-        free(console_output);
-
+    EUCA_FREE(console_append);
+    EUCA_FREE(console_main);
+    EUCA_FREE(console_output);
     return (ret);
 }
 

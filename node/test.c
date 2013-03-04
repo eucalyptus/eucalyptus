@@ -85,7 +85,7 @@ void test_command(char *command)
         result[max - 1] = 0;
     }
     printf("--->%s executed\noutput=[%s]\n\n", command, result);
-    free(result);
+    EUCA_FREE(result);
 }
 
 int main(int argc, char **argv)

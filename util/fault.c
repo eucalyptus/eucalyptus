@@ -335,7 +335,7 @@ static boolean check_eucafault_suppression(const char *fault_id, const char *fau
             }
             if ((new_supp->id = (char *)strdup(fault_id)) == NULL) {
                 logprintfl(EUCAERROR, "string malloc() failed in check_eucafault_suppression while adding suppressed fault %s.\n", fault_id);
-                free(new_supp);
+                EUCA_FREE(new_supp);
                 return FALSE;
             }
             // Insert at beginning of list.
@@ -612,7 +612,7 @@ int init_eucafaults(const char *fileprefix)
                     logprintfl(EUCADEBUG, "Found %d %s files in %s\n", numfaults, XML_SUFFIX, faultdirs[i]);
                     while (numfaults--) {
                         xmlDoc *new_fault = read_eucafault(faultdirs[i], str_trim_suffix(namelist[numfaults]->d_name, XML_SUFFIX));
-                        free(namelist[numfaults]);
+                        EUCA_FREE(namelist[numfaults]);
 
                         if (new_fault) {
                             if (add_eucafault(new_fault)) {
@@ -623,7 +623,7 @@ int init_eucafaults(const char *fileprefix)
                             logprintfl(EUCATRACE, "Not adding new fault--mismatch or already exists...?\n");
                         }
                     }
-                    free(namelist);
+                    EUCA_FREE(namelist);
                 }
             }
         }
@@ -758,7 +758,7 @@ static boolean format_eucafault(const char *fault_id, const char_map ** map)
             label_len = strlen(label);
 
             w_label_len = utf8_to_wchar(label, label_len, NULL, 0, 0);
-            free(label);
+            EUCA_FREE(label);
             if (w_label_len > max_label_len) {
                 max_label_len = w_label_len;
             }
@@ -789,12 +789,12 @@ static boolean format_eucafault(const char *fault_id, const char_map ** map)
         } else {
             fprintf(faultlog, "%s\n\n", fault_var);
         }
-        free(fault_subbed);
-        free(fault_var);
+        EUCA_FREE(fault_subbed);
+        EUCA_FREE(fault_var);
     } else {
         char *common_var = get_common_var("unknown");
         fprintf(faultlog, "%s\n\n", common_var);
-        free(common_var);
+        EUCA_FREE(common_var);
     }
 
     // Construct fault information lines.
@@ -808,7 +808,7 @@ static boolean format_eucafault(const char *fault_id, const char_map ** map)
         w_common_var_len = utf8_to_wchar(common_var, common_var_len, NULL, 0, 0);
         padding = max_label_len - w_common_var_len + 1;
         fprintf(faultlog, "%s%*s %s: ", BARS, padding, " ", common_var);
-        free(common_var);
+        EUCA_FREE(common_var);
 
         if ((fault_var = get_fault_var(fault_labels[i], fault_node)) != NULL) {
             char *fault_subbed = NULL;
@@ -818,12 +818,12 @@ static boolean format_eucafault(const char *fault_id, const char_map ** map)
             } else {
                 fprintf(faultlog, "%s", fault_var);
             }
-            free(fault_subbed);
-            free(fault_var);
+            EUCA_FREE(fault_subbed);
+            EUCA_FREE(fault_var);
         } else {
             common_var = get_common_var("unknown");
             fprintf(faultlog, "%s", common_var);
-            free(common_var);
+            EUCA_FREE(common_var);
         }
         fprintf(faultlog, "\n");
     }
@@ -860,7 +860,7 @@ boolean is_redundant_eucafault(const char *fault_id, const char_map ** vars)
                 break;          // not the same string
 
         if (new[i] == '\0' && old[i] == '\0') { // found the match in the LL
-            free(new);
+            EUCA_FREE(new);
             return TRUE;
         }
     }

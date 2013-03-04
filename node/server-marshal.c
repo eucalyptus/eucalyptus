@@ -226,8 +226,7 @@ adb_ncStartNetworkResponse_t *ncStartNetworkMarshal(adb_ncStartNetwork_t * ncSta
         }
     }
 
-    if (peers)
-        free(peers);
+    EUCA_FREE(peers);
 
     // set response to output
     adb_ncStartNetworkResponse_set_ncStartNetworkResponse(response, env, output);
@@ -439,7 +438,7 @@ adb_ncRunInstanceResponse_t *ncRunInstanceMarshal(adb_ncRunInstance_t * ncRunIns
             }
 
             if (groupNamesSize)
-                free(groupNames);
+                EUCA_FREE(groupNames);
         }
     }
 
@@ -499,21 +498,19 @@ adb_ncDescribeInstancesResponse_t *ncDescribeInstancesMarshal(adb_ncDescribeInst
                 for (i = 0; i < outInstsLen; i++) {
                     adb_instanceType_t *instance = adb_instanceType_create(env);
                     copy_instance_to_adb(instance, env, outInsts[i]);   // copy all values outInst->instance
-                    if (outInsts[i])
-                        free(outInsts[i]);
+                    EUCA_FREE(outInsts[i]);
 
                     /* TODO: should we free_instance(&outInst) here or not? currently you only have to free outInsts[] */
                     adb_ncDescribeInstancesResponseType_add_instances(output, env, instance);
                 }
 
                 if (outInstsLen)
-                    free(outInsts);
+                    EUCA_FREE(outInsts);
             }
         }
         //        eventlog("NC", userId, correlationId, "DescribeInstances", "end");
     }
-    if (instIds)
-        free(instIds);
+    EUCA_FREE(instIds);
 
     // set response to output
     adb_ncDescribeInstancesResponse_set_ncDescribeInstancesResponse(response, env, output);
@@ -601,8 +598,7 @@ adb_ncGetConsoleOutputResponse_t *ncGetConsoleOutputMarshal(adb_ncGetConsoleOutp
             // set operation-specific fields in output
             adb_ncGetConsoleOutputResponseType_set_consoleOutput(output, env, consoleOutput);
         }
-        if (consoleOutput)
-            free(consoleOutput);
+        EUCA_FREE(consoleOutput);
     }
     // set response to output
     adb_ncGetConsoleOutputResponse_set_ncGetConsoleOutputResponse(response, env, output);
@@ -990,9 +986,9 @@ adb_ncDescribeBundleTasksResponse_t *ncDescribeBundleTasksMarshal(adb_ncDescribe
                     adb_bundleTaskType_set_instanceId(btt, env, outBundleTasks[i]->instanceId);
                     adb_bundleTaskType_set_state(btt, env, outBundleTasks[i]->state);
                     adb_ncDescribeBundleTasksResponseType_add_bundleTasks(output, env, btt);
-                    free(outBundleTasks[i]);
+                    EUCA_FREE(outBundleTasks[i]);
                 }
-                free(outBundleTasks);
+                EUCA_FREE(outBundleTasks);
             }
         }
     }
@@ -1063,10 +1059,9 @@ adb_ncDescribeSensorsResponse_t *ncDescribeSensorsMarshal(adb_ncDescribeSensors_
             logprintfl(EUCAERROR, "failed error=%d\n", error);
             if (outResourcesLen) {
                 for (int i = 0; i < outResourcesLen; i++) {
-                    if (outResources[i])
-                        free(outResources[i]);
+                    EUCA_FREE(outResources[i]);
                 }
-                free(outResources);
+                EUCA_FREE(outResources);
             }
         } else {
 
@@ -1077,22 +1072,20 @@ adb_ncDescribeSensorsResponse_t *ncDescribeSensorsMarshal(adb_ncDescribeSensors_
             // set operation-specific fields in output                                                                                                                      
             for (int i = 0; i < outResourcesLen; i++) {
                 adb_sensorsResourceType_t *resource = copy_sensor_resource_to_adb(env, outResources[i], historySize);
-                if (outResources[i])
-                    free(outResources[i]);
+                EUCA_FREE(outResources[i]);
                 adb_ncDescribeSensorsResponseType_add_sensorsResources(output, env, resource);
             }
             if (outResourcesLen)
-                free(outResources);
+                EUCA_FREE(outResources);
 
             result = OK;        // success
         }
     }
     // eventlog("NC", userId, correlationId, "DescribeSensors", "end");
-    free(sensorIds);
+    EUCA_FREE(sensorIds);
 
 reply:
-
-    free(instIds);
+    EUCA_FREE(instIds);
 
     if (result == ERROR) {
         adb_ncDescribeSensorsResponseType_set_return(output, env, AXIS2_FALSE);
