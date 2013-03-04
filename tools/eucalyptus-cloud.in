@@ -160,6 +160,10 @@ pidfile=$EUCALYPTUS/var/run/eucalyptus/eucalyptus-cloud.pid
 initlog=$EUCALYPTUS/var/log/eucalyptus/startup.log
 
 check_java_version() {
+    local req_version=1.7.0
+    local req_patch=09
+    local error_msg="ERROR: JVM $req_version patch $req_patch or newer is required"
+
     # First check CLOUD_OPTS for --java-home
     JAVA=""
     JH=$( echo $CLOUD_OPTS | \
@@ -170,6 +174,7 @@ check_java_version() {
         elif [ -x $JH/bin/java ]; then
             JAVA=$JH/bin/java
         fi
+    # Next try JAVA_HOME
     elif [ -n "$JAVA_HOME" ]; then
         if [ -x $JAVA_HOME/jre/bin/java ]; then
             JAVA=$JAVA_HOME/jre/bin/java
@@ -177,18 +182,20 @@ check_java_version() {
             JAVA=$JAVA_HOME/bin/java
         fi
     fi
+    # Last use java from PATH
     if [ -z "$JAVA" ]; then
         JAVA=$( which java )
     fi
+    # Compare Java version against requirements
     JV=$( $JAVA -version 2>&1 | \
           sed -r -e '/^java version/!d; s/^java version "(.*)"/\1/' )
     VER=$( echo $JV | cut -d_ -f1 )
     PATCH=$( echo $JV | cut -d_ -f2 )
-    if [ "$VER" != "1.6.0" ]; then
-        echo "ERROR: Only JVM 1.6.0 is supported" >&2
+    if [ "$VER" != "$req_version" ]; then
+        echo "$error_msg" >&2
         exit 1
-    elif [ -z "$PATCH" ] || [ $PATCH -lt 20 ]; then
-        echo "ERROR: JVM 1.6.0 patch 20 or newer is required" >&2
+    elif [ -z "$PATCH" ] || [ $PATCH -lt $req_patch ]; then
+        echo "$error_msg" >&2
         exit 1
     fi
 }

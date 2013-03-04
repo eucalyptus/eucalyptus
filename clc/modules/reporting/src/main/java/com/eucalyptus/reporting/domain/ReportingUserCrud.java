@@ -67,9 +67,11 @@ public class ReportingUserCrud
 			return;
 		} else if (oldUser!=null) {
 			updateInDb(id, name);
+			ReportingUserDao.getInstance().putCache(user);
 		} else {
 			try {			
 				addToDb(id, accountId, name);
+				ReportingUserDao.getInstance().putCache(user);
 			} catch (RuntimeException e) {
 				LOG.error(e);
 			}

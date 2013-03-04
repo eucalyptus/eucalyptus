@@ -223,7 +223,7 @@ There are a few different Eucalyptus components that run on either the 'front-en
 
 Front-end run-time dependencies
 
-    * Java 6 is needed by the Eucalyptus components running on the front end. Note that GNU Compiler for Java (gcj), included by default with some Linux distributions, is not sufficient. Make sure that your JAVA_HOME environment variable is set to the location of your JDK.
+    * Java 7 is needed by the Eucalyptus components running on the front end. Note that GNU Compiler for Java (gcj), included by default with some Linux distributions, is not sufficient. Make sure that your JAVA_HOME environment variable is set to the location of your JDK.
     * Perl is used by helper scripts
     * The head node must run a server on port 25 that can deliver or relay email messages to cloud users' email addresses. This can be Sendmail, Exim, or postfix, or even something simpler, given that this server does not have to be able to receive incoming mail. Many Linux distributions satisfy this requirement out of the box. To test whether you have a properly functioning mail relay for localhost, try to send email to yourself from the terminal using "mail".
     * Dependencies for network support differ depending on the mode used (see Eucalyptus Network Configuration for details). For full functionality satisfy all of them:
@@ -269,21 +269,21 @@ What follows is a superset of all packages necessary for building and running Eu
 
     * For Opensuse 11.2, download and install RPMs the appropriate OpenSUSE RPM dependency package from the Eucalyptus website, then run the following command to install all required dependency packages: 
 
-zypper -n install curl bzr python-paramiko make gcc ant apache-ivy apache2 apache2-prefork apache2-devel java-1_6_0-openjdk java-1_6_0-openjdk-devel libvirt-devel libcurl-devel vlan dhcp-server bridge-utils ant-contrib ant-nodeps apache-ivy openssl libvirt libcurl-devel vlan apache2 perl-Crypt-OpenSSL-Random perl-Crypt-OpenSSL-RSA libfuse2 tgt swig
+zypper -n install curl bzr python-paramiko make gcc ant apache-ivy apache2 apache2-prefork apache2-devel java-1_7_0-openjdk java-1_7_0-openjdk-devel libvirt-devel libcurl-devel vlan dhcp-server bridge-utils ant-contrib ant-nodeps openssl libvirt libcurl-devel vlan apache2 perl-Crypt-OpenSSL-Random perl-Crypt-OpenSSL-RSA libfuse2 tgt swig
 
     * For Ubuntu 10.04, run the following command to install all required dependency packages: 
 
-apt-get install bzr gcc make apache2-threaded-dev ant ivy openjdk-6-jdk\
+apt-get install bzr gcc make apache2-threaded-dev ant openjdk-7-jdk\
    libvirt-dev libcurl4-openssl-dev dhcp3-server vblade apache2 unzip curl vlan\
    bridge-utils libvirt-bin kvm vtun
 
     * For CentOS 5 and Fedora 12, download and install RPMs the appropriate CentOS or Fedora RPM dependency package from the Eucalyptus website, then run the following command to install all required dependency packages: 
 
-yum install -y java-1.6.0-openjdk-devel ant ant-nodeps apache-ivy libvirt-devel curl-devel httpd httpd-devel apr-devel openssl-devel dhcp libxml2 libxml2-devel gnutls gnutls-devel xen-devel libgcrypt-devel zlib-devel perl-Convert-ASN1 perl-Crypt-OpenSSL-RSA perl-Crypt-OpenSSL-Random chkfontpath scsi-target-utils fuse-libs swig gcc
+yum install -y java-1.7.0-openjdk-devel ant ant-nodeps apache-ivy libvirt-devel curl-devel httpd httpd-devel apr-devel openssl-devel dhcp libxml2 libxml2-devel gnutls gnutls-devel xen-devel libgcrypt-devel zlib-devel perl-Convert-ASN1 perl-Crypt-OpenSSL-RSA perl-Crypt-OpenSSL-Random chkfontpath scsi-target-utils fuse-libs swig gcc
 
     * For Debian, run the following command to install all required dependency packages: 
 
-apt-get install gcc make apache2-threaded-dev ant ivy openjdk-6-jdk\
+apt-get install gcc make apache2-threaded-dev ant openjdk-7-jdk\
    libvirt-dev libcurl4-dev dhcp3-server vblade apache2 unzip curl vlan\
    bridge-utils libvirt-bin kvm sudo vtun
 

@@ -1950,7 +1950,6 @@ adb_ModifyNodeResponse_t *ModifyNodeMarshal(adb_ModifyNode_t * modifyNode, const
     return (ret);
 }
 
-
 //!
 //! Unmarshalls request to modify a node controller, executes, responds.
 //!

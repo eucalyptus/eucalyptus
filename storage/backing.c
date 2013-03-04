@@ -374,8 +374,8 @@ int init_backing_store(const char *conf_instances_path, unsigned int conf_work_s
         return (EUCA_ACCESS_ERROR);
 
     // convert MB to blocks
-    cache_limit_blocks = conf_cache_size_mb * 2048;
-    work_limit_blocks = conf_work_size_mb * 2048;
+    cache_limit_blocks = (unsigned long long)conf_cache_size_mb * 2048;
+    work_limit_blocks = (unsigned long long)conf_work_size_mb * 2048;
 
     // we take 0 as unlimited
     if (work_limit_blocks == 0) {

@@ -144,6 +144,11 @@ public class ClusterController extends ComponentId {
       return this.getServicePath( pathParts );
     }
     
+    @Override
+    public boolean isRegisterable( ) {
+      return false;
+    }
+
   }
   
   @Partition( ClusterController.class )

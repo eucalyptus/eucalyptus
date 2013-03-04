@@ -1,5 +1,3 @@
-#!/usr/bin/python
-
 # Copyright 2011-2012 Eucalyptus Systems, Inc.
 #
 # Redistribution and use of this software in source and binary forms,
@@ -25,8 +23,36 @@
 # (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-import eucadmin.evacuatenode
+from boto.roboto.awsqueryrequest import AWSQueryRequest
+from boto.roboto.param import Param
+import eucadmin
 
-if __name__ == "__main__":
-    r = eucadmin.evacuatenode.EvacuateNode()
-    r.main_cli()
+class MigrateInstances(AWSQueryRequest):
+    ServicePath = '/services/Eucalyptus'
+    ServiceClass = eucadmin.EucAdmin
+    Description = 'Migrate instances from a node'
+    Params = [
+              Param(name='SourceHost',
+                    short_name='H',
+                    long_name='sourceHost',
+                    ptype='string',
+                    optional=False,
+                    doc='Hostname or IP of the ')
+              ]
+
+    def get_connection(self, **args):
+        if self.connection is None:
+            args['path'] = self.ServicePath
+            self.connection = self.ServiceClass()
+        return self.connection
+
+    def cli_formatter(self, data):
+        response = getattr(data, 'euca:_return')
+        print 'RESPONSE %s' % response
+
+    def main(self, **args):
+        return self.send(**args)
+
+    def main_cli(self):
+        eucadmin.print_version_if_necessary()
+        self.do_cli()

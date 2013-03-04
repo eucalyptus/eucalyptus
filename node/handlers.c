@@ -279,7 +279,7 @@ int doCreateImage(ncMetadata * pMeta, char *instanceId, char *volumeId, char *re
 int doDescribeSensors(ncMetadata * pMeta, int historySize, long long collectionIntervalTimeMs, char **instIds, int instIdsLen, char **sensorIds,
                       int sensorIdsLen, sensorResource *** outResources, int *outResourcesLen);
 int doModifyNode(ncMetadata * pMeta, char * stateName);
-int doMigrateInstance(ncMetadata * pMeta, ncInstance ** instances, int instancesLen, char * action, char * credentials);
+int doMigrateInstances(ncMetadata * pMeta, ncInstance ** instances, int instancesLen, char * action, char * credentials);
 ncInstance *find_global_instance(const char *instanceId);
 
 /*----------------------------------------------------------------------------*\
@@ -2842,7 +2842,7 @@ int doModifyNode(ncMetadata * pMeta, char * stateName)
 //! @param[in]  pMeta a pointer to the node controller (NC) metadata structure
 //! TODO: doxygen
 
-int doMigrateInstance(ncMetadata * pMeta, ncInstance ** instances, int instancesLen, char * action, char * credentials)
+int doMigrateInstances(ncMetadata * pMeta, ncInstance ** instances, int instancesLen, char * action, char * credentials)
 {
    int ret = EUCA_OK;
 
@@ -2854,10 +2854,10 @@ int doMigrateInstance(ncMetadata * pMeta, ncInstance ** instances, int instances
              instances[0]->instanceId, instances[0]->migration_src, instances[0]->migration_dst,
              (credentials==NULL)?("unavailable"):("present"));
     
-    if (nc_state.H->doMigrateInstance) {
-        ret = nc_state.H->doMigrateInstance(&nc_state, pMeta, instances, instancesLen, action, credentials);
+    if (nc_state.H->doMigrateInstances) {
+        ret = nc_state.H->doMigrateInstances(&nc_state, pMeta, instances, instancesLen, action, credentials);
     } else {
-        ret = nc_state.D->doMigrateInstance(&nc_state, pMeta, instances, instancesLen, action, credentials);
+        ret = nc_state.D->doMigrateInstances(&nc_state, pMeta, instances, instancesLen, action, credentials);
     }
 
     return ret;

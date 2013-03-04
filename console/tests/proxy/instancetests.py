@@ -43,7 +43,7 @@ def waitForState (client, instanceid, state):
 if __name__ == "__main__":
     # make some calls to proxy class to test things out
     client = UIProxyClient()
-    client.login('localhost', '8888', 'testuser1', 'admin', 'euca123')
+    client.login('localhost', '8888', 'ui-test-acct-03', 'admin', 'mypassword6')
     print 
     print "=== listing images ==="
     print 

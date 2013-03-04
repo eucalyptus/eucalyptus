@@ -219,7 +219,7 @@ static int doDescribeBundleTasks(struct nc_state_t *nc, ncMetadata * pMeta, char
 static int doDescribeSensors(struct nc_state_t *nc, ncMetadata * pMeta, int historySize, long long collectionIntervalTimeMs, char **instIds,
                              int instIdsLen, char **sensorIds, int sensorIdsLen, sensorResource *** outResources, int *outResourcesLen);
 static int doModifyNode(struct nc_state_t * nc, ncMetadata * pMeta, char * stateName);
-static int doMigrateInstance(struct nc_state_t * nc, ncMetadata * pMeta, ncInstance ** instances, int instancesLen, char * action, char * credentials);
+static int doMigrateInstances(struct nc_state_t * nc, ncMetadata * pMeta, ncInstance ** instances, int instancesLen, char * action, char * credentials);
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |
@@ -249,7 +249,7 @@ struct handlers default_libvirt_handlers = {
     .doDescribeBundleTasks = doDescribeBundleTasks,
     .doDescribeSensors = doDescribeSensors,
     .doModifyNode = doModifyNode,
-    .doMigrateInstance = doMigrateInstance
+    .doMigrateInstances = doMigrateInstances
 };
 
 /*----------------------------------------------------------------------------*\
@@ -2001,7 +2001,7 @@ static int doModifyNode (struct nc_state_t * nc, ncMetadata * pMeta, char * stat
 //! @param[in]  pMeta a pointer to the node controller (NC) metadata structure
 //! TODO: doxygen
 //!
-static int doMigrateInstance (struct nc_state_t * nc, ncMetadata * pMeta, ncInstance ** instances, int instancesLen, char * action, char * credentials)
+static int doMigrateInstances (struct nc_state_t * nc, ncMetadata * pMeta, ncInstance ** instances, int instancesLen, char * action, char * credentials)
 {
     LOGERROR("no default for %s!\n", __func__);
     return (EUCA_UNSUPPORTED_ERROR);   
