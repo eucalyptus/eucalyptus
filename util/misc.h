@@ -204,5 +204,6 @@ long long time_usec(void);
 long long time_ms(void);
 int drop_privs(void);
 int timeshell(char *command, char *stdout_str, char *stderr_str, int max_size, int timeout);
+int get_remoteDevForNC(const char * the_iqn, const char * remoteDev, char * remoteDevForNC, int remoteDevForNCLen);
 
 #endif

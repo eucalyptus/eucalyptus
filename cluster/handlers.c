@@ -1027,8 +1027,17 @@ int doAttachVolume(ncMetadata * ccMeta, char *volumeId, char *instanceId, char *
     for (i = start; i < stop && !done; i++) {
         timeout = ncGetTimeout(op_start, OP_TIMEOUT, stop - start, i);
         timeout = maxint(timeout, ATTACH_VOL_TIMEOUT_SECONDS);
-        rc = ncClientCall(ccMeta, timeout, resourceCacheLocal.resources[i].lockidx, resourceCacheLocal.resources[i].ncURL, "ncAttachVolume",
-                          instanceId, volumeId, remoteDev, localDev);
+
+        // pick out the right LUN from the remove device string
+        char remoteDevForNC [CHAR_BUFFER_SIZE];
+        if (get_remoteDevForNC(resourceCacheLocal.resources[i].iqn, remoteDev, remoteDevForNC, sizeof(remoteDevForNC))) {
+            logprintfl(EUCAERROR, "failed to parse remote dev string in request\n");
+            rc = 1;
+        } else {
+            rc = ncClientCall(ccMeta, timeout, resourceCacheLocal.resources[i].lockidx, resourceCacheLocal.resources[i].ncURL, "ncAttachVolume",
+                              instanceId, volumeId, remoteDevForNC, localDev);
+        }
+
         if (rc) {
             ret = 1;
         } else {
@@ -1087,8 +1096,16 @@ int doDetachVolume(ncMetadata * ccMeta, char *volumeId, char *instanceId, char *
     for (i = start; i < stop; i++) {
         timeout = ncGetTimeout(op_start, OP_TIMEOUT, stop - start, i);
         timeout = maxint(timeout, DETACH_VOL_TIMEOUT_SECONDS);
-        rc = ncClientCall(ccMeta, timeout, resourceCacheLocal.resources[i].lockidx, resourceCacheLocal.resources[i].ncURL, "ncDetachVolume",
-                          instanceId, volumeId, remoteDev, localDev, force);
+
+        // pick out the right LUN from the remove device string
+        char remoteDevForNC [CHAR_BUFFER_SIZE];
+        if (get_remoteDevForNC(resourceCacheLocal.resources[i].iqn, remoteDev, remoteDevForNC, sizeof(remoteDevForNC))) {
+            logprintfl(EUCAERROR, "failed to parse remote dev string in request\n");
+            rc = 1;
+        } else {
+            rc = ncClientCall(ccMeta, timeout, resourceCacheLocal.resources[i].lockidx, resourceCacheLocal.resources[i].ncURL, "ncDetachVolume",
+                              instanceId, volumeId, remoteDevForNC, localDev, force);
+        }
         if (rc) {
             ret = 1;
         } else {
@@ -2589,6 +2606,18 @@ int doRunInstances(ncMetadata * ccMeta, char *amiId, char *kernelId, char *ramdi
             sem_mypost(CONFIG);
 
             res = &(resourceCache->resources[resid]);
+
+            // pick out the right LUN from the long version of the remote device string and create the remote dev string that NC expects
+            for (int i = 0; i < EUCA_MAX_VBRS && i < ncvm.virtualBootRecordLen; i++) {
+                virtualBootRecord * vbr = &(ncvm.virtualBootRecord[i]);
+                if (strcmp(vbr->typeName, "ebs")) // skip all except EBS entries
+                    continue;
+                if (get_remoteDevForNC(res->iqn, vbr->resourceLocationPtr, vbr->resourceLocation, sizeof(vbr->resourceLocation))) {
+                    logprintfl(EUCAERROR, "failed to parse remote dev string in VBR[%d]\n", i);
+                    rc = 1;
+                }
+            }
+            
             if (rc) {
                 // could not find resource
                 logprintfl(EUCAERROR, "scheduler could not find resource to run the instance on\n");
