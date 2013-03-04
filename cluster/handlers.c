@@ -293,6 +293,8 @@ int doTerminateInstances(ncMetadata * pMeta, char **instIds, int instIdsLen, int
 int doCreateImage(ncMetadata * pMeta, char *instanceId, char *volumeId, char *remoteDev);
 int doDescribeSensors(ncMetadata * pMeta, int historySize, long long collectionIntervalTimeMs, char **instIds, int instIdsLen, char **sensorIds,
                       int sensorIdsLen, sensorResource *** outResources, int *outResourcesLen);
+int doModifyNode(ncMetadata * pMeta, char *nodeName, char *stateName);
+int doMigrateInstances(ncMetadata * pMeta, char *nodeName);
 int setup_shared_buffer(void **buf, char *bufname, size_t bytes, sem_t ** lock, char *lockname, int mode);
 int initialize(ncMetadata * pMeta);
 int ccIsEnabled(void);
@@ -3980,8 +3982,8 @@ int doModifyNode(ncMetadata * pMeta, char *nodeName, char *stateName)
     sem_mywait(INSTCACHE);
     if (instanceCache->numInsts) {
         for (i = 0; i < MAXINSTANCES_PER_CC; i++) {
-            if (instanceCache->cacheState[i] == INSTVALID
-                && instanceCache->instances[i].ncHostIdx == src_index && (!strcmp(instanceCache->instances[i].state, "Extant"))) {
+            if (instanceCache->cacheState[i] == INSTVALID && instanceCache->instances[i].ncHostIdx == src_index
+                && (!strcmp(instanceCache->instances[i].state, "Extant"))) {
                 memcpy(&cc_instance, &(instanceCache->instances[i]), sizeof(ccInstance));
                 found_instance = 1;
                 break;
@@ -4032,6 +4034,7 @@ int doModifyNode(ncMetadata * pMeta, char *nodeName, char *stateName)
         ret = 1;
         goto out;
     }
+
 out:
     LOGTRACE("done\n");
 
@@ -4097,8 +4100,8 @@ int doMigrateInstances(ncMetadata * pMeta, char *nodeName)
     sem_mywait(INSTCACHE);
     if (instanceCache->numInsts) {
         for (i = 0; i < MAXINSTANCES_PER_CC; i++) {
-            if (instanceCache->cacheState[i] == INSTVALID
-                && instanceCache->instances[i].ncHostIdx == src_index && (!strcmp(instanceCache->instances[i].state, "Extant"))) {
+            if (instanceCache->cacheState[i] == INSTVALID && instanceCache->instances[i].ncHostIdx == src_index
+                && (!strcmp(instanceCache->instances[i].state, "Extant"))) {
                 memcpy(&cc_instance, &(instanceCache->instances[i]), sizeof(ccInstance));
                 found_instance = 1;
                 break;
@@ -4142,6 +4145,7 @@ int doMigrateInstances(ncMetadata * pMeta, char *nodeName)
     }
 
 out:
+
     LOGTRACE("done\n");
 
     shawn();

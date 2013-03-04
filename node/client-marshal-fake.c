@@ -186,6 +186,8 @@ int ncDetachVolumeStub(ncStub * pStub, ncMetadata * pMeta, char *instanceId, cha
 int ncCreateImageStub(ncStub * pStub, ncMetadata * pMeta, char *instanceId, char *volumeId, char *remoteDev);
 int ncDescribeSensorsStub(ncStub * pStub, ncMetadata * pMeta, int historySize, long long collectionIntervalTimeMs, char **instIds, int instIdsLen,
                           char **sensorIds, int sensorIdsLen, sensorResource *** outResources, int *outResourcesLen);
+int ncModifyNodeStub(ncStub * pStub, ncMetadata * pMeta, char *stateName);
+int ncMigrateInstancesStub(ncStub * pStub, ncMetadata * pMeta, ncInstance ** instances, int instancesLen, char *action, char *credentials);
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |
@@ -934,16 +936,18 @@ int ncModifyNodeStub(ncStub * pStub, ncMetadata * pMeta, char *stateName)
 }
 
 //!
-//! Handles the instance migration request, with different behavior on source and destination.
+//! Marshals the instance migration request, with different behavior on source and destination.
 //!
 //! @param[in]  pStub a pointer to the node controller (NC) stub structure
 //! @param[in]  pMeta a pointer to the node controller (NC) metadata structure
-//! @param[in]  instance metadata for the instance to migrate to destination
-//! @param[in]  sourceNodeName IP of the source Node Controller
-//! @param[in]  destNodeName IP of the destination Node Controller
+//! @param[in]  instances metadata for the instance to migrate to destination
+//! @param[in]  instancesLen number of instances in the instance list
+//! @param[in]  action IP of the destination Node Controller
 //! @param[in]  credentials credentials that enable the migration
 //!
 //! @return Always returns EUCA_OK
+//!
+//! @see ncMigrateInstances()
 //!
 int ncMigrateInstancesStub(ncStub * pStub, ncMetadata * pMeta, ncInstance ** instances, int instancesLen, char *action, char *credentials)
 {

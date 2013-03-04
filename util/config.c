@@ -188,8 +188,8 @@ void configReadLogParams(int *pLogLevel, int *pLogRollNumber, long *pLogMaxSizeB
 //! @param[in] aNewConfigKeysRestart the list of configuration keys available on restart
 //! @param[in] aNewConfigKeysNoRestart the list of configuration keys available while the system is up
 //!
-//! @pre \li Both aNewConfigKeysRestart and aNewConfigKeysNoRestart fields must not be NULL
-//!      \li Both aNewConfigKeysRestart and aNewConfigKeysNoRestart must be arrays
+//! @pre \li Both \p aNewConfigKeysRestart and \p aNewConfigKeysNoRestart fields must not be NULL
+//!      \li Both \p aNewConfigKeysRestart and \p aNewConfigKeysNoRestart must be arrays
 //!
 //! @post The local aNewConfigKeysRestart and aNewConfigKeysNoRestart fields are set.
 //!
@@ -209,10 +209,10 @@ void configInitValues(configEntry aNewConfigKeysRestart[], configEntry aNewConfi
 //! @return 0 if the configuration files were not modified; 1 if the configuration files were
 //!         modified; and -1 if an error occured while poking at the configuration files.
 //!
-//! @pre \li The configFiles field must not be NULL
-//!      \li The configFiles field must be an array of config files name with a max length of MAX_PATH
-//!      \li The configFiles field must contain numFiles elements
-//!      \li The numFiles field must be equal to 1 at the very least
+//! @pre \li The \p asConfigFiles field must not be NULL
+//!      \li The \p asConfigFiles field must be an array of config files name with a max length of MAX_PATH
+//!      \li The \p asConfigFiles field must contain \p numFiles elements
+//!      \li The \p numFiles field must be equal to 1 at the very least
 //!
 //! @post On success, the lastConfigMtime field is updated
 //!
@@ -257,8 +257,8 @@ int isConfigModified(char asConfigFiles[][MAX_PATH], u32 numFiles)
 //!         key is not found. The caller of this function is responsible to free the
 //!         returned string value.
 //!
-//! @pre \li The key field should not be NULL.
-//!      \li The key field should exist in the configKeysRestart list or the configKeysNoRestart list
+//! @pre \li The \p sKey field should not be NULL.
+//!      \li The \p sKey field should exist in the configKeysRestart list or the configKeysNoRestart list
 //!
 //! @post a duplicate string the allocated for the element matching the key.
 //!
@@ -314,14 +314,14 @@ char *configFileValue(const char *sKey)
 //! Retrieves a "long" integer value from the configuration entry.
 //!
 //! @param[in]  sKey the name of the key for which we're looking for its paired value
-//! @param[out] pVal the matching long value to be set if 'key' is found
+//! @param[out] pVal the matching long value to be set if \p sKey is found
 //!
 //! @return TRUE if the key was found and the matching value was a valid long integer and
-//!         the 'val' value is set appropriately, otherwise FALSE is returned.
+//!         the \p pVal value is set appropriately, otherwise FALSE is returned.
 //!
-//! @pre \li The key field should not be NULL
-//!      \li The val field must not be NULL
-//!      \li The key must match a config value in our lists and be of type "long"
+//! @pre \li The \p sKey field should not be NULL
+//!      \li The \p pVal field must not be NULL
+//!      \li The \p sKey must match a config value in our lists and be of type "long"
 //!
 //! @post The matching value is converted to a long integer and assigned to val and TRUE is returned.
 //!
@@ -354,7 +354,7 @@ boolean configFileValueLong(const char *sKey, long *pVal)
 //!
 //! @return the number of configuration parameteres that were actually updated.
 //!
-//! @pre The asConfigFiles list must not be NULL and should contain as least 1 item
+//! @pre The \p asConfigFiles list must not be NULL and should contain as least 1 item
 //!
 //! @post our local asConfigValuesRestart and asConfigValuesNoRestart lists are being updated.
 //!

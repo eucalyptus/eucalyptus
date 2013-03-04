@@ -2832,9 +2832,12 @@ int doDescribeSensors(ncMetadata * pMeta, int historySize, long long collectionI
 //!
 //! Handles the modify node request.
 //!
-//! @param[in]  pMeta a pointer to the node controller (NC) metadata structure
+//! @param[in] pMeta a pointer to the node controller (NC) metadata structure
+//! @param[in] stateName
+//!
+//! @return EUCA_OK on success or EUCA_ERROR on failure
+//!
 //! TODO: doxygen
-
 int doModifyNode(ncMetadata * pMeta, char *stateName)
 {
     int ret = EUCA_OK;
@@ -2857,8 +2860,15 @@ int doModifyNode(ncMetadata * pMeta, char *stateName)
 //! Handles the instance migration request.
 //!
 //! @param[in]  pMeta a pointer to the node controller (NC) metadata structure
+//! @param[in]  instances metadata for the instance to migrate to destination
+//! @param[in]  instancesLen number of instances in the instance list
+//! @param[in]  action IP of the destination Node Controller
+//! @param[in]  credentials credentials that enable the migration
+//!
+//! @return EUCA_OK on sucess or EUCA_ERROR on failure
+//!
 //! TODO: doxygen
-
+//!
 int doMigrateInstances(ncMetadata * pMeta, ncInstance ** instances, int instancesLen, char *action, char *credentials)
 {
     int ret = EUCA_OK;

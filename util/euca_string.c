@@ -169,8 +169,8 @@ char *euca_strncpy(char *restrict to, const char *restrict from, size_t size);
 \*----------------------------------------------------------------------------*/
 
 //!
-//! Given string haystack, replace occurences of source with the given value
-//! and return the new string in haystack
+//! Given string \p haystack, replace occurences of \p search with the given \p value
+//! and return the new string in \p haystack
 //!
 //! @param[in,out] haystack pointer to the original string to search from
 //! @param[in]     search the string we are looking to replace
@@ -178,10 +178,10 @@ char *euca_strncpy(char *restrict to, const char *restrict from, size_t size);
 //!
 //! @return the newly formatted string
 //!
-//! @pre \li The haystack, source and value pointers must not be NULL.
-//!      \li The source string must not be 0 length.
+//! @pre \li The \p haystack, \p search and \p value pointers must not be NULL.
+//!      \li The \p search string must not be 0 length.
 //!
-//! @post On success the current string pointed by haystack is freed and replaced
+//! @post On success the current string pointed by \p haystack is freed and replaced
 //!       by the new string.
 //!
 //! @note caller is reponsible to free the result
@@ -240,7 +240,7 @@ char *euca_strreplace(char **haystack, char *search, char *value)
 }
 
 //!
-//! Do sscanf() on each line in lines[], returning upon first match
+//! Do sscanf() on each line in \p haystack, returning upon first match
 //! returns TRUE if there was match and FALSE otherwise
 //!
 //! @param[in]  haystack The text for which we search for the format
@@ -249,9 +249,9 @@ char *euca_strreplace(char **haystack, char *search, char *value)
 //!
 //! @return TRUE if we have a match, FALSE otherwise
 //!
-//! @pre The haystack, format and value fields must not be NULL
+//! @pre The \p haystack, \p format and \p value fields must not be NULL
 //!
-//! @post If we have a matching format, the value field is being updated
+//! @post If we have a matching \p format, the \p value field is being updated
 //!
 boolean euca_lscanf(const char *haystack, const char *format, void *value)
 {
@@ -297,7 +297,7 @@ boolean euca_lscanf(const char *haystack, const char *format, void *value)
 }
 
 //!
-//! Extract string from str bound by 'begin' and 'end'
+//! Extract string from \p haystack bound by \p begin and \p end
 //!
 //! @param[in] haystack the string containing the begining and ending values
 //! @param[in] begin the begining string marker
@@ -305,14 +305,14 @@ boolean euca_lscanf(const char *haystack, const char *format, void *value)
 //!
 //! @return the newly constructed string or NULL if any error occured.
 //!
-//! @pre \li The haystack, begin and end fields must not be NULL.
-//!      \li The haystack field must be at least 3 characters long.
-//!      \li The begin and end fields must be at least 1 character long.
-//!      \li The begin and end field must be found withing the haystack field.
-//!      \li The begin field must be located before the end field.
+//! @pre \li The \p haystack, \p begin and \p end fields must not be NULL.
+//!      \li The \p haystack field must be at least 3 characters long.
+//!      \li The \p begin and \p end fields must be at least 1 character long.
+//!      \li The \p begin and \p end field must be found withing the \p haystack field.
+//!      \li The \p begin field must be located before the \p end field.
 //!
-//! @post A new string is allocated containing all characters between the begin
-//!       and end needles and NULL-Terminated.
+//! @post A new string is allocated containing all characters between the \p begin
+//!       and \p end needles and NULL-Terminated.
 //!
 //! @note Caller is responsible to free the returned memory
 //!
@@ -353,19 +353,19 @@ char *euca_strestr(const char *haystack, const char *begin, const char *end)
 }
 
 //!
-//! Extract a long integer from str bound by 'begin' and 'end'
+//! Extract a long integer from \p string bound by \p begin and \p end
 //!
 //! @param[in] string the string containing the long integer
-//! @param[in] begin pointer to the begining of the long integer in 'str'
-//! @param[in] end pointer to the end of the long integer in 'str'
+//! @param[in] begin pointer to the begining of the long integer in \p string
+//! @param[in] end pointer to the end of the long integer in \p string
 //!
 //! @return the integer value from the string and its parameters
 //!
-//! @pre \li The string, begin and end fields must not be NULL.
-//!      \li The string field must be at least 3 characters long.
-//!      \li The begin and end fields must be at least 1 character long.
-//!      \li The begin and end field must be found withing the string field.
-//!      \li The begin field must be located before the end field.
+//! @pre \li The \p string, \p begin and \p end fields must not be NULL.
+//!      \li The \p string field must be at least 3 characters long.
+//!      \li The \p begin and \p end fields must be at least 1 character long.
+//!      \li The \p begin and \p end field must be found withing the \p string field.
+//!      \li The \p begin field must be located before the \p end field.
 //!
 long long euca_strtoll(const char *string, const char *begin, const char *end)
 {
@@ -388,9 +388,9 @@ long long euca_strtoll(const char *string, const char *begin, const char *end)
 //!
 //! @return a pointer to the lower care result
 //!
-//! @pre The string field must not be NULL.
+//! @pre The \p string field must not be NULL.
 //!
-//! @post On success, str will be duplicated and each character of str will be converted to lower case.
+//! @post On success, \p string will be duplicated and each character of \p string will be converted to lower case.
 //!
 //! @note result must be freed by the caller
 //!
@@ -414,7 +414,7 @@ char *euca_strduptolower(const char *restrict string)
 }
 
 //!
-//! Returns a new string in which 's2' is appended to 's1' and frees 's1'. A NULL
+//! Returns a new string in which \p s2 is appended to \p s1 and frees \p s1. A NULL
 //! character is appended to the resulting string.
 //!
 //! @param[in] s1 the optional string to append to and free
@@ -422,9 +422,9 @@ char *euca_strduptolower(const char *restrict string)
 //!
 //! @return a pointer to the newly allocated string or NULL if any error occured.
 //!
-//! @pre Both s1 and s2 fields should be provided.
+//! @pre Both \p s1 and \p s2 fields should be provided.
 //!
-//! @post If s1 was provided, the string will be freed uppon completion of the operation.
+//! @post If \p s1 was provided, the string will be freed uppon completion of the operation.
 //!
 char *euca_strdupcat(char *restrict s1, const char *restrict s2)
 {
@@ -458,8 +458,8 @@ char *euca_strdupcat(char *restrict s1, const char *restrict s2)
 }
 
 //!
-//! Appends src to dest and makes sure dest isn't going to be greater than n Characters. If dest
-//! reaches n characters, a NULL character will be added for the n-th character
+//! Appends \p src to \p dest and makes sure \p dest isn't going to be greater than \p size Characters. If \p dest
+//! reaches \p size characters, a NULL character will be added for the n-th character
 //!
 //! @param[in] dest the optional string to append to and free
 //! @param[in] src the optional string to append
@@ -467,9 +467,9 @@ char *euca_strdupcat(char *restrict s1, const char *restrict s2)
 //!
 //! @return a pointer to the destination string
 //!
-//! @pre Both s1 and s2 fields should be provided.
+//! @pre Both \p dest and \p src fields should be provided.
 //!
-//! @post S1 will contain all or most character of S2 at the end of S1
+//! @post \p dest will contain all or most character of \p src at the end of \p dest
 //!
 char *euca_strncat(char *restrict dest, const char *restrict src, size_t size)
 {
@@ -487,7 +487,7 @@ char *euca_strncat(char *restrict dest, const char *restrict src, size_t size)
 }
 
 //!
-//! Copy 'from' into 'to' for up to 'size' - 1 characters and ensure the string is aways
+//! Copy \p from into \p to for up to \p size - 1 characters and ensure the string is aways
 //! NULL-terminated.
 //!
 //! @param[in] to the string to copy into
@@ -496,16 +496,16 @@ char *euca_strncat(char *restrict dest, const char *restrict src, size_t size)
 //!
 //! @return A string pointer to the resulting string.
 //!
-//! @pre \li The to field must not be NULL
-//!      \li The to and from fields must never points to the same address (restrict)
+//! @pre \li The \p to field must not be NULL
+//!      \li The \p to and \p from fields must never points to the same address (restrict)
 //!
-//! @post Up to size - 1 characters will be copied from 'from' to 'to' and a NULL character
+//! @post Up to \p size - 1 characters will be copied from \p from to \p to and a NULL character
 //!       will be set at the end of the resulting string.
 //!
-//! @note If from is longer or equals to size, size - 1 caracters will be copied
+//! @note If \p from is longer or equals to \p size, \p size - 1 caracters will be copied
 //!       into the resulting string to ensure a NULL-Terminated string. If the given
-//!       size field is 0 or if 'from' is NULL, the function will set the first
-//!       character of 'to' to null and return a pointer to 'to'.
+//!       \p size field is 0 or if \p from is NULL, the function will set the first
+//!       character of \p to to null and return a pointer to \p to.
 //!
 char *euca_strncpy(char *restrict to, const char *restrict from, size_t size)
 {

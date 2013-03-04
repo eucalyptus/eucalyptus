@@ -251,7 +251,7 @@ struct handlers default_libvirt_handlers = {
     .doDescribeBundleTasks = doDescribeBundleTasks,
     .doDescribeSensors = doDescribeSensors,
     .doModifyNode = doModifyNode,
-    .doMigrateInstances = doMigrateInstances
+    .doMigrateInstances = doMigrateInstances,
 };
 
 /*----------------------------------------------------------------------------*\
@@ -1995,8 +1995,12 @@ static int doDescribeSensors(struct nc_state_t *nc, ncMetadata * pMeta, int hist
 //!
 //! Handles the node modification request.
 //!
-//! @param[in]  nc a pointer to the NC state structure
-//! @param[in]  pMeta a pointer to the node controller (NC) metadata structure
+//! @param[in] nc a pointer to the NC state structure
+//! @param[in] pMeta a pointer to the node controller (NC) metadata structure
+//! @param[in] stateName
+//!
+//! @return EUCA_OK on success or EUCA_ERROR on failure
+//!
 //! TODO: doxygen
 //!
 static int doModifyNode(struct nc_state_t *nc, ncMetadata * pMeta, char *stateName)
@@ -2010,6 +2014,13 @@ static int doModifyNode(struct nc_state_t *nc, ncMetadata * pMeta, char *stateNa
 //!
 //! @param[in]  nc a pointer to the NC state structure
 //! @param[in]  pMeta a pointer to the node controller (NC) metadata structure
+//! @param[in]  instances metadata for the instance to migrate to destination
+//! @param[in]  instancesLen number of instances in the instance list
+//! @param[in]  action IP of the destination Node Controller
+//! @param[in]  credentials credentials that enable the migration
+//!
+//! @return EUCA_OK on sucess or EUCA_ERROR on failure
+//!
 //! TODO: doxygen
 //!
 static int doMigrateInstances(struct nc_state_t *nc, ncMetadata * pMeta, ncInstance ** instances, int instancesLen, char *action, char *credentials)

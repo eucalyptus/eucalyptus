@@ -196,7 +196,7 @@ struct handlers kvm_libvirt_handlers = {
     .doDetachVolume = NULL,
     .doDescribeSensors = NULL,
     .doModifyNode = NULL,
-    .doMigrateInstances = doMigrateInstances
+    .doMigrateInstances = doMigrateInstances,
 };
 
 /*----------------------------------------------------------------------------*\
@@ -616,6 +616,20 @@ out:
 }
 
 //!                                                                                                                                                                              
+//! Handles the instance migration request.
+//!
+//! @param[in]  pMeta a pointer to the node controller (NC) metadata structure
+//! @param[in]  instances metadata for the instance to migrate to destination
+//! @param[in]  instancesLen number of instances in the instance list
+//! @param[in]  action IP of the destination Node Controller
+//! @param[in]  credentials credentials that enable the migration
+//!
+//! @return EUCA_OK on sucess or EUCA_ERROR on failure
+//!
+//! @pre
+//!
+//! @post
+//!
 //! TODO: doxygen
 //!
 static int doMigrateInstances(struct nc_state_t *nc, ncMetadata * pMeta, ncInstance ** instances, int instancesLen, char *action, char *credentials)

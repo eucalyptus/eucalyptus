@@ -379,7 +379,7 @@ static int getstat_generate(getstat *** pstats)
                 subtoken = strtok_r(str2, "\t", &saveptr2);
                 if (subtoken == NULL) {
                     if (j == 1)
-                        free(gs);
+                        EUCA_FREE(gs);
                     break;
                 }
                 // e.g. line: i-760B43A1      1347407243789   NetworkIn       summation       total   2112765752
