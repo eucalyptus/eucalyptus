@@ -141,6 +141,7 @@ public class Permissions {
 			LOG.debug( "Not in a request context", e );
 		}
 	}
+	
 	public static boolean isAuthorized(Account resourceAccount, User requestUser) {
 		try {
 			Account account = requestUser.getAccount( );
