@@ -368,7 +368,7 @@ static void *rebooting_thread(void *arg)
                     err = virDomainAttachDevice(dom, xml);
                 }
                 sem_v(hyp_sem);
-                
+
                 if (err) {
                     LOGERROR("[%s][%s] failed to reattach volume (attempt %d of %d)\n", instance->instanceId, volume->volumeId, j, REATTACH_RETRIES);
                     LOGDEBUG("[%s][%s] error from virDomainAttachDevice: %d xml: %s\n", instance->instanceId, volume->volumeId, err, xml);
@@ -568,23 +568,23 @@ static void *migrating_thread(void *arg)
     ncInstance *instance = ((ncInstance *) arg);
     virDomainPtr dom = NULL;
     virConnectPtr *conn = NULL;
-    
+
     if ((conn = check_hypervisor_conn()) == NULL) {
         LOGERROR("[%s] cannot migrate instance %s (failed to connect to hypervisor), giving up\n", instance->instanceId, instance->instanceId);
         goto out;
     }
-    
+
     sem_p(hyp_sem);
     {
         dom = virDomainLookupByName(*conn, instance->instanceId);
     }
     sem_v(hyp_sem);
-    
+
     if (dom == NULL) {
         LOGERROR("[%s] cannot migrate instance %s (failed to find domain), giving up\n", instance->instanceId, instance->instanceId);
         goto out;
     }
-    
+
     char duri [1024];
     snprintf (duri, sizeof(duri), "qemu+tls://%s/system", instance->migration_dst);
     virConnectPtr dconn = NULL;
@@ -593,24 +593,27 @@ static void *migrating_thread(void *arg)
         LOGERROR("[%s] cannot migrate instance %s (failed to connect to remote), giving up\n", instance->instanceId, instance->instanceId);
         goto out;
     }
-    
-    virDomain * ddom = virDomainMigrate(dom, 
-                                        dconn, 
-                                        VIR_MIGRATE_LIVE | VIR_MIGRATE_NON_SHARED_DISK, 
+
+    virDomain * ddom = virDomainMigrate(dom,
+                                        dconn,
+                                        VIR_MIGRATE_LIVE | VIR_MIGRATE_NON_SHARED_DISK,
                                         NULL, // new name on destination (optional)
                                         NULL, // destination URI as seen from source (optional)
                                         0L); // bandwidth limitation (0 => unlimited)
     virConnectClose(dconn);
-    
+
     if (ddom == NULL) {
         LOGERROR("[%s] cannot migrate instance %s, giving up\n", instance->instanceId, instance->instanceId);
         goto out;
     }
     virDomainFree(ddom);
-    
+
  out:
     sem_p(inst_sem);
-    instance->migration_state = NOT_MIGRATING;
+    // If this is set to NOT_MIGRATING here, it's briefly possible for
+    // both the source and destination nodes to report the same instance
+    // as Extant/NOT_MIGRATING, which is confusing!
+    instance->migration_state = MIGRATION_CLEANING;
     save_instance_struct(instance);
     copy_instances();
     sem_v(inst_sem);
@@ -619,7 +622,7 @@ static void *migrating_thread(void *arg)
     return NULL;
 }
 
-//!                                                                                                                                                                              
+//!
 //! TODO: doxygen
 //!
 static int doMigrateInstances (struct nc_state_t * nc, ncMetadata * pMeta, ncInstance ** instances, int instancesLen, char * action, char * credentials)
@@ -644,7 +647,7 @@ static int doMigrateInstances (struct nc_state_t * nc, ncMetadata * pMeta, ncIns
             LOGERROR("[%s] cannot find instance\n", instance_req->instanceId);
             return (EUCA_ERROR);
         }
-        
+
         if (strcmp (action, "prepare") == 0) {
             sem_p(inst_sem);
             instance->migration_state = MIGRATION_READY;
@@ -656,7 +659,7 @@ static int doMigrateInstances (struct nc_state_t * nc, ncMetadata * pMeta, ncIns
             sem_v(inst_sem);
 
         } else if (strcmp (action, "commit") == 0) {
-            
+
             sem_p(inst_sem);
             instance->migration_state = MIGRATION_IN_PROGRESS;
             LOGINFO("[%s] migration source initiating %s > %s\n", instance->instanceId, instance->migration_src, instance->migration_dst);
@@ -670,7 +673,7 @@ static int doMigrateInstances (struct nc_state_t * nc, ncMetadata * pMeta, ncIns
                 LOGERROR("[%s] failed to spawn a migration thread\n", instance->instanceId);
                 return (EUCA_ERROR);
             }
-            
+
             if (pthread_detach(tcb)) {
                 LOGERROR("[%s] failed to detach the migration thread\n", instance->instanceId);
                 return (EUCA_ERROR);
@@ -705,13 +708,13 @@ static int doMigrateInstances (struct nc_state_t * nc, ncMetadata * pMeta, ncIns
         LOGINFO("[%s] migration destination preparing %s > %s\n", instance->instanceId, instance->migration_src, instance->migration_dst);
         save_instance_struct(instance);
         sem_v(inst_sem);
-        
+
         int error;
-        
+
         if (vbr_parse(&(instance->params), pMeta) != EUCA_OK) {
             goto failed_dest;
         }
-        
+
         // set up networking
         char *brname = NULL;
         if ((error = vnetStartNetwork(nc->vnetconfig, instance->ncnet.vlan, NULL, NULL, NULL, &brname)) != EUCA_OK) {
@@ -736,7 +739,7 @@ static int doMigrateInstances (struct nc_state_t * nc, ncMetadata * pMeta, ncIns
             if (strcmp(volume->stateName, VOL_STATE_ATTACHED) && strcmp(volume->stateName, VOL_STATE_ATTACHING))
                 continue;                  // skip the entry unless attached or attaching
             LOGDEBUG("[%s] volumes [%d] = '%s'\n", instance->instanceId, v, volume->stateName);
-            
+
             // TODO: factor what the following out of here and doAttachVolume() in handlers_default.c
 
             int is_iscsi_target = 0;
@@ -746,15 +749,15 @@ static int doMigrateInstances (struct nc_state_t * nc, ncMetadata * pMeta, ncIns
             char localDevReal[32], localDevTag[256], remoteDevReal[132];
             char * tagBuf = localDevTag;
             ret = convert_dev_names(volume->localDev, localDevReal, tagBuf);
-            if (ret) 
+            if (ret)
                 goto unroll;
 
             // do iscsi connect shellout if remoteDev is an iSCSI target
-            
+
             if (check_iscsi(volume->remoteDev)) {
                 char *remoteDevStr = NULL;
                 is_iscsi_target = 1;
-                
+
                 // get credentials, decrypt them, login into target
                 remoteDevStr = connect_iscsi_target(volume->remoteDev);
                 if (!remoteDevStr || !strstr(remoteDevStr, "/dev")) {
@@ -807,7 +810,7 @@ static int doMigrateInstances (struct nc_state_t * nc, ncMetadata * pMeta, ncIns
             // TODO: unroll all volume attachments
             break;
         }
-        
+
         sem_p(inst_sem);
         instance->migration_state = MIGRATION_READY;
         instance->bootTime = time(NULL); // otherwise nc_state.booting_cleanup_threshold will kick in
