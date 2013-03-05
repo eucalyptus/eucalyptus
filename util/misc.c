@@ -280,6 +280,25 @@ pid_t timewait(pid_t pid, int *status, int timeout_sec)
     return (rc);
 }
 
+int killwait(pid_t pid)
+{
+    int status = 0;
+
+    kill(pid, SIGTERM);         // should be able to do
+    if (timewait(pid, &status, 1) == 0) {
+        logprintfl(EUCAERROR, "child process {%u} failed to terminate. Attempting SIGKILL.\n", pid);
+        kill(pid, SIGKILL);
+        if (timewait(pid, &status, 1) == 0) {
+            logprintfl(EUCAERROR, "child process {%u} failed to KILL. Attempting SIGKILL again.\n", pid);
+            kill(pid, SIGKILL);
+            if (timewait(pid, &status, 1) == 0) {
+                return (1);
+            }
+        }
+    }
+    return (0);
+}
+
 int param_check(char *func, ...)
 {
     int fail;
@@ -2108,11 +2127,63 @@ int timeshell(char *command, char *stdout_str, char *stderr_str, int max_size, i
     if (rc) {
         rc = WEXITSTATUS(status);
     } else {
-        kill(child_pid, SIGKILL);
+        killwait(child_pid);
         logprintfl(EUCAERROR, "warning: shell execution timeout\n");
         return -1;
     }
     return rc;
+}
+
+#define DEV_STR_DELIMITER ","
+#define DEV_STR_IQNS_DELIMITER "|"
+#define DEV_STR_KEY_VAL_DELIMITER "="
+
+int get_remoteDevForNC(const char * the_iqn, const char * remoteDev, char * remoteDevForNC, int remoteDevForNCLen)
+{
+    assert(remoteDevForNC!=NULL);
+    assert(remoteDevForNCLen>0);
+    remoteDevForNC[0] = '\0'; // clear out the destination string
+
+    char * remoteDevCopy = strdup(remoteDev);
+    if (remoteDevCopy == NULL) {
+        logprintfl(EUCAERROR, "out of memory\n");
+        return 1;
+    }
+
+    int ret = 1;
+    char * toka;
+    char * ptra = remoteDevCopy;
+    for (int i = 0; (toka = strsep(&ptra, DEV_STR_DELIMITER)); i++) {
+        if (i == 2) { // IQN strings are in the 3rd field
+            if (strstr(toka, DEV_STR_KEY_VAL_DELIMITER) == NULL) { // old format, just the LUN, don't munge it
+                ret = 0;
+            } else {
+                char * ptrb;
+                char * tokb = strtok_r(toka, DEV_STR_IQNS_DELIMITER, &ptrb);
+                while (tokb) {
+                    char * ptrc;
+                    char * an_iqn = strtok_r(tokb, DEV_STR_KEY_VAL_DELIMITER, &ptrc);
+                    char * lun    = strtok_r(NULL, DEV_STR_KEY_VAL_DELIMITER, &ptrc);
+                    if (an_iqn && lun) {
+                        if (strcmp (an_iqn, the_iqn) == 0) {
+                            toka = lun;
+                            ret = 0;
+                            break;
+                        }
+                    }
+                    tokb = strtok_r(NULL, DEV_STR_IQNS_DELIMITER, &ptrb);
+                }
+            }
+        }
+        
+        strncat(remoteDevForNC, toka, remoteDevForNCLen);
+        if (ptra != NULL) { // there are more fields to come
+            strncat(remoteDevForNC, DEV_STR_DELIMITER, remoteDevForNCLen);
+        }
+    }
+    free(remoteDevCopy);
+    
+    return ret;
 }
 
 /////////////////////////////////////////////// unit testing code ///////////////////////////////////////////////////
@@ -2128,6 +2199,29 @@ int main(int argc, char **argv)
     char *s;
     getcwd(cwd, sizeof(cwd));
     srandom(time(NULL));
+
+    {
+        printf("testing get_remoteDevForNC\n");
+        char * remoteDev = "a,b,c=1|d=2|e=3,f,g,h";
+        char * the_iqn = "d";
+        char remoteDevForNC[4096] = "foobar";
+        assert(get_remoteDevForNC(the_iqn, remoteDev, remoteDevForNC, sizeof(remoteDevForNC))==0);
+        assert(strcmp(remoteDevForNC, "a,b,2,f,g,h")==0);
+        
+        remoteDev = "a,b,d=2,f,g,h";
+        assert(get_remoteDevForNC(the_iqn, remoteDev, remoteDevForNC, sizeof(remoteDevForNC))==0);
+        assert(strcmp(remoteDevForNC, "a,b,2,f,g,h")==0);
+        
+        remoteDev = "a,b,2,f,g,h";
+        assert(get_remoteDevForNC(the_iqn, remoteDev, remoteDevForNC, sizeof(remoteDevForNC))==0);
+        assert(strcmp(remoteDevForNC, "a,b,2,f,g,h")==0);
+        
+        char * remoteDevForNCGood = "b483-1000,,1,kyF3TR2zPQ/t01+U6irzECGiVdrVbOPGPjVDJqmYwhWDaWAd5P98YkGzUmhrr/C3K1+M5qO//dXtFOyU90uxL0OuBdumb3zPJ3Tpfx7O0cQ8x+2XufKJl47G8Ca3vkravOXqyRV7hmFrvGsSZXk0eqzBN7liYBzkUdpj3zhe0PMwxft+e1WyQSAvNNB/Ea41jkrG8T0X2amYE9gflqmOZlWLUiJLZV6GgJ7rV3Xb3uKtEaLqHISuaGsK1FGT0oZzpNdd4DPTeo8mo+XfphlMq0NAIZl/+VdUfCRbGhU977koY4nPX3W7xwg+ZP5S3qGF+b9R7mrUD8s4izRkqSEZjg==,,192.168.25.182,iqn.1992-04.com.emc:cx.apm00121200804.a6";
+        remoteDev = "b483-1000,,iqn.1994-05.com.redhat:d0d578d4d530=1|iqn.1994-05.com.redhat:e4a4c74e2470=1,kyF3TR2zPQ/t01+U6irzECGiVdrVbOPGPjVDJqmYwhWDaWAd5P98YkGzUmhrr/C3K1+M5qO//dXtFOyU90uxL0OuBdumb3zPJ3Tpfx7O0cQ8x+2XufKJl47G8Ca3vkravOXqyRV7hmFrvGsSZXk0eqzBN7liYBzkUdpj3zhe0PMwxft+e1WyQSAvNNB/Ea41jkrG8T0X2amYE9gflqmOZlWLUiJLZV6GgJ7rV3Xb3uKtEaLqHISuaGsK1FGT0oZzpNdd4DPTeo8mo+XfphlMq0NAIZl/+VdUfCRbGhU977koY4nPX3W7xwg+ZP5S3qGF+b9R7mrUD8s4izRkqSEZjg==,,192.168.25.182,iqn.1992-04.com.emc:cx.apm00121200804.a6";
+        the_iqn = "iqn.1994-05.com.redhat:d0d578d4d530";
+        assert(get_remoteDevForNC(the_iqn, remoteDev, remoteDevForNC, sizeof(remoteDevForNC))==0);
+        assert(strcmp(remoteDevForNC, remoteDevForNCGood)==0);
+    }
 
     printf("testing system_output() in misc.c\n");
     s = system_output("echo Hello");
