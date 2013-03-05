@@ -147,7 +147,8 @@ const char *ncResourceTypeName[] = {
     "kernel",
     "ephemeral",
     "swap",
-    "ebs"
+    "ebs",
+    "boot",
 };
 
 int allocate_virtualMachine(virtualMachine * out, const virtualMachine * in)

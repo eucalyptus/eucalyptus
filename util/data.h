@@ -152,7 +152,8 @@ typedef enum _ncResourceType {
     NC_RESOURCE_KERNEL,
     NC_RESOURCE_EPHEMERAL,
     NC_RESOURCE_SWAP,
-    NC_RESOURCE_EBS
+    NC_RESOURCE_EBS,
+    NC_RESOURCE_BOOT,
 } ncResourceType;
 
 extern const char *ncResourceTypeName[];
@@ -183,7 +184,7 @@ typedef struct virtualBootRecord_t {
     long long size;             // in bytes
     char formatName[SMALL_CHAR_BUFFER_SIZE];    // ext2|ext3|swap|none
     char id[SMALL_CHAR_BUFFER_SIZE];    // emi|eki|eri|vol|none
-    char typeName[SMALL_CHAR_BUFFER_SIZE];  // machine|kernel|ramdisk|ephemeral|ebs
+    char typeName[SMALL_CHAR_BUFFER_SIZE];  // machine|kernel|ramdisk|ephemeral|ebs|boot
 
     // the remaining fields are set by NC
     ncResourceType type;        // NC_RESOURCE_{IMAGE|RAMDISK|...}
@@ -206,6 +207,7 @@ typedef struct virtualMachine_t {
     virtualBootRecord *ramdisk;
     virtualBootRecord *swap;
     virtualBootRecord *ephemeral0;
+    virtualBootRecord *boot;
     virtualBootRecord virtualBootRecord[EUCA_MAX_VBRS];
     int virtualBootRecordLen;
     libvirtNicType nicType;

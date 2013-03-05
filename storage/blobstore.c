@@ -1819,12 +1819,14 @@ unlock:
     }
 
     safe_strncpy(meta->id, bs->id, sizeof(meta->id));
-    if(realpath(bs->path, meta->path) == NULL)
-        ERR(BLOBSTORE_ERROR_UNKNOWN, "failed to retrieve the blobstore real path.");
     meta->revocation_policy = bs->revocation_policy;
     meta->snapshot_policy = bs->snapshot_policy;
     meta->format = bs->format;
     meta->blocks_limit = bs->limit_blocks;
+    if (realpath(bs->path, meta->path) == NULL) {
+        logprintfl(EUCAERROR, "failed to resolve the blobstore path %s\n", bs->path);
+        ret = -1;
+    }
 
     return ret;
 }
@@ -2210,8 +2212,11 @@ blockblob *blockblob_open(blobstore * bs, const char *id,   // can be NULL if cr
         goto clean;
     }
     char thread_id[512];
+    int thread_id_len = 0;
     snprintf(thread_id, sizeof(thread_id), "%d/%u", getpid(), (unsigned int)pthread_self());
-    if(write(bb->fd_lock, thread_id, strlen(thread_id)) != strlen(thread_id)) {
+    thread_id_len = strlen(thread_id);
+    if (write(bb->fd_lock, thread_id, thread_id_len) != thread_id_len) {
+        // Fail to write our thread indentifier in the lock file.
         ERR(BLOBSTORE_ERROR_UNKNOWN, "failed to write to the blobstore");
         goto clean;
     }
@@ -2385,8 +2390,9 @@ clean:
     {
         int saved_errno = _blobstore_errno; // save it because close_and_unlock() or delete_blockblob_files() may reset it
         if (bb->fd_lock != -1) {
-            if(ftruncate(bb->fd_lock, 0) != 0)
-                ERR(BLOBSTORE_ERROR_UNKNOWN, "failed to shrink blockblob");
+            if (ftruncate(bb->fd_lock, 0) != 0) {
+                ERR(BLOBSTORE_ERROR_UNKNOWN, "failed to truncate the blobstore lock file.");
+            }
             close_and_unlock(bb->fd_lock);
         }
         if (bb->fd_blocks != -1) {
@@ -2836,8 +2842,9 @@ int blockblob_delete(blockblob * bb, long long timeout_usec, char do_force)
         ret = delete_blob_state(bb, timeout_usec, do_force);    // do the bulk of the cleanup
 
         // close the open file descriptors
-        if(ftruncate(bb->fd_lock, 0) != 0)
-            ERR(BLOBSTORE_ERROR_UNKNOWN, "failed to shrink blockblob");
+        if (ftruncate(bb->fd_lock, 0) != 0) {
+            ERR(BLOBSTORE_ERROR_UNKNOWN, "failed to truncate the blobstore lock file.");
+        }
 
         if (close_and_unlock(bb->fd_lock) == -1) {
             ret = -1;
@@ -2948,16 +2955,135 @@ int blockblob_copy(blockblob * src_bb,  // source blob to copy data from
     return ret;
 }
 
+//!
+//! Sorts the device mapper table string sent to dmsetup. In some case, the table is
+//! sent in partition ordering rather than start block ordering. This cause dmsetup to
+//! get sick and puke some errors. For example, the following table will cause some
+//! errors:
+//! \li 0 63 linear /dev/mapper/euca-dsk-3AE63D3B-d6320e89-p0-snap 0
+//! \li 204863 2764800 linear /dev/loop0 0
+//! \li 2969663 6516 linear /dev/loop1 0
+//! \li 2976179 1024 linear /dev/loop2 0
+//! \li 63 204800 linear /dev/loop3 0
+//! This function will take the previous table and re-order it in starting block order
+//! as in the following:
+//! \li 0 63 linear /dev/mapper/euca-dsk-3AE63D3B-d6320e89-p0-snap 0
+//! \li 63 204800 linear /dev/loop3 0
+//! \li 204863 2764800 linear /dev/loop0 0
+//! \li 2969663 6516 linear /dev/loop1 0
+//! \li 2976179 1024 linear /dev/loop2 0
+//!
+//! @param[in,out] table the table string to sort
+//!
+//! @return a pointer to the newly allocated table string if successful or NULL if any
+//!         error occured.
+//!
+//! @pre The provided table field must not be NULL and must contain more than 1 entry
+//!      separated by the newline character.
+//!
+//! @post On success the given table will be freed and a newly constructed table will be
+//!       returned. The original table pointer will be set to the newly returned table too.
+//!
+static char *dm_sort_table(char **pOldTable)
+{
+#define DM_MAX_LINES          32
+#define DM_LINE_LENGTH       256
+
+    unsigned int i = 0;
+    unsigned int lineId = UINT32_MAX;
+    unsigned long long minVal = UINT64_MAX;
+    unsigned long long curVal = 0;
+    char *aLines[DM_MAX_LINES] = { NULL }; //!< TODO: Turn this into a dynamic re-alloc'ed array?
+    char sLine[DM_LINE_LENGTH] = "";
+    char *pNewTable = NULL;
+    char *pDupTable = NULL;
+    register unsigned int j = 0;
+    register unsigned int count = 0;
+
+    // Make sure our given table isn't NULL.
+    if ((pOldTable != NULL) && ((*pOldTable) != NULL)) {
+        // Duplicate the original table in case we need it later. strtok() will mess it up
+        pDupTable = strdup((*pOldTable));
+
+        // Split in lines and count
+        aLines[count] = strtok((*pOldTable), "\n");
+        while ((aLines[count] != NULL) && (count < DM_MAX_LINES)) {
+            count++;
+            aLines[count] = strtok(NULL, "\n");
+        }
+
+        // Will we need to sort?
+        if(aLines[count] != NULL) {
+            // hmmm. This sounds list we has more than DM_MAX_LINES... Just return the table as is
+            pNewTable = pDupTable;
+        } else if (count == 1) {
+            // So we have 1 line. Because strtok() messed up the original table
+            // lets return the duplicate version of the original
+            pNewTable = pDupTable;
+        } else {
+            // we need more than 1 line in this table to sort. At this point we know
+            // we have less than DM_MAX_LINES so we don't have to worry 'bout it.
+            if (count > 1) {
+                // Sort every lines in the 'lines' array
+                for (i = 0; i < count; i++) {
+                    // Search for the smaller starting block value in the lefover lines
+                    lineId = UINT32_MAX;
+                    minVal = UINT64_MAX;
+                    for (j = 0; j < count; j++) {
+                        // As we pick lines from the array, they become NULLs
+                        if (aLines[j] != NULL) {
+                            // Retrieve the starting block number which is the first item on the line
+                            if (sscanf(aLines[j], "%llu", &curVal) == 1) {
+                                // Is this a newest low?
+                                if (curVal < minVal) {
+                                    lineId = j;
+                                    minVal = curVal;
+                                }
+                            }
+                        }
+                    }
+
+                    // Since we set line ID to UINT32_MAX, its safe to assume its valid if less than count
+                    if (lineId < count) {
+                        // Re-add the newline character at the end of this string.
+                        if (snprintf(sLine, DM_LINE_LENGTH, "%s\n", aLines[lineId]) > 0) {
+                            // Add it to our new table.
+                            if ((pNewTable = strdupcat(pNewTable, sLine)) == NULL) {
+                                EUCA_FREE(pDupTable);
+                                EUCA_FREE((*pOldTable));
+                                return (NULL);
+                            }
+                        }
+                        // Lets no longer consider this line.
+                        aLines[lineId] = NULL;
+                    }
+                }
+            }
+            // If count is anything else than 1, we no longer need pDupTable
+            EUCA_FREE(pDupTable);
+        }
+    }
+    // Free our given table and return the new one.
+    EUCA_FREE((*pOldTable));
+
+    // Set our in/out parameter properly on our way out
+    (*pOldTable) = pNewTable;
+    return (pNewTable);
+
+#undef DM_MAX_LINES
+#undef DM_LINE_LENGTH
+}
+
 int blockblob_clone(blockblob * bb, // destination blob, which blocks may be used as backing
                     const blockmap * map,   // map of blocks from other blobs/devices to be copied/mapped/snapshotted
                     unsigned int map_size)  // size of the map []
 {
     int ret = 0;
-
     if (bb == NULL) {
         ERR(BLOBSTORE_ERROR_INVAL, "blockblob pointer is NULL");
         return -1;
     }
+
     if (map == NULL || map_size < 1 || map_size > MAX_BLOCKMAP_SIZE) {
         ERR(BLOBSTORE_ERROR_INVAL, "invalid blockbmap or its size");
         return -1;
@@ -2968,7 +3094,6 @@ int blockblob_clone(blockblob * bb, // destination blob, which blocks may be use
     char *zero_dev = NULL;
     for (int i = 0; i < map_size; i++) {
         const blockmap *m = map + i;
-
         if (m->relation_type != BLOBSTORE_COPY && bb->store->snapshot_policy != BLOBSTORE_SNAPSHOT_DM) {
             ERR(BLOBSTORE_ERROR_INVAL, "relation type is incompatible with snapshot policy");
             return -1;
@@ -3032,9 +3157,10 @@ int blockblob_clone(blockblob * bb, // destination blob, which blocks may be use
     // compute the base name of the device mapper device
     char dm_base[MAX_DM_LINE];
     snprintf(dm_base, sizeof(dm_base), "euca-%s", bb->id);
-    for (char *c = dm_base; *c != '\0'; c++)
+    for (char *c = dm_base; *c != '\0'; c++) {
         if (*c == '/')          // if the ID has slashes,
             *c = '-';           // replace them with hyphens
+    }
 
     int devices = 0;
     int mapped_or_snapshotted = 0;
@@ -3045,6 +3171,7 @@ int blockblob_clone(blockblob * bb, // destination blob, which blocks may be use
         ERR(BLOBSTORE_ERROR_NOMEM, NULL);
         return -1;
     }
+
     char **dm_tables = calloc(map_size * 4 + 1, sizeof(char *));    // for device mapper tables 
     if (dm_tables == NULL) {
         ERR(BLOBSTORE_ERROR_NOMEM, NULL);
@@ -3058,6 +3185,7 @@ int blockblob_clone(blockblob * bb, // destination blob, which blocks may be use
         const char *dev = NULL;
 
         m = map + i;
+
         sbb = m->source.blob;
 
         switch (m->source_type) {
@@ -3147,6 +3275,11 @@ int blockblob_clone(blockblob * bb, // destination blob, which blocks may be use
     }
 
     if (mapped_or_snapshotted) {    // we must use the device mapper
+        if ((main_dm_table = dm_sort_table(&main_dm_table)) == NULL) {
+            ret = -1;
+            goto free;
+        }
+
         safe_strncpy(bb->dm_name, dm_base, sizeof(bb->dm_name));
         dev_names[devices] = strdup(dm_base);
         dm_tables[devices] = main_dm_table;
@@ -3209,22 +3342,24 @@ int blockblob_clone(blockblob * bb, // destination blob, which blocks may be use
 
     goto free;
 
-    int saved_errno;
 cleanup:                       // this is failure cleanup code path
+    {
+        int saved_errno;
 
-    saved_errno = _blobstore_errno; // save it because dm_delete_devices may overwrite it
-    logprintfl(EUCAERROR, "error: blockblob_clone: %s (%d)\n", blobstore_get_last_msg(), _blobstore_errno);
+        saved_errno = _blobstore_errno; // save it because dm_delete_devices may overwrite it
+        logprintfl(EUCAERROR, "error: blockblob_clone: %s (%d)\n", blobstore_get_last_msg(), _blobstore_errno);
 
-    // remove dm devices that may have been created
-    if (dm_delete_devices(dev_names, devices) == 0) {
+        // remove dm devices that may have been created
+        if (dm_delete_devices(dev_names, devices) == 0) {
 
-        // remove the .dm file so that others do not 
-        // needlessly attempt to remove dm devices later
-        char path[PATH_MAX];
-        set_blockblob_metadata_path(BLOCKBLOB_PATH_DM, bb->store, bb->id, path, sizeof(path));
-        unlink(path);
+            // remove the .dm file so that others do not
+            // needlessly attempt to remove dm devices later
+            char path[PATH_MAX];
+            set_blockblob_metadata_path(BLOCKBLOB_PATH_DM, bb->store, bb->id, path, sizeof(path));
+            unlink(path);
+        }
+        _blobstore_errno = saved_errno;
     }
-    _blobstore_errno = saved_errno;
 
 free:
     for (int i = 0; i < devices; i++) {
@@ -3515,6 +3650,7 @@ static int do_clone_stresstest(const char *base, const char *name, blobstore_for
 
     blobstore *bs1 = create_teststore(STRESS_BS_SIZE, base, name, BLOBSTORE_FORMAT_DIRECTORY, BLOBSTORE_REVOCATION_NONE, BLOBSTORE_SNAPSHOT_DM);
     blobstore *bs2 = NULL;
+
     if (bs1 == NULL) {
         errors++;
         goto done;
