@@ -48,7 +48,12 @@ class BotoBalanceInterface(BalanceInterface):
             reg = None
             port=443
         reg = RegionInfo(name='eucalyptus', endpoint=clc_host)
-        self.conn = ELBConnection(access_id, secret_key, region=reg,
+        if boto.__version__ < '2.6':
+            self.conn = ELBConnection(access_id, secret_key, region=reg,
+                                  port=port, path=path,
+                                  is_secure=True, security_token=token, debug=0)
+        else:
+            self.conn = ELBConnection(access_id, secret_key, region=reg,
                                   port=port, path=path, validate_certs=False,
                                   is_secure=True, security_token=token, debug=0)
         self.conn.http_connection_kwargs['timeout'] = 30

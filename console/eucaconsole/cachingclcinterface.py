@@ -56,6 +56,7 @@ class CachingClcInterface(ClcInterface):
             freq = pollfreq
         self.caches['zones'] = Cache(freq)
         self.caches['get_zones'] = self.clc.get_all_zones
+        self.caches['timer_zones'] = None
 
         try:
             freq = config.getint('server', 'pollfreq.images')
@@ -63,6 +64,7 @@ class CachingClcInterface(ClcInterface):
             freq = pollfreq
         self.caches['images'] = Cache(freq)
         self.caches['get_images'] = self.clc.get_all_images
+        self.caches['timer_images'] = None
 
         try:
             freq = config.getint('server', 'pollfreq.instances')
@@ -70,6 +72,7 @@ class CachingClcInterface(ClcInterface):
             freq = pollfreq
         self.caches['instances'] = Cache(freq)
         self.caches['get_instances'] = self.clc.get_all_instances
+        self.caches['timer_instances'] = None
 
         try:
             freq = config.getint('server', 'pollfreq.keypairs')
@@ -77,6 +80,7 @@ class CachingClcInterface(ClcInterface):
             freq = pollfreq
         self.caches['keypairs'] = Cache(freq)
         self.caches['get_keypairs'] = self.clc.get_all_key_pairs
+        self.caches['timer_keypairs'] = None
 
         try:
             freq = config.getint('server', 'pollfreq.groups')
@@ -84,6 +88,7 @@ class CachingClcInterface(ClcInterface):
             freq = pollfreq
         self.caches['groups'] = Cache(freq)
         self.caches['get_groups'] = self.clc.get_all_security_groups
+        self.caches['timer_groups'] = None
 
         try:
             freq = config.getint('server', 'pollfreq.addresses')
@@ -91,6 +96,7 @@ class CachingClcInterface(ClcInterface):
             freq = pollfreq
         self.caches['addresses'] = Cache(freq)
         self.caches['get_addresses'] = self.clc.get_all_addresses
+        self.caches['timer_addresses'] = None
 
         try:
             freq = config.getint('server', 'pollfreq.volumes')
@@ -98,6 +104,7 @@ class CachingClcInterface(ClcInterface):
             freq = pollfreq
         self.caches['volumes'] = Cache(freq)
         self.caches['get_volumes'] = self.clc.get_all_volumes
+        self.caches['timer_volumes'] = None
 
         try:
             freq = config.getint('server', 'pollfreq.snapshots')
@@ -105,6 +112,7 @@ class CachingClcInterface(ClcInterface):
             freq = pollfreq
         self.caches['snapshots'] = Cache(freq)
         self.caches['get_snapshots'] = self.clc.get_all_snapshots
+        self.caches['timer_snapshots'] = None
 
         try:
             freq = config.getint('server', 'pollfreq.tags')
@@ -112,6 +120,7 @@ class CachingClcInterface(ClcInterface):
             freq = pollfreq
         self.caches['tags'] = Cache(freq)
         self.caches['get_tags'] = self.clc.get_all_tags
+        self.caches['timer_tags'] = None
 
         try:
             self.min_polling = config.getboolean('server', 'min.clc.polling')
@@ -129,12 +138,10 @@ class CachingClcInterface(ClcInterface):
                 for inst in reservation.instances:
                     if zone == 'all' or inst.placement == zone:
                         state = inst.state
-                        if not(state):
-                            state = inst._state.name
                         if state == 'running':
-                            numRunning += numRunning
+                            numRunning += 1
                         elif state == 'stopped':
-                            numStopped += numStopped 
+                            numStopped += 1 
         summary['inst_running'] = numRunning
         summary['inst_stopped'] = numStopped
         summary['keypair'] = len(self.caches['keypairs'].values)if self.caches['keypairs'].values else 0
@@ -154,7 +161,7 @@ class CachingClcInterface(ClcInterface):
 
         # clear previous timers
         for res in self.caches:
-            if res[:5] == 'timer':
+            if res[:5] == 'timer' and self.caches[res]:
                 self.caches[res].cancel()
                 self.caches[res] = None
 
