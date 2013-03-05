@@ -179,6 +179,7 @@ typedef enum _ncResourceFormatType {
 typedef struct virtualBootRecord_t {
     // first six fields arrive in requests (RunInstance, {Attach|Detach}Volume)
     char resourceLocation[CHAR_BUFFER_SIZE];    // http|walrus|cloud|sc|iqn|aoe://... or none
+    char * resourceLocationPtr; // pointer to a full version of resourceLocation, used by CC for IQN=LUN demuxing
     char guestDeviceName[SMALL_CHAR_BUFFER_SIZE];   // x?[vhsf]d[a-z]?[1-9]*
     long long size;             // in bytes
     char formatName[SMALL_CHAR_BUFFER_SIZE];    // ext2|ext3|swap|none

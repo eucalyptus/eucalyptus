@@ -116,10 +116,10 @@ static void getstat_free(getstat ** stats)
         getstat *gs_next;
         for (; gs != NULL; gs = gs_next) {
             gs_next = gs->next;
-            free(gs);
+            EUCA_FREE(gs);
         }
     }
-    free(stats);
+    EUCA_FREE(stats);
 }
 
 static getstat *getstat_find(getstat ** stats, const char *instanceId)
@@ -202,11 +202,10 @@ static int getstat_generate(getstat *** pstats)
             for (int j = 1;; j++, str2 = NULL) {    // iterate over tab-separated entries in the line
                 subtoken = strtok_r(str2, "\t", &saveptr2);
                 if (subtoken == NULL) {
-                    if(j == 1)
-                        free(gs);
+                    if (j == 1)
+                        EUCA_FREE(gs);
                     break;
                 }
-
                 // e.g. line: i-760B43A1      1347407243789   NetworkIn       summation       total   2112765752
                 switch (j) {
                 case 1:{       // first entry is instance ID
@@ -265,7 +264,7 @@ static int getstat_generate(getstat *** pstats)
 bail:
         getstat_free(*pstats);
 done:
-        free(output);
+        EUCA_FREE(output);
     } else {
         logprintfl(EUCAWARN, "failed to invoke getstats for sensor data (%s)\n", strerror(errno));
     }
@@ -1594,7 +1593,7 @@ static void dump_sensor_cache(void)
         srs[i] = &(sensor_state->resources[i]);
     }
     log_sensor_resources("whole cache", srs, sensor_state->max_resources);
-    free(srs);
+    EUCA_FREE(srs);
 }
 
 static void clear_srs(sensorResource ** srs, int srsLen)
@@ -1764,9 +1763,9 @@ int main(int argc, char **argv)
     log_sensor_resources("values read from cache", srs, srsLen);
 
     for (int i = 0; i < sensor_state->max_resources; i++) {
-        free(srs[i]);
+        EUCA_FREE(srs[i]);
     }
-    free(srs);
+    EUCA_FREE(srs);
 
     dump_sensor_cache();
     logprintfl(EUCADEBUG, "********************************\n");
@@ -1815,9 +1814,9 @@ static void *competitor_function_reader(void *ptr)
     }
 
     for (int i = 0; i < sensor_state->max_resources; i++) {
-        free(srs[i]);
+        EUCA_FREE(srs[i]);
     }
-    free(srs);
+    EUCA_FREE(srs);
 
     *(long long *)ptr = errors;
     return NULL;

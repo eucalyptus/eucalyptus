@@ -197,7 +197,7 @@ int main(int argc, char *argv[])
             }
         }
 
-        free(tmp_name);
+        EUCA_FREE(tmp_name);
     } else {                    // HttpPut
         result = http_put(file_name, url, login, password);
     }

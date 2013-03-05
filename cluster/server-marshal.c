@@ -369,10 +369,9 @@ adb_DescribeSensorsResponse_t *DescribeSensorsMarshal(adb_DescribeSensors_t * de
             logprintfl(EUCAERROR, "doDescribeSensors() failed error=%d\n", error);
             if (outResourcesLen > 0 && outResources != NULL) {
                 for (int i = 0; i < outResourcesLen; i++) {
-                    if (outResources[i])
-                        free(outResources[i]);
+                    EUCA_FREE(outResources[i]);
                 }
-                free(outResources);
+                EUCA_FREE(outResources);
             }
         } else {
             logprintfl(EUCATRACE, "marshalling results outResourcesLen=%d\n", outResourcesLen);
@@ -384,22 +383,20 @@ adb_DescribeSensorsResponse_t *DescribeSensorsMarshal(adb_DescribeSensors_t * de
             // set operation-specific fields in output
             for (int i = 0; i < outResourcesLen; i++) {
                 adb_sensorsResourceType_t *resource = copy_sensor_resource_to_adb(env, outResources[i], historySize);
-                if (outResources[i])
-                    free(outResources[i]);
+                EUCA_FREE(outResources[i]);
                 adb_describeSensorsResponseType_add_sensorsResources(output, env, resource);
             }
-            if (outResourcesLen > 0 && outResources != NULL)
-                free(outResources);
+            EUCA_FREE(outResources);
 
             result = OK;        // success
         }
     }
 
-    free(sensorIds);
+    EUCA_FREE(sensorIds);
 
 reply:
 
-    free(instIds);
+    EUCA_FREE(instIds);
 
     if (result == ERROR) {
         adb_describeSensorsResponseType_set_return(output, env, AXIS2_FALSE);
@@ -521,13 +518,13 @@ adb_DescribeNetworksResponse_t *DescribeNetworksMarshal(adb_DescribeNetworks_t *
             vnetSubnet = hex2dot(outvnetConfig->nw);
             if (vnetSubnet) {
                 adb_describeNetworksResponseType_set_vnetSubnet(snrt, env, vnetSubnet);
-                free(vnetSubnet);
+                EUCA_FREE(vnetSubnet);
             }
 
             vnetNetmask = hex2dot(outvnetConfig->nm);
             if (vnetNetmask) {
                 adb_describeNetworksResponseType_set_vnetNetmask(snrt, env, vnetNetmask);
-                free(vnetNetmask);
+                EUCA_FREE(vnetNetmask);
             }
             adb_describeNetworksResponseType_set_vlanMin(snrt, env, 2);
             adb_describeNetworksResponseType_set_vlanMax(snrt, env, outvnetConfig->max_vlan);
@@ -553,11 +550,9 @@ adb_DescribeNetworksResponse_t *DescribeNetworksMarshal(adb_DescribeNetworks_t *
         }
     }
     for (i = 0; i < clusterControllersLen; i++) {
-        if (clusterControllers[i])
-            free(clusterControllers[i]);
+        EUCA_FREE(clusterControllers[i]);
     }
-    if (clusterControllers)
-        free(clusterControllers);
+    EUCA_FREE(clusterControllers);
 
     adb_describeNetworksResponseType_set_return(snrt, env, status);
     if (status == AXIS2_FALSE) {
@@ -570,8 +565,7 @@ adb_DescribeNetworksResponse_t *DescribeNetworksMarshal(adb_DescribeNetworks_t *
     ret = adb_DescribeNetworksResponse_create(env);
     adb_DescribeNetworksResponse_set_DescribeNetworksResponse(ret, env, snrt);
 
-    if (outvnetConfig)
-        free(outvnetConfig);
+    EUCA_FREE(outvnetConfig);
     return (ret);
 }
 
@@ -621,14 +615,12 @@ adb_DescribePublicAddressesResponse_t *DescribePublicAddressesMarshal(adb_Descri
 
             ipstr = hex2dot(outAddresses[i].ip);
             adb_publicAddressType_set_sourceAddress(addr, env, ipstr);
-            if (ipstr)
-                free(ipstr);
+            EUCA_FREE(ipstr);
 
             if (outAddresses[i].dstip) {
                 ipstr = hex2dot(outAddresses[i].dstip);
                 adb_publicAddressType_set_destAddress(addr, env, ipstr);
-                if (ipstr)
-                    free(ipstr);
+                EUCA_FREE(ipstr);
             } else {
                 adb_publicAddressType_set_destAddress(addr, env, "0.0.0.0");
             }
@@ -787,8 +779,7 @@ adb_ConfigureNetworkResponse_t *ConfigureNetworkMarshal(adb_ConfigureNetwork_t *
         if (strcmp(destName, destNameLast)) {
             doFlushNetwork(&ccMeta, accountId, destName);
         }
-        if (destNameLast)
-            free(destNameLast);
+        EUCA_FREE(destNameLast);
         destNameLast = strdup(destName);
         if (!destNameLast) {
             logprintf("ERROR: out of memory\n");
@@ -838,19 +829,15 @@ adb_ConfigureNetworkResponse_t *ConfigureNetworkMarshal(adb_ConfigureNetwork_t *
                                     minPort, maxPort);
         }
 
-        if (userNames)
-            free(userNames);
-        if (sourceNames)
-            free(sourceNames);
-        if (sourceNets)
-            free(sourceNets);
+        EUCA_FREE(userNames);
+        EUCA_FREE(sourceNames);
+        EUCA_FREE(sourceNets);
 
         if (rc) {
             done++;
         }
     }
-    if (destNameLast)
-        free(destNameLast);
+    EUCA_FREE(destNameLast);
 
     if (done) {
         logprintf("ERROR: doConfigureNetwork() returned fail %d\n", rc);
@@ -910,8 +897,7 @@ adb_GetConsoleOutputResponse_t *GetConsoleOutputMarshal(adb_GetConsoleOutput_t *
             }
         }
     }
-    if (output)
-        free(output);
+    EUCA_FREE(output);
 
     adb_getConsoleOutputResponseType_set_correlationId(gcort, env, ccMeta.correlationId);
     adb_getConsoleOutputResponseType_set_userId(gcort, env, ccMeta.userId);
@@ -975,11 +961,9 @@ adb_StartNetworkResponse_t *StartNetworkMarshal(adb_StartNetwork_t * startNetwor
     }
 
     for (i = 0; i < clusterControllersLen; i++) {
-        if (clusterControllers[i])
-            free(clusterControllers[i]);
+        EUCA_FREE(clusterControllers[i]);
     }
-    if (clusterControllers)
-        free(clusterControllers);
+    EUCA_FREE(clusterControllers);
 
     adb_startNetworkResponseType_set_return(snrt, env, status);
     if (status == AXIS2_FALSE) {
@@ -1050,8 +1034,7 @@ adb_DescribeResourcesResponse_t *DescribeResourcesMarshal(adb_DescribeResources_
             adb_describeResourcesResponseType_add_nodes(drrt, env, nt);
 
         }
-        if (outNodes)
-            free(outNodes);
+        EUCA_FREE(outNodes);
 
         for (i = 0; i < outTypesLen; i++) {
             adb_ccResourceType_t *rt = NULL;
@@ -1064,14 +1047,11 @@ adb_DescribeResourcesResponse_t *DescribeResourcesMarshal(adb_DescribeResources_
             adb_ccResourceType_set_availableInstances(rt, env, outTypesAvail[i]);
             adb_describeResourcesResponseType_add_resources(drrt, env, rt);
         }
-        if (outTypesMax)
-            free(outTypesMax);
-        if (outTypesAvail)
-            free(outTypesAvail);
+        EUCA_FREE(outTypesMax);
+        EUCA_FREE(outTypesAvail);
     }
 
-    if (vms)
-        free(vms);
+    EUCA_FREE(vms);
 
     adb_describeResourcesResponseType_set_correlationId(drrt, env, ccMeta.correlationId);
     adb_describeResourcesResponseType_set_userId(drrt, env, ccMeta.userId);
@@ -1121,8 +1101,7 @@ adb_DescribeInstancesResponse_t *DescribeInstancesMarshal(adb_DescribeInstances_
         rc = doDescribeInstances(&ccMeta, instIds, instIdsLen, &outInsts, &outInstsLen);
     }
 
-    if (instIds)
-        free(instIds);
+    EUCA_FREE(instIds);
     if (rc) {
         logprintf("ERROR: doDescribeInstances() failed %d\n", rc);
         status = AXIS2_FALSE;
@@ -1138,8 +1117,7 @@ adb_DescribeInstancesResponse_t *DescribeInstancesMarshal(adb_DescribeInstances_
             rc = ccInstanceUnmarshal(it, myInstance, env);
             adb_describeInstancesResponseType_add_instances(dirt, env, it);
         }
-        if (outInsts)
-            free(outInsts);
+        EUCA_FREE(outInsts);
     }
 
     adb_describeInstancesResponseType_set_correlationId(dirt, env, ccMeta.correlationId);
@@ -1366,13 +1344,13 @@ adb_RunInstancesResponse_t *RunInstancesMarshal(adb_RunInstances_t * runInstance
 
     ret = adb_RunInstancesResponse_create(env);
     adb_RunInstancesResponse_set_RunInstancesResponse(ret, env, rirt);
-    free(networkIndexList);
-    free(macAddrs);
-    free(netNames);
-    free(instIds);
-    free(userData);
-    free(uuids);
-    free(outInsts);
+    EUCA_FREE(networkIndexList);
+    EUCA_FREE(macAddrs);
+    EUCA_FREE(netNames);
+    EUCA_FREE(instIds);
+    EUCA_FREE(userData);
+    EUCA_FREE(uuids);
+    EUCA_FREE(outInsts);
     return (ret);
 }
 
@@ -1405,8 +1383,7 @@ adb_RebootInstancesResponse_t *RebootInstancesMarshal(adb_RebootInstances_t * re
         rc = doRebootInstances(&ccMeta, instIds, instIdsLen);
     }
 
-    if (instIds)
-        free(instIds);
+    EUCA_FREE(instIds);
 
     rirt = adb_rebootInstancesResponseType_create(env);
     if (rc) {
@@ -1469,8 +1446,7 @@ adb_TerminateInstancesResponse_t *TerminateInstancesMarshal(adb_TerminateInstanc
         rc = doTerminateInstances(&ccMeta, instIds, instIdsLen, force, &outStatus);
     }
 
-    if (instIds)
-        free(instIds);
+    EUCA_FREE(instIds);
 
     tirt = adb_terminateInstancesResponseType_create(env);
     if (rc) {
@@ -1486,8 +1462,7 @@ adb_TerminateInstancesResponse_t *TerminateInstancesMarshal(adb_TerminateInstanc
             }
         }
     }
-    if (outStatus)
-        free(outStatus);
+    EUCA_FREE(outStatus);
 
     adb_terminateInstancesResponseType_set_correlationId(tirt, env, ccMeta.correlationId);
     adb_terminateInstancesResponseType_set_userId(tirt, env, ccMeta.userId);

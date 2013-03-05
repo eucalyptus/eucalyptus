@@ -177,10 +177,9 @@ int verify_helpers(char **helpers, char **helpers_path, int num_helpers)
                     toka = strtok_r(NULL, ":", &savea);
                 }
                 tok = strtok_r(NULL, ":", &save);
-                if (helper)
-                    free(helper);
+                EUCA_FREE(helper);
             }
-            free(path);
+            EUCA_FREE(path);
         }
 
         if (!done) {
@@ -195,9 +194,8 @@ cleanup:
 
     if (helpers_path == NULL) {
         for (int i = 0; i < num_helpers; i++)
-            if (tmp_helpers_path[i])
-                free(tmp_helpers_path[i]);
-        free(tmp_helpers_path);
+            EUCA_FREE(tmp_helpers_path[i]);
+        EUCA_FREE(tmp_helpers_path);
     }
 
     return missing_helpers;
@@ -280,6 +278,25 @@ pid_t timewait(pid_t pid, int *status, int timeout_sec)
         logprintfl(EUCAERROR, "waitpid() timed out: pid=%d\n", pid);
     }
     return (rc);
+}
+
+int killwait(pid_t pid)
+{
+    int status = 0;
+
+    kill(pid, SIGTERM);         // should be able to do
+    if (timewait(pid, &status, 1) == 0) {
+        logprintfl(EUCAERROR, "child process {%u} failed to terminate. Attempting SIGKILL.\n", pid);
+        kill(pid, SIGKILL);
+        if (timewait(pid, &status, 1) == 0) {
+            logprintfl(EUCAERROR, "child process {%u} failed to KILL. Attempting SIGKILL again.\n", pid);
+            kill(pid, SIGKILL);
+            if (timewait(pid, &status, 1) == 0) {
+                return (1);
+            }
+        }
+    }
+    return (0);
 }
 
 int param_check(char *func, ...)
@@ -499,7 +516,7 @@ int check_block(const char *file)
         return (1);
     }
     rc = lstat(rpath, &mystat);
-    free(rpath);
+    EUCA_FREE(rpath);
     if (rc < 0 || !S_ISBLK(mystat.st_mode)) {
         return (1);
     }
@@ -584,10 +601,8 @@ char *replace_string(char **stringp, char *source, char *destination)
     new_string = malloc(sizeof(char) * maxlen); /* TODO: this has to be dynamic */
     if (!buf || !new_string) {
         fprintf(stderr, "replace_string: out of memory\n");
-        if (buf)
-            free(buf);
-        if (new_string)
-            free(new_string);
+        EUCA_FREE(buf);
+        EUCA_FREE(new_string);
         return NULL;
     }
     bzero(new_string, maxlen);
@@ -605,10 +620,8 @@ char *replace_string(char **stringp, char *source, char *destination)
     }
     snprintf(buf, maxlen, "%s%s", new_string, substart);
     strncpy(new_string, buf, maxlen);
-    if (buf)
-        free(buf);
-
-    free(*stringp);
+    EUCA_FREE(buf);
+    EUCA_FREE(*stringp);
     *stringp = new_string;
 
     return new_string;
@@ -644,7 +657,7 @@ int sscanf_lines(char *lines, char *format, void *varp)
             end--;              /* so that start=='\0' */
         }
     }
-    free(copy);
+    EUCA_FREE(copy);
 
     return found;
 }
@@ -663,9 +676,7 @@ char *fp2str(FILE * fp)
         // create/enlarge the buffer
         void *new_buf;
         if ((new_buf = realloc(buf, buf_max)) == NULL) {
-            if (buf != NULL) {  // previous realloc()s worked
-                free(buf);      // free partial buffer
-            }
+            EUCA_FREE(buf);      // free partial buffer
             return NULL;
         }
         memset(new_buf + buf_current, 0, INCREMENT * sizeof(char));
@@ -680,7 +691,7 @@ char *fp2str(FILE * fp)
             } else {
                 if (!feof(fp)) {
                     logprintfl(EUCAERROR, "failed while reading from file handle\n");
-                    free(buf);
+                    EUCA_FREE(buf);
                     return NULL;
                 }
             }
@@ -785,7 +796,7 @@ int get_conf_var(const char *path, const char *name, char **value)
                 if (*ptr == '\0') {
                     /* something wrong happened */
                     fclose(f);
-                    free(buf);
+                    EUCA_FREE(buf);
                     return -1;
                 }
                 ptr++;
@@ -801,15 +812,15 @@ int get_conf_var(const char *path, const char *name, char **value)
         *value = strdup(ret);
         if (*value == NULL) {
             fclose(f);
-            free(buf);
+            EUCA_FREE(buf);
             return -1;
         }
         fclose(f);
-        free(buf);
+        EUCA_FREE(buf);
         return 1;
     }
     fclose(f);
-    free(buf);
+    EUCA_FREE(buf);
     return 0;
 }
 
@@ -822,9 +833,9 @@ void free_char_list(char **value)
     }
 
     for (i = 0; value[i] != NULL; i++) {
-        free(value[i]);
+        EUCA_FREE(value[i]);
     }
-    free(value);
+    EUCA_FREE(value);
 }
 
 char **from_var_to_char_list(const char *v)
@@ -842,7 +853,7 @@ char **from_var_to_char_list(const char *v)
     }
     value = strdup(v);
     if (value == NULL) {
-        free(tmp);
+        EUCA_FREE(tmp);
         return NULL;
     }
     tmp[0] = NULL;
@@ -866,13 +877,13 @@ char **from_var_to_char_list(const char *v)
 
         tmp = realloc(tmp, sizeof(char *) * (i + 2));
         if (tmp == NULL) {
-            free(value);
+            EUCA_FREE(value);
             return NULL;
         }
         tmp[i] = strdup(w);
         if (tmp[i] == NULL) {
             free_char_list(tmp);
-            free(value);
+            EUCA_FREE(value);
             return NULL;
         }
         tmp[++i] = NULL;
@@ -883,7 +894,7 @@ char **from_var_to_char_list(const char *v)
             break;
         }
     }
-    free(value);
+    EUCA_FREE(value);
 
     return tmp;
 }
@@ -918,7 +929,7 @@ int hash_code_bin(const char *buf, int buf_size)
     buf_str[2 * buf_size] = '\0';
 
     int code = hash_code(buf_str);
-    free(buf_str);
+    EUCA_FREE(buf_str);
 
     return code;
 }
@@ -969,7 +980,7 @@ int daemonmaintain(char *cmd, char *procname, char *pidfile, int force, char *ro
                         fclose(FH);
                     }
                 }
-                free(pidstr);
+                EUCA_FREE(pidstr);
             }
         }
 
@@ -1047,7 +1058,7 @@ int daemonrun(char *incmd, char *pidfile)
             argv = realloc(argv, sizeof(char *) * (idx + 1));
         }
         argv[idx] = NULL;
-        free(cmd);
+        EUCA_FREE(cmd);
 
         // close all fds
         for (i = 0; i < sysconf(_SC_OPEN_MAX); i++) {
@@ -1250,7 +1261,7 @@ char *file2str(const char *path)
     int fp;
     if ((fp = open(path, O_RDONLY)) < 0) {
         logprintfl(EUCAERROR, "failed to open file %s\n", path);
-        free(content);
+        EUCA_FREE(content);
         content = NULL;
         return content;
     }
@@ -1270,7 +1281,7 @@ char *file2str(const char *path)
 
     if (bytes < 0) {
         logprintfl(EUCAERROR, "failed to read file %s\n", path);
-        free(content);
+        EUCA_FREE(content);
         content = NULL;
         return content;
     }
@@ -1306,8 +1317,7 @@ char *file2str_seek(char *file, size_t size, int mode)
                     rc = lseek(fd, (off_t) 0, SEEK_SET);
                     if (rc < 0) {
                         logprintfl(EUCAERROR, "cannot seek\n");
-                        if (ret)
-                            free(ret);
+                        EUCA_FREE(ret);
                         close(fd);
                         return (NULL);
                     }
@@ -1319,14 +1329,12 @@ char *file2str_seek(char *file, size_t size, int mode)
             close(fd);
         } else {
             logprintfl(EUCAERROR, "cannot open '%s' read-only\n", file);
-            if (ret)
-                free(ret);
+            EUCA_FREE(ret);
             return (NULL);
         }
     } else {
         logprintfl(EUCAERROR, "cannot stat console_output file '%s'\n", file);
-        if (ret)
-            free(ret);
+        EUCA_FREE(ret);
         return (NULL);
     }
 
@@ -1383,7 +1391,7 @@ long long str2longlong(const char *str, const char *begin, const char *end)
     char *buf = str2str(str, begin, end);
     if (buf != NULL) {
         val = atoll(buf);
-        free(buf);
+        EUCA_FREE(buf);
     }
 
     return val;
@@ -1416,7 +1424,7 @@ int safekillfile(char *pidfile, char *procname, int sig, char *rootwrap)
     if (pidstr) {
         logprintfl(EUCADEBUG, "calling safekill with pid %d\n", atoi(pidstr));
         rc = safekill(atoi(pidstr), procname, sig, rootwrap);
-        free(pidstr);
+        EUCA_FREE(pidstr);
     }
     unlink(pidfile);
     return (rc);
@@ -1654,7 +1662,7 @@ static char *find_cont(const char *xml, char *xpath)
         } else {                // closing tag
             // get the name in all lower-case, for consistency with xpath
             char *name_lc = strduplc(name);
-            free(name);
+            EUCA_FREE(name);
             name = name_lc;
 
             // name doesn't match last seen opening tag, error
@@ -1665,12 +1673,11 @@ static char *find_cont(const char *xml, char *xpath)
             }
             // construct the xpath of the closing tag based on stack contents
             char xpath_cur[MAX_PATH] = "";
-            for (int i = 0, xpathLen = MAX_PATH - 1; i <= stk_p; i++) {
+            for (int i = 0; i <= stk_p; i++) {
                 if (i > 0) {
-                    strncat(xpath_cur, "/", (xpathLen - strlen(xpath_cur)));
+                    strncat(xpath_cur, "/", (MAX_PATH - strlen(xpath_cur) - 1));
                 }
-
-                strncat(xpath_cur, n_stk[i], (xpathLen - strlen(xpath_cur)));
+                strncat(xpath_cur, n_stk[i], (MAX_PATH - strlen(xpath_cur) - 1));
             }
 
             // pop the stack whether we have a match or not
@@ -1678,7 +1685,7 @@ static char *find_cont(const char *xml, char *xpath)
                 goto cleanup;
             const char *contp = c_stk[stk_p];
             int cont_len = xml + xml_offset + tag_start - contp;
-            free(n_stk[stk_p]);
+            EUCA_FREE(n_stk[stk_p]);
             stk_p--;
 
             // see if current xpath matches the requested one
@@ -1691,15 +1698,14 @@ static char *find_cont(const char *xml, char *xpath)
                 break;
             }
         }
-        free(name);
+        EUCA_FREE(name);
         name = NULL;
     }
 
 cleanup:
-    if (name)
-        free(name);             // for exceptions
+    EUCA_FREE(name);             // for exceptions
     for (int i = 0; i <= stk_p; i++)
-        free(n_stk[i]);         // free everything on the stack
+        EUCA_FREE(n_stk[i]);         // free everything on the stack
     return ret;
 }
 
@@ -1720,7 +1726,7 @@ char *xpath_content(const char *xml, const char *xpath)
     char *xpath_l = strduplc(xpath);    // lower-case copy of requested xpath
     if (xpath_l != NULL) {
         ret = find_cont(xml, xpath_l);
-        free(xpath_l);
+        EUCA_FREE(xpath_l);
     }
 
     return ret;
@@ -1828,7 +1834,7 @@ char *strdupcat(char *original, char *new)
     if (ret) {
         if (original) {
             strncat(ret, original, len);
-            free(original);
+            EUCA_FREE(original);
         }
 
         if (new) {
@@ -1875,14 +1881,14 @@ int ensure_directories_exist(const char *path, int is_file_path, const char *use
                 if (mkdir(path_copy, mode) == -1) {
                     logprintfl(EUCAERROR, "failed to create path %s: %s\n", path_copy, strerror(errno));
 
-                    free(path_copy);
+                    EUCA_FREE(path_copy);
                     return -1;
                 }
                 ret = 1;        // we created a directory
 
                 if (diskutil_ch(path_copy, user, group, mode) != OK) {
                     logprintfl(EUCAERROR, "failed to change perms on path %s\n", path_copy);
-                    free(path_copy);
+                    EUCA_FREE(path_copy);
                     return -1;
                 }
                 //                chmod (path_copy, mode); // ensure perms are right despite mask
@@ -1891,7 +1897,7 @@ int ensure_directories_exist(const char *path, int is_file_path, const char *use
         }
     }
 
-    free(path_copy);
+    EUCA_FREE(path_copy);
     return ret;
 }
 
@@ -1959,7 +1965,7 @@ int get_blkid(const char *dev_path, char *uuid, unsigned int uuid_size)
             ret = 0;
         }
     }
-    free(blkid_output);
+    EUCA_FREE(blkid_output);
 
     return ret;
 }
@@ -1976,7 +1982,7 @@ char parse_boolean(const char *s)
         val = 0;
     } else
         logprintfl(EUCAERROR, "failed to parse value '%s' as boolean", lc);
-    free(lc);
+    EUCA_FREE(lc);
 
     return val;
 }
@@ -2121,11 +2127,63 @@ int timeshell(char *command, char *stdout_str, char *stderr_str, int max_size, i
     if (rc) {
         rc = WEXITSTATUS(status);
     } else {
-        kill(child_pid, SIGKILL);
+        killwait(child_pid);
         logprintfl(EUCAERROR, "warning: shell execution timeout\n");
         return -1;
     }
     return rc;
+}
+
+#define DEV_STR_DELIMITER ","
+#define DEV_STR_IQNS_DELIMITER "|"
+#define DEV_STR_KEY_VAL_DELIMITER "="
+
+int get_remoteDevForNC(const char * the_iqn, const char * remoteDev, char * remoteDevForNC, int remoteDevForNCLen)
+{
+    assert(remoteDevForNC!=NULL);
+    assert(remoteDevForNCLen>0);
+    remoteDevForNC[0] = '\0'; // clear out the destination string
+
+    char * remoteDevCopy = strdup(remoteDev);
+    if (remoteDevCopy == NULL) {
+        logprintfl(EUCAERROR, "out of memory\n");
+        return 1;
+    }
+
+    int ret = 1;
+    char * toka;
+    char * ptra = remoteDevCopy;
+    for (int i = 0; (toka = strsep(&ptra, DEV_STR_DELIMITER)); i++) {
+        if (i == 2) { // IQN strings are in the 3rd field
+            if (strstr(toka, DEV_STR_KEY_VAL_DELIMITER) == NULL) { // old format, just the LUN, don't munge it
+                ret = 0;
+            } else {
+                char * ptrb;
+                char * tokb = strtok_r(toka, DEV_STR_IQNS_DELIMITER, &ptrb);
+                while (tokb) {
+                    char * ptrc;
+                    char * an_iqn = strtok_r(tokb, DEV_STR_KEY_VAL_DELIMITER, &ptrc);
+                    char * lun    = strtok_r(NULL, DEV_STR_KEY_VAL_DELIMITER, &ptrc);
+                    if (an_iqn && lun) {
+                        if (strcmp (an_iqn, the_iqn) == 0) {
+                            toka = lun;
+                            ret = 0;
+                            break;
+                        }
+                    }
+                    tokb = strtok_r(NULL, DEV_STR_IQNS_DELIMITER, &ptrb);
+                }
+            }
+        }
+        
+        strncat(remoteDevForNC, toka, remoteDevForNCLen);
+        if (ptra != NULL) { // there are more fields to come
+            strncat(remoteDevForNC, DEV_STR_DELIMITER, remoteDevForNCLen);
+        }
+    }
+    free(remoteDevCopy);
+    
+    return ret;
 }
 
 /////////////////////////////////////////////// unit testing code ///////////////////////////////////////////////////
@@ -2142,12 +2200,35 @@ int main(int argc, char **argv)
     getcwd(cwd, sizeof(cwd));
     srandom(time(NULL));
 
+    {
+        printf("testing get_remoteDevForNC\n");
+        char * remoteDev = "a,b,c=1|d=2|e=3,f,g,h";
+        char * the_iqn = "d";
+        char remoteDevForNC[4096] = "foobar";
+        assert(get_remoteDevForNC(the_iqn, remoteDev, remoteDevForNC, sizeof(remoteDevForNC))==0);
+        assert(strcmp(remoteDevForNC, "a,b,2,f,g,h")==0);
+        
+        remoteDev = "a,b,d=2,f,g,h";
+        assert(get_remoteDevForNC(the_iqn, remoteDev, remoteDevForNC, sizeof(remoteDevForNC))==0);
+        assert(strcmp(remoteDevForNC, "a,b,2,f,g,h")==0);
+        
+        remoteDev = "a,b,2,f,g,h";
+        assert(get_remoteDevForNC(the_iqn, remoteDev, remoteDevForNC, sizeof(remoteDevForNC))==0);
+        assert(strcmp(remoteDevForNC, "a,b,2,f,g,h")==0);
+        
+        char * remoteDevForNCGood = "b483-1000,,1,kyF3TR2zPQ/t01+U6irzECGiVdrVbOPGPjVDJqmYwhWDaWAd5P98YkGzUmhrr/C3K1+M5qO//dXtFOyU90uxL0OuBdumb3zPJ3Tpfx7O0cQ8x+2XufKJl47G8Ca3vkravOXqyRV7hmFrvGsSZXk0eqzBN7liYBzkUdpj3zhe0PMwxft+e1WyQSAvNNB/Ea41jkrG8T0X2amYE9gflqmOZlWLUiJLZV6GgJ7rV3Xb3uKtEaLqHISuaGsK1FGT0oZzpNdd4DPTeo8mo+XfphlMq0NAIZl/+VdUfCRbGhU977koY4nPX3W7xwg+ZP5S3qGF+b9R7mrUD8s4izRkqSEZjg==,,192.168.25.182,iqn.1992-04.com.emc:cx.apm00121200804.a6";
+        remoteDev = "b483-1000,,iqn.1994-05.com.redhat:d0d578d4d530=1|iqn.1994-05.com.redhat:e4a4c74e2470=1,kyF3TR2zPQ/t01+U6irzECGiVdrVbOPGPjVDJqmYwhWDaWAd5P98YkGzUmhrr/C3K1+M5qO//dXtFOyU90uxL0OuBdumb3zPJ3Tpfx7O0cQ8x+2XufKJl47G8Ca3vkravOXqyRV7hmFrvGsSZXk0eqzBN7liYBzkUdpj3zhe0PMwxft+e1WyQSAvNNB/Ea41jkrG8T0X2amYE9gflqmOZlWLUiJLZV6GgJ7rV3Xb3uKtEaLqHISuaGsK1FGT0oZzpNdd4DPTeo8mo+XfphlMq0NAIZl/+VdUfCRbGhU977koY4nPX3W7xwg+ZP5S3qGF+b9R7mrUD8s4izRkqSEZjg==,,192.168.25.182,iqn.1992-04.com.emc:cx.apm00121200804.a6";
+        the_iqn = "iqn.1994-05.com.redhat:d0d578d4d530";
+        assert(get_remoteDevForNC(the_iqn, remoteDev, remoteDevForNC, sizeof(remoteDevForNC))==0);
+        assert(strcmp(remoteDevForNC, remoteDevForNCGood)==0);
+    }
+
     printf("testing system_output() in misc.c\n");
     s = system_output("echo Hello");
     assert(s);
     assert(strlen(s) != 0);
     printf("echo Hello == |%s|\n", s);
-    free(s);
+    EUCA_FREE(s);
 
     printf("testing fp2str in misc.c\n");
     FILE *fp = tmpfile();
@@ -2155,14 +2236,14 @@ int main(int argc, char **argv)
     s = fp2str(fp);
     assert(s);
     assert(strlen(s) == 0);
-    free(s);
+    EUCA_FREE(s);
     rewind(fp);
     fputs(_STR, fp);
     rewind(fp);
     s = fp2str(fp);
     assert(s);
     assert(strlen(s) == strlen(_STR));
-    free(s);
+    EUCA_FREE(s);
     fclose(fp);
 
     printf("testing get_blkid in misc.c\n");

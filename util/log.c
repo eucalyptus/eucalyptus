@@ -665,15 +665,15 @@ void eventlog(char *hostTag, char *userTag, char *cid, char *eventTag, char *oth
     hostTagFull[0] = '\0';
     PH = popen("hostname", "r");
     if (PH) {
-        fscanf(PH, "%256s", hostName);
+        if (fscanf(PH, "%256s", hostName) == 1) {
+            snprintf(hostTagFull, 256, "%s/%s", hostName, hostTag);
+
+            gettimeofday(&tv, NULL);
+            ts = (double)tv.tv_sec + ((double)tv.tv_usec / 1000000.0);
+
+            logprintf("TIMELOG %s:%s:%s:%s:%f:%s\n", hostTagFull, userTag, cid, eventTag, ts, other);
+        }
         pclose(PH);
-
-        snprintf(hostTagFull, 256, "%s/%s", hostName, hostTag);
-
-        gettimeofday(&tv, NULL);
-        ts = (double)tv.tv_sec + ((double)tv.tv_usec / 1000000.0);
-
-        logprintf("TIMELOG %s:%s:%s:%s:%f:%s\n", hostTagFull, userTag, cid, eventTag, ts, other);
     }
 }
 
@@ -697,5 +697,5 @@ void log_dump_trace(char *buf, int buf_size)
         strncat(buf, line, left);
     }
 
-    free(strings);
+    EUCA_FREE(strings);
 }

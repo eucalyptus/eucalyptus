@@ -64,7 +64,8 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include <server-marshal.h>
+#include <eucalyptus.h>
+#include "server-marshal.h"
 
 adb_GetLogsResponse_t *GetLogsMarshal(adb_GetLogs_t * getLogs, const axutil_env_t * env)
 {
@@ -95,19 +96,19 @@ adb_GetLogsResponse_t *GetLogsMarshal(adb_GetLogs_t * getLogs, const axutil_env_
 
         if (outCCLog) {
             adb_getLogsResponseType_set_CCLog(response, env, outCCLog);
-            free(outCCLog);
+            EUCA_FREE(outCCLog);
         }
         if (outNCLog) {
             adb_getLogsResponseType_set_NCLog(response, env, outNCLog);
-            free(outNCLog);
+            EUCA_FREE(outNCLog);
         }
         if (outHTTPDLog) {
             adb_getLogsResponseType_set_httpdLog(response, env, outHTTPDLog);
-            free(outHTTPDLog);
+            EUCA_FREE(outHTTPDLog);
         }
         if (outAxis2Log) {
             adb_getLogsResponseType_set_axis2Log(response, env, outAxis2Log);
-            free(outAxis2Log);
+            EUCA_FREE(outAxis2Log);
         }
     }
     adb_getLogsResponseType_set_serviceTag(response, env, service);
@@ -153,11 +154,11 @@ adb_GetKeysResponse_t *GetKeysMarshal(adb_GetKeys_t * getKeys, const axutil_env_
     } else {
         if (outCCCert) {
             adb_getKeysResponseType_set_CCcert(response, env, outCCCert);
-            free(outCCCert);
+            EUCA_FREE(outCCCert);
         }
         if (outNCCert) {
             adb_getKeysResponseType_set_NCcert(response, env, outNCCert);
-            free(outNCCert);
+            EUCA_FREE(outNCCert);
         }
     }
 

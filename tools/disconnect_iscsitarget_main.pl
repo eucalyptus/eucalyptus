@@ -139,6 +139,8 @@ while (@paths > 0) {
   } else {
     run_cmd(1, 1, "$ISCSIADM -m node -p $ip -T $store -I $iface -u");
   }
+ # Delete /var/lib/iscsi/node 
+  run_cmd(1, 1, "$ISCSIADM -m node -p $ip -T $store -o delete");
 }
 
 # Remove unused mpath device

@@ -196,7 +196,7 @@ int diskutil_init(int require_grub) // 0 = not required, 1 = required
 int diskutil_cleanup(void)
 {
     for (int i = 0; i < LASTHELPER; i++) {
-        free(helpers_path[i]);
+        EUCA_FREE(helpers_path[i]);
     }
     return 0;
 }
@@ -218,7 +218,7 @@ int diskutil_ddzero(const char *path, const long long sectors, boolean zero_fill
         logprintfl(EUCAERROR, "cannot create disk file %s\n", path);
         ret = ERROR;
     } else {
-        free(output);
+        EUCA_FREE(output);
     }
 
     return ret;
@@ -236,7 +236,7 @@ int diskutil_dd(const char *in, const char *out, const int bs, const long long c
         logprintfl(EUCAERROR, "cannot copy '%s'\n", in);
         logprintfl(EUCAERROR, "                to '%s'\n", out);
     } else {
-        free(output);
+        EUCA_FREE(output);
     }
 
     return ret;
@@ -258,7 +258,7 @@ int diskutil_dd2(const char *in, const char *out, const int bs, const long long 
         logprintfl(EUCAERROR, "                to '%s'\n", out);
         ret = ERROR;
     } else {
-        free(output);
+        EUCA_FREE(output);
     }
 
     return ret;
@@ -274,7 +274,7 @@ int diskutil_mbr(const char *path, const char *type)
         logprintfl(EUCAERROR, "cannot create an MBR\n");
         ret = ERROR;
     } else {
-        free(output);
+        EUCA_FREE(output);
     }
 
     return ret;
@@ -292,7 +292,7 @@ int diskutil_part(const char *path, char *part_type, const char *fs_type, const 
         logprintfl(EUCAERROR, "cannot add a partition\n");
         ret = ERROR;
     } else {
-        free(output);
+        EUCA_FREE(output);
     }
 
     return ret;
@@ -336,7 +336,7 @@ int diskutil_loop_check(const char *path, const char *lodev)
             ret = 1;
         }
     }
-    free(output);
+    EUCA_FREE(output);
 
     return ret;
 }
@@ -365,7 +365,7 @@ int diskutil_loop(const char *path, const long long offset, char *lodev, int lod
                 found = 1;
             }
         }
-        free(output);
+        EUCA_FREE(output);
 
         if (found) {
             boolean do_log = ((i + 1) == LOOP_RETRIES); // log error on last try only
@@ -377,7 +377,7 @@ int diskutil_loop(const char *path, const long long offset, char *lodev, int lod
             if (output == NULL) {
                 logprintfl(EUCADEBUG, "cannot attach to loop device %s (will retry)\n", lodev);
             } else {
-                free(output);
+                EUCA_FREE(output);
                 done = 1;
                 break;
             }
@@ -413,7 +413,7 @@ int diskutil_unloop(const char *lodev)
             ret = ERROR;
         } else {
             ret = OK;
-            free(output);
+            EUCA_FREE(output);
             break;
         }
         logprintfl(EUCADEBUG, "cannot detach loop device %s (will retry)\n", lodev);
@@ -439,7 +439,7 @@ int diskutil_mkswap(const char *lodev, const long long size_bytes)
         logprintfl(EUCAERROR, "cannot format partition on '%s' as swap\n", lodev);
         ret = ERROR;
     } else {
-        free(output);
+        EUCA_FREE(output);
     }
 
     return ret;
@@ -456,7 +456,7 @@ int diskutil_mkfs(const char *lodev, const long long size_bytes)
         logprintfl(EUCAERROR, "cannot format partition on '%s' as ext3\n", lodev);
         ret = ERROR;
     } else {
-        free(output);
+        EUCA_FREE(output);
     }
 
     return ret;
@@ -474,7 +474,7 @@ int diskutil_tune(const char *lodev)
         logprintfl(EUCAERROR, "cannot tune file system on '%s'\n", lodev);
         ret = ERROR;
     } else {
-        free(output);
+        EUCA_FREE(output);
     }
 
     return ret;
@@ -523,7 +523,7 @@ int diskutil_sectors(const char *path, const int part, long long *first, long lo
             }
         }
 
-        free(output);
+        EUCA_FREE(output);
     }
 
     if (*last > 0)
@@ -544,7 +544,7 @@ int diskutil_mount(const char *dev, const char *mnt_pt)
         logprintfl(EUCAERROR, "cannot mount device '%s' on '%s'\n", dev, mnt_pt);
         ret = ERROR;
     } else {
-        free(output);
+        EUCA_FREE(output);
     }
 
     return ret;
@@ -562,7 +562,7 @@ int diskutil_umount(const char *dev)
         logprintfl(EUCAERROR, "cannot unmount device '%s'\n", dev);
         ret = ERROR;
     } else {
-        free(output);
+        EUCA_FREE(output);
     }
 
     return ret;
@@ -618,7 +618,7 @@ int diskutil_grub_files(const char *mnt_pt, const int part, const char *kernel, 
         logprintfl(EUCAERROR, "failed to create grub directory\n");
         return ERROR;
     }
-    free(output);
+    EUCA_FREE(output);
 
     if (grub_version == 1) {
         output = pruntf(TRUE, "%s %s %s/*stage* %s/boot/grub", helpers_path[ROOTWRAP], helpers_path[CP], stage_files_dir, mnt_pt);
@@ -626,7 +626,7 @@ int diskutil_grub_files(const char *mnt_pt, const int part, const char *kernel, 
             logprintfl(EUCAERROR, "failed to copy stage files into grub directory\n");
             return ERROR;
         }
-        free(output);
+        EUCA_FREE(output);
     }
 
     output = pruntf(TRUE, "%s %s %s %s/boot/%s", helpers_path[ROOTWRAP], helpers_path[CP], kernel, mnt_pt, kfile);
@@ -635,7 +635,7 @@ int diskutil_grub_files(const char *mnt_pt, const int part, const char *kernel, 
         ret = ERROR;
         goto cleanup;
     }
-    free(output);
+    EUCA_FREE(output);
 
     if (ramdisk) {
         output = pruntf(TRUE, "%s %s %s %s/boot/%s", helpers_path[ROOTWRAP], helpers_path[CP], ramdisk, mnt_pt, rfile);
@@ -644,7 +644,7 @@ int diskutil_grub_files(const char *mnt_pt, const int part, const char *kernel, 
             ret = ERROR;
             goto cleanup;
         }
-        free(output);
+        EUCA_FREE(output);
     }
 
     char buf[1024];
@@ -723,7 +723,7 @@ int diskutil_grub2_mbr(const char *path, const int part, const char *mnt_pt)
                 logprintfl(EUCAINFO, "warning: failed to create partition device soft-link (%s)\n", part_path);
             } else {
                 created_partition_softlink = TRUE;
-                free(output);
+                EUCA_FREE(output);
             }
         }
         // we now invoke grub through euca_rootwrap because it may need to operate on
@@ -782,7 +782,7 @@ int diskutil_grub2_mbr(const char *path, const int part, const char *mnt_pt)
             if (!output) {
                 logprintfl(EUCAINFO, "warning: failed to remove partition device soft-link\n");
             } else {
-                free(output);
+                EUCA_FREE(output);
             }
         }
 
@@ -804,7 +804,7 @@ int diskutil_grub2_mbr(const char *path, const int part, const char *mnt_pt)
         if (!output) {
             logprintfl(EUCAERROR, "failed to install grub 2 on disk '%s' mounted on '%s'\n", path, mnt_pt);
         } else {
-            free(output);
+            EUCA_FREE(output);
             rc = 0;
         }
     }
@@ -825,7 +825,7 @@ int diskutil_ch(const char *path, const char *user, const char *group, const int
         if (!output) {
             return ERROR;
         }
-        free(output);
+        EUCA_FREE(output);
     }
 
     if (group) {
@@ -833,7 +833,7 @@ int diskutil_ch(const char *path, const char *user, const char *group, const int
         if (!output) {
             return ERROR;
         }
-        free(output);
+        EUCA_FREE(output);
     }
 
     if (perms > 0) {
@@ -841,7 +841,7 @@ int diskutil_ch(const char *path, const char *user, const char *group, const int
         if (!output) {
             return ERROR;
         }
-        free(output);
+        EUCA_FREE(output);
     }
 
     return OK;
@@ -855,7 +855,7 @@ int diskutil_mkdir(const char *path)
     if (!output) {
         return ERROR;
     }
-    free(output);
+    EUCA_FREE(output);
 
     return OK;
 }
@@ -868,7 +868,7 @@ int diskutil_cp(const char *from, const char *to)
     if (!output) {
         return ERROR;
     }
-    free(output);
+    EUCA_FREE(output);
 
     return OK;
 }
@@ -923,9 +923,7 @@ static char *pruntf(boolean log_error, char *format, ...)
                 logprintfl(EUCAERROR, "bad return code from cmd '%s'\n", cmd);
                 logprintfl(EUCADEBUG, "%s\n", output);
             }
-            if (output)
-                free(output);
-            output = NULL;
+            EUCA_FREE(output);
         }
     }
     va_end(ap);

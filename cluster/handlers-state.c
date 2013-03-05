@@ -586,8 +586,7 @@ int clean_network_state(void)
             if (rc && rc != 2) {
                 logprintfl(EUCAERROR, "running cmd '%s' failed: cannot remove ip %s\n", cmd, SP(ipstr));
             }
-            if (ipstr)
-                free(ipstr);
+            EUCA_FREE(ipstr);
         }
     }
     //  logprintfl(EUCADEBUG, "clean_network_state(): finished clearing public IPs\n");
@@ -602,7 +601,7 @@ int clean_network_state(void)
             if (rc) {
                 logprintfl(EUCAERROR, "could not terminate dhcpd (%s)\n", tmpvnetconfig->dhcpdaemon);
             }
-            free(pidstr);
+            EUCA_FREE(pidstr);
         }
     }
 
@@ -645,7 +644,6 @@ int clean_network_state(void)
        }
      */
 
-    if (tmpvnetconfig)
-        free(tmpvnetconfig);
+    EUCA_FREE(tmpvnetconfig);
     return (0);
 }

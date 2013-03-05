@@ -216,6 +216,7 @@ static inline void copy_vm_type_from_adb(virtualMachine * params, adb_virtualMac
     params->virtualBootRecordLen = adb_virtualMachineType_sizeof_virtualBootRecord(vm_type, env);
     for (i = 0; i < EUCA_MAX_VBRS && i < params->virtualBootRecordLen; i++) {
         adb_virtualBootRecordType_t *vbr_type = adb_virtualMachineType_get_virtualBootRecord_at(vm_type, env, i);
+        params->virtualBootRecord[i].resourceLocationPtr = adb_virtualBootRecordType_get_resourceLocation(vbr_type, env); // added for IQN=LUN dumuxing on CC
         safe_strncpy(params->virtualBootRecord[i].resourceLocation, adb_virtualBootRecordType_get_resourceLocation(vbr_type, env), CHAR_BUFFER_SIZE);
         logprintfl(EUCATRACE, "resource location: %s\n", params->virtualBootRecord[i].resourceLocation);
         safe_strncpy(params->virtualBootRecord[i].guestDeviceName, adb_virtualBootRecordType_get_guestDeviceName(vbr_type, env),
@@ -365,13 +366,13 @@ static inline sensorResource *copy_sensor_resource_from_adb(adb_sensorsResourceT
     sr->metricsLen = adb_sensorsResourceType_sizeof_metrics(resource, env);
     if (sr->metricsLen > MAX_SENSOR_METRICS) {
         logprintfl(EUCAERROR, "overflow of 'metrics' array in 'sensorResource'");
-        free(sr);
+        EUCA_FREE(sr);
         return NULL;
     }
     for (int i = 0; i < sr->metricsLen; i++) {
         adb_metricsResourceType_t *metric = adb_sensorsResourceType_get_metrics_at(resource, env, i);
         if (copy_sensor_metric_from_adb(sr->metrics + i, metric, env) != 0) {
-            free(sr);
+            EUCA_FREE(sr);
             return NULL;
         }
     }

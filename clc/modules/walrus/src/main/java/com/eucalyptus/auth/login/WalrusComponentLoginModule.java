@@ -62,8 +62,11 @@
 
 package com.eucalyptus.auth.login;
 
+import java.io.IOException;
+import java.security.PrivateKey;
 import java.security.PublicKey;
 import java.security.Signature;
+import java.security.SignatureException;
 import java.security.cert.X509Certificate;
 import org.apache.log4j.Logger;
 import org.apache.xml.security.utils.Base64;
@@ -75,7 +78,7 @@ import com.eucalyptus.component.Partitions;
 import com.eucalyptus.component.auth.SystemCredentials;
 import com.eucalyptus.auth.api.BaseLoginModule;
 import com.eucalyptus.auth.principal.User;
-import com.eucalyptus.auth.util.Hashes;
+import com.eucalyptus.auth.util.X509CertHelper;
 import com.eucalyptus.component.id.Storage;
 
 public class WalrusComponentLoginModule extends BaseLoginModule<WalrusWrappedComponentCredentials> {
@@ -93,44 +96,47 @@ public class WalrusComponentLoginModule extends BaseLoginModule<WalrusWrappedCom
 		boolean valid = false;
 		String data = credentials.getLoginData();
 		String signature = credentials.getSignature();
+		boolean found = false;
+		X509Certificate signingCert = null;
+		
 		try {
-			try {
-				PublicKey publicKey = SystemCredentials.lookup(Storage.class).getCertificate().getPublicKey();
-				sig = Signature.getInstance("SHA1withRSA");
-				sig.initVerify(publicKey);
-				sig.update(data.getBytes());
-				valid = sig.verify(Base64.decode(signature));
-			} catch ( Exception e ) {
-				LOG.warn ("Authentication: certificate not found in keystore");
-			} finally {
-				if( !valid && credentials.getCertString() != null ) {
-					try {
-						boolean found = false;
-						X509Certificate nodeCert = Hashes.getPemCert( Base64.decode( credentials.getCertString() ) );
-						for (Partition part : Partitions.list()) {
-							if (nodeCert.equals(part.getNodeCertificate())) {
-								found = true;
-								break;
-							}
-						}
-						if (!found) {
-							throw new AuthenticationException("Invalid certificate");
-						}
-						if(nodeCert != null) {
-							PublicKey publicKey = nodeCert.getPublicKey( );
-							sig = Signature.getInstance( "SHA1withRSA" );
-							sig.initVerify( publicKey );
-							sig.update( data.getBytes( ) );
-							valid = sig.verify( Base64.decode( signature ) );
-						}
-					} catch ( Exception e2 ) {
-						LOG.error ("Authentication error: " + e2.getMessage());
-						return false;
-					}            
+			//Find which cert to use based on the fingerprint, which is in the certstring.
+			String scFingerprint = SystemCredentials.lookup(Storage.class).getCertFingerprint();
+			
+			//Check the SC first
+			if(scFingerprint.equals(credentials.getCertMD5Fingerprint())) {
+				found = true;
+				signingCert = SystemCredentials.lookup(Storage.class).getCertificate();
+			}
+			else {
+				//Check the NCs and CCs credentials for a match
+				for(Partition part : Partitions.list()) {
+					if(X509CertHelper.calcFingerprint(part.getCertificate()).equals(credentials.getCertMD5Fingerprint())) {
+						signingCert = part.getCertificate();
+						found = true;
+						break;
+					}
+					else if(X509CertHelper.calcFingerprint(part.getNodeCertificate()).equals(credentials.getCertMD5Fingerprint())) {
+						signingCert = part.getNodeCertificate();
+						found = true;
+						break;
+					}				
 				}
 			}
-		} catch (Exception ex) {
-			LOG.error ("Authentication error: " + ex.getMessage());
+			
+			if (!found) {
+				throw new AuthenticationException("Invalid certificate");
+			}
+
+			if(signingCert != null) {
+				PublicKey publicKey = signingCert.getPublicKey( );
+				sig = Signature.getInstance( "SHA256withRSA" );
+				sig.initVerify( publicKey );
+				sig.update(data.getBytes());				
+				valid = sig.verify( Base64.decode( signature ) );
+			}
+		} catch ( Exception e2 ) {
+			LOG.error ("Authentication error: " + e2.getMessage());
 			return false;
 		}
 

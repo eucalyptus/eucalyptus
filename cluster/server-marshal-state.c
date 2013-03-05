@@ -125,10 +125,8 @@ adb_DescribeServicesResponse_t *DescribeServicesMarshal(adb_DescribeServices_t *
 
         adb_describeServicesResponseType_add_serviceStatuses(adbresp, env, stt);
     }
-    if (outStatuses)
-        free(outStatuses);
-    if (serviceIds)
-        free(serviceIds);
+    EUCA_FREE(outStatuses);
+    EUCA_FREE(serviceIds);
 
     adb_describeServicesResponseType_set_return(adbresp, env, status);
     if (status == AXIS2_FALSE) {
