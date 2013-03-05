@@ -62,10 +62,14 @@
 
 package com.eucalyptus.ws.util;
 
+import org.apache.log4j.Logger;
 import org.apache.xml.dtm.ref.DTMNodeList;
 import org.w3c.dom.Document;
 import org.w3c.dom.Node;
 
+import edu.ucsb.eucalyptus.cloud.ws.WalrusManager;
+
+import javax.xml.XMLConstants;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
@@ -84,6 +88,8 @@ import java.util.List;
 
 public class XMLParser {
 
+	private static Logger LOG = Logger.getLogger(XMLParser.class);
+
 	private DocumentBuilderFactory docFactory;
 	private DocumentBuilder docBuilder;
 	private Document docRoot;
@@ -96,9 +102,14 @@ public class XMLParser {
 		docFactory = DocumentBuilderFactory.newInstance();
 		docFactory.setExpandEntityReferences(false);
 		try {
+			docFactory.setFeature(XMLConstants.FEATURE_SECURE_PROCESSING, true);
+		} catch(ParserConfigurationException ex) {
+			LOG.error(ex, ex);
+		}
+		try {
 			docBuilder = docFactory.newDocumentBuilder();
 		} catch (ParserConfigurationException ex) {
-			ex.printStackTrace();
+			LOG.error(ex, ex);
 		}
 	}
 
