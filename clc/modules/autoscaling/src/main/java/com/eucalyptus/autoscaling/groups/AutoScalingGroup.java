@@ -80,7 +80,7 @@ public class AutoScalingGroup extends AbstractOwnedPersistent implements AutoSca
 
   @Column(name = "metadata_capacity_timestamp", nullable = false )
   @Temporal( TemporalType.TIMESTAMP)
-  Date capacityTimestamp;
+  private Date capacityTimestamp;
   
   @Column( name = "metadata_default_cooldown", nullable = false )
   private Integer defaultCooldown;
@@ -427,13 +427,12 @@ public class AutoScalingGroup extends AbstractOwnedPersistent implements AutoSca
       return builder();
     }
 
-    //TODO:STEVE: verify default values
     protected AutoScalingGroup build() {
       final AutoScalingGroup group =
           AutoScalingGroup.create( ownerFullName, name, launchConfiguration, minSize, maxSize, tags );
       group.setDefaultCooldown( Objects.firstNonNull( defaultCooldown, 300 ) ); 
       group.setDesiredCapacity( Objects.firstNonNull( desiredCapacity, minSize ) );
-      group.setHealthCheckGracePeriod( healthCheckGracePeriod );
+      group.setHealthCheckGracePeriod( Objects.firstNonNull( healthCheckGracePeriod, 0 ) );
       group.setHealthCheckType( Objects.firstNonNull( healthCheckType, HealthCheckType.EC2 ) );
       group.setAvailabilityZones( Lists.newArrayList( availabilityZones ) );
       group.setTerminationPolicies( terminationPolicies.isEmpty() ? 

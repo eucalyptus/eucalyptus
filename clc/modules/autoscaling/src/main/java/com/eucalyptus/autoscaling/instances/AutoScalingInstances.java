@@ -21,6 +21,7 @@ package com.eucalyptus.autoscaling.instances;
 
 import java.util.Collection;
 import java.util.List;
+import java.util.Set;
 import com.eucalyptus.autoscaling.common.AutoScalingInstanceDetails;
 import com.eucalyptus.autoscaling.common.AutoScalingMetadatas;
 import com.eucalyptus.autoscaling.common.Instance;
@@ -59,6 +60,8 @@ public abstract class AutoScalingInstances {
                                               Callback<AutoScalingInstance> instanceUpdateCallback ) throws AutoScalingMetadataException;
 
   public abstract void markMissingInstancesUnhealthy( AutoScalingGroup group, Collection<String> instanceIds ) throws AutoScalingMetadataException;
+
+  public abstract Set<String> verifyInstanceIds( String accountNumber, Collection<String> instanceIds ) throws AutoScalingMetadataException;
 
   public abstract void transitionState( AutoScalingGroup group, LifecycleState from, LifecycleState to, Collection<String> instanceIds ) throws AutoScalingMetadataException;
 

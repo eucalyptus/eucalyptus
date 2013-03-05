@@ -138,7 +138,7 @@ public class AutoScalingInstance extends AbstractOwnedPersistent implements Auto
 
   public boolean healthStatusGracePeriodExpired() {
     final long gracePeriodMillis = TimeUnit.SECONDS.toMillis( 
-        Objects.firstNonNull( getAutoScalingGroup( ).getHealthCheckGracePeriod(), 300 ) );
+        Objects.firstNonNull( getAutoScalingGroup( ).getHealthCheckGracePeriod(), 300 ) ); //TODO:STEVE: make this configurable?
     return System.currentTimeMillis() - getCreationTimestamp().getTime() > gracePeriodMillis;
   }
   
@@ -150,6 +150,18 @@ public class AutoScalingInstance extends AbstractOwnedPersistent implements Auto
    */
   public static AutoScalingInstance withOwner( final OwnerFullName ownerFullName ) {
     return new AutoScalingInstance( ownerFullName );
+  }
+
+  /**
+   * Create an example AutoScalingInstance for the given owner.
+   *
+   * @param accountNumber The owning account number
+   * @return The example
+   */
+  public static AutoScalingInstance withOwner( final String accountNumber ) {
+    final AutoScalingInstance example = new AutoScalingInstance( );
+    example.setOwnerAccountNumber( accountNumber );
+    return example;
   }
 
   /**

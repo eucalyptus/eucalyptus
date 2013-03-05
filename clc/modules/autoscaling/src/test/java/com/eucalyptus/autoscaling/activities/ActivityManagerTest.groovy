@@ -767,6 +767,12 @@ class ActivityManagerTest {
       }
 
       @Override
+      Set<String> verifyInstanceIds(String accountNumber,
+                                    Collection<String> instanceIds) {
+        return [] as Set
+      }
+
+      @Override
       void transitionState(AutoScalingGroup group,
                            LifecycleState from,
                            LifecycleState to,

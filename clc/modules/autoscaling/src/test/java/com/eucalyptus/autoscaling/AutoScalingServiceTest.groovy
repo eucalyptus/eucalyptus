@@ -115,7 +115,7 @@ class AutoScalingServiceTest {
     TagSupportDiscovery tagDiscovery = new TagSupportDiscovery()
     tagDiscovery.processClass( TestAutoScalingGroupTagSupport.class )
   }
-  
+
   @Test
   void testLaunchConfigurations() {
     Accounts.setAccountProvider( accountProvider() )
@@ -665,6 +665,12 @@ class AutoScalingServiceTest {
                                          Collection<String> instanceIds) {
       }
 
+      @Override
+      Set<String> verifyInstanceIds(String accountNumber,
+                                    Collection<String> instanceIds) {
+        return [] as Set
+      }      
+      
       @Override
       void transitionState(AutoScalingGroup group,
                            LifecycleState from,

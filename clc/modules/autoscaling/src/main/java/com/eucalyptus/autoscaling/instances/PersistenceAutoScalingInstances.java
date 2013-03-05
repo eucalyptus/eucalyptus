@@ -22,6 +22,8 @@ package com.eucalyptus.autoscaling.instances;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
+import java.util.Set;
+import org.hibernate.criterion.Criterion;
 import org.hibernate.criterion.Property;
 import org.hibernate.criterion.Restrictions;
 import com.eucalyptus.autoscaling.groups.AutoScalingGroup;
@@ -33,6 +35,8 @@ import com.eucalyptus.util.CollectionUtils;
 import com.eucalyptus.util.OwnerFullName;
 import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
+import com.google.common.collect.Iterables;
+import com.google.common.collect.Sets;
 
 /**
  *
@@ -131,6 +135,26 @@ public class PersistenceAutoScalingInstances extends AutoScalingInstances {
         // removed, no need to mark unhealthy
       }
     }
+  }
+
+  @Override
+  public Set<String> verifyInstanceIds( final String accountNumber,
+                                        final Collection<String> instanceIds ) throws AutoScalingMetadataException {
+    final Set<String> verifiedInstanceIds = Sets.newHashSet();
+
+    if ( !instanceIds.isEmpty() ) {
+      final AutoScalingInstance example = AutoScalingInstance.withOwner( accountNumber );
+      final Criterion idCriterion = Property.forName( "displayName" ).in( instanceIds );
+
+      Iterables.addAll(
+          verifiedInstanceIds,
+          Iterables.transform(
+              persistenceSupport.listByExample(
+                  example, Predicates.alwaysTrue(), idCriterion, Collections.<String,String>emptyMap() ),
+              AutoScalingInstances.instanceId() ) );
+    }
+
+    return verifiedInstanceIds;
   }
 
   @Override
