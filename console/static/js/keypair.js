@@ -53,8 +53,7 @@
               // Display the checkbox button in the main table
               "bSortable": false,
               "aTargets":[0],
-            //  "fnRender": function(oObj) { return '<input type="checkbox"> abc </input>' },
-              "mData" : function(data) { return '<input type="checkbox"/>' },
+              "mData" : function(source) { return '<input type="checkbox"/>' },
               "sClass": "checkbox-cell", 
             },
             {

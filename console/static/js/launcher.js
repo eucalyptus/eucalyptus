@@ -310,17 +310,18 @@
                           "sSearch": "",
                           "sZeroRecords": $.i18n.prop('resource_no_records', image_plural),
                         },
-          "aoColumns": [
+          "aoColumnDefs": [
              { // platform
-               "fnRender" : function(oObj) { 
-                 var emi = oObj.aData.id;
-                 var desc = oObj.aData.description ? oObj.aData.description : oObj.aData.location;
-                 var arch = oObj.aData.architecture;
+               "aTargets":[0],
+               "mData" : function(source) { 
+                 var emi = source.id;
+                 var desc = source.description ? source.description : source.location;
+                 var arch = source.architecture;
                  arch=arch.replace('i386', '32 bit')
                  arch=arch.replace('x86_64', '64 bit');
 
                  var name = '';
-                 var imgKey = inferImage(oObj.aData.location, desc, oObj.aData.platform);
+                 var imgKey = inferImage(source.location, desc, source.platform);
                  if(imgKey)
                    name = getImageName(imgKey);
                  var $cell = $('<div>').addClass(imgKey).addClass('image-type').append(
@@ -329,20 +330,22 @@
                                $('<div>').addClass('image-description').html(desc).text()); 
                  
                  return $cell.wrap($('<div>')).parent().html();
-               }
+               },
              },
              {
                "bVisible": false,
-               "fnRender" : function(oObj){
-                 if(!oObj.aData.platform)
+               "aTargets":[1],
+               "mData" : function(source){
+                 if(!source.platform)
                    return 'linux';
                  else
-                   return oObj.aData.platform;
-               }
+                   return source.platform;
+               },
              },
              {
                "bVisible": false,
-               "fnRender" : function(oObj){
+               "aTargets":[2],
+               "mData" : function(source){
                  var results = describe('sgroup');
                  var group = null;
                  for(i in results){
@@ -351,7 +354,7 @@
                      break;
                    }
                  } 
-                 if(group && group.owner_id === oObj.aData.ownerId)
+                 if(group && group.owner_id === source.ownerId)
                    return 'self'; // equivalent of 'describe-images -self'
                  else
                    return 'all'; 
@@ -359,19 +362,35 @@
              },
              {
                "bVisible": false,
-               "mDataProp": "type",             
+               "aTargets":[3],
+               "mRender": function(data) {
+                return DefaultEncoder().encodeForHTML(data);
+               },
+               "mData": "type",
              },
              {  
                "bVisible": false,
-               "mDataProp": "architecture"
+               "aTargets":[4],
+               "mRender": function(data) {
+                return DefaultEncoder().encodeForHTML(data);
+               },
+               "mData": "architecture"
              },
              { 
                "bVisible": false,
-               "mDataProp": "root_device_type"
+               "aTargets":[5],
+               "mRender": function(data) {
+                return DefaultEncoder().encodeForHTML(data);
+               },
+               "mData": "root_device_type"
              },
              {
                "bVisible": false,
-               "mDataProp": "state",
+               "aTargets":[6],
+               "mRender": function(data) {
+                return DefaultEncoder().encodeForHTML(data);
+               },
+               "mData": "state",
              }
            ],
            "sDom" : "<\"#filter-wrapper\"<\"#owner-filter\"><\"#platform-filter\"><\"clear\"><\"#arch-filter\"><\"clear\"><\"#root-filter\"><\"clear\">f><\"#table-wrapper\" <\"#wizard-img-table-size\"> tr<\"clear\">p>", 

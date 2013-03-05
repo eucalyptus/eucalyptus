@@ -58,7 +58,7 @@
 	      // Display the checkbox button in the main table
               "bSortable": false,
               "aTargets":[0],
-              "mData": function(data) { return '<input type="checkbox"/>' },
+              "mData": function(source) { return '<input type="checkbox"/>' },
               "sClass": "checkbox-cell"
             },
             {
@@ -72,10 +72,9 @@
             {
 	      // Display the status of the volume in the main table
 	      "aTargets":[2],
-              "mRender": function(data) { 
-                 return eucatableDisplayColumnTypeVolumeStatus(data);
+              "mData": function(source) { 
+                 return eucatableDisplayColumnTypeVolumeStatus(source.status);
                },
-              "mData": "status",
               "sClass": "narrow-cell",
               "bSearchable": false,
               "iDataSort": 8, // sort on hidden status column
@@ -85,7 +84,10 @@
 	      // Display the size of the volume in the main table
 	      "aTargets":[3],
 	      "mRender": function(data) {
-		return escape(data);		// Strange, but it fails to show up when using encodeForHTML	013013	
+                if(isInt(data)) 
+                  return data;
+                else
+                  return "ERROR";
               },
               "mData": "size",
               "sClass": "centered-cell"

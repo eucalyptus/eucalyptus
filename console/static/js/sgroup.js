@@ -55,7 +55,7 @@
 	      // Display the checkbox button in the main table
               "bSortable": false,
               "aTargets":[0],
-              "mData": function(data) { return '<input type="checkbox"/>' },
+              "mData": function(source) { return '<input type="checkbox"/>' },
               "sClass": "checkbox-cell",
             },
             {
@@ -82,8 +82,8 @@
 	      // Invisible column for storing the protocol variable, used in search
               "bVisible": false,
               "aTargets":[3],
-              "mRender" : function(data){
-                 var groupName = data;
+              "mData": function(source){
+                 var groupName = source.name;
                  var results = describe('sgroup');
                  var group = null;
                  for(i in results){
@@ -108,14 +108,13 @@
                 });
                 return DefaultEncoder().encodeForHTML(protocol);
               },
-              "mData": "name",
             },  
             { 
 	      // Invisible Column for storing the port varible, used in search
               "bVisible": false,
               "aTargets":[4],
-              "mRender" : function(data){
-                 var groupName = data;
+              "mData": function(source){
+                 var groupName = source.name;
                  var results = describe('sgroup');
                  var group = null;
                  for(i in results){
@@ -135,14 +134,13 @@
                  });
                  return DefaultEncoder().encodeForHTML(port);
                },
-               "mData": "name",
             },
             { 
 	      // Invisible Column for storing the source variable, used in search
               "bVisible": false,
               "aTargets":[5],
-              "mRender" : function(data){
-                 var groupName = data;
+              "mData" : function(source){
+                 var groupName = source.name;
                  var results = describe('sgroup');
                  var group = null;
                  for(i in results){
@@ -167,7 +165,6 @@
                  });
                  return DefaultEncoder().encodeForHTML(src);
                },
-               "mData": "name",
             },
 	    {
 	      // Invisible column for storing the description variable, used for sorting 

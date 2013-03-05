@@ -131,10 +131,9 @@
 	      // idx = 9
               "bVisible" : false,
               "aTargets":[9],
-              "mRender" : function(data) {
-                return data ? DefaultEncoder().encodeForHTML(data) : 'linux';
+              "mData" : function(source) {
+                return source.platform ? DefaultEncoder().encodeForHTML(source.platform) : 'linux';
               },
-              "mData": "platform",
             },
             {
 	      // Hidden column for the location of the image
@@ -149,7 +148,7 @@
 	      // Hidden column for the ownership of the image ?
               "bVisible": false,
               "aTargets":[11],
-              "mRender" : function(data){
+              "mData": function(source){
                 var results = describe('sgroup');
                 var group = null;
                 for(i in results){
@@ -158,12 +157,11 @@
                     break;
                   }
                 } 
-                if(group && group.owner_id === data)
+                if(group && group.owner_id === source.ownerId)
                   return 'self'; // equivalent of 'describe-images -self'
                 else
                   return 'all'; 
               },
-              "mData": "ownerId",
             }
           ],
         },

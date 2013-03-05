@@ -95,6 +95,13 @@ function isFunction(obj) {
   return obj && {}.toString.call(obj) == '[object Function]';
 }
 
+function isInt(integer){
+  var intRegex = /^\d+$/;
+  if(intRegex.test(integer))
+    return true;
+  return false; 
+};
+
 /** Add Array.indexOf to IE  **/
 if( !Array.prototype.indexOf ) {
   Array.prototype.indexOf = function(needle) {

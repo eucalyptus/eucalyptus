@@ -62,20 +62,19 @@
 	      // Display the checkbox button in the main table
               "bSortable": false,
               "aTargets":[0],
-              "mData": function(data) { return '<input type="checkbox"/>' },
+              "mData": function(source) { return '<input type="checkbox"/>' },
               "sClass": "checkbox-cell",
             },
             { 
 	      // Hidden column for displaying the platform of the instance
               "bVisible": false,
               "aTargets":[1],
-              "mRender": function(data) { 
-			var result = describe('image', data);
+              "mData": function(source) { 
+			var result = describe('image', source.image_id);
                		if(result && result.platform) 
 				return result.platform;
 			return "linux";
               },
-              "mData": "image_id",
             },
             { 
 	      // Display the id of the instance in the main table
@@ -91,14 +90,13 @@
 	      // Display the status of the instance in the main table
               "iDataSort": 12,
               "aTargets":[3],
-              "mRender": function(data) { 
-	         var state = data;
-           //      if (state == undefined) {
-           //        state = oObj.aData._state.name;
-           //      }
+              "mData": function(source) { 
+	         var state = source.state;
+                 if (state == undefined) {
+                   state = source._state.name;
+                 }
                  return eucatableDisplayColumnTypeInstanceStatus(state);
               },
-              "mData": "_state.name",
             },
             { 
 	      // Display the image id of the instance in the main table
@@ -173,14 +171,13 @@
 	      // Hidden column for the status of the instance
               "bVisible": false,
               "aTargets":[12],
-	      "mRender": function(data) {
-                 var state = data;
-            //     if (state == undefined) {
-            //       state = oObj.aData._state.name;
-            //     }
+	      "mData": function(source) {
+                 var state = source.state;
+                 if (state == undefined) {
+                   state = source._state.name;
+                 }
                 return DefaultEncoder().encodeForHTML(state);
               },
-              "mData": "_state.name",
             },
             {
 	      // Hidden column for the launch time of the instance
@@ -197,15 +194,14 @@
 	      // Hidden column for the image location of the instance
               "bVisible": false,
               "aTargets":[14],
-              "mRender" : function(data) {
+              "mData": function(source) {
 			var image = null;
-              		var result = describe('image', data);
+              		var result = describe('image', source.image_id);
 			if( result ){
 				image = result;
 			};
                  	return image ? image.location : '';		
               },
-              "mData": "image_id",
             },
             {
 	      // Hidden column for the instance type of the instance
@@ -523,7 +519,7 @@
       if ( instances.length > 0 ) {
         var matrix = [];
         $.each(instances, function(idx,id){
-          id = $(id).html();
+//          id = $(id).html();  // After dataTable 1.9 integration, this operation is no longer needed. 030413
           matrix.push([id]);
         });
         if ($.inArray('ebs',rootType)>=0){
@@ -575,7 +571,7 @@
       if ( instances.length > 0 ) {
         var matrix = [];
         $.each(instances, function(idx,id){
-          id = $(id).html();
+//          id = $(id).html();  // After dataTable 1.9 integration, this operation is no longer needed. 030413
           matrix.push([id]);
         });
         thisObj.rebootDialog.eucadialog('setSelectedResources', {title: [instance_label], contents: matrix});
@@ -615,7 +611,7 @@
       if ( instances.length > 0 ) {
         var matrix = [];
         $.each(instances, function(idx,id){
-          id = $(id).html();
+//          id = $(id).html();   // After dataTable 1.9 integration, this operation is no longer needed. 030413
           matrix.push([id]);
         });
         thisObj.stopDialog.eucadialog('setSelectedResources', {title: [instance_label], contents: matrix});
@@ -659,9 +655,9 @@
     _startInstances : function(){
       var thisObj = this;
       var instances = thisObj.tableWrapper.eucatable('getSelectedRows', 2);
-      $.each(instances, function(idx, instance){
-        instances[idx] = $(instance).html();
-      });
+//      $.each(instances, function(idx, instance){
+//        instances[idx] = $(instance).html();   // After dataTable 1.9 integration, this operation is no longer needed. 030413
+//      });
       var toStart = instances.slice(0);
       var instIds = '';
       for(i=0; i<instances.length; i++)
@@ -707,7 +703,7 @@
       if ( instances.length > 0 ) {
         // connect is for one instance 
         var instance = instances[0];
-        instance = $(instance).html();
+//        instance = $(instance).html();   // After dataTable 1.9 integration, this operation is no longer needed. 030413
         var os = oss[0]; 
 
         // XSS Note: Need to encode the input strings before rendered as HTML
@@ -761,7 +757,7 @@
       var thisObj = this;
       var instances = thisObj.tableWrapper.eucatable('getSelectedRows', 2);
       instances=instances[0];
-      instances = $(instances).html();
+//      instances = $(instances).html();    // After dataTable 1.9 integration, this operation is no longer needed. 030413
       $.when( 
         $.ajax({
           type:"POST",
@@ -787,7 +783,7 @@
     _attachAction : function() {
       var thisObj = this;
       var instanceToAttach = thisObj.tableWrapper.eucatable('getSelectedRows', 2)[0];
-      instanceToAttach=$(instanceToAttach).html();
+//      instanceToAttach=$(instanceToAttach).html();   // After dataTable 1.9 integration, this operation is no longer needed. 030413
       attachVolume(null, instanceToAttach);
     },
 
@@ -795,7 +791,7 @@
       var thisObj = this;
       var results = describe('volume');
       var instance = this.tableWrapper.eucatable('getSelectedRows', 2)[0];
-      instance = $(instance).html();
+ //     instance = $(instance).html();   // After dataTable 1.9 integration, this operation is no longer needed. 030413
       $msg = this.detachDialog.find('#volume-detach-msg');
       $msg.html($.i18n.prop('inst_volume_dialog_detach_text', DefaultEncoder().encodeForHTML(instance)));
       var $p = this.detachDialog.find('#volume-detach-select-all');
@@ -828,7 +824,7 @@
           inx = i*COL_IN_ROW + j;
           if (volumes.length > inx) {
             volId = volumes[inx];
-	    volId = DefaultEncoder().encodeForHTML(volID);
+	    volId = DefaultEncoder().encodeForHTML(volId);
             $cb = $('<input>').attr('type', 'checkbox').attr('value', volId);
             $row.append($('<td>').append($cb,'&nbsp;', volId));
             $cb.click( function() {
@@ -848,7 +844,7 @@
 
     _detachAction : function(){
       var instance = this.tableWrapper.eucatable('getSelectedRows', 2)[0];
-      instance = $(instance).html();
+//      instance = $(instance).html();   // After dataTable 1.9 integration, this operation is no longer needed. 030413
       $instId = this.detachDialog.find('#volume-detach-instance-id');
       $instId.val(instance);
       this.detachDialog.eucadialog('open');
@@ -911,7 +907,7 @@
     _associateAction : function(){
       var thisObj = this;
       var instance = thisObj.tableWrapper.eucatable('getSelectedRows', 2)[0];
-      instance = $(instance).html();
+//      instance = $(instance).html();  // After dataTable 1.9 integration, this operation is no longer needed. 030413
       associateIp(instance);
     },
     _disassociateAction : function(){
@@ -935,7 +931,7 @@
     _launchMore : function(){
       var thisObj = this;
       var id = this.tableWrapper.eucatable('getSelectedRows', 2)[0];
-      id = $(id).html();
+//      id = $(id).html();    // After dataTable 1.9 integration, this operaiton is no longer needed. 030413
       var filter = {};
       var result = describe('instance');
       var instance = null;
@@ -1014,7 +1010,7 @@
     _initLaunchMoreDialog : function(){
       var thisObj = this;
       var id = this.tableWrapper.eucatable('getSelectedRows', 2)[0];
-      id = $(id).html();
+//      id = $(id).html();       // After dataTable 1.9 integration, this operation is no longer needed.  030413 
       var filter = {};
       var result = describe('instance');
       var instance = null;
