@@ -82,6 +82,7 @@ import org.hibernate.annotations.CacheConcurrencyStrategy;
 import org.hibernate.annotations.Entity;
 import org.hibernate.annotations.Type;
 import org.hibernate.type.StringClobType;
+import com.eucalyptus.auth.util.X509CertHelper;
 import com.eucalyptus.bootstrap.SystemIds;
 import com.eucalyptus.component.auth.SystemCredentials;
 import com.eucalyptus.component.id.Eucalyptus;
@@ -161,7 +162,7 @@ public class Partition extends AbstractPersistent implements Comparable<Partitio
   public PrivateKey getPrivateKey( ) {
     return PEMFiles.toKeyPair( this.getPemPrivateKey( ) ).getPrivate( );
   }
-  
+    
   @PrePersist
   void prepareKeyDirectory( ) {
     File keyDir = SubDirectory.KEYS.getChildFile( this.name );

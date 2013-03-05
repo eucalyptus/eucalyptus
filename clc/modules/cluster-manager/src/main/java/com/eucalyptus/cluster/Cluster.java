@@ -876,12 +876,18 @@ public class Cluster implements AvailabilityZoneMetadata, HasFullName<Cluster>, 
   
   public void updateNodeInfo( final List<NodeType> nodeTags ) {
     NodeInfo ret = null;
+    boolean hasServiceTag = false;
     
     for ( final String serviceTag : this.nodeMap.keySet( ) ) {
       for ( final NodeType node : nodeTags ) {
-        if ( !node.getServiceTag( ).equals( serviceTag ) ) {
-          this.nodeMap.remove( serviceTag );
+        if ( node.getServiceTag( ).equals( serviceTag ) ) {
+          hasServiceTag = true;
         }
+      }
+      if( !hasServiceTag ) {
+        this.nodeMap.remove( serviceTag );
+      } else {
+        hasServiceTag = false;
       }
     }
     

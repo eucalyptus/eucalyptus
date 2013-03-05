@@ -67,6 +67,7 @@ import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Set;
 import java.util.concurrent.ExecutionException;
+import javax.persistence.EntityTransaction;
 import org.apache.log4j.Logger;
 import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.principal.AccountFullName;
@@ -284,6 +285,9 @@ public class VolumeManager {
       }
     };
     Set<String> allowedVolumeIds = Entities.asTransaction( Volume.class, lookupVolumeIds ).apply( volumeIds );
+    final EntityTransaction db = Entities.get( VmInstance.class );
+    try {
+      final List<VmInstance> vms = Entities.query( VmInstance.create( ) );
     final Function<String, Volume> lookupVolume = new Function<String, Volume>( ) {
       
       @Override
@@ -297,7 +301,7 @@ public class VolumeManager {
           } else if ( RestrictedTypes.filterPrivileged( ).apply( foundVol ) ) {
             AttachedVolume attachedVolume = null;
             try {
-              VmVolumeAttachment attachment = VmInstances.lookupVolumeAttachment( input );
+                VmVolumeAttachment attachment = VmInstances.lookupVolumeAttachment( input , vms );
               attachedVolume  = VmVolumeAttachment.asAttachedVolume( attachment.getVmInstance( ) ).apply( attachment );
             } catch ( NoSuchElementException ex ) {
               if ( State.BUSY.equals( foundVol.getState( ) ) ) {
@@ -334,7 +338,13 @@ public class VolumeManager {
     for ( final edu.ucsb.eucalyptus.msgs.Volume volume : reply.getVolumeSet() ) {
       Tags.addFromTags( volume.getTagSet(), ResourceTag.class, tagsMap.get( volume.getVolumeId() ) );
     }
-
+    db.commit( );
+  } catch (Exception ex) {
+    Logs.extreme( ).error( ex , ex );
+    throw ex;
+  } finally {
+    if ( db.isActive() ) db.rollback();
+  }
     return reply;
   }
   

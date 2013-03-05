@@ -165,7 +165,7 @@ int sem_v(sem * pSem);
  |                                                                            |
 \*----------------------------------------------------------------------------*/
 
-#define DECLARE_ARG               union semun { int val; struct semid_ds *buf; ushort *array; } arg
+#define DECLARE_ARG               union semun { int val; struct semid_ds *buf; u16 *array; } arg
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |
