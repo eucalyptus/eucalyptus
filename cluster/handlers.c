@@ -679,7 +679,7 @@ int ncClientCall(ncMetadata * meta, int timeout, int ncLock, char *ncURL, char *
             if (timeout && outConsoleOutput) {
                 rbytes = timeread(filedes[0], &len, sizeof(int), timeout);
                 if (rbytes <= 0) {
-                    kill(pid, SIGKILL);
+                    killwait(pid);
                     opFail = 1;
                 } else {
                     *outConsoleOutput = malloc(sizeof(char) * len);
@@ -689,7 +689,7 @@ int ncClientCall(ncMetadata * meta, int timeout, int ncLock, char *ncURL, char *
                     }
                     rbytes = timeread(filedes[0], *outConsoleOutput, len, timeout);
                     if (rbytes <= 0) {
-                        kill(pid, SIGKILL);
+                        killwait(pid);
                         opFail = 1;
                     }
                 }
@@ -710,17 +710,17 @@ int ncClientCall(ncMetadata * meta, int timeout, int ncLock, char *ncURL, char *
             if (timeout && shutdownState && previousState) {
                 rbytes = timeread(filedes[0], &len, sizeof(int), timeout);
                 if (rbytes <= 0) {
-                    kill(pid, SIGKILL);
+                    killwait(pid);
                     opFail = 1;
                 } else {
                     rbytes = timeread(filedes[0], shutdownState, sizeof(int), timeout);
                     if (rbytes <= 0) {
-                        kill(pid, SIGKILL);
+                        killwait(pid);
                         opFail = 1;
                     }
                     rbytes = timeread(filedes[0], previousState, sizeof(int), timeout);
                     if (rbytes <= 0) {
-                        kill(pid, SIGKILL);
+                        killwait(pid);
                         opFail = 1;
                     }
                 }
@@ -746,7 +746,7 @@ int ncClientCall(ncMetadata * meta, int timeout, int ncLock, char *ncURL, char *
                 *outStatus = NULL;
                 rbytes = timeread(filedes[0], &len, sizeof(int), timeout);
                 if (rbytes <= 0) {
-                    kill(pid, SIGKILL);
+                    killwait(pid);
                     opFail = 1;
                 } else {
                     *outStatus = malloc(sizeof(char) * len);
@@ -756,7 +756,7 @@ int ncClientCall(ncMetadata * meta, int timeout, int ncLock, char *ncURL, char *
                     }
                     rbytes = timeread(filedes[0], *outStatus, len, timeout);
                     if (rbytes <= 0) {
-                        kill(pid, SIGKILL);
+                        killwait(pid);
                         opFail = 1;
                     }
                 }
@@ -811,7 +811,7 @@ int ncClientCall(ncMetadata * meta, int timeout, int ncLock, char *ncURL, char *
             if (timeout && outInst) {
                 rbytes = timeread(filedes[0], &len, sizeof(int), timeout);
                 if (rbytes <= 0) {
-                    kill(pid, SIGKILL);
+                    killwait(pid);
                     opFail = 1;
                 } else {
                     *outInst = malloc(sizeof(ncInstance));
@@ -821,7 +821,7 @@ int ncClientCall(ncMetadata * meta, int timeout, int ncLock, char *ncURL, char *
                     }
                     rbytes = timeread(filedes[0], *outInst, sizeof(ncInstance), timeout);
                     if (rbytes <= 0) {
-                        kill(pid, SIGKILL);
+                        killwait(pid);
                         opFail = 1;
                     }
                 }
@@ -843,7 +843,7 @@ int ncClientCall(ncMetadata * meta, int timeout, int ncLock, char *ncURL, char *
             if (timeout && ncOutInsts && ncOutInstsLen) {
                 rbytes = timeread(filedes[0], &len, sizeof(int), timeout);
                 if (rbytes <= 0) {
-                    kill(pid, SIGKILL);
+                    killwait(pid);
                     opFail = 1;
                 } else {
                     *ncOutInsts = malloc(sizeof(ncInstance *) * len);
@@ -876,7 +876,7 @@ int ncClientCall(ncMetadata * meta, int timeout, int ncLock, char *ncURL, char *
             if (timeout && outRes) {
                 rbytes = timeread(filedes[0], &len, sizeof(int), timeout);
                 if (rbytes <= 0) {
-                    kill(pid, SIGKILL);
+                    killwait(pid);
                     opFail = 1;
                 } else {
                     *outRes = malloc(sizeof(ncResource));
@@ -886,7 +886,7 @@ int ncClientCall(ncMetadata * meta, int timeout, int ncLock, char *ncURL, char *
                     }
                     rbytes = timeread(filedes[0], *outRes, sizeof(ncResource), timeout);
                     if (rbytes <= 0) {
-                        kill(pid, SIGKILL);
+                        killwait(pid);
                         opFail = 1;
                     }
                 }
@@ -916,7 +916,7 @@ int ncClientCall(ncMetadata * meta, int timeout, int ncLock, char *ncURL, char *
             if (timeout && srs && srsLen) {
                 rbytes = timeread(filedes[0], &len, sizeof(int), timeout);
                 if (rbytes <= 0) {
-                    kill(pid, SIGKILL);
+                    killwait(pid);
                     opFail = 1;
                 } else {
                     *srs = malloc(sizeof(sensorResource *) * len);

@@ -184,6 +184,7 @@ int write2file(const char *path, char *str);
 char *str2str(const char *str, const char *begin, const char *end);
 long long str2longlong(const char *str, const char *begin, const char *end);    /* extract integer from str bound by 'begin' and 'end' */
 pid_t timewait(pid_t pid, int *status, int timeout);
+int killwait(pid_t pid);
 int timeread(int fd, void *buf, size_t bytes, int timeout);
 int uint32compar(const void *ina, const void *inb);
 int safekill(pid_t pid, char *procname, int sig, char *rootwrap);
