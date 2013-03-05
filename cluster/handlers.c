@@ -3996,7 +3996,6 @@ int doModifyNode(ncMetadata * pMeta, char *nodeName, char *stateName)
     }
 
     // call commit on source
-    /* FIXME: This is only commented out for testing purposes.
     timeout = ncGetTimeout(time(NULL), OP_TIMEOUT, 1, 0);
     rc = ncClientCall(pMeta, timeout, resourceCacheLocal.resources[src_index].lockidx, resourceCacheLocal.resources[src_index].ncURL, "ncMigrateInstances",
                       &instances, 1, "commit", NULL);
@@ -4005,7 +4004,7 @@ int doModifyNode(ncMetadata * pMeta, char *nodeName, char *stateName)
         ret = 1;
         goto out;
     }
-    */
+
  out:
     LOGTRACE("done\n");
 
@@ -4042,7 +4041,7 @@ int doMigrateInstances(ncMetadata * pMeta, char *nodeName)
         LOGERROR("bad input params\n");
         return (1);
     }
-    LOGINFO("modifying node %s\n", SP(nodeName));
+    LOGINFO("migrating from node %s\n", SP(nodeName));
 
     sem_mywait(RESCACHE);
     memcpy(&resourceCacheLocal, resourceCache, sizeof(ccResourceCache));
@@ -4060,7 +4059,7 @@ int doMigrateInstances(ncMetadata * pMeta, char *nodeName)
         }
     }
     if (src_index == -1) {
-        LOGERROR("node requested for modification (%s) cannot be found\n", SP(nodeName));
+        LOGERROR("node requested for migration (%s) cannot be found\n", SP(nodeName));
         goto out;
     }
 
@@ -4101,9 +4100,9 @@ int doMigrateInstances(ncMetadata * pMeta, char *nodeName)
     // notify the destination
     timeout = ncGetTimeout(time(NULL), OP_TIMEOUT, 1, 0);
     rc = ncClientCall(pMeta, timeout, resourceCacheLocal.resources[dst_index].lockidx, resourceCacheLocal.resources[dst_index].ncURL, "ncMigrateInstances",
-                      &instances, 1, "Prepare", NULL);
+                      &instances, 1, "prepare", NULL);
     if (rc) {
-        LOGERROR("failed to request migration on destination\n");
+        LOGERROR("failed to request prepare migration on destination\n");
         ret = 1;
         goto out;
     }
@@ -4111,7 +4110,17 @@ int doMigrateInstances(ncMetadata * pMeta, char *nodeName)
     // notify source
     timeout = ncGetTimeout(time(NULL), OP_TIMEOUT, 1, 0);
     rc = ncClientCall(pMeta, timeout, resourceCacheLocal.resources[src_index].lockidx, resourceCacheLocal.resources[src_index].ncURL, "ncMigrateInstances",
-                      &instances, 1, "Prepare", NULL);
+                      &instances, 1, "prepare", NULL);
+    if (rc) {
+        LOGERROR("failed to request prepare migration on source\n");
+        ret = 1;
+        goto out;
+    }
+
+    // call commit on source
+    timeout = ncGetTimeout(time(NULL), OP_TIMEOUT, 1, 0);
+    rc = ncClientCall(pMeta, timeout, resourceCacheLocal.resources[src_index].lockidx, resourceCacheLocal.resources[src_index].ncURL, "ncMigrateInstances",
+                      &instances, 1, "commit", NULL);
     if (rc) {
         LOGERROR("failed to request migration on source\n");
         ret = 1;
