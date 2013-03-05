@@ -3140,11 +3140,7 @@ public class WalrusManager {
 		}
 
 		if (ctx.hasAdministrativePrivileges() ||
-				Lookups.checkPrivilege(PolicySpec.S3_GETBUCKETVERSIONING,
-						PolicySpec.VENDOR_S3,
-						PolicySpec.S3_RESOURCE_BUCKET,
-						bucket,
-						bucketInfo.getOwnerId())) {
+				Lookups.checkPrivilege(bucketInfo.getOwnerId())) {
 			if (request.getLoggingEnabled() != null) {
 				String targetBucket = request.getLoggingEnabled().getTargetBucket();
 				String targetPrefix = request.getLoggingEnabled().getTargetPrefix();
@@ -3228,11 +3224,7 @@ public class WalrusManager {
 		try {
 			BucketInfo bucketInfo = db.getUniqueEscape(new BucketInfo(bucket));
 			if (ctx.hasAdministrativePrivileges() ||
-					Lookups.checkPrivilege(PolicySpec.S3_GETBUCKETVERSIONING,
-							PolicySpec.VENDOR_S3,
-							PolicySpec.S3_RESOURCE_BUCKET,
-							bucket,
-							bucketInfo.getOwnerId())) {
+					Lookups.checkPrivilege(bucketInfo.getOwnerId())) {
 				if (bucketInfo.getLoggingEnabled()) {
 					String targetBucket = bucketInfo.getTargetBucket();
 					ArrayList<Grant> grants = new ArrayList<Grant>();
@@ -3331,7 +3323,7 @@ public class WalrusManager {
 		}
 
 		if (ctx.hasAdministrativePrivileges() ||
-				Lookups.checkPrivilege(PolicySpec.S3_GETBUCKETVERSIONING,
+				Lookups.checkPrivilege(PolicySpec.S3_PUTBUCKETVERSIONING,
 						PolicySpec.VENDOR_S3,
 						PolicySpec.S3_RESOURCE_BUCKET,
 						bucket,
