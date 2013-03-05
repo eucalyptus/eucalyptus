@@ -22,6 +22,7 @@ package com.eucalyptus.tokens;
 import static com.eucalyptus.auth.login.AccountUsernamePasswordCredentials.AccountUsername;
 import static com.eucalyptus.auth.login.HmacCredentials.QueryIdCredential;
 import java.util.Set;
+import java.util.concurrent.Callable;
 import java.util.concurrent.TimeUnit;
 import javax.security.auth.Subject;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
@@ -38,6 +39,7 @@ import com.eucalyptus.auth.tokens.SecurityToken;
 import com.eucalyptus.auth.tokens.SecurityTokenManager;
 import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
+import com.eucalyptus.tokens.policy.ExternalIdContext;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.RestrictedIdentity;
 import com.google.common.base.Objects;
@@ -104,23 +106,30 @@ public class TokensService {
     final Role role = lookupRole( request.getRoleArn() );
 
     //TODO:STEVE: should we fail if a policy is supplied? (since we ignore it)
-    //TODO:STEVE: evaluation of assume role policy should include external id condition
     try {
-      //TODO:STEVE: also need to evaluate users permissions to check for explicit deny ...
-      RestrictedIdentity.checkAuthorized(
-          role.getAccount(),
-          PolicySpec.qualifiedName( PolicySpec.VENDOR_IAM, PolicySpec.IAM_RESOURCE_ROLE ),
-          Accounts.getRoleFullName( role ),
-          role.getAssumeRolePolicy(),
-          new Supplier<TokensException>() {
+      ExternalIdContext.doWithExternalId(
+          request.getExternalId(),
+          TokensException.class,
+          new Callable<Void>() {
             @Override
-            public TokensException get() {
-              return new TokensException(
-                  HttpResponseStatus.FORBIDDEN,
-                  TokensException.NOT_AUTHORIZED,
-                  "Not permitted to assume role." );
+            public Void call() throws Exception {
+              RestrictedIdentity.checkAuthorized(
+                  role.getAccount(),
+                  PolicySpec.qualifiedName( PolicySpec.VENDOR_IAM, PolicySpec.IAM_RESOURCE_ROLE ),
+                  Accounts.getRoleFullName( role ),
+                  role.getAssumeRolePolicy(),
+                  new Supplier<TokensException>() {
+                    @Override
+                    public TokensException get() {
+                      return new TokensException(
+                          HttpResponseStatus.FORBIDDEN,
+                          TokensException.NOT_AUTHORIZED,
+                          "Not permitted to assume role." );
+                    }
+                  } );
+              return null;
             }
-      } );
+          } );
 
       final SecurityToken token = SecurityTokenManager.issueSecurityToken(
           role,
