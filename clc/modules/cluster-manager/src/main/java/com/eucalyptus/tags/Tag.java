@@ -125,6 +125,11 @@ public class Tag<T extends Tag<T>> extends UserMetadata<Tag.State> implements Ta
     return resourceType; 
   }
 
+  @Nullable
+  public String getPolicyResourceType(){
+    return resourceType;
+  }
+
   @Override
   public String getPartition( ) {
     return ComponentIds.lookup(Eucalyptus.class).name( );

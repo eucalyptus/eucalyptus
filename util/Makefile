@@ -95,8 +95,11 @@ test_sensor: sensor.c sensor.h misc.o euca_string.o log.o ipc.o ../storage/disku
 ../storage/diskutil.o:
 	make -C ../storage
 
+test_auth: euca_auth.c log.o misc.o ipc.o ../storage/diskutil.o
+	$(CC) $(CFLAGS) $(INCLUDES) $(DEBUGS) -trigraphs -D_UNIT_TEST -o test_auth euca_auth.c log.o misc.o ../storage/diskutil.o ipc.o $(LIBS) $(LDFLAGS) $(EFENCE)
+
 %.o: %.c %.h
-	$(CC) -c $(CPPFLAGS) $(CFLAGS) $(INCLUDES) $(DEBUGS) `xslt-config --cflags` $<
+	$(CC) -c $(CPPFLAGS) $(CFLAGS) $(INCLUDES) $(DEBUGS) -trigraphs `xslt-config --cflags` $<
 
 indent:
 	@for idfile in *.[ch]; do \

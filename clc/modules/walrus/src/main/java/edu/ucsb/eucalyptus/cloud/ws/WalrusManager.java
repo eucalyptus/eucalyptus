@@ -232,11 +232,8 @@ public class WalrusManager {
 
 	private StorageManager storageManager;
 	private WalrusImageManager walrusImageManager;
-	private static WalrusStatistics walrusStatistics = null;
 
-	public static void configure() {
-		walrusStatistics = new WalrusStatistics();
-	}
+	public static void configure() {}
 
 	public WalrusManager(StorageManager storageManager, WalrusImageManager walrusImageManager) {
 		this.storageManager = storageManager;
@@ -439,9 +436,6 @@ public class WalrusManager {
 					db.add(bucket);
 					db.commit();
 					storageManager.createBucket(bucketName);
-					if (WalrusProperties.trackUsageStatistics)
-						walrusStatistics.incrementBucketCount();
-					
 				} catch (IOException ex) {
 					LOG.error(ex, ex);
 					throw new BucketAlreadyExistsException(bucketName);
@@ -558,10 +552,7 @@ public class WalrusManager {
 					// Actually remove the bucket from the backing store
 					try {
 						storageManager.deleteBucket(bucketName);
-						if (WalrusProperties.trackUsageStatistics) {
-							walrusStatistics.decrementBucketCount();
-						}
-		
+						
 						/* Send an event to reporting to report this S3 usage. */
 							    
 					        //fireBucketUsageEvent(S3BucketAction.BUCKETDELETE, bucketFound.getNaturalId(), 
@@ -1025,10 +1016,6 @@ public class WalrusManager {
 							foundObject.setDeleted(false);
 							reply.setSize(size);
 							
-							if (WalrusProperties.trackUsageStatistics) {
-								walrusStatistics.updateBytesIn(size);
-								walrusStatistics.updateSpaceUsed(size);
-							}
 							if (logData != null) {
 								logData.setObjectSize(size);
 								updateLogData(bucket, logData);
@@ -1408,10 +1395,6 @@ public class WalrusManager {
 					foundObject.setEtag(md5);
 					foundObject.setSize(size);
 					
-					if (WalrusProperties.trackUsageStatistics) {
-						walrusStatistics.updateBytesIn(size);
-						walrusStatistics.updateSpaceUsed(size);
-					}
 					// Add meta data if specified
 					if (request.getMetaData() != null)
 						foundObject.replaceMetaData(request.getMetaData());
@@ -1736,7 +1719,6 @@ public class WalrusManager {
 			try {
 				storageManager.deleteObject(bucketName, objectName);
 				if (WalrusProperties.trackUsageStatistics && (size > 0))
-					walrusStatistics.updateSpaceUsed(-size);
 
 				/* Send an event to reporting to report this S3 usage. */
 				if ( size > 0 ) {
@@ -2494,9 +2476,7 @@ public class WalrusManager {
 														+ ".torrent;", request
 														.getIsCompressed(),
 														null, logData);
-								if (WalrusProperties.trackUsageStatistics) {
-									walrusStatistics.updateBytesOut(torrentLength);
-								}
+								
 								return null;
 							} else {
 								//No torrent exists
@@ -2553,9 +2533,6 @@ public class WalrusManager {
 							//fireUsageEvent For Get Object 
 						} else {
 							// support for large objects
-							if (WalrusProperties.trackUsageStatistics) {
-								walrusStatistics.updateBytesOut(objectInfo.getSize());
-							}
 							storageManager.sendObject(request,
 									httpResponse, bucketName, objectName, size,
 									etag, DateUtils.format(lastModified
@@ -2759,9 +2736,6 @@ public class WalrusManager {
 										: WalrusProperties.NULL_VERSION_ID;
 							}
 							if (request.getGetData()) {
-								if (WalrusProperties.trackUsageStatistics) {
-									walrusStatistics.updateBytesOut(size);
-								}
 								storageManager.sendObject(request,
 										httpResponse, bucketName, objectName,
 										byteRangeStart, byteRangeEnd + 1, size, etag,
@@ -3048,10 +3022,6 @@ public class WalrusManager {
 								storageManager.copyObject(sourceBucket,
 										sourceObjectName, destinationBucket,
 										destinationObjectName);
-								if (WalrusProperties.trackUsageStatistics)
-									walrusStatistics
-									.updateSpaceUsed(sourceObjectInfo
-											.getSize());
 							} catch (Exception ex) {
 								LOG.error(ex);
 								db.rollback();
@@ -3768,8 +3738,6 @@ public class WalrusManager {
 				// Actually remove the bucket from the backing store
 				try {
 					storageManager.deleteBucket(bucketName);
-					if (WalrusProperties.trackUsageStatistics)
-						walrusStatistics.decrementBucketCount();
 				} catch (IOException ex) {
 					// set exception code in reply
 					LOG.error(ex);
