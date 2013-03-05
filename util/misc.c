@@ -718,7 +718,6 @@ int check_block(const char *file)
 
     rc = lstat(rpath, &mystat);
     EUCA_FREE(rpath);
-
     if ((rc < 0) || !S_ISBLK(mystat.st_mode)) {
         return (1);
     }
@@ -1273,7 +1272,7 @@ int daemonmaintain(char *cmd, char *procname, char *pidfile, int force, char *ro
                         fclose(FH);
                     }
                 }
-
+                
                 EUCA_FREE(pidstr);
             }
         }
@@ -1755,11 +1754,11 @@ char *file2str_seek(char *file, size_t size, int mode)
 //!
 int uint32compar(const void *ina, const void *inb)
 {
-    uint32_t a = 0;
-    uint32_t b = 0;
+    u32 a = 0;
+    u32 b = 0;
 
-    a = (*(uint32_t *) ina);
-    b = (*(uint32_t *) inb);
+    a = (*(u32 *) ina);
+    b = (*(u32 *) inb);
 
     if (a < b) {
         return (-1);
@@ -2105,10 +2104,9 @@ static char *find_cont(const char *xml, char *xpath)
             xpath_cur[0] = '\0';
             for (i = 0, xpathLen = MAX_PATH - 1; i <= stk_p; i++) {
                 if (i > 0) {
-                    strncat(xpath_cur, "/", (xpathLen - strlen(xpath_cur)));
+                    strncat(xpath_cur, "/", (xpathLen - strlen(xpath_cur) - 1));
                 }
-
-                strncat(xpath_cur, n_stk[i], (xpathLen - strlen(xpath_cur)));
+                strncat(xpath_cur, n_stk[i], (xpathLen - strlen(xpath_cur) - 1));
             }
 
             // pop the stack whether we have a match or not

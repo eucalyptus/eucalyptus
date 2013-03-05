@@ -82,6 +82,7 @@
 #include <sys/errno.h>
 #include <assert.h>
 #include <string.h>
+
 #include "eucalyptus.h"
 #include "misc.h"
 #include "config.h"

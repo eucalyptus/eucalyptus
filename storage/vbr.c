@@ -1736,13 +1736,12 @@ static artifact *art_alloc_vbr(virtualBootRecord * vbr, boolean do_make_work_cop
             // generate ID of the artifact (append -##### hash of sig)
             char art_id[48];
             if (art_gen_id(art_id, sizeof(art_id), vbr->id, blob_sig) != EUCA_OK)
-                goto w_out;
+                goto u_out;
 
             // allocate artifact struct
             a = art_alloc(art_id, blob_sig, bb_size_bytes, TRUE, must_be_file, FALSE, url_creator, vbr);
 
 u_out:
-
             EUCA_FREE(blob_sig);
             break;
         }
@@ -1770,7 +1769,6 @@ u_out:
             a = art_alloc(art_id, blob_sig, bb_size_bytes, TRUE, must_be_file, FALSE, walrus_creator, vbr);
 
 w_out:
-
             EUCA_FREE(blob_sig);
             break;
         }
@@ -2767,55 +2765,53 @@ int main(int argc, char **argv)
     int warnings = 0;
     char cwd[1024];
 
-    if (getcwd(cwd, sizeof(cwd)) == NULL) {
-        printf("Failed to retrieve the current working directory.\n");
-        return (1);
-    }
-    srandom(time(NULL));
-    blobstore_set_error_function(dummy_err_fn);
+    if(getcwd(cwd, sizeof(cwd)) != NULL) {
+        srandom(time(NULL));
+        blobstore_set_error_function(dummy_err_fn);
 
-    printf("testing vbr.c\n");
+        printf("testing vbr.c\n");
 
-    cache_bs = create_teststore(BS_SIZE, cwd, "cache", BLOBSTORE_FORMAT_DIRECTORY, BLOBSTORE_REVOCATION_LRU, BLOBSTORE_SNAPSHOT_ANY);
-    work_bs = create_teststore(BS_SIZE, cwd, "work", BLOBSTORE_FORMAT_FILES, BLOBSTORE_REVOCATION_NONE, BLOBSTORE_SNAPSHOT_ANY);
+        cache_bs = create_teststore(BS_SIZE, cwd, "cache", BLOBSTORE_FORMAT_DIRECTORY, BLOBSTORE_REVOCATION_LRU, BLOBSTORE_SNAPSHOT_ANY);
+        work_bs = create_teststore(BS_SIZE, cwd, "work", BLOBSTORE_FORMAT_FILES, BLOBSTORE_REVOCATION_NONE, BLOBSTORE_SNAPSHOT_ANY);
 
-    if (cache_bs == NULL || work_bs == NULL) {
-        printf("error: failed to create blobstores\n");
-        errors++;
-        goto out;
-    }
+        if (cache_bs == NULL || work_bs == NULL) {
+            printf("error: failed to create blobstores\n");
+            errors++;
+            goto out;
+        }
 
-    printf("running test that only uses cache blobstore\n");
-    if (errors += provision_vm(GEN_ID(), KEY1, EKI1, ERI1, EMI1, cache_bs, work_bs, FALSE))
-        goto out;
-    printf("provisioned first VM\n\n\n\n");
-    if (errors += provision_vm(GEN_ID(), KEY1, EKI1, ERI1, EMI1, cache_bs, work_bs, FALSE))
-        goto out;
-    printf("provisioned second VM\n\n\n\n");
-    if (errors += provision_vm(GEN_ID(), KEY2, EKI1, ERI1, EMI1, cache_bs, work_bs, FALSE))
-        goto out;
-    printf("provisioned third VM with a different key\n\n\n\n");
-    if (errors += provision_vm(GEN_ID(), KEY2, EKI1, ERI1, EMI1, cache_bs, work_bs, FALSE))
-        goto out;
-    printf("provisioned fourth VM\n\n\n\n");
-    if (errors += provision_vm(GEN_ID(), KEY2, EKI1, ERI1, EMI2, cache_bs, work_bs, FALSE))
-        goto out;
-    printf("provisioned fifth VM with different EMI\n\n\n\n");
-    if (errors += provision_vm(GEN_ID(), KEY1, EKI1, ERI1, EMI1, cache_bs, work_bs, FALSE))
-        goto out;
+        printf("running test that only uses cache blobstore\n");
+        if (errors += provision_vm(GEN_ID(), KEY1, EKI1, ERI1, EMI1, cache_bs, work_bs, FALSE))
+            goto out;
+        printf("provisioned first VM\n\n\n\n");
+        if (errors += provision_vm(GEN_ID(), KEY1, EKI1, ERI1, EMI1, cache_bs, work_bs, FALSE))
+            goto out;
+        printf("provisioned second VM\n\n\n\n");
+        if (errors += provision_vm(GEN_ID(), KEY2, EKI1, ERI1, EMI1, cache_bs, work_bs, FALSE))
+            goto out;
+        printf("provisioned third VM with a different key\n\n\n\n");
+        if (errors += provision_vm(GEN_ID(), KEY2, EKI1, ERI1, EMI1, cache_bs, work_bs, FALSE))
+            goto out;
+        printf("provisioned fourth VM\n\n\n\n");
+        if (errors += provision_vm(GEN_ID(), KEY2, EKI1, ERI1, EMI2, cache_bs, work_bs, FALSE))
+            goto out;
+        printf("provisioned fifth VM with different EMI\n\n\n\n");
+        if (errors += provision_vm(GEN_ID(), KEY1, EKI1, ERI1, EMI1, cache_bs, work_bs, FALSE))
+            goto out;
 
-    check_blob(work_bs, "blocks", 0);
-    printf("cleaning cache blobstore\n");
-    blobstore_delete_regex(cache_bs, ".*");
-    check_blob(cache_bs, "blocks", 0);
+        check_blob(work_bs, "blocks", 0);
+        printf("cleaning cache blobstore\n");
+        blobstore_delete_regex(cache_bs, ".*");
+        check_blob(cache_bs, "blocks", 0);
 
-    printf("done with vbr.c cache-only test errors=%d warnings=%d\n", errors, warnings);
+        printf("done with vbr.c cache-only test errors=%d warnings=%d\n", errors, warnings);
 
-    printf("\n\n\n\n\nrunning test with use of work blobstore\n");
+        printf("\n\n\n\n\nrunning test with use of work blobstore\n");
 
-    int emis_in_use = 1;
-    if (errors += provision_vm(GEN_ID(), KEY1, EKI1, ERI1, EMI1, cache_bs, work_bs, TRUE))
-        goto out;
+        int emis_in_use = 1;
+    	if (errors += provision_vm(GEN_ID(), KEY1, EKI1, ERI1, EMI1, cache_bs, work_bs, TRUE))
+            goto out;
+            
 #define CHECK_BLOBS \
     warnings += check_blob (cache_bs, "blocks", 4 + 1 * emis_in_use);   \
     warnings += check_blob (work_bs, "blocks", 6 * provisioned_instances);
@@ -2823,42 +2819,43 @@ int main(int argc, char **argv)
     warnings += cleanup_vms();
     CHECK_BLOBS;
 
-    for (int i = 0; i < SERIAL_ITERATIONS; i++) {
-        errors += provision_vm(GEN_ID(), KEY1, EKI1, ERI1, EMI1, cache_bs, work_bs, TRUE);
-    }
-    if (errors) {
-        printf("error: failed sequential instance provisioning test\n");
-    }
-    CHECK_BLOBS;
-    warnings += cleanup_vms();
-    CHECK_BLOBS;
-
-    for (int i = 0; i < 2; i++) {
-        if (i % 1) {
-            do_fork = 0;
-        } else {
-            do_fork = 1;
+        for (int i = 0; i < SERIAL_ITERATIONS; i++) {
+        	errors += provision_vm(GEN_ID(), KEY1, EKI1, ERI1, EMI1, cache_bs, work_bs, TRUE);
         }
-        printf("===============================================\n");
-        printf("spawning %d competing %s\n", COMPETITIVE_PARTICIPANTS, (do_fork) ? ("processes") : ("threads"));
-        emis_in_use++;          // we'll have threads creating a new EMI
-        pthread_t threads[COMPETITIVE_PARTICIPANTS];
-        long long thread_par[COMPETITIVE_PARTICIPANTS];
-        int thread_par_sum = 0;
-        for (int j = 0; j < COMPETITIVE_PARTICIPANTS; j++) {
-            pthread_create(&threads[j], NULL, competitor_function, (void *)&thread_par[j]);
-        }
-        for (int j = 0; j < COMPETITIVE_PARTICIPANTS; j++) {
-            pthread_join(threads[j], NULL);
-            thread_par_sum += (int)thread_par[j];
-        }
-        printf("waited for all competing threads (returned sum=%d)\n", thread_par_sum);
-        if (errors += thread_par_sum) {
-            printf("error: failed parallel instance provisioning test\n");
+        if (errors) {
+            printf("error: failed sequential instance provisioning test\n");
         }
         CHECK_BLOBS;
         warnings += cleanup_vms();
         CHECK_BLOBS;
+
+        for (int i = 0; i < 2; i++) {
+            if (i % 1) {
+                do_fork = 0;
+            } else {
+                do_fork = 1;
+            }
+            printf("===============================================\n");
+            printf("spawning %d competing %s\n", COMPETITIVE_PARTICIPANTS, (do_fork) ? ("processes") : ("threads"));
+            emis_in_use++;          // we'll have threads creating a new EMI
+            pthread_t threads[COMPETITIVE_PARTICIPANTS];
+            long long thread_par[COMPETITIVE_PARTICIPANTS];
+            int thread_par_sum = 0;
+            for (int j = 0; j < COMPETITIVE_PARTICIPANTS; j++) {
+                pthread_create(&threads[j], NULL, competitor_function, (void *)&thread_par[j]);
+            }
+            for (int j = 0; j < COMPETITIVE_PARTICIPANTS; j++) {
+                pthread_join(threads[j], NULL);
+                thread_par_sum += (int)thread_par[j];
+            }
+            printf("waited for all competing threads (returned sum=%d)\n", thread_par_sum);
+            if (errors += thread_par_sum) {
+                printf("error: failed parallel instance provisioning test\n");
+            }
+            CHECK_BLOBS;
+            warnings += cleanup_vms();
+            CHECK_BLOBS;
+        }
     }
 
 out:

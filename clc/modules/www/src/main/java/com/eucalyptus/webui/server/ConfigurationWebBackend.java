@@ -809,7 +809,7 @@ public class ConfigurationWebBackend {
 		String cloudRegisterId = null;
 		cloudRegisterId = SystemConfiguration.getSystemConfiguration().getRegistrationId( );
 		CloudInfo cloudInfo = new CloudInfo( );
-		cloudInfo.setInternalHostPort (Internets.localHostInetAddress( ).getHostAddress( ) + ":" + CLOUD_PORT );
+		cloudInfo.setInternalHostPort (Internets.localHostInetAddress( ).getHostAddress( ) + ":" + HttpServerBootstrapper.HTTPS_PORT );
 		if ( setExternalHostPort ) {
 			String ipAddr = getExternalIpAddress( );
 			if ( ipAddr != null ) {

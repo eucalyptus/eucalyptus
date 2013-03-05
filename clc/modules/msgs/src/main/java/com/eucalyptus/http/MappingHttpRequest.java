@@ -87,7 +87,7 @@ public class MappingHttpRequest extends MappingHttpMessage implements HttpReques
   private final String              uri;
   private String                    servicePath;
   private String                    query;
-  private final Map<String, String> parameters;
+  private final Map<String, String> parameters; //Parameters are URLDecoded when populated
   private final Set<String>         nonQueryParameterKeys;
   private final Map<String, String> formFields;
   private String                    restNamespace;
