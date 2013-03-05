@@ -594,7 +594,6 @@ static void *migrating_thread(void *arg)
         goto out;
     }
     
-    instance->migration_state = MIGRATION_IN_PROGRESS;
     virDomain * ddom = virDomainMigrate(dom, 
                                         dconn, 
                                         VIR_MIGRATE_LIVE | VIR_MIGRATE_NON_SHARED_DISK, 
@@ -610,6 +609,11 @@ static void *migrating_thread(void *arg)
     virDomainFree(ddom);
     
  out:
+    sem_p(inst_sem);
+    instance->migration_state = NOT_MIGRATING;
+    save_instance_struct(instance);
+    copy_instances();
+    sem_v(inst_sem);
     if (dom)
         virDomainFree(dom);
     return NULL;
@@ -626,6 +630,7 @@ static int doMigrateInstances (struct nc_state_t * nc, ncMetadata * pMeta, ncIns
     char * sourceNodeName = instance_req->migration_src;
     char * destNodeName = instance_req->migration_dst;
 
+    // this is a call to the source of migration
     if (!strcmp(pMeta->nodeName, sourceNodeName)) {
 
         // locate the instance structure
@@ -639,24 +644,52 @@ static int doMigrateInstances (struct nc_state_t * nc, ncMetadata * pMeta, ncIns
             LOGERROR("[%s] cannot find instance\n", instance_req->instanceId);
             return (EUCA_ERROR);
         }
-        instance->migration_state = MIGRATION_PREPARING;
-        euca_strncpy(instance->migration_src, sourceNodeName, HOSTNAME_SIZE);
-        euca_strncpy(instance->migration_dst, destNodeName, HOSTNAME_SIZE);
-        LOGINFO("[%s] migration source initiating %s > %s\n", instance->instanceId, instance->migration_src, instance->migration_dst);
-
-        // since shutdown/restart may take a while, we do them in a thread
-        pthread_t tcb = { 0 };
-        if (pthread_create(&tcb, NULL, migrating_thread, (void *)instance)) {
-            LOGERROR("[%s] failed to spawn a reboot thread\n", instance->instanceId);
-            return (EUCA_ERROR);
-        }
         
-        if (pthread_detach(tcb)) {
-            LOGERROR("[%s] failed to detach the rebooting thread\n", instance->instanceId);
+        if (strcmp (action, "prepare") == 0) {
+            sem_p(inst_sem);
+            instance->migration_state = MIGRATION_READY;
+            euca_strncpy(instance->migration_src, sourceNodeName, HOSTNAME_SIZE);
+            euca_strncpy(instance->migration_dst, destNodeName, HOSTNAME_SIZE);
+            LOGINFO("[%s] migration source preparing %s > %s\n", instance->instanceId, instance->migration_src, instance->migration_dst);
+            save_instance_struct(instance);
+            copy_instances();
+            sem_v(inst_sem);
+
+        } else if (strcmp (action, "commit") == 0) {
+            
+            sem_p(inst_sem);
+            instance->migration_state = MIGRATION_IN_PROGRESS;
+            LOGINFO("[%s] migration source initiating %s > %s\n", instance->instanceId, instance->migration_src, instance->migration_dst);
+            save_instance_struct(instance);
+            copy_instances();
+            sem_v(inst_sem);
+
+            // since shutdown/restart may take a while, we do them in a thread
+            pthread_t tcb = { 0 };
+            if (pthread_create(&tcb, NULL, migrating_thread, (void *)instance)) {
+                LOGERROR("[%s] failed to spawn a reboot thread\n", instance->instanceId);
+                return (EUCA_ERROR);
+            }
+            
+            if (pthread_detach(tcb)) {
+                LOGERROR("[%s] failed to detach the rebooting thread\n", instance->instanceId);
+                return (EUCA_ERROR);
+            }
+        } else if (strcmp (action, "rollback") == 0) {
+            LOGERROR("[%s] action 'rollback' not implemented\n", instance->instanceId);
+            return (EUCA_ERROR);
+
+        } else {
+            LOGERROR("[%s] action '%s' is not valid\n", instance->instanceId, action);
             return (EUCA_ERROR);
         }
 
-    } else if (!strcmp(pMeta->nodeName, destNodeName)) {
+    } else if (!strcmp(pMeta->nodeName, destNodeName)) { // this is a migrate request to destination
+
+        if (strcmp (action, "prepare") != 0) {
+            LOGERROR("action '%s' is not valid or not implemented\n", action);
+            return (EUCA_ERROR);
+        }
 
         // allocate a new instance struct
         ncInstance *instance = clone_instance(instance_req);
@@ -664,10 +697,14 @@ static int doMigrateInstances (struct nc_state_t * nc, ncMetadata * pMeta, ncIns
             LOGERROR("[%s] could not allocate instance struct\n", instance_req->instanceId);
             goto failed_dest;
         }
+
+        sem_p(inst_sem);
         instance->migration_state = MIGRATION_PREPARING;
         euca_strncpy(instance->migration_src, sourceNodeName, HOSTNAME_SIZE);
         euca_strncpy(instance->migration_dst, destNodeName, HOSTNAME_SIZE);
-        LOGINFO("[%s] migration destination initating %s > %s\n", instance->instanceId, instance->migration_src, instance->migration_dst);
+        LOGINFO("[%s] migration destination preparing %s > %s\n", instance->instanceId, instance->migration_src, instance->migration_dst);
+        save_instance_struct(instance);
+        sem_v(inst_sem);
         
         int error;
         
@@ -771,11 +808,13 @@ static int doMigrateInstances (struct nc_state_t * nc, ncMetadata * pMeta, ncIns
             break;
         }
         
+        sem_p(inst_sem);
+        instance->migration_state = MIGRATION_READY;
         instance->bootTime = time(NULL); // otherwise nc_state.booting_cleanup_threshold will kick in
         change_state(instance, BOOTING); // not STAGING, since in that mode we don't poll hypervisor for info
-        instance->migration_state = MIGRATION_READY;
+        LOGINFO("[%s] migration destination ready %s > %s\n", instance->instanceId, instance->migration_src, instance->migration_dst);
+        save_instance_struct(instance);
 
-        sem_p(inst_sem);
         error = add_instance(&global_instances, instance);
         copy_instances();
         sem_v(inst_sem);
