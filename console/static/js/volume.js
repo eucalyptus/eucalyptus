@@ -343,7 +343,15 @@
         if ( volume && results ) {
           for( res in results) {
             var instance = results[res];
-            if ( instance.state === 'running' && instance.placement === volume.zone)
+            var state = instance.state;
+            if (state == undefined) {
+                state = instance._state.name;
+            }
+            var placement = instance.placement;
+            if (placement == undefined) {
+                placement = instance._placement.zone;
+            }
+            if ( state === 'running' && placement === volume.zone)
               inst_ids.push(instance.id);
           }
         }

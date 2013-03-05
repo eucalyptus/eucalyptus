@@ -101,7 +101,11 @@
         var az=$instObj.find('#dashboard-instance-az select').val();
         var results = describe('instance');
         $.each(results, function (idx, instance){
-          if (az==='all' || instance.placement === az ){
+          var placement = instance.placement;
+          if (placement == undefined) {
+              placement = instance._placement.zone;
+          }
+          if (az==='all' || placement === az ){
             var state = instance.state;
             if (state == undefined) {
                 state = instance._state.name;
