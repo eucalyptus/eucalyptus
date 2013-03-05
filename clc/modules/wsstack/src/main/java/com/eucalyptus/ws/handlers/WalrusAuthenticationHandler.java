@@ -541,16 +541,28 @@ private static void checkUploadPolicy(MappingHttpRequest httpRequest) throws Aut
 			String content_type = httpRequest.getHeader(WalrusProperties.CONTENT_TYPE);
 			content_type = content_type == null ? "" : content_type;
 			String securityToken = httpRequest.getHeader(WalrusProperties.X_AMZ_SECURITY_TOKEN);
-			
-			String data = verb + "\n" + content_md5 + "\n" + content_type + "\n" + date + "\n" + getCanonicalizedAmzHeaders(httpRequest) + addrString;
+			String canonicalizedAmzHeaders = getCanonicalizedAmzHeaders(httpRequest);
+			String data = verb + "\n" + content_md5 + "\n" + content_type + "\n" + date + "\n" + canonicalizedAmzHeaders + addrString;
 			String accessKeyId = authMap.get(AuthorizationField.AccessKeyId);
 			String signature = authMap.get(AuthorizationField.Signature);
 			
 			try {
 				SecurityContext.getLoginContext(new WalrusWrappedCredentials(httpRequest.getCorrelationId(), data, accessKeyId, signature, securityToken)).login();
 			} catch(Exception ex) {
-				LOG.error(ex);
-				throw new AuthenticationException(ex);
+				//Try stripping of the '/services/Walrus' portion of the addrString and retry the signature calc
+				if(addrString.startsWith("/services/Walrus")) {
+					try {
+						String modifiedAddrString = addrString.replaceFirst("/services/Walrus", "");
+						data = verb + "\n" + content_md5 + "\n" + content_type + "\n" + date + "\n" + canonicalizedAmzHeaders + modifiedAddrString;
+						SecurityContext.getLoginContext(new WalrusWrappedCredentials(httpRequest.getCorrelationId(), data, accessKeyId, signature, securityToken)).login();
+					} catch(Exception ex2) {
+						LOG.error(ex2);
+						throw new AuthenticationException(ex2);					
+					}
+				} else {
+					LOG.error(ex);
+					throw new AuthenticationException(ex);
+				}
 			}
 		}
 		
@@ -579,16 +591,29 @@ private static void checkUploadPolicy(MappingHttpRequest httpRequest) throws Aut
 				String expires = parameters.remove(SecurityParameter.Expires.toString());
 				if(expires == null) {
 					throw new AuthenticationException("Authentication failed. Expires must be specified.");
-				}				
+				}
 				String securityToken = parameters.get(SecurityParameter.SecurityToken.toString());
 				
 				if(checkExpires(expires)) {
-					String stringToSign = verb + "\n" + content_md5 + "\n" + content_type + "\n" + Long.parseLong(expires) + "\n" + getCanonicalizedAmzHeaders(httpRequest) + addrString;
+					String canonicalizedAmzHeaders = getCanonicalizedAmzHeaders(httpRequest);
+					String stringToSign = verb + "\n" + content_md5 + "\n" + content_type + "\n" + Long.parseLong(expires) + "\n" + canonicalizedAmzHeaders + addrString;
 					try {
 						SecurityContext.getLoginContext(new WalrusWrappedCredentials(httpRequest.getCorrelationId(), stringToSign, accesskeyid, signature, securityToken)).login();
 					} catch(Exception ex) {
-						LOG.error(ex);
-						throw new AuthenticationException(ex);
+						//Try stripping of the '/services/Walrus' portion of the addrString and retry the signature calc
+						if(addrString.startsWith("/services/Walrus")) {
+							try {
+								String modifiedAddrString = addrString.replaceFirst("/services/Walrus", "");
+								stringToSign = verb + "\n" + content_md5 + "\n" + content_type + "\n" + Long.parseLong(expires) + "\n" + canonicalizedAmzHeaders + modifiedAddrString;
+								SecurityContext.getLoginContext(new WalrusWrappedCredentials(httpRequest.getCorrelationId(), stringToSign, accesskeyid, signature, securityToken)).login();
+							} catch(Exception ex2) {
+								LOG.error(ex2);
+								throw new AuthenticationException(ex2);					
+							}
+						} else {
+							LOG.error(ex);
+							throw new AuthenticationException(ex);
+						}
 					}
 				} else {
 					throw new AuthenticationException("Cannot process request. Expired.");
