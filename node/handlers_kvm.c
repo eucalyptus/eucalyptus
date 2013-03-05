@@ -664,15 +664,15 @@ static int doMigrateInstances (struct nc_state_t * nc, ncMetadata * pMeta, ncIns
             copy_instances();
             sem_v(inst_sem);
 
-            // since shutdown/restart may take a while, we do them in a thread
+            // since migration may take a while, we do them in a thread
             pthread_t tcb = { 0 };
             if (pthread_create(&tcb, NULL, migrating_thread, (void *)instance)) {
-                LOGERROR("[%s] failed to spawn a reboot thread\n", instance->instanceId);
+                LOGERROR("[%s] failed to spawn a migration thread\n", instance->instanceId);
                 return (EUCA_ERROR);
             }
             
             if (pthread_detach(tcb)) {
-                LOGERROR("[%s] failed to detach the rebooting thread\n", instance->instanceId);
+                LOGERROR("[%s] failed to detach the migration thread\n", instance->instanceId);
                 return (EUCA_ERROR);
             }
         } else if (strcmp (action, "rollback") == 0) {
