@@ -136,6 +136,11 @@ public class RegisterInstancesWithLoadBalancerType extends LoadBalancingMessage 
   @HttpEmbedded 
   Instances instances;
   public RegisterInstancesWithLoadBalancerType() {  }
+  public RegisterInstancesWithLoadBalancerType( String loadBalancerName,
+                                                Collection<String> instanceIds ) {
+    this.loadBalancerName = loadBalancerName
+    this.instances = new Instances( member: instanceIds.collect{ instanceId -> new Instance( instanceId: instanceId ) } as ArrayList<Instance> )
+  }
 }
 public class AttachLoadBalancerToSubnetsResponseType extends LoadBalancingMessage {
   public AttachLoadBalancerToSubnetsResponseType() {  }
@@ -607,6 +612,11 @@ public class DeregisterInstancesFromLoadBalancerType extends LoadBalancingMessag
   @HttpEmbedded
   Instances instances;
   public DeregisterInstancesFromLoadBalancerType() {  }
+  public DeregisterInstancesFromLoadBalancerType( String loadBalancerName,
+                                                  Collection<String> instanceIds ) {
+    this.loadBalancerName = loadBalancerName
+    this.instances = new Instances( member: instanceIds.collect{ instanceId -> new Instance( instanceId: instanceId ) } as ArrayList<Instance> )
+  }
 }
 public class AttachLoadBalancerToSubnetsType extends LoadBalancingMessage {
   String loadBalancerName;

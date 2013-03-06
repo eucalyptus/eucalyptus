@@ -48,7 +48,8 @@ public abstract class AutoScalingInstances {
 
   public abstract List<AutoScalingInstance> listByGroup( AutoScalingGroup group ) throws AutoScalingMetadataException;
 
-  public abstract List<AutoScalingInstance> listByState( LifecycleState state ) throws AutoScalingMetadataException;
+  public abstract List<AutoScalingInstance> listByState( LifecycleState lifecycleState,
+                                                         ConfigurationState configurationState ) throws AutoScalingMetadataException;
 
   public abstract List<AutoScalingInstance> listUnhealthyByGroup( AutoScalingGroup group ) throws AutoScalingMetadataException;
 
@@ -64,6 +65,10 @@ public abstract class AutoScalingInstances {
   public abstract Set<String> verifyInstanceIds( String accountNumber, Collection<String> instanceIds ) throws AutoScalingMetadataException;
 
   public abstract void transitionState( AutoScalingGroup group, LifecycleState from, LifecycleState to, Collection<String> instanceIds ) throws AutoScalingMetadataException;
+
+  public abstract void transitionConfigurationState( AutoScalingGroup group, ConfigurationState from, ConfigurationState to, Collection<String> instanceIds ) throws AutoScalingMetadataException;
+
+  public abstract int registrationFailure( AutoScalingGroup group, Collection<String> instanceIds ) throws AutoScalingMetadataException;
 
   public abstract boolean delete( AutoScalingInstance autoScalingInstance ) throws AutoScalingMetadataException;
 

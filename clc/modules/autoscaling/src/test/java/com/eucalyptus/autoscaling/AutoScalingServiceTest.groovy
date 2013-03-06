@@ -94,6 +94,7 @@ import com.eucalyptus.autoscaling.tags.TagSupportDiscovery
 import com.eucalyptus.autoscaling.tags.AutoScalingGroupTag
 import com.eucalyptus.autoscaling.tags.Tag
 import com.eucalyptus.autoscaling.tags.Tags
+import com.eucalyptus.autoscaling.instances.ConfigurationState
 
 /**
  * 
@@ -635,7 +636,8 @@ class AutoScalingServiceTest {
       }
 
       @Override
-      List<AutoScalingInstance> listByState(LifecycleState state) {
+      List<AutoScalingInstance> listByState(LifecycleState lifecycleState,
+                                            ConfigurationState configurationState) {
         []
       }
 
@@ -676,6 +678,19 @@ class AutoScalingServiceTest {
                            LifecycleState from,
                            LifecycleState to,
                            Collection<String> instanceIds) {
+      }
+
+      @Override
+      void transitionConfigurationState(AutoScalingGroup group,
+                                        ConfigurationState from,
+                                        ConfigurationState to,
+                                        Collection<String> instanceIds) {
+      }
+
+      @Override
+      int registrationFailure(AutoScalingGroup group,
+                              Collection<String> instanceIds) {
+        0
       }
 
       @Override

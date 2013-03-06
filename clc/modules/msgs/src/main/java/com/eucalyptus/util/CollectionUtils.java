@@ -123,6 +123,25 @@ public class CollectionUtils {
   }
 
   /**
+   * Min function suitable for use with reduce.
+   *
+   * @return The min function.
+   */
+  public static Function<Integer,Function<Integer,Integer>> min() {
+    return new Function<Integer,Function<Integer,Integer>>() {
+      @Override
+      public Function<Integer, Integer> apply( final Integer integer1 ) {
+        return new Function<Integer, Integer>(){
+          @Override
+          public Integer apply( final Integer integer2 ) {
+            return Math.min( integer1, integer2 );
+          }
+        };
+      }
+    };
+  }
+
+  /**
    * Count function suitable for use with reduce.
    * 
    * @param evaluator Predicate matching items to be counted.

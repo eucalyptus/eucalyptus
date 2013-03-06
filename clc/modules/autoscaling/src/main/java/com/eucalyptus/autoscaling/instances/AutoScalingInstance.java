@@ -69,9 +69,16 @@ public class AutoScalingInstance extends AbstractOwnedPersistent implements Auto
   @Column( name = "metadata_launch_configuration_name", nullable = false )
   private String launchConfigurationName;
 
-  @Column( name = "metadata_lifecycle_status", nullable = false )
+  @Column( name = "metadata_lifecycle_state", nullable = false )
   @Enumerated( EnumType.STRING )
   private LifecycleState lifecycleState;
+
+  @Column( name = "metadata_configuration_state", nullable = false )
+  @Enumerated( EnumType.STRING )
+  private ConfigurationState configurationState;
+
+  @Column( name = "metadata_registration_attempts", nullable = false )
+  private Integer registrationAttempts;
 
   protected AutoScalingInstance() {
   }
@@ -136,12 +143,32 @@ public class AutoScalingInstance extends AbstractOwnedPersistent implements Auto
     this.lifecycleState = lifecycleState;
   }
 
+  public ConfigurationState getConfigurationState() {
+    return configurationState;
+  }
+
+  public void setConfigurationState( final ConfigurationState configurationState ) {
+    this.configurationState = configurationState;
+  }
+
+  public Integer getRegistrationAttempts() {
+    return registrationAttempts;
+  }
+
+  public void setRegistrationAttempts( final Integer registrationAttempts ) {
+    this.registrationAttempts = registrationAttempts;
+  }
+
   public boolean healthStatusGracePeriodExpired() {
     final long gracePeriodMillis = TimeUnit.SECONDS.toMillis( 
-        Objects.firstNonNull( getAutoScalingGroup( ).getHealthCheckGracePeriod(), 300 ) ); //TODO:STEVE: make this configurable?
+        Objects.firstNonNull( getAutoScalingGroup( ).getHealthCheckGracePeriod(), 300 ) );
     return System.currentTimeMillis() - getCreationTimestamp().getTime() > gracePeriodMillis;
   }
-  
+
+  public int incrementRegistrationAttempts() {
+    return ++this.registrationAttempts;
+  }
+
   /**
    * Create an example AutoScalingInstance for the given owner. 
    *
@@ -194,6 +221,14 @@ public class AutoScalingInstance extends AbstractOwnedPersistent implements Auto
     return example;
   }
 
+  public static AutoScalingInstance withStates( final LifecycleState lifecycleState,
+                                                final ConfigurationState configurationState ) {
+    final AutoScalingInstance example = new AutoScalingInstance();
+    example.setLifecycleState( lifecycleState );
+    example.setConfigurationState( configurationState );
+    return example;
+  }
+
   public static AutoScalingInstance create( @Nonnull final OwnerFullName ownerFullName,
                                             @Nonnull final String instanceId,
                                             @Nonnull final String availabilityZone,
@@ -205,6 +240,8 @@ public class AutoScalingInstance extends AbstractOwnedPersistent implements Auto
         AutoScalingMetadatas.toDisplayName().apply( group.getLaunchConfiguration() ) );
     autoScalingInstance.setHealthStatus( HealthStatus.Healthy );
     autoScalingInstance.setLifecycleState( LifecycleState.Pending );
+    autoScalingInstance.setConfigurationState( ConfigurationState.Instantiated );
+    autoScalingInstance.setRegistrationAttempts( 0 );
     return autoScalingInstance;
   }
 
