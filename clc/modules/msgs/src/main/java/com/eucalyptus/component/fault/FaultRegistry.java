@@ -69,6 +69,7 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 
+import javax.xml.XMLConstants;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
@@ -126,6 +127,12 @@ public class FaultRegistry {
 		try {
 			LOG.warn("Parsing common file " + commonXMLFile);
 			DocumentBuilderFactory dbFactory = DocumentBuilderFactory.newInstance();
+			dbFactory.setExpandEntityReferences(false);
+			try {
+			  dbFactory.setFeature(XMLConstants.FEATURE_SECURE_PROCESSING, true);
+			} catch(ParserConfigurationException ex) {
+			  LOG.error(ex, ex);
+			}
 			DocumentBuilder dBuilder = dbFactory.newDocumentBuilder();
 			Document doc = dBuilder.parse(commonXMLFile);
 			Element docElement = doc.getDocumentElement();
@@ -175,6 +182,12 @@ public class FaultRegistry {
 				return;
 			}
 			DocumentBuilderFactory dbFactory = DocumentBuilderFactory.newInstance();
+			dbFactory.setExpandEntityReferences(false);
+			try {
+			  dbFactory.setFeature(XMLConstants.FEATURE_SECURE_PROCESSING, true);
+			} catch(ParserConfigurationException ex) {
+			  LOG.error(ex, ex);
+			}
 			DocumentBuilder dBuilder = dbFactory.newDocumentBuilder();
 			Document doc = dBuilder.parse(faultXMLFile);
 			Element docElement = doc.getDocumentElement();

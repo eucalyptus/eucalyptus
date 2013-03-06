@@ -62,12 +62,14 @@
 
 package edu.ucsb.eucalyptus.util;
 
+import org.apache.log4j.Logger;
 import org.apache.xml.dtm.ref.DTMNodeList;
 import org.w3c.dom.Document;
 import org.w3c.dom.Node;
 
 import com.eucalyptus.binding.HoldMe;
 
+import javax.xml.XMLConstants;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
@@ -92,12 +94,19 @@ public class XMLParser {
 	private XPath xpath;
 	private File file;
 	private String rawData;
+	private static Logger LOG = Logger.getLogger(XMLParser.class);
 
 	public XMLParser( ) {
 		HoldMe.canHas.lock( );
 		try {
 			xpath = XPathFactory.newInstance( ).newXPath( );
 			docFactory = DocumentBuilderFactory.newInstance( );
+			docFactory.setExpandEntityReferences(false);
+			try {
+				docFactory.setFeature(XMLConstants.FEATURE_SECURE_PROCESSING, true);
+			} catch(ParserConfigurationException ex) {
+				LOG.error(ex, ex);
+			}
 			try {
 				docBuilder = docFactory.newDocumentBuilder( );
 			} catch ( ParserConfigurationException ex ) {
