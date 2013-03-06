@@ -2609,7 +2609,7 @@ int vnetAddPublicIP(vnetConfig * vnetconfig, char *inip)
 
 int vnetAssignAddress(vnetConfig * vnetconfig, char *src, char *dst)
 {
-    int rc = 0, slashnet, ret = 0, pid=0;
+    int rc = 0, slashnet, ret = 0, pid = 0;
     char cmd[MAX_PATH], *network;
 
     if ((vnetconfig->role == CC || vnetconfig->role == CLC) && (!strcmp(vnetconfig->mode, "MANAGED") || !strcmp(vnetconfig->mode, "MANAGED-NOVLAN"))) {
@@ -2622,25 +2622,25 @@ int vnetAssignAddress(vnetConfig * vnetconfig, char *src, char *dst)
             logprintfl(EUCAERROR, "failed to assign IP address '%s'\n", cmd);
             ret = 1;
         } else {
-	  snprintf(cmd, MAX_PATH, EUCALYPTUS_ROOTWRAP " arping -c 2 -U -I %s %s", vnetconfig->eucahome, vnetconfig->pubInterface, src);
-	  logprintfl(EUCADEBUG, "sending unsolicited ARP to flush caches with cmd '%s'\n", cmd);
-	  pid = fork();
-	  if (!pid) {
-	    pid = fork();
-	    if (!pid) {
-	      rc = system(cmd);
-	      rc = rc >> 8;
-	      logprintfl(EUCADEBUG, "return from cmd '%s' = %d\n", cmd, rc);
-	      exit(rc);
-	    }
-	    exit(0);
-	  } else {
-	    
-	    // wait here?  or continue to let arpings complete and let 'shawn()' clean up defunct processes.  If there are many assigns to do, it could take a long time to complete.
-	    int status;
-	    timewait(pid, &status, 5);
-	  }
-	}
+            snprintf(cmd, MAX_PATH, EUCALYPTUS_ROOTWRAP " arping -c 2 -U -I %s %s", vnetconfig->eucahome, vnetconfig->pubInterface, src);
+            logprintfl(EUCADEBUG, "sending unsolicited ARP to flush caches with cmd '%s'\n", cmd);
+            pid = fork();
+            if (!pid) {
+                pid = fork();
+                if (!pid) {
+                    rc = system(cmd);
+                    rc = rc >> 8;
+                    logprintfl(EUCADEBUG, "return from cmd '%s' = %d\n", cmd, rc);
+                    exit(rc);
+                }
+                exit(0);
+            } else {
+
+                // wait here?  or continue to let arpings complete and let 'shawn()' clean up defunct processes.  If there are many assigns to do, it could take a long time to complete.
+                int status;
+                timewait(pid, &status, 5);
+            }
+        }
 
         snprintf(cmd, MAX_PATH, "-A PREROUTING -d %s -j DNAT --to-destination %s", src, dst);
         rc = vnetApplySingleTableRule(vnetconfig, "nat", cmd);
@@ -3149,7 +3149,6 @@ int vnetLoadIPTables(vnetConfig * vnetconfig)
     int rc = 0, ret;
     char newpath[MAX_PATH];
 
-
     ret = 0;
     snprintf(newpath, MAX_PATH, EUCALYPTUS_CONF_DIR "/%s", vnetconfig->eucahome, "iptables-preload");
     if (stat(newpath, &statbuf) != 0) {
@@ -3159,28 +3158,22 @@ int vnetLoadIPTables(vnetConfig * vnetconfig)
             rc = system(cmd);
             ret = WEXITSTATUS(rc);
             if (stat(newpath, &statbuf) == 0) {
-                logprintfl(EUCAINFO ,"copied %s to %s (err %x)\n",oldfile,
-                        newpath,rc);
-            }else {
-                logprintfl(EUCAINFO ,"copied %s to %s (err %x) failed\n",
-                        oldfile, newpath,rc);
-                snprintf(cmd, MAX_PATH, 
-                            EUCALYPTUS_ROOTWRAP " iptables-restore < %s",   
-                            vnetconfig->eucahome, oldfile);
+                logprintfl(EUCAINFO, "copied %s to %s (err %x)\n", oldfile, newpath, rc);
+            } else {
+                logprintfl(EUCAINFO, "copied %s to %s (err %x) failed\n", oldfile, newpath, rc);
+                snprintf(cmd, MAX_PATH, EUCALYPTUS_ROOTWRAP " iptables-restore < %s", vnetconfig->eucahome, oldfile);
                 rc = system(cmd);
                 ret = WEXITSTATUS(rc);
                 return (ret);
             }
         }
-    } 
+    }
     if (stat(newpath, &statbuf) == 0) {
-        snprintf(cmd, MAX_PATH, 
-                    EUCALYPTUS_ROOTWRAP " iptables-restore < %s", 
-                    vnetconfig->eucahome, newpath);
+        snprintf(cmd, MAX_PATH, EUCALYPTUS_ROOTWRAP " iptables-restore < %s", vnetconfig->eucahome, newpath);
         rc = system(cmd);
         ret = WEXITSTATUS(rc);
-        if (ret) { 
-            logprintfl(EUCADEBUG ," %s returned %x \n",cmd,rc);
+        if (ret) {
+            logprintfl(EUCADEBUG, " %s returned %x \n", cmd, rc);
         }
     }
     return (ret);

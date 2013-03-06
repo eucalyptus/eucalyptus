@@ -76,6 +76,7 @@
 #include <strings.h>
 #include <assert.h>
 
+#include "eucalyptus.h"
 #include "misc.h"               /* logprintfl */
 #include "ipc.h"
 
@@ -114,7 +115,7 @@ sem *sem_realloc(const int val, const char *name, int flags)
             }
         }
         if ((s->posix = sem_open(name, O_CREAT | flags, 0644, val)) == SEM_FAILED) {
-            free(s);
+            EUCA_FREE(s);
             return NULL;
         }
         s->name = strdup(name);
@@ -124,14 +125,14 @@ sem *sem_realloc(const int val, const char *name, int flags)
                          1,     /* only need one */
                          IPC_CREAT | IPC_EXCL | S_IRUSR | S_IWUSR /* user-only */ );
         if (s->sysv < 0) {
-            free(s);
+            EUCA_FREE(s);
             return NULL;
         }
 
         /* set the value */
         arg.val = val;
         if (semctl(s->sysv, 0, SETVAL, arg) == -1) {
-            free(s);
+            EUCA_FREE(s);
             return NULL;
         }
     }
@@ -249,13 +250,12 @@ void sem_free(sem * s)
         if (s->flags & O_EXCL) {
             sem_unlink(s->name);
         }
-        free(s->name);
+        EUCA_FREE(s->name);
     }
 
     if (s && s->sysv > 0) {
         semctl(s->sysv, 0, IPC_RMID, arg);  /* TODO: check return */
     }
 
-    if (s)
-        free(s);
+    EUCA_FREE(s);
 }

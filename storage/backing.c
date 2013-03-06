@@ -411,8 +411,7 @@ ncInstance *load_instance_struct(const char *instanceId)
     return instance;
 
 free:
-    if (instance)
-        free(instance);
+    EUCA_FREE(instance);
     return NULL;
 }
 
@@ -533,7 +532,7 @@ free:
     // free the search results
     for (blockblob_meta * bm = matches; bm;) {
         blockblob_meta *next = bm->next;
-        free(bm);
+        EUCA_FREE(bm);
         bm = next;
     }
 
@@ -606,9 +605,9 @@ int destroy_instance_backing(ncInstance * instance, int do_destroy_files)
                     snprintf(toDelete, MAX_PATH, "%s/%s", instance->instancePath, entry->d_name);
                     unlink(toDelete);
                 }
-                free(entry);
+                EUCA_FREE(entry);
             }
-            free(files);
+            EUCA_FREE(files);
         }
     }
     // Finally try to remove the directory.

@@ -184,6 +184,7 @@ int write2file(const char *path, char *str);
 char *str2str(const char *str, const char *begin, const char *end);
 long long str2longlong(const char *str, const char *begin, const char *end);    /* extract integer from str bound by 'begin' and 'end' */
 pid_t timewait(pid_t pid, int *status, int timeout);
+int killwait(pid_t pid);
 int timeread(int fd, void *buf, size_t bytes, int timeout);
 int uint32compar(const void *ina, const void *inb);
 int safekill(pid_t pid, char *procname, int sig, char *rootwrap);
@@ -204,5 +205,6 @@ long long time_usec(void);
 long long time_ms(void);
 int drop_privs(void);
 int timeshell(char *command, char *stdout_str, char *stderr_str, int max_size, int timeout);
+int get_remoteDevForNC(const char * the_iqn, const char * remoteDev, char * remoteDevForNC, int remoteDevForNCLen);
 
 #endif

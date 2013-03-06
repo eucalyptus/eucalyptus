@@ -152,19 +152,16 @@ ncStub *ncStubCreate(char *endpoint_uri, char *logfile, char *homedir)
         logprintfl(EUCAERROR, "failed to create a stub for EucalyptusNC service (stub=%p env=%p client_home=%s)\n", stub, env, client_home);
     }
 
-    free(node_name);
+    EUCA_FREE(node_name);
     return st;
 }
 
 int ncStubDestroy(ncStub * st)
 {
-    if (st->client_home)
-        free(st->client_home);
-    if (st->endpoint_uri)
-        free(st->endpoint_uri);
-    if (st->node_name)
-        free(st->node_name);
-    free(st);
+    EUCA_FREE(st->client_home);
+    EUCA_FREE(st->endpoint_uri);
+    EUCA_FREE(st->node_name);
+    EUCA_FREE(st);
     return 0;
 }
 

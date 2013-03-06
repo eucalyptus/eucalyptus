@@ -51,8 +51,13 @@ class BotoClcInterface(ClcInterface):
             port=443
         except ConfigParser.Error:
             pass
-        self.conn = EC2Connection(access_id, secret_key, region=reg,
+        if boto.__version__ < 2.6:
+            self.conn = EC2Connection(access_id, secret_key, region=reg,
                                   port=port, path=path,
+                                  is_secure=True, security_token=token, debug=0)
+        else:
+            self.conn = EC2Connection(access_id, secret_key, region=reg,
+                                  port=port, path=path, validate_certs=False,
                                   is_secure=True, security_token=token, debug=0)
         self.conn.APIVersion = '2012-03-01'
         self.conn.http_connection_kwargs['timeout'] = 30

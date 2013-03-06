@@ -180,19 +180,19 @@ int add_vbr(const char *spec_str, virtualMachine * vm_type)
     }
     safe_strncpy(vbr->resourceLocation, spec_str + (loc_spec - spec_copy), sizeof(vbr->resourceLocation));
 
-    free(spec_copy);
+    EUCA_FREE(spec_copy);
     return 0;
 
 out_error:
     vm_type->virtualBootRecordLen--;
-    free(spec_copy);
+    EUCA_FREE(spec_copy);
     return 1;
 }
 
 int main(int argc, char **argv)
 {
     ncMetadata meta = { "correlate-me-please", "eucalyptus" };
-    virtualMachine params = { 64, 1, 1, "m1.small", NULL, NULL, NULL, NULL, NULL, {}, 0 };
+    virtualMachine params = { 64, 1, 1, "m1.small", NULL, NULL, NULL, NULL, NULL, NULL, {}, 0 };
     char *nc_hostport = DEFAULT_NC_HOSTPORT;
     char *walrus_hostport = DEFAULT_WALRUS_HOSTPORT;
     char *instance_id = NULL;
@@ -580,7 +580,7 @@ int main(int argc, char **argv)
                 free_instance(&(outInsts[i]));
             }
         }
-        /* TODO: fix free(outInsts); */
+        /* TODO: fix EUCA_FREE(outInsts); */
 
     /***********************************************************/
     } else if (!strcmp(command, "describeResource")) {

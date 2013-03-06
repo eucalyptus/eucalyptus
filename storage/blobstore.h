@@ -114,7 +114,7 @@ typedef enum {                  // make sure these match up with _blobstore_erro
     BLOBSTORE_ERROR_UNKNOWN,
 } blobstore_error_t;
 
-extern const char *_blobstore_error_strings[]; // make sure these match up with blobstore_error_t enums above
+extern const char *_blobstore_error_strings[];  // make sure these match up with blobstore_error_t enums above
 
 typedef enum {
     BLOBSTORE_REVOCATION_ANY,   // on create, defaults to NONE; on open, allows for whatever policy is in effect

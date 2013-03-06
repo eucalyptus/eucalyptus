@@ -147,7 +147,8 @@ const char *ncResourceTypeName[] = {
     "kernel",
     "ephemeral",
     "swap",
-    "ebs"
+    "ebs",
+    "boot",
 };
 
 int allocate_virtualMachine(virtualMachine * out, const virtualMachine * in)
@@ -206,10 +207,8 @@ ncMetadata *allocate_metadata(char *correlationId, char *userId)
 void free_metadata(ncMetadata ** metap)
 {
     ncMetadata *meta = *metap;
-    if (meta->correlationId)
-        free(meta->correlationId);
-    if (meta->userId)
-        free(meta->userId);
+    EUCA_FREE(meta->correlationId);
+    EUCA_FREE(meta->userId);
     *metap = NULL;
 }
 
@@ -293,16 +292,13 @@ ncInstance *allocate_instance(char *uuid,
 
 void free_instance(ncInstance ** instp)
 {
-    ncInstance *inst;
+    ncInstance *inst = NULL;
 
-    if (!instp)
-        return;
-    inst = *instp;
-    *instp = NULL;
-    if (!inst)
-        return;
-
-    free(inst);
+    if (instp) {
+        inst = *instp;
+        *instp = NULL;
+        EUCA_FREE(inst);
+    }
 }
 
 /* resource is used to return information about resources */
@@ -336,16 +332,13 @@ ncResource *allocate_resource(char *nodeStatus,
 
 void free_resource(ncResource ** resp)
 {
-    ncResource *res;
+    ncResource *res = NULL;
 
-    if (!resp)
-        return;
-    res = *resp;
-    *resp = NULL;
-    if (!res)
-        return;
-
-    free(res);
+    if (resp) {
+        res = *resp;
+        *resp = NULL;
+        EUCA_FREE(res);
+    }
 }
 
 instance_error_codes add_instance(bunchOfInstances ** headp, ncInstance * instance)
@@ -365,7 +358,7 @@ instance_error_codes add_instance(bunchOfInstances ** headp, ncInstance * instan
         bunchOfInstances *last = *headp;
         do {
             if (!strcmp(last->instance->instanceId, instance->instanceId)) {
-                free(new);
+                EUCA_FREE(new);
                 return DUPLICATE;
             }
         } while (last->next && (last = last->next));
@@ -392,7 +385,7 @@ instance_error_codes remove_instance(bunchOfInstances ** headp, ncInstance * ins
             if (*headp) {
                 (*headp)->count = count - 1;
             }
-            free(head);
+            EUCA_FREE(head);
             return OK;
         }
         prev = head;

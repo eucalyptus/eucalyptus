@@ -105,7 +105,7 @@ extern struct nc_state_t nc_state;
 #define INIT() if (!initialized) init(&nc_state)
 #endif
 
-static void error_handler(void *ctx, const char *fmt, ...)  __attribute__ ((__format__(__printf__, 2, 3)));;
+static void error_handler(void *ctx, const char *fmt, ...) __attribute__ ((__format__(__printf__, 2, 3)));;
 static pthread_mutex_t xml_mutex = PTHREAD_MUTEX_INITIALIZER;   // process-global mutex
 
 // macros for making XML construction a bit more readable
@@ -642,8 +642,8 @@ int main(int argc, char **argv)
 out:
     remove(out_path);
     remove(in_path);
-    free(in_path);
-    free(out_path);
+    EUCA_FREE(in_path);
+    EUCA_FREE(out_path);
     return err;
 }
 #endif
@@ -661,9 +661,9 @@ int main(int argc, char **argv)
     if (devs) {
         for (int j = 0; devs[j]; j++) {
             logprintfl(EUCAINFO, "devs[%d] = '%s'\n", j, devs[j]);
-            free(devs[j]);
+            EUCA_FREE(devs[j]);
         }
-        free(devs);
+        EUCA_FREE(devs);
     } else {
         logprintfl(EUCAERROR, "devs[] are empty\n");
     }

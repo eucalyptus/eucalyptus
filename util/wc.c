@@ -31,6 +31,7 @@
 #include <locale.h>             // setlocale
 #include <string.h>
 
+#include "eucalyptus.h"
 #include "misc.h"               // boolean
 #include "wc.h"
 
@@ -157,8 +158,7 @@ wchar_t *varsub(const wchar_t * s, const wchar_map * vars[])
         wchar_t *val = find_valn(vars, var_start + pref_len, var_len);
         if (val == NULL) {
             logprintfl(EUCAWARN, "failed to substitute variable\n");    // TODO: print variable name
-            if (result != NULL)
-                free(result);
+            EUCA_FREE(result);
             return NULL;
         }
         if (var_start > remainder) {    // there is text prior to the variable
@@ -211,13 +211,13 @@ void varmap_free(wchar_map ** map)
         return;
     }
     while (map[i]) {
-        free(map[i]->key);
-        free(map[i]->val);
-        free(map[i]);
+        EUCA_FREE(map[i]->key);
+        EUCA_FREE(map[i]->val);
+        EUCA_FREE(map[i]);
         i++;
     }
-    free(map[i]);               /* NULL terminator */
-    free(map);
+    EUCA_FREE(map[i]);               /* NULL terminator */
+    EUCA_FREE(map);
 }
 
 // substitutes in 's' all occurence of variables '${var}'
@@ -270,10 +270,8 @@ char *c_varsub(const char *s, const char_map * vars[])
             }
 
             if ((vartok = (char *)malloc(strlen(C_VAR_PREFIX) + strlen(C_VAR_SUFFIX) + strlen(missed_var) + 1)) == NULL) {
-                if (result != NULL) {
-                    free(result);
-                }
-                free(missed_var);
+                EUCA_FREE(result);
+                EUCA_FREE(missed_var);
                 return NULL;
             }
             sprintf(vartok, "%s%s%s", C_VAR_PREFIX, missed_var, C_VAR_SUFFIX);
@@ -281,17 +279,15 @@ char *c_varsub(const char *s, const char_map * vars[])
                 result = c_wcappendn(result, remainder, var_start - remainder);
                 if (result == NULL) {
                     logprintfl(EUCAERROR, "failed to append during variable substitution"); // TODO: more specific error
-                    free(vartok);
-                    free(missed_var);
+                    EUCA_FREE(vartok);
+                    EUCA_FREE(missed_var);
                     break;
                 }
             }
             result = c_wcappendn(result, vartok, 0);
             remainder = var_end + suff_len; // move the pointer past the empty variable (skip it)
-            if (missed_var != NULL) {
-                free(missed_var);
-            }
-            free(vartok);
+            EUCA_FREE(missed_var);
+            EUCA_FREE(vartok);
             continue;
         }
         if (var_start > remainder) {    // there is text prior to the variable
@@ -344,13 +340,13 @@ void c_varmap_free(char_map ** map)
         return;
     }
     while (map[i]) {
-        free(map[i]->key);
-        free(map[i]->val);
-        free(map[i]);
+        EUCA_FREE(map[i]->key);
+        EUCA_FREE(map[i]->val);
+        EUCA_FREE(map[i]);
         i++;
     }
-    free(map[i]);               /* NULL terminator */
-    free(map);
+    EUCA_FREE(map[i]);               /* NULL terminator */
+    EUCA_FREE(map);
 }
 
 /////////////////////////////////////////////// unit testing code ///////////////////////////////////////////////////
@@ -379,12 +375,12 @@ int main(int argc, char **argv)
     wchar_t *s1_sub = varsub(s1, (const wchar_map **)m);
     assert(s1_sub != NULL);
     printf("nice string subbed: %ls\n", s1_sub);
-    free(s1_sub);
+    EUCA_FREE(s1_sub);
     printf("       ugly string: %ls\n", s2);
     wchar_t *s2_sub = varsub(s2, (const wchar_map **)m);
     assert(s2_sub != NULL);
     printf("ugly string subbed: %ls\n", s2_sub);
-    free(s2_sub);
+    EUCA_FREE(s2_sub);
     printf(" unsubbable string: %ls\n", s3);
     assert(varsub(s3, (const wchar_map **)m) == NULL);
 
@@ -393,7 +389,7 @@ int main(int argc, char **argv)
     printf("  sending null map: %ls\n", s3);    // Reuse s3
     wchar_t *s3_sub = varsub(s3, NULL);
     printf("returned from null: %ls\n", s3_sub);
-    free(s3_sub);
+    EUCA_FREE(s3_sub);
 
     // Now do it again, this time non-widechar
     c_m = c_varmap_alloc(NULL, "colorxxxxxx", "brown"); // FIXME: This matches
@@ -406,18 +402,18 @@ int main(int argc, char **argv)
     printf("nice string subbed: %s\n", c_s1_sub);
 
     assert(c_s1_sub != NULL);
-    free(c_s1_sub);
+    EUCA_FREE(c_s1_sub);
     printf("       ugly string: %s\n", c_s2);
     char *c_s2_sub = c_varsub(c_s2, (const char_map **)c_m);
     assert(c_s2_sub != NULL);
     printf("ugly string subbed: %s\n", c_s2_sub);
-    free(c_s2_sub);
+    EUCA_FREE(c_s2_sub);
 
     printf(" unsubbable string: %s\n", c_s3);
     char *c_s3_sub = c_varsub(c_s3, (const char_map **)c_m);
     printf("   unsubbed string: %s\n", c_s3_sub);
     assert(!strcmp(c_s3, c_s3_sub));
-    free(c_s3_sub);
+    EUCA_FREE(c_s3_sub);
 
     c_varmap_free(c_m);
 
@@ -425,7 +421,7 @@ int main(int argc, char **argv)
     c_s3_sub = c_varsub(c_s3, NULL);
     printf("returned from null: %s\n", c_s3_sub);
     assert(!strcmp(c_s3, c_s3_sub));
-    free(c_s3_sub);
+    EUCA_FREE(c_s3_sub);
 }
 
 #endif

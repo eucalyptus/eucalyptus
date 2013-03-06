@@ -270,13 +270,13 @@ ncStub *ncStubCreate(char *endpoint_uri, char *logfile, char *homedir)
         logprintfl(EUCAWARN, "fakeNC: WARNING: out of memory");
     }
 
-    free(node_name);
+    EUCA_FREE(node_name);
     return st;
 }
 
 int ncStubDestroy(ncStub * st)
 {
-    free(st);
+    EUCA_FREE(st);
     return (0);
 }
 
@@ -461,7 +461,7 @@ int ncDescribeResourceStub(ncStub * st, ncMetadata * meta, char *resourceType, n
             ret = 1;
         } else {
             memcpy(&(myconfig->res), res, sizeof(ncResource));
-            free(res);
+            EUCA_FREE(res);
         }
     }
 

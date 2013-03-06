@@ -81,7 +81,7 @@ ncStub *ncStubCreate(char *endpoint_uri, char *logfile, char *homedir)
 
 int ncStubDestroy(ncStub * st)
 {
-    free(st);
+    EUCA_FREE(st);
     return (0);
 }
 

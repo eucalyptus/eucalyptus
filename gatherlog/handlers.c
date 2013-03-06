@@ -103,7 +103,7 @@ int doGetLogs(char *service, char **outCCLog, char **outNCLog, char **outHTTPDLo
         }
         if (!home) {
             printf("Out of memory!\n");
-            free(buf);
+            EUCA_FREE(buf);
             return 1;
         }
 
@@ -166,90 +166,88 @@ int doGetLogs(char *service, char **outCCLog, char **outNCLog, char **outHTTPDLo
         } else {
             *outAxis2Log = NULL;
         }
-        if (home)
-            free(home);
+        EUCA_FREE(home);
     } else {
         int pid, filedes[2], status;
 
-        pipe(filedes);
-        pid = fork();
-        if (pid == 0) {
-            axutil_env_t *env = NULL;
-            axis2_char_t *client_home = NULL;
-            axis2_stub_t *stub = NULL;
-            char *clog, *hlog, *alog, *nlog;
+        if(pipe(filedes) == 0) {
+            pid = fork();
+            if (pid == 0) {
+                axutil_env_t *env = NULL;
+                axis2_char_t *client_home = NULL;
+                axis2_stub_t *stub = NULL;
+                char *clog, *hlog, *alog, *nlog;
 
-            close(filedes[0]);
+                close(filedes[0]);
 
-            //      env =  axutil_env_create_all("/tmp/GLclient.log", AXIS2_LOG_LEVEL_TRACE);
-            env = axutil_env_create_all(NULL, 0);
-            client_home = AXIS2_GETENV("AXIS2C_HOME");
-            if (!client_home) {
-                exit(1);
-            } else {
-                stub = axis2_stub_create_EucalyptusGL(env, client_home, service);
-                clog = nlog = hlog = alog = NULL;
-                rc = gl_getLogs("self", &clog, &nlog, &hlog, &alog, env, stub);
-                if (rc) {
+                //      env =  axutil_env_create_all("/tmp/GLclient.log", AXIS2_LOG_LEVEL_TRACE);
+                env = axutil_env_create_all(NULL, 0);
+                client_home = AXIS2_GETENV("AXIS2C_HOME");
+                if (!client_home) {
+                    exit(1);
                 } else {
-                    bzero(buf, bufsize);
-                    if (clog)
-                        snprintf(buf, bufsize, "%s", clog);
-                    rc = write(filedes[1], buf, bufsize);
+                    stub = axis2_stub_create_EucalyptusGL(env, client_home, service);
+                    clog = nlog = hlog = alog = NULL;
+                    rc = gl_getLogs("self", &clog, &nlog, &hlog, &alog, env, stub);
+                    if (rc) {
+                    } else {
+                        bzero(buf, bufsize);
+                        if (clog)
+                            snprintf(buf, bufsize, "%s", clog);
+                        rc = write(filedes[1], buf, bufsize);
 
-                    bzero(buf, bufsize);
-                    if (nlog)
-                        snprintf(buf, bufsize, "%s", nlog);
-                    rc = write(filedes[1], buf, bufsize);
+                        bzero(buf, bufsize);
+                        if (nlog)
+                            snprintf(buf, bufsize, "%s", nlog);
+                        rc = write(filedes[1], buf, bufsize);
 
-                    bzero(buf, bufsize);
-                    if (hlog)
-                        snprintf(buf, bufsize, "%s", hlog);
-                    rc = write(filedes[1], buf, bufsize);
+                        bzero(buf, bufsize);
+                        if (hlog)
+                            snprintf(buf, bufsize, "%s", hlog);
+                        rc = write(filedes[1], buf, bufsize);
 
-                    bzero(buf, bufsize);
-                    if (alog)
-                        snprintf(buf, bufsize, "%s", alog);
-                    rc = write(filedes[1], buf, bufsize);
+                        bzero(buf, bufsize);
+                        if (alog)
+                            snprintf(buf, bufsize, "%s", alog);
+                        rc = write(filedes[1], buf, bufsize);
+                    }
                 }
-            }
-            close(filedes[1]);
-            exit(0);
+                close(filedes[1]);
+                exit(0);
 
-        } else {
-            close(filedes[1]);
+            } else {
+                close(filedes[1]);
 
-            bzero(buf, bufsize);
-            rc = read(filedes[0], buf, bufsize - 1);
-            if (rc && buf[0] != '\0') {
-                *outCCLog = strdup(buf);
-            }
+                bzero(buf, bufsize);
+                rc = read(filedes[0], buf, bufsize - 1);
+                if (rc && buf[0] != '\0') {
+                    *outCCLog = strdup(buf);
+                }
 
-            bzero(buf, bufsize);
-            rc = read(filedes[0], buf, bufsize - 1);
-            if (rc && buf[0] != '\0') {
-                *outNCLog = strdup(buf);
-            }
+                bzero(buf, bufsize);
+                rc = read(filedes[0], buf, bufsize - 1);
+                if (rc && buf[0] != '\0') {
+                    *outNCLog = strdup(buf);
+                }
 
-            bzero(buf, bufsize);
-            rc = read(filedes[0], buf, bufsize - 1);
-            if (rc && buf[0] != '\0') {
-                *outHTTPDLog = strdup(buf);
-            }
+                bzero(buf, bufsize);
+                rc = read(filedes[0], buf, bufsize - 1);
+                if (rc && buf[0] != '\0') {
+                    *outHTTPDLog = strdup(buf);
+                }
 
-            bzero(buf, bufsize);
-            rc = read(filedes[0], buf, bufsize - 1);
-            if (rc && buf[0] != '\0') {
-                *outAxis2Log = strdup(buf);
+                bzero(buf, bufsize);
+                rc = read(filedes[0], buf, bufsize - 1);
+                if (rc && buf[0] != '\0') {
+                    *outAxis2Log = strdup(buf);
+                }
+                close(filedes[0]);
+                wait(&status);
             }
-            close(filedes[0]);
-            wait(&status);
         }
     }
 
-    if (buf)
-        free(buf);
-
+    EUCA_FREE(buf);
     return (0);
 }
 
@@ -280,7 +278,7 @@ int doGetKeys(char *service, char **outCCCert, char **outNCCert)
         }
         if (!home) {
             printf("Out of memory!\n");
-            free(buf);
+            EUCA_FREE(buf);
             return 1;
         }
 
@@ -314,67 +312,65 @@ int doGetKeys(char *service, char **outCCCert, char **outNCCert)
             *outNCCert = NULL;
         }
 
-        if (home)
-            free(home);
+        EUCA_FREE(home);
     } else {
         int pid, filedes[2], status;
 
-        pipe(filedes);
-        pid = fork();
-        if (pid == 0) {
-            axutil_env_t *env = NULL;
-            axis2_char_t *client_home = NULL;
-            axis2_stub_t *stub = NULL;
-            char *ccert, *ncert;
+        if(pipe(filedes) == 0) {
+            pid = fork();
+            if (pid == 0) {
+                axutil_env_t *env = NULL;
+                axis2_char_t *client_home = NULL;
+                axis2_stub_t *stub = NULL;
+                char *ccert, *ncert;
 
-            close(filedes[0]);
+                close(filedes[0]);
 
-            //      env =  axutil_env_create_all("/tmp/GLclient.log", AXIS2_LOG_LEVEL_TRACE);
-            env = axutil_env_create_all(NULL, 0);
-            client_home = AXIS2_GETENV("AXIS2C_HOME");
-            if (!client_home) {
-                exit(1);
-            } else {
-                stub = axis2_stub_create_EucalyptusGL(env, client_home, service);
-                ccert = ncert = NULL;
-                rc = gl_getKeys("self", &ccert, &ncert, env, stub);
-                if (rc) {
+                //      env =  axutil_env_create_all("/tmp/GLclient.log", AXIS2_LOG_LEVEL_TRACE);
+                env = axutil_env_create_all(NULL, 0);
+                client_home = AXIS2_GETENV("AXIS2C_HOME");
+                if (!client_home) {
+                    exit(1);
                 } else {
-                    bzero(buf, bufsize);
-                    if (ccert)
-                        snprintf(buf, bufsize, "%s", ccert);
-                    rc = write(filedes[1], buf, bufsize);
+                    stub = axis2_stub_create_EucalyptusGL(env, client_home, service);
+                    ccert = ncert = NULL;
+                    rc = gl_getKeys("self", &ccert, &ncert, env, stub);
+                    if (rc) {
+                    } else {
+                        bzero(buf, bufsize);
+                        if (ccert)
+                            snprintf(buf, bufsize, "%s", ccert);
+                        rc = write(filedes[1], buf, bufsize);
 
-                    bzero(buf, bufsize);
-                    if (ncert)
-                        snprintf(buf, bufsize, "%s", ncert);
-                    rc = write(filedes[1], buf, bufsize);
+                        bzero(buf, bufsize);
+                        if (ncert)
+                            snprintf(buf, bufsize, "%s", ncert);
+                        rc = write(filedes[1], buf, bufsize);
+                    }
                 }
+                close(filedes[1]);
+                exit(0);
+
+            } else {
+                close(filedes[1]);
+                bzero(buf, bufsize);
+
+                rc = read(filedes[0], buf, bufsize - 1);
+                if (rc) {
+                    *outCCCert = strdup(buf);
+                }
+
+                rc = read(filedes[0], buf, bufsize - 1);
+                if (rc) {
+                    *outNCCert = strdup(buf);
+                }
+
+                close(filedes[0]);
+                wait(&status);
             }
-            close(filedes[1]);
-            exit(0);
-
-        } else {
-            close(filedes[1]);
-            bzero(buf, bufsize);
-
-            rc = read(filedes[0], buf, bufsize - 1);
-            if (rc) {
-                *outCCCert = strdup(buf);
-            }
-
-            rc = read(filedes[0], buf, bufsize - 1);
-            if (rc) {
-                *outNCCert = strdup(buf);
-            }
-
-            close(filedes[0]);
-            wait(&status);
         }
     }
 
-    if (buf)
-        free(buf);
-
+    EUCA_FREE(buf);
     return (0);
 }

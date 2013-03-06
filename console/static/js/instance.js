@@ -91,7 +91,15 @@
                },
             },
             { "mDataProp": "image_id"},
-            { "mDataProp": "placement" }, 
+            {
+              "fnRender": function(oObj) { 
+                var placement = oObj.aData.placement;
+                if (placement == undefined) {
+                  placement = oObj.aData._placement.zone;
+                }
+                return placement;
+              }
+            },
             {
 	          "mDataProp": "public_dns_name",
  			  "sClass": "wrap-content"
@@ -975,6 +983,9 @@
 
       var selectedType = instance.instance_type;
       var zone = instance.placement;
+      if (zone == undefined) {
+        zone = oObj.aData._placement.zone;
+      }
       $summary = $('<div>').append(
           $('<div>').attr('id','summary-type-insttype').append($('<div>').text(launch_instance_summary_type), $('<span>').text(selectedType)),
           $('<div>').attr('id','summary-type-zone').append($('<div>').text(launch_instance_summary_zone), $('<span>').text(zone)),
