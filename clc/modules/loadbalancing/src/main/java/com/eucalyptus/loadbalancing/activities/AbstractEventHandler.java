@@ -23,8 +23,22 @@ package com.eucalyptus.loadbalancing.activities;
  * @author Sang-Min Park (spark@eucalyptus.com)
  *
  */
-public interface EventHandler<T extends LoadbalancingEvent> {
-	public void apply(T evt) throws EventHandlerException;
-	public void rollback() throws EventHandlerException;
-	public EventHandlerChain<T> getChain();
+public abstract class AbstractEventHandler<T extends LoadbalancingEvent> implements EventHandler<T> {
+	EventHandlerChain<T> chain = null;
+	
+	protected AbstractEventHandler(final EventHandlerChain<T> chain){
+		this.chain = chain;
+	}
+	
+	@Override
+	public abstract void apply(T evt) throws EventHandlerException;
+
+	@Override
+	public abstract void rollback() throws EventHandlerException;
+
+	@Override
+	public EventHandlerChain<T> getChain() {
+		// TODO Auto-generated method stub
+		return this.chain;
+	}
 }

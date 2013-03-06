@@ -28,6 +28,7 @@ import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.ServiceConfigurations;
 import com.eucalyptus.component.Topology;
+import com.eucalyptus.empyrean.Empyrean;
 import com.eucalyptus.util.Callback;
 import com.eucalyptus.util.async.AsyncRequests;
 import com.eucalyptus.util.concurrent.ListenableFuture;
@@ -50,7 +51,8 @@ abstract public class DispatchingClient<MT extends BaseMessage,CT extends Compon
   public void init() throws DispatchingClientException {
     try {
       final ComponentId componentId = ComponentIds.lookup( componentIdClass );
-      if ( BootstrapArgs.isCloudController() && componentId.isCloudLocal() && !componentId.isRegisterable()  ) {
+      if (componentId instanceof Empyrean || 
+    		  (BootstrapArgs.isCloudController() && componentId.isCloudLocal() && !componentId.isRegisterable())) {
         this.configuration = ServiceConfigurations.createEphemeral( componentId );
       } else {
         this.configuration = Topology.lookup( componentIdClass );

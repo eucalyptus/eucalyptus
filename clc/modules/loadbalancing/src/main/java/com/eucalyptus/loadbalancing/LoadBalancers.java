@@ -28,6 +28,7 @@ import com.eucalyptus.auth.principal.UserFullName;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.TransactionException;
 import com.eucalyptus.loadbalancing.LoadBalancerListener.PROTOCOL;
+import com.eucalyptus.util.Exceptions;
 import com.google.common.base.Function;
 import com.google.common.base.Predicate;
 import com.google.common.base.Strings;
@@ -210,6 +211,19 @@ public class LoadBalancers {
 				LOG.error("failed to delete the zone "+zone, ex);
 				db.rollback();
 			}
+		}
+	}
+	
+	public static LoadBalancerZone findZone(final LoadBalancer lb, final String zoneName){
+		final EntityTransaction db = Entities.get(LoadBalancerZone.class);
+		try{
+			final LoadBalancerZone exist = Entities.uniqueResult(LoadBalancerZone.named(lb, zoneName));
+			db.commit();
+			return exist;
+		}catch(NoSuchElementException ex){
+			throw ex;
+		}catch(Exception ex){
+			throw Exceptions.toUndeclared(ex);
 		}
 	}
 }

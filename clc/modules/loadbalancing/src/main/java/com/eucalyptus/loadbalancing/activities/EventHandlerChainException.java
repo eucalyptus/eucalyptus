@@ -19,12 +19,26 @@
  ************************************************************************/
 package com.eucalyptus.loadbalancing.activities;
 
+import com.eucalyptus.util.EucalyptusCloudException;
+
 /**
  * @author Sang-Min Park (spark@eucalyptus.com)
  *
  */
-public interface EventHandler<T extends LoadbalancingEvent> {
-	public void apply(T evt) throws EventHandlerException;
-	public void rollback() throws EventHandlerException;
-	public EventHandlerChain<T> getChain();
+public class EventHandlerChainException extends EucalyptusCloudException {
+	private static final long serialVersionUID = 1L;
+	private boolean rolledback = false;
+	public EventHandlerChainException(String message, Throwable cause){
+		super(message, cause);
+	}
+	public EventHandlerChainException(String message, Throwable cause, boolean rollback){
+		super(message, cause);
+		this.rolledback=rollback;
+	}
+	public void setRollback(boolean rollback){
+		this.rolledback = rollback;
+	}
+	public boolean isRolledback(){
+		return this.rolledback;
+	}
 }

@@ -19,12 +19,12 @@
  ************************************************************************/
 package com.eucalyptus.loadbalancing.activities;
 
+import java.util.List;
+
 /**
  * @author Sang-Min Park (spark@eucalyptus.com)
  *
  */
-public interface EventHandler<T extends LoadbalancingEvent> {
-	public void apply(T evt) throws EventHandlerException;
-	public void rollback() throws EventHandlerException;
-	public EventHandlerChain<T> getChain();
+public interface StoredResult<T> {
+	public List<T> getResult();
 }

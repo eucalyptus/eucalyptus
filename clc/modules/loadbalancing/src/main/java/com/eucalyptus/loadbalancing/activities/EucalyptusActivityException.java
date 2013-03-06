@@ -21,7 +21,10 @@
 package com.eucalyptus.loadbalancing.activities;
 
 import com.eucalyptus.util.EucalyptusCloudException;
-
+/**
+ * @author Sang-Min Park (spark@eucalyptus.com)
+ *
+ */
 public class EucalyptusActivityException extends EucalyptusCloudException {
 	
 	private static final long serialVersionUID = 1L;

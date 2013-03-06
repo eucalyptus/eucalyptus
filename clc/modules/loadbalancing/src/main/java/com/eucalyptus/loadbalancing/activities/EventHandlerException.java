@@ -22,12 +22,15 @@ package com.eucalyptus.loadbalancing.activities;
 import com.eucalyptus.util.EucalyptusCloudException;
 
 /**
- * @author root
+ * @author Sang-Min Park (spark@eucalyptus.com)
  *
  */
 public class EventHandlerException extends EucalyptusCloudException {
-
+	private static final long serialVersionUID = 1L;
 	private boolean isFatal = false;
+	public EventHandlerException(String message){
+		super(message);
+	}
 	public EventHandlerException(String message, Throwable cause){
 		super(message, cause);
 	}

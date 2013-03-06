@@ -138,7 +138,7 @@ public class LoadBalancingService {
     	LoadBalancers.addZone(lbName, ownerFullName, zones);
     }
     
-    /// generate new loadbalancer event to activities handler
+    /// trigger new loadbalancer event 
     try{
     	NewLoadbalancerEvent evt = new NewLoadbalancerEvent();
     	evt.setLoadBalancer(lbName);

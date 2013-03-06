@@ -29,7 +29,7 @@ import com.eucalyptus.context.Context;
 import com.eucalyptus.event.GenericEvent
 
 /**
- * @author Sang-Min Park
+ * @author Sang-Min Park (spark@eucalyptus.com)
  *
  */
 class LoadbalancingEvent extends GenericEvent<String> { 

@@ -101,6 +101,14 @@ public class LoadBalancerZone extends AbstractPersistent {
 		return this.loadbalancer;
 	}
 	
+	public Collection<LoadBalancerServoInstance> getServoInstances(){
+		return servoInstances;
+	}
+	
+	public Collection<LoadBalancerBackendInstance> getBackendInstances(){
+		return backendInstances;
+	}
+	
 	@Override
 	public int hashCode( ) {
 	    final int prime = 31;

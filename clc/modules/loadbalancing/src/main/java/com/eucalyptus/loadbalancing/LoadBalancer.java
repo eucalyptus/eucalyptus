@@ -96,10 +96,6 @@ public class LoadBalancer extends UserMetadata<LoadBalancer.STATE> implements Lo
 	private Collection<LoadBalancerBackendInstance> backendInstances = null;
 	
 	@OneToMany(fetch = FetchType.LAZY, cascade = CascadeType.ALL, orphanRemoval = true, mappedBy = "loadbalancer")
-    @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
-	private Collection<LoadBalancerServoInstance> servoInstances = null;
-	
-	@OneToMany(fetch = FetchType.LAZY, cascade = CascadeType.ALL, orphanRemoval = true, mappedBy = "loadbalancer")
 	@Cache( usage= CacheConcurrencyStrategy.TRANSACTIONAL )
 	private Collection<LoadBalancerListener> listeners = null;
 	
@@ -146,10 +142,6 @@ public class LoadBalancer extends UserMetadata<LoadBalancer.STATE> implements Lo
 	
 	public Collection<LoadBalancerBackendInstance> getBackendInstances(){
 		return this.backendInstances;
-	}
-	
-	public Collection<LoadBalancerServoInstance> getServoInstances(){
-		return this.servoInstances != null ? this.servoInstances : Lists.<LoadBalancerServoInstance>newArrayList();
 	}
 	
 	public LoadBalancerListener findListener(final int lbPort){

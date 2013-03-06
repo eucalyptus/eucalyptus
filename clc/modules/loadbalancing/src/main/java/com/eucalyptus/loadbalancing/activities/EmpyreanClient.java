@@ -19,12 +19,16 @@
  ************************************************************************/
 package com.eucalyptus.loadbalancing.activities;
 
+import com.eucalyptus.autoscaling.activities.DispatchingClient;
+import com.eucalyptus.empyrean.Empyrean;
+import com.eucalyptus.empyrean.EmpyreanMessage;
+
 /**
  * @author Sang-Min Park (spark@eucalyptus.com)
  *
  */
-public interface EventHandler<T extends LoadbalancingEvent> {
-	public void apply(T evt) throws EventHandlerException;
-	public void rollback() throws EventHandlerException;
-	public EventHandlerChain<T> getChain();
+public class EmpyreanClient extends DispatchingClient<EmpyreanMessage, Empyrean> {
+	public EmpyreanClient(String userId) {
+		super(userId, Empyrean.class);
+	}
 }

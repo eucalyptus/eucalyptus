@@ -26,7 +26,11 @@ import com.eucalyptus.event.EventFailedException;
 import com.eucalyptus.event.EventListener;
 import com.eucalyptus.event.ListenerRegistry;
 import com.eucalyptus.event.Listeners;
-
+import com.eucalyptus.util.Exceptions;
+/**
+ * @author Sang-Min Park (spark@eucalyptus.com)
+ *
+ */
 public class ActivityManager {
 
 	/* CONSIDERATIONS
@@ -99,50 +103,67 @@ public class ActivityManager {
 		NewLoadbalancer(NewLoadbalancerEvent.class) {
 			@Override
 			public void fireEvent(LoadbalancingEvent event) {
-				// TODO Auto-generated method stub
-				EventHandlerChains.onNewLoadbalancer().execute((NewLoadbalancerEvent)event);
+				try{
+					EventHandlerChains.onNewLoadbalancer().execute((NewLoadbalancerEvent)event);
+				}catch(EventHandlerChainException ex){
+					throw Exceptions.toUndeclared(ex);
+				}
 			}
 		},
 		DeleteLoadbalancer(DeleteLoadbalancerEvent.class) {
 			@Override
 			public void fireEvent(LoadbalancingEvent event) {
-				// TODO Auto-generated method stub
-				EventHandlerChains.onDeleteLoadbalancer().execute((DeleteLoadbalancerEvent) event);
+				try{
+					EventHandlerChains.onDeleteLoadbalancer().execute((DeleteLoadbalancerEvent) event);
+				}catch(EventHandlerChainException ex){
+					throw Exceptions.toUndeclared(ex);
+				}
 			}
 		},
 		CreateListener(CreateListenerEvent.class) {
 			@Override
 			public void fireEvent(LoadbalancingEvent event) {
-				// TODO Auto-generated method stub
-				EventHandlerChains.onCreateListener().execute((CreateListenerEvent)event);
+				try{
+					EventHandlerChains.onCreateListener().execute((CreateListenerEvent)event);
+				}catch(EventHandlerChainException ex){
+					throw Exceptions.toUndeclared(ex);
+				}
 			}
 		}, 
 		DeleteListener(DeleteListenerEvent.class) {
 			@Override
 			public void fireEvent(LoadbalancingEvent event) {
-				// TODO Auto-generated method stub
-				EventHandlerChains.onDeleteListener().execute((DeleteListenerEvent)event);
+				try{
+					EventHandlerChains.onDeleteListener().execute((DeleteListenerEvent)event);
+				}catch(EventHandlerChainException ex){
+					throw Exceptions.toUndeclared(ex);
+				}
 			}
 		},
 		RegisterInstances(RegisterInstancesEvent.class) {
 			@Override
 			public void fireEvent(LoadbalancingEvent event) {
-				// TODO Auto-generated method stub
-				EventHandlerChains.onRegisterInstances().execute((RegisterInstancesEvent)event);
+				try{
+					EventHandlerChains.onRegisterInstances().execute((RegisterInstancesEvent)event);
+				}catch(EventHandlerChainException ex){
+					throw Exceptions.toUndeclared(ex);
+				}
 			}
 		},
 		DeregisterInstances(DeregisterInstancesEvent.class) {
 			@Override
 			public void fireEvent(LoadbalancingEvent event) {
-				// TODO Auto-generated method stub
-				EventHandlerChains.onDeregisterInstances().execute((DeregisterInstancesEvent) event);
+				try{
+					EventHandlerChains.onDeregisterInstances().execute((DeregisterInstancesEvent) event);
+				}catch(EventHandlerChainException ex){
+					throw Exceptions.toUndeclared(ex);
+				}
 			}
 		},
 		EnabledZone(EnabledZoneEvent.class){
 			@Override
 			public void fireEvent(LoadbalancingEvent event) {
-				// NULL-OP event sink
-				
+				// NULL-OP
 				// TODO: SPARK: Should validate the zone name
 				return;
 			}

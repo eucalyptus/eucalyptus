@@ -48,7 +48,7 @@ import com.eucalyptus.vm.VmInstances;
 import edu.ucsb.eucalyptus.cloud.InvalidParameterValueException;
 
 /**
- * @author Sang-Min Park
+ * @author Sang-Min Park (spark@eucalyptus.com)
  *
  */
 @Entity @javax.persistence.Entity
@@ -65,21 +65,17 @@ public class LoadBalancerServoInstance extends AbstractPersistent {
 	}
 	
     @ManyToOne
-    @JoinColumn( name = "metadata_loadbalancer_fk" )
-    private LoadBalancer loadbalancer = null;
-    
-    @ManyToOne
-    @JoinColumn( name = "metadata_zone_fk")
+    @JoinColumn( name = "metadata_zone_fk", nullable=false)
     private LoadBalancerZone zone = null;
         
-    @Column(name="metadata_instance_id", nullable=false, unique=true)
+    @Transient
+    private LoadBalancer loadbalancer = null;
+    
+    @Column(name="metadata_instance_id", unique=true)
     private String instanceId = null;
     
     @Column(name="metadata_state", nullable=false)
     private String state = null;
-    
-    @Column(name="metadata_zone_name", nullable=false)
-    private String zoneName = null;
     
     @Column(name="metadata_unique_name", nullable=false, unique=true)
     private String uniqueName = null;
@@ -87,71 +83,35 @@ public class LoadBalancerServoInstance extends AbstractPersistent {
     private LoadBalancerServoInstance(){
     	this.state= STATE.Pending.name();
     }
-    private LoadBalancerServoInstance(final String instanceId, final String zoneName){
-    	this.instanceId=instanceId;
-    	this.zoneName=zoneName;
+    private LoadBalancerServoInstance(final LoadBalancerZone lbzone){
     	this.state = STATE.Pending.name();
+    	this.zone = lbzone;
+    	this.loadbalancer = zone.getLoadbalancer();
+    }
+    
+    public static LoadBalancerServoInstance named(final LoadBalancerZone lbzone){
+    	final LoadBalancerServoInstance sample = new LoadBalancerServoInstance(lbzone);
+    	return sample;
     }
     
     public static LoadBalancerServoInstance named(String instanceId){
     	final LoadBalancerServoInstance sample = new LoadBalancerServoInstance();
     	sample.instanceId = instanceId;
-      	return sample;
-    }
-    
-    public static LoadBalancerServoInstance named(String instanceId, String zoneName){
-    	final LoadBalancerServoInstance sample = new LoadBalancerServoInstance();
-    	sample.instanceId = instanceId;
-    	sample.zoneName = zoneName;
     	return sample;
     }
     
-    public static LoadBalancerServoInstance getInstance(String instanceId){
-    	// return if DB has the instance 
-    	try{
-    		final LoadBalancerServoInstance servo = Entities.uniqueResult(LoadBalancerServoInstance.named(instanceId));
-    		return servo;
-    	}catch(Exception ex){
-    		// retrieve VmInstance
-    		try{
-    			final VmInstance vm = VmInstances.lookup(instanceId);
-    			final LoadBalancerServoInstance servo = new LoadBalancerServoInstance(instanceId, vm.getPartition());
-    			return servo;
-    		}catch(Exception ex2){
-    			LOG.error("failed to find vm instance = "+instanceId);
-    			return null;
-    		}
-    	}
-    }
-    
-    public void setLoadbalancer(final LoadBalancer lb){
-    	this.loadbalancer = lb;
-    }
-    
-    public void setLoadbalancer(final String lbName, final UserFullName owner){
-    	 try{
-	  		this.loadbalancer= LoadBalancers.getLoadbalancer(owner, lbName);
-	  	 }catch(NoSuchElementException ex){
-	  		 throw ex;
-	  	 }catch(Exception ex){
-	  		 throw Exceptions.toUndeclared(ex);
-	  	 }
-    }
-    
-    public LoadBalancer getLoadbalancer(){
-    	return this.loadbalancer;
-    }
-    
-    public void setAvailabilityZone(final LoadBalancerZone zone) throws InvalidParameterValueException{
-    	if(zone.getName() != this.zoneName){
-    		throw new InvalidParameterValueException("Availability zone doesn't match");
-    	}
-    	this.zone = zone;
-    	this.loadbalancer = this.zone.getLoadbalancer();
+    public static LoadBalancerServoInstance fromUniqueName(String uniqueId){
+    	final LoadBalancerServoInstance sample = new LoadBalancerServoInstance();
+    	sample.uniqueName = uniqueId;
+    	return sample;
     }
     
     public LoadBalancerZone getAvailabilityZone(){
     	return this.zone;
+    }
+    
+    public void setInstanceId(String id){
+    	this.instanceId = id;
     }
     
     public String getInstanceId(){
@@ -160,11 +120,20 @@ public class LoadBalancerServoInstance extends AbstractPersistent {
 
 	@PrePersist
 	private void generateOnCommit( ) {
-		this.uniqueName = createUniqueName( );
+		if(this.uniqueName == null)
+			this.uniqueName = createUniqueName( );
+	}
+	
+	public void generateUniqueName(){
+		this.uniqueName  = createUniqueName();
+	}
+	
+	public String getUniqueName(){
+		return this.uniqueName;
 	}
 
 	private String createUniqueName(){
-		return String.format("%s-servo-instance-%s", this.zoneName, this.instanceId);
+		return String.format("%s-servo-instance-%s", this.zone.getName(), java.util.UUID.randomUUID());
 	}
 	
 	@Override
@@ -197,6 +166,7 @@ public class LoadBalancerServoInstance extends AbstractPersistent {
   }
 	@Override
 	public String toString(){
-		return String.format("Servo-instance %s for loadbalancer %s in %s", this.instanceId, this.loadbalancer.getDisplayName(), this.zone.getName());
+		String id = this.instanceId==null? "unassigned" : this.instanceId;
+		return String.format("Servo-instance (%s) for loadbalancer %s in %s", id, this.loadbalancer.getDisplayName(), this.zone.getName());
 	}
 }
