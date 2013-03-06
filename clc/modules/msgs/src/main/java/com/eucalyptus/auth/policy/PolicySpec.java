@@ -363,6 +363,8 @@ public class PolicySpec {
   public static final String S3_GETBUCKETREQUESTPAYMENT = "getbucketrequestpayment";
   public static final String S3_PUTBUCKETREQUESTPAYMENT = "putbucketrequestpayment";
   public static final String S3_GETBUCKETLOCATION = "getbucketlocation";
+  public static final String S3_GETBUCKETLOGGING = "getbucketlogging";
+  public static final String S3_PUTBUCKETLOGGING = "putbucketlogging";
 
   public static final Set<String> S3_ACTIONS = new ImmutableSet.Builder<String>()
     .add( S3_GETOBJECT )
@@ -386,6 +388,8 @@ public class PolicySpec {
     .add( S3_GETBUCKETREQUESTPAYMENT )
     .add( S3_PUTBUCKETREQUESTPAYMENT )
     .add( S3_GETBUCKETLOCATION )
+    .add( S3_GETBUCKETLOGGING )
+    .add( S3_PUTBUCKETLOGGING )
     .build();
 
   // STS actions, based on IAM Using Temporary Security Credentials version 2011-06-15
