@@ -388,6 +388,8 @@ public class PolicySpec {
     .add( S3_GETBUCKETREQUESTPAYMENT )
     .add( S3_PUTBUCKETREQUESTPAYMENT )
     .add( S3_GETBUCKETLOCATION )
+    .add( S3_GETBUCKETLOGGING )
+    .add( S3_PUTBUCKETLOGGING )
     .build();
 
   // STS actions, based on IAM Using Temporary Security Credentials version 2011-06-15
