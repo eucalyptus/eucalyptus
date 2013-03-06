@@ -363,6 +363,8 @@ public class PolicySpec {
   public static final String S3_GETBUCKETREQUESTPAYMENT = "getbucketrequestpayment";
   public static final String S3_PUTBUCKETREQUESTPAYMENT = "putbucketrequestpayment";
   public static final String S3_GETBUCKETLOCATION = "getbucketlocation";
+  public static final String S3_GETBUCKETLOGGING = "getbucketlogging";
+  public static final String S3_PUTBUCKETLOGGING = "putbucketlogging";
 
   public static final Set<String> S3_ACTIONS = new ImmutableSet.Builder<String>()
     .add( S3_GETOBJECT )

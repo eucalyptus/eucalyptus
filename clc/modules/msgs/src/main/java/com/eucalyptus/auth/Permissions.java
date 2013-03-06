@@ -142,13 +142,4 @@ public class Permissions {
 		}
 	}
 	
-	public static boolean isAuthorized(Account resourceAccount, User requestUser) {
-		try {
-			Account account = requestUser.getAccount( );
-			return resourceAccount.getAccountNumber().equals(account.getAccountNumber());
-		} catch (AuthException e) {
-			LOG.debug( e, e );
-		}
-		return false;
-	}
 }
