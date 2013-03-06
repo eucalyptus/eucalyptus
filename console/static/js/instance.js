@@ -43,7 +43,7 @@
       var $instHelp = $wrapper.children().last();
       thisObj.tableWrapper = $instTable.eucatable({
         id : 'instances', // user of this widget should customize these options,
-        data_deps: ['instances'],
+        data_deps: ['instances', 'volumes', 'addresses'],
         hidden: thisObj.options['hidden'],
         dt_arg : {
           "sAjaxSource": 'instance',
@@ -792,7 +792,7 @@
           inx = i*COL_IN_ROW + j;
           if (volumes.length > inx) {
             volId = volumes[inx];
-	    volId = DefaultEncoder().encodeForHTML(volID);
+            volId = DefaultEncoder().encodeForHTML(volId);
             $cb = $('<input>').attr('type', 'checkbox').attr('value', volId);
             $row.append($('<td>').append($cb,'&nbsp;', volId));
             $cb.click( function() {
