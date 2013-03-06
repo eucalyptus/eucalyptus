@@ -76,6 +76,23 @@
 
       thisObj._initImageSection();
       this.element.qtip();
+
+      // if image option already selected, step wizard forward to "type" step
+      if(thisObj.options.image) {
+        // search rows to get matching one
+        var $section = $launcher.find('#launch-wizard-image');
+        $section.find('table tbody').find('tr').each(function(index, tr) {
+        // add custom td handlers
+          var $currentRow = $(tr);
+          var emi = $currentRow.find('.image-id-arch').children().first().text();
+          if(thisObj.options.image === emi){
+            $currentRow.trigger('click');
+            $section.find('#launch-wizard-buttons-image-next').trigger('click');
+            thisObj._imageTable.fnSettings()._iDisplayLength = 5;
+            thisObj.options.image = null;
+          }
+        })
+      }
      },
 
     _addHelp : function(help){
@@ -277,15 +294,6 @@
               thisObj._setSummary('image', $summary);
             });
           }
-          // when image is pre-populated (launch-wizard called from image landing)
-          var emi = $currentRow.find('.image-id-arch').children().first().text();
-          if(thisObj.options.image && thisObj.options.image === emi){
-            console.log(">>>>>>>>>>>>>>>>>>>> "+thisObj.options.image);
-            $currentRow.trigger('click');
-            $section.find('#launch-wizard-buttons-image-next').trigger('click');
-            thisObj._imageTable.fnSettings()._iDisplayLength = 5;
-            thisObj.options.image = null;
-          }
         });
         $section.find('div#launch-images_filter').find('input').watermark(launch_instance_image_search_watermark);
         $section.find('div#launch-images_filter').find('input').attr('title', launch_instance_image_search_text_tip);
@@ -441,6 +449,7 @@
       $content = $section.find('#launch-wizard-image-contents').slideToggle('fast');
       thisObj._selectedSection = $content;
     },
+
     _initImageSection : function(){ 
       var thisObj = this;
       this._enableImageLink();

@@ -1196,6 +1196,9 @@
     },
 /**** Public Methods ****/
     close: function() {
+      $('html body').eucadata('removeCallback', 'instance','dashboard-summary');
+      $('html body').eucadata('removeCallback', 'volume','dashboard-summary');
+      $('html body').eucadata('removeCallback', 'eip','dashboard-summary');
       cancelRepeat(tableRefreshCallback);
       this._super('close');
     },

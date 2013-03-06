@@ -358,7 +358,6 @@ function formatDateTime(data) {
 
 function startLaunchWizard(filter) {
   var $container = $('html body').find(DOM_BINDING['main']);
-  console.log("image filter:"+filter);
   $container.maincontainer("changeSelected", null, { selected:'launcher', filter: filter});
 }
 
