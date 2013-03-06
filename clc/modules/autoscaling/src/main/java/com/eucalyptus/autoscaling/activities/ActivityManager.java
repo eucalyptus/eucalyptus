@@ -46,6 +46,7 @@ import com.eucalyptus.autoscaling.common.AutoScaling;
 import com.eucalyptus.autoscaling.configurations.LaunchConfiguration;
 import com.eucalyptus.autoscaling.groups.AutoScalingGroup;
 import com.eucalyptus.autoscaling.groups.AutoScalingGroups;
+import com.eucalyptus.autoscaling.groups.HealthCheckType;
 import com.eucalyptus.autoscaling.groups.PersistenceAutoScalingGroups;
 import com.eucalyptus.autoscaling.groups.TerminationPolicyType;
 import com.eucalyptus.autoscaling.instances.AutoScalingInstance;
@@ -65,9 +66,12 @@ import com.eucalyptus.event.EventListener;
 import com.eucalyptus.event.Listeners;
 import com.eucalyptus.loadbalancing.DeregisterInstancesFromLoadBalancerResponseType;
 import com.eucalyptus.loadbalancing.DeregisterInstancesFromLoadBalancerType;
+import com.eucalyptus.loadbalancing.DescribeInstanceHealthResponseType;
+import com.eucalyptus.loadbalancing.DescribeInstanceHealthType;
 import com.eucalyptus.loadbalancing.DescribeLoadBalancersResponseType;
 import com.eucalyptus.loadbalancing.DescribeLoadBalancersType;
 import com.eucalyptus.loadbalancing.Instance;
+import com.eucalyptus.loadbalancing.InstanceState;
 import com.eucalyptus.loadbalancing.LoadBalancerDescription;
 import com.eucalyptus.loadbalancing.LoadBalancerNames;
 import com.eucalyptus.loadbalancing.RegisterInstancesWithLoadBalancerResponseType;
@@ -492,6 +496,10 @@ public class ActivityManager {
   private DeregisterInstancesFromLoadBalancerType deregisterInstances( final String loadBalancerName,
                                                                        final List<String> instanceIds ) {
     return new DeregisterInstancesFromLoadBalancerType( loadBalancerName, instanceIds );
+  }
+
+  private DescribeInstanceHealthType describeInstanceHealth( final String loadBalancerName ) {
+    return new DescribeInstanceHealthType( loadBalancerName, Collections.<String>emptyList() );
   }
 
   private TerminateInstancesType terminateInstances( final Collection<String> instancesToTerminate ) {
@@ -1538,7 +1546,10 @@ public class ActivityManager {
       if ( response.getInstanceStatusSet() != null &&
           response.getInstanceStatusSet().getItem() != null ) {
         for ( final InstanceStatusItemType instanceStatus : response.getInstanceStatusSet().getItem() ){
-          healthyInstanceIds.add( instanceStatus.getInstanceId() );
+          if ( instanceStatus.getInstanceStatus() != null &&
+              "ok".equals( instanceStatus.getInstanceStatus().getStatus() ) ) {
+            healthyInstanceIds.add( instanceStatus.getInstanceId() );
+          }
         }
       }
 
@@ -1567,6 +1578,16 @@ public class ActivityManager {
     @Override
     boolean shouldRun() {
       return !expectedRunningInstanceIds.isEmpty() || !pendingInstanceIds.isEmpty();
+    }
+
+    @Override
+    ScalingProcessTask onSuccess() {
+      return getGroup().getLoadBalancerNames().isEmpty() || HealthCheckType.ELB != getGroup().getHealthCheckType() ?
+          null :
+          new ElbMonitoringScalingProcessTask(
+              getGroup(),
+              getGroup().getLoadBalancerNames(),
+              expectedRunningInstanceIds );
     }
 
     @Override
@@ -1601,6 +1622,91 @@ public class ActivityManager {
             LifecycleState.Pending,
             LifecycleState.InService,
             transitionToHealthy );
+      } catch ( AutoScalingMetadataException e ) {
+        logger.error( e, e );
+      }
+    }
+  }
+
+  private class ElbMonitoringScalingActivityTask extends ScalingActivityTask<DescribeInstanceHealthResponseType> {
+    private final String loadBalancerName;
+    private final AtomicReference<List<String>> unhealthyInstanceIds = new AtomicReference<List<String>>(
+        Collections.<String>emptyList()
+    );
+
+    private ElbMonitoringScalingActivityTask( final ScalingActivity activity,
+                                              final String loadBalancerName ) {
+      super( activity, false );
+      this.loadBalancerName = loadBalancerName;
+    }
+
+    @Override
+    void dispatchInternal( final ActivityContext context,
+                           final Callback.Checked<DescribeInstanceHealthResponseType> callback ) {
+      final ElbClient client = context.getElbClient();
+      client.dispatch( describeInstanceHealth( loadBalancerName ), callback );
+    }
+
+    @Override
+    void dispatchSuccess( final ActivityContext context,
+                          final DescribeInstanceHealthResponseType response ) {
+      final List<String> unhealthyInstanceIds = Lists.newArrayList();
+      if ( response.getDescribeInstanceHealthResult() != null &&
+          response.getDescribeInstanceHealthResult().getInstanceStates() != null &&
+          response.getDescribeInstanceHealthResult().getInstanceStates().getMember() != null) {
+        for ( final InstanceState instanceStatus : response.getDescribeInstanceHealthResult().getInstanceStates().getMember() ){
+          if ( "OutOfService".equals( instanceStatus.getState() ) ) {
+            unhealthyInstanceIds.add( instanceStatus.getInstanceId() );
+          }
+        }
+      }
+
+      this.unhealthyInstanceIds.set( ImmutableList.copyOf( unhealthyInstanceIds ) );
+
+      setActivityFinalStatus( ActivityStatusCode.Successful );
+    }
+
+    List<String> getUnhealthyInstanceIds() {
+      return unhealthyInstanceIds.get();
+    }
+  }
+
+  private class ElbMonitoringScalingProcessTask extends ScalingProcessTask<ElbMonitoringScalingActivityTask> {
+    private final List<String> loadBalancerNames;
+    private final List<String> expectedInstanceIds;
+
+    ElbMonitoringScalingProcessTask( final AutoScalingGroup group,
+                                     final List<String> loadBalancerNames,
+                                     final List<String> expectedInstanceIds ) {
+      super( group, "ElbMonitor" );
+      this.loadBalancerNames = loadBalancerNames;
+      this.expectedInstanceIds = expectedInstanceIds;
+    }
+
+    @Override
+    boolean shouldRun() {
+      return !loadBalancerNames.isEmpty() && !expectedInstanceIds.isEmpty();
+    }
+
+    @Override
+    List<ElbMonitoringScalingActivityTask> buildActivityTasks() throws AutoScalingMetadataException {
+      final List<ElbMonitoringScalingActivityTask> activities = Lists.newArrayList();
+      for ( final String loadBalancerName : loadBalancerNames ) {
+        activities.add( new ElbMonitoringScalingActivityTask( newActivity(), loadBalancerName ) );
+      }
+      return activities;
+    }
+
+    @Override
+    void partialSuccess( final List<ElbMonitoringScalingActivityTask> tasks ) {
+      final List<String> healthyInstanceIds = Lists.newArrayList( expectedInstanceIds );
+
+      for ( final ElbMonitoringScalingActivityTask task : tasks ) {
+        healthyInstanceIds.removeAll( task.getUnhealthyInstanceIds() );
+      }
+
+      try {
+        autoScalingInstances.markMissingInstancesUnhealthy( getGroup(), healthyInstanceIds );
       } catch ( AutoScalingMetadataException e ) {
         logger.error( e, e );
       }

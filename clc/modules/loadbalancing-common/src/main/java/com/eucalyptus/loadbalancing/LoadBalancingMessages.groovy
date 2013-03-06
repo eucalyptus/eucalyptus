@@ -580,6 +580,11 @@ public class DescribeInstanceHealthType extends LoadBalancingMessage {
   @HttpEmbedded
   Instances instances;
   public DescribeInstanceHealthType() {  }
+  public DescribeInstanceHealthType( String loadBalancerName,
+                                     Collection<String> instanceIds ) {
+    this.loadBalancerName = loadBalancerName
+    this.instances = new Instances( member: instanceIds.collect{ instanceId -> new Instance( instanceId: instanceId ) } as ArrayList<Instance> )
+  }
 }
 public class CreateLBCookieStickinessPolicyType extends LoadBalancingMessage {
   String loadBalancerName;

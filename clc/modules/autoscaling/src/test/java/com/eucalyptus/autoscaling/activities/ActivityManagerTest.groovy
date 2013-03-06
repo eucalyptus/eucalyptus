@@ -45,6 +45,18 @@ import com.eucalyptus.loadbalancing.RegisterInstancesWithLoadBalancerResult
 import com.eucalyptus.loadbalancing.Instances
 import com.eucalyptus.loadbalancing.DeregisterInstancesFromLoadBalancerResponseType
 import com.eucalyptus.loadbalancing.DeregisterInstancesFromLoadBalancerResult
+import com.eucalyptus.autoscaling.groups.HealthCheckType
+import edu.ucsb.eucalyptus.msgs.DescribeInstanceStatusType
+import edu.ucsb.eucalyptus.msgs.DescribeInstanceStatusResponseType
+import edu.ucsb.eucalyptus.msgs.InstanceStatusSetType
+import edu.ucsb.eucalyptus.msgs.InstanceStatusItemType
+import edu.ucsb.eucalyptus.msgs.InstanceStatusType
+import edu.ucsb.eucalyptus.msgs.DescribeTagsType
+import com.eucalyptus.loadbalancing.DescribeInstanceHealthType
+import com.eucalyptus.loadbalancing.DescribeInstanceHealthResponseType
+import com.eucalyptus.loadbalancing.DescribeInstanceHealthResult
+import com.eucalyptus.loadbalancing.InstanceStates
+import com.eucalyptus.loadbalancing.InstanceState
 
 /**
  * 
@@ -186,6 +198,239 @@ class ActivityManagerTest {
     assertNotNull( "Scaling activity 1 has end date", invoke( Date.class, scalingActivities.get(0), "getEndTime" ) )
     assertEquals( "Scaling activity 2 status", ActivityStatusCode.Successful, invoke( ActivityStatusCode.class, scalingActivities.get(1), "getActivityStatusCode" ) )
     assertNotNull( "Scaling activity 2 has end date", invoke( Date.class, scalingActivities.get(1), "getEndTime" ) )
+  }
+
+  @Test
+  void testHealthCheckSuccess() {
+    Accounts.setAccountProvider( accountProvider() )
+
+    AutoScalingGroup group = new AutoScalingGroup(
+        id: "1",
+        naturalId: "1",
+        availabilityZones: [ "Zone1" ],
+        loadBalancerNames: [ "LoadBalancer1", "LoadBalancer2" ],
+        healthCheckType: HealthCheckType.ELB,
+        displayName: "Group1",
+        launchConfiguration: new LaunchConfiguration(
+            id: "1",
+            naturalId: "1",
+            ownerAccountNumber: "000000000000",
+            displayName: "Config1",
+            imageId: "emi-00000001",
+            instanceType: "m1.small",
+        ),
+        scalingRequired: false,
+        desiredCapacity: 2,
+        capacity:  2,
+        minSize: 1,
+        maxSize: 2,
+        ownerAccountNumber: "000000000000",
+    )
+    List<AutoScalingInstance> instances = [
+        new AutoScalingInstance(
+            id: "2",
+            naturalId: "1",
+            uniqueName: "1",
+            displayName: "i-00000001",
+            ownerAccountNumber: "000000000000",
+            availabilityZone: "Zone1",
+            healthStatus: HealthStatus.Healthy,
+            autoScalingGroup: group,
+            autoScalingGroupName: invoke( String.class, group, "getAutoScalingGroupName" ),
+            launchConfigurationName: "Config1",
+            lifecycleState: LifecycleState.InService,
+            configurationState: ConfigurationState.Registered,
+            registrationAttempts: 0,
+        ),
+        new AutoScalingInstance(
+            id: "2",
+            naturalId: "2",
+            uniqueName: "2",
+            displayName: "i-00000002",
+            ownerAccountNumber: "000000000000",
+            availabilityZone: "Zone1",
+            healthStatus: HealthStatus.Healthy,
+            autoScalingGroup: group,
+            autoScalingGroupName: invoke( String.class, group, "getAutoScalingGroupName" ),
+            launchConfigurationName: "Config1",
+            lifecycleState: LifecycleState.InService,
+            configurationState: ConfigurationState.Registered,
+            registrationAttempts: 0,
+        ),
+    ];
+    List<ScalingActivity> scalingActivities = [];
+    ActivityManager manager = activityManager( group, scalingActivities, instances, true )
+
+    assertEquals( "Group capacity", 2, invoke( Integer.class, group, "getCapacity") )
+    assertEquals( "Instance count", 2, instances.size() )
+    assertEquals( "Scaling activity count", 0, scalingActivities.size() )
+
+    manager.doScaling()
+
+    assertEquals( "Group capacity", 2, invoke( Integer.class, group, "getCapacity") )
+    assertFalse( "Group scaling required", invoke( Boolean.class, group, "getScalingRequired") )
+    assertEquals( "Instance count", 2, instances.size() )
+    assertEquals( "Instances 1 id", "i-00000001", invoke( String.class, instances.get(0), "getInstanceId" ) )
+    assertEquals( "Instances 1 health status", HealthStatus.Healthy, invoke( HealthStatus.class, instances.get(0), "getHealthStatus" ) )
+    assertEquals( "Instances 2 id", "i-00000002", invoke( String.class, instances.get(1), "getInstanceId" ) )
+    assertEquals( "Instances 2 health status", HealthStatus.Healthy, invoke( HealthStatus.class, instances.get(1), "getHealthStatus" ) )
+    assertEquals( "Scaling activity count", 0, scalingActivities.size() )
+  }
+
+  @Test
+  void testEC2HealthCheckFailure() {
+    Accounts.setAccountProvider( accountProvider() )
+
+    AutoScalingGroup group = new AutoScalingGroup(
+        id: "1",
+        naturalId: "1",
+        availabilityZones: [ "Zone1" ],
+        loadBalancerNames: [ "LoadBalancer1", "LoadBalancer2" ],
+        healthCheckType: HealthCheckType.EC2,
+        displayName: "Group1",
+        launchConfiguration: new LaunchConfiguration(
+            id: "1",
+            naturalId: "1",
+            ownerAccountNumber: "000000000000",
+            displayName: "Config1",
+            imageId: "emi-00000001",
+            instanceType: "m1.small",
+        ),
+        scalingRequired: false,
+        desiredCapacity: 2,
+        capacity:  2,
+        minSize: 1,
+        maxSize: 2,
+        ownerAccountNumber: "000000000000",
+    )
+    List<AutoScalingInstance> instances = [
+        new AutoScalingInstance(
+            id: "2",
+            naturalId: "1",
+            uniqueName: "1",
+            displayName: "i-00000001",
+            ownerAccountNumber: "000000000000",
+            availabilityZone: "Zone1",
+            healthStatus: HealthStatus.Healthy,
+            autoScalingGroup: group,
+            autoScalingGroupName: invoke( String.class, group, "getAutoScalingGroupName" ),
+            launchConfigurationName: "Config1",
+            lifecycleState: LifecycleState.InService,
+            configurationState: ConfigurationState.Registered,
+            registrationAttempts: 0,
+        ),
+        new AutoScalingInstance(
+            id: "2",
+            naturalId: "2",
+            uniqueName: "2",
+            displayName: "i-00000002",
+            ownerAccountNumber: "000000000000",
+            availabilityZone: "Zone1",
+            healthStatus: HealthStatus.Healthy,
+            autoScalingGroup: group,
+            autoScalingGroupName: invoke( String.class, group, "getAutoScalingGroupName" ),
+            launchConfigurationName: "Config1",
+            lifecycleState: LifecycleState.InService,
+            configurationState: ConfigurationState.Registered,
+            registrationAttempts: 0,
+        ),
+    ];
+    List<ScalingActivity> scalingActivities = [];
+    ActivityManager manager = activityManager( group, scalingActivities, instances, true, ["i-00000002"] )
+
+    assertEquals( "Group capacity", 2, invoke( Integer.class, group, "getCapacity") )
+    assertEquals( "Instance count", 2, instances.size() )
+    assertEquals( "Scaling activity count", 0, scalingActivities.size() )
+
+    manager.doScaling()
+
+    assertEquals( "Group capacity", 2, invoke( Integer.class, group, "getCapacity") )
+    assertFalse( "Group scaling required", invoke( Boolean.class, group, "getScalingRequired") )
+    assertEquals( "Instance count", 2, instances.size() )
+    assertEquals( "Instances 1 id", "i-00000001", invoke( String.class, instances.get(0), "getInstanceId" ) )
+    assertEquals( "Instances 1 health status", HealthStatus.Healthy, invoke( HealthStatus.class, instances.get(0), "getHealthStatus" ) )
+    assertEquals( "Instances 2 id", "i-00000002", invoke( String.class, instances.get(1), "getInstanceId" ) )
+    assertEquals( "Instances 2 health status", HealthStatus.Unhealthy, invoke( HealthStatus.class, instances.get(1), "getHealthStatus" ) )
+    assertEquals( "Scaling activity count", 0, scalingActivities.size() )
+  }
+
+  @Test
+  void testELBHealthCheckFailure() {
+    for ( HealthCheckType type : HealthCheckType.values() ) {
+      Accounts.setAccountProvider( accountProvider() )
+
+      AutoScalingGroup group = new AutoScalingGroup(
+          id: "1",
+          naturalId: "1",
+          availabilityZones: [ "Zone1" ],
+          loadBalancerNames: [ "LoadBalancer1", "LoadBalancer2" ],
+          healthCheckType: type,
+          displayName: "Group1",
+          launchConfiguration: new LaunchConfiguration(
+              id: "1",
+              naturalId: "1",
+              ownerAccountNumber: "000000000000",
+              displayName: "Config1",
+              imageId: "emi-00000001",
+              instanceType: "m1.small",
+          ),
+          scalingRequired: false,
+          desiredCapacity: 2,
+          capacity:  2,
+          minSize: 1,
+          maxSize: 2,
+          ownerAccountNumber: "000000000000",
+      )
+      List<AutoScalingInstance> instances = [
+          new AutoScalingInstance(
+              id: "2",
+              naturalId: "1",
+              uniqueName: "1",
+              displayName: "i-00000001",
+              ownerAccountNumber: "000000000000",
+              availabilityZone: "Zone1",
+              healthStatus: HealthStatus.Healthy,
+              autoScalingGroup: group,
+              autoScalingGroupName: invoke( String.class, group, "getAutoScalingGroupName" ),
+              launchConfigurationName: "Config1",
+              lifecycleState: LifecycleState.InService,
+              configurationState: ConfigurationState.Registered,
+              registrationAttempts: 0,
+          ),
+          new AutoScalingInstance(
+              id: "2",
+              naturalId: "2",
+              uniqueName: "2",
+              displayName: "i-00000002",
+              ownerAccountNumber: "000000000000",
+              availabilityZone: "Zone1",
+              healthStatus: HealthStatus.Healthy,
+              autoScalingGroup: group,
+              autoScalingGroupName: invoke( String.class, group, "getAutoScalingGroupName" ),
+              launchConfigurationName: "Config1",
+              lifecycleState: LifecycleState.InService,
+              configurationState: ConfigurationState.Registered,
+              registrationAttempts: 0,
+          ),
+      ];
+      List<ScalingActivity> scalingActivities = [];
+      ActivityManager manager = activityManager( group, scalingActivities, instances, true, [], ["i-00000002"] )
+
+      assertEquals( "Group capacity", 2, invoke( Integer.class, group, "getCapacity") )
+      assertEquals( "Instance count", 2, instances.size() )
+      assertEquals( "Scaling activity count", 0, scalingActivities.size() )
+
+      manager.doScaling()
+
+      assertEquals( "Group capacity", 2, invoke( Integer.class, group, "getCapacity") )
+      assertFalse( "Group scaling required", invoke( Boolean.class, group, "getScalingRequired") )
+      assertEquals( "Instance count", 2, instances.size() )
+      assertEquals( "Instances 1 id", "i-00000001", invoke( String.class, instances.get(0), "getInstanceId" ) )
+      assertEquals( "Instances 1 health status", HealthStatus.Healthy, invoke( HealthStatus.class, instances.get(0), "getHealthStatus" ) )
+      assertEquals( "Instances 2 id", "i-00000002", invoke( String.class, instances.get(1), "getInstanceId" ) )
+      assertEquals( "Instances 2 health status", type==HealthCheckType.ELB ? HealthStatus.Unhealthy : HealthStatus.Healthy, invoke( HealthStatus.class, instances.get(1), "getHealthStatus" ) )
+      assertEquals( "Scaling activity count", 0, scalingActivities.size() )
+    }
   }
 
   @Test
@@ -618,10 +863,13 @@ class ActivityManagerTest {
 
   private ActivityManager activityManager( AutoScalingGroup group,
                                            List<ScalingActivity> scalingActivities,
-                                           List<AutoScalingInstance> instances) {
+                                           List<AutoScalingInstance> instances,
+                                           boolean healthChecks = false,
+                                           List<String> unhealthyInstanceIds = [],
+                                           List<String> unhealthyElbInstanceIds = [] ) {
     ActivityManager manager = new ActivityManager(
         autoScalingActivitiesStore(scalingActivities),
-        autoScalingGroupStore([group]),
+        autoScalingGroupStore([group],healthChecks),
         autoScalingInstanceStore(instances)
     ) {
       int instanceCount = 0
@@ -651,8 +899,21 @@ class ActivityManagerTest {
                         ]
                     )
                 )
+          } else if ( request instanceof DescribeInstanceStatusType ) {
+            new DescribeInstanceStatusResponseType(
+              instanceStatusSet: new InstanceStatusSetType(
+                  item: request.instancesSet.collect { instanceId ->
+                    new InstanceStatusItemType(
+                        instanceId: instanceId,
+                        instanceStatus: new InstanceStatusType( status: unhealthyInstanceIds.contains( instanceId ) ? "impaired" : "ok" ),
+                        systemStatus: new InstanceStatusType( status: "ok" ),
+                    )
+                  },
+              )
+            )
           } else if ( request instanceof CreateTagsType ||
-              request instanceof TerminateInstancesType ) {
+              request instanceof TerminateInstancesType ||
+              request instanceof DescribeTagsType ) {
                 request.reply
           } else {
             throw new RuntimeException("Unknown request type: " + request.getClass())
@@ -676,6 +937,19 @@ class ActivityManagerTest {
                 deregisterInstancesFromLoadBalancerResult: new DeregisterInstancesFromLoadBalancerResult(
                     instances: new Instances(
                         member: request.instances.member
+                    )
+                )
+            )
+          } else if ( request instanceof DescribeInstanceHealthType ) {
+            new DescribeInstanceHealthResponseType(
+                describeInstanceHealthResult: new DescribeInstanceHealthResult(
+                    instanceStates: new InstanceStates(
+                        member: unhealthyElbInstanceIds.collect{ instanceId ->
+                          new InstanceState(
+                            instanceId: instanceId,
+                            state: "OutOfService",
+                          )
+                        }
                     )
                 )
             )
@@ -831,7 +1105,7 @@ class ActivityManagerTest {
     }    
   }
   
-  AutoScalingGroups autoScalingGroupStore( List<AutoScalingGroup> groups = [] ) {
+  AutoScalingGroups autoScalingGroupStore( List<AutoScalingGroup> groups = [], boolean healthChecks = false ) {
     new AutoScalingGroups() {
       @Override
       List<AutoScalingGroup> list(OwnerFullName ownerFullName) {
@@ -855,7 +1129,9 @@ class ActivityManagerTest {
 
       @Override
       List<AutoScalingGroup> listRequiringMonitoring(long interval) {
-        []
+        healthChecks ?
+          groups :
+          []
       }
 
       @Override
@@ -959,6 +1235,11 @@ class ActivityManagerTest {
       @Override
       void markMissingInstancesUnhealthy(AutoScalingGroup group,
                                          Collection<String> instanceIds) {
+        instances.each { instance ->
+          if (invoke( String.class, group, "getAutoScalingGroupName").equals( invoke( String.class, instance, "getAutoScalingGroupName") ) &&
+             !instanceIds.contains(invoke( String.class, instance, "getInstanceId")  ) ) {
+            invoke( Void.class, instance, "setHealthStatus", [ HealthStatus.class ] as Class[], [ HealthStatus.Unhealthy ] as Object[] )
+          } }
       }
 
       @Override
@@ -972,6 +1253,9 @@ class ActivityManagerTest {
                            LifecycleState from,
                            LifecycleState to,
                            Collection<String> instanceIds) {
+        instances.each { instance ->
+          instanceIds.contains( invoke( String.class, instance, "getInstanceId") ) &&
+              from.transitionTo(to).apply( instance )  }
       }
 
       @Override
