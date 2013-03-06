@@ -69,6 +69,7 @@ import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.Map;
 
+import javax.xml.XMLConstants;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
@@ -123,6 +124,12 @@ public class LoggingResetter {
 		InputStream in = null;
 		try {
 			DocumentBuilderFactory dbFactory = DocumentBuilderFactory.newInstance();
+		    dbFactory.setExpandEntityReferences(false);
+			try {
+			  dbFactory.setFeature(XMLConstants.FEATURE_SECURE_PROCESSING, true);
+			} catch(ParserConfigurationException ex) {
+			  LOG.error(ex, ex);
+			}
 			DocumentBuilder dBuilder = dbFactory.newDocumentBuilder();
 			dBuilder.setEntityResolver(new Log4jEntityResolver());
 			URL url = Thread.currentThread().getContextClassLoader().getResource("log4j.xml");

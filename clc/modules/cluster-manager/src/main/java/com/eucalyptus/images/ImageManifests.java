@@ -69,8 +69,11 @@ import java.security.cert.Certificate;
 import java.security.cert.X509Certificate;
 import java.util.List;
 import java.util.NoSuchElementException;
+
+import javax.xml.XMLConstants;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
+import javax.xml.parsers.ParserConfigurationException;
 import javax.xml.xpath.XPath;
 import javax.xml.xpath.XPathConstants;
 import javax.xml.xpath.XPathExpressionException;
@@ -225,7 +228,14 @@ public class ImageManifests {
       }
       this.manifest = ImageManifests.requestManifestData( ctx.getUserFullName( ), bucketName, manifestKey );
       try {
-        DocumentBuilder builder = DocumentBuilderFactory.newInstance( ).newDocumentBuilder( );
+	    DocumentBuilderFactory dbFactory = DocumentBuilderFactory.newInstance();
+		dbFactory.setExpandEntityReferences(false);
+		try {
+		  dbFactory.setFeature(XMLConstants.FEATURE_SECURE_PROCESSING, true);
+		} catch(ParserConfigurationException ex) {
+		  LOG.error(ex, ex);
+		}
+        DocumentBuilder builder = dbFactory.newDocumentBuilder( );
         this.inputSource = builder.parse( new ByteArrayInputStream( this.manifest.getBytes( ) ) );
       } catch ( Exception e ) {
         throw new EucalyptusCloudException( "Failed to read manifest file: " + bucketName + "/" + manifestKey, e );

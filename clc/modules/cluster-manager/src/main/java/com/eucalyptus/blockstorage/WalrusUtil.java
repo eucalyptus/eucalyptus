@@ -64,8 +64,12 @@ package com.eucalyptus.blockstorage;
 
 import java.io.ByteArrayInputStream;
 import java.security.cert.X509Certificate;
+
+import javax.xml.XMLConstants;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
+import javax.xml.parsers.ParserConfigurationException;
+
 import org.apache.log4j.Logger;
 import org.w3c.dom.Document;
 import com.eucalyptus.auth.Accounts;
@@ -129,7 +133,14 @@ public class WalrusUtil {
     
     Document inputSource = null;
     try {
-      DocumentBuilder builder = DocumentBuilderFactory.newInstance( ).newDocumentBuilder( );
+      DocumentBuilderFactory docFactory =  DocumentBuilderFactory.newInstance( ); 
+	  docFactory.setExpandEntityReferences(false);
+	  try {
+		docFactory.setFeature(XMLConstants.FEATURE_SECURE_PROCESSING, true);
+	  } catch(ParserConfigurationException ex) {
+		LOG.error(ex, ex);
+	  }
+      DocumentBuilder builder = docFactory.newDocumentBuilder( );
       inputSource = builder.parse( new ByteArrayInputStream( Hashes.base64decode( reply.getBase64Data( ) ).getBytes( ) ) );//OMG:WTF:GRZE:what am i doing.
     } catch ( Exception e ) {
       throw new EucalyptusCloudException( "Failed to read manifest file: " + bucketName + "/" + objectName, e );
