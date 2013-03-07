@@ -41,22 +41,28 @@
         hidden: thisObj.options['hidden'],
         dt_arg : {
           "sAjaxSource": 'snapshot',
-          "aoColumns": [
+          "aoColumnDefs": [
             {
 	      // Display the checkbox button in the main table
               "bSortable": false,
-              "fnRender": function(oObj) { return '<input type="checkbox"/>' },
+              "aTargets":[0],
+              "mData": function(source) { return '<input type="checkbox"/>' },
               "sClass": "checkbox-cell",
             },
             { 
 	       // Display the id of the snapshot in the main table
-	       "mDataProp": "id" 
+	       "aTargets":[1],
+	       "mRender": function(data) {
+                return DefaultEncoder().encodeForHTML(data);
+              },
+              "mData": "id",
 	    },
             {
 	      // Display the status of the snapshot in the main table
-              "fnRender": function(oObj) { 
-                 return eucatableDisplayColumnTypeSnapshotStatus(oObj.aData.status, oObj.aData.progress);
-               },
+              "aTargets":[2],
+              "mData": function(source) {
+                return eucatableDisplayColumnTypeSnapshotStatus(source.status, source.progress);
+              },
               "sClass": "narrow-cell",
               "bSearchable": false,
               "iDataSort": 7, // sort on hidden status column
@@ -64,39 +70,66 @@
             },
             { 
 	      // Display the volume size of the snapshot in the main table
-	      "mDataProp": "volume_size"
+	      "aTargets":[3],
+              "mRender": function(data) {
+                if(isInt(data))         
+                  return data;
+                else
+                  return "ERROR";
+              },              
+              "mData": "volume_size",
 	    },
             {
 	      // Display the volume id of the snapshot in the main table
-	      "mDataProp": "volume_id"
+	      "aTargets":[4],
+	      "mRender": function(data) {
+                return DefaultEncoder().encodeForHTML(data);
+              },
+              "mData": "volume_id",
 	    },
             {
 	      // Display the description of the snapshot in the main table
-              "fnRender": function(oObj) { 
-	         return eucatableDisplayColumnTypeText(oObj.aData.description, oObj.aData.description, 75);
+              "aTargets":[5],
+              "mRender": function(data) { 
+	         return eucatableDisplayColumnTypeText(data, data, 75);
 	      },
+              "mData": "description",
               "iDataSort": 9,
             },
             {
 	      // Display the creation time of the snapshot in the main table
-              "fnRender": function(oObj) { return formatDateTime(oObj.aData.start_time); },
+              "aTargets":[6],
+              "mRender": function(data) { return formatDateTime(data); },
+              "mData": "start_time",
               "iDataSort": 8,
             },
             {
 	      // Hidden column for the status of the snapshot
               "bVisible": false,
-              "mDataProp": "status"
+              "aTargets":[7],
+	      "mRender": function(data) {
+                return DefaultEncoder().encodeForHTML(data);
+              },
+              "mData": "status",
             },
             {
 	      // Hidden column for the unprocessed creation time/start time of the snapshot
               "bVisible": false,
-              "mDataProp": "start_time",
+              "aTargets":[8],
+	      "mRender": function(data) {
+                return data;			// sort fails when encoded	011330 -- needs to verify
+              },
+              "mData": "start_time",
               "sType": "date"
             },
             {
 	      // Hidden column for the uncut description of the snapshot
               "bVisible": false,
-              "mDataProp": "description"
+              "aTargets":[9],
+	      "mRender": function(data) {
+                return DefaultEncoder().encodeForHTML(data);
+              },
+              "mData": "description",
             },
           ],
         },
@@ -157,9 +190,9 @@
          title: snapshot_create_dialog_title,
          buttons: {
            'create': { domid: thisObj.createSnapButtonId, text: snapshot_create_dialog_create_btn, disabled: true, click: function() { 
-                volumeId = $.trim(asText($snapshot_dialog.find('#snapshot-create-volume-id').val()));
+                volumeId = $.trim($snapshot_dialog.find('#snapshot-create-volume-id').val());
                 if (VOL_ID_PATTERN.test(volumeId)) {
-                  description = toBase64(asText($.trim($snapshot_dialog.find('#snapshot-create-description').val())));
+                  description = toBase64($.trim($snapshot_dialog.find('#snapshot-create-description').val()));
                   $snapshot_dialog.eucadialog("close");
                   thisObj._createSnapshot(volumeId, description);
                 } else {
@@ -178,7 +211,7 @@
        });
       var $vol_selector = this.createDialog.find('#snapshot-create-volume-id');
       this.createDialog.eucadialog('buttonOnFocus', $vol_selector, thisObj.createSnapButtonId, function(){
-        return VOL_ID_PATTERN.test(asText($vol_selector.val()));
+        return VOL_ID_PATTERN.test($vol_selector.val());
       });
       this.createDialog.eucadialog('validateOnType', '#snapshot-create-description', function(description) {
         if (description && description.length>MAX_DESCRIPTION_LEN)
@@ -198,12 +231,12 @@
          title: snapshot_register_dialog_title,
          buttons: {
            'register': {domid: registerBtnId, text: snapshot_dialog_reg_btn, click: function() {
-               var name = asText(thisObj.regDialog.find('#snapshot-register-image-name').val());
+               var name = thisObj.regDialog.find('#snapshot-register-image-name').val();
                if(!name || name.length <= 0) {
                  thisObj.regDialog.eucadialog('showError',snapshot_register_dialog_noname);
                  return; 
                } 
-               var desc = toBase64(asText(thisObj.regDialog.find('#snapshot-register-image-desc').val()));
+               var desc = toBase64(thisObj.regDialog.find('#snapshot-register-image-desc').val());
                var $checkbox = thisObj.regDialog.find('#snapshot-register-image-os');
                var windows = $checkbox.is(':checked') ? true : false; 
                thisObj._registerSnapshots(name, desc, windows);
@@ -340,6 +373,9 @@
               if(done < numberToDelete)
                 notifyMulti(100*(done/numberToDelete), $.i18n.prop('snapshot_delete_image_progress', numberToDelete));
               else {
+	        // XSS Node:: 'snapshot_delete_image_fail' would contain a chunk HTML code in the failure description string.
+	     	// Message Example - Failed to send release request to Cloud for {0} IP address(es). <a href="#">Click here for details. </a>
+	        // For this reason, the message string must be rendered as html()
                 var $msg = $('<div>').addClass('multiop-summary').append(
                   $('<div>').addClass('multiop-summary-success').html($.i18n.prop('snapshot_delete_image_done', (numberToDelete-error.length), numberToDelete)));
                 if (error.length > 0)
@@ -380,6 +416,9 @@
               if(done < numberToDelete)
                 notifyMulti(100*(done/numberToDelete), $.i18n.prop('snapshot_delete_progress', numberToDelete));
               else {
+	        // XSS Node:: 'snapshot_delete_fail' would contain a chunk HTML code in the failure description string.
+	     	// Message Example - Failed to send release request to Cloud for {0} IP address(es). <a href="#">Click here for details. </a>
+	        // For this reason, the message string must be rendered as html()
                 var $msg = $('<div>').addClass('multiop-summary').append(
                   $('<div>').addClass('multiop-summary-success').html($.i18n.prop('snapshot_delete_done', (numberToDelete-error.length), numberToDelete)));
                 if (error.length > 0)
@@ -406,16 +445,16 @@
           function(data, textStatus, jqXHR){
             if ( data.results ) {
               var snapId = data.results.id;
-              notifySuccess(null, $.i18n.prop('snapshot_create_success', snapId, volumeId));
+              notifySuccess(null, $.i18n.prop('snapshot_create_success', DefaultEncoder().encodeForHTML(snapId), DefaultEncoder().encodeForHTML(volumeId)));
               thisObj.tableWrapper.eucatable('refreshTable');
               thisObj.tableWrapper.eucatable('glowRow', snapId);
             } else {
-              notifyError($.i18n.prop('snapshot_create_error', volumeId), undefined_error);
+              notifyError($.i18n.prop('snapshot_create_error', DefaultEncoder().encodeForHTML(volumeId)), undefined_error);
             }
           },
         error:
           function(jqXHR, textStatus, errorThrown){
-            notifyError($.i18n.prop('snapshot_create_error', volumeId), getErrorMessage(jqXHR));
+            notifyError($.i18n.prop('snapshot_create_error', DefaultEncoder().encodeForHTML(volumeId)), getErrorMessage(jqXHR));
           }
       });
     },
@@ -471,14 +510,14 @@
         success:
           function(data, textStatus, jqXHR){
             if ( data.results ) {
-              notifySuccess(null, $.i18n.prop('snapshot_register_success', snapshot, data.results));  
+              notifySuccess(null, $.i18n.prop('snapshot_register_success', DefaultEncoder().encodeForHTML(snapshot.toString()), DefaultEncoder().encodeForHTML(data.results)));  
             } else {
-              notifyError($.i18n.prop('snapshot_register_error', snapshot), undefined_error);
+              notifyError($.i18n.prop('snapshot_register_error', DefaultEncoder().encodeForHTML(snapshot.toString())), undefined_error);
             }
           },
         error:
           function(jqXHR, textStatus, errorThrown){
-            notifyError($.i18n.prop('snapshot_register_error', snapshot), getErrorMessage(jqXHR));
+            notifyError($.i18n.prop('snapshot_register_error', DefaultEncoder().encodeForHTML(snapshot.toString())), getErrorMessage(jqXHR));
           }
       });
     },

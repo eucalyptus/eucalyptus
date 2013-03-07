@@ -44,23 +44,27 @@
         dt_arg : {
           "sAjaxSource": 'volume',
           "aaSorting": [[ 7, "desc" ]],
-          "aoColumns": [
+          "aoColumnDefs": [
             {
 	      // Display the checkbox button in the main table
               "bSortable": false,
-              "fnRender": function(oObj) { return '<input type="checkbox"/>' },
+              "aTargets":[0],
+              "mData": function(source) { return '<input type="checkbox"/>' },
               "sClass": "checkbox-cell"
             },
             {
-              // Display the id of the image in eucatable
-              "fnRender" : function(oObj) { 
-                return getTagForResource(oObj.aData.id);
-              }
-            },
+	      // Display the id of the volume in the main table
+	      "aTargets":[1], 
+	      "mRender": function(data) {
+                return getTagForResource((data);
+              },
+              "mData": "id",
+	    },
             {
 	      // Display the status of the volume in the main table
-              "fnRender": function(oObj) { 
-                 return eucatableDisplayColumnTypeVolumeStatus(oObj.aData.status);
+	      "aTargets":[2],
+              "mData": function(source) { 
+                 return eucatableDisplayColumnTypeVolumeStatus(source.status);
                },
               "sClass": "narrow-cell",
               "bSearchable": false,
@@ -69,35 +73,65 @@
             },
             { 
 	      // Display the size of the volume in the main table
-              "mDataProp": "size",
+	      "aTargets":[3],
+	      "mRender": function(data) {
+                if(isInt(data)) 
+                  return data;
+                else
+                  return "ERROR";
+              },
+              "mData": "size",
               "sClass": "centered-cell"
             },
             { 
 	      // Display the instance id of the attached volume in the main table
-	      "mDataProp": "attach_data.instance_id" },
+	      "aTargets":[4],
+              "mRender": function(data) {
+                return DefaultEncoder().encodeForHTML(data);
+              },
+              "mData": "attach_data.instance_id",
+	    },
             { 
 	      // Display the snapshot id of the volume in the main table
-	      "mDataProp": "snapshot_id"
+	      "aTargets":[5],
+	      "mRender": function(data) {
+                return DefaultEncoder().encodeForHTML(data);
+              },
+              "mData": "snapshot_id",
 	    },
             { 
 	      // Display the availibility zone of the volume in the main table
-	      "mDataProp": "zone" 
+	      "aTargets":[6],
+	      "mRender": function(data) {
+                return DefaultEncoder().encodeForHTML(data);
+              },
+              "mData": "zone",
 	    },
             { 
 	      // Display the creation time of the volume in the main table
+	      "aTargets":[7], 
               "asSorting" : [ 'desc', 'asc' ],
-              "fnRender": function(oObj) { return formatDateTime(oObj.aData.create_time); },
+              "mRender": function(data) { return formatDateTime(data); },
+              "mData": "create_time",
               "iDataSort": 9
             },
             {
-	      // Invisible column for the status
+	      // Invisible column for the status, used for sort
               "bVisible": false,
-              "mDataProp": "status"
+              "aTargets":[8],
+	      "mRender": function(data) {
+                return DefaultEncoder().encodeForHTML(data);
+              },
+              "mData": "status",
             },
             {
-	      // Invisible column for the creation time
+	      // Invisible column for the creation time, used for sort
               "bVisible": false,
-              "mDataProp": "create_time",
+              "aTargets":[9],
+	      "mRender": function(data) {
+		return data;			// escaping causes the sort operation to fail	013013
+              },
+              "mData": "create_time",
               "sType": "date"
             }
           ],
@@ -178,9 +212,9 @@
          title: volume_dialog_attach_title,
          buttons: {
            'attach': { domid: thisObj.attachButtonId, text: volume_dialog_attach_btn, disabled: true, click: function() { 
-                volumeId = asText($attach_dialog.find('#volume-attach-volume-id').val());
-                instanceId = asText($attach_dialog.find('#volume-attach-instance-id').val());
-                device = $.trim(asText($attach_dialog.find('#volume-attach-device-name').val()));
+                volumeId = $attach_dialog.find('#volume-attach-volume-id').val();
+                instanceId = $attach_dialog.find('#volume-attach-instance-id').val();
+                device = $.trim($attach_dialog.find('#volume-attach-device-name').val());
                 $attach_dialog.eucadialog("close");
                 thisObj._attachVolume(volumeId, instanceId, device);
               } 
@@ -202,7 +236,7 @@
          title: volume_dialog_add_title,
          buttons: {
            'create': { domid: thisObj.createButtonId, text: volume_dialog_create_btn, disabled: true, click: function() { 
-              var size = $.trim(asText($add_dialog.find('#volume-size').val()));
+              var size = $.trim($add_dialog.find('#volume-size').val());
               var az = $add_dialog.find('#volume-add-az-selector').val();
               var $snapshot = $add_dialog.find('#volume-add-snapshot-selector :selected');
               var isValid = true;
@@ -274,7 +308,7 @@
     _initAddDialog : function(dfd) { // method should resolve dfd object
       var thisObj = this;
       var results = describe('zone');
-      var $azSelector = thisObj.addDialog.find('#volume-add-az-selector').html('');
+      var $azSelector = thisObj.addDialog.find('#volume-add-az-selector').text('');
       if (results && results.length > 1)
         $azSelector.append($('<option>').attr('value', '').text($.i18n.map['volume_dialog_zone_select']));
       var azArr = []; 
@@ -288,7 +322,7 @@
       });
      
       results = describe('snapshot'); 
-      var $snapSelector = thisObj.addDialog.find('#volume-add-snapshot-selector').html('');
+      var $snapSelector = thisObj.addDialog.find('#volume-add-snapshot-selector').text('');
       $snapSelector.append($('<option>').attr('value', '').text($.i18n.map['selection_none']));
       var snapshotArr = [];
       if ( results ) {
@@ -356,7 +390,7 @@
         if ( volume && results ) {
           for( res in results) {
             var instance = results[res];
-            if ( instance.state === 'running' && instance.placement === volume.zone)
+            if ( instance._state.name === 'running' && instance.placement === volume.zone)         // it was instance.state, which returns 'undefined' TEMP ADJUSTMENT. Austin, 030113  - David's fix needed
               inst_ids.push(instance.id);
           }
         }
@@ -447,6 +481,9 @@
               if(done < all)
                 notifyMulti(100*(done/all), $.i18n.prop('volume_delete_progress', all));
               else {
+	        // XSS Node:: 'volume_delete_fail' would contain a chunk HTML code in the failure description string.
+	     	// Message Example - Failed to send release request to Cloud for {0} IP address(es). <a href="#">Click here for details. </a>
+	        // For this reason, the message string must be rendered as html()
                 var $msg = $('<div>').addClass('multiop-summary').append(
                   $('<div>').addClass('multiop-summary-success').html($.i18n.prop('volume_delete_done', (all-error.length), all)));
                 if (error.length > 0)
@@ -472,15 +509,15 @@
         success:
           function(data, textStatus, jqXHR){
             if ( data.results ) {
-              notifySuccess(null, $.i18n.prop('volume_attach_success', volumeId, instanceId));
+              notifySuccess(null, $.i18n.prop('volume_attach_success', DefaultEncoder().encodeForHTML(volumeId), DefaultEncoder().encodeForHTML(instanceId)));
               thisObj.tableWrapper.eucatable('refreshTable');
             } else {
-              notifyError($.i18n.prop('volume_attach_error', volumeId, instanceId), undefined_error);
+              notifyError($.i18n.prop('volume_attach_error', DefaultEncoder().encodeForHTML(volumeId), DefaultEncoder().encodeForHTML(instanceId)), undefined_error);
             }
           },
         error:
           function(jqXHR, textStatus, errorThrown){
-            notifyError($.i18n.prop('volume_attach_error', volumeId, instanceId), getErrorMessage(jqXHR));
+            notifyError($.i18n.prop('volume_attach_error', DefaultEncoder().encodeForHTML(volumeId), DefaultEncoder().encodeForHTML(instanceId)), getErrorMessage(jqXHR));
           }
       });
     },
@@ -498,7 +535,7 @@
           function(data, textStatus, jqXHR){
             if ( data.results ) {
               var volId = data.results.id;
-              notifySuccess(null, $.i18n.prop('volume_create_success', volId));
+              notifySuccess(null, $.i18n.prop('volume_create_success', DefaultEncoder().encodeForHTML(volId)));
               thisObj.tableWrapper.eucatable('refreshTable');
               thisObj.tableWrapper.eucatable('glowRow', volId);
             } else {
@@ -545,6 +582,9 @@
               if(done < all)
                 notifyMulti(100*(done/all), $.i18n.prop('volume_detach_progress', all));
               else {
+	        // XSS Node:: 'volume_detach_fail' would contain a chunk HTML code in the failure description string.
+	     	// Message Example - Failed to send release request to Cloud for {0} IP address(es). <a href="#">Click here for details. </a>
+	        // For this reason, the message string must be rendered as html()
                 var $msg = $('<div>').addClass('multiop-summary').append(
                   $('<div>').addClass('multiop-summary-success').html($.i18n.prop('volume_detach_done', (all-error.length), all)));
                 if (error.length > 0)
