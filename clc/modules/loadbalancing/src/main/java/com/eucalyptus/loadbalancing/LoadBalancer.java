@@ -89,7 +89,6 @@ public class LoadBalancer extends UserMetadata<LoadBalancer.STATE> implements Lo
 	
 	@Column( name = "dns_address", nullable=true)
 	private String dnsAddress = null; // the address by which the loadbalancer is reached
-	
 
 	@OneToMany(fetch = FetchType.LAZY, cascade = CascadeType.ALL, orphanRemoval = true, mappedBy = "loadbalancer")
     @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
@@ -102,6 +101,10 @@ public class LoadBalancer extends UserMetadata<LoadBalancer.STATE> implements Lo
 	@OneToMany(fetch = FetchType.LAZY, cascade = CascadeType.ALL, orphanRemoval = true, mappedBy = "loadbalancer")
 	@Cache( usage= CacheConcurrencyStrategy.TRANSACTIONAL )
 	private Collection<LoadBalancerZone> zones = null;
+	
+	@OneToMany(fetch = FetchType.LAZY, orphanRemoval = false, mappedBy = "loadbalancer")
+	@Cache( usage= CacheConcurrencyStrategy.TRANSACTIONAL )
+	private Collection<LoadBalancerSecurityGroup> groups = null;
 	
 	
 	public void setScheme(String scheme){
@@ -170,6 +173,10 @@ public class LoadBalancer extends UserMetadata<LoadBalancer.STATE> implements Lo
 	
 	public Collection<LoadBalancerZone> getZones(){
 		return this.zones;
+	}
+	
+	public Collection<LoadBalancerSecurityGroup> getGroups(){
+		return this.groups;
 	}
 	
 	void setHealthCheck(int healthyThreshold, int interval, String target, int timeout, int unhealthyThreshold)

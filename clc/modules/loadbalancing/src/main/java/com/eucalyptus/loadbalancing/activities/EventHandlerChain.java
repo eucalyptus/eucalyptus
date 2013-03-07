@@ -24,8 +24,6 @@ import java.util.List;
 import java.util.NoSuchElementException;
 
 import org.apache.log4j.Logger;
-
-import com.eucalyptus.util.Exceptions;
 import com.google.common.collect.Lists;
 
 /**
@@ -44,8 +42,8 @@ public abstract class EventHandlerChain<T extends LoadbalancingEvent> {
 		LinkedList<EventHandler<T>> reverseHandler = Lists.newLinkedList();
 		for (EventHandler<T> handler : this.handlers){
 			try{
+				reverseHandler.addFirst(handler); // failed handler will rollback too
 				handler.apply(evt);
-				reverseHandler.addFirst(handler);
 			}catch(Exception e){
 				LOG.warn("starting to rollback");
 				EventHandlerChainException toThrow = 

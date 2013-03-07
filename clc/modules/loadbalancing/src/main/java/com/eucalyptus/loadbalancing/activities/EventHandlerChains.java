@@ -19,14 +19,7 @@
  ************************************************************************/
 package com.eucalyptus.loadbalancing.activities;
 
-import java.util.NoSuchElementException;
-
-import javax.persistence.EntityTransaction;
-
 import org.apache.log4j.Logger;
-
-import com.eucalyptus.entities.Entities;
-import com.google.common.collect.Lists;
 /**
  * @author Sang-Min Park (spark@eucalyptus.com)
  *
