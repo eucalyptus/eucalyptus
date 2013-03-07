@@ -56,7 +56,7 @@
 	      // Display the id of the volume in the main table
 	      "aTargets":[1], 
 	      "mRender": function(data) {
-                return getTagForResource((data);
+                return getTagForResource(data);
               },
               "mData": "id",
 	    },
