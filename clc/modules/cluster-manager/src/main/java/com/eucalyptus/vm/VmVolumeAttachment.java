@@ -292,7 +292,7 @@ public class VmVolumeAttachment implements Comparable<VmVolumeAttachment> {
     this.attachTime = attachTime;
   }
   
-  Boolean getDeleteOnTerminate( ) {
+  public Boolean getDeleteOnTerminate( ) {
     return this.deleteOnTerminate;
   }
   
