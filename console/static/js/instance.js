@@ -48,106 +48,127 @@
         dt_arg : {
           "sAjaxSource": 'instance',
           "aaSorting": [[ 10, "desc" ]],
-          "aoColumns": [
+          "aoColumnDefs": [
             {
 	      // Display the checkbox button in the main table
               "bSortable": false,
-              "fnRender": function(oObj) { return '<input type="checkbox"/>' },
+              "aTargets":[0],
+              "mData": function(source) { return '<input type="checkbox"/>' },
               "sClass": "checkbox-cell",
             },
             { 
 	      // Hidden column for displaying the platform of the instance
-              "bVisible" : false,
-              "fnRender" : function(oObj) { 
-			var result = describe('image', oObj.aData.image_id);
+              "bVisible": false,
+              "aTargets":[1],
+              "mData": function(source) { 
+			var result = describe('image', source.image_id);
                		if(result && result.platform) 
 				return result.platform;
 			return "linux";
-              }
+              },
             },
             { 
 	      // Display the id of the instance in the main table
 	      // Allow the id to be clickable to display the platform data above
 	      // Use CSS 'twist'
-	      "fnRender" : function(oObj){
-                 return eucatableDisplayColumnTypeTwist(oObj.aData.id, oObj.aData.id, 255);
-	      }
+	      "aTargets":[2],
+	      "mRender" : function(data){
+                 return eucatableDisplayColumnTypeTwist(data, data, 255);
+	      },
+              "mData": "id",
             },
             { 
 	      // Display the status of the instance in the main table
               "iDataSort": 12,
-              "fnRender": function(oObj) { 
-	         var state = oObj.aData.state;
+              "aTargets":[3],
+              "mData": function(source) { 
+	         var state = source.state;
                  if (state == undefined) {
-                   state = oObj.aData._state.name;
+                   state = source._state.name;
                  }
                  return eucatableDisplayColumnTypeInstanceStatus(state);
               },
             },
             { 
 	      // Display the image id of the instance in the main table
-	      "fnRender": function(oObj) {
-                return DefaultEncoder().encodeForHTML(oObj.aData.image_id);
+	      "aTargets":[4],
+	      "mRender": function(data) {
+                return DefaultEncoder().encodeForHTML(data);
               },
+              "mData": "image_id",
 	    },
             { 
-              // Display the availiability zone of the instance in the main table
-              "fnRender": function(oObj) { 
-                var zone = oObj.aData.placement;
+	      // Display the availiability zone of the instance in the main table
+              "aTargets":[5],
+	      "mData": function(source) {
+                var zone = source.placement;
                 if (zone == undefined) {
-                    zone = oObj.aData._placement.zone;
+                    zone = source._placement.zone;
                 }
                 return DefaultEncoder().encodeForHTML(zone);
-              }
+              },
 	    }, 
             {
 	      // Display the public dns name of the instance in the main table
-	      "fnRender": function(oObj) {
-                return DefaultEncoder().encodeForHTML(oObj.aData.public_dns_name);
+	      "aTargets":[6],
+	      "mRender": function(data) {
+                return DefaultEncoder().encodeForHTML(data);
               },
+              "mData": "public_dns_name",
  	      "sClass": "wrap-content"
 	    },
             {
 	      // Display the private dns name of the instance in the main table
-	      "fnRender": function(oObj) {
-                return DefaultEncoder().encodeForHTML(oObj.aData.private_dns_name);
+              "aTargets":[7],
+	      "mRender": function(data) {
+                return DefaultEncoder().encodeForHTML(data);
               },
+              "mData": "private_dns_name",
  	      "sClass": "wrap-content"
 	    },
             { 
 	      // Display the key name of the instance in the main table
-	      "fnRender": function(oObj) {
-                return DefaultEncoder().encodeForHTML(oObj.aData.key_name);
+              "aTargets":[8],
+	      "mRender": function(data) {
+                return DefaultEncoder().encodeForHTML(data);
               },
+              "mData": "key_name",
 	    },
             {
 	      // Display the group name of the instance in the main table
-	      "fnRender": function(oObj) {
-                return DefaultEncoder().encodeForHTML(oObj.aData.group_name);
+	      "aTargets":[9],
+	      "mRender": function(data) {
+                return DefaultEncoder().encodeForHTML(data);
               },
+              "mData": "group_name",
 	    },
             { 
 	      // Display the launch time of the instance in the main table
-              "fnRender": function(oObj) {
-		return formatDateTime(oObj.aData.launch_time)
+	      "aTargets":[10],
+              "mRender": function(data) {
+		return formatDateTime(data)
 	      },
+              "mData": "launch_time",
               "iDataSort": 13,
               "asSorting" : [ 'desc', 'asc' ],
             },
             {
 	      // Hidden column for the root device type of the instance
               "bVisible": false,
-	      "fnRender": function(oObj) {
-                return DefaultEncoder().encodeForHTML(oObj.aData.root_device_type);
+              "aTargets":[11],
+	      "mRender": function(data) {
+                return DefaultEncoder().encodeForHTML(data);
               },
+              "mData": "root_device_type",
             },
             {
 	      // Hidden column for the status of the instance
               "bVisible": false,
-	      "fnRender": function(oObj) {
-                 var state = oObj.aData.state;
+              "aTargets":[12],
+	      "mData": function(source) {
+                 var state = source.state;
                  if (state == undefined) {
-                   state = oObj.aData._state.name;
+                   state = source._state.name;
                  }
                 return DefaultEncoder().encodeForHTML(state);
               },
@@ -156,36 +177,43 @@
 	      // Hidden column for the launch time of the instance
               "asSorting" : [ 'desc', 'asc' ],
               "bVisible": false,
-	      "fnRender": function(oObj) {
-                return oObj.aData.launch_time;		// Sorting fails when encoded	013113
+              "aTargets":[13],
+	      "mRender": function(data) {
+                return data;		// Sorting fails when encoded	013113
               },
-              "sType": "date"
+              "mData": "launch_time",
+              "sType": "date",
             },
             {
 	      // Hidden column for the image location of the instance
               "bVisible": false,
-              "fnRender" : function(oObj) {
+              "aTargets":[14],
+              "mData": function(source) {
 			var image = null;
-              		var result = describe('image', oObj.aData.image_id);
+              		var result = describe('image', source.image_id);
 			if( result ){
 				image = result;
 			};
                  	return image ? image.location : '';		
-              }
+              },
             },
             {
 	      // Hidden column for the instance type of the instance
               "bVisible": false,
-	      "fnRender": function(oObj) {
-                return DefaultEncoder().encodeForHTML(oObj.aData.instance_type);
+              "aTargets":[15],
+	      "mRender": function(data) {
+                return DefaultEncoder().encodeForHTML(data);
               },
+              "mData": "instance_type",
             },
             {
 	      // Hidden column for the ip address of the instance
               "bVisible": false,
-	      "fnRender": function(oObj) {
-                return DefaultEncoder().encodeForHTML(oObj.aData.ip_address);
+              "aTargets":[16],
+	      "mRender": function(data) {
+                return DefaultEncoder().encodeForHTML(data);
               },
+              "mData": "ip_address",
             },
           ]
         },
@@ -487,7 +515,7 @@
       if ( instances.length > 0 ) {
         var matrix = [];
         $.each(instances, function(idx,id){
-          id = $(id).html();
+//          id = $(id).html();  // After dataTable 1.9 integration, this operation is no longer needed. 030413
           matrix.push([id]);
         });
         if ($.inArray('ebs',rootType)>=0){
@@ -539,7 +567,7 @@
       if ( instances.length > 0 ) {
         var matrix = [];
         $.each(instances, function(idx,id){
-          id = $(id).html();
+//          id = $(id).html();  // After dataTable 1.9 integration, this operation is no longer needed. 030413
           matrix.push([id]);
         });
         thisObj.rebootDialog.eucadialog('setSelectedResources', {title: [instance_label], contents: matrix});
@@ -579,7 +607,7 @@
       if ( instances.length > 0 ) {
         var matrix = [];
         $.each(instances, function(idx,id){
-          id = $(id).html();
+//          id = $(id).html();   // After dataTable 1.9 integration, this operation is no longer needed. 030413
           matrix.push([id]);
         });
         thisObj.stopDialog.eucadialog('setSelectedResources', {title: [instance_label], contents: matrix});
@@ -623,9 +651,9 @@
     _startInstances : function(){
       var thisObj = this;
       var instances = thisObj.tableWrapper.eucatable('getSelectedRows', 2);
-      $.each(instances, function(idx, instance){
-        instances[idx] = $(instance).html();
-      });
+//      $.each(instances, function(idx, instance){
+//        instances[idx] = $(instance).html();   // After dataTable 1.9 integration, this operation is no longer needed. 030413
+//      });
       var toStart = instances.slice(0);
       var instIds = '';
       for(i=0; i<instances.length; i++)
@@ -671,7 +699,7 @@
       if ( instances.length > 0 ) {
         // connect is for one instance 
         var instance = instances[0];
-        instance = $(instance).html();
+//        instance = $(instance).html();   // After dataTable 1.9 integration, this operation is no longer needed. 030413
         var os = oss[0]; 
 
         // XSS Note: Need to encode the input strings before rendered as HTML
@@ -725,7 +753,7 @@
       var thisObj = this;
       var instances = thisObj.tableWrapper.eucatable('getSelectedRows', 2);
       instances=instances[0];
-      instances = $(instances).html();
+//      instances = $(instances).html();    // After dataTable 1.9 integration, this operation is no longer needed. 030413
       $.when( 
         $.ajax({
           type:"POST",
@@ -751,7 +779,7 @@
     _attachAction : function() {
       var thisObj = this;
       var instanceToAttach = thisObj.tableWrapper.eucatable('getSelectedRows', 2)[0];
-      instanceToAttach=$(instanceToAttach).html();
+//      instanceToAttach=$(instanceToAttach).html();   // After dataTable 1.9 integration, this operation is no longer needed. 030413
       attachVolume(null, instanceToAttach);
     },
 
@@ -759,7 +787,7 @@
       var thisObj = this;
       var results = describe('volume');
       var instance = this.tableWrapper.eucatable('getSelectedRows', 2)[0];
-      instance = $(instance).html();
+ //     instance = $(instance).html();   // After dataTable 1.9 integration, this operation is no longer needed. 030413
       $msg = this.detachDialog.find('#volume-detach-msg');
       $msg.html($.i18n.prop('inst_volume_dialog_detach_text', DefaultEncoder().encodeForHTML(instance)));
       var $p = this.detachDialog.find('#volume-detach-select-all');
@@ -792,7 +820,7 @@
           inx = i*COL_IN_ROW + j;
           if (volumes.length > inx) {
             volId = volumes[inx];
-            volId = DefaultEncoder().encodeForHTML(volId);
+	    volId = DefaultEncoder().encodeForHTML(volId);
             $cb = $('<input>').attr('type', 'checkbox').attr('value', volId);
             $row.append($('<td>').append($cb,'&nbsp;', volId));
             $cb.click( function() {
@@ -812,7 +840,7 @@
 
     _detachAction : function(){
       var instance = this.tableWrapper.eucatable('getSelectedRows', 2)[0];
-      instance = $(instance).html();
+//      instance = $(instance).html();   // After dataTable 1.9 integration, this operation is no longer needed. 030413
       $instId = this.detachDialog.find('#volume-detach-instance-id');
       $instId.val(instance);
       this.detachDialog.eucadialog('open');
@@ -875,7 +903,7 @@
     _associateAction : function(){
       var thisObj = this;
       var instance = thisObj.tableWrapper.eucatable('getSelectedRows', 2)[0];
-      instance = $(instance).html();
+//      instance = $(instance).html();  // After dataTable 1.9 integration, this operation is no longer needed. 030413
       associateIp(instance);
     },
     _disassociateAction : function(){
@@ -899,7 +927,7 @@
     _launchMore : function(){
       var thisObj = this;
       var id = this.tableWrapper.eucatable('getSelectedRows', 2)[0];
-      id = $(id).html();
+//      id = $(id).html();    // After dataTable 1.9 integration, this operaiton is no longer needed. 030413
       var filter = {};
       var result = describe('instance');
       var instance = null;
@@ -978,7 +1006,7 @@
     _initLaunchMoreDialog : function(){
       var thisObj = this;
       var id = this.tableWrapper.eucatable('getSelectedRows', 2)[0];
-      id = $(id).html();
+//      id = $(id).html();       // After dataTable 1.9 integration, this operation is no longer needed.  030413 
       var filter = {};
       var result = describe('instance');
       var instance = null;

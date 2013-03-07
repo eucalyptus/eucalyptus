@@ -320,17 +320,18 @@
                           "sSearch": "",
                           "sZeroRecords": $.i18n.prop('resource_no_records', image_plural),
                         },
-          "aoColumns": [
+          "aoColumnDefs": [
              { // platform
-               "fnRender" : function(oObj) { 
-                 var emi = oObj.aData.id;
-                 var desc = oObj.aData.description ? oObj.aData.description : oObj.aData.location;
-                 var arch = oObj.aData.architecture;
+               "aTargets":[0],
+               "mData" : function(source) { 
+                 var emi = source.id;
+                 var desc = source.description ? source.description : source.location;
+                 var arch = source.architecture;
                  arch=arch.replace('i386', '32 bit')
                  arch=arch.replace('x86_64', '64 bit');
 
                  var name = '';
-                 var imgKey = inferImage(oObj.aData.location, desc, oObj.aData.platform);
+                 var imgKey = inferImage(source.location, desc, source.platform);
                  if(imgKey)
                    name = getImageName(imgKey);
                  var $cell = $('<div>').addClass(imgKey).addClass('image-type').append(
@@ -339,20 +340,22 @@
                                $('<div>').addClass('image-description').html(desc).text()); 
                  
                  return $cell.wrap($('<div>')).parent().html();
-               }
+               },
              },
              {
                "bVisible": false,
-               "fnRender" : function(oObj){
-                 if(!oObj.aData.platform)
+               "aTargets":[1],
+               "mData" : function(source){
+                 if(!source.platform)
                    return 'linux';
                  else
-                   return oObj.aData.platform;
-               }
+                   return source.platform;
+               },
              },
              {
                "bVisible": false,
-               "fnRender" : function(oObj){
+               "aTargets":[2],
+               "mData" : function(source){
                  var results = describe('sgroup');
                  var group = null;
                  for(i in results){
@@ -361,7 +364,7 @@
                      break;
                    }
                  } 
-                 if(group && group.owner_id === oObj.aData.ownerId)
+                 if(group && group.owner_id === source.ownerId)
                    return 'self'; // equivalent of 'describe-images -self'
                  else
                    return 'all'; 
@@ -369,19 +372,35 @@
              },
              {
                "bVisible": false,
-               "mDataProp": "type",             
+               "aTargets":[3],
+               "mRender": function(data) {
+                return DefaultEncoder().encodeForHTML(data);
+               },
+               "mData": "type",
              },
              {  
                "bVisible": false,
-               "mDataProp": "architecture"
+               "aTargets":[4],
+               "mRender": function(data) {
+                return DefaultEncoder().encodeForHTML(data);
+               },
+               "mData": "architecture"
              },
              { 
                "bVisible": false,
-               "mDataProp": "root_device_type"
+               "aTargets":[5],
+               "mRender": function(data) {
+                return DefaultEncoder().encodeForHTML(data);
+               },
+               "mData": "root_device_type"
              },
              {
                "bVisible": false,
-               "mDataProp": "state",
+               "aTargets":[6],
+               "mRender": function(data) {
+                return DefaultEncoder().encodeForHTML(data);
+               },
+               "mData": "state",
              }
            ],
            "sDom" : "<\"#filter-wrapper\"<\"#owner-filter\"><\"#platform-filter\"><\"clear\"><\"#arch-filter\"><\"clear\"><\"#root-filter\"><\"clear\">f><\"#table-wrapper\" <\"#wizard-img-table-size\"> tr<\"clear\">p>", 
@@ -414,6 +433,7 @@
       $.each(filters, function (idx, filter){
         var $filter = $section.find('#'+filter['name']+'-filter');
         $filter.addClass('euca-table-filter');
+          // XSS Note:: No need to encode the input "filter['name']" since it can only be static, pre-defined string - Kyo 
           $filter.append(
             $('<select>').attr('title', $.i18n.prop('launch_instance_'+filter['name']+'_select_tip')).attr('id',filter['name']+'-selector'));
           var $selector = $filter.find('#'+filter['name']+'-selector');
@@ -705,7 +725,7 @@
           var $rule = $section.find('div#launch-wizard-security-sg-detail');
           $rule.children().detach();
           $rule.append(
-            $('<div>').addClass('launcher-sgroup-details-label').html($.i18n.prop('launch_instance_security_group_rule',groupName)));
+            $('<div>').addClass('launcher-sgroup-details-label').html($.i18n.prop('launch_instance_security_group_rule',DefaultEncoder().encodeForHTML(groupName))));
           var results = describe('sgroup');
           var group = null;
           for(i in results){
@@ -1442,13 +1462,14 @@
               inst_ids.push(instance.id);
             }
             var instances = inst_ids.join(' ');
-            notifySuccess(null, $.i18n.prop('instance_run_success', instances));
+            notifySuccess(null, $.i18n.prop('instance_run_success', DefaultEncoder().encodeForHTML(instances)));
             //TODO: move to instance page?
             var $container = $('html body').find(DOM_BINDING['main']);
             $container.maincontainer("clearSelected");
             $container.maincontainer("changeSelected",null, {selected:'instance'});
             $container.instance('glowNewInstance', inst_ids);
           } else {
+            // XSS Note:: No need to encode "undefined_error" since it is a static string from the file "messages.properties" - Kyo
             notifyError($.i18n.prop('instance_run_error'), undefined_error);
             //TODO: clear launch-instance wizard?
             var $container = $('html body').find(DOM_BINDING['main']);
@@ -1457,6 +1478,7 @@
           }
         },
         error: function (jqXHR, textStatus, errorthrown) {
+          // XSS Note:: Cannot encode 'getErrorMessage(jqXHR) since the type is unknown, can be HTML or TEXT
           notifyError($.i18n.prop('instance_run_error'), getErrorMessage(jqXHR));
           var $container = $('html body').find(DOM_BINDING['main']);
           $container.maincontainer("clearSelected");
