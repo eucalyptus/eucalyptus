@@ -40,7 +40,7 @@
       this.baseTable = $eipTable;
       this.tableWrapper = $eipTable.eucatable({
         id : 'eips', // user of this widget should customize these options,
-        data_deps: ['addresses'],
+        data_deps: ['addresses', 'instances'],
         hidden: thisObj.options['hidden'],
         dt_arg : {
           "sAjaxSource": 'eip',
@@ -421,7 +421,11 @@
         if ( results ) {
           for( res in results) {
             var instance = results[res];
-            if ( instance.state === 'running' ) 
+            var state = instance.state;
+            if (state == undefined) {
+                state = instance._state.name;
+            }
+            if (state === 'running') 
               inst_ids.push(instance.id);
           }
         }
