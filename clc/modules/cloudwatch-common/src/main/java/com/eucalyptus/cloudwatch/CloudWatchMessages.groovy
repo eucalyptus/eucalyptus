@@ -89,6 +89,7 @@ public class PutMetricAlarmType extends CloudWatchMessage {
   String alarmDescription;
   Boolean actionsEnabled;
   @HttpEmbedded
+  @HttpParameterMapping(parameter="OKActions")
   ResourceList okActions;
   @HttpEmbedded
   ResourceList alarmActions;
@@ -335,7 +336,7 @@ public class MetricAlarm extends EucalyptusData {
   Boolean actionsEnabled;
   ResourceList okActions;
   ResourceList alarmActions;
-  ResourceList unknownActions;
+  ResourceList insufficientDataActions;
   String stateValue;
   String stateReason;
   String stateReasonData;

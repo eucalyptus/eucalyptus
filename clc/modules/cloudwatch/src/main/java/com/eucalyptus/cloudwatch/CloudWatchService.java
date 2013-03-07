@@ -10,6 +10,13 @@ import javax.annotation.Nullable;
 
 import org.apache.log4j.Logger;
 
+import com.eucalyptus.cloudwatch.domain.alarms.AlarmEntity;
+import com.eucalyptus.cloudwatch.domain.alarms.AlarmEntity.ComparisonOperator;
+import com.eucalyptus.cloudwatch.domain.alarms.AlarmEntity.StateValue;
+import com.eucalyptus.cloudwatch.domain.alarms.AlarmEntity.Statistic;
+import com.eucalyptus.cloudwatch.domain.alarms.AlarmHistory;
+import com.eucalyptus.cloudwatch.domain.alarms.AlarmHistory.HistoryItemType;
+import com.eucalyptus.cloudwatch.domain.alarms.AlarmManager;
 import com.eucalyptus.cloudwatch.domain.dimension.DimensionEntity;
 import com.eucalyptus.auth.Permissions;
 import com.eucalyptus.auth.policy.PolicySpec;
@@ -41,7 +48,32 @@ public class CloudWatchService {
     if(!hasActionPermission(PolicySpec.CLOUDWATCH_PUTMETRICALARM, ctx)) {
    	throw new EucalyptusCloudException();
     }
-    
+    final OwnerFullName ownerFullName = ctx.getUserFullName();
+    final String accountId = ownerFullName.getAccountNumber(); 
+    final Boolean actionsEnabled = (request.getActionsEnabled() == null) ? 
+        Boolean.TRUE : request.getActionsEnabled();
+    final Collection<String> alarmActions = (request.getAlarmActions() != null) ? 
+        request.getAlarmActions().getMember() : null;
+    final String alarmDescription = request.getAlarmDescription();
+    final String alarmName = request.getAlarmName();
+    final ComparisonOperator comparisonOperator = ComparisonOperator.valueOf(request.getComparisonOperator());
+    final Map<String, String> dimensionMap = transform(request.getDimensions());
+    //final Collection<> request.getDimensions() != null ;
+    Integer evaluationPeriods = request.getEvaluationPeriods();
+    final Collection<String> insufficientDataActions = (request.getInsufficientDataActions() != null) ? 
+        request.getInsufficientDataActions().getMember() : null;
+    final String metricName = request.getMetricName();
+    final String namespace = request.getNamespace();
+    final Collection<String> okActions = (request.getOkActions() != null) ? 
+        request.getOkActions().getMember() : null;
+    final Integer period = request.getPeriod();
+    final Statistic statistic = Statistic.valueOf(request.getStatistic());
+    final Double threshold = request.getThreshold();
+    final Units unit = Units.fromValue(request.getUnit());
+    AlarmManager.putMetricAlarm(accountId, actionsEnabled, alarmActions, alarmDescription,
+        alarmName, comparisonOperator, dimensionMap, evaluationPeriods, 
+        insufficientDataActions, metricName, MetricType.Custom, namespace, okActions, period,
+        statistic, threshold, unit);
     return reply;
   }
 
@@ -125,7 +157,80 @@ public class CloudWatchService {
     }
   }
 
+  private enum AlarmEntityFunction implements Function<AlarmEntity, MetricAlarm> {
+    INSTANCE {
+      @Override
+      public MetricAlarm apply(@Nullable AlarmEntity alarmEntity) {
+        LOG.debug("OK_ACTIONS="+alarmEntity.getOkActions());
+        LOG.debug("ALARM_ACTIONS="+alarmEntity.getAlarmActions());
+        LOG.debug("INSUFFICIENT_DATA_ACTIONS="+alarmEntity.getInsufficientDataActions());
+        MetricAlarm metricAlarm = new MetricAlarm();
+        metricAlarm.setActionsEnabled(alarmEntity.getActionsEnabled());
+
+        ResourceList alarmActions = new ResourceList();
+        ArrayList<String> alarmActionsMember = new ArrayList<String>();
+        if (alarmEntity.getAlarmActions() != null) {
+          alarmActionsMember.addAll(alarmEntity.getAlarmActions());
+        }
+        alarmActions.setMember(alarmActionsMember);
+        metricAlarm.setAlarmActions(alarmActions);
+        
+        metricAlarm.setAlarmArn(alarmEntity.getResourceName());
+        metricAlarm.setAlarmConfigurationUpdatedTimestamp(alarmEntity.getAlarmConfigurationUpdatedTimestamp());
+        metricAlarm.setAlarmDescription(alarmEntity.getAlarmDescription());
+        metricAlarm.setAlarmName(alarmEntity.getAlarmName());
+        metricAlarm.setComparisonOperator(alarmEntity.getComparisionOperator() == null ? null : alarmEntity.getComparisionOperator().toString());
+        Dimensions dimensions = new Dimensions();
+        dimensions.setMember(Lists.newArrayList(Collections2.<DimensionEntity, Dimension>transform(alarmEntity.getDimensions(), ListMetricDimensionFunction.INSTANCE)));
+        metricAlarm.setDimensions(dimensions);
+        metricAlarm.setEvaluationPeriods(alarmEntity.getEvaluationPeriods());
+        metricAlarm.setMetricName(alarmEntity.getMetricName());
+        metricAlarm.setNamespace(alarmEntity.getNamespace());
+
+        ResourceList okActions = new ResourceList();
+        ArrayList<String> okActionsMember = new ArrayList<String>();
+        if (alarmEntity.getOkActions() != null) {
+          okActionsMember.addAll(alarmEntity.getOkActions());
+        }
+        okActions.setMember(okActionsMember);
+        metricAlarm.setOkActions(okActions);
+
+        metricAlarm.setPeriod(alarmEntity.getPeriod());
+        metricAlarm.setStateReason(alarmEntity.getStateReason());
+        metricAlarm.setStateReasonData(alarmEntity.getStateReasonData());
+        metricAlarm.setStateUpdatedTimestamp(alarmEntity.getStateUpdatedTimestamp());
+        metricAlarm.setStateValue(alarmEntity.getStateValue() == null ? null : alarmEntity.getStateValue().toString());
+        metricAlarm.setStatistic(alarmEntity.getStatistic() == null ? null : alarmEntity.getStatistic().toString());
+        metricAlarm.setThreshold(alarmEntity.getThreshold());
+        metricAlarm.setUnit(alarmEntity.getUnit() == null ? null : alarmEntity.getUnit().toString());
+
+        ResourceList insufficientDataActions = new ResourceList();
+        ArrayList<String> insufficientDataActionsMember = new ArrayList<String>();
+        if (alarmEntity.getInsufficientDataActions() != null) {
+          insufficientDataActionsMember.addAll(alarmEntity.getInsufficientDataActions());
+        }
+        insufficientDataActions.setMember(insufficientDataActionsMember);
+        metricAlarm.setInsufficientDataActions(insufficientDataActions);
+        return metricAlarm;
+      }
+    }
+  }
   
+  private enum AlarmHistoryFunction implements Function<AlarmHistory, AlarmHistoryItem> {
+    INSTANCE {
+      @Override
+      public AlarmHistoryItem apply(@Nullable AlarmHistory alarmHistory) {
+        AlarmHistoryItem alarmHistoryItem = new AlarmHistoryItem();
+        alarmHistoryItem.setAlarmName(alarmHistory.getAlarmName());
+        alarmHistoryItem.setHistoryData(alarmHistory.getHistoryData());
+        alarmHistoryItem.setHistoryItemType(alarmHistory.getHistoryItemType() == null ? null : alarmHistory.getHistoryItemType().toString());
+        alarmHistoryItem.setHistorySummary(alarmHistory.getHistorySummary());
+        alarmHistoryItem.setTimestamp(alarmHistory.getTimestamp());
+        return alarmHistoryItem;
+      }
+    }
+  }
+
   private Map<String, String> transform(DimensionFilters dimensionFilters) {
     final Map<String, String> result = Maps.newHashMap();
     if (dimensionFilters != null && dimensionFilters.getMember() != null) {
@@ -223,7 +328,11 @@ public class CloudWatchService {
     if(!hasActionPermission(PolicySpec.CLOUDWATCH_DISABLEALARMACTIONS, ctx)) {
    	throw new EucalyptusCloudException();
     }
-  
+    final OwnerFullName ownerFullName = ctx.getUserFullName();
+    final String accountId = ownerFullName.getAccountNumber(); 
+    final Collection<String> alarmNames = (request.getAlarmNames() != null) ? request.getAlarmNames().getMember() : null;
+    AlarmManager.disableAlarmActions(accountId, alarmNames);
+    
     return reply;
   }
 
@@ -235,7 +344,17 @@ public class CloudWatchService {
     if(!hasActionPermission(PolicySpec.CLOUDWATCH_DESCRIBEALARMS, ctx)) {
    	throw new EucalyptusCloudException();
     }
-    
+    final OwnerFullName ownerFullName = ctx.getUserFullName();
+    final String accountId = ownerFullName.getAccountNumber(); 
+    final String actionPrefix = request.getActionPrefix();
+    final String alarmNamePrefix = request.getAlarmNamePrefix();
+    final Collection<String> alarmNames = (request.getAlarmNames() != null) ? request.getAlarmNames().getMember() : null;
+    final Integer maxRecords = request.getMaxRecords();
+    final StateValue stateValue = (request.getStateValue() != null) ? StateValue.valueOf(request.getStateValue()) : null;
+    Collection<AlarmEntity> results = AlarmManager.describeAlarms(accountId, actionPrefix, alarmNamePrefix, alarmNames, maxRecords, stateValue);
+    MetricAlarms metricAlarms = new MetricAlarms();
+    metricAlarms.setMember(Lists.newArrayList(Collections2.<AlarmEntity, MetricAlarm>transform(results, AlarmEntityFunction.INSTANCE)));
+    reply.getDescribeAlarmsResult().setMetricAlarms(metricAlarms);
     return reply;
   }
 
@@ -247,7 +366,18 @@ public class CloudWatchService {
     if(!hasActionPermission(PolicySpec.CLOUDWATCH_DESCRIBEALARMSFORMETRIC, ctx)) {
 	throw new EucalyptusCloudException();
     }
-    
+    final OwnerFullName ownerFullName = ctx.getUserFullName();
+    final String accountId = ownerFullName.getAccountNumber(); 
+    final Map<String, String> dimensionMap = transform(request.getDimensions());
+    final String metricName = request.getMetricName();
+    final String namespace = request.getNamespace();
+    final Integer period = request.getPeriod();
+    final Statistic statistic = request.getStatistic() == null ? null: Statistic.valueOf(request.getStatistic());
+    final Units unit = Units.fromValue(request.getUnit());
+    Collection<AlarmEntity> results = AlarmManager.describeAlarmsForMetric(accountId, dimensionMap, metricName, namespace, period, statistic, unit);
+    MetricAlarms metricAlarms = new MetricAlarms();
+    metricAlarms.setMember(Lists.newArrayList(Collections2.<AlarmEntity, MetricAlarm>transform(results, AlarmEntityFunction.INSTANCE)));
+    reply.getDescribeAlarmsForMetricResult().setMetricAlarms(metricAlarms);
     return reply;
   }
 
@@ -259,7 +389,17 @@ public class CloudWatchService {
     if(!hasActionPermission(PolicySpec.CLOUDWATCH_DESCRIBEALARMHISTORY, ctx)) {
 	throw new EucalyptusCloudException();
     }
-   
+    final OwnerFullName ownerFullName = ctx.getUserFullName();
+    final String accountId = ownerFullName.getAccountNumber(); 
+    final String alarmName = request.getAlarmName();
+    final Date endDate = request.getEndDate();
+    final HistoryItemType historyItemType = request.getHistoryItemType() == null ? null : HistoryItemType.valueOf(request.getHistoryItemType());
+    final Integer maxRecords = request.getMaxRecords();
+    final Date startDate = request.getStartDate();
+    Collection<AlarmHistory> results = AlarmManager.describeAlarmHistory(accountId, alarmName, endDate, historyItemType, maxRecords, startDate);
+    AlarmHistoryItems alarmHistoryItems = new AlarmHistoryItems();
+    alarmHistoryItems.setMember(Lists.newArrayList(Collections2.<AlarmHistory, AlarmHistoryItem>transform(results, AlarmHistoryFunction.INSTANCE)));
+    reply.getDescribeAlarmHistoryResult().setAlarmHistoryItems(alarmHistoryItems);
     return reply;
   }
 
@@ -271,6 +411,10 @@ public class CloudWatchService {
     if(!hasActionPermission(PolicySpec.CLOUDWATCH_ENABLEALARMACTIONS, ctx)) {
 	throw new EucalyptusCloudException();
     }
+    final OwnerFullName ownerFullName = ctx.getUserFullName();
+    final String accountId = ownerFullName.getAccountNumber(); 
+    final Collection<String> alarmNames = (request.getAlarmNames() != null) ? request.getAlarmNames().getMember() : null;
+    AlarmManager.enableAlarmActions(accountId, alarmNames);
     
     return reply;
   }
@@ -283,7 +427,11 @@ public class CloudWatchService {
     if(!hasActionPermission(PolicySpec.CLOUDWATCH_DELETEALARMS, ctx)) {
 	throw new EucalyptusCloudException();
     }
-	
+    final OwnerFullName ownerFullName = ctx.getUserFullName();
+    final String accountId = ownerFullName.getAccountNumber(); 
+    Collection<String> alarmNames = (request.getAlarmNames() != null) ? 
+        request.getAlarmNames().getMember() : null;
+    AlarmManager.deleteAlarms(accountId, alarmNames);
     return reply;
   }
 
@@ -295,7 +443,13 @@ public class CloudWatchService {
     if(!hasActionPermission(PolicySpec.CLOUDWATCH_SETALARMSTATE, ctx)) {
 	throw new EucalyptusCloudException();
     }
-	
+    final OwnerFullName ownerFullName = ctx.getUserFullName();
+    final String accountId = ownerFullName.getAccountNumber(); 
+    final String alarmName = request.getAlarmName();
+    final String stateReason = request.getStateReason();
+    final String stateReasonData = request.getStateReasonData(); 
+    final StateValue stateValue = StateValue.valueOf(request.getStateValue());
+    AlarmManager.setAlarmState(accountId, alarmName, stateReason, stateReasonData, stateValue);
     return reply;
   }
   

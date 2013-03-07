@@ -270,7 +270,7 @@
     <value name="ActionsEnabled" field="actionsEnabled" usage="optional"/>
     <structure name="OKActions" field="okActions" usage="optional" type="com.eucalyptus.cloudwatch.ResourceList"/>
     <structure name="AlarmActions" field="alarmActions" usage="optional" type="com.eucalyptus.cloudwatch.ResourceList"/>
-    <structure name="UnknownActions" field="unknownActions" usage="optional" type="com.eucalyptus.cloudwatch.ResourceList"/>
+    <structure name="InsufficientDataActions" field="insufficientDataActions" usage="optional" type="com.eucalyptus.cloudwatch.ResourceList"/>
     <value name="StateValue" field="stateValue" usage="optional"/>
     <value name="StateReason" field="stateReason" usage="optional"/>
     <value name="StateReasonData" field="stateReasonData" usage="optional"/>
