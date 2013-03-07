@@ -8,17 +8,18 @@
       resource: null,
       resource_id: null,
       tag_data: null,
+      saveButtonCallback: null,   // Callback for save button
+      cancelButtonCallback: null, // Callback for cancel button 
     },
 
-    baseTable: null,  // an element to hold the dataTable object
-    
+    baseTable: null,  // an element to hold the dataTable object    
+
     displayView: null,  // a variable to store the table's interaction mode
     
     alteredRow: null,   // an element to store altered row information
     removedRow: null,   // an element to store removed row information 
     addedRow: null,    // an element to store newly added row information
 
- 
     // Set up the widget
     _create: function() {
       var thisObj = this;
@@ -241,6 +242,45 @@
 
      // Add the initialized dataTable element into the main class element
      thisObj.element.append(thisObj.baseTable);
+
+     // Add Save and Cancel buttons
+     var saveButton = $('<a>').addClass('button single-tag-button').attr('id', 'tagButton-save').text('Save');
+     var cancelButton = $('<a>').addClass('button single-tag-button').attr('id', 'tagButton-cancel').text('Cancel');
+     var saveandcancelDiv = $('<div>').addClass('resource-tag-save-cancel-buttons');
+     saveandcancelDiv.append(saveButton);
+     saveandcancelDiv.append(cancelButton);
+     thisObj.element.append(saveandcancelDiv);
+
+     saveButton.bind('click', function(e){
+       thisObj._clickedSaveButton();
+       var callback = thisObj.options.saveButtonCallback;
+       if ($.isFunction(callback)){
+          callback();
+       };
+     });
+
+     cancelButton.bind('click', function(e){
+       thisObj._clickedCancelButton();
+       var callback = thisObj.options.cancelButtonCallback;
+       if ($.isFunction(callback)){
+          callback();
+       };
+     });
+    },
+ 
+    _clickedSaveButton: function(){
+      alert("Save Button Clicked. Call Ajax");
+      // NEED TO CALL AJAX HERE
+      thisObj.baseTable.fnReloadAjax();        //Reload the table
+    },
+
+    _clickedCancelButton: function(){
+      var thisObj = this;
+      alert("Cancel Button Clicked");
+      jQuery.removeData(thisObj.alteredRow);   //remove 'altered row' data
+      jQuery.removeData(thisObj.removedRow);   //remove 'removed row' data
+      jQuery.removeData(thisObj.addedRow);     //remove 'added row' data
+      thisObj.baseTable.fnReloadAjax();        //Reload the table
     },
 
     // Use the _setOption method to respond to changes to options
