@@ -87,6 +87,8 @@ import com.eucalyptus.util.OwnerFullName;
 import com.eucalyptus.util.TypeMappers;
 import com.eucalyptus.util.async.CheckedListenableFuture;
 import com.eucalyptus.util.async.Futures;
+import com.eucalyptus.vmtypes.DescribeVmTypesResponseType;
+import com.eucalyptus.vmtypes.DescribeVmTypesType;
 import com.google.common.base.Objects;
 import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
@@ -317,13 +319,15 @@ public class ActivityManager {
         Objects.firstNonNull( availabilityZones, Collections.<String>emptyList() ),
         Objects.firstNonNull( loadBalancerNames, Collections.<String>emptyList() ),
         Collections.<String>emptyList(),
-        null ,
+        null,
+        null,
         Collections.<String>emptyList() );
 
   }
 
   public List<String> validateReferences( final OwnerFullName owner,
                                           final Iterable<String> imageIds,
+                                          final String instanceType,
                                           final String keyName,
                                           final Iterable<String> securityGroups ) {
     return validateReferences(
@@ -331,6 +335,7 @@ public class ActivityManager {
         Collections.<String>emptyList(),
         Collections.<String>emptyList(),
         Objects.firstNonNull( imageIds, Collections.<String>emptyList() ),
+        instanceType,
         keyName,
         Objects.firstNonNull( securityGroups, Collections.<String>emptyList() ) );
   }
@@ -339,6 +344,7 @@ public class ActivityManager {
                                            final Iterable<String> availabilityZones,
                                            final Iterable<String> loadBalancerNames,
                                            final Iterable<String> imageIds,
+                                           @Nullable final String instanceType,
                                            @Nullable final String keyName,
                                            final Iterable<String> securityGroups ) {
     final List<String> errors = Lists.newArrayList();
@@ -348,6 +354,7 @@ public class ActivityManager {
         Lists.newArrayList( Sets.newLinkedHashSet( availabilityZones ) ),
         Lists.newArrayList( Sets.newLinkedHashSet( loadBalancerNames ) ),
         Lists.newArrayList( Sets.newLinkedHashSet( imageIds ) ),
+        instanceType,
         keyName,
         Lists.newArrayList( Sets.newLinkedHashSet( securityGroups ) ) );
     runTask( task );
@@ -742,6 +749,16 @@ public class ActivityManager {
     }
   }
 
+  VmTypesClient createVmTypesClientForUser( final String userId ) {
+    try {
+      final VmTypesClient client = new VmTypesClient( userId );
+      client.init();
+      return client;
+    } catch ( DispatchingClient.DispatchingClientException e ) {
+      throw Exceptions.toUndeclared( e );
+    }
+  }
+
   Supplier<String> userIdSupplier( final String accountNumber ) {
     return new Supplier<String>(){
       @Override
@@ -774,6 +791,7 @@ public class ActivityManager {
     String getUserId();
     EucalyptusClient getEucalyptusClient();
     ElbClient getElbClient();
+    VmTypesClient getVmTypesClient();
   }
 
   private abstract class ScalingActivityTask<RES extends BaseMessage> {
@@ -915,6 +933,11 @@ public class ActivityManager {
     @Override
     public ElbClient getElbClient() {
       return createElbClientForUser( getUserId() );
+    }
+
+    @Override
+    public VmTypesClient getVmTypesClient() {
+      return createVmTypesClientForUser( getUserId() );
     }
 
     ScalingActivity newActivity() {
@@ -1975,6 +1998,33 @@ public class ActivityManager {
     }
   }
 
+  private class InstanceTypeValidationScalingActivityTask extends ValidationScalingActivityTask<DescribeVmTypesResponseType> {
+    final String instanceType;
+
+    private InstanceTypeValidationScalingActivityTask( final ScalingActivity activity,
+                                                       final String instanceType ) {
+      super( activity, "instance type" );
+      this.instanceType = instanceType;
+    }
+
+    @Override
+    void dispatchInternal( final ActivityContext context,
+                           final Callback.Checked<DescribeVmTypesResponseType> callback ) {
+      final VmTypesClient client = context.getVmTypesClient();
+      client.dispatch( new DescribeVmTypesType( Collections.singleton( instanceType ) ), callback );
+    }
+
+    @Override
+    void dispatchSuccess( final ActivityContext context,
+                          final DescribeVmTypesResponseType response ) {
+      if ( response.getVmTypeDetails() == null || response.getVmTypeDetails().size() != 1 ) {
+        setValidationError( "Invalid instance type: " + instanceType );
+      }
+
+      setActivityFinalStatus( ActivityStatusCode.Successful );
+    }
+  }
+
   private class SshKeyValidationScalingActivityTask extends ValidationScalingActivityTask<DescribeKeyPairsResponseType> {
     final String sshKey;
 
@@ -2053,6 +2103,8 @@ public class ActivityManager {
     private final List<String> imageIds;
     private final List<String> securityGroups;
     @Nullable
+    private final String instanceType;
+    @Nullable
     private final String keyName;
     private final AtomicReference<List<String>> validationErrors = new AtomicReference<List<String>>(
         Collections.<String>emptyList()
@@ -2062,12 +2114,14 @@ public class ActivityManager {
                                   final List<String> availabilityZones,
                                   final List<String> loadBalancerNames,
                                   final List<String> imageIds,
+                                  @Nullable final String instanceType,
                                   @Nullable final String keyName,
                                   final List<String> securityGroups ) {
       super( UUID.randomUUID().toString() + "-validation", AutoScalingGroup.withOwner(owner), "Validate" );
       this.availabilityZones = availabilityZones;
       this.loadBalancerNames = loadBalancerNames;
       this.imageIds = imageIds;
+      this.instanceType = instanceType;
       this.keyName = keyName;
       this.securityGroups = securityGroups;
     }
@@ -2093,6 +2147,9 @@ public class ActivityManager {
       }
       if ( !imageIds.isEmpty() ) {
         tasks.add( new ImageIdValidationScalingActivityTask( newActivity(), imageIds ) );
+      }
+      if ( instanceType != null ) {
+        tasks.add( new InstanceTypeValidationScalingActivityTask( newActivity(), instanceType ) );
       }
       if ( keyName != null ) {
         tasks.add( new SshKeyValidationScalingActivityTask( newActivity(), keyName ) );

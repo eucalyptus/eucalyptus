@@ -893,6 +893,7 @@ public class AutoScalingService {
           final List<String> referenceErrors = activityManager.validateReferences(
               ctx.getUserFullName(),
               Iterables.filter( Lists.newArrayList( request.getImageId(), request.getKernelId(), request.getRamdiskId() ), Predicates.notNull() ),
+              request.getInstanceType(),
               request.getKeyName(),
               request.getSecurityGroups() == null ? Collections.<String>emptyList() : request.getSecurityGroups().getMember()
           );

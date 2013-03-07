@@ -66,7 +66,6 @@
 
 package com.eucalyptus.vmtypes
 
-import java.util.ArrayList;
 import com.eucalyptus.component.ComponentId.ComponentMessage;
 import com.eucalyptus.component.id.Eucalyptus;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
@@ -81,7 +80,7 @@ public class VmTypeDetails extends EucalyptusData {
   Integer disk;
   Integer memory;
   ArrayList<VmTypeZoneStatus> availability = new ArrayList<VmTypeZoneStatus>( );
-  ArrayList<VmTypeEphemeralDisk> ephemeralDisk = new ArrayList<EphemeralDisk>( );
+  ArrayList<VmTypeEphemeralDisk> ephemeralDisk = new ArrayList<VmTypeEphemeralDisk>( );
 }
 public class VmTypeZoneStatus extends EucalyptusData {
   String name;
@@ -94,14 +93,14 @@ public class VmTypeEphemeralDisk extends EucalyptusData {
   String deviceName;
   Integer size;
   String format;
-  private VmTypeEphemeralDisk( String virtualDeviceName, String deviceName, Integer size, String format ) {
+  VmTypeEphemeralDisk( ) { }
+  VmTypeEphemeralDisk( String virtualDeviceName, String deviceName, Integer size, String format ) {
     super( );
     this.virtualDeviceName = virtualDeviceName;
     this.deviceName = deviceName;
     this.size = size;
     this.format = format;
   }
-  
 }
 public class ModifyVmTypeAttributeType extends VmTypeMessage {
   Boolean reset;
@@ -114,6 +113,10 @@ public class DescribeVmTypesType extends VmTypeMessage {
   Boolean verbose = false;
   Boolean availability = false;
   ArrayList<String> vmTypes = new ArrayList<String>();
+  DescribeVmTypesType() { }
+  DescribeVmTypesType( Collection<String> vmTypes ) {
+    this.vmTypes.addAll( vmTypes )
+  }
 }
 public class DescribeVmTypesResponseType extends VmTypeMessage  {
   ArrayList<VmTypeDetails> vmTypeDetails= new ArrayList<String>();
