@@ -425,7 +425,7 @@ public class BaseQueryBinding<T extends Enum<T>> extends RestfulMarshallingHandl
           continue;
         else if ( f.isAnnotationPresent( HttpParameterMapping.class ) ) {
           fieldMap.put( f.getAnnotation( HttpParameterMapping.class ).parameter( ), f.getName( ) );
-          fieldMap.put( f.getName( ).substring( 0, 1 ).toUpperCase( ).concat( f.getName( ).substring( 1 ) ), f.getName( ) );
+//          fieldMap.put( f.getName( ).substring( 0, 1 ).toUpperCase( ).concat( f.getName( ).substring( 1 ) ), f.getName( ) );
         } else {
           fieldMap.put( f.getName( ).substring( 0, 1 ).toUpperCase( ).concat( f.getName( ).substring( 1 ) ), f.getName( ) );
         }
