@@ -82,9 +82,12 @@ CLOUD_LIBS_BRANCH?=master
 # When the git repository is first cloned or updated,
 # it will create a '.nogit' file. This will tell make not
 # to bother with git again unless the 'distclean' target
-# is run. When the 'distclean' target is run, the '.nogit'
+# is run. When the 'clean' target is run, the '.nogit'
 # file will be removed.
 #
+ifeq ($(shell if test -d lib; then echo 1; else echo 0; fi), 0)
+    $(shell rm -f .nogit)
+endif
 DISABLEGIT?=$(shell if test -f .nogit; then echo 1; else echo 0; fi)
 
 VERSION_MAJOR=$(shell echo $(VERSION) | cut -d. -f1)
@@ -101,7 +104,7 @@ VERSION_PATCH=$(shell echo $(VERSION) | cut -d. -f3)
 #
 ifeq ($(VERSION_MAJOR), 3)
     ifeq ($(VERSION_MINOR), 3)
-        CLOUD_LIBS_BRANCH=3.3
+        CLOUD_LIBS_BRANCH=testing
     endif
 endif
 
@@ -134,7 +137,7 @@ ifeq ($(DISABLEGIT), 0)
 	#    know what you're doing. We won't touch it.
 	# 3. There is no 'lib' directory, so we'll checkout cloud-libs.
 	#
-	@if grep -q eucalyptus-cloud-libs\.git lib/.git/config 2>/dev/null; then \
+	@if grep -q eucalyptus-cloud-libs lib/.git/config 2>/dev/null; then \
 		cd $(PWD)/lib && git checkout $(CLOUD_LIBS_BRANCH); \
 		cd $(PWD)/lib && git pull origin $(CLOUD_LIBS_BRANCH); \
 	elif [ -d lib/ ]; then \
@@ -142,7 +145,10 @@ ifeq ($(DISABLEGIT), 0)
 	else \
 		git clone --depth=1 -b $(CLOUD_LIBS_BRANCH) git://github.com/eucalyptus/eucalyptus-cloud-libs.git lib; \
 	fi
-	@# Only do this once
+	@# We only want to checkout our git repository once.
+	@# In the case where a user has chosen a custom repository,
+	@# we don't want to reset it each time they build.
+	@# The '.nogit' file will be removed by the 'clean' target.
 	@touch .nogit
 endif
 
@@ -196,8 +202,9 @@ indent:
 clean: gitcheck
 	$(ANT) clean
 	make -C eucadmin clean
+	rm -f .nogit
 ifeq ($(DISABLEGIT), 0)
-	@if grep -q eucalyptus-cloud-libs\.git lib/.git/config 2>/dev/null; then \
+	@if grep -q eucalyptus-cloud-libs lib/.git/config 2>/dev/null; then \
 		# Remove untracked files from the cloud-libs repository \
 		cd $(PWD)/lib && git clean -f -d; \
 		# Hard reset and modifications \
@@ -205,9 +212,8 @@ ifeq ($(DISABLEGIT), 0)
 	fi
 endif
 
-distclean: clean
+distclean:
 	rm -rf ${TOP}/{deps,lib}
-	rm -f .nogit
 	$(ANT) distclean
 	make -C eucadmin distclean
 
