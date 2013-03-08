@@ -14,8 +14,13 @@
 
     baseTable: null,  // an element to hold the dataTable object    
 
-    displayView: null,  // a variable to store the table's interaction mode
-    
+    displayView: null,  // a variable to store the table's interaction mode    
+    isFirstData: null,  // a variable to store the table's data state, edited or unedited.
+
+    uneditedData: null,
+    createdTagList: null,
+    deletedTagList: null,
+
     alteredRow: null,   // an element to store altered row information
     removedRow: null,   // an element to store removed row information 
     addedRow: null,    // an element to store newly added row information
@@ -25,6 +30,11 @@
       var thisObj = this;
 
       thisObj.displayView = "view";   //The table is in 'view' mode by default
+      thisObj.isFirstData = "true";   //The table is unedited
+     
+      thisObj.uneditedData = [];
+      thisObj.createdTagList = [];
+      thisObj.deletedTagList = [];
 
       thisObj.alteredRow = $('div')[0];   //initialize an element to store 'altered row' data
       thisObj.removedRow = $('div')[1];   //initialize an element to store 'removed row' data
@@ -100,7 +110,17 @@
              };
 */
              // Store the unedited row data here
-
+             if( thisObj.isFirstData == "true" ){
+               thisObj.uneditedData = [];
+               $.each( thisObj.baseTable.fnGetData(), function(i, row){
+                thisObj.uneditedData.push(row);
+               });
+               console.log(thisObj.uneditedData);
+               if( thisObj.uneditedData.length > 0 ){
+                 thisObj.isFirstData = "false";           // Flip the Flag to store the initial Data in uneditedData storage
+               };
+             };
+                                         
              // For each row of dataTable, add an extra column for the dual button. 
 	     thisObj.baseTable.find('tbody').find('tr').each(function(index, tr){
                  var $currentRow = $(tr);
@@ -289,9 +309,82 @@
       thisObj.baseTable.fnReloadAjax();        //Reload the table
     },
 
+    _compareBeforeAndAfter: function(before, after){
+      var thisObj = this;
+      thisObj.createdTagList = [];
+      thisObj.deletedTagList = [];
+
+      // Look for any changes going from unedited table to edited table
+      $.each(before, function(i, v){
+        var beforeKey = v.name;
+        var beforeValue = v.value;
+        var isModed = "false";
+        var isExist = "false";
+        var newAfterValue = "";
+        $.each(after, function(i, v){
+          var afterKey = v.name;
+          var afterValue = v.value;
+          if( beforeKey == afterKey ){
+             isExist = "true";
+             if( beforeValue != afterValue ){
+                isModed = "true";
+                newAfterValue = afterValue;
+            };
+          };
+        });
+        if( isExist == "false" ){
+  //         console.log("Delete: " + beforeKey + "=" + beforeValue);
+           thisObj.deletedTagList.push({key: beforeKey, value: beforeValue});
+        }else{
+           if( isModed == "true" ){
+   //          console.log("Delete: " + beforeKey + "=" + beforeValue + " and Create: " + beforeKey + "=" + newAfterValue );
+           thisObj.deletedTagList.push({key: beforeKey, value: beforeValue});
+           thisObj.createdTagList.push({key: beforeKey, value: newAfterValue});
+           };
+        };
+      });
+
+      // Look for newly created keys
+      $.each(after, function(i, v){
+          var afterKey = v.name;
+          var afterValue = v.value;
+          var isExistBefore = "false";
+          $.each(before, function(i, v){
+             var beforeKey = v.name;
+             if( beforeKey == afterKey ){
+               isExistBefore = "true";
+             };
+          });
+          if( isExistBefore == "false" ){
+   //         console.log("Create: " + afterKey + "=" + afterValue);
+            thisObj.createdTagList.push({key: afterKey, value: afterValue});
+          };
+      });
+
+    },
+
     _processEditedTags: function(){
       var thisObj = this;
 
+      var editedData = [];
+      $.each( thisObj.baseTable.fnGetData(), function(i, row){
+         editedData.push(row);
+      });
+      console.log(editedData);
+
+      thisObj._compareBeforeAndAfter(thisObj.uneditedData, editedData);
+
+      $.each(thisObj.deletedTagList, function(i, v){
+         console.log("Deleted Tag: " + v.key + "=" + v.value);
+         thisObj._makeCall_deleteTag(thisObj.options.resource_id, v.key, v.value);
+      });
+
+      $.each(thisObj.createdTagList, function(i, v){
+         console.log("Created Tag: " + v.key + "=" + v.value);
+         thisObj._makeCall_createTag(thisObj.options.resource_id, v.key, v.value);
+      });
+
+/*
       // Process Added Rows
       var addedRowData = jQuery.data(thisObj.addedRow);   // Retreive the added row data
       for(thisKey in addedRowData) {
@@ -326,7 +419,8 @@
            thisObj._makeCall_alteredTag(thisObj.options.resource_id, prevKey, prevValue, alteredKey, alteredValue);
         };
       };
-
+*/
+      thisObj.isFirstData = "true";   // Reset the Flag
     },
 
     _makeCall_createTag : function (resource_id, key, value) {
