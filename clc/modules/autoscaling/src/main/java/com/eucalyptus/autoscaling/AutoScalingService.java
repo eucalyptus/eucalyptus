@@ -883,11 +883,11 @@ public class AutoScalingService {
         public void fire( final AutoScalingGroup autoScalingGroup ) {
           if ( RestrictedTypes.filterPrivileged().apply( autoScalingGroup ) ) {
             if ( request.availabilityZones() != null && !request.availabilityZones().isEmpty() )
-              autoScalingGroup.setAvailabilityZones( Lists.newArrayList( Sets.newLinkedHashSet( request.availabilityZones() ) ) );
+              autoScalingGroup.updateAvailabilityZones( Lists.newArrayList( Sets.newLinkedHashSet( request.availabilityZones() ) ) );
             if ( request.getDefaultCooldown() != null )
               autoScalingGroup.setDefaultCooldown( Numbers.intValue( request.getDefaultCooldown() ) );
             if ( request.getDesiredCapacity() != null )
-              autoScalingGroup.setDesiredCapacity( Numbers.intValue( request.getDesiredCapacity() ) );
+              autoScalingGroup.updateDesiredCapacity( Numbers.intValue( request.getDesiredCapacity() ) );
             if ( request.getHealthCheckGracePeriod() != null )
               autoScalingGroup.setHealthCheckGracePeriod( Numbers.intValue( request.getHealthCheckGracePeriod() ) );
             if ( request.getHealthCheckType() != null )
@@ -1081,7 +1081,7 @@ public class AutoScalingService {
     final long cooldownMs = TimeUnit.SECONDS.toMillis( Objects.firstNonNull( cooldown, autoScalingGroup.getDefaultCooldown() ) );
     if ( !Objects.firstNonNull( honorCooldown, Boolean.FALSE ) ||
         ( System.currentTimeMillis() - autoScalingGroup.getCapacityTimestamp().getTime() ) > cooldownMs ) {
-      autoScalingGroup.setDesiredCapacity( capacity );
+      autoScalingGroup.updateDesiredCapacity( capacity );
       autoScalingGroup.setCapacityTimestamp( new Date() );
     } else {
       throw Exceptions.toUndeclared( new InternalFailureException("Group is in cooldown") );

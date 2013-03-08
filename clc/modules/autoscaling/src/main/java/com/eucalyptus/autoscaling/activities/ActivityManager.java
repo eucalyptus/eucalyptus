@@ -52,6 +52,7 @@ import com.eucalyptus.autoscaling.groups.TerminationPolicyType;
 import com.eucalyptus.autoscaling.instances.AutoScalingInstance;
 import com.eucalyptus.autoscaling.instances.AutoScalingInstances;
 import com.eucalyptus.autoscaling.instances.ConfigurationState;
+import com.eucalyptus.autoscaling.instances.HealthStatus;
 import com.eucalyptus.autoscaling.instances.LifecycleState;
 import com.eucalyptus.autoscaling.instances.PersistenceAutoScalingInstances;
 import com.eucalyptus.autoscaling.metadata.AutoScalingMetadataException;
@@ -212,12 +213,7 @@ public class ActivityManager {
     // Launch and terminate
     try {
       for ( final AutoScalingGroup group : autoScalingGroups.listRequiringScaling() ) {
-        int compareResult = group.getCapacity().compareTo( group.getDesiredCapacity() );
-        if ( compareResult < 0 ) {
-          runTask( new LaunchInstancesScalingProcessTask( group ) );
-        } else if ( compareResult > 0 ) {
-          runTask( perhapsTerminateInstances( group, group.getCapacity() - group.getDesiredCapacity() ) );
-        }
+        runTask( perhapsScale( group ) );
       }
     } catch ( Exception e ) {
       logger.error( e, e );
@@ -349,6 +345,28 @@ public class ActivityManager {
     return errors;
   }
 
+  private void setScalingNotRequired( final AutoScalingGroup group ) {
+    try {
+      updateScalingRequiredFlag( group, false );
+    } catch ( AutoScalingMetadataException e ) {
+      logger.error( e, e );
+    }
+  }
+
+  private void updateScalingRequiredFlag( final AutoScalingGroup group,
+                                          final boolean scalingRequired ) throws AutoScalingMetadataException {
+    autoScalingGroups.update(
+        group.getOwner(),
+        group.getAutoScalingGroupName(),
+        new Callback<AutoScalingGroup>(){
+          @Override
+          public void fire( final AutoScalingGroup autoScalingGroup ) {
+            if ( scalingRequired || group.getVersion().equals( autoScalingGroup.getVersion() ) )
+              autoScalingGroup.setScalingRequired( scalingRequired );
+          }
+        } );
+  }
+
   private TerminateInstancesScalingProcessTask terminateInstancesTask( final Iterable<AutoScalingInstance> groupInstances ) {
     return new TerminateInstancesScalingProcessTask(
         Iterables.get( groupInstances, 0 ).getAutoScalingGroup(),
@@ -426,6 +444,48 @@ public class ActivityManager {
       logger.error( e, e );
     }
     return removeFromLoadBalancerOrTerminate( group, group.getCapacity(), instancesToTerminate, true );
+  }
+
+  private ScalingProcessTask<?> perhapsScale( final AutoScalingGroup group ) {
+    final List<AutoScalingInstance> currentInstances;
+    try {
+      currentInstances = autoScalingInstances.listByGroup( group );
+    } catch ( final Exception e ) {
+      logger.error( e, e );
+      return new LaunchInstancesScalingProcessTask( group, 0 );
+    }
+
+    if ( group.getCapacity() > group.getDesiredCapacity() ) {
+      if ( !Iterables.all( currentInstances, Predicates.and( LifecycleState.InService, ConfigurationState.Registered, HealthStatus.Healthy ) ) ) {
+        // Wait for terminations / launches to complete before further scaling.
+        return new LaunchInstancesScalingProcessTask( group, 0 );
+      }
+      return perhapsTerminateInstances( group, group.getCapacity() - group.getDesiredCapacity() );
+    } else {
+      final List<String> zones =
+          Lists.transform( currentInstances, AutoScalingInstances.availabilityZone() );
+      final int expectedInstancesPerZone = group.getCapacity() / group.getAvailabilityZones().size();
+      int requiredInstances = 0;
+      for ( final String zone : group.getAvailabilityZones() ) {
+        int instanceCount = CollectionUtils.reduce( zones, 0, CollectionUtils.count( Predicates.equalTo( zone ) ) );
+        if ( instanceCount < expectedInstancesPerZone ) {
+          requiredInstances += expectedInstancesPerZone - instanceCount;
+        }
+      }
+
+      final int hardInstanceLimit = group.getDesiredCapacity() + Math.max( 1, group.getDesiredCapacity() / 10 );
+      if ( requiredInstances + group.getCapacity() > hardInstanceLimit ) {
+        requiredInstances = hardInstanceLimit - group.getCapacity();
+      } else if ( requiredInstances + group.getCapacity() < group.getDesiredCapacity() ) {
+        requiredInstances = group.getDesiredCapacity() - group.getCapacity();
+      }
+
+      if ( requiredInstances == 0 ) {
+        setScalingNotRequired( group );
+      }
+
+      return new LaunchInstancesScalingProcessTask( group, requiredInstances );
+    }
   }
 
   private AddToLoadBalancerScalingProcessTask addToLoadBalancer( final Iterable<AutoScalingInstance> unregisteredInstances ) {
@@ -951,10 +1011,6 @@ public class ActivityManager {
   private class LaunchInstancesScalingProcessTask extends ScalingProcessTask<LaunchInstanceScalingActivityTask> {
     private final int launchCount;
 
-    LaunchInstancesScalingProcessTask( final AutoScalingGroup group ) {
-      this( group, group.getDesiredCapacity() - group.getCapacity() );
-    }
-
     LaunchInstancesScalingProcessTask( final AutoScalingGroup group,
                                        final int launchCount ) {
       super( group, "Launch" );
@@ -989,9 +1045,16 @@ public class ActivityManager {
       }
 
       try {
+        final boolean scalingRequired =
+            instanceIds.size() != launchCount ||
+                getGroup().getCapacity() + launchCount != getGroup().getDesiredCapacity();
+
         autoScalingGroups.update( getOwner(), getGroup().getAutoScalingGroupName(), new Callback<AutoScalingGroup>(){
           @Override
           public void fire( final AutoScalingGroup autoScalingGroup ) {
+            if ( getGroup().getVersion().equals( autoScalingGroup.getVersion() ) ) {
+              autoScalingGroup.setScalingRequired( scalingRequired );
+            }
             autoScalingGroup.setCapacity( autoScalingGroup.getCapacity() + instanceIds.size() );
           }
         } );
@@ -1104,6 +1167,7 @@ public class ActivityManager {
       try {
         int failureCount = autoScalingInstances.registrationFailure( getGroup(), instanceIds );
         if ( failureCount > maxRegistrationRetries ) {
+          updateScalingRequiredFlag( getGroup(), true );
           autoScalingInstances.transitionState( getGroup(), LifecycleState.InService, LifecycleState.Terminating, instanceIds );
         }
       } catch ( final AutoScalingMetadataException e ) {
@@ -1288,15 +1352,15 @@ public class ActivityManager {
     }
   }
 
-  private abstract class TerminationInstancesScalingProcessTaskSupport extends ScalingProcessTask<TerminateInstanceScalingActivityTask> {
+  private abstract class TerminateInstancesScalingProcessTaskSupport extends ScalingProcessTask<TerminateInstanceScalingActivityTask> {
     private final List<String> instanceIds;
     private final boolean persist;
     private volatile int terminatedCount;
 
-    TerminationInstancesScalingProcessTaskSupport( final AutoScalingGroup group,
-                                                   final String activity,
-                                                   final List<String> instanceIds,
-                                                   final boolean persist ) {
+    TerminateInstancesScalingProcessTaskSupport( final AutoScalingGroup group,
+                                                 final String activity,
+                                                 final List<String> instanceIds,
+                                                 final boolean persist ) {
       super( group, activity );
       this.instanceIds = instanceIds;
       this.persist = persist;
@@ -1341,14 +1405,21 @@ public class ActivityManager {
       this.terminatedCount = terminatedCount;
 
       try {
+        final Boolean scalingRequired = !persist ?
+            null :
+            getGroup().getDesiredCapacity() != getGroup().getCapacity() - terminatedCount;
+
         autoScalingGroups.update(
             getOwner(),
             getGroup().getAutoScalingGroupName(),
             new Callback<AutoScalingGroup>(){
               @Override
               public void fire( final AutoScalingGroup autoScalingGroup ) {
+                if ( scalingRequired != null && getGroup().getVersion().equals( autoScalingGroup.getVersion() ) ) {
+                  autoScalingGroup.setScalingRequired( scalingRequired );
+                }
                 autoScalingGroup.setCapacity(
-                    Math.max( 0, getCurrentCapacity() - TerminationInstancesScalingProcessTaskSupport.this.terminatedCount ) );
+                    Math.max( 0, getCurrentCapacity() - TerminateInstancesScalingProcessTaskSupport.this.terminatedCount ) );
               }
             } );
       } catch ( AutoScalingMetadataNotFoundException e ) {
@@ -1359,7 +1430,7 @@ public class ActivityManager {
     }
   }
 
-  private class TerminateInstancesScalingProcessTask extends TerminationInstancesScalingProcessTaskSupport {
+  private class TerminateInstancesScalingProcessTask extends TerminateInstancesScalingProcessTaskSupport {
     private final int currentCapacity;
     private final boolean replace;
 
@@ -1386,7 +1457,7 @@ public class ActivityManager {
     }
   }
 
-  private class UserTerminateInstancesScalingProcessTask extends TerminationInstancesScalingProcessTaskSupport {
+  private class UserTerminateInstancesScalingProcessTask extends TerminateInstancesScalingProcessTaskSupport {
 
     UserTerminateInstancesScalingProcessTask( final AutoScalingGroup group,
                                               final List<String> instanceIds ) {

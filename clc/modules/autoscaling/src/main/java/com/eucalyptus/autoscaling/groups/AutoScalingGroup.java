@@ -111,8 +111,6 @@ public class AutoScalingGroup extends AbstractOwnedPersistent implements AutoSca
   @OrderColumn( name = "metadata_availability_zone_index")
   @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
   private List<String> availabilityZones = Lists.newArrayList();
-  
-  //TODO:STEVE: instances?
 
   @ElementCollection
   @CollectionTable( name = "metadata_auto_scaling_group_termination_policies" )
@@ -273,6 +271,18 @@ public class AutoScalingGroup extends AbstractOwnedPersistent implements AutoSca
     this.loadBalancerNames = loadBalancerNames;
   }
 
+  public void updateDesiredCapacity( final int desiredCapacity ) {
+    this.scalingRequired = scalingRequired || capacity == null || !capacity.equals( desiredCapacity );
+    this.desiredCapacity = desiredCapacity;
+  }
+
+  public void updateAvailabilityZones( final List<String> availabilityZones ) {
+    final Set<String> currentZones = Sets.newHashSet( this.availabilityZones );
+    final Set<String> newZones = Sets.newHashSet( availabilityZones );
+    this.scalingRequired = scalingRequired || !currentZones.equals( newZones );
+    this.availabilityZones = availabilityZones;
+  }
+
   @Override
   public String getArn() {
     return String.format(
@@ -344,7 +354,6 @@ public class AutoScalingGroup extends AbstractOwnedPersistent implements AutoSca
   @PrePersist
   @PreUpdate
   private void preUpdate() {
-    scalingRequired = capacity == null || !capacity.equals( desiredCapacity );
     if ( capacityTimestamp == null ) {
       capacityTimestamp = new Date();
     }
@@ -439,6 +448,7 @@ public class AutoScalingGroup extends AbstractOwnedPersistent implements AutoSca
           Collections.singletonList(TerminationPolicyType.Default) :
           Lists.newArrayList( terminationPolicies ) );
       group.setLoadBalancerNames( Lists.newArrayList( loadBalancerNames ) );
+      group.setScalingRequired( group.getDesiredCapacity() > 0 );
       return group;
     }
   }  
