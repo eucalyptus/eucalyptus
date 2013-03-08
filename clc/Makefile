@@ -65,16 +65,86 @@ include ../Makedefs
 theme_dir	= ${TOP}/clc/modules/www/src/main/java/com/eucalyptus/webui/public/themes
 web_prop_dir	= ${TOP}/clc/modules/www/conf
 
-.PHONY: all build update_properties update_theme deps extras install
+#
+# Default cloud-libs repository branch
+# Different branch can be specified by the user like this:
+#
+# $ make CLOUD_LIBS_BRANCH=mylibsbranch
+#
+CLOUD_LIBS_BRANCH?=master
 
-all: deps build
-test: deps build-test
+#
+# If this is set to anything but '0', we will completely
+# ignore git. That means the cloud-libs repository will
+# not be touched at all when updating dependencies, nor
+# will it be touched from the 'clean' target.
+#
+# When the git repository is first cloned or updated,
+# it will create a '.nogit' file. This will tell make not
+# to bother with git again unless the 'distclean' target
+# is run. When the 'distclean' target is run, the '.nogit'
+# file will be removed.
+#
+DISABLEGIT?=$(shell if test -f .nogit; then echo 1; else echo 0; fi)
 
-lib/bcprov.jar:
-	@mkdir -p ${TOP}/clc/lib
-	@git clone --depth=1 git://github.com/eucalyptus/eucalyptus-cloud-libs.git lib
+VERSION_MAJOR=$(shell echo $(VERSION) | cut -d. -f1)
+VERSION_MINOR=$(shell echo $(VERSION) | cut -d. -f2)
+VERSION_PATCH=$(shell echo $(VERSION) | cut -d. -f3)
 
-deps: lib/bcprov.jar
+#
+# Deal with specific dependency branches. If a version of
+# Eucalyptus needs a specific cloud-libs branch, then it
+# will be selected here.
+#
+# Note: This can be overridden by the user if they
+# specify a different branch when running make.
+#
+ifeq ($(VERSION_MAJOR), 3)
+    ifeq ($(VERSION_MINOR), 3)
+        CLOUD_LIBS_BRANCH=3.3
+    endif
+endif
+
+ifeq ($(DISABLEGIT), 0)
+    $(info Using cloud-libs branch $(CLOUD_LIBS_BRANCH))
+endif
+
+
+.PHONY: all build update_properties update_theme deps extras install gitcheck
+
+all: build
+test: build-test
+
+gitcheck:
+ifeq ($(DISABLEGIT), 0)
+	@if ! which git &>/dev/null; then \
+		echo "Must have git installed to retrieve dependencies" >&2; \
+		false; \
+	fi
+endif
+
+deps: gitcheck
+ifeq ($(DISABLEGIT), 0)
+	# 
+	# Note to the developer: there are three possible scenarios for
+	# updating dependencies.
+	# 
+	# 1. A cloud-libs git repository exists in 'lib'. We'll update it.
+	# 2. The 'lib' directory is not a git repository and we assume you
+	#    know what you're doing. We won't touch it.
+	# 3. There is no 'lib' directory, so we'll checkout cloud-libs.
+	#
+	@if grep -q eucalyptus-cloud-libs\.git lib/.git/config 2>/dev/null; then \
+		cd $(PWD)/lib && git checkout $(CLOUD_LIBS_BRANCH); \
+		cd $(PWD)/lib && git pull origin $(CLOUD_LIBS_BRANCH); \
+	elif [ -d lib/ ]; then \
+		echo "lib is not a git repository so ignoring; good luck!" >&2; \
+	else \
+		git clone --depth=1 -b $(CLOUD_LIBS_BRANCH) git://github.com/eucalyptus/eucalyptus-cloud-libs.git lib; \
+	fi
+	@# Only do this once
+	@touch .nogit
+endif
 
 update_properties: ${web_prop_dir}/eucalyptus-web.properties
 
@@ -123,12 +193,21 @@ build-test: deps extras
 indent:
 	$(ANT) indent
 	
-clean: deps
+clean: gitcheck
 	$(ANT) clean
 	make -C eucadmin clean
+ifeq ($(DISABLEGIT), 0)
+	@if grep -q eucalyptus-cloud-libs\.git lib/.git/config 2>/dev/null; then \
+		# Remove untracked files from the cloud-libs repository \
+		cd $(PWD)/lib && git clean -f -d; \
+		# Hard reset and modifications \
+		cd $(PWD)/lib && git reset --hard HEAD; \
+	fi
+endif
 
 distclean: clean
-	rm -rf ${TOP}/deps ${TOP}/lib
+	rm -rf ${TOP}/{deps,lib}
+	rm -f .nogit
 	$(ANT) distclean
 	make -C eucadmin distclean
 
@@ -139,7 +218,6 @@ install: build
 install-test: build-test
 	@ANT_OPTS="-Xmx1g -XX:MaxPermSize=256m" $(ANT) install
 	@make -C eucadmin install
-
 
 deploy: install
 
