@@ -33,6 +33,7 @@ import com.eucalyptus.configurable.ConfigurableField;
 import com.eucalyptus.configurable.ConfigurableFieldType;
 import com.eucalyptus.crypto.util.B64;
 import com.eucalyptus.empyrean.ServiceStatusType;
+import com.eucalyptus.loadbalancing.activities.EventHandlerChainNew.SecurityGroupSetup;
 import com.eucalyptus.util.Exceptions;
 import com.google.common.collect.Lists;
 /**
@@ -72,6 +73,10 @@ public class LoadbalancerInstanceLauncher extends AbstractEventHandler<NewLoadba
 	// Assume the request parameters and the resulting resource allocation is validated in the admission control step
 	@Override
 	public void apply(NewLoadbalancerEvent evt) throws EventHandlerException {
+		StoredResult<String> sgroupSetup = this.getChain().findHandler(SecurityGroupSetup.class);
+		final List<String> group = sgroupSetup.getResult();
+		final String groupName = group.size()>0 ? group.get(0) : null;
+		
 		final Collection<String> zones = evt.getZones();
 		for (String zoneToLaunch : zones){
 			InstanceUserDataBuilder userDataBuilder  = null;
@@ -85,7 +90,7 @@ public class LoadbalancerInstanceLauncher extends AbstractEventHandler<NewLoadba
 			try{
 				instanceIds = 
 						EucalyptusActivityTasks.getInstance().launchInstances(zoneToLaunch, 
-								LOADBALANCER_EMI, LOADBALANCER_INSTANCE_TYPE, this.numInstancesToLaunch, userDataBuilder.build());
+								LOADBALANCER_EMI, LOADBALANCER_INSTANCE_TYPE, groupName, this.numInstancesToLaunch, userDataBuilder.build());
 				StringBuilder sb = new StringBuilder();
 				for (String id : instanceIds)
 					sb.append(id+" ");

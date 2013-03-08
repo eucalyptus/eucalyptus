@@ -19,8 +19,6 @@
  ************************************************************************/
 package com.eucalyptus.loadbalancing.activities;
 
-import java.util.NoSuchElementException;
-
 import javax.persistence.Column;
 import javax.persistence.JoinColumn;
 import javax.persistence.ManyToOne;
@@ -34,18 +32,11 @@ import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
 import org.hibernate.annotations.Entity;
 
-import com.eucalyptus.auth.principal.UserFullName;
 import com.eucalyptus.entities.AbstractPersistent;
-import com.eucalyptus.entities.Entities;
 import com.eucalyptus.loadbalancing.LoadBalancer;
 import com.eucalyptus.loadbalancing.LoadBalancerBackendInstance;
+import com.eucalyptus.loadbalancing.LoadBalancerSecurityGroup;
 import com.eucalyptus.loadbalancing.LoadBalancerZone;
-import com.eucalyptus.loadbalancing.LoadBalancers;
-import com.eucalyptus.util.Exceptions;
-import com.eucalyptus.vm.VmInstance;
-import com.eucalyptus.vm.VmInstances;
-
-import edu.ucsb.eucalyptus.cloud.InvalidParameterValueException;
 
 /**
  * @author Sang-Min Park (spark@eucalyptus.com)
@@ -61,12 +52,16 @@ public class LoadBalancerServoInstance extends AbstractPersistent {
 	private static final long serialVersionUID = 1L;
 	
 	enum STATE {
-		Pending, InService, OutOfService
+		Pending, InService, Error, OutOfService
 	}
 	
     @ManyToOne
-    @JoinColumn( name = "metadata_zone_fk", nullable=false)
+    @JoinColumn( name = "metadata_zone_fk", nullable=true)
     private LoadBalancerZone zone = null;
+    
+    @ManyToOne
+    @JoinColumn( name = "metadata_group_fk", nullable=true)
+    private LoadBalancerSecurityGroup group = null;
         
     @Transient
     private LoadBalancer loadbalancer = null;
@@ -81,13 +76,19 @@ public class LoadBalancerServoInstance extends AbstractPersistent {
     private String uniqueName = null;
 
     private LoadBalancerServoInstance(){
-    	this.state= STATE.Pending.name();
     }
     private LoadBalancerServoInstance(final LoadBalancerZone lbzone){
     	this.state = STATE.Pending.name();
     	this.zone = lbzone;
     	this.loadbalancer = zone.getLoadbalancer();
     }
+    private LoadBalancerServoInstance(final LoadBalancerZone lbzone, final LoadBalancerSecurityGroup group){
+    	this.state = STATE.Pending.name();
+    	this.zone = lbzone;
+    	this.loadbalancer = zone.getLoadbalancer();
+    	this.group = group;
+    }
+    
     
     public static LoadBalancerServoInstance named(final LoadBalancerZone lbzone){
     	final LoadBalancerServoInstance sample = new LoadBalancerServoInstance(lbzone);
@@ -97,6 +98,12 @@ public class LoadBalancerServoInstance extends AbstractPersistent {
     public static LoadBalancerServoInstance named(String instanceId){
     	final LoadBalancerServoInstance sample = new LoadBalancerServoInstance();
     	sample.instanceId = instanceId;
+    	return sample;
+    }
+    
+    public static LoadBalancerServoInstance withState(String state){
+    	final LoadBalancerServoInstance sample = new LoadBalancerServoInstance();
+    	sample.state = state;
     	return sample;
     }
     
@@ -110,6 +117,10 @@ public class LoadBalancerServoInstance extends AbstractPersistent {
     	return this.zone;
     }
     
+    public void leaveZone(){
+    	this.zone = null;
+    }
+    
     public void setInstanceId(String id){
     	this.instanceId = id;
     }
@@ -117,6 +128,19 @@ public class LoadBalancerServoInstance extends AbstractPersistent {
     public String getInstanceId(){
     	return this.instanceId;
     }
+    
+    public void setState(STATE update){
+    	this.state = update.name();
+    }
+    
+    public STATE getState(){
+    	return Enum.valueOf(STATE.class, this.state);
+    }
+    
+    public void setSecurityGroup(LoadBalancerSecurityGroup group){
+    	this.group=group;
+    }
+    
 
 	@PrePersist
 	private void generateOnCommit( ) {

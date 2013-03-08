@@ -21,7 +21,6 @@ package com.eucalyptus.loadbalancing;
 
 import java.util.Collection;
 
-import javax.persistence.CascadeType;
 import javax.persistence.Column;
 import javax.persistence.FetchType;
 import javax.persistence.JoinColumn;
@@ -36,78 +35,80 @@ import org.apache.log4j.Logger;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
 import org.hibernate.annotations.Entity;
+
 import com.eucalyptus.entities.AbstractPersistent;
 import com.eucalyptus.loadbalancing.activities.LoadBalancerServoInstance;
 
 /**
- * @author Sang-Min Park
-*
-*/
+ * @author Sang-Min Park (spark@eucalyptus.com)
+ *
+ */
+
 @Entity @javax.persistence.Entity
 @PersistenceContext( name = "eucalyptus_loadbalancing" )
-@Table( name = "metadata_zone" )
+@Table( name = "metadata_group" )
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
-public class LoadBalancerZone extends AbstractPersistent {
-	private static Logger    LOG     = Logger.getLogger( LoadBalancerZone.class );
+public class LoadBalancerSecurityGroup extends AbstractPersistent {
+	private static Logger    LOG     = Logger.getLogger( LoadBalancerSecurityGroup.class );
 
 	@Transient
 	private static final long serialVersionUID = 1L;
 
-	private LoadBalancerZone(){}
+	private LoadBalancerSecurityGroup(){}
 	
-	private LoadBalancerZone(final LoadBalancer lb, final String zone){
+	public LoadBalancerSecurityGroup(LoadBalancer lb, String groupName){
 		this.loadbalancer = lb;
-		this.zoneName=zone;
+		this.groupName = groupName;
 	}
-	public static LoadBalancerZone newInstance(final LoadBalancer lb, final String zone){
-		return new LoadBalancerZone(lb, zone);
+	
+	public static LoadBalancerSecurityGroup named(){
+		return new LoadBalancerSecurityGroup(); // query all
 	}
-	public static LoadBalancerZone named(final LoadBalancer lb, final String zone){
-		return new LoadBalancerZone(lb, zone);
+
+	public static LoadBalancerSecurityGroup named(String groupName){
+		final LoadBalancerSecurityGroup instance = new LoadBalancerSecurityGroup();
+		instance.groupName = groupName;
+		return instance;
 	}
 	
     @ManyToOne
-    @JoinColumn( name = "metadata_loadbalancer_fk" )
+    @JoinColumn( name = "metadata_loadbalancer_fk", nullable=true)
     private LoadBalancer loadbalancer = null;
 
-	@Column(name="zone_name", nullable=false)
-	private String zoneName = null;
-
-	@OneToMany(fetch = FetchType.LAZY, mappedBy = "zone")
+	@Column(name="group_name", nullable=false)
+    private String groupName = null;
+    
+	@OneToMany(fetch = FetchType.LAZY, mappedBy = "group")
     @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
 	private Collection<LoadBalancerServoInstance> servoInstances = null;
-	
-	@OneToMany(fetch = FetchType.LAZY, cascade = CascadeType.ALL, orphanRemoval = true, mappedBy = "zone")
-    @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
-	private Collection<LoadBalancerBackendInstance> backendInstances = null;
-	
+
 	@Column(name="metadata_unique_name", nullable=false, unique=true)
 	private String uniqueName = null;
 	
+	public String getName(){
+		return this.groupName;
+	}
+	public Collection<LoadBalancerServoInstance> getServoInstances(){
+		return this.servoInstances;
+	}
+	
+	public LoadBalancer getLoadBalancer(){
+		return this.loadbalancer;
+	}
+	
+	public void setLoadBalancer(final LoadBalancer lb){
+		this.loadbalancer = lb;
+	}
+
 	@PrePersist
 	private void generateOnCommit( ) {
 		this.uniqueName = createUniqueName( );
 	}
 
 	private String createUniqueName(){
-		return String.format("%s-zone-%s", this.loadbalancer.getDisplayName(), this.zoneName);
+		return String.format("loadbalancer-sgroup-%s", this.groupName);
 	}
 	
-	public String getName(){
-		return this.zoneName;
-	}
-	
-	public LoadBalancer getLoadbalancer(){
-		return this.loadbalancer;
-	}
-	
-	public Collection<LoadBalancerServoInstance> getServoInstances(){
-		return servoInstances;
-	}
-	
-	public Collection<LoadBalancerBackendInstance> getBackendInstances(){
-		return backendInstances;
-	}
 	
 	@Override
 	public int hashCode( ) {
@@ -127,7 +128,7 @@ public class LoadBalancerZone extends AbstractPersistent {
 		if ( getClass( ) != obj.getClass( ) ) {
 			return false;
 		}
-		LoadBalancerZone other = ( LoadBalancerZone ) obj;
+		LoadBalancerSecurityGroup other = ( LoadBalancerSecurityGroup ) obj;
 		if ( this.uniqueName == null ) {
 			if ( other.uniqueName != null ) {
 				return false;

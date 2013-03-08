@@ -50,6 +50,7 @@ public class LoadBalancers {
 			 db.commit();
 			 return lb;
 		 }catch(NoSuchElementException ex){
+			 db.rollback();
 			 throw ex;
 		 }catch(TransactionException ex){
 			 db.rollback( );
@@ -87,6 +88,7 @@ public class LoadBalancers {
 			Entities.delete(lb);
 			db.commit();
 		}catch (NoSuchElementException e){
+			db.rollback();
 			throw new LoadBalancingException("No loadbalancer is found with name = "+lbName, e);
 		}catch (Exception e){
 			db.rollback();
@@ -186,8 +188,8 @@ public class LoadBalancers {
 				Entities.persist(newZone);
 				db.commit();
 			}catch(Exception ex){
-				LOG.error("failed to persist the zone "+zone, ex);
 				db.rollback();
+				LOG.error("failed to persist the zone "+zone, ex);
 			}
 		}  
 	}
@@ -206,10 +208,11 @@ public class LoadBalancers {
 				Entities.delete(exist);
 				db.commit();
 			}catch(NoSuchElementException ex){
+				db.rollback();
 				LOG.debug(String.format("zone %s not found for %s", zone, lbName));
 			}catch(Exception ex){
-				LOG.error("failed to delete the zone "+zone, ex);
 				db.rollback();
+				LOG.error("failed to delete the zone "+zone, ex);
 			}
 		}
 	}
@@ -221,8 +224,10 @@ public class LoadBalancers {
 			db.commit();
 			return exist;
 		}catch(NoSuchElementException ex){
+			db.rollback();
 			throw ex;
 		}catch(Exception ex){
+			db.rollback();
 			throw Exceptions.toUndeclared(ex);
 		}
 	}
