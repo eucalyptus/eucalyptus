@@ -101,7 +101,8 @@ public class HttpReader extends HttpTransfer {
 		String httpVerb = "GET";
 		String addr = StorageProperties.WALRUS_URL + "/" + path;
 
-		method = constructHttpMethod(httpVerb, addr, eucaOperation, eucaHeader);
+		method = constructHttpMethod(httpVerb, addr, eucaOperation, eucaHeader,true);
+		//signEucaInternal(method);
 	}
 
 	public HttpReader(String path, LinkedBlockingQueue<WalrusDataMessage> getQueue, File file, String eucaOperation, String eucaHeader, boolean compressed, String tempPath) {

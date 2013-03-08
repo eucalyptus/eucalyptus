@@ -74,12 +74,12 @@
  |                                                                            |
 \*----------------------------------------------------------------------------*/
 
-#define _FILE_OFFSET_BITS 64           // so large-file support works on 32-bit systems
+#define _FILE_OFFSET_BITS 64    // so large-file support works on 32-bit systems
 #include <stdio.h>
 #include <stdlib.h>
 #define _GNU_SOURCE
-#include <string.h>                    // strlen, strcpy
-#include <ctype.h>                     // isspace
+#include <string.h>             // strlen, strcpy
+#include <ctype.h>              // isspace
 #include <assert.h>
 #include <stdarg.h>
 #include <sys/types.h>
@@ -87,16 +87,16 @@
 #include <sys/vfs.h>
 #include <unistd.h>
 #include <time.h>
-#include <math.h>                      // powf
-#include <fcntl.h>                     // open
-#include <utime.h>                     // utime
+#include <math.h>               // powf
+#include <fcntl.h>              // open
+#include <utime.h>              // utime
 #include <sys/wait.h>
 #include <pwd.h>
-#include <dirent.h>                    // opendir, etc
-#include <sys/errno.h>                 // errno
-#include <sys/time.h>                  // gettimeofday
+#include <dirent.h>             // opendir, etc
+#include <sys/errno.h>          // errno
+#include <sys/time.h>           // gettimeofday
 #include <limits.h>
-#include <sys/mman.h>                  // mmap
+#include <sys/mman.h>           // mmap
 #include <pthread.h>
 
 #include "eucalyptus.h"
@@ -290,7 +290,7 @@ int verify_helpers(char **helpers, char **helpers_path, int num_helpers)
             if (!rc && S_ISREG(statbuf.st_mode)) {
                 done++;
             }
-        } else {                       // no full path was given, so search $PATH
+        } else {                // no full path was given, so search $PATH
             if ((tok = getenv("PATH")) == NULL) {
                 missing_helpers = -1;
                 goto cleanup;
@@ -414,7 +414,7 @@ int add_euca_to_path(const char *euca_home_supplied)
         old_path = "";
 
     snprintf(new_path, sizeof(new_path), EUCALYPTUS_DATA_DIR ":"    // (connect|disconnect iscsi, get_xen_info, getstats, get_sys_info)
-             EUCALYPTUS_SBIN_DIR ":"   // (eucalyptus-cloud, euca_conf, euca_sync_key, euca-* admin commands)
+             EUCALYPTUS_SBIN_DIR ":"    // (eucalyptus-cloud, euca_conf, euca_sync_key, euca-* admin commands)
              EUCALYPTUS_LIBEXEC_DIR ":" // (rootwrap, mountwrap)
              "%s", euca_home, euca_home, euca_home, old_path);
 
@@ -718,7 +718,6 @@ int check_block(const char *file)
 
     rc = lstat(rpath, &mystat);
     EUCA_FREE(rpath);
-
     if ((rc < 0) || !S_ISBLK(mystat.st_mode)) {
         return (1);
     }
@@ -865,7 +864,7 @@ char *fp2str(FILE * fp)
         buf = new_buf;
         LOGEXTREME("enlarged buf to %d\n", buf_max);
 
-        do {                           // read in until EOF or buffer is full
+        do {                    // read in until EOF or buffer is full
             last_read = fgets(buf + buf_current, buf_max - buf_current, fp);
             if (last_read != NULL) {
                 buf_current = strlen(buf);
@@ -1214,7 +1213,7 @@ int hash_code_bin(const char *buf, int buf_size)
 char *get_string_stats(const char *s)
 {
     size_t len = 0;
-    static char out[OUTSIZE] = "";     //! @todo malloc this?
+    static char out[OUTSIZE] = "";  //! @todo malloc this?
 
     out[0] = '\0';
     if ((s != NULL) && (s[0] != '\0')) {
@@ -1273,7 +1272,7 @@ int daemonmaintain(char *cmd, char *procname, char *pidfile, int force, char *ro
                         fclose(FH);
                     }
                 }
-
+                
                 EUCA_FREE(pidstr);
             }
         }
@@ -1514,7 +1513,7 @@ int diff(const char *path1, const char *path2)
 
         close(fd1);
         close(fd2);
-        return (-(read1 + read2));     // both should be 0s if files are equal
+        return (-(read1 + read2));  // both should be 0s if files are equal
     }
     return EUCA_ERROR;
 }
@@ -1755,11 +1754,11 @@ char *file2str_seek(char *file, size_t size, int mode)
 //!
 int uint32compar(const void *ina, const void *inb)
 {
-    uint32_t a = 0;
-    uint32_t b = 0;
+    u32 a = 0;
+    u32 b = 0;
 
-    a = (*(uint32_t *) ina);
-    b = (*(uint32_t *) inb);
+    a = (*(u32 *) ina);
+    b = (*(u32 *) inb);
 
     if (a < b) {
         return (-1);
@@ -1985,12 +1984,12 @@ static char *next_tag(const char *xml, int *start, int *end, int *single, int *c
     const char *last_ch = NULL;
 
     for (p = xml; *p; p++) {
-        if (*p == '<') {               // found a new tag
-            tag_start = (p - xml);     // record the char so its offset can be returned
+        if (*p == '<') {        // found a new tag
+            tag_start = (p - xml);  // record the char so its offset can be returned
 
             *closing = 0;
             if ((*(p + 1) == '/') || (*(p + 1) == '?')) {
-                if (*(p + 1) == '/')   // if followed by '/' then it is a "closing" tag
+                if (*(p + 1) == '/')    // if followed by '/' then it is a "closing" tag
                     *closing = 1;
                 name_start = (p - xml + 2);
                 p++;
@@ -2006,15 +2005,15 @@ static char *next_tag(const char *xml, int *start, int *end, int *single, int *c
         }
 
         if (*p == '>') {
-            if (name_start == -1)      // never saw '<', error
+            if (name_start == -1)   // never saw '<', error
                 break;
 
-            if (p < (xml + 2))         // tag is too short, error
+            if (p < (xml + 2))  // tag is too short, error
                 break;
 
             last_ch = p - 1;
             if ((*last_ch == '/') || (*last_ch == '?')) {
-                *single = 1;           // preceded by '/' then it is a "single" tag
+                *single = 1;    // preceded by '/' then it is a "single" tag
                 last_ch--;
             } else {
                 *single = 0;
@@ -2082,14 +2081,14 @@ static char *find_cont(const char *xml, char *xpath)
     for (xml_offset = 0; (name = next_tag(xml + xml_offset, &tag_start, &tag_end, &single, &closing)) != NULL; xml_offset += tag_end + 1) {
         if (single) {
             // not interested in singles because we are looking for content
-        } else if (!closing) {         // opening a tag
+        } else if (!closing) {  // opening a tag
             // put name and pointer to content onto the stack
             stk_p++;
-            if (stk_p == _STK_SIZE)    // exceeding stack size, error
+            if (stk_p == _STK_SIZE) // exceeding stack size, error
                 goto cleanup;
             n_stk[stk_p] = euca_strduptolower(name);    // put a lower-case-only copy onto stack
             c_stk[stk_p] = xml + xml_offset + tag_end + 1;
-        } else {                       // closing tag
+        } else {                // closing tag
             // get the name in all lower-case, for consistency with xpath
             name_lc = euca_strduptolower(name);
             EUCA_FREE(name);
@@ -2105,14 +2104,13 @@ static char *find_cont(const char *xml, char *xpath)
             xpath_cur[0] = '\0';
             for (i = 0, xpathLen = MAX_PATH - 1; i <= stk_p; i++) {
                 if (i > 0) {
-                    strncat(xpath_cur, "/", (xpathLen - strlen(xpath_cur)));
+                    strncat(xpath_cur, "/", (xpathLen - strlen(xpath_cur) - 1));
                 }
-
-                strncat(xpath_cur, n_stk[i], (xpathLen - strlen(xpath_cur)));
+                strncat(xpath_cur, n_stk[i], (xpathLen - strlen(xpath_cur) - 1));
             }
 
             // pop the stack whether we have a match or not
-            if (stk_p < 0)             // past the bottom of the stack, error
+            if (stk_p < 0)      // past the bottom of the stack, error
                 goto cleanup;
 
             contp = c_stk[stk_p];
@@ -2134,9 +2132,9 @@ static char *find_cont(const char *xml, char *xpath)
     }
 
 cleanup:
-    EUCA_FREE(name);                   // for exceptions
+    EUCA_FREE(name);            // for exceptions
     for (i = 0; i <= stk_p; i++)
-        EUCA_FREE(n_stk[i]);           // free everything on the stack
+        EUCA_FREE(n_stk[i]);    // free everything on the stack
     return (ret);
 
 #undef _STK_SIZE
@@ -2335,7 +2333,7 @@ int ensure_directories_exist(const char *path, int is_file_path, const char *use
                     return (-1);
                 }
 
-                ret = 1;               // we created a directory
+                ret = 1;        // we created a directory
 
                 if (diskutil_ch(path_copy, user, group, mode) != EUCA_OK) {
                     LOGERROR("failed to change perms on path %s\n", path_copy);
@@ -2344,7 +2342,7 @@ int ensure_directories_exist(const char *path, int is_file_path, const char *use
                 }
             }
 
-            path_copy[i] = '/';        // restore the slash
+            path_copy[i] = '/'; // restore the slash
         }
     }
 
@@ -2483,11 +2481,11 @@ int drop_privs(void)
     int s = 0;
     struct passwd pwd = { 0 };
     struct passwd *result = NULL;
-    char buf[16384] = { 0 };           // man-page said this is enough
+    char buf[16384] = { 0 };    // man-page said this is enough
 
     s = getpwnam_r(EUCALYPTUS_ADMIN, &pwd, buf, sizeof(buf), &result);
     if (result == NULL)
-        return (EUCA_ERROR);           // not found if s==0, check errno otherwise
+        return (EUCA_ERROR);    // not found if s==0, check errno otherwise
 
     if (setgid(pwd.pw_gid) != 0)
         return (EUCA_ERROR);
@@ -2698,5 +2696,4 @@ int main(int argc, char **argv)
 
     return (0);
 }
-
 #endif // _UNIT_TEST

@@ -78,10 +78,10 @@
 \*----------------------------------------------------------------------------*/
 
 #include "eucalyptus.h"
-#include "data.h"                      // for ncInstance
+#include "data.h"               // for ncInstance
 #include "sensor.h"
 #include "euca_string.h"
-#include "adb_instanceType.h"          // for copy_instance_*
+#include "adb_instanceType.h"   // for copy_instance_*
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |
@@ -140,7 +140,8 @@ static inline int copy_sensor_dimension_from_adb(sensorDimension * sd, adb_metri
 static inline int copy_sensor_counter_from_adb(sensorCounter * sc, adb_metricCounterType_t * counter, axutil_env_t * env);
 static inline int copy_sensor_metric_from_adb(sensorMetric * sm, adb_metricsResourceType_t * metric, axutil_env_t * env);
 static inline sensorResource *copy_sensor_resource_from_adb(adb_sensorsResourceType_t * resource, axutil_env_t * env) _attribute_wur_;
-static inline adb_sensorsResourceType_t *copy_sensor_resource_to_adb(const axutil_env_t * env, const sensorResource * sr, int history_size) _attribute_wur_;
+static inline adb_sensorsResourceType_t *copy_sensor_resource_to_adb(const axutil_env_t * env, const sensorResource * sr,
+                                                                     int history_size) _attribute_wur_;
 static inline void copy_instance_to_adb(adb_instanceType_t * instance, const axutil_env_t * env, ncInstance * outInst);
 static inline ncInstance *copy_instance_from_adb(adb_instanceType_t * instance, const axutil_env_t * env);
 
@@ -294,7 +295,7 @@ static inline axutil_date_time_t *unixms_to_datetime(const axutil_env_t * env, l
 
     if (env != NULL) {
         tzset();
-        sec += timezone;               // seconds west of UTC to account for TZ
+        sec += timezone;        // seconds west of UTC to account for TZ
         localtime_r(&sec, &t);
         dt = axutil_date_time_create(env);
         axutil_date_time_set_date_time(dt, env, (t.tm_year + 1900), (t.tm_mon + 1), t.tm_mday, t.tm_hour, t.tm_min, t.tm_sec, msec);
@@ -325,9 +326,11 @@ static inline void copy_vm_type_from_adb(virtualMachine * params, adb_virtualMac
         params->virtualBootRecordLen = adb_virtualMachineType_sizeof_virtualBootRecord(vm_type, env);
         for (i = 0; ((i < EUCA_MAX_VBRS) && (i < params->virtualBootRecordLen)); i++) {
             if ((vbr_type = adb_virtualMachineType_get_virtualBootRecord_at(vm_type, env, i)) != NULL) {
-                euca_strncpy(params->virtualBootRecord[i].resourceLocation, adb_virtualBootRecordType_get_resourceLocation(vbr_type, env), CHAR_BUFFER_SIZE);
+                euca_strncpy(params->virtualBootRecord[i].resourceLocation, adb_virtualBootRecordType_get_resourceLocation(vbr_type, env),
+                             CHAR_BUFFER_SIZE);
                 LOGTRACE("resource location: %s\n", params->virtualBootRecord[i].resourceLocation);
-                euca_strncpy(params->virtualBootRecord[i].guestDeviceName, adb_virtualBootRecordType_get_guestDeviceName(vbr_type, env), SMALL_CHAR_BUFFER_SIZE);
+                euca_strncpy(params->virtualBootRecord[i].guestDeviceName, adb_virtualBootRecordType_get_guestDeviceName(vbr_type, env),
+                             SMALL_CHAR_BUFFER_SIZE);
                 LOGTRACE("   guest dev name: %s\n", params->virtualBootRecord[i].guestDeviceName);
                 params->virtualBootRecord[i].sizeBytes = (long long)adb_virtualBootRecordType_get_size(vbr_type, env);
                 LOGTRACE("             size: %lld\n", params->virtualBootRecord[i].sizeBytes);
@@ -695,7 +698,8 @@ static inline adb_sensorsResourceType_t *copy_sensor_resource_to_adb(const axuti
                 adb_metricCounterType_set_type(counter, env, sensor_type2str(sc->type));
                 adb_metricCounterType_set_collectionIntervalMs(counter, env, sc->collectionIntervalMs);
                 if ((sc->dimensionsLen < 0) || (sc->dimensionsLen > MAX_SENSOR_DIMENSIONS)) {
-                    LOGERROR("inconsistency in sensor database (dimensionsLen=%d for %s:%s:%s)\n", sc->dimensionsLen, sr->resourceName, sm->metricName, sensor_type2str(sc->type));
+                    LOGERROR("inconsistency in sensor database (dimensionsLen=%d for %s:%s:%s)\n", sc->dimensionsLen, sr->resourceName,
+                             sm->metricName, sensor_type2str(sc->type));
                     return resource;
                 }
                 // First, sanity check the values. All dimensions must have same number of values.
@@ -735,7 +739,8 @@ static inline adb_sensorsResourceType_t *copy_sensor_resource_to_adb(const axuti
                 for (d = 0; d < sc->dimensionsLen; d++) {
                     sd = sc->dimensions + d;
                     if ((dimension = adb_metricDimensionsType_create(env)) == NULL) {
-                        LOGERROR("failed to create metric dimension type for %s:%s:%s:%s\n", sr->resourceName, sm->metricName, sensor_type2str(sc->type), sd->dimensionName);
+                        LOGERROR("failed to create metric dimension type for %s:%s:%s:%s\n", sr->resourceName, sm->metricName,
+                                 sensor_type2str(sc->type), sd->dimensionName);
                         return (resource);
                     }
 
@@ -744,7 +749,8 @@ static inline adb_sensorsResourceType_t *copy_sensor_resource_to_adb(const axuti
                         v_adj = (sd->firstValueIndex + v) % MAX_SENSOR_VALUES;
                         sv = sd->values + v_adj;
                         if ((value = adb_metricDimensionsValuesType_create(env)) == NULL) {
-                            LOGERROR("failed to create metric dimension value for %s:%s:%s:%s\n", sr->resourceName, sm->metricName, sensor_type2str(sc->type), sd->dimensionName);
+                            LOGERROR("failed to create metric dimension value for %s:%s:%s:%s\n", sr->resourceName, sm->metricName,
+                                     sensor_type2str(sc->type), sd->dimensionName);
                             return (resource);
                         }
 
@@ -785,7 +791,8 @@ static inline adb_sensorsResourceType_t *copy_sensor_resource_to_adb(const axuti
         }
     }
 
-    LOGTRACE("marshalled %d metrics %d counters %d dimensions %d sensor values\n", total_num_metrics, total_num_counters, total_num_dimensions, total_num_values);
+    LOGTRACE("marshalled %d metrics %d counters %d dimensions %d sensor values\n", total_num_metrics, total_num_counters, total_num_dimensions,
+             total_num_values);
 
     return (resource);
 }

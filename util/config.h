@@ -105,8 +105,8 @@
 
 //! key/pair configuration structure
 typedef struct configEntry_t {
-    char *key;                         //!< Keyname of the configuration entry
-    char *defaultValue;                //!< Default value of the configuration entry
+    char *key;                  //!< Keyname of the configuration entry
+    char *defaultValue;         //!< Default value of the configuration entry
 } configEntry;
 
 /*----------------------------------------------------------------------------*\
