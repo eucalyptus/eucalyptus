@@ -99,6 +99,8 @@
                 };
              };
 */
+             // Store the unedited row data here
+
              // For each row of dataTable, add an extra column for the dual button. 
 	     thisObj.baseTable.find('tbody').find('tr').each(function(index, tr){
                  var $currentRow = $(tr);
@@ -108,7 +110,7 @@
                   // Prevent the dataTable's sorting from altering the states of the table view               
                  if( !($currentRow.children().last().hasClass('resource-tag-table-extra-td')) ){              
  
-                   var keyForId = key.replace(' ', '-');
+                   var keyForId = $.md5(key);   // Convert the key into MD5 hash value to be used as an identifier
                    var buttonSpan = $('<span>').addClass('dual-tag-button-span').attr('id', 'dualButtonSpan-'+keyForId);
                    var editButton = $('<a>').addClass('button dual-tag-button').attr('id', 'dualButton-edit-'+keyForId).text('edit').hide();
                    var removeButton = $('<a>').addClass('button dual-tag-button').attr('id', 'dualButton-remove-'+keyForId).text('remove').hide();
@@ -164,7 +166,7 @@
 
                        var newKey = tdResourceTagEdit.find('#tag_key').val();
                        var newValue = tdResourceTagEdit.find('#tag_value').val();
-                       jQuery.data(thisObj.alteredRow, key, {key: newKey, value: newValue});
+                       jQuery.data(thisObj.alteredRow, key, {key: newKey, value: newValue, prev_key: key, prev_value: value});
                        thisObj.baseTable.fnUpdate({"name": newKey, "value": newValue}, thisObj.baseTable.fnGetPosition($(this).closest("tr").get(0)));
                        tdResourceTagEdit.remove();
                        $currentRow.children().show();
@@ -269,18 +271,134 @@
     },
  
     _clickedSaveButton: function(){
-      alert("Save Button Clicked. Call Ajax");
-      // NEED TO CALL AJAX HERE
+      var thisObj = this;
+//      alert("Save Button Clicked. Call Ajax");
+      thisObj._processEditedTags();
+      jQuery.removeData(thisObj.alteredRow);   //remove 'altered row' data
+      jQuery.removeData(thisObj.removedRow);   //remove 'removed row' data
+      jQuery.removeData(thisObj.addedRow);     //remove 'added row' data
       thisObj.baseTable.fnReloadAjax();        //Reload the table
     },
 
     _clickedCancelButton: function(){
       var thisObj = this;
-      alert("Cancel Button Clicked");
+//      alert("Cancel Button Clicked");
       jQuery.removeData(thisObj.alteredRow);   //remove 'altered row' data
       jQuery.removeData(thisObj.removedRow);   //remove 'removed row' data
       jQuery.removeData(thisObj.addedRow);     //remove 'added row' data
       thisObj.baseTable.fnReloadAjax();        //Reload the table
+    },
+
+    _processEditedTags: function(){
+      var thisObj = this;
+
+      // Process Added Rows
+      var addedRowData = jQuery.data(thisObj.addedRow);   // Retreive the added row data
+      for(thisKey in addedRowData) {
+        var thisData = addedRowData[thisKey];
+        if( thisData.key != null ){   // if the stored data contains sub key-value pair,
+           var newKey = jQuery.data(thisObj.addedRow, thisKey).key;
+           var newValue = jQuery.data(thisObj.addedRow, thisKey).value;
+           thisObj._makeCall_createTag(thisObj.options.resource_id, newKey, newValue);
+        };
+      };
+
+      // Process Deleted Rows
+      var removedRowData = jQuery.data(thisObj.removedRow);   // Retreive the removed row data
+      for(thisKey in removedRowData) {
+        var thisData = removedRowData[thisKey];
+        if( thisData.key != null ){   // if the stored data contains sub key-value pair,
+           var deletedKey = jQuery.data(thisObj.removedRow, thisKey).key;
+           var deletedValue = jQuery.data(thisObj.removedRow, thisKey).value;
+           thisObj._makeCall_deleteTag(thisObj.options.resource_id, deletedKey, deletedValue);
+        };
+      };
+
+      // Process Altered Rows
+      var alteredRowData = jQuery.data(thisObj.alteredRow);   // Retreive the removed row data
+      for(thisKey in alteredRowData) {
+        var thisData = alteredRowData[thisKey];
+        if( thisData.key != null ){   // if the stored data contains sub key-value pair,
+           var prevKey = jQuery.data(thisObj.alteredRow, thisKey).prev_key;
+           var prevValue = jQuery.data(thisObj.alteredRow, thisKey).prev_value;
+           var alteredKey = jQuery.data(thisObj.alteredRow, thisKey).key;
+           var alteredValue = jQuery.data(thisObj.alteredRow, thisKey).value;
+           thisObj._makeCall_alteredTag(thisObj.options.resource_id, prevKey, prevValue, alteredKey, alteredValue);
+        };
+      };
+
+    },
+
+    _makeCall_createTag : function (resource_id, key, value) {
+      var thisObj = this;
+      $.ajax({
+        type:"POST",
+        url:"/ec2?Action=CreateTags",
+        data:"_xsrf="+$.cookie('_xsrf')+"&ResourceId.1="+resource_id+"&Tag.1.Key="+key+"&Tag.1.Value="+value,
+        dataType:"json",
+        cache:false,
+        async: false,
+        success:
+          function(data, textStatus, jqXHR){
+            if ( data.results ) {
+              notifySuccess(null, $.i18n.prop('eip_associate_success', resource_id, "["+key+"="+value+"]"));
+            } else {
+              notifyError($.i18n.prop('eip_associate_error', resource_id, "["+key+"="+value+"]"), undefined_error);
+            }
+          },
+        error:
+          function(jqXHR, textStatus, errorThrown){
+              notifyError($.i18n.prop('eip_associate_error', resource_id, "["+key+"="+value+"]"), getErrorMessage(jqXHR));
+          }
+      });
+    },
+
+    _makeCall_deleteTag : function (resource_id, key, value) {
+      var thisObj = this;
+      $.ajax({
+        type:"POST",
+        url:"/ec2?Action=DeleteTags",
+        data:"_xsrf="+$.cookie('_xsrf')+"&ResourceId.1="+resource_id+"&Tag.1.Key="+key+"&Tag.1.Value="+value,
+        dataType:"json",
+        cache:false,
+        async: false,
+        success:
+          function(data, textStatus, jqXHR){
+            if ( data.results ) {
+              notifySuccess(null, $.i18n.prop('eip_disassociate_success', resource_id, "["+key+"="+value+"]"));
+            } else {
+              notifyError($.i18n.prop('eip_disassociate_error', resource_id, "["+key+"="+value+"]"), undefined_error);
+            }
+          },
+        error:
+          function(jqXHR, textStatus, errorThrown){
+              notifyError($.i18n.prop('eip_disassociate_error', resource_id, "["+key+"="+value+"]"), getErrorMessage(jqXHR));
+          }
+      });
+    },
+
+    _makeCall_alteredTag : function (resource_id, prev_key, prev_value, new_key, new_value) {
+      var thisObj = this;
+      $.ajax({
+        type:"POST",
+        url:"/ec2?Action=DeleteTags",
+        data:"_xsrf="+$.cookie('_xsrf')+"&ResourceId.1="+resource_id+"&Tag.1.Key="+prev_key+"&Tag.1.Value="+prev_value,
+        dataType:"json",
+        cache:false,
+        async: false,
+        success:
+          function(data, textStatus, jqXHR){
+            if ( data.results ) {
+              thisObj._makeCall_createTag(resource_id, new_key, new_value);   // Make Ajax Call to Create Tag
+            } else {
+              notifyError($.i18n.prop('eip_disassociate_error', resource_id, "["+new_key+"="+new_value+"]"), undefined_error);
+            }
+          },
+        error:
+          function(jqXHR, textStatus, errorThrown){
+              notifyError($.i18n.prop('eip_disassociate_error', resource_id, "["+new_key+"="+new_value+"]"), getErrorMessage(jqXHR));
+          }
+      });
     },
 
     // Use the _setOption method to respond to changes to options
