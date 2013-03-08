@@ -172,7 +172,7 @@ public class TokensQueryPipeline extends QueryPipeline {
               final String username = B64.standard.decString( encodedAccountUsername[0] );
               final String passwordSubstring = basicUsernamePassword[1];
               final String[] passwords = passwordSubstring.split( "@" , 2 );
-              final String password = ( passwords.length == 2 ) ? passwords[0] : passwordSubstring; 
+              final String password = B64.standard.decString( passwords[0] ); 
               final String newPassword = ( passwords.length == 2 ) ? passwords[1] : null; 
               try {
                 SecurityContext.getLoginContext(
