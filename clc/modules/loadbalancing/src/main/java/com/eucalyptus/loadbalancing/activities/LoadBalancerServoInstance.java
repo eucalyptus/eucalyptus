@@ -35,6 +35,7 @@ import org.hibernate.annotations.Entity;
 import com.eucalyptus.entities.AbstractPersistent;
 import com.eucalyptus.loadbalancing.LoadBalancer;
 import com.eucalyptus.loadbalancing.LoadBalancerBackendInstance;
+import com.eucalyptus.loadbalancing.LoadBalancerDnsRecord;
 import com.eucalyptus.loadbalancing.LoadBalancerSecurityGroup;
 import com.eucalyptus.loadbalancing.LoadBalancerZone;
 
@@ -62,6 +63,10 @@ public class LoadBalancerServoInstance extends AbstractPersistent {
     @ManyToOne
     @JoinColumn( name = "metadata_group_fk", nullable=true)
     private LoadBalancerSecurityGroup group = null;
+    
+    @ManyToOne
+    @JoinColumn( name = "metadata_dns_fk", nullable=true)
+    private LoadBalancerDnsRecord dns = null;
         
     @Transient
     private LoadBalancer loadbalancer = null;
@@ -71,6 +76,9 @@ public class LoadBalancerServoInstance extends AbstractPersistent {
     
     @Column(name="metadata_state", nullable=false)
     private String state = null;
+    
+    @Column(name="metadata_address", nullable=true)
+    private String address = null;
     
     @Column(name="metadata_unique_name", nullable=false, unique=true)
     private String uniqueName = null;
@@ -88,7 +96,13 @@ public class LoadBalancerServoInstance extends AbstractPersistent {
     	this.loadbalancer = zone.getLoadbalancer();
     	this.group = group;
     }
-    
+    private LoadBalancerServoInstance(final LoadBalancerZone lbzone, final LoadBalancerSecurityGroup group, final LoadBalancerDnsRecord dns){
+    	this.state = STATE.Pending.name();
+    	this.zone = lbzone;
+    	this.loadbalancer = zone.getLoadbalancer();
+    	this.group = group;
+    	this.dns = dns;
+    }
     
     public static LoadBalancerServoInstance named(final LoadBalancerZone lbzone){
     	final LoadBalancerServoInstance sample = new LoadBalancerServoInstance(lbzone);
@@ -121,6 +135,10 @@ public class LoadBalancerServoInstance extends AbstractPersistent {
     	this.zone = null;
     }
     
+    public void unmapDns(){
+    	this.dns = null;
+    }
+    
     public void setInstanceId(String id){
     	this.instanceId = id;
     }
@@ -137,11 +155,26 @@ public class LoadBalancerServoInstance extends AbstractPersistent {
     	return Enum.valueOf(STATE.class, this.state);
     }
     
+    public void setAddress(String address){
+    	this.address=address;
+    }
+    
+    public String getAddress(){
+    	return this.address; 
+    }
+    
     public void setSecurityGroup(LoadBalancerSecurityGroup group){
     	this.group=group;
     }
     
+    public void setDns(final LoadBalancerDnsRecord dns){
+    	this.dns = dns;
+    }
 
+    public LoadBalancerDnsRecord getDns(){
+    	return this.dns;
+    }
+    
 	@PrePersist
 	private void generateOnCommit( ) {
 		if(this.uniqueName == null)
@@ -159,7 +192,7 @@ public class LoadBalancerServoInstance extends AbstractPersistent {
 	private String createUniqueName(){
 		return String.format("%s-servo-instance-%s", this.zone.getName(), java.util.UUID.randomUUID());
 	}
-	
+
 	@Override
 	public int hashCode( ) {
 	    final int prime = 31;

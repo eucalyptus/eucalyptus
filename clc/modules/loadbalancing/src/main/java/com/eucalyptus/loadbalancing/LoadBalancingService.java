@@ -120,16 +120,26 @@ public class LoadBalancingService {
     if(lb == null)
     	throw new LoadBalancingException(String.format("Requested loadbalancer %s cannot be created", lbName));
     
+    final LoadBalancerDnsRecord dns = LoadBalancers.getDnsRecord(lb);
+    if(dns == null || dns.getName() == null)
+    	throw new LoadBalancingException("New dns name could not be created");
+    
     Function<String, Boolean> rollback = new Function<String, Boolean>(){
     	@Override
     	public Boolean apply(String lbName){
     		try{
+    			LoadBalancers.deleteDnsRecord(dns);
+    		}catch(LoadBalancingException ex){
+    			LOG.error("failed to rollback the dns records", ex);
+    		}
+    		
+    		try{
         		LoadBalancers.deleteLoadbalancer(ownerFullName, lbName);
-        		return true;
         	}catch(LoadBalancingException ex){
         		LOG.error("failed to rollback the loadbalancer: " + lbName, ex);
         		return false;
         	}
+    		return true;
     	}
     };
     
@@ -169,11 +179,11 @@ public class LoadBalancingService {
     }
     
     final CreateLoadBalancerResult result = new CreateLoadBalancerResult();
-    if(lb!=null && lb.getDnsAddress()==null){
+    if(dns==null || dns.getDnsName() == null){
     	LOG.warn("No DNS name is assigned to a loadblancer "+lbName);
     }
     
-    result.setDnsName(lb != null ? lb.getDnsAddress() : null);
+    result.setDnsName(dns.getDnsName());
     reply.setCreateLoadBalancerResult(result);
     reply.set_return(true);
     return reply;
@@ -228,7 +238,9 @@ public class LoadBalancingService {
 	    				continue;
 	    			desc.setLoadBalancerName(lbName); /// loadbalancer name
 	    			desc.setCreatedTime(lb.getCreationTimestamp());/// createdtime
-	    			desc.setDnsName(lb.getDnsAddress());           /// dns name
+	    			final LoadBalancerDnsRecord dns = lb.getDns();
+	    			
+	    			desc.setDnsName(dns.getDnsName());           /// dns name
 	    			                                  /// instances
 	    			if(lb.getBackendInstances().size()>0){
 	    				desc.setInstances(new Instances());

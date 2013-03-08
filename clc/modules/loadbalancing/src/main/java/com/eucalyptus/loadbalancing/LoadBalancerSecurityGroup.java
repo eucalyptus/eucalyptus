@@ -51,6 +51,7 @@ import com.eucalyptus.loadbalancing.activities.LoadBalancerServoInstance;
 public class LoadBalancerSecurityGroup extends AbstractPersistent {
 	private static Logger    LOG     = Logger.getLogger( LoadBalancerSecurityGroup.class );
 
+	public enum STATE { InService, OutOfService }
 	@Transient
 	private static final long serialVersionUID = 1L;
 
@@ -59,6 +60,7 @@ public class LoadBalancerSecurityGroup extends AbstractPersistent {
 	public LoadBalancerSecurityGroup(LoadBalancer lb, String groupName){
 		this.loadbalancer = lb;
 		this.groupName = groupName;
+		this.state= STATE.InService.name();
 	}
 	
 	public static LoadBalancerSecurityGroup named(){
@@ -68,6 +70,20 @@ public class LoadBalancerSecurityGroup extends AbstractPersistent {
 	public static LoadBalancerSecurityGroup named(String groupName){
 		final LoadBalancerSecurityGroup instance = new LoadBalancerSecurityGroup();
 		instance.groupName = groupName;
+		instance.state = STATE.InService.name();
+		return instance;
+	}
+	
+	public static LoadBalancerSecurityGroup named(String groupName, STATE state){
+		final LoadBalancerSecurityGroup instance = new LoadBalancerSecurityGroup();
+		instance.groupName = groupName;
+		instance.state = state.name();
+		return instance;
+	}
+	
+	public static LoadBalancerSecurityGroup withState(STATE state){
+		final LoadBalancerSecurityGroup instance = new LoadBalancerSecurityGroup();
+		instance.state = state.name();
 		return instance;
 	}
 	
@@ -77,6 +93,9 @@ public class LoadBalancerSecurityGroup extends AbstractPersistent {
 
 	@Column(name="group_name", nullable=false)
     private String groupName = null;
+	
+	@Column(name="metadata_state", nullable=false)
+	private String state = null;
     
 	@OneToMany(fetch = FetchType.LAZY, mappedBy = "group")
     @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
@@ -100,6 +119,14 @@ public class LoadBalancerSecurityGroup extends AbstractPersistent {
 		this.loadbalancer = lb;
 	}
 
+	public void retire(){
+		this.state = STATE.OutOfService.name();
+	}
+	
+	public STATE getState(){
+		return Enum.valueOf(STATE.class, this.state);
+	}
+	
 	@PrePersist
 	private void generateOnCommit( ) {
 		this.uniqueName = createUniqueName( );

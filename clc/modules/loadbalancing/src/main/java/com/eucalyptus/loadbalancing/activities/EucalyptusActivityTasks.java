@@ -61,6 +61,8 @@ import edu.ucsb.eucalyptus.msgs.DescribeInstancesResponseType;
 import edu.ucsb.eucalyptus.msgs.DescribeInstancesType;
 import edu.ucsb.eucalyptus.msgs.DnsMessage;
 import edu.ucsb.eucalyptus.msgs.EucalyptusMessage;
+import edu.ucsb.eucalyptus.msgs.RemoveARecordResponseType;
+import edu.ucsb.eucalyptus.msgs.RemoveARecordType;
 import edu.ucsb.eucalyptus.msgs.ReservationInfoType;
 import edu.ucsb.eucalyptus.msgs.RunInstancesResponseType;
 import edu.ucsb.eucalyptus.msgs.RunInstancesType;
@@ -272,6 +274,21 @@ public class EucalyptusActivityTasks {
 			throw Exceptions.toUndeclared(ex);
 		} 
 	}
+	
+	public void removeARecord(String zone, String name, String address){
+		final DnsRemoveARecordTask task = new DnsRemoveARecordTask(zone, name, address);
+		final CheckedListenableFuture<Boolean> result = task.dispatch(new DnsSystemActivity());
+		try{
+			if(result.get()){
+				return;
+			}else
+				throw new EucalyptusActivityException("failed to remove A record ");
+		}catch(Exception ex){
+			throw Exceptions.toUndeclared(ex);
+		}  
+	}
+	
+	
 	private class EucalyptusDescribeServicesTask extends EucalyptusActivityTask<EmpyreanMessage, Empyrean> {
 		private String componentType = null;
 		private List<ServiceStatusType> services = null; 
@@ -337,7 +354,38 @@ public class EucalyptusActivityTasks {
 			// TODO Auto-generated method stub
 			final UpdateARecordResponseType resp = (UpdateARecordResponseType) response;
 		}
+	}
+	private class DnsRemoveARecordTask extends EucalyptusActivityTask<DnsMessage, Dns>{
+		private String zone = null;
+		private String name = null;
+		private String address = null;
+		private DnsRemoveARecordTask(final String zone, final String name, final String address){
+			this.zone = zone;
+			this.name = name;
+			this.address = address;
+		}
+		private RemoveARecordType removeARecord(){
+			final RemoveARecordType req = new RemoveARecordType();
+			req.setZone(this.zone);
+			req.setName(this.name);
+			req.setAddress(this.address);
+			return req;
+		}
 		
+		@Override
+		void dispatchInternal(ActivityContext<DnsMessage, Dns> context,
+				Checked<DnsMessage> callback) {
+
+			final DispatchingClient<DnsMessage, Dns> client = context.getClient();
+			client.dispatch(removeARecord(), callback);						
+		}
+
+		@Override
+		void dispatchSuccess(ActivityContext<DnsMessage, Dns> context,
+				DnsMessage response) {
+			// TODO Auto-generated method stub
+			final RemoveARecordResponseType resp = (RemoveARecordResponseType) response;
+		}
 	}
 	
 	private class EucalyptusDescribeInstanceTask extends EucalyptusActivityTask<EucalyptusMessage, Eucalyptus> {
@@ -510,7 +558,6 @@ public class EucalyptusActivityTasks {
 		    if(availabilityZone != null)
 		    	runInstances.setAvailabilityZone( availabilityZone );
 		    runInstances.setMaxCount( attemptToLaunch );
-		    runInstances.setAddressingType("private");
 		    if(this.userData!=null)
 		    	runInstances.setUserData(this.userData);
 		    return runInstances;

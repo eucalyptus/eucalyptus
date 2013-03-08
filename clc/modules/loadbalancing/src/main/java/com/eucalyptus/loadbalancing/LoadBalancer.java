@@ -28,6 +28,7 @@ import javax.persistence.Embeddable;
 import javax.persistence.Embedded;
 import javax.persistence.FetchType;
 import javax.persistence.OneToMany;
+import javax.persistence.OneToOne;
 import javax.persistence.PersistenceContext;
 import javax.persistence.Table;
 import javax.persistence.Transient;
@@ -87,9 +88,6 @@ public class LoadBalancer extends UserMetadata<LoadBalancer.STATE> implements Lo
 	@Column( name = "loadbalancer_scheme", nullable=true)
 	private String scheme = null; // only available for LoadBalancers attached to an Amazon VPC
 	
-	@Column( name = "dns_address", nullable=true)
-	private String dnsAddress = null; // the address by which the loadbalancer is reached
-
 	@OneToMany(fetch = FetchType.LAZY, cascade = CascadeType.ALL, orphanRemoval = true, mappedBy = "loadbalancer")
     @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
 	private Collection<LoadBalancerBackendInstance> backendInstances = null;
@@ -106,6 +104,9 @@ public class LoadBalancer extends UserMetadata<LoadBalancer.STATE> implements Lo
 	@Cache( usage= CacheConcurrencyStrategy.TRANSACTIONAL )
 	private Collection<LoadBalancerSecurityGroup> groups = null;
 	
+	@OneToOne(fetch = FetchType.LAZY, cascade = CascadeType.ALL, orphanRemoval = true, mappedBy = "loadbalancer")
+	@Cache( usage= CacheConcurrencyStrategy.TRANSACTIONAL )
+	private LoadBalancerDnsRecord dns = null;
 	
 	public void setScheme(String scheme){
 		this.scheme = scheme;
@@ -113,14 +114,6 @@ public class LoadBalancer extends UserMetadata<LoadBalancer.STATE> implements Lo
 	
 	public String getScheme(){
 		return this.scheme;
-	}
-	
-	public void setDnsAddress(String address){
-		this.dnsAddress = address;
-	}
-	
-	public String getDnsAddress(){
-		return this.dnsAddress;
 	}
 	
 	public LoadBalancerBackendInstance findBackendInstance(final String instanceId){
@@ -167,6 +160,13 @@ public class LoadBalancer extends UserMetadata<LoadBalancer.STATE> implements Lo
 		return this.findListener(lbPort)!=null;
 	}
 	
+	public void setDns(final LoadBalancerDnsRecord dns){
+		this.dns = dns;
+	}
+	
+	public LoadBalancerDnsRecord getDns(){
+		return this.dns;
+	}
 	public Collection<LoadBalancerListener> getListeners(){
 		return this.listeners;
 	}

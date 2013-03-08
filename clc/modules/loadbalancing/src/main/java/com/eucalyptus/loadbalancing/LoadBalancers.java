@@ -21,8 +21,11 @@
 package com.eucalyptus.loadbalancing;
 
 import java.util.Collection;
+import java.util.List;
 import java.util.NoSuchElementException;
 import javax.persistence.EntityTransaction;
+import javax.validation.ConstraintViolationException;
+
 import org.apache.log4j.Logger;
 import com.eucalyptus.auth.principal.UserFullName;
 import com.eucalyptus.entities.Entities;
@@ -229,6 +232,39 @@ public class LoadBalancers {
 		}catch(Exception ex){
 			db.rollback();
 			throw Exceptions.toUndeclared(ex);
+		}
+	}
+	
+	public static LoadBalancerDnsRecord getDnsRecord(final LoadBalancer lb) throws LoadBalancingException{
+		/// create the next dns record
+		final EntityTransaction db = Entities.get( LoadBalancerDnsRecord.class );
+		try{
+			LoadBalancerDnsRecord exist = Entities.uniqueResult(LoadBalancerDnsRecord.named(lb.getDisplayName()));
+			db.commit();
+			return exist;
+		}catch(NoSuchElementException ex){
+			final LoadBalancerDnsRecord newRec = 
+					LoadBalancerDnsRecord.named(lb.getDisplayName());
+			newRec.setLoadbalancer(lb);
+			Entities.persist(newRec);
+			db.commit();
+			return newRec;
+		}catch(Exception ex){
+			throw new LoadBalancingException("failed to query dns record", ex);
+		}
+	}
+	
+	public static void deleteDnsRecord(final LoadBalancerDnsRecord dns) throws LoadBalancingException{
+		final EntityTransaction db = Entities.get( LoadBalancerDnsRecord.class );
+		try{
+			LoadBalancerDnsRecord exist = Entities.uniqueResult(dns);
+			Entities.delete(exist);
+			db.commit();
+		}catch(NoSuchElementException ex){
+			db.rollback();
+		}catch(Exception ex){
+			db.rollback();
+			throw new LoadBalancingException("failed to delete dns record", ex);
 		}
 	}
 }

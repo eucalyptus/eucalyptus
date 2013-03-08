@@ -36,6 +36,7 @@ import com.eucalyptus.event.ClockTick;
 import com.eucalyptus.event.EventListener;
 import com.eucalyptus.event.Listeners;
 import com.eucalyptus.loadbalancing.LoadBalancer;
+import com.eucalyptus.loadbalancing.LoadBalancerDnsRecord;
 import com.eucalyptus.loadbalancing.LoadBalancerSecurityGroup;
 import com.eucalyptus.loadbalancing.LoadBalancerZone;
 import com.eucalyptus.loadbalancing.LoadBalancers;
@@ -347,6 +348,7 @@ public class EventHandlerChainNew extends EventHandlerChain<NewLoadbalancerEvent
 	      Listeners.register( ClockTick.class, new ServoInstancePendingToRunningChecker() );
 	    }
 
+
 	    @Override
 	    public void fireEvent( final ClockTick event ) {
 	      if ( Bootstrap.isFinished() &&
@@ -372,6 +374,7 @@ public class EventHandlerChainNew extends EventHandlerChain<NewLoadbalancerEvent
 	    	  /// for each:
 	    	  final List<String> param = Lists.newArrayList();
 	    	  final Map<String, String> latestState = Maps.newHashMap();
+	    	  final Map<String, String> addressMap = Maps.newHashMap();
 	    	  for(final LoadBalancerServoInstance instance : instances){
 	    		/// 	call describe instance
 		    	  String instanceId = instance.getInstanceId();
@@ -380,20 +383,23 @@ public class EventHandlerChainNew extends EventHandlerChain<NewLoadbalancerEvent
 	    		  param.clear();
 	    		  param.add(instanceId);
 	    		  String instanceState = null;
+	    		  String address = null;
 	    		  try{
 	    			  final List<RunningInstancesItemType> result = 
 	    					  EucalyptusActivityTasks.getInstance().describeInstances(param);
 	    			  if (result.isEmpty())
 	    				  throw new Exception("Describe instances returned no result");
 	    			  instanceState = result.get(0).getStateName();
+	    			  address = result.get(0).getIpAddress();
 	    		  }catch(final Exception ex){
 	    			  LOG.warn("failed to query instances", ex);
 	    			  continue;
 	    		  }
 	    		  if(instanceState.equals("running")){
 	    	    	  ///		if update dns A rec:
-	    			  /// update DNS
 	    			  latestState.put(instanceId, LoadBalancerServoInstance.STATE.InService.name());
+	    			  if(address!=null)
+	    				  addressMap.put(instanceId, address);
 	    		  }else if(instanceState.equals("pending")){
 	    			  latestState.put(instanceId, LoadBalancerServoInstance.STATE.Pending.name());
 	    		  }else{
@@ -401,7 +407,8 @@ public class EventHandlerChainNew extends EventHandlerChain<NewLoadbalancerEvent
 	    			  latestState.put(instanceId, LoadBalancerServoInstance.STATE.Error.name());
 	    		  }
 	    	  }
-	    	  
+
+	    	  List<LoadBalancerServoInstance> newInServiceInstances = Lists.newArrayList();
 	    	  for(final String instanceId : latestState.keySet()){
 	    		  String nextState = latestState.get(instanceId);
 	    		  if(nextState == "pending")
@@ -412,8 +419,12 @@ public class EventHandlerChainNew extends EventHandlerChain<NewLoadbalancerEvent
 	    			  final LoadBalancerServoInstance instance =
 	    					  Entities.uniqueResult(LoadBalancerServoInstance.named(instanceId));
 	    			  instance.setState(Enum.valueOf(LoadBalancerServoInstance.STATE.class, nextState));
+	    			  if(addressMap.containsKey(instanceId))
+	    				  instance.setAddress(addressMap.get(instanceId));
 	    			  Entities.persist(instance);
 	    			  dbUpdate.commit();
+	    			  if(nextState.equals(LoadBalancerServoInstance.STATE.InService.name()))
+	    				  newInServiceInstances.add(instance);
 	    		  }catch(NoSuchElementException ex){
 	    			  dbUpdate.rollback();
 	    			  LOG.error("could not find the servo instance with id="+instanceId, ex);
@@ -421,6 +432,27 @@ public class EventHandlerChainNew extends EventHandlerChain<NewLoadbalancerEvent
 	    			  dbUpdate.rollback();
 	    			  LOG.error("unknown error occured during the servo instance update ("+instanceId+")", ex);
 	    		  }
+	    	  }
+	    	  
+	    	  for(LoadBalancerServoInstance servo : newInServiceInstances){
+	    		 final LoadBalancer lb= servo.getAvailabilityZone().getLoadbalancer();
+	    		 final LoadBalancerDnsRecord dns = lb.getDns();
+	    		 try{
+	    			 EucalyptusActivityTasks.getInstance().updateARecord(dns.getZone(), dns.getName(), servo.getAddress());
+	    		 }catch(Exception ex){
+	    			 LOG.error("failed to update dns A records", ex);
+	    			 continue;
+	    		 }
+		    	 final EntityTransaction db2 = Entities.get(LoadBalancerServoInstance.class);
+	    		 try{
+	    			 LoadBalancerServoInstance update = Entities.uniqueResult(servo);
+	    			 update.setDns(dns);
+	    			 Entities.persist(update);
+	    			 db2.commit();
+	    		 }catch(Exception ex){
+	    			 db2.rollback();
+	    			 LOG.error("failed to update dns record of the servo instance");
+	    		 }
 	    	  }
 	      }
 	    }
