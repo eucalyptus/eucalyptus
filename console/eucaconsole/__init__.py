@@ -247,7 +247,7 @@ class RootHandler(BaseHandler):
         action = self.get_argument("action")
         response = None
         try:
-            if action == 'login':
+            if action == 'login' or action == 'changepwd':
                 try:
                     response = LoginProcessor.post(self)
                 except Exception, err:
