@@ -20,6 +20,8 @@
 package com.eucalyptus.loadbalancing.activities;
 
 
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicReference;
@@ -52,6 +54,8 @@ import com.google.common.base.Function;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 
+import edu.ucsb.eucalyptus.msgs.AuthorizeSecurityGroupIngressResponseType;
+import edu.ucsb.eucalyptus.msgs.AuthorizeSecurityGroupIngressType;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 import edu.ucsb.eucalyptus.msgs.CreateSecurityGroupResponseType;
 import edu.ucsb.eucalyptus.msgs.CreateSecurityGroupType;
@@ -61,9 +65,12 @@ import edu.ucsb.eucalyptus.msgs.DescribeInstancesResponseType;
 import edu.ucsb.eucalyptus.msgs.DescribeInstancesType;
 import edu.ucsb.eucalyptus.msgs.DnsMessage;
 import edu.ucsb.eucalyptus.msgs.EucalyptusMessage;
+import edu.ucsb.eucalyptus.msgs.IpPermissionType;
 import edu.ucsb.eucalyptus.msgs.RemoveARecordResponseType;
 import edu.ucsb.eucalyptus.msgs.RemoveARecordType;
 import edu.ucsb.eucalyptus.msgs.ReservationInfoType;
+import edu.ucsb.eucalyptus.msgs.RevokeSecurityGroupIngressResponseType;
+import edu.ucsb.eucalyptus.msgs.RevokeSecurityGroupIngressType;
 import edu.ucsb.eucalyptus.msgs.RunInstancesResponseType;
 import edu.ucsb.eucalyptus.msgs.RunInstancesType;
 import edu.ucsb.eucalyptus.msgs.RunningInstancesItemType;
@@ -257,6 +264,32 @@ public class EucalyptusActivityTasks {
 				return;
 			}else
 				throw new EucalyptusActivityException("failed to delete the group "+groupName);
+		}catch(Exception ex){
+			throw Exceptions.toUndeclared(ex);
+		} 
+	}
+	
+	public void authorizeSecurityGroup(String groupName, String protocol, int portNum){
+		final EucalyptusAuthorizeIngressRuleTask task = new EucalyptusAuthorizeIngressRuleTask(groupName, protocol, portNum);
+		final CheckedListenableFuture<Boolean> result = task.dispatch(new EucalyptusSystemActivity());
+		try{
+			if(result.get()){
+				return;
+			}else
+				throw new EucalyptusActivityException(String.format("failed to authorize:%s, %s, %d ", groupName, protocol, portNum));
+		}catch(Exception ex){
+			throw Exceptions.toUndeclared(ex);
+		} 
+	}
+	
+	public void revokeSecurityGroup(String groupName, String protocol, int portNum){
+		final EucalyptusRevokeIngressRuleTask task = new EucalyptusRevokeIngressRuleTask(groupName, protocol, portNum);
+		final CheckedListenableFuture<Boolean> result = task.dispatch(new EucalyptusSystemActivity());
+		try{
+			if(result.get()){
+				return;
+			}else
+				throw new EucalyptusActivityException(String.format("failed to revoke:%s, %s, %d ", groupName, protocol, portNum));
 		}catch(Exception ex){
 			throw Exceptions.toUndeclared(ex);
 		} 
@@ -495,6 +528,78 @@ public class EucalyptusActivityTasks {
 		
 		public String getGroupId(){
 			return this.groupId;
+		}
+	}
+	
+	private class EucalyptusAuthorizeIngressRuleTask extends EucalyptusActivityTask<EucalyptusMessage, Eucalyptus> {
+		String groupName=null;
+		String protocol = null;
+		int portNum = 1;
+		
+		EucalyptusAuthorizeIngressRuleTask(String groupName, String protocol, int portNum){
+			this.protocol=protocol;
+			this.groupName = groupName;
+			this.portNum = portNum;
+		}
+		private AuthorizeSecurityGroupIngressType authorize(){
+			AuthorizeSecurityGroupIngressType req = new AuthorizeSecurityGroupIngressType();
+			req.setGroupName(this.groupName);
+			IpPermissionType perm = new IpPermissionType();
+			perm.setToPort(this.portNum);
+			perm.setIpRanges(Lists.newArrayList(Arrays.asList("0.0.0.0/0")));
+			perm.setIpProtocol(this.protocol); // udp too?
+			req.setIpPermissions(Lists.newArrayList(Arrays.asList(perm)));
+			return req;
+		}
+		
+		@Override
+		void dispatchInternal(
+				ActivityContext<EucalyptusMessage, Eucalyptus> context,
+				Checked<EucalyptusMessage> callback) {
+			final DispatchingClient<EucalyptusMessage, Eucalyptus> client = context.getClient();
+			client.dispatch(authorize(), callback);						
+		}
+
+		@Override
+		void dispatchSuccess(
+				ActivityContext<EucalyptusMessage, Eucalyptus> context,
+				EucalyptusMessage response) {
+			final AuthorizeSecurityGroupIngressResponseType resp = (AuthorizeSecurityGroupIngressResponseType) response;
+		}
+	}
+	private class EucalyptusRevokeIngressRuleTask extends EucalyptusActivityTask<EucalyptusMessage, Eucalyptus> {
+		String groupName=null;
+		String protocol=null;
+		int portNum = 1;
+		EucalyptusRevokeIngressRuleTask(String groupName, String protocol, int portNum){
+			this.groupName = groupName;
+			this.protocol = protocol;
+			this.portNum = portNum;
+		}
+		private RevokeSecurityGroupIngressType revoke(){
+			RevokeSecurityGroupIngressType req = new RevokeSecurityGroupIngressType();
+			req.setGroupName(this.groupName);
+			IpPermissionType perm = new IpPermissionType();
+			perm.setToPort(this.portNum);
+			perm.setIpRanges(Lists.newArrayList(Arrays.asList("0.0.0.0/0")));
+			perm.setIpProtocol(this.protocol);
+			req.setIpPermissions(Lists.newArrayList(Arrays.asList(perm)));
+			return req;
+		}
+		
+		@Override
+		void dispatchInternal(
+				ActivityContext<EucalyptusMessage, Eucalyptus> context,
+				Checked<EucalyptusMessage> callback) {
+			final DispatchingClient<EucalyptusMessage, Eucalyptus> client = context.getClient();
+			client.dispatch(revoke(), callback);						
+		}
+
+		@Override
+		void dispatchSuccess(
+				ActivityContext<EucalyptusMessage, Eucalyptus> context,
+				EucalyptusMessage response) {
+			final RevokeSecurityGroupIngressResponseType resp = (RevokeSecurityGroupIngressResponseType) response;
 		}
 	}
 	

@@ -26,6 +26,8 @@ import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.Set;
 
+import javax.annotation.Nullable;
+
 import org.apache.log4j.Logger;
 
 import com.eucalyptus.auth.principal.AccountFullName;
@@ -172,7 +174,7 @@ public class LoadBalancingService {
     		evt.setContext(ctx);
     		ActivityManager.getInstance().fire(evt);
     	}catch(EventFailedException e){
-    		LOG.error("failed to fire createListener eent", e);
+    		LOG.error("failed to fire createListener event", e);
         	rollback.apply(lbName);
         	throw new LoadBalancingException(String.format("Faild to create the requested loadblanacer: %s", lbName), e);
     	}
@@ -309,9 +311,33 @@ public class LoadBalancingService {
 	    final String lbToDelete = request.getLoadBalancerName();
 	    final Context ctx = Contexts.lookup( );
 	    final UserFullName ownerFullName = ctx.getUserFullName( );
-	    
-	    if(lbToDelete!=null){
-	    	try{
+	 	try{
+		 	    
+		    if(lbToDelete!=null){
+		    	LoadBalancer lb = null;
+		    	try{
+		    		lb = LoadBalancers.getLoadbalancer(ownerFullName, lbToDelete);
+		    	}catch(NoSuchElementException ex){
+		    		throw new Exception("loadbalancer not found", ex);
+		    	}
+		    	Collection<LoadBalancerListener> listeners = lb.getListeners();
+		    	final List<Integer> ports = Lists.newArrayList(Collections2.transform(listeners, new Function<LoadBalancerListener, Integer>(){
+					@Override
+					public Integer apply(@Nullable LoadBalancerListener arg0) {
+						return arg0.getLoadbalancerPort();
+					}
+		    	}));
+		    	
+	    		try{
+	    			DeleteListenerEvent evt = new DeleteListenerEvent();
+	    	    	evt.setLoadBalancer(lbToDelete);
+	    	    	evt.setContext(ctx);
+	    	    	evt.setPorts(ports);
+	    	    	ActivityManager.getInstance().fire(evt);
+	    	    }catch(EventFailedException e){
+	    	    	LOG.error("failed to fire DeleteListener event", e);
+	    	    }
+		    
 	    		try{
 	        		DeleteLoadbalancerEvent evt = new DeleteLoadbalancerEvent();
 	        		evt.setLoadBalancer(lbToDelete);
@@ -322,13 +348,13 @@ public class LoadBalancingService {
 	        		throw e;
 	        	}
 	    		LoadBalancers.deleteLoadbalancer(ownerFullName, lbToDelete);
-	    	}catch(Exception e){
+		    }
+	    }catch(Exception e){
 	    		// success if the lb is not found in the system
 	    		if(!(e.getCause() instanceof NoSuchElementException)) {
 	    			LOG.error("Error deleting the loadbalancer: "+e.getMessage(), e);
 	    			throw new LoadBalancingException("Failed to delete the loadbalancer "+lbToDelete, e);
 	    		}
-	    	}
 	    }
 	    DeleteLoadBalancerResult result = new DeleteLoadBalancerResult();
 		reply.setDeleteLoadBalancerResult(result);    

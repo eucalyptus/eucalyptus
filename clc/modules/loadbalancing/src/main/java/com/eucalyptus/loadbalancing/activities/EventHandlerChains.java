@@ -46,13 +46,7 @@ public class EventHandlerChains {
 	private static EventHandlerChain<CreateListenerEvent> onCreateListenerChain = null;
 	public static EventHandlerChain<CreateListenerEvent> onCreateListener(){
 		if (onCreateListenerChain==null){
-			onCreateListenerChain = new EventHandlerChain<CreateListenerEvent>(){
-				@Override
-				public EventHandlerChain<CreateListenerEvent> build() {
-					// TODO Auto-generated method stub
-					return this;
-				}
-			}.build();
+			onCreateListenerChain = (new EventHandlerChainNewListeners()).build();
 		}
 		return onCreateListenerChain;
 	}
@@ -60,13 +54,7 @@ public class EventHandlerChains {
 	private static  EventHandlerChain<DeleteListenerEvent> onDeleteListenerChain = null;
 	public static EventHandlerChain<DeleteListenerEvent> onDeleteListener(){
 		if(onDeleteListenerChain==null){
-			onDeleteListenerChain = new EventHandlerChain<DeleteListenerEvent>(){
-				@Override
-				public EventHandlerChain<DeleteListenerEvent> build() {
-					// TODO Auto-generated method stub
-					return this;
-				}
-			}.build();
+			onDeleteListenerChain = (new EventHandlerChainDeleteListeners()).build();
 		}
 		return onDeleteListenerChain;
 	}
