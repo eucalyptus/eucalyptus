@@ -211,7 +211,7 @@ public class VmControl {
         }
         final EntityTransaction db = Entities.get( VmInstance.class );
         try {
-          VmInstance v = Entities.merge( vm );
+          VmInstance v = VmState.TERMINATED.apply( vm ) ? vm : Entities.merge( vm );
           if ( instanceMap.put( v.getReservationId( ), VmInstances.transform( v ) ) && !reservations.containsKey( v.getReservationId( ) ) ) {
             reservations.put( v.getReservationId( ), new ReservationInfoType( v.getReservationId( ), v.getOwner( ).getAccountNumber( ), v.getNetworkNames( ) ) );
           }
