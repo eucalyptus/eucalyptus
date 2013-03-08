@@ -2,10 +2,6 @@
 <classpath>
 	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER"/>
 	<classpathentry kind="src" path="modules/authentication/src/main/java"/>
-	<classpathentry kind="src" path="modules/autoscaling-common/src/main/java"/>
-	<classpathentry kind="src" path="modules/cloudwatch-common/src/main/java"/>
-	<classpathentry kind="src" path="modules/autoscaling/src/main/java"/>
-	<classpathentry kind="src" path="modules/cloudwatch/src/main/java"/>
 	<classpathentry kind="src" path="modules/cloud/src/main/java"/>
 	<classpathentry kind="src" path="modules/cluster-manager/src/main/java"/>
 	<classpathentry kind="src" path="modules/cluster-manager/conf/scripts"/>
@@ -36,12 +32,9 @@
 	<classpathentry kind="src" path="modules/www/src/main/java"/>
 	<classpathentry kind="src" path="modules/www/conf/www"/>
 	<classpathentry kind="src" path="modules/troubleshooting/src/main/java"/>
-	<classpathentry kind="src" path="modules/autoscaling/src/main/java"/>
-	<classpathentry kind="src" path="modules/autoscaling-common/src/main/java"/>
-	<classpathentry kind="src" path="modules/cloudwatch/src/main/java"/>
-	<classpathentry kind="src" path="modules/cloudwatch-common/src/main/java"/>
 	<classpathentry kind="src" path="modules/loadbalancing/src/main/java"/>
 	<classpathentry kind="src" path="modules/loadbalancing-common/src/main/java"/>
+	<classpathentry kind="src" path="modules/tokens/src/main/java"/>
 	<classpathentry kind="con" path="GROOVY_SUPPORT"/>
 	<classpathentry kind="lib" path="lib/activemq-core-5.4.1.jar"/>
 	<classpathentry kind="lib" path="lib/ant-1.7.jar"/>
