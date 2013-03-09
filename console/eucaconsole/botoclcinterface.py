@@ -51,7 +51,7 @@ class BotoClcInterface(ClcInterface):
             port=443
         except ConfigParser.Error:
             pass
-        if boto.__version__ < 2.6:
+        if boto.__version__ < '2.6':
             self.conn = EC2Connection(access_id, secret_key, region=reg,
                                   port=port, path=path,
                                   is_secure=True, security_token=token, debug=0)
