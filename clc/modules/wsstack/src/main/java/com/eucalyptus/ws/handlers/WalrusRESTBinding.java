@@ -116,9 +116,9 @@ import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.util.StorageProperties;
 import com.eucalyptus.util.WalrusProperties;
 import com.eucalyptus.util.WalrusUtil;
+import com.eucalyptus.util.XMLParser;
 import com.eucalyptus.ws.InvalidOperationException;
 import com.eucalyptus.ws.util.WalrusBucketLogger;
-import com.eucalyptus.ws.util.XMLParser;
 import com.google.common.collect.Lists;
 
 import edu.ucsb.eucalyptus.cloud.BucketLogData;
