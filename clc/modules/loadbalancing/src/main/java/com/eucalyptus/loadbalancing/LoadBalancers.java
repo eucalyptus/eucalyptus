@@ -31,6 +31,7 @@ import com.eucalyptus.auth.principal.UserFullName;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.TransactionException;
 import com.eucalyptus.loadbalancing.LoadBalancerListener.PROTOCOL;
+import com.eucalyptus.loadbalancing.activities.LoadBalancerServoInstance;
 import com.eucalyptus.util.Exceptions;
 import com.google.common.base.Function;
 import com.google.common.base.Predicate;
@@ -265,6 +266,22 @@ public class LoadBalancers {
 		}catch(Exception ex){
 			db.rollback();
 			throw new LoadBalancingException("failed to delete dns record", ex);
+		}
+	}
+	
+	public static LoadBalancerServoInstance lookupServoInstance(String instanceId) throws LoadBalancingException {
+		final EntityTransaction db = Entities.get( LoadBalancerDnsRecord.class );
+		try{
+			LoadBalancerServoInstance sample = LoadBalancerServoInstance.named(instanceId);
+			final LoadBalancerServoInstance exist = Entities.uniqueResult(sample);
+			db.commit();
+			return exist;
+		}catch(NoSuchElementException ex){
+			db.rollback();
+			throw ex;
+		}catch(Exception ex){
+			db.rollback();
+			throw new LoadBalancingException("failed to query servo instances");
 		}
 	}
 }

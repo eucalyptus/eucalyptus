@@ -90,6 +90,7 @@ import com.eucalyptus.loadbalancing.activities.DeleteLoadbalancerEvent;
 import com.eucalyptus.loadbalancing.activities.DeregisterInstancesEvent;
 import com.eucalyptus.loadbalancing.activities.DisabledZoneEvent;
 import com.eucalyptus.loadbalancing.activities.EnabledZoneEvent;
+import com.eucalyptus.loadbalancing.activities.LoadBalancerServoInstance;
 import com.eucalyptus.loadbalancing.activities.NewLoadbalancerEvent;
 import com.eucalyptus.loadbalancing.activities.ActivityManager;
 import com.eucalyptus.loadbalancing.activities.RegisterInstancesEvent;
@@ -199,23 +200,44 @@ public class LoadBalancingService {
 	    if ( !request.getLoadBalancerNames().getMember().isEmpty()) {
 	    	requestedNames.addAll( request.getLoadBalancerNames().getMember() );
 	    }
-	    
-	   final Function<Set<String>, Set<String>> lookupLBNames = new Function<Set<String>, Set<String>>( ) {
-	        public Set<String> apply( final Set<String> input ) {
-	    	  final Predicate<? super LoadBalancer> requestedAndAccessible = CloudMetadatas.filteringFor( LoadBalancer.class )
-	  	       .byId(input )
-	  	       .byPrivileges()
-	           .buildPredicate();
-	        	
-	    	  final List<LoadBalancer> lbs = Entities.query( LoadBalancer.named( ownerFullName, null ), true);
-	          Set<String> res = Sets.newHashSet( );
-	          for ( final LoadBalancer foundLB : Iterables.filter(lbs, requestedAndAccessible ))
-	            res.add( foundLB.getDisplayName( ) );
-	          return res;
-	        }
-	    }; 
-	    Set<String> allowedLBNames = Entities.asTransaction( LoadBalancer.class, lookupLBNames ).apply( requestedNames );
-	    
+	    //"servo:%s" % servo_instance_id
+
+	    Set<String> allowedLBNames = null;
+	    String marker = request.getMarker();
+	    // the case that servo instances want the listeners assigned to it
+	    // TODO: SPARK: authenticate/authorize using IAM roles	
+	    if (marker!= null && marker.startsWith("servo")){
+	    	String instanceId = marker.replace("servo:", "");
+	    	// lookup servo instance Id to see which LB it is assigned to
+	    	// return the LB's detail
+    		allowedLBNames = Sets.newHashSet();
+	    	try{
+	    		final LoadBalancerServoInstance instance = LoadBalancers.lookupServoInstance(instanceId);
+	    		final LoadBalancer lb = instance.getAvailabilityZone().getLoadbalancer();
+	    		allowedLBNames.add(lb.getDisplayName());
+	    	}catch(NoSuchElementException ex){
+	    		;
+	    	}catch(Exception ex){
+	    		LOG.warn("failed to query loadbalancer for servo instance: "+instanceId);
+	    	}
+	    	
+	    }else{	// normal describe-load-balancers path
+		    final Function<Set<String>, Set<String>> lookupLBNames = new Function<Set<String>, Set<String>>( ) {
+		        public Set<String> apply( final Set<String> input ) {
+		    	  final Predicate<? super LoadBalancer> requestedAndAccessible = CloudMetadatas.filteringFor( LoadBalancer.class )
+		  	       .byId(input )
+		  	       .byPrivileges()
+		           .buildPredicate();
+		        	
+		    	  final List<LoadBalancer> lbs = Entities.query( LoadBalancer.named( ownerFullName, null ), true);
+		          Set<String> res = Sets.newHashSet( );
+		          for ( final LoadBalancer foundLB : Iterables.filter(lbs, requestedAndAccessible ))
+		            res.add( foundLB.getDisplayName( ) );
+		          return res;
+		        }
+		    }; 
+		    allowedLBNames = Entities.asTransaction( LoadBalancer.class, lookupLBNames ).apply( requestedNames );
+	    }
 	    final Function<String, LoadBalancer> getLoadBalancer = new Function<String, LoadBalancer>(){
 	    	@Override
 	    	public LoadBalancer apply(final String lbName){
@@ -303,6 +325,7 @@ public class LoadBalancingService {
 	    descResult.setLoadBalancerDescriptions(lbDescs);
 	    reply.setDescribeLoadBalancersResult(descResult);
 	    reply.set_return(true);
+	    
 	    return reply;
   }
   
