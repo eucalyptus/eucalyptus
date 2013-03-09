@@ -85,8 +85,8 @@ import com.eucalyptus.images.ImageUtil;
 import com.eucalyptus.records.Logs;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.FullName;
+import com.eucalyptus.util.XMLParser;
 import com.eucalyptus.ws.client.ServiceDispatcher;
-import com.eucalyptus.ws.util.XMLParser;
 
 import edu.ucsb.eucalyptus.msgs.CacheImageType;
 import edu.ucsb.eucalyptus.msgs.FlushCachedImageType;

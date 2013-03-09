@@ -70,21 +70,19 @@ import java.security.cert.X509Certificate;
 import java.util.List;
 import java.util.NoSuchElementException;
 
-import javax.xml.XMLConstants;
 import javax.xml.parsers.DocumentBuilder;
-import javax.xml.parsers.DocumentBuilderFactory;
-import javax.xml.parsers.ParserConfigurationException;
 import javax.xml.xpath.XPath;
 import javax.xml.xpath.XPathConstants;
 import javax.xml.xpath.XPathExpressionException;
 import javax.xml.xpath.XPathFactory;
+
 import org.apache.log4j.Logger;
 import org.w3c.dom.Document;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
+
 import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.AuthException;
-import com.eucalyptus.auth.policy.PolicySpec;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.cloud.ImageMetadata;
 import com.eucalyptus.cloud.ImageMetadata.DeviceMappingType;
@@ -98,12 +96,13 @@ import com.eucalyptus.crypto.util.B64;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.FullName;
 import com.eucalyptus.util.RestrictedTypes;
+import com.eucalyptus.util.XMLParser;
 import com.eucalyptus.ws.client.ServiceDispatcher;
-import com.eucalyptus.ws.util.XMLParser;
 import com.google.common.base.Function;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
+
 import edu.ucsb.eucalyptus.msgs.GetBucketAccessControlPolicyResponseType;
 import edu.ucsb.eucalyptus.msgs.GetBucketAccessControlPolicyType;
 import edu.ucsb.eucalyptus.msgs.GetObjectResponseType;
@@ -230,9 +229,7 @@ public class ImageManifests {
 			this.manifest = ImageManifests.requestManifestData( ctx.getUserFullName( ), bucketName, manifestKey );
 			try {
 				DocumentBuilder builder = XMLParser.getDocBuilder();
-				if (builder != null) {
-					this.inputSource = builder.parse( new ByteArrayInputStream( this.manifest.getBytes( ) ) );
-				}
+				this.inputSource = builder.parse( new ByteArrayInputStream( this.manifest.getBytes( ) ) );
 			} catch ( Exception e ) {
 				throw new EucalyptusCloudException( "Failed to read manifest file: " + bucketName + "/" + manifestKey, e );
 			}

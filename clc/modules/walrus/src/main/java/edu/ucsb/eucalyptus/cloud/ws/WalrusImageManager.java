@@ -128,6 +128,8 @@ import com.eucalyptus.system.Threads;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.Lookups;
 import com.eucalyptus.util.WalrusProperties;
+import com.eucalyptus.util.XMLParser;
+
 import edu.ucsb.eucalyptus.cloud.AccessDeniedException;
 import edu.ucsb.eucalyptus.cloud.BucketLogData;
 import edu.ucsb.eucalyptus.cloud.DecryptionFailedException;
@@ -154,7 +156,6 @@ import edu.ucsb.eucalyptus.util.EucaSemaphore;
 import edu.ucsb.eucalyptus.util.EucaSemaphoreDirectory;
 import edu.ucsb.eucalyptus.util.WalrusDataMessenger;
 import edu.ucsb.eucalyptus.util.WalrusMonitor;
-import com.eucalyptus.ws.util.XMLParser;
 
 public class WalrusImageManager {
 	private static Logger LOG = Logger.getLogger( WalrusImageManager.class );
