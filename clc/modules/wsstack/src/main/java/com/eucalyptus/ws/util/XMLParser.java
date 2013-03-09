@@ -66,6 +66,9 @@ import org.apache.log4j.Logger;
 import org.apache.xml.dtm.ref.DTMNodeList;
 import org.w3c.dom.Document;
 import org.w3c.dom.Node;
+import org.xml.sax.EntityResolver;
+import org.xml.sax.InputSource;
+import org.xml.sax.SAXException;
 
 import javax.xml.XMLConstants;
 import javax.xml.parsers.DocumentBuilder;
@@ -80,6 +83,7 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.StringReader;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -101,11 +105,19 @@ public class XMLParser {
 		docFactory.setExpandEntityReferences(false);
 		try {
 			docFactory.setFeature(XMLConstants.FEATURE_SECURE_PROCESSING, true);
+			docFactory.setFeature("http://apache.org/xml/features/nonvalidating/load-external-dtd", false);
 		} catch(ParserConfigurationException ex) {
 			LOG.error(ex, ex);
 		}
 		try {
 			docBuilder = docFactory.newDocumentBuilder();
+			docBuilder.setEntityResolver(new EntityResolver() {
+				@Override
+				public InputSource resolveEntity(String publicId, String systemId)
+						throws SAXException, IOException {
+					return new InputSource(new StringReader(""));
+				}
+			});
 		} catch (ParserConfigurationException ex) {
 			LOG.error(ex, ex);
 		}
