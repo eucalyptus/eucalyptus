@@ -92,7 +92,6 @@ public class XMLParser {
 
 	private static Logger LOG = Logger.getLogger(XMLParser.class);
 
-	private DocumentBuilderFactory docFactory;
 	private DocumentBuilder docBuilder;
 	private Document docRoot;
 	private XPath xpath;
@@ -101,26 +100,7 @@ public class XMLParser {
 
 	public XMLParser() {
 		xpath = XPathFactory.newInstance().newXPath();
-		docFactory = DocumentBuilderFactory.newInstance();
-		docFactory.setExpandEntityReferences(false);
-		try {
-			docFactory.setFeature(XMLConstants.FEATURE_SECURE_PROCESSING, true);
-			docFactory.setFeature("http://apache.org/xml/features/nonvalidating/load-external-dtd", false);
-		} catch(ParserConfigurationException ex) {
-			LOG.error(ex, ex);
-		}
-		try {
-			docBuilder = docFactory.newDocumentBuilder();
-			docBuilder.setEntityResolver(new EntityResolver() {
-				@Override
-				public InputSource resolveEntity(String publicId, String systemId)
-						throws SAXException, IOException {
-					return new InputSource(new StringReader(""));
-				}
-			});
-		} catch (ParserConfigurationException ex) {
-			LOG.error(ex, ex);
-		}
+		docBuilder = getDocBuilder();
 	}
 
 	public XMLParser(File file) {
@@ -153,6 +133,48 @@ public class XMLParser {
 		} catch(Exception ex) {
 			ex.printStackTrace();
 		}
+	}
+
+	public static DocumentBuilderFactory getDocBuilderFactory() {
+		DocumentBuilderFactory dFactory = DocumentBuilderFactory.newInstance();
+		dFactory.setExpandEntityReferences(false);
+
+		try {
+			dFactory.setFeature(XMLConstants.FEATURE_SECURE_PROCESSING, true);
+		} catch(ParserConfigurationException ex) {
+			LOG.error(ex, ex);
+		}
+
+		try{
+			dFactory.setFeature("http://apache.org/xml/features/nonvalidating/load-external-dtd", false);
+		} catch(ParserConfigurationException ex) {
+			LOG.error(ex, ex);
+		}
+
+		try {
+			dFactory.setFeature("http://apache.org/xml/features/disallow-doctype-decl", true);
+		} catch(ParserConfigurationException ex) {
+			LOG.error(ex, ex);
+		}
+		return dFactory;
+	}
+
+	public static DocumentBuilder getDocBuilder() {
+		DocumentBuilderFactory dFactory = getDocBuilderFactory();
+		DocumentBuilder dBuilder = null;
+		try {
+			dBuilder = dFactory.newDocumentBuilder();
+			dBuilder.setEntityResolver(new EntityResolver() {
+				@Override
+				public InputSource resolveEntity(String publicId, String systemId)
+				throws SAXException, IOException {
+					return new InputSource(new StringReader(""));
+				}
+			});
+		} catch (ParserConfigurationException ex) {
+			LOG.error(ex, ex);
+		}	
+		return dBuilder;
 	}
 
 	public String getValue(String name) {

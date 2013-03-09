@@ -89,6 +89,7 @@ import org.xml.sax.InputSource;
 import org.xml.sax.SAXException;
 
 import com.eucalyptus.records.Logs;
+import com.eucalyptus.ws.util.XMLParser;
 
 
 
@@ -123,14 +124,7 @@ public class LoggingResetter {
 		SmallLoggingConfiguration smallLoggingConfiguration = null;
 		InputStream in = null;
 		try {
-			DocumentBuilderFactory dbFactory = DocumentBuilderFactory.newInstance();
-		    dbFactory.setExpandEntityReferences(false);
-			try {
-			  dbFactory.setFeature(XMLConstants.FEATURE_SECURE_PROCESSING, true);
-			} catch(ParserConfigurationException ex) {
-			  LOG.error(ex, ex);
-			}
-			DocumentBuilder dBuilder = dbFactory.newDocumentBuilder();
+			DocumentBuilder dBuilder = XMLParser.getDocBuilder();
 			dBuilder.setEntityResolver(new Log4jEntityResolver());
 			URL url = Thread.currentThread().getContextClassLoader().getResource("log4j.xml");
 			if (url != null) {

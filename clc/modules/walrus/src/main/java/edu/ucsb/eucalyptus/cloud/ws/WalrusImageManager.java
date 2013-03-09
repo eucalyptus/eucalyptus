@@ -154,7 +154,7 @@ import edu.ucsb.eucalyptus.util.EucaSemaphore;
 import edu.ucsb.eucalyptus.util.EucaSemaphoreDirectory;
 import edu.ucsb.eucalyptus.util.WalrusDataMessenger;
 import edu.ucsb.eucalyptus.util.WalrusMonitor;
-import edu.ucsb.eucalyptus.util.XMLParser;
+import com.eucalyptus.ws.util.XMLParser;
 
 public class WalrusImageManager {
 	private static Logger LOG = Logger.getLogger( WalrusImageManager.class );
@@ -588,14 +588,7 @@ public class WalrusImageManager {
 						sigCloud.update(verificationString.getBytes());
 						String signature = new String(Hashes.bytesToHex(sigCloud.sign()));
 						//TODO: refactor
-						DocumentBuilderFactory dbFactory = DocumentBuilderFactory.newInstance();
-					    dbFactory.setExpandEntityReferences(false);
-						try {
-						  dbFactory.setFeature(XMLConstants.FEATURE_SECURE_PROCESSING, true);
-						} catch(ParserConfigurationException ex) {
-						  LOG.error(ex, ex);
-						}
-						DocumentBuilder docBuilder = dbFactory.newDocumentBuilder( );
+						DocumentBuilder docBuilder = XMLParser.getDocBuilder();
 						fileInputStream = new FileInputStream( file );
 						Document docRoot = docBuilder.parse( fileInputStream );
 						Element sigElement = docRoot.createElement("signature");						

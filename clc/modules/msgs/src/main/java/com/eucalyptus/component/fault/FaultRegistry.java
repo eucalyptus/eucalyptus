@@ -82,6 +82,8 @@ import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 import org.xml.sax.SAXException;
 
+import com.eucalyptus.ws.util.XMLParser;
+
 public class FaultRegistry {
 	private static final Logger LOG = Logger.getLogger(FaultRegistry.class);
 	private static final String EUCAFAULTS = "eucafaults";
@@ -126,36 +128,28 @@ public class FaultRegistry {
 			Map<String, Common> commonMap) {
 		try {
 			LOG.warn("Parsing common file " + commonXMLFile);
-			DocumentBuilderFactory dbFactory = DocumentBuilderFactory.newInstance();
-			dbFactory.setExpandEntityReferences(false);
-			try {
-			  dbFactory.setFeature(XMLConstants.FEATURE_SECURE_PROCESSING, true);
-			} catch(ParserConfigurationException ex) {
-			  LOG.error(ex, ex);
+			DocumentBuilder dBuilder = XMLParser.getDocBuilder();
+			if (dBuilder != null) {
+	  		  Document doc = dBuilder.parse(commonXMLFile);
+			  Element docElement = doc.getDocumentElement();
+			  docElement.normalize();
+			  if (!EUCAFAULTS.equalsIgnoreCase(docElement.getTagName())) {
+				  LOG.warn("File " + commonXMLFile + " contains the wrong outer XML tag, will not be parsed.");
+			  } else {
+				  NodeList children = docElement.getChildNodes();
+				  final int length = children.getLength();
+				  for (int i=0;i < length; i++) {
+					  Node currentNode = children.item(i);
+					  if (currentNode.getNodeType() == Node.ELEMENT_NODE) {
+						  Element currentElement = (Element) currentNode;
+						  if (COMMON.equalsIgnoreCase(currentElement.getTagName())) {
+							  parseCommonElement(currentElement, commonMap);
+						  }
+				  	  }
+				  }
+			    }
+		      LOG.debug("Successfully parsed " + commonXMLFile);
 			}
-			DocumentBuilder dBuilder = dbFactory.newDocumentBuilder();
-			Document doc = dBuilder.parse(commonXMLFile);
-			Element docElement = doc.getDocumentElement();
-			docElement.normalize();
-			if (!EUCAFAULTS.equalsIgnoreCase(docElement.getTagName())) {
-				LOG.warn("File " + commonXMLFile + " contains the wrong outer XML tag, will not be parsed.");
-			} else {
-				NodeList children = docElement.getChildNodes();
-				final int length = children.getLength();
-				for (int i=0;i < length; i++) {
-					Node currentNode = children.item(i);
-					if (currentNode.getNodeType() == Node.ELEMENT_NODE) {
-						Element currentElement = (Element) currentNode;
-						if (COMMON.equalsIgnoreCase(currentElement.getTagName())) {
-							parseCommonElement(currentElement, commonMap);
-						}
-					}
-				}
-			}
-			LOG.debug("Successfully parsed " + commonXMLFile);
-		} catch (ParserConfigurationException ex) {
-			ex.printStackTrace();
-			LOG.error(ex);
 		} catch (SAXException ex) {
 			ex.printStackTrace();
 			LOG.error(ex);
@@ -181,14 +175,7 @@ public class FaultRegistry {
 				suppressedFaults.add(faultId);
 				return;
 			}
-			DocumentBuilderFactory dbFactory = DocumentBuilderFactory.newInstance();
-			dbFactory.setExpandEntityReferences(false);
-			try {
-			  dbFactory.setFeature(XMLConstants.FEATURE_SECURE_PROCESSING, true);
-			} catch(ParserConfigurationException ex) {
-			  LOG.error(ex, ex);
-			}
-			DocumentBuilder dBuilder = dbFactory.newDocumentBuilder();
+			DocumentBuilder dBuilder = XMLParser.getDocBuilder();
 			Document doc = dBuilder.parse(faultXMLFile);
 			Element docElement = doc.getDocumentElement();
 			docElement.normalize();
@@ -222,8 +209,6 @@ public class FaultRegistry {
 					}
 				}
 			}
-		} catch (ParserConfigurationException ex) {
-			LOG.error(ex);
 		} catch (SAXException ex) {
 			LOG.error(ex);
 		} catch (IOException ex) {
