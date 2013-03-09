@@ -158,7 +158,8 @@ adb_ncTerminateInstanceResponse_t *ncTerminateInstanceMarshal(adb_ncTerminateIns
 adb_ncAttachVolumeResponse_t *ncAttachVolumeMarshal(adb_ncAttachVolume_t * ncAttachVolume, const axutil_env_t * env);
 adb_ncDetachVolumeResponse_t *ncDetachVolumeMarshal(adb_ncDetachVolume_t * ncDetachVolume, const axutil_env_t * env);
 adb_ncBundleInstanceResponse_t *ncBundleInstanceMarshal(adb_ncBundleInstance_t * ncBundleInstance, const axutil_env_t * env);
-adb_ncBundleRestartInstanceResponse_t *ncBundleRestartInstanceMarshal(adb_ncBundleRestartInstance_t * ncBundleRestartInstance, const axutil_env_t * env);
+adb_ncBundleRestartInstanceResponse_t *ncBundleRestartInstanceMarshal(adb_ncBundleRestartInstance_t * ncBundleRestartInstance,
+                                                                      const axutil_env_t * env);
 adb_ncCancelBundleTaskResponse_t *ncCancelBundleTaskMarshal(adb_ncCancelBundleTask_t * ncCancelBundleTask, const axutil_env_t * env);
 adb_ncDescribeBundleTasksResponse_t *ncDescribeBundleTasksMarshal(adb_ncDescribeBundleTasks_t * ncDescribeBundleTasks, const axutil_env_t * env);
 adb_ncDescribeSensorsResponse_t *ncDescribeSensorsMarshal(adb_ncDescribeSensors_t * ncDescribeSensors, const axutil_env_t * env);
@@ -498,7 +499,8 @@ adb_ncRunInstanceResponse_t *ncRunInstanceMarshal(adb_ncRunInstance_t * ncRunIns
             EUCA_MESSAGE_UNMARSHAL(ncRunInstanceType, input, (&meta));
 
             error = doRunInstance(&meta, uuid, instanceId, reservationId, &params, imageId, imageURL, kernelId, kernelURL, ramdiskId, ramdiskURL,
-                                  ownerId, accountId, keyName, &netparams, userData, launchIndex, platform, expiryTime, groupNames, groupNamesSize, &outInst);
+                                  ownerId, accountId, keyName, &netparams, userData, launchIndex, platform, expiryTime, groupNames, groupNamesSize,
+                                  &outInst);
 
             if (error != EUCA_OK) {
                 LOGERROR("[%s] failed error=%d\n", instanceId, error);
@@ -1026,7 +1028,8 @@ adb_ncBundleInstanceResponse_t *ncBundleInstanceMarshal(adb_ncBundleInstance_t *
 //!
 //! @return a pointer to the request's response structure
 //!
-adb_ncBundleRestartInstanceResponse_t *ncBundleRestartInstanceMarshal(adb_ncBundleRestartInstance_t * ncBundleRestartInstance, const axutil_env_t * env)
+adb_ncBundleRestartInstanceResponse_t *ncBundleRestartInstanceMarshal(adb_ncBundleRestartInstance_t * ncBundleRestartInstance,
+                                                                      const axutil_env_t * env)
 {
     int error = EUCA_OK;
     ncMetadata meta = { 0 };
@@ -1282,7 +1285,9 @@ adb_ncDescribeSensorsResponse_t *ncDescribeSensorsMarshal(adb_ncDescribeSensors_
         // do it
         EUCA_MESSAGE_UNMARSHAL(ncDescribeSensorsType, input, (&meta));
 
-        error = doDescribeSensors(&meta, historySize, collectionIntervalTimeMs, instIds, instIdsLen, sensorIds, sensorIdsLen, &outResources, &outResourcesLen);
+        error =
+            doDescribeSensors(&meta, historySize, collectionIntervalTimeMs, instIds, instIdsLen, sensorIds, sensorIdsLen, &outResources,
+                              &outResourcesLen);
 
         if (error != EUCA_OK) {
             LOGERROR("failed error=%d\n", error);
@@ -1362,7 +1367,7 @@ adb_ncModifyNodeResponse_t *ncModifyNodeMarshal(adb_ncModifyNode_t * ncModifyNod
         meta.correlationId = correlationId;
         meta.userId = userId;
 
-        error = doModifyNode (&meta, stateName);
+        error = doModifyNode(&meta, stateName);
         if (error != EUCA_OK) {
             LOGERROR("failed error=%d\n", error);
             adb_ncModifyNodeResponseType_set_return(output, env, AXIS2_FALSE);
@@ -1398,7 +1403,7 @@ adb_ncMigrateInstancesResponse_t *ncMigrateInstancesMarshal(adb_ncMigrateInstanc
     axis2_char_t *correlationId = NULL;
     axis2_char_t *userId = NULL;
     axis2_char_t *nodeName = NULL;
-    ncInstance ** instances = NULL;
+    ncInstance **instances = NULL;
     int instancesLen = 0;
     axis2_char_t *action = NULL;
     axis2_char_t *credentials = NULL;
@@ -1425,16 +1430,16 @@ adb_ncMigrateInstancesResponse_t *ncMigrateInstancesMarshal(adb_ncMigrateInstanc
         }
         for (int i = 0; i < instancesLen; i++) {
             adb_instanceType_t *instance_adb = adb_ncMigrateInstancesType_get_instances_at(input, env, i);
-            ncInstance * instance = copy_instance_from_adb(instance_adb, env);
+            ncInstance *instance = copy_instance_from_adb(instance_adb, env);
             if (instance == NULL) {
                 LOGERROR("out of memory\n");
                 goto mi_error;
             }
-            instances [i] = instance;
+            instances[i] = instance;
         }
         action = adb_ncMigrateInstancesType_get_action(input, env);
         credentials = adb_ncMigrateInstancesType_get_credentials(input, env);
-        
+
         eventlog("NC", userId, correlationId, "MigrateInstances", "begin");
 
         // do it
@@ -1442,10 +1447,10 @@ adb_ncMigrateInstancesResponse_t *ncMigrateInstancesMarshal(adb_ncMigrateInstanc
         meta.userId = userId;
         meta.nodeName = nodeName;
 
-        error = doMigrateInstances (&meta, instances, instancesLen, action, credentials);
+        error = doMigrateInstances(&meta, instances, instancesLen, action, credentials);
         if (error != EUCA_OK) {
             LOGERROR("failed error=%d\n", error);
-        mi_error:
+mi_error:
             adb_ncMigrateInstancesResponseType_set_return(output, env, AXIS2_FALSE);
         } else {
             // set standard fields in output

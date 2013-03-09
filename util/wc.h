@@ -110,14 +110,14 @@
 
 //! Defines a wide char key/value mapping
 typedef struct wchar_map_struct {
-    wchar_t *key;                      //!< The key to look for within a string
-    wchar_t *val;                      //!< The replacement value
+    wchar_t *key;               //!< The key to look for within a string
+    wchar_t *val;               //!< The replacement value
 } wchar_map;
 
 //! Defines a simple char key/value mapping
 typedef struct char_map_struct {
-    char *key;                         //!< The key to look for within a string
-    char *val;                         //!< The replacement value
+    char *key;                  //!< The key to look for within a string
+    char *val;                  //!< The replacement value
 } char_map;
 
 /*----------------------------------------------------------------------------*\

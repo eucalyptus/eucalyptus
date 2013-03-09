@@ -79,8 +79,8 @@
 #include <time.h>
 #include <assert.h>
 #include <string.h>
-#include <unistd.h>                    /* getopt */
-#include <fcntl.h>                     /* open */
+#include <unistd.h>             /* getopt */
+#include <fcntl.h>              /* open */
 #include <sys/types.h>
 #include <sys/stat.h>
 
@@ -284,7 +284,7 @@ int main(int argc, char *argv[])
         if (result) {
             /* error has occured */
             cat(tmp_name);
-            fprintf(stderr, "\n");     /* in case error doesn't end with a newline */
+            fprintf(stderr, "\n");  /* in case error doesn't end with a newline */
             remove(tmp_name);
         } else {
             /* all's well */
@@ -296,7 +296,7 @@ int main(int argc, char *argv[])
         }
 
         EUCA_FREE(tmp_name);
-    } else {                           // HttpPut
+    } else {                    // HttpPut
         result = http_put(file_name, url, login, password);
     }
     return (EUCA_OK);

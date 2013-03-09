@@ -280,7 +280,7 @@ public class BaseMessage {
     try {
       Class responseClass = ClassLoader.getSystemClassLoader( ).loadClass( replyType );
       reply = ( TYPE ) responseClass.newInstance( );
-      reply.correlationId = this.correlationId;
+      reply.setCorrelationId ( this.correlationId );
     } catch ( Exception e ) {
       Logger.getLogger( BaseMessage.class ).debug( e, e );
       throw new TypeNotPresentException( this.correlationId, e );

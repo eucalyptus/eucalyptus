@@ -73,6 +73,8 @@ import java.security.interfaces.RSAKey;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import org.apache.log4j.Logger;
+
+import com.eucalyptus.auth.util.X509CertHelper;
 import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.bootstrap.Bootstrapper;
 import com.eucalyptus.bootstrap.DependsLocal;
@@ -121,12 +123,14 @@ public class SystemCredentials {
     private final String          name;
     private final X509Certificate cert;
     private final KeyPair         keyPair;
+    private final String					certFingerprint;
     
     private Credentials( ComponentId componentId ) throws Exception {
       this.componentId = componentId;
       this.name = componentId.name( );
       this.cert = loadCertificate( componentId );
       this.keyPair = loadKeyPair( componentId );
+      this.certFingerprint = X509CertHelper.calcFingerprint(this.cert);
       EventRecord.here( SystemCredentials.class, EventType.COMPONENT_INFO, "initialized", this.name, this.cert.getSubjectDN( ).toString( ) ).info( );
       SystemCredentials.providers.put( this.name, this );
     }
@@ -208,6 +212,10 @@ public class SystemCredentials {
     public KeyPair getKeyPair( ) {
       return this.keyPair;
     }
+    
+    public String getCertFingerprint() {
+    	return this.certFingerprint;
+    }  	
     
   }
   

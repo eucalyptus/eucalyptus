@@ -76,16 +76,16 @@
 
 #include <stdio.h>
 #include <stdlib.h>
-#define __USE_GNU                      /* strnlen */
-#include <string.h>                    /* strlen, strcpy */
+#define __USE_GNU               /* strnlen */
+#include <string.h>             /* strlen, strcpy */
 #include <time.h>
-#include <sys/types.h>                 /* fork */
-#include <sys/wait.h>                  /* waitpid */
+#include <sys/types.h>          /* fork */
+#include <sys/wait.h>           /* waitpid */
 #include <unistd.h>
 #include <assert.h>
 #include <errno.h>
 #include <pthread.h>
-#include <signal.h>                    /* SIGINT */
+#include <signal.h>             /* SIGINT */
 #include <sys/stat.h>
 #include <fcntl.h>
 
@@ -102,7 +102,7 @@
 #include "handlers.h"
 #include "xml.h"
 #include "hooks.h"
-#include "vbr.h" // vbr_parse
+#include "vbr.h"                // vbr_parse
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |
@@ -171,7 +171,7 @@ static int doInitialize(struct nc_state_t *nc);
 static void *rebooting_thread(void *arg);
 static int doRebootInstance(struct nc_state_t *nc, ncMetadata * pMeta, char *instanceId);
 static int doGetConsoleOutput(struct nc_state_t *nc, ncMetadata * pMeta, char *instanceId, char **consoleOutput);
-static int doMigrateInstances (struct nc_state_t * nc, ncMetadata * pMeta, ncInstance ** instances, int instancesLen, char * action, char * credentials);
+static int doMigrateInstances(struct nc_state_t *nc, ncMetadata * pMeta, ncInstance ** instances, int instancesLen, char *action, char *credentials);
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |
@@ -196,7 +196,7 @@ struct handlers kvm_libvirt_handlers = {
     .doDetachVolume = NULL,
     .doDescribeSensors = NULL,
     .doModifyNode = NULL,
-    .doMigrateInstances = doMigrateInstances
+    .doMigrateInstances = doMigrateInstances,
 };
 
 /*----------------------------------------------------------------------------*\
@@ -302,7 +302,7 @@ static void *rebooting_thread(void *arg)
     {
         // for KVM, must stop and restart the instance
         LOGDEBUG("[%s] destroying domain\n", instance->instanceId);
-        error = virDomainDestroy(dom); // @todo change to Shutdown? is this synchronous?
+        error = virDomainDestroy(dom);  // @todo change to Shutdown? is this synchronous?
         virDomainFree(dom);
     }
     sem_v(hyp_sem);
@@ -335,7 +335,7 @@ static void *rebooting_thread(void *arg)
     for (int i = 0; i < EUCA_MAX_VOLUMES; ++i) {
         volume = &instance->volumes[i];
         if (strcmp(volume->stateName, VOL_STATE_ATTACHED) && strcmp(volume->stateName, VOL_STATE_ATTACHING))
-            continue;                  // skip the entry unless attached or attaching
+            continue;           // skip the entry unless attached or attaching
 
         LOGDEBUG("[%s] volumes [%d] = '%s'\n", instance->instanceId, i, volume->stateName);
 
@@ -372,7 +372,7 @@ static void *rebooting_thread(void *arg)
                 if (err) {
                     LOGERROR("[%s][%s] failed to reattach volume (attempt %d of %d)\n", instance->instanceId, volume->volumeId, j, REATTACH_RETRIES);
                     LOGDEBUG("[%s][%s] error from virDomainAttachDevice: %d xml: %s\n", instance->instanceId, volume->volumeId, err, xml);
-                    sleep(3);          // sleep a bit and retry
+                    sleep(3);   // sleep a bit and retry
                 } else {
                     LOGINFO("[%s][%s] volume reattached as '%s'\n", instance->instanceId, volume->volumeId, volume->localDevReal);
                     break;
@@ -586,20 +586,20 @@ static void *migrating_thread(void *arg)
     }
 
     char duri [1024];
-    snprintf (duri, sizeof(duri), "qemu+tls://%s/system", instance->migration_dst);
+    snprintf(duri, sizeof(duri), "qemu+tls://%s/system", instance->migration_dst);
     virConnectPtr dconn = NULL;
     dconn = virConnectOpen(duri);
-    if (dconn==NULL) {
+    if (dconn == NULL) {
         LOGERROR("[%s] cannot migrate instance %s (failed to connect to remote), giving up\n", instance->instanceId, instance->instanceId);
         goto out;
     }
 
-    virDomain * ddom = virDomainMigrate(dom,
-                                        dconn,
-                                        VIR_MIGRATE_LIVE | VIR_MIGRATE_NON_SHARED_DISK,
-                                        NULL, // new name on destination (optional)
-                                        NULL, // destination URI as seen from source (optional)
-                                        0L); // bandwidth limitation (0 => unlimited)
+    virDomain *ddom = virDomainMigrate(dom,
+                                       dconn,
+                                       VIR_MIGRATE_LIVE | VIR_MIGRATE_NON_SHARED_DISK,
+                                       NULL, // new name on destination (optional)
+                                       NULL, // destination URI as seen from source (optional)
+                                       0L); // bandwidth limitation (0 => unlimited)
     virConnectClose(dconn);
 
     if (ddom == NULL) {
@@ -617,27 +617,39 @@ static void *migrating_thread(void *arg)
     save_instance_struct(instance);
     copy_instances();
     sem_v(inst_sem);
+
     if (dom)
         virDomainFree(dom);
     return NULL;
 }
 
 //!
-//! TODO: doxygen
+//! Handles the instance migration request.
 //!
-static int doMigrateInstances (struct nc_state_t * nc, ncMetadata * pMeta, ncInstance ** instances, int instancesLen, char * action, char * credentials)
+//! @param[in]  pMeta a pointer to the node controller (NC) metadata structure
+//! @param[in]  instances metadata for the instance to migrate to destination
+//! @param[in]  instancesLen number of instances in the instance list
+//! @param[in]  action IP of the destination Node Controller
+//! @param[in]  credentials credentials that enable the migration
+//!
+//! @return EUCA_OK on sucess or EUCA_ERROR on failure
+//!
+//! @pre
+//!
+//! @post
+static int doMigrateInstances(struct nc_state_t *nc, ncMetadata * pMeta, ncInstance ** instances, int instancesLen, char *action, char *credentials)
 {
     int ret = EUCA_OK;
-    assert (instancesLen>0);
-    ncInstance * instance_req = instances[0];
-    char * sourceNodeName = instance_req->migration_src;
-    char * destNodeName = instance_req->migration_dst;
+    assert(instancesLen > 0);
+    ncInstance *instance_req = instances[0];
+    char *sourceNodeName = instance_req->migration_src;
+    char *destNodeName = instance_req->migration_dst;
 
     // this is a call to the source of migration
     if (!strcmp(pMeta->nodeName, sourceNodeName)) {
 
         // locate the instance structure
-        ncInstance * instance;
+        ncInstance *instance;
         sem_p(inst_sem);
         {
             instance = find_instance(&global_instances, instance_req->instanceId);
@@ -681,7 +693,6 @@ static int doMigrateInstances (struct nc_state_t * nc, ncMetadata * pMeta, ncIns
         } else if (strcmp (action, "rollback") == 0) {
             LOGERROR("[%s] action 'rollback' not implemented\n", instance->instanceId);
             return (EUCA_ERROR);
-
         } else {
             LOGERROR("[%s] action '%s' is not valid\n", instance->instanceId, action);
             return (EUCA_ERROR);
@@ -722,7 +733,6 @@ static int doMigrateInstances (struct nc_state_t * nc, ncMetadata * pMeta, ncIns
             EUCA_FREE(brname);
             goto failed_dest;
         }
-
         // TODO: move stuff in startup_thread() into a function?
 
         instance->combinePartitions = nc->convert_to_disk;
@@ -732,12 +742,11 @@ static int doMigrateInstances (struct nc_state_t * nc, ncMetadata * pMeta, ncIns
             LOGERROR("[%s] failed to prepare images for instance (error=%d)\n", instance->instanceId, error);
             goto failed_dest;
         }
-
         // attach any volumes
         for (int v = 0; v < EUCA_MAX_VOLUMES; v++) {
             ncVolume *volume = &instance->volumes[v];
             if (strcmp(volume->stateName, VOL_STATE_ATTACHED) && strcmp(volume->stateName, VOL_STATE_ATTACHING))
-                continue;                  // skip the entry unless attached or attaching
+                continue;       // skip the entry unless attached or attaching
             LOGDEBUG("[%s] volumes [%d] = '%s'\n", instance->instanceId, v, volume->stateName);
 
             // TODO: factor what the following out of here and doAttachVolume() in handlers_default.c
@@ -747,7 +756,7 @@ static int doMigrateInstances (struct nc_state_t * nc, ncMetadata * pMeta, ncIns
             char *xml = NULL;
 
             char localDevReal[32], localDevTag[256], remoteDevReal[132];
-            char * tagBuf = localDevTag;
+            char *tagBuf = localDevTag;
             ret = convert_dev_names(volume->localDev, localDevReal, tagBuf);
             if (ret)
                 goto unroll;
@@ -780,7 +789,8 @@ static int doMigrateInstances (struct nc_state_t * nc, ncMetadata * pMeta, ncIns
             }
             // make sure there is a block device
             if (check_block(remoteDevReal)) {
-                LOGERROR("[%s][%s] cannot verify that host device '%s' is available for hypervisor attach\n", instance->instanceId, volume->volumeId, remoteDevReal);
+                LOGERROR("[%s][%s] cannot verify that host device '%s' is available for hypervisor attach\n", instance->instanceId, volume->volumeId,
+                         remoteDevReal);
                 goto unroll;
             }
             // generate XML for libvirt attachment request
@@ -789,7 +799,6 @@ static int doMigrateInstances (struct nc_state_t * nc, ncMetadata * pMeta, ncIns
                 LOGERROR("[%s][%s] could not produce attach device xml\n", instance->instanceId, volume->volumeId);
                 goto unroll;
             }
-
             // invoke hooks
             char path[MAX_PATH];
             char lpath[MAX_PATH];
@@ -806,7 +815,7 @@ static int doMigrateInstances (struct nc_state_t * nc, ncMetadata * pMeta, ncIns
             }
 
             continue;
-        unroll:
+unroll:
             // TODO: unroll all volume attachments
             break;
         }
@@ -817,7 +826,6 @@ static int doMigrateInstances (struct nc_state_t * nc, ncMetadata * pMeta, ncIns
         change_state(instance, BOOTING); // not STAGING, since in that mode we don't poll hypervisor for info
         LOGINFO("[%s] migration destination ready %s > %s\n", instance->instanceId, instance->migration_src, instance->migration_dst);
         save_instance_struct(instance);
-
         error = add_instance(&global_instances, instance);
         copy_instances();
         sem_v(inst_sem);
@@ -827,7 +835,7 @@ static int doMigrateInstances (struct nc_state_t * nc, ncMetadata * pMeta, ncIns
         }
 
         goto out;
-    failed_dest:
+failed_dest:
         ret = EUCA_ERROR;
         EUCA_FREE(instance);
 
@@ -836,7 +844,7 @@ static int doMigrateInstances (struct nc_state_t * nc, ncMetadata * pMeta, ncIns
         ret = EUCA_ERROR;
     }
 
- out:
+out:
 
     return ret;
 }
