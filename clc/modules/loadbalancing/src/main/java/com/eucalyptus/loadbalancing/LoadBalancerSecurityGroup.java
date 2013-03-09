@@ -97,7 +97,7 @@ public class LoadBalancerSecurityGroup extends AbstractPersistent {
 	@Column(name="metadata_state", nullable=false)
 	private String state = null;
     
-	@OneToMany(fetch = FetchType.LAZY, mappedBy = "group")
+	@OneToMany(fetch = FetchType.LAZY, mappedBy = "security_group")
     @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
 	private Collection<LoadBalancerServoInstance> servoInstances = null;
 

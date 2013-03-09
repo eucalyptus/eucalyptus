@@ -251,6 +251,7 @@ public class LoadBalancers {
 			db.commit();
 			return newRec;
 		}catch(Exception ex){
+			db.rollback();
 			throw new LoadBalancingException("failed to query dns record", ex);
 		}
 	}

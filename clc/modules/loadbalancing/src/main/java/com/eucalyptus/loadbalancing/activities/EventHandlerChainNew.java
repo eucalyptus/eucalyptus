@@ -22,10 +22,14 @@ package com.eucalyptus.loadbalancing.activities;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
+import java.util.Set;
+import java.util.UUID;
+
 import javax.persistence.EntityTransaction;
 import org.apache.log4j.Logger;
 
 import com.eucalyptus.bootstrap.Bootstrap;
+import com.eucalyptus.cloud.CloudMetadatas;
 import com.eucalyptus.component.Topology;
 import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.configurable.ConfigurableClass;
@@ -41,8 +45,12 @@ import com.eucalyptus.loadbalancing.LoadBalancerSecurityGroup;
 import com.eucalyptus.loadbalancing.LoadBalancerZone;
 import com.eucalyptus.loadbalancing.LoadBalancers;
 import com.eucalyptus.loadbalancing.LoadBalancing;
+import com.google.common.base.Function;
+import com.google.common.base.Predicate;
+import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
+import com.google.common.collect.Sets;
 
 import edu.ucsb.eucalyptus.msgs.RunningInstancesItemType;
 
@@ -128,7 +136,8 @@ public class EventHandlerChainNew extends EventHandlerChain<NewLoadbalancerEvent
 		public void apply(NewLoadbalancerEvent evt)
 				throws EventHandlerException {
 			this.event = evt;
-			String groupName = String.format("euca-lb-%s", evt.getLoadBalancer());
+			String groupName = String.format("euca-lb-%s-%s", evt.getLoadBalancer(), 
+					UUID.randomUUID().toString().substring(0, 5));
 			String groupDesc = String.format("group for loadbalancer %s", evt.getLoadBalancer());
 			// create a new security group
 			try{
@@ -154,7 +163,8 @@ public class EventHandlerChainNew extends EventHandlerChain<NewLoadbalancerEvent
 				db.commit();
 			}catch(NoSuchElementException ex){
 				final LoadBalancerSecurityGroup newGroup = new LoadBalancerSecurityGroup(lb, groupName);
-				Entities.persist(newGroup);
+				LoadBalancerSecurityGroup written = Entities.persist(newGroup);
+				Entities.flush(written);
 				db.commit();
 			}catch(Exception ex){
 				db.rollback();
@@ -217,29 +227,33 @@ public class EventHandlerChainNew extends EventHandlerChain<NewLoadbalancerEvent
 				throw new EventHandlerException("can't query the loadbalancer due to unknown reason", ex);
 			}
 			
-			final EntityTransaction db = Entities.get( LoadBalancerServoInstance.class );
-			try{
-				for (String zoneName : evt.getZones()){
-					LoadBalancerZone lbZone = null;
-					try{
-						lbZone = LoadBalancers.findZone(lb, zoneName);
-						// save the servoinstance entry to the DB
-					}catch(NoSuchElementException ex){
-						throw new EventHandlerException("Can't find the zone in user's loadbalancer ("+zoneName+")", ex);
-					}catch(Exception ex){
-						throw new EventHandlerException("Can't find the zone due to unknown reason");
-					}
-					final LoadBalancerServoInstance instance = LoadBalancerServoInstance.named(lbZone);
+			List<LoadBalancerZone> zones = Lists.newArrayList();
+		
+			for (String zoneName : evt.getZones()){
+				LoadBalancerZone lbZone = null;
+				try{
+					lbZone = LoadBalancers.findZone(lb, zoneName);
+					zones.add(lbZone);
+					// save the servoinstance entry to the DB
+				}catch(NoSuchElementException ex){
+					throw new EventHandlerException("Can't find the zone in user's loadbalancer ("+zoneName+")", ex);
+				}catch(Exception ex){
+					throw new EventHandlerException("Can't find the zone due to unknown reason");
+				}
+			}
+			
+			final Function<LoadBalancerZone, LoadBalancerServoInstance> persistInstance = 
+					new Function<LoadBalancerZone, LoadBalancerServoInstance>( ) {
+		        public LoadBalancerServoInstance apply( final LoadBalancerZone zone ) {
+					final LoadBalancerServoInstance instance = LoadBalancerServoInstance.named(zone);
 					instance.setState(LoadBalancerServoInstance.STATE.Pending);
 					instance.generateUniqueName();
-					this.uniqueEntries.add(instance.getUniqueName());
-					Entities.persist(instance);
-				}
-				db.commit();
-			}catch(Exception ex){
-				db.rollback();
-				this.uniqueEntries.clear();
-				throw new EventHandlerException("failed to persist the new loadbalancer VMs");
+					LoadBalancerServoInstance written = Entities.persist(instance);
+					return written;
+		        }
+		    }; 
+			for(LoadBalancerZone zone : zones){
+				Entities.asTransaction(LoadBalancerServoInstance.class, persistInstance).apply(zone);
 			}
 		}
 
@@ -361,13 +375,14 @@ public class EventHandlerChainNew extends EventHandlerChain<NewLoadbalancerEvent
 	    	  List<LoadBalancerServoInstance> instances = null;
 	    	  try{
 	    		  instances = Entities.query(sample);
-	    	  }catch(NoSuchElementException ex){
-	    		  ;
-	    	  }catch(Exception ex){
-	    		  LOG.warn("Loadbalancer: failed to query servo instances");
-	    	  }finally{
 	    		  db.commit();
+	    	  }catch(NoSuchElementException ex){
+	    		  db.rollback();
+	    	  }catch(Exception ex){
+	    		  db.rollback();
+	    		  LOG.warn("Loadbalancer: failed to query servo instances");
 	    	  }
+
 	    	  if(instances==null || instances.size()==0)
 	    		  return;
 	    	  

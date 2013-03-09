@@ -23,7 +23,6 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
-import java.util.concurrent.atomic.AtomicReference;
 
 import javax.annotation.Nullable;
 import javax.persistence.EntityTransaction;
@@ -78,9 +77,10 @@ public class EventHandlerChainDelete extends EventHandlerChain<DeleteLoadbalance
 			try{ 
 				lb= LoadBalancers.getLoadbalancer(evt.getContext().getUserFullName(), evt.getLoadBalancer());
 			}catch(NoSuchElementException ex){
-				throw new EventHandlerException("No such loadbalancer found");
+				return;
 			}catch(Exception ex){
-				throw new EventHandlerException("Failed to find the loadbalancer");
+				LOG.warn("Failed to find the loadbalancer");
+				return;
 			}
 			
 			final EntityTransaction db = Entities.get( LoadBalancerZone.class );
@@ -95,7 +95,8 @@ public class EventHandlerChainDelete extends EventHandlerChain<DeleteLoadbalance
 					members.addAll(zone.getServoInstances());
 				}
 			}catch(Exception ex){
-				throw new EventHandlerException("Failed to find the loadbalancer VMs", ex);
+				LOG.warn("Failed to find the loadbalancer VMs", ex);
+				return;
 			}finally{
 				db.commit();
 			}
@@ -153,9 +154,10 @@ public class EventHandlerChainDelete extends EventHandlerChain<DeleteLoadbalance
 			try{ 
 				lb= LoadBalancers.getLoadbalancer(evt.getContext().getUserFullName(), evt.getLoadBalancer());
 			}catch(NoSuchElementException ex){
-				throw new EventHandlerException("No such loadbalancer found");
+				return;
 			}catch(Exception ex){
-				throw new EventHandlerException("Failed to find the loadbalancer");
+				LOG.warn("Failed to find the loadbalancer", ex);
+				return;
 			}
 			final LoadBalancerDnsRecord dns = lb.getDns();
 			
@@ -191,7 +193,6 @@ public class EventHandlerChainDelete extends EventHandlerChain<DeleteLoadbalance
 		public void rollback() throws EventHandlerException {
 			// TODO Auto-generated method stub
 		}
-		
 	}
 
 	public static class LoadbalancerInstanceTerminator extends AbstractEventHandler<DeleteLoadbalancerEvent> implements StoredResult<String> {
@@ -212,7 +213,8 @@ public class EventHandlerChainDelete extends EventHandlerChain<DeleteLoadbalance
 		  	try{
 		  		terminated = EucalyptusActivityTasks.getInstance().terminateInstances(toTerminate);
 		  	}catch(Exception ex){
-		  		throw new EventHandlerException("failed to terminate the instances", ex);
+		  		LOG.warn("failed to terminate the instances", ex);
+		  		return;
 		  	}
 		  	this.terminatedInstances = terminated;
 		  	
@@ -310,9 +312,10 @@ public class EventHandlerChainDelete extends EventHandlerChain<DeleteLoadbalance
 					group = groups.get(0);
 				}
 			}catch(NoSuchElementException ex){
-				throw new EventHandlerException("Could not find the loadbalancer with name="+evt.getLoadBalancer(), ex);
+				return;
 			}catch(Exception ex){
-				throw new EventHandlerException("Error while looking for loadbalancer with name="+evt.getLoadBalancer(), ex);
+				LOG.error("Error while looking for loadbalancer with name="+evt.getLoadBalancer(), ex);
+				return;
 			}
 
 			if(group!= null){
@@ -334,7 +337,6 @@ public class EventHandlerChainDelete extends EventHandlerChain<DeleteLoadbalance
 		public void rollback() throws EventHandlerException {
 			// TODO Auto-generated method stub
 		}
-		
 	}
 
 	public static class DatabaseUpdate extends AbstractEventHandler<DeleteLoadbalancerEvent>{
@@ -366,15 +368,17 @@ public class EventHandlerChainDelete extends EventHandlerChain<DeleteLoadbalance
 			List<LoadBalancerServoInstance> outOfService=null;
 			final EntityTransaction db = Entities.get( LoadBalancerServoInstance.class );
 			try{
-				LoadBalancerServoInstance sample = LoadBalancerServoInstance.withState(LoadBalancerServoInstance.STATE.OutOfService.name());
+				LoadBalancerServoInstance sample = 
+						LoadBalancerServoInstance.withState(LoadBalancerServoInstance.STATE.OutOfService.name());
 				outOfService = Entities.query(sample);
-			}catch(NoSuchElementException ex){
-				;
-			}catch(Exception ex){
-				LOG.warn("failed to query loadbalancer servo instance", ex);
-			}finally{
 				db.commit();
+			}catch(NoSuchElementException ex){
+				db.rollback();
+			}catch(Exception ex){
+				db.rollback();
+				LOG.warn("failed to query loadbalancer servo instance", ex);
 			}
+
 			if(outOfService == null || outOfService.size()<=0)
 				return;
 			

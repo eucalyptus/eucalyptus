@@ -54,10 +54,10 @@ public class LoadbalancerInstanceLauncher extends AbstractEventHandler<NewLoadba
 	
 	@ConfigurableField( displayName = "loadbalancer_instance_type", 
             description = "instance type for loadbalancer instances",
-            initial = "NULL", 
+            initial = "m1.small", 
             readonly = false,
             type = ConfigurableFieldType.KEYVALUE )
-	public static String LOADBALANCER_INSTANCE_TYPE = "NULL";
+	public static String LOADBALANCER_INSTANCE_TYPE = "m1.small";
 	
 	@ConfigurableField( displayName = "loadbalancer_service_path", 
 			description = "service path of the loadbalancer",
@@ -198,5 +198,4 @@ public class LoadbalancerInstanceLauncher extends AbstractEventHandler<NewLoadba
 		// TODO Auto-generated method stub
 		return  this.launchedInstances == null ? Lists.<String>newArrayList() : this.launchedInstances;
 	}
-	
 }

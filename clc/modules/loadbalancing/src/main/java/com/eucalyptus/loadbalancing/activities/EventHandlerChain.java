@@ -44,6 +44,7 @@ public abstract class EventHandlerChain<T extends LoadbalancingEvent> {
 			try{
 				reverseHandler.addFirst(handler); // failed handler will rollback too
 				handler.apply(evt);
+				
 			}catch(Exception e){
 				LOG.warn("starting to rollback");
 				EventHandlerChainException toThrow = 
@@ -57,6 +58,7 @@ public abstract class EventHandlerChain<T extends LoadbalancingEvent> {
 						toThrow.setRollback(false); // fail once, rollback status is set to false
 					}
 				}
+				LOG.info("finished rollback");
 				throw toThrow;
 			}
 		}

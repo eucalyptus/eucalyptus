@@ -62,7 +62,7 @@ public class LoadBalancerServoInstance extends AbstractPersistent {
     
     @ManyToOne
     @JoinColumn( name = "metadata_group_fk", nullable=true)
-    private LoadBalancerSecurityGroup group = null;
+    private LoadBalancerSecurityGroup security_group = null;
     
     @ManyToOne
     @JoinColumn( name = "metadata_dns_fk", nullable=true)
@@ -71,7 +71,7 @@ public class LoadBalancerServoInstance extends AbstractPersistent {
     @Transient
     private LoadBalancer loadbalancer = null;
     
-    @Column(name="metadata_instance_id", unique=true)
+    @Column(name="metadata_instance_id", nullable=true)
     private String instanceId = null;
     
     @Column(name="metadata_state", nullable=false)
@@ -94,13 +94,13 @@ public class LoadBalancerServoInstance extends AbstractPersistent {
     	this.state = STATE.Pending.name();
     	this.zone = lbzone;
     	this.loadbalancer = zone.getLoadbalancer();
-    	this.group = group;
+    	this.security_group = group;
     }
     private LoadBalancerServoInstance(final LoadBalancerZone lbzone, final LoadBalancerSecurityGroup group, final LoadBalancerDnsRecord dns){
     	this.state = STATE.Pending.name();
     	this.zone = lbzone;
     	this.loadbalancer = zone.getLoadbalancer();
-    	this.group = group;
+    	this.security_group = group;
     	this.dns = dns;
     }
     
@@ -164,7 +164,7 @@ public class LoadBalancerServoInstance extends AbstractPersistent {
     }
     
     public void setSecurityGroup(LoadBalancerSecurityGroup group){
-    	this.group=group;
+    	this.security_group=group;
     }
     
     public void setDns(final LoadBalancerDnsRecord dns){

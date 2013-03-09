@@ -27,64 +27,42 @@ import org.apache.log4j.Logger;
 public class EventHandlerChains {
 	private static Logger LOG  = Logger.getLogger( EventHandlerChains.class );
 	
-	private static EventHandlerChain<NewLoadbalancerEvent> onNewLoadbalancerChain = null;
 	public static EventHandlerChain<NewLoadbalancerEvent> onNewLoadbalancer(){
-		if(onNewLoadbalancerChain==null){
-			onNewLoadbalancerChain= (new EventHandlerChainNew()).build();
-		}
-		return onNewLoadbalancerChain;
+		return (new EventHandlerChainNew()).build();
 	}
 	
-	private static  EventHandlerChain<DeleteLoadbalancerEvent> onDeleteLoadbalancerChain = null;
 	public static EventHandlerChain<DeleteLoadbalancerEvent> onDeleteLoadbalancer(){
-		if(onDeleteLoadbalancerChain==null){
-			onDeleteLoadbalancerChain= (new EventHandlerChainDelete()).build();
-		}
-		return onDeleteLoadbalancerChain;
+		return (new EventHandlerChainDelete()).build();
 	}
 	
-	private static EventHandlerChain<CreateListenerEvent> onCreateListenerChain = null;
 	public static EventHandlerChain<CreateListenerEvent> onCreateListener(){
-		if (onCreateListenerChain==null){
-			onCreateListenerChain = (new EventHandlerChainNewListeners()).build();
-		}
-		return onCreateListenerChain;
+		return (new EventHandlerChainNewListeners()).build();
 	}
 	
 	private static  EventHandlerChain<DeleteListenerEvent> onDeleteListenerChain = null;
 	public static EventHandlerChain<DeleteListenerEvent> onDeleteListener(){
-		if(onDeleteListenerChain==null){
-			onDeleteListenerChain = (new EventHandlerChainDeleteListeners()).build();
-		}
-		return onDeleteListenerChain;
+		return (new EventHandlerChainDeleteListeners()).build();
 	}
 	
-	private static EventHandlerChain<RegisterInstancesEvent> onRegisterInstancesChain=null;
 	public static EventHandlerChain<RegisterInstancesEvent> onRegisterInstances(){
-		if(onRegisterInstancesChain==null){
-			onRegisterInstancesChain= new EventHandlerChain<RegisterInstancesEvent>(){
+		return new EventHandlerChain<RegisterInstancesEvent>(){
 				@Override
 				public EventHandlerChain<RegisterInstancesEvent> build() {
 					// TODO Auto-generated method stub
 					return this;
 				}
 			}.build();
-		}
-		return onRegisterInstancesChain;
 	}
 	
 	private static EventHandlerChain<DeregisterInstancesEvent> onDeregisterInstancesChain = null;
 	public static EventHandlerChain<DeregisterInstancesEvent> onDeregisterInstances(){
-		if(onDeregisterInstancesChain==null){
-			onDeregisterInstancesChain= new EventHandlerChain<DeregisterInstancesEvent>(){
+		return new EventHandlerChain<DeregisterInstancesEvent>(){
 				@Override
 				public EventHandlerChain<DeregisterInstancesEvent> build() {
 					// TODO Auto-generated method stub
 					return this;
 				}
 			}.build();
-		}
-		return onDeregisterInstancesChain;
 	}
 		
 }
