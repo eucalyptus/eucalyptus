@@ -3,6 +3,10 @@
 (function($, eucalyptus) {
 
   $.widget( "eucalyptus.euca_resource_tag", {
+
+    // =============
+    // CLASS OPTIONS
+    // =============
  
     options: { 
       resource: null,
@@ -12,10 +16,16 @@
       cancelButtonCallback: null, // Callback for cancel button 
     },
 
+    // ===============
+    // CLASS VARIABLES
+    // ===============
+
     baseTable: null,  // an element to hold the dataTable object    
 
     displayView: null,  // a variable to store the table's interaction mode    
-    isFirstData: null,  // a variable to store the table's data state, edited or unedited.
+    isFirstData: null,  // a variable to store the table's data state, edited or unedited
+    totalTagCount: null, // a variable to store the total number of the resource tags
+    strEditMessage: null, // a variable to store a string that describes the edit message
 
     uneditedData: null,
     createdTagList: null,
@@ -25,13 +35,18 @@
     removedRow: null,   // an element to store removed row information 
     addedRow: null,    // an element to store newly added row information
 
-    // Set up the widget
+    // ===============================
+    // CREATE EUCA_RESOURCE_TAG WIDGET
+    // ===============================
+
     _create: function() {
       var thisObj = this;
 
       thisObj.displayView = "view";   //The table is in 'view' mode by default
       thisObj.isFirstData = "true";   //The table is unedited
-     
+      thisObj.totalTagCount = 0;  
+      thisObj.strEditMessage = "";  
+ 
       thisObj.uneditedData = [];
       thisObj.createdTagList = [];
       thisObj.deletedTagList = [];
@@ -44,7 +59,11 @@
       var demo = $('<table>').addClass('resource_tag_datatable_class').attr('id', 'resource_tag_datatable_id-' + thisObj.options.resource_id);
       mainDiv.append(demo);
       thisObj.baseTable = demo;
-      // dataTable Initialization
+      
+      // ====================
+      // INITIALIZE DATATABLE
+      // ====================
+      
       thisObj.baseTable.dataTable({
           "bProcessing": true,
           "sAjaxSource": "../ec2?Action=DescribeTags",
@@ -57,78 +76,97 @@
                     "success": fnCallback
                 });
           },
-/*          "fnServerParams": function (aoData) {
-               var addedRowData = jQuery.data(thisObj.addedRow);   // Retreive the added row data
-               for(thisKey in addedRowData) {
-                 var thisData = addedRowData[thisKey];
-                 if( thisData.key != null ){
-                    aoData.push({"name": thisData.key, "value": thisData.value });
-                    alert("pushed: "+thisData.key);
-                 };
-               };
-          },
-*/          "sAjaxDataProp": "results",
+          "sAjaxDataProp": "results",
           "bAutoWidth" : false,
           "bPaginate": false, 
           "bFilter": false ,
           "aoColumns": [
             {
               "sTitle": "Key",
-              "fnRender": function(oObj) {
- /*               if( jQuery.data(thisObj.alteredRow, oObj.aData.name) != null )
-                  return jQuery.data(thisObj.alteredRow, oObj.aData.name).key;
-                else
-*/		  return DefaultEncoder().encodeForHTML(oObj.aData.name);
+              "fnRender": function(oObj){
+//                 return DefaultEncoder().encodeForHTML(oObj.aData.name);   // Temporarily disabled. Need dataTable 1.9
+                 return oObj.aData.name;
 	       },
               "mDataProp": "name",
             },
             {
               "sTitle": "Value",
-              "fnRender": function(oObj) {
-/*                if( jQuery.data(thisObj.removedRow, oObj.aData.name) != null )
-                  return '<del>' + DefaultEncoder().encodeForHTML(oObj.aData.value) + '</del>';
-                else if( jQuery.data(thisObj.alteredRow, oObj.aData.name) != null )
-                  return jQuery.data(thisObj.alteredRow, oObj.aData.name).value;
-                else
-*/		  return DefaultEncoder().encodeForHTML(oObj.aData.value);
+              "fnRender": function(oObj){
+//                 return DefaultEncoder().encodeForHTML(oObj.aData.value);  // Temporarily disabled. Need dataTable 1.9
+                 return oObj.aData.value;
 	       },
                "mDataProp": "value",
             },
+            {
+               "bVisible": false,
+               "fnRender": function(oObj){
+                  if( !oObj.aData.edited ){
+                    return "false";
+                  };
+                  return oObj.aData.edited;
+               },
+               "mDataProp": "edited",
+            },
           ],
+
+          "fnRowCallback": function( nRow, aData ) {
+
+            // =====================
+            // COLOR CODE EDITED ROW
+            // =====================
+
+            var $nRow = $(nRow);
+            var key = aData.name.toLowerCase();
+            var edited = aData.edited.toLowerCase();
+            if(edited == "true") {
+              $nRow.css({"color":"red"});       // When modified, color it red
+            }else if(key == "name") {
+              $nRow.css({"color":"green"});     // Special Tag 'name' will be highlighted
+            };
+            return nRow;
+          },
 
           "fnDrawCallback" : function() { 
 
-             // Create more rows in the dataTable for newly added resource tags
-/*             var addedRowData = jQuery.data(thisObj.addedRow);   // Retreive the added row data
-             for(thisKey in addedRowData) { 
-                var thisData = addedRowData[thisKey];
-                if( thisData.key != null ){   // if the stored data contains sub key-value pair,
-                  var tdAddedResourceTag = $('<td>').html('<font color="blue">'+jQuery.data(thisObj.addedRow, thisKey).key+'</font>');
-                  tdAddedResourceTag.after($('<td>').html('<font color="blue">'+jQuery.data(thisObj.addedRow, thisKey).value+'</font>'));
-                  thisObj.baseTable.find('tr').last().after($('<tr>').addClass('resource-tag-added-row-tr').append(tdAddedResourceTag));   // Add the new row at the end of the table
-                };
-             };
-*/
+             // =============================================================
+             // RECIEVE AND STORE THE RESOURCE TAGS PRIOR TO THE MODIFICATION
+             // =============================================================
+
              // Store the unedited row data here
              if( thisObj.isFirstData == "true" ){
                thisObj.uneditedData = [];
                $.each( thisObj.baseTable.fnGetData(), function(i, row){
-                thisObj.uneditedData.push(row);
+                thisObj.uneditedData.push(row);           // Store the initial raw data per row
                });
-               console.log(thisObj.uneditedData);
                if( thisObj.uneditedData.length > 0 ){
+                 console.log(thisObj.uneditedData);
                  thisObj.isFirstData = "false";           // Flip the Flag to store the initial Data in uneditedData storage
                };
              };
-                                         
+
+             // ==============================================
+             // GO THROUGH EACH ROW AND CONSTRUCT EDIT BUTTONS
+             // ==============================================
+
              // For each row of dataTable, add an extra column for the dual button. 
 	     thisObj.baseTable.find('tbody').find('tr').each(function(index, tr){
+
                  var $currentRow = $(tr);
+
+                 // ==================================
+                 // RETREIVE KEY AND VALUE ON THIS ROW
+                 // ==================================
+
                  var key = $currentRow.children().first().text();   // Grab the key of the resource tag, which is the first 'td' item
                  var value = $currentRow.children().eq(1).text();   // Grab the value of the resource tag, which is the second 'td' item
                  
-                  // Prevent the dataTable's sorting from altering the states of the table view               
+                  // Prevent the dataTable's sorting from altering the states of the table view
+                  // In other words, do not run below, if the buttons are already added. 
                  if( !($currentRow.children().last().hasClass('resource-tag-table-extra-td')) ){              
+
+                   // =============================
+                   // CREATE NEW COLUMN FOR BUTTONS
+                   // =============================
  
                    var keyForId = $.md5(key);   // Convert the key into MD5 hash value to be used as an identifier
                    var buttonSpan = $('<span>').addClass('dual-tag-button-span').attr('id', 'dualButtonSpan-'+keyForId);
@@ -142,15 +180,21 @@
                    tdExtraColumn.append(buttonSpan);
                    $currentRow.append(tdExtraColumn);
 
+                   // BIND for 'mouseenter' in this row
                    $currentRow.bind('mouseenter', function(e){
                      $currentRow.children().last().find('#dualButton-edit-'+keyForId+'.dual-tag-button').show();
                      $currentRow.children().last().find('#dualButton-remove-'+keyForId+'.dual-tag-button').show();
                    });
 
+                   // BIND for 'mouseleave' in this row
                    $currentRow.bind('mouseleave', function(e){
                      $currentRow.children().last().find('#dualButton-edit-'+keyForId+'.dual-tag-button').hide();
                      $currentRow.children().last().find('#dualButton-remove-'+keyForId+'.dual-tag-button').hide();
                    });
+
+                   // ================
+                   // BIND EDIT BUTTON
+                   // ================
 
                    editButton.bind('click', function(e){
 
@@ -163,9 +207,35 @@
                        $thisCurrentRow.find('#extra-td.resource-tag-table-extra-td').hide();
                      });
 
+                     // =========================
+                     // CHANGE ROW TO INPUT BOXES
+                     // =========================
+
+                     // Replace the row with input boxes
                      var tdResourceTagEdit = $('<td>').html('<input name="tag_key" type="text" id="tag_key" size="128" value="'+key+'">');
                      tdResourceTagEdit.after($('<td>').html('<input name="tag_value" type="text" id="tag_value" size="256" value="'+value+'">'));
-                     
+
+		     // Monitor the length of the input for key
+		     tdResourceTagEdit.find('input#tag_key').keypress(function() {
+		       if($(this).val().length >= 128) {
+			 $(this).val($(this).val().slice(0, 128));
+			 alert("Warnig: the length of the key cannot be longer than 128 chars.\nKey: " + $(this).val());
+		       };
+		       // TODO: It doen't appear to be regulating the final input length
+		     });
+
+		     // Monitor the length of the input for value
+		     tdResourceTagEdit.find('input#tag_value').keypress(function() {
+		       if($(this).val().length >= 256) {
+			 $(this).val($(this).val().slice(0, 256));
+			 alert("Warnig: the length of the key cannot be longer than 256 chars.\nValue: " + $(this).val());
+		       };
+		     });
+
+                     // ========================================
+                     // CREATE EDIT-DONE AND EDIT-CANCEL BUTTONS
+                     // ========================================
+
                      var editButtonSpan = $('<span>').addClass('dual-tag-edit-button-span').attr('id', 'dualButtonSpan-'+keyForId);
                      var editdoneButton = $('<a>').addClass('button dual-tag-button').attr('id', 'dualButton-editdone-'+keyForId).text('done').show();
                      var editcancelButton = $('<a>').addClass('button dual-tag-button').attr('id', 'dualButton-editcancel-'+keyForId).text('cancel').show();
@@ -176,9 +246,12 @@
                      tdExtraColumn.append(editButtonSpan);
                      tdResourceTagEdit.after(tdExtraColumn);
 
-        //             $currentRow.text('');
                      $currentRow.children().hide();
                      $currentRow.append(tdResourceTagEdit);
+
+                     // =====================
+                     // BIND EDIT-DONE BUTTON
+                     // =====================
 
                      editdoneButton.bind('click', function(e){
 
@@ -187,14 +260,12 @@
                        var newKey = tdResourceTagEdit.find('#tag_key').val();
                        var newValue = tdResourceTagEdit.find('#tag_value').val();
                        jQuery.data(thisObj.alteredRow, key, {key: newKey, value: newValue, prev_key: key, prev_value: value});
-                       thisObj.baseTable.fnUpdate({"name": newKey, "value": newValue}, thisObj.baseTable.fnGetPosition($(this).closest("tr").get(0)));
+                       thisObj.baseTable.fnUpdate({"name": newKey, "value": newValue, "edited": "true"}, thisObj.baseTable.fnGetPosition($(this).closest("tr").get(0)));
                        tdResourceTagEdit.remove();
                        $currentRow.children().show();
 
                        key = newKey;   // Update the variable 'key' with the newly edited value
                        value = newValue;   // Update the variable 'value' with newlt edited value
-
-//                       thisObj.baseTable.fnReloadAjax();
 
                        thisObj.baseTable.find('tbody').find('tr').each(function(index, tr){      // Re-display all the edit buttons
                          var $thisCurrentRow = $(tr);
@@ -202,20 +273,18 @@
                          $thisCurrentRow.find('#extra-td.resource-tag-table-extra-td').show();
                        });
 
+                       thisObj._updateAdditionalMessageDiv(thisObj.strEditMessage);   // Update the additional message div
                      });
+
+                     // =======================
+                     // BIND EDIT-CANCEL BUTTON
+                     // =======================
 
                      editcancelButton.bind('click', function(e){
 
                        thisObj.displayView = "view";   // The table is in 'view' mode
-
-   /*                    var tdResourceTagEdit = $('<td>').text(key);
-                       tdResourceTagEdit.after($('<td>').text(value));
-                       $currentRow.text('');
-                       $currentRow.append(tdResourceTagEdit);
-   */                  
                        tdResourceTagEdit.remove();  
-          //             $currentRow.children().show();
-
+                       
                        thisObj.baseTable.find('tbody').find('tr').each(function(index, tr){      // Re-display all the edit buttons
                          var $thisCurrentRow = $(tr);
                          $thisCurrentRow.children().show();
@@ -223,10 +292,15 @@
                        }); 
 
                        thisObj.baseTable.find('tr.resource-tag-input-row-tr').show();   // Re-display the add new tag row  
-//                       thisObj.baseTable.fnReloadAjax();
+                       
+                       thisObj._updateAdditionalMessageDiv(thisObj.strEditMessage);   // Update the additional message div
                      });
 
-                   });
+                   });   // END of BIND for EDIT button
+
+                   // ==================
+                   // BIND REMOVE BUTTON
+                   // ==================
 
                    removeButton.bind('click', function(e){
 
@@ -234,11 +308,22 @@
 
                      jQuery.data(thisObj.removedRow, key, {key: key, value: value});
                      thisObj.baseTable.fnDeleteRow(thisObj.baseTable.fnGetPosition($(this).closest("tr").get(0)));
-        //             thisObj.baseTable.fnReloadAjax();
+                     if( thisObj.strEditMessage == "" ){
+                       thisObj.strEditMessage = "Deleted Row:";
+                     };
+                     thisObj.strEditMessage += " ["+key+"="+value+"]";
+                     
+                     thisObj._updateAdditionalMessageDiv(thisObj.strEditMessage);   // Update the additional message div
                    });
-                 };
-             });
 
+                 };  // END of IF statement for preventing additional button creation when sorted.
+
+             });  // END of $.each for adding buttons per row
+
+             // ============================
+             // ATTACHING ADD NEW TAG BUTTON
+             // ============================
+             
              // Construct the last row of the table; a special case for the add-only tag row.
              var addNewTagButton = $('<a>').addClass('button single-tag-button').attr('id', 'singleButton-add').text('Add new tag');
              var tdResourceTag = $('<td>').html('<input name="added_tag_key" type="text" id="added_tag_key" size="128">');
@@ -246,24 +331,62 @@
              tdResourceTag.after($('<td>').append(addNewTagButton));
              thisObj.baseTable.find('tr').last().after($('<tr>').addClass('resource-tag-input-row-tr').append(tdResourceTag));
 
+             // Monitor the length of the input for key
+             tdResourceTag.find('input#added_tag_key').keypress(function() {
+               if($(this).val().length >= 128) {
+                 $(this).val($(this).val().slice(0, 128));
+                 alert("Warnig: the length of the key cannot be longer than 128 chars.\nKey: " + $(this).val());
+               };
+               // TODO: It doen't appear to be regulating the final input length
+             });
+
+             // Monitor the length of the input for value
+             tdResourceTag.find('input#added_tag_value').keypress(function() {
+               if($(this).val().length >= 256) {
+                 $(this).val($(this).val().slice(0, 256));
+                 alert("Warnig: the length of the key cannot be longer than 256 chars.\nValue: " + $(this).val());
+               };
+             });
+
+             // BIND add new tag button 
              addNewTagButton.bind('click', function(e){
                var addedKey = tdResourceTag.find('#added_tag_key').val();
                var addedValue = tdResourceTag.find('#added_tag_value').val();
                jQuery.data(thisObj.addedRow, addedKey, {key: addedKey, value: addedValue});
-               thisObj.baseTable.fnAddData({"name": addedKey, "value": addedValue});
-          //     thisObj.baseTable.fnReloadAjax();
+               thisObj.baseTable.fnAddData({"name": addedKey, "value": addedValue, "edited": "true"});
+               
+               thisObj._updateAdditionalMessageDiv(thisObj.strEditMessage);   // Update the additional message div
              });
 
-	     // If the table is in 'edit' mode, hide the add new tag row
-             if( thisObj.displayView != "view" ){
+             // Get the total count of the resource tags 
+             thisObj.totalTagCount = thisObj.baseTable.fnGetData().length;
+             console.log("totalTagCount: " + thisObj.totalTagCount);
+
+	     // If the table is in 'edit' mode or there exists 10 tags, hide the add new tag row
+             if( thisObj.displayView != "view" || thisObj.totalTagCount >= 10){
                thisObj.baseTable.find('tr.resource-tag-input-row-tr').hide();       
              };
 
           },
      });
 
+     // ======================================
+     // APPEND DATATABLE INTO THE MAIN ELEMENT
+     // ======================================
+ 
      // Add the initialized dataTable element into the main class element
      thisObj.element.append(thisObj.baseTable);
+
+     // ==========================
+     // Display Additional Message
+     // ==========================
+
+     var additionalMessage = $('<div>').addClass('resource-tag-additional-message').attr('id', 'tag-div-additional-message').text("");
+     thisObj.element.append(additionalMessage); 
+
+     // ===========================
+     // ADD SAVE AND CANCEL BUTTONS
+     // ===========================
 
      // Add Save and Cancel buttons
      var saveButton = $('<a>').addClass('button single-tag-button').attr('id', 'tagButton-save').text('Save');
@@ -288,24 +411,35 @@
           callback();
        };
      });
+
+    },    // END OF _CREATE()
+
+    _updateAdditionalMessageDiv: function(str){
+      var thisObj = this;
+      thisObj.element.find('div#tag-div-additional-message').text(str).css({"color":"red"});
     },
- 
+
     _clickedSaveButton: function(){
       var thisObj = this;
-//      alert("Save Button Clicked. Call Ajax");
       thisObj._processEditedTags();
       jQuery.removeData(thisObj.alteredRow);   //remove 'altered row' data
       jQuery.removeData(thisObj.removedRow);   //remove 'removed row' data
       jQuery.removeData(thisObj.addedRow);     //remove 'added row' data
-      thisObj.baseTable.fnReloadAjax();        //Reload the table
+
+      thisObj.isFirstData = "true";            // Reset the Flag
+      thisObj.strEditMessage = "";             // Reset the additional message string
+      thisObj._updateAdditionalMessageDiv("Tag Updated Saved");
+      thisObj.baseTable.fnReloadAjax();        // Reload the table
     },
 
     _clickedCancelButton: function(){
       var thisObj = this;
-//      alert("Cancel Button Clicked");
       jQuery.removeData(thisObj.alteredRow);   //remove 'altered row' data
       jQuery.removeData(thisObj.removedRow);   //remove 'removed row' data
       jQuery.removeData(thisObj.addedRow);     //remove 'added row' data
+
+      thisObj.strEditMessage = "";             //Reset the additional message string
+      thisObj._updateAdditionalMessageDiv("Tag Update Canceled");
       thisObj.baseTable.fnReloadAjax();        //Reload the table
     },
 
@@ -333,11 +467,9 @@
           };
         });
         if( isExist == "false" ){
-  //         console.log("Delete: " + beforeKey + "=" + beforeValue);
            thisObj.deletedTagList.push({key: beforeKey, value: beforeValue});
         }else{
            if( isModed == "true" ){
-   //          console.log("Delete: " + beforeKey + "=" + beforeValue + " and Create: " + beforeKey + "=" + newAfterValue );
            thisObj.deletedTagList.push({key: beforeKey, value: beforeValue});
            thisObj.createdTagList.push({key: beforeKey, value: newAfterValue});
            };
@@ -356,7 +488,6 @@
              };
           });
           if( isExistBefore == "false" ){
-   //         console.log("Create: " + afterKey + "=" + afterValue);
             thisObj.createdTagList.push({key: afterKey, value: afterValue});
           };
       });
@@ -420,7 +551,6 @@
         };
       };
 */
-      thisObj.isFirstData = "true";   // Reset the Flag
     },
 
     _makeCall_createTag : function (resource_id, key, value) {
