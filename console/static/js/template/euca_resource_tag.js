@@ -9,11 +9,12 @@
     // =============
  
     options: { 
-      resource: null,
-      resource_id: null,
-      tag_data: null,
+      resource: null,             // cloud resource identifier
+      resource_id: null,          // euca/aws ID for the resource
+      tag_data: null,             // Deprecate
       saveButtonCallback: null,   // Callback for save button
       cancelButtonCallback: null, // Callback for cancel button 
+      widgetMode: null,           // Mode: edit or view-only      
     },
 
     // ===============
@@ -127,6 +128,14 @@
           },
 
           "fnDrawCallback" : function() { 
+
+             // ===============================================
+             // SKIP THE PROCESS BELOW IF IT'S 'VIEW-ONLY' MODE
+             // ===============================================
+
+             if( thisObj.options.widgetMode == "view-only" ){
+               return;
+             };
 
              // =============================================================
              // RECIEVE AND STORE THE RESOURCE TAGS PRIOR TO THE MODIFICATION
@@ -376,6 +385,14 @@
  
      // Add the initialized dataTable element into the main class element
      thisObj.element.append(thisObj.baseTable);
+
+     // ===============================================
+     // SKIP THE PROCESS BELOW IF IT'S 'VIEW-ONLY' MODE
+     // ===============================================
+
+     if( thisObj.options.widgetMode == "view-only" ){
+       return;
+     };
 
      // ==========================
      // Display Additional Message

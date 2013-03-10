@@ -924,7 +924,7 @@
       instance = $(instance).text();   // This won't be necessary after dataTable 1.9 merge is in.   030613
       if ( instance.length > 0 ) {
         // Create a widget object for displaying the resource tag information
-        var $tagInfo = $('<div>').addClass('resource-tag-table-expanded-instance').addClass('clearfix').euca_resource_tag({resource: 'instance', resource_id: instance, cancelButtonCallback: function(){ thisObj.tagDialog.eucadialog("close"); } });
+        var $tagInfo = $('<div>').addClass('resource-tag-table-expanded-instance').addClass('clearfix').euca_resource_tag({resource: 'instance', resource_id: instance, cancelButtonCallback: function(){ thisObj.tagDialog.eucadialog("close"); }, widgetMode: 'edit' });
         thisObj.tagDialog.eucadialog('addNote','ebs-backed-warning', $tagInfo);   // This line should be adjusted once the right template is created for the resource tag.  030713
         thisObj.tagDialog.eucadialog('open');
        }
@@ -1208,7 +1208,7 @@
 //        $wrapper.append($volInfo);
 
       // Create a widget object for displaying the resource tag information
-      $tagInfo = $('<div>').addClass('resource-tag-table-expanded-instance').addClass('clearfix').attr('id', instance.id).euca_resource_tag({resource: 'instance', resource_id: instance.id});
+      $tagInfo = $('<div>').addClass('resource-tag-table-expanded-instance').addClass('clearfix').attr('id', instance.id).euca_resource_tag({resource: 'instance', resource_id: instance.id, widgetMode: 'view-only'});
 
       $tabspace = $('<div>').addClass('eucatabspace-main-div').eucatabspace(); 
       $tabspace.eucatabspace('addTabPage', 'Instance', $instInfo);
