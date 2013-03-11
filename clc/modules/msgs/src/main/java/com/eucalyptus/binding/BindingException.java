@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * Copyright 2009-2013 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -66,21 +66,21 @@ import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import com.eucalyptus.ws.WebServicesException;
 
 public class BindingException extends WebServicesException {
+  private static final long serialVersionUID = 1L;
 
   public BindingException( ) {
-    super( );
   }
 
   public BindingException( String arg0, Throwable arg1 ) {
-    super( arg0, arg1, HttpResponseStatus.PRECONDITION_FAILED );
+    super( arg0, arg1, HttpResponseStatus.BAD_REQUEST );
   }
 
   public BindingException( String arg0 ) {
-    super( arg0, HttpResponseStatus.PRECONDITION_FAILED );
+    super( arg0, HttpResponseStatus.BAD_REQUEST );
   }
 
   public BindingException( Throwable arg0 ) {
-    super( arg0, HttpResponseStatus.PRECONDITION_FAILED );
+    super( arg0, HttpResponseStatus.BAD_REQUEST );
   }
 
 }
