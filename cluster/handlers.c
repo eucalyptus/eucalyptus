@@ -294,7 +294,7 @@ int doCreateImage(ncMetadata * pMeta, char *instanceId, char *volumeId, char *re
 int doDescribeSensors(ncMetadata * pMeta, int historySize, long long collectionIntervalTimeMs, char **instIds, int instIdsLen, char **sensorIds,
                       int sensorIdsLen, sensorResource *** outResources, int *outResourcesLen);
 int doModifyNode(ncMetadata * pMeta, char *nodeName, char *stateName);
-int doMigrateInstances(ncMetadata * pMeta, char *nodeName);
+int doMigrateInstances(ncMetadata * pMeta, char *nodeName, int commit);
 int setup_shared_buffer(void **buf, char *bufname, size_t bytes, sem_t ** lock, char *lockname, int mode);
 int initialize(ncMetadata * pMeta);
 int ccIsEnabled(void);
@@ -2757,6 +2757,8 @@ int ncInstance_to_ccInstance(ccInstance * dst, ncInstance * src)
     euca_strncpy(dst->createImageTaskStateName, src->createImageTaskStateName, 64);
     euca_strncpy(dst->userData, src->userData, 16384);
     euca_strncpy(dst->state, src->stateName, 16);
+    euca_strncpy(dst->migration_src, src->migration_src, HOSTNAME_SIZE);
+    euca_strncpy(dst->migration_dst, src->migration_dst, HOSTNAME_SIZE);
     dst->ts = src->launchTime;
     dst->migration_state = src->migration_state;
 
@@ -3981,7 +3983,7 @@ int doModifyNode(ncMetadata * pMeta, char *nodeName, char *stateName)
 
     // FIXME: This is only here for compatability with earlier demo
     // development. Remove.
-    if (!doMigrateInstances(pMeta, nodeName)) {
+    if (!doMigrateInstances(pMeta, nodeName, 0)) {
         LOGERROR("doModifyNode() call of doMigrateInstances() failed.\n");
     }
 
@@ -4005,7 +4007,7 @@ int doModifyNode(ncMetadata * pMeta, char *nodeName, char *stateName)
 //!
 //! @note
 //!
-int doMigrateInstances(ncMetadata * pMeta, char *nodeName)
+int doMigrateInstances(ncMetadata * pMeta, char *nodeName, int commit)
 {
     int i, rc, ret = 0, timeout;
     int src_index = -1, dst_index = -1;
@@ -4020,12 +4022,18 @@ int doMigrateInstances(ncMetadata * pMeta, char *nodeName)
         LOGERROR("bad input params\n");
         return (1);
     }
-    LOGINFO("migrating from node %s\n", SP(nodeName));
+    if (commit) {
+        LOGINFO("preparing migration from node %s\n", SP(nodeName));
+    } else {
+        LOGINFO("committing migration from node %s\n", SP(nodeName));
+    }
 
     sem_mywait(RESCACHE);
     memcpy(&resourceCacheLocal, resourceCache, sizeof(ccResourceCache));
     sem_mypost(RESCACHE);
 
+    // FIXME: this assumes two nodes, one of which is a source and one
+    // of which is a destination. Inflexible.
     for (i = 0; i < resourceCacheLocal.numResources && (src_index == -1 || dst_index == -1); i++) {
         if (resourceCacheLocal.resources[i].state != RESASLEEP) {
             if (!strcmp(resourceCacheLocal.resources[i].hostname, nodeName)) {
@@ -4076,35 +4084,36 @@ int doMigrateInstances(ncMetadata * pMeta, char *nodeName)
     strncpy(nc_instance.migration_dst, resourceCacheLocal.resources[dst_index].hostname, sizeof(nc_instance.migration_dst));
     ncInstance *instances = &nc_instance;
 
-    // notify the destination
-    timeout = ncGetTimeout(time(NULL), OP_TIMEOUT, 1, 0);
-    rc = ncClientCall(pMeta, timeout, resourceCacheLocal.resources[dst_index].lockidx, resourceCacheLocal.resources[dst_index].ncURL, "ncMigrateInstances",
-                      &instances, 1, "prepare", NULL);
-    if (rc) {
-        LOGERROR("failed: request to prepare migration on destination\n");
-        ret = 1;
-        goto out;
+    if (!commit) {
+        // notify the destination
+        timeout = ncGetTimeout(time(NULL), OP_TIMEOUT, 1, 0);
+        rc = ncClientCall(pMeta, timeout, resourceCacheLocal.resources[dst_index].lockidx, resourceCacheLocal.resources[dst_index].ncURL, "ncMigrateInstances",
+                          &instances, 1, "prepare", NULL);
+        if (rc) {
+            LOGERROR("failed: request to prepare migration on destination\n");
+            ret = 1;
+            goto out;
+        }
+        // notify source
+        timeout = ncGetTimeout(time(NULL), OP_TIMEOUT, 1, 0);
+        rc = ncClientCall(pMeta, timeout, resourceCacheLocal.resources[src_index].lockidx, resourceCacheLocal.resources[src_index].ncURL, "ncMigrateInstances",
+                          &instances, 1, "prepare", NULL);
+        if (rc) {
+            LOGERROR("failed: request to prepare migration on source\n");
+            ret = 1;
+            goto out;
+        }
+    } else {                    // Commit
+        // call commit on source
+        timeout = ncGetTimeout(time(NULL), OP_TIMEOUT, 1, 0);
+        rc = ncClientCall(pMeta, timeout, resourceCacheLocal.resources[src_index].lockidx, resourceCacheLocal.resources[src_index].ncURL, "ncMigrateInstances",
+                          &instances, 1, "commit", NULL);
+        if (rc) {
+            LOGERROR("failed: migration request on source\n");
+            ret = 1;
+            goto out;
+        }
     }
-    // notify source
-    timeout = ncGetTimeout(time(NULL), OP_TIMEOUT, 1, 0);
-    rc = ncClientCall(pMeta, timeout, resourceCacheLocal.resources[src_index].lockidx, resourceCacheLocal.resources[src_index].ncURL, "ncMigrateInstances",
-                      &instances, 1, "prepare", NULL);
-    if (rc) {
-        LOGERROR("failed: request to prepare migration on source\n");
-        ret = 1;
-        goto out;
-    }
-
-    // call commit on source
-    timeout = ncGetTimeout(time(NULL), OP_TIMEOUT, 1, 0);
-    rc = ncClientCall(pMeta, timeout, resourceCacheLocal.resources[src_index].lockidx, resourceCacheLocal.resources[src_index].ncURL, "ncMigrateInstances",
-                      &instances, 1, "commit", NULL);
-    if (rc) {
-        LOGERROR("failed: migration request on source\n");
-        ret = 1;
-        goto out;
-    }
-
 out:
 
     LOGTRACE("done\n");
