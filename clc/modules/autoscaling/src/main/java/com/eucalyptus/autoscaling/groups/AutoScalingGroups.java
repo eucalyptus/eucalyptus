@@ -25,6 +25,7 @@ import java.util.Set;
 import javax.persistence.EntityTransaction;
 import com.eucalyptus.autoscaling.common.AutoScalingGroupType;
 import com.eucalyptus.autoscaling.common.AutoScalingMetadata;
+import com.eucalyptus.autoscaling.common.ProcessType;
 import com.eucalyptus.autoscaling.common.SuspendedProcessType;
 import com.eucalyptus.autoscaling.common.SuspendedProcesses;
 import com.eucalyptus.autoscaling.common.TagType;
@@ -159,6 +160,18 @@ public abstract class AutoScalingGroups {
       suspendedProcessType.setProcessName( suspendedProcess.getScalingProcessType().toString() );
       suspendedProcessType.setSuspensionReason( suspendedProcess.getReason() );
       return suspendedProcessType;
+    }
+  }
+
+  @TypeMapper
+  public enum ScalingProcessTypeTransform implements Function<ScalingProcessType, ProcessType> {
+    INSTANCE;
+
+    @Override
+    public ProcessType apply( final ScalingProcessType scalingProcessType ) {
+      final ProcessType processType = new ProcessType();
+      processType.setProcessName( scalingProcessType.toString() );
+      return processType;
     }
   }
 

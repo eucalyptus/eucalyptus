@@ -147,6 +147,9 @@ public class PutScheduledUpdateGroupActionResponseType extends AutoScalingMessag
 public class ProcessType extends EucalyptusData {
   String processName
   public ProcessType() {  }
+  public ProcessType( String processName ) {
+    this.processName = processName
+  }
 }
 public class TagDescription extends EucalyptusData {
   String resourceId
@@ -912,7 +915,7 @@ public class DescribeAdjustmentTypesResult extends EucalyptusData {
   }
 }
 public class DescribeScalingProcessTypesResult extends EucalyptusData {
-  Processes processes
+  Processes processes = new Processes()
   public DescribeScalingProcessTypesResult() {  }
 }
 public class DescribeAutoScalingNotificationTypesResult extends EucalyptusData {

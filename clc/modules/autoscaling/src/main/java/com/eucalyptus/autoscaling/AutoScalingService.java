@@ -101,6 +101,7 @@ import com.eucalyptus.autoscaling.common.ExecutePolicyType;
 import com.eucalyptus.autoscaling.common.Instance;
 import com.eucalyptus.autoscaling.common.Instances;
 import com.eucalyptus.autoscaling.common.LaunchConfigurationType;
+import com.eucalyptus.autoscaling.common.ProcessType;
 import com.eucalyptus.autoscaling.common.PutNotificationConfigurationResponseType;
 import com.eucalyptus.autoscaling.common.PutNotificationConfigurationType;
 import com.eucalyptus.autoscaling.common.PutScalingPolicyResponseType;
@@ -348,8 +349,14 @@ public class AutoScalingService {
     return reply;
   }
 
-  public DescribeScalingProcessTypesResponseType describeScalingProcessTypes(DescribeScalingProcessTypesType request) throws EucalyptusCloudException {
-    DescribeScalingProcessTypesResponseType reply = request.getReply( );
+  public DescribeScalingProcessTypesResponseType describeScalingProcessTypes( final DescribeScalingProcessTypesType request) throws EucalyptusCloudException {
+    final DescribeScalingProcessTypesResponseType reply = request.getReply( );
+
+    final List<ProcessType> policies = reply.getDescribeScalingProcessTypesResult().getProcesses().getMember();
+    policies.addAll( Collections2.transform(
+        Collections2.filter( EnumSet.allOf( ScalingProcessType.class ), RestrictedTypes.filterPrivilegedWithoutOwner() ),
+        TypeMappers.lookup( ScalingProcessType.class, ProcessType.class )) );
+
     return reply;
   }
 

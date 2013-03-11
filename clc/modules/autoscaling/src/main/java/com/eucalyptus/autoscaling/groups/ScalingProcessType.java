@@ -19,25 +19,28 @@
  ************************************************************************/
 package com.eucalyptus.autoscaling.groups;
 
+import static com.eucalyptus.autoscaling.common.AutoScalingMetadata.ScalingProcessTypeMetadata;
 import javax.annotation.Nullable;
+import com.eucalyptus.auth.principal.Principals;
+import com.eucalyptus.util.OwnerFullName;
 import com.google.common.base.Predicate;
 
 /**
  *
  */
-public enum ScalingProcessType implements Predicate<AutoScalingGroup> {
+public enum ScalingProcessType implements Predicate<AutoScalingGroup>, ScalingProcessTypeMetadata {
 
-  Launch,
-  Terminate,
-  HealthCheck,
-  ReplaceUnhealthy,
   AZRebalance,
-  AlarmNotification,
-  ScheduledActions,
   AddToLoadBalancer,
+  AlarmNotification,
+  HealthCheck,
+  Launch,
+  ReplaceUnhealthy,
+  ScheduledActions,
+  Terminate,
   ;
 
-  @Override
+@Override
   public boolean apply( @Nullable final AutoScalingGroup group ) {
     boolean enabled = true;
 
@@ -49,5 +52,15 @@ public enum ScalingProcessType implements Predicate<AutoScalingGroup> {
     }
 
     return enabled;
+  }
+
+  @Override
+  public String getDisplayName() {
+    return name();
+  }
+
+  @Override
+  public OwnerFullName getOwner() {
+    return Principals.systemFullName();
   }
 }
