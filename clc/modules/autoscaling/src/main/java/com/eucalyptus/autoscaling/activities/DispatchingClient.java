@@ -21,6 +21,7 @@ package com.eucalyptus.autoscaling.activities;
 
 import java.util.NoSuchElementException;
 import java.util.concurrent.ExecutionException;
+import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import com.eucalyptus.bootstrap.BootstrapArgs;
 import com.eucalyptus.component.ComponentId;
@@ -28,7 +29,6 @@ import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.ServiceConfigurations;
 import com.eucalyptus.component.Topology;
-import com.eucalyptus.empyrean.Empyrean;
 import com.eucalyptus.util.Callback;
 import com.eucalyptus.util.async.AsyncRequests;
 import com.eucalyptus.util.concurrent.ListenableFuture;
@@ -37,22 +37,27 @@ import edu.ucsb.eucalyptus.msgs.BaseMessage;
 /**
  *
  */
-abstract public class DispatchingClient<MT extends BaseMessage,CT extends ComponentId> {
+public class DispatchingClient<MT extends BaseMessage,CT extends ComponentId> {
+  @Nullable
   private final String userId;
   private final Class<CT> componentIdClass;
   private ServiceConfiguration configuration;
 
-  public DispatchingClient( final String userId,
-                     final Class<CT> componentIdClass ) {
+  public DispatchingClient( @Nullable final String userId,
+                            @Nonnull  final Class<CT> componentIdClass ) {
     this.userId = userId;
     this.componentIdClass = componentIdClass;
+  }
+
+  public DispatchingClient( @Nonnull final Class<CT> componentIdClass ) {
+    this( null, componentIdClass );
   }
 
   public void init() throws DispatchingClientException {
     try {
       final ComponentId componentId = ComponentIds.lookup( componentIdClass );
-      if (componentId instanceof Empyrean || 
-    		  (BootstrapArgs.isCloudController() && componentId.isCloudLocal() && !componentId.isRegisterable())) {
+      if ( componentId.isAlwaysLocal() ||
+           ( BootstrapArgs.isCloudController() && componentId.isCloudLocal() && !componentId.isRegisterable() ) ) {
         this.configuration = ServiceConfigurations.createEphemeral( componentId );
       } else {
         this.configuration = Topology.lookup( componentIdClass );

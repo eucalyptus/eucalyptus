@@ -20,6 +20,7 @@
 package com.eucalyptus.autoscaling.activities;
 
 import static com.eucalyptus.autoscaling.activities.BackoffRunner.TaskWithBackOff;
+import static com.eucalyptus.autoscaling.activities.ZoneUnavailabilityMarkers.ZoneCallback;
 import static com.eucalyptus.autoscaling.instances.AutoScalingInstances.availabilityZone;
 import static com.eucalyptus.autoscaling.instances.AutoScalingInstances.instanceId;
 import java.util.Collection;
@@ -142,29 +143,51 @@ public class ActivityManager {
   private static final long activityTimeout = TimeUnit.MINUTES.toMillis( 5 );
   private static final int maxLaunchIncrement = 20;
   private static final int maxRegistrationRetries = 5;
+  private static final long zoneFailureThreshold = TimeUnit.MINUTES.toMillis( 5 );
 
   private final ScalingActivities scalingActivities;
   private final AutoScalingGroups autoScalingGroups;
   private final AutoScalingInstances autoScalingInstances;
+  private final ZoneUnavailabilityMarkers zoneAvailabilityMarkers;
+  private final ZoneMonitor zoneMonitor;
   private final BackoffRunner runner = BackoffRunner.getInstance( );
 
   public ActivityManager() {
     this(
         new PersistenceScalingActivities( ),
         new PersistenceAutoScalingGroups( ),
-        new PersistenceAutoScalingInstances( ) );
+        new PersistenceAutoScalingInstances( ),
+        new PersistenceZoneUnavailabilityMarkers(),
+        new ZoneMonitor() );
   }
 
   protected ActivityManager( final ScalingActivities scalingActivities,
                              final AutoScalingGroups autoScalingGroups,
-                             final AutoScalingInstances autoScalingInstances ) {
+                             final AutoScalingInstances autoScalingInstances,
+                             final ZoneUnavailabilityMarkers zoneAvailabilityMarkers,
+                             final ZoneMonitor zoneMonitor ) {
     this.scalingActivities = scalingActivities;
     this.autoScalingGroups = autoScalingGroups;
     this.autoScalingInstances = autoScalingInstances;
+    this.zoneAvailabilityMarkers = zoneAvailabilityMarkers;
+    this.zoneMonitor = zoneMonitor;
   }
 
   public void doScaling() {
     timeoutScalingActivities( );
+
+    // Check for zone failures
+    final Set<String> unavailableZones = zoneMonitor.getUnavailableZones( zoneFailureThreshold );
+    try {
+      zoneAvailabilityMarkers.updateUnavailableZones( unavailableZones, new ZoneCallback(){
+        @Override
+        public void notifyChangedZones( final Set<String> zones ) throws AutoScalingMetadataException {
+          autoScalingGroups.markScalingRequiredForZones( zones );
+        }
+      } );
+    } catch ( Exception e ) {
+      logger.error( e, e );
+    }
 
     // Restore old termination attempts
     try {
@@ -390,8 +413,10 @@ public class ActivityManager {
             Iterables.transform( currentInstances, AutoScalingInstances.instanceId()) );
       } else {
         // First terminate instances in zones that are no longer in use
+        final Set<String> groupZones = Sets.newLinkedHashSet( group.getAvailabilityZones() );
+        groupZones.removeAll( zoneMonitor.getUnavailableZones( zoneFailureThreshold ) ) ;
         final Set<String> unwantedZones = Sets.newHashSet( Iterables.transform( currentInstances, availabilityZone() ) );
-        unwantedZones.removeAll( group.getAvailabilityZones() );
+        unwantedZones.removeAll( groupZones );
 
         final Set<String> targetZones;
         final List<AutoScalingInstance> remainingInstances = Lists.newArrayList( currentInstances );
@@ -403,12 +428,12 @@ public class ActivityManager {
                 Iterables.filter( currentInstances, withAvailabilityZone( unwantedZones ) );
             Iterables.addAll( instancesToTerminate, Iterables.transform( unwantedInstances, instanceId() ) );
             Iterables.removeAll( remainingInstances, Lists.newArrayList( unwantedInstances ) );
-            targetZones = Sets.newLinkedHashSet( group.getAvailabilityZones() );
+            targetZones = groupZones;
           } else {
             targetZones = unwantedZones;
           }
         } else {
-          targetZones = Sets.newLinkedHashSet( group.getAvailabilityZones() );
+          targetZones = groupZones;
         }
 
         final Map<String,Integer> zoneCounts =
@@ -464,9 +489,11 @@ public class ActivityManager {
     } else {
       final List<String> zones =
           Lists.transform( currentInstances, AutoScalingInstances.availabilityZone() );
-      final int expectedInstancesPerZone = group.getCapacity() / group.getAvailabilityZones().size();
+      final Set<String> groupZones = Sets.newLinkedHashSet( group.getAvailabilityZones() );
+      groupZones.removeAll( zoneMonitor.getUnavailableZones( zoneFailureThreshold ) );
+      final int expectedInstancesPerZone = group.getCapacity() / groupZones.size();
       int requiredInstances = 0;
-      for ( final String zone : group.getAvailabilityZones() ) {
+      for ( final String zone : groupZones ) {
         int instanceCount = CollectionUtils.reduce( zones, 0, CollectionUtils.count( Predicates.equalTo( zone ) ) );
         if ( instanceCount < expectedInstancesPerZone ) {
           requiredInstances += expectedInstancesPerZone - instanceCount;
@@ -1025,14 +1052,18 @@ public class ActivityManager {
     @Override
     List<LaunchInstanceScalingActivityTask> buildActivityTasks() throws AutoScalingMetadataException {
       final List<AutoScalingInstance> instances = autoScalingInstances.listByGroup( getGroup() );
+      final Set<String> zonesToUse = Sets.newHashSet( getGroup().getAvailabilityZones() );
+      zonesToUse.removeAll( zoneMonitor.getUnavailableZones( zoneFailureThreshold ) );
       final Map<String,Integer> zoneCounts =
-          buildAvailabilityZoneInstanceCounts( instances, getGroup().getAvailabilityZones() );
+          buildAvailabilityZoneInstanceCounts( instances, zonesToUse );
       final int attemptToLaunch = Math.min( maxLaunchIncrement, launchCount );
       final List<LaunchInstanceScalingActivityTask> activities = Lists.newArrayList();
       for ( int i=0; i<attemptToLaunch; i++ ) {
         final Map.Entry<String,Integer> entry = selectEntry( zoneCounts, Ordering.natural() );
-        entry.setValue( entry.getValue() + 1 );
-        activities.add( new LaunchInstanceScalingActivityTask( newActivity(), entry.getKey() ) );
+        if ( entry != null ) {
+          entry.setValue( entry.getValue() + 1 );
+          activities.add( new LaunchInstanceScalingActivityTask( newActivity(), entry.getKey() ) );
+        }
       }
       return activities;
     }
@@ -1045,16 +1076,9 @@ public class ActivityManager {
       }
 
       try {
-        final boolean scalingRequired =
-            instanceIds.size() != launchCount ||
-                getGroup().getCapacity() + launchCount != getGroup().getDesiredCapacity();
-
         autoScalingGroups.update( getOwner(), getGroup().getAutoScalingGroupName(), new Callback<AutoScalingGroup>(){
           @Override
           public void fire( final AutoScalingGroup autoScalingGroup ) {
-            if ( getGroup().getVersion().equals( autoScalingGroup.getVersion() ) ) {
-              autoScalingGroup.setScalingRequired( scalingRequired );
-            }
             autoScalingGroup.setCapacity( autoScalingGroup.getCapacity() + instanceIds.size() );
           }
         } );
@@ -1405,19 +1429,12 @@ public class ActivityManager {
       this.terminatedCount = terminatedCount;
 
       try {
-        final Boolean scalingRequired = !persist ?
-            null :
-            getGroup().getDesiredCapacity() != getGroup().getCapacity() - terminatedCount;
-
         autoScalingGroups.update(
             getOwner(),
             getGroup().getAutoScalingGroupName(),
             new Callback<AutoScalingGroup>(){
               @Override
               public void fire( final AutoScalingGroup autoScalingGroup ) {
-                if ( scalingRequired != null && getGroup().getVersion().equals( autoScalingGroup.getVersion() ) ) {
-                  autoScalingGroup.setScalingRequired( scalingRequired );
-                }
                 autoScalingGroup.setCapacity(
                     Math.max( 0, getCurrentCapacity() - TerminateInstancesScalingProcessTaskSupport.this.terminatedCount ) );
               }

@@ -596,6 +596,9 @@ class AutoScalingServiceTest {
       }
 
       @Override
+      void markScalingRequiredForZones(Set<String> availabilityZones) { }
+
+      @Override
       boolean delete(AutoScalingGroup autoScalingGroup) {
         groups.remove( 0 ) != null
       }

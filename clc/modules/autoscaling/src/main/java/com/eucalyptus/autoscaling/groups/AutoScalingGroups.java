@@ -20,6 +20,7 @@
 package com.eucalyptus.autoscaling.groups;
 
 import java.util.List;
+import java.util.Set;
 import javax.persistence.EntityTransaction;
 import com.eucalyptus.autoscaling.common.AutoScalingGroupType;
 import com.eucalyptus.autoscaling.common.AutoScalingMetadata;
@@ -64,7 +65,9 @@ public abstract class AutoScalingGroups {
   public abstract AutoScalingGroup update( OwnerFullName ownerFullName,
                                            String autoScalingGroupName,
                                            Callback<AutoScalingGroup> groupUpdateCallback ) throws AutoScalingMetadataException;
-  
+
+  public abstract void markScalingRequiredForZones( Set<String> availabilityZones ) throws AutoScalingMetadataException;
+
   public abstract boolean delete( AutoScalingGroup autoScalingGroup ) throws AutoScalingMetadataException;
 
   public abstract AutoScalingGroup save( AutoScalingGroup autoScalingGroup ) throws AutoScalingMetadataException;
