@@ -81,7 +81,7 @@ CLOUD_LIBS_BRANCH?=master
 #
 # When the git repository is first cloned or updated,
 # it will create a '.nogit' file. This will tell make not
-# to bother with git again unless the 'distclean' target
+# to bother with git again unless the 'clean' target
 # is run. When the 'clean' target is run, the '.nogit'
 # file will be removed.
 #
@@ -212,7 +212,7 @@ ifeq ($(DISABLEGIT), 0)
 	fi
 endif
 
-distclean:
+distclean: clean
 	rm -rf ${TOP}/{deps,lib}
 	$(ANT) distclean
 	make -C eucadmin distclean
