@@ -48,7 +48,7 @@ import com.eucalyptus.loadbalancing.LoadBalancerZone;
 @Table( name = "metadata_servo_instance" )
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
 public class LoadBalancerServoInstance extends AbstractPersistent {
-	private static Logger    LOG     = Logger.getLogger( LoadBalancerBackendInstance.class );
+	private static Logger    LOG     = Logger.getLogger( LoadBalancerServoInstance.class );
 	@Transient
 	private static final long serialVersionUID = 1L;
 	
@@ -66,12 +66,12 @@ public class LoadBalancerServoInstance extends AbstractPersistent {
     
     @ManyToOne
     @JoinColumn( name = "metadata_dns_fk", nullable=true)
-    private LoadBalancerDnsRecord dns = null;
+    private LoadBalancerDnsRecord dns = null; 
         
     @Transient
     private LoadBalancer loadbalancer = null;
     
-    @Column(name="metadata_instance_id", nullable=true)
+    @Column(name="metadata_instance_id", nullable=false, unique=true)
     private String instanceId = null;
     
     @Column(name="metadata_state", nullable=false)
@@ -79,9 +79,6 @@ public class LoadBalancerServoInstance extends AbstractPersistent {
     
     @Column(name="metadata_address", nullable=true)
     private String address = null;
-    
-    @Column(name="metadata_unique_name", nullable=false, unique=true)
-    private String uniqueName = null;
 
     private LoadBalancerServoInstance(){
     }
@@ -118,12 +115,6 @@ public class LoadBalancerServoInstance extends AbstractPersistent {
     public static LoadBalancerServoInstance withState(String state){
     	final LoadBalancerServoInstance sample = new LoadBalancerServoInstance();
     	sample.state = state;
-    	return sample;
-    }
-    
-    public static LoadBalancerServoInstance fromUniqueName(String uniqueId){
-    	final LoadBalancerServoInstance sample = new LoadBalancerServoInstance();
-    	sample.uniqueName = uniqueId;
     	return sample;
     }
     
@@ -175,52 +166,6 @@ public class LoadBalancerServoInstance extends AbstractPersistent {
     	return this.dns;
     }
     
-	@PrePersist
-	private void generateOnCommit( ) {
-		if(this.uniqueName == null)
-			this.uniqueName = createUniqueName( );
-	}
-	
-	public void generateUniqueName(){
-		this.uniqueName  = createUniqueName();
-	}
-	
-	public String getUniqueName(){
-		return this.uniqueName;
-	}
-
-	private String createUniqueName(){
-		return String.format("%s-servo-instance-%s", this.zone.getName(), java.util.UUID.randomUUID());
-	}
-
-	@Override
-	public int hashCode( ) {
-	    final int prime = 31;
-	    int result = 0;
-	    result = prime * result + ( ( this.uniqueName == null )
-	      ? 0
-	      : this.uniqueName.hashCode( ) );
-	    return result;
-	}
-	  
-	@Override
-	public boolean equals( Object obj ) {
-		if ( this == obj ) {
-			return true;
-		}
-		if ( getClass( ) != obj.getClass( ) ) {
-			return false;
-		}
-		LoadBalancerServoInstance other = ( LoadBalancerServoInstance ) obj;
-		if ( this.uniqueName == null ) {
-			if ( other.uniqueName != null ) {
-				return false;
-			}
-		} else if ( !this.uniqueName.equals( other.uniqueName ) ) {
-			return false;
-		}
-		return true;
-  }
 	@Override
 	public String toString(){
 		String id = this.instanceId==null? "unassigned" : this.instanceId;

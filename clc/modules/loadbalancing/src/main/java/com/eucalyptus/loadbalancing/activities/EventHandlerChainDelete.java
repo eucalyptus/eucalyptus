@@ -262,27 +262,27 @@ public class EventHandlerChainDelete extends EventHandlerChain<DeleteLoadbalance
 			}
 			if(allGroups==null || allGroups.size()<=0)
 				return;
-			final List<String> toDelete = Lists.newArrayList();
+			final List<LoadBalancerSecurityGroup> toDelete = Lists.newArrayList();
 			for(LoadBalancerSecurityGroup group : allGroups){
 				Collection<LoadBalancerServoInstance> instances = group.getServoInstances();
 				if(instances == null || instances.size()<=0)
-					toDelete.add(group.getName());
+					toDelete.add(group);
 			}
 			
 			/// delete them from euca
-			for(String groupName : toDelete){
+			for(LoadBalancerSecurityGroup group : toDelete){
 				try{
-					EucalyptusActivityTasks.getInstance().deleteSecurityGroup(groupName);
-					LOG.info("deleted security group: "+groupName);
+					EucalyptusActivityTasks.getInstance().deleteSecurityGroup(group.getName());
+					LOG.info("deleted security group: "+group.getName());
 				}catch(Exception ex){
 					LOG.warn("failed to delete the security group from eucalyptus",ex);
 				}
 			}
 			final EntityTransaction db2 = Entities.get( LoadBalancerSecurityGroup.class );
 			try{
-				for(String groupName: toDelete){
+				for(LoadBalancerSecurityGroup group: toDelete){
 					LoadBalancerSecurityGroup g = 
-							Entities.uniqueResult(LoadBalancerSecurityGroup.named(groupName, LoadBalancerSecurityGroup.STATE.OutOfService));
+							Entities.uniqueResult(group);
 					Entities.delete(g);
 				}
 				db2.commit();

@@ -47,7 +47,7 @@ public class LoadBalancers {
 		return LoadBalancers.addLoadbalancer(user,  lbName, null);
 	}
 	
-	public static LoadBalancer getLoadbalancer(UserFullName user, String lbName) throws TransactionException{
+	public static LoadBalancer getLoadbalancer(UserFullName user, String lbName){
 		 final EntityTransaction db = Entities.get( LoadBalancer.class );
 		 try {
 			 final LoadBalancer lb = Entities.uniqueResult( LoadBalancer.named( user, lbName )); 
@@ -56,10 +56,10 @@ public class LoadBalancers {
 		 }catch(NoSuchElementException ex){
 			 db.rollback();
 			 throw ex;
-		 }catch(TransactionException ex){
+		 }catch(Exception ex){
 			 db.rollback( );
 			 LOG.error("failed to get the loadbalancer="+lbName, ex);
-			 throw ex;
+			 throw Exceptions.toUndeclared(ex);
 		 }
 	}
 	
@@ -186,9 +186,12 @@ public class LoadBalancers {
 		for(String zone : zones){
     		// check the listener 
 			try{
-				Entities.uniqueResult(LoadBalancerZone.named(lb, zone));
+				final LoadBalancerZone sample = LoadBalancerZone.named(lb, zone);
+				final LoadBalancerZone exist = Entities.uniqueResult(sample);
+				LOG.warn("existing zone is found: "+exist);
+				db.commit();
 			}catch(NoSuchElementException ex){
-				final LoadBalancerZone newZone = LoadBalancerZone.newInstance(lb, zone);
+				final LoadBalancerZone newZone = LoadBalancerZone.named(lb, zone);
 				Entities.persist(newZone);
 				db.commit();
 			}catch(Exception ex){
@@ -240,13 +243,12 @@ public class LoadBalancers {
 		/// create the next dns record
 		final EntityTransaction db = Entities.get( LoadBalancerDnsRecord.class );
 		try{
-			LoadBalancerDnsRecord exist = Entities.uniqueResult(LoadBalancerDnsRecord.named(lb.getDisplayName()));
+			LoadBalancerDnsRecord exist = Entities.uniqueResult(LoadBalancerDnsRecord.named(lb));
 			db.commit();
 			return exist;
 		}catch(NoSuchElementException ex){
 			final LoadBalancerDnsRecord newRec = 
-					LoadBalancerDnsRecord.named(lb.getDisplayName());
-			newRec.setLoadbalancer(lb);
+					LoadBalancerDnsRecord.named(lb);
 			Entities.persist(newRec);
 			db.commit();
 			return newRec;
@@ -271,7 +273,7 @@ public class LoadBalancers {
 	}
 	
 	public static LoadBalancerServoInstance lookupServoInstance(String instanceId) throws LoadBalancingException {
-		final EntityTransaction db = Entities.get( LoadBalancerDnsRecord.class );
+		final EntityTransaction db = Entities.get( LoadBalancerServoInstance.class );
 		try{
 			LoadBalancerServoInstance sample = LoadBalancerServoInstance.named(instanceId);
 			final LoadBalancerServoInstance exist = Entities.uniqueResult(sample);

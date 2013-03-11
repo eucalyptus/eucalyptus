@@ -68,20 +68,20 @@ public class LoadBalancerDnsRecord extends AbstractPersistent {
 	private static final long serialVersionUID = 1L;
 
 	private LoadBalancerDnsRecord(){}
-	public LoadBalancerDnsRecord(final LoadBalancer lb, String name){
+	
+	private LoadBalancerDnsRecord(final LoadBalancer lb){
 		this.loadbalancer = lb;
-		this.dnsName = name;
-		this.dnsZone = LOADBALANCER_DNS_SUBDOMAIN;
 	}
 	
 	public static LoadBalancerDnsRecord named(){
 		return new LoadBalancerDnsRecord(); // query all
 	}
 
-	public static LoadBalancerDnsRecord named(String dnsName){
-		final LoadBalancerDnsRecord instance = new LoadBalancerDnsRecord();
-		instance.dnsName = dnsName;
+	public static LoadBalancerDnsRecord named(final LoadBalancer lb){
+		final LoadBalancerDnsRecord instance = new LoadBalancerDnsRecord(lb);
+		instance.dnsName = lb.getDisplayName();
 		instance.dnsZone = LOADBALANCER_DNS_SUBDOMAIN;
+		instance.uniqueName = instance.createUniqueName();
 		return instance;
 	}
 	
@@ -94,13 +94,15 @@ public class LoadBalancerDnsRecord extends AbstractPersistent {
 	
 	@Column(name="dns_zone", nullable=false)
 	private String dnsZone = null;
+
+	@Column(name="unique_name", nullable=false)
+	private String uniqueName = null;
+
     
 	@OneToMany(fetch = FetchType.LAZY, mappedBy = "dns")
     @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
 	private Collection<LoadBalancerServoInstance> servoInstances = null;
 
-	@Column(name="metadata_unique_name", nullable=false, unique=true)
-	private String uniqueName = null;
 	
 	public String getZone(){
 		return this.dnsZone;
@@ -118,6 +120,7 @@ public class LoadBalancerDnsRecord extends AbstractPersistent {
 		return String.format("%s.%s.%s", this.dnsName, this.dnsZone, 
 				SystemConfiguration.getSystemConfiguration().getDnsDomain());
 	}
+	
 	public Collection<LoadBalancerServoInstance> getServoInstances(){
 		return this.servoInstances;
 	}
@@ -125,48 +128,23 @@ public class LoadBalancerDnsRecord extends AbstractPersistent {
 	public LoadBalancer getLoadBalancer(){
 		return this.loadbalancer;
 	}
-	
 
-	@PrePersist
-	private void generateOnCommit( ) {
-		this.uniqueName = createUniqueName( );
-	}
 
-	private String createUniqueName(){
-		return String.format("loadbalancer-dns-%s-%s", this.dnsZone, this.dnsName);
-	}
-	
-	
-	@Override
-	public int hashCode( ) {
-	    final int prime = 31;
-	    int result = 0;
-	    result = prime * result + ( ( this.uniqueName == null )
-	      ? 0
-	      : this.uniqueName.hashCode( ) );
-	    return result;
-	}
-	  
-	@Override
-	public boolean equals( Object obj ) {
-		if ( this == obj ) {
-			return true;
-		}
-		if ( getClass( ) != obj.getClass( ) ) {
-			return false;
-		}
-		LoadBalancerDnsRecord other = ( LoadBalancerDnsRecord ) obj;
-		if ( this.uniqueName == null ) {
-			if ( other.uniqueName != null ) {
-				return false;
-			}
-		} else if ( !this.uniqueName.equals( other.uniqueName ) ) {
-			return false;
-		}
-		return true;
+    @PrePersist
+    private void generateOnCommit( ) {
+    	if(this.uniqueName==null)
+    		this.uniqueName = createUniqueName( );
     }
+
+    protected String createUniqueName( ) {
+    	return String.format("dns-%s-%s", this.loadbalancer.getDisplayName(), this.getDnsName());
+    }
+		
 	@Override
 	public String toString(){
-		return this.uniqueName;
+		String name = "unassigned";
+		if(this.dnsName!=null && this.dnsZone!=null)
+			name = String.format("Loadbalancer DNS record - %s",getDnsName());
+		return name;
 	}
 }

@@ -97,7 +97,6 @@ public class EventHandlerChainNew extends EventHandlerChain<NewLoadbalancerEvent
 	  	}
 	  	this.insert(new LoadbalancerInstanceLauncher(this, numVm));
 	  	this.insert(new DatabaseUpdate(this));
-		
     /// SPARK: TODO: should check the loadbalancer's DNS and map the pub IP of instances to the DNS
 		return this;	
 	}
@@ -159,10 +158,10 @@ public class EventHandlerChainNew extends EventHandlerChain<NewLoadbalancerEvent
 
 			final EntityTransaction db = Entities.get( LoadBalancerSecurityGroup.class );
 			try{
-				Entities.uniqueResult(LoadBalancerSecurityGroup.named(groupName));
+				Entities.uniqueResult(LoadBalancerSecurityGroup.named( lb, groupName));
 				db.commit();
 			}catch(NoSuchElementException ex){
-				final LoadBalancerSecurityGroup newGroup = new LoadBalancerSecurityGroup(lb, groupName);
+				final LoadBalancerSecurityGroup newGroup = LoadBalancerSecurityGroup.named( lb, groupName);
 				LoadBalancerSecurityGroup written = Entities.persist(newGroup);
 				Entities.flush(written);
 				db.commit();
@@ -177,7 +176,15 @@ public class EventHandlerChainNew extends EventHandlerChain<NewLoadbalancerEvent
 				throws EventHandlerException {
 			if(this.createdGroup == null)
 				return;
-			
+			// set security group with the loadbalancer; update db
+			LoadBalancer lb = null;
+			try{
+				lb = LoadBalancers.getLoadbalancer(this.event.getContext().getUserFullName(), this.event.getLoadBalancer());
+			}catch(NoSuchElementException ex){
+				return;
+			}catch(Exception ex){
+				return;
+			}
 			try{
 				EucalyptusActivityTasks.getInstance().deleteSecurityGroup(this.createdGroup);
 			}catch(Exception ex){
@@ -186,7 +193,7 @@ public class EventHandlerChainNew extends EventHandlerChain<NewLoadbalancerEvent
 
 			final EntityTransaction db = Entities.get( LoadBalancerSecurityGroup.class );
 			try{
-				final LoadBalancerSecurityGroup sample = LoadBalancerSecurityGroup.named(this.createdGroup);
+				final LoadBalancerSecurityGroup sample = LoadBalancerSecurityGroup.named(lb, this.createdGroup);
 				final LoadBalancerSecurityGroup toDelete = Entities.uniqueResult(sample);
 				Entities.delete(toDelete);
 				db.commit();
@@ -247,13 +254,14 @@ public class EventHandlerChainNew extends EventHandlerChain<NewLoadbalancerEvent
 		        public LoadBalancerServoInstance apply( final LoadBalancerZone zone ) {
 					final LoadBalancerServoInstance instance = LoadBalancerServoInstance.named(zone);
 					instance.setState(LoadBalancerServoInstance.STATE.Pending);
-					instance.generateUniqueName();
+					instance.setInstanceId(UUID.randomUUID().toString().substring(0, 6));
 					LoadBalancerServoInstance written = Entities.persist(instance);
 					return written;
 		        }
 		    }; 
 			for(LoadBalancerZone zone : zones){
-				Entities.asTransaction(LoadBalancerServoInstance.class, persistInstance).apply(zone);
+				LoadBalancerServoInstance persist = Entities.asTransaction(LoadBalancerServoInstance.class, persistInstance).apply(zone);
+				this.uniqueEntries.add(persist.getInstanceId());
 			}
 		}
 
@@ -263,7 +271,7 @@ public class EventHandlerChainNew extends EventHandlerChain<NewLoadbalancerEvent
 			for(String unique : this.uniqueEntries){
 				try{
 					final LoadBalancerServoInstance exist = 
-							Entities.uniqueResult(LoadBalancerServoInstance.fromUniqueName(unique));
+							Entities.uniqueResult(LoadBalancerServoInstance.named(unique));
 					Entities.delete(exist);
 					db.commit();
 				}catch(NoSuchElementException ex){
@@ -302,6 +310,15 @@ public class EventHandlerChainNew extends EventHandlerChain<NewLoadbalancerEvent
 			// find out new instance ids
 			final List<String> newInstances = launcher.getResult();
 			
+			LoadBalancer lb = null;
+			try{
+				lb = LoadBalancers.getLoadbalancer(evt.getContext().getUserFullName(), evt.getLoadBalancer());
+			}catch(NoSuchElementException ex){
+				throw new EventHandlerException("can't find the specified loadbalancer user owns", ex);
+			}catch(Exception ex){
+				throw new EventHandlerException("can't query the loadbalancer due to unknown reason", ex);
+			}
+			
 			String groupName = null;
 			LoadBalancerSecurityGroup group= null;
 			try{
@@ -314,7 +331,7 @@ public class EventHandlerChainNew extends EventHandlerChain<NewLoadbalancerEvent
 				if(groupName != null){
 					final EntityTransaction db = Entities.get( LoadBalancerSecurityGroup.class );
 					try{
-						group = Entities.uniqueResult(LoadBalancerSecurityGroup.named(groupName));
+						group = Entities.uniqueResult(LoadBalancerSecurityGroup.named(lb, groupName));
 						db.commit();
 					}catch(Exception ex){
 						db.rollback();
@@ -335,7 +352,7 @@ public class EventHandlerChainNew extends EventHandlerChain<NewLoadbalancerEvent
 				for(String uniqueId : uniqueEntries){
 					String instanceId= newInstances.remove(0);
 					final LoadBalancerServoInstance exist = 
-							Entities.uniqueResult(LoadBalancerServoInstance.fromUniqueName(uniqueId));
+							Entities.uniqueResult(LoadBalancerServoInstance.named(uniqueId)); //.fromUniqueName(uniqueId));
 					exist.setInstanceId(instanceId);
 					if(group!= null)
 						exist.setSecurityGroup(group);
@@ -393,7 +410,7 @@ public class EventHandlerChainNew extends EventHandlerChain<NewLoadbalancerEvent
 	    	  for(final LoadBalancerServoInstance instance : instances){
 	    		/// 	call describe instance
 		    	  String instanceId = instance.getInstanceId();
-	    		  if(instanceId == null)
+	    		  if(instanceId == null || !instanceId.startsWith("i-"))
 	    			  continue;
 	    		  param.clear();
 	    		  param.add(instanceId);

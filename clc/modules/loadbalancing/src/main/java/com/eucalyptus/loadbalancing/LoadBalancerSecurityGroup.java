@@ -57,7 +57,7 @@ public class LoadBalancerSecurityGroup extends AbstractPersistent {
 
 	private LoadBalancerSecurityGroup(){}
 	
-	public LoadBalancerSecurityGroup(LoadBalancer lb, String groupName){
+	private LoadBalancerSecurityGroup(LoadBalancer lb, String groupName){
 		this.loadbalancer = lb;
 		this.groupName = groupName;
 		this.state= STATE.InService.name();
@@ -67,17 +67,16 @@ public class LoadBalancerSecurityGroup extends AbstractPersistent {
 		return new LoadBalancerSecurityGroup(); // query all
 	}
 
-	public static LoadBalancerSecurityGroup named(String groupName){
-		final LoadBalancerSecurityGroup instance = new LoadBalancerSecurityGroup();
-		instance.groupName = groupName;
-		instance.state = STATE.InService.name();
+	public static LoadBalancerSecurityGroup named(LoadBalancer lb, String groupName){
+		final LoadBalancerSecurityGroup instance = new LoadBalancerSecurityGroup(lb, groupName);
+		instance.uniqueName = instance.createUniqueName();
 		return instance;
 	}
 	
-	public static LoadBalancerSecurityGroup named(String groupName, STATE state){
-		final LoadBalancerSecurityGroup instance = new LoadBalancerSecurityGroup();
-		instance.groupName = groupName;
+	public static LoadBalancerSecurityGroup named(LoadBalancer lb, String groupName, STATE state){
+		final LoadBalancerSecurityGroup instance = new LoadBalancerSecurityGroup(lb, groupName);
 		instance.state = state.name();
+		instance.uniqueName = instance.createUniqueName();
 		return instance;
 	}
 	
@@ -129,42 +128,14 @@ public class LoadBalancerSecurityGroup extends AbstractPersistent {
 	
 	@PrePersist
 	private void generateOnCommit( ) {
-		this.uniqueName = createUniqueName( );
+		if(this.uniqueName==null)
+			this.uniqueName = createUniqueName( );
 	}
 
 	private String createUniqueName(){
-		return String.format("loadbalancer-sgroup-%s", this.groupName);
+		return String.format("loadbalancer-%s-sgroup-%s", this.loadbalancer, this.groupName);
 	}
 	
-	
-	@Override
-	public int hashCode( ) {
-	    final int prime = 31;
-	    int result = 0;
-	    result = prime * result + ( ( this.uniqueName == null )
-	      ? 0
-	      : this.uniqueName.hashCode( ) );
-	    return result;
-	}
-	  
-	@Override
-	public boolean equals( Object obj ) {
-		if ( this == obj ) {
-			return true;
-		}
-		if ( getClass( ) != obj.getClass( ) ) {
-			return false;
-		}
-		LoadBalancerSecurityGroup other = ( LoadBalancerSecurityGroup ) obj;
-		if ( this.uniqueName == null ) {
-			if ( other.uniqueName != null ) {
-				return false;
-			}
-		} else if ( !this.uniqueName.equals( other.uniqueName ) ) {
-			return false;
-		}
-		return true;
-    }
 	@Override
 	public String toString(){
 		return this.uniqueName;

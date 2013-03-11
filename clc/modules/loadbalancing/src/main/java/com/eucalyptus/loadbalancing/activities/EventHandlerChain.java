@@ -46,6 +46,7 @@ public abstract class EventHandlerChain<T extends LoadbalancingEvent> {
 				handler.apply(evt);
 				
 			}catch(Exception e){
+				LOG.error(e);
 				LOG.warn("starting to rollback");
 				EventHandlerChainException toThrow = 
 						new EventHandlerChainException(
