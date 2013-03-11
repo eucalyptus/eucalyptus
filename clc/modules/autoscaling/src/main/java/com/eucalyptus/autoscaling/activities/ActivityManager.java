@@ -49,6 +49,7 @@ import com.eucalyptus.autoscaling.groups.AutoScalingGroup;
 import com.eucalyptus.autoscaling.groups.AutoScalingGroups;
 import com.eucalyptus.autoscaling.groups.HealthCheckType;
 import com.eucalyptus.autoscaling.groups.PersistenceAutoScalingGroups;
+import com.eucalyptus.autoscaling.groups.ScalingProcessType;
 import com.eucalyptus.autoscaling.groups.TerminationPolicyType;
 import com.eucalyptus.autoscaling.instances.AutoScalingInstance;
 import com.eucalyptus.autoscaling.instances.AutoScalingInstances;
@@ -396,6 +397,7 @@ public class ActivityManager {
         Iterables.get( groupInstances, 0 ).getAutoScalingGroup().getCapacity(),
         Lists.newArrayList( Iterables.transform( groupInstances, AutoScalingInstances.instanceId() ) ),
         false,
+        true,
         true );
   }
 
@@ -457,7 +459,7 @@ public class ActivityManager {
 
   private ScalingProcessTask<?> perhapsReplaceInstances( final AutoScalingGroup group ) {
     final List<String> instancesToTerminate = Lists.newArrayList();
-    try {
+    if ( ScalingProcessType.ReplaceUnhealthy.apply( group ) ) try {
       final List<AutoScalingInstance> currentInstances =
           autoScalingInstances.listUnhealthyByGroup( group );
       Iterables.addAll(
@@ -491,7 +493,7 @@ public class ActivityManager {
           Lists.transform( currentInstances, AutoScalingInstances.availabilityZone() );
       final Set<String> groupZones = Sets.newLinkedHashSet( group.getAvailabilityZones() );
       groupZones.removeAll( zoneMonitor.getUnavailableZones( zoneFailureThreshold ) );
-      final int expectedInstancesPerZone = group.getCapacity() / groupZones.size();
+      final int expectedInstancesPerZone = group.getCapacity() / Math.max( 1, groupZones.size() );
       int requiredInstances = 0;
       for ( final String zone : groupZones ) {
         int instanceCount = CollectionUtils.reduce( zones, 0, CollectionUtils.count( Predicates.equalTo( zone ) ) );
@@ -509,6 +511,9 @@ public class ActivityManager {
 
       if ( requiredInstances == 0 ) {
         setScalingNotRequired( group );
+      } else if ( !ScalingProcessType.AZRebalance.apply( group ) &&
+          group.getCapacity().equals( group.getDesiredCapacity() ) ) {
+        requiredInstances = 0; // rebalancing disabled
       }
 
       return new LaunchInstancesScalingProcessTask( group, requiredInstances );
@@ -518,7 +523,7 @@ public class ActivityManager {
   private AddToLoadBalancerScalingProcessTask addToLoadBalancer( final Iterable<AutoScalingInstance> unregisteredInstances ) {
     final AutoScalingGroup group = Iterables.get( unregisteredInstances, 0 ).getAutoScalingGroup();
     final List<String> instancesToRegister = Lists.newArrayList();
-    if ( group.getLoadBalancerNames().isEmpty() ) {
+    if ( group.getLoadBalancerNames().isEmpty() || !ScalingProcessType.AddToLoadBalancer.apply( group ) ) {
       // nothing to do, mark instances as registered
       transitionToRegistered(
           group,
@@ -545,7 +550,7 @@ public class ActivityManager {
     if ( group.getLoadBalancerNames().isEmpty() ) {
       // deregistration not required, mark instances
       transitionToDeregistered( group, registeredInstances );
-      task = new TerminateInstancesScalingProcessTask( group, currentCapacity, registeredInstances, replace, true );
+      task = new TerminateInstancesScalingProcessTask( group, currentCapacity, registeredInstances, replace, true, true );
     } else {
       task = new RemoveFromLoadBalancerScalingProcessTask( group, currentCapacity, registeredInstances, replace );
     }
@@ -1046,7 +1051,7 @@ public class ActivityManager {
 
     @Override
     boolean shouldRun() {
-      return launchCount > 0;
+      return launchCount > 0 && ScalingProcessType.Launch.apply( getGroup() );
     }
 
     @Override
@@ -1154,7 +1159,9 @@ public class ActivityManager {
 
     @Override
     boolean shouldRun() {
-      return !instanceIds.isEmpty() && !getGroup().getLoadBalancerNames().isEmpty();
+      return !instanceIds.isEmpty() &&
+          !getGroup().getLoadBalancerNames().isEmpty() &&
+          ScalingProcessType.AddToLoadBalancer.apply( getGroup() );
     }
 
     @Override
@@ -1275,7 +1282,7 @@ public class ActivityManager {
     @Override
     ScalingProcessTask onSuccess() {
       return removed ?
-        new TerminateInstancesScalingProcessTask( getGroup(), currentCapacity, instanceIds, replace, true ):
+        new TerminateInstancesScalingProcessTask( getGroup(), currentCapacity, instanceIds, replace, true, true ):
         null;
     }
 
@@ -1379,20 +1386,23 @@ public class ActivityManager {
   private abstract class TerminateInstancesScalingProcessTaskSupport extends ScalingProcessTask<TerminateInstanceScalingActivityTask> {
     private final List<String> instanceIds;
     private final boolean persist;
+    private final boolean scaling;
     private volatile int terminatedCount;
 
     TerminateInstancesScalingProcessTaskSupport( final AutoScalingGroup group,
                                                  final String activity,
                                                  final List<String> instanceIds,
-                                                 final boolean persist ) {
+                                                 final boolean persist,
+                                                 final boolean scaling ) {
       super( group, activity );
       this.instanceIds = instanceIds;
       this.persist = persist;
+      this.scaling = scaling;
     }
 
     @Override
     boolean shouldRun() {
-      return !instanceIds.isEmpty();
+      return !instanceIds.isEmpty() && (ScalingProcessType.Terminate.apply( getGroup() ) || !scaling);
     }
 
     int getTerminatedCount() {
@@ -1455,8 +1465,9 @@ public class ActivityManager {
                                           final int currentCapacity,
                                           final List<String> instanceIds,
                                           final boolean replace,
-                                          final boolean persist ) {
-      super( group, "Terminate", instanceIds, persist );
+                                          final boolean persist,
+                                          final boolean scaling ) {
+      super( group, "Terminate", instanceIds, persist, scaling );
       this.currentCapacity = currentCapacity;
       this.replace = replace;
     }
@@ -1478,7 +1489,7 @@ public class ActivityManager {
 
     UserTerminateInstancesScalingProcessTask( final AutoScalingGroup group,
                                               final List<String> instanceIds ) {
-      super( group, "UserTermination", instanceIds, true );
+      super( group, "UserTermination", instanceIds, true, false );
     }
   }
 
@@ -1552,7 +1563,7 @@ public class ActivityManager {
         }
         if ( group != null ) {
           logger.info( "Terminating untracked auto scaling instances: " + instanceIds );
-          terminateTask = new TerminateInstancesScalingProcessTask( group, group.getCapacity(), instanceIds, false, false ){
+          terminateTask = new TerminateInstancesScalingProcessTask( group, group.getCapacity(), instanceIds, false, false, false ){
             @Override
             void partialSuccess( final List<TerminateInstanceScalingActivityTask> tasks ) {
               // no update required, we were not tracking the instance(s)
@@ -1660,7 +1671,9 @@ public class ActivityManager {
                                   final List<String> expectedRunningInstanceIds ) {
       super( group, "Monitor" );
       this.pendingInstanceIds = pendingInstanceIds;
-      this.expectedRunningInstanceIds = expectedRunningInstanceIds;
+      this.expectedRunningInstanceIds = ScalingProcessType.HealthCheck.apply( group ) ?
+          expectedRunningInstanceIds :
+          Collections.<String>emptyList();
     }
 
     @Override
@@ -1698,7 +1711,7 @@ public class ActivityManager {
 
       transitionToHealthy.retainAll( healthyInstanceIds );
 
-      try {
+      if ( ScalingProcessType.HealthCheck.apply( getGroup() ) ) try {
         autoScalingInstances.markMissingInstancesUnhealthy( getGroup(), healthyInstanceIds );
       } catch ( AutoScalingMetadataException e ) {
         logger.error( e, e );

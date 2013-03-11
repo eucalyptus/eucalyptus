@@ -130,6 +130,8 @@ import com.eucalyptus.autoscaling.groups.AutoScalingGroup;
 import com.eucalyptus.autoscaling.groups.AutoScalingGroups;
 import com.eucalyptus.autoscaling.groups.HealthCheckType;
 import com.eucalyptus.autoscaling.groups.PersistenceAutoScalingGroups;
+import com.eucalyptus.autoscaling.groups.ScalingProcessType;
+import com.eucalyptus.autoscaling.groups.SuspendedProcess;
 import com.eucalyptus.autoscaling.groups.TerminationPolicyType;
 import com.eucalyptus.autoscaling.instances.AutoScalingInstance;
 import com.eucalyptus.autoscaling.instances.AutoScalingInstances;
@@ -255,8 +257,41 @@ public class AutoScalingService {
     return reply;
   }
 
-  public ResumeProcessesResponseType resumeProcesses(ResumeProcessesType request) throws EucalyptusCloudException {
-    ResumeProcessesResponseType reply = request.getReply( );
+  public ResumeProcessesResponseType resumeProcesses( final ResumeProcessesType request ) throws EucalyptusCloudException {
+    final ResumeProcessesResponseType reply = request.getReply( );
+
+    final Context ctx = Contexts.lookup( );
+    try {
+      final AccountFullName accountFullName = ctx.getUserFullName().asAccountFullName();
+      final Callback<AutoScalingGroup> groupCallback = new Callback<AutoScalingGroup>() {
+        @Override
+        public void fire( final AutoScalingGroup autoScalingGroup ) {
+          if ( RestrictedTypes.filterPrivileged().apply( autoScalingGroup ) ) {
+            final Set<ScalingProcessType> processesToResume = EnumSet.allOf( ScalingProcessType.class );
+            if ( request.getScalingProcesses() != null && !request.getScalingProcesses().getMember().isEmpty() ) {
+              processesToResume.clear();
+              Iterables.addAll( processesToResume, Iterables.transform(
+                  request.getScalingProcesses().getMember(),
+                  Enums.valueOfFunction(ScalingProcessType.class) ) );
+            }
+            for ( final ScalingProcessType scalingProcessType : processesToResume ) {
+              autoScalingGroup.getSuspendedProcesses().remove(
+                    SuspendedProcess.createManual( scalingProcessType ) );
+            }
+          }
+        }
+      };
+
+      autoScalingGroups.update(
+          accountFullName,
+          request.getAutoScalingGroupName(),
+          groupCallback );
+    } catch ( AutoScalingMetadataNotFoundException e ) {
+      throw new InvalidParameterValueException( "Auto scaling group not found: " + request.getAutoScalingGroupName() );
+    } catch ( Exception e ) {
+      handleException( e );
+    }
+
     return reply;
   }
 
@@ -745,8 +780,43 @@ public class AutoScalingService {
     return reply;
   }
 
-  public SuspendProcessesResponseType suspendProcesses(SuspendProcessesType request) throws EucalyptusCloudException {
-    SuspendProcessesResponseType reply = request.getReply( );
+  public SuspendProcessesResponseType suspendProcesses( final SuspendProcessesType request ) throws EucalyptusCloudException {
+    final SuspendProcessesResponseType reply = request.getReply( );
+
+    final Context ctx = Contexts.lookup( );
+    try {
+      final AccountFullName accountFullName = ctx.getUserFullName().asAccountFullName();
+      final Callback<AutoScalingGroup> groupCallback = new Callback<AutoScalingGroup>() {
+        @Override
+        public void fire( final AutoScalingGroup autoScalingGroup ) {
+          if ( RestrictedTypes.filterPrivileged().apply( autoScalingGroup ) ) {
+            final Set<ScalingProcessType> processesToSuspend = EnumSet.allOf( ScalingProcessType.class );
+            if ( request.getScalingProcesses() != null && !request.getScalingProcesses().getMember().isEmpty() ) {
+              processesToSuspend.clear();
+              Iterables.addAll( processesToSuspend, Iterables.transform(
+                  request.getScalingProcesses().getMember(),
+                  Enums.valueOfFunction(ScalingProcessType.class) ) );
+            }
+            for ( final ScalingProcessType scalingProcessType : processesToSuspend ) {
+              if ( scalingProcessType.apply( autoScalingGroup ) ) {
+                autoScalingGroup.getSuspendedProcesses().add(
+                    SuspendedProcess.createManual( scalingProcessType ) );
+              }
+            }
+          }
+        }
+      };
+
+      autoScalingGroups.update(
+          accountFullName,
+          request.getAutoScalingGroupName(),
+          groupCallback );
+    } catch ( AutoScalingMetadataNotFoundException e ) {
+      throw new InvalidParameterValueException( "Auto scaling group not found: " + request.getAutoScalingGroupName() );
+    } catch ( Exception e ) {
+      handleException( e );
+    }
+
     return reply;
   }
 

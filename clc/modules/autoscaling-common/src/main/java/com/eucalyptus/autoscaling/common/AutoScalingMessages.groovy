@@ -251,7 +251,7 @@ public class Activity extends EucalyptusData {
 }
 public class SuspendedProcesses extends EucalyptusData {
   public SuspendedProcesses() {  }
-  ArrayList<SuspendedProcess> member = new ArrayList<SuspendedProcess>()
+  ArrayList<SuspendedProcessType> member = new ArrayList<SuspendedProcessType>()
 }
 public class InstanceMonitoring extends EucalyptusData {
   Boolean enabled
@@ -453,10 +453,10 @@ public class PutScheduledUpdateGroupActionType extends AutoScalingMessage {
   Integer desiredCapacity
   public PutScheduledUpdateGroupActionType() {  }
 }
-public class SuspendedProcess extends EucalyptusData {
+public class SuspendedProcessType extends EucalyptusData {
   String processName
   String suspensionReason
-  public SuspendedProcess() {  }
+  public SuspendedProcessType() {  }
 }
 public class SecurityGroups extends EucalyptusData {
   public SecurityGroups() {  }

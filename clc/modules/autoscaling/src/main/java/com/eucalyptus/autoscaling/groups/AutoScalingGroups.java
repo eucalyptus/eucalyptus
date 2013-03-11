@@ -19,11 +19,14 @@
  ************************************************************************/
 package com.eucalyptus.autoscaling.groups;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.Set;
 import javax.persistence.EntityTransaction;
 import com.eucalyptus.autoscaling.common.AutoScalingGroupType;
 import com.eucalyptus.autoscaling.common.AutoScalingMetadata;
+import com.eucalyptus.autoscaling.common.SuspendedProcessType;
+import com.eucalyptus.autoscaling.common.SuspendedProcesses;
 import com.eucalyptus.autoscaling.common.TagType;
 import com.eucalyptus.autoscaling.metadata.AutoScalingMetadataException;
 import com.eucalyptus.autoscaling.common.AutoScalingMetadatas;
@@ -38,10 +41,12 @@ import com.eucalyptus.util.OwnerFullName;
 import com.eucalyptus.util.RestrictedTypes;
 import com.eucalyptus.util.Strings;
 import com.eucalyptus.util.TypeMapper;
+import com.eucalyptus.util.TypeMappers;
 import com.google.common.base.Function;
 import com.google.common.base.Objects;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Collections2;
+import com.google.common.collect.Iterables;
 
 /**
  *
@@ -120,20 +125,40 @@ public abstract class AutoScalingGroups {
       //type.setEnabledMetrics(); //TODO:STEVE: auto scaling group mapping for enabled metrics
       type.setHealthCheckGracePeriod( group.getHealthCheckGracePeriod() );
       type.setHealthCheckType( Strings.toString( group.getHealthCheckType() ) );
-      //type.setInstances();  //TODO:STEVE: auto scaling group mapping for instances
       type.setLaunchConfigurationName( AutoScalingMetadatas.toDisplayName().apply( group.getLaunchConfiguration() ) );
       type.setLoadBalancerNames( new LoadBalancerNames( group.getLoadBalancerNames() ) );
       type.setMaxSize( group.getMaxSize() );
       type.setMinSize( group.getMinSize() );
       //type.setPlacementGroup(); //TODO:STEVE: auto scaling group mapping for placement groups?
       type.setStatus( group.getStatus() );
-      //type.setSuspendedProcesses(  );  //TODO:STEVE: auto scaling group mapping for suspended processes
+      final Collection<SuspendedProcess> suspendedProcesses = group.getSuspendedProcesses();
+      if ( suspendedProcesses != null && !suspendedProcesses.isEmpty() ) {
+        type.setSuspendedProcesses( new SuspendedProcesses() );
+        Iterables.addAll(
+            type.getSuspendedProcesses().getMember(),
+            Iterables.transform(
+                suspendedProcesses,
+                TypeMappers.lookup(SuspendedProcess.class, SuspendedProcessType.class ) ) );
+      }
       type.setTerminationPolicies( new TerminationPolicies( group.getTerminationPolicies() == null ? 
           null : 
           Collections2.transform( group.getTerminationPolicies(), Strings.toStringFunction() ) ) );
       //type.setVpcZoneIdentifier(); //TODO:STEVE: auto scaling group mapping for vpc zone identifiers?      
 
       return type;
+    }
+  }
+
+  @TypeMapper
+  public enum SuspendedProcessTransform implements Function<SuspendedProcess, SuspendedProcessType> {
+    INSTANCE;
+
+    @Override
+    public SuspendedProcessType apply( final SuspendedProcess suspendedProcess ) {
+      final SuspendedProcessType suspendedProcessType = new SuspendedProcessType();
+      suspendedProcessType.setProcessName( suspendedProcess.getScalingProcessType().toString() );
+      suspendedProcessType.setSuspensionReason( suspendedProcess.getReason() );
+      return suspendedProcessType;
     }
   }
 

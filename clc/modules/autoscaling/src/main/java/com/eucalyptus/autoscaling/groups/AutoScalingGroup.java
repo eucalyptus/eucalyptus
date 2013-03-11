@@ -130,9 +130,13 @@ public class AutoScalingGroup extends AbstractOwnedPersistent implements AutoSca
   @OrderColumn( name = "metadata_load_balancer_index")
   @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
   private List<String> loadBalancerNames = Lists.newArrayList();
-  
-  //TODO:STEVE: suspendedProcesses?
-  
+
+  @ElementCollection
+  @CollectionTable( name = "metadata_auto_scaling_group_suspended_processes" )
+  @JoinColumn( name = "metadata_auto_scaling_group_id" )
+  @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
+  private Set<SuspendedProcess> suspendedProcesses = Sets.newHashSet();
+
   //TODO:STEVE: include unsupported properties -> placementGroup, vpcZoneIdentifier
 
   @OneToMany( fetch = FetchType.LAZY, cascade = CascadeType.REMOVE, orphanRemoval = true, mappedBy = "group" )
@@ -269,6 +273,14 @@ public class AutoScalingGroup extends AbstractOwnedPersistent implements AutoSca
 
   public void setLoadBalancerNames( final List<String> loadBalancerNames ) {
     this.loadBalancerNames = loadBalancerNames;
+  }
+
+  public Set<SuspendedProcess> getSuspendedProcesses() {
+    return suspendedProcesses;
+  }
+
+  public void setSuspendedProcesses( final Set<SuspendedProcess> suspendedProcesses ) {
+    this.suspendedProcesses = suspendedProcesses;
   }
 
   public void updateDesiredCapacity( final int desiredCapacity ) {
