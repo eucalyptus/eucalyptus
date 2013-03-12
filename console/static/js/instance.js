@@ -31,6 +31,7 @@
     consoleDialog : null,
     detachDialog : null,
     launchMoreDialog : null,
+    tagDialog : null,
     instVolMap : {},// {i-123456: {vol-123456:attached,vol-234567:attaching,...}}
     instIpMap : {}, // {i-123456: 192.168.0.1}
     instPassword : {}, // only windows instances
@@ -254,7 +255,7 @@
     _create : function() { 
       var thisObj = this;
       thisObj._reloadData();
-      var  $tmpl = $('html body').find('.templates #instanceTermDlgTmpl').clone();
+      var $tmpl = $('html body').find('.templates #instanceTermDlgTmpl').clone();
       var $rendered = $($tmpl.render($.extend($.i18n.map, help_instance)));
       var $term_dialog = $rendered.children().first();
       var $term_help = $rendered.children().last();
@@ -267,6 +268,22 @@
         },
         help: {content: $term_help, url: help_instance.dialog_terminate_content_url},
       });
+
+     // TEMP LOCATION FOR TAG RESOURCE DIALOG
+      $tmpl = $('html body').find('.templates #instanceTermDlgTmpl').clone();
+      $rendered = $($tmpl.render($.extend($.i18n.map, help_instance)));
+      var $tag_dialog = $rendered.children().first();
+      var $tag_help = $rendered.children().last();
+      this.tagDialog = $tag_dialog.eucadialog({
+        id: 'instances-terminate',
+        title: 'Resource Tag',
+        buttons: {
+          'tag': {text: 'Save', click: function() { thisObj._tagResource(); $tag_dialog.eucadialog("close");}},
+          'cancel': {text: dialog_cancel_btn, focus:true, click: function() { $tag_dialog.eucadialog("close");}}
+        },
+        help: {content: $tag_help, url: help_instance.dialog_terminate_content_url},
+      });
+     // END OF TEMP LOCATION
 
       $tmpl = $('html body').find('.templates #instanceRebootDlgTmpl').clone();
       $rendered = $($tmpl.render($.extend($.i18n.map, help_instance)));
@@ -419,6 +436,7 @@
        menuItems['detach'] = {"name":instance_action_detach, callback: function(key, opt) { ; }, disabled: function(){ return true; }};
        menuItems['associate'] = {"name":instance_action_associate, callback: function(key, opt){; }, disabled: function(){ return true; }};
        menuItems['disassociate'] = {"name":instance_action_disassociate, callback: function(key, opt){;}, disabled: function(){ return true; }};
+       menuItems['tag'] = {"name":'Tag Resource', callback: function(key, opt){;}, disabled: function(){ return true; }};
      })();
 
      if(numSelected === 1 && 'running' in stateMap && $.inArray(instIds[0], stateMap['running']>=0)){
@@ -451,7 +469,7 @@
        menuItems['console'] = {"name":instance_action_console, callback: function(key, opt) { thisObj._consoleAction(); }}
        menuItems['attach'] = {"name":instance_action_attach, callback: function(key, opt) { thisObj._attachAction(); }}
      }
-   
+ 
      // detach-volume is for one selected instance 
      if(numSelected === 1 && 'running' in stateMap && $.inArray(instIds[0], stateMap['running']>=0) && 
         (instIds[0] in thisObj.instVolMap)){
@@ -473,6 +491,10 @@
      if(numSelected  === 1 && instIds[0] in thisObj.instIpMap)
        menuItems['disassociate'] = {"name":instance_action_disassociate, callback: function(key, opt){thisObj._disassociateAction();}}
  
+     if(numSelected == 1){
+       menuItems['tag'] = {"name":'Tag Resource', callback: function(key, opt){ thisObj._tagResourceAction(); }}
+     }
+  
      return menuItems;
     },
     _countVol : 0,
@@ -920,6 +942,19 @@
       if(addr)
         disassociateIp(addr);
     },
+
+    _tagResourceAction : function(){
+      var thisObj = this;
+      var instance = thisObj.tableWrapper.eucatable('getSelectedRows', 2)[0];
+      instance = $(instance).text();   // This won't be necessary after dataTable 1.9 merge is in.   030613
+      if ( instance.length > 0 ) {
+        // Create a widget object for displaying the resource tag information
+        var $tagInfo = $('<div>').addClass('resource-tag-table-expanded-instance').addClass('clearfix').euca_resource_tag({resource: 'instance', resource_id: instance, cancelButtonCallback: function(){ thisObj.tagDialog.eucadialog("close"); }, widgetMode: 'edit' });
+        thisObj.tagDialog.eucadialog('addNote','ebs-backed-warning', $tagInfo);   // This line should be adjusted once the right template is created for the resource tag.  030713
+        thisObj.tagDialog.eucadialog('open');
+       }
+    },
+
     _launchMoreAction : function(){
       this.launchMoreDialog.eucadialog('open');
     },
@@ -1198,7 +1233,7 @@
 //        $wrapper.append($volInfo);
 
       // Create a widget object for displaying the resource tag information
-      $tagInfo = $('<div>').addClass('resource-tag-table-expanded-instance').addClass('clearfix').euca_resource_tag({resource: 'instance', resource_id: instance.id});
+      $tagInfo = $('<div>').addClass('resource-tag-table-expanded-instance').addClass('clearfix').attr('id', instance.id).euca_resource_tag({resource: 'instance', resource_id: instance.id, widgetMode: 'view-only'});
 
       $tabspace = $('<div>').addClass('eucatabspace-main-div').eucatabspace(); 
       $tabspace.eucatabspace('addTabPage', 'Instance', $instInfo);
