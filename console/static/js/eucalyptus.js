@@ -119,7 +119,7 @@
                 error: function(jqXHR, textStatus, errorThrown){
                   var $container = $('html body').find(DOM_BINDING['main']);
                   $container.children().detach(); // remove spinwheel
-	          args.onError(errorThrown);
+                  args.onError(errorThrown);
                 }
  	     });
          }});
