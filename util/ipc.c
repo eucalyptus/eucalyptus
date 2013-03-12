@@ -75,7 +75,7 @@
  |                                                                            |
 \*----------------------------------------------------------------------------*/
 
-#define _FILE_OFFSET_BITS 64           // so large-file support works on 32-bit systems
+#define _FILE_OFFSET_BITS 64    // so large-file support works on 32-bit systems
 #include <stdio.h>
 #include <stdlib.h>
 #include <sys/types.h>
@@ -83,13 +83,13 @@
 #include <sys/stat.h>
 #include <sys/ipc.h>
 #include <sys/sem.h>
-#include <fcntl.h>                     /* For O_* */
+#include <fcntl.h>              /* For O_* */
 #include <string.h>
 #include <strings.h>
 #include <assert.h>
 
 #include "eucalyptus.h"
-#include "misc.h"                      /* logprintfl */
+#include "misc.h"               /* logprintfl */
 #include "ipc.h"
 
 /*----------------------------------------------------------------------------*\
@@ -165,7 +165,7 @@ int sem_v(sem * pSem);
  |                                                                            |
 \*----------------------------------------------------------------------------*/
 
-#define DECLARE_ARG               union semun { int val; struct semid_ds *buf; ushort *array; } arg
+#define DECLARE_ARG               union semun { int val; struct semid_ds *buf; u16 *array; } arg
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |

@@ -60,7 +60,7 @@
     NEEDED TO COMPLY WITH ANY SUCH LICENSES OR RIGHTS.
   -->
 
-<project name="eucalyptus-postgresql" basedir=".">
+<project name="eucalyptus-notifications" basedir=".">
 	<property name="builder.suffix" value="groovy" />
 	<uptodate property="groovyc.notRequired" targetfile="${jar.file}">
 		<srcfiles dir="${src.dir}" includes="**/*" />

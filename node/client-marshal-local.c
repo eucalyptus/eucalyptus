@@ -148,13 +148,16 @@ int ncBundleInstanceStub(ncStub * pStub, ncMetadata * pMeta, char *instanceId, c
                          char *userPublicKey, char *S3Policy, char *S3PolicySig);
 int ncBundleRestartInstanceStub(ncStub * pStub, ncMetadata * pMeta, char *instanceId);
 int ncCancelBundleTaskStub(ncStub * pStub, ncMetadata * pMeta, char *instanceId);
-int ncDescribeBundleTasksStub(ncStub * pStub, ncMetadata * pMeta, char **instIds, int instIdsLen, bundleTask *** outBundleTasks, int *outBundleTasksLen);
+int ncDescribeBundleTasksStub(ncStub * pStub, ncMetadata * pMeta, char **instIds, int instIdsLen, bundleTask *** outBundleTasks,
+                              int *outBundleTasksLen);
 int ncDescribeResourceStub(ncStub * pStub, ncMetadata * pMeta, char *resourceType, ncResource ** outRes);
 int ncAttachVolumeStub(ncStub * pStub, ncMetadata * pMeta, char *instanceId, char *volumeId, char *remoteDev, char *localDev);
 int ncDetachVolumeStub(ncStub * pStub, ncMetadata * pMeta, char *instanceId, char *volumeId, char *remoteDev, char *localDev, int force);
 int ncCreateImageStub(ncStub * pStub, ncMetadata * pMeta, char *instanceId, char *volumeId, char *remoteDev);
 int ncDescribeSensorsStub(ncStub * pStub, ncMetadata * pMeta, int historySize, long long collectionIntervalTimeMs, char **instIds, int instIdsLen,
                           char **sensorIds, int sensorIdsLen, sensorResource *** outResources, int *outResourcesLen);
+int ncModifyNodeStub(ncStub * pStub, ncMetadata * pMeta, char *stateName);
+int ncMigrateInstancesStub(ncStub * pStub, ncMetadata * pMeta, ncInstance ** instances, int instancesLen, char *action, char *credentials);
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |
@@ -368,7 +371,8 @@ int ncCancelBundleTaskStub(ncStub * pStub, ncMetadata * pMeta, char *instanceId)
 //!
 //! @return Always return EUCA_OK
 //!
-int ncDescribeBundleTasksStub(ncStub * pStub, ncMetadata * pMeta, char **instIds, int instIdsLen, bundleTask *** outBundleTasks, int *outBundleTasksLen)
+int ncDescribeBundleTasksStub(ncStub * pStub, ncMetadata * pMeta, char **instIds, int instIdsLen, bundleTask *** outBundleTasks,
+                              int *outBundleTasksLen)
 {
     return (EUCA_OK);
 }
@@ -468,7 +472,8 @@ int ncCreateImageStub(ncStub * pStub, ncMetadata * pMeta, char *instanceId, char
 int ncDescribeSensorsStub(ncStub * pStub, ncMetadata * pMeta, int historySize, long long collectionIntervalTimeMs, char **instIds, int instIdsLen,
                           char **sensorIds, int sensorIdsLen, sensorResource *** outResources, int *outResourcesLen)
 {
-    return doDescribeSensors(pMeta, historySize, collectionIntervalTimeMs, instIds, instIdsLen, sensorIds, sensorIdsLen, outResources, outResourcesLen);
+    return doDescribeSensors(pMeta, historySize, collectionIntervalTimeMs, instIds, instIdsLen, sensorIds, sensorIdsLen, outResources,
+                             outResourcesLen);
 }
 
 //!
@@ -482,7 +487,7 @@ int ncDescribeSensorsStub(ncStub * pStub, ncMetadata * pMeta, int historySize, l
 //!
 //! @see doModifyNode()
 //!
-int ncModifyNodeStub(ncStub * pStub, ncMetadata * pMeta, char * stateName)
+int ncModifyNodeStub(ncStub * pStub, ncMetadata * pMeta, char *stateName)
 {
     return (EUCA_OK);
 }
@@ -492,16 +497,16 @@ int ncModifyNodeStub(ncStub * pStub, ncMetadata * pMeta, char * stateName)
 //!
 //! @param[in]  pStub a pointer to the node controller (NC) stub structure
 //! @param[in]  pMeta a pointer to the node controller (NC) metadata structure
-//! @param[in]  instance metadata for the instance to migrate to destination
-//! @param[in]  sourceNodeName IP of the source Node Controller
-//! @param[in]  destNodeName IP of the destination Node Controller
+//! @param[in]  instances metadata for the instance to migrate to destination
+//! @param[in]  instancesLen number of instances in the instance list
+//! @param[in]  action IP of the destination Node Controller
 //! @param[in]  credentials credentials that enable the migration
 //!
 //! @return the result of doMigrateInstances() (either EUCA_OK or EUCA_ERROR)
 //!
 //! @see doMigrateInstances()
 //!
-int ncMigrateInstancesStub(ncStub * pStub, ncMetadata * pMeta, ncInstance ** instances, int instancesLen, char * action, char * credentials)
+int ncMigrateInstancesStub(ncStub * pStub, ncMetadata * pMeta, ncInstance ** instances, int instancesLen, char *action, char *credentials)
 {
     return (EUCA_OK);
 }

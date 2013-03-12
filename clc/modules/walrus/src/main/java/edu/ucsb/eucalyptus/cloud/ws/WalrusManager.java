@@ -78,6 +78,7 @@ import java.util.NoSuchElementException;
 import java.util.UUID;
 
 import javax.annotation.Nonnull;
+import javax.persistence.EntityTransaction;
 import javax.persistence.RollbackException;
 
 import org.apache.log4j.Logger;
@@ -106,6 +107,7 @@ import com.eucalyptus.blockstorage.Snapshot;
 import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.crypto.Digest;
+import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.entities.TransactionException;
 import com.eucalyptus.event.ListenerRegistry;
@@ -184,6 +186,8 @@ import edu.ucsb.eucalyptus.msgs.GetObjectType;
 import edu.ucsb.eucalyptus.msgs.Grant;
 import edu.ucsb.eucalyptus.msgs.Grantee;
 import edu.ucsb.eucalyptus.msgs.Group;
+import edu.ucsb.eucalyptus.msgs.HeadBucketResponseType;
+import edu.ucsb.eucalyptus.msgs.HeadBucketType;
 import edu.ucsb.eucalyptus.msgs.ListAllMyBucketsList;
 import edu.ucsb.eucalyptus.msgs.ListAllMyBucketsResponseType;
 import edu.ucsb.eucalyptus.msgs.ListAllMyBucketsType;
@@ -232,11 +236,8 @@ public class WalrusManager {
 
 	private StorageManager storageManager;
 	private WalrusImageManager walrusImageManager;
-	private static WalrusStatistics walrusStatistics = null;
 
-	public static void configure() {
-		walrusStatistics = new WalrusStatistics();
-	}
+	public static void configure() {}
 
 	public WalrusManager(StorageManager storageManager, WalrusImageManager walrusImageManager) {
 		this.storageManager = storageManager;
@@ -357,6 +358,46 @@ public class WalrusManager {
 		}
 		return reply;
 	}
+	
+	/**
+	 * Handles a HEAD request to the bucket. Just returns 200ok if bucket exists and user has access. Otherwise
+	 * returns 404 if not found or 403 if no accesss.
+	 * @param request
+	 * @return
+	 * @throws EucalyptusCloudException
+	 */
+	public HeadBucketResponseType headBucket(HeadBucketType request) throws EucalyptusCloudException {
+		HeadBucketResponseType reply = (HeadBucketResponseType) request.getReply();
+		Context ctx = Contexts.lookup();
+		Account account = ctx.getAccount();
+		String bucketName = request.getBucket();
+		EntityTransaction db = Entities.get(BucketInfo.class);
+		try {
+			BucketInfo bucket = Entities.uniqueResult(new BucketInfo(bucketName));
+			if (ctx.hasAdministrativePrivileges() || (
+					bucket.canRead(account.getAccountNumber()) &&
+					(bucket.isGlobalRead() || Lookups.checkPrivilege(PolicySpec.S3_LISTBUCKET,
+							PolicySpec.VENDOR_S3,
+							PolicySpec.S3_RESOURCE_BUCKET,
+							bucketName,
+							null)))) {
+				return reply;
+			} else {
+				//Insufficient access, return 403
+				throw new HeadAccessDeniedException(bucketName);
+			}
+		} catch(NoSuchElementException e) {
+			//Bucket not found return 404
+			throw new HeadNoSuchBucketException(bucketName);
+		} catch (TransactionException e) {
+			LOG.error("DB transaction error looking up bucket " + bucketName + ": " + e.getMessage());
+			LOG.debug("DB tranction exception looking up bucket " + bucketName, e);
+			throw new EucalyptusCloudException("Internal error doing db lookup for " + bucketName, e);
+		} finally {
+			//Nothing to commit, always rollback.
+			db.rollback();
+		}
+	}
 
 	public CreateBucketResponseType createBucket(CreateBucketType request)
 			throws EucalyptusCloudException {
@@ -439,9 +480,6 @@ public class WalrusManager {
 					db.add(bucket);
 					db.commit();
 					storageManager.createBucket(bucketName);
-					if (WalrusProperties.trackUsageStatistics)
-						walrusStatistics.incrementBucketCount();
-					
 				} catch (IOException ex) {
 					LOG.error(ex, ex);
 					throw new BucketAlreadyExistsException(bucketName);
@@ -558,10 +596,7 @@ public class WalrusManager {
 					// Actually remove the bucket from the backing store
 					try {
 						storageManager.deleteBucket(bucketName);
-						if (WalrusProperties.trackUsageStatistics) {
-							walrusStatistics.decrementBucketCount();
-						}
-		
+						
 						/* Send an event to reporting to report this S3 usage. */
 							    
 					        //fireBucketUsageEvent(S3BucketAction.BUCKETDELETE, bucketFound.getNaturalId(), 
@@ -1025,10 +1060,6 @@ public class WalrusManager {
 							foundObject.setDeleted(false);
 							reply.setSize(size);
 							
-							if (WalrusProperties.trackUsageStatistics) {
-								walrusStatistics.updateBytesIn(size);
-								walrusStatistics.updateSpaceUsed(size);
-							}
 							if (logData != null) {
 								logData.setObjectSize(size);
 								updateLogData(bucket, logData);
@@ -1408,10 +1439,6 @@ public class WalrusManager {
 					foundObject.setEtag(md5);
 					foundObject.setSize(size);
 					
-					if (WalrusProperties.trackUsageStatistics) {
-						walrusStatistics.updateBytesIn(size);
-						walrusStatistics.updateSpaceUsed(size);
-					}
 					// Add meta data if specified
 					if (request.getMetaData() != null)
 						foundObject.replaceMetaData(request.getMetaData());
@@ -1736,7 +1763,6 @@ public class WalrusManager {
 			try {
 				storageManager.deleteObject(bucketName, objectName);
 				if (WalrusProperties.trackUsageStatistics && (size > 0))
-					walrusStatistics.updateSpaceUsed(-size);
 
 				/* Send an event to reporting to report this S3 usage. */
 				if ( size > 0 ) {
@@ -2494,9 +2520,7 @@ public class WalrusManager {
 														+ ".torrent;", request
 														.getIsCompressed(),
 														null, logData);
-								if (WalrusProperties.trackUsageStatistics) {
-									walrusStatistics.updateBytesOut(torrentLength);
-								}
+								
 								return null;
 							} else {
 								//No torrent exists
@@ -2553,9 +2577,6 @@ public class WalrusManager {
 							//fireUsageEvent For Get Object 
 						} else {
 							// support for large objects
-							if (WalrusProperties.trackUsageStatistics) {
-								walrusStatistics.updateBytesOut(objectInfo.getSize());
-							}
 							storageManager.sendObject(request,
 									httpResponse, bucketName, objectName, size,
 									etag, DateUtils.format(lastModified
@@ -2759,9 +2780,6 @@ public class WalrusManager {
 										: WalrusProperties.NULL_VERSION_ID;
 							}
 							if (request.getGetData()) {
-								if (WalrusProperties.trackUsageStatistics) {
-									walrusStatistics.updateBytesOut(size);
-								}
 								storageManager.sendObject(request,
 										httpResponse, bucketName, objectName,
 										byteRangeStart, byteRangeEnd + 1, size, etag,
@@ -3048,10 +3066,6 @@ public class WalrusManager {
 								storageManager.copyObject(sourceBucket,
 										sourceObjectName, destinationBucket,
 										destinationObjectName);
-								if (WalrusProperties.trackUsageStatistics)
-									walrusStatistics
-									.updateSpaceUsed(sourceObjectInfo
-											.getSize());
 							} catch (Exception ex) {
 								LOG.error(ex);
 								db.rollback();
@@ -3768,8 +3782,6 @@ public class WalrusManager {
 				// Actually remove the bucket from the backing store
 				try {
 					storageManager.deleteBucket(bucketName);
-					if (WalrusProperties.trackUsageStatistics)
-						walrusStatistics.decrementBucketCount();
 				} catch (IOException ex) {
 					// set exception code in reply
 					LOG.error(ex);

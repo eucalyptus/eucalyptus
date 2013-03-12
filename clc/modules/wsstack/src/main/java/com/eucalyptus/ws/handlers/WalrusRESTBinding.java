@@ -194,7 +194,7 @@ public class WalrusRESTBinding extends RestfulMarshallingHandler {
 			if(msg instanceof WalrusDataRequestType) {
 				String expect = httpRequest.getHeader(HttpHeaders.Names.EXPECT);
 				if(expect != null) {
-					if(expect.equals("100-continue")) {
+					if(expect.toLowerCase().equals("100-continue")) {
 						HttpResponse response = new DefaultHttpResponse( HttpVersion.HTTP_1_1, HttpResponseStatus.CONTINUE );
 						DownstreamMessageEvent newEvent = new DownstreamMessageEvent( ctx.getChannel( ), event.getFuture(), response, null );
 						ctx.sendDownstream( newEvent );
@@ -245,6 +245,7 @@ public class WalrusRESTBinding extends RestfulMarshallingHandler {
 		newMap.put(SERVICE + WalrusProperties.HTTPVerb.GET.toString(), "ListAllMyBuckets");
 
 		//Bucket operations
+		newMap.put(BUCKET + WalrusProperties.HTTPVerb.HEAD.toString(), "HeadBucket");
 		newMap.put(BUCKET + WalrusProperties.HTTPVerb.GET.toString() + WalrusProperties.BucketParameter.acl.toString(), "GetBucketAccessControlPolicy");
 		newMap.put(BUCKET + WalrusProperties.HTTPVerb.PUT.toString() + WalrusProperties.BucketParameter.acl.toString(), "SetRESTBucketAccessControlPolicy");
 
@@ -264,7 +265,7 @@ public class WalrusRESTBinding extends RestfulMarshallingHandler {
 		newMap.put(BUCKET + WalrusProperties.HTTPVerb.GET.toString() + WalrusProperties.BucketParameter.versions.toString(), "ListVersions");
 		newMap.put(BUCKET + WalrusProperties.HTTPVerb.GET.toString() + WalrusProperties.BucketParameter.versioning.toString(), "GetBucketVersioningStatus");
 		newMap.put(BUCKET + WalrusProperties.HTTPVerb.PUT.toString() + WalrusProperties.BucketParameter.versioning.toString(), "SetBucketVersioningStatus");
-
+		
 		//Object operations
 		newMap.put(OBJECT + WalrusProperties.HTTPVerb.GET.toString() + WalrusProperties.ObjectParameter.acl.toString(), "GetObjectAccessControlPolicy");
 		newMap.put(OBJECT + WalrusProperties.HTTPVerb.PUT.toString() + WalrusProperties.ObjectParameter.acl.toString(), "SetRESTObjectAccessControlPolicy");

@@ -276,7 +276,8 @@ ncResource *allocate_resource(const char *sNodeStatus, const char *sIQN, int mem
 void free_resource(ncResource ** ppresource);
 
 boolean is_volume_used(const ncVolume * pVolume);
-ncVolume *save_volume(ncInstance * pInstance, const char *sVolumeId, const char *sRemoteDev, const char *sLocalDev, const char *sLocalDevReal, const char *sStateName);
+ncVolume *save_volume(ncInstance * pInstance, const char *sVolumeId, const char *sRemoteDev, const char *sLocalDev, const char *sLocalDevReal,
+                      const char *sStateName);
 ncVolume *free_volume(ncInstance * pInstance, const char *sVolumeId);
 
 bundleTask *allocate_bundleTask(ncInstance * pInstance) _attribute_wur_;
@@ -311,9 +312,9 @@ static ncVolume *find_volume(ncInstance * pInstance, const char *sVolumeId);
 //!
 //! @return EUCA_OK on success or EUCA_ERROR on failure.
 //!
-//! @pre Both pVirtMachineOut and pVirtMachineIn fields must not be NULL
+//! @pre Both \p pVirtMachineOut and \p pVirtMachineIn fields must not be NULL
 //!
-//! @post The pVirtMachineOut structure is set with the values from pVirtMachineIn
+//! @post The \p pVirtMachineOut structure is set with the values from \p pVirtMachineIn
 //!
 int allocate_virtualMachine(virtualMachine * pVirtMachineOut, const virtualMachine * pVirtMachingIn)
 {
@@ -364,7 +365,7 @@ int allocate_virtualMachine(virtualMachine * pVirtMachineOut, const virtualMachi
 //!
 //! @return EUCA_OK on success or EUCA_ERROR on failure.
 //!
-//! @pre The pNetCfg field must not be NULL.
+//! @pre The \p pNetCfg field must not be NULL.
 //!
 //! @post The network configuration structure is updated with the provided information
 //!
@@ -426,9 +427,9 @@ ncMetadata *allocate_metadata(const char *sCorrelationId, const char *sUserId)
 //!
 //! @see allocate_metadata()
 //!
-//! @pre The ppMeta field should not be NULL
+//! @pre The \p ppMeta field should not be NULL
 //!
-//! @post If the metadata pointer is valid, the structure is freed and (*ppMeta) will be set to NULL.
+//! @post If the metadata pointer is valid, the structure is freed and \p (*ppMeta) will be set to NULL.
 //!
 void free_metadata(ncMetadata ** ppMeta)
 {
@@ -544,7 +545,7 @@ ncInstance *allocate_instance(const char *sUUID, const char *sInstanceId, const 
 //!
 //! @see free_instance(), allocate_instance()
 //!
-//! @pre The old_instance field must not be NULL
+//! @pre The \p old_instance field must not be NULL
 //!
 //! @post A clone of our existing instance is created.
 //!
@@ -572,10 +573,10 @@ ncInstance *clone_instance(const ncInstance * old_instance)
 //! @see remove_instance()
 //! @see allocate_instance()
 //!
-//! @pre \li The ppInstance field should not be NULL
+//! @pre \li The \p ppInstance field should not be NULL
 //!      \li The instance should have been removed from any list using remove_instance()
 //!
-//! @post The instance is freed and the value pointed by ppInstance is set to NULL.
+//! @post The instance is freed and the value pointed by \p ppInstance is set to NULL.
 //!
 void free_instance(ncInstance ** ppInstance)
 {
@@ -595,11 +596,11 @@ void free_instance(ncInstance ** ppInstance)
 //!         \li EUCA_INVALID_ERROR: if any of our parameter does not meet the pre-condition
 //!         \li EUCA_DUPLICATE_ERROR: if the instance is already part of this list
 //!
-//! @pre \li Both ppHead and pInstance field must not be NULL.
+//! @pre \li Both \p ppHead and \p pInstance field must not be NULL.
 //!      \li The instance must not be part of the list
 //!
 //! @post The instance is added to the list. If this is the first instance in the list,
-//!       the ppHead value is updated to point to this instance.
+//!       the \p ppHead value is updated to point to this instance.
 //!
 int add_instance(bunchOfInstances ** ppHead, ncInstance * pInstance)
 {
@@ -653,11 +654,11 @@ int add_instance(bunchOfInstances ** ppHead, ncInstance * pInstance)
 //!         \li EUCA_INVALID_ERROR: if any of our parameters do not meet the pre-conditions
 //!         \li EUCA_NOT_FOUND_ERROR: if the instance is not part of this list
 //!
-//! @pre \li Both ppHead and pInstance field must not be NULL
+//! @pre \li Both \p ppHead and \p pInstance field must not be NULL
 //!      \li The instance must exist in this list
 //!
 //! @post The instance is removed from the list. If this instance was the head of the list,
-//!       the ppHead field will be updated to point to the new head (next instance in list
+//!       the \p ppHead field will be updated to point to the new head (next instance in list
 //!       from previous head).
 //!
 int remove_instance(bunchOfInstances ** ppHead, ncInstance * pInstance)
@@ -700,9 +701,9 @@ int remove_instance(bunchOfInstances ** ppHead, ncInstance * pInstance)
 //! @return EUCA_OK on success or the following error code:
 //!         \li EUCA_INVALID_ERROR: if any of our parameters do not meet the pre-conditions
 //!
-//! @pre Both ppHead and pFunction fields must not be NULL
+//! @pre Both \p ppHead and \p pFunction fields must not be NULL
 //!
-//! @post The function pFunction is applied to each member of the instance list.
+//! @post The function \p pFunction is applied to each member of the instance list.
 //!
 int for_each_instance(bunchOfInstances ** ppHead, void (*pFunction) (bunchOfInstances **, ncInstance *, void *), void *pParam)
 {
@@ -727,7 +728,7 @@ int for_each_instance(bunchOfInstances ** ppHead, void (*pFunction) (bunchOfInst
 //!
 //! @return a pointer to the instance if found. Otherwise, NULL is returned.
 //!
-//! @pre Both ppHead and sInstanceId must not be NULL.
+//! @pre Both \p ppHead and \p sInstanceId must not be NULL.
 //!
 ncInstance *find_instance(bunchOfInstances ** ppHead, const char *sInstanceId)
 {
@@ -751,7 +752,7 @@ ncInstance *find_instance(bunchOfInstances ** ppHead, const char *sInstanceId)
 //!
 //! @return a pointer ot the next instance in the list or NULL if no list is set
 //!
-//! @pre The ppHead field must not be NULL if the static list pointer is NULL.
+//! @pre The \p ppHead field must not be NULL if the static list pointer is NULL.
 //!
 ncInstance *get_instance(bunchOfInstances ** ppHead)
 {
@@ -774,9 +775,9 @@ ncInstance *get_instance(bunchOfInstances ** ppHead)
 //!
 //! @param[in] ppHead a pointer to the pointer to the head of the list
 //!
-//! @return number of instances in the list. If ppHead is NULL or (*ppHead) is NULL, 0 will be returned.
+//! @return number of instances in the list. If \p ppHead is NULL or \p (*ppHead) is NULL, 0 will be returned.
 //!
-//! @pre The ppHead field must not be NULL
+//! @pre The \p ppHead field must not be NULL
 //!
 int total_instances(bunchOfInstances ** ppHead)
 {
@@ -805,7 +806,7 @@ int total_instances(bunchOfInstances ** ppHead)
 //!
 //! @see free_resource()
 //!
-//! @pre The sNodeStatus field must not be NULL.
+//! @pre The \p sNodeStatus field must not be NULL.
 //!
 //! @post On success, a resource structure is allocated and initialized with the given information
 //!
@@ -850,9 +851,9 @@ ncResource *allocate_resource(const char *sNodeStatus, const char *sIQN, int mem
 //!
 //! @see allocate_resource()
 //!
-//! @pre The ppResource field should not be NULL
+//! @pre The \p ppResource field should not be NULL
 //!
-//! @post The resource will be freed and (*ppResource) will be set to NULL.
+//! @post The resource will be freed and \p (*ppResource) will be set to NULL.
 //!
 void free_resource(ncResource ** ppResource)
 {
@@ -871,7 +872,7 @@ void free_resource(ncResource ** ppResource)
 //! @return a pointer to the matching volume OR returns a pointer to the next empty/avail
 //!         volume slot OR if full, returns NULL.
 //!
-//! @pre Both pInstance and sVolumeId fields must not be NULL
+//! @pre Both \p pInstance and \p sVolumeId fields must not be NULL
 //!
 //! @todo There's gotta be a way to improve and not scan the whole list all the time
 //!
@@ -924,7 +925,7 @@ static ncVolume *find_volume(ncInstance * pInstance, const char *sVolumeId)
 //!
 //! @return FALSE if volume slot is not in use or if NULL and TRUE if it is in use
 //!
-//! @pre The pVol field must not be NULL.
+//! @pre The \p pVol field must not be NULL.
 //!
 boolean is_volume_used(const ncVolume * pVolume)
 {
@@ -949,15 +950,16 @@ boolean is_volume_used(const ncVolume * pVolume)
 //!
 //! @return a pointer to the volume if found. Otherwize NULL is returned.
 //!
-//! @pre \li Both pInstance and sVolumeId fields must not be NULL
-//!      \li A volume with sVolumeId for pInstance should exists
+//! @pre \li Both \p pInstance and \p sVolumeId fields must not be NULL
+//!      \li A volume with \p sVolumeId for \p pInstance should exists
 //!      \li If such volume does not exists, we must have an empty slot in the volume list
 //!
-//! @post \li If any of pInstance or sVolumeId is NULL, the application will throw a SIGABRT signal
+//! @post \li If any of \p pInstance or \p sVolumeId is NULL, the application will throw a SIGABRT signal
 //!       \li If the volume is found or if we have an empty slot, the volume information will be saved
 //!       \li If the volume is not found and if we do not have empty slot, NULL is returned and nothing is saved
 //!
-ncVolume *save_volume(ncInstance * pInstance, const char *sVolumeId, const char *sRemoteDev, const char *sLocalDev, const char *sLocalDevReal, const char *sStateName)
+ncVolume *save_volume(ncInstance * pInstance, const char *sVolumeId, const char *sRemoteDev, const char *sLocalDev, const char *sLocalDevReal,
+                      const char *sStateName)
 {
     ncVolume *pVol = NULL;
 
@@ -996,8 +998,8 @@ ncVolume *save_volume(ncInstance * pInstance, const char *sVolumeId, const char 
 //!
 //! @return a pointer to the volume structure if found otherwise NULL is returned
 //!
-//! @pre \li Both the pInstance and sVolumeId fields must not be NULL.
-//!      \li The volume specified by 'sVolumeId' must exists
+//! @pre \li Both the \p pInstance and \p sVolumeId fields must not be NULL.
+//!      \li The volume specified by \p sVolumeId must exists
 //!
 //! @post On success, the volume entry is erased from the instance volume list
 //!
@@ -1040,7 +1042,7 @@ ncVolume *free_volume(ncInstance * pInstance, const char *sVolumeId)
 //! @return A newly allocated pointer to the bundle task structure if successful or NULL if
 //!         the given pInstance structure is NULL or if we cannot allocate memory.
 //!
-//! @pre The pInstance field must not be NULL
+//! @pre The \p pInstance field must not be NULL
 //!
 //! @post A newly allocated structure is allocated and initialized.
 //!
@@ -1072,11 +1074,17 @@ bundleTask *allocate_bundleTask(ncInstance * pInstance)
 //!
 //! @return enum of migration state or -1
 //!
+//! @pre The \p migration_state_name field must not be NULL
+//!
 migration_states migration_state_from_string(const char *migration_state_name)
 {
-    for (int i = 0; i < TOTAL_MIGRATION_STATES; i++) {
-        if (!strcmp(migration_state_names[i], migration_state_name)) {
-            return i;
+    // Make sure our given field is valid
+    if (migration_state_name != NULL) {
+        // Scan our list for a matching indice
+        for (int i = 0; i < TOTAL_MIGRATION_STATES; i++) {
+            if (!strcmp(migration_state_names[i], migration_state_name)) {
+                return i;
+            }
         }
     }
     return -1;

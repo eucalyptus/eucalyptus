@@ -104,9 +104,9 @@
 
 //! MAP of key/value pairs
 typedef struct _map {
-    char *key;                         //!< unique key in the MAP
-    void *val;                         //!< value matching the key
-    struct _map *next;                 //!< pointer to the next map entry
+    char *key;                  //!< unique key in the MAP
+    void *val;                  //!< value matching the key
+    struct _map *next;          //!< pointer to the next map entry
 } map;
 
 /*----------------------------------------------------------------------------*\

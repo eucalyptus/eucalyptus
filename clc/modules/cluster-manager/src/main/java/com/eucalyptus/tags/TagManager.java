@@ -201,10 +201,10 @@ public class TagManager {
         filter.getAliases() ) ) ) {
       if ( Permissions.isAuthorized( 
           PolicySpec.VENDOR_EC2,
-          tag.getResourceType(),
+          tag.getPolicyResourceType(),
           tag.getKey(),
           context.getAccount(), //TODO:STEVE: this is wrong, should be the account of the resource, not caller.
-          PolicySpec.describeAction( PolicySpec.VENDOR_EC2, tag.getResourceType() ),
+          PolicySpec.describeAction( PolicySpec.VENDOR_EC2, tag.getPolicyResourceType() ),
           context.getUser() ) ) { //TODO:STEVE: this permission check is not sufficient (e.g. launch permissions, create volume permissions)
         final TagInfo info = new TagInfo();
         info.setKey( tag.getKey() );

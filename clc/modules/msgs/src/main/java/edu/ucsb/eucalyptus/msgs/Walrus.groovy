@@ -316,6 +316,12 @@ public class ListAllMyBucketsList extends EucalyptusData {
 	ArrayList<BucketListEntry> buckets = new ArrayList<BucketListEntry>();
 }
 
+public class WalrusHeadRequestType extends WalrusRequestType {}
+public class WalrusHeadResponseType extends WalrusResponseType {}
+
+public class HeadBucketType extends WalrusHeadRequestType {}
+public class HeadBucketResponseType extends WalrusHeadResponseType{}
+
 public class CreateBucketType extends WalrusRequestType {
 	AccessControlListType accessControlList;
 	String locationConstraint;

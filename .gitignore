@@ -11,6 +11,7 @@
 .sw*
 .*.sw*
 autom4te.cache
+clc/.nogit
 clc/bin
 clc/.classpath.bak
 clc/bind.log

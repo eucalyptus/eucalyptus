@@ -88,10 +88,10 @@
 #include <dirent.h>
 
 #include <eucalyptus.h>
-#include <misc.h>                      // logprintfl, ensure_...
-#include <data.h>                      // ncInstance
-#include <handlers.h>                  // nc_state
-#include <ipc.h>                       // sem
+#include <misc.h>               // logprintfl, ensure_...
+#include <data.h>               // ncInstance
+#include <handlers.h>           // nc_state
+#include <ipc.h>                // sem
 #include <euca_string.h>
 
 #include "diskutil.h"
@@ -374,8 +374,8 @@ int init_backing_store(const char *conf_instances_path, unsigned int conf_work_s
         return (EUCA_ACCESS_ERROR);
 
     // convert MB to blocks
-    cache_limit_blocks = conf_cache_size_mb * 2048;
-    work_limit_blocks = conf_work_size_mb * 2048;
+    cache_limit_blocks = (unsigned long long)conf_cache_size_mb *2048;
+    work_limit_blocks = (unsigned long long)conf_work_size_mb *2048;
 
     // we take 0 as unlimited
     if (work_limit_blocks == 0) {
@@ -393,7 +393,9 @@ int init_backing_store(const char *conf_instances_path, unsigned int conf_work_s
 
     // Do we need to create a cache blobstore
     if (cache_limit_blocks) {
-        cache_bs = blobstore_open(cache_path, cache_limit_blocks, BLOBSTORE_FLAG_CREAT, BLOBSTORE_FORMAT_DIRECTORY, BLOBSTORE_REVOCATION_LRU, snapshot_policy);
+        cache_bs =
+            blobstore_open(cache_path, cache_limit_blocks, BLOBSTORE_FLAG_CREAT, BLOBSTORE_FORMAT_DIRECTORY, BLOBSTORE_REVOCATION_LRU,
+                           snapshot_policy);
         if (cache_bs == NULL) {
             LOGERROR("failed to open/create cache blobstore: %s\n", blobstore_get_error_str(blobstore_get_error()));
             return (EUCA_PERMISSION_ERROR);
@@ -446,7 +448,8 @@ static void set_id(const ncInstance * instance, virtualBootRecord * vbr, char *i
 
     if (vbr) {
         assert(strlen(vbr->typeName));
-        snprintf(id, id_size, "/blob-%s-%s", vbr->typeName, (vbr->type == NC_RESOURCE_KERNEL || vbr->type == NC_RESOURCE_RAMDISK) ? (vbr->id) : (vbr->guestDeviceName));
+        snprintf(id, id_size, "/blob-%s-%s", vbr->typeName,
+                 (vbr->type == NC_RESOURCE_KERNEL || vbr->type == NC_RESOURCE_RAMDISK) ? (vbr->id) : (vbr->guestDeviceName));
     }
     snprintf(id, id_size, "%s/%s%s", instance->userId, instance->instanceId, suffix);
 }
@@ -724,7 +727,7 @@ int create_instance_backing(ncInstance * instance)
     int ret = EUCA_ERROR;
     virtualMachine *vm = &(instance->params);
     artifact *sentinel = NULL;
-    char work_prefix[1024] = { 0 };    // {userId}/{instanceId}
+    char work_prefix[1024] = { 0 }; // {userId}/{instanceId}
 
     // ensure instance directory exists
     set_path(instance->instancePath, sizeof(instance->instancePath), instance, NULL);
@@ -748,9 +751,9 @@ int create_instance_backing(ncInstance * instance)
     set_id(instance, NULL, work_prefix, sizeof(work_prefix));
 
     // compute tree of dependencies
-    sentinel = vbr_alloc_tree(vm,      // the struct containing the VBR
-                              FALSE,   // for Xen and KVM we do not need to make disk bootable
-                              TRUE,    // make working copy of runtime-modifiable files
+    sentinel = vbr_alloc_tree(vm,   // the struct containing the VBR
+                              FALSE,    // for Xen and KVM we do not need to make disk bootable
+                              TRUE, // make working copy of runtime-modifiable files
                               (instance->do_inject_key) ? (instance->keyName) : (NULL), // the SSH key
                               instance->instanceId);    // ID is for logging
     if (sentinel == NULL) {
@@ -831,7 +834,6 @@ int create_migration_backing(ncInstance * instance)
         LOGERROR("[%s] failed to prepare backing for instance\n", instance->instanceId);
         goto out;
     }
-
     // convert top-level artifacts into simple blobs and prune children
     for (int i = 0; i < MAX_ARTIFACT_DEPS && sentinel->deps[i]; i++) {
         // TODO:....
@@ -970,7 +972,7 @@ int destroy_instance_backing(ncInstance * instance, boolean do_destroy_files)
     int ret = EUCA_OK;
     char toDelete[MAX_PATH] = { 0 };
     char path[MAX_PATH] = { 0 };
-    char work_regex[1024] = { 0 };     // {userId}/{instanceId}/.*
+    char work_regex[1024] = { 0 };  // {userId}/{instanceId}/.*
     struct dirent *entry = NULL;
     struct dirent **files = NULL;
     ncVolume *volume = NULL;
@@ -991,12 +993,12 @@ int destroy_instance_backing(ncInstance * instance, boolean do_destroy_files)
         ncVolume *volume = &instance->volumes[i];
         if (!is_volume_used(volume))
             continue;
-        
+
         if (disconnect_iscsi_target(volume->remoteDev) != 0) {
             LOGERROR("[%s][%s] failed to disconnet iscsi target\n", instance->instanceId, volume->volumeId);
         }
     }
-    
+
     // see if instance directory is there (sometimes startup fails before it is created)
     set_path(path, sizeof(path), instance, NULL);
     if (check_path(path))

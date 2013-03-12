@@ -74,7 +74,7 @@
  |                                                                            |
 \*----------------------------------------------------------------------------*/
 
-#include <arpa/inet.h>                 /* for htonl() */
+#include <arpa/inet.h>          /* for htonl() */
 #include <sys/types.h>
 
 #include <wchar.h>
@@ -246,7 +246,7 @@ size_t utf8_to_wchar(const char *in, size_t insize, wchar_t * out, size_t outsiz
             return (0);
 
         // Get number of bytes for one wide character.
-        n = 1;                         // default: 1 byte. Used when skipping bytes.
+        n = 1;                  // default: 1 byte. Used when skipping bytes.
         if ((*p & 0x80) == 0)
             high = ((wchar_t) * p);
         else if ((*p & 0xe0) == _SEQ2) {
@@ -275,7 +275,7 @@ size_t utf8_to_wchar(const char *in, size_t insize, wchar_t * out, size_t outsiz
             if ((flags & UTF8_IGNORE_ERROR) == 0)
                 return (0);
             n = 1;
-            continue;                  // skip
+            continue;           // skip
         }
         // Validate sequence. All symbols must have higher bits set to 10xxxxxx
         if (n > 1) {
@@ -288,7 +288,7 @@ size_t utf8_to_wchar(const char *in, size_t insize, wchar_t * out, size_t outsiz
                 if ((flags & UTF8_IGNORE_ERROR) == 0)
                     return (0);
                 n = 1;
-                continue;              // skip
+                continue;       // skip
             }
         }
 
@@ -298,19 +298,19 @@ size_t utf8_to_wchar(const char *in, size_t insize, wchar_t * out, size_t outsiz
             continue;
 
         if (out >= wlim)
-            return (0);                // no space left
+            return (0);         // no space left
 
         *out = 0;
         n_bits = 0;
         for (i = 1; i < n; i++) {
             *out |= ((wchar_t) (p[(n - i)] & 0x3f)) << n_bits;
-            n_bits += 6;               // 6 low bits in every byte
+            n_bits += 6;        // 6 low bits in every byte
         }
         *out |= (high << n_bits);
 
         if (__wchar_forbitten(*out) != 0) {
             if ((flags & UTF8_IGNORE_ERROR) == 0)
-                return (0);            // forbitten character
+                return (0);     // forbitten character
             else {
                 total--;
                 out--;
@@ -388,7 +388,7 @@ size_t wchar_to_utf8(const wchar_t * in, size_t insize, char *out, size_t outsiz
             n = 4;
         else if (*w <= 0x03ffffff)
             n = 5;
-        else                           // if (*w <= 0x7fffffff)
+        else                    // if (*w <= 0x7fffffff)
             n = 6;
 
         total += n;
@@ -397,7 +397,7 @@ size_t wchar_to_utf8(const wchar_t * in, size_t insize, char *out, size_t outsiz
             continue;
 
         if (((signed)(lim - p)) <= ((signed)(n - 1)))
-            return (0);                // no space left
+            return (0);         // no space left
 
         /* make it work under different endians */
         ch = htonl(*w);

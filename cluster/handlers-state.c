@@ -593,9 +593,11 @@ int instIpSync(ccInstance * inst, void *in)
 
     LOGDEBUG("instanceId=%s CCpublicIp=%s CCprivateIp=%s CCprivateMac=%s CCvlan=%d CCnetworkIndex=%d NCpublicIp=%s NCprivateIp=%s NCprivateMac=%s "
              "NCvlan=%d NCnetworkIndex=%d\n", inst->instanceId, inst->ccnet.publicIp, inst->ccnet.privateIp, inst->ccnet.privateMac, inst->ccnet.vlan,
-             inst->ccnet.networkIndex, inst->ncnet.publicIp, inst->ncnet.privateIp, inst->ncnet.privateMac, inst->ncnet.vlan, inst->ncnet.networkIndex);
+             inst->ccnet.networkIndex, inst->ncnet.publicIp, inst->ncnet.privateIp, inst->ncnet.privateMac, inst->ncnet.vlan,
+             inst->ncnet.networkIndex);
 
-    if (inst->ccnet.vlan == 0 && inst->ccnet.networkIndex == 0 && inst->ccnet.publicIp[0] == '\0' && inst->ccnet.privateIp[0] == '\0' && inst->ccnet.privateMac[0] == '\0') {
+    if (inst->ccnet.vlan == 0 && inst->ccnet.networkIndex == 0 && inst->ccnet.publicIp[0] == '\0' && inst->ccnet.privateIp[0] == '\0'
+        && inst->ccnet.privateMac[0] == '\0') {
         // ccnet is completely empty, make a copy of ncnet
         LOGDEBUG("ccnet is empty, copying ncnet\n");
         memcpy(&(inst->ccnet), &(inst->ncnet), sizeof(netConfig));
@@ -634,14 +636,16 @@ int instIpSync(ccInstance * inst, void *in)
     inst->ccnet.vlan = inst->ncnet.vlan;
     if (inst->ccnet.vlan >= 0) {
         if (!vnetconfig->networks[inst->ccnet.vlan].active) {
-            LOGWARN("detected instance from NC that is running in a currently inactive network; will attempt to re-activate network '%d'\n", inst->ccnet.vlan);
+            LOGWARN("detected instance from NC that is running in a currently inactive network; will attempt to re-activate network '%d'\n",
+                    inst->ccnet.vlan);
             ret++;
         }
     }
     // networkIndex cases
     if (inst->ccnet.networkIndex != inst->ncnet.networkIndex) {
         // problem
-        LOGERROR("CC and NC networkIndicies differ instanceId=%s CCnetworkIndex=%d NCnetworkIndex=%d\n", inst->instanceId, inst->ccnet.networkIndex, inst->ncnet.networkIndex);
+        LOGERROR("CC and NC networkIndicies differ instanceId=%s CCnetworkIndex=%d NCnetworkIndex=%d\n", inst->instanceId, inst->ccnet.networkIndex,
+                 inst->ncnet.networkIndex);
     }
     inst->ccnet.networkIndex = inst->ncnet.networkIndex;
 
