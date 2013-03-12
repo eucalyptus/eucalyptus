@@ -166,6 +166,7 @@ const char *ncResourceTypeName[] = {
     "ephemeral",
     "swap",
     "ebs"
+    "boot",
 };
 
 //! String value of each instance state enumeration entry

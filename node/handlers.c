@@ -591,8 +591,7 @@ virConnectPtr *check_hypervisor_conn()
             bail = TRUE;
         }
         // terminate the child, if any
-        kill(cpid, SIGKILL);    // should be able to do
-        kill(cpid, 9);          // may not be able to do
+        killwait(cpid);
     }
 
     if (bail) {
@@ -1289,8 +1288,7 @@ void *startup_thread(void *arg)
             }
 
             if (try_killing) {
-                kill(cpid, SIGKILL);    // should be able to do
-                kill(cpid, 9);  // may not be able to do?
+                killwait(cpid);
             }
         }
 
@@ -1427,8 +1425,7 @@ void *restart_thread(void *arg)
                 }
 
                 if (tryKilling) {
-                    kill(cpid, SIGKILL);    // should be able to do
-                    kill(cpid, 9);  // may not be able to do?
+                    killwait(cpid);
                 }
             }
         }

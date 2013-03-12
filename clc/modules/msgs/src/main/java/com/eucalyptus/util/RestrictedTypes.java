@@ -281,6 +281,9 @@ public class RestrictedTypes {
             throw new AuthQuotaException( type.value( ), "Quota exceeded while trying to create: " + type + " by user: " + ctx.getUserFullName( ) );
           }
         } catch ( AuthException ex ) {
+          if ( rsc != null ) {
+            rollback.apply( rsc );
+          }
           throw ex;
         }
         res.add( rsc );

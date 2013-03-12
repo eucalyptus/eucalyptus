@@ -24,6 +24,7 @@
 	$.eucaData = {};
   }
   var support_url = '';
+  var admin_url = '';
   var initData = '';
   var redirected = false;
   $(document).ready(function() {
@@ -41,6 +42,7 @@
         success: function(out, textStatus, jqXHR){ 
           eucalyptus.i18n({'language':out.language});
           support_url = out.support_url;
+          admin_url = out.admin_url;
           if(out.ipaddr && out.ipaddr.length>0 && isValidIPv4Address(out.ipaddr)){
             var newLocation = '';
             if(location.port && location.port > 0)
@@ -93,7 +95,7 @@
           });
         } else{
           var $main = $('html body').find('.euca-main-outercontainer .inner-container');
-          $main.login({ 'support_url' : support_url, doLogin : function(evt, args) {
+          $main.login({ 'support_url' : support_url, 'admin_url' : admin_url, doLogin : function(evt, args) {
               var tok = args.param.account+':'+args.param.username+':'+args.param.password;
               var hash = toBase64(tok);  // btoa(tok) --> not supported on ie9
               var remember = (args.param.remember!=null)?"yes":"no";

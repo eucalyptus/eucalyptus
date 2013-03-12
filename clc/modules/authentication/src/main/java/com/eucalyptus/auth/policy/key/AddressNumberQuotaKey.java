@@ -93,11 +93,11 @@ public class AddressNumberQuotaKey extends QuotaKey {
   public String value( Scope scope, String id, String resource, Long quantity ) throws AuthException {
     switch ( scope ) {
       case ACCOUNT:
-        return Long.toString( RestrictedTypes.quantityMetricFunction( AddressMetadata.class ).apply( AccountFullName.getInstance( id ) ) + quantity );
+        return Long.toString( RestrictedTypes.quantityMetricFunction( AddressMetadata.class ).apply( AccountFullName.getInstance( id ) ) + quantity - 1 );
       case GROUP:
         return NOT_SUPPORTED;
       case USER:
-        return Long.toString( RestrictedTypes.quantityMetricFunction( AddressMetadata.class ).apply( UserFullName.getInstance( id ) ) + quantity );
+        return Long.toString( RestrictedTypes.quantityMetricFunction( AddressMetadata.class ).apply( UserFullName.getInstance( id ) ) + quantity - 1 );
     }
     throw new AuthException( "Invalid scope" );
   }

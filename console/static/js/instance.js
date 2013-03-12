@@ -93,19 +93,16 @@
                  return eucatableDisplayColumnTypeInstanceStatus(state);
 	      },
             },
-            { 
-	      // Display the image id of the instance in the main table
-	      "mDataProp": "image_id"
-	    },
-            { 
-	      // Display the availiability zone of the instance in the main table
-	      "mDataProp": "placement"
-	    }, 
+            { "mDataProp": "image_id"},
             {
-	      // Display the public dns name of the instance in the main table
-	      "mDataProp": "public_dns_name",
- 	      "sClass": "wrap-content"
-	    },
+              "fnRender": function(oObj) { 
+                var placement = oObj.aData.placement;
+                if (placement == undefined) {
+                  placement = oObj.aData._placement.zone;
+                }
+                return placement;
+              }
+            },
             {
 	      // Display the private dns name of the instance in the main table
 	      "mDataProp": "private_dns_name",
@@ -998,6 +995,9 @@
 
       var selectedType = instance.instance_type;
       var zone = instance.placement;
+      if (zone == undefined) {
+        zone = oObj.aData._placement.zone;
+      }
       $summary = $('<div>').append(
           $('<div>').attr('id','summary-type-insttype').append($('<div>').text(launch_instance_summary_type), $('<span>').text(selectedType)),
           $('<div>').attr('id','summary-type-zone').append($('<div>').text(launch_instance_summary_zone), $('<span>').text(zone)),

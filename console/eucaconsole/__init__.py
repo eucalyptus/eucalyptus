@@ -133,7 +133,7 @@ class GlobalSession(object):
     
     @property
     def admin_console_url(self):
-        port = self.get_value('server', 'clcwebport')
+        port = self.get_value('server', 'clcwebport', '8443')
         url = 'https://' + self.get_value('server', 'clchost')
         if port != '443':
             url += ':' + port
@@ -395,6 +395,14 @@ class InitProcessor(ProxyProcessor):
     def post(web_req):
         language = config.get('locale','language')
         support_url = config.get('locale','support.url')
+        port = '8443'
+        try:
+          port = config.get('server', 'clcwebport')
+        except Exception, err:
+          pass
+        admin_url = 'https://' + config.get('server', 'clchost')
+        if port != '443':
+            admin_url += ':' + port
         url_rewrite = config.get('server', 'url.rewrite')
         if web_req.get_argument('host', False) and (url_rewrite in ['true', '1', 'True']): 
           try:
@@ -407,9 +415,9 @@ class InitProcessor(ProxyProcessor):
                 return InitResponse(language, support_url, ip_str, host)
             raise Exception
           except:
-            return InitResponse(language, support_url)
+            return InitResponse(language, support_url, admin_url)
         else:
-          return InitResponse(language, support_url)
+          return InitResponse(language, support_url, admin_url)
 
 class SessionProcessor(ProxyProcessor):
     @staticmethod
@@ -451,11 +459,12 @@ class BusyResponse(ProxyResponse):
             return {'result': 'false'}
 
 class InitResponse(ProxyResponse):
-    def __init__(self, lang, support_url, ip='', hostname=''):
+    def __init__(self, lang, support_url, admin_url, ip='', hostname=''):
         self.language = lang
         self.support_url = support_url
+        self.admin_url = admin_url
         self.ip = ip
         self.hostname = hostname
 
     def get_response(self):
-        return {'language': self.language, 'support_url': self.support_url, 'ipaddr': self.ip, 'hostname': self.hostname}
+        return {'language': self.language, 'support_url': self.support_url, 'admin_url': self.admin_url, 'ipaddr': self.ip, 'hostname': self.hostname}

@@ -21,7 +21,8 @@
 (function($, eucalyptus) {
   $.widget('eucalyptus.login', { 
     options : {
-      support_url : ''
+      support_url : '',
+      admin_url : ''
     },
     errorDialog : null,
     nocookiesDialog : null,
@@ -73,16 +74,15 @@
        
         thisObj._trigger('doLogin', evt, { param: param,
           onSuccess: function(args){
-	     if ($.eucaData['u_session']['account'] === 'eucalyptus'){
-               thisObj.popupWarning(login_account_warning, function(){ 
-                 var admin_url = $.eucaData.g_session['admin_console_url'];
-                 window.open(admin_url, '_blank');
-               });
-             }
-            
+            if ($.eucaData['u_session']['account'] === 'eucalyptus'){
+              thisObj.popupWarning(login_account_warning, function(){ 
+                var admin_url = $.eucaData.g_session['admin_console_url'];
+                window.open(admin_url, '_blank');
+              });
+            }
             $login.remove();
             eucalyptus.main($.eucaData);
-   	    },
+   	      },
           onError: function(args){
             $form.find('.button-bar img').remove();
             $form.find('.button-bar input').removeAttr('disabled');
@@ -98,9 +98,19 @@
                   window.open(thisObj.options.support_url,'_blank');
               });
             } else {
-              msgdiv.addClass('dialog-error').html(login_failure);
+              if (args.search("Forbidden")>-1) {
+                // password expired
+                msgdiv.addClass('dialog-error').html($.i18n.prop('login_expired', '<a href="#">'+about_dialog_link_label+'</a>'));
+                msgdiv.find('a').click( function(e){
+                  window.open(thisObj.options.admin_url,'_blank');
+                });
+              }
+              else {
+                // normal login failure
+                msgdiv.addClass('dialog-error').html(login_failure);
+              }
             }
-          }		     
+          }
         });
         return false;
       });

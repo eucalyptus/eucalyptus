@@ -900,8 +900,8 @@ public class BlockStorage {
 			db.commit();
 		}
 		try {
-			String deviceName = blockManager.attachVolume(volumeId, nodeIqns);
-			reply.setRemoteDeviceString(deviceName);
+			String deviceConnectString = blockManager.attachVolume(volumeId, nodeIqns);
+			reply.setRemoteDeviceString(deviceConnectString);
 		} catch (EucalyptusCloudException ex) {
 		  LOG.error(ex, ex);
 			throw ex;

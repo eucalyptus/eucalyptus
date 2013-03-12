@@ -326,6 +326,7 @@ static inline void copy_vm_type_from_adb(virtualMachine * params, adb_virtualMac
         params->virtualBootRecordLen = adb_virtualMachineType_sizeof_virtualBootRecord(vm_type, env);
         for (i = 0; ((i < EUCA_MAX_VBRS) && (i < params->virtualBootRecordLen)); i++) {
             if ((vbr_type = adb_virtualMachineType_get_virtualBootRecord_at(vm_type, env, i)) != NULL) {
+        		params->virtualBootRecord[i].resourceLocationPtr = adb_virtualBootRecordType_get_resourceLocation(vbr_type, env); // added for IQN=LUN dumuxing on CC
                 euca_strncpy(params->virtualBootRecord[i].resourceLocation, adb_virtualBootRecordType_get_resourceLocation(vbr_type, env),
                              CHAR_BUFFER_SIZE);
                 LOGTRACE("resource location: %s\n", params->virtualBootRecord[i].resourceLocation);

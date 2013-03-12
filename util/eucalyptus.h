@@ -89,6 +89,8 @@
 #define INLINE                                   inline
 #endif /* ! CFG_USE_INLINE */
 
+#include <stdint.h>
+
 // Maybe we should have no defaults, but I will put them here for the moment.
 #ifndef LIBDIR
 #define LIBDIR                                   "/usr/lib" //!< default user library directory path

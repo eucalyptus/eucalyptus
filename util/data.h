@@ -169,7 +169,8 @@ typedef enum _ncResourceType {
     NC_RESOURCE_KERNEL,         //!< Kernel
     NC_RESOURCE_EPHEMERAL,      //!< Ephemeral
     NC_RESOURCE_SWAP,           //!< SWAP
-    NC_RESOURCE_EBS             //!< EBS
+    NC_RESOURCE_EBS,            //!< EBS
+    NC_RESOURCE_BOOT,           //!< BOOTABLE
 } ncResourceType;
 
 //! NC Resource Location Type Enumeration
@@ -254,6 +255,7 @@ typedef struct virtualBootRecord_t {
     //! @{
     //! @name first six fields arrive in requests (RunInstance, {Attach|Detach} Volume)
     char resourceLocation[CHAR_BUFFER_SIZE];    //!< http|walrus|cloud|sc|iqn|aoe://... or none
+    char * resourceLocationPtr; //!< pointer to a full version of resourceLocation, used by CC for IQN=LUN demuxing
     char guestDeviceName[SMALL_CHAR_BUFFER_SIZE];   //!< x?[vhsf]d[a-z]?[1-9]*
     long long sizeBytes;        //!< Size of the boot record in bytes
     char formatName[SMALL_CHAR_BUFFER_SIZE];    //!< ext2|ext3|swap|none
@@ -287,6 +289,7 @@ typedef struct virtualMachine_t {
     virtualBootRecord *ramdisk; //!< Ramdisk boot record information
     virtualBootRecord *swap;    //!< SWAP boot record information
     virtualBootRecord *ephemeral0;  //!< Ephemeral boot record information
+    virtualBootRecord *boot; //!< Boot sector
     virtualBootRecord virtualBootRecord[EUCA_MAX_VBRS]; //!< List of virtual boot records
     int virtualBootRecordLen;   //!< Number of VBRS in the list
     libvirtNicType nicType;     //!< Defines the virtual machine NIC type

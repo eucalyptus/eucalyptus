@@ -938,7 +938,7 @@ int ncClientCall(ncMetadata * pMeta, int timeout, int ncLock, char *ncURL, char 
             if (timeout && outConsoleOutput) {
                 rbytes = timeread(filedes[0], &len, sizeof(int), timeout);
                 if (rbytes <= 0) {
-                    kill(pid, SIGKILL);
+                    killwait(pid);
                     opFail = 1;
                 } else {
                     *outConsoleOutput = EUCA_ALLOC(len, sizeof(char));
@@ -948,7 +948,7 @@ int ncClientCall(ncMetadata * pMeta, int timeout, int ncLock, char *ncURL, char 
                     }
                     rbytes = timeread(filedes[0], *outConsoleOutput, len, timeout);
                     if (rbytes <= 0) {
-                        kill(pid, SIGKILL);
+                        killwait(pid);
                         opFail = 1;
                     }
                 }
@@ -969,17 +969,17 @@ int ncClientCall(ncMetadata * pMeta, int timeout, int ncLock, char *ncURL, char 
             if (timeout && shutdownState && previousState) {
                 rbytes = timeread(filedes[0], &len, sizeof(int), timeout);
                 if (rbytes <= 0) {
-                    kill(pid, SIGKILL);
+                    killwait(pid);
                     opFail = 1;
                 } else {
                     rbytes = timeread(filedes[0], shutdownState, sizeof(int), timeout);
                     if (rbytes <= 0) {
-                        kill(pid, SIGKILL);
+                        killwait(pid);
                         opFail = 1;
                     }
                     rbytes = timeread(filedes[0], previousState, sizeof(int), timeout);
                     if (rbytes <= 0) {
-                        kill(pid, SIGKILL);
+                        killwait(pid);
                         opFail = 1;
                     }
                 }
@@ -1005,7 +1005,7 @@ int ncClientCall(ncMetadata * pMeta, int timeout, int ncLock, char *ncURL, char 
                 *outStatus = NULL;
                 rbytes = timeread(filedes[0], &len, sizeof(int), timeout);
                 if (rbytes <= 0) {
-                    kill(pid, SIGKILL);
+                    killwait(pid);
                     opFail = 1;
                 } else {
                     *outStatus = EUCA_ALLOC(len, sizeof(char));
@@ -1015,7 +1015,7 @@ int ncClientCall(ncMetadata * pMeta, int timeout, int ncLock, char *ncURL, char 
                     }
                     rbytes = timeread(filedes[0], *outStatus, len, timeout);
                     if (rbytes <= 0) {
-                        kill(pid, SIGKILL);
+                        killwait(pid);
                         opFail = 1;
                     }
                 }
@@ -1070,7 +1070,7 @@ int ncClientCall(ncMetadata * pMeta, int timeout, int ncLock, char *ncURL, char 
             if (timeout && outInst) {
                 rbytes = timeread(filedes[0], &len, sizeof(int), timeout);
                 if (rbytes <= 0) {
-                    kill(pid, SIGKILL);
+                    killwait(pid);
                     opFail = 1;
                 } else {
                     *outInst = EUCA_ZALLOC(1, sizeof(ncInstance));
@@ -1080,7 +1080,7 @@ int ncClientCall(ncMetadata * pMeta, int timeout, int ncLock, char *ncURL, char 
                     }
                     rbytes = timeread(filedes[0], *outInst, sizeof(ncInstance), timeout);
                     if (rbytes <= 0) {
-                        kill(pid, SIGKILL);
+                        killwait(pid);
                         opFail = 1;
                     }
                 }
@@ -1102,7 +1102,7 @@ int ncClientCall(ncMetadata * pMeta, int timeout, int ncLock, char *ncURL, char 
             if (timeout && ncOutInsts && ncOutInstsLen) {
                 rbytes = timeread(filedes[0], &len, sizeof(int), timeout);
                 if (rbytes <= 0) {
-                    kill(pid, SIGKILL);
+                    killwait(pid);
                     opFail = 1;
                 } else {
                     *ncOutInsts = EUCA_ZALLOC(len, sizeof(ncInstance *));
@@ -1135,7 +1135,7 @@ int ncClientCall(ncMetadata * pMeta, int timeout, int ncLock, char *ncURL, char 
             if (timeout && outRes) {
                 rbytes = timeread(filedes[0], &len, sizeof(int), timeout);
                 if (rbytes <= 0) {
-                    kill(pid, SIGKILL);
+                    killwait(pid);
                     opFail = 1;
                 } else {
                     *outRes = EUCA_ZALLOC(1, sizeof(ncResource));
@@ -1145,7 +1145,7 @@ int ncClientCall(ncMetadata * pMeta, int timeout, int ncLock, char *ncURL, char 
                     }
                     rbytes = timeread(filedes[0], *outRes, sizeof(ncResource), timeout);
                     if (rbytes <= 0) {
-                        kill(pid, SIGKILL);
+                        killwait(pid);
                         opFail = 1;
                     }
                 }
@@ -1176,7 +1176,7 @@ int ncClientCall(ncMetadata * pMeta, int timeout, int ncLock, char *ncURL, char 
             if (timeout && srs && srsLen) {
                 rbytes = timeread(filedes[0], &len, sizeof(int), timeout);
                 if (rbytes <= 0) {
-                    kill(pid, SIGKILL);
+                    killwait(pid);
                     opFail = 1;
                 } else {
                     *srs = EUCA_ZALLOC(len, sizeof(sensorResource *));
@@ -1316,8 +1316,17 @@ int doAttachVolume(ncMetadata * pMeta, char *volumeId, char *instanceId, char *r
     for (i = start; i < stop && !done; i++) {
         timeout = ncGetTimeout(op_start, OP_TIMEOUT, stop - start, i);
         timeout = maxint(timeout, ATTACH_VOL_TIMEOUT_SECONDS);
-        rc = ncClientCall(pMeta, timeout, resourceCacheLocal.resources[i].lockidx, resourceCacheLocal.resources[i].ncURL, "ncAttachVolume",
-                          instanceId, volumeId, remoteDev, localDev);
+
+        // pick out the right LUN from the remove device string
+        char remoteDevForNC [CHAR_BUFFER_SIZE];
+        if (get_remoteDevForNC(resourceCacheLocal.resources[i].iqn, remoteDev, remoteDevForNC, sizeof(remoteDevForNC))) {
+            LOGERROR("failed to parse remote dev string in request\n");
+            rc = 1;
+        } else {
+            rc = ncClientCall(pMeta, timeout, resourceCacheLocal.resources[i].lockidx, resourceCacheLocal.resources[i].ncURL, "ncAttachVolume",
+                              instanceId, volumeId, remoteDevForNC, localDev);
+        }
+
         if (rc) {
             ret = 1;
         } else {
@@ -1392,8 +1401,16 @@ int doDetachVolume(ncMetadata * pMeta, char *volumeId, char *instanceId, char *r
     for (i = start; i < stop; i++) {
         timeout = ncGetTimeout(op_start, OP_TIMEOUT, stop - start, i);
         timeout = maxint(timeout, DETACH_VOL_TIMEOUT_SECONDS);
-        rc = ncClientCall(pMeta, timeout, resourceCacheLocal.resources[i].lockidx, resourceCacheLocal.resources[i].ncURL, "ncDetachVolume",
-                          instanceId, volumeId, remoteDev, localDev, force);
+
+        // pick out the right LUN from the remove device string
+        char remoteDevForNC [CHAR_BUFFER_SIZE];
+        if (get_remoteDevForNC(resourceCacheLocal.resources[i].iqn, remoteDev, remoteDevForNC, sizeof(remoteDevForNC))) {
+            LOGERROR("failed to parse remote dev string in request\n");
+            rc = 1;
+        } else {
+            rc = ncClientCall(pMeta, timeout, resourceCacheLocal.resources[i].lockidx, resourceCacheLocal.resources[i].ncURL, "ncDetachVolume",
+                              instanceId, volumeId, remoteDevForNC, localDev, force);
+        }
         if (rc) {
             ret = 1;
         } else {
@@ -3306,6 +3323,18 @@ int doRunInstances(ncMetadata * pMeta, char *amiId, char *kernelId, char *ramdis
             sem_mypost(CONFIG);
 
             res = &(resourceCache->resources[resid]);
+
+            // pick out the right LUN from the long version of the remote device string and create the remote dev string that NC expects
+            for (int i = 0; i < EUCA_MAX_VBRS && i < ncvm.virtualBootRecordLen; i++) {
+                virtualBootRecord * vbr = &(ncvm.virtualBootRecord[i]);
+                if (strcmp(vbr->typeName, "ebs")) // skip all except EBS entries
+                    continue;
+                if (get_remoteDevForNC(res->iqn, vbr->resourceLocationPtr, vbr->resourceLocation, sizeof(vbr->resourceLocation))) {
+                    LOGERROR("failed to parse remote dev string in VBR[%d]\n", i);
+                    rc = 1;
+                }
+            }
+            
             if (rc) {
                 // could not find resource
                 LOGERROR("scheduler could not find resource to run the instance on\n");
@@ -5054,8 +5083,7 @@ int init_thread(void)
         }
 
         if (config == NULL) {
-            rc = setup_shared_buffer((void **)&config, "/eucalyptusCCConfig", sizeof(ccConfig), &(locks[CONFIG]), "/eucalyptusCCConfigLock",
-                                     SHARED_FILE);
+            rc = setup_shared_buffer((void **)&config, "/eucalyptusCCConfig", sizeof(ccConfig), &(locks[CONFIG]), "/eucalyptusCCConfigLock", SHARED_FILE);
             if (rc != 0) {
                 fprintf(stderr, "Cannot set up shared memory region for ccConfig, exiting...\n");
                 sem_mypost(INIT);
