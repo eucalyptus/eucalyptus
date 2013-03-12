@@ -299,7 +299,7 @@ class RootHandler(BaseHandler):
 
     def check_xsrf_cookie(self):
         action = self.get_argument("action")
-        if action == 'login' or action == 'init':
+        if action == 'login' or action == 'init' or action == 'changepwd':
             xsrf = self.xsrf_token
         else:
             super(RootHandler, self).check_xsrf_cookie()
@@ -343,14 +343,10 @@ class LoginProcessor(ProxyProcessor):
         newpwd = None
         if action == 'changepwd':
             # fetch/decode old/new passwords
-            passwd, newpwd = auth_decoded.split(':', 1)
+            account, user, passwd, newpwd = auth_decoded.split(':', 3)
             passwd = base64.decodestring(passwd)
             newpwd = base64.decodestring(newpwd)
-            # lookup session to get account/user info
-            sid = web_req.get_cookie("session-id")
-            account = sessions[sid].account;
-            user = sessions[sid].username;
-            remember = (web_req.get_cookie("remember") == 'true');
+            remember = 'yes' if (web_req.get_cookie("remember") == 'true') else 'no';
         else:
             account, user, passwd = auth_decoded.split(':', 2);
             remember = web_req.get_argument("remember")
