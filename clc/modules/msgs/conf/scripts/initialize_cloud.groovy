@@ -145,5 +145,6 @@ try {
   }
 } catch( Exception ex ) {
   Databases.getBootstrapper( ).destroy( );
-  LOG.error( ex, ex );
+  LOG.fatal( "", ex );
+  System.exit( 37 );
 }

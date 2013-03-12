@@ -61,6 +61,7 @@
  ************************************************************************/
 
 import java.sql.ResultSet
+import java.io.File
 import com.eucalyptus.bootstrap.Bootstrapper
 import com.eucalyptus.bootstrap.DatabaseBootstrapper
 import com.eucalyptus.bootstrap.OrderedShutdown
@@ -137,47 +138,52 @@ public class PostgresqlBootstrapper extends Bootstrapper.Simple implements Datab
   private static long   MIN_SEMMNS = 32000L
   private static long   MIN_SHMMAX = 536870912L //512MB
   
-  private int runProcess( List<String> args ) {
-    PrintStream outstream = null
-    PrintStream errstream = null
-    LOG.debug("Postgres 9.X command : " + args.toString( ) )
+  private int runProcessWithReturn( List<String> args ) {
+    LOG.info("Postgres command : " + args.collect { "'${it}'" }.join(" ") )
     try {
       ProcessBuilder pb = new ProcessBuilder(args)
-      Process p = pb.start()
-      outstream = new PrintStream( BaseDirectory.LOG.getChildFile("db.log") )
-      errstream = new PrintStream( BaseDirectory.LOG.getChildFile("db-err.log") )
-      p.consumeProcessOutput(outstream, errstream)
-      int result = p.waitFor()
-      flushQuietly( outstream )
-      flushQuietly( errstream )
-      return result
-    } finally {
-      closeQuietly( outstream )
-      closeQuietly( errstream )
-    }
-  }
-  
-  private List<String> runProcessWithOutput( List<String> args ) {
-    LOG.debug("Postgres 9.X command : " + args.toString( ) )
-    try {
-      ProcessBuilder pb = new ProcessBuilder(args)
+      def root = new File("/")
+      def outlines = []
+      def errlines = []
+      pb.directory(root);
       Process p = pb.start()
       OutputStream outstream = new ByteArrayOutputStream( 8192 )
       OutputStream errstream = new ByteArrayOutputStream( 8192 )
       p.consumeProcessOutput(outstream, errstream)
       int result = p.waitFor()
-      if ( result == 0 ) {
-        def lines=[]
-        outstream.eachLine { line -> lines.add(line) }
-        return lines
-      } else {
-        throw new RuntimeException("Failed to run ${args} because of: ${errstream.toString( )}");
-      }
+      outstream.toString().eachLine { line -> outlines.add(line); LOG.info("stdout: ${line}") }
+      errstream.toString().eachLine { line -> errlines.add(line); LOG.info("stderr: ${line}") }
+      return result
     } catch ( Exception ex ) {
-      throw new RuntimeException("Failed to run ${args} because of: ${ex.getMessage()}", ex );
+      throw new RuntimeException("Failed to run '" + args.collect { "'${it}'" }.join(" ") + "' because of: ${ex.getMessage()}", ex );
     }
   }
-  
+
+  private List<String> runProcessWithOutput( List<String> args ) {
+    LOG.info("Postgres command : " + args.collect { "'${it}'" }.join(" ") )
+    try {
+      ProcessBuilder pb = new ProcessBuilder(args)
+      def root = new File("/")
+      def outlines = []
+      def errlines = []
+      pb.directory(root);
+      Process p = pb.start()
+      OutputStream outstream = new ByteArrayOutputStream( 8192 )
+      OutputStream errstream = new ByteArrayOutputStream( 8192 )
+      p.consumeProcessOutput(outstream, errstream)
+      int result = p.waitFor()
+      outstream.toString().eachLine { line -> outlines.add(line); LOG.info("stdout: ${line}") }
+      errstream.toString().eachLine { line -> errlines.add(line); LOG.info("stderr: ${line}") }
+      if ( result == 0 ) {
+        return outlines
+      } else {
+        throw new RuntimeException("(see stdout and stderr for details)");
+      }
+    } catch ( Exception ex ) {
+      throw new RuntimeException("Failed to run '" + args.collect { "'${it}'" }.join(" ") + "' because of: ${ex.getMessage()}", ex );
+    }
+  }
+
   //Default constructor
   public PostgresqlBootstrapper( ) {
     try {
@@ -213,28 +219,28 @@ public class PostgresqlBootstrapper extends Bootstrapper.Simple implements Datab
   }
   
   @Override
-  public void init( ) throws Exception {
+  public void init( ) {
     try {
       kernelParametersCheck( )
       
       if ( !versionCheck( ) ){
-        throw new Exception("Postgres versions less than 9.1.X are not supported")
+        throw new RuntimeException("Postgres versions less than 9.1.X are not supported")
       }
       
       if ( !initdbPG( ) ) {
-        throw new Exception("Unable to initialize the postgres database")
+        throw new RuntimeException("Unable to initialize the postgres database")
       }
       
       if ( !startResource( ) ) {
-        throw new Exception("Unable to start the postgres database")
+        throw new RuntimeException("Unable to start the postgres database")
       }
       
       if ( !createDBSql( ) ) {
-        throw new Exception("Unable to create the eucalyptus database tables")
+        throw new RuntimeException("Unable to create the eucalyptus database tables")
       }
       
       if ( !createCliUser( ) ) {
-        throw new Exception("Unable to create the cli user")
+        throw new RuntimeException("Unable to create the cli user")
       }
       
       Component dbComp = Components.lookup( Database.class )
@@ -242,8 +248,7 @@ public class PostgresqlBootstrapper extends Bootstrapper.Simple implements Datab
       prepareService( )
       
     } catch ( Exception ex ) {
-      LOG.error( ex, ex )
-      throw ex
+      throw new RuntimeException( ex );
     }
   }
   
@@ -305,7 +310,7 @@ public class PostgresqlBootstrapper extends Bootstrapper.Simple implements Datab
     final File passFile = SubDirectory.DB.getChildFile( PG_PASSFILE )
     try {
       passFile.write( getPassword() )
-      int value = runProcess([
+      def output = runProcessWithOutput([
         PG_INITDB,
         PG_ENCODING,
         PG_LOCALE,
@@ -316,17 +321,11 @@ public class PostgresqlBootstrapper extends Bootstrapper.Simple implements Datab
         PG_X_OPT + PG_X_DIR,
         PG_ENCODING
       ])
-      if (value != 0) {
-        LOG.debug("Database server did not init.")
-        return false
-      } else {
-        LOG.debug( "Database init complete." )
-        initDBFile()
-        return true
-      }
+      LOG.debug( "Database init complete." )
+      initDBFile();
+      return true
     } catch (Exception e) {
-      LOG.error( "Unable to init the database.", e )
-      return false
+      throw new RuntimeException(e.getMessage(), e)
     } finally {
       passFile.delete()
     }
@@ -373,7 +372,8 @@ ${hostOrHostSSL}\tall\tall\t::/0\tpassword
             unix_socket_directory: "'" + SubDirectory.DB.getChildPath( EUCA_DB_DIR ) + "'",
             unix_socket_directories: "'" + SubDirectory.DB.getChildPath( EUCA_DB_DIR ) + "'",
             ssl: PG_USE_SSL ? 'on' : 'off',
-            ssl_ciphers: '\'AES128-SHA:AES256-SHA\''
+            ssl_ciphers: '\'AES128-SHA:AES256-SHA\'',
+            log_directory: "'${System.getProperty('euca.log.dir')}'"
           ]
       
       final File orgPGCONF = SubDirectory.DB.getChildFile( EUCA_DB_DIR, "postgresql.conf")
@@ -482,8 +482,12 @@ ${hostOrHostSSL}\tall\tall\t::/0\tpassword
     OrderedShutdown.registerPostShutdownHook( new Runnable( ) {
           @Override
           public void run( ) {
+            File pidfile = SubDirectory.DB.getChildFile( EUCA_DB_DIR, "postmaster.pid" )
+            if (!pidfile.exists()) {
+                return
+            }
             try {
-              int value = runProcess([
+              int value = runProcessWithReturn([
                 PG_BIN,
                 PG_STOP,
                 PG_MODE,
@@ -492,9 +496,10 @@ ${hostOrHostSSL}\tall\tall\t::/0\tpassword
               if (value != 0) {
                 LOG.fatal("Postgresql shutdown failed with exit code " + value)
               }
-              ProxoolFacade.shutdown()
             } catch ( Exception e ) {
               LOG.error("Postgresql shutdown failed with error", e)
+            } finally {
+              ProxoolFacade.shutdown()
             }
           }
         } )
@@ -504,17 +509,17 @@ ${hostOrHostSSL}\tall\tall\t::/0\tpassword
       return true
     }
     
-    int value = runProcess([
-      PG_BIN,
-      PG_START,
-      PG_W_OPT,
-      PG_S_OPT,
-      PG_DB_OPT + SubDirectory.DB.getChildPath(EUCA_DB_DIR),
-      PG_PORT_OPTS2
-    ])
-    
-    if (value != 0) {
-      LOG.fatal("Postgresql startup failed with exit code " + value)
+    try { 
+      def output = runProcessWithOutput([
+        PG_BIN,
+        PG_START,
+        PG_W_OPT,
+        PG_S_OPT,
+        PG_DB_OPT + SubDirectory.DB.getChildPath(EUCA_DB_DIR),
+        PG_PORT_OPTS2
+      ])
+    } catch ( Exception ex ) {
+      LOG.fatal("Postgresql startup failed: " + ex.getMessage())
       return false
     }
     
@@ -678,16 +683,19 @@ ${hostOrHostSSL}\tall\tall\t::/0\tpassword
   }
   
   public boolean isRunning() {
-    int value = runProcess([
-      PG_BIN,
-      PG_STATUS,
-      PG_DB_OPT + SubDirectory.DB.getChildPath(EUCA_DB_DIR)
-    ])
-    
-    if (value != 0) {
+    try {
+      int value = runProcessWithReturn ([
+        PG_BIN,
+        PG_STATUS,
+        PG_DB_OPT + SubDirectory.DB.getChildPath(EUCA_DB_DIR)
+      ])
+      if (value != 0) {
+        return false
+      }
+    } catch ( Exception ex ) {
+      LOG.warn("Postgresql status check failed: " + ex.getMessage())
       return false
     }
-    
     return true
   }
   
@@ -705,23 +713,18 @@ ${hostOrHostSSL}\tall\tall\t::/0\tpassword
   
   @Override
   public boolean stop( ) throws Exception {
-    try {
-      int value = runProcess([
-        PG_BIN,
-        PG_STOP,
-        PG_MODE,
-        PG_DB_OPT + SubDirectory.DB.getChildPath(EUCA_DB_DIR)
-      ])
-      if( value != 0 ) {
-        LOG.debug("Database server did not stop.")
-        return false
-      } else {
-        LOG.debug("Database server stopped.")
-        return true
-      }
-    } catch (Exception e) {
-      LOG.error("Unable to stop the database.", e)
-      throw e
+    int value = runProcessWithReturn([
+      PG_BIN,
+      PG_STOP,
+      PG_MODE,
+      PG_DB_OPT + SubDirectory.DB.getChildPath(EUCA_DB_DIR)
+    ])
+    if ( value != 0 ) {
+      LOG.error("Unable to stop the postgresql server.", e)
+      return false
+    } else {
+      LOG.debug("Database server stopped.")
+      return true
     }
   }
   
