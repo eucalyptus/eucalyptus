@@ -25,7 +25,6 @@
     },
 
     _curSelected : null,
-    _changepwdDialog : null,
     _aboutDialog : null,
 
     _init : function() {
@@ -41,52 +40,6 @@
 
     _create : function() {
       var thisObj = this;
-      // change password dialog
-      $tmpl = $('html body').find('.templates #changePasswordTmpl').clone();
-      var $rendered = $($tmpl.render($.extend($.i18n.map, help_changepwd)));
-      var $cp_dialog = $rendered.children().first();
-      var $cp_dialog_help = $rendered.children().last();
-      this._changepwdDialog = $cp_dialog.eucadialog({
-        id: 'change-passwd',
-        title: login_change_passwd_title,
-        buttons: {
-          'change': { domid: 'change-pwd', text: login_change_passwd_submit, disabled: true, click: function() {
-              var current = trim($form.find('input[id=current]').val());
-              var newpwd = trim($form.find('input[id=newpwd]').val());
-              var confirmpwd = trim($form.find('input[id=confirmpwd]').val());
-
-              var isValid = true;
-              if (newpwd != confirmpwd) {
-                isValid = false;
-                thisObj._changepwdDialog.eucadialog('showError', login_change_passwd_dont_match);
-              }
-              
-              if (isValid) {
-                thisObj.changePassword(current, newpwd);
-              }
-              return false;
-            }
-          },
-          'cancel': { text: dialog_cancel_btn, focus:false, click: function() { $cp_dialog.eucadialog("close"); } }
-        },
-        help: { content: $cp_dialog_help, url: help_changepwd.dialog_attach_content_url },
-      });
-
-      var $form = $cp_dialog.find('form');
-      // set the login event handler
-      $form.find('input[type=password]').change( function(evt) {
-        var current = trim($form.find('input[id=current]').val());
-        var newpwd = trim($form.find('input[id=newpwd]').val());
-        var confirmpwd = trim($form.find('input[id=confirmpwd]').val());
-        thisObj._changepwdDialog.eucadialog('showError', null);
-        // should check that all files comply, then enable button
-        if (current != null && current != '' &&
-            newpwd != null && newpwd != '' &&
-            confirmpwd != null && confirmpwd != '') {
-          thisObj._changepwdDialog.eucadialog('enableButton', 'change-pwd');
-        }
-      });
-
       // about cloud dialog
       $tmpl = $('html body').find('.templates #aboutCloudDlgTmpl').clone();
       var $rendered = $($tmpl.render($.extend($.i18n.map, help_about)));
@@ -214,7 +167,8 @@
           window.open($.eucaData.g_session['help_url'], '_blank');
           break;
         case 'changepwd':
-          this._changepwdDialog.eucadialog("open");
+            $('html body').find(DOM_BINDING['hidden']).login();
+            $('html body').find(DOM_BINDING['hidden']).login('showPasswordChange');
           break;
         case 'aboutcloud':
           this._aboutDialog.eucadialog("open");
@@ -224,27 +178,6 @@
         this._curSelected = selected;
         location.hash = selected;
       }
-    },
-
-    changePassword : function (current, newpwd){
-      var thisObj = this;
-      var tok = toBase64(current)+':'+toBase64(newpwd);
-      var hash = toBase64(tok);
-	  $.ajax({
-	    type:"POST",
- 	    data:"action=changepwd"+"&_xsrf="+$.cookie('_xsrf')+"&Authorization="+hash,
-        dataType:"json",
-	    async:"false",
-	    success: function(out, textStatus, jqXHR) {
-          thisObj._changepwdDialog.eucadialog("close");
-	      $.extend($.eucaData, {'g_session':out.global_session, 'u_session':out.user_session});
-          notifySuccess(null, $.i18n.prop('login_change_passwd_done'));
-        },
-        error: function(jqXHR, textStatus, errorThrown){
-          thisObj._changepwdDialog.eucadialog("close");
-          notifyError($.i18n.prop('login_change_passwd_error'), errorThrown);
-        }
- 	  });
     },
 
     clearSelected : function (){

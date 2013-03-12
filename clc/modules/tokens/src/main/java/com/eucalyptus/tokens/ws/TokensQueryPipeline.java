@@ -170,7 +170,7 @@ public class TokensQueryPipeline extends QueryPipeline {
           // to indicate a new password is expected as well as encoded old password
           if ( authorization.length==2 && "basic".equalsIgnoreCase(authorization[0]) ) {
             boolean isChangePassword = false;
-            final unEncodedAuth = B64.standard.decString( authorization[1] );
+            final String unEncodedAuth = B64.standard.decString( authorization[1] );
             if ( unEncodedAuth.indexOf( ";" ) > -1 ) {
               isChangePassword = true;
             }

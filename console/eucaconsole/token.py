@@ -46,7 +46,7 @@ class TokenAuthenticator(object):
         try:
             req = urllib2.Request(self.auth_url)
             if new_passwd:
-                auth_string = "%s@%s:%s@%s" % \
+                auth_string = "%s@%s;%s@%s" % \
                             (base64.b64encode(user), \
                             base64.b64encode(account), \
                             base64.b64encode(passwd), \
@@ -55,7 +55,7 @@ class TokenAuthenticator(object):
                 auth_string = "%s@%s:%s" % \
                             (base64.b64encode(user), \
                             base64.b64encode(account), \
-                            base64.b64encode(passwd))
+                            passwd)
             encoded_auth = base64.b64encode(auth_string)
             req.add_header('Authorization', "Basic %s" % encoded_auth)
             response = urllib2.urlopen(req, timeout=15)
@@ -70,6 +70,7 @@ class TokenAuthenticator(object):
         except urllib2.URLError, err:
             # this returned for authorization problem
             # HTTP Error 401: Unauthorized
+            # HTTP Error 403: Forbidden (when password has expired)
             if issubclass(err.__class__, urllib2.HTTPError):
                 raise eucaconsole.EuiException(err.code, 'Not Authorized')
             # this returned for connection problem (i.e. timeout)
