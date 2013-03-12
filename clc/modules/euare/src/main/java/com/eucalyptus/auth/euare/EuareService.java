@@ -82,6 +82,7 @@ import com.eucalyptus.auth.principal.AccessKey;
 import com.eucalyptus.auth.principal.Account;
 import com.eucalyptus.auth.principal.Certificate;
 import com.eucalyptus.auth.principal.Group;
+import com.eucalyptus.auth.principal.InstanceProfile;
 import com.eucalyptus.auth.principal.Policy;
 import com.eucalyptus.auth.principal.Role;
 import com.eucalyptus.auth.principal.User;
@@ -1695,38 +1696,173 @@ public class EuareService {
     return reply;
   }
 
-  public CreateInstanceProfileResponseType createInstanceProfile(CreateInstanceProfileType request) throws EucalyptusCloudException {
-    CreateInstanceProfileResponseType reply = request.getReply( );
+  public CreateInstanceProfileResponseType createInstanceProfile( final CreateInstanceProfileType request ) throws EucalyptusCloudException {
+    final CreateInstanceProfileResponseType reply = request.getReply( );
+    reply.getResponseMetadata( ).setRequestId( reply.getCorrelationId( ) );
+    final Context ctx = Contexts.lookup( );
+    final User requestUser = ctx.getUser();
+    final Account account = getRealAccount( ctx, request.getDelegateAccount( ) );
+    try {
+      final InstanceProfile newInstanceProfile = Privileged.createInstanceProfile( requestUser, account, request.getInstanceProfileName(), sanitizePath( request.getPath() ) );
+      reply.getCreateInstanceProfileResult().setInstanceProfile( fillInstanceProfileResult( new InstanceProfileType(), newInstanceProfile, account ) );
+    } catch ( Exception e ) {
+      LOG.error( e, e );
+      if ( e instanceof AuthException ) {
+        if ( AuthException.ACCESS_DENIED.equals( e.getMessage( ) ) ) {
+          throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Not authorized to create instance profile by " + requestUser.getName( ) );
+        } else if ( AuthException.QUOTA_EXCEEDED.equals( e.getMessage( ) ) ) {
+          throw new EuareException( HttpResponseStatus.CONFLICT, EuareException.LIMIT_EXCEEDED, "Instance profile quota exceeded" );
+        } else if ( AuthException.INSTANCE_PROFILE_ALREADY_EXISTS.equals( e.getMessage( ) ) ) {
+          throw new EuareException( HttpResponseStatus.CONFLICT, EuareException.ENTITY_ALREADY_EXISTS, "Instance profile " + request.getInstanceProfileName() + " already exists." );
+        } else if ( AuthException.INVALID_NAME.equals( e.getMessage( ) ) ) {
+          throw new EuareException( HttpResponseStatus.BAD_REQUEST, EuareException.INVALID_NAME, "Invalid instance profile name " + request.getInstanceProfileName() );
+        } else if ( AuthException.INVALID_PATH.equals( e.getMessage( ) ) ) {
+          throw new EuareException( HttpResponseStatus.BAD_REQUEST, EuareException.INVALID_PATH, "Invalid instance profile path " + request.getPath( ) );
+        }
+      }
+      throw new EucalyptusCloudException( e );
+    }
     return reply;
   }
 
-  public GetInstanceProfileResponseType getInstanceProfile(GetInstanceProfileType request) throws EucalyptusCloudException {
-    GetInstanceProfileResponseType reply = request.getReply( );
+  public GetInstanceProfileResponseType getInstanceProfile( final GetInstanceProfileType request ) throws EucalyptusCloudException {
+    final GetInstanceProfileResponseType reply = request.getReply( );
+    reply.getResponseMetadata( ).setRequestId( reply.getCorrelationId( ) );
+    final Context ctx = Contexts.lookup( );
+    final User requestUser = ctx.getUser( );
+    final Account account = getRealAccount( ctx, request.getDelegateAccount( ) );
+    final InstanceProfile instanceProfileFound = lookupInstanceProfileByName( account, request.getInstanceProfileName() );
+    try {
+      if ( !Privileged.allowReadInstanceProfile( requestUser, account, instanceProfileFound ) ) {
+        throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Not authorized to get instance profile " + request.getInstanceProfileName() + " by " + requestUser.getName( ) );
+      }
+      reply.getGetInstanceProfileResult().setInstanceProfile( fillInstanceProfileResult( new InstanceProfileType(), instanceProfileFound, account ) );
+    } catch ( EuareException e ) {
+      throw e;
+    } catch ( Exception e ) {
+      LOG.error( e, e );
+      throw new EucalyptusCloudException( e );
+    }
     return reply;
   }
 
-  public AddRoleToInstanceProfileResponseType addRoleToInstanceProfile(AddRoleToInstanceProfileType request) throws EucalyptusCloudException {
-    AddRoleToInstanceProfileResponseType reply = request.getReply( );
+  public AddRoleToInstanceProfileResponseType addRoleToInstanceProfile( final AddRoleToInstanceProfileType request ) throws EucalyptusCloudException {
+    final AddRoleToInstanceProfileResponseType reply = request.getReply( );
+    reply.getResponseMetadata( ).setRequestId( reply.getCorrelationId( ) );
+    final Context ctx = Contexts.lookup( );
+    final User requestUser = ctx.getUser( );
+    final Account account = getRealAccount( ctx, request.getDelegateAccount( ) );
+    final Role roleFound = lookupRoleByName( account, request.getRoleName() );
+    final InstanceProfile instanceProfileFound = lookupInstanceProfileByName( account, request.getInstanceProfileName() );
+    try {
+      Privileged.addRoleToInstanceProfile( requestUser, account, instanceProfileFound, roleFound );
+    } catch ( Exception e ) {
+      LOG.error( e, e );
+      if ( e instanceof AuthException ) {
+        if ( AuthException.ACCESS_DENIED.equals( e.getMessage( ) ) ) {
+          throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Not authorized to add role to instance profile by " + requestUser.getName( ) );
+        } else if ( AuthException.CONFLICT.equals( e.getMessage( ) ) ) {
+          throw new EuareException( HttpResponseStatus.CONFLICT, EuareException.ENTITY_ALREADY_EXISTS, "Role " + request.getRoleName( ) + " is already in the instance profile " + request.getInstanceProfileName( ) );
+        }
+
+      }
+      throw new EucalyptusCloudException( e );
+    }
     return reply;
   }
 
-  public RemoveRoleFromInstanceProfileResponseType removeRoleFromInstanceProfile(RemoveRoleFromInstanceProfileType request) throws EucalyptusCloudException {
-    RemoveRoleFromInstanceProfileResponseType reply = request.getReply( );
+  public RemoveRoleFromInstanceProfileResponseType removeRoleFromInstanceProfile( final RemoveRoleFromInstanceProfileType request ) throws EucalyptusCloudException {
+    final RemoveRoleFromInstanceProfileResponseType reply = request.getReply( );
+    reply.getResponseMetadata( ).setRequestId( reply.getCorrelationId( ) );
+    final Context ctx = Contexts.lookup( );
+    final User requestUser = ctx.getUser( );
+    final Account account = getRealAccount( ctx, request.getDelegateAccount( ) );
+    final Role roleFound = lookupRoleByName( account, request.getRoleName() );
+    final InstanceProfile instanceProfileFound = lookupInstanceProfileByName( account, request.getInstanceProfileName() );
+    try {
+      Privileged.removeRoleFromInstanceProfile( requestUser, account, instanceProfileFound, roleFound );
+    } catch ( Exception e ) {
+      LOG.error( e, e );
+      if ( e instanceof AuthException ) {
+        if ( AuthException.ACCESS_DENIED.equals( e.getMessage( ) ) ) {
+          throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Not authorized to remove role from instance profile by " + requestUser.getName( ) );
+        }
+
+      }
+      throw new EucalyptusCloudException( e );
+    }
     return reply;
   }
 
-  public ListInstanceProfilesForRoleResponseType listInstanceProfilesForRole(ListInstanceProfilesForRoleType request) throws EucalyptusCloudException {
-    ListInstanceProfilesForRoleResponseType reply = request.getReply( );
+  public ListInstanceProfilesForRoleResponseType listInstanceProfilesForRole( final ListInstanceProfilesForRoleType request ) throws EucalyptusCloudException {
+    final ListInstanceProfilesForRoleResponseType reply = request.getReply( );
+    reply.getResponseMetadata( ).setRequestId( reply.getCorrelationId( ) );
+    final Context ctx = Contexts.lookup( );
+    final User requestUser = ctx.getUser( );
+    final Account account = getRealAccount( ctx, request.getDelegateAccount( ) );
+    final Role roleFound = lookupRoleByName( account, request.getRoleName() );
+    // TODO support pagination
+    reply.getListInstanceProfilesForRoleResult().setIsTruncated( false );
+    final ArrayList<InstanceProfileType> instanceProfiles = reply.getListInstanceProfilesForRoleResult().getInstanceProfiles().getMember();
+    try {
+      for ( final InstanceProfile instanceProfile : Privileged.listInstanceProfilesForRole( requestUser, account, roleFound ) ) {
+        if ( Privileged.allowListInstanceProfileForRole( requestUser, account, instanceProfile ) ) {
+          instanceProfiles.add( fillInstanceProfileResult( new InstanceProfileType(), instanceProfile, account ) );
+        }
+      }
+    } catch ( Exception e ) {
+      LOG.error( e, e );
+      throw new EucalyptusCloudException( e );
+    }
     return reply;
   }
 
-  public DeleteInstanceProfileResponseType deleteInstanceProfile(DeleteInstanceProfileType request) throws EucalyptusCloudException {
-    DeleteInstanceProfileResponseType reply = request.getReply( );
+  public DeleteInstanceProfileResponseType deleteInstanceProfile( final DeleteInstanceProfileType request ) throws EucalyptusCloudException {
+    final DeleteInstanceProfileResponseType reply = request.getReply( );
+    reply.getResponseMetadata( ).setRequestId( reply.getCorrelationId( ) );
+    final Context ctx = Contexts.lookup( );
+    final User requestUser = ctx.getUser( );
+    final Account account = getRealAccount( ctx, request.getDelegateAccount( ) );
+    final InstanceProfile instanceProfileFound = lookupInstanceProfileByName( account, request.getInstanceProfileName() );
+    try {
+      Privileged.deleteInstanceProfile( requestUser, account, instanceProfileFound );
+    } catch ( Exception e ) {
+      LOG.error( e, e );
+      if ( e instanceof AuthException ) {
+        if ( AuthException.ACCESS_DENIED.equals( e.getMessage( ) ) ) {
+          throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Not authorized to delete instance profile by " + requestUser.getName( ) );
+        }
+      }
+      throw new EucalyptusCloudException( e );
+    }
     return reply;
   }
 
-  public ListInstanceProfilesResponseType listInstanceProfiles(ListInstanceProfilesType request) throws EucalyptusCloudException {
-    ListInstanceProfilesResponseType reply = request.getReply( );
+  public ListInstanceProfilesResponseType listInstanceProfiles( final ListInstanceProfilesType request ) throws EucalyptusCloudException {
+    final ListInstanceProfilesResponseType reply = request.getReply( );
+    reply.getResponseMetadata( ).setRequestId( reply.getCorrelationId( ) );
+    final Context ctx = Contexts.lookup( );
+    final User requestUser = ctx.getUser( );
+    final Account account = getRealAccount( ctx, request.getDelegateAccount( ) );
+    String path = "/";
+    if ( !Strings.isNullOrEmpty( request.getPathPrefix( ) ) ) {
+      path = request.getPathPrefix( );
+    }
+    // TODO support pagination
+    reply.getListInstanceProfilesResult().setIsTruncated( false );
+    final ArrayList<InstanceProfileType> instanceProfiles = reply.getListInstanceProfilesResult( ).getInstanceProfiles().getMember();
+    try {
+      for ( final InstanceProfile instanceProfile : account.geInstanceProfiles() ) {
+        if ( instanceProfile.getPath( ).startsWith( path ) ) {
+          if ( Privileged.allowListInstanceProfile( requestUser, account, instanceProfile ) ) {
+            instanceProfiles.add( fillInstanceProfileResult( new InstanceProfileType(), instanceProfile, account ) );
+          }
+        }
+      }
+    } catch ( Exception e ) {
+      LOG.error( e, e );
+      throw new EucalyptusCloudException( e );
+    }
     return reply;
   }
 
@@ -1761,6 +1897,18 @@ public class EuareService {
     g.setGroupName( groupFound.getName() );
     g.setGroupId( groupFound.getGroupId() );
     g.setArn( (new EuareResourceName( account.getName(), PolicySpec.IAM_RESOURCE_GROUP, groupFound.getPath(), groupFound.getName() )).toString() );
+  }
+
+
+  private InstanceProfileType fillInstanceProfileResult( InstanceProfileType instanceProfileType, InstanceProfile instanceProfileFound, Account account ) throws AuthException {
+    instanceProfileType.setInstanceProfileName( instanceProfileFound.getName() );
+    instanceProfileType.setInstanceProfileId( instanceProfileFound.getInstanceProfileId() );
+    instanceProfileType.setPath( instanceProfileFound.getPath() );
+    instanceProfileType.setArn( (new EuareResourceName( account.getName(), PolicySpec.IAM_RESOURCE_INSTANCE_PROFILE, instanceProfileFound.getPath(), instanceProfileFound.getName() )).toString() );
+    instanceProfileType.setCreateDate( instanceProfileFound.getCreationTimestamp() );
+    final Role role = instanceProfileFound.getRole();
+    instanceProfileType.setRoles( role == null ? new RoleListType() : new RoleListType( fillRoleResult( new RoleType(), role, account ) ) );
+    return instanceProfileType;
   }
 
   private RoleType fillRoleResult( RoleType roleType, Role roleFound, Account account ) throws AuthException {
@@ -1827,6 +1975,23 @@ public class EuareService {
       throw new EucalyptusCloudException( e );
     }
   }
+
+  private static InstanceProfile lookupInstanceProfileByName( Account account, String instanceProfileName ) throws EucalyptusCloudException {
+    try {
+      return account.lookupInstanceProfileByName( instanceProfileName );
+    } catch ( Exception e ) {
+      LOG.error( e, e );
+      if ( e instanceof AuthException ) {
+        if ( AuthException.NO_SUCH_INSTANCE_PROFILE.equals( e.getMessage( ) ) ) {
+          throw new EuareException( HttpResponseStatus.NOT_FOUND, EuareException.NO_SUCH_ENTITY, "Can not find instance profile " + instanceProfileName );
+        } else if ( AuthException.EMPTY_INSTANCE_PROFILE_NAME.equals( e.getMessage( ) ) ) {
+          throw new EuareException( HttpResponseStatus.BAD_REQUEST, EuareException.INVALID_NAME, "Empty instance profile name" );
+        }
+      }
+      throw new EucalyptusCloudException( e );
+    }
+  }
+
 
   private static Role lookupRoleByName( Account account, String roleName ) throws EucalyptusCloudException {
     try {

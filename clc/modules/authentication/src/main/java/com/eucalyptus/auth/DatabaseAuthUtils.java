@@ -68,6 +68,7 @@ import java.util.NoSuchElementException;
 import org.hibernate.criterion.Restrictions;
 import com.eucalyptus.auth.entities.AccountEntity;
 import com.eucalyptus.auth.entities.GroupEntity;
+import com.eucalyptus.auth.entities.InstanceProfileEntity;
 import com.eucalyptus.auth.entities.PolicyEntity;
 import com.eucalyptus.auth.entities.RoleEntity;
 import com.eucalyptus.auth.entities.UserEntity;
@@ -135,6 +136,22 @@ public class DatabaseAuthUtils {
         .uniqueResult( );
     if ( result == null ) {
       throw new NoSuchElementException( "Can not find group " + groupName + " in " + accountName );
+    }
+    return result;
+  }
+
+  /**
+   * Must call within a transaction.
+   */
+  public static InstanceProfileEntity getUniqueInstanceProfile( EntityWrapper<InstanceProfileEntity> db, String instanceProfileName, String accountName ) throws Exception {
+    @SuppressWarnings( "unchecked" )
+    InstanceProfileEntity result = ( InstanceProfileEntity ) db
+        .createCriteria( InstanceProfileEntity.class ).add( Restrictions.eq( "name", instanceProfileName ) )
+        .createCriteria( "account" ).add( Restrictions.eq( "name", accountName ) )
+        .setCacheable( true )
+        .uniqueResult( );
+    if ( result == null ) {
+      throw new NoSuchElementException( "Can not find instance profile " + instanceProfileName + " in " + accountName );
     }
     return result;
   }
@@ -342,7 +359,32 @@ public class DatabaseAuthUtils {
       throw new AuthException( "Failed to find group", e );
     }
   }
-  
+
+  /**
+   * Check if an instance profile exists.
+   */
+  public static boolean checkInstanceProfileExists( String instanceProfileName, String accountName ) throws AuthException {
+    if ( instanceProfileName == null || accountName == null ) {
+      throw new AuthException( "Empty instance profile name or account name" );
+    }
+    final EntityWrapper<InstanceProfileEntity> db = EntityWrapper.get( InstanceProfileEntity.class );
+    try {
+      @SuppressWarnings( "unchecked" )
+      InstanceProfileEntity result = ( InstanceProfileEntity ) db
+          .createCriteria( InstanceProfileEntity.class ).add( Restrictions.eq( "name", instanceProfileName ) )
+          .createCriteria( "account" ).add( Restrictions.eq( "name", accountName ) )
+          .setCacheable( true )
+          .uniqueResult();
+      return result != null;
+    } catch ( Exception e ) {
+      throw new AuthException( "Failed to find instance profile", e );
+    } finally {
+      db.rollback();
+    }
+  }
+
+
+
   /**
    * Check if the acount is empty (no groups, no users).
    * 

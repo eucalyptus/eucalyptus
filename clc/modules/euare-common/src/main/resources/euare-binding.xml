@@ -1049,6 +1049,7 @@
   </mapping>
   <mapping name="CreateInstanceProfile" class="com.eucalyptus.auth.euare.CreateInstanceProfileType" extends="com.eucalyptus.auth.euare.EuareMessage">
     <structure map-as="com.eucalyptus.auth.euare.EuareMessage"/>
+    <value name="DelegateAccount" field="delegateAccount" usage="optional"/>
     <value name="InstanceProfileName" field="instanceProfileName" usage="required"/>
     <value name="Path" field="path" usage="optional"/>
   </mapping>
@@ -1062,6 +1063,7 @@
   </mapping>
   <mapping name="GetInstanceProfile" class="com.eucalyptus.auth.euare.GetInstanceProfileType" extends="com.eucalyptus.auth.euare.EuareMessage">
     <structure map-as="com.eucalyptus.auth.euare.EuareMessage"/>
+    <value name="DelegateAccount" field="delegateAccount" usage="optional"/>
     <value name="InstanceProfileName" field="instanceProfileName" usage="required"/>
   </mapping>
   <mapping name="GetInstanceProfileResponse" class="com.eucalyptus.auth.euare.GetInstanceProfileResponseType" extends="com.eucalyptus.auth.euare.EuareMessage">
@@ -1074,6 +1076,7 @@
   </mapping>
   <mapping name="AddRoleToInstanceProfile" class="com.eucalyptus.auth.euare.AddRoleToInstanceProfileType" extends="com.eucalyptus.auth.euare.EuareMessage">
     <structure map-as="com.eucalyptus.auth.euare.EuareMessage"/>
+    <value name="DelegateAccount" field="delegateAccount" usage="optional"/>
     <value name="InstanceProfileName" field="instanceProfileName" usage="required"/>
     <value name="RoleName" field="roleName" usage="required"/>
   </mapping>
@@ -1083,6 +1086,7 @@
   </mapping>
   <mapping name="RemoveRoleFromInstanceProfile" class="com.eucalyptus.auth.euare.RemoveRoleFromInstanceProfileType" extends="com.eucalyptus.auth.euare.EuareMessage">
     <structure map-as="com.eucalyptus.auth.euare.EuareMessage"/>
+    <value name="DelegateAccount" field="delegateAccount" usage="optional"/>
     <value name="InstanceProfileName" field="instanceProfileName" usage="required"/>
     <value name="RoleName" field="roleName" usage="required"/>
   </mapping>
@@ -1092,6 +1096,7 @@
   </mapping>
   <mapping name="ListInstanceProfilesForRole" class="com.eucalyptus.auth.euare.ListInstanceProfilesForRoleType" extends="com.eucalyptus.auth.euare.EuareMessage">
     <structure map-as="com.eucalyptus.auth.euare.EuareMessage"/>
+    <value name="DelegateAccount" field="delegateAccount" usage="optional"/>
     <value name="RoleName" field="roleName" usage="required"/>
     <value name="Marker" field="marker" usage="optional"/>
     <value name="MaxItems" field="maxItems" usage="optional"/>
@@ -1108,6 +1113,7 @@
   </mapping>
   <mapping name="DeleteInstanceProfile" class="com.eucalyptus.auth.euare.DeleteInstanceProfileType" extends="com.eucalyptus.auth.euare.EuareMessage">
     <structure map-as="com.eucalyptus.auth.euare.EuareMessage"/>
+    <value name="DelegateAccount" field="delegateAccount" usage="optional"/>
     <value name="InstanceProfileName" field="instanceProfileName" usage="required"/>
   </mapping>
   <mapping name="DeleteInstanceProfileResponse" class="com.eucalyptus.auth.euare.DeleteInstanceProfileResponseType" extends="com.eucalyptus.auth.euare.EuareMessage">
@@ -1116,6 +1122,7 @@
   </mapping>
   <mapping name="ListInstanceProfiles" class="com.eucalyptus.auth.euare.ListInstanceProfilesType" extends="com.eucalyptus.auth.euare.EuareMessage">
     <structure map-as="com.eucalyptus.auth.euare.EuareMessage"/>
+    <value name="DelegateAccount" field="delegateAccount" usage="optional"/>
     <value name="PathPrefix" field="pathPrefix" usage="optional"/>
     <value name="Marker" field="marker" usage="optional"/>
     <value name="MaxItems" field="maxItems" usage="optional"/>

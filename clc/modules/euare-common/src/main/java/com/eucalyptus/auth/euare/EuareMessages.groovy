@@ -1040,6 +1040,9 @@ public class GetRoleType extends EuareMessage {
 
 public class RoleListType extends EucalyptusData {
   public RoleListType() {  }
+  public RoleListType( RoleType role ) {
+    member.add( role )
+  }
   ArrayList<RoleType> member = new ArrayList<RoleType>();
 }
 
@@ -1202,7 +1205,7 @@ public class GetRolePolicyResponseType extends EuareMessage {
 }
 
 public class ListInstanceProfilesResult extends EucalyptusData {
-  InstanceProfileListType instanceProfiles;
+  InstanceProfileListType instanceProfiles = new InstanceProfileListType();
   Boolean isTruncated;
   String marker;
   public ListInstanceProfilesResult() {  }
@@ -1216,6 +1219,7 @@ public class ListInstanceProfilesForRoleResponseType extends EuareMessage {
 
 @PolicyAction( vendor = PolicySpec.VENDOR_IAM, action = PolicySpec.IAM_LISTINSTANCEPROFILES )
 public class ListInstanceProfilesType extends EuareMessage {
+  String delegateAccount;
   String pathPrefix;
   String marker;
   Integer maxItems;
@@ -1230,6 +1234,7 @@ public class ListInstanceProfilesResponseType extends EuareMessage {
 
 @PolicyAction( vendor = PolicySpec.VENDOR_IAM, action = PolicySpec.IAM_REMOVEROLEFROMINSTANCEPROFILE )
 public class RemoveRoleFromInstanceProfileType extends EuareMessage {
+  String delegateAccount;
   String instanceProfileName;
   String roleName;
   public RemoveRoleFromInstanceProfileType() {  }
@@ -1247,6 +1252,7 @@ public class CreateInstanceProfileResult extends EucalyptusData {
 
 @PolicyAction( vendor = PolicySpec.VENDOR_IAM, action = PolicySpec.IAM_CREATEINSTANCEPROFILE )
 public class CreateInstanceProfileType extends EuareMessage {
+  String delegateAccount;
   String instanceProfileName;
   String path;
   public CreateInstanceProfileType() {  }
@@ -1265,12 +1271,14 @@ public class GetInstanceProfileResult extends EucalyptusData {
 
 @PolicyAction( vendor = PolicySpec.VENDOR_IAM, action = PolicySpec.IAM_DELETEINSTANCEPROFILE )
 public class DeleteInstanceProfileType extends EuareMessage {
+  String delegateAccount;
   String instanceProfileName;
   public DeleteInstanceProfileType() {  }
 }
 
 @PolicyAction( vendor = PolicySpec.VENDOR_IAM, action = PolicySpec.IAM_LISTINSTANCEPROFILESFORROLE )
 public class ListInstanceProfilesForRoleType extends EuareMessage {
+  String delegateAccount;
   String roleName;
   String marker;
   Integer maxItems;
@@ -1290,13 +1298,14 @@ public class CreateInstanceProfileResponseType extends EuareMessage {
 
 @PolicyAction( vendor = PolicySpec.VENDOR_IAM, action = PolicySpec.IAM_ADDROLETOINSTANCEPROFILE )
 public class AddRoleToInstanceProfileType extends EuareMessage {
+  String delegateAccount;
   String instanceProfileName;
   String roleName;
   public AddRoleToInstanceProfileType() {  }
 }
 
 public class ListInstanceProfilesForRoleResult extends EucalyptusData {
-  InstanceProfileListType instanceProfiles;
+  InstanceProfileListType instanceProfiles = new InstanceProfileListType();
   Boolean isTruncated;
   String marker;
   public ListInstanceProfilesForRoleResult() {  }
@@ -1309,6 +1318,7 @@ public class AddRoleToInstanceProfileResponseType extends EuareMessage {
 
 @PolicyAction( vendor = PolicySpec.VENDOR_IAM, action = PolicySpec.IAM_GETINSTANCEPROFILE )
 public class GetInstanceProfileType extends EuareMessage {
+  String delegateAccount;
   String instanceProfileName;
   public GetInstanceProfileType() {  }
 }

@@ -29,11 +29,13 @@ import com.eucalyptus.auth.checker.InvalidValueException;
 import com.eucalyptus.auth.checker.ValueChecker;
 import com.eucalyptus.auth.checker.ValueCheckerFactory;
 import com.eucalyptus.auth.entities.AuthorizationEntity;
+import com.eucalyptus.auth.entities.InstanceProfileEntity;
 import com.eucalyptus.auth.entities.PolicyEntity;
 import com.eucalyptus.auth.entities.RoleEntity;
 import com.eucalyptus.auth.policy.PolicyParser;
 import com.eucalyptus.auth.principal.Account;
 import com.eucalyptus.auth.principal.Authorization;
+import com.eucalyptus.auth.principal.InstanceProfile;
 import com.eucalyptus.auth.principal.Policy;
 import com.eucalyptus.auth.principal.Role;
 import com.eucalyptus.entities.EntityWrapper;
@@ -207,6 +209,29 @@ public class DatabaseRoleProxy implements Role {
     } catch ( Exception e ) {
       Debugging.logError( LOG, e, "Failed to remove policy " + name + " in " + this.delegate );
       throw new AuthException( "Failed to remove policy", e );
+    } finally {
+      if ( db.isActive() ) db.rollback();
+    }
+  }
+
+  @Override
+  public List<InstanceProfile> getInstanceProfiles() throws AuthException {
+    final List<InstanceProfile> results = Lists.newArrayList( );
+    final EntityWrapper<InstanceProfileEntity> db = EntityWrapper.get( InstanceProfileEntity.class );
+    try {
+      @SuppressWarnings( "unchecked" )
+      List<InstanceProfileEntity> instanceProfiles = ( List<InstanceProfileEntity> ) db
+          .createCriteria( InstanceProfileEntity.class )
+          .createCriteria( "role" ).add( Restrictions.eq( "name", this.delegate.getName( ) ) )
+          .setCacheable( true )
+          .list( );
+      for ( final InstanceProfileEntity instanceProfile : instanceProfiles ) {
+        results.add( new DatabaseInstanceProfileProxy( instanceProfile  ) );
+      }
+      return results;
+    } catch ( Exception e ) {
+      Debugging.logError( LOG, e, "Failed to get instance profiles for " + this.delegate.getName( ) );
+      throw new AuthException( "Failed to get instance profiles", e );
     } finally {
       if ( db.isActive() ) db.rollback();
     }

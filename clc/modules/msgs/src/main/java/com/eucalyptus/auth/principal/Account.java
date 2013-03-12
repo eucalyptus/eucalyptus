@@ -102,6 +102,8 @@ public interface Account extends /*HasId,*/ BasePrincipal, Serializable {
 
   public List<Role> getRoles( ) throws AuthException;
 
+  public List<InstanceProfile> geInstanceProfiles( ) throws AuthException;
+
   public User addUser( String userName, String path, boolean skipRegistration, boolean enabled, Map<String, String> info ) throws AuthException;
   public void deleteUser( String userName, boolean forceDeleteAdmin, boolean recursive ) throws AuthException;
 
@@ -110,12 +112,17 @@ public interface Account extends /*HasId,*/ BasePrincipal, Serializable {
 
   public Group addGroup( String groupName, String path ) throws AuthException;
   public void deleteGroup( String groupName, boolean recursive ) throws AuthException;
-  
+
+  public InstanceProfile addInstanceProfile( String instanceProfileName, String path ) throws AuthException;
+  public void deleteInstanceProfile( String instanceProfileName ) throws AuthException;
+
   public Group lookupGroupByName( String groupName ) throws AuthException;
   
   public User lookupUserByName( String userName ) throws AuthException;
 
   public Role lookupRoleByName( String roleName ) throws AuthException;
+
+  public InstanceProfile lookupInstanceProfileByName( String instanceProfileName ) throws AuthException;
 
   public User lookupAdmin() throws AuthException;
 

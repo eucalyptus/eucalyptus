@@ -77,6 +77,7 @@ public class AuthException extends BaseException {
   public static final String EMPTY_GROUP_NAME = "Empty group name";
   public static final String EMPTY_GROUP_ID = "Empty group ID";
   public static final String EMPTY_ROLE_NAME = "Empty role name";
+  public static final String EMPTY_INSTANCE_PROFILE_NAME = "Empty instance profile name";
   public static final String EMPTY_ROLE_ID = "Empty role ID";
   public static final String EMPTY_ACCOUNT_NAME = "Empty account name";
   public static final String EMPTY_ACCOUNT_ID = "Empty account ID";
@@ -91,16 +92,19 @@ public class AuthException extends BaseException {
   public static final String GROUP_CREATE_FAILURE = "Can not create group";
   public static final String GROUP_DELETE_FAILURE = "Can not delete group";
   public static final String ROLE_CREATE_FAILURE = "Can not create role";
+  public static final String INSTANCE_PROFILE_CREATE_FAILURE = "Can not create instance profile";
   public static final String ROLE_DELETE_FAILURE = "Can not delete role";
   public static final String ACCOUNT_CREATE_FAILURE = "Can not create account";
   public static final String ACCOUNT_DELETE_FAILURE = "Can not delete account";
   public static final String USER_ALREADY_EXISTS = "User already exists";
   public static final String GROUP_ALREADY_EXISTS = "Group already exists";
   public static final String ROLE_ALREADY_EXISTS = "Role already exists";
+  public static final String INSTANCE_PROFILE_ALREADY_EXISTS = "Instance profile already exists";
   public static final String ACCOUNT_ALREADY_EXISTS = "Account already exists";
   public static final String NO_SUCH_USER = "No such user";
   public static final String NO_SUCH_GROUP = "No such group";
   public static final String NO_SUCH_ROLE = "No such role";
+  public static final String NO_SUCH_INSTANCE_PROFILE = "No such instance profile";
   public static final String NO_SUCH_ACCOUNT = "No such account";
   public static final String USER_GROUP_DELETE = "Can not delete user group";
   public static final String NO_SUCH_CERTIFICATE = "No such certificate";

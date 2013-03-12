@@ -20,25 +20,26 @@
 package com.eucalyptus.auth.principal;
 
 import java.util.Date;
-import java.util.List;
+import javax.annotation.Nullable;
 import com.eucalyptus.auth.AuthException;
-import com.eucalyptus.auth.PolicyParseException;
 
 /**
  *
  */
-public interface Role extends AuthorizedPrincipal {
+public interface InstanceProfile {
 
-  String getRoleId( );
+  Account getAccount( ) throws AuthException;
+
+  String getInstanceProfileId( );
+
+  String getName( );
 
   String getPath( );
 
-  String getSecret( );
-
-  Policy getAssumeRolePolicy( ) throws AuthException;
-  Policy setAssumeRolePolicy( String policy ) throws AuthException, PolicyParseException;
-
-  List<InstanceProfile> getInstanceProfiles() throws AuthException;
+  @Nullable
+  Role getRole( ) throws AuthException;
+  void setRole( @Nullable Role role ) throws AuthException;
 
   Date getCreationTimestamp();
+
 }

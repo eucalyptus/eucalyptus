@@ -72,6 +72,7 @@ import com.eucalyptus.auth.principal.AccessKey;
 import com.eucalyptus.auth.principal.Account;
 import com.eucalyptus.auth.principal.Certificate;
 import com.eucalyptus.auth.principal.Group;
+import com.eucalyptus.auth.principal.InstanceProfile;
 import com.eucalyptus.auth.principal.Policy;
 import com.eucalyptus.auth.principal.Role;
 import com.eucalyptus.auth.principal.User;
@@ -464,6 +465,98 @@ public class Privileged {
       }
     }
     role.setAssumeRolePolicy( assumeRolePolicy );
+  }
+
+  public static InstanceProfile createInstanceProfile( User requestUser, Account account, String instanceProfileName, String path ) throws AuthException {
+    if ( !requestUser.isSystemAdmin( ) ) {
+      if ( !requestUser.getAccount( ).getAccountNumber( ).equals( account.getAccountNumber( ) ) ) {
+        throw new AuthException( AuthException.ACCESS_DENIED );
+      }
+      if ( !Permissions.isAuthorized( PolicySpec.VENDOR_IAM, PolicySpec.IAM_RESOURCE_INSTANCE_PROFILE, "", account, PolicySpec.IAM_CREATEINSTANCEPROFILE, requestUser ) ) {
+        throw new AuthException( AuthException.ACCESS_DENIED );
+      }
+      if ( !Permissions.canAllocate( PolicySpec.VENDOR_IAM, PolicySpec.IAM_RESOURCE_INSTANCE_PROFILE, "", PolicySpec.IAM_CREATEINSTANCEPROFILE, requestUser, 1L ) ) {
+        throw new AuthException( AuthException.QUOTA_EXCEEDED );
+      }
+    }
+    return account.addInstanceProfile( instanceProfileName, path );
+  }
+
+  public static boolean allowListInstanceProfile( User requestUser, Account account, InstanceProfile instanceProfile ) throws AuthException {
+    return requestUser.isSystemAdmin( ) || // system admin or ...
+        ( requestUser.getAccount( ).getAccountNumber( ).equals( account.getAccountNumber( ) ) && // in the same account and ...
+            Permissions.isAuthorized( PolicySpec.VENDOR_IAM, PolicySpec.IAM_RESOURCE_INSTANCE_PROFILE, Accounts.getInstanceProfileFullName( instanceProfile ), account, PolicySpec.IAM_LISTINSTANCEPROFILES, requestUser ) );
+  }
+
+  public static boolean allowReadInstanceProfile( User requestUser, Account account, InstanceProfile instanceProfile ) throws AuthException {
+    return requestUser.isSystemAdmin( ) || // system admin or ...
+        ( requestUser.getAccount( ).getAccountNumber( ).equals( account.getAccountNumber( ) ) && // same account and ...
+            // allowed to list role
+            Permissions.isAuthorized( PolicySpec.VENDOR_IAM, PolicySpec.IAM_RESOURCE_INSTANCE_PROFILE, Accounts.getInstanceProfileFullName( instanceProfile ), account, PolicySpec.IAM_GETINSTANCEPROFILE, requestUser ) );
+  }
+
+  public static void deleteInstanceProfile( User requestUser, Account account, InstanceProfile instanceProfile ) throws AuthException {
+    if ( !requestUser.isSystemAdmin( ) ) {
+      if ( !requestUser.getAccount( ).getAccountNumber( ).equals( account.getAccountNumber( ) ) ) {
+        throw new AuthException( AuthException.ACCESS_DENIED );
+      }
+      if ( !Permissions.isAuthorized( PolicySpec.VENDOR_IAM, PolicySpec.IAM_RESOURCE_INSTANCE_PROFILE, Accounts.getInstanceProfileFullName( instanceProfile ), account, PolicySpec.IAM_DELETEINSTANCEPROFILE, requestUser ) ) {
+        throw new AuthException( AuthException.ACCESS_DENIED );
+      }
+    }
+    account.deleteInstanceProfile( instanceProfile.getName( ) );
+  }
+
+  public static void addRoleToInstanceProfile( User requestUser, Account account, InstanceProfile instanceProfile, Role role ) throws AuthException {
+    if ( !requestUser.isSystemAdmin( ) ) {
+      if ( !requestUser.getAccount( ).getAccountNumber( ).equals( account.getAccountNumber( ) ) ) {
+        throw new AuthException( AuthException.ACCESS_DENIED );
+      }
+      if ( !Permissions.isAuthorized( PolicySpec.VENDOR_IAM, PolicySpec.IAM_RESOURCE_INSTANCE_PROFILE, Accounts.getInstanceProfileFullName( instanceProfile ), account, PolicySpec.IAM_ADDROLETOINSTANCEPROFILE, requestUser ) ) {
+        throw new AuthException( AuthException.ACCESS_DENIED );
+      }
+      if ( !Permissions.isAuthorized( PolicySpec.VENDOR_IAM, PolicySpec.IAM_RESOURCE_ROLE, Accounts.getRoleFullName( role ), account, PolicySpec.IAM_ADDROLETOINSTANCEPROFILE, requestUser ) ) {
+        throw new AuthException( AuthException.ACCESS_DENIED );
+      }
+    }
+    final Role currentRole = instanceProfile.getRole();
+    if ( currentRole != null && currentRole.getName().equals( role.getName() ) ) {
+      throw new AuthException( AuthException.CONFLICT );
+    }
+    instanceProfile.setRole( role );
+  }
+
+  public static void removeRoleFromInstanceProfile( User requestUser, Account account, InstanceProfile instanceProfile, Role role ) throws AuthException {
+    if ( !requestUser.isSystemAdmin( ) ) {
+      if ( !requestUser.getAccount( ).getAccountNumber( ).equals( account.getAccountNumber( ) ) ) {
+        throw new AuthException( AuthException.ACCESS_DENIED );
+      }
+      if ( !Permissions.isAuthorized( PolicySpec.VENDOR_IAM, PolicySpec.IAM_RESOURCE_INSTANCE_PROFILE, Accounts.getInstanceProfileFullName( instanceProfile ), account, PolicySpec.IAM_REMOVEROLEFROMINSTANCEPROFILE, requestUser ) ) {
+        throw new AuthException( AuthException.ACCESS_DENIED );
+      }
+      if ( !Permissions.isAuthorized( PolicySpec.VENDOR_IAM, PolicySpec.IAM_RESOURCE_ROLE, Accounts.getRoleFullName( role ), account, PolicySpec.IAM_REMOVEROLEFROMINSTANCEPROFILE, requestUser ) ) {
+        throw new AuthException( AuthException.ACCESS_DENIED );
+      }
+    }
+    instanceProfile.setRole( null );
+  }
+
+  public static List<InstanceProfile> listInstanceProfilesForRole( User requestUser, Account account, Role role ) throws AuthException {
+    if ( !requestUser.isSystemAdmin( ) ) {
+      if ( !requestUser.getAccount( ).getAccountNumber( ).equals( account.getAccountNumber( ) ) ) {
+        throw new AuthException( AuthException.ACCESS_DENIED );
+      }
+      if ( !Permissions.isAuthorized( PolicySpec.VENDOR_IAM, PolicySpec.IAM_RESOURCE_ROLE, Accounts.getRoleFullName( role ), account, PolicySpec.IAM_LISTINSTANCEPROFILESFORROLE, requestUser ) ) {
+        throw new AuthException( AuthException.ACCESS_DENIED );
+      }
+    }
+    return role.getInstanceProfiles();
+  }
+
+  public static boolean allowListInstanceProfileForRole( User requestUser, Account account, InstanceProfile instanceProfile ) throws AuthException {
+    return requestUser.isSystemAdmin( ) || // system admin or ...
+        ( requestUser.getAccount( ).getAccountNumber( ).equals( account.getAccountNumber( ) ) && // in the same account and ...
+            Permissions.isAuthorized( PolicySpec.VENDOR_IAM, PolicySpec.IAM_RESOURCE_INSTANCE_PROFILE, Accounts.getInstanceProfileFullName( instanceProfile ), account, PolicySpec.IAM_LISTINSTANCEPROFILESFORROLE, requestUser ) );
   }
 
   public static void putAccountPolicy( boolean hasAdministrativePrivilege, Account account, String name, String policy ) throws AuthException, PolicyParseException {

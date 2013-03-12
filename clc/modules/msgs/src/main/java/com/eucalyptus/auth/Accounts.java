@@ -73,6 +73,7 @@ import com.eucalyptus.auth.principal.AccessKey;
 import com.eucalyptus.auth.principal.Account;
 import com.eucalyptus.auth.principal.Certificate;
 import com.eucalyptus.auth.principal.Group;
+import com.eucalyptus.auth.principal.InstanceProfile;
 import com.eucalyptus.auth.principal.Role;
 import com.eucalyptus.auth.principal.RoleUser;
 import com.eucalyptus.auth.principal.User;
@@ -241,6 +242,14 @@ public class Accounts {
     }
   }
 
+  public static String getInstanceProfileFullName( InstanceProfile instanceProfile ) {
+    if ( "/".equals( instanceProfile.getPath( ) ) ) {
+      return "/" + instanceProfile.getName( );
+    } else {
+      return instanceProfile.getPath( ) + "/" + instanceProfile.getName( );
+    }
+  }
+
   public static String getUserArn( final User user ) throws AuthException {
     return buildArn( user.getAccount(), PolicySpec.IAM_RESOURCE_USER, user.getPath(), user.getName() );
   }
@@ -251,6 +260,10 @@ public class Accounts {
 
   public static String getRoleArn( final Role role ) throws AuthException {
     return buildArn( role.getAccount(), PolicySpec.IAM_RESOURCE_ROLE, role.getPath(), role.getName() );
+  }
+
+  public static String getInstanceProfileArn( final InstanceProfile instanceProfile ) throws AuthException {
+    return buildArn( instanceProfile.getAccount(), PolicySpec.IAM_RESOURCE_INSTANCE_PROFILE, instanceProfile.getPath(), instanceProfile.getName() );
   }
 
   private static String buildArn( final Account account,

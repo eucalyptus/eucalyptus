@@ -73,6 +73,7 @@ import com.eucalyptus.auth.entities.AccountEntity;
 import com.eucalyptus.auth.entities.AuthorizationEntity;
 import com.eucalyptus.auth.entities.CertificateEntity;
 import com.eucalyptus.auth.entities.GroupEntity;
+import com.eucalyptus.auth.entities.InstanceProfileEntity;
 import com.eucalyptus.auth.entities.PolicyEntity;
 import com.eucalyptus.auth.entities.RoleEntity;
 import com.eucalyptus.auth.entities.UserEntity;
@@ -80,6 +81,7 @@ import com.eucalyptus.auth.policy.PolicyParser;
 import com.eucalyptus.auth.principal.Account;
 import com.eucalyptus.auth.principal.Authorization;
 import com.eucalyptus.auth.principal.Group;
+import com.eucalyptus.auth.principal.InstanceProfile;
 import com.eucalyptus.auth.principal.Role;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.auth.principal.Authorization.EffectType;
@@ -211,6 +213,29 @@ public class DatabaseAccountProxy implements Account {
     } catch ( Exception e ) {
       Debugging.logError( LOG, e, "Failed to get roles for " + this.delegate.getName( ) );
       throw new AuthException( "Failed to get roles", e );
+    } finally {
+      if ( db.isActive() ) db.rollback();
+    }
+  }
+
+  @Override
+  public List<InstanceProfile> geInstanceProfiles() throws AuthException {
+    final List<InstanceProfile> results = Lists.newArrayList( );
+    final EntityWrapper<InstanceProfileEntity> db = EntityWrapper.get( InstanceProfileEntity.class );
+    try {
+      @SuppressWarnings( "unchecked" )
+      List<InstanceProfileEntity> instanceProfiles = ( List<InstanceProfileEntity> ) db
+          .createCriteria( InstanceProfileEntity.class )
+          .createCriteria( "account" ).add( Restrictions.eq( "name", this.delegate.getName( ) ) )
+          .setCacheable( true )
+          .list( );
+      for ( final InstanceProfileEntity instanceProfile : instanceProfiles ) {
+        results.add( new DatabaseInstanceProfileProxy( instanceProfile  ) );
+      }
+      return results;
+    } catch ( Exception e ) {
+      Debugging.logError( LOG, e, "Failed to get instance profiles for " + this.delegate.getName( ) );
+      throw new AuthException( "Failed to get instance profiles", e );
     } finally {
       if ( db.isActive() ) db.rollback();
     }
@@ -472,6 +497,60 @@ public class DatabaseAccountProxy implements Account {
   }
 
   @Override
+  public InstanceProfile addInstanceProfile( final String instanceProfileName, final String path ) throws AuthException {
+    try {
+      USER_GROUP_NAME_CHECKER.check( instanceProfileName );
+    } catch ( InvalidValueException e ) {
+      Debugging.logError( LOG, e, "Invalid instance profile name " + instanceProfileName );
+      throw new AuthException( AuthException.INVALID_NAME, e );
+    }
+    try {
+      PATH_CHECKER.check( path );
+    } catch ( InvalidValueException e ) {
+      Debugging.logError( LOG, e, "Invalid path " + path );
+      throw new AuthException( AuthException.INVALID_PATH, e );
+    }
+    if ( DatabaseAuthUtils.checkInstanceProfileExists( instanceProfileName, this.delegate.getName() ) ) {
+      throw new AuthException( AuthException.INSTANCE_PROFILE_ALREADY_EXISTS );
+    }
+    final EntityWrapper<AccountEntity> db = EntityWrapper.get( AccountEntity.class );
+    try {
+      final AccountEntity account = DatabaseAuthUtils.getUnique( db, AccountEntity.class, "name", this.delegate.getName( ) );
+      final InstanceProfileEntity newInstanceProfile = new InstanceProfileEntity( instanceProfileName );
+      newInstanceProfile.setInstanceProfileId( Crypto.generateQueryId() );
+      newInstanceProfile.setPath( path );
+      newInstanceProfile.setAccount( account );
+      final InstanceProfileEntity persistedInstanceProfile = db.recast( InstanceProfileEntity.class ).persist( newInstanceProfile );
+      db.commit( );
+      return new DatabaseInstanceProfileProxy( persistedInstanceProfile );
+    } catch ( Exception e ) {
+      Debugging.logError( LOG, e, "Failed to add instance profile: " + instanceProfileName + " in " + this.delegate.getName() );
+      throw new AuthException( AuthException.INSTANCE_PROFILE_CREATE_FAILURE, e );
+    } finally {
+      if ( db.isActive() ) db.rollback();
+    }
+  }
+
+  @Override
+  public void deleteInstanceProfile( final String instanceProfileName ) throws AuthException {
+    final String accountName = this.delegate.getName( );
+    if ( instanceProfileName == null ) {
+      throw new AuthException( AuthException.EMPTY_INSTANCE_PROFILE_NAME );
+    }
+    final EntityWrapper<InstanceProfileEntity> db = EntityWrapper.get( InstanceProfileEntity.class );
+    try {
+      final InstanceProfileEntity instanceProfileEntity = DatabaseAuthUtils.getUniqueInstanceProfile( db, instanceProfileName, accountName );
+      db.delete( instanceProfileEntity );
+      db.commit( );
+    } catch ( Exception e ) {
+      Debugging.logError( LOG, e, "Failed to delete instance profile: " + instanceProfileName + " in " + accountName );
+      throw new AuthException( AuthException.NO_SUCH_INSTANCE_PROFILE, e );
+    } finally {
+      if ( db.isActive() ) db.rollback();
+    }
+  }
+
+  @Override
   public Group lookupGroupByName( String groupName ) throws AuthException {
     String accountName = this.delegate.getName( );
     if ( groupName == null ) {
@@ -486,6 +565,25 @@ public class DatabaseAccountProxy implements Account {
       db.rollback( );
       Debugging.logError( LOG, e, "Failed to get group " + groupName + " for " + accountName );
       throw new AuthException( AuthException.NO_SUCH_GROUP, e );
+    }
+  }
+
+  @Override
+  public InstanceProfile lookupInstanceProfileByName( final String instanceProfileName ) throws AuthException {
+    final String accountName = this.delegate.getName( );
+    if ( instanceProfileName == null ) {
+      throw new AuthException( AuthException.EMPTY_INSTANCE_PROFILE_NAME );
+    }
+    final EntityWrapper<InstanceProfileEntity> db = EntityWrapper.get( InstanceProfileEntity.class );
+    try {
+      final InstanceProfileEntity instanceProfileEntity =
+          DatabaseAuthUtils.getUniqueInstanceProfile( db, instanceProfileName, accountName );
+      return new DatabaseInstanceProfileProxy( instanceProfileEntity );
+    } catch ( Exception e ) {
+      Debugging.logError( LOG, e, "Failed to get instance profile " + instanceProfileName + " for " + accountName );
+      throw new AuthException( AuthException.NO_SUCH_INSTANCE_PROFILE, e );
+    } finally {
+      if ( db.isActive() ) db.rollback();
     }
   }
 
