@@ -335,16 +335,31 @@ def terminateSession(id, expired=False):
 class LoginProcessor(ProxyProcessor):
     @staticmethod
     def post(web_req):
+        action = web_req.get_argument("action")
         auth_hdr = web_req.get_argument('Authorization')
         if not auth_hdr:
             raise NotImplementedError("auth header not found")
         auth_decoded = base64.decodestring(auth_hdr)
-        account, user, passwd = auth_decoded.split(':', 2)
-        remember = web_req.get_argument("remember")
+        newpwd = None
+        if action == 'changepwd':
+            # fetch/decode old/new passwords
+            passwd, newpwd = auth_decoded.split(':', 1)
+            passwd = base64.decodestring(passwd)
+            newpwd = base64.decodestring(newpwd)
+            # lookup session to get account/user info
+            sid = web_req.get_cookie("session-id")
+            account = sessions[sid].account;
+            user = sessions[sid].username;
+            remember = (web_req.get_cookie("remember") == 'true');
+        else:
+            account, user, passwd = auth_decoded.split(':', 2);
+            remember = web_req.get_argument("remember")
 
         # this hack allows login with AWS creds if account is set to aws endpoint
         ec2_endpoint = None
         if account[len(account)-13:] == 'amazonaws.com':
+            if action == 'changepwd':
+                raise eucaconsole.EuiException(501, 'Cannot change password on AWS account.')
             ec2_endpoint = account
             access_id = user
             secret_key = passwd
@@ -353,7 +368,7 @@ class LoginProcessor(ProxyProcessor):
             if config.getboolean('test', 'usemock') == False:
                 auth = TokenAuthenticator(config.get('server', 'clchost'),
                                 config.getint('server', 'session.abs.timeout')+60)
-                creds = auth.authenticate(account, user, passwd)
+                creds = auth.authenticate(account, user, passwd, newpwd)
                 session_token = creds.session_token
                 access_id = creds.access_key
                 secret_key = creds.secret_key

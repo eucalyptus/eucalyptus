@@ -51,9 +51,6 @@
         title: login_change_passwd_title,
         buttons: {
           'change': { domid: 'change-pwd', text: login_change_passwd_submit, disabled: true, click: function() {
-              // should show activity somehow
-              //$form.find('.button-bar').append(
-              //  $('<img>').attr('id','login-spin-wheel').attr('src','images/dots32.gif'));
               var current = trim($form.find('input[id=current]').val());
               var newpwd = trim($form.find('input[id=newpwd]').val());
               var confirmpwd = trim($form.find('input[id=confirmpwd]').val());
@@ -65,39 +62,7 @@
               }
               
               if (isValid) {
-                thisObj._trigger('doLogin', evt, { param: param,
-                  onSuccess: function(args){
-                    if ($.eucaData['u_session']['account'] === 'eucalyptus'){
-                      thisObj.popupWarning(login_account_warning, function(){ 
-                        var admin_url = $.eucaData.g_session['admin_console_url'];
-                        window.open(admin_url, '_blank');
-                      });
-                    }
-
-                    thisObj._changepwdDialog.eucadialog("close");
-                    eucalyptus.main($.eucaData);
-                  },
-                  onError: function(args){
-                    $form.find('.button-bar img').remove();
-                    $form.find('.button-bar input').removeAttr('disabled');
-                    $form.find('.button-bar input').show();
-                    thisObj.errorDialog.eucadialog('open');
-                    var msgdiv = thisObj.errorDialog.find("#login-error-message p")
-                    if (args.search("Timeout")>-1) {
-                      // XSS Note:: No need to encode 'cloud_admin' since it's a static string from the file "messages.properties" - Kyo
-                      msgdiv.addClass('dialog-error').html($.i18n.prop('login_timeout', '<a href="#">'+cloud_admin+'</a>'));
-                      msgdiv.find('a').click( function(e){
-                        if(thisObj.options.support_url.indexOf('mailto') >= 0)
-                          window.open(thisObj.options.support_url, '_self');
-                        else
-                          window.open(thisObj.options.support_url,'_blank');
-                      });
-                    } else {
-                      msgdiv.addClass('dialog-error').html(login_failure);
-                    }
-                    thisObj._changepwdDialog.eucadialog("close");
-                  }
-                });
+                thisObj.changePassword(current, newpwd);
               }
               return false;
             }
@@ -113,6 +78,7 @@
         var current = trim($form.find('input[id=current]').val());
         var newpwd = trim($form.find('input[id=newpwd]').val());
         var confirmpwd = trim($form.find('input[id=confirmpwd]').val());
+        thisObj._changepwdDialog.eucadialog('showError', null);
         // should check that all files comply, then enable button
         if (current != null && current != '' &&
             newpwd != null && newpwd != '' &&
@@ -181,49 +147,49 @@
                  },
 
     updateSelected : function (selected, filter, options) {
-                     var thisObj = this;
-                     if(this._curSelected === selected){
-                         return;
-                     }
+     var thisObj = this;
+     if(this._curSelected === selected){
+         return;
+     }
 
-                     if(this._curSelected !== null){
-                         var $curInstance = this.element.data(this._curSelected);
-                         if($curInstance !== undefined && options !== KEEP_VIEW){
-                             $curInstance.close();
-                         }
-                     }
-                     var $container = $('html body').find(DOM_BINDING['main']);
-                     if (options !== KEEP_VIEW)
-                         $container.children().detach();
-                     switch(selected){
-                         case 'dashboard':
-                             this.element.dashboard({select: function(evt, ui){$container.maincontainer("changeSelected", evt, ui)}});
-                             break;
-                         case 'instance':
-                             this.element.instance({'state_filter': filter});
-                             break;
-                         case 'scaling':
-                             this.element.scaling();
-                             break;
-                         case 'balancing':
-                             this.element.balancing();
-                             break;
-                         case 'keypair':
-                             this.element.keypair();
-                             break;
-                         case 'sgroup':
-                             this.element.sgroup();
-                             break;
-                         case 'volume':
-                             this.element.volume();
-                             break;
-                         case 'snapshot':
-                             this.element.snapshot();
-                             break;
-                         case 'bucket':
-                             this.element.bucket();
-                             break;
-                         case 'eip':
+     if(this._curSelected !== null){
+         var $curInstance = this.element.data(this._curSelected);
+         if($curInstance !== undefined && options !== KEEP_VIEW){
+             $curInstance.close();
+         }
+     }
+     var $container = $('html body').find(DOM_BINDING['main']);
+     if (options !== KEEP_VIEW)
+         $container.children().detach();
+     switch(selected){
+         case 'dashboard':
+             this.element.dashboard({select: function(evt, ui){$container.maincontainer("changeSelected", evt, ui)}});
+             break;
+         case 'instance':
+             this.element.instance({'state_filter': filter});
+             break;
+         case 'scaling':
+             this.element.scaling();
+             break;
+         case 'balancing':
+             this.element.balancing();
+             break;
+         case 'keypair':
+             this.element.keypair();
+             break;
+         case 'sgroup':
+             this.element.sgroup();
+             break;
+         case 'volume':
+             this.element.volume();
+             break;
+         case 'snapshot':
+             this.element.snapshot();
+             break;
+         case 'bucket':
+             this.element.bucket();
+             break;
+         case 'eip':
           this.element.eip();
           break;
         case 'launcher':
@@ -261,33 +227,24 @@
     },
 
     changePassword : function (current, newpwd){
-      var tok = current+':'+newpwd;
+      var thisObj = this;
+      var tok = toBase64(current)+':'+toBase64(newpwd);
       var hash = toBase64(tok);
-	    $.ajax({
-	      type:"POST",
- 	      data:"action=changepwd&"+hash, 
-        beforeSend: function (xhr) { 
-          $main.find('#euca-main-container').append(
-          $('<div>').addClass('spin-wheel').append( 
-          $('<img>').attr('src','images/dots32.gif'))); // spinwheel
-          $main.find('#euca-main-container').show();
-        },
-    	  dataType:"json",
-	      async:"false",
-	      success: function(out, textStatus, jqXHR) {
-	        $.extend($.eucaData, {'g_session':out.global_session, 'u_session':out.user_session});
-          eucalyptus.help({'language':out.global_session.language}); // loads help files
-          args.onSuccess($.eucaData); // call back to login UI
-          if (args.param.account.substring(args.param.account.length-13) == 'amazonaws.com') {
-            IMG_OPT_PARAMS = '&Owner=self';
-          }
+	  $.ajax({
+	    type:"POST",
+ 	    data:"action=changepwd"+"&_xsrf="+$.cookie('_xsrf')+"&Authorization="+hash,
+        dataType:"json",
+	    async:"false",
+	    success: function(out, textStatus, jqXHR) {
+          thisObj._changepwdDialog.eucadialog("close");
+	      $.extend($.eucaData, {'g_session':out.global_session, 'u_session':out.user_session});
+          notifySuccess(null, $.i18n.prop('login_change_passwd_done'));
         },
         error: function(jqXHR, textStatus, errorThrown){
-          var $container = $('html body').find(DOM_BINDING['main']);
-          $container.children().detach(); // remove spinwheel
-	        args.onError(errorThrown);
+          thisObj._changepwdDialog.eucadialog("close");
+          notifyError($.i18n.prop('login_change_passwd_error'), errorThrown);
         }
- 	    });
+ 	  });
     },
 
     clearSelected : function (){

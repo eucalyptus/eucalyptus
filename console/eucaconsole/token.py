@@ -45,10 +45,17 @@ class TokenAuthenticator(object):
     def authenticate(self, account, user, passwd, new_passwd=None):
         try:
             req = urllib2.Request(self.auth_url)
-            auth_string = "%s@%s:%s" % \
+            if new_passwd:
+                auth_string = "%s@%s:%s@%s" % \
                             (base64.b64encode(user), \
                             base64.b64encode(account), \
-                            passwd)
+                            base64.b64encode(passwd), \
+                            new_passwd)
+            else:
+                auth_string = "%s@%s:%s" % \
+                            (base64.b64encode(user), \
+                            base64.b64encode(account), \
+                            base64.b64encode(passwd))
             encoded_auth = base64.b64encode(auth_string)
             req.add_header('Authorization', "Basic %s" % encoded_auth)
             response = urllib2.urlopen(req, timeout=15)
@@ -61,9 +68,12 @@ class TokenAuthenticator(object):
             logging.info("authenticated user: "+account+"/"+user)
             return creds
         except urllib2.URLError, err:
-            traceback.print_exc(file=sys.stdout)
-            if not(issubclass(err.__class__, urllib2.HTTPError)):
-                if isinstance(err.reason, socket.timeout):
-                    raise eucaconsole.EuiException(504, 'Timed out')
-            raise eucaconsole.EuiException(401, 'Not Authorized')
-
+            # this returned for authorization problem
+            # HTTP Error 401: Unauthorized
+            if issubclass(err.__class__, urllib2.HTTPError):
+                raise eucaconsole.EuiException(err.code, 'Not Authorized')
+            # this returned for connection problem (i.e. timeout)
+            # <urlopen error [Errno 61] Connection refused>
+            if issubclass(err.__class__, urllib2.URLError):
+                raise eucaconsole.EuiException(504, 'Timed out')
+        
