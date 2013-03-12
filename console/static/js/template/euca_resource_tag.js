@@ -361,9 +361,10 @@
              addNewTagButton.bind('click', function(e){
                var addedKey = tdResourceTag.find('#added_tag_key').val();
                var addedValue = tdResourceTag.find('#added_tag_value').val();
+               thisObj.isFirstData = "false"; 
                jQuery.data(thisObj.addedRow, addedKey, {key: addedKey, value: addedValue});
                thisObj.baseTable.fnAddData({"name": addedKey, "value": addedValue, "edited": "true"});
-               
+              
                thisObj._updateAdditionalMessageDiv(thisObj.strEditMessage);   // Update the additional message div
              });
 
