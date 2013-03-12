@@ -3983,7 +3983,7 @@ int doModifyNode(ncMetadata * pMeta, char *nodeName, char *stateName)
 
     // FIXME: This is only here for compatability with earlier demo
     // development. Remove.
-    if (!doMigrateInstances(pMeta, nodeName, 0)) {
+    if (!doMigrateInstances(pMeta, nodeName, FALSE)) {
         LOGERROR("doModifyNode() call of doMigrateInstances() failed.\n");
     }
 
