@@ -21,7 +21,15 @@ define([
 		    }
 		});
 	    }
-	}
+	},
+
+    columnSort: function(key, direction) {
+        this.comparator = function(model) {
+            return model.get(key);
+        };
+        this.sort();
+
+    }
     });
     return EucaCollection;
 });

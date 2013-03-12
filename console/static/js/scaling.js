@@ -99,6 +99,10 @@
       var thisObj = this;
     },
 
+    _createAction : function() {
+      window.location = '#newscalinggroup';
+    },
+
     _destroy : function() {
     },
 
