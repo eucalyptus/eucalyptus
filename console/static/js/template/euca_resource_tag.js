@@ -81,32 +81,28 @@
           "bAutoWidth" : false,
           "bPaginate": false, 
           "bFilter": false ,
-          "aoColumns": [
+          "aoColumnDefs": [
             {
               "sTitle": "Key",
-              "fnRender": function(oObj){
-//                 return DefaultEncoder().encodeForHTML(oObj.aData.name);   // Temporarily disabled. Need dataTable 1.9
-                 return oObj.aData.name;
+              "aTargets":[0],
+              "mRender": function(data){
+                 return DefaultEncoder().encodeForHTML(data);
 	       },
-              "mDataProp": "name",
+              "mData": "name",
             },
             {
               "sTitle": "Value",
-              "fnRender": function(oObj){
-//                 return DefaultEncoder().encodeForHTML(oObj.aData.value);  // Temporarily disabled. Need dataTable 1.9
-                 return oObj.aData.value;
+              "aTargets":[1],
+              "mRender": function(data){
+                 return DefaultEncoder().encodeForHTML(data);
 	       },
-               "mDataProp": "value",
+               "mData": "value",
             },
             {
                "bVisible": false,
-               "fnRender": function(oObj){
-                  if( !oObj.aData.edited ){
-                    return "false";
-                  };
-                  return oObj.aData.edited;
-               },
-               "mDataProp": "edited",
+               "aTargets":[2],
+               "mData": null,
+               "sDefaultContent": "edited",
             },
           ],
 
@@ -118,7 +114,10 @@
 
             var $nRow = $(nRow);
             var key = aData.name.toLowerCase();
-            var edited = aData.edited.toLowerCase();
+            var edited = "false";
+            if( aData.edited != undefined ){
+               edited = aData.edited.toLowerCase();
+            }
             if(edited == "true") {
               $nRow.css({"color":"red"});       // When modified, color it red
             }else if(key == "name") {

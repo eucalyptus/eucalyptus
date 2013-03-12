@@ -946,7 +946,6 @@
     _tagResourceAction : function(){
       var thisObj = this;
       var instance = thisObj.tableWrapper.eucatable('getSelectedRows', 2)[0];
-      instance = $(instance).text();   // This won't be necessary after dataTable 1.9 merge is in.   030613
       if ( instance.length > 0 ) {
         // Create a widget object for displaying the resource tag information
         var $tagInfo = $('<div>').addClass('resource-tag-table-expanded-instance').addClass('clearfix').euca_resource_tag({resource: 'instance', resource_id: instance, cancelButtonCallback: function(){ thisObj.tagDialog.eucadialog("close"); }, widgetMode: 'edit' });
