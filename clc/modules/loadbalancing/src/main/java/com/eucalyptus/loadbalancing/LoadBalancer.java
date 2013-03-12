@@ -182,6 +182,7 @@ public class LoadBalancer extends UserMetadata<LoadBalancer.STATE> implements Lo
 	{
 		// check the validity of the health check param
 		this.healthConfig = new LoadBalancerHealthCheckConfig(healthyThreshold, interval, target, timeout,unhealthyThreshold);
+		this.healthConfig.setLoadBalancer(this);
 	}
 	
 	public boolean isHealthcheckConfigured(){
@@ -232,7 +233,7 @@ public class LoadBalancer extends UserMetadata<LoadBalancer.STATE> implements Lo
 	private LoadBalancerHealthCheckConfig healthConfig = null;
 	
 	@Embeddable
-	private class LoadBalancerHealthCheckConfig {
+	private static class LoadBalancerHealthCheckConfig {
 		@Parent
 		private LoadBalancer loadBalancer = null;
 		
@@ -251,6 +252,7 @@ public class LoadBalancer extends UserMetadata<LoadBalancer.STATE> implements Lo
 		@Column( name = "loadbalancer_unhealthy_threshold", nullable = true)
 		private Integer UnhealthyThreshold = null; //Specifies the number of consecutive health probe failures required before moving the instance to the 
 		
+		private LoadBalancerHealthCheckConfig(){}
 		private LoadBalancerHealthCheckConfig(int healthyThreshold, int interval, String target, int timeout, int unhealthyThreshold){
 			this.HealthyThreshold = new Integer(healthyThreshold);
 			this.Interval = new Integer(interval);

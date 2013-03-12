@@ -92,7 +92,19 @@ public class LoadBalancerBackendInstance extends UserMetadata<LoadBalancerBacken
 	}
 	
 	public static LoadBalancerBackendInstance named(final OwnerFullName userName, final String vmId){
-		return new LoadBalancerBackendInstance(userName, null, vmId);
+		LoadBalancerBackendInstance instance = new LoadBalancerBackendInstance();
+		instance.setOwner(userName);
+		instance.setDisplayName(vmId);
+		instance.setState(null);
+		return instance;
+	}
+	
+	public static LoadBalancerBackendInstance named(final OwnerFullName userName){
+		LoadBalancerBackendInstance instance = new LoadBalancerBackendInstance();
+		instance.setOwner(userName);
+		instance.setState(null);
+		instance.setDisplayName(null);
+		return instance;
 	}
 	
 	public String getInstanceId(){

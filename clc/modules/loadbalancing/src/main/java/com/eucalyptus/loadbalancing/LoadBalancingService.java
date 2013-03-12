@@ -27,6 +27,7 @@ import java.util.NoSuchElementException;
 import java.util.Set;
 
 import javax.annotation.Nullable;
+import javax.persistence.EntityTransaction;
 
 import org.apache.log4j.Logger;
 
@@ -311,6 +312,25 @@ public class LoadBalancingService {
 	    						})));
 	    			}
 	    			                                  /// health check
+	    			try{
+    				  int interval = lb.getHealthCheckInterval();
+    				  String target = lb.getHealthCheckTarget();
+    				  int timeout = lb.getHealthCheckTimeout();
+    				  int healthyThresholds = lb.getHealthyThreshold();
+    				  int unhealthyThresholds = lb.getHealthCheckUnhealthyThreshold();
+    				  
+    				  final HealthCheck hc = new HealthCheck();
+    				  hc.setInterval(interval);
+    				  hc.setHealthyThreshold(healthyThresholds);
+    				  hc.setTarget(target);
+    				  hc.setTimeout(timeout);
+    				  hc.setUnhealthyThreshold(unhealthyThresholds);
+    				  desc.setHealthCheck(hc);
+	    			}catch(IllegalStateException ex){
+    				  ;
+	    			}catch(Exception ex){
+    				  ;
+	    			}
 	    			                                  /// (backend server description)
 	    			descs.add(desc);
 	    		}
@@ -506,6 +526,7 @@ public class LoadBalancingService {
 	        			continue;	// the vm instance is already registered
 	        		final LoadBalancerBackendInstance beInstance = 
 	        				LoadBalancerBackendInstance.newInstance(ownerFullName, lb, vm.getInstanceId());
+	        		beInstance.setState(LoadBalancerBackendInstance.STATE.OutOfService);
 	        		Entities.persist(beInstance);
 	        	}
 	        	return true;
@@ -699,11 +720,111 @@ public class LoadBalancingService {
   
   public ConfigureHealthCheckResponseType configureHealthCheck(ConfigureHealthCheckType request) throws EucalyptusCloudException {
     ConfigureHealthCheckResponseType reply = request.getReply( );
+    final Context ctx = Contexts.lookup( );
+	final UserFullName ownerFullName = ctx.getUserFullName( );
+	final String lbName = request.getLoadBalancerName();
+	final HealthCheck hc = request.getHealthCheck();
+	Integer healthyThreshold = hc.getHealthyThreshold();
+	if (healthyThreshold == null)
+		throw new LoadBalancingException("healthy tresholds must be specified");
+	Integer interval = hc.getInterval();
+	if(interval == null)
+		throw new LoadBalancingException("interval must be specified");
+	String target = hc.getTarget();
+	if(target == null)
+		throw new LoadBalancingException("target must be specified");
+    Integer timeout = hc.getTimeout();
+    if(timeout==null)
+    	throw new LoadBalancingException("timeout must be specified");
+    Integer unhealthyThreshold = hc.getUnhealthyThreshold();
+    if(unhealthyThreshold == null)
+    	throw new LoadBalancingException("unhealthy tresholds must be specified");
+    LoadBalancer lb = null;
+    try{
+    	lb = LoadBalancers.getLoadbalancer(ownerFullName, lbName);
+    }catch(NoSuchElementException ex){
+    	throw new AccessPointNotFoundException();
+    }catch(Exception ex){
+    	throw new LoadBalancingException("failed to find the loadbalancer due to unknown reason");
+    }
+
+    final EntityTransaction db = Entities.get( LoadBalancer.class );
+    try{
+    	final LoadBalancer update = Entities.uniqueResult(lb);
+    	update.setHealthCheck(healthyThreshold, interval, target, timeout, unhealthyThreshold);
+		Entities.persist(update);
+		db.commit();
+    }catch(Exception ex){
+    	db.rollback();
+    	LOG.error("failed to persist health check config", ex);
+    	throw new LoadBalancingException("failed to persist the health check request", ex);
+    }
+    ConfigureHealthCheckResult result = new ConfigureHealthCheckResult();
+    result.setHealthCheck(hc);
+    reply.setConfigureHealthCheckResult(result);
     return reply;
   }
 
   public DescribeInstanceHealthResponseType describeInstanceHealth(DescribeInstanceHealthType request) throws EucalyptusCloudException {
     DescribeInstanceHealthResponseType reply = request.getReply( );
+    final Context ctx = Contexts.lookup( );
+ 	final UserFullName ownerFullName = ctx.getUserFullName( );
+ 	final String lbName = request.getLoadBalancerName();
+ 	Instances instances = request.getInstances();
+ 	
+	LoadBalancer lb = null;
+	try{
+		lb= LoadBalancers.getLoadbalancer(ownerFullName, lbName);
+	}catch(NoSuchElementException ex){
+		throw new AccessPointNotFoundException();
+    }catch(Exception ex){
+    	throw new LoadBalancingException("failed to query loadbalancer due to unknown reason");
+    }
+ 	
+ 	List<LoadBalancerBackendInstance> instancesFound = Lists.newArrayList();
+ 	if(instances != null && instances.getMember()!= null && instances.getMember().size()>0){
+ 		final EntityTransaction db = Entities.get( LoadBalancerBackendInstance.class );
+		for(Instance inst : instances.getMember()){
+ 			String instId = inst.getInstanceId();
+ 			try{
+ 				LoadBalancerBackendInstance found = 
+ 						Entities.uniqueResult(LoadBalancerBackendInstance.named(ownerFullName, instId));
+ 				instancesFound.add(found);
+ 			}catch(NoSuchElementException ex){
+ 				;
+ 			}catch(Exception ex){
+ 				LOG.error("failed to query backend instances", ex);
+ 	 		}
+ 		}
+		db.commit();
+ 	}else{
+ 		final EntityTransaction db = Entities.get( LoadBalancerBackendInstance.class );
+		try{
+			instancesFound = Entities.query(LoadBalancerBackendInstance.named(ownerFullName));
+			db.commit();
+ 		}catch(NoSuchElementException ex){
+ 			db.rollback();
+ 		}catch(Exception ex){
+ 			LOG.error("failed to query backend instances", ex);
+ 			db.rollback();
+ 		}
+ 	}
+ 	
+ 	final ArrayList<InstanceState> stateList = Lists.newArrayList();
+ 	for(final LoadBalancerBackendInstance instance : instancesFound){
+ 		InstanceState state = new InstanceState();
+ 		state.setInstanceId(instance.getDisplayName());
+ 		state.setState(instance.getState().name());
+ 		if(instance.getState().equals(LoadBalancerBackendInstance.STATE.OutOfService) && instance.getReasonCode()!=null)
+ 			state.setReasonCode(instance.getReasonCode());
+ 		stateList.add(state);
+ 	}
+ 	
+ 	final InstanceStates states = new InstanceStates();
+ 	states.setMember(stateList);
+ 	final DescribeInstanceHealthResult result = new DescribeInstanceHealthResult();
+ 	result.setInstanceStates(states);
+    reply.setDescribeInstanceHealthResult(result);
     return reply;
   }
   

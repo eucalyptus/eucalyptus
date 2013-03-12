@@ -307,10 +307,10 @@ public class SetLoadBalancerPoliciesOfListenerResponseType extends LoadBalancing
 }
 public class HealthCheck extends EucalyptusData {
   String target;
-  BigInteger interval;
-  BigInteger timeout;
-  BigInteger unhealthyThreshold;
-  BigInteger healthyThreshold;
+  Integer interval;
+  Integer timeout;
+  Integer unhealthyThreshold;
+  Integer healthyThreshold;
   public HealthCheck() {  }
 }
 public class DescribeLoadBalancerPolicyTypesResult extends EucalyptusData {
