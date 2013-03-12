@@ -1,88 +1,36 @@
 <div id="euca-main-container" class="clearfix" style="display: block;">
-    <div id="scaling-table" ng-controller="AutoScaling">
-        <div class="dataTables_wrapper" id="scaling_wrapper">
-            <div class="table_scaling_header euca-table-header">
-                <span>Manage scaling groups<div class="help-link"><a href="#">&nbsp;</a></div></span>
-            </div>
-            <div class="table-filter-wrapper clearfix">
-                <div class="dataTables_filter" id="scaling_filter">
-                    <label>
-                        <input type="text" placeholder="Search scaling groups">
-                    </label><a class="table-refresh" href="#">Refresh</a>
-                </div>
-            </div>
-            <div class="clear"></div>
-            <div class="table_scaling_top euca-table-length clearfix">
-                <div class="euca-table-add">
-                    <a id="table-scaling-new" class="button" href="#">
-                        Create New Scaling Group</a>
-                </div>
-                <div class="euca-table-extra">
-
-                </div>
-                <div class="euca-table-action actionmenu">
-                    <a id="more-actions-scaling" class="button inactive-menu" href="#">
-                        More actions
-                    </a>
-                </div>
-                <div class="euca-table-size">
-                    <span id="table_scaling_count">
-                        <%= groups.length %> scaling groups found.
-                    </span>
-                    &nbsp;Showing:
-                    <a href="#" class="show selected">
-                        10
-                    </a>
-                    &nbsp;|&nbsp;
-                    <a href="#" class="show">25</a>
-                    &nbsp;|&nbsp;
-                    <a href="#" class="show">50</a>
-                    &nbsp;|&nbsp;
-                    <a href="#" class="show">100</a>
-                </div>
-            </div>
-            <div id="scaling_processing" class="dataTables_processing" style="visibility: hidden;">
-
-            </div>
-            <table id="scaling" class="display">
-                <thead>
-                    <tr>
-                        <th class="sorting_disabled checkbox-cell" rowspan="1" colspan="1">
-                            <input type="checkbox" id="scaling-check-all">
-                        </th>
-                        <th class="sorting" rowspan="1" colspan="1">Scaling Group Name</th>
-                        <th class="sorting" rowspan="1" colspan="1">Current Launch Configuration</th>
-                        <th class="sorting" rowspan="1" colspan="1">Scaling Activity (last 24 hrs)</th>
-                        <th class="sorting" rowspan="1" colspan="1">Current Instances</th>
-                        <th class="sorting" rowspan="1" colspan="1">Desired Instances</th>
-                        <th class="sorting" rowspan="1" colspan="1">Instance Health</th></tr>
-                </thead>
-
-                <tbody>
-                    <tr ng-repeat="group in results">
-                        <td class="checkbox-cell sorting_1">
-                            <input type="checkbox">
-                        </td>
-                        <td>{{group.name}}</td>
-                        <td>{{group.launch_config_name}}</td>
-                        <td>some graph</td>
-                        <td>{{group.instances.length}}</td>
-                        <td>{{group.desired_capacity}}</td>
-                        <td>All healthy</td>
-                    </tr>
-                </tbody>
-            </table>
-            <div class="legend-pagination-wrapper clearfix">
-                <div class="dataTables_paginate paging_full_numbers" id="scaling_paginate">
-                    <span class="first paginate_button paginate_button_disabled" id="scaling_first">First</span>
-                    <span class="previous paginate_button paginate_button_disabled" id="scaling_previous">Previous</span>
-                    <span><span class="paginate_active">1</span></span><span class="next paginate_button paginate_button_disabled" id="scaling_next">Next</span>
-                    <span class="last paginate_button paginate_button_disabled" id="scaling_last">Last</span>
-                </div>
-            </div>
-            <div class="clear">
-
-            </div>
-        </div>
-    </div>
+<div id="scaling-table">
+<div class="dataTables_wrapper" id="scaling_wrapper">
+<div class="table_scaling_header euca-table-header">
+<span>Manage scaling groups<div class="help-link"><a href="#">&nbsp;</a></div></span>
 </div>
+<div class="table-filter-wrapper clearfix">
+<div class="dataTables_filter" id="scaling_filter">
+<label><input type="text" placeholder="Search scaling groups"></label><a class="table-refresh" href="#">Refresh</a>
+</div>
+</div>
+<div class="clear"></div>
+<div class="table_scaling_top euca-table-length clearfix"><div class="euca-table-add"><a id="table-scaling-new" class="button" href="#">Create New Scaling Group</a></div><div class="euca-table-extra"></div><div class="euca-table-action actionmenu"><a id="more-actions-scaling" class="button inactive-menu" href="#">More actions</a></div><div class="euca-table-size"><span id="table_scaling_count"><%= groups.length %> scaling groups found.</span>&nbsp;Showing:<a href="#" class="show selected">10</a>&nbsp;|&nbsp;<a href="#" class="show">25</a>&nbsp;|&nbsp;<a href="#" class="show">50</a>&nbsp;|&nbsp;<a href="#" class="show">100</a></div></div><div id="scaling_processing" class="dataTables_processing" style="visibility: hidden;"></div><table id="scaling" class="display">
+<thead>
+<tr><th class="sorting_disabled checkbox-cell" rowspan="1" colspan="1">
+<input type="checkbox" id="scaling-check-all">
+</th><th class="sorting" rowspan="1" colspan="1">Scaling Group Name</th><th class="sorting" rowspan="1" colspan="1">Current Launch Configuration</th><th class="sorting" rowspan="1" colspan="1">Scaling Activity (last 24 hrs)</th><th class="sorting" rowspan="1" colspan="1">Current Instances</th><th class="sorting" rowspan="1" colspan="1">Desired Instances</th><th class="sorting" rowspan="1" colspan="1">Instance Health</th></tr>
+</thead>
+
+<tbody>
+<% _.each(groups, function(group, index) { %>
+<tr class="<% if (index % 2 != 0) { %>even<% } else { %>odd<% } %>">
+<td class="checkbox-cell sorting_1">
+	<input type="checkbox">
+</td>
+<td><%= group.name %></td>
+<td><%= group.launch_config_name %></td>
+<td>some graph</td>
+<td><%= group.instances.length %></td>
+<td><%= group.desired_capacity %></td>
+<td>All healthy</td>
+</tr>
+<% }); %>
+
+</tbody></table><div class="legend-pagination-wrapper clearfix"><div class="dataTables_paginate paging_full_numbers" id="scaling_paginate"><span class="first paginate_button paginate_button_disabled" id="scaling_first">First</span><span class="previous paginate_button paginate_button_disabled" id="scaling_previous">Previous</span><span><span class="paginate_active">1</span></span><span class="next paginate_button paginate_button_disabled" id="scaling_next">Next</span><span class="last paginate_button paginate_button_disabled" id="scaling_last">Last</span></div></div><div class="clear"></div></div>
+</div></div>
