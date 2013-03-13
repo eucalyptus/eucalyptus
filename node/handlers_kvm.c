@@ -673,6 +673,12 @@ static int doMigrateInstances(struct nc_state_t *nc, ncMetadata * pMeta, ncInsta
         } else if (strcmp (action, "commit") == 0) {
 
             sem_p(inst_sem);
+            if (instance->migration_state == MIGRATION_IN_PROGRESS) {
+                LOGWARN("[%s] duplicate request to migration source to initiate %s > %s (already migrating)\n", instance->instanceId,
+                        instance->migration_src, instance->migration_dst);
+                sem_v(inst_sem);
+                return (EUCA_DUPLICATE_ERROR);
+            }
             instance->migration_state = MIGRATION_IN_PROGRESS;
             LOGINFO("[%s] migration source initiating %s > %s\n", instance->instanceId, instance->migration_src, instance->migration_dst);
             save_instance_struct(instance);
