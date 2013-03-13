@@ -71,7 +71,7 @@
       });
 
       // set the login event handler
-      $cp_form.find('input[type=password]').change( function(evt) {
+      $cp_form.find('input[type=password]').keyup( function(evt) {
         var current = trim($cp_form.find('input[id=current]').val());
         var newpwd = trim($cp_form.find('input[id=newpwd]').val());
         var confirmpwd = trim($cp_form.find('input[id=confirmpwd]').val());
@@ -141,6 +141,7 @@
             $form.find('.button-bar input').show();
             if (args.search("Forbidden")>-1) {
               thisObj.changepwdDialog.eucadialog("open");
+              thisObj.changepwdDialog.find("#change-passwd-prompt p").html(login_change_passwd_prompt);
             }
             else {
               thisObj.errorDialog.eucadialog('open');

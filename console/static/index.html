@@ -155,7 +155,7 @@
             
             <div class="form-row">
               <label for="password">{{!>login_pwd}}</label>
-              <input type="password" id="password" class="input-field" value=""/>
+              <input type="password" id="password" class="input-field" maxlength="128" value=""/>
             </div>
 
             <div class="checkbox-row">
@@ -195,20 +195,20 @@
       <script id="changePasswordTmpl" type="text/x-jsrender">
         <div id="change-passwd-euca-dialog-wrapper">
           <div id="change-passwd-euca-dialog" class="euca-dialog">
-            <div class="dialog-inner-content">
-              <p>{{!: login_change_passwd_prompt }}</p>
+            <div class="dialog-inner-content" id="change-passwd-prompt">
+              <p></p>
               <form action="/" method="post" name="changepasswordform">
                 <div class="form-row">
                   <label for="current" class="required-label">{{!>login_change_passwd_current}}</label>
-                  <input type="password" id="current" class="input-field" value=""/>
+                  <input type="password" id="current" class="input-field" maxlength="128" value=""/>
                 </div>
                 <div class="form-row">
                   <label for="newpwd" class="required-label">{{!>login_change_passwd_new}}</label>
-                  <input type="password" id="newpwd" class="input-field" value=""/>
+                  <input type="password" id="newpwd" class="input-field" maxlength="128" value=""/>
                 </div>
                 <div class="form-row">
                   <label for="confirmpwd" class="required-label">{{!>login_change_passwd_confirm}}</label>
-                  <input type="password" id="confirmpwd" class="input-field" value=""/>
+                  <input type="password" id="confirmpwd" class="input-field" maxlength="128" value=""/>
                 </div>
               </form>        
               <p class="required-hint">{{!: required_fields }}</p>

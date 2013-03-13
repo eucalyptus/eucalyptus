@@ -25,7 +25,6 @@
       max_refresh_attempt : 3,
       endpoints: [{name:'summary', type:'dash', url: '/ec2?Action=GetDashSummary'},
                   {name:'instance', type:'instances', url: '/ec2?Action=DescribeInstances'},
-                  //{name:'image', type:'images', url: '/ec2?Action=DescribeImages&Owner=self'},
                   {name:'image', type:'images', url: '/ec2?Action=DescribeImages'},
                   {name:'volume', type:'volumes', url: '/ec2?Action=DescribeVolumes'},
                   {name:'snapshot', type:'snapshots', url: '/ec2?Action=DescribeSnapshots'},
@@ -62,42 +61,23 @@
          if (thisObj._data_needs && thisObj._data_needs.indexOf(ep.type) == -1) {
            return;
          }
-         // don't skip the read if data cache is empty
-         if(thisObj._data[name] != null) {
-            // however, if we have data, should we read it again?
-
-            // if summary doesn't contain this resource name, skip the update
-             if (name != 'summary') {
-//               console.log('should pull '+name+": "+thisObj._data['summary'].results[name]);
-//               if (thisObj._data['summary'].results[name] == undefined) {
-                 // still need to hit the listeners
-//                 if(thisObj._listeners[name] && thisObj._listeners[name].length >0) {
-//                   $.each(thisObj._listeners[name], function (idx, callback){
-//                     callback['callback'].apply(thisObj);
-//                   });
-//                 }
-//                 return;
-//               }
-             }
-         }
+         var paramData = "_xsrf="+$.cookie('_xsrf');
          $.ajax({
-           type:"POST",
+           type: "POST",
            url: url,
-           data:"_xsrf="+$.cookie('_xsrf'),
-           dataType:"json",
-           async:"false",
+           data: paramData,
+           dataType: "json",
+           async: "false",
            beforeSend: function(jqXHR, settings){
              thisObj._numPending++;
            },
            success: function(data, textStatus, jqXHR){
              thisObj._numPending--;
              if (data.results) {
-               //delete thisObj._data[name];
                thisObj._data[name] = {
                  lastupdated: new Date(),
                  results: data.results,
                }
-               //console.log(data.results.length+" "+name+" returned, data.length:"+thisObj._data[name].results.length);
                if(thisObj._listeners[name] && thisObj._listeners[name].length >0) {
                  $.each(thisObj._listeners[name], function (idx, callback){
                    callback['callback'].apply(thisObj);
