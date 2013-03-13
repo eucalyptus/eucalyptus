@@ -38,6 +38,7 @@
       this.baseTable = $scalingTable;
       this.tableWrapper = $scalingTable.eucatable({
         id : 'scaling', // user of this widget should customize these options,
+        data_deps: ['scalinggrps', 'scalinginsts'],
         hidden: thisObj.options['hidden'],
         dt_arg : {
           "bProcessing": true,

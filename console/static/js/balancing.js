@@ -38,6 +38,7 @@
       this.baseTable = $balancingTable;
       this.tableWrapper = $balancingTable.eucatable({
         id : 'balancing', // user of this widget should customize these options,
+        data_deps: ['balancers'],
         hidden: thisObj.options['hidden'],
         dt_arg : {
           "bProcessing": true,

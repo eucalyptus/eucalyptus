@@ -40,8 +40,8 @@
                   {name:'scalinginst', type:'scalinginsts', url: '/autoscaling?Action=DescribeAutoScalingInstances'}
       ], 
     },
-//    _data : {summary:[], instance:null, image:null, volume:null, snapshot:null, eip:null, keypair: null, sgroup: null, zone: null, tag: null, bucket: null, balancer: null, scalinggrp: null, scalinginst: null},
-    _data : {summary:[], instance:null, image:null, volume:null, snapshot:null, eip:null, keypair: null, sgroup: null, zone: null, tag: null, bucket:null},
+    _data : {summary:[], instance:null, image:null, volume:null, snapshot:null, eip:null, keypair: null, sgroup: null, zone: null, tag: null, bucket: null, balancer: null, scalinggrp: null, scalinginst: null},
+//    _data : {summary:[], instance:null, image:null, volume:null, snapshot:null, eip:null, keypair: null, sgroup: null, zone: null, tag: null, bucket:null},
     _callbacks : {}, 
     _listeners : {},
     _init : function(){ },
@@ -193,14 +193,21 @@
         thisObj._listeners[resource].splice(toDelete, 1);
     },
 
-    setDataNeeds : function(resources){
-        this._data_needs = resources;
-    },
-
     refresh : function(resource){
       var thisObj = this;
       if(thisObj._callbacks[resource])
         thisObj._callbacks[resource].callback.apply(this); 
+    },
+
+    setDataNeeds : function(resources){
+        this._data_needs = resources;
+        var thisObj = this;
+        var resList = resources;
+        $.each(thisObj.options.endpoints, function(idx, ep){
+            if (resList.indexOf(ep.type) > -1) {
+                thisObj.refresh(ep.name);
+            }
+        });
     },
 
     // status: online, offline, error
