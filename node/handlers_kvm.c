@@ -830,8 +830,13 @@ unroll:
         copy_instances();
         sem_v(inst_sem);
         if (error) {
-            LOGERROR("[%s] could not save instance struct\n", instance->instanceId);
-            goto failed_dest;
+            if (error == EUCA_DUPLICATE_ERROR) {
+                // FIXME: Handle this way, ensure deletion after migration, or remove and re-add?
+                LOGINFO("[%s] instance struct already exists (from previous migration?), not adding\n", instance->instanceId);
+            } else {
+                LOGERROR("[%s] could not add instance struct\n", instance->instanceId);
+                goto failed_dest;
+            }
         }
 
         goto out;
