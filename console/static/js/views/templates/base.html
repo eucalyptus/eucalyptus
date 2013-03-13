@@ -1,24 +1,29 @@
 <!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN" "http://www.w3.org/TR/REC-html40/loose.dtd">
 <html><body><div id="volumes-table">
 <div class="dataTables_wrapper" id="volumes_wrapper">
-<div class="table_volumes_header euca-table-header"><span>Manage volumes<div class="help-link"><a href="#">&nbsp;</a></div></span></div>
+<div class="table_volumes_header euca-table-header"><span><%= header %><div class="help-link"><a href="#">&nbsp;</a></div></span></div>
 <div class="table-filter-wrapper clearfix">
 <div id="vol_state-filter" class="euca-table-filter">
-<span class="filter-label">Filter by</span><select id="vol_state-selector"><option value="all">All volumes</option>
-<option value="attached">Attached volumes</option>
-<option value="detached">Detached volumes</option></select>
+<span class="filter-label">Filter by</span><select id="vol_state-selector">
+
+<!-- filterOptions -->
+<% _.each(filterOptions, function(opt, index) { %>
+<option value="<%= opt.value %>"><%= opt.label %></option>
+<% }); %>
+
+</select>
 </div>
 <div class="dataTables_filter" id="volumes_filter">
-<label><input type="text" placeholder="Search volumes"></label><a class="table-refresh" href="#">Refresh</a>
+<label><input type="text" placeholder="<%= searchText %>"></label><a class="table-refresh" href="#">Refresh</a>
 </div>
 </div>
 <div class="clear"></div>
 <div class="table_volumes_top euca-table-length clearfix">
-<div class="euca-table-add"><a id="table-volumes-new" class="button" href="#">Create new volume</a></div>
+<div class="euca-table-add"><a id="table-volumes-new" class="button" href="#"><%= buttonLabel %></a></div>
 <div class="euca-table-extra"></div>
 <div class="euca-table-action actionmenu"><a id="more-actions-volumes" class="button inactive-menu" href="#">More actions</a></div>
 <div class="euca-table-size">
-<span id="table_volumes_count">4 volumes found.</span>&nbsp;Showing:<a href="#" class="show selected">10</a>&nbsp;|&nbsp;<a href="#" class="show">25</a>&nbsp;|&nbsp;<a href="#" class="show">50</a>&nbsp;|&nbsp;<a href="#" class="show">100</a>
+<span id="table_volumes_count"><%= itemsFound %></span>&nbsp;Showing:<a href="#" class="show selected">10</a>&nbsp;|&nbsp;<a href="#" class="show">25</a>&nbsp;|&nbsp;<a href="#" class="show">50</a>&nbsp;|&nbsp;<a href="#" class="show">100</a>
 </div>
 </div>
 <div id="volumes_processing" class="dataTables_processing" style="visibility: hidden;"></div>
@@ -28,35 +33,33 @@
 <th colspan="1" rowspan="1" class="sorting_disabled checkbox-cell">
 <input type="checkbox" id="volumes-check-all">
 </th>
-<th colspan="1" rowspan="1" class="sorting">ID</th>
-<th style="width: 50px;" colspan="1" rowspan="1" class="narrow-cell sorting">Status</th>
-<th colspan="1" rowspan="1" class="centered-cell sorting">Size (GB)</th>
-<th colspan="1" rowspan="1" class="sorting">Attached to Instance</th>
-<th colspan="1" rowspan="1" class="sorting">Snapshot Id</th>
-<th colspan="1" rowspan="1" class="sorting">Availability Zone</th>
-<th colspan="1" rowspan="1" class="sorting_desc">Creation time</th>
+
+<% for(i=1; i < tableHeader.length; i++) {  %>
+<th colspan="1" rowspan="1" class="sorting"><%= tableHeader[i]  %></th>
+<% } %>
+
 </tr></thead>
 
 <tbody>
 
-<% _.each(volumes, function(vol, index) { %>
+<% _.each(collection, function(item, index) { %>
 <tr class="<% if (index % 2 != 0) { %>even<% } else { %>odd<% } %>">
 <td class="checkbox-cell">
         <input type="checkbox">
 </td>
-<td><%= vol.id %></td>
+<td><%= item.id %></td>
 <td class="narrow-cell">
-<% if (_.isEqual(vol.status, "available")) { %>
+<% if (_.isEqual(item.status, "available")) { %>
 	<div class="table-row-status status-available"></div>
 <% } else { %>
 <div class="table-row-status status-in-use"></div>
 <% } %>
 </td>
-<td class="centered-cell"><%= vol.size %></td>
-<td><%= vol.attach_data.instance_id %></td>
-<td><%= vol.snapshot_id %></td>
-<td><%= vol.zone %></td>
-<td><%= vol.create_time %></td>
+<td class="centered-cell"><%= item.size %></td>
+<td><%= item.attach_data.instance_id %></td>
+<td><%= item.snapshot_id %></td>
+<td><%= item.zone %></td>
+<td><%= item.create_time %></td>
 </tr>
 <% }); %>
 

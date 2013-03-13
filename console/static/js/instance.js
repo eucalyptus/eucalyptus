@@ -72,7 +72,7 @@
 	      // Allow the id to be clickable to display the platform data above
 	      // Use CSS 'twist'
 	      "fnRender" : function(oObj){
-                 return eucatableDisplayColumnTypeTwist(oObj.aData.id, oObj.aData.id, 255);
+                 return eucatableDisplayColumnTypeTwist(oObj.aData.display_id, oObj.aData.display_id, 255);
 	      }
             },
             { 

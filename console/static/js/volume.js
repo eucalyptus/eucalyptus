@@ -54,7 +54,7 @@
             },
             {
 	      // Display the id of the volume in the main table 
-	      "mDataProp": "id" 
+	      "mDataProp": "display_id" 
 	    },
             {
 	      // Display the status of the volume in the main table
@@ -76,7 +76,7 @@
 	      "mDataProp": "attach_data.instance_id" },
             { 
 	      // Display the snapshot id of the volume in the main table
-	      "mDataProp": "snapshot_id"
+	      "mDataProp": "display_snapshot_id"
 	    },
             { 
 	      // Display the availibility zone of the volume in the main table

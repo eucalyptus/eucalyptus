@@ -4,7 +4,8 @@ define([
 ], function(EucaCollection, Volume) {
         var Volumes = EucaCollection.extend({
 	        model: Volume,
-	        url: '/ec2?Action=DescribeVolumes'
+	        url: '/ec2?Action=DescribeVolumes',
+		namedColumns: ['id','snapshot_id']
         });
         return Volumes;
 });

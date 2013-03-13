@@ -48,7 +48,7 @@
             },
             { 
               // Display the id of the image in eucatable
-              "mDataProp": "id"
+              "mDataProp": "display_id"
             },
             { 
               // Display the artitecture of the image in eucatable

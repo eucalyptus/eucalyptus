@@ -26,3 +26,5 @@ function AutoScaling ($scope, $http) {
         $scope.results = data.results;
     });
 }
+
+angular.bootstrap($('ng-scope'), ['AutoScaling']);

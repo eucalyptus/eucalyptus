@@ -53,7 +53,7 @@
             },
             { 
 	       // Display the id of the snapshot in the main table
-	       "mDataProp": "id" 
+	       "mDataProp": "display_id" 
 	    },
             {
 	      // Display the status of the snapshot in the main table
@@ -71,7 +71,7 @@
 	    },
             {
 	      // Display the volume id of the snapshot in the main table
-	      "mDataProp": "volume_id"
+	      "mDataProp": "display_volume_id"
 	    },
             {
 	      // Display the description of the snapshot in the main table
