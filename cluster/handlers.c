@@ -2319,16 +2319,18 @@ int refresh_instances(ncMetadata * pMeta, int timeout, int dolock)
                                         rc = find_instanceCacheId(myInstance->instanceId, &srcInstance);
                                         if (!rc) {
                                             if (srcInstance->migration_state == MIGRATION_READY) {
-                                                // Hot diggity.
                                                 LOGDEBUG("[%s] source node %s reports ready to commit migration to %s.\n", myInstance->instanceId, ncOutInsts[j]->migration_src,
                                                          ncOutInsts[j]->migration_dst);
                                                 if (!migration_to_commit) {
                                                     migration_to_commit = EUCA_ZALLOC(1, HOSTNAME_SIZE);
                                                     euca_strncpy(migration_to_commit, ncOutInsts[j]->migration_src, HOSTNAME_SIZE);
                                                 }
+                                            } else if (srcInstance->migration_state == MIGRATION_IN_PROGRESS) {
+                                                LOGDEBUG("[%s] source node %s reports migration to %s in progress.\n", myInstance->instanceId,
+                                                         ncOutInsts[j]->migration_src, ncOutInsts[j]->migration_dst);
                                             } else {
-                                                LOGDEBUG("[%s] source node %s reports NOT ready to commit migration to %s.\n", myInstance->instanceId, ncOutInsts[j]->migration_src,
-                                                         ncOutInsts[j]->migration_dst);
+                                                LOGDEBUG("[%s] source node %s has not yet reported ready to commit migration to %s, despite implicitly being ready.\n",
+                                                         myInstance->instanceId, ncOutInsts[j]->migration_src, ncOutInsts[j]->migration_dst);
                                             }
                                         } else {
                                             LOGERROR("[%s] could not find migration source node %s in the instance cache.\n", myInstance->instanceId, ncOutInsts[j]->migration_src);
@@ -2341,35 +2343,6 @@ int refresh_instances(ncMetadata * pMeta, int timeout, int dolock)
                                     EUCA_FREE(myInstance);
                                     break;
                                 }
-                                /*
-                                // If migration source is ready, check dest.
-                                if (ncOutInsts[j]->migration_state == MIGRATION_READY && !strcmp(resourceCacheStage->resources[i].hostname, ncOutInsts[j]->migration_src)) {
-                                    LOGDEBUG("[%s] source %s reports ready to migrate, checking destination %s...\n", myInstance->instanceId,
-                                             ncOutInsts[j]->migration_src,
-                                             ncOutInsts[j]->migration_dst);
-                                    ccInstance *dstInstance = NULL;
-                                    rc = find_instanceCacheIP(ncOutInsts[j]->migration_dst, &dstInstance);
-                                    if (!rc) {
-                                        if (dstInstance->migration_state == MIGRATION_READY) {
-                                            // Hot diggity.
-                                            LOGDEBUG("[%s] destination %s reports ready to receive migration from %s\n", myInstance->instanceId,
-                                                     ncOutInsts[j]->migration_dst,
-                                                     ncOutInsts[j]->migration_src);
-                                            migration_to_commit = EUCA_ZALLOC(1, HOSTNAME_SIZE);
-                                            euca_strncpy(migration_to_commit, ncOutInsts[j]->migration_src, HOSTNAME_SIZE);
-                                        } else {
-                                            LOGDEBUG("[%s] destination %s reports NOT ready to receive migration from %s\n", myInstance->instanceId,
-                                                     ncOutInsts[j]->migration_dst,
-                                                     ncOutInsts[j]->migration_src);
-                                        }
-                                    } else {
-                                        LOGERROR("could not find %s in instance cache.\n", ncOutInsts[j]->migration_dst);
-                                    }
-                                    EUCA_FREE(dstInstance);
-                                }
-                                */
-
-
                             }
                             // instance info that the CC maintains
                             myInstance->ncHostIdx = i;
