@@ -810,11 +810,13 @@ static void refresh_instance_info(struct nc_state_t *nc, ncInstance * instance)
     case PAUSED:
         // migration-related logic
         if (is_migration_dst(instance)) {
-            if (new_state == PAUSED ) {
+            if (old_state == BOOTING && new_state == PAUSED ) {
                 instance->migration_state = MIGRATION_IN_PROGRESS;
                 LOGINFO("[%s] incoming migration in progress\n", instance->instanceId);
 
-            } else if (new_state == RUNNING || new_state == BLOCKED) {
+            } else if ((old_state == BOOTING || old_state == PAUSED) 
+                       && 
+                       (new_state == RUNNING || new_state == BLOCKED)) {
                 instance->migration_state = NOT_MIGRATING;  // done!
                 LOGINFO("[%s] incoming migration complete\n", instance->instanceId);
 
