@@ -270,17 +270,13 @@
       });
 
      // TEMP LOCATION FOR TAG RESOURCE DIALOG
-      $tmpl = $('html body').find('.templates #instanceTermDlgTmpl').clone();
+      $tmpl = $('html body').find('.templates #resourceTagWidgetTmpl').clone();
       $rendered = $($tmpl.render($.extend($.i18n.map, help_instance)));
       var $tag_dialog = $rendered.children().first();
       var $tag_help = $rendered.children().last();
       this.tagDialog = $tag_dialog.eucadialog({
         id: 'instances-terminate',
-        title: 'Resource Tag',
-        buttons: {
-          'tag': {text: 'Save', click: function() { thisObj._tagResource(); $tag_dialog.eucadialog("close");}},
-          'cancel': {text: dialog_cancel_btn, focus:true, click: function() { $tag_dialog.eucadialog("close");}}
-        },
+        title: 'Add/Edit tags',
         help: {content: $tag_help, url: help_instance.dialog_terminate_content_url},
       });
      // END OF TEMP LOCATION
@@ -949,7 +945,7 @@
       if ( instance.length > 0 ) {
         // Create a widget object for displaying the resource tag information
         var $tagInfo = $('<div>').addClass('resource-tag-table-expanded-instance').addClass('clearfix').euca_resource_tag({resource: 'instance', resource_id: instance, cancelButtonCallback: function(){ thisObj.tagDialog.eucadialog("close"); }, widgetMode: 'edit' });
-        thisObj.tagDialog.eucadialog('addNote','ebs-backed-warning', $tagInfo);   // This line should be adjusted once the right template is created for the resource tag.  030713
+        thisObj.tagDialog.eucadialog('addNote','tag-modification-display-box', $tagInfo);   // This line should be adjusted once the right template is created for the resource tag.  030713
         thisObj.tagDialog.eucadialog('open');
        }
     },

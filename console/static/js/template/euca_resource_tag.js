@@ -401,12 +401,19 @@
      var additionalMessage = $('<div>').addClass('resource-tag-additional-message').attr('id', 'tag-div-additional-message').text("");
      thisObj.element.append(additionalMessage); 
 
+     // ====================================
+     // Display Apply to Auto Scale Checkbox
+     // ====================================
+
+     var autoScaleCheckbox = $('<div>').addClass('resource-tag-auto-scale-checkbox').attr('id', 'tagCheckbox').html('<input type="checkbox"/> Also apply tags to instances in the scaling group');
+     thisObj.element.append(autoScaleCheckbox);
+
      // ===========================
      // ADD SAVE AND CANCEL BUTTONS
      // ===========================
 
      // Add Save and Cancel buttons
-     var saveButton = $('<a>').addClass('button single-tag-button').attr('id', 'tagButton-save').text('Save');
+     var saveButton = $('<a>').addClass('button single-tag-button').attr('id', 'tagButton-save').text('Save changes');
      var cancelButton = $('<a>').addClass('button single-tag-button').attr('id', 'tagButton-cancel').text('Cancel');
      var saveandcancelDiv = $('<div>').addClass('resource-tag-save-cancel-buttons');
      saveandcancelDiv.append(saveButton);
