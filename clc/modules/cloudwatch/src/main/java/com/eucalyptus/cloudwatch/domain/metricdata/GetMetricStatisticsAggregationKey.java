@@ -8,7 +8,6 @@ import com.eucalyptus.cloudwatch.domain.metricdata.MetricEntity.Units;
 public class GetMetricStatisticsAggregationKey {
 
   private String accountId;
-  private String userId;
   private String namespace;
   private String metricName;
   private Units units;
@@ -19,7 +18,6 @@ public class GetMetricStatisticsAggregationKey {
   public GetMetricStatisticsAggregationKey(MetricEntity me, Date startTime,
       Integer period) {
     this.accountId = me.getAccountId();
-    this.userId = me.getUserId();
     this.namespace = me.getNamespace();
     this.metricName = me.getMetricName();
     this.units = me.getUnits();
@@ -42,7 +40,6 @@ public class GetMetricStatisticsAggregationKey {
     result = prime * result + ((namespace == null) ? 0 : namespace.hashCode());
     result = prime * result + ((timestamp == null) ? 0 : timestamp.hashCode());
     result = prime * result + ((units == null) ? 0 : units.hashCode());
-    result = prime * result + ((userId == null) ? 0 : userId.hashCode());
     return result;
   }
 
@@ -83,11 +80,6 @@ public class GetMetricStatisticsAggregationKey {
     } else if (!timestamp.equals(other.timestamp))
       return false;
     if (units != other.units)
-      return false;
-    if (userId == null) {
-      if (other.userId != null)
-        return false;
-    } else if (!userId.equals(other.userId))
       return false;
     return true;
   }

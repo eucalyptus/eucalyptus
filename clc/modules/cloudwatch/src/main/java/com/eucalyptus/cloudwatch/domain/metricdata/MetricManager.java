@@ -1,10 +1,8 @@
 package com.eucalyptus.cloudwatch.domain.metricdata;
 
 import java.util.ArrayList;
-import java.util.Calendar;
 import java.util.Collection;
 import java.util.Date;
-import java.util.GregorianCalendar;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
@@ -15,7 +13,6 @@ import javax.persistence.EntityTransaction;
 
 import org.apache.log4j.Logger;
 import org.hibernate.Criteria;
-import org.hibernate.criterion.Disjunction;
 import org.hibernate.criterion.Restrictions;
 
 import com.eucalyptus.cloudwatch.domain.dimension.DimensionEntity;
@@ -26,7 +23,6 @@ import com.eucalyptus.cloudwatch.hashing.HashUtils;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.records.Logs;
 import com.google.common.collect.ArrayListMultimap;
-import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Multimap;
@@ -168,7 +164,7 @@ public class MetricManager {
   }
 
 
-  public static Collection<MetricStatistics> getMetricStatistics(String accountId, String userId,
+  public static Collection<MetricStatistics> getMetricStatistics(String accountId, 
       String metricName, String namespace, Map<String, String> dimensionMap,
       MetricType metricType, Units units, Date startTime, Date endTime, Integer period) {
     if (dimensionMap == null) {
@@ -210,9 +206,6 @@ public class MetricManager {
     if (accountId == null) {
       throw new IllegalArgumentException("accountId must not be null");
     }
-    if (userId == null) {
-      throw new IllegalArgumentException("userId must not be null");
-    }
     if (metricName == null) {
       throw new IllegalArgumentException("metricName must not be null");
     }
@@ -226,7 +219,6 @@ public class MetricManager {
     try {
       Criteria criteria = Entities.createCriteria(metricEntityClass);
       criteria = criteria.add(Restrictions.eq("accountId", accountId));
-      criteria = criteria.add(Restrictions.eq("userId", userId));
       criteria = criteria.add(Restrictions.eq("metricName", metricName));
       criteria = criteria.add(Restrictions.eq("namespace", namespace));
       criteria = criteria.add(Restrictions.lt("timestamp", endTime));

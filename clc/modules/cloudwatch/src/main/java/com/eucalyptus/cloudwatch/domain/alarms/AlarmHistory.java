@@ -5,7 +5,6 @@ import java.util.Date;
 import javax.persistence.Column;
 import javax.persistence.EnumType;
 import javax.persistence.Enumerated;
-import javax.persistence.Lob;
 import javax.persistence.PersistenceContext;
 import javax.persistence.Table;
 
@@ -13,10 +12,7 @@ import org.apache.log4j.Logger;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
 import org.hibernate.annotations.Entity;
-import org.hibernate.annotations.Type;
 
-import com.eucalyptus.cloudwatch.domain.dimension.AbstractPersistentWithDimensions;
-import com.eucalyptus.cloudwatch.domain.metricdata.MetricEntity.MetricType;
 import com.eucalyptus.entities.AbstractPersistent;
 
 @Entity @javax.persistence.Entity
@@ -94,9 +90,7 @@ public class AlarmHistory extends AbstractPersistent {
   private String accountId;
   @Column( name = "alarm_name" , nullable = false)
   private String alarmName; 
-  @Column( name = "history_data" )
-  @Lob
-  @Type(type="org.hibernate.type.StringClobType")  
+  @Column( name = "history_data", length = 4095 )
   private String historyData;
 
   @Column(name = "history_item_type", nullable = false)
