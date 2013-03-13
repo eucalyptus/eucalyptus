@@ -90,6 +90,24 @@ public class LoadBalancerBackendInstance extends UserMetadata<LoadBalancerBacken
 		instance.setBackendState(state);
 		return instance;
 	}
+
+	public static LoadBalancerBackendInstance named(final OwnerFullName userName, final LoadBalancer lb, final String vmId){
+		LoadBalancerBackendInstance instance = new LoadBalancerBackendInstance();
+		instance.setOwner(userName);
+		instance.setDisplayName(vmId);
+		instance.setState(null);
+		instance.loadbalancer = lb;
+		return instance;
+	}
+	
+	public static LoadBalancerBackendInstance named(final OwnerFullName userName, final LoadBalancer lb){
+		LoadBalancerBackendInstance instance = new LoadBalancerBackendInstance();
+		instance.setOwner(userName);
+		instance.setDisplayName(null);
+		instance.setState(null);
+		instance.loadbalancer = lb;
+		return instance;
+	}
 	
 	public static LoadBalancerBackendInstance named(final OwnerFullName userName, final String vmId){
 		LoadBalancerBackendInstance instance = new LoadBalancerBackendInstance();
@@ -112,6 +130,15 @@ public class LoadBalancerBackendInstance extends UserMetadata<LoadBalancerBacken
 		instance.setOwner(null);
 		instance.setState(null);
 		instance.setDisplayName(vmId);
+		return instance;
+	}
+	
+	public static LoadBalancerBackendInstance named(final LoadBalancer lb, final String vmId){
+		LoadBalancerBackendInstance instance = new LoadBalancerBackendInstance();
+		instance.setOwner(null);
+		instance.setState(null);
+		instance.setDisplayName(vmId);
+		instance.loadbalancer = lb;
 		return instance;
 	}
 	

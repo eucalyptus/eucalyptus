@@ -142,7 +142,7 @@ public class LoadBalancingService {
 			  String state = parts[1];
 			  final EntityTransaction db = Entities.get( LoadBalancerBackendInstance.class );
 		 	  try{/// TODO: SPARK: this is wrong; IAM roles should authenticate the user
-		 		  LoadBalancerBackendInstance sample = LoadBalancerBackendInstance.named(instanceId);
+		 		  LoadBalancerBackendInstance sample = LoadBalancerBackendInstance.named(lb, instanceId);
 		 		  LoadBalancerBackendInstance found = Entities.uniqueResult(sample);
 		 		  if (state.equals(LoadBalancerBackendInstance.STATE.InService.name()) || 
 		 				  state.equals(LoadBalancerBackendInstance.STATE.OutOfService.name())){
@@ -835,7 +835,7 @@ public class LoadBalancingService {
  			String instId = inst.getInstanceId();
  			try{
  				LoadBalancerBackendInstance found = 
- 						Entities.uniqueResult(LoadBalancerBackendInstance.named(ownerFullName, instId));
+ 						Entities.uniqueResult(LoadBalancerBackendInstance.named(ownerFullName, lb, instId));
  				instancesFound.add(found);
  			}catch(NoSuchElementException ex){
  				;
@@ -847,7 +847,7 @@ public class LoadBalancingService {
  	}else{
  		final EntityTransaction db = Entities.get( LoadBalancerBackendInstance.class );
 		try{
-			instancesFound = Entities.query(LoadBalancerBackendInstance.named(ownerFullName));
+			instancesFound = Entities.query(LoadBalancerBackendInstance.named(ownerFullName, lb));
 			db.commit();
  		}catch(NoSuchElementException ex){
  			db.rollback();
