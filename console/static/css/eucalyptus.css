@@ -732,6 +732,33 @@ input[type='text'].medium-textinput {
   box-shadow: 0 1px 2px rgba(0,0,0,0.7), inset 0 1px 0 rgba(255,255,255,0.30);
 }
 
+.button[disabled], .button[disabled]:hover
+{
+  color: #eee;
+  background: #c8c8c8 no-repeat 0 0;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.7), inset 0 1px 0 rgba(255,255,255,0.30);
+}
+
+#wizardContent {
+    margin-bottom: 2em;
+}
+
+#wizardNavButtons {
+    float : right;
+}
+
+#wizardNav {
+    margin-left: 1em;
+}
+
+.wizardProblem {
+    padding-left: 2em;
+    padding-right: 2em;
+    padding-top: 1em;
+    padding-bottom: 1em;
+    margin-right: 1em;
+}
+
 ul.ui-autocomplete {
   background: #f3f6f9;
   border-radius: 5px;

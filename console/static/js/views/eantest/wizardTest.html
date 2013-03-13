@@ -1,0 +1,94 @@
+<html>
+    <head>
+        <title>Wizard Test</title>
+        <style type="text/css" title="currentStyle">
+            @import "/lib/jquery.datatables-1.8.2.css";
+            @import "/lib/jquery-ui-1.9.1.custom.css";
+            @import "/lib/jquery.qtip.min.css";
+            @import "/css/eucalyptus.css";
+        </style>
+    </head>
+    <body>
+        <div class="euca-container">
+            <div class="euca-main-outercontainer">
+                <div class="inner-container">
+                    <h1>Wizard Demo</h1>
+
+                    <div id="wizard" ></div>
+                </div>
+            </div>
+        </div>
+        <script type="text/javascript" language="javascript" src="wizard.js"></script> 
+        <script type="text/javascript" language="javascript" src="/lib/jquery-1.8.2.js"></script> 
+        <script type="text/javascript" language="javascript" src="/lib/jquery-ui-1.9.1.custom.js"></script>
+
+        <script type="text/javascript" language="javascript" src="/js/underscore-1.4.3.js"></script>
+        <script type="text/javascript" language="javascript" src="/js/backbone-0.9.10.js"></script>
+        <script type="text/template" id="search_template">
+            <label>Search</label>
+            <input type="text" id="search_input" />
+            <input type="button" id="search_button" value="Search" />
+        </script>        
+
+        <script type="text/javascript">
+
+            function pageContent ( index ) {
+                return '<div class="content-box inner-box"><h3>Page ' + index +
+                        '</h3>&nbsp;<p>Hey hey, this is page ' + index + '</p></div>';
+            }
+
+            var Page1 = Backbone.View.extend ( {
+                initialize: function () {
+                    this.render ();
+                },
+                render: function () {
+                    $ ( this.el ).append ( '<span>' ).html ( pageContent ( 1 ) )
+                }
+            } );
+
+            var Page2 = Backbone.View.extend ( {
+                initialize: function () {
+                    this.render ();
+                },
+                render: function () {
+                    $ ( this.el ).append ( '<span>' ).html ( pageContent ( 2 ) )
+                }
+            } );
+
+            var Page3 = Backbone.View.extend ( {
+                initialize: function () {
+                    this.render ();
+                },
+                render: function () {
+                    $ ( this.el ).append ( '<span>' ).html ( pageContent ( 3 ) )
+                }
+            } );
+
+            var Page4 = Backbone.View.extend ( {
+                initialize: function () {
+                    this.render ();
+                },
+                render: function () {
+                    $ ( this.el ).append ( '<span>' ).html ( pageContent ( 4 ) )
+                }
+            } );
+
+            var options = {
+                canFinish: function ( position, problems ) {
+                    if (position === 2) {
+                        problems.push ( "You can't finish from step 3!" )
+                        problems.push ( "No, no, no!" )
+                        return false;
+                    }
+                    return true;
+                },
+                finish: function () {
+                    alert ( "Congratulations!  You finished a pointless wizard!" )
+                }
+            }
+
+            var wiz = new Wizard ().add ( Page1 ).add ( Page2 ).add ( Page3 ).add ( Page4 );
+            var wv = wiz.makeView ( {el: $ ( '#wizard' )}, options );
+        </script>
+    </body>
+</html>

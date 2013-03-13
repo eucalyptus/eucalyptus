@@ -1,0 +1,24 @@
+{
+    "name": "jstests",
+    "description": "Javascript tests using Vows and Node.js",
+    "version": "1.0.0",
+    "main": "jstests.js",
+    "author": {
+        "name": "Tim Boudreau",
+        "email": "niftiness@gmail.com"
+    },
+    "keywords": ["tests", "eucalyptus"],
+    "licenses": {
+        "type": "none"
+    },
+    "repository": {
+        "type": "git",
+        "url": "ssh://tim@jp.brainfood.com/opt/new-eucalyptus"
+    },
+    "dependencies": {
+        "vows": ">=0.7.0"
+    },
+    "license": {
+        "type": "gplv3"
+    }
+}

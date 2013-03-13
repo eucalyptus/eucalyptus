@@ -6,10 +6,12 @@
 *.pyo
 */generated
 .DS_Store
+.nbrun
 .settings/grze_localhost.launch
 .settings/grze_office.launch
 .sw*
 .*.sw*
+console/jstests/node_modules/*
 autom4te.cache
 clc/bin
 clc/.classpath.bak
