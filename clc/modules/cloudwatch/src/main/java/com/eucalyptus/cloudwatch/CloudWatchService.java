@@ -5,11 +5,17 @@ import java.util.Collection;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 
 import javax.annotation.Nullable;
 
 import org.apache.log4j.Logger;
 
+import com.eucalyptus.auth.Permissions;
+import com.eucalyptus.auth.policy.PolicySpec;
 import com.eucalyptus.cloudwatch.domain.alarms.AlarmEntity;
 import com.eucalyptus.cloudwatch.domain.alarms.AlarmEntity.ComparisonOperator;
 import com.eucalyptus.cloudwatch.domain.alarms.AlarmEntity.StateValue;
@@ -17,9 +23,8 @@ import com.eucalyptus.cloudwatch.domain.alarms.AlarmEntity.Statistic;
 import com.eucalyptus.cloudwatch.domain.alarms.AlarmHistory;
 import com.eucalyptus.cloudwatch.domain.alarms.AlarmHistory.HistoryItemType;
 import com.eucalyptus.cloudwatch.domain.alarms.AlarmManager;
+import com.eucalyptus.cloudwatch.domain.alarms.AlarmStateEvaluationDispatcher;
 import com.eucalyptus.cloudwatch.domain.dimension.DimensionEntity;
-import com.eucalyptus.auth.Permissions;
-import com.eucalyptus.auth.policy.PolicySpec;
 import com.eucalyptus.cloudwatch.domain.listmetrics.ListMetric;
 import com.eucalyptus.cloudwatch.domain.listmetrics.ListMetricManager;
 import com.eucalyptus.cloudwatch.domain.metricdata.MetricDataQueue;
@@ -27,11 +32,11 @@ import com.eucalyptus.cloudwatch.domain.metricdata.MetricEntity.MetricType;
 import com.eucalyptus.cloudwatch.domain.metricdata.MetricEntity.Units;
 import com.eucalyptus.cloudwatch.domain.metricdata.MetricManager;
 import com.eucalyptus.cloudwatch.domain.metricdata.MetricStatistics;
+import com.eucalyptus.cloudwatch.domain.metricdata.MetricUtils;
 import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.OwnerFullName;
-import com.eucalyptus.util.RestrictedTypes;
 import com.google.common.base.Function;
 import com.google.common.collect.Collections2;
 import com.google.common.collect.Lists;
@@ -39,6 +44,14 @@ import com.google.common.collect.Maps;
 
 
 public class CloudWatchService {
+  
+  static {
+    // TODO: put this somewhere else...
+    ExecutorService fixedThreadPool = Executors.newFixedThreadPool(5); // TODO: make this configurable
+    ScheduledExecutorService alarmWorkerService = Executors.newSingleThreadScheduledExecutor();
+    alarmWorkerService.scheduleAtFixedRate(new AlarmStateEvaluationDispatcher(fixedThreadPool), 0, 1, TimeUnit.MINUTES);
+  }
+  
   private static final Logger LOG = Logger.getLogger(CloudWatchService.class);
   public PutMetricAlarmResponseType putMetricAlarm(PutMetricAlarmType request) throws EucalyptusCloudException {
     PutMetricAlarmResponseType reply = request.getReply( );
@@ -179,7 +192,7 @@ public class CloudWatchService {
         metricAlarm.setAlarmConfigurationUpdatedTimestamp(alarmEntity.getAlarmConfigurationUpdatedTimestamp());
         metricAlarm.setAlarmDescription(alarmEntity.getAlarmDescription());
         metricAlarm.setAlarmName(alarmEntity.getAlarmName());
-        metricAlarm.setComparisonOperator(alarmEntity.getComparisionOperator() == null ? null : alarmEntity.getComparisionOperator().toString());
+        metricAlarm.setComparisonOperator(alarmEntity.getComparisonOperator() == null ? null : alarmEntity.getComparisonOperator().toString());
         Dimensions dimensions = new Dimensions();
         dimensions.setMember(Lists.newArrayList(Collections2.<DimensionEntity, Dimension>transform(alarmEntity.getDimensions(), ListMetricDimensionFunction.INSTANCE)));
         metricAlarm.setDimensions(dimensions);
@@ -283,7 +296,7 @@ public class CloudWatchService {
     boolean wantsSampleCount = statistics.getMember().contains("SampleCount");
     boolean wantsMaximum = statistics.getMember().contains("Maximum");
     boolean wantsMinimum = statistics.getMember().contains("Minimum");
-    Collection<MetricStatistics> metrics = MetricManager.getMetricStatistics(ownerFullName.getAccountNumber(), ownerFullName.getUserId(), metricName, namespace, dimensionMap, MetricType.Custom, units, startTime, endTime, period);
+    Collection<MetricStatistics> metrics = MetricManager.getMetricStatistics(ownerFullName.getAccountNumber(), metricName, namespace, dimensionMap, MetricType.Custom, units, startTime, endTime, period);
     reply.getGetMetricStatisticsResult().setLabel(metricName);
     ArrayList<Datapoint> datapoints = Lists.newArrayList();
     for (MetricStatistics metricStatistics: metrics) {
@@ -303,7 +316,7 @@ public class CloudWatchService {
         datapoint.setMinimum(metricStatistics.getSampleMin());
       }
       if (wantsAverage) {
-        datapoint.setAverage(average(metricStatistics.getSampleSum(), metricStatistics.getSampleSize()));
+        datapoint.setAverage(MetricUtils.average(metricStatistics.getSampleSum(), metricStatistics.getSampleSize()));
       }
       datapoints.add(datapoint);
     }
@@ -315,10 +328,6 @@ public class CloudWatchService {
     return reply;
   }
 
-  private Double average(Double sum, Double size) {
-    if (Math.abs(size) < 0.9) return 0.0; // TODO: make sure size is really an int
-    return sum/size;
-  }
 
   public DisableAlarmActionsResponseType disableAlarmActions(DisableAlarmActionsType request) throws EucalyptusCloudException {
     DisableAlarmActionsResponseType reply = request.getReply( );

@@ -73,11 +73,11 @@ public class AlarmEntity extends AbstractPersistentWithDimensions {
   public void setAlarmName(String alarmName) {
     this.alarmName = alarmName;
   }
-  public ComparisonOperator getComparisionOperator() {
-    return comparisionOperator;
+  public ComparisonOperator getComparisonOperator() {
+    return comparisonOperator;
   }
-  public void setComparisionOperator(ComparisonOperator comparisionOperator) {
-    this.comparisionOperator = comparisionOperator;
+  public void setComparisonOperator(ComparisonOperator comparisonOperator) {
+    this.comparisonOperator = comparisonOperator;
   }
   public Integer getEvaluationPeriods() {
     return evaluationPeriods;
@@ -127,6 +127,12 @@ public class AlarmEntity extends AbstractPersistentWithDimensions {
   public void setStateUpdatedTimestamp(Date stateUpdatedTimestamp) {
     this.stateUpdatedTimestamp = stateUpdatedTimestamp;
   }
+  public Date getLastActionsUpdatedTimestamp() {
+    return lastActionsUpdatedTimestamp;
+  }
+  public void setLastActionsUpdatedTimestamp(Date lastActionsUpdatedTimestamp) {
+    this.lastActionsUpdatedTimestamp = lastActionsUpdatedTimestamp;
+  }
   public StateValue getStateValue() {
     return stateValue;
   }
@@ -152,10 +158,10 @@ public class AlarmEntity extends AbstractPersistentWithDimensions {
     this.threshold = threshold;
   }
   public String getResourceName() {
-    return resourceName;
-  }
-  public void setResourceName(String resourceName) {
-    this.resourceName = resourceName;
+    return String.format(
+        "arn:aws:cloudwatch::%1s:alarm:%2s",
+        getAccountId(),
+        getAlarmName() );
   }
 
   @Column(name="alarm_name", nullable = false)
@@ -163,7 +169,7 @@ public class AlarmEntity extends AbstractPersistentWithDimensions {
 
   @Column(name = "comparison_operator", nullable = false)
   @Enumerated(EnumType.STRING)
-  private ComparisonOperator comparisionOperator;
+  private ComparisonOperator comparisonOperator;
 
   @Column(name = "evaluation_periods", nullable = false)
   private Integer evaluationPeriods;
@@ -181,18 +187,17 @@ public class AlarmEntity extends AbstractPersistentWithDimensions {
   @Column(name = "period", nullable = false)
   private Integer period;
 
-  @Column( name = "state_reason" )
-  @Lob
-  @Type(type="org.hibernate.type.StringClobType")  
+  @Column( name = "state_reason", length = 1023)
   private String stateReason;
 
-  @Column( name = "state_reason_data" )
-  @Lob
-  @Type(type="org.hibernate.type.StringClobType")  
+  @Column( name = "state_reason_data", length =  4000)
   private String stateReasonData;
   
   @Column(name = "state_updated_timestamp", nullable = false)
   private Date stateUpdatedTimestamp;
+
+  @Column(name = "last_actions_executed_timestamp", nullable = false)
+  private Date lastActionsUpdatedTimestamp;
 
   @Column(name = "state_value", nullable = false)
   @Enumerated(EnumType.STRING)
@@ -209,9 +214,6 @@ public class AlarmEntity extends AbstractPersistentWithDimensions {
   @Column(name = "threshold", nullable = false)
   private Double threshold;
 
-  @Column(name = "resource_name")//, nullable = false)
-  private String resourceName;
-  
   public enum ComparisonOperator {
     GreaterThanOrEqualToThreshold,
     GreaterThanThreshold,

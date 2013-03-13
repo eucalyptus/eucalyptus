@@ -10,6 +10,7 @@ import java.util.TreeSet;
 
 import javax.persistence.EntityTransaction;
 
+import org.apache.log4j.Logger;
 import org.hibernate.Criteria;
 import org.hibernate.criterion.Junction;
 import org.hibernate.criterion.Restrictions;
@@ -19,14 +20,13 @@ import com.eucalyptus.cloudwatch.domain.alarms.AlarmEntity.StateValue;
 import com.eucalyptus.cloudwatch.domain.alarms.AlarmEntity.Statistic;
 import com.eucalyptus.cloudwatch.domain.alarms.AlarmHistory.HistoryItemType;
 import com.eucalyptus.cloudwatch.domain.dimension.DimensionEntity;
-import com.eucalyptus.cloudwatch.domain.listmetrics.ListMetric;
 import com.eucalyptus.cloudwatch.domain.metricdata.MetricEntity.MetricType;
 import com.eucalyptus.cloudwatch.domain.metricdata.MetricEntity.Units;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.records.Logs;
 
 public class AlarmManager {
-
+  private static final Logger LOG = Logger.getLogger(AlarmManager.class);
   public static void putMetricAlarm(String accountId, Boolean actionsEnabled,
       Collection<String> alarmActions, String alarmDescription,
       String alarmName, ComparisonOperator comparisonOperator,
@@ -58,7 +58,7 @@ public class AlarmManager {
       alarmEntity.setActionsEnabled(actionsEnabled);
       alarmEntity.setAlarmActions(alarmActions);
       alarmEntity.setAlarmDescription(alarmDescription);
-      alarmEntity.setComparisionOperator(comparisonOperator);
+      alarmEntity.setComparisonOperator(comparisonOperator);
       TreeSet<DimensionEntity> dimensions = new TreeSet<DimensionEntity>();
       for (Map.Entry<String,String> entry: dimensionMap.entrySet()) {
         DimensionEntity d = new DimensionEntity();
@@ -83,6 +83,8 @@ public class AlarmManager {
         alarmEntity.setStateValue(StateValue.INSUFFICIENT_DATA);
         alarmEntity.setStateReason("Unchecked: Initial alarm creation");
         alarmEntity.setStateUpdatedTimestamp(now);
+        // TODO: revisit (we are not firing actions on alarm creation, but may after one period)
+        alarmEntity.setLastActionsUpdatedTimestamp(now); 
         String historyData = "JSON DATA (TODO)"; // TODO:
         AlarmManager.addAlarmHistoryItem(accountId, alarmName, historyData, 
             HistoryItemType.ConfigurationUpdate, "Alarm \"" + alarmName + "\" created", now);
@@ -102,7 +104,7 @@ public class AlarmManager {
     }
   }
 
-  private static void addAlarmHistoryItem(String accountId, String alarmName,
+  static void addAlarmHistoryItem(String accountId, String alarmName,
       String historyData, HistoryItemType historyItemType, String historySummary,
       Date now) {
     if (now == null) now = new Date();
@@ -235,16 +237,10 @@ public class AlarmManager {
       }
       StateValue oldStateValue = alarmEntity.getStateValue();
       if (stateValue != oldStateValue) {
-        alarmEntity.setStateReason(stateReason);
-        alarmEntity.setStateReasonData(stateReasonData);
-        alarmEntity.setStateValue(stateValue);
-        Date now = new Date();
-        alarmEntity.setStateUpdatedTimestamp(now);
-        alarmEntity.setAlarmConfigurationUpdatedTimestamp(now);
-        String historyData = "JSON DATA (TODO)"; // TODO:
-        AlarmManager.addAlarmHistoryItem(accountId, alarmName, historyData, 
-            HistoryItemType.StateUpdate, "Alarm updated from " + oldStateValue + " to " + stateValue, now);
-        // TODO: act on these items...(maybe make a generic function to do so)
+        Date evaluationDate = new Date();
+        AlarmState newState = createAlarmState(stateValue, stateReason, stateReasonData);
+        AlarmManager.changeAlarmState(alarmEntity, newState, evaluationDate);
+        AlarmManager.executeActions(alarmEntity, newState, true, evaluationDate);
       }
       db.commit();
     } catch (RuntimeException ex) {
@@ -402,5 +398,81 @@ public class AlarmManager {
         db.rollback();
     }
     return results;
+  }
+
+  static void changeAlarmState(AlarmEntity alarmEntity, AlarmState newState, Date now) {
+    LOG.info("Updating alarm " + alarmEntity.getAlarmName() + " from " + alarmEntity.getStateValue() + " to " + newState.getStateValue());
+    alarmEntity.setStateUpdatedTimestamp(now);
+    String historyData = "JSON DATA (TODO)"; // TODO:
+    AlarmManager.addAlarmHistoryItem(alarmEntity.getAccountId(), alarmEntity.getAlarmName(), historyData, 
+        HistoryItemType.StateUpdate, " Alarm updated from " + alarmEntity.getStateValue() + " to " + newState.getStateValue(), now);
+    alarmEntity.setStateReason(newState.getStateReason());
+    alarmEntity.setStateReasonData(newState.getStateReasonData());
+    alarmEntity.setStateValue(newState.getStateValue());
+    alarmEntity.setStateUpdatedTimestamp(now);
+  }
+
+
+  static void executeActions(AlarmEntity alarmEntity, AlarmState state,
+      boolean stateJustChanged, Date now) {
+    if (alarmEntity.getActionsEnabled()) {
+      Collection<String> actions = AlarmUtils.getActionsByState(alarmEntity, state);
+      for (String action: actions) {
+        // always execute autoscaling actions, but others only on state change...
+        if (action.startsWith("arn:aws:autoscaling:") || stateJustChanged) {
+          LOG.info("Executing alarm " + alarmEntity.getAlarmName() + " action " + action);
+          // TODO: really execute the actions...
+          String historyData = "JSON DATA (TODO)"; // TODO:
+          AlarmManager.addAlarmHistoryItem(alarmEntity.getAccountId(), alarmEntity.getAlarmName(), historyData, 
+              HistoryItemType.Action, " Successfully executed action " + action, now);
+        }
+      }
+    }
+    alarmEntity.setLastActionsUpdatedTimestamp(new Date());
+  }
+
+  private static String creatStateReasonData(StateValue stateValue,
+      List<Double> dataPoints,
+      ComparisonOperator comparisonOperator, Double threshold, String stateReason) {
+    String stateReasonData = "JSON (TODO)";
+    return stateReasonData;
+  }
+  
+  private static String createStateReason(StateValue stateValue, List<Double> dataPoints,
+      ComparisonOperator comparisonOperator, Double threshold) {
+    String stateReason = null;
+    if (stateValue == StateValue.INSUFFICIENT_DATA) {
+      stateReason = "Insufficient Data: " + dataPoints.size() +
+          AlarmUtils.matchSingularPlural(dataPoints.size(), " datapoint was ", " datapoints were ") +
+          "unknown.";
+    } else {
+      stateReason = "Threshold Crossed: " + dataPoints.size() + 
+          AlarmUtils.matchSingularPlural(dataPoints.size(), " datapoint ", " datapoints ") +
+          AlarmUtils.makeDoubleList(dataPoints) + 
+          AlarmUtils.matchSingularPlural(dataPoints.size(), " was ", " were ") +
+          (stateValue == StateValue.OK ? " not " : "") + 
+          AlarmUtils.comparisonOperatorString(comparisonOperator) + 
+          " the threshold (" + threshold + ").";
+    }
+    return stateReason;
+  }
+
+  static AlarmState createAlarmState(StateValue stateValue,
+      List<Double> dataPoints,
+      ComparisonOperator comparisonOperator, Double threshold) {
+    String stateReason = createStateReason(stateValue, dataPoints, comparisonOperator, threshold);
+    return createAlarmState(stateValue, dataPoints, comparisonOperator, threshold, stateReason);
+  }
+  
+  static AlarmState createAlarmState(StateValue stateValue,
+      List<Double> dataPoints,
+      ComparisonOperator comparisonOperator, Double threshold, String stateReason) {
+    String stateReasonData = creatStateReasonData(stateValue, dataPoints, comparisonOperator, threshold, stateReason);
+    return new AlarmState(stateValue, stateReason, stateReasonData);
+  }
+
+  private static AlarmState createAlarmState(StateValue stateValue,
+      String stateReason, String stateReasonData) {
+    return new AlarmState(stateValue, stateReason, stateReasonData);
   }
 }

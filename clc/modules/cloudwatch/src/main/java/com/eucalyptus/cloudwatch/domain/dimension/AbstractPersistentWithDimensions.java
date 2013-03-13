@@ -3,6 +3,8 @@ package com.eucalyptus.cloudwatch.domain.dimension;
 import java.lang.reflect.Method;
 import java.util.Collection;
 import java.util.Iterator;
+import java.util.Map;
+import java.util.TreeMap;
 import java.util.TreeSet;
 
 import javax.persistence.Column;
@@ -31,6 +33,14 @@ public class AbstractPersistentWithDimensions extends AbstractPersistent {
 			}
 		}
 		return dimensions;
+	}
+	
+	public Map<String, String> getDimensionMap() {
+    TreeMap<String, String> dimensionMap = new TreeMap<String, String>();
+    for (DimensionEntity entity: getDimensions()) {
+      dimensionMap.put(entity.getName(), entity.getValue());
+    }
+    return dimensionMap;
 	}
 	/**
 	 * Sets all dimensions.  This method copies the input parameter, do not lazily load it.
