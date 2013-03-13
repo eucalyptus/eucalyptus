@@ -23,23 +23,32 @@
     options : {  
       refresh_interval_sec : REFRESH_INTERVAL_SEC,
       max_refresh_attempt : 3,
-      endpoints: [{name:'instance', url: '/ec2?Action=DescribeInstances'},
-                  {name:'image', url: '/ec2?Action=DescribeImages'+IMG_OPT_PARAMS},
-                  {name:'volume', url: '/ec2?Action=DescribeVolumes'},
-                  {name:'snapshot', url: '/ec2?Action=DescribeSnapshots'},
-                  {name:'eip', url: '/ec2?Action=DescribeAddresses'},
-                  {name:'keypair', url: '/ec2?Action=DescribeKeyPairs'},
-                  {name:'sgroup', url: '/ec2?Action=DescribeSecurityGroups'},
-                  {name:'zone', url: '/ec2?Action=DescribeAvailabilityZones'}
+      endpoints: [{name:'summary', type:'dash', url: '/ec2?Action=GetDashSummary'},
+                  {name:'instance', type:'instances', url: '/ec2?Action=DescribeInstances'},
+                  //{name:'image', type:'images', url: '/ec2?Action=DescribeImages&Owner=self'},
+                  {name:'image', type:'images', url: '/ec2?Action=DescribeImages'},
+                  {name:'volume', type:'volumes', url: '/ec2?Action=DescribeVolumes'},
+                  {name:'snapshot', type:'snapshots', url: '/ec2?Action=DescribeSnapshots'},
+                  {name:'eip', type:'addresses', url: '/ec2?Action=DescribeAddresses'},
+                  {name:'keypair', type:'keypairs', url: '/ec2?Action=DescribeKeyPairs'},
+                  {name:'sgroup', type:'groups', url: '/ec2?Action=DescribeSecurityGroups'},
+                  {name:'zone', type:'zones', url: '/ec2?Action=DescribeAvailabilityZones'},
+                  {name:'tag', type:'tags', url: '/ec2?Action=DescribeTags'},
+                  {name:'bucket', type:'buckets', url: '/s3?Action=DescribeBuckets'},
+                  {name:'balancer', type:'balancers', url: '/elb?Action=DescribeLoadBalancers'},
+                  {name:'scalinggrp', type:'scalinggrps', url: '/autoscaling?Action=DescribeAutoScalingGroups'},
+                  {name:'scalinginst', type:'scalinginsts', url: '/autoscaling?Action=DescribeAutoScalingInstances'}
       ], 
     },
-    _data : {instance:null, image:null, volume:null, snapshot:null, eip:null, keypair: null, sgroup: null, zone: null},
+//    _data : {summary:[], instance:null, image:null, volume:null, snapshot:null, eip:null, keypair: null, sgroup: null, zone: null, tag: null, bucket: null, balancer: null, scalinggrp: null, scalinginst: null},
+    _data : {summary:[], instance:null, image:null, volume:null, snapshot:null, eip:null, keypair: null, sgroup: null, zone: null, tag: null, bucket:null},
     _callbacks : {}, 
     _listeners : {},
     _init : function(){ },
     _numPending : 0,
     _enabled : true,
     _errorCode : null, // the http status code of the latest response
+    _data_needs : null, // if this is set, only resources listed will be fetched from the proxy
     _create : function(){
       var thisObj = this;
       
@@ -49,6 +58,27 @@
         thisObj._callbacks[name] = {callback: function(){
          if(!thisObj._enabled || thisObj.countPendingReq() > MAX_PENDING_REQ ) {
            return;
+         }
+         if (thisObj._data_needs && thisObj._data_needs.indexOf(ep.type) == -1) {
+           return;
+         }
+         // don't skip the read if data cache is empty
+         if(thisObj._data[name] != null) {
+            // however, if we have data, should we read it again?
+
+            // if summary doesn't contain this resource name, skip the update
+             if (name != 'summary') {
+//               console.log('should pull '+name+": "+thisObj._data['summary'].results[name]);
+//               if (thisObj._data['summary'].results[name] == undefined) {
+                 // still need to hit the listeners
+//                 if(thisObj._listeners[name] && thisObj._listeners[name].length >0) {
+//                   $.each(thisObj._listeners[name], function (idx, callback){
+//                     callback['callback'].apply(thisObj);
+//                   });
+//                 }
+//                 return;
+//               }
+             }
          }
          $.ajax({
            type:"POST",
@@ -67,6 +97,7 @@
                  lastupdated: new Date(),
                  results: data.results,
                }
+               //console.log(data.results.length+" "+name+" returned, data.length:"+thisObj._data[name].results.length);
                if(thisObj._listeners[name] && thisObj._listeners[name].length >0) {
                  $.each(thisObj._listeners[name], function (idx, callback){
                    callback['callback'].apply(thisObj);
@@ -106,7 +137,9 @@
       var thisObj = this;
       $.each(thisObj.options.endpoints, function(idx, ep){
         var name = ep.name;
-        var interval = getRandomInt((thisObj.options.refresh_interval_sec*1000)/2,(thisObj.options.refresh_interval_sec*1000)*2);
+        // probobly don't need randomness when we're requesting a lot less data in general
+        //var interval = getRandomInt((thisObj.options.refresh_interval_sec*1000)/2,(thisObj.options.refresh_interval_sec*1000)*2);
+        var interval = thisObj.options.refresh_interval_sec*1000;
         thisObj._callbacks[name].repeat = runRepeat(thisObj._callbacks[name].callback, interval, true); // random ms is added to distribute sync interval
       });
     },
@@ -158,6 +191,10 @@
       }
       if(toDelete>=0)
         thisObj._listeners[resource].splice(toDelete, 1);
+    },
+
+    setDataNeeds : function(resources){
+        this._data_needs = resources;
     },
 
     refresh : function(resource){

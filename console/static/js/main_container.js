@@ -46,35 +46,35 @@
       var $dialog = $rendered.children().first();
       var $dialog_help = $rendered.children().last();
       this._aboutDialog = $dialog.eucadialog({
-         id: 'about-cloud',
-         title: about_dialog_title,
-         buttons: {
-           'cancel': { text: dialog_close_btn, focus:true, click: function() { $dialog.eucadialog("close"); } }
-         },
-         afterHelpFlipped : function() {
-           $scrollable = thisObj._aboutDialog.find(".animated");
-           $scrollable.css('overflow-y', 'hidden');
-           $scrollable.stop();
-           $scrollable.animate({scrollTop : 0}, 1);
-           $scrollable.animate({scrollTop : $scrollable[0].scrollHeight}, 40*1000, undefined, function() {$scrollable.stop()});
-           $scrollable.click( function() {
-             $scrollable.stop();
-             $scrollable.css('overflow-y', 'scroll');
-           });
-           return true;
-         },
-         beforeHelpFlipped : function() {
-           thisObj._aboutDialog.eucadialog('setDialogOption','position', 'top');
-           return true;
-         },
-         help: { content: $dialog_help },
-         help_icon_class : 'help-euca',
-       });
-      this._aboutDialog.find('#version').html($.eucaData.g_session['version']);
-      var admin_url = $.eucaData.g_session['admin_console_url'];
-      if(admin_url.indexOf('://localhost:') > 0)
-        admin_url = admin_url.replace('localhost', location.hostname)
-      this._aboutDialog.find('#admin-url').attr('href', admin_url);
+        id: 'about-cloud',
+        title: about_dialog_title,
+        buttons: {
+          'cancel': { text: dialog_close_btn, focus:true, click: function() { $dialog.eucadialog("close"); } }
+        },
+        afterHelpFlipped : function() {
+          $scrollable = thisObj._aboutDialog.find(".animated");
+          $scrollable.css('overflow-y', 'hidden');
+          $scrollable.stop();
+          $scrollable.animate({scrollTop : 0}, 1);
+          $scrollable.animate({scrollTop : $scrollable[0].scrollHeight}, 40*1000, undefined, function() {$scrollable.stop()});
+          $scrollable.click( function() {
+            $scrollable.stop();
+            $scrollable.css('overflow-y', 'scroll');
+          });
+          return true;
+        },
+        beforeHelpFlipped : function() {
+          thisObj._aboutDialog.eucadialog('setDialogOption','position', 'top');
+        return true;
+                          },
+        help: { content: $dialog_help },
+          help_icon_class : 'help-euca',
+        });
+        this._aboutDialog.find('#version').html($.eucaData.g_session['version']);
+        var admin_url = $.eucaData.g_session['admin_console_url'];
+        if(admin_url.indexOf('://localhost:') > 0)
+          admin_url = admin_url.replace('localhost', location.hostname)
+        this._aboutDialog.find('#admin-url').attr('href', admin_url);
 
       $(window).hashchange( function(){
         thisObj._windowsHashChanged();
@@ -82,58 +82,67 @@
     },
 
     _destroy : function() {
-    },
+                   },
 
     _windowsHashChanged : function() {
-      var hash = location.hash;
-      if (hash){
-        hash = hash.replace(/^#/, '');
-      }
-      if (this._curSelected !== hash && hash !== '')
-       this.updateSelected(hash);
-      iamBusy();
-    },
+                          var hash = location.hash;
+                          if (hash){
+                              hash = hash.replace(/^#/, '');
+                          }
+                          if (this._curSelected !== hash && hash !== '')
+                              this.updateSelected(hash);
+                          iamBusy();
+                      },
 
-    // event receiver for menu selection
+                      // event receiver for menu selection
     changeSelected : function (evt, ui) {
-      this.updateSelected(ui.selected, ui.filter, ui.options);
-    },
+                     this.updateSelected(ui.selected, ui.filter, ui.options);
+                 },
 
     updateSelected : function (selected, filter, options) {
-      var thisObj = this;
-      if(this._curSelected === selected){
-        return;
-      }
+     var thisObj = this;
+     if(this._curSelected === selected){
+         return;
+     }
 
-      if(this._curSelected !== null){
-        var $curInstance = this.element.data(this._curSelected);
-        if($curInstance !== undefined && options !== KEEP_VIEW){
-          $curInstance.close();
-        }
-      }
-      var $container = $('html body').find(DOM_BINDING['main']);
-      if (options !== KEEP_VIEW)
-        $container.children().detach();
-      switch(selected){
-        case 'dashboard':
-          this.element.dashboard({select: function(evt, ui){$container.maincontainer("changeSelected", evt, ui)}});
-          break;
-        case 'instance':
-          this.element.instance({'state_filter': filter});
-          break;
-        case 'keypair':
-          this.element.keypair();
-          break;
-        case 'sgroup':
-          this.element.sgroup();
-          break;
-        case 'volume':
-          this.element.volume();
-          break;
-        case 'snapshot':
-          this.element.snapshot();
-          break;
-        case 'eip':
+     if(this._curSelected !== null){
+         var $curInstance = this.element.data(this._curSelected);
+         if($curInstance !== undefined && options !== KEEP_VIEW){
+             $curInstance.close();
+         }
+     }
+     var $container = $('html body').find(DOM_BINDING['main']);
+     if (options !== KEEP_VIEW)
+         $container.children().detach();
+     switch(selected){
+         case 'dashboard':
+             this.element.dashboard({select: function(evt, ui){$container.maincontainer("changeSelected", evt, ui)}});
+             break;
+         case 'instance':
+             this.element.instance({'state_filter': filter});
+             break;
+         case 'scaling':
+             this.element.scaling();
+             break;
+         case 'balancing':
+             this.element.balancing();
+             break;
+         case 'keypair':
+             this.element.keypair();
+             break;
+         case 'sgroup':
+             this.element.sgroup();
+             break;
+         case 'volume':
+             this.element.volume();
+             break;
+         case 'snapshot':
+             this.element.snapshot();
+             break;
+         case 'bucket':
+             this.element.bucket();
+             break;
+         case 'eip':
           this.element.eip();
           break;
         case 'launcher':
@@ -156,6 +165,10 @@
           break;
         case 'help':
           window.open($.eucaData.g_session['help_url'], '_blank');
+          break;
+        case 'changepwd':
+            $('html body').find(DOM_BINDING['hidden']).login();
+            $('html body').find(DOM_BINDING['hidden']).login('showPasswordChange');
           break;
         case 'aboutcloud':
           this._aboutDialog.eucadialog("open");

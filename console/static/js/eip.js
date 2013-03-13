@@ -40,52 +40,57 @@
       this.baseTable = $eipTable;
       this.tableWrapper = $eipTable.eucatable({
         id : 'eips', // user of this widget should customize these options,
+        data_deps: ['addresses', 'instances'],
         hidden: thisObj.options['hidden'],
         dt_arg : {
-          "bProcessing": true,
-          "sAjaxSource": "../ec2?Action=DescribeAddresses",
-          "fnServerData": function (sSource, aoData, fnCallback) {
-                $.ajax( {
-                    "dataType": 'json',
-                    "type": "POST",
-                    "url": sSource,
-                    "data": "_xsrf="+$.cookie('_xsrf'),
-                    "success": fnCallback
-                });
-
-          },
-          "sAjaxDataProp": "results",
-          "bAutoWidth" : false,
-          "sPaginationType": "full_numbers",
-          "aoColumns": [
+          "sAjaxSource": 'eip',
+          "aoColumnDefs": [
             {
+	      // Display the checkbox button in the main table
               "bSortable": false,
-              "fnRender": function(oObj) { return '<input type="checkbox"/>' },
-              "sClass": "checkbox-cell"
+              "aTargets":[0],
+              "mData": function(source) { return '<input type="checkbox"/>' },
+              "sClass": "checkbox-cell",
             },
             {
-              "mDataProp": "public_ip",
+	      // Display the allocated public IP in eucatable
+	      "aTargets":[1],
+      	      "mRender": function(data) {
+		return DefaultEncoder().encodeForHTML(data);
+	      },
+              "mData": "public_ip",
               "iDataSort": 4
             },
-            { "mDataProp": "instance_id" },
+            { 
+	      // Display the instance ID in eucatable
+	      "aTargets":[2],
+	      "mRender": function(data) {
+                return DefaultEncoder().encodeForHTML(data);
+              },
+              "mData": "instance_id",
+	    },
             {
+	      // Invisible Column for storing the status of the IP
               "bVisible": false,
-              "fnRender": function(oObj) { 
-                if (! oObj.aData.instance_id)
+              "aTargets":[3],
+              "mData": function(source) {
+                if (!source.instance_id)
+                    return 'unassigned';
+                else if (source.instance_id.indexOf('available') >= 0)
                   return 'unassigned';
-                else if (oObj.aData.instance_id.indexOf('available') >= 0)
-                  return 'unassigned';
-                else if (oObj.aData.instance_id.indexOf('nobody') >= 0)
+                else if (source.instance_id.indexOf('nobody') >= 0)
                   return 'unallocated';
                 else
                   return 'assigned'
-              } 
+              },
             },
             {
+	      // Invisialbe Column for allowing the IPs to be sorted
               "bVisible": false,
-              "fnRender": function(oObj) {
-                return ipv4AsInteger(oObj.aData.public_ip);
-              }
+              "aTargets":[4],
+              "mData": function(source) {
+                return ipv4AsInteger(source.public_ip);
+              },
             }
           ],
         },
@@ -109,6 +114,9 @@
         filters : [{name:"eip_state", options: ['all','assigned','unassigned'], filter_col:3, alias: {'assigned':'assigned','unassigned':'unassigned'}, text: [eip_state_selector_all,eip_state_selector_assigned,eip_state_selector_unassigned] }],
       });
       this.tableWrapper.appendTo(this.element);
+      $('html body').eucadata('addCallback', 'eip', 'eip-landing', function() {
+        thisObj.tableWrapper.eucatable('redraw');
+      });
     },
 
     _create : function() { 
@@ -143,7 +151,7 @@
          title: eip_allocate_dialog_title,
          buttons: {
            'create': { domid: allocateButtonId, text: eip_allocate_dialog_allocate_btn, disabled: true, click: function() {
-                var numberOfIps = asText($eip_allocate_dialog.find('#eip-allocate-count').val());
+                var numberOfIps = $eip_allocate_dialog.find('#eip-allocate-count').val();
                 if ( numberOfIps != parseInt(numberOfIps) ) {
                   $eip_allocate_dialog.eucadialog('showError', eip_allocate_count_error_msg);
                 } else {
@@ -173,7 +181,7 @@
          buttons: {
            'associate': { domid: this.associateBtnId, text: eip_associate_dialog_associate_btn, disabled: true, click: function() {
                fixedValue = $eip_associate_dialog.find('#associate-fixed-value').html();
-               selectedValue = asText($eip_associate_dialog.find('#associate-selected-value').val());
+               selectedValue = $eip_associate_dialog.find('#associate-selected-value').val();
                if (thisObj.options.from_instance) {
                  if ( isValidIPv4Address(selectedValue) ) {
                    $eip_associate_dialog.eucadialog("close");
@@ -283,6 +291,9 @@
               if(done < all)
                 notifyMulti(100*(done/all), $.i18n.prop('eip_release_progress', all));
               else {
+		// XSS Node:: 'eip_release_fail' would contain a chunk HTML code in the failure description string.
+		// Message - Failed to send release request to Cloud for {0} IP address(es). <a href="#">Click here for details. </a>
+		// For this reason, the message string must be rendered as html()
                 var $msg = $('<div>').addClass('multiop-summary').append(
                   $('<div>').addClass('multiop-summary-success').html($.i18n.prop('eip_release_done', (all-error.length), all)));
                 if (error.length > 0)
@@ -333,6 +344,9 @@
               if(done < all)
                 notifyMulti(100*(done/all), $.i18n.prop('eip_disassociate_progress', all));
               else {
+		// XSS Node:: 'eip_disassociate_fail' would contain a chunk HTML code in the failure description string.
+		// Message Example - Failed to send release request to Cloud for {0} IP address(es). <a href="#">Click here for details. </a>
+		// For this reason, the message string must be rendered as html()
                 var $msg = $('<div>').addClass('multiop-summary').append(
                   $('<div>').addClass('multiop-summary-success').html($.i18n.prop('eip_disassociate_done', (all-error.length), all)));
                 if (error.length > 0)
@@ -381,6 +395,9 @@
             if(done < all)
               notifyMulti(100*(done/all), $.i18n.prop('eip_allocate_progress', all));
             else {
+	      // XSS Node:: 'eip_allocate_fail' would contain a chunk HTML code in the failure description string.
+	      // Message Example - Failed to send release request to Cloud for {0} IP address(es). <a href="#">Click here for details. </a>
+	      // For this reason, the message string must be rendered as html()
               var $msg = $('<div>').addClass('multiop-summary').append(
                 $('<div>').addClass('multiop-summary-success').html($.i18n.prop('eip_allocate_done', (all-error.length), all)));
               if (error.length > 0)
@@ -431,7 +448,11 @@
         if ( results ) {
           for( res in results) {
             var instance = results[res];
-            if ( instance.state === 'running' ) 
+            var state = instance.state;
+            if (state == undefined) {
+                state = instance._state.name;
+            }
+            if (state === 'running') 
               inst_ids.push(instance.id);
           }
         }
@@ -495,12 +516,12 @@
     dialogAssociateIp : function(ip, instance){
       var thisObj = this;
       if(ip){
-        thisObj.associateDialog.find('#associate-fixed-value').html(ip);
-        thisObj.associateDialog.find('#eip-associate-instance-txt').html(eip_associate_dialog_text(ip));
+        thisObj.associateDialog.find('#associate-fixed-value').text(ip);
+        thisObj.associateDialog.find('#eip-associate-instance-txt').text(eip_associate_dialog_text(ip));
         thisObj.associateDialog.dialog('open');
       }else if(instance){
-        thisObj.associateDialog.find('#associate-fixed-value').html(instance);
-        thisObj.associateDialog.find('#eip-associate-instance-txt').html(instance_dialog_associate_ip_text(instance));
+        thisObj.associateDialog.find('#associate-fixed-value').text(instance);
+        thisObj.associateDialog.find('#eip-associate-instance-txt').text(instance_dialog_associate_ip_text(instance));
         thisObj.associateDialog.dialog('open');
       }
     },

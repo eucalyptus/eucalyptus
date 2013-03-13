@@ -38,6 +38,7 @@ from boto.ec2.blockdevicemapping import BlockDeviceType
 from boto.ec2.image import ImageAttribute
 from boto.ec2.instance import ConsoleOutput
 from boto.ec2.instance import Group
+from boto.ec2.instanceinfo import InstanceInfo
 from boto.ec2.cloudwatch import CloudWatchConnection
 from boto.ec2.cloudwatch.dimension import Dimension
 from boto.ec2.cloudwatch.metric import Metric
@@ -48,9 +49,14 @@ from boto.ec2.autoscale.launchconfig import LaunchConfiguration
 from boto.ec2.autoscale.launchconfig import InstanceMonitoring
 from boto.ec2.autoscale.request import Request
 from boto.ec2.autoscale.group import AutoScalingGroup
+from boto.ec2.autoscale.instance import Instance
 from boto.ec2.elb import ELBConnection
 from boto.ec2.elb.loadbalancer import LoadBalancer
 from boto.ec2.elb.healthcheck import HealthCheck
+from boto.ec2.elb.listener import Listener
+from boto.ec2.elb.policies import Policies
+from boto.ec2.elb.securitygroup import SecurityGroup
+from boto.ec2.elb.instancestate import InstanceState
 # these things came in with boto 2.6
 try:
     from boto.ec2.instance import InstanceState
@@ -161,10 +167,6 @@ class BotoJsonEncoder(JSONEncoder):
             values = self.__sanitize_and_copy__(obj.__dict__)
             values['__obj_name__'] = 'Tag'
             return (values)
-        elif isinstance(obj, Bucket):
-            values = {'name':obj.name}
-            values['__obj_name__'] = 'Bucket'
-            return (values)
         if isinstance(obj, InstanceState):
             values = self.__sanitize_and_copy__(obj.__dict__)
             values['__obj_name__'] = 'InstanceState'
@@ -181,6 +183,26 @@ class BotoJsonEncoder(JSONEncoder):
 #                return obj.__dict__
 #            else:
 #                return []
+
+class BotoJsonStorageEncoder(JSONEncoder):
+    def default(self, obj):
+        if issubclass(obj.__class__, EC2Object):
+            values = copy.copy(obj.__dict__)
+            values['__obj_name__'] = obj.__class__.__name__
+            return (values)
+        elif isinstance(obj, RegionInfo):
+            return []
+        elif isinstance(obj, ClcError):
+            return copy.copy(obj.__dict__)
+        elif isinstance(obj, Response):
+            return obj.__dict__
+        elif isinstance(obj, CloudWatchConnection):
+            return []
+        elif isinstance(obj, Bucket):
+            values = {'name':obj.name}
+            values['__obj_name__'] = 'Bucket'
+            return (values)
+        return super(BotoJsonWatchEncoder, self).default(obj)
 
 class BotoJsonWatchEncoder(JSONEncoder):
     def default(self, obj):
@@ -208,6 +230,8 @@ class BotoJsonWatchEncoder(JSONEncoder):
 
 class BotoJsonBalanceEncoder(JSONEncoder):
     def default(self, obj):
+#        print obj.__class__.__name__
+#        print obj.__dict__.keys()
         if issubclass(obj.__class__, EC2Object):
             values = copy.copy(obj.__dict__)
             values['__obj_name__'] = obj.__class__.__name__
@@ -222,13 +246,35 @@ class BotoJsonBalanceEncoder(JSONEncoder):
             return []
         elif isinstance(obj, LoadBalancer):
             values = copy.copy(obj.__dict__)
+            values['connection'] = None
             values['__obj_name__'] = 'LoadBalancer'
             return (values)
         elif isinstance(obj, HealthCheck):
             values = copy.copy(obj.__dict__)
+            values['access_point'] = None
             values['__obj_name__'] = 'HealthCheck'
             return (values)
-        print obj.__class__.__name__
+        elif isinstance(obj, Listener):
+            values = copy.copy(obj.__dict__)
+            values['__obj_name__'] = 'Listener'
+            return (values)
+        elif isinstance(obj, Policies):
+            values = copy.copy(obj.__dict__)
+            values['connection'] = None
+            values['__obj_name__'] = 'Policies'
+            return (values)
+        elif isinstance(obj, SecurityGroup):
+            values = copy.copy(obj.__dict__)
+            values['__obj_name__'] = 'SecurityGroup'
+            return (values)
+        elif isinstance(obj, boto.ec2.elb.InstanceState):
+            values = copy.copy(obj.__dict__)
+            values['__obj_name__'] = 'InstanceState'
+            return (values)
+        elif isinstance(obj, InstanceInfo):
+            values = copy.copy(obj.__dict__)
+            values['__obj_name__'] = 'InstanceInfo'
+            return (values)
         return super(BotoJsonBalanceEncoder, self).default(obj)
 
 class BotoJsonScaleEncoder(JSONEncoder):
@@ -254,6 +300,11 @@ class BotoJsonScaleEncoder(JSONEncoder):
         elif isinstance(obj, LaunchConfiguration):
             values = copy.copy(obj.__dict__)
             values['__obj_name__'] = 'LaunchConfiguration'
+            return (values)
+        elif isinstance(obj, boto.ec2.autoscale.Instance):
+            values = copy.copy(obj.__dict__)
+            values['connection'] = None
+            values['__obj_name__'] = 'Instance'
             return (values)
         elif isinstance(obj, Request):
             values = copy.copy(obj.__dict__)

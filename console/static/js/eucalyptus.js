@@ -121,7 +121,11 @@
                 error: function(jqXHR, textStatus, errorThrown){
                   var $container = $('html body').find(DOM_BINDING['main']);
                   $container.children().detach(); // remove spinwheel
-	          args.onError(errorThrown);
+                  args.onError(errorThrown);
+                  if (errorThrown.search("Forbidden")>-1) {
+	                $.extend($.eucaData, {'g_session':jqXHR.global_session, 'u_session':jqXHR.user_session});
+                    eucalyptus.help({'language':out.global_session.language}); // loads help files
+                  }
                 }
  	     });
          }});

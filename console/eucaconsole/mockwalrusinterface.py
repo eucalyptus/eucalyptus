@@ -1,5 +1,3 @@
-#!/usr/bin/python
-
 # Copyright 2012 Eucalyptus Systems, Inc.
 #
 # Redistribution and use of this software in source and binary forms,
@@ -25,20 +23,45 @@
 # (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-from uiproxyclient import UIProxyClient
+import boto
+import copy
+import json
+import os
+import datetime
 
-if __name__ == "__main__":
-    # make some calls to proxy class to test things out
-    client = UIProxyClient()
-    client.login('localhost', '8888', 'ui-test-acct-03', 'admin', 'mypassword7')
-    print "=== Getting Tags ==="
-    print client.get_tags()
-#    print "=== Creating Tag ==="
-#    print client.create_tags(['ami-d54d8fbc'], {'Purpose':'PuppetDev'})
-#    print client.get_tags()
-#    print "=== Deleting Tag ==="
-#    print client.delete_tags(['ami-d54d8fbc'], {'Purpose':'PuppetDev'})
-#    print client.get_tags()
-#    print "=== Getting filtered images ==="
-#    print client.get_images({'tag:Purpose':'LifeguardDevel'});
-    print client.get_tags({'resource-type':'volume'});
+from operator import itemgetter
+from boto.ec2.image import Image
+from boto.ec2.instance import Instance
+from boto.ec2.keypair import KeyPair
+
+from .botojsonencoder import BotoJsonDecoder
+from .walrusinterface import WalrusInterface
+from .configloader import ConfigLoader
+
+# This class provides an implmentation of the clcinterface using canned json
+# strings. Might be better to represent as object graph so we can modify
+# values in the mock.
+class MockWalrusInterface(WalrusInterface):
+    buckets = None
+    objects = None
+
+    # load saved state to simulate CLC
+    def __init__(self):
+        self.config = ConfigLoader().getParser()
+        if self.config.has_option('server', 'mockpath'):
+            self.mockpath = self.config.get('server', 'mockpath')
+        else:
+            self.mockpath = 'mockdata'
+
+        with open(os.path.join(self.mockpath, 'Buckets.json')) as f:
+            self.buckets = json.load(f, cls=BotoJsonDecoder)
+        with open(os.path.join(self.mockpath, 'Objects.json')) as f:
+            self.objects = json.load(f, cls=BotoJsonDecoder)
+
+    def get_all_buckets(self, callbcack=None):
+        return self.buckets
+
+    def get_all_objects(self, bucket, callbcack=None):
+        return self.objects[bucket]
+
+

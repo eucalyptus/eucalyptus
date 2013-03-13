@@ -42,10 +42,17 @@ class TokenAuthenticator(object):
         self.auth_url = "https://%s:8773/services/Tokens?Action=GetSessionToken&DurationSeconds=%d&Version=2011-06-15" % (host, duration)
 
     # raises EuiExcepiton for "Noth Authorized" or "Timed out"
-    def authenticate(self, account, user, passwd):
+    def authenticate(self, account, user, passwd, new_passwd=None):
         try:
             req = urllib2.Request(self.auth_url)
-            auth_string = "%s@%s:%s" % \
+            if new_passwd:
+                auth_string = "%s@%s;%s@%s" % \
+                            (base64.b64encode(user), \
+                            base64.b64encode(account), \
+                            base64.b64encode(passwd), \
+                            new_passwd)
+            else:
+                auth_string = "%s@%s:%s" % \
                             (base64.b64encode(user), \
                             base64.b64encode(account), \
                             passwd)
@@ -63,11 +70,11 @@ class TokenAuthenticator(object):
         except urllib2.URLError, err:
             # this returned for authorization problem
             # HTTP Error 401: Unauthorized
+            # HTTP Error 403: Forbidden (when password has expired)
             if issubclass(err.__class__, urllib2.HTTPError):
                 raise eucaconsole.EuiException(err.code, 'Not Authorized')
             # this returned for connection problem (i.e. timeout)
             # <urlopen error [Errno 61] Connection refused>
             if issubclass(err.__class__, urllib2.URLError):
                 raise eucaconsole.EuiException(504, 'Timed out')
-
-
+        

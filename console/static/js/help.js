@@ -53,6 +53,16 @@
         help_image.load({language:'en_US'}); 
       }
       try{
+        help_scaling.load({language:language});
+      }catch(e){
+        help_scaling.load({language:'en_US'});
+      }
+      try{
+        help_balancing.load({language:language});
+      }catch(e){
+        help_balancing.load({language:'en_US'});
+      }
+      try{
         help_eip.load({language:language});
       }catch(e){
         help_eip.load({language:'en_US'});
@@ -71,6 +81,11 @@
         help_about.load({language:language});
       }catch(e){
         help_about.load({language:'en_US'});
+      }
+      try{
+        help_changepwd.load({language:language});
+      }catch(e){
+        help_changepwd.load({language:'en_US'});
       }
     }catch(e){
       ;
@@ -257,10 +272,39 @@ var help_instance = {
   dialog_launchmore_content_url: '',
 }
 
+var help_scaling = {
+  load : function(arg){
+    help_scaling.landing_content_url = 'help/'+arg.language+'/console_manage_scaling.html';
+
+    loadHtml(help_scaling.landing_content_url, function(data){help_scaling.landing_content=data})
+  },
+  landing_content: '',
+  landing_content_url: '',
+}
+
+var help_balancing = {
+  load : function(arg){
+    help_balancing.landing_content_url = 'help/'+arg.language+'/console_manage_balancing.html';
+
+    loadHtml(help_balancing.landing_content_url, function(data){help_balancing.landing_content=data})
+  },
+  landing_content: '',
+  landing_content_url: '',
+}
+
 var help_about = {
   load : function(arg){
     help_about.dialog_content_url = 'help/'+arg.language+'/console_about.html';
     loadHtml(help_about.dialog_content_url, function(data){help_about.dialog_content=data})
+  },
+  dialog_content: '',
+  dialog_content_url: '',
+}
+
+var help_changepwd = {
+  load : function(arg){
+    help_changepwd.dialog_content_url = 'help/'+arg.language+'/console_changepwd.html';
+    loadHtml(help_changepwd.dialog_content_url, function(data){help_changepwd.dialog_content=data})
   },
   dialog_content: '',
   dialog_content_url: '',

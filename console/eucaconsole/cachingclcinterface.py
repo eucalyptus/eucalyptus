@@ -25,6 +25,9 @@
 
 from cache import Cache
 import ConfigParser
+import functools
+import logging
+import threading
 
 from boto.ec2.ec2object import EC2Object
 from boto.ec2.image import Image
@@ -41,6 +44,7 @@ from .clcinterface import ClcInterface
 # some things will need to be re-written.
 class CachingClcInterface(ClcInterface):
     clc = None
+    caches = {}
 
     # load saved state to simulate CLC
     def __init__(self, clcinterface, config):
@@ -50,67 +54,128 @@ class CachingClcInterface(ClcInterface):
             freq = config.getint('server', 'pollfreq.zones')
         except ConfigParser.NoOptionError:
             freq = pollfreq
-        self.zones = Cache(freq)
+        self.caches['zones'] = Cache(freq)
+        self.caches['get_zones'] = self.clc.get_all_zones
+        self.caches['timer_zones'] = None
 
         try:
             freq = config.getint('server', 'pollfreq.images')
         except ConfigParser.NoOptionError:
             freq = pollfreq
-        self.images = Cache(freq)
+        self.caches['images'] = Cache(freq)
+        self.caches['get_images'] = self.clc.get_all_images
+        self.caches['timer_images'] = None
 
         try:
             freq = config.getint('server', 'pollfreq.instances')
         except ConfigParser.NoOptionError:
             freq = pollfreq
-        self.instances = Cache(freq)
+        self.caches['instances'] = Cache(freq)
+        self.caches['get_instances'] = self.clc.get_all_instances
+        self.caches['timer_instances'] = None
 
         try:
             freq = config.getint('server', 'pollfreq.keypairs')
         except ConfigParser.NoOptionError:
             freq = pollfreq
-        self.keypairs = Cache(freq)
+        self.caches['keypairs'] = Cache(freq)
+        self.caches['get_keypairs'] = self.clc.get_all_key_pairs
+        self.caches['timer_keypairs'] = None
 
         try:
             freq = config.getint('server', 'pollfreq.groups')
         except ConfigParser.NoOptionError:
             freq = pollfreq
-        self.groups = Cache(freq)
+        self.caches['groups'] = Cache(freq)
+        self.caches['get_groups'] = self.clc.get_all_security_groups
+        self.caches['timer_groups'] = None
 
         try:
             freq = config.getint('server', 'pollfreq.addresses')
         except ConfigParser.NoOptionError:
             freq = pollfreq
-        self.addresses = Cache(freq)
+        self.caches['addresses'] = Cache(freq)
+        self.caches['get_addresses'] = self.clc.get_all_addresses
+        self.caches['timer_addresses'] = None
 
         try:
             freq = config.getint('server', 'pollfreq.volumes')
         except ConfigParser.NoOptionError:
             freq = pollfreq
-        self.volumes = Cache(freq)
+        self.caches['volumes'] = Cache(freq)
+        self.caches['get_volumes'] = self.clc.get_all_volumes
+        self.caches['timer_volumes'] = None
 
         try:
             freq = config.getint('server', 'pollfreq.snapshots')
         except ConfigParser.NoOptionError:
             freq = pollfreq
-        self.snapshots = Cache(freq)
+        self.caches['snapshots'] = Cache(freq)
+        self.caches['get_snapshots'] = self.clc.get_all_snapshots
+        self.caches['timer_snapshots'] = None
 
         try:
             freq = config.getint('server', 'pollfreq.tags')
         except ConfigParser.NoOptionError:
             freq = pollfreq
-        self.tags = Cache(freq)
+        self.caches['tags'] = Cache(freq)
+        self.caches['get_tags'] = self.clc.get_all_tags
+        self.caches['timer_tags'] = None
 
-    def get_cache_summary(self):
-        summary = {'zone':self.zones.isCacheFresh(),
-                   'image':self.images.isCacheFresh(),
-                   'instance':self.instances.isCacheFresh(),
-                   'keypair':self.keypairs.isCacheFresh(),
-                   'sgroup':self.groups.isCacheFresh(),
-                   'volume':self.volumes.isCacheFresh(),
-                   'snapshot':self.snapshots.isCacheFresh(),
-                   'eip':self.addresses.isCacheFresh()}
+        try:
+            self.min_polling = config.getboolean('server', 'min.clc.polling')
+        except ConfigParser.NoOptionError:
+            self.min_polling = False
+
+    def get_cache_summary(self, zone):
+        # make sparse array containing names of resource with updates
+        summary = {}
+        summary['image'] = len(self.caches['images'].values)if self.caches['images'].values else 0
+        numRunning = 0;
+        numStopped = 0;
+        if self.caches['instances'].values:
+            for reservation in self.caches['instances'].values:
+                for inst in reservation.instances:
+                    if zone == 'all' or inst.placement == zone:
+                        state = inst.state
+                        if state == 'running':
+                            numRunning += 1
+                        elif state == 'stopped':
+                            numStopped += 1 
+        summary['inst_running'] = numRunning
+        summary['inst_stopped'] = numStopped
+        summary['keypair'] = len(self.caches['keypairs'].values)if self.caches['keypairs'].values else 0
+        summary['sgroup'] = len(self.caches['groups'].values)if self.caches['groups'].values else 0
+        summary['volume'] = len(self.caches['volumes'].values)if self.caches['volumes'].values else 0
+        summary['snapshot'] = len(self.caches['snapshots'].values)if self.caches['snapshots'].values else 0
+        summary['eip'] = len(self.caches['addresses'].values)if self.caches['addresses'].values else 0
+        summary['tag'] = len(self.caches['tags'].values)if self.caches['tags'].values else 0
         return summary
 
+    def __cache_load_callback__(self, resource, kwargs, interval):
+        self.caches[resource].values = self.caches['get_'+resource](kwargs)
+        self.caches['timer_'+resource] = threading.Timer(interval, self.__cache_load_callback__, [resource, kwargs, interval])
+        self.caches['timer_'+resource].start()
+
+    def set_data_interest(self, resources):
+
+        # clear previous timers
+        for res in self.caches:
+            if res[:5] == 'timer' and self.caches[res]:
+                self.caches[res].cancel()
+                self.caches[res] = None
+
+        if self.min_polling:
+            # start timers for new list of resources
+            for res in resources:
+                self.__cache_load_callback__(res, {}, self.caches[res].updateFreq)
+        else:
+            # start timers for all cached resources
+            for vals in self.caches:
+                if isinstance(self.caches[vals], Cache):
+                    self.__cache_load_callback__(vals, {}, self.caches[vals].updateFreq)
+        return True
+    
     def __normalize_instances__(self, instances):
         ret = []
         if not(instances):
@@ -136,28 +201,32 @@ class CachingClcInterface(ClcInterface):
 
     def get_all_zones(self, filters, callback):
         # if cache stale, update it
-        if self.zones.isCacheStale():
+        if self.caches['zones'].isCacheStale(filters):
             Threads.instance().runThread(self.__get_all_zones_cb__, ({'filters':filters}, callback))
+            self.caches['zones'].filters = filters
         else:
-            callback(Response(data=self.zones.values))
+            callback(Response(data=self.caches['zones'].values))
 
     def __get_all_zones_cb__(self, kwargs, callback):
         try:
-            self.zones.values = self.clc.get_all_zones(kwargs['filters'])
-            Threads.instance().invokeCallback(callback, Response(data=self.zones.values))
+            ret = self.clc.get_all_zones(kwargs['filters'])
+            self.caches['zones'].values = ret
+            Threads.instance().invokeCallback(callback, Response(data=ret))
         except Exception as ex:
             Threads.instance().invokeCallback(callback, Response(error=ex))
 
     def get_all_images(self, owners, filters, callback):
-        if self.images.isCacheStale():
+        if self.caches['images'].isCacheStale(filters):
             Threads.instance().runThread(self.__get_all_images_cb__, ({'owners': owners, 'filters':filters}, callback))
+            self.caches['images'].filters = filters
         else:
-            callback(Response(data=self.images.values))
+            callback(Response(data=self.caches['images'].values))
 
     def __get_all_images_cb__(self, kwargs, callback):
         try:
-            self.images.values = self.clc.get_all_images(kwargs['owners'], kwargs['filters'])
-            Threads.instance().invokeCallback(callback, Response(data=self.images.values))
+            ret = self.clc.get_all_images(kwargs['owners'], kwargs['filters'])
+            self.caches['images'].values = ret
+            Threads.instance().invokeCallback(callback, Response(data=ret))
         except Exception as ex:
             Threads.instance().invokeCallback(callback, Response(error=ex))
 
@@ -175,7 +244,7 @@ class CachingClcInterface(ClcInterface):
 
     # returns True if successful
     def modify_image_attribute(self, image_id, attribute, operation, users, groups):
-        self.images.expireCache()
+        self.caches['images'].expireCache()
         Threads.instance().runThread(self.__modify_image_attribute_cb__,
                     ({'image_id':image_id, 'attribute':attribute,
                       'operation':operation, 'users':users, 'groups':groups}, callback))
@@ -190,7 +259,7 @@ class CachingClcInterface(ClcInterface):
 
     # returns True if successful
     def reset_image_attribute(self, image_id, attribute):
-        self.images.expireCache()
+        self.caches['images'].expireCache()
         Threads.instance().runThread(self.__reset_image_attribute_cb__,
                     ({'image_id':image_id, 'attribute':attribute}, callback))
 
@@ -202,16 +271,18 @@ class CachingClcInterface(ClcInterface):
             Threads.instance().invokeCallback(callback, Response(error=ex))
 
     def get_all_instances(self, filters, callback):
-        if self.instances.isCacheStale():
+        if self.caches['instances'].isCacheStale(filters):
             Threads.instance().runThread(self.__get_all_instances_cb__, ({'filters':filters}, callback))
+            self.caches['instances'].filters = filters
         else:
-            callback(Response(data=self.__normalize_instances__(self.instances.values)))
+            callback(Response(data=self.__normalize_instances__(self.caches['instances'].values)))
 
     def __get_all_instances_cb__(self, kwargs, callback):
         try:
-            self.instances.values = self.clc.get_all_instances(kwargs['filters'])
+            ret = self.clc.get_all_instances(kwargs['filters'])
+            self.caches['instances'].values = ret
             Threads.instance().invokeCallback(callback,
-                            Response(data=self.__normalize_instances__(self.instances.values)))
+                            Response(data=self.__normalize_instances__(ret)))
         except Exception as ex:
             Threads.instance().invokeCallback(callback, Response(error=ex))
 
@@ -229,7 +300,7 @@ class CachingClcInterface(ClcInterface):
                       security_group_ids=None,
                       additional_info=None, instance_profile_name=None,
                       instance_profile_arn=None, tenancy=None, callback=None):
-        self.instances.expireCache()
+        self.caches['instances'].expireCache()
         Threads.instance().runThread(self.__run_instances_cb__,
                     ({'image_id':image_id, 'min_count':min_count, 'max_count':max_count,
                       'key_name':key_name, 'security_groups':security_groups,
@@ -271,7 +342,7 @@ class CachingClcInterface(ClcInterface):
 
     # returns instance list
     def terminate_instances(self, instance_ids, callback):
-        self.instances.expireCache()
+        self.caches['instances'].expireCache()
         Threads.instance().runThread(self.__terminate_instances_cb__,
                     ({'instance_ids':instance_ids}, callback))
 
@@ -284,7 +355,7 @@ class CachingClcInterface(ClcInterface):
 
     # returns instance list
     def stop_instances(self, instance_ids, force=False, callback=None):
-        self.instances.expireCache()
+        self.caches['instances'].expireCache()
         Threads.instance().runThread(self.__stop_instances_cb__,
                     ({'instance_ids':instance_ids, 'force':force}, callback))
 
@@ -297,7 +368,7 @@ class CachingClcInterface(ClcInterface):
 
     # returns instance list
     def start_instances(self, instance_ids, callback):
-        self.instances.expireCache()
+        self.caches['instances'].expireCache()
         Threads.instance().runThread(self.__start_instances_cb__,
                     ({'instance_ids':instance_ids}, callback))
 
@@ -310,7 +381,7 @@ class CachingClcInterface(ClcInterface):
 
     # returns instance status
     def reboot_instances(self, instance_ids, callback):
-        self.instances.expireCache()
+        self.caches['instances'].expireCache()
         Threads.instance().runThread(self.__reboot_instances_cb__,
                     ({'instance_ids':instance_ids}, callback))
 
@@ -337,21 +408,23 @@ class CachingClcInterface(ClcInterface):
         return self.clc.get_password_data(instance_id)
 
     def get_all_addresses(self, filters, callback):
-        if self.addresses.isCacheStale():
+        if self.caches['addresses'].isCacheStale(filters):
             Threads.instance().runThread(self.__get_all_addresses_cb__, ({'filters':filters}, callback))
+            self.caches['addresses'].filters = filters
         else:
-            callback(Response(data=self.addresses.values))
+            callback(Response(data=self.caches['addresses'].values))
 
     def __get_all_addresses_cb__(self, kwargs, callback):
         try:
-            self.addresses.values = self.clc.get_all_addresses(kwargs['filters'])
-            Threads.instance().invokeCallback(callback, Response(data=self.addresses.values))
+            ret = self.clc.get_all_addresses(kwargs['filters'])
+            self.caches['addresses'].values = ret
+            Threads.instance().invokeCallback(callback, Response(data=ret))
         except Exception as ex:
             Threads.instance().invokeCallback(callback, Response(error=ex))
 
     # returns address info
     def allocate_address(self, callback):
-        self.addresses.expireCache()
+        self.caches['addresses'].expireCache()
         Threads.instance().runThread(self.__allocate_address_cb__, ({}, callback))
 
     def __allocate_address_cb__(self, kwargs, callback):
@@ -363,7 +436,7 @@ class CachingClcInterface(ClcInterface):
 
     # returns True if successful
     def release_address(self, publicip, callback):
-        self.addresses.expireCache()
+        self.caches['addresses'].expireCache()
         Threads.instance().runThread(self.__release_address_cb__, ({'publicip':publicip}, callback))
 
     def __release_address_cb__(self, kwargs, callback):
@@ -375,7 +448,7 @@ class CachingClcInterface(ClcInterface):
 
     # returns True if successful
     def associate_address(self, publicip, instanceid, callback):
-        self.addresses.expireCache()
+        self.caches['addresses'].expireCache()
         Threads.instance().runThread(self.__associate_address_cb__,
                             ({'publicip':publicip, 'instanceid':instanceid}, callback))
 
@@ -388,7 +461,7 @@ class CachingClcInterface(ClcInterface):
 
     # returns True if successful
     def disassociate_address(self, publicip, callback):
-        self.addresses.expireCache()
+        self.caches['addresses'].expireCache()
         Threads.instance().runThread(self.__disassociate_address_cb__,
                             ({'publicip':publicip}, callback))
     def __disassociate_address_cb__(self, kwargs, callback):
@@ -399,21 +472,23 @@ class CachingClcInterface(ClcInterface):
             Threads.instance().invokeCallback(callback, Response(error=ex))
 
     def get_all_key_pairs(self, filters, callback):
-        if self.keypairs.isCacheStale():
+        if self.caches['keypairs'].isCacheStale(filters):
             Threads.instance().runThread(self.__get_all_key_pairs_cb__, ({'filters':filters}, callback))
+            self.caches['keypairs'].filters = filters
         else:
-            callback(Response(data=self.keypairs.values))
+            callback(Response(data=self.caches['keypairs'].values))
 
     def __get_all_key_pairs_cb__(self, kwargs, callback):
         try:
-            self.keypairs.values = self.clc.get_all_key_pairs(kwargs['filters'])
-            Threads.instance().invokeCallback(callback, Response(data=self.keypairs.values))
+            ret = self.clc.get_all_key_pairs(kwargs['filters'])
+            self.caches['keypairs'].values = ret
+            Threads.instance().invokeCallback(callback, Response(data=ret))
         except Exception as ex:
             Threads.instance().invokeCallback(callback, Response(error=ex))
 
     # returns keypair info and key
     def create_key_pair(self, key_name, callback):
-        self.keypairs.expireCache()
+        self.caches['keypairs'].expireCache()
         Threads.instance().runThread(self.__create_key_pair_cb__, ({'key_name':key_name}, callback))
 
     def __create_key_pair_cb__(self, kwargs, callback):
@@ -425,7 +500,7 @@ class CachingClcInterface(ClcInterface):
 
     # returns nothing
     def delete_key_pair(self, key_name, callback):
-        self.keypairs.expireCache()
+        self.caches['keypairs'].expireCache()
         Threads.instance().runThread(self.__delete_key_pair_cb__, ({'key_name':key_name}, callback))
 
     def __delete_key_pair_cb__(self, kwargs, callback):
@@ -437,7 +512,7 @@ class CachingClcInterface(ClcInterface):
 
     # returns keypair info and key
     def import_key_pair(self, key_name, public_key_material, callback):
-        self.keypairs.expireCache()
+        self.caches['keypairs'].expireCache()
         Threads.instance().runThread(self.__import_key_pair_cb__,
                             ({'key_name':key_name, 'public_key_material':public_key_material}, callback))
 
@@ -449,21 +524,23 @@ class CachingClcInterface(ClcInterface):
             Threads.instance().invokeCallback(callback, Response(error=ex))
 
     def get_all_security_groups(self, filters, callback):
-        if self.groups.isCacheStale():
+        if self.caches['groups'].isCacheStale(filters):
             Threads.instance().runThread(self.__get_all_security_groups_cb__, ({'filters':filters}, callback))
+            self.caches['groups'].filters = filters
         else:
-            callback(Response(data=self.groups.values))
+            callback(Response(data=self.caches['groups'].values))
 
     def __get_all_security_groups_cb__(self, kwargs, callback):
         try:
-            self.groups.values = self.clc.get_all_security_groups(kwargs['filters'])
-            Threads.instance().invokeCallback(callback, Response(data=self.groups.values))
+            ret = self.clc.get_all_security_groups(kwargs['filters'])
+            self.caches['groups'].values = ret
+            Threads.instance().invokeCallback(callback, Response(data=ret))
         except Exception as ex:
             Threads.instance().invokeCallback(callback, Response(error=ex))
 
     # returns True if successful
     def create_security_group(self, name, description, callback):
-        self.groups.expireCache()
+        self.caches['groups'].expireCache()
         Threads.instance().runThread(self.__create_security_group_cb__,
                     ({'name':name, 'description':description}, callback))
 
@@ -477,7 +554,7 @@ class CachingClcInterface(ClcInterface):
     # returns True if successful
     def delete_security_group(self, name=None, group_id=None, callback=None):
         # invoke this on a separate thread
-        self.groups.expireCache()
+        self.caches['groups'].expireCache()
         Threads.instance().runThread(self.__delete_security_group_cb__,
                     ({'name':name, 'group_id':group_id}, callback))
 
@@ -495,7 +572,7 @@ class CachingClcInterface(ClcInterface):
                                  ip_protocol=[], from_port=[], to_port=[],
                                  cidr_ip=[], group_id=[],
                                  src_security_group_group_id=[], callback=None):
-        self.groups.expireCache()
+        self.caches['groups'].expireCache()
         Threads.instance().runThread(self.__authorize_security_group_cb__,
                     ({'name':name, 'src_security_group_name':src_security_group_name,
                       'src_security_group_owner_id':src_security_group_owner_id,
@@ -524,7 +601,7 @@ class CachingClcInterface(ClcInterface):
                                  ip_protocol=[], from_port=[], to_port=[],
                                  cidr_ip=[], group_id=[],
                                  src_security_group_group_id=[], callback=None):
-        self.groups.expireCache()
+        self.caches['groups'].expireCache()
         Threads.instance().runThread(self.__revoke_security_group_cb__,
                     ({'name':name, 'src_security_group_name':src_security_group_name,
                       'src_security_group_owner_id':src_security_group_owner_id,
@@ -547,21 +624,23 @@ class CachingClcInterface(ClcInterface):
             Threads.instance().invokeCallback(callback, Response(error=ex))
 
     def get_all_volumes(self, filters, callback):
-        if self.volumes.isCacheStale():
+        if self.caches['volumes'].isCacheStale(filters):
             Threads.instance().runThread(self.__get_all_volumes_cb__, ({'filters':filters}, callback))
+            self.caches['volumes'].filters = filters
         else:
-            callback(Response(data=self.volumes.values))
+            callback(Response(data=self.caches['volumes'].values))
 
     def __get_all_volumes_cb__(self, kwargs, callback):
         try:
-            self.volumes.values = self.clc.get_all_volumes(kwargs['filters'])
-            Threads.instance().invokeCallback(callback, Response(data=self.volumes.values))
+            ret = self.clc.get_all_volumes(kwargs['filters'])
+            self.caches['volumes'].values = ret
+            Threads.instance().invokeCallback(callback, Response(data=ret))
         except Exception as ex:
             Threads.instance().invokeCallback(callback, Response(error=ex))
 
     # returns volume info
     def create_volume(self, size, availability_zone, snapshot_id, callback):
-        self.volumes.expireCache()
+        self.caches['volumes'].expireCache()
         Threads.instance().runThread(self.__create_volume_cb__,
                             ({'size':size, 'availability_zone':availability_zone, 'snapshot_id':snapshot_id}, callback))
 
@@ -574,7 +653,7 @@ class CachingClcInterface(ClcInterface):
 
     # returns True if successful
     def delete_volume(self, volume_id, callback):
-        self.volumes.expireCache()
+        self.caches['volumes'].expireCache()
         Threads.instance().runThread(self.__delete_volume_cb__, ({'volume_id':volume_id}, callback))
 
     def __delete_volume_cb__(self, kwargs, callback):
@@ -586,7 +665,7 @@ class CachingClcInterface(ClcInterface):
 
     # returns True if successful
     def attach_volume(self, volume_id, instance_id, device, callback):
-        self.volumes.expireCache()
+        self.caches['volumes'].expireCache()
         Threads.instance().runThread(self.__attach_volume_cb__,
                             ({'volume_id':volume_id, 'instance_id':instance_id, 'device':device}, callback))
 
@@ -599,7 +678,7 @@ class CachingClcInterface(ClcInterface):
 
     # returns True if successful
     def detach_volume(self, volume_id, force=False, callback=None):
-        self.volumes.expireCache()
+        self.caches['volumes'].expireCache()
         Threads.instance().runThread(self.__detach_volume_cb__,
                             ({'volume_id':volume_id, 'force':force}, callback))
 
@@ -611,21 +690,23 @@ class CachingClcInterface(ClcInterface):
             Threads.instance().invokeCallback(callback, Response(error=ex))
 
     def get_all_snapshots(self, filters, callback):
-        if self.snapshots.isCacheStale():
+        if self.caches['snapshots'].isCacheStale(filters):
             Threads.instance().runThread(self.__get_all_snapshots_cb__, ({'filters':filters}, callback))
+            self.caches['snapshots'].filters = filters
         else:
-            callback(Response(data=self.snapshots.values))
+            callback(Response(data=self.caches['snapshots'].values))
 
     def __get_all_snapshots_cb__(self, kwargs, callback):
         try:
-            self.snapshots.values = self.clc.get_all_snapshots(kwargs['filters'])
-            Threads.instance().invokeCallback(callback, Response(data=self.snapshots.values))
+            ret = self.clc.get_all_snapshots(kwargs['filters'])
+            self.caches['snapshots'].values = ret
+            Threads.instance().invokeCallback(callback, Response(data=ret))
         except Exception as ex:
             Threads.instance().invokeCallback(callback, Response(error=ex))
 
     # returns snapshot info
     def create_snapshot(self, volume_id, description, callback):
-        self.snapshots.expireCache()
+        self.caches['snapshots'].expireCache()
         Threads.instance().runThread(self.__create_snapshot_cb__,
                             ({'volume_id':volume_id, 'description':description}, callback))
 
@@ -638,7 +719,7 @@ class CachingClcInterface(ClcInterface):
 
     # returns True if successful
     def delete_snapshot(self, snapshot_id, callback):
-        self.snapshots.expireCache()
+        self.caches['snapshots'].expireCache()
         Threads.instance().runThread(self.__delete_snapshot_cb__, ({'snapshot_id':snapshot_id}, callback))
 
     def __delete_snapshot_cb__(self, kwargs, callback):
@@ -650,7 +731,7 @@ class CachingClcInterface(ClcInterface):
 
     # returns list of snapshots attributes
     def get_snapshot_attribute(self, snapshot_id, attribute, callback):
-        self.snapshots.expireCache()
+        self.caches['snapshots'].expireCache()
         Threads.instance().runThread(self.__get_snapshot_attribute_cb__,
                             ({'snapshot_id':snapshot_id, 'attribute':attribute}, callback))
 
@@ -663,7 +744,7 @@ class CachingClcInterface(ClcInterface):
 
     # returns True if successful
     def modify_snapshot_attribute(self, snapshot_id, attribute, operation, users, groups, callback):
-        self.snapshots.expireCache()
+        self.caches['snapshots'].expireCache()
         Threads.instance().runThread(self.__modify_snapshot_attribute_cb__,
                             ({'snapshot_id':snapshot_id, 'attribute':attribute,
                               'operation':operation, 'user':user, 'groups':groups}, callback))
@@ -678,7 +759,7 @@ class CachingClcInterface(ClcInterface):
 
     # returns True if successful
     def reset_snapshot_attribute(self, snapshot_id, attribute, callback):
-        self.snapshots.expireCache()
+        self.caches['snapshots'].expireCache()
         Threads.instance().runThread(self.__reset_snapshot_attribute_cb__,
                             ({'snapshot_id':snapshot_id, 'attribute':attribute}, callback))
 
@@ -691,7 +772,7 @@ class CachingClcInterface(ClcInterface):
 
     # returns True if successful
     def deregister_image(self, image_id, callback):
-        self.images.expireCache()
+        self.caches['images'].expireCache()
         Threads.instance().runThread(self.__deregister_image_cb__,
                     ({'image_id':image_id}, callback))
 
@@ -704,7 +785,7 @@ class CachingClcInterface(ClcInterface):
 
     # returns True if successful
     def register_image(self, name, image_location=None, description=None, architecture=None, kernel_id=None, ramdisk_id=None, root_dev_name=None, block_device_map=None, callback=None):
-        self.images.expireCache()
+        self.caches['images'].expireCache()
         Threads.instance().runThread(self.__register_image_cb__,
                             ({'name':name, 'image_location':image_location, 'description':description,
                               'architecture':architecture, 'kernel_id':kernel_id,
@@ -720,21 +801,23 @@ class CachingClcInterface(ClcInterface):
             Threads.instance().invokeCallback(callback, Response(error=ex))
 
     def get_all_tags(self, filters, callback):
-        if self.tags.isCacheStale():
+        if self.caches['tags'].isCacheStale(filters):
             Threads.instance().runThread(self.__get_all_tags_cb__, ({'filters':filters}, callback))
+            self.caches['tags'].filters = filters
         else:
-            callback(Response(data=self.tags.values))
+            callback(Response(data=self.caches['tags'].values))
 
     def __get_all_tags_cb__(self, kwargs, callback):
         try:
-            self.tags.values = self.clc.get_all_tags(kwargs['filters'])
-            Threads.instance().invokeCallback(callback, Response(data=self.tags.values))
+            ret = self.clc.get_all_tags(kwargs['filters'])
+            self.caches['tags'].values = ret
+            Threads.instance().invokeCallback(callback, Response(data=ret))
         except Exception as ex:
             Threads.instance().invokeCallback(callback, Response(error=ex))
 
     # returns tag info
     def create_tags(self, resourceIds, tags, callback):
-        self.tags.expireCache()
+        self.caches['tags'].expireCache()
         Threads.instance().runThread(self.__create_tag_cb__,
                             ({'resource_ids':resourceIds, 'tags':tags}, callback))
 
@@ -747,7 +830,7 @@ class CachingClcInterface(ClcInterface):
 
     # returns True if successful
     def delete_tags(self, resourceIds, tags, callback):
-        self.tags.expireCache()
+        self.caches['tags'].expireCache()
         Threads.instance().runThread(self.__delete_tag_cb__,
                             ({'resource_ids':resourceIds, 'tags':tags}, callback))
 

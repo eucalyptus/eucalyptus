@@ -40,6 +40,7 @@ import uuid
 from datetime import datetime
 from datetime import timedelta
 
+from .botoclcinterface import BotoClcInterface
 from token import TokenAuthenticator
 
 sessions = {}
@@ -108,7 +109,8 @@ class UserSession(object):
 
 class GlobalSession(object):
     def __init__(self):
-        pass
+        self.vmtypes = ""
+
     def get_value(self, scope, key, default_val = None):
         value = None
         try:
@@ -123,13 +125,21 @@ class GlobalSession(object):
             items[k] = v
         return items
 
+    def parse_vmtypes(self, vmtypes):
+        self.vmtypes = {}
+        for vmt in vmtypes:
+            if isinstance(vmt, dict):
+                self.vmtypes[vmt['name']] = [vmt['cores'], vmt['memory'], vmt['disk']]
+            else:
+                self.vmtypes[vmt.name] = [vmt.cores, vmt.memory, vmt.disk]
+
     @property
     def language(self):
         return self.get_value('locale', 'language')
 
     @property
     def version(self):
-        return '3.2.1'
+        return '3.3.0'
     
     @property
     def admin_console_url(self):
@@ -149,20 +159,7 @@ class GlobalSession(object):
 
     @property
     def instance_type(self):
-        '''
-        m1.small:1 128 2
-        c1.medium: 2 128 5 74
-        ... 
-        '''
-        m1_small = [self.get_value('instance_type','m1.small.cpu','1'),self.get_value('instance_type','m1.small.mem','128'),self.get_value('instance_type','m1.small.disk','2')]; 
-        c1_medium = [self.get_value('instance_type','c1.medium.cpu','2'),self.get_value('instance_type','c1.medium.mem', '128'),self.get_value('instance_type','c1.medium.disk', '5')]; 
-        m1_large = [self.get_value('instance_type','m1.large.cpu', '2'),self.get_value('instance_type','m1.large.mem', '512'),self.get_value('instance_type','m1.large.disk', '10')];
-        m1_xlarge = [self.get_value('instance_type','m1.xlarge.cpu', '2'),self.get_value('instance_type','m1.xlarge.mem', '1024'),self.get_value('instance_type','m1.xlarge.disk', '10')]; 
-        c1_xlarge = [self.get_value('instance_type','c1.xlarge.cpu', '4'),self.get_value('instance_type','c1.xlarge.mem', '2048'),self.get_value('instance_type','c1.xlarge.disk', '10')]; 
-        m3_xlarge = [self.get_value('instance_type','m3.xlarge.cpu', '4'),self.get_value('instance_type','m3.xlarge.mem', '15360'),self.get_value('instance_type','m3.xlarge.disk', '0')]; 
-        m3_2xlarge = [self.get_value('instance_type','m3.2xlarge.cpu', '8'),self.get_value('instance_type','m3.2xlarge.mem', '30720'),self.get_value('instance_type','m3.2xlarge.disk', '0')]; 
-
-        return {'m1.small':m1_small, 'c1.medium':c1_medium, 'm1.large':m1_large, 'm1.xlarge':m1_xlarge, 'c1.xlarge':c1_xlarge, 'm3.xlarge':m3_xlarge, 'm3.2xlarge':m3_2xlarge};
+        return self.vmtypes
 
     # return the collection of global session info
     def get_session(self):
@@ -250,7 +247,7 @@ class RootHandler(BaseHandler):
         action = self.get_argument("action")
         response = None
         try:
-            if action == 'login':
+            if action == 'login' or action == 'changepwd':
                 try:
                     response = LoginProcessor.post(self)
                 except Exception, err:
@@ -302,7 +299,7 @@ class RootHandler(BaseHandler):
 
     def check_xsrf_cookie(self):
         action = self.get_argument("action")
-        if action == 'login' or action == 'init':
+        if action == 'login' or action == 'init' or action == 'changepwd':
             xsrf = self.xsrf_token
         else:
             super(RootHandler, self).check_xsrf_cookie()
@@ -338,25 +335,36 @@ def terminateSession(id, expired=False):
 class LoginProcessor(ProxyProcessor):
     @staticmethod
     def post(web_req):
+        action = web_req.get_argument("action")
         auth_hdr = web_req.get_argument('Authorization')
         if not auth_hdr:
             raise NotImplementedError("auth header not found")
         auth_decoded = base64.decodestring(auth_hdr)
-        account, user, passwd = auth_decoded.split(':', 2)
-        remember = web_req.get_argument("remember")
+        newpwd = None
+        if action == 'changepwd':
+            # fetch/decode old/new passwords
+            account, user, passwd, newpwd = auth_decoded.split(':', 3)
+            passwd = base64.decodestring(passwd)
+            newpwd = base64.decodestring(newpwd)
+            remember = 'yes' if (web_req.get_cookie("remember") == 'true') else 'no';
+        else:
+            account, user, passwd = auth_decoded.split(':', 2);
+            remember = web_req.get_argument("remember")
 
+        # this hack allows login with AWS creds if account is set to aws endpoint
         ec2_endpoint = None
         if account[len(account)-13:] == 'amazonaws.com':
+            if action == 'changepwd':
+                raise eucaconsole.EuiException(501, 'Cannot change password on AWS account.')
             ec2_endpoint = account
             access_id = user
             secret_key = passwd
             session_token = None
-            print "ec2: %s, %s, %s" %(ec2_endpoint, access_id, secret_key)
         if ec2_endpoint == None:
             if config.getboolean('test', 'usemock') == False:
                 auth = TokenAuthenticator(config.get('server', 'clchost'),
                                 config.getint('server', 'session.abs.timeout')+60)
-                creds = auth.authenticate(account, user, passwd)
+                creds = auth.authenticate(account, user, passwd, newpwd)
                 session_token = creds.session_token
                 access_id = creds.access_key
                 secret_key = creds.secret_key
@@ -445,6 +453,35 @@ class LoginResponse(ProxyResponse):
         global global_session
         if not global_session:
             global_session = GlobalSession()
+
+        # hopefully, solve this in boto, but for now, let's see if
+        # this is aws endpoint and use static def instead
+        # btw, this comes in handy for mock mode as well
+        vmtypes = []
+#        if (self.user_session.host_override != None) or (use_mock == True):
+        vmtypes.append(dict(name='t1.micro', cores='1', memory='256', disk='5'))
+        vmtypes.append(dict(name='m1.small', cores='1', memory='256', disk='5'))
+        vmtypes.append(dict(name='m1.medium', cores='1', memory='512', disk='10'))
+        vmtypes.append(dict(name='m1.large', cores='2', memory='512', disk='10'))
+        vmtypes.append(dict(name='c1.medium', cores='2', memory='512', disk='10'))
+        vmtypes.append(dict(name='m1.xlarge', cores='2', memory='1024', disk='10'))
+        vmtypes.append(dict(name='c1.xlarge', cores='2', memory='2048', disk='10'))
+        vmtypes.append(dict(name='m2.xlarge', cores='2', memory='2048', disk='10'))
+        vmtypes.append(dict(name='m3.xlarge', cores='4', memory='2048', disk='15'))
+        vmtypes.append(dict(name='m3.2xlarge', cores='4', memory='4096', disk='30'))
+        vmtypes.append(dict(name='m2.4xlarge', cores='8', memory='4096', disk='60'))
+        vmtypes.append(dict(name='hi1.4xlarge', cores='8', memory='6144', disk='120'))
+        vmtypes.append(dict(name='cc2.8xlarge', cores='16', memory='6144', disk='120'))
+        vmtypes.append(dict(name='cg1.4xlarge', cores='16', memory='12288', disk='200'))
+        vmtypes.append(dict(name='cr1.8xlarge', cores='16', memory='16384', disk='240'))
+        vmtypes.append(dict(name='hs1.8xlarge', cores='48', memory='119808', disk='24000'))
+#        else:
+#            host = config.get('server', 'clchost')
+#            clc = BotoClcInterface(host, self.user_session.access_key,
+#                                   self.user_session.secret_key,
+#                                   self.user_session.session_token)
+#            vmtypes = clc.get_all_vmtypes()
+        global_session.parse_vmtypes(vmtypes)
 
         return {'global_session': global_session.get_session(),
                 'user_session': self.user_session.get_session()}

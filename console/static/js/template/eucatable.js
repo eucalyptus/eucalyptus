@@ -22,6 +22,7 @@
   $.widget('eucalyptus.eucatable', {
     options : { 
       id : '', // user of this widget should customize these options
+      data_deps : null,
       dt_arg : null,
       text : {
         header_title : '',
@@ -73,8 +74,12 @@
         });
       }
 
-      thisObj.refreshCallback = runRepeat(function(){ return thisObj._refreshTableInterval();}, (TABLE_REFRESH_INTERVAL_SEC * 1000), false);
-      tableRefreshCallback = thisObj.refreshCallback;
+// removed callback that causes the table to auto-refresh from data. Instead
+// tables get updated automatically by data pushed from eucadata, in each landing page
+//      thisObj.refreshCallback = runRepeat(function(){ return thisObj._refreshTableInterval();}, (TABLE_REFRESH_INTERVAL_SEC * 1000), false);
+//      tableRefreshCallback = thisObj.refreshCallback;
+      this._refreshTableInterval();
+      $('html body').eucadata('setDataNeeds', thisObj.options.data_deps);
     },
 
     _create : function() {
@@ -87,11 +92,21 @@
       var thisObj = this;
       var dt_arg = {};
       dt_arg["bProcessing"] = true;
+      dt_arg["bServerSide"] = true;
       dt_arg["sAjaxDataProp"] = "results";
       dt_arg["bAutoWidth"] = false;
       dt_arg["sPaginationType"] = "full_numbers",
       dt_arg['fnDrawCallback'] = function( oSettings ) {
         thisObj._drawCallback(oSettings);
+      }
+      dt_arg['sAjaxDataProp'] = function(json) {
+        return json;
+      }
+      dt_arg['fnServerData'] = function (sSource, aoData, fnCallback) {
+        data = $('html body').eucadata('get', sSource);
+        data.iTotalRecords = data.length;
+        data.iTotalDisplayRecords = data.length;
+        fnCallback(data);
       }
       dt_arg['fnInitComplete'] = function( oSettings ) {
         oSettings.oLanguage.sZeroRecords = $.i18n.prop('resource_no_records', thisObj.options.text.resource_plural);
@@ -136,7 +151,7 @@
 
     _drawCallback : function(oSettings) {
       var thisObj = this;
-      $('#table_' + this.options.id + '_count').html($.i18n.prop(thisObj.options.text.resource_found, oSettings.fnRecordsDisplay()));
+      $('#table_' + this.options.id + '_count').text($.i18n.prop(thisObj.options.text.resource_found, oSettings.fnRecordsDisplay()));
       this.element.find('table thead tr').each(function(index, tr){
         var $checkAll = $(tr).find(':input[type="checkbox"]');
         if(! $checkAll.data('events') || !('click' in $checkAll.data('events'))){
@@ -166,7 +181,7 @@
           $expand = thisObj.options.expand_callback(row);
           if($expand === null){
             var text = $currentRow.find('a.twist').text(); 
-            $currentRow.find('a.twist').parent().append(text);
+            $currentRow.find('a.twist').parent().text(text);
             $currentRow.find('a.twist').remove();
           }
         }
@@ -442,7 +457,7 @@
           var itemCls = 'legend-'+val;
           textId = thisObj.options.id+'_legend_'+val.replace('-','_');
           var text = $.i18n.map[textId] ? $.i18n.map[textId] : val;
-          $itemWrapper.append($('<span>').addClass('legend-item').addClass(itemCls).html(text));
+          $itemWrapper.append($('<span>').addClass('legend-item').addClass(itemCls).text(text));
         });
         $legend.append($itemWrapper);
         thisObj.element.find('.legend-pagination-wrapper').prepend($legend);
@@ -536,8 +551,10 @@
         return;
       if(! $('html body').eucadata('isEnabled'))
         return;
+      var oSettings = this.table.fnSettings();
+      $('html body').eucadata('refresh', oSettings.sAjaxSource);
       this.table.fnReloadAjax(undefined, undefined, true);
-      
+     
       var $checkAll = this.table.find('thead').find(':input[type="checkbox"]');
       var checked = $checkAll.is(':checked');
       if(checked)
@@ -557,6 +574,10 @@
           cancelRepeat(token);
         }
       }, 2000);
+    },
+
+    redraw : function() {
+      this._refreshTableInterval();
     },
 
     // (optional) columnIdx: if undefined, returns matrix [row_idx, col_key]

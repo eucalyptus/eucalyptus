@@ -24,7 +24,9 @@
       support_url : '',
       admin_url : ''
     },
+    loginDialog : null,
     errorDialog : null,
+    changepwdDialog : null,
     nocookiesDialog : null,
     _init : function() {
      },
@@ -32,7 +34,58 @@
       var thisObj = this;
       var $tmpl = $('html body').find('.templates #loginTmpl').clone(); 
       var $login = $($tmpl.render($.i18n.map));
+      thisObj.loginDialog = $login;
+      var $form = $login.find('form');
+
+      // change password dialog
+      $tmpl = $('html body').find('.templates #changePasswordTmpl').clone();
+      var $rendered = $($tmpl.render($.extend($.i18n.map, help_changepwd)));
+      var $cp_dialog = $rendered.children().first();
+      var $cp_dialog_help = $rendered.children().last();
+      var $cp_form = $cp_dialog.find('form');
+      this.changepwdDialog = $cp_dialog.eucadialog({
+        id: 'change-passwd',
+        title: login_change_passwd_title,
+        buttons: {
+          'change': { domid: 'change-pwd', text: login_change_passwd_submit, disabled: true, click: function() {
+              var current = trim($cp_form.find('input[id=current]').val());
+              var newpwd = trim($cp_form.find('input[id=newpwd]').val());
+              var confirmpwd = trim($cp_form.find('input[id=confirmpwd]').val());
+
+              var isValid = true;
+              if (newpwd != confirmpwd) {
+                isValid = false;
+                thisObj.changepwdDialog.eucadialog('showError', login_change_passwd_dont_match);
+              }
+              
+              if (isValid) {
+                var account = $form.find('input[id=account]').val();
+                var user = $form.find('input[id=username]').val();
+                thisObj._changePassword(account, user, current, newpwd);
+              }
+              return false;
+            }
+          },
+          'cancel': { text: dialog_cancel_btn, focus:false, click: function() { $cp_dialog.eucadialog("close"); } }
+        },
+        help: { content: $cp_dialog_help, url: help_changepwd.dialog_attach_content_url },
+      });
+
+      // set the login event handler
+      $cp_form.find('input[type=password]').change( function(evt) {
+        var current = trim($cp_form.find('input[id=current]').val());
+        var newpwd = trim($cp_form.find('input[id=newpwd]').val());
+        var confirmpwd = trim($cp_form.find('input[id=confirmpwd]').val());
+        thisObj.changepwdDialog.eucadialog('showError', null);
+        // should check that all files comply, then enable button
+        if (current != null && current != '' &&
+            newpwd != null && newpwd != '' &&
+            confirmpwd != null && confirmpwd != '') {
+          thisObj.changepwdDialog.eucadialog('enableButton', 'change-pwd');
+        }
+      });
       
+      // login dialog
       var $tmpl = $('html body').find('.templates #loginErrorDlgTmpl').clone();
       var $rendered = $($tmpl.render($.extend($.i18n.map, help_instance)));
       var $err_dialog = $rendered.children().first();
@@ -53,7 +106,6 @@
         this.element.append($cookies_dialog);
         return;
       }
-      var $form = $login.find('form');
       // set the login event handler
       $form.find('input[type=text]').change( function(evt) {
         if($(this).val() != null && $(this).val()!='')
@@ -80,32 +132,30 @@
                 window.open(admin_url, '_blank');
               });
             }
+
             $login.remove();
             eucalyptus.main($.eucaData);
-   	      },
+          },
           onError: function(args){
             $form.find('.button-bar img').remove();
             $form.find('.button-bar input').removeAttr('disabled');
             $form.find('.button-bar input').show();
-            thisObj.errorDialog.eucadialog('open');
-            var msgdiv = thisObj.errorDialog.find("#login-error-message p")
-            if (args.search("Timeout")>-1) {
-              msgdiv.addClass('dialog-error').html($.i18n.prop('login_timeout', '<a href="#">'+cloud_admin+'</a>'));
-              msgdiv.find('a').click( function(e){
-                if(thisObj.options.support_url.indexOf('mailto') >= 0)
-                  window.open(thisObj.options.support_url, '_self');
-                else
-                  window.open(thisObj.options.support_url,'_blank');
-              });
-            } else {
-              if (args.search("Forbidden")>-1) {
-                // password expired
-                msgdiv.addClass('dialog-error').html($.i18n.prop('login_expired', '<a href="#">'+about_dialog_link_label+'</a>'));
+            if (args.search("Forbidden")>-1) {
+              thisObj.changepwdDialog.eucadialog("open");
+            }
+            else {
+              thisObj.errorDialog.eucadialog('open');
+              var msgdiv = thisObj.errorDialog.find("#login-error-message p")
+              if (args.search("Timeout")>-1) {
+                // XSS Note:: No need to encode 'cloud_admin' since it's a static string from the file "messages.properties" - Kyo
+                msgdiv.addClass('dialog-error').html($.i18n.prop('login_timeout', '<a href="#">'+cloud_admin+'</a>'));
                 msgdiv.find('a').click( function(e){
-                  window.open(thisObj.options.admin_url,'_blank');
+                  if(thisObj.options.support_url.indexOf('mailto') >= 0)
+                    window.open(thisObj.options.support_url, '_self');
+                  else
+                    window.open(thisObj.options.support_url,'_blank');
                 });
-              }
-              else {
+              } else {
                 // normal login failure
                 msgdiv.addClass('dialog-error').html(login_failure);
               }
@@ -125,6 +175,7 @@
         }
         $form.find('input[name=login]').removeAttr('disabled');
       }
+      // XSS Note:: No need to encode 'cloud_admin' since it's a static string from the file "messages.properties" - Kyo
       $login.find("#password-help").html($.i18n.prop('login_pwd_help', '<a href="#">'+cloud_admin+'</a>'));
       $login.find('#password-help a').click(function(e){
         if(thisObj.options.support_url.indexOf('mailto') >= 0)
@@ -142,6 +193,30 @@
       }
     },
     _destroy : function() { },
+
+    _changePassword : function (acct, user, current, newpwd){
+      var thisObj = this;
+      var tok = acct +':'+ user +':'+ toBase64(current)+':'+toBase64(newpwd);
+      var hash = toBase64(tok);
+      $.ajax({
+        type:"POST",
+        data:"action=changepwd"+"&_xsrf="+$.cookie('_xsrf')+"&Authorization="+hash,
+        dataType:"json",
+        async:"false",
+        success: function(out, textStatus, jqXHR) {
+          thisObj.changepwdDialog.eucadialog("close");
+	        $.extend($.eucaData, {'g_session':out.global_session, 'u_session':out.user_session});
+          eucalyptus.help({'language':out.global_session.language}); // loads help files
+          thisObj.loginDialog.remove();
+          eucalyptus.main($.eucaData);
+        },
+        error: function(jqXHR, textStatus, errorThrown){
+          thisObj.changepwdDialog.eucadialog("close");
+          thisObj.errorDialog.eucadialog('open');
+          msgdiv.addClass('dialog-error').html($.i18n.prop('login_change_passwd_error', errorThrown));
+        }
+ 	    });
+    },
 
   /////// PUBLIC METHODS //////
     popupError : function(bError, msg, callback) {
@@ -173,6 +248,11 @@
        thisObj.errorDialog.find('#login-error-message a').click(onClick);
      }
    },
+
+   showPasswordChange : function () {
+     var thisObj = this;
+     thisObj.changepwdDialog.eucadialog('open');
+   }
   });
 })(jQuery, 
    window.eucalyptus ? window.eucalyptus : window.eucalyptus = {});

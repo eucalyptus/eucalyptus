@@ -41,7 +41,7 @@
     <!-- jQuery libraries -->
     <script type="text/javascript" language="javascript" src="lib/jquery-1.8.2.js"></script> 
     <script type="text/javascript" language="javascript" src="lib/jquery-ui-1.9.1.custom.js"></script>
-    <script type="text/javascript" language="javascript" src="lib/jquery.datatables-1.8.2.js "></script>
+    <script type="text/javascript" language="javascript" src="lib/jquery.dataTables.js "></script>
     <script type="text/javascript" language="javascript" src="lib/jquery.i18n.properties-min-1.0.9.js"></script>
     <script type="text/javascript" language="javascript" src="lib/jsrender.js"></script>
     <script type="text/javascript" language="javascript" src="lib/jquery.flip.js"></script>
@@ -53,6 +53,7 @@
     <script type="text/javascript" language="javascript" src="lib/moment.min.js"></script>
     <script type="text/javascript" language="javascript" src="lib/jquery.base64.js"></script>
     <script type="text/javascript" language="javascript" src="lib/jquery.ba-hashchange.js"></script>
+    <script type="text/javascript" language="javascript" src="lib/jquery.md5.js"></script>
 
     <!-- Eucalyptus UI javascripts -->
     <script type="text/javascript" language="javascript" src="js/jquery_ext.js"></script>
@@ -75,6 +76,8 @@
     <script type="text/javascript" language="javascript" src="js/snapshot.js"></script>
     <script type="text/javascript" language="javascript" src="js/sgroup.js"></script>
     <script type="text/javascript" language="javascript" src="js/eip.js"></script>
+    <script type="text/javascript" language="javascript" src="js/balancing.js"></script>
+    <script type="text/javascript" language="javascript" src="js/scaling.js"></script>
     <script type="text/javascript" language="javascript" src="js/eucaevent.js"></script>
     <script type="text/javascript" language="javascript" src="js/notification.js"></script>
     <script type="text/javascript" language="javascript" src="js/help.js"></script>
@@ -82,6 +85,8 @@
     <script type="text/javascript" language="javascript" src="js/launcher.js"></script>
     <script type="text/javascript" language="javascript" src="js/template/eucatable.js"></script>
     <script type="text/javascript" language="javascript" src="js/template/eucadialog.js"></script>
+    <script type="text/javascript" language="javascript" src="js/template/eucatabspace.js"></script>
+    <script type="text/javascript" language="javascript" src="js/template/euca_resource_tag.js"></script>
   </head> 
 
   <body>
@@ -186,6 +191,39 @@
           </div>
         </div>
       </script>
+
+      <script id="changePasswordTmpl" type="text/x-jsrender">
+        <div id="change-passwd-euca-dialog-wrapper">
+          <div id="change-passwd-euca-dialog" class="euca-dialog">
+            <div class="dialog-inner-content">
+              <p>{{!: login_change_passwd_prompt }}</p>
+              <form action="/" method="post" name="changepasswordform">
+                <div class="form-row">
+                  <label for="current" class="required-label">{{!>login_change_passwd_current}}</label>
+                  <input type="password" id="current" class="input-field" value=""/>
+                </div>
+                <div class="form-row">
+                  <label for="newpwd" class="required-label">{{!>login_change_passwd_new}}</label>
+                  <input type="password" id="newpwd" class="input-field" value=""/>
+                </div>
+                <div class="form-row">
+                  <label for="confirmpwd" class="required-label">{{!>login_change_passwd_confirm}}</label>
+                  <input type="password" id="confirmpwd" class="input-field" value=""/>
+                </div>
+              </form>        
+              <p class="required-hint">{{!: required_fields }}</p>
+            </div>
+          </div>
+          <div id="changepwd-euca-dialog-help" class="dialog-help">
+            <div class="dialog-help-content">
+              {{!: dialog_create_content}}
+            </div>
+            <div class="help-revert-button">
+              <a href="#">{{!>revert_button}}</a>
+            </div>
+          </div>
+        </div>
+      </script>
       <!-- END Login template -->
 
       <!-- Footer template -->
@@ -217,6 +255,11 @@
                   <span></span> {{!>dashboard_instance_stopped}}
                 </div>
               </div>
+              <div id="dashboard-scaling-groups" class="db-instances-scaling clearfix" title="{{!: dashboard_instances_scaling_tip }}">
+                <div class="status-readout">
+                  <span></span> {{!>dashboard_instance_scaling}}
+                </div>
+              </div>
               <div id="dashboard-instance-launch">
                 <a href="#" class="xlarge-button" title="{{!: dashboard_instance_launch_tip }}">{{!>dashboard_launch_new_instance}}</a>
               </div> 
@@ -230,10 +273,16 @@
               <div id="dashboard-storage-snapshot" class="status-readout" title="{{!: dashboard_snapshots_tip }}">
                 <span></span> {{!>snapshots_label}}
               </div>
+              <div id="dashboard-storage-buckets" class="status-readout" title="{{!: dashboard_buckets_tip }}">
+                <span></span> {{!>buckets_label}}
+              </div>
             </div>
             <div class="netsec inner-box clearfix">
               <h3>{{!>netsec_label}}</h3>
               <div id="dashboard-netsec-img"></div>
+              <div id="dashboard-netsec-load-balancer" class="status-readout" title="{{!: dashboard_balancer_tip }}">
+                <span></span> {{!>balancers_label}}
+              </div>
               <div id="dashboard-netsec-sgroup" class="status-readout" title="{{!: dashboard_sgroup_tip }}">
                 <span></span> {{!>sgroups_label}}
               </div>
@@ -1112,6 +1161,262 @@
 
       <!-- END IPs dialog template -->
 
+      <!-- AutoScaling table -->
+      <script id="scalingTblTmpl" type="text/x-jsrender">
+        <div id="scaling-wrapper">
+          <div id="scaling-table">
+            <table id="scaling" class="display">
+              <thead>
+                <tr>
+                  <th>
+                    <input type="checkbox" id="scaling-check-all">
+                  </th>
+                  <th>{{!>scaling_tbl_hdr_name}}</th>
+                  <th>{{!>scaling_tbl_hdr_config}}</th>
+                  <th>{{!>scaling_tbl_hdr_activity}}</th>
+                  <th>{{!>scaling_tbl_hdr_current}}</th>
+                  <th>{{!>scaling_tbl_hdr_desired}}</th>
+                  <th>{{!>scaling_tbl_hdr_health}}</th>
+                </tr>
+               </thead>
+               <tbody>
+               </tbody>
+            </table>
+          </div>
+          <div id="scaling-help">
+            <div class="help-content">
+              {{!: landing_content }}
+            </div>
+            <div class="help-revert-button"> 
+              <a href="#">{{!>revert_button}}</a>
+            </div>
+          </div>
+        </div>
+      </script>
+      <!-- END AutoScaling table -->
+
+      <!-- AutoScaling dialog template -->
+      <script id="scalingAllocateDlgTmpl" type="text/x-jsrender">
+        <div id="scaling-allocate-dialog-wrapper">
+          <div id="scaling-allocate-dialog" class="euca-dialog">
+            <div class="dialog-inner-content">
+              {{!: scaling_allocate_dialog_text }}
+              <div class="form-row">
+                <label for="scaling-allocate-count" class="required-label mega-long-label">{{!: scaling_allocate_dialog_count_label }}</label>
+                <input type="text" id="scaling-allocate-count" class="required short-textinput" maxlength="2" title="{{!: scaling_allocate_dialog_count_tip }}"/>
+              </div>
+              <p class="required-hint">{{!: required_fields }}</p>
+            </div>
+          </div>
+          <div id="snapshot-create-dialog-help" class="dialog-help">
+            <div class="dialog-help-content">
+              {{!: dialog_allocate_content}}
+            </div>
+            <div class="help-revert-button">
+              <a href="#">{{!>revert_button}}</a>
+            </div>
+          </div>
+        </div>
+      </script>
+      <script id="scalingReleaseDlgTmpl" type="text/x-jsrender">
+        <div id="scaling-euca-dialog-wrapper">
+
+          <div id="scaling-release-dialog" class="euca-dialog">
+            <div class="dialog-inner-content">
+              {{!: scaling_release_dialog_text }}
+              <div class="selected-resources"></div>
+            </div>
+          </div>
+
+          <div id="scaling-release-dialog-help" class="dialog-help">
+            <div class="dialog-help-content">
+              {{!: dialog_release_content}}
+            </div>
+            <div class="help-revert-button"> 
+              <a href="#">{{!>revert_button}}</a>
+            </div>
+          </div>
+
+        </div>
+      </script>
+
+      <script id="scalingAssociateDlgTmpl" type="text/x-jsrender">
+        <div id="scaling-associate-dialog-wrapper">
+          
+          <div id="scaling-associate-dialog" class="euca-dialog">
+            <div class="dialog-inner-content">
+              <div class="form-row top-form-row">
+                <label for="scaling-associate-instance-id" class="required-label extra-long-label" id="scaling-associate-instance-txt"></label>
+                <input type="text" id="associate-selected-value" class="required" title="{{!: scaling_associate_dialog_instance_tip }}"> </input>
+              </div>
+              <p class="required-hint">{{!: required_fields }}</p>
+              <span style="display:none" id="associate-fixed-value"> </span>
+            </div>
+          </div>
+
+          <div id="scaling-associate-dialog-help" class="dialog-help">
+            <div class="dialog-help-content">
+              {{!: dialog_associate_content}}
+            </div>
+            <div class="help-revert-button"> 
+              <a href="#">{{!>revert_button}}</a>
+            </div>
+          </div>
+
+        </div>
+      </script>
+
+      <script id="scalingDisassociateDlgTmpl" type="text/x-jsrender">
+        <div id="scaling-disassociate-dialog-wrapper">
+          
+          <div id="scaling-disassociate-dialog" class="euca-dialog">
+            <div class="dialog-inner-content">
+              {{!: scaling_disassociate_dialog_text }}
+              <div class="selected-resources"></div>
+            </div>
+          </div>
+
+          <div id="scaling-disassociate-dialog-help" class="dialog-help">
+            <div class="dialog-help-content">
+              {{!: dialog_disassociate_content}}
+            </div>
+            <div class="help-revert-button"> 
+              <a href="#">{{!>revert_button}}</a>
+            </div>
+          </div>
+
+        </div>
+      </script>
+
+      <!-- END AutoScaling dialog template -->
+
+      <!-- Load balancing table -->
+      <script id="balancingTblTmpl" type="text/x-jsrender">
+        <div id="balancing-wrapper">
+          <div id="balancing-table">
+            <table id="balancing" class="display">
+              <thead>
+                <tr>
+                  <th>
+                    <input type="checkbox" id="balancing-check-all">
+                  </th>
+                  <th>{{!>balancing_tbl_hdr_name}}</th>
+                  <th>{{!>balancing_tbl_hdr_dns}}</th>
+                  <th>{{!>balancing_tbl_hdr_activity}}</th>
+                  <th>{{!>balancing_tbl_hdr_timestamp}}</th>
+                </tr>
+               </thead>
+               <tbody>
+               </tbody>
+            </table>
+          </div>
+          <div id="balancing-help">
+            <div class="help-content">
+              {{!: landing_content }}
+            </div>
+            <div class="help-revert-button"> 
+              <a href="#">{{!>revert_button}}</a>
+            </div>
+          </div>
+        </div>
+      </script>
+      <!-- END Load balancing table -->
+
+      <!-- Load balancing dialog template -->
+      <script id="scalingAllocateDlgTmpl" type="text/x-jsrender">
+        <div id="scaling-allocate-dialog-wrapper">
+          <div id="scaling-allocate-dialog" class="euca-dialog">
+            <div class="dialog-inner-content">
+              {{!: scaling_allocate_dialog_text }}
+              <div class="form-row">
+                <label for="scaling-allocate-count" class="required-label mega-long-label">{{!: scaling_allocate_dialog_count_label }}</label>
+                <input type="text" id="scaling-allocate-count" class="required short-textinput" maxlength="2" title="{{!: scaling_allocate_dialog_count_tip }}"/>
+              </div>
+              <p class="required-hint">{{!: required_fields }}</p>
+            </div>
+          </div>
+          <div id="snapshot-create-dialog-help" class="dialog-help">
+            <div class="dialog-help-content">
+              {{!: dialog_allocate_content}}
+            </div>
+            <div class="help-revert-button">
+              <a href="#">{{!>revert_button}}</a>
+            </div>
+          </div>
+        </div>
+      </script>
+      <script id="scalingReleaseDlgTmpl" type="text/x-jsrender">
+        <div id="scaling-euca-dialog-wrapper">
+
+          <div id="scaling-release-dialog" class="euca-dialog">
+            <div class="dialog-inner-content">
+              {{!: scaling_release_dialog_text }}
+              <div class="selected-resources"></div>
+            </div>
+          </div>
+
+          <div id="scaling-release-dialog-help" class="dialog-help">
+            <div class="dialog-help-content">
+              {{!: dialog_release_content}}
+            </div>
+            <div class="help-revert-button"> 
+              <a href="#">{{!>revert_button}}</a>
+            </div>
+          </div>
+
+        </div>
+      </script>
+
+      <script id="scalingAssociateDlgTmpl" type="text/x-jsrender">
+        <div id="scaling-associate-dialog-wrapper">
+          
+          <div id="scaling-associate-dialog" class="euca-dialog">
+            <div class="dialog-inner-content">
+              <div class="form-row top-form-row">
+                <label for="scaling-associate-instance-id" class="required-label extra-long-label" id="scaling-associate-instance-txt"></label>
+                <input type="text" id="associate-selected-value" class="required" title="{{!: scaling_associate_dialog_instance_tip }}"> </input>
+              </div>
+              <p class="required-hint">{{!: required_fields }}</p>
+              <span style="display:none" id="associate-fixed-value"> </span>
+            </div>
+          </div>
+
+          <div id="scaling-associate-dialog-help" class="dialog-help">
+            <div class="dialog-help-content">
+              {{!: dialog_associate_content}}
+            </div>
+            <div class="help-revert-button"> 
+              <a href="#">{{!>revert_button}}</a>
+            </div>
+          </div>
+
+        </div>
+      </script>
+
+      <script id="scalingDisassociateDlgTmpl" type="text/x-jsrender">
+        <div id="scaling-disassociate-dialog-wrapper">
+          
+          <div id="scaling-disassociate-dialog" class="euca-dialog">
+            <div class="dialog-inner-content">
+              {{!: scaling_disassociate_dialog_text }}
+              <div class="selected-resources"></div>
+            </div>
+          </div>
+
+          <div id="scaling-disassociate-dialog-help" class="dialog-help">
+            <div class="dialog-help-content">
+              {{!: dialog_disassociate_content}}
+            </div>
+            <div class="help-revert-button"> 
+              <a href="#">{{!>revert_button}}</a>
+            </div>
+          </div>
+
+        </div>
+      </script>
+
+      <!-- END Load balancing dialog template -->
+
       <!-- Instance landing table template -->
       <script id="instanceTblTmpl" type="text/x-jsrender">
         <div id="instances-wrapper">
@@ -1353,7 +1658,7 @@
               <p>{{!: about_dialog_link_text }}&nbsp;<a href="#" target="_blank" id="admin-url">{{!: about_dialog_link_label }}</a>.</p>
             </div>
           </div>
-          <div id="about-clound-euca-dialog-help" class="dialog-help">
+          <div id="about-cloud-euca-dialog-help" class="dialog-help">
             <div class="dialog-help-content">
               {{!: dialog_content}}
             </div>
@@ -1402,7 +1707,10 @@
                     <div id="launch-wizard-type-header" class="twist launch-wizard-section-header"> </div>
                     <div id="launch-wizard-type-contents" class="launch-wizard-section">
                       <div id="launch-wizard-type-main-contents">
-                        <div id="launch-wizard-type-size"> </div>
+                        <div id="launch-wizard-type-size">
+                          <div class="launch-wizard-selection">{{!>launch_instance_type_size_header}}</div>
+                          <select id="launch-instance-type-size" class="wizard-selection-content"></select>
+                        </div>
                         <div id="launch-wizard-type-options"> </div>
                       </div>
                       <div id="launch-wizard-buttons-type" class="launch-wizard-buttons"></div>

@@ -64,13 +64,13 @@ class BotoClcInterface(ClcInterface):
         json.dump(obj, f, cls=BotoJsonEncoder, indent=2)
         f.close()
 
-    def get_all_zones(self, filters, callback=None):
+    def get_all_zones(self, filters=None, callback=None):
         obj = self.conn.get_all_zones(filters)
         if self.saveclcdata:
             self.__save_json__(obj, "mockdata/Zones.json")
         return obj
 
-    def get_all_images(self, owners, filters, callback=None):
+    def get_all_images(self, owners=None, filters=None, callback=None):
         obj = self.conn.get_all_images(owners=owners, filters=filters)
         if self.saveclcdata:
             self.__save_json__(obj, "mockdata/Images.json")
@@ -88,7 +88,7 @@ class BotoClcInterface(ClcInterface):
     def reset_image_attribute(self, image_id, attribute):
         return self.conn.reset_image_attribute(image_id, attribute)
 
-    def get_all_instances(self, filters, callback=None):
+    def get_all_instances(self, filters=None, callback=None):
         obj = self.conn.get_all_instances(filters)
         if self.saveclcdata:
             self.__save_json__(obj, "mockdata/Instances.json")
@@ -151,7 +151,7 @@ class BotoClcInterface(ClcInterface):
     def get_password_data(self, instance_id):
         return self.conn.get_password_data(instance_id)
 
-    def get_all_addresses(self, filters, callback=None):
+    def get_all_addresses(self, filters=None, callback=None):
         obj = self.conn.get_all_addresses(filters)
         if self.saveclcdata:
             self.__save_json__(obj, "mockdata/Addresses.json")
@@ -173,7 +173,7 @@ class BotoClcInterface(ClcInterface):
     def disassociate_address(self, publicip):
         return self.conn.disassociate_address(publicip)
 
-    def get_all_key_pairs(self, filters, callback=None):
+    def get_all_key_pairs(self, filters=None, callback=None):
         obj = self.conn.get_all_key_pairs(filters)
         if self.saveclcdata:
             self.__save_json__(obj, "mockdata/Keypairs.json")
@@ -191,7 +191,7 @@ class BotoClcInterface(ClcInterface):
     def import_key_pair(self, key_name, public_key_material):
         return self.conn.import_key_pair(key_name, public_key_material)
 
-    def get_all_security_groups(self, filters, callback=None):
+    def get_all_security_groups(self, filters=None, callback=None):
         obj = self.conn.get_all_security_groups(filters)
         if self.saveclcdata:
             self.__save_json__(obj, "mockdata/Groups.json")
@@ -233,7 +233,7 @@ class BotoClcInterface(ClcInterface):
                                  cidr_ip)#, group_id,
                                  #src_security_group_group_id)
 
-    def get_all_volumes(self, filters, callback=None):
+    def get_all_volumes(self, filters=None, callback=None):
         obj = self.conn.get_all_volumes(filters)
         if self.saveclcdata:
             self.__save_json__(obj, "mockdata/Volumes.json")
@@ -255,8 +255,8 @@ class BotoClcInterface(ClcInterface):
     def detach_volume(self, volume_id, force=False):
         return self.conn.detach_volume(volume_id, None, None, force)
 
-    def get_all_snapshots(self, filters, callback=None):
-        obj = self.conn.get_all_snapshots(filters)
+    def get_all_snapshots(self, filters=None, callback=None):
+        obj = self.conn.get_all_snapshots(owner='self', filters=filters)
         if self.saveclcdata:
             self.__save_json__(obj, "mockdata/Snapshots.json")
         return obj
@@ -290,7 +290,7 @@ class BotoClcInterface(ClcInterface):
 #            kernel_id = 'windows'
         return self.conn.register_image(name, description, image_location, architecture, kernel_id, ramdisk_id, root_dev_name, block_device_map)
 
-    def get_all_tags(self, filters):
+    def get_all_tags(self, filters=None):
         obj = self.conn.get_all_tags(filters)
         if self.saveclcdata:
             self.__save_json__(obj, "mockdata/Tags.json")
@@ -303,3 +303,7 @@ class BotoClcInterface(ClcInterface):
     # returns True if successful
     def delete_tags(self, resourceIds, tags):
         return self.conn.delete_tags(resourceIds, tags)
+
+    def get_all_vmtypes(self):
+        return self.conn.get_all_vmtypes()
+

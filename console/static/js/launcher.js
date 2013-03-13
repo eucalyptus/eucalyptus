@@ -76,6 +76,23 @@
 
       thisObj._initImageSection();
       this.element.qtip();
+
+      // if image option already selected, step wizard forward to "type" step
+      if(thisObj.options.image) {
+        // search rows to get matching one
+        var $section = $launcher.find('#launch-wizard-image');
+        $section.find('table tbody').find('tr').each(function(index, tr) {
+        // add custom td handlers
+          var $currentRow = $(tr);
+          var emi = $currentRow.find('.image-id-arch').children().first().text();
+          if(thisObj.options.image === emi){
+            $currentRow.trigger('click');
+            $section.find('#launch-wizard-buttons-image-next').trigger('click');
+            thisObj._imageTable.fnSettings()._iDisplayLength = 5;
+            thisObj.options.image = null;
+          }
+        })
+      }
      },
 
     _addHelp : function(help){
@@ -277,14 +294,6 @@
               thisObj._setSummary('image', $summary);
             });
           }
-          // when image is pre-populated (launch-wizard called from image landing)
-          var emi = $currentRow.find('.image-id-arch').children().first().text();
-          if(thisObj.options.image && thisObj.options.image === emi){
-            $currentRow.trigger('click');
-            $section.find('#launch-wizard-buttons-image-next').trigger('click');
-            thisObj._imageTable.fnSettings()._iDisplayLength = 5;
-            thisObj.options.image = null;
-          }
         });
         $section.find('div#launch-images_filter').find('input').watermark(launch_instance_image_search_watermark);
         $section.find('div#launch-images_filter').find('input').attr('title', launch_instance_image_search_text_tip);
@@ -292,16 +301,17 @@
 
       var image_self = false; 
       var dtArg = { 
-          "sAjaxSource": "../ec2?Action=DescribeImages",
+          "bProcessing": true,
+          "bServerSide": true,
+          "sAjaxDataProp": function(json) {
+            return json;
+          },
+          "sAjaxSource": 'image',
           "fnServerData": function (sSource, aoData, fnCallback) {
-                $.ajax( {
-                    "dataType": 'json',
-                    "type": "POST",
-                    "url": sSource,
-                    "data": "_xsrf="+$.cookie('_xsrf'),
-                    "success": fnCallback
-                });
-
+                data = $('html body').eucadata('get', sSource);
+                data.iTotalRecords = data.length;
+                data.iTotalDisplayRecords = data.length;
+                fnCallback(data);
           },
           "bSortClasses" : false,
           "bSortable" : false,
@@ -310,17 +320,18 @@
                           "sSearch": "",
                           "sZeroRecords": $.i18n.prop('resource_no_records', image_plural),
                         },
-          "aoColumns": [
+          "aoColumnDefs": [
              { // platform
-               "fnRender" : function(oObj) { 
-                 var emi = oObj.aData.id;
-                 var desc = oObj.aData.description ? oObj.aData.description : oObj.aData.location;
-                 var arch = oObj.aData.architecture;
+               "aTargets":[0],
+               "mData" : function(source) { 
+                 var emi = source.id;
+                 var desc = source.description ? source.description : source.location;
+                 var arch = source.architecture;
                  arch=arch.replace('i386', '32 bit')
                  arch=arch.replace('x86_64', '64 bit');
 
                  var name = '';
-                 var imgKey = inferImage(oObj.aData.location, desc, oObj.aData.platform);
+                 var imgKey = inferImage(source.location, desc, source.platform);
                  if(imgKey)
                    name = getImageName(imgKey);
                  var $cell = $('<div>').addClass(imgKey).addClass('image-type').append(
@@ -329,20 +340,22 @@
                                $('<div>').addClass('image-description').html(desc).text()); 
                  
                  return $cell.wrap($('<div>')).parent().html();
-               }
+               },
              },
              {
                "bVisible": false,
-               "fnRender" : function(oObj){
-                 if(!oObj.aData.platform)
+               "aTargets":[1],
+               "mData" : function(source){
+                 if(!source.platform)
                    return 'linux';
                  else
-                   return oObj.aData.platform;
-               }
+                   return source.platform;
+               },
              },
              {
                "bVisible": false,
-               "fnRender" : function(oObj){
+               "aTargets":[2],
+               "mData" : function(source){
                  var results = describe('sgroup');
                  var group = null;
                  for(i in results){
@@ -351,7 +364,7 @@
                      break;
                    }
                  } 
-                 if(group && group.owner_id === oObj.aData.ownerId)
+                 if(group && group.owner_id === source.ownerId)
                    return 'self'; // equivalent of 'describe-images -self'
                  else
                    return 'all'; 
@@ -359,26 +372,40 @@
              },
              {
                "bVisible": false,
-               "mDataProp": "type",             
+               "aTargets":[3],
+               "mRender": function(data) {
+                return DefaultEncoder().encodeForHTML(data);
+               },
+               "mData": "type",
              },
              {  
                "bVisible": false,
-               "mDataProp": "architecture"
+               "aTargets":[4],
+               "mRender": function(data) {
+                return DefaultEncoder().encodeForHTML(data);
+               },
+               "mData": "architecture"
              },
              { 
                "bVisible": false,
-               "mDataProp": "root_device_type"
+               "aTargets":[5],
+               "mRender": function(data) {
+                return DefaultEncoder().encodeForHTML(data);
+               },
+               "mData": "root_device_type"
              },
              {
                "bVisible": false,
-               "mDataProp": "state",
+               "aTargets":[6],
+               "mRender": function(data) {
+                return DefaultEncoder().encodeForHTML(data);
+               },
+               "mData": "state",
              }
            ],
            "sDom" : "<\"#filter-wrapper\"<\"#owner-filter\"><\"#platform-filter\"><\"clear\"><\"#arch-filter\"><\"clear\"><\"#root-filter\"><\"clear\">f><\"#table-wrapper\" <\"#wizard-img-table-size\"> tr<\"clear\">p>", 
            "sPaginationType" : "full_numbers",
            "iDisplayLength" : thisObj.options.image ? -1: 5,
-           "bProcessing" : true,
-           "sAjaxDataProp" : "results",
            "bAutoWidth" : false,
            "fnDrawCallback" : function( oSettings ) {
               drawCallback(oSettings);
@@ -406,6 +433,7 @@
       $.each(filters, function (idx, filter){
         var $filter = $section.find('#'+filter['name']+'-filter');
         $filter.addClass('euca-table-filter');
+          // XSS Note:: No need to encode the input "filter['name']" since it can only be static, pre-defined string - Kyo 
           $filter.append(
             $('<select>').attr('title', $.i18n.prop('launch_instance_'+filter['name']+'_select_tip')).attr('id',filter['name']+'-selector'));
           var $selector = $filter.find('#'+filter['name']+'-selector');
@@ -441,6 +469,7 @@
       $content = $section.find('#launch-wizard-image-contents').slideToggle('fast');
       thisObj._selectedSection = $content;
     },
+
     _initImageSection : function(){ 
       var thisObj = this;
       this._enableImageLink();
@@ -493,8 +522,6 @@
       var $size = $content.find('#launch-wizard-type-size');
       var $option = $content.find('#launch-wizard-type-options');
     
-      var $list = $('<ul>').addClass('launch-wizard-type-size clearfix'); 
-      var $legend = $('<div>').attr('id','launch-wizard-type-size-legend').addClass('wizard-type-size-legend');
       var selectedType = 'm1.small';
       var typeSelected = false;
       var numInstances = 1;
@@ -526,29 +553,44 @@
       }
 
       var instType ={};
-      instType['m1.small'] = $.eucaData.g_session['instance_type']['m1.small'];
-      instType['c1.medium'] = $.eucaData.g_session['instance_type']['c1.medium'];
-      instType['m1.large'] = $.eucaData.g_session['instance_type']['m1.large'];
-      instType['m1.xlarge'] = $.eucaData.g_session['instance_type']['m1.xlarge'];
-      instType['c1.xlarge'] = $.eucaData.g_session['instance_type']['c1.xlarge'];
+      itypes = $.eucaData.g_session['instance_type'];
+      $.each(itypes, function(type, value) {
+        instType[type] = value;
+      });
+      // put keys into array
+      var instNames = [];
+      for (name in instType) {
+        instNames.push(name);
+      }
+      // sort array
+      instNames.sort(function(a,b) {
+        if (instType[a][0] != instType[b][0]) return instType[a][0] - instType[b][0];
+        if (instType[a][1] != instType[b][1]) return instType[a][1] - instType[b][1];
+        if (instType[a][2] != instType[b][2]) return instType[a][2] - instType[b][2];
+      });
 
-      $.each(instType, function(type, size){
-        $list.append(
-          $('<li>').addClass('instance-type-'+type.replace('.','_')).append(
+      // iterate through array, pulling data from dictionary to populate select
+      var $list = $content.find('#launch-instance-type-size');
+      $.each(instNames, function(index, value){
+        var tmp = instType[value];
+        var legend = value + ': ' + tmp[0] + ' ' + launch_wizard_type_description_cpus + ', ' + tmp[1] + ' ' + launch_wizard_type_description_memory + ', ' +tmp[2] + ' ' + launch_wizard_type_description_disk;  
+        $list.append($('<option>').attr('value', value).text(legend));
+      });
+      $list.change(function(e){
+        selectedType = $(this).val();
+        typeSelected = true;
+        thisObj._setSummary('type', summarize());
+      });
+          /*
             $('<a>').attr('href','#').text(type).click( function(){
               selectedType = type;
               typeSelected = true;
-              var legend = type + '&nbsp;' + launch_wizard_type_description_default + '&nbsp;' + size[0] + '&nbsp;' + launch_wizard_type_description_cpus + ',&nbsp;' + size[1] + '&nbsp;' + launch_wizard_type_description_memory + ',&nbsp;' +size[2] + '&nbsp;' + launch_wizard_type_description_disk;  
               $size.find('#launch-wizard-type-size-legend').html(legend); 
-              $(this).parent().addClass('selected-type');
-              $(this).parent().siblings().removeClass('selected-type');
+//              $(this).parent().addClass('selected-type');
+//              $(this).parent().siblings().removeClass('selected-type');
               thisObj._setSummary('type', summarize());
             })));
-      });
-
-      $size.append($('<div>').addClass('wizard-section-label').html(launch_instance_type_size_header),
-                   $('<div>').addClass('wizard-section-content').append($list),
-                   $legend); 
+            */
 
       var $list = $('<div>').addClass('launch-wizard-type-option'); 
       $list.append(
@@ -679,13 +721,11 @@
         var $sg_selector = $sgroup.find('select');
         var results = describe('sgroup');
         var numOptions = $sg_selector.find('option').length;
-        if (numOptions === results.length)
-          return;
         var onSelectorChange = function(groupName){
           var $rule = $section.find('div#launch-wizard-security-sg-detail');
           $rule.children().detach();
           $rule.append(
-            $('<div>').addClass('launcher-sgroup-details-label').html($.i18n.prop('launch_instance_security_group_rule',groupName)));
+            $('<div>').addClass('launcher-sgroup-details-label').html($.i18n.prop('launch_instance_security_group_rule',DefaultEncoder().encodeForHTML(groupName))));
           var results = describe('sgroup');
           var group = null;
           for(i in results){
@@ -1422,13 +1462,14 @@
               inst_ids.push(instance.id);
             }
             var instances = inst_ids.join(' ');
-            notifySuccess(null, $.i18n.prop('instance_run_success', instances));
+            notifySuccess(null, $.i18n.prop('instance_run_success', DefaultEncoder().encodeForHTML(instances)));
             //TODO: move to instance page?
             var $container = $('html body').find(DOM_BINDING['main']);
             $container.maincontainer("clearSelected");
             $container.maincontainer("changeSelected",null, {selected:'instance'});
             $container.instance('glowNewInstance', inst_ids);
           } else {
+            // XSS Note:: No need to encode "undefined_error" since it is a static string from the file "messages.properties" - Kyo
             notifyError($.i18n.prop('instance_run_error'), undefined_error);
             //TODO: clear launch-instance wizard?
             var $container = $('html body').find(DOM_BINDING['main']);
@@ -1437,6 +1478,7 @@
           }
         },
         error: function (jqXHR, textStatus, errorthrown) {
+          // XSS Note:: Cannot encode 'getErrorMessage(jqXHR) since the type is unknown, can be HTML or TEXT
           notifyError($.i18n.prop('instance_run_error'), getErrorMessage(jqXHR));
           var $container = $('html body').find(DOM_BINDING['main']);
           $container.maincontainer("clearSelected");

@@ -56,6 +56,7 @@ from .botojsonencoder import BotoJsonEncoder
 from .botojsonencoder import BotoJsonBalanceEncoder
 from .botojsonencoder import BotoJsonWatchEncoder
 from .botojsonencoder import BotoJsonScaleEncoder
+from .botojsonencoder import BotoJsonStorageEncoder
 from .cachingclcinterface import CachingClcInterface
 from .cachingbalanceinterface import CachingBalanceInterface
 from .cachingwalrusinterface import CachingWalrusInterface
@@ -65,6 +66,7 @@ from .mockclcinterface import MockClcInterface
 from .mockbalanceinterface import MockBalanceInterface
 from .mockwatchinterface import MockWatchInterface
 from .mockscaleinterface import MockScaleInterface
+from .mockwalrusinterface import MockWalrusInterface
 from .response import ClcError
 from .response import Response
 
@@ -94,6 +96,16 @@ class BaseAPIHandler(eucaconsole.BaseHandler):
                 val = self.get_argument(pattern % (index), None)
         return ret
 
+
+    def extract_ids(self, data):
+        if isinstance(data, list):
+            ret = []
+            for item in data:
+                ret.append(item.id)
+            return ret
+        else:
+            return data
+                
     # async calls end up back here so we can check error status and reply appropriately
     def callback(self, response):
         if response.error:
@@ -120,7 +132,11 @@ class BaseAPIHandler(eucaconsole.BaseHandler):
                         time.sleep(int(eucaconsole.config.get('test','apidelay'))/1000.0);
                 except ConfigParser.NoOptionError:
                     pass
-                ret = Response(response.data) # wrap all responses in an object for security purposes
+                summary = False
+                if summary:
+                    ret = Response(extract_ids(response.data))
+                else:
+                    ret = Response(response.data) # wrap all responses in an object for security purposes
                 data = json.dumps(ret, cls=self.json_encoder, indent=2)
                 self.set_header("Content-Type", "application/json;charset=UTF-8")
                 self.write(data)
@@ -283,8 +299,8 @@ class BalanceHandler(BaseAPIHandler):
             if not(balancer_port):
                 done = True
                 break
-            ret.append(Listener(load_balancer_port=balancer_port, instance_port=instance_port,
-                                protocol=protocol, ssl_certificate_id=ssl_cert_id))
+            l = balancer_port, instance_port, protocol, ssl_cert_id
+            ret.append(l)
             index += 1
 
         return ret
@@ -298,7 +314,7 @@ class BalanceHandler(BaseAPIHandler):
     def post(self):
         if not self.authorized():
             raise tornado.web.HTTPError(401, "not authorized")
-        if not(self.user_session.scaling):
+        if not(self.user_session.elb):
             if self.should_use_mock():
                 self.user_session.elb = MockBalanceInterface()
             else:
@@ -384,7 +400,7 @@ class WatchHandler(BaseAPIHandler):
             raise tornado.web.HTTPError(401, "not authorized")
         if not(self.user_session.cw):
             if self.should_use_mock():
-                self.user_session.walrus = MockWatchInterface()
+                self.user_session.cw = MockWatchInterface()
             else:
                 host = eucaconsole.config.get('server', 'clchost')
                 if self.user_session.host_override:
@@ -431,8 +447,7 @@ class WatchHandler(BaseAPIHandler):
             logging.exception(ex)
 
 class StorageHandler(BaseAPIHandler):
-#    def __init__(self):
-#        self.json_encoder = JsonBotoStorageEncoder
+    json_encoder = BotoJsonStorageEncoder
 
     ##
     # This is the main entry point for API calls for S3(Walrus) from the browser
@@ -444,7 +459,7 @@ class StorageHandler(BaseAPIHandler):
             raise tornado.web.HTTPError(401, "not authorized")
         if not(self.user_session.walrus):
             if self.should_use_mock():
-                pass #self.user_session.walrus = MockClcInterface()
+                self.user_session.walrus = MockWalrusInterface()
             else:
                 host = eucaconsole.config.get('server', 'clchost')
                 if self.user_session.host_override:
@@ -845,7 +860,6 @@ class ComputeHandler(BaseAPIHandler):
     def __get_password_cb__(self, kwargs, callback):
         try:
             passwd_data = self.user_session.clc.get_password_data(kwargs['instanceid'])
-            print "got password data"+passwd_data
             priv_key_file = self.request.files['priv_key']
             user_priv_key = RSA.load_key_string(priv_key_file[0].body)
             string_to_decrypt = base64.b64decode(passwd_data)
@@ -897,11 +911,16 @@ class ComputeHandler(BaseAPIHandler):
                 del self.user_session.keypair_cache[name]
                 return
 
-            if action == 'GetCacheSummary':
+            if action == 'GetDashSummary':
                 ret = ""
+                zone = self.get_argument('AvailabilityZone', 'all')
                 if isinstance(self.user_session.clc, CachingClcInterface):
-                    ret = self.user_session.clc.get_cache_summary()
-                print ret
+                    ret = self.user_session.clc.get_cache_summary(zone)
+                self.callback(eucaconsole.cachingclcinterface.Response(data=ret))
+            elif action == 'SetDataInterest':
+                resources = self.get_argument_list('Resources.member')
+                if isinstance(self.user_session.clc, CachingClcInterface):
+                    ret = self.user_session.clc.set_data_interest(resources)
                 self.callback(eucaconsole.cachingclcinterface.Response(data=ret))
             elif action == 'RunInstances':
                 user_data_file = []

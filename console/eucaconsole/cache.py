@@ -34,20 +34,28 @@ class Cache(object):
         self._values = None
         self._lock = threading.Lock()
         self.freshData = True
+        self.filters = None
 
-    def isCacheStale(self):
+    # staleness is determined by an age calculation (based on updateFreq)
+    def isCacheStale(self, filters=None):
+        if filters != self.filters:
+            return True
         return ((datetime.now() - self.lastUpdate) > timedelta(seconds = self.updateFreq))
 
+    # freshness is defined (not as !stale, but) as new data which has not been read yet
     def isCacheFresh(self):
         ret = self.freshData
-        self.freshData = False
         return ret
 
     def expireCache(self):
         self.lastUpdate = datetime.min
 
+    def filters(self, filters):
+        self.filters = filters
+
     @property
     def values(self):
+        self.freshData = False
         return self._values
 
     @values.setter

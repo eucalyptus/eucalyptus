@@ -48,7 +48,12 @@ class BotoScaleInterface(ScaleInterface):
             reg = None
             port=443
         reg = RegionInfo(name='eucalyptus', endpoint=clc_host)
-        self.conn = AutoScaleConnection(access_id, secret_key, region=reg,
+        if boto.__version__ < '2.6':
+            self.conn = AutoScaleConnection(access_id, secret_key, region=reg,
+                                  port=port, path=path,
+                                  is_secure=True, security_token=token, debug=0)
+        else:
+            self.conn = AutoScaleConnection(access_id, secret_key, region=reg,
                                   port=port, path=path, validate_certs=False,
                                   is_secure=True, security_token=token, debug=0)
         self.conn.http_connection_kwargs['timeout'] = 30
@@ -68,12 +73,14 @@ class BotoScaleInterface(ScaleInterface):
         return self.conn.delete_auto_scaling_group(name, force_delete)
 
     def get_all_groups(self, names=None, max_records=None, next_token=None):
+        return []
         obj = self.conn.get_all_groups(names, max_records, next_token)
         if self.saveclcdata:
             self.__save_json__(obj, "mockdata/AS_Groups.json")
         return obj
 
     def get_all_autoscaling_instances(self, instance_ids=None, max_records=None, next_token=None):
+        return []
         obj = self.conn.get_all_autoscaling_instances(instance_ids, max_records, next_token)
         if self.saveclcdata:
             self.__save_json__(obj, "mockdata/AS_Instances.json")
