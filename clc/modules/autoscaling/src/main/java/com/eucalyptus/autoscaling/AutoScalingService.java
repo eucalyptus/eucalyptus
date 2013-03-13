@@ -1121,20 +1121,22 @@ public class AutoScalingService {
         TypeMappers.transform( activities.get( 0 ), Activity.class )  
       );
 
-      if ( Objects.firstNonNull( request.getShouldDecrementDesiredCapacity(), Boolean.FALSE ) ) {
-        final String groupArn = instance.getAutoScalingGroup().getArn();
-        final Callback<AutoScalingGroup> groupCallback = new Callback<AutoScalingGroup>() {
-          @Override
-          public void fire( final AutoScalingGroup autoScalingGroup ) {
+      final String groupArn = instance.getAutoScalingGroup().getArn();
+      final Callback<AutoScalingGroup> groupCallback = new Callback<AutoScalingGroup>() {
+        @Override
+        public void fire( final AutoScalingGroup autoScalingGroup ) {
+          if ( Objects.firstNonNull( request.getShouldDecrementDesiredCapacity(), Boolean.FALSE ) ) {
             autoScalingGroup.setDesiredCapacity( autoScalingGroup.getDesiredCapacity() - 1 );
+          } else {
+            autoScalingGroup.setScalingRequired( true );
           }
-        };
+        }
+      };
 
-        autoScalingGroups.update(
-            ctx.getUserFullName().asAccountFullName(),
-            groupArn,
-            groupCallback);
-      }
+      autoScalingGroups.update(
+          ctx.getUserFullName().asAccountFullName(),
+          groupArn,
+          groupCallback);
     } catch ( AutoScalingMetadataNotFoundException e ) {
       throw new InvalidParameterValueException( "Auto scaling instance not found: " + request.getInstanceId( ) );
     } catch ( Exception e ) {
