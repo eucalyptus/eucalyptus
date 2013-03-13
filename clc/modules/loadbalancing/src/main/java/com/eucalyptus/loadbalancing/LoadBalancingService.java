@@ -112,6 +112,52 @@ public class LoadBalancingService {
   /// EUCA-specific, internal operations for retrieving instance health check
   public PutServoStatesResponseType putServoStates(PutServoStatesType request){
 	  PutServoStatesResponseType reply = request.getReply();
+	  // TODO: SPARK: authenticate/authorize using IAM roles
+	  final String servoId = request.getInstanceId();
+	  final Instances instances = request.getInstances();
+	  LoadBalancer lb = null;
+	  if(servoId!= null){
+		  try{
+			  LoadBalancerServoInstance servo = LoadBalancers.lookupServoInstance(servoId);
+			  lb = servo.getAvailabilityZone().getLoadbalancer();
+			  if(lb==null)
+				  throw new Exception("Failed to find the loadbalancer");
+		  }catch(NoSuchElementException ex){
+			  LOG.warn("unknown servo VM id is used to query: "+servoId);
+		  }catch(Exception ex){
+			  LOG.warn("failed to query servo instance");
+		  }
+	  }
+	  
+	  if(lb != null && instances.getMember()!=null && instances.getMember().size()>0){
+		  for(Instance instance : instances.getMember()){
+			  String instanceId = instance.getInstanceId();
+			  // format: instanceId:state
+			  String[] parts = instanceId.split(":");
+			  if(parts==null || parts.length!= 2){
+				  LOG.warn("instance id is in wrong format:"+ instanceId);
+				  continue;
+			  }
+			  instanceId = parts[0];
+			  String state = parts[1];
+			  final EntityTransaction db = Entities.get( LoadBalancerBackendInstance.class );
+		 	  try{/// TODO: SPARK: this is wrong; IAM roles should authenticate the user
+		 		  LoadBalancerBackendInstance sample = LoadBalancerBackendInstance.named(instanceId);
+		 		  LoadBalancerBackendInstance found = Entities.uniqueResult(sample);
+		 		  if (state.equals(LoadBalancerBackendInstance.STATE.InService.name()) || 
+		 				  state.equals(LoadBalancerBackendInstance.STATE.OutOfService.name())){
+		 			  found.setState(Enum.valueOf(LoadBalancerBackendInstance.STATE.class, state));
+		 			  Entities.persist(found);
+		 		  }
+		 		  db.commit();
+		 	  }catch(NoSuchElementException ex){
+		 		  db.rollback();
+		 	  }catch(Exception ex){
+		 		  db.rollback();
+		 		  LOG.warn("Failed to query loadbalancer backend instance: "+instanceId, ex);
+		 	  }
+		  }
+	  }
 	  return reply;
   }
  
@@ -733,7 +779,8 @@ public class LoadBalancingService {
 	String target = hc.getTarget();
 	if(target == null)
 		throw new LoadBalancingException("target must be specified");
-    Integer timeout = hc.getTimeout();
+	
+	Integer timeout = hc.getTimeout();
     if(timeout==null)
     	throw new LoadBalancingException("timeout must be specified");
     Integer unhealthyThreshold = hc.getUnhealthyThreshold();

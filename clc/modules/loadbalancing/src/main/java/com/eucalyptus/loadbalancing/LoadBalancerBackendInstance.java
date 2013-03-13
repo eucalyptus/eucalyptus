@@ -107,6 +107,14 @@ public class LoadBalancerBackendInstance extends UserMetadata<LoadBalancerBacken
 		return instance;
 	}
 	
+	public static LoadBalancerBackendInstance named(final String vmId){
+		LoadBalancerBackendInstance instance = new LoadBalancerBackendInstance();
+		instance.setOwner(null);
+		instance.setState(null);
+		instance.setDisplayName(vmId);
+		return instance;
+	}
+	
 	public String getInstanceId(){
 		return this.getDisplayName();
 	}
@@ -171,4 +179,12 @@ public class LoadBalancerBackendInstance extends UserMetadata<LoadBalancerBacken
 	public String toString(){
 		return String.format("%s backend instance - %s", this.loadbalancer, this.getDisplayName());
 	}
+	
+	@Override
+	protected String createUniqueName( ) {
+	    return ( this.getOwnerAccountNumber( ) != null && this.getDisplayName( ) != null && this.getLoadBalancer() != null)
+	      ? this.getOwnerAccountNumber( ) + ":" + this.getLoadBalancer().getDisplayName()+":"+this.getDisplayName( )
+	      : null;
+	}
+	  
 }

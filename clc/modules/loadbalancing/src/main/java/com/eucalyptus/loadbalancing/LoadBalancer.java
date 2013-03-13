@@ -181,6 +181,44 @@ public class LoadBalancer extends UserMetadata<LoadBalancer.STATE> implements Lo
 		throws IllegalArgumentException
 	{
 		// check the validity of the health check param
+		if(healthyThreshold < 0)
+			throw new IllegalArgumentException("healthyThreshold must be > 0");
+		if(interval < 0)
+			throw new IllegalArgumentException("interval must be > 0");
+		if(timeout < 0)
+			throw new IllegalArgumentException("timeout must be > 0");
+		if(unhealthyThreshold < 0)
+			throw new IllegalArgumentException("unhealthyThreshold must be > 0");
+		
+		if(!(target.startsWith("HTTP") || target.startsWith("HTTPS") || 
+				target.startsWith("TCP") ||target.startsWith("SSL")))
+			throw new IllegalArgumentException("target must starts with one of HTTP, HTTPS, TCP, SSL");
+		
+		if(target.startsWith("HTTP") || target.startsWith("HTTPS")){
+			int idxPort = target.indexOf(":");
+			int idxPath = target.indexOf("/");
+			if(idxPort < 0 || idxPath <0 || (idxPath-idxPort) <= 1)
+				throw new IllegalArgumentException("Port and Path must be specified for HTTP");
+			String port = target.substring(idxPort+1, idxPath);
+			try{
+				int portNum = Integer.parseInt(port);
+				if(!(portNum > 0 && portNum < 65536))
+					throw new Exception("invalid port number");
+			}catch(Exception ex){
+				throw new IllegalArgumentException("Invalid target specified", ex);
+			}
+		}else if (target.startsWith("TCP") || target.startsWith("SSL")){
+			String copy = target;
+			copy.replace("TCP:","").replace("SSL:", "");
+			try{
+				int portNum = Integer.parseInt(copy);
+				if(!(portNum > 0 && portNum < 65536))
+					throw new Exception("invalid port number");
+			}catch(Exception ex){
+				throw new IllegalArgumentException("Invalid target specified", ex);
+			}
+		}
+	   
 		this.healthConfig = new LoadBalancerHealthCheckConfig(healthyThreshold, interval, target, timeout,unhealthyThreshold);
 		this.healthConfig.setLoadBalancer(this);
 	}
