@@ -1,3 +1,23 @@
+/*************************************************************************
+ * Copyright 2009-2013 Eucalyptus Systems, Inc.
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; version 3 of the License.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see http://www.gnu.org/licenses/.
+ *
+ * Please contact Eucalyptus Systems, Inc., 6755 Hollister Ave., Goleta
+ * CA 93117, USA or visit http://www.eucalyptus.com/licenses/ if you need
+ * additional information or have any questions.
+ ************************************************************************/
+
 package com.eucalyptus.cloudwatch;
 
 import java.util.ArrayList;
@@ -31,7 +51,6 @@ import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.OwnerFullName;
-import com.eucalyptus.util.RestrictedTypes;
 import com.google.common.base.Function;
 import com.google.common.collect.Collections2;
 import com.google.common.collect.Lists;
@@ -40,6 +59,9 @@ import com.google.common.collect.Maps;
 
 public class CloudWatchService {
   private static final Logger LOG = Logger.getLogger(CloudWatchService.class);
+  
+  private static final String SystemMetricPrefix = "AWS/";
+  
   public PutMetricAlarmResponseType putMetricAlarm(PutMetricAlarmType request) throws EucalyptusCloudException {
     PutMetricAlarmResponseType reply = request.getReply( );
     final Context ctx = Contexts.lookup( );
@@ -88,12 +110,20 @@ public class CloudWatchService {
     final OwnerFullName ownerFullName = ctx.getUserFullName();
     final String nameSpace = request.getNamespace();
     final List<MetricDatum> metricDatum = Lists.newArrayList(request.getMetricData().getMember());
+    final Boolean isUserAccountAdmin = ctx.getUser().isAccountAdmin();
     //TODO: validate mon-put-data:  Malformed input-The parameter MetricData.member.1.StatisticValues.Maximum must
     //be greater than MetricData.member.1.StatisticValues.Minimum.
     //TODO: on-put-data:  Malformed input-The parameters MetricData.member.1.Value and
     // MetricData.member.1.StatisticValues are mutually exclusive and you have
     // specified both.
-    MetricDataQueue.getInstance().insertMetricData(ownerFullName.getUserId(), ownerFullName.getAccountNumber(), nameSpace, metricDatum, MetricType.Custom);
+    
+    if (nameSpace.startsWith(SystemMetricPrefix) && isUserAccountAdmin ) {
+	MetricDataQueue.getInstance().insertMetricData(ownerFullName.getUserId(), ownerFullName.getAccountNumber(), nameSpace, metricDatum, MetricType.System);
+    } else if (!nameSpace.startsWith(SystemMetricPrefix) ) {
+	MetricDataQueue.getInstance().insertMetricData(ownerFullName.getUserId(), ownerFullName.getAccountNumber(), nameSpace, metricDatum, MetricType.Custom);
+    } else {
+	LOG.debug("Unknown metric data type");
+    }
 
     return reply;
   }
@@ -283,7 +313,12 @@ public class CloudWatchService {
     boolean wantsSampleCount = statistics.getMember().contains("SampleCount");
     boolean wantsMaximum = statistics.getMember().contains("Maximum");
     boolean wantsMinimum = statistics.getMember().contains("Minimum");
-    Collection<MetricStatistics> metrics = MetricManager.getMetricStatistics(ownerFullName.getAccountNumber(), ownerFullName.getUserId(), metricName, namespace, dimensionMap, MetricType.Custom, units, startTime, endTime, period);
+    Collection<MetricStatistics> metrics;
+    if (namespace.startsWith("AWS/")) {
+	metrics = MetricManager.getMetricStatistics(ownerFullName.getAccountNumber(), ownerFullName.getUserId(), metricName, namespace, dimensionMap, MetricType.System, units, startTime, endTime, period);
+    } else {
+	metrics = MetricManager.getMetricStatistics(ownerFullName.getAccountNumber(), ownerFullName.getUserId(), metricName, namespace, dimensionMap, MetricType.Custom, units, startTime, endTime, period);
+    }
     reply.getGetMetricStatisticsResult().setLabel(metricName);
     ArrayList<Datapoint> datapoints = Lists.newArrayList();
     for (MetricStatistics metricStatistics: metrics) {

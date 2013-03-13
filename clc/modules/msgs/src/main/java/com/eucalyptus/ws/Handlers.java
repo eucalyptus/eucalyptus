@@ -155,7 +155,7 @@ public class Handlers {
   private static final ChannelHandler                        soapHandler              = new SoapHandler( );
   private static final ChannelHandler                        addressingHandler        = new AddressingHandler( );
   private static final ConcurrentMap<String, BindingHandler> bindingHandlers          = new MapMaker( ).makeComputingMap( BindingHandlerLookup.INSTANCE );
-  private static final ChannelHandler                        bindingHandler           = new BindingHandler( );
+  private static final ChannelHandler                        bindingHandler           = new BindingHandler( BindingManager.getDefaultBinding( ) );
   private static final ChannelHandler                        internalImpersonationHandler = new InternalImpersonationHandler();
   private static final HashedWheelTimer                      timer                    = new HashedWheelTimer( );                                                                                             //TODO:GRZE: configurable
                                                                                                                                                                                                               

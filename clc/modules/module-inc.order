@@ -12,6 +12,7 @@ wsstack
 euare
 tokens
 component
+cloudwatch-common
 cluster-manager
 notifications
 storage-common
@@ -19,10 +20,10 @@ reporting
 troubleshooting
 walrus
 storage-controller
-cloudwatch-common
 autoscaling-common
 loadbalancing-common
 autoscaling
 loadbalancing
+cloudwatch
 dns
 www
