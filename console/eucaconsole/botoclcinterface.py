@@ -31,14 +31,15 @@ from boto.ec2.regioninfo import RegionInfo
 
 from .botojsonencoder import BotoJsonEncoder
 from .clcinterface import ClcInterface
+from vmtype import VmType
 
 # This class provides an implmentation of the clcinterface using boto
 class BotoClcInterface(ClcInterface):
     conn = None
     saveclcdata = False
 
-    def __init__(self, clc_host, access_id, secret_key, token):
-        #boto.set_stream_logger('foo')
+    def __init__(self, clc_host, access_id, secret_key, token, debug=0):
+        boto.set_stream_logger('foo')
         reg = RegionInfo(name='eucalyptus', endpoint=clc_host)
         path='/services/Eucalyptus'
         port=8773
@@ -49,11 +50,11 @@ class BotoClcInterface(ClcInterface):
         if boto.__version__ < '2.6':
             self.conn = EC2Connection(access_id, secret_key, region=reg,
                                   port=port, path=path,
-                                  is_secure=True, security_token=token, debug=0)
+                                  is_secure=True, security_token=token, debug=debug)
         else:
             self.conn = EC2Connection(access_id, secret_key, region=reg,
                                   port=port, path=path, validate_certs=False,
-                                  is_secure=True, security_token=token, debug=0)
+                                  is_secure=True, security_token=token, debug=debug)
         self.conn.APIVersion = '2012-03-01'
         self.conn.http_connection_kwargs['timeout'] = 30
 
@@ -303,5 +304,5 @@ class BotoClcInterface(ClcInterface):
         return self.conn.delete_tags(resourceIds, tags)
 
     def get_all_vmtypes(self):
-        return self.conn.get_all_vmtypes()
+        return self.conn.get_list('DescribeVmTypes', {}, [('euca:item', VmType)], verb='POST')
 
