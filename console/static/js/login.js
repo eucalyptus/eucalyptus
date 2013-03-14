@@ -141,7 +141,7 @@
             $form.find('.button-bar input').show();
             if (args.search("Forbidden")>-1) {
               thisObj.changepwdDialog.eucadialog("open");
-              thisObj.changepwdDialog.find("#change-passwd-prompt p").html(login_change_passwd_prompt);
+              thisObj.changepwdDialog.find("#change-passwd-prompt").html(login_change_passwd_prompt);
             }
             else {
               thisObj.errorDialog.eucadialog('open');

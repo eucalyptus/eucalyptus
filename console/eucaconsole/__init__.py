@@ -469,7 +469,7 @@ class LoginResponse(ProxyResponse):
             host = config.get('server', 'clchost')
             clc = BotoClcInterface(host, self.user_session.access_key,
                                    self.user_session.secret_key,
-                                   self.user_session.session_token, debug=2)
+                                   self.user_session.session_token, debug=0)
             vmtypes = clc.get_all_vmtypes()
         global_session.parse_vmtypes(vmtypes)
 
