@@ -280,6 +280,10 @@
     // args.refresh = text 'Refresh'
     _decorateSearchBar : function(args) {
       var thisObj = this; // ref to widget instance
+
+      var facetMatches = [];
+      var matchStruct = {};
+
       if(thisObj.options.filters){
         $.each(thisObj.options.filters, function (idx, filter){
           var $filter = thisObj.element.find('#'+filter['name']+'-filter');
@@ -294,11 +298,16 @@
           }
           var $selector = $filter.find('#'+filter['name']+'-selector');
           $selector.change( function(e) { thisObj.table.fnDraw(); } );
+          var optList = [];
           for (i in filter.options){
             var option = filter.options[i];
             var text = (filter.text&&filter.text.length>i) ? filter.text[i] : option; 
             $selector.append($('<option>').val(option).text(text));
+            optList.push({value: option, label: text});
           }
+          facetMatches.push(filter['name']);
+          matchStruct[filter['name']] = optList;
+
           if(filter['filter_col']){
             $.fn.dataTableExt.afnFiltering.push(
 	      function( oSettings, aData, iDataIndex ) {
@@ -345,6 +354,24 @@
       $(filterArr).each(function(){$wrapper.append($(this).clone(true));}); 
       $wrapper.insertAfter(filterArr[filterArr.length-1]);
       $(filterArr).each(function(){$(this).remove();});
+if (true) {
+      $wrapper.empty();
+      $wrapper.prepend('<div class="visual_search" style="margin-top:-2px;width:90%;display:inline-block"></div><div class="dataTables_filter" id="images_filter"><a class="table-refresh" href="#">Refresh</a></div>');
+      setTimeout(function() {
+        VS.init({ 
+              container : $('.visual_search'),
+              showFacets : true,
+              query     : '',
+              callbacks : {
+                search       : function(query, searchCollection) {},
+                facetMatches : function(callback) { callback(facetMatches); },
+                valueMatches : function(facet, searchTerm, callback) {
+                        callback(matchStruct[facet]);
+                }
+              }
+            });
+        }, 1);
+}         
     },   
 
     // args.txt_create (e.g., Create new key)
