@@ -116,7 +116,7 @@ public class VmBootRecord {
   private Set<VmVolumeAttachment> persistentVolumes = Sets.newHashSet( );
   
   @Column( name = "metadata_vm_monitoring")
-  private boolean 		  monitoring;
+  private Boolean 		  monitoring;
   
   @Column( name = "metadata_vm_user_data" )
   private byte[]                  userData;

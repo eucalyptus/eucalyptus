@@ -20,6 +20,7 @@
 package com.eucalyptus.autoscaling.activities;
 
 import javax.annotation.Nullable;
+import com.eucalyptus.loadbalancing.LoadBalancingMessage;
 import com.eucalyptus.util.Callback;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 import edu.ucsb.eucalyptus.msgs.EucalyptusMessage;
@@ -42,9 +43,32 @@ class TestClients {
 
     @SuppressWarnings( "unchecked" )
     @Override
-    <REQ extends EucalyptusMessage, RES extends EucalyptusMessage> void dispatch( REQ request,
+    public <REQ extends EucalyptusMessage, RES extends EucalyptusMessage> void dispatch( REQ request,
                                                                                   Callback.Checked<RES> callback,
                                                                                   @Nullable Runnable then ) {
+      try {
+        callback.fire( (RES)handler.handle( request ) );
+      } catch ( Exception e ) {
+        callback.fireException( e );
+      } finally {
+        if ( then != null ) then.run();
+      }
+    }
+  }
+
+  static class TestElbClient extends ElbClient {
+    private final RequestHandler handler;
+
+    TestElbClient( String userId, RequestHandler handler ) {
+      super(userId);
+      this.handler = handler;
+    }
+
+    @SuppressWarnings( "unchecked" )
+    @Override
+    public <REQ extends LoadBalancingMessage, RES extends LoadBalancingMessage> void dispatch( REQ request,
+                                                                                               Callback.Checked<RES> callback,
+                                                                                               @Nullable Runnable then ) {
       try {
         callback.fire( (RES)handler.handle( request ) );
       } catch ( Exception e ) {

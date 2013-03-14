@@ -31,7 +31,7 @@ public class LoadBalancingException extends EucalyptusWebServiceException {
 	public static final String DUPLICATE_LOADBALANCER_EXCEPTION = "Duplicate loadbalancer name is found";
 	public static final String LOADBALANCER_CREATE_EXCEPTION = "Failed to create a new loadbalancer";
 	
-	public static final Role DEFAULT_ROLE = Role.Receiver;
+	public static final Role DEFAULT_ROLE = Role.Sender;
 	public static final String DEFAULT_CODE = "400";  //  TODO: SPARK: Figure out the use of code
 	
 	public LoadBalancingException(final String message){

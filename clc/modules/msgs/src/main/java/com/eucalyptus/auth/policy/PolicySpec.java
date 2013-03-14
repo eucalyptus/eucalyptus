@@ -101,6 +101,8 @@ public class PolicySpec {
   public static final String VENDOR_STS = "sts";
   public static final String VENDOR_AUTOSCALING = "autoscaling";
   public static final String VENDOR_CLOUDWATCH = "cloudwatch";
+  public static final String VENDOR_LOADBALANCING = "loadbalancing";
+  
   
   public static final Set<String> VENDORS = ImmutableSet.of(
     VENDOR_IAM,
@@ -108,7 +110,8 @@ public class PolicySpec {
     VENDOR_S3,
     VENDOR_STS,
     VENDOR_AUTOSCALING,
-    VENDOR_CLOUDWATCH
+    VENDOR_CLOUDWATCH,
+    VENDOR_LOADBALANCING
   );
 
   public static final String ALL_ACTION = "*";
@@ -501,18 +504,70 @@ public class PolicySpec {
       .add(CLOUDWATCH_SETALARMSTATE)
       .build();
   
+  //Load Balancing actions, based on API Reference (API Version 2012-06-01)
+  public static final String LOADBALANCING_DESCRIBELOADBALANCERPOLICYTYPES = "describeloadbalancerpolicytypes";
+  public static final String LOADBALANCING_CONFIGUREHEALTHCHECK = "configurehealthcheck";
+  public static final String LOADBALANCING_DETACHLOABBALANCERFROMSUBNETS = "detachloadbalancerfromsubnets";
+  public static final String LOADBALANCING_DESCRIBELOADBALANCERPOLICIES = "describeloadbalancerpolicies";
+  public static final String LOADBALANCING_SETLOADBALANCERPOLICIESOFLISTENER = "setloadbalancerpoliciesoflistener";
+  public static final String LOADBALANCING_DISABLEAVAILABILITYZONESFORLOADBALANCER = "disableavailabilityzonesforloadbalancer";
+  public static final String LOADBALANCING_DESCRIBEINSTANCEHEALTH = "describeinstancehealth";
+  public static final String LOADBALANCING_DELETELOADBALANCERPOLICY = "deleteloadbalancerpolicy";
+  public static final String LOADBALANCING_CREATELOADBALANCERPOLICY = "createloadbalancerpolicy";
+  public static final String LOADBALANCING_ENABLEAVAILABILITYZONESFORLOADBALANCER = "enableavailabilityzonesforloadbalancer";
+  public static final String LOADBALANCING_CREATELOADBALANCERLISTENERS = "createloadbalancerlisteners";
+  public static final String LOADBALANCING_CREATELOADBALANCER = "createloadbalancer";
+  public static final String LOADBALANCING_DELETELOADBALANCER = "deleteloadbalancer";
+  public static final String LOADBALANCING_SETLOADBALANCERPOLICIESFORBACKENDSERVER = "setloadbalancerpoliciesforbackendserver";
+  public static final String LOADBALANCING_DELETELOADBALANCERLISTENERS = "deleteloadbalancerlisteners";
+  public static final String LOADBALANCING_DEREGISTERINSTANCESFROMLOADBALANCER = "deregisterinstancesfromloadbalancer";
+  public static final String LOADBALANCING_SETLOADBALANCERLISTENERSSLCERTIFICATE = "setloadbalancerlistenersslcertificate";
+  public static final String LOADBALANCING_CREATELBCOOKIESTICKINESSPOLICY = "createlbcookiestickinesspolicy";
+  public static final String LOADBALANCING_ATTACHLOADBALANCERTOSUBNETS = "attachLoadbalancertosubnets";
+  public static final String LOADBALANCING_CREATEAPPCOOKIESTICKINESSPOLICY = "createappcookiestickinesspolicy";
+  public static final String LOADBALANCING_REGISTERINSTANCESWITHLOADBALANCER = "registerinstanceswithloadbalancer";
+  public static final String LOADBALANCING_APPLYSECURITYGROUPSTOLOADBALANCER = "applysecuritygroupstoloadbalancer";
+  public static final String LOADBALANCING_DESCRIBELOADBALANCERS = "describeloadbalancers";
+  
+  public static final Set<String> LOADBALANCING_ACTIONS = new ImmutableSet.Builder<String>()
+      .add(LOADBALANCING_DESCRIBELOADBALANCERPOLICYTYPES)
+      .add(LOADBALANCING_CONFIGUREHEALTHCHECK)
+      .add(LOADBALANCING_DETACHLOABBALANCERFROMSUBNETS)
+      .add(LOADBALANCING_DESCRIBELOADBALANCERPOLICIES)
+      .add(LOADBALANCING_SETLOADBALANCERPOLICIESOFLISTENER)
+      .add(LOADBALANCING_DISABLEAVAILABILITYZONESFORLOADBALANCER)
+      .add(LOADBALANCING_DESCRIBEINSTANCEHEALTH)
+      .add(LOADBALANCING_DELETELOADBALANCERPOLICY)
+      .add(LOADBALANCING_CREATELOADBALANCERPOLICY)
+      .add(LOADBALANCING_ENABLEAVAILABILITYZONESFORLOADBALANCER)
+      .add(LOADBALANCING_CREATELOADBALANCERLISTENERS)
+      .add(LOADBALANCING_CREATELOADBALANCER)
+      .add(LOADBALANCING_DELETELOADBALANCER)
+      .add(LOADBALANCING_SETLOADBALANCERPOLICIESFORBACKENDSERVER)
+      .add(LOADBALANCING_DELETELOADBALANCERLISTENERS)
+      .add(LOADBALANCING_DEREGISTERINSTANCESFROMLOADBALANCER)
+      .add(LOADBALANCING_SETLOADBALANCERLISTENERSSLCERTIFICATE)
+      .add(LOADBALANCING_CREATELBCOOKIESTICKINESSPOLICY)
+      .add(LOADBALANCING_ATTACHLOADBALANCERTOSUBNETS)
+      .add(LOADBALANCING_CREATEAPPCOOKIESTICKINESSPOLICY)
+      .add(LOADBALANCING_REGISTERINSTANCESWITHLOADBALANCER)
+      .add(LOADBALANCING_APPLYSECURITYGROUPSTOLOADBALANCER)
+      .add(LOADBALANCING_DESCRIBELOADBALANCERS)
+      .build();
+  
   // Map vendor to actions
   public static final Map<String, Set<String>> VENDOR_ACTIONS = new ImmutableMap.Builder<String,Set<String>>()
-  .put( VENDOR_IAM, IAM_ACTIONS )
-  .put( VENDOR_EC2, EC2_ACTIONS )
-  .put( VENDOR_S3, S3_ACTIONS )
-  .put( VENDOR_STS, STS_ACTIONS )
-  .put( VENDOR_AUTOSCALING, AUTOSCALING_ACTIONS )
-  .put( VENDOR_CLOUDWATCH, CLOUDWATCH_ACTIONS)
-  .build();
+    .put( VENDOR_IAM, IAM_ACTIONS )
+    .put( VENDOR_EC2, EC2_ACTIONS )
+    .put( VENDOR_S3, S3_ACTIONS )
+    .put( VENDOR_STS, STS_ACTIONS )
+    .put( VENDOR_AUTOSCALING, AUTOSCALING_ACTIONS )
+    .put( VENDOR_CLOUDWATCH, CLOUDWATCH_ACTIONS)
+    .put( VENDOR_LOADBALANCING, LOADBALANCING_ACTIONS)
+    .build();
   
   // Action syntax
-  public static final Pattern ACTION_PATTERN = Pattern.compile( "\\*|(?:(" + VENDOR_IAM + "|" + VENDOR_EC2 + "|" + VENDOR_S3 + "|" + VENDOR_STS  + "|" + VENDOR_AUTOSCALING + "|" + VENDOR_CLOUDWATCH + "):(\\S+))" );
+  public static final Pattern ACTION_PATTERN = Pattern.compile( "\\*|(?:(" + VENDOR_IAM + "|" + VENDOR_EC2 + "|" + VENDOR_S3 + "|" + VENDOR_STS  + "|" + VENDOR_LOADBALANCING + "|" + VENDOR_AUTOSCALING + "|" + VENDOR_CLOUDWATCH + "):(\\S+))" );
   
   // Wildcard
   public static final String ALL_RESOURCE = "*";

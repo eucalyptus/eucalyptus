@@ -18,6 +18,9 @@
  * additional information or have any questions.
  ************************************************************************/
 package com.eucalyptus.loadbalancing.activities
+import com.eucalyptus.loadbalancing.Instance
+import com.eucalyptus.loadbalancing.Listener
+import com.eucalyptus.loadbalancing.Listeners
 import com.eucalyptus.loadbalancing.LoadBalancer
 import com.eucalyptus.loadbalancing.LoadBalancerBackendInstance
 import com.eucalyptus.loadbalancing.LoadBalancerListener
@@ -26,28 +29,42 @@ import com.eucalyptus.context.Context;
 import com.eucalyptus.event.GenericEvent
 
 /**
- * @author Sang-Min Park
+ * @author Sang-Min Park (spark@eucalyptus.com)
  *
  */
 class LoadbalancingEvent extends GenericEvent<String> { 
 	String loadBalancer="";
 	Context context;
+	
+	@Override
+	public String toString(){
+		return "evt: "+this.getClass().toString();
+	}
 }
 
 class LoadbalancingUserEvent extends LoadbalancingEvent{ }
 class LoadbalancingAdminEvent extends LoadbalancingEvent{ }
 
-class NewLoadbalancerEvent extends LoadbalancingUserEvent { }
+class NewLoadbalancerEvent extends LoadbalancingUserEvent { 
+	Collection<String> zones;
+	
+}
 class DeleteLoadbalancerEvent extends LoadbalancingUserEvent { }
 class CreateListenerEvent extends LoadbalancingUserEvent {
-		LoadBalancerListener listener;
+	Collection<Listener> listeners;
 }
 class DeleteListenerEvent extends LoadbalancingUserEvent {
-	LoadBalancerListener listener;
+	Collection<Integer> ports;
 }
 class RegisterInstancesEvent extends LoadbalancingUserEvent {
-	LoadBalancerBackendInstance instance;
+	Collection<Instance> instances;
 }
 class DeregisterInstancesEvent extends LoadbalancingUserEvent {
-	LoadBalancerBackendInstance instance;
+	Collection<Instance> instances;
+}
+class EnabledZoneEvent extends LoadbalancingUserEvent {
+	Collection<String> zones;
+}
+class DisabledZoneEvent extends LoadbalancingUserEvent {
+	Collection<String> zones;
 }

@@ -147,6 +147,9 @@ public class PutScheduledUpdateGroupActionResponseType extends AutoScalingMessag
 public class ProcessType extends EucalyptusData {
   String processName
   public ProcessType() {  }
+  public ProcessType( String processName ) {
+    this.processName = processName
+  }
 }
 public class TagDescription extends EucalyptusData {
   String resourceId
@@ -251,7 +254,7 @@ public class Activity extends EucalyptusData {
 }
 public class SuspendedProcesses extends EucalyptusData {
   public SuspendedProcesses() {  }
-  ArrayList<SuspendedProcess> member = new ArrayList<SuspendedProcess>()
+  ArrayList<SuspendedProcessType> member = new ArrayList<SuspendedProcessType>()
 }
 public class InstanceMonitoring extends EucalyptusData {
   Boolean enabled
@@ -453,10 +456,10 @@ public class PutScheduledUpdateGroupActionType extends AutoScalingMessage {
   Integer desiredCapacity
   public PutScheduledUpdateGroupActionType() {  }
 }
-public class SuspendedProcess extends EucalyptusData {
+public class SuspendedProcessType extends EucalyptusData {
   String processName
   String suspensionReason
-  public SuspendedProcess() {  }
+  public SuspendedProcessType() {  }
 }
 public class SecurityGroups extends EucalyptusData {
   public SecurityGroups() {  }
@@ -912,7 +915,7 @@ public class DescribeAdjustmentTypesResult extends EucalyptusData {
   }
 }
 public class DescribeScalingProcessTypesResult extends EucalyptusData {
-  Processes processes
+  Processes processes = new Processes()
   public DescribeScalingProcessTypesResult() {  }
 }
 public class DescribeAutoScalingNotificationTypesResult extends EucalyptusData {

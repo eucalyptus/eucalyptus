@@ -19,37 +19,61 @@
  ************************************************************************/
 package com.eucalyptus.loadbalancing.activities;
 
+import java.util.LinkedList;
 import java.util.List;
+import java.util.NoSuchElementException;
 
 import org.apache.log4j.Logger;
-
-import com.eucalyptus.util.Exceptions;
 import com.google.common.collect.Lists;
 
 /**
- * @author Sang-Min Park
+ * @author Sang-Min Park (spark@eucalyptus.com)
  *
  */
 public abstract class EventHandlerChain<T extends LoadbalancingEvent> {
 	private static Logger    LOG     = Logger.getLogger( EventHandlerChain.class );
 	private final List<EventHandler<T>> handlers =
 			Lists.newArrayList();
-	
 	protected void insert(EventHandler<T> next) {
 		handlers.add(next);
 	}
 
-	public void execute(T evt){
+	public void execute(T evt) throws EventHandlerChainException{
+		LinkedList<EventHandler<T>> reverseHandler = Lists.newLinkedList();
 		for (EventHandler<T> handler : this.handlers){
 			try{
+				reverseHandler.addFirst(handler); // failed handler will rollback too
 				handler.apply(evt);
+				
 			}catch(Exception e){
-				LOG.warn(String.format("failed handling %s, in handler %s", evt, handler), e);
-				// TODO SPARK: rollback?
-				Exceptions.toUndeclared(e);
+				LOG.error(e);
+				LOG.warn("starting to rollback");
+				EventHandlerChainException toThrow = 
+						new EventHandlerChainException(
+								String.format("failed handling %s, in handler %s", evt, handler), e, true);
+				for (EventHandler<T> h : reverseHandler){
+					try{
+						h.rollback();
+					}catch(Exception ex){
+						LOG.warn("failed to rollback at " + h.toString());
+						toThrow.setRollback(false); // fail once, rollback status is set to false
+					}
+				}
+				LOG.info("finished rollback");
+				throw toThrow;
 			}
 		}
 	}
 	
 	public abstract EventHandlerChain<T> build();
+	
+	@SuppressWarnings("unchecked")
+	public <HT> HT findHandler(Class<HT> handlerType){
+		for (EventHandler<T> handler : this.handlers){
+			if (handler.getClass().isAssignableFrom(handlerType)){
+				return (HT) handler;
+			}
+		}
+		throw new NoSuchElementException();
+	}
 }
