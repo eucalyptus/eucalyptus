@@ -1,6 +1,6 @@
 define([
 	'dataholder',
-	//'text!views/templates/template.html!strip',
+	'text!views/templates/base.html!strip',
 	], function( dataholder, template ) {
 	return Backbone.View.extend({
 		initialize : function() {
@@ -13,10 +13,23 @@ define([
 			this.collection.fetch();
 		},
         name: "base",
-        template: "template",
+        header: "Base View",
+        tableHeader: [],
+        filterOptions: {},
+        searchText: "Search",
+        buttonLabel: "Create new",
+        itemsFound: function() { return this.collection.size() + " items found."; },
+        template: template,
 		render : function() {
             var tmp = {};
-            tmp[this.name] = this.collection.toJSON();
+            tmp['collection'] = this.collection.toJSON();
+            tmp['header'] = this.header;
+            tmp['tableHeader'] = this.tableHeader;
+            tmp['filterOptions'] = this.filterOptions;
+            tmp['searchText'] = this.searchText;
+            tmp['buttonLabel'] = this.buttonLabel;
+            tmp['itemsFound'] = this.itemsFound();
+            console.log(tmp);
 			this.$el.html(_.template(this.template)(_.extend({}, tmp)));
             this.delegateEvents();
             return this;

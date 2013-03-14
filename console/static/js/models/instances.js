@@ -4,7 +4,8 @@ define([
 ], function(EucaCollection, Instance) {
     var Instances = EucaCollection.extend({
 	model: Instance,
-	url: '/ec2?Action=DescribeInstances'
+	url: '/ec2?Action=DescribeInstances',
+        namedColumns: ['id']
     });
     return Instances;
 });
