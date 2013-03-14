@@ -139,6 +139,8 @@ import com.eucalyptus.util.async.Request;
 import com.eucalyptus.vm.VmInstance.Transitions;
 import com.eucalyptus.vm.VmInstance.VmState;
 import com.eucalyptus.vm.VmInstance.VmStateSet;
+import com.eucalyptus.vmtypes.VmType;
+import com.eucalyptus.vmtypes.VmTypes;
 import com.google.common.base.Enums;
 import com.google.common.base.Function;
 import com.google.common.base.Functions;
@@ -270,6 +272,12 @@ public class VmInstances {
   @ConfigurableField( description = "Amount of time (in minutes) before a EBS volume backing the instance is created",
                       initial = "30" )
   public static Integer   EBS_VOLUME_CREATION_TIMEOUT   = 30;
+  @ConfigurableField( description = "Amount of time (in seconds) to let instance state settle after a transition to either stopping or shutting-down.",
+                      initial = "40" )
+  public static Integer   VM_STATE_SETTLE_TIME          = 40;
+  @ConfigurableField( description = "Amount of time (in seconds) since completion of the creating run instance operation that the new instance is treated as unreported if not... reported.",
+                      initial = "300" )
+  public static Integer   VM_INITIAL_REPORT_TIMEOUT     = 300;
   
   public static class SubdomainListener implements PropertyChangeListener {
     @Override
@@ -365,6 +373,28 @@ public class VmInstances {
     }
   }
   
+  public static VmVolumeAttachment lookupVolumeAttachment( final String volumeId , final List<VmInstance> vms ) {
+    VmVolumeAttachment ret = null;
+    try {
+      for ( VmInstance vm : vms ) {
+        try {
+          ret = vm.lookupVolumeAttachment( volumeId );
+          if ( ret.getVmInstance( ) == null ) {
+            ret.setVmInstance( vm );
+          }
+        } catch ( NoSuchElementException ex ) {
+          continue;
+        }
+      }
+      if ( ret == null ) {
+        throw new NoSuchElementException( "VmVolumeAttachment: no volume attachment for " + volumeId );
+      }
+      return ret;
+    } catch ( Exception ex ) {
+      throw new NoSuchElementException( ex.getMessage( ) );
+    }
+  }
+
   public static VmInstance lookupByPublicIp( final String ip ) throws NoSuchElementException {
     final EntityTransaction db = Entities.get( VmInstance.class );
     try {

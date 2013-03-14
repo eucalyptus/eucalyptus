@@ -62,7 +62,6 @@
 
 package com.eucalyptus.cloud.ws;
 
-import com.eucalyptus.config.Configuration;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.dns.TransientZone;
 import com.eucalyptus.entities.EntityWrapper;

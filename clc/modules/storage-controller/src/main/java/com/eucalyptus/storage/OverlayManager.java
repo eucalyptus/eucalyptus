@@ -95,7 +95,6 @@ import com.eucalyptus.util.StorageProperties;
 import com.eucalyptus.util.WalrusProperties;
 import com.google.common.base.Joiner;
 
-import edu.ucsb.eucalyptus.cloud.entities.AOEVolumeInfo;
 import edu.ucsb.eucalyptus.cloud.entities.DirectStorageInfo;
 import edu.ucsb.eucalyptus.cloud.entities.ISCSIVolumeInfo;
 import edu.ucsb.eucalyptus.cloud.entities.LVMVolumeInfo;
@@ -117,7 +116,6 @@ public class OverlayManager implements LogicalStorageManager {
 	private static final long LVM_HEADER_LENGTH = 4 * StorageProperties.MB;
 	public static StorageExportManager exportManager;
 
-	public static String iface = "eth0";
 	public static boolean zeroFillVolumes = false;
 
 	private ConcurrentHashMap<String, VolumeOpMonitor> volumeOps;
@@ -139,11 +137,7 @@ public class OverlayManager implements LogicalStorageManager {
 			} else {
 				LOG.info(returnValue);
 			}
-			if(System.getProperty("euca.disable.iscsi") != null) {
-				exportManager = new AOEManager();
-			} else {
-				exportManager = new ISCSIManager();
-			}
+			exportManager = new ISCSIManager();
 			exportManager.checkPreconditions();
 		} catch(EucalyptusCloudException ex) {
 			String error = "Unable to run command: " + ex.getMessage();
@@ -229,7 +223,7 @@ public class OverlayManager implements LogicalStorageManager {
 			}
 			retryCount++;
 		} while (retryCount < 20);
-		
+
 		LOG.error("All attempts to remove loop device " + loDevName + " failed.");
 		return "";
 	}
@@ -295,14 +289,14 @@ public class OverlayManager implements LogicalStorageManager {
 	}
 
 	private String duplicateLogicalVolume(String oldLvName, String newLvName) throws EucalyptusCloudException {
-		return SystemUtil.run(new String[]{StorageProperties.EUCA_ROOT_WRAPPER, "dd", "if=" + oldLvName, "of=" + newLvName, "bs=" + StorageProperties.blockSize});
+		return SystemUtil.run(new String[]{ StorageProperties.EUCA_ROOT_WRAPPER, "dd", "if=" + oldLvName, "of=" + newLvName, "bs=" + StorageProperties.blockSize});
 	}
 
 	private String createFile(String fileName, long size) throws EucalyptusCloudException {
 		if(!DirectStorageInfo.getStorageInfo().getZeroFillVolumes())
-			return SystemUtil.run(new String[]{StorageProperties.EUCA_ROOT_WRAPPER, "dd", "if=/dev/zero", "of=" + fileName, "count=1", "bs=" + StorageProperties.blockSize, "seek=" + (size -1)});
+			return SystemUtil.run(new String[]{"dd", "if=/dev/zero", "of=" + fileName, "count=1", "bs=" + StorageProperties.blockSize, "seek=" + (size -1)});
 		else
-			return SystemUtil.run(new String[]{StorageProperties.EUCA_ROOT_WRAPPER, "dd", "if=/dev/zero", "of=" + fileName, "count=" + size, "bs=" + StorageProperties.blockSize});
+			return SystemUtil.run(new String[]{"dd", "if=/dev/zero", "of=" + fileName, "count=" + size, "bs=" + StorageProperties.blockSize});
 	}
 
 	private String createEmptyFile(String fileName, int size) throws EucalyptusCloudException {
@@ -339,12 +333,8 @@ public class OverlayManager implements LogicalStorageManager {
 	}
 
 	public void startupChecks() {
-		/* zhill: removed because now we only export volumes on 'attach', so no reload needed.
-		 *  It is assumed that if the service goes down the exports are unaffected. If a reboot
-		 *  of the machine is done then it is admin responsibility to ensure that volumes are
-		 *  detached.
-		 */
-		//reload();
+		//Reload the volumes that were exported on last shutdown (of the service)
+		reload();
 	}
 
 	private void checkVolumesDir() {
@@ -530,11 +520,8 @@ public class OverlayManager implements LogicalStorageManager {
 		VolumeEntityWrapperManager volumeManager = new VolumeEntityWrapperManager();
 
 		LVMVolumeInfo lvmVolumeInfo = null;
-		if(exportManager instanceof AOEManager) {
-			lvmVolumeInfo = new AOEVolumeInfo();
-		} else {
-			lvmVolumeInfo = new ISCSIVolumeInfo();
-		}
+		lvmVolumeInfo = new ISCSIVolumeInfo();
+
 		volumeManager.finish();
 		String rawFileName = DirectStorageInfo.getStorageInfo().getVolumesDir() + "/" + volumeId;
 		//create file and attach to loopback device
@@ -547,12 +534,12 @@ public class OverlayManager implements LogicalStorageManager {
 			String loDevName = createLoopback(rawFileName, absoluteSize);
 			lvmVolumeInfo.setVolumeId(volumeId);
 			lvmVolumeInfo.setLoDevName(loDevName);
-			
+
 			//create physical volume, volume group and logical volume
 			createLogicalVolume(loDevName, vgName, lvName);
 			lvmVolumeInfo.setVgName(vgName);
 			lvmVolumeInfo.setLvName(lvName);
-			
+
 			lvmVolumeInfo.setStatus(StorageProperties.Status.available.toString());
 			lvmVolumeInfo.setSize(size);
 			//tear down
@@ -601,21 +588,21 @@ public class OverlayManager implements LogicalStorageManager {
 					long absoluteSize;
 					if (size <= 0 || size == foundSnapshotInfo.getSize()) {
 						size = (int)(snapshotFile.length() / StorageProperties.GB);
-					 	absoluteSize = snapshotFile.length() + LVM_HEADER_LENGTH;
+						absoluteSize = snapshotFile.length() + LVM_HEADER_LENGTH;
 					} else {
 						absoluteSize = size * StorageProperties.GB + LVM_HEADER_LENGTH;
 					}
-					
+
 					String loDevName = createLoopback(rawFileName, absoluteSize);
 					lvmVolumeInfo.setVolumeId(volumeId);
 					lvmVolumeInfo.setLoDevName(loDevName);
-					
+
 					//create physical volume, volume group and logical volume
 					createLogicalVolume(loDevName, vgName, lvName);
 					//duplicate snapshot volume
 					String absoluteLVName = lvmRootDirectory + PATH_SEPARATOR + vgName + PATH_SEPARATOR + lvName;
 					duplicateLogicalVolume(loFileName, absoluteLVName);
-					
+
 					lvmVolumeInfo.setVgName(vgName);
 					lvmVolumeInfo.setLvName(lvName);
 					lvmVolumeInfo.setStatus(StorageProperties.Status.available.toString());
@@ -747,7 +734,7 @@ public class OverlayManager implements LogicalStorageManager {
 				volumeManager.finish();
 			}
 		}
-		
+
 		if (foundLVMVolumeInfo != null) {
 			boolean isReadyForDelete = false;
 			int retryCount = 0;
@@ -859,7 +846,7 @@ public class OverlayManager implements LogicalStorageManager {
 		if(snapshotPointId != null) {
 			throw new EucalyptusCloudException("Synchronous snapshot points not supported in Overlay storage manager");
 		}
-		
+
 		VolumeEntityWrapperManager volumeManager = new VolumeEntityWrapperManager();
 		LVMVolumeInfo foundLVMVolumeInfo = volumeManager.getVolumeInfo(volumeId);
 		ArrayList<String> returnValues = new ArrayList<String>();
@@ -1013,30 +1000,42 @@ public class OverlayManager implements LogicalStorageManager {
 
 	/**
 	 * Called on service start to load and export any volumes that should be available to clients immediately.
-	 * This is a legacy call from the old OverlayManager that always exported volumes on creation rather than
-	 * attach.
+	 * Bases that decision on the lodevName field in the DB.
 	 * 
-	 * TODO: For the new version, don't export volumes unless they were in an exported state when the service terminated
-	 * and are not exported currently. (i.e. machine reboot)
-	 * TODO: this is currently *NOT* called during startup.
 	 */
 	public void reload() {
+		LOG.info("Initiating SC Reload of iSCSI targets");
 		VolumeEntityWrapperManager volumeManager = new VolumeEntityWrapperManager();
 		List<LVMVolumeInfo> volumeInfos = volumeManager.getAllVolumeInfos();
+		LOG.info("SC Reload found " + volumeInfos.size() + " volumes in the DB");
+		
+		//Ensure that all loopbacks are properly setup.
 		for(LVMVolumeInfo foundVolumeInfo : volumeInfos) {
 			String loDevName = foundVolumeInfo.getLoDevName();
 			if(loDevName != null) {
 				String loFileName = foundVolumeInfo.getVolumeId();
+				LOG.info("SC Reload: found volume " + loFileName + " was exported at last shutdown. Ensuring export restored");
 				String absoluteLoFileName = DirectStorageInfo.getStorageInfo().getVolumesDir() + PATH_SEPARATOR + loFileName;
 				if(!new File(absoluteLoFileName).exists()) {
-					LOG.error("Backing volume: " + absoluteLoFileName + " not found. Invalidating volume."); 
+					LOG.error("SC Reload: Backing volume: " + absoluteLoFileName + " not found. Invalidating volume."); 
 					foundVolumeInfo.setStatus(StorageProperties.Status.failed.toString());
 					continue;
 				}
 				try {
+					//Ensure the loopback isn't used
 					String returnValue = getLoopback(loDevName);
 					if(returnValue.length() <= 0) {
+						LOG.info("SC Reload: volume " + loFileName + " previously used loopback " + loDevName + ". No conflict detected, reusing same loopback");
 						createLoopback(absoluteLoFileName, loDevName);
+					} else {
+						if(!returnValue.contains(loFileName)) {
+							//Use a new loopback since the old one is used by something else
+							String newLoDev = createLoopback(absoluteLoFileName);
+							foundVolumeInfo.setLoDevName(newLoDev);
+							LOG.info("SC Reload: volume " + loFileName + " previously used loopback " + loDevName + ", but loopback already in used by something else. Using new loopback: " + newLoDev);
+						} else {
+							LOG.info("SC Reload: Detection of loopback for volume " + loFileName + " got " + returnValue + ". Appears that loopback is already in-place. No losetup needed for this volume.");
+						}
 					}
 				} catch(EucalyptusCloudException ex) {
 					String error = "Unable to run command: " + ex.getMessage();
@@ -1044,20 +1043,28 @@ public class OverlayManager implements LogicalStorageManager {
 				}
 			}
 		}
+		
 		//now enable them
 		try {
-			LOG.info("Scanning volume groups. This might take a little while...");
+			LOG.info("SC Reload: Scanning volume groups. This might take a little while...");
 			scanVolumeGroups();
 		} catch (EucalyptusCloudException e) {
 			LOG.error(e);
 		}
+		
+		//Export volumes
+		LOG.info("SC Reload: ensuring configured volumes are exported via iSCSI targets");
 		for(LVMVolumeInfo foundVolumeInfo : volumeInfos) {
 			try {
-				if (foundVolumeInfo.getVgName() != null) {
+				//Only try to export volumes that have both a lodev and a vgname
+				if (foundVolumeInfo.getLoDevName() != null && foundVolumeInfo.getVgName() != null) {
+					LOG.info("SC Reload: exporting " + foundVolumeInfo.getVolumeId() + " in VG: " + foundVolumeInfo.getVgName());
 					volumeManager.exportVolume(foundVolumeInfo);
+				} else {
+					LOG.info("SC Reload: no loopback configured for " + foundVolumeInfo.getVolumeId() + ". Skipping export for this volume.");
 				}
 			} catch(EucalyptusCloudException ex) {
-				LOG.error("Unable to reload volume: " + foundVolumeInfo.getVolumeId() + ex);
+				LOG.error("SC Reload: Unable to reload volume: " + foundVolumeInfo.getVolumeId() + ex.getMessage());
 			}		
 		}
 		volumeManager.finish();
@@ -1112,99 +1119,27 @@ public class OverlayManager implements LogicalStorageManager {
 		public List<String> getSnapshotValues(String snapshotId) {
 			ArrayList<String> returnValues = new ArrayList<String>();
 			LVMVolumeInfo lvmVolumeInfo = getVolumeInfo(snapshotId);
-			if(lvmVolumeInfo instanceof AOEVolumeInfo) {
-				returnValues.add(lvmVolumeInfo.getVgName());
-				returnValues.add(lvmVolumeInfo.getLvName());
-			}
 			return returnValues;
 		}
 
 		public void exportVolume(LVMVolumeInfo lvmVolumeInfo) throws EucalyptusCloudException {
-			if(exportManager instanceof AOEManager) {
-				if(lvmVolumeInfo instanceof AOEVolumeInfo) {
-					AOEVolumeInfo aoeVolumeInfo = (AOEVolumeInfo) lvmVolumeInfo;
-
-					int pid = aoeVolumeInfo.getVbladePid();
-					if(pid > 0) {
-						//enable logical volumes
-						String absoluteLVName = lvmRootDirectory + PATH_SEPARATOR + aoeVolumeInfo.getVgName() + PATH_SEPARATOR + aoeVolumeInfo.getLvName();
-						if(!logicalVolumeExists(absoluteLVName)) {
-							LOG.error("Backing volume not found: " + absoluteLVName);
-							throw new EucalyptusCloudException("Logical volume not found: " + absoluteLVName);
-						}
-						try {
-							enableLogicalVolume(absoluteLVName);
-						} catch(EucalyptusCloudException ex) {
-							String error = "Unable to run command: " + ex.getMessage();
-							LOG.error(error);
-							throw new EucalyptusCloudException(ex);
-						}
-						String returnValue = aoeStatus(pid);
-						if(returnValue.length() == 0) {
-							int majorNumber = aoeVolumeInfo.getMajorNumber();
-							int minorNumber = aoeVolumeInfo.getMinorNumber();
-							pid = exportManager.exportVolume(DirectStorageInfo.getStorageInfo().getStorageInterface(), absoluteLVName, majorNumber, minorNumber);
-							aoeVolumeInfo.setVbladePid(pid);
-							File vbladePidFile = new File(EUCA_VAR_RUN_PATH + "/vblade-" + majorNumber + minorNumber + ".pid");
-							FileOutputStream fileOutStream = null;
-							try {
-								fileOutStream = new FileOutputStream(vbladePidFile);
-								String pidString = String.valueOf(pid);
-								fileOutStream.write(pidString.getBytes());
-								fileOutStream.close();
-							} catch (Exception ex) {
-								if(fileOutStream != null)
-									try {
-										fileOutStream.close();
-									} catch (IOException e) {
-										LOG.error(e);
-									}
-									LOG.error("Could not write pid file vblade-" + majorNumber + minorNumber + ".pid");
-							}
-						}
-					}
-				} else {
-					//convert it
-					AOEVolumeInfo volumeInfo = new AOEVolumeInfo();
-					convertVolumeInfo(lvmVolumeInfo, volumeInfo);
-					try {
-						unexportVolume(lvmVolumeInfo);
-						exportVolume(volumeInfo, volumeInfo.getVgName(), volumeInfo.getLvName());
-						add(volumeInfo);
-						remove(lvmVolumeInfo);
-					} catch(EucalyptusCloudException ex) {
-						LOG.error(ex);
-					}
+			if(lvmVolumeInfo instanceof ISCSIVolumeInfo) {
+				ISCSIVolumeInfo iscsiVolumeInfo = (ISCSIVolumeInfo) lvmVolumeInfo;
+				String absoluteLVName = lvmRootDirectory + PATH_SEPARATOR + iscsiVolumeInfo.getVgName() + PATH_SEPARATOR + iscsiVolumeInfo.getLvName();
+				if(!logicalVolumeExists(absoluteLVName)) {
+					LOG.error("Backing volume not found: " + absoluteLVName);
+					throw new EucalyptusCloudException("Logical volume not found: " + absoluteLVName);
 				}
-			} else if(exportManager instanceof ISCSIManager) {
-				if(lvmVolumeInfo instanceof ISCSIVolumeInfo) {
-					ISCSIVolumeInfo iscsiVolumeInfo = (ISCSIVolumeInfo) lvmVolumeInfo;
-					String absoluteLVName = lvmRootDirectory + PATH_SEPARATOR + iscsiVolumeInfo.getVgName() + PATH_SEPARATOR + iscsiVolumeInfo.getLvName();
-					if(!logicalVolumeExists(absoluteLVName)) {
-						LOG.error("Backing volume not found: " + absoluteLVName);
-						throw new EucalyptusCloudException("Logical volume not found: " + absoluteLVName);
-					}
-					try {
-						enableLogicalVolume(absoluteLVName);
-					} catch(EucalyptusCloudException ex) {
-						String error = "Unable to run command: " + ex.getMessage();
-						LOG.error(error);
-						throw new EucalyptusCloudException(ex);
-					}
-					((ISCSIManager)exportManager).exportTarget(iscsiVolumeInfo.getTid(), iscsiVolumeInfo.getStoreName(), iscsiVolumeInfo.getLun(), absoluteLVName, iscsiVolumeInfo.getStoreUser());
-				}
-			} else {
-				ISCSIVolumeInfo volumeInfo = new ISCSIVolumeInfo();
-				convertVolumeInfo(lvmVolumeInfo, volumeInfo);
 				try {
-					unexportVolume(lvmVolumeInfo);
-					exportVolume(volumeInfo, volumeInfo.getVgName(), volumeInfo.getLvName());
-					add(volumeInfo);
-					remove(lvmVolumeInfo);
+					enableLogicalVolume(absoluteLVName);
 				} catch(EucalyptusCloudException ex) {
-					LOG.error(ex);
+					String error = "Unable to run command: " + ex.getMessage();
+					LOG.error(error);
+					throw new EucalyptusCloudException(ex);
 				}
-			}	
+				((ISCSIManager)exportManager).exportTarget(iscsiVolumeInfo.getTid(), iscsiVolumeInfo.getStoreName(), iscsiVolumeInfo.getLun(), absoluteLVName, iscsiVolumeInfo.getStoreUser());
+			}
+
 		}
 
 		private void convertVolumeInfo(LVMVolumeInfo lvmVolumeSource, LVMVolumeInfo lvmVolumeDestination) {
@@ -1223,61 +1158,28 @@ public class OverlayManager implements LogicalStorageManager {
 		public String getVolumeProperty(String volumeId) {
 			LVMVolumeInfo lvmVolumeInfo = getVolumeInfo(volumeId);
 			if(lvmVolumeInfo != null) {
-				if(exportManager instanceof AOEManager) {
-					AOEVolumeInfo aoeVolumeInfo = (AOEVolumeInfo) lvmVolumeInfo;
-					return StorageProperties.ETHERD_PREFIX + aoeVolumeInfo.getMajorNumber() + "." + aoeVolumeInfo.getMinorNumber();
-				} else if(exportManager instanceof ISCSIManager) {
-					ISCSIVolumeInfo iscsiVolumeInfo = (ISCSIVolumeInfo) lvmVolumeInfo;
-					String storeName = iscsiVolumeInfo.getStoreName();
-					String encryptedPassword;
-					try {
-						encryptedPassword = ((ISCSIManager)exportManager).getEncryptedPassword();
-					} catch (EucalyptusCloudException e) {
-						LOG.error(e);
-						return null;
-					}
-					return ",,," + encryptedPassword + ",," + StorageProperties.STORAGE_HOST + "," + storeName;
+				ISCSIVolumeInfo iscsiVolumeInfo = (ISCSIVolumeInfo) lvmVolumeInfo;
+				String storeName = iscsiVolumeInfo.getStoreName();
+				String encryptedPassword;
+				try {
+					encryptedPassword = ((ISCSIManager)exportManager).getEncryptedPassword();
+				} catch (EucalyptusCloudException e) {
+					LOG.error(e);
+					return null;
 				}
+				return ",,," + encryptedPassword + ",," + StorageProperties.STORAGE_HOST + "," + storeName;
 			}
 			return null;
 		}
 
 		public void unexportVolume(LVMVolumeInfo volumeInfo) {
 			StorageExportManager manager = exportManager;
-			if(volumeInfo instanceof AOEVolumeInfo) {
-				AOEVolumeInfo aoeVolumeInfo = (AOEVolumeInfo) volumeInfo;
-				if(!(exportManager instanceof AOEManager)) {
-					manager = new AOEManager();
-				}
-				int pid = aoeVolumeInfo.getVbladePid();
-				if(pid > 0) {
-					String returnValue = aoeStatus(pid);
-					if(returnValue.length() > 0) {
-						manager.unexportVolume(pid);
-						int majorNumber = aoeVolumeInfo.getMajorNumber();
-						int minorNumber = aoeVolumeInfo.getMinorNumber();
-						File vbladePidFile = new File(EUCA_VAR_RUN_PATH + "/vblade-" + majorNumber + minorNumber + ".pid");
-						if(vbladePidFile.exists()) {
-							vbladePidFile.delete();
-						}
-						while(aoeStatus(pid).length() > 0) {
-							LOG.info("Waiting for volume to be unexported...");
-							try {
-								Thread.sleep(300);
-							} catch (InterruptedException e) {
-								LOG.error(e);
-							}
-						}
-					}
-				}
-			} else if(volumeInfo instanceof ISCSIVolumeInfo) {
-				if(!(exportManager instanceof ISCSIManager)) {
-					manager = new ISCSIManager();
-				}
-				ISCSIVolumeInfo iscsiVolumeInfo = (ISCSIVolumeInfo) volumeInfo;
-				((ISCSIManager)manager).unexportTarget(iscsiVolumeInfo.getTid(), iscsiVolumeInfo.getLun());
-				iscsiVolumeInfo.setTid(-1);
-			}			
+			if(!(exportManager instanceof ISCSIManager)) {
+				manager = new ISCSIManager();
+			}
+			ISCSIVolumeInfo iscsiVolumeInfo = (ISCSIVolumeInfo) volumeInfo;
+			((ISCSIManager)manager).unexportTarget(iscsiVolumeInfo.getTid(), iscsiVolumeInfo.getLun());
+			iscsiVolumeInfo.setTid(-1);			
 		}
 
 		private void finish() {
@@ -1295,59 +1197,31 @@ public class OverlayManager implements LogicalStorageManager {
 
 
 		private LVMVolumeInfo getVolumeInfo(String volumeId) {
-			if(exportManager instanceof AOEManager) {
-				AOEVolumeInfo AOEVolumeInfo = new AOEVolumeInfo(volumeId);
-				List<AOEVolumeInfo> AOEVolumeInfos = entityWrapper.query(AOEVolumeInfo);
-				if(AOEVolumeInfos.size() > 0) {
-					return AOEVolumeInfos.get(0);
-				}
-			} else if(exportManager instanceof ISCSIManager) {
-				ISCSIVolumeInfo ISCSIVolumeInfo = new ISCSIVolumeInfo(volumeId);
-				List<ISCSIVolumeInfo> ISCSIVolumeInfos = entityWrapper.query(ISCSIVolumeInfo);
-				if(ISCSIVolumeInfos.size() > 0) {
-					return ISCSIVolumeInfos.get(0);
-				}
+			ISCSIVolumeInfo ISCSIVolumeInfo = new ISCSIVolumeInfo(volumeId);
+			List<ISCSIVolumeInfo> ISCSIVolumeInfos = entityWrapper.query(ISCSIVolumeInfo);
+			if(ISCSIVolumeInfos.size() > 0) {
+				return ISCSIVolumeInfos.get(0);
 			}
 			return null;
 		}
 
 		private boolean areSnapshotsPending(String volumeId) {
-			if(exportManager instanceof AOEManager) {
-				AOEVolumeInfo AOEVolumeInfo = new AOEVolumeInfo();
-				AOEVolumeInfo.setSnapshotOf(volumeId);
-				AOEVolumeInfo.setStatus(StorageProperties.Status.pending.toString());
-				List<AOEVolumeInfo> AOEVolumeInfos = entityWrapper.query(AOEVolumeInfo);
-				if(AOEVolumeInfos.size() > 0) {
-					return true;
-				}
-			} else if(exportManager instanceof ISCSIManager) {
-				ISCSIVolumeInfo ISCSIVolumeInfo = new ISCSIVolumeInfo();
-				ISCSIVolumeInfo.setSnapshotOf(volumeId);
-				ISCSIVolumeInfo.setStatus(StorageProperties.Status.pending.toString());
-				List<ISCSIVolumeInfo> ISCSIVolumeInfos = entityWrapper.query(ISCSIVolumeInfo);
-				if(ISCSIVolumeInfos.size() > 0) {
-					return true;
-				}
+			ISCSIVolumeInfo ISCSIVolumeInfo = new ISCSIVolumeInfo();
+			ISCSIVolumeInfo.setSnapshotOf(volumeId);
+			ISCSIVolumeInfo.setStatus(StorageProperties.Status.pending.toString());
+			List<ISCSIVolumeInfo> ISCSIVolumeInfos = entityWrapper.query(ISCSIVolumeInfo);
+			if(ISCSIVolumeInfos.size() > 0) {
+				return true;
 			}
 			return false;
 		}
 
 		private LVMVolumeInfo getVolumeInfo() {
-			if(exportManager instanceof AOEManager) {
-				AOEVolumeInfo aoeVolumeInfo = new AOEVolumeInfo();
-				aoeVolumeInfo.setVbladePid(-1);
-				aoeVolumeInfo.setMajorNumber(-1);
-				aoeVolumeInfo.setMinorNumber(-1);
-				return aoeVolumeInfo;
-			} else if(exportManager instanceof ISCSIManager) {
-				return new ISCSIVolumeInfo();
-			}
-			return null;
+			return new ISCSIVolumeInfo();
 		}
 
 		private List<LVMVolumeInfo> getAllVolumeInfos() {
 			List<LVMVolumeInfo> volumeInfos = new ArrayList<LVMVolumeInfo>();
-			volumeInfos.addAll(entityWrapper.query(new AOEVolumeInfo()));
 			volumeInfos.addAll(entityWrapper.query(new ISCSIVolumeInfo()));	
 			return volumeInfos;
 		}
@@ -1375,79 +1249,29 @@ public class OverlayManager implements LogicalStorageManager {
 		}
 
 		private void exportVolume(LVMVolumeInfo lvmVolumeInfo, String vgName, String lvName) throws EucalyptusCloudException {
-			if(exportManager instanceof AOEManager) {
-				AOEVolumeInfo aoeVolumeInfo = (AOEVolumeInfo) lvmVolumeInfo;
-				exportManager.allocateTarget(aoeVolumeInfo);
-				int majorNumber = aoeVolumeInfo.getMajorNumber();
-				int minorNumber = aoeVolumeInfo.getMinorNumber();
-				String absoluteLVName = lvmRootDirectory + PATH_SEPARATOR + vgName + PATH_SEPARATOR + lvName;
-				int pid = exportManager.exportVolume(DirectStorageInfo.getStorageInfo().getStorageInterface(), absoluteLVName, majorNumber, minorNumber);
-				boolean success = false;
-				String returnValue = "";
-				int timeout = 300;
-				if(pid > 0) {
-					for(int i=0; i < 3; ++i) {
-						returnValue = aoeStatus(pid);						
-						if(returnValue.length() == 0) {
-							success = false;
-						} else {
-							success = true;
-						}
-						try {
-							Thread.sleep(timeout);
-						} catch(InterruptedException ie) {
-							LOG.error(ie);
-						}
-					}
-				}
-				if(!success) {
-					throw new EucalyptusCloudException("Could not export AoE device " + absoluteLVName + " StorageInfo.getStorageInfo().getStorageInterface(): " + DirectStorageInfo.getStorageInfo().getStorageInterface() + " pid: " + pid + " returnValue: " + returnValue);
-				}
+			ISCSIVolumeInfo iscsiVolumeInfo = (ISCSIVolumeInfo) lvmVolumeInfo;
 
-				File vbladePidFile = new File(EUCA_VAR_RUN_PATH + "/vblade-" + majorNumber + minorNumber + ".pid");
-				FileOutputStream fileOutStream = null;
+			String absoluteLVName = lvmRootDirectory + PATH_SEPARATOR + vgName + PATH_SEPARATOR + lvName;
+			int max_tries = 10;
+			int i = 0;
+			EucalyptusCloudException ex = null;
+			do {
+				exportManager.allocateTarget(iscsiVolumeInfo);
 				try {
-					fileOutStream = new FileOutputStream(vbladePidFile);
-					String pidString = String.valueOf(pid);
-					fileOutStream.write(pidString.getBytes());
-				} catch (Exception ex) {
-					LOG.error("Could not write pid file vblade-" + majorNumber + minorNumber + ".pid");
-				} finally {
-					if(fileOutStream != null)
-						try {
-							fileOutStream.close();
-						} catch (IOException e) {
-							LOG.error(e);
-						}
+					((ISCSIManager)exportManager).exportTarget(iscsiVolumeInfo.getTid(), iscsiVolumeInfo.getStoreName(), iscsiVolumeInfo.getLun(), absoluteLVName, iscsiVolumeInfo.getStoreUser());
+					ex = null;
+					//it worked. break out. may be break is a better way of breaking out?
+					//i = max_tries;
+					break;
+				} catch (EucalyptusCloudException e) {
+					ex = e;
+					LOG.error(e);				
 				}
-				if(pid < 0)
-					throw new EucalyptusCloudException("invalid vblade pid: " + pid);
-				aoeVolumeInfo.setVbladePid(pid);
-			} else if(exportManager instanceof ISCSIManager) {
-				ISCSIVolumeInfo iscsiVolumeInfo = (ISCSIVolumeInfo) lvmVolumeInfo;
+			} while (i++ < max_tries);
 
-				String absoluteLVName = lvmRootDirectory + PATH_SEPARATOR + vgName + PATH_SEPARATOR + lvName;
-				int max_tries = 10;
-				int i = 0;
-				EucalyptusCloudException ex = null;
-				do {
-					exportManager.allocateTarget(iscsiVolumeInfo);
-					try {
-						((ISCSIManager)exportManager).exportTarget(iscsiVolumeInfo.getTid(), iscsiVolumeInfo.getStoreName(), iscsiVolumeInfo.getLun(), absoluteLVName, iscsiVolumeInfo.getStoreUser());
-						ex = null;
-						//it worked. break out. may be break is a better way of breaking out?
-						//i = max_tries;
-						break;
-					} catch (EucalyptusCloudException e) {
-						ex = e;
-						LOG.error(e);				
-					}
-				} while (i++ < max_tries);
-
-				// EUCA-3597 After all retries, check if the process actually completed
-				if (null != ex){
-					throw ex;
-				}
+			// EUCA-3597 After all retries, check if the process actually completed
+			if (null != ex){
+				throw ex;
 			}
 		}
 	}
@@ -1479,7 +1303,7 @@ public class OverlayManager implements LogicalStorageManager {
 		}
 		volumeManager.finish();
 		return deviceName;
-		
+
 		// return DirectStorageInfo.getStorageInfo().getVolumesDir() + File.separator + snapshotId;
 	}
 
@@ -1831,13 +1655,13 @@ public class OverlayManager implements LogicalStorageManager {
 
 	@Override
 	public String createSnapshotPoint(String volumeId, String snapshotId)
-			throws EucalyptusCloudException {
+	throws EucalyptusCloudException {
 		return null;
 	}
 
 	@Override
 	public void deleteSnapshotPoint(String volumeId, String snapshotId, String snapshotPointId)
-			throws EucalyptusCloudException {
+	throws EucalyptusCloudException {
 		throw new EucalyptusCloudException("Synchronous snapshot points not supported in Overlay storage manager");
 	}	
 }

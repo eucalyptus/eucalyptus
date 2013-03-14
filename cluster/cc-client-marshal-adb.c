@@ -150,7 +150,8 @@ int cc_stopNetwork(int vlan, char *netName, axutil_env_t * env, axis2_stub_t * p
 int cc_attachVolume(char *volumeId, char *instanceId, char *remoteDev, char *localDev, axutil_env_t * env, axis2_stub_t * pStub);
 int cc_detachVolume(char *volumeId, char *instanceId, char *remoteDev, char *localDev, int force, axutil_env_t * env, axis2_stub_t * pStub);
 int cc_createImage(char *volumeId, char *instanceId, char *remoteDev, axutil_env_t * env, axis2_stub_t * pStub);
-int cc_bundleInstance(char *instanceId, char *bucketName, char *filePrefix, char *walrusURL, char *userPublicKey, axutil_env_t * env, axis2_stub_t * pStub);
+int cc_bundleInstance(char *instanceId, char *bucketName, char *filePrefix, char *walrusURL, char *userPublicKey, axutil_env_t * env,
+                      axis2_stub_t * pStub);
 int cc_bundleRestartInstance(char *instanceId, axutil_env_t * env, axis2_stub_t * pStub);
 int cc_assignAddress(char *src, char *dst, axutil_env_t * env, axis2_stub_t * pStub);
 int cc_unassignAddress(char *src, char *dst, axutil_env_t * env, axis2_stub_t * pStub);
@@ -683,7 +684,8 @@ int cc_createImage(char *volumeId, char *instanceId, char *remoteDev, axutil_env
 //!
 //! @note
 //!
-int cc_bundleInstance(char *instanceId, char *bucketName, char *filePrefix, char *walrusURL, char *userPublicKey, axutil_env_t * env, axis2_stub_t * pStub)
+int cc_bundleInstance(char *instanceId, char *bucketName, char *filePrefix, char *walrusURL, char *userPublicKey, axutil_env_t * env,
+                      axis2_stub_t * pStub)
 {
     int i = 0;
     adb_BundleInstance_t *input = NULL;
@@ -1220,7 +1222,10 @@ int cc_describeInstances(char **instIds, int instIdsLen, axutil_env_t * env, axi
                      adb_netConfigType_get_privateIp(nct, env), adb_netConfigType_get_publicIp(nct, env), adb_netConfigType_get_vlan(nct, env),
                      keyName, adb_virtualMachineType_get_name(vm, env), adb_virtualMachineType_get_cores(vm, env),
                      adb_virtualMachineType_get_memory(vm, env), adb_virtualMachineType_get_disk(vm, env), adb_ccInstanceType_get_serviceTag(it, env),
-                     adb_ccInstanceType_get_userData(it, env), adb_ccInstanceType_get_launchIndex(it, env), adb_ccInstanceType_get_groupNames_at(it, env, 0), volId, networkIndex);
+                     adb_ccInstanceType_get_userData(it, env), adb_ccInstanceType_get_launchIndex(it, env), adb_ccInstanceType_get_groupNames_at(it,
+                                                                                                                                                 env,
+                                                                                                                                                 0),
+                     volId, networkIndex);
             }
         }
     }
@@ -1299,7 +1304,8 @@ int cc_runInstances(char *amiId, char *amiURL, char *kernelId, char *kernelURL, 
     mac = EUCA_ALLOC(SIZE, sizeof(char));
 
     for (i = 0; i < num; i++) {
-        snprintf(mac, SIZE, "aa:dd:11:%c%c:%c%c:%c%c", rand() % 5 + 65, rand() % 5 + 65, rand() % 5 + 65, rand() % 5 + 65, rand() % 5 + 65, rand() % 5 + 65);
+        snprintf(mac, SIZE, "aa:dd:11:%c%c:%c%c:%c%c", rand() % 5 + 65, rand() % 5 + 65, rand() % 5 + 65, rand() % 5 + 65, rand() % 5 + 65,
+                 rand() % 5 + 65);
         adb_runInstancesType_add_macAddresses(rit, env, mac);
 
         snprintf(instId, SIZE, "i-");

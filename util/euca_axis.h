@@ -128,13 +128,14 @@
  |                                                                            |
 \*----------------------------------------------------------------------------*/
 
-axis2_status_t __euca_authenticate(const axutil_env_t * env, axis2_msg_ctx_t * out_msg_ctx, axis2_op_ctx_t * op_ctx);
-axis2_status_t verify_references(axiom_node_t * sig_node, const axutil_env_t * env, axis2_msg_ctx_t * msg_ctx, axiom_soap_envelope_t * envelope,
-                                 rampart_context_t * rampart_context);
-int verify_node(axiom_node_t * signed_node, const axutil_env_t * env, axis2_msg_ctx_t * msg_ctx, axis2_char_t * ref, short *signed_elems, rampart_context_t * rampart_context);
-int verify_addr_hdr_elem_loc(axiom_node_t * signed_node, const axutil_env_t * env, axis2_char_t * ref);
+axis2_status_t __euca_authenticate(const axutil_env_t * pEnv, axis2_msg_ctx_t * pOutMsgCtx, axis2_op_ctx_t * pOpCtx);
+axis2_status_t verify_references(axiom_node_t * pSigNode, const axutil_env_t * pEnv, axis2_msg_ctx_t * pMsgCtx, axiom_soap_envelope_t * pEnvelope,
+                                 rampart_context_t * pRampartCtx);
+int verify_node(axiom_node_t * pSigNode, const axutil_env_t * pEnv, axis2_msg_ctx_t * pMsgCtx, axis2_char_t * sRef, short *pSignedElems,
+                rampart_context_t * pRampartCtx);
+int verify_addr_hdr_elem_loc(axiom_node_t * pSigNode, const axutil_env_t * pEnv, axis2_char_t * sRef);
 
-int InitWSSEC(axutil_env_t * env, axis2_stub_t * pStub, char *policyFile);
+int InitWSSEC(axutil_env_t * pEnv, axis2_stub_t * pStub, char *sPolicyFile);
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |
@@ -153,7 +154,7 @@ int InitWSSEC(axutil_env_t * env, axis2_stub_t * pStub, char *policyFile);
 	do {                                                             \
 		if (__euca_authenticate((_a), (_b), (_c)) == AXIS2_FAILURE)  \
 			return (NULL);                                           \
-	} while(0);                                                      \
+	} while (0);                                                     \
 }
 
 /*----------------------------------------------------------------------------*\

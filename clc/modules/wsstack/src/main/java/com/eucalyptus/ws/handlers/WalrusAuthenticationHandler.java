@@ -63,14 +63,19 @@
 package com.eucalyptus.ws.handlers;
 
 import java.io.UnsupportedEncodingException;
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.NavigableSet;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.Arrays;
+import java.util.TreeSet;
+
+import org.apache.commons.httpclient.util.DateParseException;
 import org.apache.commons.httpclient.util.DateUtil;
 import org.apache.log4j.Logger;
 import org.jboss.netty.channel.ChannelFutureListener;
@@ -96,12 +101,22 @@ import com.eucalyptus.http.MappingHttpRequest;
 import com.eucalyptus.util.StorageProperties;
 import com.eucalyptus.util.WalrusProperties;
 import com.eucalyptus.util.WalrusUtil;
+import com.google.common.base.Joiner;
+import com.google.common.base.Strings;
+import com.google.common.collect.Sets;
 import com.google.common.collect.Lists;
+
 
 @ChannelPipelineCoverage("one")
 public class WalrusAuthenticationHandler extends MessageStackHandler {
 	private static Logger LOG = Logger.getLogger( WalrusAuthenticationHandler.class );
-	public enum SecurityParameter {
+	private static final String AWS_AUTH_TYPE = "AWS";
+	private static final String EUCA_AUTH_TYPE = "EUCA2-RSA-SHA256";
+	private static final String EUCA_OLD_AUTH_TYPE = "Euca";
+	protected static final String ISO_8601_FORMAT = "yyyyMMdd'T'HHmmss'Z'"; //Use the ISO8601 format
+
+	
+	public static enum SecurityParameter {
 		AWSAccessKeyId,
 		Timestamp,
 		Expires,
@@ -113,6 +128,46 @@ public class WalrusAuthenticationHandler extends MessageStackHandler {
 		SecurityToken,
 	}
 	
+	/* The possible fields in an authorization header */
+	private static enum AuthorizationField {
+		Type,
+		AccessKeyId,
+		CertFingerPrint,
+		SignedHeaders,
+		Signature		
+	}
+	
+	/**
+	 * Ensure that only one header for each name exists (i.e. not 2 Authorization headers)
+	 * Accomplish this by comma-delimited concatenating any duplicates found as per HTTP 1.1 RFC 2616 section 4.2
+	 * 
+	 * TODO: Also, should convert all headers to lower-case for consistent processing later. This is okay since headers are case-insensitive.
+	 * 
+	 * in HTTP
+	 * @param httpRequest
+	 */
+	private static void canonicalizeHeaders(MappingHttpRequest httpRequest) {
+		//Iterate through headers and find duplicates, concatenate their values together and remove from
+		// request as we find them.
+		TreeMap<String, String> headerMap = new TreeMap<String, String>();
+		String value = null;
+		
+		//Construct a map of the normalized headers, cannot modify in-place since
+		// conconcurrent-modify exception may result
+		for(String header : httpRequest.getHeaderNames()) {
+			//TODO: zhill, put in the map in lower-case form.
+			headerMap.put(header, Joiner.on(',').join(httpRequest.getHeaders(header)));
+		}
+		
+		//Remove *all* headers
+		httpRequest.clearHeaders();
+
+		//Add the normalized headers back into the request
+		for(String foundHeader : headerMap.keySet()) {
+			httpRequest.addHeader(foundHeader, headerMap.get(foundHeader).toString());
+		}
+	}
+		
 	/**
 	 * This method exists to clean up a problem encountered periodically where the HTTP
 	 * headers are duplicated
@@ -144,65 +199,539 @@ public class WalrusAuthenticationHandler extends MessageStackHandler {
 					httpRequest.addHeader(e.getKey(), v);
 				}
 			}			
-		}
-		
+		}		
 	}
-
+	
 	@Override
 	public void incomingMessage( ChannelHandlerContext ctx, MessageEvent event ) throws Exception {
 		if ( event.getMessage( ) instanceof MappingHttpRequest ) {
 			MappingHttpRequest httpRequest = ( MappingHttpRequest ) event.getMessage( );
+
+			removeDuplicateHeaderValues(httpRequest);			
+			//Consolidate duplicates, etc.
 			
-			removeDuplicateHeaderValues(httpRequest);
-			
+			canonicalizeHeaders(httpRequest);			
 			if(httpRequest.containsHeader(WalrusProperties.Headers.S3UploadPolicy.toString())) {
 				checkUploadPolicy(httpRequest);
 			}
 			handle(httpRequest);
 		}
 	}
-
-	public void handle(MappingHttpRequest httpRequest) throws AuthenticationException
-	{
-		Map<String,String> parameters = httpRequest.getParameters( );
-		String verb = httpRequest.getMethod().getName();
-		String addr = httpRequest.getUri();
-
-		if(httpRequest.containsHeader(StorageProperties.StorageParameters.EucaSignature.toString())) {
-			//possible internal request -- perform authentication using internal credentials
-			String date = httpRequest.getAndRemoveHeader(SecurityParameter.Date.toString());
-			String signature = httpRequest.getAndRemoveHeader(StorageProperties.StorageParameters.EucaSignature.toString());
-			String certString = null;
-			if( httpRequest.containsHeader( StorageProperties.StorageParameters.EucaCert.toString( ) ) ) {
-				certString= httpRequest.getAndRemoveHeader(StorageProperties.StorageParameters.EucaCert.toString());
+	
+	/**
+	 * Process the authorization header
+	 * @param authorization
+	 * @return
+	 * @throws AuthenticationException
+	 */
+	public static Map<AuthorizationField,String> processAuthorizationHeader(String authorization) throws AuthenticationException { 
+		if(Strings.isNullOrEmpty(authorization)) {
+			return null;
+		}
+		
+		HashMap<AuthorizationField, String> authMap = new HashMap<AuthorizationField,String>();		
+		String[] components = authorization.split(" ");
+		
+		if(components.length < 2) {
+			throw new AuthenticationException("Invalid authoriztion header");
+		}
+		
+		if(AWS_AUTH_TYPE.equals(components[0]) && components.length == 2) {
+			//Expect: components[1] = <AccessKeyId>:<Signature>
+			authMap.put(AuthorizationField.Type, AWS_AUTH_TYPE);			
+			String[] signatureElements = components[1].split(":");			
+			authMap.put(AuthorizationField.AccessKeyId, signatureElements[0]);
+			authMap.put(AuthorizationField.Signature, signatureElements[1]);
+		}
+		else if(EUCA_AUTH_TYPE.equals(components[0]) && components.length == 4){
+			//Expect: components[0] = EUCA2-RSA-SHA256 components[1] = <fingerprint of signing certificate> components[2] = <list of signed headers> components[3] = <Signature>
+			authMap.put(AuthorizationField.Type, EUCA_AUTH_TYPE);			
+			authMap.put(AuthorizationField.CertFingerPrint, components[1].trim());
+			authMap.put(AuthorizationField.SignedHeaders, components[2].trim());
+			authMap.put(AuthorizationField.Signature, components[3].trim());			
+		}
+		else if(EUCA_OLD_AUTH_TYPE.equals(components[0]) && components.length == 1){
+			authMap.put(AuthorizationField.Type, EUCA_OLD_AUTH_TYPE);
+		}
+		else {
+			throw new AuthenticationException("Invalid authorization header");
+		}
+		
+		return authMap;
+	}
+	
+/*
+ * Handle S3UploadPolicy optionally sent as headers for bundle-upload calls.
+ * Simply verifies the policy and signature of the policy.
+ */
+private static void checkUploadPolicy(MappingHttpRequest httpRequest) throws AuthenticationException {
+	Map<String, String> fields = new HashMap<String, String>();
+	String policy = httpRequest.getHeader(WalrusProperties.Headers.S3UploadPolicy.toString());
+	fields.put(WalrusProperties.FormField.policy.toString(), policy);
+	String policySignature = httpRequest.getHeader(WalrusProperties.Headers.S3UploadPolicySignature.toString());
+	if(policySignature == null)
+		throw new AuthenticationException("Policy signature must be specified with policy.");
+	String awsAccessKeyId = httpRequest.getHeader(SecurityParameter.AWSAccessKeyId.toString());
+	if(awsAccessKeyId == null)
+		throw new AuthenticationException("AWSAccessKeyID must be specified.");
+	fields.put(WalrusProperties.FormField.signature.toString(), policySignature);
+	fields.put(SecurityParameter.AWSAccessKeyId.toString(), awsAccessKeyId);
+	String acl = httpRequest.getHeader(WalrusProperties.AMZ_ACL.toString());
+	if(acl != null)
+		fields.put(WalrusProperties.FormField.acl.toString(), acl);
+	String operationPath = httpRequest.getServicePath().replaceAll(WalrusProperties.walrusServicePath, "");
+	String[] target = WalrusUtil.getTarget(operationPath);
+	if(target != null) {
+		fields.put(WalrusProperties.FormField.bucket.toString(), target[0]);
+		if(target.length > 1)
+			fields.put(WalrusProperties.FormField.key.toString(), target[1]);
+	}
+	UploadPolicyChecker.checkPolicy(httpRequest, fields);
+}	
+	
+	/**
+	 * Class contains methods for implementing EucaRSA-V2 Authentication.
+	 * @author zhill
+	 *
+	 */
+	public static class EucaAuthentication {
+		private static final Set<String> SAFE_HEADER_SET = Sets.newHashSet("transfer-encoding"); 
+		
+		/**
+		 * Implements the Euca2 auth method
+		 * 
+		 * Add an Authorization HTTP header to the request that contains the following strings, separated by spaces:
+		 * EUCA2-RSA-SHA256
+		 * The lower-case hexadecimal encoding of the component's X.509 certificate's fingerprint
+		 * The SignedHeaders list calculated in Task 1
+		 * The Base64 encoding of the Signature calculated in Task 2
+		 * 
+		 * Signature = RSA(privkey, SHA256(CanonicalRequest))
+		 * 
+		 * CanonicalRequest =
+		 * 	HTTPRequestMethod + '\n' +
+		 * 	CanonicalURI + '\n' +
+		 * 	CanonicalQueryString + '\n' +
+		 *	CanonicalHeaders + '\n' +
+		 *	SignedHeaders
+			  	
+		 * @param httpRequest
+		 * @param authMap
+		 * @throws AuthenticationException
+		 */
+		public static void authenticate(MappingHttpRequest httpRequest, Map<AuthorizationField, String> authMap) throws AuthenticationException {		
+			if(authMap ==  null || !EUCA_AUTH_TYPE.equals(authMap.get(AuthorizationField.Type))) {
+				throw new AuthenticationException("Mismatch between expected and found authentication types");
 			}
-			String data = verb + "\n" + date + "\n" + addr + "\n";
-			String effectiveUserID = httpRequest.getAndRemoveHeader(StorageProperties.StorageParameters.EucaEffectiveUserId.toString());
+			
+			//Remove unsigned headers so they are not consumed accidentally later
+			cleanHeaders(httpRequest, authMap.get(AuthorizationField.SignedHeaders));
+			
+			//Must contain a date of some sort signed
+			checkDate(httpRequest);
+			
+			//Must be certificate signed
+			String certString = null;
+			if(authMap.containsKey(AuthorizationField.CertFingerPrint)) {
+				certString = authMap.get(AuthorizationField.CertFingerPrint);
+			}
+			else {
+				throw new AuthenticationException("Invalid Authorization Header");
+			}
+			
+			String verb = httpRequest.getMethod().getName();
+			String canonicalURI = getCanonicalURI(httpRequest);
+			String canonicalQueryString = getCanonicalQueryString(httpRequest);
+			String canonicalHeaders = getCanonicalHeaders(httpRequest, authMap.get(AuthorizationField.SignedHeaders));
+			String signedHeaders = getSignedHeaders(httpRequest, authMap);
+			
+			String data = verb + "\n" + canonicalURI + "\n" + canonicalQueryString + "\n" + canonicalHeaders + "\n" + signedHeaders;
+			String AWSAccessKeyID = httpRequest.getAndRemoveHeader(SecurityParameter.AWSAccessKeyId.toString());
+			String signature = authMap.get(AuthorizationField.Signature);
+			
 			try {
-				SecurityContext.getLoginContext(new WalrusWrappedComponentCredentials(httpRequest.getCorrelationId(), data, effectiveUserID, signature, certString)).login();
+				SecurityContext.getLoginContext(new WalrusWrappedComponentCredentials(httpRequest.getCorrelationId(), data, AWSAccessKeyID, signature, certString)).login();
 			} catch(Exception ex) {
 				LOG.error(ex);
 				throw new AuthenticationException(ex);
 			}
-		}  else {
-			//external user request
+			
+		}
+		
+		private static void checkDate(MappingHttpRequest httpRequest) throws AuthenticationException {
+			String date;
+			String verifyDate;
+			if(httpRequest.containsHeader("x-amz-date")) {
+				date = "";
+				verifyDate = httpRequest.getHeader("x-amz-date");
+			} else {
+				date =  httpRequest.getHeader(SecurityParameter.Date.toString());
+				verifyDate = date;
+				if(date == null || date.length() <= 0)
+					throw new AuthenticationException("User authentication failed. Date must be specified.");
+			}
+
+			try {				
+				ArrayList<String> formats = new ArrayList<String>();
+				formats.add(ISO_8601_FORMAT);
+				Date dateToVerify = DateUtil.parseDate(verifyDate, formats);
+				Date currentDate = new Date();
+				if(Math.abs(currentDate.getTime() - dateToVerify.getTime()) > WalrusProperties.EXPIRATION_LIMIT) {
+					LOG.error("Incoming Walrus message is expired. Current date: " + currentDate.toString() + " Message's Verification Date: " + dateToVerify.toString());
+					throw new AuthenticationException("Message expired. Sorry.");
+				}
+			} catch(DateParseException ex) {
+				LOG.error("Walrus cannot parse date: " + verifyDate);
+				throw new AuthenticationException("Unable to parse date.");
+			}
+		}
+		
+		/**
+		 * Gets the signed header string for Euca2 auth.
+		 * @param httpRequest
+		 * @param authMap
+		 * @return
+		 * @throws AuthenticationException
+		 */
+		private static String getSignedHeaders(MappingHttpRequest httpRequest, Map<AuthorizationField, String> authMap) throws AuthenticationException {
+			String signedHeaders = authMap.get(AuthorizationField.SignedHeaders);
+			if(signedHeaders != null) return signedHeaders.trim();
+			return "";
+		}
+		/**
+		 * Returns the canonical URI for euca2 auth, just the path from the end of the host header value to the first ?
+		 * @param httpRequest
+		 * @return
+		 * @throws AuthenticationException
+		 */
+		private static String getCanonicalURI(MappingHttpRequest httpRequest) throws AuthenticationException {
+			String addr = httpRequest.getUri();
+			String targetHost = httpRequest.getHeader(HttpHeaders.Names.HOST);
+			if(targetHost != null && targetHost.contains(".walrus")) {
+				String bucket = targetHost.substring(0, targetHost.indexOf(".walrus"));
+				addr = "/" + bucket + addr;
+			}
+			String[] addrStrings = addr.split("\\?");
+			String addrString = addrStrings[0];
+			return addrString;
+		}
+		
+		/**
+		 * Get the canonical headers list, a string composed of sorted headers and values, taken from the list of signed headers given by the request
+		 * @param httpRequest
+		 * @return
+		 * @throws AuthenticationException
+		 */
+		private static String getCanonicalHeaders(MappingHttpRequest httpRequest, String signedHeaders) throws AuthenticationException {
+			String[] signedHeaderArray = signedHeaders.split(";");
+			StringBuilder canonHeader = new StringBuilder();
+			boolean foundHost = false;
+			for(String headerName : signedHeaderArray) {			
+				String headerNameString = headerName.toLowerCase().trim();
+				if("host".equals(headerNameString)) {
+					foundHost = true;
+				}
+				String value =  httpRequest.getHeader(headerName);
+				if(value != null) {
+					value = value.trim();
+					String[] parts = value.split("\n");
+					value = "";
+					for(String part: parts) {
+						part = part.trim();
+						value += part + " ";
+					}
+					value = value.trim();
+				}
+				else {
+					value = "";
+				}
+				canonHeader.append(headerNameString).append(":").append(value).append('\n');
+			}
+			
+			if(!foundHost) {
+				throw new AuthenticationException("Host header not found when canonicalizing headers");
+			}
+			
+			return canonHeader.toString().trim();
+		}		
+
+		/**
+		 * Gets Euca2 signing canonical query string.
+		 * @param httpRequest
+		 * @return
+		 * @throws AuthenticationException
+		 */
+		private static String getCanonicalQueryString(MappingHttpRequest httpRequest) throws AuthenticationException {
+			String addr = httpRequest.getUri();
+			String[] addrStrings = addr.split("\\?");
+			StringBuilder addrString = new StringBuilder();
+			
+			NavigableSet<String> sortedParams = new TreeSet<String>( );
+			Map<String, String> params = httpRequest.getParameters();
+			if(params == null) {
+				return "";
+			}
+			
+			sortedParams.addAll(params.keySet());
+			
+			String key = null;
+			while((key = sortedParams.pollFirst()) != null) {
+				addrString.append(key).append('=').append(params.get(key)).append('&');
+			}
+			
+			if(addrString.length() > 0) {
+				addrString.deleteCharAt(addrString.length() - 1); //delete trailing '&';
+			}
+			
+			return addrString.toString();
+		}
+		
+		/**
+		 * Removes all headers that are not in the signed-headers list. This prevents potentially modified headers from being used by later stages.
+		 * @param httpRequest
+		 * @param signedHeaders - semicolon delimited list of header names
+		 */
+		private static void cleanHeaders(MappingHttpRequest httpRequest, String signedHeaders) {
+			if(Strings.isNullOrEmpty(signedHeaders)) {
+				//Remove all headers.
+				signedHeaders = "";
+			}
+						
+			//Remove ones not found in the list
+			Set<String> signedNames = new TreeSet<String>();
+			String[] names = signedHeaders.split(";");
+			for(String n : names) {
+				signedNames.add(n.toLowerCase());
+			}
+			
+			signedNames.addAll(SAFE_HEADER_SET);
+			
+			Set<String> removeSet = new TreeSet<String>();
+			for(String headerName : httpRequest.getHeaderNames()) {
+				if(!signedNames.contains(headerName.toLowerCase())) {
+					removeSet.add(headerName);
+				}
+			}
+			
+			for(String headerName : removeSet) {				
+				httpRequest.removeHeader(headerName);
+			}
+		}
+		
+	} //End class EucaAuthentication
+	
+	private static class S3Authentication {
+		/**
+		 * Authenticate using S3-spec REST authentication
+		 * @param httpRequest
+		 * @param authMap
+		 * @throws AuthenticationException
+		 */
+		private static void authenticate(MappingHttpRequest httpRequest, Map<AuthorizationField, String> authMap) throws AuthenticationException {
+			if(!authMap.get(AuthorizationField.Type).equals(AWS_AUTH_TYPE)) {
+				throw new AuthenticationException("Mismatch between expected and found authentication types");
+			}
+			
+			//Standard S3 authentication signed by SecretKeyID
+			String verb = httpRequest.getMethod().getName();
+			String date = getDate(httpRequest);
+			String addrString = getS3AddressString(httpRequest);
 			String content_md5 = httpRequest.getHeader("Content-MD5");
 			content_md5 = content_md5 == null ? "" : content_md5;
 			String content_type = httpRequest.getHeader(WalrusProperties.CONTENT_TYPE);
 			content_type = content_type == null ? "" : content_type;
+			String securityToken = httpRequest.getHeader(WalrusProperties.X_AMZ_SECURITY_TOKEN);
+			String canonicalizedAmzHeaders = getCanonicalizedAmzHeaders(httpRequest);
+			String data = verb + "\n" + content_md5 + "\n" + content_type + "\n" + date + "\n" + canonicalizedAmzHeaders + addrString;
+			String accessKeyId = authMap.get(AuthorizationField.AccessKeyId);
+			String signature = authMap.get(AuthorizationField.Signature);
+			
+			try {
+				SecurityContext.getLoginContext(new WalrusWrappedCredentials(httpRequest.getCorrelationId(), data, accessKeyId, signature, securityToken)).login();
+			} catch(Exception ex) {
+				//Try stripping of the '/services/Walrus' portion of the addrString and retry the signature calc
+				if(addrString.startsWith("/services/Walrus")) {
+					try {
+						String modifiedAddrString = addrString.replaceFirst("/services/Walrus", "");
+						data = verb + "\n" + content_md5 + "\n" + content_type + "\n" + date + "\n" + canonicalizedAmzHeaders + modifiedAddrString;
+						SecurityContext.getLoginContext(new WalrusWrappedCredentials(httpRequest.getCorrelationId(), data, accessKeyId, signature, securityToken)).login();
+					} catch(Exception ex2) {
+						LOG.error(ex2);
+						throw new AuthenticationException(ex2);					
+					}
+				} else {
+					LOG.error(ex);
+					throw new AuthenticationException(ex);
+				}
+			}
+		}
+		
+		/**
+		 * Authenticate using S3-spec query string authentication
+		 * @param httpRequest
+		 * @throws AuthenticationException
+		 */
+		private static void authenticateQueryString(MappingHttpRequest httpRequest) throws AuthenticationException {
+			//Standard S3 query string authentication
+			Map<String,String> parameters = httpRequest.getParameters( );
+			String verb = httpRequest.getMethod().getName();
+			String content_md5 = httpRequest.getHeader("Content-MD5");
+			content_md5 = content_md5 == null ? "" : content_md5;
+			String content_type = httpRequest.getHeader(WalrusProperties.CONTENT_TYPE);
+			content_type = content_type == null ? "" : content_type;
+			String addrString = getS3AddressString(httpRequest);		
+			String accesskeyid = parameters.remove(SecurityParameter.AWSAccessKeyId.toString());
+			
+			try {
+				//Parameter url decode happens during MappingHttpRequest construction.
+				String signature = parameters.remove(SecurityParameter.Signature.toString());
+				if(signature == null) {
+					throw new AuthenticationException("User authentication failed. Null signature.");
+				}
+				String expires = parameters.remove(SecurityParameter.Expires.toString());
+				if(expires == null) {
+					throw new AuthenticationException("Authentication failed. Expires must be specified.");
+				}
+				String securityToken = parameters.get(SecurityParameter.SecurityToken.toString());
+				
+				if(checkExpires(expires)) {
+					String canonicalizedAmzHeaders = getCanonicalizedAmzHeaders(httpRequest);
+					String stringToSign = verb + "\n" + content_md5 + "\n" + content_type + "\n" + Long.parseLong(expires) + "\n" + canonicalizedAmzHeaders + addrString;
+					try {
+						SecurityContext.getLoginContext(new WalrusWrappedCredentials(httpRequest.getCorrelationId(), stringToSign, accesskeyid, signature, securityToken)).login();
+					} catch(Exception ex) {
+						//Try stripping of the '/services/Walrus' portion of the addrString and retry the signature calc
+						if(addrString.startsWith("/services/Walrus")) {
+							try {
+								String modifiedAddrString = addrString.replaceFirst("/services/Walrus", "");
+								stringToSign = verb + "\n" + content_md5 + "\n" + content_type + "\n" + Long.parseLong(expires) + "\n" + canonicalizedAmzHeaders + modifiedAddrString;
+								SecurityContext.getLoginContext(new WalrusWrappedCredentials(httpRequest.getCorrelationId(), stringToSign, accesskeyid, signature, securityToken)).login();
+							} catch(Exception ex2) {
+								LOG.error(ex2);
+								throw new AuthenticationException(ex2);					
+							}
+						} else {
+							LOG.error(ex);
+							throw new AuthenticationException(ex);
+						}
+					}
+				} else {
+					throw new AuthenticationException("Cannot process request. Expired.");
+				}
+			} catch (Exception ex) {
+				throw new AuthenticationException("Could not verify request " + ex.getMessage());
+			}	
+		}
+		
+		/**
+		 * See if the expires string indicates the message is expired.
+		 * @param expires
+		 * @return
+		 */
+		private static boolean checkExpires(String expires) {
+			Long expireTime = Long.parseLong(expires);
+			Long currentTime = new Date().getTime() / 1000;
+			if(currentTime > expireTime)
+				return false;
+			return true;
+		}
+		
+		/**
+		 * Gets the date for S3-spec authentication
+		 * @param httpRequest
+		 * @return
+		 * @throws AuthenticationException
+		 */
+		private static String getDate(MappingHttpRequest httpRequest) throws AuthenticationException {
+			String date;
+			String verifyDate;
+			if(httpRequest.containsHeader("x-amz-date")) {
+				date = "";
+				verifyDate = httpRequest.getHeader("x-amz-date");
+			} else {
+				date =  httpRequest.getAndRemoveHeader(SecurityParameter.Date.toString());
+				verifyDate = date;
+				if(date == null || date.length() <= 0)
+					throw new AuthenticationException("User authentication failed. Date must be specified.");
+			}
 
+			try {
+				Date dateToVerify = DateUtil.parseDate(verifyDate);
+				Date currentDate = new Date();
+				if(Math.abs(currentDate.getTime() - dateToVerify.getTime()) > WalrusProperties.EXPIRATION_LIMIT) {
+					LOG.error("Incoming Walrus message is expired. Current date: " + currentDate.toString() + " Message's Verification Date: " + dateToVerify.toString());
+					throw new AuthenticationException("Message expired. Sorry.");
+				}
+			} catch(Exception ex) {
+				LOG.error("Cannot parse date: " + verifyDate);
+				throw new AuthenticationException("Unable to parse date.");
+			}
+
+			return date;
+		}
+		
+		private static String getCanonicalizedAmzHeaders(MappingHttpRequest httpRequest) {
+			String result = "";
+			Set<String> headerNames = httpRequest.getHeaderNames();
+
+			TreeMap<String,String> amzHeaders = new TreeMap<String, String>();
+			for(String headerName : headerNames) {
+				String headerNameString = headerName.toLowerCase().trim();
+				if(headerNameString.startsWith("x-amz-")) {
+					String value =  httpRequest.getHeader(headerName).trim();
+					String[] parts = value.split("\n");
+					value = "";
+					for(String part: parts) {
+						part = part.trim();
+						value += part + " ";
+					}
+					value = value.trim();
+					if(amzHeaders.containsKey(headerNameString)) {
+						String oldValue = (String) amzHeaders.remove(headerNameString);
+						oldValue += "," + value;
+						amzHeaders.put(headerNameString, oldValue);
+					} else {
+						amzHeaders.put(headerNameString, value);
+					}
+				}
+			}
+
+			Iterator<String> iterator = amzHeaders.keySet().iterator();
+			while(iterator.hasNext()) {
+				String key = iterator.next();
+				String value = (String) amzHeaders.get(key);
+				result += key + ":" + value + "\n";
+			}
+			return result;
+		}
+		
+		//Old method for getting signature info from Auth header
+		private static String[] getSigInfo (String auth_part) {
+			int index = auth_part.lastIndexOf(" ");
+			String sigString = auth_part.substring(index + 1);
+			return sigString.split(":");
+		}
+		
+		/**
+		 * AWS S3-spec address string, which includes the query parameters
+		 * @param httpRequest
+		 * @return
+		 * @throws AuthenticationException
+		 */
+		private static String getS3AddressString(MappingHttpRequest httpRequest) throws AuthenticationException {
+			String addr = httpRequest.getUri();
 			String targetHost = httpRequest.getHeader(HttpHeaders.Names.HOST);
 			if(targetHost.contains(".walrus")) {
 				String bucket = targetHost.substring(0, targetHost.indexOf(".walrus"));
 				addr = "/" + bucket + addr;
 			}
 			String[] addrStrings = addr.split("\\?");
-			String addrString = addrStrings[0];
-
+			StringBuilder addrString = new StringBuilder(addrStrings[0]);
+			
 			if(addrStrings.length > 1) {
 				//Split into individual parameter=value strings
 				String[] params = addrStrings[1].split("&");
-
+				
 				//Sort the query parameters before adding them to the canonical string
 				Arrays.sort(params);
 				String[] pair = null;
@@ -210,197 +739,70 @@ public class WalrusAuthenticationHandler extends MessageStackHandler {
 				try {
 					for(String qparam : params) {
 						pair = qparam.split("="); //pair[0] = param name, pair[1] = param value if it is present
-					
+						
 						for(WalrusProperties.SubResource subResource : WalrusProperties.SubResource.values()) {
 							if(pair[0].equals(subResource.toString())) {
 								if(first) {
-									addrString += "?";
+									addrString.append("?");
 									first = false;
 								}
 								else {
-									addrString += "&";
+									addrString.append("&");
 								}
-								addrString += subResource.toString() + (pair.length > 1 ? "=" + WalrusUtil.URLdecode(pair[1]) : "");							
+								addrString.append(subResource.toString()).append((pair.length > 1 ? "=" + WalrusUtil.URLdecode(pair[1]) : ""));							
 							}
 						}
 					}					
 				} catch(UnsupportedEncodingException e) {
 					throw new AuthenticationException("Could not verify request. Failed url decoding query parameters: " + e.getMessage());
 				}
+			}		
+			return addrString.toString();
+		}
+				
+	} //End class S3Authentication	
+	
+	/**
+	 * Authentication Handler for Walrus REST requests (POST method and SOAP are processed using different handlers)
+	 * @param httpRequest
+	 * @throws AuthenticationException
+	 */
+	public void handle(MappingHttpRequest httpRequest) throws AuthenticationException {
+		//Clean up the headers such that no duplicates may exist etc.
+		//sanitizeHeaders(httpRequest);
+		Map<String,String> parameters = httpRequest.getParameters();
+
+		if(httpRequest.containsHeader(SecurityParameter.Authorization.toString())) {							
+			String authHeader = httpRequest.getAndRemoveHeader(SecurityParameter.Authorization.toString());
+			Map<AuthorizationField, String> authMap = processAuthorizationHeader(authHeader);
+
+			if(EUCA_AUTH_TYPE.equals(authMap.get(AuthorizationField.Type))) {
+				//Internally signed request. Using a certificate for signing
+				EucaAuthentication.authenticate(httpRequest, authMap);
+			} else if(AWS_AUTH_TYPE.equals(authMap.get(AuthorizationField.Type))) {
+				//Normally signed request using AccessKeyId/SecretKeyId pair
+				S3Authentication.authenticate(httpRequest, authMap);
+			} else {
+				throw new AuthenticationException("Malformed Authentication Header");
 			}
-
-			if(httpRequest.containsHeader(SecurityParameter.Authorization.toString())) {
-				String date;
-				String verifyDate;
-				if(httpRequest.containsHeader("x-amz-date")) {
-					date = "";
-					verifyDate = httpRequest.getHeader("x-amz-date");
-				} else {
-					date =  httpRequest.getAndRemoveHeader(SecurityParameter.Date.toString());
-					verifyDate = date;
-					if(date == null || date.length() <= 0)
-						throw new AuthenticationException("User authentication failed. Date must be specified.");
-				}
-
-				try {
-					Date dateToVerify = DateUtil.parseDate(verifyDate);
-					Date currentDate = new Date();
-					if(Math.abs(currentDate.getTime() - dateToVerify.getTime()) > WalrusProperties.EXPIRATION_LIMIT)
-						throw new AuthenticationException("Message expired. Sorry.");
-				} catch(Exception ex) {
-					throw new AuthenticationException("Unable to parse date.");
-				}
-				String data = verb + "\n" + content_md5 + "\n" + content_type + "\n" + date + "\n" +  getCanonicalizedAmzHeaders(httpRequest) + addrString;
-				String authPart = httpRequest.getAndRemoveHeader(SecurityParameter.Authorization.toString());
-				String sigString[] = getSigInfo(authPart);
-				if(sigString.length < 2) {
-					throw new AuthenticationException("Invalid authentication header");
-				}
-				String accessKeyId = sigString[0];
-				String signature = sigString[1];
-				String securityToken = httpRequest.getHeader(WalrusProperties.X_AMZ_SECURITY_TOKEN);
-				try {
-					SecurityContext.getLoginContext(new WalrusWrappedCredentials(httpRequest.getCorrelationId(), data, accessKeyId, signature, securityToken)).login();
-				} catch(Exception ex) {
-					LOG.error(ex);
-					throw new AuthenticationException(ex);
-				}
-			} else if(parameters.containsKey(SecurityParameter.AWSAccessKeyId.toString())) {
-				//query string authentication
-				String accesskeyid = parameters.remove(SecurityParameter.AWSAccessKeyId.toString());
-				try {
-					//No need to decode the parameter, that is done during HTTP message creation
-					String signature = parameters.remove(SecurityParameter.Signature.toString());
-					if(signature == null) {
-						throw new AuthenticationException("User authentication failed. Null signature.");
-					}
-					String expires = parameters.remove(SecurityParameter.Expires.toString());
-					if(expires == null) {
-						throw new AuthenticationException("Authentication failed. Expires must be specified.");
-					}
-					if(checkExpires(expires)) {
-						String stringToSign = verb + "\n" + content_md5 + "\n" + content_type + "\n" + Long.parseLong(expires) + "\n" + getCanonicalizedAmzHeaders(httpRequest) + addrString;
-						String securityToken = parameters.get(SecurityParameter.SecurityToken.toString());
-						try {
-							SecurityContext.getLoginContext(new WalrusWrappedCredentials(httpRequest.getCorrelationId(), stringToSign, accesskeyid, signature, securityToken)).login();
-						} catch(Exception ex) {
-							LOG.error(ex);
-							throw new AuthenticationException(ex);
-						}
-					} else {
-						throw new AuthenticationException("Cannot process request. Expired.");
-					}
-				} catch (Exception ex) {
-					throw new AuthenticationException("Could not verify request " + ex.getMessage());
-				}
-			} else{
-				//anonymous request              
+		} 
+		else {
+			if(parameters.containsKey(SecurityParameter.AWSAccessKeyId.toString())) {
+				//Query String Auth
+				S3Authentication.authenticateQueryString(httpRequest);				
+			} else {
+				//Anonymous request, no query string, no Authorization header
 				try {
 					Context ctx = Contexts.lookup(httpRequest.getCorrelationId());
 					ctx.setUser(Principals.nobodyUser());
 				} catch (NoSuchContextException e) {
 					LOG.error(e, e);
 					throw new AuthenticationException(e);
-				}
+				}				
 			}
 		}
 	}
-
-	private boolean checkExpires(String expires) {
-		Long expireTime = Long.parseLong(expires);
-		Long currentTime = new Date().getTime() / 1000;
-		if(currentTime > expireTime)
-			return false;
-		return true;
-	}
-
-	private String[] getSigInfo (String auth_part) {
-		int index = auth_part.lastIndexOf(" ");
-		String sigString = auth_part.substring(index + 1);
-		return sigString.split(":");
-	}
-
-	private String getCanonicalizedAmzHeaders(MappingHttpRequest httpRequest) {
-		String result = "";
-		Set<String> headerNames = httpRequest.getHeaderNames();
-
-		TreeMap amzHeaders = new TreeMap<String, String>();
-		for(String headerName : headerNames) {
-			String headerNameString = headerName.toLowerCase().trim();
-			if(headerNameString.startsWith("x-amz-")) {
-				String value =  httpRequest.getHeader(headerName).trim();
-				String[] parts = value.split("\n");
-				value = "";
-				for(String part: parts) {
-					part = part.trim();
-					value += part + " ";
-				}
-				value = value.trim();
-				if(amzHeaders.containsKey(headerNameString)) {
-					String oldValue = (String) amzHeaders.remove(headerNameString);
-					oldValue += "," + value;
-					amzHeaders.put(headerNameString, oldValue);
-				} else {
-					amzHeaders.put(headerNameString, value);
-				}
-			}
-		}
-
-		Iterator<String> iterator = amzHeaders.keySet().iterator();
-		while(iterator.hasNext()) {
-			String key = iterator.next();
-			String value = (String) amzHeaders.get(key);
-			result += key + ":" + value + "\n";
-		}
-		return result;
-	}
-
-	private void checkUploadPolicy(MappingHttpRequest httpRequest) throws AuthenticationException {
-		Map<String, String> fields = new HashMap<String, String>();
-		String policy = httpRequest.getAndRemoveHeader(WalrusProperties.Headers.S3UploadPolicy.toString());
-		fields.put(WalrusProperties.FormField.policy.toString(), policy);
-		String policySignature = httpRequest.getAndRemoveHeader(WalrusProperties.Headers.S3UploadPolicySignature.toString());
-		if(policySignature == null)
-			throw new AuthenticationException("Policy signature must be specified with policy.");
-		String awsAccessKeyId = httpRequest.getAndRemoveHeader(SecurityParameter.AWSAccessKeyId.toString());
-		if(awsAccessKeyId == null)
-			throw new AuthenticationException("AWSAccessKeyID must be specified.");
-		fields.put(WalrusProperties.FormField.signature.toString(), policySignature);
-		fields.put(SecurityParameter.AWSAccessKeyId.toString(), awsAccessKeyId);
-		String acl = httpRequest.getAndRemoveHeader(WalrusProperties.AMZ_ACL.toString());
-		if(acl != null)
-			fields.put(WalrusProperties.FormField.acl.toString(), acl);
-		String operationPath = httpRequest.getServicePath().replaceAll(WalrusProperties.walrusServicePath, "");
-		String[] target = WalrusUtil.getTarget(operationPath);
-		if(target != null) {
-			fields.put(WalrusProperties.FormField.bucket.toString(), target[0]);
-			if(target.length > 1)
-				fields.put(WalrusProperties.FormField.key.toString(), target[1]);
-		}
-		UploadPolicyChecker.checkPolicy(httpRequest, fields);
-
-		String data = httpRequest.getAndRemoveHeader(WalrusProperties.FormField.FormUploadPolicyData.toString());
-		String auth_part = httpRequest.getAndRemoveHeader(SecurityParameter.Authorization.toString());
-		String securityToken = httpRequest.getHeader(WalrusProperties.X_AMZ_SECURITY_TOKEN);
-		if(auth_part != null) {
-			String sigString[] = getSigInfo(auth_part);
-		 	if(sigString.length < 2) {
-				throw new AuthenticationException("Invalid authentication header");
-			}
-			String accessKeyId = sigString[0];
-			String signature = sigString[1];
-			try {
-				SecurityContext.getLoginContext(new WalrusWrappedCredentials(httpRequest.getCorrelationId(), data, accessKeyId, signature, securityToken)).login();
-			} catch(Exception ex) {
-				LOG.error(ex);
-				throw new AuthenticationException(ex);
-			}
-		} else {
-			throw new AuthenticationException("User authentication failed. Invalid policy signature.");
-		}
-
-	}
-
+	
 	public void exceptionCaught( final ChannelHandlerContext ctx, final ExceptionEvent exceptionEvent ) throws Exception {
 		LOG.info("[exception " + exceptionEvent + "]");
 		final HttpResponse response = new DefaultHttpResponse( HttpVersion.HTTP_1_1, HttpResponseStatus.INTERNAL_SERVER_ERROR );

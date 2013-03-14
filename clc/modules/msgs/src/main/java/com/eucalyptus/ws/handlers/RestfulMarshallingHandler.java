@@ -122,7 +122,7 @@ public abstract class RestfulMarshallingHandler extends MessageStackHandler {
   public RestfulMarshallingHandler( String namespacePattern, String defaultVersion ) {
     this( namespacePattern );
     this.defaultBindingNamespace = String.format( namespacePattern, defaultVersion );
-    this.defaultBinding = BindingManager.getBinding( BindingManager.sanitizeNamespace( this.defaultBindingNamespace ) );
+    this.defaultBinding = BindingManager.getBinding( this.defaultBindingNamespace );
   }
   
   @Override
@@ -149,7 +149,7 @@ public abstract class RestfulMarshallingHandler extends MessageStackHandler {
   
   protected void setNamespace( String namespace ) {
     this.namespace = namespace;
-    this.binding = BindingManager.getBinding( BindingManager.sanitizeNamespace( this.namespace ) );
+    this.binding = BindingManager.getBinding( this.namespace );
   }
   
   private void setNamespaceVersion( String bindingVersion ) {

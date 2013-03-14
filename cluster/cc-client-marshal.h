@@ -129,7 +129,8 @@ int cc_stopNetwork(int vlan, char *netName, axutil_env_t * env, axis2_stub_t * p
 int cc_attachVolume(char *volumeId, char *instanceId, char *remoteDev, char *localDev, axutil_env_t * env, axis2_stub_t * pStub);
 int cc_detachVolume(char *volumeId, char *instanceId, char *remoteDev, char *localDev, int force, axutil_env_t * env, axis2_stub_t * pStub);
 int cc_createImage(char *volumeId, char *instanceId, char *remoteDev, axutil_env_t * env, axis2_stub_t * pStub);
-int cc_bundleInstance(char *instanceId, char *bucketName, char *filePrefix, char *walrusURL, char *userPublicKey, axutil_env_t * env, axis2_stub_t * pStub);
+int cc_bundleInstance(char *instanceId, char *bucketName, char *filePrefix, char *walrusURL, char *userPublicKey, axutil_env_t * env,
+                      axis2_stub_t * pStub);
 int cc_bundleRestartInstance(char *instanceId, axutil_env_t * env, axis2_stub_t * pStub);
 int cc_assignAddress(char *src, char *dst, axutil_env_t * env, axis2_stub_t * pStub);
 int cc_unassignAddress(char *src, char *dst, axutil_env_t * env, axis2_stub_t * pStub);
@@ -153,7 +154,6 @@ int cc_disableService(axutil_env_t * env, axis2_stub_t * pStub);
 int cc_shutdownService(axutil_env_t * env, axis2_stub_t * pStub);
 int cc_modifyNode(char *nodeName, char *stateName, axutil_env_t * env, axis2_stub_t * pStub);
 int cc_migrateInstances(char *nodeName, axutil_env_t * env, axis2_stub_t * pStub);
-
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |

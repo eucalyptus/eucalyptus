@@ -86,8 +86,8 @@
 #include <errno.h>
 
 #include <eucalyptus.h>
-#include <misc.h>                      // logprintfl
-#include <ipc.h>                       // sem
+#include <misc.h>               // logprintfl
+#include <ipc.h>                // sem
 #include <euca_string.h>
 
 #include "diskutil.h"
@@ -185,7 +185,7 @@ static char *helpers_path[LASTHELPER] = { NULL };
 
 static char stage_files_dir[EUCA_MAX_PATH] = "";
 static int initialized = 0;
-static sem *loop_sem = NULL;           //!< semaphore held while attaching/detaching loopback devices
+static sem *loop_sem = NULL;    //!< semaphore held while attaching/detaching loopback devices
 static unsigned char grub_version = 0;
 
 /*----------------------------------------------------------------------------*\
@@ -334,7 +334,7 @@ int diskutil_init(boolean require_grub)
         }
 
         if ((initialized < 1) && (loop_sem == NULL))
-            loop_sem = sem_alloc(1, "mutex");
+            loop_sem = sem_alloc(1, IPC_MUTEX_SEMAPHORE);
         initialized = 1 + require_grub;
     }
 
@@ -461,7 +461,8 @@ int diskutil_dd2(const char *in, const char *out, const int bs, const long long 
         LOGINFO("               to '%s'\n", out);
         LOGINFO("               of %lld blocks (bs=%d), seeking %lld, skipping %lld\n", count, bs, seek, skip);
         output =
-            pruntf(TRUE, "%s %s if=%s of=%s bs=%d count=%lld seek=%lld skip=%lld conv=notrunc,fsync", helpers_path[ROOTWRAP], helpers_path[DD], in, out, bs, count, seek, skip);
+            pruntf(TRUE, "%s %s if=%s of=%s bs=%d count=%lld seek=%lld skip=%lld conv=notrunc,fsync", helpers_path[ROOTWRAP], helpers_path[DD], in,
+                   out, bs, count, seek, skip);
         if (!output) {
             LOGERROR("cannot copy '%s'\n", in);
             LOGERROR("                to '%s'\n", out);
@@ -532,7 +533,8 @@ int diskutil_part(const char *path, char *part_type, const char *fs_type, const 
 
     if (path && part_type) {
         output = pruntf(TRUE, "LD_PRELOAD='' %s %s --script %s mkpart %s %s %llds %llds",
-                        helpers_path[ROOTWRAP], helpers_path[PARTED], path, part_type, ((fs_type != NULL) ? (fs_type) : ("")), first_sector, last_sector);
+                        helpers_path[ROOTWRAP], helpers_path[PARTED], path, part_type, ((fs_type != NULL) ? (fs_type) : ("")), first_sector,
+                        last_sector);
         if (!output) {
             LOGERROR("cannot add a partition\n");
             return (EUCA_ERROR);
@@ -1299,7 +1301,7 @@ int diskutil_grub2_mbr(const char *path, const int part, const char *mnt_pt)
             _PR();
             snprintf(s, sizeof(s), "quit\n");
             _PR();
-            rc = pclose(fp);           // base success on exit code of grub
+            rc = pclose(fp);    // base success on exit code of grub
         }
 
         if (rc) {
@@ -1314,10 +1316,10 @@ int diskutil_grub2_mbr(const char *path, const int part, const char *mnt_pt)
                        && ((read_bytes = read(tfd, buf + bytes_read, 1)) > 0))
                     if (buf[bytes_read++] == '\n')
                         break;
-                if (read_bytes < 0)    // possibly truncated output, ensure there is newline
+                if (read_bytes < 0) // possibly truncated output, ensure there is newline
                     buf[bytes_read++] = '\n';
                 buf[bytes_read] = '\0';
-                LOGDEBUG("\t%s", buf); // log grub 1 prompts and our inputs
+                LOGDEBUG("\t%s", buf);  // log grub 1 prompts and our inputs
                 if (strstr(buf, "Done."))   // this indicates that grub 1 succeeded (the message has been there since 2000)
                     saw_done = TRUE;
             } while (read_bytes > 0);
@@ -1351,7 +1353,8 @@ int diskutil_grub2_mbr(const char *path, const int part, const char *mnt_pt)
             LOGINFO("%s", device_map_buf);
         }
 
-        output = pruntf(TRUE, "%s %s --modules='part_msdos ext2' --root-directory=%s '(hd0)'", helpers_path[ROOTWRAP], helpers_path[GRUB_INSTALL], mnt_pt);
+        output =
+            pruntf(TRUE, "%s %s --modules='part_msdos ext2' --root-directory=%s '(hd0)'", helpers_path[ROOTWRAP], helpers_path[GRUB_INSTALL], mnt_pt);
         if (!output) {
             LOGERROR("failed to install grub 2 on disk '%s' mounted on '%s'\n", path, mnt_pt);
         } else {
@@ -1518,7 +1521,7 @@ static char *pruntf(boolean log_error, char *format, ...)
 
     output = EUCA_ALLOC(outsize, sizeof(char));
     if (output) {
-        output[0] = '\0';              // make sure we return an empty string if there is no output
+        output[0] = '\0';       // make sure we return an empty string if there is no output
     }
 
     while ((output != NULL) && (bytes = fread(output + (outsize - 1025), 1, 1024, IF)) > 0) {

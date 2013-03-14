@@ -75,7 +75,7 @@
  |                                                                            |
 \*----------------------------------------------------------------------------*/
 
-#define _FILE_OFFSET_BITS 64           // so large-file support works on 32-bit systems
+#define _FILE_OFFSET_BITS 64    // so large-file support works on 32-bit systems
 #include <stdio.h>
 #include <stdlib.h>
 #include <sys/types.h>
@@ -83,13 +83,13 @@
 #include <sys/stat.h>
 #include <sys/ipc.h>
 #include <sys/sem.h>
-#include <fcntl.h>                     /* For O_* */
+#include <fcntl.h>              /* For O_* */
 #include <string.h>
 #include <strings.h>
 #include <assert.h>
 
 #include "eucalyptus.h"
-#include "misc.h"                      /* logprintfl */
+#include "misc.h"               /* logprintfl */
 #include "ipc.h"
 
 /*----------------------------------------------------------------------------*\
@@ -142,14 +142,16 @@
  |                                                                            |
 \*----------------------------------------------------------------------------*/
 
-sem *sem_alloc(const int val, const char *name);
-sem *sem_realloc(const int val, const char *name, int flags);
-sem *sem_alloc_posix(sem_t * external_lock);
-int sem_prolaag(sem * s, boolean do_log);
-int sem_p(sem * s);
-int sem_verhogen(sem * s, boolean do_log);
-int sem_v(sem * s);
-void sem_free(sem * s);
+sem *sem_alloc(const int val, const char *typeName);
+sem *sem_realloc(const int val, const char *typeName, u32 flags);
+sem *sem_alloc_posix(sem_t * pExternalLock);
+void sem_free(sem * pSem);
+
+int sem_prolaag(sem * pSem, boolean doLog);
+int sem_p(sem * pSem);
+
+int sem_verhogen(sem * pSem, boolean doLog);
+int sem_v(sem * pSem);
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |
@@ -163,7 +165,7 @@ void sem_free(sem * s);
  |                                                                            |
 \*----------------------------------------------------------------------------*/
 
-#define DECLARE_ARG               union semun { int val; struct semid_ds *buf; ushort *array; } arg
+#define DECLARE_ARG               union semun { int val; struct semid_ds *buf; u16 *array; } arg
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |
@@ -175,28 +177,34 @@ void sem_free(sem * s);
 //! Allocate a new semaphore with the given name and mutex starting value.
 //!
 //! @param[in] val  the starting mutex count
-//! @param[in] name the type of semaphore ('mutex' = pthread mutex; 'semaphore' = semaphore) if any other
-//!                 name, then SYS V IPC semaphore is implied.
+//! @param[in] typeName the type of semaphore ('mutex' = pthread mutex; 'semaphore' = semaphore) if any other
+//!                     name, then SYS V IPC semaphore is implied.
 //!
 //! @return a pointer to the newly allocated semaphore or NULL if a failure occured
 //!
 //! @see sem_realloc()
 //! @see sem_free()
 //!
+//! @pre The name field must not be NULL.
+//!
+//! @post On success, a new semaphore will be allocated and initialized. If name happened to be NULL, a
+//!       SIGABRT signal will be thrown by the application.
+//!
 //! @note Caller is responsible to free allocated memory for this semaphore. Call to sem_free() is
 //!       prefered for this operation
 //!
-sem *sem_alloc(const int val, const char *name)
+sem *sem_alloc(const int val, const char *typeName)
 {
-    return (sem_realloc(val, name, O_EXCL));
+    return (sem_realloc(val, typeName, O_EXCL));
 }
 
 //!
 //! Allocate a new semaphore with the given name and mutex starting value.
 //!
 //! @param[in] val   the starting mutex count
-//! @param[in] name  the type of semaphore ('mutex' = pthread mutex; 'semaphore' = semaphore) if any other
-//!                  name, then SYS V IPC semaphore is implied.
+//! @param[in] typeName  the type of semaphore. If 'mutex' then pthread mutexis used if any other
+//!                      name then posix named semaphore is used if an empty name then SYS V IPC
+//!                      semaphore is implied.
 //! @param[in] flags Kernel encoding of open mode
 //!
 //! @return a pointer to the newly allocated semaphore or NULL if a failure occured
@@ -210,59 +218,71 @@ sem *sem_alloc(const int val, const char *name)
 //! @note Caller is responsible to free allocated memory for this semaphore. Call to sem_free() is
 //!       prefered for this operation
 //!
-sem *sem_realloc(const int val, const char *name, int flags)
+sem *sem_realloc(const int val, const char *typeName, u32 flags)
 {
-    sem *s = NULL;
+    sem *pSem = NULL;
+    char addr[24] = "";
     DECLARE_ARG;
 
-    assert(name);
-    if ((s = EUCA_ZALLOC(1, sizeof(sem))) == NULL)
+    // Validate the name parameter
+    assert(typeName);
+
+    // Check if we can allocate memory for our zemaphore
+    if ((pSem = EUCA_ZALLOC(1, sizeof(sem))) == NULL)
         return (NULL);
 
-    s->sysv = -1;
-    s->flags = flags;
+    // Initialize our type independent fields
+    pSem->sysv = -1;
+    pSem->flags = flags;
 
-    if (name && !strcmp(name, "mutex")) {
-        /* use pthread mutex */
-        s->usemutex = 1;
-        s->mutcount = val;
-        s->mutwaiters = 0;
-        pthread_mutex_init(&(s->mutex), NULL);
-        pthread_cond_init(&(s->cond), NULL);
-    } else if (name) {
-        /* named semaphores */
-        if (s->flags & O_EXCL) {
-            if (sem_unlink(name) == 0) {
-                /* clean up in case previous sem holder crashed */
-                LOGINFO("cleaning up old semaphore %s\n", name);
+    // save the address of this semaphore for future use
+    snprintf(addr, sizeof(addr), "%p", pSem);
+
+    //
+    // Initialize our semphore base on the requested type
+    //
+    if (!strcmp(typeName, IPC_MUTEX_SEMAPHORE)) {
+        // use pthread mutex
+        pSem->usemutex = 1;
+        pSem->mutcount = val;
+        pSem->mutwaiters = 0;
+        pthread_mutex_init(&(pSem->mutex), NULL);
+        pthread_cond_init(&(pSem->cond), NULL);
+
+        // In this case we'll use the address of the semaphore rather than the name
+        pSem->name = strdup(addr);
+    } else if (strlen(typeName) > 0) {
+        // named semaphores
+        if (pSem->flags & O_EXCL) {
+            // clean up in case previous sem holder crashed
+            if (sem_unlink(typeName) == 0) {
+                LOGINFO("cleaning up old semaphore %s\n", typeName);
             }
         }
-
-        if ((s->posix = sem_open(name, O_CREAT | flags, 0644, val)) == SEM_FAILED) {
-            EUCA_FREE(s);
+        // Create a new semaphore with this name.
+        if ((pSem->posix = sem_open(typeName, O_CREAT | flags, 0644, val)) == SEM_FAILED) {
+            EUCA_FREE(pSem);
             return (NULL);
         }
 
-        s->name = strdup(name);
+        pSem->name = strdup(typeName);
     } else {
-        /* SYS V IPC semaphores */
-        s->sysv = semget(IPC_PRIVATE,  /* private to process & children */
-                         1,            /* only need one */
-                         (IPC_CREAT | IPC_EXCL | S_IRUSR | S_IWUSR) /* user-only */ );
-        if (s->sysv < 0) {
-            EUCA_FREE(s);
+        // SYS V IPC semaphores
+        if ((pSem->sysv = semget(IPC_PRIVATE, 1, (IPC_CREAT | IPC_EXCL | S_IRUSR | S_IWUSR))) < 0) {
+            EUCA_FREE(pSem);
             return (NULL);
         }
-
-        /* set the value */
+        // Set the value
         arg.val = val;
-        if (semctl(s->sysv, 0, SETVAL, arg) == -1) {
-            EUCA_FREE(s);
+        if (semctl(pSem->sysv, 0, SETVAL, arg) == -1) {
+            EUCA_FREE(pSem);
             return (NULL);
         }
+        // In this case we'll use the address of the semaphore rather than the name
+        pSem->name = strdup(addr);
     }
 
-    return (s);
+    return (pSem);
 }
 
 //!
@@ -270,7 +290,7 @@ sem *sem_realloc(const int val, const char *name, int flags)
 //! be used with it; freeing the sem struct also closes the Posix semaphore that was passed
 //! in.
 //!
-//! @param[in] external_lock a pointer to the posix semaphore structure to use.
+//! @param[in] pExternalLock a pointer to the posix semaphore structure to use.
 //!
 //! @return a pointer to the newly created semaphore or NULL if any failure occured.
 //!
@@ -278,19 +298,68 @@ sem *sem_realloc(const int val, const char *name, int flags)
 //!
 //! @post On success a new sem structure is allocated and initialized with the external_lock.
 //!
-sem *sem_alloc_posix(sem_t * external_lock)
+sem *sem_alloc_posix(sem_t * pExternalLock)
 {
-    sem *s = NULL;
+    sem *pSem = NULL;
 
-    if (external_lock != NULL) {
-        if ((s = EUCA_ZALLOC(1, sizeof(sem))) == NULL)
+    // Name sure or parameter is valid
+    if (pExternalLock != NULL) {
+        // Allocate memory for our duplicate semaphore
+        if ((pSem = EUCA_ZALLOC(1, sizeof(sem))) == NULL)
             return (NULL);
-        s->posix = external_lock;
-        s->name = strdup("unknown");
-        return (s);
+
+        // Set the dependency
+        pSem->posix = pExternalLock;
+        pSem->name = strdup("unknown");
+        return (pSem);
     }
 
     return (NULL);
+}
+
+//!
+//! Frees a semaphore.
+//!
+//! @param[in] pSem a pointer to the semaphore to free if not NULL
+//!
+//! @see SEM_FREE()
+//!
+//! @pre The pSem field should not be NULL
+//!
+//! @post If pSem isn't NULL, the semaphore will be uninitialized and the memory will be freed
+//!
+//! @note It is recommended to use the SEM_FREE() macro as this will ensured that pSem will be
+//!       explicitedly set to NULL uppon returning from this call.
+//!
+void sem_free(sem * pSem)
+{
+    DECLARE_ARG;
+
+    // Make sure we were provided with a valid semaphore
+    if (pSem) {
+        // Is this a posix semaphore?
+        if (pSem->posix) {
+            // Close the posix semaphore
+            sem_close(pSem->posix);
+
+            // If we had the exclusive flag set, then unlink
+            if (pSem->flags & O_EXCL) {
+                sem_unlink(pSem->name);
+            }
+
+        }
+        // If this is a SYS V semaphore
+        if (pSem->sysv > 0) {
+            semctl(pSem->sysv, 0, IPC_RMID, arg);
+        }
+        // If we use mutex, we need to destroy it.
+        if (pSem->usemutex) {
+            pthread_mutex_destroy(&(pSem->mutex));
+        }
+        // Free the memory for the name before freeing the semaphore structure memory
+        EUCA_FREE(pSem->name);
+        EUCA_FREE(pSem);
+    }
 }
 
 //!
@@ -298,61 +367,64 @@ sem *sem_alloc_posix(sem_t * external_lock)
 //! tells it not to log the event (useful for avoiding infinite recursion when
 //! locking from the logging code).
 //!
-//! @param[in] s      a pointer to the semaphore to acquire
-//! @param[in] do_log set to TRUE if we need to log this acquisition. Otherwise set to FALSE.
+//! @param[in] pSem  a pointer to the semaphore to acquire
+//! @param[in] doLog set to TRUE if we need to log this acquisition. Otherwise set to FALSE.
 //!
 //! @return 0 on success or any other values on failure
 //!
-int sem_prolaag(sem * s, boolean do_log)
+//! @pre The pSem field must not be NULL.
+//!
+//! @post On success, the sempahore is acquired
+//!
+int sem_prolaag(sem * pSem, boolean doLog)
 {
     int rc = 0;
-    char addr[24] = { 0 };
     struct sembuf sb = { 0, -1, 0 };
 
-    if (s) {
-        if (do_log) {
-            snprintf(addr, sizeof(addr), "%lx", ((unsigned long)s));
-            LOGEXTREME("%s locking\n", ((s->name) ? (s->name) : (addr)));
+    // Make sure our given semaphore is valid
+    if (pSem) {
+        // Check if we need to log this operation now
+        if (doLog) {
+            LOGEXTREME("%s locking\n", pSem->name);
         }
-
-        if (s->usemutex) {
-            rc = pthread_mutex_lock(&(s->mutex));
-            s->mutwaiters++;
-            while (s->mutcount == 0) {
-                pthread_cond_wait(&(s->cond), &(s->mutex));
+        // For mutex semaphore
+        if (pSem->usemutex) {
+            rc = pthread_mutex_lock(&(pSem->mutex));
+            pSem->mutwaiters++;
+            while (pSem->mutcount == 0) {
+                pthread_cond_wait(&(pSem->cond), &(pSem->mutex));
             }
 
-            s->mutwaiters--;
-            s->mutcount--;
-            rc = pthread_mutex_unlock(&(s->mutex));
+            pSem->mutwaiters--;
+            pSem->mutcount--;
+            rc = pthread_mutex_unlock(&(pSem->mutex));
             return (rc);
         }
-
-        if (s->posix) {
-            return (sem_wait(s->posix));
+        // For Posix semaphore
+        if (pSem->posix) {
+            return (sem_wait(pSem->posix));
         }
-
-        if (s->sysv > 0) {
-            return (semop(s->sysv, &sb, 1));
+        // For SYS V semaphore
+        if (pSem->sysv > 0) {
+            return (semop(pSem->sysv, &sb, 1));
         }
     }
 
     return (-1);
 }
 
-//
 //!
 //! The semaphore increment (aka lock acquisition) function used throughout.
 //!
-//! @param[in] s a pointer to the semaphore to acquire
+//! @param[in] pSem a pointer to the semaphore to acquire
 //!
 //! @return the result from sem_prolaag()
 //!
 //! @see sem_prolaag()
 //!
-int sem_p(sem * s)
+int sem_p(sem * pSem)
 {
-    return (sem_prolaag(s, TRUE));
+    return (sem_prolaag(pSem, TRUE));
 }
 
 //!
@@ -360,40 +432,44 @@ int sem_p(sem * s)
 //! to log the event (useful for avoiding infinite recursion when unlocking from the
 //! logging code)
 //!
-//! @param[in] s      pointer to the semaphore to release
-//! @param[in] do_log set to TRUE if we need to log this acquisition. Otherwise set to FALSE.
+//! @param[in] pSem  pointer to the semaphore to release
+//! @param[in] doLog set to TRUE if we need to log this acquisition. Otherwise set to FALSE.
 //!
 //! @return 0 on success or any other values on failure
 //!
-int sem_verhogen(sem * s, boolean do_log)
+//! @pre The pSem field must not be NULL
+//!
+//! @post On success, the semaphore has successfully been released.
+//!
+int sem_verhogen(sem * pSem, boolean doLog)
 {
     int rc = 0;
-    char addr[24] = { 0 };
     struct sembuf sb = { 0, 1, 0 };
 
-    if (s) {
-        if (do_log) {
-            snprintf(addr, sizeof(addr), "%lx", ((unsigned long)s));
-            LOGEXTREME("%s unlocking\n", ((s->name) ? (s->name) : (addr)));
+    // Make sure our given semaphore is valid
+    if (pSem) {
+        // Check if we need to log this operation now
+        if (doLog) {
+            LOGEXTREME("%s unlocking\n", pSem->name);
         }
-
-        if (s->usemutex) {
-            rc = pthread_mutex_lock(&(s->mutex));
-            if (s->mutwaiters > 0) {
-                rc = pthread_cond_signal(&(s->cond));
+        // For mutex semaphore
+        if (pSem->usemutex) {
+            rc = pthread_mutex_lock(&(pSem->mutex));
+            if (pSem->mutwaiters > 0) {
+                rc = pthread_cond_signal(&(pSem->cond));
             }
 
-            s->mutcount++;
-            rc = pthread_mutex_unlock(&(s->mutex));
+            pSem->mutcount++;
+            rc = pthread_mutex_unlock(&(pSem->mutex));
             return (rc);
         }
-
-        if (s->posix) {
-            return (sem_post(s->posix));
+        // For Posix semaphore
+        if (pSem->posix) {
+            return (sem_post(pSem->posix));
         }
-
-        if (s->sysv > 0) {
-            return (semop(s->sysv, &sb, 1));
+        // For SYS V semaphore
+        if (pSem->sysv > 0) {
+            return (semop(pSem->sysv, &sb, 1));
         }
     }
 
@@ -403,40 +479,13 @@ int sem_verhogen(sem * s, boolean do_log)
 //!
 //! The semaphore decrement (aka lock release) function used throughout.
 //!
-//! @param[in] s a pointer to the semaphore to release
+//! @param[in] pSem a pointer to the semaphore to release
 //!
 //! @return the result from sem_verhogen()
 //!
 //! @see sem_verhogen()
 //!
-int sem_v(sem * s)
+int sem_v(sem * pSem)
 {
-    return (sem_verhogen(s, TRUE));
-}
-
-//!
-//! Frees a semaphore
-//!
-//! @param[in] s a pointer to the semaphore to free if not NULL
-//!
-void sem_free(sem * s)
-{
-    DECLARE_ARG;
-
-    if (s) {
-        if (s->posix) {
-            sem_close(s->posix);
-            if (s->flags & O_EXCL) {
-                sem_unlink(s->name);
-            }
-            EUCA_FREE(s->name);
-        }
-
-        if (s->sysv > 0) {
-            /* @todo check return */
-            semctl(s->sysv, 0, IPC_RMID, arg);
-        }
-
-        EUCA_FREE(s);
-    }
+    return (sem_verhogen(pSem, TRUE));
 }

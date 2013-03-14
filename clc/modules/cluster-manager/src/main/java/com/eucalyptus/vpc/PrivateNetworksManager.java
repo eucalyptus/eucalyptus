@@ -60,92 +60,23 @@
  *   NEEDED TO COMPLY WITH ANY SUCH LICENSES OR RIGHTS.
  ************************************************************************/
 
-package edu.ucsb.eucalyptus.cloud.entities;
+package com.eucalyptus.vpc;
 
-import javax.persistence.Column;
-import org.hibernate.annotations.Entity;
-import javax.persistence.GeneratedValue;
-import javax.persistence.Id;
-import javax.persistence.PersistenceContext;
-import javax.persistence.Table;
-import org.hibernate.annotations.Cache;
-import org.hibernate.annotations.CacheConcurrencyStrategy;
-import com.eucalyptus.entities.AbstractPersistent;
+import edu.ucsb.eucalyptus.msgs.DescribeSubnetsResponseType;
+import edu.ucsb.eucalyptus.msgs.DescribeSubnetsType;
+import edu.ucsb.eucalyptus.msgs.DescribeVpcsResponseType;
+import edu.ucsb.eucalyptus.msgs.DescribeVpcsType;
 
-@Entity @javax.persistence.Entity
-@PersistenceContext(name="eucalyptus_storage")
-@Table( name = "storage_stats_info" )
-@Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
-public class StorageStatsInfo extends AbstractPersistent {
-	@Column(name = "storage_name")
-	private String name;
-	@Column( name = "number_volumes" )
-	private Integer numberOfVolumes;
-	@Column( name = "total_space_used" )
-	private Long totalSpaceUsed;
-
-	public StorageStatsInfo() {}
-	
-	public StorageStatsInfo(final String name) {
-		this.name = name;
-	}
-	
-	public StorageStatsInfo(final String name, 
-			Integer numberOfVolumes,
-			Long totalSpaceUsed) {
-		this.name = name;
-		this.numberOfVolumes = numberOfVolumes;
-		this.totalSpaceUsed = totalSpaceUsed;
-	}
-
-	public String getName() {
-		return name;
-	}
-
-	public void setName(String name) {
-		this.name = name;
-	}
-
-	public Integer getNumberOfVolumes() {
-		return numberOfVolumes;
-	}
-
-	public void setNumberOfVolumes(Integer numberOfVolumes) {
-		this.numberOfVolumes = numberOfVolumes;
-	}
-
-	public Long getTotalSpaceUsed() {
-		return totalSpaceUsed;
-	}
-
-	public void setTotalSpaceUsed(Long totalSpaceUsed) {
-		this.totalSpaceUsed = totalSpaceUsed;
-	}
-
-	@Override
-	public int hashCode() {
-		final int prime = 31;
-		int result = 1;
-		result = prime * result + ((name == null) ? 0 : name.hashCode());
-		return result;
-	}
-
-	@Override
-	public boolean equals(Object obj) {
-		if (this == obj)
-			return true;
-		if (obj == null)
-			return false;
-		if (getClass() != obj.getClass())
-			return false;
-		StorageStatsInfo other = (StorageStatsInfo) obj;
-		if (name == null) {
-			if (other.name != null)
-				return false;
-		} else if (!name.equals(other.name))
-			return false;
-		return true;
-	}
-	
-	
+/**
+ * @todo doc
+ * @author chris grzegorczyk <grze@eucalyptus.com>
+ */
+public class PrivateNetworksManager {
+  public DescribeVpcsResponseType DescribeVpcs( DescribeVpcsType request ) {
+    return request.getReply( );
+  }
+  public DescribeSubnetsResponseType DescribeSubnets( DescribeSubnetsType request ) {
+    return request.getReply( );
+  }
+  
 }

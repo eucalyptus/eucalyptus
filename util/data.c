@@ -252,30 +252,37 @@ const char *euca_error_names[] = {
  |                                                                            |
 \*----------------------------------------------------------------------------*/
 
-int allocate_virtualMachine(virtualMachine * out, const virtualMachine * in);
-int allocate_netConfig(netConfig * out, char *pvMac, char *pvIp, char *pbIp, int vlan, int networkIndex);
+int allocate_virtualMachine(virtualMachine * pVirtMachineOut, const virtualMachine * pVirtMachingIn);
+int allocate_netConfig(netConfig * pNetCfg, const char *sPvMac, const char *sPvIp, const char *sPbIp, int vlan, int networkIndex);
 
-ncMetadata *allocate_metadata(char *correlationId, char *userId);
-void free_metadata(ncMetadata ** pMeta);
+ncMetadata *allocate_metadata(const char *sCorrelationId, const char *sUserId) _attribute_wur_;
+void free_metadata(ncMetadata ** ppMeta);
 
-ncInstance *allocate_instance(char *uuid, char *instanceId, char *reservationId, virtualMachine * params, const char *stateName, int stateCode,
-                              char *userId, char *ownerId, char *accountId, netConfig * ncnet, char *keyName, char *userData, char *launchIndex,
-                              char *platform, int expiryTime, char **groupNames, int groupNamesSize);
-void free_instance(ncInstance ** instp);
-int add_instance(bunchOfInstances ** headp, ncInstance * instance);
-int remove_instance(bunchOfInstances ** headp, ncInstance * instance);
-int for_each_instance(bunchOfInstances ** headp, void (*function) (bunchOfInstances **, ncInstance *, void *), void *param);
-ncInstance *find_instance(bunchOfInstances ** headp, char *instanceId);
-ncInstance *get_instance(bunchOfInstances ** headp);
-int total_instances(bunchOfInstances ** headp);
+ncInstance *allocate_instance(const char *sUUID, const char *sInstanceId, const char *sReservationId, virtualMachine * pVirtMachine,
+                              const char *sStateName, int stateCode, const char *sUserId, const char *sOwnerId, const char *sAccountId,
+                              netConfig * pNetCfg, const char *sKeyName, const char *sUserData, const char *sLaunchIndex, const char *sPlatform,
+                              int expiryTime, char **asGroupNames, int groupNamesSize) _attribute_wur_;
+ncInstance *clone_instance(const ncInstance * old_instance);
+void free_instance(ncInstance ** ppInstance);
+int add_instance(bunchOfInstances ** ppHead, ncInstance * pInstance);
+int remove_instance(bunchOfInstances ** ppHead, ncInstance * pInstance);
+int for_each_instance(bunchOfInstances ** ppHead, void (*pFunction) (bunchOfInstances **, ncInstance *, void *), void *pParam);
+ncInstance *find_instance(bunchOfInstances ** ppHead, const char *instanceId);
+ncInstance *get_instance(bunchOfInstances ** ppHead);
+int total_instances(bunchOfInstances ** ppHead);
 
-ncResource *allocate_resource(char *nodeStatus, char *iqn, int memorySizeMax, int memorySizeAvailable, int diskSizeMax, int diskSizeAvailable,
-                              int numberOfCoresMax, int numberOfCoresAvailable, char *publicSubnets);
-void free_resource(ncResource ** resp);
+ncResource *allocate_resource(const char *sNodeStatus, const char *sIQN, int memorySizeMax, int memorySizeAvailable, int diskSizeMax,
+                              int diskSizeAvailable, int numberOfCoresMax, int numberOfCoresAvailable, const char *sPublicSubnets) _attribute_wur_;
+void free_resource(ncResource ** ppresource);
 
-boolean is_volume_used(const ncVolume * v);
-ncVolume *save_volume(ncInstance * instance, const char *volumeId, const char *remoteDev, const char *localDev, const char *localDevReal, const char *stateName);
-ncVolume *free_volume(ncInstance * instance, const char *volumeId);
+boolean is_volume_used(const ncVolume * pVolume);
+ncVolume *save_volume(ncInstance * pInstance, const char *sVolumeId, const char *sRemoteDev, const char *sLocalDev, const char *sLocalDevReal,
+                      const char *sStateName);
+ncVolume *free_volume(ncInstance * pInstance, const char *sVolumeId);
+
+bundleTask *allocate_bundleTask(ncInstance * pInstance) _attribute_wur_;
+
+migration_states migration_state_from_string(const char *migration_state_name);
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |
@@ -283,7 +290,7 @@ ncVolume *free_volume(ncInstance * instance, const char *volumeId);
  |                                                                            |
 \*----------------------------------------------------------------------------*/
 
-static ncVolume *find_volume(ncInstance * instance, const char *volumeId);
+static ncVolume *find_volume(ncInstance * pInstance, const char *sVolumeId);
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |
@@ -300,35 +307,44 @@ static ncVolume *find_volume(ncInstance * instance, const char *volumeId);
 //!
 //! Initialize a virtual machine structure from another
 //!
-//! @param[out] out a pointer to the resulting virtual machine structure
-//! @param[in]  in a pointer to the virtual machine structure to duplicate
+//! @param[out] pVirtMachineOut a pointer to the resulting virtual machine structure
+//! @param[in]  pVirtMachingIn a pointer to the virtual machine structure to duplicate
 //!
 //! @return EUCA_OK on success or EUCA_ERROR on failure.
 //!
-//! @note The memory for the 'out' pointer should already have been allocated.
+//! @pre Both \p pVirtMachineOut and \p pVirtMachineIn fields must not be NULL
 //!
-int allocate_virtualMachine(virtualMachine * out, const virtualMachine * in)
+//! @post The \p pVirtMachineOut structure is set with the values from \p pVirtMachineIn
+//!
+int allocate_virtualMachine(virtualMachine * pVirtMachineOut, const virtualMachine * pVirtMachingIn)
 {
-    int i = 0;
-    virtualBootRecord *out_r = NULL;
-    const virtualBootRecord *in_r = NULL;
+    u32 i = 0;
+    virtualBootRecord *pVbrOut = NULL;
+    const virtualBootRecord *pVbrIn = NULL;
 
-    if ((out != NULL) && (in != NULL)) {
-        out->mem = in->mem;
-        out->disk = in->disk;
-        out->cores = in->cores;
-        snprintf(out->name, 64, "%s", in->name);
+    if ((pVirtMachineOut != NULL) && (pVirtMachingIn != NULL)) {
+        //
+        // Initialize the outgoing virtual machine with the incoming
+        //
+        pVirtMachineOut->mem = pVirtMachingIn->mem;
+        pVirtMachineOut->disk = pVirtMachingIn->disk;
+        pVirtMachineOut->cores = pVirtMachingIn->cores;
+        snprintf(pVirtMachineOut->name, 64, "%s", pVirtMachingIn->name);
 
         //! @todo dan ask dmitrii
-        for (i = 0; ((i < EUCA_MAX_VBRS) && (i < in->virtualBootRecordLen)); i++) {
-            out_r = out->virtualBootRecord + i;
-            in_r = in->virtualBootRecord + i;
-            strncpy(out_r->resourceLocation, in_r->resourceLocation, sizeof(out_r->resourceLocation));
-            strncpy(out_r->guestDeviceName, in_r->guestDeviceName, sizeof(out_r->guestDeviceName));
-            strncpy(out_r->id, in_r->id, sizeof(out_r->id));
-            strncpy(out_r->typeName, in_r->typeName, sizeof(out_r->typeName));
-            out_r->sizeBytes = in_r->sizeBytes;
-            strncpy(out_r->formatName, in_r->formatName, sizeof(out_r->formatName));
+        for (i = 0; ((i < EUCA_MAX_VBRS) && (i < pVirtMachingIn->virtualBootRecordLen)); i++) {
+            pVbrOut = pVirtMachineOut->virtualBootRecord + i;
+            pVbrIn = pVirtMachingIn->virtualBootRecord + i;
+
+            //
+            // Initialize the outgoing virtual bood record with the incoming.
+            //
+            strncpy(pVbrOut->resourceLocation, pVbrIn->resourceLocation, sizeof(pVbrOut->resourceLocation));
+            strncpy(pVbrOut->guestDeviceName, pVbrIn->guestDeviceName, sizeof(pVbrOut->guestDeviceName));
+            strncpy(pVbrOut->id, pVbrIn->id, sizeof(pVbrOut->id));
+            strncpy(pVbrOut->typeName, pVbrIn->typeName, sizeof(pVbrOut->typeName));
+            pVbrOut->sizeBytes = pVbrIn->sizeBytes;
+            strncpy(pVbrOut->formatName, pVbrIn->formatName, sizeof(pVbrOut->formatName));
         }
 
         return (EUCA_OK);
@@ -340,73 +356,90 @@ int allocate_virtualMachine(virtualMachine * out, const virtualMachine * in)
 //!
 //! Initialize a network configuration structure with given values.
 //!
-//! @param[out] out a pointer to the resulting network configuration structure
-//! @param[in]  pvMac the private MAC string
-//! @param[in]  pvIp the private IP string
-//! @param[in]  pbIp the public IP string
+//! @param[out] pNetCfg a pointer to the resulting network configuration structure
+//! @param[in]  sPvMac the private MAC string
+//! @param[in]  sPvIp the private IP string
+//! @param[in]  sPbIp the public IP string
 //! @param[in]  vlan the network Virtual LAN
 //! @param[in]  networkIndex the network index
 //!
 //! @return EUCA_OK on success or EUCA_ERROR on failure.
 //!
-//! @note The memory for the 'out' pointer should already have been allocated.
+//! @pre The \p pNetCfg field must not be NULL.
 //!
-int allocate_netConfig(netConfig * out, char *pvMac, char *pvIp, char *pbIp, int vlan, int networkIndex)
+//! @post The network configuration structure is updated with the provided information
+//!
+int allocate_netConfig(netConfig * pNetCfg, const char *sPvMac, const char *sPvIp, const char *sPbIp, int vlan, int networkIndex)
 {
-    if (out != NULL) {
-        if (pvMac)
-            euca_strncpy(out->privateMac, pvMac, 24);
+    // make sure our netconfig parameter isn't NULL
+    if (pNetCfg != NULL) {
+        if (sPvMac)
+            euca_strncpy(pNetCfg->privateMac, sPvMac, 24);
 
-        if (pvIp)
-            euca_strncpy(out->privateIp, pvIp, 24);
+        if (sPvIp)
+            euca_strncpy(pNetCfg->privateIp, sPvIp, 24);
 
-        if (pbIp)
-            euca_strncpy(out->publicIp, pbIp, 24);
+        if (sPbIp)
+            euca_strncpy(pNetCfg->publicIp, sPbIp, 24);
 
-        out->networkIndex = networkIndex;
-        out->vlan = vlan;
-
+        pNetCfg->networkIndex = networkIndex;
+        pNetCfg->vlan = vlan;
         return (EUCA_OK);
     }
 
     return (EUCA_ERROR);
 }
 
-/*  */
 //!
 //! Allocate a metadata structure and initialize it. Metadata is present in every type of nc request
 //!
-//! @param[in] correlationId the correlation identifier string
-//! @param[in] userId the user identifier
+//! @param[in] sCorrelationId the correlation identifier string
+//! @param[in] sUserId the user identifier
 //!
 //! @return a pointer to the newly allocated metadata structure or NULL if any error occured.
 //!
-ncMetadata *allocate_metadata(char *correlationId, char *userId)
+//! @see free_metadata()
+//!
+//! @post A metadata structure is allocated and initialized with the provided information
+//!
+//! @note Caller is responsible for freeing the allocated memory using free_metadata() call.
+//!
+ncMetadata *allocate_metadata(const char *sCorrelationId, const char *sUserId)
 {
-    ncMetadata *meta;
+    ncMetadata *pMeta;
 
-    if ((meta = EUCA_ZALLOC(1, sizeof(ncMetadata))) == NULL)
+    // Try to allocate the structure
+    if ((pMeta = EUCA_ZALLOC(1, sizeof(ncMetadata))) == NULL)
         return (NULL);
 
-    meta->correlationId = ((correlationId != NULL) ? strdup(correlationId) : NULL);
-    meta->userId = ((userId != NULL) ? strdup(userId) : NULL);
-    return (meta);
+    //
+    // Initialize with the provided information
+    //
+    pMeta->correlationId = ((sCorrelationId != NULL) ? strdup(sCorrelationId) : NULL);
+    pMeta->userId = ((sUserId != NULL) ? strdup(sUserId) : NULL);
+    return (pMeta);
 }
 
 //!
 //! Frees an allocated metadata structure.
 //!
-//! @param[in,out] pMeta a pointer to the node controller (NC) metadata structure
+//! @param[in,out] ppMeta a pointer to the node controller (NC) metadata structure
 //!
-void free_metadata(ncMetadata ** pMeta)
+//! @see allocate_metadata()
+//!
+//! @pre The \p ppMeta field should not be NULL
+//!
+//! @post If the metadata pointer is valid, the structure is freed and \p (*ppMeta) will be set to NULL.
+//!
+void free_metadata(ncMetadata ** ppMeta)
 {
-    ncMetadata *meta = NULL;
-    if (pMeta != NULL) {
-        if ((meta = (*pMeta)) != NULL) {
-            EUCA_FREE(meta->correlationId);
-            EUCA_FREE(meta->userId);
-            EUCA_FREE(meta);
-            *pMeta = NULL;
+    ncMetadata *pMeta = NULL;
+    if (ppMeta != NULL) {
+        if ((pMeta = (*ppMeta)) != NULL) {
+            EUCA_FREE(pMeta->correlationId);
+            EUCA_FREE(pMeta->userId);
+            EUCA_FREE(pMeta);
+            *ppMeta = NULL;
         }
     }
 }
@@ -415,99 +448,119 @@ void free_metadata(ncMetadata ** pMeta)
 //! Allocate and initialize an instance structure with given information. Instances are
 //! present in instance-related requests.
 //!
-//! @param[in] uuid the unique user identifier string
-//! @param[in] instanceId the instance identifier string (i-XXXXXXXX)
-//! @param[in] reservationId the reservation identifier string
-//! @param[in] params a pointer to our virtual machine parametes
-//! @param[in] stateName the current instance state name string
+//! @param[in] sUUID the unique user identifier string
+//! @param[in] sInstanceId the instance identifier string (i-XXXXXXXX)
+//! @param[in] sReservationId the reservation identifier string
+//! @param[in] pVirtMachine a pointer to our virtual machine parametes
+//! @param[in] sStateName the current instance state name string
 //! @param[in] stateCode the current instance state code
-//! @param[in] userId the user identifier string
-//! @param[in] ownerId the owner identifier string
-//! @param[in] accountId the account identifier string
-//! @param[in] ncnet a pointer to the network configuration of this instance
-//! @param[in] keyName the SSH key name to use
-//! @param[in] userData user data string to pass to the instance
-//! @param[in] launchIndex the instance's launch index
-//! @param[in] platform the instance's platform ty[e
+//! @param[in] sUserId the user identifier string
+//! @param[in] sOwnerId the owner identifier string
+//! @param[in] sAccountId the account identifier string
+//! @param[in] pNetCfg a pointer to the network configuration of this instance
+//! @param[in] sKeyName the SSH key name to use
+//! @param[in] sUserData user data string to pass to the instance
+//! @param[in] sLaunchIndex the instance's launch index
+//! @param[in] sPlatform the instance's platform type
 //! @param[in] expiryTime the instance's expiration time before it reaches running
-//! @param[in] groupNames a list of group name string
+//! @param[in] asGroupNames an array list of group name string
 //! @param[in] groupNamesSize the number of group name in the groupNames list
 //!
 //! @return a pointer to the newly allocated instance structure or NULL if any error occured.
 //!
-ncInstance *allocate_instance(char *uuid, char *instanceId, char *reservationId, virtualMachine * params, const char *stateName, int stateCode,
-                              char *userId, char *ownerId, char *accountId, netConfig * ncnet, char *keyName, char *userData, char *launchIndex,
-                              char *platform, int expiryTime, char **groupNames, int groupNamesSize)
+//! @see add_instance()
+//! @see free_instance()
+//!
+//! @post On succes an instance structure is allocated and initialized with the given information.
+//!
+ncInstance *allocate_instance(const char *sUUID, const char *sInstanceId, const char *sReservationId, virtualMachine * pVirtMachine,
+                              const char *sStateName, int stateCode, const char *sUserId, const char *sOwnerId, const char *sAccountId,
+                              netConfig * pNetCfg, const char *sKeyName, const char *sUserData, const char *sLaunchIndex, const char *sPlatform,
+                              int expiryTime, char **asGroupNames, int groupNamesSize)
 {
-    int i = 0;
-    ncInstance *inst = NULL;
+    u32 i = 0;
+    ncInstance *pInstance = NULL;
 
     /* zeroed out for cleaner-looking checkpoints and strings that are empty unless set */
-    if ((inst = EUCA_ZALLOC(1, sizeof(ncInstance))) == NULL)
+    if ((pInstance = EUCA_ZALLOC(1, sizeof(ncInstance))) == NULL)
         return (NULL);
 
-    if (userData)
-        euca_strncpy(inst->userData, userData, CHAR_BUFFER_SIZE * 32);
+    if (sUserData)
+        euca_strncpy(pInstance->userData, sUserData, CHAR_BUFFER_SIZE * 32);
 
-    if (launchIndex)
-        euca_strncpy(inst->launchIndex, launchIndex, CHAR_BUFFER_SIZE);
+    if (sLaunchIndex)
+        euca_strncpy(pInstance->launchIndex, sLaunchIndex, CHAR_BUFFER_SIZE);
 
-    if (platform)
-        euca_strncpy(inst->platform, platform, CHAR_BUFFER_SIZE);
+    if (sPlatform)
+        euca_strncpy(pInstance->platform, sPlatform, CHAR_BUFFER_SIZE);
 
-    inst->groupNamesSize = groupNamesSize;
-    if ((groupNames != NULL) && (groupNamesSize > 0)) {
-        for (i = 0; i < groupNamesSize && groupNames[i]; i++)
-            euca_strncpy(inst->groupNames[i], groupNames[i], CHAR_BUFFER_SIZE);
+    pInstance->groupNamesSize = groupNamesSize;
+    if ((asGroupNames != NULL) && (groupNamesSize > 0)) {
+        for (i = 0; i < groupNamesSize && asGroupNames[i]; i++)
+            euca_strncpy(pInstance->groupNames[i], asGroupNames[i], CHAR_BUFFER_SIZE);
     }
 
-    if (ncnet != NULL)
-        memcpy(&(inst->ncnet), ncnet, sizeof(netConfig));
+    if (pNetCfg != NULL)
+        memcpy(&(pInstance->ncnet), pNetCfg, sizeof(netConfig));
 
-    if (uuid)
-        euca_strncpy(inst->uuid, uuid, CHAR_BUFFER_SIZE);
+    if (sUUID)
+        euca_strncpy(pInstance->uuid, sUUID, CHAR_BUFFER_SIZE);
 
-    if (instanceId)
-        euca_strncpy(inst->instanceId, instanceId, CHAR_BUFFER_SIZE);
+    if (sInstanceId)
+        euca_strncpy(pInstance->instanceId, sInstanceId, CHAR_BUFFER_SIZE);
 
-    if (keyName)
-        euca_strncpy(inst->keyName, keyName, CHAR_BUFFER_SIZE * 4);
+    if (sKeyName)
+        euca_strncpy(pInstance->keyName, sKeyName, CHAR_BUFFER_SIZE * 4);
 
-    if (reservationId)
-        euca_strncpy(inst->reservationId, reservationId, CHAR_BUFFER_SIZE);
+    if (sReservationId)
+        euca_strncpy(pInstance->reservationId, sReservationId, CHAR_BUFFER_SIZE);
 
-    if (stateName)
-        euca_strncpy(inst->stateName, stateName, CHAR_BUFFER_SIZE);
+    if (sStateName)
+        euca_strncpy(pInstance->stateName, sStateName, CHAR_BUFFER_SIZE);
 
-    if (userId)
-        euca_strncpy(inst->userId, userId, CHAR_BUFFER_SIZE);
+    if (sUserId)
+        euca_strncpy(pInstance->userId, sUserId, CHAR_BUFFER_SIZE);
 
-    if (ownerId)
-        euca_strncpy(inst->ownerId, ownerId, CHAR_BUFFER_SIZE);
+    if (sOwnerId)
+        euca_strncpy(pInstance->ownerId, sOwnerId, CHAR_BUFFER_SIZE);
 
-    if (accountId)
-        euca_strncpy(inst->accountId, accountId, CHAR_BUFFER_SIZE);
+    if (sAccountId)
+        euca_strncpy(pInstance->accountId, sAccountId, CHAR_BUFFER_SIZE);
 
-    if (params)
-        memcpy(&(inst->params), params, sizeof(virtualMachine));
+    if (pVirtMachine)
+        memcpy(&(pInstance->params), pVirtMachine, sizeof(virtualMachine));
 
-    inst->stateCode = stateCode;
-    euca_strncpy(inst->bundleTaskStateName, bundling_progress_names[NOT_BUNDLING], CHAR_BUFFER_SIZE);
-    inst->expiryTime = expiryTime;
-    return (inst);
+    pInstance->stateCode = stateCode;
+    euca_strncpy(pInstance->bundleTaskStateName, bundling_progress_names[NOT_BUNDLING], CHAR_BUFFER_SIZE);
+    pInstance->expiryTime = expiryTime;
+    return (pInstance);
 }
 
-//! @TODO finish doxygen
-ncInstance *clone_instance(const ncInstance *old_instance)
+//!
+//! Clones an existing instance structure
+//!
+//! @param[in] old_instance a pointer to the instance to duplicate
+//!
+//! @return A clone of the existing instance of NULL on failure
+//!
+//! @see free_instance(), allocate_instance()
+//!
+//! @pre The \p old_instance field must not be NULL
+//!
+//! @post A clone of our existing instance is created.
+//!
+//! @note The caller is responsible to free the allocated instance using the free_instance() API.
+//!
+ncInstance *clone_instance(const ncInstance * old_instance)
 {
     ncInstance *new_instance;
-    
+
     // zeroed out for cleaner-looking checkpoints and strings that are empty unless set
     if ((new_instance = EUCA_ZALLOC(1, sizeof(ncInstance))) == NULL)
-        return (NULL);   
+        return (NULL);
 
     //! @TODO do not just copy everything
-    memcpy (new_instance, old_instance, sizeof(ncInstance));
+    memcpy(new_instance, old_instance, sizeof(ncInstance));
 
     return new_instance;
 }
@@ -515,49 +568,77 @@ ncInstance *clone_instance(const ncInstance *old_instance)
 //!
 //! Frees an allocated instance structure.
 //!
-//! @param[in,out] instp a pointer to the instance structure pointer to free
+//! @param[in,out] ppInstance a pointer to the instance structure pointer to free
 //!
-void free_instance(ncInstance ** instp)
+//! @see remove_instance()
+//! @see allocate_instance()
+//!
+//! @pre \li The \p ppInstance field should not be NULL
+//!      \li The instance should have been removed from any list using remove_instance()
+//!
+//! @post The instance is freed and the value pointed by \p ppInstance is set to NULL.
+//!
+void free_instance(ncInstance ** ppInstance)
 {
-    if (instp != NULL) {
-        EUCA_FREE((*instp));
+    if (ppInstance != NULL) {
+        EUCA_FREE((*ppInstance));
     }
 }
 
 //!
 //! Adds an instance to an instance linked list
 //!
-//! @param[in] headp a pointer to a pointer to the head of the instance list
-//! @param[in] instance a pointer to the instance to add to the list
+//! @param[in,out] ppHead a pointer to the pointer to the head of the list
+//! @param[in]     pInstance a pointer to the instance to add to the list
 //!
-//! @return EUCA_OK on success or proper error code. Known error code returned include: EUCA_MEMORY_ERROR
-//!         and EUCA_DUPLICATE_ERROR.
+//! @return EUCA_OK on success or the following error code:
+//!         \li EUCA_MEMORY_ERROR: if we fail to allocate memory
+//!         \li EUCA_INVALID_ERROR: if any of our parameter does not meet the pre-condition
+//!         \li EUCA_DUPLICATE_ERROR: if the instance is already part of this list
 //!
-int add_instance(bunchOfInstances ** headp, ncInstance * instance)
+//! @pre \li Both \p ppHead and \p pInstance field must not be NULL.
+//!      \li The instance must not be part of the list
+//!
+//! @post The instance is added to the list. If this is the first instance in the list,
+//!       the \p ppHead value is updated to point to this instance.
+//!
+int add_instance(bunchOfInstances ** ppHead, ncInstance * pInstance)
 {
-    bunchOfInstances *new = NULL;
-    bunchOfInstances *last = NULL;
+    bunchOfInstances *pNew = NULL;
+    bunchOfInstances *pLast = NULL;
 
-    if ((new = EUCA_ZALLOC(1, sizeof(bunchOfInstances))) == NULL)
+    // Make sure our paramters are valid
+    if ((ppHead == NULL) || (pInstance == NULL))
+        return (EUCA_INVALID_ERROR);
+
+    // Try to allocate memory for our instance list node
+    if ((pNew = EUCA_ZALLOC(1, sizeof(bunchOfInstances))) == NULL)
         return (EUCA_MEMORY_ERROR);
 
-    new->instance = instance;
-    new->next = NULL;
+    // Initialize our node
+    pNew->instance = pInstance;
+    pNew->next = NULL;
 
-    if (*headp == NULL) {
-        *headp = new;
-        (*headp)->count = 1;
+    // Are we the first item in this list?
+    if (*ppHead == NULL) {
+        *ppHead = pNew;
+        (*ppHead)->count = 1;
     } else {
-        last = *headp;
+        pLast = *ppHead;
+
+        //
+        // Process the list to make sure we're not trying to add a duplicate
+        //
         do {
-            if (!strcmp(last->instance->instanceId, instance->instanceId)) {
-                EUCA_FREE(new);
+            if (!strcmp(pLast->instance->instanceId, pInstance->instanceId)) {
+                EUCA_FREE(pNew);
                 return (EUCA_DUPLICATE_ERROR);
             }
-        } while (last->next && (last = last->next));
+        } while (pLast->next && (pLast = pLast->next));
 
-        last->next = new;
-        (*headp)->count++;
+        // We're at the end so add it there.
+        pLast->next = pNew;
+        (*ppHead)->count++;
     }
 
     return (EUCA_OK);
@@ -566,167 +647,218 @@ int add_instance(bunchOfInstances ** headp, ncInstance * instance)
 //!
 //! Removes an instance from an instance linked list
 //!
-//! @param[in] headp a pointer to a pointer to the head of the instance list
-//! @param[in] instance a pointer to the instance to remove from the list
+//! @param[in,out] ppHead a pointer to the pointer to the head of the list
+//! @param[in]     pInstance a pointer to the instance to remove from the list
 //!
-//! @return EUCA_OK on success or proper error code. Known error code returned include: EUCA_NOT_FOUND_ERROR.
+//! @return EUCA_OK on success or the following error code:
+//!         \li EUCA_INVALID_ERROR: if any of our parameters do not meet the pre-conditions
+//!         \li EUCA_NOT_FOUND_ERROR: if the instance is not part of this list
 //!
-int remove_instance(bunchOfInstances ** headp, ncInstance * instance)
+//! @pre \li Both \p ppHead and \p pInstance field must not be NULL
+//!      \li The instance must exist in this list
+//!
+//! @post The instance is removed from the list. If this instance was the head of the list,
+//!       the \p ppHead field will be updated to point to the new head (next instance in list
+//!       from previous head).
+//!
+int remove_instance(bunchOfInstances ** ppHead, ncInstance * pInstance)
 {
-    int count = 0;
-    bunchOfInstances *head, *prev = NULL;
+    u32 count = 0;
+    bunchOfInstances *pHead = NULL;
+    bunchOfInstances *pPrevious = NULL;
 
-    for (head = *headp; head; prev = head, head = head->next) {
-        count = (*headp)->count;
+    // Make sure our parameters are valid
+    if (ppHead && pInstance) {
+        for (pHead = *ppHead; pHead; pPrevious = pHead, pHead = pHead->next) {
+            count = (*ppHead)->count;
 
-        if (!strcmp(head->instance->instanceId, instance->instanceId)) {
-            if (prev) {
-                prev->next = head->next;
-            } else {
-                *headp = head->next;
+            if (!strcmp(pHead->instance->instanceId, pInstance->instanceId)) {
+                if (pPrevious) {
+                    pPrevious->next = pHead->next;
+                } else {
+                    *ppHead = pHead->next;
+                }
+
+                if (*ppHead) {
+                    (*ppHead)->count = count - 1;
+                }
+                EUCA_FREE(pHead);
+                return (EUCA_OK);
             }
-
-            if (*headp) {
-                (*headp)->count = count - 1;
-            }
-            EUCA_FREE(head);
-            return (EUCA_OK);
         }
+        return (EUCA_NOT_FOUND_ERROR);
     }
-    return (EUCA_NOT_FOUND_ERROR);
+    return (EUCA_INVALID_ERROR);
 }
 
 //!
 //! Helper to do something on each instance of a given list
 //!
-//! @param[in] headp a pointer to a pointer to the head node of the list
-//! @param[in] function a pointer to the function to execute on each node
-//! @param[in] param a transparent pointer to provide to function
+//! @param[in] ppHead a pointer to the pointer to the head of the list
+//! @param[in] pFunction a pointer to the function to execute on each node
+//! @param[in] pParam a transparent pointer to provide to pFunction
 //!
-//! @return Always return EUCA_OK
+//! @return EUCA_OK on success or the following error code:
+//!         \li EUCA_INVALID_ERROR: if any of our parameters do not meet the pre-conditions
 //!
-int for_each_instance(bunchOfInstances ** headp, void (*function) (bunchOfInstances **, ncInstance *, void *), void *param)
+//! @pre Both \p ppHead and \p pFunction fields must not be NULL
+//!
+//! @post The function \p pFunction is applied to each member of the instance list.
+//!
+int for_each_instance(bunchOfInstances ** ppHead, void (*pFunction) (bunchOfInstances **, ncInstance *, void *), void *pParam)
 {
-    bunchOfInstances *head = NULL;
+    bunchOfInstances *pHead = NULL;
 
-    for (head = *headp; head; head = head->next) {
-        function(headp, head->instance, param);
+    // Make sure our parameters aren't NULL
+    if (ppHead && pFunction) {
+        for (pHead = *ppHead; pHead; pHead = pHead->next) {
+            pFunction(ppHead, pHead->instance, pParam);
+        }
+
+        return (EUCA_OK);
     }
-
-    return EUCA_OK;
+    return (EUCA_INVALID_ERROR);
 }
 
 //!
-//! Finds an instance in a given list
+//! Finds an instance in a given list based on the given instance identifier
 //!
-//! @param[in] headp a pointer to the head of the instance list
-//! @param[in] instanceId the instance identifier string (i-XXXXXXXX)
+//! @param[in] ppHead a pointer to the pointer to the head of the list
+//! @param[in] sInstanceId the instance identifier string (i-XXXXXXXX)
 //!
 //! @return a pointer to the instance if found. Otherwise, NULL is returned.
 //!
-ncInstance *find_instance(bunchOfInstances ** headp, char *instanceId)
+//! @pre Both \p ppHead and \p sInstanceId must not be NULL.
+//!
+ncInstance *find_instance(bunchOfInstances ** ppHead, const char *sInstanceId)
 {
-    bunchOfInstances *head = NULL;
+    bunchOfInstances *pHead = NULL;
 
-    for (head = *headp; head; head = head->next) {
-        if (!strcmp(head->instance->instanceId, instanceId)) {
-            return (head->instance);
+    // Make sure our parameters aren't NULL
+    if (ppHead && sInstanceId) {
+        for (pHead = *ppHead; pHead; pHead = pHead->next) {
+            if (!strcmp(pHead->instance->instanceId, sInstanceId)) {
+                return (pHead->instance);
+            }
         }
     }
-
     return (NULL);
 }
 
 //!
 //! Retrieves the next instance in the list
 //!
-//! @param[in] headp a pointer to the head of the list
+//! @param[in] ppHead a pointer to the pointer to the head of the list
 //!
-//! @return a pointer ot the next instance in the list
+//! @return a pointer ot the next instance in the list or NULL if no list is set
 //!
-ncInstance *get_instance(bunchOfInstances ** headp)
+//! @pre The \p ppHead field must not be NULL if the static list pointer is NULL.
+//!
+ncInstance *get_instance(bunchOfInstances ** ppHead)
 {
-    static bunchOfInstances *current = NULL;
+    static bunchOfInstances *pCurrent = NULL;
 
-    /* advance static variable, wrapping to head if at the end */
-    if (current == NULL)
-        current = *headp;
+    // advance static variable, wrapping to head if at the end
+    if (pCurrent == NULL)
+        pCurrent = ((ppHead == NULL) ? NULL : (*ppHead));
     else
-        current = current->next;
+        pCurrent = pCurrent->next;
 
-    /* return the new value, if any */
-    if (current == NULL)
+    // return the new value, if any
+    if (pCurrent == NULL)
         return (NULL);
-    return (current->instance);
+    return (pCurrent->instance);
 }
 
 //!
 //! Returns the number of instances assigned to a given instance list
 //!
-//! @param[in] headp a pointer to the head of the list
+//! @param[in] ppHead a pointer to the pointer to the head of the list
 //!
-//! @return number of instances in the list
+//! @return number of instances in the list. If \p ppHead is NULL or \p (*ppHead) is NULL, 0 will be returned.
 //!
-int total_instances(bunchOfInstances ** headp)
+//! @pre The \p ppHead field must not be NULL
+//!
+int total_instances(bunchOfInstances ** ppHead)
 {
-    if (*headp)
-        return ((*headp)->count);
+    if (ppHead) {
+        if (*ppHead)
+            return ((*ppHead)->count);
+    }
     return (0);
 }
 
 //!
-//! Allocate and initialize an instance structure with given information. Resource is
+//! Allocate and initialize a resource structure with given information. Resource is
 //! used to return information about resources
 //!
-//! @param[in] nodeStatus the current node status string
-//! @param[in] iqn
+//! @param[in] sNodeStatus the current node status string
+//! @param[in] sIQN
 //! @param[in] memorySizeMax the maximum amount of memory available on this node
 //! @param[in] memorySizeAvailable the current amount of memory available on this node
 //! @param[in] diskSizeMax the maximum amount of disk space available on this node
 //! @param[in] diskSizeAvailable the current amount of disk space available on this node
 //! @param[in] numberOfCoresMax the maximum number of cores available on this node
 //! @param[in] numberOfCoresAvailable the current number of cores available on this node
-//! @param[in] publicSubnets the available public subnet for this node
+//! @param[in] sPublicSubnets the available public subnet for this node
 //!
 //! @return a pointer to the newly allocated resource structure or NULL if any error occured.
 //!
-ncResource *allocate_resource(char *nodeStatus, char *iqn, int memorySizeMax, int memorySizeAvailable, int diskSizeMax, int diskSizeAvailable,
-                              int numberOfCoresMax, int numberOfCoresAvailable, char *publicSubnets)
+//! @see free_resource()
+//!
+//! @pre The \p sNodeStatus field must not be NULL.
+//!
+//! @post On success, a resource structure is allocated and initialized with the given information
+//!
+//! @note Caller is responsible to free the allocated memory using the free_resource() function call.
+//!
+ncResource *allocate_resource(const char *sNodeStatus, const char *sIQN, int memorySizeMax, int memorySizeAvailable, int diskSizeMax,
+                              int diskSizeAvailable, int numberOfCoresMax, int numberOfCoresAvailable, const char *sPublicSubnets)
 {
-    ncResource *res = NULL;
+    ncResource *pResource = NULL;
 
-    if (nodeStatus == NULL)
+    // Make sure we have a valid parameter
+    if (sNodeStatus == NULL)
         return (NULL);
 
-    if ((res = EUCA_ZALLOC(1, sizeof(ncResource))) == NULL)
+    // See if we can allocate our resource structure
+    if ((pResource = EUCA_ZALLOC(1, sizeof(ncResource))) == NULL)
         return (NULL);
 
-    euca_strncpy(res->nodeStatus, nodeStatus, CHAR_BUFFER_SIZE);
-    if (iqn)
-        euca_strncpy(res->iqn, iqn, CHAR_BUFFER_SIZE);
+    //
+    // Initialize the structure with the given values
+    //
+    euca_strncpy(pResource->nodeStatus, sNodeStatus, CHAR_BUFFER_SIZE);
+    if (sIQN)
+        euca_strncpy(pResource->iqn, sIQN, CHAR_BUFFER_SIZE);
 
-    if (publicSubnets)
-        euca_strncpy(res->publicSubnets, publicSubnets, CHAR_BUFFER_SIZE);
+    if (sPublicSubnets)
+        euca_strncpy(pResource->publicSubnets, sPublicSubnets, CHAR_BUFFER_SIZE);
 
-    res->memorySizeMax = memorySizeMax;
-    res->memorySizeAvailable = memorySizeAvailable;
-    res->diskSizeMax = diskSizeMax;
-    res->diskSizeAvailable = diskSizeAvailable;
-    res->numberOfCoresMax = numberOfCoresMax;
-    res->numberOfCoresAvailable = numberOfCoresAvailable;
-
-    return (res);
+    pResource->memorySizeMax = memorySizeMax;
+    pResource->memorySizeAvailable = memorySizeAvailable;
+    pResource->diskSizeMax = diskSizeMax;
+    pResource->diskSizeAvailable = diskSizeAvailable;
+    pResource->numberOfCoresMax = numberOfCoresMax;
+    pResource->numberOfCoresAvailable = numberOfCoresAvailable;
+    return (pResource);
 }
 
 //!
 //! Frees an allocated resource structure.
 //!
-//! @param[in,out] resp a pointer to the resource structure pointer to free
+//! @param[in,out] ppResource a pointer to the resource structure pointer to free
 //!
-void free_resource(ncResource ** resp)
+//! @see allocate_resource()
+//!
+//! @pre The \p ppResource field should not be NULL
+//!
+//! @post The resource will be freed and \p (*ppResource) will be set to NULL.
+//!
+void free_resource(ncResource ** ppResource)
 {
-    if (resp != NULL) {
-        EUCA_FREE((*resp));
+    if (ppResource != NULL) {
+        EUCA_FREE((*ppResource));
     }
 }
 
@@ -734,133 +866,205 @@ void free_resource(ncResource ** resp)
 //! Finds a matching volume OR returns a pointer to the next empty/avail volume slot
 //! OR if full, returns NULL.
 //!
-//! @param[in] instance a pointer to the instance structure the volume should be under
-//! @param[in] volumeId the volume identifier string (vol-XXXXXXXX)
+//! @param[in] pInstance a pointer to the instance structure the volume should be under
+//! @param[in] sVolumeId the volume identifier string (vol-XXXXXXXX)
 //!
 //! @return a pointer to the matching volume OR returns a pointer to the next empty/avail
-//! volume slot OR if full, returns NULL.
+//!         volume slot OR if full, returns NULL.
 //!
-static ncVolume *find_volume(ncInstance * instance, const char *volumeId)
+//! @pre Both \p pInstance and \p sVolumeId fields must not be NULL
+//!
+//! @todo There's gotta be a way to improve and not scan the whole list all the time
+//!
+static ncVolume *find_volume(ncInstance * pInstance, const char *sVolumeId)
 {
-    int i = 0;
-    ncVolume *v = instance->volumes;
-    ncVolume *match = NULL;
-    ncVolume *avail = NULL;
-    ncVolume *empty = NULL;
+    ncVolume *pVol = NULL;
+    ncVolume *pMatch = NULL;
+    ncVolume *pAvail = NULL;
+    ncVolume *pEmpty = NULL;
+    register u32 i = 0;
 
-    for (i = 0; i < EUCA_MAX_VOLUMES; i++, v++) {
-        // look for matches
-        if (!strncmp(v->volumeId, volumeId, CHAR_BUFFER_SIZE)) {
-            assert(match == NULL);
-            match = v;
+    // Make sure our given parameters aren't NULL
+    if ((pInstance != NULL) && (sVolumeId != NULL)) {
+        for (i = 0, pVol = pInstance->volumes; i < EUCA_MAX_VOLUMES; i++, pVol++) {
+            // look for matches
+            if (!strncmp(pVol->volumeId, sVolumeId, CHAR_BUFFER_SIZE)) {
+                assert(pMatch == NULL);
+                pMatch = pVol;
+            }
+            // look for the first empty and available slot
+            if (!strnlen(pVol->volumeId, CHAR_BUFFER_SIZE)) {
+                if (pEmpty == NULL)
+                    pEmpty = pVol;
+            } else if (!is_volume_used(pVol)) {
+                if (pAvail == NULL)
+                    pAvail = pVol;
+            }
         }
-        // look for the first empty and available slot
-        if (!strnlen(v->volumeId, CHAR_BUFFER_SIZE)) {
-            if (empty == NULL)
-                empty = v;
-        } else if (!is_volume_used(v)) {
-            if (avail == NULL)
-                avail = v;
-        }
+
+        // Return match first if any are found
+        if (pMatch)
+            return (pMatch);
+
+        // then return the empty slot
+        if (pEmpty)
+            return (pEmpty);
+
+        // If nothing else, return the first available slot.
+        return (pAvail);
     }
 
-    if (match)
-        return (match);
-
-    if (empty)
-        return (empty);
-    return (avail);
+    return (NULL);
 }
 
 //
 //!
 //! Checks wether or not a volume is in use
 //!
-//! @param[in] v a pointer to the volume to check
+//! @param[in] pVolume a pointer to the volume to validate
 //!
-//! @return FALSE if volume slot is not in use and TRUE if it is
+//! @return FALSE if volume slot is not in use or if NULL and TRUE if it is in use
 //!
-boolean is_volume_used(const ncVolume * v)
+//! @pre The \p pVol field must not be NULL.
+//!
+boolean is_volume_used(const ncVolume * pVolume)
 {
-    if (strlen(v->stateName) == 0)
-        return (FALSE);
-    return (strcmp(v->stateName, VOL_STATE_ATTACHING_FAILED) && strcmp(v->stateName, VOL_STATE_DETACHED));
+    if (pVolume != NULL) {
+        if (strlen(pVolume->stateName) == 0)
+            return (FALSE);
+        return (strcmp(pVolume->stateName, VOL_STATE_ATTACHING_FAILED) && strcmp(pVolume->stateName, VOL_STATE_DETACHED));
+    }
+    return (FALSE);
 }
 
 //!
-//! records volume's information in the instance struct, updating the non-NULL
-//! values if the record already exists
+//! Records volume's information in the instance struct, updating the non-NULL values if the record
+//! already exists
 //!
-//! @param[in] instance
-//! @param[in] volumeId the volume identifier string (vol-XXXXXXXX)
-//! @param[in] remoteDev
-//! @param[in] localDev
-//! @param[in] localDevReal
-//! @param[in] stateName
+//! @param[in] pInstance a pointer to our instance containing the volume information to save
+//! @param[in] sVolumeId the volume identifier string (vol-XXXXXXXX)
+//! @param[in] sRemoteDev the remote device name
+//! @param[in] sLocalDev the local device name
+//! @param[in] sLocalDevReal the local real device name
+//! @param[in] sStateName the current volume state name
 //!
 //! @return a pointer to the volume if found. Otherwize NULL is returned.
 //!
-ncVolume *save_volume(ncInstance * instance, const char *volumeId, const char *remoteDev, const char *localDev, const char *localDevReal, const char *stateName)
+//! @pre \li Both \p pInstance and \p sVolumeId fields must not be NULL
+//!      \li A volume with \p sVolumeId for \p pInstance should exists
+//!      \li If such volume does not exists, we must have an empty slot in the volume list
+//!
+//! @post \li If any of \p pInstance or \p sVolumeId is NULL, the application will throw a SIGABRT signal
+//!       \li If the volume is found or if we have an empty slot, the volume information will be saved
+//!       \li If the volume is not found and if we do not have empty slot, NULL is returned and nothing is saved
+//!
+ncVolume *save_volume(ncInstance * pInstance, const char *sVolumeId, const char *sRemoteDev, const char *sLocalDev, const char *sLocalDevReal,
+                      const char *sStateName)
 {
-    ncVolume *v = NULL;
+    ncVolume *pVol = NULL;
 
-    assert(instance != NULL);
-    assert(volumeId != NULL);
+    // Make sure pInstance and sVolumeId aren't NULL
+    assert(pInstance != NULL);
+    assert(sVolumeId != NULL);
 
-    if ((v = find_volume(instance, volumeId)) != NULL) {
-        euca_strncpy(v->volumeId, volumeId, CHAR_BUFFER_SIZE);
-        if (remoteDev)
-            euca_strncpy(v->remoteDev, remoteDev, CHAR_BUFFER_SIZE);
-        if (localDev)
-            euca_strncpy(v->localDev, localDev, CHAR_BUFFER_SIZE);
-        if (localDevReal)
-            euca_strncpy(v->localDevReal, localDevReal, CHAR_BUFFER_SIZE);
-        if (stateName)
-            euca_strncpy(v->stateName, stateName, CHAR_BUFFER_SIZE);
+    // Lookup for our device
+    if ((pVol = find_volume(pInstance, sVolumeId)) != NULL) {
+        //
+        // Save our volume information
+        //
+        euca_strncpy(pVol->volumeId, sVolumeId, CHAR_BUFFER_SIZE);
+
+        if (sRemoteDev)
+            euca_strncpy(pVol->remoteDev, sRemoteDev, CHAR_BUFFER_SIZE);
+
+        if (sLocalDev)
+            euca_strncpy(pVol->localDev, sLocalDev, CHAR_BUFFER_SIZE);
+
+        if (sLocalDevReal)
+            euca_strncpy(pVol->localDevReal, sLocalDevReal, CHAR_BUFFER_SIZE);
+
+        if (sStateName)
+            euca_strncpy(pVol->stateName, sStateName, CHAR_BUFFER_SIZE);
     }
 
-    return (v);
+    return (pVol);
 }
 
 //!
 //! Zeroes out the volume's slot in the instance struct (no longer used)
 //!
-//! @param[in] instance a pointer to the instance to free a volume from
-//! @param[in] volumeId the volume identifier string (vol-XXXXXXXX)
+//! @param[in] pInstance a pointer to the instance to free a volume from
+//! @param[in] sVolumeId the volume identifier string (vol-XXXXXXXX)
 //!
 //! @return a pointer to the volume structure if found otherwise NULL is returned
 //!
-ncVolume *free_volume(ncInstance * instance, const char *volumeId)
+//! @pre \li Both the \p pInstance and \p sVolumeId fields must not be NULL.
+//!      \li The volume specified by \p sVolumeId must exists
+//!
+//! @post On success, the volume entry is erased from the instance volume list
+//!
+ncVolume *free_volume(ncInstance * pInstance, const char *sVolumeId)
 {
-    int slots_left = 0;
-    ncVolume *v = NULL;
-    ncVolume *last_v = NULL;
+    int slotsLeft = 0;
+    ncVolume *pVol = NULL;
+    ncVolume *pLastVol = NULL;
 
-    if ((instance == NULL) || (volumeId == NULL))
+    // Make sure our given parameters are valid
+    if ((pInstance == NULL) || (sVolumeId == NULL))
         return (NULL);
 
-    if ((v = find_volume(instance, volumeId)) == NULL) {
-        /* not there (and out of room) */
+    // Check if this volume exists in our volume list
+    if ((pVol = find_volume(pInstance, sVolumeId)) == NULL) {
+        return (NULL);
+    }
+    // Make sure this is the volume we're looking for
+    if (strncmp(pVol->volumeId, sVolumeId, CHAR_BUFFER_SIZE)) {
         return (NULL);
     }
 
-    if (strncmp(v->volumeId, volumeId, CHAR_BUFFER_SIZE)) {
-        /* not there */
-        return (NULL);
+    pLastVol = pInstance->volumes + (EUCA_MAX_VOLUMES - 1);
+    slotsLeft = pLastVol - pVol;
 
-    } else {
-        last_v = instance->volumes + (EUCA_MAX_VOLUMES - 1);
-        slots_left = last_v - v;
+    /* shift the remaining entries up, empty or not */
+    if (slotsLeft)
+        memmove(pVol, (pVol + 1), (slotsLeft * sizeof(ncVolume)));
 
-        /* shift the remaining entries up, empty or not */
-        if (slots_left)
-            memmove(v, v + 1, slots_left * sizeof(ncVolume));
+    /* empty the last one */
+    bzero(pLastVol, sizeof(ncVolume));
+    return (pVol);
+}
 
-        /* empty the last one */
-        bzero(last_v, sizeof(ncVolume));
+//!
+//! Allocate a new bundle task for the given instance
+//!
+//! @param[in] pInstance pointer to the instance we're creating a bundling task for
+//!
+//! @return A newly allocated pointer to the bundle task structure if successful or NULL if
+//!         the given pInstance structure is NULL or if we cannot allocate memory.
+//!
+//! @pre The \p pInstance field must not be NULL
+//!
+//! @post A newly allocated structure is allocated and initialized.
+//!
+//! @note The caller is responsible for freeing the allocated memory
+//!
+bundleTask *allocate_bundleTask(ncInstance * pInstance)
+{
+    bundleTask *pBundle = NULL;
+
+    // Make sure out given parameter is valid
+    if (pInstance != NULL) {
+        if ((pBundle = EUCA_ZALLOC(1, sizeof(bundleTask))) == NULL) {
+            LOGERROR("out of memory\n");
+            return (NULL);
+        }
+        // initialize our newly allocated structure.
+        snprintf(pBundle->instanceId, CHAR_BUFFER_SIZE, "%s", pInstance->instanceId);
+        snprintf(pBundle->state, CHAR_BUFFER_SIZE, "%s", pInstance->bundleTaskStateName);
+        return (pBundle);
     }
 
-    return (v);
+    return (NULL);
 }
 
 //!
@@ -870,11 +1074,17 @@ ncVolume *free_volume(ncInstance * instance, const char *volumeId)
 //!
 //! @return enum of migration state or -1
 //!
+//! @pre The \p migration_state_name field must not be NULL
+//!
 migration_states migration_state_from_string(const char *migration_state_name)
 {
-    for (int i = 0; i < TOTAL_MIGRATION_STATES; i++) {
-        if (! strcmp(migration_state_names[i], migration_state_name)) {
-            return i;
+    // Make sure our given field is valid
+    if (migration_state_name != NULL) {
+        // Scan our list for a matching indice
+        for (int i = 0; i < TOTAL_MIGRATION_STATES; i++) {
+            if (!strcmp(migration_state_names[i], migration_state_name)) {
+                return i;
+            }
         }
     }
     return -1;

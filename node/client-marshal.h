@@ -77,11 +77,9 @@
  |                                                                            |
 \*----------------------------------------------------------------------------*/
 
-#include "axis2_stub_EucalyptusNC.h"   /* for axis2_ and axutil_ defs */
-#include "data.h"                      /* for eucalyptus defs */
-#include "sensor.h"                    // sensorResource
-
-#include <windows-bundle.h>
+#include "axis2_stub_EucalyptusNC.h"    /* for axis2_ and axutil_ defs */
+#include "data.h"               /* for eucalyptus defs */
+#include "sensor.h"             // sensorResource
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |
@@ -109,11 +107,11 @@
 
 //! NC Stub structure
 typedef struct ncStub_t {
-    axutil_env_t *env;                 //!< Pointer to the AXIS2 environment structure
-    axis2_char_t *client_home;         //!< The AXIS2 client home directory path string
-    axis2_char_t *endpoint_uri;        //!< The AXIS2 endpoint URI string
-    axis2_char_t *node_name;           //!< The AXIS2 node name parameter string
-    axis2_stub_t *stub;                //!< Pointer to the AXIS2 stub structure
+    axutil_env_t *env;          //!< Pointer to the AXIS2 environment structure
+    axis2_char_t *client_home;  //!< The AXIS2 client home directory path string
+    axis2_char_t *endpoint_uri; //!< The AXIS2 endpoint URI string
+    axis2_char_t *node_name;    //!< The AXIS2 node name parameter string
+    axis2_stub_t *stub;         //!< Pointer to the AXIS2 stub structure
 } ncStub;
 
 /*----------------------------------------------------------------------------*\
@@ -151,13 +149,14 @@ int ncBundleInstanceStub(ncStub * pStub, ncMetadata * pMeta, char *instanceId, c
                          char *userPublicKey, char *S3Policy, char *S3PolicySig);
 int ncBundleRestartInstanceStub(ncStub * pStub, ncMetadata * pMeta, char *instanceId);
 int ncCancelBundleTaskStub(ncStub * pStub, ncMetadata * pMeta, char *instanceId);
-int ncDescribeBundleTasksStub(ncStub * pStub, ncMetadata * pMeta, char **instIds, int instIdsLen, bundleTask *** outBundleTasks, int *outBundleTasksLen);
+int ncDescribeBundleTasksStub(ncStub * pStub, ncMetadata * pMeta, char **instIds, int instIdsLen, bundleTask *** outBundleTasks,
+                              int *outBundleTasksLen);
 
 int ncCreateImageStub(ncStub * pStub, ncMetadata * pMeta, char *instanceId, char *volumeId, char *remoteDev);
 int ncDescribeSensorsStub(ncStub * pStub, ncMetadata * pMeta, int historySize, long long collectionIntervalTimeMs, char **instIds, int instIdsLen,
                           char **sensorIds, int sensorIdsLen, sensorResource *** outResources, int *outResourcesLen);
-int ncModifyNodeStub(ncStub * pStub, ncMetadata * pMeta, char * stateName);
-int ncMigrateInstanceStub(ncStub * pStub, ncMetadata * pMeta, ncInstance ** instances, int instancesLen, char * action, char * credentials);
+int ncModifyNodeStub(ncStub * pStub, ncMetadata * pMeta, char *stateName);
+int ncMigrateInstancesStub(ncStub * pStub, ncMetadata * pMeta, ncInstance ** instances, int instancesLen, char *action, char *credentials);
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |

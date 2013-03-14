@@ -139,6 +139,8 @@ public class VmRuntimeState {
   private String            passwordData;
   @Column( name = "metadata_vm_pending" )
   private Boolean           pending;
+  @Embedded
+  private VmMigrationTask   migrationTask;
   
   VmRuntimeState( final VmInstance vmInstance ) {
     super( );
@@ -465,6 +467,31 @@ public class VmRuntimeState {
     this.bundleTask = bundleTask;
   }
   
+  VmMigrationTask getMigrationTask( ) {
+    return this.migrationTask;
+  }
+
+  void setMigrationTask( VmMigrationTask migrationTask ) {
+    this.migrationTask = migrationTask;
+  }
+  
+  public void setMigrationState( String stateName, String sourceHost, String destHost ) {
+    if ( stateName != null ) {
+      if ( this.migrationTask == null ) {
+        //TODO:GRZE: here we need to handle tag creation
+        //TODO:GRZE: authorize volume attachments only for the two NCs which now host the vm during migration
+        this.migrationTask = VmMigrationTask.create( vmInstance, stateName, sourceHost, destHost );
+      } else {
+        //TODO:GRZE: here we need to handle tag update
+        this.migrationTask.updateMigrationState( stateName, sourceHost, destHost );
+      }
+    } else if ( stateName == null ) {
+      //TODO:GRZE: here we need to handle tag removal
+      //TODO:GRZE: authorize volume attachments only for the single NCs which now host the vm after migration
+      this.migrationTask = null;
+    }
+  }
+
   private void setVmInstance( final VmInstance vmInstance ) {
     this.vmInstance = vmInstance;
   }

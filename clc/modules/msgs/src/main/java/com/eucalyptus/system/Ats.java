@@ -63,9 +63,11 @@
 package com.eucalyptus.system;
 
 import java.lang.annotation.Annotation;
+import java.lang.reflect.AccessibleObject;
 import java.lang.reflect.AnnotatedElement;
 import java.util.List;
 import java.util.Map;
+import java.util.NoSuchElementException;
 import com.eucalyptus.util.Classes;
 import com.google.common.base.Function;
 import com.google.common.base.Joiner;
@@ -111,6 +113,27 @@ public class Ats implements Predicate<Class> {
                        : decl.getAnnotation( annotation );
   }
   
+  /**
+   * Find the nearest conformant Class to the root of the Ats hierarcy that has the argument annotation.
+   * @param annotation
+   * @return Class which is annotated with {@link annotation} and is closest in terms of sub-typing to {@link #getRootClass()}
+   * @throws NoSuchElementException if no such class is found
+   */
+  public <A extends Annotation,T> Class<T> findAncestor( final Class<A> annotation ) {
+    for ( final AnnotatedElement a : this.ancestry ) {
+      if ( a instanceof Class && a.isAnnotationPresent( annotation ) ) {
+        return ( Class<T> ) a;
+      }    
+    }
+    throw new NoSuchElementException( "Failed to find ancestor with @" + annotation.getSimpleName( ) + " for root class " + getRootClass( ).getSimpleName( ) );
+  }
+  
+  /**
+   * Find the nearest conformant AnnotatedElement to the root of the Ats hierarcy that has the argument annotation.
+   * @param annotation
+   * @return AnnotatedElement which is annotated with {@link annotation} and is closest in terms of sub-typing to {@link #getRootClass()}
+   * @throws NoSuchElementException if no such AnnotatedElement is found
+   */
   public <A extends Annotation> AnnotatedElement find( final Class<A> annotation ) {
     for ( final AnnotatedElement a : this.ancestry ) {
       if ( a.isAnnotationPresent( annotation ) ) {
@@ -123,7 +146,14 @@ public class Ats implements Predicate<Class> {
         }
       }
     }
-    return this.ancestry.get( 0 );
+    return getRootClass( );
+  }
+
+  /**
+   * @return the root of this annotation hierarchy
+   */
+  private Class getRootClass( ) {
+    return ( Class ) this.ancestry.get( 0 );
   }
   
   enum AtsBuilder implements Function<Object, Ats> {
@@ -160,11 +190,19 @@ public class Ats implements Predicate<Class> {
   private static final Map<Object, Ats> atsHierarchyCache = new MapMaker( ).makeComputingMap( AtsHierarchyBuilder.INSTANCE );
   
   public static Ats from( Object o ) {
-    return atsCache.get( o );
+    if ( o instanceof AccessibleObject ) {
+      return atsCache.get( o );
+    } else {
+      return atsCache.get( Classes.typeOf( o ) );
+    }
   }
   
   public static Ats inClassHierarchy( Object o ) {
-    return atsHierarchyCache.get( o );
+    if ( o instanceof AccessibleObject ) {
+      return atsHierarchyCache.get( o );
+    } else {
+      return atsHierarchyCache.get( Classes.typeOf( o ) );
+    }
   }
   
   List<AnnotatedElement> getAncestry( ) {
@@ -182,7 +220,7 @@ public class Ats implements Predicate<Class> {
   
   @Override
   public String toString( ) {
-    return String.format( "Ats:class=%s\nAts:ancestor=%s", this.ancestry.get( 0 ),
+    return String.format( "Ats:class=%s\nAts:ancestor=%s", getRootClass( ),
                           Joiner.on( "Ats:ancestor=" ).join( Lists.transform( this.ancestry, AnnotatedElementToString.INSTANCE ) ) );
   }
 

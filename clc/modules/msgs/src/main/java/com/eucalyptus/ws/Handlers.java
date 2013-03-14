@@ -296,6 +296,10 @@ public class Handlers {
     
   }
   
+  public static ChannelHandler bindingHandler( ) {
+    return bindingHandler;
+  }
+  
   public static ChannelHandler bindingHandler( final String bindingName ) {
     return bindingHandlers.get( bindingName );
   }
@@ -550,14 +554,10 @@ public class Handlers {
     return queryTimestampHandler;
   }
   
-  public static ChannelHandler bindinghandler( ) {
-    return bindingHandler;
-  }
-  
   public static ChannelHandler internalWsSecHandler( ) {
     return internalWsSecHandler;
   }
-  
+    
   public static ChannelHandler internalImpersonationHandler() {
     return internalImpersonationHandler;
   }

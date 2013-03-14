@@ -65,12 +65,16 @@ package com.eucalyptus.component.auth;
 import java.io.File;
 import java.io.IOException;
 import java.security.GeneralSecurityException;
+import java.security.Key;
 import java.security.KeyPair;
 import java.security.PrivateKey;
 import java.security.cert.X509Certificate;
+import java.security.interfaces.RSAKey;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import org.apache.log4j.Logger;
+
+import com.eucalyptus.auth.util.X509CertHelper;
 import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.bootstrap.Bootstrapper;
 import com.eucalyptus.bootstrap.DependsLocal;
@@ -91,6 +95,7 @@ import com.eucalyptus.empyrean.Empyrean;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
 import com.eucalyptus.system.SubDirectory;
+import com.google.common.base.Predicate;
 
 public class SystemCredentials {
   private static Logger                             LOG       = Logger.getLogger( SystemCredentials.class );
@@ -118,12 +123,14 @@ public class SystemCredentials {
     private final String          name;
     private final X509Certificate cert;
     private final KeyPair         keyPair;
+    private final String					certFingerprint;
     
     private Credentials( ComponentId componentId ) throws Exception {
       this.componentId = componentId;
       this.name = componentId.name( );
       this.cert = loadCertificate( componentId );
       this.keyPair = loadKeyPair( componentId );
+      this.certFingerprint = X509CertHelper.calcFingerprint(this.cert);
       EventRecord.here( SystemCredentials.class, EventType.COMPONENT_INFO, "initialized", this.name, this.cert.getSubjectDN( ).toString( ) ).info( );
       SystemCredentials.providers.put( this.name, this );
     }
@@ -205,6 +212,10 @@ public class SystemCredentials {
     public KeyPair getKeyPair( ) {
       return this.keyPair;
     }
+    
+    public String getCertFingerprint() {
+    	return this.certFingerprint;
+    }  	
     
   }
   
@@ -329,11 +340,31 @@ public class SystemCredentials {
     
   }
   
-  private static class EucaKeyStore extends AbstractKeyStore {
+  private static final class EucaKeyStore extends AbstractKeyStore {
     public static String    FORMAT         = "pkcs12";
     private static String   KEY_STORE_PASS = "eucalyptus";
     private static String   FILENAME       = "euca.p12";
     
+    /**
+     * Enforces that keys are less than the MAX_SIZE of 4096. 
+     */
+    private enum RestrictSize implements Predicate<Key> {
+      INSTANCE;
+      private static final int MAX_SIZE = 4096;
+      
+      public boolean apply( Key arg0 ) {
+        RSAKey key = ( ( RSAKey ) arg0 );
+        if ( key.getModulus( ).bitLength( ) > MAX_SIZE ) {
+          SecurityException ex = new SecurityException( "Illegal key size: " + key.getModulus( ).bitLength( ) + " > " + MAX_SIZE + " (max key size)" );
+          LOG.trace( ex, ex );
+          throw ex;
+        } else {
+          return true;
+        }
+      }
+      
+    }
+
     private static KeyStore singleton      = EucaKeyStore.getInstance( );
     
     public static KeyStore getInstance( ) {
@@ -365,9 +396,44 @@ public class SystemCredentials {
       return ( this.getCertificate( ComponentIds.lookup( HttpService.class ).name( ) ) != null )
              && ( this.getCertificate( ComponentIds.lookup( Eucalyptus.class ).name( ) ) != null );
     }
+
+    @Override
+    public final KeyPair getKeyPair( String alias, String password ) throws GeneralSecurityException {
+      KeyPair keyPair = super.getKeyPair( alias, password );
+      RestrictSize.INSTANCE.apply( keyPair.getPrivate( ) );
+      RestrictSize.INSTANCE.apply( keyPair.getPublic( ) );
+      return keyPair;
+    }
+
+    @Override
+    public final X509Certificate getCertificate( String alias ) throws GeneralSecurityException {
+      X509Certificate certificate = super.getCertificate( alias );
+      RestrictSize.INSTANCE.apply( certificate.getPublicKey( ) );
+      return certificate;
+    }
+
+    @Override
+    public final Key getKey( String alias, String password ) throws GeneralSecurityException {
+      Key key = super.getKey( alias, password );
+      RestrictSize.INSTANCE.apply( key );
+      return key;
+    }
+
+    @Override
+    public final void addCertificate( String alias, X509Certificate cert ) throws IOException, GeneralSecurityException {
+      RestrictSize.INSTANCE.apply( cert.getPublicKey( ) );
+      super.addCertificate( alias, cert );
+    }
+
+    @Override
+    public final void addKeyPair( String alias, X509Certificate cert, PrivateKey privateKey, String keyPassword ) throws IOException, GeneralSecurityException {
+      RestrictSize.INSTANCE.apply( cert.getPublicKey( ) );
+      RestrictSize.INSTANCE.apply( privateKey );
+      super.addKeyPair( alias, cert, privateKey, keyPassword );
+    }
   }
   
-  public static KeyStore getKeyStore( ) {
+  public static final KeyStore getKeyStore( ) {
     return EucaKeyStore.getInstance( );
   }
   

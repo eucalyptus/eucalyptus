@@ -63,17 +63,35 @@
 package com.eucalyptus.cluster;
 
 import java.util.List;
+import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Set;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.Topology;
 import com.eucalyptus.component.id.ClusterController;
 import com.eucalyptus.vm.VmInstance;
+import com.google.common.base.Joiner;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import edu.ucsb.eucalyptus.cloud.NodeInfo;
 
 public class Nodes {
+  
+  /**
+   * GRZE:TODO: should return the node's service configuration
+   * @param ccConfig
+   * @param ncHostOrTag
+   * @return
+   */
+  public static NodeInfo lookupNodeInfo( ServiceConfiguration ccConfig, String ncHostOrTag ) {
+    Map<String, NodeInfo> map = Clusters.lookup( ccConfig ).getNodeHostMap( );
+    if ( map.containsKey( ncHostOrTag ) ) {
+      return map.get( ncHostOrTag );
+    } else {
+      throw new NoSuchElementException( "Failed to lookup node using " + ncHostOrTag + ".  Available nodes are: " + Joiner.on("\n").join( map.keySet( ) ) );
+    }
+  }
+  
   public static List<String> lookupIqns( ServiceConfiguration ccConfig ) {
     Cluster cluster = Clusters.lookup( ccConfig );
     Set<String> ret = Sets.newHashSet( );

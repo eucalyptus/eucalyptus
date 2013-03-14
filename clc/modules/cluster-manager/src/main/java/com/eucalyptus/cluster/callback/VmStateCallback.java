@@ -82,8 +82,8 @@ import com.eucalyptus.vm.VmInstance.VmState;
 import com.eucalyptus.vm.VmInstance.VmStateSet;
 import com.eucalyptus.vm.VmInstances;
 import com.eucalyptus.vm.VmInstances.TerminatedInstanceException;
-import com.eucalyptus.vm.VmType;
-import com.eucalyptus.vm.VmTypes;
+import com.eucalyptus.vmtypes.VmType;
+import com.eucalyptus.vmtypes.VmTypes;
 import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
 import com.google.common.base.Supplier;
@@ -97,8 +97,6 @@ import edu.ucsb.eucalyptus.msgs.VmTypeInfo;
 
 public class VmStateCallback extends StateUpdateMessageCallback<Cluster, VmDescribeType, VmDescribeResponseType> {
   private static Logger               LOG                       = Logger.getLogger( VmStateCallback.class );
-  private static final int            VM_INITIAL_REPORT_TIMEOUT = 300000;
-  private static final int            VM_STATE_SETTLE_TIME      = 20000;
   private final Supplier<Set<String>> initialInstances;
   
   public VmStateCallback( ) {
@@ -184,7 +182,7 @@ public class VmStateCallback extends StateUpdateMessageCallback<Cluster, VmDescr
     final EntityTransaction db1 = Entities.get( VmInstance.class );
     try {
       VmInstance vm = VmInstances.cachedLookup( vmId );
-      if ( VmState.PENDING.apply( vm ) && vm.lastUpdateMillis( ) < VM_INITIAL_REPORT_TIMEOUT ) {
+      if ( VmState.PENDING.apply( vm ) && vm.lastUpdateMillis( ) < ( VmInstances.VM_INITIAL_REPORT_TIMEOUT * 1000 ) ) {
         //do nothing during first VM_INITIAL_REPORT_TIMEOUT millis of instance life
         return;
       } else if ( vm.isBlockStorage( ) && VmInstances.Timeout.UNREPORTED.apply( vm ) ) {
@@ -301,7 +299,7 @@ public class VmStateCallback extends StateUpdateMessageCallback<Cluster, VmDescr
       VmInstances.terminated( vm );
     } else if ( VmState.STOPPING.apply( vm ) ) {
       VmInstances.stopped( vm );
-    } else if ( VmStateSet.RUN.apply( vm ) && vm.getSplitTime( ) > VM_STATE_SETTLE_TIME ) {
+    } else if ( VmStateSet.RUN.apply( vm ) && vm.getSplitTime( ) > ( VmInstances.VM_STATE_SETTLE_TIME * 1000 ) ) {
       if ( vm.isBlockStorage( ) ) {
         VmInstances.stopped( vm );
       } else {
@@ -315,7 +313,7 @@ public class VmStateCallback extends StateUpdateMessageCallback<Cluster, VmDescr
       
       @Override
       public boolean apply( VmInstance input ) {
-        return input.getCreationSplitTime( ) > VM_STATE_SETTLE_TIME;
+        return input.getCreationSplitTime( ) > ( VmInstances.VM_STATE_SETTLE_TIME * 1000 );
       }
     };
   }

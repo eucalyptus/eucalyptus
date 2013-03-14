@@ -65,7 +65,11 @@
 
 //!
 //! @file util/wc.c
-//! Need to provide description
+//! Implements the library that handles variable substitution within a string.
+//!
+//! Within a string, variables begins with '${' and terminates with '}'. For
+//! example, the following string "This is the ${varname} variable" has '${varname}'
+//! as a variable that can be substitured.
 //!
 
 /*----------------------------------------------------------------------------*\
@@ -77,15 +81,15 @@
 #include <stdio.h>
 #include <stdlib.h>
 #define _GNU_SOURCE
-#include <ctype.h>                     // isspace
+#include <ctype.h>              // isspace
 #include <assert.h>
 #include <stdarg.h>
-#include <errno.h>                     // errno
-#include <locale.h>                    // setlocale
+#include <errno.h>              // errno
+#include <locale.h>             // setlocale
 #include <string.h>
 
 #include "eucalyptus.h"
-#include "misc.h"                      // boolean
+#include "misc.h"               // boolean
 #include "wc.h"
 
 /*----------------------------------------------------------------------------*\
@@ -132,28 +136,23 @@
  |                                                                            |
 \*----------------------------------------------------------------------------*/
 
-#ifdef _UNIT_TEST
-const wchar_t *s1 = L"The quick ${color} ${subject} jümps øver the låzy ${øbject}";
-const wchar_t *s2 = L"${}A m${}alformed ${color} string${}${}";
-const wchar_t *s3 = L"An undefined ${variable}";
-wchar_map **m = NULL;
-
-const char *c_s1 = "The quick ${color} ${subject} jumps over the lazy ${object}";
-const char *c_s2 = "${}A m${}alformed ${color} string${}${}";
-const char *c_s3 = "An undefined ${variable}";
-char_map **c_m = NULL;
-#endif /* _UNIT_TEST */
-
 /*----------------------------------------------------------------------------*\
  |                                                                            |
  |                              STATIC VARIABLES                              |
  |                                                                            |
 \*----------------------------------------------------------------------------*/
 
-static wchar_t *find_valn(const wchar_map * vars[], const wchar_t * name, size_t name_len);
-static char *c_find_valn(const char_map * vars[], const char *name, size_t name_len);
-static wchar_t *wcappendn(wchar_t * dst, const wchar_t * src, size_t src_limit);
-static char *c_wcappendn(char *dst, const char *src, size_t src_limit);
+#ifdef _UNIT_TEST
+static const wchar_t *s1 = L"The quick ${color} ${subject} jümps øver the låzy ${øbject}";
+static const wchar_t *s2 = L"${}A m${}alformed ${color} string${}${}";
+static const wchar_t *s3 = L"An undefined ${variable}";
+static wchar_map **m = NULL;
+
+static const char *c_s1 = "The quick ${color} ${subject} jumps over the lazy ${object}";
+static const char *c_s2 = "${}A m${}alformed ${color} string${}${}";
+static const char *c_s3 = "An undefined ${variable}";
+static char_map **c_m = NULL;
+#endif /* _UNIT_TEST */
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |
@@ -177,6 +176,11 @@ int main(int argc, char **argv);
  |                              STATIC PROTOTYPES                             |
  |                                                                            |
 \*----------------------------------------------------------------------------*/
+
+static wchar_t *find_valn(const wchar_map * vars[], const wchar_t * name, size_t name_len);
+static char *c_find_valn(const char_map * vars[], const char *name, size_t name_len);
+static wchar_t *wcappendn(wchar_t * dst, const wchar_t * src, size_t src_limit);
+static char *c_wcappendn(char *dst, const char *src, size_t src_limit);
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |
@@ -454,7 +458,7 @@ wchar_map **varmap_alloc(wchar_map ** map, const wchar_t * key, const wchar_t * 
         if ((map[i] = EUCA_ALLOC(1, sizeof(wchar_map))) != NULL) {
             map[i]->key = wcsdup(key);
             map[i]->val = wcsdup(val);
-            map[i + 1] = NULL;         // NULL terminator
+            map[i + 1] = NULL;  // NULL terminator
         }
     }
 
@@ -480,7 +484,7 @@ void varmap_free(wchar_map ** map)
             i++;
         }
 
-        EUCA_FREE(map[i]);             // NULL terminator
+        EUCA_FREE(map[i]);      // NULL terminator
         EUCA_FREE(map);
     }
 }
@@ -627,7 +631,7 @@ char_map **c_varmap_alloc(char_map ** map, const char *key, const char *val)
         if ((map[i] = EUCA_ALLOC(1, sizeof(char_map))) != NULL) {
             map[i]->key = strdup(key);
             map[i]->val = strdup(val);
-            map[i + 1] = NULL;         // NULL terminator
+            map[i + 1] = NULL;  // NULL terminator
         }
     }
 
@@ -653,7 +657,7 @@ void c_varmap_free(char_map ** map)
             i++;
         }
 
-        EUCA_FREE(map[i]);             // NULL terminator
+        EUCA_FREE(map[i]);      // NULL terminator
         EUCA_FREE(map);
     }
 }

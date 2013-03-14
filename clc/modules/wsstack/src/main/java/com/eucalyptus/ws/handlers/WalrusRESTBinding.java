@@ -194,7 +194,7 @@ public class WalrusRESTBinding extends RestfulMarshallingHandler {
 			if(msg instanceof WalrusDataRequestType) {
 				String expect = httpRequest.getHeader(HttpHeaders.Names.EXPECT);
 				if(expect != null) {
-					if(expect.equals("100-continue")) {
+					if(expect.toLowerCase().equals("100-continue")) {
 						HttpResponse response = new DefaultHttpResponse( HttpVersion.HTTP_1_1, HttpResponseStatus.CONTINUE );
 						DownstreamMessageEvent newEvent = new DownstreamMessageEvent( ctx.getChannel( ), event.getFuture(), response, null );
 						ctx.sendDownstream( newEvent );
@@ -217,12 +217,12 @@ public class WalrusRESTBinding extends RestfulMarshallingHandler {
 			Binding binding;
 
 			if(!(msg instanceof EucalyptusErrorMessageType)&&!(msg instanceof ExceptionResponseType)) {
-				binding = BindingManager.getBinding( BindingManager.sanitizeNamespace( super.getNamespace( ) ) );
+				binding = BindingManager.getBinding( super.getNamespace( ) );
 				if(putQueue != null) {
 					putQueue = null;
 				}
 			} else {
-				binding = BindingManager.getBinding( BindingManager.sanitizeNamespace( "http://msgs.eucalyptus.com" ) );
+				binding = BindingManager.getDefaultBinding( );
 				if(putQueue != null) {
 					putQueue = null;
 				}
@@ -339,7 +339,7 @@ public class WalrusRESTBinding extends RestfulMarshallingHandler {
 		LOG.info(groovyMsg.toString());
 		try
 		{
-			Binding binding = BindingManager.getBinding( BindingManager.sanitizeNamespace( "http://msgs.eucalyptus.com" ) );
+			Binding binding = BindingManager.getDefaultBinding( );
 			msg = binding.toOM( groovyMsg );
 		}
 		catch ( RuntimeException e )

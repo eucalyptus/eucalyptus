@@ -143,6 +143,8 @@ import com.eucalyptus.vm.VmBundleTask.BundleState;
 import com.eucalyptus.vm.VmInstance.VmState;
 import com.eucalyptus.vm.VmInstances.Timeout;
 import com.eucalyptus.vm.VmVolumeAttachment.AttachmentState;
+import com.eucalyptus.vmtypes.VmType;
+import com.eucalyptus.vmtypes.VmTypes;
 import com.eucalyptus.ws.StackConfiguration;
 import com.google.common.base.Function;
 import com.google.common.base.Objects;
@@ -710,7 +712,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
     private static VmType restoreVmType( final VmInfo input ) {
       VmType vmType = null;
       try {
-        vmType = VmTypes.getVmType( input.getInstanceType( ).getName( ) );
+        vmType = VmTypes.lookup( input.getInstanceType( ).getName( ) );
       } catch ( final Exception ex ) {
         LOG.error( "Failed to lookup vm type " + input.getInstanceType( ).getName( ) + " for: " + input.getInstanceId( ) + " because of: " + ex.getMessage( ) );
         Logs.extreme( ).error( ex, ex );
@@ -1704,11 +1706,21 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
           VmInstance.this.updateVolumeAttachments( runVm.getVolumes( ) );
           VmInstance.this.updateBlockBytes( runVm.getBlockBytes( ) );
           VmInstance.this.updateNetworkBytes( runVm.getNetworkBytes( ) );
+          VmInstance.this.updateMigrationTaskState( runVm.getMigrationStateName( ), runVm.getMigrationSource( ), runVm.getMigrationDestination( )  );
         }
       }
     };
   }
   
+  /**
+   * @param migrationStateName
+   * @param migrationSource
+   * @param migrationDestination
+   */
+  protected void updateMigrationTaskState( String migrationStateName, String migrationSource, String migrationDestination ) {
+    this.getRuntimeState( ).setMigrationState( migrationStateName, migrationSource, migrationDestination );
+  }
+
   /**
    *
    */

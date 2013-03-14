@@ -60,55 +60,18 @@
  *   NEEDED TO COMPLY WITH ANY SUCH LICENSES OR RIGHTS.
  ************************************************************************/
 
-package com.eucalyptus.util;
+package com.eucalyptus.vm;
 
-import org.apache.log4j.Logger;
-import com.eucalyptus.bootstrap.Bootstrap;
-import com.eucalyptus.bootstrap.Bootstrapper;
-import com.eucalyptus.bootstrap.Hosts;
-import com.eucalyptus.bootstrap.Provides;
-import com.eucalyptus.bootstrap.RunDuring;
-import com.eucalyptus.component.id.Eucalyptus;
-import com.eucalyptus.entities.EntityWrapper;
-import com.eucalyptus.vm.VmType;
+import edu.ucsb.eucalyptus.msgs.DescribeReservedInstancesResponseType;
+import edu.ucsb.eucalyptus.msgs.DescribeReservedInstancesType;
 
-@Provides( Eucalyptus.class )
-@RunDuring( Bootstrap.Stage.UserCredentialsInit )
-public class MetadataStateBootstrapper extends Bootstrapper.Simple {
-  private static Logger LOG = Logger.getLogger( MetadataStateBootstrapper.class );
-  
-  @Override
-  public boolean start( ) throws Exception {
-    try {
-      if ( Hosts.isCoordinator( ) ) {
-        ensureCountersExist( );
-        ensureVmTypesExist( );
-      }
-    } catch ( Exception ex ) {
-      LOG.error( ex, ex );
-    }
-    return true;
+/**
+ * @todo doc
+ * @author chris grzegorczyk <grze@eucalyptus.com>
+ */
+public class ReservedManager {
+  public DescribeReservedInstancesResponseType DescribeReservedInstances( DescribeReservedInstancesType request ) {
+    return request.getReply( );
   }
-  
-  private static void ensureCountersExist( ) {
-    UniqueIds.nextId( );
-    UniqueIds.nextId( Eucalyptus.class );
-  }
-  
-  private static void ensureVmTypesExist( ) {
-    EntityWrapper<VmType> db = EntityWrapper.get( VmType.class );
-    try {
-      if ( db.query( new VmType( ) ).size( ) == 0 ) { //TODO: make defaults configurable?
-        db.add( new VmType( "m1.small",  1,  5,  512 ) );
-        db.add( new VmType( "c1.medium", 2, 10,  512 ) );
-        db.add( new VmType( "m1.large",  2, 15, 1024 ) );
-        db.add( new VmType( "m1.xlarge", 2, 20, 2048 ) );
-        db.add( new VmType( "c1.xlarge", 4, 20, 4096 ) );
-      }
-      db.commit( );
-    } catch ( Exception e ) {
-      db.rollback( );
-    }
-  }
-  
+
 }

@@ -296,7 +296,8 @@ int main(int argc, char **argv)
             if (argv[11])
                 ramdiskURL = argv[11];
 
-            rc = cc_runInstances(amiId, amiURL, kernelId, kernelURL, ramdiskId, ramdiskURL, atoi(argv[7]), atoi(argv[8]), argv[9], &params, env, stub);
+            rc = cc_runInstances(amiId, amiURL, kernelId, kernelURL, ramdiskId, ramdiskURL, atoi(argv[7]), atoi(argv[8]), argv[9], &params, env,
+                                 stub);
             if (rc != 0) {
                 printf("cc_runInstances() failed: in:%s out:%d\n", argv[4], rc);
                 exit(1);
@@ -484,13 +485,13 @@ int main(int argc, char **argv)
             sensor_res2str(buf, sizeof(buf), res, resSize);
             printf("resources: %d\n%s\n", resSize, buf);
         } else if (!strcmp(argv[2], "modifyNode")) {
-            rc = cc_modifyNode(argv[3], argv[4],  env, stub);
+            rc = cc_modifyNode(argv[3], argv[4], env, stub);
             if (rc != 0) {
                 printf("cc_modifyNode() failed: error=%d\n", rc);
                 exit(1);
             }
         } else if (!strcmp(argv[2], "migrateInstances")) {
-            rc = cc_migrateInstances(argv[3],  env, stub);
+            rc = cc_migrateInstances(argv[3], env, stub);
             if (rc != 0) {
                 printf("cc_migrateInstances() failed: error=%d\n", rc);
                 exit(1);

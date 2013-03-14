@@ -60,11 +60,16 @@
  *   NEEDED TO COMPLY WITH ANY SUCH LICENSES OR RIGHTS.
  ************************************************************************/
 
-package com.eucalyptus.vm;
+package com.eucalyptus.vmtypes;
 
+import java.util.Map;
+import java.util.Set;
+import javax.persistence.CollectionTable;
 import javax.persistence.Column;
+import javax.persistence.ElementCollection;
 import javax.persistence.PersistenceContext;
 import javax.persistence.Table;
+import javax.persistence.Transient;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
 import org.hibernate.annotations.Entity;
@@ -72,48 +77,94 @@ import com.eucalyptus.auth.principal.Principals;
 import com.eucalyptus.cloud.CloudMetadata.VmTypeMetadata;
 import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.id.Eucalyptus;
+import com.eucalyptus.crypto.Crypto;
+import com.eucalyptus.crypto.Digest;
 import com.eucalyptus.entities.AbstractPersistent;
+import com.eucalyptus.images.DeviceMapping;
 import com.eucalyptus.util.FullName;
 import com.eucalyptus.util.HasFullName;
 import com.eucalyptus.util.OwnerFullName;
+import com.eucalyptus.vmtypes.VmTypes.Format;
 import com.google.common.base.Function;
 import com.google.common.base.Supplier;
+import com.google.common.collect.Maps;
+import com.google.common.collect.Sets;
 
+/**
+ * Definition of the VM resource type.<br/>
+ * Currently reflects resource allocations in the following dimensions and kinds:
+ * <ul>
+ * <li>CPU: only in terms of quantity of VCPUs allocated on the hypervisor
+ * <li>Memory: the number of memories
+ * <li>Disk:
+ * <ol>
+ * <li>Root: size of the root disk
+ * <li>Ephemeral: size of the possible ephemeral partitions attached (For epheremeral disk
+ * information see the below referenced documents.)
+ * </ol>
+ * </ul>
+ * Continue to be missing:
+ * <ul>
+ * <li>Placement affinity
+ * <li>Placement restrictions
+ * <li>EBS optimized storage
+ * <li>SSDs
+ * <li>GPUs
+ * <li>32bit/64bit restrictions
+ * <li>Network capacity characteristics (may never be feasible)
+ * </ul>
+ * 
+ * @see <a
+ *      href="http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/InstanceStorage.html#StorageOnInstanceTypes">Storage
+ *      on Instance Types</a>
+ * @see <a
+ *      href="http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/InstanceStorage.html#InstanceStoreDeviceNames">Instance
+ *      Store Device Names</a>
+ * @see DeviceMapping
+ */
 @Entity
 @javax.persistence.Entity
 @PersistenceContext( name = "eucalyptus_cloud" )
 @Table( name = "cloud_vm_types" )
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
-//@ConfigurableClass(root="eucalyptus",alias="vmtypes",deferred=true,singleton=false,description="Virtual Machine type definitions")
 public class VmType extends AbstractPersistent implements VmTypeMetadata, HasFullName<VmTypeMetadata> {
-  /**
-   * 
-   */
-  private static final long serialVersionUID = 1L;
-  //  @ConfigurableIdentifier
-  @Column( name = "metadata_vm_type_name" )
-  private String            name;
-//  @ConfigurableField( description = "Number of CPUs per instance.", displayName = "CPUs" )
-  @Column( name = "metadata_vm_type_cpu" )
-  private Integer           cpu;
-//  @ConfigurableField( description = "Gigabytes of disk per instance.", displayName = "Disk (GB)" )
-  @Column( name = "metadata_vm_type_disk" )
-  private Integer           disk;
-//  @ConfigurableField( description = "Gigabytes of RAM per instance.", displayName = "RAM (GB)" )
-  @Column( name = "metadata_vm_type_memory" )
-  private Integer           memory;
+  @Transient
+  private static final long  serialVersionUID = 1L;
+  @Column( name = "config_vm_type_name" )
+  private String             name;
+  @Column( name = "config_vm_type_cpu" )
+  private Integer            cpu;
+  @Column( name = "config_vm_type_disk" )
+  private Integer            disk;
+  @Column( name = "config_vm_type_memory" )
+  private Integer            memory;
+  @Column( name = "config_vm_type_ebs_only" )
+  private Boolean            ebsOnly;
+  @Column( name = "config_vm_type_ebs_iops" )
+  private Integer            ebsIopsLimit;
+  @Column( name = "config_vm_type_64bit_only" )
+  private Boolean            x86_64only;
+  @ElementCollection
+  @CollectionTable( name = "config_vm_types_ephemeral_disks" )
+  @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
+  private Set<EphemeralDisk> epehemeralDisks  = Sets.newHashSet( );
   
-  public VmType( ) {}
+  private VmType( ) {}
   
-  public VmType( final String name ) {
+  private VmType( final String name ) {
     this.name = name;
+    this.setNaturalId( Crypto.getDigestBase64( name, Digest.SHA1 ) );//this ensures that natural ids are used when unique queries are performed.
   }
   
-  public VmType( final String name, final Integer cpu, final Integer disk, final Integer memory ) {
-    this.name = name;
+  private VmType( final String name, final Integer cpu, final Integer disk, final Integer memory ) {
+    this( name );
     this.cpu = cpu;
     this.disk = disk;
     this.memory = memory;
+  }
+  
+  public static VmType create( ) {
+    return new VmType( );
   }
   
   @Override
@@ -157,7 +208,7 @@ public class VmType extends AbstractPersistent implements VmTypeMetadata, HasFul
     this.memory = memory;
   }
   
-  @SuppressWarnings("RedundantIfStatement")
+  @SuppressWarnings( "RedundantIfStatement" )
   @Override
   public boolean equals( final Object o ) {
     if ( this == o ) return true;
@@ -176,9 +227,9 @@ public class VmType extends AbstractPersistent implements VmTypeMetadata, HasFul
   @Override
   public int hashCode( ) {
     int result = this.name.hashCode( );
-    result = 31 * result + this.cpu.hashCode( );
-    result = 31 * result + this.disk.hashCode( );
-    result = 31 * result + this.memory.hashCode( );
+    result = ( 31 * result ) + this.cpu.hashCode( );
+    result = ( 31 * result ) + this.disk.hashCode( );
+    result = ( 31 * result ) + this.memory.hashCode( );
     return result;
   }
   
@@ -214,34 +265,117 @@ public class VmType extends AbstractPersistent implements VmTypeMetadata, HasFul
   }
   
   public Supplier<VmType> allocator( ) {
-    return new Supplier<VmType>() {
-
+    return new Supplier<VmType>( ) {
+      
       @Override
       public VmType get( ) {
         return VmType.this;
       }
     };
   }
-
-  public enum SizeProperties implements Function<VmType,Integer> {
+  
+  public enum SizeProperties implements Function<VmType, Integer> {
     Cpu {
       @Override
       public Integer apply( final VmType vmType ) {
-        return vmType.getCpu();
+        return vmType.getCpu( );
       }
     },
     Disk {
       @Override
       public Integer apply( final VmType vmType ) {
-        return vmType.getDisk();
+        return vmType.getDisk( );
       }
     },
     Memory {
       @Override
       public Integer apply( final VmType vmType ) {
-        return vmType.getMemory();
+        return vmType.getMemory( );
       }
     }
   }
+
+  public static class EphemeralBuilder {
+    private Integer              index       = 0;
+    private Map<Integer, String> deviceNames = Maps.newHashMap( );
+    private Set<EphemeralDisk>   disks       = Sets.newHashSet( );
+    private VmType               parent;
+    
+    EphemeralBuilder( VmType parent ) {
+      super( );
+      this.parent = parent;
+    }
+    
+    private String getDiskName( String deviceName ) {
+      if ( "/dev/sda1".equals( deviceName ) ) {
+        throw new IllegalArgumentException( "Attempt to assign restricted device name: " + deviceName );
+      } else if ( deviceNames.containsValue( deviceName ) ) {
+        throw new IllegalArgumentException( "Attempt to assign same device name to multiple devices: " + deviceName + " with " + deviceNames.entrySet( ) );
+      } else {
+        int idx = index++;
+        deviceNames.put( idx, deviceName );
+        return "ephemeral" + idx;
+      }
+    }
+    
+    public EphemeralBuilder addDisk( EphemeralDisk disk ) {
+      String diskName = getDiskName( disk.getDeviceName( ) );
+      EphemeralDisk ephemeral = EphemeralDisk.create( this.parent, diskName, disk.getDeviceName( ), disk.getSize( ), disk.getFormat( ) );
+      disks.add( ephemeral );
+      return this;
+    }
+    
+    public VmType commit( ) {
+      this.parent.getEpehemeralDisks( ).addAll( disks );
+      return this.parent;
+    }
+  }
+
+  Boolean getEbsOnly( ) {
+    return this.ebsOnly;
+  }
+
+  void setEbsOnly( Boolean ebsOnly ) {
+    this.ebsOnly = ebsOnly;
+  }
+
+  Integer getEbsIopsLimit( ) {
+    return this.ebsIopsLimit;
+  }
+
+  void setEbsIopsLimit( Integer ebsIopsLimit ) {
+    this.ebsIopsLimit = ebsIopsLimit;
+  }
+
+  Boolean getX86_64only( ) {
+    return this.x86_64only;
+  }
+
+  void setX86_64only( Boolean x86_64only ) {
+    this.x86_64only = x86_64only;
+  }
+
+  Set<EphemeralDisk> getEpehemeralDisks( ) {
+    return this.epehemeralDisks;
+  }
+
+  public void addEphemeralDisks( EphemeralDisk...disks ) {
+    EphemeralBuilder builder = this.withEphemeralDisks( );
+    for ( EphemeralDisk d : disks ) {
+      builder.addDisk( d );
+    }
+  }
   
+  public VmType.EphemeralBuilder withEphemeralDisks( ) {
+    this.getEpehemeralDisks( ).clear( );
+    return new VmType.EphemeralBuilder( this );
+  }
+
+  public static VmType create( String name, Integer cpu, Integer disk, Integer memory ) {
+    return new VmType( name, cpu, disk, memory );
+  }
+
+  public static VmType named( String name ) {
+    return new VmType( name );
+  }
 }

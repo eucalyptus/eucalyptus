@@ -43,7 +43,7 @@ EXTENSIONS=""
 ANT=""
 JAVA=""
 WSDL2C=""
-java_min_version="1.6.0"
+java_min_version="1.7.0"
 ant_min_version="1.6.5"
 
 # these are for large files (>2GB)

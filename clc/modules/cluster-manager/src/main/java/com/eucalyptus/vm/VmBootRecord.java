@@ -88,6 +88,8 @@ import com.eucalyptus.images.KernelImageInfo;
 import com.eucalyptus.images.RamdiskImageInfo;
 import com.eucalyptus.keys.KeyPairs;
 import com.eucalyptus.keys.SshKeyPair;
+import com.eucalyptus.vmtypes.VmType;
+import com.eucalyptus.vmtypes.VmTypes;
 import com.google.common.collect.Sets;
 import edu.ucsb.eucalyptus.msgs.VmTypeInfo;
 

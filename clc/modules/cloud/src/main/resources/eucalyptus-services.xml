@@ -80,8 +80,12 @@
   <endpoint name="KeyPairWS" address="vm://KeyPair" synchronous="false" />
   <endpoint name="GroupsWS" address="vm://Groups" synchronous="false" />
   <endpoint name="TagsWS" address="vm://Tags" synchronous="false" />
-
-    <!--run-time system state services-->
+  <endpoint name="PrivateNetworksWS" address="vm://PrivateNetworks" synchronous="false" />
+  <endpoint name="SpotWS" address="vm://Spot" synchronous="false" />
+  <endpoint name="ReservedWS" address="vm://Reserved" synchronous="false" />
+  <endpoint name="VmTypesWS" address="vm://VmTypes" synchronous="false" />
+  <!--  GRZE:WTF: all of these forward references are crap. -->
+  <!--run-time system state services-->
   <endpoint name="ClusterEndpointWS" address="vm://ClusterEndpoint" synchronous="false" />
   <endpoint name="ClusterSinkWS" address="vm://ClusterSink" synchronous="false" />
   <endpoint name="VmMetadataWS" address="vm://VmMetadata" synchronous="true" />

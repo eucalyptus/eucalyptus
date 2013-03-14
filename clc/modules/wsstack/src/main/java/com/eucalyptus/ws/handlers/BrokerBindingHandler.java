@@ -104,7 +104,7 @@ public class BrokerBindingHandler extends MessageStackHandler {
       String namespace = omNs.getNamespaceURI( );
       Class msgType = null;
       try {
-        this.binding = BindingManager.getBinding( BindingManager.sanitizeNamespace( namespace ) );
+        this.binding = BindingManager.getBinding( namespace );
         msgType = this.binding.getElementClass( httpMessage.getOmMessage( ).getLocalName( ) );
       } catch ( Exception e1 ) {
         if ( this.binding == null ) {
