@@ -251,7 +251,7 @@ int euca_init_cert(void)
         return 0;
     }
 
-    if ((euca_home = getenv("EUCALYPTUS")) != NULL) {
+    if ((euca_home = getenv("EUCALYPTUS")) == NULL) {
         euca_home = root;
     }
 
