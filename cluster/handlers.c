@@ -294,7 +294,7 @@ int doCreateImage(ncMetadata * pMeta, char *instanceId, char *volumeId, char *re
 int doDescribeSensors(ncMetadata * pMeta, int historySize, long long collectionIntervalTimeMs, char **instIds, int instIdsLen, char **sensorIds,
                       int sensorIdsLen, sensorResource *** outResources, int *outResourcesLen);
 int doModifyNode(ncMetadata * pMeta, char *nodeName, char *stateName);
-int doMigrateInstances(ncMetadata * pMeta, char *nodeName);
+int doMigrateInstances(ncMetadata * pMeta, char *nodeName, int commit);
 int setup_shared_buffer(void **buf, char *bufname, size_t bytes, sem_t ** lock, char *lockname, int mode);
 int initialize(ncMetadata * pMeta);
 int ccIsEnabled(void);
@@ -2248,6 +2248,7 @@ int refresh_instances(ncMetadata * pMeta, int timeout, int dolock)
     ccInstance *myInstance = NULL;
     int i, numInsts = 0, found, ncOutInstsLen, rc, pid, nctimeout, *pids = NULL, status;
     time_t op_start;
+    char *migration_to_commit = NULL;
 
     ncInstance **ncOutInsts = NULL;
 
@@ -2327,9 +2328,35 @@ int refresh_instances(ncMetadata * pMeta, int timeout, int dolock)
                             if (ncOutInsts[j]->migration_state != NOT_MIGRATING) {
                                 if (!strcmp(resourceCacheStage->resources[i].hostname, ncOutInsts[j]->migration_dst)) {
 
-                                    // TODO: for now just ignore updates from destination while migrating
-                                    LOGDEBUG("[%s] ignoring updates from destination node %s\n", myInstance->instanceId,
-                                             resourceCacheStage->resources[i].hostname);
+                                    // TODO: for now just ignore updates from destination while migrating, unless it's ready, in which case we check source.
+                                    if (ncOutInsts[j]->migration_state == MIGRATION_READY) {
+                                        LOGDEBUG("[%s] destination node %s reports ready to receive migration, checking source node %s...\n", myInstance->instanceId,
+                                                 resourceCacheStage->resources[i].hostname, ncOutInsts[j]->migration_src);
+                                        ccInstance *srcInstance = NULL;
+                                        rc = find_instanceCacheId(myInstance->instanceId, &srcInstance);
+                                        if (!rc) {
+                                            if (srcInstance->migration_state == MIGRATION_READY) {
+                                                LOGDEBUG("[%s] source node %s reports ready to commit migration to %s.\n", myInstance->instanceId, ncOutInsts[j]->migration_src,
+                                                         ncOutInsts[j]->migration_dst);
+                                                if (!migration_to_commit) {
+                                                    migration_to_commit = EUCA_ZALLOC(1, HOSTNAME_SIZE);
+                                                    euca_strncpy(migration_to_commit, ncOutInsts[j]->migration_src, HOSTNAME_SIZE);
+                                                }
+                                            } else if (srcInstance->migration_state == MIGRATION_IN_PROGRESS) {
+                                                LOGDEBUG("[%s] source node %s reports migration to %s in progress.\n", myInstance->instanceId,
+                                                         ncOutInsts[j]->migration_src, ncOutInsts[j]->migration_dst);
+                                            } else {
+                                                LOGDEBUG("[%s] source node %s has not yet reported ready to commit migration to %s, despite implicitly being ready.\n",
+                                                         myInstance->instanceId, ncOutInsts[j]->migration_src, ncOutInsts[j]->migration_dst);
+                                            }
+                                        } else {
+                                            LOGERROR("[%s] could not find migration source node %s in the instance cache.\n", myInstance->instanceId, ncOutInsts[j]->migration_src);
+                                        }
+                                        EUCA_FREE(srcInstance);
+                                    } else {
+                                        LOGDEBUG("[%s] ignoring updates from destination node %s\n", myInstance->instanceId,
+                                                 resourceCacheStage->resources[i].hostname);
+                                    }
                                     EUCA_FREE(myInstance);
                                     break;
                                 }
@@ -2399,6 +2426,13 @@ int refresh_instances(ncMetadata * pMeta, int timeout, int dolock)
                 }
             }
             sem_mypost(REFRESHLOCK);
+
+            if (migration_to_commit) {
+                LOGDEBUG("notifying source %s to commit migration.\n", migration_to_commit);
+                doMigrateInstances(pMeta, migration_to_commit, TRUE);
+                EUCA_FREE(migration_to_commit);
+            }
+
             exit(0);
         } else {
             pids[i] = pid;
@@ -2435,6 +2469,7 @@ int refresh_instances(ncMetadata * pMeta, int timeout, int dolock)
     sem_mypost(RESCACHE);
 
     EUCA_FREE(pids);
+
     LOGTRACE("done\n");
     return (0);
 }
@@ -2774,7 +2809,10 @@ int ncInstance_to_ccInstance(ccInstance * dst, ncInstance * src)
     euca_strncpy(dst->createImageTaskStateName, src->createImageTaskStateName, 64);
     euca_strncpy(dst->userData, src->userData, 16384);
     euca_strncpy(dst->state, src->stateName, 16);
+    euca_strncpy(dst->migration_src, src->migration_src, HOSTNAME_SIZE);
+    euca_strncpy(dst->migration_dst, src->migration_dst, HOSTNAME_SIZE);
     dst->ts = src->launchTime;
+    dst->migration_state = src->migration_state;
 
     memcpy(&(dst->ncnet), &(src->ncnet), sizeof(netConfig));
 
@@ -2831,6 +2869,7 @@ int ccInstance_to_ncInstance(ncInstance * dst, ccInstance * src)
     euca_strncpy(dst->userData, src->userData, 16384);
     euca_strncpy(dst->stateName, src->state, 16);
     dst->launchTime = src->ts;
+    //dst->migration_state = src->migration_state;
 
     memcpy(&(dst->ncnet), &(src->ncnet), sizeof(netConfig));
 
@@ -3934,7 +3973,7 @@ int doDescribeSensors(ncMetadata * pMeta, int historySize, long long collectionI
                 num_results = num_slots;    // actually num_results <= num_slots, but that's OK
 
         } else {                // report on specific instances
-            // if some instances requested by ID were not found on this CC, 
+            // if some instances requested by ID were not found on this CC,
             // we will have fewer records in outResources[] (ok, since empty ones will be ignored)
             for (int i = 0; i < num_instances; i++) {
                 if (sensor_get_instance_data(instIds[i], NULL, 0, (*outResources + num_results), 1) == 0)
@@ -3954,7 +3993,7 @@ int doDescribeSensors(ncMetadata * pMeta, int historySize, long long collectionI
 //!
 //! @param[in] pMeta a pointer to the node controller (NC) metadata structure
 //! @param[in] nodeName the IP of the NC to effect
-//! @param[in] stateName the state for the NC 
+//! @param[in] stateName the state for the NC
 //!
 //! @return
 //!
@@ -4005,66 +4044,14 @@ int doModifyNode(ncMetadata * pMeta, char *nodeName, char *stateName)
         ret = 1;
         goto out;
     }
-    // find an instance running on the host
-    int found_instance = 0;
-    ccInstance cc_instance;
-    sem_mywait(INSTCACHE);
-    if (instanceCache->numInsts) {
-        for (i = 0; i < MAXINSTANCES_PER_CC; i++) {
-            if (instanceCache->cacheState[i] == INSTVALID && instanceCache->instances[i].ncHostIdx == src_index
-                && (!strcmp(instanceCache->instances[i].state, "Extant"))) {
-                memcpy(&cc_instance, &(instanceCache->instances[i]), sizeof(ccInstance));
-                found_instance = 1;
-                break;
-            }
-        }
-    }
-    sem_mypost(INSTCACHE);
-    if (!found_instance) {
-        LOGINFO("no instances running on host %s\n", SP(nodeName));
-        goto out;
+
+    // FIXME: This is only here for compatability with earlier demo
+    // development. Remove.
+    if (!doMigrateInstances(pMeta, nodeName, FALSE)) {
+        LOGERROR("doModifyNode() call of doMigrateInstances() failed.\n");
     }
 
-    if (dst_index == -1) {
-        LOGERROR("have instances to migrate, but no destinations\n");
-        goto out;
-    }
-
-    ncInstance nc_instance;
-    ccInstance_to_ncInstance(&nc_instance, &cc_instance);
-    strncpy(nc_instance.migration_src, resourceCacheLocal.resources[src_index].hostname, sizeof(nc_instance.migration_src));
-    strncpy(nc_instance.migration_dst, resourceCacheLocal.resources[dst_index].hostname, sizeof(nc_instance.migration_dst));
-    ncInstance *instances = &nc_instance;
-
-    // notify the destination
-    timeout = ncGetTimeout(time(NULL), OP_TIMEOUT, 1, 0);
-    rc = ncClientCall(pMeta, timeout, resourceCacheLocal.resources[dst_index].lockidx, resourceCacheLocal.resources[dst_index].ncURL,
-                      "ncMigrateInstances", &instances, 1, "Prepare", NULL);
-    if (rc) {
-        LOGERROR("failed to request prepare migration on destination\n");
-        ret = 1;
-        goto out;
-    }
-    // notify source
-    timeout = ncGetTimeout(time(NULL), OP_TIMEOUT, 1, 0);
-    rc = ncClientCall(pMeta, timeout, resourceCacheLocal.resources[src_index].lockidx, resourceCacheLocal.resources[src_index].ncURL,
-                      "ncMigrateInstances", &instances, 1, "Prepare", NULL);
-    if (rc) {
-        LOGERROR("failed to request prepare migration on source\n");
-        ret = 1;
-        goto out;
-    }
-    // call commit on source
-    timeout = ncGetTimeout(time(NULL), OP_TIMEOUT, 1, 0);
-    rc = ncClientCall(pMeta, timeout, resourceCacheLocal.resources[src_index].lockidx, resourceCacheLocal.resources[src_index].ncURL,
-                      "ncMigrateInstances", &instances, 1, "Commit", NULL);
-    if (rc) {
-        LOGERROR("failed to request migration on source\n");
-        ret = 1;
-        goto out;
-    }
-
-out:
+ out:
     LOGTRACE("done\n");
 
     shawn();
@@ -4084,7 +4071,7 @@ out:
 //!
 //! @note
 //!
-int doMigrateInstances(ncMetadata * pMeta, char *nodeName)
+int doMigrateInstances(ncMetadata * pMeta, char *nodeName, int commit)
 {
     int i, rc, ret = 0, timeout;
     int src_index = -1, dst_index = -1;
@@ -4099,12 +4086,18 @@ int doMigrateInstances(ncMetadata * pMeta, char *nodeName)
         LOGERROR("bad input params\n");
         return (1);
     }
-    LOGINFO("modifying node %s\n", SP(nodeName));
+    if (!commit) {
+        LOGINFO("preparing migration from node %s\n", SP(nodeName));
+    } else {
+        LOGINFO("committing migration from node %s\n", SP(nodeName));
+    }
 
     sem_mywait(RESCACHE);
     memcpy(&resourceCacheLocal, resourceCache, sizeof(ccResourceCache));
     sem_mypost(RESCACHE);
 
+    // FIXME: this assumes two nodes, one of which is a source and one
+    // of which is a destination. Inflexible.
     for (i = 0; i < resourceCacheLocal.numResources && (src_index == -1 || dst_index == -1); i++) {
         if (resourceCacheLocal.resources[i].state != RESASLEEP) {
             if (!strcmp(resourceCacheLocal.resources[i].hostname, nodeName)) {
@@ -4117,12 +4110,13 @@ int doMigrateInstances(ncMetadata * pMeta, char *nodeName)
         }
     }
     if (src_index == -1) {
-        LOGERROR("node requested for modification (%s) cannot be found\n", SP(nodeName));
+        LOGERROR("node requested for migration (%s) cannot be found\n", SP(nodeName));
         goto out;
     }
 
     LOGINFO("migrating from %s to %s\n", SP(resourceCacheLocal.resources[src_index].hostname), SP(resourceCacheLocal.resources[dst_index].hostname));
 
+    // FIXME: needs to find all instances running on host.
     // find an instance running on the host
     int found_instance = 0;
     ccInstance cc_instance;
@@ -4154,25 +4148,36 @@ int doMigrateInstances(ncMetadata * pMeta, char *nodeName)
     strncpy(nc_instance.migration_dst, resourceCacheLocal.resources[dst_index].hostname, sizeof(nc_instance.migration_dst));
     ncInstance *instances = &nc_instance;
 
-    // notify the destination
-    timeout = ncGetTimeout(time(NULL), OP_TIMEOUT, 1, 0);
-    rc = ncClientCall(pMeta, timeout, resourceCacheLocal.resources[dst_index].lockidx, resourceCacheLocal.resources[dst_index].ncURL,
-                      "ncMigrateInstances", &instances, 1, "Prepare", NULL);
-    if (rc) {
-        LOGERROR("failed to request migration on destination\n");
-        ret = 1;
-        goto out;
+    if (!commit) {
+        // notify source
+        timeout = ncGetTimeout(time(NULL), OP_TIMEOUT, 1, 0);
+        rc = ncClientCall(pMeta, timeout, resourceCacheLocal.resources[src_index].lockidx, resourceCacheLocal.resources[src_index].ncURL, "ncMigrateInstances",
+                          &instances, 1, "prepare", NULL);
+        if (rc) {
+            LOGERROR("failed: request to prepare migration on source\n");
+            ret = 1;
+            goto out;
+        }
+        // notify the destination
+        timeout = ncGetTimeout(time(NULL), OP_TIMEOUT, 1, 0);
+        rc = ncClientCall(pMeta, timeout, resourceCacheLocal.resources[dst_index].lockidx, resourceCacheLocal.resources[dst_index].ncURL, "ncMigrateInstances",
+                          &instances, 1, "prepare", NULL);
+        if (rc) {
+            LOGERROR("failed: request to prepare migration on destination\n");
+            ret = 1;
+            goto out;
+        }
+    } else {                    // Commit
+        // call commit on source
+        timeout = ncGetTimeout(time(NULL), OP_TIMEOUT, 1, 0);
+        rc = ncClientCall(pMeta, timeout, resourceCacheLocal.resources[src_index].lockidx, resourceCacheLocal.resources[src_index].ncURL, "ncMigrateInstances",
+                          &instances, 1, "commit", NULL);
+        if (rc) {
+            LOGERROR("failed: migration request on source\n");
+            ret = 1;
+            goto out;
+        }
     }
-    // notify source
-    timeout = ncGetTimeout(time(NULL), OP_TIMEOUT, 1, 0);
-    rc = ncClientCall(pMeta, timeout, resourceCacheLocal.resources[src_index].lockidx, resourceCacheLocal.resources[src_index].ncURL,
-                      "ncMigrateInstances", &instances, 1, "Prepare", NULL);
-    if (rc) {
-        LOGERROR("failed to request migration on source\n");
-        ret = 1;
-        goto out;
-    }
-
 out:
 
     LOGTRACE("done\n");
@@ -6769,10 +6774,11 @@ void print_ccInstance(char *tag, ccInstance * in)
 
     LOGDEBUG("%s instanceId=%s reservationId=%s state=%s accountId=%s ownerId=%s ts=%ld keyName=%s ccnet={privateIp=%s publicIp=%s privateMac=%s "
              "vlan=%d networkIndex=%d} ccvm={cores=%d mem=%d disk=%d} ncHostIdx=%d serviceTag=%s userData=%s launchIndex=%s platform=%s "
-             "bundleTaskStateName=%s, volumesSize=%d volumes={%s} groupNames={%s}\n", tag, in->instanceId, in->reservationId, in->state,
+             "bundleTaskStateName=%s, volumesSize=%d volumes={%s} groupNames={%s} migration_state=%s\n", tag, in->instanceId, in->reservationId, in->state,
              in->accountId, in->ownerId, in->ts, in->keyName, in->ccnet.privateIp, in->ccnet.publicIp, in->ccnet.privateMac, in->ccnet.vlan,
              in->ccnet.networkIndex, in->ccvm.cores, in->ccvm.mem, in->ccvm.disk, in->ncHostIdx, in->serviceTag, in->userData, in->launchIndex,
-             in->platform, in->bundleTaskStateName, in->volumesSize, volbuf, groupbuf);
+             in->platform, in->bundleTaskStateName, in->volumesSize, volbuf, groupbuf,
+             migration_state_names[in->migration_state]);
 
     EUCA_FREE(volbuf);
     EUCA_FREE(groupbuf);
@@ -7018,6 +7024,9 @@ int find_instanceCacheId(char *instanceId, ccInstance ** out)
                                 instanceCache->instances[i].groupNames, instanceCache->instances[i].volumes, instanceCache->instances[i].volumesSize);
             LOGDEBUG("found instance in cache '%s/%s/%s'\n", instanceCache->instances[i].instanceId,
                      instanceCache->instances[i].ccnet.publicIp, instanceCache->instances[i].ccnet.privateIp);
+            // migration-related
+            (*out)->migration_state = instanceCache->instances[i].migration_state;
+            LOGDEBUG("instance %s migration state=%s\n", instanceCache->instances[i].instanceId, migration_state_names[(*out)->migration_state]);
             done++;
         }
     }

@@ -213,11 +213,11 @@ const char *createImage_progress_names[] = {
 
 //! String value of each migrate-related state enumeration entry
 const char *migration_state_names[] = {
-    "migration-none",
-    "migration-preparing",
-    "migration-ready",
-    "migration-migrating",
-    "migration-cleaning"
+    "none",
+    "preparing",
+    "ready",
+    "migrating",
+    "cleaning"
 };
 
 //! String value of each error enumeration entry

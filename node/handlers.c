@@ -809,9 +809,16 @@ static void refresh_instance_info(struct nc_state_t *nc, ncInstance * instance)
     case PAUSED:
         // migration-related logic
         if (is_migration_dst(instance)) {
-            if (new_state == RUNNING || new_state == BLOCKED) {
+            if (old_state == BOOTING && new_state == PAUSED ) {
+                instance->migration_state = MIGRATION_IN_PROGRESS;
+                LOGINFO("[%s] incoming migration in progress\n", instance->instanceId);
+
+            } else if ((old_state == BOOTING || old_state == PAUSED) 
+                       && 
+                       (new_state == RUNNING || new_state == BLOCKED)) {
                 instance->migration_state = NOT_MIGRATING;  // done!
                 LOGINFO("[%s] incoming migration complete\n", instance->instanceId);
+
             } else if (new_state == SHUTOFF || new_state == SHUTDOWN) {
                 // this is normal at the beginning of incoming migration, before a domain is created in PAUSED state
                 break;
@@ -2240,15 +2247,11 @@ int doDescribeInstances(ncMetadata * pMeta, char **instIds, int instIdsLen, ncIn
     char *s = "";
     char *file_name = NULL;
     char myName[CHAR_BUFFER_SIZE] = "";
-    char vols_str[128] = "";
-    char vol_str[16] = "";
     FILE *f = NULL;
     long long used_mem = 0;
     long long used_disk = 0;
     long long used_cores = 0;
     u_int vols_count = 0;
-    ncInstance *instance = NULL;
-    ncVolume *volume = NULL;
 
     if (init())
         return (EUCA_ERROR);
@@ -2264,12 +2267,15 @@ int doDescribeInstances(ncMetadata * pMeta, char **instIds, int instIdsLen, ncIn
         return ret;
 
     for (i = 0; i < (*outInstsLen); i++) {
-        instance = (*outInsts)[i];
+        char vols_str[128] = "";
+        char vol_str[16] = "";
+        char mig_str[128] = "not migrating";
+        ncInstance *instance = (*outInsts)[i];
 
         // construct a string summarizing the volumes attached to the instance
         vols_count = 0;
         for (j = 0; j < EUCA_MAX_VOLUMES; ++j) {
-            volume = &instance->volumes[j];
+            ncVolume * volume = &instance->volumes[j];
             if (strlen(volume->volumeId) == 0)
                 continue;
             vols_count++;
@@ -2293,12 +2299,26 @@ int doDescribeInstances(ncMetadata * pMeta, char **instIds, int instIdsLen, ncIn
                 strcat(vols_str, vol_str);
             }
         }
+        
+        if (instance->migration_state!=NOT_MIGRATING) { // construct migration status string
+            char * peer = "?";
+            char dir = '?';
+            if (! strcmp(nc_state.ip, instance->migration_src)) {
+                peer = instance->migration_dst;
+                dir = '>';
+            } else {
+                peer = instance->migration_src;
+                dir = '<';
+            }
+            snprintf(mig_str, sizeof(mig_str), "%s %c%s", migration_state_names[instance->migration_state], dir, peer);
+        }
 
-        LOGDEBUG("[%s] %s pub=%s priv=%s mac=%s vlan=%d net=%d plat=%s vols=%s\n",
+        LOGDEBUG("[%s] %s (%s) pub=%s vols=%s\n",
                  instance->instanceId,
                  instance->stateName,
-                 instance->ncnet.publicIp, instance->ncnet.privateIp, instance->ncnet.privateMac, instance->ncnet.vlan, instance->ncnet.networkIndex,
-                 instance->platform, vols_str);
+                 mig_str,
+                 instance->ncnet.publicIp,
+                 vols_str);
     }
 
     // allocate enough memory
@@ -2330,7 +2350,7 @@ int doDescribeInstances(ncMetadata * pMeta, char **instIds, int instIdsLen, ncIn
 
             used_disk = used_mem = used_cores = 0;
             for (i = 0; i < (*outInstsLen); i++) {
-                instance = (*outInsts)[i];
+                ncInstance * instance = (*outInsts)[i];
                 used_disk += instance->params.disk;
                 used_mem += instance->params.mem;
                 used_cores += instance->params.cores;
@@ -2341,7 +2361,7 @@ int doDescribeInstances(ncMetadata * pMeta, char **instIds, int instIdsLen, ncIn
             fprintf(f, "cores (max/avail/used): %lld/%lld/%lld\n", nc_state.cores_max, nc_state.cores_max - used_cores, used_cores);
 
             for (i = 0; i < (*outInstsLen); i++) {
-                instance = (*outInsts)[i];
+                ncInstance * instance = (*outInsts)[i];
                 fprintf(f, "id: %s", instance->instanceId);
                 fprintf(f, " userId: %s", instance->userId);
                 fprintf(f, " state: %s", instance->stateName);
@@ -2447,8 +2467,8 @@ int doRunInstance(ncMetadata * pMeta, char *uuid, char *instanceId, char *reserv
     if (init())
         return (EUCA_ERROR);
 
-    LOGINFO("[%s] running instance cores=%d disk=%d memory=%d vlan=%d priMAC=%s privIp=%s\n", instanceId, params->cores, params->disk,
-            params->mem, netparams->vlan, netparams->privateMac, netparams->privateIp);
+    LOGINFO("[%s] running instance cores=%d disk=%d memory=%d vlan=%d net=%d priMAC=%s privIp=%s plat=%s\n", instanceId, params->cores, params->disk,
+            params->mem, netparams->vlan, netparams->networkIndex, netparams->privateMac, netparams->privateIp, platform);
     if (vbr_legacy(instanceId, params, imageId, imageURL, kernelId, kernelURL, ramdiskId, ramdiskURL) != EUCA_OK)
         return (EUCA_ERROR);
 

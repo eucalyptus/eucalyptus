@@ -1,4 +1,4 @@
-# Copyright 2011-2012 Eucalyptus Systems, Inc.
+# Copyright 2013 Eucalyptus Systems, Inc.
 #
 # Redistribution and use of this software in source and binary forms,
 # with or without modification, are permitted provided that the following
@@ -30,15 +30,22 @@ import eucadmin
 class MigrateInstances(AWSQueryRequest):
     ServicePath = '/services/Eucalyptus'
     ServiceClass = eucadmin.EucAdmin
-    Description = 'Migrate instances from a node'
-    Params = [
-              Param(name='SourceHost',
-                    short_name='H',
-                    long_name='sourceHost',
-                    ptype='string',
-                    optional=False,
-                    doc='Hostname or IP of the ')
-              ]
+    Description = ('Migrate one instance from its current host, or migrate '
+                   'all instances off a specific host.  Either a single '
+                   'instance or a single source host is required.')
+    Params = [Param(name='SourceHost', long_name='source',
+                    ptype='string', optional=True,
+                    doc=('remove all instances from a specific host')),
+              Param(name='InstanceId', short_name='i', long_name='instance',
+                    ptype='string', optional=True,
+                    doc='migrate a specific instance'),
+              Param(name='dest', long_name='dest', ptype='string',
+                    cardinality='*', request_param=False, doc=('migrate to '
+                    'a specific host (may be used more than once)')),
+              Param(name='exclude_dest', long_name='exclude-dest',
+                    ptype='string', cardinality='*', request_param=False,
+                    doc=('migrate to any host except this one (may be used '
+                    'more than once)'))]
 
     def get_connection(self, **args):
         if self.connection is None:
@@ -48,9 +55,31 @@ class MigrateInstances(AWSQueryRequest):
 
     def cli_formatter(self, data):
         response = getattr(data, 'euca:_return')
-        print 'RESPONSE %s' % response
+        if response != 'true':
+            # Failed responses still return HTTP 200, so we raise exceptions
+            # manually.  See http://eucalyptus.atlassian.net/browse/EUCA-5269
+            msg = getattr(data, 'euca:statusMessage',
+                          'failed to start migration')
+            raise RuntimeError('error: ' + msg)
 
     def main(self, **args):
+        if self.args.get('source') and self.args.get('instance'):
+            raise ValueError('error: argument -i/--instance: not allowed '
+                             'with --source')
+        if not self.args.get('source') and not self.args.get('instance'):
+            raise ValueError('error: one of the arguments -i/--instance '
+                             '--source is required')
+        if self.args.get('dest'):
+            if self.args.get('exclude_dest'):
+                raise ValueError('error: argument --to-host: not allowed '
+                                 'with --not-to-host')
+            self.request_params['AllowHosts'] = 'true'
+            for i, host in enumerate(self.args['dest'], 1):
+                self.request_params['DestinationHost.{0}'.format(i)] = host
+        elif self.args.get('not_to_nost'):
+            self.request_params['AllowHosts'] = 'false'
+            for i, host in enumerate(self.args['exclude_dest'], 1):
+                self.request_params['DestinationHost.{0}'.format(i)] = host
         return self.send(**args)
 
     def main_cli(self):

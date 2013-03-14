@@ -1983,7 +1983,7 @@ adb_MigrateInstancesResponse_t *MigrateInstancesMarshal(adb_MigrateInstances_t *
 
     status = AXIS2_TRUE;
     if (!DONOTHING) {
-        rc = doMigrateInstances(&ccMeta, nodeName);
+        rc = doMigrateInstances(&ccMeta, nodeName, FALSE);
         if (rc) {
             LOGERROR("doMigrateInstances() failed\n");
             status = AXIS2_FALSE;
