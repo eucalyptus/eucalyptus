@@ -67,8 +67,23 @@
 
             // update the display
       $az.change( function (e) {
-        thisObj._reloadInstSummary($instObj);
+        thisObj._resetInstances($instObj);
       }); 
+    },
+
+    _resetInstances : function($instObj){
+      $instObj.find('#dashboard-instance-running div span').text('');
+      $instObj.find('#dashboard-instance-stopped div span').text('');
+      $instObj.find('#dashboard-scaling-groups div span').text('');
+      $instObj.find('#dashboard-instance-running div').prepend(
+        $('<img>').attr('src','images/dots32.gif'));
+      $instObj.find('#dashboard-instance-stopped div').prepend(
+        $('<img>').attr('src','images/dots32.gif'));
+      $instObj.find('#dashboard-scaling-groups div').prepend(
+        $('<img>').attr('src','images/dots32.gif'));
+      // set filter on eucadata for summary
+      var az=$instObj.find('#dashboard-instance-az select').val();
+      $('html body').eucadata('setDataFilter', 'dash', {'AvailabilityZone':az});
     },
 
     _setTotals : function($instObj, $storageObj, $netsecObj){

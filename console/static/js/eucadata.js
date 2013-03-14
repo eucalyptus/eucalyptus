@@ -62,6 +62,12 @@
            return;
          }
          var paramData = "_xsrf="+$.cookie('_xsrf');
+         if (ep.params != undefined) {
+            $.each(ep.params, function(key, value){
+                paramData += "&"+key+"="+value;
+            });
+         }
+         //console.log("param string = "+paramData);
          $.ajax({
            type: "POST",
            url: url,
@@ -185,6 +191,17 @@
         var resList = resources;
         $.each(thisObj.options.endpoints, function(idx, ep){
             if (resList.indexOf(ep.type) > -1) {
+                thisObj.refresh(ep.name);
+            }
+        });
+    },
+
+    // this can be used to set any additional param, including filters
+    setDataFilter : function(resource, filters){
+        var thisObj = this;
+        $.each(this.options.endpoints, function(idx, ep){
+            if (resource == ep.type) {
+                ep.params = filters;
                 thisObj.refresh(ep.name);
             }
         });
