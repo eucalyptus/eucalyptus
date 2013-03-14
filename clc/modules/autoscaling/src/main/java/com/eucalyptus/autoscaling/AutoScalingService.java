@@ -29,6 +29,7 @@ import java.util.Date;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Map;
+import java.util.NoSuchElementException;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import org.apache.log4j.Logger;
@@ -153,6 +154,7 @@ import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.TransactionException;
+import com.eucalyptus.records.Logs;
 import com.eucalyptus.util.Callback;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.Exceptions;
@@ -754,21 +756,26 @@ public class AutoScalingService {
           try {
             for ( final TagType tagType : request.getTags().getMember() ) {
               final TagSupport tagSupport = TagSupport.fromResourceType( tagType.getResourceType() );
-              AutoScalingMetadata resource = tagSupport.lookup( accountFullName, tagType.getResourceId() );
-
-              if ( !RestrictedTypes.filterPrivileged().apply( resource ) ) {
-                throw Exceptions.toUndeclared( new InvalidParameterValueException( "Resource not found " + tagType.getResourceId() ) );
+              AutoScalingMetadata resource = null;
+              try {
+                resource = tagSupport.lookup( accountFullName, tagType.getResourceId() );
+              } catch ( NoSuchElementException e ) {
+                Logs.extreme().info( e, e );
               }
 
-              final Tag example = tagSupport.example( resource, accountFullName, null, null );
-              if ( Entities.count( example ) >= MAX_TAGS_PER_RESOURCE ) {
-                throw Exceptions.toUndeclared( new LimitExceededException("Tag limit exceeded for resource '"+resource.getDisplayName()+"'") );
+              if ( resource == null || !RestrictedTypes.filterPrivileged().apply( resource ) ) {
+                throw Exceptions.toUndeclared( new InvalidParameterValueException( "Resource not found " + tagType.getResourceId() ) );
               }
 
               final String key = com.google.common.base.Strings.nullToEmpty( tagType.getKey() ).trim();
               final String value = com.google.common.base.Strings.nullToEmpty( tagType.getValue() ).trim();
               final Boolean propagateAtLaunch = Objects.firstNonNull( tagType.getPropagateAtLaunch(), Boolean.FALSE );
               tagSupport.createOrUpdate( resource, ownerFullName, key, value, propagateAtLaunch );
+
+              final Tag example = tagSupport.example( resource, accountFullName, null, null );
+              if ( Entities.count( example ) > MAX_TAGS_PER_RESOURCE ) {
+                throw Exceptions.toUndeclared( new LimitExceededException("Tag limit exceeded for resource '"+resource.getDisplayName()+"'") );
+              }
             }
             return true;
           } catch ( Exception e ) {
