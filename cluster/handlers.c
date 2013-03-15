@@ -6763,7 +6763,7 @@ void print_ccInstance(char *tag, ccInstance * in)
         if (in->volumes[i].volumeId[0] != '\0') {
             strncat(volbuf, in->volumes[i].volumeId, CHAR_BUFFER_SIZE);
             strncat(volbuf, ",", 1);
-            strncat(volbuf, in->volumes[i].remoteDev, CHAR_BUFFER_SIZE);
+            strncat(volbuf, in->volumes[i].remoteDev, VERY_BIG_CHAR_BUFFER_SIZE);
             strncat(volbuf, ",", 1);
             strncat(volbuf, in->volumes[i].localDev, CHAR_BUFFER_SIZE);
             strncat(volbuf, ",", 1);

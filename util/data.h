@@ -94,6 +94,7 @@
 #define SMALL_CHAR_BUFFER_SIZE                     64   //!< Small string buffer size
 #define CHAR_BUFFER_SIZE                          512   //!< Regular string buffer size
 #define BIG_CHAR_BUFFER_SIZE                     1024   //!< Large string buffer size
+#define VERY_BIG_CHAR_BUFFER_SIZE				 4096   //!< Extra large string buffer size
 #define HOSTNAME_SIZE                             255   //!< Hostname buffer size
 
 //! @}
@@ -254,7 +255,7 @@ typedef struct ncMetadata_t {
 typedef struct virtualBootRecord_t {
     //! @{
     //! @name first six fields arrive in requests (RunInstance, {Attach|Detach} Volume)
-    char resourceLocation[CHAR_BUFFER_SIZE];    //!< http|walrus|cloud|sc|iqn|aoe://... or none
+    char resourceLocation[VERY_BIG_CHAR_BUFFER_SIZE];    //!< http|walrus|cloud|sc|iqn|aoe://... or none
     char * resourceLocationPtr; //!< pointer to a full version of resourceLocation, used by CC for IQN=LUN demuxing
     char guestDeviceName[SMALL_CHAR_BUFFER_SIZE];   //!< x?[vhsf]d[a-z]?[1-9]*
     long long sizeBytes;        //!< Size of the boot record in bytes
@@ -308,7 +309,7 @@ typedef struct netConfig_t {
 //! Structure defining NC Volumes
 typedef struct ncVolume_t {
     char volumeId[CHAR_BUFFER_SIZE];    //!< Remote volume identifier string
-    char remoteDev[CHAR_BUFFER_SIZE];   //!< Remote device name string
+    char remoteDev[VERY_BIG_CHAR_BUFFER_SIZE];   //!< Remote device name string
     char localDev[CHAR_BUFFER_SIZE];    //!< Local device name string
     char localDevReal[CHAR_BUFFER_SIZE];    //!< Local device name (real) string
     char stateName[CHAR_BUFFER_SIZE];   //!< Volume state name string
