@@ -294,7 +294,7 @@ int doCreateImage(ncMetadata * pMeta, char *instanceId, char *volumeId, char *re
 int doDescribeSensors(ncMetadata * pMeta, int historySize, long long collectionIntervalTimeMs, char **instIds, int instIdsLen, char **sensorIds,
                       int sensorIdsLen, sensorResource *** outResources, int *outResourcesLen);
 int doModifyNode(ncMetadata * pMeta, char *nodeName, char *stateName);
-int doMigrateInstances(ncMetadata * pMeta, char *nodeName, int commit);
+int doMigrateInstances(ncMetadata * pMeta, char *nodeName, char *nodeAction);
 int setup_shared_buffer(void **buf, char *bufname, size_t bytes, sem_t ** lock, char *lockname, int mode);
 int initialize(ncMetadata * pMeta);
 int ccIsEnabled(void);
@@ -2261,11 +2261,11 @@ static int migration_handler(ccInstance *myInstance, char *host, char *src, char
             }
             EUCA_FREE(srcInstance);
         } else {
-            LOGDEBUG("[%s] ignoring updates from destination node %s\n", myInstance->instanceId, host);
+            LOGTRACE("[%s] ignoring updates from destination node %s during migration.\n", myInstance->instanceId, host);
         }
     }
     LOGDEBUG("done\n");
-    return (EUCA_OK);
+    return rc;
 }
 
 //!
@@ -2366,46 +2366,17 @@ int refresh_instances(ncMetadata * pMeta, int timeout, int dolock)
                             // migration-related logic
                             if (ncOutInsts[j]->migration_state != NOT_MIGRATING) {
 
-                                // Dummy call for now.
-                                migration_handler(myInstance,
-                                                  resourceCacheStage->resources[i].hostname,
-                                                  ncOutInsts[j]->migration_src,
-                                                  ncOutInsts[j]->migration_dst,
-                                                  ncOutInsts[j]->migration_state,
-                                                  &migration_to_commit,
-                                                  &migration_action);
+                                rc = migration_handler(myInstance,
+                                                       resourceCacheStage->resources[i].hostname,
+                                                       ncOutInsts[j]->migration_src,
+                                                       ncOutInsts[j]->migration_dst,
+                                                       ncOutInsts[j]->migration_state,
+                                                       &migration_to_commit,
+                                                       &migration_action);
 
+                                // For now just ignore updates from destination while migrating.
                                 if (!strcmp(resourceCacheStage->resources[i].hostname, ncOutInsts[j]->migration_dst)) {
 
-                                    // TODO: for now just ignore updates from destination while migrating, unless it's ready, in which case we check source.
-                                    if (ncOutInsts[j]->migration_state == MIGRATION_READY) {
-                                        LOGDEBUG("[%s] destination node %s reports ready to receive migration, checking source node %s...\n", myInstance->instanceId,
-                                                 resourceCacheStage->resources[i].hostname, ncOutInsts[j]->migration_src);
-                                        ccInstance *srcInstance = NULL;
-                                        rc = find_instanceCacheId(myInstance->instanceId, &srcInstance);
-                                        if (!rc) {
-                                            if (srcInstance->migration_state == MIGRATION_READY) {
-                                                LOGDEBUG("[%s] source node %s reports ready to commit migration to %s.\n", myInstance->instanceId, ncOutInsts[j]->migration_src,
-                                                         ncOutInsts[j]->migration_dst);
-                                                if (!migration_to_commit) {
-                                                    migration_to_commit = EUCA_ALLOC(1, HOSTNAME_SIZE);
-                                                    euca_strncpy(migration_to_commit, ncOutInsts[j]->migration_src, HOSTNAME_SIZE);
-                                                }
-                                            } else if (srcInstance->migration_state == MIGRATION_IN_PROGRESS) {
-                                                LOGDEBUG("[%s] source node %s reports migration to %s in progress.\n", myInstance->instanceId,
-                                                         ncOutInsts[j]->migration_src, ncOutInsts[j]->migration_dst);
-                                            } else {
-                                                LOGDEBUG("[%s] source node %s has not yet reported ready to commit migration to %s, despite implicitly being ready.\n",
-                                                         myInstance->instanceId, ncOutInsts[j]->migration_src, ncOutInsts[j]->migration_dst);
-                                            }
-                                        } else {
-                                            LOGERROR("[%s] could not find migration source node %s in the instance cache.\n", myInstance->instanceId, ncOutInsts[j]->migration_src);
-                                        }
-                                        EUCA_FREE(srcInstance);
-                                    } else {
-                                        LOGDEBUG("[%s] ignoring updates from destination node %s\n", myInstance->instanceId,
-                                                 resourceCacheStage->resources[i].hostname);
-                                    }
                                     EUCA_FREE(myInstance);
                                     break;
                                 }
@@ -2478,7 +2449,7 @@ int refresh_instances(ncMetadata * pMeta, int timeout, int dolock)
 
             if (migration_to_commit) {
                 LOGDEBUG("notifying source %s to commit migration.\n", migration_to_commit);
-                doMigrateInstances(pMeta, migration_to_commit, TRUE);
+                doMigrateInstances(pMeta, migration_to_commit, "commit");
                 EUCA_FREE(migration_to_commit);
             }
             EUCA_FREE(migration_action);
@@ -4085,7 +4056,7 @@ int doModifyNode(ncMetadata * pMeta, char *nodeName, char *stateName)
 
     // FIXME: This is only here for compatability with earlier demo
     // development. Remove.
-    if (!doMigrateInstances(pMeta, nodeName, FALSE)) {
+    if (!doMigrateInstances(pMeta, nodeName, "prepare")) {
         LOGERROR("doModifyNode() call of doMigrateInstances() failed.\n");
     }
 
@@ -4101,7 +4072,8 @@ int doModifyNode(ncMetadata * pMeta, char *nodeName, char *stateName)
 //! Implements the CC logic of migrating instances from a node controller
 //!
 //! @param[in] pMeta a pointer to the node controller (NC) metadata structure
-//! @param[in] nodeName the IP of the NC to effect
+//! @param[in] nodeName the IP of the NC to affect
+//! @param[in] nodeAction the action to perform on the NC
 //!
 //! @return
 //!
@@ -4109,7 +4081,7 @@ int doModifyNode(ncMetadata * pMeta, char *nodeName, char *stateName)
 //!
 //! @note
 //!
-int doMigrateInstances(ncMetadata * pMeta, char *nodeName, int commit)
+int doMigrateInstances(ncMetadata * pMeta, char *nodeName, char *nodeAction)
 {
     int i, rc, ret = 0, timeout;
     int src_index = -1, dst_index = -1;
@@ -4124,10 +4096,18 @@ int doMigrateInstances(ncMetadata * pMeta, char *nodeName, int commit)
         LOGERROR("bad input params\n");
         return (1);
     }
-    if (!commit) {
+    if (!strcmp(nodeAction, "prepare")) {
         LOGINFO("preparing migration from node %s\n", SP(nodeName));
-    } else {
+    } else if (!strcmp(nodeAction, "commit")) {
         LOGINFO("committing migration from node %s\n", SP(nodeName));
+    } else if (!strcmp(nodeAction, "rollback")) {
+        LOGINFO("rolling back migration on node %s\n", SP(nodeName));
+        // FIXME: Remove this warning once rollback has been implemented.
+        LOGWARN("rollbacks have not yet been implemented\n");
+        return (1);
+    } else {
+        LOGERROR("invalid action parameter: %s\n", nodeAction);
+        return (1);
     }
 
     sem_mywait(RESCACHE);
@@ -4186,11 +4166,11 @@ int doMigrateInstances(ncMetadata * pMeta, char *nodeName, int commit)
     strncpy(nc_instance.migration_dst, resourceCacheLocal.resources[dst_index].hostname, sizeof(nc_instance.migration_dst));
     ncInstance *instances = &nc_instance;
 
-    if (!commit) {
+    if (!strcmp(nodeAction, "prepare")) {
         // notify source
         timeout = ncGetTimeout(time(NULL), OP_TIMEOUT, 1, 0);
         rc = ncClientCall(pMeta, timeout, resourceCacheLocal.resources[src_index].lockidx, resourceCacheLocal.resources[src_index].ncURL, "ncMigrateInstances",
-                          &instances, 1, "prepare", NULL);
+                          &instances, 1, nodeAction, NULL);
         if (rc) {
             LOGERROR("failed: request to prepare migration on source\n");
             ret = 1;
@@ -4199,7 +4179,7 @@ int doMigrateInstances(ncMetadata * pMeta, char *nodeName, int commit)
         // notify the destination
         timeout = ncGetTimeout(time(NULL), OP_TIMEOUT, 1, 0);
         rc = ncClientCall(pMeta, timeout, resourceCacheLocal.resources[dst_index].lockidx, resourceCacheLocal.resources[dst_index].ncURL, "ncMigrateInstances",
-                          &instances, 1, "prepare", NULL);
+                          &instances, 1, nodeAction, NULL);
         if (rc) {
             LOGERROR("failed: request to prepare migration on destination\n");
             ret = 1;
@@ -4209,7 +4189,7 @@ int doMigrateInstances(ncMetadata * pMeta, char *nodeName, int commit)
         // call commit on source
         timeout = ncGetTimeout(time(NULL), OP_TIMEOUT, 1, 0);
         rc = ncClientCall(pMeta, timeout, resourceCacheLocal.resources[src_index].lockidx, resourceCacheLocal.resources[src_index].ncURL, "ncMigrateInstances",
-                          &instances, 1, "commit", NULL);
+                          &instances, 1, nodeAction, NULL);
         if (rc) {
             LOGERROR("failed: migration request on source\n");
             ret = 1;
