@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * Copyright 2009-2013 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -44,6 +44,7 @@ import com.eucalyptus.auth.AccessKeys;
 import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.principal.AccessKey;
+import com.eucalyptus.auth.principal.Role;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.bootstrap.SystemIds;
 import com.eucalyptus.crypto.Ciphers;
@@ -73,6 +74,7 @@ public class SecurityTokenManager {
    *
    * @param user The user for the token
    * @param accessKey The originating access key for the token
+   * @param accessToken The originating user token for the token
    * @param durationSeconds The desired duration for the token
    * @return The newly issued security token
    * @throws AuthException If an error occurs
@@ -80,8 +82,23 @@ public class SecurityTokenManager {
   @Nonnull
   public static SecurityToken issueSecurityToken( @Nonnull  final User user,
                                                   @Nullable final AccessKey accessKey,
+                                                  @Nullable final String accessToken,
                                                             final int durationSeconds ) throws AuthException {
-    return instance.doIssueSecurityToken( user, accessKey, durationSeconds );
+    return instance.doIssueSecurityToken( user, accessKey, accessToken, durationSeconds );
+  }
+
+  /**
+   * Issue a security token.
+   *
+   * @param role The role to to assume
+   * @param durationSeconds The desired duration for the token
+   * @return The newly issued security token
+   * @throws AuthException If an error occurs
+   */
+  @Nonnull
+  public static SecurityToken issueSecurityToken( @Nonnull final Role role,
+                                                  final int durationSeconds ) throws AuthException {
+    return instance.doIssueSecurityToken( role, durationSeconds );
   }
 
   /**
@@ -98,43 +115,70 @@ public class SecurityTokenManager {
     return instance.doLookupAccessKey( accessKeyId, token );
   }
 
+  /**
+   * The accessToken parameter appears redundant but indicates authorization to use the users token.
+   */
   @Nonnull
   protected SecurityToken doIssueSecurityToken( @Nonnull  final User user,
                                                 @Nullable final AccessKey accessKey,
+                                                @Nullable final String accessToken,
                                                           final int durationSeconds ) throws AuthException {
-      Preconditions.checkNotNull( user, "User is required" );
+    Preconditions.checkNotNull( user, "User is required" );
 
-    final AccessKey key = accessKey!=null ?
+    final AccessKey key = accessKey != null || accessToken != null ?
         accessKey :
         Iterables.find(
             Objects.firstNonNull( user.getKeys(), Collections.<AccessKey>emptyList() ),
             AccessKeys.isActive(),
             null );
 
-    if ( key==null )
+    if ( key==null && accessToken==null )
       throw new AuthException("Key not found for user");
 
     final long restrictedDurationMillis =
-        Math.max(
-            Math.min(
-                durationSeconds == 0 ?
-                    TimeUnit.HOURS.toMillis(12) :
-                    TimeUnit.SECONDS.toMillis(durationSeconds),
-                TimeUnit.HOURS.toMillis(user.isAccountAdmin() ? 1 : 36)
-            ),
-            TimeUnit.HOURS.toMillis(1));
+        restrictDuration( user.isAccountAdmin(), durationSeconds );
 
-    if ( !key.getUser().getUserId().equals( user.getUserId() ) ) {
+    if ( key != null && !key.getUser().getUserId().equals( user.getUserId() ) ) {
       throw new AuthException("Key not valid for user");
+    } else if ( key == null &&  accessToken.length() < 30 ) {
+      throw new AuthException("Cannot generate token for user");
     }
 
-    final EncryptedSecurityToken encryptedToken = new EncryptedSecurityToken( key.getAccessKey(), getCurrentTimeMillis(), restrictedDurationMillis );
+    final EncryptedSecurityToken encryptedToken = new EncryptedSecurityToken(
+        key!=null ? key.getAccessKey() : null,
+        user.getUserId(),
+        getCurrentTimeMillis(),
+        restrictedDurationMillis );
     return  new SecurityToken(
         encryptedToken.getAccessKeyId(),
-        encryptedToken.getSecretKey( key.getSecretKey() ),
+        encryptedToken.getSecretKey( key == null ? accessToken : key.getSecretKey() ),
         encryptedToken.encrypt( getEncryptionKey( encryptedToken.getAccessKeyId() ) ),
         encryptedToken.getExpires()
         );
+  }
+
+  @Nonnull
+  protected SecurityToken doIssueSecurityToken( @Nonnull final Role role,
+                                                final int durationSeconds ) throws AuthException {
+    Preconditions.checkNotNull( role, "Role is required" );
+
+    final long restrictedDurationMillis =
+        restrictDuration( false, durationSeconds );
+
+    if ( role.getSecret()==null || role.getSecret().length() < 30 ) {
+      throw new AuthException("Cannot generate token for role");
+    }
+
+    final EncryptedSecurityToken encryptedToken = new EncryptedSecurityToken(
+        role,
+        getCurrentTimeMillis(),
+        restrictedDurationMillis );
+    return  new SecurityToken(
+        encryptedToken.getAccessKeyId(),
+        encryptedToken.getSecretKey( role.getSecret() ),
+        encryptedToken.encrypt( getEncryptionKey( encryptedToken.getAccessKeyId() ) ),
+        encryptedToken.getExpires()
+    );
   }
 
   @Nonnull
@@ -151,11 +195,30 @@ public class SecurityTokenManager {
       throw new AuthException("Invalid security token");
     }
 
-    final AccessKey key = lookupAccessKeyById( encryptedToken.getOriginatingAccessKeyId() );
-    final String secretKey = encryptedToken.getSecretKey( key.getSecretKey() );
+    final String originatingAccessKeyId = encryptedToken.getOriginatingAccessKeyId();
+    final String userId = encryptedToken.getUserId();
+    final boolean active;
+    final String secretKey;
+    final User user;
+    if ( originatingAccessKeyId != null ) {
+      final AccessKey key = lookupAccessKeyById( originatingAccessKeyId );
+      active = key.isActive();
+      secretKey = encryptedToken.getSecretKey( key.getSecretKey() );
+      user = key.getUser();
+    } else if ( userId != null ) {
+      user = lookupUserById( encryptedToken.getUserId() );
+      active = user.isEnabled();
+      secretKey = encryptedToken.getSecretKey( Objects.firstNonNull( user.getToken(), "") );
+    } else  {
+      final Role role = lookupRoleById( encryptedToken.getRoleId() );
+      user = roleAsUser( role );
+      active = true;
+      secretKey = encryptedToken.getSecretKey( role.getSecret() );
+    }
+
     return new AccessKey() {
       @Override public Boolean isActive() {
-        return key.isActive() && encryptedToken.isValid();
+        return active && encryptedToken.isValid();
       }
 
       @Override public String getAccessKey() {
@@ -171,7 +234,7 @@ public class SecurityTokenManager {
       }
 
       @Override public User getUser() throws AuthException {
-        return key.getUser();
+        return user;
       }
 
       @Override public void setActive(final Boolean active) throws AuthException { }
@@ -187,8 +250,32 @@ public class SecurityTokenManager {
     return Accounts.lookupAccessKeyById( accessKeyId );
   }
 
+  protected User lookupUserById( final String userId ) throws AuthException {
+    return Accounts.lookupUserById( userId );
+  }
+
+  protected Role lookupRoleById( final String roleId ) throws AuthException {
+    return Accounts.lookupRoleById( roleId );
+  }
+
+  protected User roleAsUser( final Role role ) throws AuthException {
+    return Accounts.roleAsUser( role );
+  }
+
   protected String getSecurityTokenPassword() {
     return SystemIds.securityTokenPassword();
+  }
+
+  private long restrictDuration( final boolean isAdmin,
+                                 final int durationSeconds ) {
+    return Math.max(
+        Math.min(
+            durationSeconds == 0 ?
+                TimeUnit.HOURS.toMillis( 12 ) :
+                TimeUnit.SECONDS.toMillis( durationSeconds ),
+            TimeUnit.HOURS.toMillis( isAdmin ? 1 : 36 )
+        ),
+        TimeUnit.HOURS.toMillis( 1 ) );
   }
 
   private SecretKey getEncryptionKey( final String salt ) {
@@ -202,7 +289,7 @@ public class SecurityTokenManager {
     private static final byte[] TOKEN_PREFIX = new byte[]{ 'e', 'u', 'c', 'a', 0, 1 };
 
     private String accessKeyId;
-    private String originatingAccessKeyId;
+    private String originatingId;
     private String nonce;
     private long created;
     private long expires;
@@ -211,22 +298,48 @@ public class SecurityTokenManager {
      * Generate a new token
      */
     private EncryptedSecurityToken( final String originatingAccessKeyId,
+                                    final String userId,
+                                    final long created,
+                                    final long durationMillis ) {
+      this( originatingAccessKeyId != null ?
+             "$a$" + originatingAccessKeyId :
+             "$u$" + userId,
+          created,
+          durationMillis );
+    }
+
+    /**
+     * Generate a new token
+     */
+    private EncryptedSecurityToken( final Role role,
+                                    final long created,
+                                    final long durationMillis ) {
+      this( "$r$" + role.getRoleId(), created, durationMillis );
+    }
+
+      /**
+      * Generate a new token
+      */
+    private EncryptedSecurityToken( final String originatingId,
                                     final long created,
                                     final long durationMillis ) {
       this.accessKeyId = Crypto.generateQueryId();
-      this.originatingAccessKeyId = originatingAccessKeyId;
+      this.originatingId = originatingId;
       this.nonce = Crypto.generateSessionToken();
       this.created = created;
       this.expires = created + durationMillis;
     }
 
+    /**
+     * Reconstruct token
+     */
     private EncryptedSecurityToken( final String accessKeyId,
-                                    final String originatingAccessKeyId,
+                                    final String originatingId,
                                     final String nonce,
                                     final long created,
                                     final long expires ) {
       this.accessKeyId = accessKeyId;
-      this.originatingAccessKeyId = originatingAccessKeyId;
+      this.originatingId = originatingId;
       this.nonce = nonce;
       this.created = created;
       this.expires = expires;
@@ -237,7 +350,22 @@ public class SecurityTokenManager {
     }
 
     public String getOriginatingAccessKeyId() {
-      return originatingAccessKeyId;
+      return getTrimmedIfPrefixed( "$a$", originatingId );
+    }
+
+    public String getUserId() {
+      return getTrimmedIfPrefixed( "$u$", originatingId );
+    }
+
+    public String getRoleId() {
+      return getTrimmedIfPrefixed( "$r$", originatingId );
+    }
+
+    private String getTrimmedIfPrefixed( final String prefix,
+                                         final String value ) {
+      return value.startsWith( prefix ) ?
+          value.substring( prefix.length() ) :
+          null;
     }
 
     public long getCreated() {
@@ -272,8 +400,8 @@ public class SecurityTokenManager {
     private byte[] toBytes() {
       try {
         final SecurityTokenOutput out = new SecurityTokenOutput();
-        out.writeInt(1); // format identifier
-        out.writeString(originatingAccessKeyId);
+        out.writeInt(2); // format identifier
+        out.writeString(originatingId);
         out.writeString(nonce);
         out.writeLong(created);
         out.writeLong(expires);
@@ -316,14 +444,14 @@ public class SecurityTokenManager {
         final int offset = TOKEN_PREFIX.length + 32;
         final SecurityTokenInput in = new SecurityTokenInput(
             cipher.doFinal( securityTokenBytes, offset, securityTokenBytes.length-offset ) );
-        if ( in.readInt() != 1 ) throw new GeneralSecurityException("Invalid token format");
-        final String originatingAccessKeyId = in.readString();
+        if ( in.readInt() != 2 ) throw new GeneralSecurityException("Invalid token format");
+        final String originatingAccessKeyIdOrUserId = in.readString();
         final String nonce = in.readString();
         final long created = in.readLong();
         final long expires = in.readLong();
         return new EncryptedSecurityToken(
             accessKeyId,
-            originatingAccessKeyId,
+            originatingAccessKeyIdOrUserId,
             nonce,
             created,
             expires );

@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * Copyright 2009-2013 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -62,6 +62,7 @@
 
 package com.eucalyptus.auth.policy;
 
+import static com.eucalyptus.auth.principal.Principal.PrincipalType;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -84,10 +85,13 @@ import com.eucalyptus.auth.principal.Account;
 import com.eucalyptus.auth.principal.Authorization;
 import com.eucalyptus.auth.principal.Condition;
 import com.eucalyptus.auth.principal.Group;
+import com.eucalyptus.auth.principal.Policy;
+import com.eucalyptus.auth.principal.Principal;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.auth.principal.Authorization.EffectType;
 import com.eucalyptus.auth.principal.User.RegistrationStatus;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
 
 /**
  * The implementation of policy engine, which evaluates a request against specified policies.
@@ -154,39 +158,8 @@ public class PolicyEngineImpl implements PolicyEngine {
   @Override
   public void evaluateAuthorization( String resourceType, String resourceName, Account resourceAccount, String action, User requestUser, Map<Contract.Type, Contract> contracts ) throws AuthException {
     try {
-      ContractKeyEvaluator contractEval = new ContractKeyEvaluator( contracts );
-      CachedKeyEvaluator keyEval = new CachedKeyEvaluator( );
-      
-      // Case insensitive
-      resourceName = resourceName.toLowerCase( );
-      action = action.toLowerCase( );
-
-      // System admin can do everything
-      if ( !requestUser.isSystemAdmin( ) ) {
-        // Disabled user can't do anything
-        if ( !requestUser.isEnabled( ) || !RegistrationStatus.CONFIRMED.equals( requestUser.getRegistrationStatus( ) ) ) {
-          LOG.debug( "Request user is rejected because he/she is not enabled or confirmed yet" );
-          throw new AuthException( AuthException.ACCESS_DENIED );
-        }
-        Account account = requestUser.getAccount( );
-        
-        // Check global (inter-account) authorizations first
-        Decision decision = processAuthorizations( lookupGlobalAuthorizations( resourceType, account ), action, resourceName, keyEval, contractEval );
-        if ( ( decision == Decision.DENY )
-            || ( decision == Decision.DEFAULT && resourceAccount != null && resourceAccount.getAccountNumber( ) != null && !resourceAccount.getAccountNumber( ).equals( account.getAccountNumber( ) ) ) ) {
-          LOG.debug( "Request is rejected by global authorization check, due to decision " + decision );
-          throw new AuthException( AuthException.ACCESS_DENIED ); 
-        }
-        // Account admin can do everything within the account
-        if ( !requestUser.isAccountAdmin( ) ) {
-          // If not denied by global authorizations, check local (intra-account) authorizations.
-          decision = processAuthorizations( lookupLocalAuthorizations( resourceType, requestUser ), action, resourceName, keyEval, contractEval );
-          // Denied by explicit or default deny
-          if ( decision == Decision.DENY || decision == Decision.DEFAULT ) {
-            LOG.debug( "Request is rejected by local authorization check, due to decision " + decision );
-            throw new AuthException( AuthException.ACCESS_DENIED );
-          }
-        }
+      if ( Decision.ALLOW != evaluateResourceAuthorization( resourceType, resourceName, resourceAccount, action, requestUser, contracts ) ) {
+        throw new AuthException( AuthException.ACCESS_DENIED );
       }
       // Allowed
     } catch ( AuthException e ) {
@@ -199,13 +172,63 @@ public class PolicyEngineImpl implements PolicyEngine {
     }    
   }
 
+  @Override
+  public void evaluateAuthorization( final PrincipalType principalType,
+                                     final String principalName,
+                                     final Policy resourcePolicy,
+                                     final String resourceType,
+                                     final String resourceName,
+                                     final Account resourceAccount,
+                                     String action,
+                                     final User requestUser ) throws AuthException {
+    try {
+      final Map<Contract.Type, Contract> contracts = Maps.newHashMap();
+      final ContractKeyEvaluator contractEval = new ContractKeyEvaluator( contracts );
+      final CachedKeyEvaluator keyEval = new CachedKeyEvaluator( );
+
+      // Case insensitive
+      action = action.toLowerCase( );
+
+      // System admin can do everything
+      if ( !requestUser.isSystemAdmin( ) ) {
+        // Disabled user can't do anything
+        verifyUser( requestUser );
+        final Account account = requestUser.getAccount( );
+
+        // Account admin can do everything within the account
+        if ( !requestUser.isAccountAdmin( ) ||
+             resourceAccount == null ||
+             resourceAccount.getAccountNumber( ) == null ||
+             !resourceAccount.getAccountNumber( ).equals( account.getAccountNumber( ) ) ) {
+          // Check resource authorizations
+          Decision decision = processAuthorizations( resourcePolicy.getAuthorizations(), action, null, principalType, principalName, keyEval, contractEval );
+          // Denied by explicit or default deny
+          if ( decision != Decision.ALLOW ) {
+            LOG.debug( "Request is rejected by resource authorization check, due to decision " + decision );
+            throw new AuthException( AuthException.ACCESS_DENIED );
+          } else if  ( Decision.DENY == evaluateResourceAuthorization( resourceType, resourceName, resourceAccount, action, requestUser, contracts ) ) {
+            throw new AuthException( AuthException.ACCESS_DENIED );
+          }
+        }
+      }
+      // Allowed
+    } catch ( AuthException e ) {
+      //throw by the policy engine implementation
+      LOG.debug( e, e );
+      throw e;
+    } catch ( Exception e ) {
+      LOG.debug( e, e );
+      throw new AuthException( "An error occurred while trying to evaluate policy for resource access", e );
+    }
+  }
+
   /*
-   * Quota evaluation algorithm is very simple: going through all quotas that can be applied to the request (by user
-   * and resource), at all levels (account, group and user), if any of the quota is exceeded, reject the request.
-   * 
-   * (non-Javadoc)
-   * @see com.eucalyptus.auth.api.PolicyEngine#evaluateQuota(java.lang.Integer, java.lang.Class, java.lang.String)
-   */
+  * Quota evaluation algorithm is very simple: going through all quotas that can be applied to the request (by user
+  * and resource), at all levels (account, group and user), if any of the quota is exceeded, reject the request.
+  *
+  * (non-Javadoc)
+  * @see com.eucalyptus.auth.api.PolicyEngine#evaluateQuota(java.lang.Integer, java.lang.Class, java.lang.String)
+  */
   @Override
   public void evaluateQuota( String resourceType, String resourceName, String action, User requestUser, Long quantity) throws AuthException {
     try {
@@ -222,21 +245,89 @@ public class PolicyEngineImpl implements PolicyEngine {
     }
   }
 
-  /**
-   * Process a list of authorizations against the current request. Collecting contracts from matching authorizations.
-   * 
-   * @param authorizations The list of authorizations to process
-   * @param action The request action
-   * @param resource The requested resource
-   * @param keyEval The key cache for condition evaluation (optimization purpose)
-   * @param contractEval The contract evaluator and collector.
-   * @return The final decision: DEFAULT - no matching authorization, DENY - explicit deny, ALLOW = explicit allow
-   * @throws AuthException
-   */
-  private Decision processAuthorizations( List<Authorization> authorizations, String action, String resource, CachedKeyEvaluator keyEval, ContractKeyEvaluator contractEval ) throws AuthException {
+  private Decision evaluateResourceAuthorization( String resourceType, String resourceName, Account resourceAccount, String action, User requestUser, Map<Contract.Type, Contract> contracts ) throws AuthException {
+    final ContractKeyEvaluator contractEval = new ContractKeyEvaluator( contracts );
+    final CachedKeyEvaluator keyEval = new CachedKeyEvaluator( );
+
+    // Case insensitive
+    resourceName = PolicySpec.canonicalizeResourceName( resourceType, resourceName );
+    action = action.toLowerCase( );
+
+    // System admin can do everything
+    if ( requestUser.isSystemAdmin( ) ) {
+      return Decision.ALLOW;
+    }
+
+    // Disabled user can't do anything
+    verifyUser( requestUser );
+    final Account account = requestUser.getAccount( );
+
+    // Check global (inter-account) authorizations first
+    Decision decision = processAuthorizations( lookupGlobalAuthorizations( resourceType, account ), action, resourceName, keyEval, contractEval );
+    if ( decision == Decision.DENY ) {
+      LOG.debug( "Request is rejected by global authorization check, due to decision " + decision );
+      return decision;
+    }
+
+    if ( resourceAccount != null && resourceAccount.getAccountNumber( ) != null && !resourceAccount.getAccountNumber( ).equals( account.getAccountNumber( ) ) ) {
+      decision = processAuthorizations( lookupLocalAuthorizations( resourceType, requestUser ), action, resourceName, keyEval, contractEval );
+      if ( decision == Decision.DENY ) {
+        LOG.debug( "Request is rejected by local authorization check, due to decision " + decision );
+      }
+      // Local authorizations may DENY access to a resource in another account but cannot grant it
+      return decision == Decision.ALLOW ? Decision.DEFAULT : decision;
+    } else if ( requestUser.isAccountAdmin( ) ) { // Account admin can do everything within their account
+      return Decision.ALLOW;
+    } else {
+      // If not denied by global authorizations, check local (intra-account) authorizations.
+      decision = processAuthorizations( lookupLocalAuthorizations( resourceType, requestUser ), action, resourceName, keyEval, contractEval );
+      // Denied by explicit or default deny
+      if ( decision == Decision.DENY || decision == Decision.DEFAULT ) {
+        LOG.debug( "Request is rejected by local authorization check, due to decision " + decision );
+      }
+      return decision;
+    }
+  }
+
+  private void verifyUser( final User requestUser ) throws AuthException {
+    if ( !requestUser.isEnabled( ) || !RegistrationStatus.CONFIRMED.equals( requestUser.getRegistrationStatus( ) ) ) {
+      LOG.debug( "Request user is rejected because he/she is not enabled or confirmed yet" );
+      throw new AuthException( AuthException.ACCESS_DENIED );
+    }
+  }
+
+  private Decision processAuthorizations( List<Authorization> authorizations,
+                                          String action,
+                                          String resource,
+                                          CachedKeyEvaluator keyEval,
+                                          ContractKeyEvaluator contractEval ) throws AuthException {
+    return  processAuthorizations( authorizations, action, resource, null, null, keyEval, contractEval );
+  }
+
+    /**
+    * Process a list of authorizations against the current request. Collecting contracts from matching authorizations.
+    *
+    * @param authorizations The list of authorizations to process
+    * @param action The request action
+    * @param resource The requested resource
+    * @param keyEval The key cache for condition evaluation (optimization purpose)
+    * @param contractEval The contract evaluator and collector.
+    * @return The final decision: DEFAULT - no matching authorization, DENY - explicit deny, ALLOW = explicit allow
+    * @throws AuthException
+    */
+  private Decision processAuthorizations( List<Authorization> authorizations,
+                                          String action,
+                                          String resource,
+                                          PrincipalType principalType,
+                                          String principalName,
+                                          CachedKeyEvaluator keyEval,
+                                          ContractKeyEvaluator contractEval ) throws AuthException {
     Decision result = Decision.DEFAULT; 
     for ( Authorization auth : authorizations ) {
       if ( !matchActions( auth, action ) ) {
+        continue;
+      }
+      if ( !matchPrincipal( auth.getPrincipal(), principalType, principalName ) ) {
         continue;
       }
       if ( !matchResources( auth, resource ) ) {
@@ -258,9 +349,18 @@ public class PolicyEngineImpl implements PolicyEngine {
   private boolean matchActions( Authorization auth, String action ) throws AuthException {
     return evaluateElement( matchOne( auth.getActions( ), action, PATTERN_MATCHER ), auth.isNotAction( ) );
   }
-  
+
+  private boolean matchPrincipal( Principal principal, PrincipalType principalType, String principalName ) throws AuthException {
+    return principalName == null || (
+        principal != null &&
+        principal.getType() == principalType &&
+        evaluateElement( matchOne( principalType.convertForUserMatching( principal.getValues() ), principalName, PATTERN_MATCHER ), principal.isNotPrincipal() ) );
+  }
+
   private boolean matchResources( Authorization auth, String resource ) throws AuthException {
-    if ( PolicySpec.EC2_RESOURCE_ADDRESS.equals( auth.getType( ) ) ) {
+    if ( resource == null ) {
+      return true;
+    } else  if ( PolicySpec.EC2_RESOURCE_ADDRESS.equals( auth.getType( ) ) ) {
       return evaluateElement( matchOne( auth.getResources( ), resource, ADDRESS_MATCHER ), auth.isNotResource( ) );
     } else {
       return evaluateElement( matchOne( auth.getResources( ), resource, PATTERN_MATCHER ), auth.isNotResource( ) );

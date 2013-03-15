@@ -94,6 +94,7 @@ import com.eucalyptus.autoscaling.tags.TagSupportDiscovery
 import com.eucalyptus.autoscaling.tags.AutoScalingGroupTag
 import com.eucalyptus.autoscaling.tags.Tag
 import com.eucalyptus.autoscaling.tags.Tags
+import com.eucalyptus.auth.principal.Role
 import com.eucalyptus.autoscaling.instances.ConfigurationState
 
 /**
@@ -490,6 +491,11 @@ class AutoScalingServiceTest {
 
       @Override
       Group lookupGroupById(final String groupId) {
+        throw new NotImplementedException()
+      }
+
+      @Override
+      Role lookupRoleById(final String roleId) {
         throw new NotImplementedException()
       }
 

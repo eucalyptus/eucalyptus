@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * Copyright 2009-2013 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -70,6 +70,7 @@ import com.eucalyptus.auth.entities.ConditionEntity;
 import com.eucalyptus.auth.principal.Authorization;
 import com.eucalyptus.auth.principal.Condition;
 import com.eucalyptus.auth.principal.Group;
+import com.eucalyptus.auth.principal.Principal;
 import com.eucalyptus.entities.Transactions;
 import java.util.concurrent.ExecutionException;
 import com.eucalyptus.util.Tx;
@@ -184,5 +185,21 @@ public class DatabaseAuthorizationProxy implements Authorization {
     }
     return results.get( 0 );
   }
-  
+
+  @Override
+  public Principal getPrincipal( ) {
+    final List<Principal> results = Lists.newArrayList( );
+    try {
+      Transactions.one( AuthorizationEntity.newInstanceWithId( this.delegate.getAuthorizationId() ), new Tx<AuthorizationEntity>( ) {
+        @Override
+        public void fire( AuthorizationEntity authorizationEntity ) {
+          results.add( new DatabasePrincipalProxy( authorizationEntity.getStatement().getPrincipal() ) );
+        }
+      } );
+    } catch ( ExecutionException e ) {
+      Debugging.logError( LOG, e, "Failed to getPrincipal for " + this.delegate );
+    }
+    return results.get( 0 );
+  }
+
 }

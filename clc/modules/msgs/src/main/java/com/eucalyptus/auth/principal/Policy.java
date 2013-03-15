@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * Copyright 2009-2013 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -63,6 +63,7 @@
 package com.eucalyptus.auth.principal;
 
 import java.io.Serializable;
+import java.util.List;
 import com.eucalyptus.auth.AuthException;
 
 public interface Policy extends /*HasId, */Serializable {
@@ -74,5 +75,6 @@ public interface Policy extends /*HasId, */Serializable {
   public String getVersion( );
   
   public Group getGroup( ) throws AuthException;
-  
+
+  public List<Authorization> getAuthorizations() throws AuthException;
 }

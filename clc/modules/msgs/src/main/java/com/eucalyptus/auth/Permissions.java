@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * Copyright 2009-2013 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -62,15 +62,16 @@
 
 package com.eucalyptus.auth;
 
+import static com.eucalyptus.auth.principal.Principal.PrincipalType;
 import static com.google.common.collect.Maps.newHashMap;
 import java.util.Map;
 import org.apache.log4j.Logger;
 import com.eucalyptus.auth.api.PolicyEngine;
 import com.eucalyptus.auth.principal.Account;
+import com.eucalyptus.auth.principal.Policy;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.context.IllegalContextAccessException;
-import com.eucalyptus.util.EucalyptusCloudException;
 
 public class Permissions {
   
@@ -84,6 +85,7 @@ public class Permissions {
       policyEngine = engine;
     }
   }
+
   public static boolean isAuthorized( String vendor, String resourceType, String resourceName, Account resourceAccount, String action, User requestUser ) {
     try {
       // If we are not in a request context, e.g. the UI, use a dummy contract map.
@@ -100,6 +102,18 @@ public class Permissions {
     return false;
   }
 
+  public static boolean isAuthorized( String vendor, PrincipalType principalType, String principalName, Policy resourcePolicy, String resourceType, String resourceName, Account resourceAccount, String action, User requestUser ) {
+    try {
+      policyEngine.evaluateAuthorization( principalType, principalName, resourcePolicy, resourceType, resourceName, resourceAccount, vendor + ":" + action, requestUser );
+      return true;
+    } catch ( AuthException e ) {
+      LOG.error( "Denied resource access for " + principalType + ":" + principalName + " / " + requestUser, e );
+    } catch ( Exception e ) {
+      LOG.debug( "Exception in resource access for " + principalType + ":" + principalName + " / " + requestUser, e );
+    }
+    return false;
+  }
+
   public static boolean canAllocate( String vendor, String resourceType, String resourceName, String action, User requestUser, Long quantity ) {
     try {
       policyEngine.evaluateQuota( vendor + ":" + resourceType, resourceName, vendor + ":" + action, requestUser, quantity );
@@ -108,30 +122,6 @@ public class Permissions {
       LOG.debug( "Denied resource allocation of " + resourceType + ":" + resourceName + " by " + quantity + " for " + requestUser, e );
     }
     return false;
-  }
-  
-  public static User getUserById( String userId ) throws EucalyptusCloudException {
-    try {
-      return Accounts.lookupUserById( userId );
-    } catch ( Exception t ) {
-      throw new EucalyptusCloudException( t );
-    }
-  }
-  
-  public static Account getAccountByUserId( String userId ) throws EucalyptusCloudException {
-    try {
-      return Accounts.lookupUserById( userId ).getAccount( );
-    } catch ( Exception t ) {
-      throw new EucalyptusCloudException( t );
-    }
-  }
-  
-  public static Account getUserAccount( User user ) throws EucalyptusCloudException {
-    try {
-      return user.getAccount( );
-    } catch ( Exception t ) {
-      throw new EucalyptusCloudException( t );
-    }
   }
 
   private static void pushToContext( final Map<Contract.Type, Contract> contracts ) {

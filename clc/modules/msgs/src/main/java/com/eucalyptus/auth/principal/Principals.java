@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * Copyright 2009-2013 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -85,135 +85,8 @@ public class Principals {
   
   private static final String  SYSTEM_ID      = Account.SYSTEM_ACCOUNT;
   private static final String  NOBODY_ID      = Account.NOBODY_ACCOUNT;
-  private static final Account NOBODY_ACCOUNT = new Account( ) {
-                                                @Override
-                                                public String getAccountNumber( ) {
-                                                  return String.format( "%012d", NOBODY_ACCOUNT_ID );
-                                                }
-                                                
-                                                @Override
-                                                public String getName( ) {
-                                                  return NOBODY_ACCOUNT;
-                                                }
-                                                
-                                                @Override
-                                                public void setName( String name ) throws AuthException {}
-                                                
-                                                @Override
-                                                public List<User> getUsers( ) throws AuthException {
-                                                  return Lists.newArrayList( Principals.nobodyUser( ) );
-                                                }
-                                                
-                                                @Override
-                                                public List<Group> getGroups( ) throws AuthException {
-                                                  return Lists.newArrayList( );
-                                                };
-                                                
-                                                @Override
-                                                public User addUser( String userName, String path, boolean skipRegistration, boolean enabled, Map<String, String> info ) throws AuthException {
-                                                  throw new AuthException( AuthException.SYSTEM_MODIFICATION );
-                                                }
-                                                
-                                                @Override
-                                                public void deleteUser( String userName, boolean forceDeleteAdmin, boolean recursive ) throws AuthException {}
-                                                
-                                                @Override
-                                                public Group addGroup( String groupName, String path ) throws AuthException {
-                                                  throw new AuthException( AuthException.SYSTEM_MODIFICATION );
-                                                }
-                                                
-                                                @Override
-                                                public void deleteGroup( String groupName, boolean recursive ) throws AuthException {}
-                                                
-                                                @Override
-                                                public Group lookupGroupByName( String groupName ) throws AuthException {
-                                                  throw new AuthException( AuthException.SYSTEM_MODIFICATION );
-                                                }
-                                                
-                                                @Override
-                                                public User lookupUserByName( String userName ) throws AuthException {
-                                                  if ( Principals.nobodyUser( ).getName( ).equals( userName ) ) {
-                                                    return Principals.nobodyUser( );
-                                                  } else {
-                                                    throw new AuthException( AuthException.SYSTEM_MODIFICATION );
-                                                  }
-                                                }
-                                                
-                                                @Override
-                                                public List<Authorization> lookupAccountGlobalAuthorizations( String resourceType ) throws AuthException {
-                                                  return Lists.newArrayList( );
-                                                }
-                                                
-                                                @Override
-                                                public List<Authorization> lookupAccountGlobalQuotas( String resourceType ) throws AuthException {
-                                                  return Lists.newArrayList( );
-                                                }
-                                              };
-  
-  private static final Account SYSTEM_ACCOUNT = new Account( ) {
-                                                @Override
-                                                public String getAccountNumber( ) {
-                                                  return String.format( "%012d", SYSTEM_ACCOUNT_ID );
-                                                }
-                                                
-                                                @Override
-                                                public String getName( ) {
-                                                  return Account.SYSTEM_ACCOUNT;
-                                                }
-                                                
-                                                @Override
-                                                public void setName( String name ) throws AuthException {}
-                                                
-                                                @Override
-                                                public List<User> getUsers( ) throws AuthException {
-                                                  return Lists.newArrayList( Principals.systemUser( ) );
-                                                }
-                                                
-                                                @Override
-                                                public List<Group> getGroups( ) throws AuthException {
-                                                  return Lists.newArrayList( );
-                                                };
-                                                
-                                                @Override
-                                                public User addUser( String userName, String path, boolean skipRegistration, boolean enabled, Map<String, String> info ) throws AuthException {
-                                                  throw new AuthException( AuthException.SYSTEM_MODIFICATION );
-                                                }
-                                                
-                                                @Override
-                                                public void deleteUser( String userName, boolean forceDeleteAdmin, boolean recursive ) throws AuthException {}
-                                                
-                                                @Override
-                                                public Group addGroup( String groupName, String path ) throws AuthException {
-                                                  throw new AuthException( AuthException.SYSTEM_MODIFICATION );
-                                                }
-                                                
-                                                @Override
-                                                public void deleteGroup( String groupName, boolean recursive ) throws AuthException {}
-                                                
-                                                @Override
-                                                public Group lookupGroupByName( String groupName ) throws AuthException {
-                                                  throw new AuthException( AuthException.SYSTEM_MODIFICATION );
-                                                }
-                                                
-                                                @Override
-                                                public User lookupUserByName( String userName ) throws AuthException {
-                                                  if ( Principals.systemUser( ).getName( ).equals( userName ) ) {
-                                                    return Principals.systemUser( );
-                                                  } else {
-                                                    throw new AuthException( AuthException.SYSTEM_MODIFICATION );
-                                                  }
-                                                }
-                                                
-                                                @Override
-                                                public List<Authorization> lookupAccountGlobalAuthorizations( String resourceType ) throws AuthException {
-                                                  return Lists.newArrayList( );
-                                                }
-                                                
-                                                @Override
-                                                public List<Authorization> lookupAccountGlobalQuotas( String resourceType ) throws AuthException {
-                                                  return Lists.newArrayList( );
-                                                }
-                                              };
+  private static final Account NOBODY_ACCOUNT = new SystemAccount( Account.NOBODY_ACCOUNT_ID, Account.NOBODY_ACCOUNT, nobodyUser( ) );
+  private static final Account SYSTEM_ACCOUNT = new SystemAccount( Account.SYSTEM_ACCOUNT_ID, Account.SYSTEM_ACCOUNT, systemUser( ) );
   
   private static final User    SYSTEM_USER    = new User( ) {
                                                 private final Certificate       cert  = new Certificate( ) {
@@ -740,5 +613,124 @@ public class Principals {
     return user1 != null && user2 != null &&
         !Strings.isNullOrEmpty( user1.getUserId() ) && !Strings.isNullOrEmpty( user2.getUserId() ) &&
         user1.getUserId().equals( user2.getUserId() );
+  }
+
+  private static class SystemAccount implements Account {
+    private static final long serialVersionUID = 1L;
+    private final Long accountId;
+    private final String accountName;
+    private final User systemUser;
+
+    private SystemAccount( final Long accountId,
+                           final String accountName,
+                           final User systemUser ) {
+      this.accountId = accountId;
+      this.accountName = accountName;
+      this.systemUser = systemUser;
+    }
+
+    @Override
+    public String getAccountNumber( ) {
+      return String.format( "%012d", accountId );
+    }
+
+    @Override
+    public String getName( ) {
+      return accountName;
+    }
+
+    @Override
+    public void setName( String name ) throws AuthException {}
+
+    @Override
+    public List<User> getUsers( ) throws AuthException {
+      return Lists.newArrayList( systemUser );
+    }
+
+    @Override
+    public List<Group> getGroups( ) throws AuthException {
+      return Lists.newArrayList( );
+    }
+
+    @Override
+    public List<Role> getRoles( ) throws AuthException {
+      return Lists.newArrayList( );
+    }
+
+    @Override
+    public List<InstanceProfile> geInstanceProfiles() throws AuthException {
+      return Lists.newArrayList( );
+    }
+
+    @Override
+    public InstanceProfile addInstanceProfile( final String instanceProfileName, final String path ) throws AuthException {
+      throw new AuthException( AuthException.SYSTEM_MODIFICATION );
+    }
+
+    @Override
+    public void deleteInstanceProfile( final String instanceProfileName ) throws AuthException { }
+
+    @Override
+    public InstanceProfile lookupInstanceProfileByName( final String instanceProfileName ) throws AuthException {
+      throw new AuthException( AuthException.SYSTEM_MODIFICATION );
+    }
+
+    @Override
+    public User addUser( String userName, String path, boolean skipRegistration, boolean enabled, Map<String, String> info ) throws AuthException {
+      throw new AuthException( AuthException.SYSTEM_MODIFICATION );
+    }
+
+    @Override
+    public void deleteUser( String userName, boolean forceDeleteAdmin, boolean recursive ) throws AuthException {}
+
+    @Override
+    public Role addRole( String roleName, String path, String assumeRolePolicy ) throws AuthException, PolicyParseException {
+      throw new AuthException( AuthException.SYSTEM_MODIFICATION );
+    }
+
+    @Override
+    public void deleteRole( String roleName ) throws AuthException {}
+
+    @Override
+    public Group addGroup( String groupName, String path ) throws AuthException {
+      throw new AuthException( AuthException.SYSTEM_MODIFICATION );
+    }
+
+    @Override
+    public void deleteGroup( String groupName, boolean recursive ) throws AuthException {}
+
+    @Override
+    public Group lookupGroupByName( String groupName ) throws AuthException {
+      throw new AuthException( AuthException.SYSTEM_MODIFICATION );
+    }
+
+    @Override
+    public Role lookupRoleByName( String roleName ) throws AuthException {
+      throw new AuthException( AuthException.SYSTEM_MODIFICATION );
+    }
+
+    @Override
+    public User lookupUserByName( String userName ) throws AuthException {
+      if ( systemUser.getName().equals( userName ) ) {
+        return systemUser;
+      } else {
+        throw new AuthException( AuthException.SYSTEM_MODIFICATION );
+      }
+    }
+
+    @Override
+    public User lookupAdmin() throws AuthException {
+      return lookupUserByName( User.ACCOUNT_ADMIN );
+    }
+
+    @Override
+    public List<Authorization> lookupAccountGlobalAuthorizations( String resourceType ) throws AuthException {
+      return Lists.newArrayList( );
+    }
+
+    @Override
+    public List<Authorization> lookupAccountGlobalQuotas( String resourceType ) throws AuthException {
+      return Lists.newArrayList( );
+    }
   }
 }

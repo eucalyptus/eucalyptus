@@ -63,5 +63,27 @@
         <structure name="GetSessionTokenResult" field="result" type="com.eucalyptus.tokens.GetSessionTokenResultType"/>
         <structure name="ResponseMetadata" field="responseMetadata" type="com.eucalyptus.tokens.TokensResponseMetadataType"/>
     </mapping>
+    <mapping name="AssumeRole" class="com.eucalyptus.tokens.AssumeRoleType" extends="com.eucalyptus.tokens.TokenMessage">
+        <structure map-as="com.eucalyptus.tokens.TokenMessage"/>
+        <value name="RoleArn" field="roleArn" usage="required"/>
+        <value name="RoleSessionName" field="roleSessionName" usage="required"/>
+        <value name="Policy" field="policy" usage="optional"/>
+        <value name="DurationSeconds" field="durationSeconds" usage="optional"/>
+        <value name="ExternalId" field="externalId" usage="optional"/>
+    </mapping>
+    <mapping name="AssumeRoleResponse" class="com.eucalyptus.tokens.AssumeRoleResponseType" extends="com.eucalyptus.tokens.TokenMessage">
+        <structure map-as="com.eucalyptus.tokens.TokenMessage"/>
+        <structure name="AssumeRoleResult" field="assumeRoleResult" usage="required" type="com.eucalyptus.tokens.AssumeRoleResultType"/>
+        <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.tokens.TokensResponseMetadataType"/>
+    </mapping>
+    <mapping class="com.eucalyptus.tokens.AssumeRoleResultType" abstract="true">
+        <structure name="Credentials" field="credentials" usage="optional" type="com.eucalyptus.tokens.CredentialsType"/>
+        <structure name="AssumedRoleUser" field="assumedRoleUser" usage="optional" type="com.eucalyptus.tokens.AssumedRoleUserType"/>
+        <value name="PackedPolicySize" field="packedPolicySize" usage="optional"/>
+    </mapping>
+    <mapping class="com.eucalyptus.tokens.AssumedRoleUserType" abstract="true">
+        <value name="AssumedRoleId" field="assumedRoleId" usage="required"/>
+        <value name="Arn" field="arn" usage="required"/>
+    </mapping>
 
 </binding>

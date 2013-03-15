@@ -37,6 +37,7 @@ import org.junit.Test
 
 import java.security.cert.X509Certificate
 import com.eucalyptus.autoscaling.tags.Tag
+import com.eucalyptus.auth.principal.Role
 import com.eucalyptus.autoscaling.instances.ConfigurationState
 import com.eucalyptus.loadbalancing.DeregisterInstancesFromLoadBalancerType
 import com.eucalyptus.loadbalancing.RegisterInstancesWithLoadBalancerType
@@ -1217,6 +1218,11 @@ class ActivityManagerTest {
 
       @Override
       Group lookupGroupById(final String groupId) {
+        throw new NotImplementedException()
+      }
+
+      @Override
+      Role lookupRoleById(final String roleId) {
         throw new NotImplementedException()
       }
 

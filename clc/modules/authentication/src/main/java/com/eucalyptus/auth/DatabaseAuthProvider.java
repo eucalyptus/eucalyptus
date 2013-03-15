@@ -77,11 +77,13 @@ import com.eucalyptus.auth.entities.AccessKeyEntity;
 import com.eucalyptus.auth.entities.AccountEntity;
 import com.eucalyptus.auth.entities.CertificateEntity;
 import com.eucalyptus.auth.entities.GroupEntity;
+import com.eucalyptus.auth.entities.RoleEntity;
 import com.eucalyptus.auth.entities.UserEntity;
 import com.eucalyptus.auth.principal.AccessKey;
 import com.eucalyptus.auth.principal.Account;
 import com.eucalyptus.auth.principal.Certificate;
 import com.eucalyptus.auth.principal.Group;
+import com.eucalyptus.auth.principal.Role;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.auth.util.X509CertHelper;
 import com.eucalyptus.entities.EntityWrapper;
@@ -189,7 +191,7 @@ public class DatabaseAuthProvider implements AccountProvider {
           .createCriteria( "certificates" ).setCacheable( true ).add( 
               Restrictions.and( 
                   Restrictions.eq( "pem", X509CertHelper.fromCertificate( cert ) ), 
-                  Restrictions.and( 
+                  Restrictions.and(
                       Restrictions.eq( "active", true ),
                       Restrictions.eq( "revoked", false ) ) ) )
           .uniqueResult( );
@@ -221,7 +223,24 @@ public class DatabaseAuthProvider implements AccountProvider {
       throw new AuthException( AuthException.NO_SUCH_GROUP, e );
     }
   }
-  
+
+  @Override
+  public Role lookupRoleById( final String roleId ) throws AuthException {
+    if ( roleId == null ) {
+      throw new AuthException( AuthException.EMPTY_ROLE_ID );
+    }
+    final EntityWrapper<RoleEntity> db = EntityWrapper.get( RoleEntity.class );
+    try {
+      final RoleEntity role = DatabaseAuthUtils.getUnique( db, RoleEntity.class, "roleId", roleId );
+      return new DatabaseRoleProxy( role );
+    } catch ( Exception e ) {
+      Debugging.logError( LOG, e, "Failed to find role by ID " + roleId );
+      throw new AuthException( AuthException.NO_SUCH_ROLE, e );
+    } finally {
+      db.rollback();
+    }
+  }
+
   /**
    * Add account admin user separately.
    * 
