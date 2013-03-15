@@ -358,6 +358,7 @@ int image_cache_proxykick(ccResource * res, int *numHosts);
  |                              STATIC PROTOTYPES                             |
  |                                                                            |
 \*----------------------------------------------------------------------------*/
+static int migration_handler(ccInstance *myInstance, char *host, char *src, char *dst, migration_states migration_state, char **node, char **action);
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |
@@ -2213,6 +2214,60 @@ int refresh_resources(ncMetadata * pMeta, int timeout, int dolock)
     return (0);
 }
 
+
+//!
+//!
+//!
+//! @param[in] myInstance instance to check for migration
+//! @param[in] host reported hostname
+//! @param[in] src source node for migration
+//! @param[in] dst destination node for migration
+//! @param[in] state reported migration state
+//! @param[out] node node to which to send migration action request
+//! @param[out] action migration action to request of node
+//!
+//! @return
+//!
+//! @pre
+//!
+//! @note
+//!
+static int migration_handler(ccInstance *myInstance, char *host, char *src, char *dst, migration_states migration_state, char **node, char **action)
+{
+    int rc = 0;
+
+    LOGDEBUG("invoked\n");
+
+    if (!strcmp(host, dst)) {
+        if (migration_state == MIGRATION_READY) {
+            LOGDEBUG("[%s] destination node %s reports ready to receive migration, checking source node %s...\n", myInstance->instanceId, host, src);
+            ccInstance *srcInstance = NULL;
+            rc = find_instanceCacheId(myInstance->instanceId, &srcInstance);
+            if (!rc) {
+                if (srcInstance->migration_state == MIGRATION_READY) {
+                    LOGDEBUG("[%s] source node %s reports ready to commit migration to %s.\n", myInstance->instanceId, src, dst);
+                    EUCA_FREE(*node);
+                    EUCA_FREE(*action);
+                    *node = strdup(src);
+                    *action = strdup("commit");
+                } else if (srcInstance->migration_state == MIGRATION_IN_PROGRESS) {
+                    LOGDEBUG("[%s] source node %s reports migration to %s in progress.\n", myInstance->instanceId, src, dst);
+                } else {
+                    LOGDEBUG("[%s] source node %s has not yet reported ready to commit migration to %s, despite implicitly being ready.\n",
+                             myInstance->instanceId, src, dst);
+                }
+            } else {
+                LOGERROR("[%s] could not find migration source node %s in the instance cache.\n", myInstance->instanceId, src);
+            }
+            EUCA_FREE(srcInstance);
+        } else {
+            LOGDEBUG("[%s] ignoring updates from destination node %s\n", myInstance->instanceId, host);
+        }
+    }
+    LOGDEBUG("done\n");
+    return (EUCA_OK);
+}
+
 //!
 //!
 //!
@@ -2232,6 +2287,7 @@ int refresh_instances(ncMetadata * pMeta, int timeout, int dolock)
     int i, numInsts = 0, found, ncOutInstsLen, rc, pid, nctimeout, *pids = NULL, status;
     time_t op_start;
     char *migration_to_commit = NULL;
+    char *migration_action = NULL;
 
     ncInstance **ncOutInsts = NULL;
 
@@ -2309,6 +2365,16 @@ int refresh_instances(ncMetadata * pMeta, int timeout, int dolock)
 
                             // migration-related logic
                             if (ncOutInsts[j]->migration_state != NOT_MIGRATING) {
+
+                                // Dummy call for now.
+                                migration_handler(myInstance,
+                                                  resourceCacheStage->resources[i].hostname,
+                                                  ncOutInsts[j]->migration_src,
+                                                  ncOutInsts[j]->migration_dst,
+                                                  ncOutInsts[j]->migration_state,
+                                                  &migration_to_commit,
+                                                  &migration_action);
+
                                 if (!strcmp(resourceCacheStage->resources[i].hostname, ncOutInsts[j]->migration_dst)) {
 
                                     // TODO: for now just ignore updates from destination while migrating, unless it's ready, in which case we check source.
@@ -2322,7 +2388,7 @@ int refresh_instances(ncMetadata * pMeta, int timeout, int dolock)
                                                 LOGDEBUG("[%s] source node %s reports ready to commit migration to %s.\n", myInstance->instanceId, ncOutInsts[j]->migration_src,
                                                          ncOutInsts[j]->migration_dst);
                                                 if (!migration_to_commit) {
-                                                    migration_to_commit = EUCA_ZALLOC(1, HOSTNAME_SIZE);
+                                                    migration_to_commit = EUCA_ALLOC(1, HOSTNAME_SIZE);
                                                     euca_strncpy(migration_to_commit, ncOutInsts[j]->migration_src, HOSTNAME_SIZE);
                                                 }
                                             } else if (srcInstance->migration_state == MIGRATION_IN_PROGRESS) {
@@ -2415,6 +2481,7 @@ int refresh_instances(ncMetadata * pMeta, int timeout, int dolock)
                 doMigrateInstances(pMeta, migration_to_commit, TRUE);
                 EUCA_FREE(migration_to_commit);
             }
+            EUCA_FREE(migration_action);
 
             exit(0);
         } else {
