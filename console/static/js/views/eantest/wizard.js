@@ -200,32 +200,78 @@ function Wizard(pages, navigationController, closedViewFactory) {
     return self.current;
   }
 
-  self.makeView = function(element, options, template) {
+  // Creates a mapping of { a : '#a'} and so forth based on the arguments array
+  function trivialMapping() {
+    var result = {};
+    for (var i = 0; i < arguments.length; i++) {
+      result[arguments[i]] = '#' + arguments[i];
+    
+    }
+    return result;
+  }
+  
+  // Merge b's properties into a
+  function merge(a, b) {
+    
+    if (b) {
+      for (var key in b) {
+        // avoid immediately resolving b's contents
+        a.__defineGetter__(key, function() {
+          return b[key];
+        });
+      }
+    }
+    return a;
+  }
+
+  self.makeView = function(element, options, template, mapping) {
+    // Assume default component names, but let mapping override them if it wants
+    mapping = merge(trivialMapping('nextButton', 'prevButton', 'finishButton', 'problems', 'wizardContent'), mapping || {});
+    // Make sure options is defined
     options = options || {};
+    // If there is no canFinish function, provide a default one that only
+    // enables the Finish button on the last page
     if (typeof options.canFinish !== 'function') {
-      console.log("add canFinish");
       options.canFinish = function(arr) {
         return position === pages.length - 1;
       }
     }
+    // Predefine click handlers, using the selectors provided in the mapping
+    // (if any)
+    var events = {};
+    events['click ' + mapping.nextButton] = function() {
+      self.next();
+      this.render();
+    };
+    events['click ' + mapping.prevButton] = function() {
+      self.prev();
+      this.render();
+    };
+    events['click ' + mapping.finishButton] = function() {
+      if (options.finish) {
+        options.finish()
+      }
+      this.render();
+    };
+
     var Result = Backbone.View.extend({
       initialize: function() {
         self.show();
         this.$el.html(template);
-        this.nextButton = this.$el.find('#next')
-        this.prevButton = this.$el.find('#prev')
-        this.finishButton = this.$el.find('#finish')
-        this.problems = this.$el.find('#problems')
-        this.inner = this.$el.find('#wizardContent')
+        this.nextButton = this.$el.find(mapping.nextButton);
+        this.prevButton = this.$el.find(mapping.prevButton);
+        this.finishButton = this.$el.find(mapping.finishButton);
+        this.problems = this.$el.find(mapping.problems);
+        this.wizardContent = this.$el.find(mapping.wizardContent);
         this.render();
       },
       render: function() {
         var Type = self.current;
-        var page = new Type($(this.inner));
-        this.inner.empty();
-        this.inner.append(page.$el);
-        this.nextButton.attr('disabled', !self.hasNext)
-        this.prevButton.attr('disabled', !self.hasPrev)
+        var page = new Type($(this.wizardContent));
+        this.wizardContent.empty();
+        this.wizardContent.append(page.$el);
+        this.nextButton.attr('disabled', !self.hasNext);
+        this.prevButton.attr('disabled', !self.hasPrev);
         var problems = [];
         this.finishButton.attr('disabled', !options.canFinish(self.position, problems));
         this.problems.empty();
@@ -233,30 +279,16 @@ function Wizard(pages, navigationController, closedViewFactory) {
           var problem = problems[i];
           var problemLabel = $('<span>', {
             text: problem,
-            id: 'problem' + i,
+            id: 'problem-' + i,
             class: 'error-msg wizardProblem'
           });
           this.problems.append(problemLabel);
         }
       },
-      events: {
-        'click #next': function() {
-          self.next();
-          this.render();
-        },
-        'click #prev': function() {
-          self.prev();
-          this.render();
-        },
-        'click #finish': function() {
-          if (options.finish) {
-            options.finish();
-          }
-        }
-      }
+      events: events
     });
     return new Result(element);
-  }
+  };
 }
 
 function trivialClosedViewFactory(index) {
