@@ -221,7 +221,6 @@ public class VolumeManager {
           }
           if ( State.FAIL.equals( vol.getState( ) ) || State.ANNIHILATED.equals( vol.getState( ) ) ) {
             Entities.delete( vol );
-            Volumes.fireUsageEvent( vol, VolumeEvent.forVolumeDelete());
             return vol;
           } else if ( State.ANNIHILATING.equals( vol.getState( ) ) ) {
             return vol;
@@ -230,7 +229,7 @@ public class VolumeManager {
               ServiceConfiguration sc = Topology.lookup( Storage.class, Partitions.lookupByName( vol.getPartition( ) ) );
               DeleteStorageVolumeResponseType scReply = AsyncRequests.sendSync( sc, new DeleteStorageVolumeType( vol.getDisplayName( ) ) );
               if ( scReply.get_return( ) ) {
-                vol.setState( State.ANNIHILATING );
+                Volumes.annihilateStorageVolume( vol );
                 return vol;
               } else {
                 throw Exceptions.toUndeclared( "Storage Controller returned false:  Contact the administrator to report the problem." );
