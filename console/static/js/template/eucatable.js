@@ -99,13 +99,12 @@
       dt_arg['fnDrawCallback'] = function( oSettings ) {
         thisObj._drawCallback(oSettings);
       }
-      dt_arg['sAjaxDataProp'] = function(json) {
-        return json;
-      }
+      dt_arg['sAjaxDataProp'] = 'aaData',
       dt_arg['fnServerData'] = function (sSource, aoData, fnCallback) {
-        data = $('html body').eucadata('get', sSource);
-        data.iTotalRecords = data.length;
-        data.iTotalDisplayRecords = data.length;
+        var data = {};
+        data.aaData = $('html body').eucadata('get', sSource);
+        data.iTotalRecords = data.aaData.length;
+        data.iTotalDisplayRecords = data.aaData.length;
         fnCallback(data);
       }
       dt_arg['fnInitComplete'] = function( oSettings ) {
