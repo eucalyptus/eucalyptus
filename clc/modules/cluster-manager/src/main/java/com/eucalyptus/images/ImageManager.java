@@ -271,6 +271,10 @@ public class ImageManager {
       return reply;
     } catch ( InstanceNotTerminatedException re ) {
       throw new EucalyptusCloudException( re );
+    } catch ( EucalyptusCloudException ex ) {
+      if ( ex.getCause() instanceof NoSuchElementException )
+        throw new EucalyptusCloudException( "The image id '[" +  request.getImageId( ) + "]' does not exist");
+      else throw ex;
     } finally {
       db.commit( );
     }
