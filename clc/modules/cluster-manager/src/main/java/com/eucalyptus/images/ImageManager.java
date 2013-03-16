@@ -245,6 +245,8 @@ public class ImageManager {
   }
   
   public DeregisterImageResponseType deregister( DeregisterImageType request ) throws EucalyptusCloudException {
+    if(!request.getImageId( ).matches("(emi-|eki-|eri-)\\w{8}"))
+      throw new EucalyptusCloudException( "Invalid id: " + "\"" + request.getImageId( ) + "\"" );
     DeregisterImageResponseType reply = request.getReply( );
     final Context ctx = Contexts.lookup( );
     final String requestAccountId = ctx.getUserFullName( ).getAccountNumber( );
