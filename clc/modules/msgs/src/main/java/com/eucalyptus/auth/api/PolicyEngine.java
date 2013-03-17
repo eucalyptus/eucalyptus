@@ -87,10 +87,10 @@ public interface PolicyEngine {
   public void evaluateAuthorization( String resourceType, String resourceName, Account resourceAccount, String action, User requestUser, Map<Type, Contract> contracts ) throws AuthException;
 
   /**
-   * Evaluate authorizations for a resource
+   * Evaluate authorizations for a request to access a resource.
    */
   public void evaluateAuthorization( PrincipalType principalType, String principalName, Policy resourcePolicy, String resourceType,
-                                     String resourceName, Account resourceAccount, String action, User requestUser ) throws AuthException;
+                                     String resourceName, Account resourceAccount, String action, User requestUser, Map<Type, Contract> contracts ) throws AuthException;
 
   /**
    * Evaluate quota for a request to allocate a resource.

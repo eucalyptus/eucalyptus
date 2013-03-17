@@ -19,15 +19,22 @@
  ************************************************************************/
 package com.eucalyptus.auth.principal;
 
+import static com.eucalyptus.util.RestrictedType.PolicyRestrictedType;
 import java.util.Date;
 import java.util.List;
 import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.PolicyParseException;
+import com.eucalyptus.auth.policy.PolicyResourceType;
+import com.eucalyptus.auth.policy.PolicySpec;
+import com.eucalyptus.component.ComponentId;
+import com.eucalyptus.util.RestrictedType;
 
 /**
  *
  */
-public interface Role extends AuthorizedPrincipal {
+@ComponentId.PolicyVendor( PolicySpec.VENDOR_IAM )
+@PolicyResourceType( value = PolicySpec.IAM_RESOURCE_ROLE, resourcePolicyActions = "sts:assumerole" )
+public interface Role extends AuthorizedPrincipal, RestrictedType, PolicyRestrictedType {
 
   String getRoleId( );
 

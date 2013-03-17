@@ -223,7 +223,6 @@ public class PolicyParser {
     if ( values.size( ) < 1 && attachmentType.isPrincipalRequired() ) {
       throw new JSONException( "Empty principal values" );
     }
-    //TODO:STEVE: convert short account identifiers to ARNs here?
     boolean notPrincipal = PolicySpec.NOTPRINCIPAL.equals( principalElement );
     return new PrincipalEntity( notPrincipal, PrincipalType.valueOf( principalType ), Sets.newHashSet( values ) );
   }
@@ -287,8 +286,7 @@ public class PolicyParser {
         Set<String> resourceSet = resourceSetEntry.getValue( );
         if ( PolicySpec.ALL_ACTION.equals( vendor )
             || PolicySpec.ALL_RESOURCE.equals( type )
-            || type.startsWith( vendor )
-            || type.startsWith( PolicySpec.VENDOR_IAM )) {  //TODO:STEVE: Always allow IAM types? (e.g. sts action with iam resource)
+            || PolicySpec.isPermittedResourceVendor( vendor, PolicySpec.vendor( type ) ) ) {
           results.add( new AuthorizationEntity( EffectType.valueOf( effect ), type, actionSet, notAction, resourceSet, notResource ) );
           added = true;
         }

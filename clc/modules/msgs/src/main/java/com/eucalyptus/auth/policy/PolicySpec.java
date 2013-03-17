@@ -620,6 +620,11 @@ public class PolicySpec {
     .put( VENDOR_LOADBALANCING, LOADBALANCING_ACTIONS)
     .build();
 
+  // Map vendors to resource vendors
+  public static final Map<String, Set<String>> VENDOR_RESOURCE_VENDORS = new ImmutableMap.Builder<String,Set<String>>()
+      .put( VENDOR_STS, ImmutableSet.of( VENDOR_IAM ) )
+      .build();
+
   // Set of vendors with case sensitive resource names
   public static final Set<String> VENDORS_CASE_SENSITIVE_RESOURCES = new ImmutableSet.Builder<String>()
       .add( VENDOR_IAM )
@@ -680,6 +685,13 @@ public class PolicySpec {
       throw new IllegalArgumentException( "Name not qualified: " + qualifiedName );
     }
     return qualifiedName.substring( 0, index );
+  }
+
+  public static boolean isPermittedResourceVendor( final String vendor, final String resourceVendor ) {
+    final Set<String> resourceVendors = VENDOR_RESOURCE_VENDORS.get( vendor );
+    return resourceVendors == null ?
+        vendor.equals( resourceVendor ) :
+        resourceVendors.contains( resourceVendor );
   }
   
   /**

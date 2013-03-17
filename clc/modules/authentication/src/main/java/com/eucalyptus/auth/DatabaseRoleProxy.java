@@ -34,12 +34,15 @@ import com.eucalyptus.auth.entities.PolicyEntity;
 import com.eucalyptus.auth.entities.RoleEntity;
 import com.eucalyptus.auth.policy.PolicyParser;
 import com.eucalyptus.auth.principal.Account;
+import com.eucalyptus.auth.principal.AccountFullName;
 import com.eucalyptus.auth.principal.Authorization;
 import com.eucalyptus.auth.principal.InstanceProfile;
 import com.eucalyptus.auth.principal.Policy;
 import com.eucalyptus.auth.principal.Role;
 import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.util.Callback;
+import com.eucalyptus.util.Exceptions;
+import com.eucalyptus.util.OwnerFullName;
 import com.eucalyptus.util.Tx;
 import com.google.common.base.Strings;
 import com.google.common.collect.Lists;
@@ -59,6 +62,20 @@ public class DatabaseRoleProxy implements Role {
 
   public DatabaseRoleProxy( RoleEntity delegate ) {
     this.delegate = delegate;
+  }
+
+  @Override
+  public String getDisplayName() {
+    return getName();
+  }
+
+  @Override
+  public OwnerFullName getOwner() {
+    try {
+      return AccountFullName.getInstance( getAccount().getAccountNumber() );
+    } catch ( AuthException e ) {
+      throw Exceptions.toUndeclared( e );
+    }
   }
 
   @Override
@@ -95,6 +112,15 @@ public class DatabaseRoleProxy implements Role {
   @Override
   public String getSecret() {
     return this.delegate.getSecret();
+  }
+
+  @Override
+  public Policy getPolicy() {
+    try {
+      return getAssumeRolePolicy();
+    } catch ( Exception e ) {
+      throw Exceptions.toUndeclared( e );
+    }
   }
 
   @Override

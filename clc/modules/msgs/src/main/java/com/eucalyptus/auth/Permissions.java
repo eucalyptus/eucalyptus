@@ -67,6 +67,7 @@ import static com.google.common.collect.Maps.newHashMap;
 import java.util.Map;
 import org.apache.log4j.Logger;
 import com.eucalyptus.auth.api.PolicyEngine;
+import com.eucalyptus.auth.policy.PolicySpec;
 import com.eucalyptus.auth.principal.Account;
 import com.eucalyptus.auth.principal.Policy;
 import com.eucalyptus.auth.principal.User;
@@ -87,11 +88,15 @@ public class Permissions {
   }
 
   public static boolean isAuthorized( String vendor, String resourceType, String resourceName, Account resourceAccount, String action, User requestUser ) {
+    return isAuthorized( PolicySpec.qualifiedName( vendor, resourceType ), resourceName, resourceAccount, PolicySpec.qualifiedName( vendor, action ), requestUser );
+  }
+
+  public static boolean isAuthorized( String resourceType, String resourceName, Account resourceAccount, String action, User requestUser ) {
     try {
       // If we are not in a request context, e.g. the UI, use a dummy contract map.
       // TODO(wenye): we should consider how to handle this if we allow the EC2 operations in the UI.
       final Map<Contract.Type, Contract> contracts = newHashMap();
-      policyEngine.evaluateAuthorization( vendor + ":" + resourceType, resourceName, resourceAccount, vendor + ":" + action, requestUser, contracts );
+      policyEngine.evaluateAuthorization( resourceType, resourceName, resourceAccount, action, requestUser, contracts );
       pushToContext(contracts);
       return true;
     } catch ( AuthException e ) {
@@ -102,9 +107,11 @@ public class Permissions {
     return false;
   }
 
-  public static boolean isAuthorized( String vendor, PrincipalType principalType, String principalName, Policy resourcePolicy, String resourceType, String resourceName, Account resourceAccount, String action, User requestUser ) {
+  public static boolean isAuthorized( PrincipalType principalType, String principalName, Policy resourcePolicy, String resourceType, String resourceName, Account resourceAccount, String action, User requestUser ) {
     try {
-      policyEngine.evaluateAuthorization( principalType, principalName, resourcePolicy, resourceType, resourceName, resourceAccount, vendor + ":" + action, requestUser );
+      final Map<Contract.Type, Contract> contracts = newHashMap();
+      policyEngine.evaluateAuthorization( principalType, principalName, resourcePolicy, resourceType, resourceName, resourceAccount, action, requestUser, contracts );
+      pushToContext( contracts );
       return true;
     } catch ( AuthException e ) {
       LOG.error( "Denied resource access for " + principalType + ":" + principalName + " / " + requestUser, e );

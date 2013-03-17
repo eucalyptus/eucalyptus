@@ -62,30 +62,35 @@
 
 package com.eucalyptus.util;
 
+import com.eucalyptus.auth.principal.Policy;
+
 /**
  * {@inheritDoc RestrictedTypes} {@link RestrictedTypes}
  * 
  * @see RestrictedTypes
  */
-public interface RestrictedType<T> {
-  public abstract String getDisplayName( );
+public interface RestrictedType {
+  String getDisplayName( );
   
-  public abstract OwnerFullName getOwner( );
+  OwnerFullName getOwner( );
   
-  public interface AccountRestrictedType {
-    public abstract String getOwnerAccountName( );
+  interface AccountRestrictedType {
+    String getOwnerAccountName( );
     
-    public abstract String getOwnerAccountNumber( );
+    String getOwnerAccountNumber( );
   }
   
-  public interface UserRestrictedType {
-    public abstract String getOwnerAccountName( );
+  interface UserRestrictedType {
+    String getOwnerAccountName( );
     
-    public abstract String getOwnerAccountNumber( );
+    String getOwnerAccountNumber( );
     
-    public abstract String getOwnerUserId( );
+    String getOwnerUserId( );
     
-    public abstract String getOwnerUserName( );
+    String getOwnerUserName( );
   }
-  
+
+  interface PolicyRestrictedType {
+    Policy getPolicy( );
+  }
 }

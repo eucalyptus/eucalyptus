@@ -24,6 +24,7 @@ import static com.eucalyptus.auth.login.HmacCredentials.QueryIdCredential;
 import java.util.Set;
 import java.util.concurrent.Callable;
 import java.util.concurrent.TimeUnit;
+import javax.annotation.Nullable;
 import javax.security.auth.Subject;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import com.eucalyptus.auth.Accounts;
@@ -41,9 +42,10 @@ import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.tokens.policy.ExternalIdContext;
 import com.eucalyptus.util.EucalyptusCloudException;
-import com.eucalyptus.util.RestrictedIdentity;
+import com.eucalyptus.util.RestrictedTypes;
+import com.google.common.base.Function;
+import com.google.common.base.Functions;
 import com.google.common.base.Objects;
-import com.google.common.base.Supplier;
 import com.google.common.collect.Iterables;
 
 /**
@@ -109,25 +111,17 @@ public class TokensService {
     try {
       ExternalIdContext.doWithExternalId(
           request.getExternalId(),
-          TokensException.class,
-          new Callable<Void>() {
+          EucalyptusCloudException.class,
+          new Callable<Role>() {
             @Override
-            public Void call() throws Exception {
-              RestrictedIdentity.checkAuthorized(
-                  role.getAccount(),
-                  PolicySpec.qualifiedName( PolicySpec.VENDOR_IAM, PolicySpec.IAM_RESOURCE_ROLE ),
-                  Accounts.getRoleFullName( role ),
-                  role.getAssumeRolePolicy(),
-                  new Supplier<TokensException>() {
-                    @Override
-                    public TokensException get() {
-                      return new TokensException(
-                          HttpResponseStatus.FORBIDDEN,
-                          TokensException.NOT_AUTHORIZED,
-                          "Not permitted to assume role." );
-                    }
-                  } );
-              return null;
+            public Role call() throws EucalyptusCloudException {
+              try {
+                return RestrictedTypes.doPrivilegedWithoutOwner(
+                    Accounts.getRoleFullName( role ),
+                    new RoleResolver( role ) );
+              } catch ( final AuthException e ) {
+                throw new EucalyptusCloudException( e.getMessage(), e );
+              }
             }
           } );
 
@@ -147,6 +141,7 @@ public class TokensService {
     } catch ( final AuthException e ) {
       throw new EucalyptusCloudException( e.getMessage(), e );
     }
+
     return reply;
   }
 
@@ -170,4 +165,16 @@ public class TokensService {
     }
   }
 
+  private static class RoleResolver implements Function<String,Role> {
+    private final Role role;
+
+    private RoleResolver( final Role role ) {
+      this.role = role;
+    }
+
+    @Override
+    public Role apply( @Nullable final String roleFullName ) {
+      return role;
+    }
+  }
 }

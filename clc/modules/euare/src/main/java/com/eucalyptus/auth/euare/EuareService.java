@@ -1465,7 +1465,7 @@ public class EuareService {
     final Account account = getRealAccount( ctx, request.getDelegateAccount( ) );
     try {
       final Role newRole = Privileged.createRole( requestUser, account, request.getRoleName( ), sanitizePath( request.getPath( ) ), request.getAssumeRolePolicyDocument() );
-      reply.getCreateRoleResult( ).setRole( fillRoleResult( new RoleType(), newRole, account ) );
+      reply.getCreateRoleResult( ).setRole( fillRoleResult( new RoleType(), newRole ) );
     } catch ( PolicyParseException e ) {
       LOG.error( e, e );
       throw new EuareException( HttpResponseStatus.BAD_REQUEST, EuareException.MALFORMED_POLICY_DOCUMENT, "Error in uploaded policy: " + request.getAssumeRolePolicyDocument( ), e );
@@ -1524,7 +1524,7 @@ public class EuareService {
       if ( !Privileged.allowReadRole( requestUser, account, roleFound ) ) {
         throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Not authorized to get role " + request.getRoleName() + " by " + requestUser.getName( ) );
       }
-      reply.getGetRoleResult( ).setRole( fillRoleResult( new RoleType(), roleFound, account ) );
+      reply.getGetRoleResult( ).setRole( fillRoleResult( new RoleType(), roleFound ) );
     } catch ( EuareException e ) {
       throw e;
     } catch ( Exception e ) {
@@ -1575,7 +1575,7 @@ public class EuareService {
       for ( final Role role : account.getRoles() ) {
         if ( role.getPath( ).startsWith( path ) ) {
           if ( Privileged.allowListRole( requestUser, account, role ) ) {
-            roles.add( fillRoleResult( new RoleType(), role, account ) );
+            roles.add( fillRoleResult( new RoleType(), role ) );
           }
         }
       }
@@ -1704,7 +1704,7 @@ public class EuareService {
     final Account account = getRealAccount( ctx, request.getDelegateAccount( ) );
     try {
       final InstanceProfile newInstanceProfile = Privileged.createInstanceProfile( requestUser, account, request.getInstanceProfileName(), sanitizePath( request.getPath() ) );
-      reply.getCreateInstanceProfileResult().setInstanceProfile( fillInstanceProfileResult( new InstanceProfileType(), newInstanceProfile, account ) );
+      reply.getCreateInstanceProfileResult().setInstanceProfile( fillInstanceProfileResult( new InstanceProfileType(), newInstanceProfile ) );
     } catch ( Exception e ) {
       LOG.error( e, e );
       if ( e instanceof AuthException ) {
@@ -1736,7 +1736,7 @@ public class EuareService {
       if ( !Privileged.allowReadInstanceProfile( requestUser, account, instanceProfileFound ) ) {
         throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Not authorized to get instance profile " + request.getInstanceProfileName() + " by " + requestUser.getName( ) );
       }
-      reply.getGetInstanceProfileResult().setInstanceProfile( fillInstanceProfileResult( new InstanceProfileType(), instanceProfileFound, account ) );
+      reply.getGetInstanceProfileResult().setInstanceProfile( fillInstanceProfileResult( new InstanceProfileType(), instanceProfileFound ) );
     } catch ( EuareException e ) {
       throw e;
     } catch ( Exception e ) {
@@ -1807,7 +1807,7 @@ public class EuareService {
     try {
       for ( final InstanceProfile instanceProfile : Privileged.listInstanceProfilesForRole( requestUser, account, roleFound ) ) {
         if ( Privileged.allowListInstanceProfileForRole( requestUser, account, instanceProfile ) ) {
-          instanceProfiles.add( fillInstanceProfileResult( new InstanceProfileType(), instanceProfile, account ) );
+          instanceProfiles.add( fillInstanceProfileResult( new InstanceProfileType(), instanceProfile ) );
         }
       }
     } catch ( Exception e ) {
@@ -1855,7 +1855,7 @@ public class EuareService {
       for ( final InstanceProfile instanceProfile : account.geInstanceProfiles() ) {
         if ( instanceProfile.getPath( ).startsWith( path ) ) {
           if ( Privileged.allowListInstanceProfile( requestUser, account, instanceProfile ) ) {
-            instanceProfiles.add( fillInstanceProfileResult( new InstanceProfileType(), instanceProfile, account ) );
+            instanceProfiles.add( fillInstanceProfileResult( new InstanceProfileType(), instanceProfile ) );
           }
         }
       }
@@ -1900,23 +1900,23 @@ public class EuareService {
   }
 
 
-  private InstanceProfileType fillInstanceProfileResult( InstanceProfileType instanceProfileType, InstanceProfile instanceProfileFound, Account account ) throws AuthException {
+  private InstanceProfileType fillInstanceProfileResult( InstanceProfileType instanceProfileType, InstanceProfile instanceProfileFound ) throws AuthException {
     instanceProfileType.setInstanceProfileName( instanceProfileFound.getName() );
     instanceProfileType.setInstanceProfileId( instanceProfileFound.getInstanceProfileId() );
     instanceProfileType.setPath( instanceProfileFound.getPath() );
-    instanceProfileType.setArn( (new EuareResourceName( account.getName(), PolicySpec.IAM_RESOURCE_INSTANCE_PROFILE, instanceProfileFound.getPath(), instanceProfileFound.getName() )).toString() );
+    instanceProfileType.setArn( Accounts.getInstanceProfileArn( instanceProfileFound ) );
     instanceProfileType.setCreateDate( instanceProfileFound.getCreationTimestamp() );
     final Role role = instanceProfileFound.getRole();
-    instanceProfileType.setRoles( role == null ? new RoleListType() : new RoleListType( fillRoleResult( new RoleType(), role, account ) ) );
+    instanceProfileType.setRoles( role == null ? new RoleListType() : new RoleListType( fillRoleResult( new RoleType(), role ) ) );
     return instanceProfileType;
   }
 
-  private RoleType fillRoleResult( RoleType roleType, Role roleFound, Account account ) throws AuthException {
+  private RoleType fillRoleResult( RoleType roleType, Role roleFound ) throws AuthException {
     roleType.setRoleName( roleFound.getName( ) );
     roleType.setRoleId( roleFound.getRoleId() );
     roleType.setPath( roleFound.getPath() );
     roleType.setAssumeRolePolicyDocument( roleFound.getAssumeRolePolicy().getText() );
-    roleType.setArn( (new EuareResourceName( account.getName(), PolicySpec.IAM_RESOURCE_ROLE, roleFound.getPath(), roleFound.getName() )).toString() );
+    roleType.setArn( Accounts.getRoleArn( roleFound ) );
     roleType.setCreateDate( roleFound.getCreationTimestamp() );
     return roleType;
   }

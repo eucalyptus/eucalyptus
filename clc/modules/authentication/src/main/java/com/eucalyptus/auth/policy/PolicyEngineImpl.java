@@ -67,6 +67,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.regex.Pattern;
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import org.apache.log4j.Logger;
 import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.Contract;
@@ -91,7 +93,6 @@ import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.auth.principal.Authorization.EffectType;
 import com.eucalyptus.auth.principal.User.RegistrationStatus;
 import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
 
 /**
  * The implementation of policy engine, which evaluates a request against specified policies.
@@ -173,16 +174,16 @@ public class PolicyEngineImpl implements PolicyEngine {
   }
 
   @Override
-  public void evaluateAuthorization( final PrincipalType principalType,
-                                     final String principalName,
-                                     final Policy resourcePolicy,
-                                     final String resourceType,
-                                     final String resourceName,
-                                     final Account resourceAccount,
-                                     String action,
-                                     final User requestUser ) throws AuthException {
+  public void evaluateAuthorization( @Nonnull  final PrincipalType principalType,
+                                     @Nonnull  final String principalName,
+                                     @Nullable final Policy resourcePolicy,
+                                     @Nonnull  final String resourceType,
+                                     @Nonnull  final String resourceName,
+                                     @Nullable final Account resourceAccount,
+                                     @Nonnull        String action,
+                                     @Nonnull  final User requestUser,
+                                     @Nonnull  final Map<Contract.Type, Contract> contracts ) throws AuthException {
     try {
-      final Map<Contract.Type, Contract> contracts = Maps.newHashMap();
       final ContractKeyEvaluator contractEval = new ContractKeyEvaluator( contracts );
       final CachedKeyEvaluator keyEval = new CachedKeyEvaluator( );
 
@@ -201,13 +202,18 @@ public class PolicyEngineImpl implements PolicyEngine {
              resourceAccount.getAccountNumber( ) == null ||
              !resourceAccount.getAccountNumber( ).equals( account.getAccountNumber( ) ) ) {
           // Check resource authorizations
-          Decision decision = processAuthorizations( resourcePolicy.getAuthorizations(), action, null, principalType, principalName, keyEval, contractEval );
+          Decision decision = resourcePolicy == null ?
+              Decision.ALLOW :
+              processAuthorizations( resourcePolicy.getAuthorizations(), action, null, principalType, principalName, keyEval, contractEval );
           // Denied by explicit or default deny
           if ( decision != Decision.ALLOW ) {
             LOG.debug( "Request is rejected by resource authorization check, due to decision " + decision );
             throw new AuthException( AuthException.ACCESS_DENIED );
-          } else if  ( Decision.DENY == evaluateResourceAuthorization( resourceType, resourceName, resourceAccount, action, requestUser, contracts ) ) {
-            throw new AuthException( AuthException.ACCESS_DENIED );
+          } else {
+            decision = evaluateResourceAuthorization( resourceType, resourceName, resourceAccount, action, requestUser, contracts );
+            if ( Decision.DENY == decision || ( Decision.ALLOW != decision && resourcePolicy == null ) ) {
+              throw new AuthException( AuthException.ACCESS_DENIED );
+            }
           }
         }
       }
@@ -382,14 +388,6 @@ public class PolicyEngineImpl implements PolicyEngine {
   
   /**
    * Evaluate conditions for an authorization.
-   * 
-   * @param conditions
-   * @param action
-   * @param resourceType
-   * @param keyEval
-   * @param contractEval
-   * @return
-   * @throws AuthException
    */
   private boolean evaluateConditions( List<? extends Condition> conditions, String action, String resourceType, CachedKeyEvaluator keyEval, ContractKeyEvaluator contractEval ) throws AuthException {
     for ( Condition cond : conditions ) {
@@ -420,7 +418,7 @@ public class PolicyEngineImpl implements PolicyEngine {
    * Lookup global (inter-accounts) authorizations.
    * 
    * @param resourceType Type of the resource
-   * @param accountId The ID of the account of the request user
+   * @param account The account of the request user
    * @return The list of global authorizations apply to the request user
    * @throws AuthException for any error
    */
@@ -437,7 +435,7 @@ public class PolicyEngineImpl implements PolicyEngine {
    * Lookup local (intra-accounts) authorizations.
    * 
    * @param resourceType Type of the resource
-   * @param userId The ID of the request user
+   * @param user The request user
    * @return The list of local authorization apply to the request user
    * @throws AuthException for any error
    */
@@ -454,7 +452,7 @@ public class PolicyEngineImpl implements PolicyEngine {
    * Find all quotas that can be applied for the request, by resource type, user and account.
    * 
    * @param resourceType The resource type to allocate.
-   * @param userId The request user ID.
+   * @param user The request user.
    * @param account The request user account.
    * @param isAccountAdmin If the request user is account admin.
    * @return The list of authorizations (quotas) that match.
