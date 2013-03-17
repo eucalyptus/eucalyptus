@@ -101,17 +101,18 @@ public class TransientZone extends Zone {
   public static Zone getInstanceExternalZone( ) {
     try {
       Name name = getExternalName( );
+      Name host = Name.fromString( "root." + name.toString( ) );
+      Name admin = Name.fromString( Internets.localHostInetAddress( ).getCanonicalHostName( ) + "." + name.toString( ) );
+      Name target = Name.fromString( Internets.localHostInetAddress( ).getCanonicalHostName( ) + "." + name.toString( ) );
       long serial = 1;
       long refresh = 86400;
       long retry = ttl;
       long expires = 2419200;
       //This is the negative cache TTL
       long minimum = 600;
-      Record soarec = new SOARecord( name, DClass.IN, ttl, name, Name.fromString( "root." + name.toString( ) ), serial,
-        refresh, retry, expires, minimum );
+      Record soarec = new SOARecord( name, DClass.IN, ttl, host, admin, serial, refresh, retry, expires, minimum );
       long nsTTL = 604800;
-      Record nsrec = new NSRecord( name, DClass.IN, nsTTL,
-        Name.fromString( Internets.localHostInetAddress( ).getCanonicalHostName( )+"." ) );
+      Record nsrec = new NSRecord( name, DClass.IN, nsTTL, target);
       return new TransientZone( name, new Record[] { soarec, nsrec } );
     } catch ( Exception e ) {
       LOG.error( e, e );
@@ -120,7 +121,8 @@ public class TransientZone extends Zone {
   }
 
   public static Name getExternalName( ) throws TextParseException {
-    String externalNameString = SystemConfiguration.getSystemConfiguration( ).getDnsDomain( ) + ".";
+    String externalNameString = VmInstances.INSTANCE_SUBDOMAIN + "." + SystemConfiguration.getSystemConfiguration( ).getDnsDomain( ) + ".";
+    externalNameString = externalNameString.startsWith(".") ? externalNameString.replaceFirst("\\.", "") : externalNameString;
     Name externalName = Name.fromString( externalNameString );
     return externalName;
   }
@@ -128,17 +130,19 @@ public class TransientZone extends Zone {
   public static Zone getInstanceInternalZone( ) {
     try {
       Name name = getInternalName( );
+      Name host = Name.fromString( "root." + name.toString( ) );
+      Name admin = Name.fromString( Internets.localHostInetAddress( ).getCanonicalHostName( ) + "." + name.toString( ) );
+      Name target = Name.fromString( Internets.localHostInetAddress( ).getCanonicalHostName( ) + "." + name.toString( ) );
       long serial = 1;
       long refresh = 86400;
       long retry = ttl;
       long expires = 2419200;
       //This is the negative cache TTL
       long minimum = 600;
-      Record soarec = new SOARecord( name, DClass.IN, ttl, name, Name.fromString( "root." + name.toString( ) ), serial,
-        refresh, retry, expires, minimum );
+      
+      Record soarec = new SOARecord( name, DClass.IN, ttl, host, admin, serial, refresh, retry, expires, minimum );
       long nsTTL = 604800;
-      Record nsrec = new NSRecord( name, DClass.IN, nsTTL,
-        Name.fromString( Internets.localHostInetAddress( ).getCanonicalHostName( ) +".") );
+      Record nsrec = new NSRecord( name, DClass.IN, nsTTL, target );
       return new TransientZone( name, new Record[] { soarec, nsrec } );
     } catch ( Exception e ) {
       LOG.error( e, e );
@@ -158,11 +162,11 @@ public class TransientZone extends Zone {
  */
 @Override
   public SetResponse findRecords( Name name, int type ) {
-    if( StackConfiguration.USE_INSTANCE_DNS && name.toString( ).matches("euca-.+{3}-.+{3}-.+{3}-.+{3}\\..*") ) {
+	if(type == Type.AAAA)
+		return(SetResponse.ofType(SetResponse.SUCCESSFUL));
+
+	if( StackConfiguration.USE_INSTANCE_DNS && name.toString( ).matches("euca-.+{3}-.+{3}-.+{3}-.+{3}\\..*") ) {
       try {
-    	if(type == Type.AAAA)
-    		return(SetResponse.ofType(SetResponse.SUCCESSFUL));
-    	
         String[] tryIp = name.toString( ).replaceAll( "euca-", "" ).replaceAll(VmInstances.INSTANCE_SUBDOMAIN + ".*", "").split("-");
         if( tryIp.length < 4 ) return super.findRecords( name, type );
         String ipCandidate = new StringBuffer()
@@ -198,7 +202,7 @@ public class TransientZone extends Zone {
             return super.findRecords( name, type );
 		}
     } else if (StackConfiguration.USE_INSTANCE_DNS && name.toString().endsWith(".in-addr.arpa.")) {
-  	  int index = name.toString().indexOf(".in-addr.arpa.");
+      int index = name.toString().indexOf(".in-addr.arpa.");
   	  Name target;
 	  if ( index > 0 ) {
 		String ipString = name.toString().substring(0, index);
@@ -244,7 +248,7 @@ public class TransientZone extends Zone {
         resp.addRRset( new RRset( new ARecord( name, 1, ttl, ip ) ) );
         return resp;
     } else if (name.toString().startsWith("walrus.")) {
-        SetResponse resp = new SetResponse(SetResponse.SUCCESSFUL);
+    	SetResponse resp = new SetResponse(SetResponse.SUCCESSFUL);
         InetAddress walrusIp = null;
           try {
 		    walrusIp = WalrusProperties.getWalrusAddress();
@@ -283,8 +287,7 @@ public class TransientZone extends Zone {
 	  long expires = 2419200;
           //This is the negative cache TTL
           long minimum = 600;
-	  Record soarec = new SOARecord( name, DClass.IN, ttl, name, Name.fromString( "root." + name.toString( ) ), serial,
-	    refresh, retry, expires, minimum );
+	  Record soarec = new SOARecord( name, DClass.IN, ttl, name, Name.fromString( "root." + name.toString( ) ), serial, refresh, retry, expires, minimum );
 	  long nsTTL = 604800;
 	  Record nsrec = new NSRecord( name, DClass.IN, nsTTL,
 	    Name.fromString( Internets.localHostInetAddress( ).getCanonicalHostName( ) +".") );
