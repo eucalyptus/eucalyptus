@@ -33,6 +33,7 @@ import java.util.Map;
 import java.util.Random;
 import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
@@ -42,7 +43,6 @@ import org.apache.log4j.Logger;
 import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.principal.AccountFullName;
-import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.autoscaling.common.AutoScaling;
 import com.eucalyptus.autoscaling.configurations.LaunchConfiguration;
 import com.eucalyptus.autoscaling.groups.AutoScalingGroup;
@@ -50,6 +50,7 @@ import com.eucalyptus.autoscaling.groups.AutoScalingGroups;
 import com.eucalyptus.autoscaling.groups.HealthCheckType;
 import com.eucalyptus.autoscaling.groups.PersistenceAutoScalingGroups;
 import com.eucalyptus.autoscaling.groups.ScalingProcessType;
+import com.eucalyptus.autoscaling.groups.SuspendedProcess;
 import com.eucalyptus.autoscaling.groups.TerminationPolicyType;
 import com.eucalyptus.autoscaling.instances.AutoScalingInstance;
 import com.eucalyptus.autoscaling.instances.AutoScalingInstances;
@@ -147,6 +148,8 @@ public class ActivityManager {
   private static final int maxLaunchIncrement = 20;
   private static final int maxRegistrationRetries = 5;
   private static final long zoneFailureThreshold = TimeUnit.MINUTES.toMillis( 5 );
+  private static final long suspensionTimeout = TimeUnit.DAYS.toMillis( 1 );
+  private static final int suspensionLaunchAttemptsThreshold = 15;
 
   private final ScalingActivities scalingActivities;
   private final AutoScalingGroups autoScalingGroups;
@@ -154,6 +157,7 @@ public class ActivityManager {
   private final ZoneUnavailabilityMarkers zoneAvailabilityMarkers;
   private final ZoneMonitor zoneMonitor;
   private final BackoffRunner runner = BackoffRunner.getInstance( );
+  private final ConcurrentMap<String,Integer> launchFailureCounters = Maps.newConcurrentMap();
 
   public ActivityManager() {
     this(
@@ -338,6 +342,10 @@ public class ActivityManager {
         instanceType,
         keyName,
         Objects.firstNonNull( securityGroups, Collections.<String>emptyList() ) );
+  }
+
+  protected long timestamp() {
+    return System.currentTimeMillis();
   }
 
   private List<String> validateReferences( final OwnerFullName owner,
@@ -687,7 +695,7 @@ public class ActivityManager {
   }
 
   private boolean isTimedOut( final Date timestamp ) {
-    return ( System.currentTimeMillis() - timestamp.getTime() ) > activityTimeout;
+    return ( timestamp() - timestamp.getTime() ) > activityTimeout;
   }
 
   private Map<String,Integer> buildAvailabilityZoneInstanceCounts( final Collection<AutoScalingInstance> instances,
@@ -785,6 +793,21 @@ public class ActivityManager {
             return Objects.firstNonNull( tag.getPropagateAtLaunch(), Boolean.FALSE );
           }
         } );
+  }
+
+  private boolean shouldSuspendDueToLaunchFailure( final AutoScalingGroup group ) {
+    while ( true ) {
+      final Integer count = launchFailureCounters.get( group.getArn() );
+      final Integer newCount = Objects.firstNonNull( count, 0 ) + 1;
+      if ( ( count == null && launchFailureCounters.putIfAbsent( group.getArn(), newCount ) == null ) ||
+           ( count != null && launchFailureCounters.replace( group.getArn(), count, newCount ) ) ) {
+        return newCount >= suspensionLaunchAttemptsThreshold;
+      }
+    }
+  }
+
+  private void clearLaunchFailures( final AutoScalingGroup group ) {
+    launchFailureCounters.remove( group.getArn() );
   }
 
   private interface ActivityContext {
@@ -1097,7 +1120,35 @@ public class ActivityManager {
     }
 
     @Override
+    void failure( final List<LaunchInstanceScalingActivityTask> tasks ) {
+      // Check to see if we should suspend activities for this group
+      // - Group zones must not be unavailable
+      // - Group must have been trying to launch instances for X period (unchanged)
+      if ( !zoneMonitor.getUnavailableZones( 0 ).removeAll( getGroup().getAvailabilityZones() ) &&
+          (getGroup().getLastUpdateTimestamp().getTime() + suspensionTimeout ) < timestamp() ) {
+        if ( shouldSuspendDueToLaunchFailure( getGroup() ) ) try {
+          autoScalingGroups.update(
+              getOwner(),
+              getGroup().getAutoScalingGroupName(),
+              new Callback<AutoScalingGroup>() {
+                @Override
+                public void fire( final AutoScalingGroup autoScalingGroup ) {
+                  autoScalingGroup.getSuspendedProcesses().add(
+                      SuspendedProcess.createAdministrative( ScalingProcessType.Launch ) );
+                }
+              } );
+        } catch ( AutoScalingMetadataException e ) {
+          logger.error( e, e );
+        }
+      } else {
+        clearLaunchFailures( getGroup() );
+      }
+    }
+
+    @Override
     void partialSuccess( final List<LaunchInstanceScalingActivityTask> tasks ) {
+      clearLaunchFailures( getGroup() );
+
       final List<String> instanceIds = Lists.newArrayList();
       for ( final LaunchInstanceScalingActivityTask task : tasks ) {
         instanceIds.addAll( task.getInstanceIds() );

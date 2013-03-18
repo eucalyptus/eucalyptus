@@ -85,9 +85,7 @@ public class Principals {
   
   private static final String  SYSTEM_ID      = Account.SYSTEM_ACCOUNT;
   private static final String  NOBODY_ID      = Account.NOBODY_ACCOUNT;
-  private static final Account NOBODY_ACCOUNT = new SystemAccount( Account.NOBODY_ACCOUNT_ID, Account.NOBODY_ACCOUNT, nobodyUser( ) );
-  private static final Account SYSTEM_ACCOUNT = new SystemAccount( Account.SYSTEM_ACCOUNT_ID, Account.SYSTEM_ACCOUNT, systemUser( ) );
-  
+
   private static final User    SYSTEM_USER    = new User( ) {
                                                 private final Certificate       cert  = new Certificate( ) {
                                                                                         @Override
@@ -553,6 +551,9 @@ public class Principals {
                                                 public void removeInfo(String key) throws AuthException {}
                                               };
 
+  private static final Account NOBODY_ACCOUNT = new SystemAccount( Account.NOBODY_ACCOUNT_ID, Account.NOBODY_ACCOUNT, nobodyUser( ) );
+  private static final Account SYSTEM_ACCOUNT = new SystemAccount( Account.SYSTEM_ACCOUNT_ID, Account.SYSTEM_ACCOUNT, systemUser( ) );
+
   private static final Set<Account> FAKE_ACCOUNTS        = ImmutableSet.of( systemAccount(), nobodyAccount() );
   private static final Set<String>  FAKE_ACCOUNT_NUMBERS =
       ImmutableSet.copyOf( Iterables.transform(FAKE_ACCOUNTS, Accounts.toAccountNumber() ) );
@@ -720,7 +721,7 @@ public class Principals {
 
     @Override
     public User lookupAdmin() throws AuthException {
-      return lookupUserByName( User.ACCOUNT_ADMIN );
+      return systemUser;
     }
 
     @Override

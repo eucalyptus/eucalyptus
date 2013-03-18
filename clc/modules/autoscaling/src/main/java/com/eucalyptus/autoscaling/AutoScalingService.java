@@ -804,6 +804,10 @@ public class AutoScalingService {
         @Override
         public void fire( final AutoScalingGroup autoScalingGroup ) {
           if ( RestrictedTypes.filterPrivileged().apply( autoScalingGroup ) ) {
+            final boolean isAdminSuspension =
+                ctx.hasAdministrativePrivileges() &&
+                !autoScalingGroup.getOwnerAccountNumber().equals( accountFullName.getAccountNumber() );
+
             final Set<ScalingProcessType> processesToSuspend = EnumSet.allOf( ScalingProcessType.class );
             if ( request.getScalingProcesses() != null && !request.getScalingProcesses().getMember().isEmpty() ) {
               processesToSuspend.clear();
@@ -814,7 +818,9 @@ public class AutoScalingService {
             for ( final ScalingProcessType scalingProcessType : processesToSuspend ) {
               if ( scalingProcessType.apply( autoScalingGroup ) ) {
                 autoScalingGroup.getSuspendedProcesses().add(
-                    SuspendedProcess.createManual( scalingProcessType ) );
+                    isAdminSuspension ?
+                        SuspendedProcess.createAdministrative( scalingProcessType ) :
+                        SuspendedProcess.createManual( scalingProcessType ) );
               }
             }
           }

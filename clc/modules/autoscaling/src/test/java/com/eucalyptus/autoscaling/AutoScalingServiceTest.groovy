@@ -798,6 +798,7 @@ class AutoScalingServiceTest {
       @Override
       List<String> validateReferences( OwnerFullName owner,
                                        Iterable<String> imageIds,
+                                       String instanceType,
                                        String keyName,
                                        Iterable<String> securityGroups) {
         []

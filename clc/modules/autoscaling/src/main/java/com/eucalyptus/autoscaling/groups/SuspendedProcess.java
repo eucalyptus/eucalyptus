@@ -87,10 +87,19 @@ public class SuspendedProcess {
   }
 
   public static SuspendedProcess createManual( final ScalingProcessType scalingProcessType ) {
+    return buildSuspendedProcess( scalingProcessType, "Manual suspension" );
+  }
+
+  public static SuspendedProcess createAdministrative( final ScalingProcessType scalingProcessType ) {
+    return buildSuspendedProcess( scalingProcessType, "Administrative suspension" );
+  }
+
+  private static SuspendedProcess buildSuspendedProcess( final ScalingProcessType scalingProcessType,
+                                                         final String reason) {
     final SuspendedProcess suspendedProcess = new SuspendedProcess();
     suspendedProcess.setCreationTimestamp( new Date() );
     suspendedProcess.setScalingProcessType( scalingProcessType );
-    suspendedProcess.setReason( "Manual suspension" );
+    suspendedProcess.setReason( reason );
     return suspendedProcess;
   }
 }
