@@ -92,7 +92,9 @@
       var thisObj = this;
       var dt_arg = {};
       dt_arg["bProcessing"] = true;
-      dt_arg["bServerSide"] = true;
+      // This was disabling sorting. I'm not sure why this was there to start with, so
+      // let's leave this like this for now with this comment. - dak
+      //dt_arg["bServerSide"] = true;
       dt_arg["sAjaxDataProp"] = "results";
       dt_arg["bAutoWidth"] = false;
       dt_arg["sPaginationType"] = "full_numbers",
