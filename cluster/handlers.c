@@ -4252,17 +4252,6 @@ int init_config(void)
             EUCA_FREE(tmpstr);
         }
 
-        if (pubmode && !(!strcmp(pubmode, "SYSTEM") || !strcmp(pubmode, "STATIC") || 
-                !strcmp(pubmode, "STATIC-DYNMAC")   || 
-                !strcmp(pubmode, "MANAGED-NOVLAN")  || !strcmp(pubmode, "MANAGED"))) {
-            char errorm[256];
-            memset(errorm,0,256);
-            sprintf(errorm,"Invalid VNET_MODE setting: %s",pubmode);
-            logprintfl (EUCAFATAL,"%s\n",errorm);
-            log_eucafault("1012","component",euca_this_component_name,"cause",errorm,NULL);
-            initFail = 1;
-        }
-
         if (pubmode && (!strcmp(pubmode, "STATIC") || !strcmp(pubmode, "STATIC-DYNMAC"))) {
             pubSubnet = configFileValue("VNET_SUBNET");
             pubSubnetMask = configFileValue("VNET_NETMASK");
@@ -4278,6 +4267,7 @@ int init_config(void)
                 logprintfl(EUCAFATAL,
                            "in '%s' network mode, you must specify values for 'VNET_SUBNET, VNET_NETMASK, VNET_BROADCAST, VNET_ROUTER, VNET_DNS and %s'\n",
                            pubmode, (!strcmp(pubmode, "STATIC")) ? "VNET_MACMAP" : "VNET_PUBLICIPS");
+                initFail = 1;
             }
 
         } else if (pubmode && (!strcmp(pubmode, "MANAGED") || !strcmp(pubmode, "MANAGED-NOVLAN"))) {
