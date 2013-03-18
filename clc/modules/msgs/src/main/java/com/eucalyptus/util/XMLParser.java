@@ -177,6 +177,33 @@ public class XMLParser {
 		return dBuilder;
 	}
 
+	public static DocumentBuilder getDocBuilderWithDTD() {
+		DocumentBuilderFactory dFactory = DocumentBuilderFactory.newInstance();
+		dFactory.setExpandEntityReferences(false);
+
+		try {
+			dFactory.setFeature(XMLConstants.FEATURE_SECURE_PROCESSING, true);
+		} catch(ParserConfigurationException ex) {
+			LOG.error(ex, ex);
+		}
+
+		DocumentBuilder dBuilder = null;
+		try {
+			dBuilder = dFactory.newDocumentBuilder();
+			dBuilder.setEntityResolver(new EntityResolver() {
+				@Override
+				public InputSource resolveEntity(String publicId, String systemId)
+				throws SAXException, IOException {
+					return new InputSource(new StringReader(""));
+				}
+			});
+		} catch (ParserConfigurationException ex) {
+			LOG.error(ex, ex);
+		}	
+		return dBuilder;
+	}
+
+
 	public String getValue(String name) {
 		try {
 			return (String) xpath.evaluate(name, docRoot, XPathConstants.STRING);

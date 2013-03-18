@@ -121,7 +121,7 @@ public class LoggingResetter {
 		SmallLoggingConfiguration smallLoggingConfiguration = null;
 		InputStream in = null;
 		try {
-			DocumentBuilder dBuilder = XMLParser.getDocBuilder();
+			DocumentBuilder dBuilder = XMLParser.getDocBuilderWithDTD();
 			dBuilder.setEntityResolver(new Log4jEntityResolver());
 			URL url = Thread.currentThread().getContextClassLoader().getResource("log4j.xml");
 			if (url != null) {
