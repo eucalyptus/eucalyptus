@@ -219,8 +219,8 @@ void usage(void)
             "\t\t-U [string] \t- user data to store with instance\n" "\t\t-I [string] \t- launch index to store with instance\n"
             "\t\t-G [str:str: ] \t- group names to store with instance\n"
             "\t\t-s [stateName] \t- name of state\n"
-            "\t\t\t\tUse {ENABLED|DISABLED} for modifyNode operation\n"
-            "\t\t\t\tUse {Prepare|Commit|Rollback} for migrateInstances opration\n"
+            "\t\t\t\tUse {enabled|disabled} for modifyNode operation\n"
+            "\t\t\t\tUse {prepare|commit|rollback} for migrateInstances opration\n"
             "\t\t-M [src:dst:cr]\t- migration request source and destination IPs + credentials\n");
 
     exit(1);
