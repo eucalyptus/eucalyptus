@@ -244,7 +244,7 @@ public class RunInstancesType extends VmControlMessage {
   String shutdownAction = "stop"; //or "terminate"
   /** InstanceLicenseRequest license; **/
   String privateIpAddress = "";
-  String clientToken = "";
+  String clientToken;
   
   ArrayList<Integer> networkIndexList = new ArrayList<Integer>();
   String privateMacBase;
@@ -334,6 +334,7 @@ public class RunningInstancesItemType extends EucalyptusData implements Comparab
   String rootDeviceType = "instance-store";
   String rootDeviceName = "/dev/sda1";
   ArrayList<InstanceBlockDeviceMapping> blockDevices = new ArrayList<InstanceBlockDeviceMapping>();
+  String clientToken;
   ArrayList<ResourceTag> tagSet = new ArrayList<ResourceTag>();
 
   @Override

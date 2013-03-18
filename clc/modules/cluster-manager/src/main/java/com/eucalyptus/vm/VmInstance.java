@@ -164,6 +164,7 @@ import edu.ucsb.eucalyptus.msgs.InstanceStatusDetailsSetItemType;
 import edu.ucsb.eucalyptus.msgs.InstanceStatusDetailsSetType;
 import edu.ucsb.eucalyptus.msgs.InstanceStatusItemType;
 import edu.ucsb.eucalyptus.msgs.InstanceStatusType;
+import edu.ucsb.eucalyptus.msgs.ReservationInfoType;
 import edu.ucsb.eucalyptus.msgs.RunningInstancesItemType;
 
 @Entity
@@ -431,7 +432,10 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
           final byte[] userData = RestoreAllocation.restoreUserData( input );
           building = true;
           final VmInstance vmInst = new VmInstance.Builder( ).owner( userFullName )
-                                              .withIds( input.getInstanceId( ), input.getReservationId( ) )
+                                              .withIds( input.getInstanceId( ),
+                                                        input.getReservationId( ),
+                                                        null,
+                                                        null )
                                               .bootRecord( bootSet,
                                                            userData,
                                                            keyPair,
@@ -900,7 +904,10 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
       try {
         final Allocation allocInfo = token.getAllocationInfo( );
         VmInstance vmInst = new VmInstance.Builder( ).owner( allocInfo.getOwnerFullName( ) )
-                                                     .withIds( token.getInstanceId( ), allocInfo.getReservationId( ) )
+                                                     .withIds( token.getInstanceId( ),
+                                                               allocInfo.getReservationId( ),
+                                                               allocInfo.getClientToken( ),
+                                                               allocInfo.getUniqueClientToken( ) )
                                                      .bootRecord( allocInfo.getBootSet( ),
                                                                   allocInfo.getUserData( ),
                                                                   allocInfo.getSshKeyPair( ),
@@ -963,8 +970,11 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
       return this;
     }
     
-    public Builder withIds( final String instanceId, final String reservationId ) {
-      this.vmId = new VmId( reservationId, instanceId );
+    public Builder withIds( @Nonnull  final String instanceId,
+                            @Nonnull  final String reservationId,
+                            @Nullable final String clientToken,
+                            @Nullable final String uniqueClientToken ) {
+      this.vmId = new VmId( reservationId, instanceId, clientToken, uniqueClientToken );
       return this;
     }
     
@@ -978,9 +988,9 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
       this.vmBootRecord = new VmBootRecord( bootSet, userData, sshKeyPair, vmType, monitoring );
       return this;
     }
-    
-    public VmInstance build( final Integer launchndex ) throws ResourceAllocationException {
-      return new VmInstance( this.owner, this.vmId, this.vmBootRecord, new VmLaunchRecord( launchndex, new Date( ) ), this.vmPlacement,
+
+    public VmInstance build( final Integer launchIndex ) throws ResourceAllocationException {
+      return new VmInstance( this.owner, this.vmId, this.vmBootRecord, new VmLaunchRecord( launchIndex, new Date( ) ), this.vmPlacement,
                              this.networkRulesGroups, this.networkIndex, this.usePrivateAddressing, this.expiration );
     }
   }
@@ -1013,7 +1023,21 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
                                                                     : null;
     this.store( );
   }
-  
+
+  private VmInstance( final OwnerFullName owner, final VmId vmId ) {
+    super( owner, null );
+    this.vmId = vmId;
+    this.expiration = null;
+    this.runtimeState = null;
+    this.bootRecord = null;
+    this.launchRecord = null;
+    this.placement = null;
+    this.privateNetwork = null;
+    this.usageStats = null;
+    this.networkConfig = null;
+    this.transientVolumeState = null;
+  }
+
   protected VmInstance( final OwnerFullName ownerFullName, final String instanceId2 ) {
     super( ownerFullName, instanceId2 );
     this.expiration = null;
@@ -1027,7 +1051,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
     this.networkConfig = null;
     this.transientVolumeState = null;
   }
-  
+
   protected VmInstance( ) {
     this.expiration = null;
     this.vmId = null;
@@ -1337,7 +1361,11 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
   public static VmInstance named( final OwnerFullName ownerFullName, final String instanceId ) {
     return new VmInstance( ownerFullName, instanceId );
   }
-  
+
+  public static VmInstance withToken( final OwnerFullName ownerFullName, final String clientToken ) {
+    return new VmInstance( ownerFullName, new VmId( null, null, clientToken, null ) );
+  }
+
   public static VmInstance namedTerminated( final OwnerFullName ownerFullName, final String instanceId ) {
     return new VmInstance( ownerFullName, instanceId ) {
       /**
@@ -1800,12 +1828,14 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
      */
     @Override
     public RunningInstancesItemType apply( final VmInstance v ) {
-      if ( !Entities.isPersistent( v ) ) {
+      if ( !Entities.isPersistent( v ) && !VmStateSet.DONE.apply( v ) ) {
         throw new TransientEntityException( v.toString( ) );
       } else {
         final EntityTransaction db = Entities.get( VmInstance.class );
         try {
-          final VmInstance input = Entities.merge( v );
+          final VmInstance input = !Entities.isPersistent( v ) && VmStateSet.DONE.apply( v ) ?
+              v :
+              Entities.merge( v );
           RunningInstancesItemType runningInstance;
           runningInstance = new RunningInstancesItemType( );
           
@@ -1836,7 +1866,8 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
           runningInstance.setPlacement( input.getPlacement( ).getPartitionName( ) );
           
           runningInstance.setLaunchTime( input.getLaunchRecord( ).getLaunchTime( ) );
-          
+          runningInstance.setClientToken( input.getClientToken() );
+
           if (input.getBootRecord().isMonitoring()) {
             runningInstance.setMonitoring("enabled");
           } else {
@@ -1872,7 +1903,20 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
       }
     }
   }
-  
+
+  @TypeMapper
+  public enum ReservationTransform implements Function<VmInstance, ReservationInfoType> {
+    INSTANCE;
+
+    @Override
+    public ReservationInfoType apply( final VmInstance instance ) {
+      return new ReservationInfoType(
+          instance.getReservationId( ),
+          instance.getOwner( ).getAccountNumber( ),
+          instance.getNetworkNames( ) );
+    }
+  }
+
   public boolean isLinux( ) {
     return this.bootRecord.isLinux( );
   }
@@ -1936,7 +1980,12 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
   public Integer getLaunchIndex( ) {
     return this.getLaunchRecord( ).getLaunchIndex( );
   }
-  
+
+  @Nullable
+  public String getClientToken() {
+    return this.getVmId().getClientToken();
+  }
+
   public SshKeyPair getKeyPair( ) {
     return this.getBootRecord( ).getSshKeyPair( );
   }

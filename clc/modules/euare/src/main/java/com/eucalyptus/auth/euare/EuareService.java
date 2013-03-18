@@ -1242,6 +1242,7 @@ public class EuareService {
       map.add( new SummaryMapTypeEntryType( "Groups", account.getGroups().size() ) );
       map.add( new SummaryMapTypeEntryType( "Users", account.getUsers().size() ) );
       map.add( new SummaryMapTypeEntryType( "Roles", account.getRoles( ).size( ) ) );
+      //TODO:STEVE:InstanceProfiles
       return reply;
     } catch ( Exception e ) {
       LOG.error( e, e );
