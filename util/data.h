@@ -95,6 +95,7 @@
 #define CHAR_BUFFER_SIZE                          512   //!< Regular string buffer size
 #define BIG_CHAR_BUFFER_SIZE                     1024   //!< Large string buffer size
 #define HOSTNAME_SIZE                             255   //!< Hostname buffer size
+#define CREDENTIAL_SIZE                          1024   //!< Migration-credential buffer size
 
 //! @}
 
@@ -346,9 +347,10 @@ typedef struct ncInstance_t {
     int createImagePid;         //!< Image creationg task PID value
     int createImageCanceled;    //!< Boolean indicating if the image creation task has been cancelled
 
-    migration_states migration_state;   //!< Migration state
-    char migration_src[HOSTNAME_SIZE];  //!< Name of the host from which the instance is being or needs to be migrated
-    char migration_dst[HOSTNAME_SIZE];  //!< Name of the host to which the instance is being or needs to be migrated
+    migration_states migration_state;                   //!< Migration state
+    char migration_src[HOSTNAME_SIZE];                  //!< Name of the host from which the instance is being or needs to be migrated
+    char migration_dst[HOSTNAME_SIZE];                  //!< Name of the host to which the instance is being or needs to be migrated
+    char migration_credentials[CREDENTIAL_SIZE];        //!< Migration shared secret
 
     char keyName[CHAR_BUFFER_SIZE * 4]; //!< Name of the key to use for this instance
     char privateDnsName[CHAR_BUFFER_SIZE];  //!< Private DNS name
@@ -359,6 +361,7 @@ typedef struct ncInstance_t {
     int bundlingTime;           //!< timestamp of ->BUNDLING transition
     int createImageTime;        //!< timestamp of ->CREATEIMAGE transition
     int terminationTime;        //!< timestamp of when resources are released (->TEARDOWN transition)
+    int migrationTime;          //!< timestamp of migration request
 
     virtualMachine params;      //!< Virtual machine parameters
     netConfig ncnet;            //!< Network configuration information
