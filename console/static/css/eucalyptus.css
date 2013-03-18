@@ -1818,8 +1818,8 @@ ul.ramdisk-expanded li:nth-child(5) {
   width: auto;
 }
 
-.paging_full_numbers span.paginate_button,
-.paging_full_numbers span.paginate_active {
+.paging_full_numbers a.paginate_button,
+.paging_full_numbers a.paginate_active {
   display: inline-block;
   margin: 0;
   background-color: transparent;
@@ -1832,60 +1832,60 @@ ul.ramdisk-expanded li:nth-child(5) {
   border-radius: 0;
 
 }
-.paging_full_numbers span.paginate_button:hover {
+.paging_full_numbers a.paginate_button:hover {
   background-color: transparent;
   text-decoration: underline;
 }
 
-.paging_full_numbers span.first,
-.paging_full_numbers span.previous,
-.paging_full_numbers span.next,
-.paging_full_numbers span.last {
+.paging_full_numbers a.first,
+.paging_full_numbers a.previous,
+.paging_full_numbers a.next,
+.paging_full_numbers a.last {
   text-indent: -9999px;
   background-image: url(../images/css-sprites.png);
   background-repeat: no-repeat;
 }
 
-.paging_full_numbers span.first  {
+.paging_full_numbers a.first  {
   width: 45px;
   background-position: 0 -650px;
   border-left: 0;
 }
-.paging_full_numbers span.first.paginate_button_disabled {
+.paging_full_numbers a.first.paginate_button_disabled {
   background-position: 0 -680px;
 }
 
-.paging_full_numbers span.previous {
+.paging_full_numbers a.previous {
   width: 30px;
   background-position: -50px -650px;
 }
-.paging_full_numbers span.previous.paginate_button_disabled {
+.paging_full_numbers a.previous.paginate_button_disabled {
   background-position: -50px -680px;
 }
 
-.paging_full_numbers span.next  {
+.paging_full_numbers a.next  {
   width: 30px; 
   background-position: -85px -650px; 
 }
-.paging_full_numbers span.next.paginate_button_disabled {
+.paging_full_numbers a.next.paginate_button_disabled {
   background-position: -85px -680px;
 }
 
-.paging_full_numbers span.last  {
+.paging_full_numbers a.last  {
   width: 45px;
   background-position: -120px -650px;
   border-right: 0;
 }
-.paging_full_numbers span.last.paginate_button_disabled {
+.paging_full_numbers a.last.paginate_button_disabled {
   background-position: -120px -680px;
 }
 
-.paging_full_numbers span.paginate_active {
+.paging_full_numbers a.paginate_active {
   color: #02405f;
   cursor: default;
 }
 
-.paging_full_numbers span.paginate_button_disabled {
+.paging_full_numbers a.paginate_button_disabled {
   cursor: default;
 }
 
