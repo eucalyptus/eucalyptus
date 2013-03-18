@@ -981,6 +981,18 @@ ul.ui-autocomplete {
   font-size: 14px;
 }
 
+.wizardTitle h3 {
+  background: transparent url(../images/css-sprites.png) no-repeat left -160px;
+  font-family: 'PlayBold', Arial, sans-serif;
+  font-size: 13px;
+  line-height: 1.5;
+  font-weight: normal;
+  color: #02405f;
+  margin: 0;
+  padding: 1px 0 9px 20px;
+  width: 170px;
+}
+
 .inner-box h3 {
   position: absolute;
   top: 9px;

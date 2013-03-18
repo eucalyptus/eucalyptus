@@ -21,6 +21,7 @@
 
     <script type="text/template" id="wizard_template">
     <div id="wizard">
+      <div id="wizardAbove" class="">Above</div>
       <div id="wizardContent">
         [content here]
       </div>
@@ -35,6 +36,7 @@
           <span id="problem1" class="error-msg wizardProblem">No, no, no!</span>
         </div>
       </div>
+      <div id="wizardBelow">Below</div>
     </div>
     </script>
 
@@ -51,6 +53,23 @@
       function pageContent(index) {
         return '<div class="content-box inner-box"><h3>Page ' + index +
                 '</h3>&nbsp;<p>Hey hey, this is page ' + index + '</p></div>';
+      }
+      
+      function closedView(index) {
+        var Closed = Backbone.View.extend({
+          initialize: function() {
+            this.render();
+          },
+          render: function() {
+            var container = $('<div>', {
+              id : 'closed-' + index,
+              class : 'wizardTitle'
+            });
+            container.html('<h3>Page ' + index + '</h3>');
+            $(this.el).append(container);
+          }
+        });
+        return Closed;
       }
 
       var Page1 = Backbone.View.extend({
@@ -105,7 +124,7 @@
 
       var template = _.template($("#wizard_template").html(), {});
 
-      var wiz = new Wizard().add(Page1).add(Page2).add(Page3).add(Page4);
+      var wiz = new Wizard().add(Page1, closedView(1)).add(Page2, closedView(2)).add(Page3, closedView(3)).add(Page4, closedView(4));
       var wv = wiz.makeView({el: $('#wizard')}, options, template);
     </script>
   </body>

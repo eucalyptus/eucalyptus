@@ -205,14 +205,14 @@ function Wizard(pages, navigationController, closedViewFactory) {
     var result = {};
     for (var i = 0; i < arguments.length; i++) {
       result[arguments[i]] = '#' + arguments[i];
-    
+
     }
     return result;
   }
-  
+
   // Merge b's properties into a
   function merge(a, b) {
-    
+
     if (b) {
       for (var key in b) {
         // avoid immediately resolving b's contents
@@ -226,7 +226,7 @@ function Wizard(pages, navigationController, closedViewFactory) {
 
   self.makeView = function(element, options, template, mapping) {
     // Assume default component names, but let mapping override them if it wants
-    mapping = merge(trivialMapping('nextButton', 'prevButton', 'finishButton', 'problems', 'wizardContent'), mapping || {});
+    mapping = merge(trivialMapping('nextButton', 'prevButton', 'finishButton', 'problems', 'wizardContent', 'wizardAbove', 'wizardBelow'), mapping || {});
     // Make sure options is defined
     options = options || {};
     // If there is no canFinish function, provide a default one that only
@@ -234,7 +234,7 @@ function Wizard(pages, navigationController, closedViewFactory) {
     if (typeof options.canFinish !== 'function') {
       options.canFinish = function(arr) {
         return position === pages.length - 1;
-      }
+      };
     }
     // Predefine click handlers, using the selectors provided in the mapping
     // (if any)
@@ -263,6 +263,8 @@ function Wizard(pages, navigationController, closedViewFactory) {
         this.finishButton = this.$el.find(mapping.finishButton);
         this.problems = this.$el.find(mapping.problems);
         this.wizardContent = this.$el.find(mapping.wizardContent);
+        this.wizardAbove = this.$el.find(mapping.wizardAbove);
+        this.wizardBelow = this.$el.find(mapping.wizardBelow);
         this.render();
       },
       render: function() {
@@ -284,6 +286,18 @@ function Wizard(pages, navigationController, closedViewFactory) {
           });
           this.problems.append(problemLabel);
         }
+
+        this.wizardAbove.empty();
+        this.wizardBelow.empty();
+        for (var i = 0; i < self.position; i++) {
+          var CV = self.closedView(i);
+          this.wizardAbove.append(new CV($(this.wizardAbove)).$el);
+        }
+        for (var i = self.position + 1; i < pages.length; i++) {
+          var CV = self.closedView(i);
+          this.wizardBelow.append(new CV($(this.wizardBelow)).$el);
+        }
+
       },
       events: events
     });
