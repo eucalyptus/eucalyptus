@@ -200,6 +200,7 @@ const int default_booting_cleanup_threshold = 60;   //!< after this many seconds
 const int default_bundling_cleanup_threshold = 60 * 60 * 2; //!< after this many seconds any BUNDLING domains will be cleaned up
 const int default_createImage_cleanup_threshold = 60 * 60 * 2;  //!< after this many seconds any CREATEIMAGE domains will be cleaned up
 const int default_teardown_state_duration = 180;    //!< after this many seconds in TEARDOWN state (no resources), we'll forget about the instance
+const int default_migration_ready_threshold = 60 * 15; //!< after this many seconds ready (and waiting) to migrate, migration will terminate and roll back
 
 struct nc_state_t nc_state = { 0 }; //!< Global NC state structure
 
@@ -283,6 +284,7 @@ int doDescribeSensors(ncMetadata * pMeta, int historySize, long long collectionI
 int doModifyNode(ncMetadata * pMeta, char *stateName);
 int doMigrateInstances(ncMetadata * pMeta, ncInstance ** instances, int instancesLen, char *action, char *credentials);
 ncInstance *find_global_instance(const char *instanceId);
+int migration_rollback_src(ncInstance *instance);
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |
@@ -814,8 +816,8 @@ static void refresh_instance_info(struct nc_state_t *nc, ncInstance * instance)
                 instance->migration_state = MIGRATION_IN_PROGRESS;
                 LOGINFO("[%s] incoming migration in progress\n", instance->instanceId);
 
-            } else if ((old_state == BOOTING || old_state == PAUSED) 
-                       && 
+            } else if ((old_state == BOOTING || old_state == PAUSED)
+                       &&
                        (new_state == RUNNING || new_state == BLOCKED)) {
                 instance->migration_state = NOT_MIGRATING;  // done!
                 LOGINFO("[%s] incoming migration complete\n", instance->instanceId);
@@ -1004,6 +1006,20 @@ void *monitoring_thread(void *arg)
             // query for current state, if any
             refresh_instance_info(nc, instance);
 
+            // time out logic for migration-ready instances
+            if (!strcmp(instance->stateName, "Extant") && (instance->migration_state == MIGRATION_READY) &&
+                ((now - instance->migrationTime) > nc_state.migration_ready_threshold)) {
+                if (instance->migrationTime) {
+                    LOGWARN("[%s] has been in migration-ready state on source %s for %d seconds (threshold is %d), rolling back [%d].\n",
+                            instance->instanceId, instance->migration_src, (int)(now - instance->migrationTime), nc_state.migration_ready_threshold,
+                            instance->migrationTime);
+                    migration_rollback_src(instance);
+                    continue;
+                } else {
+                    LOGERROR("[%s] is ready to migrate but has a zero instance migrationTime.\n", instance->instanceId);
+                }
+            }
+
             // don't touch running or canceled threads
             if (instance->state != STAGING && instance->state != BOOTING &&
                 instance->state != SHUTOFF &&
@@ -1032,6 +1048,7 @@ void *monitoring_thread(void *arg)
                 }
                 continue;
             }
+
             // time out logic for STAGING or BOOTING or BUNDLING instances
             if (instance->state == STAGING && (now - instance->launchTime) < nc_state.staging_cleanup_threshold)
                 continue;       // hasn't been long enough, spare it
@@ -1769,6 +1786,7 @@ static int init(void)
     GET_VAR_INT(nc_state.bundling_cleanup_threshold, CONFIG_NC_BUNDLING_CLEANUP_THRESHOLD, default_bundling_cleanup_threshold);
     GET_VAR_INT(nc_state.createImage_cleanup_threshold, CONFIG_NC_CREATEIMAGE_CLEANUP_THRESHOLD, default_createImage_cleanup_threshold);
     GET_VAR_INT(nc_state.teardown_state_duration, CONFIG_NC_TEARDOWN_STATE_DURATION, default_teardown_state_duration);
+    GET_VAR_INT(nc_state.migration_ready_threshold, CONFIG_NC_MIGRATION_READY_THRESHOLD, default_migration_ready_threshold);
 
     // add three eucalyptus directories with executables to PATH of this process
     add_euca_to_path(nc_state.home);
@@ -2302,7 +2320,7 @@ int doDescribeInstances(ncMetadata * pMeta, char **instIds, int instIdsLen, ncIn
                 strcat(vols_str, vol_str);
             }
         }
-        
+
         if (instance->migration_state!=NOT_MIGRATING) { // construct migration status string
             char * peer = "?";
             char dir = '?';
@@ -2926,7 +2944,7 @@ ncInstance *find_global_instance(const char *instanceId)
 //! Predicate determining whether the instance is a migration destination
 //!
 //! @param[in] instance pointer to the instance struct
-//! 
+//!
 //! @return true or false
 //!
 int is_migration_dst(const ncInstance * instance)
@@ -2940,12 +2958,41 @@ int is_migration_dst(const ncInstance * instance)
 //! Predicate determining whether the instance is a migration source
 //!
 //! @param[in] instance pointer to the instance struct
-//! 
+//!
 //! @return true or false
 //!
 int is_migration_src(const ncInstance * instance)
 {
     if (instance->migration_state != NOT_MIGRATING && !strcmp(instance->migration_src, nc_state.ip))
         return TRUE;
+    return FALSE;
+}
+
+//!
+//! Rollback a pending migration request on a source NC
+//!
+//! FIXME: Currently only safe to call under the protection of inst_sem, such as from the migrating_thread().
+//!
+//! @param[in] instance pointer to the instance struct
+//!
+//! @return true or false
+//!
+int migration_rollback_src(ncInstance *instance)
+{
+    if (is_migration_src(instance)) {
+        LOGINFO("[%s] starting migration rollback of instance on source %s\n", instance->instanceId, instance->migration_src);
+        //sem_p(inst_sem);
+        instance->migration_state = NOT_MIGRATING;
+        bzero(instance->migration_src, HOSTNAME_SIZE);
+        bzero(instance->migration_dst, HOSTNAME_SIZE);
+        instance->migrationTime = 0;
+        save_instance_struct(instance);
+        copy_instances();
+        //sem_v(inst_sem);
+        LOGINFO("[%s] migration source rolled back.\n", instance->instanceId);
+        return TRUE;
+    }
+    // Not source node?
+    LOGERROR("[%s] request to roll back migration of instance on non-source node %s\n", instance->instanceId, nc_state.ip)
     return FALSE;
 }
