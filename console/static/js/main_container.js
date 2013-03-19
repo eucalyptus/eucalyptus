@@ -178,6 +178,9 @@
 	case 'newscalinggroup':
 	  this.element.createscalinggroup();
           break;
+        case 'rivetstest':
+          this.element.rivetstest();
+          break;
       }
       if (options !== KEEP_VIEW) {
         this._curSelected = selected;
