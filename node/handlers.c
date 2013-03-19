@@ -1016,7 +1016,15 @@ void *monitoring_thread(void *arg)
                     migration_rollback_src(instance);
                     continue;
                 } else {
-                    LOGERROR("[%s] is ready to migrate but has a zero instance migrationTime.\n", instance->instanceId);
+                    if (instance->state == BOOTING) {
+                        // Assume destination node. (Is this a safe assumption?)
+                        LOGDEBUG("[%s] destination node ready: instance in booting state with no intance migrationTime.\n",
+                                 instance->instanceId)
+                    } else {
+                        // Assume source node. (Is this a safe assumption?)
+                        // FIXME: Make this LOGERROR()?
+                        LOGWARN("[%s] is ready to migrate but has a zero instance migrationTime.\n", instance->instanceId);
+                    }
                 }
             }
 

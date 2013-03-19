@@ -568,9 +568,11 @@ static void *migrating_thread(void *arg)
     ncInstance *instance = ((ncInstance *) arg);
     virDomainPtr dom = NULL;
     virConnectPtr *conn = NULL;
+    int migration_error = 0;
 
     if ((conn = check_hypervisor_conn()) == NULL) {
-        LOGERROR("[%s] cannot migrate instance %s (failed to connect to hypervisor), giving up\n", instance->instanceId, instance->instanceId);
+        LOGERROR("[%s] cannot migrate instance %s (failed to connect to hypervisor), giving up and rolling back.\n", instance->instanceId, instance->instanceId);
+        migration_error++;
         goto out;
     }
 
@@ -581,7 +583,8 @@ static void *migrating_thread(void *arg)
     sem_v(hyp_sem);
 
     if (dom == NULL) {
-        LOGERROR("[%s] cannot migrate instance %s (failed to find domain), giving up\n", instance->instanceId, instance->instanceId);
+        LOGERROR("[%s] cannot migrate instance %s (failed to find domain), giving up and rolling back.\n", instance->instanceId, instance->instanceId);
+        migration_error++;
         goto out;
     }
 
@@ -590,7 +593,8 @@ static void *migrating_thread(void *arg)
     virConnectPtr dconn = NULL;
     dconn = virConnectOpen(duri);
     if (dconn == NULL) {
-        LOGERROR("[%s] cannot migrate instance %s (failed to connect to remote), giving up\n", instance->instanceId, instance->instanceId);
+        LOGERROR("[%s] cannot migrate instance %s (failed to connect to remote), giving up and rolling back.\n", instance->instanceId, instance->instanceId);
+        migration_error++;
         goto out;
     }
 
@@ -603,19 +607,24 @@ static void *migrating_thread(void *arg)
     virConnectClose(dconn);
 
     if (ddom == NULL) {
-        LOGERROR("[%s] cannot migrate instance %s, giving up\n", instance->instanceId, instance->instanceId);
+        LOGERROR("[%s] cannot migrate instance %s, giving up and rolling back.\n", instance->instanceId, instance->instanceId);
+        migration_error++;
         goto out;
     }
     virDomainFree(ddom);
 
  out:
     sem_p(inst_sem);
-    // If this is set to NOT_MIGRATING here, it's briefly possible for
-    // both the source and destination nodes to report the same instance
-    // as Extant/NOT_MIGRATING, which is confusing!
-    instance->migration_state = MIGRATION_CLEANING;
-    save_instance_struct(instance);
-    copy_instances();
+    if (migration_error) {
+        migration_rollback_src(instance);
+    } else {
+        // If this is set to NOT_MIGRATING here, it's briefly possible for
+        // both the source and destination nodes to report the same instance
+        // as Extant/NOT_MIGRATING, which is confusing!
+        instance->migration_state = MIGRATION_CLEANING;
+        save_instance_struct(instance);
+        copy_instances();
+    }
     sem_v(inst_sem);
 
     if (dom)
@@ -679,6 +688,11 @@ static int doMigrateInstances(struct nc_state_t *nc, ncMetadata * pMeta, ncInsta
                         instance->migration_src, instance->migration_dst);
                 sem_v(inst_sem);
                 return (EUCA_DUPLICATE_ERROR);
+            } else if (instance->migration_state != MIGRATION_READY) {
+                LOGERROR("[%s] request to commit migration %s > %s when source migration_state='%s' (not 'ready')\n", instance->instanceId,
+                         sourceNodeName, destNodeName, migration_state_names[instance->migration_state]);
+                sem_v(inst_sem);
+                return (EUCA_ERROR);
             }
             instance->migration_state = MIGRATION_IN_PROGRESS;
             LOGINFO("[%s] migration source initiating %s > %s\n", instance->instanceId, instance->migration_src, instance->migration_dst);
