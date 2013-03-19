@@ -167,7 +167,7 @@ function Wizard(pages, navigationController, closedViewFactory) {
     }
     var offset = -(position - index);
     if (!navigationController || navigationController(offset)) {
-      position = offset;
+      position = index;
     }
     return self.current;
   }
@@ -224,6 +224,8 @@ function Wizard(pages, navigationController, closedViewFactory) {
     return a;
   }
 
+  var uid = Math.floor(Math.random() * 65536) + '_' + new Date().getTime();
+
   self.makeView = function(element, options, template, mapping) {
     // Assume default component names, but let mapping override them if it wants
     mapping = merge(trivialMapping('nextButton', 'prevButton', 'finishButton', 'problems', 'wizardContent', 'wizardAbove', 'wizardBelow'), mapping || {});
@@ -235,6 +237,9 @@ function Wizard(pages, navigationController, closedViewFactory) {
       options.canFinish = function(arr) {
         return position === pages.length - 1;
       };
+    }
+    if (typeof options.canAnimate === 'undefined') {
+      options.canAnimate = false;
     }
     // Predefine click handlers, using the selectors provided in the mapping
     // (if any)
@@ -254,9 +259,27 @@ function Wizard(pages, navigationController, closedViewFactory) {
       this.render();
     };
 
+    function closedViewName(i) {
+      return 'closedView' + uid + '_' + i;
+    }
+
+    function addClickHandler(i) {
+      events['click ' + '#' + closedViewName(i)] = function() {
+        console.log('GO TO ' + i);
+        self.goTo(i);
+        this.render();
+      };
+    }
+
+    for (var i = 0; i < pages.length; i++) {
+      addClickHandler(i);
+    }
+
     var Result = Backbone.View.extend({
+      animate: true,
       initialize: function() {
         self.show();
+        this.animate = typeof options.canAnimate === 'undefined' ? true : options.canAnimate;
         this.$el.html(template);
         this.nextButton = this.$el.find(mapping.nextButton);
         this.prevButton = this.$el.find(mapping.prevButton);
@@ -268,10 +291,18 @@ function Wizard(pages, navigationController, closedViewFactory) {
         this.render();
       },
       render: function() {
+        var shouldAnimate = this.animate && typeof this.wizardContent['slideUp'] === 'function' && typeof this.wizardContent['slideDown'] === 'function';
+        var shouldAnimate = true;
+        if (shouldAnimate) {
+          this.wizardContent.slideUp(0);
+        }
         var Type = self.current;
         var page = new Type($(this.wizardContent));
         this.wizardContent.empty();
         this.wizardContent.append(page.$el);
+        if (shouldAnimate) {
+          this.wizardContent.slideDown("fast");
+        }
         this.nextButton.attr('disabled', !self.hasNext);
         this.prevButton.attr('disabled', !self.hasPrev);
         var problems = [];
@@ -289,15 +320,23 @@ function Wizard(pages, navigationController, closedViewFactory) {
 
         this.wizardAbove.empty();
         this.wizardBelow.empty();
-        for (var i = 0; i < self.position; i++) {
+
+        function addClosed(i, toWhat) {
           var CV = self.closedView(i);
-          this.wizardAbove.append(new CV($(this.wizardAbove)).$el);
-        }
-        for (var i = self.position + 1; i < pages.length; i++) {
-          var CV = self.closedView(i);
-          this.wizardBelow.append(new CV($(this.wizardBelow)).$el);
+          var container = $('<div>', {
+            id: closedViewName(i)
+          });
+          var element = new CV($(this.wizardBelow)).$el;
+          container.append(element);
+          toWhat.append(container);
         }
 
+        for (var i = 0; i < self.position; i++) {
+          addClosed(i, this.wizardAbove);
+        }
+        for (var i = self.position + 1; i < pages.length; i++) {
+          addClosed(i, this.wizardBelow);
+        }
       },
       events: events
     });

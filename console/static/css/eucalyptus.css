@@ -759,6 +759,23 @@ input[type='text'].medium-textinput {
     margin-right: 1em;
 }
 
+.problems {
+  margin-left: 177px;
+}
+
+.wizardTitle h3 {
+  background: transparent url(../images/css-sprites.png) no-repeat left -160px;
+  font-family: 'PlayBold', Arial, sans-serif;
+  font-size: 13px;
+  cursor: pointer;
+  line-height: 1.5;
+  font-weight: normal;
+  color: #02405f;
+  margin: 0;
+  padding: 1px 0 9px 20px;
+  width: 170px;
+}
+
 ul.ui-autocomplete {
   background: #f3f6f9;
   border-radius: 5px;
@@ -979,18 +996,6 @@ ul.ui-autocomplete {
 #dashboard-page {
   padding: 75px 30px 30px;
   font-size: 14px;
-}
-
-.wizardTitle h3 {
-  background: transparent url(../images/css-sprites.png) no-repeat left -160px;
-  font-family: 'PlayBold', Arial, sans-serif;
-  font-size: 13px;
-  line-height: 1.5;
-  font-weight: normal;
-  color: #02405f;
-  margin: 0;
-  padding: 1px 0 9px 20px;
-  width: 170px;
 }
 
 .inner-box h3 {
