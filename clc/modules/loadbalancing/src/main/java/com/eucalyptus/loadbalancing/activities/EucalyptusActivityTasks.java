@@ -57,10 +57,13 @@ import com.google.common.collect.Lists;
 import edu.ucsb.eucalyptus.msgs.AuthorizeSecurityGroupIngressResponseType;
 import edu.ucsb.eucalyptus.msgs.AuthorizeSecurityGroupIngressType;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
+import edu.ucsb.eucalyptus.msgs.ClusterInfoType;
 import edu.ucsb.eucalyptus.msgs.CreateSecurityGroupResponseType;
 import edu.ucsb.eucalyptus.msgs.CreateSecurityGroupType;
 import edu.ucsb.eucalyptus.msgs.DeleteSecurityGroupResponseType;
 import edu.ucsb.eucalyptus.msgs.DeleteSecurityGroupType;
+import edu.ucsb.eucalyptus.msgs.DescribeAvailabilityZonesResponseType;
+import edu.ucsb.eucalyptus.msgs.DescribeAvailabilityZonesType;
 import edu.ucsb.eucalyptus.msgs.DescribeInstancesResponseType;
 import edu.ucsb.eucalyptus.msgs.DescribeInstancesType;
 import edu.ucsb.eucalyptus.msgs.DnsMessage;
@@ -243,6 +246,21 @@ public class EucalyptusActivityTasks {
 		}
 	}
 	
+	public List<ClusterInfoType> describeAvailabilityZones(){
+		final EucalyptusDescribeAvailabilityZonesTask task = new EucalyptusDescribeAvailabilityZonesTask();
+		final CheckedListenableFuture<Boolean> result = task.dispatch(new EucalyptusSystemActivity());
+		try{
+			if(result.get()){
+				final List<ClusterInfoType> describe = task.getAvailabilityZones();
+				return describe;
+			}else
+				throw new EucalyptusActivityException("failed to describe the availability zones");
+		}catch(Exception ex){
+			throw Exceptions.toUndeclared(ex);
+		}
+
+	}
+	
 	public void createSecurityGroup(String groupName, String groupDesc){
 		final EucalyptusCreateGroupTask task = new EucalyptusCreateGroupTask(groupName, groupDesc);
 		final CheckedListenableFuture<Boolean> result = task.dispatch(new EucalyptusSystemActivity());
@@ -321,6 +339,37 @@ public class EucalyptusActivityTasks {
 		}  
 	}
 	
+
+	private class EucalyptusDescribeAvailabilityZonesTask extends EucalyptusActivityTask<EucalyptusMessage, Eucalyptus> {
+		private List<ClusterInfoType> zones = null; 
+		private EucalyptusDescribeAvailabilityZonesTask(){
+		}
+		
+		private DescribeAvailabilityZonesType describeAvailabilityZones(){
+			final DescribeAvailabilityZonesType req = new DescribeAvailabilityZonesType();
+		    return req;
+		}
+		
+		@Override
+		void dispatchInternal(
+				ActivityContext<EucalyptusMessage, Eucalyptus> context,
+				Checked<EucalyptusMessage> callback) {
+			final DispatchingClient<EucalyptusMessage,Eucalyptus> client = context.getClient();
+			client.dispatch(describeAvailabilityZones(), callback);
+		}
+
+		@Override
+		void dispatchSuccess(
+				ActivityContext<EucalyptusMessage, Eucalyptus> context, EucalyptusMessage response) {
+			// TODO Auto-generated method stub
+			final DescribeAvailabilityZonesResponseType resp = (DescribeAvailabilityZonesResponseType) response;
+			zones = resp.getAvailabilityZoneInfo();
+		}
+		
+		public List<ClusterInfoType> getAvailabilityZones(){
+			return this.zones;
+		}
+	}
 	
 	private class EucalyptusDescribeServicesTask extends EucalyptusActivityTask<EmpyreanMessage, Empyrean> {
 		private String componentType = null;

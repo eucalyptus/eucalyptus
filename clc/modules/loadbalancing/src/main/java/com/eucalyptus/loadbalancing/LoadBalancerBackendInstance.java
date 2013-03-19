@@ -20,8 +20,10 @@
 package com.eucalyptus.loadbalancing;
 
 import java.util.List;
+import java.util.NoSuchElementException;
 
 import javax.persistence.Column;
+import javax.persistence.EntityTransaction;
 import javax.persistence.JoinColumn;
 import javax.persistence.ManyToOne;
 import javax.persistence.PersistenceContext;
@@ -36,6 +38,7 @@ import org.hibernate.annotations.Entity;
 import com.eucalyptus.cloud.UserMetadata;
 import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.id.Eucalyptus;
+import com.eucalyptus.entities.Entities;
 import com.eucalyptus.loadbalancing.activities.EucalyptusActivityTasks;
 import com.eucalyptus.util.FullName;
 import com.eucalyptus.util.OwnerFullName;
@@ -84,11 +87,28 @@ public class LoadBalancerBackendInstance extends UserMetadata<LoadBalancerBacken
 		this.setState(STATE.OutOfService);
 		
 		List<RunningInstancesItemType> instanceIds = EucalyptusActivityTasks.getInstance().describeInstances(Lists.newArrayList(vmId));
-    for(RunningInstancesItemType instance : instanceIds ) {
-      if(instance.getInstanceId().equals(vmId))
-        this.vmInstance = instance;
-        break;
-    }
+	    for(RunningInstancesItemType instance : instanceIds ) {
+	      if(instance.getInstanceId().equals(vmId)){
+	        this.vmInstance = instance;
+	        break;
+	      }
+	    }
+    	if(this.vmInstance == null)
+    		throw new IllegalArgumentException("Cannot find the instance with id="+vmId);
+
+    	final EntityTransaction db = Entities.get( LoadBalancerBackendInstance.class );
+    	try{
+    		final LoadBalancerZone found = Entities.uniqueResult(LoadBalancerZone.named(lb, this.vmInstance.getPlacement()));
+    		this.setAvailabilityZone(found);
+    		db.commit();
+    	}catch(NoSuchElementException ex){
+    		db.rollback();
+    	}catch(Exception ex){
+    		db.rollback();
+    	}finally{
+    		if(this.zone == null)
+    			throw new IllegalArgumentException("Cannot find the availability zone");
+    	}
 	}
 	
 	public static LoadBalancerBackendInstance newInstance(final OwnerFullName userFullName, final LoadBalancer lb, final String vmId){
@@ -100,24 +120,6 @@ public class LoadBalancerBackendInstance extends UserMetadata<LoadBalancerBacken
 		instance.setBackendState(state);
 		return instance;
 	}
-
-	public static LoadBalancerBackendInstance named(final OwnerFullName userName, final LoadBalancer lb, final String vmId){
-		LoadBalancerBackendInstance instance = new LoadBalancerBackendInstance();
-		instance.setOwner(userName);
-		instance.setDisplayName(vmId);
-		instance.setState(null);
-		instance.loadbalancer = lb;
-		return instance;
-	}
-	
-	public static LoadBalancerBackendInstance named(final OwnerFullName userName, final LoadBalancer lb){
-		LoadBalancerBackendInstance instance = new LoadBalancerBackendInstance();
-		instance.setOwner(userName);
-		instance.setDisplayName(null);
-		instance.setState(null);
-		instance.loadbalancer = lb;
-		return instance;
-	}
 	
 	public static LoadBalancerBackendInstance named(final OwnerFullName userName, final String vmId){
 		LoadBalancerBackendInstance instance = new LoadBalancerBackendInstance();
@@ -126,32 +128,7 @@ public class LoadBalancerBackendInstance extends UserMetadata<LoadBalancerBacken
 		instance.setState(null);
 		return instance;
 	}
-	
-	public static LoadBalancerBackendInstance named(final OwnerFullName userName){
-		LoadBalancerBackendInstance instance = new LoadBalancerBackendInstance();
-		instance.setOwner(userName);
-		instance.setState(null);
-		instance.setDisplayName(null);
-		return instance;
-	}
-	
-	public static LoadBalancerBackendInstance named(final String vmId){
-		LoadBalancerBackendInstance instance = new LoadBalancerBackendInstance();
-		instance.setOwner(null);
-		instance.setState(null);
-		instance.setDisplayName(vmId);
-		return instance;
-	}
-	
-	public static LoadBalancerBackendInstance named(final LoadBalancer lb, final String vmId){
-		LoadBalancerBackendInstance instance = new LoadBalancerBackendInstance();
-		instance.setOwner(null);
-		instance.setState(null);
-		instance.setDisplayName(vmId);
-		instance.loadbalancer = lb;
-		return instance;
-	}
-	
+		
 	public String getInstanceId(){
 		return this.getDisplayName();
 	}

@@ -71,6 +71,8 @@ import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.dns.TransientZone;
 import com.eucalyptus.dns.Zone;
 import com.eucalyptus.entities.EntityWrapper;
+import com.eucalyptus.loadbalancing.LoadBalancerDNSZone;
+
 import org.xbill.DNS.Address;
 import org.xbill.DNS.CNAMERecord;
 import org.xbill.DNS.Record;
@@ -100,26 +102,29 @@ public class ZoneManager {
 	}
 
 	public static Zone getZone(Name name) {
-	    
-	    if ( Bootstrap.isFinished( ) ) {
-		if(name.toString().endsWith("in-addr.arpa.")) {
-			//create new transient zone to handle reverse lookups
-			return TransientZone.getPtrZone(name);
-		} else {
-			try {
-				if(!ZoneManager.zones.containsKey(TransientZone.getExternalName())){
-					ZoneManager.registerZone(TransientZone.getExternalName( ),TransientZone.getInstanceExternalZone());
-				} else if(!ZoneManager.zones.containsKey(TransientZone.getInternalName())){
-					ZoneManager.registerZone(TransientZone.getInternalName(),TransientZone.getInstanceInternalZone());
+
+		if ( Bootstrap.isFinished( ) ) {
+			if(name.toString().endsWith("in-addr.arpa.")) {
+				//create new transient zone to handle reverse lookups
+				return LoadBalancerDNSZone.getPtrZone(name);
+			} else {
+				try {
+					if(!ZoneManager.zones.containsKey(TransientZone.getExternalName())){
+						ZoneManager.registerZone(TransientZone.getExternalName( ),TransientZone.getInstanceExternalZone());
+					} else if(!ZoneManager.zones.containsKey(TransientZone.getInternalName())){
+						ZoneManager.registerZone(TransientZone.getInternalName(),TransientZone.getInstanceInternalZone());
+					}
+					if(!ZoneManager.zones.containsKey(LoadBalancerDNSZone.getName())) {
+						ZoneManager.registerZone(LoadBalancerDNSZone.getName(), LoadBalancerDNSZone.getZone());
+					}
+				} catch(Exception e) {
+					LOG.debug( e, e );
 				}
-			} catch(Exception e) {
-				LOG.debug( e, e );
 			}
+			return zones.get(name);
+		} else {
+			return null;
 		}
-		return zones.get(name);
-	    } else {
-		return null;
-	    }
 	}
 
 	public static void registerZone( Name name, Zone z ) {
@@ -321,11 +326,11 @@ public class ZoneManager {
 	}
 
 	public static void deleteZone(String zoneName) {
-	   try {
-	      zones.remove(new Name(zoneName));
-	   } catch(Exception ex) {
-	      LOG.error(ex);
-	   }
+		try {
+			zones.remove(new Name(zoneName));
+		} catch(Exception ex) {
+			LOG.error(ex);
+		}
 	}
 
 }

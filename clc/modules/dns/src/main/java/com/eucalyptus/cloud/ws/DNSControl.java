@@ -143,7 +143,6 @@ public class DNSControl {
 
 	public static void initialize() throws Exception {
 		try {
-			populateRecords();
 			initializeUDP();
 			initializeTCP();
 		} catch(Exception ex) {
@@ -167,18 +166,8 @@ public class DNSControl {
 
 	public UpdateARecordResponseType UpdateARecord(UpdateARecordType request)  throws EucalyptusCloudException {
 		UpdateARecordResponseType reply = (UpdateARecordResponseType) request.getReply();
-		String zone = request.getZone();
-		if (zone.endsWith("."))
-			zone += DNSProperties.DOMAIN + ".";
-		else
-			zone += "."+DNSProperties.DOMAIN + ".";
-		
-		String name = request.getName();
-		if (name.endsWith("."))
-			name+= DNSProperties.DOMAIN + ".";
-		else
-			name+= "."+DNSProperties.DOMAIN + ".";
-		
+		String zone = request.getZone() + DNSProperties.DOMAIN + ".";
+		String name = request.getName()  + DNSProperties.DOMAIN + ".";
 		String address = request.getAddress();
 		long ttl = request.getTtl();
 		EntityWrapper<ARecordInfo> db = EntityWrapper.get(ARecordInfo.class);
@@ -225,18 +214,8 @@ public class DNSControl {
 
 	public RemoveARecordResponseType RemoveARecord(RemoveARecordType request) throws EucalyptusCloudException {
 		RemoveARecordResponseType reply = (RemoveARecordResponseType) request.getReply();
-		String zone = request.getZone();
-		if (zone.endsWith("."))
-			zone += DNSProperties.DOMAIN + ".";
-		else
-			zone += "."+DNSProperties.DOMAIN + ".";
-		
-		String name = request.getName();
-		if (name.endsWith("."))
-			name+= DNSProperties.DOMAIN + ".";
-		else
-			name+= "."+DNSProperties.DOMAIN + ".";
-		
+		String zone = request.getZone()  + DNSProperties.DOMAIN + ".";
+		String name = request.getName()  + DNSProperties.DOMAIN + ".";
 		String address = request.getAddress();
 		EntityWrapper<ARecordInfo> db = EntityWrapper.get(ARecordInfo.class);
 		ARecordInfo aRecordInfo = new ARecordInfo();
