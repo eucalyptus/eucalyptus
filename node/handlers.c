@@ -200,6 +200,7 @@ const int default_booting_cleanup_threshold = 60;   //!< after this many seconds
 const int default_bundling_cleanup_threshold = 60 * 60 * 2; //!< after this many seconds any BUNDLING domains will be cleaned up
 const int default_createImage_cleanup_threshold = 60 * 60 * 2;  //!< after this many seconds any CREATEIMAGE domains will be cleaned up
 const int default_teardown_state_duration = 180;    //!< after this many seconds in TEARDOWN state (no resources), we'll forget about the instance
+const int default_migration_ready_threshold = 60 * 15; //!< after this many seconds ready (and waiting) to migrate, migration will terminate and roll back
 
 struct nc_state_t nc_state = { 0 }; //!< Global NC state structure
 
@@ -283,6 +284,7 @@ int doDescribeSensors(ncMetadata * pMeta, int historySize, long long collectionI
 int doModifyNode(ncMetadata * pMeta, char *stateName);
 int doMigrateInstances(ncMetadata * pMeta, ncInstance ** instances, int instancesLen, char *action, char *credentials);
 ncInstance *find_global_instance(const char *instanceId);
+int migration_rollback_src(ncInstance *instance);
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |
@@ -591,8 +593,7 @@ virConnectPtr *check_hypervisor_conn()
             bail = TRUE;
         }
         // terminate the child, if any
-        kill(cpid, SIGKILL);    // should be able to do
-        kill(cpid, 9);          // may not be able to do
+        killwait(cpid);
     }
 
     if (bail) {
@@ -810,9 +811,16 @@ static void refresh_instance_info(struct nc_state_t *nc, ncInstance * instance)
     case PAUSED:
         // migration-related logic
         if (is_migration_dst(instance)) {
-            if (new_state == RUNNING || new_state == BLOCKED) {
+            if (old_state == BOOTING && new_state == PAUSED ) {
+                instance->migration_state = MIGRATION_IN_PROGRESS;
+                LOGINFO("[%s] incoming migration in progress\n", instance->instanceId);
+
+            } else if ((old_state == BOOTING || old_state == PAUSED)
+                       &&
+                       (new_state == RUNNING || new_state == BLOCKED)) {
                 instance->migration_state = NOT_MIGRATING;  // done!
                 LOGINFO("[%s] incoming migration complete\n", instance->instanceId);
+
             } else if (new_state == SHUTOFF || new_state == SHUTDOWN) {
                 // this is normal at the beginning of incoming migration, before a domain is created in PAUSED state
                 break;
@@ -997,6 +1005,20 @@ void *monitoring_thread(void *arg)
             // query for current state, if any
             refresh_instance_info(nc, instance);
 
+            // time out logic for migration-ready instances
+            if (!strcmp(instance->stateName, "Extant") && (instance->migration_state == MIGRATION_READY) &&
+                ((now - instance->migrationTime) > nc_state.migration_ready_threshold)) {
+                if (instance->migrationTime) {
+                    LOGWARN("[%s] has been in migration-ready state on source %s for %d seconds (threshold is %d), rolling back [%d].\n",
+                            instance->instanceId, instance->migration_src, (int)(now - instance->migrationTime), nc_state.migration_ready_threshold,
+                            instance->migrationTime);
+                    migration_rollback_src(instance);
+                    continue;
+                } else {
+                    LOGERROR("[%s] is ready to migrate but has a zero instance migrationTime.\n", instance->instanceId);
+                }
+            }
+
             // don't touch running or canceled threads
             if (instance->state != STAGING && instance->state != BOOTING &&
                 instance->state != SHUTOFF &&
@@ -1025,6 +1047,7 @@ void *monitoring_thread(void *arg)
                 }
                 continue;
             }
+
             // time out logic for STAGING or BOOTING or BUNDLING instances
             if (instance->state == STAGING && (now - instance->launchTime) < nc_state.staging_cleanup_threshold)
                 continue;       // hasn't been long enough, spare it
@@ -1289,8 +1312,7 @@ void *startup_thread(void *arg)
             }
 
             if (try_killing) {
-                kill(cpid, SIGKILL);    // should be able to do
-                kill(cpid, 9);  // may not be able to do?
+                killwait(cpid);
             }
         }
 
@@ -1427,8 +1449,7 @@ void *restart_thread(void *arg)
                 }
 
                 if (tryKilling) {
-                    kill(cpid, SIGKILL);    // should be able to do
-                    kill(cpid, 9);  // may not be able to do?
+                    killwait(cpid);
                 }
             }
         }
@@ -1762,6 +1783,7 @@ static int init(void)
     GET_VAR_INT(nc_state.bundling_cleanup_threshold, CONFIG_NC_BUNDLING_CLEANUP_THRESHOLD, default_bundling_cleanup_threshold);
     GET_VAR_INT(nc_state.createImage_cleanup_threshold, CONFIG_NC_CREATEIMAGE_CLEANUP_THRESHOLD, default_createImage_cleanup_threshold);
     GET_VAR_INT(nc_state.teardown_state_duration, CONFIG_NC_TEARDOWN_STATE_DURATION, default_teardown_state_duration);
+    GET_VAR_INT(nc_state.migration_ready_threshold, CONFIG_NC_MIGRATION_READY_THRESHOLD, default_migration_ready_threshold);
 
     // add three eucalyptus directories with executables to PATH of this process
     add_euca_to_path(nc_state.home);
@@ -2089,6 +2111,17 @@ static int init(void)
     }
 
     int initFail = 0;
+
+    if (tmp && !(!strcmp(tmp, "SYSTEM") || !strcmp(tmp, "STATIC") || 
+                !strcmp(tmp, "MANAGED-NOVLAN") || !strcmp(tmp, "MANAGED"))) {
+            char errorm[256];
+            memset(errorm,0,256);
+            sprintf(errorm,"Invalid VNET_MODE setting: %s",tmp);
+            LOGFATAL("%s\n",errorm);
+            log_eucafault("1012","component",euca_this_component_name,"cause",errorm,NULL);
+            initFail = 1;
+    }
+
     if (tmp && (!strcmp(tmp, "SYSTEM") || !strcmp(tmp, "STATIC") || !strcmp(tmp, "MANAGED-NOVLAN"))) {
         bridge = getConfString(nc_state.configFiles, 2, "VNET_BRIDGE");
         if (!bridge) {
@@ -2243,15 +2276,11 @@ int doDescribeInstances(ncMetadata * pMeta, char **instIds, int instIdsLen, ncIn
     char *s = "";
     char *file_name = NULL;
     char myName[CHAR_BUFFER_SIZE] = "";
-    char vols_str[128] = "";
-    char vol_str[16] = "";
     FILE *f = NULL;
     long long used_mem = 0;
     long long used_disk = 0;
     long long used_cores = 0;
     u_int vols_count = 0;
-    ncInstance *instance = NULL;
-    ncVolume *volume = NULL;
 
     if (init())
         return (EUCA_ERROR);
@@ -2267,12 +2296,15 @@ int doDescribeInstances(ncMetadata * pMeta, char **instIds, int instIdsLen, ncIn
         return ret;
 
     for (i = 0; i < (*outInstsLen); i++) {
-        instance = (*outInsts)[i];
+        char vols_str[128] = "";
+        char vol_str[16] = "";
+        char mig_str[128] = "not migrating";
+        ncInstance *instance = (*outInsts)[i];
 
         // construct a string summarizing the volumes attached to the instance
         vols_count = 0;
         for (j = 0; j < EUCA_MAX_VOLUMES; ++j) {
-            volume = &instance->volumes[j];
+            ncVolume * volume = &instance->volumes[j];
             if (strlen(volume->volumeId) == 0)
                 continue;
             vols_count++;
@@ -2297,11 +2329,25 @@ int doDescribeInstances(ncMetadata * pMeta, char **instIds, int instIdsLen, ncIn
             }
         }
 
-        LOGDEBUG("[%s] %s pub=%s priv=%s mac=%s vlan=%d net=%d plat=%s vols=%s\n",
+        if (instance->migration_state!=NOT_MIGRATING) { // construct migration status string
+            char * peer = "?";
+            char dir = '?';
+            if (! strcmp(nc_state.ip, instance->migration_src)) {
+                peer = instance->migration_dst;
+                dir = '>';
+            } else {
+                peer = instance->migration_src;
+                dir = '<';
+            }
+            snprintf(mig_str, sizeof(mig_str), "%s %c%s", migration_state_names[instance->migration_state], dir, peer);
+        }
+
+        LOGDEBUG("[%s] %s (%s) pub=%s vols=%s\n",
                  instance->instanceId,
                  instance->stateName,
-                 instance->ncnet.publicIp, instance->ncnet.privateIp, instance->ncnet.privateMac, instance->ncnet.vlan, instance->ncnet.networkIndex,
-                 instance->platform, vols_str);
+                 mig_str,
+                 instance->ncnet.publicIp,
+                 vols_str);
     }
 
     // allocate enough memory
@@ -2333,7 +2379,7 @@ int doDescribeInstances(ncMetadata * pMeta, char **instIds, int instIdsLen, ncIn
 
             used_disk = used_mem = used_cores = 0;
             for (i = 0; i < (*outInstsLen); i++) {
-                instance = (*outInsts)[i];
+                ncInstance * instance = (*outInsts)[i];
                 used_disk += instance->params.disk;
                 used_mem += instance->params.mem;
                 used_cores += instance->params.cores;
@@ -2344,7 +2390,7 @@ int doDescribeInstances(ncMetadata * pMeta, char **instIds, int instIdsLen, ncIn
             fprintf(f, "cores (max/avail/used): %lld/%lld/%lld\n", nc_state.cores_max, nc_state.cores_max - used_cores, used_cores);
 
             for (i = 0; i < (*outInstsLen); i++) {
-                instance = (*outInsts)[i];
+                ncInstance * instance = (*outInsts)[i];
                 fprintf(f, "id: %s", instance->instanceId);
                 fprintf(f, " userId: %s", instance->userId);
                 fprintf(f, " state: %s", instance->stateName);
@@ -2450,8 +2496,8 @@ int doRunInstance(ncMetadata * pMeta, char *uuid, char *instanceId, char *reserv
     if (init())
         return (EUCA_ERROR);
 
-    LOGINFO("[%s] running instance cores=%d disk=%d memory=%d vlan=%d priMAC=%s privIp=%s\n", instanceId, params->cores, params->disk,
-            params->mem, netparams->vlan, netparams->privateMac, netparams->privateIp);
+    LOGINFO("[%s] running instance cores=%d disk=%d memory=%d vlan=%d net=%d priMAC=%s privIp=%s plat=%s\n", instanceId, params->cores, params->disk,
+            params->mem, netparams->vlan, netparams->networkIndex, netparams->privateMac, netparams->privateIp, platform);
     if (vbr_legacy(instanceId, params, imageId, imageURL, kernelId, kernelURL, ramdiskId, ramdiskURL) != EUCA_OK)
         return (EUCA_ERROR);
 
@@ -2906,7 +2952,7 @@ ncInstance *find_global_instance(const char *instanceId)
 //! Predicate determining whether the instance is a migration destination
 //!
 //! @param[in] instance pointer to the instance struct
-//! 
+//!
 //! @return true or false
 //!
 int is_migration_dst(const ncInstance * instance)
@@ -2920,12 +2966,41 @@ int is_migration_dst(const ncInstance * instance)
 //! Predicate determining whether the instance is a migration source
 //!
 //! @param[in] instance pointer to the instance struct
-//! 
+//!
 //! @return true or false
 //!
 int is_migration_src(const ncInstance * instance)
 {
     if (instance->migration_state != NOT_MIGRATING && !strcmp(instance->migration_src, nc_state.ip))
         return TRUE;
+    return FALSE;
+}
+
+//!
+//! Rollback a pending migration request on a source NC
+//!
+//! FIXME: Currently only safe to call under the protection of inst_sem, such as from the migrating_thread().
+//!
+//! @param[in] instance pointer to the instance struct
+//!
+//! @return true or false
+//!
+int migration_rollback_src(ncInstance *instance)
+{
+    if (is_migration_src(instance)) {
+        LOGINFO("[%s] starting migration rollback of instance on source %s\n", instance->instanceId, instance->migration_src);
+        //sem_p(inst_sem);
+        instance->migration_state = NOT_MIGRATING;
+        bzero(instance->migration_src, HOSTNAME_SIZE);
+        bzero(instance->migration_dst, HOSTNAME_SIZE);
+        instance->migrationTime = 0;
+        save_instance_struct(instance);
+        copy_instances();
+        //sem_v(inst_sem);
+        LOGINFO("[%s] migration source rolled back.\n", instance->instanceId);
+        return TRUE;
+    }
+    // Not source node?
+    LOGERROR("[%s] request to roll back migration of instance on non-source node %s\n", instance->instanceId, nc_state.ip)
     return FALSE;
 }

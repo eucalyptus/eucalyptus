@@ -24,19 +24,30 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Date;
 import java.util.List;
+import java.util.NoSuchElementException;
+
 import org.apache.log4j.Logger;
 
 import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.AuthException;
-
+import com.eucalyptus.auth.principal.Account;
+import com.eucalyptus.auth.principal.User;
+import com.eucalyptus.cloudwatch.CloudWatch;
+import com.eucalyptus.cloudwatch.Dimension;
+import com.eucalyptus.cloudwatch.Dimensions;
+import com.eucalyptus.cloudwatch.MetricData;
+import com.eucalyptus.cloudwatch.MetricDatum;
+import com.eucalyptus.cloudwatch.PutMetricDataType;
+import com.eucalyptus.component.ComponentIds;
+import com.eucalyptus.component.ServiceConfiguration;
+import com.eucalyptus.component.ServiceConfigurations;
 import com.eucalyptus.event.EventFailedException;
 import com.eucalyptus.event.ListenerRegistry;
 import com.eucalyptus.records.Logs;
 import com.eucalyptus.reporting.event.InstanceUsageEvent;
-
 import com.eucalyptus.util.LogUtil;
+import com.eucalyptus.util.async.AsyncRequests;
 import com.eucalyptus.util.async.BroadcastCallback;
-
 import com.eucalyptus.vm.VmInstance.VmState;
 import com.eucalyptus.vm.VmInstance;
 import com.eucalyptus.vm.VmInstances;
@@ -151,13 +162,23 @@ public class DescribeSensorCallback extends
 
   private void fireUsageEvent( Supplier<InstanceUsageEvent> instanceUsageEventSupplier ) {
     InstanceUsageEvent event = null;
+    event = instanceUsageEventSupplier.get();
     try {
-      event = instanceUsageEventSupplier.get();
       listener.fireEvent( event );
     } catch ( EventFailedException e ) {
       LOG.debug( "Failed to fire instance usage event"
           + (event!=null?event:""), e );
     }
+    
+    try { 
+      sendSystemMetric( event );
+    } catch (NoSuchElementException nse) {
+      LOG.debug(nse,nse);
+    } catch (Exception ex){
+      LOG.error("Unable to send the request to the cloud watch service.");
+      LOG.debug(ex,ex);
+    }
+    
   }
 
   private enum GetTimestamp implements Function<MetricDimensionsValuesType,Date> {
@@ -168,4 +189,165 @@ public class DescribeSensorCallback extends
       return metricDimensionsValuesType.getTimestamp();
     }
   }
+  
+  private void sendSystemMetric(final InstanceUsageEvent event) throws Exception {
+
+      //prototype implementation 
+     
+      final VmInstance instance = VmInstances.lookup(event.getInstanceId());
+
+      if (!instance.getInstanceId().equals(event.getInstanceId())
+	      || !instance.getBootRecord().isMonitoring()) {
+	  throw new NoSuchElementException("Instance : " + event.getInstanceId() + " monitoring is not enabled");
+      }
+
+      if (instance.getInstanceId().equals(event.getInstanceId())
+	      && instance.getBootRecord().isMonitoring()) {
+
+	  PutMetricDataType putMetricData = new PutMetricDataType();
+	  MetricDatum metricDatum = new MetricDatum();
+	  ArrayList<Dimension> dimArray = Lists.newArrayList();
+
+	  if (event.getDimension() != null && event.getValue() != null) {
+
+	      if (event.getDimension().startsWith("vol-")) {
+		  putMetricData.setNamespace("AWS/EBS");
+		  Dimension volDim = new Dimension();
+		  volDim.setName("VolumeId");
+		  volDim.setValue(event.getDimension());
+		  dimArray.add(volDim);
+		  // Need to replace metric name
+		  if (event.getMetric().startsWith("Disk")) {
+		      final String convertedEBSMetricName = event.getMetric()
+			      .replace("Disk", "Volume");
+		      metricDatum.setMetricName(convertedEBSMetricName);
+		  } else {
+		      metricDatum.setMetricName(event.getMetric());
+		  }
+	      } else {
+		  putMetricData.setNamespace("AWS/EC2");
+
+		  Dimension instanceIdDim = new Dimension();
+		  instanceIdDim.setName("InstanceId");
+		  instanceIdDim.setValue(instance.getInstanceId());
+		  dimArray.add(instanceIdDim);
+
+		  Dimension imageIdDim = new Dimension();
+		  imageIdDim.setName("ImageId");
+		  imageIdDim.setValue(instance.getImageId());
+		  dimArray.add(imageIdDim);
+
+		  Dimension instanceTypeDim = new Dimension();
+		  instanceTypeDim.setName("InstanceType");
+		  instanceTypeDim.setValue(instance.getVmType()
+			  .getDisplayName());
+		  dimArray.add(instanceTypeDim);
+
+		  // convert ephemeral disks metrics
+		  if (event.getMetric().equals("VolumeTotalReadTime")) {
+		      metricDatum.setMetricName("DiskReadBytes");
+		  } else if (event.getMetric().endsWith("External")) {
+		      final String convertedEC2NetworkMetricName = event
+			      .getMetric().replace("External", "");
+		      metricDatum
+		      .setMetricName(convertedEC2NetworkMetricName);
+		  } else if (event.getMetric().equals("VolumeTotalWriteTime")) {
+		      metricDatum.setMetricName("DiskWriteBytes");	  
+		  } else {
+		      metricDatum.setMetricName(event.getMetric());
+		  }
+	      }
+	  } else {
+	      LOG.debug("Event does not contain a dimension");
+	      throw new Exception();
+	  }
+
+	  Dimensions dims = new Dimensions();
+	  dims.setMember(dimArray);
+
+	  MetricData metricData = new MetricData();
+
+	  metricDatum.setTimestamp(new Date(event.getValueTimestamp()));
+	  metricDatum.setDimensions(dims);
+	  metricDatum.setValue(event.getValue());
+
+	  final String unitType = containsUnitType(metricDatum.getMetricName());
+	  metricDatum.setUnit(unitType);
+	  
+
+	  if (event.getMetric().equals("CPUUtilization")) {
+		  metricDatum.setMetricName("CPUUtilizationMS"); // this is actually the data in milliseconds, not percentage
+	  }
+	  metricData.setMember(Lists.newArrayList(metricDatum));
+	  putMetricData.setMetricData(metricData);
+
+	  Account account = Accounts.getAccountProvider().lookupAccountById(
+		  instance.getOwnerAccountNumber());
+
+	  User user = account.lookupUserByName(User.ACCOUNT_ADMIN);
+	  putMetricData.setEffectiveUserId(user.getUserId());
+
+	  ServiceConfiguration serviceConfiguration = ServiceConfigurations
+		  .createEphemeral(ComponentIds.lookup(CloudWatch.class));
+	  AsyncRequests.dispatch(serviceConfiguration, putMetricData);
+
+      }
+  }
+   
+  private enum Bytes {
+    VolumeReadBytes,
+    VolumeWriteBytes, 
+    DiskReadBytes,
+    DiskWriteBytes,
+    NetworkIn,
+    NetworkOut; 
+  }
+  
+  private enum Count {
+    VolumeWriteOps, 
+    VolumeQueueLength,
+    VolumeConsumedReadWriteOps,
+    DiskReadOps,
+    DiskWriteOps, 
+    StatusCheckFailed,
+    VolumeReadOps;
+  }
+  
+  private enum Seconds {
+    VolumeTotalReadTime,
+    VolumeTotalWriteTime,
+    VolumeIdleTime;
+  }
+  
+  private enum Percent {
+    VolumeThroughputPercentage, 
+    CPUUtilization; 
+  }
+  
+  private String containsUnitType(final String metricType) {
+      //TODO:KEN find cleaner method of finding the metric type
+      try {
+	  Enum.valueOf(Bytes.class, metricType);
+	  return "Bytes";
+      } catch (IllegalArgumentException ex1) {
+	  try {
+	      Enum.valueOf(Count.class, metricType);
+	      return "Count";
+	  } catch (IllegalArgumentException ex2) {
+	      try {
+		  Enum.valueOf(Seconds.class, metricType);
+		  return "Seconds";
+	      } catch (IllegalArgumentException ex4) {
+		  try {
+		      Enum.valueOf(Percent.class, metricType);
+		      return "Percent";
+		  } catch (IllegalArgumentException ex5) {
+		      throw new NoSuchElementException(
+			      "Unknown system unit type : " + metricType);
+		  }
+	      }
+	  }
+      }
+  }
+
 }

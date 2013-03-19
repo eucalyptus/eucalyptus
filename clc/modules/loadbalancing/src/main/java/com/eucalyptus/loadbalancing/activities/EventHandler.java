@@ -20,9 +20,11 @@
 package com.eucalyptus.loadbalancing.activities;
 
 /**
- * @author Sang-Min Park
+ * @author Sang-Min Park (spark@eucalyptus.com)
  *
  */
 public interface EventHandler<T extends LoadbalancingEvent> {
-	public void apply(T evt);
+	public void apply(T evt) throws EventHandlerException;
+	public void rollback() throws EventHandlerException;
+	public EventHandlerChain<T> getChain();
 }

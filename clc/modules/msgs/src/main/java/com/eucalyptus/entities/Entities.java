@@ -84,6 +84,7 @@ import org.apache.log4j.Logger;
 import org.hibernate.Criteria;
 import org.hibernate.HibernateException;
 import org.hibernate.Session;
+import org.hibernate.criterion.Criterion;
 import org.hibernate.criterion.Example;
 import org.hibernate.criterion.MatchMode;
 import org.hibernate.criterion.Projections;
@@ -265,7 +266,7 @@ public class Entities {
   @SuppressWarnings( { "unchecked", "cast" } )
   public static <T> List<T> query( final T example, 
                                    final boolean readOnly, 
-                                   final org.hibernate.criterion.Criterion criterion,
+                                   final Criterion criterion,
                                    final Map<String,String> aliases ) {
     final Example qbe = Example.create( example ).enableLike( MatchMode.EXACT );
     final Criteria criteria = getTransaction( example ).getTxState( ).getSession( )
@@ -605,16 +606,34 @@ public class Entities {
    * @return The number of matching entities
    */
   public static long count( final Object example ) {
+    return count( example, Restrictions.conjunction(), Collections.<String,String>emptyMap() );
+  }
+
+  /**
+   * Count the matching entities for the given example.
+   *
+   * @param example The example entity
+   * @param criterion Additional restrictions for the query
+   * @param aliases Any aliases necessary for the given criterion
+   * @return The number of matching entities
+   */
+  public static long count( final Object example,
+                            final Criterion criterion,
+                            final Map<String,String> aliases ) {
     final Example qbe = Example.create( example );
-    final Number count = (Number) getTransaction( example ).getTxState( ).getSession( )
+    final Criteria criteria = getTransaction( example ).getTxState( ).getSession( )
         .createCriteria( example.getClass( ) )
         .setReadOnly( true )
         .setResultTransformer( Criteria.DISTINCT_ROOT_ENTITY )
         .setCacheable( false )
         .add( qbe )
-        .setProjection( Projections.rowCount() )
-        .uniqueResult( );
-    return count.longValue(); 
+        .add( criterion )
+        .setProjection( Projections.rowCount() );
+    for ( final Map.Entry<String,String> aliasEntry : aliases.entrySet() ) {
+      criteria.createAlias( aliasEntry.getKey(), aliasEntry.getValue() ); // inner join by default
+    }
+    final Number count = (Number)criteria.uniqueResult( );
+    return count.longValue();
   }
 
   private static class TxStateThreadLocal extends ThreadLocal<ConcurrentMap<String, CascadingTx>> {

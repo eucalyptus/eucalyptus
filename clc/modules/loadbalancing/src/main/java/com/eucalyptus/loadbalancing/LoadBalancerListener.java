@@ -95,9 +95,6 @@ public class LoadBalancerListener extends AbstractPersistent
     @JoinColumn( name = "metadata_loadbalancer_fk" )
     private LoadBalancer loadbalancer = null;
 	
-    @Column(name="metadata_unique_name", nullable=false, unique=true)
-    private String uniqueName = null;
-    
 	@Column(name="instance_port", nullable=false)
 	private Integer instancePort = null;
 	
@@ -148,43 +145,6 @@ public class LoadBalancerListener extends AbstractPersistent
 		}
 	}
 
-	@PrePersist
-	private void generateOnCommit( ) {
-		this.uniqueName = createUniqueName( );
-	}
-
-	private String createUniqueName(){
-		return String.format("%s-listener-port-%d", this.loadbalancer.getDisplayName(), this.getLoadbalancerPort());
-	}
-	
-	@Override
-	public int hashCode( ) {
-	    final int prime = 31;
-	    int result = 0;
-	    result = prime * result + ( ( this.uniqueName == null )
-	      ? 0
-	      : this.uniqueName.hashCode( ) );
-	    return result;
-	}
-	  
-	@Override
-	public boolean equals( Object obj ) {
-		if ( this == obj ) {
-			return true;
-		}
-		if ( getClass( ) != obj.getClass( ) ) {
-			return false;
-		}
-		LoadBalancerListener other = ( LoadBalancerListener ) obj;
-		if ( this.uniqueName == null ) {
-			if ( other.uniqueName != null ) {
-				return false;
-			}
-		} else if ( !this.uniqueName.equals( other.uniqueName ) ) {
-			return false;
-		}
-		return true;
-  }
 	@Override
 	public String toString(){
 		return String.format("Listener for %s: %nProtocol=%s, Port=%d, InstancePort=%d, InstanceProtocol=%s, CertId=%s", 

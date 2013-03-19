@@ -465,7 +465,7 @@
   </mapping>
   <mapping class="com.eucalyptus.autoscaling.common.SuspendedProcesses" abstract="true">
     <collection field="member">
-      <structure name="member" type="com.eucalyptus.autoscaling.common.SuspendedProcess"/>
+      <structure name="member" type="com.eucalyptus.autoscaling.common.SuspendedProcessType"/>
     </collection>
   </mapping>
   <mapping class="com.eucalyptus.autoscaling.common.LoadBalancerNames" abstract="true">
@@ -685,7 +685,7 @@
       <structure name="member" type="com.eucalyptus.autoscaling.common.MetricGranularityType"/>
     </collection>
   </mapping>
-  <mapping class="com.eucalyptus.autoscaling.common.SuspendedProcess" abstract="true">
+  <mapping class="com.eucalyptus.autoscaling.common.SuspendedProcessType" abstract="true">
     <value name="ProcessName" field="processName" usage="optional"/>
     <value name="SuspensionReason" field="suspensionReason" usage="optional"/>
   </mapping>

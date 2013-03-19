@@ -90,6 +90,7 @@ import org.hibernate.criterion.Restrictions;
 import com.eucalyptus.address.Address;
 import com.eucalyptus.address.Addresses;
 import com.eucalyptus.blockstorage.State;
+import com.eucalyptus.blockstorage.Volume;
 import com.eucalyptus.blockstorage.Volumes;
 import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.bootstrap.Hosts;
@@ -552,7 +553,8 @@ public class VmInstances {
               if ( VmStateSet.TERM.apply( vm ) && arg0.getDeleteOnTerminate( ) ) {
                 final ServiceConfiguration sc = Topology.lookup( Storage.class, vm.lookupPartition( ) );
                 AsyncRequests.dispatch( sc, new DeleteStorageVolumeType( arg0.getVolumeId( ) ) );
-                Volumes.lookup( null, arg0.getVolumeId( ) ).setState( State.ANNIHILATING );
+                Volume volume = Volumes.lookup( null, arg0.getVolumeId( ) );
+                Volumes.annihilateStorageVolume( volume );
               }
             } catch ( Exception ex ) {
               LOG.debug( ex );

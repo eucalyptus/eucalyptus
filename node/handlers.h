@@ -138,6 +138,7 @@ struct nc_state_t {
     int bundling_cleanup_threshold;
     int createImage_cleanup_threshold;
     int teardown_state_duration;
+    int migration_ready_threshold;
     //! @}
 
     //! @{
@@ -310,6 +311,7 @@ int find_and_terminate_instance(struct nc_state_t *nc_state, ncMetadata * pMeta,
 void copy_instances(void);
 int is_migration_dst(const ncInstance * instance);
 int is_migration_src(const ncInstance * instance);
+int migration_rollback_src(ncInstance *instance);
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |

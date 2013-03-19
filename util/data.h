@@ -94,7 +94,9 @@
 #define SMALL_CHAR_BUFFER_SIZE                     64   //!< Small string buffer size
 #define CHAR_BUFFER_SIZE                          512   //!< Regular string buffer size
 #define BIG_CHAR_BUFFER_SIZE                     1024   //!< Large string buffer size
+#define VERY_BIG_CHAR_BUFFER_SIZE				 4096   //!< Extra large string buffer size
 #define HOSTNAME_SIZE                             255   //!< Hostname buffer size
+#define CREDENTIAL_SIZE                          1024   //!< Migration-credential buffer size
 
 //! @}
 
@@ -169,7 +171,8 @@ typedef enum _ncResourceType {
     NC_RESOURCE_KERNEL,         //!< Kernel
     NC_RESOURCE_EPHEMERAL,      //!< Ephemeral
     NC_RESOURCE_SWAP,           //!< SWAP
-    NC_RESOURCE_EBS             //!< EBS
+    NC_RESOURCE_EBS,            //!< EBS
+    NC_RESOURCE_BOOT,           //!< BOOTABLE
 } ncResourceType;
 
 //! NC Resource Location Type Enumeration
@@ -253,7 +256,8 @@ typedef struct ncMetadata_t {
 typedef struct virtualBootRecord_t {
     //! @{
     //! @name first six fields arrive in requests (RunInstance, {Attach|Detach} Volume)
-    char resourceLocation[CHAR_BUFFER_SIZE];    //!< http|walrus|cloud|sc|iqn|aoe://... or none
+    char resourceLocation[VERY_BIG_CHAR_BUFFER_SIZE];    //!< http|walrus|cloud|sc|iqn|aoe://... or none
+    char * resourceLocationPtr; //!< pointer to a full version of resourceLocation, used by CC for IQN=LUN demuxing
     char guestDeviceName[SMALL_CHAR_BUFFER_SIZE];   //!< x?[vhsf]d[a-z]?[1-9]*
     long long sizeBytes;        //!< Size of the boot record in bytes
     char formatName[SMALL_CHAR_BUFFER_SIZE];    //!< ext2|ext3|swap|none
@@ -287,6 +291,7 @@ typedef struct virtualMachine_t {
     virtualBootRecord *ramdisk; //!< Ramdisk boot record information
     virtualBootRecord *swap;    //!< SWAP boot record information
     virtualBootRecord *ephemeral0;  //!< Ephemeral boot record information
+    virtualBootRecord *boot; //!< Boot sector
     virtualBootRecord virtualBootRecord[EUCA_MAX_VBRS]; //!< List of virtual boot records
     int virtualBootRecordLen;   //!< Number of VBRS in the list
     libvirtNicType nicType;     //!< Defines the virtual machine NIC type
@@ -305,7 +310,7 @@ typedef struct netConfig_t {
 //! Structure defining NC Volumes
 typedef struct ncVolume_t {
     char volumeId[CHAR_BUFFER_SIZE];    //!< Remote volume identifier string
-    char remoteDev[CHAR_BUFFER_SIZE];   //!< Remote device name string
+    char remoteDev[VERY_BIG_CHAR_BUFFER_SIZE];   //!< Remote device name string
     char localDev[CHAR_BUFFER_SIZE];    //!< Local device name string
     char localDevReal[CHAR_BUFFER_SIZE];    //!< Local device name (real) string
     char stateName[CHAR_BUFFER_SIZE];   //!< Volume state name string
@@ -346,9 +351,10 @@ typedef struct ncInstance_t {
     int createImagePid;         //!< Image creationg task PID value
     int createImageCanceled;    //!< Boolean indicating if the image creation task has been cancelled
 
-    migration_states migration_state;   //!< Migration state
-    char migration_src[HOSTNAME_SIZE];  //!< Name of the host from which the instance is being or needs to be migrated
-    char migration_dst[HOSTNAME_SIZE];  //!< Name of the host to which the instance is being or needs to be migrated
+    migration_states migration_state;                   //!< Migration state
+    char migration_src[HOSTNAME_SIZE];                  //!< Name of the host from which the instance is being or needs to be migrated
+    char migration_dst[HOSTNAME_SIZE];                  //!< Name of the host to which the instance is being or needs to be migrated
+    char migration_credentials[CREDENTIAL_SIZE];        //!< Migration shared secret
 
     char keyName[CHAR_BUFFER_SIZE * 4]; //!< Name of the key to use for this instance
     char privateDnsName[CHAR_BUFFER_SIZE];  //!< Private DNS name
@@ -359,6 +365,7 @@ typedef struct ncInstance_t {
     int bundlingTime;           //!< timestamp of ->BUNDLING transition
     int createImageTime;        //!< timestamp of ->CREATEIMAGE transition
     int terminationTime;        //!< timestamp of when resources are released (->TEARDOWN transition)
+    int migrationTime;          //!< timestamp of migration request
 
     virtualMachine params;      //!< Virtual machine parameters
     netConfig ncnet;            //!< Network configuration information

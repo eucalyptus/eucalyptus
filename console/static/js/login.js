@@ -21,7 +21,8 @@
 (function($, eucalyptus) {
   $.widget('eucalyptus.login', { 
     options : {
-      support_url : ''
+      support_url : '',
+      admin_url : ''
     },
     loginDialog : null,
     errorDialog : null,
@@ -160,7 +161,7 @@
                 msgdiv.addClass('dialog-error').html(login_failure);
               }
             }
-          }		     
+          }
         });
         return false;
       });

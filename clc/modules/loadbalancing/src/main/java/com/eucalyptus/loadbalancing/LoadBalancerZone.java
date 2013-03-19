@@ -36,6 +36,8 @@ import org.apache.log4j.Logger;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
 import org.hibernate.annotations.Entity;
+import org.jgroups.util.UUID;
+
 import com.eucalyptus.entities.AbstractPersistent;
 import com.eucalyptus.loadbalancing.activities.LoadBalancerServoInstance;
 
@@ -58,41 +60,32 @@ public class LoadBalancerZone extends AbstractPersistent {
 	private LoadBalancerZone(final LoadBalancer lb, final String zone){
 		this.loadbalancer = lb;
 		this.zoneName=zone;
+		this.uniqueName = this.createUniqueName();
 	}
-	public static LoadBalancerZone newInstance(final LoadBalancer lb, final String zone){
-		return new LoadBalancerZone(lb, zone);
-	}
+	
 	public static LoadBalancerZone named(final LoadBalancer lb, final String zone){
 		return new LoadBalancerZone(lb, zone);
 	}
 	
     @ManyToOne
-    @JoinColumn( name = "metadata_loadbalancer_fk" )
+    @JoinColumn( name = "metadata_loadbalancer_fk", nullable=false )
+    @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
     private LoadBalancer loadbalancer = null;
 
 	@Column(name="zone_name", nullable=false)
 	private String zoneName = null;
+	
+	@Column(name="unique_name", nullable=false)
+	private String uniqueName = null;
 
-	@OneToMany(fetch = FetchType.LAZY, cascade = CascadeType.ALL, orphanRemoval = true, mappedBy = "zone")
+	@OneToMany(fetch = FetchType.LAZY, mappedBy = "zone")
     @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
 	private Collection<LoadBalancerServoInstance> servoInstances = null;
 	
 	@OneToMany(fetch = FetchType.LAZY, cascade = CascadeType.ALL, orphanRemoval = true, mappedBy = "zone")
     @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
 	private Collection<LoadBalancerBackendInstance> backendInstances = null;
-	
-	@Column(name="metadata_unique_name", nullable=false, unique=true)
-	private String uniqueName = null;
-	
-	@PrePersist
-	private void generateOnCommit( ) {
-		this.uniqueName = createUniqueName( );
-	}
-
-	private String createUniqueName(){
-		return String.format("%s-zone-%s", this.loadbalancer.getDisplayName(), this.zoneName);
-	}
-	
+		
 	public String getName(){
 		return this.zoneName;
 	}
@@ -101,36 +94,29 @@ public class LoadBalancerZone extends AbstractPersistent {
 		return this.loadbalancer;
 	}
 	
-	@Override
-	public int hashCode( ) {
-	    final int prime = 31;
-	    int result = 0;
-	    result = prime * result + ( ( this.uniqueName == null )
-	      ? 0
-	      : this.uniqueName.hashCode( ) );
-	    return result;
+	public Collection<LoadBalancerServoInstance> getServoInstances(){
+		return servoInstances;
 	}
+	
+	public Collection<LoadBalancerBackendInstance> getBackendInstances(){
+		return backendInstances;
+	}
+
+    @PrePersist
+    private void generateOnCommit( ) {
+    	if(this.uniqueName==null)
+    		this.uniqueName = createUniqueName( );
+    }
+
+    protected String createUniqueName( ) {
+    	return String.format("zone-%s-%s", this.loadbalancer.getDisplayName(), this.zoneName);
+    }
 	  
 	@Override
-	public boolean equals( Object obj ) {
-		if ( this == obj ) {
-			return true;
-		}
-		if ( getClass( ) != obj.getClass( ) ) {
-			return false;
-		}
-		LoadBalancerZone other = ( LoadBalancerZone ) obj;
-		if ( this.uniqueName == null ) {
-			if ( other.uniqueName != null ) {
-				return false;
-			}
-		} else if ( !this.uniqueName.equals( other.uniqueName ) ) {
-			return false;
-		}
-		return true;
-    }
-	@Override
 	public String toString(){
-		return this.uniqueName;
+		String name="unassigned";
+		if(this.loadbalancer!=null && this.zoneName!=null)
+			name = String.format("loadbalancer-zone-%s-%s", this.loadbalancer.getDisplayName(), this.zoneName);
+		return name;
 	}
 }

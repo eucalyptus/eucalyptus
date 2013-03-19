@@ -19,10 +19,33 @@
  ************************************************************************/
 package com.eucalyptus.autoscaling.instances;
 
+import javax.annotation.Nullable;
+import com.google.common.base.Predicate;
+
 /**
  *
  */
-public enum HealthStatus {
-  
-  Healthy, Unhealthy
+public enum HealthStatus implements Predicate<AutoScalingInstance> {
+
+  /**
+   * Instance is healthy
+   */
+  Healthy,
+
+  /**
+   * Instance is unhealthy
+   */
+  Unhealthy,
+  ;
+
+  /**
+   * State matching predicate.
+   *
+   * @param instance The instance to match
+   * @return True if the instance is in this state
+   */
+  @Override
+  public boolean apply( @Nullable final AutoScalingInstance instance ) {
+    return instance != null && this == instance.getHealthStatus();
+  }
 }

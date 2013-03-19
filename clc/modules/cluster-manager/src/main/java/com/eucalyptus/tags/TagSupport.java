@@ -67,7 +67,7 @@ public abstract class TagSupport {
   protected <T extends AbstractPersistent & CloudMetadata> TagSupport( @Nonnull final Class<T> resourceClass,
                                                                        @Nonnull final Set<String> identifierPrefixes,
                                                                        @Nonnull final String resourceClassIdField,
-                                                                       @Nonnull final  String tagClassResourceField ) {
+                                                                       @Nonnull final String tagClassResourceField ) {
 
     this.resourceClass = resourceClass;
     this.cloudMetadataClass = subclassFor( resourceClass );
@@ -79,7 +79,7 @@ public abstract class TagSupport {
   protected <T extends AbstractPersistent & CloudMetadata> TagSupport( @Nonnull final Class<T> resourceClass,
                                                                        @Nonnull final String identifierPrefix,
                                                                        @Nonnull final String resourceClassIdField,
-                                                                       @Nonnull final  String tagClassResourceField ) {
+                                                                       @Nonnull final String tagClassResourceField ) {
     this( resourceClass, Collections.singleton( identifierPrefix ), resourceClassIdField, tagClassResourceField );
   }
 
@@ -87,7 +87,11 @@ public abstract class TagSupport {
                                       OwnerFullName ownerFullName,
                                       String key, 
                                       String value );
-  
+
+  /**
+   * Warning: The returned example will NOT match a specific resource. to match
+   * a particular resource additional criteria are required.
+   */
   public abstract Tag example( @Nonnull CloudMetadata metadata,
                                @Nonnull OwnerFullName ownerFullName,
                                @Nullable String key,
@@ -99,6 +103,22 @@ public abstract class TagSupport {
                                         @Nonnull OwnerFullName ownerFullName ) {
     tag.setOwner( ownerFullName );
     return tag;
+  }
+
+  public Criterion exampleCriterion( final Tag example ) {
+    final DetachedCriteria detachedCriteria = DetachedCriteria.forClass( resourceClass )
+        .add( Restrictions.in( resourceClassIdField, Lists.newArrayList( example.getResourceId() ) ) )
+        .setProjection( Projections.id() );
+    return Property.forName( tagClassResourceField ).in( detachedCriteria );
+  }
+
+  public final long count( @Nonnull CloudMetadata metadata,
+                           @Nonnull OwnerFullName ownerFullName ) {
+    final Tag example = example( metadata, ownerFullName, null, null );
+    return Tags.count(
+        example,
+        exampleCriterion( example ),
+        Collections.<String,String>emptyMap()  );
   }
 
   public abstract CloudMetadata lookup( String identifier ) throws TransactionException;

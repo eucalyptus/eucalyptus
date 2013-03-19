@@ -221,7 +221,6 @@ public class VolumeManager {
           }
           if ( State.FAIL.equals( vol.getState( ) ) || State.ANNIHILATED.equals( vol.getState( ) ) ) {
             Entities.delete( vol );
-            Volumes.fireUsageEvent( vol, VolumeEvent.forVolumeDelete());
             return vol;
           } else if ( State.ANNIHILATING.equals( vol.getState( ) ) ) {
             return vol;
@@ -230,7 +229,7 @@ public class VolumeManager {
               ServiceConfiguration sc = Topology.lookup( Storage.class, Partitions.lookupByName( vol.getPartition( ) ) );
               DeleteStorageVolumeResponseType scReply = AsyncRequests.sendSync( sc, new DeleteStorageVolumeType( vol.getDisplayName( ) ) );
               if ( scReply.get_return( ) ) {
-                vol.setState( State.ANNIHILATING );
+                Volumes.annihilateStorageVolume( vol );
                 return vol;
               } else {
                 throw Exceptions.toUndeclared( "Storage Controller returned false:  Contact the administrator to report the problem." );
@@ -403,8 +402,17 @@ public class VolumeManager {
     request.setRemoteDevice( scAttachResponse.getRemoteDeviceString( ) );
     
     AttachedVolume attachVol = new AttachedVolume( volume.getDisplayName( ), vm.getInstanceId( ), request.getDevice( ), request.getRemoteDevice( ) );
-    vm.addTransientVolume( deviceName, scAttachResponse.getRemoteDeviceString( ), volume );
-    AsyncRequests.newRequest( new VolumeAttachCallback( request ) ).dispatch( ccConfig );
+
+    if ("/dev/sda1".equals( deviceName ) && vm.getBootRecord( ).isBlockStorage( ) ) {
+      if ( this.getDeleteOnTerminate( vm ) ) {
+        vm.addPersistentVolume( deviceName, volume );
+      } else {
+        vm.addPermanentVolume( deviceName, volume );
+      }
+    } else {
+      vm.addTransientVolume( deviceName, scAttachResponse.getRemoteDeviceString( ), volume );
+      AsyncRequests.newRequest( new VolumeAttachCallback( request ) ).dispatch( ccConfig );
+    }
     
     EventRecord.here( VolumeManager.class, EventClass.VOLUME, EventType.VOLUME_ATTACH )
                .withDetails( volume.getOwner( ).toString( ), volume.getDisplayName( ), "instance", vm.getInstanceId( ) )
@@ -431,8 +439,9 @@ public class VolumeManager {
     
     VmInstance vm = null;
     AttachedVolume volume = null;
+    VmVolumeAttachment vmVolAttach = null;
     try {
-      VmVolumeAttachment vmVolAttach = VmInstances.lookupVolumeAttachment( request.getVolumeId( ) );
+      vmVolAttach = VmInstances.lookupVolumeAttachment( request.getVolumeId( ) );
       volume = VmVolumeAttachment.asAttachedVolume( vmVolAttach.getVmInstance( ) ).apply( vmVolAttach );
       vm = vmVolAttach.getVmInstance( );
     } catch ( NoSuchElementException ex ) {
@@ -465,6 +474,9 @@ public class VolumeManager {
     		Logs.extreme( ).debug( e, e );
     		//GRZE: attach is idempotent, failure here is ok, throw new EucalyptusCloudException( e.getMessage( ) );
     	}
+      if ( vm.isBlockStorage( ) && "/dev/sda1".equals( vmVolAttach.getDevice( ) ) ) {
+        this.setDeleteOnTerminate( vm , vmVolAttach.getDeleteOnTerminate( ) );
+      }
     	vm.removeVolumeAttachment( volume.getVolumeId( ) );
     } else {
     	Cluster cluster = null;
@@ -496,4 +508,33 @@ public class VolumeManager {
     return reply;
   }
   
+  public boolean getDeleteOnTerminate( VmInstance vm ) throws EucalyptusCloudException {
+  final EntityTransaction db = Entities.get( VmInstance.class );
+    try {
+      final VmInstance foundVm = Entities.uniqueResult( VmInstance.named( null, vm.getInstanceId( ) ) );
+      boolean ret = foundVm.getDeleteOnTerminate();
+      db.commit();
+      return ret;
+    }catch ( Exception ex ) {
+      Logs.extreme( ).error( ex , ex );
+      throw new EucalyptusCloudException( ex.getMessage( ) , ex);
+    } finally {
+      if ( db.isActive() ) db.rollback( );
+    }
+  }
+
+  public void setDeleteOnTerminate( VmInstance vm , boolean deleteOnTerminate ) {
+  final EntityTransaction db = Entities.get( VmInstance.class );
+    try {
+      final VmInstance foundVm = Entities.uniqueResult( VmInstance.named( null, vm.getInstanceId( ) ) );
+      foundVm.setDeleteOnTerminate( deleteOnTerminate );
+      db.commit();
+    }catch ( Exception ex ) {
+      Logs.extreme( ).error( ex , ex );
+      LOG.error( ex , ex );
+    } finally {
+      if ( db.isActive() ) db.rollback( );
+    }
+  }
+
 }

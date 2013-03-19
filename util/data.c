@@ -166,6 +166,7 @@ const char *ncResourceTypeName[] = {
     "ephemeral",
     "swap",
     "ebs"
+    "boot",
 };
 
 //! String value of each instance state enumeration entry
@@ -212,11 +213,11 @@ const char *createImage_progress_names[] = {
 
 //! String value of each migrate-related state enumeration entry
 const char *migration_state_names[] = {
-    "migration-none",
-    "migration-preparing",
-    "migration-ready",
-    "migration-migrating",
-    "migration-cleaning"
+    "none",
+    "preparing",
+    "ready",
+    "migrating",
+    "cleaning"
 };
 
 //! String value of each error enumeration entry
@@ -975,7 +976,7 @@ ncVolume *save_volume(ncInstance * pInstance, const char *sVolumeId, const char 
         euca_strncpy(pVol->volumeId, sVolumeId, CHAR_BUFFER_SIZE);
 
         if (sRemoteDev)
-            euca_strncpy(pVol->remoteDev, sRemoteDev, CHAR_BUFFER_SIZE);
+            euca_strncpy(pVol->remoteDev, sRemoteDev, VERY_BIG_CHAR_BUFFER_SIZE);
 
         if (sLocalDev)
             euca_strncpy(pVol->localDev, sLocalDev, CHAR_BUFFER_SIZE);

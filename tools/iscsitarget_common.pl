@@ -258,13 +258,19 @@ sub lookup_session {
   my $session = {};
   my @sessions = ();
   my $lun;
+  my $target;
   foreach (@output) {
     chomp;
     if (/^Target:\s+(\S+)/) {
+      ### A SAN can expose the same iSCSI target (IQN) over multiple network interfaces (IP addresses). 
+      ### In this case the target IQN is the same across all client sessions. 
+      $target = $1;
+    } elsif (/^\s+Current Portal:\s+([\d\.]+):\d+,(\d+)/) {
+      ### For a given target IQN, there cannot be multiple sessions with the same portal (IP Address). 
+      ### Making portal the unique identifier for distinguishing between sessions for a given target.
       $session = {};
       push @sessions, $session;
-      $session->{$SK_TARGET} = $1;
-    } elsif (/^\s+Current Portal:\s+([\d\.]+):\d+,(\d+)/) {
+      $session->{$SK_TARGET} = $target;
       $session->{$SK_PORTAL} = $1;
       $session->{$SK_TPGT} = $2;
     } elsif (/^\s+Persistent Portal:\s+([\d\.]+):\d+,(\d+)/) {

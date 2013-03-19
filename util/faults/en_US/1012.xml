@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Copyright 2012 Eucalyptus Systems, Inc.
+
+  This program is free software: you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation; version 3 of the License.
+
+  This program is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details.
+
+  You should have received a copy of the GNU General Public License
+  along with this program.  If not, see http://www.gnu.org/licenses/.
+
+  Please contact Eucalyptus Systems, Inc., 6755 Hollister Ave., Goleta
+  CA 93117, USA or visit http://www.eucalyptus.com/licenses/ if you need
+  additional information or have any questions.
+  -->
+<eucafaults version="1" description="Templates for the fault subsystem">
+  <fault
+  id="1012"
+  message="Subsystem failed with incorrect configuration item.">
+
+    <condition
+    message="VNET_MODE is set to an unknown mode."/>
+
+    <cause
+    message="Invalid configuartion item detected in eucatyptus.conf file."/>
+
+    <initiator
+    message="Eucalyptus"/>
+
+    <location
+    message="localhost"/>
+
+    <resolution>
+      <message>
+
+        Subsystem: ${component}, Cause: ${cause} .
+
+        The system network configuration on this node is not valid.
+
+        1. Edit /etc/eucalyptus/eucalyptus.conf
+        2. Set the VNET_MODE parameter to one of these values:
+        	SYSTEM
+        	STATIC
+        	MANAGED
+        	MANAGED_NOVLAN
+        3. Start the Eucalyptus service on this node using the appropriate name:
+        	On NC: 	service eucalyptus-nc restart
+        	On CLC: service eucalyptus-cloud restart
+        	On CC: 	service eucalyptus-cc cleanrestart
+        4. Verify that the system comes back up and behaves as you expected.
+        Please report any problems or post a question on https://engage.eucalyptus.com/
+      </message>
+    </resolution>
+  </fault>
+</eucafaults>

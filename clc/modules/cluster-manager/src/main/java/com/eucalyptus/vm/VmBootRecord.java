@@ -116,10 +116,12 @@ public class VmBootRecord {
   private Set<VmVolumeAttachment> persistentVolumes = Sets.newHashSet( );
   
   @Column( name = "metadata_vm_monitoring")
-  private boolean 		  monitoring;
+  private Boolean 		  monitoring;
   
   @Column( name = "metadata_vm_user_data" )
   private byte[]                  userData;
+  @Column( name = "metadata_vm_delete_on_terminate" )
+  private boolean                 deleteOnTerminate;
   @Lob
   @Type(type="org.hibernate.type.StringClobType")
   @Column( name = "metadata_vm_sshkey" )
@@ -183,6 +185,14 @@ public class VmBootRecord {
     return !this.persistentVolumes.isEmpty( );
   }
   
+  public boolean getDeleteOnTerminate( ) {
+    return this.deleteOnTerminate;
+  }
+
+  public void setDeleteOnTerminate( boolean deleteOnTerminate ) {
+    this.deleteOnTerminate = deleteOnTerminate;
+  }
+
   byte[] getUserData( ) {
     return this.userData;
   }

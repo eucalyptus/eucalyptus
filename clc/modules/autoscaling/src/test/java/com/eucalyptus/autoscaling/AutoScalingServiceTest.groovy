@@ -94,6 +94,7 @@ import com.eucalyptus.autoscaling.tags.TagSupportDiscovery
 import com.eucalyptus.autoscaling.tags.AutoScalingGroupTag
 import com.eucalyptus.autoscaling.tags.Tag
 import com.eucalyptus.autoscaling.tags.Tags
+import com.eucalyptus.autoscaling.instances.ConfigurationState
 
 /**
  * 
@@ -115,7 +116,7 @@ class AutoScalingServiceTest {
     TagSupportDiscovery tagDiscovery = new TagSupportDiscovery()
     tagDiscovery.processClass( TestAutoScalingGroupTagSupport.class )
   }
-  
+
   @Test
   void testLaunchConfigurations() {
     Accounts.setAccountProvider( accountProvider() )
@@ -595,6 +596,9 @@ class AutoScalingServiceTest {
       }
 
       @Override
+      void markScalingRequiredForZones(Set<String> availabilityZones) { }
+
+      @Override
       boolean delete(AutoScalingGroup autoScalingGroup) {
         groups.remove( 0 ) != null
       }
@@ -635,6 +639,12 @@ class AutoScalingServiceTest {
       }
 
       @Override
+      List<AutoScalingInstance> listByState(LifecycleState lifecycleState,
+                                            ConfigurationState configurationState) {
+        []
+      }
+
+      @Override
       List<AutoScalingInstance> listUnhealthyByGroup( AutoScalingGroup group ) {
         []
       }
@@ -658,6 +668,32 @@ class AutoScalingServiceTest {
       @Override
       void markMissingInstancesUnhealthy(AutoScalingGroup group, 
                                          Collection<String> instanceIds) {
+      }
+
+      @Override
+      Set<String> verifyInstanceIds(String accountNumber,
+                                    Collection<String> instanceIds) {
+        return [] as Set
+      }      
+      
+      @Override
+      void transitionState(AutoScalingGroup group,
+                           LifecycleState from,
+                           LifecycleState to,
+                           Collection<String> instanceIds) {
+      }
+
+      @Override
+      void transitionConfigurationState(AutoScalingGroup group,
+                                        ConfigurationState from,
+                                        ConfigurationState to,
+                                        Collection<String> instanceIds) {
+      }
+
+      @Override
+      int registrationFailure(AutoScalingGroup group,
+                              Collection<String> instanceIds) {
+        0
       }
 
       @Override

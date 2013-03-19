@@ -89,6 +89,8 @@
 #define INLINE                                   inline
 #endif /* ! CFG_USE_INLINE */
 
+#include <stdint.h>
+
 // Maybe we should have no defaults, but I will put them here for the moment.
 #ifndef LIBDIR
 #define LIBDIR                                   "/usr/lib" //!< default user library directory path
@@ -220,6 +222,7 @@
 #define CONFIG_NC_BUNDLING_CLEANUP_THRESHOLD    "NC_BUNDLING_CLEANUP_THRESHOLD"
 #define CONFIG_NC_CREATEIMAGE_CLEANUP_THRESHOLD "NC_CREATEIMAGE_CLEANUP_THRESHOLD"
 #define CONFIG_NC_TEARDOWN_STATE_DURATION       "NC_TEARDOWN_STATE_DURATION"
+#define CONFIG_NC_MIGRATION_READY_THRESHOLD     "NC_MIGRATION_READY_THRESHOLD"
 
 //! @}
 
