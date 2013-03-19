@@ -24,6 +24,7 @@ import static com.eucalyptus.autoscaling.common.AutoScalingResourceName.InvalidR
 import static com.eucalyptus.autoscaling.common.AutoScalingMetadata.AutoScalingGroupMetadata;
 import static com.eucalyptus.autoscaling.common.AutoScalingMetadata.LaunchConfigurationMetadata;
 import static com.eucalyptus.autoscaling.common.AutoScalingResourceName.Type.autoScalingGroup;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.Date;
 import java.util.EnumSet;
@@ -99,6 +100,7 @@ import com.eucalyptus.autoscaling.common.EnableMetricsCollectionResponseType;
 import com.eucalyptus.autoscaling.common.EnableMetricsCollectionType;
 import com.eucalyptus.autoscaling.common.ExecutePolicyResponseType;
 import com.eucalyptus.autoscaling.common.ExecutePolicyType;
+import com.eucalyptus.autoscaling.common.Filter;
 import com.eucalyptus.autoscaling.common.Instance;
 import com.eucalyptus.autoscaling.common.Instances;
 import com.eucalyptus.autoscaling.common.LaunchConfigurationType;
@@ -164,11 +166,14 @@ import com.eucalyptus.util.RestrictedTypes;
 import com.eucalyptus.util.Strings;
 import com.eucalyptus.util.TypeMappers;
 import com.google.common.base.Enums;
+import com.google.common.base.Function;
+import com.google.common.base.Functions;
 import com.google.common.base.Objects;
 import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
 import com.google.common.base.Supplier;
 import com.google.common.collect.Collections2;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
@@ -180,6 +185,19 @@ public class AutoScalingService {
 
   private static final Set<String> reservedPrefixes =
       ImmutableSet.<String>builder().add("aws:").add("euca:").build();
+
+  private static final Map<String,Function<Tag,String>> tagFilterExtractors =
+      ImmutableMap.<String,Function<Tag,String>>builder()
+      .put( "auto-scaling-group", Tags.resourceId() )
+      .put( "key", Tags.key() )
+      .put( "value", Tags.value() )
+      .put( "propagate-at-launch", Tags.propagateAtLaunch() )
+      .build();
+
+  private static final Map<String,Function<String,String>> tagValuePreProcessors =
+      ImmutableMap.<String,Function<String,String>>builder()
+      .put( "propagate-at-launch", Strings.lower() )
+      .build();
 
   public static long MAX_TAGS_PER_RESOURCE = 10;
 
@@ -460,7 +478,20 @@ public class AutoScalingService {
     final DescribeTagsResponseType reply = request.getReply( );
 
     //TODO:STEVE: MaxRecords / NextToken support for DescribeTags
-    //TODO:STEVE: Filtering support for DescribeTags
+
+    final Collection<Predicate<Tag>> tagFilters = Lists.newArrayList();
+    for ( final Filter filter : request.filters() ) {
+      final Function<Tag,String> extractor = tagFilterExtractors.get( filter.getName() );
+      if ( extractor == null ) {
+        throw new InvalidParameterValueException( "Filter type "+filter.getName()+" is not correct. Allowed Filter types are: auto-scaling-group key value propagate-at-launch" );
+      }
+      final Function<String,String> tagValueConverter = Objects.firstNonNull(
+          tagValuePreProcessors.get( filter.getName() ),
+          Functions.<String>identity() );
+      tagFilters.add( Predicates.compose(
+          Predicates.in( Collections2.transform( filter.values(), tagValueConverter ) ),
+          extractor ) );
+    }
 
     final Context context = Contexts.lookup();
 
@@ -469,9 +500,9 @@ public class AutoScalingService {
         .compound( Ordering.natural().onResultOf( Tags.value() ) );
     try {
       final TagDescriptionList tagDescriptions = new TagDescriptionList();
-      for ( final Tag tag : ordering.sortedCopy( Tags.list(
+       for ( final Tag tag : ordering.sortedCopy( Tags.list(
           context.getUserFullName().asAccountFullName(),
-          Predicates.alwaysTrue(),
+          Predicates.and( tagFilters ),
           Restrictions.conjunction(),
           Collections.<String,String>emptyMap() ) ) ) {
         if ( Permissions.isAuthorized(

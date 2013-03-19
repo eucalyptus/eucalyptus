@@ -278,6 +278,11 @@ public class Filter extends EucalyptusData {
   @HttpEmbedded
   Values values
   public Filter() {  }
+  public List<String> values() {
+    values != null ?
+      values.getMember() :
+      []
+  }
 }
 public class ErrorDetail extends EucalyptusData {
   public ErrorDetail() {  }
@@ -320,6 +325,11 @@ public class DescribeTagsType extends AutoScalingMessage {
   String nextToken
   Integer maxRecords
   public DescribeTagsType() {  }
+  public List<Filter> filters() {
+    filters != null ?
+        filters.member :
+        []
+  }
 }
 public class AdjustmentType extends EucalyptusData {
   String adjustmentType
@@ -484,7 +494,7 @@ public class DescribeScheduledActionsResponseType extends AutoScalingMessage {
 }
 public class Filters extends EucalyptusData {
   public Filters() {  }
-  @HttpEmbedded
+  @HttpEmbedded(multiple=true)
   @HttpParameterMapping(parameter="member")
   ArrayList<Filter> member = new ArrayList<Filter>()
 }
