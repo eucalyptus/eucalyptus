@@ -333,8 +333,7 @@ public class WalrusManager {
 
 					buckets.add(new BucketListEntry(bucketInfo.getBucketName(),
 							DateUtils.format(bucketInfo.getCreationDate().getTime(), 
-									DateUtils.ISO8601_DATETIME_PATTERN) 
-									+ ".000Z"));
+									DateUtils.RFC822_DATETIME_PATTERN)));
 				}
 			}
 			db.commit();
@@ -1174,8 +1173,7 @@ public class WalrusManager {
 		
 		reply.setEtag(md5);
 		reply.setLastModified(DateUtils.format(lastModified.getTime(),
-				DateUtils.ISO8601_DATETIME_PATTERN)
-				+ ".000Z");
+				DateUtils.RFC822_DATETIME_PATTERN));
 		return reply;
 	}
 	
@@ -1484,8 +1482,7 @@ public class WalrusManager {
 
 		reply.setEtag(md5);
 		reply.setLastModified(DateUtils.format(lastModified.getTime(),
-				DateUtils.ISO8601_DATETIME_PATTERN)
-				+ ".000Z");
+				DateUtils.RFC822_DATETIME_PATTERN));
 		return reply;
 	}
 
@@ -1927,7 +1924,7 @@ public class WalrusManager {
 							ListEntry listEntry = new ListEntry();
 							listEntry.setKey(objectKey);
 							listEntry.setEtag(objectInfo.getEtag());
-							listEntry.setLastModified(DateUtils.format(objectInfo.getLastModified().getTime(), DateUtils.ISO8601_DATETIME_PATTERN) + ".000Z");
+							listEntry.setLastModified(DateUtils.format(objectInfo.getLastModified().getTime(), DateUtils.RFC822_DATETIME_PATTERN));
 							listEntry.setStorageClass(objectInfo.getStorageClass());
 
 							try {									
@@ -2509,11 +2506,7 @@ public class WalrusManager {
 									logData.setObjectSize(torrentLength);
 								}
 								storageManager.sendObject(request, httpResponse, bucketName, torrentFile, torrentLength, null,
-										DateUtils.format(
-												lastModified
-												.getTime(),
-												DateUtils.ISO8601_DATETIME_PATTERN)
-												+ ".000Z",
+										DateUtils.format(lastModified.getTime(),DateUtils.RFC822_DATETIME_PATTERN),
 												"application/x-bittorrent",
 												"attachment; filename="
 														+ objectKey
@@ -2581,8 +2574,7 @@ public class WalrusManager {
 									httpResponse, bucketName, objectName, size,
 									etag, DateUtils.format(lastModified
 											.getTime(),
-											DateUtils.ISO8601_DATETIME_PATTERN)
-											+ ".000Z", contentType,
+											DateUtils.RFC822_DATETIME_PATTERN), contentType,
 											contentDisposition, request
 											.getIsCompressed(), versionId,
 											logData);
@@ -2595,14 +2587,13 @@ public class WalrusManager {
 						storageManager.sendHeaders(request,
 								httpResponse, size, etag, DateUtils.format(
 										lastModified.getTime(),
-										DateUtils.ISO8601_DATETIME_PATTERN)
-										+ ".000Z", contentType,
+										DateUtils.RFC822_DATETIME_PATTERN), contentType,
 										contentDisposition, versionId, logData);
 						return null;
 
 					}
 					reply.setEtag(etag);
-					reply.setLastModified(DateUtils.format(lastModified, DateUtils.ISO8601_DATETIME_PATTERN) + ".000Z");
+					reply.setLastModified(DateUtils.format(lastModified, DateUtils.RFC822_DATETIME_PATTERN));
 					reply.setSize(size);
 					reply.setContentType(contentType);
 					reply.setContentDisposition(contentDisposition);
@@ -2784,8 +2775,7 @@ public class WalrusManager {
 										httpResponse, bucketName, objectName,
 										byteRangeStart, byteRangeEnd + 1, size, etag,
 										DateUtils.format(lastModified.getTime(),
-												DateUtils.ISO8601_DATETIME_PATTERN
-												+ ".000Z"), contentType,
+												DateUtils.RFC822_DATETIME_PATTERN), contentType,
 												contentDisposition, request.getIsCompressed(),
 												versionId, logData);
 								//fireUsageEvent For Get Object (we need the size in regards
@@ -2795,8 +2785,7 @@ public class WalrusManager {
 								storageManager.sendHeaders(request,
 										httpResponse, size, etag, DateUtils.format(
 												lastModified.getTime(),
-												DateUtils.ISO8601_DATETIME_PATTERN
-												+ ".000Z"), contentType,
+												DateUtils.RFC822_DATETIME_PATTERN), contentType,
 												contentDisposition, versionId, logData);
 								return null;
 							}
@@ -3089,10 +3078,7 @@ public class WalrusManager {
 							}
 
 							reply.setEtag(etag);
-							reply.setLastModified(DateUtils.format(lastModified
-									.getTime(),
-									DateUtils.ISO8601_DATETIME_PATTERN)
-									+ ".000Z");
+							reply.setLastModified(DateUtils.format(lastModified.getTime(), DateUtils.RFC822_DATETIME_PATTERN));
 
 							if(foundDestinationBucketInfo.isVersioningEnabled()) {
 								reply.setCopySourceVersionId(sourceVersionId);
@@ -3530,7 +3516,7 @@ public class WalrusManager {
 								versionEntry.setKey(objectKey);
 								versionEntry.setVersionId(objectInfo.getVersionId());
 								versionEntry.setEtag(objectInfo.getEtag());
-								versionEntry.setLastModified(DateUtils.format(objectInfo.getLastModified().getTime(),DateUtils.ISO8601_DATETIME_PATTERN)+ ".000Z");
+								versionEntry.setLastModified(DateUtils.format(objectInfo.getLastModified().getTime(),DateUtils.RFC822_DATETIME_PATTERN));
 								try {
 									String displayName = Accounts.lookupAccountById(objectInfo.getOwnerId()).getName();
 									versionEntry.setOwner(new CanonicalUserType(objectInfo.getOwnerId(), displayName));
@@ -3547,7 +3533,7 @@ public class WalrusManager {
 								DeleteMarkerEntry deleteMarkerEntry = new DeleteMarkerEntry();
 								deleteMarkerEntry.setKey(objectKey);
 								deleteMarkerEntry.setVersionId(objectInfo.getVersionId());
-								deleteMarkerEntry.setLastModified(DateUtils.format(objectInfo.getLastModified().getTime(), DateUtils.ISO8601_DATETIME_PATTERN) + ".000Z");
+								deleteMarkerEntry.setLastModified(DateUtils.format(objectInfo.getLastModified().getTime(), DateUtils.RFC822_DATETIME_PATTERN));
 
 								try {
 									String ownerId = objectInfo.getOwnerId();

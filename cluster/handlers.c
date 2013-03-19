@@ -1318,7 +1318,7 @@ int doAttachVolume(ncMetadata * pMeta, char *volumeId, char *instanceId, char *r
         timeout = maxint(timeout, ATTACH_VOL_TIMEOUT_SECONDS);
 
         // pick out the right LUN from the remove device string
-        char remoteDevForNC [CHAR_BUFFER_SIZE];
+        char remoteDevForNC [VERY_BIG_CHAR_BUFFER_SIZE];
         if (get_remoteDevForNC(resourceCacheLocal.resources[i].iqn, remoteDev, remoteDevForNC, sizeof(remoteDevForNC))) {
             LOGERROR("failed to parse remote dev string in request\n");
             rc = 1;
@@ -1403,7 +1403,7 @@ int doDetachVolume(ncMetadata * pMeta, char *volumeId, char *instanceId, char *r
         timeout = maxint(timeout, DETACH_VOL_TIMEOUT_SECONDS);
 
         // pick out the right LUN from the remove device string
-        char remoteDevForNC [CHAR_BUFFER_SIZE];
+        char remoteDevForNC [VERY_BIG_CHAR_BUFFER_SIZE];
         if (get_remoteDevForNC(resourceCacheLocal.resources[i].iqn, remoteDev, remoteDevForNC, sizeof(remoteDevForNC))) {
             LOGERROR("failed to parse remote dev string in request\n");
             rc = 1;
