@@ -665,7 +665,8 @@ static int doMigrateInstances(struct nc_state_t *nc, ncMetadata * pMeta, ncInsta
             instance->migration_state = MIGRATION_READY;
             euca_strncpy(instance->migration_src, sourceNodeName, HOSTNAME_SIZE);
             euca_strncpy(instance->migration_dst, destNodeName, HOSTNAME_SIZE);
-            LOGINFO("[%s] migration source preparing %s > %s\n", instance->instanceId, instance->migration_src, instance->migration_dst);
+            instance->migrationTime = time(NULL);
+            LOGINFO("[%s] migration source preparing %s > %s [%d]\n", instance->instanceId, instance->migration_src, instance->migration_dst, instance->migrationTime);
             save_instance_struct(instance);
             copy_instances();
             sem_v(inst_sem);
@@ -697,8 +698,10 @@ static int doMigrateInstances(struct nc_state_t *nc, ncMetadata * pMeta, ncInsta
                 return (EUCA_ERROR);
             }
         } else if (strcmp (action, "rollback") == 0) {
-            LOGERROR("[%s] action 'rollback' not implemented\n", instance->instanceId);
-            return (EUCA_ERROR);
+            LOGINFO("[%s] rolling back migration of instance on source %s\n", instance->instanceId, instance->migration_src);
+            sem_p(inst_sem);
+            migration_rollback_src(instance);
+            sem_v(inst_sem);
         } else {
             LOGERROR("[%s] action '%s' is not valid\n", instance->instanceId, action);
             return (EUCA_ERROR);
@@ -707,6 +710,7 @@ static int doMigrateInstances(struct nc_state_t *nc, ncMetadata * pMeta, ncInsta
     } else if (!strcmp(pMeta->nodeName, destNodeName)) { // this is a migrate request to destination
 
         if (strcmp (action, "prepare") != 0) {
+            // FIXME: "commit" will remain invalid, but "rollback" must be implemented!
             LOGERROR("action '%s' is not valid or not implemented\n", action);
             return (EUCA_ERROR);
         }
