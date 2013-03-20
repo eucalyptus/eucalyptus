@@ -42,7 +42,7 @@
 
     <script type="text/javascript" language="javascript" src="../../../lib/jquery-1.8.2.js"></script>
     <script type="text/javascript" language="javascript" src="../../../lib/jquery-ui-1.9.1.custom.js"></script>
-    <script type="text/javascript" language="javascript" src="../../../js/dependencies.js"></script>
+    <script type="text/javascript" language="javascript" src="../../../js/visualsearch/build/dependencies.js"></script>
 
     <script type="text/javascript" language="javascript" src="../../../js/underscore-1.4.3.js"></script>
     <script type="text/javascript" language="javascript" src="../../../js/backbone-0.9.10.js"></script>
@@ -125,7 +125,6 @@
 
       var wiz = new Wizard().add(Page1, closedView(1)).add(Page2, closedView(2)).add(Page3, closedView(3)).add(Page4, closedView(4));
       var wv = wiz.makeView({el: $('#wizard')}, options, template);
-      wv.controller.next();
     </script>
   </body>
 </html>
