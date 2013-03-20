@@ -224,6 +224,7 @@ function Wizard(pages, navigationController, closedViewFactory) {
     return a;
   }
 
+  // Append this to generated HTML IDs to avoid name clashes
   var uid = Math.floor(Math.random() * 65536) + '_' + new Date().getTime();
 
   self.makeView = function(element, options, template, mapping) {
@@ -279,7 +280,7 @@ function Wizard(pages, navigationController, closedViewFactory) {
       animate: true,
       initialize: function() {
         self.show();
-        this.animate = typeof options.canAnimate === 'undefined' ? true : options.canAnimate;
+        this.animate = true;
         this.$el.html(template);
         this.nextButton = this.$el.find(mapping.nextButton);
         this.prevButton = this.$el.find(mapping.prevButton);
@@ -291,8 +292,8 @@ function Wizard(pages, navigationController, closedViewFactory) {
         this.render();
       },
       render: function() {
-        var shouldAnimate = this.animate && typeof this.wizardContent['slideUp'] === 'function' && typeof this.wizardContent['slideDown'] === 'function';
-        var shouldAnimate = true;
+        // Make sure there is something there
+        var shouldAnimate = this.animate;
         if (shouldAnimate) {
           this.wizardContent.slideUp(0);
         }
@@ -342,14 +343,6 @@ function Wizard(pages, navigationController, closedViewFactory) {
     });
     return new Result(element);
   };
-}
-
-function trivialClosedViewFactory(index) {
-  return Backbone.view.extend({
-    render: function() {
-      $(this.el).append('<h1>Page ' + index + "</h1>");
-    }
-  });
 }
 
 // Modules, for tests with node
