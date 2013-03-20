@@ -2183,6 +2183,7 @@ public class ActivityManager {
           !availabilityZones.isEmpty() ||
           !loadBalancerNames.isEmpty() ||
           !imageIds.isEmpty() ||
+          instanceType != null ||
           keyName != null ||
           !securityGroups.isEmpty();
     }

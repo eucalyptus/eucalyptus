@@ -153,7 +153,8 @@ public class Ats implements Predicate<Class> {
    * @return the root of this annotation hierarchy
    */
   private Class getRootClass( ) {
-    return ( Class ) this.ancestry.get( 0 );
+    AnnotatedElement a = this.ancestry.get( 0 );
+    return a instanceof Class ? ( Class ) a : null;
   }
   
   enum AtsBuilder implements Function<Object, Ats> {
