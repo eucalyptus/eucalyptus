@@ -2243,7 +2243,7 @@ int refresh_resources(ncMetadata * pMeta, int timeout, int dolock)
 //! @param[out] node node to which to send migration action request
 //! @param[out] action migration action to request of node
 //!
-//! @return
+//! @return EUCA_OK or EUCA
 //!
 //! @pre
 //!
@@ -2257,6 +2257,11 @@ static int migration_handler(ccInstance *myInstance, char *host, char *src, char
 
     if (!strcmp(host, dst)) {
         if (migration_state == MIGRATION_READY) {
+            if (!strcmp(myInstance->state, "Teardown")) {
+                LOGDEBUG("[%s] destination node %s reports ready to receive migration, but is in Teardown--ignoring...\n", myInstance->instanceId, host);
+                rc++;
+                goto out;
+            }
             LOGDEBUG("[%s] destination node %s reports ready to receive migration, checking source node %s...\n", myInstance->instanceId, host, src);
             ccInstance *srcInstance = NULL;
             rc = find_instanceCacheId(myInstance->instanceId, &srcInstance);
@@ -2270,8 +2275,8 @@ static int migration_handler(ccInstance *myInstance, char *host, char *src, char
                 } else if (srcInstance->migration_state == MIGRATION_IN_PROGRESS) {
                     LOGDEBUG("[%s] source node %s reports migration to %s in progress.\n", myInstance->instanceId, src, dst);
                 } else {
-                    LOGDEBUG("[%s] source node %s has not yet reported ready to commit migration to %s, despite implicitly being ready.\n",
-                             myInstance->instanceId, src, dst);
+                    LOGDEBUG("[%s] source node %s not reporting ready to commit migration to %s (migration_state=%s).\n",
+                             myInstance->instanceId, src, dst, migration_state_names[srcInstance->migration_state]);
                 }
             } else {
                 LOGERROR("[%s] could not find migration source node %s in the instance cache.\n", myInstance->instanceId, src);
@@ -2280,7 +2285,13 @@ static int migration_handler(ccInstance *myInstance, char *host, char *src, char
         } else {
             LOGTRACE("[%s] ignoring updates from destination node %s during migration.\n", myInstance->instanceId, host);
         }
+    } else if (!strcmp(host, src)) {
+        LOGDEBUG("[%s] received migration state %s from source node %s\n",
+                 myInstance->instanceId, migration_state_names[migration_state], host);
+    } else {
+        LOGERROR("[%s] received status from a migrating node that's neither the source (%s) nor the destination (%s): %s\n", myInstance->instanceId, src, dst, host);
     }
+ out:
     LOGDEBUG("done\n");
     return rc;
 }
@@ -2465,8 +2476,13 @@ int refresh_instances(ncMetadata * pMeta, int timeout, int dolock)
             sem_mypost(REFRESHLOCK);
 
             if (migration_to_commit) {
-                LOGDEBUG("notifying source %s to commit migration.\n", migration_to_commit);
-                doMigrateInstances(pMeta, migration_to_commit, "commit");
+                if (!strcmp(migration_action, "commit")) {
+                    LOGDEBUG("notifying source %s to commit migration.\n", migration_to_commit);
+                    doMigrateInstances(pMeta, migration_to_commit, migration_action);
+                } else {
+                    LOGWARN("unexpected migration action %s for source %s -- doing nothing\n",
+                            migration_action, migration_to_commit);
+                }
                 EUCA_FREE(migration_to_commit);
             }
             EUCA_FREE(migration_action);
@@ -2675,8 +2691,8 @@ int doDescribeInstances(ncMetadata * pMeta, char **instIds, int instIdsLen, ccIn
     sem_mypost(INSTCACHE);
 
     for (i = 0; i < (*outInstsLen); i++) {
-        LOGDEBUG("instances summary: instanceId=%s, state=%s, publicIp=%s, privateIp=%s\n", (*outInsts)[i].instanceId,
-                 (*outInsts)[i].state, (*outInsts)[i].ccnet.publicIp, (*outInsts)[i].ccnet.privateIp);
+        LOGDEBUG("instances summary: instanceId=%s, state=%s, migration_state=%s, publicIp=%s, privateIp=%s\n", (*outInsts)[i].instanceId,
+                 (*outInsts)[i].state, migration_state_names[(*outInsts)[i].migration_state], (*outInsts)[i].ccnet.publicIp, (*outInsts)[i].ccnet.privateIp);
     }
 
     LOGTRACE("done\n");
@@ -7083,7 +7099,7 @@ int find_instanceCacheId(char *instanceId, ccInstance ** out)
                      instanceCache->instances[i].ccnet.publicIp, instanceCache->instances[i].ccnet.privateIp);
             // migration-related
             (*out)->migration_state = instanceCache->instances[i].migration_state;
-            LOGDEBUG("instance %s migration state=%s\n", instanceCache->instances[i].instanceId, migration_state_names[(*out)->migration_state]);
+            LOGTRACE("instance %s migration state=%s\n", instanceCache->instances[i].instanceId, migration_state_names[(*out)->migration_state]);
             done++;
         }
     }
