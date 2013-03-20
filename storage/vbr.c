@@ -1335,6 +1335,8 @@ w_out:
     case NC_LOCATION_NONE:{
             assert(vbr->size > 0L);
 
+            vbr->size = vbr->size * VBR_SIZE_SCALING; // TODO: remove this adjustment (CLC sends size in KBs) 
+
             char art_sig[ART_SIG_MAX];  // signature for this artifact based on its salient characteristics
             if (snprintf(art_sig, sizeof(art_sig), "id=%s size=%lld format=%s\n\n", vbr->id, vbr->size, vbr->formatName) >= sizeof(art_sig))    // output was truncated
                 break;
