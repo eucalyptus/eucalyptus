@@ -104,7 +104,7 @@ if ((@paths < 1) || ((@paths % 3) != 0)) {
   print STDERR "Target paths are not complete:$dev_string\n";
   do_exit(1);
 }
-my $first_store = $paths[2];
+
 $multipath = 0;
 $multipath = 1 if @paths > 3;
 if (($multipath == 1) && (!-x $MULTIPATH)) {
@@ -175,10 +175,11 @@ if (is_null_or_empty($localdev)) {
   print STDERR "Unable to get attached target device.\n";
   do_exit(1);
 }
+# get the /dev/disk/by-id path
 if ($multipath == 0) {
-  $localdev = "/dev/$localdev";
+  $localdev = get_disk_by_id_path("/dev/$localdev");
 } else {
-  $localdev = "/dev/mapper/$localdev";
+  $localdev = get_disk_by_id_path("/dev/mapper/$localdev");
 }
 # make sure device exists on the filesystem
 for ($i = 0; $i < 12; $i++) { 
@@ -186,7 +187,7 @@ for ($i = 0; $i < 12; $i++) {
   sleep(1);
 }
 
-print wrap_device($localdev, $first_store);
+print "$localdev";
 
 ##################################################################
 sub login_target {
