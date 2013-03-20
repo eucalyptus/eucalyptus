@@ -26,6 +26,7 @@
     delDialog : null,
     createDialog : null,
     registerDialog : null,
+    tagDialog : null,
     createVolButtonId : 'volume-create-btn',
     createSnapButtonId : 'snapshot-create-btn',
     _init : function() {
@@ -258,6 +259,17 @@
          }]},
        });
       // snapshot delete dialog end
+      // tag resource dialog starts
+      $tmpl = $('html body').find('.templates #resourceTagWidgetTmpl').clone();
+      $rendered = $($tmpl.render($.extend($.i18n.map, help_instance)));
+      var $tag_dialog = $rendered.children().first();
+      var $tag_help = $rendered.children().last();
+      this.tagDialog = $tag_dialog.eucadialog({
+        id: 'snapshots-tag-resource',
+        title: 'Add/Edit tags',
+        help: {content: $tag_help, url: help_instance.dialog_terminate_content_url},
+      });
+      // tag resource dialog ends
     },
 
     _destroy : function() {
@@ -271,6 +283,7 @@
         itemsList['delete'] = { "name": snapshot_action_delete, callback: function(key, opt) {;}, disabled: function(){ return true;} };
         itemsList['create_volume'] = { "name": snapshot_action_create_volume, callback: function(key, opt) {;}, disabled: function(){ return true;} };
         itemsList['register'] = { "name": snapshot_action_register, callback: function(key, opt) {;}, disabled: function(){ return true;} }
+        itemsList['tag'] = { "name": 'Tag Resource', callback: function(key, opt) {;}, disabled: function(){ return true;} }
       })();
 
       if ( selectedSnapshots.length > 0 && selectedSnapshots.indexOf('pending') == -1 ){
@@ -280,7 +293,9 @@
       if ( selectedSnapshots.length === 1 && onlyInArray('completed', selectedSnapshots)){
         itemsList['register'] = { "name": snapshot_action_register, callback: function(key, opt) { thisObj._registerAction(); } }
         itemsList['create_volume'] = { "name": snapshot_action_create_volume, callback: function(key, opt) { thisObj._createVolumeAction(); } }
+        itemsList['tag'] = {"name":'Tag Resource', callback: function(key, opt){ thisObj._tagResourceAction(); }}
       }
+
       return itemsList;
     },
 
@@ -520,6 +535,17 @@
             notifyError($.i18n.prop('snapshot_register_error', DefaultEncoder().encodeForHTML(snapshot.toString())), getErrorMessage(jqXHR));
           }
       });
+    },
+
+    _tagResourceAction : function(){
+      var thisObj = this;
+      var snapshot = thisObj.tableWrapper.eucatable('getSelectedRows', 1)[0];
+      if ( snapshot.length > 0 ) {
+        // Create a widget object for displaying the resource tag information
+        var $tagInfo = $('<div>').addClass('resource-tag-table-expanded-snapshot').addClass('clearfix').euca_resource_tag({resource: 'snapshot', resource_id: snapshot, cancelButtonCallback: function(){ thisObj.tagDialog.eucadialog("close"); }, widgetMode: 'edit' });
+        thisObj.tagDialog.eucadialog('addNote','tag-modification-display-box', $tagInfo);   // This line should be adjusted once the right template is created for the resource tag.  030713
+        thisObj.tagDialog.eucadialog('open');
+       }
     },
 
 /**** Public Methods ****/
