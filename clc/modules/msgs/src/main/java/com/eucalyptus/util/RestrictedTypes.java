@@ -69,6 +69,8 @@ import java.lang.annotation.Target;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import javax.persistence.PersistenceException;
 import org.apache.log4j.Logger;
 import com.eucalyptus.auth.Accounts;
@@ -103,7 +105,9 @@ import com.google.common.collect.Maps;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 import static com.eucalyptus.component.ComponentId.ComponentMessage;
 import static com.eucalyptus.util.Parameters.checkParam;
+import static com.eucalyptus.util.RestrictedType.AccountRestrictedType;
 import static com.eucalyptus.util.RestrictedType.PolicyRestrictedType;
+import static com.eucalyptus.util.RestrictedType.UserRestrictedType;
 import static org.hamcrest.Matchers.notNullValue;
 
 public class RestrictedTypes {
@@ -486,7 +490,56 @@ public class RestrictedTypes {
       
     };
   }
-  
+
+  /**
+   * Filter by account and possibly user.
+   *
+   * <p>If the given owner is null the returned predicate will always match.</p>
+   */
+  @Nonnull
+  public static Predicate<AccountRestrictedType> filterByOwner( @Nullable final OwnerFullName owner ) {
+    return owner == null ?
+        Predicates.<AccountRestrictedType>alwaysTrue() :
+        Predicates.<AccountRestrictedType>and(
+            filterByAccount( owner.getAccountNumber() ),
+            typeSafeFilterByUser( owner.getUserId() )
+            );
+  }
+
+  @Nonnull
+  public static Predicate<AccountRestrictedType> filterByAccount( @Nonnull final String accountNumber ) {
+    return new Predicate<AccountRestrictedType>() {
+      @Override
+      public boolean apply( @Nullable final AccountRestrictedType restricted ) {
+        return restricted == null || accountNumber.equals( restricted.getOwnerAccountNumber() );
+      }
+    };
+  }
+
+  @Nonnull
+  public static Predicate<UserRestrictedType> filterByUser( @Nonnull final String userId ) {
+    return new Predicate<UserRestrictedType>() {
+      @Override
+      public boolean apply( @Nullable final UserRestrictedType restricted ) {
+        return restricted == null || userId.equals( restricted.getOwnerUserId() );
+      }
+    };
+  }
+
+  @Nonnull
+  private static Predicate<AccountRestrictedType> typeSafeFilterByUser( @Nullable final String userId ) {
+    final Predicate<UserRestrictedType> userFilter = userId == null ?
+        Predicates.<UserRestrictedType>alwaysTrue() :
+        filterByUser( userId );
+    return new Predicate<AccountRestrictedType>() {
+      @Override
+      public boolean apply( @Nullable final AccountRestrictedType restricted ) {
+        return !(restricted instanceof UserRestrictedType) ||
+            userFilter.apply( (UserRestrictedType) restricted );
+      }
+    };
+  }
+
   public static class ResourceMetricFunctionDiscovery extends ServiceJarDiscovery {
     
     public ResourceMetricFunctionDiscovery( ) {

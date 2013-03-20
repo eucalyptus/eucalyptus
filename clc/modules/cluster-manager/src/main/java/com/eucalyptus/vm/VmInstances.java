@@ -129,6 +129,7 @@ import com.eucalyptus.util.CollectionUtils;
 import com.eucalyptus.util.HasNaturalId;
 import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.util.OwnerFullName;
+import com.eucalyptus.util.RestrictedTypes;
 import com.eucalyptus.util.RestrictedTypes.QuantityMetricFunction;
 import com.eucalyptus.util.RestrictedTypes.Resolver;
 import com.eucalyptus.util.Strings;
@@ -136,7 +137,6 @@ import com.eucalyptus.util.async.AsyncRequests;
 import com.eucalyptus.util.async.Callbacks;
 import com.eucalyptus.util.async.DelegatingRemoteCallback;
 import com.eucalyptus.util.async.RemoteCallback;
-import com.eucalyptus.util.async.Request;
 import com.eucalyptus.vm.VmInstance.Transitions;
 import com.eucalyptus.vm.VmInstance.VmState;
 import com.eucalyptus.vm.VmInstance.VmStateSet;
@@ -714,7 +714,10 @@ public class VmInstances {
       public List<VmInstance> get() {
         return Entities.query( VmInstance.named( ownerFullName, null ), false, criterion, aliases );
       }
-    }, predicate );
+    }, Predicates.and(
+        RestrictedTypes.filterByOwner( ownerFullName ),
+        checkPredicate( predicate )
+    ) );
   }
 
   public static List<VmInstance> list( @Nullable String instanceId,
@@ -730,7 +733,10 @@ public class VmInstances {
       public List<VmInstance> get() {
         return Entities.query( VmInstance.named( ownerFullName, instanceId ) );
       }
-    }, predicate );
+    }, Predicates.and(
+        RestrictedTypes.filterByOwner( ownerFullName ),
+        checkPredicate( predicate )
+    ) );
   }
 
   public static List<VmInstance> listByClientToken( @Nullable final OwnerFullName ownerFullName,
@@ -741,7 +747,11 @@ public class VmInstances {
       public List<VmInstance> get() {
         return Entities.query( VmInstance.withToken( ownerFullName, clientToken ) );
       }
-    }, Predicates.and( predicate, CollectionUtils.propertyPredicate( clientToken, VmInstanceFilterFunctions.CLIENT_TOKEN ) ));
+    }, Predicates.and(
+        CollectionUtils.propertyPredicate( clientToken, VmInstanceFilterFunctions.CLIENT_TOKEN ),
+        RestrictedTypes.filterByOwner( ownerFullName ),
+        checkPredicate( predicate )
+        ) );
   }
 
   private static List<VmInstance> list( @Nonnull Supplier<List<VmInstance>> instancesSupplier,
