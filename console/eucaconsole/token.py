@@ -61,10 +61,13 @@ class TokenAuthenticator(object):
             logging.info("authenticated user: "+account+"/"+user)
             return creds
         except urllib2.URLError, err:
-            traceback.print_exc(file=sys.stdout)
-            if not(issubclass(err.__class__, urllib2.HTTPError)):
-                if isinstance(err.reason, socket.timeout):
-                    raise eucaconsole.EuiException(504, 'Timed out')
-            raise eucaconsole.EuiException(401, 'Not Authorized')
+            # this returned for authorization problem
+            # HTTP Error 401: Unauthorized
+            if issubclass(err.__class__, urllib2.HTTPError):
+                raise eucaconsole.EuiException(err.code, 'Not Authorized')
+            # this returned for connection problem (i.e. timeout)
+            # <urlopen error [Errno 61] Connection refused>
+            if issubclass(err.__class__, urllib2.URLError):
+                raise eucaconsole.EuiException(504, 'Timed out')
 
 
