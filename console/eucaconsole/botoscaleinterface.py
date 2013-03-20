@@ -48,14 +48,10 @@ class BotoScaleInterface(ScaleInterface):
             reg = None
             port=443
         reg = RegionInfo(name='eucalyptus', endpoint=clc_host)
-        if boto.__version__ < '2.6':
-            self.conn = AutoScaleConnection(access_id, secret_key, region=reg,
+        self.conn = AutoScaleConnection(access_id, secret_key, region=reg,
                                   port=port, path=path,
                                   is_secure=True, security_token=token, debug=0)
-        else:
-            self.conn = AutoScaleConnection(access_id, secret_key, region=reg,
-                                  port=port, path=path, validate_certs=False,
-                                  is_secure=True, security_token=token, debug=0)
+        self.conn.https_validate_certificates = False
         self.conn.http_connection_kwargs['timeout'] = 30
 
     def __save_json__(self, obj, name):
