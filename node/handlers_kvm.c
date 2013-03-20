@@ -411,8 +411,8 @@ static void *rebooting_thread(void *arg)
 //! @param[in] pMeta a pointer to the node controller (NC) metadata structure
 //! @param[in] instanceId the instance identifier string (i-XXXXXXXX)
 //!
-//! @return EUCA_OK on success or proper error code. Known error code returned include: EUCA_ERROR
-//!         and EUCA_FATAL_ERROR.
+//! @return EUCA_OK on success or proper error code. Known error code returned include:
+//!         EUCA_ERROR, EUCA_NOT_FOUND_ERROR, and EUCA_FATAL_ERROR.
 //!
 static int doRebootInstance(struct nc_state_t *nc, ncMetadata * pMeta, char *instanceId)
 {
@@ -427,7 +427,7 @@ static int doRebootInstance(struct nc_state_t *nc, ncMetadata * pMeta, char *ins
 
     if (instance == NULL) {
         LOGERROR("[%s] cannot find instance\n", instanceId);
-        return (EUCA_ERROR);
+        return (EUCA_NOT_FOUND_ERROR);
     }
     // since shutdown/restart may take a while, we do them in a thread
     if (pthread_create(&tcb, NULL, rebooting_thread, (void *)instance)) {
@@ -641,7 +641,7 @@ static void *migrating_thread(void *arg)
 //! @param[in]  action IP of the destination Node Controller
 //! @param[in]  credentials credentials that enable the migration
 //!
-//! @return EUCA_OK on sucess or EUCA_ERROR on failure
+//! @return EUCA_OK on success or EUCA_*ERROR on failure
 //!
 //! @pre
 //!
@@ -666,7 +666,7 @@ static int doMigrateInstances(struct nc_state_t *nc, ncMetadata * pMeta, ncInsta
         sem_v(inst_sem);
         if (instance == NULL) {
             LOGERROR("[%s] cannot find instance\n", instance_req->instanceId);
-            return (EUCA_ERROR);
+            return (EUCA_NOT_FOUND_ERROR);
         }
 
         if (strcmp (action, "prepare") == 0) {
@@ -692,7 +692,7 @@ static int doMigrateInstances(struct nc_state_t *nc, ncMetadata * pMeta, ncInsta
                 LOGERROR("[%s] request to commit migration %s > %s when source migration_state='%s' (not 'ready')\n", instance->instanceId,
                          sourceNodeName, destNodeName, migration_state_names[instance->migration_state]);
                 sem_v(inst_sem);
-                return (EUCA_ERROR);
+                return (EUCA_UNSUPPORTED_ERROR);
             }
             instance->migration_state = MIGRATION_IN_PROGRESS;
             LOGINFO("[%s] migration source initiating %s > %s\n", instance->instanceId, instance->migration_src, instance->migration_dst);
@@ -704,12 +704,12 @@ static int doMigrateInstances(struct nc_state_t *nc, ncMetadata * pMeta, ncInsta
             pthread_t tcb = { 0 };
             if (pthread_create(&tcb, NULL, migrating_thread, (void *)instance)) {
                 LOGERROR("[%s] failed to spawn a migration thread\n", instance->instanceId);
-                return (EUCA_ERROR);
+                return (EUCA_THREAD_ERROR);
             }
 
             if (pthread_detach(tcb)) {
                 LOGERROR("[%s] failed to detach the migration thread\n", instance->instanceId);
-                return (EUCA_ERROR);
+                return (EUCA_THREAD_ERROR);
             }
         } else if (strcmp (action, "rollback") == 0) {
             LOGINFO("[%s] rolling back migration of instance on source %s\n", instance->instanceId, instance->migration_src);
@@ -718,7 +718,7 @@ static int doMigrateInstances(struct nc_state_t *nc, ncMetadata * pMeta, ncInsta
             sem_v(inst_sem);
         } else {
             LOGERROR("[%s] action '%s' is not valid\n", instance->instanceId, action);
-            return (EUCA_ERROR);
+            return (EUCA_INVALID_ERROR);
         }
 
     } else if (!strcmp(pMeta->nodeName, destNodeName)) { // this is a migrate request to destination
@@ -726,7 +726,7 @@ static int doMigrateInstances(struct nc_state_t *nc, ncMetadata * pMeta, ncInsta
         if (strcmp (action, "prepare") != 0) {
             // FIXME: "commit" will remain invalid, but "rollback" must be implemented!
             LOGERROR("action '%s' is not valid or not implemented\n", action);
-            return (EUCA_ERROR);
+            return (EUCA_INVALID_ERROR);
         }
 
         // allocate a new instance struct

@@ -199,7 +199,7 @@ const int default_staging_cleanup_threshold = 60 * 60 * 2;  //!< after this many
 const int default_booting_cleanup_threshold = 60;   //!< after this many seconds any BOOTING domains will be cleaned up
 const int default_bundling_cleanup_threshold = 60 * 60 * 2; //!< after this many seconds any BUNDLING domains will be cleaned up
 const int default_createImage_cleanup_threshold = 60 * 60 * 2;  //!< after this many seconds any CREATEIMAGE domains will be cleaned up
-const int default_teardown_state_duration = 180;    //!< after this many seconds in TEARDOWN state (no resources), we'll forget about the instance
+const int default_teardown_state_duration = 60 * 3;    //!< after this many seconds in TEARDOWN state (no resources), we'll forget about the instance
 const int default_migration_ready_threshold = 60 * 15; //!< after this many seconds ready (and waiting) to migrate, migration will terminate and roll back
 
 struct nc_state_t nc_state = { 0 }; //!< Global NC state structure
@@ -1018,7 +1018,7 @@ void *monitoring_thread(void *arg)
                 } else {
                     if (instance->state == BOOTING) {
                         // Assume destination node. (Is this a safe assumption?)
-                        LOGDEBUG("[%s] destination node ready: instance in booting state with no intance migrationTime.\n",
+                        LOGDEBUG("[%s] destination node ready: instance in booting state with no migrationTime.\n",
                                  instance->instanceId)
                     } else {
                         // Assume source node. (Is this a safe assumption?)
