@@ -38,7 +38,7 @@ class Cache(object):
 
     # staleness is determined by an age calculation (based on updateFreq)
     def isCacheStale(self, filters=None):
-        if filters != self.filters:
+        if cmp(filters, self.filters) != 0:
             return True
         return ((datetime.now() - self.lastUpdate) > timedelta(seconds = self.updateFreq))
 
