@@ -219,7 +219,7 @@ public class DatabaseAccountProxy implements Account {
   }
 
   @Override
-  public List<InstanceProfile> geInstanceProfiles() throws AuthException {
+  public List<InstanceProfile> getInstanceProfiles() throws AuthException {
     final List<InstanceProfile> results = Lists.newArrayList( );
     final EntityWrapper<InstanceProfileEntity> db = EntityWrapper.get( InstanceProfileEntity.class );
     try {

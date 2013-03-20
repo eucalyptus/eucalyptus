@@ -659,7 +659,7 @@ public class Principals {
     }
 
     @Override
-    public List<InstanceProfile> geInstanceProfiles() throws AuthException {
+    public List<InstanceProfile> getInstanceProfiles() throws AuthException {
       return Lists.newArrayList( );
     }
 

@@ -80,6 +80,6 @@ public class EuareQuotaUtil {
   }
 
   public static long countInstanceProfileByAccount( String accountId ) throws AuthException {
-    return Accounts.lookupAccountById( accountId ).geInstanceProfiles( ).size( );
+    return Accounts.lookupAccountById( accountId ).getInstanceProfiles( ).size( );
   }
 }

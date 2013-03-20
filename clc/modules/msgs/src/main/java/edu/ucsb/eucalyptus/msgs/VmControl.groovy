@@ -269,7 +269,14 @@ public class RunInstancesType extends VmControlMessage {
     c.networkIndexList = this.networkIndexList.clone( );
     return c;
   }
-  
+
+  void setInstanceProfileNameOrArn ( String nameOrArn ) {
+    if ( nameOrArn.startsWith( "arn:" ) ) {
+      // TODO - EUCA-5407 - Set InstanceProfile ARN
+    } else {
+      // TODO - EUCA-5407 - Set InstanceProfile Name
+    }
+  }
 }
 /** *******************************************************************************/
 public class GetConsoleOutputResponseType extends VmControlMessage {

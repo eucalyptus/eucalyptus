@@ -102,7 +102,7 @@ public interface Account extends /*HasId,*/ BasePrincipal, Serializable {
 
   public List<Role> getRoles( ) throws AuthException;
 
-  public List<InstanceProfile> geInstanceProfiles( ) throws AuthException;
+  public List<InstanceProfile> getInstanceProfiles() throws AuthException;
 
   public User addUser( String userName, String path, boolean skipRegistration, boolean enabled, Map<String, String> info ) throws AuthException;
   public void deleteUser( String userName, boolean forceDeleteAdmin, boolean recursive ) throws AuthException;

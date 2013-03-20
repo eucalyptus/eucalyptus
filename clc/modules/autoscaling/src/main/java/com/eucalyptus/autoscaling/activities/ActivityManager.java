@@ -42,6 +42,9 @@ import javax.annotation.Nullable;
 import org.apache.log4j.Logger;
 import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.AuthException;
+import com.eucalyptus.auth.policy.PolicySpec;
+import com.eucalyptus.auth.policy.ern.Ern;
+import com.eucalyptus.auth.policy.ern.EuareResourceName;
 import com.eucalyptus.auth.principal.AccountFullName;
 import com.eucalyptus.autoscaling.common.AutoScaling;
 import com.eucalyptus.autoscaling.configurations.LaunchConfiguration;
@@ -142,6 +145,9 @@ public class ActivityManager {
       ActivityStatusCode.Cancelled,
       ActivityStatusCode.Failed,
       ActivityStatusCode.Successful );
+
+  private static final String INSTANCE_PROFILE_RESOURCE =
+      PolicySpec.qualifiedName( PolicySpec.VENDOR_IAM, PolicySpec.IAM_RESOURCE_INSTANCE_PROFILE );
 
   //TODO:STEVE: What do we want to expose as configuration settings?
   private static final long activityTimeout = TimeUnit.MINUTES.toMillis( 5 );
@@ -325,7 +331,8 @@ public class ActivityManager {
         Collections.<String>emptyList(),
         null,
         null,
-        Collections.<String>emptyList() );
+        Collections.<String>emptyList(),
+        null );
 
   }
 
@@ -333,7 +340,8 @@ public class ActivityManager {
                                           final Iterable<String> imageIds,
                                           final String instanceType,
                                           final String keyName,
-                                          final Iterable<String> securityGroups ) {
+                                          final Iterable<String> securityGroups,
+                                          final String iamInstanceProfile ) {
     return validateReferences(
         owner,
         Collections.<String>emptyList(),
@@ -341,7 +349,8 @@ public class ActivityManager {
         Objects.firstNonNull( imageIds, Collections.<String>emptyList() ),
         instanceType,
         keyName,
-        Objects.firstNonNull( securityGroups, Collections.<String>emptyList() ) );
+        Objects.firstNonNull( securityGroups, Collections.<String>emptyList() ),
+        iamInstanceProfile );
   }
 
   protected long timestamp() {
@@ -354,7 +363,8 @@ public class ActivityManager {
                                            final Iterable<String> imageIds,
                                            @Nullable final String instanceType,
                                            @Nullable final String keyName,
-                                           final Iterable<String> securityGroups ) {
+                                           final Iterable<String> securityGroups,
+                                           @Nullable final String iamInstanceProfile ) {
     final List<String> errors = Lists.newArrayList();
 
     final ValidationScalingProcessTask task = new ValidationScalingProcessTask(
@@ -370,9 +380,13 @@ public class ActivityManager {
       final boolean success = task.getFuture().get();
       if ( success ) {
         errors.addAll( task.getValidationErrors() );
-      } else {
+      } else if ( task.shouldRun() ) {
         errors.add("Unable to validate references at this time.");
       }
+
+      // validate IAM instance profile
+      validateIamInstanceProfile( owner, iamInstanceProfile, errors );
+
     } catch ( ExecutionException e ) {
       logger.error( e, e );
       errors.add("Error during reference validation");
@@ -382,6 +396,35 @@ public class ActivityManager {
     }
 
     return errors;
+  }
+
+  private void validateIamInstanceProfile( final OwnerFullName owner,
+                                           final String iamInstanceProfile,
+                                           final List<String> errors ) {
+    if ( iamInstanceProfile != null ) try {
+      final String accountNumber = owner.getAccountNumber();
+      String instanceProfileName = iamInstanceProfile;
+      if ( iamInstanceProfile.startsWith( "arn:" )  ) {
+        final Ern ern = Ern.parse( iamInstanceProfile );
+        if ( ern instanceof EuareResourceName &&
+            INSTANCE_PROFILE_RESOURCE.equals( ern.getResourceType() ) ) {
+          if ( accountNumber.equals( ern.getNamespace() ) ) {
+            instanceProfileName = ((EuareResourceName)ern).getName();
+          } else {
+            instanceProfileName = null;
+            errors.add( "Invalid instance profile: " + iamInstanceProfile );
+          }
+        } else {
+          instanceProfileName = null;
+          errors.add( "Invalid instance profile: " + iamInstanceProfile );
+        }
+      }
+      if ( instanceProfileName != null ) {
+        Accounts.lookupAccountById( accountNumber ).lookupInstanceProfileByName( instanceProfileName );
+      }
+    } catch ( Exception e ) {
+      errors.add( "Invalid instance profile: " + iamInstanceProfile );
+    }
   }
 
   private void setScalingNotRequired( final AutoScalingGroup group ) {

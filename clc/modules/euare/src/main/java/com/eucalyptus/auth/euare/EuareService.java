@@ -1241,8 +1241,8 @@ public class EuareService {
       List<SummaryMapTypeEntryType> map = reply.getGetAccountSummaryResult( ).getSummaryMap( ).getEntryList( );
       map.add( new SummaryMapTypeEntryType( "Groups", account.getGroups().size() ) );
       map.add( new SummaryMapTypeEntryType( "Users", account.getUsers().size() ) );
-      map.add( new SummaryMapTypeEntryType( "Roles", account.getRoles( ).size( ) ) );
-      //TODO:STEVE:InstanceProfiles
+      map.add( new SummaryMapTypeEntryType( "Roles", account.getRoles().size( ) ) );
+      map.add( new SummaryMapTypeEntryType( "InstanceProfiles", account.getInstanceProfiles().size( ) ) );
       return reply;
     } catch ( Exception e ) {
       LOG.error( e, e );
@@ -1853,7 +1853,7 @@ public class EuareService {
     reply.getListInstanceProfilesResult().setIsTruncated( false );
     final ArrayList<InstanceProfileType> instanceProfiles = reply.getListInstanceProfilesResult( ).getInstanceProfiles().getMember();
     try {
-      for ( final InstanceProfile instanceProfile : account.geInstanceProfiles() ) {
+      for ( final InstanceProfile instanceProfile : account.getInstanceProfiles() ) {
         if ( instanceProfile.getPath( ).startsWith( path ) ) {
           if ( Privileged.allowListInstanceProfile( requestUser, account, instanceProfile ) ) {
             instanceProfiles.add( fillInstanceProfileResult( new InstanceProfileType(), instanceProfile ) );

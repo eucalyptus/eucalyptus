@@ -1060,7 +1060,7 @@ public class CreateLaunchConfigurationType extends AutoScalingMessage {
   @HttpEmbedded
   InstanceMonitoring instanceMonitoring
   String spotPrice
-  @AutoScalingMessageValidation.FieldRegex(AutoScalingMessageValidation.FieldRegexValue.EC2_NAME)
+  @AutoScalingMessageValidation.FieldRegex(AutoScalingMessageValidation.FieldRegexValue.IAM_NAME_OR_ARN)
   String iamInstanceProfile
   Boolean ebsOptimized
   public CreateLaunchConfigurationType() {  }

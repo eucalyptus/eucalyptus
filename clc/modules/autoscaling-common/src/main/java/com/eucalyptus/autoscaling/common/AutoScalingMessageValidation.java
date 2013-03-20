@@ -79,6 +79,10 @@ class AutoScalingMessageValidation {
 
     // ELB
     ELB_NAME( "(?s).{1,255}" ),
+
+    // IAM
+    IAM_NAME_OR_ARN( "[a-zA-Z0-9+=,.@-]{1,128}|arn:aws:iam:[!-~]{1,1588}" ),
+
     ;
 
     private final Pattern pattern;

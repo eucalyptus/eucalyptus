@@ -943,6 +943,7 @@ public class AutoScalingService {
             .withKeyName( request.getKeyName() )
             .withUserData( request.getUserData() )
             .withInstanceMonitoring( request.getInstanceMonitoring() != null ? request.getInstanceMonitoring().getEnabled() : null )
+            .withInstanceProfile( request.getIamInstanceProfile() )
             .withSecurityGroups( request.getSecurityGroups() != null ? request.getSecurityGroups().getMember() : null );          
             
           if ( request.getBlockDeviceMappings() != null ) {
@@ -960,8 +961,10 @@ public class AutoScalingService {
               Iterables.filter( Lists.newArrayList( request.getImageId(), request.getKernelId(), request.getRamdiskId() ), Predicates.notNull() ),
               request.getInstanceType(),
               request.getKeyName(),
-              request.getSecurityGroups() == null ? Collections.<String>emptyList() : request.getSecurityGroups().getMember()
+              request.getSecurityGroups() == null ? Collections.<String>emptyList() : request.getSecurityGroups().getMember(),
+              request.getIamInstanceProfile()
           );
+
           if ( !referenceErrors.isEmpty() ) {
             throw Exceptions.toUndeclared( new ValidationErrorException( "Invalid parameters " + referenceErrors ) );
           }
