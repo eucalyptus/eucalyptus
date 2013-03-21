@@ -589,13 +589,19 @@ static void *migrating_thread(void *arg)
     }
 
     char duri [1024];
+    // FIXME: Make TLS/SSH a config-file item and/or make fallback from one to the other configurable?
     snprintf(duri, sizeof(duri), "qemu+tls://%s/system", instance->migration_dst);
     virConnectPtr dconn = NULL;
     dconn = virConnectOpen(duri);
     if (dconn == NULL) {
-        LOGERROR("[%s] cannot migrate instance %s (failed to connect to remote), giving up and rolling back.\n", instance->instanceId, instance->instanceId);
-        migration_error++;
-        goto out;
+        LOGERROR("[%s] cannot migrate instance using TLS (failed to connect to remote), retrying using SSH.\n", instance->instanceId);
+        snprintf(duri, sizeof(duri), "qemu+ssh://%s/system", instance->migration_dst);
+        dconn = virConnectOpen(duri);
+        if (dconn == NULL) {
+            LOGERROR("[%s] cannot migrate instance using SSH (failed to connect to remote), giving up and rolling back.\n", instance->instanceId);
+            migration_error++;
+            goto out;
+        }
     }
 
     virDomain *ddom = virDomainMigrate(dom,
