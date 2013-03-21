@@ -45,8 +45,13 @@
     table : null, // jQuery object to the table
     tableArg : null, 
     refreshCallback : null,
+
+    fnServerData: function() {
+    },
+
     _init : function() {
       var thisObj = this; // 
+
       if(thisObj.options['hidden']){
         return;
       }
@@ -95,20 +100,27 @@
       // This was disabling sorting. I'm not sure why this was there to start with, so
       // let's leave this like this for now with this comment. - dak
       //dt_arg["bServerSide"] = true;
-      dt_arg["sAjaxDataProp"] = "results";
       dt_arg["bAutoWidth"] = false;
       dt_arg["sPaginationType"] = "full_numbers",
       dt_arg['fnDrawCallback'] = function( oSettings ) {
         thisObj._drawCallback(oSettings);
       }
       dt_arg['sAjaxDataProp'] = 'aaData',
-      dt_arg['fnServerData'] = function (sSource, aoData, fnCallback) {
-        var data = {};
-        data.aaData = $('html body').eucadata('get', sSource);
-        data.iTotalRecords = data.aaData.length;
-        data.iTotalDisplayRecords = data.aaData.length;
-        fnCallback(data);
-      }
+      dt_arg["fnServerData"] = function (sSource, aoData, fnCallback) {
+	    require(['models/'+sSource], function(CollectionImpl) {
+		var collection = new CollectionImpl();
+		collection.on('reset', function() {
+		   var data = {};
+                   data.aaData = collection.toJSON();
+                   console.log('DISPLAY',data.aaData);
+                   data.iTotalRecords = data.aaData.length;
+                   data.iTotalDisplayRecords = data.aaData.length;
+		   fnCallback(data);
+		});
+		collection.fetch();
+	    });
+         }
+
       dt_arg['fnInitComplete'] = function( oSettings ) {
         oSettings.oLanguage.sZeroRecords = $.i18n.prop('resource_no_records', thisObj.options.text.resource_plural);
         $emptyDataTd = thisObj.element.find('table tbody').find('.dataTables_empty');
@@ -274,6 +286,10 @@
     // args.refresh = text 'Refresh'
     _decorateSearchBar : function(args) {
       var thisObj = this; // ref to widget instance
+
+      var facetMatches = [];
+      var matchStruct = {};
+
       if(thisObj.options.filters){
         $.each(thisObj.options.filters, function (idx, filter){
           var $filter = thisObj.element.find('#'+filter['name']+'-filter');
@@ -288,11 +304,16 @@
           }
           var $selector = $filter.find('#'+filter['name']+'-selector');
           $selector.change( function(e) { thisObj.table.fnDraw(); } );
+          var optList = [];
           for (i in filter.options){
             var option = filter.options[i];
             var text = (filter.text&&filter.text.length>i) ? filter.text[i] : option; 
             $selector.append($('<option>').val(option).text(text));
+            optList.push({value: option, label: text});
           }
+          facetMatches.push(filter['name']);
+          matchStruct[filter['name']] = optList;
+
           if(filter['filter_col']){
             $.fn.dataTableExt.afnFiltering.push(
 	      function( oSettings, aData, iDataIndex ) {
@@ -339,6 +360,24 @@
       $(filterArr).each(function(){$wrapper.append($(this).clone(true));}); 
       $wrapper.insertAfter(filterArr[filterArr.length-1]);
       $(filterArr).each(function(){$(this).remove();});
+if (true) {
+      $wrapper.empty();
+      $wrapper.prepend('<div class="visual_search" style="margin-top:-2px;width:90%;display:inline-block"></div><div class="dataTables_filter" id="images_filter"><a class="table-refresh" href="#">Refresh</a></div>');
+      setTimeout(function() {
+        VS.init({ 
+              container : $('.visual_search'),
+              showFacets : true,
+              query     : '',
+              callbacks : {
+                search       : function(query, searchCollection) {},
+                facetMatches : function(callback) { callback(facetMatches); },
+                valueMatches : function(facet, searchTerm, callback) {
+                        callback(matchStruct[facet]);
+                }
+              }
+            });
+        }, 1);
+}         
     },   
 
     // args.txt_create (e.g., Create new key)

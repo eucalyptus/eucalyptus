@@ -36,7 +36,7 @@
         data_deps: ['images'],
         hidden: thisObj.options['hidden'],
         dt_arg : {
-          "sAjaxSource": 'image',
+          "sAjaxSource": 'images',
           "aoColumnDefs": [
             {
               // Display the checkbox button in the main table
@@ -61,7 +61,7 @@
 	      "mRender": function(data) {
                 return getTagForResource(data);
               },
-              "mData": "id",
+              "mData": "display_id",
 	    },
             { 
 	      // Display the artitecture of the image in eucatable
@@ -192,9 +192,6 @@ launch_instance_image_table_platform_linux, launch_instance_image_table_platform
           ],
       });
       this.tableWrapper.appendTo(this.element);
-      $('html body').eucadata('addCallback', 'image', 'image-landing', function() {
-        thisObj.tableWrapper.eucatable('redraw');
-      });
     },
 
     _create : function() {

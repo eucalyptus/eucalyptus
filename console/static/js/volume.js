@@ -43,7 +43,7 @@
         data_deps: ['volumes'],
         hidden : thisObj.options['hidden'],
         dt_arg : {
-          "sAjaxSource": 'volume',
+          "sAjaxSource": 'volumes',
           "aaSorting": [[ 7, "desc" ]],
           "aoColumnDefs": [
             {
@@ -59,7 +59,7 @@
 	      "mRender": function(data) {
                 return getTagForResource(data);
               },
-              "mData": "id",
+              "mData": "display_id",
 	    },
             {
 	      // Display the status of the volume in the main table
@@ -98,7 +98,7 @@
 	      "mRender": function(data) {
                 return DefaultEncoder().encodeForHTML(data);
               },
-              "mData": "snapshot_id",
+              "mData": "display_snapshot_id",
 	    },
             { 
 	      // Display the availibility zone of the volume in the main table
@@ -158,9 +158,6 @@
         legend : ['creating', 'available', 'in-use', 'deleting', 'deleted', 'error'],
       });
       this.tableWrapper.appendTo(this.element);
-      $('html body').eucadata('addCallback', 'volume', 'volume-landing', function() {
-        thisObj.tableWrapper.eucatable('redraw');
-      });
     },
 
     _create : function() { 
