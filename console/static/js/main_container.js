@@ -176,7 +176,7 @@
 	  this.element.jpvols();
           break;
 	case 'newscalinggroup':
-	  this.element.createscalinggroup();
+	  this.element.newscalinggroup();
           break;
         case 'rivetstest':
           this.element.rivetstest();
