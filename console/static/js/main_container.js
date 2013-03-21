@@ -172,14 +172,17 @@
         case 'eantest':
           this.element.eantest();
           break;
-	case 'jp_volume':
-	  this.element.jpvols();
+	      case 'jp_volume':
+	        this.element.jpvols();
           break;
-	case 'newscalinggroup':
-	  this.element.newscalinggroup();
+	      case 'newscalinggroup':
+	        this.element.newscalinggroup();
           break;
         case 'rivetstest':
           this.element.rivetstest();
+          break;
+        case 'wizimagetest':
+          this.element.wizimagetest();
           break;
       }
       if (options !== KEEP_VIEW) {
