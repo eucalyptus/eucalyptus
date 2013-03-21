@@ -1,0 +1,64 @@
+<div class="wizard-step">
+    <div class="wizardTitle"><h3>Membership</h3></div>
+    <div class="launch-wizard-type-main-contents">
+        <div class="launch-wizard-type-option">
+            <div class="form-row clearfix">
+                <div class="form-row-section">
+                    <label for="availabilityZone">Availability Zone</label>
+                    <div>
+                        <select name="availabilityZone" id="availabilityZone">
+                            <option>ABC</option>
+                            <option>DEF</option>
+                        </select>
+                        <button>+</button>
+                    </div>
+                </div>
+                <div class="form-row-section">
+                    <label for="loadBalancers">Load Balancers</label>
+                    <div>
+                        <select name="loadBalancers" id="loadBalancers">
+                            <option>GHI</option>
+                            <option>JKL</option>
+                        </select>
+                        <button>+</button>
+                    </div>
+                </div>
+                <div class="form-row-section-wide form-row-section">
+                    <label class="wizard-section-label">Health Check</label>
+                    <div>
+                        <span>
+                            <label for="healthCheckType">Type</label>
+                            <select name="healthCheckType" id="healthCheckType">
+                                <option>aaa</option>
+                                <option>PQR</option>
+                            </select>
+                        </span>
+                        <span>
+                            <label for="healthCheckSeconds">Grace Period (secs)</label>
+                            <input value="1" type="number" class="smallNumber" id="healthCheckSeconds" name="healthCheckSeconds"></input>
+                        </span>
+                    </div>
+                </div>
+            </div>
+            <div class="wizard-section-label">Scaling Group Logs</div>
+            <div class="form-row clearfix">
+                <div>
+                    <span class="form-row-section">
+                        <label class="centerLabel" for="key">KEY</label>
+                        <input name="key" id="key" type="text" placeholder="key"></input>
+                    </span>
+                    <span class="form-row-section">
+                        <label for="value">VALUE</label>
+                        <input name="value" id="key" type="text" placeholder="value"></input>
+                    </span>
+                </div>
+            </div>
+            <div class="clearfix">
+                <div class="form-longrow">
+                    <input type="checkbox" id="applyTags" name="applyTags"></input>
+                    <label for="applyTags">Also apply tags to instances in the scaling group</label>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
