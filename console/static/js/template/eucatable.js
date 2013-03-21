@@ -46,9 +46,6 @@
     tableArg : null, 
     refreshCallback : null,
 
-    fnServerData: function() {
-    },
-
     _init : function() {
       var thisObj = this; // 
 
@@ -360,7 +357,8 @@
       $(filterArr).each(function(){$wrapper.append($(this).clone(true));}); 
       $wrapper.insertAfter(filterArr[filterArr.length-1]);
       $(filterArr).each(function(){$(this).remove();});
-if (true) {
+
+if (false) {
       $wrapper.empty();
       $wrapper.prepend('<div class="visual_search" style="margin-top:-2px;width:90%;display:inline-block"></div><div class="dataTables_filter" id="images_filter"><a class="table-refresh" href="#">Refresh</a></div>');
       setTimeout(function() {
