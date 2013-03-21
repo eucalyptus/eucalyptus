@@ -368,6 +368,18 @@ public class ErrorDetail extends EucalyptusData {
 }
 public class Alarms extends EucalyptusData {
   public Alarms() {  }
+  public Alarms( Iterable<String> alarmArns ) {
+    alarmArns.each { String alarmArn ->
+      int nameIndex = alarmArn.indexOf( ":alarm:" );
+      String alarmName = nameIndex > 0 ?
+        alarmArn.substring( nameIndex + 7 ) :
+        null
+      member.add( new Alarm(
+          alarmARN: alarmArn,
+          alarmName: alarmName
+      ) );
+    }
+  }
   ArrayList<Alarm> member = new ArrayList<Alarm>()
 }
 public class DescribeAutoScalingInstancesResult extends EucalyptusData {

@@ -44,6 +44,7 @@ import com.eucalyptus.auth.principal.UserFullName;
 import com.eucalyptus.autoscaling.activities.ActivityManager;
 import com.eucalyptus.autoscaling.activities.ScalingActivity;
 import com.eucalyptus.autoscaling.common.Activity;
+import com.eucalyptus.autoscaling.common.Alarms;
 import com.eucalyptus.autoscaling.common.AutoScalingGroupType;
 import com.eucalyptus.autoscaling.common.AutoScalingInstanceDetails;
 import com.eucalyptus.autoscaling.common.AutoScalingMetadata;
@@ -358,9 +359,22 @@ public class AutoScalingService {
                 ScalingPolicies.toGroupName() )
         );
 
-      final List<ScalingPolicyType> results = reply.getDescribePoliciesResult().getScalingPolicies().getMember();
-      for ( final ScalingPolicy scalingPolicy : scalingPolicies.list( ownerFullName, requestedAndAccessible ) ) {
-        results.add( TypeMappers.transform( scalingPolicy, ScalingPolicyType.class ) );
+      final List<ScalingPolicyType> results =
+          reply.getDescribePoliciesResult().getScalingPolicies().getMember();
+      final List<ScalingPolicy> scalingPolicies =
+          this.scalingPolicies.list( ownerFullName, requestedAndAccessible );
+      final List<String> scalingPolicyArns = Lists.transform( scalingPolicies, AutoScalingMetadatas.toArn() );
+      final Map<String,Collection<String>> policyArnToAlarmArns =
+          activityManager.getAlarmsForPolicies( ctx.getUserFullName( ), scalingPolicyArns );
+
+      for ( final ScalingPolicy scalingPolicy : scalingPolicies ) {
+        final ScalingPolicyType scalingPolicyType =
+            TypeMappers.transform( scalingPolicy, ScalingPolicyType.class );
+        final Collection<String> alarmArns = policyArnToAlarmArns.get( scalingPolicy.getArn() );
+        if ( alarmArns != null && !alarmArns.isEmpty() ) {
+          scalingPolicyType.setAlarms( new Alarms( alarmArns ) );
+        }
+        results.add( scalingPolicyType );
       }
     } catch ( Exception e ) {
       handleException( e );

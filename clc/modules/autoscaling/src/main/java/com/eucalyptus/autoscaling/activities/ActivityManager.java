@@ -66,6 +66,10 @@ import com.eucalyptus.autoscaling.metadata.AutoScalingMetadataNotFoundException;
 import com.eucalyptus.autoscaling.tags.Tag;
 import com.eucalyptus.autoscaling.tags.TagSupport;
 import com.eucalyptus.bootstrap.Bootstrap;
+import com.eucalyptus.cloudwatch.DescribeAlarmsResponseType;
+import com.eucalyptus.cloudwatch.DescribeAlarmsType;
+import com.eucalyptus.cloudwatch.MetricAlarm;
+import com.eucalyptus.cloudwatch.ResourceList;
 import com.eucalyptus.component.Topology;
 import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.event.ClockTick;
@@ -100,6 +104,7 @@ import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
@@ -351,6 +356,24 @@ public class ActivityManager {
         keyName,
         Objects.firstNonNull( securityGroups, Collections.<String>emptyList() ),
         iamInstanceProfile );
+  }
+
+  public Map<String,Collection<String>> getAlarmsForPolicies( final OwnerFullName owner,
+                                                              final List<String> policyArns ) {
+    final Map<String,Collection<String>> policyArnToAlarmArnMap = Maps.newHashMap();
+    final AlarmLookupProcessTask task = new AlarmLookupProcessTask( owner, policyArns );
+    runTask( task );
+    try {
+      final boolean success = task.getFuture().get();
+      if ( success ) {
+        policyArnToAlarmArnMap.putAll( task.getPolicyArnToAlarmArns() );
+      }
+    } catch ( ExecutionException e ) {
+      logger.error( e, e );
+    } catch ( InterruptedException e ) {
+      logger.error( e, e );
+    }
+    return policyArnToAlarmArnMap;
   }
 
   protected long timestamp() {
@@ -800,6 +823,16 @@ public class ActivityManager {
     }
   }
 
+  CloudWatchClient createCloudWatchClientForUser( final String userId ) {
+    try {
+      final CloudWatchClient client = new CloudWatchClient( userId );
+      client.init();
+      return client;
+    } catch ( DispatchingClient.DispatchingClientException e ) {
+      throw Exceptions.toUndeclared( e );
+    }
+  }
+
   VmTypesClient createVmTypesClientForUser( final String userId ) {
     try {
       final VmTypesClient client = new VmTypesClient( userId );
@@ -857,6 +890,7 @@ public class ActivityManager {
     String getUserId();
     EucalyptusClient getEucalyptusClient();
     ElbClient getElbClient();
+    CloudWatchClient getCloudWatchClient();
     VmTypesClient getVmTypesClient();
   }
 
@@ -999,6 +1033,11 @@ public class ActivityManager {
     @Override
     public ElbClient getElbClient() {
       return createElbClientForUser( getUserId() );
+    }
+
+    @Override
+    public CloudWatchClient getCloudWatchClient() {
+      return createCloudWatchClientForUser( getUserId() );
     }
 
     @Override
@@ -2266,6 +2305,94 @@ public class ActivityManager {
 
     List<String> getValidationErrors() {
       return validationErrors.get();
+    }
+  }
+
+  private class AlarmLookupActivityTask extends ScalingActivityTask<DescribeAlarmsResponseType> {
+    private final String policyArn;
+    private final AtomicReference<Collection<String>> alarmArns = new AtomicReference<Collection<String>>(
+        Collections.<String>emptyList()
+    );
+
+    private AlarmLookupActivityTask( final ScalingActivity activity,
+                                     final String policyArn ) {
+      super( activity, false );
+      this.policyArn = policyArn;
+    }
+
+    @Override
+    void dispatchInternal( final ActivityContext context,
+                           final Callback.Checked<DescribeAlarmsResponseType> callback ) {
+      final CloudWatchClient client = context.getCloudWatchClient();
+      final DescribeAlarmsType describeAlarmsType = new DescribeAlarmsType();
+      describeAlarmsType.setActionPrefix( policyArn );
+      client.dispatch( describeAlarmsType, callback );
+    }
+
+    @Override
+    void dispatchSuccess( final ActivityContext context,
+                          final DescribeAlarmsResponseType response ) {
+      final List<String> arns = Lists.newArrayList();
+      if ( response.getDescribeAlarmsResult() != null && response.getDescribeAlarmsResult().getMetricAlarms() != null ) {
+        for ( final MetricAlarm metricAlarm : response.getDescribeAlarmsResult().getMetricAlarms().getMember() ) {
+          final ResourceList list = metricAlarm.getAlarmActions();
+          if ( list != null && list.getMember().contains( policyArn ) ) {
+            arns.add( metricAlarm.getAlarmArn() );
+          }
+        }
+      }
+
+      alarmArns.set( arns );
+
+      setActivityFinalStatus( ActivityStatusCode.Successful );
+    }
+
+    String getPolicyArn() {
+      return policyArn;
+    }
+
+    Collection<String> getAlarmArns() {
+      return alarmArns.get();
+    }
+  }
+
+  private class AlarmLookupProcessTask extends ScalingProcessTask<AlarmLookupActivityTask> {
+    private final List<String> policyArns;
+    private final AtomicReference<Map<String,Collection<String>>> policyArnToAlarmArns = new AtomicReference<Map<String,Collection<String>>>(
+        Collections.<String,Collection<String>>emptyMap()
+    );
+
+    AlarmLookupProcessTask( final OwnerFullName owner,
+                            final List<String> policyArns ) {
+      super( UUID.randomUUID().toString() + "-alarm-lookup", AutoScalingGroup.withOwner(owner), "AlarmLookup" );
+      this.policyArns = policyArns;
+    }
+
+    @Override
+    boolean shouldRun() {
+      return !policyArns.isEmpty();
+    }
+
+    @Override
+    List<AlarmLookupActivityTask> buildActivityTasks() throws AutoScalingMetadataException {
+      final List<AlarmLookupActivityTask> tasks = Lists.newArrayList();
+      for ( final String policyArn : policyArns ) {
+        tasks.add( new AlarmLookupActivityTask( newActivity(), policyArn ) );
+      }
+      return tasks;
+    }
+
+    @Override
+    void partialSuccess( final List<AlarmLookupActivityTask> tasks ) {
+      final Map<String,Collection<String>> policyArnToAlarmArns = Maps.newHashMap();
+      for ( final AlarmLookupActivityTask task : tasks ) {
+        policyArnToAlarmArns.put( task.getPolicyArn(), task.getAlarmArns() );
+      }
+      this.policyArnToAlarmArns.set( ImmutableMap.copyOf( policyArnToAlarmArns ) );
+    }
+
+    Map<String,Collection<String>> getPolicyArnToAlarmArns() {
+      return policyArnToAlarmArns.get();
     }
   }
 

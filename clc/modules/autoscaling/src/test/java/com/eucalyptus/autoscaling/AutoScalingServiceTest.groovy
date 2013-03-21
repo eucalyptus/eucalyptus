@@ -800,7 +800,8 @@ class AutoScalingServiceTest {
                                        Iterable<String> imageIds,
                                        String instanceType,
                                        String keyName,
-                                       Iterable<String> securityGroups) {
+                                       Iterable<String> securityGroups,
+                                       String iamInstanceProfile ) {
         []
       }
     }
