@@ -745,6 +745,8 @@ input[type='text'].medium-textinput {
 
 #wizardNavButtons {
     float : right;
+    margin-right: 1em;
+    margin-bottom: 1em;
 }
 
 #wizardNav {
@@ -771,8 +773,10 @@ input[type='text'].medium-textinput {
   line-height: 1.5;
   font-weight: normal;
   color: #02405f;
-  margin: 0;
-  padding: 1px 0 9px 20px;
+  margin-top: 0em;
+  margin-left: 0px;
+  margin-bottom: 0px;
+  padding: 1px 0 9px 5px;
   width: 170px;
 }
 
@@ -2440,6 +2444,93 @@ span.on-error {
   font-family: 'Trebuchet MS', Arial, sans-serif;
 }
 
+.form-row-section {
+    vertical-align: top;
+    display: inline-table;
+    width: fit-content;
+    margin-right: 2em;
+}
+
+.centerLabel {
+    text-align: center;
+}
+
+.form-row .wizard-section-label {
+    margin-left: 2em;
+}
+
+.smallNumber {
+    width: 3em;
+}
+
+.form-row-section label {
+    display: table-row;
+    text-align: center;
+}
+
+.form-row-section select {
+    margin-right: 0.25em;
+}
+
+.form-row-section-wide label{
+    text-align: left;
+    float: inside;
+    display: inline;
+}
+
+.form-row-section-wide span {
+    display: block;
+}
+
+.form-row-section-wide select {
+    float: inside;
+}
+.form-row-section-wide input {
+    display: inline;
+}
+
+.form-row-section-wide {
+    text-align: right;
+}
+
+.form-row-section div {
+    margin-left: 1em;
+    display: block;
+}
+
+.form-row-section input {
+    max-width: 90px;
+    text-align: right;
+    display: inline;
+    float: right;
+}
+
+.form-subrow {
+    margin-top: 2em;
+    display: block;
+    margin-left: 2em;
+    margin-right: 20em;
+}
+
+.subrow-buttons {
+    float: right;
+    margin-left: 2em;
+}
+
+.wizardTitleLink h3 {
+    color: #73a434;
+}
+
+.wizardTitleLink {
+    outline: 0 none;
+    color: #73a434;
+    text-decoration: none;
+}
+
+.form-longrow {
+    width: 100%;
+}
+
 #launch-wizard-security-keypair-selector, 
 #launch-wizard-security-sg-selector {
   min-width: 285px;
@@ -2694,6 +2785,7 @@ span.on-error {
   font-weight: bold;
   font-size: 14px;
   margin-bottom: 10px;
+  margin-left: 0em;
  } 
 
 .launch-wizard-section-header {

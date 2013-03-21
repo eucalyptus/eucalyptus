@@ -18,6 +18,19 @@ exports.mockBackbone = {
     }
 };
 
+// Allow requirejs'isms
+global['define'] = function() {
+    if (typeof arguments[0] === 'function') {
+        var f = arguments[0];
+        return f.apply(this);
+    } else if (typeof arguments[1] === 'function') {
+        var f = arguments[1];
+        return f.apply(this);
+    } else {
+        throw new Error("Don't know what to do with " + util.inspect(arguments));
+    }
+}
+
 fs.readdir ( base, function ( err, files ) {
     // Make a list of js files to run
     if (err) throw err;

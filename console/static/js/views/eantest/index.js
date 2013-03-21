@@ -20,11 +20,3 @@ define([
 		}
 	});
 });
-
-function AutoScaling ($scope, $http) {
-    http.post('/autoscaling?Action=DescribeAutoScalingGroups').success(function(data) {
-        $scope.results = data.results;
-    });
-}
-
-angular.bootstrap($('ng-scope'), ['AutoScaling']);
