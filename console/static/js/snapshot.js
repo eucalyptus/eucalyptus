@@ -41,7 +41,7 @@
         data_deps: ['snapshots'],
         hidden: thisObj.options['hidden'],
         dt_arg : {
-          "sAjaxSource": 'snapshot',
+          "sAjaxSource": 'snapshots',
           "aoColumnDefs": [
             {
 	      // Display the checkbox button in the main table
@@ -56,7 +56,7 @@
 	       "mRender": function(data) {
                 return DefaultEncoder().encodeForHTML(data);
               },
-              "mData": "id",
+              "mData": "display_id",
 	    },
             {
 	      // Display the status of the snapshot in the main table
@@ -86,7 +86,8 @@
 	      "mRender": function(data) {
                 return DefaultEncoder().encodeForHTML(data);
               },
-              "mData": "volume_id",
+              "mData": "display_volume_id",
+	      "mDataProp": "display_volume_id"
 	    },
             {
 	      // Display the description of the snapshot in the main table
@@ -155,9 +156,6 @@
         legend : ['pending', 'completed', 'error'],
       });
       this.tableWrapper.appendTo(this.element);
-      $('html body').eucadata('addCallback', 'snapshot', 'snapshot-landing', function() {
-        thisObj.tableWrapper.eucatable('redraw');
-      });
     },
 
     _create : function() { 

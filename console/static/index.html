@@ -30,6 +30,9 @@
       @import "css/eucalyptus.css";
     </style>
 
+    <link rel="stylesheet" href="/js/visualsearch/build/visualsearch-datauri.css" type="text/css" media="screen" charset="utf-8"> 
+
+
     <!-- encoder libarary for XSS protection -->
     <script type="text/javascript" language="javascript" src="lib/esapi/Codec.js"></script>
     <script type="text/javascript" language="javascript" src="lib/esapi/HTMLEntityCodec.js"></script>
@@ -54,6 +57,18 @@
     <script type="text/javascript" language="javascript" src="lib/jquery.base64.js"></script>
     <script type="text/javascript" language="javascript" src="lib/jquery.ba-hashchange.js"></script>
     <script type="text/javascript" language="javascript" src="lib/jquery.md5.js"></script>
+
+    <!-- Backbone support -->
+    <!-- Backbone support -->
+    <script>
+    var require = {
+      baseUrl: 'js'
+    };
+    </script>
+    <script type="text/javascript" language="javascript" src="js/require.js"></script>
+    <script type="text/javascript" language="javascript" src="js/underscore-1.4.3.js"></script>
+    <script type="text/javascript" language="javascript" src="js/backbone-0.9.10.js"></script>
+    <script src="/js/visualsearch/build/visualsearch.js" type="text/javascript" charset="utf-8"></script>
 
     <!-- Eucalyptus UI javascripts -->
     <script type="text/javascript" language="javascript" src="js/jquery_ext.js"></script>
@@ -87,6 +102,10 @@
     <script type="text/javascript" language="javascript" src="js/template/eucadialog.js"></script>
     <script type="text/javascript" language="javascript" src="js/template/eucatabspace.js"></script>
     <script type="text/javascript" language="javascript" src="js/template/euca_resource_tag.js"></script>
+
+    <script type="text/javascript" language="javascript" src="js/eantest.js"></script>
+    <script type="text/javascript" language="javascript" src="js/jpvols.js"></script>
+    <script type="text/javascript" language="javascript" src="js/newscalinggroup.js"></script>
   </head> 
 
   <body>
@@ -1803,6 +1822,13 @@
             </div>
           </div>
 
+        </div>
+      </script>
+
+      <!-- Launch Wizard & Help -->
+      <script id="eantestTmpl" type="text/x-jsrender"> 
+        <div id="eantest-wrapper"> <!-- rendering will remove this extra div --> 
+          <h1>Dummy component</h1>
         </div>
       </script>
 

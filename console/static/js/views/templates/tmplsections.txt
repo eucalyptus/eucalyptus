@@ -1,0 +1,8 @@
+table-xxx-header
+filter options
+search box
+create new xxxx button
+table-xxx-count
+table header
+table body
+legend

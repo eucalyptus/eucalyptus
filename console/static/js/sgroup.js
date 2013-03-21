@@ -40,7 +40,7 @@
         data_deps: ['groups'],
         hidden: thisObj.options['hidden'],
         dt_arg : {
-          "sAjaxSource": 'sgroup',
+          "sAjaxSource": 'sgroups',
           "aoColumnDefs": [
             {
 	      // Display the checkbox button in the main table
@@ -196,9 +196,6 @@
         },
       });
       this.tableWrapper.appendTo(this.element);
-      $('html body').eucadata('addCallback', 'sgroup', 'sgroup-landing', function() {
-        thisObj.tableWrapper.eucatable('redraw');
-      });
     },
 
     _createMenuActions : function() {

@@ -296,7 +296,7 @@ ol li {
 
 .resources-nav li {
   float: left;
-  width: 200px;
+  width: 165px;
   /* Needed so submenus that can be positioned absolutely */
   position: relative;
 }
@@ -730,6 +730,50 @@ input[type='text'].medium-textinput {
   -webkit-box-shadow: 0 1px 2px rgba(0,0,0,0.7), inset 0 1px 0 rgba(255,255,255,0.30);
   -moz-box-shadow: 0 1px 2px rgba(0,0,0,0.7), inset 0 1px 0 rgba(255,255,255,0.30);
   box-shadow: 0 1px 2px rgba(0,0,0,0.7), inset 0 1px 0 rgba(255,255,255,0.30);
+}
+
+.button[disabled], .button[disabled]:hover
+{
+  color: #eee;
+  background: #c8c8c8 no-repeat 0 0;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.7), inset 0 1px 0 rgba(255,255,255,0.30);
+}
+
+#wizardContent {
+    margin-bottom: 2em;
+}
+
+#wizardNavButtons {
+    float : right;
+}
+
+#wizardNav {
+    margin-left: 1em;
+}
+
+.wizardProblem {
+    padding-left: 2em;
+    padding-right: 2em;
+    padding-top: 1em;
+    padding-bottom: 1em;
+    margin-right: 1em;
+}
+
+.problems {
+  margin-left: 177px;
+}
+
+.wizardTitle h3 {
+  background: transparent url(../images/css-sprites.png) no-repeat left -160px;
+  font-family: 'PlayBold', Arial, sans-serif;
+  font-size: 13px;
+  cursor: pointer;
+  line-height: 1.5;
+  font-weight: normal;
+  color: #02405f;
+  margin: 0;
+  padding: 1px 0 9px 20px;
+  width: 170px;
 }
 
 ul.ui-autocomplete {
