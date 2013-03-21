@@ -95,6 +95,7 @@ import com.eucalyptus.vmtypes.VmTypes;
 import com.google.common.base.Function;
 import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
+import com.google.common.base.Strings;
 import com.google.common.base.Supplier;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
@@ -135,16 +136,24 @@ public class ClusterEndpoint implements Startable {
     Clusters.getInstance( );
   }
   
-  public MigrateInstancesResponseType migrateInstances( final MigrateInstancesType request ) {
+  public MigrateInstancesResponseType migrateInstances( final MigrateInstancesType request ) throws EucalyptusCloudException {
     MigrateInstancesResponseType reply = request.getReply( );
     for ( ServiceConfiguration c : Topology.enabledServices( ClusterController.class ) ) {
       try {
         Nodes.lookupNodeInfo( c, request.getSourceHost( ) );
         Cluster cluster = Clusters.lookup( c );
-        cluster.migrateInstances( request.getSourceHost( ) );
+        if ( Strings.isNullOrEmpty( request.getSourceHost( ) ) ) {
+          cluster.migrateInstances( request.getSourceHost( ), request.getAllowHosts( ), request.getDestinationHosts( ) );
+        } else if ( Strings.isNullOrEmpty( request.getInstanceId( ) ) ) {
+          cluster.migrateInstance( request.getInstanceId( ), request.getAllowHosts( ), request.getDestinationHosts( ) );
+        } else {
+          throw new IllegalArgumentException( "Either the sourceHost or instanceId must be provided" );
+        }
         return reply.markWinning( );
+      } catch ( EucalyptusCloudException ex1 ) {
+        throw ex1;
       } catch ( NoSuchElementException ex1 ) {
-        //noop
+        throw new EucalyptusCloudException( ex1.getMessage( ), ex1 );
       } catch ( Exception ex ) {
         LOG.error( ex, ex );
       }

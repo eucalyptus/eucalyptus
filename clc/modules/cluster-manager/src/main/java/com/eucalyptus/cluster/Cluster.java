@@ -70,10 +70,12 @@ import java.net.URISyntaxException;
 import java.net.UnknownHostException;
 import java.security.cert.X509Certificate;
 import java.util.ArrayList;
+import java.util.Calendar;
 import java.util.List;
 import java.util.Map;
 import java.util.NavigableSet;
 import java.util.NoSuchElementException;
+import java.util.Set;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CancellationException;
@@ -85,9 +87,7 @@ import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.locks.Lock;
-import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantLock;
-import java.util.concurrent.locks.ReentrantReadWriteLock;
 import org.apache.log4j.Logger;
 import com.eucalyptus.auth.principal.Principals;
 import com.eucalyptus.bootstrap.Bootstrap;
@@ -113,6 +113,7 @@ import com.eucalyptus.component.ServiceRegistrationException;
 import com.eucalyptus.component.ServiceUris;
 import com.eucalyptus.component.id.ClusterController;
 import com.eucalyptus.component.id.ClusterController.GatherLogService;
+import com.eucalyptus.context.Contexts;
 import com.eucalyptus.crypto.util.B64;
 import com.eucalyptus.crypto.util.PEMFiles;
 import com.eucalyptus.empyrean.DescribeServicesResponseType;
@@ -135,6 +136,7 @@ import com.eucalyptus.records.Logs;
 import com.eucalyptus.system.Threads;
 import com.eucalyptus.util.Callback;
 import com.eucalyptus.util.Classes;
+import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.FullName;
 import com.eucalyptus.util.HasFullName;
@@ -161,11 +163,11 @@ import com.eucalyptus.vmtypes.VmTypes;
 import com.eucalyptus.ws.WebServicesException;
 import com.google.common.base.Function;
 import com.google.common.base.Predicate;
-import com.google.common.base.Strings;
 import com.google.common.collect.ForwardingMap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.ObjectArrays;
+import com.google.common.collect.Sets;
 import edu.ucsb.eucalyptus.cloud.NodeInfo;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 import edu.ucsb.eucalyptus.msgs.MigrateInstancesType;
@@ -856,50 +858,6 @@ public class Cluster implements AvailabilityZoneMetadata, HasFullName<Cluster>, 
     }
   }
   
-  public void updateNodeInfo( final ArrayList<String> serviceTags ) {
-    NodeInfo ret = null;
-    
-    for ( final String serviceTag : this.nodeMap.keySet( ) ) {
-      if ( !serviceTags.contains( serviceTag ) ) {
-        this.nodeMap.remove( serviceTag );
-      }
-    }
-    
-    for ( final String serviceTag : serviceTags ) {
-      if ( ( ret = this.nodeMap.putIfAbsent( serviceTag, new NodeInfo( serviceTag ) ) ) != null ) {
-        ret.touch( );
-        ret.setServiceTag( serviceTag );
-        ret.setIqn( "No IQN reported" );
-      }
-    }
-  }
-  
-  public void updateNodeInfo( final List<NodeType> nodeTags ) {
-    NodeInfo ret = null;
-    boolean hasServiceTag = false;
-    
-    for ( final String serviceTag : this.nodeMap.keySet( ) ) {
-      for ( final NodeType node : nodeTags ) {
-        if ( node.getServiceTag( ).equals( serviceTag ) ) {
-          hasServiceTag = true;
-        }
-      }
-      if( !hasServiceTag ) {
-        this.nodeMap.remove( serviceTag );
-      } else {
-        hasServiceTag = false;
-      }
-    }
-    
-    for ( final NodeType node : nodeTags ) {
-      if ( ( ret = this.nodeMap.putIfAbsent( node.getServiceTag( ), new NodeInfo( node ) ) ) != null ) {
-        ret.touch( );
-        ret.setServiceTag( node.getServiceTag( ) );
-        ret.setIqn( node.getIqn( ) );
-      }
-    }
-  }
-  
   @Override
   public int compareTo( final Cluster that ) {
     return this.getName( ).compareTo( that.getName( ) );
@@ -1395,6 +1353,10 @@ public class Cluster implements AvailabilityZoneMetadata, HasFullName<Cluster>, 
   Map<String,NodeInfo> getNodeHostMap( ) {
     return this.nodeHostAddrMap;
   }
+  
+  protected Lock getGateLock( ) {
+    return this.gateLock;
+  }
 
   /**
    * <ol>
@@ -1406,9 +1368,12 @@ public class Cluster implements AvailabilityZoneMetadata, HasFullName<Cluster>, 
    * <li> Unmark this cluster as gated.
    * </ol>
    * @param sourceHost
+   * @param destHostsWhiteList -- the destination host list is a white list when true and a black list when false
+   * @param destHosts -- list of hosts which are either a white list or black list based on {@code destHostsWhiteList}
+   * @throws EucalyptusCloudException 
    * @throws Exception
    */
-  public void migrateInstances( final String sourceHost ) throws Exception {
+  public void migrateInstances( final String sourceHost, final Boolean destHostsWhiteList, final List<String> destHosts ) throws EucalyptusCloudException {
     this.gateLock.lock( );
     try {
       //TODO:GRZE: gate cluster
@@ -1416,18 +1381,59 @@ public class Cluster implements AvailabilityZoneMetadata, HasFullName<Cluster>, 
       //TODO:GRZE: authorize all NCs for volume attachments on VMs running on sourceHost 
       AsyncRequests.sendSync( this.getConfiguration( ), new MigrateInstancesType( ) {
         {
+          this.setCorrelationId( Contexts.lookup( ).getCorrelationId( ) );
           this.setSourceHost( sourceHost );
+          this.setAllowHosts( destHostsWhiteList );
+          this.getDestinationHosts( ).addAll( destHosts );
         }
       } );
       //TODO:GRZE: describe resources
       //TODO:GRZE: ungate cluster
+    } catch ( Exception ex ) {
+      LOG.error( ex );
+      throw new EucalyptusCloudException( ex.getMessage( ), ex );
     } finally {
       this.gateLock .unlock( );
     }
   }
 
-  protected Lock getGateLock( ) {
-    return this.gateLock;
+  /**
+   * <ol>
+   * <li> Mark this cluster as gated.
+   * <li> Update node and resource information; describe resources.
+   * <li> Find the VM and its volume attachments and authorize every node's IQN.
+   * <li> Send the MigrateInstances operation.
+   * <li> Update node and resource information; describe resources.
+   * <li> Unmark this cluster as gated.
+   * </ol>
+   * @param sourceHost
+   * @param destHostsWhiteList -- the destination host list is a white list when true and a black list when false
+   * @param destHosts -- list of hosts which are either a white list or black list based on {@code destHostsWhiteList}
+   * @throws EucalyptusCloudException 
+   * @throws Exception
+   */
+  public void migrateInstance( final String instanceId, final Boolean destHostsWhiteList, final List<String> destHosts ) throws EucalyptusCloudException {
+    this.gateLock.lock( );
+    try {
+      //TODO:GRZE: gate cluster
+      //TODO:GRZE: describe resources
+      //TODO:GRZE: authorize all NCs for volume attachments on VMs running on sourceHost 
+      AsyncRequests.sendSync( this.getConfiguration( ), new MigrateInstancesType( ) {
+        {
+          this.setCorrelationId( Contexts.lookup( ).getCorrelationId( ) );
+          this.setInstanceId( instanceId );
+          this.setAllowHosts( destHostsWhiteList );
+          this.getDestinationHosts( ).addAll( destHosts );
+        }
+      } );
+      //TODO:GRZE: describe resources
+      //TODO:GRZE: ungate cluster
+    } catch ( Exception ex ) {
+      LOG.error( ex );
+      throw new EucalyptusCloudException( ex.getMessage( ), ex );
+    } finally {
+      this.gateLock .unlock( );
+    }
   }
 
 }
