@@ -275,7 +275,7 @@
       var $tag_dialog = $rendered.children().first();
       var $tag_help = $rendered.children().last();
       this.tagDialog = $tag_dialog.eucadialog({
-        id: 'instances-terminate',
+        id: 'instances-tag-resource',
         title: 'Add/Edit tags',
         help: {content: $tag_help, url: help_instance.dialog_terminate_content_url},
       });
