@@ -215,6 +215,9 @@ int doDescribeServices(ncMetadata * pMeta, serviceInfoType * serviceIds, int ser
     char host[MAX_PATH] = { 0 };
     char path[MAX_PATH] = { 0 };
     serviceStatusType *myStatus = NULL;
+    int do_report_cluster = 1; // always do report on the cluster, otherwise CC won't get ENABLED
+    int do_report_nodes = 0;
+    char * my_partition = NULL;
 
     rc = initialize(pMeta);
     if (rc) {
@@ -246,17 +249,26 @@ int doDescribeServices(ncMetadata * pMeta, serviceInfoType * serviceIds, int ser
                                      SP(serviceIds[i].type), SP(serviceIds[i].name), SP(serviceIds[i].partition));
                             memcpy(&(config->ccStatus.serviceId), &(serviceIds[i]), sizeof(serviceInfoType));
                         }
+                    } else if (!strcmp(serviceIds[i].type, "node")) {
+                        do_report_nodes = 1; // report on node services if requested explicitly
                     }
                 }
             }
         }
     }
     sem_mypost(CONFIG);
+    if (serviceIdsLen < 1) { // if the describe request is not specific, report on everything
+        do_report_cluster = 1;
+        do_report_nodes = 1;
+    }
 
     for (i = 0; i < 16; i++) {
         if (strlen(config->services[i].type)) {
             LOGDEBUG("internal serviceInfos type=%s name=%s partition=%s urisLen=%d\n", config->services[i].type,
                      config->services[i].name, config->services[i].partition, config->services[i].urisLen);
+            if (!strcmp(config->services[i].type, "cluster")) {
+                my_partition = config->services[i].partition;
+            }
             for (j = 0; j < 8; j++) {
                 if (strlen(config->services[i].uris[j])) {
                     LOGDEBUG("internal serviceInfos\t uri[%d]:%s\n", j, config->services[i].uris[j]);
@@ -289,20 +301,62 @@ int doDescribeServices(ncMetadata * pMeta, serviceInfoType * serviceIds, int ser
         }
     }
 
-    *outStatusesLen = 1;
-    *outStatuses = EUCA_ZALLOC(1, sizeof(serviceStatusType));
-    if (!*outStatuses) {
-        LOGFATAL("out of memory!\n");
-        unlock_exit(1);
+    *outStatusesLen = 0;
+    *outStatuses = NULL;
+
+    if (do_report_cluster) {
+        *outStatusesLen = 1;
+        *outStatuses = EUCA_ZALLOC(1, sizeof(serviceStatusType));
+        if (!*outStatuses) {
+            LOGFATAL("out of memory!\n");
+            unlock_exit(1);
+        }
+        
+        myStatus = *outStatuses;
+        snprintf(myStatus->localState, 32, "%s", config->ccStatus.localState); // ENABLED, DISABLED, STOPPED, NOTREADY
+        snprintf(myStatus->details, 1024, "%s", config->ccStatus.details); // string that gets printed by 'euca-describe-services -E'
+        myStatus->localEpoch = config->ccStatus.localEpoch;
+        memcpy(&(myStatus->serviceId), &(config->ccStatus.serviceId), sizeof(serviceInfoType));
     }
-
-    myStatus = *outStatuses;
-    snprintf(myStatus->localState, 32, "%s", config->ccStatus.localState);
-    snprintf(myStatus->details, 1024, "%s", config->ccStatus.details);
-    myStatus->localEpoch = config->ccStatus.localEpoch;
-    memcpy(&(myStatus->serviceId), &(config->ccStatus.serviceId), sizeof(serviceInfoType));
-
-    LOGTRACE("done\n");
+    
+    if (do_report_nodes) {
+        extern ccResourceCache * resourceCache;
+        ccResourceCache resourceCacheLocal;
+        
+        sem_mywait(RESCACHE);
+        memcpy(&resourceCacheLocal, resourceCache, sizeof(ccResourceCache));
+        sem_mypost(RESCACHE);
+        
+        if (resourceCacheLocal.numResources > 0 && my_partition != NULL) { // parition is unknown at early stages of CC initialization
+            
+            *outStatusesLen += resourceCacheLocal.numResources;
+            *outStatuses = EUCA_REALLOC(*outStatuses, *outStatusesLen, sizeof(serviceStatusType));
+            if (!*outStatuses) {
+                LOGFATAL("out of memory!\n");
+                unlock_exit(1);
+            }
+            
+            for (int i = 0; i < resourceCacheLocal.numResources; i++) {
+                myStatus = *outStatuses + 1 + i;
+                snprintf(myStatus->localState, 32, "%s", "ENABLED"); // @TODO: allow this to be ENABLED, DISABLED, STOPPED, NOTREADY 
+                snprintf(myStatus->details, 1024, "%s", "it's all good"); // string that gets printed by 'euca-describe-services -E'
+                myStatus->localEpoch = config->ccStatus.localEpoch;
+                sprintf(myStatus->serviceId.type, "node");
+                sprintf(myStatus->serviceId.name, resourceCacheLocal.resources[i].ip);
+                sprintf(myStatus->serviceId.partition, my_partition);
+                sprintf(myStatus->serviceId.uris[0], resourceCacheLocal.resources[i].ncURL);
+                myStatus->serviceId.urisLen = 1;
+                LOGDEBUG("external services\t uri[%d]: %s %s %s %s\n", 
+                         i, 
+                         myStatus->localState,
+                         myStatus->serviceId.partition,
+                         myStatus->serviceId.name,
+                         myStatus->serviceId.uris[0]);
+            }
+        }
+    }
+    
+    LOGDEBUG("done\n");
     return (0);
 }
 
