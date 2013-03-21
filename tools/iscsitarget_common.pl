@@ -275,6 +275,8 @@ sub lookup_session {
       $session->{$SK_TPGT} = $2;
     } elsif (/^\s+Persistent Portal:\s+([\d\.]+):\d+,(\d+)/) {
       $session->{$SK_PPORTAL} = $1;
+    } elsif (/^\s+Persistent Portal:\s+\[(.*)\]:\d+,(\d+)/) {
+      $session->{$SK_PPORTAL} = $1;
     } elsif (/^\s+Iface Name:\s+(\S+)/) {
       $session->{$SK_IFACE} = $1;
     } elsif (/^\s+Iface Netdev:\s+(\S+)/) {
