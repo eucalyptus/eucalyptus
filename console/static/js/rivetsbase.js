@@ -2,7 +2,6 @@
 // version: 0.4.5
 // author: Michael Richards
 // license: MIT
-console.log('RIVETS START');
 (function() {
   var Rivets, bindEvent, getInputValue, rivets, unbindEvent,
     __bind = function(fn, me){ return function(){ return fn.apply(me, arguments); }; },
@@ -268,6 +267,7 @@ console.log('RIVETS START');
               splitPath = path.split(/\.|:/);
               options.formatters = pipes;
               options.bypass = path.indexOf(':') !== -1;
+              options.bindContext = _this.models;
               if (splitPath[0]) {
                 model = _this.models[splitPath.shift()];
               } else {
@@ -367,10 +367,10 @@ console.log('RIVETS START');
 
   })();
 
-  bindEvent = function(el, event, handler, context) {
+  bindEvent = function(el, event, handler, context, bindContext) {
     var fn;
     fn = function(e) {
-      return handler.call(context, e);
+      return handler.call(context, e, bindContext);
     };
     if (window.jQuery != null) {
       el = jQuery(el);
@@ -509,7 +509,7 @@ console.log('RIVETS START');
         if (this.currentListener) {
           unbindEvent(el, this.args[0], this.currentListener);
         }
-        return this.currentListener = bindEvent(el, this.args[0], value, this.model);
+        return this.currentListener = bindEvent(el, this.args[0], value, this.model, this.options.bindContext);
       }
     },
     "each-*": {

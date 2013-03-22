@@ -12,9 +12,9 @@ define([
 			this.sGroups = dataholder.scalingGroups;
 			this.render();
 		},
-		doit : function() {
-			console.log('DOIT:', arguments);
-			this.test.set({value: 'pressed the clicker'});
+		doit : function(e, context) {
+			console.log('DOIT', arguments);
+			this.test.set({value: context.sg.get('name')});
 		},
 		render : function() {
 			this.$el.html(template);
