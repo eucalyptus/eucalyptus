@@ -2141,7 +2141,7 @@ int refresh_resources(ncMetadata * pMeta, int timeout, int dolock)
                 } else {
                     LOGDEBUG("received data from node=%s status=%s mem=%d/%d disk=%d/%d cores=%d/%d\n",
                              resourceCacheStage->resources[i].hostname,
-                             resourceCacheStage->resources[i].nodeStatus,
+                             ncResDst->nodeStatus,
                              ncResDst->memorySizeAvailable,
                              ncResDst->memorySizeMax, ncResDst->diskSizeAvailable, ncResDst->diskSizeMax, ncResDst->numberOfCoresAvailable,
                              ncResDst->numberOfCoresMax);
@@ -4033,8 +4033,8 @@ int doModifyNode(ncMetadata * pMeta, char *nodeName, char *stateName)
     int src_index = -1, dst_index = -1;
     ccResourceCache resourceCacheLocal;
 
-    // rc = initialize(pMeta); not needed because we call doModifyNode internally, from doEnable/DisableService
-    if (rc || ccIsEnabled()) {
+    // no need to call initialize(pMeta) because we call doModifyNode internally, from doEnable/DisableService
+    if (ccIsEnabled()) {
         return (1);
     }
 
@@ -4074,7 +4074,7 @@ int doModifyNode(ncMetadata * pMeta, char *nodeName, char *stateName)
         sem_mywait(RESCACHE);
         for (i = 0; i < MAXNODES; i++) {
             if (!strcmp(resourceCache->resources[i].hostname, nodeName)) {
-                ccResource *res = &(resourceCacheLocal.resources[i]);
+                ccResource *res = &(resourceCache->resources[i]);
                 strcpy(res->nodeStatus, stateName);
                 if (! strcmp(stateName, "disabled")) { // preemptively remove resources from the pool when disabling
                     res->availCores = res->maxCores = 0;
