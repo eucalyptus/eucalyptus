@@ -733,6 +733,8 @@ int wait_state_transition(ncInstance * instance, instance_states from_state, ins
 //!
 //! Refresh instance information.
 //!
+//! (This is called while holding inst_sem.)
+//!
 //! @param[in] nc a pointer to the global NC state structure.
 //! @param[in] instance a pointer to the instance being refreshed
 //!
@@ -813,25 +815,24 @@ static void refresh_instance_info(struct nc_state_t *nc, ncInstance * instance)
         // migration-related logic
         if (is_migration_dst(instance)) {
             if (old_state == BOOTING && new_state == PAUSED ) {
-                sem_p(inst_sem);
-                instance->migration_state = MIGRATION_IN_PROGRESS;
-                sem_v(inst_sem);
                 LOGINFO("[%s] incoming (%s < %s) migration in progress\n", instance->instanceId,
                         instance->migration_dst, instance->migration_src);
+                instance->migration_state = MIGRATION_IN_PROGRESS;
+                LOGDEBUG("[%s] incoming (%s < %s) migration_state set to '%s'\n", instance->instanceId,
+                        instance->migration_dst, instance->migration_src, migration_state_names[instance->migration_state]);
 
             } else if ((old_state == BOOTING || old_state == PAUSED)
                        &&
                        (new_state == RUNNING || new_state == BLOCKED)) {
                 LOGINFO("[%s] completing incoming (%s < %s) migration...\n", instance->instanceId,
                         instance->migration_dst, instance->migration_src);
-                sem_p(inst_sem);
                 instance->migration_state = NOT_MIGRATING;  // done!
                 bzero(instance->migration_src, HOSTNAME_SIZE);
                 bzero(instance->migration_dst, HOSTNAME_SIZE);
                 instance->migrationTime = 0;
                 save_instance_struct(instance);
-                copy_instances();
-                sem_v(inst_sem);
+                // Done upon return in monitoring_thread().
+                //copy_instances();
                 LOGINFO("[%s] incoming migration complete\n", instance->instanceId);
 
             } else if (new_state == SHUTOFF || new_state == SHUTDOWN) {
@@ -1038,6 +1039,8 @@ void *monitoring_thread(void *arg)
                         // the migration-completed code on the destination to avoid this in the future.)
                         LOGWARN("[%s] in instance state '%s' is ready to migrate but has a zero instance migrationTime.\n",
                                 instance->instanceId, instance_state_names[instance->state]);
+                        // FIXME: Is this always safe?
+                        migration_rollback_src(instance);
                     }
                 }
             }
