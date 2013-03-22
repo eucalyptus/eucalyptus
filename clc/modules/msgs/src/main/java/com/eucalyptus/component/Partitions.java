@@ -111,35 +111,35 @@ public class Partitions {
     }
   }
   
-  private static final LoadingCache<String,Partition> partitionMap = CacheBuilder.build(LookupPartition.INSTANCE);
-  enum LookupPartition implements CacheLoader<String, Partition> {
-    INSTANCE;
-    public Partition load( final String input ) {
-      try {
-        Databases.awaitSynchronized( );
-        EntityTransaction db = Entities.get( Partition.class );
-        Partition p = null;
+  private static final LoadingCache<String, Partition> partitionMap = CacheBuilder.build(
+    new CacheLoader<String, Partition> {
+      @Override
+      public Partition load( final String input ) throws Exception {
         try {
-          p = Entities.uniqueResult( Partition.newInstanceNamed( input ) );
-          db.commit( );
-          return p;
+          Databases.awaitSynchronized( );
+          EntityTransaction db = Entities.get( Partition.class );
+          Partition p = null;
+          try {
+            p = Entities.uniqueResult( Partition.newInstanceNamed( input ) );
+            db.commit( );
+            return p;
+          } catch ( NoSuchElementException ex ) {
+            db.rollback( );
+            throw ex;
+          } catch ( Exception ex ) {
+            db.rollback( );
+            throw Exceptions.toUndeclared( ex );
+          }
         } catch ( NoSuchElementException ex ) {
-          db.rollback( );
           throw ex;
-        } catch ( Exception ex ) {
-          db.rollback( );
-          throw Exceptions.toUndeclared( ex );
+        } catch ( DatabaseStateException ex ) {
+          Databases.awaitSynchronized( );
+          return INSTANCE.apply( input );
+        } catch ( RuntimeException ex ) {
+          throw ex;
         }
-      } catch ( NoSuchElementException ex ) {
-        throw ex;
-      } catch ( DatabaseStateException ex ) {
-        Databases.awaitSynchronized( );
-        return INSTANCE.apply( input );
-      } catch ( RuntimeException ex ) {
-        throw ex;
       }
-    }
-  }
+    });
   
 
   public static Partition lookupByName( String partitionName ) {

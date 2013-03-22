@@ -157,11 +157,9 @@ public class Ats implements Predicate<Class> {
     return ( Class ) this.ancestry.get( 0 );
   }
   
-  enum AtsBuilder implements CacheLoader<Object, Ats> {
-    INSTANCE;
-    
+  class AtsBuilder extends CacheLoader<Object, Ats> {
     @Override
-    public Ats load( Object input ) {
+    public Ats load( Object input ) throws Exception {
       if ( input instanceof Class ) {
         return new Ats( ( AnnotatedElement ) input );
       } else if ( input instanceof AnnotatedElement ) {
@@ -173,22 +171,19 @@ public class Ats implements Predicate<Class> {
     
   }
   
-  enum AtsHierarchyBuilder implements CacheLoader<Object, Ats> {
-    INSTANCE;
-    
+  class AtsHierarchyBuilder extends CacheLoader<Object, Ats> {
     @Override
-    public Ats load( Object input ) {
+    public Ats load( Object input ) throws Exception {
       if ( input instanceof AnnotatedElement ) {
         return new Ats( Classes.ancestors( input ).toArray( new Class[] {} ) );
       } else {
         return new Ats( Classes.ancestors( input ).toArray( new Class[] {} ) );
       }
     }
-    
   }
   
-  private static final LoadingCache<Object, Ats> atsCache          = CacheBuilder.build(AtsBuilder.INSTANCE);
-  private static final LoadingCache<Object, Ats> atsHierarchyCache = CacheBuilder.build(AtsHierarchyBuilder.INSTANCE);
+  private static final LoadingCache<Object, Ats> atsCache          = CacheBuilder.build(new AtsBuilder());
+  private static final LoadingCache<Object, Ats> atsHierarchyCache = CacheBuilder.build(new AtsHierarchyBuilder());
   
   public static Ats from( Object o ) {
     if ( o instanceof AccessibleObject ) {

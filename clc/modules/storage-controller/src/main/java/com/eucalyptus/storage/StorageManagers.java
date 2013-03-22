@@ -132,23 +132,19 @@ public class StorageManagers extends ServiceJarDiscovery {
     return 0.0d;
   }
   
-  private static final LoadingCache<String, LogicalStorageManager> managerInstances = CacheBuilder.build(LookupStorageManager.INSTANCE);
-  
-  enum LookupStorageManager implements CacheLoader<String, LogicalStorageManager> {
-    INSTANCE;
-    
-    @Override
-    public LogicalStorageManager load( String arg0 ) {
-      LogicalStorageManager bsm = Classes.newInstance( lookupManager( arg0 ) );
-      try {
-        bsm.checkPreconditions( );
-        return bsm;
-      } catch ( EucalyptusCloudException ex ) {
-        throw new ComputationException( ex );
+  private static final LoadingCache<String, LogicalStorageManager> managerInstances = CacheBuilder.build(
+    new CacheLoader<String, LogicalStorageManager> {
+      @Override
+      public LogicalStorageManager load( String arg0 ) throws Exception {
+        LogicalStorageManager bsm = Classes.newInstance( lookupManager( arg0 ) );
+        try {
+          bsm.checkPreconditions( );
+          return bsm;
+        } catch ( EucalyptusCloudException ex ) {
+          throw new ComputationException( ex );
+        }
       }
-    }
-    
-  }
+    });
   
   private static AtomicReference<String> lastManager = new AtomicReference<String>( );
   

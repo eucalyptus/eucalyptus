@@ -55,7 +55,7 @@ public abstract class TagSupport {
   private static final Logger log = Logger.getLogger( TagSupport.class );
   private static final ConcurrentMap<String,TagSupport> supportByResourceType = Maps.newConcurrentMap();
   private static final ConcurrentMap<Class<? extends AutoScalingMetadata>,TagSupport> supportByClass = Maps.newConcurrentMap();
-  private static final LoadingCache<Class,Class> metadataClassMap = CacheBuilder.build(MetadataSubclass.INSTANCE);
+  private static final LoadingCache<Class,Class> metadataClassMap = CacheBuilder.build(new MetadataSubclass());
 
   private final Class<? extends AbstractOwnedPersistent> resourceClass;
   private final Class<? extends AutoScalingMetadata> cloudMetadataClass;
@@ -196,11 +196,9 @@ public abstract class TagSupport {
     return tagClassResourceField;
   }
 
-  private enum MetadataSubclass implements CacheLoader<Class,Class> {
-    INSTANCE;
-
+  private class MetadataSubclass extends CacheLoader<Class,Class> {
     @Override
-    public Class load( final Class instanceClass ) {
+    public Class load( final Class instanceClass ) throws Exception {
       final List<Class<?>> interfaces = Lists.newArrayList();
       for ( final Class clazz : Classes.interfaceAncestors().apply( instanceClass ) ) {
         interfaces.add( clazz );
