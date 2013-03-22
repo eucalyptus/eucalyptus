@@ -42,16 +42,20 @@ rivets.configure({
 var uiBindings = {}
 
 rivets.binders["ui-*"] = {
+    bind: function(el) {
+        var self = this;
+        console.log('UI bind', this);
+        require(['views/ui/' + this.args[0] + '/index'], function(view) {
+            // self.bbView = new view({el: el, model: self.bbLastValue ? self.bbLastValue : {}});
+            self.bbView = new view({el: el, model: self.bbLastValue ? self.bbLastValue : {}});
+        });
+    },
     routine: function(el, value) {
-        var existingView = uiBindings[el];
-        if (!existingView) {
-           require(['views/ui/' + this.args[0] + '/index'], function(view) {
-               var view = new view({el: el, model: value});
-               uiBindings[el] = view;
-           });
-        } else if (existingView.model != value) { 
-           existingView.model = value; 
-           existingView.render(); 
+        console.log('UI routine', this);
+        this.bbLastValue = value;
+        if (this.bbView) {
+           this.bbView.model = value;
+           this.bbView.render();
         }
     }
 }

@@ -10,6 +10,9 @@ define([
 				value: 'foobarbaz'
 			});
 			this.sGroups = dh.scalingGroups;
+			this.$el.html(template);
+			this.rivetsView = rivets.bind(this.$el, this);
+			$(':input[data-value]', this.$el).keyup(function() { $(this).trigger('change'); });
 			this.render();
 		},
 		doit : function(e, context) {
@@ -17,9 +20,7 @@ define([
 			this.test.set({value: context.sg.get('name')});
 		},
 		render : function() {
-			this.$el.html(template);
-			rivets.bind(this.$el, this);
-			$(':input[data-value]', this.$el).keyup(function() { $(this).trigger('change'); });
+                        this.rivetsView.sync();
 			return this;
 		}
 	});

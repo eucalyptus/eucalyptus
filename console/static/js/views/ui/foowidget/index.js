@@ -4,12 +4,11 @@ define([
 	], function( template, rivets ) {
 	return Backbone.View.extend({
 		initialize : function() {
-			console.log('FOOTEST', this);
-			this.render();
+			this.$el.html(template);
+			this.rivetsView = rivets.bind(this.$el, this);
 		},
 		render : function() {
-			this.$el.html(template);
-			rivets.bind(this.$el, this);
+                        this.rivetsView.sync();
 			return this;
 		}
 	});
