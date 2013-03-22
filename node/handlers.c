@@ -141,6 +141,11 @@
 #define MIN_BLOBSTORE_SIZE_MB                        10 //!< even with boot-from-EBS one will need work space for kernel and ramdisk
 #define FS_BUFFER_PERCENT                            0.03   //!< leave 3% extra when deciding on blobstore sizes automatically
 #define WORK_BS_PERCENT                              0.33   //!< give a third of available space to work, the rest to cache
+#define DISABLED_CHECK \
+    if (nc_state.is_enabled == FALSE) { \
+        LOGERROR("operation %s is not allowed when node is DISABLED\n", __func__); \
+        return EUCA_ERROR; \
+    } //<! rejection of certain operations when NC is disabled
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |
@@ -2523,6 +2528,7 @@ int doRunInstance(ncMetadata * pMeta, char *uuid, char *instanceId, char *reserv
 
     if (init())
         return (EUCA_ERROR);
+    DISABLED_CHECK;
 
     LOGINFO("[%s] running instance cores=%d disk=%d memory=%d vlan=%d net=%d priMAC=%s privIp=%s plat=%s\n", instanceId, params->cores, params->disk,
             params->mem, netparams->vlan, netparams->networkIndex, netparams->privateMac, netparams->privateIp, platform);
@@ -2559,6 +2565,7 @@ int doTerminateInstance(ncMetadata * pMeta, char *instanceId, int force, int *sh
 
     if (init())
         return (EUCA_ERROR);
+    DISABLED_CHECK;
 
     LOGINFO("[%s] termination requested\n", instanceId);
 
@@ -2584,6 +2591,7 @@ int doRebootInstance(ncMetadata * pMeta, char *instanceId)
 
     if (init())
         return (EUCA_ERROR);
+    DISABLED_CHECK;
 
     LOGDEBUG("[%s] invoked\n", instanceId);
 
@@ -2691,6 +2699,7 @@ int doAttachVolume(ncMetadata * pMeta, char *instanceId, char *volumeId, char *r
 
     if (init())
         return (EUCA_ERROR);
+    DISABLED_CHECK;
 
     LOGDEBUG("[%s][%s] volume attaching (localDev=%s)\n", instanceId, volumeId, localDev);
 
@@ -2721,6 +2730,7 @@ int doDetachVolume(ncMetadata * pMeta, char *instanceId, char *volumeId, char *r
 
     if (init())
         return (EUCA_ERROR);
+    DISABLED_CHECK;
 
     LOGDEBUG("[%s][%s] volume detaching (localDev=%s force=%d grab_inst_sem=%d)\n", instanceId, volumeId, localDev, force, grab_inst_sem);
 
@@ -2753,6 +2763,7 @@ int doBundleInstance(ncMetadata * pMeta, char *instanceId, char *bucketName, cha
 
     if (init())
         return (EUCA_ERROR);
+    DISABLED_CHECK;
 
     LOGINFO("[%s] starting instance bundling into bucket %s\n", instanceId, bucketName);
     LOGDEBUG("[%s] bundling parameters: bucketName=%s filePrefix=%s walrusURL=%s userPublicKey=%s S3Policy=%s, S3PolicySig=%s\n",
@@ -2778,6 +2789,7 @@ int doBundleRestartInstance(ncMetadata * pMeta, char *instanceId)
 {
     if (init())
         return (EUCA_ERROR);
+    DISABLED_CHECK;
 
     LOGINFO("[%s] restarting bundling instance\n", instanceId);
     if (nc_state.H->doBundleRestartInstance)
@@ -2799,6 +2811,7 @@ int doCancelBundleTask(ncMetadata * pMeta, char *instanceId)
 
     if (init())
         return (EUCA_ERROR);
+    DISABLED_CHECK;
 
     LOGINFO("[%s] canceling bundling instance\n", instanceId);
 
@@ -2827,6 +2840,7 @@ int doDescribeBundleTasks(ncMetadata * pMeta, char **instIds, int instIdsLen, bu
 
     if (init())
         return (EUCA_ERROR);
+    DISABLED_CHECK;
 
     LOGINFO("describing bundle tasks (for %d instances)\n", instIdsLen);
 
@@ -2854,6 +2868,7 @@ int doCreateImage(ncMetadata * pMeta, char *instanceId, char *volumeId, char *re
 
     if (init())
         return (EUCA_ERROR);
+    DISABLED_CHECK;
 
     LOGINFO("[%s][%s] creating image\n", instanceId, volumeId);
 
