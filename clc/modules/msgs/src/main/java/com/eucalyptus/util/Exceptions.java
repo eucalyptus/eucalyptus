@@ -333,7 +333,6 @@ public class Exceptions {
   
   private static final LoadingCache<Class, ErrorMessageBuilder> builders = CacheBuilder.build(
                                                                                  new CacheLoader<Class, ErrorMessageBuilder>( ) {
-                                                                                   
                                                                                    @Override
                                                                                    public ErrorMessageBuilder load( Class input ) {
                                                                                      return new ErrorMessageBuilder( input );

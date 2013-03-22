@@ -122,7 +122,7 @@ public class ServiceTransitions {
   LoadingCache<TransitionActions, ServiceTransitionCallback> hi    = CacheBuilder.build( new CacheLoader<TransitionActions, ServiceTransitionCallback>( ) {
                                                             
                                                             @Override
-                                                            public ServiceTransitionCallback load( TransitionActions input ) {
+                                                            public ServiceTransitionCallback load( TransitionActions input ) throws Exception {
                                                               return null;
                                                             }
                                                           } );

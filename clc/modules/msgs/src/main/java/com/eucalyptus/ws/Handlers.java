@@ -154,7 +154,7 @@ public class Handlers {
   private static final ChannelHandler                        internalWsSecHandler     = new InternalWsSecHandler( );
   private static final ChannelHandler                        soapHandler              = new SoapHandler( );
   private static final ChannelHandler                        addressingHandler        = new AddressingHandler( );
-  private static final LoadingCache<String, BindingHandler>  bindingHandlers          = CacheBuilder.build( BindingHandlerLookup.INSTANCE );
+  private static final LoadingCache<String, BindingHandler>  bindingHandlers          = CacheBuilder.build( new BindingHandlerLookup() );
   private static final ChannelHandler                        bindingHandler           = new BindingHandler( BindingManager.getDefaultBinding( ) );
   private static final ChannelHandler                        internalImpersonationHandler = new InternalImpersonationHandler();
   private static final HashedWheelTimer                      timer                    = new HashedWheelTimer( );                                                                                             //TODO:GRZE: configurable
@@ -277,11 +277,9 @@ public class Handlers {
     return new AddressingHandler( addressingPrefix );
   }
   
-  enum BindingHandlerLookup implements CacheLoader<String, BindingHandler> {
-    INSTANCE;
-    
+  class BindingHandlerLookup extends CacheLoader<String, BindingHandler> {
     @Override
-    public BindingHandler load( String bindingName ) {
+    public BindingHandler load( String bindingName ) throws Exception {
       String maybeBindingName = "";
       if ( BindingManager.isRegisteredBinding( bindingName ) ) {
         return new BindingHandler( BindingManager.getBinding( bindingName ) );
@@ -293,7 +291,6 @@ public class Handlers {
                                 + maybeBindingName );
       }
     }
-    
   }
   
   public static ChannelHandler bindingHandler( ) {
