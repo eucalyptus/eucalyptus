@@ -657,6 +657,7 @@ static int doDescribeResource(struct nc_state_t *nc, ncMetadata * pMeta, char *r
     int sum_cores = 0;          // for known domains: sum of requested cores
 
     *outRes = NULL;
+
     sem_p(inst_copy_sem);
     while ((inst = get_instance(&global_instances_copy)) != NULL) {
         if (inst->state == TEARDOWN)
@@ -689,22 +690,38 @@ static int doDescribeResource(struct nc_state_t *nc, ncMetadata * pMeta, char *r
         return EUCA_OVERFLOW_ERROR;
     }
 
-    res = allocate_resource(nc->is_enabled ? "enabled" : "disabled", 
-                            nc->iqn, 
-                            nc->mem_max, mem_free, nc->disk_max, disk_free, nc->cores_max, cores_free, 
-                            "none");
+    if (nc->is_enabled) {
+        res = allocate_resource("enabled",
+                                nc->iqn, 
+                                nc->mem_max, mem_free, 
+                                nc->disk_max, disk_free, 
+                                nc->cores_max, cores_free, 
+                                "none");
+    } else {
+        res = allocate_resource("disabled",
+                                nc->iqn,
+                                0, 0,
+                                0, 0,
+                                0, 0,
+                                "none");
+    }
+    
     if (res == NULL) {
         LOGERROR("out of memory\n");
         return EUCA_MEMORY_ERROR;
     }
-    
     *outRes = res;
-    LOGDEBUG("returning status=%s cores=%d/%lld mem=%lld/%lld disk=%lld/%lld iqn=%s\n", 
+    
+    LOGDEBUG("returning status=%s cores=%d/%d mem=%d/%d disk=%d/%d iqn=%s\n", 
              res->nodeStatus,
-             cores_free, nc->cores_max, 
-             mem_free, nc->mem_max, 
-             disk_free, nc->disk_max, 
-             nc->iqn);
+             res->numberOfCoresAvailable,
+             res->numberOfCoresMax,
+             res->memorySizeAvailable,
+             res->memorySizeMax,
+             res->diskSizeAvailable,
+             res->diskSizeMax,
+             res->iqn);
+    
     return EUCA_OK;
 }
 

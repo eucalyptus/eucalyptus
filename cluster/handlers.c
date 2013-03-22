@@ -2139,8 +2139,9 @@ int refresh_resources(ncMetadata * pMeta, int timeout, int dolock)
                         changeState(&(resourceCacheStage->resources[i]), RESDOWN);
                     }
                 } else {
-                    LOGDEBUG("received data from node=%s mem=%d/%d disk=%d/%d cores=%d/%d\n",
+                    LOGDEBUG("received data from node=%s status=%s mem=%d/%d disk=%d/%d cores=%d/%d\n",
                              resourceCacheStage->resources[i].hostname,
+                             resourceCacheStage->resources[i].nodeStatus,
                              ncResDst->memorySizeAvailable,
                              ncResDst->memorySizeMax, ncResDst->diskSizeAvailable, ncResDst->diskSizeMax, ncResDst->numberOfCoresAvailable,
                              ncResDst->numberOfCoresMax);
@@ -2150,7 +2151,7 @@ int refresh_resources(ncMetadata * pMeta, int timeout, int dolock)
                     resourceCacheStage->resources[i].availDisk = ncResDst->diskSizeAvailable;
                     resourceCacheStage->resources[i].maxCores = ncResDst->numberOfCoresMax;
                     resourceCacheStage->resources[i].availCores = ncResDst->numberOfCoresAvailable;
-
+                    strncpy(resourceCacheStage->resources[i].nodeStatus, ncResDst->nodeStatus, sizeof(resourceCacheStage->resources[i].nodeStatus));
                     // set iqn, if set
                     if (strlen(ncResDst->iqn)) {
                         snprintf(resourceCacheStage->resources[i].iqn, 128, "%s", ncResDst->iqn);
@@ -4068,6 +4069,22 @@ int doModifyNode(ncMetadata * pMeta, char *nodeName, char *stateName)
     if (rc) {
         ret = 1;
         goto out;
+
+    } else { // state change succeded => update nodeStatus and resource availability if the change succeeds
+        sem_mywait(RESCACHE);
+        for (i = 0; i < MAXNODES; i++) {
+            if (!strcmp(resourceCache->resources[i].hostname, nodeName)) {
+                ccResource *res = &(resourceCacheLocal.resources[i]);
+                strcpy(res->nodeStatus, stateName);
+                if (! strcmp(stateName, "disabled")) { // preemptively remove resources from the pool when disabling
+                    res->availCores = res->maxCores = 0;
+                    res->availDisk = res->maxDisk = 0;
+                    res->availMemory = res->maxMemory = 0;
+                }
+                break;
+            }
+        }
+        sem_mypost(RESCACHE);        
     }
 
  out:
