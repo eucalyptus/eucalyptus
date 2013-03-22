@@ -2015,13 +2015,13 @@ static int doModifyNode(struct nc_state_t *nc, ncMetadata * pMeta, char *stateNa
     int ret = EUCA_OK;
     boolean did_change_state = FALSE;
 
-    if (strcasecmp(stateName, "enabled")) {
+    if (! strcasecmp(stateName, "enabled")) {
         if (nc->is_enabled == FALSE) {
             nc->is_enabled = TRUE;
             did_change_state = TRUE;
         }
 
-    } else if (strcasecmp(stateName, "disabled")) {
+    } else if (! strcasecmp(stateName, "disabled")) {
         if (nc->is_enabled == TRUE) {
             nc->is_enabled = FALSE;
             did_change_state = TRUE;
@@ -2033,7 +2033,7 @@ static int doModifyNode(struct nc_state_t *nc, ncMetadata * pMeta, char *stateNa
     }
 
     if (did_change_state) {
-        LOGINFO("node state change to %s\n", stateName);
+        LOGINFO("node state change to '%s'\n", stateName);
         if (gen_nc_xml(nc) != EUCA_OK) {
             LOGERROR("failed to update NC state on disk\n");
             ret = EUCA_ERROR;
