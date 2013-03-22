@@ -1676,6 +1676,8 @@ static int init(void)
 
     // ensure that MAXes are zeroed out
     bzero(&nc_state, sizeof(struct nc_state_t));
+    strncpy(nc_state.version, EUCA_VERSION, sizeof(nc_state.version)); // set the version
+    nc_state.is_enabled = TRUE; // NC is enabled unless disk state will say otherwise
 
     // configure signal handling for this thread and its children:
     // - ignore SIGALRM, which may be used in libraries we depend on
@@ -1708,7 +1710,7 @@ static int init(void)
     // set the minimum log for now
     snprintf(logFile, MAX_PATH, EUCALYPTUS_LOG_DIR "/nc.log", nc_state.home);
     log_file_set(logFile);
-    LOGINFO("spawning Eucalyptus node controller %s\n", compile_timestamp_str);
+    LOGINFO("spawning Eucalyptus node controller v%s %s\n", nc_state.version, compile_timestamp_str);
     if (do_warn)
         LOGWARN("env variable %s not set, using /\n", EUCALYPTUS_ENV_VAR_NAME);
 
@@ -1724,6 +1726,28 @@ static int init(void)
     configInitValues(configKeysRestartNC, configKeysNoRestartNC);   // initialize config subsystem
     readConfigFile(nc_state.configFiles, 2);
     update_log_params();
+
+    { // load NC's state from disk, if any
+        struct nc_state_t nc_state_disk;
+        if (read_nc_xml(&nc_state_disk) == EUCA_OK) {
+            // check on the version, in case it has changed
+            if (strcmp(nc_state_disk.version, nc_state.version)!=0
+                && nc_state_disk.version[0]!='\0') {
+                LOGINFO("found state from NC v%s while starting NC v%s\n", nc_state_disk.version, nc_state.version);
+                // any NC upgrade/downgrade-related code can go here
+            }
+            
+            // check on the state
+            if (nc_state_disk.is_enabled == FALSE) {
+                LOGINFO("NC will start up as DISABLED based on disk state\n");
+                nc_state.is_enabled = FALSE;
+            }
+        } else { // there is no disk state, so create it
+            if (gen_nc_xml(&nc_state) != EUCA_OK) {
+                LOGERROR("failed to update NC state on disk\n");
+            }
+        }
+    }
 
     {
         /* Initialize libvirtd.conf, since some buggy versions of libvirt

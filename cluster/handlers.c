@@ -4032,7 +4032,7 @@ int doModifyNode(ncMetadata * pMeta, char *nodeName, char *stateName)
     int src_index = -1, dst_index = -1;
     ccResourceCache resourceCacheLocal;
 
-    rc = initialize(pMeta);
+    // rc = initialize(pMeta); not needed because we call doModifyNode internally, from doEnable/DisableService
     if (rc || ccIsEnabled()) {
         return (1);
     }
@@ -4068,12 +4068,6 @@ int doModifyNode(ncMetadata * pMeta, char *nodeName, char *stateName)
     if (rc) {
         ret = 1;
         goto out;
-    }
-
-    // FIXME: This is only here for compatability with earlier demo
-    // development. Remove.
-    if (!doMigrateInstances(pMeta, nodeName, "prepare")) {
-        LOGERROR("doModifyNode() call of doMigrateInstances() failed.\n");
     }
 
  out:

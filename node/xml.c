@@ -162,11 +162,14 @@ static pthread_mutex_t xml_mutex = PTHREAD_MUTEX_INITIALIZER;   //!< process-glo
  |                                                                            |
 \*----------------------------------------------------------------------------*/
 
+int gen_nc_xml(const struct nc_state_t *nc_state_param);
+int read_nc_xml(struct nc_state_t *nc_state_param);
 int gen_instance_xml(const ncInstance * instance);
 int gen_libvirt_instance_xml(const ncInstance * instance);
 int gen_volume_xml(const char *volumeId, const ncInstance * instance, const char *localDevReal, const char *remoteDev);
 int gen_libvirt_volume_xml(const char *volumeId, const ncInstance * instance);
 char **get_xpath_content(const char *xml_path, const char *xpath);
+char *get_xpath_content_at(const char *xml_path, const char *xpath, int index, char *buf, int buf_len);
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |
@@ -298,6 +301,78 @@ static int write_xml_file(const xmlDocPtr doc, const char *instanceId, const cha
     }
     umask(old_umask);
     return ((ret > 0) ? (EUCA_OK) : (EUCA_ERROR));
+}
+
+//!
+//! Writes Node Controller state to disk, into an XML file
+//!
+//! @param[in] nc_state pointer to NC's global state struct to be savedd
+//! 
+//! @return EUCA_OK on success or EUCA_ERROR on failure to write the file
+//!
+
+int gen_nc_xml(const struct nc_state_t *nc_state_param)
+{
+    int ret = EUCA_ERROR;
+    char path[MAX_PATH] = "";
+    xmlDocPtr doc = NULL;
+    xmlNodePtr nc = NULL;
+    xmlNodePtr version = NULL;
+    xmlNodePtr enabled = NULL;
+
+    INIT();
+
+    pthread_mutex_lock(&xml_mutex);
+    {
+        doc = xmlNewDoc(BAD_CAST "1.0");
+        nc = xmlNewNode(NULL, BAD_CAST "nc");
+        xmlDocSetRootElement(doc, nc);
+
+        version = xmlNewChild(nc, NULL, BAD_CAST "version", BAD_CAST (nc_state_param->version));
+        enabled = xmlNewChild(nc, NULL, BAD_CAST "enabled", BAD_CAST (nc_state_param->is_enabled ? "true" : "false"));
+
+        snprintf(path, sizeof(path), EUCALYPTUS_NC_STATE_FILE, nc_state.home);
+        ret = write_xml_file(doc, "global", path, "nc");
+        xmlFreeDoc(doc);
+    }
+    pthread_mutex_unlock(&xml_mutex);
+    
+    return (ret);
+}
+
+//!
+//! Reads Node Controller state from disk
+//!
+//! @param[in] nc_state pointer to NC's global state struct to be updated
+//! 
+//! @return EUCA_OK on success or EUCA_ERROR on failure to read the file
+//!
+int read_nc_xml(struct nc_state_t *nc_state_param)
+{
+    int ret = EUCA_OK;
+    char path[MAX_PATH] = "";
+    char buf[1024];
+
+    snprintf(path, sizeof(path), EUCALYPTUS_NC_STATE_FILE, nc_state.home);
+    bzero(&nc_state_param, sizeof(struct nc_state_t));
+
+    if (get_xpath_content_at(path, "/nc/version", 0, nc_state_param->version, sizeof(nc_state_param->version))==NULL) {
+        LOGDEBUG("failed to read /nc/version from %s\n", path);
+        return EUCA_ERROR;
+    }
+
+    if (get_xpath_content_at(path, "/nc/enabled", 0, buf, sizeof(buf))==NULL) {
+        LOGDEBUG("failed to read /nc/enabled from %s\n", path);
+        return EUCA_ERROR;
+    }
+    if (strcmp(buf, "true")==0) {
+        nc_state_param->is_enabled = 1;
+    } else if (strcmp(buf, "false")!=0) {
+        LOGDEBUG("failed to parse /nc/enabled as {true|false} in %s\n", path);
+        return EUCA_ERROR;
+    }
+    
+    return ret;
 }
 
 //!
@@ -742,7 +817,7 @@ int gen_libvirt_volume_xml(const char *volumeId, const ncInstance * instance)
 //! @param[in] xml_path a string containing the path to the XML file to parse
 //! @param[in] xpath a string contianing the XPATH expression to evaluate
 //!
-//! @return a pointer to a list of strings
+//! @return a pointer to a list of strings (strings and array must be freed by caller)
 //!
 char **get_xpath_content(const char *xml_path, const char *xpath)
 {
@@ -787,6 +862,50 @@ char **get_xpath_content(const char *xml_path, const char *xpath)
     }
     pthread_mutex_unlock(&xml_mutex);
     return (res);
+}
+
+//!
+//! Returns text content of the N-th result of an xpath query.
+//!
+//! If a buffer was provided, the result is copied into it and the pointer to the 
+//! buffer is returned. If the buffer is NULL, the result is returned in a string
+//! that the caller must free. If there were no values or if index is out of range
+//! NULL is returned.
+//!
+//! To be useful, the query should point to an XML element that does not have any 
+//! children.
+//!
+//! @param[in] xml_path a string containing the path to the XML file to parse
+//! @param[in] xpath a string contianing the XPATH expression to evaluate
+//! @param[in] index of the value to retrieve
+//! @param[in] buf string buffer to copy value into (if NULL, a malloced value is returned)
+//! @param[in] buf_len length of the buffer (irrelevant if buf is NULL)
+//!
+//! @return a pointer to a string with the first result (must be freed by caller) or to buf, if specified
+//!
+char *get_xpath_content_at(const char *xml_path, const char *xpath, int index, char *buf, int buf_len)
+{
+    char **res_array = NULL;
+    char *res = NULL;
+    
+    if ((res_array = get_xpath_content(xml_path, xpath)) != NULL) {
+        for (int i = 0; res_array[i]; i++) {
+            if (i==index) {
+                if (buf!=NULL) {
+                    strncpy(buf, res_array[i], buf_len);
+                    EUCA_FREE(res_array[i]);
+                    res = buf;
+                } else {
+                    res = res_array[i]; // caller has to free res_array[i]
+                }
+            } else  {
+                EUCA_FREE(res_array[i]); // we always free all other results
+            }
+        }
+        EUCA_FREE(res_array);
+    }
+
+    return res;
 }
 
 #ifdef __STANDALONE
