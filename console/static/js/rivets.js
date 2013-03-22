@@ -1,4 +1,10 @@
-console.log('RIVETS CONFIGURE');
+rivets.binders["widget-*"] = function(el, value) {
+  console.log('widget', this.args[0], value, this);
+  require(['views/' + this.args[0] + '/index'], function(view) {
+    new view({el: el, model: value});
+  });
+}
+
 rivets.configure({
 	adapter: {
 	    subscribe: function(obj, keypath, callback) {
@@ -40,3 +46,5 @@ rivets.configure({
 	    }
 	}
 });
+
+
