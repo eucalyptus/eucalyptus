@@ -4,6 +4,6 @@ define([
 ], function(EucaCollection, Bucket) {
     return EucaCollection.extend({
 	model: Bucket,
-	url: '/ec2?Action=DescribeBuckets'
+	url: '/s3?Action=DescribeBuckets'
     });
 });

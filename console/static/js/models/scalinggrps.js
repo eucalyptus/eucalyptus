@@ -1,9 +1,9 @@
 define([
     'models/eucacollection',
     'models/scalinggrp'
-], function(EucaCollection, Model) {
+], function(EucaCollection, ScalingGrp) {
     return EucaCollection.extend({
-	model: Model,
+	model: ScalingGrp,
 	url: '/autoscaling?Action=DescribeAutoScalingGroups'
     });
 });

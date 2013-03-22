@@ -4,6 +4,6 @@ define([
 ], function(EucaCollection, Summary) {
     return EucaCollection.extend({
 	model: Summary,
-	url: '/ec2?Action=GetCacheSummary'
+	url: '/ec2?Action=GetDashSummary'
     });
 });
