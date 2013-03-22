@@ -66,14 +66,15 @@ import java.lang.annotation.Annotation;
 import java.lang.reflect.AccessibleObject;
 import java.lang.reflect.AnnotatedElement;
 import java.util.List;
-import java.util.Map;
 import java.util.NoSuchElementException;
 import com.eucalyptus.util.Classes;
 import com.google.common.base.Function;
 import com.google.common.base.Joiner;
 import com.google.common.base.Predicate;
+import com.google.common.cache.CacheBuilder;
+import com.google.common.cache.CacheLoader;
+import com.google.common.cache.LoadingCache;
 import com.google.common.collect.Lists;
-import com.google.common.collect.MapMaker;
 
 /**
  * A builder-like utility for interrogating the {@link Annotation}s that may be present on instances
@@ -156,11 +157,11 @@ public class Ats implements Predicate<Class> {
     return ( Class ) this.ancestry.get( 0 );
   }
   
-  enum AtsBuilder implements Function<Object, Ats> {
+  enum AtsBuilder implements CacheLoader<Object, Ats> {
     INSTANCE;
     
     @Override
-    public Ats apply( Object input ) {
+    public Ats load( Object input ) {
       if ( input instanceof Class ) {
         return new Ats( ( AnnotatedElement ) input );
       } else if ( input instanceof AnnotatedElement ) {
@@ -172,11 +173,11 @@ public class Ats implements Predicate<Class> {
     
   }
   
-  enum AtsHierarchyBuilder implements Function<Object, Ats> {
+  enum AtsHierarchyBuilder implements CacheLoader<Object, Ats> {
     INSTANCE;
     
     @Override
-    public Ats apply( Object input ) {
+    public Ats load( Object input ) {
       if ( input instanceof AnnotatedElement ) {
         return new Ats( Classes.ancestors( input ).toArray( new Class[] {} ) );
       } else {
@@ -186,8 +187,8 @@ public class Ats implements Predicate<Class> {
     
   }
   
-  private static final Map<Object, Ats> atsCache          = new MapMaker( ).makeComputingMap( AtsBuilder.INSTANCE );
-  private static final Map<Object, Ats> atsHierarchyCache = new MapMaker( ).makeComputingMap( AtsHierarchyBuilder.INSTANCE );
+  private static final LoadingCache<Object, Ats> atsCache          = CacheBuilder.build(AtsBuilder.INSTANCE);
+  private static final LoadingCache<Object, Ats> atsHierarchyCache = CacheBuilder.build(AtsHierarchyBuilder.INSTANCE);
   
   public static Ats from( Object o ) {
     if ( o instanceof AccessibleObject ) {

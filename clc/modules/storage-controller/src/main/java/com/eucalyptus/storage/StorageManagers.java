@@ -79,8 +79,10 @@ import com.eucalyptus.util.Classes;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.google.common.base.Function;
 import com.google.common.base.Joiner;
+import com.google.common.cache.CacheBuilder;
+import com.google.common.cache.CacheLoader;
+import com.google.common.cache.LoadingCache;
 import com.google.common.collect.ComputationException;
-import com.google.common.collect.MapMaker;
 import com.google.common.collect.Maps;
 
 /**
@@ -130,13 +132,13 @@ public class StorageManagers extends ServiceJarDiscovery {
     return 0.0d;
   }
   
-  private static final Map<String, LogicalStorageManager> managerInstances = new MapMaker( ).makeComputingMap( LookupStorageManager.INSTANCE );
+  private static final LoadingCache<String, LogicalStorageManager> managerInstances = CacheBuilder.build(LookupStorageManager.INSTANCE);
   
-  enum LookupStorageManager implements Function<String, LogicalStorageManager> {
+  enum LookupStorageManager implements CacheLoader<String, LogicalStorageManager> {
     INSTANCE;
     
     @Override
-    public LogicalStorageManager apply( String arg0 ) {
+    public LogicalStorageManager load( String arg0 ) {
       LogicalStorageManager bsm = Classes.newInstance( lookupManager( arg0 ) );
       try {
         bsm.checkPreconditions( );

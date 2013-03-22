@@ -40,9 +40,11 @@ import com.eucalyptus.util.OwnerFullName;
 import com.google.common.base.Function;
 import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
+import com.google.common.cache.CacheBuilder;
+import com.google.common.cache.CacheLoader;
+import com.google.common.cache.LoadingCache;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
-import com.google.common.collect.MapMaker;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Ordering;
 
@@ -53,7 +55,7 @@ public abstract class TagSupport {
   private static final Logger log = Logger.getLogger( TagSupport.class );
   private static final ConcurrentMap<String,TagSupport> supportByResourceType = Maps.newConcurrentMap();
   private static final ConcurrentMap<Class<? extends AutoScalingMetadata>,TagSupport> supportByClass = Maps.newConcurrentMap();
-  private static final ConcurrentMap<Class,Class> metadataClassMap = new MapMaker().makeComputingMap( MetadataSubclass.INSTANCE );
+  private static final LoadingCache<Class,Class> metadataClassMap = CacheBuilder.build(MetadataSubclass.INSTANCE);
 
   private final Class<? extends AbstractOwnedPersistent> resourceClass;
   private final Class<? extends AutoScalingMetadata> cloudMetadataClass;
@@ -194,11 +196,11 @@ public abstract class TagSupport {
     return tagClassResourceField;
   }
 
-  private enum MetadataSubclass implements Function<Class,Class> {
+  private enum MetadataSubclass implements CacheLoader<Class,Class> {
     INSTANCE;
 
     @Override
-    public Class apply( final Class instanceClass ) {
+    public Class load( final Class instanceClass ) {
       final List<Class<?>> interfaces = Lists.newArrayList();
       for ( final Class clazz : Classes.interfaceAncestors().apply( instanceClass ) ) {
         interfaces.add( clazz );

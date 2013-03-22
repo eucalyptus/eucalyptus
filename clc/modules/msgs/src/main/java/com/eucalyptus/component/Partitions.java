@@ -111,10 +111,10 @@ public class Partitions {
     }
   }
   
-  private static final Map<String,Partition> partitionMap = new MapMaker().makeComputingMap( LookupPartition.INSTANCE );
-  enum LookupPartition implements Function<String, Partition> {
+  private static final LoadingCache<String,Partition> partitionMap = CacheBuilder.build(LookupPartition.INSTANCE);
+  enum LookupPartition implements CacheLoader<String, Partition> {
     INSTANCE;
-    public Partition apply( final String input ) {
+    public Partition load( final String input ) {
       try {
         Databases.awaitSynchronized( );
         EntityTransaction db = Entities.get( Partition.class );
