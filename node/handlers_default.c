@@ -689,15 +689,22 @@ static int doDescribeResource(struct nc_state_t *nc, ncMetadata * pMeta, char *r
         return EUCA_OVERFLOW_ERROR;
     }
 
-    res = allocate_resource("OK", nc->iqn, nc->mem_max, mem_free, nc->disk_max, disk_free, nc->cores_max, cores_free, "none");
+    res = allocate_resource(nc->is_enabled ? "enabled" : "disabled", 
+                            nc->iqn, 
+                            nc->mem_max, mem_free, nc->disk_max, disk_free, nc->cores_max, cores_free, 
+                            "none");
     if (res == NULL) {
         LOGERROR("out of memory\n");
         return EUCA_MEMORY_ERROR;
     }
-
+    
     *outRes = res;
-    LOGDEBUG("returning cores=%d/%lld mem=%lld/%lld disk=%lld/%lld iqn=%s\n", cores_free, nc->cores_max, mem_free, nc->mem_max, disk_free,
-             nc->disk_max, nc->iqn);
+    LOGDEBUG("returning status=%s cores=%d/%lld mem=%lld/%lld disk=%lld/%lld iqn=%s\n", 
+             res->nodeStatus,
+             cores_free, nc->cores_max, 
+             mem_free, nc->mem_max, 
+             disk_free, nc->disk_max, 
+             nc->iqn);
     return EUCA_OK;
 }
 
@@ -2005,8 +2012,37 @@ static int doDescribeSensors(struct nc_state_t *nc, ncMetadata * pMeta, int hist
 //!
 static int doModifyNode(struct nc_state_t *nc, ncMetadata * pMeta, char *stateName)
 {
-    LOGINFO("node state change to %s\n", stateName);
-    return EUCA_OK;
+    int ret = EUCA_OK;
+    boolean did_change_state = FALSE;
+
+    if (strcasecmp(stateName, "enabled")) {
+        if (nc->is_enabled == FALSE) {
+            nc->is_enabled = TRUE;
+            did_change_state = TRUE;
+        }
+
+    } else if (strcasecmp(stateName, "disabled")) {
+        if (nc->is_enabled == TRUE) {
+            nc->is_enabled = FALSE;
+            did_change_state = TRUE;
+        }
+
+    } else {
+        LOGERROR("unexpected state '%s' requested for the node\n", stateName);
+        ret = EUCA_ERROR;
+    }
+
+    if (did_change_state) {
+        LOGINFO("node state change to %s\n", stateName);
+        if (gen_nc_xml(nc) != EUCA_OK) {
+            LOGERROR("failed to update NC state on disk\n");
+            ret = EUCA_ERROR;
+        } else {
+            LOGINFO("wrote NC state to disk\n");
+        }
+    }
+    
+    return ret;
 }
 
 //!

@@ -354,7 +354,7 @@ int read_nc_xml(struct nc_state_t *nc_state_param)
     char buf[1024];
 
     snprintf(path, sizeof(path), EUCALYPTUS_NC_STATE_FILE, nc_state.home);
-    bzero(&nc_state_param, sizeof(struct nc_state_t));
+    bzero(nc_state_param, sizeof(struct nc_state_t));
 
     if (get_xpath_content_at(path, "/nc/version", 0, nc_state_param->version, sizeof(nc_state_param->version))==NULL) {
         LOGDEBUG("failed to read /nc/version from %s\n", path);

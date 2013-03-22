@@ -1730,6 +1730,8 @@ static int init(void)
     { // load NC's state from disk, if any
         struct nc_state_t nc_state_disk;
         if (read_nc_xml(&nc_state_disk) == EUCA_OK) {
+            LOGINFO("loaded NC state from previous invocation\n");
+
             // check on the version, in case it has changed
             if (strcmp(nc_state_disk.version, nc_state.version)!=0
                 && nc_state_disk.version[0]!='\0') {
@@ -1745,6 +1747,8 @@ static int init(void)
         } else { // there is no disk state, so create it
             if (gen_nc_xml(&nc_state) != EUCA_OK) {
                 LOGERROR("failed to update NC state on disk\n");
+            } else {
+                LOGINFO("wrote NC state to disk\n");
             }
         }
     }
