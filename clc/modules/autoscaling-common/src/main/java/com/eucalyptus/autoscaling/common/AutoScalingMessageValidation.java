@@ -76,6 +76,7 @@ class AutoScalingMessageValidation {
     EC2_INSTANCE( "i-[0-9a-fA-F]{8}" ),
     EC2_INSTANCE_VERBOSE( "i-[0-9a-fA-F]{8}|verbose" ),
     EC2_USERDATA( "(?s).{0,90000}" ), // Enough for 64KiB Base64 encoded with some formatting
+    EC2_SPOT_PRICE( "[0-9]{1,4}\\.[0-9]{2,4}" ),
 
     // ELB
     ELB_NAME( "(?s).{1,255}" ),

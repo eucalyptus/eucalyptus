@@ -1071,6 +1071,7 @@ public class CreateLaunchConfigurationType extends AutoScalingMessage {
   BlockDeviceMappings blockDeviceMappings
   @HttpEmbedded
   InstanceMonitoring instanceMonitoring
+  @AutoScalingMessageValidation.FieldRegex(AutoScalingMessageValidation.FieldRegexValue.EC2_SPOT_PRICE)
   String spotPrice
   @AutoScalingMessageValidation.FieldRegex(AutoScalingMessageValidation.FieldRegexValue.IAM_NAME_OR_ARN)
   String iamInstanceProfile

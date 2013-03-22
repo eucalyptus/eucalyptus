@@ -321,8 +321,8 @@ public class AutoScalingService {
     final DeleteLaunchConfigurationResponseType reply = request.getReply( );
     final Context ctx = Contexts.lookup( );
     try {
-      final LaunchConfiguration launchConfiguration = launchConfigurations.lookup( 
-          ctx.getUserFullName( ).asAccountFullName( ), 
+      final LaunchConfiguration launchConfiguration = launchConfigurations.lookup(
+          ctx.getUserFullName( ).asAccountFullName( ),
           request.getLaunchConfigurationName( ) );
       if ( RestrictedTypes.filterPrivileged().apply( launchConfiguration ) ) {
         launchConfigurations.delete( launchConfiguration );
@@ -432,6 +432,9 @@ public class AutoScalingService {
               request.availabilityZones(),
               request.loadBalancerNames()
           );
+          verifyUnsupportedReferences( referenceErrors,
+              request.getPlacementGroup(),
+              request.getVpcZoneIdentifier() );
 
           if ( !referenceErrors.isEmpty() ) {
             throw Exceptions.toUndeclared( new ValidationErrorException( "Invalid parameters " + referenceErrors ) );
@@ -1075,7 +1078,6 @@ public class AutoScalingService {
                   Sets.newLinkedHashSet( Iterables.filter(
                       Iterables.transform( request.terminationPolicies(), Enums.valueOfFunction( TerminationPolicyType.class ) ),
                       Predicates.not( Predicates.isNull() ) ) ) ) );
-            //TODO:STEVE: something for VPC zone identifier or placement group?
 
             if ( autoScalingGroup.getDesiredCapacity() < autoScalingGroup.getMinSize() ) {
               throw Exceptions.toUndeclared( new ValidationErrorException( "DesiredCapacity must not be less than MinSize" ) );
@@ -1090,6 +1092,9 @@ public class AutoScalingService {
                 autoScalingGroup.getAvailabilityZones(),
                 Collections.<String>emptyList() // load balancer names cannot be updated
             );
+            verifyUnsupportedReferences( referenceErrors,
+                request.getPlacementGroup(),
+                request.getVpcZoneIdentifier() );
 
             if ( !referenceErrors.isEmpty() ) {
               throw Exceptions.toUndeclared( new ValidationErrorException( "Invalid parameters " + referenceErrors ) );
@@ -1262,6 +1267,18 @@ public class AutoScalingService {
       autoScalingGroup.setCapacityTimestamp( new Date() );
     } else {
       throw Exceptions.toUndeclared( new InternalFailureException("Group is in cooldown") );
+    }
+  }
+
+  private static void verifyUnsupportedReferences( final List<String> referenceErrors,
+                                                   final String placementGroup,
+                                                   final String vpcZoneIdentifier ) {
+    if ( !com.google.common.base.Strings.isNullOrEmpty( placementGroup ) ) {
+      referenceErrors.add( "Invalid placement group: " + placementGroup );
+    }
+
+    if ( !com.google.common.base.Strings.isNullOrEmpty( vpcZoneIdentifier ) ) {
+      referenceErrors.add( "Invalid VPC zone identifier: " + vpcZoneIdentifier );
     }
   }
 
