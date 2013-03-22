@@ -331,11 +331,11 @@ public class Exceptions {
     }
   }
   
-  private static final Map<Class, ErrorMessageBuilder> builders = new MapMaker( ).makeComputingMap(
-                                                                                 new Function<Class, ErrorMessageBuilder>( ) {
+  private static final LoadingCache<Class, ErrorMessageBuilder> builders = CacheBuilder.build(
+                                                                                 new CacheLoader<Class, ErrorMessageBuilder>( ) {
                                                                                    
                                                                                    @Override
-                                                                                   public ErrorMessageBuilder apply( Class input ) {
+                                                                                   public ErrorMessageBuilder load( Class input ) {
                                                                                      return new ErrorMessageBuilder( input );
                                                                                    }
                                                                                  } );

@@ -71,11 +71,12 @@ import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.FullName;
 import com.eucalyptus.util.OwnerFullName;
-import com.google.common.collect.MapMaker;
+import com.google.common.cache.CacheBuilder;
+import com.google.common.cache.LoadingCache;
 
 public class UserFullName implements OwnerFullName {
   private static final long serialVersionUID = 1L;
-  private static ConcurrentMap<String, UserFullName> userIdMap = new MapMaker( ).softValues( ).makeMap( );
+  private static LoadingCache<String, UserFullName> userIdMap = CacheBuilder.newBuilder.softValues().build();
   private static Logger                              LOG       = Logger.getLogger( UserFullName.class );
   private static final String                        VENDOR    = "euare";
   private final String                               userId;

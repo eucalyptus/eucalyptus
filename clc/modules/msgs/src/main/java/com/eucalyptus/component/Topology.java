@@ -108,10 +108,11 @@ import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
 import com.google.common.base.Supplier;
 import com.google.common.base.Throwables;
+import com.google.common.cache.CacheBuilder;
+import com.google.common.cache.LoadingCache;
 import com.google.common.collect.Collections2;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
-import com.google.common.collect.MapMaker;
 import com.google.common.primitives.Ints;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 
@@ -968,8 +969,8 @@ public class Topology {
   
   //@noformat
   private static final
-  Map<Component.State, Function<ServiceConfiguration, ServiceConfiguration>> 
-  cloudTransitionCallables = new MapMaker( ).makeComputingMap( TopologyFunctionGenerator.INSTANCE ); //TODO:GRZE: CacheBuilder
+  LoadingCache<Component.State, Function<ServiceConfiguration, ServiceConfiguration>> 
+    cloudTransitionCallables = CacheBuilder.build(TopologyFunctionGenerator.INSTANCE);
   //@format
   private static Function<ServiceConfiguration, ServiceConfiguration> get( final Component.State state ) {
     return cloudTransitionCallables.get( state );
