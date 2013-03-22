@@ -17,7 +17,6 @@
  * CA 93117, USA or visit http://www.eucalyptus.com/licenses/ if you need
  * additional information or have any questions.
  ************************************************************************/
-
 (function($, eucalyptus) {
   $.widget('eucalyptus.instance', $.eucalyptus.eucawidget, {
     options : {
@@ -37,6 +36,8 @@
     instPassword : {}, // only windows instances
     detachButtonId : 'btn-vol-detach',
     _init : function() {
+            console.log ( "INIT!!!" );
+        
       var thisObj = this;
       var $tmpl = $('html body').find('.templates #instanceTblTmpl').clone();
       var $wrapper = $($tmpl.render($.extend($.i18n.map, help_instance)));
@@ -47,7 +48,7 @@
         data_deps: ['instances', 'volumes', 'addresses'],
         hidden: thisObj.options['hidden'],
         dt_arg : {
-          "sAjaxSource": 'instance',
+          "sAjaxSource": 'instances',
           "aaSorting": [[ 10, "desc" ]],
           "aoColumnDefs": [
             {

@@ -43,7 +43,9 @@
         data_deps: ['addresses', 'instances'],
         hidden: thisObj.options['hidden'],
         dt_arg : {
-          "sAjaxSource": 'eip',
+          "sAjaxSource": 'eips',
+          "bAutoWidth" : false,
+          "sPaginationType": "full_numbers",
           "aoColumnDefs": [
             {
 	      // Display the checkbox button in the main table
@@ -114,9 +116,6 @@
         filters : [{name:"eip_state", options: ['all','assigned','unassigned'], filter_col:3, alias: {'assigned':'assigned','unassigned':'unassigned'}, text: [eip_state_selector_all,eip_state_selector_assigned,eip_state_selector_unassigned] }],
       });
       this.tableWrapper.appendTo(this.element);
-      $('html body').eucadata('addCallback', 'eip', 'eip-landing', function() {
-        thisObj.tableWrapper.eucatable('redraw');
-      });
     },
 
     _create : function() { 
