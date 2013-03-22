@@ -27,6 +27,8 @@ import com.eucalyptus.cloudwatch.domain.alarms.AlarmEntity.StateValue;
 import com.eucalyptus.cloudwatch.domain.alarms.AlarmEntity.Statistic;
 import com.eucalyptus.cloudwatch.domain.alarms.AlarmHistory.HistoryItemType;
 import com.eucalyptus.cloudwatch.domain.dimension.DimensionEntity;
+import com.eucalyptus.cloudwatch.domain.listmetrics.ListMetric;
+import com.eucalyptus.cloudwatch.domain.metricdata.MetricEntityFactory;
 import com.eucalyptus.cloudwatch.domain.metricdata.MetricEntity.MetricType;
 import com.eucalyptus.cloudwatch.domain.metricdata.MetricEntity.Units;
 import com.eucalyptus.component.ComponentIds;
@@ -413,6 +415,27 @@ public class AlarmManager {
     return results;
   }
 
+  /**
+   * Delete all alarm history before a certain date
+   * @param before the date to delete before (inclusive)
+   */
+  public static void deleteAlarmHistory(Date before) {
+    EntityTransaction db = Entities.get(AlarmHistory.class);
+    try {
+      Map<String, Date> criteria = new HashMap<String, Date>();
+      criteria.put("before", before);
+      Entities.deleteAllMatching(AlarmHistory.class, "WHERE timestamp < :before", criteria);
+      db.commit();
+    } catch (RuntimeException ex) {
+      Logs.extreme().error(ex, ex);
+      throw ex;
+    } finally {
+      if (db.isActive())
+        db.rollback();
+    }
+  }
+
+  
   static void changeAlarmState(AlarmEntity alarmEntity, AlarmState newState, Date now) {
     LOG.info("Updating alarm " + alarmEntity.getAlarmName() + " from " + alarmEntity.getStateValue() + " to " + newState.getStateValue());
     alarmEntity.setStateUpdatedTimestamp(now);
