@@ -41,7 +41,7 @@
         data_deps: ['snapshots'],
         hidden: thisObj.options['hidden'],
         dt_arg : {
-          "sAjaxSource": 'snapshots',
+          "sAjaxSource": 'snapshot',
           "aoColumnDefs": [
             {
 	      // Display the checkbox button in the main table
@@ -156,6 +156,9 @@
         legend : ['pending', 'completed', 'error'],
       });
       this.tableWrapper.appendTo(this.element);
+      $('html body').eucadata('addCallback', 'snapshot', 'snapshot-landing', function() {
+        thisObj.tableWrapper.eucatable('redraw');
+      });
     },
 
     _create : function() { 

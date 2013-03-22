@@ -43,7 +43,7 @@
         data_deps: ['volumes'],
         hidden : thisObj.options['hidden'],
         dt_arg : {
-          "sAjaxSource": 'volumes',
+          "sAjaxSource": 'volume',
           "aaSorting": [[ 7, "desc" ]],
           "aoColumnDefs": [
             {
@@ -158,6 +158,9 @@
         legend : ['creating', 'available', 'in-use', 'deleting', 'deleted', 'error'],
       });
       this.tableWrapper.appendTo(this.element);
+      $('html body').eucadata('addCallback', 'volume', 'volume-landing', function() {
+        thisObj.tableWrapper.eucatable('redraw');
+      });
     },
 
     _create : function() { 

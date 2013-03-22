@@ -38,7 +38,7 @@
         data_deps: ['keypairs'],
         hidden: thisObj.options['hidden'],
         dt_arg : {
-          "sAjaxSource": 'keypairs',
+          "sAjaxSource": 'keypair',
           "aoColumnDefs": [
             {
               // Display the checkbox button in the main table
@@ -103,6 +103,9 @@
         },
       });
       this.tableWrapper.appendTo(this.element);
+      $('html body').eucadata('addCallback', 'keypair', 'keypair-landing', function() {
+        thisObj.tableWrapper.eucatable('redraw');
+      });
     },
 
     _create : function() { 
