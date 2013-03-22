@@ -50,7 +50,8 @@ define([
         ).fail(
           // Failure
           function(jqXHR, textStatus) {
-            console.log('EUCACOLLECTION (error for +'+name+') : '+textStatus);
+            console.log('EUCACOLLECTION (error for '+name+') : '+textStatus);
+            options.error && options.error(jqXHR, textStatus, options);
           }
         );
       }

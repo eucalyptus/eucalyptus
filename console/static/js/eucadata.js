@@ -91,7 +91,7 @@
                   }
                 },
                 //error: function(jqXHR, textStatus, errorThrown){ 
-                error: function(model, response){
+                error: function(jqXHR, response){
                   console.log("error reading data "+name+" status:"+response);
                   thisObj._errorCode = response
                   thisObj._numPending--;
