@@ -375,7 +375,7 @@ public class LoadBalancingService {
 	    // the case that servo instances want the listeners assigned to it
 	    // TODO: SPARK: authenticate/authorize using IAM roles	
 	    if (marker!= null && marker.startsWith("servo")){
-	  	  String instanceId = marker.replace("servo:", "");
+	  	String instanceId = marker.replace("servo:", "");
 	    	return describeLoadBalancersServo(instanceId, reply); 	
 	    }else{	// normal describe-load-balancers path
 		    final Function<Set<String>, Set<String>> lookupLBNames = new Function<Set<String>, Set<String>>( ) {
