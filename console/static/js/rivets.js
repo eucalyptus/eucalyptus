@@ -1,10 +1,3 @@
-rivets.binders["widget-*"] = function(el, value) {
-  console.log('widget', this.args[0], value, this);
-  require(['views/' + this.args[0] + '/index'], function(view) {
-    new view({el: el, model: value});
-  });
-}
-
 rivets.configure({
 	adapter: {
 	    subscribe: function(obj, keypath, callback) {
@@ -26,7 +19,6 @@ rivets.configure({
 		};
 	    },
 	    read: function(obj, keypath) {
-		console.log('RIVETS-READ',obj,keypath);
 		if (obj instanceof Backbone.Collection)  {
 		    if(keypath) {
                        return obj[keypath];
@@ -47,4 +39,19 @@ rivets.configure({
 	}
 });
 
+var uiBindings = {}
 
+rivets.binders["ui-*"] = {
+    routine: function(el, value) {
+        var existingView = uiBindings[el];
+        if (!existingView) {
+           require(['views/ui/' + this.args[0] + '/index'], function(view) {
+               var view = new view({el: el, model: value});
+               uiBindings[el] = view;
+           });
+        } else if (existingView.model != value) { 
+           existingView.model = value; 
+           existingView.render(); 
+        }
+    }
+}
