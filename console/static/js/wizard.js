@@ -206,7 +206,7 @@ define([], function() {
     }
 
     self.scrapeTitle = function(tpl) {
-      var rex = /<h[1234]>([^<>]*?)<\/h[1234]>/i;
+      var rex = /<h[1234][a-zA-Z0-9=\'\"\-\s]*>([^<>]*?)<\/h[1234]>/i;
       if (rex.test(tpl)) {
         return rex.exec(tpl)[1];
       }

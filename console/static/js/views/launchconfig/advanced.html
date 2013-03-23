@@ -1,0 +1,47 @@
+<div class="wizard-step">
+<div class="wizardTitle"><h3>Advanced</h3></div>
+<div id="launch-wizard-advanced-main-contents">
+<div class="wizard-section-label">Select advanced options:</div>
+<div id="launch-wizard-advanced-userdata"> <div class="form-row clearfix upper-sibling">
+<label for="launch-wizard-advanced-input-userdata">User data</label><textarea class="description" title="Enter custom user data to be passed to the instances or click the choose file button" id="launch-wizard-advanced-input-userdata"></textarea>
+</div>
+<div class="form-row clearfix lower-sibling">
+<label for="launch-wizard-advanced-input-userfile">Or:</label><input id="launch-wizard-advanced-input-userfile" type="file">
+</div>
+</div>
+<div id="launch-wizard-advanced-kernelramdisk"> <div id="launch-wizard-advanced-kernel" class="form-row clearfix">
+<label for="launch-wizard-advanced-kernel-selector">Kernel ID</label><select id="launch-wizard-advanced-kernel-selector" title="Select a specific kernel ID"><option value="default">Use default from image</option>
+<option value="eki-3B833B83">eki-3B833B83</option></select>
+</div>
+<div id="launch-wizard-advanced-ramdisk" class="form-row clearfix">
+<label for="launch-wizard-advanced-ramdisk-selector">RAM disk ID</label><select id="launch-wizard-advanced-ramdisk-selector" title="Select a specific RAM disk ID"><option value="default">Use default from image</option>
+<option value="eri-22583D83">eri-22583D83</option></select>
+</div>
+</div>
+<div class="form-row clearfix orphan-row" id="launch-wizard-advanced-network"> <label for="launch-wizard-advanced-input-network">Network</label><input id="launch-wizard-advanced-input-network" title="Select this to prevent a public IP address from being assigned to your instance(s). They will only be accessible from other instances in the same security group." type="checkbox"><label for="launch-wizard-advanced-input-network" class="plaintext-label">Use private addressing only</label>
+</div>
+<div id="launch-wizard-advanced-storage"> <div class="wizard-section-label">Storage</div>
+<div id="launch-wizard-advanced-storage-table-wrapper"><table class="device-map-table">
+<thead><tr>
+<th>Volume</th>
+<th>Mapping</th>
+<th>Create From Snapshot</th>
+<th>Size (GB)</th>
+<th>Delete on Termination</th>
+</tr></thead>
+<tbody><tr>
+<td><select disabled class="launch-wizard-advanced-storage-volume-selector" title="Select the source of the additional storage"><option value="root">Root</option></select></td>
+<td>/dev/<input disabled class="launch-wizard-advanced-storage-mapping-input" title="Add a mapping for the additional storage" type="text">
+</td>
+<td><select disabled class="launch-wizard-advanced-storage-snapshot-input" title="Select a snapshot to use for the storage"><option value="snap-D9193F44">snap-D9193F44</option></select></td>
+<td><input class="launch-wizard-advanced-storage-size-input" title="Specify the size of the storage in whole gigabytes" type="text"></td>
+<td class="centered-cell"><input checked class="launch-wizard-advanced-storage-delOnTerm" type="checkbox"></td>
+</tr></tbody>
+</table></div>
+</div>
+<input value="emi-EDBA3EEA" id="launch-wizard-image-emi" type="hidden">
+</div>
+<div id="launch-wizard-buttons-advanced" class="launch-wizard-buttons"> <button class="button" id="launch-wizard-buttons-advanced-launch">Launch instance(s)</button>
+</div>
+</div>
+</div>

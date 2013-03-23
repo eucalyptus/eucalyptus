@@ -188,8 +188,8 @@
         case 'rivetstest':
           this.element.rivetstest();
           break;
-        case 'wizimagetest':
-          this.element.wizimagetest();
+        case 'launchconfig':
+          this.element.launchconfig();
           break;
       }
       if (options !== KEEP_VIEW) {
