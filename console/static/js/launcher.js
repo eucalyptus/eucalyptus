@@ -731,6 +731,7 @@
           var $rule = $section.find('div#launch-wizard-security-sg-detail');
           $rule.children().detach();
           $rule.append(
+            // XSS Warning: groupName might contain a XSS string.
             $('<div>').addClass('launcher-sgroup-details-label').html($.i18n.prop('launch_instance_security_group_rule',DefaultEncoder().encodeForHTML(groupName))));
           var results = describe('sgroup');
           var group = null;
@@ -771,12 +772,11 @@
               });
               src = src.join(', '); 
  
-              src = $("<div/>").html(src).text();
               $wrapper.append( $('<div>').addClass('launcher-sgroup-rule-label').html(launch_instance_security_rule + ':'),
                                  $('<ul>').append(
                                    $('<li>').text(protocol),
                                    $('<li>').text(portOrType),
-                                   $('<li>').text(src)));
+                                   $('<li>').text(src)));   // XSS Warning: src might contain a XSS string. Safe with text().
               $rule.append($wrapper);
             });
           } 
