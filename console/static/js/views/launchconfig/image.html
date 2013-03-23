@@ -1,51 +1,13 @@
+<div class="wizard-step">
+<div class="wizardTitle"><h3 class="required-label" data-text="jerry">Image</h3></div>
 <div id="launch-wizard-image-main-contents">
   <div id="launch-wizard-image-table">
+  
     <div id="launch-images_wrapper" class="dataTables_wrapper">
-      <div id="filter-wrapper">
-        <div class="wizard-section-label">Refine your results</div>
-        <div class="euca-table-filter" id="owner-filter">
-          <select id="owner-selector" title="[launch_instance_owner_select_tip]">
-            <option value="all">All images</option>
-            <option value="self">Images owned by me</option>
-          </select>
-        </div>
-        <div class="euca-table-filter" id="platform-filter">
-          <select id="platform-selector" title="Filter the image list by platform">
-            <option value="all">All platforms</option>
-            <option value="linux">Linux</option>
-            <option value="windows">Windows</option>
-          </select>
-        </div>
-        <div class="clear"></div>
-        <div class="euca-table-filter" id="arch-filter">
-          <select id="arch-selector" title="Filter the image list by architecture">
-            <option value="all">32 and 64 bit</option>
-            <option value="i386">32 bit</option>
-            <option value="x86_64">64 bit</option>
-          </select>
-        </div>
-        <div class="clear"></div>
-        <div class="euca-table-filter" id="root-filter">
-          <select id="root-selector" title="Filter the image list by root device type">
-            <option value="all">All root devices</option>
-            <option value="instance-store">Instance-store root device</option>
-            <option value="ebs">EBS root device</option>
-          </select>
-        </div>
-        <div class="clear"></div>
-        <div id="launch-images_filter" class="dataTables_filter">
-          <label>
-            <input title="Start typing an image ID to filter by image ID" placeholder="Search images" type="text">
-          </label>
-        </div>
-      </div>
-      <div id="table-wrapper">
-        <div class="wizard-section-label required-label">Select image</div>
-        <div id="wizard-img-table-size">
-          <span id="img-table-count"></span>
-          &nbsp;Showing:<a class="show selected" href="#">5</a>&nbsp;|&nbsp;<a class="show" href="#">10</a>&nbsp;|&nbsp;<a class="show" href="#">20</a>&nbsp;|&nbsp;<a class="show" href="#">all</a>
-        </div>
-        <table id="launch-images" class="display">
+      <div style="float:left;" class="wizard-section-label required-label">Select image</div>
+       <div id="table-wrapper" style="float:left">
+         <div>
+         <table id="launch-images" class="display">
           <thead>
             <tr>
               <th colspan="1" rowspan="1" class="sorting_asc"></th>
@@ -65,7 +27,7 @@
               </td>
             </tr>
           -->
-            <tr data-each-image="images.image">
+            <tr data-each-image="images">
               <td>
                 <div data-text="image.description" data-class="image.platform" class="image.type">
                   <div class="image-name" data-text="image.name"></div>
@@ -78,6 +40,7 @@
             </tr>  
           </tbody>
         </table>
+        </div>
         <div style="visibility: hidden;" class="dataTables_processing" id="launch-images_processing">
           <img src="images/dots32.gif"> &nbsp; <span>Loading...</span>
         </div>
@@ -98,5 +61,6 @@
     </div>
   </div>
 </div>
-<div id="launch-wizard-buttons-image" class="launch-wizard-buttons"> <button class="button" id="launch-wizard-buttons-image-next">Next: Select type</button>
+</div>
+</div>
 </div>
