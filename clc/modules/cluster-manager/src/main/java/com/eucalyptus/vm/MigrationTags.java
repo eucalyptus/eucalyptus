@@ -66,7 +66,6 @@ import javax.annotation.Nullable;
 import org.apache.log4j.Logger;
 import com.eucalyptus.component.Topology;
 import com.eucalyptus.component.id.Eucalyptus;
-import com.eucalyptus.context.ServiceContext;
 import com.eucalyptus.util.async.AsyncRequests;
 import com.google.common.base.Predicate;
 import edu.ucsb.eucalyptus.msgs.CreateTagsType;
@@ -97,7 +96,7 @@ enum MigrationTags implements Predicate<VmInstance> {
   
   private static void dispatch( final ResourceTagMessage tagMessage ) {
     try {
-      ServiceContext.dispatch( tagMessage );
+      AsyncRequests.dispatch( Topology.lookup( Eucalyptus.class ), tagMessage );
     } catch ( Exception ex ) {
       LOG.trace( ex );
     }

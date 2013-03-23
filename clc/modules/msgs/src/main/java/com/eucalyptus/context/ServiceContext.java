@@ -65,7 +65,6 @@ package com.eucalyptus.context;
 import java.util.concurrent.Callable;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
-import javax.annotation.Nullable;
 import org.apache.log4j.Logger;
 import org.mule.DefaultMuleEvent;
 import org.mule.DefaultMuleMessage;
@@ -89,9 +88,6 @@ import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.bootstrap.BootstrapException;
 import com.eucalyptus.component.ComponentId;
-import com.eucalyptus.component.ComponentIds;
-import com.eucalyptus.component.ComponentMessages;
-import com.eucalyptus.component.ComponentId.ComponentMessage;
 import com.eucalyptus.configurable.ConfigurableClass;
 import com.eucalyptus.configurable.ConfigurableField;
 import com.eucalyptus.configurable.ConfigurableProperty;
@@ -101,22 +97,10 @@ import com.eucalyptus.empyrean.Empyrean;
 import com.eucalyptus.system.Threads;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.Exceptions;
-import com.google.common.base.Function;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 
 @ConfigurableClass( root = "bootstrap.servicebus", description = "Parameters having to do with the service bus." )
 public class ServiceContext {
-  enum ResolveEndpoint implements Function<BaseMessage,String> {
-    INSTANCE;
-
-    @Override
-    public String apply( @Nullable BaseMessage input ) {
-      Class<? extends ComponentId> compIdClass = ComponentMessages.lookup( input );
-      ComponentId compId = ComponentIds.lookup( compIdClass );
-      return compId.getLocalEndpointName( );
-    }
-    
-  }
   static Logger                                LOG                      = Logger.getLogger( ServiceContext.class );
   private static SpringXmlConfigurationBuilder builder;
   @ConfigurableField( initial = "256", description = "Max queue length allowed per service stage.", changeListener = HupListener.class )
@@ -139,10 +123,6 @@ public class ServiceContext {
   private static final AtomicReference<MuleClient> client            = new AtomicReference<MuleClient>( null );
   private static final BootstrapException          failEx            = new BootstrapException(
                                                                                                     "Attempt to use esb client before the service bus has been started." );
-  
-  public static <T extends BaseMessage> void dispatch( T msg ) throws Exception {
-    dispatch( ResolveEndpoint.INSTANCE.apply( msg ), msg );
-  }
   
   public static void dispatch( String dest, Object msg ) throws Exception {
     dest = ServiceContextManager.mapServiceToEndpoint( dest );
@@ -201,13 +181,7 @@ public class ServiceContext {
       }
     } );
   }
-
-  public static <T extends BaseMessage, R extends BaseMessage> Object send( T msg ) throws Exception {
-    return send( ResolveEndpoint.INSTANCE.apply( msg ), msg );
-  }
   
-
-  @Deprecated
   public static <T> T send( ComponentId dest, Object msg ) throws Exception {
     return send( dest.getLocalEndpointName( ), msg );
   }

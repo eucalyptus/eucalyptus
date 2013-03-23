@@ -90,7 +90,6 @@ import com.eucalyptus.component.Topology;
 import com.eucalyptus.component.id.ClusterController;
 import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.component.id.Storage;
-import com.eucalyptus.context.ServiceContext;
 import com.eucalyptus.node.Nodes;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
@@ -381,7 +380,7 @@ public class VmRuntimeState {
       }
     };
     try {
-      ServiceContext.dispatch( createTags );
+      AsyncRequests.dispatch( Topology.lookup( Eucalyptus.class ), createTags );
     } catch ( Exception ex ) {
       LOG.error( ex );
     }
