@@ -206,7 +206,7 @@ define([], function() {
     }
 
     self.scrapeTitle = function(tpl) {
-      var rex = /<h[1234]>([^<>]*?)<\/h[1234]>/i;
+      var rex = /<h[1234][a-zA-Z0-9=\'\"\-\s]*>([^<>]*?)<\/h[1234]>/i;
       if (rex.test(tpl)) {
         return rex.exec(tpl)[1];
       }
@@ -314,7 +314,10 @@ define([], function() {
             this.wizardContent.slideUp(0);
           }
           var Type = self.current;
-          var page = new Type($(this.wizardContent));
+console.log('TYPE', Type, typeof Type);
+          Type.el = this.wizardContent;
+//          var page = new Type($(this.wizardContent));
+          var page = Type;
           this.wizardContent.empty();
           this.wizardContent.append(page.$el);
           if (shouldAnimate) {
@@ -381,8 +384,8 @@ define([], function() {
 
       function titler(position) {
         var result = "Next";
-        if (self.position < pages.length) {
-          result += ': ' + self.scrapeTitle(templates[position + 1]);
+        if (self.position < pages.length && templates[position + 1]) {
+          result += ': ' + templates[position + 1].titleStr;
         }
         return result;
       }
@@ -399,8 +402,7 @@ define([], function() {
         });
       }
 
-      function genericTitle(tpl, index) {
-        var name = self.scrapeTitle(tpl);
+      function genericTitle(name, index) {
         return Backbone.View.extend({
           initialize: function() {
             this.render();
@@ -422,8 +424,44 @@ define([], function() {
 
       this.add = function(template) {
         console.log("ADD TPL " + new Error().stack);
-        doAdd(genericView(template), genericTitle(template, pages.length));
-        templates.push(template);
+        doAdd(template, genericTitle(self.scrapeTitle(template), pages.length));
+        // templates.push(template);
+        return bldr;
+      }
+
+      this.add = function(template, closedView) {
+	var tObj;
+	var cView;
+        var titleStr;
+	if (typeof template === 'string') {
+ 		tObj = new (genericView(template));
+		titleStr = self.scrapeTitle(template);
+	} else if (typeof template === 'function') {
+		tObj = new template();
+	} else if (typeof template === 'object') {
+		tObj = template;
+	}
+
+	if (tObj.title) {
+		if (typeof tObj.title === 'string') {
+			titleStr = tObj.title;
+		} else if (typeof tObj.title === 'function') {
+			titleStr = tObj.title();
+		} else {
+			titleStr = 'Page ' + pages.length + 1;
+		}
+	} 
+
+	if (closedView) 	
+		cView = closedView;
+	else
+		cView = genericTitle(titleStr, pages.length);
+
+	tObj.cView = cView;
+	tObj.titleStr = titleStr;
+	doAdd(tObj, cView);
+
+        templates.push(tObj);
         return bldr;
       }
 
