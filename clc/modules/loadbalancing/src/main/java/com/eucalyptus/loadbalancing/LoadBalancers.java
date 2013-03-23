@@ -20,23 +20,21 @@
 
 package com.eucalyptus.loadbalancing;
 
+import static com.eucalyptus.loadbalancing.LoadBalancingMetadata.LoadBalancerMetadata;
+import static com.eucalyptus.util.RestrictedTypes.QuantityMetricFunction;
 import java.util.Collection;
 import java.util.List;
 import java.util.NoSuchElementException;
 import javax.persistence.EntityTransaction;
-import javax.validation.ConstraintViolationException;
 
 import org.apache.log4j.Logger;
 import com.eucalyptus.auth.principal.UserFullName;
-import com.eucalyptus.cluster.Cluster;
-import com.eucalyptus.component.Component;
 import com.eucalyptus.entities.Entities;
-import com.eucalyptus.entities.TransactionException;
 import com.eucalyptus.loadbalancing.LoadBalancerListener.PROTOCOL;
 import com.eucalyptus.loadbalancing.activities.EucalyptusActivityTasks;
 import com.eucalyptus.loadbalancing.activities.LoadBalancerServoInstance;
 import com.eucalyptus.util.Exceptions;
-import com.eucalyptus.util.RestrictedTypes;
+import com.eucalyptus.util.OwnerFullName;
 import com.google.common.base.Function;
 import com.google.common.base.Predicate;
 import com.google.common.base.Strings;
@@ -118,7 +116,7 @@ public class LoadBalancers {
 		    	    	return new AccessPointNotFoundException();
 		    	    }
 		        	  //IAM support to restricted lb modification
-		     	   if(!RestrictedTypes.filterPrivileged().apply(lb)) {
+		     	   if(!LoadBalancingMetadatas.filterPrivileged().apply(lb)) {
 		     	       return new AccessPointNotFoundException();
 		     	   }
 		        	try{
@@ -317,4 +315,19 @@ public class LoadBalancers {
 			throw new LoadBalancingException("failed to query servo instances");
 		}
 	}
+
+  @QuantityMetricFunction( LoadBalancerMetadata.class )
+  public enum CountLoadBalancers implements Function<OwnerFullName, Long> {
+    INSTANCE;
+
+    @Override
+    public Long apply( final OwnerFullName input ) {
+      final EntityTransaction db = Entities.get( LoadBalancer.class );
+      try {
+        return Entities.count( LoadBalancer.named( input, null ) );
+      } finally {
+        db.rollback( );
+      }
+    }
+  }
 }

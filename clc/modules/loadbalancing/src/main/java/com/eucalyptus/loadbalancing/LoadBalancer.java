@@ -19,6 +19,7 @@
  ************************************************************************/
 package com.eucalyptus.loadbalancing;
 
+import static com.eucalyptus.loadbalancing.LoadBalancingMetadata.LoadBalancerMetadata;
 import java.util.Collection;
 import java.util.NoSuchElementException;
 
@@ -39,7 +40,6 @@ import org.hibernate.annotations.CacheConcurrencyStrategy;
 import org.hibernate.annotations.Entity;
 import org.hibernate.annotations.Parent;
 
-import com.eucalyptus.cloud.CloudMetadata.LoadBalancingMetadata;
 import com.eucalyptus.cloud.UserMetadata;
 import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.id.Eucalyptus;
@@ -57,7 +57,7 @@ import com.google.common.collect.Iterables;
 @PersistenceContext( name = "eucalyptus_loadbalancing" )
 @Table( name = "metadata_loadbalancer" )
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
-public class LoadBalancer extends UserMetadata<LoadBalancer.STATE> implements LoadBalancingMetadata {    
+public class LoadBalancer extends UserMetadata<LoadBalancer.STATE> implements LoadBalancerMetadata {
 	private static Logger    LOG     = Logger.getLogger( LoadBalancer.class );
 
 	@Transient
