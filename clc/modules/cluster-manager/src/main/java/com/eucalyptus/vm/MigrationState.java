@@ -65,6 +65,10 @@ package com.eucalyptus.vm;
 import org.apache.log4j.Logger;
 import com.google.common.base.Strings;
 
+/**
+ * @todo doc
+ * @author chris grzegorczyk <grze@eucalyptus.com>
+ */
 public enum MigrationState {
   none {
     @Override

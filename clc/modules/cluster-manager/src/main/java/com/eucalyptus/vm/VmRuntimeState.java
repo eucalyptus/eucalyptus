@@ -90,6 +90,7 @@ import com.eucalyptus.component.Topology;
 import com.eucalyptus.component.id.ClusterController;
 import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.component.id.Storage;
+import com.eucalyptus.context.ServiceContext;
 import com.eucalyptus.node.Nodes;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
@@ -367,7 +368,7 @@ public class VmRuntimeState {
   }
   
   /**
-   * Asynchronously assign the tag for this instance.
+   * Asynchronously assign the tag for this instance, do so only if it has changed.
    */
   private void setNodeTag( String serviceTag2 ) {
     final String host = URI.create( serviceTag2 ).getHost( );
@@ -380,7 +381,7 @@ public class VmRuntimeState {
       }
     };
     try {
-      AsyncRequests.dispatch( Topology.lookup( Eucalyptus.class ), createTags );
+      ServiceContext.dispatch( createTags );
     } catch ( Exception ex ) {
       LOG.error( ex );
     }
@@ -510,15 +511,12 @@ public class VmRuntimeState {
   }
   
   public void setMigrationState( String stateName, String sourceHost, String destHost ) {
-    if ( this.migrationTask == null ) {
-      this.migrationTask = VmMigrationTask.create( vmInstance, stateName, sourceHost, destHost );
-    } else {
-      this.migrationTask.updateMigrationTask( stateName, sourceHost, destHost );
+    if ( this.getMigrationTask( ).updateMigrationTask( stateName, sourceHost, destHost ) ) {//actually updated the state
+      //TODO:GRZE: authorize volume attachments only for the two NCs which now host the vm during migration
+      //TODO:GRZE: authorize volume attachments only for the single NCs which now host the vm after migration
+      //TODO:GRZE: VolumeMigration.update( vmInstance );
+      MigrationTags.update( vmInstance );
     }
-    //TODO:GRZE: authorize volume attachments only for the two NCs which now host the vm during migration
-    //TODO:GRZE: authorize volume attachments only for the single NCs which now host the vm after migration
-    //TODO:GRZE: VolumeMigration.update( vmInstance );
-    MigrationTags.update( vmInstance );
   }
   
   private void setVmInstance( final VmInstance vmInstance ) {

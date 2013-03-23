@@ -62,18 +62,18 @@
 
 package com.eucalyptus.vm;
 
+import java.util.Date;
+import java.util.concurrent.TimeUnit;
 import javax.persistence.Column;
 import javax.persistence.Embeddable;
 import javax.persistence.EnumType;
 import javax.persistence.Enumerated;
+import javax.persistence.Temporal;
+import javax.persistence.TemporalType;
 import javax.persistence.Transient;
 import org.apache.log4j.Logger;
 import org.hibernate.annotations.Parent;
-import com.eucalyptus.component.Topology;
-import com.eucalyptus.component.id.Eucalyptus;
-import com.eucalyptus.util.async.AsyncRequests;
 import com.google.common.base.Strings;
-import edu.ucsb.eucalyptus.msgs.CreateTagsType;
 
 /**
  * @todo doc
@@ -83,15 +83,43 @@ import edu.ucsb.eucalyptus.msgs.CreateTagsType;
 public class VmMigrationTask {
   @Transient
   private static Logger  LOG = Logger.getLogger( VmMigrationTask.class );
+  
   @Parent
   private VmInstance     vmInstance;
+  
+  /**
+   * Most recently reported migration state.
+   * 
+   * @see {@link MigrationState}
+   */
   @Enumerated( EnumType.STRING )
   @Column( name = "metadata_vm_migration_state" )
   private MigrationState state;
+  
+  /**
+   * Source host for the migration as it is registered.
+   */
+  @Enumerated( EnumType.STRING )
   @Column( name = "metadata_vm_migration_source_host" )
   private String         sourceHost;
+  
+  /**
+   * Destination host for the migration as it is registered.
+   */
   @Column( name = "metadata_vm_migration_dest_host" )
   private String         destinationHost;
+  
+  /**
+   * The purpose of this timestamp is to serve as a periodic trigger for state propagation; viz. to
+   * tags (unlike the AbstractPersistent timestamps). In
+   * {@code #updateMigrationTask(String, String, String)} this timer is used to determine when a
+   * false-positive indicate that state needs to be refreshed.
+   * 
+   * @see {@link #updateMigrationTask(String, String, String)}
+   */
+  @Temporal( TemporalType.TIMESTAMP )
+  @Column( name = "metadata_vm_migration_state_timer" )
+  private Date           refreshTimer;
   
   private VmMigrationTask( ) {}
   
@@ -100,6 +128,7 @@ public class VmMigrationTask {
     this.state = state;
     this.sourceHost = Strings.nullToEmpty( sourceHost );
     this.destinationHost = Strings.nullToEmpty( destinationHost );
+    this.refreshTimer = new Date( );
   }
   
   private VmMigrationTask( VmInstance vmInstance, String state, String sourceHost, String destinationHost ) {
@@ -121,19 +150,33 @@ public class VmMigrationTask {
    * @param sourceHost
    * @param destinationHost
    */
-  void updateMigrationTask( String state, String sourceHost, String destinationHost ) {
-    if ( !Strings.isNullOrEmpty( state ) ) {
-      try {
-        this.state = MigrationState.defaultValueOf( state );
-        this.sourceHost = Strings.nullToEmpty( sourceHost );
-        this.destinationHost = Strings.nullToEmpty( destinationHost );
-      } catch ( IllegalArgumentException ex ) {
-        LOG.error( ex );//should never happen; hello!!?
-        this.state = MigrationState.none;
-        this.sourceHost = null;
-        this.destinationHost = null;
-      }
+  boolean updateMigrationTask( String state, String sourceHost, String destinationHost ) {
+    boolean updated = !this.getState( ).equals( state ) || !this.getSourceHost( ).equals( sourceHost ) || !this.getDestinationHost( ).equals( destinationHost );
+    this.setState( MigrationState.defaultValueOf( state ) );
+    this.setSourceHost( sourceHost );
+    this.setDestinationHost( destinationHost );
+    
+    /**
+     * GRZE:TODO: this entire notion of refresh timer can be (and should be!) made orthogonal to the
+     * domain type. Indeed, the idea that an external operation wants to have a timer associated
+     * with a resource, in this case periodic tag propagation, is decidedly external state and this
+     * should GTFO.
+     */
+    if ( ( System.currentTimeMillis( ) - this.getRefreshTimer( ).getTime( ) ) > TimeUnit.SECONDS.toMillis( VmInstances.MIGRATION_REFRESH_TIME ) ) {
+      //GRZE:TODO: not to mention that the above line is annoying and could be thoroughly generalized.
+      this.setRefreshTimer( new Date( ) );
+      return true;
+    } else {
+      return updated;
     }
+  }
+  
+  protected Date getRefreshTimer( ) {
+    return this.refreshTimer;
+  }
+  
+  protected void setRefreshTimer( Date refreshTimer ) {
+    this.refreshTimer = refreshTimer;
   }
   
   protected VmInstance getVmInstance( ) {
@@ -144,27 +187,38 @@ public class VmMigrationTask {
     this.vmInstance = vmInstance;
   }
   
-  protected MigrationState getState( ) {
+  public MigrationState getState( ) {
     return this.state;
   }
   
   protected void setState( MigrationState state ) {
-    this.state = state;
+    if ( !this.equals( state ) ) {
+      this.setLastState( this.state );
+      this.state = state;
+    }
   }
   
-  protected String getSourceHost( ) {
+  public MigrationState getLastState( ) {
+    return this.lastState;
+  }
+  
+  protected void setLastState( MigrationState lastState ) {
+    this.lastState = lastState;
+  }
+  
+  public String getSourceHost( ) {
     return this.sourceHost;
   }
   
   protected void setSourceHost( String sourceHost ) {
-    this.sourceHost = sourceHost;
+    this.sourceHost = Strings.nullToEmpty( sourceHost );
   }
   
-  protected String getDestinationHost( ) {
+  public String getDestinationHost( ) {
     return this.destinationHost;
   }
   
   protected void setDestinationHost( String destinationHost ) {
-    this.destinationHost = destinationHost;
+    this.destinationHost = Strings.nullToEmpty( destinationHost );
   }
 }

@@ -66,6 +66,7 @@ import javax.annotation.Nullable;
 import org.apache.log4j.Logger;
 import com.eucalyptus.component.Topology;
 import com.eucalyptus.component.id.Eucalyptus;
+import com.eucalyptus.context.ServiceContext;
 import com.eucalyptus.util.async.AsyncRequests;
 import com.google.common.base.Predicate;
 import edu.ucsb.eucalyptus.msgs.CreateTagsType;
@@ -75,57 +76,52 @@ import edu.ucsb.eucalyptus.msgs.ResourceTag;
 import edu.ucsb.eucalyptus.msgs.ResourceTagMessage;
 
 enum MigrationTags implements Predicate<VmInstance> {
+  STATE,
   SOURCE,
   DESTINATION;
   private static Logger LOG = Logger.getLogger( MigrationTags.class );
   
   public String toString( ) {
-    return "euca:node:migration-" + this.name( ).toLowerCase( );
+    return "euca:node:migration:" + this.name( ).toLowerCase( );
   }
   
   public static void deleteFor( final VmInstance vm ) {
-    final DeleteTagsType deleteTags = new DeleteTagsType( ) {
-      {
-        this.getTagSet( ).add( MigrationTags.SOURCE.deleteTag( ) );
-        this.getTagSet( ).add( MigrationTags.DESTINATION.deleteTag( ) );
-        this.getResourcesSet( ).add( vm.getInstanceId( ) );
-        this.setEffectiveUserId( vm.getOwnerUserId( ) );//GRZE:TODO: update impersonation impl later.
-      }
-    };
+    final DeleteTagsType deleteTags = new DeleteTagsType( );
+    deleteTags.getTagSet( ).add( MigrationTags.STATE.deleteTag( ) );
+    deleteTags.getTagSet( ).add( MigrationTags.SOURCE.deleteTag( ) );
+    deleteTags.getTagSet( ).add( MigrationTags.DESTINATION.deleteTag( ) );
+    deleteTags.getResourcesSet( ).add( vm.getInstanceId( ) );
+    deleteTags.setEffectiveUserId( vm.getOwnerUserId( ) );//GRZE:TODO: update impersonation impl later.
     dispatch( deleteTags );
   }
   
   private static void dispatch( final ResourceTagMessage tagMessage ) {
     try {
-      AsyncRequests.dispatch( Topology.lookup( Eucalyptus.class ), tagMessage );
+      ServiceContext.dispatch( tagMessage );
     } catch ( Exception ex ) {
-      LOG.error( ex );
+      LOG.trace( ex );
     }
   }
   
   public static void createFor( final VmInstance vm ) {
     final VmMigrationTask migrationTask = vm.getRuntimeState( ).getMigrationTask( );
-    final CreateTagsType createTags = new CreateTagsType( ) {
-      {
-        this.getTagSet( ).add( MigrationTags.SOURCE.getTag( migrationTask.getSourceHost( ) ) );
-        this.getTagSet( ).add( MigrationTags.DESTINATION.getTag( migrationTask.getDestinationHost( ) ) );
-        this.getResourcesSet( ).add( vm.getInstanceId( ) );
-        this.setEffectiveUserId( vm.getOwnerUserId( ) );//GRZE:TODO: update impersonation impl later.
-      }
-    };
+    final CreateTagsType createTags = new CreateTagsType( );
+    createTags.getTagSet( ).add( MigrationTags.STATE.getTag( migrationTask.getState( ).name( ) ) );
+    createTags.getTagSet( ).add( MigrationTags.SOURCE.getTag( migrationTask.getSourceHost( ) ) );
+    createTags.getTagSet( ).add( MigrationTags.DESTINATION.getTag( migrationTask.getDestinationHost( ) ) );
+    createTags.getResourcesSet( ).add( vm.getInstanceId( ) );
+    createTags.setEffectiveUserId( vm.getOwnerUserId( ) );//GRZE:TODO: update impersonation impl later.
     dispatch( createTags );
   }
   
-  ResourceTag getTag( String host ) {
-    return new ResourceTag( this.toString( ), host );
+  ResourceTag getTag( String value ) {
+    return new ResourceTag( this.toString( ), value );
   }
   
   private DeleteResourceTag deleteTag( ) {
-    return new DeleteResourceTag( ) {
-      {
-        this.setKey( this.toString( ) );
-      }
-    };
+    DeleteResourceTag rsrcTag = new DeleteResourceTag( );
+    rsrcTag.setKey( this.toString( ) );
+    return rsrcTag;
   }
   
   @Override
