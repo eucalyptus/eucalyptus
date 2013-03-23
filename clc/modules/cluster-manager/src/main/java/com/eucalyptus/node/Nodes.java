@@ -60,7 +60,7 @@
  *   NEEDED TO COMPLY WITH ANY SUCH LICENSES OR RIGHTS.
  ************************************************************************/
 
-package com.eucalyptus.cluster;
+package com.eucalyptus.node;
 
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -72,6 +72,8 @@ import java.util.concurrent.ConcurrentNavigableMap;
 import java.util.concurrent.TimeUnit;
 import javax.annotation.Nullable;
 import org.apache.log4j.Logger;
+import com.eucalyptus.cluster.Cluster;
+import com.eucalyptus.cluster.Clusters;
 import com.eucalyptus.component.Component;
 import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.Components;
@@ -81,7 +83,6 @@ import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.ServiceConfigurations;
 import com.eucalyptus.component.Topology;
 import com.eucalyptus.component.id.ClusterController;
-import com.eucalyptus.component.id.ClusterController.NodeController;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.vm.VmInstance;
 import com.google.common.base.Function;
@@ -160,6 +161,7 @@ public class Nodes {
   }
 
   private static void updateServiceConfiguration( ServiceConfiguration ccConfig, NodeInfo nodeInfo ) throws NoSuchElementException {
+    //GRZE:TODO:MAINTMODE: finish up here
     ServiceConfiguration ncConfig = Nodes.transformNodeInfo( ccConfig ).apply( nodeInfo );
     
     Component component = Components.lookup( NodeController.class );

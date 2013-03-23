@@ -1350,7 +1350,7 @@ public class Cluster implements AvailabilityZoneMetadata, HasFullName<Cluster>, 
    * GRZE:WARNING: this is a temporary method to expose the forwarding map of NC info
    * @return
    */
-  Map<String,NodeInfo> getNodeHostMap( ) {
+  public Map<String,NodeInfo> getNodeHostMap( ) {
     return this.nodeHostAddrMap;
   }
   

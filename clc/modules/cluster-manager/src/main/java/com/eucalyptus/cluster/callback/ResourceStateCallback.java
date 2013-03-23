@@ -64,7 +64,7 @@ package com.eucalyptus.cluster.callback;
 
 import org.apache.log4j.Logger;
 import com.eucalyptus.cluster.Cluster;
-import com.eucalyptus.cluster.Nodes;
+import com.eucalyptus.node.Nodes;
 import com.eucalyptus.util.async.FailedRequestException;
 import com.eucalyptus.vmtypes.VmType;
 import com.eucalyptus.vmtypes.VmTypes;

@@ -85,6 +85,7 @@ import com.eucalyptus.component.id.ClusterController;
 import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.component.id.Walrus;
 import com.eucalyptus.context.Contexts;
+import com.eucalyptus.node.Nodes;
 import com.eucalyptus.tags.Filter;
 import com.eucalyptus.tags.FilterSupport;
 import com.eucalyptus.tags.Filters;

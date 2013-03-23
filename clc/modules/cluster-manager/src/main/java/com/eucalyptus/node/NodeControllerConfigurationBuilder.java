@@ -60,109 +60,85 @@
  *   NEEDED TO COMPLY WITH ANY SUCH LICENSES OR RIGHTS.
  ************************************************************************/
 
-package com.eucalyptus.component.id;
+package com.eucalyptus.node;
 
-import java.util.ArrayList;
-import java.util.List;
-import org.jboss.netty.channel.ChannelPipelineFactory;
+import com.eucalyptus.bootstrap.Handles;
 import com.eucalyptus.component.ComponentId;
-import com.eucalyptus.component.ComponentId.FaultLogPrefix;
-import com.eucalyptus.component.ComponentId.Partition;
-import com.eucalyptus.component.ServiceUris;
-import com.eucalyptus.util.Internets;
+import com.eucalyptus.component.ComponentId.ComponentPart;
+import com.eucalyptus.component.ComponentIds;
+import com.eucalyptus.component.Faults.CheckException;
+import com.eucalyptus.component.Partition;
+import com.eucalyptus.component.Partitions;
+import com.eucalyptus.component.ServiceBuilder;
+import com.eucalyptus.component.ServiceConfiguration;
+import com.eucalyptus.component.ServiceRegistrationException;
+import com.eucalyptus.records.EventRecord;
+import com.eucalyptus.records.EventType;
 
-@Partition( value = { Eucalyptus.class } )
-@FaultLogPrefix( "cloud" ) // stub for cc, but in clc
-public class ClusterController extends ComponentId {
+/**
+ * @todo doc
+ * @author chris grzegorczyk <grze@eucalyptus.com>
+ */
+@ComponentPart( NodeController.class )
+@Handles( { RegisterNodeControllerType.class,
+           DeregisterNodeControllerType.class,
+           DescribeNodeControllersType.class,
+           ModifyNodeControllerAttributeType.class } )
+public class NodeControllerConfigurationBuilder implements ServiceBuilder<NodeControllerConfiguration> {
   
-  private static final long       serialVersionUID = 1L;
-  public static final ComponentId INSTANCE         = new ClusterController( );
-  
-  public ClusterController( ) {
-    super( "cluster" );
+  @Override
+  public ComponentId getComponentId( ) {
+    return ComponentIds.lookup( NodeController.class );
   }
   
   @Override
-  public Integer getPort( ) {
-    return 8774;
+  public Boolean checkAdd( String partition, String name, String host, Integer port ) throws ServiceRegistrationException {
+    throw new ServiceRegistrationException( "Node Controllers must currently be registered " +
+                                            "on the Cluster Controllers for the partition." +
+                                            "Apologies.  Please see the documentation." );
+  }
+  
+  /**
+   * Here we do nothing for now.
+   */
+  @Override
+  public void fireLoad( ServiceConfiguration parent ) throws ServiceRegistrationException {}
+  
+  /**
+   * Here we do nothing for now.
+   */
+  @Override
+  public void fireStart( ServiceConfiguration config ) throws ServiceRegistrationException {}
+  
+  /**
+   * Here we do nothing for now.
+   */
+  @Override
+  public void fireStop( ServiceConfiguration config ) throws ServiceRegistrationException {}
+  
+  @Override
+  public void fireEnable( ServiceConfiguration config ) throws ServiceRegistrationException {
+    //GRZE:TODO:MAINTMODE
   }
   
   @Override
-  public String getLocalEndpointName( ) {
-    return ServiceUris.remote( this, Internets.localHostInetAddress( ), this.getPort( ) ).toASCIIString( );
-  }
-  
-  private static ChannelPipelineFactory clusterPipeline;
-  
-  @Override
-  public ChannelPipelineFactory getClientPipeline( ) {//TODO:GRZE:fixme to use discovery
-    ChannelPipelineFactory factory = null;
-    if ( ( factory = super.getClientPipeline( ) ) == null ) {
-      factory = ( clusterPipeline = ( clusterPipeline != null
-        ? clusterPipeline
-          : helpGetClientPipeline( "com.eucalyptus.ws.client.pipeline.ClusterClientPipelineFactory" ) ) );
-    }
-    return factory;
+  public void fireDisable( ServiceConfiguration config ) throws ServiceRegistrationException {
+    //GRZE:TODO:MAINTMODE
   }
   
   @Override
-  public String getServicePath( final String... pathParts ) {
-    return "/axis2/services/EucalyptusCC";
+  public void fireCheck( ServiceConfiguration config ) throws ServiceRegistrationException {
+    //GRZE:TODO:MAINTMODE
   }
   
   @Override
-  public String getInternalServicePath( final String... pathParts ) {
-    return this.getServicePath( pathParts );
+  public NodeControllerConfiguration newInstance( String partition, String name, String host, Integer port ) {
+    return new NodeControllerConfiguration( partition, host );
   }
   
-  @Partition( ClusterController.class )
-  @InternalService
-  @FaultLogPrefix( "cloud" )
-  public static class GatherLogService extends ComponentId {
-    
-    private static final long serialVersionUID = 1L;
-    
-    public GatherLogService( ) {
-      super( "gatherlog" );
-    }
-    
-    @Override
-    public Integer getPort( ) {
-      return 8774;
-    }
-    
-    @Override
-    public String getLocalEndpointName( ) {
-      return ServiceUris.remote( this, Internets.localHostInetAddress( ), this.getPort( ) ).toASCIIString( );
-    }
-    
-    @Override
-    public String getServicePath( final String... pathParts ) {
-      return "/axis2/services/EucalyptusGL";
-    }
-    
-    @Override
-    public String getInternalServicePath( final String... pathParts ) {
-      return this.getServicePath( pathParts );
-    }
-    
-    private static ChannelPipelineFactory logPipeline;
-    
-    /**
-     * This was born under a bad sign. No touching.
-     * 
-     * @return
-     */
-    @Override
-    public ChannelPipelineFactory getClientPipeline( ) {
-      ChannelPipelineFactory factory = null;
-      if ( ( factory = super.getClientPipeline( ) ) == null ) {
-        factory = ( logPipeline = ( logPipeline != null
-          ? logPipeline
-          : helpGetClientPipeline( "com.eucalyptus.ws.client.pipeline.GatherLogClientPipeline" ) ) );
-      }
-      return factory;
-    }
-    
+  @Override
+  public NodeControllerConfiguration newInstance( ) {
+    return null;
   }
+  
 }
