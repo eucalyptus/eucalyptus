@@ -198,14 +198,6 @@ public class VmMigrationTask {
     }
   }
   
-  public MigrationState getLastState( ) {
-    return this.lastState;
-  }
-  
-  protected void setLastState( MigrationState lastState ) {
-    this.lastState = lastState;
-  }
-  
   public String getSourceHost( ) {
     return this.sourceHost;
   }
