@@ -3,7 +3,7 @@ define([
   'wizard',
   'text!./template.html',
   'text!./page1.html!strip',
-  'text!./page2.html!strip',
+  './page2',
   'text!./page3.html!strip',
 ], function(Wizard, wizardTemplate, page1, page2, page3) {
   var wizard = new Wizard();

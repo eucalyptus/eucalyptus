@@ -103,6 +103,7 @@
         thisObj._drawCallback(oSettings);
       }
       dt_arg['sAjaxDataProp'] = 'aaData',
+      /*
       dt_arg["fnServerData"] = function (sSource, aoData, fnCallback) {
 	    require(['models/'+sSource], function(CollectionImpl) {
 		var collection = new CollectionImpl();
@@ -117,6 +118,15 @@
 		collection.fetch();
 	    });
          }
+      */
+      dt_arg['fnServerData'] = function (sSource, aoData, fnCallback) {
+        var data = {};
+        data.aaData = $('html body').eucadata('get', sSource);
+        data.iTotalRecords = data.aaData.length;
+        data.iTotalDisplayRecords = data.aaData.length;
+        fnCallback(data);
+      }
+         
 
       dt_arg['fnInitComplete'] = function( oSettings ) {
         oSettings.oLanguage.sZeroRecords = $.i18n.prop('resource_no_records', thisObj.options.text.resource_plural);

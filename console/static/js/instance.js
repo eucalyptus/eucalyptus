@@ -48,7 +48,7 @@
         data_deps: ['instances', 'volumes', 'addresses'],
         hidden: thisObj.options['hidden'],
         dt_arg : {
-          "sAjaxSource": 'instances',
+          "sAjaxSource": 'instance',
           "aaSorting": [[ 10, "desc" ]],
           "aoColumnDefs": [
             {
