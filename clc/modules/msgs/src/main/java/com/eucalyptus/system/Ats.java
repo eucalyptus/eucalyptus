@@ -157,47 +157,45 @@ public class Ats implements Predicate<Class> {
     return ( Class ) this.ancestry.get( 0 );
   }
   
-  class AtsBuilder extends CacheLoader<Object, Ats> {
-    @Override
-    public Ats load( Object input ) throws Exception {
-      if ( input instanceof Class ) {
-        return new Ats( ( AnnotatedElement ) input );
-      } else if ( input instanceof AnnotatedElement ) {
-        return new Ats( ( AnnotatedElement ) input );
-      } else {
-        return new Ats( ( AnnotatedElement ) input.getClass( ) );
+  private static final LoadingCache<Object, Ats> atsCache = CacheBuilder.newBuilder().build(
+    new CacheLoader<Object, Ats>() {
+      @Override
+      public Ats load( Object input ) {
+        if ( input instanceof Class ) {
+          return new Ats( ( AnnotatedElement ) input );
+        } else if ( input instanceof AnnotatedElement ) {
+          return new Ats( ( AnnotatedElement ) input );
+        } else {
+          return new Ats( ( AnnotatedElement ) input.getClass( ) );
+        }
       }
-    }
-    
-  }
+    });
   
-  class AtsHierarchyBuilder extends CacheLoader<Object, Ats> {
-    @Override
-    public Ats load( Object input ) throws Exception {
-      if ( input instanceof AnnotatedElement ) {
-        return new Ats( Classes.ancestors( input ).toArray( new Class[] {} ) );
-      } else {
-        return new Ats( Classes.ancestors( input ).toArray( new Class[] {} ) );
+  private static final LoadingCache<Object, Ats> atsHierarchyCache = CacheBuilder.newBuilder().build(
+    new CacheLoader<Object, Ats>() {
+      @Override
+      public Ats load( Object input ) {
+        if ( input instanceof AnnotatedElement ) {
+          return new Ats( Classes.ancestors( input ).toArray( new Class[] {} ) );
+        } else {
+          return new Ats( Classes.ancestors( input ).toArray( new Class[] {} ) );
+        }
       }
-    }
-  }
-  
-  private static final LoadingCache<Object, Ats> atsCache          = CacheBuilder.build(new AtsBuilder());
-  private static final LoadingCache<Object, Ats> atsHierarchyCache = CacheBuilder.build(new AtsHierarchyBuilder());
+    });
   
   public static Ats from( Object o ) {
     if ( o instanceof AccessibleObject ) {
-      return atsCache.get( o );
+      return atsCache.getUnchecked( o );
     } else {
-      return atsCache.get( Classes.typeOf( o ) );
+      return atsCache.getUnchecked( Classes.typeOf( o ) );
     }
   }
   
   public static Ats inClassHierarchy( Object o ) {
     if ( o instanceof AccessibleObject ) {
-      return atsHierarchyCache.get( o );
+      return atsHierarchyCache.getUnchecked( o );
     } else {
-      return atsHierarchyCache.get( Classes.typeOf( o ) );
+      return atsHierarchyCache.getUnchecked( Classes.typeOf( o ) );
     }
   }
   

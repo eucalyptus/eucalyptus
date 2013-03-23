@@ -119,10 +119,10 @@ import com.google.common.collect.ObjectArrays;
 public class ServiceTransitions {
   static Logger                                     LOG   = Logger.getLogger( ServiceTransitions.class );
   private static final Component.State[]            EMPTY = {};
-  LoadingCache<TransitionActions, ServiceTransitionCallback> hi    = CacheBuilder.build( new CacheLoader<TransitionActions, ServiceTransitionCallback>( ) {
+  LoadingCache<TransitionActions, ServiceTransitionCallback> hi    = CacheBuilder.newBuilder().build( new CacheLoader<TransitionActions, ServiceTransitionCallback>( ) {
                                                             
                                                             @Override
-                                                            public ServiceTransitionCallback load( TransitionActions input ) throws Exception {
+                                                            public ServiceTransitionCallback load( TransitionActions input ) {
                                                               return null;
                                                             }
                                                           } );
@@ -569,17 +569,17 @@ public class ServiceTransitions {
         }
       }
     };
-    private static CacheLoader<TransitionActions, ServiceTransitionCallback> mapper = new CacheLoader<TransitionActions, ServiceTransitionCallback>( ) {
-                                                                                   
-                                                                                   @Override
-                                                                                   public ServiceTransitionCallback load( TransitionActions input ) {
-                                                                                     return valueOf( input.name( ) );
-                                                                                   }
-                                                                                 };
-    private static LoadingCache<TransitionActions, ServiceTransitionCallback> map = CacheBuilder.build(mapper);
+
+    private static LoadingCache<TransitionActions, ServiceTransitionCallback> map = CacheBuilder.newBuilder().build(
+      new CacheLoader<TransitionActions, ServiceTransitionCallback>( ) {
+        @Override
+        public ServiceTransitionCallback load( TransitionActions input ) {
+          return valueOf( input.name( ) );
+        }
+      });
     
     public static ServiceTransitionCallback map( TransitionActions transition ) {
-      return map.get( transition );
+      return map.getUnchecked( transition );
     }
     
   }
@@ -701,17 +701,17 @@ public class ServiceTransitions {
         ServiceBuilders.lookup( parent.getComponentId( ) ).fireStop( parent );
       }
     };
-    private static CacheLoader<TransitionActions, ServiceTransitionCallback> mapper = new CacheLoader<TransitionActions, ServiceTransitionCallback>( ) {
-                                                                                   
-                                                                                   @Override
-                                                                                   public ServiceTransitionCallback load( TransitionActions input ) {
-                                                                                     return ServiceLocalTransitionCallbacks.valueOf( input.name( ) );
-                                                                                   }
-                                                                                 };
-    private static LoadingCache<TransitionActions, ServiceTransitionCallback> map = CacheBuilder.build(mapper);
+
+    private static LoadingCache<TransitionActions, ServiceTransitionCallback> map = CacheBuilder.newBuilder().build(
+      new CacheLoader<TransitionActions, ServiceTransitionCallback>( ) {
+        @Override
+        public ServiceTransitionCallback load( TransitionActions input ) {
+          return ServiceLocalTransitionCallbacks.valueOf( input.name( ) );
+        }
+      });
     
     public static ServiceTransitionCallback map( TransitionActions transition ) {
-      return map.get( transition );
+      return map.getUnchecked( transition );
     }
   }
   
@@ -784,17 +784,16 @@ public class ServiceTransitions {
       }
     };
     
-    private static CacheLoader<TransitionActions, ServiceTransitionCallback> mapper = new CacheLoader<TransitionActions, ServiceTransitionCallback>( ) {
-                                                                                   
-                                                                                   @Override
-                                                                                   public ServiceTransitionCallback load( TransitionActions input ) {
-                                                                                     return valueOf( input.name( ) );
-                                                                                   }
-                                                                                 };
-    private static LoadingCache<TransitionActions, ServiceTransitionCallback> map = CacheBuilder.build(mapper);
+    private static LoadingCache<TransitionActions, ServiceTransitionCallback> map = CacheBuilder.newBuilder().build(
+      new CacheLoader<TransitionActions, ServiceTransitionCallback>( ) {
+        @Override
+        public ServiceTransitionCallback load( TransitionActions input ) {
+          return valueOf( input.name( ) );
+        }
+      });
     
     public static ServiceTransitionCallback map( TransitionActions transition ) {
-      return map.get( transition );
+      return map.getUnchecked( transition );
     }
   }
   

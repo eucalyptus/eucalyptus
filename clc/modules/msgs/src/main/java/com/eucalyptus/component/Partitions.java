@@ -81,7 +81,9 @@ import com.eucalyptus.entities.TransactionException;
 import com.eucalyptus.system.SubDirectory;
 import com.eucalyptus.util.Exceptions;
 import com.google.common.base.Function;
-import com.google.common.collect.MapMaker;
+import com.google.common.cache.CacheBuilder;
+import com.google.common.cache.CacheLoader;
+import com.google.common.cache.LoadingCache;
 
 public class Partitions {
   static Logger         LOG                 = Logger.getLogger( Partitions.class );
@@ -111,10 +113,10 @@ public class Partitions {
     }
   }
   
-  private static final LoadingCache<String, Partition> partitionMap = CacheBuilder.build(
-    new CacheLoader<String, Partition> {
+  private static final LoadingCache<String, Partition> partitionMap = CacheBuilder.newBuilder().build(
+    new CacheLoader<String, Partition>() {
       @Override
-      public Partition load( final String input ) throws Exception {
+      public Partition load( final String input ) {
         try {
           Databases.awaitSynchronized( );
           EntityTransaction db = Entities.get( Partition.class );
@@ -134,7 +136,7 @@ public class Partitions {
           throw ex;
         } catch ( DatabaseStateException ex ) {
           Databases.awaitSynchronized( );
-          return INSTANCE.apply( input );
+          return load( input );
         } catch ( RuntimeException ex ) {
           throw ex;
         }
@@ -143,7 +145,7 @@ public class Partitions {
   
 
   public static Partition lookupByName( String partitionName ) {
-    return partitionMap.get( partitionName );
+    return partitionMap.getUnchecked( partitionName );
   }
   
   public static Partition lookup( final ServiceConfiguration config ) {

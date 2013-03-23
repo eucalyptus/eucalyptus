@@ -58,7 +58,6 @@ public abstract class TagSupport {
   private static final ConcurrentMap<String,TagSupport> supportByIdentifierPrefix = Maps.newConcurrentMap();
   private static final ConcurrentMap<Class<? extends CloudMetadata>,TagSupport> supportByClass = Maps.newConcurrentMap();
   private static final Splitter idSplitter = Splitter.on( '-' ).limit( 2 );
-  private static final LoadingCache<Class,Class> metadataClassMap = CacheBuilder.build(new MetadataSubclass());
 
   private final Class<? extends AbstractPersistent> resourceClass;
   private final Class<? extends CloudMetadata> cloudMetadataClass;
@@ -191,7 +190,7 @@ public abstract class TagSupport {
 
   @SuppressWarnings( "unchecked" )
   private static Class<? extends CloudMetadata> subclassFor( Class<? extends CloudMetadata> metadataInstance ) {
-    return metadataClassMap.get( metadataInstance );  
+    return metadataClassMap.getUnchecked( metadataInstance );  
   }
 
   Class<? extends AbstractPersistent> getResourceClass() {
@@ -206,18 +205,19 @@ public abstract class TagSupport {
     return tagClassResourceField;
   }
 
-  private class MetadataSubclass extends CacheLoader<Class,Class> {
-    @Override
-    public Class load( final Class instanceClass ) throws Exception {
-      final List<Class<?>> interfaces = Lists.newArrayList();
-      for ( final Class clazz : Classes.interfaceAncestors().apply( instanceClass ) ) {
-        interfaces.add( clazz );
+  private static final LoadingCache<Class,Class> metadataClassMap = CacheBuilder.newBuilder().build(
+    new CacheLoader<Class,Class>() {
+      @Override
+      public Class load( final Class instanceClass ) {
+        final List<Class<?>> interfaces = Lists.newArrayList();
+        for ( final Class clazz : Classes.interfaceAncestors().apply( instanceClass ) ) {
+          interfaces.add( clazz );
+        }
+        Collections.reverse( interfaces );
+        return Iterables.find( interfaces,
+            Predicates.and(
+                Predicates.not( Predicates.<Class<?>>equalTo( CloudMetadata.class ) ),
+                Classes.subclassOf( CloudMetadata.class ) ) );
       }
-      Collections.reverse( interfaces );
-      return Iterables.find( interfaces,
-          Predicates.and(
-              Predicates.not( Predicates.<Class<?>>equalTo( CloudMetadata.class ) ),
-              Classes.subclassOf( CloudMetadata.class ) ) );
-    }
-  }
+    });
 }

@@ -56,7 +56,15 @@ import com.google.common.cache.LoadingCache;
  */
 public class SslUtils {
   private static final LoadingCache<SslCipherSuiteBuilderParams,String[]> SSL_CIPHER_LOOKUP =
-         CacheBuilder.newBuilder().maximumSize(32).build(new SslCipherSuiteBuilder());
+    CacheBuilder.newBuilder().maximumSize(32).build(
+    new CacheLoader<SslCipherSuiteBuilderParams,String[]>() {
+      @Override
+      public String[] load( final SslCipherSuiteBuilderParams params ) {
+        return ciphers()
+            .with( params.getCipherStrings() )
+            .enabledCipherSuites( params.getSupportedCipherSuites() );
+      }
+    });
 
   public static String[] getEnabledCipherSuites( final String cipherStrings, final String[] supportedCipherSuites ) {
       return SSL_CIPHER_LOOKUP.getUnchecked( params(cipherStrings, supportedCipherSuites) );
@@ -104,15 +112,6 @@ public class SslUtils {
     static SslCipherSuiteBuilderParams params( final String cipherStrings,
                                                final String[] supportedCipherSuites  ) {
       return new SslCipherSuiteBuilderParams( cipherStrings, supportedCipherSuites );
-    }
-  }
-
-  private class SslCipherSuiteBuilder extends CacheLoader<SslCipherSuiteBuilderParams,String[]> {
-    @Override
-    public String[] load( final SslCipherSuiteBuilderParams params ) throws Exception {
-      return ciphers()
-          .with( params.getCipherStrings() )
-          .enabledCipherSuites( params.getSupportedCipherSuites() );
     }
   }
 
