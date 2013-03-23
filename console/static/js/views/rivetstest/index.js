@@ -5,12 +5,13 @@ define([
 	], function( dh, template, rivets) {
 	return Backbone.View.extend({
 		initialize : function() {
+			var self = this;
 			this.view = this;
 			this.test = new Backbone.Model({
 				value: 'foobarbaz'
 			});
 			this.buttonScope = {
-				click: function() { alert('click'); }
+				click: function() { self.test.set('value', 'button click'); }
 			}
 			this.sGroups = dh.scalingGroups;
 			this.$el.html(template);
