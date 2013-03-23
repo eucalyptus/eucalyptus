@@ -62,109 +62,37 @@
 
 package com.eucalyptus.vm;
 
-import javax.persistence.Column;
-import javax.persistence.Embeddable;
-import javax.persistence.EnumType;
-import javax.persistence.Enumerated;
-import javax.persistence.Transient;
 import org.apache.log4j.Logger;
-import org.hibernate.annotations.Parent;
-import com.eucalyptus.component.Topology;
-import com.eucalyptus.component.id.Eucalyptus;
-import com.eucalyptus.util.async.AsyncRequests;
 import com.google.common.base.Strings;
-import edu.ucsb.eucalyptus.msgs.CreateTagsType;
 
-/**
- * @todo doc
- * @author chris grzegorczyk <grze@eucalyptus.com>
- */
-@Embeddable
-public class VmMigrationTask {
-  @Transient
-  private static Logger  LOG = Logger.getLogger( VmMigrationTask.class );
-  @Parent
-  private VmInstance     vmInstance;
-  @Enumerated( EnumType.STRING )
-  @Column( name = "metadata_vm_migration_state" )
-  private MigrationState state;
-  @Column( name = "metadata_vm_migration_source_host" )
-  private String         sourceHost;
-  @Column( name = "metadata_vm_migration_dest_host" )
-  private String         destinationHost;
+public enum MigrationState {
+  none {
+    @Override
+    public boolean isMigrating( ) {
+      return false;
+    }
+  },
+  preparing,
+  ready,
+  migrating,
+  cleaning;
+  private static Logger LOG = Logger.getLogger( MigrationState.class );
   
-  private VmMigrationTask( ) {}
-  
-  private VmMigrationTask( VmInstance vmInstance, MigrationState state, String sourceHost, String destinationHost ) {
-    this.vmInstance = vmInstance;
-    this.state = state;
-    this.sourceHost = Strings.nullToEmpty( sourceHost );
-    this.destinationHost = Strings.nullToEmpty( destinationHost );
+  public boolean isMigrating( ) {
+    return true;
   }
   
-  private VmMigrationTask( VmInstance vmInstance, String state, String sourceHost, String destinationHost ) {
-    this( vmInstance, MigrationState.defaultValueOf( state ), sourceHost, destinationHost );
-  }
-  
-  public static VmMigrationTask create( VmInstance vmInstance ) {
-    return new VmMigrationTask( vmInstance, MigrationState.none, null, null );
-  }
-  
-  public static VmMigrationTask create( VmInstance vmInstance, String state, String sourceHost, String destinationHost ) {
-    return new VmMigrationTask( vmInstance, state, sourceHost, destinationHost );
-  }
-  
-  /**
-   * Verify and update the local state, src and dest hosts.
-   * 
-   * @param state
-   * @param sourceHost
-   * @param destinationHost
-   */
-  void updateMigrationTask( String state, String sourceHost, String destinationHost ) {
+  public static MigrationState defaultValueOf( String state ) {
     if ( !Strings.isNullOrEmpty( state ) ) {
       try {
-        this.state = MigrationState.defaultValueOf( state );
-        this.sourceHost = Strings.nullToEmpty( sourceHost );
-        this.destinationHost = Strings.nullToEmpty( destinationHost );
+        return MigrationState.valueOf( state );
       } catch ( IllegalArgumentException ex ) {
-        LOG.error( ex );//should never happen; hello!!?
-        this.state = MigrationState.none;
-        this.sourceHost = null;
-        this.destinationHost = null;
+        LOG.debug( ex );
+        return none;
       }
+    } else {
+      return none;
     }
   }
   
-  protected VmInstance getVmInstance( ) {
-    return this.vmInstance;
-  }
-  
-  protected void setVmInstance( VmInstance vmInstance ) {
-    this.vmInstance = vmInstance;
-  }
-  
-  protected MigrationState getState( ) {
-    return this.state;
-  }
-  
-  protected void setState( MigrationState state ) {
-    this.state = state;
-  }
-  
-  protected String getSourceHost( ) {
-    return this.sourceHost;
-  }
-  
-  protected void setSourceHost( String sourceHost ) {
-    this.sourceHost = sourceHost;
-  }
-  
-  protected String getDestinationHost( ) {
-    return this.destinationHost;
-  }
-  
-  protected void setDestinationHost( String destinationHost ) {
-    this.destinationHost = destinationHost;
-  }
 }

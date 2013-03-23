@@ -62,109 +62,83 @@
 
 package com.eucalyptus.vm;
 
-import javax.persistence.Column;
-import javax.persistence.Embeddable;
-import javax.persistence.EnumType;
-import javax.persistence.Enumerated;
-import javax.persistence.Transient;
+import javax.annotation.Nullable;
 import org.apache.log4j.Logger;
-import org.hibernate.annotations.Parent;
 import com.eucalyptus.component.Topology;
 import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.util.async.AsyncRequests;
-import com.google.common.base.Strings;
+import com.google.common.base.Predicate;
 import edu.ucsb.eucalyptus.msgs.CreateTagsType;
+import edu.ucsb.eucalyptus.msgs.DeleteResourceTag;
+import edu.ucsb.eucalyptus.msgs.DeleteTagsType;
+import edu.ucsb.eucalyptus.msgs.ResourceTag;
+import edu.ucsb.eucalyptus.msgs.ResourceTagMessage;
 
-/**
- * @todo doc
- * @author chris grzegorczyk <grze@eucalyptus.com>
- */
-@Embeddable
-public class VmMigrationTask {
-  @Transient
-  private static Logger  LOG = Logger.getLogger( VmMigrationTask.class );
-  @Parent
-  private VmInstance     vmInstance;
-  @Enumerated( EnumType.STRING )
-  @Column( name = "metadata_vm_migration_state" )
-  private MigrationState state;
-  @Column( name = "metadata_vm_migration_source_host" )
-  private String         sourceHost;
-  @Column( name = "metadata_vm_migration_dest_host" )
-  private String         destinationHost;
+enum MigrationTags implements Predicate<VmInstance> {
+  SOURCE,
+  DESTINATION;
+  private static Logger LOG = Logger.getLogger( MigrationTags.class );
   
-  private VmMigrationTask( ) {}
-  
-  private VmMigrationTask( VmInstance vmInstance, MigrationState state, String sourceHost, String destinationHost ) {
-    this.vmInstance = vmInstance;
-    this.state = state;
-    this.sourceHost = Strings.nullToEmpty( sourceHost );
-    this.destinationHost = Strings.nullToEmpty( destinationHost );
+  public String toString( ) {
+    return "euca:node:migration-" + this.name( ).toLowerCase( );
   }
   
-  private VmMigrationTask( VmInstance vmInstance, String state, String sourceHost, String destinationHost ) {
-    this( vmInstance, MigrationState.defaultValueOf( state ), sourceHost, destinationHost );
-  }
-  
-  public static VmMigrationTask create( VmInstance vmInstance ) {
-    return new VmMigrationTask( vmInstance, MigrationState.none, null, null );
-  }
-  
-  public static VmMigrationTask create( VmInstance vmInstance, String state, String sourceHost, String destinationHost ) {
-    return new VmMigrationTask( vmInstance, state, sourceHost, destinationHost );
-  }
-  
-  /**
-   * Verify and update the local state, src and dest hosts.
-   * 
-   * @param state
-   * @param sourceHost
-   * @param destinationHost
-   */
-  void updateMigrationTask( String state, String sourceHost, String destinationHost ) {
-    if ( !Strings.isNullOrEmpty( state ) ) {
-      try {
-        this.state = MigrationState.defaultValueOf( state );
-        this.sourceHost = Strings.nullToEmpty( sourceHost );
-        this.destinationHost = Strings.nullToEmpty( destinationHost );
-      } catch ( IllegalArgumentException ex ) {
-        LOG.error( ex );//should never happen; hello!!?
-        this.state = MigrationState.none;
-        this.sourceHost = null;
-        this.destinationHost = null;
+  public static void deleteFor( final VmInstance vm ) {
+    final DeleteTagsType deleteTags = new DeleteTagsType( ) {
+      {
+        this.getTagSet( ).add( MigrationTags.SOURCE.deleteTag( ) );
+        this.getTagSet( ).add( MigrationTags.DESTINATION.deleteTag( ) );
+        this.getResourcesSet( ).add( vm.getInstanceId( ) );
       }
+    };
+    dispatch( deleteTags );
+  }
+  
+  private static void dispatch( final ResourceTagMessage tagMessage ) {
+    try {
+      AsyncRequests.dispatch( Topology.lookup( Eucalyptus.class ), tagMessage );
+    } catch ( Exception ex ) {
+      LOG.error( ex );
     }
   }
   
-  protected VmInstance getVmInstance( ) {
-    return this.vmInstance;
+  public static void createFor( final VmInstance vm ) {
+    final VmMigrationTask migrationTask = vm.getRuntimeState( ).getMigrationTask( );
+    final CreateTagsType createTags = new CreateTagsType( ) {
+      {
+        this.getTagSet( ).add( MigrationTags.SOURCE.getTag( migrationTask.getSourceHost( ) ) );
+        this.getTagSet( ).add( MigrationTags.DESTINATION.getTag( migrationTask.getDestinationHost( ) ) );
+        this.getResourcesSet( ).add( vm.getInstanceId( ) );
+        this.setEffectiveUserId( vm.getOwnerUserId( ) );//impersonation should only be needed when creating?
+      }
+    };
+    dispatch( createTags );
   }
   
-  protected void setVmInstance( VmInstance vmInstance ) {
-    this.vmInstance = vmInstance;
+  ResourceTag getTag( String host ) {
+    return new ResourceTag( this.toString( ), host );
   }
   
-  protected MigrationState getState( ) {
-    return this.state;
+  private DeleteResourceTag deleteTag( ) {
+    return new DeleteResourceTag( ) {
+      {
+        this.setKey( this.toString( ) );
+      }
+    };
   }
   
-  protected void setState( MigrationState state ) {
-    this.state = state;
+  @Override
+  public boolean apply( @Nullable VmInstance input ) {
+    VmMigrationTask task = input.getRuntimeState( ).getMigrationTask( );
+    if ( MigrationState.none.equals( task.getState( ) ) ) {
+      MigrationTags.deleteFor( input );
+    } else {
+      MigrationTags.createFor( input );
+    }
+    return true;
   }
   
-  protected String getSourceHost( ) {
-    return this.sourceHost;
-  }
-  
-  protected void setSourceHost( String sourceHost ) {
-    this.sourceHost = sourceHost;
-  }
-  
-  protected String getDestinationHost( ) {
-    return this.destinationHost;
-  }
-  
-  protected void setDestinationHost( String destinationHost ) {
-    this.destinationHost = destinationHost;
+  public static void update( VmInstance input ) {
+    SOURCE.apply( input );
   }
 }
