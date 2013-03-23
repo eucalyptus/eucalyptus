@@ -6,10 +6,10 @@ define([
 		initialize : function(args) {
 			console.log('UI: Button');
 			this.$el.html(template);
-			$('div', this.$el).html(args.innerHtml);
-			this.rview = rivets.bind(this.$el, this);
+			$('.buttoncontent', this.$el).html(args.innerHtml);
+			this.rview = rivets.bind(this.$el, args.model);
 		},
-		clicked : function() {
+		click : function() {
 			if (this.model.click) {
 				this.model.click();
 			} else {
