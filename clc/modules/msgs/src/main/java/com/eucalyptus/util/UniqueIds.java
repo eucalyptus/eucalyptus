@@ -167,12 +167,11 @@ public class UniqueIds implements Serializable {
     return Transaction.NEXT_INDEX.apply( nextIndex( counterName, 1 ) );
   }
   
-  private static final LoadingCache<String,Function<Long, Long>> counterMap = CacheBuilder.build( new CacheLoader<String,Function<Long, Long>>(){
-
+  private static final LoadingCache<String,Function<Long, Long>> counterMap = CacheBuilder.newBuilder().build(
+    new CacheLoader<String,Function<Long, Long>>(){
     @Override
     public Function<Long, Long> load( final String counterName ) {
       return new Function<Long, Long>( ) {
-        
         @Override
         public Long apply( Long arg0 ) {
           Long ret = 0l;
@@ -195,7 +194,7 @@ public class UniqueIds implements Serializable {
     }} );
   
   private static Long nextIndex( final String counterName, long extent ) {
-    return Entities.asTransaction( PersistedCounter.class, counterMap.get( counterName ), 1000 ).apply( extent );
+    return Entities.asTransaction( PersistedCounter.class, counterMap.getUnchecked( counterName ), 1000 ).apply( extent );
     
   }
   

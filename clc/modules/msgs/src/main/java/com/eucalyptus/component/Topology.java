@@ -109,6 +109,7 @@ import com.google.common.base.Predicates;
 import com.google.common.base.Supplier;
 import com.google.common.base.Throwables;
 import com.google.common.cache.CacheBuilder;
+import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
 import com.google.common.collect.Collections2;
 import com.google.common.collect.Iterables;
@@ -970,10 +971,23 @@ public class Topology {
   //@noformat
   private static final
   LoadingCache<Component.State, Function<ServiceConfiguration, ServiceConfiguration>> 
-    cloudTransitionCallables = CacheBuilder.build(TopologyFunctionGenerator.INSTANCE);
+    cloudTransitionCallables = CacheBuilder.newBuilder().build(
+    new CacheLoader<Component.State, Function<ServiceConfiguration, ServiceConfiguration>>() {
+      @Override
+      public Function<ServiceConfiguration, ServiceConfiguration> load( final State input ) {
+        for ( final Transitions c : Transitions.values( ) ) {
+          if ( input.equals( c.state ) ) {
+            return c;
+          } else if ( input.name( ).startsWith( c.name( ) ) ) {
+            return c;
+          }
+        }
+        return Transitions.CHECK;
+      }
+    });
   //@format
   private static Function<ServiceConfiguration, ServiceConfiguration> get( final Component.State state ) {
-    return cloudTransitionCallables.get( state );
+    return cloudTransitionCallables.getUnchecked( state );
   }
   
   private static Function<ServiceConfiguration, ServiceConfiguration> check( ) {
@@ -1210,20 +1224,4 @@ public class Topology {
     
   }
   
-  private enum TopologyFunctionGenerator implements Function<Component.State, Function<ServiceConfiguration, ServiceConfiguration>> {
-    INSTANCE;
-    
-    @Override
-    public Function<ServiceConfiguration, ServiceConfiguration> apply( final State input ) {
-      for ( final Transitions c : Transitions.values( ) ) {
-        if ( input.equals( c.state ) ) {
-          return c;
-        } else if ( input.name( ).startsWith( c.name( ) ) ) {
-          return c;
-        }
-      }
-      return Transitions.CHECK;
-    }
-    
-  }
 }

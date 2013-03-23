@@ -55,7 +55,21 @@ public abstract class TagSupport {
   private static final Logger log = Logger.getLogger( TagSupport.class );
   private static final ConcurrentMap<String,TagSupport> supportByResourceType = Maps.newConcurrentMap();
   private static final ConcurrentMap<Class<? extends AutoScalingMetadata>,TagSupport> supportByClass = Maps.newConcurrentMap();
-  private static final LoadingCache<Class,Class> metadataClassMap = CacheBuilder.build(new MetadataSubclass());
+  private static final LoadingCache<Class,Class> metadataClassMap = CacheBuilder.newBuilder().build(
+    new CacheLoader<Class,Class>() {
+      @Override
+      public Class load( final Class instanceClass ) {
+        final List<Class<?>> interfaces = Lists.newArrayList();
+        for ( final Class clazz : Classes.interfaceAncestors().apply( instanceClass ) ) {
+          interfaces.add( clazz );
+        }
+        Collections.reverse( interfaces );
+        return Iterables.find( interfaces,
+            Predicates.and(
+                Predicates.not( Predicates.<Class<?>>equalTo( AutoScalingMetadata.class ) ),
+                Classes.subclassOf( AutoScalingMetadata.class ) ) );
+      }
+    });
 
   private final Class<? extends AbstractOwnedPersistent> resourceClass;
   private final Class<? extends AutoScalingMetadata> cloudMetadataClass;
@@ -181,7 +195,7 @@ public abstract class TagSupport {
 
   @SuppressWarnings( "unchecked" )
   private static Class<? extends AutoScalingMetadata> subclassFor( Class<? extends AutoScalingMetadata> metadataInstance ) {
-    return metadataClassMap.get( metadataInstance );
+    return metadataClassMap.getUnchecked( metadataInstance );
   }
 
   Class<? extends AbstractOwnedPersistent> getResourceClass() {
@@ -196,18 +210,4 @@ public abstract class TagSupport {
     return tagClassResourceField;
   }
 
-  private class MetadataSubclass extends CacheLoader<Class,Class> {
-    @Override
-    public Class load( final Class instanceClass ) throws Exception {
-      final List<Class<?>> interfaces = Lists.newArrayList();
-      for ( final Class clazz : Classes.interfaceAncestors().apply( instanceClass ) ) {
-        interfaces.add( clazz );
-      }
-      Collections.reverse( interfaces );
-      return Iterables.find( interfaces,
-          Predicates.and(
-              Predicates.not( Predicates.<Class<?>>equalTo( AutoScalingMetadata.class ) ),
-              Classes.subclassOf( AutoScalingMetadata.class ) ) );
-    }
-  }
 }

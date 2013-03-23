@@ -132,10 +132,10 @@ public class StorageManagers extends ServiceJarDiscovery {
     return 0.0d;
   }
   
-  private static final LoadingCache<String, LogicalStorageManager> managerInstances = CacheBuilder.build(
-    new CacheLoader<String, LogicalStorageManager> {
+  private static final LoadingCache<String, LogicalStorageManager> managerInstances = CacheBuilder.newBuilder().build(
+    new CacheLoader<String, LogicalStorageManager>() {
       @Override
-      public LogicalStorageManager load( String arg0 ) throws Exception {
+      public LogicalStorageManager load( String arg0 ) {
         LogicalStorageManager bsm = Classes.newInstance( lookupManager( arg0 ) );
         try {
           bsm.checkPreconditions( );
@@ -152,7 +152,7 @@ public class StorageManagers extends ServiceJarDiscovery {
     if ( lastManager.get( ) == null || UNSET.equals(lastManager.get())) {
       throw new NoSuchElementException( "SC blockstorageamanger not configured. Found empty or unset manager(" + lastManager + ").  Legal values are: " + Joiner.on( "," ).join( managers.keySet( ) ) );
     } else {
-      return managerInstances.get( lastManager.get( ) );
+      return managerInstances.getUnchecked( lastManager.get( ) );
     }
   }
   
@@ -173,16 +173,14 @@ public class StorageManagers extends ServiceJarDiscovery {
   
   public static synchronized void flushManagerInstances() throws EucalyptusCloudException {
   	LOG.debug("Flushing all block storage manager instances");
-  	managerInstances.clear();
+  	managerInstances.invalidateAll();
   	lastManager.set(UNSET);
   }
   
   public static synchronized void flushManagerInstance(String key) throws EucalyptusCloudException {
   	LOG.debug("Flusing block storage manager instance: " + key);
-		lastManager.set(UNSET);
-  	if(managerInstances.containsKey(key)) {  		
-  		managerInstances.remove(key);
-  	}
+	lastManager.set(UNSET);
+	managerInstances.invalidate(key);
   }
   
   public static Class<? extends LogicalStorageManager> lookupManager( String arg0 ) {

@@ -331,13 +331,13 @@ public class Exceptions {
     }
   }
   
-  private static final LoadingCache<Class, ErrorMessageBuilder> builders = CacheBuilder.build(
-                                                                                 new CacheLoader<Class, ErrorMessageBuilder>( ) {
-                                                                                   @Override
-                                                                                   public ErrorMessageBuilder load( Class input ) {
-                                                                                     return new ErrorMessageBuilder( input );
-                                                                                   }
-                                                                                 } );
+  private static final LoadingCache<Class, ErrorMessageBuilder> builders = CacheBuilder.newBuilder().build(
+    new CacheLoader<Class, ErrorMessageBuilder>( ) {
+      @Override
+      public ErrorMessageBuilder load( Class input ) {
+        return new ErrorMessageBuilder( input );
+      }
+    });
   
   /**
    * @param class1
@@ -345,7 +345,7 @@ public class Exceptions {
    * @return
    */
   public static ErrorMessageBuilder builder( Class<?> type ) {
-    return builders.get( type );
+    return builders.getUnchecked( type );
   }
   
   public static class ErrorMessageBuilder {

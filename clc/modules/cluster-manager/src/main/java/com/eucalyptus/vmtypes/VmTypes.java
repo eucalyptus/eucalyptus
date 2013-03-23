@@ -183,8 +183,8 @@ public class VmTypes {
     
     private PersistentMap( Function<K, V> getFunction ) {
       super( );
-      LoadingCache<K, V> map = CacheBuilder.build(CacheLoader.from(getFunction));
-      this.backingMap = map;
+      LoadingCache<K, V> map = CacheBuilder.newBuilder().build(CacheLoader.from(getFunction));
+      this.backingMap = map.asMap();
       Class valueType = Classes.genericsToClasses( getFunction ).get( 1 );
       this.getFunction = Entities.asTransaction( getFunction );
       this.putFunction = Entities.asTransaction( valueType, new Persister<V>( ) );
