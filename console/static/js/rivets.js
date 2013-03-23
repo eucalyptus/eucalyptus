@@ -44,14 +44,13 @@ var uiBindings = {}
 rivets.binders["ui-*"] = {
     bind: function(el) {
         var self = this;
-        console.log('UI bind', this);
         require(['views/ui/' + this.args[0] + '/index'], function(view) {
-            // self.bbView = new view({el: el, model: self.bbLastValue ? self.bbLastValue : {}});
-            self.bbView = new view({el: el, model: self.bbLastValue ? self.bbLastValue : {}});
+            self.bbView = new view({model: self.bbLastValue ? self.bbLastValue : {}});
+            $(el).replaceWith($(self.bbView.el).children());
+            return self.bbView.el;
         });
     },
     routine: function(el, value) {
-        console.log('UI routine', this);
         this.bbLastValue = value;
         if (this.bbView) {
            this.bbView.model = value;
