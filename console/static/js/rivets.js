@@ -1,4 +1,3 @@
-console.log('RIVETS CONFIGURE');
 rivets.configure({
 	adapter: {
 	    subscribe: function(obj, keypath, callback) {
@@ -20,7 +19,6 @@ rivets.configure({
 		};
 	    },
 	    read: function(obj, keypath) {
-		console.log('RIVETS-READ',obj,keypath);
 		if (obj instanceof Backbone.Collection)  {
 		    if(keypath) {
                        return obj[keypath];
@@ -40,3 +38,23 @@ rivets.configure({
 	    }
 	}
 });
+
+var uiBindings = {}
+
+rivets.binders["ui-*"] = {
+    bind: function(el) {
+        var self = this;
+        require(['views/ui/' + this.args[0] + '/index'], function(view) {
+            self.bbView = new view({model: self.bbLastValue ? self.bbLastValue : {}});
+            $(el).replaceWith($(self.bbView.el).children());
+            return self.bbView.el;
+        });
+    },
+    routine: function(el, value) {
+        this.bbLastValue = value;
+        if (this.bbView) {
+           this.bbView.model = value;
+           this.bbView.render();
+        }
+    }
+}

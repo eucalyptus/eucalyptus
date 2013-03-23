@@ -325,19 +325,19 @@
                "aTargets":[0],
                "mData" : function(source) { 
                  var emi = source.id;
-                 var desc = source.description ? source.description : source.location;
+                 var desc = source.description ? source.description : source.location;   // XSS Warning: desc might contains unescaped strings
                  var arch = source.architecture;
                  arch=arch.replace('i386', '32 bit')
                  arch=arch.replace('x86_64', '64 bit');
 
                  var name = '';
-                 var imgKey = inferImage(source.location, desc, source.platform);
+                 var imgKey = inferImage(source.location, desc, source.platform);   // XSS Warning: desc will be used for regex operation here. Safe.
                  if(imgKey)
                    name = getImageName(imgKey);
                  var $cell = $('<div>').addClass(imgKey).addClass('image-type').append(
                                $('<div>').addClass('image-name').text(name), // should be linux, windows, or distros
                                $('<div>').addClass('image-id-arch').append($('<span>').text(emi), $('<span>').text(arch)),
-                               $('<div>').addClass('image-description').html(desc).text()); 
+                               $('<div>').addClass('image-description').text(desc)); 
                  
                  return $cell.wrap($('<div>')).parent().html();
                },
@@ -345,6 +345,9 @@
              {
                "bVisible": false,
                "aTargets":[1],
+               "mRender": function(data) {
+                return DefaultEncoder().encodeForHTML(data);
+               },
                "mData" : function(source){
                  if(!source.platform)
                    return 'linux';
@@ -355,6 +358,9 @@
              {
                "bVisible": false,
                "aTargets":[2],
+               "mRender": function(data) {
+                return DefaultEncoder().encodeForHTML(data);
+               },
                "mData" : function(source){
                  var results = describe('sgroup');
                  var group = null;
