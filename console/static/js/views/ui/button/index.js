@@ -6,7 +6,7 @@ define([
 		initialize : function(args) {
 			console.log('UI: Button');
 			this.$el.html(template);
-			$('div', this.$el).html(args.innerHtml);
+			$('.buttoncontent', this.$el).html(args.innerHtml);
 			this.rview = rivets.bind(this.$el, this);
 		},
 		clicked : function() {
