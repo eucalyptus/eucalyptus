@@ -113,7 +113,7 @@ public class ServiceContext {
     public String apply( @Nullable BaseMessage input ) {
       Class<? extends ComponentId> compIdClass = ComponentMessages.lookup( input );
       ComponentId compId = ComponentIds.lookup( compIdClass );
-      return null;
+      return compId.getLocalEndpointName( );
     }
     
   }
