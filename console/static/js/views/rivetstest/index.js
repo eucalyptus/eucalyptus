@@ -11,7 +11,11 @@ define([
 				value: 'foobarbaz'
 			});
 			this.buttonScope = {
-				click: function() { self.test.set('value', 'button click'); }
+				test: this.test,
+				click: function() { 
+					console.log('Click occurred');
+					self.test.set('value', 'button click'); 
+				}
 			}
 			this.sGroups = dh.scalingGroups;
 			this.$el.html(template);

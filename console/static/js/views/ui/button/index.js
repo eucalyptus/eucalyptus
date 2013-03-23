@@ -7,9 +7,9 @@ define([
 			console.log('UI: Button');
 			this.$el.html(template);
 			$('.buttoncontent', this.$el).html(args.innerHtml);
-			this.rview = rivets.bind(this.$el, this);
+			this.rview = rivets.bind(this.$el, args.model);
 		},
-		clicked : function() {
+		click : function() {
 			if (this.model.click) {
 				this.model.click();
 			} else {
