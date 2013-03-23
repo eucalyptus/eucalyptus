@@ -9,6 +9,9 @@ define([
 			this.test = new Backbone.Model({
 				value: 'foobarbaz'
 			});
+			this.buttonScope = {
+				click: function() { alert('click'); }
+			}
 			this.sGroups = dh.scalingGroups;
 			this.$el.html(template);
 			this.rivetsView = rivets.bind(this.$el, this);

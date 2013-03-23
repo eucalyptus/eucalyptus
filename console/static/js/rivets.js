@@ -45,7 +45,10 @@ rivets.binders["ui-*"] = {
     bind: function(el) {
         var self = this;
         require(['views/ui/' + this.args[0] + '/index'], function(view) {
-            self.bbView = new view({model: self.bbLastValue ? self.bbLastValue : {}});
+            self.bbView = new view({
+                model: self.bbLastValue ? self.bbLastValue : {},
+                innerHtml: $(el).html()
+            });
             $(el).replaceWith($(self.bbView.el).children());
             return self.bbView.el;
         });
