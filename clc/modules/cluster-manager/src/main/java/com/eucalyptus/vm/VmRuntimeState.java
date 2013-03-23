@@ -117,7 +117,7 @@ public class VmRuntimeState {
   /**
    * 
    */
-  private static final String VM_NC_HOST_TAG      = "euca:node:host";
+  private static final String VM_NC_HOST_TAG      = "euca:node";
   @Transient
   private static String       SEND_USER_TERMINATE = "SIGTERM";
   @Transient
