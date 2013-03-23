@@ -371,10 +371,12 @@ public class VmRuntimeState {
    */
   private void setNodeTag( String serviceTag2 ) {
     final String host = URI.create( serviceTag2 ).getHost( );
+    final VmInstance vm = VmRuntimeState.this.getVmInstance( );
     final CreateTagsType createTags = new CreateTagsType( ) {
       {
         this.getTagSet( ).add( new ResourceTag( VM_NC_HOST_TAG, host ) );
-        this.getResourcesSet( ).add( VmRuntimeState.this.getVmInstance( ).getInstanceId( ) );
+        this.getResourcesSet( ).add( vm.getInstanceId( ) );
+        this.setEffectiveUserId( vm.getOwnerUserId( ) );//GRZE:TODO: update impersonation impl later.
       }
     };
     try {

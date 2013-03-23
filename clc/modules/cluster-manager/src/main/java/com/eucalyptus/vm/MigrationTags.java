@@ -89,6 +89,7 @@ enum MigrationTags implements Predicate<VmInstance> {
         this.getTagSet( ).add( MigrationTags.SOURCE.deleteTag( ) );
         this.getTagSet( ).add( MigrationTags.DESTINATION.deleteTag( ) );
         this.getResourcesSet( ).add( vm.getInstanceId( ) );
+        this.setEffectiveUserId( vm.getOwnerUserId( ) );//GRZE:TODO: update impersonation impl later.
       }
     };
     dispatch( deleteTags );
@@ -109,7 +110,7 @@ enum MigrationTags implements Predicate<VmInstance> {
         this.getTagSet( ).add( MigrationTags.SOURCE.getTag( migrationTask.getSourceHost( ) ) );
         this.getTagSet( ).add( MigrationTags.DESTINATION.getTag( migrationTask.getDestinationHost( ) ) );
         this.getResourcesSet( ).add( vm.getInstanceId( ) );
-        this.setEffectiveUserId( vm.getOwnerUserId( ) );//impersonation should only be needed when creating?
+        this.setEffectiveUserId( vm.getOwnerUserId( ) );//GRZE:TODO: update impersonation impl later.
       }
     };
     dispatch( createTags );
