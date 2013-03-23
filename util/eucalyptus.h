@@ -149,6 +149,7 @@
 #define EUCALYPTUS_FAULT_DIR                     EUCALYPTUS_DATA_DIR "/faults"
 #define EUCALYPTUS_CUSTOM_FAULT_DIR              EUCALYPTUS_CONF_DIR "/faults"
 #define EUCALYPTUS_KEYS_DIR                      EUCALYPTUS_STATE_DIR "/keys"
+#define EUCALYPTUS_NC_STATE_FILE                 EUCALYPTUS_STATE_DIR "/nc_state.xml"
 #define EUCALYPTUS_CONF_LOCATION                 EUCALYPTUS_CONF_DIR "/eucalyptus.conf"
 #define EUCALYPTUS_CONF_OVERRIDE_LOCATION        EUCALYPTUS_CONF_DIR "/eucalyptus.local.conf"
 #define EUCALYPTUS_LIBVIRT_XSLT                  EUCALYPTUS_CONF_DIR "/libvirt.xsl"

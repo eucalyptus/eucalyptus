@@ -285,6 +285,7 @@ typedef struct resource_t {
     time_t idleStart;
     int running;
     int lockidx;
+    char nodeStatus[24];
 } ccResource;
 
 typedef struct ccResourceCache_t {

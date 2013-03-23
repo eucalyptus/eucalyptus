@@ -657,6 +657,7 @@ static int doDescribeResource(struct nc_state_t *nc, ncMetadata * pMeta, char *r
     int sum_cores = 0;          // for known domains: sum of requested cores
 
     *outRes = NULL;
+
     sem_p(inst_copy_sem);
     while ((inst = get_instance(&global_instances_copy)) != NULL) {
         if (inst->state == TEARDOWN)
@@ -688,16 +689,38 @@ static int doDescribeResource(struct nc_state_t *nc, ncMetadata * pMeta, char *r
         LOGERROR("       INT_MAX=%-10d\n", INT_MAX);
         return EUCA_OVERFLOW_ERROR;
     }
-
-    res = allocate_resource("OK", nc->iqn, nc->mem_max, mem_free, nc->disk_max, disk_free, nc->cores_max, cores_free, "none");
+    
+    if (nc->is_enabled)
+        res = allocate_resource("enabled",
+                                nc->iqn,
+                                nc->mem_max, mem_free,
+                                nc->disk_max, disk_free,
+                                nc->cores_max, cores_free,
+                                "none");
+    else
+        res = allocate_resource("disabled",
+                                nc->iqn,
+                                0, 0,
+                                0, 0,
+                                0, 0,
+                                "none");
+    
     if (res == NULL) {
         LOGERROR("out of memory\n");
         return EUCA_MEMORY_ERROR;
     }
-
     *outRes = res;
-    LOGDEBUG("returning cores=%d/%lld mem=%lld/%lld disk=%lld/%lld iqn=%s\n", cores_free, nc->cores_max, mem_free, nc->mem_max, disk_free,
-             nc->disk_max, nc->iqn);
+    
+    LOGDEBUG("returning status=%s cores=%d/%d mem=%d/%d disk=%d/%d iqn=%s\n", 
+             res->nodeStatus,
+             res->numberOfCoresAvailable,
+             res->numberOfCoresMax,
+             res->memorySizeAvailable,
+             res->memorySizeMax,
+             res->diskSizeAvailable,
+             res->diskSizeMax,
+             res->iqn);
+    
     return EUCA_OK;
 }
 
@@ -2005,8 +2028,37 @@ static int doDescribeSensors(struct nc_state_t *nc, ncMetadata * pMeta, int hist
 //!
 static int doModifyNode(struct nc_state_t *nc, ncMetadata * pMeta, char *stateName)
 {
-    LOGINFO("node state change to %s\n", stateName);
-    return EUCA_OK;
+    int ret = EUCA_OK;
+    boolean did_change_state = FALSE;
+
+    if (! strcasecmp(stateName, "enabled")) {
+        if (nc->is_enabled == FALSE) {
+            nc->is_enabled = TRUE;
+            did_change_state = TRUE;
+        }
+
+    } else if (! strcasecmp(stateName, "disabled")) {
+        if (nc->is_enabled == TRUE) {
+            nc->is_enabled = FALSE;
+            did_change_state = TRUE;
+        }
+
+    } else {
+        LOGERROR("unexpected state '%s' requested for the node\n", stateName);
+        ret = EUCA_ERROR;
+    }
+
+    if (did_change_state) {
+        LOGINFO("node state change to '%s'\n", stateName);
+        if (gen_nc_xml(nc) != EUCA_OK) {
+            LOGERROR("failed to update NC state on disk\n");
+            ret = EUCA_ERROR;
+        } else {
+            LOGINFO("wrote NC state to disk\n");
+        }
+    }
+    
+    return ret;
 }
 
 //!

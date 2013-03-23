@@ -476,6 +476,20 @@ int doEnableService(ncMetadata * pMeta)
 
     LOGDEBUG("invoked: userId=%s\n", SP(pMeta ? pMeta->userId : "UNSET"));
 
+    int enable_cc = 0;
+    for (int i=0; i<pMeta->servicesLen; i++) {
+        if (strcmp(pMeta->services[i].type, "cluster")==0) {
+            enable_cc = 1;
+        } else if (strcmp(pMeta->services[i].type, "node")==0) {
+            ret = doModifyNode(pMeta, pMeta->services[i].name, "enabled");
+        }
+    }
+    if (pMeta->servicesLen<1) {
+        enable_cc = 1;
+    }
+    if (enable_cc != 1)
+        goto done;
+
     sem_mywait(CONFIG);
     {
         if (config->ccState == SHUTDOWNCC) {
@@ -516,6 +530,7 @@ int doEnableService(ncMetadata * pMeta)
         }
     }
 
+ done:
     LOGTRACE("done\n");
     return (ret);
 }
@@ -543,6 +558,20 @@ int doDisableService(ncMetadata * pMeta)
 
     LOGDEBUG("invoked: userId=%s\n", SP(pMeta ? pMeta->userId : "UNSET"));
 
+    int disable_cc = 0;
+    for (int i=0; i<pMeta->servicesLen; i++) {
+        if (strcmp(pMeta->services[i].type, "cluster")==0) {
+            disable_cc = 1;
+        } else if (strcmp(pMeta->services[i].type, "node")==0) {
+            ret = doModifyNode(pMeta, pMeta->services[i].name, "disabled");
+        }
+    }
+    if (pMeta->servicesLen<1) {
+        disable_cc = 1;
+    }
+    if (disable_cc != 1)
+        goto done;
+
     sem_mywait(CONFIG);
     {
         if (config->ccState == SHUTDOWNCC) {
@@ -560,6 +589,7 @@ int doDisableService(ncMetadata * pMeta)
     }
     sem_mypost(CONFIG);
 
+ done:
     LOGTRACE("done\n");
     return (ret);
 }
