@@ -7,6 +7,7 @@ define([
         return Backbone.View.extend({
           title: 'Membership', 
           loadBalancers: dh.loadBalancers,
+
           initialize: function() {
             this.render();
           },
