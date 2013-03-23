@@ -164,7 +164,7 @@ public class VmMigrationTask {
      */
     if ( ( System.currentTimeMillis( ) - this.getRefreshTimer( ).getTime( ) ) > TimeUnit.SECONDS.toMillis( VmInstances.MIGRATION_REFRESH_TIME ) ) {
       //GRZE:TODO: not to mention that the above line is annoying and could be thoroughly generalized.
-      this.setRefreshTimer( new Date( ) );
+      this.updateRefreshTimer( );
       return true;
     } else {
       return updated;
@@ -178,7 +178,11 @@ public class VmMigrationTask {
   protected void setRefreshTimer( Date refreshTimer ) {
     this.refreshTimer = refreshTimer;
   }
-  
+
+  private void updateRefreshTimer( ) {
+    this.setRefreshTimer( new Date( ) );
+  }
+
   protected VmInstance getVmInstance( ) {
     return this.vmInstance;
   }
@@ -193,7 +197,7 @@ public class VmMigrationTask {
   
   protected void setState( MigrationState state ) {
     if ( !this.equals( state ) ) {
-      this.setLastState( this.state );
+      this.updateRefreshTimer( );
       this.state = state;
     }
   }
