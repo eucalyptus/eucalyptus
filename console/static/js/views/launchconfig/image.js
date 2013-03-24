@@ -1,23 +1,33 @@
 define([
 	'dataholder',
-	//'text!./image_static.html!strip',
+	'text!./image_static.html!strip',
   'text!./image.html!strip',
-  'rivets'
+  'rivets',
 	], function( dataholder, template, rivets ) {
 	return Backbone.View.extend({
 		initialize : function() {
 			this.view = this;
 			this.images = dataholder.images;
-      this.jerry = "POMMER";
+      this.images.on('all', this.render, this);
+      this.imageNames = {};
 			this.render();
 		},
-		doit : function() {
-			console.log('DOIT:', arguments);
-			this.test.set({value: 'pressed the clicker'});
-		},
+
+    setImageNames: function() {
+        var view = this;
+        _.each(this.images.models, function(image) {
+            console.log("IMAGES - model: ", image.attributes);
+          view.imageNames[image.id] = inferImage(image.attributes.location, image.attributes.description, image.attributes.platform);
+          console.log("IMAGES - setname: ", view.imageNames[image.id]);
+        });
+    },
+
+
 		render : function() {
-      this.$el.html(template);
-			//this.$el.html(_.template(template, {collection: this.collection}));
+      this.setImageNames();
+      this.$el.html(_.template(template,{images: this.images, imageNames: this.imageNames}));
+      //this.$el.html(template);
+
 			rivets.bind(this.$el, {images: this.images});
 			//$(':input[data-value]', this.$el).keyup(function() { $(this).trigger('change'); });
 			return this;

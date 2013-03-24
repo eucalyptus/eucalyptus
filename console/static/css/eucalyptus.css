@@ -2246,6 +2246,11 @@ a.sg-my-ip {
   line-height: 1.5;
 }
 
+.wizard-step-scrollcontainer {
+  height: 205px;
+  overflow: auto;
+}
+
 /* Security Group dialogs get narrower labels, due to narrow dialog width */
 
 .group.content-section .form-row label,
@@ -2276,6 +2281,7 @@ a.sg-my-ip {
 
 .wizard-step .dataTables_wrapper table {
   border: 1px solid #e5e5e5;
+  width: 100%;
 }
 
 .wizard-step .dataTables_wrapper table td {
@@ -2384,6 +2390,11 @@ span.on-error {
   padding: 15px 0 0 5px;
 }
 
+.wizardTitle {
+  margin-bottom: 8px;
+  float: left;
+}
+
 .wizard-step #filter-wrapper {
   float: left;
   width : 185px;
@@ -2391,7 +2402,22 @@ span.on-error {
 }
 .wizard-step #table-wrapper {
   float: left;
-  width : 440px;
+  width : 85%;
+  margin-left: 8px;
+}
+
+.wizard-step div.list { 
+  padding: 4px;
+  margin-left: 15px;
+  margin-right: 15px;
+}
+
+.wizard-step div.list.odd {
+  background-color: #FFFFFF;
+}
+
+.wizard-step div.list.even {
+  background-color: #F4F4EF;
 }
 
 .wizard-step .dataTables_filter input {
