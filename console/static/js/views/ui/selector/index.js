@@ -6,6 +6,7 @@ define([
 		initialize : function(args) {
 			this.$el.html(template);
 			$('.ui-content', this.$el).html(args.innerHtml);
+                        args.model.label = $(args.innerHtml).filter('label').text();
 			this.rview = rivets.bind(this.$el, args.model);
 		},
 		click : function() {

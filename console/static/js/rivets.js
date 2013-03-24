@@ -19,15 +19,13 @@ rivets.configure({
 		};
 	    },
 	    read: function(obj, keypath) {
-		if (obj instanceof Backbone.Collection)  {
-		    if(keypath) {
-                       return obj[keypath];
-		    } else {
-                       return obj.models;
-                    }
-		} else {
+		if (obj instanceof Backbone.Model)  {
 		    return obj.get(keypath);
-		};
+		} else if (obj instanceof Backbone.Collection)  {
+		    return obj.at(keypath);
+		} else {
+		    return obj[keypath];
+		}
 	    },
 	    publish: function(obj, keypath, value) {
 		if (obj instanceof Backbone.Collection) {
