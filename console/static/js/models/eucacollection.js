@@ -4,6 +4,7 @@ define([
     sync: function(method, model, options) {
       var collection = this;
       if (method == 'read') {
+        console.log('EUCA COLLECTION: URL ' + collection.url);
         $.when(
           $.ajax({
             type:"POST",
@@ -24,7 +25,7 @@ define([
         ).done(
           // Success
           function(describe, tags) {
-            //console.log('EUCACOLLECTION (success):', describe, tags);
+            console.log('EUCACOLLECTION (success):', describe, tags);
             if (describe[0].results) {
               var results = describe[0].results;
               if (collection.namedColumns && tags && tags[0].results) {

@@ -1,5 +1,12 @@
-define(['models/scalinggrps','models/volumes', 'models/images'], function(ScalingGroups,Volumes,Images) {
+define([
+	'models/scalinggrps',
+	'models/volumes', 
+	'models/images',
+	'models/launchconfigs'
+], 
+function(ScalingGroups,Volumes,Images,LaunchConfigs) {
 	var shared = {
+		launchConfigs: new LaunchConfigs(),
 		scalingGroups: new ScalingGroups(),
 		volumes: new Volumes(),
 		images: new Images(),
@@ -11,6 +18,7 @@ define(['models/scalinggrps','models/volumes', 'models/images'], function(Scalin
 		])
 	};
 
+	shared.launchConfigs.fetch();
 	shared.scalingGroups.fetch();
 	shared.volumes.fetch();
 	shared.images.fetch();

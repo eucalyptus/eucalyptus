@@ -2,7 +2,7 @@ console.log('WIZARD:start');
 define([
   'wizard',
   'text!./template.html',
-  'text!./page1.html!strip',
+  './page1',
   './page2',
   'text!./page3.html!strip',
 ], function(Wizard, wizardTemplate, page1, page2, page3) {
