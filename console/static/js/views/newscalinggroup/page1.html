@@ -1,0 +1,34 @@
+<div class="wizard-step">
+    <div class="wizardTitle"><h3>General</h3></div>
+    <div class="launch-wizard-type-main-contents">
+        <div class="launch-wizard-type-option">
+            <div class="form-row clearfix">
+                <label class="required-label" for="scalingGroupName">Name</label>
+                <input type="text" name="name" id="scalingGroupName" data-text="model.scalingGroup.name"></input>
+            </div>
+            <div class="form-row clearfix">
+                <div data-ui-selector=":launchConfigs">
+                     <label>Launch Configuration</label>
+                </div>
+            </div>
+            <div class="form-row clearfix">
+                <div style="margin-left: 3em;" class="wizard-section-label">Instances</div>
+
+                <div class="form-row clearfix">
+                    <label for="maximum">Maximum</label>
+                    <input class="smallNumber" type="number" id="maximum" value="1"></input>
+                </div>
+
+                <div class="form-row clearfix">
+                    <label for="desired">Desired</label>
+                    <input class="smallNumber" name="desired" id="desired" type="number" value="1"></input>
+                </div>
+
+                <div class="form-row clearfix">
+                    <label for="minimum">Minimum</label>
+                    <input class="smallNumber" name="minimum" id="minimum" type="number" value="1"></input>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

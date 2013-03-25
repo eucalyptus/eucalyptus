@@ -1,30 +1,33 @@
-console.log('EANTEST:start');
+console.log('WIZARD:start');
 define([
-	'dataholder',
-	'text!./template.html!strip',
-	], function( dataholder, template ) {
-	return Backbone.View.extend({
-		events : {
-		},
-		initialize : function() {
-			var view = this;
+  'wizard',
+  'text!./template.html',
+  './page1',
+  './page2',
+  './page3',
+  'models/scalinggrp',
+], function(Wizard, wizardTemplate, page1, page2, page3, ScalingGroup) {
+  var wizard = new Wizard();
 
-			this.collection = dataholder.scalingGroups;
-			this.collection.on('reset', function() { view.render() });
-			this.collection.on('change', function() { view.render() });
-			this.collection.fetch();	
-		},
-		render : function() {
-			this.$el.html(_.template(template)({ groups: this.collection.toJSON() }));
-			return this;
-		}
-	});
+  function canFinish(position, problems) {
+    // VALIDATE THE MODEL HERE AND IF THERE ARE PROBLEMS,
+    // ADD THEM INTO THE PASSED ARRAY
+    return position === 2;
+  }
+
+  function finish() {
+    alert("Congratulations!  You finished a pointless wizard!")
+  }
+
+  var scope = {
+    scalingGroup: new ScalingGroup()
+  }
+
+  var viewBuilder = wizard.viewBuilder(wizardTemplate)
+          .add(page1).add(page2).add(page3).setHideDisabledButtons(true)
+          .setFinishText('Create scaling group').setFinishChecker(canFinish)
+          .finisher(finish);
+
+  var ViewType = viewBuilder.build()
+  return ViewType;
 });
-
-function AutoScaling ($scope, $http) {
-    http.post('/autoscaling?Action=DescribeAutoScalingGroups').success(function(data) {
-        $scope.results = data.results;
-    });
-}
-
-angular.bootstrap($('ng-scope'), ['AutoScaling']);

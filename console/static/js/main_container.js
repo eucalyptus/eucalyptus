@@ -182,11 +182,14 @@
 	      case 'newscalinggroup':
 	        this.element.newscalinggroup();
           break;
+	case 'scalinggroup':
+	  this.element.scalinggroup();
+          break;
         case 'rivetstest':
           this.element.rivetstest();
           break;
-        case 'wizimagetest':
-          this.element.wizimagetest();
+        case 'launchconfig':
+          this.element.launchconfig();
           break;
       }
       if (options !== KEEP_VIEW) {

@@ -1,11 +1,13 @@
 <div>
 <h1>Rivets Test</h1>
+<div data-ui-button=":buttonScope">My Button Test: <span data-text="test.value"></span></div>
+<div data-ui-foowidget="test.value">Test!</div>
 <table>
 <tr><td>
 <p>Test: <span data-text="test.value"></span></p>
 <input data-value="test.value">
 <ul>
-	<li data-each-sg="sGroups"><span data-text="sg.name"></span></li>
+	<li data-each-sg="sGroups" data-bbview=":widget"><span data-text="sg.name"></span></li>
 </ul>
 </td>
 <td>
@@ -15,5 +17,10 @@
 </td>
 </tr>
 </table>
+
+<div data-ui-foowidget="test.value">Test!</div>
+
+<div data-ui-button=":quickScaleButton">Quick Scale</div>
+<div data-ui-button=":scalingDialog">Edit Scaling Group</div>
 
 </div>
