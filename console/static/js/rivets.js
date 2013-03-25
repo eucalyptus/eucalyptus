@@ -19,10 +19,12 @@ rivets.configure({
 		};
 	    },
 	    read: function(obj, keypath) {
+                if (typeof keypath === 'undefined' || keypath === '') return obj;
+
 		if (obj instanceof Backbone.Model)  {
 		    return obj.get(keypath);
 		} else if (obj instanceof Backbone.Collection)  {
-		    return obj.at(keypath);
+                    return obj.at(keypath);
 		} else {
 		    return obj[keypath];
 		}
@@ -36,8 +38,6 @@ rivets.configure({
 	    }
 	}
 });
-
-var uiBindings = {}
 
 rivets.binders["ui-*"] = {
     bind: function(el) {
