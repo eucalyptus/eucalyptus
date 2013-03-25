@@ -8,7 +8,6 @@ define([
 
           launchConfigs: {
             name: 'launchConfig',
-//            label: 'Launch Configuration',
             collection: dh.launchConfigs,
             itrLabel: function() {
               return this.itr.get('name');

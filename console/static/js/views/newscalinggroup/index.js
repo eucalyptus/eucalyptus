@@ -4,7 +4,7 @@ define([
   'text!./template.html',
   './page1',
   './page2',
-  'text!./page3.html!strip',
+  './page3',
 ], function(Wizard, wizardTemplate, page1, page2, page3) {
   var wizard = new Wizard();
 
@@ -23,7 +23,6 @@ define([
           .setFinishText('Create scaling group').setFinishChecker(canFinish)
           .finisher(finish);
 
-//  var ViewType = wizard.makeView(options, wizardTemplate);
   var ViewType = viewBuilder.build()
   return ViewType;
 });
