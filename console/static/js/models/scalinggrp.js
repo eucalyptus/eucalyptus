@@ -2,10 +2,9 @@
 //
 
 define([
-    'backbone',
     './eucamodel'
-], function(Backbone, EucaModel) {
-    var model = Backbone.Model.extend({
+], function(EucaModel) {
+    var model = EucaModel.extend({
     });
     return model;
 });
