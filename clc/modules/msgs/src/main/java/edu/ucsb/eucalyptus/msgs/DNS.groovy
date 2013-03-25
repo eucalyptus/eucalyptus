@@ -72,6 +72,80 @@ public class DNSRequestType extends DnsMessage {
   def DNSRequestType() {}
 }
 
+public class CreateMultiARecordType extends DNSRequestType {
+	String zone;
+	String name;
+	long ttl;
+	
+    def CreateMultiARecordType() {}
+
+    def CreateMultiARecordType(String zone, String name, long ttl) {
+		this.zone = zone;
+		this.name = name;
+		this.ttl = ttl;
+    }
+}
+
+public class CreateMultiARecordResponseType extends DNSResponseType {
+  def CreateMultiARecordResponseType() {}
+}
+
+
+public class AddMultiARecordType extends DNSRequestType {
+	String zone;
+	String name;
+	String address;
+	long ttl;
+	
+	def AddMultiARecordType() {}
+
+	def AddMultiARecordType(String zone, String name, String address, long ttl) {
+		this.zone = zone;
+		this.name = name;
+		this.address = address;
+		this.ttl = ttl;
+	}
+}
+
+public class AddMultiARecordResponseType extends DNSResponseType {
+  def AddMultiARecordResponseType() {}
+}
+
+public class RemoveMultiARecordType extends DNSRequestType {
+	String zone;
+	String name;
+	String address;
+	
+	def RemoveMultiARecordType() {}
+
+	def RemoveMultiARecordType(String zone, String name, String address) {
+		this.zone = zone;
+		this.name = name;
+		this.address = address;
+	}
+}
+
+public class RemoveMultiARecordResponseType extends DNSResponseType {
+  def RemoveMultiARecordResponseType() {}
+}
+
+
+public class RemoveMultiANameType extends DNSRequestType {
+	String zone;
+	String name;
+	
+	def RemoveMultiANameType() {}
+
+	def RemoveMultiANameType(String zone, String name) {
+		this.zone = zone;
+		this.name = name;
+	}
+}
+
+public class RemoveMultiANameResponseType extends DNSResponseType {
+  def RemoveMultiANameResponseType() {}
+}
+
 public class UpdateARecordType extends DNSRequestType {
   String zone;
   String name;

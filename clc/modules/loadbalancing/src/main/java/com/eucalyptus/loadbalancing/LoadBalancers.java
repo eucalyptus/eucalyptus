@@ -28,14 +28,19 @@ import javax.validation.ConstraintViolationException;
 
 import org.apache.log4j.Logger;
 import com.eucalyptus.auth.principal.UserFullName;
+import com.eucalyptus.cluster.Cluster;
+import com.eucalyptus.component.Component;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.TransactionException;
 import com.eucalyptus.loadbalancing.LoadBalancerListener.PROTOCOL;
+import com.eucalyptus.loadbalancing.activities.EucalyptusActivityTasks;
 import com.eucalyptus.loadbalancing.activities.LoadBalancerServoInstance;
 import com.eucalyptus.util.Exceptions;
 import com.google.common.base.Function;
 import com.google.common.base.Predicate;
 import com.google.common.base.Strings;
+
+import edu.ucsb.eucalyptus.msgs.ClusterInfoType;
 
 /**
  * @author Sang-Min Park
@@ -175,30 +180,51 @@ public class LoadBalancers {
 	}
 	
 	public static void addZone(final String lbName, final UserFullName ownerFullName, final Collection<String> zones) throws LoadBalancingException{
-		// TODO: SPARK: validate the zones
+		List<ClusterInfoType> clusters = null;
+		try{
+			clusters = EucalyptusActivityTasks.getInstance().describeAvailabilityZones();
+		}catch(Exception ex){
+			throw new LoadBalancingException("Failed to check the requested zones");
+		}
+		for(String zone : zones){
+			boolean found = false;
+			for(ClusterInfoType cluster: clusters){	 // assume that describe-availability-zones return only enabled clusters
+				if(zone.equals(cluster.getZoneName())){
+					found = true;
+					break;
+				}
+			}
+			if(!found)
+				throw new LoadBalancingException("No cluster named "+zone+" is available");
+		}
+		
 	   	LoadBalancer lb = null;
     	try{
     		lb = LoadBalancers.getLoadbalancer(ownerFullName, lbName);
     	}catch(Exception ex){
 	    	throw new AccessPointNotFoundException();
 	    }
-		final EntityTransaction db = Entities.get( LoadBalancerZone.class );
-		for(String zone : zones){
-    		// check the listener 
-			try{
-				final LoadBalancerZone sample = LoadBalancerZone.named(lb, zone);
-				final LoadBalancerZone exist = Entities.uniqueResult(sample);
-				LOG.warn("existing zone is found: "+exist);
-				db.commit();
-			}catch(NoSuchElementException ex){
-				final LoadBalancerZone newZone = LoadBalancerZone.named(lb, zone);
-				Entities.persist(newZone);
-				db.commit();
-			}catch(Exception ex){
-				db.rollback();
-				LOG.error("failed to persist the zone "+zone, ex);
+    	try{
+			for(String zone : zones){
+				final EntityTransaction db = Entities.get( LoadBalancerZone.class );
+				// check the listener 
+				try{
+					final LoadBalancerZone sample = LoadBalancerZone.named(lb, zone);
+					final LoadBalancerZone exist = Entities.uniqueResult(sample);
+					LOG.warn("existing zone is found: "+exist);
+					db.commit();
+				}catch(NoSuchElementException ex){
+					final LoadBalancerZone newZone = LoadBalancerZone.named(lb, zone);
+					Entities.persist(newZone);
+					db.commit();
+				}catch(Exception ex){
+					db.rollback();
+					LOG.error("failed to persist the zone "+zone, ex);
+				}
 			}
-		}  
+    	}catch(Exception ex){
+    		throw new LoadBalancingException("Failed to add zone", ex);
+    	}
 	}
 	
 	public static void removeZone(final String lbName, final UserFullName ownerFullName, final Collection<String> zones) throws LoadBalancingException{

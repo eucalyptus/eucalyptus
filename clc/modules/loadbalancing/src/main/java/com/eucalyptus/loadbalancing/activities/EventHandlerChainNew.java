@@ -86,8 +86,8 @@ public class EventHandlerChainNew extends EventHandlerChain<NewLoadbalancerEvent
 	@Override
 	public EventHandlerChain<NewLoadbalancerEvent> build() {
 		this.insert(new AdmissionControl(this));
-		/// TODO: SPARK: setup security group
 	  	this.insert(new DatabaseInsert(this));
+	  	this.insert(new DNSANameSetup(this));
 	  	this.insert(new SecurityGroupSetup(this));
 	  	int numVm = 1;
 	  	try{
@@ -97,7 +97,6 @@ public class EventHandlerChainNew extends EventHandlerChain<NewLoadbalancerEvent
 	  	}
 	  	this.insert(new LoadbalancerInstanceLauncher(this, numVm));
 	  	this.insert(new DatabaseUpdate(this));
-    /// SPARK: TODO: should check the loadbalancer's DNS and map the pub IP of instances to the DNS
 		return this;	
 	}
 	
@@ -121,6 +120,52 @@ public class EventHandlerChainNew extends EventHandlerChain<NewLoadbalancerEvent
 		public void rollback() throws EventHandlerException {
 			// TODO Auto-generated method stub
 			
+		}
+	}
+	
+	public static class DNSANameSetup extends AbstractEventHandler<NewLoadbalancerEvent> {
+		private String dnsName = null;
+		private String dnsZone= null;
+		DNSANameSetup(EventHandlerChain<NewLoadbalancerEvent> chain){
+			super(chain);
+		}
+		
+		@Override
+		public void apply(NewLoadbalancerEvent evt) throws EventHandlerException {	
+			LoadBalancer lb = null;
+			LoadBalancerDnsRecord dns = null;
+			try{
+				lb = LoadBalancers.getLoadbalancer(evt.getContext().getUserFullName(), evt.getLoadBalancer());
+				dns = lb.getDns();
+			}catch(NoSuchElementException ex){
+				throw new EventHandlerException("Failed to find the loadbalancer "+evt.getLoadBalancer(), ex);
+			}catch(Exception ex){
+				throw new EventHandlerException("Failed due to query exception", ex);
+			}
+			if(dns==null)
+				throw new EventHandlerException("No dns record is found with the loadbalancer "+evt.getLoadBalancer());
+			
+			try{
+				EucalyptusActivityTasks.getInstance().removeMultiARecord(dns.getZone(), dns.getName());
+				EucalyptusActivityTasks.getInstance().createARecord(dns.getZone(), dns.getName());
+				this.dnsName = dns.getName();
+				this.dnsZone = dns.getZone();
+			}catch(Exception ex){
+				throw new EventHandlerException("Failed to create new multiA name record");
+			}
+		}
+		
+
+		@Override
+		public void rollback() 
+				throws EventHandlerException {
+			if(this.dnsName!=null && this.dnsZone!= null){
+				try{
+					EucalyptusActivityTasks.getInstance().removeMultiARecord(this.dnsZone, this.dnsName);
+				}catch(Exception ex){
+					LOG.warn(String.format("failed to remove the multi A record (%s-%s)", this.dnsZone, this.dnsName), ex);
+				}
+			}
 		}
 	}
 	
@@ -252,7 +297,7 @@ public class EventHandlerChainNew extends EventHandlerChain<NewLoadbalancerEvent
 			final Function<LoadBalancerZone, LoadBalancerServoInstance> persistInstance = 
 					new Function<LoadBalancerZone, LoadBalancerServoInstance>( ) {
 		        public LoadBalancerServoInstance apply( final LoadBalancerZone zone ) {
-					final LoadBalancerServoInstance instance = LoadBalancerServoInstance.named(zone);
+		        	final LoadBalancerServoInstance instance = LoadBalancerServoInstance.named(zone);
 					instance.setState(LoadBalancerServoInstance.STATE.Pending);
 					instance.setInstanceId(UUID.randomUUID().toString().substring(0, 6));
 					LoadBalancerServoInstance written = Entities.persist(instance);
@@ -260,8 +305,15 @@ public class EventHandlerChainNew extends EventHandlerChain<NewLoadbalancerEvent
 		        }
 		    }; 
 			for(LoadBalancerZone zone : zones){
-				LoadBalancerServoInstance persist = Entities.asTransaction(LoadBalancerServoInstance.class, persistInstance).apply(zone);
-				this.uniqueEntries.add(persist.getInstanceId());
+				try{
+					int numVm = Integer.parseInt(EventHandlerChainNew.LOADBALANCER_NUM_VM);
+					for(int i = 0; i < numVm; i++){
+						LoadBalancerServoInstance persist = Entities.asTransaction(LoadBalancerServoInstance.class, persistInstance).apply(zone);
+						this.uniqueEntries.add(persist.getInstanceId());
+					}
+				}catch(Exception ex){
+					throw new EventHandlerException("Failed to persist the loadbalancer vm", ex);
+				}
 			}
 		}
 
@@ -470,9 +522,9 @@ public class EventHandlerChainNew extends EventHandlerChain<NewLoadbalancerEvent
 	    		 final LoadBalancer lb= servo.getAvailabilityZone().getLoadbalancer();
 	    		 final LoadBalancerDnsRecord dns = lb.getDns();
 	    		 try{
-	    			 EucalyptusActivityTasks.getInstance().updateARecord(dns.getZone(), dns.getName(), servo.getAddress());
+	    			 EucalyptusActivityTasks.getInstance().addARecord(dns.getZone(), dns.getName(), servo.getAddress());
 	    		 }catch(Exception ex){
-	    			 LOG.error("failed to update dns A records", ex);
+	    			 LOG.error("failed to add dns A records", ex);
 	    			 continue;
 	    		 }
 		    	 final EntityTransaction db2 = Entities.get(LoadBalancerServoInstance.class);

@@ -70,6 +70,7 @@ import com.eucalyptus.auth.principal.AccessKey;
 import com.eucalyptus.auth.principal.Account;
 import com.eucalyptus.auth.principal.Certificate;
 import com.eucalyptus.auth.principal.Group;
+import com.eucalyptus.auth.principal.Role;
 import com.eucalyptus.auth.principal.User;
 
 public interface AccountProvider {
@@ -92,7 +93,9 @@ public interface AccountProvider {
   User lookupUserByConfirmationCode( String code ) throws AuthException;
   
   Group lookupGroupById( String groupId ) throws AuthException;
-  
+
+  Role lookupRoleById( String roleId ) throws AuthException;
+
   Certificate lookupCertificate( X509Certificate cert ) throws AuthException;
   
   AccessKey lookupAccessKeyById( String keyId ) throws AuthException;

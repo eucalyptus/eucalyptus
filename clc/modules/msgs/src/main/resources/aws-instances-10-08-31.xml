@@ -145,6 +145,7 @@
       factory="org.jibx.runtime.Utility.arrayListFactory">
       <structure name="item" map-as="edu.ucsb.eucalyptus.msgs.InstanceBlockDeviceMapping" />
     </collection>
+    <value name="clientToken" field="clientToken" usage="optional"/>
     <structure name="tagSet" usage="optional">
       <collection factory="org.jibx.runtime.Utility.arrayListFactory" field="tagSet">
         <structure name="item" map-as="edu.ucsb.eucalyptus.msgs.ResourceTag" />
@@ -200,6 +201,8 @@
     <!--2009-10-31 -->
     <value name="disableApiTermination" field="disableTerminate" usage="optional" />
     <value name="instanceInitiatedShutdownBehavior" field="shutdownAction" usage="optional" />
+    <!-- 2010-08-31 -->
+    <value name="clientToken" field="clientToken" usage="optional" />
   </mapping>
 
 

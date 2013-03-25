@@ -130,7 +130,6 @@ public abstract class AutoScalingGroups {
       type.setLoadBalancerNames( new LoadBalancerNames( group.getLoadBalancerNames() ) );
       type.setMaxSize( group.getMaxSize() );
       type.setMinSize( group.getMinSize() );
-      //type.setPlacementGroup(); //TODO:STEVE: auto scaling group mapping for placement groups?
       type.setStatus( group.getStatus() );
       final Collection<SuspendedProcess> suspendedProcesses = group.getSuspendedProcesses();
       if ( suspendedProcesses != null && !suspendedProcesses.isEmpty() ) {
@@ -144,7 +143,6 @@ public abstract class AutoScalingGroups {
       type.setTerminationPolicies( new TerminationPolicies( group.getTerminationPolicies() == null ? 
           null : 
           Collections2.transform( group.getTerminationPolicies(), Strings.toStringFunction() ) ) );
-      //type.setVpcZoneIdentifier(); //TODO:STEVE: auto scaling group mapping for vpc zone identifiers?      
 
       return type;
     }
