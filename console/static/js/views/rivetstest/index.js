@@ -2,9 +2,10 @@ define([
 	'dataholder',
 	'text!./template.html!strip',
     'rivets',
+    'views/newscalinggroup/editdialog',
     'views/dialogs/testdialog',
     'views/dialogs/quickscaledialog',
-], function( dh, template, rivets, TestDialog, QuickScaleDialog) {
+], function( dh, template, rivets, EditScalingGroupDialog, TestDialog, QuickScaleDialog) {
 	return Backbone.View.extend({
 		initialize : function() {
 			var self = this;
@@ -24,6 +25,12 @@ define([
 			this.quickScaleButton = {
 				click: function() { 
                     var dialog = new QuickScaleDialog();
+				}
+			}
+
+			this.scalingDialog = {
+				click: function() { 
+                    var dialog = new EditScalingGroupDialog();
 				}
 			}
 
