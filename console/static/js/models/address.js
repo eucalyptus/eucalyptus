@@ -1,6 +1,10 @@
+// address model
+//
+
 define([
-], function() {
-    var Address = Backbone.Model.extend({
+    './eucamodel'
+], function(EucaModel) {
+    var model = EucaModel.extend({
     });
-    return Address;
+    return model;
 });

@@ -1,6 +1,10 @@
+// launchconfig model
+//
+
 define([
-], function() {
-    var Volume = Backbone.Model.extend({
+    './eucamodel'
+], function(EucaModel) {
+    var model = EucaModel.extend({
     });
-    return Volume;
+    return model;
 });
