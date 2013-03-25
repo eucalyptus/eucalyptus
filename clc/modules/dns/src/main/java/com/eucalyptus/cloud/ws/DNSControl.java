@@ -66,7 +66,6 @@ import com.eucalyptus.context.Contexts;
 import com.eucalyptus.dns.TransientZone;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.EntityWrapper;
-import com.eucalyptus.loadbalancing.activities.LoadBalancerServoInstance;
 import com.eucalyptus.util.DNSProperties;
 
 import edu.ucsb.eucalyptus.cloud.AccessDeniedException;
