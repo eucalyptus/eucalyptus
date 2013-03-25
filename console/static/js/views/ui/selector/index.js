@@ -1,7 +1,8 @@
 define([
+        'backbone',
+        'rivets',
 	'text!./template.html!strip',
-        'rivets'
-	], function( template, rivets ) {
+	], function( Backbone, rivets, template ) {
 	return Backbone.View.extend({
 		initialize : function(args) {
 			this.$el.html(template);
