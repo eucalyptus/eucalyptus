@@ -33,6 +33,7 @@ import java.util.Map;
 import java.util.Random;
 import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
@@ -41,8 +42,10 @@ import javax.annotation.Nullable;
 import org.apache.log4j.Logger;
 import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.AuthException;
+import com.eucalyptus.auth.policy.PolicySpec;
+import com.eucalyptus.auth.policy.ern.Ern;
+import com.eucalyptus.auth.policy.ern.EuareResourceName;
 import com.eucalyptus.auth.principal.AccountFullName;
-import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.autoscaling.common.AutoScaling;
 import com.eucalyptus.autoscaling.configurations.LaunchConfiguration;
 import com.eucalyptus.autoscaling.groups.AutoScalingGroup;
@@ -50,6 +53,7 @@ import com.eucalyptus.autoscaling.groups.AutoScalingGroups;
 import com.eucalyptus.autoscaling.groups.HealthCheckType;
 import com.eucalyptus.autoscaling.groups.PersistenceAutoScalingGroups;
 import com.eucalyptus.autoscaling.groups.ScalingProcessType;
+import com.eucalyptus.autoscaling.groups.SuspendedProcess;
 import com.eucalyptus.autoscaling.groups.TerminationPolicyType;
 import com.eucalyptus.autoscaling.instances.AutoScalingInstance;
 import com.eucalyptus.autoscaling.instances.AutoScalingInstances;
@@ -62,6 +66,10 @@ import com.eucalyptus.autoscaling.metadata.AutoScalingMetadataNotFoundException;
 import com.eucalyptus.autoscaling.tags.Tag;
 import com.eucalyptus.autoscaling.tags.TagSupport;
 import com.eucalyptus.bootstrap.Bootstrap;
+import com.eucalyptus.cloudwatch.DescribeAlarmsResponseType;
+import com.eucalyptus.cloudwatch.DescribeAlarmsType;
+import com.eucalyptus.cloudwatch.MetricAlarm;
+import com.eucalyptus.cloudwatch.ResourceList;
 import com.eucalyptus.component.Topology;
 import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.event.ClockTick;
@@ -96,6 +104,7 @@ import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
@@ -142,11 +151,16 @@ public class ActivityManager {
       ActivityStatusCode.Failed,
       ActivityStatusCode.Successful );
 
+  private static final String INSTANCE_PROFILE_RESOURCE =
+      PolicySpec.qualifiedName( PolicySpec.VENDOR_IAM, PolicySpec.IAM_RESOURCE_INSTANCE_PROFILE );
+
   //TODO:STEVE: What do we want to expose as configuration settings?
   private static final long activityTimeout = TimeUnit.MINUTES.toMillis( 5 );
   private static final int maxLaunchIncrement = 20;
   private static final int maxRegistrationRetries = 5;
   private static final long zoneFailureThreshold = TimeUnit.MINUTES.toMillis( 5 );
+  private static final long suspensionTimeout = TimeUnit.DAYS.toMillis( 1 );
+  private static final int suspensionLaunchAttemptsThreshold = 15;
 
   private final ScalingActivities scalingActivities;
   private final AutoScalingGroups autoScalingGroups;
@@ -154,6 +168,7 @@ public class ActivityManager {
   private final ZoneUnavailabilityMarkers zoneAvailabilityMarkers;
   private final ZoneMonitor zoneMonitor;
   private final BackoffRunner runner = BackoffRunner.getInstance( );
+  private final ConcurrentMap<String,Integer> launchFailureCounters = Maps.newConcurrentMap();
 
   public ActivityManager() {
     this(
@@ -321,7 +336,8 @@ public class ActivityManager {
         Collections.<String>emptyList(),
         null,
         null,
-        Collections.<String>emptyList() );
+        Collections.<String>emptyList(),
+        null );
 
   }
 
@@ -329,7 +345,8 @@ public class ActivityManager {
                                           final Iterable<String> imageIds,
                                           final String instanceType,
                                           final String keyName,
-                                          final Iterable<String> securityGroups ) {
+                                          final Iterable<String> securityGroups,
+                                          final String iamInstanceProfile ) {
     return validateReferences(
         owner,
         Collections.<String>emptyList(),
@@ -337,7 +354,30 @@ public class ActivityManager {
         Objects.firstNonNull( imageIds, Collections.<String>emptyList() ),
         instanceType,
         keyName,
-        Objects.firstNonNull( securityGroups, Collections.<String>emptyList() ) );
+        Objects.firstNonNull( securityGroups, Collections.<String>emptyList() ),
+        iamInstanceProfile );
+  }
+
+  public Map<String,Collection<String>> getAlarmsForPolicies( final OwnerFullName owner,
+                                                              final List<String> policyArns ) {
+    final Map<String,Collection<String>> policyArnToAlarmArnMap = Maps.newHashMap();
+    final AlarmLookupProcessTask task = new AlarmLookupProcessTask( owner, policyArns );
+    runTask( task );
+    try {
+      final boolean success = task.getFuture().get();
+      if ( success ) {
+        policyArnToAlarmArnMap.putAll( task.getPolicyArnToAlarmArns() );
+      }
+    } catch ( ExecutionException e ) {
+      logger.error( e, e );
+    } catch ( InterruptedException e ) {
+      logger.error( e, e );
+    }
+    return policyArnToAlarmArnMap;
+  }
+
+  protected long timestamp() {
+    return System.currentTimeMillis();
   }
 
   private List<String> validateReferences( final OwnerFullName owner,
@@ -346,7 +386,8 @@ public class ActivityManager {
                                            final Iterable<String> imageIds,
                                            @Nullable final String instanceType,
                                            @Nullable final String keyName,
-                                           final Iterable<String> securityGroups ) {
+                                           final Iterable<String> securityGroups,
+                                           @Nullable final String iamInstanceProfile ) {
     final List<String> errors = Lists.newArrayList();
 
     final ValidationScalingProcessTask task = new ValidationScalingProcessTask(
@@ -362,9 +403,13 @@ public class ActivityManager {
       final boolean success = task.getFuture().get();
       if ( success ) {
         errors.addAll( task.getValidationErrors() );
-      } else {
+      } else if ( task.shouldRun() ) {
         errors.add("Unable to validate references at this time.");
       }
+
+      // validate IAM instance profile
+      validateIamInstanceProfile( owner, iamInstanceProfile, errors );
+
     } catch ( ExecutionException e ) {
       logger.error( e, e );
       errors.add("Error during reference validation");
@@ -374,6 +419,35 @@ public class ActivityManager {
     }
 
     return errors;
+  }
+
+  private void validateIamInstanceProfile( final OwnerFullName owner,
+                                           final String iamInstanceProfile,
+                                           final List<String> errors ) {
+    if ( iamInstanceProfile != null ) try {
+      final String accountNumber = owner.getAccountNumber();
+      String instanceProfileName = iamInstanceProfile;
+      if ( iamInstanceProfile.startsWith( "arn:" )  ) {
+        final Ern ern = Ern.parse( iamInstanceProfile );
+        if ( ern instanceof EuareResourceName &&
+            INSTANCE_PROFILE_RESOURCE.equals( ern.getResourceType() ) ) {
+          if ( accountNumber.equals( ern.getNamespace() ) ) {
+            instanceProfileName = ((EuareResourceName)ern).getName();
+          } else {
+            instanceProfileName = null;
+            errors.add( "Invalid instance profile: " + iamInstanceProfile );
+          }
+        } else {
+          instanceProfileName = null;
+          errors.add( "Invalid instance profile: " + iamInstanceProfile );
+        }
+      }
+      if ( instanceProfileName != null ) {
+        Accounts.lookupAccountById( accountNumber ).lookupInstanceProfileByName( instanceProfileName );
+      }
+    } catch ( Exception e ) {
+      errors.add( "Invalid instance profile: " + iamInstanceProfile );
+    }
   }
 
   private void setScalingNotRequired( final AutoScalingGroup group ) {
@@ -687,7 +761,7 @@ public class ActivityManager {
   }
 
   private boolean isTimedOut( final Date timestamp ) {
-    return ( System.currentTimeMillis() - timestamp.getTime() ) > activityTimeout;
+    return ( timestamp() - timestamp.getTime() ) > activityTimeout;
   }
 
   private Map<String,Integer> buildAvailabilityZoneInstanceCounts( final Collection<AutoScalingInstance> instances,
@@ -749,6 +823,16 @@ public class ActivityManager {
     }
   }
 
+  CloudWatchClient createCloudWatchClientForUser( final String userId ) {
+    try {
+      final CloudWatchClient client = new CloudWatchClient( userId );
+      client.init();
+      return client;
+    } catch ( DispatchingClient.DispatchingClientException e ) {
+      throw Exceptions.toUndeclared( e );
+    }
+  }
+
   VmTypesClient createVmTypesClientForUser( final String userId ) {
     try {
       final VmTypesClient client = new VmTypesClient( userId );
@@ -765,7 +849,7 @@ public class ActivityManager {
       public String get() {
         try {
           return Accounts.lookupAccountById( accountNumber )
-              .lookupUserByName( User.ACCOUNT_ADMIN ).getUserId();
+              .lookupAdmin().getUserId();
         } catch ( AuthException e ) {
           throw Exceptions.toUndeclared( e );
         }
@@ -787,10 +871,26 @@ public class ActivityManager {
         } );
   }
 
+  private boolean shouldSuspendDueToLaunchFailure( final AutoScalingGroup group ) {
+    while ( true ) {
+      final Integer count = launchFailureCounters.get( group.getArn() );
+      final Integer newCount = Objects.firstNonNull( count, 0 ) + 1;
+      if ( ( count == null && launchFailureCounters.putIfAbsent( group.getArn(), newCount ) == null ) ||
+           ( count != null && launchFailureCounters.replace( group.getArn(), count, newCount ) ) ) {
+        return newCount >= suspensionLaunchAttemptsThreshold;
+      }
+    }
+  }
+
+  private void clearLaunchFailures( final AutoScalingGroup group ) {
+    launchFailureCounters.remove( group.getArn() );
+  }
+
   private interface ActivityContext {
     String getUserId();
     EucalyptusClient getEucalyptusClient();
     ElbClient getElbClient();
+    CloudWatchClient getCloudWatchClient();
     VmTypesClient getVmTypesClient();
   }
 
@@ -933,6 +1033,11 @@ public class ActivityManager {
     @Override
     public ElbClient getElbClient() {
       return createElbClientForUser( getUserId() );
+    }
+
+    @Override
+    public CloudWatchClient getCloudWatchClient() {
+      return createCloudWatchClientForUser( getUserId() );
     }
 
     @Override
@@ -1097,7 +1202,35 @@ public class ActivityManager {
     }
 
     @Override
+    void failure( final List<LaunchInstanceScalingActivityTask> tasks ) {
+      // Check to see if we should suspend activities for this group
+      // - Group zones must not be unavailable
+      // - Group must have been trying to launch instances for X period (unchanged)
+      if ( !zoneMonitor.getUnavailableZones( 0 ).removeAll( getGroup().getAvailabilityZones() ) &&
+          (getGroup().getLastUpdateTimestamp().getTime() + suspensionTimeout ) < timestamp() ) {
+        if ( shouldSuspendDueToLaunchFailure( getGroup() ) ) try {
+          autoScalingGroups.update(
+              getOwner(),
+              getGroup().getAutoScalingGroupName(),
+              new Callback<AutoScalingGroup>() {
+                @Override
+                public void fire( final AutoScalingGroup autoScalingGroup ) {
+                  autoScalingGroup.getSuspendedProcesses().add(
+                      SuspendedProcess.createAdministrative( ScalingProcessType.Launch ) );
+                }
+              } );
+        } catch ( AutoScalingMetadataException e ) {
+          logger.error( e, e );
+        }
+      } else {
+        clearLaunchFailures( getGroup() );
+      }
+    }
+
+    @Override
     void partialSuccess( final List<LaunchInstanceScalingActivityTask> tasks ) {
+      clearLaunchFailures( getGroup() );
+
       final List<String> instanceIds = Lists.newArrayList();
       for ( final LaunchInstanceScalingActivityTask task : tasks ) {
         instanceIds.addAll( task.getInstanceIds() );
@@ -2132,6 +2265,7 @@ public class ActivityManager {
           !availabilityZones.isEmpty() ||
           !loadBalancerNames.isEmpty() ||
           !imageIds.isEmpty() ||
+          instanceType != null ||
           keyName != null ||
           !securityGroups.isEmpty();
     }
@@ -2171,6 +2305,94 @@ public class ActivityManager {
 
     List<String> getValidationErrors() {
       return validationErrors.get();
+    }
+  }
+
+  private class AlarmLookupActivityTask extends ScalingActivityTask<DescribeAlarmsResponseType> {
+    private final String policyArn;
+    private final AtomicReference<Collection<String>> alarmArns = new AtomicReference<Collection<String>>(
+        Collections.<String>emptyList()
+    );
+
+    private AlarmLookupActivityTask( final ScalingActivity activity,
+                                     final String policyArn ) {
+      super( activity, false );
+      this.policyArn = policyArn;
+    }
+
+    @Override
+    void dispatchInternal( final ActivityContext context,
+                           final Callback.Checked<DescribeAlarmsResponseType> callback ) {
+      final CloudWatchClient client = context.getCloudWatchClient();
+      final DescribeAlarmsType describeAlarmsType = new DescribeAlarmsType();
+      describeAlarmsType.setActionPrefix( policyArn );
+      client.dispatch( describeAlarmsType, callback );
+    }
+
+    @Override
+    void dispatchSuccess( final ActivityContext context,
+                          final DescribeAlarmsResponseType response ) {
+      final List<String> arns = Lists.newArrayList();
+      if ( response.getDescribeAlarmsResult() != null && response.getDescribeAlarmsResult().getMetricAlarms() != null ) {
+        for ( final MetricAlarm metricAlarm : response.getDescribeAlarmsResult().getMetricAlarms().getMember() ) {
+          final ResourceList list = metricAlarm.getAlarmActions();
+          if ( list != null && list.getMember().contains( policyArn ) ) {
+            arns.add( metricAlarm.getAlarmArn() );
+          }
+        }
+      }
+
+      alarmArns.set( arns );
+
+      setActivityFinalStatus( ActivityStatusCode.Successful );
+    }
+
+    String getPolicyArn() {
+      return policyArn;
+    }
+
+    Collection<String> getAlarmArns() {
+      return alarmArns.get();
+    }
+  }
+
+  private class AlarmLookupProcessTask extends ScalingProcessTask<AlarmLookupActivityTask> {
+    private final List<String> policyArns;
+    private final AtomicReference<Map<String,Collection<String>>> policyArnToAlarmArns = new AtomicReference<Map<String,Collection<String>>>(
+        Collections.<String,Collection<String>>emptyMap()
+    );
+
+    AlarmLookupProcessTask( final OwnerFullName owner,
+                            final List<String> policyArns ) {
+      super( UUID.randomUUID().toString() + "-alarm-lookup", AutoScalingGroup.withOwner(owner), "AlarmLookup" );
+      this.policyArns = policyArns;
+    }
+
+    @Override
+    boolean shouldRun() {
+      return !policyArns.isEmpty();
+    }
+
+    @Override
+    List<AlarmLookupActivityTask> buildActivityTasks() throws AutoScalingMetadataException {
+      final List<AlarmLookupActivityTask> tasks = Lists.newArrayList();
+      for ( final String policyArn : policyArns ) {
+        tasks.add( new AlarmLookupActivityTask( newActivity(), policyArn ) );
+      }
+      return tasks;
+    }
+
+    @Override
+    void partialSuccess( final List<AlarmLookupActivityTask> tasks ) {
+      final Map<String,Collection<String>> policyArnToAlarmArns = Maps.newHashMap();
+      for ( final AlarmLookupActivityTask task : tasks ) {
+        policyArnToAlarmArns.put( task.getPolicyArn(), task.getAlarmArns() );
+      }
+      this.policyArnToAlarmArns.set( ImmutableMap.copyOf( policyArnToAlarmArns ) );
+    }
+
+    Map<String,Collection<String>> getPolicyArnToAlarmArns() {
+      return policyArnToAlarmArns.get();
     }
   }
 

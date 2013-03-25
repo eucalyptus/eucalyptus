@@ -64,18 +64,25 @@ package com.eucalyptus.cloud.ws;
 
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.dns.TransientZone;
+import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.util.DNSProperties;
 
 import edu.ucsb.eucalyptus.cloud.AccessDeniedException;
 import com.eucalyptus.util.EucalyptusCloudException;
+import com.google.gwt.thirdparty.guava.common.collect.Lists;
+
 import edu.ucsb.eucalyptus.cloud.entities.*;
 import edu.ucsb.eucalyptus.msgs.*;
 import org.apache.log4j.Logger;
 import org.xbill.DNS.*;
 
 import java.net.UnknownHostException;
+import java.util.Collection;
 import java.util.List;
+import java.util.NoSuchElementException;
+
+import javax.persistence.EntityTransaction;
 
 public class DNSControl {
 
@@ -132,20 +139,43 @@ public class DNSControl {
 			ARecordInfo searchARecInfo = new ARecordInfo();
 			List<ARecordInfo> aRecInfos = dbARec.query(searchARecInfo);
 			for(ARecordInfo aRecInfo : aRecInfos) {
-				ZoneManager.addRecord(aRecInfo);
+				ZoneManager.addRecord(aRecInfo, false);
 			}
 			db.commit();
 		} catch(EucalyptusCloudException ex) {		
 			db.rollback();
 			LOG.error(ex);
 		}
+		
+		final EntityTransaction db2 = Entities.get( ARecordNameInfo.class );
+		try{
+			int count = 0;
+			List<ARecordNameInfo> multiARec = Entities.query(new ARecordNameInfo(), true);
+			if(multiARec != null && multiARec.size()>0){
+				for(ARecordNameInfo nameRec : multiARec){
+					final Collection<ARecordAddressInfo> addresses = nameRec.getAddresses();
+					if(addresses!=null && addresses.size()>0){
+						for(final ARecordAddressInfo addrRec : addresses){
+							ARecord record = new ARecord(new Name(nameRec.getName()), DClass.IN, nameRec.getTtl(), Address.getByAddress(addrRec.getAddress()));
+							ZoneManager.addRecord(nameRec.getZone(), record, true);
+							count++;
+						}
+					}
+				}
+			}
+			LOG.info(String.format("%d DNS records populated from database", count));
+			db2.commit();
+		}catch(Exception ex){
+			db2.rollback();
+			LOG.error("Failed to populate the existing DNS records", ex);
+		}
 	}
 
 	public static void initialize() throws Exception {
 		try {
-			populateRecords();
 			initializeUDP();
 			initializeTCP();
+			populateRecords();
 		} catch(Exception ex) {
 			LOG.error("DNS could not be initialized. Is some other service running on port 53?");
 			throw ex;
@@ -164,6 +194,201 @@ public class DNSControl {
 	}
 	
 	public DNSControl() {}
+	
+	public CreateMultiARecordResponseType CreateMultiARecord(CreateMultiARecordType request) throws EucalyptusCloudException {
+		CreateMultiARecordResponseType reply = (CreateMultiARecordResponseType) request.getReply();
+		String zone = request.getZone();
+		if (zone.endsWith("."))
+			zone += DNSProperties.DOMAIN + ".";
+		else
+			zone += "."+DNSProperties.DOMAIN + ".";
+		String name = request.getName();
+		if (name.endsWith("."))
+			name+= DNSProperties.DOMAIN + ".";
+		else
+			name+= "."+DNSProperties.DOMAIN + ".";
+		long ttl = request.getTtl();
+
+		// look for the records with the same name
+		// create one if not found
+		final EntityTransaction db = Entities.get( ARecordNameInfo.class );
+		try{
+			Entities.uniqueResult(ARecordNameInfo.named(name, zone));
+			db.commit();
+			throw new EucalyptusCloudException("A record with the same name is found");
+		}catch(NoSuchElementException ex){
+			ARecordNameInfo newInfo = ARecordNameInfo.newInstance(name, zone,  DClass.IN, ttl);
+			Entities.persist(newInfo);
+			db.commit();
+		}catch(Exception ex){
+			db.rollback();
+			throw new EucalyptusCloudException("Failed due to database error");
+		}
+		return reply;
+	}
+	
+	/// add a new name - address mapping
+	public AddMultiARecordResponseType AddMultiARecord(AddMultiARecordType request) throws EucalyptusCloudException {
+		AddMultiARecordResponseType reply = (AddMultiARecordResponseType) request.getReply();
+		// find the exsting ARecordNameInfo; if not throw exception
+		String zone = request.getZone();
+		if (zone.endsWith("."))
+			zone += DNSProperties.DOMAIN + ".";
+		else
+			zone += "."+DNSProperties.DOMAIN + ".";
+		String name = request.getName();
+		if (name.endsWith("."))
+			name+= DNSProperties.DOMAIN + ".";
+		else
+			name+= "."+DNSProperties.DOMAIN + ".";
+		long ttl = request.getTtl();
+		String address = request.getAddress();
+		
+		EntityTransaction db = Entities.get( ARecordNameInfo.class );
+		ARecordNameInfo nameInfo = null;
+		try{
+			nameInfo = Entities.uniqueResult(ARecordNameInfo.named(name, zone));
+			db.commit();
+		}catch(NoSuchElementException ex){
+			db.rollback();
+			throw new EucalyptusCloudException("No dns record with name="+name+" is found");
+		}catch(Exception ex){
+			db.rollback();
+			throw new EucalyptusCloudException("Failed to query dns name record", ex);
+		}
+		
+		// add new address
+		// call ZoneManager.addRecord
+		db = Entities.get( ARecordAddressInfo.class );
+		try{
+			List<ARecordAddressInfo> exist = Entities.query(ARecordAddressInfo.named(nameInfo, address));
+			if(exist==null || exist.size()<=0){
+				ARecord record = new ARecord(new Name(name), DClass.IN, ttl, Address.getByAddress(address));
+				ZoneManager.addRecord(zone, record, true);
+				ARecordAddressInfo addrInfo = ARecordAddressInfo.newInstance(nameInfo, address);
+				Entities.persist(addrInfo);
+			}
+			db.commit();
+		}catch(Exception ex){
+			db.rollback();
+			throw new EucalyptusCloudException("Failed to add the record", ex);
+		}
+		
+		return reply;
+	}
+	
+	/// remove an existing name - address mapping
+	/// do nothing if no mapping is found
+	public RemoveMultiARecordResponseType RemoveMultiARecord(RemoveMultiARecordType request) throws EucalyptusCloudException {
+		RemoveMultiARecordResponseType reply = (RemoveMultiARecordResponseType) request.getReply();
+		String zone = request.getZone();
+		if (zone.endsWith("."))
+			zone += DNSProperties.DOMAIN + ".";
+		else
+			zone += "."+DNSProperties.DOMAIN + ".";
+		String name = request.getName();
+		if (name.endsWith("."))
+			name+= DNSProperties.DOMAIN + ".";
+		else
+			name+= "."+DNSProperties.DOMAIN + ".";
+		String address = request.getAddress();
+		EntityTransaction db = Entities.get( ARecordNameInfo.class );
+		ARecordNameInfo nameInfo = null;
+		try{
+			nameInfo = Entities.uniqueResult(ARecordNameInfo.named(name, zone));
+			db.commit();
+		}catch(NoSuchElementException ex){
+			db.rollback();
+			return reply;
+		}catch(Exception ex){
+			db.rollback();
+			throw new EucalyptusCloudException("Failed to query dns name record", ex);
+		}
+		
+		db = Entities.get( ARecordAddressInfo.class );
+		ARecordAddressInfo addrInfo = null;
+		// find the existing record
+		try{
+			addrInfo = Entities.uniqueResult(ARecordAddressInfo.named(nameInfo, address));
+			ARecord arecord = new ARecord(Name.fromString(name), DClass.IN, nameInfo.getTtl(), Address.getByAddress(addrInfo.getAddress()));
+		
+			ZoneManager.deleteRecord(zone, arecord);
+			Entities.delete(addrInfo);
+			db.commit();
+		}catch(NoSuchElementException ex){
+			db.rollback();
+		}catch(Exception ex){
+			db.rollback();
+			throw new EucalyptusCloudException("Failed to delete the record");
+		}
+		
+		// delete name info if no addresses mapped to it
+		db = Entities.get( ARecordNameInfo.class );
+		try{
+			nameInfo = Entities.uniqueResult(ARecordNameInfo.named(name, zone));
+			if(nameInfo.getAddresses() == null || nameInfo.getAddresses().size()<=0)
+				Entities.delete(nameInfo);
+			db.commit();
+		}catch(NoSuchElementException ex){
+			db.rollback();
+		}catch(Exception ex){
+			db.rollback();
+		}	
+		return reply;
+	}
+	
+	/// remove all name - {address1, address2, ...} mapping
+	/// do nothing if no mapping is found
+	public RemoveMultiANameResponseType RemoveMultiAName(RemoveMultiANameType request) throws EucalyptusCloudException {
+		RemoveMultiANameResponseType reply = (RemoveMultiANameResponseType) request.getReply();
+		String zone = request.getZone();
+		if (zone.endsWith("."))
+			zone += DNSProperties.DOMAIN + ".";
+		else
+			zone += "."+DNSProperties.DOMAIN + ".";
+		String name = request.getName();
+		if (name.endsWith("."))
+			name+= DNSProperties.DOMAIN + ".";
+		else
+			name+= "."+DNSProperties.DOMAIN + ".";
+
+		EntityTransaction db = Entities.get( ARecordNameInfo.class );
+		ARecordNameInfo nameInfo = null;
+		try{
+			nameInfo = Entities.uniqueResult(ARecordNameInfo.named(name, zone));
+			db.commit();
+		}catch(NoSuchElementException ex){
+			db.rollback();
+			return reply;
+		}catch(Exception ex){
+			db.rollback();
+			throw new EucalyptusCloudException("Failed to query dns name record", ex);
+		}
+		
+		// delete the records from zone
+		List<ARecordAddressInfo> addresses = Lists.newArrayList(nameInfo.getAddresses());
+		for(ARecordAddressInfo addr : addresses){
+			try{
+				ARecord arecord = new ARecord(Name.fromString(name), DClass.IN, nameInfo.getTtl(), Address.getByAddress(addr.getAddress()));
+				ZoneManager.deleteRecord(zone, arecord);
+			}catch(Exception ex){
+				throw new EucalyptusCloudException("Failed to delete the record from zone", ex);
+			}	
+		}
+		db = Entities.get( ARecordNameInfo.class );
+		try{
+			nameInfo = Entities.uniqueResult(ARecordNameInfo.named(name, zone));
+			Entities.delete(nameInfo); // deletion will be cascaded to AddressInfo
+			db.commit();
+		}catch(NoSuchElementException ex){
+			db.rollback();
+		}catch(Exception ex){
+			db.rollback();
+			throw new EucalyptusCloudException("Failed to query dns name record", ex);
+		}
+		
+		return reply;
+	}	
 
 	public UpdateARecordResponseType UpdateARecord(UpdateARecordType request)  throws EucalyptusCloudException {
 		UpdateARecordResponseType reply = (UpdateARecordResponseType) request.getReply();
@@ -172,7 +397,6 @@ public class DNSControl {
 			zone += DNSProperties.DOMAIN + ".";
 		else
 			zone += "."+DNSProperties.DOMAIN + ".";
-		
 		String name = request.getName();
 		if (name.endsWith("."))
 			name+= DNSProperties.DOMAIN + ".";
@@ -207,7 +431,7 @@ public class DNSControl {
 				ARecordInfo searchARecInfo = new ARecordInfo();
 				searchARecInfo.setZone(zone);
 				ARecord record = new ARecord(new Name(name), DClass.IN, ttl, Address.getByAddress(address));
-				ZoneManager.addRecord(zone, record);
+				ZoneManager.addRecord(zone, record, false);
 				aRecordInfo = new ARecordInfo();
 				aRecordInfo.setName(name);
 				aRecordInfo.setAddress(address);
@@ -230,13 +454,11 @@ public class DNSControl {
 			zone += DNSProperties.DOMAIN + ".";
 		else
 			zone += "."+DNSProperties.DOMAIN + ".";
-		
 		String name = request.getName();
 		if (name.endsWith("."))
 			name+= DNSProperties.DOMAIN + ".";
 		else
 			name+= "."+DNSProperties.DOMAIN + ".";
-		
 		String address = request.getAddress();
 		EntityWrapper<ARecordInfo> db = EntityWrapper.get(ARecordInfo.class);
 		ARecordInfo aRecordInfo = new ARecordInfo();
@@ -299,7 +521,7 @@ public class DNSControl {
 				CNAMERecordInfo searchCNAMERecInfo = new CNAMERecordInfo();
 				searchCNAMERecInfo.setZone(zone);
 				CNAMERecord record = new CNAMERecord(new Name(name), DClass.IN, ttl, Name.fromString(alias));
-				ZoneManager.addRecord(zone, record);
+				ZoneManager.addRecord(zone, record, false);
 				cnameRecordInfo = new CNAMERecordInfo();
 				cnameRecordInfo.setName(name);
 				cnameRecordInfo.setAlias(alias);

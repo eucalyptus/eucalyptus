@@ -48,7 +48,7 @@
             <inbound>
                 <vm:inbound-endpoint ref="AutoScalingRequestQueueEndpoint" />
             </inbound>
-            <bridge-component />
+            <component class="com.eucalyptus.autoscaling.AutoScalingMessageValidator" />
             <outbound>
                 <filtering-router>
                     <outbound-endpoint ref="AutoScalingWS" />

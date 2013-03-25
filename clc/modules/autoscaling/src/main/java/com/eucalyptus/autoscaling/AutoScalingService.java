@@ -24,6 +24,7 @@ import static com.eucalyptus.autoscaling.common.AutoScalingResourceName.InvalidR
 import static com.eucalyptus.autoscaling.common.AutoScalingMetadata.AutoScalingGroupMetadata;
 import static com.eucalyptus.autoscaling.common.AutoScalingMetadata.LaunchConfigurationMetadata;
 import static com.eucalyptus.autoscaling.common.AutoScalingResourceName.Type.autoScalingGroup;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.Date;
 import java.util.EnumSet;
@@ -43,6 +44,7 @@ import com.eucalyptus.auth.principal.UserFullName;
 import com.eucalyptus.autoscaling.activities.ActivityManager;
 import com.eucalyptus.autoscaling.activities.ScalingActivity;
 import com.eucalyptus.autoscaling.common.Activity;
+import com.eucalyptus.autoscaling.common.Alarms;
 import com.eucalyptus.autoscaling.common.AutoScalingGroupType;
 import com.eucalyptus.autoscaling.common.AutoScalingInstanceDetails;
 import com.eucalyptus.autoscaling.common.AutoScalingMetadata;
@@ -99,6 +101,7 @@ import com.eucalyptus.autoscaling.common.EnableMetricsCollectionResponseType;
 import com.eucalyptus.autoscaling.common.EnableMetricsCollectionType;
 import com.eucalyptus.autoscaling.common.ExecutePolicyResponseType;
 import com.eucalyptus.autoscaling.common.ExecutePolicyType;
+import com.eucalyptus.autoscaling.common.Filter;
 import com.eucalyptus.autoscaling.common.Instance;
 import com.eucalyptus.autoscaling.common.Instances;
 import com.eucalyptus.autoscaling.common.LaunchConfigurationType;
@@ -164,11 +167,14 @@ import com.eucalyptus.util.RestrictedTypes;
 import com.eucalyptus.util.Strings;
 import com.eucalyptus.util.TypeMappers;
 import com.google.common.base.Enums;
+import com.google.common.base.Function;
+import com.google.common.base.Functions;
 import com.google.common.base.Objects;
 import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
 import com.google.common.base.Supplier;
 import com.google.common.collect.Collections2;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
@@ -180,6 +186,19 @@ public class AutoScalingService {
 
   private static final Set<String> reservedPrefixes =
       ImmutableSet.<String>builder().add("aws:").add("euca:").build();
+
+  private static final Map<String,Function<Tag,String>> tagFilterExtractors =
+      ImmutableMap.<String,Function<Tag,String>>builder()
+      .put( "auto-scaling-group", Tags.resourceId() )
+      .put( "key", Tags.key() )
+      .put( "value", Tags.value() )
+      .put( "propagate-at-launch", Tags.propagateAtLaunch() )
+      .build();
+
+  private static final Map<String,Function<String,String>> tagValuePreProcessors =
+      ImmutableMap.<String,Function<String,String>>builder()
+      .put( "propagate-at-launch", Strings.lower() )
+      .build();
 
   public static long MAX_TAGS_PER_RESOURCE = 10;
 
@@ -290,7 +309,7 @@ public class AutoScalingService {
           request.getAutoScalingGroupName(),
           groupCallback );
     } catch ( AutoScalingMetadataNotFoundException e ) {
-      throw new InvalidParameterValueException( "Auto scaling group not found: " + request.getAutoScalingGroupName() );
+      throw new ValidationErrorException( "Auto scaling group not found: " + request.getAutoScalingGroupName() );
     } catch ( Exception e ) {
       handleException( e );
     }
@@ -302,8 +321,8 @@ public class AutoScalingService {
     final DeleteLaunchConfigurationResponseType reply = request.getReply( );
     final Context ctx = Contexts.lookup( );
     try {
-      final LaunchConfiguration launchConfiguration = launchConfigurations.lookup( 
-          ctx.getUserFullName( ).asAccountFullName( ), 
+      final LaunchConfiguration launchConfiguration = launchConfigurations.lookup(
+          ctx.getUserFullName( ).asAccountFullName( ),
           request.getLaunchConfigurationName( ) );
       if ( RestrictedTypes.filterPrivileged().apply( launchConfiguration ) ) {
         launchConfigurations.delete( launchConfiguration );
@@ -340,9 +359,22 @@ public class AutoScalingService {
                 ScalingPolicies.toGroupName() )
         );
 
-      final List<ScalingPolicyType> results = reply.getDescribePoliciesResult().getScalingPolicies().getMember();
-      for ( final ScalingPolicy scalingPolicy : scalingPolicies.list( ownerFullName, requestedAndAccessible ) ) {
-        results.add( TypeMappers.transform( scalingPolicy, ScalingPolicyType.class ) );
+      final List<ScalingPolicyType> results =
+          reply.getDescribePoliciesResult().getScalingPolicies().getMember();
+      final List<ScalingPolicy> scalingPolicies =
+          this.scalingPolicies.list( ownerFullName, requestedAndAccessible );
+      final List<String> scalingPolicyArns = Lists.transform( scalingPolicies, AutoScalingMetadatas.toArn() );
+      final Map<String,Collection<String>> policyArnToAlarmArns =
+          activityManager.getAlarmsForPolicies( ctx.getUserFullName( ), scalingPolicyArns );
+
+      for ( final ScalingPolicy scalingPolicy : scalingPolicies ) {
+        final ScalingPolicyType scalingPolicyType =
+            TypeMappers.transform( scalingPolicy, ScalingPolicyType.class );
+        final Collection<String> alarmArns = policyArnToAlarmArns.get( scalingPolicy.getArn() );
+        if ( alarmArns != null && !alarmArns.isEmpty() ) {
+          scalingPolicyType.setAlarms( new Alarms( alarmArns ) );
+        }
+        results.add( scalingPolicyType );
       }
     } catch ( Exception e ) {
       handleException( e );
@@ -371,7 +403,7 @@ public class AutoScalingService {
       for ( final TagType tagType : request.getTags().getMember() ) {
         final String key = tagType.getKey();
         if ( com.google.common.base.Strings.isNullOrEmpty( key ) || key.trim().length() > 128 || isReserved( key ) ) {
-          throw new InvalidParameterValueException( "Invalid key (max length 128, must not be empty, reserved prefixes "+reservedPrefixes+"): "+key );
+          throw new ValidationErrorException( "Invalid key (max length 128, must not be empty, reserved prefixes "+reservedPrefixes+"): "+key );
         }
       }
 
@@ -384,15 +416,39 @@ public class AutoScalingService {
       @Override
       public AutoScalingGroup get( ) {
         try {
+          final Integer minSize = Numbers.intValue( request.getMinSize() );
+          final Integer maxSize = Numbers.intValue( request.getMaxSize() );
+          final Integer desiredCapacity = Numbers.intValue( request.getDesiredCapacity() );
+
+          if ( desiredCapacity != null && desiredCapacity < minSize ) {
+            throw Exceptions.toUndeclared( new ValidationErrorException( "DesiredCapacity must not be less than MinSize" ) );
+          }
+          if ( desiredCapacity != null && desiredCapacity > maxSize ) {
+            throw Exceptions.toUndeclared( new ValidationErrorException( "DesiredCapacity must not be greater than MaxSize" ) );
+          }
+
+          final List<String> referenceErrors = activityManager.validateReferences(
+              ctx.getUserFullName(),
+              request.availabilityZones(),
+              request.loadBalancerNames()
+          );
+          verifyUnsupportedReferences( referenceErrors,
+              request.getPlacementGroup(),
+              request.getVpcZoneIdentifier() );
+
+          if ( !referenceErrors.isEmpty() ) {
+            throw Exceptions.toUndeclared( new ValidationErrorException( "Invalid parameters " + referenceErrors ) );
+          }
+
           final AutoScalingGroups.PersistingBuilder builder = autoScalingGroups.create(
               ctx.getUserFullName(),
               request.getAutoScalingGroupName(),
               launchConfigurations.lookup( ctx.getUserFullName().asAccountFullName(), request.getLaunchConfigurationName() ),
-              Numbers.intValue( request.getMinSize() ),
-              Numbers.intValue( request.getMaxSize() ) )
+              minSize,
+              maxSize )
               .withAvailabilityZones( request.availabilityZones() )
               .withDefaultCooldown( Numbers.intValue( request.getDefaultCooldown() ) )
-              .withDesiredCapacity( Numbers.intValue( request.getDesiredCapacity() ) )
+              .withDesiredCapacity( desiredCapacity )
               .withHealthCheckGracePeriod( Numbers.intValue( request.getHealthCheckGracePeriod() ) )
               .withHealthCheckType(
                   request.getHealthCheckType()==null ? null : HealthCheckType.valueOf( request.getHealthCheckType() ) )
@@ -405,21 +461,11 @@ public class AutoScalingService {
                   null :
                   Iterables.transform( request.getTags().getMember(), TypeMappers.lookup( TagType.class, AutoScalingGroupTag.class ) ) );
 
-          final List<String> referenceErrors = activityManager.validateReferences(
-              ctx.getUserFullName(),
-              request.availabilityZones(),
-              request.loadBalancerNames()
-          );
-          if ( !referenceErrors.isEmpty() ) {
-            throw Exceptions.toUndeclared( new InvalidParameterValueException( "Invalid parameters " + referenceErrors ) );
-          }
-
-          //TODO:STEVE: input validation
           return builder.persist();
         } catch ( AutoScalingMetadataNotFoundException e ) {
-          throw Exceptions.toUndeclared( new InvalidParameterValueException( "Launch configuration not found: " + request.getLaunchConfigurationName() ) );
+          throw Exceptions.toUndeclared( new ValidationErrorException( "Launch configuration not found: " + request.getLaunchConfigurationName() ) );
         } catch ( IllegalArgumentException e ) {
-          throw Exceptions.toUndeclared( new InvalidParameterValueException( "Invalid health check type: " + request.getHealthCheckType() ) );
+          throw Exceptions.toUndeclared( new ValidationErrorException( "Invalid health check type: " + request.getHealthCheckType() ) );
         } catch ( Exception ex ) {
           throw new RuntimeException( ex );
         }
@@ -460,7 +506,20 @@ public class AutoScalingService {
     final DescribeTagsResponseType reply = request.getReply( );
 
     //TODO:STEVE: MaxRecords / NextToken support for DescribeTags
-    //TODO:STEVE: Filtering support for DescribeTags
+
+    final Collection<Predicate<Tag>> tagFilters = Lists.newArrayList();
+    for ( final Filter filter : request.filters() ) {
+      final Function<Tag,String> extractor = tagFilterExtractors.get( filter.getName() );
+      if ( extractor == null ) {
+        throw new ValidationErrorException( "Filter type "+filter.getName()+" is not correct. Allowed Filter types are: auto-scaling-group key value propagate-at-launch" );
+      }
+      final Function<String,String> tagValueConverter = Objects.firstNonNull(
+          tagValuePreProcessors.get( filter.getName() ),
+          Functions.<String>identity() );
+      tagFilters.add( Predicates.compose(
+          Predicates.in( Collections2.transform( filter.values(), tagValueConverter ) ),
+          extractor ) );
+    }
 
     final Context context = Contexts.lookup();
 
@@ -469,9 +528,9 @@ public class AutoScalingService {
         .compound( Ordering.natural().onResultOf( Tags.value() ) );
     try {
       final TagDescriptionList tagDescriptions = new TagDescriptionList();
-      for ( final Tag tag : ordering.sortedCopy( Tags.list(
+       for ( final Tag tag : ordering.sortedCopy( Tags.list(
           context.getUserFullName().asAccountFullName(),
-          Predicates.alwaysTrue(),
+          Predicates.and( tagFilters ),
           Restrictions.conjunction(),
           Collections.<String,String>emptyMap() ) ) ) {
         if ( Permissions.isAuthorized(
@@ -507,7 +566,7 @@ public class AutoScalingService {
           request.getAutoScalingGroupName(),
           request.getPolicyName() );        
       } catch ( AutoScalingMetadataNotFoundException e ) {
-        throw new InvalidParameterValueException( "Scaling policy not found: " + request.getPolicyName() );
+        throw new ValidationErrorException( "Scaling policy not found: " + request.getPolicyName() );
       }
 
       autoScalingGroups.update( accountFullName, request.getAutoScalingGroupName(), new Callback<AutoScalingGroup>(){
@@ -544,7 +603,7 @@ public class AutoScalingService {
     for ( final TagType tagType : tagTypes ) {
       final String key = tagType.getKey();
       if ( com.google.common.base.Strings.isNullOrEmpty( key ) || key.trim().length() > 128 || isReserved( key ) ) {
-        throw new InvalidParameterValueException( "Invalid key (max length 128, must not be empty, reserved prefixes "+reservedPrefixes+"): "+key );
+        throw new ValidationErrorException( "Invalid key (max length 128, must not be empty, reserved prefixes "+reservedPrefixes+"): "+key );
       }
     }
 
@@ -601,17 +660,24 @@ public class AutoScalingService {
         @Override
         public void fire( final ScalingPolicy scalingPolicy ) {
           if ( RestrictedTypes.filterPrivileged().apply( scalingPolicy ) ) {
-            //TODO:STEVE: input validation
-            // You will get a ValidationError if you use MinAdjustmentStep on a policy with an AdjustmentType other than PercentChangeInCapacity. 
             if ( request.getAdjustmentType() != null )
               scalingPolicy.setAdjustmentType( 
                   Enums.valueOfFunction( AdjustmentType.class ).apply( request.getAdjustmentType() ) );
-            if ( request.getScalingAdjustment() != null )
+            if ( request.getScalingAdjustment() != null ) {
+              if ( AdjustmentType.ExactCapacity == scalingPolicy.getAdjustmentType() &&
+                  request.getScalingAdjustment() < 0 ) {
+                throw Exceptions.toUndeclared( new ValidationErrorException( "ScalingAdjustment cannot be negative with the specified adjustment type." ) );
+              }
               scalingPolicy.setScalingAdjustment( request.getScalingAdjustment() );
+            }
             if ( request.getCooldown() != null )
               scalingPolicy.setCooldown( request.getCooldown() );
-            if ( request.getMinAdjustmentStep() != null )
+            if ( request.getMinAdjustmentStep() != null ) {
+              if ( AdjustmentType.PercentChangeInCapacity != scalingPolicy.getAdjustmentType() ) {
+                throw Exceptions.toUndeclared( new ValidationErrorException( "MinAdjustmentStep is not supported by the specified adjustment type." ) );
+              }
               scalingPolicy.setMinAdjustmentStep( request.getMinAdjustmentStep() );
+            }
           }
         }
       } );
@@ -622,23 +688,33 @@ public class AutoScalingService {
         @Override
         public ScalingPolicy get( ) {
           try {
+            final AdjustmentType adjustmentType =
+                Enums.valueOfFunction( AdjustmentType.class ).apply( request.getAdjustmentType() );
+
+            if ( request.getMinAdjustmentStep() != null &&
+                AdjustmentType.PercentChangeInCapacity != adjustmentType ) {
+              throw Exceptions.toUndeclared( new ValidationErrorException( "MinAdjustmentStep is not supported by the specified adjustment type." ) );
+            }
+
+            if ( AdjustmentType.ExactCapacity == adjustmentType &&
+                request.getScalingAdjustment() < 0 ) {
+              throw Exceptions.toUndeclared( new ValidationErrorException( "ScalingAdjustment cannot be negative with the specified adjustment type." ) );
+            }
+
             final ScalingPolicies.PersistingBuilder builder = scalingPolicies.create(
                 ctx.getUserFullName( ),
                 autoScalingGroups.lookup( accountFullName, request.getAutoScalingGroupName() ),
                 request.getPolicyName(),
-                Enums.valueOfFunction( AdjustmentType.class ).apply( request.getAdjustmentType() ),
+                adjustmentType,
                 request.getScalingAdjustment() )
                 .withCooldown( request.getCooldown() )
                 .withMinAdjustmentStep( request.getMinAdjustmentStep() );
 
-            //TODO:STEVE: input validation
-            // No Auto Scaling name, including policy names, can contain the colon (:) character because colons serve as delimiters in ARNs.
-            // You will get a ValidationError if you use MinAdjustmentStep on a policy with an AdjustmentType other than PercentChangeInCapacity. 
             return builder.persist();
           } catch ( AutoScalingMetadataNotFoundException e ) {
-            throw Exceptions.toUndeclared( new InvalidParameterValueException( "Auto scaling group not found: " + request.getAutoScalingGroupName() ) );
+            throw Exceptions.toUndeclared( new ValidationErrorException( "Auto scaling group not found: " + request.getAutoScalingGroupName() ) );
           } catch ( IllegalArgumentException e ) {
-            throw Exceptions.toUndeclared( new InvalidParameterValueException( "Invalid adjustment type: " + request.getAdjustmentType() ) );
+            throw Exceptions.toUndeclared( new ValidationErrorException( "Invalid adjustment type: " + request.getAdjustmentType() ) );
           } catch ( Exception ex ) {
             throw new RuntimeException( ex );
           }
@@ -717,7 +793,7 @@ public class AutoScalingService {
       };      
       autoScalingInstances.update( ownerFullName, request.getInstanceId(), instanceUpdateCallback );
     } catch ( AutoScalingMetadataNotFoundException e ) {
-      throw new InvalidParameterValueException( "Auto scaling instance not found: " + request.getInstanceId( ) );
+      throw new ValidationErrorException( "Auto scaling instance not found: " + request.getInstanceId( ) );
     } catch ( Exception e ) {
       handleException( e );
     }
@@ -742,10 +818,10 @@ public class AutoScalingService {
       final String value = com.google.common.base.Strings.nullToEmpty( tagType.getValue() ).trim();
 
       if ( com.google.common.base.Strings.isNullOrEmpty( key ) || key.trim().length() > 128 || isReserved( key ) ) {
-        throw new InvalidParameterValueException( "Invalid key (max length 128, must not be empty, reserved prefixes "+reservedPrefixes+"): "+key );
+        throw new ValidationErrorException( "Invalid key (max length 128, must not be empty, reserved prefixes "+reservedPrefixes+"): "+key );
       }
       if ( value.length() > 256 || isReserved( key ) ) {
-        throw new InvalidParameterValueException( "Invalid value (max length 256, reserved prefixes "+reservedPrefixes+"): "+value );
+        throw new ValidationErrorException( "Invalid value (max length 256, reserved prefixes "+reservedPrefixes+"): "+value );
       }
     }
 
@@ -764,7 +840,7 @@ public class AutoScalingService {
               }
 
               if ( resource == null || !RestrictedTypes.filterPrivileged().apply( resource ) ) {
-                throw Exceptions.toUndeclared( new InvalidParameterValueException( "Resource not found " + tagType.getResourceId() ) );
+                throw Exceptions.toUndeclared( new ValidationErrorException( "Resource not found " + tagType.getResourceId() ) );
               }
 
               final String key = com.google.common.base.Strings.nullToEmpty( tagType.getKey() ).trim();
@@ -804,6 +880,10 @@ public class AutoScalingService {
         @Override
         public void fire( final AutoScalingGroup autoScalingGroup ) {
           if ( RestrictedTypes.filterPrivileged().apply( autoScalingGroup ) ) {
+            final boolean isAdminSuspension =
+                ctx.hasAdministrativePrivileges() &&
+                !autoScalingGroup.getOwnerAccountNumber().equals( accountFullName.getAccountNumber() );
+
             final Set<ScalingProcessType> processesToSuspend = EnumSet.allOf( ScalingProcessType.class );
             if ( request.getScalingProcesses() != null && !request.getScalingProcesses().getMember().isEmpty() ) {
               processesToSuspend.clear();
@@ -814,7 +894,9 @@ public class AutoScalingService {
             for ( final ScalingProcessType scalingProcessType : processesToSuspend ) {
               if ( scalingProcessType.apply( autoScalingGroup ) ) {
                 autoScalingGroup.getSuspendedProcesses().add(
-                    SuspendedProcess.createManual( scalingProcessType ) );
+                    isAdminSuspension ?
+                        SuspendedProcess.createAdministrative( scalingProcessType ) :
+                        SuspendedProcess.createManual( scalingProcessType ) );
               }
             }
           }
@@ -826,7 +908,7 @@ public class AutoScalingService {
           request.getAutoScalingGroupName(),
           groupCallback );
     } catch ( AutoScalingMetadataNotFoundException e ) {
-      throw new InvalidParameterValueException( "Auto scaling group not found: " + request.getAutoScalingGroupName() );
+      throw new ValidationErrorException( "Auto scaling group not found: " + request.getAutoScalingGroupName() );
     } catch ( Exception e ) {
       handleException( e );
     }
@@ -878,6 +960,7 @@ public class AutoScalingService {
             .withKeyName( request.getKeyName() )
             .withUserData( request.getUserData() )
             .withInstanceMonitoring( request.getInstanceMonitoring() != null ? request.getInstanceMonitoring().getEnabled() : null )
+            .withInstanceProfile( request.getIamInstanceProfile() )
             .withSecurityGroups( request.getSecurityGroups() != null ? request.getSecurityGroups().getMember() : null );          
             
           if ( request.getBlockDeviceMappings() != null ) {
@@ -895,13 +978,14 @@ public class AutoScalingService {
               Iterables.filter( Lists.newArrayList( request.getImageId(), request.getKernelId(), request.getRamdiskId() ), Predicates.notNull() ),
               request.getInstanceType(),
               request.getKeyName(),
-              request.getSecurityGroups() == null ? Collections.<String>emptyList() : request.getSecurityGroups().getMember()
+              request.getSecurityGroups() == null ? Collections.<String>emptyList() : request.getSecurityGroups().getMember(),
+              request.getIamInstanceProfile()
           );
+
           if ( !referenceErrors.isEmpty() ) {
-            throw Exceptions.toUndeclared( new InvalidParameterValueException( "Invalid parameters " + referenceErrors ) );
+            throw Exceptions.toUndeclared( new ValidationErrorException( "Invalid parameters " + referenceErrors ) );
           }
 
-          //TODO:STEVE: input validation
           return builder.persist();
         } catch ( Exception ex ) {
           throw new RuntimeException( ex );
@@ -981,7 +1065,7 @@ public class AutoScalingService {
               try {
                 autoScalingGroup.setLaunchConfiguration( launchConfigurations.lookup( accountFullName, request.getLaunchConfigurationName() ) );
               } catch ( AutoScalingMetadataNotFoundException e ) {
-                throw Exceptions.toUndeclared( new InvalidParameterValueException( "Launch configuration not found: " + request.getLaunchConfigurationName() ) );
+                throw Exceptions.toUndeclared( new ValidationErrorException( "Launch configuration not found: " + request.getLaunchConfigurationName() ) );
               } catch ( AutoScalingMetadataException e ) {
                 throw Exceptions.toUndeclared( e );
               }
@@ -994,15 +1078,26 @@ public class AutoScalingService {
                   Sets.newLinkedHashSet( Iterables.filter(
                       Iterables.transform( request.terminationPolicies(), Enums.valueOfFunction( TerminationPolicyType.class ) ),
                       Predicates.not( Predicates.isNull() ) ) ) ) );
-            //TODO:STEVE: something for VPC zone identifier or placement group?
+
+            if ( autoScalingGroup.getDesiredCapacity() < autoScalingGroup.getMinSize() ) {
+              throw Exceptions.toUndeclared( new ValidationErrorException( "DesiredCapacity must not be less than MinSize" ) );
+            }
+
+            if ( autoScalingGroup.getDesiredCapacity() > autoScalingGroup.getMaxSize() ) {
+              throw Exceptions.toUndeclared( new ValidationErrorException( "DesiredCapacity must not be greater than MaxSize" ) );
+            }
 
             final List<String> referenceErrors = activityManager.validateReferences(
                 autoScalingGroup.getOwner(),
                 autoScalingGroup.getAvailabilityZones(),
                 Collections.<String>emptyList() // load balancer names cannot be updated
             );
+            verifyUnsupportedReferences( referenceErrors,
+                request.getPlacementGroup(),
+                request.getVpcZoneIdentifier() );
+
             if ( !referenceErrors.isEmpty() ) {
-              throw Exceptions.toUndeclared( new InvalidParameterValueException( "Invalid parameters " + referenceErrors ) );
+              throw Exceptions.toUndeclared( new ValidationErrorException( "Invalid parameters " + referenceErrors ) );
             }
           }
         }
@@ -1013,7 +1108,7 @@ public class AutoScalingService {
           request.getAutoScalingGroupName(),
           groupCallback );
     } catch ( AutoScalingMetadataNotFoundException e ) {
-      throw new InvalidParameterValueException( "Auto scaling group not found: " + request.getAutoScalingGroupName() );
+      throw new ValidationErrorException( "Auto scaling group not found: " + request.getAutoScalingGroupName() );
     } catch ( Exception e ) {
       handleException( e );
     }
@@ -1097,7 +1192,7 @@ public class AutoScalingService {
           request.getAutoScalingGroupName(),
           groupCallback);
     } catch ( AutoScalingMetadataNotFoundException e ) {
-      throw new InvalidParameterValueException( "Auto scaling group not found: " + request.getAutoScalingGroupName() );
+      throw new ValidationErrorException( "Auto scaling group not found: " + request.getAutoScalingGroupName() );
     } catch ( Exception e ) {
       handleException( e );
     }    
@@ -1146,7 +1241,7 @@ public class AutoScalingService {
           groupArn,
           groupCallback);
     } catch ( AutoScalingMetadataNotFoundException e ) {
-      throw new InvalidParameterValueException( "Auto scaling instance not found: " + request.getInstanceId( ) );
+      throw new ValidationErrorException( "Auto scaling instance not found: " + request.getInstanceId( ) );
     } catch ( Exception e ) {
       handleException( e );
     }
@@ -1172,6 +1267,18 @@ public class AutoScalingService {
       autoScalingGroup.setCapacityTimestamp( new Date() );
     } else {
       throw Exceptions.toUndeclared( new InternalFailureException("Group is in cooldown") );
+    }
+  }
+
+  private static void verifyUnsupportedReferences( final List<String> referenceErrors,
+                                                   final String placementGroup,
+                                                   final String vpcZoneIdentifier ) {
+    if ( !com.google.common.base.Strings.isNullOrEmpty( placementGroup ) ) {
+      referenceErrors.add( "Invalid placement group: " + placementGroup );
+    }
+
+    if ( !com.google.common.base.Strings.isNullOrEmpty( vpcZoneIdentifier ) ) {
+      referenceErrors.add( "Invalid VPC zone identifier: " + vpcZoneIdentifier );
     }
   }
 
@@ -1206,7 +1313,7 @@ public class AutoScalingService {
     final InvalidResourceNameException invalidResourceNameException =
         Exceptions.findCause( e, InvalidResourceNameException.class );
     if ( invalidResourceNameException != null ) {
-      throw new InvalidParameterValueException( invalidResourceNameException.getMessage() );
+      throw new ValidationErrorException( invalidResourceNameException.getMessage() );
     }
 
     logger.error( e, e );

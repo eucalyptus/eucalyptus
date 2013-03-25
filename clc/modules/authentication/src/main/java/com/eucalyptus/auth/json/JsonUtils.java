@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * Copyright 2009-2013 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -76,11 +76,15 @@ public class JsonUtils {
     }
     return element;
   }
-  
+
   public static String checkBinaryOption( JSONObject map, String element1, String element2 ) throws JSONException {
+    return checkBinaryOption( map, element1, element2, true );
+  }
+
+  public static String checkBinaryOption( JSONObject map, String element1, String element2, boolean required ) throws JSONException {
     boolean has1 = map.containsKey( element1 );
     boolean has2 = map.containsKey( element2 );
-    if ( !has1 && !has2 ) {
+    if ( required && !has1 && !has2 ) {
       throw new JSONException( "Element " + element1 + " or " + element2 + " is required" );
     }
     if ( has1 && has2 ) {
@@ -93,7 +97,7 @@ public class JsonUtils {
     List<String> results = Lists.newArrayList( );
     try {
       String value = getByType( String.class, statement, key );
-      results.add( value );
+      if (value != null) results.add( value );
       return results;
     } catch ( JSONException e ) {
     }

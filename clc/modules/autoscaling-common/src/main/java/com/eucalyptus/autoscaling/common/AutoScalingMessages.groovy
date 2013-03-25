@@ -26,6 +26,9 @@ import com.google.common.collect.Lists
 import com.eucalyptus.binding.HttpEmbedded
 import com.eucalyptus.binding.HttpParameterMapping
 import java.lang.reflect.Field
+import javax.annotation.Nonnull
+import com.eucalyptus.system.Ats
+import com.google.common.collect.Maps
 
 public class DescribeMetricCollectionTypesType extends AutoScalingMessage {
   public DescribeMetricCollectionTypesType() {  }
@@ -46,11 +49,13 @@ public class DescribeAutoScalingNotificationTypesResponseType extends AutoScalin
 }
 public class LaunchConfigurationNames extends EucalyptusData {
   public LaunchConfigurationNames() {  }
+  @AutoScalingMessageValidation.FieldRegex(AutoScalingMessageValidation.FieldRegexValue.NAME_OR_ARN)
   @HttpParameterMapping(parameter="member")
   ArrayList<String> member = new ArrayList<String>()
 }
 @ComponentId.ComponentMessage(AutoScaling.class)
 public class AutoScalingMessage extends BaseMessage {
+
   @Override
   def <TYPE extends BaseMessage> TYPE getReply() {
     TYPE type = super.getReply()
@@ -61,6 +66,70 @@ public class AutoScalingMessage extends BaseMessage {
     } catch ( Exception e ) {       
     }
     return type
+  }
+
+  Map<String,String> validate( ) {
+    Map<String,String> errors = Maps.newTreeMap()
+    validateRecursively( errors, "", this )
+    errors
+  }
+
+  void validateRecursively( Map<String,String> errorMap,
+                            String prefix,
+                            Object target ) {
+    target.class.declaredFields.each { Field field ->
+      Ats fieldAts = Ats.from( field )
+      field.setAccessible( true )
+      Object value = field.get( target );
+      String displayName = prefix + AutoScalingMessageValidation.displayName( field )
+
+      // validate null constraint
+      if ( fieldAts.has( Nonnull.class ) && value == null ) {
+        errorMap.put( displayName, displayName + " is required" )
+      }
+
+      // validate regex
+      AutoScalingMessageValidation.FieldRegex regex = fieldAts.get( AutoScalingMessageValidation.FieldRegex.class )
+      if ( regex && value != null && !(value instanceof Iterable) && !regex.value().pattern().matcher( String.valueOf( value ) ).matches( ) ) {
+        errorMap.put( displayName, value + " for parameter " + displayName + " is invalid" )
+      } else if ( regex && value instanceof Iterable ) {
+        value.eachWithIndex { Object item, int index  ->
+          if ( !regex.value().pattern().matcher( String.valueOf( item ) ).matches( ) ) {
+            errorMap.put( displayName + "." + (index + 1), item + " for parameter " + displayName + "." + (index + 1) + " is invalid" )
+          }
+        }
+      }
+
+      // validate range
+      AutoScalingMessageValidation.FieldRange range = fieldAts.get( AutoScalingMessageValidation.FieldRange.class )
+      if ( range != null && value instanceof Number ) {
+        Long longValue = ((Number) value).longValue()
+        if ( longValue < range.min() || longValue > range.max() ) {
+          errorMap.put( displayName, value + " for parameter " + displayName + " is invalid" )
+        }
+      }
+      if ( range != null && value instanceof List ) {
+        Long longValue = (long) ((List)value).size()
+        if ( longValue < range.min() && range.min() == 1 ) {
+          errorMap.put( displayName + ".1", displayName + ".1 is required" )
+        } else if ( longValue < range.min() ) {
+          errorMap.put( displayName, displayName + " length too short" )
+        } else if ( longValue > range.max() ) {
+          errorMap.put( displayName, displayName + " length too long" )
+        }
+      }
+
+      // validate recursively
+      if ( value instanceof EucalyptusData ) {
+        validateRecursively( errorMap, displayName + ".", value )
+      } else if ( value instanceof Iterable ) {
+        value.eachWithIndex { Object item, int index ->
+          if ( item instanceof EucalyptusData ) {
+            validateRecursively( errorMap, displayName + "." + (index + 1) + ".", item )
+          }
+        }
+      }
+    }
   }
 }
 public class SuspendProcessesResponseType extends AutoScalingMessage {
@@ -73,7 +142,9 @@ public class AutoScalingNotificationTypes extends EucalyptusData {
   ArrayList<String> member = new ArrayList<String>()
 }
 public class TerminateInstanceInAutoScalingGroupType extends AutoScalingMessage {
+  @Nonnull @AutoScalingMessageValidation.FieldRegex(AutoScalingMessageValidation.FieldRegexValue.EC2_INSTANCE)
   String instanceId
+  @Nonnull
   Boolean shouldDecrementDesiredCapacity
   public TerminateInstanceInAutoScalingGroupType() {  }
 }
@@ -96,11 +167,13 @@ public class LoadBalancerNames extends EucalyptusData {
   public LoadBalancerNames( Collection<String> names ) {
     if ( names != null ) member.addAll( names )
   }
+  @AutoScalingMessageValidation.FieldRegex(AutoScalingMessageValidation.FieldRegexValue.ELB_NAME)
   @HttpParameterMapping(parameter="member")
   ArrayList<String> member = new ArrayList<String>()
 }
 public class PolicyNames extends EucalyptusData {
   public PolicyNames() {  }
+  @AutoScalingMessageValidation.FieldRegex(AutoScalingMessageValidation.FieldRegexValue.NAME_OR_ARN)
   @HttpParameterMapping(parameter="member")
   ArrayList<String> member = new ArrayList<String>()
 }
@@ -116,6 +189,7 @@ public class SetInstanceHealthResponseType extends AutoScalingMessage {
   ResponseMetadata responseMetadata = new ResponseMetadata()
 }
 public class DeleteAutoScalingGroupType extends AutoScalingMessage {
+  @Nonnull @AutoScalingMessageValidation.FieldRegex(AutoScalingMessageValidation.FieldRegexValue.NAME_OR_ARN)
   String autoScalingGroupName
   Boolean forceDelete
   public DeleteAutoScalingGroupType() {  }
@@ -165,7 +239,9 @@ public class DeleteNotificationConfigurationType extends AutoScalingMessage {
   public DeleteNotificationConfigurationType() {  }
 }
 public class ExecutePolicyType extends AutoScalingMessage {
+  @AutoScalingMessageValidation.FieldRegex(AutoScalingMessageValidation.FieldRegexValue.NAME_OR_ARN)
   String autoScalingGroupName
+  @Nonnull @AutoScalingMessageValidation.FieldRegex(AutoScalingMessageValidation.FieldRegexValue.NAME_OR_ARN)
   String policyName
   Boolean honorCooldown
   public ExecutePolicyType() {  }
@@ -180,7 +256,9 @@ public class AutoScalingInstanceDetails extends EucalyptusData {
   public AutoScalingInstanceDetails() {  }
 }
 public class DeletePolicyType extends AutoScalingMessage {
+  @AutoScalingMessageValidation.FieldRegex(AutoScalingMessageValidation.FieldRegexValue.NAME_OR_ARN)
   String autoScalingGroupName
+  @Nonnull @AutoScalingMessageValidation.FieldRegex(AutoScalingMessageValidation.FieldRegexValue.NAME_OR_ARN)
   String policyName
   public DeletePolicyType() {  }
 }
@@ -274,16 +352,34 @@ public class DescribeScheduledActionsType extends AutoScalingMessage {
   public DescribeScheduledActionsType() {  }
 }
 public class Filter extends EucalyptusData {
+  @Nonnull @AutoScalingMessageValidation.FieldRegex(AutoScalingMessageValidation.FieldRegexValue.TAG_FILTER)
   String name
   @HttpEmbedded
   Values values
   public Filter() {  }
+  public List<String> values() {
+    values != null ?
+      values.getMember() :
+      []
+  }
 }
 public class ErrorDetail extends EucalyptusData {
   public ErrorDetail() {  }
 }
 public class Alarms extends EucalyptusData {
   public Alarms() {  }
+  public Alarms( Iterable<String> alarmArns ) {
+    alarmArns.each { String alarmArn ->
+      int nameIndex = alarmArn.indexOf( ":alarm:" );
+      String alarmName = nameIndex > 0 ?
+        alarmArn.substring( nameIndex + 7 ) :
+        null
+      member.add( new Alarm(
+          alarmARN: alarmArn,
+          alarmName: alarmName
+      ) );
+    }
+  }
   ArrayList<Alarm> member = new ArrayList<Alarm>()
 }
 public class DescribeAutoScalingInstancesResult extends EucalyptusData {
@@ -320,6 +416,11 @@ public class DescribeTagsType extends AutoScalingMessage {
   String nextToken
   Integer maxRecords
   public DescribeTagsType() {  }
+  public List<Filter> filters() {
+    filters != null ?
+        filters.member :
+        []
+  }
 }
 public class AdjustmentType extends EucalyptusData {
   String adjustmentType
@@ -335,19 +436,29 @@ public class DisableMetricsCollectionResponseType extends AutoScalingMessage {
   ResponseMetadata responseMetadata = new ResponseMetadata()
 }
 public class CreateAutoScalingGroupType extends AutoScalingMessage {
+  @Nonnull @AutoScalingMessageValidation.FieldRegex(AutoScalingMessageValidation.FieldRegexValue.NAME)
   String autoScalingGroupName
+  @Nonnull @AutoScalingMessageValidation.FieldRegex(AutoScalingMessageValidation.FieldRegexValue.NAME_OR_ARN)
   String launchConfigurationName
+  @Nonnull @AutoScalingMessageValidation.FieldRange
   Integer minSize
+  @Nonnull @AutoScalingMessageValidation.FieldRange
   Integer maxSize
+  @AutoScalingMessageValidation.FieldRange
   Integer desiredCapacity
+  @AutoScalingMessageValidation.FieldRange
   Integer defaultCooldown
-  @HttpEmbedded
+  @Nonnull @HttpEmbedded
   AvailabilityZones availabilityZones
   @HttpEmbedded
   LoadBalancerNames loadBalancerNames
+  @AutoScalingMessageValidation.FieldRegex(AutoScalingMessageValidation.FieldRegexValue.HEALTH_CHECK)
   String healthCheckType
+  @AutoScalingMessageValidation.FieldRange
   Integer healthCheckGracePeriod
+  @AutoScalingMessageValidation.FieldRegex(AutoScalingMessageValidation.FieldRegexValue.EC2_NAME)
   String placementGroup
+  @AutoScalingMessageValidation.FieldRegex(AutoScalingMessageValidation.FieldRegexValue.EC2_NAME)
   @HttpParameterMapping(parameter="VPCZoneIdentifier")
   String vpcZoneIdentifier
   @HttpEmbedded
@@ -364,8 +475,24 @@ public class CreateAutoScalingGroupType extends AutoScalingMessage {
   public Collection<String> terminationPolicies() {
     return terminationPolicies?.member
   }
+
+  @Override
+  Map<String, String> validate() {
+    Map<String,String> errors = super.validate()
+    if ( minSize && maxSize && minSize > maxSize ) {
+      errors.put( "MinSize", "MinSize must not be greater than MaxSize" )
+    }
+    if ( minSize && desiredCapacity && desiredCapacity < minSize ) {
+      errors.put( "DesiredCapacity", "DesiredCapacity must not be less than MinSize" )
+    }
+    if ( maxSize && desiredCapacity && desiredCapacity > maxSize ) {
+      errors.put( "DesiredCapacity", "DesiredCapacity must not be greater than MaxSize" )
+    }
+    errors
+  }
 }
 public class DisableMetricsCollectionType extends AutoScalingMessage {
+  @Nonnull @AutoScalingMessageValidation.FieldRegex(AutoScalingMessageValidation.FieldRegexValue.NAME_OR_ARN)
   String autoScalingGroupName
   @HttpEmbedded
   Metrics metrics
@@ -379,6 +506,7 @@ public class TerminationPolicies extends EucalyptusData {
   public TerminationPolicies( Collection<String> terminationPolicies ) { 
     if ( terminationPolicies != null ) member.addAll( terminationPolicies )
   }
+  @AutoScalingMessageValidation.FieldRegex(AutoScalingMessageValidation.FieldRegexValue.TERMINATION_POLICY)
   @HttpParameterMapping(parameter="member")
   ArrayList<String> member = new ArrayList<String>()
 }
@@ -408,6 +536,8 @@ public class AvailabilityZones extends EucalyptusData {
   public AvailabilityZones( Collection<String> zones ) { 
     if ( zones != null ) member.addAll( zones )
   }
+  @AutoScalingMessageValidation.FieldRegex(AutoScalingMessageValidation.FieldRegexValue.EC2_NAME)
+  @AutoScalingMessageValidation.FieldRange(min=1L)
   @HttpParameterMapping(parameter="member")
   ArrayList<String> member = new ArrayList<String>()
 }
@@ -421,6 +551,7 @@ public class DescribeAutoScalingNotificationTypesType extends AutoScalingMessage
 }
 public class Metrics extends EucalyptusData {
   public Metrics() {  }
+  @AutoScalingMessageValidation.FieldRegex(AutoScalingMessageValidation.FieldRegexValue.METRIC)
   @HttpParameterMapping(parameter="member")
   ArrayList<String> member = new ArrayList<String>()
 }
@@ -434,9 +565,11 @@ public class DescribeNotificationConfigurationsResult extends EucalyptusData {
   public DescribeNotificationConfigurationsResult() {  }
 }
 public class EnableMetricsCollectionType extends AutoScalingMessage {
+  @Nonnull @AutoScalingMessageValidation.FieldRegex(AutoScalingMessageValidation.FieldRegexValue.NAME_OR_ARN)
   String autoScalingGroupName
   @HttpEmbedded
   Metrics metrics
+  @Nonnull @AutoScalingMessageValidation.FieldRegex(AutoScalingMessageValidation.FieldRegexValue.METRIC_GRANULARITY)
   String granularity
   public EnableMetricsCollectionType() {  }
 }
@@ -466,6 +599,7 @@ public class SecurityGroups extends EucalyptusData {
   public SecurityGroups( Collection<String> groups ) {
     member.addAll( groups )  
   }
+  @Nonnull @AutoScalingMessageValidation.FieldRegex(AutoScalingMessageValidation.FieldRegexValue.EC2_NAME)
   @HttpParameterMapping(parameter="member")
   ArrayList<String> member = new ArrayList<String>()
 }
@@ -484,11 +618,12 @@ public class DescribeScheduledActionsResponseType extends AutoScalingMessage {
 }
 public class Filters extends EucalyptusData {
   public Filters() {  }
-  @HttpEmbedded
+  @HttpEmbedded(multiple=true)
   @HttpParameterMapping(parameter="member")
   ArrayList<Filter> member = new ArrayList<Filter>()
 }
 public class ResumeProcessesType extends AutoScalingMessage {
+  @Nonnull @AutoScalingMessageValidation.FieldRegex(AutoScalingMessageValidation.FieldRegexValue.NAME_OR_ARN)
   String autoScalingGroupName
   @HttpEmbedded
   ProcessNames scalingProcesses
@@ -501,10 +636,12 @@ public class DescribeAdjustmentTypesResponseType extends AutoScalingMessage {
 }
 public class InstanceIds extends EucalyptusData {
   public InstanceIds() {  }
+  @AutoScalingMessageValidation.FieldRegex(AutoScalingMessageValidation.FieldRegexValue.EC2_INSTANCE_VERBOSE)
   @HttpParameterMapping(parameter="member")
   ArrayList<String> member = new ArrayList<String>()
 }
 public class SuspendProcessesType extends AutoScalingMessage {
+  @Nonnull @AutoScalingMessageValidation.FieldRegex(AutoScalingMessageValidation.FieldRegexValue.NAME_OR_ARN)
   String autoScalingGroupName
   @HttpEmbedded
   ProcessNames scalingProcesses
@@ -542,6 +679,7 @@ public class DescribeAutoScalingInstancesType extends AutoScalingMessage {
   }
 }
 public class DeleteTagsType extends AutoScalingMessage {
+  @Nonnull
   @HttpEmbedded
   Tags tags
   public DeleteTagsType() {  }
@@ -561,9 +699,13 @@ public class DescribePoliciesResponseType extends AutoScalingMessage {
   ResponseMetadata responseMetadata = new ResponseMetadata()
 }
 public class TagType extends EucalyptusData {
+  @AutoScalingMessageValidation.FieldRegex(AutoScalingMessageValidation.FieldRegexValue.NAME)
   String resourceId
+  @AutoScalingMessageValidation.FieldRegex(AutoScalingMessageValidation.FieldRegexValue.TAG_RESOURCE)
   String resourceType
+  @Nonnull @AutoScalingMessageValidation.FieldRegex(AutoScalingMessageValidation.FieldRegexValue.STRING_128)
   String key
+  @AutoScalingMessageValidation.FieldRegex(AutoScalingMessageValidation.FieldRegexValue.STRING_256)
   String value
   Boolean propagateAtLaunch
   public TagType() {  }
@@ -595,6 +737,7 @@ public class ExecutePolicyResponseType extends AutoScalingMessage {
 }
 public class ActivityIds extends EucalyptusData {
   public ActivityIds() {  }
+  @AutoScalingMessageValidation.FieldRegex(AutoScalingMessageValidation.FieldRegexValue.UUID)
   @HttpParameterMapping(parameter="member")
   ArrayList<String> member = new ArrayList<String>()
 }
@@ -624,6 +767,7 @@ public class SetDesiredCapacityResponseType extends AutoScalingMessage {
 public class DescribeScalingActivitiesType extends AutoScalingMessage {
   @HttpEmbedded
   ActivityIds activityIds
+  @AutoScalingMessageValidation.FieldRegex(AutoScalingMessageValidation.FieldRegexValue.NAME_OR_ARN)
   String autoScalingGroupName
   Integer maxRecords
   String nextToken
@@ -652,28 +796,42 @@ public class Processes extends EucalyptusData {
   ArrayList<ProcessType> member = new ArrayList<ProcessType>()
 }
 public class Ebs extends EucalyptusData {
+  @AutoScalingMessageValidation.FieldRegex(AutoScalingMessageValidation.FieldRegexValue.EC2_SNAPSHOT)
   String snapshotId
+  @AutoScalingMessageValidation.FieldRange
   Integer volumeSize
   public Ebs() {  }
 }
 public class SetInstanceHealthType extends AutoScalingMessage {
+  @Nonnull @AutoScalingMessageValidation.FieldRegex(AutoScalingMessageValidation.FieldRegexValue.EC2_INSTANCE)
   String instanceId
+  @Nonnull @AutoScalingMessageValidation.FieldRegex(AutoScalingMessageValidation.FieldRegexValue.HEALTH_STATUS)
   String healthStatus
   Boolean shouldRespectGracePeriod
   public SetInstanceHealthType() {  }
 }
 public class UpdateAutoScalingGroupType extends AutoScalingMessage {
+  @Nonnull @AutoScalingMessageValidation.FieldRegex(AutoScalingMessageValidation.FieldRegexValue.NAME_OR_ARN)
   String autoScalingGroupName
+  @AutoScalingMessageValidation.FieldRegex(AutoScalingMessageValidation.FieldRegexValue.NAME_OR_ARN)
   String launchConfigurationName
+  @AutoScalingMessageValidation.FieldRange
   Integer minSize
+  @AutoScalingMessageValidation.FieldRange
   Integer maxSize
+  @AutoScalingMessageValidation.FieldRange
   Integer desiredCapacity
+  @AutoScalingMessageValidation.FieldRange
   Integer defaultCooldown
   @HttpEmbedded
   AvailabilityZones availabilityZones
+  @AutoScalingMessageValidation.FieldRegex(AutoScalingMessageValidation.FieldRegexValue.HEALTH_CHECK)
   String healthCheckType
+  @AutoScalingMessageValidation.FieldRange
   Integer healthCheckGracePeriod
+  @AutoScalingMessageValidation.FieldRegex(AutoScalingMessageValidation.FieldRegexValue.EC2_NAME)
   String placementGroup
+  @AutoScalingMessageValidation.FieldRegex(AutoScalingMessageValidation.FieldRegexValue.EC2_NAME)
   @HttpParameterMapping(parameter="VPCZoneIdentifier")
   String vpcZoneIdentifier
   @HttpEmbedded
@@ -684,7 +842,21 @@ public class UpdateAutoScalingGroupType extends AutoScalingMessage {
   }
   public Collection<String> terminationPolicies() {
     return terminationPolicies?.member
-  }  
+  }
+  @Override
+  Map<String, String> validate() {
+    Map<String,String> errors = super.validate()
+    if ( minSize && maxSize && minSize > maxSize ) {
+      errors.put( "MinSize", "MinSize must not be greater than MaxSize" )
+    }
+    if ( minSize && desiredCapacity && desiredCapacity < minSize ) {
+      errors.put( "DesiredCapacity", "DesiredCapacity must not be less than MinSize" )
+    }
+    if ( maxSize && desiredCapacity && desiredCapacity > maxSize ) {
+      errors.put( "DesiredCapacity", "DesiredCapacity must not be greater than MaxSize" )
+    }
+    errors
+  }
 }
 public class DescribeMetricCollectionTypesResult extends EucalyptusData {
   MetricCollectionTypes metrics
@@ -692,7 +864,9 @@ public class DescribeMetricCollectionTypesResult extends EucalyptusData {
   public DescribeMetricCollectionTypesResult() {  }
 }
 public class BlockDeviceMappingType extends EucalyptusData {
+  @AutoScalingMessageValidation.FieldRegex(AutoScalingMessageValidation.FieldRegexValue.EC2_NAME)
   String virtualName
+  @Nonnull @AutoScalingMessageValidation.FieldRegex(AutoScalingMessageValidation.FieldRegexValue.EC2_NAME)
   String deviceName
   @HttpEmbedded
   Ebs ebs
@@ -737,16 +911,23 @@ public class EnabledMetrics extends EucalyptusData {
   ArrayList<EnabledMetric> member = new ArrayList<EnabledMetric>()
 }
 public class SetDesiredCapacityType extends AutoScalingMessage {
+  @Nonnull @AutoScalingMessageValidation.FieldRegex(AutoScalingMessageValidation.FieldRegexValue.NAME_OR_ARN)
   String autoScalingGroupName
+  @Nonnull @AutoScalingMessageValidation.FieldRange
   Integer desiredCapacity
   Boolean honorCooldown
   public SetDesiredCapacityType() {  }
 }
 public class PutScalingPolicyType extends AutoScalingMessage {
+  @Nonnull @AutoScalingMessageValidation.FieldRegex(AutoScalingMessageValidation.FieldRegexValue.NAME_OR_ARN)
   String autoScalingGroupName
+  @Nonnull @AutoScalingMessageValidation.FieldRegex(AutoScalingMessageValidation.FieldRegexValue.NAME)
   String policyName
+  @Nonnull
   Integer scalingAdjustment
+  @Nonnull @AutoScalingMessageValidation.FieldRegex(AutoScalingMessageValidation.FieldRegexValue.ADJUSTMENT)
   String adjustmentType
+  @AutoScalingMessageValidation.FieldRange
   Integer cooldown
   Integer minAdjustmentStep
   public PutScalingPolicyType() {  }
@@ -780,6 +961,7 @@ public class AutoScalingGroupType extends EucalyptusData {
   public AutoScalingGroupType() {  }
 }
 public class DeleteLaunchConfigurationType extends AutoScalingMessage {
+  @Nonnull @AutoScalingMessageValidation.FieldRegex(AutoScalingMessageValidation.FieldRegexValue.NAME_OR_ARN)
   String launchConfigurationName
   public DeleteLaunchConfigurationType() {  }
 }
@@ -805,11 +987,13 @@ public class ScalingPolicyType extends EucalyptusData {
 }
 public class AutoScalingGroupNames extends EucalyptusData {
   public AutoScalingGroupNames() {  }
+  @AutoScalingMessageValidation.FieldRegex(AutoScalingMessageValidation.FieldRegexValue.NAME_OR_ARN)
   @HttpParameterMapping(parameter="member")
   ArrayList<String> member = new ArrayList<String>()
 }
 public class Values extends EucalyptusData {
   public Values() {  }
+  @AutoScalingMessageValidation.FieldRegex(AutoScalingMessageValidation.FieldRegexValue.STRING_256)
   @HttpParameterMapping(parameter="member")
   ArrayList<String> member = new ArrayList<String>()
 }
@@ -829,6 +1013,7 @@ public class Activities extends EucalyptusData {
   ArrayList<Activity> member = new ArrayList<Activity>()
 }
 public class DescribePoliciesType extends AutoScalingMessage {
+  @AutoScalingMessageValidation.FieldRegex(AutoScalingMessageValidation.FieldRegexValue.NAME_OR_ARN)
   String autoScalingGroupName
   @HttpEmbedded
   PolicyNames policyNames
@@ -866,20 +1051,29 @@ public class DescribeAutoScalingGroupsType extends AutoScalingMessage {
   }  
 }
 public class CreateLaunchConfigurationType extends AutoScalingMessage {
+  @Nonnull @AutoScalingMessageValidation.FieldRegex(AutoScalingMessageValidation.FieldRegexValue.NAME)
   String launchConfigurationName
+  @Nonnull @AutoScalingMessageValidation.FieldRegex(AutoScalingMessageValidation.FieldRegexValue.EC2_MACHINE_IMAGE)
   String imageId
+  @AutoScalingMessageValidation.FieldRegex(AutoScalingMessageValidation.FieldRegexValue.EC2_NAME)
   String keyName
   @HttpEmbedded
   SecurityGroups securityGroups
+  @AutoScalingMessageValidation.FieldRegex(AutoScalingMessageValidation.FieldRegexValue.EC2_USERDATA)
   String userData
+  @Nonnull @AutoScalingMessageValidation.FieldRegex(AutoScalingMessageValidation.FieldRegexValue.EC2_NAME)
   String instanceType
+  @AutoScalingMessageValidation.FieldRegex(AutoScalingMessageValidation.FieldRegexValue.EC2_KERNEL_IMAGE)
   String kernelId
+  @AutoScalingMessageValidation.FieldRegex(AutoScalingMessageValidation.FieldRegexValue.EC2_RAMDISK_IMAGE)
   String ramdiskId
   @HttpEmbedded
   BlockDeviceMappings blockDeviceMappings
   @HttpEmbedded
   InstanceMonitoring instanceMonitoring
+  @AutoScalingMessageValidation.FieldRegex(AutoScalingMessageValidation.FieldRegexValue.EC2_SPOT_PRICE)
   String spotPrice
+  @AutoScalingMessageValidation.FieldRegex(AutoScalingMessageValidation.FieldRegexValue.IAM_NAME_OR_ARN)
   String iamInstanceProfile
   Boolean ebsOptimized
   public CreateLaunchConfigurationType() {  }
@@ -897,12 +1091,13 @@ public class DescribeScalingProcessTypesType extends AutoScalingMessage {
   public DescribeScalingProcessTypesType() {  }
 }
 public class CreateOrUpdateTagsType extends AutoScalingMessage {
-  @HttpEmbedded
+  @Nonnull @HttpEmbedded
   Tags tags
   public CreateOrUpdateTagsType() {  }
 }
 public class ProcessNames extends EucalyptusData {
   public ProcessNames() {  }
+  @AutoScalingMessageValidation.FieldRegex(AutoScalingMessageValidation.FieldRegexValue.SCALING_PROCESS)
   @HttpParameterMapping(parameter="member")
   ArrayList<String> member = new ArrayList<String>()
 }
