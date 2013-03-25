@@ -5,7 +5,8 @@ define([
   './page1',
   './page2',
   './page3',
-], function(Wizard, wizardTemplate, page1, page2, page3) {
+  'models/scalinggrp',
+], function(Wizard, wizardTemplate, page1, page2, page3, ScalingGroup) {
   var wizard = new Wizard();
 
   function canFinish(position, problems) {
@@ -16,6 +17,10 @@ define([
 
   function finish() {
     alert("Congratulations!  You finished a pointless wizard!")
+  }
+
+  var scope = {
+    scalingGroup: new ScalingGroup()
   }
 
   var viewBuilder = wizard.viewBuilder(wizardTemplate)

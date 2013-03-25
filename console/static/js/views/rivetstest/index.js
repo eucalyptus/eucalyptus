@@ -1,8 +1,10 @@
 define([
 	'dataholder',
 	'text!./template.html!strip',
-        'rivets',
-	], function( dh, template, rivets) {
+    'rivets',
+    'views/dialogs/testdialog',
+    'views/dialogs/quickscaledialog',
+], function( dh, template, rivets, TestDialog, QuickScaleDialog) {
 	return Backbone.View.extend({
 		initialize : function() {
 			var self = this;
@@ -15,8 +17,16 @@ define([
 				click: function() { 
 					console.log('Click occurred');
 					self.test.set('value', 'button click'); 
+                    var dialog = new TestDialog();
 				}
 			}
+
+			this.quickScaleButton = {
+				click: function() { 
+                    var dialog = new QuickScaleDialog();
+				}
+			}
+
 			this.sGroups = dh.scalingGroups;
 			this.$el.html(template);
 			this.rivetsView = rivets.bind(this.$el, this);
@@ -28,7 +38,7 @@ define([
 			this.test.set({value: context.sg.get('name')});
 		},
 		render : function() {
-                        this.rivetsView.sync();
+            this.rivetsView.sync();
 			return this;
 		}
 	});
