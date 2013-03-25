@@ -36,7 +36,7 @@
       this._addHelp($help);
       var needs = ['zones', 'images', 'instances', 'keypairs', 'groups', 'addresses', 'volumes', 'snapshots', 'tags'];
       setDataInterest(needs);
-      $('html body').eucadata('setDataNeeds', ['dash', 'zones']);
+      $('html body').eucadata('setDataNeeds', ['dash', 'zones', 'scalinginsts']);
     },
 
     _create : function() { 
@@ -204,7 +204,8 @@
         var results = describe('summary');
         $instObj.find('#dashboard-instance-running span').text(results.inst_running);
         $instObj.find('#dashboard-instance-stopped span').text(results.inst_stopped);
-        $instObj.find('#dashboard-scaling-groups span').text(0);
+        var scalinginsts = describe('scalinginst');
+        $instObj.find('#dashboard-scaling-groups span').text(scalinginsts.length);
         $storageObj.find('#dashboard-storage-volume span').text(results.volume);
         $storageObj.find('#dashboard-storage-snapshot span').text(results.snapshot);
 //        $storageObj.find('#dashboard-storage-buckets span').text(0);
