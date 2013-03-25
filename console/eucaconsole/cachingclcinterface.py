@@ -135,13 +135,22 @@ class CachingClcInterface(ClcInterface):
         numStopped = 0;
         if self.caches['instances'].values:
             for reservation in self.caches['instances'].values:
-                for inst in reservation.instances:
-                    if zone == 'all' or inst.placement == zone:
-                        state = inst.state
-                        if state == 'running':
-                            numRunning += 1
-                        elif state == 'stopped':
-                            numStopped += 1 
+                if issubclass(reservation.__class__, EC2Object):
+                    for inst in reservation.instances:
+                        if zone == 'all' or inst.placement == zone:
+                            state = inst.state
+                            if state == 'running':
+                                numRunning += 1
+                            elif state == 'stopped':
+                                numStopped += 1 
+                else:
+                    for inst in reservation['instances']:
+                        if zone == 'all' or inst['placement'] == zone:
+                            state = inst['state']
+                            if state == 'running':
+                                numRunning += 1
+                            elif state == 'stopped':
+                                numStopped += 1 
         summary['inst_running'] = numRunning
         summary['inst_stopped'] = numStopped
         summary['keypair'] = len(self.caches['keypairs'].values)if self.caches['keypairs'].values else 0
