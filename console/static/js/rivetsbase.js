@@ -539,7 +539,8 @@
         if (collection) {
           _results = [];
           for (_k = 0, _len2 = collection.length; _k < _len2; _k++) {
-            item = collection[_k];
+            item = Rivets.config.adapter.read(collection, _k)
+            console.log('ITEM:', item, collection);
             data = {};
             _ref2 = this.view.models;
             for (n in _ref2) {

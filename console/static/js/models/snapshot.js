@@ -1,6 +1,10 @@
+// snapshot model
+//
+
 define([
-], function() {
-    var Snapshot = Backbone.Model.extend({
+    './eucamodel'
+], function(EucaModel) {
+    var model = EucaModel.extend({
     });
-    return Snapshot;
+    return model;
 });

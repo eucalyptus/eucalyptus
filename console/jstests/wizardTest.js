@@ -1,4 +1,4 @@
-var Wizard = require ( '../static/js/views/eantest/wizard' ).Wizard,
+var Wizard = require ( '../static/js/wizard' ).Wizard,
         vows = require ( 'vows' ),
         util = require ( 'util' ),
         assert = require ( 'assert' ),

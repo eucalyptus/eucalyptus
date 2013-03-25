@@ -1,5 +1,11 @@
+// scalinggrp model
+//
+
 define([
-], function() {
-    return Backbone.Model.extend({
+    'backbone',
+    './eucamodel'
+], function(Backbone, EucaModel) {
+    var model = Backbone.Model.extend({
     });
+    return model;
 });
