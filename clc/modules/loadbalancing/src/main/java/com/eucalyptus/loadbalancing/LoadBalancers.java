@@ -36,6 +36,7 @@ import com.eucalyptus.loadbalancing.LoadBalancerListener.PROTOCOL;
 import com.eucalyptus.loadbalancing.activities.EucalyptusActivityTasks;
 import com.eucalyptus.loadbalancing.activities.LoadBalancerServoInstance;
 import com.eucalyptus.util.Exceptions;
+import com.eucalyptus.util.RestrictedTypes;
 import com.google.common.base.Function;
 import com.google.common.base.Predicate;
 import com.google.common.base.Strings;
@@ -116,7 +117,10 @@ public class LoadBalancers {
 		        	}catch(Exception ex){
 		    	    	return new AccessPointNotFoundException();
 		    	    }
-		        	
+		        	  //IAM support to restricted lb modification
+		     	   if(!RestrictedTypes.filterPrivileged().apply(lb)) {
+		     	       return new AccessPointNotFoundException();
+		     	   }
 		        	try{
 		        		for(Listener listener : listeners){
 		        			if(!LoadBalancerListener.acceptable(listener))

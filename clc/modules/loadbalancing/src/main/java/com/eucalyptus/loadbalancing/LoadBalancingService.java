@@ -31,6 +31,7 @@ import javax.persistence.EntityTransaction;
 
 import org.apache.log4j.Logger;
 
+import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.principal.AccountFullName;
 import com.eucalyptus.auth.principal.UserFullName;
 import com.eucalyptus.cloud.CloudMetadatas;
@@ -96,7 +97,9 @@ import com.eucalyptus.loadbalancing.activities.NewLoadbalancerEvent;
 import com.eucalyptus.loadbalancing.activities.ActivityManager;
 import com.eucalyptus.loadbalancing.activities.RegisterInstancesEvent;
 import com.eucalyptus.util.EucalyptusCloudException;
+import com.eucalyptus.util.RestrictedTypes;
 import com.google.common.base.Function;
+import com.google.common.base.Supplier;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Collections2;
 import com.google.common.collect.Iterables;
@@ -170,12 +173,32 @@ public class LoadBalancingService {
 	  return reply;
   }
  
-  public CreateLoadBalancerResponseType createLoadBalancer(CreateLoadBalancerType request) throws EucalyptusCloudException {
+  public CreateLoadBalancerResponseType createLoadBalancer(CreateLoadBalancerType request) throws EucalyptusCloudException, AuthException {
     final CreateLoadBalancerResponseType reply = request.getReply( );
     final Context ctx = Contexts.lookup( );
     final UserFullName ownerFullName = ctx.getUserFullName( );
     final String lbName = request.getLoadBalancerName();
-    final LoadBalancer lb = LoadBalancers.addLoadbalancer(ownerFullName, lbName);
+    LoadBalancer lb;
+
+    final Supplier<LoadBalancer> allocator = new Supplier<LoadBalancer>() {
+      @Override
+      public LoadBalancer get() {
+        try {
+          return LoadBalancers.addLoadbalancer(ownerFullName, lbName);
+        } catch (LoadBalancingException e) {
+          return null;
+        }
+      }
+    };
+
+    try {
+      RestrictedTypes.allocateUnitlessResource( allocator );
+    } catch ( Exception e ) {
+      throw new AuthException(e);
+    }
+
+    lb = allocator.get();
+    
     if(lb == null)
     	throw new LoadBalancingException(String.format("Requested loadbalancer %s cannot be created", lbName));
     
@@ -387,8 +410,12 @@ public class LoadBalancingService {
 		        	
 		    	  final List<LoadBalancer> lbs = Entities.query( LoadBalancer.named( ownerFullName, null ), true);
 		          Set<String> res = Sets.newHashSet( );
-		          for ( final LoadBalancer foundLB : Iterables.filter(lbs, requestedAndAccessible ))
-		            res.add( foundLB.getDisplayName( ) );
+		          for ( final LoadBalancer foundLB : Iterables.filter(lbs, requestedAndAccessible )) {
+		              //Added IAM support for describe lbs
+		              if( RestrictedTypes.filterPrivileged().apply(foundLB) ) {
+		               res.add( foundLB.getDisplayName( ) );
+		             }
+		          }
 		          return res;
 		        }
 		    }; 
@@ -518,6 +545,10 @@ public class LoadBalancingService {
 		    	}catch(NoSuchElementException ex){
 		    		throw new Exception("loadbalancer not found", ex);
 		    	}
+		    	//IAM Support for deleting load balancers 
+		    	if (!RestrictedTypes.filterPrivileged().apply(lb)) {
+		    	    throw new Exception("not authorized for the loadbalancer instance");
+		    	}
 		    	Collection<LoadBalancerListener> listeners = lb.getListeners();
 		    	final List<Integer> ports = Lists.newArrayList(Collections2.transform(listeners, new Function<LoadBalancerListener, Integer>(){
 					@Override
@@ -566,7 +597,9 @@ public class LoadBalancingService {
 	    final UserFullName ownerFullName = ctx.getUserFullName( );
 	    final String lbName = request.getLoadBalancerName();
 	    final Collection<Listener> listeners = request.getListeners().getMember();
-	    try{
+
+	
+	try{
     		CreateListenerEvent evt = new CreateListenerEvent();
     		evt.setLoadBalancer(lbName);
     		evt.setContext(ctx);
@@ -581,7 +614,7 @@ public class LoadBalancingService {
 	    return reply;
   }
   
-  public DeleteLoadBalancerListenersResponseType deleteLoadBalancerListeners(DeleteLoadBalancerListenersType request) throws EucalyptusCloudException {
+  public DeleteLoadBalancerListenersResponseType deleteLoadBalancerListeners(DeleteLoadBalancerListenersType request) throws EucalyptusCloudException, AuthException {
 	    final DeleteLoadBalancerListenersResponseType reply = request.getReply( );
 	    final Context ctx = Contexts.lookup( );
 	    final UserFullName ownerFullName = ctx.getUserFullName( );
@@ -610,7 +643,12 @@ public class LoadBalancingService {
 	    	LOG.error("Failed to find the loadbalancer="+lbName);
 	    	throw new LoadBalancingException("failed to retrieve the loadbalancer", ex);
 	    }
-		  	 
+	
+	   //IAM support to restricted lb modification
+	   if(!RestrictedTypes.filterPrivileged().apply(lb)) {
+	       throw new AuthException("Not authorized to modify the load balancer");
+	   }
+	    
 	   final Function<Void, Collection<Integer>> filter = new Function<Void, Collection<Integer>>(){
 	    	@Override
 	    	public Collection<Integer> apply(Void v){
