@@ -1,12 +1,12 @@
-console.log('WIZARD:start');
 define([
+   'views/dialogs/eucadialogview',
   'wizard',
-  'text!./template.html',
+   'text!./nosidebar.html',
   './page1',
   './page2',
   './page3',
   'models/scalinggrp',
-], function(Wizard, wizardTemplate, page1, page2, page3, ScalingGroup) {
+], function(EucaDialogView, Wizard, wizardTemplate, page1, page2, page3, ScalingGroup) {
   var wizard = new Wizard();
 
   function canFinish(position, problems) {
@@ -19,15 +19,21 @@ define([
     alert("Congratulations!  You finished a pointless wizard!")
   }
 
-  var scope = {
-    scalingGroup: new ScalingGroup()
-  }
-
   var viewBuilder = wizard.viewBuilder(wizardTemplate)
           .add(page1).add(page2).add(page3).setHideDisabledButtons(true)
           .setFinishText('Create scaling group').setFinishChecker(canFinish)
           .finisher(finish);
 
   var ViewType = viewBuilder.build()
-  return ViewType;
+
+    return EucaDialogView.extend({
+        scope : {
+        },
+        initialize : function() {
+            var v = new ViewType();
+            v.render();
+            this.$el = v.$el;
+            this._do_init();
+        },
+	});
 });

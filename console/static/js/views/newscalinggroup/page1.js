@@ -8,11 +8,9 @@ define([
 
           launchConfigs: {
             name: 'launchConfig',
-            label: 'Launch Configuration',
             collection: dh.launchConfigs,
             itrLabel: function() {
-              console.log('ITR', this);
-              return 'LABEL';
+              return this.itr.get('name');
             } 
           },
 

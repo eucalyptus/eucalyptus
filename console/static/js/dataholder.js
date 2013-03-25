@@ -1,10 +1,11 @@
 define([
+        'backbone',
 	'models/scalinggrps',
 	'models/volumes', 
 	'models/images',
 	'models/launchconfigs'
 ], 
-function(ScalingGroups,Volumes,Images,LaunchConfigs) {
+function(Backbone, ScalingGroups,Volumes,Images,LaunchConfigs) {
 	var shared = {
 		launchConfigs: new LaunchConfigs(),
 		scalingGroups: new ScalingGroups(),
