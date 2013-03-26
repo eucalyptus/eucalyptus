@@ -1,26 +1,40 @@
 <div>
+<h1>Validation Example: ScalingGroup</h1>
+<p><span>Name: </span><input data-value="sg.name" /><span data-text="errors.name"></span></p>
+<p><span>Min Size: </span><input data-value="sg.min_size" /><span data-text="errors.min_size"></span></p>
+<p><span>Max Size: </span><input data-value="sg.max_size" /><span data-text="errors.max_size"></span></p>
+
 <h1>Rivets Test</h1>
 <div data-ui-button=":buttonScope">My Button Test: <span data-text="test.value"></span></div>
-<div data-ui-foowidget="test.value">Test!</div>
 <table>
 <tr><td>
 <p>Test: <span data-text="test.value"></span></p>
 <input data-value="test.value">
 <ul>
-	<li data-each-sg="sGroups" data-bbview=":widget"><span data-text="sg.name"></span></li>
+	<li data-each-sg="sGroups"><span data-text="sg.name"></span></li>
 </ul>
 </td>
 <td>
 <ul>
-	<li data-each-sg="sGroups"><a data-on-click=":doit">-= [x] =-</a><span data-text="sg.name"></span></li>
+	<li data-each-sg="sGroups"><a data-on-click=":doit">-= [x] =-</a><span data-text=":showName"></span></li>
 </ul>
 </td>
 </tr>
 </table>
 
-<div data-ui-foowidget="test.value">Test!</div>
+<a href="#"><div class="icon_approve"></div></a>
+<a href="#"><div class="icon_delete"></div></a>
+<a href="#"><div class="icon_down"></div></a>
+<a href="#"><div class="icon_edit"></div></a>
+<a href="#"><div class="icon_help"></div></a>
+<a href="#"><div class="icon_reload"></div></a>
+<a href="#"><div class="icon_searchdelete"></div></a>
+<a href="#"><div class="icon_settings"></div></a>
+<a href="#"><div class="icon_up"></div></a>
 
 <div data-ui-button=":quickScaleButton">Quick Scale</div>
 <div data-ui-button=":scalingDialog">Edit Scaling Group</div>
+
+<div data-ui-toggle="test.toggle"></div>
 
 </div>

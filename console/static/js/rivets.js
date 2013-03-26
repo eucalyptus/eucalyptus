@@ -1,40 +1,46 @@
 rivets.configure({
 	adapter: {
 	    subscribe: function(obj, keypath, callback) {
-		if (obj instanceof Backbone.Collection) {
-		    obj.on('add remove reset', function () { 
-			callback(obj[keypath]) 
-		    });
-		} else {
-		    obj.on('change:' + keypath, function (m, v) { callback(v) });
-		};
+            if (obj instanceof Backbone.Model) {
+                obj.on('change:' + keypath, function (m, v) { callback(v) });
+            } else if (obj instanceof Backbone.Collection) {
+                obj.on('add remove reset', function () { 
+                    callback(obj.at(keypath));
+                });
+            } else {
+                console.log('plain object');
+            }
 	    },
 	    unsubscribe: function(obj, keypath, callback) {
-		if (obj instanceof Backbone.Collection) {
-		    obj.off('add remove reset', function () { 
-			callback(obj[keypath]) 
-		    });
-		} else {
-		    obj.off('change:' + keypath, function (m, v) { callback(v) });
-		};
+            if (obj instanceof Backbone.Model)  {
+                obj.off('change:' + keypath, function (m, v) { callback(v) });
+            } else if (obj instanceof Backbone.Collection) {
+                obj.off('add remove reset', function () { 
+                    callback(obj.at(keypath)) 
+                });
+            } else {
+                console.log('plain object');
+            }
 	    },
 	    read: function(obj, keypath) {
-                if (typeof keypath === 'undefined' || keypath === '') return obj;
+            if (typeof keypath === 'undefined' || keypath === '') return obj;
 
-		if (obj instanceof Backbone.Model)  {
-		    return obj.get(keypath);
-		} else if (obj instanceof Backbone.Collection)  {
-                    return obj.at(keypath);
-		} else {
-		    return obj[keypath];
-		}
+            if (obj instanceof Backbone.Model)  {
+                return obj.get(keypath);
+            } else if (obj instanceof Backbone.Collection)  {
+                return obj.at(keypath);
+            } else {
+                return obj[keypath];
+            }
 	    },
 	    publish: function(obj, keypath, value) {
-		if (obj instanceof Backbone.Collection) {
-		    obj[keypath] = value;
-		} else {
-		    obj.set(keypath, value);
-		};
+            if (obj instanceof Backbone.Model)  {
+                obj.set(keypath, value);
+            } else if (obj instanceof Backbone.Collection) {
+                obj.at(keypath) = value;
+            } else {
+                obj[keypath] = value;
+            }
 	    }
 	}
 });
