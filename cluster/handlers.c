@@ -4061,6 +4061,7 @@ int doModifyNode(ncMetadata * pMeta, char *nodeName, char *stateName)
     }
     if (src_index == -1) {
         LOGERROR("node requested for modification (%s) cannot be found\n", SP(nodeName));
+        ret = 1;
         goto out;
     }
 
