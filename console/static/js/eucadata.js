@@ -56,8 +56,8 @@
         var url = ep.url;
         // add setup backbone collections in endpoints array
         if (ep.collection != null) {
+          console.log("set up model for "+name);
           require(['models/'+ep.collection], function(collection) {
-            //console.log("set up model for "+name);
             ep.model = new collection();
             // set up callback for timer which updates model if necessary
             thisObj._callbacks[name] = {callback: function(){

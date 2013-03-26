@@ -148,7 +148,7 @@ ol li {
   margin: 0 auto;
   padding: 0 10px;
   position: relative;
-  width: 1100;
+  width: 1100px;
 }
 
 .templates {
@@ -1047,7 +1047,7 @@ ul.ui-autocomplete {
 #dashboard-instance-launch {
   position: absolute;
   top: 2px;
-  left: 838px;
+  left: 738px;
   height: 120px;
   border-left: 2px solid #ecebeb;
 }
@@ -2392,7 +2392,6 @@ span.on-error {
 
 .wizardTitle {
   margin-bottom: 8px;
-  float: left;
 }
 
 .wizard-step #filter-wrapper {
@@ -3005,4 +3004,30 @@ textarea.console-output {
   list-style-type: none;
   color: #444;
 }
+
+
+/*------- euca icons -------*/
+
+.Eucalyptis_IconSheet_20{ background: url(/images/csg-5150d9193b75a.png) no-repeat top left;  background-position: 0 0; width: 27px; height: 27px; } 
+.Eucalyptis_IconSheet_22{ background: url(/images/csg-5150d9193b75a.png) no-repeat top left;  background-position: 0 -77px; width: 27px; height: 27px; } 
+.icon_approve{background: url(/images/csg-5150d9193b75a.png) no-repeat top left;  background-position: 0 -154px; width: 27px; height: 27px; } 
+ a:hover .icon_approve{background: url(/images/csg-5150d9193b75a.png) no-repeat top left;  background-position: 0 -231px; width: 27px; height: 27px; } 
+.icon_delete{background: url(/images/csg-5150d9193b75a.png) no-repeat top left;  background-position: 0 -308px; width: 27px; height: 27px; } 
+ a:hover .icon_delete{ background: url(/images/csg-5150d9193b75a.png) no-repeat top left; background-position: 0 -385px; width: 27px; height: 27px; } 
+.icon_down{ background: url(/images/csg-5150d9193b75a.png) no-repeat top left; background-position: 0 -462px; width: 27px; height: 27px; } 
+ a:hover .icon_down {background: url(/images/csg-5150d9193b75a.png) no-repeat top left;  background-position: 0 -539px; width: 27px; height: 27px; } 
+.icon_edit{ background: url(/images/csg-5150d9193b75a.png) no-repeat top left; background-position: 0 -616px; width: 27px; height: 27px; } 
+ a:hover .icon_edit { background: url(/images/csg-5150d9193b75a.png) no-repeat top left; background-position: 0 -693px; width: 27px; height: 27px; } 
+.icon_help{ background: url(/images/csg-5150d9193b75a.png) no-repeat top left; background-position: 0 -770px; width: 27px; height: 27px; } 
+ a:hover .icon_help { background: url(/images/csg-5150d9193b75a.png) no-repeat top left; background-position: 0 -847px; width: 27px; height: 27px; } 
+.icon_reload{ background: url(/images/csg-5150d9193b75a.png) no-repeat top left; background-position: 0 -924px; width: 27px; height: 27px; } 
+ a:hover .icon_reload{ background: url(/images/csg-5150d9193b75a.png) no-repeat top left; background-position: 0 -1001px; width: 27px; height: 27px; } 
+.icon_searchdelete{ background: url(/images/csg-5150d9193b75a.png) no-repeat top left; background-position: 0 -1078px; width: 27px; height: 27px; } 
+ a:hover .icon_searchdelete{background: url(/images/csg-5150d9193b75a.png) no-repeat top left;  background-position: 0 -1155px; width: 27px; height: 27px; } 
+.icon_settings{ background: url(/images/csg-5150d9193b75a.png) no-repeat top left; background-position: 0 -1232px; width: 27px; height: 27px; } 
+ a:hover .icon_settings { background: url(/images/csg-5150d9193b75a.png) no-repeat top left; background-position: 0 -1309px; width: 27px; height: 27px; } 
+.icon_up{ background: url(/images/csg-5150d9193b75a.png) no-repeat top left; background-position: 0 -1386px; width: 27px; height: 27px; } 
+ a:hover .icon_up { background: url(/images/csg-5150d9193b75a.png) no-repeat top left; background-position: 0 -1463px; width: 27px; height: 27px; }
+
+
 
