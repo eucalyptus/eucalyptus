@@ -1582,18 +1582,12 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
     try {
       final VmInstance entity = Entities.merge( this );
       final Volume volEntity = Volumes.lookup( null, volumeId );
-      final VmVolumeAttachment attachment = lookupVolumeAttachment(volumeId);
-
-      if ( this.isBlockStorage( ) && "/dev/sda1".equals( attachment.getDevice( ) ) ) {
-        entity.bootRecord.getPersistentVolumes().remove( attachment );
-      } else {
-        entity.transientVolumeState.removeVolumeAttachment( volumeId );
-      }
+      final VmVolumeAttachment ret = entity.transientVolumeState.removeVolumeAttachment( volumeId );
       if ( State.BUSY.equals( volEntity.getState( ) ) ) {
         volEntity.setState( State.EXTANT );
       }
       db.commit( );
-      return attachment;
+      return ret;
     } catch ( final Exception ex ) {
       Logs.extreme( ).error( ex, ex );
       throw new NoSuchElementException( "Failed to lookup volume: " + volumeId );
@@ -1976,12 +1970,4 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
     this.bootRecord = bootRecord;
   }
   
-  public Boolean getDeleteOnTerminate() {
-    return this.bootRecord.getDeleteOnTerminate();
-  }
-
-  public void setDeleteOnTerminate( boolean deleteOnterminate ) {
-    this.bootRecord.setDeleteOnTerminate( deleteOnterminate );
-  }
-
 }

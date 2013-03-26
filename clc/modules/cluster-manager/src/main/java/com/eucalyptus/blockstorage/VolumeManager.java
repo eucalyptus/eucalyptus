@@ -392,17 +392,8 @@ public class VolumeManager {
     request.setRemoteDevice( scAttachResponse.getRemoteDeviceString( ) );
     
     AttachedVolume attachVol = new AttachedVolume( volume.getDisplayName( ), vm.getInstanceId( ), request.getDevice( ), request.getRemoteDevice( ) );
-
-    if ("/dev/sda1".equals( deviceName ) && vm.getBootRecord( ).isBlockStorage( ) ) {
-      if ( this.getDeleteOnTerminate( vm ) ) {
-        vm.addPersistentVolume( deviceName, volume );
-      } else {
-        vm.addPermanentVolume( deviceName, volume );
-      }
-    } else {
-      vm.addTransientVolume( deviceName, scAttachResponse.getRemoteDeviceString( ), volume );
-      AsyncRequests.newRequest( new VolumeAttachCallback( request ) ).dispatch( ccConfig );
-    }
+    vm.addTransientVolume( deviceName, scAttachResponse.getRemoteDeviceString( ), volume );
+    AsyncRequests.newRequest( new VolumeAttachCallback( request ) ).dispatch( ccConfig );
     
     EventRecord.here( VolumeManager.class, EventClass.VOLUME, EventType.VOLUME_ATTACH )
                .withDetails( volume.getOwner( ).toString( ), volume.getDisplayName( ), "instance", vm.getInstanceId( ) )
@@ -429,9 +420,8 @@ public class VolumeManager {
     
     VmInstance vm = null;
     AttachedVolume volume = null;
-    VmVolumeAttachment vmVolAttach = null;
     try {
-      vmVolAttach = VmInstances.lookupVolumeAttachment( request.getVolumeId( ) );
+      VmVolumeAttachment vmVolAttach = VmInstances.lookupVolumeAttachment( request.getVolumeId( ) );
       volume = VmVolumeAttachment.asAttachedVolume( vmVolAttach.getVmInstance( ) ).apply( vmVolAttach );
       vm = vmVolAttach.getVmInstance( );
     } catch ( NoSuchElementException ex ) {
@@ -464,9 +454,6 @@ public class VolumeManager {
     		Logs.extreme( ).debug( e, e );
     		//GRZE: attach is idempotent, failure here is ok, throw new EucalyptusCloudException( e.getMessage( ) );
     	}
-      if ( vm.isBlockStorage( ) && "/dev/sda1".equals( vmVolAttach.getDevice( ) ) ) {
-        this.setDeleteOnTerminate( vm , vmVolAttach.getDeleteOnTerminate( ) );
-      }
     	vm.removeVolumeAttachment( volume.getVolumeId( ) );
     } else {
     	Cluster cluster = null;
@@ -498,33 +485,4 @@ public class VolumeManager {
     return reply;
   }
   
-  public boolean getDeleteOnTerminate( VmInstance vm ) throws EucalyptusCloudException {
-  final EntityTransaction db = Entities.get( VmInstance.class );
-    try {
-      final VmInstance foundVm = Entities.uniqueResult( VmInstance.named( null, vm.getInstanceId( ) ) );
-      boolean ret = foundVm.getDeleteOnTerminate();
-      db.commit();
-      return ret;
-    }catch ( Exception ex ) {
-      Logs.extreme( ).error( ex , ex );
-      throw new EucalyptusCloudException( ex.getMessage( ) , ex);
-    } finally {
-      if ( db.isActive() ) db.rollback( );
-    }
-  }
-
-  public void setDeleteOnTerminate( VmInstance vm , boolean deleteOnTerminate ) {
-  final EntityTransaction db = Entities.get( VmInstance.class );
-    try {
-      final VmInstance foundVm = Entities.uniqueResult( VmInstance.named( null, vm.getInstanceId( ) ) );
-      foundVm.setDeleteOnTerminate( deleteOnTerminate );
-      db.commit();
-    }catch ( Exception ex ) {
-      Logs.extreme( ).error( ex , ex );
-      LOG.error( ex , ex );
-    } finally {
-      if ( db.isActive() ) db.rollback( );
-    }
-  }
-
 }
