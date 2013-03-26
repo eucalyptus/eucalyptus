@@ -1732,9 +1732,17 @@ static int init(void)
     readConfigFile(nc_state.configFiles, 2);
     update_log_params();
 
+    // set default in the paths. the driver will override
+    nc_state.config_network_path[0] = '\0';
+    nc_state.xm_cmd_path[0] = '\0';
+    nc_state.virsh_cmd_path[0] = '\0';
+    nc_state.get_info_cmd_path[0] = '\0';
+    snprintf(nc_state.libvirt_xslt_path, MAX_PATH, EUCALYPTUS_LIBVIRT_XSLT, nc_state.home); // for now, this must be set before anything in xml.c is invoked
+    snprintf(nc_state.rootwrap_cmd_path, MAX_PATH, EUCALYPTUS_ROOTWRAP, nc_state.home);
+
     { // load NC's state from disk, if any
         struct nc_state_t nc_state_disk;
-        if (read_nc_xml(&nc_state_disk) == EUCA_OK) {
+        if (read_nc_xml(&nc_state_disk) == EUCA_OK) {  //! @TODO currently read_nc_xml() relies on nc_state.libvirt_xslt_path being set, which is brittle - fix init() in xml.c
             LOGINFO("loaded NC state from previous invocation\n");
 
             // check on the version, in case it has changed
@@ -1906,14 +1914,6 @@ static int init(void)
     }
 
     init_iscsi(nc_state.home);
-
-    // set default in the paths. the driver will override
-    nc_state.config_network_path[0] = '\0';
-    nc_state.xm_cmd_path[0] = '\0';
-    nc_state.virsh_cmd_path[0] = '\0';
-    nc_state.get_info_cmd_path[0] = '\0';
-    snprintf(nc_state.libvirt_xslt_path, MAX_PATH, EUCALYPTUS_LIBVIRT_XSLT, nc_state.home);
-    snprintf(nc_state.rootwrap_cmd_path, MAX_PATH, EUCALYPTUS_ROOTWRAP, nc_state.home);
 
     // NOTE: this is the only call which needs to be called on both
     // the default and the specific handler! All the others will be
