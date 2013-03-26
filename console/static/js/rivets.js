@@ -59,3 +59,9 @@ rivets.binders["ui-*"] = {
         }
     }
 }
+
+rivets.binders["addclass"] = {
+    routine: function(el, value) {
+        $(el).addClass(value);
+    }
+}
