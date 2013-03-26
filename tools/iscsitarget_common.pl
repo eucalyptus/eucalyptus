@@ -172,7 +172,7 @@ sub retry_until_true {
 sub match_iscsi_session {
   my ($session, $netdev, $ip, $store) = @_;
   if (($session->{$SK_TARGET} eq $store) &&
-      (($session->{$SK_PORTAL} eq $ip) || ($session->{$SK_PPORTAL} eq $ip)) &&
+      (($session->{$SK_PORTAL} eq $ip) || ($session->{$SK_PPORTAL} =~ m/$ip/i)) &&
       (is_null_or_empty($netdev) || ($session->{$SK_NETDEV} eq $netdev))) {
     return 1;
   }
@@ -267,7 +267,7 @@ sub lookup_session {
     } elsif (/^\s+Current Portal:\s+([\d\.]+):\d+,(\d+)/) {
       $session->{$SK_PORTAL} = $1;
       $session->{$SK_TPGT} = $2;
-    } elsif (/^\s+Persistent Portal:\s+([\d\.]+):\d+,(\d+)/) {
+    } elsif (/^\s+Persistent Portal:\s+(.*):\d+,(\d+)/) {
       $session->{$SK_PPORTAL} = $1;
     } elsif (/^\s+Iface Name:\s+(\S+)/) {
       $session->{$SK_IFACE} = $1;
