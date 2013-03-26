@@ -87,7 +87,9 @@ class BotoScaleInterface(ScaleInterface):
         return obj
 
     def set_desired_capacity(self, group_name, desired_capacity, honor_cooldown=False):
-        return self.conn.set_desired_capacity(group_name, desired_capacity, honor_cooldown)
+        group = self.conn.get_all_groups([group_name])[0];
+        # notice, honor_cooldown not supported.
+        return group.set_capacity(desired_capacity)
 
     def set_instance_health(self, instance_id, health_status, should_respect_grace_period=True):
         return self.conn.set_instance_health(instance_id, health_status,

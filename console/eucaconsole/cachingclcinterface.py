@@ -50,6 +50,8 @@ class CachingClcInterface(ClcInterface):
     def __init__(self, clcinterface, config):
         self.clc = clcinterface
         pollfreq = config.getint('server', 'pollfreq')
+        if pollfreq < 5:    # let's say min frequency is 5
+            pollfreq = 5
         try:
             freq = config.getint('server', 'pollfreq.zones')
         except ConfigParser.NoOptionError:
