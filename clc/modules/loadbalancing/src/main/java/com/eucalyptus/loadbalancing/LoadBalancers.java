@@ -51,6 +51,7 @@ public class LoadBalancers {
 		return LoadBalancers.addLoadbalancer(user,  lbName, null);
 	}
 	
+	/// TODO: SPARK: FIX THIS - Loadbalancer belongs to account
 	public static LoadBalancer getLoadbalancer(UserFullName user, String lbName){
 		 final EntityTransaction db = Entities.get( LoadBalancer.class );
 		 try {

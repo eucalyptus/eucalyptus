@@ -23,8 +23,10 @@ package com.eucalyptus.loadbalancing;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 
 import javax.annotation.Nullable;
 import javax.persistence.EntityTransaction;
@@ -34,6 +36,8 @@ import org.apache.log4j.Logger;
 import com.eucalyptus.auth.AuthQuotaException;
 import com.eucalyptus.auth.principal.AccountFullName;
 import com.eucalyptus.auth.principal.UserFullName;
+import com.eucalyptus.cloud.CloudMetadatas;
+import com.eucalyptus.cloudwatch.MetricData;
 import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.entities.Entities;
@@ -71,6 +75,8 @@ public class LoadBalancingService {
 	  // TODO: SPARK: authenticate/authorize using IAM roles
 	  final String servoId = request.getInstanceId();
 	  final Instances instances = request.getInstances();
+	  final MetricData metric = request.getMetricData();
+	  
 	  LoadBalancer lb = null;
 	  if(servoId!= null){
 		  try{
@@ -84,45 +90,81 @@ public class LoadBalancingService {
 			  LOG.warn("failed to query servo instance");
 		  }
 	  }
-	  final Collection<LoadBalancerBackendInstance> lbInstances = lb.getBackendInstances();
-	  if(lb != null && instances.getMember()!=null && instances.getMember().size()>0){
-		  for(Instance instance : instances.getMember()){
-			  String instanceId = instance.getInstanceId();
-			  // format: instanceId:state
-			  String[] parts = instanceId.split(":");
-			  if(parts==null || parts.length!= 2){
-				  LOG.warn("instance id is in wrong format:"+ instanceId);
-				  continue;
-			  }
-			  instanceId = parts[0];
-			  String state = parts[1];
-			  
-			  LoadBalancerBackendInstance found = null;
-			  for(final LoadBalancerBackendInstance lbInstance : lbInstances){
-				  if(instanceId.equals(lbInstance.getInstanceId())){
-					  found = lbInstance;
-					  break;
-				  }  
-			  }
-			  if(found!=null){
-				  final EntityTransaction db = Entities.get( LoadBalancerBackendInstance.class );
-			 	  try{
-			 		  found = Entities.uniqueResult(found);
-			 		  if (state.equals(LoadBalancerBackendInstance.STATE.InService.name()) || 
-			 				  state.equals(LoadBalancerBackendInstance.STATE.OutOfService.name())){
-			 			  found.setState(Enum.valueOf(LoadBalancerBackendInstance.STATE.class, state));
-			 			  Entities.persist(found);
-			 		  }
-			 		  db.commit();
-			 	  }catch(NoSuchElementException ex){
-			 		  db.rollback();
-			 	  }catch(Exception ex){
-			 		  db.rollback();
-			 		  LOG.warn("Failed to query loadbalancer backend instance: "+instanceId, ex);
-			 	  }
+	  
+	  /// INSTANCE HEALTH CHECK UPDATE
+	  Map<String, Integer> healthyCounter = new ConcurrentHashMap<String, Integer>(); // zone -> count
+	  Map<String, Integer> unHealthyCounter = new ConcurrentHashMap<String, Integer>();
+	  
+	  if(instances!= null && instances.getMember()!=null && instances.getMember().size()>0){
+		  final Collection<LoadBalancerBackendInstance> lbInstances = lb.getBackendInstances();
+		  if(lb != null && instances.getMember()!=null && instances.getMember().size()>0){
+			  for(Instance instance : instances.getMember()){
+				  String instanceId = instance.getInstanceId();
+				  // format: instanceId:state
+				  String[] parts = instanceId.split(":");
+				  if(parts==null || parts.length!= 2){
+					  LOG.warn("instance id is in wrong format:"+ instanceId);
+					  continue;
+				  }
+				  instanceId = parts[0];
+				  String state = parts[1];
+				  
+				  LoadBalancerBackendInstance found = null;
+				  for(final LoadBalancerBackendInstance lbInstance : lbInstances){
+					  if(instanceId.equals(lbInstance.getInstanceId())){
+						  found = lbInstance;
+						  break;
+					  }  
+				  }
+				  if(found!=null){
+					  String zoneName = found.getAvailabilityZone().getName();
+					  final EntityTransaction db = Entities.get( LoadBalancerBackendInstance.class );
+				 	  try{
+				 		  found = Entities.uniqueResult(found);
+				 		  if (state.equals(LoadBalancerBackendInstance.STATE.InService.name()) || 
+				 				  state.equals(LoadBalancerBackendInstance.STATE.OutOfService.name())){
+				 			  found.setState(Enum.valueOf(LoadBalancerBackendInstance.STATE.class, state));
+				 			  Entities.persist(found);
+				 		  }
+				 		  db.commit();
+				 		  if(state.equals(LoadBalancerBackendInstance.STATE.InService.name())){
+				 			  if(!healthyCounter.containsKey(zoneName))
+				 				  healthyCounter.put(zoneName, 0);
+				 			  healthyCounter.put(zoneName, healthyCounter.get(zoneName)+1);
+				 		  }else if (state.equals(LoadBalancerBackendInstance.STATE.OutOfService.name())){
+				 			  if(!unHealthyCounter.containsKey(zoneName))
+				 				 unHealthyCounter.put(zoneName, 0);
+				 			  unHealthyCounter.put(zoneName, unHealthyCounter.get(zoneName)+1);
+				 		  }
+				 	  }catch(NoSuchElementException ex){
+				 		  db.rollback();
+				 	  }catch(Exception ex){
+				 		  db.rollback();
+				 		  LOG.warn("Failed to query loadbalancer backend instance: "+instanceId, ex);
+				 	  }
+				  }
 			  }
 		  }
 	  }
+	  
+	  if(metric!= null && metric.getMember()!= null && metric.getMember().size()>0){
+		  try{
+			  LoadBalancerCwatchMetrics.getInstance().addMetric(servoId, metric);
+		  }catch(Exception ex){
+			  LOG.error("Failed to add ELB cloudwatch metric", ex);
+		  }
+	  }
+	  
+	  for(String zone : healthyCounter.keySet()){
+		  int numHealthy = healthyCounter.get(zone);
+		  LoadBalancerCwatchMetrics.getInstance().updateHealthyCount(lb.getOwnerUserId(), lb.getDisplayName(), zone, numHealthy);
+	  }
+	  
+	  for(String zone : unHealthyCounter.keySet()){
+		  int numUnhealthy = unHealthyCounter.get(zone);
+		  LoadBalancerCwatchMetrics.getInstance().updateUnhealthyCount(lb.getOwnerUserId(), lb.getDisplayName(), zone, numUnhealthy);
+	  }
+	  
 	  return reply;
   }
  
@@ -340,7 +382,6 @@ public class LoadBalancingService {
       requestedNames.addAll( request.getLoadBalancerNames().getMember() );
     }
     //"servo:%s" % servo_instance_id
-
     Set<String> allowedLBNames = null;
     String marker = request.getMarker();
     // the case that servo instances want the listeners assigned to it

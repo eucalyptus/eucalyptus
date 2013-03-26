@@ -35,6 +35,11 @@ import com.eucalyptus.auth.principal.Principals;
 import com.eucalyptus.autoscaling.activities.DispatchingClient;
 import com.eucalyptus.autoscaling.activities.EucalyptusClient;
 import com.eucalyptus.autoscaling.configurations.LaunchConfiguration;
+import com.eucalyptus.cloudwatch.CloudWatch;
+import com.eucalyptus.cloudwatch.CloudWatchMessage;
+import com.eucalyptus.cloudwatch.MetricData;
+import com.eucalyptus.cloudwatch.PutMetricDataResponseType;
+import com.eucalyptus.cloudwatch.PutMetricDataType;
 import com.eucalyptus.component.ComponentId;
 import com.eucalyptus.component.id.Dns;
 import com.eucalyptus.component.id.Eucalyptus;
@@ -105,6 +110,29 @@ public class EucalyptusActivityTasks {
 	private interface ActivityContext<TM extends BaseMessage, TC extends ComponentId> {
 	  String getUserId();
 	  DispatchingClient<TM, TC> getClient();
+	}
+	
+	private class CloudWatchUserActivity implements ActivityContext<CloudWatchMessage, CloudWatch>{
+		private String userId = null;
+		private CloudWatchUserActivity(final String userId){
+			this.userId = userId;
+		}
+		
+		@Override
+		public String getUserId() {
+			return this.userId;
+		}
+
+		@Override
+		public DispatchingClient<CloudWatchMessage, CloudWatch> getClient() {
+			try{
+				final CloudWatchClient client = new CloudWatchClient(this.getUserId());
+				client.init();
+				return client;
+			}catch(Exception ex){
+				throw Exceptions.toUndeclared(ex);
+			}
+		}
 	}
 	
 	private class DnsSystemActivity implements ActivityContext<DnsMessage, Dns> {
@@ -374,6 +402,54 @@ public class EucalyptusActivityTasks {
 			throw Exceptions.toUndeclared(ex);
 		}  
 	}
+	
+	public void putCloudWatchMetricData(final String userId, final String namespace, final MetricData data){
+		final CloudWatchPutMetricDataTask task = new CloudWatchPutMetricDataTask(namespace, data);
+
+		final CheckedListenableFuture<Boolean> result = task.dispatch(new CloudWatchUserActivity(userId));
+		try{
+			if(result.get()){
+				return;
+			}else
+				throw new EucalyptusActivityException("failed to remove multi A records ");
+		}catch(Exception ex){
+			throw Exceptions.toUndeclared(ex);
+		}
+	}
+
+	private class CloudWatchPutMetricDataTask extends EucalyptusActivityTask<CloudWatchMessage, CloudWatch>{
+		private MetricData metricData = null;
+		private String namespace = null;
+		private CloudWatchPutMetricDataTask( final String namespace, final MetricData data){
+			this.namespace = namespace;
+			this.metricData = data;
+		}
+		
+		private PutMetricDataType putMetricData(){
+			final PutMetricDataType request = new PutMetricDataType();
+			request.setNamespace(this.namespace);
+			request.setMetricData(this.metricData);
+			return request;
+		}
+		
+		@Override
+		void dispatchInternal(
+				ActivityContext<CloudWatchMessage, CloudWatch> context,
+				Checked<CloudWatchMessage> callback) {
+			final DispatchingClient<CloudWatchMessage, CloudWatch> client = context.getClient();
+			client.dispatch(putMetricData(), callback);
+			
+		}
+
+		@Override
+		void dispatchSuccess(
+				ActivityContext<CloudWatchMessage, CloudWatch> context,
+				CloudWatchMessage response) {
+			// TODO Auto-generated method stub
+			final PutMetricDataResponseType resp = (PutMetricDataResponseType) response;
+		}
+		
+	}
 
 	private class EucalyptusDescribeAvailabilityZonesTask extends EucalyptusActivityTask<EucalyptusMessage, Eucalyptus> {
 		private List<ClusterInfoType> zones = null; 
@@ -439,7 +515,7 @@ public class EucalyptusActivityTasks {
 			return this.services;
 		}
 	}
-	
+		
 	/// create new {name - {address1}} mapping
 	private class DnsCreateNameRecordTask extends EucalyptusActivityTask<DnsMessage, Dns>{
 		private String zone = null;
