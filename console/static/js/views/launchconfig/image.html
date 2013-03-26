@@ -1,5 +1,5 @@
 <div class="wizard-step">
-<div class="wizardTitle"><h3 class="required-label" data-text="jerry">Image</h3></div>
+<div class="wizardTitle"><h3 class="required-label" >Image</h3></div>
 <div id="launch-wizard-image-main-contents">
   <div id="launch-wizard-image-table">
   
@@ -27,20 +27,18 @@
               </td>
             </tr>
           -->
-            <% _.each(images.models, function(image, index) { %>
-            <tr class="<% if (index % 2 == 0) { %>even<% } else { %>odd<%}%>">
+            <tr data-each-image="images" data-class-odd=":isOdd">
               <td>
-                <div class="image-type <%= imageNames[image.id] %>">
-                  <div class="image-name"><%= image.attributes.name %></div>
+                <div class="image-type" data-addclass=":setClass" data-on-click=":doit">
+                  <div class="image-name" data-text="image.name"></div>
                   <div class="image-id-arch">
-                    <span><%= image.id %></span>
-                    <span><%= image.attributes.architecture %></span>
-                    <span><%= image.attributes.description %></span>
+                    <span data-text="image.id"></span>
+                    <span data-text="image.architecture"></span>
+                    <span data-text="image.description"></span>
                   </div>
                 </div>
               </td>
             </tr>  
-            <% }); %>
           </tbody>
         </table>
         </div>
