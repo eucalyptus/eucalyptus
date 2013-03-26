@@ -63,30 +63,25 @@
 package com.eucalyptus.vm;
 
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.notNullValue;
-
+import static org.hamcrest.Matchers.*;
 import java.util.Arrays;
-import java.util.List;
 import java.util.Set;
-
 import javax.persistence.CollectionTable;
 import javax.persistence.Column;
 import javax.persistence.ElementCollection;
 import javax.persistence.Embeddable;
-import javax.persistence.EntityTransaction;
 import javax.persistence.Lob;
 import javax.persistence.ManyToOne;
 import javax.persistence.PreRemove;
-
-import org.apache.log4j.Logger;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
 import org.hibernate.annotations.Parent;
 import org.hibernate.annotations.Type;
+import org.hibernate.type.StringClobType;
 
+import com.eucalyptus.blockstorage.Volume;
 import com.eucalyptus.cloud.ImageMetadata;
 import com.eucalyptus.cloud.util.MetadataException;
-import com.eucalyptus.entities.Entities;
 import com.eucalyptus.images.BlockStorageImageInfo;
 import com.eucalyptus.images.BootableImageInfo;
 import com.eucalyptus.images.Emis.BootableSet;
@@ -95,12 +90,7 @@ import com.eucalyptus.images.KernelImageInfo;
 import com.eucalyptus.images.RamdiskImageInfo;
 import com.eucalyptus.keys.KeyPairs;
 import com.eucalyptus.keys.SshKeyPair;
-import com.eucalyptus.upgrade.Upgrades.EntityUpgrade;
-import com.eucalyptus.upgrade.Upgrades.Version;
-import com.eucalyptus.util.Exceptions;
-import com.google.common.base.Predicate;
 import com.google.common.collect.Sets;
-
 import edu.ucsb.eucalyptus.msgs.VmTypeInfo;
 
 
@@ -127,8 +117,6 @@ public class VmBootRecord {
   
   @Column( name = "metadata_vm_user_data" )
   private byte[]                  userData;
-  @Column( name = "metadata_vm_delete_on_terminate" )
-  private boolean                 deleteOnTerminate;
   @Lob
   @Type(type="org.hibernate.type.StringClobType")
   @Column( name = "metadata_vm_sshkey" )
@@ -191,14 +179,6 @@ public class VmBootRecord {
     return !this.persistentVolumes.isEmpty( );
   }
   
-  public boolean getDeleteOnTerminate( ) {
-    return this.deleteOnTerminate;
-  }
-
-  public void setDeleteOnTerminate( boolean deleteOnTerminate ) {
-    this.deleteOnTerminate = deleteOnTerminate;
-  }
-
   byte[] getUserData( ) {
     return this.userData;
   }
@@ -330,26 +310,4 @@ public class VmBootRecord {
     this.sshKeyString = sshKeyString;
   }
   
-  @EntityUpgrade( entities = { VmBootRecord.class }, since = Version.v3_2_2, value = com.eucalyptus.component.id.Eucalyptus.class )
-  public enum VmBootRecordUpgrade implements Predicate<Class> {
-    INSTANCE;
-    private static Logger LOG = Logger.getLogger( VmBootRecord.VmBootRecordUpgrade.class );
-    @Override
-    public boolean apply( Class arg0 ) {
-      EntityTransaction db = Entities.get( VmInstance.class );
-      try {
-        List<VmInstance> entities = Entities.query( new VmInstance( ) );
-        for ( VmInstance entry : entities ) {
-          LOG.debug( "Upgrading BootRecord: " + entry.toString() );
-          entry.setDeleteOnTerminate(false);
-          Entities.persist(entry);
-        }
-        db.commit( );
-        return true;
-      } catch ( Exception ex ) {
-        db.rollback();
-        throw Exceptions.toUndeclared( ex );
-      }
-    }
-  }
 }
