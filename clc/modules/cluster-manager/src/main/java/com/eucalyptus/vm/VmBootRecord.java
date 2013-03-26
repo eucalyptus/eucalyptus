@@ -63,30 +63,25 @@
 package com.eucalyptus.vm;
 
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.notNullValue;
-
+import static org.hamcrest.Matchers.*;
 import java.util.Arrays;
-import java.util.List;
 import java.util.Set;
-
 import javax.persistence.CollectionTable;
 import javax.persistence.Column;
 import javax.persistence.ElementCollection;
 import javax.persistence.Embeddable;
-import javax.persistence.EntityTransaction;
 import javax.persistence.Lob;
 import javax.persistence.ManyToOne;
 import javax.persistence.PreRemove;
-
-import org.apache.log4j.Logger;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
 import org.hibernate.annotations.Parent;
 import org.hibernate.annotations.Type;
+import org.hibernate.type.StringClobType;
 
+import com.eucalyptus.blockstorage.Volume;
 import com.eucalyptus.cloud.ImageMetadata;
 import com.eucalyptus.cloud.util.MetadataException;
-import com.eucalyptus.entities.Entities;
 import com.eucalyptus.images.BlockStorageImageInfo;
 import com.eucalyptus.images.BootableImageInfo;
 import com.eucalyptus.images.Emis.BootableSet;
@@ -95,12 +90,7 @@ import com.eucalyptus.images.KernelImageInfo;
 import com.eucalyptus.images.RamdiskImageInfo;
 import com.eucalyptus.keys.KeyPairs;
 import com.eucalyptus.keys.SshKeyPair;
-import com.eucalyptus.upgrade.Upgrades.EntityUpgrade;
-import com.eucalyptus.upgrade.Upgrades.Version;
-import com.eucalyptus.util.Exceptions;
-import com.google.common.base.Predicate;
 import com.google.common.collect.Sets;
-
 import edu.ucsb.eucalyptus.msgs.VmTypeInfo;
 
 
@@ -330,25 +320,4 @@ public class VmBootRecord {
     this.sshKeyString = sshKeyString;
   }
   
-  @EntityUpgrade( entities = { VmBootRecord.class }, since = Version.v3_2_2, value = com.eucalyptus.component.id.Eucalyptus.class )
-  public enum VmBootRecordUpgrade implements Predicate<Class> {
-    INSTANCE;
-    private static Logger LOG = Logger.getLogger( VmBootRecord.VmBootRecordUpgrade.class );
-    @Override
-    public boolean apply( Class arg0 ) {
-      EntityTransaction db = Entities.get( VmBootRecord.class );
-      try {
-        List<VmBootRecord> entities = Entities.query( new VmBootRecord( ) );
-        for ( VmBootRecord entry : entities ) {
-          LOG.debug( "Upgrading: " + entry.toString() );
-          entry.setDeleteOnTerminate(false);
-        }
-        db.commit( );
-        return true;
-      } catch ( Exception ex ) {
-        db.rollback();
-        throw Exceptions.toUndeclared( ex );
-      }
-    }
-  }
 }
