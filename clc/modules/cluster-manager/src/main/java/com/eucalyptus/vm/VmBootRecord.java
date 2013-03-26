@@ -342,7 +342,6 @@ public class VmBootRecord {
         for ( VmInstance entry : entities ) {
           LOG.debug( "Upgrading BootRecord: " + entry.toString() );
           entry.setDeleteOnTerminate(false);
-          Entities.persist(entry);
         }
         db.commit( );
         return true;
