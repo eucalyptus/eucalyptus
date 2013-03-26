@@ -238,7 +238,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
       LOG.error( ex, ex );
     }
   }
-  
+
   public enum Filters implements Predicate<VmInstance> {
     BUNDLING {
       
@@ -435,7 +435,8 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
                                               .withIds( input.getInstanceId( ),
                                                         input.getReservationId( ),
                                                         null,
-                                                        null )
+                                                        null,
+                                                        null)
                                               .bootRecord( bootSet,
                                                            userData,
                                                            keyPair,
@@ -907,7 +908,8 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
                                                      .withIds( token.getInstanceId( ),
                                                                allocInfo.getReservationId( ),
                                                                allocInfo.getClientToken( ),
-                                                               allocInfo.getUniqueClientToken( ) )
+                                                               allocInfo.getUniqueClientToken( ),
+                                                               allocInfo.getNameOrArn( ) )
                                                      .bootRecord( allocInfo.getBootSet( ),
                                                                   allocInfo.getUserData( ),
                                                                   allocInfo.getSshKeyPair( ),
@@ -973,8 +975,9 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
     public Builder withIds( @Nonnull  final String instanceId,
                             @Nonnull  final String reservationId,
                             @Nullable final String clientToken,
-                            @Nullable final String uniqueClientToken ) {
-      this.vmId = new VmId( reservationId, instanceId, clientToken, uniqueClientToken );
+                            @Nullable final String uniqueClientToken,
+                            @Nullable final String nameOrArn ) {
+      this.vmId = new VmId( reservationId, instanceId, clientToken, uniqueClientToken, nameOrArn );
       return this;
     }
     
@@ -1363,7 +1366,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
   }
 
   public static VmInstance withToken( final OwnerFullName ownerFullName, final String clientToken ) {
-    return new VmInstance( ownerFullName, new VmId( null, null, clientToken, null ) );
+    return new VmInstance( ownerFullName, new VmId( null, null, clientToken, null , null) );
   }
 
   public static VmInstance namedTerminated( final OwnerFullName ownerFullName, final String instanceId ) {
@@ -1867,6 +1870,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
           
           runningInstance.setLaunchTime( input.getLaunchRecord( ).getLaunchTime( ) );
           runningInstance.setClientToken( input.getClientToken() );
+          runningInstance.setNameOrArn( input.getNameOrArn( ) );
 
           if (input.getBootRecord().isMonitoring()) {
             runningInstance.setMonitoring("enabled");
@@ -1984,6 +1988,11 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
   @Nullable
   public String getClientToken() {
     return this.getVmId().getClientToken();
+  }
+
+  @Nullable
+  public String getNameOrArn() {
+    return this.getVmId().getNameOrArn();
   }
 
   public SshKeyPair getKeyPair( ) {
