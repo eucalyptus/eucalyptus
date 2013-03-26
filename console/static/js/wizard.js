@@ -240,7 +240,7 @@ define([], function() {
     // Append this to generated HTML IDs to avoid name clashes
     var uid = Math.floor(Math.random() * 65536) + '_' + new Date().getTime();
 
-    self.makeView = function(options, template, mapping) {
+    self.makeView = function(options, template, mapping, scope) {
       // Assume default component names, but let mapping override them if it wants
       mapping = merge(trivialMapping('nextButton', 'prevButton', 'finishButton', 'problems', 'wizardContent', 'wizardAbove', 'wizardBelow'), mapping || {});
       // Make sure options is defined
@@ -314,8 +314,8 @@ define([], function() {
             this.wizardContent.slideUp(0);
           }
           var Type = self.current;
-console.log('TYPE', Type, typeof Type);
-          Type.el = this.wizardContent;
+// console.log('TYPE', Type, typeof Type);
+//          Type.el = this.wizardContent;
 //          var page = new Type($(this.wizardContent));
           var page = Type;
           this.wizardContent.empty();
@@ -377,7 +377,7 @@ console.log('TYPE', Type, typeof Type);
       return Result;
     };
 
-    self.viewBuilder = function(wizardTemplate) {
+    self.viewBuilder = function(wizardTemplate, scope) {
       var bldr = this;
       var mapping = {};
       var templates = [];
@@ -430,36 +430,36 @@ console.log('TYPE', Type, typeof Type);
       }
 
       this.add = function(template, closedView) {
-	var tObj;
-	var cView;
-        var titleStr;
-	if (typeof template === 'string') {
- 		tObj = new (genericView(template));
-		titleStr = self.scrapeTitle(template);
-	} else if (typeof template === 'function') {
-		tObj = new template();
-	} else if (typeof template === 'object') {
-		tObj = template;
-	}
+        var tObj;
+        var cView;
+            var titleStr;
+        if (typeof template === 'string') {
+            tObj = new (genericView(template));
+            titleStr = self.scrapeTitle(template);
+        } else if (typeof template === 'function') {
+            tObj = new template({scope: scope});
+        } else if (typeof template === 'object') {
+            tObj = template;
+        }
 
-	if (tObj.title) {
-		if (typeof tObj.title === 'string') {
-			titleStr = tObj.title;
-		} else if (typeof tObj.title === 'function') {
-			titleStr = tObj.title();
-		} else {
-			titleStr = 'Page ' + pages.length + 1;
-		}
-	} 
+        if (tObj.title) {
+            if (typeof tObj.title === 'string') {
+                titleStr = tObj.title;
+            } else if (typeof tObj.title === 'function') {
+                titleStr = tObj.title();
+            } else {
+                titleStr = 'Page ' + pages.length + 1;
+            }
+        } 
 
-	if (closedView) 	
-		cView = closedView;
-	else
-		cView = genericTitle(titleStr, pages.length);
+        if (closedView) 	
+            cView = closedView;
+        else
+            cView = genericTitle(titleStr, pages.length);
 
-	tObj.cView = cView;
-	tObj.titleStr = titleStr;
-	doAdd(tObj, cView);
+        tObj.cView = cView;
+        tObj.titleStr = titleStr;
+        doAdd(tObj, cView);
 
         templates.push(tObj);
         return bldr;
@@ -495,7 +495,7 @@ console.log('TYPE', Type, typeof Type);
       }
 
       this.build = function() {
-        return self.makeView(options, wizardTemplate, mapping);
+        return self.makeView(options, wizardTemplate, mapping, scope);
       }
 
       return this;
