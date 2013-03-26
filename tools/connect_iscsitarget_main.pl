@@ -163,6 +163,12 @@ while (@paths > 0) {
   # get dev from lun
   push @devices, retry_until_exists(\&get_iscsi_device, [$netdev, $ip, $store, $lun], 5);
 }
+# debugging
+use Data::Dumper;
+print STDERR "After connecting:\n";
+for $session (lookup_session()) {
+  print STDERR Dumper($session);
+}
 # get the actual device
 # Non-multipathing: the iSCSI device
 # Multipathing: the mpath device
