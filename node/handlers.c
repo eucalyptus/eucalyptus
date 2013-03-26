@@ -1320,7 +1320,6 @@ void *startup_thread(void *arg)
                 try_killing = TRUE;
             } else if (WEXITSTATUS(status) != 0) {
                 LOGERROR("[%s] hypervisor failed to create the instance\n", instance->instanceId);
-                invalidate_hypervisor_conn();   // guard against libvirtd connection badness
             } else {
                 created = TRUE;
             }
@@ -1335,6 +1334,7 @@ void *startup_thread(void *arg)
         sem_v(hyp_sem);
         if (created)
             break;
+        invalidate_hypervisor_conn();   // guard against libvirtd connection badness
         sleep(1);
     }
     if (!created) {
@@ -1664,7 +1664,6 @@ static int init(void)
     int do_warn = 0, i;
     char logFile[MAX_PATH] = "";
     char *bridge = NULL;
-    char *hypervisor = NULL;
     char *s = NULL;
     char *tmp = NULL;
     char *pubinterface = NULL;
@@ -1740,9 +1739,38 @@ static int init(void)
     snprintf(nc_state.libvirt_xslt_path, MAX_PATH, EUCALYPTUS_LIBVIRT_XSLT, nc_state.home); // for now, this must be set before anything in xml.c is invoked
     snprintf(nc_state.rootwrap_cmd_path, MAX_PATH, EUCALYPTUS_ROOTWRAP, nc_state.home);
 
+    { // determine the hypervisor to use
+        char *hypervisor = getConfString(nc_state.configFiles, 2, CONFIG_HYPERVISOR);
+        if (!hypervisor) {
+            LOGFATAL("value %s is not set in the config file\n", CONFIG_HYPERVISOR);
+            return (EUCA_FATAL_ERROR);
+        }
+        // let's look for the right hypervisor driver
+        for (h = available_handlers; *h; h++) {
+            if (!strncmp((*h)->name, "default", CHAR_BUFFER_SIZE))
+                nc_state.D = *h;
+            
+            if (!strncmp((*h)->name, hypervisor, CHAR_BUFFER_SIZE))
+                nc_state.H = *h;
+        }
+        
+        if (nc_state.H == NULL) {
+            LOGFATAL("requested hypervisor type (%s) is not available\n", hypervisor);
+            EUCA_FREE(hypervisor);
+            return (EUCA_FATAL_ERROR);
+        }
+        // only load virtio config for kvm
+        if (!strncmp("kvm", hypervisor, CHAR_BUFFER_SIZE) || !strncmp("KVM", hypervisor, CHAR_BUFFER_SIZE)) {
+            GET_VAR_INT(nc_state.config_use_virtio_net, CONFIG_USE_VIRTIO_NET, 0); // for now, these three Virtio settings must be set before anything in xml.c is invoked
+            GET_VAR_INT(nc_state.config_use_virtio_disk, CONFIG_USE_VIRTIO_DISK, 0);
+            GET_VAR_INT(nc_state.config_use_virtio_root, CONFIG_USE_VIRTIO_ROOT, 0);
+        }
+        EUCA_FREE(hypervisor);
+    }
+
     { // load NC's state from disk, if any
         struct nc_state_t nc_state_disk;
-        if (read_nc_xml(&nc_state_disk) == EUCA_OK) {  //! @TODO currently read_nc_xml() relies on nc_state.libvirt_xslt_path being set, which is brittle - fix init() in xml.c
+        if (read_nc_xml(&nc_state_disk) == EUCA_OK) {  //! @TODO currently read_nc_xml() relies on nc_state.libvirt_xslt_path and virtio flags being set, which is brittle - fix init() in xml.c
             LOGINFO("loaded NC state from previous invocation\n");
 
             // check on the version, in case it has changed
@@ -1850,34 +1878,6 @@ static int init(void)
         LOGFATAL("failed to find all required dependencies\n");
         return (EUCA_FATAL_ERROR);
     }
-    // determine the hypervisor to use
-    hypervisor = getConfString(nc_state.configFiles, 2, CONFIG_HYPERVISOR);
-    if (!hypervisor) {
-        LOGFATAL("value %s is not set in the config file\n", CONFIG_HYPERVISOR);
-        return (EUCA_FATAL_ERROR);
-    }
-    // let's look for the right hypervisor driver
-    for (h = available_handlers; *h; h++) {
-        if (!strncmp((*h)->name, "default", CHAR_BUFFER_SIZE))
-            nc_state.D = *h;
-
-        if (!strncmp((*h)->name, hypervisor, CHAR_BUFFER_SIZE))
-            nc_state.H = *h;
-    }
-
-    if (nc_state.H == NULL) {
-        LOGFATAL("requested hypervisor type (%s) is not available\n", hypervisor);
-        EUCA_FREE(hypervisor);
-        return (EUCA_FATAL_ERROR);
-    }
-    // only load virtio config for kvm
-    if (!strncmp("kvm", hypervisor, CHAR_BUFFER_SIZE) || !strncmp("KVM", hypervisor, CHAR_BUFFER_SIZE)) {
-        GET_VAR_INT(nc_state.config_use_virtio_net, CONFIG_USE_VIRTIO_NET, 0);
-        GET_VAR_INT(nc_state.config_use_virtio_disk, CONFIG_USE_VIRTIO_DISK, 0);
-        GET_VAR_INT(nc_state.config_use_virtio_root, CONFIG_USE_VIRTIO_ROOT, 0);
-    }
-
-    EUCA_FREE(hypervisor);
 
     if (sensor_init(NULL, NULL, MAX_SENSOR_RESOURCES, FALSE, NULL) != EUCA_OK) {
         LOGERROR("failed to initialize sensor subsystem in this process\n");
