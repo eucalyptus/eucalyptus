@@ -336,11 +336,11 @@ public class VmBootRecord {
     private static Logger LOG = Logger.getLogger( VmBootRecord.VmBootRecordUpgrade.class );
     @Override
     public boolean apply( Class arg0 ) {
-      EntityTransaction db = Entities.get( VmInstance.class );
+      EntityTransaction db = Entities.get( VmBootRecord.class );
       try {
-        List<VmInstance> entities = Entities.query( new VmInstance( ) );
-        for ( VmInstance entry : entities ) {
-          LOG.debug( "Upgrading BootRecord: " + entry.toString() );
+        List<VmBootRecord> entities = Entities.query( new VmBootRecord( ) );
+        for ( VmBootRecord entry : entities ) {
+          LOG.debug( "Upgrading: " + entry.toString() );
           entry.setDeleteOnTerminate(false);
         }
         db.commit( );
