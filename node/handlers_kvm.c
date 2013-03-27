@@ -2,7 +2,7 @@
 // vim: set softtabstop=4 shiftwidth=4 tabstop=4 expandtab:
 
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * Copyright 2009-2013 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -589,16 +589,15 @@ static void *migrating_thread(void *arg)
     }
 
     char duri [1024];
-    // FIXME: Make TLS/SSH a config-file item and/or make fallback from one to the other configurable?
     snprintf(duri, sizeof(duri), "qemu+tls://%s/system", instance->migration_dst);
     virConnectPtr dconn = NULL;
     dconn = virConnectOpen(duri);
     if (dconn == NULL) {
-        LOGERROR("[%s] cannot migrate instance using TLS (failed to connect to remote), retrying using SSH.\n", instance->instanceId);
+        LOGWARN("[%s] cannot migrate instance using TLS (failed to connect to remote), retrying using SSH.\n", instance->instanceId);
         snprintf(duri, sizeof(duri), "qemu+ssh://%s/system", instance->migration_dst);
         dconn = virConnectOpen(duri);
         if (dconn == NULL) {
-            LOGERROR("[%s] cannot migrate instance using SSH (failed to connect to remote), giving up and rolling back.\n", instance->instanceId);
+            LOGERROR("[%s] cannot migrate instance using TLS or SSH (failed to connect to remote), giving up and rolling back.\n", instance->instanceId);
             migration_error++;
             goto out;
         }
@@ -655,7 +654,23 @@ static void *migrating_thread(void *arg)
 static int doMigrateInstances(struct nc_state_t *nc, ncMetadata * pMeta, ncInstance ** instances, int instancesLen, char *action, char *credentials)
 {
     int ret = EUCA_OK;
+    //int inst_idx = 0;
     assert(instancesLen > 0);
+
+    LOGDEBUG("verifing %d instance[s] for migration...\n", instancesLen);
+    // Try to verify instancesLen instances are present and that all involve the same endpoints.
+    for (int inst_idx = 0; inst_idx < instancesLen; inst_idx++) {
+        LOGDEBUG("verifying instance # %d...\n", inst_idx);
+        if (instances[inst_idx]) {
+            ncInstance *instance_idx = instances[inst_idx];
+            LOGDEBUG("[%s] proposed migration from %s to %s\n", instance_idx->instanceId,
+                     instance_idx->migration_src, instance_idx->migration_dst);
+        } else {
+            LOGERROR("Mismatch between count of instances to migrate (%d) and instance list\n", instancesLen);
+            return (EUCA_ERROR);
+        }
+    }
+
     ncInstance *instance_req = instances[0];
     char *sourceNodeName = instance_req->migration_src;
     char *destNodeName = instance_req->migration_dst;
@@ -729,11 +744,18 @@ static int doMigrateInstances(struct nc_state_t *nc, ncMetadata * pMeta, ncInsta
 
     } else if (!strcmp(pMeta->nodeName, destNodeName)) { // this is a migrate request to destination
 
-        if (strcmp (action, "prepare") != 0) {
-            // FIXME: "commit" will remain invalid, but "rollback" must be implemented!
+        if (!strcmp(action, "commit")) {
+            LOGERROR("action '%s' is not valid on destination node\n", action);
+            return (EUCA_UNSUPPORTED_ERROR);
+        } else if (!strcmp(action, "rollback")) {
+            LOGERROR("action '%s' has not yet been implemented on destination node\n", action);
+            return (EUCA_UNSUPPORTED_ERROR);
+        } else if (strcmp(action, "prepare") != 0) {
             LOGERROR("action '%s' is not valid or not implemented\n", action);
             return (EUCA_INVALID_ERROR);
         }
+
+        // Everything from here on is specific to "prepare"
 
         // allocate a new instance struct
         ncInstance *instance = clone_instance(instance_req);
