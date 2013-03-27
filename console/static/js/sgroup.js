@@ -73,6 +73,9 @@
 	      // Invisible column for storing the protocol variable, used in search
               "bVisible": false,
               "aTargets":[3],
+              "mRender": function(data) {
+                return DefaultEncoder().encodeForHTML(data);
+               },
               "mData": function(source){
                  var groupName = source.name;
                  var results = describe('sgroup');
@@ -97,13 +100,16 @@
                        ;
                    }*/
                 });
-                return DefaultEncoder().encodeForHTML(protocol);
+                return protocol;
               },
             },  
             { 
 	      // Invisible Column for storing the port varible, used in search
               "bVisible": false,
               "aTargets":[4],
+              "mRender": function(data) {
+                return DefaultEncoder().encodeForHTML(data);
+               },
               "mData": function(source){
                  var groupName = source.name;
                  var results = describe('sgroup');
@@ -123,13 +129,16 @@
                    if(rule['to_port'])
                      port += rule['to_port']+';';
                  });
-                 return DefaultEncoder().encodeForHTML(port);
+                 return port;
                },
             },
             { 
 	      // Invisible Column for storing the source variable, used in search
               "bVisible": false,
               "aTargets":[5],
+              "mRender": function(data) {
+                return DefaultEncoder().encodeForHTML(data);
+               },
               "mData" : function(source){
                  var groupName = source.name;
                  var results = describe('sgroup');
@@ -154,7 +163,7 @@
                      }
                    } 
                  });
-                 return DefaultEncoder().encodeForHTML(src);
+                 return src;
                },
             },
 	    {
@@ -955,10 +964,10 @@
       firstRow = rowsToEdit[0];
       thisObj._fillRulesList(firstRow);
       thisObj.editDialog.dialog('open');
-      thisObj.editDialog.find('#sgroups-edit-group-name').append($('<span>').text(addEllipsis(firstRow.name, 70)));
+      thisObj.editDialog.find('#sgroups-edit-group-name').text(addEllipsis(firstRow.name, 70));
       thisObj.editDialog.find('#sgroups-hidden-name').text(firstRow.name);
       thisObj.editDialog.find('#sgroup-template').val('none');
-      thisObj.editDialog.find('#sgroups-edit-group-desc').append($('<span>').text(addEllipsis(firstRow.description, 70)));
+      thisObj.editDialog.find('#sgroups-edit-group-desc').text(addEllipsis(firstRow.description, 70));
       thisObj.editDialog.find('input[id=allow-ip]').prop('disabled', false);
       thisObj.editDialog.find('input[id=allow-group]').prop('disabled', true);
       thisObj.editDialog.find('input[id=sgroup-allow-ip]').prop('checked', 'yes');

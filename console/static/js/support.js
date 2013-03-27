@@ -202,6 +202,7 @@ function clearRepeat() {
  
 function describe(resource, resourceId){
   var result= $('html body').eucadata('get', resource);
+  //result = $.parseJSON(result);
   if(!resourceId)
     return result;
 
@@ -674,3 +675,15 @@ function eucatableDisplayColumnTypeLaunchInstanceButton (imageID){
 	return asHTML($html);
 };
 
+// method to help construct lists of params for ajax calls
+function build_list_params(label, items){
+  if (!(items instanceof Array))
+    items = [items]
+  var ret = '';
+  for (var index in items) {
+    i = parseInt(index)+1;
+    item = items[index];
+    ret += "&"+label+i+"="+item;
+  }
+  return ret;
+}

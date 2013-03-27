@@ -173,6 +173,24 @@
         case 'aboutcloud':
           this._aboutDialog.eucadialog("open");
           break;
+        case 'eantest':
+          this.element.eantest();
+          break;
+	      case 'jp_volume':
+	        this.element.jpvols();
+          break;
+	      case 'newscalinggroup':
+	        this.element.newscalinggroup();
+          break;
+          case 'scalinggroup':
+            this.element.scalinggroup();
+          break;
+        case 'rivetstest':
+          this.element.rivetstest();
+          break;
+        case 'launchconfig':
+          this.element.launchconfig();
+          break;
       }
       if (options !== KEEP_VIEW) {
         this._curSelected = selected;

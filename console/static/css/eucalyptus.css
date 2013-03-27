@@ -148,7 +148,7 @@ ol li {
   margin: 0 auto;
   padding: 0 10px;
   position: relative;
-  width: 1100;
+  width: 1100px;
 }
 
 .templates {
@@ -296,7 +296,7 @@ ol li {
 
 .resources-nav li {
   float: left;
-  width: 200px;
+  width: 220px;
   /* Needed so submenus that can be positioned absolutely */
   position: relative;
 }
@@ -331,45 +331,45 @@ ol li {
 /* ==== Link specific styling (including hover and selected states) ==== */
 
 .lnk-dashboard {
-  background-position: 0 0;
+  background-position: 13px 0;
 }
 .resources-nav li:hover a.lnk-dashboard,
 .lnk-dashboard:hover {
-  background-position: 0 -125px;
+  background-position: 13px -125px;
 }
 
 .lnk-image {
-  background-position: -200px 0;
+  background-position: -188px 0;
 }
 .resources-nav li:hover a.lnk-image,
 .lnk-image:hover {
-  background-position: -200px -121px;
+  background-position: -188px -121px;
 }
 
 .lnk-instance {
-  background-position: -400px 0;
+  background-position: -388px 0;
 }
 .resources-nav li:hover a.lnk-instance,
 .lnk-instance:hover {
-  background-position: -400px -107px;
+  background-position: -388px -107px;
 }
 
 .lnk-storage {
-  background-position: -600px 0;
+  background-position: -588px 0;
 }
 .resources-nav li:hover a.lnk-storage,
 .resources-nav li.toggle-on a.lnk-storage,
 .lnk-storage:hover {
-  background-position: -600px -125px;
+  background-position: -588px -125px;
 }
 
 .lnk-netsec {
-  background-position: -800px 0;
+  background-position: -788px 0;
 }
 .resources-nav li:hover a.lnk-netsec,
 .resources-nav li.toggle-on a.lnk-netsec,
 .lnk-netsec:hover {
-  background-position: -800px -129px;
+  background-position: -788px -129px;
 }
 
 
@@ -435,7 +435,7 @@ ol li {
 .notification-box {
   display: none;
   position: absolute;
-  width: 995px;
+  width: 1100px;
   min-height: 15px;
   margin-top: 5px;
   padding: 15px 0;
@@ -732,6 +732,54 @@ input[type='text'].medium-textinput {
   box-shadow: 0 1px 2px rgba(0,0,0,0.7), inset 0 1px 0 rgba(255,255,255,0.30);
 }
 
+.button[disabled], .button[disabled]:hover
+{
+  color: #eee;
+  background: #c8c8c8 no-repeat 0 0;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.7), inset 0 1px 0 rgba(255,255,255,0.30);
+}
+
+#wizardContent {
+    margin-bottom: 2em;
+}
+
+#wizardNavButtons {
+    float : right;
+    margin-right: 1em;
+    margin-bottom: 1em;
+}
+
+#wizardNav {
+    margin-left: 1em;
+}
+
+.wizardProblem {
+    padding-left: 2em;
+    padding-right: 2em;
+    padding-top: 1em;
+    padding-bottom: 1em;
+    margin-right: 1em;
+}
+
+.problems {
+  margin-left: 177px;
+}
+
+.wizardTitle h3 {
+  background: transparent url(../images/css-sprites.png) no-repeat left -160px;
+  font-family: 'PlayBold', Arial, sans-serif;
+  font-size: 13px;
+  cursor: pointer;
+  line-height: 1.5;
+  font-weight: normal;
+  color: #02405f;
+  margin-top: 0em;
+  margin-left: 0px;
+  margin-bottom: 0px;
+  padding: 1px 0 9px 5px;
+  width: 170px;
+}
+
 ul.ui-autocomplete {
   background: #f3f6f9;
   border-radius: 5px;
@@ -999,7 +1047,7 @@ ul.ui-autocomplete {
 #dashboard-instance-launch {
   position: absolute;
   top: 2px;
-  left: 838px;
+  right: 30px;
   height: 120px;
   border-left: 2px solid #ecebeb;
 }
@@ -1047,7 +1095,7 @@ ul.ui-autocomplete {
 .storage,
 .netsec {
   float: left;
-  width: 40%;
+  width: 42%;
   min-height: 85px; 
 }
 
@@ -1139,22 +1187,22 @@ table.display td.dataTables_empty {
   padding: 10px;
 }
 
-tr.odd,
-tr.odd td.sorting_1 {
+table.display tr.odd,
+table.display tr.odd td.sorting_1 {
   background-color: #fff;
 }
 
-tr.even,
-tr.even td.sorting_1 {
-  background-color: #f4f4ef;
+table.display tr.even,
+table.display tr.even td.sorting_1 {
+  background-color: #f4f4f4;
 }
 
 .table_center_cell {
   text-align: center;
 }
 
-tr.selected-row,
-tr.selected-row td.sorting_1
+table.display tr.selected-row,
+table.display tr.selected-row td.sorting_1
  {
   background-color: #f1ffe3;
 }
@@ -1174,10 +1222,10 @@ table.display thead th.checkbox-cell {
   text-align: center;
 }
 
-tr.glow td,
-tr.glow td.sorting_1,
-tr.glow td.sorting_2,
-tr.glow td.sorting_3 {
+table.display tr.glow td,
+table.display tr.glow td.sorting_1,
+table.display tr.glow td.sorting_2,
+table.display tr.glow td.sorting_3 {
   background-color: #ffffdc;
 }
 
@@ -1206,7 +1254,7 @@ tr.expanded td {
 }
 
 tr.even + tr.expanded td { 
-  background-color : #f4f4ef;
+  background-color : #f4f4f4;
 }
 
 tr.odd + tr.expanded td { 
@@ -1216,7 +1264,7 @@ tr.odd + tr.expanded td {
 .expanded-row-inner-wrapper {
   padding: 0 10px 8px;
   border-bottom: 1px solid #a9a9a9;
-  background: transparent url(../images/expanded-row-shadows.png) no-repeat right bottom;
+  background: #f4f4f4 url(../images/expanded-row-shadows.png) repeat-x left bottom;
   text-align: left;
 }
 
@@ -2151,7 +2199,7 @@ a.sg-my-ip {
 
 .wizard-wrapper {
   float: left;
-  width: 730px;
+  width: 775px;
 }
 
 .launch-wizard-intro-text {
@@ -2198,6 +2246,11 @@ a.sg-my-ip {
   line-height: 1.5;
 }
 
+.wizard-step-scrollcontainer {
+  height: 205px;
+  overflow: auto;
+}
+
 /* Security Group dialogs get narrower labels, due to narrow dialog width */
 
 .group.content-section .form-row label,
@@ -2228,6 +2281,7 @@ a.sg-my-ip {
 
 .wizard-step .dataTables_wrapper table {
   border: 1px solid #e5e5e5;
+  width: 100%;
 }
 
 .wizard-step .dataTables_wrapper table td {
@@ -2274,7 +2328,7 @@ a.sg-my-ip {
 
 .wizard-summary-wrapper {
   float: right;
-  width: 200px;
+  width: 280px;
 }
 
 .wizard-summary {
@@ -2336,6 +2390,10 @@ span.on-error {
   padding: 15px 0 0 5px;
 }
 
+.wizardTitle {
+  margin-bottom: 8px;
+}
+
 .wizard-step #filter-wrapper {
   float: left;
   width : 185px;
@@ -2343,7 +2401,22 @@ span.on-error {
 }
 .wizard-step #table-wrapper {
   float: left;
-  width : 440px;
+  width : 85%;
+  margin-left: 8px;
+}
+
+.wizard-step div.list { 
+  padding: 4px;
+  margin-left: 15px;
+  margin-right: 15px;
+}
+
+.wizard-step div.list.odd {
+  background-color: #FFFFFF;
+}
+
+.wizard-step div.list.even {
+  background-color: #F4F4EF;
 }
 
 .wizard-step .dataTables_filter input {
@@ -2394,6 +2467,93 @@ span.on-error {
   width: 220px;
   text-align: left;
   font-family: 'Trebuchet MS', Arial, sans-serif;
+}
+
+.form-row-section {
+    vertical-align: top;
+    display: inline-table;
+    width: fit-content;
+    margin-right: 2em;
+}
+
+.centerLabel {
+    text-align: center;
+}
+
+.form-row .wizard-section-label {
+    margin-left: 2em;
+}
+
+.smallNumber {
+    width: 3em;
+}
+
+.form-row-section label {
+    display: table-row;
+    text-align: center;
+}
+
+.form-row-section select {
+    margin-right: 0.25em;
+}
+
+.form-row-section-wide label{
+    text-align: left;
+    float: inside;
+    display: inline;
+}
+
+.form-row-section-wide span {
+    display: block;
+}
+
+.form-row-section-wide select {
+    float: inside;
+}
+.form-row-section-wide input {
+    display: inline;
+}
+
+.form-row-section-wide {
+    text-align: right;
+}
+
+.form-row-section div {
+    margin-left: 1em;
+    display: block;
+}
+
+.form-row-section input {
+    max-width: 90px;
+    text-align: right;
+    display: inline;
+    float: right;
+}
+
+.form-subrow {
+    margin-top: 2em;
+    display: block;
+    margin-left: 2em;
+    margin-right: 20em;
+}
+
+.subrow-buttons {
+    float: right;
+    margin-left: 2em;
+}
+
+.wizardTitleLink h3 {
+    color: #73a434;
+}
+
+.wizardTitleLink {
+    outline: 0 none;
+    color: #73a434;
+    text-decoration: none;
+}
+
+.form-longrow {
+    width: 100%;
 }
 
 #launch-wizard-security-keypair-selector, 
@@ -2534,7 +2694,7 @@ span.on-error {
 }
 
 .device-map-table tbody tr:nth-child(2n) {
-  background-color: #f4f4ef;
+  background-color: #f4f4f4;
 }  
 
 #launch-wizard-advanced-storage th {
@@ -2600,6 +2760,11 @@ span.on-error {
   color: #73a434;
 }
 
+#launch-wizard-tags table {
+  float:right;
+  margin-right:190px;
+}
+
 .instance-type-m1_small a {
   background-position: 0 0;
 }
@@ -2650,6 +2815,7 @@ span.on-error {
   font-weight: bold;
   font-size: 14px;
   margin-bottom: 10px;
+  margin-left: 0em;
  } 
 
 .launch-wizard-section-header {
@@ -2695,6 +2861,12 @@ span.on-error {
   width: 19px;
   height: 30px;
   background: transparent url(../images/wizard-pointer.png) no-repeat left top;
+}
+
+/*------- visual search -----*/
+.wizard-step .visual_search {
+  margin: 0 0 0 90px;
+  width: 85%;
 }
 
 /* ======= Instances - Launch More dialog ======= */
@@ -2843,4 +3015,29 @@ textarea.console-output {
   list-style-type: none;
   color: #444;
 }
+
+/*------- euca icons -------*/
+
+.Eucalyptis_IconSheet_20{ background: url(/images/csg-5150d9193b75a.png) no-repeat top left;  background-position: 0 0; width: 27px; height: 27px; } 
+.Eucalyptis_IconSheet_22{ background: url(/images/csg-5150d9193b75a.png) no-repeat top left;  background-position: 0 -77px; width: 27px; height: 27px; } 
+.icon_approve{background: url(/images/csg-5150d9193b75a.png) no-repeat top left;  background-position: 0 -154px; width: 27px; height: 27px; } 
+ a:hover .icon_approve{background: url(/images/csg-5150d9193b75a.png) no-repeat top left;  background-position: 0 -231px; width: 27px; height: 27px; } 
+.icon_delete{background: url(/images/csg-5150d9193b75a.png) no-repeat top left;  background-position: 0 -308px; width: 27px; height: 27px; } 
+ a:hover .icon_delete{ background: url(/images/csg-5150d9193b75a.png) no-repeat top left; background-position: 0 -385px; width: 27px; height: 27px; } 
+.icon_down{ background: url(/images/csg-5150d9193b75a.png) no-repeat top left; background-position: 0 -462px; width: 27px; height: 27px; } 
+ a:hover .icon_down {background: url(/images/csg-5150d9193b75a.png) no-repeat top left;  background-position: 0 -539px; width: 27px; height: 27px; } 
+.icon_edit{ background: url(/images/csg-5150d9193b75a.png) no-repeat top left; background-position: 0 -616px; width: 27px; height: 27px; } 
+ a:hover .icon_edit { background: url(/images/csg-5150d9193b75a.png) no-repeat top left; background-position: 0 -693px; width: 27px; height: 27px; } 
+.icon_help{ background: url(/images/csg-5150d9193b75a.png) no-repeat top left; background-position: 0 -770px; width: 27px; height: 27px; } 
+ a:hover .icon_help { background: url(/images/csg-5150d9193b75a.png) no-repeat top left; background-position: 0 -847px; width: 27px; height: 27px; } 
+.icon_reload{ background: url(/images/csg-5150d9193b75a.png) no-repeat top left; background-position: 0 -924px; width: 27px; height: 27px; } 
+ a:hover .icon_reload{ background: url(/images/csg-5150d9193b75a.png) no-repeat top left; background-position: 0 -1001px; width: 27px; height: 27px; } 
+.icon_searchdelete{ background: url(/images/csg-5150d9193b75a.png) no-repeat top left; background-position: 0 -1078px; width: 27px; height: 27px; } 
+ a:hover .icon_searchdelete{background: url(/images/csg-5150d9193b75a.png) no-repeat top left;  background-position: 0 -1155px; width: 27px; height: 27px; } 
+.icon_settings{ background: url(/images/csg-5150d9193b75a.png) no-repeat top left; background-position: 0 -1232px; width: 27px; height: 27px; } 
+ a:hover .icon_settings { background: url(/images/csg-5150d9193b75a.png) no-repeat top left; background-position: 0 -1309px; width: 27px; height: 27px; } 
+.icon_up{ background: url(/images/csg-5150d9193b75a.png) no-repeat top left; background-position: 0 -1386px; width: 27px; height: 27px; } 
+ a:hover .icon_up { background: url(/images/csg-5150d9193b75a.png) no-repeat top left; background-position: 0 -1463px; width: 27px; height: 27px; }
+
+
 
