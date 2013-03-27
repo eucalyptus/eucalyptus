@@ -137,7 +137,7 @@ public class LoadBalancerDnsRecord extends AbstractPersistent {
     }
 
     protected String createUniqueName( ) {
-    	return String.format("dns-%s-%s", this.loadbalancer.getDisplayName(), this.getDnsName());
+    	return String.format("dns-%s-%s-%s", this.loadbalancer.getOwnerAccountNumber(), this.loadbalancer.getDisplayName(), this.getDnsName());
     }
 		
 	@Override

@@ -20,7 +20,6 @@
 package com.eucalyptus.loadbalancing.activities;
 
 
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
@@ -78,8 +77,6 @@ import edu.ucsb.eucalyptus.msgs.DescribeInstancesType;
 import edu.ucsb.eucalyptus.msgs.DnsMessage;
 import edu.ucsb.eucalyptus.msgs.EucalyptusMessage;
 import edu.ucsb.eucalyptus.msgs.IpPermissionType;
-import edu.ucsb.eucalyptus.msgs.RemoveARecordResponseType;
-import edu.ucsb.eucalyptus.msgs.RemoveARecordType;
 import edu.ucsb.eucalyptus.msgs.RemoveMultiANameResponseType;
 import edu.ucsb.eucalyptus.msgs.RemoveMultiANameType;
 import edu.ucsb.eucalyptus.msgs.RemoveMultiARecordResponseType;
@@ -93,8 +90,6 @@ import edu.ucsb.eucalyptus.msgs.RunningInstancesItemType;
 import edu.ucsb.eucalyptus.msgs.TerminateInstancesResponseType;
 import edu.ucsb.eucalyptus.msgs.TerminateInstancesType;
 import edu.ucsb.eucalyptus.msgs.TerminateInstancesItemType;
-import edu.ucsb.eucalyptus.msgs.UpdateARecordResponseType;
-import edu.ucsb.eucalyptus.msgs.UpdateARecordType;
 /**
  * @author Sang-Min Park (spark@eucalyptus.com)
  *
@@ -208,6 +203,32 @@ public class EucalyptusActivityTasks {
 			    }
 		}
 	}
+
+	private class EucalyptusUserActivity implements ActivityContext<EucalyptusMessage, Eucalyptus>{
+		private String userId = null;
+		private EucalyptusUserActivity(final String userId){
+			this.userId = userId;
+		}
+		
+		@Override
+		public String getUserId() {
+			// TODO Auto-generated method stub
+			return this.userId;
+		}
+
+		@Override
+		public DispatchingClient<EucalyptusMessage, Eucalyptus> getClient() {
+			// TODO Auto-generated method stub
+			try{
+				EucalyptusClient client = new EucalyptusClient(this.userId);
+				client.init();
+				return client;
+			}catch(Exception e){
+				throw Exceptions.toUndeclared(e);
+			}
+		}
+		
+	}
 	
 	public List<String> launchInstances(final String availabilityZone, final String imageId, 
 			final String instanceType, final int numInstances){
@@ -253,7 +274,8 @@ public class EucalyptusActivityTasks {
 		}
 	}
 	
-	public List<RunningInstancesItemType> describeInstances(final List<String> instances){
+	
+	public List<RunningInstancesItemType> describeSystemInstances(final List<String> instances){
 		if(instances.size() <=0)
 			return Lists.newArrayList();
 		final EucalyptusDescribeInstanceTask describeTask = new EucalyptusDescribeInstanceTask(instances);
@@ -268,6 +290,24 @@ public class EucalyptusActivityTasks {
 			throw Exceptions.toUndeclared(ex);
 		}
 	}
+	
+	public List<RunningInstancesItemType> describeUserInstances(final String userId, final List<String> instances){
+		if(instances.size() <=0)
+			return Lists.newArrayList();
+		final EucalyptusDescribeInstanceTask describeTask = new EucalyptusDescribeInstanceTask(instances);
+		final CheckedListenableFuture<Boolean> result = describeTask.dispatch(new EucalyptusUserActivity(userId));
+
+		try{
+			if(result.get()){
+				final List<RunningInstancesItemType> describe = describeTask.getResult();
+				return describe;
+			}else
+				throw new EucalyptusActivityException("failed to describe the instances");
+		}catch(Exception ex){
+			throw Exceptions.toUndeclared(ex);
+		}
+	}
+	
 	
 	public List<ServiceStatusType> describeServices(final String componentType){
 		//LOG.info("calling describe-services -T "+componentType);

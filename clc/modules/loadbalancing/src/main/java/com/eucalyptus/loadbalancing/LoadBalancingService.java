@@ -34,9 +34,7 @@ import javax.persistence.EntityTransaction;
 import org.apache.log4j.Logger;
 
 import com.eucalyptus.auth.AuthQuotaException;
-import com.eucalyptus.auth.principal.AccountFullName;
 import com.eucalyptus.auth.principal.UserFullName;
-import com.eucalyptus.cloud.CloudMetadatas;
 import com.eucalyptus.cloudwatch.MetricData;
 import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
@@ -376,7 +374,7 @@ public class LoadBalancingService {
   public DescribeLoadBalancersResponseType describeLoadBalancers(DescribeLoadBalancersType request) throws EucalyptusCloudException {
     DescribeLoadBalancersResponseType reply = request.getReply( );
     final Context ctx = Contexts.lookup( );
-    final AccountFullName ownerFullName = ctx.getUserFullName( ).asAccountFullName( );
+    final UserFullName ownerFullName = ctx.getUserFullName( );
     final Set<String> requestedNames = Sets.newHashSet( );
     if ( !request.getLoadBalancerNames().getMember().isEmpty()) {
       requestedNames.addAll( request.getLoadBalancerNames().getMember() );
@@ -398,7 +396,7 @@ public class LoadBalancingService {
              .byPrivileges( )
              .buildPredicate( );
 
-            final List<LoadBalancer> lbs = Entities.query( LoadBalancer.named( ownerFullName, null ), true);
+            final List<LoadBalancer> lbs = Entities.query( LoadBalancer.named( ownerFullName.getAccountName() , null ), true);
             return Sets.newHashSet( Iterables.transform( Iterables.filter( lbs, requestedAndAccessible ), LoadBalancingMetadatas.toDisplayName() ) );
           }
       };
@@ -408,7 +406,7 @@ public class LoadBalancingService {
       @Override
       public LoadBalancer apply(final String lbName){
         try{
-          return Entities.uniqueResult(LoadBalancer.named(ownerFullName, lbName));
+          return Entities.uniqueResult(LoadBalancer.named(ownerFullName.getAccountName(), lbName));
         }catch(NoSuchElementException ex){
           return null;
         }catch(Exception ex){
@@ -682,6 +680,8 @@ public class LoadBalancingService {
 	    final Context ctx = Contexts.lookup( );
 	    final UserFullName ownerFullName = ctx.getUserFullName( );
 	  
+	    //TODO: SPARK: make sure the requested instance belong to the requesting account
+	    
 	    final String lbName = request.getLoadBalancerName();
 	    final Collection<Instance> instances = request.getInstances().getMember();
 	    final Predicate<Void> creator = new Predicate<Void>(){

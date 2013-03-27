@@ -71,6 +71,10 @@ public class LoadBalancer extends UserMetadata<LoadBalancer.STATE> implements Lo
 		super(null, null);
 	}
 	
+	private LoadBalancer(final String lbName){
+		super(null, lbName);
+	}
+	
 	private LoadBalancer(final OwnerFullName userFullName, final String lbName){
 		super(userFullName, lbName);
 	}
@@ -79,8 +83,10 @@ public class LoadBalancer extends UserMetadata<LoadBalancer.STATE> implements Lo
 		return new LoadBalancer(userFullName, lbName);
 	}
 	
-	static LoadBalancer named(final OwnerFullName userName, final String lbName){
-		return new LoadBalancer(userName, lbName);
+	static LoadBalancer named(final String accountName, final String lbName){
+		final LoadBalancer instance= new LoadBalancer(lbName);
+		instance.setOwnerAccountName(accountName);
+		return instance;
 	}
 	
 	@Column( name = "loadbalancer_scheme", nullable=true)

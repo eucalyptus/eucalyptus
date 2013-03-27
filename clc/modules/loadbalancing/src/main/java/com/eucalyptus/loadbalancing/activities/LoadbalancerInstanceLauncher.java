@@ -178,6 +178,7 @@ public class LoadbalancerInstanceLauncher extends AbstractEventHandler<NewLoadba
 	interface InstanceUserDataBuilder {
 		String build();
 	}
+	
 	@Override
 	public void rollback() throws EventHandlerException {
 		// terminate the launched instances
@@ -194,6 +195,7 @@ public class LoadbalancerInstanceLauncher extends AbstractEventHandler<NewLoadba
 			}
 		}
 	}
+	
 	@Override
 	public List<String> getResult() {
 		// TODO Auto-generated method stub

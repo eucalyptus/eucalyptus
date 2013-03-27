@@ -22,14 +22,12 @@ package com.eucalyptus.loadbalancing.activities;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
-import java.util.Set;
 import java.util.UUID;
 
 import javax.persistence.EntityTransaction;
 import org.apache.log4j.Logger;
 
 import com.eucalyptus.bootstrap.Bootstrap;
-import com.eucalyptus.cloud.CloudMetadatas;
 import com.eucalyptus.component.Topology;
 import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.configurable.ConfigurableClass;
@@ -46,11 +44,8 @@ import com.eucalyptus.loadbalancing.LoadBalancerZone;
 import com.eucalyptus.loadbalancing.LoadBalancers;
 import com.eucalyptus.loadbalancing.LoadBalancing;
 import com.google.common.base.Function;
-import com.google.common.base.Predicate;
-import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
-import com.google.common.collect.Sets;
 
 import edu.ucsb.eucalyptus.msgs.RunningInstancesItemType;
 
@@ -470,7 +465,7 @@ public class EventHandlerChainNew extends EventHandlerChain<NewLoadbalancerEvent
 	    		  String address = null;
 	    		  try{
 	    			  final List<RunningInstancesItemType> result = 
-	    					  EucalyptusActivityTasks.getInstance().describeInstances(param);
+	    					  EucalyptusActivityTasks.getInstance().describeSystemInstances(param);
 	    			  if (result.isEmpty())
 	    				  throw new Exception("Describe instances returned no result");
 	    			  instanceState = result.get(0).getStateName();

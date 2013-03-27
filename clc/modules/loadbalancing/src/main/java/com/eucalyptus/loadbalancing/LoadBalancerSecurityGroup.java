@@ -133,7 +133,7 @@ public class LoadBalancerSecurityGroup extends AbstractPersistent {
 	}
 
 	private String createUniqueName(){
-		return String.format("loadbalancer-%s-sgroup-%s", this.loadbalancer, this.groupName);
+		return String.format("loadbalancer-sgroup-%s-%s-%s", this.loadbalancer.getOwnerAccountNumber(), this.loadbalancer.getDisplayName(), this.groupName);
 	}
 	
 	@Override

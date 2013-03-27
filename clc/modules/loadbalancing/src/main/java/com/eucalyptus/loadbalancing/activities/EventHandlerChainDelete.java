@@ -402,7 +402,7 @@ public class EventHandlerChainDelete extends EventHandlerChain<DeleteLoadbalance
 	    		String instanceState = null;
 	    		try{
 	    			final List<RunningInstancesItemType> result = 
-	    					  EucalyptusActivityTasks.getInstance().describeInstances(param);
+	    					  EucalyptusActivityTasks.getInstance().describeSystemInstances(param);
 	    			if (result.isEmpty())
 	    				instanceState= "terminated";
 	    			else

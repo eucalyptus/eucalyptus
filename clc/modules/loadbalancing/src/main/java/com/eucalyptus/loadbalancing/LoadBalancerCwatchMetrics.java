@@ -28,7 +28,6 @@ import java.util.concurrent.ConcurrentHashMap;
 import javax.persistence.EntityTransaction;
 
 import org.apache.log4j.Logger;
-import org.mortbay.log.Log;
 
 import com.eucalyptus.cloudwatch.Dimension;
 import com.eucalyptus.cloudwatch.Dimensions;
