@@ -28,7 +28,7 @@
                   {name:'image', type:'images', collection: 'images'},
                   {name:'volume', type:'volumes', collection: 'volumes'},
                   {name:'snapshot', type:'snapshots', collection: 'snapshots'},
-//                  {name:'eip', type:'addresses', collection: 'addresses'},
+                  {name:'eip', type:'addresses', collection: 'addresses'},
                   {name:'keypair', type:'keypairs', collection: 'keypairs'},
                   {name:'sgroup', type:'groups', collection: 'sgroups'},
                   {name:'zone', type:'zones', collection: 'zones'},
@@ -56,7 +56,7 @@
         var url = ep.url;
         // add setup backbone collections in endpoints array
         if (ep.collection != null) {
-          console.log("set up model for "+name);
+          //console.log("set up model for "+name);
           require(['models/'+ep.collection], function(collection) {
             ep.model = new collection();
             // set up callback for timer which updates model if necessary

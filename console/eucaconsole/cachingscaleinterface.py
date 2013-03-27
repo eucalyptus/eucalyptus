@@ -86,8 +86,11 @@ class CachingScaleInterface(ScaleInterface):
             Threads.instance().invokeCallback(callback, Response(error=ex))
 
     def get_all_groups(self, names=None, max_records=None, next_token=None, callback=None):
-        params = {'names':names, 'max_records':max_records, 'next_token':next_token}
-        Threads.instance().runThread(self.__get_all_groups_cb__, (params, callback))
+        if self.groups.isCacheStale():
+            params = {'names':names, 'max_records':max_records, 'next_token':next_token}
+            Threads.instance().runThread(self.__get_all_groups_cb__, (params, callback))
+        else:
+            callback(Response(data=self.groups.values))
 
     def __get_all_groups_cb__(self, kwargs, callback):
         try:
@@ -98,10 +101,13 @@ class CachingScaleInterface(ScaleInterface):
             Threads.instance().invokeCallback(callback, Response(error=ex))
 
     def get_all_autoscaling_instances(self, instance_ids=None, max_records=None, next_token=None, callback=None):
-        params = {'instance_ids':instance_ids, 'max_records':max_records,
-                  'next_token':next_token}
-        Threads.instance().runThread(self.__get_all_autoscaling_instances_cb__,
+        if self.instances.isCacheStale():
+            params = {'instance_ids':instance_ids, 'max_records':max_records,
+                      'next_token':next_token}
+            Threads.instance().runThread(self.__get_all_autoscaling_instances_cb__,
                                     (params, callback))
+        else:
+            callback(Response(data=self.instances.values))
 
     def __get_all_autoscaling_instances_cb__(self, kwargs, callback):
         try:
