@@ -74,10 +74,11 @@ public class HtmlDocument
     private StringBuilder rowSb;
     private Writer writer;
     private boolean rowHasLabel = false;
+    private int rowIndent = 3;
 
-    public HtmlDocument()
-    {
-        rowSb = null;
+    @Override
+    public void setUnlabeledRowIndent( final int num ) {
+        this.rowIndent = num;
     }
 
     @Override
@@ -115,7 +116,7 @@ public class HtmlDocument
 	public Document tableClose()
 		throws IOException
 	{
-    	if (rowSb != null) {
+    	if (rowSb != null && rowSb.length()!=0) {
     		writer.write("<tr>" + rowSb.toString() + "</tr>\n");
     	}
     	writer.write("</table>\n");
@@ -136,7 +137,7 @@ public class HtmlDocument
     	throws IOException
     {
     	rowHasLabel = false;
-    	if (rowSb != null) {
+    	if (rowSb != null && rowSb.length()!=0) {
     		writer.write("<tr>" + rowSb.toString() + "</tr>\n");
     	}
         rowSb = new StringBuilder();
@@ -148,8 +149,7 @@ public class HtmlDocument
 		throws IOException
 	{
     	addEmptyLabelCols(indent);
-        rowSb.append(String.format("<td width=%d colspan=%d align=\"left\">%s</td>",LABEL_WIDTH,3,val));
-    	addEmptyLabelCols(3-indent);
+    	rowSb.append(String.format("<td width=\"%d\" colspan=\"%d\" align=\"left\">%s</td>",LABEL_WIDTH,(rowIndent-indent),val));
     	rowHasLabel = true;
     	return this;
 	}	
@@ -162,7 +162,14 @@ public class HtmlDocument
         return addCol(val, VALUE_WIDTH, 1, "center");
     }
 
-    @Override
+  @Override
+  public Document addValCol(Integer val)
+      throws IOException
+  {
+    return addCol((val==null)?"-":val.toString(), VALUE_WIDTH, 1, "center");
+  }
+
+  @Override
 	public Document addValCol(Long val)
 		throws IOException
     {
@@ -187,10 +194,10 @@ public class HtmlDocument
 		throws IOException
     {
     	if (!rowHasLabel) {
-    		addEmptyLabelCols(6);
+    		addEmptyLabelCols(rowIndent);
     		rowHasLabel = true;
     	}
-        rowSb.append(String.format("<td width=%d colspan=%d align=%s>%s</td>",width,colspan,align,val));
+        rowSb.append(String.format("<td width=\"%d\" colspan=\"%d\" align=\"%s\">%s</td>",width,colspan,align,val));
         return this;
     }
 
@@ -199,7 +206,7 @@ public class HtmlDocument
 		throws IOException
    {
         for (int i=0; i<num; i++) {
-            rowSb.append("<td width=" + VALUE_WIDTH + ">&nbsp;</td>");
+            rowSb.append("<td width=\"" + VALUE_WIDTH + "\">&nbsp;</td>");
         }
         return this;
     }
@@ -209,7 +216,7 @@ public class HtmlDocument
 		throws IOException
 	{
     	for (int i=0; i<num; i++) {
-        	rowSb.append("<td width=" + LABEL_WIDTH + ">&nbsp;</td>");
+        	rowSb.append("<td width=\"" + LABEL_WIDTH + "\">&nbsp;</td>");
     	}
     	return this;
 	}

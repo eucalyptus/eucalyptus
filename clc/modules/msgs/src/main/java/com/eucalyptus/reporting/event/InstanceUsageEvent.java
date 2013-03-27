@@ -20,7 +20,7 @@
 
 package com.eucalyptus.reporting.event;
 
-import static org.hamcrest.MatcherAssert.assertThat;
+import static com.eucalyptus.util.Parameters.checkParam;
 import static org.hamcrest.Matchers.not;
 import static org.hamcrest.Matchers.notNullValue;
 import static org.hamcrest.text.IsEmptyString.isEmptyOrNullString;
@@ -45,13 +45,13 @@ public class InstanceUsageEvent implements Event {
                              final String dimension,
                              final Double value,
                              final Long valueTimestamp ) {
-    assertThat( uuid, not( isEmptyOrNullString() ) );
-    assertThat( instanceId, not(isEmptyOrNullString()) );
-    assertThat( metric, not(isEmptyOrNullString()) );
-    assertThat( sequenceNum, notNullValue() );
-    assertThat( dimension, not(isEmptyOrNullString()) );
-    assertThat( value, notNullValue() );
-    assertThat( valueTimestamp, notNullValue() );
+    checkParam( uuid, not( isEmptyOrNullString() ) );
+    checkParam( instanceId, not( isEmptyOrNullString() ) );
+    checkParam( metric, not( isEmptyOrNullString() ) );
+    checkParam( sequenceNum, notNullValue() );
+    checkParam( dimension, not( isEmptyOrNullString() ) );
+    checkParam( value, notNullValue() );
+    checkParam( valueTimestamp, notNullValue() );
     this.uuid = uuid;
     this.instanceId = instanceId;
     this.metric = metric;

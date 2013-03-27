@@ -102,6 +102,7 @@ public class ResourceToken implements VmInstanceMetadata, Comparable<ResourceTok
   @Nullable
   private VmInstance          vmInst;
   private final Cluster       cluster;
+  private boolean             aborted;
   
   public ResourceToken( final Allocation allocInfo, final int resourceAllocationSequenceNumber, final int launchIndex ) {
     this.allocation = allocInfo;
@@ -161,6 +162,9 @@ public class ResourceToken implements VmInstanceMetadata, Comparable<ResourceTok
   }
   
   public void abort( ) {
+    if ( aborted ) return;
+    aborted = true;
+
     LOG.debug( this );
     try {
       this.release( );

@@ -62,7 +62,7 @@
 
 package com.eucalyptus.cloud.run;
 
-import static org.hamcrest.MatcherAssert.assertThat;
+import static com.eucalyptus.util.Parameters.checkParam;
 import static org.hamcrest.Matchers.notNullValue;
 import java.util.ArrayList;
 import java.util.Iterator;
@@ -73,7 +73,6 @@ import com.eucalyptus.address.Addresses;
 import com.eucalyptus.cloud.ResourceToken;
 import com.eucalyptus.cloud.run.Allocations.Allocation;
 import com.eucalyptus.cloud.util.NotEnoughResourcesException;
-import com.eucalyptus.cloud.util.InvalidMetadataException;
 import com.eucalyptus.cluster.Cluster;
 import com.eucalyptus.cluster.Clusters;
 import com.eucalyptus.cluster.ResourceState;
@@ -242,7 +241,8 @@ public class AdmissionControl {
     @Override
     public void allocate( Allocation allocInfo ) throws Exception {
       RunInstancesType request = allocInfo.getRequest( );
-      String clusterName = allocInfo.getPartition( ).getName( );
+      Partition reqPartition = allocInfo.getPartition();
+      String zoneName = reqPartition.getName( );
       String vmTypeName = allocInfo.getVmType( ).getName( );
       
       /* Validate min and max amount */
@@ -251,14 +251,17 @@ public class AdmissionControl {
       if(minAmount > maxAmount)
     	  throw new RuntimeException("Maximum instance count must not be smaller than minimum instance count");
       
+      /* Retrieve our context and list of clusters associated with this zone */
       Context ctx = Contexts.lookup( );
-      String zoneName = ( clusterName != null )
-        ? clusterName
-        : "default";
       List<Cluster> authorizedClusters = this.doPrivilegedLookup( zoneName, vmTypeName );
+      
       int remaining = maxAmount;
+      int allocated = 0;
       int available = 0;
+      
       LOG.info( "Found authorized clusters: " + Iterables.transform( authorizedClusters, HasName.GET_NAME ) );
+      
+      /* Do we have any VM available throughout our clusters? */
       if ( ( available = checkAvailability( vmTypeName, authorizedClusters ) ) < minAmount ) {
         throw new NotEnoughResourcesException( "Not enough resources (" + available + " in " + zoneName + " < " + minAmount + "): vm instances." );
       } else {
@@ -268,13 +271,38 @@ public class AdmissionControl {
           } else {
             ResourceState state = cluster.getNodeState( );
             Partition partition = cluster.getConfiguration( ).lookupPartition( );
+            
+            /* Has a partition been set if the AZ was not specified? */
+            if( allocInfo.getPartition( ).equals( Partition.DEFAULT ) ) {
+            	/* 
+            	 * Ok, do we have enough slots in this partition to support our request? We should have at least
+            	 * the minimum. The list is sorted in order of resource availability from the cluster with the most 
+            	 * available to the cluster with the least amount available. This is why we don't check against the
+            	 * maxAmount value since its a best effort at this point. If we select the partition here and we
+            	 * can't fit maxAmount, based on the sorting order, the next partition will not fit maxAmount anyway. 
+            	 */
+            	int zoneAvailable = checkZoneAvailability( vmTypeName, partition, authorizedClusters );
+            	if( zoneAvailable < minAmount )
+            	  continue;
+            	
+            	/* Lets use this partition */
+                allocInfo.setPartition( partition );
+            }
+            else if( !allocInfo.getPartition( ).equals( partition ) ) {
+              /* We should only pick clusters that are part of the selected AZ */
+          	  continue;
+            }
+            
             if ( allocInfo.getBootSet( ).getMachine( ) instanceof BlockStorageImageInfo ) {
               try {
                 ServiceConfiguration sc = Topology.lookup( Storage.class, partition );
               } catch ( Exception ex ) {
+                allocInfo.abort( );
+                allocInfo.setPartition( reqPartition );
                 throw new NotEnoughResourcesException( "Not enough resources: Cannot run EBS instances in partition w/o a storage controller: " + ex.getMessage( ), ex );
               }
             }
+            
             try {
               int tryAmount = ( remaining > state.getAvailability( vmTypeName ).getAvailable( ) )
                 ? state.getAvailability( vmTypeName ).getAvailable( )
@@ -282,18 +310,35 @@ public class AdmissionControl {
               
               List<ResourceToken> tokens = this.requestResourceToken( allocInfo, tryAmount, maxAmount );
               remaining -= tokens.size( );
-              allocInfo.setPartition( partition );
+              allocated += tokens.size( );
             } catch ( Exception t ) {
               LOG.error( t );
               Logs.extreme( ).error( t, t );
+              
+              allocInfo.abort( );
+              allocInfo.setPartition( reqPartition );
+              
               /* if we still have some allocation remaining AND no more resources are available */
-              if ( ( ( available = checkAvailability( vmTypeName, authorizedClusters ) ) < remaining ) && ( remaining > 0 ) ) {
-                allocInfo.abort( );
+              if ( ( ( available = checkZoneAvailability( vmTypeName, partition, authorizedClusters ) ) < remaining ) && ( remaining > 0 ) ) {
                 throw new NotEnoughResourcesException( "Not enough resources (" + available + " in " + zoneName + " < " + minAmount + "): vm instances.", t );
               } else {
                 throw new NotEnoughResourcesException( t.getMessage(), t );
               }
             }
+          }
+        }
+        
+        /* Were we able to meet our minimum requirements? */
+        if ( ( allocated < minAmount) && ( remaining > 0 ) ) {
+          allocInfo.abort( );
+          allocInfo.setPartition( reqPartition );
+          
+          if( reqPartition.equals( Partition.DEFAULT ) ) {
+            throw new NotEnoughResourcesException( "Not enough resources available in all zone for " + minAmount + "): vm instances." );
+          }
+          else {
+        	available = checkZoneAvailability( vmTypeName, reqPartition, authorizedClusters );
+            throw new NotEnoughResourcesException( "Not enough resources (" + available + " in " + zoneName + " < " + minAmount + "): vm instances." );
           }
         }
       }
@@ -309,9 +354,22 @@ public class AdmissionControl {
       return available;
     }
     
+    private int checkZoneAvailability( String vmTypeName, Partition partition, List<Cluster> authorizedClusters ) throws NotEnoughResourcesException {
+      int available = 0;
+      for ( Cluster authorizedCluster : authorizedClusters ) {
+    	if( !authorizedCluster.getConfiguration( ).lookupPartition( ).equals( partition ) )
+    		continue;
+    	
+        VmTypeAvailability vmAvailability = authorizedCluster.getNodeState( ).getAvailability( vmTypeName );
+        available += vmAvailability.getAvailable( );
+        LOG.info( "Availability: " + authorizedCluster.getName( ) + " -> " + vmAvailability.getAvailable( ) );
+      }
+      return available;
+    }
+      
     private List<Cluster> doPrivilegedLookup( String partitionName, String vmTypeName ) throws NotEnoughResourcesException {
-      if ( "default".equals( partitionName ) ) {
-        Iterable<Cluster> authorizedClusters = Iterables.filter( Clusters.getInstance( ).listValues( ), RestrictedTypes.filterPrivileged( ) );
+      if ( Partition.DEFAULT_NAME.equals( partitionName ) ) {
+        Iterable<Cluster> authorizedClusters = Iterables.filter( Clusters.getInstance( ).listValues( ), RestrictedTypes.filterPrivilegedWithoutOwner( ) );
         Multimap<VmTypeAvailability, Cluster> sorted = TreeMultimap.create( );
         for ( Cluster c : authorizedClusters ) {
           sorted.put( c.getNodeState( ).getAvailability( vmTypeName ), c );
@@ -402,7 +460,7 @@ public class AdmissionControl {
           EntityTransaction db = Entities.get( ExtantNetwork.class );
           try {
             ExtantNetwork exNet = Entities.merge( rscToken.getExtantNetwork( ) );
-            assertThat( exNet, notNullValue( ) );
+            checkParam( exNet, notNullValue() );
             PrivateNetworkIndex addrIndex = exNet.allocateNetworkIndex( );
             rscToken.setNetworkIndex( addrIndex );
             rscToken.setExtantNetwork( Entities.merge( exNet ) );

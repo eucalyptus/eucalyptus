@@ -1017,21 +1017,28 @@ adb_ncDescribeSensorsResponse_t* ncDescribeSensorsMarshal (adb_ncDescribeSensors
     // get operation-specific fields from input
     int historySize = adb_ncDescribeSensorsType_get_historySize(input, env);
     long long collectionIntervalTimeMs = adb_ncDescribeSensorsType_get_collectionIntervalTimeMs(input, env);
+
     int instIdsLen = adb_ncDescribeSensorsType_sizeof_instanceIds(input, env);
-    char ** instIds = malloc (sizeof(char *) * instIdsLen);
-    if (instIds == NULL) {
-        logprintfl (EUCAERROR, "out of memory for 'instIds'\n");
-        goto reply;
+    char ** instIds = NULL;
+    if (instIdsLen > 0) {
+        instIds = malloc (sizeof(char *) * instIdsLen);
+        if (instIds == NULL) {
+            logprintfl (EUCAERROR, "out of memory for 'instIds'\n");
+            goto reply;
+        }
     }
     for (int i=0; i<instIdsLen; i++) {
         instIds[i] = adb_ncDescribeSensorsType_get_instanceIds_at(input, env, i);
     }
 
     int sensorIdsLen = adb_ncDescribeSensorsType_sizeof_sensorIds(input, env);
-    char ** sensorIds = malloc (sizeof(char *) * sensorIdsLen);
-    if (sensorIds == NULL) {
-        logprintfl (EUCAERROR, "out of memory for 'sensorIds'\n");
-        goto reply;
+    char ** sensorIds = NULL;
+    if (sensorIdsLen > 0) {
+        sensorIds = malloc (sizeof(char *) * sensorIdsLen);
+        if (sensorIds == NULL) {
+            logprintfl (EUCAERROR, "out of memory for 'sensorIds'\n");
+            goto reply;
+        }
     }
     for (int i=0; i<sensorIdsLen; i++) {
         sensorIds[i] = adb_ncDescribeSensorsType_get_sensorIds_at(input, env, i);
@@ -1049,7 +1056,13 @@ adb_ncDescribeSensorsResponse_t* ncDescribeSensorsMarshal (adb_ncDescribeSensors
 
         if (error) {
             logprintfl (EUCAERROR, "failed error=%d\n", error);
-
+            if (outResourcesLen) {
+				for (int i = 0; i < outResourcesLen; i++) {
+					if (outResources[i])
+						free(outResources[i]);
+				}
+                free (outResources);
+            }
         } else {
 
             // set standard fields in output
@@ -1070,13 +1083,12 @@ adb_ncDescribeSensorsResponse_t* ncDescribeSensorsMarshal (adb_ncDescribeSensors
         }
     }
     // eventlog("NC", userId, correlationId, "DescribeSensors", "end");
-    if (instIds)
-        free (instIds);
-    if (sensorIds)
-        free (sensorIds);
+    free (sensorIds);
 
  reply:
     
+    free (instIds);
+
     if (result == ERROR) {
         adb_ncDescribeSensorsResponseType_set_return(output, env, AXIS2_FALSE);
     } else {

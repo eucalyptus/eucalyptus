@@ -1,3 +1,23 @@
+/*************************************************************************
+ * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; version 3 of the License.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see http://www.gnu.org/licenses/.
+ *
+ * Please contact Eucalyptus Systems, Inc., 6755 Hollister Ave., Goleta
+ * CA 93117, USA or visit http://www.eucalyptus.com/licenses/ if you need
+ * additional information or have any questions.
+ ************************************************************************/
+
 package com.eucalyptus.troubleshooting.checker;
 
 import java.lang.management.GarbageCollectorMXBean;
@@ -49,7 +69,7 @@ public class MemoryCheck {
 		private long pollInterval;
 		private Class <? extends ComponentId> componentIdClass;
 
-		private Set<String> alreadyFaulted = new HashSet<String>();
+		private boolean alreadyFaulted = false;
 
 		public GarbageCollectionChecker(double ratio) {
 			this.ratio = ratio;
@@ -69,7 +89,6 @@ public class MemoryCheck {
 			List<MemoryPoolMXBean> beans = ManagementFactory.getMemoryPoolMXBeans();
 			boolean noOldGenBeans = true;
 			if (null != beans) {
-				boolean alreadyFaulted = false;
 				for (MemoryPoolMXBean bean : beans) {
 					String name = bean.getName();
 					if (!name.contains("Old Gen")) continue;

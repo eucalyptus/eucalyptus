@@ -62,17 +62,14 @@
 
 package com.eucalyptus.entities;
 
-import static org.hamcrest.MatcherAssert.assertThat;
+import static com.eucalyptus.util.Parameters.checkParam;
 import static org.hamcrest.Matchers.*;
 import java.lang.ref.WeakReference;
-import java.util.Iterator;
 import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.UUID;
-import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentNavigableMap;
 import java.util.concurrent.ConcurrentSkipListMap;
-import javax.jms.IllegalStateException;
 import javax.persistence.EntityManager;
 import javax.persistence.EntityManagerFactory;
 import javax.persistence.EntityTransaction;
@@ -81,7 +78,6 @@ import javax.persistence.PersistenceException;
 import org.apache.commons.lang.time.StopWatch;
 import org.apache.log4j.Logger;
 import org.hibernate.Criteria;
-import org.hibernate.HibernateException;
 import org.hibernate.LockMode;
 import org.hibernate.NonUniqueResultException;
 import org.hibernate.Query;
@@ -92,19 +88,16 @@ import org.hibernate.criterion.MatchMode;
 import org.hibernate.criterion.Restrictions;
 import org.hibernate.ejb.EntityManagerFactoryImpl;
 import org.hibernate.exception.ConstraintViolationException;
-import com.eucalyptus.bootstrap.Databases;
 import com.eucalyptus.event.ClockTick;
 import com.eucalyptus.event.Event;
 import com.eucalyptus.event.EventListener;
 import com.eucalyptus.records.EventType;
 import com.eucalyptus.records.Logs;
 import com.eucalyptus.system.Threads;
-import com.eucalyptus.util.Classes;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.HasNaturalId;
 import com.eucalyptus.util.LogUtil;
 import com.google.common.base.Joiner;
-import com.google.common.base.Predicate;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 
@@ -585,9 +578,9 @@ public class EntityWrapper<TYPE> {
       try {
         this.eventLog( TxStep.BEGIN, TxEvent.CREATE );
         final EntityManagerFactory anemf = ( EntityManagerFactoryImpl ) PersistenceContexts.getEntityManagerFactory( ctx );
-        assertThat( anemf, notNullValue( ) );
+        checkParam( anemf, notNullValue() );
         this.em = anemf.createEntityManager( );
-        assertThat( this.em, notNullValue( ) );
+        checkParam( this.em, notNullValue() );
         this.transaction = this.em.getTransaction( );
         this.transaction.begin( );
         this.session = new WeakReference<Session>( ( Session ) this.em.getDelegate( ) );

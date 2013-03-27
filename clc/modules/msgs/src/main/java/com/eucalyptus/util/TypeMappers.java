@@ -62,7 +62,7 @@
 
 package com.eucalyptus.util;
 
-import static org.hamcrest.MatcherAssert.assertThat;
+import static com.eucalyptus.util.Parameters.checkParam;
 import static org.hamcrest.Matchers.*;
 import java.util.Comparator;
 import java.util.List;
@@ -115,8 +115,8 @@ public class TypeMappers {
   }
   
   public static <A, B> Function<A, B> lookup( Class<A> a, Class<B> b ) {
-    assertThat( knownMappers.keySet( ), hasItem( a ) );
-    assertThat( knownMappers.get( a ), hasItem( b ) );
+    checkParam( knownMappers.keySet(), hasItem( a ) );
+    checkParam( knownMappers.get( a ), hasItem( b ) );
     String key = Joiner.on( "=>" ).join( a, b );
     return mappers.get( key );
   }
@@ -161,8 +161,8 @@ public class TypeMappers {
     EventRecord.here( TypeMapperDiscovery.class, EventType.BOOTSTRAP_INIT_DISCOVERY, "mapper", from.getCanonicalName( ), to.getCanonicalName( ),
                       mapper.getClass( ).getCanonicalName( ) ).info( );
     String key = Joiner.on( "=>" ).join( from, to );
-    assertThat( knownMappers.get( from ), not( hasItem( to ) ) );
-    assertThat( mappers, not( hasKey( key ) ) );
+    checkParam( knownMappers.get( from ), not( hasItem( to ) ) );
+    checkParam( mappers, not( hasKey( key ) ) );
     knownMappers.put( from, to );
     mappers.put( key, mapper );
     

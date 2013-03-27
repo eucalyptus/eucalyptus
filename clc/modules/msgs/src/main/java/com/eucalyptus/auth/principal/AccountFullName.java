@@ -67,7 +67,7 @@ import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.util.FullName;
 import com.eucalyptus.util.OwnerFullName;
-import static org.hamcrest.MatcherAssert.assertThat;
+import static com.eucalyptus.util.Parameters.checkParam;
 import static org.hamcrest.Matchers.notNullValue;
 
 public class AccountFullName implements OwnerFullName {
@@ -80,9 +80,9 @@ public class AccountFullName implements OwnerFullName {
   private final String        qName;
   
   protected AccountFullName( OwnerFullName ownerFn, String... relativePath ) {
-    assertThat( ownerFn, notNullValue( ) );
+    checkParam( ownerFn, notNullValue() );
     this.accountNumber = ownerFn.getAccountNumber( );
-    assertThat( this.accountNumber, notNullValue( ) );
+    checkParam( this.accountNumber, notNullValue() );
     //this.accountName = ownerFn.getAccountName( );
     this.accountName = null;
     this.authority = ownerFn.getAuthority( );
@@ -92,7 +92,7 @@ public class AccountFullName implements OwnerFullName {
   
   protected AccountFullName( Account account, String... relativePath ) {
     this.accountNumber = account.getAccountNumber( );
-    assertThat( this.accountNumber, notNullValue( ) );
+    checkParam( this.accountNumber, notNullValue() );
     //this.accountName = account.getName( );
     this.accountName = null;
     this.authority = new StringBuilder( ).append( FullName.PREFIX ).append( FullName.SEP ).append( VENDOR ).append( FullName.SEP ).append( FullName.SEP ).append( this.accountNumber ).append( FullName.SEP ).toString( );

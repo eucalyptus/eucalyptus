@@ -21,13 +21,13 @@
 <eucafaults version="1" description="Templates for the fault subsystem">
   <fault
     id="1005"
-    message="Running very low on perm-gen memory.">
+    message="Java is running very low on perm-gen memory.">
 
     <condition
-      message="Running very low on memory, in perm-gen memory."/>
+      message="Running very low on perm-gen memory in Java."/>
 
     <cause
-      message="Not enough memory in perm-gen memory."/>
+      message="Too much perm-gen memory in use: too many class/objects may be defined. Not enough memory available in perm-gen memory."/>
 
     <initiator
       message="${component}"/>
@@ -37,8 +37,12 @@
 
     <resolution>
       <message>
-        1) Set -XX:PermSize and -XX:MaxPermSize appropriately.
-        2) Buy more memory.
+        1) Ensure that the CLOUD_OPTS variable set in eucalyptus.conf includes a value for 
+           --XX:MaxPermSize. Set or increase this value as necessary: by default, it should be at 
+           least 64MB. This value can be expressed in bytes, or as '64M', '1G' etc.
+        2) Restart the cloud application.
+        3) If this condition continues despite a high value for --XX:MaxPermSize, it may be 
+           necessary to add more physical memory to the machine.
       </message>
     </resolution>
   </fault>

@@ -1,0 +1,196 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE html
+  PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xml:lang="en-us" lang="en-us">
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+<meta name="DC.Type" content="task"/>
+<meta name="DC.Title" content="Create Instances"/>
+<meta name="abstract" content="This screen allows you create a new instance."/>
+<meta name="description" content="This screen allows you create a new instance."/>
+<meta name="prodname" content="Eucalyptus"/>
+<meta name="version" content="3.2"/>
+<meta name="copyright" content="Eucalyptus Systems 2012" type="primary"/>
+<meta name="DC.Rights.Owner" content="Eucalyptus Systems 2012" type="primary"/>
+<meta name="DC.Format" content="XHTML"/>
+<meta name="DC.Identifier" content="launch_instances_ui_context"/>
+<link rel="stylesheet" type="text/css" href="/css/eucalyptus.css"/>
+<title>Create Instances</title>
+</head>
+<body id="launch_instances_ui_context" class="help-page-body">
+
+
+    <h1 class="title topictitle1">创建虚拟机实例</h1>
+
+    
+    <div class="body taskbody"><p class="shortdesc"> 你可以在本窗口创建虚拟机实例.</p>
+</div>
+
+    <div class="topic task nested1" id="launch_instances_ui_image_steps">
+        <h2 class="title topictitle2">选择一个虚拟机模版</h2>
+
+        
+        <div class="body taskbody"><p class="shortdesc">在这里选择一个虚拟机模板来创建虚拟机.</p>
+
+            <ol class="ol steps"><li class="li step">
+
+                    <span class="ph cmd">选择用过滤下列列表或者<span class="ph uicontrol">搜索</span>文本框来定位你要选择的虚拟机模板.</span>
+                </li>
+<li class="li step">
+                    <span class="ph cmd"> 在<span class="ph uicontrol">选择模板</span>列表中选中你要的模板. </span>
+                </li>
+<li class="li step">
+                    <span class="ph cmd"> 点击 <span class="ph uicontrol">下一步: 选择虚拟机类型</span> 按钮，进入
+                         <span class="ph uicontrol">虚拟机类型</span> 版面. </span>
+                </li>
+</ol>
+
+        </div>
+
+    </div>
+
+    <div class="topic task nested1" id="launch_instances_ui_type_steps">
+        <h2 class="title topictitle2">选择虚拟机类型</h2>
+
+        
+        <div class="body taskbody"><p class="shortdesc">在本版面你可以指定虚拟机的大小，虚拟机数目，可用区域</p>
+
+            <ol class="ol steps"><li class="li step">
+                    <span class="ph cmd"> 通过点击相应的图标指定虚拟机大小. </span>
+                     
+                        <div class="note note"><span class="notetitle">提示:</span>  通过点击虚拟机大小连接可以得到虚拟机大小的详细信息. </div>
+
+                    
+                </li>
+<li class="li step">
+                    <span class="ph cmd"> 可选则的，你可以在
+                            <span class="ph uicontrol">虚拟机数目</span> 文本框，输入你要创建的虚拟机的数目</span>
+                </li>
+<li class="li step">
+                    <span class="ph cmd"> 如果不用缺省区域，你可以在 <span class="ph uicontrol">可用区域</span>
+                        下拉列表框中指定一个. </span>
+                </li>
+<li class="li step">
+                    <span class="ph cmd"> 点击 <span class="ph uicontrol">下一步: 选择安全管理</span> 按钮 进入
+                        <span class="ph uicontrol">安全管理</span> 版面. </span>
+                </li>
+</ol>
+
+        </div>
+
+    </div>
+
+    <div class="topic task nested1" id="launch_instances_ui_security_steps">
+        <h2 class="title topictitle2">安全管理</h2>
+
+        
+
+        <div class="body taskbody"><p class="shortdesc">在本版面，你可以为要创建的虚拟机实列指定密钥对和安全组. 
+        	  提示: 你在这里创建的密钥对和安全组会自动被虚拟机实例使用. </p>
+
+            <ol class="ol steps"><li class="li step">
+                    <span class="ph cmd"> 在<span class="ph uicontrol">密钥对</span> 下拉列表.选择一个密钥对 </span>
+                     
+                        <div class="note note"><span class="notetitle">提示:</span> 点击 <span class="ph uicontrol">创建密钥对</span> link to display the <span class="ph uicontrol">Create new
+                                key pair</span> 对话框，你可以创建新的密钥对. </div>
+
+                    
+
+                </li>
+<li class="li step">
+                    <span class="ph cmd"> 在 <span class="ph uicontrol">安全组</span>下拉列表框，
+                        选择一个安全组.</span>
+                     
+                        <div class="note note"><span class="notetitle">提示:</span>  点击
+                                <span class="ph uicontrol">新建安全组</span> 连接，可以显示
+                                <span class="ph uicontrol">新建安全组</span> 对话框. 你可以在对话框里新建一个安全组</div>
+
+                        <div class="note note"><span class="notetitle">提示:</span> 
+                            如果你选择缺省安全组，请加入相关规则到缺省安全组来保证你一访问你建立的虚拟机实例.
+                        </div>
+
+                    
+                </li>
+<li class="li step">
+                    <span class="ph cmd"> 点击
+                            <span class="ph uicontrol">选择高级选项</span> 连接. 你可以设置一些高级选项 </span>
+                </li>
+<li class="li step">
+                    <span class="ph cmd"> 点击 <span class="ph uicontrol">发布虚拟机实例</span> 按钮. </span>
+                </li>
+</ol>
+
+        </div>
+
+    </div>
+
+    <div class="topic task nested1" id="launch_instances_ui_advanced_steps">
+        <h2 class="title topictitle2">指定高级选项</h2>
+
+        
+        <div class="body taskbody"><p class="shortdesc">在本版面，你可以为虚拟机指定一些高级选贤，包括制定用户数据，指定内核和内存盘的标示，私有网络和扩展存储.</p>
+
+            <ol class="ol steps"><li class="li step">
+                    <span class="ph cmd"> 通过在 <span class="ph uicontrol">用户数据</span> 文本框输入或者在
+                            <span class="ph uicontrol">附件</span> 连接上传文件. 你可以指定用户自定义的数据</span>
+                </li>
+<li class="li step">
+                    <span class="ph cmd"> 在
+                            <span class="ph uicontrol">内核ID</span> 下拉列表中.指定一个内核 </span>
+                </li>
+<li class="li step">
+                    <span class="ph cmd"> 在
+                            <span class="ph uicontrol">内存盘ID</span> 下拉列表中，指定一个内存盘. </span>
+                </li>
+<li class="li step">
+                    <span class="ph cmd"> 点击 <span class="ph uicontrol">网路</span> 选项框，为虚拟机实例指定私有地址.
+                    	  私有地址不能直接连到Internet，要连接到Internet,需要通过NAT或者为虚拟机设置弹性IP. </span>
+                </li>
+<li class="li step">
+                    <span class="ph cmd">你可以为虚拟机添加一个或者多个扩展存储设备:</span>
+                    <ol type="a" class="ol substeps" id="launch_instances_ui_advanced_steps__launch_instances_ui_advanced_storage_steps">
+                        <li class="li substep">
+                            <span class="ph cmd"> 在
+                                    <span class="ph uicontrol">存储卷</span> 下拉列表中指定存储设备类型(EBS或者ephemeral). </span>
+                        </li>
+
+                        <li class="li substep">
+                            <span class="ph cmd"> 在
+                                    <span class="ph uicontrol">映射</span> 文本框输入设备映射名(例如, sdc 对应 /dev/sdc). </span>
+                        </li>
+
+                        <li class="li substep">
+                            <span class="ph cmd"> 如果你想从存储快照建立一个存储卷，可以在
+                                the snapshot using the <span class="ph uicontrol">从快照建立</span>
+                                下拉列表中选择一个快照来创建 </span>
+                        </li>
+
+                        <li class="li substep">
+                            <span class="ph cmd"> 在
+                                    <span class="ph uicontrol">大小 (GB) </span>文本框，输入存储设备的大小.单位为G </span>
+                        </li>
+
+                        <li class="li substep">
+                            <span class="ph cmd"> 选择 <span class="ph uicontrol">在终止后删除</span> 选项
+                                如果你想删除这个存储设备当虚拟机被终止后. </span>
+                        </li>
+
+                        <li class="li substep">
+                            <span class="ph cmd"> 点击 <span class="ph uicontrol">继续添加</span> 按钮 继续为虚拟机添加存储设备 </span>
+                        </li>
+
+                    </ol>
+
+                </li>
+<li class="li step">
+                    <span class="ph cmd"> 点击 <span class="ph uicontrol">发布虚拟机实例</span> 按钮，发布虚拟实例. </span>
+                </li>
+</ol>
+
+        </div>
+
+    </div>
+
+
+</body>
+</html>

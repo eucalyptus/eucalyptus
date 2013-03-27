@@ -66,16 +66,19 @@
        percent = Math.max(0, percent);
        thisObj.element.find('#euca-notification-progress').progressbar({value: percent});
        thisObj.element.find('#euca-notification-progress').show();
+       thisObj.element.find('#euca-notification-title').html('');
        if(desc)
          thisObj.element.find('#euca-notification-desc').html(desc);
 
        // check if the notification is in progress-mode and the id is for this progress report
          // toggle and show the progress
-       if( !this.element.hasClass('toggle-on') && !thisObj.element.attr('in-progress') ){ 
+       if( !this.element.hasClass('toggle-on') && !thisObj.element.hasClass('in-progress') ){ 
          this.element.slideToggle('fast');
          this.element.toggleClass('toggle-on');
        }
 
+       this.element.removeClass('success-msg');
+       this.element.removeClass('error-msg');
        // set the percentage
        if( percent === 100){
          // now set the description and error
@@ -90,11 +93,11 @@
              });
              thisObj.element.find('#euca-notification-desc').append(
                $('<div>').addClass('euca-notification-error').append(
-                 $('<textarea>').attr('id','euca-notification-error-list').attr('disabled','true').val(errorMsg)));
+                 $('<textarea>').attr('id','euca-notification-error-list').attr('readonly','true').html(errorMsg)));
            }else
              thisObj.element.find('#euca-notification-desc .euca-notification-error').detach();
          });
-         thisObj.element.removeAttr('in-progress');
+         thisObj.element.removeClass('in-progress');
          if(error && error.length > 0)
            this.element.removeClass('success-msg').addClass('error-msg');
          else{
@@ -110,11 +113,11 @@
            this.element.toggleClass('toggle-on');
          }
        }else{
-         if( !this.element.hasClass('toggle-on')  && !thisObj.element.attr('in-progress') ){ 
+         if( !this.element.hasClass('toggle-on')  && !thisObj.element.hasClass('in-progress') ){ 
            this.element.slideToggle('fast');
            this.element.toggleClass('toggle-on');
          }
-         thisObj.element.attr('in-progress','true');
+         thisObj.element.addClass('in-progress');
        }  
     },
 
@@ -127,7 +130,7 @@
     notify : function(args) {
       var thisObj = this;
       // override notifyMulti if invoked
-      thisObj.element.removeAttr('in-progress');
+      thisObj.element.removeClass('in-progress');
       thisObj.element.find('#euca-notification-progress').hide();
 
       if(args.title){

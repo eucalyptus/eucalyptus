@@ -75,7 +75,7 @@ import com.google.common.base.Function;
 import com.google.common.base.Joiner;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Maps;
-import static org.hamcrest.MatcherAssert.assertThat;
+import static com.eucalyptus.util.Parameters.checkParam;
 import static org.hamcrest.Matchers.arrayWithSize;
 import static org.hamcrest.Matchers.notNullValue;
 import static org.hamcrest.Matchers.typeCompatibleWith;
@@ -87,31 +87,31 @@ public class ServiceUris {
       SCHEME {
         @Override
         String format( Object... args ) {
-          assertThat( args, arrayWithSize( 1 ) );
+          checkParam( args, arrayWithSize( 1 ) );
           return "" + args[0];
         }
       },
       HOST {
         @Override
         String format( Object... args ) {
-          assertThat( args, arrayWithSize( 1 ) );
-          assertThat( args[0].getClass( ), typeCompatibleWith( InetAddress.class ) );
+          checkParam( args, arrayWithSize( 1 ) );
+          checkParam( args[0].getClass(), typeCompatibleWith( InetAddress.class ) );
           return "" + ( ( InetAddress ) args[0] ).getCanonicalHostName( );
         }
       },
       PORT {
         @Override
         String format( Object... args ) {
-          assertThat( args, arrayWithSize( 1 ) );
-          assertThat( args[0].getClass( ), typeCompatibleWith( Integer.class ) );
+          checkParam( args, arrayWithSize( 1 ) );
+          checkParam( args[0].getClass(), typeCompatibleWith( Integer.class ) );
           return COLON.format( ) + args[0];
         }
       },
       SERVICEPATH {
         @Override
         String format( Object... args ) {
-          assertThat( args, arrayWithSize( 1 ) );
-          assertThat( args[0].getClass( ), typeCompatibleWith( String.class ) );
+          checkParam( args, arrayWithSize( 1 ) );
+          checkParam( args[0].getClass(), typeCompatibleWith( String.class ) );
           return SLASH.format( ) + args[0];
         }
       },
@@ -127,7 +127,7 @@ public class ServiceUris {
         @Override
         String format( Object... args ) {
           if ( args != null && args.length > 0 ) {
-            assertThat( args[0].getClass( ), typeCompatibleWith( Map.class ) );
+            checkParam( args[0].getClass(), typeCompatibleWith( Map.class ) );
             Map queryArgs = ( Map ) args[0];
             if ( !queryArgs.isEmpty( ) ) {
               Iterable argPairString = Iterables.transform( queryArgs.entrySet( ), transform );
@@ -233,8 +233,8 @@ public class ServiceUris {
     }
     
     public URI get( ) {
-      assertThat( this.address, notNullValue( ) );
-      assertThat( this.path, notNullValue( ) );
+      checkParam( this.address, notNullValue() );
+      checkParam( this.path, notNullValue() );
       if ( this.scheme == null ) this.scheme = BasicTransport.HTTP;
       if ( this.port == null ) this.port = this.componentId.getPort( );
       if ( this.internal ) this.path = this.componentId.getInternalServicePath( this.path );
@@ -252,8 +252,8 @@ public class ServiceUris {
     }
     
     public URI getPublicify( ) {
-      assertThat( this.address, notNullValue( ) );
-      assertThat( this.path, notNullValue( ) );
+      checkParam( this.address, notNullValue() );
+      checkParam( this.path, notNullValue() );
       if ( this.scheme == null ) this.scheme = BasicTransport.HTTP;
       if ( this.port == null ) this.port = this.componentId.getPort( );
       if ( this.internal ) this.path = this.componentId.getInternalServicePath( this.path );

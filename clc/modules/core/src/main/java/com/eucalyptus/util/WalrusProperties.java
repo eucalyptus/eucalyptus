@@ -87,7 +87,7 @@ public class WalrusProperties {
 	public static String WALRUS_SUBDOMAIN = "walrus";
 
 	public static final String bucketRootDirectory = BaseDirectory.VAR.toString() + "/bukkits";
-	public static int MAX_BUCKETS_PER_ACCOUNT = 5;
+	public static int MAX_BUCKETS_PER_ACCOUNT = 100;
 	public static long MAX_BUCKET_SIZE = 5 * G;
 	public static long IMAGE_CACHE_SIZE = 30 * G;
 	public static String WALRUS_URL;

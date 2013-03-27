@@ -20,7 +20,7 @@
 
 package com.eucalyptus.reporting.event;
 
-import static org.hamcrest.MatcherAssert.assertThat;
+import static com.eucalyptus.util.Parameters.checkParam;
 import static org.hamcrest.Matchers.greaterThan;
 import static org.hamcrest.Matchers.not;
 import static org.hamcrest.Matchers.notNullValue;
@@ -91,9 +91,9 @@ public class SnapShotEvent implements Event {
   public static EventActionInfo<SnapShotAction> forSnapShotCreate( final Integer size,
                                                                    final String volumeUuid,
                                                                    final String volumeId ) {
-    assertThat(size, greaterThan( -1 ));
-    assertThat(volumeUuid, not( isEmptyOrNullString() ));
-    assertThat(volumeId, not( isEmptyOrNullString() ));
+    checkParam( size, greaterThan( -1 ) );
+    checkParam( volumeUuid, not( isEmptyOrNullString() ) );
+    checkParam( volumeId, not( isEmptyOrNullString() ) );
 
     return new CreateActionInfo( size, volumeUuid, volumeId );
   }
@@ -114,10 +114,10 @@ public class SnapShotEvent implements Event {
                          final String uuid,
                          final String snapshotId,
                          final String userId ) {
-    assertThat(actionInfo, notNullValue());
-    assertThat(uuid, not( isEmptyOrNullString() ));
-    assertThat(userId, not( isEmptyOrNullString() ));
-    assertThat(snapshotId, not( isEmptyOrNullString() ));
+    checkParam( actionInfo, notNullValue() );
+    checkParam( uuid, not( isEmptyOrNullString() ) );
+    checkParam( userId, not( isEmptyOrNullString() ) );
+    checkParam( snapshotId, not( isEmptyOrNullString() ) );
     this.actionInfo = actionInfo;
     this.userId = userId;
     this.snapshotId = snapshotId;

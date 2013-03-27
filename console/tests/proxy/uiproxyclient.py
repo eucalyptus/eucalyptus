@@ -1,3 +1,27 @@
+# Copyright 2012 Eucalyptus Systems, Inc.
+#
+# Redistribution and use of this software in source and binary forms,
+# with or without modification, are permitted provided that the following
+# conditions are met:
+#
+#   Redistributions of source code must retain the above copyright notice,
+#   this list of conditions and the following disclaimer.
+#
+#   Redistributions in binary form must reproduce the above copyright
+#   notice, this list of conditions and the following disclaimer in the
+#   documentation and/or other materials provided with the distribution.
+#
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+# "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+# LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+# A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+# OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+# SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+# LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+# DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+# THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+# (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+# OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 import base64
 #from poster.encode import multipart_encode
@@ -22,9 +46,8 @@ class UIProxyClient(object):
         self.host = host
         self.port = port
         req = urllib2.Request("http://%s:%s/"%(host, port))
-        data = "action=login&remember=no"
         encoded_auth = base64.encodestring("%s:%s:%s" % (account, username, password))[:-1]
-        req.add_header('Authorization', "Basic %s" % encoded_auth)
+        data = "action=login&remember=no&Authorization="+encoded_auth
         response = urllib2.urlopen(req, data)
         self.session_cookie = response.headers.get('Set-Cookie')
         print self.session_cookie
@@ -47,15 +70,17 @@ class UIProxyClient(object):
             params["%s.%d" % (name, idx + 1)] = val
 
     def __make_request__(self, action, params):
+        url = 'http://%s:%s/ec2?'%(self.host, self.port)
         for param in params.keys():
             if params[param]==None:
                 del params[param]
         params['Action'] = action
-        url = 'http://%s:%s/ec2?'%(self.host, self.port) + urllib.urlencode(params)
+        params['_xsrf'] = self.xsrf
+        data = urllib.urlencode(params)
         try:
             req = urllib2.Request(url)
             self.__check_logged_in__(req)
-            response = urllib2.urlopen(req)
+            response = urllib2.urlopen(req, data)
             return json.loads(response.read())
         except urllib2.URLError, err:
             print "Error! "+str(err.code)
@@ -112,21 +137,9 @@ class UIProxyClient(object):
         if key_name:
             params['KeyName'] = key_name
         if security_group_ids:
-            l = []
-            for group in security_group_ids:
-                if isinstance(group, SecurityGroup):
-                    l.append(group.id)
-                else:
-                    l.append(group)
-            self.build_list_params(params, l, 'SecurityGroupId')
+            self.__add_param_list__(params, 'SecurityGroupId', security_group_ids);
         if security_groups:
-            l = []
-            for group in security_groups:
-                if isinstance(group, SecurityGroup):
-                    l.append(group.name)
-                else:
-                    l.append(group)
-            self.build_list_params(params, l, 'SecurityGroup')
+            self.__add_param_list__(params, 'SecurityGroup', security_groups);
         if user_data:
             params['UserData'] = base64.b64encode(user_data)
         if addressing_type:
@@ -224,7 +237,7 @@ class UIProxyClient(object):
 
     # returns True if successful
     def create_security_group(self, name, description):
-        return self.__make_request__('CreateSecurityGroup', {'GroupName': name, 'GroupDescription': description})
+        return self.__make_request__('CreateSecurityGroup', {'GroupName': name, 'GroupDescription': base64.encodestring(description)})
 
     # returns True if successful
     def delete_security_group(self, name=None, group_id=None):
@@ -324,7 +337,7 @@ class UIProxyClient(object):
     def create_snapshot(self, volume_id, description=None):
         params = {'VolumeId': volume_id}
         if description:
-            params['Description'] = description
+            params['Description'] = base64.b64encode(description)
         return self.__make_request__('CreateSnapshot', params)
 
     def delete_snapshot(self, snapshot_id):
@@ -343,3 +356,11 @@ class UIProxyClient(object):
 
     def reset_snapshot_attribute(self, snapshot_id, attribute='createVolumePermission'):
         return self.__make_request__('ResetSnapshotAttribute', {'SnapshotId': snapshot_id, 'Attribute': attribute})
+
+    ##
+    # Register/deregister image
+    ##
+    def register_snapshot_as_image(self, snapshot_id, name):
+        return self.__make_request__('RegisterImage', {'SnapshotId': snapshot_id, 'Name': name})
+    def deregister_image(self, image_id):
+        return self.__make_request__('DeregisterImage', {'ImageId': image_id})

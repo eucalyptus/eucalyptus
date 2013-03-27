@@ -25,8 +25,11 @@
 
 from boto.roboto.awsqueryrequest import AWSQueryRequest, RequiredParamError
 from boto.roboto.param import Param
+from . import describeservices
+from . import EucadminRequest
 import boto.exception
 import eucadmin
+import sys
 
 class FixPortMetaClass(type):
     """
@@ -48,7 +51,7 @@ class FixPortMetaClass(type):
                             param.doc = 'Port for service (default=%d)' % port
         return type.__new__(cls, name, bases, attrs)
 
-class RegisterRequest(AWSQueryRequest):
+class RegisterRequest(EucadminRequest):
 
     __metaclass__ = FixPortMetaClass
 
@@ -111,9 +114,73 @@ class RegisterRequest(AWSQueryRequest):
             # manually.  See https://eucalyptus.atlassian.net/browse/EUCA-3670.
             msg = getattr(data, 'euca:statusMessage', 'registration failed')
             raise RuntimeError('error: ' + msg)
+        if len(self.new_partitions) == 1:
+            print >> sys.stderr, 'Created new partition \'{0}\''.format(
+                    iter(self.new_partitions).next())
+
+        # Mostly copypasted from describeservices.py.  Make sure to refactor
+        # this during the rewrite.
+        fmt = 'SERVICE\t%-15.15s\t%-15s\t%-15s\t%-10s\t%-4s\t%-40s\t%s'
+        if self.service_info:
+            service_id = self.service_info['euca:serviceId']
+            print fmt % (service_id.get('euca:type'),
+                         service_id.get('euca:partition'),
+                         service_id.get('euca:name'),
+                         self.service_info.get('euca:localState'),
+                         self.service_info.get('euca:localEpoch'),
+                         service_id.get('euca:uri'),
+                         service_id.get('euca:fullName'))
+        else:
+            print 'Registration ok; no service information is available yet'
 
     def main(self, **args):
-        return self.send(**args)
+        # We have to handle debug specially because AWSQueryRequest.send adds
+        # another log stream handler every time its gets debug=2, resulting in
+        # duplicate log messages' going to the console when debugging is
+        # enabled.
+        if 'debug' in args:
+            debug = args.pop('debug')
+            self.args.pop('debug', None)
+        else:
+            debug = self.args.pop('debug', 0)
+
+        # Roboto weirdness results in self.args *always* containing a
+        # 'partition' key, so we need to check its value separately.
+        partition = self.args.get('partition') or args.get('partition')
+        if partition is None:
+            sys.exit('error: argument --partition is required')
+
+        partitions_before = self.get_partitions(debug=debug)
+        response = self.send(**args)
+        partitions_after  = self.get_partitions()
+
+        # Also save this info for later printing
+        self.new_partitions = partitions_after - partitions_before
+        name = self.args.get('name') or args.get('name')
+        self.service_info = self.get_service_info(name)
+
+        return response
+
+    def get_service_info(self, name, debug=0):
+        obj = describeservices.DescribeServices()
+        response = obj.main(debug=debug)
+        statuses = (response.get('euca:DescribeServicesResponseType', {})
+                            .get('euca:serviceStatuses', []))
+        for status in statuses:
+            svcname = status.get('euca:serviceId', {}).get('euca:name')
+            if svcname == name:
+                return status
+
+    def get_partitions(self, debug=0):
+        obj = describeservices.DescribeServices()
+        response = obj.main(debug=debug)
+        statuses = (response.get('euca:DescribeServicesResponseType', {})
+                            .get('euca:serviceStatuses', []))
+        partitions = set()
+        for status in statuses:
+            partition = status.get('euca:serviceId', {}).get('euca:partition')
+            partitions.add(partition)
+        return partitions
 
     def main_cli(self):
         eucadmin.print_version_if_necessary()

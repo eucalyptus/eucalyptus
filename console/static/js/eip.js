@@ -40,6 +40,7 @@
       this.baseTable = $eipTable;
       this.tableWrapper = $eipTable.eucatable({
         id : 'eips', // user of this widget should customize these options,
+        hidden: thisObj.options['hidden'],
         dt_arg : {
           "bProcessing": true,
           "sAjaxSource": "../ec2?Action=DescribeAddresses",
@@ -150,7 +151,7 @@
        });
       var $ip_count_edit = $eip_allocate_dialog.find('#eip-allocate-count');
       $eip_allocate_dialog.eucadialog('buttonOnKeyup', $ip_count_edit,  allocateButtonId, function(){
-        var count = parseInt($ip_count_edit.val())
+        var count = parseInt($ip_count_edit.val());
         return $ip_count_edit.val() == count && count > 0;
       });
       // allocate eip dialog end
@@ -251,7 +252,6 @@
           url:"/ec2?Action=ReleaseAddress",
           data:"_xsrf="+$.cookie('_xsrf')+"&PublicIp="+eipId,
           dataType:"json",
-          timeout:PROXY_TIMEOUT,
           async:false,
           cache:false,
           success:
@@ -260,7 +260,7 @@
               if ( data.results && data.results == true ) {
                 ;
               } else {
-                error.push({id:eipId, reason: undefined_reason});
+                error.push({id:eipId, reason: undefined_error});
               }
            }
           })(eipId),
@@ -281,13 +281,13 @@
                 if (error.length > 0)
                   $msg.append($('<div>').addClass('multiop-summary-failure').html($.i18n.prop('eip_release_fail', error.length)));
                 notifyMulti(100, $msg.html(), error);
+                thisObj.tableWrapper.eucatable('refreshTable');
               }
               dfd.resolve();
             }
           })(eipId),
         });
       }, 100);
-      thisObj.tableWrapper.eucatable('refreshTable');
     },
 
     _disassociateListedIps : function (ipsToDisassociate) {
@@ -302,7 +302,6 @@
           url:"/ec2?Action=DisassociateAddress",
           data:"_xsrf="+$.cookie('_xsrf')+"&PublicIp="+eipId,
           dataType:"json",
-          timeout:PROXY_TIMEOUT,
           async:false,
           cache:false,
           success:
@@ -311,7 +310,7 @@
               if ( data.results && data.results == true ) {
                 ;
               } else {
-                error.push({id:eipId, reason: undefined_reason});
+                error.push({id:eipId, reason: undefined_error});
               }
            }
           })(eipId),
@@ -332,13 +331,13 @@
                 if (error.length > 0)
                   $msg.append($('<div>').addClass('multiop-summary-failure').html($.i18n.prop('eip_disassociate_fail', error.length)));
                 notifyMulti(100, $msg.html(), error);
+                thisObj.tableWrapper.eucatable('refreshTable');
               }
               dfd.resolve();
             }
           })(eipId),
         });
       }, 100);
-      thisObj.tableWrapper.eucatable('refreshTable');
     },
 
     _allocateIps : function (numberIpsToAllocate) {
@@ -358,14 +357,13 @@
           data:"_xsrf="+$.cookie('_xsrf'),
           dataType:"json",
           cache:false,
-          timeout:PROXY_TIMEOUT,
           async:false,
           success: function(data, textStatus, jqXHR){
               if ( data.results ) {
                 ip = data.results.public_ip;
                 allocatedIps.push(ip);
               } else {
-                error.push({id:'unknown', reason: undefined_reason});
+                error.push({id:'unknown', reason: undefined_error});
               }
           },
           error: function(jqXHR, textStatus, errorThrown){
@@ -381,15 +379,15 @@
               if (error.length > 0)
                 $msg.append($('<div>').addClass('multiop-summary-failure').html($.i18n.prop('eip_allocate_fail', error.length)));
               notifyMulti(100, $msg.html(), error);
+              thisObj.tableWrapper.eucatable('refreshTable');
+              $.each(allocatedIps, function(idx, ip){
+                thisObj.tableWrapper.eucatable('glowRow', ip);
+              });
             }
             dfd.resolve();
           }
         });
       }, 100);
-      thisObj.tableWrapper.eucatable('refreshTable');
-      $.each(allocatedIps, function(idx, ip){
-        thisObj.tableWrapper.eucatable('glowRow', ip);
-      });
     },
 
     _associateIp : function (publicIp, instanceId) {
@@ -432,8 +430,9 @@
         }
         if ( inst_ids.length === 0 )
           this.associateDialog.eucadialog('showError', no_running_instances);
+        var sorted_ids = sortArray(inst_ids);
         $selector.autocomplete({
-          source: inst_ids,
+          source: sorted_ids,
           select: function() { thisObj.associateDialog.eucadialog('activateButton', thisObj.associateBtnId); }
         });
         $selector.watermark(instance_id_watermark);
@@ -449,8 +448,9 @@
         } 
         if (addresses.length ===0 )
           this.associateDialog.eucadialog('showError', no_available_address);
+        var sorted = sortArray(addresses);
         $selector.autocomplete({
-          source: addresses,
+          source: sorted,
           select: function() { thisObj.associateDialog.eucadialog('activateButton', thisObj.associateBtnId); }
         });
         $selector.watermark(address_watermark);
@@ -497,7 +497,6 @@
         thisObj.associateDialog.dialog('open');
       }
     },
-
     dialogDisassociateIp : function(addresses){
       var thisObj = this;
       if ( addresses.length > 0 ) {
@@ -509,19 +508,13 @@
         thisObj.disassociateDialog.dialog('open');
       }
     },
-
     createAction : function() {
       this.allocateDialog.eucadialog('open');
     },
-
     close: function() {
 //      this.tableWrapper.eucatable('close');
       cancelRepeat(tableRefreshCallback);
       this._super('close');
-    },
-
-    keyAction : function(e) {
-      this.tableWrapper.eucatable('keyAction', e);
     },
 /**** End of Public Methods ****/
   });

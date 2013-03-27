@@ -74,21 +74,27 @@ import org.hibernate.annotations.CacheConcurrencyStrategy;
 import org.hibernate.annotations.Type;
 import org.hibernate.type.StringClobType;
 import com.eucalyptus.entities.AbstractPersistent;
+import com.eucalyptus.util.StorageProperties;
 
 @Entity @javax.persistence.Entity
 @PersistenceContext(name="eucalyptus_storage")
 @Table( name = "CHAPUserInfo" )
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
 public class CHAPUserInfo extends AbstractPersistent {
-    @Column( name = "username" )
+	private String scName;
+	
+	@Column( name = "username" )
     private String user;
     @Lob
     @Type(type="org.hibernate.type.StringClobType")
     private String encryptedPassword;
     
-    public CHAPUserInfo() {}
+    public CHAPUserInfo() {
+    	this.scName = StorageProperties.NAME;
+    }
     
     public CHAPUserInfo(String user) {
+    	this();
     	this.user = user;
     }
     
@@ -111,6 +117,14 @@ public class CHAPUserInfo extends AbstractPersistent {
 
 	public void setEncryptedPassword(String encryptedPassword) {
 		this.encryptedPassword = encryptedPassword;
+	}
+
+	public String getScName() {
+		return scName;
+	}
+
+	public void setScName(String scName) {
+		this.scName = scName;
 	}
 
 	@Override

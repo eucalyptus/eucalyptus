@@ -26,8 +26,13 @@ import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.bootstrap.Hosts;
 import com.eucalyptus.cluster.callback.DescribeSensorCallback;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.TimeUnit;
 import com.eucalyptus.util.async.AsyncRequests;
+import com.eucalyptus.vm.VmInstance;
+import com.eucalyptus.vm.VmInstances;
+import com.eucalyptus.vm.VmInstance.VmState;
 
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.Topology;
@@ -37,6 +42,9 @@ import com.eucalyptus.configurable.ConfigurableField;
 import com.eucalyptus.event.Hertz;
 import com.eucalyptus.event.EventListener;
 import com.eucalyptus.event.Listeners;
+import com.google.common.base.Predicates;
+import com.google.common.collect.Iterables;
+import com.google.common.collect.Lists;
 
 @ConfigurableClass( root = "reporting", description = "Parameters controlling reporting")
 public class DescribeSensorsListener implements EventListener<Hertz> {
@@ -47,7 +55,8 @@ public class DescribeSensorsListener implements EventListener<Hertz> {
   private Integer COLLECTION_INTERVAL_TIME_MS;
   private Integer HISTORY_SIZE = 5;
   private Integer MAX_WRITE_INTERVAL_MS = 86400000;
- 
+  private Integer SENSOR_QUERY_BATCH_SIZE = 10;
+
   private static final Logger LOG = Logger.getLogger(DescribeSensorsListener.class);
 
   public static void register() {
@@ -57,38 +66,58 @@ public class DescribeSensorsListener implements EventListener<Hertz> {
   @Override
   public void fireEvent( Hertz event ) {
    
+      if (DEFAULT_POLL_INTERVAL_MINS >= 1) {
+	  COLLECTION_INTERVAL_TIME_MS = ((int) TimeUnit.MINUTES
+		  .toMillis(DEFAULT_POLL_INTERVAL_MINS) / 2);
+      } else {
+	  COLLECTION_INTERVAL_TIME_MS = 0; 
+      }
 
-	COLLECTION_INTERVAL_TIME_MS = ((int) TimeUnit.MINUTES
-		.toMillis(DEFAULT_POLL_INTERVAL_MINS) / 2);
+      if (COLLECTION_INTERVAL_TIME_MS == 0 ) {	
+	  LOG.debug("The instance usage report is disabled");
+      } else if (COLLECTION_INTERVAL_TIME_MS <= MAX_WRITE_INTERVAL_MS) {
 
-	if (COLLECTION_INTERVAL_TIME_MS <= MAX_WRITE_INTERVAL_MS) {
+	  try {
 
-	    try {
+	      if (event.isAsserted(TimeUnit.MINUTES
+		      .toSeconds(DEFAULT_POLL_INTERVAL_MINS))) {
+		  if (Bootstrap.isFinished() && Hosts.isCoordinator()) {
 
-		if (event.isAsserted(TimeUnit.MINUTES
-			.toSeconds(DEFAULT_POLL_INTERVAL_MINS))) {
-		    if (Bootstrap.isFinished() && Hosts.isCoordinator()) {
+		      List<VmInstance> instList = VmInstances.list( VmState.RUNNING );
+		      
+		      List<String> instIdList = Lists.newArrayList();
+		      
+		      for (final VmInstance inst : instList) {
+		        instIdList.add(inst.getInstanceId());
+		      }
+		      Iterable<List<String>> processInts = Iterables.paddedPartition(instIdList, SENSOR_QUERY_BATCH_SIZE);
+		      
 
-			for (final ServiceConfiguration ccConfig : Topology
-				.enabledServices(ClusterController.class)) {
+		      for (final ServiceConfiguration ccConfig : Topology
+			      .enabledServices(ClusterController.class)) {
+			  for(List<String> instIds : processInts) {
 
-			    AsyncRequests.newRequest(
-				    new DescribeSensorCallback(HISTORY_SIZE,
-					    COLLECTION_INTERVAL_TIME_MS))
-				    .dispatch(ccConfig);
-			    LOG.debug("DecribeSensorCallback has been successfully executed");
-			}
-		    }
-		}
-	    } catch (Exception ex) {
-		LOG.error("Unable to listen for describe sensors events", ex);
-	    }
+			  ArrayList<String> instanceIds = Lists.newArrayList(instIds);
+			  Iterables.removeIf(instanceIds, Predicates.isNull());
+			  
+			  AsyncRequests.newRequest(
+				  new DescribeSensorCallback(HISTORY_SIZE,
+					  COLLECTION_INTERVAL_TIME_MS, instanceIds))
+					  .dispatch(ccConfig);
+			  LOG.debug("DecribeSensorCallback has been successfully executed");
+			  }
+		      }
+		  }
+	      }
+	  } catch (Exception ex) {
+	      LOG.error("Unable to listen for describe sensors events", ex);
+	  }
 
-	} else {
-	    LOG.error("DEFAULT_POLL_INTERVAL_MINS : "
-		    + DEFAULT_POLL_INTERVAL_MINS
-		    + " must be less than 1440 minutes");
-	}
+      } else {
+	  LOG.error("DEFAULT_POLL_INTERVAL_MINS : "
+		  + DEFAULT_POLL_INTERVAL_MINS
+		  + " must be less than 1440 minutes");
+      }
 
-    }
+  }
 }

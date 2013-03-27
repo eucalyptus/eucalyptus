@@ -62,6 +62,7 @@
 
 package com.eucalyptus.vm;
 
+import static com.eucalyptus.cloud.ImageMetadata.Platform;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
@@ -71,6 +72,8 @@ import java.util.NavigableSet;
 import java.util.NoSuchElementException;
 import java.util.Set;
 import java.util.TreeSet;
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import javax.persistence.CascadeType;
 import javax.persistence.Column;
 import javax.persistence.Embedded;
@@ -102,6 +105,8 @@ import com.eucalyptus.cloud.CloudMetadata.VmInstanceMetadata;
 import com.eucalyptus.cloud.ResourceToken;
 import com.eucalyptus.cloud.UserMetadata;
 import com.eucalyptus.cloud.run.Allocations.Allocation;
+import com.eucalyptus.cloud.util.MetadataException;
+import com.eucalyptus.cloud.util.NoSuchMetadataException;
 import com.eucalyptus.cloud.util.ResourceAllocationException;
 import com.eucalyptus.cluster.Clusters;
 import com.eucalyptus.component.ComponentIds;
@@ -123,6 +128,7 @@ import com.eucalyptus.keys.KeyPairs;
 import com.eucalyptus.keys.SshKeyPair;
 import com.eucalyptus.network.ExtantNetwork;
 import com.eucalyptus.network.NetworkGroup;
+import com.eucalyptus.network.NetworkGroups;
 import com.eucalyptus.network.PrivateNetworkIndex;
 import com.eucalyptus.records.Logs;
 import com.eucalyptus.reporting.event.InstanceCreationEvent;
@@ -136,12 +142,15 @@ import com.eucalyptus.vm.VmInstances.Timeout;
 import com.eucalyptus.vm.VmVolumeAttachment.AttachmentState;
 import com.eucalyptus.ws.StackConfiguration;
 import com.google.common.base.Function;
+import com.google.common.base.Joiner;
 import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
+import com.google.common.base.Strings;
 import com.google.common.collect.Collections2;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
+import edu.ucsb.eucalyptus.cloud.VirtualBootRecord;
 import edu.ucsb.eucalyptus.cloud.VmInfo;
 import edu.ucsb.eucalyptus.msgs.AttachedVolume;
 import edu.ucsb.eucalyptus.msgs.InstanceBlockDeviceMapping;
@@ -247,7 +256,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
     TERM( VmState.SHUTTING_DOWN, VmState.TERMINATED ),
     NOT_RUNNING( VmState.STOPPING, VmState.STOPPED, VmState.SHUTTING_DOWN, VmState.TERMINATED ),
     DONE( VmState.TERMINATED, VmState.BURIED );
-    
+
     private Set<VmState> states;
     
     VmStateSet( final VmState... states ) {
@@ -319,6 +328,37 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
     }
   }
   
+  private enum ValidateVmInfo implements Predicate<VmInfo> {
+    INSTANCE;
+
+    @Override
+    public boolean apply( VmInfo arg0 ) {
+      if ( arg0.getGroupNames( ).isEmpty( ) ) {
+        LOG.warn( "Instance " + arg0.getInstanceId( ) + " reported no groups: " + arg0.getGroupNames( ) );
+      }
+      if ( arg0.getInstanceType( ).getName( ) == null ) {
+        LOG.warn( "Instance " + arg0.getInstanceId( ) + " reported no instance type: " + arg0.getInstanceType( ) );
+      }
+      if ( arg0.getInstanceType( ).getVirtualBootRecord( ).isEmpty( ) ) {
+        LOG.warn( "Instance " + arg0.getInstanceId( ) + " reported no vbr entries: " + arg0.getInstanceType( ).getVirtualBootRecord( ) );
+        return false;
+      }
+      try {
+        VirtualBootRecord vbr = arg0.getInstanceType( ).lookupRoot( );
+      } catch ( NoSuchElementException ex ) {
+        LOG.warn( "Instance " + arg0.getInstanceId( ) + " reported no root vbr entry: " + arg0.getInstanceType( ).getVirtualBootRecord( ) );
+        return false;
+      }
+      try {
+        Topology.lookup( ClusterController.class, Clusters.getInstance( ).lookup( arg0.getPlacement( ) ).lookupPartition( ) );
+      } catch ( NoSuchElementException ex ) {
+        return false;//GRZE:ARG: skip restoring while cluster is enabling since Builder.placement() depends on a running cluster...
+      }
+      return true;
+    }
+    
+  }
+  
   public enum RestoreAllocation implements Predicate<VmInfo> {
     INSTANCE;
     
@@ -357,9 +397,10 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
       final VmState inputState = VmState.Mapper.get( input.getStateName( ) );
       if ( !VmStateSet.RUN.contains( inputState ) ) {
         return false;
+      } else if ( !ValidateVmInfo.INSTANCE.apply( input ) ) {
+        return false;
       } else {
         final UserFullName userFullName = UserFullName.getInstance( input.getOwnerId( ) );
-        
         final EntityTransaction db = Entities.get( VmInstance.class );
         boolean building = false;
         try {
@@ -438,9 +479,43 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
     }
     
     private static List<NetworkGroup> restoreNetworks( final VmInfo input, final UserFullName userFullName ) {
-      final List<NetworkGroup> networks = Lists.newArrayList( );
-      networks.addAll( Lists.transform( input.getGroupNames( ), transformNetworkNames( userFullName ) ) );
-      return networks;
+	final List<NetworkGroup> networks = Lists.newArrayList( );
+	networks.addAll( Lists.transform( input.getGroupNames( ), transformNetworkNames( userFullName ) ) );
+	Iterables.removeIf(networks, Predicates.isNull());
+
+	if ( networks.isEmpty() ) {
+	    final EntityTransaction restore = Entities.get( NetworkGroup.class );
+	    int index = input.getGroupNames().get(0).lastIndexOf("-");
+	    String truncatedSecGroup = (String) input.getGroupNames().get(0).subSequence(0, index);
+	    String orphanedSecGrp =  truncatedSecGroup.concat("-orphaned");
+
+	    try {
+		NetworkGroup found = NetworkGroups.lookup(userFullName,
+			orphanedSecGrp);
+		networks.add(found);
+		restore.commit();
+	    } catch (NoSuchMetadataException ex) {
+
+		try {
+		    NetworkGroup restoredGroup = NetworkGroups.create(userFullName,
+			    orphanedSecGrp,
+			    orphanedSecGrp);
+		    networks.add(restoredGroup);    
+		} catch (Exception e) {
+		    LOG.debug("Failed to restored security group : " + orphanedSecGrp);
+		    restore.rollback();
+		} 
+
+	    } catch (Exception e) {
+		LOG.debug("Failed to restore security group : " + orphanedSecGrp);
+		restore.rollback();
+	    } finally {
+	      if ( restore.isActive( ) ) {
+	        restore.rollback( );
+	      }
+	    }
+	}
+	return networks;
     }
     
     private static void restoreAddress( final VmInfo input, final VmInstance vmInst ) {
@@ -453,17 +528,22 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
           vmInst.updateAddresses( input.getNetParams( ).getIpAddress( ), input.getNetParams( ).getIgnoredPublicIp( ) );
         } else if ( !addr.isAssigned( ) && addr.isAllocated( ) && ( addr.isSystemOwned( ) || addr.getOwner( ).equals( userFullName ) ) ) {
           vmInst.updateAddresses( input.getNetParams( ).getIpAddress( ), input.getNetParams( ).getIgnoredPublicIp( ) );
+          if ( addr.isPending() ) try {
+            addr.clearPending();
+          } catch ( Exception e ) {
+          }
           addr.assign( vmInst ).clearPending();
-        } else {
-          vmInst.updateAddresses( input.getNetParams( ).getIpAddress( ), input.getNetParams( ).getIpAddress( ) );
+        } else { // the public address used by the instance is not available
+          vmInst.updateAddresses( input.getNetParams( ).getIpAddress( ), input.getNetParams( ).getIpAddress() );
         }
       } catch ( NoSuchElementException e ) { // Address disabled
         try {
-          final Address addr = Addresses.getInstance( ).lookupDisabled( input.getNetParams( ).getIgnoredPublicIp( ) );
-          vmInst.updateAddresses( input.getNetParams( ).getIpAddress( ), input.getNetParams( ).getIgnoredPublicIp( ) );
-          addr.pendingAssignment().assign( vmInst ).clearPending();
+            final Address addr = Addresses.getInstance( ).lookupDisabled( input.getNetParams( ).getIgnoredPublicIp( ) );
+            vmInst.updateAddresses( input.getNetParams( ).getIpAddress( ), input.getNetParams( ).getIgnoredPublicIp( ) );
+            addr.pendingAssignment().assign( vmInst ).clearPending();
+
         } catch ( final Exception ex2 ) {
-          LOG.error( "Failed to restore address state (from disabled) " + input.getNetParams( )
+            LOG.error( "Failed to restore address state (from disabled) " + input.getNetParams( )
               + " for instance "
               + input.getInstanceId( )
               + " because of: "
@@ -479,7 +559,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
         Logs.extreme( ).error( ex2, ex2 );
       }
     }
-    
+
     private static byte[] restoreUserData( final VmInfo input ) {
       byte[] userData;
       try {
@@ -510,26 +590,45 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
       return launchIndex;
     }
 
-    private static BootableSet restoreBootSet( final VmInfo input, final String imageId, final String kernelId, final String ramdiskId ) {
-      BootableSet bootSet = null;
-      if ( imageId != null ) {
-        try {
-          bootSet = Emis.recreateBootableSet( imageId, kernelId, ramdiskId );
-        } catch ( final Exception ex ) {
-          LOG.error( "Failed to recreate bootset with imageId " + imageId
-                     + ", kernelId "
-                     + kernelId
-                     + " ramdiskId "
-                     + ramdiskId
-                     + " for: "
-                     + input.getInstanceId( )
-                     + " because of: "
-                     + ex.getMessage( ) );
-          Logs.extreme( ).error( ex, ex );
-        }
-      } else {
-        //TODO:GRZE: handle the case where an instance is running and it's root emi has been deregistered.
+    @Nonnull
+    private static BootableSet restoreBootSet( @Nonnull  final VmInfo input,
+                                               @Nullable final String imageId,
+                                               @Nullable final String kernelId,
+                                               @Nullable final String ramdiskId ) throws MetadataException {
+      if ( imageId == null ) {
+        throw new MetadataException( "Missing image id for boot set restoration" );
       }
+
+      BootableSet bootSet;
+      try {
+        bootSet = Emis.recreateBootableSet( imageId, kernelId, ramdiskId );
+      } catch ( final NoSuchMetadataException e ) {
+        LOG.error( "Using transient bootset in place of imageId " + imageId
+            + ", kernelId " + kernelId
+            + ", ramdiskId " + ramdiskId
+            + " for " + input.getInstanceId( )
+            + " because of: " + e.getMessage( ) );
+        Platform platform;
+        try {
+          platform = Platform.valueOf( Strings.nullToEmpty(input.getPlatform()) );
+        } catch ( final IllegalArgumentException e2 ) {
+          platform = Platform.linux;
+        }
+        bootSet = Emis.unavailableBootableSet( platform );
+      }  catch ( final Exception ex ) {
+        LOG.error( "Failed to recreate bootset with imageId " + imageId
+                   + ", kernelId " + kernelId
+                   + ", ramdiskId " + ramdiskId
+                   + " for " + input.getInstanceId( )
+                   + " because of: " + ex.getMessage( ) );
+        Logs.extreme( ).error( ex, ex );
+        if ( ex instanceof MetadataException ) {
+          throw (MetadataException) ex;
+        } else {
+          throw Exceptions.toUndeclared( ex );
+        }
+      }
+
       return bootSet;
     }
     
@@ -823,7 +922,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
     private PrivateNetworkIndex networkIndex;
     private Boolean             usePrivateAddressing;
     private OwnerFullName       owner;
-    private Date                expiration;
+    private Date                expiration = new Date( 32503708800000l ); // 3000
     
     public Builder owner( final OwnerFullName owner ) {
       this.owner = owner;
@@ -831,7 +930,9 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
     }
 
     public Builder expiresOn( final Date expirationTime ) {
-      this.expiration = expirationTime;
+      if ( expirationTime != null ) {
+        this.expiration = expirationTime;
+      }
       return this;
     }
     
@@ -1028,7 +1129,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
     final boolean dns = StackConfiguration.USE_INSTANCE_DNS && !ComponentIds.lookup( Dns.class ).runLimitedServices( );
     final Map<String, String> m = new HashMap<String, String>( );
     m.put( "ami-id", this.getImageId( ) );
-    if ( !this.bootRecord.getMachine( ).getProductCodes( ).isEmpty( ) ) {
+    if ( this.bootRecord.getMachine( ) != null && !this.bootRecord.getMachine( ).getProductCodes( ).isEmpty( ) ) {
       m.put( "product-codes", this.bootRecord.getMachine( ).getProductCodes( ).toString( ).replaceAll( "[\\Q[]\\E]", "" ).replaceAll( ", ", "\n" ) );
     }
     m.put( "ami-launch-index", "" + this.launchRecord.getLaunchIndex( ) );
@@ -1106,7 +1207,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
   }
   
   public String getImageId( ) {
-    return this.bootRecord.getMachine( ).getDisplayName( );
+    return this.bootRecord.getMachine( ) == null ? "emi-00000000" : this.bootRecord.getMachine( ).getDisplayName( );
   }
   
   public String getRamdiskId( ) {
@@ -1651,9 +1752,9 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
           runningInstance.setInstanceId( input.getVmId( ).getInstanceId( ) );
           //ASAP:FIXME:GRZE: restore.
           runningInstance.setProductCodes( new ArrayList<String>( ) );
-          runningInstance.setImageId( input.getBootRecord( ).getMachine( ).getDisplayName( ) );
+          runningInstance.setImageId( input.getImageId() );
           if ( input.getBootRecord( ).getKernel( ) != null ) {
-            runningInstance.setKernel( input.getBootRecord( ).getKernel( ).getDisplayName( ) );
+            runningInstance.setKernel( input.getKernelId() );
           }
           if ( input.getBootRecord( ).getRamdisk( ) != null ) {
             runningInstance.setRamdisk( input.getBootRecord( ).getRamdisk( ).getDisplayName( ) );

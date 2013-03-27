@@ -73,7 +73,7 @@ import com.eucalyptus.util.async.CheckedListenableFuture;
 import com.eucalyptus.util.async.Futures;
 import com.google.common.base.Joiner;
 import com.google.common.collect.Lists;
-import static org.hamcrest.MatcherAssert.assertThat;
+import static com.eucalyptus.util.Parameters.checkParam;
 import static org.hamcrest.Matchers.emptyArray;
 import static org.hamcrest.Matchers.not;
 
@@ -101,7 +101,7 @@ public class Automata {
   public static Logger LOG = Logger.getLogger( Automata.class );
   
   public static <S extends Automata.State, P extends HasFullName<P>> Callable<CheckedListenableFuture<P>> sequenceTransitions( final HasStateMachine<P, S, ?> hasFsm, final S... toStates ) {
-    assertThat( toStates, not( emptyArray( ) ) );
+    checkParam( toStates, not( emptyArray() ) );
     //TODO:GRZE: enforce that the sequence of states denotes a valid transition path
     S currentState = hasFsm.getStateMachine( ).getState( );
     int index = Lists.newArrayList( toStates ).indexOf( currentState );

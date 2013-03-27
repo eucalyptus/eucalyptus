@@ -188,7 +188,13 @@ public class VolumeManager {
       @Override
       public Volume apply( final String input ) {
         try {
-          Volume vol = Entities.uniqueResult( Volume.named( ctx.getUserFullName( ).asAccountFullName( ), input ) );
+          Volume vol = null;
+          try {
+            vol = Entities.uniqueResult( Volume.named( ctx.getUserFullName( ).asAccountFullName( ), input ) );
+          } catch ( NoSuchElementException e ) {
+            // Slow path: try searching globally
+            vol = Entities.uniqueResult( Volume.named( null, input ) );
+          }
           if ( !RestrictedTypes.filterPrivileged( ).apply( vol ) ) {
             throw Exceptions.toUndeclared( "Not authorized to delete volume by " + ctx.getUser( ).getName( ) );
           }

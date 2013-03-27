@@ -1,9 +1,28 @@
+/*************************************************************************
+ * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; version 3 of the License.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see http://www.gnu.org/licenses/.
+ *
+ * Please contact Eucalyptus Systems, Inc., 6755 Hollister Ave., Goleta
+ * CA 93117, USA or visit http://www.eucalyptus.com/licenses/ if you need
+ * additional information or have any questions.
+ ************************************************************************/
+
 package com.eucalyptus.reporting.art.renderer.document;
 
 import java.io.IOException;
 import java.io.Writer;
 import java.util.*;
-
 
 public class CsvDocument
 	implements Document
@@ -11,9 +30,11 @@ public class CsvDocument
 	private List<String> colVals = null;
     private Writer writer;
     private boolean rowHasLabel = false;
+    private int rowIndent = 3;
 
-    public CsvDocument()
-    {
+    @Override
+    public void setUnlabeledRowIndent( final int num ) {
+      this.rowIndent = num;
     }
 
     @Override
@@ -83,6 +104,7 @@ public class CsvDocument
     		writeRow();
     	}
     	colVals = new ArrayList<String>();
+    	rowHasLabel = false;
     	return this;    	
     }
 
@@ -90,10 +112,10 @@ public class CsvDocument
 	public Document addLabelCol(int indent, String val)
 		throws IOException
 	{
-    	addEmptyLabelCols(indent);
-    	addCol(val, 3);
-    	addEmptyLabelCols(3-indent);
     	rowHasLabel = true;
+    	addEmptyLabelCols(indent);
+    	addCol(val, 1);
+    	addEmptyLabelCols(rowIndent-(indent+1));
     	return this;
 	}	
 
@@ -105,7 +127,14 @@ public class CsvDocument
         return addCol(val, 1);
     }
 
-    @Override
+  @Override
+  public Document addValCol(Integer val)
+      throws IOException
+  {
+    return addCol((val==null)?null:val.toString(), 1);
+  }
+
+  @Override
 	public Document addValCol(Long val)
 		throws IOException
     {
@@ -130,7 +159,7 @@ public class CsvDocument
 		throws IOException
     {
     	if (!rowHasLabel) {
-    		addEmptyLabelCols(6);
+    		addEmptyLabelCols(rowIndent);
     		rowHasLabel = true;
     	}
     	colVals.add(val);
@@ -159,6 +188,4 @@ public class CsvDocument
     	}
     	return this;
 	}
-
-
 }

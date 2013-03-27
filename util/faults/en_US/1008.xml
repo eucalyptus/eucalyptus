@@ -24,7 +24,7 @@
     message="${daemon} is not running">
 
     <condition
-      message="can't find running ${daemon} process"/>
+      message="Can't find running ${daemon} process"/>
 
     <cause/> <!-- since 'message' is not set, default value, $unknown, will be used -->
 
@@ -36,8 +36,8 @@
 
     <resolution>
       <message>
-        1) install ${daemon}
-        2) run ${daemon}
+        1) Install ${daemon}
+        2) Run ${daemon}
       </message>
     </resolution>
   </fault>

@@ -60,6 +60,9 @@
  *   NEEDED TO COMPLY WITH ANY SUCH LICENSES OR RIGHTS.
  ************************************************************************/
 
+// -*- mode: C; c-basic-offset: 4; tab-width: 4; indent-tabs-mode: nil -*-
+// vim: set softtabstop=4 shiftwidth=4 tabstop=4 expandtab:
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <sys/types.h>
@@ -903,6 +906,7 @@ int doAttachVolume(ncMetadata *ccMeta, char *volumeId, char *instanceId, char *r
   done=0;
   for (i=start; i<stop && !done; i++) {
     timeout = ncGetTimeout(op_start, OP_TIMEOUT, stop-start, i);
+    timeout = maxint(timeout, ATTACH_VOL_TIMEOUT_SECONDS);
     rc = ncClientCall(ccMeta, timeout, resourceCacheLocal.resources[i].lockidx, resourceCacheLocal.resources[i].ncURL, "ncAttachVolume", instanceId, volumeId, remoteDev, localDev);
     if (rc) {
       ret = 1;
@@ -959,6 +963,7 @@ int doDetachVolume(ncMetadata *ccMeta, char *volumeId, char *instanceId, char *r
 
   for (i=start; i<stop; i++) {
     timeout = ncGetTimeout(op_start, OP_TIMEOUT, stop-start, i);
+    timeout = maxint(timeout, DETACH_VOL_TIMEOUT_SECONDS);
     rc = ncClientCall(ccMeta, timeout, resourceCacheLocal.resources[i].lockidx, resourceCacheLocal.resources[i].ncURL, "ncDetachVolume", instanceId, volumeId, remoteDev, localDev, force);
     if (rc) {
       ret = 1;
@@ -2555,7 +2560,11 @@ int doRunInstances(ncMetadata *ccMeta, char *amiId, char *kernelId, char *ramdis
   logprintfl(EUCADEBUG,"done.\n");
 
   shawn();
-
+  
+  if (runCount < 1) {
+    error++;
+    logprintfl(EUCAERROR, "unable to run input instance\n");
+  }
   if (error) {
     return(1);
   }
@@ -2860,38 +2869,68 @@ int doCreateImage(ncMetadata *ccMeta, char *instanceId, char *volumeId, char *re
 
 int doDescribeSensors(ncMetadata *meta, int historySize, long long collectionIntervalTimeMs, char **instIds, int instIdsLen, char **sensorIds, int sensorIdsLen, sensorResource ***outResources, int *outResourcesLen)
 {
-  logprintfl(EUCAINFO, "invoked historySize=%d collectionIntervalTimeMs=%lld\n", historySize, collectionIntervalTimeMs);
+  int rc = initialize(meta);
+  if (rc || ccIsEnabled()) {
+    return 1;
+  }
+  
+  logprintfl(EUCADEBUG, "invoked historySize=%d collectionIntervalTimeMs=%lld instIdsLen=%d i[0]='%s' sensorIdsLen=%d s[0]='%s'\n", 
+	     historySize, collectionIntervalTimeMs, 
+	     instIdsLen, instIdsLen>0 ? instIds[0] : "*",
+	     sensorIdsLen, sensorIdsLen>0 ? sensorIds[0] : "*");
   int err = sensor_config (historySize, collectionIntervalTimeMs); // update the config parameters if they are different
   if (err != 0)
-    logprintfl (EUCAERROR, "failed to update sensor configuration (err=%d)\n", err);
+    logprintfl (EUCAWARN, "failed to update sensor configuration (err=%d)\n", err);
 
   int num_resources = sensor_get_num_resources();
   if (num_resources < 0) {
-    logprintfl (EUCAERROR, "failed to determine number of available sensors\n");
+    logprintfl (EUCAERROR, "failed to determine number of available sensor resources\n");
     return 1;
   }
+
+  // oddly, an empty set of instanceIds or sensorIds in XML is presented
+  // by Axis as an array of size 1 with an empty string as the only element
+  int num_instances = instIdsLen;
+  if (instIdsLen == 1 && strlen(instIds[0]) == 0)
+    num_instances = 0; // which is to say all instances
 
   * outResources = NULL;
   * outResourcesLen = 0;
 
   if (num_resources > 0) {
 
-    * outResources = malloc (num_resources * sizeof (sensorResource *));
+    int num_slots = num_resources; // report on all instances
+    if (num_instances > 0)
+      num_slots = num_instances; // report on specific instances
+
+    * outResources = malloc (num_slots * sizeof (sensorResource *));
     if ((*outResources) == NULL) {
       return OUT_OF_MEMORY;
     }
-    for (int i = 0; i < num_resources; i++) {
+    for (int i = 0; i < num_slots; i++) {
       (* outResources) [i] = calloc (1, sizeof (sensorResource));
       if (((* outResources) [i]) == NULL) {
 	return OUT_OF_MEMORY;
       }
     }
 
-    // if number of resources has changed since the call to sensor_get_num_resources(),
-    // then either we won't report on everything (ok, since we'll get it next time)
-    // or we'll have fewer records in outResrouces[] (ok, since empty ones will be ignored)
-    sensor_get_instance_data (NULL, NULL, 0, * outResources, num_resources);
-    * outResourcesLen = num_resources;
+    int num_results = 0;
+    if (num_instances == 0) { // report on all instances
+      // if number of resources has changed since the call to sensor_get_num_resources(),
+      // then we may not report on everything (ok, since we'll get it next time)
+      // or we may have fewer records in outResrouces[] (ok, since empty ones will be ignored)
+      if (sensor_get_instance_data (NULL, NULL, 0, * outResources, num_slots) == 0)
+	num_results = num_slots; // actually num_results <= num_slots, but that's OK
+
+    } else { // report on specific instances
+      // if some instances requested by ID were not found on this CC, 
+      // we will have fewer records in outResources[] (ok, since empty ones will be ignored)
+      for (int i=0; i < num_instances; i++) {
+	if (sensor_get_instance_data (instIds[i], NULL, 0, (* outResources + num_results), 1) == 0)
+	  num_results++;
+      }
+    }    
+    * outResourcesLen = num_results;
   }
 
   return 0;
@@ -3564,7 +3603,15 @@ int init_log(void)
         configReadLogParams (&(config->log_level), &(config->log_roll_number), &(config->log_max_size_bytes), &log_prefix);
 	if (log_prefix && strlen(log_prefix)>0) {
 	  safe_strncpy (config->log_prefix, log_prefix, sizeof (config->log_prefix));
+	}
 	  free (log_prefix);
+
+	char * log_facility = configFileValue ("LOGFACILITY");
+	if (log_facility) {
+	  if (strlen(log_facility)>0) {
+	    safe_strncpy (config->log_facility, log_facility, sizeof (config->log_facility));
+	  }
+	  free (log_facility);
 	}
 
         // set the log file path (levels and size limits are set below)
@@ -3577,6 +3624,7 @@ int init_log(void)
     // by monitoring_thread will get picked up by other processes, too
     log_params_set (config->log_level, (int)config->log_roll_number, config->log_max_size_bytes);
     log_prefix_set (config->log_prefix);
+    log_facility_set (config->log_facility, "cc");
 
     return 0;
 }
@@ -3684,13 +3732,22 @@ int update_config(void) {
       char * log_prefix;
       configReadLogParams (&(config->log_level), &(config->log_roll_number), &(config->log_max_size_bytes), &log_prefix);
       if (log_prefix && strlen(log_prefix)>0) {
-	safe_strncpy (config->log_prefix, log_prefix, sizeof (config->log_prefix));
-	free (log_prefix);
+          safe_strncpy (config->log_prefix, log_prefix, sizeof (config->log_prefix));
       }
+      free (log_prefix);
 
+      char * log_facility = configFileValue ("LOGFACILITY");
+      if (log_facility) {
+	if (strlen(log_facility)>0) {
+	  safe_strncpy (config->log_facility, log_facility, sizeof (config->log_facility));
+	}
+	free (log_facility);
+      }
+      
       // reconfigure the logging subsystem to use the new values, if any
       log_params_set (config->log_level, (int)config->log_roll_number, config->log_max_size_bytes);
       log_prefix_set (config->log_prefix);
+      log_facility_set (config->log_facility, "cc");
 
       // NODES
       logprintfl(EUCAINFO, "refreshing node list.\n");

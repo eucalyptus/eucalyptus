@@ -210,6 +210,10 @@
 #define NC_EVENT_PRE_ATTACH    "euca-nc-pre-attach"    // p1: eucalyptusHome p2: volumeXmlPath
 #define NC_EVENT_POST_DETACH   "euca-nc-post-detach"   // p1: eucalyptusHome p2: volumeXmlPath
 
+// Timeout values (suggestions)
+#define ATTACH_VOL_TIMEOUT_SECONDS	180 //CC Timeout for an doAttachVolume() operation on the NC. In failure cases NC may take 60 sec.
+#define DETACH_VOL_TIMEOUT_SECONDS	180 //CC Timeout for an doDetachVolume() operation on the NC. In failure cases NC may take 60 sec.
+
 #define MEGABYTE 1048576
 
 // return codes
@@ -306,4 +310,11 @@ static char * createImage_progress_names[] = {
   "cancelled"
 };
 
+#ifndef EUCA_FREE
+#define EUCA_FREE(_x)  \
+{                      \
+	free((_x));        \
+	(_x) = NULL;       \
+}
+#endif /* ! EUCA_FREE */
 #endif

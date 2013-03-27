@@ -112,11 +112,17 @@ import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
 import com.eucalyptus.records.Logs;
 import com.eucalyptus.reporting.event.ResourceAvailabilityEvent;
+import com.eucalyptus.util.Callback;
 import com.eucalyptus.util.HasNaturalId;
+import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.util.OwnerFullName;
 import com.eucalyptus.util.RestrictedTypes.QuantityMetricFunction;
 import com.eucalyptus.util.RestrictedTypes.Resolver;
 import com.eucalyptus.util.async.AsyncRequests;
+import com.eucalyptus.util.async.Callbacks;
+import com.eucalyptus.util.async.DelegatingRemoteCallback;
+import com.eucalyptus.util.async.RemoteCallback;
+import com.eucalyptus.util.async.Request;
 import com.eucalyptus.vm.VmInstance.Transitions;
 import com.eucalyptus.vm.VmInstance.VmState;
 import com.eucalyptus.vm.VmInstance.VmStateSet;
@@ -127,7 +133,6 @@ import com.google.common.collect.Collections2;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
-import edu.ucsb.eucalyptus.msgs.AttachedVolume;
 import edu.ucsb.eucalyptus.msgs.DeleteStorageVolumeType;
 import edu.ucsb.eucalyptus.msgs.DetachStorageVolumeType;
 import edu.ucsb.eucalyptus.msgs.RunningInstancesItemType;
@@ -376,8 +381,17 @@ public class VmInstances {
   public static VmInstance lookupByBundleId( final String bundleId ) throws NoSuchElementException {
     return Iterables.find( list( ), withBundleId( bundleId ) );
   }
-  
+
+  public static void tryCleanUp( final VmInstance vm ) {
+    cleanUp( vm, true );
+  }
+
   public static void cleanUp( final VmInstance vm ) {
+    cleanUp( vm, false );
+  }
+
+  private static void cleanUp( final VmInstance vm,
+                               final boolean rollbackNetworkingOnFailure ) {
     VmState vmLastState = vm.getLastState( );
     VmState vmState = vm.getState( );
     RuntimeException logEx = new RuntimeException( "Cleaning up instance: " + vm.getInstanceId( ) + " " + vmLastState + " -> " + vmState );
@@ -394,14 +408,14 @@ public class VmInstances {
             } else {
               EventRecord.caller( VmInstances.class, EventType.VM_TERMINATING, "USER_ADDRESS", address.toString( ) ).debug( );
             }
-            AsyncRequests.newRequest( address.unassign( ).getCallback( ) ).dispatch( vm.getPartition( ) );
+            unassignAddress( vm, address, rollbackNetworkingOnFailure );
           }
         } catch ( final NoSuchElementException e ) {
           //PENDING->SHUTTINGDOWN might happen before address info reported in describe instances by CC, need to try finding address
           if ( VmState.PENDING.equals( vmLastState ) ) {
             for ( Address addr : Addresses.getInstance( ).listValues( ) ) {
               if ( addr.getInstanceId( ).equals( vm.getInstanceId( ) ) ) {
-                AsyncRequests.newRequest( addr.unassign( ).getCallback( ) ).dispatch( vm.getPartition( ) );
+                unassignAddress( vm, addr, rollbackNetworkingOnFailure );
                 break;
               }
             }
@@ -427,13 +441,47 @@ public class VmInstances {
       Logs.extreme( ).error( ex, ex );
     }
   }
-  
-  private static final Predicate<AttachedVolume> anyVolumePred = new Predicate<AttachedVolume>( ) {
-                                                                 @Override
-                                                                 public boolean apply( final AttachedVolume arg0 ) {
-                                                                   return true;
-                                                                 }
-                                                               };
+
+  private static void unassignAddress( final VmInstance vm,
+                                       final Address address,
+                                       final boolean rollbackNetworkingOnFailure ) {
+    RemoteCallback<?,?> callback = address.unassign().getCallback();
+    Callback.Failure failureHander;
+    if ( rollbackNetworkingOnFailure ) {
+      callback = DelegatingRemoteCallback.suppressException( callback );
+      failureHander = new Callback.Failure<java.lang.Object>() {
+        @Override
+        public void fireException( final Throwable t ) {
+          // Revert the cloud state change
+          LOG.info( "Unable to assign address " + address.getName() + " for " + vm.getInstanceId() + ", will retry."  );
+          if ( address.isPending( ) ) {
+            try {
+              address.clearPending( );
+            } catch ( Exception ex ) {
+            }
+          }
+          try {
+            if ( !address.isAllocated() ) {
+              address.pendingAssignment();
+            }
+            address.assign( vm ).clearPending();
+          } catch ( Exception e ) {
+            LOG.error( e, e );
+            LOG.warn( "Address potentially in an inconsistent state: " + LogUtil.dumpObject( address ) );
+          }
+        }
+      };
+    } else {
+      failureHander = Callbacks.noopFailure();
+    }
+    final Request request = AsyncRequests.newRequest( callback ).then( failureHander );
+    try {
+      request.dispatch( vm.getPartition() );
+    } catch ( NoSuchElementException e ) {
+      // No message was sent, so handle failure manually
+      request.getCallback().fireException( e );
+    }
+  }
   
   private static void cleanUpAttachedVolumes( final VmInstance vm ) {
     try {

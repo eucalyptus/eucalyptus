@@ -58,6 +58,16 @@ class InstanceArtGeneratorTest {
   }
 
   @Test
+  void testBasicGenerationWithDuplicateCreate(){
+    InstanceArtGenerator generator = testGeneratorWith( [
+        instanceCreate( INSTANCE1, USER1, "2012-08-01T01:00:00", VMTYPE1, ZONE1 ),
+        instanceCreate( INSTANCE1, USER1, "2012-09-01T06:00:00", VMTYPE1, ZONE1 ),
+    ], basicUsageInReportPeriod() )
+    ReportArtEntity art = generator.generateReportArt( new ReportArtEntity( millis("2012-09-01T00:00:00"), millis("2012-09-01T12:00:00") ) )
+    assertArt( art )
+  }
+
+  @Test
   void testBasicGenerationMultipleZones(){
     InstanceArtGenerator generator = testGeneratorWith( basicUsageInReportPeriodMultipleZones() )
     ReportArtEntity art = generator.generateReportArt( new ReportArtEntity( millis("2012-09-01T00:00:00"), millis("2012-09-01T12:00:00") ) )
@@ -255,13 +265,13 @@ class InstanceArtGeneratorTest {
 
   private void assertUsage( String description, InstanceUsageArtEntity usage, int diskUsageMultiplier, double durationMultiplier ) {
     assertEquals( description + " duration", (long)(durationMultiplier * ms(12)), usage.getDurationMs() );
-    assertEquals( description + " usage net in", 100, usage.getNetTotalInMegs() )
-    assertEquals( description + " usage net out", 200, usage.getNetTotalOutMegs() )
+    assertEquals( description + " usage net in", mb(100), usage.getNetTotalInBytes() )
+    assertEquals( description + " usage net out", mb(200), usage.getNetTotalOutBytes() )
     assertEquals( description + " usage cpu ms", ms(6), usage.getCpuUtilizationMs() )
     assertEquals( description + " usage disk read ops", diskUsageMultiplier * 50000, usage.getDiskReadOps() )
     assertEquals( description + " usage disk write ops", diskUsageMultiplier * 20000, usage.getDiskWriteOps() )
-    assertEquals( description + " usage disk read size", diskUsageMultiplier * 2000, usage.getDiskReadMegs() )
-    assertEquals( description + " usage disk write size", diskUsageMultiplier * 1000, usage.getDiskWriteMegs() )
+    assertEquals( description + " usage disk read size", diskUsageMultiplier * mb(2000), usage.getDiskReadBytes() )
+    assertEquals( description + " usage disk write size", diskUsageMultiplier * mb(1000), usage.getDiskWriteBytes() )
     assertEquals( description + " usage disk read time", diskUsageMultiplier * 8000, usage.getDiskReadTime() )
     assertEquals( description + " usage disk write time", diskUsageMultiplier * 4000, usage.getDiskWriteTime() )
   }
@@ -685,6 +695,12 @@ class InstanceArtGeneratorTest {
         instanceCreate( INSTANCE1, USER1, instance1CreateTime, VMTYPE1, ZONE1 ),
         instanceCreate( INSTANCE2, USER2, "2012-09-01T00:00:00", VMTYPE2, ZONE2 ),
     ]
+    testGeneratorWith( instanceCreateList, usage )
+  }
+
+  private InstanceArtGenerator testGeneratorWith( List<ReportingInstanceCreateEvent> create,
+                                                  List<ReportingInstanceUsageEvent> usage ) {
+    List<ReportingInstanceCreateEvent> instanceCreateList = create.sort{ event -> event.getTimestampMs() }
     List<ReportingInstanceUsageEvent> instanceUsageList = usage.sort{ event -> event.getTimestampMs() }
     new InstanceArtGenerator() {
 
@@ -700,7 +716,7 @@ class InstanceArtGeneratorTest {
       @Override
       protected void foreachInstanceCreateEvent( final long endExclusive,
                                                  final Predicate<? super ReportingInstanceCreateEvent> callback ) {
-        instanceCreateList.reverse().findAll{ event ->
+        instanceCreateList.findAll{ event ->
           event.getTimestampMs() < endExclusive }.every { event -> callback.apply( event ) }
       }
 

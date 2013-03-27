@@ -62,7 +62,7 @@
 
 package com.eucalyptus.images;
 
-import static org.hamcrest.MatcherAssert.assertThat;
+import static com.eucalyptus.util.Parameters.checkParam;
 import static org.hamcrest.Matchers.notNullValue;
 import java.util.Collection;
 import java.util.List;
@@ -178,7 +178,7 @@ public class Images {
     @Override
     public ImageDetails apply( KernelImageInfo arg0 ) {
       ImageDetails i = new ImageDetails( );
-      i.setName( arg0.getName( ) );
+      i.setName( arg0.getImageName( ) );
       i.setDescription( arg0.getDescription( ) );
       i.setArchitecture( arg0.getArchitecture( ).toString( ) );
       i.setImageId( arg0.getDisplayName( ) );
@@ -204,7 +204,7 @@ public class Images {
     @Override
     public ImageDetails apply( RamdiskImageInfo arg0 ) {
       ImageDetails i = new ImageDetails( );
-      i.setName( arg0.getName( ) );
+      i.setName( arg0.getImageName( ) );
       i.setDescription( arg0.getDescription( ) );
       i.setArchitecture( arg0.getArchitecture( ).toString( ) );
       i.setImageId( arg0.getDisplayName( ) );
@@ -263,7 +263,7 @@ public class Images {
     @Override
     public ImageDetails apply( MachineImageInfo arg0 ) {
       ImageDetails i = new ImageDetails( );
-      i.setName( arg0.getName( ) );
+      i.setName( arg0.getImageName( ) );
       i.setDescription( arg0.getDescription( ) );
       i.setArchitecture( arg0.getArchitecture( ).toString( ) );
       //TODO      i.setRootDeviceName( arg0.getD )
@@ -318,8 +318,8 @@ public class Images {
     return new Function<BlockDeviceMappingItemType, DeviceMapping>( ) {
       @Override
       public DeviceMapping apply( BlockDeviceMappingItemType input ) {
-        assertThat( input, notNullValue( ) );
-        assertThat( input.getDeviceName( ), notNullValue( ) );
+        checkParam( input, notNullValue() );
+        checkParam( input.getDeviceName(), notNullValue() );
         if ( input.getEbs( ) != null ) {
           EbsDeviceMapping ebsInfo = input.getEbs( );
           Snapshot snap;

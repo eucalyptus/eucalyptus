@@ -201,7 +201,8 @@ public class WalrusControl {
 			LOG.error("Error initializing walrus", ex);
 			SystemUtil.shutdownWithError(ex.getMessage());
 		}
-		Tracker.initialize();
+		//Disable torrents
+		//Tracker.initialize();
 		if(System.getProperty("euca.virtualhosting.disable") != null) {
 			WalrusProperties.enableVirtualHosting = false;
 		}

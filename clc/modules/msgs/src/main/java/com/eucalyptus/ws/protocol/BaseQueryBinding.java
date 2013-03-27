@@ -341,10 +341,10 @@ public class BaseQueryBinding<T extends Enum<T>> extends RestfulMarshallingHandl
           final List<String> keys = Lists.newArrayList( params.keySet( ) );
           final Map<String,String> subParams = Maps.newConcurrentMap( );
           for ( final String k : keys ) {
-            if ( k.contains( paramFieldPair.getKey( ) + ".1." ) ) {
+        	if ( k.contains( paramFieldPair.getKey( )) ) {
               //theList.add( params.remove(k) );
               final String currentValue = params.remove( k );
-              final String newKey = k.replaceAll( paramFieldPair.getKey( ) + ".1.", "" );
+              final String newKey = k.replaceAll( paramFieldPair.getKey( ) + "\\.\\d\\." , "" );
               subParams.put( newKey, currentValue );
             }
           }

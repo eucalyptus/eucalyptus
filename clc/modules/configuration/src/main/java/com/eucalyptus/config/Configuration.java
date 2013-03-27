@@ -80,7 +80,7 @@ import com.eucalyptus.util.TypeMapper;
 import com.eucalyptus.util.TypeMappers;
 import com.google.common.base.Function;
 import com.google.common.collect.Sets;
-import static org.hamcrest.MatcherAssert.assertThat;
+import static com.eucalyptus.util.Parameters.checkParam;
 import static org.hamcrest.Matchers.notNullValue;
 
 public class Configuration {
@@ -125,9 +125,9 @@ public class Configuration {
     final String name = request.getName( );
     final String hostName = request.getHost( );
     final Integer port = request.getPort( );
-    assertThat( "Name must not be null: " + request, name, notNullValue( ) );
-    assertThat( "Hostname must not be null: " + request, hostName, notNullValue( ) );
-    assertThat( "Port must not be null: " + request, port, notNullValue( ) );
+    checkParam( "Name must not be null: " + request, name, notNullValue() );
+    checkParam( "Hostname must not be null: " + request, hostName, notNullValue() );
+    checkParam( "Port must not be null: " + request, port, notNullValue() );
     
     String partition = request.getPartition( );
     if ( !componentId.isPartitioned( ) ) {//TODO:GRZE: convert to @NotNull

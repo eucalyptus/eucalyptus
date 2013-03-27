@@ -48,10 +48,15 @@
 
       $('html body').eucadata('addCallback', 'zone', 'dashboard-summary', function(){
          var results = describe('zone');
+         var arrayAz = [];
          for( res in results) {
               var azName = results[res].name;
-              $az.append($('<option>').attr('value', azName).text(azName));
+              arrayAz.push(azName);
          }
+         var sorted = sortArray(arrayAz);
+         $.each(sorted, function(idx, azName){
+              $az.append($('<option>').attr('value', azName).text(azName));
+         });
          $('html body').eucadata('removeCallback','zone','dashboard-summary');
       });
       $('html body').eucadata('refresh', 'zone');

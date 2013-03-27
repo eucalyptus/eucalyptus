@@ -62,7 +62,7 @@
 
 package com.eucalyptus.cloud;
 
-import static org.hamcrest.MatcherAssert.assertThat;
+import static com.eucalyptus.util.Parameters.checkParam;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.notNullValue;
 import java.util.ArrayList;
@@ -146,16 +146,16 @@ public class VmRunType extends CloudClusterMessage {
     
     public VmRunType create( ) {
       /** GRZE:NOTE: Nullables: userData, keyInfo **/
-      assertThat( this.buildit.getInstanceId( ), notNullValue( ) );
-      assertThat( this.buildit.getLaunchIndex( ), notNullValue( ) );
-      assertThat( this.buildit.getMacAddress( ), notNullValue( ) );
-      assertThat( this.buildit.getNetworkNames( ).isEmpty( ), is( false ) );
-      assertThat( this.buildit.getNetworkIndex( ), notNullValue( ) );
-      assertThat( this.buildit.getPlatform( ), notNullValue( ) );
-      assertThat( this.buildit.getReservationId( ), notNullValue( ) );
-      assertThat( this.buildit.getUuid( ), notNullValue( ) );
-      assertThat( this.buildit.getVlan( ), notNullValue( ) );
-      assertThat( this.buildit.getVmTypeInfo( ), notNullValue( ) );
+      checkParam( this.buildit.getInstanceId(), notNullValue() );
+      checkParam( this.buildit.getLaunchIndex(), notNullValue() );
+      checkParam( this.buildit.getMacAddress(), notNullValue() );
+      checkParam( this.buildit.getNetworkNames().isEmpty(), is( false ) );
+      checkParam( this.buildit.getNetworkIndex(), notNullValue() );
+      checkParam( this.buildit.getPlatform(), notNullValue() );
+      checkParam( this.buildit.getReservationId(), notNullValue() );
+      checkParam( this.buildit.getUuid(), notNullValue() );
+      checkParam( this.buildit.getVlan(), notNullValue() );
+      checkParam( this.buildit.getVmTypeInfo(), notNullValue() );
       return this.buildit;
     }
     

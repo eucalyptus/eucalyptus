@@ -21,7 +21,7 @@
 (function($, eucalyptus) {
   $.widget('eucalyptus.login', { 
     options : {
-      support_url : '',
+      support_url : ''
     },
     errorDialog : null,
     _init : function() {
@@ -41,7 +41,7 @@
         buttons: {
           'Close': {text: dialog_close_btn, focus:true, click: function() { $err_dialog.eucadialog("close");}}
         },
-        help: {content: $err_help},
+        help: {content: $err_help}
       });
 
       var $form = $login.find('form');
@@ -57,11 +57,12 @@
           $('<img>').attr('id','login-spin-wheel').attr('src','images/dots32.gif'));
 
         var param = {
-          account:$form.find('input[id=account]').val(),
-          username:$form.find('input[id=username]').val(),
-          password:$form.find('input[id=password]').val(),
+          account:trim($form.find('input[id=account]').val()),
+          username:trim($form.find('input[id=username]').val()),
+          password:trim($form.find('input[id=password]').val()),
           remember:$form.find('input[id=remember]').attr('checked') 
         };
+       
         thisObj._trigger('doLogin', evt, { param: param,
           onSuccess: function(args){
             $login.remove();
@@ -119,14 +120,16 @@
     _destroy : function() { },
 
   /////// PUBLIC METHODS //////
-    popupError : function(msg, callback) {
+    popupDialog : function(bError, msg, callback) {
      var thisObj = this;
      thisObj.errorDialog.eucadialog('open');
      if(callback){
        thisObj.errorDialog.data('eucadialog').option('on_close', {callback: callback});
      }
      var msgdiv = thisObj.errorDialog.find("#login-error-message p")
-     msgdiv.addClass('dialog-error').html(msg);
+     if(typeof bError != undefined && bError)
+       msgdiv.addClass('dialog-error');
+     msgdiv.html(msg);
      thisObj.errorDialog.find('#login-error-message a').click(function(e){
        if(thisObj.options.support_url.indexOf('mailto') >= 0)
          window.open(thisObj.options.support_url, '_self');

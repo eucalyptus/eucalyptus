@@ -62,7 +62,7 @@
 
 package com.eucalyptus.event;
 
-import static org.hamcrest.MatcherAssert.assertThat;
+import static com.eucalyptus.util.Parameters.checkParam;
 import static org.hamcrest.Matchers.notNullValue;
 import java.util.List;
 import java.util.NoSuchElementException;
@@ -203,7 +203,7 @@ public class StatefulNamedRegistry<T extends HasName, E extends Enum<E>> {
   public T register( T obj, E nextState ) {
     StatefulValue oldValue = null;
     StatefulValue newValue = null;
-    assertThat( obj, notNullValue( ) );
+    checkParam( obj, notNullValue() );
     this.canHas.writeLock( ).lock( );
     try {
       newValue = new StatefulValue( nextState, obj );

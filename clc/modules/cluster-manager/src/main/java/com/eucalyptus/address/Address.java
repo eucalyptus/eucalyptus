@@ -67,6 +67,7 @@ import java.lang.reflect.Constructor;
 import java.util.NoSuchElementException;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicMarkableReference;
+import javax.persistence.EntityTransaction;
 import javax.persistence.PersistenceContext;
 import javax.persistence.Table;
 import javax.persistence.Transient;
@@ -84,14 +85,13 @@ import com.eucalyptus.cluster.callback.AssignAddressCallback;
 import com.eucalyptus.cluster.callback.UnassignAddressCallback;
 import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.id.ClusterController;
-import com.eucalyptus.entities.EntityWrapper;
+import com.eucalyptus.entities.Entities;
 import com.eucalyptus.event.ListenerRegistry;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
 import com.eucalyptus.records.Logs;
 import com.eucalyptus.reporting.event.AddressEvent;
 import com.eucalyptus.reporting.event.EventActionInfo;
-import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.FullName;
 import com.eucalyptus.util.OwnerFullName;
 import com.eucalyptus.util.async.NOOP;
@@ -214,6 +214,7 @@ public class Address extends UserMetadata<Address.State> implements AddressMetad
   }
   
   public void init( ) {//Should only EVER be called externally after loading from the db
+    this.resetPersistence();
     this.atomicState = new AtomicMarkableReference<State>( State.unallocated, false );
     this.transition = this.QUIESCENT;
     this.getOwner( );//ensure to initialize
@@ -252,12 +253,12 @@ public class Address extends UserMetadata<Address.State> implements AddressMetad
   }
   
   private boolean transition( State expectedState, State newState, boolean expectedMark, boolean newMark, SplitTransition transition ) {
-    this.transition = transition;
     if ( !this.atomicState.compareAndSet( expectedState, newState, expectedMark, newMark ) ) {
       throw new IllegalStateException( String.format( "Cannot mark address as %s[%s.%s->%s.%s] when it is %s.%s: %s", transition.getName( ), expectedState,
                                                       expectedMark, newState, newMark, this.atomicState.getReference( ), this.atomicState.isMarked( ),
                                                       this.toString( ) ) );
     }
+    this.transition = transition;
     EventRecord.caller( this.getClass( ), EventType.ADDRESS_STATE, "TOP", this.toString( ) ).info( );
     try {
       this.transition.top( );
@@ -323,16 +324,16 @@ public class Address extends UserMetadata<Address.State> implements AddressMetad
     } catch ( NoSuchElementException e1 ) {
       LOG.debug( e1 );
     }
-    EntityWrapper<Address> db = EntityWrapper.get( Address.class );
+    final EntityTransaction db = Entities.get( Address.class );
     try {
-      Address searchAddr = new Address( ipAddress );
-      searchAddr.setOwner( null );
-      Address dbAddr = db.getUnique( searchAddr );
-      db.delete( dbAddr );
+      Entities.delete( Entities.uniqueResult( forIp( ipAddress ) ) );
       db.commit( );
-    } catch ( Exception e ) {
+    } catch ( final NoSuchElementException e ) {
+      LOG.debug( "Address not found for removal '" + ipAddress + "'" );
+    } catch ( final Exception e ) {
       Logs.extreme( ).error( e, e );
-      db.rollback( );
+    } finally {
+      if (db.isActive()) db.rollback();
     }
   }
   
@@ -461,43 +462,87 @@ public class Address extends UserMetadata<Address.State> implements AddressMetad
   public boolean isSystemOwned( ) {
     return Principals.systemFullName( ).equals( ( UserFullName ) this.getOwner( ) );
   }
-  
+
+  /**
+   * Is the instance assigned or with an impending assignment.
+   *
+   * <P>WARNING! in this state the instance ID may not be a valid instance
+   * identifier.</P>
+   *
+   * @return True if assigned or assignment impending.
+   * @see #getInstanceId()
+   * @see #getInstanceUuid()
+   */
   public boolean isAssigned( ) {
     return this.atomicState.getReference( ).ordinal( ) > State.allocated.ordinal( );
   }
-  
+
+  /**
+   * Is it really assigned? Really?
+   *
+   * <P>In this state the instance ID and UUID are expected to be valid.</P>
+   *
+   * @return True if assigned to an instance.
+   * @see #getInstanceId()
+   * @see #getInstanceUuid()
+   */
+  public boolean isReallyAssigned( ) {
+    return this.atomicState.getReference( ).ordinal( ) > State.impending.ordinal( );
+  }
+
   public boolean isPending( ) {
     return this.atomicState.isMarked( );
   }
-  
+
   private static void addAddress( final Address address ) {
-    Address addr = address;
-    EntityWrapper<Address> db = EntityWrapper.get( Address.class );
+    final EntityTransaction db = Entities.get( Address.class );
+    String naturalId = address.getNaturalId();
     try {
-      addr = db.getUnique( new Address( ) {
-        {
-          this.setDisplayName( address.getName( ) );
-        }
-      } );
-      addr.setOwner( address.getOwner( ) );
-      db.commit( );
-    } catch ( RuntimeException e ) {
-      db.rollback( );
-      LOG.error( e, e );
-    } catch ( EucalyptusCloudException e ) {
+      // delete matching persistent instance if any
       try {
-        db.add( address );
-        db.commit( );
-      } catch ( Exception e1 ) {
-        db.rollback( );
+        Entities.delete( Entities.uniqueResult( forIp( address.getName( ) ) ) );
+      } catch ( NoSuchElementException e ) {
+        // nothing to delete
       }
+
+      // create new persistent instance, we avoid making the cached
+      // copy of the object persistent by using merge
+      address.setNaturalId( null ); // each allocations natural ID should be unique
+      final Address persisted = Entities.mergeDirect( address );
+      naturalId = persisted.getNaturalId();
+
+      db.commit( );
+    } catch ( Exception e ) {
+      LOG.error( e, e );
+    } finally {
+      if ( db.isActive() ) db.rollback();
+      address.setNaturalId( naturalId );  // restore/update/set naturalId
     }
   }
 
+  /**
+   * Get the instance ID for the instance using this address.
+   *
+   * <P>The instance ID is only a valid identifier when the address is
+   * assigned. In other states the value describes the state of the address
+   * (e.g. "available" or "pending") </P>
+   *
+   * @return The instance ID
+   * @see #isReallyAssigned()
+   */
   public String getInstanceId( ) {
     return this.instanceId;
   }
 
+  /**
+   * Get the instance UUID for the instance using this address.
+   *
+   * <P>The instance ID is only a valid identifier when the address is
+   * assigned.</P>
+   *
+   * @return The instance UUID
+   * @see #isReallyAssigned()
+   */
   public String getInstanceUuid( ) {
     return this.instanceUuid;
   }
@@ -612,6 +657,12 @@ public class Address extends UserMetadata<Address.State> implements AddressMetad
     return "eucalyptus";
   }
 
+  private static Address forIp( final String ip ) {
+    final Address example = new Address();
+    example.setDisplayName( ip );
+    return example;
+  }
+
   private void fireUsageEvent( final Supplier<EventActionInfo<AddressAction>> actionInfoSupplier ) {
     fireUsageEvent( getOwner(), actionInfoSupplier );
   }
@@ -622,12 +673,11 @@ public class Address extends UserMetadata<Address.State> implements AddressMetad
       try {
         ListenerRegistry.getInstance().fireEvent(
             AddressEvent.with(
-                getNaturalId(),
                 getDisplayName(),
                 ownerFullName,
                 Accounts.lookupAccountById(ownerFullName.getAccountNumber()).getName(),
                 actionInfoSupplier.get() ) );
-      } catch ( final Exception e ) {
+      } catch ( final Throwable e ) {
         LOG.error( e, e );
       }
     }

@@ -186,16 +186,16 @@ class InstanceRenderer
 		doc.addValCol((long)entity.getInstanceCnt());
 		doc.addValCol(UnitUtil.convertTime(entity.getDurationMs(), TimeUnit.MS, units.getTimeUnit()));
 		if (entity.getDurationMs()>0) {
-			doc.addValCol(entity.getCpuUtilizationMs()==null?null:((double)entity.getCpuUtilizationMs()/(double)entity.getDurationMs()));			
+			doc.addValCol(entity.getCpuUtilizationMs()==null?0.0d:(100.0d * (double)entity.getCpuUtilizationMs()/(double)entity.getDurationMs()));	// Percentage, so multiply ratio by 100		
 		} else {
 			doc.addValCol(0d); //Doesn't work if you divide by zero
 		}
-		doc.addValCol(UnitUtil.convertSize(entity.getNetTotalInMegs(), SizeUnit.MB, units.getSizeUnit()));
-		doc.addValCol(UnitUtil.convertSize(entity.getNetTotalOutMegs(), SizeUnit.MB, units.getSizeUnit()));
-		doc.addValCol(UnitUtil.convertSize(entity.getNetExternalInMegs(), SizeUnit.MB, units.getSizeUnit()));
-		doc.addValCol(UnitUtil.convertSize(entity.getNetExternalOutMegs(), SizeUnit.MB, units.getSizeUnit()));
-		doc.addValCol(UnitUtil.convertSize(entity.getDiskReadMegs(), SizeUnit.MB, units.getSizeUnit()));
-		doc.addValCol(UnitUtil.convertSize(entity.getDiskWriteMegs(), SizeUnit.MB, units.getSizeUnit()));
+		doc.addValCol(UnitUtil.convertSize(entity.getNetTotalInBytes(), SizeUnit.B, units.getSizeUnit()));
+		doc.addValCol(UnitUtil.convertSize(entity.getNetTotalOutBytes(), SizeUnit.B, units.getSizeUnit()));
+		doc.addValCol(UnitUtil.convertSize(entity.getNetExternalInBytes(), SizeUnit.B, units.getSizeUnit()));
+		doc.addValCol(UnitUtil.convertSize(entity.getNetExternalOutBytes(), SizeUnit.B, units.getSizeUnit()));
+		doc.addValCol(UnitUtil.convertSize(entity.getDiskReadBytes(), SizeUnit.B, units.getSizeUnit()));
+		doc.addValCol(UnitUtil.convertSize(entity.getDiskWriteBytes(), SizeUnit.B, units.getSizeUnit()));
 		doc.addValCol(entity.getDiskReadOps()==null?null:((double)entity.getDiskReadOps()/1000000d)); //TODO: do something about this
 		doc.addValCol(entity.getDiskWriteOps()==null?null:((double)entity.getDiskWriteOps()/1000000d));
 		doc.addValCol(UnitUtil.convertTime(entity.getDiskReadTime(), TimeUnit.MS, TimeUnit.values()[units.getTimeUnit().ordinal()-1]));

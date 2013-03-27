@@ -62,16 +62,14 @@
 
 package com.eucalyptus.network;
 
-import static org.hamcrest.MatcherAssert.assertThat;
+import static com.eucalyptus.util.Parameters.checkParam;
 import static org.hamcrest.Matchers.notNullValue;
-import java.util.Collection;
 import java.util.HashSet;
 import java.util.Set;
 import javax.persistence.CascadeType;
 import javax.persistence.Column;
 import javax.persistence.FetchType;
 import javax.persistence.JoinColumn;
-import javax.persistence.JoinTable;
 import javax.persistence.OneToMany;
 import javax.persistence.OneToOne;
 import javax.persistence.PersistenceContext;
@@ -84,14 +82,11 @@ import org.apache.log4j.Logger;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
 import org.hibernate.annotations.Entity;
-import org.hibernate.annotations.Fetch;
-import org.hibernate.annotations.FetchMode;
 import org.hibernate.annotations.NotFound;
 import org.hibernate.annotations.NotFoundAction;
 import com.eucalyptus.cloud.CloudMetadata.NetworkGroupMetadata;
 import com.eucalyptus.cloud.UserMetadata;
 import com.eucalyptus.cloud.util.NotEnoughResourcesException;
-import com.eucalyptus.cloud.util.ResourceAllocationException;
 import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.entities.Entities;
@@ -100,7 +95,6 @@ import com.eucalyptus.util.FullName;
 import com.eucalyptus.util.Numbers;
 import com.eucalyptus.util.OwnerFullName;
 import com.google.common.base.Function;
-import com.google.common.collect.Collections2;
 import edu.ucsb.eucalyptus.msgs.PacketFilterRule;
 
 @Entity
@@ -147,7 +141,7 @@ public class NetworkGroup extends UserMetadata<NetworkGroup.State> implements Ne
   
   NetworkGroup( final OwnerFullName ownerFullName, final String groupName, final String groupDescription ) {
     this( ownerFullName, groupName );
-    assertThat( groupDescription, notNullValue( ) );
+    checkParam( groupDescription, notNullValue() );
     this.description = groupDescription;
   }
   
@@ -267,7 +261,9 @@ public class NetworkGroup extends UserMetadata<NetworkGroup.State> implements Ne
     } else if ( !Entities.isPersistent( this ) ) {
       throw new TransientEntityException( this.toString( ) );
     } else {
-      return Entities.persist( ExtantNetwork.create( this, i ) );
+      ExtantNetwork exNet = Entities.persist( ExtantNetwork.create( this, i ) );
+      this.setExtantNetwork( exNet );
+      return this.getExtantNetwork( );
     }
   }
   

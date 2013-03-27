@@ -51,16 +51,16 @@ public class AddressUsageEventListener implements EventListener<AddressEvent> {
     final ReportingElasticIpEventStore eventStore = getReportingElasticIpEventStore();
     switch (event.getActionInfo().getAction()) {
       case ALLOCATE:
-        eventStore.insertCreateEvent( event.getUuid(), timestamp, event.getUserId(), event.getAddress() );
+        eventStore.insertCreateEvent( timestamp, event.getUserId(), event.getAddress() );
         break;
       case RELEASE:
-        eventStore.insertDeleteEvent( event.getUuid(), timestamp );
+        eventStore.insertDeleteEvent( event.getAddress(), timestamp );
         break;
       case ASSOCIATE:
-        eventStore.insertAttachEvent( event.getUuid(), ((InstanceEventActionInfo)event.getActionInfo()).getInstanceUuid(), timestamp );
+        eventStore.insertAttachEvent( event.getAddress(), ((InstanceEventActionInfo)event.getActionInfo()).getInstanceUuid(), timestamp );
         break;
       case DISASSOCIATE:
-        eventStore.insertDetachEvent( event.getUuid(), ((InstanceEventActionInfo)event.getActionInfo()).getInstanceUuid(), timestamp );
+        eventStore.insertDetachEvent( event.getAddress(), ((InstanceEventActionInfo)event.getActionInfo()).getInstanceUuid(), timestamp );
         break;
     }
   }

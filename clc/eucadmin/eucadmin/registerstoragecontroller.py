@@ -24,7 +24,40 @@
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 import eucadmin.registerrequest
+import sys
+from . import describeservices
 
 class RegisterStorageController(eucadmin.registerrequest.RegisterRequest):
     ServiceName = 'Storage Controller'
     Description = 'Register a StorageController service.'
+
+    def main(self, **args):
+        debug = self.args.get('debug', False) or args.get('debug')
+
+        # Roboto weirdness results in self.args *always* containing a
+        # 'partition' key, so we need to check its value separately.
+        self.partition = self.args.get('partition') or args.get('partition')
+        if self.partition is None:
+            sys.exit('error: argument --partition is required')
+
+        self.sc_preexists = self.check_for_extant_storage(self.partition,
+                                                          debug)
+
+        return eucadmin.registerrequest.RegisterRequest.main(self, **args)
+
+    def check_for_extant_storage(self, partition, debug=False):
+        obj = describeservices.DescribeServices()
+        response = obj.main(filter_partition=partition, filter_type='storage',
+                            debug=debug)
+        statuses = (response.get('euca:DescribeServicesResponseType', {})
+                            .get('euca:serviceStatuses', []))
+        return len(statuses) > 0
+
+    def cli_formatter(self, data):
+        eucadmin.registerrequest.RegisterRequest.cli_formatter(self, data)
+        if not self.sc_preexists:
+            print >> sys.stderr, \
+                    ('Registered the first storage controller in partition '
+                     '\'{0}\'.  You must choose a storage back end with '
+                     '``euca-modify-property -p {0}.storage.'
+                     'blockstoragemanager=$BACKEND\'\'').format(self.partition)

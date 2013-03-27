@@ -62,7 +62,7 @@
 
 package com.eucalyptus.cloud;
 
-import static org.hamcrest.MatcherAssert.assertThat;
+import static com.eucalyptus.util.Parameters.checkParam;
 import static org.hamcrest.Matchers.notNullValue;
 import javax.persistence.Column;
 import javax.persistence.MappedSuperclass;
@@ -167,7 +167,7 @@ public abstract class UserMetadata<STATE extends Enum<STATE>> extends AccountMet
   @PrePersist
   @PreUpdate
   public void verifyComplete( ) {
-    assertThat( this.ownerUserId, notNullValue( ) );
-    assertThat( this.ownerUserName, notNullValue( ) );
+    checkParam( this.ownerUserId, notNullValue() );
+    checkParam( this.ownerUserName, notNullValue() );
   }
 }

@@ -101,6 +101,10 @@ public class StorageInfo extends AbstractPersistent {
 	@ConfigurableField( description = "Should transfer snapshots", displayName = "Transfer snapshots to Walrus", type = ConfigurableFieldType.BOOLEAN )
 	@Column( name = "system_storage_transfer_snapshots")
 	private Boolean shouldTransferSnapshots;
+
+	@ConfigurableField( description = "Maximum retry count for snapshot transfer", displayName = "Max Snaphot Transfer Retries" )
+        @Column( name = "max_snap_transfer_retries")
+        private Integer maxSnapTransferRetries;
 	
 	public StorageInfo() {
 		this.name = StorageProperties.NAME;
@@ -151,6 +155,14 @@ public class StorageInfo extends AbstractPersistent {
 
 	public void setShouldTransferSnapshots(Boolean shouldTransferSnapshots) {
 		this.shouldTransferSnapshots = shouldTransferSnapshots;
+	}
+
+	public Integer getMaxSnapTransferRetries() {
+		return maxSnapTransferRetries == null ? 50 : maxSnapTransferRetries;
+	}
+
+	public void setMaxSnapTransferRetries(Integer maxSnapTransferRetries) {
+		this.maxSnapTransferRetries = maxSnapTransferRetries;
 	}
 
 	@Override

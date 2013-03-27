@@ -27,10 +27,11 @@
   var initData = '';
   var redirected = false;
   $(document).ready(function() {
-    if (! isValidIp(location.hostname)) // hostname is given 
+    if (! isValidIPv4Address(location.hostname)) // hostname is given
       initData = "action=init&host="+location.hostname;
     else
       initData = "action=init";
+
     $.when( // this is to synchronize a chain of ajax calls 
       $.ajax({
         type:"POST",
@@ -40,7 +41,7 @@
         success: function(out, textStatus, jqXHR){ 
           eucalyptus.i18n({'language':out.language});
           support_url = out.support_url;
-          if(out.ipaddr && out.ipaddr.length>0 && isValidIp(out.ipaddr)){
+          if(out.ipaddr && out.ipaddr.length>0 && isValidIPv4Address(out.ipaddr)){
             var newLocation = '';
             if(location.port && location.port > 0)
               newLocation = location.protocol + '//' + out.ipaddr + ':' + location.port; // + '/?hostname='+out.hostname;
@@ -58,6 +59,22 @@
       })).done(function(out){
         if(redirected)
           return;
+
+        // check browser's version
+        var supportedBrowser = false;
+        if (($.browser.msie && parseInt($.browser.version, 10) > 8)
+            || ($.browser.mozilla && parseInt($.browser.version, 10) > 14)) {
+           supportedBrowser = true;
+        } else if ($.browser.webkit) {
+          userAgent = navigator.userAgent.toLowerCase();
+          rwebkit = new RegExp("webkit/([0-9]+)");
+          res = rwebkit.exec(userAgent);
+          if (res && res[1] > 535)
+            supportedBrowser = true;
+        }
+        if (!supportedBrowser)
+          alert($.i18n.map.unsupported_browser);
+
         setupAjax();
         // check cookie
         if ($.cookie('session-id')) {

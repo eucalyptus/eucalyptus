@@ -19,7 +19,7 @@
  ************************************************************************/
 package com.eucalyptus.reporting.event_store;
 
-import static org.hamcrest.MatcherAssert.assertThat;
+import static com.eucalyptus.util.Parameters.checkParam;
 import static org.hamcrest.Matchers.notNullValue;
 
 import java.util.Set;
@@ -53,12 +53,12 @@ public class ReportingInstanceUsageEvent
 	ReportingInstanceUsageEvent( final String uuid, final String metric, final Long sequenceNum,
 		    final String dimension, final Double value, final Long valueTimestamp ) {
 
-		assertThat(uuid, notNullValue());
-		assertThat(metric, notNullValue());
-		assertThat(sequenceNum, notNullValue());
-		assertThat(dimension, notNullValue());
-		assertThat(value, notNullValue());
-		assertThat(valueTimestamp, notNullValue());
+		checkParam( uuid, notNullValue() );
+		checkParam( metric, notNullValue() );
+		checkParam( sequenceNum, notNullValue() );
+		checkParam( dimension, notNullValue() );
+		checkParam( value, notNullValue() );
+		checkParam( valueTimestamp, notNullValue() );
 		this.uuid = uuid;
 		this.timestampMs = valueTimestamp;
 		this.metric = metric;

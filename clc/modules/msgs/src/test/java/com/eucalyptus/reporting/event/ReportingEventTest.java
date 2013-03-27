@@ -42,14 +42,12 @@ public class ReportingEventTest {
   @Test
   public void testAddressAllocateEventCreation() {
     final AddressEvent event = AddressEvent.with(
-        uuid("test"),
         "127.0.0.1",
         Principals.systemFullName(),
         "testaccount",
         AddressEvent.forAllocate()
         );
 
-    assertEquals( "uuid", uuid("test"), event.getUuid() );
     assertEquals( "address", "127.0.0.1", event.getAddress() );
     assertEquals( "account number", Principals.systemFullName().getAccountNumber(), event.getAccountId() );
     assertEquals( "account name", "testaccount", event.getAccountName() );
@@ -63,14 +61,12 @@ public class ReportingEventTest {
   @Test
   public void testAddressReleaseEventCreation() {
     final AddressEvent event = AddressEvent.with(
-        uuid("test"),
         "127.0.0.1",
         Principals.systemFullName(),
         "testaccount",
         AddressEvent.forRelease()
     );
 
-    assertEquals( "uuid", uuid("test"), event.getUuid() );
     assertEquals( "address", "127.0.0.1", event.getAddress() );
     assertEquals( "account number", Principals.systemFullName().getAccountNumber(), event.getAccountId() );
     assertEquals( "account name", "testaccount", event.getAccountName() );
@@ -84,14 +80,12 @@ public class ReportingEventTest {
   @Test
   public void testAddressAssociateEventCreation() {
     final AddressEvent event = AddressEvent.with(
-        uuid("test"),
         "127.0.0.1",
         Principals.systemFullName(),
         "testaccount",
         AddressEvent.forAssociate(uuid("instance"), "i-12345678")
     );
 
-    assertEquals( "uuid", uuid("test"), event.getUuid() );
     assertEquals( "address", "127.0.0.1", event.getAddress() );
     assertEquals( "account number", Principals.systemFullName().getAccountNumber(), event.getAccountId() );
     assertEquals( "account name", "testaccount", event.getAccountName() );
@@ -107,14 +101,12 @@ public class ReportingEventTest {
   @Test
   public void testAddressDisassociateEventCreation() {
     final AddressEvent event = AddressEvent.with(
-        uuid("test"),
         "127.0.0.1",
         Principals.systemFullName(),
         "testaccount",
         AddressEvent.forDisassociate(uuid("instance2"), "i-12345678")
     );
 
-    assertEquals( "uuid", uuid("test"), event.getUuid() );
     assertEquals( "address", "127.0.0.1", event.getAddress() );
     assertEquals( "account number", Principals.systemFullName().getAccountNumber(), event.getAccountId() );
     assertEquals( "account name", "testaccount", event.getAccountName() );

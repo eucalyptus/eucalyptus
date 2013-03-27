@@ -23,8 +23,9 @@
 # (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-from boto.roboto.awsqueryrequest import AWSQueryRequest
+from boto.roboto.awsqueryrequest import AWSQueryRequest, RequiredParamError
 from boto.roboto.param import Param
+import boto.exception
 import eucadmin
 
 class DeregisterRequest(AWSQueryRequest):
@@ -67,4 +68,22 @@ class DeregisterRequest(AWSQueryRequest):
 
     def main_cli(self):
         eucadmin.print_version_if_necessary()
+
+        # EVIL HACK: When you fail to supply a name for the component,
+        # roboto's error message instructs you to use the --name
+        # option, which doesn't exist.  We can't simply call
+        # self.do_cli and catch an exception either, because do_cli
+        # will call sys.exit before we regain control.  As a last
+        # resort, we monkey patch the RequiredParamError that it
+        # would throw to special-case this error message.
+        #
+        # Don't worry too much about how horrible this is; we're
+        # going to phase roboto out completely soon.
+        RequiredParamError.__init__ = _required_param_error_init
+
         self.do_cli()
+
+def _required_param_error_init(self, required):
+    self.required = required
+    s = 'Required parameters are missing: %s' % self.required.replace('--name', 'name')
+    boto.exception.BotoClientError.__init__(self, s)

@@ -111,6 +111,10 @@ test_url: http.c
 ../util/euca_auth.o: ../util/euca_auth.c ../util/euca_auth.h
 	make -C ../util
 
+indent:
+	@indent *.[ch] -nbad -bap -nbc -bbo -hnl -br -brs -c33 -cd33 -ncdb -ce -ci4 -cli0 -d0 -di1 -nfc1 -i4 -ut -ip0 -l200 -lp -npcs -nprs -npsl -sai -saf -saw -ncs -nsc -sob -nfca -ss -ts4 -il0 -nip
+	@\rm *.*~
+
 clean:
 	rm -rf *~ *.o Wclient euca-blobs $(TESTS)
 

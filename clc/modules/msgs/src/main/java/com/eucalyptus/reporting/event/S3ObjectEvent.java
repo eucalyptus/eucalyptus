@@ -20,7 +20,7 @@
 
 package com.eucalyptus.reporting.event;
 
-import static org.hamcrest.MatcherAssert.assertThat;
+import static com.eucalyptus.util.Parameters.checkParam;
 import static org.hamcrest.Matchers.not;
 import static org.hamcrest.text.IsEmptyString.isEmptyOrNullString;
 import javax.annotation.Nonnull;
@@ -69,7 +69,7 @@ public class S3ObjectEvent extends S3EventSupport<S3ObjectEvent.S3ObjectAction> 
                  @Nonnull  final String ownerUserId,
                  @Nonnull  final Long size ) {
     super( action, bucketName, ownerUserId, size );
-    assertThat(objectKey, not( isEmptyOrNullString() ));
+    checkParam( objectKey, not( isEmptyOrNullString() ) );
     this.objectKey = objectKey;
     this.version = version;
   }

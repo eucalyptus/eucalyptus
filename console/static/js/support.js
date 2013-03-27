@@ -24,7 +24,6 @@ var RETURN_MAC_KEY_CODE = 10;
 var BACKSPACE_KEY_CODE = 8;
 
 /* CONFIGURABLE */
-var PROXY_TIMEOUT = 120000;
 var REFRESH_INTERVAL_SEC = 10;
 var TABLE_REFRESH_INTERVAL_SEC = 20;
 var GLOW_DURATION_SEC = 10;
@@ -36,14 +35,14 @@ var DOM_BINDING = {header:'.euca-container .euca-header-container .inner-contain
                    notification:'.euca-container .euca-notification-container .inner-container #euca-notification',
                    explorer:'.euca-explorer-container .inner-container',
                    footer:'.euca-container .euca-footer-container .inner-container',
-                   hidden:'.euca-hidden-container',
+                   hidden:'.euca-hidden-container'
                   };
 
-var SGROUP_NAME_PATTERN = new RegExp('^[ A-Za-z0-9_\-]{1,256}$');
-var KEY_PATTERN = new RegExp('^[ A-Za-z0-9_\-]{1,256}$');
+var SGROUP_NAME_PATTERN = new RegExp('^[ A-Za-z0-9_\-]{1,242}$');
+var KEY_PATTERN = new RegExp('^[ A-Za-z0-9_\-]{1,242}$');
 var VOL_ID_PATTERN = new RegExp('^vol-[A-Za-z0-9]{8}$');
 var IP_PATTER = new RegExp('[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}$');
-
+var MAX_DESCRIPTION_LEN = 255;
 var KEEP_VIEW = 'keep_view';
 
 function isValidIPv4Address(ipaddr) {
@@ -94,7 +93,7 @@ function isFunction(obj) {
   return obj && {}.toString.call(obj) == '[object Function]';
 }
 
-/** Add Array.indexOf to IE **/
+/** Add Array.indexOf to IE  **/
 if( !Array.prototype.indexOf ) {
   Array.prototype.indexOf = function(needle) {
     for(var i = 0; i < this.length; i++) {
@@ -104,6 +103,16 @@ if( !Array.prototype.indexOf ) {
     }
     return -1;
   };
+}
+
+function addEllipsis(input, maxLen){
+  if (input == undefined || input.length < maxLen)
+    return input;
+  input = input.substring(0, maxLen);
+  i = input.lastIndexOf(" ");
+  if ( i > 0)
+    input = input.substring(0, i);
+  return input + '...';
 }
 
 function S4() {
@@ -197,31 +206,31 @@ var unescape_vector = {
   instance: {
     root_device_name: true,
     reason: true,
-    launch_time: true,
+    launch_time: true
   },
   image: {
     root_device_name: true,
-    location: true, //can we?
+    location: true //can we?
   },
   volume: {
-    create_time: true, 
+    create_time: true
   },
   snapshot: {
     start_time: true,
-    progress: true,
+    progress: true
   },
   sgroup: {
     rules: { 
       grants: {
         cidr_ip: true 
-      },
-    },
+      }
+    }
   },
   keypair: {
-    fingerprint: true,
+    fingerprint: true
   },
   zone: {
-    state: true,
+    state: true
   }
 }
 
@@ -259,49 +268,49 @@ function refresh(resource){
 
 function addKeypair(callback){
   $('html body').find(DOM_BINDING['hidden']).children().detach();
-  $('html body').find(DOM_BINDING['hidden']).keypair();
+  $('html body').find(DOM_BINDING['hidden']).keypair({hidden:true});
   $('html body').find(DOM_BINDING['hidden']).keypair('dialogAddKeypair',callback);
 }
 
 function addGroup(callback){
   $('html body').find(DOM_BINDING['hidden']).children().detach();
-  $('html body').find(DOM_BINDING['hidden']).sgroup();
+  $('html body').find(DOM_BINDING['hidden']).sgroup({hidden:true});
   $('html body').find(DOM_BINDING['hidden']).sgroup('dialogAddGroup',callback);
 }
 
 function addSnapshot(volume){
   $('html body').find(DOM_BINDING['hidden']).children().detach();
-  $('html body').find(DOM_BINDING['hidden']).snapshot();
+  $('html body').find(DOM_BINDING['hidden']).snapshot({hidden:true});
   $('html body').find(DOM_BINDING['hidden']).snapshot('dialogAddSnapshot', volume);
 }
 
 function addVolume(snapshot){
   $('html body').find(DOM_BINDING['hidden']).children().detach();
-  $('html body').find(DOM_BINDING['hidden']).volume();
+  $('html body').find(DOM_BINDING['hidden']).volume({hidden:true});
   $('html body').find(DOM_BINDING['hidden']).volume('dialogAddVolume', snapshot);
 }
 
 function attachVolume(volume, instance){
   $('html body').find(DOM_BINDING['hidden']).children().detach();
-  $('html body').find(DOM_BINDING['hidden']).volume();
+  $('html body').find(DOM_BINDING['hidden']).volume({hidden:true});
   $('html body').find(DOM_BINDING['hidden']).volume('dialogAttachVolume', volume, instance);
 }
 
 function associateIp(instance) {
   $('html body').find(DOM_BINDING['hidden']).children().detach();
-  $('html body').find(DOM_BINDING['hidden']).eip({'from_instance' : true});
+  $('html body').find(DOM_BINDING['hidden']).eip({from_instance: true, hidden:true});
   $('html body').find(DOM_BINDING['hidden']).eip('dialogAssociateIp', null, instance);
 }
 
 function disassociateIp(address){
   $('html body').find(DOM_BINDING['hidden']).children().detach();
-  $('html body').find(DOM_BINDING['hidden']).eip({'from_instance' : true});
+  $('html body').find(DOM_BINDING['hidden']).eip({from_instance: true, hidden:true});
   $('html body').find(DOM_BINDING['hidden']).eip('dialogDisassociateIp', [address]);
 }
 
 function allocateIP() {
   $('html body').find(DOM_BINDING['hidden']).children().detach();
-  $('html body').find(DOM_BINDING['hidden']).eip();
+  $('html body').find(DOM_BINDING['hidden']).eip({hidden:true});
   $('html body').find(DOM_BINDING['hidden']).eip('createAction');
 }
 
@@ -316,7 +325,7 @@ function logout(){
       data:"action=logout&_xsrf="+$.cookie('_xsrf'),
       dataType:"json",
       async:"false", // async option deprecated as of jQuery 1.8
-      timeout: 10000, // shorter timeout for log-out
+      timeout: 10000 // shorter timeout for log-out
     })).always(function(out){
       var hostname = null;
       /*if (location.href && location.href.indexOf('hostname=') >= 0){
@@ -362,7 +371,7 @@ function getErrorMessage(jqXHR) {
 function isRootVolume(instanceId, volumeId) {
   var instance = describe('instance', instanceId);
   if ( instance && instance.root_device_type && instance.root_device_type.toLowerCase() == 'ebs' ) {
-    var rootDeviceName = instance.root_device_name ? instance.root_device_name.replace('&#x2f;','/').replace('&#x2f;','/') : '/dev/sda1';
+    var rootDeviceName = getRootDeviceName(instance);
     var rootVolume = instance.block_device_mapping[rootDeviceName];
     if ( rootVolume && rootVolume.volume_id === volumeId ) {
       return true;
@@ -371,20 +380,30 @@ function isRootVolume(instanceId, volumeId) {
   return false;
 }
 
-var tableRefreshCallback = null; // hacky..but callback name inside the table breaks with flippy help
-
-function isValidIp(s) {
-  var arr = s.split('.');
-  if(!arr || arr.length!==4)
-    return false;
-  for(i in arr){
-    var n = parseInt(arr[i]);
-    if (!(n >=0 && n<=255)){
-      return false;
-    }
-  }
-  return true;
+function getRootDeviceName(resource){
+  return resource.root_device_name ? resource.root_device_name.replace('&#x2f;','/').replace('&#x2f;','/') : '/dev/sda1';
 }
+
+function generateSnapshotToImageMap(){
+  var images = describe('image');
+  var snapToImageMap = {}
+  $.each(images, function(idx, image){
+    if(image.block_device_mapping){
+      vol = image.block_device_mapping[getRootDeviceName(image)];
+      if (vol) {
+        snapshot = vol['snapshot_id'];
+        if (snapToImageMap[snapshot])
+          snapToImageMap[snapshot].push(image['id']);
+        else {
+          snapToImageMap[snapshot] = [image['id']];
+        }
+      }
+    }
+  });
+  return snapToImageMap;
+}
+
+var tableRefreshCallback = null; // hacky..but callback name inside the table breaks with flippy help
 
 function inferImage(manifest, desc, platform) {
   if(!platform)
@@ -407,7 +426,7 @@ function inferImage(manifest, desc, platform) {
      'suse' : new RegExp('suse', 'ig'),
      'gentoo' : new RegExp('gentoo', 'ig'),
      'linux' : new RegExp('linux','ig'),
-     'windows' :new RegExp('windows','ig'),
+     'windows' :new RegExp('windows','ig')
     };
   for (key in inferMap){
     var reg = inferMap[key];
@@ -438,7 +457,7 @@ function getImageName(imgKey){
     'suse' : 'Suse Linux',
     'gentoo' : 'Gentoo',
     'linux' : 'Linux',
-    'windows' : 'Windows' ,
+    'windows' : 'Windows'
   };
   return nameMap[imgKey];
 }
@@ -450,12 +469,15 @@ function errorAndLogout(errorCode){
   $('html body').eucadata('disable');
   $('html body').find(DOM_BINDING['hidden']).login();
   var errorMsg = null;
+  var bError = false;
   if (errorCode === 401 || errorCode === 403)
     errorMsg = $.i18n.prop('login_timeout', '<a href="#">'+cloud_admin+'</a>');
-  else
+  else{
     errorMsg = $.i18n.prop('connection_failure', '<a href="#">'+cloud_admin+'</a>');
+    bError = true;
+  }
 
-  $('html body').find(DOM_BINDING['hidden']).login('popupError', errorMsg, function(){
+  $('html body').find(DOM_BINDING['hidden']).login('popupDialog', bError, errorMsg, function(){
     logout();
   });
 }
@@ -486,10 +508,11 @@ function popOutPageHelp(url, height){
   window.open(url, '_blank', option,true);
 }
 
+var PROXY_TIMEOUT = 120000;
 function setupAjax(){
  $.ajaxSetup({
    type: "POST",
-   timeout: 30000,
+   timeout: 30000
  });
 }
 
@@ -515,4 +538,47 @@ function doMultiAjax(array, callback, delayMs){
   };
 
   doNext(array, 0);
+}
+
+function sortArray(array, comperator){
+  if(!comperator){
+    comperator = function(item1, item2){ return item1 < item2}
+  }
+  var mergeSort = function(arr, left, right){
+    if(left < right){
+      var leftArr = mergeSort(arr, left, Math.floor((left+right)/2));
+      var rightArr = mergeSort(arr, Math.floor((left+right)/2) +1 , right);
+      return merge(leftArr, rightArr); 
+    }else if (left === right){
+      return [arr[left]];
+    }   
+  };   
+  var merge = function(arr1, arr2){
+    var merged = [];
+    var idx1 = 0;
+    var idx2 = 0;
+    while(idx1 < arr1.length  || idx2 < arr2.length){
+      if(idx1 < arr1.length && idx2 < arr2.length){
+       // if(arr1[idx1] < arr2[idx2])
+        if(comperator(arr1[idx1], arr2[idx2]))
+          merged.push(arr1[idx1++]);
+        else
+          merged.push(arr2[idx2++]);
+      }else if(idx1 < arr1.length){
+        merged.push(arr1[idx1++]);
+      }else
+        merged.push(arr2[idx2++]);
+    }
+    return merged;
+  }
+  if(! array || array.length <= 1)
+    return array;
+  return mergeSort(array, 0, array.length-1);
+}
+
+function trim (str) {
+    if(str)
+      return str.replace(/^\s\s*/, '').replace(/\s\s*$/, '');
+    else
+      return str;
 }

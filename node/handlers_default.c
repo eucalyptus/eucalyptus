@@ -618,6 +618,7 @@ doAttachVolume (	struct nc_state_t *nc,
      int ret = OK;
      int is_iscsi_target = 0;
      int have_remote_device = 0;
+     char * xml = NULL;
 
      char * tagBuf;
      char * localDevName;
@@ -731,7 +732,7 @@ doAttachVolume (	struct nc_state_t *nc,
      }
      
      // read in libvirt XML, which may have been modified by the hook above
-     char * xml = file2str (lpath);
+     xml = file2str (lpath);
      if (xml == NULL) {
          logprintfl (EUCAERROR, "[%s][%s] failed to read volume XML from %s\n", instance->instanceId, volumeId, lpath);
          ret = ERROR;
@@ -739,11 +740,23 @@ doAttachVolume (	struct nc_state_t *nc,
      }
 
      // protect libvirt calls because we've seen problems during concurrent libvirt invocations
-     sem_p (hyp_sem);
-     int err = virDomainAttachDevice (dom, xml);
-     sem_v (hyp_sem);
+     // zhill - wrap with retry in case libvirt is dumb.
+     int err = 0;
+     for(int i = 1 ; i < 3 ; i++) {
+    	 sem_p (hyp_sem);
+    	 err = virDomainAttachDevice (dom, xml);
+    	 sem_v (hyp_sem);
+    	 if(err) {
+    		 logprintfl (EUCAERROR, "[%s][%s] failed to attach host device '%s' to guest device '%s' on attempt %d of 3\n", instanceId, volumeId, remoteDevReal, localDevReal, i);
+    		 logprintfl (EUCAERROR, "[%s][%s] virDomainAttachDevice() failed (err=%d) XML='%s'\n", instanceId, volumeId, err, xml);
+    		 sleep(3); //sleep a bit and retry.
+    	 } else {
+    		 break;
+    	 }
+     }
+
      if (err) {
-         logprintfl (EUCAERROR, "[%s][%s] failed to attach host device '%s' to guest device '%s'\n", instanceId, volumeId, remoteDevReal, localDevReal);
+         logprintfl (EUCAERROR, "[%s][%s] failed to attach host device '%s' to guest device '%s' after 3 retries\n", instanceId, volumeId, remoteDevReal, localDevReal);
          logprintfl (EUCAERROR, "[%s][%s] virDomainAttachDevice() failed (err=%d) XML='%s'\n", instanceId, volumeId, err, xml);
          ret = ERROR;
      }

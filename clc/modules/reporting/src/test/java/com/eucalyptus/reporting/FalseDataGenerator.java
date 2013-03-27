@@ -1,3 +1,23 @@
+/*************************************************************************
+ * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; version 3 of the License.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see http://www.gnu.org/licenses/.
+ *
+ * Please contact Eucalyptus Systems, Inc., 6755 Hollister Ave., Goleta
+ * CA 93117, USA or visit http://www.eucalyptus.com/licenses/ if you need
+ * additional information or have any questions.
+ ************************************************************************/
+
 package com.eucalyptus.reporting;
 
 import java.io.File;
@@ -63,6 +83,7 @@ public class FalseDataGenerator
 	private static final long VOLUME_SIZE   = 2;
 	private static final long SNAPSHOT_SIZE = 2;
 	private static final long OBJECT_SIZE   = 2;
+	private static final double ONE_MB = 1024d*1024d;
 
 	private static final long INSTANCE_CUMULATIVE_DISK_USAGE_PER_PERIOD                 = 2;
 	private static final long INSTANCE_CUMULATIVE_NET_INCOMING_BETWEEN_USAGE_PER_PERIOD = 3;
@@ -164,7 +185,7 @@ public class FalseDataGenerator
 
 						String instanceUuid  = "(none)";
 						String volumeUuid    = "(none)";
-						String elasticIpUuid = "(none)";
+						String elasticIp = "(none)";
 						String bucketName    = "(none)";
 						int createdInstanceNum = 0;
 						for (int periodNum=0; periodNum<NUM_PERIODS; periodNum++) {
@@ -187,14 +208,14 @@ public class FalseDataGenerator
 								ReportingVolumeEventStore.getInstance().insertCreateEvent(volumeUuid, ("vol-" + userNum + "-" + periodNum),
 										timeMs, userId, availZone, VOLUME_SIZE);
 
-								elasticIpUuid = String.format(UUID_FORMAT, uniqueUserId, elasticIpUuidNum++);
-								log.debug(String.format("  Generating elastic ip uuid %s\n", elasticIpUuid));
 								String ip = String.format("%d.%d.%d.%d",
 										(userNum >> 8) % 256,
 										userNum % 256,
 										(periodNum >> 8) % 256,
 										periodNum % 256);
-								ReportingElasticIpEventStore.getInstance().insertCreateEvent(elasticIpUuid, timeMs, userId, ip);
+                elasticIp = ip;
+                log.debug(String.format("  Generating elastic ip %s\n", elasticIp));
+                ReportingElasticIpEventStore.getInstance().insertCreateEvent(timeMs, userId, ip);
 							}
 
 							/* Create a fake snapshot if one should be created in this period. */
@@ -223,27 +244,25 @@ public class FalseDataGenerator
 
 
 
-							/* Generate instance usage in this period for every instance running from before */
-							double oneMB = 1024d*11024d;
 							for (long i=INSTANCE_UUID_START; i<instanceUuidNum-2; i++) {
 								String uuid = String.format(UUID_FORMAT, uniqueUserId, i);
 								log.debug(String.format("  Generating instance usage uuid %s\n", uuid));
 								ReportingInstanceEventStore.getInstance().insertUsageEvent(uuid,
-										timeMs, "NetworkIn", 0L, "total", oneMB*periodNum);
+										timeMs, "NetworkIn", 0L, "total", ONE_MB*periodNum);
 								ReportingInstanceEventStore.getInstance().insertUsageEvent(uuid,
-										timeMs, "NetworkIn", 0L, "external", oneMB*2*periodNum);
+										timeMs, "NetworkIn", 0L, "external", ONE_MB*2*periodNum);
 								ReportingInstanceEventStore.getInstance().insertUsageEvent(uuid,
-										timeMs, "NetworkOut", 0L, "total", oneMB*3*periodNum);
+										timeMs, "NetworkOut", 0L, "total", ONE_MB*3*periodNum);
 								ReportingInstanceEventStore.getInstance().insertUsageEvent(uuid,
-										timeMs, "NetworkOut", 0L, "external", oneMB*4*periodNum);
+										timeMs, "NetworkOut", 0L, "external", ONE_MB*4*periodNum);
 								ReportingInstanceEventStore.getInstance().insertUsageEvent(uuid,
-										timeMs, "DiskReadBytes", 0L, "root", oneMB*5*periodNum);
+										timeMs, "DiskReadBytes", 0L, "root", ONE_MB*5*periodNum);
 								ReportingInstanceEventStore.getInstance().insertUsageEvent(uuid,
-										timeMs, "DiskWriteBytes", 0L, "root", oneMB*6*periodNum);
+										timeMs, "DiskWriteBytes", 0L, "root", ONE_MB*6*periodNum);
 								ReportingInstanceEventStore.getInstance().insertUsageEvent(uuid,
-										timeMs, "DiskReadBytes", 0L, "ephemeral0", oneMB*7*periodNum);
+										timeMs, "DiskReadBytes", 0L, "ephemeral0", ONE_MB*7*periodNum);
 								ReportingInstanceEventStore.getInstance().insertUsageEvent(uuid,
-										timeMs, "DiskWriteBytes", 0L, "ephemeral0", oneMB*8*periodNum);
+										timeMs, "DiskWriteBytes", 0L, "ephemeral0", ONE_MB*8*periodNum);
 								ReportingInstanceEventStore.getInstance().insertUsageEvent(uuid,
 										timeMs, "VolumeTotalReadTime", 0L, "vda", 100000d*periodNum);
 								ReportingInstanceEventStore.getInstance().insertUsageEvent(uuid,
@@ -258,19 +277,19 @@ public class FalseDataGenerator
 
 							/* Attach Volumes and Elastic IPs to Instances */
 							ReportingVolumeEventStore.getInstance().insertAttachEvent(volumeUuid, instanceUuid, VOLUME_SIZE, timeMs);
-							ReportingElasticIpEventStore.getInstance().insertAttachEvent(elasticIpUuid, instanceUuid, timeMs);
-							log.debug(String.format("  Attaching volume %s and ip %s to instance %s\n", volumeUuid, elasticIpUuid, instanceUuid));
-							attachments.add(new Attachment(instanceUuid, volumeUuid, elasticIpUuid));
+							ReportingElasticIpEventStore.getInstance().insertAttachEvent(elasticIp, instanceUuid, timeMs);
+							log.debug(String.format("  Attaching volume %s and ip %s to instance %s\n", volumeUuid, elasticIp, instanceUuid));
+							attachments.add(new Attachment(instanceUuid, volumeUuid, elasticIp));
 
 							/* Detach old Volumes and Elastic IPs from old Instances */
 							if (attachments.size() >= ATTACH_PERIODS_DURATION) {
 								Attachment attachment = attachments.remove(0);
 								ReportingVolumeEventStore.getInstance().insertDetachEvent(attachment.getVolumeUuid(),
 										attachment.getInstanceUuid(), timeMs);
-								ReportingElasticIpEventStore.getInstance().insertDetachEvent(attachment.getElasticIpUuid(),
+								ReportingElasticIpEventStore.getInstance().insertDetachEvent(attachment.getElasticIp(),
 										attachment.getInstanceUuid(), timeMs);
 								log.debug(String.format("  Detaching volume %s and ip %s to instance %s\n",
-										attachment.getVolumeUuid(), attachment.getElasticIpUuid(), attachment.getInstanceUuid()));
+										attachment.getVolumeUuid(), attachment.getElasticIp(), attachment.getInstanceUuid()));
 							}
 						}
 					}
@@ -283,14 +302,14 @@ public class FalseDataGenerator
 	{
 		private final String instanceUuid;
 		private final String volumeUuid;
-		private final String elasticIpUuid;
+		private final String elasticIp;
 				
 		public Attachment(String instanceUuid, String volumeUuid,
-				String elasticIpUuid)
+				String elasticIp)
 		{
 			this.instanceUuid = instanceUuid;
 			this.volumeUuid = volumeUuid;
-			this.elasticIpUuid = elasticIpUuid;
+			this.elasticIp = elasticIp;
 		}
 		
 		public String getInstanceUuid() {
@@ -301,8 +320,8 @@ public class FalseDataGenerator
 			return volumeUuid;
 		}
 		
-		public String getElasticIpUuid() {
-			return elasticIpUuid;
+		public String getElasticIp() {
+			return elasticIp;
 		}
 
 	}
@@ -542,7 +561,7 @@ public class FalseDataGenerator
 		}
 		/* TODO: verify zone totals */
 		InstanceUsageArtEntity zoneUsage = zone.getUsageTotals().getInstanceTotals();
-		checkDiskInMetric("Zone Totals", zoneUsage, 1700d*NUM_USER_TEST); // Each user has 1700d (1000d+700d for instance a+b)	
+		checkDiskInMetric("Zone Totals", zoneUsage, ONE_MB*1700d*NUM_USER_TEST); // Each user has 1700d (1000d+700d for instance a+b)	
 		
 		AccountArtEntity account = zone.getAccounts().get("account0");
 		if (account==null) {
@@ -558,14 +577,14 @@ public class FalseDataGenerator
 
 			/* Verify user totals */
 			InstanceUsageArtEntity userUsage = user.getUsageTotals().getInstanceTotals();
-			checkDiskInMetric("User Totals", userUsage, 1700d);	// Each user has 1700d (1000d+700d for instance a+b)
+			checkDiskInMetric("User Totals", userUsage, ONE_MB*1700d);	// Each user has 1700d (1000d+700d for instance a+b)
 			
 			for (String uuid: user.getInstances().keySet()) {
 				InstanceUsageArtEntity usage = user.getInstances().get(uuid).getUsage();
 				if (uuid.startsWith("a")) {
-					checkDiskInMetric("Instance A", usage, 700d);  // See comment in geneation method for 700d
+					checkDiskInMetric("Instance A", usage, ONE_MB*700d);  // See comment in geneation method for 700d
 				} else if (uuid.startsWith("b")) {
-					checkDiskInMetric("Instance B", usage, 1000d); // See comment in generation method for 1000d
+					checkDiskInMetric("Instance B", usage, ONE_MB*1000d); // See comment in generation method for 1000d
 				} else if (uuid.startsWith("c") || uuid.startsWith("d")) {
 					throw new IllegalStateException("Instance included without any usage in report boundaries");
 				}
@@ -575,7 +594,7 @@ public class FalseDataGenerator
 	
 	private static boolean checkDiskInMetric(String testName, InstanceUsageArtEntity usage, double foundVal)
 	{
-		long got = new Double(usage.getDiskReadMegs()).longValue();
+		long got = new Double(usage.getDiskReadBytes()).longValue();
 		long expected = new Double(foundVal).longValue();
 		log.debug(String.format("test:%s expected:%d got:%d", testName, expected, got));
 		return (expected==got);

@@ -31,7 +31,7 @@
 #define MAX_SENSOR_VALUES      15 // by default 10 on CLC
 #define MAX_SENSOR_DIMENSIONS  (5 + EUCA_MAX_VOLUMES) // root, ephemeral[0-1], vol-XYZ
 #define MAX_SENSOR_COUNTERS    2  // we only have two types of counters (summation|average) for now
-#define MAX_SENSOR_METRICS     10 // currently 9 are implemented
+#define MAX_SENSOR_METRICS     12 // currently 11 are implemented
 #else
 #define MAX_SENSOR_NAME_LEN    64
 #define MAX_SENSOR_VALUES      5  // smaller sizes, for easier testing of limits
@@ -44,6 +44,10 @@
 #define MIN_COLLECTION_INTERVAL_MS 1000L // below 1 second is too frequent
 #define MAX_COLLECTION_INTERVAL_MS 86400000L // above 24 hours is too infrequent
 #define MAX_SENSOR_RESOURCES_HARD  10000000L // 10 mil resources max, for sanity checking
+
+// Sensor resources that have not been updated in this multiple of the
+// upstream polling interval will be expired from the cache.
+#define CACHE_EXPIRY_MULTIPLE_OF_POLLING_INTERVAL 3
 
 typedef struct {
     long long timestampMs; // in milliseconds
@@ -86,17 +90,8 @@ typedef struct {
     char resourceUuid [64];                    // e.g. "550e8400-e29b-41d4-a716-446655443210"
     sensorMetric metrics [MAX_SENSOR_METRICS]; // array of values (not pointers, to simplify shared-memory region use)
     int metricsLen;                            // size of the array
+    int timestamp;                             // timestamp for last receipt of metrics
 } sensorResource;
-
-typedef struct getstat_t { // an internal struct for temporary storage of stats
-    char instanceId [100];
-    long long timestamp;
-    char metricName [100];
-    int counterType;
-    char dimensionName [100];
-    double value;
-    struct getstat_t * next;
-} getstat;
 
 typedef struct {
     long long collection_interval_time_ms;
@@ -104,7 +99,8 @@ typedef struct {
     boolean initialized;
     int max_resources;
     int used_resources;
-    getstat ** stats;
+    time_t last_polled;
+    time_t interval_polled;
     sensorResource resources[1]; // if struct should be allocated with extra space after it for additional cache elements
 } sensorResourceCache;
 

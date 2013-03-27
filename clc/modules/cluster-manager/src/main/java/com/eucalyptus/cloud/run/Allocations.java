@@ -124,7 +124,7 @@ public class Allocations {
     private final List<ResourceToken>  allocationTokens  = Lists.newArrayList( );
     private final Long                 reservationIndex;
     private final Map<Integer, String> instanceIds;
-    private Date                       expiration = new Date( 32503708800000l );
+    private Date                       expiration;
     
     private Allocation( final RunInstancesType request ) {
       super( );

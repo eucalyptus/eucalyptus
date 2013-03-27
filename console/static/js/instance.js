@@ -43,6 +43,7 @@
       var $instHelp = $wrapper.children().last();
       thisObj.tableWrapper = $instTable.eucatable({
         id : 'instances', // user of this widget should customize these options,
+        hidden: thisObj.options['hidden'],
         dt_arg : {
           "sAjaxSource": "../ec2?Action=DescribeInstances",
           "fnServerData": function (sSource, aoData, fnCallback) {
@@ -86,8 +87,8 @@
             },
             { "mDataProp": "image_id"},
             { "mDataProp": "placement" }, // TODO: placement==zone?
-            { "mDataProp": "ip_address" },
-            { "mDataProp": "private_ip_address" },
+            { "mDataProp": "public_dns_name" },
+            { "mDataProp": "private_dns_name" },
             { "mDataProp": "key_name" },
             { "mDataProp": "group_name" },
             { 
@@ -498,6 +499,7 @@
           success: function(data, textStatus, jqXHR){
             if ( data.results && data.results == true ) {
               notifySuccess(null, $.i18n.prop('instance_reboot_success', instances));
+              thisObj.tableWrapper.eucatable('refreshTable');
             } else {
               notifyError($.i18n.prop('instance_reboot_error', instances), undefined_error);
             }
@@ -621,12 +623,12 @@
                   var parent = thisObj.connectDialog.find('a#password-link').parent();
                   parent.find('a').remove();
                   parent.html(result.password);
-                  //thisObj.connectDialog.find('a').last().html(result.password);
-                  //thisObj.connectDialog.find('a').unbind('click');
+                  thisObj.connectDialog.find('a').unbind('click');
                 });
               },
               fail : function (e, data) {
-                thisObj.connectDialog.find('a').last().html('<span class="on-error">'+instance_dialog_password_error+'</span>');
+                var parent = thisObj.connectDialog.find('a#password-link').parent();
+                parent.html('<span class="on-error">'+instance_dialog_password_error+'</span>');
                 thisObj.connectDialog.find('a').unbind('click');
               },
             });
@@ -637,8 +639,7 @@
             var parent = thisObj.connectDialog.find('a#password-link').parent();
             parent.find('a').remove();
             parent.html(thisObj.instPassword[instance]);
-            //thisObj.connectDialog.find('a').last().html(
-            //thisObj.connectDialog.find('a').unbind('click');
+            thisObj.connectDialog.find('a').unbind('click');
           }
         }
         else{
@@ -767,7 +768,7 @@
               if ( data.results && data.results == 'detaching' ) {
                 ;
               }else{
-                error.push({id:volumeId, reason: undefined_reason});
+                error.push({id:volumeId, reason: undefined_error});
               }
             }
            })(volumeId),
@@ -787,13 +788,13 @@
                 if (error.length > 0)
                   $msg.append($('<div>').addClass('multiop-summary-failure').html($.i18n.prop('volume_detach_fail', error.length)));
                 notifyMulti(100, $msg.html(), error);
+                thisObj.tableWrapper.eucatable('refreshTable');
               }
               dfd.resolve();
             }
           })(volumeId),
         });
       });
-      thisObj.tableWrapper.eucatable('refreshTable');
     },
     _associateAction : function(){
       var thisObj = this;
@@ -855,7 +856,47 @@
       $('html body').find(DOM_BINDING['hidden']).launcher('updateLaunchParam', 'number', inst_num);
       $('html body').find(DOM_BINDING['hidden']).launcher('updateLaunchParam', 'keypair', keyname);
       $('html body').find(DOM_BINDING['hidden']).launcher('updateLaunchParam', 'sgroup', sgroup);
-      
+     
+      var deviceMap = [] 
+      thisObj.launchMoreDialog.find('#launch-wizard-advanced-storage').find('table tbody tr').each(function(){
+        var $selectedRow = $(this);
+        var $cells = $selectedRow.find('td');
+        var volume = $($cells[0]).find('select').val();
+        var mapping = '/dev/'+asText($($cells[1]).find('input').val());
+        var snapshot = $($cells[2]).find('select').val();
+        var size = asText($($cells[3]).find('input').val()); 
+        var delOnTerm = $($cells[4]).find('input').is(':checked') ? true : false;
+        
+        snapshot = (snapshot ==='none') ? null : snapshot; 
+        if(volume ==='ebs'){
+          var mapping = {
+            'volume':'ebs',
+            'dev':mapping,
+            'snapshot':snapshot, 
+            'size':size,
+            'delOnTerm':delOnTerm
+          };
+          deviceMap.push(mapping);
+      $('html body').find(DOM_BINDING['hidden']).launcher('launch');
+        }else if(volume.indexOf('ephemeral')>=0){
+          var mapping = {
+            'volume':volume,
+            'dev':mapping
+          }
+          deviceMap.push(mapping);
+        }else if(snapshot !== 'none') { // root volume
+          var mapping = {
+            'volume':'ebs',
+            'dev': mapping,
+            'snapshot':snapshot,
+            'size':size,
+            'delOnTerm':delOnTerm
+          }
+          deviceMap.push(mapping);
+        }
+      });
+      if(deviceMap.length > 0)
+        $('html body').find(DOM_BINDING['hidden']).launcher('updateLaunchParam', 'device_map', deviceMap);
       $('html body').find(DOM_BINDING['hidden']).launcher('launch');
     },
     _initLaunchMoreDialog : function(){
@@ -960,6 +1001,7 @@
       if (advHeader)
         $(advHeader).detach();
       $('html body').find(DOM_BINDING['hidden']).launcher('makeAdvancedSection', $advanced);
+      $advanced.find('#launch-wizard-image-emi').val(image.id).trigger('change');
     },
     _expandCallback : function(row){
       var thisObj = this;
@@ -1070,11 +1112,7 @@
       for( i in inst_ids){
         thisObj.tableWrapper.eucatable('glowRow', inst_ids[i], 2); 
       }
-    },
-
-    keyAction : function(e) {
-      this.tableWrapper.eucatable('keyAction', e);
-    },
+    } 
 /**** End of Public Methods ****/
   });
 })(jQuery,

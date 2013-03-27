@@ -74,7 +74,6 @@ import com.eucalyptus.component.Components;
 import com.eucalyptus.component.Partitions;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.ServiceConfigurations;
-import com.eucalyptus.component.ServiceTransitions;
 import com.eucalyptus.component.Topology;
 import com.eucalyptus.empyrean.DescribeServicesResponseType;
 import com.eucalyptus.empyrean.DescribeServicesType;
@@ -102,7 +101,7 @@ import com.google.common.base.Joiner;
 import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
 import com.google.common.collect.Iterables;
-import static org.hamcrest.MatcherAssert.assertThat;
+import static com.eucalyptus.util.Parameters.checkParam;
 import static org.hamcrest.Matchers.notNullValue;
 
 public class EmpyreanService {
@@ -217,7 +216,7 @@ public class EmpyreanService {
   }
   
   public static ServiceConfiguration findService( final String name ) {
-    assertThat( name, notNullValue( ) );
+    checkParam( name, notNullValue() );
     Predicate<ServiceConfiguration> nameOrFullName = new Predicate<ServiceConfiguration>( ) {
       
       @Override
@@ -473,7 +472,7 @@ public class EmpyreanService {
         {
           if ( request.getByPartition( ) != null ) {
             Partitions.exists( request.getByPartition( ) );
-            this.add( Filters.host( request.getByPartition( ) ) );
+            this.add( Filters.partition( request.getByPartition( ) ) );
           }
           if ( request.getByState( ) != null ) {
             final Component.State stateFilter = Component.State.valueOf( request.getByState( ).toUpperCase( ) );

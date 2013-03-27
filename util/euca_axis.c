@@ -120,6 +120,16 @@ AXIS2_ERROR_SET(env->error, RAMPART_ERROR_FAILED_AUTHENTICATION, AXIS2_FAILURE);
 return AXIS2_FAILURE; \
 }while(0)
 
+static void throw_fault (void)
+{
+  init_eucafaults (euca_this_component_name);
+  log_eucafault ("1009", 
+		 "sender", euca_client_component_name, 
+		 "receiver", euca_this_component_name, 
+		 "keys_dir", "$EUCALYPTUS/var/lib/eucalyptus/keys/",
+		 NULL);
+}
+
 axis2_status_t __euca_authenticate(const axutil_env_t *env,axis2_msg_ctx_t *out_msg_ctx, axis2_op_ctx_t *op_ctx)
 {
   //***** First get the message context before doing anything dumb w/ a NULL pointer *****/
@@ -223,7 +233,8 @@ axis2_status_t __euca_authenticate(const axutil_env_t *env,axis2_msg_ctx_t *out_
     if (recv_cert) {
       recv_x509_buf = oxs_x509_cert_get_data(recv_cert,env);
     } else {
-      NO_U_FAIL("could not populate receiver cert");
+      throw_fault();
+      NO_U_FAIL("could not populate receiver certificate");
     }
 
     if( axutil_strcmp(recv_x509_buf,msg_x509_buf)!=0){
@@ -232,12 +243,7 @@ axis2_status_t __euca_authenticate(const axutil_env_t *env,axis2_msg_ctx_t *out_
       AXIS2_LOG_CRITICAL(env->log,AXIS2_LOG_SI," --------- Local x509 certificate value! ---------" );
       AXIS2_LOG_CRITICAL(env->log,AXIS2_LOG_SI, recv_x509_buf );
       AXIS2_LOG_CRITICAL(env->log,AXIS2_LOG_SI," ---------------------------------------------------" );
-      init_eucafaults (euca_this_component_name);
-      log_eucafault ("1009", 
-		     "sender", euca_client_component_name, 
-		     "receiver", euca_this_component_name, 
-		     "keys_dir", "$EUCALYPTUS/var/lib/eucalyptus/keys/",
-		     NULL);
+      throw_fault();
       NO_U_FAIL("The certificate specified is invalid!");
     }
     if(verify_references(sig_node, env, out_msg_ctx, soap_envelope, rampart_context) == AXIS2_FAILURE) {
@@ -247,6 +253,7 @@ axis2_status_t __euca_authenticate(const axutil_env_t *env,axis2_msg_ctx_t *out_
   }
   else 
   {
+    throw_fault();
     oxs_error(env, OXS_ERROR_LOCATION, OXS_ERROR_DEFAULT, "Cannot load certificate from string =%s", data); 
     NO_U_FAIL("Failed to build certificate from BinarySecurityToken");
   }

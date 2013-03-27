@@ -62,15 +62,13 @@
 
 package com.eucalyptus.images;
 
-import static org.hamcrest.MatcherAssert.assertThat;
+import static com.eucalyptus.util.Parameters.checkParam;
 import static org.hamcrest.Matchers.notNullValue;
 import javax.persistence.Column;
 import javax.persistence.Lob;
 import javax.persistence.MappedSuperclass;
 import com.eucalyptus.auth.principal.UserFullName;
 import com.eucalyptus.cloud.ImageMetadata;
-import org.hibernate.annotations.Type;
-import org.hibernate.type.StringClobType;
 
 @MappedSuperclass
 public class PutGetImageInfo extends ImageInfo implements ImageMetadata.StaticDiskImage {
@@ -96,7 +94,7 @@ public class PutGetImageInfo extends ImageInfo implements ImageMetadata.StaticDi
                              final ImageMetadata.Architecture arch, final ImageMetadata.Platform platform,
                              final String manifestLocation, final Long imageBundleSizeBytes, final String imageChecksum, final String imageChecksumType ) {
     super( userFullName, imageId, imageType, imageName, imageDescription, imageSizeBytes, arch, platform );
-    assertThat( manifestLocation, notNullValue( ) );
+    checkParam( manifestLocation, notNullValue() );
     this.manifestLocation = manifestLocation;
     this.bundleSizeBytes = imageBundleSizeBytes;
     this.checksum = imageChecksum;

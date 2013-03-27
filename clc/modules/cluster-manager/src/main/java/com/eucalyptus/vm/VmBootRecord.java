@@ -62,7 +62,7 @@
 
 package com.eucalyptus.vm;
 
-import static org.hamcrest.MatcherAssert.assertThat;
+import static com.eucalyptus.util.Parameters.checkParam;
 import static org.hamcrest.Matchers.*;
 import java.util.Arrays;
 import java.util.Set;
@@ -77,9 +77,7 @@ import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
 import org.hibernate.annotations.Parent;
 import org.hibernate.annotations.Type;
-import org.hibernate.type.StringClobType;
 
-import com.eucalyptus.blockstorage.Volume;
 import com.eucalyptus.cloud.ImageMetadata;
 import com.eucalyptus.cloud.util.MetadataException;
 import com.eucalyptus.images.BlockStorageImageInfo;
@@ -130,13 +128,16 @@ public class VmBootRecord {
   }
   
   VmBootRecord( BootableSet bootSet, byte[] userData, SshKeyPair sshKeyPair, VmType vmType ) {
-    super( );
-    assertThat( "Bootset must not be null", bootSet, notNullValue( ) );
-    this.machineImage = ( ImageInfo ) bootSet.getMachine( );
-    if ( bootSet.hasKernel( ) )
+    checkParam( "Bootset must not be null", bootSet, notNullValue( ) );
+    if ( bootSet.getMachine() instanceof ImageInfo ) {
+      this.machineImage = ( ImageInfo ) bootSet.getMachine( );
+    }
+    if ( bootSet.hasKernel( ) ) {
       this.kernel = bootSet.getKernel( );
-    if ( bootSet.hasRamdisk( ) )
+    }
+    if ( bootSet.hasRamdisk( ) ) {
       this.ramdisk = bootSet.getRamdisk( );
+    }
     this.platform = bootSet.getMachine( ).getPlatform( ).name( );
     this.userData = userData;
     this.sshKeyString = sshKeyPair.getPublicKey( );
@@ -201,7 +202,10 @@ public class VmBootRecord {
   }
   
   public boolean isLinux( ) {
-    return ImageMetadata.Platform.linux.equals( this.getMachine( ).getPlatform( ) ) || this.getMachine( ).getPlatform( ) == null;
+    return
+        this.getMachine( ) == null ||
+        this.getMachine( ).getPlatform( ) == null ||
+        ImageMetadata.Platform.linux.equals( this.getMachine( ).getPlatform( ) );
   }
   
   public VmTypeInfo populateVirtualBootRecord( VmType vmType ) throws MetadataException {

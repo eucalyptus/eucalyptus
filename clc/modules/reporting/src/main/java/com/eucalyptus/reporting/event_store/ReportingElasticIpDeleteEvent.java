@@ -34,12 +34,12 @@ public class ReportingElasticIpDeleteEvent
 {
 	private static final long serialVersionUID = 1L;
 
-	@Column(name="uuid", nullable=false)
-	private String uuid;
+	@Column(name="ip", nullable=false)
+	private String ip;
 
-	protected ReportingElasticIpDeleteEvent(String uuid, Long timestampMs)
+	protected ReportingElasticIpDeleteEvent(String ip, Long timestampMs)
 	{
-		this.uuid = uuid;
+		this.ip = ip;
 		this.timestampMs = timestampMs;
 	}
 
@@ -47,15 +47,15 @@ public class ReportingElasticIpDeleteEvent
 	{
 	}
 
-	public String getUuid()
+	public String getIp()
 	{
-		return uuid;
+		return ip;
 	}
 
 	@Override
 	public Set<EventDependency> getDependencies() {
 		return withDependencies()
-				.relation(ReportingElasticIpCreateEvent.class, "uuid", uuid)
+				.relation(ReportingElasticIpCreateEvent.class, "ip", ip)
 				.set();
 	}
 
@@ -65,7 +65,7 @@ public class ReportingElasticIpDeleteEvent
 		int result = 1;
 		result = prime * result
 				+ ((timestampMs == null) ? 0 : timestampMs.hashCode());
-		result = prime * result + ((uuid == null) ? 0 : uuid.hashCode());
+		result = prime * result + ((ip == null) ? 0 : ip.hashCode());
 		return result;
 	}
 
@@ -83,10 +83,10 @@ public class ReportingElasticIpDeleteEvent
 				return false;
 		} else if (!timestampMs.equals(other.timestampMs))
 			return false;
-		if (uuid == null) {
-			if (other.uuid != null)
+		if (ip == null) {
+			if (other.ip != null)
 				return false;
-		} else if (!uuid.equals(other.uuid))
+		} else if (!ip.equals(other.ip))
 			return false;
 		return true;
 	}
