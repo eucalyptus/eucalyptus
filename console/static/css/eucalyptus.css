@@ -2760,6 +2760,11 @@ span.on-error {
   color: #73a434;
 }
 
+#launch-wizard-tags table {
+  float:right;
+  margin-right:190px;
+}
+
 .instance-type-m1_small a {
   background-position: 0 0;
 }
@@ -2856,6 +2861,12 @@ span.on-error {
   width: 19px;
   height: 30px;
   background: transparent url(../images/wizard-pointer.png) no-repeat left top;
+}
+
+/*------- visual search -----*/
+.wizard-step .visual_search {
+  margin: 0 0 0 90px;
+  width: 85%;
 }
 
 /* ======= Instances - Launch More dialog ======= */
@@ -3004,7 +3015,6 @@ textarea.console-output {
   list-style-type: none;
   color: #444;
 }
-
 
 /*------- euca icons -------*/
 
