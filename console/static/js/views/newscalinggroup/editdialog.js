@@ -19,7 +19,17 @@ define([
     alert("Congratulations!  You finished a pointless wizard!")
   }
 
-  var viewBuilder = wizard.viewBuilder(wizardTemplate)
+  scalingGroup = new ScalingGroup({name: 'test', min_size: 2});
+  var scope = {
+    scalingGroup: scalingGroup,
+    errors: {}
+  }
+  scalingGroup.on('change', function() {
+      scope.errors = scalingGroup.validate();
+      console.log('CHANGE', scope.errors);
+  });
+
+  var viewBuilder = wizard.viewBuilder(wizardTemplate,scope)
           .add(page1).add(page2).add(page3).setHideDisabledButtons(true)
           .setFinishText('Create scaling group').setFinishChecker(canFinish)
           .finisher(finish);

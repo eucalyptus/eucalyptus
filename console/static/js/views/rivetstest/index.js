@@ -4,7 +4,7 @@ define([
     'rivets',
     'views/dialogs/testdialog',
     'views/dialogs/quickscaledialog',
-    'models/scalinggrp'
+    'models/scalinggrp',
 ], function( dh, template, rivets, TestDialog, QuickScaleDialog, ScalingGroup) {
 	return Backbone.View.extend({
 		initialize : function() {

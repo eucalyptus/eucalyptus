@@ -182,8 +182,8 @@
 	      case 'newscalinggroup':
 	        this.element.newscalinggroup();
           break;
-	case 'scalinggroup':
-	  this.element.scalinggroup();
+          case 'scalinggroup':
+            this.element.scalinggroup();
           break;
         case 'rivetstest':
           this.element.rivetstest();

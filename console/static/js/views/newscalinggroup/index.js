@@ -1,4 +1,3 @@
-console.log('WIZARD:start');
 define([
   'wizard',
   'text!./template.html',
@@ -16,14 +15,20 @@ define([
   }
 
   function finish() {
-    alert("Congratulations!  You finished a pointless wizard!")
+      window.location = '#scaling';
   }
 
+  scalingGroup = new ScalingGroup({name: 'test', min_size: 2});
   var scope = {
-    scalingGroup: new ScalingGroup()
+    scalingGroup: scalingGroup,
+    errors: {}
   }
+  scalingGroup.on('change', function() {
+      scope.errors = scalingGroup.validate();
+      console.log('CHANGE', scope.errors);
+  });
 
-  var viewBuilder = wizard.viewBuilder(wizardTemplate)
+  var viewBuilder = wizard.viewBuilder(wizardTemplate, scope)
           .add(page1).add(page2).add(page3).setHideDisabledButtons(true)
           .setFinishText('Create scaling group').setFinishChecker(canFinish)
           .finisher(finish);
