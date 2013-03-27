@@ -19,7 +19,7 @@
  ************************************************************************/
 
 (function($, eucalyptus) {
-  $.widget('eucalyptus.launchconfig', $.eucalyptus.eucawidget, {
+  $.widget('eucalyptus.newlaunchconfig', $.eucalyptus.eucawidget, {
     options : { },
     _init : function() {
       var thisObj = this;
