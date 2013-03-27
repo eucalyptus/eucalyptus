@@ -15,7 +15,7 @@ define([
   }
 
   function finish() {
-    alert("Congratulations!  You finished a pointless wizard!")
+      window.location = '#scaling';
   }
 
   scalingGroup = new ScalingGroup({name: 'test', min_size: 2});

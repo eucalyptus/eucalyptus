@@ -30,7 +30,7 @@
                 {key:'monitoring', text:monitoring_label}],
 		    submenus : { storage: [{key:'volume', text:volumes_label}, {key:'snapshot', text:snapshots_label}, /*{key:'bucket', text:buckets_label},*/ {key:'jp_volume', text:'JP Volumes'}],
                   netsec: [/*{key:'balancing', text:balancers_label},*/ {key:'sgroup',text:sgroups_label},{key:'keypair',text:keypairs_label},{key:'eip',text:eips_label}],
-                  instance: [{key:'instance', text:instances_label}, {key:'scaling', text:scaling_label}, {key:'eantest', text: 'Ean Test'}, {key:'rivetstest', text:'Rivets Test'}, {key:'newscalinggroup', text: 'New Scaling Group'},{key: 'launchconfig', text: 'New Launch Config'} ]},
+                  instance: [{key:'instance', text:instances_label}, {key:'scaling', text:scaling_label}, {key:'rivetstest', text:'Testbed'}, {key:'newscalinggroup', text: 'New Scaling Group'},{key: 'launchconfig', text: 'New Launch Config'} ]},
       },
 
       _init : function() { },
