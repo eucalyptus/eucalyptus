@@ -50,8 +50,30 @@ define([
                                       }
                                     });
                       });
-                      require(['models/launchconfig'], function(config) {
-                        var model = new LaunchConfig({name:'atestlc'});
+                      require(['models/launchconfig'], function(LaunchConfig) {
+                        var model = new LaunchConfig({name:'atestlc', image_id:'emi-F5373E2F', instance_type:'t1.micro', instance_monitoring:'true'});
+                        model.save();
+                      });
+                    }
+                },
+                makeScalingGroup: {
+                    click: function() { 
+                      require(['models/scalinggrps'], function(collection) {
+                        var model = new collection();
+                        model.fetch({ success: function(model, response){
+                                        console.log(model.models.length+" groups returned");
+                                        for (var idx in model.models) {
+                                          var grp = model.models[idx];
+                                          console.log(JSON.stringify(grp));
+                                          if (grp.get('name') == 'atestgroup') {
+                                            ;//grp.destroy({wait:true});
+                                          }
+                                        }
+                                      }
+                                    });
+                      });
+                      require(['models/scalinggrp'], function(ScalingGroup) {
+                        var model = new ScalingGroup({name:'atestgroup2', launch_config:'atestlc', min_size:'0', max_size:'1', default_cooldown:'444', zones:'cluster01'});
                         model.save();
                       });
                     }
