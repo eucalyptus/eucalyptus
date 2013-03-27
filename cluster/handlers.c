@@ -2404,6 +2404,8 @@ int refresh_instances(ncMetadata * pMeta, int timeout, int dolock)
                             // instance info that the CC maintains
                             myInstance->ncHostIdx = i;
 
+                            /* FIXME: This breaks cache lookups of source-node instances used to determine commits. */
+#if 0
                             // If migration is active, will use the source node's migration state as the instance's.
                             // Note that only a subset of the possible states are saved here;
                             // this is the information passed upstream to the CLC.
@@ -2417,6 +2419,8 @@ int refresh_instances(ncMetadata * pMeta, int timeout, int dolock)
                                 // Any other state can be passed upstream to the CLC as-is.
                                 myInstance->migration_state = ncOutInsts[j]->migration_state;
                             }
+#endif
+                            myInstance->migration_state = ncOutInsts[j]->migration_state;
 
                             euca_strncpy(myInstance->serviceTag, resourceCacheStage->resources[i].ncURL, 384);
                             {
