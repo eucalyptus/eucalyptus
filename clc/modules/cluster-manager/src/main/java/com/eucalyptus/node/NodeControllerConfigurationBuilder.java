@@ -66,14 +66,21 @@ import com.eucalyptus.bootstrap.Handles;
 import com.eucalyptus.component.ComponentId;
 import com.eucalyptus.component.ComponentId.ComponentPart;
 import com.eucalyptus.component.ComponentIds;
-import com.eucalyptus.component.Faults.CheckException;
-import com.eucalyptus.component.Partition;
 import com.eucalyptus.component.Partitions;
 import com.eucalyptus.component.ServiceBuilder;
 import com.eucalyptus.component.ServiceConfiguration;
+import com.eucalyptus.component.ServiceConfigurations;
 import com.eucalyptus.component.ServiceRegistrationException;
-import com.eucalyptus.records.EventRecord;
-import com.eucalyptus.records.EventType;
+import com.eucalyptus.component.Topology;
+import com.eucalyptus.component.id.ClusterController;
+import com.eucalyptus.empyrean.DescribeServicesType;
+import com.eucalyptus.empyrean.DisableServiceType;
+import com.eucalyptus.empyrean.EnableServiceType;
+import com.eucalyptus.empyrean.ServiceId;
+import com.eucalyptus.empyrean.ServiceTransitionType;
+import com.eucalyptus.util.Exceptions;
+import com.eucalyptus.util.async.AsyncRequests;
+import edu.ucsb.eucalyptus.msgs.BaseMessage;
 
 /**
  * @todo doc
@@ -118,17 +125,17 @@ public class NodeControllerConfigurationBuilder implements ServiceBuilder<NodeCo
   
   @Override
   public void fireEnable( ServiceConfiguration config ) throws ServiceRegistrationException {
-    //GRZE:TODO:MAINTMODE
+    sendNodeServiceRequest( config, new EnableServiceType( ) ); 
   }
-  
+
   @Override
   public void fireDisable( ServiceConfiguration config ) throws ServiceRegistrationException {
-    //GRZE:TODO:MAINTMODE
+    sendNodeServiceRequest( config, new DisableServiceType( ) ); 
   }
   
   @Override
   public void fireCheck( ServiceConfiguration config ) throws ServiceRegistrationException {
-    //GRZE:TODO:MAINTMODE
+    sendNodeServiceRequest( config, new DescribeServicesType( ) ); 
   }
   
   @Override
@@ -138,7 +145,18 @@ public class NodeControllerConfigurationBuilder implements ServiceBuilder<NodeCo
   
   @Override
   public NodeControllerConfiguration newInstance( ) {
-    return null;
+    return new NodeControllerConfiguration( );
+  }
+  
+  private static <T extends BaseMessage> T sendNodeServiceRequest( ServiceConfiguration config, ServiceTransitionType msg ) throws RuntimeException {
+    ServiceConfiguration ccConfig = Topology.lookup( ClusterController.class, Partitions.lookupByName( config.getPartition( ) ) );
+    ServiceId serviceId = ServiceConfigurations.ServiceConfigurationToServiceId.INSTANCE.apply( config );
+    msg.getServices().add( serviceId );
+    try {
+      return AsyncRequests.sendSync( ccConfig, msg );
+    } catch ( Exception ex ) {
+      throw Exceptions.toUndeclared( ex );
+    }
   }
   
 }
