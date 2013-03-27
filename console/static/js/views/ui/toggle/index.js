@@ -1,5 +1,4 @@
 define([
-	'itoggle',
 	'text!./template.html!strip',
         'rivets'
 	], function( template, rivets ) {

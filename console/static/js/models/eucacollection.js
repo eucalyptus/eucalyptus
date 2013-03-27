@@ -42,6 +42,11 @@ define([
                   });
                 });
               }
+              _.each(results, function(result) {
+                if (result['id'] == undefined) {
+                  result['id'] = "d00d";
+                }
+              });
               //console.log('MERGED:', results);
               options.success && options.success(model, results, options);
             } else {

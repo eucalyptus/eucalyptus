@@ -4,8 +4,9 @@ define([
     'rivets',
     'views/dialogs/testdialog',
     'views/dialogs/quickscaledialog',
-    'models/scalinggrp'
-], function( dh, template, rivets, TestDialog, QuickScaleDialog, ScalingGroup) {
+    'models/scalinggrp',
+    'models/launchconfig'
+], function( dh, template, rivets, TestDialog, QuickScaleDialog, ScalingGroup, LaunchConfig) {
 	return Backbone.View.extend({
 		initialize : function() {
 			var self = this;
@@ -32,6 +33,27 @@ define([
                 quickScaleButton: {
                     click: function() { 
                         var dialog = new QuickScaleDialog();
+                    }
+                },
+                makeLaunchConfig: {
+                    click: function() { 
+                      require(['models/launchconfigs'], function(collection) {
+                        var model = new collection();
+                        model.fetch({ success: function(model, response){
+                                        console.log(JSON.stringify(model));
+                                        for (var idx in model.models) {
+                                          var lc = model.models[idx];
+                                          if (lc.get('name') == 'atestlc') {
+                                            lc.destroy({wait:true});
+                                          }
+                                        }
+                                      }
+                                    });
+                      });
+                      require(['models/launchconfig'], function(config) {
+                        var model = new LaunchConfig({name:'atestlc'});
+                        model.save();
+                      });
                     }
                 },
                 scalingDialog: {
