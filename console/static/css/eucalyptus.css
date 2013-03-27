@@ -296,7 +296,7 @@ ol li {
 
 .resources-nav li {
   float: left;
-  width: 165px;
+  width: 220px;
   /* Needed so submenus that can be positioned absolutely */
   position: relative;
 }
@@ -331,45 +331,45 @@ ol li {
 /* ==== Link specific styling (including hover and selected states) ==== */
 
 .lnk-dashboard {
-  background-position: 0 0;
+  background-position: 13px 0;
 }
 .resources-nav li:hover a.lnk-dashboard,
 .lnk-dashboard:hover {
-  background-position: 0 -125px;
+  background-position: 13px -125px;
 }
 
 .lnk-image {
-  background-position: -200px 0;
+  background-position: -188px 0;
 }
 .resources-nav li:hover a.lnk-image,
 .lnk-image:hover {
-  background-position: -200px -121px;
+  background-position: -188px -121px;
 }
 
 .lnk-instance {
-  background-position: -400px 0;
+  background-position: -388px 0;
 }
 .resources-nav li:hover a.lnk-instance,
 .lnk-instance:hover {
-  background-position: -400px -107px;
+  background-position: -388px -107px;
 }
 
 .lnk-storage {
-  background-position: -600px 0;
+  background-position: -588px 0;
 }
 .resources-nav li:hover a.lnk-storage,
 .resources-nav li.toggle-on a.lnk-storage,
 .lnk-storage:hover {
-  background-position: -600px -125px;
+  background-position: -588px -125px;
 }
 
 .lnk-netsec {
-  background-position: -800px 0;
+  background-position: -788px 0;
 }
 .resources-nav li:hover a.lnk-netsec,
 .resources-nav li.toggle-on a.lnk-netsec,
 .lnk-netsec:hover {
-  background-position: -800px -129px;
+  background-position: -788px -129px;
 }
 
 
@@ -435,7 +435,7 @@ ol li {
 .notification-box {
   display: none;
   position: absolute;
-  width: 995px;
+  width: 1100px;
   min-height: 15px;
   margin-top: 5px;
   padding: 15px 0;
@@ -1047,7 +1047,7 @@ ul.ui-autocomplete {
 #dashboard-instance-launch {
   position: absolute;
   top: 2px;
-  left: 738px;
+  right: 30px;
   height: 120px;
   border-left: 2px solid #ecebeb;
 }
@@ -1095,7 +1095,7 @@ ul.ui-autocomplete {
 .storage,
 .netsec {
   float: left;
-  width: 40%;
+  width: 42%;
   min-height: 85px; 
 }
 
@@ -1187,22 +1187,22 @@ table.display td.dataTables_empty {
   padding: 10px;
 }
 
-tr.odd,
-tr.odd td.sorting_1 {
+table.display tr.odd,
+table.display tr.odd td.sorting_1 {
   background-color: #fff;
 }
 
-tr.even,
-tr.even td.sorting_1 {
-  background-color: #f4f4ef;
+table.display tr.even,
+table.display tr.even td.sorting_1 {
+  background-color: #f4f4f4;
 }
 
 .table_center_cell {
   text-align: center;
 }
 
-tr.selected-row,
-tr.selected-row td.sorting_1
+table.display tr.selected-row,
+table.display tr.selected-row td.sorting_1
  {
   background-color: #f1ffe3;
 }
@@ -1222,10 +1222,10 @@ table.display thead th.checkbox-cell {
   text-align: center;
 }
 
-tr.glow td,
-tr.glow td.sorting_1,
-tr.glow td.sorting_2,
-tr.glow td.sorting_3 {
+table.display tr.glow td,
+table.display tr.glow td.sorting_1,
+table.display tr.glow td.sorting_2,
+table.display tr.glow td.sorting_3 {
   background-color: #ffffdc;
 }
 
@@ -1254,7 +1254,7 @@ tr.expanded td {
 }
 
 tr.even + tr.expanded td { 
-  background-color : #f4f4ef;
+  background-color : #f4f4f4;
 }
 
 tr.odd + tr.expanded td { 
@@ -1264,7 +1264,7 @@ tr.odd + tr.expanded td {
 .expanded-row-inner-wrapper {
   padding: 0 10px 8px;
   border-bottom: 1px solid #a9a9a9;
-  background: transparent url(../images/expanded-row-shadows.png) no-repeat right bottom;
+  background: #f4f4f4 url(../images/expanded-row-shadows.png) repeat-x left bottom;
   text-align: left;
 }
 
@@ -2199,7 +2199,7 @@ a.sg-my-ip {
 
 .wizard-wrapper {
   float: left;
-  width: 730px;
+  width: 775px;
 }
 
 .launch-wizard-intro-text {
@@ -2328,7 +2328,7 @@ a.sg-my-ip {
 
 .wizard-summary-wrapper {
   float: right;
-  width: 200px;
+  width: 280px;
 }
 
 .wizard-summary {
@@ -2694,7 +2694,7 @@ span.on-error {
 }
 
 .device-map-table tbody tr:nth-child(2n) {
-  background-color: #f4f4ef;
+  background-color: #f4f4f4;
 }  
 
 #launch-wizard-advanced-storage th {
