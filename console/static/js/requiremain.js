@@ -1,3 +1,10 @@
+var old = alert;
+
+alert = function() {
+      console.log(new Error().stack);
+        old.apply(window, arguments);
+};
+
 console.log('REQUIRE CONFIG');
 require.config({
         baseUrl: 'js',

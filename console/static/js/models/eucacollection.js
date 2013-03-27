@@ -26,11 +26,12 @@ define([
         ).done(
           // Success
           function(describe, tags) {
-            //console.log('EUCACOLLECTION (success):', collection.url, describe, tags);
+            console.log('EUCACOLLECTION (success):', collection.url, describe, tags);
             if (describe[0].results) {
               var results = describe[0].results;
               if (collection.namedColumns && tags && tags[0].results) {
-                _.each(results, function(result) {
+                _.each(results, function(result, index) {
+                  if (typeof result.id == 'undefined') result.id = index;
                   var tagById = _.groupBy(tags[0].results, 'res_id');
                   var tagSet = _.groupBy(tagById[result.id], 'name');
                   result.tags = tagSet;

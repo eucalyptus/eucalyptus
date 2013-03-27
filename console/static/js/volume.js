@@ -56,10 +56,14 @@
             {
 	      // Display the id of the volume in the main table
 	      "aTargets":[1], 
-	      "mRender": function(data) {
-                return getTagForResource(data);
+              "mRender": function(data){
+                 return eucatableDisplayColumnTypeTwist(data, data, 255);
               },
-              "mData": "display_id",
+              "mData": function(source){
+                 if(source.display_id)
+                   return source.display_id;
+                 return source.id;
+              },
 	    },
             {
 	      // Display the status of the volume in the main table
@@ -134,6 +138,15 @@
               },
               "mData": "create_time",
               "sType": "date"
+            },
+            {
+	      // Invisible column for the id
+              "bVisible": false,
+              "aTargets":[10],
+	      "mRender": function(data) {
+                return DefaultEncoder().encodeForHTML(data);
+              },
+              "mData": "id",
             }
           ],
         },
@@ -149,6 +162,9 @@
         },
         context_menu_actions : function(row) {
           return thisObj._createMenuActions();
+        },
+         expand_callback : function(row){ // row = [col1, col2, ..., etc]
+          return thisObj._expandCallback(row);
         },
         menu_click_create : function (args) { thisObj._createAction() },
         help_click : function(evt) {
@@ -613,7 +629,7 @@
 
     _deleteAction : function() {
       var thisObj = this;
-      volumesToDelete = thisObj.tableWrapper.eucatable('getSelectedRows', 1);
+      volumesToDelete = thisObj.tableWrapper.eucatable('getSelectedRows', 10);
       if( volumesToDelete.length > 0 ) {
         var matrix = [];
         $.each(volumesToDelete, function(idx, volume){
@@ -630,7 +646,7 @@
 
     _attachAction : function() {
       var thisObj = this;
-      var volumeToAttach = thisObj.tableWrapper.eucatable('getSelectedRows', 1)[0];
+      var volumeToAttach = thisObj.tableWrapper.eucatable('getSelectedRows', 10)[0];
       thisObj.dialogAttachVolume(volumeToAttach, null);
     },
 
@@ -649,13 +665,13 @@
     },
 
     _createSnapshotAction : function() {
-      var volumeToUse = this.tableWrapper.eucatable('getSelectedRows', 1)[0];
+      var volumeToUse = this.tableWrapper.eucatable('getSelectedRows', 10)[0];
       addSnapshot(volumeToUse);
     },
 
     _tagResourceAction : function(){
       var thisObj = this;
-      var volume = thisObj.tableWrapper.eucatable('getSelectedRows', 1)[0];
+      var volume = thisObj.tableWrapper.eucatable('getSelectedRows', 10)[0];
       if ( volume.length > 0 ) {
         // Create a widget object for displaying the resource tag information
         var $tagInfo = $('<div>').addClass('resource-tag-table-expanded-volume').addClass('clearfix').euca_resource_tag({resource: 'volume', resource_id: volume, cancelButtonCallback: function(){ thisObj.tagDialog.eucadialog("close"); }, widgetMode: 'edit' });
@@ -724,6 +740,31 @@
       }
 
       return itemsList;
+    },
+
+    _expandCallback : function(row){ 
+      var thisObj = this;
+      var volId = row[10];
+      var results = describe('volume');
+      var volume = null;
+      for(v in results){
+        if(results[v].id === volId){
+          volume = results[v];
+          break;
+        }
+      }
+
+      if(!volume)
+        return null;
+
+      var $wrapper = $('<div>');
+
+      $tagInfo = $('<div>').addClass('resource-tag-table-expanded-instance').addClass('clearfix').attr('id', volume.id).euca_resource_tag({resource: 'volume', resource_id: volume.id, widgetMode: 'view-only'});
+      
+      $tabspace = $('<div>').addClass('eucatabspace-main-div').eucatabspace(); 
+      $tabspace.eucatabspace('addTabPage', 'Tag', $tagInfo);
+      $wrapper.append($tabspace)
+      return $wrapper;
     },
 
 /**** Public Methods ****/

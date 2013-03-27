@@ -4,9 +4,9 @@ define([
   'text!./template.html',
   //'text!./image_static.html!strip',
   './image',
-  'text!./type.html!strip',
-  'text!./security.html!strip',
-  'text!./advanced.html!strip',
+  './type',
+  './security',
+  './advanced',
 ], function(Wizard, wizardTemplate, page1, page2, page3, page4) {
   var wizard = new Wizard();
 
