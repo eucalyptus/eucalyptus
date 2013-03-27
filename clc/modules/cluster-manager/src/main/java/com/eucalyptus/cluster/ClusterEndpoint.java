@@ -143,9 +143,9 @@ public class ClusterEndpoint implements Startable {
       try {
         Nodes.lookupNodeInfo( c, request.getSourceHost( ) );
         Cluster cluster = Clusters.lookup( c );
-        if ( Strings.isNullOrEmpty( request.getSourceHost( ) ) ) {
+        if ( !Strings.isNullOrEmpty( request.getSourceHost( ) ) ) {
           cluster.migrateInstances( request.getSourceHost( ), request.getAllowHosts( ), request.getDestinationHosts( ) );
-        } else if ( Strings.isNullOrEmpty( request.getInstanceId( ) ) ) {
+        } else if ( !Strings.isNullOrEmpty( request.getInstanceId( ) ) ) {
           cluster.migrateInstance( request.getInstanceId( ), request.getAllowHosts( ), request.getDestinationHosts( ) );
         } else {
           throw new IllegalArgumentException( "Either the sourceHost or instanceId must be provided" );

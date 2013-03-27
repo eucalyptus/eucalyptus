@@ -168,7 +168,7 @@ public class TagManager {
                   Tags.delete( example );
                 }
               } catch ( NoSuchMetadataException e ) {
-                log.debug( e, e );
+                log.trace( e );
               } catch ( MetadataException e ) {
                 throw Exceptions.toUndeclared(e);
               } 
