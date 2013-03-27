@@ -102,6 +102,7 @@
         }
       });
       this.tableWrapper.appendTo(this.element);
+      $(this.element).prepend($('#scaling-topselector', $wrapper));
     },
 
     _create : function() { 
