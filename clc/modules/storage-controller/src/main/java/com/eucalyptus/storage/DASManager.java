@@ -517,7 +517,7 @@ public class DASManager implements LogicalStorageManager {
 	}
 
 	public void cloneVolume(String volumeId, String parentVolumeId)
-	throws EucalyptusCloudException {
+			throws EucalyptusCloudException {
 		updateVolumeGroup();
 		VolumeEntityWrapperManager volumeManager = new VolumeEntityWrapperManager();
 		LVMVolumeInfo foundVolumeInfo = volumeManager.getVolumeInfo(parentVolumeId);
@@ -1031,7 +1031,7 @@ public class DASManager implements LogicalStorageManager {
 	}
 	@Override
 	public String prepareSnapshot(String snapshotId, int sizeExpected, long actualSizeInMB)
-	throws EucalyptusCloudException {
+			throws EucalyptusCloudException {
 		String deviceName = null;
 		VolumeEntityWrapperManager volumeManager = new VolumeEntityWrapperManager();
 		LVMVolumeInfo foundSnapshotInfo = volumeManager.getVolumeInfo(snapshotId);
@@ -1109,7 +1109,7 @@ public class DASManager implements LogicalStorageManager {
 
 	@Override
 	public String getSnapshotPath(String snapshotId)
-	throws EucalyptusCloudException {
+			throws EucalyptusCloudException {
 		VolumeEntityWrapperManager volumeManager = new VolumeEntityWrapperManager();
 		LVMVolumeInfo volInfo = volumeManager.getVolumeInfo(snapshotId);
 		if(volInfo != null) {
@@ -1124,7 +1124,7 @@ public class DASManager implements LogicalStorageManager {
 
 	@Override
 	public String getVolumePath(String volumeId)
-	throws EucalyptusCloudException {
+			throws EucalyptusCloudException {
 		VolumeEntityWrapperManager volumeManager = new VolumeEntityWrapperManager();
 		LVMVolumeInfo volInfo = volumeManager.getVolumeInfo(volumeId);
 		if(volInfo != null) {
@@ -1163,7 +1163,7 @@ public class DASManager implements LogicalStorageManager {
 
 	@Override
 	public void importVolume(String volumeId, String volumePath, int size)
-	throws EucalyptusCloudException {
+			throws EucalyptusCloudException {
 		VolumeEntityWrapperManager volumeManager = new VolumeEntityWrapperManager();
 		LVMVolumeInfo volInfo = volumeManager.getVolumeInfo(volumeId);
 		if(volInfo != null) {
@@ -1187,7 +1187,7 @@ public class DASManager implements LogicalStorageManager {
 
 	@Override
 	public String attachVolume(String volumeId, List<String> nodeIqns)
-	throws EucalyptusCloudException {
+			throws EucalyptusCloudException {
 		LVMVolumeInfo lvmVolumeInfo = null;
 		{
 			final VolumeEntityWrapperManager volumeManager = new VolumeEntityWrapperManager();
@@ -1234,7 +1234,7 @@ public class DASManager implements LogicalStorageManager {
 
 	@Override
 	public void detachVolume(String volumeId, String nodeIqn)
-	throws EucalyptusCloudException {
+			throws EucalyptusCloudException {
 		VolumeEntityWrapperManager volumeManager = new VolumeEntityWrapperManager();
 		LVMVolumeInfo foundLVMVolumeInfo = volumeManager.getVolumeInfo(volumeId);
 		if(foundLVMVolumeInfo != null) {
@@ -1249,31 +1249,36 @@ public class DASManager implements LogicalStorageManager {
 
 	@Override
 	public void checkReady() throws EucalyptusCloudException {
-		// TODO Auto-generated method stub
-
+		//check if binaries exist, commands can be executed, etc.
+		if(!new File(StorageProperties.EUCA_ROOT_WRAPPER).exists()) {
+			throw new EucalyptusCloudException("root wrapper (euca_rootwrap) does not exist in " + StorageProperties.EUCA_ROOT_WRAPPER);
+		}
+		File varDir = new File(EUCA_VAR_RUN_PATH);
+		if(!varDir.exists()) {
+			varDir.mkdirs();
+		}
+		exportManager.check();
 	}
 
 	@Override
 	public void stop() throws EucalyptusCloudException {
-		// TODO Auto-generated method stub
-
+		exportManager.stop();
 	}
 
 	@Override
 	public void disable() throws EucalyptusCloudException {
-		// TODO Auto-generated method stub
-
+		volumeOps.clear();
+		volumeOps = null;
 	}
 
 	@Override
 	public void enable() throws EucalyptusCloudException {
-		// TODO Auto-generated method stub
-
+		volumeOps = new ConcurrentHashMap<String, VolumeOpMonitor>();
 	}
 
 	@Override
 	public boolean getFromBackend(String snapshotId, int size)
-	throws EucalyptusCloudException {
+			throws EucalyptusCloudException {
 		return false;
 	}
 
@@ -1290,13 +1295,13 @@ public class DASManager implements LogicalStorageManager {
 
 	@Override
 	public String createSnapshotPoint(String volumeId, String snapshotId)
-	throws EucalyptusCloudException {
+			throws EucalyptusCloudException {
 		return null;
 	}
 
 	@Override
 	public void deleteSnapshotPoint(String volumeId, String snapshotId, String snapshotPointId)
-	throws EucalyptusCloudException {
+			throws EucalyptusCloudException {
 		throw new EucalyptusCloudException("Synchronous snapshot points not supported in DAS storage manager");
 	}
 

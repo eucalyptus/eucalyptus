@@ -369,7 +369,7 @@ public class OverlayManager extends DASManager {
 
 		if(status != 0) {
 			throw new EucalyptusCloudException("Could not create loopback device for " + fileName +
-			". Please check the max loop value and permissions");
+					". Please check the max loop value and permissions");
 		}
 		return loDevName;
 	}
@@ -548,7 +548,7 @@ public class OverlayManager extends DASManager {
 	}
 
 	public void cloneVolume(String volumeId, String parentVolumeId)
-	throws EucalyptusCloudException {
+			throws EucalyptusCloudException {
 		VolumeEntityWrapperManager volumeManager = new VolumeEntityWrapperManager();
 		LVMVolumeInfo foundVolumeInfo = volumeManager.getVolumeInfo(parentVolumeId);
 		if(foundVolumeInfo != null) {
@@ -1028,7 +1028,7 @@ public class OverlayManager extends DASManager {
 
 	@Override
 	public String prepareSnapshot(String snapshotId, int sizeExpected, long actualSizeInMB)
-	throws EucalyptusCloudException {
+			throws EucalyptusCloudException {
 		String deviceName = null;
 		VolumeEntityWrapperManager volumeManager = new VolumeEntityWrapperManager();
 		LVMVolumeInfo foundSnapshotInfo = volumeManager.getVolumeInfo(snapshotId);
@@ -1088,7 +1088,7 @@ public class OverlayManager extends DASManager {
 
 	@Override
 	public String getVolumePath(String volumeId)
-	throws EucalyptusCloudException {
+			throws EucalyptusCloudException {
 		VolumeEntityWrapperManager volumeManager = new VolumeEntityWrapperManager();
 		LVMVolumeInfo volInfo = volumeManager.getVolumeInfo(volumeId);
 		if(volInfo != null) {
@@ -1103,7 +1103,7 @@ public class OverlayManager extends DASManager {
 
 	@Override
 	public void importVolume(String volumeId, String volumePath, int size)
-	throws EucalyptusCloudException {
+			throws EucalyptusCloudException {
 		VolumeEntityWrapperManager volumeManager = new VolumeEntityWrapperManager();
 		LVMVolumeInfo volInfo = volumeManager.getVolumeInfo(volumeId);
 		if(volInfo != null) {
@@ -1127,7 +1127,7 @@ public class OverlayManager extends DASManager {
 
 	@Override
 	public String getSnapshotPath(String snapshotId)
-	throws EucalyptusCloudException {
+			throws EucalyptusCloudException {
 		VolumeEntityWrapperManager volumeManager = new VolumeEntityWrapperManager();
 		LVMVolumeInfo volInfo = volumeManager.getVolumeInfo(snapshotId);
 		if(volInfo != null) {
@@ -1142,7 +1142,7 @@ public class OverlayManager extends DASManager {
 
 	@Override
 	public void importSnapshot(String snapshotId, String volumeId, String snapPath, int size)
-	throws EucalyptusCloudException {
+			throws EucalyptusCloudException {
 		VolumeEntityWrapperManager volumeManager = new VolumeEntityWrapperManager();
 		LVMVolumeInfo snapInfo = volumeManager.getVolumeInfo(snapshotId);
 		if(snapInfo != null) {
@@ -1166,7 +1166,7 @@ public class OverlayManager extends DASManager {
 
 	@Override
 	public String attachVolume(String volumeId, List<String> nodeIqns)
-	throws EucalyptusCloudException {
+			throws EucalyptusCloudException {
 		LVMVolumeInfo lvmVolumeInfo = null;
 		{
 			final VolumeEntityWrapperManager volumeManager = new VolumeEntityWrapperManager();
@@ -1230,42 +1230,33 @@ public class OverlayManager extends DASManager {
 
 	@Override
 	public void detachVolume(String volumeId, String nodeIqn)
-	throws EucalyptusCloudException {
+			throws EucalyptusCloudException {
 		super.detachVolume(volumeId, nodeIqn);
 	}
 
 	@Override
 	public void checkReady() throws EucalyptusCloudException {
-		//check if binaries exist, commands can be executed, etc.
-		if(!new File(StorageProperties.EUCA_ROOT_WRAPPER).exists()) {
-			throw new EucalyptusCloudException("root wrapper (euca_rootwrap) does not exist in " + StorageProperties.EUCA_ROOT_WRAPPER);
-		}
-		File varDir = new File(EUCA_VAR_RUN_PATH);
-		if(!varDir.exists()) {
-			varDir.mkdirs();
-		}
-		exportManager.check();
+		super.checkReady();
 	}
 
 	@Override
 	public void stop() throws EucalyptusCloudException {
-		exportManager.stop();
+		super.stop();
 	}
 
 	@Override
 	public void disable() throws EucalyptusCloudException {
-		volumeOps.clear();
-		volumeOps = null;
+		super.disable();
 	}
 
 	@Override
 	public void enable() throws EucalyptusCloudException {
-		volumeOps = new ConcurrentHashMap<String, VolumeOpMonitor>();
+		super.enable();
 	}
 
 	@Override
 	public boolean getFromBackend(String snapshotId, int size)
-	throws EucalyptusCloudException {
+			throws EucalyptusCloudException {
 		return false;
 	}
 
@@ -1291,16 +1282,16 @@ public class OverlayManager extends DASManager {
 
 	@Override
 	public String createSnapshotPoint(String volumeId, String snapshotId)
-	throws EucalyptusCloudException {
+			throws EucalyptusCloudException {
 		return null;
 	}
 
 	@Override
 	public void deleteSnapshotPoint(String volumeId, String snapshotId, String snapshotPointId)
-	throws EucalyptusCloudException {
+			throws EucalyptusCloudException {
 		throw new EucalyptusCloudException("Synchronous snapshot points not supported in Overlay storage manager");
 	}	
-	
+
 	protected class OverlayVolumeCleanup extends VolumeCleanup {
 
 		public OverlayVolumeCleanup() {
@@ -1377,5 +1368,5 @@ public class OverlayManager extends DASManager {
 			}
 		}
 	}
-	
+
 }
