@@ -21,31 +21,114 @@
 (function($, eucalyptus) {
   $.widget('eucalyptus.launchconfig', $.eucalyptus.eucawidget, {
     options : { },
+    baseTable : null,
+    tableWrapper : null,
+    releaseDialog : null,
+    allocateDialog : null,
+    associateDialog : null,
+    disassociateDialog : null,
+    associateBtnId : 'launchconfig-associate-btn',
+
     _init : function() {
       var thisObj = this;
-      require(['views/launchconfig/index'], function(View) {
-        var view = new View({el: thisObj.element});
-	view.render();
+      var $tmpl = $('html body').find('.templates #launchConfigTblTmpl').clone();
+      var $wrapper = $($tmpl.render($.extend($.i18n.map, help_scaling)));
+      var $launchConfigTable = $wrapper.children().first();
+      var $launchConfigHelp = $wrapper.children().last();
+      this.baseTable = $launchConfigTable;
+      this.tableWrapper = $launchConfigTable.eucatable({
+        id : 'launchconfig', // user of this widget should customize these options,
+        data_deps: ['launchconfigs' ],
+        hidden: thisObj.options['hidden'],
+        dt_arg : {
+          "sAjaxSource": 'launchconfig',
+          "aaSorting": [[ 1, "desc" ]],
+          "aoColumnDefs": [
+            {
+              "aTargets" : [0],
+              "bSortable": false,
+              "mData": function(oObj) { return '<input type="checkbox"/>' },
+              "sClass": "checkbox-cell"
+            },
+            {
+              "aTargets" : [1],
+              "mData": "name",
+            },
+            {
+              "aTargets" : [2],
+              "mData": "image_id",
+            },
+            {
+              "aTargets" : [3],
+              "mData": "key_name",
+            },
+            {
+              "aTargets" : [4],
+              "mData": "security_groups",
+            },
+            {
+              "aTargets" : [5],
+              "mData": "created_time",
+            },
+          ],
+        },
+        text : {
+          header_title : launchconfig_h_title,
+          create_resource : launchconfig_create,
+          resource_found : 'launchconfig_found',
+          resource_search : launchconfig_search,
+          resource_plural : launchconfig_plural,
+        },
+        menu_actions : function(args){ 
+          return thisObj._createMenuActions();
+        },
+        context_menu_actions : function(row) {
+          return thisObj._createMenuActions();
+        },
+        menu_click_create : function (args) { thisObj._createAction() },
+        help_click : function(evt) {
+          thisObj._flipToHelp(evt, {content: $launchConfigHelp, url: help_launchconfig.landing_content_url});
+        }
       });
+      this.tableWrapper.appendTo(this.element);
+      $(this.element).prepend($('#scaling-topselector', $wrapper));
     },
 
     _create : function() { 
+      var thisObj = this;
+    },
+
+    _createAction : function() {
+      window.location = '#newlaunchconfig';
     },
 
     _destroy : function() {
     },
 
-    _expandCallback : function(row){ 
-       var $wrapper = $('');
-      return $wrapper;
+    _createMenuActions : function() {
+      var thisObj = this;
+      selectedLaunchConfig = thisObj.baseTable.eucatable('getSelectedRows', 1);
+      var itemsList = {};
+
+      (function(){
+        itemsList['create'] = { "name": launchconfig_action_create, callback: function(key, opt) {;}, disabled: function(){ return true;} }
+        itemsList['delete'] = { "name": launchconfig_action_delete, callback: function(key, opt) {;}, disabled: function(){ return true;} }
+      })();
+
+      if ( selectedLaunchConfig.length === 1) {
+        itemsList['create'] = {"name":launchconfig_action_create, callback: function(key, opt){ thisObj._dialogAction('createscalinggroupfromlaunchconfig', selectedLaunchConfig); }}
+        itemsList['delete'] = {"name":launchconfig_action_delete, callback: function(key, opt){ thisObj._dialogAction('deletelaunchconfig', selectedLaunchConfig); }}
+      }
+
+      return itemsList;
     },
 
-/**** Public Methods ****/
-    close: function() {
-      cancelRepeat(tableRefreshCallback);
-      this._super('close');
-    },
-/**** End of Public Methods ****/
+    _dialogAction: function(dialog, selectedLaunchConfig) {
+        console.log('Would do', dialog, selectedLaunchConfig);
+        require(['views/dialogs/' + dialog], function(dialog) {
+            new dialog({items: selectedLaunchConfig});
+        });
+    }
   });
 })
 (jQuery, window.eucalyptus ? window.eucalyptus : window.eucalyptus = {});

@@ -108,6 +108,7 @@
     <script type="text/javascript" language="javascript" src="js/newscalinggroup.js"></script>
     <script type="text/javascript" language="javascript" src="js/wizimagetest.js"></script>
     <script type="text/javascript" language="javascript" src="js/launchconfig.js"></script>
+    <script type="text/javascript" language="javascript" src="js/newlaunchconfig.js"></script>
   </head> 
 
   <body>
@@ -1208,6 +1209,7 @@
                </tbody>
             </table>
           </div>
+          <div id="scaling-topselector"><a href="#scaling">Auto-scaling</a> | <a href="#launchconfig">Launch configs</a></div>
           <div id="scaling-help">
             <div class="help-content">
               {{!: landing_content }}
@@ -1831,6 +1833,40 @@
 
         </div>
       </script>
+
+      <!-- Launch Config Template -->
+      <script id="launchConfigTblTmpl" type="text/x-jsrender">
+        <div id="launchconfig-wrapper">
+          <div id="launchconfig-table">
+            <table id="launchconfig" class="display">
+              <thead>
+                <tr>
+                  <th>
+                    <input type="checkbox" id="launchconfig-check-all">
+                  </th>
+                  <th>{{!>launchconfig_tbl_hdr_name}}</th>
+                  <th>{{!>launchconfig_tbl_hdr_image_id}}</th>
+                  <th>{{!>launchconfig_tbl_hdr_key_name}}</th>
+                  <th>{{!>launchconfig_tbl_hdr_security_group}}</th>
+                  <th>{{!>launchconfig_tbl_hdr_created_time}}</th>
+                </tr>
+               </thead>
+               <tbody>
+               </tbody>
+            </table>
+          </div>
+          <div id="scaling-topselector"><a href="#scaling">Auto-scaling</a> | <a href="#launchconfig">Launch configs</a></div>
+          <div id="scaling-help">
+            <div class="help-content">
+              {{!: landing_content }}
+            </div>
+            <div class="help-revert-button"> 
+              <a href="#">{{!>revert_button}}</a>
+            </div>
+          </div>
+        </div>
+      </script>
+      <!-- END AutoScaling table -->
 
       <!-- Launch Wizard & Help -->
       <script id="eantestTmpl" type="text/x-jsrender"> 
