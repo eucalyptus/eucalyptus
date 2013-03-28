@@ -774,6 +774,7 @@ class AutoScalingServiceTest {
       @Override
       ScalingPolicy save(final ScalingPolicy scalingPolicy) {
         scalingPolicy.setId( "1" )
+        scalingPolicy.setAutoScalingGroupName( scalingPolicy.getGroup().getAutoScalingGroupName() )
         policies.add( scalingPolicy )
         scalingPolicy
       }

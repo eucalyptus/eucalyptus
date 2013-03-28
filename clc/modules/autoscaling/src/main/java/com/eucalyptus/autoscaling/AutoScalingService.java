@@ -40,6 +40,7 @@ import com.eucalyptus.auth.AuthQuotaException;
 import com.eucalyptus.auth.Permissions;
 import com.eucalyptus.auth.policy.PolicySpec;
 import com.eucalyptus.auth.principal.AccountFullName;
+import com.eucalyptus.auth.principal.Principals;
 import com.eucalyptus.auth.principal.UserFullName;
 import com.eucalyptus.autoscaling.activities.ActivityManager;
 import com.eucalyptus.autoscaling.activities.PersistenceScalingActivities;
@@ -130,6 +131,7 @@ import com.eucalyptus.autoscaling.common.TerminateInstanceInAutoScalingGroupResp
 import com.eucalyptus.autoscaling.common.TerminateInstanceInAutoScalingGroupType;
 import com.eucalyptus.autoscaling.common.UpdateAutoScalingGroupResponseType;
 import com.eucalyptus.autoscaling.common.UpdateAutoScalingGroupType;
+import com.eucalyptus.autoscaling.config.AutoScalingConfiguration;
 import com.eucalyptus.autoscaling.configurations.LaunchConfiguration;
 import com.eucalyptus.autoscaling.configurations.LaunchConfigurations;
 import com.eucalyptus.autoscaling.configurations.PersistenceLaunchConfigurations;
@@ -169,6 +171,7 @@ import com.eucalyptus.util.OwnerFullName;
 import com.eucalyptus.util.RestrictedTypes;
 import com.eucalyptus.util.Strings;
 import com.eucalyptus.util.TypeMappers;
+import com.eucalyptus.util.Wrappers;
 import com.google.common.base.Enums;
 import com.google.common.base.Function;
 import com.google.common.base.Functions;
@@ -601,9 +604,16 @@ public class AutoScalingService {
         throw new ValidationErrorException( "Scaling policy not found: " + request.getPolicyName() );
       }
 
-      autoScalingGroups.update( accountFullName, request.getAutoScalingGroupName(), new Callback<AutoScalingGroup>(){
+      autoScalingGroups.update( accountFullName, scalingPolicy.getAutoScalingGroupName(), new Callback<AutoScalingGroup>(){
         @Override
         public void fire( final AutoScalingGroup autoScalingGroup ) {
+          final boolean isCloudWatch = Principals.isSameUser(
+              Principals.systemUser(),
+              Wrappers.unwrap( Context.class, Contexts.lookup() ).getUser() );
+          if ( isCloudWatch && !scalingProcessEnabled( ScalingProcessType.AlarmNotification, autoScalingGroup ) )  {
+            logger.debug( "Ignoring policy execution due to alarm notification suspension" );
+            return;
+          }
           failIfScaling( activityManager, autoScalingGroup );
           final Integer desiredCapacity = scalingPolicy.getAdjustmentType().adjustCapacity(
               autoScalingGroup.getDesiredCapacity( ),
@@ -617,7 +627,9 @@ public class AutoScalingService {
               request.getHonorCooldown(),
               scalingPolicy.getCooldown(),
               desiredCapacity,
-              String.format( "a user request executed policy %1$s changing the desired capacity from %2$d to %3$d",
+              String.format( isCloudWatch ?
+                    "a CloudWatch alarm triggered policy %1$s changing the desired capacity from %2$d to %3$d" :
+                    "a user request executed policy %1$s changing the desired capacity from %2$d to %3$d",
                   scalingPolicy.getDisplayName(),
                   autoScalingGroup.getDesiredCapacity(),
                   desiredCapacity ) );
@@ -1303,6 +1315,10 @@ public class AutoScalingService {
     if ( activityManager.scalingInProgress( group ) ) {
       throw Exceptions.toUndeclared( new ScalingActivityInProgressException("Scaling activity in progress") );      
     }
+  }
+
+  private static boolean scalingProcessEnabled( final ScalingProcessType type, final AutoScalingGroup group ) {
+    return !AutoScalingConfiguration.getSuspendedProcesses().contains( type ) && type.apply( group );
   }
 
   private static void setDesiredCapacityWithCooldown( final AutoScalingGroup autoScalingGroup,
