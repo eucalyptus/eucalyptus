@@ -73,7 +73,7 @@ define([
                                     });
                       });
                       require(['models/scalinggrp'], function(ScalingGroup) {
-                        var model = new ScalingGroup({name:'atestgroup2', launch_config:'atestlc', min_size:'0', max_size:'1', default_cooldown:'444', zones:'cluster01'});
+                        var model = new ScalingGroup({name:'atestgroup3', launch_config:'atestlc', min_size:'2', max_size:'2', default_cooldown:'555', zones:'cluster01'});
                         model.save();
                       });
                     }
@@ -89,6 +89,42 @@ define([
                                           console.log(JSON.stringify(grp));
                                           if (grp.get('name') == 'atestgroup') {
                                             grp.setDesiredCapacity(3);
+                                          }
+                                        }
+                                      }
+                                    });
+                      });
+                    }
+                },
+                setInstanceHealth: {
+                    click: function() { 
+                      require(['models/scalinginsts'], function(collection) {
+                        var model = new collection();
+                        model.fetch({ success: function(model, response){
+                                        console.log(model.models.length+" instances returned");
+                                        for (var idx in model.models) {
+                                          var grp = model.models[idx];
+                                          console.log(JSON.stringify(grp));
+                                          if (grp.get('instance_id') == 'i-712F3FD7') {
+                                            grp.setInstanceHealth("Unhealthy");
+                                          }
+                                        }
+                                      }
+                                    });
+                      });
+                    }
+                },
+                terminateInstance: {
+                    click: function() { 
+                      require(['models/scalinginsts'], function(collection) {
+                        var model = new collection();
+                        model.fetch({ success: function(model, response){
+                                        console.log(model.models.length+" instances returned");
+                                        for (var idx in model.models) {
+                                          var grp = model.models[idx];
+                                          console.log(JSON.stringify(grp));
+                                          if (grp.get('instance_id') == 'i-22AA42DC') {
+                                            grp.terminateInstance();
                                           }
                                         }
                                       }

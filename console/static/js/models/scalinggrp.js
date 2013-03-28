@@ -58,8 +58,9 @@ function(EucaModel) {
     sync: function(method, model, options) {
       var collection = this;
       if (method == 'create') {
+        var name = model.get('name');
         var data = "_xsrf="+$.cookie('_xsrf');
-        data += "&AutoScalingGroupName="+model.get('name')+
+        data += "&AutoScalingGroupName="+name+
                 "&LaunchConfigurationName="+model.get('launch_config')+
                 "&MinSize="+model.get('min_size')+
                 "&MaxSize="+model.get('max_size');
@@ -88,20 +89,20 @@ function(EucaModel) {
           success:
             function(data, textStatus, jqXHR){
               if ( data.results ) {
-                notifySuccess(null, $.i18n.prop('volume_attach_success', DefaultEncoder().encodeForHTML(volumeId), DefaultEncoder().encodeForHTML(instanceId)));
-                thisObj.tableWrapper.eucatable('refreshTable');
+                notifySuccess(null, $.i18n.prop('create_scaling_group_run_success', DefaultEncoder().encodeForHTML(name)));
               } else {
-                notifyError($.i18n.prop('volume_attach_error', DefaultEncoder().encodeForHTML(model.name), DefaultEncoder().encodeForHTML(model.name)), undefined_error);
+                notifyError($.i18n.prop('create_scaling_group_run_error', DefaultEncoder().encodeForHTML(name)), undefined_error);
               }
             },
           error:
             function(jqXHR, textStatus, errorThrown){
-              notifyError($.i18n.prop('volume_attach_error', DefaultEncoder().encodeForHTML(model.name), DefaultEncoder().encodeForHTML(model.name)), getErrorMessage(jqXHR));
+              notifyError($.i18n.prop('create_scaling_group_run_error', DefaultEncoder().encodeForHTML(name)), getErrorMessage(jqXHR));
             }
         });
       }
       else if (method == 'delete') {
-        var data = "_xsrf="+$.cookie('_xsrf')+"&AutoScalingGroupName="+model.get('name');
+        var name = model.get('name');
+        var data = "_xsrf="+$.cookie('_xsrf')+"&AutoScalingGroupName="+name;
         if (model.get('force_delete') != undefined)
           data += "&ForceDelete=true";
         $.ajax({
@@ -112,15 +113,22 @@ function(EucaModel) {
           async:true,
           success:
             function(data, textStatus, jqXHR){
+              if ( data.results ) {
+                notifySuccess(null, $.i18n.prop('delete_scaling_group_success', DefaultEncoder().encodeForHTML(name)));
+              } else {
+                notifyError($.i18n.prop('delete_scaling_group_error', DefaultEncoder().encodeForHTML(name)), undefined_error);
+              }
             },
           error:
             function(jqXHR, textStatus, errorThrown){
-            },
+              notifyError($.i18n.prop('delete_scaling_group_error', DefaultEncoder().encodeForHTML(name)), getErrorMessage(jqXHR));
+            }
         });
       }
     },
 
     setDesiredCapacity: function (desired_capacity, honor_cooldown) {
+      var name = this.get('name');
       var data = "_xsrf="+$.cookie('_xsrf')+"&AutoScalingGroupName="+this.get('name')+
                  "&DesiredCapacity="+desired_capacity;
       if (honor_cooldown != undefined)
@@ -133,9 +141,15 @@ function(EucaModel) {
         async:true,
         success:
           function(data, textStatus, jqXHR){
+            if ( data.results ) {
+              notifySuccess(null, $.i18n.prop('quick_scale_success', DefaultEncoder().encodeForHTML(name)));
+            } else {
+              notifyError($.i18n.prop('quick_scale_error', DefaultEncoder().encodeForHTML(name)), undefined_error);
+            }
           },
         error:
           function(jqXHR, textStatus, errorThrown){
+            notifyError($.i18n.prop('quick_scale_error', DefaultEncoder().encodeForHTML(name)), getErrorMessage(jqXHR));
           },
       });
     }

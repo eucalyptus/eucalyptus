@@ -221,7 +221,7 @@ class ScaleHandler(BaseAPIHandler):
                 health_status = self.get_argument('HealthStatus')
                 respect_grace_period = self.get_argument('ShouldRespectGracePeriod', '') == 'true'
                 self.user_session.scaling.set_instance_health(instance_id, health_status, respect_grace_period, self.callback)
-            elif action == 'TerminateAutoScalingGroup':
+            elif action == 'TerminateInstanceInAutoScalingGroup':
                 instance_id = self.get_argument('InstanceId')
                 decrement_capacity = self.get_argument('ShouldDecrementDesiredCapacity', '') == 'true'
                 self.user_session.scaling.terminate_instance(instance_id, decrement_capacity, self.callback)
