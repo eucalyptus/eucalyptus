@@ -42,6 +42,8 @@ import com.eucalyptus.auth.policy.PolicySpec;
 import com.eucalyptus.auth.principal.AccountFullName;
 import com.eucalyptus.auth.principal.UserFullName;
 import com.eucalyptus.autoscaling.activities.ActivityManager;
+import com.eucalyptus.autoscaling.activities.PersistenceScalingActivities;
+import com.eucalyptus.autoscaling.activities.ScalingActivities;
 import com.eucalyptus.autoscaling.activities.ScalingActivity;
 import com.eucalyptus.autoscaling.common.Activity;
 import com.eucalyptus.autoscaling.common.Alarms;
@@ -142,6 +144,7 @@ import com.eucalyptus.autoscaling.instances.AutoScalingInstance;
 import com.eucalyptus.autoscaling.instances.AutoScalingInstances;
 import com.eucalyptus.autoscaling.instances.HealthStatus;
 import com.eucalyptus.autoscaling.instances.PersistenceAutoScalingInstances;
+import com.eucalyptus.autoscaling.metadata.AbstractOwnedPersistents;
 import com.eucalyptus.autoscaling.metadata.AutoScalingMetadataException;
 import com.eucalyptus.autoscaling.metadata.AutoScalingMetadataNotFoundException;
 import com.eucalyptus.autoscaling.policies.AdjustmentType;
@@ -207,6 +210,7 @@ public class AutoScalingService {
   private final AutoScalingInstances autoScalingInstances;
   private final ScalingPolicies scalingPolicies;
   private final ActivityManager activityManager;
+  private final ScalingActivities scalingActivities;
   
   public AutoScalingService() {
     this( 
@@ -214,25 +218,28 @@ public class AutoScalingService {
         new PersistenceAutoScalingGroups( ),
         new PersistenceAutoScalingInstances( ),
         new PersistenceScalingPolicies( ),
-        new ActivityManager() );
+        new ActivityManager( ),
+        new PersistenceScalingActivities( ) );
   }
 
   protected AutoScalingService( final LaunchConfigurations launchConfigurations,
                                 final AutoScalingGroups autoScalingGroups,
                                 final AutoScalingInstances autoScalingInstances,
                                 final ScalingPolicies scalingPolicies,
-                                final ActivityManager activityManager ) {
+                                final ActivityManager activityManager,
+                                final ScalingActivities scalingActivities ) {
     this.launchConfigurations = launchConfigurations;
     this.autoScalingGroups = autoScalingGroups;
     this.autoScalingInstances = autoScalingInstances;
     this.scalingPolicies = scalingPolicies;
     this.activityManager = activityManager;
+    this.scalingActivities = scalingActivities;
   }
 
   public DescribeAutoScalingGroupsResponseType describeAutoScalingGroups( final DescribeAutoScalingGroupsType request ) throws EucalyptusCloudException {
     final DescribeAutoScalingGroupsResponseType reply = request.getReply( );
 
-    //TODO:STEVE: MaxRecords / NextToken support for DescribeAutoScalingGroups
+    //TODO: MaxRecords / NextToken support for DescribeAutoScalingGroups
 
     final Context ctx = Contexts.lookup( );
     final boolean showAll = request.autoScalingGroupNames().remove( "verbose" );
@@ -338,7 +345,7 @@ public class AutoScalingService {
   public DescribePoliciesResponseType describePolicies(final DescribePoliciesType request) throws EucalyptusCloudException {
     final DescribePoliciesResponseType reply = request.getReply( );
 
-    //TODO:STEVE: MaxRecords / NextToken support for DescribePolicies
+    //TODO: MaxRecords / NextToken support for DescribePolicies
 
     final Context ctx = Contexts.lookup( );
     final boolean showAll = request.policyNames().remove( "verbose" );
@@ -481,8 +488,33 @@ public class AutoScalingService {
     return reply;
   }
 
-  public DescribeScalingActivitiesResponseType describeScalingActivities(DescribeScalingActivitiesType request) throws EucalyptusCloudException {
-    DescribeScalingActivitiesResponseType reply = request.getReply( );
+  public DescribeScalingActivitiesResponseType describeScalingActivities( final DescribeScalingActivitiesType request ) throws EucalyptusCloudException {
+    final DescribeScalingActivitiesResponseType reply = request.getReply( );
+
+    final Context ctx = Contexts.lookup( );
+    final boolean showAll = request.activityIds().remove( "verbose" );
+    final OwnerFullName ownerFullName = ctx.hasAdministrativePrivileges( ) &&  showAll ?
+        null :
+        ctx.getUserFullName( ).asAccountFullName( );
+
+    try {
+      final AutoScalingGroup group = com.google.common.base.Strings.isNullOrEmpty( request.getAutoScalingGroupName() ) ?
+          null :
+          autoScalingGroups.lookup( ownerFullName, request.getAutoScalingGroupName() );
+
+      final List<ScalingActivity> scalingActivities =
+          this.scalingActivities.list( ownerFullName, group, request.activityIds(), AutoScalingMetadatas.filterPrivileged() );
+      Collections.sort( scalingActivities, Ordering.natural().reverse().onResultOf( AbstractOwnedPersistents.createdDate() ) );
+
+      Iterables.addAll(
+          reply.getDescribeScalingActivitiesResult().getActivities().getMember(),
+          Iterables.transform( scalingActivities, TypeMappers.lookup( ScalingActivity.class, Activity.class ) ) );
+    } catch ( AutoScalingMetadataNotFoundException e ) {
+      throw new ValidationErrorException( "Auto scaling group not found: " + request.getAutoScalingGroupName() );
+    } catch ( AutoScalingMetadataException e ) {
+      handleException( e );
+    }
+
     return reply;
   }
 
@@ -505,7 +537,7 @@ public class AutoScalingService {
   public DescribeTagsResponseType describeTags( final DescribeTagsType request ) throws EucalyptusCloudException {
     final DescribeTagsResponseType reply = request.getReply( );
 
-    //TODO:STEVE: MaxRecords / NextToken support for DescribeTags
+    //TODO: MaxRecords / NextToken support for DescribeTags
 
     final Collection<Predicate<Tag>> tagFilters = Lists.newArrayList();
     for ( final Filter filter : request.filters() ) {
@@ -573,17 +605,22 @@ public class AutoScalingService {
         @Override
         public void fire( final AutoScalingGroup autoScalingGroup ) {
           failIfScaling( activityManager, autoScalingGroup );
+          final Integer desiredCapacity = scalingPolicy.getAdjustmentType().adjustCapacity(
+              autoScalingGroup.getDesiredCapacity( ),
+              scalingPolicy.getScalingAdjustment( ),
+              Objects.firstNonNull( scalingPolicy.getMinAdjustmentStep( ), 0 ),
+              Objects.firstNonNull( autoScalingGroup.getMinSize( ), 0 ),
+              Objects.firstNonNull( autoScalingGroup.getMaxSize( ), Integer.MAX_VALUE )
+          );
           setDesiredCapacityWithCooldown(
               autoScalingGroup,
               request.getHonorCooldown(),
               scalingPolicy.getCooldown(),
-              scalingPolicy.getAdjustmentType().adjustCapacity(
+              desiredCapacity,
+              String.format( "a user request executed policy %1$s changing the desired capacity from %2$d to %3$d",
+                  scalingPolicy.getDisplayName(),
                   autoScalingGroup.getDesiredCapacity(),
-                  scalingPolicy.getScalingAdjustment(),
-                  Objects.firstNonNull( scalingPolicy.getMinAdjustmentStep(), 0 ),
-                  Objects.firstNonNull( autoScalingGroup.getMinSize(), 0 ),
-                  Objects.firstNonNull( autoScalingGroup.getMaxSize(), Integer.MAX_VALUE )
-              ) );
+                  desiredCapacity ) );
         }
       } );
     } catch( Exception e ) {
@@ -919,7 +956,7 @@ public class AutoScalingService {
   public DescribeAutoScalingInstancesResponseType describeAutoScalingInstances( final DescribeAutoScalingInstancesType request ) throws EucalyptusCloudException {
     final DescribeAutoScalingInstancesResponseType reply = request.getReply( );
 
-    //TODO:STEVE: MaxRecords / NextToken support for DescribeAutoScalingInstances
+    //TODO: MaxRecords / NextToken support for DescribeAutoScalingInstances
 
     final Context ctx = Contexts.lookup( );
     final boolean showAll = request.instanceIds().remove( "verbose" );
@@ -1054,14 +1091,12 @@ public class AutoScalingService {
             if ( request.availabilityZones() != null && !request.availabilityZones().isEmpty() )
               autoScalingGroup.updateAvailabilityZones( Lists.newArrayList( Sets.newLinkedHashSet( request.availabilityZones() ) ) );
             if ( request.getDefaultCooldown() != null )
-              autoScalingGroup.setDefaultCooldown( Numbers.intValue( request.getDefaultCooldown() ) );
-            if ( request.getDesiredCapacity() != null )
-              autoScalingGroup.updateDesiredCapacity( Numbers.intValue( request.getDesiredCapacity() ) );
-            if ( request.getHealthCheckGracePeriod() != null )
-              autoScalingGroup.setHealthCheckGracePeriod( Numbers.intValue( request.getHealthCheckGracePeriod() ) );
-            if ( request.getHealthCheckType() != null )
-              autoScalingGroup.setHealthCheckType( Enums.valueOfFunction( HealthCheckType.class ).apply( request.getHealthCheckType() ) );
-            if ( request.getLaunchConfigurationName() != null )
+              autoScalingGroup.setDefaultCooldown( Numbers.intValue( request.getDefaultCooldown( ) ) );
+            if ( request.getHealthCheckGracePeriod( ) != null )
+              autoScalingGroup.setHealthCheckGracePeriod( Numbers.intValue( request.getHealthCheckGracePeriod( ) ) );
+            if ( request.getHealthCheckType( ) != null )
+              autoScalingGroup.setHealthCheckType( Enums.valueOfFunction( HealthCheckType.class ).apply( request.getHealthCheckType( ) ) );
+            if ( request.getLaunchConfigurationName( ) != null )
               try {
                 autoScalingGroup.setLaunchConfiguration( launchConfigurations.lookup( accountFullName, request.getLaunchConfigurationName() ) );
               } catch ( AutoScalingMetadataNotFoundException e ) {
@@ -1069,15 +1104,25 @@ public class AutoScalingService {
               } catch ( AutoScalingMetadataException e ) {
                 throw Exceptions.toUndeclared( e );
               }
-            if ( request.getMaxSize() != null )
+            if ( request.getMaxSize( ) != null )
               autoScalingGroup.setMaxSize( Numbers.intValue( request.getMaxSize() ) );
-            if ( request.getMinSize() != null )
-              autoScalingGroup.setMinSize( Numbers.intValue( request.getMinSize() ) );
+            if ( request.getMinSize( ) != null )
+              autoScalingGroup.setMinSize( Numbers.intValue( request.getMinSize( ) ) );
             if ( request.terminationPolicies() != null && !request.terminationPolicies().isEmpty() )
               autoScalingGroup.setTerminationPolicies( Lists.newArrayList(
                   Sets.newLinkedHashSet( Iterables.filter(
-                      Iterables.transform( request.terminationPolicies(), Enums.valueOfFunction( TerminationPolicyType.class ) ),
-                      Predicates.not( Predicates.isNull() ) ) ) ) );
+                      Iterables.transform( request.terminationPolicies( ), Enums.valueOfFunction( TerminationPolicyType.class ) ),
+                      Predicates.not( Predicates.isNull( ) ) ) ) ) );
+            if ( request.getDesiredCapacity() != null ) {
+              Integer updatedDesiredCapacity = Numbers.intValue( request.getDesiredCapacity( ) );
+              autoScalingGroup.updateDesiredCapacity(
+                  updatedDesiredCapacity,
+                  String.format("a user request update of AutoScalingGroup constraints to min: %1$d, max: %2$d, desired: %4$d changing the desired capacity from %3$d to %4$d",
+                      autoScalingGroup.getMinSize(),
+                      autoScalingGroup.getMaxSize(),
+                      autoScalingGroup.getDesiredCapacity(),
+                      updatedDesiredCapacity ) );
+            }
 
             if ( autoScalingGroup.getDesiredCapacity() < autoScalingGroup.getMinSize() ) {
               throw Exceptions.toUndeclared( new ValidationErrorException( "DesiredCapacity must not be less than MinSize" ) );
@@ -1119,7 +1164,7 @@ public class AutoScalingService {
   public DescribeLaunchConfigurationsResponseType describeLaunchConfigurations(DescribeLaunchConfigurationsType request) throws EucalyptusCloudException {
     final DescribeLaunchConfigurationsResponseType reply = request.getReply( );
 
-    //TODO:STEVE: MaxRecords / NextToken support for DescribeLaunchConfigurations
+    //TODO: MaxRecords / NextToken support for DescribeLaunchConfigurations
     
     final Context ctx = Contexts.lookup( );
     final boolean showAll = request.launchConfigurationNames().remove( "verbose" );  
@@ -1178,11 +1223,15 @@ public class AutoScalingService {
         public void fire( final AutoScalingGroup autoScalingGroup ) {
           if ( RestrictedTypes.filterPrivileged().apply( autoScalingGroup ) ) {
             failIfScaling( activityManager, autoScalingGroup );
+            final Integer desiredCapacity = Numbers.intValue( request.getDesiredCapacity( ) );
             setDesiredCapacityWithCooldown( 
                 autoScalingGroup, 
                 request.getHonorCooldown(), 
-                null, 
-                Numbers.intValue( request.getDesiredCapacity() ) );
+                null,
+                desiredCapacity,
+                String.format( "a user request explicitly set group desired capacity changing the desired capacity from %1$d to %2$d",
+                    autoScalingGroup.getDesiredCapacity(),
+                    desiredCapacity ) );
           } 
         }
       };
@@ -1259,11 +1308,12 @@ public class AutoScalingService {
   private static void setDesiredCapacityWithCooldown( final AutoScalingGroup autoScalingGroup,
                                                       final Boolean honorCooldown,
                                                       final Integer cooldown,
-                                                      final int capacity ) {
+                                                      final int capacity,
+                                                      final String reason ) {
     final long cooldownMs = TimeUnit.SECONDS.toMillis( Objects.firstNonNull( cooldown, autoScalingGroup.getDefaultCooldown() ) );
     if ( !Objects.firstNonNull( honorCooldown, Boolean.FALSE ) ||
         ( System.currentTimeMillis() - autoScalingGroup.getCapacityTimestamp().getTime() ) > cooldownMs ) {
-      autoScalingGroup.updateDesiredCapacity( capacity );
+      autoScalingGroup.updateDesiredCapacity( capacity, reason );
       autoScalingGroup.setCapacityTimestamp( new Date() );
     } else {
       throw Exceptions.toUndeclared( new InternalFailureException("Group is in cooldown") );

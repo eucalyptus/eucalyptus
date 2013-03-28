@@ -130,7 +130,6 @@ public abstract class AutoScalingGroups {
       type.setLoadBalancerNames( new LoadBalancerNames( group.getLoadBalancerNames() ) );
       type.setMaxSize( group.getMaxSize() );
       type.setMinSize( group.getMinSize() );
-      type.setStatus( group.getStatus() );
       final Collection<SuspendedProcess> suspendedProcesses = group.getSuspendedProcesses();
       if ( suspendedProcesses != null && !suspendedProcesses.isEmpty() ) {
         type.setSuspendedProcesses( new SuspendedProcesses() );

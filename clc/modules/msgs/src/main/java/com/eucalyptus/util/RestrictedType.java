@@ -75,14 +75,10 @@ public interface RestrictedType {
   OwnerFullName getOwner( );
   
   interface AccountRestrictedType {
-    String getOwnerAccountName( );
-    
     String getOwnerAccountNumber( );
   }
   
   interface UserRestrictedType {
-    String getOwnerAccountName( );
-    
     String getOwnerAccountNumber( );
     
     String getOwnerUserId( );

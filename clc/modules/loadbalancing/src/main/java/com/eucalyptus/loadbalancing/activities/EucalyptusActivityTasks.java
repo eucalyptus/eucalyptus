@@ -1013,8 +1013,7 @@ public class EucalyptusActivityTasks {
 	    abstract void dispatchInternal( ActivityContext<TM,TC> context, Callback.Checked<TM> callback );
 	
 	    void dispatchFailure( ActivityContext<TM,TC> context, Throwable throwable ) {
-	      // error, assume no instances run for now
-	      LOG.error( "Loadbalancer activity error", throwable ); //TODO:STEVE: Remove failure logging and record in scaling activity details/description
+	      LOG.error( "Loadbalancer activity error", throwable );
 	    }
 	
 	    abstract void dispatchSuccess( ActivityContext<TM,TC> context, TM response );

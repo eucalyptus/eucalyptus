@@ -28,12 +28,13 @@ import com.eucalyptus.auth.principal.Principals;
 import com.eucalyptus.auth.principal.UserFullName;
 import com.eucalyptus.entities.AbstractPersistent;
 import com.eucalyptus.util.OwnerFullName;
+import com.eucalyptus.util.RestrictedType;
 
 /**
  *
  */
 @MappedSuperclass
-public class AbstractOwnedPersistent extends AbstractPersistent {
+public class AbstractOwnedPersistent extends AbstractPersistent implements RestrictedType.AccountRestrictedType, RestrictedType.UserRestrictedType {
   private static final long serialVersionUID = 1L;
   
   @Column( name = "metadata_display_name" )
