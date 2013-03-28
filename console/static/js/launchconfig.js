@@ -152,7 +152,6 @@
     },
 
     _dialogAction: function(dialog, selectedLaunchConfig) {
-        console.log('Would do', dialog, selectedLaunchConfig);
         require(['views/dialogs/' + dialog], function(dialog) {
             new dialog({items: selectedLaunchConfig});
         });
