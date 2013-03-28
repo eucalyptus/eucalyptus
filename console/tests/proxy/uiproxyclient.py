@@ -41,11 +41,12 @@ class UIProxyClient(object):
     def __init__(self):
         pass
 
-    def login(self, host, port, account, username, password):
+    def login(self, host, port, account, username, password, is_secure=False):
         # make request, storing cookie
         self.host = host
         self.port = port
-        req = urllib2.Request("http://%s:%s/"%(host, port))
+        self.protocol = 'https' if is_secure else 'http'
+        req = urllib2.Request("%s://%s:%s/"%(self.protocol, host, port))
         encoded_auth = base64.encodestring("%s:%s:%s" % (account, username, password))[:-1]
         data = "action=login&remember=no&Authorization="+encoded_auth
         response = urllib2.urlopen(req, data)
@@ -116,7 +117,7 @@ class UIProxyClient(object):
                 params[label % i] = item
 
     def __make_request__(self, action, params, endpoint='ec2'):
-        url = 'http://%s:%s/%s?'%(self.host, self.port, endpoint)
+        url = '%s://%s:%s/%s?'%(self.protocol, self.host, self.port, endpoint)
         for param in params.keys():
             if params[param]==None:
                 del params[param]
