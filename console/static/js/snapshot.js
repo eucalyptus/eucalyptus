@@ -51,13 +51,17 @@
               "sClass": "checkbox-cell",
             },
             { 
-	       // Display the id of the snapshot in the main table
-	       "aTargets":[1],
-	       "mRender": function(data) {
-                return DefaultEncoder().encodeForHTML(data);
+	      // Display the id of the snapshot in the main table
+	      "aTargets":[1],
+              "mRender": function(data){
+                 return eucatableDisplayColumnTypeTwist(data, data, 255);
               },
-              "mData": "display_id",
-	    },
+              "mData": function(source){
+                 if(source.display_id)
+                   return source.display_id;
+                 return source.id;
+              },
+            },
             {
 	      // Display the status of the snapshot in the main table
               "aTargets":[2],
@@ -133,6 +137,15 @@
               },
               "mData": "description",
             },
+            {
+               // Hidden column for the uncut id of the snapshot
+               "bVisible": false,
+               "aTargets":[10],
+               "mRender": function(data) {
+                return DefaultEncoder().encodeForHTML(data);
+              },
+              "mData": "id",
+            },
           ],
         },
         text : {
@@ -147,6 +160,9 @@
         },
         context_menu_actions : function(row) {
           return thisObj._createMenuActions();
+        },
+        expand_callback : function(row){ // row = [col1, col2, ..., etc]
+          return thisObj._expandCallback(row);
         },
         menu_click_create : function (args) { thisObj._createAction() },
         help_click : function(evt) {
@@ -477,7 +493,7 @@
 
     _deleteAction : function(){
       var thisObj = this;
-      snapshotsToDelete = thisObj.tableWrapper.eucatable('getSelectedRows', 1);
+      snapshotsToDelete = thisObj.tableWrapper.eucatable('getSelectedRows', 10);
       var matrix = [];
       var snapToImageMap = generateSnapshotToImageMap();
       deregisterImages = false;
@@ -506,13 +522,13 @@
     },
 
     _createVolumeAction : function() {
-      var snapshot = this.tableWrapper.eucatable('getSelectedRows', 1)[0];
+      var snapshot = this.tableWrapper.eucatable('getSelectedRows', 10)[0];
       addVolume(snapshot);
     },
 
     _registerSnapshots : function(name, desc, windows) {
       var thisObj = this;
-      var snapshot = thisObj.tableWrapper.eucatable('getSelectedRows', 1);
+      var snapshot = thisObj.tableWrapper.eucatable('getSelectedRows', 10);
       var data = "&SnapshotId=" + snapshot + "&Name=" + name + "&Description=" + desc;
       if(windows)
         data += "&KernelId=windows";
@@ -540,13 +556,38 @@
 
     _tagResourceAction : function(){
       var thisObj = this;
-      var snapshot = thisObj.tableWrapper.eucatable('getSelectedRows', 1)[0];
+      var snapshot = thisObj.tableWrapper.eucatable('getSelectedRows', 10)[0];
       if ( snapshot.length > 0 ) {
         // Create a widget object for displaying the resource tag information
         var $tagInfo = $('<div>').addClass('resource-tag-table-expanded-snapshot').addClass('clearfix').euca_resource_tag({resource: 'snapshot', resource_id: snapshot, cancelButtonCallback: function(){ thisObj.tagDialog.eucadialog("close"); }, widgetMode: 'edit' });
         thisObj.tagDialog.eucadialog('addNote','tag-modification-display-box', $tagInfo);   // This line should be adjusted once the right template is created for the resource tag.  030713
         thisObj.tagDialog.eucadialog('open');
        }
+    },
+
+    _expandCallback : function(row){ 
+      var thisObj = this;
+      var snapId = row[10];
+      var results = describe('snapshot');
+      var snapshot = null;
+      for(s in results){
+        if(results[s].id === snapId){
+          snapshot = results[s];
+          break;
+        }
+      }
+
+      if(!snapshot)
+        return null;
+
+      var $wrapper = $('<div>');
+
+      $tagInfo = $('<div>').addClass('resource-tag-table-expanded-instance').addClass('clearfix').attr('id', snapshot.id).euca_resource_tag({resource: 'snapshot', resource_id: snapshot.id, widgetMode: 'view-only'});
+      
+      $tabspace = $('<div>').addClass('eucatabspace-main-div').eucatabspace(); 
+      $tabspace.eucatabspace('addTabPage', 'Tag', $tagInfo);
+      $wrapper.append($tabspace)
+      return $wrapper;
     },
 
 /**** Public Methods ****/

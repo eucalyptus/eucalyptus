@@ -7,6 +7,5 @@ define([
 	    name: 'scaling',
         template: template,
         sortKeys:  ['', 'name', 'launch_config_name', 'activity', '', 'instances', 'desired_capacity', 'health'],
-       
 	});
 });

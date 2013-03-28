@@ -191,6 +191,9 @@
         case 'launchconfig':
           this.element.launchconfig();
           break;
+        case 'newlaunchconfig':
+          this.element.newlaunchconfig();
+          break;
       }
       if (options !== KEEP_VIEW) {
         this._curSelected = selected;

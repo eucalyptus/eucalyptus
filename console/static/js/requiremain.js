@@ -1,9 +1,11 @@
 var old = alert;
 
+/*
 alert = function() {
       console.log(new Error().stack);
         old.apply(window, arguments);
 };
+*/
 
 console.log('REQUIRE CONFIG');
 require.config({
@@ -11,11 +13,15 @@ require.config({
         paths: {
 		'underscore': 'underscore-1.4.3',
 		'backbone': 'backbone-0.9.10',
+        'visualsearch' : 'visualsearch/build/visualsearch',
 		'backbone-validation': 'backbone-validation-min'
         },
         shim: {
                 underscore : {
                        exports: '_',
+                },
+                visualsearch: {
+                    exports: 'VS'
                 },
                 backbone : {
                     deps: ['underscore'],

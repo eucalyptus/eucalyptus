@@ -57,12 +57,16 @@
             },
             { 
 	      // Display the id of the image in eucatable
-	      "aTargets":[2],
-	      "mRender": function(data) {
-                return getTagForResource(data);
+	      "aTargets":[2], 
+              "mRender": function(data){
+                 return DefaultEncoder().encodeForHTML(data);
               },
-              "mData": "display_id",
-	    },
+              "mData": function(source){
+                 if(source.display_id)
+                   return source.display_id;
+                 return source.id;
+              },
+            },
             { 
 	      // Display the artitecture of the image in eucatable
 	      "aTargets":[3],
@@ -233,7 +237,7 @@ launch_instance_image_table_platform_linux, launch_instance_image_table_platform
 
     _tagResourceAction : function(){
       var thisObj = this;
-      var image = thisObj.tableWrapper.eucatable('getSelectedRows', 2)[0];
+      var image = thisObj.tableWrapper.eucatable('getSelectedRows', 9)[0];
       if ( image.length > 0 ) {
         // Create a widget object for displaying the resource tag information
         var $tagInfo = $('<div>').addClass('resource-tag-table-expanded-image').addClass('clearfix').euca_resource_tag({resource: 'image', resource_id: image, cancelButtonCallback: function(){ thisObj.tagDialog.eucadialog("close"); }, widgetMode: 'edit' });
@@ -332,12 +336,24 @@ launch_instance_image_table_platform_linux, launch_instance_image_table_platform
                                  $('<div>').addClass('expanded-title').text(image_table_expanded_desc),
                                  $('<div>').addClass('expanded-value').text(ramdisk['description'] ? ramdisk['description'] : '&nbsp;'))))));
       }
+/*
       $wrapper.append($imgInfo);
       if($kernelInfo)
         $wrapper.append($kernelInfo);
       if($ramdiskInfo)
         $wrapper.append($ramdiskInfo);
-
+*/
+      // Create a widget object for displaying the resource tag information
+      $tagInfo = $('<div>').addClass('resource-tag-table-expanded-instance').addClass('clearfix').attr('id', image.id).euca_resource_tag({resource: 'image', resource_id: image.id, widgetMode: 'view-only'});
+      
+      $tabspace = $('<div>').addClass('eucatabspace-main-div').eucatabspace(); 
+      $tabspace.eucatabspace('addTabPage', 'Image', $imgInfo);
+      if($kernelInfo)
+        $tabspace.eucatabspace('addTabPage', 'Kernel', $kernelInfo);
+      if($ramdiskInfo)
+        $tabspace.eucatabspace('addTabPage', 'Ramdisk', $ramdiskInfo);  
+      $tabspace.eucatabspace('addTabPage', 'Tag', $tagInfo);
+      $wrapper.append($tabspace)
       return $wrapper;
     },
 

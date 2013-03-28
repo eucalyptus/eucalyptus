@@ -26,7 +26,7 @@ define([
         ).done(
           // Success
           function(describe, tags) {
-            console.log('EUCACOLLECTION (success):', collection.url, describe, tags);
+            //console.log('EUCACOLLECTION (success):', collection.url, describe, tags);
             if (describe[0].results) {
               var results = describe[0].results;
               if (collection.namedColumns && tags && tags[0].results) {
@@ -43,6 +43,10 @@ define([
                   });
                 });
               }
+              _.each(results, function(result) {
+                if (typeof result['id'] == undefined)
+                  result['id'] = "d00d";
+              });
               //console.log('MERGED:', results);
               options.success && options.success(model, results, options);
             } else {
