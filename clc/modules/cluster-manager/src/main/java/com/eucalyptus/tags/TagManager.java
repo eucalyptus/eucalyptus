@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * Copyright 2009-2013 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -27,6 +27,7 @@ import javax.annotation.Nullable;
 import org.apache.log4j.Logger;
 import com.eucalyptus.auth.Permissions;
 import com.eucalyptus.auth.policy.PolicySpec;
+import com.eucalyptus.auth.principal.Principals;
 import com.eucalyptus.cloud.CloudMetadata;
 import com.eucalyptus.cloud.util.MetadataException;
 import com.eucalyptus.cloud.util.NoSuchMetadataException;
@@ -42,6 +43,7 @@ import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.OwnerFullName;
 import com.eucalyptus.util.RestrictedTypes;
+import com.eucalyptus.util.Wrappers;
 import com.google.common.base.Function;
 import com.google.common.base.Objects;
 import com.google.common.base.Predicate;
@@ -53,7 +55,6 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Ordering;
 import edu.ucsb.eucalyptus.cloud.InvalidParameterValueException;
-import edu.ucsb.eucalyptus.msgs.BaseMessage;
 import edu.ucsb.eucalyptus.msgs.CreateTagsResponseType;
 import edu.ucsb.eucalyptus.msgs.CreateTagsType;
 import edu.ucsb.eucalyptus.msgs.DeleteResourceTag;
@@ -107,7 +108,6 @@ public class TagManager {
             return false;            
           }
 
-          //TODO:STEVE: quotas for tags?
           for ( final CloudMetadata resource : resources ) {
             final Tag example = TagSupport.fromResource( resource ).example( resource, ownerFullName, null, null );
             if ( Entities.count( example ) + resourceTags.size() > MAX_TAGS_PER_RESOURCE ) {
@@ -219,12 +219,9 @@ public class TagManager {
   }
 
   private static boolean isReserved( final String text ) {
-    //TODO:STEVE: Review impersonation mechanism.
-    //TODO:GRZE: Review impersonation mechanism. 
-    final BaseMessage request = Contexts.lookup().getRequest();      
     return
-        request.getEffectiveUserId() == null &&
-        Iterables.any( reservedPrefixes, prefix( text ) );          
+        !Principals.isSameUser( Principals.systemUser(), Wrappers.unwrap( Context.class, Contexts.lookup() ).getUser() ) &&
+        Iterables.any( reservedPrefixes, prefix( text ) );
   }
   
   private static Predicate<String> prefix( final String text ) {

@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * Copyright 2009-2013 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -123,7 +123,7 @@ public class Contexts {
     } else {
       Context ctx = channelContexts.get( channel );
       ctx.setMuleEvent( RequestContext.getEvent( ) );
-      return ctx;
+      return Context.maybeImpersonating( ctx );
     }
   }
   
@@ -148,14 +148,14 @@ public class Contexts {
     } else {
       Context ctx = uuidContexts.get( correlationId );
       ctx.setMuleEvent( RequestContext.getEvent( ) );
-      return ctx;
+      return Context.maybeImpersonating( ctx );
     }
   }
   
   public static final Context lookup( ) throws IllegalContextAccessException {
     Context ctx;
     if ( ( ctx = tlContext.get( ) ) != null ) {
-      return ctx;
+      return Context.maybeImpersonating( ctx );
     }
     BaseMessage parent = null;
     MuleMessage muleMsg = null;
@@ -212,7 +212,7 @@ public class Contexts {
     } else {
       Context ctx = new Context( dest, msg );
       uuidContexts.put( ctx.getCorrelationId( ), ctx );
-      return ctx;
+      return Context.maybeImpersonating( ctx );
     }
   }
 
