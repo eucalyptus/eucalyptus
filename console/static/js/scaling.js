@@ -42,7 +42,7 @@
         hidden: thisObj.options['hidden'],
         dt_arg : {
           "sAjaxSource": 'scalinggrp',
-          "aaSorting": [[ 1, "desc" ]],
+          "aaSorting": [[ 7, "desc" ]],
           "aoColumnDefs": [
             {
               "aTargets" : [0],
@@ -52,8 +52,12 @@
             },
             {
               "aTargets" : [1],
-              "mData": "name",
-              "iDataSort": 4
+              "mRender": function(data){
+                 return eucatableDisplayColumnTypeTwist(data, data, 255);
+              },
+              "mData": function(source){
+                 return source.name;
+              },
             },
             { 
               "aTargets" : [2],
@@ -80,7 +84,15 @@
               "mData": function(oObj) { 
                 return 'All healthy';
               }
-            }
+            },
+            {
+              "bVisible": false,
+              "aTargets":[7],
+	          "mRender": function(data) {
+                return DefaultEncoder().encodeForHTML(data);
+              },
+              "mData": "name",
+            },
           ],
         },
         text : {
