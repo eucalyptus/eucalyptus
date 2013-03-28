@@ -297,7 +297,7 @@ sub lookup_session {
 sub get_disk_by_id_path {
   my ($devname) = @_;
   my $disk_by_id_path = "/dev/disk/by-id/";
-  my @output = run_cmd(1, 0, "scsi_id --whitelisted -d $devname");
+  my @output = run_cmd(1, 0, "scsi_id --whitelisted --replace-whitespace --device=$devname");
   my $scsi_id = shift(@output);
   chomp $scsi_id;
   return $devname if (is_null_or_empty($scsi_id));
