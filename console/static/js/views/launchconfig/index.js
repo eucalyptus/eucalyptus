@@ -1,13 +1,13 @@
-console.log('WIZARD:start');
 define([
   'wizard',
   'text!./template.html',
-  //'text!./image_static.html!strip',
   './image',
   './type',
   './security',
   './advanced',
-], function(Wizard, wizardTemplate, page1, page2, page3, page4) {
+  './summary',
+  './instancemodel'
+], function(Wizard, wizardTemplate, page1, page2, page3, page4, summary, model) {
   var wizard = new Wizard();
 
   function canFinish(position, problems) {
@@ -20,12 +20,14 @@ define([
     alert("Congratulations!  You finished a pointless wizard!")
   }
 
+  var dataModel = new model(); 
   var viewBuilder = wizard.viewBuilder(wizardTemplate)
           .add(page1).add(page2).add(page3).add(page4)
           .setHideDisabledButtons(true)
           .setFinishText('Launch Instance(s)').setFinishChecker(canFinish)
-          .finisher(finish);
-
+          .finisher(finish)
+          .summary(new summary( {model: dataModel} ))
+          .setPageModel(dataModel);
 //  var ViewType = wizard.makeView(options, wizardTemplate);
   var ViewType = viewBuilder.build()
   return ViewType;

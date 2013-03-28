@@ -1,7 +1,11 @@
 define([], function() {
   return Backbone.Model.extend({
     // Image ID
-    image: '',
+    image_id: '',
+    image_location: '',
+    image_description: '',
+    image_platform: '',
+
 
     // Type definition
     type_number: '',
@@ -30,8 +34,7 @@ define([], function() {
     storage_delete: '',
 
     initialize: function() {
-
     },
 
-  )};
+  });
 });
