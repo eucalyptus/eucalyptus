@@ -90,6 +90,9 @@
           resource_search : scaling_search,
           resource_plural : scaling_plural,
         },
+        expand_callback : function(row){ // row = [col1, col2, ..., etc]
+          return thisObj._expandCallback(row);
+        },
         menu_actions : function(args){ 
           return thisObj._createMenuActions();
         },
@@ -114,6 +117,15 @@
     },
 
     _destroy : function() {
+    },
+
+    _expandCallback : function(row){ 
+      var $el = $('<div />');
+      console.log('expandcallback');
+      require(['views/expandos/scaling'], function(expando) {
+         new expando({el: $el, id: row[1]});
+      });
+      return $el;
     },
 
     _createMenuActions : function() {

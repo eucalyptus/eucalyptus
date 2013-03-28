@@ -22,9 +22,15 @@ define([
               return inferImage(image.attributes.location, image.attributes.description, image.attributes.platform);
           },
           
-          select: function(e, image) {
+          select: function(e, images) {
             $(e.currentTarget).parent().find('tr').removeClass('selected-row');
             $(e.currentTarget).addClass('selected-row');
+            this.view.model.set('image_id', images.image.id);
+            this.view.model.set('image_platform', images.image.attributes.platform ? images.image.attributes.platform : 'Linux');
+            this.view.model.set('image_location', images.image.attributes.location);
+            this.view.model.set('image_description', images.image.attributes.description);
+            this.view.model.set('image_iconclass', this.setClass(images.image));
+            console.log("SELECTED", this.view.model, images.image);
           }
 
 
