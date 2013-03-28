@@ -158,6 +158,9 @@
         itemsList['suspend'] = {"name":scaling_action_suspend, callback: function(key, opt){ thisObj._dialogAction('suspendscalinggroup', selectedScaling); }}
         itemsList['resume'] = {"name":scaling_action_resume, callback: function(key, opt){ thisObj._dialogAction('resumescalinggroup', selectedScaling); }}
         itemsList['edit'] = {"name":scaling_action_edit, callback: function(key, opt){ thisObj._dialogAction('editscalinggroup', selectedScaling); }}
+      }
+
+      if ( selectedScaling.length >= 1) {
         itemsList['delete'] = {"name":scaling_action_delete, callback: function(key, opt){ thisObj._dialogAction('deletescalinggroup', selectedScaling); }}
       }
 

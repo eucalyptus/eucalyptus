@@ -1,4 +1,5 @@
 define([
+    'app',
 	'dataholder',
 	'text!./template.html!strip',
     'rivets',
@@ -6,7 +7,7 @@ define([
     'views/dialogs/quickscaledialog',
     'models/scalinggrp',
     'models/launchconfig'
-], function( dh, template, rivets, TestDialog, QuickScaleDialog, ScalingGroup, LaunchConfig) {
+], function( app, dh, template, rivets, TestDialog, QuickScaleDialog, ScalingGroup, LaunchConfig) {
 	return Backbone.View.extend({
 		initialize : function() {
 			var self = this;
@@ -22,6 +23,44 @@ define([
                 errors: new Backbone.Model({}),
                 test: test,
                 sg: sg,
+                search: {
+                    query: '',
+                    search: function() {
+                        console.log("SEARCH", arguments);
+                    },
+                    collection: dh.scalingGroups,
+                    facetMatches : function(callback) {
+                        callback([
+                          'account', 'filter', 'access', 'title',
+                          { label: 'city',    category: 'location' },
+                          { label: 'address', category: 'location' },
+                          { label: 'country', category: 'location' },
+                          { label: 'state',   category: 'location' },
+                        ]);
+                    },
+                    valueMatches : function(facet, searchTerm, callback) {
+                        switch (facet) {
+                        case 'account':
+                            callback([
+                              { value: '1-amanda', label: 'Amanda' },
+                              { value: '2-aron',   label: 'Aron' },
+                              { value: '3-eric',   label: 'Eric' },
+                              { value: '4-jeremy', label: 'Jeremy' },
+                              { value: '5-samuel', label: 'Samuel' },
+                              { value: '6-scott',  label: 'Scott' }
+                            ]);
+                            break;
+                          case 'title':
+                            callback([
+                              'Pentagon Papers',
+                              'CoffeeScript Manual',
+                              'Laboratory for Object Oriented Thinking',
+                              'A Repository Grows in Brooklyn'
+                            ]);
+                            break;
+                        }
+                    }
+                },
                 buttonScope: {
                     test: test,
                     click: function() { 
@@ -32,7 +71,7 @@ define([
                 },
                 quickScaleButton: {
                     click: function() { 
-                        var dialog = new QuickScaleDialog();
+                        app.dialog('quickscaledialog', scope);
                     }
                 },
                 makeLaunchConfig: {
