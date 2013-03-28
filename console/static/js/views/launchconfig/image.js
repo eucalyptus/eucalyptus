@@ -30,7 +30,6 @@ define([
             this.view.model.set('image_location', images.image.attributes.location);
             this.view.model.set('image_description', images.image.attributes.description);
             this.view.model.set('image_iconclass', this.setClass(images.image));
-            console.log("SELECTED", this.view.model, images.image);
           }
 
 

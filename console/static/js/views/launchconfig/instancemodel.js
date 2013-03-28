@@ -14,6 +14,7 @@ define([], function() {
     type_zone: '',
     type_balancer: '',
     type_tags: {},
+    type_show: '',
 
     // Security params
     security_keyname: '',
@@ -34,6 +35,10 @@ define([], function() {
     storage_delete: '',
 
     initialize: function() {
+        this.type_show = '';
+        this.type_hasTags = 'false';
+        this.type_hasNames = 'false';
+        this.image_iconclass = 'linux';
     },
 
   });
