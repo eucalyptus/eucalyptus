@@ -1,6 +1,6 @@
 define([
    './eucaexpandoview',
-   'text!./launchconfig.html!strip',
+   'text!./scaling.html!strip',
 ], function(EucaExpandoView, template) {
     return EucaExpandoView.extend({
         initialize : function(args) {

@@ -57,68 +57,102 @@ function(EucaModel) {
         },
     sync: function(method, model, options) {
       var collection = this;
-        if (method == 'create') {
-          var data = "_xsrf="+$.cookie('_xsrf');
-          data += "&AutoScalingGroupName="+model.get('name')+
-                  "&LaunchConfigurationName="+model.get('launch_config')+
-                  "&MinSize="+model.get('min_size')+
-                  "&MaxSize="+model.get('max_size');
-          if (model.get('default_cooldown') != undefined)
-            data += "&DefaultCooldown="+model.get('default_cooldown');
-          if (model.get('hc_type') != undefined)
-            data += "&HealthCheckType="+model.get('hc_type');
-          if (model.get('hc_period') != undefined)
-            data += "&HealthCheckGracePeriod="+model.get('hc_period');
-          if (model.get('desired_capacity') != undefined)
-            data += "&DesiredCapacity="+model.get('desired_capacity');
-          if (model.get('zones') != undefined)
-            data += build_list_params("AvailabilityZones.member.", model.get('zones'));
-          if (model.get('load_balancers') != undefined)
-            data += build_list_params("LoadBalancerNames.member.", model.get('load_balancers'));
-          if (model.get('tags') != undefined)
-            data += build_list_params("Tags.member.", model.get('tags'));
-          if (model.get('termination_policies') != undefined)
-            data += build_list_params("TerminationPolicies.member.", model.get('termination_policies'));
-          $.ajax({
-            type:"POST",
-            url:"/autoscaling?Action=CreateAutoScalingGroup",
-            data:data,
-            dataType:"json",
-            async:true,
-            success:
-              function(data, textStatus, jqXHR){
-                if ( data.results ) {
-                  notifySuccess(null, $.i18n.prop('volume_attach_success', DefaultEncoder().encodeForHTML(volumeId), DefaultEncoder().encodeForHTML(instanceId)));
-                  thisObj.tableWrapper.eucatable('refreshTable');
-                } else {
-                  notifyError($.i18n.prop('volume_attach_error', DefaultEncoder().encodeForHTML(model.name), DefaultEncoder().encodeForHTML(model.name)), undefined_error);
-                }
-              },
-            error:
-              function(jqXHR, textStatus, errorThrown){
-                notifyError($.i18n.prop('volume_attach_error', DefaultEncoder().encodeForHTML(model.name), DefaultEncoder().encodeForHTML(model.name)), getErrorMessage(jqXHR));
+      if (method == 'create') {
+        var name = model.get('name');
+        var data = "_xsrf="+$.cookie('_xsrf');
+        data += "&AutoScalingGroupName="+name+
+                "&LaunchConfigurationName="+model.get('launch_config')+
+                "&MinSize="+model.get('min_size')+
+                "&MaxSize="+model.get('max_size');
+        if (model.get('default_cooldown') != undefined)
+          data += "&DefaultCooldown="+model.get('default_cooldown');
+        if (model.get('hc_type') != undefined)
+          data += "&HealthCheckType="+model.get('hc_type');
+        if (model.get('hc_period') != undefined)
+          data += "&HealthCheckGracePeriod="+model.get('hc_period');
+        if (model.get('desired_capacity') != undefined)
+          data += "&DesiredCapacity="+model.get('desired_capacity');
+        if (model.get('zones') != undefined)
+          data += build_list_params("AvailabilityZones.member.", model.get('zones'));
+        if (model.get('load_balancers') != undefined)
+          data += build_list_params("LoadBalancerNames.member.", model.get('load_balancers'));
+        if (model.get('tags') != undefined)
+          data += build_list_params("Tags.member.", model.get('tags'));
+        if (model.get('termination_policies') != undefined)
+          data += build_list_params("TerminationPolicies.member.", model.get('termination_policies'));
+        $.ajax({
+          type:"POST",
+          url:"/autoscaling?Action=CreateAutoScalingGroup",
+          data:data,
+          dataType:"json",
+          async:true,
+          success:
+            function(data, textStatus, jqXHR){
+              if ( data.results ) {
+                notifySuccess(null, $.i18n.prop('create_scaling_group_run_success', DefaultEncoder().encodeForHTML(name)));
+              } else {
+                notifyError($.i18n.prop('create_scaling_group_run_error', DefaultEncoder().encodeForHTML(name)), undefined_error);
               }
-          });
-        }
-        else if (method == 'delete') {
-          var data = "_xsrf="+$.cookie('_xsrf')+"&AutoScalingGroupName="+model.get('name');
-          if (model.get('force_delete') != undefined)
-            data += "&ForceDelete=true";
-          $.ajax({
-            type:"POST",
-            url:"/autoscaling?Action=DeleteAutoScalingGroup",
-            data:data,
-            dataType:"json",
-            async:true,
-            success:
-              function(data, textStatus, jqXHR){
-              },
-            error:
-              function(jqXHR, textStatus, errorThrown){
-              },
-          });
-        }
+            },
+          error:
+            function(jqXHR, textStatus, errorThrown){
+              notifyError($.i18n.prop('create_scaling_group_run_error', DefaultEncoder().encodeForHTML(name)), getErrorMessage(jqXHR));
+            }
+        });
       }
+      else if (method == 'delete') {
+        var name = model.get('name');
+        var data = "_xsrf="+$.cookie('_xsrf')+"&AutoScalingGroupName="+name;
+        if (model.get('force_delete') != undefined)
+          data += "&ForceDelete=true";
+        $.ajax({
+          type:"POST",
+          url:"/autoscaling?Action=DeleteAutoScalingGroup",
+          data:data,
+          dataType:"json",
+          async:true,
+          success:
+            function(data, textStatus, jqXHR){
+              if ( data.results ) {
+                notifySuccess(null, $.i18n.prop('delete_scaling_group_success', DefaultEncoder().encodeForHTML(name)));
+              } else {
+                notifyError($.i18n.prop('delete_scaling_group_error', DefaultEncoder().encodeForHTML(name)), undefined_error);
+              }
+            },
+          error:
+            function(jqXHR, textStatus, errorThrown){
+              notifyError($.i18n.prop('delete_scaling_group_error', DefaultEncoder().encodeForHTML(name)), getErrorMessage(jqXHR));
+            }
+        });
+      }
+    },
+
+    setDesiredCapacity: function (desired_capacity, honor_cooldown) {
+      var name = this.get('name');
+      var data = "_xsrf="+$.cookie('_xsrf')+"&AutoScalingGroupName="+this.get('name')+
+                 "&DesiredCapacity="+desired_capacity;
+      if (honor_cooldown != undefined)
+        data += "&HonorCooldown=true";
+      $.ajax({
+        type:"POST",
+        url:"/autoscaling?Action=SetDesiredCapacity",
+        data:data,
+        dataType:"json",
+        async:true,
+        success:
+          function(data, textStatus, jqXHR){
+            if ( data.results ) {
+              notifySuccess(null, $.i18n.prop('quick_scale_success', DefaultEncoder().encodeForHTML(name)));
+            } else {
+              notifyError($.i18n.prop('quick_scale_error', DefaultEncoder().encodeForHTML(name)), undefined_error);
+            }
+          },
+        error:
+          function(jqXHR, textStatus, errorThrown){
+            notifyError($.i18n.prop('quick_scale_error', DefaultEncoder().encodeForHTML(name)), getErrorMessage(jqXHR));
+          },
+      });
+    }
   });
   return model;
 });

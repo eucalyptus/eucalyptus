@@ -42,7 +42,7 @@
         hidden: thisObj.options['hidden'],
         dt_arg : {
           "sAjaxSource": 'scalinggrp',
-          "aaSorting": [[ 1, "desc" ]],
+          "aaSorting": [[ 7, "desc" ]],
           "aoColumnDefs": [
             {
               "aTargets" : [0],
@@ -52,8 +52,12 @@
             },
             {
               "aTargets" : [1],
-              "mData": "name",
-              "iDataSort": 4
+              "mRender": function(data){
+                 return eucatableDisplayColumnTypeTwist(data, data, 255);
+              },
+              "mData": function(source){
+                 return source.name;
+              },
             },
             { 
               "aTargets" : [2],
@@ -80,7 +84,15 @@
               "mData": function(oObj) { 
                 return 'All healthy';
               }
-            }
+            },
+            {
+              "bVisible": false,
+              "aTargets":[7],
+	          "mRender": function(data) {
+                return DefaultEncoder().encodeForHTML(data);
+              },
+              "mData": "name",
+            },
           ],
         },
         text : {
@@ -89,6 +101,9 @@
           resource_found : 'scaling_found',
           resource_search : scaling_search,
           resource_plural : scaling_plural,
+        },
+        expand_callback : function(row){ // row = [col1, col2, ..., etc]
+          return thisObj._expandCallback(row);
         },
         menu_actions : function(args){ 
           return thisObj._createMenuActions();
@@ -114,6 +129,15 @@
     },
 
     _destroy : function() {
+    },
+
+    _expandCallback : function(row){ 
+      var $el = $('<div />');
+      console.log('expandcallback');
+      require(['views/expandos/scaling'], function(expando) {
+         new expando({el: $el, id: row[1]});
+      });
+      return $el;
     },
 
     _createMenuActions : function() {

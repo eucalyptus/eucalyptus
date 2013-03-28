@@ -1,4 +1,17 @@
-<div>
-    Well, hello there <span data-text="launchConfig.name"></span>
-    <div data-ui-button=":button">Some button</div>
+<div data-ui-tabs=":button" id="tabs" >
+  <ul>
+    <li><a href="#tabs-1">Instance</a></li>
+    <li><a href="#tabs-2">Volumes</a></li>
+  </ul>
+  <div id="tabs-1" class="tab">
+  <ul class="instance-expanded clearfix"><li><div class="expanded-title">INSTANCE TYPE</div><div class="expanded-value">m1.small</div></li><li><div class="expanded-title">OS</div><div class="expanded-value">linux</div></li><li><div class="expanded-title">KERNEL ID</div><div class="expanded-value">eki-3B833B83</div></li><li><div class="expanded-title">RAM DISK ID</div><div class="expanded-value">eri-22583D83</div></li><li><div class="expanded-title">ROOT DEVICE</div><div class="expanded-value">instance-store</div></li><li><div class="expanded-title">RESERVATION ID</div><div class="expanded-value">r-D6564489</div></li><li><div class="expanded-title">ACCOUNT ID</div><div class="expanded-value">878210294747</div></li><li><div class="expanded-title">IMAGE MANIFEST</div><div class="expanded-value">tmpobxi939ocl&amp;#x2f;precise-server-cloudimg-amd64-ext3.img.manifest.xml</div></li></ul>
+  </div>
+  <div id="tabs-2" class="tab">
+      <ul class="instance-expanded clearfix">
+        <li><div class="expanded-title">Volume Id</div><div class="expanded-value">vol-xxxxx</div></li>
+        <li><div class="expanded-title">Device Mapping</div><div class="expanded-value">/dev/sda</div></li>
+        <li><div class="expanded-title">Creation Time</div><div class="expanded-value">Aug 21, 2012 07:34:23AM</div></li>
+      </ul>
+  </div>
 </div>
+<div style="clear:both"></div>

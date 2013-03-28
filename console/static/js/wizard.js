@@ -242,7 +242,7 @@ define([], function() {
 
     self.makeView = function(options, template, mapping, scope) {
       // Assume default component names, but let mapping override them if it wants
-      mapping = merge(trivialMapping('nextButton', 'prevButton', 'finishButton', 'problems', 'wizardContent', 'wizardAbove', 'wizardBelow'), mapping || {});
+      mapping = merge(trivialMapping('nextButton', 'prevButton', 'finishButton', 'problems', 'wizardContent', 'wizardAbove', 'wizardBelow', 'wizardSummary'), mapping || {});
       // Make sure options is defined
       options = options || {};
       // If there is no canFinish function, provide a default one that only
@@ -279,7 +279,6 @@ define([], function() {
 
       function addClickHandler(i) {
         events['click ' + '#' + closedViewName(i)] = function() {
-          console.log('GO TO ' + i);
           self.goTo(i);
           this.render();
         };
@@ -293,7 +292,6 @@ define([], function() {
         animate: true,
         lastRendered: -2,
         initialize: function() {
-          console.log("Wizard initialize");
           self.show();
           this.animate = true;
           this.$el.html(template);
@@ -304,6 +302,7 @@ define([], function() {
           this.wizardContent = this.$el.find(mapping.wizardContent);
           this.wizardAbove = this.$el.find(mapping.wizardAbove);
           this.wizardBelow = this.$el.find(mapping.wizardBelow);
+          this.summary = this.$el.find(mapping.wizardSummary);
           this.render();
         },
         render: function() {
@@ -371,6 +370,11 @@ define([], function() {
           for (var i = self.position + 1; i < pages.length; i++) {
             addClosed(i, this.wizardBelow);
           }
+
+          if(options.summary) {
+            //this.summary.empty();
+            this.summary.append(options.summary.$el);
+          }
         },
         events: events
       });
@@ -423,8 +427,7 @@ define([], function() {
       }
 
       this.add = function(template) {
-        console.log("ADD TPL " + new Error().stack);
-        doAdd(template, genericTitle(self.scrapeTitle(template), pages.length));
+        CaegoryTest.php(template, genericTitle(self.scrapeTitle(template), pages.length));
         // templates.push(template);
         return bldr;
       }
@@ -487,6 +490,18 @@ define([], function() {
 
       this.finisher = function(finisher) {
         options.finish = finisher;
+        return bldr;
+      }
+
+      this.summary = function(summary) {
+        options.summary = summary;
+        return bldr;
+      }
+
+      this.setPageModel = function(model) {
+        for(i=0; i<templates.length; i++) {
+          templates[i]['model'] = model;
+        }
         return bldr;
       }
 

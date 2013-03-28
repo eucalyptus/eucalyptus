@@ -36,10 +36,6 @@
       var $launchConfigTable = $wrapper.children().first();
       var $launchConfigHelp = $wrapper.children().last();
 
-      require(['views/expandos/launchconfig'], function(lc) {
-        thisObj.expando = new lc();
-      });
-
       this.baseTable = $launchConfigTable;
       this.tableWrapper = $launchConfigTable.eucatable({
         id : 'launchconfig', // user of this widget should customize these options,
@@ -156,7 +152,6 @@
     },
 
     _dialogAction: function(dialog, selectedLaunchConfig) {
-        console.log('Would do', dialog, selectedLaunchConfig);
         require(['views/dialogs/' + dialog], function(dialog) {
             new dialog({items: selectedLaunchConfig});
         });

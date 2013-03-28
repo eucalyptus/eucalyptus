@@ -3039,5 +3039,7 @@ textarea.console-output {
 .icon_up{ background: url(/images/csg-5150d9193b75a.png) no-repeat top left; background-position: 0 -1386px; width: 27px; height: 27px; } 
  a:hover .icon_up { background: url(/images/csg-5150d9193b75a.png) no-repeat top left; background-position: 0 -1463px; width: 27px; height: 27px; }
 
-
-
+.tab {
+    clear:both;
+    display: none;
+}
