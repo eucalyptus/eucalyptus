@@ -132,7 +132,7 @@ class CachingScaleInterface(ScaleInterface):
         except Exception as ex:
             Threads.instance().invokeCallback(callback, Response(error=ex))
 
-    def set_instance_health(self, instance_id, health_status, should_respect_grace_period=True):
+    def set_instance_health(self, instance_id, health_status, should_respect_grace_period=True, callback=None):
         params = {'instance_id':instance_id, 'health_status':health_status,
                   'should_respect_grace_period':should_respect_grace_period}
         Threads.instance().runThread(self.__set_instance_health_cb__, (params, callback))
@@ -145,7 +145,7 @@ class CachingScaleInterface(ScaleInterface):
         except Exception as ex:
             Threads.instance().invokeCallback(callback, Response(error=ex))
 
-    def terminate_instance(self, instance_id, decrement_capacity=True):
+    def terminate_instance(self, instance_id, decrement_capacity=True, callback=None):
         params = {'instance_id':instance_id, 'decrement_capacity':decrement_capacity}
         Threads.instance().runThread(self.__terminate_instance_cb__, (params, callback))
 
