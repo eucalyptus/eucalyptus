@@ -5,6 +5,7 @@ define([
   './eucamodel'
 ], function(EucaModel) {
   var model = EucaModel.extend({
+    idAttribute: 'name',
     sync: function(method, model, options) {
       var collection = this;
         if (method == 'create') {

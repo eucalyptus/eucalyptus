@@ -35,6 +35,11 @@
       var $wrapper = $($tmpl.render($.extend($.i18n.map, help_scaling)));
       var $launchConfigTable = $wrapper.children().first();
       var $launchConfigHelp = $wrapper.children().last();
+
+      require(['views/expandos/launchconfig'], function(lc) {
+        thisObj.expando = new lc();
+      });
+
       this.baseTable = $launchConfigTable;
       this.tableWrapper = $launchConfigTable.eucatable({
         id : 'launchconfig', // user of this widget should customize these options,
@@ -52,7 +57,12 @@
             },
             {
               "aTargets" : [1],
-              "mData": "name",
+              "mRender": function(data){
+                 return eucatableDisplayColumnTypeTwist(data, data, 255);
+              },
+              "mData": function(source){
+                 return source.name;
+              },
             },
             {
               "aTargets" : [2],
@@ -70,6 +80,16 @@
               "aTargets" : [5],
               "mData": "created_time",
             },
+	        // Invisible column for the unmodified name
+            {
+              "bVisible": false,
+              "aTargets":[6],
+	          "mRender": function(data) {
+                return DefaultEncoder().encodeForHTML(data);
+              },
+              "mData": "name",
+            },
+
           ],
         },
         text : {
@@ -78,6 +98,9 @@
           resource_found : 'launchconfig_found',
           resource_search : launchconfig_search,
           resource_plural : launchconfig_plural,
+        },
+        expand_callback : function(row){ // row = [col1, col2, ..., etc]
+          return thisObj._expandCallback(row);
         },
         menu_actions : function(args){ 
           return thisObj._createMenuActions();
@@ -103,6 +126,15 @@
     },
 
     _destroy : function() {
+    },
+
+    _expandCallback : function(row){ 
+      var $el = $('<div />');
+      console.log('expandcallback');
+      require(['views/expandos/launchconfig'], function(expando) {
+         new expando({el: $el, id: row[6]});
+      });
+      return $el;
     },
 
     _createMenuActions : function() {
