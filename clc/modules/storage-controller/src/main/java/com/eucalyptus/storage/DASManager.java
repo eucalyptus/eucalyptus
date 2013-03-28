@@ -1205,10 +1205,6 @@ public class DASManager implements LogicalStorageManager {
 				try {
 					lvmVolumeInfo = volumeManager.getVolumeInfo(volumeId);
 					String lvName = lvmVolumeInfo.getLvName();
-					String absoluteLVName = lvmRootDirectory + PATH_SEPARATOR + volumeGroup + PATH_SEPARATOR + lvName;
-
-					// enable logical volume
-					enableLogicalVolume(absoluteLVName);
 					try {
 						// export logical volume
 						volumeManager.exportVolume(lvmVolumeInfo, volumeGroup, lvName);
@@ -1333,9 +1329,9 @@ public class DASManager implements LogicalStorageManager {
 								LOG.info("Cleaning up volume: " + foundLVMVolumeInfo.getVolumeId());
 								try {
 									exportManager.cleanup(volInfo);
-									volumeManager.finish();
 									LOG.info("Done cleaning up: " + volumeId);
 									volInfo.setCleanup(false);
+									volumeManager.finish();
 								} catch (EucalyptusCloudException ee) {
 									LOG.error(ee, ee);
 									volumeManager.abort();
