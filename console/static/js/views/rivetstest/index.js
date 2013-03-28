@@ -78,6 +78,24 @@ define([
                       });
                     }
                 },
+                setDesiredCapacity: {
+                    click: function() { 
+                      require(['models/scalinggrps'], function(collection) {
+                        var model = new collection();
+                        model.fetch({ success: function(model, response){
+                                        console.log(model.models.length+" groups returned");
+                                        for (var idx in model.models) {
+                                          var grp = model.models[idx];
+                                          console.log(JSON.stringify(grp));
+                                          if (grp.get('name') == 'atestgroup') {
+                                            grp.setDesiredCapacity(3);
+                                          }
+                                        }
+                                      }
+                                    });
+                      });
+                    }
+                },
                 scalingDialog: {
                     click: function() { 
                     }
