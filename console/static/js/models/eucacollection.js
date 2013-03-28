@@ -14,15 +14,7 @@ define([
             dataType:"json",
             async:"true",
           }),
-          $.ajax({
-            type:"POST",
-            url: '/ec2?Action=DescribeTags',
-            data: {
-                "_xsrf": $.cookie('_xsrf'),
-            },
-            dataType:"json",
-            async:"true",
-          })
+          describe('tag')
         ).done(
           // Success
           function(describe, tags) {
