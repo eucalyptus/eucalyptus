@@ -1,11 +1,16 @@
 <div>
     <div class="title">Delete Scaling Groups</div>
     <div class="body">
-        <p>Really delete these scaling groups?</p>
-        <ul>
-        <li data-each-item="items" data-text="item"></li>
-        </ul>
-        <div data-text=":status" style="height:20px"></div>
+		<p>Are you sure you want to delete the following scaling groups?</p>
+		<div class="selected-resources">
+			<table>
+				<thead><tr><th>SCALING GROUP</th></tr></thead>
+				<tbody>
+					<tr data-each-item="items"><td><span data-text="item"></span></td></tr>
+				</tbody>
+			</table>
+		</div>
+		<div data-text=":status" style="height:20px"></div>
         <div class="ui-dialog-buttonpane ui-widget-content ui-helper-clearfix">
             <div class="ui-dialog-buttonset">
                 <a data-ui-button=":deleteButton">Delete</a>
@@ -14,3 +19,4 @@
         </div>
     </div>
 </div>
+
