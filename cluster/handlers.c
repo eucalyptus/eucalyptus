@@ -2140,11 +2140,11 @@ int refresh_resources(ncMetadata * pMeta, int timeout, int dolock)
                         changeState(&(resourceCacheStage->resources[i]), RESDOWN);
                     }
                 } else {
-                    LOGDEBUG("received data from node=%s mem=%d/%d disk=%d/%d cores=%d/%d\n",
+                    LOGDEBUG("received data from node=%s mem=%d/%d disk=%d/%d cores=%d/%d migrationCapable=%d\n",
                              resourceCacheStage->resources[i].hostname,
                              ncResDst->memorySizeAvailable,
                              ncResDst->memorySizeMax, ncResDst->diskSizeAvailable, ncResDst->diskSizeMax, ncResDst->numberOfCoresAvailable,
-                             ncResDst->numberOfCoresMax);
+                             ncResDst->numberOfCoresMax, ncResDst->migrationCapable);
                     resourceCacheStage->resources[i].maxMemory = ncResDst->memorySizeMax;
                     resourceCacheStage->resources[i].availMemory = ncResDst->memorySizeAvailable;
                     resourceCacheStage->resources[i].maxDisk = ncResDst->diskSizeMax;

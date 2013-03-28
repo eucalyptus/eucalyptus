@@ -407,6 +407,7 @@ typedef struct ncInstance_t {
 typedef struct ncResource_t {
     char nodeStatus[CHAR_BUFFER_SIZE];  //!< Node status as a string
     char iqn[CHAR_BUFFER_SIZE]; //!< IQN
+    boolean migrationCapable;   //!< Whether NC is capable of live-migrating VM without shared storage
     int memorySizeMax;          //!< Maximum memory size supported by this node controller
     int memorySizeAvailable;    //!< Currently available memory on this node controller
     int diskSizeMax;            //!< Maximum disk size supported by this node controller
@@ -481,7 +482,7 @@ int total_instances(bunchOfInstances ** ppHead);
 
 //! @{
 //! @name Resources APIs
-ncResource *allocate_resource(const char *sNodeStatus, const char *sIQN, int memorySizeMax, int memorySizeAvailable, int diskSizeMax,
+ncResource *allocate_resource(const char *sNodeStatus, boolean migrationCapable, const char *sIQN, int memorySizeMax, int memorySizeAvailable, int diskSizeMax,
                               int diskSizeAvailable, int numberOfCoresMax, int numberOfCoresAvailable, const char *sPublicSubnets) _attribute_wur_;
 void free_resource(ncResource ** ppresource);
 //! @}

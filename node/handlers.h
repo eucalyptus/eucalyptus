@@ -139,6 +139,7 @@ struct nc_state_t {
     int createImage_cleanup_threshold;
     int teardown_state_duration;
     int migration_ready_threshold;
+    boolean migration_capable;
     //! @}
 
     //! @{
