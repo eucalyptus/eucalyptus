@@ -135,7 +135,7 @@
           var $createNew = $('<a>').attr('href','#').text(thisObj.options.text.create_resource);
           $createNew.click( function() { 
             thisObj.options.menu_click_create(); 
-            $('html body').trigger('click', 'create-new');
+            $('html body').trigger('click.datatable', 'create-new');
             return false;
           });
           text = $emptyDataTd.html();
@@ -174,8 +174,8 @@
       $('#table_' + this.options.id + '_count').text($.i18n.prop(thisObj.options.text.resource_found, oSettings.fnRecordsDisplay()));
       this.element.find('table thead tr').each(function(index, tr){
         var $checkAll = $(tr).find(':input[type="checkbox"]');
-        if(! $checkAll.data('events') || !('click' in $checkAll.data('events'))){
-          $checkAll.unbind('click').bind('click', function (e) {
+        if(! $checkAll.data('events') || !('click.datatable' in $checkAll.data('events'))){
+          $checkAll.unbind('click.datatable').bind('click.datatable', function (e) {
             var checked = $(this).is(':checked');
             thisObj.element.find('table tbody tr').each(function(innerIdx, innerTr){
               if(checked)
@@ -206,8 +206,10 @@
           }
         }
         
-        if(!$currentRow.data('events') || !('click' in $currentRow.data('events'))){
-          $currentRow.unbind('click').bind('click', function (e) {
+        if(!$currentRow.data('events') || !('click.datatable' in $currentRow.data('events'))){
+          $currentRow.unbind('click.datatable').bind('click.datatable', function (e) {
+            // We must regenerate the row so that any events are correctly rebound.
+            $expand = thisObj.options.expand_callback(row);
             if($(e.target).is('a') && $(e.target).hasClass('twist') && thisObj.options.expand_callback){
               if(!$currentRow.next().hasClass('expanded')){
                 thisObj.element.find('table tbody').find('tr.expanded').remove(); // remove all expanded
@@ -431,12 +433,12 @@ if (false) {
       // add action to create new
       this.element.find('#table-' + this.options.id + '-new').click(function(e) {
         thisObj._trigger('menu_click_create', e); // users of the table should listen to
-        $('html body').trigger('click', 'create-new');
+        $('html body').trigger('click.datatable', 'create-new');
         return false;
       });
       this.element.find('#table-' + this.options.id + '-extra').click(function(e) {
         thisObj._trigger('menu_click_extra', e); // users of the table should listen to
-        $('html body').trigger('click', 'create-extra');
+        $('html body').trigger('click.datatable', 'create-extra');
         return false;
       });
       return $tableTop;
@@ -471,17 +473,17 @@ if (false) {
               $.each(menu_actions, function (key, menu){
                 $ul.append(
                   $('<li>').attr('id', thisObj.options.id + '-' + key).append(
-                    $('<a>').attr('href','#').text(menu.name).unbind('click').bind('click', menu.callback)));
+                    $('<a>').attr('href','#').text(menu.name).unbind('click.datatable').bind('click.datatable', menu.callback)));
               });
               $menuDiv.append($ul);
             }
-            $('html body').trigger('click','table:instance');
+            $('html body').trigger('click.datatable','table:instance');
             if($ul.hasClass('toggle-on')){
               $.each(menu_actions, function (key, menu){
                 if(menu.disabled){
-                  $ul.find('#'+thisObj.options.id + '-'+key).addClass('disabled').find('a').removeAttr('href').unbind('click');
+                  $ul.find('#'+thisObj.options.id + '-'+key).addClass('disabled').find('a').removeAttr('href').unbind('click.datatable');
                 }else{
-                  $ul.find('#'+thisObj.options.id + '-'+key).removeClass('disabled').find('a').attr('href','#').unbind('click').bind('click',menu.callback);
+                  $ul.find('#'+thisObj.options.id + '-'+key).removeClass('disabled').find('a').attr('href','#').unbind('click.datatable').bind('click.datatable',menu.callback);
                 }
               }); 
               $('html body').eucaevent('add_click', 'table:instance', e);
@@ -606,7 +608,7 @@ if (false) {
       var $checkAll = this.table.find('thead').find(':input[type="checkbox"]');
       var checked = $checkAll.is(':checked');
       if(checked)
-        $checkAll.trigger('click');
+        $checkAll.trigger('click.datatable');
     },
 
     glowRow : function(val, columnId) {
