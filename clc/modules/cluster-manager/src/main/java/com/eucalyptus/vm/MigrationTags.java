@@ -68,6 +68,7 @@ import com.eucalyptus.component.Topology;
 import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.util.async.AsyncRequests;
 import com.google.common.base.Predicate;
+import com.google.common.base.Strings;
 import edu.ucsb.eucalyptus.msgs.CreateTagsType;
 import edu.ucsb.eucalyptus.msgs.DeleteResourceTag;
 import edu.ucsb.eucalyptus.msgs.DeleteTagsType;
@@ -106,8 +107,12 @@ enum MigrationTags implements Predicate<VmInstance> {
     final VmMigrationTask migrationTask = vm.getRuntimeState( ).getMigrationTask( );
     final CreateTagsType createTags = new CreateTagsType( );
     createTags.getTagSet( ).add( MigrationTags.STATE.getTag( migrationTask.getState( ).name( ) ) );
-    createTags.getTagSet( ).add( MigrationTags.SOURCE.getTag( migrationTask.getSourceHost( ) ) );
-    createTags.getTagSet( ).add( MigrationTags.DESTINATION.getTag( migrationTask.getDestinationHost( ) ) );
+    if ( !Strings.isNullOrEmpty( migrationTask.getSourceHost( ) ) ) {
+      createTags.getTagSet( ).add( MigrationTags.SOURCE.getTag( migrationTask.getSourceHost( ) ) );
+    }
+    if ( !Strings.isNullOrEmpty( migrationTask.getDestinationHost( ) ) ) {
+      createTags.getTagSet( ).add( MigrationTags.DESTINATION.getTag( migrationTask.getDestinationHost( ) ) );
+    }
     createTags.getResourcesSet( ).add( vm.getInstanceId( ) );
     createTags.setEffectiveUserId( vm.getOwnerUserId( ) );//GRZE:TODO: update impersonation impl later.
     dispatch( createTags );

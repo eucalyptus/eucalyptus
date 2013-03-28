@@ -69,13 +69,10 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.UnknownHostException;
 import java.security.cert.X509Certificate;
-import java.util.ArrayList;
-import java.util.Calendar;
 import java.util.List;
 import java.util.Map;
 import java.util.NavigableSet;
 import java.util.NoSuchElementException;
-import java.util.Set;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CancellationException;
@@ -88,11 +85,13 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
+import javax.annotation.Nullable;
 import org.apache.log4j.Logger;
 import com.eucalyptus.auth.principal.Principals;
 import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.bootstrap.Hosts;
 import com.eucalyptus.cloud.CloudMetadata.AvailabilityZoneMetadata;
+import com.eucalyptus.cloud.CloudMetadatas;
 import com.eucalyptus.cluster.ResourceState.VmTypeAvailability;
 import com.eucalyptus.cluster.callback.ClusterCertsCallback;
 import com.eucalyptus.cluster.callback.LogDataCallback;
@@ -114,6 +113,7 @@ import com.eucalyptus.component.ServiceUris;
 import com.eucalyptus.component.id.ClusterController;
 import com.eucalyptus.component.id.ClusterController.GatherLogService;
 import com.eucalyptus.context.Contexts;
+import com.eucalyptus.context.ServiceStateException;
 import com.eucalyptus.crypto.util.B64;
 import com.eucalyptus.crypto.util.PEMFiles;
 import com.eucalyptus.empyrean.DescribeServicesResponseType;
@@ -124,12 +124,14 @@ import com.eucalyptus.empyrean.ServiceId;
 import com.eucalyptus.empyrean.ServiceStatusType;
 import com.eucalyptus.empyrean.ServiceTransitionType;
 import com.eucalyptus.empyrean.StartServiceType;
+import com.eucalyptus.entities.Entities;
 import com.eucalyptus.event.ClockTick;
 import com.eucalyptus.event.Event;
 import com.eucalyptus.event.EventListener;
 import com.eucalyptus.event.Hertz;
 import com.eucalyptus.event.ListenerRegistry;
 import com.eucalyptus.event.Listeners;
+import com.eucalyptus.node.Nodes;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
 import com.eucalyptus.records.Logs;
@@ -152,28 +154,32 @@ import com.eucalyptus.util.async.SubjectMessageCallback;
 import com.eucalyptus.util.async.SubjectRemoteCallbackFactory;
 import com.eucalyptus.util.fsm.AbstractTransitionAction;
 import com.eucalyptus.util.fsm.Automata;
+import com.eucalyptus.util.fsm.ExistingTransitionException;
 import com.eucalyptus.util.fsm.HasStateMachine;
 import com.eucalyptus.util.fsm.StateMachine;
 import com.eucalyptus.util.fsm.StateMachineBuilder;
 import com.eucalyptus.util.fsm.TransitionAction;
 import com.eucalyptus.util.fsm.Transitions;
+import com.eucalyptus.vm.MigrationState;
+import com.eucalyptus.vm.VmInstance;
 import com.eucalyptus.vm.VmInstances;
 import com.eucalyptus.vmtypes.VmType;
 import com.eucalyptus.vmtypes.VmTypes;
 import com.eucalyptus.ws.WebServicesException;
 import com.google.common.base.Function;
+import com.google.common.base.Joiner;
 import com.google.common.base.Predicate;
+import com.google.common.base.Predicates;
+import com.google.common.base.Strings;
 import com.google.common.collect.ForwardingMap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.ObjectArrays;
-import com.google.common.collect.Sets;
 import edu.ucsb.eucalyptus.cloud.NodeInfo;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 import edu.ucsb.eucalyptus.msgs.MigrateInstancesType;
 import edu.ucsb.eucalyptus.msgs.NodeCertInfo;
 import edu.ucsb.eucalyptus.msgs.NodeLogInfo;
-import edu.ucsb.eucalyptus.msgs.NodeType;
 
 public class Cluster implements AvailabilityZoneMetadata, HasFullName<Cluster>, EventListener, HasStateMachine<Cluster, Cluster.State, Cluster.Transition> {
   private static Logger                                  LOG            = Logger.getLogger( Cluster.class );
@@ -1064,6 +1070,13 @@ public class Cluster implements AvailabilityZoneMetadata, HasFullName<Cluster>, 
   }
   
   private final AtomicBoolean logUpdate = new AtomicBoolean( false );
+  private final Predicate<VmInstance> filterPartition = new Predicate<VmInstance>( ) {
+    
+    @Override
+    public boolean apply( @Nullable VmInstance input ) {
+      return input.getPartition( ).equals( Cluster.this.getPartition( ) ) && MigrationState.isMigrating( input );
+    }
+  };
   
   public NodeLogInfo getLastLog( ) {
     if ( this.logUpdate.compareAndSet( false, true ) ) {
@@ -1354,7 +1367,7 @@ public class Cluster implements AvailabilityZoneMetadata, HasFullName<Cluster>, 
     return this.nodeHostAddrMap;
   }
   
-  protected Lock getGateLock( ) {
+  public Lock getGateLock( ) {
     return this.gateLock;
   }
 
@@ -1362,7 +1375,7 @@ public class Cluster implements AvailabilityZoneMetadata, HasFullName<Cluster>, 
    * <ol>
    * <li> Mark this cluster as gated.
    * <li> Update node and resource information; describe resources.
-   * <li> Find all VMs with volume attachments and authorize every node's IQN.
+   * <li> Find all VMs and update their migration state and volumes
    * <li> Send the MigrateInstances operation.
    * <li> Update node and resource information; describe resources.
    * <li> Unmark this cluster as gated.
@@ -1373,27 +1386,51 @@ public class Cluster implements AvailabilityZoneMetadata, HasFullName<Cluster>, 
    * @throws EucalyptusCloudException 
    * @throws Exception
    */
-  public void migrateInstances( final String sourceHost, final Boolean destHostsWhiteList, final List<String> destHosts ) throws EucalyptusCloudException {
-    this.gateLock.lock( );
-    try {
-      //TODO:GRZE: gate cluster
-      //TODO:GRZE: describe resources
-      //TODO:GRZE: authorize all NCs for volume attachments on VMs running on sourceHost 
-      AsyncRequests.sendSync( this.getConfiguration( ), new MigrateInstancesType( ) {
-        {
-          this.setCorrelationId( Contexts.lookup( ).getCorrelationId( ) );
-          this.setSourceHost( sourceHost );
-          this.setAllowHosts( destHostsWhiteList );
-          this.getDestinationHosts( ).addAll( destHosts );
+  public void migrateInstances( final String sourceHost, final Boolean destHostsWhiteList, final List<String> destHosts ) throws Exception {
+    //#1 Mark this cluster as gated.
+    if ( this.gateLock.tryLock( 30, TimeUnit.SECONDS ) ) {
+      try {
+        //#2.a. Node controller must be in the STOPPED state to be evacuated
+        ServiceConfiguration ncConfig = Nodes.lookup( this.getConfiguration( ), sourceHost );
+        if ( !Component.State.STOPPED.apply( ncConfig ) ) {
+          throw Exceptions.toUndeclared( "Cannot evacuate a node controller which is not currently STOPPED: " + ncConfig );
         }
-      } );
-      //TODO:GRZE: describe resources
-      //TODO:GRZE: ungate cluster
-    } catch ( Exception ex ) {
-      LOG.error( ex );
-      throw new EucalyptusCloudException( ex.getMessage( ), ex );
-    } finally {
-      this.gateLock .unlock( );
+        //#2.b. Only one migration per cluster for now
+        List<VmInstance> currentMigrations = this.lookupCurrentMigrations( );
+        if ( !currentMigrations.isEmpty( ) ) {
+          throw Exceptions.toUndeclared( "Cannot start a new migration because the following are already ongoing: "
+                                         + Joiner.on( ", " ).join( Iterables.transform( currentMigrations, CloudMetadatas.toDisplayName( ) ) ) );
+        }
+        //#3 Update node and resource information 
+        this.retryCheck( );
+        //#4 Find all VMs and update their migration state and volumes
+        this.prepareInstanceEvacuations( sourceHost );
+        //#5 Send the MigrateInstances operation.
+        try {
+          AsyncRequests.sendSync( this.getConfiguration( ), new MigrateInstancesType( ) {
+            {
+              this.setCorrelationId( Contexts.lookup( ).getCorrelationId( ) );
+              this.setSourceHost( sourceHost );
+              this.setAllowHosts( destHostsWhiteList );
+              this.getDestinationHosts( ).addAll( destHosts );
+            }
+          } );
+        } catch ( Exception ex ) {
+          //#5 On error go back and abort the migration status for every instance
+          this.rollbackInstanceEvacuations( sourceHost );
+          throw ex;
+        }
+        //#6 Update node and resource information; describe resources.
+        this.retryCheck( );
+      } catch ( Exception ex ) {
+        LOG.error( ex );
+        throw ex;
+      } finally {
+        //#6 Unmark this cluster as gated.
+        this.gateLock.unlock( );
+      }
+    } else {
+      throw new ServiceStateException( "Failed to request migration in the zone " + this.getPartition( ) + ", it is currently locked for maintenance." );
     }
   }
 
@@ -1412,28 +1449,141 @@ public class Cluster implements AvailabilityZoneMetadata, HasFullName<Cluster>, 
    * @throws EucalyptusCloudException 
    * @throws Exception
    */
-  public void migrateInstance( final String instanceId, final Boolean destHostsWhiteList, final List<String> destHosts ) throws EucalyptusCloudException {
-    this.gateLock.lock( );
-    try {
-      //TODO:GRZE: gate cluster
-      //TODO:GRZE: describe resources
-      //TODO:GRZE: authorize all NCs for volume attachments on VMs running on sourceHost 
-      AsyncRequests.sendSync( this.getConfiguration( ), new MigrateInstancesType( ) {
-        {
-          this.setCorrelationId( Contexts.lookup( ).getCorrelationId( ) );
-          this.setInstanceId( instanceId );
-          this.setAllowHosts( destHostsWhiteList );
-          this.getDestinationHosts( ).addAll( destHosts );
+  public void migrateInstance( final String instanceId, final Boolean destHostsWhiteList, final List<String> destHosts ) throws Exception {
+    //#1 Mark this cluster as gated.
+    if ( this.gateLock.tryLock( 30, TimeUnit.SECONDS ) ) {
+      try {
+        //#2 Only one migration per cluster for now
+        List<VmInstance> currentMigrations = this.lookupCurrentMigrations( );
+        if ( !currentMigrations.isEmpty( ) ) {
+          throw Exceptions.toUndeclared( "Cannot start a new migration because the following are already ongoing: "
+                                         + Joiner.on( ", " ).join( Iterables.transform( currentMigrations, CloudMetadatas.toDisplayName( ) ) ) );
         }
-      } );
-      //TODO:GRZE: describe resources
-      //TODO:GRZE: ungate cluster
-    } catch ( Exception ex ) {
-      LOG.error( ex );
-      throw new EucalyptusCloudException( ex.getMessage( ), ex );
-    } finally {
-      this.gateLock .unlock( );
+        //#3 Update node and resource information
+        this.retryCheck( );
+        //#4 Find all VMs and update their migration state and volumes
+        this.prepareInstanceMigrations( instanceId );
+        //#5 Send the MigrateInstances operation.
+        try {
+          AsyncRequests.sendSync( this.getConfiguration( ), new MigrateInstancesType( ) {
+            {
+              this.setCorrelationId( Contexts.lookup( ).getCorrelationId( ) );
+              this.setInstanceId( instanceId );
+              this.setAllowHosts( destHostsWhiteList );
+              this.getDestinationHosts( ).addAll( destHosts );
+            }
+          } );
+        } catch ( Exception ex ) {
+          //#5 On error go back and abort the migration status for every instance
+          this.rollbackInstanceMigrations( instanceId );
+          throw ex;
+        }
+        //#6 Update node and resource information; describe resources.
+        this.retryCheck( );
+      } catch ( Exception ex ) {
+        LOG.error( ex );
+        throw ex;
+      } finally {
+        //#6 Unmark this cluster as gated.
+        this.gateLock.unlock( );
+      }
+    } else {
+      throw new ServiceStateException( "Failed to request migration in the zone " + this.getPartition( ) + ", it is currently locked for maintenance." );
     }
+  }
+
+  private void rollbackInstanceEvacuations( final String sourceHost ) {
+    Predicate<VmInstance> filterHost = new Predicate<VmInstance>( ) {
+      
+      @Override
+      public boolean apply( @Nullable VmInstance input ) {
+        String vmHost = URI.create( input.getServiceTag( ) ).getHost( );
+        return Strings.nullToEmpty( vmHost ).equals( sourceHost );
+      }
+    };
+    Predicate<VmInstance> rollbackMigration = new Predicate<VmInstance>( ) {
+      
+      @Override
+      public boolean apply( @Nullable VmInstance input ) {
+        input.abortMigration( );
+        return true;
+      }
+    };
+    Predicate<VmInstance> filterAndAbort = Predicates.and( this.filterPartition, rollbackMigration );
+    Predicate<VmInstance> rollbackMigrationTx = Entities.asTransaction( VmInstance.class, filterAndAbort );
+    VmInstances.list( rollbackMigrationTx );
+  }
+
+  @SuppressWarnings( "unchecked" )
+  private void prepareInstanceEvacuations( final String sourceHost ) {
+    Predicate<VmInstance> filterHost = new Predicate<VmInstance>( ) {
+      
+      @Override
+      public boolean apply( @Nullable VmInstance input ) {
+        String vmHost = URI.create( input.getServiceTag( ) ).getHost( );
+        return Strings.nullToEmpty( vmHost ).equals( sourceHost );
+      }
+    };
+    Predicate<VmInstance> startMigration = new Predicate<VmInstance>( ) {
+      
+      @Override
+      public boolean apply( @Nullable VmInstance input ) {
+        input.startMigration( );
+        return true;
+      }
+    };
+    Predicate<VmInstance> filterAndAbort = Predicates.and( this.filterPartition, startMigration );
+    Predicate<VmInstance> startMigrationTx = Entities.asTransaction( VmInstance.class, filterAndAbort );
+    VmInstances.list( startMigrationTx );
+  }
+
+  private void rollbackInstanceMigrations( final String instanceId ) {
+    Predicate<VmInstance> rollbackMigration = new Predicate<VmInstance>( ) {
+      
+      @Override
+      public boolean apply( @Nullable VmInstance input ) {
+        input.abortMigration( );
+        return true;
+      }
+    };
+    Predicate<VmInstance> rollbackMigrationTx = Entities.asTransaction( VmInstance.class, rollbackMigration );
+    rollbackMigrationTx.apply( VmInstances.lookup( instanceId ) );
+  }
+
+  @SuppressWarnings( "unchecked" )
+  private void prepareInstanceMigrations( final String instanceId ) {
+    Predicate<VmInstance> startMigration = new Predicate<VmInstance>( ) {
+      
+      @Override
+      public boolean apply( @Nullable VmInstance input ) {
+        input.startMigration( );
+        return true;
+      }
+    };
+    Predicate<VmInstance> startMigrationTx = Entities.asTransaction( VmInstance.class, startMigration );
+    startMigrationTx.apply( VmInstances.lookup( instanceId ) );
+  }
+
+  private List<VmInstance> lookupCurrentMigrations( ) throws Exception {
+    return VmInstances.list( this.filterPartition );
+  }
+
+  private void retryCheck( ) throws Exception {
+    Exception lastEx = null;
+    for ( int i = 0; i < 5; i++ ) {
+      try {
+        this.check( );
+        return;
+      } catch ( Exception ex ) {
+        LOG.debug( "Retrying after failed attempt to refresh cluster state in check(): " + ex.getMessage( ) );
+        lastEx = ex;
+        TimeUnit.SECONDS.sleep( 2 );
+      }
+    }
+    throw new ServiceStateException( "Failed to request migration in the zone "
+                                     + this.getPartition( )
+                                     + " because updating resources returned an error: "
+                                     + ( lastEx != null ? lastEx.getMessage( ) : "unknown error" ) );
   }
 
 }

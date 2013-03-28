@@ -115,13 +115,17 @@ public class NodeControllerConfigurationBuilder implements ServiceBuilder<NodeCo
    * Here we do nothing for now.
    */
   @Override
-  public void fireStart( ServiceConfiguration config ) throws ServiceRegistrationException {}
+  public void fireStart( ServiceConfiguration config ) throws ServiceRegistrationException {
+//    sendNodeServiceRequest( config, new StartServiceType( ) ); 
+  }
   
   /**
    * Here we do nothing for now.
    */
   @Override
-  public void fireStop( ServiceConfiguration config ) throws ServiceRegistrationException {}
+  public void fireStop( ServiceConfiguration config ) throws ServiceRegistrationException {
+//    sendNodeServiceRequest( config, new StopServiceType( ) ); 
+  }
   
   @Override
   public void fireEnable( ServiceConfiguration config ) throws ServiceRegistrationException {

@@ -105,6 +105,7 @@ import com.eucalyptus.util.RestrictedTypes;
 import com.eucalyptus.util.async.AsyncRequests;
 import com.eucalyptus.vm.VmInstance;
 import com.eucalyptus.vm.VmInstance.VmState;
+import com.eucalyptus.vm.MigrationState;
 import com.eucalyptus.vm.VmInstances;
 import com.eucalyptus.vm.VmVolumeAttachment;
 import com.google.common.base.Function;
@@ -367,6 +368,13 @@ public class VolumeManager {
       LOG.debug( ex, ex );
       throw new EucalyptusCloudException( ex.getMessage( ), ex );
     }
+    if ( MigrationState.isMigrating( vm ) ) {
+      throw Exceptions.toUndeclared( "Cannot attach a volume to an instance which is currently migrating: "
+                                     + vm.getInstanceId( )
+                                     + " "
+                                     + vm.getMigrationTask( ) );
+    }
+
     AccountFullName ownerFullName = ctx.getUserFullName( ).asAccountFullName( );
     Volume volume = Volumes.lookup( ownerFullName, volumeId );
     if ( !RestrictedTypes.filterPrivileged( ).apply( volume ) ) {
@@ -437,6 +445,12 @@ public class VolumeManager {
       vm = vmVolAttach.getVmInstance( );
     } catch ( NoSuchElementException ex ) {
       /** no such attachment **/
+    }
+    if ( MigrationState.isMigrating( vm ) ) {
+      throw Exceptions.toUndeclared( "Cannot detach a volume from an instance which is currently migrating: "
+                                     + vm.getInstanceId( )
+                                     + " "
+                                     + vm.getMigrationTask( ) );
     }
     if ( volume == null ) {
       throw new EucalyptusCloudException( "Volume is not attached: " + request.getVolumeId( ) );

@@ -86,6 +86,7 @@ import com.eucalyptus.component.id.ClusterController;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.vm.VmInstance;
 import com.google.common.base.Function;
+import com.google.common.base.Functions;
 import com.google.common.base.Joiner;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
@@ -95,18 +96,33 @@ import edu.ucsb.eucalyptus.msgs.NodeType;
 public class Nodes {
   private static Logger LOG             = Logger.getLogger( Nodes.class );
   public static Long    REFRESH_TIMEOUT = TimeUnit.MINUTES.toMillis( 10 );
-  
+  private static Function<String, NodeInfo> lookupNodeInfo( final ServiceConfiguration ccConfig ) {
+    return new Function<String, NodeInfo>( ) {
+      
+      @Override
+      public NodeInfo apply( @Nullable String ncHostOrTag ) {
+        Map<String, NodeInfo> map = Clusters.lookup( ccConfig ).getNodeHostMap( );
+        if ( map.containsKey( ncHostOrTag ) ) {
+          return map.get( ncHostOrTag );
+        } else {
+          throw new NoSuchElementException( "Failed to lookup node using " + ncHostOrTag + ".  Available nodes are: " + Joiner.on( "\n" ).join( map.keySet( ) ) );
+        }
+      }
+    };
+    
+  }
+
   private static Function<NodeInfo, ServiceConfiguration> transformNodeInfo( final ServiceConfiguration ccConfig ) {
     return new Function<NodeInfo, ServiceConfiguration>( ) {
       
       @Override
       public ServiceConfiguration apply( @Nullable NodeInfo input ) {
         NodeController compId = ComponentIds.lookup( NodeController.class );
-        URI nodeUri = URI.create( input.getServiceTag( ) );
         Component comp = Components.lookup( compId );
         try {
           return comp.lookup( input.getName( ) );
         } catch ( final NoSuchElementException ex1 ) {
+          URI nodeUri = URI.create( input.getServiceTag( ) );
           final ServiceBuilder<? extends ServiceConfiguration> builder = ServiceBuilders.lookup( comp.getComponentId( ) );
           ServiceConfiguration config = builder.newInstance( ccConfig.getPartition( ), input.getName( ), nodeUri.getHost( ), nodeUri.getPort( ) );
           comp.setup( config );
@@ -114,7 +130,10 @@ public class Nodes {
         }
       }
     };
-    
+  }
+
+  private static Function<String, ServiceConfiguration> lookupNodeServiceConfiguration( ServiceConfiguration ccConfig ) {
+    return Functions.compose( transformNodeInfo( ccConfig ), lookupNodeInfo( ccConfig ) );
   }
   
   public static void updateNodeInfo( ServiceConfiguration ccConfig, List<NodeType> nodes ) {
@@ -134,6 +153,7 @@ public class Nodes {
       NodeInfo unreportedNode = clusterNodeMap.get( unreportedTag );
       if ( unreportedNode != null && ( System.currentTimeMillis( ) - unreportedNode.getLastSeen( ).getTime( ) ) > Nodes.REFRESH_TIMEOUT ) {
         clusterNodeMap.remove( unreportedTag );
+        //TODO:GRZE: this is where unreported node service configurations need to be updated!
       }
     }
     /** add new nodes or updated existing node infos **/
@@ -142,12 +162,13 @@ public class Nodes {
       if ( newTags.contains( serviceTag ) ) {
         clusterNodeMap.putIfAbsent( serviceTag, new NodeInfo( ccConfig.getPartition( ), node ) );
         NodeInfo nodeInfo = clusterNodeMap.get( serviceTag );
+        nodeInfo.touch( );
         Nodes.updateServiceConfiguration( ccConfig, nodeInfo );
-        
       } else if ( stillKnownTags.contains( serviceTag ) ) {
         NodeInfo nodeInfo = clusterNodeMap.get( serviceTag );
         nodeInfo.touch( );
         nodeInfo.setIqn( serviceTag );
+        Nodes.updateServiceConfiguration( ccConfig, nodeInfo );
       }
     }
     /**
@@ -160,30 +181,18 @@ public class Nodes {
     
   }
 
+  public static ServiceConfiguration lookup( ServiceConfiguration ccConfig, String hostOrTag ) throws NoSuchElementException {
+    return Nodes.lookupNodeServiceConfiguration( ccConfig ).apply( hostOrTag );
+  }
+
   private static void updateServiceConfiguration( ServiceConfiguration ccConfig, NodeInfo nodeInfo ) throws NoSuchElementException {
-    //GRZE:TODO:MAINTMODE: finish up here
-    ServiceConfiguration ncConfig = Nodes.transformNodeInfo( ccConfig ).apply( nodeInfo );
+    //GRZE:TODO:MAINTMODE: this is a hack in order to inject ephemeral configs for the NCs
+    ServiceConfiguration ncConfig = Nodes.lookup( ccConfig, nodeInfo.getName( ) );
     
     Component component = Components.lookup( NodeController.class );
     if ( !component.hasService( ncConfig ) ) {
       component.setup( ncConfig );
-    } else {
-    }
-  }
-  
-  /**
-   * GRZE:TODO: should return the node's service configuration
-   * 
-   * @param ccConfig
-   * @param ncHostOrTag
-   * @return
-   */
-  public static NodeInfo lookupNodeInfo( ServiceConfiguration ccConfig, String ncHostOrTag ) {
-    Map<String, NodeInfo> map = Clusters.lookup( ccConfig ).getNodeHostMap( );
-    if ( map.containsKey( ncHostOrTag ) ) {
-      return map.get( ncHostOrTag );
-    } else {
-      throw new NoSuchElementException( "Failed to lookup node using " + ncHostOrTag + ".  Available nodes are: " + Joiner.on( "\n" ).join( map.keySet( ) ) );
+      Topology.disable( ncConfig );
     }
   }
   

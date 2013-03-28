@@ -2045,4 +2045,15 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
     return this.getBootRecord().isMonitoring();
   }
   
+  public void startMigration( ) {
+    this.runtimeState.startMigration( );
+  }
+
+  public void abortMigration( ) {
+    this.runtimeState.abortMigration( );
+  }
+
+  public VmMigrationTask getMigrationTask( ) {
+    return this.runtimeState.getMigrationTask( );
+  }
 }

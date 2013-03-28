@@ -509,12 +509,22 @@ public class VmRuntimeState {
     this.migrationTask = migrationTask;
   }
   
+  public void startMigration( ) {
+    this.getMigrationTask( ).updateMigrationTask( MigrationState.pending.name( ), null, null );
+    //TODO:GRZE: VolumeMigration.update( vmInstance );
+    MigrationTags.update( this.getVmInstance( ) );
+  }
+  
+  public void abortMigration( ) {
+    this.getMigrationTask( ).updateMigrationTask( MigrationState.none.name( ), null, null );
+    //TODO:GRZE: VolumeMigration.update( vmInstance );
+    MigrationTags.update( this.getVmInstance( ) );
+  }
+
   public void setMigrationState( String stateName, String sourceHost, String destHost ) {
     if ( this.getMigrationTask( ).updateMigrationTask( stateName, sourceHost, destHost ) ) {//actually updated the state
-      //TODO:GRZE: authorize volume attachments only for the two NCs which now host the vm during migration
-      //TODO:GRZE: authorize volume attachments only for the single NCs which now host the vm after migration
       //TODO:GRZE: VolumeMigration.update( vmInstance );
-      MigrationTags.update( vmInstance );
+      MigrationTags.update( this.getVmInstance( ) );
     }
   }
   

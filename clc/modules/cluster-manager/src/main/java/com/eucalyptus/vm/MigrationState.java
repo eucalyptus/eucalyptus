@@ -62,7 +62,9 @@
 
 package com.eucalyptus.vm;
 
+import javax.annotation.Nullable;
 import org.apache.log4j.Logger;
+import com.google.common.base.Predicate;
 import com.google.common.base.Strings;
 
 /**
@@ -76,11 +78,29 @@ public enum MigrationState {
       return false;
     }
   },
+  pending,
   preparing,
   ready,
   migrating,
   cleaning;
   private static Logger LOG = Logger.getLogger( MigrationState.class );
+
+  public static boolean isMigrating( VmInstance vm ) {
+    return VmInstanceFilter.INSTANCE.apply( vm );
+  }
+  
+  public enum VmInstanceFilter implements Predicate<VmInstance> {
+    INSTANCE;
+
+    /**
+     * @see com.google.common.base.Predicate#apply(java.lang.Object)
+     */
+    @Override
+    public boolean apply( @Nullable VmInstance input ) {
+      return input.getRuntimeState( ).getMigrationTask( ).getState( ).isMigrating( );
+    }
+    
+  }
   
   public boolean isMigrating( ) {
     return true;
