@@ -336,10 +336,23 @@ int doDescribeServices(ncMetadata * pMeta, serviceInfoType * serviceIds, int ser
                 unlock_exit(1);
             }
             
-            for (int i = 0; i < resourceCacheLocal.numResources; i++) {
+            for (int i = 0; i < resourceCacheLocal.numResources; i++) {                
                 myStatus = *outStatuses + 1 + i;
-                snprintf(myStatus->localState, 32, "%s", "ENABLED"); // @TODO: allow this to be ENABLED, DISABLED, STOPPED, NOTREADY 
-                snprintf(myStatus->details, 1024, "%s", "it's all good"); // string that gets printed by 'euca-describe-services -E'
+                ccResource * r = resourceCacheLocal.resources + i;
+
+                {
+                    char * state = "BUGGY";
+                    char * msg = "";
+                    if (! strcmp(r->nodeStatus, "enabled")) {
+                        state = "ENABLED";
+                        msg = "the node is operating normally";
+                    } else if (! strcmp(r->nodeStatus, "disabled")) {
+                        state = "DISABLED";
+                        msg = "the node is not accepting new instances";
+                    }
+                    snprintf(myStatus->localState, 32, "%s", state);
+                    snprintf(myStatus->details, 1024, "%s", msg); // string that gets printed by 'euca-describe-services -E'
+                }
                 myStatus->localEpoch = config->ccStatus.localEpoch;
                 sprintf(myStatus->serviceId.type, "node");
                 sprintf(myStatus->serviceId.name, resourceCacheLocal.resources[i].ip);
