@@ -81,6 +81,14 @@ import com.google.common.base.Strings;
  */
 @Embeddable
 public class VmMigrationTask {
+  @Override
+  public String toString( ) {
+    StringBuilder builder = new StringBuilder( );
+    if ( this.state != null ) builder.append( this.state );
+    if ( this.sourceHost != null && this.destinationHost != null ) builder.append( " " ).append( this.sourceHost ).append( "->" ).append( this.destinationHost );
+    return builder.toString( );
+  }
+
   @Transient
   private static Logger  LOG = Logger.getLogger( VmMigrationTask.class );
   
@@ -151,28 +159,35 @@ public class VmMigrationTask {
    * @param destinationHost
    */
   boolean updateMigrationTask( String state, String sourceHost, String destinationHost ) {
-    boolean updated = !this.getState( ).equals( state ) || !this.getSourceHost( ).equals( sourceHost ) || !this.getDestinationHost( ).equals( destinationHost );
-    this.setState( MigrationState.defaultValueOf( state ) );
-    this.setSourceHost( sourceHost );
-    this.setDestinationHost( destinationHost );
-    
+    MigrationState migrationState = MigrationState.defaultValueOf( state );
     /**
      * GRZE:TODO: this entire notion of refresh timer can be (and should be!) made orthogonal to the
      * domain type. Indeed, the idea that an external operation wants to have a timer associated
      * with a resource, in this case periodic tag propagation, is decidedly external state and this
      * should GTFO.
      */
-    if ( ( System.currentTimeMillis( ) - this.getRefreshTimer( ).getTime( ) ) > TimeUnit.SECONDS.toMillis( VmInstances.MIGRATION_REFRESH_TIME ) ) {
-      //GRZE:TODO: not to mention that the above line is annoying and could be thoroughly generalized.
-      this.updateRefreshTimer( );
-      return true;
+    boolean timerExpired = ( System.currentTimeMillis( ) - this.getRefreshTimer( ).getTime( ) ) > TimeUnit.SECONDS.toMillis( VmInstances.MIGRATION_REFRESH_TIME );
+    if ( !timerExpired && MigrationState.pending.equals( this.getState( ) ) && migrationState.ordinal( ) < MigrationState.preparing.ordinal( ) ) {
+      return false;
     } else {
-      return updated;
+      boolean updated = !this.getState( ).equals( migrationState ) || !this.getSourceHost( ).equals( sourceHost ) || !this.getDestinationHost( ).equals( destinationHost );
+      this.setState( migrationState );
+      this.setSourceHost( sourceHost );
+      this.setDestinationHost( destinationHost );
+      if ( MigrationState.none.equals( this.getState( ) ) ) {
+        this.setRefreshTimer( null );
+        return updated || timerExpired;
+      } else if ( timerExpired ) {
+        this.updateRefreshTimer( );
+        return true;
+      } else {
+        return updated;
+      }
     }
   }
   
   protected Date getRefreshTimer( ) {
-    return this.refreshTimer;
+    return this.refreshTimer == null ? this.refreshTimer = new Date( ) : this.refreshTimer;
   }
   
   protected void setRefreshTimer( Date refreshTimer ) {

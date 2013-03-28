@@ -141,7 +141,6 @@ public class ClusterEndpoint implements Startable {
     MigrateInstancesResponseType reply = request.getReply( );
     for ( ServiceConfiguration c : Topology.enabledServices( ClusterController.class ) ) {
       try {
-        Nodes.lookupNodeInfo( c, request.getSourceHost( ) );
         Cluster cluster = Clusters.lookup( c );
         if ( !Strings.isNullOrEmpty( request.getSourceHost( ) ) ) {
           cluster.migrateInstances( request.getSourceHost( ), request.getAllowHosts( ), request.getDestinationHosts( ) );
@@ -151,12 +150,9 @@ public class ClusterEndpoint implements Startable {
           throw new IllegalArgumentException( "Either the sourceHost or instanceId must be provided" );
         }
         return reply.markWinning( );
-      } catch ( EucalyptusCloudException ex1 ) {
-        throw ex1;
-      } catch ( NoSuchElementException ex1 ) {
-        throw new EucalyptusCloudException( ex1.getMessage( ), ex1 );
       } catch ( Exception ex ) {
-        LOG.error( ex, ex );
+        LOG.error( ex );
+        throw new EucalyptusCloudException( ex.getMessage( ), ex );
       }
     }
     return reply.markFailed( );
