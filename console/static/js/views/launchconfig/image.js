@@ -1,7 +1,6 @@
 define([
     'app',
 	'dataholder',
-	//'text!./image_static.html!strip',
   'text!./image.html!strip',
   'rivets',
   'views/searches/images',
@@ -27,12 +26,11 @@ define([
               select: function(e, images) {
                 $(e.currentTarget).parent().find('tr').removeClass('selected-row');
                 $(e.currentTarget).addClass('selected-row');
-                self.view.model.set('image_id', images.image.id);
-                self.view.model.set('image_platform', images.image.attributes.platform ? images.image.attributes.platform : 'Linux');
-                self.view.model.set('image_location', images.image.attributes.location);
-                self.view.model.set('image_description', images.image.attributes.description);
-                self.view.model.set('image_iconclass', self.setClass(images.image));
-                console.log("SELECTED", self.view.model, images.image);
+                self.model.set('image_id', images.image.id);
+                self.model.set('image_platform', images.image.attributes.platform ? images.image.attributes.platform : 'Linux');
+                self.model.set('image_location', images.image.attributes.location);
+                self.model.set('image_description', images.image.attributes.description);
+                self.model.set('image_iconclass', this.setClass(images.image));
               }
           } 
           scope.images = scope.search.filtered;
