@@ -71,3 +71,14 @@ rivets.binders["addclass"] = {
         $(el).addClass(value);
     }
 }
+
+rivets.binders["msg"] = {
+    routine: function(el, keyname) {
+      var value = window[keyname];
+      if (el.innerText != null) {
+        return el.innerText = value != null ? value : '';
+      } else {
+        return el.textContent = value != null ? value : '';
+      }
+    }
+}
