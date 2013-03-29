@@ -4,11 +4,9 @@ define([
   ], function( template, rivets ) {
     return Backbone.View.extend({
       
-      initialize: function() {
-        this.collection = this.options.model.collection;
-        this.pairs = this.collection;
+      initialize: function(args) {
         this.$el.html(template);
-        this.rView = rivets.bind(this.$el, {pairs: this.pairs});    
+        this.rView = rivets.bind(this.$el, {pairs: args.model.collection});    
       },
 
       add: function() {
