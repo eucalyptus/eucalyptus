@@ -1973,6 +1973,7 @@ adb_MigrateInstancesResponse_t *MigrateInstancesMarshal(adb_MigrateInstances_t *
     axis2_bool_t status = AXIS2_TRUE;
     char statusMessage[256] = { 0 };
     char *nodeName = NULL;
+    char *instanceId = NULL;
     ncMetadata ccMeta = { 0 };
 
     mit = adb_MigrateInstances_get_MigrateInstances(migrateInstances, env);
@@ -1980,10 +1981,12 @@ adb_MigrateInstancesResponse_t *MigrateInstancesMarshal(adb_MigrateInstances_t *
     EUCA_MESSAGE_UNMARSHAL(migrateInstancesType, mit, (&ccMeta));
 
     nodeName = adb_migrateInstancesType_get_sourceHost(mit, env);
+    instanceId = adb_migrateInstancesType_get_instanceId(mit, env);
+
 
     status = AXIS2_TRUE;
     if (!DONOTHING) {
-        rc = doMigrateInstances(&ccMeta, nodeName, "prepare");
+        rc = doMigrateInstances(&ccMeta, nodeName, instanceId, "prepare");
         if (rc) {
             LOGERROR("doMigrateInstances() failed\n");
             status = AXIS2_FALSE;

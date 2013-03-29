@@ -295,7 +295,7 @@ int doCreateImage(ncMetadata * pMeta, char *instanceId, char *volumeId, char *re
 int doDescribeSensors(ncMetadata * pMeta, int historySize, long long collectionIntervalTimeMs, char **instIds, int instIdsLen, char **sensorIds,
                       int sensorIdsLen, sensorResource *** outResources, int *outResourcesLen);
 int doModifyNode(ncMetadata * pMeta, char *nodeName, char *stateName);
-int doMigrateInstances(ncMetadata * pMeta, char *nodeName, char *nodeAction);
+int doMigrateInstances(ncMetadata * pMeta, char *nodeName, char *instanceId, char *nodeAction);
 int setup_shared_buffer(void **buf, char *bufname, size_t bytes, sem_t ** lock, char *lockname, int mode);
 int initialize(ncMetadata * pMeta);
 int ccIsEnabled(void);
@@ -2473,7 +2473,7 @@ int refresh_instances(ncMetadata * pMeta, int timeout, int dolock)
             if (migration_host) {
                 if (!strcmp(migration_action, "commit")) {
                     LOGDEBUG("notifying source %s to commit migration.\n", migration_host);
-                    doMigrateInstances(pMeta, migration_host, migration_action);
+                    doMigrateInstances(pMeta, migration_host, NULL, migration_action);
                 } else {
                     LOGWARN("unexpected migration action %s for source %s -- doing nothing\n",
                             migration_action, migration_host);
@@ -4128,7 +4128,7 @@ int doModifyNode(ncMetadata * pMeta, char *nodeName, char *stateName)
 
     // FIXME: This is only here for compatability with earlier demo
     // development. Remove.
-    if (!doMigrateInstances(pMeta, nodeName, "prepare")) {
+    if (!doMigrateInstances(pMeta, nodeName, NULL, "prepare")) {
         LOGERROR("doModifyNode() call of doMigrateInstances() failed.\n");
     }
 
@@ -4153,7 +4153,7 @@ int doModifyNode(ncMetadata * pMeta, char *nodeName, char *stateName)
 //!
 //! @note
 //!
-int doMigrateInstances(ncMetadata * pMeta, char *nodeName, char *nodeAction)
+int doMigrateInstances(ncMetadata * pMeta, char *nodeName, char *instanceId, char *nodeAction)
 {
     int i, rc, ret = 0, timeout;
     int src_index = -1, dst_index = -1;
@@ -4165,10 +4165,14 @@ int doMigrateInstances(ncMetadata * pMeta, char *nodeName, char *nodeAction)
         return (1);
     }
 
-    if (!nodeName) {
+    if (instanceId) {
+        LOGERROR("migration by instanceId not yet supported\n");
+        return (1);
+    } else if (!nodeName && !instanceId) {
         LOGERROR("bad input params\n");
         return (1);
     }
+
     if (!strcmp(nodeAction, "prepare")) {
         LOGINFO("preparing migration from node %s\n", SP(nodeName));
         preparing = 1;
