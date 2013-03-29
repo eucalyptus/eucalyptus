@@ -71,12 +71,12 @@ class MigrateInstances(AWSQueryRequest):
                              '--source is required')
         if self.args.get('dest'):
             if self.args.get('exclude_dest'):
-                raise ValueError('error: argument --to-host: not allowed '
-                                 'with --not-to-host')
+                raise ValueError('error: argument --dest: not allowed '
+                                 'with --exclude-dest')
             self.request_params['AllowHosts'] = 'true'
             for i, host in enumerate(self.args['dest'], 1):
                 self.request_params['DestinationHost.{0}'.format(i)] = host
-        elif self.args.get('not_to_nost'):
+        elif self.args.get('exclude_dest'):
             self.request_params['AllowHosts'] = 'false'
             for i, host in enumerate(self.args['exclude_dest'], 1):
                 self.request_params['DestinationHost.{0}'.format(i)] = host
