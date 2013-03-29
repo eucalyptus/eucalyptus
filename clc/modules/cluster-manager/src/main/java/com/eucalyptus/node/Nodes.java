@@ -71,17 +71,15 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentNavigableMap;
 import java.util.concurrent.TimeUnit;
 import javax.annotation.Nullable;
+
+import com.eucalyptus.component.*;
+import com.eucalyptus.empyrean.*;
+import com.eucalyptus.util.async.AsyncRequests;
+import com.google.common.base.Strings;
+import edu.ucsb.eucalyptus.msgs.BaseMessage;
 import org.apache.log4j.Logger;
 import com.eucalyptus.cluster.Cluster;
 import com.eucalyptus.cluster.Clusters;
-import com.eucalyptus.component.Component;
-import com.eucalyptus.component.ComponentIds;
-import com.eucalyptus.component.Components;
-import com.eucalyptus.component.ServiceBuilder;
-import com.eucalyptus.component.ServiceBuilders;
-import com.eucalyptus.component.ServiceConfiguration;
-import com.eucalyptus.component.ServiceConfigurations;
-import com.eucalyptus.component.Topology;
 import com.eucalyptus.component.id.ClusterController;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.vm.VmInstance;
@@ -192,7 +190,40 @@ public class Nodes {
     Component component = Components.lookup( NodeController.class );
     if ( !component.hasService( ncConfig ) ) {
       component.setup( ncConfig );
-      Topology.disable( ncConfig );
+      try {
+        Topology.disable( ncConfig ).get( );
+      } catch ( Exception e ) {
+        LOG.debug( e, e );
+      }
+    } else if ( Component.State.STOPPED.apply( ncConfig ) ) {
+      Component.State ncState = ncConfig.lookupState( );
+      Component.State nextState = ncState;
+      DescribeServicesResponseType reply = Nodes.send( ncConfig, new DescribeServicesType( ) );
+      for ( ServiceStatusType status : reply.getServiceStatuses( ) ) {
+        if ( ncConfig.getName( ).equals( status.getServiceId( ).getName( ) ) ) {
+          Component.State reportedState = Component.State.ENABLED;
+          try {
+            reportedState = Component.State.valueOf( Strings.nullToEmpty( status.getLocalState( ) ).toUpperCase( ) );
+            LOG.debug( "Found service status for " + ncConfig.getName( ) + ": " + reportedState );
+          } catch ( IllegalArgumentException e ) {
+            LOG.debug( "Failed to get service status for " + ncConfig.getName( ) + "; got " + status.getLocalState( ) );
+            reportedState = Component.State.DISABLED;
+          }
+          try {
+            if ( !Component.State.ENABLED.apply( ncConfig ) && Component.State.ENABLED.equals( reportedState ) ) {
+              Topology.enable( ncConfig );
+            } else if ( Component.State.STOPPED.apply( ncConfig ) && !Component.State.ENABLED.equals( reportedState ) ) {
+              //atm, don't need to do anything in this case.
+            } else if ( !Component.State.ENABLED.apply( ncConfig ) && Component.State.ENABLED.equals( reportedState ) ) {
+              //atm, also, don't need to do anything in this case.
+            } else {
+              Topology.stop( ncConfig );
+            }
+          } catch ( Exception e ) {
+            LOG.debug( e, e );
+          }
+        }
+      }
     }
   }
   
@@ -217,6 +248,17 @@ public class Nodes {
       throw new NoSuchElementException( "Error looking up iqn for node " + vm.getServiceTag( ) + " (" + vm.getInstanceId( ) + "): node does not have an iqn." );
     } else {
       return Lists.newArrayList( node.getIqn( ) );
+    }
+  }
+
+  static <T extends BaseMessage> T send( ServiceConfiguration config, ServiceTransitionType msg ) throws RuntimeException {
+    ServiceConfiguration ccConfig = Topology.lookup( ClusterController.class, Partitions.lookupByName( config.getPartition( ) ) );
+    ServiceId serviceId = ServiceConfigurations.ServiceConfigurationToServiceId.INSTANCE.apply( config );
+    msg.getServices( ).add( serviceId );
+    try {
+      return AsyncRequests.sendSync( ccConfig, msg );
+    } catch ( Exception ex ) {
+      throw Exceptions.toUndeclared( ex );
     }
   }
 }

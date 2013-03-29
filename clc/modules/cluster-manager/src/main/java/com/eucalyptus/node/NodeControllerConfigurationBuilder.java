@@ -63,104 +63,82 @@
 package com.eucalyptus.node;
 
 import com.eucalyptus.bootstrap.Handles;
-import com.eucalyptus.component.ComponentId;
+import com.eucalyptus.component.*;
 import com.eucalyptus.component.ComponentId.ComponentPart;
-import com.eucalyptus.component.ComponentIds;
-import com.eucalyptus.component.Partitions;
-import com.eucalyptus.component.ServiceBuilder;
-import com.eucalyptus.component.ServiceConfiguration;
-import com.eucalyptus.component.ServiceConfigurations;
-import com.eucalyptus.component.ServiceRegistrationException;
-import com.eucalyptus.component.Topology;
-import com.eucalyptus.component.id.ClusterController;
-import com.eucalyptus.empyrean.DescribeServicesType;
-import com.eucalyptus.empyrean.DisableServiceType;
-import com.eucalyptus.empyrean.EnableServiceType;
-import com.eucalyptus.empyrean.ServiceId;
-import com.eucalyptus.empyrean.ServiceTransitionType;
-import com.eucalyptus.util.Exceptions;
-import com.eucalyptus.util.async.AsyncRequests;
-import edu.ucsb.eucalyptus.msgs.BaseMessage;
+import com.eucalyptus.empyrean.*;
+import com.google.common.base.Strings;
+import org.apache.log4j.Logger;
 
 /**
- * @todo doc
  * @author chris grzegorczyk <grze@eucalyptus.com>
+ * @todo doc
  */
-@ComponentPart( NodeController.class )
-@Handles( { RegisterNodeControllerType.class,
-           DeregisterNodeControllerType.class,
-           DescribeNodeControllersType.class,
-           ModifyNodeControllerAttributeType.class } )
+@ComponentPart(NodeController.class)
+@Handles({RegisterNodeControllerType.class,
+         DeregisterNodeControllerType.class,
+         DescribeNodeControllersType.class,
+         ModifyNodeControllerAttributeType.class})
 public class NodeControllerConfigurationBuilder implements ServiceBuilder<NodeControllerConfiguration> {
-  
+  private static Logger LOG = Logger.getLogger( NodeControllerConfigurationBuilder.class );
+
   @Override
-  public ComponentId getComponentId( ) {
+  public ComponentId getComponentId() {
     return ComponentIds.lookup( NodeController.class );
   }
-  
+
   @Override
   public Boolean checkAdd( String partition, String name, String host, Integer port ) throws ServiceRegistrationException {
     throw new ServiceRegistrationException( "Node Controllers must currently be registered " +
                                             "on the Cluster Controllers for the partition." +
                                             "Apologies.  Please see the documentation." );
   }
-  
+
   /**
    * Here we do nothing for now.
    */
   @Override
-  public void fireLoad( ServiceConfiguration parent ) throws ServiceRegistrationException {}
-  
+  public void fireLoad( ServiceConfiguration parent ) throws ServiceRegistrationException {
+  }
+
   /**
    * Here we do nothing for now.
    */
   @Override
   public void fireStart( ServiceConfiguration config ) throws ServiceRegistrationException {
-//    sendNodeServiceRequest( config, new StartServiceType( ) ); 
+//GRZE: we dont send this at the moment -- it is a NOOP at the CC
+//    send( config, new StartServiceType( ) );
   }
-  
+
   /**
    * Here we do nothing for now.
    */
   @Override
   public void fireStop( ServiceConfiguration config ) throws ServiceRegistrationException {
-//    sendNodeServiceRequest( config, new StopServiceType( ) ); 
+    Nodes.send( config, new StopServiceType( ) );
   }
-  
+
   @Override
   public void fireEnable( ServiceConfiguration config ) throws ServiceRegistrationException {
-    sendNodeServiceRequest( config, new EnableServiceType( ) ); 
+    Nodes.send( config, new EnableServiceType( ) );
   }
 
   @Override
   public void fireDisable( ServiceConfiguration config ) throws ServiceRegistrationException {
-    sendNodeServiceRequest( config, new DisableServiceType( ) ); 
+//GRZE: we dont send this at the moment -- it is a NOOP at the CC
+//    send( config, new DisableServiceType( ) );
   }
-  
+
   @Override
-  public void fireCheck( ServiceConfiguration config ) throws ServiceRegistrationException {
-    sendNodeServiceRequest( config, new DescribeServicesType( ) ); 
-  }
-  
+  public void fireCheck( ServiceConfiguration config ) throws ServiceRegistrationException {}
+
   @Override
   public NodeControllerConfiguration newInstance( String partition, String name, String host, Integer port ) {
     return new NodeControllerConfiguration( partition, host );
   }
-  
+
   @Override
-  public NodeControllerConfiguration newInstance( ) {
+  public NodeControllerConfiguration newInstance() {
     return new NodeControllerConfiguration( );
   }
-  
-  private static <T extends BaseMessage> T sendNodeServiceRequest( ServiceConfiguration config, ServiceTransitionType msg ) throws RuntimeException {
-    ServiceConfiguration ccConfig = Topology.lookup( ClusterController.class, Partitions.lookupByName( config.getPartition( ) ) );
-    ServiceId serviceId = ServiceConfigurations.ServiceConfigurationToServiceId.INSTANCE.apply( config );
-    msg.getServices().add( serviceId );
-    try {
-      return AsyncRequests.sendSync( ccConfig, msg );
-    } catch ( Exception ex ) {
-      throw Exceptions.toUndeclared( ex );
-    }
-  }
-  
+
 }
