@@ -26,6 +26,12 @@ define([
               architecture : [{name : 'i386', label: 'i386 32-bit'}, {name : 'x86_64' , label : 'AMD64 64-bit'}]
             };
             var facetNames = ['architecture', 'description', 'name', 'owner', 'platform', 'root_device'];
+            
+            var customSearches = {
+              description : function(facet, search, images) {
+                return ["Custom custom!"]
+              }
+            }
 
             var sg = new ScalingGroup({name: 'a test group'});
             var scope = {
@@ -35,7 +41,8 @@ define([
                 search : new Search(app.data.images, 
                               facetNames, 
                               {architecture : 'System Type'}, 
-                              explicitFacets),
+                              explicitFacets, 
+                              customSearches),
                 buttonScope: {
                     test: test,
                     click: function() { 
