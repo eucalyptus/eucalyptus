@@ -1,9 +1,22 @@
 define(['app'], function(app) {
   var self = this;
-  return function(images, allowedFacetNames, localizer, explicitFacets) {
+  return function(images, allowedFacetNames, localizer, explicitFacets, searchers) {
     var self = this;
     searchContext = self;
-
+    
+    // Make sure if the argument isn't there, that at least
+    // something works
+    if (!allowedFacetNames) {
+      allowedFacetNames = [];
+      images.forEach(function(img) {
+        for (var key in img) {
+          if (!isIgnored(key, img, allowedFacetNames)) {
+            allowedFacetNames.push(key);
+          }
+        }
+      })
+    }
+    
     var sortKeyList = function(list, keyName) {
       return _.chain(list)
               .sort()
@@ -65,6 +78,9 @@ define(['app'], function(app) {
     }
 
     function deriveMatches(facet, searchTerm) {
+      if (searchers && searchers[facet]) {
+        return searchers[facet].apply(self, [facet, searchTerm]);
+      }
       console.log('FACET: ' + JSON.stringify(facet));
       if (explicitFacets && explicitFacets[facet]) {
         console.log('RETURNING EXPLICIT ' + JSON.stringify(explicitFacets[facet]));
@@ -93,8 +109,11 @@ define(['app'], function(app) {
       console.log("SEARCH", arguments);
       var jfacets = facets.toJSON();
       var results = self.images.filter(function(model) {
-        return _.every(jfacets, function(item) {
-          var test = new RegExp('.*' + item.value + '.*').test(model.get(item.category));
+        return _.every(jfacets, function(facet) {
+          if (searchers && searchers[facet.category]) {
+            return searchers[facet.category].apply(self, [facet, search, images]);
+          }
+          var test = new RegExp('.*' + facet.value + '.*').test(model.get(facet.category));
           return test;
         });
       }).map(function(model) {
