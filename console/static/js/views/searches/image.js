@@ -1,3 +1,12 @@
+define([
+    'views/searches/generic',
+], function(Search) {
+    return function(images, allowedFacetNames, localizer, explicitFacets, searchers) {
+      return new Search(images, ['architecture', 'description', 'name', 'owner', 'platform', 'root_device'], {}, null);
+    }
+});
+
+/*
 define(['app'], function(app) {
     var self = this;
     return function(images) {
@@ -10,7 +19,7 @@ define(['app'], function(app) {
             .sort()
             .uniq()
             .value()
-        }
+    }
 
         var keyLists = {};
         var updateKeyLists = function() {
@@ -45,7 +54,7 @@ define(['app'], function(app) {
                 return _.every(jfacets, function(item) {
                     var test = new RegExp('.*' + item.value + '.*').test(model.get(item.category));
                     return test;
-                });
+});
             }).map(function(model) { return model.toJSON(); });
             console.log(results);
             self.filtered.reset(results);
@@ -80,3 +89,4 @@ define(['app'], function(app) {
         images.on('change reset', updateKeyLists);
     }
 });
+*/
