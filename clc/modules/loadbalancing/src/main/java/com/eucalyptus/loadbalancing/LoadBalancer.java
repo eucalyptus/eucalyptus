@@ -43,6 +43,7 @@ import org.hibernate.annotations.Parent;
 import com.eucalyptus.cloud.UserMetadata;
 import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.id.Eucalyptus;
+import com.eucalyptus.loadbalancing.activities.LoadBalancerAutoScalingGroup;
 import com.eucalyptus.util.FullName;
 import com.eucalyptus.util.OwnerFullName;
 import com.google.common.base.Predicate;
@@ -107,6 +108,10 @@ public class LoadBalancer extends UserMetadata<LoadBalancer.STATE> implements Lo
 	@OneToMany(fetch = FetchType.LAZY, orphanRemoval = false, mappedBy = "loadbalancer")
 	@Cache( usage= CacheConcurrencyStrategy.TRANSACTIONAL )
 	private Collection<LoadBalancerSecurityGroup> groups = null;
+
+	@OneToOne(fetch = FetchType.LAZY, cascade = CascadeType.ALL, orphanRemoval = true, mappedBy = "loadbalancer")
+	@Cache( usage= CacheConcurrencyStrategy.TRANSACTIONAL )
+	private LoadBalancerAutoScalingGroup autoscale_group = null;
 	
 	@OneToOne(fetch = FetchType.LAZY, cascade = CascadeType.ALL, orphanRemoval = true, mappedBy = "loadbalancer")
 	@Cache( usage= CacheConcurrencyStrategy.TRANSACTIONAL )
@@ -181,6 +186,10 @@ public class LoadBalancer extends UserMetadata<LoadBalancer.STATE> implements Lo
 	
 	public Collection<LoadBalancerSecurityGroup> getGroups(){
 		return this.groups;
+	}
+	
+	public LoadBalancerAutoScalingGroup getAutoScaleGroup(){
+		return this.autoscale_group;
 	}
 	
 	void setHealthCheck(int healthyThreshold, int interval, String target, int timeout, int unhealthyThreshold)

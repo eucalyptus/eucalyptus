@@ -118,8 +118,8 @@ public class LoadBalancerSecurityGroup extends AbstractPersistent {
 		this.loadbalancer = lb;
 	}
 
-	public void retire(){
-		this.state = STATE.OutOfService.name();
+	public void setState(STATE state){
+		this.state = state.name();
 	}
 	
 	public STATE getState(){

@@ -74,7 +74,7 @@ public class LoadBalancerZone extends AbstractPersistent {
 	@Column(name="zone_name", nullable=false)
 	private String zoneName = null;
 	
-	@Column(name="unique_name", nullable=false)
+	@Column(name="unique_name", nullable=false, unique=true)
 	private String uniqueName = null;
 
 	@OneToMany(fetch = FetchType.LAZY, mappedBy = "zone")

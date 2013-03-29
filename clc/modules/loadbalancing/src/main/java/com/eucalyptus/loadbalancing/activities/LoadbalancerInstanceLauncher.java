@@ -44,26 +44,26 @@ import com.google.common.collect.Lists;
 public class LoadbalancerInstanceLauncher extends AbstractEventHandler<NewLoadbalancerEvent> implements StoredResult<String> {
 	private static final Logger LOG = Logger.getLogger( LoadbalancerInstanceLauncher.class );
 	private List<String> launchedInstances = Lists.newArrayList();
-	@ConfigurableField( displayName = "loadbalancer_emi", 
+	/*@ConfigurableField( displayName = "loadbalancer_emi", 
 	                    description = "EMI containing haproxy and the controller",
 	                    initial = "NULL", 
 	                    readonly = false,
-	                    type = ConfigurableFieldType.KEYVALUE )
+	                    type = ConfigurableFieldType.KEYVALUE )*/
 	public static String LOADBALANCER_EMI = "NULL";
 	private int numInstancesToLaunch = 1;
 	
-	@ConfigurableField( displayName = "loadbalancer_instance_type", 
+	/*@ConfigurableField( displayName = "loadbalancer_instance_type", 
             description = "instance type for loadbalancer instances",
             initial = "m1.small", 
             readonly = false,
-            type = ConfigurableFieldType.KEYVALUE )
+            type = ConfigurableFieldType.KEYVALUE )*/
 	public static String LOADBALANCER_INSTANCE_TYPE = "m1.small";
 	
-	@ConfigurableField( displayName = "loadbalancer_service_path", 
+	/*@ConfigurableField( displayName = "loadbalancer_service_path", 
 			description = "service path of the loadbalancer",
 			initial = "services/Eucalyptus",
 			readonly = false,
-			type = ConfigurableFieldType.KEYVALUE )
+			type = ConfigurableFieldType.KEYVALUE )*/
 	public static String LOADBALANCER_SERVICE_PATH = "";
 	
 	LoadbalancerInstanceLauncher(EventHandlerChain<NewLoadbalancerEvent> chain, final int numInstances){

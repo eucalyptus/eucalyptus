@@ -33,6 +33,21 @@ import com.eucalyptus.auth.principal.AccountFullName;
 import com.eucalyptus.auth.principal.Principals;
 import com.eucalyptus.autoscaling.activities.DispatchingClient;
 import com.eucalyptus.autoscaling.activities.EucalyptusClient;
+import com.eucalyptus.autoscaling.common.AutoScaling;
+import com.eucalyptus.autoscaling.common.AutoScalingGroupNames;
+import com.eucalyptus.autoscaling.common.AutoScalingMessage;
+import com.eucalyptus.autoscaling.common.AvailabilityZones;
+import com.eucalyptus.autoscaling.common.CreateAutoScalingGroupResponseType;
+import com.eucalyptus.autoscaling.common.CreateAutoScalingGroupType;
+import com.eucalyptus.autoscaling.common.CreateLaunchConfigurationResponseType;
+import com.eucalyptus.autoscaling.common.CreateLaunchConfigurationType;
+import com.eucalyptus.autoscaling.common.DeleteAutoScalingGroupResponseType;
+import com.eucalyptus.autoscaling.common.DeleteAutoScalingGroupType;
+import com.eucalyptus.autoscaling.common.DeleteLaunchConfigurationResponseType;
+import com.eucalyptus.autoscaling.common.DeleteLaunchConfigurationType;
+import com.eucalyptus.autoscaling.common.DescribeAutoScalingGroupsResponseType;
+import com.eucalyptus.autoscaling.common.DescribeAutoScalingGroupsType;
+import com.eucalyptus.autoscaling.common.SecurityGroups;
 import com.eucalyptus.autoscaling.configurations.LaunchConfiguration;
 import com.eucalyptus.cloudwatch.CloudWatch;
 import com.eucalyptus.cloudwatch.CloudWatchMessage;
@@ -105,6 +120,31 @@ public class EucalyptusActivityTasks {
 	private interface ActivityContext<TM extends BaseMessage, TC extends ComponentId> {
 	  String getUserId();
 	  DispatchingClient<TM, TC> getClient();
+	}
+	
+	private class AutoScalingSystemActivity implements ActivityContext<AutoScalingMessage, AutoScaling>{
+		private AutoScalingSystemActivity(){	}
+
+		@Override
+		public String getUserId() {
+			try{
+				return Accounts.lookupSystemAdmin().getUserId();
+			}catch(AuthException ex){
+				throw Exceptions.toUndeclared(ex);
+			}
+		}
+
+		@Override
+		public DispatchingClient<AutoScalingMessage, AutoScaling> getClient() {
+			try{
+				final AutoScalingClient client = new AutoScalingClient(this.getUserId());
+				client.init();
+				return client;
+			}catch(Exception ex){
+				throw Exceptions.toUndeclared(ex);
+			}
+		}
+		
 	}
 	
 	private class CloudWatchUserActivity implements ActivityContext<CloudWatchMessage, CloudWatch>{
@@ -451,9 +491,262 @@ public class EucalyptusActivityTasks {
 			if(result.get()){
 				return;
 			}else
-				throw new EucalyptusActivityException("failed to remove multi A records ");
+				throw new EucalyptusActivityException("failed to remove multi A records");
 		}catch(Exception ex){
 			throw Exceptions.toUndeclared(ex);
+		}
+	}
+	
+	public void createLaunchConfiguration(final String imageId, final String instanceType, final String launchConfigName,
+			final String securityGroup, final String userData){
+		final AutoScalingCreateLaunchConfigTask task = 
+				new AutoScalingCreateLaunchConfigTask(imageId, instanceType, launchConfigName, securityGroup, userData);
+		final CheckedListenableFuture<Boolean> result = task.dispatch(new AutoScalingSystemActivity());
+		try{
+			if(result.get()){
+				return;
+			}else
+				throw new EucalyptusActivityException("failed to create launch configuration");
+		}catch(Exception ex){
+			throw Exceptions.toUndeclared(ex);
+		}
+	}
+	
+	public void createAutoScalingGroup(final String groupName, final List<String> availabilityZones, final int capacity, final String launchConfigName){
+		final AutoScalingCreateGroupTask task =
+				new AutoScalingCreateGroupTask(groupName, availabilityZones, capacity, launchConfigName);
+		final CheckedListenableFuture<Boolean> result = task.dispatch(new AutoScalingSystemActivity());
+		try{
+			if(result.get()){
+				return;
+			}else
+				throw new EucalyptusActivityException("failed to create autoscaling group");
+		}catch(Exception ex){
+			throw Exceptions.toUndeclared(ex);
+		}
+	}
+	
+	public void deleteLaunchConfiguration(final String launchConfigName){
+		final AutoScalingDeleteLaunchConfigTask task =
+				new AutoScalingDeleteLaunchConfigTask(launchConfigName);
+		final CheckedListenableFuture<Boolean> result = task.dispatch(new AutoScalingSystemActivity());
+		try{
+			if(result.get()){
+				return;
+			}else
+				throw new EucalyptusActivityException("failed to delete launch configuration");
+		}catch(Exception ex){
+			throw Exceptions.toUndeclared(ex);
+		}
+	}
+	
+	public void deleteAutoScalingGroup(final String groupName, final boolean terminateInstances){
+		final AutoScalingDeleteGroupTask task = 
+				new AutoScalingDeleteGroupTask(groupName, terminateInstances);
+		final CheckedListenableFuture<Boolean> result = task.dispatch(new AutoScalingSystemActivity());
+		try{
+			if(result.get()){
+				return;
+			}else
+				throw new EucalyptusActivityException("failed to delete autoscaling group");
+		}catch(Exception ex){
+			throw Exceptions.toUndeclared(ex);
+		}
+	}
+	
+	public DescribeAutoScalingGroupsResponseType describeAutoScalingGroups(final List<String> groupNames){
+		final AutoScalingDescribeGroupsTask task =
+				new AutoScalingDescribeGroupsTask(groupNames);
+		final CheckedListenableFuture<Boolean> result = task.dispatch(new AutoScalingSystemActivity());
+		try{
+			if(result.get()){
+				return task.getResponse();
+			}else
+				throw new EucalyptusActivityException("failed to describe autoscaling groups");
+		}catch(Exception ex){
+			throw Exceptions.toUndeclared(ex);
+		}
+	}
+	
+	private class AutoScalingDescribeGroupsTask extends EucalyptusActivityTask<AutoScalingMessage, AutoScaling>{
+		private List<String> groupNames = null;
+		private DescribeAutoScalingGroupsResponseType response = null;
+		private AutoScalingDescribeGroupsTask(final List<String> groupNames){
+			this.groupNames = groupNames;
+		}
+		
+		private DescribeAutoScalingGroupsType describeAutoScalingGroup(){
+			final DescribeAutoScalingGroupsType req = new DescribeAutoScalingGroupsType();
+			final AutoScalingGroupNames names = new AutoScalingGroupNames();
+			names.setMember(Lists.<String>newArrayList());
+			names.getMember().addAll(this.groupNames);
+			req.setAutoScalingGroupNames(names);
+			return req;
+		}
+		
+		@Override
+		void dispatchInternal(
+				ActivityContext<AutoScalingMessage, AutoScaling> context,
+				Checked<AutoScalingMessage> callback) {
+			final DispatchingClient<AutoScalingMessage, AutoScaling> client = context.getClient();
+			client.dispatch(describeAutoScalingGroup(), callback);					
+		}
+
+		@Override
+		void dispatchSuccess(
+				ActivityContext<AutoScalingMessage, AutoScaling> context,
+				AutoScalingMessage response) {
+			this.response = (DescribeAutoScalingGroupsResponseType) response;
+		}
+		
+		public DescribeAutoScalingGroupsResponseType getResponse(){
+			return this.response;
+		}
+	}
+	
+	private class AutoScalingCreateGroupTask extends EucalyptusActivityTask<AutoScalingMessage, AutoScaling>{
+		private String groupName = null;
+		private List<String> availabilityZones = null;
+		private int capacity = 1;
+		private String launchConfigName = null;
+		
+		private AutoScalingCreateGroupTask(final String groupName, final List<String> zones, final int capacity, final String launchConfig){
+			this.groupName = groupName;
+			this.availabilityZones = zones;
+			this.capacity = capacity;
+			this.launchConfigName = launchConfig;
+		}
+		
+		private CreateAutoScalingGroupType createAutoScalingGroup(){
+			final CreateAutoScalingGroupType req = new CreateAutoScalingGroupType();
+			req.setAutoScalingGroupName(this.groupName);
+			AvailabilityZones zones = new AvailabilityZones();
+			zones.setMember(Lists.<String>newArrayList());
+			zones.getMember().addAll(this.availabilityZones);
+			req.setAvailabilityZones(zones);
+			req.setDesiredCapacity(this.capacity);
+			req.setMaxSize(this.capacity);
+			req.setMinSize(this.capacity);
+			req.setHealthCheckType("EC2");
+			req.setLaunchConfigurationName(this.launchConfigName);
+			return req;
+		}
+		
+		@Override
+		void dispatchInternal(
+				ActivityContext<AutoScalingMessage, AutoScaling> context,
+				Checked<AutoScalingMessage> callback) {
+			final DispatchingClient<AutoScalingMessage, AutoScaling> client = context.getClient();
+			client.dispatch(createAutoScalingGroup(), callback);			
+		}
+
+		@Override
+		void dispatchSuccess(
+				ActivityContext<AutoScalingMessage, AutoScaling> context,
+				AutoScalingMessage response) {
+			CreateAutoScalingGroupResponseType resp = (CreateAutoScalingGroupResponseType) response;
+		}
+	}
+	
+	private class AutoScalingDeleteGroupTask extends EucalyptusActivityTask<AutoScalingMessage, AutoScaling>{
+		private String groupName = null;
+		private boolean terminateInstances = false;
+		private AutoScalingDeleteGroupTask(final String groupName, final boolean terminateInstances){
+			this.groupName = groupName;
+			this.terminateInstances = terminateInstances;
+		}
+		
+		private DeleteAutoScalingGroupType deleteAutoScalingGroup(){
+			final DeleteAutoScalingGroupType req = new DeleteAutoScalingGroupType();
+			req.setAutoScalingGroupName(this.groupName);
+			req.setForceDelete(this.terminateInstances);
+			return req;
+		}
+		
+		@Override
+		void dispatchInternal(
+				ActivityContext<AutoScalingMessage, AutoScaling> context,
+				Checked<AutoScalingMessage> callback) {
+			final DispatchingClient<AutoScalingMessage, AutoScaling> client = context.getClient();
+			client.dispatch(deleteAutoScalingGroup(), callback);			
+		}
+
+		@Override
+		void dispatchSuccess(
+				ActivityContext<AutoScalingMessage, AutoScaling> context,
+				AutoScalingMessage response) {
+			final DeleteAutoScalingGroupResponseType resp = (DeleteAutoScalingGroupResponseType) response;
+		}
+	}
+	
+	private class AutoScalingDeleteLaunchConfigTask extends EucalyptusActivityTask<AutoScalingMessage, AutoScaling>{
+		private String launchConfigName = null;
+		private AutoScalingDeleteLaunchConfigTask(final String launchConfigName){
+			this.launchConfigName = launchConfigName;
+		}
+		
+		private DeleteLaunchConfigurationType deleteLaunchConfiguration(){
+			final DeleteLaunchConfigurationType req = new DeleteLaunchConfigurationType();
+			req.setLaunchConfigurationName(this.launchConfigName);
+			return req;
+		}
+		
+		@Override
+		void dispatchInternal(
+				ActivityContext<AutoScalingMessage, AutoScaling> context,
+				Checked<AutoScalingMessage> callback) {
+			final DispatchingClient<AutoScalingMessage, AutoScaling> client = context.getClient();
+			client.dispatch(deleteLaunchConfiguration(), callback);
+		}
+
+		@Override
+		void dispatchSuccess(
+				ActivityContext<AutoScalingMessage, AutoScaling> context,
+				AutoScalingMessage response) {
+			final DeleteLaunchConfigurationResponseType resp = (DeleteLaunchConfigurationResponseType) response;
+		}
+	}
+	private class AutoScalingCreateLaunchConfigTask extends EucalyptusActivityTask<AutoScalingMessage, AutoScaling>{
+		private String imageId=null;
+		private String instanceType = null;
+		private String launchConfigName = null;
+		private String securityGroup = null;
+		private String userData = null;
+		private AutoScalingCreateLaunchConfigTask(final String imageId, final String instanceType, 
+				final String launchConfigName, final String sgroupName, final String userData){
+			this.imageId = imageId;
+			this.instanceType = instanceType;
+			this.launchConfigName = launchConfigName;
+			this.securityGroup = sgroupName;
+			this.userData = userData;
+		}
+		
+		private CreateLaunchConfigurationType createLaunchConfiguration(){
+			final CreateLaunchConfigurationType req = new CreateLaunchConfigurationType();
+			req.setImageId(this.imageId);
+			req.setInstanceType(this.instanceType);
+			req.setLaunchConfigurationName(this.launchConfigName);
+			SecurityGroups groups = new SecurityGroups();
+			groups.setMember(Lists.<String>newArrayList());
+			groups.getMember().add(this.securityGroup);
+			req.setSecurityGroups(groups);
+			req.setUserData(userData);
+			return req;
+		}
+		
+		@Override
+		void dispatchInternal(
+				ActivityContext<AutoScalingMessage, AutoScaling> context,
+				Checked<AutoScalingMessage> callback) {
+			final DispatchingClient<AutoScalingMessage, AutoScaling> client = context.getClient();
+			client.dispatch(createLaunchConfiguration(), callback);
+		}
+
+		@Override
+		void dispatchSuccess(
+				ActivityContext<AutoScalingMessage, AutoScaling> context,
+				AutoScalingMessage response) {
+			final CreateLaunchConfigurationResponseType resp = (CreateLaunchConfigurationResponseType) response;
 		}
 	}
 

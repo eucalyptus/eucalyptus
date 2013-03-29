@@ -111,7 +111,7 @@ public class LoadBalancerListener extends AbstractPersistent
 	@Column(name="certificate_id", nullable=true)
 	private String sslCertificateArn = null;
 	
-	@Column(name="unique_name", nullable=false)
+	@Column(name="unique_name", nullable=false, unique=true)
 	private String uniqueName = null;
 	
 	public int getInstancePort(){
