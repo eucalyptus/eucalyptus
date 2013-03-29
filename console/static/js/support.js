@@ -375,7 +375,8 @@ function getErrorMessage(jqXHR) {
   }
   if (jqXHR && jqXHR.responseText) {
     response = jQuery.parseJSON(jqXHR.responseText);
-    return response.message ? response.message : undefined_error;
+    var msg = response.message ? response.message : response.summary;
+    return msg ? msg : undefined_error;
   } else {
     return undefined_error;
   }

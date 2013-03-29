@@ -9,8 +9,9 @@ define([
     sync: function(method, model, options) {
       var collection = this;
         if (method == 'create') {
+          var name = model.get('name');
           var data = "_xsrf="+$.cookie('_xsrf');
-          data += "&LaunchConfigurationName="+model.get('name');
+          data += "&LaunchConfigurationName="+name;
           if (model.get('image_id') != undefined)
             data += "&ImageId="+model.get('image_id');
           if (model.get('key_name') != undefined)
@@ -39,31 +40,38 @@ define([
             success:
               function(data, textStatus, jqXHR){
                 if ( data.results ) {
-                  notifySuccess(null, $.i18n.prop('volume_attach_success', DefaultEncoder().encodeForHTML(volumeId), DefaultEncoder().encodeForHTML(instanceId)));
+                  notifySuccess(null, $.i18n.prop('create_launch_config_run_success', DefaultEncoder().encodeForHTML(volumeId), DefaultEncoder().encodeForHTML(instanceId)));
                   thisObj.tableWrapper.eucatable('refreshTable');
                 } else {
-                  notifyError($.i18n.prop('volume_attach_error', DefaultEncoder().encodeForHTML(model.name), DefaultEncoder().encodeForHTML(model.name)), undefined_error);
+                  notifyError($.i18n.prop('create_launch_config_run_error', DefaultEncoder().encodeForHTML(model.name), DefaultEncoder().encodeForHTML(model.name)), undefined_error);
                 }
               },
             error:
               function(jqXHR, textStatus, errorThrown){
-                notifyError($.i18n.prop('volume_attach_error', DefaultEncoder().encodeForHTML(model.name), DefaultEncoder().encodeForHTML(model.name)), getErrorMessage(jqXHR));
+                notifyError($.i18n.prop('create_launch_config_run_error', DefaultEncoder().encodeForHTML(model.name), DefaultEncoder().encodeForHTML(model.name)), getErrorMessage(jqXHR));
               }
           });
         }
         else if (method == 'delete') {
+          var name = model.get('name');
           $.ajax({
             type:"POST",
             url:"/autoscaling?Action=DeleteLaunchConfiguration",
-            data:"_xsrf="+$.cookie('_xsrf')+"&LaunchConfigurationName="+model.get('name'),
+            data:"_xsrf="+$.cookie('_xsrf')+"&LaunchConfigurationName="+name,
             dataType:"json",
             async:true,
             success:
               function(data, textStatus, jqXHR){
+                if ( data.results ) {
+                  notifySuccess(null, $.i18n.prop('delete_launch_config_success', DefaultEncoder().encodeForHTML(name)));
+                } else {
+                  notifyError($.i18n.prop('delete_launch_config_error', DefaultEncoder().encodeForHTML(name)), undefined_error);
+                }
               },
             error:
               function(jqXHR, textStatus, errorThrown){
-              },
+                notifyError($.i18n.prop('delete_launch_config_error', DefaultEncoder().encodeForHTML(name)), getErrorMessage(jqXHR));
+              }
           });
         }
       }

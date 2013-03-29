@@ -18,17 +18,17 @@ define([
                 },
 
                 deleteButton: {
-                    click: function() {
-                       self.scope.status = 'Deleting';
-                       self.render();
-                       setTimeout(function() {
-                          self.scope.status = 'Still deleting';
-                          self.render();
-                       }, 1000);
-                       setTimeout(function() {
-                           self.close();
-                       }, 2000);
-                    }
+                  click: function() {
+                    require(['models/launchconfigs'], function(collection) {
+                      var lc = new collection();
+                      _.each(self.scope.items, function(item) {
+
+                        lc.fetch({success: function() { lc.get(item).destroy({wait: true}); }});
+                      });
+                      self.close();
+                    
+                    });
+                  }
                 }
             }
 

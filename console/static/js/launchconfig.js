@@ -145,7 +145,7 @@
 
       if ( selectedLaunchConfig.length === 1) {
         itemsList['create'] = {"name":launchconfig_action_create, callback: function(key, opt){ thisObj._dialogAction('createscalinggroupfromlaunchconfig', selectedLaunchConfig); }}
-        itemsList['delete'] = {"name":launchconfig_action_delete, callback: function(key, opt){ thisObj._dialogAction('deletelaunchconfig', selectedLaunchConfig); }}
+        itemsList['delete'] = {"name":launchconfig_action_delete, callback: function(key, opt){ thisObj._dialogAction('deletelaunchconfig', [selectedLaunchConfig]); }}
       }
 
       return itemsList;
