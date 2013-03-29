@@ -297,6 +297,25 @@ public class DescribeSensorCallback extends
       if (event.getMetric().equals("CPUUtilization")) {
         metricDatum.setMetricName("CPUUtilizationMS"); // this is actually the data in milliseconds, not percentage
       }
+      if (event.getMetric().equals("VolumeReadOps")) {
+        metricDatum.setMetricName("VolumeReadOpsTotal"); // this is actually the total volume read Ops since volume creation, not for the period
+      }
+      if (event.getMetric().equals("VolumeWriteOps")) {
+        metricDatum.setMetricName("VolumeWriteOpsTotal"); // this is actually the total volume write Ops since volume creation, not for the period
+      }
+      if (event.getMetric().equals("VolumeReadBytes")) {
+        metricDatum.setMetricName("VolumeReadBytesTotal"); // this is actually the total volume read bytes since volume creation, not for the period
+      }
+      if (event.getMetric().equals("VolumeWriteBytes")) {
+        metricDatum.setMetricName("VolumeWriteBytesTotal"); // this is actually the total volume write bytes since volume creation, not for the period
+      }
+      if (event.getMetric().equals("VolumeReadTime")) {
+        metricDatum.setMetricName("VolumeReadTimeTotal"); // this is actually the total volume read time since volume creation, not for the period
+      }
+      if (event.getMetric().equals("VolumeWriteTime")) {
+        metricDatum.setMetricName("VolumeWriteTimeTotal"); // this is actually the total volume write time since volume creation, not for the period
+      }
+      
       metricData.setMember(Lists.newArrayList(metricDatum));
       putMetricData.setMetricData(metricData);
 

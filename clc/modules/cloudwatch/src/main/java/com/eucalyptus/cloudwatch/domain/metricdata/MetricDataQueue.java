@@ -14,8 +14,10 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import org.apache.log4j.Logger;
 
 import com.eucalyptus.cloudwatch.Dimension;
+import com.eucalyptus.cloudwatch.Dimensions;
 import com.eucalyptus.cloudwatch.MetricDatum;
-import com.eucalyptus.cloudwatch.domain.cpu.CPUUtilizationPercentageCalculator;
+import com.eucalyptus.cloudwatch.domain.absolute.AbsoluteMetricHelper;
+import com.eucalyptus.cloudwatch.domain.absolute.AbsoluteMetricHelper.MetricDifferenceInfo;
 import com.eucalyptus.cloudwatch.domain.listmetrics.ListMetricManager;
 import com.eucalyptus.cloudwatch.domain.metricdata.MetricEntity.MetricType;
 import com.eucalyptus.cloudwatch.domain.metricdata.MetricEntity.Units;
@@ -101,12 +103,49 @@ public class MetricDataQueue {
   }
   public void insertMetricData(final String ownerAccountId, final String nameSpace,
       final List<MetricDatum> metricDatum, final MetricType metricType) {
+    List<MetricDatum> extraData = new ArrayList<MetricDatum>(); // some metrics are derived
     Date now = new Date();
     for (final MetricDatum datum : metricDatum) {
-      // Deal with CPUUtilization
-      if (("CPUUtilizationMS".equals(datum.getMetricName())) && 
-        (metricType == MetricType.System) && ("AWS/EC2".equals(nameSpace)) &&
-        (datum.getValue() != null)) {
+      // Deal with some absolute metrics
+      // VolumeReadOps
+      // VolumeWriteOps
+      // VolumeReadBytes
+      // VolumeWriteBytes
+      // VolumeTotalReadTime
+      // VolumeTotalWriteTime
+      // CPUUtilization (special case)
+      if ("AWS/EBS".equals(nameSpace) && metricType == MetricType.System) {
+        String volumeId = null;
+        if ((datum.getDimensions() != null) && (datum.getDimensions().getMember() != null)) {
+          for (Dimension dimension: datum.getDimensions().getMember()) {
+            if ("VolumeId".equals(dimension.getName())) {
+              volumeId = dimension.getValue();
+            }
+          }
+          if (volumeId != null) {
+            if ("VolumeReadOpsTotal".equals(datum.getMetricName())) {
+              if (!adjustAbsoluteVolumeValue(datum, "VolumeReadOpsTotal", "VolumeReadOps", volumeId)) continue;
+              extraData.add(createVolumeThroughputMetric(datum));
+            } 
+            if ("VolumeWriteOpsTotal".equals(datum.getMetricName())) {
+              if (!adjustAbsoluteVolumeValue(datum, "VolumeWriteOpsTotal", "VolumeWriteOps", volumeId)) continue;
+            } 
+            if ("VolumeReadBytesTotal".equals(datum.getMetricName())) {
+              if (!adjustAbsoluteVolumeValue(datum, "VolumeReadBytesTotal", "VolumeReadBytes", volumeId)) continue;
+            } 
+            if ("VolumeWriteBytesTotal".equals(datum.getMetricName())) {
+              if (!adjustAbsoluteVolumeValue(datum, "VolumeWriteBytesTotal", "VolumeWriteBytes", volumeId)) continue;
+            } 
+            if ("TotalVolumeReadTimeTotal".equals(datum.getMetricName())) {
+              if (!adjustAbsoluteVolumeValue(datum, "TotalVolumeReadTimeTotal", "TotalVolumeReadTime", volumeId)) continue;
+            } 
+            if ("TotalVolumeWriteTimeTotal".equals(datum.getMetricName())) {
+              if (!adjustAbsoluteVolumeValue(datum, "TotalVolumeWriteTimeTotal", "TotalVolumeWriteTime", volumeId)) continue;
+            }
+          }
+        }        
+      }            
+      if ("AWS/EC2".equals(nameSpace) && metricType == MetricType.System) {
         String instanceId = null;
         if ((datum.getDimensions() != null) && (datum.getDimensions().getMember() != null)) {
           for (Dimension dimension: datum.getDimensions().getMember()) {
@@ -114,15 +153,16 @@ public class MetricDataQueue {
               instanceId = dimension.getValue();
             }
           }
-        }
-        if (instanceId != null) {
-          Double percentValue = CPUUtilizationPercentageCalculator.calculateCPUUtilizationSinceLastEvent(instanceId, datum.getTimestamp(), datum.getValue());	
-          if (percentValue == null) continue; // don't enter the first point
-          datum.setMetricName("CPUUtilization");
-          datum.setValue(percentValue);
-          datum.setUnit(Units.Percent.toString());
-        }
-      } 
+          if (instanceId != null) {
+            if ("CPUUtilizationMS".equals(datum.getMetricName())) {
+              if (!adjustAbsoluteCPUValue(datum, "CPUUtilizationMS", "CPUUtilization", instanceId)) continue;
+            } 
+          }
+        }        
+      }
+    }
+    metricDatum.addAll(extraData);
+    for (final MetricDatum datum : metricDatum) {
       scrub(datum, now);
       final ArrayList<Dimension> dimensions = datum.getDimensions().getMember(); 
       queue(new Supplier<MetricQueueItem>() {
@@ -158,6 +198,58 @@ public class MetricDataQueue {
 
       });
     }
+  }
+
+  private MetricDatum createVolumeThroughputMetric(MetricDatum datum) {
+    // add volume throughput percentage.  (The guess is that there will be a set of volume metrics.  
+    // Attach it to one so it will be sent as many times as the others.
+    // add one
+    MetricDatum vtpDatum = new MetricDatum();
+    vtpDatum.setMetricName("VolumeThroughputPercentage");
+    vtpDatum.setTimestamp(datum.getTimestamp());
+    vtpDatum.setUnit(Units.Percent.toString());
+    vtpDatum.setValue(100.0); // Any time we have a volume data, this value is 100%
+    // use the same dimensions as current metric
+    Dimensions vtpDimensions = new Dimensions();
+    ArrayList<Dimension> vtpDimensionsMember = new ArrayList<Dimension>();
+    for (Dimension dimension: datum.getDimensions().getMember()) {
+      Dimension vtpDimension = new Dimension();
+      vtpDimension.setName(dimension.getName());
+      vtpDimension.setValue(dimension.getValue());
+      vtpDimensionsMember.add(vtpDimension);
+    }
+    vtpDimensions.setMember(vtpDimensionsMember);
+    vtpDatum.setDimensions(vtpDimensions);
+    return vtpDatum;
+  }
+
+  private boolean adjustAbsoluteCPUValue(MetricDatum datum, String absoluteMetricName,
+      String relativeMetricName, String instanceId) {
+    MetricDifferenceInfo info = AbsoluteMetricHelper.calculateDifferenceSinceLastEvent("AWS/EC2", absoluteMetricName, "InstanceId", instanceId, datum.getTimestamp(), datum.getValue());
+    if (info != null) {
+      // calculate percentage
+      double percentage = 0.0;
+      if (info.getElapsedTimeInMillis() != 0) {
+        // don't want to divide by 0
+        percentage = 100.0 * (info.getValueDifference() / info.getElapsedTimeInMillis());
+      }
+      datum.setMetricName(relativeMetricName);
+      datum.setValue(percentage);
+      datum.setUnit(Units.Percent.toString());
+      return true; //don't continue;
+    }
+    return false; // continue
+  }
+
+  private boolean adjustAbsoluteVolumeValue(MetricDatum datum,
+      String absoluteMetricName, String relativeMetricName, String volumeId) {
+    MetricDifferenceInfo info = AbsoluteMetricHelper.calculateDifferenceSinceLastEvent("AWS/EBS", absoluteMetricName, "VolumeId", volumeId, datum.getTimestamp(), datum.getValue());
+    if (info != null) {
+      datum.setMetricName(relativeMetricName);
+      datum.setValue(info.getValueDifference());
+      return true; //don't continue;
+    }
+    return false; // continue
   }
 
   private void scrub(MetricDatum datum, Date now) {
