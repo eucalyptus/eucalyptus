@@ -62,6 +62,7 @@
 
 package com.eucalyptus.node;
 
+import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.bootstrap.Handles;
 import com.eucalyptus.component.*;
 import com.eucalyptus.component.ComponentId.ComponentPart;
@@ -114,7 +115,9 @@ public class NodeControllerConfigurationBuilder implements ServiceBuilder<NodeCo
    */
   @Override
   public void fireStop( ServiceConfiguration config ) throws ServiceRegistrationException {
-    Nodes.send( config, new StopServiceType( ) );
+    if ( Bootstrap.isOperational() ) {
+      Nodes.send( config, new StopServiceType( ) );
+    }
   }
 
   @Override

@@ -156,17 +156,22 @@ public class Nodes {
     }
     /** add new nodes or updated existing node infos **/
     for ( final NodeType node : nodes ) {
-      String serviceTag = node.getServiceTag( );
-      if ( newTags.contains( serviceTag ) ) {
-        clusterNodeMap.putIfAbsent( serviceTag, new NodeInfo( ccConfig.getPartition( ), node ) );
-        NodeInfo nodeInfo = clusterNodeMap.get( serviceTag );
-        nodeInfo.touch( );
-        Nodes.updateServiceConfiguration( ccConfig, nodeInfo );
-      } else if ( stillKnownTags.contains( serviceTag ) ) {
-        NodeInfo nodeInfo = clusterNodeMap.get( serviceTag );
-        nodeInfo.touch( );
-        nodeInfo.setIqn( serviceTag );
-        Nodes.updateServiceConfiguration( ccConfig, nodeInfo );
+      try {
+        String serviceTag = node.getServiceTag( );
+        if ( newTags.contains( serviceTag ) ) {
+          clusterNodeMap.putIfAbsent( serviceTag, new NodeInfo( ccConfig.getPartition( ), node ) );
+          NodeInfo nodeInfo = clusterNodeMap.get( serviceTag );
+          nodeInfo.touch( );
+          Nodes.updateServiceConfiguration( ccConfig, nodeInfo );
+        } else if ( stillKnownTags.contains( serviceTag ) ) {
+          NodeInfo nodeInfo = clusterNodeMap.get( serviceTag );
+          nodeInfo.touch( );
+          nodeInfo.setIqn( serviceTag );
+          Nodes.updateServiceConfiguration( ccConfig, nodeInfo );
+        }
+      } catch ( NoSuchElementException e ) {
+        LOG.error( e );
+        LOG.debug( e, e );
       }
     }
     /**
@@ -184,20 +189,19 @@ public class Nodes {
   }
 
   private static void updateServiceConfiguration( ServiceConfiguration ccConfig, NodeInfo nodeInfo ) throws NoSuchElementException {
-    //GRZE:TODO:MAINTMODE: this is a hack in order to inject ephemeral configs for the NCs
-    ServiceConfiguration ncConfig = Nodes.lookup( ccConfig, nodeInfo.getName( ) );
-    
-    Component component = Components.lookup( NodeController.class );
-    if ( !component.hasService( ncConfig ) ) {
-      component.setup( ncConfig );
-      try {
-        Topology.disable( ncConfig ).get( );
-      } catch ( Exception e ) {
-        LOG.debug( e, e );
+    if ( Component.State.ENABLED.apply( ccConfig ) ) {
+      //GRZE:TODO:MAINTMODE: this is a hack in order to inject ephemeral configs for the NCs
+      ServiceConfiguration ncConfig = Nodes.lookup( ccConfig, nodeInfo.getName( ) );
+
+      Component component = Components.lookup( NodeController.class );
+      if ( !component.hasService( ncConfig ) ) {
+        component.setup( ncConfig );
+        try {
+          Topology.disable( ncConfig );
+        } catch ( Exception e ) {
+          LOG.debug( e, e );
+        }
       }
-    } else if ( Component.State.STOPPED.apply( ncConfig ) ) {
-      Component.State ncState = ncConfig.lookupState( );
-      Component.State nextState = ncState;
       DescribeServicesResponseType reply = Nodes.send( ncConfig, new DescribeServicesType( ) );
       for ( ServiceStatusType status : reply.getServiceStatuses( ) ) {
         if ( ncConfig.getName( ).equals( status.getServiceId( ).getName( ) ) ) {
@@ -207,15 +211,10 @@ public class Nodes {
             LOG.debug( "Found service status for " + ncConfig.getName( ) + ": " + reportedState );
           } catch ( IllegalArgumentException e ) {
             LOG.debug( "Failed to get service status for " + ncConfig.getName( ) + "; got " + status.getLocalState( ) );
-            reportedState = Component.State.DISABLED;
           }
           try {
-            if ( !Component.State.ENABLED.apply( ncConfig ) && Component.State.ENABLED.equals( reportedState ) ) {
+            if ( Component.State.ENABLED.equals( reportedState ) ) {
               Topology.enable( ncConfig );
-            } else if ( Component.State.STOPPED.apply( ncConfig ) && !Component.State.ENABLED.equals( reportedState ) ) {
-              //atm, don't need to do anything in this case.
-            } else if ( !Component.State.ENABLED.apply( ncConfig ) && Component.State.ENABLED.equals( reportedState ) ) {
-              //atm, also, don't need to do anything in this case.
             } else {
               Topology.stop( ncConfig );
             }

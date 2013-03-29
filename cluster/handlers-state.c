@@ -259,7 +259,6 @@ int doDescribeServices(ncMetadata * pMeta, serviceInfoType * serviceIds, int ser
     sem_mypost(CONFIG);
     if (serviceIdsLen < 1) { // if the describe request is not specific, report on everything
         do_report_cluster = 1;
-        do_report_nodes = 1;
     } else { // if the describe request is specific, identify which types are requested
         do_report_cluster = 0;
         do_report_nodes = 0;
@@ -272,7 +271,7 @@ int doDescribeServices(ncMetadata * pMeta, serviceInfoType * serviceIds, int ser
                      serviceIds[i].uris[0]);
             if (strlen(serviceIds[i].type)) {
                 if (!strcmp(serviceIds[i].type, "cluster")) {
-                    do_report_cluster = 1; // report on node services if requested explicitly
+                    do_report_cluster = 1; // report on cluster services if requested explicitly
                 } else if (!strcmp(serviceIds[i].type, "node")) {
                     do_report_nodes++; // count number of and report on node services if requested explicitly
                 }
@@ -354,19 +353,28 @@ int doDescribeServices(ncMetadata * pMeta, serviceInfoType * serviceIds, int ser
         
         if (resourceCacheLocal.numResources > 0 && my_partition != NULL) { // parition is unknown at early stages of CC initialization
             
-            *outStatusesLen += do_report_nodes;
-            *outStatuses = EUCA_REALLOC(*outStatuses, *outStatusesLen, sizeof(serviceStatusType));
-            if (!*outStatuses) {
-                LOGFATAL("out of memory!\n");
-                unlock_exit(1);
-            }
+        	if (do_report_nodes) {
+				*outStatusesLen += do_report_nodes;
+				*outStatuses = EUCA_REALLOC(*outStatuses, *outStatusesLen, sizeof(serviceStatusType));
+				if (!*outStatuses) {
+					LOGFATAL("out of memory!\n");
+					unlock_exit(1);
+				}
+        	} else if (!serviceIdsLen) {
+				*outStatusesLen += resourceCacheLocal.numResources;
+				*outStatuses = EUCA_REALLOC(*outStatuses, *outStatusesLen, sizeof(serviceStatusType));
+				if (!*outStatuses) {
+					LOGFATAL("out of memory!\n");
+					unlock_exit(1);
+				}
+        	}
             
             for (int idIdx = 0; idIdx < serviceIdsLen; idIdx++) {
-                if (!strcmp(serviceIds[idIdx].type, "node")) {  
+                if (!serviceIdsLen||!strcmp(serviceIds[idIdx].type, "node")) {
                     for (int rIdx = 0; rIdx < resourceCacheLocal.numResources; rIdx++) {                
                         ccResource * r = resourceCacheLocal.resources + rIdx;
                         if (strlen(serviceIds[idIdx].name) && strlen(r->ip)) {
-                            if (!strcmp(serviceIds[idIdx].name, r->ip)) {
+                            if (!serviceIdsLen||!strcmp(serviceIds[idIdx].name, r->ip)) {
                                 myStatus = *outStatuses + do_report_cluster + idIdx;
                                 {
                                     char * state = "BUGGY";
