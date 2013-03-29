@@ -120,11 +120,13 @@
          }
       */
       dt_arg['fnServerData'] = function (sSource, aoData, fnCallback) {
-        var data = {};
-        data.aaData = $('html body').eucadata('get', sSource);
-        data.iTotalRecords = data.aaData.length;
-        data.iTotalDisplayRecords = data.aaData.length;
-        fnCallback(data);
+        thisObj.refreshTable = function() {
+            var data = {};
+            data.aaData = thisObj.bbdata.toJSON();
+            data.iTotalRecords = data.aaData.length;
+            data.iTotalDisplayRecords = data.aaData.length;
+            fnCallback(data);
+        }
       }
          
 
@@ -296,64 +298,6 @@
     _decorateSearchBar : function(args) {
       var thisObj = this; // ref to widget instance
 
-      var facetMatches = [];
-      var matchStruct = {};
-
-      if(thisObj.options.filters){
-        $.each(thisObj.options.filters, function (idx, filter){
-          var $filter = thisObj.element.find('#'+filter['name']+'-filter');
-          $filter.addClass('euca-table-filter');
-          if (idx===0){
-            $filter.append(
-              $('<span>').addClass('filter-label').html(table_filter_label),
-              $('<select>').attr('id',filter['name']+'-selector'));
-          }else{
-            $filter.append(
-              $('<select>').attr('id',filter['name']+'-selector'));
-          }
-          var $selector = $filter.find('#'+filter['name']+'-selector');
-          $selector.change( function(e) { thisObj.table.fnDraw(); } );
-          var optList = [];
-          for (i in filter.options){
-            var option = filter.options[i];
-            var text = (filter.text&&filter.text.length>i) ? filter.text[i] : option; 
-            $selector.append($('<option>').val(option).text(text));
-            optList.push({value: option, label: text});
-          }
-          facetMatches.push(filter['name']);
-          matchStruct[filter['name']] = optList;
-
-          if(filter['filter_col']){
-            $.fn.dataTableExt.afnFiltering.push(
-	      function( oSettings, aData, iDataIndex ) {
-                if (oSettings.sInstance !== thisObj.options.id)
-                  return true;
-                var selectorVal = thisObj.element.find('select#'+filter['name']+'-selector').val();
-                if(filter['alias'] && filter['alias'][selectorVal]){
-                  var aliasTbl = filter['alias'];
-                  return aliasTbl[selectorVal] === aData[filter['filter_col']];
-                }else if ( selectorVal !== filter['options'][0] ){ // not 'all'
-                  return selectorVal === aData[filter['filter_col']];
-                }else
-                  return true;
-             });
-          }else if (filter['callback']){
-            $selector.change(function(e){ 
-              filter.callback($(e.target).val());
-            }); 
-          }
-
-          if(filter.default){
-            $selector.find('option').each(function(){
-              if($(this).val() === filter.default){
-                $(this).attr('selected','selected');
-              }
-            });
-            $selector.trigger('change');
-          }
-        }); // end of filters
-      }      
-
       var $searchBar = this.element.find('#'+this.options.id+'_filter');
       $searchBar.find(":input").watermark(this.options.text.resource_search);
       var refresh = this.options.text.search_refresh ? this.options.text.search_refresh : search_refresh;
@@ -370,23 +314,27 @@
       $wrapper.insertAfter(filterArr[filterArr.length-1]);
       $(filterArr).each(function(){$(this).remove();});
 
-if (false) {
+if (true) {
       $wrapper.empty();
       $wrapper.prepend('<div class="visual_search" style="margin-top:-2px;width:90%;display:inline-block"></div><div class="dataTables_filter" id="images_filter"><a class="table-refresh" href="#">Refresh</a></div>');
-      setTimeout(function() {
-        VS.init({ 
-              container : $('.visual_search'),
-              showFacets : true,
-              query     : '',
-              callbacks : {
-                search       : function(query, searchCollection) {},
-                facetMatches : function(callback) { callback(facetMatches); },
-                valueMatches : function(facet, searchTerm, callback) {
-                        callback(matchStruct[facet]);
+      var $vs = $('.visual_search', $wrapper);
+      require(['app', 'visualsearch', 'views/searches/images'], function(app, VS, searchConfig) {
+            var config = new searchConfig(app.data.images);
+            console.log('visual search', $vs, config);
+            vsearch = VS.init({
+                container : $vs,
+                showFacets : true,
+                query     : '',
+                callbacks : {
+                    search       : config.search,
+                    facetMatches : config.facetMatches,
+                    valueMatches : config.valueMatches
                 }
-              }
             });
-        }, 1);
+            thisObj.bbdata = config.filtered;
+            config.filtered.on('change reset', thisObj.refreshTable);
+            thisObj.refreshTable();
+        });
 }         
     },   
 
