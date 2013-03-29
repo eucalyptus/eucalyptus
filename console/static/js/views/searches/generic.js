@@ -94,7 +94,7 @@ define(['app'], function(app) {
         if (val && typeof val !== 'object' && typeof val !== 'function') {
           if (found.indexOf(val) < 0) {
             found.push(val);
-            result.push({name: val, label: localize(val)});
+            result.push({name: facet, label: localize(val), value: val});
           }
         }
       });
