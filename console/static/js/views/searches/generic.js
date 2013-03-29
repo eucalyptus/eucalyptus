@@ -7,6 +7,7 @@ define(['app'], function(app) {
     // Make sure if the argument isn't there, that at least
     // something works
     if (!allowedFacetNames) {
+      console.log('NO NAMES'); 
       allowedFacetNames = [];
       images.forEach(function(img) {
         for (var key in img) {
@@ -105,10 +106,10 @@ define(['app'], function(app) {
     this.filtered = images.clone();
     this.lastSearch = '';
     this.lastFacets = new Backbone.Model({});
-    this.search = function(search, facets) {
-      console.log("SEARCH", arguments);
-      var jfacets = facets.toJSON();
-      var results = self.images.filter(function(model) {
+        this.search = function(search, facets) {
+            console.log("SEARCH", arguments);
+            var jfacets = facets.toJSON();
+            var results = self.images.filter(function(model) {
         return _.every(jfacets, function(facet) {
           if (searchers && searchers[facet.category]) {
             return searchers[facet.category].apply(self, [facet, search, images]);
@@ -122,12 +123,13 @@ define(['app'], function(app) {
       console.log(results);
       self.filtered.reset(results);
     }
-    
     this.facetMatches = function(callback) {
+      console.log('FM');
       callback(deriveFacets());
     }
     
     this.valueMatches = function(facet, searchTerm, callback) {
+      console.log('VM: ' + facet);
       callback(deriveMatches(facet, searchTerm))
     }
 
