@@ -5,7 +5,6 @@
     <li><a href="#tabs-3">Instances</a></li>
     <li><a href="#tabs-4">Processes</a></li>
     <li><a href="#tabs-5">Tags</a></li>
-    <li><a href="#tabs-6">Monitoring</a></li>
   </ul>
   <div id="tabs-1" class="tab">
       <ul class="instance-expanded clearfix">
@@ -14,13 +13,13 @@
 	    <li><div class="expanded-title">AVAILABILITY ZONES</div><div class="expanded-value">zone 2</div></li>
 	    <li><div class="expanded-title">LOAD BALANCERS</div><div class="expanded-value">balancer 1</div></li>
 	    <li><div class="expanded-title">HEALTH CHECK</div><div class="expanded-label">Type:<span class="expanded-value">None</span></div><div class="expanded-label">Grace period (secs):<span class="expanded-value">30</span></div></li>
-	    <li><div class="expanded-title">Instances</div><div class="expanded-label">Maximum<span class="expanded-value">10</span></div><div class="expanded-label">Desired<span class="expanded-value">5</span></div><div class="expanded-label">Minimum<span class="expanded-value">1</span></div></li>
+	    <li><div class="expanded-title">INSTANCES</div><div class="expanded-label">Maximum<span class="expanded-value">10</span></div><div class="expanded-label">Desired<span class="expanded-value">5</span></div><div class="expanded-label">Minimum<span class="expanded-value">1</span></div></li>
 	  </ul>
   </div>
   <div id="tabs-2" class="tab">
       <ul class="instance-expanded clearfix">
-	    <li><div class="expanded-label">Instance termination policies (in execution order):</div><div class="expanded-value">Oldest instance</div><div class="expanded-value">Default</div></li>
-	    <li><div class="expanded-label">Scaling policies:</div><div class="expanded-label">Default cooldown period (secs);<span class="expanded-value">30</span></div></li>
+	    <li><div class="expanded-section-label">Instance termination policies (in execution order):</div><div class="expanded-value">Oldest instance</div><div class="expanded-value">Default</div></li>
+	    <li><div class="expanded-section-label">Scaling policies:</div><div class="expanded-label">Default cooldown period (secs):<span class="expanded-value">30</span></div></li>
 	    <li><div class="expanded-title">NAME</div><div class="expanded-value">My Policy</div></li>
 	    <li><div class="expanded-title">AMOUNT</div><div class="expanded-value">10</div></li>
 	    <li><div class="expanded-title">MEASURE</div><div class="expanded-value">instances</div></li>
@@ -47,8 +46,8 @@
 			</thead>
 			<tbody>
 				<tr><td>Launch instance</td><td>yes</td></tr>
-				<tr><td>Terminate instance</td><td>yes</td></tr>
-				<tr><td>Health check</td><td>yes</td></tr>
+				<tr><td>Terminate instance</td><td></td></tr>
+				<tr><td>Health check</td><td></td></tr>
 				<tr><td>Replace unhealthy instance</td><td>yes</td></tr>
 				<tr><td>Balance instances across availability zones</td><td>yes</td></tr>
 				<tr><td>Add instances to load balancer(s) on launch</td><td>yes</td></tr>
@@ -72,8 +71,4 @@
 		</li>
 	  </ul>
   </div>
-  <div id="tabs-6" class="tab">
-      <p>Monitoring</p>
-  </div>
-</div>
 <div style="clear:both"></div>
