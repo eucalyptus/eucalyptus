@@ -11,7 +11,6 @@ define([
             count: 0,
             initialize : function() {
           var self = this;
-          imageTest = new imageSearch(app.data.images);
           var scope = {
               view: this,
               isOdd: function() {
