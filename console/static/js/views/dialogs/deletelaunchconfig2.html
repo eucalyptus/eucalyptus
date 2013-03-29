@@ -1,13 +1,14 @@
 <div>
     <div class="title">Delete launch configuration</div>
     <div class="body">
-		<p>Your launch configuration is fubar and you can't delete it. Sucka!</p>
+		<p>You many only delete launch configurations that are not in use by scaling groups</p>
+        <p>Suspend launch processes on you affected scaling group(s), then use the Edit Scaling Group option to change the lauch configuration in use for each. you can thenretry the delete launch configuration operation.</p>
 		<div class="selected-resources">
 			<table>
 				<thead><tr><th>LAUNCH CONFIGURATION</th><th>SCALING GROUP</th></tr>
 				</thead>
 				<tbody>
-					<tr data-each-item="items"><td><span data-text="item"></span></td><td><span data-text="item"></span></td></tr>
+					<tr data-each-item="items"><td><span data-text="item.config"></span></td><td><span data-text="item.group"></span></td></tr>
 				</tbody>
 			</table>
 		</div>

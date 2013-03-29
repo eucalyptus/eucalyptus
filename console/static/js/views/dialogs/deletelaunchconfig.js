@@ -19,6 +19,8 @@ define([
 
                 deleteButton: {
                   click: function() {
+                    // unfortunate thing about this is that it reloads from proxy, no local store
+                    // TODO: fix that ^^^
                     require(['models/launchconfigs'], function(collection) {
                       var lc = new collection();
                       _.each(self.scope.items, function(item) {
