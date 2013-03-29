@@ -197,6 +197,7 @@ public class NodeInfo implements Comparable {
   String iqn;
   String serviceTag;
   String name;
+  String partition;
   Boolean hasClusterCert = false;
   Boolean hasNodeCert = false;
   Date lastSeen;
@@ -214,7 +215,8 @@ public class NodeInfo implements Comparable {
     this.logs.setServiceTag(this.serviceTag);
   }
   
-  def NodeInfo(final NodeType nodeType) {
+  def NodeInfo(final String partition, final NodeType nodeType) {
+    this.partition = partition;
     this.serviceTag = nodeType.getServiceTag( );
     this.iqn = nodeType.getIqn( );
     this.name = (new URI(this.serviceTag)).getHost();

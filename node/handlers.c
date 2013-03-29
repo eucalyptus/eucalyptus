@@ -141,6 +141,11 @@
 #define MIN_BLOBSTORE_SIZE_MB                        10 //!< even with boot-from-EBS one will need work space for kernel and ramdisk
 #define FS_BUFFER_PERCENT                            0.03   //!< leave 3% extra when deciding on blobstore sizes automatically
 #define WORK_BS_PERCENT                              0.33   //!< give a third of available space to work, the rest to cache
+#define DISABLED_CHECK \
+    if (nc_state.is_enabled == FALSE) { \
+        LOGERROR("operation %s is not allowed when node is DISABLED\n", __func__); \
+        return EUCA_ERROR; \
+    } //<! rejection of certain operations when NC is disabled
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |
@@ -1332,7 +1337,6 @@ void *startup_thread(void *arg)
                 try_killing = TRUE;
             } else if (WEXITSTATUS(status) != 0) {
                 LOGERROR("[%s] hypervisor failed to create the instance\n", instance->instanceId);
-                invalidate_hypervisor_conn();   // guard against libvirtd connection badness
             } else {
                 created = TRUE;
             }
@@ -1347,6 +1351,7 @@ void *startup_thread(void *arg)
         sem_v(hyp_sem);
         if (created)
             break;
+        invalidate_hypervisor_conn();   // guard against libvirtd connection badness
         sleep(1);
     }
     if (!created) {
@@ -1676,7 +1681,6 @@ static int init(void)
     int do_warn = 0, i;
     char logFile[MAX_PATH] = "";
     char *bridge = NULL;
-    char *hypervisor = NULL;
     char *s = NULL;
     char *tmp = NULL;
     char *pubinterface = NULL;
@@ -1693,6 +1697,8 @@ static int init(void)
 
     // ensure that MAXes are zeroed out
     bzero(&nc_state, sizeof(struct nc_state_t));
+    strncpy(nc_state.version, EUCA_VERSION, sizeof(nc_state.version)); // set the version
+    nc_state.is_enabled = TRUE; // NC is enabled unless disk state will say otherwise
 
     // configure signal handling for this thread and its children:
     // - ignore SIGALRM, which may be used in libraries we depend on
@@ -1725,7 +1731,7 @@ static int init(void)
     // set the minimum log for now
     snprintf(logFile, MAX_PATH, EUCALYPTUS_LOG_DIR "/nc.log", nc_state.home);
     log_file_set(logFile);
-    LOGINFO("spawning Eucalyptus node controller %s\n", compile_timestamp_str);
+    LOGINFO("spawning Eucalyptus node controller v%s %s\n", nc_state.version, compile_timestamp_str);
     if (do_warn)
         LOGWARN("env variable %s not set, using /\n", EUCALYPTUS_ENV_VAR_NAME);
 
@@ -1741,6 +1747,69 @@ static int init(void)
     configInitValues(configKeysRestartNC, configKeysNoRestartNC);   // initialize config subsystem
     readConfigFile(nc_state.configFiles, 2);
     update_log_params();
+
+    // set default in the paths. the driver will override
+    nc_state.config_network_path[0] = '\0';
+    nc_state.xm_cmd_path[0] = '\0';
+    nc_state.virsh_cmd_path[0] = '\0';
+    nc_state.get_info_cmd_path[0] = '\0';
+    snprintf(nc_state.libvirt_xslt_path, MAX_PATH, EUCALYPTUS_LIBVIRT_XSLT, nc_state.home); // for now, this must be set before anything in xml.c is invoked
+    snprintf(nc_state.rootwrap_cmd_path, MAX_PATH, EUCALYPTUS_ROOTWRAP, nc_state.home);
+
+    { // determine the hypervisor to use
+        char *hypervisor = getConfString(nc_state.configFiles, 2, CONFIG_HYPERVISOR);
+        if (!hypervisor) {
+            LOGFATAL("value %s is not set in the config file\n", CONFIG_HYPERVISOR);
+            return (EUCA_FATAL_ERROR);
+        }
+        // let's look for the right hypervisor driver
+        for (h = available_handlers; *h; h++) {
+            if (!strncmp((*h)->name, "default", CHAR_BUFFER_SIZE))
+                nc_state.D = *h;
+            
+            if (!strncmp((*h)->name, hypervisor, CHAR_BUFFER_SIZE))
+                nc_state.H = *h;
+        }
+        
+        if (nc_state.H == NULL) {
+            LOGFATAL("requested hypervisor type (%s) is not available\n", hypervisor);
+            EUCA_FREE(hypervisor);
+            return (EUCA_FATAL_ERROR);
+        }
+        // only load virtio config for kvm
+        if (!strncmp("kvm", hypervisor, CHAR_BUFFER_SIZE) || !strncmp("KVM", hypervisor, CHAR_BUFFER_SIZE)) {
+            GET_VAR_INT(nc_state.config_use_virtio_net, CONFIG_USE_VIRTIO_NET, 0); // for now, these three Virtio settings must be set before anything in xml.c is invoked
+            GET_VAR_INT(nc_state.config_use_virtio_disk, CONFIG_USE_VIRTIO_DISK, 0);
+            GET_VAR_INT(nc_state.config_use_virtio_root, CONFIG_USE_VIRTIO_ROOT, 0);
+        }
+        EUCA_FREE(hypervisor);
+    }
+
+    { // load NC's state from disk, if any
+        struct nc_state_t nc_state_disk;
+        if (read_nc_xml(&nc_state_disk) == EUCA_OK) {  //! @TODO currently read_nc_xml() relies on nc_state.libvirt_xslt_path and virtio flags being set, which is brittle - fix init() in xml.c
+            LOGINFO("loaded NC state from previous invocation\n");
+
+            // check on the version, in case it has changed
+            if (strcmp(nc_state_disk.version, nc_state.version)!=0
+                && nc_state_disk.version[0]!='\0') {
+                LOGINFO("found state from NC v%s while starting NC v%s\n", nc_state_disk.version, nc_state.version);
+                // any NC upgrade/downgrade-related code can go here
+            }
+            
+            // check on the state
+            if (nc_state_disk.is_enabled == FALSE) {
+                LOGINFO("NC will start up as DISABLED based on disk state\n");
+                nc_state.is_enabled = FALSE;
+            }
+        } else { // there is no disk state, so create it
+            if (gen_nc_xml(&nc_state) != EUCA_OK) {
+                LOGERROR("failed to update NC state on disk\n");
+            } else {
+                LOGINFO("wrote NC state to disk\n");
+            }
+        }
+    }
 
     {
         /* Initialize libvirtd.conf, since some buggy versions of libvirt
@@ -1826,34 +1895,6 @@ static int init(void)
         LOGFATAL("failed to find all required dependencies\n");
         return (EUCA_FATAL_ERROR);
     }
-    // determine the hypervisor to use
-    hypervisor = getConfString(nc_state.configFiles, 2, CONFIG_HYPERVISOR);
-    if (!hypervisor) {
-        LOGFATAL("value %s is not set in the config file\n", CONFIG_HYPERVISOR);
-        return (EUCA_FATAL_ERROR);
-    }
-    // let's look for the right hypervisor driver
-    for (h = available_handlers; *h; h++) {
-        if (!strncmp((*h)->name, "default", CHAR_BUFFER_SIZE))
-            nc_state.D = *h;
-
-        if (!strncmp((*h)->name, hypervisor, CHAR_BUFFER_SIZE))
-            nc_state.H = *h;
-    }
-
-    if (nc_state.H == NULL) {
-        LOGFATAL("requested hypervisor type (%s) is not available\n", hypervisor);
-        EUCA_FREE(hypervisor);
-        return (EUCA_FATAL_ERROR);
-    }
-    // only load virtio config for kvm
-    if (!strncmp("kvm", hypervisor, CHAR_BUFFER_SIZE) || !strncmp("KVM", hypervisor, CHAR_BUFFER_SIZE)) {
-        GET_VAR_INT(nc_state.config_use_virtio_net, CONFIG_USE_VIRTIO_NET, 0);
-        GET_VAR_INT(nc_state.config_use_virtio_disk, CONFIG_USE_VIRTIO_DISK, 0);
-        GET_VAR_INT(nc_state.config_use_virtio_root, CONFIG_USE_VIRTIO_ROOT, 0);
-    }
-
-    EUCA_FREE(hypervisor);
 
     if (sensor_init(NULL, NULL, MAX_SENSOR_RESOURCES, FALSE, NULL) != EUCA_OK) {
         LOGERROR("failed to initialize sensor subsystem in this process\n");
@@ -1890,14 +1931,6 @@ static int init(void)
     }
 
     init_iscsi(nc_state.home);
-
-    // set default in the paths. the driver will override
-    nc_state.config_network_path[0] = '\0';
-    nc_state.xm_cmd_path[0] = '\0';
-    nc_state.virsh_cmd_path[0] = '\0';
-    nc_state.get_info_cmd_path[0] = '\0';
-    snprintf(nc_state.libvirt_xslt_path, MAX_PATH, EUCALYPTUS_LIBVIRT_XSLT, nc_state.home);
-    snprintf(nc_state.rootwrap_cmd_path, MAX_PATH, EUCALYPTUS_ROOTWRAP, nc_state.home);
 
     // NOTE: this is the only call which needs to be called on both
     // the default and the specific handler! All the others will be
@@ -2526,6 +2559,7 @@ int doRunInstance(ncMetadata * pMeta, char *uuid, char *instanceId, char *reserv
 
     if (init())
         return (EUCA_ERROR);
+    DISABLED_CHECK;
 
     LOGINFO("[%s] running instance cores=%d disk=%d memory=%d vlan=%d net=%d priMAC=%s privIp=%s plat=%s\n", instanceId, params->cores, params->disk,
             params->mem, netparams->vlan, netparams->networkIndex, netparams->privateMac, netparams->privateIp, platform);
@@ -2562,6 +2596,7 @@ int doTerminateInstance(ncMetadata * pMeta, char *instanceId, int force, int *sh
 
     if (init())
         return (EUCA_ERROR);
+    DISABLED_CHECK;
 
     LOGINFO("[%s] termination requested\n", instanceId);
 
@@ -2587,6 +2622,7 @@ int doRebootInstance(ncMetadata * pMeta, char *instanceId)
 
     if (init())
         return (EUCA_ERROR);
+    DISABLED_CHECK;
 
     LOGDEBUG("[%s] invoked\n", instanceId);
 
@@ -2694,6 +2730,7 @@ int doAttachVolume(ncMetadata * pMeta, char *instanceId, char *volumeId, char *r
 
     if (init())
         return (EUCA_ERROR);
+    DISABLED_CHECK;
 
     LOGDEBUG("[%s][%s] volume attaching (localDev=%s)\n", instanceId, volumeId, localDev);
 
@@ -2724,6 +2761,7 @@ int doDetachVolume(ncMetadata * pMeta, char *instanceId, char *volumeId, char *r
 
     if (init())
         return (EUCA_ERROR);
+    DISABLED_CHECK;
 
     LOGDEBUG("[%s][%s] volume detaching (localDev=%s force=%d grab_inst_sem=%d)\n", instanceId, volumeId, localDev, force, grab_inst_sem);
 
@@ -2756,6 +2794,7 @@ int doBundleInstance(ncMetadata * pMeta, char *instanceId, char *bucketName, cha
 
     if (init())
         return (EUCA_ERROR);
+    DISABLED_CHECK;
 
     LOGINFO("[%s] starting instance bundling into bucket %s\n", instanceId, bucketName);
     LOGDEBUG("[%s] bundling parameters: bucketName=%s filePrefix=%s walrusURL=%s userPublicKey=%s S3Policy=%s, S3PolicySig=%s\n",
@@ -2781,6 +2820,7 @@ int doBundleRestartInstance(ncMetadata * pMeta, char *instanceId)
 {
     if (init())
         return (EUCA_ERROR);
+    DISABLED_CHECK;
 
     LOGINFO("[%s] restarting bundling instance\n", instanceId);
     if (nc_state.H->doBundleRestartInstance)
@@ -2802,6 +2842,7 @@ int doCancelBundleTask(ncMetadata * pMeta, char *instanceId)
 
     if (init())
         return (EUCA_ERROR);
+    DISABLED_CHECK;
 
     LOGINFO("[%s] canceling bundling instance\n", instanceId);
 
@@ -2830,6 +2871,7 @@ int doDescribeBundleTasks(ncMetadata * pMeta, char **instIds, int instIdsLen, bu
 
     if (init())
         return (EUCA_ERROR);
+    DISABLED_CHECK;
 
     LOGINFO("describing bundle tasks (for %d instances)\n", instIdsLen);
 
@@ -2857,6 +2899,7 @@ int doCreateImage(ncMetadata * pMeta, char *instanceId, char *volumeId, char *re
 
     if (init())
         return (EUCA_ERROR);
+    DISABLED_CHECK;
 
     LOGINFO("[%s][%s] creating image\n", instanceId, volumeId);
 

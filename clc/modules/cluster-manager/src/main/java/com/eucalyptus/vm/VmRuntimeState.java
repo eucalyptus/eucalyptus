@@ -62,6 +62,7 @@
 
 package com.eucalyptus.vm;
 
+import java.net.URI;
 import java.util.Date;
 import java.util.Set;
 import java.util.concurrent.Callable;
@@ -84,12 +85,12 @@ import org.hibernate.annotations.Parent;
 import org.hibernate.annotations.Type;
 import com.eucalyptus.cluster.Cluster;
 import com.eucalyptus.cluster.Clusters;
-import com.eucalyptus.cluster.Nodes;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.Topology;
 import com.eucalyptus.component.id.ClusterController;
 import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.component.id.Storage;
+import com.eucalyptus.node.Nodes;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
 import com.eucalyptus.records.Logs;
@@ -103,44 +104,51 @@ import com.eucalyptus.vm.VmInstance.Reason;
 import com.eucalyptus.vm.VmInstance.VmState;
 import com.eucalyptus.vm.VmInstance.VmStateSet;
 import com.google.common.base.Predicate;
+import com.google.common.base.Strings;
 import com.google.common.collect.Sets;
 import edu.ucsb.eucalyptus.msgs.AttachStorageVolumeResponseType;
 import edu.ucsb.eucalyptus.msgs.AttachStorageVolumeType;
 import edu.ucsb.eucalyptus.msgs.AttachVolumeType;
+import edu.ucsb.eucalyptus.msgs.CreateTagsType;
+import edu.ucsb.eucalyptus.msgs.ResourceTag;
 
 @Embeddable
 public class VmRuntimeState {
+  /**
+   * 
+   */
+  private static final String VM_NC_HOST_TAG      = "euca:node";
   @Transient
-  private static String     SEND_USER_TERMINATE = "SIGTERM";
+  private static String       SEND_USER_TERMINATE = "SIGTERM";
   @Transient
-  private static String     SEND_USER_STOP      = "SIGSTOP";
+  private static String       SEND_USER_STOP      = "SIGSTOP";
   @Transient
-  private static Logger     LOG                 = Logger.getLogger( VmRuntimeState.class );
+  private static Logger       LOG                 = Logger.getLogger( VmRuntimeState.class );
   @Parent
-  private VmInstance        vmInstance;
+  private VmInstance          vmInstance;
   @Embedded
-  private VmBundleTask      bundleTask;
+  private VmBundleTask        bundleTask;
   @Embedded
-  private VmCreateImageTask createImageTask;
+  private VmCreateImageTask   createImageTask;
   @Column( name = "metadata_vm_service_tag" )
-  private String            serviceTag;
+  private String              serviceTag;
   @Enumerated( EnumType.STRING )
   @Column( name = "metadata_vm_reason" )
-  private Reason            reason;
+  private Reason              reason;
   @ElementCollection
   @CollectionTable( name = "metadata_instances_state_reasons" )
   @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
-  private Set<String>       reasonDetails       = Sets.newHashSet( );
+  private Set<String>         reasonDetails       = Sets.newHashSet( );
   @Transient
-  private StringBuffer      consoleOutput       = new StringBuffer( );
+  private StringBuffer        consoleOutput       = new StringBuffer( );
   @Lob
-  @Type(type="org.hibernate.type.StringClobType")
+  @Type( type = "org.hibernate.type.StringClobType" )
   @Column( name = "metadata_vm_password_data" )
-  private String            passwordData;
+  private String              passwordData;
   @Column( name = "metadata_vm_pending" )
-  private Boolean           pending;
+  private Boolean             pending;
   @Embedded
-  private VmMigrationTask   migrationTask;
+  private VmMigrationTask     migrationTask;
   
   VmRuntimeState( final VmInstance vmInstance ) {
     super( );
@@ -196,8 +204,8 @@ public class VmRuntimeState {
          && VmStateSet.NOT_RUNNING.contains( newState ) ) {
       this.getVmInstance( ).setState( newState );
       action = VmState.SHUTTING_DOWN.equals( newState ) ?
-          this.tryCleanUpRunnable() : // try cleanup now, will try again when moving to final state
-          this.cleanUpRunnable( );
+                                                       this.tryCleanUpRunnable( ) : // try cleanup now, will try again when moving to final state
+                                                       this.cleanUpRunnable( );
     } else if ( VmState.PENDING.equals( oldState )
                 && VmState.RUNNING.equals( newState ) ) {
       this.getVmInstance( ).setState( newState );
@@ -225,7 +233,7 @@ public class VmRuntimeState {
         this.getVmInstance( ).updatePublicAddress( this.getVmInstance( ).getPrivateAddress( ) );
       } else {//if ( VmState.STOPPING.equals( oldState ) ) {
         this.getVmInstance( ).setState( VmState.STOPPED );
-        this.getVmInstance( ).updateAddresses( "" , "" );
+        this.getVmInstance( ).updateAddresses( "", "" );
       }
       action = this.cleanUpRunnable( );
     } else if ( VmState.STOPPED.equals( oldState )
@@ -300,9 +308,9 @@ public class VmRuntimeState {
       }
     }
   }
-
+  
   private Callable<Boolean> tryCleanUpRunnable( ) {
-    return this.cleanUpRunnable( null, new Predicate<VmInstance>(){
+    return this.cleanUpRunnable( null, new Predicate<VmInstance>( ) {
       @Override
       public boolean apply( final VmInstance vmInstance ) {
         VmInstances.tryCleanUp( vmInstance );
@@ -310,13 +318,13 @@ public class VmRuntimeState {
       }
     } );
   }
-
+  
   private Callable<Boolean> cleanUpRunnable( ) {
     return this.cleanUpRunnable( null );
   }
-
+  
   private Callable<Boolean> cleanUpRunnable( @Nullable final String reason ) {
-    return this.cleanUpRunnable( reason, new Predicate<VmInstance>(){
+    return this.cleanUpRunnable( reason, new Predicate<VmInstance>( ) {
       @Override
       public boolean apply( final VmInstance vmInstance ) {
         VmInstances.cleanUp( vmInstance );
@@ -324,7 +332,7 @@ public class VmRuntimeState {
       }
     } );
   }
-
+  
   private Callable<Boolean> cleanUpRunnable( @Nullable final String reason,
                                              final Predicate<VmInstance> cleaner ) {
     Logs.extreme( ).info( "Preparing to clean-up instance: " + this.getVmInstance( ).getInstanceId( ),
@@ -352,7 +360,30 @@ public class VmRuntimeState {
   }
   
   public void setServiceTag( final String serviceTag ) {
-    this.serviceTag = serviceTag;
+    if ( !Strings.nullToEmpty( this.serviceTag ).equals( serviceTag ) ) {
+      this.serviceTag = serviceTag;
+      this.setNodeTag( serviceTag );
+    }
+  }
+  
+  /**
+   * Asynchronously assign the tag for this instance, do so only if it has changed.
+   */
+  private void setNodeTag( String serviceTag2 ) {
+    final String host = URI.create( serviceTag2 ).getHost( );
+    final VmInstance vm = VmRuntimeState.this.getVmInstance( );
+    final CreateTagsType createTags = new CreateTagsType( ) {
+      {
+        this.getTagSet( ).add( new ResourceTag( VM_NC_HOST_TAG, host ) );
+        this.getResourcesSet( ).add( vm.getInstanceId( ) );
+        this.setEffectiveUserId( vm.getOwnerUserId( ) );//GRZE:TODO: update impersonation impl later.
+      }
+    };
+    try {
+      AsyncRequests.dispatch( Topology.lookup( Eucalyptus.class ), createTags );
+    } catch ( Exception ex ) {
+      LOG.error( ex );
+    }
   }
   
   void setReason( final Reason reason ) {
@@ -408,8 +439,8 @@ public class VmRuntimeState {
     if ( this.getBundleTask( ) != null ) {
       this.getBundleTask( ).setState( BundleState.canceling );
       EventRecord.here( VmRuntimeState.class, EventType.BUNDLE_CANCELING, this.vmInstance.getOwner( ).toString( ), this.getBundleTask( ).getBundleId( ),
-                        this.getVmInstance( ).getInstanceId( ),
-                        "" + this.getBundleTask( ).getState( ) ).info( );
+        this.getVmInstance( ).getInstanceId( ),
+        "" + this.getBundleTask( ).getState( ) ).info( );
       return true;
     } else {
       return false;
@@ -420,31 +451,31 @@ public class VmRuntimeState {
     if ( this.getBundleTask( ) != null ) {
       this.getBundleTask( ).setState( BundleState.none );
       EventRecord.here( VmRuntimeState.class, EventType.BUNDLE_RESTART, this.vmInstance.getOwner( ).toString( ), this.getBundleTask( ).getBundleId( ),
-                        this.getVmInstance( ).getInstanceId( ),
-                        "" + this.getBundleTask( ).getState( ) ).info( );
+        this.getVmInstance( ).getInstanceId( ),
+        "" + this.getBundleTask( ).getState( ) ).info( );
       return true;
     }
     return false;
   }
   
   public Boolean submittedBundleTask( ) {
-	if ( this.getBundleTask( ) != null ) {
-  	  if ( BundleState.cancelled.equals( this.getBundleTaskState( ) ) ) {
-	    EventRecord.here( VmRuntimeState.class, EventType.BUNDLE_CANCELLED, this.vmInstance.getOwner( ).toString( ), this.getBundleTask( ).getBundleId( ),
-	                      this.getVmInstance( ).getInstanceId( ),
-	                      "" + this.getBundleTask( ).getState( ) ).info( );
-	    this.resetBundleTask( );
-	    return true;
-	  } else if ( this.getBundleTask( ).getState( ).ordinal( ) >= BundleState.storing.ordinal( ) ) {
+    if ( this.getBundleTask( ) != null ) {
+      if ( BundleState.cancelled.equals( this.getBundleTaskState( ) ) ) {
+        EventRecord.here( VmRuntimeState.class, EventType.BUNDLE_CANCELLED, this.vmInstance.getOwner( ).toString( ), this.getBundleTask( ).getBundleId( ),
+          this.getVmInstance( ).getInstanceId( ),
+          "" + this.getBundleTask( ).getState( ) ).info( );
+        this.resetBundleTask( );
+        return true;
+      } else if ( this.getBundleTask( ).getState( ).ordinal( ) >= BundleState.storing.ordinal( ) ) {
         this.getBundleTask( ).setState( BundleState.storing );
         EventRecord.here( VmRuntimeState.class, EventType.BUNDLE_STARTING,
-                          this.vmInstance.getOwner( ).toString( ),
-                          this.getBundleTask( ).getBundleId( ),
-                          this.getVmInstance( ).getInstanceId( ),
-                          "" + this.getBundleTask( ).getState( ) ).info( );
+          this.vmInstance.getOwner( ).toString( ),
+          this.getBundleTask( ).getBundleId( ),
+          this.getVmInstance( ).getInstanceId( ),
+          "" + this.getBundleTask( ).getState( ) ).info( );
         return true;
       }
-  	} 
+    }
     return false;
   }
   
@@ -453,7 +484,8 @@ public class VmRuntimeState {
       this.bundleTask = task;
       return true;
     } else {
-      if ( ( this.getBundleTask( ) != null ) && ( BundleState.failed.equals( task.getState() ) || BundleState.canceling.equals( task.getState() ) || BundleState.cancelled.equals( task.getState() ) ) ) {
+      if ( ( this.getBundleTask( ) != null )
+           && ( BundleState.failed.equals( task.getState( ) ) || BundleState.canceling.equals( task.getState( ) ) || BundleState.cancelled.equals( task.getState( ) ) ) ) {
         this.resetBundleTask( );
         this.bundleTask = task;
         return true;
@@ -468,30 +500,34 @@ public class VmRuntimeState {
   }
   
   VmMigrationTask getMigrationTask( ) {
-    return this.migrationTask;
+    return this.migrationTask == null
+                                     ? this.migrationTask = VmMigrationTask.create( this.getVmInstance( ) )
+                                     : this.migrationTask;
   }
-
+  
   void setMigrationTask( VmMigrationTask migrationTask ) {
     this.migrationTask = migrationTask;
   }
   
-  public void setMigrationState( String stateName, String sourceHost, String destHost ) {
-    if ( stateName != null ) {
-      if ( this.migrationTask == null ) {
-        //TODO:GRZE: here we need to handle tag creation
-        //TODO:GRZE: authorize volume attachments only for the two NCs which now host the vm during migration
-        this.migrationTask = VmMigrationTask.create( vmInstance, stateName, sourceHost, destHost );
-      } else {
-        //TODO:GRZE: here we need to handle tag update
-        this.migrationTask.updateMigrationState( stateName, sourceHost, destHost );
-      }
-    } else if ( stateName == null ) {
-      //TODO:GRZE: here we need to handle tag removal
-      //TODO:GRZE: authorize volume attachments only for the single NCs which now host the vm after migration
-      this.migrationTask = null;
-    }
+  public void startMigration( ) {
+    this.getMigrationTask( ).updateMigrationTask( MigrationState.pending.name( ), null, null );
+    //TODO:GRZE: VolumeMigration.update( vmInstance );
+    MigrationTags.update( this.getVmInstance( ) );
+  }
+  
+  public void abortMigration( ) {
+    this.getMigrationTask( ).updateMigrationTask( MigrationState.none.name( ), null, null );
+    //TODO:GRZE: VolumeMigration.update( vmInstance );
+    MigrationTags.update( this.getVmInstance( ) );
   }
 
+  public void setMigrationState( String stateName, String sourceHost, String destHost ) {
+    if ( this.getMigrationTask( ).updateMigrationTask( stateName, sourceHost, destHost ) ) {//actually updated the state
+      //TODO:GRZE: VolumeMigration.update( vmInstance );
+      MigrationTags.update( this.getVmInstance( ) );
+    }
+  }
+  
   private void setVmInstance( final VmInstance vmInstance ) {
     this.vmInstance = vmInstance;
   }
@@ -523,12 +559,12 @@ public class VmRuntimeState {
     if ( this.pending != null ) builder.append( "pending=" ).append( this.pending );
     return builder.toString( );
   }
-
+  
   @Nullable
-  Reason reason() {
+  Reason reason( ) {
     return reason;
   }
-
+  
   private VmCreateImageTask getCreateImageTask( ) {
     return this.createImageTask;
   }
@@ -558,42 +594,42 @@ public class VmRuntimeState {
     updateBundleTaskState( next );
   }
   
-  public void bundleRestartInstance(VmBundleTask bundleTask) {
-	  BundleState state = bundleTask.getState();
-	  if(BundleState.complete.equals(state) || BundleState.failed.equals(state) || BundleState.cancelled.equals(state)) {
-		final BundleRestartInstanceType         request = new BundleRestartInstanceType();
-        final BundleRestartInstanceResponseType reply   = request.getReply();
+  public void bundleRestartInstance( VmBundleTask bundleTask ) {
+    BundleState state = bundleTask.getState( );
+    if ( BundleState.complete.equals( state ) || BundleState.failed.equals( state ) || BundleState.cancelled.equals( state ) ) {
+      final BundleRestartInstanceType request = new BundleRestartInstanceType( );
+      final BundleRestartInstanceResponseType reply = request.getReply( );
+      
+      reply.set_return( true );
+      try {
+        LOG.info( EventRecord.here( BundleCallback.class, EventType.BUNDLE_RESTART, vmInstance.getOwner( ).getUserName( ),
+          bundleTask.getBundleId( ),
+          vmInstance.getInstanceId( ) ) );
         
-        reply.set_return(true);
-        try {
-            LOG.info(EventRecord.here(BundleCallback.class, EventType.BUNDLE_RESTART, vmInstance.getOwner().getUserName(),
-                                      bundleTask.getBundleId(),
-                                      vmInstance.getInstanceId()));
-            
-            ServiceConfiguration ccConfig = Topology.lookup(ClusterController.class, vmInstance.lookupPartition());
-            final Cluster        cluster  = Clusters.lookup(ccConfig );
-            
-            request.setInstanceId(vmInstance.getInstanceId());
-            reply.setTask(Bundles.transform(bundleTask));
-            AsyncRequests.newRequest(Bundles.bundleRestartInstanceCallback(request)).dispatch(cluster.getConfiguration());
-        } catch (final Exception e) {
-        	Logs.extreme().trace("Failed to find bundle task: " + bundleTask.getBundleId());
-        }
-	  }
+        ServiceConfiguration ccConfig = Topology.lookup( ClusterController.class, vmInstance.lookupPartition( ) );
+        final Cluster cluster = Clusters.lookup( ccConfig );
+        
+        request.setInstanceId( vmInstance.getInstanceId( ) );
+        reply.setTask( Bundles.transform( bundleTask ) );
+        AsyncRequests.newRequest( Bundles.bundleRestartInstanceCallback( request ) ).dispatch( cluster.getConfiguration( ) );
+      } catch ( final Exception e ) {
+        Logs.extreme( ).trace( "Failed to find bundle task: " + bundleTask.getBundleId( ) );
+      }
+    }
   }
   
   public void updateBundleTaskState( BundleState state ) {
     if ( this.getBundleTask( ) != null ) {
       final BundleState current = this.getBundleTask( ).getState( );
-      if ( BundleState.complete.equals( state ) && !BundleState.complete.equals( current ) && !BundleState.none.equals( current )) {
+      if ( BundleState.complete.equals( state ) && !BundleState.complete.equals( current ) && !BundleState.none.equals( current ) ) {
         this.getBundleTask( ).setState( state );
-        bundleRestartInstance(this.getBundleTask());
-     } else if ( BundleState.failed.equals( state ) && !BundleState.failed.equals( current ) && !BundleState.none.equals( current )) {
+        bundleRestartInstance( this.getBundleTask( ) );
+      } else if ( BundleState.failed.equals( state ) && !BundleState.failed.equals( current ) && !BundleState.none.equals( current ) ) {
         this.getBundleTask( ).setState( state );
-        bundleRestartInstance(this.getBundleTask());
-      } else if ( BundleState.cancelled.equals( state ) && !BundleState.cancelled.equals( current ) && !BundleState.none.equals( current )) {
+        bundleRestartInstance( this.getBundleTask( ) );
+      } else if ( BundleState.cancelled.equals( state ) && !BundleState.cancelled.equals( current ) && !BundleState.none.equals( current ) ) {
         this.getBundleTask( ).setState( state );
-        bundleRestartInstance(this.getBundleTask());
+        bundleRestartInstance( this.getBundleTask( ) );
       } else if ( BundleState.canceling.equals( state ) || BundleState.canceling.equals( current ) ) {
         //
       } else if ( BundleState.pending.equals( current ) && !BundleState.none.equals( state ) ) {

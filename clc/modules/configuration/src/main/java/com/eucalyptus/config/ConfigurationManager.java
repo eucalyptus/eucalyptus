@@ -168,12 +168,6 @@ public class ConfigurationManager {
     return reply;
   }
   
-  public static DescribeNodesResponseType listComponents( final DescribeNodesType request ) throws EucalyptusCloudException {
-    final DescribeNodesResponseType reply = ( DescribeNodesResponseType ) request.getReply( );
-    reply.setRegistered( ( ArrayList<NodeComponentInfoType> ) Groovyness.run( "describe_nodes" ) );
-    return reply;
-  }
-  
   private static final Set<String> attributes = Sets.newHashSet( "partition", "state" );
   
   public static ModifyComponentAttributeResponseType modify( final ModifyComponentAttributeType request ) throws EucalyptusCloudException {

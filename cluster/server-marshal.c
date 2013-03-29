@@ -1457,6 +1457,24 @@ int ccInstanceUnmarshal(adb_ccInstanceType_t * dst, ccInstance * src, const axut
     if (strlen(src->bundleTaskStateName)) {
         adb_ccInstanceType_set_bundleTaskStateName(dst, env, src->bundleTaskStateName);
     }
+    //GRZE: these strings should be made an enum indexed by the migration_states_t
+    if (src->migration_state == MIGRATION_PREPARING) {
+    	adb_ccInstanceType_set_migrationStateName(dst, env, "preparing");
+        if (strlen(src->migration_src)&&strlen(src->migration_dst)) {
+        	adb_ccInstanceType_set_migrationDestination(dst, env, src->migration_dst);
+        	adb_ccInstanceType_set_migrationSource(dst, env, src->migration_src);
+        }
+    } else if (src->migration_state == MIGRATION_IN_PROGRESS) {
+    	adb_ccInstanceType_set_migrationStateName(dst, env, "migrating");
+        if (strlen(src->migration_src)&&strlen(src->migration_dst)) {
+        	adb_ccInstanceType_set_migrationDestination(dst, env, src->migration_dst);
+        	adb_ccInstanceType_set_migrationSource(dst, env, src->migration_src);
+        }
+    } else {
+    	adb_ccInstanceType_set_migrationStateName(dst, env, "none");
+    	adb_ccInstanceType_set_migrationDestination_nil(dst, env);
+    	adb_ccInstanceType_set_migrationSource_nil(dst, env);
+    }
 
     adb_ccInstanceType_set_blkbytes(dst, env, src->blkbytes);
     adb_ccInstanceType_set_netbytes(dst, env, src->netbytes);

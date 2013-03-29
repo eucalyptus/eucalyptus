@@ -60,59 +60,63 @@
  *   NEEDED TO COMPLY WITH ANY SUCH LICENSES OR RIGHTS.
  ************************************************************************/
 
-package com.eucalyptus.cluster;
+package com.eucalyptus.vm;
 
-import java.util.List;
-import java.util.Map;
-import java.util.NoSuchElementException;
-import java.util.Set;
-import com.eucalyptus.component.ServiceConfiguration;
-import com.eucalyptus.component.Topology;
-import com.eucalyptus.component.id.ClusterController;
-import com.eucalyptus.vm.VmInstance;
-import com.google.common.base.Joiner;
-import com.google.common.collect.Lists;
-import com.google.common.collect.Sets;
-import edu.ucsb.eucalyptus.cloud.NodeInfo;
+import javax.annotation.Nullable;
+import org.apache.log4j.Logger;
+import com.google.common.base.Predicate;
+import com.google.common.base.Strings;
 
-public class Nodes {
-  
-  /**
-   * GRZE:TODO: should return the node's service configuration
-   * @param ccConfig
-   * @param ncHostOrTag
-   * @return
-   */
-  public static NodeInfo lookupNodeInfo( ServiceConfiguration ccConfig, String ncHostOrTag ) {
-    Map<String, NodeInfo> map = Clusters.lookup( ccConfig ).getNodeHostMap( );
-    if ( map.containsKey( ncHostOrTag ) ) {
-      return map.get( ncHostOrTag );
-    } else {
-      throw new NoSuchElementException( "Failed to lookup node using " + ncHostOrTag + ".  Available nodes are: " + Joiner.on("\n").join( map.keySet( ) ) );
+/**
+ * @todo doc
+ * @author chris grzegorczyk <grze@eucalyptus.com>
+ */
+public enum MigrationState {
+  none {
+    @Override
+    public boolean isMigrating( ) {
+      return false;
     }
+  },
+  pending,
+  preparing,
+  ready,
+  migrating,
+  cleaning;
+  private static Logger LOG = Logger.getLogger( MigrationState.class );
+
+  public static boolean isMigrating( VmInstance vm ) {
+    return VmInstanceFilter.INSTANCE.apply( vm );
   }
   
-  public static List<String> lookupIqns( ServiceConfiguration ccConfig ) {
-    Cluster cluster = Clusters.lookup( ccConfig );
-    Set<String> ret = Sets.newHashSet( );
-    for ( NodeInfo node : cluster.getNodeMap( ).values( ) ) {
-      if ( node.getIqn( ) != null ) {
-        ret.add( node.getIqn( ) );
+  public enum VmInstanceFilter implements Predicate<VmInstance> {
+    INSTANCE;
+
+    /**
+     * @see com.google.common.base.Predicate#apply(java.lang.Object)
+     */
+    @Override
+    public boolean apply( @Nullable VmInstance input ) {
+      return input.getRuntimeState( ).getMigrationTask( ).getState( ).isMigrating( );
+    }
+    
+  }
+  
+  public boolean isMigrating( ) {
+    return true;
+  }
+  
+  public static MigrationState defaultValueOf( String state ) {
+    if ( !Strings.isNullOrEmpty( state ) ) {
+      try {
+        return MigrationState.valueOf( state );
+      } catch ( IllegalArgumentException ex ) {
+        LOG.debug( ex );
+        return none;
       }
+    } else {
+      return none;
     }
-    return Lists.newArrayList( ret );
   }
   
-  public static List<String> lookupIqn( VmInstance vm ) {
-    ServiceConfiguration ccConfig = Topology.lookup( ClusterController.class, vm.lookupPartition( ) );
-    Cluster cluster = Clusters.lookup( ccConfig );
-    NodeInfo node = cluster.getNode( vm.getServiceTag( ) );
-    if ( node == null ) {
-      throw new NoSuchElementException( "Failed to look up node information for " + vm.getInstanceId( ) + " with service tag " + vm.getServiceTag( ) );
-    } else if ( node.getIqn( ) == null ) {
-      throw new NoSuchElementException( "Error looking up iqn for node " + vm.getServiceTag( ) + " (" + vm.getInstanceId( ) + "): node does not have an iqn." );
-    } else {
-      return Lists.newArrayList( node.getIqn( ) );
-    }
-  }
 }
