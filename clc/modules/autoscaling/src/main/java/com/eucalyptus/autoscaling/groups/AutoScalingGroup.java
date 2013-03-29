@@ -119,8 +119,6 @@ public class AutoScalingGroup extends AbstractOwnedPersistent implements AutoSca
   @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
   private List<TerminationPolicyType> terminationPolicies = Lists.newArrayList();
   
-  //TODO:STEVE: enabled metrics?
-
   @ElementCollection
   @CollectionTable( name = "metadata_auto_scaling_group_load_balancers" )
   @Column( name = "metadata_load_balancer_name" )
@@ -134,6 +132,14 @@ public class AutoScalingGroup extends AbstractOwnedPersistent implements AutoSca
   @JoinColumn( name = "metadata_auto_scaling_group_id" )
   @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
   private Set<SuspendedProcess> suspendedProcesses = Sets.newHashSet();
+
+  @ElementCollection
+  @CollectionTable( name = "metadata_auto_scaling_group_enabled_metrics" )
+  @Column( name = "metadata_metric" )
+  @JoinColumn( name = "metadata_auto_scaling_group_id" )
+  @Enumerated( EnumType.STRING )
+  @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
+  private Set<MetricCollectionType> enabledMetrics = Sets.newHashSet();
 
   @ElementCollection
   @CollectionTable( name = "metadata_auto_scaling_group_scaling_causes" )
@@ -276,6 +282,14 @@ public class AutoScalingGroup extends AbstractOwnedPersistent implements AutoSca
 
   public void setSuspendedProcesses( final Set<SuspendedProcess> suspendedProcesses ) {
     this.suspendedProcesses = suspendedProcesses;
+  }
+
+  public Set<MetricCollectionType> getEnabledMetrics() {
+    return enabledMetrics;
+  }
+
+  public void setEnabledMetrics( final Set<MetricCollectionType> enabledMetrics ) {
+    this.enabledMetrics = enabledMetrics;
   }
 
   public List<GroupScalingCause> getScalingCauses() {

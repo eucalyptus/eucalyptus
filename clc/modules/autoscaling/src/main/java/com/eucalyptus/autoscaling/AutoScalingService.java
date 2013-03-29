@@ -108,6 +108,7 @@ import com.eucalyptus.autoscaling.common.Filter;
 import com.eucalyptus.autoscaling.common.Instance;
 import com.eucalyptus.autoscaling.common.Instances;
 import com.eucalyptus.autoscaling.common.LaunchConfigurationType;
+import com.eucalyptus.autoscaling.common.MetricCollectionTypes;
 import com.eucalyptus.autoscaling.common.ProcessType;
 import com.eucalyptus.autoscaling.common.PutNotificationConfigurationResponseType;
 import com.eucalyptus.autoscaling.common.PutNotificationConfigurationType;
@@ -137,6 +138,7 @@ import com.eucalyptus.autoscaling.configurations.LaunchConfigurations;
 import com.eucalyptus.autoscaling.configurations.PersistenceLaunchConfigurations;
 import com.eucalyptus.autoscaling.groups.AutoScalingGroup;
 import com.eucalyptus.autoscaling.groups.AutoScalingGroups;
+import com.eucalyptus.autoscaling.groups.MetricCollectionType;
 import com.eucalyptus.autoscaling.groups.HealthCheckType;
 import com.eucalyptus.autoscaling.groups.PersistenceAutoScalingGroups;
 import com.eucalyptus.autoscaling.groups.ScalingProcessType;
@@ -284,8 +286,38 @@ public class AutoScalingService {
     return reply;
   }
 
-  public EnableMetricsCollectionResponseType enableMetricsCollection(EnableMetricsCollectionType request) throws EucalyptusCloudException {
-    EnableMetricsCollectionResponseType reply = request.getReply( );
+  public EnableMetricsCollectionResponseType enableMetricsCollection( final EnableMetricsCollectionType request ) throws EucalyptusCloudException {
+    final EnableMetricsCollectionResponseType reply = request.getReply( );
+
+    final Context ctx = Contexts.lookup( );
+    try {
+      final AccountFullName accountFullName = ctx.getUserFullName().asAccountFullName();
+      final Callback<AutoScalingGroup> groupCallback = new Callback<AutoScalingGroup>() {
+        @Override
+        public void fire( final AutoScalingGroup autoScalingGroup ) {
+          if ( RestrictedTypes.filterPrivileged().apply( autoScalingGroup ) ) {
+            final Set<MetricCollectionType> metricsToEnable = EnumSet.allOf( MetricCollectionType.class );
+            if ( request.getMetrics() != null && !request.getMetrics().getMember().isEmpty() ) {
+              metricsToEnable.clear();
+              Iterables.addAll( metricsToEnable, Iterables.transform(
+                  request.getMetrics().getMember(),
+                  Enums.valueOfFunction(MetricCollectionType.class) ) );
+            }
+            autoScalingGroup.getEnabledMetrics().addAll( metricsToEnable );
+          }
+        }
+      };
+
+      autoScalingGroups.update(
+          accountFullName,
+          request.getAutoScalingGroupName(),
+          groupCallback );
+    } catch ( AutoScalingMetadataNotFoundException e ) {
+      throw new ValidationErrorException( "Auto scaling group not found: " + request.getAutoScalingGroupName() );
+    } catch ( Exception e ) {
+      handleException( e );
+    }
+
     return reply;
   }
 
@@ -1085,8 +1117,38 @@ public class AutoScalingService {
     return reply;
   }
 
-  public DisableMetricsCollectionResponseType disableMetricsCollection(DisableMetricsCollectionType request) throws EucalyptusCloudException {
-    DisableMetricsCollectionResponseType reply = request.getReply( );
+  public DisableMetricsCollectionResponseType disableMetricsCollection( final DisableMetricsCollectionType request ) throws EucalyptusCloudException {
+    final DisableMetricsCollectionResponseType reply = request.getReply( );
+
+    final Context ctx = Contexts.lookup( );
+    try {
+      final AccountFullName accountFullName = ctx.getUserFullName().asAccountFullName();
+      final Callback<AutoScalingGroup> groupCallback = new Callback<AutoScalingGroup>() {
+        @Override
+        public void fire( final AutoScalingGroup autoScalingGroup ) {
+          if ( RestrictedTypes.filterPrivileged().apply( autoScalingGroup ) ) {
+            final Set<MetricCollectionType> metricsToDisable = EnumSet.allOf( MetricCollectionType.class );
+            if ( request.getMetrics() != null && !request.getMetrics().getMember().isEmpty() ) {
+              metricsToDisable.clear();
+              Iterables.addAll( metricsToDisable, Iterables.transform(
+                  request.getMetrics().getMember(),
+                  Enums.valueOfFunction(MetricCollectionType.class) ) );
+            }
+            autoScalingGroup.getEnabledMetrics().removeAll( metricsToDisable );
+          }
+        }
+      };
+
+      autoScalingGroups.update(
+          accountFullName,
+          request.getAutoScalingGroupName(),
+          groupCallback );
+    } catch ( AutoScalingMetadataNotFoundException e ) {
+      throw new ValidationErrorException( "Auto scaling group not found: " + request.getAutoScalingGroupName() );
+    } catch ( Exception e ) {
+      handleException( e );
+    }
+
     return reply;
   }
 
@@ -1220,8 +1282,14 @@ public class AutoScalingService {
     return reply;
   }
 
-  public DescribeMetricCollectionTypesResponseType describeMetricCollectionTypes(DescribeMetricCollectionTypesType request) throws EucalyptusCloudException {
-    DescribeMetricCollectionTypesResponseType reply = request.getReply( );
+  public DescribeMetricCollectionTypesResponseType describeMetricCollectionTypes( final DescribeMetricCollectionTypesType request ) throws EucalyptusCloudException {
+    final DescribeMetricCollectionTypesResponseType reply = request.getReply( );
+
+    reply.getDescribeMetricCollectionTypesResult().setMetrics( new MetricCollectionTypes(
+        Collections2.transform(
+            Collections2.filter( EnumSet.allOf( MetricCollectionType.class ), RestrictedTypes.filterPrivilegedWithoutOwner() ),
+            Strings.toStringFunction() ) ) );
+
     return reply;
   }
 

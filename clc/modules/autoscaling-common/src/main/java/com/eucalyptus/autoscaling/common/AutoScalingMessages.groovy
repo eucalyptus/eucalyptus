@@ -40,7 +40,7 @@ public class Alarm extends EucalyptusData {
 }
 public class MetricGranularityTypes extends EucalyptusData {
   public MetricGranularityTypes() {  }
-  ArrayList<MetricGranularityType> member = new ArrayList<MetricGranularityType>()
+  ArrayList<MetricGranularityType> member = [ new MetricGranularityType(granularity: "1Minute") ]
 }
 public class DescribeAutoScalingNotificationTypesResponseType extends AutoScalingMessage {
   public DescribeAutoScalingNotificationTypesResponseType() {  }
@@ -290,6 +290,9 @@ public class PutNotificationConfigurationType extends AutoScalingMessage {
 }
 public class MetricCollectionTypes extends EucalyptusData {
   public MetricCollectionTypes() {  }
+  public MetricCollectionTypes( Collection<String> types ) {
+    member.addAll( types.collect{ type -> new MetricCollectionType( metric: type ) } )
+  }
   ArrayList<MetricCollectionType> member = new ArrayList<MetricCollectionType>()
 }
 public class CreateAutoScalingGroupResponseType extends AutoScalingMessage {
@@ -692,7 +695,7 @@ public class UpdateAutoScalingGroupResponseType extends AutoScalingMessage {
 }
 public class EnabledMetric extends EucalyptusData {
   String metric
-  String granularity
+  String granularity = "1Minute"
   public EnabledMetric() {  }
 }
 public class DescribePoliciesResponseType extends AutoScalingMessage {
@@ -869,7 +872,7 @@ public class UpdateAutoScalingGroupType extends AutoScalingMessage {
 }
 public class DescribeMetricCollectionTypesResult extends EucalyptusData {
   MetricCollectionTypes metrics
-  MetricGranularityTypes granularities
+  MetricGranularityTypes granularities = new MetricGranularityTypes()
   public DescribeMetricCollectionTypesResult() {  }
 }
 public class BlockDeviceMappingType extends EucalyptusData {
@@ -917,6 +920,9 @@ public class AutoScalingGroupsType extends EucalyptusData {
 }
 public class EnabledMetrics extends EucalyptusData {
   public EnabledMetrics() {  }
+  public EnabledMetrics( Collection<String> enabledMetrics ) {
+    if ( enabledMetrics != null ) member.addAll( enabledMetrics.collect{ metric -> new EnabledMetric(metric: metric) } )
+  }
   ArrayList<EnabledMetric> member = new ArrayList<EnabledMetric>()
 }
 public class SetDesiredCapacityType extends AutoScalingMessage {
