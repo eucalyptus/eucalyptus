@@ -6,8 +6,9 @@ define([
     'views/dialogs/testdialog',
     'views/dialogs/quickscaledialog',
     'models/scalinggrp',
+    'views/searches/generic',
     'models/launchconfig'
-], function( app, dh, template, rivets, TestDialog, QuickScaleDialog, ScalingGroup, LaunchConfig) {
+], function( app, dh, template, rivets, TestDialog, QuickScaleDialog, ScalingGroup, Search, LaunchConfig) {
 	return Backbone.View.extend({
 		initialize : function() {
 			var self = this;
@@ -17,12 +18,28 @@ define([
                     value: 'foobarbaz',
                     toggle: true
                 });
+                
+                console.log("VOLUMES: " + JSON.stringify(app.data.images))
+                
+
+            var explicitFacets = {
+              platform : [{i386 : 'i386 32-bit', x86_64 : 'AMD64 64-bit'}]
+            };
+            var excludedFacetNames = ['owner_id', 'block_device_mapping', 
+              'hypervisor', 'connection', 'root_device_type', 'product_code', 
+              'ramdisk_id', 'display_id', 'is_public', 'delete_on_termination',
+              'instance_lifecycle'];
 
             var sg = new ScalingGroup({name: 'a test group'});
             var scope = {
                 errors: new Backbone.Model({}),
                 test: test,
                 sg: sg,
+                search : new Search(app.data.images, 
+                              excludedFacetNames, 
+                              {architecture : 'System Type'}, 
+                              explicitFacets),
+                /*
                 search: {
                     query: '',
                     search: function() {
@@ -61,6 +78,7 @@ define([
                         }
                     }
                 },
+                */
                 buttonScope: {
                     test: test,
                     click: function() { 
