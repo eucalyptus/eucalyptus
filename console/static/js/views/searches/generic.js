@@ -94,7 +94,7 @@ define(['app'], function(app) {
         if (val && typeof val !== 'object' && typeof val !== 'function') {
           if (found.indexOf(val) < 0) {
             found.push(val);
-            result.push({name: val, label: localize(val)});
+            result.push({name: facet, label: localize(val), value: val});
           }
         }
       });
@@ -132,7 +132,12 @@ define(['app'], function(app) {
       console.log('VM: ' + facet);
       callback(deriveMatches(facet, searchTerm))
     }
-
-//    images.on('change reset', updateKeyLists);
+    
+    function up() {
+      self.search(self.lastSearch, self.lastFacets);
+    }
+    
+    images.on('change reset', up);
+    up();
   }
 });
