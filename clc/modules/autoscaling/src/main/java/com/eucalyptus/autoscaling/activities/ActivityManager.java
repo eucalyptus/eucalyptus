@@ -53,6 +53,7 @@ import com.eucalyptus.autoscaling.groups.AutoScalingGroup;
 import com.eucalyptus.autoscaling.groups.AutoScalingGroups;
 import com.eucalyptus.autoscaling.groups.GroupScalingCause;
 import com.eucalyptus.autoscaling.groups.HealthCheckType;
+import com.eucalyptus.autoscaling.groups.MetricCollectionType;
 import com.eucalyptus.autoscaling.groups.PersistenceAutoScalingGroups;
 import com.eucalyptus.autoscaling.groups.ScalingProcessType;
 import com.eucalyptus.autoscaling.groups.SuspendedProcess;
@@ -70,7 +71,13 @@ import com.eucalyptus.autoscaling.tags.TagSupport;
 import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.cloudwatch.DescribeAlarmsResponseType;
 import com.eucalyptus.cloudwatch.DescribeAlarmsType;
+import com.eucalyptus.cloudwatch.Dimension;
+import com.eucalyptus.cloudwatch.Dimensions;
 import com.eucalyptus.cloudwatch.MetricAlarm;
+import com.eucalyptus.cloudwatch.MetricData;
+import com.eucalyptus.cloudwatch.MetricDatum;
+import com.eucalyptus.cloudwatch.PutMetricDataResponseType;
+import com.eucalyptus.cloudwatch.PutMetricDataType;
 import com.eucalyptus.cloudwatch.ResourceList;
 import com.eucalyptus.component.Topology;
 import com.eucalyptus.component.id.Eucalyptus;
@@ -156,6 +163,12 @@ public class ActivityManager {
       ActivityStatusCode.Failed,
       ActivityStatusCode.Successful );
 
+  private static final Set<MetricCollectionType> instanceMetrics = EnumSet.of(
+      MetricCollectionType.GroupInServiceInstances,
+      MetricCollectionType.GroupPendingInstances,
+      MetricCollectionType.GroupTerminatingInstances,
+      MetricCollectionType.GroupTotalInstances );
+
   private static final String INSTANCE_PROFILE_RESOURCE =
       PolicySpec.qualifiedName( PolicySpec.VENDOR_IAM, PolicySpec.IAM_RESOURCE_INSTANCE_PROFILE );
 
@@ -172,13 +185,14 @@ public class ActivityManager {
       .add( state( LifecycleState.InService, ConfigurationState.Instantiated, addToLoadBalancer() )  )
       .build();
   private final List<ScalingTask> scalingTasks = ImmutableList.<ScalingTask>builder()
-      .add( new ScalingTask(   30, ActivityTask.Timeout         ) { @Override void doWork( ) throws Exception { timeoutScalingActivities( ); } } )
-      .add( new ScalingTask( 3600, ActivityTask.Expiry          ) { @Override void doWork( ) throws Exception { deleteExpiredActivities( ); } } )
-      .add( new ScalingTask(   10, ActivityTask.ZoneHealth      ) { @Override void doWork( ) throws Exception { updateUnavailableZones( ); } } )
-      .add( new ScalingTask(   10, ActivityTask.Recovery        ) { @Override void doWork( ) throws Exception { progressUnstableStates( ); } } )
-      .add( new ScalingTask(   10, ActivityTask.Scaling         ) { @Override void doWork( ) throws Exception { scalingActivities( ); } } )
-      .add( new ScalingTask(   10, ActivityTask.Scaling         ) { @Override void doWork( ) throws Exception { replaceUnhealthy( ); } } )
-      .add( new ScalingTask(   10, ActivityTask.InstanceCleanup ) { @Override void doWork( ) throws Exception { runningInstanceChecks( ); } } )
+      .add( new ScalingTask(   30, ActivityTask.Timeout           ) { @Override void doWork( ) throws Exception { timeoutScalingActivities( ); } } )
+      .add( new ScalingTask( 3600, ActivityTask.Expiry            ) { @Override void doWork( ) throws Exception { deleteExpiredActivities( ); } } )
+      .add( new ScalingTask(   10, ActivityTask.ZoneHealth        ) { @Override void doWork( ) throws Exception { updateUnavailableZones( ); } } )
+      .add( new ScalingTask(   10, ActivityTask.Recovery          ) { @Override void doWork( ) throws Exception { progressUnstableStates( ); } } )
+      .add( new ScalingTask(   10, ActivityTask.Scaling           ) { @Override void doWork( ) throws Exception { scalingActivities( ); } } )
+      .add( new ScalingTask(   10, ActivityTask.Scaling           ) { @Override void doWork( ) throws Exception { replaceUnhealthy( ); } } )
+      .add( new ScalingTask(   10, ActivityTask.InstanceCleanup   ) { @Override void doWork( ) throws Exception { runningInstanceChecks( ); } } )
+      .add( new ScalingTask(   10, ActivityTask.MetricsSubmission ) { @Override void doWork( ) throws Exception { submitMetrics( ); } } )
       .build( );
 
   private static UnstableInstanceState state( final LifecycleState lifecycleState,
@@ -213,7 +227,7 @@ public class ActivityManager {
     }
   }
 
-  public enum ActivityTask { Timeout, Expiry, ZoneHealth, Recovery, Scaling, InstanceCleanup }
+  public enum ActivityTask { Timeout, Expiry, ZoneHealth, Recovery, Scaling, InstanceCleanup, MetricsSubmission }
 
   public ActivityManager() {
     this(
@@ -384,6 +398,26 @@ public class ActivityManager {
     try {
       for ( final AutoScalingGroup group : autoScalingAccounts.values() ) {
         runTask( new UntrackedInstanceTerminationScalingProcessTask( group ) );
+      }
+    } catch ( Exception e ) {
+      logger.error( e, e );
+    }
+  }
+
+  /**
+   * Periodically executed scaling work.
+   */
+  private void submitMetrics() {
+    try {
+      for ( final AutoScalingGroup group : autoScalingGroups.listRequiringMonitoring( 10000L ) ) {
+        if ( !group.getEnabledMetrics().isEmpty() ) {
+          final List<AutoScalingInstance> groupInstances = Sets.intersection( group.getEnabledMetrics(), instanceMetrics ).isEmpty() ?
+              Collections.<AutoScalingInstance>emptyList() :
+              autoScalingInstances.listByGroup( group );
+          runTask( new MetricsSubmissionScalingProcessTask(
+              group,
+              groupInstances ) );
+        }
       }
     } catch ( Exception e ) {
       logger.error( e, e );
@@ -2060,6 +2094,65 @@ public class ActivityManager {
       } catch ( AutoScalingMetadataException e ) {
         logger.error( e, e );
       }
+    }
+  }
+
+  private class MetricsSubmissionScalingActivityTask extends ScalingActivityTask<PutMetricDataResponseType> {
+    private final List<AutoScalingInstance> autoScalingInstances;
+
+    private MetricsSubmissionScalingActivityTask( final ScalingActivity activity,
+                                                  final List<AutoScalingInstance> autoScalingInstances ) {
+      super( activity, false );
+      this.autoScalingInstances = autoScalingInstances;
+    }
+
+    @Override
+    void dispatchInternal( final ActivityContext context,
+                           final Callback.Checked<PutMetricDataResponseType> callback ) {
+      final CloudWatchClient client = context.getCloudWatchClient();
+      final Date date = new Date();
+      final MetricData metricData = new MetricData();
+      for ( final MetricCollectionType metricCollectionType : getGroup().getEnabledMetrics() ) {
+        final MetricDatum metricDatum = new MetricDatum();
+        metricDatum.setDimensions( new Dimensions(
+            new Dimension( "AutoScalingGroupName", getGroup().getAutoScalingGroupName() )
+        ) );
+        metricDatum.setTimestamp( date );
+        metricDatum.setUnit( "None" );
+        metricDatum.setMetricName( metricCollectionType.getDisplayName() );
+        metricDatum.setValue( metricCollectionType.getValue( getGroup(), autoScalingInstances ) );
+        metricData.getMember().add( metricDatum );
+      }
+      final PutMetricDataType putMetricData = new PutMetricDataType();
+      putMetricData.setNamespace( "AWS/AutoScaling" );
+      putMetricData.setMetricData( metricData );
+      client.dispatch( putMetricData, callback );
+    }
+
+    @Override
+    void dispatchSuccess( final ActivityContext context,
+                          final PutMetricDataResponseType response ) {
+      setActivityFinalStatus( ActivityStatusCode.Successful );
+    }
+  }
+
+  private class MetricsSubmissionScalingProcessTask extends ScalingProcessTask<MetricsSubmissionScalingActivityTask> {
+    private final List<AutoScalingInstance> autoScalingInstances;
+
+    MetricsSubmissionScalingProcessTask( final AutoScalingGroup group,
+                                         final List<AutoScalingInstance> autoScalingInstances ) {
+      super( group, "MetricsSubmission" );
+      this.autoScalingInstances = autoScalingInstances;
+    }
+
+    @Override
+    boolean shouldRun() {
+      return !getGroup().getEnabledMetrics().isEmpty();
+    }
+
+    @Override
+    List<MetricsSubmissionScalingActivityTask> buildActivityTasks() throws AutoScalingMetadataException {
+      return Collections.singletonList( new MetricsSubmissionScalingActivityTask( newActivity(), autoScalingInstances ) );
     }
   }
 
