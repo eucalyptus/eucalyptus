@@ -45,10 +45,14 @@ define([
             add: function(e, me) {
               var key = $('.keyfield').val();
               var val = $('.valuefield').val();
-              $('.keyfield').val('');
-              $('.valuefield').val('');
-              me.list.add({key: key, value: val});
-              me.sharedModel.set('type_hasTags', 'true');
+              if(me.list.where({key: key}).length == 0) {
+                me.list.add({key: key, value: val});
+                me.sharedModel.set('type_hasTags', 'true');
+                $('.keyfield').val('');
+                $('.valuefield').val('');
+              } else {
+                $('.keyfield').addClass('ui-keyval-error');
+              }
             },
             remove: function(e, me) {
               me.list.remove(me.row);
