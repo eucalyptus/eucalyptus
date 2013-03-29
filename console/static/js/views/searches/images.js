@@ -2,6 +2,7 @@ define(['app'], function(app) {
     var self = this;
     return function(images) {
         var self = this;
+        searchContext = self;
 
         var sortKeyList = function(list, keyName) {
             return _.chain(list)
@@ -11,6 +12,17 @@ define(['app'], function(app) {
             .value()
         }
 
+        var keyLists = {};
+        var updateKeyLists = function() {
+            console.log('update keyLists');
+            var jsonImages = images.toJSON();
+            keyLists = {
+                name: sortKeyList(jsonImages, 'name'),
+                platform: sortKeyList(jsonImages, 'platform'),
+                description: sortKeyList(jsonImages, 'description')
+            }
+            self.search(self.lastSearch, self.lastFacets);
+        }
         var siftKeyList = function(list, search) {
             console.log(list, search);
             return _.chain(list).filter(function(item) { 
@@ -22,15 +34,10 @@ define(['app'], function(app) {
             .value();
         }
 
-        var jsonImages = images.toJSON();
-        var keyLists = {
-            name: sortKeyList(jsonImages, 'name'),
-            platform: sortKeyList(jsonImages, 'platform'),
-            description: sortKeyList(jsonImages, 'description'),
-        }
         this.images = images;
         this.filtered = images.clone();
-        this.query = '';
+        this.lastSearch = '';
+        this.lastFacets = new Backbone.Model({});
         this.search = function(search, facets) {
             console.log("SEARCH", arguments);
             var jfacets = facets.toJSON();
@@ -68,5 +75,8 @@ define(['app'], function(app) {
                 break;
             }
         }
+
+        updateKeyLists();
+        images.on('change reset', updateKeyLists);
     }
 });

@@ -10,8 +10,7 @@ define([
             title: 'Image',
             count: 0,
             initialize : function() {
-          var imageList = app.data.images.clone(); 
-          imageTest = new imageSearch(imageList);
+          imageTest = new imageSearch(app.data.images);
           var scope = {
               view: this,
               isOdd: function() {
@@ -23,7 +22,7 @@ define([
                   return inferImage(image.attributes.location, image.attributes.description, image.attributes.platform);
               },
 
-              search: new imageSearch(imageList),
+              search: new imageSearch(app.data.images),
               
               select: function(e, images) {
                 $(e.currentTarget).parent().find('tr').removeClass('selected-row');
