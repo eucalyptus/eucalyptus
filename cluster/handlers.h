@@ -409,7 +409,7 @@ int doCreateImage(ncMetadata * pMeta, char *instanceId, char *volumeId, char *re
 int doDescribeSensors(ncMetadata * pMeta, int historySize, long long collectionIntervalTimeMs, char **instIds, int instIdsLen, char **sensorIds,
                       int sensorIdsLen, sensorResource *** outResources, int *outResourcesLen);
 int doModifyNode(ncMetadata * pMeta, char *nodeName, char *nodeState);
-int doMigrateInstances(ncMetadata * pMeta, char *nodeName, char *nodeAction);
+int doMigrateInstances(ncMetadata * pMeta, char *nodeName, char *instanceId, char *nodeAction);
 int setup_shared_buffer(void **buf, char *bufname, size_t bytes, sem_t ** lock, char *lockname, int mode);
 int initialize(ncMetadata * pMeta);
 int ccIsEnabled(void);
