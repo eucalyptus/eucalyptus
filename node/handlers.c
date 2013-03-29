@@ -2,7 +2,7 @@
 // vim: set softtabstop=4 shiftwidth=4 tabstop=4 expandtab:
 
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * Copyright 2009-2013 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -833,7 +833,7 @@ static void refresh_instance_info(struct nc_state_t *nc, ncInstance * instance)
                 save_instance_struct(instance);
                 // Done upon return in monitoring_thread().
                 //copy_instances();
-                LOGINFO("[%s] incoming migration complete\n", instance->instanceId);
+                LOGINFO("[%s] incoming migration complete.\n", instance->instanceId);
 
             } else if (new_state == SHUTOFF || new_state == SHUTDOWN) {
                 // this is normal at the beginning of incoming migration, before a domain is created in PAUSED state
@@ -2939,16 +2939,25 @@ int doMigrateInstances(ncMetadata * pMeta, ncInstance ** instances, int instance
     if (init())
         return (EUCA_ERROR);
 
-    LOGDEBUG("invoked (action=%s instance[0].{id=%s src=%s dst=%s) creds=%s\n",
-             action,
-             instances[0]->instanceId, instances[0]->migration_src, instances[0]->migration_dst,
-             (credentials == NULL) ? ("unavailable") : ("present"));
+    LOGDEBUG("invoked\n");
+
+    for (int i = 0; i < instancesLen; i++) {
+        LOGDEBUG("verifying instance # %d...\n", i);
+        if (instances[i]) {
+            LOGDEBUG("invoked (action=%s instance[%d].{id=%s src=%s dst=%s) creds=%s\n",
+                     action, i,
+                     instances[i]->instanceId, instances[i]->migration_src, instances[i]->migration_dst,
+                     (credentials == NULL) ? ("unavailable") : ("present"));
+        }
+    }
 
     if (nc_state.H->doMigrateInstances) {
         ret = nc_state.H->doMigrateInstances(&nc_state, pMeta, instances, instancesLen, action, credentials);
     } else {
         ret = nc_state.D->doMigrateInstances(&nc_state, pMeta, instances, instancesLen, action, credentials);
     }
+
+    LOGDEBUG("done\n");
 
     return ret;
 }
@@ -2996,7 +3005,7 @@ int is_migration_src(const ncInstance * instance)
 //!
 //! Rollback a pending migration request on a source NC
 //!
-//! FIXME: Currently only safe to call under the protection of inst_sem, such as from the migrating_thread().
+//! Currently only safe to call under the protection of inst_sem, such as from the migrating_thread().
 //!
 //! @param[in] instance pointer to the instance struct
 //!
