@@ -161,8 +161,8 @@ extern vnetConfig *vnetconfig;
 int doDescribeServices(ncMetadata * pMeta, serviceInfoType * serviceIds, int serviceIdsLen, serviceStatusType ** outStatuses, int *outStatusesLen);
 int doStartService(ncMetadata * pMeta);
 int doStopService(ncMetadata * pMeta);
-int doEnableService(ncMetadata * pMeta);
-int doDisableService(ncMetadata * pMeta);
+int doEnableService(ncMetadata * pMeta, serviceInfoType * serviceIds, int serviceIdsLen);
+int doDisableService(ncMetadata * pMeta, serviceInfoType * serviceIds, int serviceIdsLen);
 int doShutdownService(ncMetadata * pMeta);
 
 int validCmp(ccInstance * inst, void *in);
@@ -224,7 +224,7 @@ int doDescribeServices(ncMetadata * pMeta, serviceInfoType * serviceIds, int ser
         return (1);
     }
 
-    LOGDEBUG("invoked: userId=%s, serviceIdsLen=%d\n", SP(pMeta ? pMeta->userId : "UNSET"), serviceIdsLen);
+    LOGDEBUG("invoked: userId=%s, serviceIdsLen=%d\n", SP(pMeta ? pMeta->userId : "UNKNOWN"), serviceIdsLen);
 
     //! @TODO for now, return error if list of services is passed in as parameter
     /*
@@ -336,10 +336,23 @@ int doDescribeServices(ncMetadata * pMeta, serviceInfoType * serviceIds, int ser
                 unlock_exit(1);
             }
             
-            for (int i = 0; i < resourceCacheLocal.numResources; i++) {
+            for (int i = 0; i < resourceCacheLocal.numResources; i++) {                
                 myStatus = *outStatuses + 1 + i;
-                snprintf(myStatus->localState, 32, "%s", "ENABLED"); // @TODO: allow this to be ENABLED, DISABLED, STOPPED, NOTREADY 
-                snprintf(myStatus->details, 1024, "%s", "it's all good"); // string that gets printed by 'euca-describe-services -E'
+                ccResource * r = resourceCacheLocal.resources + i;
+
+                {
+                    char * state = "BUGGY";
+                    char * msg = "";
+                    if (! strcmp(r->nodeStatus, "enabled")) {
+                        state = "ENABLED";
+                        msg = "the node is operating normally";
+                    } else if (! strcmp(r->nodeStatus, "disabled")) {
+                        state = "DISABLED";
+                        msg = "the node is not accepting new instances";
+                    }
+                    snprintf(myStatus->localState, 32, "%s", state);
+                    snprintf(myStatus->details, 1024, "%s", msg); // string that gets printed by 'euca-describe-services -E'
+                }
                 myStatus->localEpoch = config->ccStatus.localEpoch;
                 sprintf(myStatus->serviceId.type, "node");
                 sprintf(myStatus->serviceId.name, resourceCacheLocal.resources[i].ip);
@@ -381,7 +394,7 @@ int doStartService(ncMetadata * pMeta)
         return (1);
     }
 
-    LOGDEBUG("invoked: userId=%s\n", SP(pMeta ? pMeta->userId : "UNSET"));
+    LOGDEBUG("invoked: userId=%s\n", SP(pMeta ? pMeta->userId : "UNKNOWN"));
 
     // this is actually a NOP
     sem_mywait(CONFIG);
@@ -427,7 +440,7 @@ int doStopService(ncMetadata * pMeta)
         return (1);
     }
 
-    LOGDEBUG("invoked: userId=%s\n", SP(pMeta ? pMeta->userId : "UNSET"));
+    LOGDEBUG("invoked: userId=%s\n", SP(pMeta ? pMeta->userId : "UNKNOWN"));
 
     sem_mywait(CONFIG);
     {
@@ -462,7 +475,7 @@ int doStopService(ncMetadata * pMeta)
 //!
 //! @note
 //!
-int doEnableService(ncMetadata * pMeta)
+int doEnableService(ncMetadata * pMeta, serviceInfoType * serviceIds, int serviceIdsLen)
 {
     int i = 0;
     int rc = 0;
@@ -474,17 +487,17 @@ int doEnableService(ncMetadata * pMeta)
         return (1);
     }
 
-    LOGDEBUG("invoked: userId=%s\n", SP(pMeta ? pMeta->userId : "UNSET"));
+    LOGDEBUG("invoked: userId=%s\n", SP(pMeta ? pMeta->userId : "UNKNOWN"));
 
     int enable_cc = 0;
-    for (int i=0; i<pMeta->servicesLen; i++) {
-        if (strcmp(pMeta->services[i].type, "cluster")==0) {
+    for (int i=0; i<serviceIdsLen; i++) {
+        if (strcmp(serviceIds[i].type, "cluster")==0) {
             enable_cc = 1;
-        } else if (strcmp(pMeta->services[i].type, "node")==0) {
-            ret = doModifyNode(pMeta, pMeta->services[i].name, "enabled");
+        } else if (strcmp(serviceIds[i].type, "node")==0) {
+            ret = doModifyNode(pMeta, serviceIds[i].name, "enabled");
         }
     }
-    if (pMeta->servicesLen<1) {
+    if (serviceIdsLen<1) {
         enable_cc = 1;
     }
     if (enable_cc != 1)
@@ -499,7 +512,7 @@ int doEnableService(ncMetadata * pMeta)
             LOGWARN("ccCheckState() returned failures, skipping.\n");
             ret++;
         } else if (config->ccState != ENABLED) {
-            LOGDEBUG("enabling service\n");
+            LOGINFO("enabling service\n");
             ret = 0;
             // tell monitor thread to (re)enable
             config->kick_monitor_running = 0;
@@ -546,7 +559,7 @@ int doEnableService(ncMetadata * pMeta)
 //!
 //! @note
 //!
-int doDisableService(ncMetadata * pMeta)
+int doDisableService(ncMetadata * pMeta, serviceInfoType * serviceIds, int serviceIdsLen)
 {
     int rc = 0;
     int ret = 0;
@@ -556,17 +569,17 @@ int doDisableService(ncMetadata * pMeta)
         return (1);
     }
 
-    LOGDEBUG("invoked: userId=%s\n", SP(pMeta ? pMeta->userId : "UNSET"));
+    LOGDEBUG("invoked: userId=%s\n", SP(pMeta ? pMeta->userId : "UNKNOWN"));
 
     int disable_cc = 0;
-    for (int i=0; i<pMeta->servicesLen; i++) {
-        if (strcmp(pMeta->services[i].type, "cluster")==0) {
+    for (int i=0; i<serviceIdsLen; i++) {
+        if (strcmp(serviceIds[i].type, "cluster")==0) {
             disable_cc = 1;
-        } else if (strcmp(pMeta->services[i].type, "node")==0) {
-            ret = doModifyNode(pMeta, pMeta->services[i].name, "disabled");
+        } else if (strcmp(serviceIds[i].type, "node")==0) {
+            ret = doModifyNode(pMeta, serviceIds[i].name, "disabled");
         }
     }
-    if (pMeta->servicesLen<1) {
+    if (serviceIdsLen<1) {
         disable_cc = 1;
     }
     if (disable_cc != 1)
@@ -615,7 +628,7 @@ int doShutdownService(ncMetadata * pMeta)
         return (1);
     }
 
-    LOGDEBUG("invoked: userId=%s\n", SP(pMeta ? pMeta->userId : "UNSET"));
+    LOGDEBUG("invoked: userId=%s\n", SP(pMeta ? pMeta->userId : "UNKNOWN"));
 
     sem_mywait(CONFIG);
     {

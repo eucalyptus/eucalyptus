@@ -1390,12 +1390,7 @@ public class Cluster implements AvailabilityZoneMetadata, HasFullName<Cluster>, 
     //#1 Mark this cluster as gated.
     if ( this.gateLock.tryLock( 30, TimeUnit.SECONDS ) ) {
       try {
-        //#2.a. Node controller must be in the STOPPED state to be evacuated
-        ServiceConfiguration ncConfig = Nodes.lookup( this.getConfiguration( ), sourceHost );
-        if ( !Component.State.STOPPED.apply( ncConfig ) ) {
-          throw Exceptions.toUndeclared( "Cannot evacuate a node controller which is not currently STOPPED: " + ncConfig );
-        }
-        //#2.b. Only one migration per cluster for now
+        //#2 Only one migration per cluster for now
         List<VmInstance> currentMigrations = this.lookupCurrentMigrations( );
         if ( !currentMigrations.isEmpty( ) ) {
           throw Exceptions.toUndeclared( "Cannot start a new migration because the following are already ongoing: "

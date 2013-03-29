@@ -2000,9 +2000,15 @@ int doDescribeResources(ncMetadata * pMeta, virtualMachine ** ccvms, int vmLen, 
             res = &(resourceCacheLocal.resources[i]);
 
             for (j = 0; j < vmLen; j++) {
-                mempool = res->availMemory;
-                diskpool = res->availDisk;
-                corepool = res->availCores;
+                if (! strcmp(res->nodeStatus, "disabled")) {
+                    mempool = 0;
+                    diskpool = 0;
+                    corepool = 0;
+                } else {
+                    mempool = res->availMemory;
+                    diskpool = res->availDisk;
+                    corepool = res->availCores;
+                }
 
                 mempool -= (*ccvms)[j].mem;
                 diskpool -= (*ccvms)[j].disk;
@@ -2014,9 +2020,15 @@ int doDescribeResources(ncMetadata * pMeta, virtualMachine ** ccvms, int vmLen, 
                     corepool -= (*ccvms)[j].cores;
                 }
 
-                mempool = res->maxMemory;
-                diskpool = res->maxDisk;
-                corepool = res->maxCores;
+                if (! strcmp(res->nodeStatus, "disabled")) {
+                    mempool = 0;
+                    diskpool = 0;
+                    corepool = 0;
+                } else {
+                    mempool = res->maxMemory;
+                    diskpool = res->maxDisk;
+                    corepool = res->maxCores;
+                }
 
                 mempool -= (*ccvms)[j].mem;
                 diskpool -= (*ccvms)[j].disk;
@@ -4133,11 +4145,6 @@ int doModifyNode(ncMetadata * pMeta, char *nodeName, char *stateName)
             if (!strcmp(resourceCache->resources[i].hostname, nodeName)) {
                 ccResource *res = &(resourceCache->resources[i]);
                 strcpy(res->nodeStatus, stateName);
-                if (! strcmp(stateName, "disabled")) { // preemptively remove resources from the pool when disabling
-                    res->availCores = res->maxCores = 0;
-                    res->availDisk = res->maxDisk = 0;
-                    res->availMemory = res->maxMemory = 0;
-                }
                 break;
             }
         }
