@@ -437,6 +437,7 @@
 	<xs:extension base="tns:eucalyptusMessage">
 	  <xs:sequence>
 	    <xs:element name="nodeStatus" type="xs:string"/>
+	    <xs:element name="migrationCapable" type="xs:boolean"/>
 	    <xs:element name="iqn" type="xs:string"/>
 	    <xs:element name="memorySizeMax" type="xs:int"/>
 	    <xs:element name="memorySizeAvailable" type="xs:int"/>

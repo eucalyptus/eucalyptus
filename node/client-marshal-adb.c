@@ -702,6 +702,7 @@ int ncDescribeResourceStub(ncStub * pStub, ncMetadata * pMeta, char *resourceTyp
         }
 
         res = allocate_resource((char *)adb_ncDescribeResourceResponseType_get_nodeStatus(response, env),
+                                (boolean)adb_ncDescribeResourceResponseType_get_migrationCapable(response, env),
                                 (char *)adb_ncDescribeResourceResponseType_get_iqn(response, env),
                                 (int)adb_ncDescribeResourceResponseType_get_memorySizeMax(response, env),
                                 (int)adb_ncDescribeResourceResponseType_get_memorySizeAvailable(response, env),

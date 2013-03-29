@@ -689,7 +689,7 @@ static int doDescribeResource(struct nc_state_t *nc, ncMetadata * pMeta, char *r
         return EUCA_OVERFLOW_ERROR;
     }
 
-    res = allocate_resource("OK", nc->iqn, nc->mem_max, mem_free, nc->disk_max, disk_free, nc->cores_max, cores_free, "none");
+    res = allocate_resource("ENABLED", nc->migration_capable,  nc->iqn, nc->mem_max, mem_free, nc->disk_max, disk_free, nc->cores_max, cores_free, "none");
     if (res == NULL) {
         LOGERROR("out of memory\n");
         return EUCA_MEMORY_ERROR;
