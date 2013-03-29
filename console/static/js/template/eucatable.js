@@ -52,6 +52,7 @@
       if(thisObj.options['hidden']){
         return;
       }
+      thisObj.$vel = $('<div class="visual_search" style="margin-top:-2px;width:90%;display:inline-block"></div>');
       // add draw call back
       $.fn.dataTableExt.afnFiltering = []; /// clear the filtering object
 
@@ -83,10 +84,20 @@
       this._refreshTableInterval();
       $('html body').eucadata('setDataNeeds', thisObj.options.data_deps);
 
-      require(['app','views/searches/' + dtArg.sAjaxSource], function(app,searchConfig) {
+      require(['app','views/searches/' + dtArg.sAjaxSource, 'visualsearch'], function(app, searchConfig, VS) {
         var source = app.data[dtArg.sAjaxSource];
         thisObj.searchConfig = new searchConfig(source);
         thisObj.bbdata = thisObj.searchConfig.filtered;
+        thisObj.vsearch = VS.init({
+            container : thisObj.$vel,
+            showFacets : true,
+            query     : '',
+            callbacks : {
+                search       : thisObj.searchConfig.search,
+                facetMatches : thisObj.searchConfig.facetMatches,
+                valueMatches : thisObj.searchConfig.valueMatches
+            }
+        });
         thisObj.bbdata.on('change reset', function() {
             thisObj.refreshTable()
         });
@@ -324,21 +335,8 @@
 
 if (true) {
       $wrapper.empty();
-      $wrapper.prepend('<div class="visual_search" style="margin-top:-2px;width:90%;display:inline-block"></div><div class="dataTables_filter" id="images_filter"><a class="table-refresh" href="#">Refresh</a></div>');
-      var $vs = $('.visual_search', $wrapper);
-      require(['app', 'visualsearch'], function(app, VS) {
-            console.log('visual search', $vs);
-            vsearch = VS.init({
-                container : $vs,
-                showFacets : true,
-                query     : '',
-                callbacks : {
-                    search       : thisObj.searchConfig.search,
-                    facetMatches : thisObj.searchConfig.facetMatches,
-                    valueMatches : thisObj.searchConfig.valueMatches
-                }
-            });
-        });
+      $wrapper.prepend('<div class="dataTables_filter" id="images_filter"><a class="table-refresh" href="#">Refresh</a></div>');
+      $wrapper.prepend(thisObj.$vel);
 }         
     },   
 
