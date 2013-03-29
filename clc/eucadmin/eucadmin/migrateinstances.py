@@ -26,6 +26,7 @@
 from boto.roboto.awsqueryrequest import AWSQueryRequest
 from boto.roboto.param import Param
 import eucadmin
+from eucadmin.modifyservice import ModifyService
 
 class MigrateInstances(AWSQueryRequest):
     ServicePath = '/services/Eucalyptus'
@@ -45,7 +46,11 @@ class MigrateInstances(AWSQueryRequest):
               Param(name='exclude_dest', long_name='exclude-dest',
                     ptype='string', cardinality='*', request_param=False,
                     doc=('migrate to any host except this one (may be used '
-                    'more than once)'))]
+                    'more than once)')),
+              Param(name='stop_node', long_name='stop-node',
+                    ptype='boolean', default=False, request_param=False,
+                    doc=('also stop the node controller to prevent new '
+                         'instances from running on it'))]
 
     def get_connection(self, **args):
         if self.connection is None:
@@ -80,6 +85,15 @@ class MigrateInstances(AWSQueryRequest):
             self.request_params['AllowHosts'] = 'false'
             for i, host in enumerate(self.args['exclude_dest'], 1):
                 self.request_params['DestinationHost.{0}'.format(i)] = host
+
+        if self.args['stop_node']:
+            source = self.args.get('source')
+            if source is None:
+                raise ValueError('error: argument --stop-node: only valid '
+                                 'with --source, not -i/--instance')
+            obj = ModifyService(debug=self.args.get('debug'))
+            obj.main(name=self.args['source'], state='STOP')
+
         return self.send(**args)
 
     def main_cli(self):
