@@ -317,8 +317,9 @@ define([], function() {
 //          Type.el = this.wizardContent;
 //          var page = new Type($(this.wizardContent));
           var page = Type;
-          this.wizardContent.empty();
+          this.wizardContent.children().detach();
           this.wizardContent.append(page.$el);
+          page.render();
           if (shouldAnimate) {
             this.wizardContent.slideDown("fast");
           }
