@@ -65,7 +65,7 @@ define(['app'], function(app) {
             case 'architecture':
                 callback([
                   { value: 'i386', label: 'i386 32-bit' },
-                  { value: 'amd64', label: 'AMD64 64-bit' },
+                  { value: 'x86_64', label: 'AMD64 64-bit' },
                 ]);
                 break;
             case 'platform':
