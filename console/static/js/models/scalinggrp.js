@@ -6,55 +6,97 @@ define([
 function(EucaModel) {
   var model = EucaModel.extend({
     validation: {
+           
+            // ====================
+            // API Reference: http://docs.aws.amazon.com/AutoScaling/latest/APIReference/API_AutoScalingGroup.html
+            // ====================
+
+            autoscaling_group_arn: {
+              rangeLength: [1, 1600],
+              required: false
+            },
             name: {
-                minLength: 1,
-                required: true
-            },
-            min_size: {
-                pattern: 'digits'
-            },
-            desired_capacity: {
-                pattern: 'digits'
-            },
-            max_size: {
-                pattern: 'digits'
-            },
-            default_cooldown: {
-                pattern: 'digits'
-            },
-            instance: {
-            },
-            health_check_period: {
-            },
-            created_time: {
-            },
-            enabled_metrics: {
+              rangeLength: [1, 255],
+              required: true
             },
             availability_zones: {
+              required: true
+            },
+            created_time: {
+              pattern: /^\d{4}-\d{2}-\d{2}T\d{2}\:\d{2}\:\d{2}\.\w+/,
+              required: true
+            },
+            default_cooldown: {
+              min: 0,
+              required: true
+            },
+            desired_capacity: {
+              fn:  function(value, attr, customValue){
+                if(parseInt(value) < parseInt(customValue.min_size)){
+                  return attr + ' must to be greater than or equal to ' + customValue.min_size;
+                }else if(parseInt(value) > parseInt(customValue.max_size)){
+                  return attr + ' needs to be less than or equal to ' + customValue.max_size;
+                }
+              },
+              required: true
+            },
+            enabled_metrics: {
+              required: false
+            },
+            health_check_period: {
+              min: 0,
+              required: false
+            },
+            health_check_type: {
+              oneOf: ['EC2', 'ELB'],
+              rangeLength: [1, 32],
+              required: true
+            },
+            instances: {
+              required: false
+            },
+            launch_config_name: {
+              rangeLength: [1, 255],
+              required: true
+            },
+            load_balancers: {
+              required: false
+            },
+            max_size: {
+              min: 0,
+              required: true
+            },
+            min_size: {
+              min: 0,
+              required: true
+            },
+            placement_group: {
+              rangeLength: [1, 255],
+              required: false
+            },
+            status: {
+              rangeLength: [1, 255],
+              required: false
+            },
+            suspended_processes: {
+              required: false
+            },
+            tags: {
+              required: false
+            },
+            termination_policies: {
+              required: false
+            },
+            vpc_zone_identifier: {
+              rangeLength: [1, 255],
+              required: false
             },
             member: {
             },
-            health_check_type: {
-            },
-            launch_config_name: {
-            },
-            placement_group: {
-            },
-            tags: {
-            },
-            suspended_processes: {
-            },
-            autoscaling_group_arn: {
-            },
-            load_balancers: {
-            },
-            termination_policies: {
-            },
             connection: {
             },
-            vpc_zone_identifier: {
-            },
         },
+
     sync: function(method, model, options) {
       var collection = this;
       if (method == 'create') {
