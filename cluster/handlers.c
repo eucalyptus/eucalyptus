@@ -2403,22 +2403,6 @@ int refresh_instances(ncMetadata * pMeta, int timeout, int dolock)
                             // instance info that the CC maintains
                             myInstance->ncHostIdx = i;
 
-                            /* FIXME: This breaks cache lookups of source-node instances used to determine commits. */
-#if 0
-                            // If migration is active, will use the source node's migration state as the instance's.
-                            // Note that only a subset of the possible states are saved here;
-                            // this is the information passed upstream to the CLC.
-                            if (ncOutInsts[j]->migration_state == MIGRATION_READY) {
-                                // READY means we're not yet MIGRATING, so...we're PREPARING.
-                                myInstance->migration_state = MIGRATION_PREPARING;
-                            } else if (ncOutInsts[j]->migration_state == MIGRATION_CLEANING) {
-                                // CLEANING on the source node means we're not done MIGRATING there yet.
-                                myInstance->migration_state = MIGRATION_IN_PROGRESS;
-                            } else {
-                                // Any other state can be passed upstream to the CLC as-is.
-                                myInstance->migration_state = ncOutInsts[j]->migration_state;
-                            }
-#endif
                             myInstance->migration_state = ncOutInsts[j]->migration_state;
 
                             euca_strncpy(myInstance->serviceTag, resourceCacheStage->resources[i].ncURL, 384);
