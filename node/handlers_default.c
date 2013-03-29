@@ -690,20 +690,12 @@ static int doDescribeResource(struct nc_state_t *nc, ncMetadata * pMeta, char *r
         return EUCA_OVERFLOW_ERROR;
     }
     
-    if (nc->is_enabled)
-        res = allocate_resource("enabled",
-                                nc->iqn,
-                                nc->mem_max, mem_free,
-                                nc->disk_max, disk_free,
-                                nc->cores_max, cores_free,
-                                "none");
-    else
-        res = allocate_resource("disabled",
-                                nc->iqn,
-                                0, 0,
-                                0, 0,
-                                0, 0,
-                                "none");
+    res = allocate_resource(nc->is_enabled ? "enabled" : "disabled",
+                            nc->iqn,
+                            nc->mem_max, mem_free,
+                            nc->disk_max, disk_free,
+                            nc->cores_max, cores_free,
+                            "none");
     
     if (res == NULL) {
         LOGERROR("out of memory\n");
