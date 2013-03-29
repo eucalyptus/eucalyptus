@@ -39,6 +39,7 @@ define([], function() {
         this.type_hasTags = 'false';
         this.type_hasNames = 'false';
         this.image_iconclass = 'linux';
+        this.type_tags = new Backbone.Collection();
     },
 
   });

@@ -7,52 +7,67 @@ define([
     title: 'Type',
 
     initialize : function() {
-        
+
+      var self = this;
       var scope = {
-        view: this,
 
         setField: function(e, el) {
           var target = e.target;
-          this.view.model.set('type_show', 'true');
+          self.model.set('type_show', 'true');
           switch(target.id) {
             case 'launch-instance-names':
               var names = target.value.split(',');
-              this.view.model.set('type_names', names);
-              this.view.model.set('type_hasNames', 'true');
+              self.model.set('type_names', names);
+              self.model.set('type_hasNames', 'true');
               break;
             case 'launch-instance-type-num-instance':
-              this.view.model.set('type_number', target.value);
+              self.model.set('type_number', target.value);
               break;
             case 'launch-instance-type-size':
-              this.view.model.set('type_size', target.value);
+              self.model.set('type_size', target.value);
               break;
             case 'launch-instance-type-az':
-              this.view.model.set('type_zone', target.value);
+              self.model.set('type_zone', target.value);
               break;
             default:
           }
         },
 
         iconClass: function() {
-         return this.view.model.get('image_iconclass'); 
+          return self.model.get('image_iconclass'); 
         },
 
         tags: {
-          collection: new Backbone.Collection([
-                              new Backbone.Model({key: 'x', value: 'abc'}),
-                              new Backbone.Model({key: 'y', value: 'def'}),
-                              new Backbone.Model({key: 'z', value: 'ghi'}),
-          ]),
-        },
-     };
+            list: self.model.type_tags,
+            sharedModel: self.model,
+            keyLabel: "Key",
+            valLabel: "Value",
+            add: function(e, me) {
+              var key = $('.keyfield').val();
+              var val = $('.valuefield').val();
+              $('.keyfield').val('');
+              $('.valuefield').val('');
+              me.list.add({key: key, value: val});
+              me.sharedModel.set('type_hasTags', 'true');
+            },
+            remove: function(e, me) {
+              me.list.remove(me.row);
 
-     $(this.el).html(template)
+            }
+        }
+      };
+
+    $(this.el).html(template)
      this.rView = rivets.bind(this.$el, scope);
      this.render();
+     console.log("TYPEVIEW", this.model);
     },
+
 
     render: function() {
       this.rView.sync();
+      
+      
     }
   });
 });
