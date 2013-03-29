@@ -6,7 +6,7 @@ define([
     'views/dialogs/testdialog',
     'views/dialogs/quickscaledialog',
     'models/scalinggrp',
-    'views/searches/generic',
+    'views/searches/volume',
     'models/launchconfig'
 ], function( app, dh, template, rivets, TestDialog, QuickScaleDialog, ScalingGroup, Search, LaunchConfig) {
 	return Backbone.View.extend({
