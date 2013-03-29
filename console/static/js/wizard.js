@@ -441,7 +441,7 @@ define([], function() {
             tObj = new (genericView(template));
             titleStr = self.scrapeTitle(template);
         } else if (typeof template === 'function') {
-            tObj = new template({scope: scope});
+            tObj = new template({scope: scope, model: this.pageModel});
         } else if (typeof template === 'object') {
             tObj = template;
         }
@@ -500,9 +500,10 @@ define([], function() {
       }
 
       this.setPageModel = function(model) {
-        for(i=0; i<templates.length; i++) {
-          templates[i]['model'] = model;
-        }
+          this.pageModel = model;
+        //for(i=0; i<templates.length; i++) {
+        //  templates[i]['model'] = model;
+        //}
         return bldr;
       }
 

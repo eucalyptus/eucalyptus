@@ -22,12 +22,12 @@ define([
 
   var dataModel = new model(); 
   var viewBuilder = wizard.viewBuilder(wizardTemplate)
+          .setPageModel(dataModel)
           .add(page1).add(page2).add(page3).add(page4)
           .setHideDisabledButtons(true)
           .setFinishText('Launch Instance(s)').setFinishChecker(canFinish)
           .finisher(finish)
-          .summary(new summary( {model: dataModel} ))
-          .setPageModel(dataModel);
+          .summary(new summary( {model: dataModel} ));
 //  var ViewType = wizard.makeView(options, wizardTemplate);
   var ViewType = viewBuilder.build()
   return ViewType;
