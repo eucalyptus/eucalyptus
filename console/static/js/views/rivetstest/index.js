@@ -23,12 +23,9 @@ define([
                 
 
             var explicitFacets = {
-              platform : [{i386 : 'i386 32-bit', x86_64 : 'AMD64 64-bit'}]
+              architecture : [{name : 'i386', label: 'i386 32-bit'}, {name : 'x86_64' , label : 'AMD64 64-bit'}]
             };
-            var excludedFacetNames = ['owner_id', 'block_device_mapping', 
-              'hypervisor', 'connection', 'root_device_type', 'product_code', 
-              'ramdisk_id', 'display_id', 'is_public', 'delete_on_termination',
-              'instance_lifecycle'];
+            var facetNames = ['architecture', 'description', 'name', 'owner', 'platform', 'root_device'];
 
             var sg = new ScalingGroup({name: 'a test group'});
             var scope = {
@@ -36,49 +33,9 @@ define([
                 test: test,
                 sg: sg,
                 search : new Search(app.data.images, 
-                              excludedFacetNames, 
+                              facetNames, 
                               {architecture : 'System Type'}, 
                               explicitFacets),
-                /*
-                search: {
-                    query: '',
-                    search: function() {
-                        console.log("SEARCH", arguments);
-                    },
-                    collection: dh.scalingGroups,
-                    facetMatches : function(callback) {
-                        callback([
-                          'account', 'filter', 'access', 'title',
-                          { label: 'city',    category: 'location' },
-                          { label: 'address', category: 'location' },
-                          { label: 'country', category: 'location' },
-                          { label: 'state',   category: 'location' },
-                        ]);
-                    },
-                    valueMatches : function(facet, searchTerm, callback) {
-                        switch (facet) {
-                        case 'account':
-                            callback([
-                              { value: '1-amanda', label: 'Amanda' },
-                              { value: '2-aron',   label: 'Aron' },
-                              { value: '3-eric',   label: 'Eric' },
-                              { value: '4-jeremy', label: 'Jeremy' },
-                              { value: '5-samuel', label: 'Samuel' },
-                              { value: '6-scott',  label: 'Scott' }
-                            ]);
-                            break;
-                          case 'title':
-                            callback([
-                              'Pentagon Papers',
-                              'CoffeeScript Manual',
-                              'Laboratory for Object Oriented Thinking',
-                              'A Repository Grows in Brooklyn'
-                            ]);
-                            break;
-                        }
-                    }
-                },
-                */
                 buttonScope: {
                     test: test,
                     click: function() { 

@@ -1,6 +1,6 @@
 define(['app'], function(app) {
   var self = this;
-  return function(images, excludedKeys, localizer, explicitFacets) {
+  return function(images, allowedFacetNames, localizer, explicitFacets) {
     var self = this;
     searchContext = self;
 
@@ -45,7 +45,6 @@ define(['app'], function(app) {
     function isIgnored(key, on, done) {
       return /^_.*/.test(key) 
               || typeof on[key] === 'function'
-              || (excludedKeys && excludedKeys.indexOf(key) > 0)
               || done[key];
     }
 
@@ -53,7 +52,8 @@ define(['app'], function(app) {
       var derivedFacets = [];
       var done = {};
       images.toJSON().forEach(function(img) {
-        for (var key in img) {
+        for (var i=0; i < allowedFacetNames.length; i++) {
+          var key = allowedFacetNames[i];
           if (isIgnored(key, img, done)) {
             continue;
           }
@@ -65,14 +65,15 @@ define(['app'], function(app) {
     }
 
     function deriveMatches(facet, searchTerm) {
+      console.log('FACET: ' + JSON.stringify(facet));
       if (explicitFacets && explicitFacets[facet]) {
+        console.log('RETURNING EXPLICIT ' + JSON.stringify(explicitFacets[facet]));
         return explicitFacets[facet];
       }
       var result = [];
       var found = [];
       images.toJSON().forEach(function(img) {
         var val = img[facet];
-        console.log(facet + ' VAL ' + val + " for " + JSON.stringify(img));
         if (val && typeof val !== 'object' && typeof val !== 'function') {
           if (found.indexOf(val) < 0) {
             found.push(val);
@@ -80,7 +81,6 @@ define(['app'], function(app) {
           }
         }
       });
-      console.log('DERIVE MATCHES FOR ' + facet + " and " + searchTerm + " gets " + JSON.stringify(result));
       result = sortKeyList(result, 'label')
       return siftKeyList(result, searchTerm);
     }
