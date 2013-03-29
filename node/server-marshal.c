@@ -395,6 +395,7 @@ adb_ncDescribeResourceResponse_t *ncDescribeResourceMarshal(adb_ncDescribeResour
 
             // set operation-specific fields in output
             adb_ncDescribeResourceResponseType_set_nodeStatus(output, env, outRes->nodeStatus);
+            adb_ncDescribeResourceResponseType_set_migrationCapable(output, env, outRes->migrationCapable);
             adb_ncDescribeResourceResponseType_set_iqn(output, env, outRes->iqn);
             adb_ncDescribeResourceResponseType_set_memorySizeMax(output, env, outRes->memorySizeMax);
             adb_ncDescribeResourceResponseType_set_memorySizeAvailable(output, env, outRes->memorySizeAvailable);

@@ -1911,10 +1911,24 @@ static int init(void)
         return (EUCA_FATAL_ERROR);
     }
 
-    if (!check_hypervisor_conn()) {
-        LOGFATAL("unable to contact hypervisor\n");
-        return (EUCA_FATAL_ERROR);
+    { // check on hypervisor and pull out capabilities
+        virConnectPtr * conn = check_hypervisor_conn();
+        if (conn == NULL) {
+            LOGFATAL("unable to contact hypervisor\n");
+            return (EUCA_FATAL_ERROR);
+        }
+        char * caps_xml = virConnectGetCapabilities(*conn);
+        if (caps_xml == NULL) {
+            LOGFATAL("unable to obtain hypervisor capabilities\n");
+            return (EUCA_FATAL_ERROR);
+        }
+        if (strstr(caps_xml, "<live/>") != NULL) {
+            nc_state.migration_capable = 1;
+        }
+        free(caps_xml);
     }
+    LOGINFO("hypervisor %scapable of live migration\n", nc_state.migration_capable ? "" : "not ");
+
     // now that hypervisor-specific initializers have discovered mem_max and cores_max,
     // adjust the values based on configuration parameters, if any
     if (nc_state.config_max_mem && nc_state.config_max_mem < nc_state.mem_max)
