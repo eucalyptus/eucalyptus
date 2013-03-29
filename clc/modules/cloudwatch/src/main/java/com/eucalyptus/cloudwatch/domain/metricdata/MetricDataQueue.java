@@ -61,14 +61,14 @@ public class MetricDataQueue {
           dataQueue.drainTo(dataBatch);
           dataBatch = aggregate(dataBatch);
           for (final MetricQueueItem metricData : dataBatch) {
-            MetricManager.addMetric(metricData.getAccountId(), metricData.getUserId(), 
+            MetricManager.addMetric(metricData.getAccountId(), 
                 metricData.getMetricName(), metricData.getNamespace(), 
                 metricData.getDimensionMap(), metricData.getMetricType(), 
                 metricData.getUnits(), metricData.getTimestamp(), 
                 metricData.getSampleSize(), metricData.getSampleMax(), 
                 metricData.getSampleMin(), metricData.getSampleSum());
             ListMetricManager.addMetric(metricData.getAccountId(), metricData.getMetricName(),
-                metricData.getNamespace(), metricData.getDimensionMap());
+                metricData.getNamespace(), metricData.getDimensionMap(), metricData.getMetricType());
           }
           dataQueue.clear();
           busy.set(false);
@@ -99,8 +99,7 @@ public class MetricDataQueue {
     }
     return Lists.newArrayList(aggregationMap.values());
   }
-  public void insertMetricData(final String ownerId,
-      final String ownerAccountId, final String nameSpace,
+  public void insertMetricData(final String ownerAccountId, final String nameSpace,
       final List<MetricDatum> metricDatum, final MetricType metricType) {
     Date now = new Date();
     for (final MetricDatum datum : metricDatum) {
@@ -131,14 +130,13 @@ public class MetricDataQueue {
         public MetricQueueItem get() {
           MetricQueueItem metricMetadata = new MetricQueueItem();
           metricMetadata.setAccountId(ownerAccountId);
-          metricMetadata.setUserId(ownerId);
           metricMetadata.setMetricName(datum.getMetricName());
           metricMetadata.setNamespace(nameSpace);
           metricMetadata.setDimensionMap(makeDimensionMap(dimensions));
           metricMetadata.setMetricType(metricType);
           metricMetadata.setUnits(Units.fromValue(datum.getUnit())); 
           metricMetadata.setTimestamp(datum.getTimestamp());
-          if (datum.getValue() != null) { // TODO: make sure both value and statistics sets are not set
+          if (datum.getValue() != null) { // Either or case taken care of in service
             metricMetadata.setSampleMax(datum.getValue());
             metricMetadata.setSampleMin(datum.getValue());
             metricMetadata.setSampleSum(datum.getValue());
@@ -153,7 +151,7 @@ public class MetricDataQueue {
               metricMetadata.setSampleSum(datum.getStatisticValues().getSum());
               metricMetadata.setSampleSize(datum.getStatisticValues().getSampleCount());
           } else {
-            throw new RuntimeException("Values missing"); // TODO: clarify
+            throw new RuntimeException("Statistics set (all values) or Value must be set"); 
           }
           return metricMetadata;
         }

@@ -3,6 +3,7 @@ package com.eucalyptus.cloudwatch.domain.alarms;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Date;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.TreeMap;
 
@@ -62,7 +63,8 @@ public class AlarmStateEvaluationWorker implements Runnable {
   }
 
   private AlarmState evaluateState(AlarmEntity alarmEntity) {
-    Date endDate = MetricManager.stripSeconds(new Date());
+    Date queryDate = new Date();
+    Date endDate = MetricManager.stripSeconds(queryDate);
     Date startDate = new Date(endDate.getTime() - 1000L * alarmEntity.getPeriod() * alarmEntity.getEvaluationPeriods());
     // We put in a slight buffer in addition to the regular window time (two additional periods or 5 minutes, whichever is greater) to delay
     // insufficient data from going down... 
@@ -95,9 +97,11 @@ public class AlarmStateEvaluationWorker implements Runnable {
     List<Double> okPoints = new ArrayList<Double>();
     List<Double> alarmPoints = new ArrayList<Double>();
     List<Double> insufficientDataPoints = new ArrayList<Double>();
+    LinkedList<Double> relevantDataPoints = new LinkedList<Double>(); // we will add at the beginning sometimes
     StateValue oldestStateValue = null;
     for (long L = startDate.getTime(); L < endDate.getTime(); L += alarmEntity.getPeriod() * 1000L) {
       StateAndMetricValue stateAndMetricValue = dataPointMap.get(L);
+      relevantDataPoints.addLast(stateAndMetricValue.getMetricValue()); // newer ones go at the end?
       if (oldestStateValue == null) {
         oldestStateValue = stateAndMetricValue.getStateValue();
       }
@@ -111,15 +115,16 @@ public class AlarmStateEvaluationWorker implements Runnable {
     }
     // TODO: we really need to get better reasons, but these are like Amazon's reasons for now.
     if (okPoints.size() > 0) {
-      return AlarmManager.createAlarmState(StateValue.OK, okPoints, alarmEntity.getComparisonOperator(), alarmEntity.getThreshold());
+      return AlarmManager.createAlarmState(StateValue.OK, okPoints, relevantDataPoints, alarmEntity.getComparisonOperator(), alarmEntity.getThreshold(), alarmEntity.getPeriod(), queryDate, alarmEntity.getStatistic());
       // it's ok
     } else if (oldestStateValue == StateValue.ALARM) {
-      return AlarmManager.createAlarmState(StateValue.ALARM, alarmPoints, alarmEntity.getComparisonOperator(), alarmEntity.getThreshold());
+      return AlarmManager.createAlarmState(StateValue.ALARM, alarmPoints, relevantDataPoints, alarmEntity.getComparisonOperator(), alarmEntity.getThreshold(), alarmEntity.getPeriod(), queryDate, alarmEntity.getStatistic());
     } else {
       // go back earlier
       StateValue lastNonInsufficientDataStateValue = null;
       for (long L = startDate.getTime() - alarmEntity.getPeriod() * 1000L; L >= bufferStartDate.getTime(); L -= alarmEntity.getPeriod() * 1000L) {
         StateAndMetricValue stateAndMetricValue = dataPointMap.get(L);
+        relevantDataPoints.addFirst(stateAndMetricValue.getMetricValue()); // older ones go at the beginning?
         if (stateAndMetricValue.getStateValue() == StateValue.OK) {
           okPoints.add(stateAndMetricValue.getMetricValue());
           lastNonInsufficientDataStateValue = StateValue.OK;
@@ -131,11 +136,11 @@ public class AlarmStateEvaluationWorker implements Runnable {
         }
       }
       if (lastNonInsufficientDataStateValue == StateValue.OK) {
-        return AlarmManager.createAlarmState(StateValue.OK, okPoints, alarmEntity.getComparisonOperator(), alarmEntity.getThreshold());
+        return AlarmManager.createAlarmState(StateValue.OK, okPoints, relevantDataPoints, alarmEntity.getComparisonOperator(), alarmEntity.getThreshold(), alarmEntity.getPeriod(), queryDate, alarmEntity.getStatistic());
       } else if (lastNonInsufficientDataStateValue == StateValue.ALARM) {
-        return AlarmManager.createAlarmState(StateValue.ALARM, alarmPoints, alarmEntity.getComparisonOperator(), alarmEntity.getThreshold());
+        return AlarmManager.createAlarmState(StateValue.ALARM, alarmPoints, relevantDataPoints, alarmEntity.getComparisonOperator(), alarmEntity.getThreshold(), alarmEntity.getPeriod(), queryDate, alarmEntity.getStatistic());
       } else {
-        return AlarmManager.createAlarmState(StateValue.INSUFFICIENT_DATA, insufficientDataPoints, alarmEntity.getComparisonOperator(), alarmEntity.getThreshold());
+        return AlarmManager.createAlarmState(StateValue.INSUFFICIENT_DATA, insufficientDataPoints, relevantDataPoints, alarmEntity.getComparisonOperator(), alarmEntity.getThreshold(), alarmEntity.getPeriod(), queryDate, alarmEntity.getStatistic());
         // (TODO: distinguish the case of complete insufficient data
         // from that of some insufficient data and some alarm, where alarm has not been seen "long enough"
       }
