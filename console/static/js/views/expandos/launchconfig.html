@@ -1,16 +1,29 @@
 <div data-ui-tabs=":button" id="tabs" >
   <ul>
-    <li><a href="#tabs-1">Instance</a></li>
-    <li><a href="#tabs-2">Volumes</a></li>
+    <li><a href="#tabs-1" data-msg="tab_instance">Instance</a></li>
+    <li><a href="#tabs-2" data-msg="tab_volumes">Volumes</a></li>
   </ul>
   <div id="tabs-1" class="tab">
-  <ul class="instance-expanded clearfix"><li><div class="expanded-title">INSTANCE TYPE</div><div class="expanded-value">m1.small</div></li><li><div class="expanded-title">OS</div><div class="expanded-value">linux</div></li><li><div class="expanded-title">KERNEL ID</div><div class="expanded-value">eki-3B833B83</div></li><li><div class="expanded-title">RAM DISK ID</div><div class="expanded-value">eri-22583D83</div></li><li><div class="expanded-title">ROOT DEVICE</div><div class="expanded-value">instance-store</div></li><li><div class="expanded-title">RESERVATION ID</div><div class="expanded-value">r-D6564489</div></li><li><div class="expanded-title">ACCOUNT ID</div><div class="expanded-value">878210294747</div></li><li><div class="expanded-title">IMAGE MANIFEST</div><div class="expanded-value">tmpobxi939ocl&amp;#x2f;precise-server-cloudimg-amd64-ext3.img.manifest.xml</div></li></ul>
+    <ul class="instance-expanded clearfix">
+	  <li><div class="expanded-title" data-msg="launch_config_table_expanded_name">LAUNCH CONFIG</div><div class="expanded-value">my config</div></li>
+	  <li><div class="expanded-title" data-msg="launch_config_table_expanded_image_name">IMAGE NAME</div><div class="expanded-value">my image</div></li>
+	  <li><div class="expanded-title" data-msg="launch_config_table_expanded_image_id">IMAGE ID</div><div class="expanded-value">emi-3B833B83</div></li>
+      <li><div class="expanded-title" data-msg="launch_config_table_expanded_kernel_id">KERNEL ID</div><div class="expanded-value">eki-3B833B83</div></li>
+	  <li><div class="expanded-title" data-msg="launch_config_table_expanded_ramdisk_id">RAM DISK ID</div><div class="expanded-value">eri-22583D83</div></li>
+      <li><div class="expanded-title" data-msg="launch_config_table_expanded_image_manifest">IMAGE MANIFEST</div><div class="expanded-value">manifest.xml</div></li>
+	  <li><div class="expanded-title" data-msg="launch_config_table_expanded_vm_type">INSTANCE TYPE</div><div class="expanded-value">m1.small</div></li>
+	  <li><div class="expanded-title" data-msg="launch_config_table_expanded_os">OS</div><div class="expanded-value">linux</div></li>
+	  <li><div class="expanded-title" data-msg="launch_config_table_expanded_root_device">ROOT DEVICE</div><div class="expanded-value">instance-store</div></li>
+	  <li><div class="expanded-title" data-msg="launch_config_table_expanded_key">KEY NAME</div><div class="expanded-value">my key</div></li>
+	  <li><div class="expanded-title" data-msg="launch_config_table_expanded_sgroup">SECURITY GROUP</div><div class="expanded-value">my s group</div></li>
+	  <li><div class="expanded-title" data-msg="launch_config_table_expanded_createtime">CREATION TIME</div><div class="expanded-value">10:68:99 AM</div></li>
+	</ul>
   </div>
   <div id="tabs-2" class="tab">
       <ul class="instance-expanded clearfix">
-        <li><div class="expanded-title">Volume Id</div><div class="expanded-value">vol-xxxxx</div></li>
-        <li><div class="expanded-title">Device Mapping</div><div class="expanded-value">/dev/sda</div></li>
-        <li><div class="expanded-title">Creation Time</div><div class="expanded-value">Aug 21, 2012 07:34:23AM</div></li>
+        <li><div class="expanded-title" data-msg="instance_table_expanded_volid">Volume Id</div><div class="expanded-value">vol-xxxxx</div></li>
+        <li><div class="expanded-title" data-msg="instance_table_expanded_devmap">Device Mapping</div><div class="expanded-value">/dev/sda</div></li>
+        <li><div class="expanded-title" data-msg="instance_table_expanded_createtime">Creation Time</div><div class="expanded-value">Aug 21, 2012 07:34:23AM</div></li>
       </ul>
   </div>
 </div>
