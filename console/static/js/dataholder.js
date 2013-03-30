@@ -4,9 +4,13 @@ define([
 	'models/volumes', 
 	'models/images',
 	'models/launchconfigs',
-	'models/instances'
+	'models/instances',
+	'models/eips',
+	'models/keypairs',
+	'models/sgroups',
+	'models/snapshots'
 ], 
-function(Backbone, ScalingGroups,Volumes,Images,LaunchConfigs,Instances) {
+function(Backbone, ScalingGroups,Volumes,Images,LaunchConfigs,Instances, Eips, KeyPairs, SecurityGroups, Snapshots) {
 	var shared = {
 		launchConfigs: new LaunchConfigs(),
 		scalingGroups: new ScalingGroups(),
@@ -18,12 +22,16 @@ function(Backbone, ScalingGroups,Volumes,Images,LaunchConfigs,Instances) {
 		  new Backbone.Model({name: "LB B"}),
 		  new Backbone.Model({name: "LB C"}),
 		  new Backbone.Model({name: "LB D"}),
-		])
+		]),
+        eip : new Eips(),
+        keypair : new KeyPairs(),
+        sgroup : new SecurityGroups(),
+        snapshot : new Snapshots()
 	};
 
     shared.image = shared.images;
     shared.volume = shared.volumes;
-    shared.launchConfig = shared.launchConfigs;
+    shared.launchconfig = shared.launchConfigs;
     shared.scalingGroup = shared.scalingGroups;
 
 	shared.launchConfigs.fetch();
@@ -31,6 +39,10 @@ function(Backbone, ScalingGroups,Volumes,Images,LaunchConfigs,Instances) {
 	shared.volumes.fetch();
 	shared.images.fetch();
 	shared.instance.fetch();
+    shared.eip.fetch();
+    shared.keypair.fetch();
+    shared.sgroup.fetch();
+    shared.snapshot.fetch();
 
 	return shared;
 });
