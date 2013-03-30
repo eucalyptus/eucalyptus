@@ -83,9 +83,13 @@
 //      tableRefreshCallback = thisObj.refreshCallback;
       this._refreshTableInterval();
       $('html body').eucadata('setDataNeeds', thisObj.options.data_deps);
-
+      console.log('TRY TO LOAD ' + 'views/searches/' + dtArg.sAjaxSource);
       require(['app','views/searches/' + dtArg.sAjaxSource, 'visualsearch'], function(app, searchConfig, VS) {
-        var source = app.data[dtArg.sAjaxSource];
+        var target = dtArg.sAjaxSource === 'scalinggrp' ? 'scalingGroups' : dtArg.sAjaxSource;
+        var source = app.data[target];
+        if (typeof source === 'undefined') {
+          throw new Error("No property '" + target + " on app.data");
+        }
         thisObj.searchConfig = new searchConfig(source);
         thisObj.bbdata = thisObj.searchConfig.filtered;
         thisObj.vsearch = VS.init({
