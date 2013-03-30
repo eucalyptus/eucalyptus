@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * Copyright 2009-2013 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -62,6 +62,7 @@
 
 package com.eucalyptus.auth.policy;
 
+import static com.eucalyptus.auth.principal.Principal.PrincipalType;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -75,11 +76,11 @@ import com.eucalyptus.auth.PolicyParseException;
 import com.eucalyptus.auth.entities.AuthorizationEntity;
 import com.eucalyptus.auth.entities.ConditionEntity;
 import com.eucalyptus.auth.entities.PolicyEntity;
+import com.eucalyptus.auth.entities.PrincipalEntity;
 import com.eucalyptus.auth.entities.StatementEntity;
 import com.eucalyptus.auth.json.JsonUtils;
 import com.eucalyptus.auth.policy.condition.ConditionOp;
 import com.eucalyptus.auth.policy.condition.Conditions;
-import com.eucalyptus.auth.policy.condition.NumericLessThanEquals;
 import com.eucalyptus.auth.policy.ern.Ern;
 import com.eucalyptus.auth.policy.key.Key;
 import com.eucalyptus.auth.policy.key.Keys;
@@ -98,16 +99,40 @@ public class PolicyParser {
   
   private static final Logger LOG = Logger.getLogger( PolicyParser.class );
   
-  private static PolicyParser instance = null;
+  private enum PolicyAttachmentType {
+    Identity( true/*requireResource*/, false/*requirePrincipal*/ ),
+    Resource( false/*requireResource*/, true/*requirePrincipal*/ );
+
+    private final boolean requireResource;
+    private final boolean requirePrincipal;
+
+    private PolicyAttachmentType( final boolean requireResource,
+                                  final boolean requirePrincipal ) {
+      this.requireResource = requireResource;
+      this.requirePrincipal = requirePrincipal;
+    }
+
+    public boolean isResourceRequired() {
+      return requireResource;
+    }
+
+    public boolean isPrincipalRequired() {
+      return requirePrincipal;
+    }
+  }
+
+  private final PolicyAttachmentType attachmentType;
   
   public static PolicyParser getInstance( ) {
-    if ( instance == null ) {
-      instance = new PolicyParser( );
-    }
-    return instance;
+    return new PolicyParser( PolicyAttachmentType.Identity );
   }
-  
-  public PolicyParser( ) {
+
+  public static PolicyParser getResourceInstance( ) {
+    return new PolicyParser( PolicyAttachmentType.Resource );
+  }
+
+  private PolicyParser( final PolicyAttachmentType attachmentType  ) {
+    this.attachmentType = attachmentType;
   }
   
   /**
@@ -130,8 +155,7 @@ public class PolicyParser {
       String version = JsonUtils.getByType( String.class, policyJsonObj, PolicySpec.VERSION );
       // Policy statements
       List<StatementEntity> statements = parseStatements( policyJsonObj );
-      PolicyEntity policyEntity = new PolicyEntity( version, policy, statements );
-      return policyEntity;
+      return new PolicyEntity( version, policy, statements );
     } catch ( JSONException e ) {
       Debugging.logError( LOG, e, "Syntax error in input policy" );
       throw new PolicyParseException( e );
@@ -171,15 +195,36 @@ public class PolicyParser {
     JsonUtils.checkRequired( statement, PolicySpec.EFFECT );
     String effect = JsonUtils.getByType( String.class, statement, PolicySpec.EFFECT );
     checkEffect( effect );
+    // principal
+    PrincipalEntity principal = parsePrincipal( statement );
     // authorizations: action + resource
     List<AuthorizationEntity> authorizations = parseAuthorizations( statement, effect );
     // conditions
     List<ConditionEntity> conditions = parseConditions( statement, effect );
     // Construct the statement: a list of authorizations and a list of conditions
-    StatementEntity statementEntity = new StatementEntity( sid );
-    statementEntity.setAuthorizations( authorizations );
-    statementEntity.setConditions( conditions );
-    return statementEntity;
+    return new StatementEntity( sid, principal, authorizations, conditions );
+  }
+
+  /**
+   * Parse the principal part of a statement.
+   *
+   * @param statement The input statement in JSON object.
+   * @return The optional principal entity entities.
+   * @throws JSONException for syntax error.
+   */
+  private PrincipalEntity parsePrincipal( final JSONObject statement ) {
+    final String principalElement =
+        JsonUtils.checkBinaryOption( statement, PolicySpec.PRINCIPAL, PolicySpec.NOTPRINCIPAL, attachmentType.isPrincipalRequired() );
+    final JSONObject principal = JsonUtils.getByType( JSONObject.class, statement, principalElement );
+    if ( principal == null ) return null;
+
+    final String principalType = JsonUtils.checkBinaryOption( principal, PrincipalType.AWS.name(), PrincipalType.Service.name() );
+    final List<String> values = JsonUtils.parseStringOrStringList( principal, principalType );
+    if ( values.size( ) < 1 && attachmentType.isPrincipalRequired() ) {
+      throw new JSONException( "Empty principal values" );
+    }
+    boolean notPrincipal = PolicySpec.NOTPRINCIPAL.equals( principalElement );
+    return new PrincipalEntity( notPrincipal, PrincipalType.valueOf( principalType ), Sets.newHashSet( values ) );
   }
 
   /**
@@ -198,9 +243,9 @@ public class PolicyParser {
       throw new JSONException( "Empty action values" );
     }
     // resources
-    String resourceElement = JsonUtils.checkBinaryOption( statement, PolicySpec.RESOURCE, PolicySpec.NOTRESOURCE );
+    String resourceElement = JsonUtils.checkBinaryOption( statement, PolicySpec.RESOURCE, PolicySpec.NOTRESOURCE, attachmentType.isResourceRequired() );
     List<String> resources = JsonUtils.parseStringOrStringList( statement, resourceElement );
-    if ( resources.size( ) < 1 ) {
+    if ( resources.size( ) < 1 && attachmentType.isResourceRequired() ) {
       throw new JSONException( "Empty resource values" );
     }
     // decompose actions and resources and re-combine them into a list of authorizations
@@ -213,13 +258,6 @@ public class PolicyParser {
    * 2. Group resources into different resource types.
    * 3. Permute all combinations of action groups and resource groups, matching them by the same
    *    vendors.
-   *    
-   * @param effect
-   * @param actionElement
-   * @param actions
-   * @param resourceElement
-   * @param resources
-   * @return
    */
   private List<AuthorizationEntity> decomposeStatement( String effect, String actionElement, List<String> actions, String resourceElement, List<String> resources ) {
     // Group actions by vendor
@@ -235,21 +273,26 @@ public class PolicyParser {
       Ern ern = Ern.parse( resource );
       addToSetMap( resourceMap, ern.getResourceType( ), ern.getResourceName( ) );
     }
-    boolean notAction = Boolean.valueOf( PolicySpec.NOTACTION.equals( actionElement ) );
-    boolean notResource = Boolean.valueOf( PolicySpec.NOTRESOURCE.equals( resourceElement ) );
+    boolean notAction = PolicySpec.NOTACTION.equals( actionElement );
+    boolean notResource = PolicySpec.NOTRESOURCE.equals( resourceElement );
     // Permute action and resource groups and construct authorizations.
     List<AuthorizationEntity> results = Lists.newArrayList( );
     for ( Map.Entry<String, Set<String>> actionSetEntry : actionMap.entrySet( ) ) {
       String vendor = actionSetEntry.getKey( );
       Set<String> actionSet = actionSetEntry.getValue( );
+      boolean added = false;
       for ( Map.Entry<String, Set<String>> resourceSetEntry : resourceMap.entrySet( ) ) {
         String type = resourceSetEntry.getKey( );
         Set<String> resourceSet = resourceSetEntry.getValue( );
         if ( PolicySpec.ALL_ACTION.equals( vendor )
             || PolicySpec.ALL_RESOURCE.equals( type )
-            || type.startsWith( vendor ) ) {
+            || PolicySpec.isPermittedResourceVendor( vendor, PolicySpec.vendor( type ) ) ) {
           results.add( new AuthorizationEntity( EffectType.valueOf( effect ), type, actionSet, notAction, resourceSet, notResource ) );
+          added = true;
         }
+      }
+      if ( !added ) {
+        results.add( new AuthorizationEntity( EffectType.valueOf( effect ), actionSet, notAction ) );
       }
     }
     return results;
@@ -257,10 +300,6 @@ public class PolicyParser {
   
   /**
    * Add a value to a map of sets.
-   * 
-   * @param map
-   * @param key
-   * @param value
    */
   private void addToSetMap( Map<String, Set<String>> map, String key, String value ) {
     Set<String> set = map.get( key );
@@ -379,15 +418,12 @@ public class PolicyParser {
   
   /**
    * Check the validity of effect.
-   * 
-   * @param effect
-   * @throws JSONException
    */
   private void checkEffect( String effect ) throws JSONException {
     if ( effect == null ) {
       throw new JSONException( "Effect can not be empty" );
     }
-    if ( effect != null && !PolicySpec.EFFECTS.contains( effect ) ) {
+    if ( !PolicySpec.EFFECTS.contains( effect ) ) {
       throw new JSONException( "Invalid Effect value: " + effect );
     }
   }

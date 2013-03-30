@@ -165,8 +165,8 @@ const char *ncResourceTypeName[] = {
     "kernel",
     "ephemeral",
     "swap",
-    "ebs"
-    "boot",
+    "ebs",
+    "boot"
 };
 
 //! String value of each instance state enumeration entry
@@ -238,7 +238,7 @@ const char *euca_error_names[] = {
     "access denied error",
     "no space available error",
     "timeout error",
-    "unknown",
+    "unknown"
 };
 
 /*----------------------------------------------------------------------------*\

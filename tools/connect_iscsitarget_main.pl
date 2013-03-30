@@ -104,7 +104,7 @@ if ((@paths < 1) || ((@paths % 3) != 0)) {
   print STDERR "Target paths are not complete:$dev_string\n";
   do_exit(1);
 }
-my $first_store = $paths[2];
+
 $multipath = 0;
 $multipath = 1 if @paths > 3;
 if (($multipath == 1) && (!-x $MULTIPATH)) {
@@ -163,6 +163,12 @@ while (@paths > 0) {
   # get dev from lun
   push @devices, retry_until_exists(\&get_iscsi_device, [$netdev, $ip, $store, $lun], 5);
 }
+# debugging
+use Data::Dumper;
+print STDERR "After connecting:\n";
+for $session (lookup_session()) {
+  print STDERR Dumper($session);
+}
 # get the actual device
 # Non-multipathing: the iSCSI device
 # Multipathing: the mpath device
@@ -175,10 +181,11 @@ if (is_null_or_empty($localdev)) {
   print STDERR "Unable to get attached target device.\n";
   do_exit(1);
 }
+# get the /dev/disk/by-id path
 if ($multipath == 0) {
-  $localdev = "/dev/$localdev";
+  $localdev = get_disk_by_id_path("/dev/$localdev");
 } else {
-  $localdev = "/dev/mapper/$localdev";
+  $localdev = get_disk_by_id_path("/dev/mapper/$localdev");
 }
 # make sure device exists on the filesystem
 for ($i = 0; $i < 12; $i++) { 
@@ -186,7 +193,7 @@ for ($i = 0; $i < 12; $i++) {
   sleep(1);
 }
 
-print wrap_device($localdev, $first_store);
+print "$localdev";
 
 ##################################################################
 sub login_target {

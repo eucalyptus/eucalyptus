@@ -6,8 +6,10 @@ define([
     'views/dialogs/testdialog',
     'views/dialogs/quickscaledialog',
     'models/scalinggrp',
-    'models/launchconfig'
-], function( app, dh, template, rivets, TestDialog, QuickScaleDialog, ScalingGroup, LaunchConfig) {
+    'views/searches/volume',
+    'models/launchconfig',
+    'models/tag'
+ ], function( app, dh, template, rivets, TestDialog, QuickScaleDialog, ScalingGroup, Search, LaunchConfig, Tag) {
 	return Backbone.View.extend({
 		initialize : function() {
 			var self = this;
@@ -17,50 +19,42 @@ define([
                     value: 'foobarbaz',
                     toggle: true
                 });
+                
+                console.log("VOLUMES: " + JSON.stringify(app.data.launchConfigs))
+                
+                for (var key in app.data) {
+                  console.log('KEY ' + key + ': ' + JSON.stringify(app.data[key]));
+                }
+                
+
+            var explicitFacets = {
+              architecture : [{name : 'i386', label: 'i386 32-bit'}, {name : 'x86_64' , label : 'AMD64 64-bit'}]
+            };
+            var facetNames = ['architecture', 'description', 'name', 'owner', 'platform', 'root_device'];
+            
+            var customSearches = {
+              description : function(facet, search, images) {
+                return ["Custom custom!"]
+              }
+            }
 
             var sg = new ScalingGroup({name: 'a test group'});
+            var tag = new Tag({resource_type: 'instance'});
+            var lc = new LaunchConfig({name: 'my launch configuration'});
+
+
             var scope = {
                 errors: new Backbone.Model({}),
+                lc_errors: new Backbone.Model({}),
                 test: test,
                 sg: sg,
-                search: {
-                    query: '',
-                    search: function() {
-                        console.log("SEARCH", arguments);
-                    },
-                    collection: dh.scalingGroups,
-                    facetMatches : function(callback) {
-                        callback([
-                          'account', 'filter', 'access', 'title',
-                          { label: 'city',    category: 'location' },
-                          { label: 'address', category: 'location' },
-                          { label: 'country', category: 'location' },
-                          { label: 'state',   category: 'location' },
-                        ]);
-                    },
-                    valueMatches : function(facet, searchTerm, callback) {
-                        switch (facet) {
-                        case 'account':
-                            callback([
-                              { value: '1-amanda', label: 'Amanda' },
-                              { value: '2-aron',   label: 'Aron' },
-                              { value: '3-eric',   label: 'Eric' },
-                              { value: '4-jeremy', label: 'Jeremy' },
-                              { value: '5-samuel', label: 'Samuel' },
-                              { value: '6-scott',  label: 'Scott' }
-                            ]);
-                            break;
-                          case 'title':
-                            callback([
-                              'Pentagon Papers',
-                              'CoffeeScript Manual',
-                              'Laboratory for Object Oriented Thinking',
-                              'A Repository Grows in Brooklyn'
-                            ]);
-                            break;
-                        }
-                    }
-                },
+                tag: tag,
+                lc: lc,
+                search : new Search(app.data.images, 
+                              facetNames, 
+                              {architecture : 'System Type'}, 
+                              explicitFacets, 
+                              customSearches),
                 buttonScope: {
                     test: test,
                     click: function() { 
@@ -190,6 +184,16 @@ define([
             sg.on('change', function() {
                scope.errors.clear();
                scope.errors.set(sg.validate()); 
+            });
+
+            tag.on('change', function() {
+               scope.errors.clear();
+               scope.errors.set(tag.validate());
+            });
+ 
+            lc.on('change', function() {
+               scope.lc_errors.clear();
+               scope.lc_errors.set(lc.validate());
             });
 
 			this.$el.html(template);

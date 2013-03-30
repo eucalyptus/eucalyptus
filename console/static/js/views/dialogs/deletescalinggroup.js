@@ -1,15 +1,16 @@
 define([
    './eucadialogview',
    'text!./deletescalinggroup.html!strip',
-], function(EucaDialogView, template) {
+   'text!./deletescalinggroup2.html!strip',
+], function(EucaDialogView, template, template2) {
     return EucaDialogView.extend({
         initialize : function(args) {
             var self = this;
-            this.template = template;
+            this.template = args.items.not_allowed ? template2 : template;
 
             this.scope = {
                 status: '',
-                items: args.items, 
+                items: args.items.groups, 
 
                 cancelButton: {
                     click: function() {
@@ -19,15 +20,18 @@ define([
 
                 deleteButton: {
                     click: function() {
-                       self.scope.status = 'Deleting';
-                       self.render();
-                       setTimeout(function() {
-                          self.scope.status = 'Still deleting';
-                          self.render();
-                       }, 1000);
-                       setTimeout(function() {
-                           self.close();
-                       }, 2000);
+                      // unfortunate thing about this is that it reloads from proxy, no local store
+                      // TODO: fix that ^^^
+                      require(['models/scalinggrps'], function(collection) {
+                        var grps = new collection();
+                        _.each(self.scope.items, function(item) {
+                          grps.fetch({success: function() {
+                            grps.get(item).destroy({wait: true});
+                          }});
+                        });
+                        self.close();
+                      
+                      });
                     }
                 }
             }

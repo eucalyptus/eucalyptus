@@ -95,6 +95,7 @@ public abstract class LaunchConfigurations {
       final LaunchConfigurationType type = new LaunchConfigurationType();
 
       type.setCreatedTime( launchConfiguration.getCreationTimestamp() );
+      type.setIamInstanceProfile( launchConfiguration.getIamInstanceProfile() );
       type.setImageId( launchConfiguration.getImageId() );
       if (launchConfiguration.getInstanceMonitoring() != null) 
         type.setInstanceMonitoring( new InstanceMonitoring( launchConfiguration.getInstanceMonitoring() ) );
@@ -163,6 +164,9 @@ public abstract class LaunchConfigurations {
       runInstances.setKeyName( launchConfiguration.getKeyName() );
       runInstances.setGroupSet( Lists.newArrayList( launchConfiguration.getSecurityGroups() ) );
       runInstances.setMonitoring( launchConfiguration.getInstanceMonitoring() );
+      if ( launchConfiguration.getIamInstanceProfile() != null ) {
+        runInstances.setInstanceProfileNameOrArn( launchConfiguration.getIamInstanceProfile() );
+      }
       return runInstances;
     }
   }

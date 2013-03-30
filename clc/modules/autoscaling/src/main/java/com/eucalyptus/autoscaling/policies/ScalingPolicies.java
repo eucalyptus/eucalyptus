@@ -113,8 +113,7 @@ public abstract class ScalingPolicies {
       type.setScalingAdjustment( policy.getScalingAdjustment() );
       type.setMinAdjustmentStep( policy.getMinAdjustmentStep() );
       type.setCooldown( policy.getCooldown() );
-      // type.setAlarms(); //TODO:STEVE: Alarms for scaling policies
-      
+
       return type;
     }
   }

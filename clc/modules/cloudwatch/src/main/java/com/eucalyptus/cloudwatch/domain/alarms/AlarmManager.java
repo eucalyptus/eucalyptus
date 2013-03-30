@@ -1,5 +1,6 @@
 package com.eucalyptus.cloudwatch.domain.alarms;
 
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Date;
 import java.util.HashMap;
@@ -15,15 +16,29 @@ import org.hibernate.Criteria;
 import org.hibernate.criterion.Junction;
 import org.hibernate.criterion.Restrictions;
 
+import com.eucalyptus.auth.Accounts;
+import com.eucalyptus.auth.principal.Account;
+import com.eucalyptus.auth.principal.User;
+import com.eucalyptus.autoscaling.common.AutoScaling;
+import com.eucalyptus.autoscaling.common.ExecutePolicyResponseType;
+import com.eucalyptus.autoscaling.common.ExecutePolicyType;
 import com.eucalyptus.cloudwatch.domain.alarms.AlarmEntity.ComparisonOperator;
 import com.eucalyptus.cloudwatch.domain.alarms.AlarmEntity.StateValue;
 import com.eucalyptus.cloudwatch.domain.alarms.AlarmEntity.Statistic;
 import com.eucalyptus.cloudwatch.domain.alarms.AlarmHistory.HistoryItemType;
 import com.eucalyptus.cloudwatch.domain.dimension.DimensionEntity;
+import com.eucalyptus.cloudwatch.domain.listmetrics.ListMetric;
+import com.eucalyptus.cloudwatch.domain.metricdata.MetricEntityFactory;
 import com.eucalyptus.cloudwatch.domain.metricdata.MetricEntity.MetricType;
 import com.eucalyptus.cloudwatch.domain.metricdata.MetricEntity.Units;
+import com.eucalyptus.component.ComponentIds;
+import com.eucalyptus.component.ServiceConfiguration;
+import com.eucalyptus.component.ServiceConfigurations;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.records.Logs;
+import com.eucalyptus.util.async.AsyncRequests;
+
+import edu.ucsb.eucalyptus.msgs.BaseMessage;
 
 public class AlarmManager {
   private static final Logger LOG = Logger.getLogger(AlarmManager.class);
@@ -400,6 +415,27 @@ public class AlarmManager {
     return results;
   }
 
+  /**
+   * Delete all alarm history before a certain date
+   * @param before the date to delete before (inclusive)
+   */
+  public static void deleteAlarmHistory(Date before) {
+    EntityTransaction db = Entities.get(AlarmHistory.class);
+    try {
+      Map<String, Date> criteria = new HashMap<String, Date>();
+      criteria.put("before", before);
+      Entities.deleteAllMatching(AlarmHistory.class, "WHERE timestamp < :before", criteria);
+      db.commit();
+    } catch (RuntimeException ex) {
+      Logs.extreme().error(ex, ex);
+      throw ex;
+    } finally {
+      if (db.isActive())
+        db.rollback();
+    }
+  }
+
+  
   static void changeAlarmState(AlarmEntity alarmEntity, AlarmState newState, Date now) {
     LOG.info("Updating alarm " + alarmEntity.getAlarmName() + " from " + alarmEntity.getStateValue() + " to " + newState.getStateValue());
     alarmEntity.setStateUpdatedTimestamp(now);
@@ -418,17 +454,18 @@ public class AlarmManager {
     if (alarmEntity.getActionsEnabled()) {
       Collection<String> actions = AlarmUtils.getActionsByState(alarmEntity, state);
       for (String action: actions) {
+        Action actionToExecute = ActionManager.getAction(action, alarmEntity);
+        if (actionToExecute == null) {
+          LOG.warn("Unsupported action " + action); // TODO: do not let it in to start with...
+        } 
         // always execute autoscaling actions, but others only on state change...
-        if (action.startsWith("arn:aws:autoscaling:") || stateJustChanged) {
+        else if (actionToExecute.alwaysExecute() || stateJustChanged) {
           LOG.info("Executing alarm " + alarmEntity.getAlarmName() + " action " + action);
-          // TODO: really execute the actions...
-          String historyData = "JSON DATA (TODO)"; // TODO:
-          AlarmManager.addAlarmHistoryItem(alarmEntity.getAccountId(), alarmEntity.getAlarmName(), historyData, 
-              HistoryItemType.Action, " Successfully executed action " + action, now);
+          actionToExecute.executeAction(action, alarmEntity, now);
         }
       }
     }
-    alarmEntity.setLastActionsUpdatedTimestamp(new Date());
+    alarmEntity.setLastActionsUpdatedTimestamp(now);
   }
 
   private static String creatStateReasonData(StateValue stateValue,
@@ -475,4 +512,120 @@ public class AlarmManager {
       String stateReason, String stateReasonData) {
     return new AlarmState(stateValue, stateReason, stateReasonData);
   }
+  
+  private static abstract class Action {
+    public abstract boolean filter(String actionURN, AlarmEntity entity);
+    public abstract void executeAction(String actionARN, AlarmEntity alarmEntity, Date now);
+    public abstract boolean alwaysExecute();
+  }
+  private static class ExecuteAutoScalingPolicyAction extends Action {
+    @Override
+    public boolean filter(String action, AlarmEntity entity) {
+      return (action != null && action.startsWith("arn:aws:autoscaling:"));
+    }
+
+    @Override
+    public void executeAction(String action, AlarmEntity alarmEntity, Date now) {
+      try {
+        ServiceConfiguration serviceConfiguration = ServiceConfigurations.createEphemeral(ComponentIds.lookup(AutoScaling.class));
+        ExecutePolicyType executePolicyType = new ExecutePolicyType();
+        executePolicyType.setPolicyName(action);
+        executePolicyType.setHonorCooldown(true);
+        Account account = Accounts.getAccountProvider().lookupAccountById(
+              alarmEntity.getAccountId());
+        User user = account.lookupUserByName(User.ACCOUNT_ADMIN);
+        executePolicyType.setEffectiveUserId(user.getUserId());
+        BaseMessage reply = AsyncRequests.dispatch(serviceConfiguration, executePolicyType).get();
+        if (!(reply instanceof ExecutePolicyResponseType)) {
+          throw new Exception(reply.getStatusMessage()); // TODO: create an exception
+        }
+        String historyData = "JSON DATA (TODO)"; // TODO:
+        AlarmManager.addAlarmHistoryItem(alarmEntity.getAccountId(), alarmEntity.getAlarmName(), historyData, 
+            HistoryItemType.Action, " Successfully executed action " + action, now);
+      } catch (Exception ex) {
+        String historyData = "JSON DATA (TODO)"; // TODO:
+        AlarmManager.addAlarmHistoryItem(alarmEntity.getAccountId(), alarmEntity.getAlarmName(), historyData, 
+            HistoryItemType.Action, " Failed to execute action " + action, now);
+      }
+    }
+
+    @Override
+    public boolean alwaysExecute() {
+      return true;
+    }
+
+  }
+
+  private static class TerminateInstanceAction extends Action {
+
+    @Override
+    public boolean filter(String action, AlarmEntity entity) {
+      if (action == null) return false;
+      // Example:
+      // arn:aws:automate:us-east-1:ec2:terminate
+      if (!action.startsWith("arn:aws:automate:")) return false;
+      if (!action.endsWith(":ec2:terminate")) return false;
+      if (entity == null) return false;
+      if (entity.getDimensionMap() == null) return false;
+      return (entity.getDimensionMap().containsKey("InstanceId"));
+    }
+
+    @Override
+    public void executeAction(String action, AlarmEntity alarmEntity, Date now) {
+      String historyData = "JSON DATA (TODO)"; // TODO:
+      AlarmManager.addAlarmHistoryItem(alarmEntity.getAccountId(), alarmEntity.getAlarmName(), historyData, 
+          HistoryItemType.Action, " Successfully executed action " + action, now);
+    }
+
+    @Override
+    public boolean alwaysExecute() {
+      return false;
+    }
+  }
+  private static class StopInstanceAction extends Action {
+
+    @Override
+    public boolean filter(String action, AlarmEntity entity) {
+      if (action == null) return false;
+      // Example:
+      // arn:aws:automate:us-east-1:ec2:stop
+      if (!action.startsWith("arn:aws:automate:")) return false;
+      if (!action.endsWith(":ec2:stop")) return false;
+      if (entity == null) return false;
+      if (entity.getDimensionMap() == null) return false;
+      return (entity.getDimensionMap().containsKey("InstanceId"));
+    }
+
+    @Override
+    public void executeAction(String action, AlarmEntity alarmEntity, Date now) {
+      String historyData = "JSON DATA (TODO)"; // TODO:
+      AlarmManager.addAlarmHistoryItem(alarmEntity.getAccountId(), alarmEntity.getAlarmName(), historyData, 
+          HistoryItemType.Action, " Successfully executed action " + action, now);
+    }
+
+    @Override
+    public boolean alwaysExecute() {
+      return false;
+    }
+  }
+
+  private static class ActionManager {
+    private static List<Action> actions = new ArrayList<Action>();
+    static {
+      actions.add(new StopInstanceAction());
+      actions.add(new TerminateInstanceAction());
+      actions.add(new ExecuteAutoScalingPolicyAction());
+      
+    }
+    public static Action getAction(String action, AlarmEntity entity) {
+      for (Action actionFromList :actions) {
+        if (actionFromList.filter(action, entity)) {
+          return actionFromList;
+        } 
+      }
+      return null;
+    }
+  }
+
 }
+

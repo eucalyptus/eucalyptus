@@ -38,7 +38,7 @@
       this.baseTable = $scalingTable;
       this.tableWrapper = $scalingTable.eucatable({
         id : 'scaling', // user of this widget should customize these options,
-        data_deps: ['scalinggrps', 'scalinginsts'],
+        data_deps: ['scalinggrps'],
         hidden: thisObj.options['hidden'],
         dt_arg : {
           "sAjaxSource": 'scalinggrp',
@@ -154,14 +154,27 @@
       })();
 
       if ( selectedScaling.length === 1) {
-        itemsList['quick'] = {"name":scaling_action_quick, callback: function(key, opt){ thisObj._dialogAction('quickscale', selectedScaling); }}
+        itemsList['quick'] = {"name":scaling_action_quick, callback: function(key, opt){
+          var scaling_groups = describe('scalinggrp');
+          _.find(scaling_groups, function(group) {
+            if (group.name == selectedScaling[0]) {
+              var params = {name:group.name, size:group.instances.length, min:group.min_size, max:group.max_size, desired:group.desired_capacity};
+              thisObj._dialogAction('quickscaledialog', params);
+            }
+          });
+        }}
         itemsList['suspend'] = {"name":scaling_action_suspend, callback: function(key, opt){ thisObj._dialogAction('suspendscalinggroup', selectedScaling); }}
         itemsList['resume'] = {"name":scaling_action_resume, callback: function(key, opt){ thisObj._dialogAction('resumescalinggroup', selectedScaling); }}
         itemsList['edit'] = {"name":scaling_action_edit, callback: function(key, opt){ thisObj._dialogAction('editscalinggroup', selectedScaling); }}
       }
 
       if ( selectedScaling.length >= 1) {
-        itemsList['delete'] = {"name":scaling_action_delete, callback: function(key, opt){ thisObj._dialogAction('deletescalinggroup', selectedScaling); }}
+        itemsList['delete'] = {"name":scaling_action_delete, callback: function(key, opt){
+          var in_use = false;
+          // Until DescribeScalingActivities is implemented on CLC, we can't tell if
+          // something is in progress. For now, we'll always allow the user to try.
+          thisObj._dialogAction('deleteScalingGroup', {groups:selectedScaling, not_allowed:in_use});
+        }}
       }
 
       return itemsList;

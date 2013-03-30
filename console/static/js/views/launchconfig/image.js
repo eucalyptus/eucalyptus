@@ -3,7 +3,7 @@ define([
 	'dataholder',
   'text!./image.html!strip',
   'rivets',
-  'views/searches/images',
+  'views/searches/image',
 	], function( app, dataholder, template, rivets, imageSearch ) {
 	return Backbone.View.extend({
             title: 'Image',

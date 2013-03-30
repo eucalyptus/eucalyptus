@@ -71,6 +71,7 @@ import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.dns.TransientZone;
 import com.eucalyptus.dns.Zone;
 import com.eucalyptus.entities.EntityWrapper;
+
 import org.xbill.DNS.Address;
 import org.xbill.DNS.CNAMERecord;
 import org.xbill.DNS.Record;
@@ -92,7 +93,8 @@ public class ZoneManager {
 
 	public static Zone getZone(String name) {
 		try {
-			return zones.get(new Name(name));
+			return getZone(new Name(name));
+					//zones.get(new Name(name));
 		} catch(Exception ex) {
 			LOG.error(ex);
 		}
@@ -100,26 +102,26 @@ public class ZoneManager {
 	}
 
 	public static Zone getZone(Name name) {
-	    
-	    if ( Bootstrap.isFinished( ) ) {
-		if(name.toString().endsWith("in-addr.arpa.")) {
-			//create new transient zone to handle reverse lookups
-			return TransientZone.getPtrZone(name);
-		} else {
-			try {
-				if(!ZoneManager.zones.containsKey(TransientZone.getExternalName())){
-					ZoneManager.registerZone(TransientZone.getExternalName( ),TransientZone.getInstanceExternalZone());
-				} else if(!ZoneManager.zones.containsKey(TransientZone.getInternalName())){
-					ZoneManager.registerZone(TransientZone.getInternalName(),TransientZone.getInstanceInternalZone());
+
+		if ( Bootstrap.isFinished( ) ) {
+			if(name.toString().endsWith("in-addr.arpa.")) {
+				//create new transient zone to handle reverse lookups
+				return TransientZone.getPtrZone(name);
+			} else {
+				try {
+					if(!ZoneManager.zones.containsKey(TransientZone.getExternalName())){
+						ZoneManager.registerZone(TransientZone.getExternalName( ),TransientZone.getInstanceExternalZone());
+					} else if(!ZoneManager.zones.containsKey(TransientZone.getInternalName())){
+						ZoneManager.registerZone(TransientZone.getInternalName(),TransientZone.getInstanceInternalZone());
+					}	
+				} catch(Exception e) {
+					LOG.debug( e, e );
 				}
-			} catch(Exception e) {
-				LOG.debug( e, e );
 			}
+			return zones.get(name);
+		} else {
+			return null;
 		}
-		return zones.get(name);
-	    } else {
-		return null;
-	    }
 	}
 
 	public static void registerZone( Name name, Zone z ) {
@@ -139,22 +141,23 @@ public class ZoneManager {
 			Record soarec = new SOARecord(name, DClass.IN, soaTTL, name, Name.fromString("root." + name.toString()), serial, refresh, retry, expires, minimum);
 			long nsTTL = nsRecordInfo.getTtl();
 			Record nsrec = new NSRecord(name, DClass.IN, nsTTL, Name.fromString(nsRecordInfo.getTarget()));
-			zones.putIfAbsent(name, new Zone(name, new Record[]{soarec, nsrec}));
+			Zone zone = new Zone(name, new Record[]{soarec, nsrec});
+			zones.putIfAbsent(name, zone);
 		} catch(Exception ex) {
 			LOG.error(ex);
 		}
 	}
 
-	public static void addRecord(ARecordInfo arecInfo) {
+	public static void addRecord(ARecordInfo arecInfo, boolean multiRec) {
 		try {
 			ARecord arecord = new ARecord(Name.fromString(arecInfo.getName()), DClass.IN, arecInfo.getTtl(), Address.getByAddress(arecInfo.getAddress()));
-			addRecord(arecInfo.getZone(), arecord);
+			addRecord(arecInfo.getZone(), arecord, multiRec);
 		} catch(Exception ex) {
 			LOG.error(ex);
 		}
 	}
 
-	public static void addRecord(String nameString, Record record) {
+	public static void addRecord(String nameString, Record record, boolean multiRec) {
 		Zone zone = getZone(nameString);
 		if(zone == null) {
 			try {
@@ -173,7 +176,9 @@ public class ZoneManager {
 				Name nsName = Name.fromString(nsHost);
 				Record nsrec = new NSRecord(name, DClass.IN, nsTTL, nsName);
 				ARecord nsARecord = new ARecord(nsName, DClass.IN, nsTTL, Address.getByAddress(DNSProperties.NS_IP));
-				zone =  zones.putIfAbsent(name, new Zone(name, new Record[]{soarec, nsrec, nsARecord, record}));
+			
+				zone = new Zone(name, new Record[]{soarec, nsrec, nsARecord, record});
+				zone =  zones.putIfAbsent(name, zone);
 				if(zone == null) {
 					zone = zones.get(name);
 					EntityWrapper<ZoneInfo> db = EntityWrapper.get(ZoneInfo.class);
@@ -218,7 +223,7 @@ public class ZoneManager {
 				LOG.error(ex);
 			}
 		} else {
-			if(zone.findExactMatch(record.getName(), record.getType()) == null) {
+			if(multiRec || (zone.findExactMatch(record.getName(), record.getType()) == null)) {
 				zone.addRecord(record);
 			}
 		}
@@ -321,11 +326,11 @@ public class ZoneManager {
 	}
 
 	public static void deleteZone(String zoneName) {
-	   try {
-	      zones.remove(new Name(zoneName));
-	   } catch(Exception ex) {
-	      LOG.error(ex);
-	   }
+		try {
+			zones.remove(new Name(zoneName));
+		} catch(Exception ex) {
+			LOG.error(ex);
+		}
 	}
 
 }

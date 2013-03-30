@@ -52,11 +52,12 @@
       if(thisObj.options['hidden']){
         return;
       }
-
+      thisObj.$vel = $('<div class="visual_search" style="margin-top:-2px;width:90%;display:inline-block"></div>');
       // add draw call back
       $.fn.dataTableExt.afnFiltering = []; /// clear the filtering object
 
       var dtArg = this._getTableParam();
+
       thisObj.tableArg = dtArg;
       this.table = this.element.find('table').dataTable(dtArg);
       var $header = this._decorateHeader();
@@ -82,6 +83,30 @@
 //      tableRefreshCallback = thisObj.refreshCallback;
       this._refreshTableInterval();
       $('html body').eucadata('setDataNeeds', thisObj.options.data_deps);
+      require(['app','views/searches/' + dtArg.sAjaxSource, 'visualsearch'], function(app, searchConfig, VS) {
+        var target = dtArg.sAjaxSource === 'scalinggrp' ? 'scalingGroups' : dtArg.sAjaxSource == 'launchconfig' ? 
+            'launchConfigs' : dtArg.sAjaxSource;
+        var source = app.data[target];
+        if (typeof source === 'undefined') {
+          throw new Error("No property '" + target + " on app.data");
+        }
+        thisObj.searchConfig = new searchConfig(source);
+        thisObj.bbdata = thisObj.searchConfig.filtered;
+        thisObj.vsearch = VS.init({
+            container : thisObj.$vel,
+            showFacets : true,
+            query     : '',
+            callbacks : {
+                search       : thisObj.searchConfig.search,
+                facetMatches : thisObj.searchConfig.facetMatches,
+                valueMatches : thisObj.searchConfig.valueMatches
+            }
+        });
+        thisObj.bbdata.on('change reset', function() {
+            thisObj.refreshTable()
+        });
+        thisObj.refreshTable();
+      });
     },
 
     _create : function() {
@@ -120,15 +145,13 @@
          }
       */
       dt_arg['fnServerData'] = function (sSource, aoData, fnCallback) {
-        thisObj.refreshTable = function() {
-            var data = {};
-            data.aaData = thisObj.bbdata.toJSON();
-            data.iTotalRecords = data.aaData.length;
-            data.iTotalDisplayRecords = data.aaData.length;
-            fnCallback(data);
-        }
+        console.log('fnServerData', arguments);
+        var data = {};
+        data.aaData = thisObj.bbdata ? thisObj.bbdata.toJSON() : [];
+        data.iTotalRecords = data.aaData.length;
+        data.iTotalDisplayRecords = data.aaData.length;
+        fnCallback(data);
       }
-         
 
       dt_arg['fnInitComplete'] = function( oSettings ) {
         oSettings.oLanguage.sZeroRecords = $.i18n.prop('resource_no_records', thisObj.options.text.resource_plural);
@@ -316,25 +339,8 @@
 
 if (true) {
       $wrapper.empty();
-      $wrapper.prepend('<div class="visual_search" style="margin-top:-2px;width:90%;display:inline-block"></div><div class="dataTables_filter" id="images_filter"><a class="table-refresh" href="#">Refresh</a></div>');
-      var $vs = $('.visual_search', $wrapper);
-      require(['app', 'visualsearch', 'views/searches/images'], function(app, VS, searchConfig) {
-            var config = new searchConfig(app.data.images);
-            console.log('visual search', $vs, config);
-            vsearch = VS.init({
-                container : $vs,
-                showFacets : true,
-                query     : '',
-                callbacks : {
-                    search       : config.search,
-                    facetMatches : config.facetMatches,
-                    valueMatches : config.valueMatches
-                }
-            });
-            thisObj.bbdata = config.filtered;
-            config.filtered.on('change reset', thisObj.refreshTable);
-            thisObj.refreshTable();
-        });
+      $wrapper.prepend('<div class="dataTables_filter" id="images_filter"><a class="table-refresh" href="#">Refresh</a></div>');
+      $wrapper.prepend(thisObj.$vel);
 }         
     },   
 
@@ -550,7 +556,10 @@ if (true) {
       if(! $('html body').eucadata('isEnabled'))
         return;
       var oSettings = this.table.fnSettings();
-      $('html body').eucadata('refresh', oSettings.sAjaxSource);
+
+      // Don't use eucadata
+      //$('html body').eucadata('refresh', oSettings.sAjaxSource);
+
       this.table.fnReloadAjax(undefined, undefined, true);
      
       var $checkAll = this.table.find('thead').find(':input[type="checkbox"]');

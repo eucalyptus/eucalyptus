@@ -94,6 +94,7 @@ import com.eucalyptus.autoscaling.tags.TagSupportDiscovery
 import com.eucalyptus.autoscaling.tags.AutoScalingGroupTag
 import com.eucalyptus.autoscaling.tags.Tag
 import com.eucalyptus.autoscaling.tags.Tags
+import com.eucalyptus.auth.principal.Role
 import com.eucalyptus.autoscaling.instances.ConfigurationState
 
 /**
@@ -494,6 +495,11 @@ class AutoScalingServiceTest {
       }
 
       @Override
+      Role lookupRoleById(final String roleId) {
+        throw new NotImplementedException()
+      }
+
+      @Override
       Certificate lookupCertificate(final X509Certificate cert) {
         throw new NotImplementedException()
       }
@@ -792,8 +798,10 @@ class AutoScalingServiceTest {
       @Override
       List<String> validateReferences( OwnerFullName owner,
                                        Iterable<String> imageIds,
+                                       String instanceType,
                                        String keyName,
-                                       Iterable<String> securityGroups) {
+                                       Iterable<String> securityGroups,
+                                       String iamInstanceProfile ) {
         []
       }
     }

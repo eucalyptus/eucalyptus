@@ -653,11 +653,13 @@ public class BlockStorage {
 			if(size != null) {
 				int totalVolumeSize = 0;
                		        VolumeInfo volInfo = new VolumeInfo();
-               	         	volInfo.setStatus(StorageProperties.Status.available.toString());
                 		EntityWrapper<VolumeInfo> db = StorageProperties.getEntityWrapper();
                        		List<VolumeInfo> volInfos = db.query(volInfo);
                         	for (VolumeInfo vInfo : volInfos) {
-                       	         	totalVolumeSize += vInfo.getSize();
+					if (!vInfo.getStatus().equals(StorageProperties.Status.failed.toString()) &&
+						!vInfo.getStatus().equals(StorageProperties.Status.error.toString())) {
+                       	         		totalVolumeSize += vInfo.getSize();
+					}
 				}
 				db.rollback();
 				sizeAsInt = Integer.parseInt(size);

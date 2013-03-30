@@ -1475,7 +1475,7 @@ ul.ramdisk-expanded li:nth-child(5) {
 /* == Optional filters == */
 
 .table-filter-wrapper {
-  padding: 12px 15px;
+  padding: 12px 15px 12px 30px;
   min-height: 31px;
   background: transparent url(../images/css-sprites.png) repeat-x left -530px;
 }
@@ -1549,7 +1549,6 @@ ul.ramdisk-expanded li:nth-child(5) {
 .actionmenu {
   position: relative;
   margin-left: 15px;
-  z-index: 10;
 }
 
 .actionmenu a.button {

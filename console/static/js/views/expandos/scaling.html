@@ -1,33 +1,74 @@
 <div data-ui-tabs=":button" id="tabs" >
   <ul>
-    <li><a href="#tabs-1">General</a></li>
-    <li><a href="#tabs-2">Policies</a></li>
-    <li><a href="#tabs-3">Instances</a></li>
-    <li><a href="#tabs-4">Processes</a></li>
-    <li><a href="#tabs-5">Tags</a></li>
-    <li><a href="#tabs-6">Monitoring</a></li>
+    <li><a href="#tabs-1" data-msg="tab_general">General</a></li>
+    <li><a href="#tabs-2" data-msg="tab_policies">Policies</a></li>
+    <li><a href="#tabs-3" data-msg="tab_instances">Instances</a></li>
+    <li><a href="#tabs-4" data-msg="tab_processes">Processes</a></li>
+    <li><a href="#tabs-5" data-msg="tab_tags">Tags</a></li>
   </ul>
   <div id="tabs-1" class="tab">
-      <p>General</p>
+      <ul class="instance-expanded clearfix">
+	    <li><div class="expanded-title" data-msg="scaling_table_expanded_name">SCALING GROUP NAME</div><div class="expanded-value">myGroup</div></li>
+	    <li><div class="expanded-title" data-msg="scaling_table_expanded_launch_configs">LAUNCH CONFIGURATIONS</div><div class="expanded-value">myconfig (current)</div><div class="expanded-value">oldconfig (past)</div></li>
+	    <li><div class="expanded-title" data-msg="scaling_table_expanded_zones">AVAILABILITY ZONES</div><div class="expanded-value">zone 2</div></li>
+	    <li><div class="expanded-title" data-msg="scaling_table_expanded_lb">LOAD BALANCERS</div><div class="expanded-value">balancer 1</div></li>
+	    <li><div class="expanded-title" data-msg="scaling_table_expanded_health">HEALTH CHECK</div><div class="expanded-label" data-msg="scaling_table_expanded_health_check_type">Type:<span class="expanded-value">None</span></div><div class="expanded-label" data-msg="scaling_table_expanded_health_check_grace_period">Grace period (secs):<span class="expanded-value">30</span></div></li>
+	    <li><div class="expanded-title" data-msg="scaling_table_expanded_instances">INSTANCES</div><div class="expanded-label" data-msg="scaling_table_expanded_instances_max">Maximum<span class="expanded-value">10</span></div><div class="expanded-label" data-msg="scaling_table_expanded_instances_desired">Desired<span class="expanded-value">5</span></div><div class="expanded-label" data-msg="scaling_table_expanded_instances_min">Minimum<span class="expanded-value">1</span></div></li>
+	  </ul>
   </div>
   <div id="tabs-2" class="tab">
       <ul class="instance-expanded clearfix">
-        <li><div class="expanded-title">Volume Id</div><div class="expanded-value">vol-xxxxx</div></li>
-        <li><div class="expanded-title">Device Mapping</div><div class="expanded-value">/dev/sda</div></li>
-        <li><div class="expanded-title">Creation Time</div><div class="expanded-value">Aug 21, 2012 07:34:23AM</div></li>
-      </ul>
+	    <li><div class="expanded-section-label" data-msg="scaling_table_expanded_term_policies">Instance termination policies (in execution order):</div><div class="expanded-value">Oldest instance</div><div class="expanded-value">Default</div></li>
+	    <li><div class="expanded-section-label" data-msg="scaling_table_expanded_scaling_policies">Scaling policies:</div></li>
+		<li><div class="expanded-label" data-msg="scaling_table_expanded_scaling_policy_default_cooldown">Default cooldown period (secs):<span class="expanded-value">30</span></div></li>
+	    <li><div class="expanded-title" data-msg="scaling_table_expanded_scaling_policy_name">NAME</div><div class="expanded-value">My Policy</div></li>
+	    <li><div class="expanded-title" data-msg="scaling_table_expanded_scaling_policy_amount">AMOUNT</div><div class="expanded-value">10</div></li>
+	    <li><div class="expanded-title" data-msg="scaling_table_expanded_scaling_policy_measure">MEASURE</div><div class="expanded-value">instances</div></li>
+	    <li><div class="expanded-title" data-msg="scaling_table_expanded_scaling_policy_trigger_metric">TRIGGER METRIC</div><div class="expanded-value">AVG CPU UTILIZATION ></div></li>
+	    <li><div class="expanded-title" data-msg="scaling_table_expanded_scaling_policy_trigger_threshold">TRIGGER THRESHOLD</div><div class="expanded-value">50</div></li>
+	  </ul>
   </div>
   <div id="tabs-3" class="tab">
-      <p>Instances</p>
+	  <ul class="instance-expanded clearfix">
+	  	<li><div class="form-row clearfix checkbox-only"><input type="checkbox" id="scaling-expanded-launch-instance-on-term"><label for="scaling-expanded-launch-instance-on-term" data-msg="scaling_table_expanded_launch_instance_on_term">Launch new instance when an instance is terminated</label></div></li>
+	    <li><div class="form-row clearfix checkbox-only"><input type="checkbox" id="scaling-expanded-check-health"><label for="scaling-expanded-check-health" data-msg="scaling_table_expanded_check_health_on_launch">Begin checking health immediately when instance replaces unhealthy one</label></div></li>
+		<li><div class="expanded-title" data-msg="scaling_table_expanded_instance_id">ID</div><div class="expanded-value">i-36473662</div><div class="expanded-value">i-74837465</div></li>    
+	    <li><div class="expanded-title" data-msg="scaling_table_expanded_instance_health_status">HEALTH STATUS</div><div class="expanded-value">healthy</div><div class="expanded-value">healthy</div></li>
+	    <li><div class="expanded-title" data-msg="scaling_table_expanded_instance_zone">AVAILABILITY ZONE</div><div class="expanded-value">zone 1</div><div class="expanded-value">zone 1</div></li>
+    	<li><div class="expanded-title" data-msg="scaling_table_expanded_instance_launch_config">LAUNCH CONFIGURATION</div><div class="expanded-value">myconfig</div><div class="expanded-value">oldconfig</div></li>
+	    <li><div class="expanded-title" data-msg="scaling_table_expanded_instance_state">STATE</div><div class="expanded-value">state</div><div class="expanded-value">state</div></li>
+	  </ul>
   </div>
   <div id="tabs-4" class="tab">
-      <p>Processes</p>
+      <ul class="instance-expanded clearfix">
+	    <li>
+		<table>
+			<thead><tr><th data-msg="scaling_table_expanded_process">PROCESS</th><th data-msg="scaling_table_expanded_suspended_state">SUSPENDED?</th></tr>
+			</thead>
+			<tbody>
+				<tr><td data-msg="suspend_scaling_processes_dialog_launch_instance">Launch instance</td><td>yes</td></tr>
+				<tr><td data-msg="suspend_scaling_processes_dialog_terminate_instance">Terminate instance</td><td></td></tr>
+				<tr><td data-msg="suspend_scaling_processes_dialog_health_check">Health check</td><td></td></tr>
+				<tr><td data-msg="suspend_scaling_processes_dialog_replace_unhealthy">Replace unhealthy instance</td><td>yes</td></tr>
+				<tr><td data-msg="suspend_scaling_processes_dialog_az_balance">Balance instances across availability zones</td><td>yes</td></tr>
+				<tr><td data-msg="suspend_scaling_processes_dialog_add_to_lb">Add instances to load balancer(s) on launch</td><td>yes</td></tr>
+			</tbody>
+		</table>
+		</li>
+	  </ul>
   </div>
   <div id="tabs-5" class="tab">
-      <p>Tags</p>
+      <ul class="instance-expanded clearfix">
+        <li><div class="form-row clearfix checkbox-only"><input type="checkbox" id="scaling-expanded-apply-tags-to-instances"><label for="scaling-expanded-apply-tags-to-instances" data-msg="">Also apply tags to instances in this scaling group</label></div></li>	    
+	    <li>
+		<table>
+			<thead><tr><th data-msg="tag_display_hdr_key">KEY</th><th data-msg="tag_display_hdr_value">VALUE</th></tr>
+			</thead>
+			<tbody>
+				<tr data-each-item="items"><td><span data-text="item.name"></span></td><td><span data-text="item.value"></span></td></tr>
+			</tbody>
+		</table>
+		</li>
+	  </ul>
   </div>
-  <div id="tabs-6" class="tab">
-      <p>Monitoring</p>
-  </div>
-</div>
 <div style="clear:both"></div>

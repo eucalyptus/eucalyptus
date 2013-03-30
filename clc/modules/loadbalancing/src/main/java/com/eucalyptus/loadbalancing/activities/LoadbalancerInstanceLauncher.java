@@ -90,15 +90,16 @@ public class LoadbalancerInstanceLauncher extends AbstractEventHandler<NewLoadba
 			try{
 				instanceIds = 
 						EucalyptusActivityTasks.getInstance().launchInstances(zoneToLaunch, 
-								LOADBALANCER_EMI, LOADBALANCER_INSTANCE_TYPE, groupName, this.numInstancesToLaunch, userDataBuilder.build());
+								LOADBALANCER_EMI, LOADBALANCER_INSTANCE_TYPE, groupName, userDataBuilder.build(), 
+								this.numInstancesToLaunch);
 				StringBuilder sb = new StringBuilder();
 				for (String id : instanceIds)
 					sb.append(id+" ");
 				LOG.info("new servo instance launched: "+sb.toString());
+				launchedInstances.addAll(instanceIds);
 			}catch(Exception ex){
 				throw new EventHandlerException("failed to launch the servo instance", ex);
 			}
-			launchedInstances.addAll(instanceIds);
 		} //// TODO: SPARK: SAFE TO ASSUME ROLLBACK STEP WILL CLEANUP PARTIALLY COMPLETED REQUEST?
 	}
 
