@@ -1,5 +1,27 @@
 rivets.configure({
 	adapter: {
+        iterate: function(obj, callback) {
+            //console.log('iterate:', obj, callback);
+            if (obj instanceof Backbone.Collection) {
+                var l = obj.length;
+                for (var i = 0; i < l; i++) {
+                    callback(obj.at(i), i);
+                }
+            } else if (obj instanceof Backbone.Model) {
+                var keys = obj.keys();
+                for (var i = 0; i < keys.length; i++) {
+                    callback(obj.get(keys[i]), keys[i]);
+                }
+            } else if (obj instanceof Array) {
+                for (var i = 0; i < obj.length; i++) {
+                    callback(obj[i], i);
+                }
+            } else {
+                for (var i in obj) {
+                    callback(obj[i], i);
+                }
+            }
+        },
 	    subscribe: function(obj, keypath, callback) {
             if (obj instanceof Backbone.Model) {
                 obj.on('change:' + keypath, function (m, v) { callback(v) });
@@ -23,6 +45,7 @@ rivets.configure({
             }
 	    },
 	    read: function(obj, keypath) {
+            if (obj == null) return null;
             if (typeof keypath === 'undefined' || keypath === '') return obj;
 
             if (obj instanceof Backbone.Model)  {
@@ -37,7 +60,7 @@ rivets.configure({
             if (obj instanceof Backbone.Model)  {
                 obj.set(keypath, value);
             } else if (obj instanceof Backbone.Collection) {
-                obj.at(keypath) = value;
+                obj.at(keypath).set(value);
             } else {
                 obj[keypath] = value;
             }
@@ -73,8 +96,12 @@ rivets.binders["addclass"] = {
 }
 
 rivets.binders["msg"] = {
+    tokenizes: true,
     routine: function(el, keyname) {
-      var value = window[keyname];
+      var value = window[this.keypath];
+
+      if (value == null) return;
+
       if (el.innerText != null) {
         return el.innerText = value != null ? value : '';
       } else {
