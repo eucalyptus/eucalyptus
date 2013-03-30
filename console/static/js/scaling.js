@@ -154,7 +154,20 @@
       })();
 
       if ( selectedScaling.length === 1) {
-        itemsList['quick'] = {"name":scaling_action_quick, callback: function(key, opt){ thisObj._dialogAction('quickscale', selectedScaling); }}
+        itemsList['quick'] = {"name":scaling_action_quick, callback: function(key, opt){
+          var scaling_insts = describe('scalinginst');
+          var count = 0;
+          _.each(scaling_insts, function(inst) {
+            if (inst.group_name == selectedScaling[0]) count += 1;
+          });
+          var scaling_groups = describe('scalinggrp');
+          _.find(scaling_groups, function(group) {
+            if (group.name == selectedScaling[0]) {
+              var params = {name:group.name, size:count, min:group.min_size, max:group.max_size, desired:group.desired_capacity};
+              thisObj._dialogAction('quickscaledialog', params);
+            }
+          });
+        }}
         itemsList['suspend'] = {"name":scaling_action_suspend, callback: function(key, opt){ thisObj._dialogAction('suspendscalinggroup', selectedScaling); }}
         itemsList['resume'] = {"name":scaling_action_resume, callback: function(key, opt){ thisObj._dialogAction('resumescalinggroup', selectedScaling); }}
         itemsList['edit'] = {"name":scaling_action_edit, callback: function(key, opt){ thisObj._dialogAction('editscalinggroup', selectedScaling); }}
