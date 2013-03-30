@@ -22,7 +22,7 @@ function(Backbone, ScalingGroups,Volumes,Images,LaunchConfigs,Instances) {
 	};
 
     shared.image = shared.images;
-    shared.volume = shared.images;
+    shared.volume = shared.volumes;
     shared.launchConfig = shared.launchConfigs;
     shared.scalingGroup = shared.scalingGroups;
 
