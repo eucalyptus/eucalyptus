@@ -38,7 +38,7 @@
       this.baseTable = $scalingTable;
       this.tableWrapper = $scalingTable.eucatable({
         id : 'scaling', // user of this widget should customize these options,
-        data_deps: ['scalinggrps', 'scalinginsts'],
+        data_deps: ['scalinggrps'],
         hidden: thisObj.options['hidden'],
         dt_arg : {
           "sAjaxSource": 'scalinggrp',
@@ -155,15 +155,10 @@
 
       if ( selectedScaling.length === 1) {
         itemsList['quick'] = {"name":scaling_action_quick, callback: function(key, opt){
-          var scaling_insts = describe('scalinginst');
-          var count = 0;
-          _.each(scaling_insts, function(inst) {
-            if (inst.group_name == selectedScaling[0]) count += 1;
-          });
           var scaling_groups = describe('scalinggrp');
           _.find(scaling_groups, function(group) {
             if (group.name == selectedScaling[0]) {
-              var params = {name:group.name, size:count, min:group.min_size, max:group.max_size, desired:group.desired_capacity};
+              var params = {name:group.name, size:group.instances.length, min:group.min_size, max:group.max_size, desired:group.desired_capacity};
               thisObj._dialogAction('quickscaledialog', params);
             }
           });
@@ -174,7 +169,12 @@
       }
 
       if ( selectedScaling.length >= 1) {
-        itemsList['delete'] = {"name":scaling_action_delete, callback: function(key, opt){ thisObj._dialogAction('deletescalinggroup', selectedScaling); }}
+        itemsList['delete'] = {"name":scaling_action_delete, callback: function(key, opt){
+          var in_use = false;
+          // Until DescribeScalingActivities is implemented on CLC, we can't tell if
+          // something is in progress. For now, we'll always allow the user to try.
+          thisObj._dialogAction('deleteScalingGroup', {groups:selectedScaling, not_allowed:in_use});
+        }}
       }
 
       return itemsList;

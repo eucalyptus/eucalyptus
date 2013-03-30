@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * Copyright 2009-2013 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -79,6 +79,7 @@ import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
 import com.eucalyptus.auth.principal.Authorization.EffectType;
 import com.eucalyptus.entities.AbstractPersistent;
+import com.google.common.collect.Sets;
 
 /**
  * Database authorization entity. A single row of authorization table represents a decomposed
@@ -137,7 +138,16 @@ public class AuthorizationEntity extends AbstractPersistent implements Serializa
     this.notResource = notResource;
     this.resources = resources;
   }
-  
+
+  public AuthorizationEntity( EffectType effect, Set<String> actions, Boolean notAction ) {
+    this.effect = effect;
+    this.type = null;
+    this.notAction = notAction;
+    this.actions = actions;
+    this.notResource = false;
+    this.resources = Sets.newHashSet();
+  }
+
   public AuthorizationEntity( String type ) {
     this.type = type;
   }

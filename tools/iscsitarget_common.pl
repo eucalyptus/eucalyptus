@@ -172,7 +172,7 @@ sub retry_until_true {
 sub match_iscsi_session {
   my ($session, $netdev, $ip, $store) = @_;
   if (($session->{$SK_TARGET} eq $store) &&
-      (($session->{$SK_PORTAL} eq $ip) || ($session->{$SK_PPORTAL} eq $ip)) &&
+      (($session->{$SK_PORTAL} eq $ip) || ($session->{$SK_PPORTAL} =~ m/$ip/i)) &&
       (is_null_or_empty($netdev) || ($session->{$SK_NETDEV} eq $netdev))) {
     return 1;
   }
@@ -273,7 +273,7 @@ sub lookup_session {
       $session->{$SK_TARGET} = $target;
       $session->{$SK_PORTAL} = $1;
       $session->{$SK_TPGT} = $2;
-    } elsif (/^\s+Persistent Portal:\s+([\d\.]+):\d+,(\d+)/) {
+    } elsif (/^\s+Persistent Portal:\s+(.*):\d+,(\d+)/) {
       $session->{$SK_PPORTAL} = $1;
     } elsif (/^\s+Iface Name:\s+(\S+)/) {
       $session->{$SK_IFACE} = $1;
@@ -292,49 +292,18 @@ sub lookup_session {
   return @sessions;
 }
 
-sub get_wrap_name {
-    my ($store) = @_;
-    
-    my $wrapped_name = "euca-" . $store;
-    $wrapped_name =~ s/[\.:]/-/g;
-
-    return $wrapped_name;
+sub get_disk_by_id_path {
+  my ($devname) = @_;
+  my $disk_by_id_path = "/dev/disk/by-id/";
+  my @output = run_cmd(1, 0, "scsi_id --whitelisted --replace-whitespace --device=$devname");
+  my $scsi_id = shift(@output);
+  chomp $scsi_id;
+  return $devname if (is_null_or_empty($scsi_id));
+  if ($multipath == 0) {
+    $disk_by_id_path = $disk_by_id_path."scsi-".$scsi_id;
+  } else {
+    $disk_by_id_path = $disk_by_id_path."dm-uuid-mpath-".$scsi_id;
+  }
+  return $disk_by_id_path;
 }
 
-sub get_wrap_dev_name {
-    my ($localdev, $store) = @_;
-
-    my $wrapped_dev_name = "/dev/mapper/" . get_wrap_name($store);
-    my $size_local = `blockdev --getsz $localdev`;
-    my $size_wrapped = `blockdev --getsz $wrapped_dev_name`;
-    if ($size_local eq $size_wrapped) {
-	return $wrapped_dev_name;
-    } else {
-	return $localdev;
-    }
-}
-
-sub unwrap_device {
-    my ($store) = @_;
-
-    my $wrapped_name = get_wrap_name($store);
-    my $cmd = "dmsetup remove $wrapped_name";
-    if (system($cmd) != 0) {
-	print STDERR "'$cmd' failed with $?\n";
-    }
-}
-
-sub wrap_device {
-    my ($localdev, $store) = @_;
-
-    my $size_sectors = `blockdev --getsz $localdev`;
-    chomp($size_sectors); # remove newline
-    if ($size_sectors > 0) {
-	my $wrapped_name = get_wrap_name($store);
-	my $cmd = "echo \"0 $size_sectors linear $localdev 0\" | dmsetup create $wrapped_name";
-	if (system($cmd) != 0) {
-	    print STDERR "'$cmd' failed with $?\n";
-	}
-    }
-    return get_wrap_dev_name($localdev, $store); # return the wrapped dev name if exists or localdev
-}

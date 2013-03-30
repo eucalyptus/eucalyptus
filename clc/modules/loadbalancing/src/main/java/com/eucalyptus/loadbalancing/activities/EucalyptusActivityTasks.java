@@ -54,13 +54,20 @@ import com.google.common.base.Function;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 
+import edu.ucsb.eucalyptus.msgs.AddMultiARecordResponseType;
+import edu.ucsb.eucalyptus.msgs.AddMultiARecordType;
 import edu.ucsb.eucalyptus.msgs.AuthorizeSecurityGroupIngressResponseType;
 import edu.ucsb.eucalyptus.msgs.AuthorizeSecurityGroupIngressType;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
+import edu.ucsb.eucalyptus.msgs.ClusterInfoType;
+import edu.ucsb.eucalyptus.msgs.CreateMultiARecordResponseType;
+import edu.ucsb.eucalyptus.msgs.CreateMultiARecordType;
 import edu.ucsb.eucalyptus.msgs.CreateSecurityGroupResponseType;
 import edu.ucsb.eucalyptus.msgs.CreateSecurityGroupType;
 import edu.ucsb.eucalyptus.msgs.DeleteSecurityGroupResponseType;
 import edu.ucsb.eucalyptus.msgs.DeleteSecurityGroupType;
+import edu.ucsb.eucalyptus.msgs.DescribeAvailabilityZonesResponseType;
+import edu.ucsb.eucalyptus.msgs.DescribeAvailabilityZonesType;
 import edu.ucsb.eucalyptus.msgs.DescribeInstancesResponseType;
 import edu.ucsb.eucalyptus.msgs.DescribeInstancesType;
 import edu.ucsb.eucalyptus.msgs.DnsMessage;
@@ -68,6 +75,10 @@ import edu.ucsb.eucalyptus.msgs.EucalyptusMessage;
 import edu.ucsb.eucalyptus.msgs.IpPermissionType;
 import edu.ucsb.eucalyptus.msgs.RemoveARecordResponseType;
 import edu.ucsb.eucalyptus.msgs.RemoveARecordType;
+import edu.ucsb.eucalyptus.msgs.RemoveMultiANameResponseType;
+import edu.ucsb.eucalyptus.msgs.RemoveMultiANameType;
+import edu.ucsb.eucalyptus.msgs.RemoveMultiARecordResponseType;
+import edu.ucsb.eucalyptus.msgs.RemoveMultiARecordType;
 import edu.ucsb.eucalyptus.msgs.ReservationInfoType;
 import edu.ucsb.eucalyptus.msgs.RevokeSecurityGroupIngressResponseType;
 import edu.ucsb.eucalyptus.msgs.RevokeSecurityGroupIngressType;
@@ -171,14 +182,15 @@ public class EucalyptusActivityTasks {
 	}
 	
 	public List<String> launchInstances(final String availabilityZone, final String imageId, 
-			final String instanceType, int numInstance){
-		return launchInstances(availabilityZone, imageId, instanceType, null, numInstance, null);
+			final String instanceType, final int numInstances){
+		return launchInstances(availabilityZone, imageId, instanceType, null,  null, numInstances);
 	}
 	
 	public List<String> launchInstances(final String availabilityZone, final String imageId, 
-				final String instanceType, String groupName, int numInstance, final String userData){
+				final String instanceType, String groupName, final String userData, final int numInstances){
 		LOG.info("launching instances at zone="+availabilityZone+", imageId="+imageId+", group="+groupName);
-		final EucalyptusLaunchInstanceTask launchTask = new EucalyptusLaunchInstanceTask(availabilityZone, imageId, instanceType);
+		final EucalyptusLaunchInstanceTask launchTask 
+			= new EucalyptusLaunchInstanceTask(availabilityZone, imageId, instanceType, numInstances);
 		if(userData!=null)
 			launchTask.setUserData(userData);
 		if(groupName != null)
@@ -243,6 +255,21 @@ public class EucalyptusActivityTasks {
 		}
 	}
 	
+	public List<ClusterInfoType> describeAvailabilityZones(){
+		final EucalyptusDescribeAvailabilityZonesTask task = new EucalyptusDescribeAvailabilityZonesTask();
+		final CheckedListenableFuture<Boolean> result = task.dispatch(new EucalyptusSystemActivity());
+		try{
+			if(result.get()){
+				final List<ClusterInfoType> describe = task.getAvailabilityZones();
+				return describe;
+			}else
+				throw new EucalyptusActivityException("failed to describe the availability zones");
+		}catch(Exception ex){
+			throw Exceptions.toUndeclared(ex);
+		}
+
+	}
+	
 	public void createSecurityGroup(String groupName, String groupDesc){
 		final EucalyptusCreateGroupTask task = new EucalyptusCreateGroupTask(groupName, groupDesc);
 		final CheckedListenableFuture<Boolean> result = task.dispatch(new EucalyptusSystemActivity());
@@ -295,14 +322,28 @@ public class EucalyptusActivityTasks {
 		} 
 	}
 	
-	public void updateARecord(String zone, String name, String address){
-		final DnsUpdateARecordTask task = new DnsUpdateARecordTask(zone, name, address);
+	
+	public void createARecord(String zone, String name){
+		final DnsCreateNameRecordTask task = new DnsCreateNameRecordTask(zone, name);
 		final CheckedListenableFuture<Boolean> result = task.dispatch(new DnsSystemActivity());
 		try{
 			if(result.get()){
 				return;
 			}else
-				throw new EucalyptusActivityException("failed to update A record ");
+				throw new EucalyptusActivityException("failed to create multi A record ");
+		}catch(Exception ex){
+			throw Exceptions.toUndeclared(ex);
+		} 
+	}
+	
+	public void addARecord(String zone, String name, String address){
+		final DnsAddARecordTask task = new DnsAddARecordTask(zone, name, address);
+		final CheckedListenableFuture<Boolean> result = task.dispatch(new DnsSystemActivity());
+		try{
+			if(result.get()){
+				return;
+			}else
+				throw new EucalyptusActivityException("failed to add A record ");
 		}catch(Exception ex){
 			throw Exceptions.toUndeclared(ex);
 		} 
@@ -321,6 +362,49 @@ public class EucalyptusActivityTasks {
 		}  
 	}
 	
+	public void removeMultiARecord(String zone, String name){
+		final DnsRemoveMultiARecordTask task = new DnsRemoveMultiARecordTask(zone, name);
+		final CheckedListenableFuture<Boolean> result = task.dispatch(new DnsSystemActivity());
+		try{
+			if(result.get()){
+				return;
+			}else
+				throw new EucalyptusActivityException("failed to remove multi A records ");
+		}catch(Exception ex){
+			throw Exceptions.toUndeclared(ex);
+		}  
+	}
+
+	private class EucalyptusDescribeAvailabilityZonesTask extends EucalyptusActivityTask<EucalyptusMessage, Eucalyptus> {
+		private List<ClusterInfoType> zones = null; 
+		private EucalyptusDescribeAvailabilityZonesTask(){
+		}
+		
+		private DescribeAvailabilityZonesType describeAvailabilityZones(){
+			final DescribeAvailabilityZonesType req = new DescribeAvailabilityZonesType();
+		    return req;
+		}
+		
+		@Override
+		void dispatchInternal(
+				ActivityContext<EucalyptusMessage, Eucalyptus> context,
+				Checked<EucalyptusMessage> callback) {
+			final DispatchingClient<EucalyptusMessage,Eucalyptus> client = context.getClient();
+			client.dispatch(describeAvailabilityZones(), callback);
+		}
+
+		@Override
+		void dispatchSuccess(
+				ActivityContext<EucalyptusMessage, Eucalyptus> context, EucalyptusMessage response) {
+			// TODO Auto-generated method stub
+			final DescribeAvailabilityZonesResponseType resp = (DescribeAvailabilityZonesResponseType) response;
+			zones = resp.getAvailabilityZoneInfo();
+		}
+		
+		public List<ClusterInfoType> getAvailabilityZones(){
+			return this.zones;
+		}
+	}
 	
 	private class EucalyptusDescribeServicesTask extends EucalyptusActivityTask<EmpyreanMessage, Empyrean> {
 		private String componentType = null;
@@ -356,20 +440,20 @@ public class EucalyptusActivityTasks {
 		}
 	}
 	
-	private class DnsUpdateARecordTask extends EucalyptusActivityTask<DnsMessage, Dns>{
+	/// create new {name - {address1}} mapping
+	private class DnsCreateNameRecordTask extends EucalyptusActivityTask<DnsMessage, Dns>{
 		private String zone = null;
 		private String name = null;
-		private String address = null;
-		private DnsUpdateARecordTask(final String zone, final String name, final String address){
+
+		private DnsCreateNameRecordTask(final String zone, final String name){
 			this.zone = zone;
 			this.name = name;
-			this.address = address;
 		}
-		private UpdateARecordType updateARecord(){
-			final UpdateARecordType req = new UpdateARecordType();
+		private CreateMultiARecordType createNameRecord(){
+			final CreateMultiARecordType req = new CreateMultiARecordType();
 			req.setZone(this.zone);
 			req.setName(this.name);
-			req.setAddress(this.address);
+			req.setTtl(86400);
 			return req;
 		}
 		
@@ -378,16 +462,53 @@ public class EucalyptusActivityTasks {
 				Checked<DnsMessage> callback) {
 
 			final DispatchingClient<DnsMessage, Dns> client = context.getClient();
-			client.dispatch(updateARecord(), callback);						
+			client.dispatch(createNameRecord(), callback);						
 		}
 
 		@Override
 		void dispatchSuccess(ActivityContext<DnsMessage, Dns> context,
 				DnsMessage response) {
 			// TODO Auto-generated method stub
-			final UpdateARecordResponseType resp = (UpdateARecordResponseType) response;
+			final CreateMultiARecordResponseType resp = (CreateMultiARecordResponseType) response;
 		}
 	}
+	
+	/// add {name-address} mapping into an existing {name - {addr1, addr2, etc } } map
+	private class DnsAddARecordTask extends EucalyptusActivityTask<DnsMessage, Dns>{
+		private String zone = null;
+		private String name = null;
+		private String address = null;
+		private DnsAddARecordTask(final String zone, final String name, final String address){
+			this.zone = zone;
+			this.name = name;
+			this.address = address;
+		}
+		private AddMultiARecordType addARecord(){
+			final AddMultiARecordType req = new AddMultiARecordType();
+			req.setZone(this.zone);
+			req.setName(this.name);
+			req.setAddress(this.address);
+			req.setTtl(86400);
+			return req;
+		}
+		
+		@Override
+		void dispatchInternal(ActivityContext<DnsMessage, Dns> context,
+				Checked<DnsMessage> callback) {
+
+			final DispatchingClient<DnsMessage, Dns> client = context.getClient();
+			client.dispatch(addARecord(), callback);						
+		}
+
+		@Override
+		void dispatchSuccess(ActivityContext<DnsMessage, Dns> context,
+				DnsMessage response) {
+			// TODO Auto-generated method stub
+			final AddMultiARecordResponseType resp = (AddMultiARecordResponseType) response;
+		}
+	}
+	
+	/// delete one name-address mapping from existing {name - {addr1, addr2, etc } } map
 	private class DnsRemoveARecordTask extends EucalyptusActivityTask<DnsMessage, Dns>{
 		private String zone = null;
 		private String name = null;
@@ -397,8 +518,8 @@ public class EucalyptusActivityTasks {
 			this.name = name;
 			this.address = address;
 		}
-		private RemoveARecordType removeARecord(){
-			final RemoveARecordType req = new RemoveARecordType();
+		private RemoveMultiARecordType removeARecord(){
+			final RemoveMultiARecordType req = new RemoveMultiARecordType();
 			req.setZone(this.zone);
 			req.setName(this.name);
 			req.setAddress(this.address);
@@ -417,10 +538,40 @@ public class EucalyptusActivityTasks {
 		void dispatchSuccess(ActivityContext<DnsMessage, Dns> context,
 				DnsMessage response) {
 			// TODO Auto-generated method stub
-			final RemoveARecordResponseType resp = (RemoveARecordResponseType) response;
+			final RemoveMultiARecordResponseType resp = (RemoveMultiARecordResponseType) response;
 		}
 	}
 	
+	/// delete name - {addr1, addr2, addr3, etc} mapping entirely
+	private class DnsRemoveMultiARecordTask extends EucalyptusActivityTask<DnsMessage, Dns>{
+		private String zone = null;
+		private String name = null;
+		private DnsRemoveMultiARecordTask(final String zone, final String name){
+			this.zone = zone;
+			this.name = name;
+		}
+		private RemoveMultiANameType removeARecord(){
+			final RemoveMultiANameType req = new RemoveMultiANameType();
+			req.setZone(this.zone);
+			req.setName(this.name);
+			return req;
+		}
+		
+		@Override
+		void dispatchInternal(ActivityContext<DnsMessage, Dns> context,
+				Checked<DnsMessage> callback) {
+
+			final DispatchingClient<DnsMessage, Dns> client = context.getClient();
+			client.dispatch(removeARecord(), callback);						
+		}
+
+		@Override
+		void dispatchSuccess(ActivityContext<DnsMessage, Dns> context,
+				DnsMessage response) {
+			// TODO Auto-generated method stub
+			final RemoveMultiANameResponseType resp = (RemoveMultiANameResponseType) response;
+		}
+	}
 	private class EucalyptusDescribeInstanceTask extends EucalyptusActivityTask<EucalyptusMessage, Eucalyptus> {
 		private final List<String> instanceIds;
 		private final AtomicReference<List<RunningInstancesItemType>> result =
@@ -634,14 +785,17 @@ public class EucalyptusActivityTasks {
 		private final String instanceType;
 		private String userData = null;
 		private String groupName = null;
+		private int numInstances = 1;
 		private final AtomicReference<List<String>> instanceIds = new AtomicReference<List<String>>(
 		    Collections.<String>emptyList()
 	    );
 
-		private EucalyptusLaunchInstanceTask(final String availabilityZone, final String imageId, final String instanceType ) {
+		private EucalyptusLaunchInstanceTask(final String availabilityZone, final String imageId, 
+				final String instanceType, int numInstances) {
 			this.availabilityZone = availabilityZone;
 			this.imageId = imageId;
 			this.instanceType = instanceType;
+			this.numInstances = numInstances;
 		}
 
 	    private RunInstancesType runInstances( 
@@ -662,7 +816,11 @@ public class EucalyptusActivityTasks {
 		    final RunInstancesType runInstances = TypeMappers.transform( launchConfiguration, RunInstancesType.class );
 		    if(availabilityZone != null)
 		    	runInstances.setAvailabilityZone( availabilityZone );
-		    runInstances.setMaxCount( attemptToLaunch );
+		    
+		    if(numInstances>1){
+		    	runInstances.setMinCount(numInstances);
+		    	runInstances.setMaxCount(numInstances);
+		    }
 		    if(this.userData!=null)
 		    	runInstances.setUserData(this.userData);
 		    return runInstances;
