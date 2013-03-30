@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * Copyright 2009-2013 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -68,7 +68,9 @@ import java.util.NoSuchElementException;
 import org.hibernate.criterion.Restrictions;
 import com.eucalyptus.auth.entities.AccountEntity;
 import com.eucalyptus.auth.entities.GroupEntity;
+import com.eucalyptus.auth.entities.InstanceProfileEntity;
 import com.eucalyptus.auth.entities.PolicyEntity;
+import com.eucalyptus.auth.entities.RoleEntity;
 import com.eucalyptus.auth.entities.UserEntity;
 import com.eucalyptus.auth.principal.Account;
 import com.eucalyptus.auth.principal.Policy;
@@ -137,7 +139,39 @@ public class DatabaseAuthUtils {
     }
     return result;
   }
-  
+
+  /**
+   * Must call within a transaction.
+   */
+  public static InstanceProfileEntity getUniqueInstanceProfile( EntityWrapper<InstanceProfileEntity> db, String instanceProfileName, String accountName ) throws Exception {
+    @SuppressWarnings( "unchecked" )
+    InstanceProfileEntity result = ( InstanceProfileEntity ) db
+        .createCriteria( InstanceProfileEntity.class ).add( Restrictions.eq( "name", instanceProfileName ) )
+        .createCriteria( "account" ).add( Restrictions.eq( "name", accountName ) )
+        .setCacheable( true )
+        .uniqueResult( );
+    if ( result == null ) {
+      throw new NoSuchElementException( "Can not find instance profile " + instanceProfileName + " in " + accountName );
+    }
+    return result;
+  }
+
+  /**
+   * Must call within a transaction.
+   */
+  public static RoleEntity getUniqueRole( EntityWrapper<RoleEntity> db, String roleName, String accountName ) throws Exception {
+    @SuppressWarnings( "unchecked" )
+    final RoleEntity result = ( RoleEntity ) db
+        .createCriteria( RoleEntity.class ).add( Restrictions.eq( "name", roleName ) )
+        .createCriteria( "account" ).add( Restrictions.eq( "name", accountName ) )
+        .setCacheable( true )
+        .uniqueResult();
+    if ( result == null ) {
+      throw new NoSuchElementException( "Can not find role " + roleName + " in " + accountName );
+    }
+    return result;
+  }
+
   /**
    * Must call within a transaction.
    * 
@@ -171,18 +205,22 @@ public class DatabaseAuthUtils {
   }
   
   public static PolicyEntity removeGroupPolicy( GroupEntity group, String name ) throws Exception {
+    return removeNamedPolicy( group.getPolicies(), name );
+  }
+
+  public static PolicyEntity removeNamedPolicy( List<PolicyEntity> policyEntities, String name ) throws Exception {
     PolicyEntity policy = null;
-    for ( PolicyEntity p : group.getPolicies( ) ) {
+    for ( PolicyEntity p : policyEntities ) {
       if ( name.equals( p.getName( ) ) ) {
         policy = p;
       }
     }
     if ( policy != null ) {
-      group.getPolicies( ).remove( policy );
+      policyEntities.remove( policy );
     }
     return policy;
   }
-  
+
   /**
    * Check if the user name follows the IAM spec.
    * http://docs.amazonwebservices.com/IAM/latest/UserGuide/index.html?Using_Identifiers.html
@@ -243,7 +281,30 @@ public class DatabaseAuthUtils {
       throw new AuthException( "Failed to find user", e );
     }
   }
-  
+
+  /**
+   * Check if a role exists.
+   */
+  public static boolean checkRoleExists( String roleName, String accountName ) throws AuthException {
+    if ( roleName == null || accountName == null ) {
+      throw new AuthException( "Empty user name or account name" );
+    }
+    final EntityWrapper<RoleEntity> db = EntityWrapper.get( RoleEntity.class );
+    try {
+      @SuppressWarnings( "unchecked" )
+      RoleEntity result = ( RoleEntity ) db
+          .createCriteria( RoleEntity.class ).add( Restrictions.eq( "name", roleName ) )
+          .createCriteria( "account" ).add( Restrictions.eq( "name", accountName ) )
+          .setCacheable( true )
+          .uniqueResult();
+      return result != null;
+    } catch ( Exception e ) {
+      throw new AuthException( "Failed to find role", e );
+    } finally {
+      db.rollback();
+    }
+  }
+
   /**
    * Check if an account exists.
    * 
@@ -298,7 +359,32 @@ public class DatabaseAuthUtils {
       throw new AuthException( "Failed to find group", e );
     }
   }
-  
+
+  /**
+   * Check if an instance profile exists.
+   */
+  public static boolean checkInstanceProfileExists( String instanceProfileName, String accountName ) throws AuthException {
+    if ( instanceProfileName == null || accountName == null ) {
+      throw new AuthException( "Empty instance profile name or account name" );
+    }
+    final EntityWrapper<InstanceProfileEntity> db = EntityWrapper.get( InstanceProfileEntity.class );
+    try {
+      @SuppressWarnings( "unchecked" )
+      InstanceProfileEntity result = ( InstanceProfileEntity ) db
+          .createCriteria( InstanceProfileEntity.class ).add( Restrictions.eq( "name", instanceProfileName ) )
+          .createCriteria( "account" ).add( Restrictions.eq( "name", accountName ) )
+          .setCacheable( true )
+          .uniqueResult();
+      return result != null;
+    } catch ( Exception e ) {
+      throw new AuthException( "Failed to find instance profile", e );
+    } finally {
+      db.rollback();
+    }
+  }
+
+
+
   /**
    * Check if the acount is empty (no groups, no users).
    * 

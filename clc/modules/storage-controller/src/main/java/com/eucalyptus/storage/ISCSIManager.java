@@ -94,8 +94,8 @@ import edu.ucsb.eucalyptus.util.SystemUtil.CommandOutput;
 
 
 public class ISCSIManager implements StorageExportManager {
-  public static String  TGT_SERVICE_NAME = "tgtd";
-  private static Logger LOG = Logger.getLogger(ISCSIManager.class);
+	public static String  TGT_SERVICE_NAME = "tgtd";
+	private static Logger LOG = Logger.getLogger(ISCSIManager.class);
 	private static String ROOT_WRAP = StorageProperties.EUCA_ROOT_WRAPPER;
 
 	private static ExecutorService service = Executors.newFixedThreadPool(10);
@@ -113,7 +113,7 @@ public class ISCSIManager implements StorageExportManager {
 			Faults.forComponent(Storage.class).havingId(TGT_CORRUPTED).withVar("component", "Storage Controller").withVar("operation", "tgtadm --help").withVar("error", output.error).log();
 			throw new EucalyptusCloudException("tgtadm not found: Is tgt installed?");
 		}
-		
+
 		output = execute (new String[]{ROOT_WRAP, "tgtadm", "--lld", "iscsi", "--mode", "target", "--op", "show"}, timeout);
 		if (output.returnValue != 0 || StringUtils.isNotBlank(output.error)) {
 			LOG.warn("Unable to connect to tgt daemon. Is tgtd loaded?");
@@ -227,7 +227,7 @@ public class ISCSIManager implements StorageExportManager {
 
 	// Modified logic for implementing EUCA-3597
 	public void exportTarget(int tid, String name, int lun, String path, String user) throws EucalyptusCloudException {
-	  LOG.debug("Exporting target: " + tid + "," + name + "," + lun + "," + path + "," + user);
+		LOG.debug("Exporting target: " + tid + "," + name + "," + lun + "," + path + "," + user);
 		checkAndAddUser();
 
 		Long timeout = DirectStorageInfo.getStorageInfo().getTimeoutInMillis();
@@ -239,7 +239,7 @@ public class ISCSIManager implements StorageExportManager {
 			LOG.info("Target: " + tid + " already exported");
 			return;
 		}
-		
+
 		output = execute(new String[] { ROOT_WRAP, "tgtadm", "--lld", "iscsi", "--op", "new", "--mode", "target", "--tid", String.valueOf(tid), "-T", name }, timeout);
 		if (StringUtils.isNotBlank(output.error)) {
 			throw new EucalyptusCloudException(output.error);
@@ -273,7 +273,7 @@ public class ISCSIManager implements StorageExportManager {
 				LOG.info("Target: " + tid + " not found");
 				return;
 			}
-			
+
 			output = execute (new String[]{ROOT_WRAP, "tgtadm", "--lld", "iscsi", "--op", "unbind", "--mode", "target", "--tid", String.valueOf(tid),  "-I", "ALL"} ,timeout);
 			if (StringUtils.isNotBlank(output.error)) {
 				LOG.error("Unable to unbind tid: " + tid);
@@ -301,7 +301,7 @@ public class ISCSIManager implements StorageExportManager {
 					Thread.sleep(1000); //FIXME: clean this up async 
 					continue;
 				}
-				
+
 				output = execute(new String[] { ROOT_WRAP, "tgtadm", "--lld", "iscsi", "--op", "show", "--mode", "target", "--tid", String.valueOf(tid) }, timeout);
 				if (StringUtils.isBlank(output.error)) {
 					LOG.warn("Target: " + tid + " still exists...");
@@ -357,7 +357,7 @@ public class ISCSIManager implements StorageExportManager {
 		} catch(EucalyptusCloudException ex) {
 			boolean addUser = true;
 			String encryptedPassword = null; 
-			
+
 			if (checkUser("eucalyptus"))
 			{
 				try {
@@ -379,7 +379,7 @@ public class ISCSIManager implements StorageExportManager {
 					}
 				}
 			} 
-			
+
 			if (addUser) {
 				// Windows iscsi initiator requires the password length to be 12-16 bytes
 				String password = Hashes.getRandom(16);
@@ -392,7 +392,7 @@ public class ISCSIManager implements StorageExportManager {
 					return;
 				}
 			}
-			
+
 			try{
 				dbUser.add(new CHAPUserInfo("eucalyptus", encryptedPassword));
 			} catch (Exception e) {
@@ -517,5 +517,20 @@ public class ISCSIManager implements StorageExportManager {
 		} finally {
 			service = null;
 		}
+	}
+
+	@Override
+	public boolean isExported(LVMVolumeInfo volumeInfo) throws EucalyptusCloudException {
+		if(volumeInfo instanceof ISCSIVolumeInfo) {
+			if(((ISCSIVolumeInfo) volumeInfo).getTid() > -1) {
+				ISCSIVolumeInfo iscsiVolumeInfo = (ISCSIVolumeInfo) volumeInfo;
+				Long timeout = DirectStorageInfo.getStorageInfo().getTimeoutInMillis();
+				CommandOutput output = execute(new String[] { ROOT_WRAP, "tgtadm", "--lld", "iscsi", "--op", "show", "--mode", "target", "--tid", String.valueOf(iscsiVolumeInfo.getTid()) }, timeout);
+				if (StringUtils.isBlank(output.error)) {
+					return true;
+				}
+			}
+		}
+		return false;
 	}
 }

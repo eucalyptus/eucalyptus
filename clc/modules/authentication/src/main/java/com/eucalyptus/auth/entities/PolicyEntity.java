@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * Copyright 2009-2013 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -116,7 +116,12 @@ public class PolicyEntity extends AbstractPersistent implements Serializable {
   @ManyToOne
   @JoinColumn( name = "auth_policy_owning_group" )
   GroupEntity group;
-  
+
+  // The owning role
+  @ManyToOne
+  @JoinColumn( name = "auth_policy_owning_role" )
+  RoleEntity role;
+
   public PolicyEntity( ) {
   }
   
@@ -128,6 +133,9 @@ public class PolicyEntity extends AbstractPersistent implements Serializable {
     this.policyVersion = version;
     this.text = text;
     this.statements = statements;
+    if ( statements != null ) for ( StatementEntity statement : statements ) {
+        statement.setPolicy( this );
+    }
   }
 
   public static PolicyEntity newInstanceWithId( final String id ) {
@@ -162,6 +170,14 @@ public class PolicyEntity extends AbstractPersistent implements Serializable {
   
   public void setGroup( GroupEntity group ) {
     this.group = group;
+  }
+
+  public RoleEntity getRole() {
+    return role;
+  }
+
+  public void setRole( RoleEntity role ) {
+    this.role = role;
   }
 
   public String getPolicyVersion( ) {

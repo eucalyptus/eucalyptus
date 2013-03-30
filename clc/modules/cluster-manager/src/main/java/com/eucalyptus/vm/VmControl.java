@@ -122,13 +122,13 @@ import com.google.common.base.Function;
 import com.google.common.base.Objects;
 import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
+import com.google.common.base.Strings;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Multimap;
 import com.google.common.collect.Sets;
 import com.google.common.collect.TreeMultimap;
-import com.google.gwt.thirdparty.guava.common.collect.Iterators;
 
 import edu.ucsb.eucalyptus.msgs.CreatePlacementGroupResponseType;
 import edu.ucsb.eucalyptus.msgs.CreatePlacementGroupType;
@@ -181,9 +181,23 @@ public class VmControl {
     Allocation allocInfo = Allocations.run( request );
     final EntityTransaction db = Entities.get( VmInstance.class );
     try {
+      if ( !Strings.isNullOrEmpty( allocInfo.getClientToken() ) ) {
+        final List<VmInstance> instances = VmInstances.listByClientToken(
+            allocInfo.getOwnerFullName( ).asAccountFullName(),
+            allocInfo.getClientToken(), RestrictedTypes.filterPrivileged() );
+        if ( !instances.isEmpty() ) {
+          final VmInstance vm = instances.get( 0 );
+          final ReservationInfoType reservationInfoType = TypeMappers.transform( vm, ReservationInfoType.class );
+          Iterables.addAll( reservationInfoType.getInstancesSet(),
+              Iterables.transform( instances, TypeMappers.lookup( VmInstance.class, RunningInstancesItemType.class ) ) );
+          reply.setRsvInfo( reservationInfoType );
+          return reply;
+        }
+      }
+
       Predicates.and( VerifyMetadata.get( ), AdmissionControl.run( ), ContractEnforcement.run() ).apply( allocInfo );
       allocInfo.commit( );
-      
+
       ReservationInfoType reservation = new ReservationInfoType( allocInfo.getReservationId( ),
                                                                  allocInfo.getOwnerFullName( ).getAccountNumber( ),
                                                                  Lists.transform( allocInfo.getNetworkGroups( ), CloudMetadatas.toDisplayName( ) ) );
@@ -249,8 +263,7 @@ public class VmControl {
                 RunningInstancesItemType ret = VmInstances.transform( vm );
                 if ( ret != null && vm.getReservationId( ) != null ) {
                   if ( instanceMap.put( vm.getReservationId( ), VmInstances.transform( vm ) ) && !reservations.containsKey( vm.getReservationId( ) ) ) {
-                    reservations.put( vm.getReservationId( ),
-                                      new ReservationInfoType( vm.getReservationId( ), vm.getOwner( ).getAccountNumber( ), vm.getNetworkNames( ) ) );
+                    reservations.put( vm.getReservationId( ), TypeMappers.transform( vm, ReservationInfoType.class ) );
                   }
                 }
               } catch ( Exception ex1 ) {

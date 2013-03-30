@@ -344,7 +344,7 @@ public final class ReportingDataVerifier {
 
     if ( user==null && !accountNumberToAccountAdminMap.containsKey( accountNumber ) ) {
       try {
-        user = getAccountProvider().lookupAccountById( accountNumber ).lookupUserByName( User.ACCOUNT_ADMIN );
+        user = getAccountProvider().lookupAccountById( accountNumber ).lookupAdmin();
         accountNumberToAccountAdminMap.put( accountNumber, user );
       } catch ( AuthException e ) {
         accountNumberToAccountAdminMap.put( accountNumber, null );

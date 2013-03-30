@@ -244,7 +244,7 @@ public class RunInstancesType extends VmControlMessage {
   String shutdownAction = "stop"; //or "terminate"
   /** InstanceLicenseRequest license; **/
   String privateIpAddress = "";
-  String clientToken = "";
+  String clientToken;
   
   ArrayList<Integer> networkIndexList = new ArrayList<Integer>();
   String privateMacBase;
@@ -269,7 +269,14 @@ public class RunInstancesType extends VmControlMessage {
     c.networkIndexList = this.networkIndexList.clone( );
     return c;
   }
-  
+
+  void setInstanceProfileNameOrArn ( String nameOrArn ) {
+    if ( nameOrArn.startsWith( "arn:" ) ) {
+      // TODO - EUCA-5407 - Set InstanceProfile ARN
+    } else {
+      // TODO - EUCA-5407 - Set InstanceProfile Name
+    }
+  }
 }
 /** *******************************************************************************/
 public class GetConsoleOutputResponseType extends VmControlMessage {
@@ -334,6 +341,7 @@ public class RunningInstancesItemType extends EucalyptusData implements Comparab
   String rootDeviceType = "instance-store";
   String rootDeviceName = "/dev/sda1";
   ArrayList<InstanceBlockDeviceMapping> blockDevices = new ArrayList<InstanceBlockDeviceMapping>();
+  String clientToken;
   ArrayList<ResourceTag> tagSet = new ArrayList<ResourceTag>();
 
   @Override

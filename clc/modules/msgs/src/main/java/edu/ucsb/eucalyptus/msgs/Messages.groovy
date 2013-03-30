@@ -312,12 +312,12 @@ public class MetricsResourceType extends EucalyptusData {
 public class MetricCounterType extends EucalyptusData {
     String type;
     Long collectionIntervalMs;
-    Long sequenceNum;
     ArrayList<MetricDimensionsType> dimensions = new ArrayList<MetricDimensionsType>();
 }
 
 public class MetricDimensionsType extends EucalyptusData {
     String dimensionName;
+    Long sequenceNum;
     ArrayList<MetricDimensionsValuesType> values = new ArrayList<MetricDimensionsValuesType>();
 }
 

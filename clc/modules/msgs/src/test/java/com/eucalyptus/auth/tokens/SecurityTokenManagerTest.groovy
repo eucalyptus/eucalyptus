@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * Copyright 2009-2013 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -32,6 +32,12 @@ import org.junit.BeforeClass
 import java.security.Security
 import org.bouncycastle.jce.provider.BouncyCastleProvider
 import com.eucalyptus.auth.AuthException
+import com.eucalyptus.auth.principal.Certificate
+import java.security.cert.X509Certificate
+import com.eucalyptus.auth.principal.Group
+import com.eucalyptus.auth.principal.Account
+import com.eucalyptus.auth.principal.Policy
+import com.eucalyptus.auth.principal.Authorization
 
 /**
  * Unit tests for security token manager
@@ -46,7 +52,7 @@ class SecurityTokenManagerTest {
   }
 
   @Test
-  void testIssueToken() {
+  void testIssueTokenWithAccessKey() {
     long now = System.currentTimeMillis()
     long desiredLifetimeHours = 6
 
@@ -55,6 +61,7 @@ class SecurityTokenManagerTest {
       SecurityToken token = manager.doIssueSecurityToken(
         Principals.nobodyUser(),
         testKey,
+        null,
         (int) TimeUnit.HOURS.toSeconds( desiredLifetimeHours ) )
 
     assertThat( "Null token issued", token, notNullValue() )
@@ -67,7 +74,7 @@ class SecurityTokenManagerTest {
   }
 
   @Test
-  void testLookupToken() {
+  void testLookupTokenWithAccessKey() {
     long now = System.currentTimeMillis()
     long desiredLifetimeHours = 6
 
@@ -76,6 +83,7 @@ class SecurityTokenManagerTest {
     SecurityToken token = manager.doIssueSecurityToken(
         Principals.nobodyUser(),
         testKey,
+        null,
         (int) TimeUnit.HOURS.toSeconds( desiredLifetimeHours ) )
 
     AccessKey tokenKey = manager.doLookupAccessKey( token.getAccessKeyId(), token.getToken() )
@@ -87,13 +95,65 @@ class SecurityTokenManagerTest {
     assertThat( "Invalid creation time", tokenKey.isActive(), equalTo(true) )
   }
 
+  /**
+   * WithPassword tests are for console authentication case
+   */
+  @Test
+  void testIssueTokenWithPassword() {
+    long now = System.currentTimeMillis()
+    long desiredLifetimeHours = 6
+
+    User user = user();
+    AccessKey testKey = accessKey( now - TimeUnit.HOURS.toMillis( 24 ), Principals.nobodyUser() )
+    SecurityTokenManager manager = manager( now, testKey, user )
+    SecurityToken token = manager.doIssueSecurityToken(
+        user,
+        null,
+        user.token,
+        (int) TimeUnit.HOURS.toSeconds( desiredLifetimeHours ) )
+
+    assertThat( "Null token issued", token, notNullValue() )
+    assertThat( "Invalid access key identifier", token.getAccessKeyId(), not(isEmptyOrNullString()) )
+    assertThat( "Invalid secret key", token.getSecretKey(), not(isEmptyOrNullString())  )
+    assertThat( "Duplicate access key identifier", token.getAccessKeyId(), not(equalTo(testKey.getAccessKey())) )
+    assertThat( "Duplicate secret key", token.getSecretKey(), not(equalTo(testKey.getSecretKey())) )
+    assertThat( "Security token empty", token.getToken(), not(isEmptyOrNullString()) )
+    assertThat( "Token expiry", token.getExpires(), equalTo( now + TimeUnit.HOURS.toMillis( desiredLifetimeHours ) ) )
+  }
+
+  /**
+   * WithPassword tests are for console authentication case
+   */
+  @Test
+  void testLookupTokenWithPassword() {
+    long now = System.currentTimeMillis()
+    long desiredLifetimeHours = 6
+
+    User user = user();
+    AccessKey testKey = accessKey( now - TimeUnit.HOURS.toMillis( 24 ), Principals.nobodyUser() )
+    SecurityTokenManager manager = manager( now, testKey, user )
+    SecurityToken token = manager.doIssueSecurityToken(
+        user,
+        null,
+        user.token,
+        (int) TimeUnit.HOURS.toSeconds( desiredLifetimeHours ) )
+
+    AccessKey tokenKey = manager.doLookupAccessKey( token.getAccessKeyId(), token.getToken() )
+    assertThat( "Null key", tokenKey, notNullValue() )
+    assertThat( "Invalid access key identifier", tokenKey.getAccessKey(), equalTo(token.getAccessKeyId()) )
+    assertThat( "Invalid secret key", tokenKey.getSecretKey(), equalTo(token.getSecretKey())  )
+    assertThat( "Invalid user", tokenKey.getUser().getUserId(), equalTo(user.getUserId())  )
+    assertThat( "Invalid creation time", tokenKey.getCreateDate(), equalTo( new Date(now) ) )
+    assertThat( "Invalid creation time", tokenKey.isActive(), equalTo(true) )
+  }
+
   @Test
   void testMinimumTokenDuration() {
     long now = System.currentTimeMillis()
 
     AccessKey testKey = accessKey( now - TimeUnit.HOURS.toMillis( 24 ), Principals.nobodyUser() )
     SecurityTokenManager manager = manager( now, testKey )
-    SecurityToken token = manager.doIssueSecurityToken( Principals.nobodyUser(), testKey, 1 )
+    SecurityToken token = manager.doIssueSecurityToken( Principals.nobodyUser(), testKey, null, 1 )
 
     assertThat( "Null token issued", token, notNullValue() )
     assertThat( "Token expiry", token.getExpires(), equalTo( now + TimeUnit.HOURS.toMillis( 1 ) ) )
@@ -105,7 +165,7 @@ class SecurityTokenManagerTest {
 
     AccessKey testKey = accessKey( now - TimeUnit.HOURS.toMillis( 24 ), Principals.nobodyUser() )
     SecurityTokenManager manager = manager( now, testKey )
-    SecurityToken token = manager.doIssueSecurityToken( Principals.nobodyUser(), testKey, Integer.MAX_VALUE )
+    SecurityToken token = manager.doIssueSecurityToken( Principals.nobodyUser(), testKey, null, Integer.MAX_VALUE )
 
     assertThat( "Null token issued", token, notNullValue() )
     assertThat( "Token expiry", token.getExpires(), equalTo( now + TimeUnit.HOURS.toMillis( 36 ) ) )
@@ -117,7 +177,7 @@ class SecurityTokenManagerTest {
 
     AccessKey testKey = accessKey( now - TimeUnit.HOURS.toMillis( 24 ), Principals.systemUser() )
     SecurityTokenManager manager = manager( now, testKey )
-    SecurityToken token = manager.doIssueSecurityToken( Principals.systemUser(), testKey, Integer.MAX_VALUE )
+    SecurityToken token = manager.doIssueSecurityToken( Principals.systemUser(), testKey, null, Integer.MAX_VALUE )
 
     assertThat( "Null token issued", token, notNullValue() )
     assertThat( "Token expiry", token.getExpires(), equalTo( now + TimeUnit.HOURS.toMillis( 1 ) ) )
@@ -128,7 +188,7 @@ class SecurityTokenManagerTest {
     long now = System.currentTimeMillis()
     AccessKey testKey = accessKey( now - TimeUnit.HOURS.toMillis( 24 ), Principals.systemUser() )
     SecurityTokenManager manager = manager( now, testKey )
-    manager.doIssueSecurityToken( Principals.nobodyUser(), testKey, 300 )
+    manager.doIssueSecurityToken( Principals.nobodyUser(), testKey, null, 300 )
   }
 
   private AccessKey accessKey( long created, User owner ) {
@@ -143,7 +203,7 @@ class SecurityTokenManagerTest {
     }
   }
 
-  private SecurityTokenManager manager( long now, AccessKey keyForLookup ) {
+  private SecurityTokenManager manager( long now, AccessKey keyForLookup, User userForLookup = null ) {
     new SecurityTokenManager() {
       @Override protected String getSecurityTokenPassword() { "password" }
       @Override protected long getCurrentTimeMillis() { now }
@@ -151,6 +211,58 @@ class SecurityTokenManagerTest {
         assertThat( "Correct original access key id", accessKeyId, equalTo(keyForLookup.getAccessKey()) )
         keyForLookup
       }
+      @Override protected User lookupUserById( String userId ) {
+        assertThat( "Correct user id", userId, equalTo(userForLookup?.getUserId()) )
+        userForLookup
+      }
+    }
+  }
+
+  // Hey! wouldn't it be great if we had a mocking framework (spock comes with one - http://code.google.com/p/spock/)
+  private User user() {
+    new User() {
+      @Override String getUserId() { "EXAMPLEUUFKQWVU6MBZWL" }
+      @Override void setName(String name) { }
+      @Override String getPath() { "" }
+      @Override void setPath(String path) { }
+      @Override User.RegistrationStatus getRegistrationStatus() { User.RegistrationStatus.CONFIRMED }
+      @Override void setRegistrationStatus(User.RegistrationStatus stat) { }
+      @Override Boolean isEnabled() { true }
+      @Override void setEnabled(Boolean enabled) { }
+      @Override String getToken() { "examplefnBk4b4TfjAjRMhjmu7eBjNmpvR8llmHPfXKzYw1s3vC8tDMCeEk02OKxuXBZJeDMbaynoo6N" }
+      @Override void setToken(String token) { }
+      @Override String resetToken() { getToken() }
+      @Override String getConfirmationCode() { null }
+      @Override void setConfirmationCode(String code) { }
+      @Override void createConfirmationCode() { }
+      @Override String getPassword() { "" }
+      @Override void setPassword(String password) { }
+      @Override void createPassword() { }
+      @Override Long getPasswordExpires() { null }
+      @Override void setPasswordExpires(Long time) { }
+      @Override String getInfo(String key) { null }
+      @Override Map<String, String> getInfo() { [:] }
+      @Override void setInfo(String key, String value) { }
+      @Override void setInfo(Map<String, String> newInfo) { }
+      @Override void removeInfo(String key) { }
+      @Override List<AccessKey> getKeys() { [] }
+      @Override AccessKey getKey(String keyId) { null }
+      @Override void removeKey(String keyId) { }
+      @Override AccessKey createKey() { null }
+      @Override List<Certificate> getCertificates() { [] }
+      @Override Certificate getCertificate(String certificateId) {null}
+      @Override Certificate addCertificate(X509Certificate certificate) { certificate }
+      @Override void removeCertificate(String certficateId) { }
+      @Override List<Group> getGroups() { [] }
+      @Override Account getAccount() { null }
+      @Override boolean isSystemAdmin() { false }
+      @Override  boolean isAccountAdmin() { false }
+      @Override List<Policy> getPolicies() { [] }
+      @Override Policy addPolicy(String name, String policy) { }
+      @Override void removePolicy(String name) { }
+      @Override List<Authorization> lookupAuthorizations(String resourceType) { [] }
+      @Override List<Authorization> lookupQuotas(String resourceType) { [] }
+      @Override String getName() { "test-user-1" }
     }
   }
 }

@@ -69,7 +69,6 @@
 		<value name="type" field="type" type="java.lang.String" />
 		<value name="collectionIntervalMs" field="collectionIntervalMs"
 			type="java.lang.Long" />
-		<value name="sequenceNum" field="sequenceNum" type="java.lang.Long" />
 		<collection field="dimensions"
 			factory="org.jibx.runtime.Utility.arrayListFactory">
 			<structure name="dimensions"
@@ -80,6 +79,7 @@
 	<mapping class="edu.ucsb.eucalyptus.msgs.MetricDimensionsType"
 		abstract="true">
 		<value name="dimensionName" field="dimensionName" type="java.lang.String" />
+		<value name="sequenceNum" field="sequenceNum" type="java.lang.Long" />
 		<collection field="values"
 			factory="org.jibx.runtime.Utility.arrayListFactory">
 			<structure name="values"

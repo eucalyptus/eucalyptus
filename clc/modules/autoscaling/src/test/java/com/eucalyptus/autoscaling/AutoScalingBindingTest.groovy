@@ -30,6 +30,10 @@ import com.eucalyptus.autoscaling.common.ExecutePolicyType
 import com.eucalyptus.autoscaling.common.PutScalingPolicyType
 import com.eucalyptus.autoscaling.common.SetDesiredCapacityType
 import com.eucalyptus.autoscaling.common.UpdateAutoScalingGroupType
+import com.eucalyptus.autoscaling.common.DescribeTagsType
+import com.eucalyptus.autoscaling.common.Filters
+import com.eucalyptus.autoscaling.common.Values
+import com.eucalyptus.autoscaling.common.Filter
 
 /**
  * 
@@ -182,5 +186,21 @@ class AutoScalingBindingTest extends QueryBindingTestSupport {
         healthCheckGracePeriod: 4534,
         terminationPolicies: new TerminationPolicies( member: [ 'Default' ] )
     ), 12 )
+
+    // DescribeTags
+    bindAndAssertObject( asb, DescribeTagsType.class, "DescribeTags", new DescribeTagsType(
+      filters: new Filters(
+          member: [
+              new Filter(
+                  name: "key",
+                  values: new Values(
+                      member: [
+                          "TestKey"
+                      ]
+                  )
+              )
+          ],
+      )
+    ), 2 )
   }
 }
