@@ -673,7 +673,7 @@ static int doMigrateInstances(struct nc_state_t *nc, ncMetadata * pMeta, ncInsta
 
     // FIXME: Optimize the location of this loop, placing it inside various conditionals below?
     for (int inst_idx = 0; inst_idx < instancesLen; inst_idx++) {
-        ncInstance *instance_req = instances[0];
+        ncInstance *instance_req = instances[inst_idx];
         char *sourceNodeName = instance_req->migration_src;
         char *destNodeName = instance_req->migration_dst;
 
@@ -888,10 +888,20 @@ static int doMigrateInstances(struct nc_state_t *nc, ncMetadata * pMeta, ncInsta
         sem_v(inst_sem);
         if (error) {
             if (error == EUCA_DUPLICATE_ERROR) {
-                // FIXME: Handle this way, ensure deletion after migration, or remove and re-add?
-                LOGINFO("[%s] instance struct already exists (from previous migration?), not adding\n", instance->instanceId);
+                // FIXME: Ensure deletion after migration, or replace (remove and re-add)?
+                LOGINFO("[%s] instance struct already exists (from previous migration?), deleting and re-adding...\n", instance->instanceId);
+                error = remove_instance(&global_instances, instance);
+                if (error) {
+                    LOGERROR("[%s] could not replace (remove) instance struct, failing...\n", instance->instanceId);
+                    goto failed_dest;
+                }
+                error = add_instance(&global_instances, instance);
+                if (error) {
+                    LOGERROR("[%s] could not replace (add) instance struct, failing...\n", instance->instanceId);
+                    goto failed_dest;
+                }
             } else {
-                LOGERROR("[%s] could not add instance struct\n", instance->instanceId);
+                LOGERROR("[%s] could not add instance struct, failing...\n", instance->instanceId);
                 goto failed_dest;
             }
         }
