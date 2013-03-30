@@ -114,7 +114,7 @@ define(['app'], function(app) {
           if (searchers && searchers[facet.category]) {
             return searchers[facet.category].apply(self, [facet, search, images]);
           }
-          var test = new RegExp('.*' + facet.value + '.*').test(model.get(facet.category));
+          var test = new RegExp('.*' + facet.value + '.*', 'im').test(model.get(facet.category));
           return test;
         });
       }).map(function(model) {

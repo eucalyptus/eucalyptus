@@ -19,7 +19,11 @@ define([
                     toggle: true
                 });
                 
-                console.log("VOLUMES: " + JSON.stringify(app.data.images))
+                console.log("VOLUMES: " + JSON.stringify(app.data.scalingGroups))
+                
+                for (var key in app.data) {
+                  console.log('KEY ' + key);
+                }
                 
 
             var explicitFacets = {
