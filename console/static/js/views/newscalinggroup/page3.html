@@ -1,44 +1,44 @@
 <div class="wizard-step">
     <div class="wizardTitle">
-        <h3>Policies</h3>
+        <h3 data-msg="create_scaling_group_section_header_policies">Policies</h3>
         <div class="launch-wizard-type-main-contents">
             <div class="launch-wizard-type-option">
                 <div class="form-subrow">
                     <div class="form-row clearfix">
-                        <input type="checkbox">Oldest Instance</input> <span class="subrow-buttons"><button>Up</button><button>Down</button></span>
+                        <input type="checkbox" data-msg="">Oldest Instance</input> <span class="subrow-buttons"><button>Up</button><button>Down</button></span>
                     </div>
                     <div class="form-row clearfix">
-                        <input type="checkbox">Newest Instance</input> <span class="subrow-buttons"><button>Up</button><button>Down</button></span>
+                        <input type="checkbox" data-msg="">Newest Instance</input> <span class="subrow-buttons"><button>Up</button><button>Down</button></span>
                     </div>
                     <div class="form-row clearfix">
-                        <input type="checkbox">Oldest Launch Configuration</input> <span class="subrow-buttons"><button>Up</button><button>Down</button></span>
+                        <input type="checkbox" data-msg="">Oldest Launch Configuration</input> <span class="subrow-buttons"><button>Up</button><button>Down</button></span>
                     </div>
                     <div class="form-row clearfix">
-                        <input type="checkbox">Closest To Complete Running Hour</input> <span class="subrow-buttons"><button>Up</button><button>Down</button></span>
+                        <input type="checkbox" data-msg="">Closest To Complete Running Hour</input> <span class="subrow-buttons"><button>Up</button><button>Down</button></span>
                     </div>
                 </div>
             </div>
-            <div class="wizard-section-label">Scaling Policies</div>
+            <div class="wizard-section-label" data-msg="">Scaling Policies</div>
             <div class="form-row clearfix">
-                <label for="cooldownPeriod">Default Cooldown Period (secs)</label>
+                <label for="cooldownPeriod" data-msg="">Default Cooldown Period (secs)</label>
                 <input class="smallNumber" type="cooldownPeriod" id="cooldownPeriod" value="1"></input>                
             </div>
             <div class="form-row clearfix">
                 <div>
                     <span class="form-row-section">
-                        <label class="centerLabel required-label" for="scalingPolicyName">NAME</label>
+                        <label class="centerLabel required-label" for="scalingPolicyName" data-msg="">NAME</label>
                         <input name="key" id="scalingPolicyName" type="text" placeholder="scaling policy name"></input>
                     </span>
                     <span class="form-row-section">
-                        <label for="scalingPolicyAmount" class="required-label">AMOUNT</label>
+                        <label for="scalingPolicyAmount" class="required-label" data-msg="">AMOUNT</label>
                         <input name="scalingPolicyAmount" class="smallNumber" id="scalingPolicyAmount" type="number" value="1" placeholder="value"></input>
                     </span>
                     <span class="form-row-section">
-                        <label for="scalingPolicyMeasure" class="required-label">MEASURE</label>
+                        <label for="scalingPolicyMeasure" class="required-label" data-msg="">MEASURE</label>
                         <input name="scalingPolicyMeasure" class="smallNumber" id="scalingPolicyMeasure" type="number" value="%" placeholder="%"></input>
                     </span>
                     <span class="form-row-section">
-                        <label for="triggerMetric" class="required-label">TRIGGER METRIC</label>
+                        <label for="triggerMetric" class="required-label" data-msg="">TRIGGER METRIC</label>
                         <select name="triggerMetric" id="triggerMetric" class="smallNumber">
                             <option>abc</option>
                             <option>def</option>
@@ -46,7 +46,7 @@
                         </select>
                     </span>
                     <span class="form-row-section">
-                        <label for="triggerThreshold" class="required-label">TRIGGER THRESHOLD</label>
+                        <label for="triggerThreshold" class="required-label" data-msg="">TRIGGER THRESHOLD</label>
                         <input name="triggerThreshold" id="triggerThreshold" class="smallNumber"
                                type="number" value="1" placeholder="%"></input>
                     </span>

@@ -1,31 +1,31 @@
 <div class="wizard-step">
-    <div class="wizardTitle"><h3>General</h3></div>
+    <div class="wizardTitle" data-msg="create_scaling_group_section_header_general"><h3>General</h3></div>
     <div class="launch-wizard-type-main-contents">
         <div class="launch-wizard-type-option">
             <div class="form-row clearfix">
-                <label class="required-label" for="scalingGroupName">Name</label>
+                <label class="required-label" for="scalingGroupName" data-msg"create_scaling_group_general_name">Name</label>
                 <input type="text" name="name" id="scalingGroupName" data-value="scalingGroup.name"></input><span data-text="errors.name"></span>
             </div>
             <div class="form-row clearfix">
                 <div data-ui-selector="launchConfigs">
-                     <label>Launch Configuration</label>
+                     <label class="required-label" data-msg="create_scaling_group_general_launch_config">Launch Configuration</label>
                 </div>
             </div>
             <div class="form-row clearfix">
-                <div style="margin-left: 3em;" class="wizard-section-label">Instances</div>
+                <div style="margin-left: 3em;" class="wizard-section-label" data-msg="create_scaling_group_general_instances">Instances</div>
 
                 <div class="form-row clearfix">
-                    <label for="maximum">Maximum</label>
+                    <label class="required-label" for="maximum" data-msg="create_scaling_group_general_instances_max">Maximum</label>
                     <input class="smallNumber" name="maximum" id="maximum" type="number" value="1" data-value="scalingGroup.max_size"></input><span data-text=":errors.max_size"></span>
                 </div>
 
                 <div class="form-row clearfix">
-                    <label for="desired">Desired</label>
+                    <label for="desired" data-msg="create_scaling_group_general_instances_desired">Desired</label>
                     <input class="smallNumber" name="desired" id="desired" type="number" value="1"></input>
                 </div>
 
                 <div class="form-row clearfix">
-                    <label for="minimum">Minimum</label>
+                    <label class="required-label" for="minimum" data-msg="create_scaling_group_general_instances_min">Minimum</label>
                     <input class="smallNumber" name="minimum" id="minimum" type="number" value="1" data-value="scalingGroup.min_size"></input><span data-text="errors.min_size"></span>
                 </div>
             </div>
