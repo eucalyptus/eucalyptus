@@ -89,11 +89,11 @@
           ],
         },
         text : {
-          header_title : launchconfig_h_title,
-          create_resource : launchconfig_create,
-          resource_found : 'launchconfig_found',
-          resource_search : launchconfig_search,
-          resource_plural : launchconfig_plural,
+          header_title : launch_config_h_title,
+          create_resource : launch_config_create,
+          resource_found : 'launch_config_found',
+          resource_search : launch_config_search,
+          resource_plural : launch_config_plural,
         },
         expand_callback : function(row){ // row = [col1, col2, ..., etc]
           return thisObj._expandCallback(row);
