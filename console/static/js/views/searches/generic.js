@@ -155,7 +155,13 @@ define(['app', 'dataholder'], function(app, dh) {
           if ('all_text' === facet.category) {
             return drillThrough(model, rex, 0);
           } else {
-            return rex.test(model.get(facet.category));
+            var curr = model.get(facet.category);
+            if (typeof curr === 'object') {
+              // Allow for searching inside tags and such
+              return drillThrough(curr, rex, 0);
+            } else {
+              return rex.test(model.get(facet.category));
+            }
           }
         });
       }).map(function(model) {
