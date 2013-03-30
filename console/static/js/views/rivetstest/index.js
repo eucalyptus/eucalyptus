@@ -7,8 +7,9 @@ define([
     'views/dialogs/quickscaledialog',
     'models/scalinggrp',
     'views/searches/volume',
-    'models/launchconfig'
-], function( app, dh, template, rivets, TestDialog, QuickScaleDialog, ScalingGroup, Search, LaunchConfig) {
+    'models/launchconfig',
+    'models/tag'
+ ], function( app, dh, template, rivets, TestDialog, QuickScaleDialog, ScalingGroup, Search, LaunchConfig, Tag) {
 	return Backbone.View.extend({
 		initialize : function() {
 			var self = this;
@@ -38,10 +39,17 @@ define([
             }
 
             var sg = new ScalingGroup({name: 'a test group'});
+            var tag = new Tag({resource_type: 'instance'});
+            var lc = new LaunchConfig({name: 'my launch configuration'});
+
+
             var scope = {
                 errors: new Backbone.Model({}),
+                lc_errors: new Backbone.Model({}),
                 test: test,
                 sg: sg,
+                tag: tag,
+                lc: lc,
                 search : new Search(app.data.images, 
                               facetNames, 
                               {architecture : 'System Type'}, 
@@ -176,6 +184,16 @@ define([
             sg.on('change', function() {
                scope.errors.clear();
                scope.errors.set(sg.validate()); 
+            });
+
+            tag.on('change', function() {
+               scope.errors.clear();
+               scope.errors.set(tag.validate());
+            });
+ 
+            lc.on('change', function() {
+               scope.lc_errors.clear();
+               scope.lc_errors.set(lc.validate());
             });
 
 			this.$el.html(template);

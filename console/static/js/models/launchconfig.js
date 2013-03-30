@@ -6,6 +6,70 @@ define([
 ], function(EucaModel) {
   var model = EucaModel.extend({
     idAttribute: 'name',
+
+    validation: {
+
+      // ====================
+      // API Reference: http://docs.aws.amazon.com/AWSSDKforPHP/latest/index.html#m=AmazonAS/create_launch_configuration
+      // ====================         
+
+      name: {
+        rangeLength: [1, 255],
+        required: true
+      },
+      image_id: {
+        rangeLength: [1, 255],
+        required: true
+      },
+      instance_type: {
+        rangeLength: [1, 255],
+        required: true
+      },
+      key_name: {
+        rangeLength: [1, 255],
+        required: false
+      },
+      security_groups: {
+        required: false
+      },
+      user_data: {
+        rangeLength: [0, 21847],
+        required: false
+      },
+      kernel_id: {
+        rangeLength: [1, 255],
+        required: false
+      },
+      ramdisk_id: {
+        rangeLength: [1, 255],
+        required: false
+      },
+      block_device_mappings: {
+        required: false
+      },
+      instance_monitoring: {
+        required: false
+      },
+      spot_price: {
+        pattern: /\d+\.\d+/,
+        required: false
+      },
+      iam_instance_profile: {
+        rangeLength: [1, 1600],
+        required: false
+      },
+      ebs_optimized: {
+        required: false
+      },
+      curlopts: {
+        required: false
+      },
+      return_curl_handle: {
+        oneOf: [ 'true', 'false' ],
+        required: false
+      },
+    },
+
     sync: function(method, model, options) {
       var collection = this;
         if (method == 'create') {
