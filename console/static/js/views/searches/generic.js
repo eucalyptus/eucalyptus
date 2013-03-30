@@ -1,5 +1,10 @@
 define(['app', 'dataholder'], function(app, dh) {
   var self = this;
+  
+  function isArray(o) {
+    return o && typeof o.forEach === 'function' && typeof o.length === 'number';
+  }
+  
   return function(images, allowedFacetNames, localizer, explicitFacets, searchers) {
     var self = this;
     searchContext = self;
@@ -43,6 +48,8 @@ define(['app', 'dataholder'], function(app, dh) {
         return words;
       }
       result = capitalize(name.split(/_/g)).join(' ');
+      result = result.replace(/&#x2f;/g, '/')
+      result = result.replace(/&#.{0,3};/g, '')
       return result;
     }
 
@@ -99,6 +106,39 @@ define(['app', 'dataholder'], function(app, dh) {
       return siftKeyList(result, searchTerm);
     }
 
+    var MAX_RECURSE = 5;
+    function drillThrough(obj, rex, depth) {
+      if (MAX_RECURSE === depth) {
+        return false;
+      }
+      var result = false;
+      switch (typeof obj) {
+        case 'string' :
+          result = rex.test(obj);
+          break;
+        case 'number' :
+          result = rex.test('' + obj)
+          break;
+        case 'object' :
+          if (isArray(obj)) {
+            for (var i = 0; i < obj.length; i++) {
+              result = drillThrough(obj[i], rex, depth + 1);
+              if (result) {
+                break;
+              }
+            }
+          } else {
+            for (var key in obj) {
+              result = drillThrough(obj[key], rex, depth + 1);
+              if (result) {
+                break;
+              }
+            }
+          }
+      }
+      return result;
+    }
+
     this.images = images;
     this.filtered = images.clone();
     this.lastSearch = '';
@@ -111,8 +151,12 @@ define(['app', 'dataholder'], function(app, dh) {
           if (searchers && searchers[facet.category]) {
             return searchers[facet.category].apply(self, [facet, search, images]);
           }
-          var test = new RegExp('.*' + facet.value + '.*', 'im').test(model.get(facet.category));
-          return test;
+          var rex = new RegExp('.*' + facet.value + '.*', 'img');
+          if ('all_text' === facet.category) {
+            return drillThrough(model, rex, 0);
+          } else {
+            return rex.test(model.get(facet.category));
+          }
         });
       }).map(function(model) {
         return model.toJSON();

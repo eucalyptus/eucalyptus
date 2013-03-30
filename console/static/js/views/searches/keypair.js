@@ -1,7 +1,7 @@
 define([
-    'views/searches/generic',
+  'views/searches/generic',
 ], function(Search) {
-    return function(images) {
-      return new Search(images, ['name', 'value'], {}, null);
-    }
+  return function(images) {
+    return new Search(images, ['all_text', 'name', 'value'], {}, null);
+  }
 });
