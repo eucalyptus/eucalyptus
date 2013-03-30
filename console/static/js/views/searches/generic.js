@@ -1,8 +1,10 @@
-define(['app'], function(app) {
+define(['app', 'dataholder'], function(app, dh) {
   var self = this;
   return function(images, allowedFacetNames, localizer, explicitFacets, searchers) {
     var self = this;
     searchContext = self;
+    
+    console.log('I GOT ' + JSON.stringify(images));
     
     // Make sure if the argument isn't there, that at least
     // something works

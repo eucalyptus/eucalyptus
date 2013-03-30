@@ -19,7 +19,7 @@ define([
                     toggle: true
                 });
                 
-                console.log("VOLUMES: " + JSON.stringify(app.data.scalingGroups))
+                console.log("VOLUMES: " + JSON.stringify(app.data.eip))
                 
                 for (var key in app.data) {
                   console.log('KEY ' + key);
