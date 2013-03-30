@@ -1,10 +1,10 @@
 <div>
-    <div class="title">Delete scaling group</div>
+    <div class="title" data-msg="delete_scaling_group_dialog_title">Delete scaling group</div>
     <div class="body">
-		<p>Your scaling group is a mess and you can't delete it. Sucka!</p>
+		<p data-msg="delete_scaling_group_dialog_in_progress_warning">Your scaling group is a mess and you can't delete it. Sucka!</p>
 		<div class="selected-resources">
 			<table>
-				<thead><tr><th>SCALING GROUP</th></tr></thead>
+				<thead><tr><th data-msg="delete_scaling_group_dialog_hdr_scaling_group">SCALING GROUP</th></tr></thead>
 				<tbody>
 					<tr data-each-item="items"><td><span data-text="item"></span></td></tr>
 				</tbody>
@@ -13,7 +13,7 @@
 		<div data-text=":status" style="height:20px"></div>
         <div class="ui-dialog-buttonpane ui-widget-content ui-helper-clearfix">
             <div class="ui-dialog-buttonset">
-                <a data-ui-button=":cancelButton">Close</a>
+                <a data-ui-button=":cancelButton" data-msg="dialog_close_btn">Close</a>
             </div>
         </div>
     </div>
