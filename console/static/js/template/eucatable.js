@@ -84,7 +84,8 @@
       this._refreshTableInterval();
       $('html body').eucadata('setDataNeeds', thisObj.options.data_deps);
       require(['app','views/searches/' + dtArg.sAjaxSource, 'visualsearch'], function(app, searchConfig, VS) {
-        var target = dtArg.sAjaxSource === 'scalinggrp' ? 'scalingGroups' : dtArg.sAjaxSource;
+        var target = dtArg.sAjaxSource === 'scalinggrp' ? 'scalingGroups' : dtArg.sAjaxSource == 'launchconfig' ? 
+            'launchConfigs' : dtArg.sAjaxSource;
         var source = app.data[target];
         if (typeof source === 'undefined') {
           throw new Error("No property '" + target + " on app.data");

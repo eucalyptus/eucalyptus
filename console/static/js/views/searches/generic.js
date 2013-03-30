@@ -4,12 +4,9 @@ define(['app', 'dataholder'], function(app, dh) {
     var self = this;
     searchContext = self;
     
-    console.log('I GOT ' + JSON.stringify(images));
-    
     // Make sure if the argument isn't there, that at least
     // something works
     if (!allowedFacetNames) {
-      console.log('NO NAMES'); 
       allowedFacetNames = [];
       images.forEach(function(img) {
         for (var key in img) {
@@ -84,9 +81,7 @@ define(['app', 'dataholder'], function(app, dh) {
       if (searchers && searchers[facet]) {
         return searchers[facet].apply(self, [facet, searchTerm]);
       }
-      console.log('FACET: ' + JSON.stringify(facet));
       if (explicitFacets && explicitFacets[facet]) {
-        console.log('RETURNING EXPLICIT ' + JSON.stringify(explicitFacets[facet]));
         return explicitFacets[facet];
       }
       var result = [];
@@ -126,12 +121,10 @@ define(['app', 'dataholder'], function(app, dh) {
       self.filtered.reset(results);
     }
     this.facetMatches = function(callback) {
-      console.log('FM');
       callback(deriveFacets());
     }
     
     this.valueMatches = function(facet, searchTerm, callback) {
-      console.log('VM: ' + facet);
       callback(deriveMatches(facet, searchTerm))
     }
     
