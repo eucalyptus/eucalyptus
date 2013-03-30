@@ -8,23 +8,30 @@ define([
 
       initialize: function(args) {
         var self = this;
-        var scope =  args.scope;
-        if (scope) {
-            myScope = scope;
-            scope.launchConfigs = {
-                name: 'launchConfig',
-                collection: dh.launchConfigs,
-                itrLabel: function() {
-                  return this.itr.get('name');
-                } 
-            }
-            scope.scalingGroup.on('change', function() {
-                self.render();
-            });
+        var scope = this.model;
+
+        scope.launchConfigs = {
+            name: 'launchConfig',
+            collection: dh.launchConfigs,
+            itrLabel: function() {
+              return this.itr.get('name');
+            } 
         }
 
+        scope.scalingGroupErrors = new Backbone.Model();
 
-        $(this.el).html(template)
+        scope.scalingGroup.on('change', function(model) {
+            console.log('CHANGE', arguments);
+            scope.scalingGroup.validate(model.changed);
+        });
+
+        scope.scalingGroup.on('validated', function(valid, model, errors) {
+            _.each(_.keys(model.changed), function(key) { 
+                scope.scalingGroupErrors.set(key, errors[key]); 
+            });
+        });
+
+        $(this.el).html(template);
         this.rView = rivets.bind(this.$el, scope);
         this.render();
       },
