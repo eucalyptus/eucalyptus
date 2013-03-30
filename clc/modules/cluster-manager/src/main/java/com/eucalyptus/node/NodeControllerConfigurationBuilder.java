@@ -66,7 +66,9 @@ import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.bootstrap.Handles;
 import com.eucalyptus.component.*;
 import com.eucalyptus.component.ComponentId.ComponentPart;
+import com.eucalyptus.component.id.ClusterController;
 import com.eucalyptus.empyrean.*;
+import com.google.common.base.Joiner;
 import com.google.common.base.Strings;
 import org.apache.log4j.Logger;
 
@@ -116,13 +118,13 @@ public class NodeControllerConfigurationBuilder implements ServiceBuilder<NodeCo
   @Override
   public void fireStop( ServiceConfiguration config ) throws ServiceRegistrationException {
     if ( Bootstrap.isOperational() ) {
-      Nodes.send( config, new StopServiceType( ) );
+      Nodes.send( config, new StopServiceType() );
     }
   }
 
   @Override
   public void fireEnable( ServiceConfiguration config ) throws ServiceRegistrationException {
-    Nodes.send( config, new EnableServiceType( ) );
+    Nodes.send( config, new EnableServiceType() );
   }
 
   @Override
@@ -132,7 +134,34 @@ public class NodeControllerConfigurationBuilder implements ServiceBuilder<NodeCo
   }
 
   @Override
-  public void fireCheck( ServiceConfiguration config ) throws ServiceRegistrationException {}
+  public void fireCheck( ServiceConfiguration config ) throws ServiceRegistrationException {
+    try {
+      final ServiceConfiguration ccConfig = Topology.lookup( ClusterController.class, Partitions.lookupByName( config.getPartition() ) );
+      DescribeServicesResponseType reply = Nodes.send( config, new DescribeServicesType( ) );
+      for ( ServiceStatusType status : reply.getServiceStatuses( ) ) {
+        if ( config.getName( ).equals( status.getServiceId( ).getName( ) ) ) {
+          Component.State reportedState = Component.State.ENABLED;
+          try {
+            reportedState = Component.State.valueOf( Strings.nullToEmpty( status.getLocalState( ) ).toUpperCase( ) );
+            LOG.debug( "Found service status for " + config.getName( ) + ": " + reportedState );
+          } catch ( IllegalArgumentException e ) {
+            LOG.debug( "Failed to get service status for " + config.getName( ) + "; got " + status.getLocalState( ) );
+          }
+          if ( Component.State.NOTREADY.equals( reportedState ) ) {
+            throw Faults.failure( config, new RuntimeException( Joiner.on( "," ).join( status.getDetails() ) ) );
+          } else {
+            throw Faults.advisory( config, new RuntimeException( Joiner.on( "," ).join( status.getDetails() ) ) );
+          }
+        }
+      }
+    } catch ( Faults.CheckException e ) {
+      throw e;
+    } catch ( Exception e ) {
+      LOG.error( e );
+      LOG.debug( e, e );
+      throw Faults.failure( config, e );
+    }
+  }
 
   @Override
   public NodeControllerConfiguration newInstance( String partition, String name, String host, Integer port ) {
@@ -141,7 +170,7 @@ public class NodeControllerConfigurationBuilder implements ServiceBuilder<NodeCo
 
   @Override
   public NodeControllerConfiguration newInstance() {
-    return new NodeControllerConfiguration( );
+    return new NodeControllerConfiguration();
   }
 
 }

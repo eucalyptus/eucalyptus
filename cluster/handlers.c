@@ -110,6 +110,7 @@
 #include <handlers-state.h>
 #include <fault.h>
 #include <euca_string.h>
+#include <axutil_error.h>
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |
@@ -842,17 +843,28 @@ int ncClientCall(ncMetadata * pMeta, int timeout, int ncLock, char *ncURL, char 
         } else if (!strcmp(ncOp, "ncDescribeResource")) {
             char *resourceType = va_arg(al, char *);
             ncResource **outRes = va_arg(al, ncResource **);
+            char **errMsg = va_arg(al, char **);
 
             rc = ncDescribeResourceStub(ncs, localmeta, resourceType, outRes);
             if (timeout && outRes) {
                 if (!rc && *outRes) {
                     len = sizeof(ncResource);
+                     rc = write(filedes[1], &rc, sizeof(int));//NOTE: we write back rc as well
                     rc = write(filedes[1], &len, sizeof(int));
                     rc = write(filedes[1], *outRes, sizeof(ncResource));
                     rc = 0;
                 } else {
-                    len = 0;
-                    rc = write(filedes[1], &len, sizeof(int));
+                    (*errMsg) = axutil_error_get_message(ncs->env->error);
+                    if(*errMsg && (len = strnlen(*errMsg,1024-1))) {
+                        len += 1;
+                        rc = write(filedes[1], &rc, sizeof(int));//NOTE: we write back rc as well
+                        rc = write(filedes[1], &len, sizeof(int));
+                        rc = write(filedes[1], *errMsg, sizeof(char) * len);
+                    } else {
+                        len = 0;
+                        rc = write(filedes[1], &rc, sizeof(int));//NOTE: we write back rc as well
+                        rc = write(filedes[1], &len, sizeof(int));
+                    }
                     rc = 1;
                 }
             }
@@ -1127,18 +1139,32 @@ int ncClientCall(ncMetadata * pMeta, int timeout, int ncLock, char *ncURL, char 
             }
         } else if (!strcmp(ncOp, "ncDescribeResource")) {
             char *resourceType = NULL;
+            char **errMsg = NULL;
             ncResource **outRes = NULL;
 
             resourceType = va_arg(al, char *);
             outRes = va_arg(al, ncResource **);
+            errMsg = va_arg(al, char **);
             if (outRes) {
                 *outRes = NULL;
             }
             if (timeout && outRes) {
-                rbytes = timeread(filedes[0], &len, sizeof(int), timeout);
-                if (rbytes <= 0) {
+                //NOTE: first int we read back is the 'rc', then the 'len'
+                rbytes = timeread(filedes[0], &opFail, sizeof(int), timeout);
+                if (rbytes <= 0 || (rbytes = timeread(filedes[0], &len, sizeof(int), timeout)) <=0 ) {
                     kill(pid, SIGKILL);
                     opFail = 1;
+                } else if (opFail&&len) {
+                    *errMsg = EUCA_ZALLOC(len,sizeof(char));
+                    if (*errMsg == NULL) {
+                        LOGFATAL("out of memory! ncOps=%s\n", ncOp);
+                        unlock_exit(1);
+                    }
+                    rbytes = timeread(filedes[0], *errMsg, len*sizeof(char), timeout);
+                    if (rbytes <= 0 || opFail) {
+                        kill(pid, SIGKILL);
+                        opFail = 1;
+                    }
                 } else {
                     *outRes = EUCA_ZALLOC(1, sizeof(ncResource));
                     if (*outRes == NULL) {
@@ -1998,9 +2024,8 @@ int doDescribeResources(ncMetadata * pMeta, virtualMachine ** ccvms, int vmLen, 
 
         for (i = 0; i < resourceCacheLocal.numResources; i++) {
             res = &(resourceCacheLocal.resources[i]);
-
             for (j = 0; j < vmLen; j++) {
-                if (! strcmp(res->nodeStatus, "disabled")) {
+                if ( res->ncState == STOPPED ) {
                     mempool = 0;
                     diskpool = 0;
                     corepool = 0;
@@ -2020,7 +2045,7 @@ int doDescribeResources(ncMetadata * pMeta, virtualMachine ** ccvms, int vmLen, 
                     corepool -= (*ccvms)[j].cores;
                 }
 
-                if (! strcmp(res->nodeStatus, "disabled")) {
+                if ( res->ncState == STOPPED ) {
                     mempool = 0;
                     diskpool = 0;
                     corepool = 0;
@@ -2132,8 +2157,9 @@ int refresh_resources(ncMetadata * pMeta, int timeout, int dolock)
             ncResDst = NULL;
             if (resourceCacheStage->resources[i].state != RESASLEEP && resourceCacheStage->resources[i].running == 0) {
                 nctimeout = ncGetTimeout(op_start, timeout, 1, 1);
+                char *errMsg = NULL;
                 rc = ncClientCall(pMeta, nctimeout, resourceCacheStage->resources[i].lockidx, resourceCacheStage->resources[i].ncURL,
-                                  "ncDescribeResource", NULL, &ncResDst);
+                                  "ncDescribeResource", NULL, &ncResDst, &errMsg);
                 if (rc != 0) {
                     powerUp(&(resourceCacheStage->resources[i]));
 
@@ -2150,6 +2176,9 @@ int refresh_resources(ncMetadata * pMeta, int timeout, int dolock)
                         resourceCacheStage->resources[i].maxCores = 0;
                         resourceCacheStage->resources[i].availCores = 0;
                         changeState(&(resourceCacheStage->resources[i]), RESDOWN);
+                        resourceCacheStage->resources[i].ncState = NOTREADY;
+                        euca_strncpy(resourceCacheStage->resources[i].nodeMessage, SP(errMsg), 1024);
+                        LOGERROR("error message from ncDescribeResource: %s\n", resourceCacheStage->resources[i].nodeMessage);
                     }
                 } else {
                     LOGDEBUG("received data from node=%s status=%s mem=%d/%d disk=%d/%d cores=%d/%d\n",
@@ -2164,13 +2193,23 @@ int refresh_resources(ncMetadata * pMeta, int timeout, int dolock)
                     resourceCacheStage->resources[i].availDisk = ncResDst->diskSizeAvailable;
                     resourceCacheStage->resources[i].maxCores = ncResDst->numberOfCoresMax;
                     resourceCacheStage->resources[i].availCores = ncResDst->numberOfCoresAvailable;
-                    strncpy(resourceCacheStage->resources[i].nodeStatus, ncResDst->nodeStatus, sizeof(resourceCacheStage->resources[i].nodeStatus));
+                    if (! strcmp(ncResDst->nodeStatus, "enabled")) {
+                        resourceCacheStage->resources[i].ncState = ENABLED;
+                    } else if (! strcmp(ncResDst->nodeStatus, "disabled")) {
+                        resourceCacheStage->resources[i].ncState = STOPPED;
+                    }
+                    euca_strncpy(resourceCacheStage->resources[i].nodeStatus, ncResDst->nodeStatus, 24);
+////                    // temporarily duplicate the NC reported value in the node message for debugging
+                    sprintf(resourceCacheStage->resources[i].nodeMessage, "");
                     // set iqn, if set
                     if (strlen(ncResDst->iqn)) {
                         snprintf(resourceCacheStage->resources[i].iqn, 128, "%s", ncResDst->iqn);
                     }
 
                     changeState(&(resourceCacheStage->resources[i]), RESUP);
+                }
+                if (errMsg!=NULL) {
+                    EUCA_FREE(errMsg);
                 }
             } else {
                 LOGDEBUG("resource asleep/running instances (%d), skipping resource update\n", resourceCacheStage->resources[i].running);
@@ -4144,6 +4183,12 @@ int doModifyNode(ncMetadata * pMeta, char *nodeName, char *stateName)
         for (i = 0; i < MAXNODES; i++) {
             if (!strcmp(resourceCache->resources[i].hostname, nodeName)) {
                 ccResource *res = &(resourceCache->resources[i]);
+                if (! strcmp(res->nodeStatus, "enabled")) {
+                    res->ncState = ENABLED;
+                } else if (! strcmp(res->nodeStatus, "disabled")) {
+                    res->ncState = STOPPED;
+                }
+
                 strcpy(res->nodeStatus, stateName);
                 break;
             }

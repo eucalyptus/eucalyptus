@@ -217,6 +217,7 @@ int doDescribeServices(ncMetadata * pMeta, serviceInfoType * serviceIds, int ser
     serviceStatusType *myStatus = NULL;
     int do_report_cluster = 1; // always do report on the cluster, otherwise CC won't get ENABLED
     int do_report_nodes = 0;
+    int do_report_all = 0;
     char * my_partition = NULL;
 
     rc = initialize(pMeta);
@@ -259,9 +260,12 @@ int doDescribeServices(ncMetadata * pMeta, serviceInfoType * serviceIds, int ser
     sem_mypost(CONFIG);
     if (serviceIdsLen < 1) { // if the describe request is not specific, report on everything
         do_report_cluster = 1;
+        do_report_nodes = 1;
+        do_report_all = 1;
     } else { // if the describe request is specific, identify which types are requested
         do_report_cluster = 0;
         do_report_nodes = 0;
+        do_report_all = 0;
         for (i = 0; i < serviceIdsLen; i++) {
             LOGDEBUG("received input serviceId[%d]: %s %s %s %s\n", 
                      i,
@@ -353,56 +357,71 @@ int doDescribeServices(ncMetadata * pMeta, serviceInfoType * serviceIds, int ser
         
         if (resourceCacheLocal.numResources > 0 && my_partition != NULL) { // parition is unknown at early stages of CC initialization
             
-        	if (do_report_nodes) {
+            if (do_report_all) {
+                *outStatusesLen += resourceCacheLocal.numResources;
+            } else if (do_report_nodes) {
 				*outStatusesLen += do_report_nodes;
-				*outStatuses = EUCA_REALLOC(*outStatuses, *outStatusesLen, sizeof(serviceStatusType));
-				if (!*outStatuses) {
-					LOGFATAL("out of memory!\n");
-					unlock_exit(1);
-				}
-        	} else if (!serviceIdsLen) {
-				*outStatusesLen += resourceCacheLocal.numResources;
-				*outStatuses = EUCA_REALLOC(*outStatuses, *outStatusesLen, sizeof(serviceStatusType));
-				if (!*outStatuses) {
-					LOGFATAL("out of memory!\n");
-					unlock_exit(1);
-				}
         	}
-            
-            for (int idIdx = 0; idIdx < serviceIdsLen; idIdx++) {
-                if (!serviceIdsLen||!strcmp(serviceIds[idIdx].type, "node")) {
-                    for (int rIdx = 0; rIdx < resourceCacheLocal.numResources; rIdx++) {                
+            *outStatuses = EUCA_REALLOC(*outStatuses, *outStatusesLen, sizeof(serviceStatusType));
+            if (!*outStatuses) {
+                LOGFATAL("out of memory!\n");
+                unlock_exit(1);
+            }
+
+            for (int idIdx = 0; idIdx < *outStatusesLen; idIdx++) {
+                if (do_report_all||!strcmp(serviceIds[idIdx].type, "node")) {
+                    for (int rIdx = 0; idIdx < *outStatusesLen && rIdx < resourceCacheLocal.numResources; rIdx++) {
                         ccResource * r = resourceCacheLocal.resources + rIdx;
-                        if (strlen(serviceIds[idIdx].name) && strlen(r->ip)) {
-                            if (!serviceIdsLen||!strcmp(serviceIds[idIdx].name, r->ip)) {
-                                myStatus = *outStatuses + do_report_cluster + idIdx;
-                                {
-                                    char * state = "BUGGY";
-                                    char * msg = "";
-                                    if (! strcmp(r->nodeStatus, "enabled")) {
+                        if (do_report_all||(strlen(serviceIds[idIdx].name) && strlen(r->ip) && !strcmp(serviceIds[idIdx].name, r->ip))) {
+                            myStatus = *outStatuses + do_report_cluster + idIdx;
+                            idIdx += do_report_all;
+                            {
+                                int resState = r->state;
+                                int resNcState = r->ncState;
+                                char * state = "BUGGY";
+                                char * msg = "";
+                                if ( resState == RESUP ) {
+                                    if ( resNcState == ENABLED ) {
                                         state = "ENABLED";
                                         msg = "the node is operating normally";
-                                    } else if (! strcmp(r->nodeStatus, "disabled")) {
-                                        state = "DISABLED";
+                                    } else if ( resNcState == STOPPED ) {
+                                        state = "STOPPED";
                                         msg = "the node is not accepting new instances";
+                                    } else if ( resNcState == NOTREADY ) {
+                                        state = "NOTREADY";
+                                        if (strnlen(r->nodeMessage, 1024)) {
+                                            msg = r->nodeMessage;
+                                        } else {
+                                            msg = "the node is currently experiencing problems and needs attention";
+                                        }
                                     }
-                                    snprintf(myStatus->localState, 32, "%s", state);
-                                    snprintf(myStatus->details, 1024, "%s", msg); // string that gets printed by 'euca-describe-services -E'
+                                } else if ( resState == RESASLEEP || resState == RESWAKING ) {
+                                    state = "NOTREADY";
+                                    msg = "the node is currently in the sleep state";
+                                } else if ( resState == RESDOWN ) {
+                                    state = "NOTREADY";
+                                    if (strnlen(r->nodeMessage, 1024)){
+                                        msg = r->nodeMessage;
+                                    } else {
+                                        msg = "the node is not responding to the cluster controller";
+                                    }
                                 }
-                                myStatus->localEpoch = config->ccStatus.localEpoch;
-                                sprintf(myStatus->serviceId.type, serviceIds[idIdx].type);
-                                sprintf(myStatus->serviceId.name, serviceIds[idIdx].name);
-                                sprintf(myStatus->serviceId.partition, serviceIds[idIdx].partition);
-                                sprintf(myStatus->serviceId.uris[0], serviceIds[idIdx].uris[0]);
-                                myStatus->serviceId.urisLen = 1;
-                                LOGDEBUG("external services\t uri[%d]: %s %s %s %s %s\n", 
-                                         idIdx,
-                                         myStatus->serviceId.type,
-                                         myStatus->serviceId.partition,
-                                         myStatus->serviceId.name,
-                                         myStatus->localState,
-                                         myStatus->serviceId.uris[0]);
+                                snprintf(myStatus->localState, 32, "%s", state);
+                                snprintf(myStatus->details, 1024, "%s", msg); // string that gets printed by 'euca-describe-services -E'
                             }
+                            myStatus->localEpoch = config->ccStatus.localEpoch;
+                            sprintf(myStatus->serviceId.type, "node");
+                            sprintf(myStatus->serviceId.name, r->hostname);
+                            sprintf(myStatus->serviceId.partition, config->ccStatus.serviceId.partition);
+                            sprintf(myStatus->serviceId.uris[0], r->ncURL);
+                            myStatus->serviceId.urisLen = 1;
+                            LOGDEBUG("external services\t uri[%d]: %s %s %s %s %s\n",
+                                     idIdx,
+                                     myStatus->serviceId.type,
+                                     myStatus->serviceId.partition,
+                                     myStatus->serviceId.name,
+                                     myStatus->localState,
+                                     myStatus->serviceId.uris[0]);
                         }
                     }
                 }

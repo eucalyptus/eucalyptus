@@ -200,6 +200,7 @@ public class NodeInfo implements Comparable {
   String partition;
   Boolean hasClusterCert = false;
   Boolean hasNodeCert = false;
+  String lastMessage;
   Date lastSeen;
   NodeCertInfo certs = new NodeCertInfo();
   NodeLogInfo logs = new NodeLogInfo();

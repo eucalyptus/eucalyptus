@@ -94,9 +94,9 @@ import edu.ucsb.eucalyptus.msgs.NodeType;
 public class Nodes {
   private static Logger LOG             = Logger.getLogger( Nodes.class );
   public static Long    REFRESH_TIMEOUT = TimeUnit.MINUTES.toMillis( 10 );
-  private static Function<String, NodeInfo> lookupNodeInfo( final ServiceConfiguration ccConfig ) {
+  static Function<String, NodeInfo> lookupNodeInfo( final ServiceConfiguration ccConfig ) {
     return new Function<String, NodeInfo>( ) {
-      
+
       @Override
       public NodeInfo apply( @Nullable String ncHostOrTag ) {
         Map<String, NodeInfo> map = Clusters.lookup( ccConfig ).getNodeHostMap( );
@@ -107,12 +107,12 @@ public class Nodes {
         }
       }
     };
-    
+
   }
 
-  private static Function<NodeInfo, ServiceConfiguration> transformNodeInfo( final ServiceConfiguration ccConfig ) {
+  static Function<NodeInfo, ServiceConfiguration> transformNodeInfo( final ServiceConfiguration ccConfig ) {
     return new Function<NodeInfo, ServiceConfiguration>( ) {
-      
+
       @Override
       public ServiceConfiguration apply( @Nullable NodeInfo input ) {
         NodeController compId = ComponentIds.lookup( NodeController.class );
@@ -133,7 +133,7 @@ public class Nodes {
   private static Function<String, ServiceConfiguration> lookupNodeServiceConfiguration( ServiceConfiguration ccConfig ) {
     return Functions.compose( transformNodeInfo( ccConfig ), lookupNodeInfo( ccConfig ) );
   }
-  
+
   public static void updateNodeInfo( ServiceConfiguration ccConfig, List<NodeType> nodes ) {
     ConcurrentNavigableMap<String, NodeInfo> clusterNodeMap = Clusters.lookup( ccConfig ).getNodeMap( );
     /** prepare key sets for comparison **/
@@ -181,7 +181,7 @@ public class Nodes {
      * TODO:GRZE: {@link Component#destroy()} for the NodeControllers which are not reported by the
      * CC.
      */
-    
+
   }
 
   public static ServiceConfiguration lookup( ServiceConfiguration ccConfig, String hostOrTag ) throws NoSuchElementException {
@@ -206,6 +206,9 @@ public class Nodes {
       for ( ServiceStatusType status : reply.getServiceStatuses( ) ) {
         if ( ncConfig.getName( ).equals( status.getServiceId( ).getName( ) ) ) {
           Component.State reportedState = Component.State.ENABLED;
+          final String lastMessage = Joiner.on( "," ).join( status.getDetails() );
+          nodeInfo.setLastMessage( lastMessage );
+          Faults.CheckException checkException = null;
           try {
             reportedState = Component.State.valueOf( Strings.nullToEmpty( status.getLocalState( ) ).toUpperCase( ) );
             LOG.debug( "Found service status for " + ncConfig.getName( ) + ": " + reportedState );
@@ -215,17 +218,24 @@ public class Nodes {
           try {
             if ( Component.State.ENABLED.equals( reportedState ) ) {
               Topology.enable( ncConfig );
+              checkException = Faults.advisory( ncConfig, Exceptions.toUndeclared( lastMessage ) );
+            } else if ( !Component.State.STOPPED.apply( ncConfig ) && Component.State.NOTREADY.equals( reportedState ) ) {
+              //Only attempt to reflect the error state when the service is /not/ in the STOPPED state
+              Topology.disable( ncConfig );
+              checkException = Faults.failure( ncConfig, Exceptions.toUndeclared( lastMessage ) );
             } else {
               Topology.stop( ncConfig );
+              checkException = Faults.advisory( ncConfig, Exceptions.toUndeclared( lastMessage ) );
             }
           } catch ( Exception e ) {
             LOG.debug( e, e );
           }
+          Faults.submit( ncConfig,  null, checkException );
         }
       }
     }
   }
-  
+
   public static List<String> lookupIqns( ServiceConfiguration ccConfig ) {
     Cluster cluster = Clusters.lookup( ccConfig );
     Set<String> ret = Sets.newHashSet( );
@@ -236,7 +246,7 @@ public class Nodes {
     }
     return Lists.newArrayList( ret );
   }
-  
+
   public static List<String> lookupIqn( VmInstance vm ) {
     ServiceConfiguration ccConfig = Topology.lookup( ClusterController.class, vm.lookupPartition( ) );
     Cluster cluster = Clusters.lookup( ccConfig );
