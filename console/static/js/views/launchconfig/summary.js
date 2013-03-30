@@ -6,6 +6,11 @@ define([
     initialize: function() {
 
       this.model.bind('change:image_iconclass', this.swapIconClass, this);
+      /*this.model.bind('change:type_size', this.render , this);
+      this.model.bind('change:type_number', this.render , this);
+      this.model.bind('change:type_zone', this.render, this);
+      this.model.bind('change:type_tags', this.render, this);
+      this.model.bind('change:type_names', this.render, this);*/
 
       var scope = {
         view: this,
@@ -26,8 +31,6 @@ define([
     },
 
     swapIconClass: function() {
-        
-        console.log("SWAPCLASS", arguments);
       var target = this.$el.find('#summary-icon');
       target.removeClass();
       target.addClass('image-type').addClass('summary').addClass(this.model.get('image_iconclass'));

@@ -7,6 +7,7 @@ define(['app'], function(app) {
     // Make sure if the argument isn't there, that at least
     // something works
     if (!allowedFacetNames) {
+      console.log('NO NAMES'); 
       allowedFacetNames = [];
       images.forEach(function(img) {
         for (var key in img) {
@@ -93,7 +94,7 @@ define(['app'], function(app) {
         if (val && typeof val !== 'object' && typeof val !== 'function') {
           if (found.indexOf(val) < 0) {
             found.push(val);
-            result.push({name: val, label: localize(val)});
+            result.push({name: facet, label: localize(val), value: val});
           }
         }
       });
@@ -105,15 +106,15 @@ define(['app'], function(app) {
     this.filtered = images.clone();
     this.lastSearch = '';
     this.lastFacets = new Backbone.Model({});
-    this.search = function(search, facets) {
-      console.log("SEARCH", arguments);
-      var jfacets = facets.toJSON();
-      var results = self.images.filter(function(model) {
+        this.search = function(search, facets) {
+            console.log("SEARCH", arguments);
+            var jfacets = facets.toJSON();
+            var results = self.images.filter(function(model) {
         return _.every(jfacets, function(facet) {
           if (searchers && searchers[facet.category]) {
             return searchers[facet.category].apply(self, [facet, search, images]);
           }
-          var test = new RegExp('.*' + facet.value + '.*').test(model.get(facet.category));
+          var test = new RegExp('.*' + facet.value + '.*', 'im').test(model.get(facet.category));
           return test;
         });
       }).map(function(model) {
@@ -122,15 +123,21 @@ define(['app'], function(app) {
       console.log(results);
       self.filtered.reset(results);
     }
-    
     this.facetMatches = function(callback) {
+      console.log('FM');
       callback(deriveFacets());
     }
     
     this.valueMatches = function(facet, searchTerm, callback) {
+      console.log('VM: ' + facet);
       callback(deriveMatches(facet, searchTerm))
     }
-
-//    images.on('change reset', updateKeyLists);
+    
+    function up() {
+      self.search(self.lastSearch, self.lastFacets);
+    }
+    
+    images.on('change reset', up);
+    up();
   }
 });

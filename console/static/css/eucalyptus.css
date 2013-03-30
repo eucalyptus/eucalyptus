@@ -3199,3 +3199,16 @@ filter: progid:DXImageTransform.Microsoft.gradient( startColorstr='#ededed', end
 .scalingtab.active a {color:#02405f;}
 
 #scaling-topselector { margin:0 14px;}
+
+.ui-keyval-fields {
+    float: left;
+}
+
+.ui-keyval-buttons {
+    float: left;
+}
+
+.ui-keyval-buttons div {
+  float: left;
+}
+
