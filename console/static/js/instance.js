@@ -77,7 +77,7 @@
 	      "mRender" : function(data){
                  return eucatableDisplayColumnTypeTwist(data, data, 255);
 	      },
-              "mData": "id",
+              "mData": "display_id",
             },
             { 
 	      // Display the status of the instance in the main table
@@ -216,6 +216,15 @@
                 return DefaultEncoder().encodeForHTML(data);
               },
               "mData": "ip_address",
+            },
+            { 
+	      // Hidden column for the ip address of the instance
+              "bVisible": false,
+              "aTargets":[17],
+	      "mRender": function(data) {
+                return DefaultEncoder().encodeForHTML(data);
+              },
+              "mData": "id",
             },
           ]
         },
@@ -1143,9 +1152,8 @@
     _expandCallback : function(row){ 
       var thisObj = this;
       var $el = $('<div />');
-      console.log('expandcallback');
-      require(['views/expandos/instance'], function(expando) {
-         new expando({el: $el, id: row[1]});
+      require(['app', 'views/expandos/instance'], function(app, expando) {
+         new expando({el: $el, model: app.data.instance.get(row[17]) });
       });
       return $el;
     },

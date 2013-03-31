@@ -6,9 +6,9 @@
   </ul>
   <div id="tabs-1" class="tab">
       <ul class="instance-expanded clearfix">
-		<li><div class="expanded-title" data-msg="instance_table_expanded_name">INSTANCE NAME</div><div class="expanded-value">myinstance</div></li>
-		<li><div class="expanded-title" data-msg="instance_table_expanded_id">INSTANCE ID</div><div class="expanded-value">i-64736252</div></li>
-		<li><div class="expanded-title" data-msg="inst_tbl_hdr_state">STATUS</div><div class="expanded-value">running</div></li>
+		<li><div class="expanded-title" data-msg="instance_table_expanded_name">INSTANCE NAME</div><div class="expanded-value" data-text="display_id">myinstance</div></li>
+		<li><div class="expanded-title" data-msg="instance_table_expanded_id">INSTANCE ID</div><div class="expanded-value" data-text="id">i-64736252</div></li>
+		<li><div class="expanded-title" data-msg="inst_tbl_hdr_state">STATUS</div><div class="expanded-value" data-text="state">running</div></li>
 		<li><div class="expanded-title" data-msg="inst_tbl_hdr_availability_zone">AVAILABILITY ZONE</div><div class="expanded-value">zone 1</div></li>
 		<li><div class="expanded-title" data-msg="inst_tbl_hdr_public_ip">PUBLIC IP</div><div class="expanded-value">192.168.55.266</div></li>
 		<li><div class="expanded-title" data-msg="inst_tbl_hdr_public_hostname">PUBLIC HOSTNAME</div><div class="expanded-value">hostname.domain.com</div></li>
@@ -22,10 +22,10 @@
 		<li><div class="expanded-title" data-msg="instance_table_expanded_load_balancer">LOAD BALANCER</div><div class="expanded-value">myloadbalancer</div></li>
 		<li><div class="expanded-title" data-msg="inst_tbl_hdr_os">OS</div><div class="expanded-value">linux</div></li>
 		<li><div class="expanded-title" data-msg="instance_table_expanded_root">ROOT DEVICE</div><div class="expanded-value">instance-store</div></li>
-		<li><div class="expanded-title" data-msg="instance_table_expanded_kernel">KERNEL ID</div><div class="expanded-value">eki-3B833B83</div></li>
+		<li><div class="expanded-title" data-msg="instance_table_expanded_kernel">KERNEL ID</div><div class="expanded-value" data-text="kernel">eki-3B833B83</div></li>
 		<li><div class="expanded-title" data-msg="instance_table_expanded_manifest">IMAGE MANIFEST</div><div class="expanded-value">tmpobxi939ocl&amp;#x2f;precise-server-cloudimg-amd64-ext3.img.manifest.xml</div></li>
 		<li><div class="expanded-title" data-msg="inst_tbl_hdr_private_ip">PRIVATE IP</div><div class="expanded-value">10.1.0.23</div></li>
-		<li><div class="expanded-title" data-msg="inst_tbl_hdr_private_hostname">PRIVATE HOSTNAME</div><div class="expanded-value">hostname.private.com</div></li>
+		<li><div class="expanded-title" data-msg="inst_tbl_hdr_private_hostname">PRIVATE HOSTNAME</div><div class="expanded-value" data-text="private_dns_name">hostname.private.com</div></li>
 		<li><div class="expanded-title" data-msg="instance_table_expanded_account">ACCOUNT ID</div><div class="expanded-value">878210294747</div></li>
 		<li><div class="expanded-title" data-msg="instance_table_expanded_reservation">RESERVATION ID</div><div class="expanded-value">r-D6564489</div></li>
 		<li><div class="expanded-title" data-msg="instance_table_expanded_ramdisk">RAM DISK ID</div><div class="expanded-value">eri-22583D83</div></li>
@@ -34,9 +34,9 @@
 
   <div id="tabs-2" class="tab">
       <ul class="instance-expanded clearfix">
-        <li><div class="expanded-title" data-msg="instance_table_expanded_volid">Volume Id</div><div class="expanded-value">vol-xxxxx</div></li>
-        <li><div class="expanded-title" data-msg="instance_table_expanded_devmap">Device Mapping</div><div class="expanded-value">/dev/sda</div></li>
-        <li><div class="expanded-title" data-msg="instance_table_expanded_createtime">Creation Time</div><div class="expanded-value">Aug 21, 2012 07:34:23AM</div></li>
+        <li><div class="expanded-title" data-msg="instance_table_expanded_volid">Volume Id</div><div data-each-blk="block_device_mapping" class="expanded-value">vol-xxxxx</div></li>
+        <li><div class="expanded-title" data-msg="instance_table_expanded_devmap">Device Mapping</div><div data-each-blk="block_device_mapping" class="expanded-value">/dev/sda</div></li>
+        <li><div class="expanded-title" data-msg="instance_table_expanded_createtime">Creation Time</div><div data-each-blk="block_device_mapping" class="expanded-value">Aug 21, 2012 07:34:23AM</div></li>
 	  </ul>
   </div>
 
