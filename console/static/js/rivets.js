@@ -8,9 +8,9 @@ rivets.configure({
                     callback(obj.at(i), i);
                 }
             } else if (obj instanceof Backbone.Model) {
-                var keys = obj.keys();
-                for (var i = 0; i < keys.length; i++) {
-                    callback(obj.get(keys[i]), keys[i]);
+                var jobj = obj.toJSON();
+                for (var i in jobj) {
+                    callback(obj.get(i), i);
                 }
             } else if (obj instanceof Array) {
                 for (var i = 0; i < obj.length; i++) {
