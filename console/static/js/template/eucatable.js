@@ -59,6 +59,7 @@
       var dtArg = this._getTableParam();
 
       thisObj.tableArg = dtArg;
+      this.sAjaxSource = dtArg.sAjaxSource;
       this.table = this.element.find('table').dataTable(dtArg);
       var $header = this._decorateHeader();
       this._decorateSearchBar();
@@ -448,6 +449,7 @@ if (true) {
       return $menuDiv;
     },
 
+    
     _decorateLegendPagination : function (args) {
       var thisObj = this;
       var $wrapper = $('<div>').addClass('legend-pagination-wrapper clearfix');
