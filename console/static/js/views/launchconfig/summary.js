@@ -15,10 +15,10 @@ define([
       var scope = {
         view: this,
         model: this.model,
+        imageModel: this.options.imageModel,
         title: 'Summary',
         summary: this.model,
       };
-
 
       this.$el.html(template);
       this.riv = rivets.bind(this.$el, scope);

@@ -9,7 +9,7 @@ define([
     initialize : function() {
 
       var self = this;
-      this.model.set('tags', new Backbone.Collection());
+      this.model.tags = new Backbone.Collection();
       var scope = {
 
         setField: function(e, el) {
@@ -39,7 +39,7 @@ define([
         },
 
         tags: {
-            list: self.model.get('tags'),
+            list: self.model.tags,
             sharedModel: self.model,
             keyLabel: "Key",
             valLabel: "Value",
@@ -63,8 +63,12 @@ define([
         }
       };
 
+    scope.tags.list.on('add remove change reset', function() {
+        self.render();
+        console.log("TAGSCHANGE", this.model.tags);
+    });
 
-    $(this.el).html(template)
+    $(this.el).html(template);
      this.rView = rivets.bind(this.$el, scope);
      this.render();
      console.log("TYPEVIEW", this.model);
