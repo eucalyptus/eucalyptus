@@ -234,10 +234,11 @@
         
         if(!$currentRow.data('events') || !('click.datatable' in $currentRow.data('events'))){
           $currentRow.unbind('click.datatable').bind('click.datatable', function (e) {
-            // We must regenerate the row so that any events are correctly rebound.
-            $expand = thisObj.options.expand_callback(row);
             if($(e.target).is('a') && $(e.target).hasClass('twist') && thisObj.options.expand_callback){
               if(!$currentRow.next().hasClass('expanded')){
+                // We must regenerate the row so that any events are correctly rebound.
+                $expand = thisObj.options.expand_callback(row);
+
                 thisObj.element.find('table tbody').find('tr.expanded').remove(); // remove all expanded
                 thisObj.element.find('table tbody').find('a.expanded').removeClass('expanded');
                 if(!$expand.hasClass('expanded-row-inner-wrapper'))
