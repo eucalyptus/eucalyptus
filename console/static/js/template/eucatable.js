@@ -146,7 +146,6 @@
          }
       */
       dt_arg['fnServerData'] = function (sSource, aoData, fnCallback) {
-        console.log('fnServerData', arguments);
         var data = {};
         data.aaData = thisObj.bbdata ? thisObj.bbdata.toJSON() : [];
         data.iTotalRecords = data.aaData.length;

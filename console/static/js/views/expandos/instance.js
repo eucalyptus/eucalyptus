@@ -6,10 +6,8 @@ define([
     return EucaExpandoView.extend({
         initialize : function(args) {
             this.template = template;
+            this.model = this.model ? this.model : {};
             this.scope = _.extend(this.model, {
-                button: {
-                    click: function() { alert('ding dong'); }
-                }
             });
             this._do_init();
         },

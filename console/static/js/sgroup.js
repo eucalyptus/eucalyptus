@@ -1002,7 +1002,6 @@
 
     _expandCallback : function(row){ 
       var $el = $('<div />');
-      console.log('expandcallback');
       require(['views/expandos/sgroup'], function(expando) {
          new expando({el: $el, id: row[1]});
       });
