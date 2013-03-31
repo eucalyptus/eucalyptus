@@ -19,6 +19,8 @@ define([], function() {
     // Security params
     security_keyname: '',
     security_group: '',
+    security_group_name: '',
+    security_group_rules: '',
 
     // Advanced
     user_data: '',
@@ -40,6 +42,7 @@ define([], function() {
         this.type_hasNames = 'false';
         this.image_iconclass = 'linux';
         this.type_tags = new Backbone.Collection();
+        this.security_group = new Backbone.Model();
     },
 
   });
