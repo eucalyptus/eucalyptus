@@ -106,6 +106,9 @@
         menu_actions : function(args){ 
           return thisObj._createMenuActions();
         },
+        expand_callback : function(row){ // row = [col1, col2, ..., etc]
+          return thisObj._expandCallback(row);
+        },
         context_menu_actions : function(row) {
           return thisObj._createMenuActions();
         },
@@ -507,11 +510,16 @@
       thisObj.dialogDisassociateIp(rows);
     },
 
-
     _associateAction : function() {
       var thisObj = this;
       var eipsToAssociate = thisObj.tableWrapper.eucatable('getSelectedRows', 1);
       thisObj.dialogAssociateIp(eipsToAssociate[0], null);
+    },
+
+    _expandCallback : function(row){ 
+      var thisObj = this;
+      var ip = row[1];
+      return null;
     },
 
 /**** Public Methods ****/
