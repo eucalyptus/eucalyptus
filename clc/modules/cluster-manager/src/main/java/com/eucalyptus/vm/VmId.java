@@ -109,7 +109,7 @@ public class VmId {
   }
 
   public String getNameOrArn ( ) {
-    return this.nameOrArn;
+    return this.nameOrArn != null ? this.nameOrArn : "";
   }
 
   public String getUniqueClientToken( ) {

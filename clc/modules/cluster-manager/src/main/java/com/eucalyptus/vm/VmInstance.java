@@ -87,6 +87,26 @@ import javax.persistence.OneToOne;
 import javax.persistence.PersistenceContext;
 import javax.persistence.PreRemove;
 import javax.persistence.Table;
+
+import com.eucalyptus.auth.AuthException;
+import com.eucalyptus.auth.principal.InstanceProfile;
+import com.eucalyptus.component.ServiceConfiguration;
+import com.eucalyptus.component.Partition;
+import com.eucalyptus.component.Partitions;
+import com.eucalyptus.component.ComponentIds;
+import com.eucalyptus.component.Topology;
+import com.eucalyptus.component.ServiceConfigurations;
+import com.eucalyptus.component.id.Tokens;
+import com.eucalyptus.util.async.AsyncRequests;
+import edu.ucsb.eucalyptus.msgs.AttachedVolume;
+import edu.ucsb.eucalyptus.msgs.InstanceBlockDeviceMapping;
+import edu.ucsb.eucalyptus.msgs.InstanceStateType;
+import edu.ucsb.eucalyptus.msgs.InstanceStatusDetailsSetItemType;
+import edu.ucsb.eucalyptus.msgs.InstanceStatusDetailsSetType;
+import edu.ucsb.eucalyptus.msgs.InstanceStatusItemType;
+import edu.ucsb.eucalyptus.msgs.InstanceStatusType;
+import edu.ucsb.eucalyptus.msgs.ReservationInfoType;
+import edu.ucsb.eucalyptus.msgs.RunningInstancesItemType;
 import org.apache.log4j.Logger;
 import org.bouncycastle.util.encoders.Base64;
 import org.hibernate.annotations.Cache;
@@ -99,6 +119,8 @@ import org.hibernate.criterion.SimpleExpression;
 import com.eucalyptus.address.Address;
 import com.eucalyptus.address.Addresses;
 import com.eucalyptus.auth.Accounts;
+import com.eucalyptus.auth.principal.Account;
+import com.eucalyptus.auth.principal.Role;
 import com.eucalyptus.auth.principal.UserFullName;
 import com.eucalyptus.blockstorage.State;
 import com.eucalyptus.blockstorage.Volume;
@@ -112,11 +134,6 @@ import com.eucalyptus.cloud.util.MetadataException;
 import com.eucalyptus.cloud.util.NoSuchMetadataException;
 import com.eucalyptus.cloud.util.ResourceAllocationException;
 import com.eucalyptus.cluster.Clusters;
-import com.eucalyptus.component.ComponentIds;
-import com.eucalyptus.component.Partition;
-import com.eucalyptus.component.Partitions;
-import com.eucalyptus.component.ServiceConfiguration;
-import com.eucalyptus.component.Topology;
 import com.eucalyptus.component.id.ClusterController;
 import com.eucalyptus.component.id.Dns;
 import com.eucalyptus.component.id.Eucalyptus;
@@ -157,15 +174,8 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import edu.ucsb.eucalyptus.cloud.VirtualBootRecord;
 import edu.ucsb.eucalyptus.cloud.VmInfo;
-import edu.ucsb.eucalyptus.msgs.AttachedVolume;
-import edu.ucsb.eucalyptus.msgs.InstanceBlockDeviceMapping;
-import edu.ucsb.eucalyptus.msgs.InstanceStateType;
-import edu.ucsb.eucalyptus.msgs.InstanceStatusDetailsSetItemType;
-import edu.ucsb.eucalyptus.msgs.InstanceStatusDetailsSetType;
-import edu.ucsb.eucalyptus.msgs.InstanceStatusItemType;
-import edu.ucsb.eucalyptus.msgs.InstanceStatusType;
-import edu.ucsb.eucalyptus.msgs.ReservationInfoType;
-import edu.ucsb.eucalyptus.msgs.RunningInstancesItemType;
+import com.eucalyptus.tokens.AssumeRoleType;
+import com.eucalyptus.tokens.AssumeRoleResponseType;
 
 @Entity
 @javax.persistence.Entity
@@ -1215,7 +1225,65 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
     m.put( "block-device-mapping/ephemeral0", "sda2" );
     m.put( "block-device-mapping/swap", "sda3" );
     m.put( "block-device-mapping/root", "/dev/sda1" );
-    
+
+
+    if (!this.getNameOrArn().equals("")) {
+
+      AssumeRoleType assumeRoleType = new AssumeRoleType();
+
+      Account userAccount;
+      String roleArn = null;
+      InstanceProfile profile = null;
+
+      String roleName = null;
+      try {
+        userAccount = Accounts.lookupAccountByName(Account.SYSTEM_ACCOUNT);
+        profile = userAccount.lookupInstanceProfileByName(this.getNameOrArn());
+        Role role = profile.getRole();
+        roleArn = Accounts.getRoleArn(role);
+        role.getRoleId();
+        roleName = role.getName();
+      } catch (AuthException e) {
+        LOG.debug(e);
+      }
+
+      //request.setDurationSeconds(3600); //TODO :
+      assumeRoleType.setRoleArn(roleArn);
+      assumeRoleType.setRoleSessionName("2JETSAA0QB8PGZOCA5FJI");
+      assumeRoleType.setEffectiveUserId(this.ownerUserId);
+
+      AssumeRoleResponseType assumeRoleResponseType = null;
+
+      ServiceConfiguration serviceConfiguration = ServiceConfigurations
+          .createEphemeral(ComponentIds.lookup(Tokens.class));
+      try {
+        assumeRoleResponseType = (AssumeRoleResponseType) AsyncRequests.sendSync(serviceConfiguration, assumeRoleType);
+      } catch (Exception e) {
+        LOG.debug("Unable to send assume role request to token service",e);
+      }
+
+
+      final String accessKey = (assumeRoleResponseType != null ? assumeRoleResponseType.getAssumeRoleResult() : null).getCredentials().getAccessKeyId();
+      final Date expiration = (assumeRoleResponseType != null ? assumeRoleResponseType.getAssumeRoleResult() : null).getCredentials().getExpiration();
+      final String secretKey = (assumeRoleResponseType != null ? assumeRoleResponseType.getAssumeRoleResult() : null).getCredentials().getSecretAccessKey();
+      final String sessionToken = (assumeRoleResponseType != null ? assumeRoleResponseType.getAssumeRoleResult() : null).getCredentials().getSessionToken();
+
+      if (profile != null) {
+        m.put("iam/info/", "last-updated-date\ninstance-profile-arn\ninstance-profile-id");
+        m.put("iam/info/last-updated-date",profile.getCreationTimestamp().toString());  //TODO : Need to collection and display the real last updated date.
+        m.put("iam/info/instance-profile-arn", roleArn );
+        m.put("iam/info/instance-profile-id", profile.getInstanceProfileId() );
+      }
+
+      if (roleName != null || accessKey != null || expiration != null || secretKey != null || sessionToken != null ) {
+      m.put( "iam/security-credentials/" + roleName + "/", "access-key-id\nexpiration\nsecret-access-key\nsession-token");
+      m.put("iam/security-credentials/" + roleName + "/access-key-id", accessKey);
+      m.put("iam/security-credentials/" + roleName + "/expiration", expiration.toString());
+      m.put("iam/security-credentials/" + roleName + "/secret-access-key", secretKey);
+      m.put("iam/security-credentials/" + roleName + "/session-token", sessionToken);
+      }
+
+    }
     if ( this.bootRecord.getSshKeyPair( ) != null ) {
       m.put( "public-keys/", "0=" + this.bootRecord.getSshKeyPair( ).getName( ) );
       m.put( "public-keys/0", "openssh-key" );

@@ -10,6 +10,7 @@ core
 postgresql
 wsstack
 euare
+tokens-common
 tokens
 component
 cloudwatch-common

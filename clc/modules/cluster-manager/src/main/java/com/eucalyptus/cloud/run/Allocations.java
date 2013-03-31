@@ -150,8 +150,18 @@ public class Allocations {
         this.request.setInstanceType( VmTypes.defaultTypeName( ) );
       }
 
-      this.nameOrArn = this.request.getNameOrArn();
-      this.request.setInstanceProfileNameOrArn(nameOrArn);
+      final String iamInstanceProfileArn =  this.request.getIamInstanceProfileArn();
+      final String iamInstanceProfileName = this.request.getIamInstanceProfileName();
+
+      if (!iamInstanceProfileArn.equals("")) {
+        this.nameOrArn = iamInstanceProfileArn;
+        this.request.setInstanceProfileNameOrArn(this.nameOrArn);
+      } else if (!iamInstanceProfileName.equals("")) {
+        this.nameOrArn = iamInstanceProfileName;
+        this.request.setInstanceProfileNameOrArn(this.nameOrArn);
+      } else {
+        this.nameOrArn = "";
+      }
 
       this.reservationIndex = UniqueIds.nextIndex( VmInstance.class, ( long ) request.getMaxCount( ) );
       this.reservationId = VmInstances.getId( this.reservationIndex, 0 ).replaceAll( "i-", "r-" );

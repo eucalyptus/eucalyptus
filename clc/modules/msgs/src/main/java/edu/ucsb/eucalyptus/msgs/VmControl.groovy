@@ -246,7 +246,9 @@ public class RunInstancesType extends VmControlMessage {
   String privateIpAddress = "";
   String clientToken;
   @HttpParameterMapping(parameter = "IamInstanceProfile.Arn")
-  String nameOrArn = "";
+  String iamInstanceProfileArn = "";
+  @HttpParameterMapping(parameter = "IamInstanceProfile.Name")
+  String iamInstanceProfileName = "";
   ArrayList<Integer> networkIndexList = new ArrayList<Integer>();
   String privateMacBase;
   String publicMacBase;
@@ -273,9 +275,9 @@ public class RunInstancesType extends VmControlMessage {
 
   void setInstanceProfileNameOrArn ( String nameOrArn ) {
     if ( nameOrArn.startsWith( "arn:" ) ) {
-        this.nameOrArn = nameOrArn;
+        this.iamInstanceProfileArn = nameOrArn;
     } else {
-        this.nameOrArn = nameOrArn;
+        this.iamInstanceProfileName = nameOrArn;
     }
   }
 }
