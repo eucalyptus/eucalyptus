@@ -9,6 +9,7 @@ define([
     initialize : function() {
 
       var self = this;
+      this.model.set('tags', new Backbone.Collection());
       var scope = {
 
         setField: function(e, el) {
@@ -24,7 +25,7 @@ define([
               self.model.set('type_number', target.value);
               break;
             case 'launch-instance-type-size':
-              self.model.set('type_size', target.value);
+              self.model.set('instance_type', target.value);
               break;
             case 'launch-instance-type-az':
               self.model.set('type_zone', target.value);
@@ -38,11 +39,12 @@ define([
         },
 
         tags: {
-            list: self.model.type_tags,
+            list: self.model.get('tags'),
             sharedModel: self.model,
             keyLabel: "Key",
             valLabel: "Value",
             add: function(e, me) {
+                console.log("TAGS", arguments);
               var key = $('.keyfield').val();
               var val = $('.valuefield').val();
               if(me.list.where({key: key}).length == 0) {
@@ -60,6 +62,7 @@ define([
             }
         }
       };
+
 
     $(this.el).html(template)
      this.rView = rivets.bind(this.$el, scope);

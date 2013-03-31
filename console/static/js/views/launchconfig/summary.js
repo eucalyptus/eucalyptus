@@ -27,7 +27,6 @@ define([
 
     render: function() {
       this.riv.sync();
-      this.model.set('image', 'EucaImage');
     },
 
     swapIconClass: function() {

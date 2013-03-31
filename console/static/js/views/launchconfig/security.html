@@ -7,7 +7,7 @@
     <div id="launch-wizard-security-keypair"> 
       <div class="form-row clearfix upper-sibling">
         <label for="launch-wizard-security-keypair-selector">Key name</label>
-        <select id="launch-wizard-security-keypair-selector" title="Select a key pair for your instance">
+        <select data-on-change=":setKeyPair" id="launch-wizard-security-keypair-selector" title="Select a key pair for your instance">
 <!--
           <option title="spark" value="spark">spark</option>
           <option title="tmp1" value="tmp1">tmp1</option>
@@ -56,7 +56,7 @@
 -->
           <li data-text="rule.ip_protocol"></li>
           <li data-text="rule.to_port"></li>
-          <li><span data-each-grant="configmodel.security_group_rule_grants" data-text=""></span><span>&nbsp;</span></li>
+          <li><span data-each-grant="rule.grants" data-text="grant.cidr_ip"></span><span>&nbsp;</span></li>
         </ul>
       </div>
 <!--        

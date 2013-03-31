@@ -12,6 +12,7 @@ define([
           var self = this;
           var scope = {
               view: this,
+
               isOdd: function() {
                   return (this.view.count++ % 2) ? 'even' : 'odd';
               },
@@ -32,7 +33,7 @@ define([
                 self.model.set('image_description', images.image.attributes.description);
                 self.model.set('image_iconclass', this.setClass(images.image));
               }
-          } 
+          }; 
           scope.images = scope.search.filtered;
           this.scope = scope;
 

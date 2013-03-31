@@ -6,8 +6,8 @@ define([
   './security',
   './advanced',
   './summary',
-  './instancemodel'
-], function(Wizard, wizardTemplate, page1, page2, page3, page4, summary, model) {
+  'models/launchconfig'
+], function(Wizard, wizardTemplate, page1, page2, page3, page4, summary, launchconfigModel) {
   var wizard = new Wizard();
 
   function canFinish(position, problems) {
@@ -20,14 +20,17 @@ define([
     alert("Congratulations!  You finished a pointless wizard!")
   }
 
-  var dataModel = new model(); 
+  var launchConfigModel = new launchconfigModel();
+   
   var viewBuilder = wizard.viewBuilder(wizardTemplate)
-          .setPageModel(dataModel)
-          .add(page1).add(page2).add(page3).add(page4)
+          .add(new page1({model: launchConfigModel}))
+          .add(new page2({model: launchConfigModel}))
+          .add(new page3({model: launchConfigModel}))
+          .add(new page4({model: launchConfigModel}))
           .setHideDisabledButtons(true)
           .setFinishText('Launch Instance(s)').setFinishChecker(canFinish)
           .finisher(finish)
-          .summary(new summary( {model: dataModel} ));
+          .summary(new summary( {model: launchConfigModel} ));
 //  var ViewType = wizard.makeView(options, wizardTemplate);
   var ViewType = viewBuilder.build()
   return ViewType;
