@@ -35,6 +35,9 @@ define([
           } 
           scope.images = scope.search.filtered;
           this.scope = scope;
+          scope.search.filtered.on('change reset', function() {
+              self.render();
+          });
 
          $(this.el).html(template)
          this.rView = rivets.bind(this.$el, this.scope);
