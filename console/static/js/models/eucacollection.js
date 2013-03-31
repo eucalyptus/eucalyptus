@@ -14,32 +14,31 @@ define([
             dataType:"json",
             async:"true",
           }),
-          $.ajax({
-            type:"POST",
-            url: '/ec2?Action=DescribeTags',
-            data: {
-                "_xsrf": $.cookie('_xsrf'),
-            },
-            dataType:"json",
-            async:"true",
-          })
+          describe('tag')
         ).done(
           // Success
           function(describe, tags) {
             //console.log('EUCACOLLECTION (success):', collection.url, describe, tags);
             if (describe[0].results) {
               var results = describe[0].results;
-              if (collection.namedColumns && tags && tags[0].results) {
+
+              // always generate display_ values for named columns.
+              if (collection.namedColumns) {
                 _.each(results, function(result, index) {
                   if (typeof result.id == 'undefined') result.id = index;
-                  var tagById = _.groupBy(tags[0].results, 'res_id');
-                  var tagSet = _.groupBy(tagById[result.id], 'name');
-                  result.tags = tagSet;
+                  if (tags && tags != '' && tags[0].results) {
+                    var tagById = _.groupBy(tags[0].results, 'res_id');
+                    var tagSet = _.groupBy(tagById[result.id], 'name');
+                    result.tags = tagSet;
+                  }
                   _.each(collection.namedColumns, function(column) {
-                    tagSet = _.groupBy(tagById[result[column]], 'name');
+                    var display_id = result[column];
+                    if (tags && tags != '' && tags[0].results) {
+                      tagSet = _.groupBy(tagById[result[column]], 'name');
+                      if (tagSet && tagSet.Name) display_id = tagSet.Name[0].value;
+                    }
                     //console.log(column + ':' + result[column] + '->', tagSet);
-                    result['display_' + column] = tagSet && tagSet.Name ? 
-                                                  tagSet.Name[0].value : result[column];
+                    result['display_' + column] = display_id;
                   });
                 });
               }

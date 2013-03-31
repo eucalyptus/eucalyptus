@@ -137,8 +137,6 @@ public class AutoScalingGroup extends AbstractOwnedPersistent implements AutoSca
   @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
   private Set<SuspendedProcess> suspendedProcesses = Sets.newHashSet();
 
-  //TODO:STEVE: include unsupported properties -> placementGroup, vpcZoneIdentifier
-
   @OneToMany( fetch = FetchType.LAZY, cascade = CascadeType.REMOVE, orphanRemoval = true, mappedBy = "group" )
   private Collection<ScalingActivity> scalingActivity;
 

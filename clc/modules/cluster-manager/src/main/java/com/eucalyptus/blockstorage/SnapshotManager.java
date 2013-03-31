@@ -148,7 +148,21 @@ public class SnapshotManager {
       }
     };
     Snapshot snap = RestrictedTypes.allocateUnitlessResource( allocator );
-    snap = Snapshots.startCreateSnapshot( volReady, snap );
+    try {
+      snap = Snapshots.startCreateSnapshot( volReady, snap );
+    } catch ( EucalyptusCloudException e ) {
+      final EntityTransaction db = Entities.get( Snapshot.class );
+      try {
+        Snapshot entity = Entities.uniqueResult( snap );
+        Entities.delete( entity );
+        db.commit();
+      } catch ( Exception ex ) {
+        Logs.extreme( ).error( ex , ex );
+      } finally {
+        if ( db.isActive() ) db.rollback( );
+      }
+      throw e;
+    }
 
     try {
       fireUsageEvent( snap, SnapShotEvent.forSnapShotCreate( snap.getVolumeSize(), volReady.getNaturalId(), snap.getDisplayName() ) );

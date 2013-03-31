@@ -88,8 +88,11 @@ public class LaunchConfiguration extends AbstractOwnedPersistent implements Laun
 
   @Column( name = "metadata_instance_monitoring" )
   private Boolean instanceMonitoring;
-  
-  protected LaunchConfiguration() {    
+
+  @Column( name = "metadata_instance_profile", length = 1600)
+  private String iamInstanceProfile;
+
+  protected LaunchConfiguration() {
   }
 
   protected LaunchConfiguration( final OwnerFullName owner ) {
@@ -175,7 +178,15 @@ public class LaunchConfiguration extends AbstractOwnedPersistent implements Laun
   public void setInstanceMonitoring( final Boolean instanceMonitoring ) {
     this.instanceMonitoring = instanceMonitoring;
   }
-  
+
+  public String getIamInstanceProfile() {
+    return iamInstanceProfile;
+  }
+
+  public void setIamInstanceProfile( final String iamInstanceProfile ) {
+    this.iamInstanceProfile = iamInstanceProfile;
+  }
+
   @Override
   public String getArn() {
     return String.format( 
@@ -239,6 +250,7 @@ public class LaunchConfiguration extends AbstractOwnedPersistent implements Laun
     private String keyName;
     private String userData;
     private Boolean instanceMonitoring;
+    private String iamInstanceProfile;
     private Set<String> securityGroups = Sets.newLinkedHashSet();
     private Set<BlockDeviceMapping> blockDeviceMappings = Sets.newLinkedHashSet();
 
@@ -279,6 +291,11 @@ public class LaunchConfiguration extends AbstractOwnedPersistent implements Laun
       return builder();
     }
 
+    public T withInstanceProfile( final String iamInstanceProfile ) {
+      this.iamInstanceProfile  = iamInstanceProfile;
+      return builder();
+    }
+
     public T withSecurityGroups( final Collection<String> securityGroups ) {
       if ( securityGroups != null ) {
         this.securityGroups.addAll( securityGroups );
@@ -303,6 +320,7 @@ public class LaunchConfiguration extends AbstractOwnedPersistent implements Laun
       configuration.setKeyName( keyName );
       configuration.setUserData( userData );
       configuration.setInstanceMonitoring( instanceMonitoring );
+      configuration.setIamInstanceProfile( iamInstanceProfile );
       configuration.setSecurityGroups( Lists.newArrayList( securityGroups ) );
       configuration.setBlockDeviceMappings( Lists.newArrayList( blockDeviceMappings ) );
       return configuration;

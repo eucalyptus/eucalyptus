@@ -91,12 +91,7 @@ public class Bundles {
   private static Logger LOG = Logger.getLogger( Bundles.class );
   
   public static MessageCallback createCallback( BundleInstanceType request ) throws AuthException, IllegalContextAccessException, ServiceStateException {
-    Component walrus = Components.lookup( Walrus.class );
-    NavigableSet<ServiceConfiguration> configs = walrus.services( );
-    if ( configs.isEmpty( ) || !Component.State.ENABLED.equals( configs.first( ).lookupState( ) ) ) {
-      throw new ServiceStateException( "Failed to bundle instance because there is no available walrus service at the moment." );
-    }
-    final String walrusUrl = ServiceUris.remote( configs.first( ) ).toASCIIString( );
+    final String walrusUrl = ServiceUris.remote( Topology.lookup( Walrus.class ) ).toASCIIString( );
     request.setUrl( walrusUrl );
     request.setAwsAccessKeyId( Accounts.getFirstActiveAccessKeyId( Contexts.lookup( ).getUser( ) ) );
     return new BundleCallback( request );

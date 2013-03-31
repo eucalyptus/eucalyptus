@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * Copyright 2009-2013 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -60,59 +60,64 @@
  *   NEEDED TO COMPLY WITH ANY SUCH LICENSES OR RIGHTS.
  ************************************************************************/
 
-package com.eucalyptus.auth.policy;
+package com.eucalyptus.auth.euare;
 
-import java.io.FileInputStream;
-import java.io.InputStream;
-import org.apache.commons.io.output.ByteArrayOutputStream;
-import com.eucalyptus.auth.entities.AuthorizationEntity;
-import com.eucalyptus.auth.entities.ConditionEntity;
-import com.eucalyptus.auth.entities.PolicyEntity;
-import com.eucalyptus.auth.entities.StatementEntity;
+import org.jboss.netty.handler.codec.http.HttpResponseStatus;
+import com.eucalyptus.util.EucalyptusCloudException;
 
-public class PolicyParserTest {
+public class EuareException extends EucalyptusCloudException {
 
-  public static void main( String[] args ) throws Exception {
-    if ( args.length < 1 ) {
-      System.err.println( "Requires input policy file" );
-      System.exit( 1 ); 
-    }
-    InputStream input = new FileInputStream( args[0] );
-    
-    String policy = readInputAsString( input );
-        
-    PolicyEntity parsed = PolicyParser.getInstance( ).parse( policy );
-    
-    printPolicy( parsed );
+  private static final long serialVersionUID = 1L;
 
-    input.close();
+  public static final String ENTITY_ALREADY_EXISTS = "EntityAlreadyExists";
+  public static final String LIMIT_EXCEEDED = "LimitExceeded";
+  public static final String NO_SUCH_ENTITY = "NoSuchEntity";
+  public static final String INTERNAL_FAILURE = "InternalFailure";
+  public static final String NOT_AUTHORIZED = "NotAuthorized";
+  public static final String DELETE_CONFLICT = "DeleteConflict";
+  public static final String NOT_IMPLEMENTED = "NotImplemented";
+  public static final String MALFORMED_POLICY_DOCUMENT = "MalformedPolicyDocument";
+  public static final String DUPLICATE_CERTIFICATE = "DuplicateCertificate";
+  public static final String INVALID_CERTIFICATE = "InvalidCertificate";
+  public static final String MALFORMED_CERTIFICATE = "MalformedCertificate";
+  public static final String INVALID_NAME = "InvalidName";
+  public static final String INVALID_ID = "InvalidId";
+  public static final String INVALID_PATH = "InvalidPath";
+  public static final String INVALID_VALUE = "InvalidValue";
+  
+  private HttpResponseStatus status;
+  private String error;
+  
+  public EuareException( HttpResponseStatus status, String error ) {
+    super( );
+    this.status = status;
+    this.error = error;
   }
   
-  private static String readInputAsString( InputStream in ) throws Exception {
-    ByteArrayOutputStream baos = new ByteArrayOutputStream( );
-    
-    byte[] buf = new byte[512];
-    int nRead = 0;
-    while ( ( nRead = in.read( buf ) ) >= 0 ) {
-      baos.write( buf, 0, nRead );
-    }
-    
-    String string = new String( baos.toByteArray( ), "UTF-8" );
-    baos.close();
-    return string;
+  public EuareException( HttpResponseStatus status, String error, String message, Throwable cause ) {
+    super( message, cause );
+    this.status = status;
+    this.error = error;
   }
   
-  private static void printPolicy( PolicyEntity parsed ) {
-    System.out.println( "Policy:\n" + parsed.getText( ) + "\n" + "Version = " + parsed.getPolicyVersion( ) );
-    for ( StatementEntity statement : parsed.getStatements( ) ) {
-      System.out.println( "Statement: " + statement.getSid( ) );
-      for ( AuthorizationEntity auth : statement.getAuthorizations( ) ) {
-        System.out.println( "Authorization: " + auth );
-      }
-      for ( ConditionEntity cond : statement.getConditions( ) ) {
-        System.out.println( "Condition: " + cond );
-      }
-    }
+  public EuareException( HttpResponseStatus status, String error, String message ) {
+    super( message );
+    this.status = status;
+    this.error = error;
+  }
+  
+  public EuareException( HttpResponseStatus status, String error, Throwable cause ) {
+    super( cause );
+    this.status = status;
+    this.error = error;
+  }
+  
+  public HttpResponseStatus getStatus( ) {
+    return this.status;
+  }
+  
+  public String getError( ) {
+    return this.error;
   }
   
 }

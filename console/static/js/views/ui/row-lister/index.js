@@ -6,7 +6,8 @@ define([
       
       initialize: function(args) {
         this.$el.html(template);
-        this.rView = rivets.bind(this.$el, args.model);    
+        this.rView = rivets.bind(this.$el, args.model);
+        console.log("ROWLIST", args);    
       },
 
       add: function() {

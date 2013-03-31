@@ -172,6 +172,11 @@ define([], function() {
       }
       var offset = -(position - index);
       if (!navigationController || navigationController(offset)) {
+        if (typeof self.current === 'object' && typeof self.current.isValid === 'function') {
+            if (! self.current.isValid()) {
+              return self.current;
+            }
+        }
         position = index;
       }
       return self.current;
@@ -259,8 +264,8 @@ define([], function() {
       // (if any)
       var events = {};
       events['click ' + mapping.nextButton] = function() {
-        self.next();
-        this.render();
+        //self.next();
+        //this.render();
       };
       events['click ' + mapping.prevButton] = function() {
         self.prev();

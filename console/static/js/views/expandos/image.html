@@ -1,0 +1,54 @@
+<div data-ui-tabs=":button" id="tabs" >
+  <ul>
+    <li><a href="#tabs-1" data-msg="tab_general">General</a></li>
+    <li><a href="#tabs-2" data-msg="tab_volumes">Volumes</a></li>
+    <li><a href="#tabs-3" data-msg="tab_tags">Tags</a></li>
+  </ul>
+  <div id="tabs-1" class="tab">
+      <ul class="instance-expanded clearfix">
+        <li><div class="expanded-section-label" data-msg="image_table_expanded_machine">Machine:</div></li>
+		<li><div class="expanded-title" data-msg="image_table_expanded_image_name">IMAGE NAME</div><div class="expanded-value">myimage</div></li> 
+		<li><div class="expanded-title" data-msg="image_table_expanded_image_id">IMAGE ID</div><div class="expanded-value">emi-756465353</div></li>
+		<li><div class="expanded-title" data-msg="image_table_expanded_arch">ARCHITECTURE</div><div class="expanded-value">64 bit</div></li>
+		<li><div class="expanded-title" data-msg="image_table_expanded_root_device">ROOT DEVICE</div><div class="expanded-value">instance-store</div></li>
+		<li><div class="expanded-title" data-msg="image_table_expanded_desc">DESCRIPTION</div><div class="expanded-value">this image won't boot</div></li>
+		<li><div class="expanded-title" data-msg="image_table_expanded_os">OS</div><div class="expanded-value">linux</div></li>
+		<li><div class="expanded-title" data-msg="image_table_expanded_snapshot">SNAPSHOT</div><div class="expanded-value">snap-85746353</div></li>
+		<li><div class="expanded-title" data-msg="image_table_expanded_account">REGISTERING ACCOUNT</div><div class="expanded-value">878210294747</div></li>
+		<li><div class="expanded-title" data-msg="image_table_expanded_manifest">MANIFEST PATH</div><div class="expanded-value">tmpobxi939ocl&amp;#x2f;precise-server-cloudimg-amd64-ext3.img.manifest.xml</div></li>
+        <li><div class="expanded-section-label" data-msg="image_table_expanded_kernel">Kernel:</div></li>
+		<li><div class="expanded-title" data-msg="image_table_expanded_kernel_id">KERNEL ID</div><div class="expanded-value">eki-756465353</div></li>
+		<li><div class="expanded-title" data-msg="image_table_expanded_arch">ARCHITECTURE</div><div class="expanded-value">64 bit</div></li>	
+		<li><div class="expanded-title" data-msg="image_table_expanded_manifest">MANIFEST PATH</div><div class="expanded-value">tmpobxi939ocl&amp;#x2f;precise-server-cloudimg-amd64-ext3.img.manifest.xml</div></li>
+		<li><div class="expanded-title" data-msg="image_table_expanded_desc">DESCRIPTION</div><div class="expanded-value">this kernel won't boot</div></li>
+        <li><div class="expanded-section-label" data-msg="image_table_expanded_ramdisk">Ram disk:</div></li>
+		<li><div class="expanded-title" data-msg="image_table_expanded_ramdisk_id">RAM DISK ID</div><div class="expanded-value">eri-756465353</div></li>
+		<li><div class="expanded-title" data-msg="image_table_expanded_arch">ARCHITECTURE</div><div class="expanded-value">64 bit</div></li>	
+		<li><div class="expanded-title" data-msg="image_table_expanded_manifest">MANIFEST PATH</div><div class="expanded-value">tmpobxi939ocl&amp;#x2f;precise-server-cloudimg-amd64-ext3.img.manifest.xml</div></li>
+		<li><div class="expanded-title" data-msg="image_table_expanded_desc">DESCRIPTION</div><div class="expanded-value">this kernel won't boot</div></li>	
+	 </ul>
+  </div>
+
+  <div id="tabs-2" class="tab">
+      <ul class="instance-expanded clearfix">
+        <li><div class="expanded-title" data-msg="volume_table_expanded_volume_id">Volume Id</div><div class="expanded-value">vol-xxxxx</div></li>
+        <li><div class="expanded-title" data-msg="volume_table_expanded_device_mapping">Device Mapping</div><div class="expanded-value">/dev/sda</div></li>
+        <li><div class="expanded-title" data-msg="volume_table_expanded_creation_time">Creation Time</div><div class="expanded-value">Aug 21, 2012 07:34:23AM</div></li>
+	  </ul>
+  </div>
+
+  <div id="tabs-3" class="tab">
+	  <ul class="instance-expanded clearfix">
+	  	<li>
+		<table>
+			<thead><tr><th data-msg="tag_display_hdr_key">KEY</th><th data-msg="tag_display_hdr_value">VALUE</th></tr>
+			</thead>
+			<tbody>
+				<tr data-each-item="items"><td><span data-text="item.name"></span></td><td><span data-text="item.value"></span></td></tr>
+			</tbody>
+		</table>
+		</li>
+	  </ul>
+  </div>
+
+<div style="clear:both"></div>

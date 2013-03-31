@@ -36,6 +36,7 @@ import org.apache.log4j.Logger;
 
 import com.eucalyptus.auth.Permissions;
 import com.eucalyptus.auth.policy.PolicySpec;
+import com.eucalyptus.cloudwatch.domain.DBCleanupService;
 import com.eucalyptus.cloudwatch.domain.alarms.AlarmEntity;
 import com.eucalyptus.cloudwatch.domain.alarms.AlarmEntity.ComparisonOperator;
 import com.eucalyptus.cloudwatch.domain.alarms.AlarmEntity.StateValue;
@@ -70,6 +71,8 @@ public class CloudWatchService {
     ExecutorService fixedThreadPool = Executors.newFixedThreadPool(5); // TODO: make this configurable
     ScheduledExecutorService alarmWorkerService = Executors.newSingleThreadScheduledExecutor();
     alarmWorkerService.scheduleAtFixedRate(new AlarmStateEvaluationDispatcher(fixedThreadPool), 0, 1, TimeUnit.MINUTES);
+    ScheduledExecutorService dbCleanupService = Executors.newSingleThreadScheduledExecutor();
+    dbCleanupService.scheduleAtFixedRate(new DBCleanupService(), 0, 1, TimeUnit.DAYS);
   }
   
   private static final Logger LOG = Logger.getLogger(CloudWatchService.class);

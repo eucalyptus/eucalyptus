@@ -48,7 +48,7 @@ public enum AdjustmentType implements AdjustmentTypeMetadata {
     public int adjustCapacity( final int currentCapacity, 
                                final int adjustmentStep, 
                                final int minAdjustment ) {
-      return adjustmentStep; //TODO:STEVE: error on negative? or enforce elsewhere?
+      return adjustmentStep;
     }
   },
 

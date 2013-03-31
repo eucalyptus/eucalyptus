@@ -155,6 +155,9 @@
           resource_search : snapshot_search,
           resource_plural : snapshot_plural,
         },
+         expand_callback : function(row){ // row = [col1, col2, ..., etc]
+          return thisObj._expandCallback(row);
+        },
         menu_actions : function(args){ 
           return thisObj._createMenuActions();
         },
@@ -291,6 +294,15 @@
 
     _destroy : function() {
     },
+
+    _expandCallback : function(row){ 
+      var $el = $('<div />');
+      require(['views/expandos/volume'], function(expando) {
+         new expando({el: $el, id: row[1]});
+      });
+      return $el;
+    },
+
 
     _createMenuActions : function() {
       var thisObj = this;
@@ -565,30 +577,6 @@
        }
     },
 
-    _expandCallback : function(row){ 
-      var thisObj = this;
-      var snapId = row[10];
-      var results = describe('snapshot');
-      var snapshot = null;
-      for(s in results){
-        if(results[s].id === snapId){
-          snapshot = results[s];
-          break;
-        }
-      }
-
-      if(!snapshot)
-        return null;
-
-      var $wrapper = $('<div>');
-
-      $tagInfo = $('<div>').addClass('resource-tag-table-expanded-instance').addClass('clearfix').attr('id', snapshot.id).euca_resource_tag({resource: 'snapshot', resource_id: snapshot.id, widgetMode: 'view-only'});
-      
-      $tabspace = $('<div>').addClass('eucatabspace-main-div').eucatabspace(); 
-      $tabspace.eucatabspace('addTabPage', 'Tag', $tagInfo);
-      $wrapper.append($tabspace)
-      return $wrapper;
-    },
 
 /**** Public Methods ****/
     close: function() {

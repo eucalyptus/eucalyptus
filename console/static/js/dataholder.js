@@ -23,15 +23,15 @@ function(Backbone, ScalingGroups,Volumes,Images,LaunchConfigs,Instances, Eips, K
 		  new Backbone.Model({name: "LB C"}),
 		  new Backbone.Model({name: "LB D"}),
 		]),
-                eip : new Eips(),
-                keypair : new KeyPairs(),
-                sgroup : new SecurityGroups(),
-                snapshot : new Snapshots()
+        eip : new Eips(),
+        keypair : new KeyPairs(),
+        sgroup : new SecurityGroups(),
+        snapshot : new Snapshots()
 	};
 
     shared.image = shared.images;
     shared.volume = shared.volumes;
-    shared.launchConfig = shared.launchConfigs;
+    shared.launchconfig = shared.launchConfigs;
     shared.scalingGroup = shared.scalingGroups;
 
 	shared.launchConfigs.fetch();
@@ -39,6 +39,10 @@ function(Backbone, ScalingGroups,Volumes,Images,LaunchConfigs,Instances, Eips, K
 	shared.volumes.fetch();
 	shared.images.fetch();
 	shared.instance.fetch();
+    shared.eip.fetch();
+    shared.keypair.fetch();
+    shared.sgroup.fetch();
+    shared.snapshot.fetch();
 
 	return shared;
 });

@@ -6,13 +6,15 @@ define([
         initialize : function(args) {
             var self = this;
             this.template = template;
+            this.name = args.items.name,
+            this.original = args.items.desired,
             this.scope = {
                 qscale: new Backbone.Model({
-                    name: 'some name',
-                    size: 4,
-                    minimum: 1,
-                    maximum: 10,
-                    desired: 4,
+                    name: args.items.name,
+                    size: args.items.size,
+                    minimum: args.items.min,
+                    maximum: args.items.max,
+                    desired: args.items.desired
                 }),
 
                 cancelButton: {
@@ -23,8 +25,20 @@ define([
 
                 submitButton: {
                     click: function() {
-                       self.scope.status = 'Deleting';
-                       self.close();
+                      if (self.original != self.scope.qscale.get('desired')) {
+                        // unfortunate thing about this is that it reloads from proxy, no local store
+                        // TODO: fix that ^^^
+                        require(['models/scalinggrps'], function(collection) {
+                          var grps = new collection();
+                          grps.fetch({success: function() {
+                            grps.get(self.name).setDesiredCapacity(self.scope.qscale.get('desired'));
+                            self.close();
+                          }});
+                        });
+                      }
+                      else {
+                        self.close();
+                      }
                     }
                 }
             }

@@ -196,7 +196,7 @@
         menu_actions : function(){
           return thisObj._createMenuActions(); 
         },
-        expand_callback : function(row){ // row = [col1, col2, ..., etc]
+         expand_callback : function(row){ // row = [col1, col2, ..., etc]
           return thisObj._expandCallback(row);
         },
         menu_click_create : function (args) { thisObj._createAction(); },
@@ -999,69 +999,15 @@
       });
     },
 
-    _expandCallback : function(row){
-      var thisObj = this;
-      var groupName = row[7];
-      var results = describe('sgroup');
-      var group = null;
-      for(i in results){
-        if (results[i].name === groupName){
-          group = results[i];
-          break;
-        }
-      }
-      if(!group || !group.rules || group.rules.length <= 0){
-        return null;
-      }
-      var $wrapper = $('<div>').addClass('sgroup-table-expanded-group').addClass('clearfix').append(
-          $('<div>').addClass('expanded-section-label').text(sgroup_table_expanded_title), 
-          $('<div>').addClass('expanded-section-content').addClass('clearfix'));
-      if(group.rules && group.rules.length > 0){
-        var $list = $wrapper.find('div').last();
-        $.each(group.rules, function (idx, rule){
-          var protocol = rule['ip_protocol'];
-          var port = rule['from_port'];
-          if(rule['to_port'] !== rule['from_port'])
-            port += '-'+rule['to_port']; 
-          var type = '';
-          if(protocol === 'icmp'){
-            // TODO : define icmp type
-            ;
-          }
-          var portOrType = type ? type: port;
-          var portOrTypeTitle = type ? sgroup_table_expanded_type : sgroup_table_expanded_port;
 
-          var src = [];
-          var grants = rule['grants'];
-          $.each(grants, function(idx, grant){
-            if(grant.cidr_ip && grant.cidr_ip.length>0){
-              src.push(grant.cidr_ip);
-            }else if(grant.owner_id && grant.owner_id.length>0){
-              if(group.owner_id === grant.owner_id)
-                src.push(grant.groupName);
-              else
-                src.push(grant.owner_id+'/'+grant.groupName);
-            }
-          });
-          src = src.join(', '); 
- 
-          $list.append(
-            $('<div>').addClass('sgroup-expanded-rule').append(
-              $('<div>').addClass('rule-label').text(sgroup_table_expanded_rule),
-              $('<ul>').addClass('rule-expanded').addClass('clearfix').append(
-                $('<li>').append( 
-                  $('<div>').addClass('expanded-title').text(sgroup_table_expanded_protocol),
-                  $('<div>').addClass('expanded-value').text(protocol)),
-                $('<li>').append( 
-                  $('<div>').addClass('expanded-title').text(portOrTypeTitle),
-                  $('<div>').addClass('expanded-value').text(portOrType)),
-                $('<li>').append( 
-                  $('<div>').addClass('expanded-title').text(sgroup_table_expanded_source),
-                  $('<div>').addClass('expanded-value').text(src)))));
-        });
-      }
-      return $('<div>').append($wrapper);
+    _expandCallback : function(row){ 
+      var $el = $('<div />');
+      require(['views/expandos/sgroup'], function(expando) {
+         new expando({el: $el, id: row[1]});
+      });
+      return $el;
     },
+
 
 /**** Public Methods ****/
     close: function() {

@@ -39,7 +39,7 @@
       this.baseTable = $launchConfigTable;
       this.tableWrapper = $launchConfigTable.eucatable({
         id : 'launchconfig', // user of this widget should customize these options,
-        data_deps: ['launchconfigs' ],
+        data_deps: ['launchconfigs', 'scalinggrps'],
         hidden: thisObj.options['hidden'],
         dt_arg : {
           "sAjaxSource": 'launchconfig',
@@ -89,11 +89,11 @@
           ],
         },
         text : {
-          header_title : launchconfig_h_title,
-          create_resource : launchconfig_create,
-          resource_found : 'launchconfig_found',
-          resource_search : launchconfig_search,
-          resource_plural : launchconfig_plural,
+          header_title : launch_config_h_title,
+          create_resource : launch_config_create,
+          resource_found : 'launch_config_found',
+          resource_search : launch_config_search,
+          resource_plural : launch_config_plural,
         },
         expand_callback : function(row){ // row = [col1, col2, ..., etc]
           return thisObj._expandCallback(row);
@@ -126,7 +126,6 @@
 
     _expandCallback : function(row){ 
       var $el = $('<div />');
-      console.log('expandcallback');
       require(['views/expandos/launchconfig'], function(expando) {
          new expando({el: $el, id: row[6]});
       });
@@ -145,7 +144,28 @@
 
       if ( selectedLaunchConfig.length === 1) {
         itemsList['create'] = {"name":launchconfig_action_create, callback: function(key, opt){ thisObj._dialogAction('createscalinggroupfromlaunchconfig', selectedLaunchConfig); }}
-        itemsList['delete'] = {"name":launchconfig_action_delete, callback: function(key, opt){ thisObj._dialogAction('deletelaunchconfig', selectedLaunchConfig); }}
+      }
+      if ( selectedLaunchConfig.length >= 1) {
+        itemsList['delete'] = {"name":launchconfig_action_delete, callback: function(key, opt){
+          var scaling_groups = describe('scalinggrp');
+          var in_use = false;
+          var groups = [];
+          _.each(selectedLaunchConfig, function(configName) {
+            _.find(scaling_groups, function(group) {
+              if (group.launch_config_name == configName) {
+                in_use = true;
+                groups.push({config:configName, group:group.name});
+              }
+            });
+          });
+          if (in_use == true) {
+            // construct list of lc names + sg names?
+            thisObj._dialogAction('deletelaunchconfig2', groups);
+          }
+          else {
+            thisObj._dialogAction('deletelaunchconfig', selectedLaunchConfig);
+          }
+        }}
       }
 
       return itemsList;

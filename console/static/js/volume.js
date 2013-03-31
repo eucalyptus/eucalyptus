@@ -680,6 +680,14 @@
       }
     },
 
+    _expandCallback : function(row){ 
+      var $el = $('<div />');
+      require(['views/expandos/volume'], function(expando) {
+         new expando({el: $el, id: row[1]});
+      });
+      return $el;
+    },
+
 
     _createMenuActions : function() {
       var thisObj = this;
@@ -740,31 +748,6 @@
       }
 
       return itemsList;
-    },
-
-    _expandCallback : function(row){ 
-      var thisObj = this;
-      var volId = row[10];
-      var results = describe('volume');
-      var volume = null;
-      for(v in results){
-        if(results[v].id === volId){
-          volume = results[v];
-          break;
-        }
-      }
-
-      if(!volume)
-        return null;
-
-      var $wrapper = $('<div>');
-
-      $tagInfo = $('<div>').addClass('resource-tag-table-expanded-instance').addClass('clearfix').attr('id', volume.id).euca_resource_tag({resource: 'volume', resource_id: volume.id, widgetMode: 'view-only'});
-      
-      $tabspace = $('<div>').addClass('eucatabspace-main-div').eucatabspace(); 
-      $tabspace.eucatabspace('addTabPage', 'Tag', $tagInfo);
-      $wrapper.append($tabspace)
-      return $wrapper;
     },
 
 /**** Public Methods ****/

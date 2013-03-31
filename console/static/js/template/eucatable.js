@@ -59,6 +59,7 @@
       var dtArg = this._getTableParam();
 
       thisObj.tableArg = dtArg;
+      this.sAjaxSource = dtArg.sAjaxSource;
       this.table = this.element.find('table').dataTable(dtArg);
       var $header = this._decorateHeader();
       this._decorateSearchBar();
@@ -145,7 +146,6 @@
          }
       */
       dt_arg['fnServerData'] = function (sSource, aoData, fnCallback) {
-        console.log('fnServerData', arguments);
         var data = {};
         data.aaData = thisObj.bbdata ? thisObj.bbdata.toJSON() : [];
         data.iTotalRecords = data.aaData.length;
@@ -233,10 +233,11 @@
         
         if(!$currentRow.data('events') || !('click.datatable' in $currentRow.data('events'))){
           $currentRow.unbind('click.datatable').bind('click.datatable', function (e) {
-            // We must regenerate the row so that any events are correctly rebound.
-            $expand = thisObj.options.expand_callback(row);
             if($(e.target).is('a') && $(e.target).hasClass('twist') && thisObj.options.expand_callback){
               if(!$currentRow.next().hasClass('expanded')){
+                // We must regenerate the row so that any events are correctly rebound.
+                $expand = thisObj.options.expand_callback(row);
+
                 thisObj.element.find('table tbody').find('tr.expanded').remove(); // remove all expanded
                 thisObj.element.find('table tbody').find('a.expanded').removeClass('expanded');
                 if(!$expand.hasClass('expanded-row-inner-wrapper'))
@@ -448,6 +449,7 @@ if (true) {
       return $menuDiv;
     },
 
+    
     _decorateLegendPagination : function (args) {
       var thisObj = this;
       var $wrapper = $('<div>').addClass('legend-pagination-wrapper clearfix');

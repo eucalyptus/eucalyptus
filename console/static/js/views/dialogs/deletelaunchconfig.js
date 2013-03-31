@@ -18,17 +18,19 @@ define([
                 },
 
                 deleteButton: {
-                    click: function() {
-                       self.scope.status = 'Deleting';
-                       self.render();
-                       setTimeout(function() {
-                          self.scope.status = 'Still deleting';
-                          self.render();
-                       }, 1000);
-                       setTimeout(function() {
-                           self.close();
-                       }, 2000);
-                    }
+                  click: function() {
+                    // unfortunate thing about this is that it reloads from proxy, no local store
+                    // TODO: fix that ^^^
+                    require(['models/launchconfigs'], function(collection) {
+                      var lc = new collection();
+                      _.each(self.scope.items, function(item) {
+
+                        lc.fetch({success: function() { lc.get(item).destroy({wait: true}); }});
+                      });
+                      self.close();
+                    
+                    });
+                  }
                 }
             }
 

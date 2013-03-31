@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * Copyright 2009-2013 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -62,11 +62,13 @@
 
 package com.eucalyptus.auth.api;
 
+import static com.eucalyptus.auth.principal.Principal.PrincipalType;
 import java.util.Map;
 import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.Contract;
 import com.eucalyptus.auth.Contract.Type;
 import com.eucalyptus.auth.principal.Account;
+import com.eucalyptus.auth.principal.Policy;
 import com.eucalyptus.auth.principal.User;
 
 public interface PolicyEngine {
@@ -83,7 +85,13 @@ public interface PolicyEngine {
    * @throws AuthException
    */
   public void evaluateAuthorization( String resourceType, String resourceName, Account resourceAccount, String action, User requestUser, Map<Type, Contract> contracts ) throws AuthException;
-  
+
+  /**
+   * Evaluate authorizations for a request to access a resource.
+   */
+  public void evaluateAuthorization( PrincipalType principalType, String principalName, Policy resourcePolicy, String resourceType,
+                                     String resourceName, Account resourceAccount, String action, User requestUser, Map<Type, Contract> contracts ) throws AuthException;
+
   /**
    * Evaluate quota for a request to allocate a resource.
    * 

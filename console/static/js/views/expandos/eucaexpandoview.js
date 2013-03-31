@@ -6,16 +6,6 @@ define([
     return Backbone.View.extend({
         _do_init : function() {
             var self = this;
-
-            if (self.id) {
-               self.scope.launchConfig = dataholder.launchConfigs.get(self.id); 
-               dataholder.launchConfigs.on('change reset', function() {
-                    console.log('rerender');
-                    self.launchConfig = dataholder.launchConfigs.get(self.id); 
-                    self.render();
-               });
-            }
-
             $tmpl = $(this.template);
 
             this.scope.$el = this.$el;
