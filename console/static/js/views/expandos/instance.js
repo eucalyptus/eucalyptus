@@ -1,17 +1,16 @@
 define([
+   'underscore',
    './eucaexpandoview',
    'text!./instance.html!strip',
-], function(EucaExpandoView, template) {
+], function(_, EucaExpandoView, template) {
     return EucaExpandoView.extend({
         initialize : function(args) {
-            console.log('init');
-            this.id = args && args.id ? args.id : undefined;
             this.template = template;
-            this.scope = {
+            this.scope = _.extend(this.model, {
                 button: {
                     click: function() { alert('ding dong'); }
                 }
-            }
+            });
             this._do_init();
         },
 	});

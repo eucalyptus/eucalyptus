@@ -1,11 +1,13 @@
 define([
+  'underscore',
   'wizard',
   'text!./template.html',
   './page1',
   './page2',
   './page3',
   'models/scalinggrp',
-], function(Wizard, wizardTemplate, page1, page2, page3, ScalingGroup) {
+  './summary',
+], function(_,Wizard, wizardTemplate, page1, page2, page3, ScalingGroup, summary) {
   var wizard = new Wizard();
 
   function canFinish(position, problems) {
@@ -18,20 +20,16 @@ define([
       window.location = '#scaling';
   }
 
-  scalingGroup = new ScalingGroup({name: 'test', min_size: 2});
   var scope = {
-    scalingGroup: scalingGroup,
-    errors: {}
+    scalingGroup: new ScalingGroup({})
   }
-  scalingGroup.on('change', function() {
-      scope.errors = scalingGroup.validate();
-      console.log('CHANGE', scope.errors);
-  });
+  var p1 = new page1({model: scope});
 
-  var viewBuilder = wizard.viewBuilder(wizardTemplate, scope)
-          .add(page1).add(page2).add(page3).setHideDisabledButtons(true)
+  var viewBuilder = wizard.viewBuilder(wizardTemplate)
+          .add(p1).add(page2).add(page3).setHideDisabledButtons(true)
           .setFinishText('Create scaling group').setFinishChecker(canFinish)
-          .finisher(finish);
+          .finisher(finish)
+          .summary(new summary( {model: scope} ));
 
   var ViewType = viewBuilder.build()
   return ViewType;
