@@ -99,7 +99,8 @@
  |                                                                            |
 \*----------------------------------------------------------------------------*/
 
-#define NULL_ERROR_MSG               "operation on %s could not be invoked (check NC host, port, and credentials)\n", pStub->node_name
+#define NULL_ERROR_MSG               "operation on %s could not be invoked (check NC host, port, and credentials): %s\n", \
+                                     pStub->node_name, axutil_error_get_message(env->error)
 
 #define CORRELATION_ID               NULL   //!< Default Corelation ID value
 
@@ -212,6 +213,8 @@ ncStub *ncStubCreate(char *endpoint_uri, char *logfile, char *homedir)
     axutil_env_t *env = NULL;
     axis2_char_t *client_home;
     axis2_stub_t *stub;
+
+    axutil_error_init(); // initialize error strings in Axis2
 
     if (logfile) {
         env = axutil_env_create_all(logfile, AXIS2_LOG_LEVEL_TRACE);
@@ -692,6 +695,7 @@ int ncDescribeResourceStub(ncStub * pStub, ncMetadata * pMeta, char *resourceTyp
     adb_ncDescribeResource_set_ncDescribeResource(input, env, request);
 
     if ((output = axis2_stub_op_EucalyptusNC_ncDescribeResource(stub, env, input)) == NULL) {
+        
         LOGERROR(NULL_ERROR_MSG);
         status = -1;
     } else {
@@ -702,6 +706,7 @@ int ncDescribeResourceStub(ncStub * pStub, ncMetadata * pMeta, char *resourceTyp
         }
 
         res = allocate_resource((char *)adb_ncDescribeResourceResponseType_get_nodeStatus(response, env),
+                                (boolean)adb_ncDescribeResourceResponseType_get_migrationCapable(response, env),
                                 (char *)adb_ncDescribeResourceResponseType_get_iqn(response, env),
                                 (int)adb_ncDescribeResourceResponseType_get_memorySizeMax(response, env),
                                 (int)adb_ncDescribeResourceResponseType_get_memorySizeAvailable(response, env),

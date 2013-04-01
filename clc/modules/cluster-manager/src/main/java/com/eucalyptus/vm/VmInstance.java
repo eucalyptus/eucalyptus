@@ -2108,4 +2108,15 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
     this.bootRecord.setDeleteOnTerminate( deleteOnterminate );
   }
 
+  public void startMigration( ) {
+    this.runtimeState.startMigration( );
+  }
+
+  public void abortMigration( ) {
+    this.runtimeState.abortMigration( );
+  }
+
+  public VmMigrationTask getMigrationTask( ) {
+    return this.runtimeState.getMigrationTask( );
+  }
 }

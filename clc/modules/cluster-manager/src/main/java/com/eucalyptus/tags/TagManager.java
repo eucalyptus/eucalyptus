@@ -171,7 +171,7 @@ public class TagManager {
                   Tags.delete( example, TagSupport.fromResource( resource ).exampleCriterion( example ), Collections.<String,String>emptyMap() );
                 }
               } catch ( NoSuchMetadataException e ) {
-                log.debug( e, e );
+                log.trace( e );
               } catch ( MetadataException e ) {
                 throw Exceptions.toUndeclared(e);
               } 

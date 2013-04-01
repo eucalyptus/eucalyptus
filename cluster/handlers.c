@@ -2017,9 +2017,15 @@ int doDescribeResources(ncMetadata * pMeta, virtualMachine ** ccvms, int vmLen, 
             res = &(resourceCacheLocal.resources[i]);
 
             for (j = 0; j < vmLen; j++) {
-                mempool = res->availMemory;
-                diskpool = res->availDisk;
-                corepool = res->availCores;
+                if (! strcmp(res->nodeStatus, "disabled")) {
+                    mempool = 0;
+                    diskpool = 0;
+                    corepool = 0;
+                } else {
+                    mempool = res->availMemory;
+                    diskpool = res->availDisk;
+                    corepool = res->availCores;
+                }
 
                 mempool -= (*ccvms)[j].mem;
                 diskpool -= (*ccvms)[j].disk;
@@ -2031,9 +2037,15 @@ int doDescribeResources(ncMetadata * pMeta, virtualMachine ** ccvms, int vmLen, 
                     corepool -= (*ccvms)[j].cores;
                 }
 
-                mempool = res->maxMemory;
-                diskpool = res->maxDisk;
-                corepool = res->maxCores;
+                if (! strcmp(res->nodeStatus, "disabled")) {
+                    mempool = 0;
+                    diskpool = 0;
+                    corepool = 0;
+                } else {
+                    mempool = res->maxMemory;
+                    diskpool = res->maxDisk;
+                    corepool = res->maxCores;
+                }
 
                 mempool -= (*ccvms)[j].mem;
                 diskpool -= (*ccvms)[j].disk;
@@ -2157,18 +2169,20 @@ int refresh_resources(ncMetadata * pMeta, int timeout, int dolock)
                         changeState(&(resourceCacheStage->resources[i]), RESDOWN);
                     }
                 } else {
-                    LOGDEBUG("received data from node=%s mem=%d/%d disk=%d/%d cores=%d/%d\n",
+                    LOGDEBUG("received data from node=%s status=%s mem=%d/%d disk=%d/%d cores=%d/%d migrationCapable=%d\n",
                              resourceCacheStage->resources[i].hostname,
-                             ncResDst->memorySizeAvailable,
-                             ncResDst->memorySizeMax, ncResDst->diskSizeAvailable, ncResDst->diskSizeMax, ncResDst->numberOfCoresAvailable,
-                             ncResDst->numberOfCoresMax);
+                             ncResDst->nodeStatus,
+                             ncResDst->memorySizeAvailable, ncResDst->memorySizeMax, 
+                             ncResDst->diskSizeAvailable, ncResDst->diskSizeMax, 
+                             ncResDst->numberOfCoresAvailable, ncResDst->numberOfCoresMax, 
+                             ncResDst->migrationCapable);
                     resourceCacheStage->resources[i].maxMemory = ncResDst->memorySizeMax;
                     resourceCacheStage->resources[i].availMemory = ncResDst->memorySizeAvailable;
                     resourceCacheStage->resources[i].maxDisk = ncResDst->diskSizeMax;
                     resourceCacheStage->resources[i].availDisk = ncResDst->diskSizeAvailable;
                     resourceCacheStage->resources[i].maxCores = ncResDst->numberOfCoresMax;
                     resourceCacheStage->resources[i].availCores = ncResDst->numberOfCoresAvailable;
-
+                    strncpy(resourceCacheStage->resources[i].nodeStatus, ncResDst->nodeStatus, sizeof(resourceCacheStage->resources[i].nodeStatus));
                     // set iqn, if set
                     if (strlen(ncResDst->iqn)) {
                         snprintf(resourceCacheStage->resources[i].iqn, 128, "%s", ncResDst->iqn);
@@ -4117,8 +4131,8 @@ int doModifyNode(ncMetadata * pMeta, char *nodeName, char *stateName)
     int src_index = -1, dst_index = -1;
     ccResourceCache resourceCacheLocal;
 
-    rc = initialize(pMeta);
-    if (rc || ccIsEnabled()) {
+    // no need to call initialize(pMeta) because we call doModifyNode internally, from doEnable/DisableService
+    if (ccIsEnabled()) {
         return (1);
     }
 
@@ -4145,6 +4159,7 @@ int doModifyNode(ncMetadata * pMeta, char *nodeName, char *stateName)
     }
     if (src_index == -1) {
         LOGERROR("node requested for modification (%s) cannot be found\n", SP(nodeName));
+        ret = 1;
         goto out;
     }
 
@@ -4153,12 +4168,17 @@ int doModifyNode(ncMetadata * pMeta, char *nodeName, char *stateName)
     if (rc) {
         ret = 1;
         goto out;
-    }
 
-    // FIXME: This is only here for compatability with earlier demo
-    // development. Remove.
-    if (!doMigrateInstances(pMeta, nodeName, "prepare")) {
-        LOGERROR("doModifyNode() call of doMigrateInstances() failed.\n");
+    } else { // state change succeded => update nodeStatus and resource availability if the change succeeds
+        sem_mywait(RESCACHE);
+        for (i = 0; i < MAXNODES; i++) {
+            if (!strcmp(resourceCache->resources[i].hostname, nodeName)) {
+                ccResource *res = &(resourceCache->resources[i]);
+                strcpy(res->nodeStatus, stateName);
+                break;
+            }
+        }
+        sem_mypost(RESCACHE);        
     }
 
  out:

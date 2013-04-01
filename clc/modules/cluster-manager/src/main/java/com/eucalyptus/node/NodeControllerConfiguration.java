@@ -60,109 +60,91 @@
  *   NEEDED TO COMPLY WITH ANY SUCH LICENSES OR RIGHTS.
  ************************************************************************/
 
-package com.eucalyptus.component.id;
+package com.eucalyptus.node;
 
-import java.util.ArrayList;
-import java.util.List;
-import org.jboss.netty.channel.ChannelPipelineFactory;
-import com.eucalyptus.component.ComponentId;
-import com.eucalyptus.component.ComponentId.FaultLogPrefix;
-import com.eucalyptus.component.ComponentId.Partition;
-import com.eucalyptus.component.ServiceUris;
-import com.eucalyptus.util.Internets;
+import java.io.Serializable;
+import javax.persistence.PersistenceContext;
+import javax.persistence.PostLoad;
+import javax.persistence.Transient;
+import org.hibernate.annotations.Cache;
+import org.hibernate.annotations.CacheConcurrencyStrategy;
+import org.hibernate.annotations.Entity;
+import com.eucalyptus.bootstrap.BootstrapArgs;
+import com.eucalyptus.component.ComponentId.ComponentPart;
+import com.eucalyptus.config.ComponentConfiguration;
+import com.eucalyptus.configurable.ConfigurableClass;
+import com.eucalyptus.configurable.ConfigurableIdentifier;
 
-@Partition( value = { Eucalyptus.class } )
-@FaultLogPrefix( "cloud" ) // stub for cc, but in clc
-public class ClusterController extends ComponentId {
+/**
+ * @todo doc
+ * @author chris grzegorczyk <grze@eucalyptus.com>
+ */
+@Entity
+@javax.persistence.Entity
+@PersistenceContext( name = "eucalyptus_config" )
+@Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
+@ComponentPart( NodeController.class )
+@ConfigurableClass( root = "node",
+                    alias = "basic",
+                    description = "Node Controller Configuration.",
+                    singleton = false,
+                    deferred = true )
+public class NodeControllerConfiguration extends ComponentConfiguration implements Serializable {
+  @Transient
+  private static String DEFAULT_SERVICE_PATH = "/axis2/services/EucalyptusNC";
+  @Transient
+  private static Integer DEFAULT_SERVICE_PORT = 8775;
+
+  @Transient
+  @ConfigurableIdentifier
+  private String        propertyPrefix;
   
-  private static final long       serialVersionUID = 1L;
-  public static final ComponentId INSTANCE         = new ClusterController( );
-  
-  public ClusterController( ) {
-    super( "cluster" );
+  public NodeControllerConfiguration( ) {
+    super( );
   }
   
+  public NodeControllerConfiguration( String partition, String hostName ) {
+    super( partition, hostName, hostName, DEFAULT_SERVICE_PORT, DEFAULT_SERVICE_PATH );
+  }
+  
+  @PostLoad
+  private void initOnLoad( ) {//GRZE:HACK:HACK: needed to mark field as @ConfigurableIdentifier
+    if ( this.propertyPrefix == null ) {
+      this.propertyPrefix = this.getPartition( ).replace( ".", "" ) + "." + this.getName( );
+    }
+  }
+  
+  @Override
+  public Boolean isVmLocal( ) {
+    return false;
+  }
+  
+  @Override
+  public Boolean isHostLocal( ) {
+    return BootstrapArgs.isCloudController( );
+  }
+
+  /**
+   * Immutable for now.
+   */
   @Override
   public Integer getPort( ) {
-    return 8774;
+    return DEFAULT_SERVICE_PORT;
   }
-  
+
+  /**
+   * Immutable for now.
+   */
   @Override
-  public String getLocalEndpointName( ) {
-    return ServiceUris.remote( this, Internets.localHostInetAddress( ), this.getPort( ) ).toASCIIString( );
+  public String getServicePath( ) {
+    return DEFAULT_SERVICE_PATH;
   }
   
-  private static ChannelPipelineFactory clusterPipeline;
-  
-  @Override
-  public ChannelPipelineFactory getClientPipeline( ) {//TODO:GRZE:fixme to use discovery
-    ChannelPipelineFactory factory = null;
-    if ( ( factory = super.getClientPipeline( ) ) == null ) {
-      factory = ( clusterPipeline = ( clusterPipeline != null
-        ? clusterPipeline
-          : helpGetClientPipeline( "com.eucalyptus.ws.client.pipeline.ClusterClientPipelineFactory" ) ) );
-    }
-    return factory;
+  public String getPropertyPrefix( ) {
+    return this.getPartition( );
   }
   
-  @Override
-  public String getServicePath( final String... pathParts ) {
-    return "/axis2/services/EucalyptusCC";
-  }
-  
-  @Override
-  public String getInternalServicePath( final String... pathParts ) {
-    return this.getServicePath( pathParts );
-  }
-  
-  @Partition( ClusterController.class )
-  @InternalService
-  @FaultLogPrefix( "cloud" )
-  public static class GatherLogService extends ComponentId {
-    
-    private static final long serialVersionUID = 1L;
-    
-    public GatherLogService( ) {
-      super( "gatherlog" );
-    }
-    
-    @Override
-    public Integer getPort( ) {
-      return 8774;
-    }
-    
-    @Override
-    public String getLocalEndpointName( ) {
-      return ServiceUris.remote( this, Internets.localHostInetAddress( ), this.getPort( ) ).toASCIIString( );
-    }
-    
-    @Override
-    public String getServicePath( final String... pathParts ) {
-      return "/axis2/services/EucalyptusGL";
-    }
-    
-    @Override
-    public String getInternalServicePath( final String... pathParts ) {
-      return this.getServicePath( pathParts );
-    }
-    
-    private static ChannelPipelineFactory logPipeline;
-    
-    /**
-     * This was born under a bad sign. No touching.
-     * 
-     * @return
-     */
-    @Override
-    public ChannelPipelineFactory getClientPipeline( ) {
-      ChannelPipelineFactory factory = null;
-      if ( ( factory = super.getClientPipeline( ) ) == null ) {
-        factory = ( logPipeline = ( logPipeline != null
-          ? logPipeline
-          : helpGetClientPipeline( "com.eucalyptus.ws.client.pipeline.GatherLogClientPipeline" ) ) );
-      }
-      return factory;
-    }
-    
+  public void setPropertyPrefix( String propertyPrefix ) {
+    this.setPartition( propertyPrefix );
   }
 }

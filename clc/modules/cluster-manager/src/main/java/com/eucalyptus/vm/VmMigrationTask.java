@@ -62,12 +62,18 @@
 
 package com.eucalyptus.vm;
 
+import java.util.Date;
+import java.util.concurrent.TimeUnit;
 import javax.persistence.Column;
 import javax.persistence.Embeddable;
 import javax.persistence.EnumType;
 import javax.persistence.Enumerated;
+import javax.persistence.Temporal;
+import javax.persistence.TemporalType;
+import javax.persistence.Transient;
+import org.apache.log4j.Logger;
 import org.hibernate.annotations.Parent;
-import com.google.common.base.Function;
+import com.google.common.base.Strings;
 
 /**
  * @todo doc
@@ -75,92 +81,155 @@ import com.google.common.base.Function;
  */
 @Embeddable
 public class VmMigrationTask {
-  public enum MigrationState {
-    none( "none" );
-    private String mappedState;
-    
-    MigrationState( final String mappedState ) {
-      this.mappedState = mappedState;
-    }
-    
-    public String getMappedState( ) {
-      return this.mappedState;
-    }
-    
-    public static Function<String, MigrationState> mapper = new Function<String, MigrationState>( ) {
-                                                            
-                                                            @Override
-                                                            public MigrationState apply( final String input ) {
-                                                              if ( input != null ) {
-                                                                for ( final MigrationState s : MigrationState.values( ) ) {
-                                                                  if ( ( s.getMappedState( ) != null ) && s.getMappedState( ).equals( input ) ) {
-                                                                    return s;
-                                                                  }
-                                                                }
-                                                              }
-                                                              return none;
-                                                            }
-                                                          };
+  @Override
+  public String toString( ) {
+    StringBuilder builder = new StringBuilder( );
+    if ( this.state != null ) builder.append( this.state );
+    if ( this.sourceHost != null && this.destinationHost != null ) builder.append( " " ).append( this.sourceHost ).append( "->" ).append( this.destinationHost );
+    return builder.toString( );
   }
+
+  @Transient
+  private static Logger  LOG = Logger.getLogger( VmMigrationTask.class );
   
   @Parent
   private VmInstance     vmInstance;
+  
+  /**
+   * Most recently reported migration state.
+   * 
+   * @see {@link MigrationState}
+   */
   @Enumerated( EnumType.STRING )
   @Column( name = "metadata_vm_migration_state" )
   private MigrationState state;
+  
+  /**
+   * Source host for the migration as it is registered.
+   */
+  @Enumerated( EnumType.STRING )
   @Column( name = "metadata_vm_migration_source_host" )
   private String         sourceHost;
+  
+  /**
+   * Destination host for the migration as it is registered.
+   */
   @Column( name = "metadata_vm_migration_dest_host" )
   private String         destinationHost;
   
+  /**
+   * The purpose of this timestamp is to serve as a periodic trigger for state propagation; viz. to
+   * tags (unlike the AbstractPersistent timestamps). In
+   * {@code #updateMigrationTask(String, String, String)} this timer is used to determine when a
+   * false-positive indicate that state needs to be refreshed.
+   * 
+   * @see {@link #updateMigrationTask(String, String, String)}
+   */
+  @Temporal( TemporalType.TIMESTAMP )
+  @Column( name = "metadata_vm_migration_state_timer" )
+  private Date           refreshTimer;
+  
   private VmMigrationTask( ) {}
   
-  private VmMigrationTask( VmInstance vmInstance, String state, String sourceHost, String destinationHost ) {
+  private VmMigrationTask( VmInstance vmInstance, MigrationState state, String sourceHost, String destinationHost ) {
     this.vmInstance = vmInstance;
-    this.state = MigrationState.mapper.apply( state );
-    this.sourceHost = sourceHost;
-    this.destinationHost = destinationHost;
+    this.state = state;
+    this.sourceHost = Strings.nullToEmpty( sourceHost );
+    this.destinationHost = Strings.nullToEmpty( destinationHost );
+    this.refreshTimer = new Date( );
+  }
+  
+  private VmMigrationTask( VmInstance vmInstance, String state, String sourceHost, String destinationHost ) {
+    this( vmInstance, MigrationState.defaultValueOf( state ), sourceHost, destinationHost );
+  }
+  
+  public static VmMigrationTask create( VmInstance vmInstance ) {
+    return new VmMigrationTask( vmInstance, MigrationState.none, null, null );
   }
   
   public static VmMigrationTask create( VmInstance vmInstance, String state, String sourceHost, String destinationHost ) {
     return new VmMigrationTask( vmInstance, state, sourceHost, destinationHost );
   }
+  
+  /**
+   * Verify and update the local state, src and dest hosts.
+   * 
+   * @param state
+   * @param sourceHost
+   * @param destinationHost
+   */
+  boolean updateMigrationTask( String state, String sourceHost, String destinationHost ) {
+    MigrationState migrationState = MigrationState.defaultValueOf( state );
+    /**
+     * GRZE:TODO: this entire notion of refresh timer can be (and should be!) made orthogonal to the
+     * domain type. Indeed, the idea that an external operation wants to have a timer associated
+     * with a resource, in this case periodic tag propagation, is decidedly external state and this
+     * should GTFO.
+     */
+    boolean timerExpired = ( System.currentTimeMillis( ) - this.getRefreshTimer( ).getTime( ) ) > TimeUnit.SECONDS.toMillis( VmInstances.MIGRATION_REFRESH_TIME );
+    if ( !timerExpired && MigrationState.pending.equals( this.getState( ) ) && migrationState.ordinal( ) < MigrationState.preparing.ordinal( ) ) {
+      return false;
+    } else {
+      boolean updated = !this.getState( ).equals( migrationState ) || !this.getSourceHost( ).equals( sourceHost ) || !this.getDestinationHost( ).equals( destinationHost );
+      this.setState( migrationState );
+      this.setSourceHost( sourceHost );
+      this.setDestinationHost( destinationHost );
+      if ( MigrationState.none.equals( this.getState( ) ) ) {
+        this.setRefreshTimer( null );
+        return updated || timerExpired;
+      } else if ( timerExpired ) {
+        this.updateRefreshTimer( );
+        return true;
+      } else {
+        return updated;
+      }
+    }
+  }
+  
+  protected Date getRefreshTimer( ) {
+    return this.refreshTimer == null ? this.refreshTimer = new Date( ) : this.refreshTimer;
+  }
+  
+  protected void setRefreshTimer( Date refreshTimer ) {
+    this.refreshTimer = refreshTimer;
+  }
 
-  void updateMigrationState( String state, String sourceHost, String destinationHost ) {
-    this.state = MigrationState.mapper.apply( state );
-    this.sourceHost = sourceHost;
-    this.destinationHost = destinationHost;
+  private void updateRefreshTimer( ) {
+    this.setRefreshTimer( new Date( ) );
   }
 
   protected VmInstance getVmInstance( ) {
     return this.vmInstance;
   }
-
+  
   protected void setVmInstance( VmInstance vmInstance ) {
     this.vmInstance = vmInstance;
   }
-
-  protected MigrationState getState( ) {
+  
+  public MigrationState getState( ) {
     return this.state;
   }
-
+  
   protected void setState( MigrationState state ) {
-    this.state = state;
+    if ( !this.equals( state ) ) {
+      this.updateRefreshTimer( );
+      this.state = state;
+    }
   }
-
-  protected String getSourceHost( ) {
+  
+  public String getSourceHost( ) {
     return this.sourceHost;
   }
-
+  
   protected void setSourceHost( String sourceHost ) {
-    this.sourceHost = sourceHost;
+    this.sourceHost = Strings.nullToEmpty( sourceHost );
   }
-
-  protected String getDestinationHost( ) {
+  
+  public String getDestinationHost( ) {
     return this.destinationHost;
   }
-
+  
   protected void setDestinationHost( String destinationHost ) {
-    this.destinationHost = destinationHost;
+    this.destinationHost = Strings.nullToEmpty( destinationHost );
   }
 }

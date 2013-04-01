@@ -60,109 +60,86 @@
  *   NEEDED TO COMPLY WITH ANY SUCH LICENSES OR RIGHTS.
  ************************************************************************/
 
-package com.eucalyptus.component.id;
+package com.eucalyptus.vm;
 
-import java.util.ArrayList;
-import java.util.List;
-import org.jboss.netty.channel.ChannelPipelineFactory;
-import com.eucalyptus.component.ComponentId;
-import com.eucalyptus.component.ComponentId.FaultLogPrefix;
-import com.eucalyptus.component.ComponentId.Partition;
-import com.eucalyptus.component.ServiceUris;
-import com.eucalyptus.util.Internets;
+import javax.annotation.Nullable;
+import org.apache.log4j.Logger;
+import com.eucalyptus.component.Topology;
+import com.eucalyptus.component.id.Eucalyptus;
+import com.eucalyptus.util.async.AsyncRequests;
+import com.google.common.base.Predicate;
+import com.google.common.base.Strings;
+import edu.ucsb.eucalyptus.msgs.CreateTagsType;
+import edu.ucsb.eucalyptus.msgs.DeleteResourceTag;
+import edu.ucsb.eucalyptus.msgs.DeleteTagsType;
+import edu.ucsb.eucalyptus.msgs.ResourceTag;
+import edu.ucsb.eucalyptus.msgs.ResourceTagMessage;
 
-@Partition( value = { Eucalyptus.class } )
-@FaultLogPrefix( "cloud" ) // stub for cc, but in clc
-public class ClusterController extends ComponentId {
+enum MigrationTags implements Predicate<VmInstance> {
+  STATE,
+  SOURCE,
+  DESTINATION;
+  private static Logger LOG = Logger.getLogger( MigrationTags.class );
   
-  private static final long       serialVersionUID = 1L;
-  public static final ComponentId INSTANCE         = new ClusterController( );
+  public String toString( ) {
+    return "euca:node:migration:" + this.name( ).toLowerCase( );
+  }
   
-  public ClusterController( ) {
-    super( "cluster" );
+  public static void deleteFor( final VmInstance vm ) {
+    final DeleteTagsType deleteTags = new DeleteTagsType( );
+    deleteTags.getTagSet( ).add( MigrationTags.STATE.deleteTag( ) );
+    deleteTags.getTagSet( ).add( MigrationTags.SOURCE.deleteTag( ) );
+    deleteTags.getTagSet( ).add( MigrationTags.DESTINATION.deleteTag( ) );
+    deleteTags.getResourcesSet( ).add( vm.getInstanceId( ) );
+    deleteTags.setEffectiveUserId( vm.getOwnerUserId( ) );//GRZE:TODO: update impersonation impl later.
+    dispatch( deleteTags );
+  }
+  
+  private static void dispatch( final ResourceTagMessage tagMessage ) {
+    try {
+      AsyncRequests.dispatch( Topology.lookup( Eucalyptus.class ), tagMessage );
+    } catch ( Exception ex ) {
+      LOG.trace( ex );
+    }
+  }
+  
+  public static void createFor( final VmInstance vm ) {
+    final VmMigrationTask migrationTask = vm.getRuntimeState( ).getMigrationTask( );
+    final CreateTagsType createTags = new CreateTagsType( );
+    createTags.getTagSet( ).add( MigrationTags.STATE.getTag( migrationTask.getState( ).name( ) ) );
+    if ( !Strings.isNullOrEmpty( migrationTask.getSourceHost( ) ) ) {
+      createTags.getTagSet( ).add( MigrationTags.SOURCE.getTag( migrationTask.getSourceHost( ) ) );
+    }
+    if ( !Strings.isNullOrEmpty( migrationTask.getDestinationHost( ) ) ) {
+      createTags.getTagSet( ).add( MigrationTags.DESTINATION.getTag( migrationTask.getDestinationHost( ) ) );
+    }
+    createTags.getResourcesSet( ).add( vm.getInstanceId( ) );
+    createTags.setEffectiveUserId( vm.getOwnerUserId( ) );//GRZE:TODO: update impersonation impl later.
+    dispatch( createTags );
+  }
+  
+  ResourceTag getTag( String value ) {
+    return new ResourceTag( this.toString( ), value );
+  }
+  
+  private DeleteResourceTag deleteTag( ) {
+    DeleteResourceTag rsrcTag = new DeleteResourceTag( );
+    rsrcTag.setKey( this.toString( ) );
+    return rsrcTag;
   }
   
   @Override
-  public Integer getPort( ) {
-    return 8774;
+  public boolean apply( @Nullable VmInstance input ) {
+    VmMigrationTask task = input.getRuntimeState( ).getMigrationTask( );
+    if ( MigrationState.none.equals( task.getState( ) ) ) {
+      MigrationTags.deleteFor( input );
+    } else {
+      MigrationTags.createFor( input );
+    }
+    return true;
   }
   
-  @Override
-  public String getLocalEndpointName( ) {
-    return ServiceUris.remote( this, Internets.localHostInetAddress( ), this.getPort( ) ).toASCIIString( );
-  }
-  
-  private static ChannelPipelineFactory clusterPipeline;
-  
-  @Override
-  public ChannelPipelineFactory getClientPipeline( ) {//TODO:GRZE:fixme to use discovery
-    ChannelPipelineFactory factory = null;
-    if ( ( factory = super.getClientPipeline( ) ) == null ) {
-      factory = ( clusterPipeline = ( clusterPipeline != null
-        ? clusterPipeline
-          : helpGetClientPipeline( "com.eucalyptus.ws.client.pipeline.ClusterClientPipelineFactory" ) ) );
-    }
-    return factory;
-  }
-  
-  @Override
-  public String getServicePath( final String... pathParts ) {
-    return "/axis2/services/EucalyptusCC";
-  }
-  
-  @Override
-  public String getInternalServicePath( final String... pathParts ) {
-    return this.getServicePath( pathParts );
-  }
-  
-  @Partition( ClusterController.class )
-  @InternalService
-  @FaultLogPrefix( "cloud" )
-  public static class GatherLogService extends ComponentId {
-    
-    private static final long serialVersionUID = 1L;
-    
-    public GatherLogService( ) {
-      super( "gatherlog" );
-    }
-    
-    @Override
-    public Integer getPort( ) {
-      return 8774;
-    }
-    
-    @Override
-    public String getLocalEndpointName( ) {
-      return ServiceUris.remote( this, Internets.localHostInetAddress( ), this.getPort( ) ).toASCIIString( );
-    }
-    
-    @Override
-    public String getServicePath( final String... pathParts ) {
-      return "/axis2/services/EucalyptusGL";
-    }
-    
-    @Override
-    public String getInternalServicePath( final String... pathParts ) {
-      return this.getServicePath( pathParts );
-    }
-    
-    private static ChannelPipelineFactory logPipeline;
-    
-    /**
-     * This was born under a bad sign. No touching.
-     * 
-     * @return
-     */
-    @Override
-    public ChannelPipelineFactory getClientPipeline( ) {
-      ChannelPipelineFactory factory = null;
-      if ( ( factory = super.getClientPipeline( ) ) == null ) {
-        factory = ( logPipeline = ( logPipeline != null
-          ? logPipeline
-          : helpGetClientPipeline( "com.eucalyptus.ws.client.pipeline.GatherLogClientPipeline" ) ) );
-      }
-      return factory;
-    }
-    
+  public static void update( VmInstance input ) {
+    SOURCE.apply( input );
   }
 }

@@ -193,7 +193,8 @@ public class Contexts {
     if ( ctx != null && ( channel = ctx.getChannel( ) ) != null ) {
       channelContexts.remove( channel );
     } else {
-      LOG.debug( "Context.clear() failed for correlationId=" + corrId, new RuntimeException( "Missing reference to channel for the request." ) );
+      LOG.trace( "Context.clear() failed for correlationId=" + corrId );
+      Logs.extreme( ).trace( "Context.clear() failed for correlationId=" + corrId, new RuntimeException( "Missing reference to channel for the request." ) );
     }
     if ( ctx != null ) {
       ctx.clear( );
