@@ -359,7 +359,7 @@ int image_cache_proxykick(ccResource * res, int *numHosts);
  |                              STATIC PROTOTYPES                             |
  |                                                                            |
 \*----------------------------------------------------------------------------*/
-static int migration_handler(ccInstance *myInstance, char *host, char *src, char *dst, migration_states migration_state, char **node, char **action);
+static int migration_handler(ccInstance *myInstance, char *host, char *src, char *dst, migration_states migration_state, char **node, char **instance, char **action);
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |
@@ -2233,7 +2233,7 @@ int refresh_resources(ncMetadata * pMeta, int timeout, int dolock)
 //!
 //! @note
 //!
-static int migration_handler(ccInstance *myInstance, char *host, char *src, char *dst, migration_states migration_state, char **node, char **action)
+static int migration_handler(ccInstance *myInstance, char *host, char *src, char *dst, migration_states migration_state, char **node, char **instance, char **action)
 {
     int rc = 0;
 
@@ -2242,42 +2242,46 @@ static int migration_handler(ccInstance *myInstance, char *host, char *src, char
     if (!strcmp(host, dst)) {
         if (migration_state == MIGRATION_READY) {
             if (!strcmp(myInstance->state, "Teardown")) {
-                LOGDEBUG("[%s] destination node %s reports ready to receive migration, but is in Teardown--ignoring...\n", myInstance->instanceId, host);
+                LOGDEBUG("[%s] destination node %s reports ready to receive migration, but is in Teardown--ignoring\n", myInstance->instanceId, host);
                 rc++;
                 goto out;
             }
-            LOGDEBUG("[%s] destination node %s reports ready to receive migration, checking source node %s...\n", myInstance->instanceId, host, src);
+            LOGDEBUG("[%s] destination node %s reports ready to receive migration, checking source node %s\n", myInstance->instanceId, host, src);
             ccInstance *srcInstance = NULL;
             rc = find_instanceCacheId(myInstance->instanceId, &srcInstance);
             if (!rc) {
                 if (srcInstance->migration_state == MIGRATION_READY) {
-                    LOGDEBUG("[%s] source node %s reports ready to commit migration to %s.\n", myInstance->instanceId, src, dst);
+                    LOGDEBUG("[%s] source node %s reports ready to commit migration to %s\n", myInstance->instanceId, src, dst);
                     EUCA_FREE(*node);
+                    EUCA_FREE(*instance);
                     EUCA_FREE(*action);
                     *node = strdup(src);
+                    *instance = strdup(myInstance->instanceId);
                     *action = strdup("commit");
                 } else if (srcInstance->migration_state == MIGRATION_IN_PROGRESS) {
-                    LOGDEBUG("[%s] source node %s reports migration to %s in progress.\n", myInstance->instanceId, src, dst);
+                    LOGDEBUG("[%s] source node %s reports migration to %s in progress\n", myInstance->instanceId, src, dst);
                 } else if (srcInstance->migration_state == NOT_MIGRATING) {
                     LOGINFO("[%s] source node %s reports migration_state=%s, rolling back destination node %s...",
                             myInstance->instanceId, src, migration_state_names[srcInstance->migration_state], dst);
                     EUCA_FREE(*node);
+                    EUCA_FREE(*instance);
                     EUCA_FREE(*action);
                     *node = strdup(dst);
+                    *instance = strdup(myInstance->instanceId);
                     *action = strdup("rollback");
                 } else {
-                    LOGDEBUG("[%s] source node %s not reporting ready to commit migration to %s (migration_state=%s).\n",
+                    LOGDEBUG("[%s] source node %s not reporting ready to commit migration to %s (migration_state=%s)\n",
                              myInstance->instanceId, src, dst, migration_state_names[srcInstance->migration_state]);
                 }
             } else {
-                LOGERROR("[%s] could not find migration source node %s in the instance cache.\n", myInstance->instanceId, src);
+                LOGERROR("[%s] could not find migration source node %s in the instance cache\n", myInstance->instanceId, src);
             }
             EUCA_FREE(srcInstance);
         } else {
-            LOGTRACE("[%s] ignoring updates from destination node %s during migration.\n", myInstance->instanceId, host);
+            LOGTRACE("[%s] ignoring update from destination node %s during migration\n", myInstance->instanceId, host);
         }
     } else if (!strcmp(host, src)) {
-        LOGDEBUG("[%s] received migration state %s from source node %s\n",
+        LOGDEBUG("[%s] received migration state '%s' from source node %s\n",
                  myInstance->instanceId, migration_state_names[migration_state], host);
     } else {
         LOGERROR("[%s] received status from a migrating node that's neither the source (%s) nor the destination (%s): %s\n", myInstance->instanceId, src, dst, host);
@@ -2306,6 +2310,7 @@ int refresh_instances(ncMetadata * pMeta, int timeout, int dolock)
     int i, numInsts = 0, found, ncOutInstsLen, rc, pid, nctimeout, *pids = NULL, status;
     time_t op_start;
     char *migration_host = NULL;
+    char *migration_instance = NULL;
     char *migration_action = NULL;
 
     ncInstance **ncOutInsts = NULL;
@@ -2391,13 +2396,16 @@ int refresh_instances(ncMetadata * pMeta, int timeout, int dolock)
                                                        ncOutInsts[j]->migration_dst,
                                                        ncOutInsts[j]->migration_state,
                                                        &migration_host,
+                                                       &migration_instance,
                                                        &migration_action);
 
                                 // For now just ignore updates from destination while migrating.
                                 if (!strcmp(resourceCacheStage->resources[i].hostname, ncOutInsts[j]->migration_dst)) {
-
+                                    LOGTRACE("[%s] ignoring update from destination node %s during migration (host=%s, instance=%s, action=%s)\n",
+                                             myInstance->instanceId, ncOutInsts[j]->migration_dst, SP(migration_host), SP(migration_instance),
+                                             SP(migration_action));
                                     EUCA_FREE(myInstance);
-                                    break;
+                                    continue;
                                 }
                             }
                             // instance info that the CC maintains
@@ -2472,14 +2480,15 @@ int refresh_instances(ncMetadata * pMeta, int timeout, int dolock)
 
             if (migration_host) {
                 if (!strcmp(migration_action, "commit")) {
-                    LOGDEBUG("notifying source %s to commit migration.\n", migration_host);
-                    doMigrateInstances(pMeta, migration_host, NULL, migration_action);
+                    LOGDEBUG("[%s] notifying source %s to commit migration.\n", migration_instance, migration_host);
+                    doMigrateInstances(pMeta, migration_host, migration_instance, migration_action);
                 } else {
                     LOGWARN("unexpected migration action %s for source %s -- doing nothing\n",
                             migration_action, migration_host);
                 }
                 EUCA_FREE(migration_host);
             }
+            EUCA_FREE(migration_instance);
             EUCA_FREE(migration_action);
 
             exit(0);
@@ -4165,8 +4174,8 @@ int doMigrateInstances(ncMetadata * pMeta, char *nodeName, char *instanceId, cha
         return (1);
     }
 
-    if (instanceId) {
-        LOGERROR("migration by instanceId not yet supported\n");
+    if (instanceId && strcmp(nodeAction, "commit")) {
+        LOGERROR("[%s] migration action '%s' requests by specific instanceId not yet supported\n", instanceId, nodeAction);
         return (1);
     } else if (!nodeName && !instanceId) {
         LOGERROR("bad input params\n");
@@ -4177,7 +4186,7 @@ int doMigrateInstances(ncMetadata * pMeta, char *nodeName, char *instanceId, cha
         LOGINFO("preparing migration from node %s\n", SP(nodeName));
         preparing = 1;
     } else if (!strcmp(nodeAction, "commit")) {
-        LOGINFO("committing migration from node %s\n", SP(nodeName));
+        LOGINFO("[%s] committing migration from node %s\n", instanceId, SP(nodeName));
     } else if (!strcmp(nodeAction, "rollback")) {
         LOGINFO("rolling back migration on node %s\n", SP(nodeName));
         // FIXME: Remove this warning once rollback has been fully implemented.
@@ -4216,17 +4225,20 @@ int doMigrateInstances(ncMetadata * pMeta, char *nodeName, char *instanceId, cha
         goto out;
     }
 
-    // FIXME: needs to find all instances running on host -- it currently only finds the first one.
-    // find an instance running on the host
-
     int found_instances = 0;
     ccInstance **cc_instances = NULL;
-    //*cc_instances = NULL;
     sem_mywait(INSTCACHE);
     if (instanceCache->numInsts) {
         for (i = 0; i < MAXINSTANCES_PER_CC; i++) {
             if (instanceCache->cacheState[i] == INSTVALID && instanceCache->instances[i].ncHostIdx == src_index
                 && (!strcmp(instanceCache->instances[i].state, "Extant"))) {
+                if (instanceId) {
+                    // Only looking for a specific instance?
+                    if (strcmp(instanceCache->instances[i].instanceId, instanceId)) {
+                        // Yes, but this is not the one, so keep looking.
+                        continue;
+                    }
+                }
                 // FIXME: Wrap.
                 LOGDEBUG("about to reallocate cc_instances to hold %d entries (* %ld)\n", found_instances + 1, sizeof(ccInstance *));
                 cc_instances = EUCA_REALLOC(cc_instances, found_instances + 1, sizeof(ccInstance *));
@@ -4238,7 +4250,11 @@ int doMigrateInstances(ncMetadata * pMeta, char *nodeName, char *instanceId, cha
                 LOGDEBUG("copied cc_instances[%d] id=%s, reservation=%s, uuid=%s\n", found_instances, cc_instances[found_instances]->instanceId,
                          cc_instances[found_instances]->reservationId, cc_instances[found_instances]->uuid);
                 found_instances++;
-                //break;
+
+                if (instanceId) {
+                    // If we get here, we've found our one instance, so quit looking.
+                    break;
+                }
             }
         }
     }
@@ -4249,10 +4265,12 @@ int doMigrateInstances(ncMetadata * pMeta, char *nodeName, char *instanceId, cha
         LOGDEBUG("about to free cc_instances\n");
         EUCA_FREE(cc_instances);
         goto out;
+    } else if (found_instances > 1 && !strcmp(nodeAction, "commit")) {
+        LOGWARN("trying to perform a migration commit with multiple (%d) instances. Just thought I'd warn you...\n", found_instances);
+        // FIXME: Should unwind allocations and bail out right here.
     }
 
     ncInstance **nc_instances = NULL;
-    //*nc_instances = NULL;
 
     for (int idx = 0; idx < found_instances; idx++) {
         // FIXME: Wrap.
@@ -4278,8 +4296,6 @@ int doMigrateInstances(ncMetadata * pMeta, char *nodeName, char *instanceId, cha
     LOGDEBUG("about to free cc_instances\n");
     EUCA_FREE(cc_instances);
 
-    //   ncInstance *instances = &nc_instance;
-
     /*
     if (preparing) {
         char *migration_dst = strdup((*nc_instances)[0].migration_dst);
@@ -4299,8 +4315,9 @@ int doMigrateInstances(ncMetadata * pMeta, char *nodeName, char *instanceId, cha
     if (!strcmp(nodeAction, "prepare")) {
         // notify source
         timeout = ncGetTimeout(time(NULL), OP_TIMEOUT, 1, 0);
-        LOGDEBUG("about to ncClientCall source node '%s' with nc_instances (%s %d)\n",
-                 SP(resourceCacheLocal.resources[src_index].hostname), nodeAction, found_instances);
+        LOGTRACE("about to ncClientCall source node '%s' with nc_instances (%s %d) %s\n",
+                 SP(resourceCacheLocal.resources[src_index].hostname), nodeAction, found_instances,
+                 SP(found_instances == 1 ? nc_instances[0]->instanceId : ""));
         rc = ncClientCall(pMeta, timeout, resourceCacheLocal.resources[src_index].lockidx, resourceCacheLocal.resources[src_index].ncURL, "ncMigrateInstances",
                           nc_instances, found_instances, nodeAction, NULL);
         if (rc) {
@@ -4310,8 +4327,9 @@ int doMigrateInstances(ncMetadata * pMeta, char *nodeName, char *instanceId, cha
         }
         // notify the destination
         timeout = ncGetTimeout(time(NULL), OP_TIMEOUT, 1, 0);
-        LOGDEBUG("about to ncClientCall destination node '%s' with nc_instances (%s %d)\n",
-                 SP(resourceCacheLocal.resources[dst_index].hostname), nodeAction, found_instances);
+        LOGTRACE("about to ncClientCall destination node '%s' with nc_instances (%s %d) %s\n",
+                 SP(resourceCacheLocal.resources[dst_index].hostname), nodeAction, found_instances,
+                 SP(found_instances == 1 ? nc_instances[0]->instanceId : ""));
         rc = ncClientCall(pMeta, timeout, resourceCacheLocal.resources[dst_index].lockidx, resourceCacheLocal.resources[dst_index].ncURL, "ncMigrateInstances",
                           nc_instances, found_instances, nodeAction, NULL);
         if (rc) {
@@ -4322,8 +4340,9 @@ int doMigrateInstances(ncMetadata * pMeta, char *nodeName, char *instanceId, cha
     } else {                    // Commit
         // call commit on source
         timeout = ncGetTimeout(time(NULL), OP_TIMEOUT, 1, 0);
-        LOGDEBUG("about to ncClientCall source node '%s' with nc_instances (%s %d)\n",
-                 SP(resourceCacheLocal.resources[src_index].hostname), nodeAction, found_instances);
+        LOGTRACE("about to ncClientCall source node '%s' with nc_instances (%s %d) %s\n",
+                 SP(resourceCacheLocal.resources[src_index].hostname), nodeAction, found_instances,
+                 SP(found_instances == 1 ? nc_instances[0]->instanceId : ""));
         rc = ncClientCall(pMeta, timeout, resourceCacheLocal.resources[src_index].lockidx, resourceCacheLocal.resources[src_index].ncURL, "ncMigrateInstances",
                           nc_instances, found_instances, nodeAction, NULL);
         if (rc) {
@@ -4475,7 +4494,7 @@ int initialize(ncMetadata * pMeta)
     }
 
     if (pMeta != NULL) {
-        LOGDEBUG("pMeta: userId=%s correlationId=%s\n", pMeta->userId, pMeta->correlationId);
+        LOGDEBUG("pMeta: userId=%s correlationId=%s\n", SP(pMeta->userId), pMeta->correlationId);
     }
 
     if (!ret) {
