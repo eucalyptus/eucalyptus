@@ -126,8 +126,8 @@
 
     _expandCallback : function(row){ 
       var $el = $('<div />');
-      require(['views/expandos/launchconfig'], function(expando) {
-         new expando({el: $el, id: row[6]});
+      require(['app', 'views/expandos/launchconfig'], function(app, expando) {
+         new expando({el: $el, model: app.data.launchConfig.get(row[6]) });
       });
       return $el;
     },

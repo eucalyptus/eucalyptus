@@ -133,8 +133,8 @@
 
     _expandCallback : function(row){ 
       var $el = $('<div />');
-      require(['views/expandos/scaling'], function(expando) {
-         new expando({el: $el, id: row[1]});
+      require(['app', 'views/expandos/scaling'], function(app, expando) {
+         new expando({el: $el, model: app.data.scalingGroups.get(row[7]) });
       });
       return $el;
     },
