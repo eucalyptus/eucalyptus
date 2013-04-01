@@ -1,52 +1,40 @@
 define([
+  'underscore',
+  'sharedtags',
   'backbone'
-], function(Backbone) {
+], function(_, tags, Backbone) {
   var EucaCollection = Backbone.Collection.extend({
+    initialize: function() {
+        var self = this;
+        tags.on('change reset', function() {
+            self.resetTags();
+        });        
+        self.resetTags();
+    },
+    resetTags: function() {
+        var self = this;
+        console.log('reset tags', self.url);
+        this.each(function(m) {
+            console.log('reset model', self.url);
+            var newtags = tags.where({res_id: m.get('id')});
+            m.get('tags').reset(newtags);
+        });
+    },
     sync: function(method, model, options) {
       var collection = this;
+
       if (method == 'read') {
-        //console.log('EUCA COLLECTION: URL ' + collection.url);
-        $.when(
           $.ajax({
             type:"POST",
             url: collection.url,
             data:"_xsrf="+$.cookie('_xsrf'),
             dataType:"json",
             async:"true",
-          }),
-          describe('tag')
-        ).done(
-          // Success
-          function(describe, tags) {
-            //console.log('EUCACOLLECTION (success):', collection.url, describe, tags);
-            if (describe[0].results) {
-              var results = describe[0].results;
-
-              // always generate display_ values for named columns.
-              if (collection.namedColumns) {
-                _.each(results, function(result, index) {
-                  if (typeof result.id == 'undefined') result.id = index;
-                  if (tags && tags != '' && tags[0].results) {
-                    var tagById = _.groupBy(tags[0].results, 'res_id');
-                    var tagSet = _.groupBy(tagById[result.id], 'name');
-                    result.tags = tagSet;
-                  }
-                  _.each(collection.namedColumns, function(column) {
-                    var display_id = result[column];
-                    if (tags && tags != '' && tags[0].results) {
-                      tagSet = _.groupBy(tagById[result[column]], 'name');
-                      if (tagSet && tagSet.Name) display_id = tagSet.Name[0].value;
-                    }
-                    //console.log(column + ':' + result[column] + '->', tagSet);
-                    result['display_' + column] = display_id;
-                  });
-                });
-              }
-              _.each(results, function(result) {
-                if (typeof result['id'] == undefined)
-                  result['id'] = "d00d";
-              });
-              //console.log('MERGED:', results);
+          }).done(
+          function(describe) {
+            if (describe.results) {
+              var results = describe.results;
+              _.each(results, function(r) { r.tags = new Backbone.Collection(); });
               options.success && options.success(model, results, options);
             } else {
               ;//TODO: how to notify errors?
