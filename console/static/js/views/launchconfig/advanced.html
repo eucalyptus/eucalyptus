@@ -55,23 +55,25 @@
          </tr>
        </thead>
        <tbody>
-        <tr>
+
+
+        <tr data-each-volume="blockDeviceMappings">
           <td>
             <select data-enabled="enableStorageVolume" data-on-change=":setStorageVolume"  class="launch-wizard-advanced-storage-volume-selector" title="Select the source of the additional storage">
               <option value="root">Root</option>
-              <option data-each-volume="volumes" data-value="volume.id" data-text="volume.name"></option>
+              <option value="EBS">EBS</option>
             </select>
           </td>
           <td>
-            /dev/<input data-enabled="enableMapping" data-value="block_device_mappings" class="launch-wizard-advanced-storage-mapping-input" title="Add a mapping for the additional storage" type="text">
+            /dev/<input data-enabled="enableMapping" data-value="volume.map_name" class="launch-wizard-advanced-storage-mapping-input" title="Add a mapping for the additional storage" type="text">
           </td>
           <td>
-            <select data-enabled="enableSnapshot" data-value="snapshot" class="launch-wizard-advanced-storage-snapshot-input" title="Select a snapshot to use for the storage">
-              <option data-each-snap="snapshots" data-value="snap.id" data-text="snap.name"></option>
+            <select data-enabled="enableSnapshot" class="launch-wizard-advanced-storage-snapshot-input" title="Select a snapshot to use for the storage">
+              <option data-value="volume.snapshot_id" data-text="volume.snapshot_id"></option>
             </select>
           </td>
-<td><input data-value="" data-enabled="" class="launch-wizard-advanced-storage-size-input" title="Specify the size of the storage in whole gigabytes" type="text"></td>
-<td class="centered-cell"><input checked class="launch-wizard-advanced-storage-delOnTerm" type="checkbox"></td>
+<td><input data-value="volume.size" data-enabled="" class="launch-wizard-advanced-storage-size-input" title="Specify the size of the storage in whole gigabytes" type="text"></td>
+<td class="centered-cell"><input data-checked="volume.delete_on_termination" class="launch-wizard-advanced-storage-delOnTerm" type="checkbox"></td>
 </tr></tbody>
 </table></div>
 </div>

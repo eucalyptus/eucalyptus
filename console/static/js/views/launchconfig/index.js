@@ -10,8 +10,9 @@ define([
   './imagemodel',
   './typemodel',
   './securitymodel',
-  './advancedmodel'
-], function(Wizard, wizardTemplate, page1, page2, page3, page4, summary, launchconfigModel, imageModel, typeModel, securityModel, advancedModel) {
+  './advancedmodel',
+  './blockmaps',
+], function(Wizard, wizardTemplate, page1, page2, page3, page4, summary, launchconfigModel, imageModel, typeModel, securityModel, advancedModel, blockMaps) {
   var wizard = new Wizard();
 
   function canFinish(position, problems) {
@@ -29,12 +30,13 @@ define([
   var typeModel = new typeModel();
   var securityModel = new securityModel();
   var advancedModel = new advancedModel();
+  var blockMaps = new blockMaps();
 
   var viewBuilder = wizard.viewBuilder(wizardTemplate)
-          .add(new page1({model: imageModel}))
+          .add(new page1({model: imageModel, blockMaps: blockMaps}))
           .add(new page2({model: typeModel}))
           .add(new page3({model: securityModel}))
-          .add(new page4({model: advancedModel}))
+          .add(new page4({model: advancedModel, blockMaps: blockMaps}))
           .setHideDisabledButtons(true)
           .setFinishText('Launch Instance(s)').setFinishChecker(canFinish)
           .finisher(finish)

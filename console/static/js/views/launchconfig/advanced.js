@@ -18,7 +18,7 @@ define([
         privateNetwork: false,
         volumes: '',
         snapshots: '',
-        blockDeviceMappings: self.model.get('block_device_mappings') ? self.model.get('block_device_mappings') : new Backbone.Collection(),
+        blockDeviceMappings: self.options.blockMaps,
         enableStorageVolume: false,
         volumeName: '',
         enableMapping: false,
@@ -61,6 +61,8 @@ define([
         },
 
       };
+
+      //scope.blockDeviceMappings.on('change reset', this.render);
       $(this.el).html(template)
       this.rView = rivets.bind(this.$el, scope);
       this.render();

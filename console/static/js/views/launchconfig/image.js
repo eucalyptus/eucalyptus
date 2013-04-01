@@ -5,7 +5,8 @@ define([
   'text!./image.html!strip',
   'rivets',
   'views/searches/image',
-	], function( _, app, dataholder, template, rivets, imageSearch ) {
+  './blockmap'
+	], function( _, app, dataholder, template, rivets, imageSearch, BlockMap ) {
 	return Backbone.View.extend({
             title: 'Image',
             count: 0,
@@ -13,6 +14,7 @@ define([
           var self = this;
           var scope = {
               view: this,
+              blockmaps: self.options.blockMaps,
 
               isOdd: function() {
                   var selected = this.isSelected(arguments);
@@ -43,6 +45,22 @@ define([
                 self.model.set('image_description', images.image.get('description'));
                 self.model.set('image_iconclass', this.setClass(images.image));
                 self.model.set('image_selected', images.image.get('id'));
+
+                //block device maps
+                var maps = images.image.get('block_device_mapping');
+                var keys = _.keys(maps);
+                for(i=0; i<keys.length; i++) {
+                  var key = keys[i];
+                  var map = {
+                    map_name: key
+                  };
+                  
+                  var subkeys = _.keys(maps[key]);
+                  for(j=0; j<subkeys.length; j++) {
+                    map[subkeys[j]] = maps[key][subkeys[j]];
+                  }
+                }
+                self.options.blockMaps.reset(new BlockMap(map));
               },
 
               
