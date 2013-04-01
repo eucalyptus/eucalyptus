@@ -1,41 +1,22 @@
-********************************************************************
+# Overview
+Eucalyptus is open source software for building Amazon Web Services-compatible private and hybrid clouds.
 
-Please see the INSTALL file for build instructions.
+# Requirements and Technical Notes
+* Eucalyptus is broken into five components: Cloud Controller, Walrus, Cluster Controller, Storage Controller, Node Controller. There is also an optional, proprietary VMware broker plugin, available from Eucalyptus Systems. These components are software services and are arranged in three layers: cloud, cluster, and nodes. You can install the components on the same physical server or on separate physical servers as business, security, and resource needs dictate. 
+* The Node Controller requires libvirt and either Xen or KVM.
+* The libraries that Eucalyptus depends on are described in detail 
+in the INSTALL file.
+* You will have to choose one of several network modes, which are
+described in the installation guide. Your system's and network's
+requirements will vary based on which mode you choose.
+* Generally, you will need two IP address ranges. The first range is private, to be used only within the Eucalyptus system itself. The second range is public, to be routable to and from end-users and VM instances. Both sets must be unique to Eucalyptus, not in use by other components or applications within your network. Static mode requires only one available IP address range, and system mode does not require an available IP address range.
 
-********************************************************************
+# License
+Eucalyptus is published under version 3 of the GNU General Public License. For more information, see the LICENSE file.
 
-        EUCALYPTUS: Elastic Utility Computing Architecture
-            for Linking Your Programs To Useful Systems
+# Building Eucalyptus
+For information about building Eucalyptus, see the INSTALL file.
 
-EUCALYPTUS is an open source service overlay that implements elastic
-computing using existing resources. The goal of EUCALYPTUS is to allow
-sites with existing clusters and server infrastructure to co-host an
-elastic computing service that is interface-compatible with Amazon's
-EC2.
+# Useful Information for Future Trivia Games
+The product name "Eucalyptus" was originally an acronym, derived from "Elastic Utility Computing Architecture for Linking Your Programs To Useful Systems."
 
-Because EUCALYPTUS is designed to function as an overlay, it must be
-able to incorporate resources from different clusters or pools.  For
-example, EUCALYPTUS allows its administrator to set up a "cloud" that
-permit users to virtualized OS instances on a number of clusters
-transparently.  Enabling the necessary network interconnectivity in a
-way that is secure and portable is one novel feature of EUCALYPTUS.
-Another stems from its ability to provide interface compatibility with
-the existing Amazon EC2 service.  EUCALYPTUS users can develop using
-their own local resources and then transition directly some or all of
-their functionality to EC2.
-
-Finally, a key requirement of EUCALYPTUS is that it be able to serve
-as a research platform for elastic computing.  To this end, its design
-makes two significant contributions.  The first concerns the use of
-scarce network resources in a structured way.  A EUCALYPTUS allocation
-can function equally well in an environment in which all processors
-have externally routable IP addresses (e.g. Amazon's current
-environment) as well as one in which only a certain "front-end
-machine" is externally routable (as is the case with many production
-and research clusters today).  Secondly, EUCALYPTUS leverages the
-extensive Linux packaging and deployment support that is currently
-available while requiring minimal modification to the existing
-installed OS base.  Specifically, the target resources need only run a
-standard hypervisor (Xen, KVM), along with common open-source Linux
-utilities.  All other functionality installs directly without need for
-kernel patching or module additions to the host OS domain.
