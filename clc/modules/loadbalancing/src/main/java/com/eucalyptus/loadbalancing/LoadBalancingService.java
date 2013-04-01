@@ -679,9 +679,7 @@ public class LoadBalancingService {
 	    RegisterInstancesWithLoadBalancerResponseType reply = request.getReply( );
 	    final Context ctx = Contexts.lookup( );
 	    final UserFullName ownerFullName = ctx.getUserFullName( );
-	  
-	    //TODO: SPARK: make sure the requested instance belong to the requesting account
-	    
+	  	    
 	    final String lbName = request.getLoadBalancerName();
 	    final Collection<Instance> instances = request.getInstances().getMember();
 	    final Predicate<Void> creator = new Predicate<Void>(){

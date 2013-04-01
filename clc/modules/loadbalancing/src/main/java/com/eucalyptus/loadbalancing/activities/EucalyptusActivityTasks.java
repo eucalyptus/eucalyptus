@@ -29,8 +29,26 @@ import org.apache.log4j.Logger;
 
 import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.AuthException;
+import com.eucalyptus.auth.euare.AddRoleToInstanceProfileResponseType;
+import com.eucalyptus.auth.euare.AddRoleToInstanceProfileType;
+import com.eucalyptus.auth.euare.CreateInstanceProfileResponseType;
+import com.eucalyptus.auth.euare.CreateInstanceProfileType;
+import com.eucalyptus.auth.euare.CreateRoleResponseType;
+import com.eucalyptus.auth.euare.CreateRoleType;
+import com.eucalyptus.auth.euare.DeleteInstanceProfileResponseType;
+import com.eucalyptus.auth.euare.DeleteInstanceProfileType;
+import com.eucalyptus.auth.euare.DeleteRoleResponseType;
+import com.eucalyptus.auth.euare.DeleteRoleType;
+import com.eucalyptus.auth.euare.EuareMessage;
+import com.eucalyptus.auth.euare.InstanceProfileType;
+import com.eucalyptus.auth.euare.ListInstanceProfilesResponseType;
+import com.eucalyptus.auth.euare.ListInstanceProfilesType;
+import com.eucalyptus.auth.euare.ListRolesResponseType;
+import com.eucalyptus.auth.euare.ListRolesType;
+import com.eucalyptus.auth.euare.RoleType;
 import com.eucalyptus.auth.principal.AccountFullName;
 import com.eucalyptus.auth.principal.Principals;
+import com.eucalyptus.auth.principal.Role;
 import com.eucalyptus.autoscaling.activities.DispatchingClient;
 import com.eucalyptus.autoscaling.activities.EucalyptusClient;
 import com.eucalyptus.autoscaling.common.AutoScaling;
@@ -56,6 +74,7 @@ import com.eucalyptus.cloudwatch.PutMetricDataResponseType;
 import com.eucalyptus.cloudwatch.PutMetricDataType;
 import com.eucalyptus.component.ComponentId;
 import com.eucalyptus.component.id.Dns;
+import com.eucalyptus.component.id.Euare;
 import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.empyrean.DescribeServicesResponseType;
 import com.eucalyptus.empyrean.DescribeServicesType;
@@ -120,6 +139,30 @@ public class EucalyptusActivityTasks {
 	private interface ActivityContext<TM extends BaseMessage, TC extends ComponentId> {
 	  String getUserId();
 	  DispatchingClient<TM, TC> getClient();
+	}
+	
+	private class EuareSystemActivity implements ActivityContext<EuareMessage, Euare>{
+		private EuareSystemActivity(){}
+
+		@Override
+		public String getUserId() {
+			try{
+				return Accounts.lookupSystemAdmin().getUserId();
+			}catch(AuthException ex){
+				throw Exceptions.toUndeclared(ex);
+			}		
+		}
+
+		@Override
+		public DispatchingClient<EuareMessage, Euare> getClient() {
+			try{
+				final EuareClient client = new EuareClient(this.getUserId());
+				client.init();
+				return client;
+			}catch(Exception ex){
+				throw Exceptions.toUndeclared(ex);
+			}
+		}
 	}
 	
 	private class AutoScalingSystemActivity implements ActivityContext<AutoScalingMessage, AutoScaling>{
@@ -497,10 +540,10 @@ public class EucalyptusActivityTasks {
 		}
 	}
 	
-	public void createLaunchConfiguration(final String imageId, final String instanceType, final String launchConfigName,
+	public void createLaunchConfiguration(final String imageId, final String instanceType, final String instanceProfileName, final String launchConfigName,
 			final String securityGroup, final String userData){
 		final AutoScalingCreateLaunchConfigTask task = 
-				new AutoScalingCreateLaunchConfigTask(imageId, instanceType, launchConfigName, securityGroup, userData);
+				new AutoScalingCreateLaunchConfigTask(imageId, instanceType, instanceProfileName, launchConfigName, securityGroup, userData);
 		final CheckedListenableFuture<Boolean> result = task.dispatch(new AutoScalingSystemActivity());
 		try{
 			if(result.get()){
@@ -566,6 +609,342 @@ public class EucalyptusActivityTasks {
 		}catch(Exception ex){
 			throw Exceptions.toUndeclared(ex);
 		}
+	}
+	
+	public List<RoleType> listRoles(final String pathPrefix){
+		final EuareListRolesTask task = 
+				new EuareListRolesTask(pathPrefix);
+		final CheckedListenableFuture<Boolean> result = task.dispatch(new EuareSystemActivity());
+		try{
+			if(result.get()){
+				return task.getRoles();
+			}else
+				throw new EucalyptusActivityException("failed to list IAM roles");
+		}catch(Exception ex){
+			throw Exceptions.toUndeclared(ex);
+		}
+	}
+	
+	public RoleType createRole(final String roleName, final String path, final String assumeRolePolicy){
+		final EuareCreateRoleTask task =
+				new EuareCreateRoleTask(roleName, path, assumeRolePolicy);
+
+		final CheckedListenableFuture<Boolean> result = task.dispatch(new EuareSystemActivity());
+		try{
+			if(result.get()){
+				return task.getRole();
+			}else
+				throw new EucalyptusActivityException("failed to create IAM role");
+		}catch(Exception ex){
+			throw Exceptions.toUndeclared(ex);
+		}
+	}
+	
+	public void deleteRole(final String roleName){
+		final EuareDeleteRoleTask task =
+				new EuareDeleteRoleTask(roleName);
+		final CheckedListenableFuture<Boolean> result = task.dispatch(new EuareSystemActivity());
+		try{
+			if(result.get()){
+				return;
+			}else
+				throw new EucalyptusActivityException("failed to delete IAM role");
+		}catch(Exception ex){
+			throw Exceptions.toUndeclared(ex);
+		}
+	}
+	
+	public List<InstanceProfileType> listInstanceProfiles(String pathPrefix){
+		final EuareListInstanceProfilesTask task =
+				new EuareListInstanceProfilesTask(pathPrefix);
+		final CheckedListenableFuture<Boolean> result = task.dispatch(new EuareSystemActivity());
+		try{
+			if(result.get()){
+				return task.getInstanceProfiles();
+			}else
+				throw new EucalyptusActivityException("failed to delete IAM role");
+		}catch(Exception ex){
+			throw Exceptions.toUndeclared(ex);
+		}
+	}
+	
+	public InstanceProfileType createInstanceProfile(String profileName, String path){
+		final EuareCreateInstanceProfileTask task =
+				new EuareCreateInstanceProfileTask(profileName, path);
+		final CheckedListenableFuture<Boolean> result = task.dispatch(new EuareSystemActivity());
+		try{
+			if(result.get()){
+				return task.getInstanceProfile();
+			}else
+				throw new EucalyptusActivityException("failed to create IAM instance profile");
+		}catch(Exception ex){
+			throw Exceptions.toUndeclared(ex);
+		}
+	}
+	
+	public void deleteInstanceProfile(String profileName){
+		final EuareDeleteInstanceProfileTask task =
+				new EuareDeleteInstanceProfileTask(profileName);
+		final CheckedListenableFuture<Boolean> result = task.dispatch(new EuareSystemActivity());
+		try{
+			if(result.get()){
+				return;
+			}else
+				throw new EucalyptusActivityException("failed to delete IAM instance profile");
+		}catch(Exception ex){
+			throw Exceptions.toUndeclared(ex);
+		}
+	}
+	
+	public void addRoleToInstanceProfile(String instanceProfileName, String roleName){
+		final EuareAddRoleToInstanceProfileTask task =
+				new EuareAddRoleToInstanceProfileTask(instanceProfileName, roleName);
+		final CheckedListenableFuture<Boolean> result = task.dispatch(new EuareSystemActivity());
+		try{
+			if(result.get()){
+				return;
+			}else
+				throw new EucalyptusActivityException("failed to add role to the instance profile");
+		}catch(Exception ex){
+			throw Exceptions.toUndeclared(ex);
+		}
+	}
+	
+	private class EuareDeleteInstanceProfileTask extends EucalyptusActivityTask<EuareMessage, Euare>{
+		private String profileName =null;
+		private EuareDeleteInstanceProfileTask(String profileName){
+			this.profileName = profileName;
+		}
+		
+		private DeleteInstanceProfileType deleteInstanceProfile(){
+			final DeleteInstanceProfileType req = new DeleteInstanceProfileType();
+			req.setInstanceProfileName(this.profileName);
+			return req;
+		}
+		@Override
+		void dispatchInternal(ActivityContext<EuareMessage, Euare> context,
+				Checked<EuareMessage> callback) {
+			final DispatchingClient<EuareMessage, Euare> client = context.getClient();
+			client.dispatch(deleteInstanceProfile(), callback);	
+		}
+
+		@Override
+		void dispatchSuccess(ActivityContext<EuareMessage, Euare> context,
+				EuareMessage response) {
+			final DeleteInstanceProfileResponseType resp = (DeleteInstanceProfileResponseType) response;
+		}
+		
+	}
+	
+	private class EuareAddRoleToInstanceProfileTask extends EucalyptusActivityTask<EuareMessage, Euare>{
+		private String instanceProfileName = null;
+		private String roleName = null;
+		
+		private EuareAddRoleToInstanceProfileTask(final String instanceProfileName, final String roleName){
+			this.instanceProfileName = instanceProfileName;
+			this.roleName = roleName;
+		}
+		
+		private AddRoleToInstanceProfileType addRoleToInstanceProfile(){
+			AddRoleToInstanceProfileType req  = new AddRoleToInstanceProfileType();
+			req.setRoleName(this.roleName);
+			req.setInstanceProfileName(this.instanceProfileName);
+			return req;
+		}
+		
+		@Override
+		void dispatchInternal(ActivityContext<EuareMessage, Euare> context,
+				Checked<EuareMessage> callback) {
+			final DispatchingClient<EuareMessage, Euare> client = context.getClient();
+			client.dispatch(addRoleToInstanceProfile(), callback);	
+		}
+		
+		@Override
+		void dispatchSuccess(ActivityContext<EuareMessage, Euare> context,
+				EuareMessage response) {										
+			final AddRoleToInstanceProfileResponseType resp = (AddRoleToInstanceProfileResponseType) response;
+		}
+	}
+	
+	private class EuareListInstanceProfilesTask extends EucalyptusActivityTask<EuareMessage, Euare>{
+		private String pathPrefix = null;
+		private List<InstanceProfileType> instanceProfiles = null;
+		private EuareListInstanceProfilesTask(final String pathPrefix){
+			this.pathPrefix = pathPrefix;
+		}
+		
+		private ListInstanceProfilesType listInstanceProfiles(){
+			final ListInstanceProfilesType req = new ListInstanceProfilesType();
+			req.setPathPrefix(this.pathPrefix);
+			return req;
+		}
+		
+		public List<InstanceProfileType> getInstanceProfiles(){
+			return this.instanceProfiles;
+		}
+
+		@Override
+		void dispatchInternal(ActivityContext<EuareMessage, Euare> context,
+				Checked<EuareMessage> callback) {
+			final DispatchingClient<EuareMessage, Euare> client = context.getClient();
+			client.dispatch(listInstanceProfiles(), callback);								
+		}
+
+		@Override
+		void dispatchSuccess(ActivityContext<EuareMessage, Euare> context,
+				EuareMessage response) {
+			ListInstanceProfilesResponseType resp = (ListInstanceProfilesResponseType) response;
+			try{
+				instanceProfiles = resp.getListInstanceProfilesResult().getInstanceProfiles().getMember();
+			}catch(Exception  ex){
+				;
+			}
+		}
+	}
+	
+	private class EuareCreateInstanceProfileTask extends EucalyptusActivityTask<EuareMessage, Euare>{
+		private String profileName = null;
+		private String path = null;
+		private InstanceProfileType instanceProfile = null;
+		private EuareCreateInstanceProfileTask(String profileName, String path){
+			this.profileName = profileName;
+			this.path = path;
+		}
+		
+		private CreateInstanceProfileType createInstanceProfile(){
+			final CreateInstanceProfileType req = new CreateInstanceProfileType();
+			req.setInstanceProfileName(this.profileName);
+			req.setPath(this.path);
+			return req;
+		}
+		
+		public InstanceProfileType getInstanceProfile(){
+			return this.instanceProfile;
+		}
+			
+		@Override
+		void dispatchInternal(ActivityContext<EuareMessage, Euare> context,
+				Checked<EuareMessage> callback) {
+			final DispatchingClient<EuareMessage, Euare> client = context.getClient();
+			client.dispatch(createInstanceProfile(), callback);					
+		}
+
+		@Override
+		void dispatchSuccess(ActivityContext<EuareMessage, Euare> context,
+				EuareMessage response) {
+			final CreateInstanceProfileResponseType resp = (CreateInstanceProfileResponseType) response;
+			try{
+				this.instanceProfile = resp.getCreateInstanceProfileResult().getInstanceProfile();
+			}catch(Exception ex){
+				;
+			}
+			
+		}
+	}
+	
+	private class EuareDeleteRoleTask extends EucalyptusActivityTask<EuareMessage, Euare> {
+		private String roleName = null;
+		private EuareDeleteRoleTask(String roleName){
+			this.roleName = roleName;
+		}
+		private DeleteRoleType deleteRole(){
+			final DeleteRoleType req = new DeleteRoleType();
+			req.setRoleName(this.roleName);
+			return req;
+		}
+		
+		@Override
+		void dispatchInternal(ActivityContext<EuareMessage, Euare> context,
+				Checked<EuareMessage> callback) {
+			final DispatchingClient<EuareMessage, Euare> client = context.getClient();
+			client.dispatch(deleteRole(), callback);			
+		}
+
+		@Override
+		void dispatchSuccess(ActivityContext<EuareMessage, Euare> context,
+				EuareMessage response) {
+			final DeleteRoleResponseType resp = (DeleteRoleResponseType) response;
+		}
+	}
+	
+	private class EuareCreateRoleTask extends EucalyptusActivityTask<EuareMessage, Euare> {
+		String roleName = null;
+		String path = null;
+		String assumeRolePolicy = null;
+		private RoleType role = null;
+		private EuareCreateRoleTask(String roleName, String path, String assumeRolePolicy){
+			this.roleName = roleName;
+			this.path = path;
+			this.assumeRolePolicy = assumeRolePolicy;
+		}
+		private CreateRoleType createRole(){
+			final CreateRoleType req = new CreateRoleType();
+			req.setRoleName(this.roleName);
+			req.setPath(this.path);
+			req.setAssumeRolePolicyDocument(this.assumeRolePolicy);
+			return req;
+		}
+		
+		public RoleType getRole(){ 
+			return this.role;
+		}
+		
+		@Override
+		void dispatchInternal(ActivityContext<EuareMessage, Euare> context,
+				Checked<EuareMessage> callback) {
+			final DispatchingClient<EuareMessage, Euare> client = context.getClient();
+			client.dispatch(createRole(), callback);			
+		}
+
+		@Override
+		void dispatchSuccess(ActivityContext<EuareMessage, Euare> context,
+				EuareMessage response) {
+			CreateRoleResponseType resp = (CreateRoleResponseType) response;
+			try{
+				this.role = resp.getCreateRoleResult().getRole();
+			}catch(Exception ex){
+				;
+			}			
+		}
+		
+	}
+	
+	private class EuareListRolesTask extends EucalyptusActivityTask<EuareMessage, Euare> {
+		private String pathPrefix = null;
+		private List<RoleType> roles = Lists.newArrayList();
+		
+		private EuareListRolesTask(String pathPrefix){
+			this.pathPrefix = pathPrefix;
+		}
+		
+		private ListRolesType listRoles(){
+			final ListRolesType req = new ListRolesType();
+			req.setPathPrefix(this.pathPrefix);
+			return req;
+		}
+		
+		public List<RoleType> getRoles(){
+			return this.roles;
+		}
+		
+		@Override
+		void dispatchInternal(ActivityContext<EuareMessage, Euare> context,
+				Checked<EuareMessage> callback) {
+			final DispatchingClient<EuareMessage, Euare> client = context.getClient();
+			client.dispatch(listRoles(), callback);
+		}
+
+		@Override
+		void dispatchSuccess(ActivityContext<EuareMessage, Euare> context,
+				EuareMessage response) {
+			ListRolesResponseType resp = (ListRolesResponseType) response;
+			try{
+				this.roles = resp.getListRolesResult().getRoles().getMember();
+			}catch(Exception ex){
+				;
+			}
+		}
+		
 	}
 	
 	private class AutoScalingDescribeGroupsTask extends EucalyptusActivityTask<AutoScalingMessage, AutoScaling>{
@@ -709,13 +1088,15 @@ public class EucalyptusActivityTasks {
 	private class AutoScalingCreateLaunchConfigTask extends EucalyptusActivityTask<AutoScalingMessage, AutoScaling>{
 		private String imageId=null;
 		private String instanceType = null;
+		private String instanceProfileName = null;
 		private String launchConfigName = null;
 		private String securityGroup = null;
 		private String userData = null;
-		private AutoScalingCreateLaunchConfigTask(final String imageId, final String instanceType, 
+		private AutoScalingCreateLaunchConfigTask(final String imageId, final String instanceType, String instanceProfileName,
 				final String launchConfigName, final String sgroupName, final String userData){
 			this.imageId = imageId;
 			this.instanceType = instanceType;
+			this.instanceProfileName = instanceProfileName;
 			this.launchConfigName = launchConfigName;
 			this.securityGroup = sgroupName;
 			this.userData = userData;
@@ -725,6 +1106,9 @@ public class EucalyptusActivityTasks {
 			final CreateLaunchConfigurationType req = new CreateLaunchConfigurationType();
 			req.setImageId(this.imageId);
 			req.setInstanceType(this.instanceType);
+			if(this.instanceProfileName!=null)
+				req.setIamInstanceProfile(this.instanceProfileName);
+			
 			req.setLaunchConfigurationName(this.launchConfigName);
 			SecurityGroups groups = new SecurityGroups();
 			groups.setMember(Lists.<String>newArrayList());

@@ -24,7 +24,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
 
-import javax.annotation.Nullable;
 import javax.persistence.EntityTransaction;
 
 import org.apache.log4j.Logger;
@@ -38,8 +37,6 @@ import com.eucalyptus.loadbalancing.LoadBalancerDnsRecord;
 import com.eucalyptus.loadbalancing.LoadBalancerSecurityGroup;
 import com.eucalyptus.loadbalancing.LoadBalancerZone;
 import com.eucalyptus.loadbalancing.LoadBalancers;
-import com.google.common.base.Function;
-import com.google.common.collect.Collections2;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 
@@ -60,8 +57,7 @@ public class EventHandlerChainDelete extends EventHandlerChain<DeleteLoadbalance
 		return this;
 	}
 	
-	public static class DnsARecordRemover extends AbstractEventHandler<DeleteLoadbalancerEvent>{
-
+	private static class DnsARecordRemover extends AbstractEventHandler<DeleteLoadbalancerEvent>{
 		DnsARecordRemover(
 				EventHandlerChain<DeleteLoadbalancerEvent> chain) {
 			super(chain);
@@ -185,7 +181,7 @@ public class EventHandlerChainDelete extends EventHandlerChain<DeleteLoadbalance
 		}
 	}
 	
-	public static class SecurityGroupRemover extends AbstractEventHandler<DeleteLoadbalancerEvent>{
+	private static class SecurityGroupRemover extends AbstractEventHandler<DeleteLoadbalancerEvent>{
 		SecurityGroupRemover(EventHandlerChain<DeleteLoadbalancerEvent> chain){
 			super(chain);
 		}
