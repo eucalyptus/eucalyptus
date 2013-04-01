@@ -48,6 +48,7 @@ define(['app', 'dataholder'], function(app, dh) {
         return words;
       }
       result = capitalize(name.split(/_/g)).join(' ');
+      result = capitalize(result.split(/-/g)).join(' ');
       result = result.replace(/&#x2f;/g, '/')
       result = result.replace(/&#.{0,3};/g, '')
       return result;
@@ -100,6 +101,11 @@ define(['app', 'dataholder'], function(app, dh) {
             found.push(val);
             result.push({name: facet, label: localize(val), value: val});
           }
+        } else if (isArray(val)) {
+            val.forEach(function(item) {
+              found.push(item);
+              result.push({name: item + '', value : item, label:localize(item + '')})
+            });
         }
       });
       result = sortKeyList(result, 'label')
@@ -144,7 +150,6 @@ define(['app', 'dataholder'], function(app, dh) {
     this.lastSearch = '';
     this.lastFacets = new Backbone.Model({});
         this.search = function(search, facets) {
-            console.log("SEARCH", arguments);
             var jfacets = facets.toJSON();
             var results = self.images.filter(function(model) {
         return _.every(jfacets, function(facet) {
