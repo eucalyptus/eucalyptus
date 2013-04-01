@@ -15,7 +15,16 @@ define([
               view: this,
 
               isOdd: function() {
-                  return (this.view.count++ % 2) ? 'even' : 'odd';
+                  var selected = this.isSelected(arguments);
+                  return ((this.view.count++ % 2) ? 'even' : 'odd') + selected;
+              },
+
+              isSelected: function(image) {
+                var image = this.image;
+                if (self.model.get('image_selected') == image.get('id')) {
+                    return ' selected-row';
+                } 
+                return '';
               },
 
               setClass: function(image) {
@@ -33,16 +42,17 @@ define([
                 self.model.set('image_location', images.image.get('location'));
                 self.model.set('image_description', images.image.get('description'));
                 self.model.set('image_iconclass', this.setClass(images.image));
+                self.model.set('image_selected', images.image.get('id'));
               },
 
               
               launchConfigErrors: {
-                image: ""
+                image_id: ''    
               }
           };
-          self.model.on('invalid', function() {
-              console.log("INVALID EVENT", args);
-              scope.launchConfigErrors.image = self.model.validationError;  
+          self.model.on('validated:invalid', function(model, errors) {
+              scope.launchConfigErrors.image_id = errors.image_id; 
+              self.render(); 
           });
 
           scope.images = scope.search.filtered;
@@ -63,7 +73,6 @@ define([
         isValid: function() {
           this.model.validate(_.pick(this.model.toJSON(),'image_id'));
           var error = this.model.isValid();
-          console.log("VIEWISVALID", error);
           return error;
         },
   });
