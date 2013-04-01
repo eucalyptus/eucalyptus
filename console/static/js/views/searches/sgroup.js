@@ -14,6 +14,6 @@ define([
     ];
     // PENDING:  tag facets
     
-    return new Search(images, facets, {}, null);
+    return new Search(images, facets, { owner_id : 'Owner' }, null);
   }
 });
