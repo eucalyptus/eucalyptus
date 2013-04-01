@@ -3,17 +3,16 @@ define([
 ], function(Search) {
   return function(images) {
     
-    var facets = ['all_text', 'owner_id', 
-      // FIXME:  there is no mock data for platform or architecture,
-      // so no idea what properties are intended to be referenced by the
-      // wireframe at 
-      // https://eucalyptus.atlassian.net/wiki/display/3UD/Manage+Security+Groups+Landing
-      'platform', 'architecture', 
-      
-      'root_device_name'
+    var facets = ['all_text', 'launch_config_name', 
+      'health_check_type', 'availability_zones', 
     ];
-    // PENDING:  tag facets
+    // XXX want actual localization
+    var localization = {
+      launch_config_name : 'Launch Configuration', health_check_type : 'Health Check' 
+    }
     
-    return new Search(images, facets, { owner_id : 'Owner' }, null);
+    return new Search(images, facets, 
+      localization, 
+      null);
   }
 });
