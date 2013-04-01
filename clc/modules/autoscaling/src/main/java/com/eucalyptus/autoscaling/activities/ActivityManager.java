@@ -178,7 +178,8 @@ public class ActivityManager {
   private final ZoneUnavailabilityMarkers zoneAvailabilityMarkers;
   private final ZoneMonitor zoneMonitor;
   private final BackoffRunner runner = BackoffRunner.getInstance( );
-  private final ConcurrentMap<String,Integer> launchFailureCounters = Maps.newConcurrentMap();
+  private final ConcurrentMap<String,Integer> launchFailureCounters = Maps.newConcurrentMap(); // TODO:STEVE:expire entries (also below)
+  private final ConcurrentMap<String,Long> untrackedInstanceTimestamps = Maps.newConcurrentMap();
   private final List<UnstableInstanceState> unstableInstanceStates = ImmutableList.<UnstableInstanceState>builder()
       .add( state( LifecycleState.Terminating, ConfigurationState.Instantiated, terminateInstancesTask() ) )
       .add( state( LifecycleState.Terminating, ConfigurationState.Registered, removeFromLoadBalancerOrTerminate() ) )
@@ -1024,6 +1025,30 @@ public class ActivityManager {
 
   private void clearLaunchFailures( final AutoScalingGroup group ) {
     launchFailureCounters.remove( group.getArn() );
+  }
+
+  private boolean shouldTerminateUntrackedInstance( final String instanceId ) {
+    while ( true ) {
+      final Long timestamp = untrackedInstanceTimestamps.get( instanceId );
+      final Long newTimestamp = Objects.firstNonNull( timestamp, timestamp() );
+      if ( ( timestamp == null && untrackedInstanceTimestamps.putIfAbsent( instanceId, newTimestamp ) == null ) ||
+          timestamp != null ) {
+        return (timestamp() - newTimestamp) >= AutoScalingConfiguration.getUntrackedInstanceTimeoutMillis();
+      }
+    }
+  }
+
+  private Predicate<String> shouldTerminateUntrackedInstance( ) {
+    return new Predicate<String>( ) {
+      @Override
+      public boolean apply( final String instanceId ) {
+        return shouldTerminateUntrackedInstance( instanceId );
+      }
+    };
+  }
+
+  private void clearUntrackedInstances( final Collection<String> instanceIds ) {
+    untrackedInstanceTimestamps.keySet().removeAll( instanceIds );
   }
 
   private interface ActivityContext {
@@ -1965,8 +1990,15 @@ public class ActivityManager {
         final Set<String> knownInstanceIds =
             autoScalingInstances.verifyInstanceIds( getGroup().getOwnerAccountNumber(), taggedInstanceIds );
         groupNameToInstances.values().removeAll( knownInstanceIds );
+        clearUntrackedInstances( knownInstanceIds );
 
         final Map<String,Collection<String>> groupMap = groupNameToInstances.asMap();
+        for ( final Map.Entry<String,Collection<String>> entry : groupMap.entrySet() ) {
+          if ( Iterables.all( entry.getValue(), Predicates.not( shouldTerminateUntrackedInstance() ) ) ) {
+            groupMap.remove( entry.getKey() );
+          }
+        }
+
         int entryIndex = -1;
         if ( groupMap.size() == 1 ) {
           entryIndex = 0;
@@ -1980,6 +2012,7 @@ public class ActivityManager {
               Iterables.get( groupMap.entrySet(), entryIndex );
           this.groupName = entry.getKey();
           this.instanceIds = Lists.newArrayList( entry.getValue() );
+          clearUntrackedInstances( this.instanceIds );
         }
       } catch ( Exception e ) {
         logger.error( e, e );

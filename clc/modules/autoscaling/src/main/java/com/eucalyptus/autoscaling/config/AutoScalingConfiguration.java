@@ -75,10 +75,14 @@ public class AutoScalingConfiguration {
   @ConfigurableField( initial = "", description = "Suspended scaling tasks.", changeListener = AutoScalingSuspendedTasksPropertyChangeListener.class  )
   public static volatile String suspendedTasks = "";
 
+  @ConfigurableField( initial = "5m", description = "Timeout for termination of untracked auto scaling instances." )
+  public static volatile String untrackedInstanceTimeout = "5m";
+
   private static AtomicLong activityTimeoutMillis = new AtomicLong( Intervals.parse( activityTimeout, TimeUnit.MINUTES.toMillis( 5 ) ) );
   private static AtomicLong activityExpiryMillis =  new AtomicLong( Intervals.parse( activityExpiry, TimeUnit.DAYS.toMillis( 42 ) ) );
   private static AtomicLong zoneFailureThresholdMillis = new AtomicLong( Intervals.parse( zoneFailureThreshold, TimeUnit.MINUTES.toMillis( 5 ) ) );
   private static AtomicLong suspensionTimeoutMillis = new AtomicLong( Intervals.parse( suspensionTimeout, TimeUnit.DAYS.toMillis( 1 ) ) );
+  private static AtomicLong untrackedInstanceTimeoutMillis = new AtomicLong( Intervals.parse( untrackedInstanceTimeout, TimeUnit.MINUTES.toMillis( 5 ) ) );
   private static AtomicReference<EnumSet<ScalingProcessType>> suspendedProcessesSet = new AtomicReference<EnumSet<ScalingProcessType>>( toEnumSet( ScalingProcessType.class, suspendedProcesses ) );
   private static AtomicReference<EnumSet<ActivityTask>> suspendedTasksSet = new AtomicReference<EnumSet<ActivityTask>>( toEnumSet( ActivityTask.class, suspendedTasks ) );
 
@@ -108,6 +112,10 @@ public class AutoScalingConfiguration {
 
   public static long getSuspensionTimeoutMillis() {
     return suspensionTimeoutMillis.get();
+  }
+
+  public static long getUntrackedInstanceTimeoutMillis() {
+    return untrackedInstanceTimeoutMillis.get();
   }
 
   public static EnumSet<ScalingProcessType> getSuspendedProcesses() {
