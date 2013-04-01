@@ -186,6 +186,10 @@ const char *euca_client_component_name = "cc";  //!< Name of this component's cl
 
 /* used by lower level handlers */
 sem *hyp_sem = NULL;            //!< semaphore for serializing domain creation
+
+// FIXME: This semaphore is probably superfluous and should be removed (with hyp_sem used in its place).
+sem *migr_sem = NULL;           //!< semaphore for serializing migrations
+
 sem *inst_sem = NULL;           //!< guarding access to global instance structs
 sem *inst_copy_sem = NULL;      //!< guarding access to global instance structs
 sem *addkey_sem = NULL;         //!< guarding access to global instance structs
@@ -2422,6 +2426,7 @@ int doDescribeInstances(ncMetadata * pMeta, char **instIds, int instIdsLen, ncIn
     }
     EUCA_FREE(file_name);
 
+    LOGTRACE("done\n");
     return (EUCA_OK);
 }
 
@@ -2939,7 +2944,7 @@ int doMigrateInstances(ncMetadata * pMeta, ncInstance ** instances, int instance
     if (init())
         return (EUCA_ERROR);
 
-    LOGDEBUG("invoked\n");
+    LOGTRACE("invoked\n");
 
     for (int i = 0; i < instancesLen; i++) {
         LOGDEBUG("verifying instance # %d...\n", i);
@@ -2957,7 +2962,7 @@ int doMigrateInstances(ncMetadata * pMeta, ncInstance ** instances, int instance
         ret = nc_state.D->doMigrateInstances(&nc_state, pMeta, instances, instancesLen, action, credentials);
     }
 
-    LOGDEBUG("done\n");
+    LOGTRACE("done\n");
 
     return ret;
 }
