@@ -1,13 +1,13 @@
 define([
+   'underscore',
    './eucaexpandoview',
    'text!./sgroup.html!strip',
-], function(EucaExpandoView, template) {
+], function(_, EucaExpandoView, template) {
     return EucaExpandoView.extend({
         initialize : function(args) {
-            this.id = args && args.id ? args.id : undefined;
             this.template = template;
-            this.scope = {
-            }
+            this.model = this.model ? this.model : {};
+            this.scope = _.extend(this.model, {});
             this._do_init();
         },
 	});

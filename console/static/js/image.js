@@ -221,8 +221,8 @@ launch_instance_image_table_platform_linux, launch_instance_image_table_platform
 
     _expandCallback : function(row){ 
       var $el = $('<div />');
-      require(['views/expandos/image'], function(expando) {
-         new expando({el: $el, id: row[1]});
+      require(['app', 'views/expandos/image'], function(app, expando) {
+         new expando({el: $el, model: app.data.images.get(row[1])});
       });
       return $el;
     },

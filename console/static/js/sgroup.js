@@ -1002,8 +1002,8 @@
 
     _expandCallback : function(row){ 
       var $el = $('<div />');
-      require(['views/expandos/sgroup'], function(expando) {
-         new expando({el: $el, id: row[1]});
+      require(['app', 'views/expandos/sgroup'], function(app, expando) {
+         new expando({el: $el, model: app.data.sgroup.get(row[1])});
       });
       return $el;
     },
