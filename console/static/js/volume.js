@@ -682,8 +682,8 @@
 
     _expandCallback : function(row){ 
       var $el = $('<div />');
-      require(['views/expandos/volume'], function(expando) {
-         new expando({el: $el, id: row[1]});
+      require(['app', 'views/expandos/volume'], function(app, expando) {
+         new expando({el: $el, model: app.data.volume.get(row[10]) });
       });
       return $el;
     },
