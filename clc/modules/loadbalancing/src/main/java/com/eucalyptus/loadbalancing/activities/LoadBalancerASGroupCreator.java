@@ -39,6 +39,7 @@ import com.eucalyptus.empyrean.ServiceStatusType;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.loadbalancing.LoadBalancer;
 import com.eucalyptus.loadbalancing.LoadBalancers;
+import com.eucalyptus.loadbalancing.activities.EventHandlerChainNew.InstanceProfileSetup;
 import com.eucalyptus.loadbalancing.activities.EventHandlerChainNew.SecurityGroupSetup;
 import com.eucalyptus.util.Exceptions;
 import com.google.common.collect.Lists;
@@ -109,12 +110,20 @@ public class LoadBalancerASGroupCreator extends AbstractEventHandler<NewLoadbala
 		if(groupName.length()>255)
 			groupName = groupName.substring(0, 255);
 		
+		String instanceProfileName = null;
+		try{
+			List<String> result = this.chain.findHandler(InstanceProfileSetup.class).getResult();
+			instanceProfileName = result.get(0);
+		}catch(Exception ex){
+			;
+		}
+		
 		// create launch config based on the parameters
 		try{
 			StoredResult<String> sgroupSetup = this.getChain().findHandler(SecurityGroupSetup.class);
 			final List<String> group = sgroupSetup.getResult();
 			final String sgroupName = group.size()>0 ? group.get(0) : null;
-			EucalyptusActivityTasks.getInstance().createLaunchConfiguration(LOADBALANCER_EMI, LOADBALANCER_INSTANCE_TYPE, 
+			EucalyptusActivityTasks.getInstance().createLaunchConfiguration(LOADBALANCER_EMI, LOADBALANCER_INSTANCE_TYPE, instanceProfileName,
 					launchConfigName, sgroupName, userDataBuilder.build());
 			this.launchConfigName = launchConfigName;
 		}catch(Exception ex){

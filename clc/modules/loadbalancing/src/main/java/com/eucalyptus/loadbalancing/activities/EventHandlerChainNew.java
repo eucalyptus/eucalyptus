@@ -28,6 +28,8 @@ import java.util.concurrent.ConcurrentHashMap;
 import javax.persistence.EntityTransaction;
 import org.apache.log4j.Logger;
 
+import com.eucalyptus.auth.euare.InstanceProfileType;
+import com.eucalyptus.auth.euare.RoleType;
 import com.eucalyptus.autoscaling.common.AutoScalingGroupType;
 import com.eucalyptus.autoscaling.common.AutoScalingGroupsType;
 import com.eucalyptus.autoscaling.common.DescribeAutoScalingGroupsResponseType;
@@ -72,6 +74,8 @@ public class EventHandlerChainNew extends EventHandlerChain<NewLoadbalancerEvent
 	@Override
 	public EventHandlerChain<NewLoadbalancerEvent> build() {
 		this.insert(new AdmissionControl(this));
+		this.insert(new IAMRoleSetup(this));
+		this.insert(new InstanceProfileSetup(this));
 	  	this.insert(new DNSANameSetup(this));
 	  	this.insert(new SecurityGroupSetup(this));
 	  	int numVm = 1;
@@ -85,7 +89,7 @@ public class EventHandlerChainNew extends EventHandlerChain<NewLoadbalancerEvent
 	  	return this;	
 	}
 	
-	public static class AdmissionControl extends AbstractEventHandler<NewLoadbalancerEvent> {
+	static class AdmissionControl extends AbstractEventHandler<NewLoadbalancerEvent> {
 		AdmissionControl(EventHandlerChain<NewLoadbalancerEvent> chain){
 			super(chain);
 		}
@@ -108,7 +112,142 @@ public class EventHandlerChainNew extends EventHandlerChain<NewLoadbalancerEvent
 		}
 	}
 	
-	public static class DNSANameSetup extends AbstractEventHandler<NewLoadbalancerEvent> {
+	static class IAMRoleSetup extends AbstractEventHandler<NewLoadbalancerEvent> implements StoredResult<String>{
+		public static final String DEFAULT_ROLE_PATH_PREFIX = "/internal/loadbalancer";
+		public static final String DEFAULT_ROLE_NAME = "loadbalancer-vm";
+		public static final String DEFAULT_ASSUME_ROLE_POLICY = 
+				"{\"Statement\":[{\"Effect\":\"Allow\",\"Principal\":{\"Service\":[\"ec2.amazonaws.com\"]},\"Action\":[\"sts:AssumeRole\"]}]}" 
+				+
+				"{\"Statement\":[{\"Action\": \"elasticloadbalancing:*\",\"Effect\": \"Allow\",\"Resource\": \"*\"}]}";
+		
+		private RoleType role = null;
+		protected IAMRoleSetup(EventHandlerChain<NewLoadbalancerEvent> chain) {
+			super(chain);
+			// TODO Auto-generated constructor stub
+		}
+
+		@Override
+		public List<String> getResult() {
+			return this.role!=null ? Lists.newArrayList(this.role.getRoleName()) : Lists.<String>newArrayList();
+		}
+
+		@Override
+		public void apply(NewLoadbalancerEvent evt)
+				throws EventHandlerException {
+			// list-roles.
+			try{
+				List<RoleType> result = EucalyptusActivityTasks.getInstance().listRoles(DEFAULT_ROLE_PATH_PREFIX);
+				if(result != null){
+					for(RoleType r : result){
+						if(DEFAULT_ROLE_NAME.equals(r.getRoleName())){
+							role = r;
+							break;
+						}	
+					}
+				}
+			}catch(Exception ex){
+				throw new EventHandlerException("Failed to list IAM roles", ex);
+			}
+
+			// if no role found, create a new role with assume-role policy for elb
+			if(role==null){	/// create a new role
+				try{
+					role = EucalyptusActivityTasks.getInstance().createRole(DEFAULT_ROLE_NAME, DEFAULT_ROLE_PATH_PREFIX, DEFAULT_ASSUME_ROLE_POLICY);
+				}catch(Exception ex){
+					throw new EventHandlerException("Failed to create the role for ELB Vms");
+				}
+			}
+			
+			if(role==null)
+				throw new EventHandlerException("No role is found for LoadBalancer Vms");		
+		}
+
+		@Override
+		public void rollback() throws EventHandlerException {
+			; // role and instance profile are system-wide for all loadalancers; no need to delete them
+		}	
+	}
+	
+
+	static class InstanceProfileSetup extends AbstractEventHandler<NewLoadbalancerEvent> implements StoredResult<String>{
+		public static final String DEFAULT_INSTANCE_PROFILE_PATH_PREFIX="/internal/loadbalancer";
+		public static final String DEFAULT_INSTANCE_PROFILE_NAME = "loadbalancer-vm";
+
+		private InstanceProfileType instanceProfile = null;
+		protected InstanceProfileSetup(
+				EventHandlerChain<NewLoadbalancerEvent> chain) {
+			super(chain);
+		}
+
+		@Override
+		public List<String> getResult() {
+			return this.instanceProfile!=null ? Lists.newArrayList(this.instanceProfile.getInstanceProfileName()) : Lists.<String>newArrayList();
+		}
+
+		@Override
+		public void apply(NewLoadbalancerEvent evt)
+				throws EventHandlerException {
+			// list instance profiles
+			try{
+				//   check if the instance profile for ELB VM is found
+				List<InstanceProfileType> instanceProfiles =
+						EucalyptusActivityTasks.getInstance().listInstanceProfiles(DEFAULT_INSTANCE_PROFILE_PATH_PREFIX);
+				for(InstanceProfileType ip : instanceProfiles){
+					if(DEFAULT_INSTANCE_PROFILE_NAME.equals(ip.getInstanceProfileName())){
+						instanceProfile = ip;
+						break;
+					}
+				}
+			}catch(Exception ex){
+				throw new EventHandlerException("Failed to list instance profiles", ex);
+			}
+			
+			if(instanceProfile == null){	//   if not create one
+				try{
+					instanceProfile = 
+							EucalyptusActivityTasks.getInstance().createInstanceProfile(DEFAULT_INSTANCE_PROFILE_NAME, DEFAULT_INSTANCE_PROFILE_PATH_PREFIX);
+				}catch(Exception ex){
+					throw new EventHandlerException("Failed to create instance profile", ex);
+				}
+			}
+			if(instanceProfile == null)
+				throw new EventHandlerException("No instance profile for loadbalancer VM is found");
+			
+			// make sure the role is added to the instance profile; if not add it.
+			final List<String> result = this.chain.findHandler(IAMRoleSetup.class).getResult();
+			String lbRoleName = null;
+			if(result!=null && result.size()>0)
+				lbRoleName = result.get(0);
+			
+			try{
+				List<RoleType> roles = instanceProfile.getRoles().getMember();
+				boolean roleFound = false;
+				for(RoleType role : roles){
+					if(role.getRoleName().equals(lbRoleName)){
+						roleFound=true;
+						break;
+					}
+				}
+				if(!roleFound)
+					throw new NoSuchElementException();
+			}catch(Exception ex){
+				if(lbRoleName == null)
+					throw new EventHandlerException("No role name is found for loadbalancer VMs");
+				try{
+					EucalyptusActivityTasks.getInstance().addRoleToInstanceProfile(this.instanceProfile.getInstanceProfileName(), lbRoleName);
+				}catch(Exception ex2){
+					throw new EventHandlerException("Failed to add role to the instance profile", ex2);
+				}
+			}
+		}
+		
+		@Override
+		public void rollback() throws EventHandlerException {
+			;
+		}
+	}
+	
+	static class DNSANameSetup extends AbstractEventHandler<NewLoadbalancerEvent> {
 		private String dnsName = null;
 		private String dnsZone= null;
 		DNSANameSetup(EventHandlerChain<NewLoadbalancerEvent> chain){
@@ -154,7 +293,7 @@ public class EventHandlerChainNew extends EventHandlerChain<NewLoadbalancerEvent
 		}
 	}
 	
-	public static class SecurityGroupSetup extends AbstractEventHandler<NewLoadbalancerEvent> implements StoredResult<String>{
+	static class SecurityGroupSetup extends AbstractEventHandler<NewLoadbalancerEvent> implements StoredResult<String>{
 		private String createdGroup = null;
 		NewLoadbalancerEvent event = null;
 		SecurityGroupSetup(EventHandlerChain<NewLoadbalancerEvent> chain){
@@ -177,6 +316,13 @@ public class EventHandlerChainNew extends EventHandlerChain<NewLoadbalancerEvent
 
 			String groupName = String.format("euca-internal-%s-%s", lb.getOwnerAccountNumber(), lb.getDisplayName());
 			String groupDesc = String.format("group for loadbalancer %s", evt.getLoadBalancer());
+			
+			try{
+				EucalyptusActivityTasks.getInstance().deleteSecurityGroup(groupName);
+			}catch(Exception ex){
+				;
+			}
+			
 			// create a new security group
 			try{
 				EucalyptusActivityTasks.getInstance().createSecurityGroup(groupName, groupDesc);
