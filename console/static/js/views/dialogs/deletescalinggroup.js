@@ -22,7 +22,7 @@ define([
                   click: function() {
                     require(['app'], function(app) {
                       _.each(self.scope.items, function(item) {
-                        app.data.sclaingGroup.get(item).destroy({wait: true});
+                        app.data.scalingGroup.get(item).destroy({wait: true});
                       });
                       self.close();
                     });
