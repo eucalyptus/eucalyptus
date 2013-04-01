@@ -9,7 +9,6 @@ define([
         tags.on('change reset', function() {
             self.resetTags();
         });        
-        self.resetTags();
     },
     resetTags: function() {
         var self = this;
@@ -34,6 +33,7 @@ define([
               var results = describe.results;
               _.each(results, function(r) { r.tags = new Backbone.Collection(); });
               options.success && options.success(model, results, options);
+              collection.resetTags();
             } else {
               ;//TODO: how to notify errors?
               console.log('regrettably, its an error');

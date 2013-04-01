@@ -2,8 +2,7 @@ define([
   'underscore',
   'backbone',
   'backbone-validation',
-  'sharedtags'
-], function(_, Backbone, BackboneValidation, tags) {
+], function(_, Backbone, BackboneValidation) {
   _.extend(Backbone.Model.prototype, Backbone.Validation.mixin);
   var EucaModel = Backbone.Model.extend({
     initialize: function() {
@@ -21,7 +20,7 @@ define([
     refreshNamedColumns: function() {
         var self = this;
         _.each(this.namedColumns, function(column) {
-            var matched = tags.where({res_id: self.get('id'), name: 'Name'});
+            var matched = self.get('tags').where({res_id: self.get('id'), name: 'Name'});
             if (matched.length) {
                 var tag = matched[0];
                 self.set('display_' + column, tag.get('value'));
