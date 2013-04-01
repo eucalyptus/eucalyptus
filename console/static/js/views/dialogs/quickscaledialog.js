@@ -26,14 +26,9 @@ define([
                 submitButton: {
                     click: function() {
                       if (self.original != self.scope.qscale.get('desired')) {
-                        // unfortunate thing about this is that it reloads from proxy, no local store
-                        // TODO: fix that ^^^
-                        require(['models/scalinggrps'], function(collection) {
-                          var grps = new collection();
-                          grps.fetch({success: function() {
-                            grps.get(self.name).setDesiredCapacity(self.scope.qscale.get('desired'));
-                            self.close();
-                          }});
+                        require(['app'], function(app) {
+                          app.data.scalingGroup.get(self.name).setDesiredCapacity(self.scope.qscale.get('desired'));
+                          self.close();
                         });
                       }
                       else {
