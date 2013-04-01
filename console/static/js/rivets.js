@@ -1,7 +1,6 @@
 rivets.configure({
 	adapter: {
         iterate: function(obj, callback) {
-            //console.log('iterate:', obj, callback);
             if (obj instanceof Backbone.Collection) {
                 var l = obj.length;
                 for (var i = 0; i < l; i++) {
@@ -30,7 +29,8 @@ rivets.configure({
                     callback(obj.at(keypath));
                 });
             } else {
-                console.log('plain object');
+                // No easy portable way to observe plain objects.
+                // console.log('plain object');
             }
 	    },
 	    unsubscribe: function(obj, keypath, callback) {
@@ -41,7 +41,8 @@ rivets.configure({
                     callback(obj.at(keypath)) 
                 });
             } else {
-                console.log('plain object');
+                // No easy portable way to observe plain objects.
+                // console.log('plain object');
             }
 	    },
 	    read: function(obj, keypath) {
@@ -71,6 +72,7 @@ rivets.configure({
 rivets.binders["ui-*"] = {
     bind: function(el) {
         var self = this;
+        // console.log('UI', this.args[0], el);
         require(['views/ui/' + this.args[0] + '/index'], function(view) {
             self.bbView = new view({
                 model: self.bbLastValue ? self.bbLastValue : {},
@@ -107,5 +109,26 @@ rivets.binders["msg"] = {
       } else {
         return el.textContent = value != null ? value : '';
       }
+    }
+}
+
+rivets.binders["include"] = {
+    bind: function(el) {
+        var self = this;
+        var path = $(el).text();
+        require([path], function(view) {
+            self.bbView = new view({
+                model: self.bbLastValue ? self.bbLastValue : {},
+            });
+            $(el).replaceWith($(self.bbView.el).children());
+            return self.bbView.el;
+        });
+    },
+    routine: function(el, value) {
+        this.bbLastValue = value;
+        if (this.bbView) {
+           this.bbView.model = value;
+           this.bbView.render();
+        }
     }
 }
