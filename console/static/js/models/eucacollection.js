@@ -13,9 +13,7 @@ define([
     },
     resetTags: function() {
         var self = this;
-        console.log('reset tags', self.url);
         this.each(function(m) {
-            console.log('reset model', self.url);
             var newtags = tags.where({res_id: m.get('id')});
             m.get('tags').reset(newtags);
         });
