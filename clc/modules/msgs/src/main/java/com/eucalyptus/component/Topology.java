@@ -1154,7 +1154,9 @@ public class Topology {
       ServiceConfiguration endResult = input;
       try {
         endResult = ServiceTransitions.pathTo( input, nextState ).get( );
-        Logs.extreme( ).debug( this.toString( endResult, initialState, nextState ) );
+        if ( !nextState.equals( initialState ) ) {
+          LOG.info( this.toString( endResult, initialState, nextState ) );
+        }
         return endResult;
       } catch ( final Exception ex ) {
         if ( Exceptions.isCausedBy( ex, ExistingTransitionException.class ) ) {
