@@ -199,7 +199,7 @@ const int default_staging_cleanup_threshold = 60 * 60 * 2;  //!< after this many
 const int default_booting_cleanup_threshold = 60;   //!< after this many seconds any BOOTING domains will be cleaned up
 const int default_bundling_cleanup_threshold = 60 * 60 * 2; //!< after this many seconds any BUNDLING domains will be cleaned up
 const int default_createImage_cleanup_threshold = 60 * 60 * 2;  //!< after this many seconds any CREATEIMAGE domains will be cleaned up
-const int default_teardown_state_duration = 180;    //!< after this many seconds in TEARDOWN state (no resources), we'll forget about the instance
+const int default_teardown_state_duration = 60 * 3;    //!< after this many seconds in TEARDOWN state (no resources), we'll forget about the instance
 const int default_migration_ready_threshold = 60 * 15; //!< after this many seconds ready (and waiting) to migrate, migration will terminate and roll back
 
 struct nc_state_t nc_state = { 0 }; //!< Global NC state structure
@@ -732,6 +732,8 @@ int wait_state_transition(ncInstance * instance, instance_states from_state, ins
 //!
 //! Refresh instance information.
 //!
+//! (This is called while holding inst_sem.)
+//!
 //! @param[in] nc a pointer to the global NC state structure.
 //! @param[in] instance a pointer to the instance being refreshed
 //!
@@ -812,13 +814,24 @@ static void refresh_instance_info(struct nc_state_t *nc, ncInstance * instance)
         // migration-related logic
         if (is_migration_dst(instance)) {
             if (old_state == BOOTING && new_state == PAUSED ) {
+                LOGINFO("[%s] incoming (%s < %s) migration in progress\n", instance->instanceId,
+                        instance->migration_dst, instance->migration_src);
                 instance->migration_state = MIGRATION_IN_PROGRESS;
-                LOGINFO("[%s] incoming migration in progress\n", instance->instanceId);
+                LOGDEBUG("[%s] incoming (%s < %s) migration_state set to '%s'\n", instance->instanceId,
+                        instance->migration_dst, instance->migration_src, migration_state_names[instance->migration_state]);
 
             } else if ((old_state == BOOTING || old_state == PAUSED)
                        &&
                        (new_state == RUNNING || new_state == BLOCKED)) {
+                LOGINFO("[%s] completing incoming (%s < %s) migration...\n", instance->instanceId,
+                        instance->migration_dst, instance->migration_src);
                 instance->migration_state = NOT_MIGRATING;  // done!
+                bzero(instance->migration_src, HOSTNAME_SIZE);
+                bzero(instance->migration_dst, HOSTNAME_SIZE);
+                instance->migrationTime = 0;
+                save_instance_struct(instance);
+                // Done upon return in monitoring_thread().
+                //copy_instances();
                 LOGINFO("[%s] incoming migration complete\n", instance->instanceId);
 
             } else if (new_state == SHUTOFF || new_state == SHUTDOWN) {
@@ -1009,13 +1022,25 @@ void *monitoring_thread(void *arg)
             if (!strcmp(instance->stateName, "Extant") && (instance->migration_state == MIGRATION_READY) &&
                 ((now - instance->migrationTime) > nc_state.migration_ready_threshold)) {
                 if (instance->migrationTime) {
-                    LOGWARN("[%s] has been in migration-ready state on source %s for %d seconds (threshold is %d), rolling back [%d].\n",
+                    LOGWARN("[%s] has been in migration-ready state on %s for %d seconds (threshold is %d), rolling back [%d].\n",
                             instance->instanceId, instance->migration_src, (int)(now - instance->migrationTime), nc_state.migration_ready_threshold,
                             instance->migrationTime);
                     migration_rollback_src(instance);
                     continue;
                 } else {
-                    LOGERROR("[%s] is ready to migrate but has a zero instance migrationTime.\n", instance->instanceId);
+                    if (instance->state == BOOTING) {
+                        // Assume destination node. (Is this a safe assumption?)
+                        LOGDEBUG("[%s] destination node ready: instance in booting state with no migrationTime.\n",
+                                 instance->instanceId);
+                    } else {
+                        // FIXME: Can't safely assume active source node--this can apparently occur post-successful-migration to a destination node
+                        // after an inconveniently timed NC restart on the destination. (I've seen this at least once, though I think I have fixed
+                        // the migration-completed code on the destination to avoid this in the future.)
+                        LOGWARN("[%s] in instance state '%s' is ready to migrate but has a zero instance migrationTime.\n",
+                                instance->instanceId, instance_state_names[instance->state]);
+                        // FIXME: Is this always safe?
+                        migration_rollback_src(instance);
+                    }
                 }
             }
 
@@ -2987,20 +3012,31 @@ int is_migration_src(const ncInstance * instance)
 //!
 int migration_rollback_src(ncInstance *instance)
 {
+    // FIXME: duplicated code in two parts of conditional. Refactor.
     if (is_migration_src(instance)) {
         LOGINFO("[%s] starting migration rollback of instance on source %s\n", instance->instanceId, instance->migration_src);
-        //sem_p(inst_sem);
         instance->migration_state = NOT_MIGRATING;
         bzero(instance->migration_src, HOSTNAME_SIZE);
         bzero(instance->migration_dst, HOSTNAME_SIZE);
         instance->migrationTime = 0;
         save_instance_struct(instance);
         copy_instances();
-        //sem_v(inst_sem);
         LOGINFO("[%s] migration source rolled back.\n", instance->instanceId);
+        return TRUE;
+    } else if (is_migration_dst(instance)) {
+        // FIXME: Do I want to protect this functionality by requiring something like a 'force' option be passed to this function?
+        LOGWARN("[%s] resetting migration state '%s' to 'none' for an already-migrated (%s < %s) instance. SOMETHING WENT WRONG SOMEWHERE!\n",
+                instance->instanceId, migration_state_names[instance->migration_state], instance->migration_dst, instance->migration_src);
+        instance->migration_state = NOT_MIGRATING;
+        bzero(instance->migration_src, HOSTNAME_SIZE);
+        bzero(instance->migration_dst, HOSTNAME_SIZE);
+        instance->migrationTime = 0;
+        save_instance_struct(instance);
+        copy_instances();
+        LOGINFO("[%s] migration state reset.\n", instance->instanceId);
         return TRUE;
     }
     // Not source node?
-    LOGERROR("[%s] request to roll back migration of instance on non-source node %s\n", instance->instanceId, nc_state.ip)
+    LOGERROR("[%s] request to roll back migration of instance on non-source/destination node %s\n", instance->instanceId, nc_state.ip)
     return FALSE;
 }

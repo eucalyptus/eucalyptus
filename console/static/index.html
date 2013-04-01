@@ -60,19 +60,17 @@
 
     <!-- Backbone support -->
     <!-- Backbone support -->
-    <script>
-    var require = {
-      baseUrl: 'js'
-    };
-    </script>
-    <script type="text/javascript" language="javascript" src="js/require.js"></script>
+    <script data-main="js/requiremain" type="text/javascript" language="javascript" src="js/require.js"></script>
+<!--
     <script type="text/javascript" language="javascript" src="js/underscore-1.4.3.js"></script>
     <script type="text/javascript" language="javascript" src="js/backbone-0.9.10.js"></script>
     <script src="/js/visualsearch/build/visualsearch.js" type="text/javascript" charset="utf-8"></script>
+-->
 
     <!-- Eucalyptus UI javascripts -->
     <script type="text/javascript" language="javascript" src="js/jquery_ext.js"></script>
     <script type="text/javascript" language="javascript" src="js/jquery_generate_file.js"></script>
+    <script type="text/javascript" language="javascript" src="js/engage.itoggle-min.js"></script>
     <script type="text/javascript" language="javascript" src="js/login.js"></script>
     <script type="text/javascript" language="javascript" src="js/main.js"></script>
     <script type="text/javascript" language="javascript" src="js/eucalyptus.js"></script>
@@ -104,8 +102,13 @@
     <script type="text/javascript" language="javascript" src="js/template/euca_resource_tag.js"></script>
 
     <script type="text/javascript" language="javascript" src="js/eantest.js"></script>
+    <script type="text/javascript" language="javascript" src="js/rivetstest.js"></script>
+    <script type="text/javascript" language="javascript" src="js/scalinggroup.js"></script>
     <script type="text/javascript" language="javascript" src="js/jpvols.js"></script>
     <script type="text/javascript" language="javascript" src="js/newscalinggroup.js"></script>
+    <script type="text/javascript" language="javascript" src="js/wizimagetest.js"></script>
+    <script type="text/javascript" language="javascript" src="js/launchconfig.js"></script>
+    <script type="text/javascript" language="javascript" src="js/newlaunchconfig.js"></script>
   </head> 
 
   <body>
@@ -292,16 +295,20 @@
               <div id="dashboard-storage-snapshot" class="status-readout" title="{{!: dashboard_snapshots_tip }}">
                 <span></span> {{!>snapshots_label}}
               </div>
+              <!--
               <div id="dashboard-storage-buckets" class="status-readout" title="{{!: dashboard_buckets_tip }}">
                 <span></span> {{!>buckets_label}}
               </div>
+              -->
             </div>
             <div class="netsec inner-box clearfix">
               <h3>{{!>netsec_label}}</h3>
               <div id="dashboard-netsec-img"></div>
+              <!--
               <div id="dashboard-netsec-load-balancer" class="status-readout" title="{{!: dashboard_balancer_tip }}">
                 <span></span> {{!>balancers_label}}
               </div>
+              -->
               <div id="dashboard-netsec-sgroup" class="status-readout" title="{{!: dashboard_sgroup_tip }}">
                 <span></span> {{!>sgroups_label}}
               </div>
@@ -409,7 +416,7 @@
             </div>
           </div>
         </div>
-      </script>
+      </script>adsf  
 
       <script id="keypairDelDlgTmpl" type="text/x-jsrender">
         <div id="keys-euca-dialog-wrapper">
@@ -1202,6 +1209,7 @@
                </tbody>
             </table>
           </div>
+          <div id="scaling-topselector"><div class="scalingtab active"><a href="#scaling">Auto-scaling</a></div> <div class="scalingtab "><a href="#launchconfig">Launch configs</a></div></div>
           <div id="scaling-help">
             <div class="help-content">
               {{!: landing_content }}
@@ -1633,6 +1641,7 @@
             <table id="images" class="display">
               <thead>
                 <tr>
+                  <th>&nbsp;</th>
                   <th>{{!>img_tbl_hdr_name}}</th>
                   <th>{{!>inst_tbl_hdr_image_id}}</th>
                   <th>{{!>img_tbl_hdr_architecture}}</th>
@@ -1691,7 +1700,7 @@
       <!-- Launch Wizard & Help -->
       <script id="launchWizardTmpl" type="text/x-jsrender"> 
         <div id="launch-wizard-wrapper"> <!-- rendering will remove this extra div --> 
-         <div id="launch-wizard-and-summary-wrapper">
+         <div id="launch-wizard-and-summary-wrapper" class="clearfix">
             <!-- Wizard Wrapper (left side) -->
             <div class="wizard-wrapper">
 
@@ -1825,6 +1834,40 @@
         </div>
       </script>
 
+      <!-- Launch Config Template -->
+      <script id="launchConfigTblTmpl" type="text/x-jsrender">
+        <div id="launchconfig-wrapper">
+          <div id="launchconfig-table">
+            <table id="launchconfig" class="display">
+              <thead>
+                <tr>
+                  <th>
+                    <input type="checkbox" id="launchconfig-check-all">
+                  </th>
+                  <th>{{!>launchconfig_tbl_hdr_name}}</th>
+                  <th>{{!>launchconfig_tbl_hdr_image_id}}</th>
+                  <th>{{!>launchconfig_tbl_hdr_key_name}}</th>
+                  <th>{{!>launchconfig_tbl_hdr_security_group}}</th>
+                  <th>{{!>launchconfig_tbl_hdr_created_time}}</th>
+                </tr>
+               </thead>
+               <tbody>
+               </tbody>
+            </table>
+          </div>
+          <div id="scaling-topselector"><div class="scalingtab "><a href="#scaling">Auto-scaling</a></div> <div class="scalingtab active"><a href="#launchconfig">Launch configs</a></div></div>
+          <div id="scaling-help">
+            <div class="help-content">
+              {{!: landing_content }}
+            </div>
+            <div class="help-revert-button"> 
+              <a href="#">{{!>revert_button}}</a>
+            </div>
+          </div>
+        </div>
+      </script>
+      <!-- END AutoScaling table -->
+
       <!-- Launch Wizard & Help -->
       <script id="eantestTmpl" type="text/x-jsrender"> 
         <div id="eantest-wrapper"> <!-- rendering will remove this extra div --> 
@@ -1832,6 +1875,14 @@
         </div>
       </script>
 
+     <!-- <script type="text/javascript" language="javascript" src="../../../js/wizard.js"></script> -->
+
+      <script id="scalinggroupTmpl" type="text/x-jsrender"> 
+        <div id="scalinggroup-wrapper"> <!-- rendering will remove this extra div --> 
+          <h1>Dummy component</h1>
+        </div>
+      </script>
+      
     </div>
     <!-- END of templates --> 
 

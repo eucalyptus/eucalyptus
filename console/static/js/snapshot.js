@@ -41,7 +41,7 @@
         data_deps: ['snapshots'],
         hidden: thisObj.options['hidden'],
         dt_arg : {
-          "sAjaxSource": 'snapshots',
+          "sAjaxSource": 'snapshot',
           "aoColumnDefs": [
             {
 	      // Display the checkbox button in the main table
@@ -51,13 +51,17 @@
               "sClass": "checkbox-cell",
             },
             { 
-	       // Display the id of the snapshot in the main table
-	       "aTargets":[1],
-	       "mRender": function(data) {
-                return DefaultEncoder().encodeForHTML(data);
+	      // Display the id of the snapshot in the main table
+	      "aTargets":[1],
+              "mRender": function(data){
+                 return eucatableDisplayColumnTypeTwist(data, data, 255);
               },
-              "mData": "display_id",
-	    },
+              "mData": function(source){
+                 if(source.display_id)
+                   return source.display_id;
+                 return source.id;
+              },
+            },
             {
 	      // Display the status of the snapshot in the main table
               "aTargets":[2],
@@ -133,6 +137,15 @@
               },
               "mData": "description",
             },
+            {
+               // Hidden column for the uncut id of the snapshot
+               "bVisible": false,
+               "aTargets":[10],
+               "mRender": function(data) {
+                return DefaultEncoder().encodeForHTML(data);
+              },
+              "mData": "id",
+            },
           ],
         },
         text : {
@@ -142,11 +155,17 @@
           resource_search : snapshot_search,
           resource_plural : snapshot_plural,
         },
+         expand_callback : function(row){ // row = [col1, col2, ..., etc]
+          return thisObj._expandCallback(row);
+        },
         menu_actions : function(args){ 
           return thisObj._createMenuActions();
         },
         context_menu_actions : function(row) {
           return thisObj._createMenuActions();
+        },
+        expand_callback : function(row){ // row = [col1, col2, ..., etc]
+          return thisObj._expandCallback(row);
         },
         menu_click_create : function (args) { thisObj._createAction() },
         help_click : function(evt) {
@@ -156,6 +175,9 @@
         legend : ['pending', 'completed', 'error'],
       });
       this.tableWrapper.appendTo(this.element);
+      $('html body').eucadata('addCallback', 'snapshot', 'snapshot-landing', function() {
+        thisObj.tableWrapper.eucatable('redraw');
+      });
     },
 
     _create : function() { 
@@ -272,6 +294,15 @@
 
     _destroy : function() {
     },
+
+    _expandCallback : function(row){ 
+      var $el = $('<div />');
+      require(['app', 'views/expandos/snapshot'], function(app, expando) {
+         new expando({el: $el, model: app.data.snapshot.get(row[10])});
+      });
+      return $el;
+    },
+
 
     _createMenuActions : function() {
       var thisObj = this;
@@ -474,7 +505,7 @@
 
     _deleteAction : function(){
       var thisObj = this;
-      snapshotsToDelete = thisObj.tableWrapper.eucatable('getSelectedRows', 1);
+      snapshotsToDelete = thisObj.tableWrapper.eucatable('getSelectedRows', 10);
       var matrix = [];
       var snapToImageMap = generateSnapshotToImageMap();
       deregisterImages = false;
@@ -503,13 +534,13 @@
     },
 
     _createVolumeAction : function() {
-      var snapshot = this.tableWrapper.eucatable('getSelectedRows', 1)[0];
+      var snapshot = this.tableWrapper.eucatable('getSelectedRows', 10)[0];
       addVolume(snapshot);
     },
 
     _registerSnapshots : function(name, desc, windows) {
       var thisObj = this;
-      var snapshot = thisObj.tableWrapper.eucatable('getSelectedRows', 1);
+      var snapshot = thisObj.tableWrapper.eucatable('getSelectedRows', 10);
       var data = "&SnapshotId=" + snapshot + "&Name=" + name + "&Description=" + desc;
       if(windows)
         data += "&KernelId=windows";
@@ -537,7 +568,7 @@
 
     _tagResourceAction : function(){
       var thisObj = this;
-      var snapshot = thisObj.tableWrapper.eucatable('getSelectedRows', 1)[0];
+      var snapshot = thisObj.tableWrapper.eucatable('getSelectedRows', 10)[0];
       if ( snapshot.length > 0 ) {
         // Create a widget object for displaying the resource tag information
         var $tagInfo = $('<div>').addClass('resource-tag-table-expanded-snapshot').addClass('clearfix').euca_resource_tag({resource: 'snapshot', resource_id: snapshot, cancelButtonCallback: function(){ thisObj.tagDialog.eucadialog("close"); }, widgetMode: 'edit' });
@@ -545,6 +576,7 @@
         thisObj.tagDialog.eucadialog('open');
        }
     },
+
 
 /**** Public Methods ****/
     close: function() {

@@ -198,6 +198,10 @@ public class ListenerRegistry {
     this.eventMap.fireEvent( e.getClass( ), e );
   }
   
+  public void fireThrowableEvent( final Event e) throws EventFailedException {
+	  this.eventMap.fireThrowableEvent(e.getClass(), e);
+  }
+  
   @SuppressWarnings( "unchecked" )
   public void fireEvent( final Object type, final Event e ) throws EventFailedException {
     if ( !this.registryMap.containsKey( type.getClass( ) ) ) {
@@ -288,10 +292,21 @@ public class ListenerRegistry {
       } finally {
         this.modificationLock.unlock( );
       }
-      this.fireEvent( e, listeners );
+      this.fireEvent( e, listeners, false );
     }
     
-    private void fireEvent( Event e, List<EventListener> listeners ) throws EventFailedException {
+    public void fireThrowableEvent(T type, Event e) throws EventFailedException {
+    	 List<EventListener> listeners;
+         this.modificationLock.lock( );
+         try {
+           listeners = Lists.newArrayList( this.listenerMap.get( type ) );
+         } finally {
+           this.modificationLock.unlock( );
+         }
+         this.fireEvent( e, listeners, true );
+    }
+    
+    private void fireEvent( Event e, List<EventListener> listeners, boolean throwException) throws EventFailedException {
       List<Throwable> errors = Lists.newArrayList( );
       for ( EventListener ce : listeners ) {
         EventRecord.here( ReentrantListenerRegistry.class, EventType.LISTENER_EVENT_FIRED, ce.getClass( ).getSimpleName( ), e.toString( ) ).trace( );
@@ -301,6 +316,8 @@ public class ListenerRegistry {
           EventFailedException eventEx = new EventFailedException( "Failed to fire event: listener=" + ce.getClass( ).getCanonicalName( ) + " event="
                                                                    + e.toString( ) + " because of: "
                                                                    + ex.getMessage( ), Exceptions.filterStackTrace( ex ) );
+          if(throwException)
+        	  throw eventEx;
           errors.add( eventEx );
         }
       }

@@ -1,5 +1,57 @@
 <div>
+<div data-ui-vsearch=":search"></div>
+
+<h1>Validation: ScalingGroup</h1>
+<p><span>Name: </span><input data-value="sg.name" /><span data-text="errors.name"></span></p>
+<p><span>Min Size: </span><input data-value="sg.min_size" /><span data-text="errors.min_size"></span></p>
+<p><span>Max Size: </span><input data-value="sg.max_size" /><span data-text="errors.max_size"></span></p>
+<p><span>Desired Capacity: </span><input data-value="sg.desired_capacity" /><span data-text="errors.desired_capacity"></span></p>
+<p><span>Default Cooldown: </span><input data-value="sg.default_cooldown" /><span data-text="errors.default_cooldown"></span></p>
+<p><span>Instances: </span><input data-value="sg.instances" /><span data-text="errors.instances"></span></p>
+<p><span>Health Check Period: </span><input data-value="sg.health_check_period" /><span data-text="errors.health_check_period"></span></p>
+<p><span>Created Time: </span><input data-value="sg.created_time" /><span data-text="errors.created_time"></span></p>
+<p><span>Enabled Metrics: </span><input data-value="sg.enabled_metrics" /><span data-text="errors.entabled_metrics"></span></p>
+<p><span>Availablity Zones: </span><input data-value="sg.availablity_zones" /><span data-text="errors.availablity_zones"></span></p>
+<p><span>Member: </span><input data-value="sg.member" /><span data-text="errors.member"></span></p>
+<p><span>Health Check Type: </span><input data-value="sg.health_check_type" /><span data-text="errors.health_check_type"></span></p>
+<p><span>Launch Config Name: </span><input data-value="sg.launch_config_name" /><span data-text="errors.launch_config_name"></span></p>
+<p><span>Placement Group: </span><input data-value="sg.placement_group" /><span data-text="errors.placement_group"></span></p>
+<p><span>Tags: </span><input data-value="sg.tags" /><span data-text="errors.tags"></span></p>
+<p><span>Suspected Processes: </span><input data-value="sg.suspended_processes" /><span data-text="errors.suspended_processes"></span></p>
+<p><span>Autoscaling Group Arn: </span><input data-value="sg.autoscaling_group_arn" /><span data-text="errors.autoscaling_group_arn"></span></p>
+<p><span>Load Balancers: </span><input data-value="sg.load_balancers" /><span data-text="errors.load_balancers"></span></p>
+<p><span>Termination Policies: </span><input data-value="sg.termination_policies" /><span data-text="errors.termination_policies"></span></p>
+<p><span>Connection: </span><input data-value="sg.connection" /><span data-text="errors.connection"></span></p>
+<p><span>VPC Zone Identifier: </span><input data-value="sg.vpc_zone_identifier" /><span data-text="errors.vpc_zone_identifier"></span></p>
+<p><span>Status: </span><input data-value="sg.status" /><span data-text="errors.status"></span></p>
+
+<h1>Validation: Resource Tag</h1>
+<p><span>Resource ID: </span><input data-value="tag.resource_id" /><span data-text="errors.resource_id"></span></p>
+<p><span>Resource Type: </span><input data-value="tag.resource_type" /><span data-text="errors.resource_type"></span></p>
+<p><span>Key: </span><input data-value="tag.key" /><span data-text="errors.key"></span></p>
+<p><span>Value: </span><input data-value="tag.value" /><span data-text="errors.value"></span></p>
+
+<h1>Validation: Launch Config</h1>
+<p><span>Name: </span><input data-value="lc.name" /><span data-text="lc_errors.name"></span></p>
+<p><span>Image ID: </span><input data-value="lc.image_id" /><span data-text="lc_errors.image_id"></span></p>
+<p><span>Instance Type: </span><input data-value="lc.instance_type" /><span data-text="lc_errors.instance_type"></span></p>
+<p><span>Key Name: </span><input data-value="lc.key_name" /><span data-text="lc_errors.name"></span></p>
+<p><span>Security Groups: </span><input data-value="lc.security_groups" /><span data-text="lc_errors.security_groups"></span></p>
+<p><span>User Data: </span><input data-value="lc.user_data" /><span data-text="lc_errors.user_data"></span></p>
+<p><span>Kernel ID: </span><input data-value="lc.kernel_id" /><span data-text="lc_errors.kernel_id"></span></p>
+<p><span>Ramdisk ID: </span><input data-value="lc.ramdisk_id" /><span data-text="lc_errors.ramdisk_id"></span></p>
+<p><span>Block Device Mappings: </span><input data-value="lc.block_device_mappings" /><span data-text="lc_errors.block_device_mappings"></span></p>
+<p><span>Instance Monitoring: </span><input data-value="lc.instance_monitoring" /><span data-text="lc_errors.instance_monitoring"></span></p>
+<p><span>Spot Price: </span><input data-value="lc.spot_price" /><span data-text="lc_errors.spot_price"></span></p>
+<p><span>Iam Instance Profile: </span><input data-value="lc.iam_instance_profile" /><span data-text="lc_errors.iam_instance_profile"></span></p>
+<p><span>EBS Optimized: </span><input data-value="lc.ebs_optimized" /><span data-text="lc_errors.ebs_optimized"></span></p>
+<p><span>Curlopts: </span><input data-value="lc.curlopts" /><span data-text="lc_errors.curlopts"></span></p>
+<p><span>Return Curl Handle: </span><input data-value="lc.return_curl_handle" /><span data-text="lc_errors.return_curl_handle"></span></p>
+
+<h1 data-msg="about_dialog_version">I18N</h1>
+
 <h1>Rivets Test</h1>
+<div data-ui-button=":buttonScope">My Button Test: <span data-text="test.value"></span></div>
 <table>
 <tr><td>
 <p>Test: <span data-text="test.value"></span></p>
@@ -10,10 +62,30 @@
 </td>
 <td>
 <ul>
-	<li data-each-sg="sGroups"><a data-on-click=":doit">-= [x] =-</a><span data-text="sg.name"></span></li>
+	<li data-each-sg="sGroups"><a data-on-click=":doit">-= [x] =-</a><span data-text=":showName"></span></li>
 </ul>
 </td>
 </tr>
 </table>
 
+<a href="#"><div class="icon_approve"></div></a>
+<a href="#"><div class="icon_delete"></div></a>
+<a href="#"><div class="icon_down"></div></a>
+<a href="#"><div class="icon_edit"></div></a>
+<a href="#"><div class="icon_help"></div></a>
+<a href="#"><div class="icon_reload"></div></a>
+<a href="#"><div class="icon_searchdelete"></div></a>
+<a href="#"><div class="icon_settings"></div></a>
+<a href="#"><div class="icon_up"></div></a>
+
+<div data-ui-button=":quickScaleButton">Quick Scale</div>
+<div data-ui-button=":scalingDialog">Edit Scaling Group</div>
+
+<div data-ui-toggle="test.toggle"></div>
+
+<div data-ui-button=":makeLaunchConfig">CreateLaunchConfig</div>
+<div data-ui-button=":makeScalingGroup">CreateAutoScalingGroup</div>
+<div data-ui-button=":setDesiredCapacity">SetDesiredCapacity</div>
+<div data-ui-button=":setInstanceHealth">SetInstanceHealth</div>
+<div data-ui-button=":terminateInstance">TerminateInstance</div>
 </div>

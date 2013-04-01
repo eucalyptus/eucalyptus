@@ -48,7 +48,7 @@
         data_deps: ['instances', 'volumes', 'addresses'],
         hidden: thisObj.options['hidden'],
         dt_arg : {
-          "sAjaxSource": 'instances',
+          "sAjaxSource": 'instance',
           "aaSorting": [[ 10, "desc" ]],
           "aoColumnDefs": [
             {
@@ -77,7 +77,7 @@
 	      "mRender" : function(data){
                  return eucatableDisplayColumnTypeTwist(data, data, 255);
 	      },
-              "mData": "id",
+              "mData": "display_id",
             },
             { 
 	      // Display the status of the instance in the main table
@@ -216,6 +216,15 @@
                 return DefaultEncoder().encodeForHTML(data);
               },
               "mData": "ip_address",
+            },
+            { 
+	      // Hidden column for the ip address of the instance
+              "bVisible": false,
+              "aTargets":[17],
+	      "mRender": function(data) {
+                return DefaultEncoder().encodeForHTML(data);
+              },
+              "mData": "id",
             },
           ]
         },
@@ -1140,121 +1149,13 @@
       $('html body').find(DOM_BINDING['hidden']).launcher('makeAdvancedSection', $advanced);
       $advanced.find('#launch-wizard-image-emi').val(image.id).trigger('change');
     },
-    _expandCallback : function(row){
+    _expandCallback : function(row){ 
       var thisObj = this;
-      var instId = $(row[2]).html();			// XSS Note:: Replaced .html() to text() - Kyo 020613
-      var results = describe('instance');		// Note:: describe() is such a generic name; be descriptive when naming a global function - Kyo 020613
-      var instance = null; 
-      for(i in results){				// Note:: Create a global function that performs "describe(<resource>, ID)" - Kyo 020613
-        if(results[i].id === instId){
-          instance = results[i];
-          break;
-        }
-      }
-      if(!instance)
-        return null; 
-      var $wrapper = $('<div>');
-      var prodCode = ''; 
-      if(instance['product_codes'] && instance['product_codes'].length > 0)
-        prodCode = instance['product_codes'].join(' ');
-      var image = describe('image',instance['image_id']);	// Note:: If appears that this function exists. See the previous note above ^ - Kyo 020613
- 
-      var os = 'unknown';
-      if(image && image['platform'])
-        os = image['platform']
-      else 
-        os = 'linux';
-      var manifest = 'unknown';
-      if(image && image.location)
-        manifest = image.location; 
-      var $instInfo = $('<div>').addClass('instance-table-expanded-instance').addClass('clearfix').append(
-      $('<div>').addClass('expanded-section-label').text(instance_table_expanded_instance),
-      $('<div>').addClass('expanded-section-content').addClass('clearfix').append(
-        $('<ul>').addClass('instance-expanded').addClass('clearfix').append(
-          $('<li>').append( 
-            $('<div>').addClass('expanded-title').text(instance_table_expanded_type),
-            $('<div>').addClass('expanded-value').text(instance['instance_type'])),
-          $('<li>').append(
-            $('<div>').addClass('expanded-title').text(inst_tbl_hdr_os),
-            $('<div>').addClass('expanded-value').text(os)),
-          $('<li>').append(
-            $('<div>').addClass('expanded-title').text(instance_table_expanded_kernel),
-            $('<div>').addClass('expanded-value').text(instance['kernel'])),
-          $('<li>').append(
-            $('<div>').addClass('expanded-title').text(instance_table_expanded_ramdisk),
-            $('<div>').addClass('expanded-value').text(instance['ramdisk'])),
-          $('<li>').append(
-            $('<div>').addClass('expanded-title').text(instance_table_expanded_root),
-            $('<div>').addClass('expanded-value').text(instance['root_device_type'])),
-          $('<li>').append(
-            $('<div>').addClass('expanded-title').text(instance_table_expanded_reservation),
-            $('<div>').addClass('expanded-value').text(instance['reservation_id'])),
-          $('<li>').append(
-            $('<div>').addClass('expanded-title').text(instance_table_expanded_account),
-            $('<div>').addClass('expanded-value').text(instance['owner_id'])),
-          $('<li>').append(
-            $('<div>').addClass('expanded-title').text(instance_table_expanded_manifest),
-            $('<div>').addClass('expanded-value').text(manifest)))));
-
-      var $volInfo = null;
-      if(instance.block_device_mapping && Object.keys(instance.block_device_mapping).length >0){
-        results = describe('volume');
-        var attachedVols = {};
-        for (i in results){
-          var vol = results[i];
-          if(vol.attach_data && vol.attach_data.instance_id ===instId) 
-            attachedVols[vol.id] = vol;
-        }
-        $volInfo = $('<div>').addClass('instance-table-expanded-volume').addClass('clearfix').append(
-            $('<div>').addClass('expanded-section-label').text(instance_table_expanded_volume),
-            $('<div>').addClass('expanded-section-content').addClass('clearfix'));
-        $.each(instance.block_device_mapping, function(key, mapping){
-          var creationTime = '';
-          if(mapping.volume_id in attachedVols){
-            creationTime = attachedVols[mapping.volume_id].create_time;
-            creationTime = formatDateTime(creationTime); 
-            $volInfo.find('.expanded-section-content').append(
-              $('<ul>').addClass('volume-expanded').addClass('clearfix').append(
-                $('<li>').append(
-                  $('<div>').addClass('expanded-title').text(instance_table_expanded_volid),
-                  $('<div>').addClass('expanded-value').text(mapping.volume_id)),
-                $('<li>').append(
-                  $('<div>').addClass('expanded-title').text(instance_table_expanded_devmap),
-                  $('<div>').addClass('expanded-value').text(key)),
-                $('<li>').append(
-                  $('<div>').addClass('expanded-title').text(instance_table_expanded_createtime),
-                  $('<div>').addClass('expanded-value').text(creationTime))));
-          }
-        });
-      } 
-//      $wrapper.append($instInfo);
-
-//        $wrapper.append($volInfo);
-
-      // Create a widget object for displaying the resource tag information
-      $tagInfo = $('<div>').addClass('resource-tag-table-expanded-instance').addClass('clearfix').attr('id', instance.id).euca_resource_tag({resource: 'instance', resource_id: instance.id, widgetMode: 'view-only'});
-
-      $tabspace = $('<div>').addClass('eucatabspace-main-div').eucatabspace(); 
-      $tabspace.eucatabspace('addTabPage', 'Instance', $instInfo);
-      $tabspace.eucatabspace('addTabPage', 'Volume', $volInfo);
-      $tabspace.eucatabspace('addTabPage', 'Tag', $tagInfo);
-      $wrapper.append($tabspace);
-/*
-      $wrapper.append(
-	$('<div>').attr('id', 'tabs').append(
-	   $('<ui>').append(
-	   	$('<li>').append(
-		   $('<a>').attr('href','#tabs-1').text('Instance')),
-		$('<li>').append(
-                   $('<a>').attr('href','#tabs-2').text('Volume')),
-		$('<li>').append(
-                   $('<a>').attr('href','#tabs-3').text('Tag'))),
-	   $('<div>').attr('id', 'tabs-1').append($instInfo),
-	   $('<div>').attr('id', 'tabs-2').append($volInfo),
-	  // $('<div>').attr('id', 'tabs-3').append($('<div>').text('Name: <name_here>').html())));
-	   $('<div>').attr('id', 'tabs-3').append($tabspace)));
-*/	
-      return $wrapper;
+      var $el = $('<div />');
+      require(['app', 'views/expandos/instance'], function(app, expando) {
+         new expando({el: $el, model: app.data.instance.get(row[17]) });
+      });
+      return $el;
     },
 /**** Public Methods ****/
     close: function() {

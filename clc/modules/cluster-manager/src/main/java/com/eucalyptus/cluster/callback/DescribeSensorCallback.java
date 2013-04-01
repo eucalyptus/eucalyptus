@@ -136,7 +136,7 @@ public class DescribeSensorCallback extends
                 final MetricDimensionsValuesType latestValue = Iterables.getLast( values );
                 final Double usageValue = latestValue.getValue();
                 final Long usageTimestamp = latestValue.getTimestamp().getTime();
-                final long sequenceNumber = counterType.getSequenceNum() + (values.size() - 1);
+                final long sequenceNumber = dimensionType.getSequenceNum() + (values.size() - 1);
                 fireUsageEvent( new Supplier<InstanceUsageEvent>(){
                   @Override
                   public InstanceUsageEvent get() {

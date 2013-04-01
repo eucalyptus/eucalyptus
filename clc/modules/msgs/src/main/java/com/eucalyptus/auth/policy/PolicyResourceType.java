@@ -70,5 +70,16 @@ import java.lang.annotation.Target;
 @Target( { ElementType.TYPE } )
 @Retention( RetentionPolicy.RUNTIME )
 public @interface PolicyResourceType {
+
+  /**
+   * Unqualified resource type.
+   */
   String value( );
+
+  /**
+   * Qualified actions for which the resource policy applies.
+   *
+   * <p>The values must be in canonical format (lower case, e.g. "sts:assumerole")</p>
+   */
+  String[] resourcePolicyActions( ) default { };
 }

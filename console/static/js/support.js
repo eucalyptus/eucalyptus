@@ -24,7 +24,7 @@ var RETURN_MAC_KEY_CODE = 10;
 var BACKSPACE_KEY_CODE = 8;
 
 /* CONFIGURABLE */
-var REFRESH_INTERVAL_SEC = 10000;
+var REFRESH_INTERVAL_SEC = 10;
 var TABLE_REFRESH_INTERVAL_SEC = 20;
 var GLOW_DURATION_SEC = 10;
 var MAX_PENDING_REQ = 16;
@@ -202,6 +202,7 @@ function clearRepeat() {
  
 function describe(resource, resourceId){
   var result= $('html body').eucadata('get', resource);
+  //result = $.parseJSON(result);
   if(!resourceId)
     return result;
 
@@ -374,7 +375,8 @@ function getErrorMessage(jqXHR) {
   }
   if (jqXHR && jqXHR.responseText) {
     response = jQuery.parseJSON(jqXHR.responseText);
-    return response.message ? response.message : undefined_error;
+    var msg = response.message ? response.message : response.summary;
+    return msg ? msg : undefined_error;
   } else {
     return undefined_error;
   }
@@ -674,3 +676,15 @@ function eucatableDisplayColumnTypeLaunchInstanceButton (imageID){
 	return asHTML($html);
 };
 
+// method to help construct lists of params for ajax calls
+function build_list_params(label, items){
+  if (!(items instanceof Array))
+    items = [items]
+  var ret = '';
+  for (var index in items) {
+    i = parseInt(index)+1;
+    item = items[index];
+    ret += "&"+label+i+"="+item;
+  }
+  return ret;
+}

@@ -43,7 +43,7 @@
         data_deps: ['volumes'],
         hidden : thisObj.options['hidden'],
         dt_arg : {
-          "sAjaxSource": 'volumes',
+          "sAjaxSource": 'volume',
           "aaSorting": [[ 7, "desc" ]],
           "aoColumnDefs": [
             {
@@ -56,10 +56,14 @@
             {
 	      // Display the id of the volume in the main table
 	      "aTargets":[1], 
-	      "mRender": function(data) {
-                return getTagForResource(data);
+              "mRender": function(data){
+                 return eucatableDisplayColumnTypeTwist(data, data, 255);
               },
-              "mData": "display_id",
+              "mData": function(source){
+                 if(source.display_id)
+                   return source.display_id;
+                 return source.id;
+              },
 	    },
             {
 	      // Display the status of the volume in the main table
@@ -134,6 +138,15 @@
               },
               "mData": "create_time",
               "sType": "date"
+            },
+            {
+	      // Invisible column for the id
+              "bVisible": false,
+              "aTargets":[10],
+	      "mRender": function(data) {
+                return DefaultEncoder().encodeForHTML(data);
+              },
+              "mData": "id",
             }
           ],
         },
@@ -150,6 +163,9 @@
         context_menu_actions : function(row) {
           return thisObj._createMenuActions();
         },
+         expand_callback : function(row){ // row = [col1, col2, ..., etc]
+          return thisObj._expandCallback(row);
+        },
         menu_click_create : function (args) { thisObj._createAction() },
         help_click : function(evt) {
           thisObj._flipToHelp(evt, {content: $volHelp, url: help_volume.landing_content_url});
@@ -158,6 +174,9 @@
         legend : ['creating', 'available', 'in-use', 'deleting', 'deleted', 'error'],
       });
       this.tableWrapper.appendTo(this.element);
+      $('html body').eucadata('addCallback', 'volume', 'volume-landing', function() {
+        thisObj.tableWrapper.eucatable('redraw');
+      });
     },
 
     _create : function() { 
@@ -610,7 +629,7 @@
 
     _deleteAction : function() {
       var thisObj = this;
-      volumesToDelete = thisObj.tableWrapper.eucatable('getSelectedRows', 1);
+      volumesToDelete = thisObj.tableWrapper.eucatable('getSelectedRows', 10);
       if( volumesToDelete.length > 0 ) {
         var matrix = [];
         $.each(volumesToDelete, function(idx, volume){
@@ -627,7 +646,7 @@
 
     _attachAction : function() {
       var thisObj = this;
-      var volumeToAttach = thisObj.tableWrapper.eucatable('getSelectedRows', 1)[0];
+      var volumeToAttach = thisObj.tableWrapper.eucatable('getSelectedRows', 10)[0];
       thisObj.dialogAttachVolume(volumeToAttach, null);
     },
 
@@ -646,19 +665,27 @@
     },
 
     _createSnapshotAction : function() {
-      var volumeToUse = this.tableWrapper.eucatable('getSelectedRows', 1)[0];
+      var volumeToUse = this.tableWrapper.eucatable('getSelectedRows', 10)[0];
       addSnapshot(volumeToUse);
     },
 
     _tagResourceAction : function(){
       var thisObj = this;
-      var volume = thisObj.tableWrapper.eucatable('getSelectedRows', 1)[0];
+      var volume = thisObj.tableWrapper.eucatable('getSelectedRows', 10)[0];
       if ( volume.length > 0 ) {
         // Create a widget object for displaying the resource tag information
         var $tagInfo = $('<div>').addClass('resource-tag-table-expanded-volume').addClass('clearfix').euca_resource_tag({resource: 'volume', resource_id: volume, cancelButtonCallback: function(){ thisObj.tagDialog.eucadialog("close"); }, widgetMode: 'edit' });
         thisObj.tagDialog.eucadialog('addNote','tag-modification-display-box', $tagInfo);   // This line should be adjusted once the right template is created for the resource tag.  030713
         thisObj.tagDialog.eucadialog('open');
       }
+    },
+
+    _expandCallback : function(row){ 
+      var $el = $('<div />');
+      require(['app', 'views/expandos/volume'], function(app, expando) {
+         new expando({el: $el, model: app.data.volume.get(row[10]) });
+      });
+      return $el;
     },
 
 

@@ -1,6 +1,11 @@
+// snapshot model
+//
+
 define([
-], function() {
-    var Snapshot = Backbone.Model.extend({
+    './eucamodel'
+], function(EucaModel) {
+    var model = EucaModel.extend({
+        namedColumns: ['id', 'volume_id']
     });
-    return Snapshot;
+    return model;
 });

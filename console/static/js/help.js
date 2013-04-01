@@ -275,11 +275,17 @@ var help_instance = {
 var help_scaling = {
   load : function(arg){
     help_scaling.landing_content_url = 'help/'+arg.language+'/console_manage_scaling.html';
+    help_scaling.dialog_add_content_url = 'help/'+arg.language+'/console_create_scaling_group.html';
+
 
     loadHtml(help_scaling.landing_content_url, function(data){help_scaling.landing_content=data})
+    loadHtml(help_scaling.dialog_add_content_url, function(data){help_scaling.dialog_add_content=data})
+
   },
   landing_content: '',
   landing_content_url: '',
+  dialog_add_content: '',
+  dialog_add_content_url: ''
 }
 
 var help_balancing = {

@@ -144,6 +144,7 @@ typedef struct {
 typedef struct {
     char dimensionName[MAX_SENSOR_NAME_LEN];    //!< e.g. "default", "root", "vol-123ABC"
     char dimensionAlias[MAX_SENSOR_NAME_LEN];   //!< e.g. "sda1", "vda", "sdc"
+    long long sequenceNum;      //!< num of first value in values[], starts with 0 when sensor is reset
     sensorValue values[MAX_SENSOR_VALUES];  //!< array of values (not pointers, to simplify shared-memory region use)
     int valuesLen;              //!< size of the array
     int firstValueIndex;        //!< index into values[] of the first value (one that matches sequenceNum)
@@ -154,7 +155,6 @@ typedef struct {
 typedef struct {
     sensorCounterType type;
     long long collectionIntervalMs; //!< the spacing of values, based on sensor's configuration
-    long long sequenceNum;      //!< starts with 0 when sensor is reset and monotonically increases
     sensorDimension dimensions[MAX_SENSOR_DIMENSIONS];  //!< array of values (not pointers, to simplify shared-memory region use)
     int dimensionsLen;          //!< size of the array
 } sensorCounter;

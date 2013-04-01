@@ -59,7 +59,7 @@ public class BackoffRunner {
     return instance; 
   }
   
-  private BackoffRunner(){    
+  BackoffRunner(){
   }
   
   boolean taskInProgress( final String uniqueKey ) {

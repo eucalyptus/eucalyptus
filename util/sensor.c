@@ -879,17 +879,17 @@ int sensor_res2str(char *buf, int bufLen, sensorResource ** srs, int srsLen)
             MAYBE_BAIL for (int c = 0; c < sm->countersLen; c++) {
                 const sensorCounter *sc = sm->counters + c;
                 printed =
-                    snprintf(s, left, "\t\tcounter: %s interval: %lld seq: %lld dimensions: %d\n", sensor_type2str(sc->type),
-                             sc->collectionIntervalMs, sc->sequenceNum, sc->dimensionsLen);
+                    snprintf(s, left, "\t\tcounter: %s interval: %lld dimensions: %d\n", sensor_type2str(sc->type),
+                             sc->collectionIntervalMs, sc->dimensionsLen);
                 MAYBE_BAIL for (int d = 0; d < sc->dimensionsLen; d++) {
                     const sensorDimension *sd = sc->dimensions + d;
                     printed =
-                        snprintf(s, left, "\t\t\tdimension: %s values: %d firstValueIndex: %d\n", sd->dimensionName, sd->valuesLen,
-                                 sd->firstValueIndex);
+                        snprintf(s, left, "\t\t\tdimension: %s values: %d seq: %lld firstValueIndex: %d\n", sd->dimensionName, sd->valuesLen,
+                                 sd->sequenceNum, sd->firstValueIndex);
                     MAYBE_BAIL for (int v = 0; v < sd->valuesLen; v++) {
                         const int i = (sd->firstValueIndex + v) % MAX_SENSOR_VALUES;
                         const sensorValue *sv = sd->values + i;
-                        const long long sn = sc->sequenceNum + v;
+                        const long long sn = sd->sequenceNum + v;
                         printed =
                             snprintf(s, left, "\t\t\t\t[%02d] %05lld %014lld %s %f\n", i, sn, sv->timestampMs, sv->available ? "YES" : " NO",
                                      sv->available ? sv->value : -1);
@@ -948,11 +948,11 @@ int sensor_get_dummy_instance_data(long long sn, const char *instanceId, const c
                                   {
                                    .type = SENSOR_AVERAGE,
                                    .collectionIntervalMs = 20000,
-                                   .sequenceNum = 0,
                                    .dimensionsLen = 1,
                                    .dimensions = {
                                                   {
                                                    .dimensionName = "default",
+                                                   .sequenceNum = 0,
                                                    .valuesLen = 5,
                                                    .values = {
                                                               {.timestampMs = 1344056910424,.value = 33.3,.available = 1},
@@ -973,11 +973,11 @@ int sensor_get_dummy_instance_data(long long sn, const char *instanceId, const c
                                   {
                                    .type = SENSOR_SUMMATION,
                                    .collectionIntervalMs = 20000,
-                                   .sequenceNum = sn,
                                    .dimensionsLen = 3,
                                    .dimensions = {
                                                   {
                                                    .dimensionName = "root",
+                                                   .sequenceNum = sn,
                                                    .valuesLen = 3,
                                                    .values = {
                                                               {.timestampMs = 1344056910424 + sn,.value = 111.0 + sn,.available = 1},
@@ -987,6 +987,7 @@ int sensor_get_dummy_instance_data(long long sn, const char *instanceId, const c
                                                    },
                                                   {
                                                    .dimensionName = "ephemeral0",
+                                                   .sequenceNum = sn,
                                                    .valuesLen = 3,
                                                    .values = {
                                                               {.timestampMs = 1344056910424 + sn,.value = 1111.0 + sn,.available = 1},
@@ -996,6 +997,7 @@ int sensor_get_dummy_instance_data(long long sn, const char *instanceId, const c
                                                    },
                                                   {
                                                    .dimensionName = "vol-34567",
+                                                   .sequenceNum = sn,
                                                    .valuesLen = 3,
                                                    .values = {
                                                               {.timestampMs = 1344056910424 + sn,.value = 11111.0 + sn,.available = 1},
@@ -1256,8 +1258,6 @@ int sensor_merge_records(sensorResource * srs[], int srsLen, boolean fail_on_oom
                     cache_sc->collectionIntervalMs = sc->collectionIntervalMs;
                 }
                 // run through dimensions merging in their values separately
-                long long dimension_seq[MAX_SENSOR_DIMENSIONS] = { 0 };
-                long long largest_seq = -1L;
                 for (int d = 0; d < sc->dimensionsLen; d++) {
                     const sensorDimension *sd = sc->dimensions + d;
                     sensorDimension *cache_sd = find_or_alloc_sd(TRUE, cache_sc, sd->dimensionName);
@@ -1286,8 +1286,8 @@ int sensor_merge_records(sensorResource * srs[], int srsLen, boolean fail_on_oom
                     int iov = cache_sd->valuesLen - 1;  // logical index for old values, starting with the latest
                     int iov_start = iov + 1;    // cache start logical index for receiving new values
                     for (int inv = sd->valuesLen - 1; inv >= 0; inv--) {    // logical index for new values, starting with the latest
-                        long long sov = cache_sc->sequenceNum + iov;    // seq for old values
-                        long long snv = sc->sequenceNum + inv;  // seq for new values
+                        long long sov = cache_sd->sequenceNum + iov;    // seq for old values
+                        long long snv = sd->sequenceNum + inv;  // seq for new values
 
                         if (snv < sov) {    // the last new seq number is behind the last old seq number
                             // this can happen when sensor resets; if, additionally,
@@ -1296,7 +1296,7 @@ int sensor_merge_records(sensorResource * srs[], int srsLen, boolean fail_on_oom
                             LOGINFO("reset in sensor values detected, clearing history for %s:%s:%s:%s\n", sr->resourceName,
                                     sm->metricName, sensor_type2str(sc->type), sd->dimensionName);
                             LOGDEBUG("cached valuesLen=%d seq=%lld+%d vs new valuesLen=%d seq=%lld+%d\n", cache_sd->valuesLen,
-                                     cache_sc->sequenceNum, iov, sd->valuesLen, sc->sequenceNum, inv);
+                                     cache_sd->sequenceNum, iov, sd->valuesLen, sd->sequenceNum, inv);
                             inv_start = 0;  // copy all new values
                             iov_start = 0;  // overwrite what is in cache
                             break;
@@ -1328,7 +1328,6 @@ int sensor_merge_records(sensorResource * srs[], int srsLen, boolean fail_on_oom
 
                     // step 2: if there is new data, copy it into the right place
 
-                    long long seq = cache_sc->sequenceNum;  // current value
                     if (inv_start >= 0) {   // there is new data to copy
                         int iov = iov_start;
                         int copied = 0;
@@ -1343,7 +1342,7 @@ int sensor_merge_records(sensorResource * srs[], int srsLen, boolean fail_on_oom
                             // set the shift to the negative of the value so that values go back to zero, too
                             // (this is easier than maintaining shift_value, which is also used to compensate
                             // for value resets due to instance rebooting, across component restarts)
-                            if ((sc->sequenceNum + iov) == 0 && copied == 0 && sc->type == SENSOR_SUMMATION) {
+                            if ((sd->sequenceNum + iov) == 0 && copied == 0 && sc->type == SENSOR_SUMMATION) {
                                 if (sd->values[vn_adj].value != 0) {
                                     cache_sd->shift_value = -sd->values[vn_adj].value;  // TODO: deal with the case when available is FALSE?
                                     LOGTRACE("at seq 0, setting shift for %s:%s:%s:%s to %f\n",
@@ -1352,7 +1351,7 @@ int sensor_merge_records(sensorResource * srs[], int srsLen, boolean fail_on_oom
                             } else {
                                 sensorValue *sv = cache_sd->values + vo_adj;
                                 LOGTRACE("merging sensor value %s:%s:%s:%s %05lld %014lld %s %f\n",
-                                         sr->resourceName, sm->metricName, sensor_type2str(sc->type), sd->dimensionName, sc->sequenceNum + inv,
+                                         sr->resourceName, sm->metricName, sensor_type2str(sc->type), sd->dimensionName, sd->sequenceNum + inv,
                                          sv->timestampMs, sv->available ? "YES" : " NO", sv->available ? sv->value : -1);
                             }
                             num_merged++;
@@ -1367,30 +1366,10 @@ int sensor_merge_records(sensorResource * srs[], int srsLen, boolean fail_on_oom
                         cache_sd->firstValueIndex = (cache_sd->firstValueIndex + (iov_start + copied) - cache_sd->valuesLen) % MAX_SENSOR_VALUES;
 
                         // set the sequence number by counting back from the seq num of the last value copied in
-                        seq = (sc->sequenceNum + sd->valuesLen) - cache_sd->valuesLen;
+                        cache_sd->sequenceNum = (sd->sequenceNum + sd->valuesLen) - cache_sd->valuesLen;
 
                         //! update the interval now (@TODO should we base it on the delta between the last two values?)
                         cache_sc->collectionIntervalMs = sensor_state->collection_interval_time_ms;
-                    }
-                    // record sequence number for possible later adjustment across dimensions
-                    dimension_seq[d] = seq;
-                    if (largest_seq < seq) {
-                        largest_seq = seq;
-                    }
-                }
-
-                // will have to change the sequence number
-                if (largest_seq != cache_sc->sequenceNum) {
-                    cache_sc->sequenceNum = largest_seq;
-                    for (int d = 0; d < sc->dimensionsLen; d++) {
-                        if (dimension_seq[d] < largest_seq) {
-                            sensorDimension *peer_sd = cache_sc->dimensions + d;
-                            int delta = largest_seq - dimension_seq[d];
-                            peer_sd->valuesLen -= delta;
-                            if (peer_sd->valuesLen < 0)
-                                peer_sd->valuesLen = 0;
-                            peer_sd->firstValueIndex = (peer_sd->firstValueIndex + delta) % MAX_SENSOR_VALUES;
-                        }
                     }
                 }
             }
@@ -1441,10 +1420,10 @@ int sensor_add_value(const char *instanceId,
                      .counters = {
                                   {
                                    .collectionIntervalMs = 0,
-                                   .sequenceNum = sequenceNum,
                                    .dimensionsLen = 1,
                                    .dimensions = {
                                                   {
+                                                   .sequenceNum = sequenceNum,
                                                    .valuesLen = 1}
                                                   }
                                    }
@@ -1522,7 +1501,7 @@ int sensor_get_value(const char *instanceId,
     if (cache_sd->valuesLen < 1)    // no values in this dimension at all
         goto bail;
 
-    *sequenceNum = cache_sc->sequenceNum + cache_sd->valuesLen - 1;
+    *sequenceNum = cache_sd->sequenceNum + cache_sd->valuesLen - 1;
     *intervalMs = cache_sc->collectionIntervalMs;
     *valLen = cache_sd->valuesLen;
 

@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * Copyright 2009-2013 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -63,12 +63,10 @@
 package com.eucalyptus.auth.principal;
 
 import java.io.Serializable;
-import java.math.BigInteger;
 import java.security.cert.X509Certificate;
 import java.util.List;
 import java.util.Map;
 import com.eucalyptus.auth.AuthException;
-import com.eucalyptus.auth.PolicyParseException;
 
 /**
  * The interface for a user in Eucalyptus.
@@ -76,7 +74,7 @@ import com.eucalyptus.auth.PolicyParseException;
  * @author decker
  *
  */
-public interface User extends /*HasId, */BasePrincipal, Serializable {
+public interface User extends /*HasId, */AuthorizedPrincipal, Serializable {
   
   public static final String USER_GROUP_PREFIX = "_";  
   public static final String ACCOUNT_ADMIN = "admin";
@@ -143,17 +141,8 @@ public interface User extends /*HasId, */BasePrincipal, Serializable {
   
   public List<Group> getGroups( ) throws AuthException;
   
-  public Account getAccount( ) throws AuthException;
-  
   public boolean isSystemAdmin( );
   
   public boolean isAccountAdmin( );
-  
-  public List<Policy> getPolicies( ) throws AuthException;
-  public Policy addPolicy( String name, String policy ) throws AuthException, PolicyParseException;
-  public void removePolicy( String name ) throws AuthException;
 
-  public List<Authorization> lookupAuthorizations( String resourceType ) throws AuthException;
-  public List<Authorization> lookupQuotas( String resourceType ) throws AuthException;
-    
 }

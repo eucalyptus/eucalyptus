@@ -109,7 +109,7 @@ import com.google.common.collect.Sets;
 public class LoadBalancingService {
   private static Logger    LOG     = Logger.getLogger( LoadBalancingService.class );
   
-  /// EUCA-specific, internal operations for retrieving instance health check
+  /// EUCA-specific, internal operations for storing instance health check and cloudwatch metrics
   public PutServoStatesResponseType putServoStates(PutServoStatesType request){
 	  PutServoStatesResponseType reply = request.getReply();
 	  // TODO: SPARK: authenticate/authorize using IAM roles
@@ -128,7 +128,7 @@ public class LoadBalancingService {
 			  LOG.warn("failed to query servo instance");
 		  }
 	  }
-	  
+	  final Collection<LoadBalancerBackendInstance> lbInstances = lb.getBackendInstances();
 	  if(lb != null && instances.getMember()!=null && instances.getMember().size()>0){
 		  for(Instance instance : instances.getMember()){
 			  String instanceId = instance.getInstanceId();
@@ -140,22 +140,31 @@ public class LoadBalancingService {
 			  }
 			  instanceId = parts[0];
 			  String state = parts[1];
-			  final EntityTransaction db = Entities.get( LoadBalancerBackendInstance.class );
-		 	  try{/// TODO: SPARK: this is wrong; IAM roles should authenticate the user
-		 		  LoadBalancerBackendInstance sample = LoadBalancerBackendInstance.named(lb, instanceId);
-		 		  LoadBalancerBackendInstance found = Entities.uniqueResult(sample);
-		 		  if (state.equals(LoadBalancerBackendInstance.STATE.InService.name()) || 
-		 				  state.equals(LoadBalancerBackendInstance.STATE.OutOfService.name())){
-		 			  found.setState(Enum.valueOf(LoadBalancerBackendInstance.STATE.class, state));
-		 			  Entities.persist(found);
-		 		  }
-		 		  db.commit();
-		 	  }catch(NoSuchElementException ex){
-		 		  db.rollback();
-		 	  }catch(Exception ex){
-		 		  db.rollback();
-		 		  LOG.warn("Failed to query loadbalancer backend instance: "+instanceId, ex);
-		 	  }
+			  
+			  LoadBalancerBackendInstance found = null;
+			  for(final LoadBalancerBackendInstance lbInstance : lbInstances){
+				  if(instanceId.equals(lbInstance.getInstanceId())){
+					  found = lbInstance;
+					  break;
+				  }  
+			  }
+			  if(found!=null){
+				  final EntityTransaction db = Entities.get( LoadBalancerBackendInstance.class );
+			 	  try{
+			 		  found = Entities.uniqueResult(found);
+			 		  if (state.equals(LoadBalancerBackendInstance.STATE.InService.name()) || 
+			 				  state.equals(LoadBalancerBackendInstance.STATE.OutOfService.name())){
+			 			  found.setState(Enum.valueOf(LoadBalancerBackendInstance.STATE.class, state));
+			 			  Entities.persist(found);
+			 		  }
+			 		  db.commit();
+			 	  }catch(NoSuchElementException ex){
+			 		  db.rollback();
+			 	  }catch(Exception ex){
+			 		  db.rollback();
+			 		  LOG.warn("Failed to query loadbalancer backend instance: "+instanceId, ex);
+			 	  }
+			  }
 		  }
 	  }
 	  return reply;
@@ -195,7 +204,15 @@ public class LoadBalancingService {
     
     Collection<String> zones = request.getAvailabilityZones().getMember();
     if(zones != null && zones.size()>0){
+    	try{
     	LoadBalancers.addZone(lbName, ownerFullName, zones);
+    	}catch(LoadBalancingException ex){
+    		rollback.apply(lbName);
+    		throw ex;
+    	}catch(Exception ex){
+    		rollback.apply(lbName);
+    		throw new LoadBalancingException("failed to create the loadbalancer", ex);
+    	}
     }
     
     /// trigger new loadbalancer event 
@@ -239,6 +256,110 @@ public class LoadBalancingService {
     return reply;
   }
 
+  public DescribeLoadBalancersResponseType describeLoadBalancersServo(final String instanceId, final DescribeLoadBalancersResponseType reply) throws EucalyptusCloudException {
+  	// lookup servo instance Id to see which LB zone it is assigned to
+	  LoadBalancerZone zone = null;
+	  try{
+  		final LoadBalancerServoInstance instance = LoadBalancers.lookupServoInstance(instanceId);
+  		zone = instance.getAvailabilityZone();
+	  }catch(NoSuchElementException ex){
+  		;
+  	  }catch(Exception ex){
+  		LOG.warn("failed to query loadbalancer for servo instance: "+instanceId);
+  	  }			  
+	  
+  	  final Function<LoadBalancerZone, Set<LoadBalancerDescription>> lookupLBDescriptions = new Function<LoadBalancerZone, Set<LoadBalancerDescription>> () {
+		  @Override
+  		  public Set<LoadBalancerDescription> apply (LoadBalancerZone zone){
+	    		final Set<LoadBalancerDescription> descs = Sets.newHashSet();
+	    		final LoadBalancer lb = zone.getLoadbalancer();
+	    		final String lbName = lb.getDisplayName();
+
+	    		LoadBalancerDescription desc = new LoadBalancerDescription();
+	    		desc.setLoadBalancerName(lbName); /// loadbalancer name
+	    		desc.setCreatedTime(lb.getCreationTimestamp());/// createdtime
+	    		final LoadBalancerDnsRecord dns = lb.getDns();
+	    			
+	    		desc.setDnsName(dns.getDnsName());           /// dns name
+	    			                                 
+	    		/// instances
+	    		if(zone.getBackendInstances().size()>0){
+	    			desc.setInstances(new Instances());
+	    			desc.getInstances().setMember(new ArrayList<Instance>(
+	    		    	Collections2.transform(zone.getBackendInstances(), new Function<LoadBalancerBackendInstance, Instance>(){
+    		    			@Override
+    		    			public Instance apply(final LoadBalancerBackendInstance be){
+    		    				Instance instance = new Instance();
+    		    				instance.setInstanceId(be.getInstanceId());
+    		    				return instance;
+    		    			}
+    		    		})));
+	    		}
+	    			/// availability zones
+	    		desc.setAvailabilityZones(new AvailabilityZones());
+	    		desc.getAvailabilityZones().setMember(Lists.newArrayList(zone.getName()));
+	    			                                  /// listeners
+	    		if(lb.getListeners().size()>0){
+	    			desc.setListenerDescriptions(new ListenerDescriptions());
+	    			desc.getListenerDescriptions().setMember(new ArrayList<ListenerDescription>(
+	    					Collections2.transform(lb.getListeners(), new Function<LoadBalancerListener, ListenerDescription>(){
+    							@Override
+    							public ListenerDescription apply(final LoadBalancerListener input){
+    								ListenerDescription desc = new ListenerDescription();
+    								Listener listener = new Listener();
+    								listener.setLoadBalancerPort(input.getLoadbalancerPort());
+    								listener.setInstancePort(input.getInstancePort());
+    								if(input.getInstanceProtocol() != PROTOCOL.NONE)
+    									listener.setInstanceProtocol(input.getInstanceProtocol().name());
+    								listener.setProtocol(input.getProtocol().name());
+    								if(input.getCertificateId()!=null)
+    									listener.setSslCertificateId(input.getCertificateId());
+    								desc.setListener(listener);
+    								return desc;
+    							}
+    						})));
+    			}
+	    			                                  /// health check
+	    		try{
+	 				  int interval = lb.getHealthCheckInterval();
+	 				  String target = lb.getHealthCheckTarget();
+	 				  int timeout = lb.getHealthCheckTimeout();
+	 				  int healthyThresholds = lb.getHealthyThreshold();
+	 				  int unhealthyThresholds = lb.getHealthCheckUnhealthyThreshold();
+	 				  
+	 				  final HealthCheck hc = new HealthCheck();
+	 				  hc.setInterval(interval);
+	 				  hc.setHealthyThreshold(healthyThresholds);
+	 				  hc.setTarget(target);
+	 				  hc.setTimeout(timeout);
+	 				  hc.setUnhealthyThreshold(unhealthyThresholds);
+	 				  desc.setHealthCheck(hc);
+	    		}catch(IllegalStateException ex){
+	    				;
+	    		}catch(Exception ex){
+	    				;
+	    		}
+    			descs.add(desc);
+	    		return descs;
+	    	}
+  	  };
+
+	  Set<LoadBalancerDescription> descs = null;
+  	  if(zone != null){
+  		  descs= lookupLBDescriptions.apply(zone);
+  	  }else
+  		  descs = Sets.<LoadBalancerDescription>newHashSet();
+  		  
+	  DescribeLoadBalancersResult descResult = new DescribeLoadBalancersResult();
+	  LoadBalancerDescriptions lbDescs = new LoadBalancerDescriptions();
+	  lbDescs.setMember(new ArrayList<LoadBalancerDescription>(descs));
+	  descResult.setLoadBalancerDescriptions(lbDescs);
+	  reply.setDescribeLoadBalancersResult(descResult);
+	  reply.set_return(true);
+	    
+	    return reply;
+			  
+  }
   public DescribeLoadBalancersResponseType describeLoadBalancers(DescribeLoadBalancersType request) throws EucalyptusCloudException {
 	    DescribeLoadBalancersResponseType reply = request.getReply( );
 	    final Context ctx = Contexts.lookup( );
@@ -254,20 +375,8 @@ public class LoadBalancingService {
 	    // the case that servo instances want the listeners assigned to it
 	    // TODO: SPARK: authenticate/authorize using IAM roles	
 	    if (marker!= null && marker.startsWith("servo")){
-	    	String instanceId = marker.replace("servo:", "");
-	    	// lookup servo instance Id to see which LB it is assigned to
-	    	// return the LB's detail
-    		allowedLBNames = Sets.newHashSet();
-	    	try{
-	    		final LoadBalancerServoInstance instance = LoadBalancers.lookupServoInstance(instanceId);
-	    		final LoadBalancer lb = instance.getAvailabilityZone().getLoadbalancer();
-	    		allowedLBNames.add(lb.getDisplayName());
-	    	}catch(NoSuchElementException ex){
-	    		;
-	    	}catch(Exception ex){
-	    		LOG.warn("failed to query loadbalancer for servo instance: "+instanceId);
-	    	}
-	    	
+	  	String instanceId = marker.replace("servo:", "");
+	    	return describeLoadBalancersServo(instanceId, reply); 	
 	    }else{	// normal describe-load-balancers path
 		    final Function<Set<String>, Set<String>> lookupLBNames = new Function<Set<String>, Set<String>>( ) {
 		        public Set<String> apply( final Set<String> input ) {
@@ -612,7 +721,11 @@ public class LoadBalancingService {
     	}
 	    
 	    if(instances!=null){
-			reply.set_return(Entities.asTransaction(LoadBalancerBackendInstance.class, creator).apply(null));
+	    	try{
+	    		reply.set_return(Entities.asTransaction(LoadBalancerBackendInstance.class, creator).apply(null));
+	    	}catch(Exception ex){
+	    		throw new LoadBalancingException("Failed to register instances", ex);
+	    	}
 	    }
 	    
 	    RegisterInstancesWithLoadBalancerResult result = new RegisterInstancesWithLoadBalancerResult();
@@ -828,33 +941,21 @@ public class LoadBalancingService {
     	throw new LoadBalancingException("failed to query loadbalancer due to unknown reason");
     }
  	
- 	List<LoadBalancerBackendInstance> instancesFound = Lists.newArrayList();
+	List<LoadBalancerBackendInstance> lbInstances = Lists.newArrayList(lb.getBackendInstances());
+	List<LoadBalancerBackendInstance> instancesFound = null;
  	if(instances != null && instances.getMember()!= null && instances.getMember().size()>0){
- 		final EntityTransaction db = Entities.get( LoadBalancerBackendInstance.class );
-		for(Instance inst : instances.getMember()){
+ 		instancesFound = Lists.newArrayList();
+ 		for(Instance inst : instances.getMember()){
  			String instId = inst.getInstanceId();
- 			try{
- 				LoadBalancerBackendInstance found = 
- 						Entities.uniqueResult(LoadBalancerBackendInstance.named(ownerFullName, lb, instId));
- 				instancesFound.add(found);
- 			}catch(NoSuchElementException ex){
- 				;
- 			}catch(Exception ex){
- 				LOG.error("failed to query backend instances", ex);
- 	 		}
+ 			for(final LoadBalancerBackendInstance lbInstance : lbInstances){
+ 				if(instId.equals(lbInstance.getInstanceId())){
+ 					instancesFound.add(lbInstance);
+ 					break;
+ 				}
+ 			}
  		}
-		db.commit();
  	}else{
- 		final EntityTransaction db = Entities.get( LoadBalancerBackendInstance.class );
-		try{
-			instancesFound = Entities.query(LoadBalancerBackendInstance.named(ownerFullName, lb));
-			db.commit();
- 		}catch(NoSuchElementException ex){
- 			db.rollback();
- 		}catch(Exception ex){
- 			LOG.error("failed to query backend instances", ex);
- 			db.rollback();
- 		}
+ 		instancesFound = Lists.newArrayList(lb.getBackendInstances());
  	}
  	
  	final ArrayList<InstanceState> stateList = Lists.newArrayList();

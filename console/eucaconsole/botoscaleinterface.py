@@ -69,21 +69,21 @@ class BotoScaleInterface(ScaleInterface):
         return self.conn.delete_auto_scaling_group(name, force_delete)
 
     def get_all_groups(self, names=None, max_records=None, next_token=None):
-        return []
         obj = self.conn.get_all_groups(names, max_records, next_token)
         if self.saveclcdata:
             self.__save_json__(obj, "mockdata/AS_Groups.json")
         return obj
 
     def get_all_autoscaling_instances(self, instance_ids=None, max_records=None, next_token=None):
-        return []
         obj = self.conn.get_all_autoscaling_instances(instance_ids, max_records, next_token)
         if self.saveclcdata:
             self.__save_json__(obj, "mockdata/AS_Instances.json")
         return obj
 
     def set_desired_capacity(self, group_name, desired_capacity, honor_cooldown=False):
-        return self.conn.set_desired_capacity(group_name, desired_capacity, honor_cooldown)
+        group = self.conn.get_all_groups([group_name])[0];
+        # notice, honor_cooldown not supported.
+        return group.set_capacity(desired_capacity)
 
     def set_instance_health(self, instance_id, health_status, should_respect_grace_period=True):
         return self.conn.set_instance_health(instance_id, health_status,

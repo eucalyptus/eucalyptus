@@ -38,41 +38,61 @@
       this.baseTable = $scalingTable;
       this.tableWrapper = $scalingTable.eucatable({
         id : 'scaling', // user of this widget should customize these options,
-        data_deps: ['scalinggrps', 'scalinginsts'],
+        data_deps: ['scalinggrps'],
         hidden: thisObj.options['hidden'],
         dt_arg : {
-          "bProcessing": true,
-          "bServerSide": true,
-          "sAjaxSource": 'scalinggrps',
-          "bAutoWidth" : false,
-          "sPaginationType": "full_numbers",
-          "aoColumns": [
+          "sAjaxSource": 'scalinggrp',
+          "aaSorting": [[ 7, "desc" ]],
+          "aoColumnDefs": [
             {
+              "aTargets" : [0],
               "bSortable": false,
-              "fnRender": function(oObj) { return '<input type="checkbox"/>' },
+              "mData": function(oObj) { return '<input type="checkbox"/>' },
               "sClass": "checkbox-cell"
             },
             {
-              "mDataProp": "name",
-              "iDataSort": 4
+              "aTargets" : [1],
+              "mRender": function(data){
+                 return eucatableDisplayColumnTypeTwist(data, data, 255);
+              },
+              "mData": function(source){
+                 return source.name;
+              },
             },
-            { "mDataProp": "launch_config_name" },
+            { 
+              "aTargets" : [2],
+              "mData": "launch_config_name" 
+            },
             {
-              "fnRender": function(oObj) { 
+              "aTargets" : [3],
+              "mData": function(oObj) { 
                 return 'some graph';
               }
             },
             {
-              "fnRender": function(oObj) { 
-                return oObj.aData.instances.length;
+              "aTargets" : [4],
+              "mData": function(oObj) { 
+                return "";
               }
             },
-            { "mDataProp": "desired_capacity" },
+            { 
+              "aTargets" : [5],
+              "mData": "desired_capacity" 
+            },
             {
-              "fnRender": function(oObj) { 
+              "aTargets" : [6],
+              "mData": function(oObj) { 
                 return 'All healthy';
               }
-            }
+            },
+            {
+              "bVisible": false,
+              "aTargets":[7],
+	          "mRender": function(data) {
+                return DefaultEncoder().encodeForHTML(data);
+              },
+              "mData": "name",
+            },
           ],
         },
         text : {
@@ -82,18 +102,22 @@
           resource_search : scaling_search,
           resource_plural : scaling_plural,
         },
+        expand_callback : function(row){ // row = [col1, col2, ..., etc]
+          return thisObj._expandCallback(row);
+        },
         menu_actions : function(args){ 
           return thisObj._createMenuActions();
         },
         context_menu_actions : function(row) {
           return thisObj._createMenuActions();
         },
-        menu_click_create : function (args) { thisObj.createAction() },
+        menu_click_create : function (args) { thisObj._createAction() },
         help_click : function(evt) {
           thisObj._flipToHelp(evt, {content: $scalingHelp, url: help_scaling.landing_content_url});
         }
       });
       this.tableWrapper.appendTo(this.element);
+      $(this.element).prepend($('#scaling-topselector', $wrapper));
     },
 
     _create : function() { 
@@ -107,9 +131,17 @@
     _destroy : function() {
     },
 
+    _expandCallback : function(row){ 
+      var $el = $('<div />');
+      require(['views/expandos/scaling'], function(expando) {
+         new expando({el: $el, id: row[1]});
+      });
+      return $el;
+    },
+
     _createMenuActions : function() {
       var thisObj = this;
-      selectedScaling = thisObj.baseTable.eucatable('getSelectedRows', 3);
+      selectedScaling = thisObj.baseTable.eucatable('getSelectedRows', 1);
       var itemsList = {};
 
       (function(){
@@ -120,19 +152,38 @@
         itemsList['delete'] = { "name": scaling_action_delete, callback: function(key, opt) {;}, disabled: function(){ return true;} }
       })();
 
-      // add associate
-      /*
-      if ( selectedScaling.length == 1 && selectedScaling[0] == 'unassigned' ){
-        itemsList['associate'] = { "name": scaling_action_associate, callback: function(key, opt) { thisObj._associateAction(); } }
+      if ( selectedScaling.length === 1) {
+        itemsList['quick'] = {"name":scaling_action_quick, callback: function(key, opt){
+          var scaling_groups = describe('scalinggrp');
+          _.find(scaling_groups, function(group) {
+            if (group.name == selectedScaling[0]) {
+              var params = {name:group.name, size:group.instances.length, min:group.min_size, max:group.max_size, desired:group.desired_capacity};
+              thisObj._dialogAction('quickscaledialog', params);
+            }
+          });
+        }}
+        itemsList['suspend'] = {"name":scaling_action_suspend, callback: function(key, opt){ thisObj._dialogAction('suspendscalinggroup', selectedScaling); }}
+        itemsList['resume'] = {"name":scaling_action_resume, callback: function(key, opt){ thisObj._dialogAction('resumescalinggroup', selectedScaling); }}
+        itemsList['edit'] = {"name":scaling_action_edit, callback: function(key, opt){ thisObj._dialogAction('editscalinggroup', selectedScaling); }}
       }
-      if ( selectedScaling.length > 0 ){
-        if ( onlyInArray('assigned', selectedScaling) )
-        itemsList['disassociate'] = { "name": scaling_action_disassociate, callback: function(key, opt) { thisObj._disassociateAction(); } }
 
-        itemsList['release'] = { "name": scaling_action_release, callback: function(key, opt) { thisObj._releaseAction(); } }
+      if ( selectedScaling.length >= 1) {
+        itemsList['delete'] = {"name":scaling_action_delete, callback: function(key, opt){
+          var in_use = false;
+          // Until DescribeScalingActivities is implemented on CLC, we can't tell if
+          // something is in progress. For now, we'll always allow the user to try.
+          thisObj._dialogAction('deleteScalingGroup', {groups:selectedScaling, not_allowed:in_use});
+        }}
       }
-      */
+
       return itemsList;
+    },
+
+    _dialogAction: function(dialog, selectedScaling) {
+        console.log('Would do', dialog, selectedScaling);
+        require(['views/dialogs/' + dialog], function(dialog) {
+            new dialog({items: selectedScaling});
+        });
     }
   });
 })

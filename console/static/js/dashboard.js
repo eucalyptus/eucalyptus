@@ -36,7 +36,7 @@
       this._addHelp($help);
       var needs = ['zones', 'images', 'instances', 'keypairs', 'groups', 'addresses', 'volumes', 'snapshots', 'tags'];
       setDataInterest(needs);
-      $('html body').eucadata('setDataNeeds', ['dash', 'zones']);
+      $('html body').eucadata('setDataNeeds', ['dash', 'zones', 'scalinginsts']);
     },
 
     _create : function() { 
@@ -99,10 +99,10 @@
         $('<img>').attr('src','images/dots32.gif'));
       $storageObj.find('#dashboard-storage-snapshot').prepend(
         $('<img>').attr('src','images/dots32.gif'));
-      $storageObj.find('#dashboard-storage-buckets').prepend(
-        $('<img>').attr('src','images/dots32.gif'));
-      $netsecObj.find('#dashboard-netsec-load-balancer').prepend(
-        $('<img>').attr('src','images/dots32.gif'));
+//      $storageObj.find('#dashboard-storage-buckets').prepend(
+//        $('<img>').attr('src','images/dots32.gif'));
+//      $netsecObj.find('#dashboard-netsec-load-balancer').prepend(
+//        $('<img>').attr('src','images/dots32.gif'));
       $netsecObj.find('#dashboard-netsec-sgroup').prepend(
         $('<img>').attr('src','images/dots32.gif'));
       $netsecObj.find('#dashboard-netsec-eip').prepend(
@@ -148,6 +148,7 @@
           $('html body').trigger('click', 'navigator:snapshot');
           return false;
       }));
+/*
       $('html body').eucadata('refresh', 'bucket');
       $storageObj.find('#dashboard-storage-buckets').wrapAll(
         $('<a>').attr('href','#').click( function(evt){
@@ -161,6 +162,7 @@
           $('html body').trigger('click', 'navigator:balancing');
           return false;
       }));
+*/
       $netsecObj.find('#dashboard-netsec-sgroup').wrapAll(
         $('<a>').attr('href','#').click( function(evt){
           thisObj._trigger('select', evt, {selected:'sgroup'});
@@ -191,8 +193,8 @@
         $instObj.find('#dashboard-scaling-groups div img').remove();
         $storageObj.find('#dashboard-storage-volume img').remove();
         $storageObj.find('#dashboard-storage-snapshot img').remove();
-        $storageObj.find('#dashboard-storage-buckets img').remove();
-        $netsecObj.find('#dashboard-netsec-load-balancer img').remove();
+//        $storageObj.find('#dashboard-storage-buckets img').remove();
+//        $netsecObj.find('#dashboard-netsec-load-balancer img').remove();
         $netsecObj.find('#dashboard-netsec-sgroup img').remove();
         $netsecObj.find('#dashboard-netsec-eip img').remove();
         $netsecObj.find('#dashboard-netsec-keypair img').remove();
@@ -202,11 +204,13 @@
         var results = describe('summary');
         $instObj.find('#dashboard-instance-running span').text(results.inst_running);
         $instObj.find('#dashboard-instance-stopped span').text(results.inst_stopped);
-        $instObj.find('#dashboard-scaling-groups span').text(0);
+        var scalinginsts = describe('scalinginst');
+        if (scalinginsts == null) scalinginsts = [];
+        $instObj.find('#dashboard-scaling-groups span').text(scalinginsts.length);
         $storageObj.find('#dashboard-storage-volume span').text(results.volume);
         $storageObj.find('#dashboard-storage-snapshot span').text(results.snapshot);
-        $storageObj.find('#dashboard-storage-buckets span').text(0);
-        $netsecObj.find('#dashboard-netsec-load-balancer span').text(0);
+//        $storageObj.find('#dashboard-storage-buckets span').text(0);
+//        $netsecObj.find('#dashboard-netsec-load-balancer span').text(0);
         $netsecObj.find('#dashboard-netsec-sgroup span').text(results.sgroup);
         $netsecObj.find('#dashboard-netsec-eip span').text(results.eip);
         $netsecObj.find('#dashboard-netsec-keypair span').text(results.keypair);

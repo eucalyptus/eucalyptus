@@ -1,6 +1,11 @@
+// instance model
+//
+
 define([
-], function() {
-    var Instance = Backbone.Model.extend({
+    './eucamodel'
+], function(EucaModel) {
+    var model = EucaModel.extend({
+        namedColumns: ['id']
     });
-    return Instance;
+    return model;
 });

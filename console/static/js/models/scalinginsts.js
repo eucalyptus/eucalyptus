@@ -4,6 +4,6 @@ define([
 ], function(EucaCollection, ScalingInst) {
     return EucaCollection.extend({
 	model: ScalingInst,
-	url: '/sutoscaling?Action=DescribeAutoScalingInstances'
+	url: '/autoscaling?Action=DescribeAutoScalingInstances'
     });
 });

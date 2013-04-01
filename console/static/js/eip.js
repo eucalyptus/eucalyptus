@@ -43,7 +43,7 @@
         data_deps: ['addresses', 'instances'],
         hidden: thisObj.options['hidden'],
         dt_arg : {
-          "sAjaxSource": 'eips',
+          "sAjaxSource": 'eip',
           "bAutoWidth" : false,
           "sPaginationType": "full_numbers",
           "aoColumnDefs": [
@@ -106,6 +106,9 @@
         menu_actions : function(args){ 
           return thisObj._createMenuActions();
         },
+        expand_callback : function(row){ // row = [col1, col2, ..., etc]
+          return thisObj._expandCallback(row);
+        },
         context_menu_actions : function(row) {
           return thisObj._createMenuActions();
         },
@@ -116,6 +119,9 @@
         filters : [{name:"eip_state", options: ['all','assigned','unassigned'], filter_col:3, alias: {'assigned':'assigned','unassigned':'unassigned'}, text: [eip_state_selector_all,eip_state_selector_assigned,eip_state_selector_unassigned] }],
       });
       this.tableWrapper.appendTo(this.element);
+      $('html body').eucadata('addCallback', 'eip', 'eip-landing', function() {
+        thisObj.tableWrapper.eucatable('redraw');
+      });
     },
 
     _create : function() { 
@@ -504,11 +510,16 @@
       thisObj.dialogDisassociateIp(rows);
     },
 
-
     _associateAction : function() {
       var thisObj = this;
       var eipsToAssociate = thisObj.tableWrapper.eucatable('getSelectedRows', 1);
       thisObj.dialogAssociateIp(eipsToAssociate[0], null);
+    },
+
+    _expandCallback : function(row){ 
+      var thisObj = this;
+      var ip = row[1];
+      return null;
     },
 
 /**** Public Methods ****/

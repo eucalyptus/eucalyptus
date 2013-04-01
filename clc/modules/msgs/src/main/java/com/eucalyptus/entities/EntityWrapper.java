@@ -539,7 +539,7 @@ public class EntityWrapper<TYPE> {
   }
   
   public boolean isActive( ) {
-    return this.tx.isActive( );
+    return this.tx != null && this.tx.isActive( );
   }
   
   public static <TYPE> EntityWrapper<TYPE> create( final PersistenceContext persistence ) {
