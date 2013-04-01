@@ -12,6 +12,7 @@ define([
       var self = this;
       var scope = {
         configmodel: this.model,
+        keymodel: this.options.keymodel,
         sgroups: dataholder.sgroup,
         keypairs: dataholder.keypair,
 
@@ -21,11 +22,8 @@ define([
                         return sg.get('name') == e.target.value;
           });
           if(groupWhere.length > 0) {
-              self.model.set('security_groups', groupWhere);
-              self.model.set('security_group', group);
-              self.model.set('security_group_name', group.get('name'));
-              self.model.set('security_group_rules', group.get('rules'));
-              self.model.set('security_show', 'true');
+              self.model.set(group.toJSON());
+              self.model.set('security_show', true);
           }
         },
 
@@ -34,8 +32,8 @@ define([
           var key = _.find(keyWhere, function(k) {
                       return k.get('name') == e.target.value;
           });
-          self.model.set('security_keyname', key.get('name'));
-          self.model.set('security_show', 'true');
+          this.keymodel.set(key.toJSON());
+          self.model.set('security_show', true);
         }
 
       };

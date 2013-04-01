@@ -17,7 +17,7 @@ define([
         enableMonitoring: true,
         privateNetwork: false,
         volumes: '',
-        snapshots: '',
+        snapshots: dataholder.snapshot,
         blockDeviceMappings: self.options.blockMaps,
         enableStorageVolume: false,
         volumeName: '',
@@ -60,9 +60,17 @@ define([
 
         },
 
+        mapName: function() {
+          var model = this.blockDeviceMappings.at(this.blockDeviceMappings.length - 1);
+          if(undefined !== model) {
+            var drive = model.get('map_name').replace(/\/dev\/([a-z]*)([0-9]{1,2})/, '$1');
+            var partition = model.get('map_name').replace(/\/dev\/([a-z]*)([0-9]{1,2})/, '$2');
+            return drive + (++partition);
+          }
+        }
+
       };
 
-      //scope.blockDeviceMappings.on('change reset', this.render);
       $(this.el).html(template)
       this.rView = rivets.bind(this.$el, scope);
       this.render();

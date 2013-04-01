@@ -5,11 +5,12 @@ define([
   'text!./image.html!strip',
   'rivets',
   'views/searches/image',
-  './blockmap'
+  './model/blockmap'
 	], function( _, app, dataholder, template, rivets, imageSearch, BlockMap ) {
 	return Backbone.View.extend({
             title: 'Image',
             count: 0,
+            image_selected: null,
             initialize : function() {
           var self = this;
           var scope = {
@@ -23,7 +24,7 @@ define([
 
               isSelected: function(image) {
                 var image = this.image;
-                if (self.model.get('image_selected') == image.get('id')) {
+                if (self.image_selected == image.get('id')) {
                     return ' selected-row';
                 } 
                 return '';
@@ -39,12 +40,16 @@ define([
               select: function(e, images) {
                 $(e.currentTarget).parent().find('tr').removeClass('selected-row');
                 $(e.currentTarget).addClass('selected-row');
+                /*
                 self.model.set('image_id', images.image.get('id'));
                 self.model.set('image_platform', images.image.get('platform') ? images.image.get('platform') : 'Linux');
                 self.model.set('image_location', images.image.get('location'));
                 self.model.set('image_description', images.image.get('description'));
                 self.model.set('image_iconclass', this.setClass(images.image));
-                self.model.set('image_selected', images.image.get('id'));
+                */
+                self.image_selected = images.image.get('id');
+                self.model.set(images.image.toJSON());
+                self.model.set('platform', this.setClass(self.model));
 
                 //block device maps
                 var maps = images.image.get('block_device_mapping');
@@ -69,7 +74,8 @@ define([
               }
           };
           self.model.on('validated:invalid', function(model, errors) {
-              scope.launchConfigErrors.image_id = errors.image_id; 
+              console.log('ERROR', errors);
+              scope.launchConfigErrors.image_id = errors.id; 
               self.render(); 
           });
 
@@ -89,8 +95,9 @@ define([
         },
     
         isValid: function() {
-          this.model.validate(_.pick(this.model.toJSON(),'image_id'));
+          this.model.validate(_.pick(this.model.toJSON(),'id'));
           var error = this.model.isValid();
+
           return error;
         },
   });

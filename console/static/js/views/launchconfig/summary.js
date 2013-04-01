@@ -16,6 +16,7 @@ define([
         imageModel: this.options.imageModel,
         typeModel: this.options.typeModel,
         securityModel: this.options.securityModel,
+        keymodel: this.options.keymodel,
         advancedModel: this.options.advancedModel,
         title: 'Summary',
       };

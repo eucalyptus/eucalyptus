@@ -58,6 +58,19 @@
 
 
         <tr data-each-volume="blockDeviceMappings">
+          <td data-text="">Root
+          </td>
+          <td data-text="volume.map_name">
+          </td>
+          <td data-text="volume.snapshot_id">
+          </td>
+          <td data-text="volume.size"></td>
+          <td class="centered-cell"><input disabled data-checked="volume.delete_on_termination" class="launch-wizard-advanced-storage-delOnTerm" type="checkbox"></td>
+        </tr> 
+
+
+
+        <tr>
           <td>
             <select data-enabled="enableStorageVolume" data-on-change=":setStorageVolume"  class="launch-wizard-advanced-storage-volume-selector" title="Select the source of the additional storage">
               <option value="root">Root</option>
@@ -65,15 +78,15 @@
             </select>
           </td>
           <td>
-            /dev/<input data-enabled="enableMapping" data-value="volume.map_name" class="launch-wizard-advanced-storage-mapping-input" title="Add a mapping for the additional storage" type="text">
+            /dev/<input data-enabled="enableMapping" data-value=":mapName" class="launch-wizard-advanced-storage-mapping-input" title="Add a mapping for the additional storage" type="text">
           </td>
           <td>
             <select data-enabled="enableSnapshot" class="launch-wizard-advanced-storage-snapshot-input" title="Select a snapshot to use for the storage">
-              <option data-value="volume.snapshot_id" data-text="volume.snapshot_id"></option>
+              <option data-each-snapshot="snapshots" data-value="snapshot.id" data-text="snapshot.id"></option>
             </select>
           </td>
-<td><input data-value="volume.size" data-enabled="" class="launch-wizard-advanced-storage-size-input" title="Specify the size of the storage in whole gigabytes" type="text"></td>
-<td class="centered-cell"><input data-checked="volume.delete_on_termination" class="launch-wizard-advanced-storage-delOnTerm" type="checkbox"></td>
+<td><input class="launch-wizard-advanced-storage-size-input" title="Specify the size of the storage in whole gigabytes" type="text"></td>
+<td class="centered-cell"><input class="launch-wizard-advanced-storage-delOnTerm" type="checkbox"></td>
 </tr></tbody>
 </table></div>
 </div>
