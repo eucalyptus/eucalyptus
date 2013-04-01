@@ -138,15 +138,15 @@
       var itemsList = {};
 
       (function(){
-        itemsList['create'] = { "name": launchconfig_action_create, callback: function(key, opt) {;}, disabled: function(){ return true;} }
-        itemsList['delete'] = { "name": launchconfig_action_delete, callback: function(key, opt) {;}, disabled: function(){ return true;} }
+        itemsList['create'] = { "name": launch_config_action_create_scaling_group, callback: function(key, opt) {;}, disabled: function(){ return true;} }
+        itemsList['delete'] = { "name": launch_config_action_delete, callback: function(key, opt) {;}, disabled: function(){ return true;} }
       })();
 
       if ( selectedLaunchConfig.length === 1) {
-        itemsList['create'] = {"name":launchconfig_action_create, callback: function(key, opt){ thisObj._dialogAction('createscalinggroupfromlaunchconfig', selectedLaunchConfig); }}
+        itemsList['create'] = {"name":launch_config_action_create_scaling_group, callback: function(key, opt){ thisObj._dialogAction('createscalinggroupfromlaunchconfig', selectedLaunchConfig); }}
       }
       if ( selectedLaunchConfig.length >= 1) {
-        itemsList['delete'] = {"name":launchconfig_action_delete, callback: function(key, opt){
+        itemsList['delete'] = {"name":launch_config_action_delete, callback: function(key, opt){
           var scaling_groups = describe('scalinggrp');
           var in_use = false;
           var groups = [];
