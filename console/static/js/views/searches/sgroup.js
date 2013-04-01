@@ -10,7 +10,7 @@ define([
       // https://eucalyptus.atlassian.net/wiki/display/3UD/Manage+Security+Groups+Landing
       'platform', 'architecture', 
       
-      'root_device'
+      'root_device_name'
     ];
     // PENDING:  tag facets
     
