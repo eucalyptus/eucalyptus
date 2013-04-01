@@ -327,7 +327,7 @@ public class DescribeSensorCallback extends
 
       ServiceConfiguration serviceConfiguration = ServiceConfigurations
           .createEphemeral(ComponentIds.lookup(CloudWatch.class));
-      BaseMessage reply = (BaseMessage) AsyncRequests.dispatch(serviceConfiguration, putMetricData);
+      BaseMessage reply = (BaseMessage) AsyncRequests.dispatch(serviceConfiguration, putMetricData).get();
       if (!(reply instanceof PutMetricDataResponseType)) {
         throw new EucalyptusCloudException("Unable to send put metric data to cloud watch");
       }
