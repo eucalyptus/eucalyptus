@@ -294,25 +294,25 @@ public class DescribeSensorCallback extends
       metricDatum.setUnit(unitType);
 
 
-      if (event.getMetric().equals("CPUUtilization")) {
+      if (metricDatum.getMetricName().equals("CPUUtilization")) {
         metricDatum.setMetricName("CPUUtilizationMS"); // this is actually the data in milliseconds, not percentage
       }
-      if (event.getMetric().equals("VolumeReadOps")) {
+      if (metricDatum.getMetricName().equals("VolumeReadOps")) {
         metricDatum.setMetricName("VolumeReadOpsTotal"); // this is actually the total volume read Ops since volume creation, not for the period
       }
-      if (event.getMetric().equals("VolumeWriteOps")) {
+      if (metricDatum.getMetricName().equals("VolumeWriteOps")) {
         metricDatum.setMetricName("VolumeWriteOpsTotal"); // this is actually the total volume write Ops since volume creation, not for the period
       }
-      if (event.getMetric().equals("VolumeReadBytes")) {
+      if (metricDatum.getMetricName().equals("VolumeReadBytes")) {
         metricDatum.setMetricName("VolumeReadBytesTotal"); // this is actually the total volume read bytes since volume creation, not for the period
       }
-      if (event.getMetric().equals("VolumeWriteBytes")) {
+      if (metricDatum.getMetricName().equals("VolumeWriteBytes")) {
         metricDatum.setMetricName("VolumeWriteBytesTotal"); // this is actually the total volume write bytes since volume creation, not for the period
       }
-      if (event.getMetric().equals("VolumeReadTime")) {
+      if (metricDatum.getMetricName().equals("VolumeReadTime")) {
         metricDatum.setMetricName("VolumeReadTimeTotal"); // this is actually the total volume read time since volume creation, not for the period
       }
-      if (event.getMetric().equals("VolumeWriteTime")) {
+      if (metricDatum.getMetricName().equals("VolumeWriteTime")) {
         metricDatum.setMetricName("VolumeWriteTimeTotal"); // this is actually the total volume write time since volume creation, not for the period
       }
       
