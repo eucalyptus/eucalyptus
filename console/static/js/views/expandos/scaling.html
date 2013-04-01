@@ -9,11 +9,11 @@
   <div id="tabs-1" class="tab">
       <ul class="instance-expanded clearfix">
 	    <li><div class="expanded-title" data-msg="scaling_table_expanded_name">SCALING GROUP NAME</div><div class="expanded-value">myGroup</div></li>
-	    <li><div class="expanded-title" data-msg="scaling_table_expanded_launch_configs">LAUNCH CONFIGURATIONS</div><div class="expanded-value">myconfig (current)</div><div class="expanded-value">oldconfig (past)</div></li>
+	    <li><div class="expanded-title" data-msg="scaling_table_expanded_launch_configs">CURRENT LAUNCH CONFIGURATION</div><div class="expanded-value" data-text="launch_config_name">myconfig</div></li>
 	    <li><div class="expanded-title" data-msg="scaling_table_expanded_zones">AVAILABILITY ZONES</div><div class="expanded-value">zone 2</div></li>
 	    <li><div class="expanded-title" data-msg="scaling_table_expanded_lb">LOAD BALANCERS</div><div class="expanded-value">balancer 1</div></li>
-	    <li><div class="expanded-title" data-msg="scaling_table_expanded_health">HEALTH CHECK</div><div class="expanded-label" data-msg="scaling_table_expanded_health_check_type">Type:<span class="expanded-value">None</span></div><div class="expanded-label" data-msg="scaling_table_expanded_health_check_grace_period">Grace period (secs):<span class="expanded-value">30</span></div></li>
-	    <li><div class="expanded-title" data-msg="scaling_table_expanded_instances">INSTANCES</div><div class="expanded-label" data-msg="scaling_table_expanded_instances_max">Maximum<span class="expanded-value">10</span></div><div class="expanded-label" data-msg="scaling_table_expanded_instances_desired">Desired<span class="expanded-value">5</span></div><div class="expanded-label" data-msg="scaling_table_expanded_instances_min">Minimum<span class="expanded-value">1</span></div></li>
+	    <li><div class="expanded-title" data-msg="scaling_table_expanded_health">HEALTH CHECK</div><div class="expanded-label" data-msg="scaling_table_expanded_health_check_type">Type:<span class="expanded-value" data-text="health_check_type">None</span></div><div class="expanded-label" data-msg="scaling_table_expanded_health_check_grace_period">Grace period (secs):<span class="expanded-value"data-text="health_check_period">30</span></div></li>
+	    <li><div class="expanded-title" data-msg="scaling_table_expanded_instances">INSTANCES</div><div class="expanded-label" data-msg="scaling_table_expanded_instances_max">Maximum<span class="expanded-value" data-text="max_size">10</span></div><div class="expanded-label" data-msg="scaling_table_expanded_instances_desired">Desired<span class="expanded-value" data-text="desired_capacity">5</span></div><div class="expanded-label" data-msg="scaling_table_expanded_instances_min">Minimum<span class="expanded-value" data-text="min_size">1</span></div></li>
 	  </ul>
   </div>
   <div id="tabs-2" class="tab">
@@ -24,7 +24,7 @@
 	    <li><div class="expanded-section-label" data-msg="scaling_table_expanded_scaling_policies">Scaling policies:</div></li>
       </ul>
       <ul class="instance-expanded clearfix">
-		<li><div class="expanded-label" data-msg="scaling_table_expanded_scaling_policy_default_cooldown">Default cooldown period (secs):<span class="expanded-value">30</span></div></li>
+		<li><div class="expanded-label" data-msg="scaling_table_expanded_scaling_policy_default_cooldown">Default cooldown period (secs):<span class="expanded-value" data-text="default_cooldown">30</span></div></li>
       </ul>
       <ul class="instance-expanded clearfix">
 		<li>
