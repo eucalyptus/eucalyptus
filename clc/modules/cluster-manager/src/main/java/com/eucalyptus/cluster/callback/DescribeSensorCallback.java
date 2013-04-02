@@ -309,7 +309,7 @@ public class DescribeSensorCallback extends
       if (metricDatum.getMetricName().equals("VolumeWriteBytes")) {
         metricDatum.setMetricName("VolumeWriteBytesTotal"); // this is actually the total volume write bytes since volume creation, not for the period
       }
-      if (metricDatum.getMetricName().equals("VolumeTotalWriteTime")) {
+      if (metricDatum.getMetricName().equals("VolumeTotalReadTime")) {
         metricDatum.setMetricName("VolumeTotalReadTimeTotal"); // this is actually the total volume read time since volume creation, not for the period
       }
       if (metricDatum.getMetricName().equals("VolumeTotalWriteTime")) {

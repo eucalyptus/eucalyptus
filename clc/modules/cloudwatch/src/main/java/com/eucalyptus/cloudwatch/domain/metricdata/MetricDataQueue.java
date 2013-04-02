@@ -136,12 +136,12 @@ public class MetricDataQueue {
             if ("VolumeWriteBytesTotal".equals(datum.getMetricName())) {
               if (!adjustAbsoluteVolumeValue(datum, "VolumeWriteBytesTotal", "VolumeWriteBytes", volumeId)) continue;
             } 
-            if ("TotalVolumeReadTimeTotal".equals(datum.getMetricName())) {
-              if (!adjustAbsoluteVolumeValue(datum, "TotalVolumeReadTimeTotal", "TotalVolumeReadTime", volumeId)) continue;
+            if ("VolumeTotalReadTimeTotal".equals(datum.getMetricName())) {
+              if (!adjustAbsoluteVolumeValue(datum, "VolumeTotalReadTimeTotal", "VolumeTotalReadTime", volumeId)) continue;
             } 
-            if ("TotalVolumeWriteTimeTotal".equals(datum.getMetricName())) {
-              if (!adjustAbsoluteVolumeValue(datum, "TotalVolumeWriteTimeTotal", "TotalVolumeWriteTime", volumeId)) continue;
-            }
+            if ("VolumeTotalWriteTimeTotal".equals(datum.getMetricName())) {
+              if (!adjustAbsoluteVolumeValue(datum, "VolumeTotalWriteTimeTotal", "VolumeTotalWriteTime", volumeId)) continue;
+            } 
           }
         }        
       }            
