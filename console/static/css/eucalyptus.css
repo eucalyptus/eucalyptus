@@ -3257,3 +3257,11 @@ filter: progid:DXImageTransform.Microsoft.gradient( startColorstr='#ededed', end
 .ui-dialog .scale-max label {
 	margin-top: 34px;
 }
+
+.tag-edit .tag-control {
+    visibility: hidden;
+}
+
+.tag-edit:hover .tag-control {
+    visibility: visible;
+}
