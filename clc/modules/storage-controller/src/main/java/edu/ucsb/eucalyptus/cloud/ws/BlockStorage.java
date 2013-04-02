@@ -1524,6 +1524,7 @@ public class BlockStorage {
 			db.commit();
 			for (VolumeInfo vol : volumes) {
 				String volumeId = vol.getVolumeId();
+				LOG.info("Volume: " + volumeId + " was marked for deletion. Cleaning up...");
 				try {
 					blockManager.deleteVolume(volumeId);
 				} catch (EucalyptusCloudException e) {
@@ -1559,6 +1560,7 @@ public class BlockStorage {
 			db.commit();
 			for (SnapshotInfo snap : snapshots) {
 				String snapshotId = snap.getSnapshotId();
+				LOG.info("Snapshot: " + snapshotId + " was marked for deletion. Cleaning up...");
 				try {
 					blockManager.deleteSnapshot(snapshotId);
 				} catch (EucalyptusCloudException e1) {
