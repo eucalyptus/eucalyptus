@@ -130,6 +130,7 @@ rivets.binders["include"] = {
            this.bbView.model = value;
            this.bbView.render();
         }
+    }
 }
 
 rivets.binders['entitytext'] = {
