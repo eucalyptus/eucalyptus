@@ -47,10 +47,10 @@ class MigrateInstances(AWSQueryRequest):
                     ptype='string', cardinality='*', request_param=False,
                     doc=('migrate to any host except this one (may be used '
                     'more than once)')),
-              Param(name='stop_node', long_name='stop-node',
+              Param(name='stop_source', long_name='stop-source',
                     ptype='boolean', default=False, request_param=False,
-                    doc=('also stop the node controller to prevent new '
-                         'instances from running on it'))]
+                    doc=('also stop the source node controller to prevent new '
+                         'instances from running on it (requires --source)'))]
 
     def get_connection(self, **args):
         if self.connection is None:
@@ -86,10 +86,10 @@ class MigrateInstances(AWSQueryRequest):
             for i, host in enumerate(self.args['exclude_dest'], 1):
                 self.request_params['DestinationHost.{0}'.format(i)] = host
 
-        if self.args['stop_node']:
+        if self.args['stop_source']:
             source = self.args.get('source')
             if source is None:
-                raise ValueError('error: argument --stop-node: only valid '
+                raise ValueError('error: argument --stop-source: only valid '
                                  'with --source, not -i/--instance')
             obj = ModifyService(debug=self.args.get('debug'))
             obj.main(name=self.args['source'], state='STOP')
