@@ -1,15 +1,21 @@
 <div class="wizard-step">
 <div class="wizardTitle"><h3 class="required-label">Type</h3></div>
 <div id="launch-wizard-type-main-contents">
+
+<!-- ##Number of Instances -->
+<!--
   <div id="launch-wizard-type-option-num-instance" class="form-row clearfix">
     <label for="launch-instance-type-num-instance" class="required-label">Number of instances</label>
     <input data-on-change=":setField" class="short-textinput" id="launch-instance-type-num-instance" title="Enter the number of instances you want to create" type="text">
     <div class="field-error" data-text="launchConfigErrors.type_number"></div>
   </div>
+-->
+
   <div class="form-row clearfix">
-    <label for="launch-instance-names">Instance name(s)</label>
+    <label class="required-label" for="launch-instance-names">Launch configuration name</label>
     <input data-on-change=":setField" id="launch-instance-names" title="Instance name(s)" type="text" placeholder="separate multiple names with commas">
   </div>
+  <div class="field-error" data-text="launchConfigErrors.type_names"></div>
 <div id="launch-wizard-type-size">
 <div class="launch-wizard-select form-row">
 <label for="launch-instance-type-size">Instance size</label>
@@ -32,14 +38,20 @@
 </div>
 </div>
 <div id="launch-wizard-type-options"> <!-- <div class="wizard-section-label">Select launch options:</div> -->
+<!-- ##Zone -->
+<!--
 <div class="launch-wizard-type-option">
 <div id="launch-wizard-type-option-az" class="form-row clearfix">
-<label for="launch-instance-type-az">Availability zone</label>
-<select data-on-change=":setField" id="launch-instance-type-az" title="Select the availability zone for your new instance(s)">
-<option value="Any">No Preference</option>
-<option value="PARTI00">PARTI00</option></select>
+  <label for="launch-instance-type-az">Availability zone</label>
+  <select data-on-change=":setField" id="launch-instance-type-az" title="Select the availability zone for your new instance(s)">
+    <option value="Any">No Preference</option>
+    <option value="PARTI00">PARTI00</option></select>
 </div>
 </div>
+-->
+
+<!-- ## Load balancer -->
+<!--
 <div class="launch-wizard-type-option">
   <div id="launch-wizard-type-option-lb" class="form-row clearfix">
     <label for="launch-instance-type-lb">Add to load balancer</label>
@@ -48,13 +60,18 @@
     </select>
   </div>  
 </div>
-</div>
+-->
+
+<!-- ## TAGS -->
+<!--
+<div class="launch-wizard-type-option">
 <div id="launch-wizard-tags" class="form-row clearfix">
   <label>Instance Tags</label>
     <div data-ui-row-lister="tags"></div>
       <div data-ui-row-adder="tags"></div>
 </div>
 </div>
+-->
 
 <!-- <div id="launch-wizard-buttons-type" class="launch-wizard-buttons"><button class="button" id="launch-wizard-buttons-type-next">Next: Select security</button></div> -->
 </div>

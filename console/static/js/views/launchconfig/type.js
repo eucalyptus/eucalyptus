@@ -63,7 +63,8 @@ define([
         },
     
         launchConfigErrors: {
-          type_number: ''
+          type_number: '',
+          type_names: ''
         }
     };
 
@@ -73,6 +74,7 @@ define([
 
     self.model.on('validated:invalid', function(model, errors) {
       scope.launchConfigErrors.type_number = errors.type_number;
+      scope.launchConfigErrors.type_names = errors.type_names;
     });
 
 
@@ -87,7 +89,8 @@ define([
     },
 
     isValid: function() {
-      this.model.validate(_.pick(this.model.toJSON(),'type_number'));
+      //this.model.validate(_.pick(this.model.toJSON(),'type_number'));
+      this.model.validate(_.pick(this.model.toJSON(),'type_names'));
       return this.model.isValid();
     }
 
