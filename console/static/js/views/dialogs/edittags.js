@@ -33,6 +33,7 @@ define([
                     var newt = new Tag(self.scope.newtag.toJSON());
                     newt.set({_clean: true, _deleted: false, _edited: false, _edit: false, _new: true});
                     newt.set('id', args.model.get('id') + '-' + newt.get('name'));
+                    newt.set('res_id', args.model.get('id'));
                     self.scope.tags.add(newt);
                     self.scope.newtag.clear();
                     self.render();
@@ -73,9 +74,24 @@ define([
                 confirmButton: {
                   click: function() {
                        tags.each(function(t) {
-                           console.log(t);
-                           if (t.get('_new') && !t.get('_deleted')) origtags.push(t);
-                           if (t.get('_deleted')) _.each(origtags.where({id: t.id}), function(ot) { console.log('remove', ot); origtags.remove(ot) });
+                           console.log('TAG', t);
+                           if (t.get('_new') && !t.get('_deleted')) { 
+                               console.log('add', t); 
+                               origtags.add(t);
+                           }
+                           if (t.get('_deleted')) {
+                               _.each(origtags.where({id: t.get('id')}), function(ot) { 
+                                   console.log('remove', ot); 
+                                   origtags.remove(ot) 
+                               });
+                           }
+                           if (t.get('_edited')) {
+                               console.log('update', t); 
+                               _.each(origtags.where({id: t.get('id')}), function(ot) { 
+                                   console.log('update run', ot, t); 
+                                   ot.set('value', t.get('value'));
+                               });
+                           }
                        });
                        self.close();
                   }

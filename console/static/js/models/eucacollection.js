@@ -6,7 +6,7 @@ define([
   var EucaCollection = Backbone.Collection.extend({
     initialize: function() {
         var self = this;
-        tags.on('change reset', function() {
+        tags.on('add change reset', function() {
             self.resetTags();
         });        
     },
