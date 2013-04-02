@@ -1344,7 +1344,7 @@ ul.ramdisk-expanded li:nth-child(5) {
 }
 
 .expanded-value {
-  padding: 0 4px;
+  padding: 0 4px 5px;
 }
 
 /* ======= Help page related ===== */
@@ -2199,7 +2199,7 @@ a.sg-my-ip {
 
 .wizard-wrapper {
   float: left;
-  width: 775px;
+  width: 800px;
 }
 
 .launch-wizard-intro-text {
@@ -2328,7 +2328,7 @@ a.sg-my-ip {
 
 .wizard-summary-wrapper {
   float: right;
-  width: 280px;
+  width: 280px; 
 }
 
 .wizard-summary {
@@ -2339,9 +2339,17 @@ a.sg-my-ip {
 }
 
 .summary-title {
-  font-family: 'PlayBold', Arial, sans-serif;
-  font-size: 24px; 
   color: #02405f;
+  text-align: center;
+  font-size: 24px;
+  font-family: 'PlayBold', Arial, sans-serif;
+}
+
+#summary-image,
+#summary-type,
+#summary-security,
+#summary-advanced {
+  padding: 0 25px;
 }
 
 .summary {
@@ -3212,10 +3220,34 @@ filter: progid:DXImageTransform.Microsoft.gradient( startColorstr='#ededed', end
   float: left;
 }
 
+/* ======= Scaling Group Instances Indicator ======= */
+
+.scaling-group-instances {
+  padding: 10px 0 0;
+  background: transparent url(../images/thermometer.png) no-repeat 224px 42px;
+}
+
+.scaling-group-instances .wizard-section-label {
+  margin-left: 35px;
+}
+
+.scale-max {
+  
+}
+
+.scale-desired {
+  padding: 24px 0 22px;
+}
+
+.scale-min {
+
+}
+
+/* ======= Tag Related styles ======= */
+
 .tags-edited {
   color: black;
-}
 
 .tags-deleted {
   color: red;
-}
+
