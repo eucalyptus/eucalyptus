@@ -279,13 +279,21 @@ adb_StartServiceResponse_t *StartServiceMarshal(adb_StartService_t * startServic
         adb_startServiceResponseType_add_serviceIds(adbresp, env, adb_startServiceType_get_serviceIds_at(adbinput, env, i));
     }
 
+    // pull out serviceIds[] entries, which indicate which services to 'Start'
+    int serviceIdsLen = adb_startServiceType_sizeof_serviceIds(adbinput, env);
+    serviceInfoType *serviceIds = EUCA_ZALLOC(serviceIdsLen, sizeof(serviceInfoType));
+    for (i = 0; i < serviceIdsLen; i++) {
+        copy_service_info_type_from_adb(&(serviceIds[i]), adb_startServiceType_get_serviceIds_at(adbinput, env, i), env);
+    }
+
     status = AXIS2_TRUE;
-    rc = doStartService(&ccMeta);
+    rc = doStartService(&ccMeta, serviceIds, serviceIdsLen);
     if (rc) {
         logprintf("ERROR: doStartService() returned FAIL\n");
         status = AXIS2_FALSE;
         snprintf(statusMessage, 255, "ERROR");
     }
+    EUCA_FREE(serviceIds);
 
     adb_startServiceResponseType_set_return(adbresp, env, status);
     if (status == AXIS2_FALSE) {
@@ -334,13 +342,21 @@ adb_StopServiceResponse_t *StopServiceMarshal(adb_StopService_t * stopService, c
         adb_stopServiceResponseType_add_serviceIds(adbresp, env, adb_stopServiceType_get_serviceIds_at(adbinput, env, i));
     }
 
+    // pull out serviceIds[] entries, which indicate which services to 'Stop'
+    int serviceIdsLen = adb_stopServiceType_sizeof_serviceIds(adbinput, env);
+    serviceInfoType *serviceIds = EUCA_ZALLOC(serviceIdsLen, sizeof(serviceInfoType));
+    for (i = 0; i < serviceIdsLen; i++) {
+        copy_service_info_type_from_adb(&(serviceIds[i]), adb_stopServiceType_get_serviceIds_at(adbinput, env, i), env);
+    }
+
     status = AXIS2_TRUE;
-    rc = doStopService(&ccMeta);
+    rc = doStopService(&ccMeta, serviceIds, serviceIdsLen);
     if (rc) {
         logprintf("ERROR: doStopService() returned FAIL\n");
         status = AXIS2_FALSE;
         snprintf(statusMessage, 255, "ERROR");
     }
+    EUCA_FREE(serviceIds);
 
     adb_stopServiceResponseType_set_return(adbresp, env, status);
     if (status == AXIS2_FALSE) {

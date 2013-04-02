@@ -1,0 +1,63 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN" "http://www.w3.org/TR/REC-html40/loose.dtd">
+<html><body>
+<div id="launch-wizard-security-main-contents">
+<div class="wizard-section-label">Select security options:</div>
+<div id="launch-wizard-security-keypair"> <div class="form-row clearfix upper-sibling">
+<label for="launch-wizard-security-keypair-selector">Key name</label><select id="launch-wizard-security-keypair-selector" title="Select a key pair for your instance"><option title="spark" value="spark">spark</option>
+<option title="tmp1" value="tmp1">tmp1</option>
+<option title="tmp10" value="tmp10">tmp10</option>
+<option title="tmp2" value="tmp2">tmp2</option>
+<option title="tmp3" value="tmp3">tmp3</option>
+<option title="tmp4" value="tmp4">tmp4</option>
+<option title="tmp5" value="tmp5">tmp5</option>
+<option title="tmp6" value="tmp6">tmp6</option>
+<option title="tmp7" value="tmp7">tmp7</option>
+<option title="tmp8" value="tmp8">tmp8</option>
+<option title="tmp9" value="tmp9">tmp9</option>
+<option value="none">None (advanced option)</option></select>
+</div>
+<div class="form-row clearfix lower-sibling">
+<label for="launch-instance-create-keypair-link">Or:</label><a href="#" id="launch-instance-create-keypair-link">Create new key pair</a>
+</div>
+</div>
+<div id="launch-wizard-security-sgroup"> <div class="form-row clearfix upper-sibling">
+<label for="launch-wizard-security-sg-selector">Security group</label><select id="launch-wizard-security-sg-selector" title="Select a security group for your instance"><option selected title="default" value="default">default</option>
+<option title="group2" value="group2">group2</option></select>
+</div>
+<div class="form-row clearfix lower-sibling">
+<label for="launch-instance-create-sg-link">Or:</label><a href="#" id="launch-instance-create-sg-link">Create new security group</a>
+</div>
+<div id="launch-wizard-security-sg-detail">
+<div class="launcher-sgroup-details-label">Security group default incoming traffic rules</div>
+<div class="launcher-sgroup-rule clearfix">
+<div class="launcher-sgroup-rule-label">Rule:</div>
+<ul>
+<li>icmp</li>
+<li>3</li>
+<li>0.0.0.0/0</li>
+</ul>
+</div>
+<div class="launcher-sgroup-rule clearfix">
+<div class="launcher-sgroup-rule-label">Rule:</div>
+<ul>
+<li>tcp</li>
+<li>3389</li>
+<li>0.0.0.0/0</li>
+</ul>
+</div>
+<div class="launcher-sgroup-rule clearfix">
+<div class="launcher-sgroup-rule-label">Rule:</div>
+<ul>
+<li>tcp</li>
+<li>22</li>
+<li>0.0.0.0/0</li>
+</ul>
+</div>
+</div>
+</div>
+</div>
+<div id="launch-wizard-buttons-security" class="launch-wizard-buttons"> <button class="button" id="launch-wizard-buttons-security-launch">Launch instance(s)</button><div class="form-row advanced-link-wrapper">
+<label for="launch-wizard-buttons-security-advanced-link">Or:</label><a href="#" id="launch-wizard-buttons-security-advanced-link">Select advanced options</a>
+</div>
+</div>
+</body></html>

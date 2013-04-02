@@ -112,6 +112,11 @@ public final class DateUtils {
             = "yyyy-MM-dd'T'HH:mm:ss";
 
     /**
+     * RFC8222-like pattern for date-time. Includes zone
+     */
+    public static final String RFC822_DATETIME_PATTERN = "EEE, dd MMM yyyy HH:mm:ss z";
+    
+    /**
      * ISO8601-like pattern for date. <tt>yyyy-MM-dd</tt>
      */
     public static final String ISO8601_DATE_PATTERN
@@ -336,5 +341,9 @@ public final class DateUtils {
         } catch (ParseException px) {
             return parseIso8601Date(datestr);
         }
+    }
+    
+    public static Date parseRfc822DateTime(String datestr) throws ParseException {
+    	return new SimpleDateFormat(RFC822_DATETIME_PATTERN).parse(datestr);      
     }
 }

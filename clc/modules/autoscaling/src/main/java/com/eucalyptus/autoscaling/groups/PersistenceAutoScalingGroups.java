@@ -22,6 +22,7 @@ package com.eucalyptus.autoscaling.groups;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
+import java.util.Set;
 import org.hibernate.criterion.DetachedCriteria;
 import org.hibernate.criterion.Example;
 import org.hibernate.criterion.Junction;
@@ -31,6 +32,7 @@ import org.hibernate.criterion.Restrictions;
 import com.eucalyptus.autoscaling.common.AutoScalingResourceName;
 import com.eucalyptus.autoscaling.instances.AutoScalingInstance;
 import com.eucalyptus.autoscaling.instances.HealthStatus;
+import com.eucalyptus.autoscaling.metadata.AbstractOwnedPersistents;
 import com.eucalyptus.autoscaling.metadata.AbstractOwnedPersistentsWithResourceNameSupport;
 import com.eucalyptus.autoscaling.metadata.AutoScalingMetadataException;
 import com.eucalyptus.util.Callback;
@@ -38,6 +40,7 @@ import com.eucalyptus.util.OwnerFullName;
 import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Sets;
 
 /**
  *
@@ -134,6 +137,26 @@ public class PersistenceAutoScalingGroups extends AutoScalingGroups {
                                   final String autoScalingGroupName,
                                   final Callback<AutoScalingGroup> groupUpdateCallback ) throws AutoScalingMetadataException {
     return persistenceSupport.update( ownerFullName, autoScalingGroupName, groupUpdateCallback );
+  }
+
+  @Override
+  public void markScalingRequiredForZones( final Set<String> availabilityZones ) throws AutoScalingMetadataException {
+    if ( !availabilityZones.isEmpty() ) {
+      persistenceSupport.transactionWithRetry( AutoScalingGroup.class, new AbstractOwnedPersistents.WorkCallback<Void>() {
+        @Override
+        public Void doWork() throws AutoScalingMetadataException {
+          final List<AutoScalingGroup> groups =
+              //TODO:STEVE: can this query be improved? (restrict by contents of ElementCollection)
+              persistenceSupport.listByExample( AutoScalingGroup.withOwner( null ), Predicates.alwaysTrue()  );
+          for ( final AutoScalingGroup group : groups ) {
+            if ( !Sets.union( Sets.newHashSet( group.getAvailabilityZones() ), availabilityZones ).isEmpty() ) {
+              group.setScalingRequired( true );
+            }
+          }
+          return null;
+        }
+      } );
+    }
   }
 
   @Override

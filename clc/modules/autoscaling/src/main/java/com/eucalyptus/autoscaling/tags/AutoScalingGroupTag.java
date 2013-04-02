@@ -65,6 +65,7 @@ public class AutoScalingGroupTag extends Tag<AutoScalingGroupTag> {
                               @Nullable final Boolean propagateAtLaunch ) {
     super( "auto-scaling-group", ResourceIdFunction.INSTANCE, ownerFullName, key, value, propagateAtLaunch );
     setGroup( group );
+    setResourceId( getResourceId() ); // Set for query by example use
   }
 
   public AutoScalingGroup getGroup() {

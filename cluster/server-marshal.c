@@ -1299,6 +1299,7 @@ adb_DescribeResourcesResponse_t *DescribeResourcesMarshal(adb_DescribeResources_
             //      adb_describeResourcesResponseType_add_serviceTags(drrt, env, outNodes[i].ncURL);
             adb_ccNodeType_t *nt = NULL;
 
+            LOGTRACE("node %s %s\n", outNodes[i].ncURL, outNodes[i].iqn);
             nt = adb_ccNodeType_create(env);
             adb_ccNodeType_set_serviceTag(nt, env, outNodes[i].ncURL);
             adb_ccNodeType_set_iqn(nt, env, outNodes[i].iqn);
@@ -1472,8 +1473,8 @@ int ccInstanceUnmarshal(adb_ccInstanceType_t * dst, ccInstance * src, const axut
         }
     } else {
     	adb_ccInstanceType_set_migrationStateName(dst, env, "none");
-    	adb_ccInstanceType_set_migrationDestination_nil(dst, env);
-    	adb_ccInstanceType_set_migrationSource_nil(dst, env);
+//    	adb_ccInstanceType_set_migrationDestination_nil(dst, env);
+//    	adb_ccInstanceType_set_migrationSource_nil(dst, env);
     }
 
     adb_ccInstanceType_set_blkbytes(dst, env, src->blkbytes);

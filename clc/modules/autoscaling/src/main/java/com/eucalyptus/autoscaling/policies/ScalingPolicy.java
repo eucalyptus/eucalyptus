@@ -69,8 +69,6 @@ public class ScalingPolicy extends AbstractOwnedPersistent implements ScalingPol
   @Enumerated( EnumType.STRING )  
   private AdjustmentType adjustmentType;
   
-  //TODO:STEVE: alarms?
-
   protected ScalingPolicy() {
   }
 

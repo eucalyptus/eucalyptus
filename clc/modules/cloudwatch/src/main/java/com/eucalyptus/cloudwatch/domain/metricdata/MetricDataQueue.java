@@ -15,6 +15,7 @@ import org.apache.log4j.Logger;
 
 import com.eucalyptus.cloudwatch.Dimension;
 import com.eucalyptus.cloudwatch.MetricDatum;
+import com.eucalyptus.cloudwatch.domain.cpu.CPUUtilizationPercentageCalculator;
 import com.eucalyptus.cloudwatch.domain.listmetrics.ListMetricManager;
 import com.eucalyptus.cloudwatch.domain.metricdata.MetricEntity.MetricType;
 import com.eucalyptus.cloudwatch.domain.metricdata.MetricEntity.Units;
@@ -103,6 +104,26 @@ public class MetricDataQueue {
       final List<MetricDatum> metricDatum, final MetricType metricType) {
     Date now = new Date();
     for (final MetricDatum datum : metricDatum) {
+      // Deal with CPUUtilization
+      if (("CPUUtilizationMS".equals(datum.getMetricName())) && 
+        (metricType == MetricType.System) && ("AWS/EC2".equals(nameSpace)) &&
+        (datum.getValue() != null)) {
+        String instanceId = null;
+        if ((datum.getDimensions() != null) && (datum.getDimensions().getMember() != null)) {
+          for (Dimension dimension: datum.getDimensions().getMember()) {
+            if ("InstanceId".equals(dimension.getName())) {
+              instanceId = dimension.getValue();
+            }
+          }
+        }
+        if (instanceId != null) {
+          Double percentValue = CPUUtilizationPercentageCalculator.calculateCPUUtilizationSinceLastEvent(instanceId, datum.getTimestamp(), datum.getValue());	
+          if (percentValue == null) continue; // don't enter the first point
+          datum.setMetricName("CPUUtilization");
+          datum.setValue(percentValue);
+          datum.setUnit(Units.Percent.toString());
+        }
+      } 
       scrub(datum, now);
       final ArrayList<Dimension> dimensions = datum.getDimensions().getMember(); 
       queue(new Supplier<MetricQueueItem>() {
@@ -155,4 +176,16 @@ public class MetricDataQueue {
     return returnValue;
   }
 
+  private List<MetricQueueItem> collectNetworkIO (List<MetricQueueItem> dataBatch) {
+    
+    //List<MetricQueueItem> 
+    
+    for(MetricQueueItem networkItem : dataBatch) {
+	if ( networkItem.getMetricType() == MetricType.System && networkItem.getMetricName().startsWith("Network") ) {
+	    
+	}
+    }
+      
+    return dataBatch;    
+  }
 }

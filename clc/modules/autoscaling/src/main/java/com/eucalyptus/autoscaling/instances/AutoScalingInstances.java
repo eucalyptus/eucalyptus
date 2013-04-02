@@ -21,6 +21,7 @@ package com.eucalyptus.autoscaling.instances;
 
 import java.util.Collection;
 import java.util.List;
+import java.util.Set;
 import com.eucalyptus.autoscaling.common.AutoScalingInstanceDetails;
 import com.eucalyptus.autoscaling.common.AutoScalingMetadatas;
 import com.eucalyptus.autoscaling.common.Instance;
@@ -47,6 +48,9 @@ public abstract class AutoScalingInstances {
 
   public abstract List<AutoScalingInstance> listByGroup( AutoScalingGroup group ) throws AutoScalingMetadataException;
 
+  public abstract List<AutoScalingInstance> listByState( LifecycleState lifecycleState,
+                                                         ConfigurationState configurationState ) throws AutoScalingMetadataException;
+
   public abstract List<AutoScalingInstance> listUnhealthyByGroup( AutoScalingGroup group ) throws AutoScalingMetadataException;
 
   public abstract AutoScalingInstance lookup( OwnerFullName ownerFullName,
@@ -57,7 +61,15 @@ public abstract class AutoScalingInstances {
                                               Callback<AutoScalingInstance> instanceUpdateCallback ) throws AutoScalingMetadataException;
 
   public abstract void markMissingInstancesUnhealthy( AutoScalingGroup group, Collection<String> instanceIds ) throws AutoScalingMetadataException;
-  
+
+  public abstract Set<String> verifyInstanceIds( String accountNumber, Collection<String> instanceIds ) throws AutoScalingMetadataException;
+
+  public abstract void transitionState( AutoScalingGroup group, LifecycleState from, LifecycleState to, Collection<String> instanceIds ) throws AutoScalingMetadataException;
+
+  public abstract void transitionConfigurationState( AutoScalingGroup group, ConfigurationState from, ConfigurationState to, Collection<String> instanceIds ) throws AutoScalingMetadataException;
+
+  public abstract int registrationFailure( AutoScalingGroup group, Collection<String> instanceIds ) throws AutoScalingMetadataException;
+
   public abstract boolean delete( AutoScalingInstance autoScalingInstance ) throws AutoScalingMetadataException;
 
   public abstract boolean deleteByGroup( final AutoScalingGroup group ) throws AutoScalingMetadataException;

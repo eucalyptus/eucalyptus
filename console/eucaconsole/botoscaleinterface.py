@@ -48,7 +48,12 @@ class BotoScaleInterface(ScaleInterface):
             reg = None
             port=443
         reg = RegionInfo(name='eucalyptus', endpoint=clc_host)
-        self.conn = AutoScaleConnection(access_id, secret_key, region=reg,
+        if boto.__version__ < '2.6':
+            self.conn = AutoScaleConnection(access_id, secret_key, region=reg,
+                                  port=port, path=path,
+                                  is_secure=True, security_token=token, debug=0)
+        else:
+            self.conn = AutoScaleConnection(access_id, secret_key, region=reg,
                                   port=port, path=path, validate_certs=False,
                                   is_secure=True, security_token=token, debug=0)
         self.conn.http_connection_kwargs['timeout'] = 30
@@ -80,7 +85,9 @@ class BotoScaleInterface(ScaleInterface):
         return obj
 
     def set_desired_capacity(self, group_name, desired_capacity, honor_cooldown=False):
-        return self.conn.set_desired_capacity(group_name, desired_capacity, honor_cooldown)
+        group = self.conn.get_all_groups([group_name])[0];
+        # notice, honor_cooldown not supported.
+        return group.set_capacity(desired_capacity)
 
     def set_instance_health(self, instance_id, health_status, should_respect_grace_period=True):
         return self.conn.set_instance_health(instance_id, health_status,

@@ -22,6 +22,7 @@
   $.widget('eucalyptus.eucatable', {
     options : { 
       id : '', // user of this widget should customize these options
+      data_deps : null,
       dt_arg : null,
       text : {
         header_title : '',
@@ -44,16 +45,19 @@
     table : null, // jQuery object to the table
     tableArg : null, 
     refreshCallback : null,
+
     _init : function() {
       var thisObj = this; // 
+
       if(thisObj.options['hidden']){
         return;
       }
-
+      thisObj.$vel = $('<div class="visual_search" style="margin-top:-2px;width:90%;display:inline-block"></div>');
       // add draw call back
       $.fn.dataTableExt.afnFiltering = []; /// clear the filtering object
 
       var dtArg = this._getTableParam();
+
       thisObj.tableArg = dtArg;
       this.table = this.element.find('table').dataTable(dtArg);
       var $header = this._decorateHeader();
@@ -73,8 +77,36 @@
         });
       }
 
-      thisObj.refreshCallback = runRepeat(function(){ return thisObj._refreshTableInterval();}, (TABLE_REFRESH_INTERVAL_SEC * 1000), false);
-      tableRefreshCallback = thisObj.refreshCallback;
+// removed callback that causes the table to auto-refresh from data. Instead
+// tables get updated automatically by data pushed from eucadata, in each landing page
+//      thisObj.refreshCallback = runRepeat(function(){ return thisObj._refreshTableInterval();}, (TABLE_REFRESH_INTERVAL_SEC * 1000), false);
+//      tableRefreshCallback = thisObj.refreshCallback;
+      this._refreshTableInterval();
+      $('html body').eucadata('setDataNeeds', thisObj.options.data_deps);
+      require(['app','views/searches/' + dtArg.sAjaxSource, 'visualsearch'], function(app, searchConfig, VS) {
+        var target = dtArg.sAjaxSource === 'scalinggrp' ? 'scalingGroups' : dtArg.sAjaxSource == 'launchconfig' ? 
+            'launchConfigs' : dtArg.sAjaxSource;
+        var source = app.data[target];
+        if (typeof source === 'undefined') {
+          throw new Error("No property '" + target + " on app.data");
+        }
+        thisObj.searchConfig = new searchConfig(source);
+        thisObj.bbdata = thisObj.searchConfig.filtered;
+        thisObj.vsearch = VS.init({
+            container : thisObj.$vel,
+            showFacets : true,
+            query     : '',
+            callbacks : {
+                search       : thisObj.searchConfig.search,
+                facetMatches : thisObj.searchConfig.facetMatches,
+                valueMatches : thisObj.searchConfig.valueMatches
+            }
+        });
+        thisObj.bbdata.on('change reset', function() {
+            thisObj.refreshTable()
+        });
+        thisObj.refreshTable();
+      });
     },
 
     _create : function() {
@@ -87,12 +119,40 @@
       var thisObj = this;
       var dt_arg = {};
       dt_arg["bProcessing"] = true;
-      dt_arg["sAjaxDataProp"] = "results";
+      // This was disabling sorting. I'm not sure why this was there to start with, so
+      // let's leave this like this for now with this comment. - dak
+      //dt_arg["bServerSide"] = true;
       dt_arg["bAutoWidth"] = false;
       dt_arg["sPaginationType"] = "full_numbers",
       dt_arg['fnDrawCallback'] = function( oSettings ) {
         thisObj._drawCallback(oSettings);
       }
+      dt_arg['sAjaxDataProp'] = 'aaData',
+      /*
+      dt_arg["fnServerData"] = function (sSource, aoData, fnCallback) {
+	    require(['models/'+sSource], function(CollectionImpl) {
+		var collection = new CollectionImpl();
+		collection.on('reset', function() {
+		   var data = {};
+                   data.aaData = collection.toJSON();
+                   console.log('DISPLAY',data.aaData);
+                   data.iTotalRecords = data.aaData.length;
+                   data.iTotalDisplayRecords = data.aaData.length;
+		   fnCallback(data);
+		});
+		collection.fetch();
+	    });
+         }
+      */
+      dt_arg['fnServerData'] = function (sSource, aoData, fnCallback) {
+        console.log('fnServerData', arguments);
+        var data = {};
+        data.aaData = thisObj.bbdata ? thisObj.bbdata.toJSON() : [];
+        data.iTotalRecords = data.aaData.length;
+        data.iTotalDisplayRecords = data.aaData.length;
+        fnCallback(data);
+      }
+
       dt_arg['fnInitComplete'] = function( oSettings ) {
         oSettings.oLanguage.sZeroRecords = $.i18n.prop('resource_no_records', thisObj.options.text.resource_plural);
         $emptyDataTd = thisObj.element.find('table tbody').find('.dataTables_empty');
@@ -100,7 +160,7 @@
           var $createNew = $('<a>').attr('href','#').text(thisObj.options.text.create_resource);
           $createNew.click( function() { 
             thisObj.options.menu_click_create(); 
-            $('html body').trigger('click', 'create-new');
+            $('html body').trigger('click.datatable', 'create-new');
             return false;
           });
           text = $emptyDataTd.html();
@@ -136,11 +196,11 @@
 
     _drawCallback : function(oSettings) {
       var thisObj = this;
-      $('#table_' + this.options.id + '_count').html($.i18n.prop(thisObj.options.text.resource_found, oSettings.fnRecordsDisplay()));
+      $('#table_' + this.options.id + '_count').text($.i18n.prop(thisObj.options.text.resource_found, oSettings.fnRecordsDisplay()));
       this.element.find('table thead tr').each(function(index, tr){
         var $checkAll = $(tr).find(':input[type="checkbox"]');
-        if(! $checkAll.data('events') || !('click' in $checkAll.data('events'))){
-          $checkAll.unbind('click').bind('click', function (e) {
+        if(! $checkAll.data('events') || !('click.datatable' in $checkAll.data('events'))){
+          $checkAll.unbind('click.datatable').bind('click.datatable', function (e) {
             var checked = $(this).is(':checked');
             thisObj.element.find('table tbody tr').each(function(innerIdx, innerTr){
               if(checked)
@@ -166,13 +226,15 @@
           $expand = thisObj.options.expand_callback(row);
           if($expand === null){
             var text = $currentRow.find('a.twist').text(); 
-            $currentRow.find('a.twist').parent().append(text);
+            $currentRow.find('a.twist').parent().text(text);
             $currentRow.find('a.twist').remove();
           }
         }
         
-        if(!$currentRow.data('events') || !('click' in $currentRow.data('events'))){
-          $currentRow.unbind('click').bind('click', function (e) {
+        if(!$currentRow.data('events') || !('click.datatable' in $currentRow.data('events'))){
+          $currentRow.unbind('click.datatable').bind('click.datatable', function (e) {
+            // We must regenerate the row so that any events are correctly rebound.
+            $expand = thisObj.options.expand_callback(row);
             if($(e.target).is('a') && $(e.target).hasClass('twist') && thisObj.options.expand_callback){
               if(!$currentRow.next().hasClass('expanded')){
                 thisObj.element.find('table tbody').find('tr.expanded').remove(); // remove all expanded
@@ -258,55 +320,6 @@
     // args.refresh = text 'Refresh'
     _decorateSearchBar : function(args) {
       var thisObj = this; // ref to widget instance
-      if(thisObj.options.filters){
-        $.each(thisObj.options.filters, function (idx, filter){
-          var $filter = thisObj.element.find('#'+filter['name']+'-filter');
-          $filter.addClass('euca-table-filter');
-          if (idx===0){
-            $filter.append(
-              $('<span>').addClass('filter-label').html(table_filter_label),
-              $('<select>').attr('id',filter['name']+'-selector'));
-          }else{
-            $filter.append(
-              $('<select>').attr('id',filter['name']+'-selector'));
-          }
-          var $selector = $filter.find('#'+filter['name']+'-selector');
-          $selector.change( function(e) { thisObj.table.fnDraw(); } );
-          for (i in filter.options){
-            var option = filter.options[i];
-            var text = (filter.text&&filter.text.length>i) ? filter.text[i] : option; 
-            $selector.append($('<option>').val(option).text(text));
-          }
-          if(filter['filter_col']){
-            $.fn.dataTableExt.afnFiltering.push(
-	      function( oSettings, aData, iDataIndex ) {
-                if (oSettings.sInstance !== thisObj.options.id)
-                  return true;
-                var selectorVal = thisObj.element.find('select#'+filter['name']+'-selector').val();
-                if(filter['alias'] && filter['alias'][selectorVal]){
-                  var aliasTbl = filter['alias'];
-                  return aliasTbl[selectorVal] === aData[filter['filter_col']];
-                }else if ( selectorVal !== filter['options'][0] ){ // not 'all'
-                  return selectorVal === aData[filter['filter_col']];
-                }else
-                  return true;
-             });
-          }else if (filter['callback']){
-            $selector.change(function(e){ 
-              filter.callback($(e.target).val());
-            }); 
-          }
-
-          if(filter.default){
-            $selector.find('option').each(function(){
-              if($(this).val() === filter.default){
-                $(this).attr('selected','selected');
-              }
-            });
-            $selector.trigger('change');
-          }
-        }); // end of filters
-      }      
 
       var $searchBar = this.element.find('#'+this.options.id+'_filter');
       $searchBar.find(":input").watermark(this.options.text.resource_search);
@@ -323,6 +336,12 @@
       $(filterArr).each(function(){$wrapper.append($(this).clone(true));}); 
       $wrapper.insertAfter(filterArr[filterArr.length-1]);
       $(filterArr).each(function(){$(this).remove();});
+
+if (true) {
+      $wrapper.empty();
+      $wrapper.prepend('<div class="dataTables_filter" id="images_filter"><a class="table-refresh" href="#">Refresh</a></div>');
+      $wrapper.prepend(thisObj.$vel);
+}         
     },   
 
     // args.txt_create (e.g., Create new key)
@@ -368,12 +387,12 @@
       // add action to create new
       this.element.find('#table-' + this.options.id + '-new').click(function(e) {
         thisObj._trigger('menu_click_create', e); // users of the table should listen to
-        $('html body').trigger('click', 'create-new');
+        $('html body').trigger('click.datatable', 'create-new');
         return false;
       });
       this.element.find('#table-' + this.options.id + '-extra').click(function(e) {
         thisObj._trigger('menu_click_extra', e); // users of the table should listen to
-        $('html body').trigger('click', 'create-extra');
+        $('html body').trigger('click.datatable', 'create-extra');
         return false;
       });
       return $tableTop;
@@ -408,17 +427,17 @@
               $.each(menu_actions, function (key, menu){
                 $ul.append(
                   $('<li>').attr('id', thisObj.options.id + '-' + key).append(
-                    $('<a>').attr('href','#').text(menu.name).unbind('click').bind('click', menu.callback)));
+                    $('<a>').attr('href','#').text(menu.name).unbind('click.datatable').bind('click.datatable', menu.callback)));
               });
               $menuDiv.append($ul);
             }
-            $('html body').trigger('click','table:instance');
+            $('html body').trigger('click.datatable','table:instance');
             if($ul.hasClass('toggle-on')){
               $.each(menu_actions, function (key, menu){
                 if(menu.disabled){
-                  $ul.find('#'+thisObj.options.id + '-'+key).addClass('disabled').find('a').removeAttr('href').unbind('click');
+                  $ul.find('#'+thisObj.options.id + '-'+key).addClass('disabled').find('a').removeAttr('href').unbind('click.datatable');
                 }else{
-                  $ul.find('#'+thisObj.options.id + '-'+key).removeClass('disabled').find('a').attr('href','#').unbind('click').bind('click',menu.callback);
+                  $ul.find('#'+thisObj.options.id + '-'+key).removeClass('disabled').find('a').attr('href','#').unbind('click.datatable').bind('click.datatable',menu.callback);
                 }
               }); 
               $('html body').eucaevent('add_click', 'table:instance', e);
@@ -442,7 +461,7 @@
           var itemCls = 'legend-'+val;
           textId = thisObj.options.id+'_legend_'+val.replace('-','_');
           var text = $.i18n.map[textId] ? $.i18n.map[textId] : val;
-          $itemWrapper.append($('<span>').addClass('legend-item').addClass(itemCls).html(text));
+          $itemWrapper.append($('<span>').addClass('legend-item').addClass(itemCls).text(text));
         });
         $legend.append($itemWrapper);
         thisObj.element.find('.legend-pagination-wrapper').prepend($legend);
@@ -536,12 +555,17 @@
         return;
       if(! $('html body').eucadata('isEnabled'))
         return;
+      var oSettings = this.table.fnSettings();
+
+      // Don't use eucadata
+      //$('html body').eucadata('refresh', oSettings.sAjaxSource);
+
       this.table.fnReloadAjax(undefined, undefined, true);
-      
+     
       var $checkAll = this.table.find('thead').find(':input[type="checkbox"]');
       var checked = $checkAll.is(':checked');
       if(checked)
-        $checkAll.trigger('click');
+        $checkAll.trigger('click.datatable');
     },
 
     glowRow : function(val, columnId) {
@@ -557,6 +581,10 @@
           cancelRepeat(token);
         }
       }, 2000);
+    },
+
+    redraw : function() {
+      this._refreshTableInterval();
     },
 
     // (optional) columnIdx: if undefined, returns matrix [row_idx, col_key]

@@ -165,7 +165,8 @@ const char *ncResourceTypeName[] = {
     "kernel",
     "ephemeral",
     "swap",
-    "ebs"
+    "ebs",
+    "boot"
 };
 
 //! String value of each instance state enumeration entry
@@ -237,7 +238,7 @@ const char *euca_error_names[] = {
     "access denied error",
     "no space available error",
     "timeout error",
-    "unknown",
+    "unknown"
 };
 
 /*----------------------------------------------------------------------------*\
@@ -977,7 +978,7 @@ ncVolume *save_volume(ncInstance * pInstance, const char *sVolumeId, const char 
         euca_strncpy(pVol->volumeId, sVolumeId, CHAR_BUFFER_SIZE);
 
         if (sRemoteDev)
-            euca_strncpy(pVol->remoteDev, sRemoteDev, CHAR_BUFFER_SIZE);
+            euca_strncpy(pVol->remoteDev, sRemoteDev, VERY_BIG_CHAR_BUFFER_SIZE);
 
         if (sLocalDev)
             euca_strncpy(pVol->localDev, sLocalDev, CHAR_BUFFER_SIZE);

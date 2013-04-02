@@ -598,8 +598,7 @@ virConnectPtr *check_hypervisor_conn()
             bail = TRUE;
         }
         // terminate the child, if any
-        kill(cpid, SIGKILL);    // should be able to do
-        kill(cpid, 9);          // may not be able to do
+        killwait(cpid);
     }
 
     if (bail) {
@@ -1342,8 +1341,7 @@ void *startup_thread(void *arg)
             }
 
             if (try_killing) {
-                kill(cpid, SIGKILL);    // should be able to do
-                kill(cpid, 9);  // may not be able to do?
+                killwait(cpid);
             }
         }
 
@@ -1481,8 +1479,7 @@ void *restart_thread(void *arg)
                 }
 
                 if (tryKilling) {
-                    kill(cpid, SIGKILL);    // should be able to do
-                    kill(cpid, 9);  // may not be able to do?
+                    killwait(cpid);
                 }
             }
         }
@@ -2186,6 +2183,17 @@ static int init(void)
     }
 
     int initFail = 0;
+
+    if (tmp && !(!strcmp(tmp, "SYSTEM") || !strcmp(tmp, "STATIC") || 
+                !strcmp(tmp, "MANAGED-NOVLAN") || !strcmp(tmp, "MANAGED"))) {
+            char errorm[256];
+            memset(errorm,0,256);
+            sprintf(errorm,"Invalid VNET_MODE setting: %s",tmp);
+            LOGFATAL("%s\n",errorm);
+            log_eucafault("1012","component",euca_this_component_name,"cause",errorm,NULL);
+            initFail = 1;
+    }
+
     if (tmp && (!strcmp(tmp, "SYSTEM") || !strcmp(tmp, "STATIC") || !strcmp(tmp, "MANAGED-NOVLAN"))) {
         bridge = getConfString(nc_state.configFiles, 2, "VNET_BRIDGE");
         if (!bridge) {

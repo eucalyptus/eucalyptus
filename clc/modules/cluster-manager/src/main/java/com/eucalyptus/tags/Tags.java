@@ -96,6 +96,25 @@ public class Tags {
     }
   }
 
+  /**
+   * Count tags matching the given example and criteria.
+   *
+   * @param example The tag example
+   * @param criterion The database criterion to restrict the results
+   * @param aliases Aliases for the database criterion
+   * @return The matching tag count.
+   */
+  public static long count( final Tag example,
+                            final Criterion criterion,
+                            final Map<String,String> aliases ) {
+    EntityTransaction transaction = Entities.get( example );
+    try {
+      return Entities.count( example, criterion, aliases );
+    } finally {
+      transaction.rollback();
+    }
+  }
+
   public static Function<Tag,String> resourceId() {
     return TagFunctions.RESOURCE_ID;
   }
@@ -108,12 +127,21 @@ public class Tags {
     return TagFunctions.VALUE;
   }
 
-  public static void delete( final Tag example ) throws NoSuchMetadataException {
+  public static void delete( final Tag example,
+                             final Criterion criterion,
+                             final Map<String,String> aliases ) throws NoSuchMetadataException {
     final EntityTransaction db = Entities.get(Tag.class);
     try {
-      final Tag entity = Entities.uniqueResult( example );
-      Entities.delete( entity );
+      final List<Tag> entities = Entities.query( example, false, criterion, aliases );
+      if ( entities.size() == 0 ) {
+        throw new NoSuchMetadataException( "Tag not found for delete: " + example.getKey() + " for " + example.getOwner() );
+      } else if ( entities.size() < 1 ) {
+        throw new NoSuchMetadataException( "Multiple matching tags found for delete: " + example.getKey() + " for " + example.getOwner() );
+      }
+      Entities.delete( entities.get( 0 ) );
       db.commit( );
+    } catch ( NoSuchMetadataException e ) {
+      throw e;
     } catch ( Exception ex ) {
       Logs.exhaust().error( ex, ex );
       db.rollback( );
@@ -132,19 +160,27 @@ public class Tags {
   public static Tag createOrUpdate( final Tag tag ) {
     Tag result;
     String originalValue = tag.getValue();
+    String originalUserId = tag.getOwnerUserId();
+    String originalUserName = tag.getOwnerUserName();
     try {
+      tag.setValue( null );
+      tag.setOwnerUserId( null );
+      tag.setOwnerUserName( null );
       tag.setValue( null );
       final Tag existing = lookup( tag );
       existing.setValue( originalValue );
       result = existing;
     } catch ( final NoSuchMetadataException e ) {
       tag.setValue( originalValue );
+      tag.setOwnerUserId( originalUserId );
+      tag.setOwnerUserName( originalUserName );
       Entities.persist( tag );
       result = tag;
     } finally {
       tag.setValue( originalValue );
+      tag.setOwnerUserId( originalUserId );
+      tag.setOwnerUserName( originalUserName );
     }
-
     return result;
   }
 

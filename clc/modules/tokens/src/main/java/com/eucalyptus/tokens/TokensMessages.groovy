@@ -102,9 +102,56 @@ class CredentialsType extends EucalyptusData {
   String secretAccessKey
   String sessionToken
   Date expiration
+
+  public CredentialsType() {}
+
+  CredentialsType( String accessKeyId,
+                   String secretAccessKey,
+                   String sessionToken,
+                   long expiration) {
+    this.accessKeyId = accessKeyId
+    this.secretAccessKey = secretAccessKey
+    this.sessionToken = sessionToken
+    this.expiration = new Date(expiration)
+  }
 }
 
 class FederatedUserType extends EucalyptusData {
   String federatedUserId
   String arn
+}
+
+@PolicyAction( vendor = PolicySpec.VENDOR_STS, action = PolicySpec.STS_ASSUME_ROLE )
+public class AssumeRoleType extends TokenMessage {
+  String roleArn;
+  String roleSessionName;
+  String policy;
+  Integer durationSeconds;
+  String externalId;
+  public AssumeRoleType() {  }
+}
+
+public class AssumeRoleResponseType extends TokenMessage {
+  public AssumeRoleResponseType() {  }
+  AssumeRoleResultType assumeRoleResult = new AssumeRoleResultType();
+  TokensResponseMetadataType responseMetadata = new TokensResponseMetadataType();
+}
+
+public class AssumeRoleResultType extends EucalyptusData {
+  CredentialsType credentials;
+  AssumedRoleUserType assumedRoleUser;
+  Integer packedPolicySize;
+  public AssumeRoleResultType() {  }
+}
+
+public class AssumedRoleUserType extends EucalyptusData {
+  String assumedRoleId;
+  String arn;
+  public AssumedRoleUserType() {  }
+
+  AssumedRoleUserType( String assumedRoleId,
+                       String arn) {
+    this.assumedRoleId = assumedRoleId
+    this.arn = arn
+  }
 }

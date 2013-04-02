@@ -30,7 +30,7 @@ from uiproxyclient import UIProxyClient
 if __name__ == "__main__":
     # make some calls to proxy class to test things out
     client = UIProxyClient()
-    client.login('localhost', '8888', 'testuser1', 'admin', 'euca123')
+    client.login('localhost', '8888', 'ui-test-acct-03', 'admin', 'mypassword7')
     print "=== Getting Tags ==="
     print client.get_tags()
 #    print "=== Creating Tag ==="
@@ -41,3 +41,4 @@ if __name__ == "__main__":
 #    print client.get_tags()
 #    print "=== Getting filtered images ==="
 #    print client.get_images({'tag:Purpose':'LifeguardDevel'});
+    print client.get_tags({'resource-type':'volume'});

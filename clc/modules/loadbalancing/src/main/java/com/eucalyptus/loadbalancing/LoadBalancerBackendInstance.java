@@ -19,7 +19,11 @@
  ************************************************************************/
 package com.eucalyptus.loadbalancing;
 
+import java.util.List;
+import java.util.NoSuchElementException;
+
 import javax.persistence.Column;
+import javax.persistence.EntityTransaction;
 import javax.persistence.JoinColumn;
 import javax.persistence.ManyToOne;
 import javax.persistence.PersistenceContext;
@@ -34,10 +38,13 @@ import org.hibernate.annotations.Entity;
 import com.eucalyptus.cloud.UserMetadata;
 import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.id.Eucalyptus;
+import com.eucalyptus.entities.Entities;
+import com.eucalyptus.loadbalancing.activities.EucalyptusActivityTasks;
 import com.eucalyptus.util.FullName;
 import com.eucalyptus.util.OwnerFullName;
-import com.eucalyptus.vm.VmInstance;
-import com.eucalyptus.vm.VmInstances;
+import com.google.common.collect.Lists;
+
+import edu.ucsb.eucalyptus.msgs.RunningInstancesItemType;
 
 /**
  * @author Sang-Min Park
@@ -65,7 +72,7 @@ public class LoadBalancerBackendInstance extends UserMetadata<LoadBalancerBacken
     private LoadBalancerZone zone = null;
         
     @Transient
-    private VmInstance vmInstance = null;
+    private RunningInstancesItemType vmInstance = null;
 	
 	@Column( name = "reason_code", nullable=true)
 	private String reasonCode = null;
@@ -74,11 +81,34 @@ public class LoadBalancerBackendInstance extends UserMetadata<LoadBalancerBacken
     	super(null,null);
     }
 	
-	private LoadBalancerBackendInstance(final OwnerFullName userFullName, final LoadBalancer lb, final String vmId){
+	private LoadBalancerBackendInstance(final OwnerFullName userFullName, final LoadBalancer lb, final String vmId) {
 		super(userFullName, vmId);
 		this.loadbalancer = lb;
 		this.setState(STATE.OutOfService);
-		this.vmInstance=VmInstances.lookup(vmId);
+		
+		List<RunningInstancesItemType> instanceIds = EucalyptusActivityTasks.getInstance().describeInstances(Lists.newArrayList(vmId));
+	    for(RunningInstancesItemType instance : instanceIds ) {
+	      if(instance.getInstanceId().equals(vmId)){
+	        this.vmInstance = instance;
+	        break;
+	      }
+	    }
+    	if(this.vmInstance == null)
+    		throw new IllegalArgumentException("Cannot find the instance with id="+vmId);
+
+    	final EntityTransaction db = Entities.get( LoadBalancerBackendInstance.class );
+    	try{
+    		final LoadBalancerZone found = Entities.uniqueResult(LoadBalancerZone.named(lb, this.vmInstance.getPlacement()));
+    		this.setAvailabilityZone(found);
+    		db.commit();
+    	}catch(NoSuchElementException ex){
+    		db.rollback();
+    	}catch(Exception ex){
+    		db.rollback();
+    	}finally{
+    		if(this.zone == null)
+    			throw new IllegalArgumentException("Cannot find the availability zone");
+    	}
 	}
 	
 	public static LoadBalancerBackendInstance newInstance(final OwnerFullName userFullName, final LoadBalancer lb, final String vmId){
@@ -92,14 +122,18 @@ public class LoadBalancerBackendInstance extends UserMetadata<LoadBalancerBacken
 	}
 	
 	public static LoadBalancerBackendInstance named(final OwnerFullName userName, final String vmId){
-		return new LoadBalancerBackendInstance(userName, null, vmId);
+		LoadBalancerBackendInstance instance = new LoadBalancerBackendInstance();
+		instance.setOwner(userName);
+		instance.setDisplayName(vmId);
+		instance.setState(null);
+		return instance;
 	}
-	
+		
 	public String getInstanceId(){
 		return this.getDisplayName();
 	}
 	
-	public VmInstance getVmInstance(){
+	public RunningInstancesItemType getVmInstance(){
 		return this.vmInstance;
 	}
 
@@ -133,8 +167,14 @@ public class LoadBalancerBackendInstance extends UserMetadata<LoadBalancerBacken
     
 	@Override
 	public String getPartition() {
-		// TODO Auto-generated method stub
-		return this.vmInstance != null ? this.vmInstance.getPartition() : null;
+
+    String localPartition = null;
+    List<RunningInstancesItemType> instances = EucalyptusActivityTasks.getInstance().describeInstances(Lists.newArrayList(this.vmInstance.getInstanceId()));
+    for (RunningInstancesItemType instance : instances ) {
+      localPartition = instance.getPlacement();
+      break;
+    }
+    return localPartition != null ? localPartition : null;
 	}
 
 	@Override
@@ -143,7 +183,7 @@ public class LoadBalancerBackendInstance extends UserMetadata<LoadBalancerBacken
 		return FullName.create.vendor( "euca" )
                 .region( ComponentIds.lookup( Eucalyptus.class ).name( ) )
                 .namespace( this.getOwnerAccountNumber( ) )
-                .relativeId( "loadbalancer-backend-instance", this.vmInstance!=null ? this.vmInstance.getDisplayName() : "");
+                .relativeId( "loadbalancer-backend-instance", this.vmInstance.getInstanceId()!=null ? this.vmInstance.getInstanceId() : "");
 	}
 	@Override
 	public int hashCode( ) {
@@ -159,4 +199,12 @@ public class LoadBalancerBackendInstance extends UserMetadata<LoadBalancerBacken
 	public String toString(){
 		return String.format("%s backend instance - %s", this.loadbalancer, this.getDisplayName());
 	}
+	
+	@Override
+	protected String createUniqueName( ) {
+	    return ( this.getOwnerAccountNumber( ) != null && this.getDisplayName( ) != null && this.getLoadBalancer() != null)
+	      ? this.getOwnerAccountNumber( ) + ":" + this.getLoadBalancer().getDisplayName()+":"+this.getDisplayName( )
+	      : null;
+	}
+	  
 }

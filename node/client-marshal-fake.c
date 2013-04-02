@@ -819,7 +819,7 @@ int ncAttachVolumeStub(ncStub * pStub, ncMetadata * pMeta, char *instanceId, cha
             if (!vdone && foundidx >= 0) {
                 LOGDEBUG("fakeNC: \tfake attaching volume at idx %d\n", foundidx);
                 snprintf(myconfig->global_instances[i].volumes[foundidx].volumeId, CHAR_BUFFER_SIZE, "%s", volumeId);
-                snprintf(myconfig->global_instances[i].volumes[foundidx].remoteDev, CHAR_BUFFER_SIZE, "%s", remoteDev);
+                snprintf(myconfig->global_instances[i].volumes[foundidx].remoteDev, VERY_BIG_CHAR_BUFFER_SIZE, "%s", remoteDev);
                 snprintf(myconfig->global_instances[i].volumes[foundidx].localDev, CHAR_BUFFER_SIZE, "%s", localDev);
                 snprintf(myconfig->global_instances[i].volumes[foundidx].localDevReal, CHAR_BUFFER_SIZE, "%s", localDev);
                 snprintf(myconfig->global_instances[i].volumes[foundidx].stateName, CHAR_BUFFER_SIZE, "%s", "attached");

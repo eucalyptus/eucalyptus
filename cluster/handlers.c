@@ -110,6 +110,7 @@
 #include <handlers-state.h>
 #include <fault.h>
 #include <euca_string.h>
+#include <axutil_error.h>
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |
@@ -842,17 +843,28 @@ int ncClientCall(ncMetadata * pMeta, int timeout, int ncLock, char *ncURL, char 
         } else if (!strcmp(ncOp, "ncDescribeResource")) {
             char *resourceType = va_arg(al, char *);
             ncResource **outRes = va_arg(al, ncResource **);
+            char **errMsg = va_arg(al, char **);
 
             rc = ncDescribeResourceStub(ncs, localmeta, resourceType, outRes);
             if (timeout && outRes) {
                 if (!rc && *outRes) {
                     len = sizeof(ncResource);
+                     rc = write(filedes[1], &rc, sizeof(int));//NOTE: we write back rc as well
                     rc = write(filedes[1], &len, sizeof(int));
                     rc = write(filedes[1], *outRes, sizeof(ncResource));
                     rc = 0;
                 } else {
-                    len = 0;
-                    rc = write(filedes[1], &len, sizeof(int));
+                    (*errMsg) = axutil_error_get_message(ncs->env->error);
+                    if(*errMsg && (len = strnlen(*errMsg,1024-1))) {
+                        len += 1;
+                        rc = write(filedes[1], &rc, sizeof(int));//NOTE: we write back rc as well
+                        rc = write(filedes[1], &len, sizeof(int));
+                        rc = write(filedes[1], *errMsg, sizeof(char) * len);
+                    } else {
+                        len = 0;
+                        rc = write(filedes[1], &rc, sizeof(int));//NOTE: we write back rc as well
+                        rc = write(filedes[1], &len, sizeof(int));
+                    }
                     rc = 1;
                 }
             }
@@ -940,7 +952,7 @@ int ncClientCall(ncMetadata * pMeta, int timeout, int ncLock, char *ncURL, char 
             if (timeout && outConsoleOutput) {
                 rbytes = timeread(filedes[0], &len, sizeof(int), timeout);
                 if (rbytes <= 0) {
-                    kill(pid, SIGKILL);
+                    killwait(pid);
                     opFail = 1;
                 } else {
                     *outConsoleOutput = EUCA_ALLOC(len, sizeof(char));
@@ -950,7 +962,7 @@ int ncClientCall(ncMetadata * pMeta, int timeout, int ncLock, char *ncURL, char 
                     }
                     rbytes = timeread(filedes[0], *outConsoleOutput, len, timeout);
                     if (rbytes <= 0) {
-                        kill(pid, SIGKILL);
+                        killwait(pid);
                         opFail = 1;
                     }
                 }
@@ -971,17 +983,17 @@ int ncClientCall(ncMetadata * pMeta, int timeout, int ncLock, char *ncURL, char 
             if (timeout && shutdownState && previousState) {
                 rbytes = timeread(filedes[0], &len, sizeof(int), timeout);
                 if (rbytes <= 0) {
-                    kill(pid, SIGKILL);
+                    killwait(pid);
                     opFail = 1;
                 } else {
                     rbytes = timeread(filedes[0], shutdownState, sizeof(int), timeout);
                     if (rbytes <= 0) {
-                        kill(pid, SIGKILL);
+                        killwait(pid);
                         opFail = 1;
                     }
                     rbytes = timeread(filedes[0], previousState, sizeof(int), timeout);
                     if (rbytes <= 0) {
-                        kill(pid, SIGKILL);
+                        killwait(pid);
                         opFail = 1;
                     }
                 }
@@ -1007,7 +1019,7 @@ int ncClientCall(ncMetadata * pMeta, int timeout, int ncLock, char *ncURL, char 
                 *outStatus = NULL;
                 rbytes = timeread(filedes[0], &len, sizeof(int), timeout);
                 if (rbytes <= 0) {
-                    kill(pid, SIGKILL);
+                    killwait(pid);
                     opFail = 1;
                 } else {
                     *outStatus = EUCA_ALLOC(len, sizeof(char));
@@ -1017,7 +1029,7 @@ int ncClientCall(ncMetadata * pMeta, int timeout, int ncLock, char *ncURL, char 
                     }
                     rbytes = timeread(filedes[0], *outStatus, len, timeout);
                     if (rbytes <= 0) {
-                        kill(pid, SIGKILL);
+                        killwait(pid);
                         opFail = 1;
                     }
                 }
@@ -1072,7 +1084,7 @@ int ncClientCall(ncMetadata * pMeta, int timeout, int ncLock, char *ncURL, char 
             if (timeout && outInst) {
                 rbytes = timeread(filedes[0], &len, sizeof(int), timeout);
                 if (rbytes <= 0) {
-                    kill(pid, SIGKILL);
+                    killwait(pid);
                     opFail = 1;
                 } else {
                     *outInst = EUCA_ZALLOC(1, sizeof(ncInstance));
@@ -1082,7 +1094,7 @@ int ncClientCall(ncMetadata * pMeta, int timeout, int ncLock, char *ncURL, char 
                     }
                     rbytes = timeread(filedes[0], *outInst, sizeof(ncInstance), timeout);
                     if (rbytes <= 0) {
-                        kill(pid, SIGKILL);
+                        killwait(pid);
                         opFail = 1;
                     }
                 }
@@ -1104,7 +1116,7 @@ int ncClientCall(ncMetadata * pMeta, int timeout, int ncLock, char *ncURL, char 
             if (timeout && ncOutInsts && ncOutInstsLen) {
                 rbytes = timeread(filedes[0], &len, sizeof(int), timeout);
                 if (rbytes <= 0) {
-                    kill(pid, SIGKILL);
+                    killwait(pid);
                     opFail = 1;
                 } else {
                     *ncOutInsts = EUCA_ZALLOC(len, sizeof(ncInstance *));
@@ -1127,18 +1139,32 @@ int ncClientCall(ncMetadata * pMeta, int timeout, int ncLock, char *ncURL, char 
             }
         } else if (!strcmp(ncOp, "ncDescribeResource")) {
             char *resourceType = NULL;
+            char **errMsg = NULL;
             ncResource **outRes = NULL;
 
             resourceType = va_arg(al, char *);
             outRes = va_arg(al, ncResource **);
+            errMsg = va_arg(al, char **);
             if (outRes) {
                 *outRes = NULL;
             }
             if (timeout && outRes) {
-                rbytes = timeread(filedes[0], &len, sizeof(int), timeout);
-                if (rbytes <= 0) {
-                    kill(pid, SIGKILL);
+                // first int we read back is the 'rc', then the 'len'
+                rbytes = timeread(filedes[0], &opFail, sizeof(int), timeout);
+                if (rbytes <= 0 || (rbytes = timeread(filedes[0], &len, sizeof(int), timeout)) <=0 ) {
+                    killwait(pid);
                     opFail = 1;
+                } else if (opFail&&len) {
+                    *errMsg = EUCA_ZALLOC(len,sizeof(char));
+                    if (*errMsg == NULL) {
+                        LOGFATAL("out of memory! ncOps=%s\n", ncOp);
+                        unlock_exit(1);
+                    }
+                    rbytes = timeread(filedes[0], *errMsg, len*sizeof(char), timeout);
+                    if (rbytes <= 0 || opFail) {
+                        kill(pid, SIGKILL);
+                        opFail = 1;
+                    }
                 } else {
                     *outRes = EUCA_ZALLOC(1, sizeof(ncResource));
                     if (*outRes == NULL) {
@@ -1147,7 +1173,7 @@ int ncClientCall(ncMetadata * pMeta, int timeout, int ncLock, char *ncURL, char 
                     }
                     rbytes = timeread(filedes[0], *outRes, sizeof(ncResource), timeout);
                     if (rbytes <= 0) {
-                        kill(pid, SIGKILL);
+                        killwait(pid);
                         opFail = 1;
                     }
                 }
@@ -1178,7 +1204,7 @@ int ncClientCall(ncMetadata * pMeta, int timeout, int ncLock, char *ncURL, char 
             if (timeout && srs && srsLen) {
                 rbytes = timeread(filedes[0], &len, sizeof(int), timeout);
                 if (rbytes <= 0) {
-                    kill(pid, SIGKILL);
+                    killwait(pid);
                     opFail = 1;
                 } else {
                     *srs = EUCA_ZALLOC(len, sizeof(sensorResource *));
@@ -1318,8 +1344,17 @@ int doAttachVolume(ncMetadata * pMeta, char *volumeId, char *instanceId, char *r
     for (i = start; i < stop && !done; i++) {
         timeout = ncGetTimeout(op_start, OP_TIMEOUT, stop - start, i);
         timeout = maxint(timeout, ATTACH_VOL_TIMEOUT_SECONDS);
-        rc = ncClientCall(pMeta, timeout, resourceCacheLocal.resources[i].lockidx, resourceCacheLocal.resources[i].ncURL, "ncAttachVolume",
-                          instanceId, volumeId, remoteDev, localDev);
+
+        // pick out the right LUN from the remove device string
+        char remoteDevForNC [VERY_BIG_CHAR_BUFFER_SIZE];
+        if (get_remoteDevForNC(resourceCacheLocal.resources[i].iqn, remoteDev, remoteDevForNC, sizeof(remoteDevForNC))) {
+            LOGERROR("failed to parse remote dev string in request\n");
+            rc = 1;
+        } else {
+            rc = ncClientCall(pMeta, timeout, resourceCacheLocal.resources[i].lockidx, resourceCacheLocal.resources[i].ncURL, "ncAttachVolume",
+                              instanceId, volumeId, remoteDevForNC, localDev);
+        }
+
         if (rc) {
             ret = 1;
         } else {
@@ -1394,8 +1429,16 @@ int doDetachVolume(ncMetadata * pMeta, char *volumeId, char *instanceId, char *r
     for (i = start; i < stop; i++) {
         timeout = ncGetTimeout(op_start, OP_TIMEOUT, stop - start, i);
         timeout = maxint(timeout, DETACH_VOL_TIMEOUT_SECONDS);
-        rc = ncClientCall(pMeta, timeout, resourceCacheLocal.resources[i].lockidx, resourceCacheLocal.resources[i].ncURL, "ncDetachVolume",
-                          instanceId, volumeId, remoteDev, localDev, force);
+
+        // pick out the right LUN from the remove device string
+        char remoteDevForNC [VERY_BIG_CHAR_BUFFER_SIZE];
+        if (get_remoteDevForNC(resourceCacheLocal.resources[i].iqn, remoteDev, remoteDevForNC, sizeof(remoteDevForNC))) {
+            LOGERROR("failed to parse remote dev string in request\n");
+            rc = 1;
+        } else {
+            rc = ncClientCall(pMeta, timeout, resourceCacheLocal.resources[i].lockidx, resourceCacheLocal.resources[i].ncURL, "ncDetachVolume",
+                              instanceId, volumeId, remoteDevForNC, localDev, force);
+        }
         if (rc) {
             ret = 1;
         } else {
@@ -1998,9 +2041,8 @@ int doDescribeResources(ncMetadata * pMeta, virtualMachine ** ccvms, int vmLen, 
 
         for (i = 0; i < resourceCacheLocal.numResources; i++) {
             res = &(resourceCacheLocal.resources[i]);
-
             for (j = 0; j < vmLen; j++) {
-                if (! strcmp(res->nodeStatus, "disabled")) {
+                if ( res->ncState == STOPPED ) {
                     mempool = 0;
                     diskpool = 0;
                     corepool = 0;
@@ -2020,7 +2062,7 @@ int doDescribeResources(ncMetadata * pMeta, virtualMachine ** ccvms, int vmLen, 
                     corepool -= (*ccvms)[j].cores;
                 }
 
-                if (! strcmp(res->nodeStatus, "disabled")) {
+                if ( res->ncState == STOPPED ) {
                     mempool = 0;
                     diskpool = 0;
                     corepool = 0;
@@ -2132,8 +2174,9 @@ int refresh_resources(ncMetadata * pMeta, int timeout, int dolock)
             ncResDst = NULL;
             if (resourceCacheStage->resources[i].state != RESASLEEP && resourceCacheStage->resources[i].running == 0) {
                 nctimeout = ncGetTimeout(op_start, timeout, 1, 1);
+                char *errMsg = NULL;
                 rc = ncClientCall(pMeta, nctimeout, resourceCacheStage->resources[i].lockidx, resourceCacheStage->resources[i].ncURL,
-                                  "ncDescribeResource", NULL, &ncResDst);
+                                  "ncDescribeResource", NULL, &ncResDst, &errMsg);
                 if (rc != 0) {
                     powerUp(&(resourceCacheStage->resources[i]));
 
@@ -2150,6 +2193,9 @@ int refresh_resources(ncMetadata * pMeta, int timeout, int dolock)
                         resourceCacheStage->resources[i].maxCores = 0;
                         resourceCacheStage->resources[i].availCores = 0;
                         changeState(&(resourceCacheStage->resources[i]), RESDOWN);
+                        resourceCacheStage->resources[i].ncState = NOTREADY;
+                        euca_strncpy(resourceCacheStage->resources[i].nodeMessage, SP(errMsg), 1024);
+                        LOGERROR("error message from ncDescribeResource: %s\n", resourceCacheStage->resources[i].nodeMessage);
                     }
                 } else {
                     LOGDEBUG("received data from node=%s status=%s mem=%d/%d disk=%d/%d cores=%d/%d migrationCapable=%d\n",
@@ -2165,13 +2211,23 @@ int refresh_resources(ncMetadata * pMeta, int timeout, int dolock)
                     resourceCacheStage->resources[i].availDisk = ncResDst->diskSizeAvailable;
                     resourceCacheStage->resources[i].maxCores = ncResDst->numberOfCoresMax;
                     resourceCacheStage->resources[i].availCores = ncResDst->numberOfCoresAvailable;
-                    strncpy(resourceCacheStage->resources[i].nodeStatus, ncResDst->nodeStatus, sizeof(resourceCacheStage->resources[i].nodeStatus));
+                    if (! strcmp(ncResDst->nodeStatus, "enabled")) {
+                        resourceCacheStage->resources[i].ncState = ENABLED;
+                    } else if (! strcmp(ncResDst->nodeStatus, "disabled")) {
+                        resourceCacheStage->resources[i].ncState = STOPPED;
+                    }
+                    euca_strncpy(resourceCacheStage->resources[i].nodeStatus, ncResDst->nodeStatus, 24);
+////                    // temporarily duplicate the NC reported value in the node message for debugging
+                    sprintf(resourceCacheStage->resources[i].nodeMessage, "");
                     // set iqn, if set
                     if (strlen(ncResDst->iqn)) {
                         snprintf(resourceCacheStage->resources[i].iqn, 128, "%s", ncResDst->iqn);
                     }
 
                     changeState(&(resourceCacheStage->resources[i]), RESUP);
+                }
+                if (errMsg!=NULL) {
+                    EUCA_FREE(errMsg);
                 }
             } else {
                 LOGDEBUG("resource asleep/running instances (%d), skipping resource update\n", resourceCacheStage->resources[i].running);
@@ -3469,6 +3525,18 @@ int doRunInstances(ncMetadata * pMeta, char *amiId, char *kernelId, char *ramdis
             sem_mypost(CONFIG);
 
             res = &(resourceCache->resources[resid]);
+
+            // pick out the right LUN from the long version of the remote device string and create the remote dev string that NC expects
+            for (int i = 0; i < EUCA_MAX_VBRS && i < ncvm.virtualBootRecordLen; i++) {
+                virtualBootRecord * vbr = &(ncvm.virtualBootRecord[i]);
+                if (strcmp(vbr->typeName, "ebs")) // skip all except EBS entries
+                    continue;
+                if (get_remoteDevForNC(res->iqn, vbr->resourceLocationPtr, vbr->resourceLocation, sizeof(vbr->resourceLocation))) {
+                    LOGERROR("failed to parse remote dev string in VBR[%d]\n", i);
+                    rc = 1;
+                }
+            }
+            
             if (rc) {
                 // could not find resource
                 LOGERROR("scheduler could not find resource to run the instance on\n");
@@ -4145,6 +4213,12 @@ int doModifyNode(ncMetadata * pMeta, char *nodeName, char *stateName)
         for (i = 0; i < MAXNODES; i++) {
             if (!strcmp(resourceCache->resources[i].hostname, nodeName)) {
                 ccResource *res = &(resourceCache->resources[i]);
+                if (! strcmp(res->nodeStatus, "enabled")) {
+                    res->ncState = ENABLED;
+                } else if (! strcmp(res->nodeStatus, "disabled")) {
+                    res->ncState = STOPPED;
+                }
+
                 strcpy(res->nodeStatus, stateName);
                 break;
             }
@@ -5218,8 +5292,7 @@ int init_thread(void)
         }
 
         if (config == NULL) {
-            rc = setup_shared_buffer((void **)&config, "/eucalyptusCCConfig", sizeof(ccConfig), &(locks[CONFIG]), "/eucalyptusCCConfigLock",
-                                     SHARED_FILE);
+            rc = setup_shared_buffer((void **)&config, "/eucalyptusCCConfig", sizeof(ccConfig), &(locks[CONFIG]), "/eucalyptusCCConfigLock", SHARED_FILE);
             if (rc != 0) {
                 fprintf(stderr, "Cannot set up shared memory region for ccConfig, exiting...\n");
                 sem_mypost(INIT);
@@ -5561,6 +5634,17 @@ int init_config(void)
                 }
             }
             EUCA_FREE(tmpstr);
+        }
+
+        if (pubmode && !(!strcmp(pubmode, "SYSTEM") || !strcmp(pubmode, "STATIC") || 
+                !strcmp(pubmode, "STATIC-DYNMAC")   || 
+                !strcmp(pubmode, "MANAGED-NOVLAN")  || !strcmp(pubmode, "MANAGED"))) {
+            char errorm[256];
+            memset(errorm,0,256);
+            sprintf(errorm,"Invalid VNET_MODE setting: %s",pubmode);
+            LOGFATAL("%s\n",errorm);
+            log_eucafault("1012","component",euca_this_component_name,"cause",errorm,NULL);
+            initFail = 1;
         }
 
         if (pubmode && (!strcmp(pubmode, "STATIC") || !strcmp(pubmode, "STATIC-DYNMAC"))) {
@@ -6894,7 +6978,7 @@ void print_ccInstance(char *tag, ccInstance * in)
         if (in->volumes[i].volumeId[0] != '\0') {
             strncat(volbuf, in->volumes[i].volumeId, CHAR_BUFFER_SIZE);
             strncat(volbuf, ",", 1);
-            strncat(volbuf, in->volumes[i].remoteDev, CHAR_BUFFER_SIZE);
+            strncat(volbuf, in->volumes[i].remoteDev, VERY_BIG_CHAR_BUFFER_SIZE);
             strncat(volbuf, ",", 1);
             strncat(volbuf, in->volumes[i].localDev, CHAR_BUFFER_SIZE);
             strncat(volbuf, ",", 1);

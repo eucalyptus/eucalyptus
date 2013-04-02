@@ -28,6 +28,7 @@ import javax.persistence.Embeddable;
 import javax.persistence.Embedded;
 import javax.persistence.FetchType;
 import javax.persistence.OneToMany;
+import javax.persistence.OneToOne;
 import javax.persistence.PersistenceContext;
 import javax.persistence.Table;
 import javax.persistence.Transient;
@@ -42,12 +43,10 @@ import com.eucalyptus.cloud.CloudMetadata.LoadBalancingMetadata;
 import com.eucalyptus.cloud.UserMetadata;
 import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.id.Eucalyptus;
-import com.eucalyptus.loadbalancing.activities.LoadBalancerServoInstance;
 import com.eucalyptus.util.FullName;
 import com.eucalyptus.util.OwnerFullName;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
-import com.google.common.collect.Lists;
 
 /**
  * @author Sang-Min Park
@@ -87,17 +86,9 @@ public class LoadBalancer extends UserMetadata<LoadBalancer.STATE> implements Lo
 	@Column( name = "loadbalancer_scheme", nullable=true)
 	private String scheme = null; // only available for LoadBalancers attached to an Amazon VPC
 	
-	@Column( name = "dns_address", nullable=true)
-	private String dnsAddress = null; // the address by which the loadbalancer is reached
-	
-
 	@OneToMany(fetch = FetchType.LAZY, cascade = CascadeType.ALL, orphanRemoval = true, mappedBy = "loadbalancer")
     @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
 	private Collection<LoadBalancerBackendInstance> backendInstances = null;
-	
-	@OneToMany(fetch = FetchType.LAZY, cascade = CascadeType.ALL, orphanRemoval = true, mappedBy = "loadbalancer")
-    @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
-	private Collection<LoadBalancerServoInstance> servoInstances = null;
 	
 	@OneToMany(fetch = FetchType.LAZY, cascade = CascadeType.ALL, orphanRemoval = true, mappedBy = "loadbalancer")
 	@Cache( usage= CacheConcurrencyStrategy.TRANSACTIONAL )
@@ -107,6 +98,13 @@ public class LoadBalancer extends UserMetadata<LoadBalancer.STATE> implements Lo
 	@Cache( usage= CacheConcurrencyStrategy.TRANSACTIONAL )
 	private Collection<LoadBalancerZone> zones = null;
 	
+	@OneToMany(fetch = FetchType.LAZY, orphanRemoval = false, mappedBy = "loadbalancer")
+	@Cache( usage= CacheConcurrencyStrategy.TRANSACTIONAL )
+	private Collection<LoadBalancerSecurityGroup> groups = null;
+	
+	@OneToOne(fetch = FetchType.LAZY, cascade = CascadeType.ALL, orphanRemoval = true, mappedBy = "loadbalancer")
+	@Cache( usage= CacheConcurrencyStrategy.TRANSACTIONAL )
+	private LoadBalancerDnsRecord dns = null;
 	
 	public void setScheme(String scheme){
 		this.scheme = scheme;
@@ -114,14 +112,6 @@ public class LoadBalancer extends UserMetadata<LoadBalancer.STATE> implements Lo
 	
 	public String getScheme(){
 		return this.scheme;
-	}
-	
-	public void setDnsAddress(String address){
-		this.dnsAddress = address;
-	}
-	
-	public String getDnsAddress(){
-		return this.dnsAddress;
 	}
 	
 	public LoadBalancerBackendInstance findBackendInstance(final String instanceId){
@@ -148,10 +138,6 @@ public class LoadBalancer extends UserMetadata<LoadBalancer.STATE> implements Lo
 		return this.backendInstances;
 	}
 	
-	public Collection<LoadBalancerServoInstance> getServoInstances(){
-		return this.servoInstances != null ? this.servoInstances : Lists.<LoadBalancerServoInstance>newArrayList();
-	}
-	
 	public LoadBalancerListener findListener(final int lbPort){
 		if(this.listeners!=null){
 			try{
@@ -172,6 +158,13 @@ public class LoadBalancer extends UserMetadata<LoadBalancer.STATE> implements Lo
 		return this.findListener(lbPort)!=null;
 	}
 	
+	public void setDns(final LoadBalancerDnsRecord dns){
+		this.dns = dns;
+	}
+	
+	public LoadBalancerDnsRecord getDns(){
+		return this.dns;
+	}
 	public Collection<LoadBalancerListener> getListeners(){
 		return this.listeners;
 	}
@@ -180,11 +173,54 @@ public class LoadBalancer extends UserMetadata<LoadBalancer.STATE> implements Lo
 		return this.zones;
 	}
 	
+	public Collection<LoadBalancerSecurityGroup> getGroups(){
+		return this.groups;
+	}
+	
 	void setHealthCheck(int healthyThreshold, int interval, String target, int timeout, int unhealthyThreshold)
 		throws IllegalArgumentException
 	{
 		// check the validity of the health check param
+		if(healthyThreshold < 0)
+			throw new IllegalArgumentException("healthyThreshold must be > 0");
+		if(interval < 0)
+			throw new IllegalArgumentException("interval must be > 0");
+		if(timeout < 0)
+			throw new IllegalArgumentException("timeout must be > 0");
+		if(unhealthyThreshold < 0)
+			throw new IllegalArgumentException("unhealthyThreshold must be > 0");
+		
+		if(!(target.startsWith("HTTP") || target.startsWith("HTTPS") || 
+				target.startsWith("TCP") ||target.startsWith("SSL")))
+			throw new IllegalArgumentException("target must starts with one of HTTP, HTTPS, TCP, SSL");
+		
+		if(target.startsWith("HTTP") || target.startsWith("HTTPS")){
+			int idxPort = target.indexOf(":");
+			int idxPath = target.indexOf("/");
+			if(idxPort < 0 || idxPath <0 || (idxPath-idxPort) <= 1)
+				throw new IllegalArgumentException("Port and Path must be specified for HTTP");
+			String port = target.substring(idxPort+1, idxPath);
+			try{
+				int portNum = Integer.parseInt(port);
+				if(!(portNum > 0 && portNum < 65536))
+					throw new Exception("invalid port number");
+			}catch(Exception ex){
+				throw new IllegalArgumentException("Invalid target specified", ex);
+			}
+		}else if (target.startsWith("TCP") || target.startsWith("SSL")){
+			String copy = target;
+			copy.replace("TCP:","").replace("SSL:", "");
+			try{
+				int portNum = Integer.parseInt(copy);
+				if(!(portNum > 0 && portNum < 65536))
+					throw new Exception("invalid port number");
+			}catch(Exception ex){
+				throw new IllegalArgumentException("Invalid target specified", ex);
+			}
+		}
+	   
 		this.healthConfig = new LoadBalancerHealthCheckConfig(healthyThreshold, interval, target, timeout,unhealthyThreshold);
+		this.healthConfig.setLoadBalancer(this);
 	}
 	
 	public boolean isHealthcheckConfigured(){
@@ -235,7 +271,7 @@ public class LoadBalancer extends UserMetadata<LoadBalancer.STATE> implements Lo
 	private LoadBalancerHealthCheckConfig healthConfig = null;
 	
 	@Embeddable
-	private class LoadBalancerHealthCheckConfig {
+	private static class LoadBalancerHealthCheckConfig {
 		@Parent
 		private LoadBalancer loadBalancer = null;
 		
@@ -254,6 +290,7 @@ public class LoadBalancer extends UserMetadata<LoadBalancer.STATE> implements Lo
 		@Column( name = "loadbalancer_unhealthy_threshold", nullable = true)
 		private Integer UnhealthyThreshold = null; //Specifies the number of consecutive health probe failures required before moving the instance to the 
 		
+		private LoadBalancerHealthCheckConfig(){}
 		private LoadBalancerHealthCheckConfig(int healthyThreshold, int interval, String target, int timeout, int unhealthyThreshold){
 			this.HealthyThreshold = new Integer(healthyThreshold);
 			this.Interval = new Integer(interval);

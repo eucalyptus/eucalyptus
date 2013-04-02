@@ -1,0 +1,6 @@
+<ivy-module version="2.0">
+    <info organisation="com.eucalyptus" module="eucalyptus-bootstrap"/>
+    <dependencies>
+    </dependencies>
+</ivy-module>
+

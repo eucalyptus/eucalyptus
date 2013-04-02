@@ -1,0 +1,23 @@
+defaults {
+        user_friendly_names     yes
+}
+
+blacklist {
+        devnode "^hd[a-z]"
+        devnode "^(ram|raw|loop|fd|md|dm-|sr|scd|st)[0-9]*"
+        devnode "^cciss.*"
+        devnode "^sda[0-9]*"
+        devnode "^sdb[0-9]*"
+}
+
+devices {
+	device {
+		vendor "EQLOGIC"
+		product "100E-00"
+		path_grouping_policy group_by_prio
+		getuid_callout "/sbin/scsi_id -g -u -s /block/%n"
+		features "1 queue_if_no_path"
+		path_checker readsector0
+		failback immediate
+	}
+}

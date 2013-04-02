@@ -13,6 +13,7 @@ import tornado.httpserver
 import tornado.ioloop
 import eucaconsole
 from eucaconsole import api
+from eucaconsole.threads import Threads
 from eucaconsole.configloader import ConfigLoader
 
 pid_file = "/var/run/eucalyptus-console.pid"
@@ -85,6 +86,7 @@ def sessionChecker():
 def start_console():
     settings = {
       "xsrf_cookies": True,
+      "debug": True
     }
 
     ssl_settings = {
@@ -149,6 +151,11 @@ def usage():
     sys.exit(1)
 
 
+def killThreads(signal, frame):
+    print "attempting to kill threads and exit"
+    Threads.instance().killEmAll()
+    sys.exit(0)
+
 if __name__ == "__main__":
 #    (hostname, alt_host, ipaddrs) = socket.gethostbyaddr(socket.gethostname())
 #    for ip in ipaddrs:
@@ -185,6 +192,7 @@ if __name__ == "__main__":
     else:
         try:
             logging.info("Starting Eucalyptus Console")
+            signal.signal(signal.SIGINT, killThreads)
             start_console()
         except KeyboardInterrupt:
             logging.info("Interrupted By User")

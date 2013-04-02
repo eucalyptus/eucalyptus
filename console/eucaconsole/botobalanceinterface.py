@@ -39,7 +39,7 @@ class BotoBalanceInterface(BalanceInterface):
     saveclcdata = False
 
     def __init__(self, clc_host, access_id, secret_key, token):
-        boto.set_stream_logger('foo')
+        #boto.set_stream_logger('foo')
         path='/services/elb'
         port=8773
         if clc_host[len(clc_host)-13:] == 'amazonaws.com':
@@ -48,9 +48,14 @@ class BotoBalanceInterface(BalanceInterface):
             reg = None
             port=443
         reg = RegionInfo(name='eucalyptus', endpoint=clc_host)
-        self.conn = ELBConnection(access_id, secret_key, region=reg,
+        if boto.__version__ < '2.6':
+            self.conn = ELBConnection(access_id, secret_key, region=reg,
+                                  port=port, path=path,
+                                  is_secure=True, security_token=token, debug=0)
+        else:
+            self.conn = ELBConnection(access_id, secret_key, region=reg,
                                   port=port, path=path, validate_certs=False,
-                                  is_secure=True, security_token=token, debug=2)
+                                  is_secure=True, security_token=token, debug=0)
         self.conn.http_connection_kwargs['timeout'] = 30
 
     def __save_json__(self, obj, name):
@@ -66,6 +71,7 @@ class BotoBalanceInterface(BalanceInterface):
         return self.conn.delete_load_balancer(name)
 
     def get_all_load_balancers(self, load_balancer_names=None):
+        return []
         obj = self.conn.get_all_load_balancers(load_balancer_names)
         if self.saveclcdata:
             self.__save_json__(obj, "mockdata/ELB_Balancers.json")

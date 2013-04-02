@@ -21,16 +21,26 @@
 package com.eucalyptus.loadbalancing;
 
 import java.util.Collection;
+import java.util.List;
 import java.util.NoSuchElementException;
 import javax.persistence.EntityTransaction;
+import javax.validation.ConstraintViolationException;
+
 import org.apache.log4j.Logger;
 import com.eucalyptus.auth.principal.UserFullName;
+import com.eucalyptus.cluster.Cluster;
+import com.eucalyptus.component.Component;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.TransactionException;
 import com.eucalyptus.loadbalancing.LoadBalancerListener.PROTOCOL;
+import com.eucalyptus.loadbalancing.activities.EucalyptusActivityTasks;
+import com.eucalyptus.loadbalancing.activities.LoadBalancerServoInstance;
+import com.eucalyptus.util.Exceptions;
 import com.google.common.base.Function;
 import com.google.common.base.Predicate;
 import com.google.common.base.Strings;
+
+import edu.ucsb.eucalyptus.msgs.ClusterInfoType;
 
 /**
  * @author Sang-Min Park
@@ -42,18 +52,19 @@ public class LoadBalancers {
 		return LoadBalancers.addLoadbalancer(user,  lbName, null);
 	}
 	
-	public static LoadBalancer getLoadbalancer(UserFullName user, String lbName) throws TransactionException{
+	public static LoadBalancer getLoadbalancer(UserFullName user, String lbName){
 		 final EntityTransaction db = Entities.get( LoadBalancer.class );
 		 try {
 			 final LoadBalancer lb = Entities.uniqueResult( LoadBalancer.named( user, lbName )); 
 			 db.commit();
 			 return lb;
 		 }catch(NoSuchElementException ex){
+			 db.rollback();
 			 throw ex;
-		 }catch(TransactionException ex){
+		 }catch(Exception ex){
 			 db.rollback( );
 			 LOG.error("failed to get the loadbalancer="+lbName, ex);
-			 throw ex;
+			 throw Exceptions.toUndeclared(ex);
 		 }
 	}
 	
@@ -86,6 +97,7 @@ public class LoadBalancers {
 			Entities.delete(lb);
 			db.commit();
 		}catch (NoSuchElementException e){
+			db.rollback();
 			throw new LoadBalancingException("No loadbalancer is found with name = "+lbName, e);
 		}catch (Exception e){
 			db.rollback();
@@ -168,27 +180,51 @@ public class LoadBalancers {
 	}
 	
 	public static void addZone(final String lbName, final UserFullName ownerFullName, final Collection<String> zones) throws LoadBalancingException{
-		// TODO: SPARK: validate the zones
+		List<ClusterInfoType> clusters = null;
+		try{
+			clusters = EucalyptusActivityTasks.getInstance().describeAvailabilityZones();
+		}catch(Exception ex){
+			throw new LoadBalancingException("Failed to check the requested zones");
+		}
+		for(String zone : zones){
+			boolean found = false;
+			for(ClusterInfoType cluster: clusters){	 // assume that describe-availability-zones return only enabled clusters
+				if(zone.equals(cluster.getZoneName())){
+					found = true;
+					break;
+				}
+			}
+			if(!found)
+				throw new LoadBalancingException("No cluster named "+zone+" is available");
+		}
+		
 	   	LoadBalancer lb = null;
     	try{
     		lb = LoadBalancers.getLoadbalancer(ownerFullName, lbName);
     	}catch(Exception ex){
 	    	throw new AccessPointNotFoundException();
 	    }
-		final EntityTransaction db = Entities.get( LoadBalancerZone.class );
-		for(String zone : zones){
-    		// check the listener 
-			try{
-				Entities.uniqueResult(LoadBalancerZone.named(lb, zone));
-			}catch(NoSuchElementException ex){
-				final LoadBalancerZone newZone = LoadBalancerZone.newInstance(lb, zone);
-				Entities.persist(newZone);
-				db.commit();
-			}catch(Exception ex){
-				LOG.error("failed to persist the zone "+zone, ex);
-				db.rollback();
+    	try{
+			for(String zone : zones){
+				final EntityTransaction db = Entities.get( LoadBalancerZone.class );
+				// check the listener 
+				try{
+					final LoadBalancerZone sample = LoadBalancerZone.named(lb, zone);
+					final LoadBalancerZone exist = Entities.uniqueResult(sample);
+					LOG.warn("existing zone is found: "+exist);
+					db.commit();
+				}catch(NoSuchElementException ex){
+					final LoadBalancerZone newZone = LoadBalancerZone.named(lb, zone);
+					Entities.persist(newZone);
+					db.commit();
+				}catch(Exception ex){
+					db.rollback();
+					LOG.error("failed to persist the zone "+zone, ex);
+				}
 			}
-		}  
+    	}catch(Exception ex){
+    		throw new LoadBalancingException("Failed to add zone", ex);
+    	}
 	}
 	
 	public static void removeZone(final String lbName, final UserFullName ownerFullName, final Collection<String> zones) throws LoadBalancingException{
@@ -205,11 +241,76 @@ public class LoadBalancers {
 				Entities.delete(exist);
 				db.commit();
 			}catch(NoSuchElementException ex){
+				db.rollback();
 				LOG.debug(String.format("zone %s not found for %s", zone, lbName));
 			}catch(Exception ex){
-				LOG.error("failed to delete the zone "+zone, ex);
 				db.rollback();
+				LOG.error("failed to delete the zone "+zone, ex);
 			}
+		}
+	}
+	
+	public static LoadBalancerZone findZone(final LoadBalancer lb, final String zoneName){
+		final EntityTransaction db = Entities.get(LoadBalancerZone.class);
+		try{
+			final LoadBalancerZone exist = Entities.uniqueResult(LoadBalancerZone.named(lb, zoneName));
+			db.commit();
+			return exist;
+		}catch(NoSuchElementException ex){
+			db.rollback();
+			throw ex;
+		}catch(Exception ex){
+			db.rollback();
+			throw Exceptions.toUndeclared(ex);
+		}
+	}
+	
+	public static LoadBalancerDnsRecord getDnsRecord(final LoadBalancer lb) throws LoadBalancingException{
+		/// create the next dns record
+		final EntityTransaction db = Entities.get( LoadBalancerDnsRecord.class );
+		try{
+			LoadBalancerDnsRecord exist = Entities.uniqueResult(LoadBalancerDnsRecord.named(lb));
+			db.commit();
+			return exist;
+		}catch(NoSuchElementException ex){
+			final LoadBalancerDnsRecord newRec = 
+					LoadBalancerDnsRecord.named(lb);
+			Entities.persist(newRec);
+			db.commit();
+			return newRec;
+		}catch(Exception ex){
+			db.rollback();
+			throw new LoadBalancingException("failed to query dns record", ex);
+		}
+	}
+	
+	public static void deleteDnsRecord(final LoadBalancerDnsRecord dns) throws LoadBalancingException{
+		final EntityTransaction db = Entities.get( LoadBalancerDnsRecord.class );
+		try{
+			LoadBalancerDnsRecord exist = Entities.uniqueResult(dns);
+			Entities.delete(exist);
+			db.commit();
+		}catch(NoSuchElementException ex){
+			db.rollback();
+		}catch(Exception ex){
+			db.rollback();
+			throw new LoadBalancingException("failed to delete dns record", ex);
+		}
+	}
+	
+	public static LoadBalancerServoInstance lookupServoInstance(String instanceId) throws LoadBalancingException {
+		final EntityTransaction db = Entities.get( LoadBalancerServoInstance.class );
+		try{
+			LoadBalancerServoInstance sample = LoadBalancerServoInstance.named(instanceId);
+			final LoadBalancerServoInstance exist = Entities.uniqueResult(sample);
+			db.commit();
+			return exist;
+		}catch(NoSuchElementException ex){
+			db.rollback();
+			throw ex;
+		}catch(Exception ex){
+			db.rollback();
+			throw new LoadBalancingException("failed to query servo instances");
 		}
 	}
 }

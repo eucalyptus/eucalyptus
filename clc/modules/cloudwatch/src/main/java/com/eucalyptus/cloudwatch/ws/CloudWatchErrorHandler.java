@@ -19,11 +19,13 @@
  ************************************************************************/
 package com.eucalyptus.cloudwatch.ws;
 
-import com.eucalyptus.ws.Role;
-import com.eucalyptus.cloudwatch.CloudWatchErrorResponse;
-import com.eucalyptus.ws.util.ErrorHandlerSupport;
-import edu.ucsb.eucalyptus.msgs.BaseMessage;
 import org.apache.log4j.Logger;
+
+import com.eucalyptus.cloudwatch.CloudWatchErrorResponse;
+import com.eucalyptus.ws.Role;
+import com.eucalyptus.ws.util.ErrorHandlerSupport;
+
+import edu.ucsb.eucalyptus.msgs.BaseMessage;
 
 
 public class CloudWatchErrorHandler extends ErrorHandlerSupport {

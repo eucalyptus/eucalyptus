@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
-  Copyright 2009-2012 Eucalyptus Systems, Inc.
+  Copyright 2009-2013 Eucalyptus Systems, Inc.
 
   This program is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
@@ -648,8 +648,7 @@
     <value name="Arn" field="arn" usage="required"/>
     <value name="UploadDate" field="uploadDate" usage="optional"/>
   </mapping>
-  <mapping class="com.eucalyptus.auth.euare.UserType" abstract="true" extends="com.eucalyptus.auth.euare.EuareMessage">
-    <structure map-as="com.eucalyptus.auth.euare.EuareMessage"/>
+  <mapping class="com.eucalyptus.auth.euare.UserType" abstract="true">
     <value name="Path" field="path" usage="required"/>
     <value name="UserName" field="userName" usage="required"/>
     <value name="UserId" field="userId" usage="required"/>
@@ -658,8 +657,7 @@
     <value name="RegStatus" field="regStatus" usage="optional"/>
     <value name="PasswordExpiration" field="passwordExpiration" usage="optional"/>
   </mapping>
-  <mapping class="com.eucalyptus.auth.euare.SigningCertificateType" abstract="true" extends="com.eucalyptus.auth.euare.EuareMessage">
-    <structure map-as="com.eucalyptus.auth.euare.EuareMessage"/>
+  <mapping class="com.eucalyptus.auth.euare.SigningCertificateType" abstract="true">
     <value name="UserName" field="userName" usage="required"/>
     <value name="CertificateId" field="certificateId" usage="required"/>
     <value name="CertificateBody" field="certificateBody" usage="required"/>
@@ -672,8 +670,7 @@
       <structure map-as="com.eucalyptus.auth.euare.MFADeviceType"/>
     </collection>
   </mapping>
-  <mapping class="com.eucalyptus.auth.euare.GroupType" abstract="true" extends="com.eucalyptus.auth.euare.EuareMessage">
-    <structure map-as="com.eucalyptus.auth.euare.EuareMessage"/>
+  <mapping class="com.eucalyptus.auth.euare.GroupType" abstract="true">
     <value name="Path" field="path" usage="required"/>
     <value name="GroupName" field="groupName" usage="required"/>
     <value name="GroupId" field="groupId" usage="required"/>
@@ -700,8 +697,7 @@
       <structure map-as="com.eucalyptus.auth.euare.AccessKeyMetadataType"/>
     </collection>
   </mapping>
-  <mapping class="com.eucalyptus.auth.euare.MFADeviceType" abstract="true" extends="com.eucalyptus.auth.euare.EuareMessage">
-    <structure map-as="com.eucalyptus.auth.euare.EuareMessage"/>
+  <mapping class="com.eucalyptus.auth.euare.MFADeviceType" abstract="true">
     <value name="UserName" field="userName" usage="required"/>
     <value name="SerialNumber" field="serialNumber" usage="required"/>
   </mapping>
@@ -718,8 +714,7 @@
     <value name="SecretAccessKey" field="secretAccessKey" usage="required"/>
     <value name="CreateDate" field="createDate" usage="optional"/>
   </mapping>
-  <mapping class="com.eucalyptus.auth.euare.LoginProfileType" abstract="true" extends="com.eucalyptus.auth.euare.EuareMessage">
-    <structure map-as="com.eucalyptus.auth.euare.EuareMessage"/>
+  <mapping class="com.eucalyptus.auth.euare.LoginProfileType" abstract="true">
     <value name="UserName" field="userName" usage="required"/>
   </mapping>
   
@@ -784,8 +779,7 @@
     <value name="value" field="value" usage="required"/>
   </mapping>  
   
-  <mapping class="com.eucalyptus.auth.euare.AccountType" abstract="true" extends="com.eucalyptus.auth.euare.EuareMessage">
-    <structure map-as="com.eucalyptus.auth.euare.EuareMessage"/>
+  <mapping class="com.eucalyptus.auth.euare.AccountType" abstract="true">
     <value name="AccountName" field="accountName" usage="required"/>
     <value name="AccountId" field="accountId" usage="required"/>
   </mapping>
@@ -858,8 +852,7 @@
       <structure name="member" type="com.eucalyptus.auth.euare.UserInfoType"/>
     </collection>
   </mapping>
-  <mapping class="com.eucalyptus.auth.euare.UserInfoType" abstract="true" extends="com.eucalyptus.auth.euare.EuareMessage">
-    <structure map-as="com.eucalyptus.auth.euare.EuareMessage"/>
+  <mapping class="com.eucalyptus.auth.euare.UserInfoType" abstract="true">
     <value name="Key" field="key" usage="required"/>
     <value name="Value" field="value" usage="required"/>
   </mapping>
@@ -935,5 +928,239 @@
   <mapping name="GetLdapSyncStatusResult" class="com.eucalyptus.auth.euare.GetLdapSyncStatusResultType">
     <value name="SyncEnabled" field="syncEnabled" usage="required"/>
     <value name="InSync" field="inSync" usage="required"/>
+  </mapping>
+  <mapping name="CreateRole" class="com.eucalyptus.auth.euare.CreateRoleType" extends="com.eucalyptus.auth.euare.EuareMessage">
+    <structure map-as="com.eucalyptus.auth.euare.EuareMessage"/>
+    <value name="DelegateAccount" field="delegateAccount" usage="optional"/>
+    <value name="Path" field="path" usage="optional"/>
+    <value name="RoleName" field="roleName" usage="required"/>
+    <value name="AssumeRolePolicyDocument" field="assumeRolePolicyDocument" usage="required"/>
+  </mapping>
+  <mapping name="CreateRoleResponse" class="com.eucalyptus.auth.euare.CreateRoleResponseType" extends="com.eucalyptus.auth.euare.EuareMessage">
+    <structure map-as="com.eucalyptus.auth.euare.EuareMessage"/>
+    <structure name="CreateRoleResult" field="createRoleResult" usage="required" type="com.eucalyptus.auth.euare.CreateRoleResult"/>
+    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.auth.euare.ResponseMetadataType"/>
+  </mapping>
+  <mapping class="com.eucalyptus.auth.euare.CreateRoleResult" abstract="true">
+    <structure name="Role" field="role" usage="required" type="com.eucalyptus.auth.euare.RoleType"/>
+  </mapping>
+  <mapping name="UpdateAssumeRolePolicy" class="com.eucalyptus.auth.euare.UpdateAssumeRolePolicyType" extends="com.eucalyptus.auth.euare.EuareMessage">
+    <structure map-as="com.eucalyptus.auth.euare.EuareMessage"/>
+    <value name="DelegateAccount" field="delegateAccount" usage="optional"/>
+    <value name="RoleName" field="roleName" usage="required"/>
+    <value name="PolicyDocument" field="policyDocument" usage="required"/>
+  </mapping>
+  <mapping name="UpdateAssumeRolePolicyResponse" class="com.eucalyptus.auth.euare.UpdateAssumeRolePolicyResponseType" extends="com.eucalyptus.auth.euare.EuareMessage">
+    <structure map-as="com.eucalyptus.auth.euare.EuareMessage"/>
+    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.auth.euare.ResponseMetadataType"/>
+  </mapping>
+  <mapping name="GetRole" class="com.eucalyptus.auth.euare.GetRoleType" extends="com.eucalyptus.auth.euare.EuareMessage">
+    <structure map-as="com.eucalyptus.auth.euare.EuareMessage"/>
+    <value name="DelegateAccount" field="delegateAccount" usage="optional"/>
+    <value name="RoleName" field="roleName" usage="required"/>
+  </mapping>
+  <mapping name="GetRoleResponse" class="com.eucalyptus.auth.euare.GetRoleResponseType" extends="com.eucalyptus.auth.euare.EuareMessage">
+    <structure map-as="com.eucalyptus.auth.euare.EuareMessage"/>
+    <structure name="GetRoleResult" field="getRoleResult" usage="required" type="com.eucalyptus.auth.euare.GetRoleResult"/>
+    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.auth.euare.ResponseMetadataType"/>
+  </mapping>
+  <mapping class="com.eucalyptus.auth.euare.GetRoleResult" abstract="true">
+    <structure name="Role" field="role" usage="required" type="com.eucalyptus.auth.euare.RoleType"/>
+  </mapping>
+  <mapping name="DeleteRole" class="com.eucalyptus.auth.euare.DeleteRoleType" extends="com.eucalyptus.auth.euare.EuareMessage">
+    <structure map-as="com.eucalyptus.auth.euare.EuareMessage"/>
+    <value name="DelegateAccount" field="delegateAccount" usage="optional"/>
+    <value name="RoleName" field="roleName" usage="required"/>
+  </mapping>
+  <mapping name="DeleteRoleResponse" class="com.eucalyptus.auth.euare.DeleteRoleResponseType" extends="com.eucalyptus.auth.euare.EuareMessage">
+    <structure map-as="com.eucalyptus.auth.euare.EuareMessage"/>
+    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.auth.euare.ResponseMetadataType"/>
+  </mapping>
+  <mapping name="ListRoles" class="com.eucalyptus.auth.euare.ListRolesType" extends="com.eucalyptus.auth.euare.EuareMessage">
+    <structure map-as="com.eucalyptus.auth.euare.EuareMessage"/>
+    <value name="DelegateAccount" field="delegateAccount" usage="optional"/>
+    <value name="PathPrefix" field="pathPrefix" usage="optional"/>
+    <value name="Marker" field="marker" usage="optional"/>
+    <value name="MaxItems" field="maxItems" usage="optional"/>
+  </mapping>
+  <mapping name="ListRolesResponse" class="com.eucalyptus.auth.euare.ListRolesResponseType" extends="com.eucalyptus.auth.euare.EuareMessage">
+    <structure map-as="com.eucalyptus.auth.euare.EuareMessage"/>
+    <structure name="ListRolesResult" field="listRolesResult" usage="required" type="com.eucalyptus.auth.euare.ListRolesResult"/>
+    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.auth.euare.ResponseMetadataType"/>
+  </mapping>
+  <mapping class="com.eucalyptus.auth.euare.ListRolesResult" abstract="true">
+    <structure name="Roles" field="roles" usage="required" type="com.eucalyptus.auth.euare.RoleListType"/>
+    <value name="IsTruncated" field="isTruncated" usage="optional"/>
+    <value name="Marker" field="marker" usage="optional"/>
+  </mapping>
+  <mapping name="PutRolePolicy" class="com.eucalyptus.auth.euare.PutRolePolicyType" extends="com.eucalyptus.auth.euare.EuareMessage">
+    <structure map-as="com.eucalyptus.auth.euare.EuareMessage"/>
+    <value name="DelegateAccount" field="delegateAccount" usage="optional"/>
+    <value name="RoleName" field="roleName" usage="required"/>
+    <value name="PolicyName" field="policyName" usage="required"/>
+    <value name="PolicyDocument" field="policyDocument" usage="required"/>
+  </mapping>
+  <mapping name="PutRolePolicyResponse" class="com.eucalyptus.auth.euare.PutRolePolicyResponseType" extends="com.eucalyptus.auth.euare.EuareMessage">
+    <structure map-as="com.eucalyptus.auth.euare.EuareMessage"/>
+    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.auth.euare.ResponseMetadataType"/>
+  </mapping>
+  <mapping name="GetRolePolicy" class="com.eucalyptus.auth.euare.GetRolePolicyType" extends="com.eucalyptus.auth.euare.EuareMessage">
+    <structure map-as="com.eucalyptus.auth.euare.EuareMessage"/>
+    <value name="DelegateAccount" field="delegateAccount" usage="optional"/>
+    <value name="RoleName" field="roleName" usage="required"/>
+    <value name="PolicyName" field="policyName" usage="required"/>
+  </mapping>
+  <mapping name="GetRolePolicyResponse" class="com.eucalyptus.auth.euare.GetRolePolicyResponseType" extends="com.eucalyptus.auth.euare.EuareMessage">
+    <structure map-as="com.eucalyptus.auth.euare.EuareMessage"/>
+    <structure name="GetRolePolicyResult" field="getRolePolicyResult" usage="required" type="com.eucalyptus.auth.euare.GetRolePolicyResult"/>
+    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.auth.euare.ResponseMetadataType"/>
+  </mapping>
+  <mapping class="com.eucalyptus.auth.euare.GetRolePolicyResult" abstract="true">
+    <value name="RoleName" field="roleName" usage="required"/>
+    <value name="PolicyName" field="policyName" usage="required"/>
+    <value name="PolicyDocument" field="policyDocument" usage="required"/>
+  </mapping>
+  <mapping name="DeleteRolePolicy" class="com.eucalyptus.auth.euare.DeleteRolePolicyType" extends="com.eucalyptus.auth.euare.EuareMessage">
+    <structure map-as="com.eucalyptus.auth.euare.EuareMessage"/>
+    <value name="DelegateAccount" field="delegateAccount" usage="optional"/>
+    <value name="RoleName" field="roleName" usage="required"/>
+    <value name="PolicyName" field="policyName" usage="required"/>
+  </mapping>
+  <mapping name="DeleteRolePolicyResponse" class="com.eucalyptus.auth.euare.DeleteRolePolicyResponseType" extends="com.eucalyptus.auth.euare.EuareMessage">
+    <structure map-as="com.eucalyptus.auth.euare.EuareMessage"/>
+    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.auth.euare.ResponseMetadataType"/>
+  </mapping>
+  <mapping name="ListRolePolicies" class="com.eucalyptus.auth.euare.ListRolePoliciesType" extends="com.eucalyptus.auth.euare.EuareMessage">
+    <structure map-as="com.eucalyptus.auth.euare.EuareMessage"/>
+    <value name="DelegateAccount" field="delegateAccount" usage="optional"/>
+    <value name="RoleName" field="roleName" usage="required"/>
+    <value name="Marker" field="marker" usage="optional"/>
+    <value name="MaxItems" field="maxItems" usage="optional"/>
+  </mapping>
+  <mapping name="ListRolePoliciesResponse" class="com.eucalyptus.auth.euare.ListRolePoliciesResponseType" extends="com.eucalyptus.auth.euare.EuareMessage">
+    <structure map-as="com.eucalyptus.auth.euare.EuareMessage"/>
+    <structure name="ListRolePoliciesResult" field="listRolePoliciesResult" usage="required" type="com.eucalyptus.auth.euare.ListRolePoliciesResult"/>
+    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.auth.euare.ResponseMetadataType"/>
+  </mapping>
+  <mapping class="com.eucalyptus.auth.euare.ListRolePoliciesResult" abstract="true">
+    <structure name="PolicyNames" field="policyNames" usage="required" type="com.eucalyptus.auth.euare.PolicyNameListTypeType"/>
+    <value name="IsTruncated" field="isTruncated" usage="optional"/>
+    <value name="Marker" field="marker" usage="optional"/>
+  </mapping>
+  <mapping name="CreateInstanceProfile" class="com.eucalyptus.auth.euare.CreateInstanceProfileType" extends="com.eucalyptus.auth.euare.EuareMessage">
+    <structure map-as="com.eucalyptus.auth.euare.EuareMessage"/>
+    <value name="DelegateAccount" field="delegateAccount" usage="optional"/>
+    <value name="InstanceProfileName" field="instanceProfileName" usage="required"/>
+    <value name="Path" field="path" usage="optional"/>
+  </mapping>
+  <mapping name="CreateInstanceProfileResponse" class="com.eucalyptus.auth.euare.CreateInstanceProfileResponseType" extends="com.eucalyptus.auth.euare.EuareMessage">
+    <structure map-as="com.eucalyptus.auth.euare.EuareMessage"/>
+    <structure name="CreateInstanceProfileResult" field="createInstanceProfileResult" usage="required" type="com.eucalyptus.auth.euare.CreateInstanceProfileResult"/>
+    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.auth.euare.ResponseMetadataType"/>
+  </mapping>
+  <mapping class="com.eucalyptus.auth.euare.CreateInstanceProfileResult" abstract="true">
+    <structure name="InstanceProfile" field="instanceProfile" usage="required" type="com.eucalyptus.auth.euare.InstanceProfileType"/>
+  </mapping>
+  <mapping name="GetInstanceProfile" class="com.eucalyptus.auth.euare.GetInstanceProfileType" extends="com.eucalyptus.auth.euare.EuareMessage">
+    <structure map-as="com.eucalyptus.auth.euare.EuareMessage"/>
+    <value name="DelegateAccount" field="delegateAccount" usage="optional"/>
+    <value name="InstanceProfileName" field="instanceProfileName" usage="required"/>
+  </mapping>
+  <mapping name="GetInstanceProfileResponse" class="com.eucalyptus.auth.euare.GetInstanceProfileResponseType" extends="com.eucalyptus.auth.euare.EuareMessage">
+    <structure map-as="com.eucalyptus.auth.euare.EuareMessage"/>
+    <structure name="GetInstanceProfileResult" field="getInstanceProfileResult" usage="required" type="com.eucalyptus.auth.euare.GetInstanceProfileResult"/>
+    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.auth.euare.ResponseMetadataType"/>
+  </mapping>
+  <mapping class="com.eucalyptus.auth.euare.GetInstanceProfileResult" abstract="true">
+    <structure name="InstanceProfile" field="instanceProfile" usage="required" type="com.eucalyptus.auth.euare.InstanceProfileType"/>
+  </mapping>
+  <mapping name="AddRoleToInstanceProfile" class="com.eucalyptus.auth.euare.AddRoleToInstanceProfileType" extends="com.eucalyptus.auth.euare.EuareMessage">
+    <structure map-as="com.eucalyptus.auth.euare.EuareMessage"/>
+    <value name="DelegateAccount" field="delegateAccount" usage="optional"/>
+    <value name="InstanceProfileName" field="instanceProfileName" usage="required"/>
+    <value name="RoleName" field="roleName" usage="required"/>
+  </mapping>
+  <mapping name="AddRoleToInstanceProfileResponse" class="com.eucalyptus.auth.euare.AddRoleToInstanceProfileResponseType" extends="com.eucalyptus.auth.euare.EuareMessage">
+    <structure map-as="com.eucalyptus.auth.euare.EuareMessage"/>
+    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.auth.euare.ResponseMetadataType"/>
+  </mapping>
+  <mapping name="RemoveRoleFromInstanceProfile" class="com.eucalyptus.auth.euare.RemoveRoleFromInstanceProfileType" extends="com.eucalyptus.auth.euare.EuareMessage">
+    <structure map-as="com.eucalyptus.auth.euare.EuareMessage"/>
+    <value name="DelegateAccount" field="delegateAccount" usage="optional"/>
+    <value name="InstanceProfileName" field="instanceProfileName" usage="required"/>
+    <value name="RoleName" field="roleName" usage="required"/>
+  </mapping>
+  <mapping name="RemoveRoleFromInstanceProfileResponse" class="com.eucalyptus.auth.euare.RemoveRoleFromInstanceProfileResponseType" extends="com.eucalyptus.auth.euare.EuareMessage">
+    <structure map-as="com.eucalyptus.auth.euare.EuareMessage"/>
+    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.auth.euare.ResponseMetadataType"/>
+  </mapping>
+  <mapping name="ListInstanceProfilesForRole" class="com.eucalyptus.auth.euare.ListInstanceProfilesForRoleType" extends="com.eucalyptus.auth.euare.EuareMessage">
+    <structure map-as="com.eucalyptus.auth.euare.EuareMessage"/>
+    <value name="DelegateAccount" field="delegateAccount" usage="optional"/>
+    <value name="RoleName" field="roleName" usage="required"/>
+    <value name="Marker" field="marker" usage="optional"/>
+    <value name="MaxItems" field="maxItems" usage="optional"/>
+  </mapping>
+  <mapping name="ListInstanceProfilesForRoleResponse" class="com.eucalyptus.auth.euare.ListInstanceProfilesForRoleResponseType" extends="com.eucalyptus.auth.euare.EuareMessage">
+    <structure map-as="com.eucalyptus.auth.euare.EuareMessage"/>
+    <structure name="ListInstanceProfilesForRoleResult" field="listInstanceProfilesForRoleResult" usage="required" type="com.eucalyptus.auth.euare.ListInstanceProfilesForRoleResult"/>
+    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.auth.euare.ResponseMetadataType"/>
+  </mapping>
+  <mapping class="com.eucalyptus.auth.euare.ListInstanceProfilesForRoleResult" abstract="true">
+    <structure name="InstanceProfiles" field="instanceProfiles" usage="required" type="com.eucalyptus.auth.euare.InstanceProfileListType"/>
+    <value name="IsTruncated" field="isTruncated" usage="optional"/>
+    <value name="Marker" field="marker" usage="optional"/>
+  </mapping>
+  <mapping name="DeleteInstanceProfile" class="com.eucalyptus.auth.euare.DeleteInstanceProfileType" extends="com.eucalyptus.auth.euare.EuareMessage">
+    <structure map-as="com.eucalyptus.auth.euare.EuareMessage"/>
+    <value name="DelegateAccount" field="delegateAccount" usage="optional"/>
+    <value name="InstanceProfileName" field="instanceProfileName" usage="required"/>
+  </mapping>
+  <mapping name="DeleteInstanceProfileResponse" class="com.eucalyptus.auth.euare.DeleteInstanceProfileResponseType" extends="com.eucalyptus.auth.euare.EuareMessage">
+    <structure map-as="com.eucalyptus.auth.euare.EuareMessage"/>
+    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.auth.euare.ResponseMetadataType"/>
+  </mapping>
+  <mapping name="ListInstanceProfiles" class="com.eucalyptus.auth.euare.ListInstanceProfilesType" extends="com.eucalyptus.auth.euare.EuareMessage">
+    <structure map-as="com.eucalyptus.auth.euare.EuareMessage"/>
+    <value name="DelegateAccount" field="delegateAccount" usage="optional"/>
+    <value name="PathPrefix" field="pathPrefix" usage="optional"/>
+    <value name="Marker" field="marker" usage="optional"/>
+    <value name="MaxItems" field="maxItems" usage="optional"/>
+  </mapping>
+  <mapping name="ListInstanceProfilesResponse" class="com.eucalyptus.auth.euare.ListInstanceProfilesResponseType" extends="com.eucalyptus.auth.euare.EuareMessage">
+    <structure map-as="com.eucalyptus.auth.euare.EuareMessage"/>
+    <structure name="ListInstanceProfilesResult" field="listInstanceProfilesResult" usage="required" type="com.eucalyptus.auth.euare.ListInstanceProfilesResult"/>
+    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.auth.euare.ResponseMetadataType"/>
+  </mapping>
+  <mapping class="com.eucalyptus.auth.euare.ListInstanceProfilesResult" abstract="true">
+    <structure name="InstanceProfiles" field="instanceProfiles" usage="required" type="com.eucalyptus.auth.euare.InstanceProfileListType"/>
+    <value name="IsTruncated" field="isTruncated" usage="optional"/>
+    <value name="Marker" field="marker" usage="optional"/>
+  </mapping>
+  <mapping class="com.eucalyptus.auth.euare.RoleType" abstract="true">
+    <value name="Path" field="path" usage="required"/>
+    <value name="RoleName" field="roleName" usage="required"/>
+    <value name="RoleId" field="roleId" usage="required"/>
+    <value name="Arn" field="arn" usage="required"/>
+    <value name="CreateDate" field="createDate" usage="required"/>
+    <value name="AssumeRolePolicyDocument" field="assumeRolePolicyDocument" usage="optional"/>
+  </mapping>
+  <mapping class="com.eucalyptus.auth.euare.RoleListType" abstract="true">
+    <collection field="member">
+      <structure name="member" type="com.eucalyptus.auth.euare.RoleType"/>
+    </collection>
+  </mapping>
+  <mapping class="com.eucalyptus.auth.euare.InstanceProfileType" abstract="true">
+    <value name="Path" field="path" usage="required"/>
+    <value name="InstanceProfileName" field="instanceProfileName" usage="required"/>
+    <value name="InstanceProfileId" field="instanceProfileId" usage="required"/>
+    <value name="Arn" field="arn" usage="required"/>
+    <value name="CreateDate" field="createDate" usage="required"/>
+    <structure name="Roles" field="roles" usage="required" type="com.eucalyptus.auth.euare.RoleListType"/>
+  </mapping>
+  <mapping class="com.eucalyptus.auth.euare.InstanceProfileListType" abstract="true">
+    <collection field="member">
+      <structure name="member" type="com.eucalyptus.auth.euare.InstanceProfileType"/>
+    </collection>
   </mapping>
 </binding>

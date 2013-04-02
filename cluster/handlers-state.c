@@ -159,8 +159,8 @@ extern vnetConfig *vnetconfig;
 \*----------------------------------------------------------------------------*/
 
 int doDescribeServices(ncMetadata * pMeta, serviceInfoType * serviceIds, int serviceIdsLen, serviceStatusType ** outStatuses, int *outStatusesLen);
-int doStartService(ncMetadata * pMeta);
-int doStopService(ncMetadata * pMeta);
+int doStartService(ncMetadata * pMeta, serviceInfoType * serviceIds, int serviceIdsLen);
+int doStopService(ncMetadata * pMeta, serviceInfoType * serviceIds, int serviceIdsLen);
 int doEnableService(ncMetadata * pMeta, serviceInfoType * serviceIds, int serviceIdsLen);
 int doDisableService(ncMetadata * pMeta, serviceInfoType * serviceIds, int serviceIdsLen);
 int doShutdownService(ncMetadata * pMeta);
@@ -217,6 +217,7 @@ int doDescribeServices(ncMetadata * pMeta, serviceInfoType * serviceIds, int ser
     serviceStatusType *myStatus = NULL;
     int do_report_cluster = 1; // always do report on the cluster, otherwise CC won't get ENABLED
     int do_report_nodes = 0;
+    int do_report_all = 0;
     char * my_partition = NULL;
 
     rc = initialize(pMeta);
@@ -260,6 +261,26 @@ int doDescribeServices(ncMetadata * pMeta, serviceInfoType * serviceIds, int ser
     if (serviceIdsLen < 1) { // if the describe request is not specific, report on everything
         do_report_cluster = 1;
         do_report_nodes = 1;
+        do_report_all = 1;
+    } else { // if the describe request is specific, identify which types are requested
+        do_report_cluster = 0;
+        do_report_nodes = 0;
+        do_report_all = 0;
+        for (i = 0; i < serviceIdsLen; i++) {
+            LOGDEBUG("received input serviceId[%d]: %s %s %s %s\n", 
+                     i,
+                     serviceIds[i].type,
+                     serviceIds[i].partition,
+                     serviceIds[i].name,
+                     serviceIds[i].uris[0]);
+            if (strlen(serviceIds[i].type)) {
+                if (!strcmp(serviceIds[i].type, "cluster")) {
+                    do_report_cluster = 1; // report on cluster services if requested explicitly
+                } else if (!strcmp(serviceIds[i].type, "node")) {
+                    do_report_nodes++; // count number of and report on node services if requested explicitly
+                }
+            }
+        }
     }
 
     for (i = 0; i < 16; i++) {
@@ -317,6 +338,13 @@ int doDescribeServices(ncMetadata * pMeta, serviceInfoType * serviceIds, int ser
         snprintf(myStatus->details, 1024, "%s", config->ccStatus.details); // string that gets printed by 'euca-describe-services -E'
         myStatus->localEpoch = config->ccStatus.localEpoch;
         memcpy(&(myStatus->serviceId), &(config->ccStatus.serviceId), sizeof(serviceInfoType));
+        LOGDEBUG("external services\t uri[%d]: %s %s %s %s %s\n", 
+                 1,
+                 myStatus->serviceId.type,
+                 myStatus->serviceId.partition,
+                 myStatus->serviceId.name,
+                 myStatus->localState,
+                 myStatus->serviceId.uris[0]);
     }
     
     if (do_report_nodes) {
@@ -329,42 +357,74 @@ int doDescribeServices(ncMetadata * pMeta, serviceInfoType * serviceIds, int ser
         
         if (resourceCacheLocal.numResources > 0 && my_partition != NULL) { // parition is unknown at early stages of CC initialization
             
-            *outStatusesLen += resourceCacheLocal.numResources;
+            if (do_report_all) {
+                *outStatusesLen += resourceCacheLocal.numResources;
+            } else if (do_report_nodes) {
+				*outStatusesLen += do_report_nodes;
+        	}
             *outStatuses = EUCA_REALLOC(*outStatuses, *outStatusesLen, sizeof(serviceStatusType));
             if (!*outStatuses) {
                 LOGFATAL("out of memory!\n");
                 unlock_exit(1);
             }
-            
-            for (int i = 0; i < resourceCacheLocal.numResources; i++) {                
-                myStatus = *outStatuses + 1 + i;
-                ccResource * r = resourceCacheLocal.resources + i;
 
-                {
-                    char * state = "BUGGY";
-                    char * msg = "";
-                    if (! strcmp(r->nodeStatus, "enabled")) {
-                        state = "ENABLED";
-                        msg = "the node is operating normally";
-                    } else if (! strcmp(r->nodeStatus, "disabled")) {
-                        state = "DISABLED";
-                        msg = "the node is not accepting new instances";
+            for (int idIdx = 0; idIdx < *outStatusesLen; idIdx++) {
+                if (do_report_all||!strcmp(serviceIds[idIdx].type, "node")) {
+                    for (int rIdx = 0; idIdx < *outStatusesLen && rIdx < resourceCacheLocal.numResources; rIdx++) {
+                        ccResource * r = resourceCacheLocal.resources + rIdx;
+                        if (do_report_all||(strlen(serviceIds[idIdx].name) && strlen(r->ip) && !strcmp(serviceIds[idIdx].name, r->ip))) {
+                            myStatus = *outStatuses + do_report_cluster + idIdx;
+                            idIdx += do_report_all;
+                            {
+                                int resState = r->state;
+                                int resNcState = r->ncState;
+                                char * state = "BUGGY";
+                                char * msg = "";
+                                if ( resState == RESUP ) {
+                                    if ( resNcState == ENABLED ) {
+                                        state = "ENABLED";
+                                        msg = "the node is operating normally";
+                                    } else if ( resNcState == STOPPED ) {
+                                        state = "STOPPED";
+                                        msg = "the node is not accepting new instances";
+                                    } else if ( resNcState == NOTREADY ) {
+                                        state = "NOTREADY";
+                                        if (strnlen(r->nodeMessage, 1024)) {
+                                            msg = r->nodeMessage;
+                                        } else {
+                                            msg = "the node is currently experiencing problems and needs attention";
+                                        }
+                                    }
+                                } else if ( resState == RESASLEEP || resState == RESWAKING ) {
+                                    state = "NOTREADY";
+                                    msg = "the node is currently in the sleep state";
+                                } else if ( resState == RESDOWN ) {
+                                    state = "NOTREADY";
+                                    if (strnlen(r->nodeMessage, 1024)){
+                                        msg = r->nodeMessage;
+                                    } else {
+                                        msg = "the node is not responding to the cluster controller";
+                                    }
+                                }
+                                snprintf(myStatus->localState, 32, "%s", state);
+                                snprintf(myStatus->details, 1024, "%s", msg); // string that gets printed by 'euca-describe-services -E'
+                            }
+                            myStatus->localEpoch = config->ccStatus.localEpoch;
+                            sprintf(myStatus->serviceId.type, "node");
+                            sprintf(myStatus->serviceId.name, r->hostname);
+                            sprintf(myStatus->serviceId.partition, config->ccStatus.serviceId.partition);
+                            sprintf(myStatus->serviceId.uris[0], r->ncURL);
+                            myStatus->serviceId.urisLen = 1;
+                            LOGDEBUG("external services\t uri[%d]: %s %s %s %s %s\n",
+                                     idIdx,
+                                     myStatus->serviceId.type,
+                                     myStatus->serviceId.partition,
+                                     myStatus->serviceId.name,
+                                     myStatus->localState,
+                                     myStatus->serviceId.uris[0]);
+                        }
                     }
-                    snprintf(myStatus->localState, 32, "%s", state);
-                    snprintf(myStatus->details, 1024, "%s", msg); // string that gets printed by 'euca-describe-services -E'
                 }
-                myStatus->localEpoch = config->ccStatus.localEpoch;
-                sprintf(myStatus->serviceId.type, "node");
-                sprintf(myStatus->serviceId.name, resourceCacheLocal.resources[i].ip);
-                sprintf(myStatus->serviceId.partition, my_partition);
-                sprintf(myStatus->serviceId.uris[0], resourceCacheLocal.resources[i].ncURL);
-                myStatus->serviceId.urisLen = 1;
-                LOGDEBUG("external services\t uri[%d]: %s %s %s %s\n", 
-                         i, 
-                         myStatus->localState,
-                         myStatus->serviceId.partition,
-                         myStatus->serviceId.name,
-                         myStatus->serviceId.uris[0]);
             }
         }
     }
@@ -384,7 +444,7 @@ int doDescribeServices(ncMetadata * pMeta, serviceInfoType * serviceIds, int ser
 //!
 //! @note
 //!
-int doStartService(ncMetadata * pMeta)
+int doStartService(ncMetadata * pMeta, serviceInfoType * serviceIds, int serviceIdsLen)
 {
     int rc = 0;
     int ret = 0;
@@ -395,6 +455,21 @@ int doStartService(ncMetadata * pMeta)
     }
 
     LOGDEBUG("invoked: userId=%s\n", SP(pMeta ? pMeta->userId : "UNKNOWN"));
+
+    int start_cc = 0;
+    for (int i=0; i<serviceIdsLen; i++) {
+        if (strcmp(serviceIds[i].type, "cluster")==0) {
+            start_cc = 1;
+        } else if (strcmp(serviceIds[i].type, "node")==0) {
+            //GRZE: This is currently a NOOP; also "enabled" would not be right
+            //ret = doModifyNode(pMeta, serviceIds[i].name, "enabled");
+        }
+    }
+    if (serviceIdsLen<1) {
+        start_cc = 1;
+    }
+    if (start_cc != 1)
+        goto done;
 
     // this is actually a NOP
     sem_mywait(CONFIG);
@@ -414,6 +489,7 @@ int doStartService(ncMetadata * pMeta)
     }
     sem_mypost(CONFIG);
 
+done:
     LOGTRACE("done\n");
 
     return (ret);
@@ -430,7 +506,7 @@ int doStartService(ncMetadata * pMeta)
 //!
 //! @note
 //!
-int doStopService(ncMetadata * pMeta)
+int doStopService(ncMetadata * pMeta, serviceInfoType * serviceIds, int serviceIdsLen)
 {
     int rc = 0;
     int ret = 0;
@@ -441,6 +517,21 @@ int doStopService(ncMetadata * pMeta)
     }
 
     LOGDEBUG("invoked: userId=%s\n", SP(pMeta ? pMeta->userId : "UNKNOWN"));
+
+    int stop_cc = 0;
+    for (int i=0; i<serviceIdsLen; i++) {
+        if (strcmp(serviceIds[i].type, "cluster")==0) {
+            stop_cc = 1;
+        } else if (strcmp(serviceIds[i].type, "node")==0) {
+            //GRZE: map stop operation to modifyNode("disabled") here
+            ret = doModifyNode(pMeta, serviceIds[i].name, "disabled");
+        }
+    }
+    if (serviceIdsLen<1) {
+        stop_cc = 1;
+    }
+    if (stop_cc != 1)
+        goto done;
 
     sem_mywait(CONFIG);
     {
@@ -459,6 +550,7 @@ int doStopService(ncMetadata * pMeta)
     }
     sem_mypost(CONFIG);
 
+done:
     LOGTRACE("done\n");
 
     return (ret);

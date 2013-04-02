@@ -19,7 +19,6 @@
  ************************************************************************/
 package com.eucalyptus.auth.login;
 
-import javax.security.auth.login.CredentialExpiredException;
 import javax.security.auth.login.FailedLoginException;
 import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.AuthException;
@@ -27,7 +26,6 @@ import com.eucalyptus.auth.PasswordAuthentication;
 import com.eucalyptus.auth.api.BaseLoginModule;
 import com.eucalyptus.auth.principal.Account;
 import com.eucalyptus.auth.principal.User;
-import com.google.common.base.Objects;
 
 /**
  *
@@ -44,6 +42,7 @@ public class PasswordLoginModule extends BaseLoginModule<AccountUsernamePassword
     final String accountName = credentials.getAccount();
     final String username = credentials.getUsername();
     final String password = credentials.getPassword();
+    final String newPassword = credentials.getNewPassword();
 
     final Account account;
     final User user;
@@ -54,12 +53,7 @@ public class PasswordLoginModule extends BaseLoginModule<AccountUsernamePassword
       throw new FailedLoginException();
     }
 
-    PasswordAuthentication.authenticate( user, password );
-
-    if ( Objects.firstNonNull( user.getPasswordExpires(), Long.MAX_VALUE )
-        < System.currentTimeMillis() ) {
-      throw new CredentialExpiredException();
-    }
+    PasswordAuthentication.authenticate( user, password, newPassword );
 
     super.setCredential( credentials.getAccountUsername() );
     super.setPrincipal( user );

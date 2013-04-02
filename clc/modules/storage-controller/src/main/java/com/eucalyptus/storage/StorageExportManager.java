@@ -78,4 +78,6 @@ public interface StorageExportManager {
 	public void stop();
 
 	public void check() throws EucalyptusCloudException;
+
+	public boolean isExported(LVMVolumeInfo foundLVMVolumeInfo) throws EucalyptusCloudException;
 }

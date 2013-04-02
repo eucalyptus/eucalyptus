@@ -27,6 +27,8 @@ import javax.annotation.Nullable;
 import org.apache.log4j.Logger;
 import com.eucalyptus.auth.Permissions;
 import com.eucalyptus.auth.policy.PolicySpec;
+import com.eucalyptus.auth.principal.AccountFullName;
+import com.eucalyptus.auth.principal.UserFullName;
 import com.eucalyptus.cloud.CloudMetadata;
 import com.eucalyptus.cloud.util.MetadataException;
 import com.eucalyptus.cloud.util.NoSuchMetadataException;
@@ -82,7 +84,8 @@ public class TagManager {
     reply.set_return( false );
 
     final Context context = Contexts.lookup();
-    final OwnerFullName ownerFullName = context.getUserFullName();
+    final UserFullName userFullName = context.getUserFullName();
+    final AccountFullName accountFullName = userFullName.asAccountFullName();
     final List<String> resourceIds = Objects.firstNonNull( request.getResourcesSet(), Collections.<String>emptyList() );
     final List<ResourceTag> resourceTags = Objects.firstNonNull( request.getTagSet(), Collections.<ResourceTag>emptyList() );
 
@@ -107,27 +110,27 @@ public class TagManager {
             return false;            
           }
 
-          //TODO:STEVE: quotas for tags?
-          for ( final CloudMetadata resource : resources ) {
-            final Tag example = TagSupport.fromResource( resource ).example( resource, ownerFullName, null, null );
-            if ( Entities.count( example ) + resourceTags.size() > MAX_TAGS_PER_RESOURCE ) {
-              return false;              
-            }
-          }
-
           for ( final CloudMetadata resource : resources ) {
             for ( final ResourceTag resourceTag : resourceTags ) {
               final String key = Strings.nullToEmpty( resourceTag.getKey() ).trim();
               final String value = Strings.nullToEmpty( resourceTag.getValue() ).trim();
-              TagSupport.fromResource( resource ).createOrUpdate( resource, ownerFullName, key, value );
+              TagSupport.fromResource( resource ).createOrUpdate( resource, userFullName, key, value );
+            }
+
+            if ( TagSupport.fromResource( resource ).count( resource, accountFullName ) > MAX_TAGS_PER_RESOURCE ) {
+              throw new TagLimitException();
             }
           }
 
           return true;
         }
       };
-      
-      reply.set_return( Entities.asTransaction( Tag.class, creator ).apply( null ) );
+
+      try {
+        reply.set_return( Entities.asTransaction( Tag.class, creator ).apply( null ) );
+      } catch ( TagLimitException e ) {
+        reply.set_return( false );
+      }
     }
     
     return reply;
@@ -165,7 +168,7 @@ public class TagManager {
                     context.getAccount(),
                     PolicySpec.EC2_DELETETAGS,
                     context.getUser() ) ) {
-                  Tags.delete( example );
+                  Tags.delete( example, TagSupport.fromResource( resource ).exampleCriterion( example ), Collections.<String,String>emptyMap() );
                 }
               } catch ( NoSuchMetadataException e ) {
                 log.trace( e );
@@ -290,5 +293,9 @@ public class TagManager {
     public boolean apply( final Object object ) {
       return Predicates.and( predicates ).apply( object );
     }
+  }
+
+  private static class TagLimitException extends RuntimeException {
+    private static final long serialVersionUID = 1L;
   }
 }

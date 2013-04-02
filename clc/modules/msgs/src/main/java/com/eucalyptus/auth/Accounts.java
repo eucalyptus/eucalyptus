@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * Copyright 2009-2013 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -67,10 +67,15 @@ import java.util.List;
 import java.util.Set;
 import org.apache.log4j.Logger;
 import com.eucalyptus.auth.api.AccountProvider;
+import com.eucalyptus.auth.policy.PolicySpec;
+import com.eucalyptus.auth.policy.ern.EuareResourceName;
 import com.eucalyptus.auth.principal.AccessKey;
 import com.eucalyptus.auth.principal.Account;
 import com.eucalyptus.auth.principal.Certificate;
 import com.eucalyptus.auth.principal.Group;
+import com.eucalyptus.auth.principal.InstanceProfile;
+import com.eucalyptus.auth.principal.Role;
+import com.eucalyptus.auth.principal.RoleUser;
 import com.eucalyptus.auth.principal.User;
 import com.google.common.base.Function;
 
@@ -178,7 +183,11 @@ public class Accounts {
   public static Group lookupGroupById( String groupId ) throws AuthException {
     return Accounts.getAccountProvider( ).lookupGroupById( groupId );
   }
-  
+
+  public static Role lookupRoleById( String roleId ) throws AuthException {
+    return Accounts.getAccountProvider( ).lookupRoleById( roleId );
+  }
+
   public static Certificate lookupCertificate( X509Certificate cert ) throws AuthException {
     return Accounts.getAccountProvider( ).lookupCertificate( cert );
   }
@@ -189,7 +198,7 @@ public class Accounts {
   
   public static User lookupSystemAdmin( ) throws AuthException {
     Account system = Accounts.getAccountProvider( ).lookupAccountByName( Account.SYSTEM_ACCOUNT );
-    return system.lookupUserByName( User.ACCOUNT_ADMIN );
+    return system.lookupAdmin();
   }
   
   public static String getFirstActiveAccessKeyId( User user ) throws AuthException {
@@ -203,6 +212,10 @@ public class Accounts {
   
   public static User lookupUserByConfirmationCode( String code ) throws AuthException {
     return Accounts.getAccountProvider( ).lookupUserByConfirmationCode( code );
+  }
+
+  public static User roleAsUser( final Role role ) throws AuthException {
+    return new RoleUser( role, role.getAccount().lookupAdmin() );
   }
 
   public static String getUserFullName( User user ) {
@@ -220,7 +233,46 @@ public class Accounts {
       return group.getPath( ) + "/" + group.getName( );
     }
   }
-  
+
+  public static String getRoleFullName( Role role ) {
+    if ( "/".equals( role.getPath( ) ) ) {
+      return "/" + role.getName( );
+    } else {
+      return role.getPath( ) + "/" + role.getName( );
+    }
+  }
+
+  public static String getInstanceProfileFullName( InstanceProfile instanceProfile ) {
+    if ( "/".equals( instanceProfile.getPath( ) ) ) {
+      return "/" + instanceProfile.getName( );
+    } else {
+      return instanceProfile.getPath( ) + "/" + instanceProfile.getName( );
+    }
+  }
+
+  public static String getUserArn( final User user ) throws AuthException {
+    return buildArn( user.getAccount(), PolicySpec.IAM_RESOURCE_USER, user.getPath(), user.getName() );
+  }
+
+  public static String getGroupArn( final Group group ) throws AuthException {
+    return buildArn( group.getAccount(), PolicySpec.IAM_RESOURCE_GROUP, group.getPath(), group.getName() );
+  }
+
+  public static String getRoleArn( final Role role ) throws AuthException {
+    return buildArn( role.getAccount(), PolicySpec.IAM_RESOURCE_ROLE, role.getPath(), role.getName() );
+  }
+
+  public static String getInstanceProfileArn( final InstanceProfile instanceProfile ) throws AuthException {
+    return buildArn( instanceProfile.getAccount(), PolicySpec.IAM_RESOURCE_INSTANCE_PROFILE, instanceProfile.getPath(), instanceProfile.getName() );
+  }
+
+  private static String buildArn( final Account account,
+                                  final String type,
+                                  final String path,
+                                  final String name ) throws AuthException {
+    return new EuareResourceName( account.getAccountNumber(), type, path, name ).toString();
+  }
+
   public static void normalizeUserInfo( ) throws AuthException {
     for ( User user : listAllUsers( ) ) {
       try {

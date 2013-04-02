@@ -6,17 +6,8 @@ import javax.persistence.Column;
 import javax.persistence.EnumType;
 import javax.persistence.Enumerated;
 import javax.persistence.MappedSuperclass;
-import javax.persistence.PersistenceContext;
-import javax.persistence.Table;
-
-import org.hibernate.annotations.Cache;
-import org.hibernate.annotations.CacheConcurrencyStrategy;
-import org.hibernate.annotations.Entity;
 
 import com.eucalyptus.cloudwatch.domain.dimension.AbstractPersistentWithDimensions;
-import com.eucalyptus.cloudwatch.domain.metricdata.MetricEntity.Units;
-
-import edu.emory.mathcs.backport.java.util.Arrays;
 
 @MappedSuperclass
 public abstract class MetricEntity extends AbstractPersistentWithDimensions {

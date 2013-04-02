@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * Copyright 2009-2013 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -84,6 +84,8 @@ public class PolicySpec {
   public static final String NOTACTION = "NotAction";
   public static final String RESOURCE = "Resource";
   public static final String NOTRESOURCE = "NotResource";
+  public static final String PRINCIPAL = "Principal";
+  public static final String NOTPRINCIPAL = "NotPrincipal";
   public static final String CONDITION = "Condition";
     
   // Effect
@@ -101,6 +103,8 @@ public class PolicySpec {
   public static final String VENDOR_STS = "sts";
   public static final String VENDOR_AUTOSCALING = "autoscaling";
   public static final String VENDOR_CLOUDWATCH = "cloudwatch";
+  public static final String VENDOR_LOADBALANCING = "loadbalancing";
+  
   
   public static final Set<String> VENDORS = ImmutableSet.of(
     VENDOR_IAM,
@@ -108,33 +112,48 @@ public class PolicySpec {
     VENDOR_S3,
     VENDOR_STS,
     VENDOR_AUTOSCALING,
-    VENDOR_CLOUDWATCH
+    VENDOR_CLOUDWATCH,
+    VENDOR_LOADBALANCING
   );
 
   public static final String ALL_ACTION = "*";
   
   // IAM actions, based on API version 2010-05-08
+  public static final String IAM_ADDROLETOINSTANCEPROFILE = "addroletoinstanceprofile";
   public static final String IAM_ADDUSERTOGROUP = "addusertogroup";
+  public static final String IAM_CHANGEPASSWORD = "changepassword";
   public static final String IAM_CREATEACCESSKEY = "createaccesskey";
   public static final String IAM_CREATEACCOUNTALIAS = "createaccountalias";
   public static final String IAM_CREATEGROUP = "creategroup";
+  public static final String IAM_CREATEINSTANCEPROFILE = "createinstanceprofile";
   public static final String IAM_CREATELOGINPROFILE = "createloginprofile";
+  public static final String IAM_CREATEROLE = "createrole";
   public static final String IAM_CREATEUSER = "createuser";
+  public static final String IAM_CREATEVIRTUALMFADEVICE = "createvirtualmfadevice";
   public static final String IAM_DEACTIVATEMFADEVICE = "deactivatemfadevice";
   public static final String IAM_DELETEACCESSKEY = "deleteaccesskey";
   public static final String IAM_DELETEACCOUNTALIAS = "deleteaccountalias";
+  public static final String IAM_DELETEACCOUNTPASSWORDPOLICY = "deleteaccountpasswordpolicy";
   public static final String IAM_DELETEGROUP = "deletegroup";
   public static final String IAM_DELETEGROUPPOLICY = "deletegrouppolicy";
+  public static final String IAM_DELETEINSTANCEPROFILE = "deleteinstanceprofile";
   public static final String IAM_DELETELOGINPROFILE = "deleteloginprofile";
+  public static final String IAM_DELETEROLE = "deleterole";
+  public static final String IAM_DELETEROLEPOLICY = "deleterolepolicy";
   public static final String IAM_DELETESERVERCERTIFICATE = "deleteservercertificate";
   public static final String IAM_DELETESIGNINGCERTIFICATE = "deletesigningcertificate";
   public static final String IAM_DELETEUSER = "deleteuser";
   public static final String IAM_DELETEUSERPOLICY = "deleteuserpolicy";
+  public static final String IAM_DELETEVIRTUALMFADEVICE = "deletevirtualmfadevice";
   public static final String IAM_ENABLEMFADEVICE = "enablemfadevice";
+  public static final String IAM_GETACCOUNTPASSWORDPOLICY = "getaccountpasswordpolicy";
   public static final String IAM_GETACCOUNTSUMMARY = "getaccountsummary";
   public static final String IAM_GETGROUP = "getgroup";
   public static final String IAM_GETGROUPPOLICY = "getgrouppolicy";
+  public static final String IAM_GETINSTANCEPROFILE = "getinstanceprofile";
   public static final String IAM_GETLOGINPROFILE = "getloginprofile";
+  public static final String IAM_GETROLE = "getrole";
+  public static final String IAM_GETROLEPOLICY = "getrolepolicy";
   public static final String IAM_GETSERVERCERTIFICATE = "getservercertificate";
   public static final String IAM_GETUSER = "getuser";
   public static final String IAM_GETUSERPOLICY = "getuserpolicy";
@@ -143,16 +162,25 @@ public class PolicySpec {
   public static final String IAM_LISTGROUPPOLICIES = "listgrouppolicies";
   public static final String IAM_LISTGROUPS = "listgroups";
   public static final String IAM_LISTGROUPSFORUSER = "listgroupsforuser";
+  public static final String IAM_LISTINSTANCEPROFILES = "listinstanceprofiles";
+  public static final String IAM_LISTINSTANCEPROFILESFORROLE = "listinstanceprofilesforrole";
   public static final String IAM_LISTMFADEVICES = "listmfadevices";
+  public static final String IAM_LISTROLEPOLICIES = "listrolepolicies";
+  public static final String IAM_LISTROLES = "listroles";
   public static final String IAM_LISTSERVERCERTIFICATES = "listservercertificates";
   public static final String IAM_LISTSIGNINGCERTIFICATES = "listsigningcertificates";
   public static final String IAM_LISTUSERPOLICIES = "listuserpolicies";
   public static final String IAM_LISTUSERS = "listusers";
+  public static final String IAM_LISTVIRTUALMFADEVICES = "listvirtualmfadevices";
   public static final String IAM_PUTGROUPPOLICY = "putgrouppolicy";
+  public static final String IAM_PUTROLEPOLICY = "putrolepolicy";
   public static final String IAM_PUTUSERPOLICY = "putuserpolicy";
+  public static final String IAM_REMOVEROLEFROMINSTANCEPROFILE = "removerolefrominstanceprofile";
   public static final String IAM_REMOVEUSERFROMGROUP = "removeuserfromgroup";
   public static final String IAM_RESYNCMFADEVICE = "resyncmfadevice";
   public static final String IAM_UPDATEACCESSKEY = "updateaccesskey";
+  public static final String IAM_UPDATEACCOUNTPASSWORDPOLICY = "updateaccountpasswordpolicy";
+  public static final String IAM_UPDATEASSUMEROLEPOLICY = "updateassumerolepolicy";
   public static final String IAM_UPDATEGROUP = "updategroup";
   public static final String IAM_UPDATELOGINPROFILE = "updateloginprofile";
   public static final String IAM_UPDATESERVERCERTIFICATE = "updateservercertificate";
@@ -162,41 +190,68 @@ public class PolicySpec {
   public static final String IAM_UPLOADSIGNINGCERTIFICATE = "uploadsigningcertificate";
 
   public static final Set<String> IAM_ACTIONS = new ImmutableSet.Builder<String>( )
+    .add( IAM_ADDROLETOINSTANCEPROFILE )
     .add( IAM_ADDUSERTOGROUP )
+    .add( IAM_CHANGEPASSWORD )
     .add( IAM_CREATEACCESSKEY )
+    .add( IAM_CREATEACCOUNTALIAS )
     .add( IAM_CREATEGROUP )
+    .add( IAM_CREATEINSTANCEPROFILE )
     .add( IAM_CREATELOGINPROFILE )
+    .add( IAM_CREATEROLE )
     .add( IAM_CREATEUSER )
+    .add( IAM_CREATEVIRTUALMFADEVICE )
     .add( IAM_DEACTIVATEMFADEVICE )
     .add( IAM_DELETEACCESSKEY )
+    .add( IAM_DELETEACCOUNTALIAS )
+    .add( IAM_DELETEACCOUNTPASSWORDPOLICY )
     .add( IAM_DELETEGROUP )
     .add( IAM_DELETEGROUPPOLICY )
+    .add( IAM_DELETEINSTANCEPROFILE )
     .add( IAM_DELETELOGINPROFILE )
+    .add( IAM_DELETEROLE )
+    .add( IAM_DELETEROLEPOLICY )
     .add( IAM_DELETESERVERCERTIFICATE )
     .add( IAM_DELETESIGNINGCERTIFICATE )
     .add( IAM_DELETEUSER )
     .add( IAM_DELETEUSERPOLICY )
+    .add( IAM_DELETEVIRTUALMFADEVICE )
     .add( IAM_ENABLEMFADEVICE )
+    .add( IAM_GETACCOUNTPASSWORDPOLICY )
+    .add( IAM_GETACCOUNTSUMMARY )
     .add( IAM_GETGROUP )
     .add( IAM_GETGROUPPOLICY )
+    .add( IAM_GETINSTANCEPROFILE )
     .add( IAM_GETLOGINPROFILE )
+    .add( IAM_GETROLE )
+    .add( IAM_GETROLEPOLICY )
     .add( IAM_GETSERVERCERTIFICATE )
     .add( IAM_GETUSER )
     .add( IAM_GETUSERPOLICY )
     .add( IAM_LISTACCESSKEYS )
+    .add( IAM_LISTACCOUNTALIASES )
     .add( IAM_LISTGROUPPOLICIES )
     .add( IAM_LISTGROUPS )
     .add( IAM_LISTGROUPSFORUSER )
+    .add( IAM_LISTINSTANCEPROFILES )
+    .add( IAM_LISTINSTANCEPROFILESFORROLE )
     .add( IAM_LISTMFADEVICES )
+    .add( IAM_LISTROLEPOLICIES )
+    .add( IAM_LISTROLES )
     .add( IAM_LISTSERVERCERTIFICATES )
     .add( IAM_LISTSIGNINGCERTIFICATES )
     .add( IAM_LISTUSERPOLICIES )
     .add( IAM_LISTUSERS )
+    .add( IAM_LISTVIRTUALMFADEVICES )
     .add( IAM_PUTGROUPPOLICY )
+    .add( IAM_PUTROLEPOLICY )
     .add( IAM_PUTUSERPOLICY )
+    .add( IAM_REMOVEROLEFROMINSTANCEPROFILE )
     .add( IAM_REMOVEUSERFROMGROUP )
     .add( IAM_RESYNCMFADEVICE )
     .add( IAM_UPDATEACCESSKEY )
+    .add( IAM_UPDATEACCOUNTPASSWORDPOLICY )
+    .add( IAM_UPDATEASSUMEROLEPOLICY )
     .add( IAM_UPDATEGROUP )
     .add( IAM_UPDATELOGINPROFILE )
     .add( IAM_UPDATESERVERCERTIFICATE )
@@ -395,10 +450,12 @@ public class PolicySpec {
   // STS actions, based on IAM Using Temporary Security Credentials version 2011-06-15
   public static final String STS_GET_FEDERATION_TOKEN = "getfederationtoken";
   public static final String STS_GET_SESSION_TOKEN = "getsessiontoken";
+  public static final String STS_ASSUME_ROLE = "assumerole";
 
   public static final Set<String> STS_ACTIONS = new ImmutableSet.Builder<String>()
       .add( STS_GET_FEDERATION_TOKEN )
       .add( STS_GET_SESSION_TOKEN )
+      .add( STS_ASSUME_ROLE )
       .build();
 
   // Auto Scaling actions, based on API Reference (API Version 2011-01-01)
@@ -501,18 +558,80 @@ public class PolicySpec {
       .add(CLOUDWATCH_SETALARMSTATE)
       .build();
   
+  //Load Balancing actions, based on API Reference (API Version 2012-06-01)
+  public static final String LOADBALANCING_DESCRIBELOADBALANCERPOLICYTYPES = "describeloadbalancerpolicytypes";
+  public static final String LOADBALANCING_CONFIGUREHEALTHCHECK = "configurehealthcheck";
+  public static final String LOADBALANCING_DETACHLOABBALANCERFROMSUBNETS = "detachloadbalancerfromsubnets";
+  public static final String LOADBALANCING_DESCRIBELOADBALANCERPOLICIES = "describeloadbalancerpolicies";
+  public static final String LOADBALANCING_SETLOADBALANCERPOLICIESOFLISTENER = "setloadbalancerpoliciesoflistener";
+  public static final String LOADBALANCING_DISABLEAVAILABILITYZONESFORLOADBALANCER = "disableavailabilityzonesforloadbalancer";
+  public static final String LOADBALANCING_DESCRIBEINSTANCEHEALTH = "describeinstancehealth";
+  public static final String LOADBALANCING_DELETELOADBALANCERPOLICY = "deleteloadbalancerpolicy";
+  public static final String LOADBALANCING_CREATELOADBALANCERPOLICY = "createloadbalancerpolicy";
+  public static final String LOADBALANCING_ENABLEAVAILABILITYZONESFORLOADBALANCER = "enableavailabilityzonesforloadbalancer";
+  public static final String LOADBALANCING_CREATELOADBALANCERLISTENERS = "createloadbalancerlisteners";
+  public static final String LOADBALANCING_CREATELOADBALANCER = "createloadbalancer";
+  public static final String LOADBALANCING_DELETELOADBALANCER = "deleteloadbalancer";
+  public static final String LOADBALANCING_SETLOADBALANCERPOLICIESFORBACKENDSERVER = "setloadbalancerpoliciesforbackendserver";
+  public static final String LOADBALANCING_DELETELOADBALANCERLISTENERS = "deleteloadbalancerlisteners";
+  public static final String LOADBALANCING_DEREGISTERINSTANCESFROMLOADBALANCER = "deregisterinstancesfromloadbalancer";
+  public static final String LOADBALANCING_SETLOADBALANCERLISTENERSSLCERTIFICATE = "setloadbalancerlistenersslcertificate";
+  public static final String LOADBALANCING_CREATELBCOOKIESTICKINESSPOLICY = "createlbcookiestickinesspolicy";
+  public static final String LOADBALANCING_ATTACHLOADBALANCERTOSUBNETS = "attachLoadbalancertosubnets";
+  public static final String LOADBALANCING_CREATEAPPCOOKIESTICKINESSPOLICY = "createappcookiestickinesspolicy";
+  public static final String LOADBALANCING_REGISTERINSTANCESWITHLOADBALANCER = "registerinstanceswithloadbalancer";
+  public static final String LOADBALANCING_APPLYSECURITYGROUPSTOLOADBALANCER = "applysecuritygroupstoloadbalancer";
+  public static final String LOADBALANCING_DESCRIBELOADBALANCERS = "describeloadbalancers";
+  
+  public static final Set<String> LOADBALANCING_ACTIONS = new ImmutableSet.Builder<String>()
+      .add(LOADBALANCING_DESCRIBELOADBALANCERPOLICYTYPES)
+      .add(LOADBALANCING_CONFIGUREHEALTHCHECK)
+      .add(LOADBALANCING_DETACHLOABBALANCERFROMSUBNETS)
+      .add(LOADBALANCING_DESCRIBELOADBALANCERPOLICIES)
+      .add(LOADBALANCING_SETLOADBALANCERPOLICIESOFLISTENER)
+      .add(LOADBALANCING_DISABLEAVAILABILITYZONESFORLOADBALANCER)
+      .add(LOADBALANCING_DESCRIBEINSTANCEHEALTH)
+      .add(LOADBALANCING_DELETELOADBALANCERPOLICY)
+      .add(LOADBALANCING_CREATELOADBALANCERPOLICY)
+      .add(LOADBALANCING_ENABLEAVAILABILITYZONESFORLOADBALANCER)
+      .add(LOADBALANCING_CREATELOADBALANCERLISTENERS)
+      .add(LOADBALANCING_CREATELOADBALANCER)
+      .add(LOADBALANCING_DELETELOADBALANCER)
+      .add(LOADBALANCING_SETLOADBALANCERPOLICIESFORBACKENDSERVER)
+      .add(LOADBALANCING_DELETELOADBALANCERLISTENERS)
+      .add(LOADBALANCING_DEREGISTERINSTANCESFROMLOADBALANCER)
+      .add(LOADBALANCING_SETLOADBALANCERLISTENERSSLCERTIFICATE)
+      .add(LOADBALANCING_CREATELBCOOKIESTICKINESSPOLICY)
+      .add(LOADBALANCING_ATTACHLOADBALANCERTOSUBNETS)
+      .add(LOADBALANCING_CREATEAPPCOOKIESTICKINESSPOLICY)
+      .add(LOADBALANCING_REGISTERINSTANCESWITHLOADBALANCER)
+      .add(LOADBALANCING_APPLYSECURITYGROUPSTOLOADBALANCER)
+      .add(LOADBALANCING_DESCRIBELOADBALANCERS)
+      .build();
+  
   // Map vendor to actions
   public static final Map<String, Set<String>> VENDOR_ACTIONS = new ImmutableMap.Builder<String,Set<String>>()
-  .put( VENDOR_IAM, IAM_ACTIONS )
-  .put( VENDOR_EC2, EC2_ACTIONS )
-  .put( VENDOR_S3, S3_ACTIONS )
-  .put( VENDOR_STS, STS_ACTIONS )
-  .put( VENDOR_AUTOSCALING, AUTOSCALING_ACTIONS )
-  .put( VENDOR_CLOUDWATCH, CLOUDWATCH_ACTIONS)
-  .build();
-  
+    .put( VENDOR_IAM, IAM_ACTIONS )
+    .put( VENDOR_EC2, EC2_ACTIONS )
+    .put( VENDOR_S3, S3_ACTIONS )
+    .put( VENDOR_STS, STS_ACTIONS )
+    .put( VENDOR_AUTOSCALING, AUTOSCALING_ACTIONS )
+    .put( VENDOR_CLOUDWATCH, CLOUDWATCH_ACTIONS)
+    .put( VENDOR_LOADBALANCING, LOADBALANCING_ACTIONS)
+    .build();
+
+  // Map vendors to resource vendors
+  public static final Map<String, Set<String>> VENDOR_RESOURCE_VENDORS = new ImmutableMap.Builder<String,Set<String>>()
+      .put( VENDOR_STS, ImmutableSet.of( VENDOR_IAM ) )
+      .build();
+
+  // Set of vendors with case sensitive resource names
+  public static final Set<String> VENDORS_CASE_SENSITIVE_RESOURCES = new ImmutableSet.Builder<String>()
+      .add( VENDOR_IAM )
+      .build();
+
   // Action syntax
-  public static final Pattern ACTION_PATTERN = Pattern.compile( "\\*|(?:(" + VENDOR_IAM + "|" + VENDOR_EC2 + "|" + VENDOR_S3 + "|" + VENDOR_STS  + "|" + VENDOR_AUTOSCALING + "|" + VENDOR_CLOUDWATCH + "):(\\S+))" );
+  public static final Pattern ACTION_PATTERN = Pattern.compile( "\\*|(?:(" + VENDOR_IAM + "|" + VENDOR_EC2 + "|" + VENDOR_S3 + "|" + VENDOR_STS  + "|" + VENDOR_LOADBALANCING + "|" + VENDOR_AUTOSCALING + "|" + VENDOR_CLOUDWATCH + "):(\\S+))" );
   
   // Wildcard
   public static final String ALL_RESOURCE = "*";
@@ -520,7 +639,9 @@ public class PolicySpec {
   // IAM resource types
   public static final String IAM_RESOURCE_GROUP = "group";
   public static final String IAM_RESOURCE_USER = "user";
-  
+  public static final String IAM_RESOURCE_ROLE = "role";
+  public static final String IAM_RESOURCE_INSTANCE_PROFILE = "instance-profile";
+
   // EC2 resource types, extension to AWS IAM
   public static final String EC2_RESOURCE_IMAGE = "image";
   public static final String EC2_RESOURCE_SECURITYGROUP = "securitygroup";
@@ -557,6 +678,21 @@ public class PolicySpec {
   public static String qualifiedName( String vendor, String name ) {
     return vendor + ":" + name;
   }
+
+  public static String vendor( final String qualifiedName ) {
+    int index = qualifiedName.indexOf( ':' );
+    if ( index <= 0 ) {
+      throw new IllegalArgumentException( "Name not qualified: " + qualifiedName );
+    }
+    return qualifiedName.substring( 0, index );
+  }
+
+  public static boolean isPermittedResourceVendor( final String vendor, final String resourceVendor ) {
+    final Set<String> resourceVendors = VENDOR_RESOURCE_VENDORS.get( vendor );
+    return resourceVendors == null ?
+        vendor.equals( resourceVendor ) :
+        resourceVendors.contains( resourceVendor );
+  }
   
   /**
    * Map request to policy language's action string.
@@ -584,6 +720,13 @@ public class PolicySpec {
   
   public static String describeAction( final String vendor, final String resource ) {
     return "describe" + resource + "s";
+  }
+
+  public static String canonicalizeResourceName( final String type,
+                                                 final String name ) {
+    return VENDORS_CASE_SENSITIVE_RESOURCES.contains( vendor( type ) ) ?
+        name :
+        name.toLowerCase();
   }
   
 }

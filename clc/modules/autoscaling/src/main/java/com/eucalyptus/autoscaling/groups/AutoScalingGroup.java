@@ -80,7 +80,7 @@ public class AutoScalingGroup extends AbstractOwnedPersistent implements AutoSca
 
   @Column(name = "metadata_capacity_timestamp", nullable = false )
   @Temporal( TemporalType.TIMESTAMP)
-  Date capacityTimestamp;
+  private Date capacityTimestamp;
   
   @Column( name = "metadata_default_cooldown", nullable = false )
   private Integer defaultCooldown;
@@ -111,8 +111,6 @@ public class AutoScalingGroup extends AbstractOwnedPersistent implements AutoSca
   @OrderColumn( name = "metadata_availability_zone_index")
   @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
   private List<String> availabilityZones = Lists.newArrayList();
-  
-  //TODO:STEVE: instances?
 
   @ElementCollection
   @CollectionTable( name = "metadata_auto_scaling_group_termination_policies" )
@@ -132,10 +130,12 @@ public class AutoScalingGroup extends AbstractOwnedPersistent implements AutoSca
   @OrderColumn( name = "metadata_load_balancer_index")
   @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
   private List<String> loadBalancerNames = Lists.newArrayList();
-  
-  //TODO:STEVE: suspendedProcesses?
-  
-  //TODO:STEVE: include unsupported properties -> placementGroup, vpcZoneIdentifier
+
+  @ElementCollection
+  @CollectionTable( name = "metadata_auto_scaling_group_suspended_processes" )
+  @JoinColumn( name = "metadata_auto_scaling_group_id" )
+  @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
+  private Set<SuspendedProcess> suspendedProcesses = Sets.newHashSet();
 
   @OneToMany( fetch = FetchType.LAZY, cascade = CascadeType.REMOVE, orphanRemoval = true, mappedBy = "group" )
   private Collection<ScalingActivity> scalingActivity;
@@ -273,6 +273,26 @@ public class AutoScalingGroup extends AbstractOwnedPersistent implements AutoSca
     this.loadBalancerNames = loadBalancerNames;
   }
 
+  public Set<SuspendedProcess> getSuspendedProcesses() {
+    return suspendedProcesses;
+  }
+
+  public void setSuspendedProcesses( final Set<SuspendedProcess> suspendedProcesses ) {
+    this.suspendedProcesses = suspendedProcesses;
+  }
+
+  public void updateDesiredCapacity( final int desiredCapacity ) {
+    this.scalingRequired = scalingRequired || capacity == null || !capacity.equals( desiredCapacity );
+    this.desiredCapacity = desiredCapacity;
+  }
+
+  public void updateAvailabilityZones( final List<String> availabilityZones ) {
+    final Set<String> currentZones = Sets.newHashSet( this.availabilityZones );
+    final Set<String> newZones = Sets.newHashSet( availabilityZones );
+    this.scalingRequired = scalingRequired || !currentZones.equals( newZones );
+    this.availabilityZones = availabilityZones;
+  }
+
   @Override
   public String getArn() {
     return String.format(
@@ -344,7 +364,6 @@ public class AutoScalingGroup extends AbstractOwnedPersistent implements AutoSca
   @PrePersist
   @PreUpdate
   private void preUpdate() {
-    scalingRequired = capacity == null || !capacity.equals( desiredCapacity );
     if ( capacityTimestamp == null ) {
       capacityTimestamp = new Date();
     }
@@ -427,19 +446,19 @@ public class AutoScalingGroup extends AbstractOwnedPersistent implements AutoSca
       return builder();
     }
 
-    //TODO:STEVE: verify default values
     protected AutoScalingGroup build() {
       final AutoScalingGroup group =
           AutoScalingGroup.create( ownerFullName, name, launchConfiguration, minSize, maxSize, tags );
       group.setDefaultCooldown( Objects.firstNonNull( defaultCooldown, 300 ) ); 
       group.setDesiredCapacity( Objects.firstNonNull( desiredCapacity, minSize ) );
-      group.setHealthCheckGracePeriod( healthCheckGracePeriod );
+      group.setHealthCheckGracePeriod( Objects.firstNonNull( healthCheckGracePeriod, 0 ) );
       group.setHealthCheckType( Objects.firstNonNull( healthCheckType, HealthCheckType.EC2 ) );
       group.setAvailabilityZones( Lists.newArrayList( availabilityZones ) );
       group.setTerminationPolicies( terminationPolicies.isEmpty() ? 
           Collections.singletonList(TerminationPolicyType.Default) :
           Lists.newArrayList( terminationPolicies ) );
       group.setLoadBalancerNames( Lists.newArrayList( loadBalancerNames ) );
+      group.setScalingRequired( group.getDesiredCapacity() > 0 );
       return group;
     }
   }  
