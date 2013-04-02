@@ -218,7 +218,7 @@
               "mData": "ip_address",
             },
             { 
-	      // Hidden column for the ip address of the instance
+	      // Hidden column for the instance of the instance
               "bVisible": false,
               "aTargets":[17],
 	      "mRender": function(data) {
@@ -951,12 +951,11 @@
 
     _tagResourceAction : function(){
       var thisObj = this;
-      var instance = thisObj.tableWrapper.eucatable('getSelectedRows', 2)[0];
+      var instance = thisObj.tableWrapper.eucatable('getSelectedRows', 17)[0];
       if ( instance.length > 0 ) {
-        // Create a widget object for displaying the resource tag information
-        var $tagInfo = $('<div>').addClass('resource-tag-table-expanded-instance').addClass('clearfix').euca_resource_tag({resource: 'instance', resource_id: instance, cancelButtonCallback: function(){ thisObj.tagDialog.eucadialog("close"); }, widgetMode: 'edit' });
-        thisObj.tagDialog.eucadialog('addNote','tag-modification-display-box', $tagInfo);   // This line should be adjusted once the right template is created for the resource tag.  030713
-        thisObj.tagDialog.eucadialog('open');
+        require(['app'], function(app) {
+           app.dialog('edittags', app.data.instance.get(instance));
+        });
        }
     },
 
