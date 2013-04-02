@@ -1,7 +1,7 @@
 define([
-  'views/searches/generic',
+    'views/searches/generic',
 ], function(Search) {
-  return function(images) {
-    return new Search(images, ['all_text', 'attach_data'], { attach_data : 'Attachment' }, null);
-  }
+    return function(images) {
+      return new Search(images, ['attach_data.status'], {}, null);
+    }
 });

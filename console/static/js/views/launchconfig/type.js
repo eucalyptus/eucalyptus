@@ -58,7 +58,6 @@ define([
             },
             remove: function(e, me) {
               me.list.remove(me.row);
-
             }
         }
       };

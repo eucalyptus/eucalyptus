@@ -88,13 +88,16 @@
           return {'delete': {"name": table_menu_delete_action, callback: function(key, opt) { thisObj._deleteAction(); } }};
         },
         menu_click_create : function (args) {
-                                thisObj.addDialog.eucadialog('open');
-                                thisObj.addDialog.find('input[id=key-name]').focus();
-                            },
+          thisObj.addDialog.eucadialog('open');
+          thisObj.addDialog.find('input[id=key-name]').focus();
+        },
         menu_click_extra : function (args) {
-                                thisObj.importDialog.eucadialog('open');
-                                thisObj.importDialog.find('input[id=key-name]').focus();
-                            },
+          thisObj.importDialog.eucadialog('open');
+          thisObj.importDialog.find('input[id=key-name]').focus();
+        },
+        expand_callback : function(row){ // row = [col1, col2, ..., etc]
+          return thisObj._expandCallback(row);
+        },
         context_menu_actions : function(state) { 
           return {'delete': {"name": table_menu_delete_action, callback: function(key, opt) { thisObj._deleteAction(); } }};
         },
@@ -339,7 +342,13 @@
         })(keyName, keyContents)
       });
     },
-   
+
+    _expandCallback : function(row){ 
+      var thisObj = this;
+      var keyname = row[3];
+      return null;
+    },
+ 
 /**** Public Methods ****/ 
     close: function() {
       cancelRepeat(tableRefreshCallback);

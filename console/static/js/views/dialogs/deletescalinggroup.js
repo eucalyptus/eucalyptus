@@ -13,26 +13,20 @@ define([
                 items: args.items.groups, 
 
                 cancelButton: {
-                    click: function() {
-                       self.close();
-                    }
+                  click: function() {
+                    self.close();
+                  }
                 },
 
                 deleteButton: {
-                    click: function() {
-                      // unfortunate thing about this is that it reloads from proxy, no local store
-                      // TODO: fix that ^^^
-                      require(['models/scalinggrps'], function(collection) {
-                        var grps = new collection();
-                        _.each(self.scope.items, function(item) {
-                          grps.fetch({success: function() {
-                            grps.get(item).destroy({wait: true});
-                          }});
-                        });
-                        self.close();
-                      
+                  click: function() {
+                    require(['app'], function(app) {
+                      _.each(self.scope.items, function(item) {
+                        app.data.scalingGroup.get(item).destroy({wait: true});
                       });
-                    }
+                      self.close();
+                    });
+                  }
                 }
             }
 

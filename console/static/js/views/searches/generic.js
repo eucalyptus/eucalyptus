@@ -57,7 +57,6 @@ define(['app', 'dataholder'], function(app, dh) {
     }
 
     var siftKeyList = function(list, search) {
-      console.log(list, search);
       return _.chain(list).filter(function(item) {
         return new RegExp('.*' + search + '.*').test(item);
       }).map(function(item) {
@@ -182,7 +181,6 @@ define(['app', 'dataholder'], function(app, dh) {
       }).map(function(model) {
         return model.toJSON();
       });
-      console.log(results);
       self.filtered.reset(results);
     }
     this.facetMatches = function(callback) {

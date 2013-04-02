@@ -1,10 +1,11 @@
 define([
+    'underscore',
     'app',
 	'dataholder',
   'text!./image.html!strip',
   'rivets',
   'views/searches/image',
-	], function( app, dataholder, template, rivets, imageSearch ) {
+	], function( _, app, dataholder, template, rivets, imageSearch ) {
 	return Backbone.View.extend({
             title: 'Image',
             count: 0,
@@ -60,8 +61,9 @@ define([
         },
     
         isValid: function() {
+          this.model.validate(_.pick(this.model.toJSON(),'image_id'));
           var error = this.model.isValid();
-            console.log("VIEWISVALID", error);
+          console.log("VIEWISVALID", error);
           return error;
         },
   });
