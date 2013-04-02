@@ -6,7 +6,7 @@ define([
     return EucaDialogView.extend({
         initialize : function(args) {
             var self = this;
-            var original = args.model[0];
+            var original = args.model.at(0);
             var model = original.clone();
             this.template = template;
             this.scope = {
