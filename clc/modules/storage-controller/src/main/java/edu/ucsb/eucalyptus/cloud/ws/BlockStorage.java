@@ -243,6 +243,7 @@ public class BlockStorage {
 			checkerService.add(checker);
 		}
 		checkerService.add(new VolumeDeleterTask());
+		checkerService.add(new SnapshotDeleterTask());
 		StorageProperties.enableSnapshots = StorageProperties.enableStorage = true;
 	}
 
@@ -571,17 +572,17 @@ public class BlockStorage {
 		SnapshotInfo snapshotInfo = new SnapshotInfo(snapshotId);
 		List<SnapshotInfo> snapshotInfos = db.query(snapshotInfo);
 
-		reply.set_return(true);
+		reply.set_return(false);
 		if(snapshotInfos.size() > 0) {
 			SnapshotInfo  foundSnapshotInfo = snapshotInfos.get(0);
 			String status = foundSnapshotInfo.getStatus();
-			db.commit();
 			if(status.equals(StorageProperties.Status.available.toString()) || status.equals(StorageProperties.Status.failed.toString())) {
-				SnapshotDeleter snapshotDeleter = new SnapshotDeleter(snapshotId);
-				snapshotService.add(snapshotDeleter);
+				foundSnapshotInfo.setStatus(StorageProperties.Status.deleting.toString());
+				db.commit();
+				reply.set_return(true);
 			} else {
 				//snapshot is still in progress.
-				reply.set_return(false);
+				db.rollback();
 				throw new SnapshotInUseException(snapshotId);
 			}
 		} else {
@@ -1154,42 +1155,6 @@ public class BlockStorage {
 		}
 	}
 
-	private class SnapshotDeleter extends SnapshotTask {
-		private String snapshotId;
-
-		public SnapshotDeleter(String snapshotId) {
-			this.snapshotId = snapshotId;
-		}
-
-		@Override
-		public void run() {
-			try {
-				blockManager.deleteSnapshot(snapshotId);
-			} catch (EucalyptusCloudException e1) {
-				LOG.error(e1);
-				return;
-			}
-			SnapshotInfo snapInfo = new SnapshotInfo(snapshotId);
-			EntityWrapper<SnapshotInfo> db = StorageProperties.getEntityWrapper();
-			SnapshotInfo foundSnapshotInfo;
-			try {
-				foundSnapshotInfo = db.getUnique(snapInfo);
-				db.delete(foundSnapshotInfo);
-				db.commit();
-			} catch (EucalyptusCloudException e) {
-				db.rollback();
-				LOG.error(e);
-				return;
-			}
-			HttpWriter httpWriter = new HttpWriter("DELETE", "snapset", snapshotId, "DeleteWalrusSnapshot", null);
-			try {
-				httpWriter.run();
-			} catch(EucalyptusCloudException ex) {
-				LOG.error(ex);
-			}
-		}
-	}
-
 	public class VolumeCreator extends VolumeTask {
 		private String volumeId;
 		private String snapshotId;
@@ -1463,33 +1428,6 @@ public class BlockStorage {
 		}
 	}
 
-	public class VolumeDeleter extends VolumeTask {
-		private String volumeId;
-
-		public VolumeDeleter(String volumeId) {
-			this.volumeId = volumeId;
-		}
-
-		@Override
-		public void run() {
-			try {
-				blockManager.deleteVolume(volumeId);
-			} catch (EucalyptusCloudException e1) {
-				LOG.error(e1);
-			}
-			EntityWrapper<VolumeInfo> db = StorageProperties.getEntityWrapper();
-			VolumeInfo foundVolume;
-			try {
-				foundVolume = db.getUnique(new VolumeInfo(volumeId));
-				db.delete(foundVolume);
-				db.commit();
-				EucaSemaphoreDirectory.removeSemaphore(volumeId);
-			} catch (EucalyptusCloudException e) {
-				db.rollback();
-			}
-		}
-	}
-
 	public class VolumesConvertor extends Thread {
 		private LogicalStorageManager fromBlockManager;
 
@@ -1606,4 +1544,47 @@ public class BlockStorage {
 		}
 	}
 	
+	public static class SnapshotDeleterTask extends CheckerTask {
+
+		public SnapshotDeleterTask() {
+			this.name = "SnapshotDeleter";
+		}
+		
+		@Override
+		public void run() {
+			EntityWrapper<SnapshotInfo> db = StorageProperties.getEntityWrapper();
+			SnapshotInfo searchSnap = new SnapshotInfo();
+			searchSnap.setStatus(StorageProperties.Status.deleting.toString());
+			List<SnapshotInfo> snapshots = db.query(searchSnap);
+			db.commit();
+			for (SnapshotInfo snap : snapshots) {
+				String snapshotId = snap.getSnapshotId();
+				try {
+					blockManager.deleteSnapshot(snapshotId);
+				} catch (EucalyptusCloudException e1) {
+					LOG.error(e1);
+					return;
+				}
+				SnapshotInfo snapInfo = new SnapshotInfo(snapshotId);
+				db = StorageProperties.getEntityWrapper();
+				SnapshotInfo foundSnapshotInfo;
+				try {
+					foundSnapshotInfo = db.getUnique(snapInfo);
+					db.delete(foundSnapshotInfo);
+					db.commit();
+				} catch (EucalyptusCloudException e) {
+					db.rollback();
+					LOG.error(e);
+					return;
+				}
+				HttpWriter httpWriter = new HttpWriter("DELETE", "snapset", snapshotId, "DeleteWalrusSnapshot", null);
+				try {
+					httpWriter.run();
+				} catch(EucalyptusCloudException ex) {
+					LOG.error(ex);
+				}
+			}
+		}
+	}
+
 }
