@@ -2,10 +2,12 @@ define(['app', 'dataholder'], function(app, dh) {
   var self = this;
   
   function isArray(o) {
-    return o && typeof o.forEach === 'function' && typeof o.length === 'number';
+    return o && typeof o === 'object' 
+            && typeof o.forEach === 'function' 
+            && typeof o.length === 'number';
   }
   
-  return function(images, allowedFacetNames, localizer, explicitFacets, searchers) {
+  return function(images, allowedFacetNames, localizer, explicitFacets, searchers, propertyMapping) {
     var self = this;
     searchContext = self;
     
@@ -106,6 +108,14 @@ define(['app', 'dataholder'], function(app, dh) {
               found.push(item);
               result.push({name: item + '', value : item, label:localize(item + '')})
             });
+        } else if (typeof val === 'object') {
+          if (propertyMapping && propertyMapping[facet]) {
+              var nm = val[propertyMapping[facet]];
+              found.push(nm)
+              result.push({name: val + '', value : val, label : nm});
+          } else {
+            console.log("No matching strategy for " + JSON.stringify(img) + " as facet " + facet);
+          }
         }
       });
       result = sortKeyList(result, 'label')
