@@ -7,18 +7,27 @@ define(['app', 'dataholder'], function(app, dh) {
             && typeof o.length === 'number';
   }
   
-  return function(images, allowedFacetNames, localizer, explicitFacets, searchers, propertyMapping) {
+  return function(images, config /*, allowedFacetNames, localizer, explicitFacets, searchers, propertyMapping*/) {
     var self = this;
     searchContext = self;
     
+    if (isArray(config)) {
+      var nue = {
+        facets : config
+      }
+      config = nue;
+    }
+    
     // Make sure if the argument isn't there, that at least
     // something works
-    if (!allowedFacetNames) {
-      allowedFacetNames = [];
+    if (!config.facets) {
+      config.facets = [];
+      var done = {};
       images.forEach(function(img) {
         for (var key in img) {
-          if (!isIgnored(key, img, allowedFacetNames)) {
-            allowedFacetNames.push(key);
+          if (!isIgnored(key, img, done)) {
+            config.facets.push(key);
+            done[key] = true;
           }
         }
       })
@@ -33,14 +42,14 @@ define(['app', 'dataholder'], function(app, dh) {
 
     function localize(name) {
       var result = name;
-      if (localizer) {
-        if (typeof localizer === 'function') {
-          var localized = localizer(name);
+      if (config.localize) {
+        if (typeof config.localize === 'function') {
+          var localized = config.localize(name);
           if (localized) {
             return localized;
           }
-        } else if (localizer[name]) {
-          return localizer[name];
+        } else if (config.localize[name]) {
+          return config.localize[name];
         }
       }
       function capitalize(words) {
@@ -72,50 +81,63 @@ define(['app', 'dataholder'], function(app, dh) {
 
     function deriveFacets() {
       var derivedFacets = [];
-      var done = {};
-      images.toJSON().forEach(function(img) {
-        for (var i=0; i < allowedFacetNames.length; i++) {
-          var key = allowedFacetNames[i];
-          if (isIgnored(key, img, done)) {
-            continue;
-          }
-          derivedFacets.push({value: key, label: localize(key)});
-          done[key] = true;
-        }
+      config.facets.forEach(function(facet) {
+        derivedFacets.push({label: localize(facet), value: facet});
       });
-      return sortKeyList(derivedFacets, 'label');
+      var appended = [];
+      if (typeof config.facetsCustomizer === 'function') {
+        function add(property, label) {
+          derivedFacets.push({value: property, label: label ? label : localize(property)});
+        }
+        function append(property, label) {
+          appended.push({value: property, label: label ? label : localize(property)});
+        }
+        config.facetsCustomizer.apply(self, [add, append]);
+      }
+      var result = sortKeyList(derivedFacets, 'label');
+      appended.forEach(function(additional) {
+        result.push(additional);
+      });
+      return result;
     }
 
-    function deriveMatches(facet, searchTerm) {
-      if (searchers && searchers[facet]) {
-        return searchers[facet].apply(self, [facet, searchTerm]);
-      }
-      if (explicitFacets && explicitFacets[facet]) {
-        return explicitFacets[facet];
-      }
-      var result = [];
-      var found = [];
-      images.toJSON().forEach(function(img) {
+    function findMatches(facet, searchTerm, img, add) {
+        if (config.match && typeof config.match[facet] === 'function') {
+          var doneMatching = config.match[facet].apply(self, [searchTerm, img, add]);
+          if (doneMatching) {
+            return;
+          }
+        }
         var val = img[facet];
         if (val && typeof val !== 'object' && typeof val !== 'function') {
-          if (found.indexOf(val) < 0) {
-            found.push(val);
-            result.push({name: facet, label: localize(val), value: val});
-          }
+            add(val);
         } else if (isArray(val)) {
             val.forEach(function(item) {
-              found.push(item);
-              result.push({name: item + '', value : item, label:localize(item + '')})
+              add(item, localize(item + ''));
             });
         } else if (typeof val === 'object') {
-          if (propertyMapping && propertyMapping[facet]) {
-              var nm = val[propertyMapping[facet]];
-              found.push(nm)
-              result.push({name: val + '', value : val, label : nm});
+          if (config.propertyForFacet && config.propertyForFacet[facet]) {
+              var nm = val[config.propertyForFacet[facet]];
+              if (nm) { // avoid null
+                console.log("VALUE ", nm);
+                add(val + '', localize(nm));
+              }
           } else {
             console.log("No matching strategy for " + JSON.stringify(img) + " as facet " + facet);
           }
         }
+    }
+
+    function deriveMatches(facet, searchTerm) {
+      var result = [];
+      var found = [];
+      images.toJSON().forEach(function(img) {
+        findMatches(facet, searchTerm, img, function(val, label){
+          if (found.indexOf(val) < 0) {
+            found.push(val);
+            result.push({name : facet, value : val, label : label ? label : localize(val) })
+          }
+        });
       });
       result = sortKeyList(result, 'label')
       return siftKeyList(result, searchTerm);
@@ -158,23 +180,30 @@ define(['app', 'dataholder'], function(app, dh) {
     this.filtered = images.clone();
     this.lastSearch = '';
     this.lastFacets = new Backbone.Model({});
-        this.search = function(search, facets) {
-            var jfacets = facets.toJSON();
-            var results = self.images.filter(function(model) {
+    this.search = function(search, facets) {
+        var jfacets = facets.toJSON();
+        var results = self.images.filter(function(model) {
         return _.every(jfacets, function(facet) {
-          if (searchers && searchers[facet.category]) {
-            return searchers[facet.category].apply(self, [facet, search, images]);
+          var curr = model.get(facet.category);
+          if (config.search && config.search[facet.category]) {
+            var isMatch = false;
+            function hit() {
+              isMatch = true;
+            }
+            var doneSearching = config.search[facet.category].apply(self, [search, facet.value, model.toJSON(), curr, hit]);
+            if (doneSearching || isMatch) {
+              return isMatch;
+            }
           }
           var rex = new RegExp('.*' + facet.value + '.*', 'img');
           if ('all_text' === facet.category) {
             return drillThrough(model, rex, 0);
           } else {
-            var curr = model.get(facet.category);
             if (typeof curr === 'object') {
               // Allow for searching inside tags and such
               return drillThrough(curr, rex, 0);
             } else {
-              return rex.test(model.get(facet.category));
+              return rex.test(curr);
             }
           }
         });
