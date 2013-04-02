@@ -63,6 +63,7 @@
 package com.eucalyptus.vm;
 
 import static com.eucalyptus.cloud.ImageMetadata.Platform;
+
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Date;
@@ -73,6 +74,8 @@ import java.util.NavigableSet;
 import java.util.NoSuchElementException;
 import java.util.Set;
 import java.util.TreeSet;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.TimeUnit;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import javax.persistence.CascadeType;
@@ -87,6 +90,7 @@ import javax.persistence.OneToOne;
 import javax.persistence.PersistenceContext;
 import javax.persistence.PreRemove;
 import javax.persistence.Table;
+import javax.persistence.Transient;
 
 import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.principal.InstanceProfile;
@@ -98,6 +102,7 @@ import com.eucalyptus.component.Topology;
 import com.eucalyptus.component.ServiceConfigurations;
 import com.eucalyptus.component.id.Tokens;
 import com.eucalyptus.util.async.AsyncRequests;
+import com.google.common.base.*;
 import edu.ucsb.eucalyptus.msgs.AttachedVolume;
 import edu.ucsb.eucalyptus.msgs.InstanceBlockDeviceMapping;
 import edu.ucsb.eucalyptus.msgs.InstanceStateType;
@@ -137,6 +142,7 @@ import com.eucalyptus.cluster.Clusters;
 import com.eucalyptus.component.id.ClusterController;
 import com.eucalyptus.component.id.Dns;
 import com.eucalyptus.component.id.Eucalyptus;
+import com.eucalyptus.crypto.util.Timestamps;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.TransactionExecutionException;
 import com.eucalyptus.entities.TransientEntityException;
@@ -163,11 +169,6 @@ import com.eucalyptus.vm.VmVolumeAttachment.AttachmentState;
 import com.eucalyptus.vmtypes.VmType;
 import com.eucalyptus.vmtypes.VmTypes;
 import com.eucalyptus.ws.StackConfiguration;
-import com.google.common.base.Function;
-import com.google.common.base.Objects;
-import com.google.common.base.Predicate;
-import com.google.common.base.Predicates;
-import com.google.common.base.Strings;
 import com.google.common.collect.Collections2;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
@@ -915,11 +916,11 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
       try {
         final Allocation allocInfo = token.getAllocationInfo( );
         VmInstance vmInst = new VmInstance.Builder( ).owner( allocInfo.getOwnerFullName( ) )
-                                                     .withIds( token.getInstanceId( ),
-                                                               allocInfo.getReservationId( ),
-                                                               allocInfo.getClientToken( ),
-                                                               allocInfo.getUniqueClientToken( ),
-                                                               allocInfo.getNameOrArn( ) )
+                                                     .withIds( token.getInstanceId(),
+                                                               allocInfo.getReservationId(),
+                                                               allocInfo.getClientToken(),
+                                                               allocInfo.getUniqueClientToken(),
+                                                               allocInfo.getNameOrArn() )
                                                      .bootRecord( allocInfo.getBootSet( ),
                                                                   allocInfo.getUserData( ),
                                                                   allocInfo.getSshKeyPair( ),
@@ -1166,9 +1167,22 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
       }
     }
   }
-
+  
+  private static Map<String, Supplier< Map<String,String>>> mapOfMetaSupplier = new ConcurrentHashMap<String, Supplier< Map<String,String>>>();
+		  
   public String getByKey( final String pathArg ) {
-    final Map<String, String> m = this.getMetadataMap( );
+	  
+	if(!mapOfMetaSupplier.containsKey(this.getInstanceId())){
+		  mapOfMetaSupplier.put(this.getInstanceId(), Suppliers.memoizeWithExpiration(new Supplier< Map<String,String>>( ) {
+				    @Override
+				    public Map<String, String> get() {
+				      return getMetadataMap();
+				    }
+				  }, 5, TimeUnit.SECONDS ));
+	}
+	  
+	Supplier< Map<String,String>> metaSupplier = mapOfMetaSupplier.get(this.getInstanceId());
+    final Map<String, String> m = metaSupplier.get();
     String path = ( pathArg != null )
                                      ? pathArg
                                      : "";
@@ -1180,7 +1194,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
       return m.get( path ).replaceAll( "\n*\\z", "" );
     }
   }
-  
+
   private Map<String, String> getMetadataMap( ) {
     final boolean dns = StackConfiguration.USE_INSTANCE_DNS && !ComponentIds.lookup( Dns.class ).runLimitedServices( );
     final Map<String, String> m = new HashMap<String, String>( );
@@ -1276,11 +1290,13 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
       }
 
       if (roleName != null || accessKey != null || expiration != null || secretKey != null || sessionToken != null ) {
-      m.put( "iam/security-credentials/" + roleName + "/", "access-key-id\nexpiration\nsecret-access-key\nsession-token");
-      m.put("iam/security-credentials/" + roleName + "/access-key-id", accessKey);
-      m.put("iam/security-credentials/" + roleName + "/expiration", expiration.toString());
-      m.put("iam/security-credentials/" + roleName + "/secret-access-key", secretKey);
-      m.put("iam/security-credentials/" + roleName + "/session-token", sessionToken);
+      m.put("iam/", "security-credentials/" );
+      m.put("iam/security-credentials/", roleName + "/");
+      m.put("iam/security-credentials/" + roleName + "/", "AccessKeyId\nExpiration\nSecretAccessKey\nToken");
+      m.put("iam/security-credentials/" + roleName + "/AccessKeyId/", accessKey);
+      m.put("iam/security-credentials/" + roleName + "/Expiration/",Timestamps.formatIso8601Timestamp(expiration));
+      m.put("iam/security-credentials/" + roleName + "/SecretAccessKey/", secretKey);
+      m.put("iam/security-credentials/" + roleName + "/Token/", sessionToken);
       }
 
     }

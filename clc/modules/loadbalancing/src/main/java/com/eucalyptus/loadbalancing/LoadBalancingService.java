@@ -89,6 +89,11 @@ public class LoadBalancingService {
 		  }
 	  }
 	  
+	  // IAM policy enforcement for role credentials
+	 /* if(! LoadBalancingMetadatas.filterPrivileged().apply( lb )){
+		  return reply;
+	  } */
+	  
 	  /// INSTANCE HEALTH CHECK UPDATE
 	  Map<String, Integer> healthyCounter = new ConcurrentHashMap<String, Integer>(); // zone -> count
 	  Map<String, Integer> unHealthyCounter = new ConcurrentHashMap<String, Integer>();
@@ -284,6 +289,12 @@ public class LoadBalancingService {
   		  public Set<LoadBalancerDescription> apply (LoadBalancerZone zone){
 	    		final Set<LoadBalancerDescription> descs = Sets.newHashSet();
 	    		final LoadBalancer lb = zone.getLoadbalancer();
+	    		
+	    		/// IAM policy enforcement for role credentials
+	    		/*if(! LoadBalancingMetadatas.filterPrivileged().apply( lb )){
+	    			return Sets.<LoadBalancerDescription>newHashSet();	
+	    		}*/
+	    		
 	    		final String lbName = lb.getDisplayName();
 
 	    		LoadBalancerDescription desc = new LoadBalancerDescription();
