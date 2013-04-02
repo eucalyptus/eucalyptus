@@ -165,7 +165,8 @@ const char *ncResourceTypeName[] = {
     "kernel",
     "ephemeral",
     "swap",
-    "ebs"
+    "ebs",
+    "boot"
 };
 
 //! String value of each instance state enumeration entry
@@ -237,7 +238,7 @@ const char *euca_error_names[] = {
     "access denied error",
     "no space available error",
     "timeout error",
-    "unknown",
+    "unknown"
 };
 
 /*----------------------------------------------------------------------------*\
@@ -271,7 +272,7 @@ ncInstance *find_instance(bunchOfInstances ** ppHead, const char *instanceId);
 ncInstance *get_instance(bunchOfInstances ** ppHead);
 int total_instances(bunchOfInstances ** ppHead);
 
-ncResource *allocate_resource(const char *sNodeStatus, const char *sIQN, int memorySizeMax, int memorySizeAvailable, int diskSizeMax,
+ncResource *allocate_resource(const char *sNodeStatus, boolean migrationCapable, const char *sIQN, int memorySizeMax, int memorySizeAvailable, int diskSizeMax,
                               int diskSizeAvailable, int numberOfCoresMax, int numberOfCoresAvailable, const char *sPublicSubnets) _attribute_wur_;
 void free_resource(ncResource ** ppresource);
 
@@ -793,6 +794,7 @@ int total_instances(bunchOfInstances ** ppHead)
 //! used to return information about resources
 //!
 //! @param[in] sNodeStatus the current node status string
+//! @param[in] migrationCapable flag indicating whether node can participate in live migration
 //! @param[in] sIQN
 //! @param[in] memorySizeMax the maximum amount of memory available on this node
 //! @param[in] memorySizeAvailable the current amount of memory available on this node
@@ -812,7 +814,7 @@ int total_instances(bunchOfInstances ** ppHead)
 //!
 //! @note Caller is responsible to free the allocated memory using the free_resource() function call.
 //!
-ncResource *allocate_resource(const char *sNodeStatus, const char *sIQN, int memorySizeMax, int memorySizeAvailable, int diskSizeMax,
+ncResource *allocate_resource(const char *sNodeStatus, boolean migrationCapable, const char *sIQN, int memorySizeMax, int memorySizeAvailable, int diskSizeMax,
                               int diskSizeAvailable, int numberOfCoresMax, int numberOfCoresAvailable, const char *sPublicSubnets)
 {
     ncResource *pResource = NULL;
@@ -831,6 +833,7 @@ ncResource *allocate_resource(const char *sNodeStatus, const char *sIQN, int mem
     euca_strncpy(pResource->nodeStatus, sNodeStatus, CHAR_BUFFER_SIZE);
     if (sIQN)
         euca_strncpy(pResource->iqn, sIQN, CHAR_BUFFER_SIZE);
+    pResource->migrationCapable = migrationCapable;
 
     if (sPublicSubnets)
         euca_strncpy(pResource->publicSubnets, sPublicSubnets, CHAR_BUFFER_SIZE);
@@ -975,7 +978,7 @@ ncVolume *save_volume(ncInstance * pInstance, const char *sVolumeId, const char 
         euca_strncpy(pVol->volumeId, sVolumeId, CHAR_BUFFER_SIZE);
 
         if (sRemoteDev)
-            euca_strncpy(pVol->remoteDev, sRemoteDev, CHAR_BUFFER_SIZE);
+            euca_strncpy(pVol->remoteDev, sRemoteDev, VERY_BIG_CHAR_BUFFER_SIZE);
 
         if (sLocalDev)
             euca_strncpy(pVol->localDev, sLocalDev, CHAR_BUFFER_SIZE);

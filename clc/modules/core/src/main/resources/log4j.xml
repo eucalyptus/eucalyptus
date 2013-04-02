@@ -296,6 +296,10 @@
     <priority value="FATAL" />
     <appender-ref ref="cloud-exhaust" />
   </category>
+  <category name="com.eucalyptus.scripts.setup_db" additivity="true">
+    <priority value="INFO" />
+    <appender-ref ref="cloud-exhaust" />
+  </category>
   <category name="org.apache.commons.httpclient" additivity="true">
     <priority value="ERROR" />
     <appender-ref ref="${euca.log.appender}" />

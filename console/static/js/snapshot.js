@@ -26,6 +26,7 @@
     delDialog : null,
     createDialog : null,
     registerDialog : null,
+    tagDialog : null,
     createVolButtonId : 'volume-create-btn',
     createSnapButtonId : 'snapshot-create-btn',
     _init : function() {
@@ -37,39 +38,36 @@
       this.baseTable = $snapshotTable;
       this.tableWrapper = $snapshotTable.eucatable({
         id : 'snapshots', // user of this widget should customize these options,
+        data_deps: ['snapshots'],
         hidden: thisObj.options['hidden'],
         dt_arg : {
-          "bProcessing": true,
-          "sAjaxSource": "../ec2?Action=DescribeSnapshots",
-          "fnServerData": function (sSource, aoData, fnCallback) {
-                $.ajax( {
-                    "dataType": 'json',
-                    "type": "POST",
-                    "url": sSource,
-                    "data": "_xsrf="+$.cookie('_xsrf'),
-                    "success": fnCallback
-                });
-
-          },
-          "sAjaxDataProp": "results",
-          "bAutoWidth" : false,
-          "sPaginationType": "full_numbers",
-          "aoColumns": [
+          "sAjaxSource": 'snapshot',
+          "aoColumnDefs": [
             {
 	      // Display the checkbox button in the main table
               "bSortable": false,
-              "fnRender": function(oObj) { return '<input type="checkbox"/>' },
+              "aTargets":[0],
+              "mData": function(source) { return '<input type="checkbox"/>' },
               "sClass": "checkbox-cell",
             },
             { 
-	       // Display the id of the snapshot in the main table
-	       "mDataProp": "id" 
-	    },
+	      // Display the id of the snapshot in the main table
+	      "aTargets":[1],
+              "mRender": function(data){
+                 return eucatableDisplayColumnTypeTwist(data, data, 255);
+              },
+              "mData": function(source){
+                 if(source.display_id)
+                   return source.display_id;
+                 return source.id;
+              },
+            },
             {
 	      // Display the status of the snapshot in the main table
-              "fnRender": function(oObj) { 
-                 return eucatableDisplayColumnTypeSnapshotStatus(oObj.aData.status, oObj.aData.progress);
-               },
+              "aTargets":[2],
+              "mData": function(source) {
+                return eucatableDisplayColumnTypeSnapshotStatus(source.status, source.progress);
+              },
               "sClass": "narrow-cell",
               "bSearchable": false,
               "iDataSort": 7, // sort on hidden status column
@@ -77,39 +75,76 @@
             },
             { 
 	      // Display the volume size of the snapshot in the main table
-	      "mDataProp": "volume_size"
+	      "aTargets":[3],
+              "mRender": function(data) {
+                if(isInt(data))         
+                  return data;
+                else
+                  return "ERROR";
+              },              
+              "mData": "volume_size",
 	    },
             {
 	      // Display the volume id of the snapshot in the main table
-	      "mDataProp": "volume_id"
+	      "aTargets":[4],
+	      "mRender": function(data) {
+                return DefaultEncoder().encodeForHTML(data);
+              },
+              "mData": "display_volume_id",
+	      "mDataProp": "display_volume_id"
 	    },
             {
 	      // Display the description of the snapshot in the main table
-              "fnRender": function(oObj) { 
-	         return eucatableDisplayColumnTypeText(oObj.aData.description, oObj.aData.description, 75);
+              "aTargets":[5],
+              "mRender": function(data) { 
+	         return eucatableDisplayColumnTypeText(data, data, 75);
 	      },
+              "mData": "description",
               "iDataSort": 9,
             },
             {
 	      // Display the creation time of the snapshot in the main table
-              "fnRender": function(oObj) { return formatDateTime(oObj.aData.start_time); },
+              "aTargets":[6],
+              "mRender": function(data) { return formatDateTime(data); },
+              "mData": "start_time",
               "iDataSort": 8,
             },
             {
 	      // Hidden column for the status of the snapshot
               "bVisible": false,
-              "mDataProp": "status"
+              "aTargets":[7],
+	      "mRender": function(data) {
+                return DefaultEncoder().encodeForHTML(data);
+              },
+              "mData": "status",
             },
             {
 	      // Hidden column for the unprocessed creation time/start time of the snapshot
               "bVisible": false,
-              "mDataProp": "start_time",
+              "aTargets":[8],
+	      "mRender": function(data) {
+                return data;			// sort fails when encoded	011330 -- needs to verify
+              },
+              "mData": "start_time",
               "sType": "date"
             },
             {
 	      // Hidden column for the uncut description of the snapshot
               "bVisible": false,
-              "mDataProp": "description"
+              "aTargets":[9],
+	      "mRender": function(data) {
+                return DefaultEncoder().encodeForHTML(data);
+              },
+              "mData": "description",
+            },
+            {
+               // Hidden column for the uncut id of the snapshot
+               "bVisible": false,
+               "aTargets":[10],
+               "mRender": function(data) {
+                return DefaultEncoder().encodeForHTML(data);
+              },
+              "mData": "id",
             },
           ],
         },
@@ -126,6 +161,9 @@
         context_menu_actions : function(row) {
           return thisObj._createMenuActions();
         },
+        expand_callback : function(row){ // row = [col1, col2, ..., etc]
+          return thisObj._expandCallback(row);
+        },
         menu_click_create : function (args) { thisObj._createAction() },
         help_click : function(evt) {
           thisObj._flipToHelp(evt, {content: $snapshotHelp, url: help_snapshot.landing_content_url});
@@ -134,6 +172,9 @@
         legend : ['pending', 'completed', 'error'],
       });
       this.tableWrapper.appendTo(this.element);
+      $('html body').eucadata('addCallback', 'snapshot', 'snapshot-landing', function() {
+        thisObj.tableWrapper.eucatable('redraw');
+      });
     },
 
     _create : function() { 
@@ -167,9 +208,9 @@
          title: snapshot_create_dialog_title,
          buttons: {
            'create': { domid: thisObj.createSnapButtonId, text: snapshot_create_dialog_create_btn, disabled: true, click: function() { 
-                volumeId = $.trim(asText($snapshot_dialog.find('#snapshot-create-volume-id').val()));
+                volumeId = $.trim($snapshot_dialog.find('#snapshot-create-volume-id').val());
                 if (VOL_ID_PATTERN.test(volumeId)) {
-                  description = toBase64(asText($.trim($snapshot_dialog.find('#snapshot-create-description').val())));
+                  description = toBase64($.trim($snapshot_dialog.find('#snapshot-create-description').val()));
                   $snapshot_dialog.eucadialog("close");
                   thisObj._createSnapshot(volumeId, description);
                 } else {
@@ -188,7 +229,7 @@
        });
       var $vol_selector = this.createDialog.find('#snapshot-create-volume-id');
       this.createDialog.eucadialog('buttonOnFocus', $vol_selector, thisObj.createSnapButtonId, function(){
-        return VOL_ID_PATTERN.test(asText($vol_selector.val()));
+        return VOL_ID_PATTERN.test($vol_selector.val());
       });
       this.createDialog.eucadialog('validateOnType', '#snapshot-create-description', function(description) {
         if (description && description.length>MAX_DESCRIPTION_LEN)
@@ -208,12 +249,12 @@
          title: snapshot_register_dialog_title,
          buttons: {
            'register': {domid: registerBtnId, text: snapshot_dialog_reg_btn, click: function() {
-               var name = asText(thisObj.regDialog.find('#snapshot-register-image-name').val());
+               var name = thisObj.regDialog.find('#snapshot-register-image-name').val();
                if(!name || name.length <= 0) {
                  thisObj.regDialog.eucadialog('showError',snapshot_register_dialog_noname);
                  return; 
                } 
-               var desc = toBase64(asText(thisObj.regDialog.find('#snapshot-register-image-desc').val()));
+               var desc = toBase64(thisObj.regDialog.find('#snapshot-register-image-desc').val());
                var $checkbox = thisObj.regDialog.find('#snapshot-register-image-os');
                var windows = $checkbox.is(':checked') ? true : false; 
                thisObj._registerSnapshots(name, desc, windows);
@@ -235,6 +276,17 @@
          }]},
        });
       // snapshot delete dialog end
+      // tag resource dialog starts
+      $tmpl = $('html body').find('.templates #resourceTagWidgetTmpl').clone();
+      $rendered = $($tmpl.render($.extend($.i18n.map, help_instance)));
+      var $tag_dialog = $rendered.children().first();
+      var $tag_help = $rendered.children().last();
+      this.tagDialog = $tag_dialog.eucadialog({
+        id: 'snapshots-tag-resource',
+        title: 'Add/Edit tags',
+        help: {content: $tag_help, url: help_instance.dialog_terminate_content_url},
+      });
+      // tag resource dialog ends
     },
 
     _destroy : function() {
@@ -248,6 +300,7 @@
         itemsList['delete'] = { "name": snapshot_action_delete, callback: function(key, opt) {;}, disabled: function(){ return true;} };
         itemsList['create_volume'] = { "name": snapshot_action_create_volume, callback: function(key, opt) {;}, disabled: function(){ return true;} };
         itemsList['register'] = { "name": snapshot_action_register, callback: function(key, opt) {;}, disabled: function(){ return true;} }
+        itemsList['tag'] = { "name": 'Tag Resource', callback: function(key, opt) {;}, disabled: function(){ return true;} }
       })();
 
       if ( selectedSnapshots.length > 0 && selectedSnapshots.indexOf('pending') == -1 ){
@@ -257,7 +310,9 @@
       if ( selectedSnapshots.length === 1 && onlyInArray('completed', selectedSnapshots)){
         itemsList['register'] = { "name": snapshot_action_register, callback: function(key, opt) { thisObj._registerAction(); } }
         itemsList['create_volume'] = { "name": snapshot_action_create_volume, callback: function(key, opt) { thisObj._createVolumeAction(); } }
+        itemsList['tag'] = {"name":'Tag Resource', callback: function(key, opt){ thisObj._tagResourceAction(); }}
       }
+
       return itemsList;
     },
 
@@ -350,6 +405,9 @@
               if(done < numberToDelete)
                 notifyMulti(100*(done/numberToDelete), $.i18n.prop('snapshot_delete_image_progress', numberToDelete));
               else {
+	        // XSS Node:: 'snapshot_delete_image_fail' would contain a chunk HTML code in the failure description string.
+	     	// Message Example - Failed to send release request to Cloud for {0} IP address(es). <a href="#">Click here for details. </a>
+	        // For this reason, the message string must be rendered as html()
                 var $msg = $('<div>').addClass('multiop-summary').append(
                   $('<div>').addClass('multiop-summary-success').html($.i18n.prop('snapshot_delete_image_done', (numberToDelete-error.length), numberToDelete)));
                 if (error.length > 0)
@@ -390,6 +448,9 @@
               if(done < numberToDelete)
                 notifyMulti(100*(done/numberToDelete), $.i18n.prop('snapshot_delete_progress', numberToDelete));
               else {
+	        // XSS Node:: 'snapshot_delete_fail' would contain a chunk HTML code in the failure description string.
+	     	// Message Example - Failed to send release request to Cloud for {0} IP address(es). <a href="#">Click here for details. </a>
+	        // For this reason, the message string must be rendered as html()
                 var $msg = $('<div>').addClass('multiop-summary').append(
                   $('<div>').addClass('multiop-summary-success').html($.i18n.prop('snapshot_delete_done', (numberToDelete-error.length), numberToDelete)));
                 if (error.length > 0)
@@ -416,23 +477,23 @@
           function(data, textStatus, jqXHR){
             if ( data.results ) {
               var snapId = data.results.id;
-              notifySuccess(null, $.i18n.prop('snapshot_create_success', snapId, volumeId));
+              notifySuccess(null, $.i18n.prop('snapshot_create_success', DefaultEncoder().encodeForHTML(snapId), DefaultEncoder().encodeForHTML(volumeId)));
               thisObj.tableWrapper.eucatable('refreshTable');
               thisObj.tableWrapper.eucatable('glowRow', snapId);
             } else {
-              notifyError($.i18n.prop('snapshot_create_error', volumeId), undefined_error);
+              notifyError($.i18n.prop('snapshot_create_error', DefaultEncoder().encodeForHTML(volumeId)), undefined_error);
             }
           },
         error:
           function(jqXHR, textStatus, errorThrown){
-            notifyError($.i18n.prop('snapshot_create_error', volumeId), getErrorMessage(jqXHR));
+            notifyError($.i18n.prop('snapshot_create_error', DefaultEncoder().encodeForHTML(volumeId)), getErrorMessage(jqXHR));
           }
       });
     },
 
     _deleteAction : function(){
       var thisObj = this;
-      snapshotsToDelete = thisObj.tableWrapper.eucatable('getSelectedRows', 1);
+      snapshotsToDelete = thisObj.tableWrapper.eucatable('getSelectedRows', 10);
       var matrix = [];
       var snapToImageMap = generateSnapshotToImageMap();
       deregisterImages = false;
@@ -461,13 +522,13 @@
     },
 
     _createVolumeAction : function() {
-      var snapshot = this.tableWrapper.eucatable('getSelectedRows', 1)[0];
+      var snapshot = this.tableWrapper.eucatable('getSelectedRows', 10)[0];
       addVolume(snapshot);
     },
 
     _registerSnapshots : function(name, desc, windows) {
       var thisObj = this;
-      var snapshot = thisObj.tableWrapper.eucatable('getSelectedRows', 1);
+      var snapshot = thisObj.tableWrapper.eucatable('getSelectedRows', 10);
       var data = "&SnapshotId=" + snapshot + "&Name=" + name + "&Description=" + desc;
       if(windows)
         data += "&KernelId=windows";
@@ -481,16 +542,52 @@
         success:
           function(data, textStatus, jqXHR){
             if ( data.results ) {
-              notifySuccess(null, $.i18n.prop('snapshot_register_success', snapshot, data.results));  
+              notifySuccess(null, $.i18n.prop('snapshot_register_success', DefaultEncoder().encodeForHTML(snapshot.toString()), DefaultEncoder().encodeForHTML(data.results)));  
             } else {
-              notifyError($.i18n.prop('snapshot_register_error', snapshot), undefined_error);
+              notifyError($.i18n.prop('snapshot_register_error', DefaultEncoder().encodeForHTML(snapshot.toString())), undefined_error);
             }
           },
         error:
           function(jqXHR, textStatus, errorThrown){
-            notifyError($.i18n.prop('snapshot_register_error', snapshot), getErrorMessage(jqXHR));
+            notifyError($.i18n.prop('snapshot_register_error', DefaultEncoder().encodeForHTML(snapshot.toString())), getErrorMessage(jqXHR));
           }
       });
+    },
+
+    _tagResourceAction : function(){
+      var thisObj = this;
+      var snapshot = thisObj.tableWrapper.eucatable('getSelectedRows', 10)[0];
+      if ( snapshot.length > 0 ) {
+        // Create a widget object for displaying the resource tag information
+        var $tagInfo = $('<div>').addClass('resource-tag-table-expanded-snapshot').addClass('clearfix').euca_resource_tag({resource: 'snapshot', resource_id: snapshot, cancelButtonCallback: function(){ thisObj.tagDialog.eucadialog("close"); }, widgetMode: 'edit' });
+        thisObj.tagDialog.eucadialog('addNote','tag-modification-display-box', $tagInfo);   // This line should be adjusted once the right template is created for the resource tag.  030713
+        thisObj.tagDialog.eucadialog('open');
+       }
+    },
+
+    _expandCallback : function(row){ 
+      var thisObj = this;
+      var snapId = row[10];
+      var results = describe('snapshot');
+      var snapshot = null;
+      for(s in results){
+        if(results[s].id === snapId){
+          snapshot = results[s];
+          break;
+        }
+      }
+
+      if(!snapshot)
+        return null;
+
+      var $wrapper = $('<div>');
+
+      $tagInfo = $('<div>').addClass('resource-tag-table-expanded-instance').addClass('clearfix').attr('id', snapshot.id).euca_resource_tag({resource: 'snapshot', resource_id: snapshot.id, widgetMode: 'view-only'});
+      
+      $tabspace = $('<div>').addClass('eucatabspace-main-div').eucatabspace(); 
+      $tabspace.eucatabspace('addTabPage', 'Tag', $tagInfo);
+      $wrapper.append($tabspace)
+      return $wrapper;
     },
 
 /**** Public Methods ****/

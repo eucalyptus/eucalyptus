@@ -33,9 +33,7 @@ import com.eucalyptus.loadbalancing.LoadBalancing;
 public class LoadBalancingQueryPipeline extends QueryPipeline {
 
   public LoadBalancingQueryPipeline( ) {
-    //TODO:GEN2OOLS: Set false or true below depending on whether temporary credentials should be permitted (i.e. is STS supported for service?)
-    //TODO:GEN2OOLS: Add the following param for Signature V4 support (if desired), EnumSet.of( RequiredQueryParams.Version )
-    super( "loadbalancing-query-pipeline", "/services/LoadBalancing", false ); //, EnumSet.of( RequiredQueryParams.Version ) );
+    super( "loadbalancing-query-pipeline", "/services/LoadBalancing", true, EnumSet.of( RequiredQueryParams.Version ) );
   }
 
   @Override

@@ -34,7 +34,7 @@ http://downloads.eucalyptus.com/software/eucalyptus/build-deps/3.2/rhel/$release
 
 Install the following build and runtime dependencies (this is the superset of all dependencies. Not all may be required for every component).
 
-yum install gcc make ant ant-nodeps axis2-adb-codegen axis2-codegen axis2c-devel jpackage-utils libvirt-devel \
+yum install gcc make ant ant-nodeps apache-ivy axis2-adb-codegen axis2-codegen axis2c-devel jpackage-utils libvirt-devel \
 libxml2-devel libxslt-devel python-devel python-setuptools rampartc-devel swig velocity xalan-j2-xsltc gawk \
 java-devel java-devel openssl-devel curl-devel axis2c dhcp dhcp-common postgresql91 postgresql91-server \
 python-boto rampartc iscsi-initiator-utils perl-Crypt-OpenSSL-RSA perl-Crypt-OpenSSL-Random \
@@ -70,7 +70,7 @@ http://downloads.eucalyptus.com/software/eucalyptus/build-deps/3.2/rhel/$release
 
 Install the following build dependencies:
 
-ant ant-nodeps axis2-adb-codegen axis2-codegen axis2c-devel
+ant ant-nodeps apache-ivy axis2-adb-codegen axis2-codegen axis2c-devel
 jpackage-utils libvirt-devel libxml2-devel libxslt-devel python-devel
 python-setuptools rampartc-devel swig velocity xalan-j2-xsltc gawk
 xen-tools java-devel libopenssl-devel java-devel openssl-devel curl-devel
@@ -269,7 +269,7 @@ What follows is a superset of all packages necessary for building and running Eu
 
     * For Opensuse 11.2, download and install RPMs the appropriate OpenSUSE RPM dependency package from the Eucalyptus website, then run the following command to install all required dependency packages: 
 
-zypper -n install curl bzr python-paramiko make gcc ant apache2 apache2-prefork apache2-devel java-1_7_0-openjdk java-1_7_0-openjdk-devel libvirt-devel libcurl-devel vlan dhcp-server bridge-utils ant-contrib ant-nodeps openssl libvirt libcurl-devel vlan apache2 perl-Crypt-OpenSSL-Random perl-Crypt-OpenSSL-RSA libfuse2 tgt swig
+zypper -n install curl bzr python-paramiko make gcc ant apache-ivy apache2 apache2-prefork apache2-devel java-1_7_0-openjdk java-1_7_0-openjdk-devel libvirt-devel libcurl-devel vlan dhcp-server bridge-utils ant-contrib ant-nodeps openssl libvirt libcurl-devel vlan apache2 perl-Crypt-OpenSSL-Random perl-Crypt-OpenSSL-RSA libfuse2 tgt swig
 
     * For Ubuntu 10.04, run the following command to install all required dependency packages: 
 
@@ -279,7 +279,7 @@ apt-get install bzr gcc make apache2-threaded-dev ant openjdk-7-jdk\
 
     * For CentOS 5 and Fedora 12, download and install RPMs the appropriate CentOS or Fedora RPM dependency package from the Eucalyptus website, then run the following command to install all required dependency packages: 
 
-yum install -y java-1.7.0-openjdk-devel ant ant-nodeps libvirt-devel curl-devel httpd httpd-devel apr-devel openssl-devel dhcp libxml2 libxml2-devel gnutls gnutls-devel xen-devel libgcrypt-devel zlib-devel perl-Convert-ASN1 perl-Crypt-OpenSSL-RSA perl-Crypt-OpenSSL-Random chkfontpath scsi-target-utils fuse-libs swig gcc
+yum install -y java-1.7.0-openjdk-devel ant ant-nodeps apache-ivy libvirt-devel curl-devel httpd httpd-devel apr-devel openssl-devel dhcp libxml2 libxml2-devel gnutls gnutls-devel xen-devel libgcrypt-devel zlib-devel perl-Convert-ASN1 perl-Crypt-OpenSSL-RSA perl-Crypt-OpenSSL-Random chkfontpath scsi-target-utils fuse-libs swig gcc
 
     * For Debian, run the following command to install all required dependency packages: 
 

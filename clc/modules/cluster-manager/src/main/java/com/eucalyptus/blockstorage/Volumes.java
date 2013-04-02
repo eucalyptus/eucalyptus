@@ -404,6 +404,11 @@ public class Volumes {
     return newVol;
   }
   
+  public static void annihilateStorageVolume( Volume volume) {
+    volume.setState( State.ANNIHILATING );
+    fireUsageEvent( volume, VolumeEvent.forVolumeDelete());
+  }
+
   static State transformStorageState( final State volumeState, final String storageState ) {
     if ( State.GENERATING.equals( volumeState ) ) {
       if ("failed".equals(storageState) ) {

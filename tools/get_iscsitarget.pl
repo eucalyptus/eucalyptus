@@ -109,7 +109,7 @@ if ((@paths < 1) || ((@paths % 3) != 0)) {
   print STDERR "Target paths are not complete:$dev_string\n";
   do_exit(1);
 }
-my $first_store = $paths[2];
+
 $multipath = 0;
 $multipath = 1 if @paths > 3;
 if (($multipath == 1) && (!-x $MULTIPATH)) {
@@ -145,15 +145,17 @@ if (is_null_or_empty($localdev)) {
   print STDERR "Unable to get attached target device.\n";
   do_exit(1);
 }
+# get the /dev/disk/by-id path
 if ($multipath == 0) {
-  $localdev = "/dev/$localdev";
+  $localdev = get_disk_by_id_path("/dev/$localdev");
 } else {
   # TODO(wenye): temporary measure to allow safe volume detaching due to "queue_if_no_path"
   run_cmd(1, 0, "$DMSETUP message $localdev 0 'fail_if_no_path'");
   sleep(2);
-  $localdev = "/dev/mapper/$localdev";
+  $localdev = get_disk_by_id_path("/dev/mapper/$localdev");
 }
-print get_wrap_dev_name($localdev, $store);
+
+print "$localdev";
 
 ##################################################################
 sub retry_until_exists {

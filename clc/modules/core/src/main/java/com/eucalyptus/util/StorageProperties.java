@@ -115,6 +115,8 @@ public class StorageProperties {
 	public static final String STORAGE_CLASS_PREFIX = "com.eucalyptus.storage.";
   public static final long SNAP_POINT_MAX_TIME_MS = 15000; //15 sec turnaround
 
+	public static final String COMMON_IQN = "ALL";
+
 	static { Groovyness.loadConfig("storageprops.groovy"); }
 
 

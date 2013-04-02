@@ -22,6 +22,9 @@ package com.eucalyptus.autoscaling.instances;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import org.hibernate.criterion.Criterion;
 import org.hibernate.criterion.Property;
 import org.hibernate.criterion.Restrictions;
 import com.eucalyptus.autoscaling.groups.AutoScalingGroup;
@@ -29,9 +32,13 @@ import com.eucalyptus.autoscaling.metadata.AbstractOwnedPersistents;
 import com.eucalyptus.autoscaling.metadata.AutoScalingMetadataException;
 import com.eucalyptus.autoscaling.metadata.AutoScalingMetadataNotFoundException;
 import com.eucalyptus.util.Callback;
+import com.eucalyptus.util.CollectionUtils;
 import com.eucalyptus.util.OwnerFullName;
 import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
+import com.google.common.collect.Iterables;
+import com.google.common.collect.Maps;
+import com.google.common.collect.Sets;
 
 /**
  *
@@ -56,13 +63,20 @@ public class PersistenceAutoScalingInstances extends AutoScalingInstances {
                                                 final String groupName ) throws AutoScalingMetadataException {
     final AutoScalingInstance example = AutoScalingInstance.withOwner( ownerFullName );
     example.setAutoScalingGroupName( groupName );
-    return persistenceSupport.listByExample( example, Predicates.alwaysTrue( ) );
+    return persistenceSupport.listByExample( example, Predicates.alwaysTrue() );
   }
 
   @Override
   public List<AutoScalingInstance> listByGroup( final AutoScalingGroup group ) throws AutoScalingMetadataException {
     final AutoScalingInstance example = exampleForGroup( group );
     return persistenceSupport.listByExample( example, Predicates.alwaysTrue() );
+  }
+
+  @Override
+  public List<AutoScalingInstance> listByState( final LifecycleState lifecycleState,
+                                                final ConfigurationState configurationState ) throws AutoScalingMetadataException {
+    final AutoScalingInstance example = AutoScalingInstance.withStates( lifecycleState, configurationState );
+    return persistenceSupport.listByExample( example, Predicates.and( lifecycleState, configurationState ) );
   }
 
   @Override
@@ -93,18 +107,18 @@ public class PersistenceAutoScalingInstances extends AutoScalingInstances {
   }
 
   @Override
-  public void markMissingInstancesUnhealthy( final AutoScalingGroup group, 
+  public void markMissingInstancesUnhealthy( final AutoScalingGroup group,
                                              final Collection<String> instanceIds ) throws AutoScalingMetadataException {
     final AutoScalingInstance example = exampleForGroup( group );
     example.setHealthStatus( HealthStatus.Healthy );
 
     final List<AutoScalingInstance> instancesToMark = persistenceSupport.listByExample( 
-        example, 
-        Predicates.alwaysTrue(),
+        example,
+        Predicates.or( LifecycleState.Pending, LifecycleState.InService ),
         instanceIds.isEmpty() ?
             Restrictions.conjunction() :
             Restrictions.not( Property.forName( "displayName" ).in( instanceIds ) ), 
-    Collections.<String,String>emptyMap() );
+        Collections.<String,String>emptyMap() );
     
     for ( final AutoScalingInstance instance : instancesToMark ) {
       try {
@@ -124,6 +138,61 @@ public class PersistenceAutoScalingInstances extends AutoScalingInstances {
         // removed, no need to mark unhealthy
       }
     }
+  }
+
+  @Override
+  public Set<String> verifyInstanceIds( final String accountNumber,
+                                        final Collection<String> instanceIds ) throws AutoScalingMetadataException {
+    final Set<String> verifiedInstanceIds = Sets.newHashSet();
+
+    if ( !instanceIds.isEmpty() ) {
+      final AutoScalingInstance example = AutoScalingInstance.withOwner( accountNumber );
+      final Criterion idCriterion = Property.forName( "displayName" ).in( instanceIds );
+
+      Iterables.addAll(
+          verifiedInstanceIds,
+          Iterables.transform(
+              persistenceSupport.listByExample(
+                  example, Predicates.alwaysTrue(), idCriterion, Collections.<String,String>emptyMap() ),
+              AutoScalingInstances.instanceId() ) );
+    }
+
+    return verifiedInstanceIds;
+  }
+
+  @Override
+  public void transitionState( final AutoScalingGroup group,
+                               final LifecycleState from,
+                               final LifecycleState to,
+                               final Collection<String> instanceIds ) throws AutoScalingMetadataException {
+    final AutoScalingInstance example = exampleForGroup( group );
+    example.setLifecycleState( from );
+    updateInstances( example, from, from.transitionTo( to ), instanceIds );
+  }
+
+  @Override
+  public void transitionConfigurationState( final AutoScalingGroup group,
+                                            final ConfigurationState from,
+                                            final ConfigurationState to,
+                                            final Collection<String> instanceIds ) throws AutoScalingMetadataException {
+    final AutoScalingInstance example = exampleForGroup( group );
+    example.setConfigurationState( from );
+    updateInstances( example, from, from.transitionTo( to ), instanceIds );
+  }
+
+  @Override
+  public int registrationFailure( final AutoScalingGroup group,
+                                  final Collection<String> instanceIds ) throws AutoScalingMetadataException {
+    final AutoScalingInstance example = exampleForGroup( group );
+    final Map<String,Integer> failureCountMap = Maps.newHashMap();
+    updateInstances( example, Predicates.alwaysTrue(), new Predicate<AutoScalingInstance>() {
+      @Override
+      public boolean apply( final AutoScalingInstance instance ) {
+        failureCountMap.put( instance.getInstanceId(), instance.incrementRegistrationAttempts() );
+        return true;
+      }
+    }, instanceIds );
+    return CollectionUtils.reduce( failureCountMap.values(), Integer.MAX_VALUE, CollectionUtils.min() );
   }
 
   @Override
@@ -147,6 +216,29 @@ public class PersistenceAutoScalingInstances extends AutoScalingInstances {
     example.clearUserIdentity();
     example.setAutoScalingGroupName( group.getAutoScalingGroupName() );
     return example;
+  }
+
+  private void updateInstances( final AutoScalingInstance fromExample,
+                                final Predicate<? super AutoScalingInstance> fromPredicate,
+                                final Predicate<? super AutoScalingInstance> updatePredicate,
+                                final Collection<String> instanceIds ) throws AutoScalingMetadataException {
+    final AbstractOwnedPersistents.WorkCallback<Void> updateCallback = new AbstractOwnedPersistents.WorkCallback<Void>() {
+      @Override
+      public Void doWork() throws AutoScalingMetadataException {
+        final List<AutoScalingInstance> instances = persistenceSupport.listByExample(
+            fromExample,
+            fromPredicate,
+            Property.forName( "displayName" ).in( instanceIds ),
+            Collections.<String, String>emptyMap() );
+        CollectionUtils.each(
+            instances,
+            updatePredicate
+        );
+        return null;
+      }
+    };
+
+    persistenceSupport.transactionWithRetry( AutoScalingInstance.class, updateCallback );
   }
 
   private static class PersistenceSupport extends AbstractOwnedPersistents<AutoScalingInstance> {

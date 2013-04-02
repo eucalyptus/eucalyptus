@@ -27,8 +27,9 @@ public class AccountUsernamePasswordCredentials extends WrappedCredentials<Accou
   public AccountUsernamePasswordCredentials( final String correlationId,
                                              final String account,
                                              final String username,
-                                             final String password ) {
-    super( correlationId, new AccountCredentials( account, username, password) );
+                                             final String password,
+                                             final String newPassword ) {
+    super( correlationId, new AccountCredentials( account, username, password, newPassword) );
   }
 
   public AccountUsername getAccountUsername() {
@@ -45,6 +46,10 @@ public class AccountUsernamePasswordCredentials extends WrappedCredentials<Accou
 
   public String getPassword() {
     return getLoginData().getPassword();
+  }
+
+  public String getNewPassword() {
+    return getLoginData().getNewPassword();
   }
 
   /**
@@ -78,13 +83,20 @@ public class AccountUsernamePasswordCredentials extends WrappedCredentials<Accou
    */
   public static final class AccountCredentials {
     private final String password;
+    private final String newPassword;
     private final AccountUsername accountUsername;
 
     public AccountCredentials( final String account,
                                final String username,
-                               final String password ) {
+                               final String password,
+                               final String newPassword ) {
       this.accountUsername = new AccountUsername( account, username );
       this.password = password;
+      this.newPassword = newPassword;
+    }
+
+    public String getNewPassword( ) {
+      return this.newPassword;
     }
 
     public AccountUsername getAccountUsername() {

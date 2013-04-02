@@ -69,19 +69,25 @@ import java.lang.annotation.Target;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import javax.persistence.PersistenceException;
 import org.apache.log4j.Logger;
 import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.AuthQuotaException;
 import com.eucalyptus.auth.Permissions;
+import com.eucalyptus.auth.policy.PolicyAction;
 import com.eucalyptus.auth.policy.PolicyResourceType;
 import com.eucalyptus.auth.policy.PolicySpec;
 import com.eucalyptus.auth.principal.Account;
+import com.eucalyptus.auth.principal.Policy;
+import com.eucalyptus.auth.principal.Principal;
 import com.eucalyptus.auth.principal.Principals;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.auth.principal.UserFullName;
 import com.eucalyptus.bootstrap.ServiceJarDiscovery;
+import com.eucalyptus.component.ComponentId;
 import com.eucalyptus.component.ComponentId.PolicyVendor;
 import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
@@ -97,14 +103,18 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
+import static com.eucalyptus.component.ComponentId.ComponentMessage;
 import static com.eucalyptus.util.Parameters.checkParam;
+import static com.eucalyptus.util.RestrictedType.AccountRestrictedType;
+import static com.eucalyptus.util.RestrictedType.PolicyRestrictedType;
+import static com.eucalyptus.util.RestrictedType.UserRestrictedType;
 import static org.hamcrest.Matchers.notNullValue;
 
 public class RestrictedTypes {
   static Logger LOG = Logger.getLogger( RestrictedTypes.class );
   
   /**
-   * Class implementing {@link Function<String,T extends RestrictedResource>}, that is, one which
+   * Class implementing {@link Function<String,T extends RestrictedType>}, that is, one which
    * converts a string reference into a type reference for the object {@code T} referenced by
    * {@code identifier}.
    * 
@@ -124,7 +134,7 @@ public class RestrictedTypes {
   
   private static final Map<Class, Function<?, ?>> resourceResolvers = Maps.newHashMap( );
   
-  public static final <T extends RestrictedType<T>> Function<String, T> resolver( Class<?> type ) {
+  public static final <T extends RestrictedType> Function<String, T> resolver( Class<?> type ) {
     return ( Function<String, T> ) checkMapByType( type, resourceResolvers );
   }
   
@@ -281,6 +291,9 @@ public class RestrictedTypes {
             throw new AuthQuotaException( type.value( ), "Quota exceeded while trying to create: " + type + " by user: " + ctx.getUserFullName( ) );
           }
         } catch ( AuthException ex ) {
+          if ( rsc != null ) {
+            rollback.apply( rsc );
+          }
           throw ex;
         }
         res.add( rsc );
@@ -332,12 +345,21 @@ public class RestrictedTypes {
   public static <T extends RestrictedType> T doPrivileged( String identifier, Function<String, T> resolverFunction ) throws AuthException, IllegalContextAccessException, NoSuchElementException, PersistenceException {
     return doPrivileged( identifier, resolverFunction, false );
   }
-  
+
+  /**
+   * Check access permission without regard for resource ownership.
+   *
+   * This check should only be used for resources that are public or that have
+   * an additional permission check applied (for example EC2 images can be
+   * shared between accounts)
+   *
+   * @see #doPrivileged(String, Class)
+   */
   @SuppressWarnings( "rawtypes" )
-  public static <T extends RestrictedType> T doPrivilegedWithoutOwner( String identifier, Function<String, T> resolverFunction ) throws AuthException, IllegalContextAccessException, NoSuchElementException, PersistenceException {
+  public static <T extends RestrictedType> T doPrivilegedWithoutOwner( String identifier, Function<? super String, T> resolverFunction ) throws AuthException, IllegalContextAccessException, NoSuchElementException, PersistenceException {
     return doPrivileged( identifier, resolverFunction, true );
   }
-  
+
   /**
    * Uses the provided {@code lookupFunction} to resolve the {@code identifier} to the underlying
    * object {@code T} with privileges determined by the current messaging context.
@@ -353,7 +375,9 @@ public class RestrictedTypes {
    * @throws IllegalContextAccessException if the current request context cannot be determined.
    */
   @SuppressWarnings( "rawtypes" )
-  private static <T extends RestrictedType> T doPrivileged( String identifier, Function<String, T> resolverFunction, boolean ignoreOwningAccount ) throws AuthException, IllegalContextAccessException, NoSuchElementException, PersistenceException {
+  private static <T extends RestrictedType> T doPrivileged( final String identifier,
+                                                            final Function<? super String, T> resolverFunction,
+                                                            final boolean ignoreOwningAccount ) throws AuthException, IllegalContextAccessException, NoSuchElementException, PersistenceException {
     checkParam( "Resolver function must be not null: " + identifier, resolverFunction, notNullValue() );
     Context ctx = Contexts.lookup( );
     if ( ctx.hasAdministrativePrivileges( ) ) {
@@ -367,6 +391,7 @@ public class RestrictedTypes {
       PolicyVendor vendor = ats.get( PolicyVendor.class );
       PolicyResourceType type = ats.get( PolicyResourceType.class );
       String action = getIamActionByMessageType( );
+      String actionVendor = findPolicyVendor( msgType );
       User requestUser = ctx.getUser( );
       T requestedObject;
       try {
@@ -388,14 +413,27 @@ public class RestrictedTypes {
                                         + " typed as "
                                         + rscType, ex );
       }
-      
+
+      final Principal.PrincipalType principalType;
+      final String principalName;
+      if ( Principals.isSameUser( requestUser, Principals.systemUser() ) ) {
+        principalType = Principal.PrincipalType.Service;
+        principalName = "ec2.amazon.com";
+      } else {
+        principalType = Principal.PrincipalType.AWS;
+        principalName = Accounts.getUserArn( requestUser );
+      }
+
       Account owningAccount = null;
       if ( !ignoreOwningAccount ) {
         owningAccount = Principals.nobodyFullName( ).getAccountNumber( ).equals( requestedObject.getOwner( ).getAccountNumber( ) )
           ? null
           : Accounts.lookupAccountById( requestedObject.getOwner( ).getAccountNumber( ) );
       }
-      if ( !Permissions.isAuthorized( vendor.value( ), type.value( ), identifier, owningAccount, action, requestUser ) ) {
+
+      if ( !Permissions.isAuthorized( principalType, principalName, findPolicy( requestedObject, actionVendor, action ),
+                                      PolicySpec.qualifiedName( vendor.value( ), type.value( ) ), identifier, owningAccount,
+                                      PolicySpec.qualifiedName( actionVendor, action ), requestUser ) ) {
         throw new AuthException( "Not authorized to use " + type.value( ) + " identified by " + identifier + " as the user "
                                  + UserFullName.getInstance( requestUser ) );
       }
@@ -406,7 +444,16 @@ public class RestrictedTypes {
   public static <T extends RestrictedType> Predicate<T> filterPrivileged( ) {
     return filterPrivileged( false );
   }
-  
+
+  /**
+   * Check access permission without regard for resource ownership.
+   *
+   * This check should only be used for resources that are public or that have
+   * an additional permission check applied (for example EC2 images can be
+   * shared between accounts)
+   *
+   * @see #filterPrivileged
+   */
   public static <T extends RestrictedType> Predicate<T> filterPrivilegedWithoutOwner( ) {
     return filterPrivileged( true );
   }
@@ -446,7 +493,56 @@ public class RestrictedTypes {
       
     };
   }
-  
+
+  /**
+   * Filter by account and possibly user.
+   *
+   * <p>If the given owner is null the returned predicate will always match.</p>
+   */
+  @Nonnull
+  public static Predicate<AccountRestrictedType> filterByOwner( @Nullable final OwnerFullName owner ) {
+    return owner == null ?
+        Predicates.<AccountRestrictedType>alwaysTrue() :
+        Predicates.<AccountRestrictedType>and(
+            filterByAccount( owner.getAccountNumber() ),
+            typeSafeFilterByUser( owner.getUserId() )
+            );
+  }
+
+  @Nonnull
+  public static Predicate<AccountRestrictedType> filterByAccount( @Nonnull final String accountNumber ) {
+    return new Predicate<AccountRestrictedType>() {
+      @Override
+      public boolean apply( @Nullable final AccountRestrictedType restricted ) {
+        return restricted == null || accountNumber.equals( restricted.getOwnerAccountNumber() );
+      }
+    };
+  }
+
+  @Nonnull
+  public static Predicate<UserRestrictedType> filterByUser( @Nonnull final String userId ) {
+    return new Predicate<UserRestrictedType>() {
+      @Override
+      public boolean apply( @Nullable final UserRestrictedType restricted ) {
+        return restricted == null || userId.equals( restricted.getOwnerUserId() );
+      }
+    };
+  }
+
+  @Nonnull
+  private static Predicate<AccountRestrictedType> typeSafeFilterByUser( @Nullable final String userId ) {
+    final Predicate<UserRestrictedType> userFilter = userId == null ?
+        Predicates.<UserRestrictedType>alwaysTrue() :
+        filterByUser( userId );
+    return new Predicate<AccountRestrictedType>() {
+      @Override
+      public boolean apply( @Nullable final AccountRestrictedType restricted ) {
+        return !(restricted instanceof UserRestrictedType) ||
+            userFilter.apply( (UserRestrictedType) restricted );
+      }
+    };
+  }
+
   public static class ResourceMetricFunctionDiscovery extends ServiceJarDiscovery {
     
     public ResourceMetricFunctionDiscovery( ) {
@@ -472,7 +568,7 @@ public class RestrictedTypes {
         Resolver resolver = Ats.from( candidate ).get( Resolver.class );
         Class<?> resolverFunctionType = resolver.value( );
         LOG.info( "Registered @Resolver:               " + resolverFunctionType.getSimpleName( ) + " => " + candidate );
-        RestrictedTypes.resourceResolvers.put( resolverFunctionType, ( Function<String, RestrictedType<?>> ) Classes.newInstance( candidate ) );
+        RestrictedTypes.resourceResolvers.put( resolverFunctionType, ( Function<String, RestrictedType> ) Classes.newInstance( candidate ) );
         return true;
       } else {
         return false;
@@ -536,5 +632,50 @@ public class RestrictedTypes {
     }
     return ats;
   }
-  
+
+  private static String findPolicyVendor( Class<? extends BaseMessage > msgType ) throws IllegalArgumentException {
+    final Ats ats = Ats.inClassHierarchy( msgType );
+
+    if ( ats.has( PolicyVendor.class ) ) {
+      return ats.get( PolicyVendor.class ).value();
+    }
+
+    if ( ats.has( PolicyAction.class ) ) {
+      return ats.get( PolicyAction.class ).vendor();
+    }
+
+    if ( ats.has( ComponentMessage.class ) ) {
+      final Class<? extends ComponentId> componentIdClass =
+          ats.get( ComponentMessage.class ).value();
+      final Ats componentAts = Ats.inClassHierarchy( componentIdClass );
+      if ( componentAts.has( PolicyVendor.class ) ) {
+        return componentAts.get( PolicyVendor.class ).value();
+      }
+    }
+
+    throw new IllegalArgumentException( "Failed to determine policy"
+        + ": require @PolicyVendor, @PolicyAction or @ComponentMessage in request type hierarchy "
+        + msgType.getCanonicalName( ) );
+  }
+
+  private static Policy findPolicy( final RestrictedType object,
+                                    final String vendor,
+                                    final String action ) throws AuthException {
+    Policy policy = null;
+    if ( object instanceof PolicyRestrictedType ) {
+      final Ats ats = Ats.inClassHierarchy( object.getClass() );
+      final PolicyResourceType policyResourceType = ats.get( PolicyResourceType.class );
+      if ( policyResourceType == null || Lists.newArrayList( policyResourceType.resourcePolicyActions() ).contains( PolicySpec.qualifiedName( vendor, action ).toLowerCase() ) ) {
+        try {
+          policy = ((PolicyRestrictedType) object).getPolicy();
+          if ( policy == null ) {
+            throw new AuthException( "Policy not found for resource" );
+          }
+        } catch ( Exception e ) {
+          throw new AuthException( "Error finding policy", e );
+        }
+      }
+    }
+    return policy;
+  }
 }

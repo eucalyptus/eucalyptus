@@ -67,6 +67,7 @@ import static org.hamcrest.Matchers.notNullValue;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 import javax.persistence.EntityTransaction;
 import org.apache.log4j.Logger;
 import com.eucalyptus.address.Addresses;
@@ -85,6 +86,7 @@ import com.eucalyptus.component.id.ClusterController;
 import com.eucalyptus.component.id.Storage;
 import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
+import com.eucalyptus.context.ServiceStateException;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.TransientEntityException;
 import com.eucalyptus.images.BlockStorageImageInfo;
@@ -216,31 +218,39 @@ public class AdmissionControl {
        * It shouldn't be handled directly here, but instead be handled in {@link ResourceState#requestResourceAllocation().
        * 
        */
-      final ResourceState state = cluster.getNodeState( );
-      final List<ResourceToken> tokens = state.requestResourceAllocation( allocInfo, tryAmount, maxAmount );
-      final Iterator<ResourceToken> tokenIterator = tokens.iterator( );
-      try {
-        final Supplier<ResourceToken> allocator = new Supplier<ResourceToken>( ) {
-          @Override
-          public ResourceToken get( ) {
-            final ResourceToken ret = tokenIterator.next( );
-            allocInfo.getAllocationTokens( ).add( ret );
-            return ret;
-          }
-        };
+      if ( cluster.getGateLock( ).tryLock( 30, TimeUnit.SECONDS ) ) {
+        try {
+          final ResourceState state = cluster.getNodeState( );
+          final List<ResourceToken> tokens = state.requestResourceAllocation( allocInfo, tryAmount, maxAmount );
+          final Iterator<ResourceToken> tokenIterator = tokens.iterator( );
+          try {
+            final Supplier<ResourceToken> allocator = new Supplier<ResourceToken>( ) {
+              @Override
+              public ResourceToken get( ) {
+                final ResourceToken ret = tokenIterator.next( );
+                allocInfo.getAllocationTokens( ).add( ret );
+                return ret;
+              }
+            };
 
-        RestrictedTypes.allocateUnitlessResources( tokens.size( ), allocator );
-      } finally {
-        // release any tokens that were not allocated
-        Iterators.all( tokenIterator, new Predicate<ResourceToken>() {
-          @Override
-          public boolean apply(final ResourceToken resourceToken) {
-            state.releaseToken( resourceToken );
-            return true;
+            RestrictedTypes.allocateUnitlessResources( tokens.size( ), allocator );
+          } finally {
+            // release any tokens that were not allocated
+            Iterators.all( tokenIterator, new Predicate<ResourceToken>() {
+              @Override
+              public boolean apply(final ResourceToken resourceToken) {
+                state.releaseToken( resourceToken );
+                return true;
+              }
+            } );
           }
-        } );
+          return allocInfo.getAllocationTokens( );
+        } finally {
+          cluster.getGateLock( ).unlock( );
+        }
+      } else {
+        throw new ServiceStateException( "Failed to allocate resources in the zone " + cluster.getPartition( ) + ", it is currently locked for maintenance." );
       }
-      return allocInfo.getAllocationTokens( );
     }
     
     @Override

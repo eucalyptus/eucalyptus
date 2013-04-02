@@ -280,11 +280,14 @@ typedef struct resource_t {
     int maxCores;
     int availCores;
     // state information
-    int state, lastState;
+    int state, lastState, ncState;
     time_t stateChange;
     time_t idleStart;
     int running;
     int lockidx;
+    char nodeMessage[1024];
+    char nodeStatus[24];
+
 } ccResource;
 
 typedef struct ccResourceCache_t {

@@ -72,7 +72,3 @@ public class ModifyClusterAttributeType extends ModifyComponentAttributeType{}
 public class ModifyClusterAttributeResponseType extends ModifyComponentAttributeResponseType {}
 public class DescribeClustersType extends DescribeComponentsType {}
 public class DescribeClustersResponseType extends DescribeComponentsResponseType {}
-public class DescribeNodesType extends ConfigurationMessage  {}
-public class DescribeNodesResponseType extends ConfigurationMessage {
-  ArrayList<NodeComponentInfoType> registered = new ArrayList<NodeComponentInfoType>();
-}

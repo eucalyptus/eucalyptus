@@ -28,6 +28,7 @@
     //forceDetachDialog : null, // forceDetach is not supported
     addDialog : null,
     attachDialog : null,
+    tagDialog : null,
     attachButtonId : 'volume-attach-btn',
     createButtonId : 'volumes-add-btn',
     _init : function() {
@@ -39,35 +40,36 @@
       this.baseTable = $volTable;
       this.tableWrapper = $volTable.eucatable({
         id : 'volumes', // user of this widget should customize these options,
+        data_deps: ['volumes'],
         hidden : thisObj.options['hidden'],
         dt_arg : {
-          "sAjaxSource": "../ec2?Action=DescribeVolumes",
-          "fnServerData": function (sSource, aoData, fnCallback) {
-                $.ajax( {
-                    "dataType": 'json',
-                    "type": "POST",
-                    "url": sSource,
-                    "data": "_xsrf="+$.cookie('_xsrf'),
-                    "success": fnCallback
-                });
-
-          },
+          "sAjaxSource": 'volume',
           "aaSorting": [[ 7, "desc" ]],
-          "aoColumns": [
+          "aoColumnDefs": [
             {
 	      // Display the checkbox button in the main table
               "bSortable": false,
-              "fnRender": function(oObj) { return '<input type="checkbox"/>' },
+              "aTargets":[0],
+              "mData": function(source) { return '<input type="checkbox"/>' },
               "sClass": "checkbox-cell"
             },
             {
-	      // Display the id of the volume in the main table 
-	      "mDataProp": "id" 
+	      // Display the id of the volume in the main table
+	      "aTargets":[1], 
+              "mRender": function(data){
+                 return eucatableDisplayColumnTypeTwist(data, data, 255);
+              },
+              "mData": function(source){
+                 if(source.display_id)
+                   return source.display_id;
+                 return source.id;
+              },
 	    },
             {
 	      // Display the status of the volume in the main table
-              "fnRender": function(oObj) { 
-                 return eucatableDisplayColumnTypeVolumeStatus(oObj.aData.status);
+	      "aTargets":[2],
+              "mData": function(source) { 
+                 return eucatableDisplayColumnTypeVolumeStatus(source.status);
                },
               "sClass": "narrow-cell",
               "bSearchable": false,
@@ -76,36 +78,75 @@
             },
             { 
 	      // Display the size of the volume in the main table
-              "mDataProp": "size",
+	      "aTargets":[3],
+	      "mRender": function(data) {
+                if(isInt(data)) 
+                  return data;
+                else
+                  return "ERROR";
+              },
+              "mData": "size",
               "sClass": "centered-cell"
             },
             { 
 	      // Display the instance id of the attached volume in the main table
-	      "mDataProp": "attach_data.instance_id" },
+	      "aTargets":[4],
+              "mRender": function(data) {
+                return DefaultEncoder().encodeForHTML(data);
+              },
+              "mData": "attach_data.instance_id",
+	    },
             { 
 	      // Display the snapshot id of the volume in the main table
-	      "mDataProp": "snapshot_id"
+	      "aTargets":[5],
+	      "mRender": function(data) {
+                return DefaultEncoder().encodeForHTML(data);
+              },
+              "mData": "display_snapshot_id",
 	    },
             { 
 	      // Display the availibility zone of the volume in the main table
-	      "mDataProp": "zone" 
+	      "aTargets":[6],
+	      "mRender": function(data) {
+                return DefaultEncoder().encodeForHTML(data);
+              },
+              "mData": "zone",
 	    },
             { 
 	      // Display the creation time of the volume in the main table
+	      "aTargets":[7], 
               "asSorting" : [ 'desc', 'asc' ],
-              "fnRender": function(oObj) { return formatDateTime(oObj.aData.create_time); },
+              "mRender": function(data) { return formatDateTime(data); },
+              "mData": "create_time",
               "iDataSort": 9
             },
             {
-	      // Invisible column for the status
+	      // Invisible column for the status, used for sort
               "bVisible": false,
-              "mDataProp": "status"
+              "aTargets":[8],
+	      "mRender": function(data) {
+                return DefaultEncoder().encodeForHTML(data);
+              },
+              "mData": "status",
             },
             {
-	      // Invisible column for the creation time
+	      // Invisible column for the creation time, used for sort
               "bVisible": false,
-              "mDataProp": "create_time",
+              "aTargets":[9],
+	      "mRender": function(data) {
+		return data;			// escaping causes the sort operation to fail	013013
+              },
+              "mData": "create_time",
               "sType": "date"
+            },
+            {
+	      // Invisible column for the id
+              "bVisible": false,
+              "aTargets":[10],
+	      "mRender": function(data) {
+                return DefaultEncoder().encodeForHTML(data);
+              },
+              "mData": "id",
             }
           ],
         },
@@ -122,6 +163,9 @@
         context_menu_actions : function(row) {
           return thisObj._createMenuActions();
         },
+         expand_callback : function(row){ // row = [col1, col2, ..., etc]
+          return thisObj._expandCallback(row);
+        },
         menu_click_create : function (args) { thisObj._createAction() },
         help_click : function(evt) {
           thisObj._flipToHelp(evt, {content: $volHelp, url: help_volume.landing_content_url});
@@ -130,6 +174,9 @@
         legend : ['creating', 'available', 'in-use', 'deleting', 'deleted', 'error'],
       });
       this.tableWrapper.appendTo(this.element);
+      $('html body').eucadata('addCallback', 'volume', 'volume-landing', function() {
+        thisObj.tableWrapper.eucatable('redraw');
+      });
     },
 
     _create : function() { 
@@ -182,9 +229,9 @@
          title: volume_dialog_attach_title,
          buttons: {
            'attach': { domid: thisObj.attachButtonId, text: volume_dialog_attach_btn, disabled: true, click: function() { 
-                volumeId = asText($attach_dialog.find('#volume-attach-volume-id').val());
-                instanceId = asText($attach_dialog.find('#volume-attach-instance-id').val());
-                device = $.trim(asText($attach_dialog.find('#volume-attach-device-name').val()));
+                volumeId = $attach_dialog.find('#volume-attach-volume-id').val();
+                instanceId = $attach_dialog.find('#volume-attach-instance-id').val();
+                device = $.trim($attach_dialog.find('#volume-attach-device-name').val());
                 $attach_dialog.eucadialog("close");
                 thisObj._attachVolume(volumeId, instanceId, device);
               } 
@@ -206,7 +253,7 @@
          title: volume_dialog_add_title,
          buttons: {
            'create': { domid: thisObj.createButtonId, text: volume_dialog_create_btn, disabled: true, click: function() { 
-              var size = $.trim(asText($add_dialog.find('#volume-size').val()));
+              var size = $.trim($add_dialog.find('#volume-size').val());
               var az = $add_dialog.find('#volume-add-az-selector').val();
               var $snapshot = $add_dialog.find('#volume-add-snapshot-selector :selected');
               var isValid = true;
@@ -270,6 +317,17 @@
           return null;
       });
       // volume create dialog end
+      // tag dialog begins
+      $tmpl = $('html body').find('.templates #resourceTagWidgetTmpl').clone();
+      $rendered = $($tmpl.render($.extend($.i18n.map, help_instance)));
+      var $tag_dialog = $rendered.children().first();
+      var $tag_help = $rendered.children().last();
+      this.tagDialog = $tag_dialog.eucadialog({
+        id: 'volumes-tag-resource',
+        title: 'Add/Edit tags',
+        help: {content: $tag_help, url: help_instance.dialog_terminate_content_url},
+      });
+      // tag dialog ends
     },
 
     _destroy : function() {
@@ -278,7 +336,7 @@
     _initAddDialog : function(dfd) { // method should resolve dfd object
       var thisObj = this;
       var results = describe('zone');
-      var $azSelector = thisObj.addDialog.find('#volume-add-az-selector').html('');
+      var $azSelector = thisObj.addDialog.find('#volume-add-az-selector').text('');
       if (results && results.length > 1)
         $azSelector.append($('<option>').attr('value', '').text($.i18n.map['volume_dialog_zone_select']));
       var azArr = []; 
@@ -292,7 +350,7 @@
       });
      
       results = describe('snapshot'); 
-      var $snapSelector = thisObj.addDialog.find('#volume-add-snapshot-selector').html('');
+      var $snapSelector = thisObj.addDialog.find('#volume-add-snapshot-selector').text('');
       $snapSelector.append($('<option>').attr('value', '').text($.i18n.map['selection_none']));
       var snapshotArr = [];
       if ( results ) {
@@ -360,7 +418,7 @@
         if ( volume && results ) {
           for( res in results) {
             var instance = results[res];
-            if ( instance.state === 'running' && instance.placement === volume.zone)
+            if ( instance._state.name === 'running' && instance.placement === volume.zone)         // it was instance.state, which returns 'undefined' TEMP ADJUSTMENT. Austin, 030113  - David's fix needed
               inst_ids.push(instance.id);
           }
         }
@@ -451,6 +509,9 @@
               if(done < all)
                 notifyMulti(100*(done/all), $.i18n.prop('volume_delete_progress', all));
               else {
+	        // XSS Node:: 'volume_delete_fail' would contain a chunk HTML code in the failure description string.
+	     	// Message Example - Failed to send release request to Cloud for {0} IP address(es). <a href="#">Click here for details. </a>
+	        // For this reason, the message string must be rendered as html()
                 var $msg = $('<div>').addClass('multiop-summary').append(
                   $('<div>').addClass('multiop-summary-success').html($.i18n.prop('volume_delete_done', (all-error.length), all)));
                 if (error.length > 0)
@@ -476,15 +537,15 @@
         success:
           function(data, textStatus, jqXHR){
             if ( data.results ) {
-              notifySuccess(null, $.i18n.prop('volume_attach_success', volumeId, instanceId));
+              notifySuccess(null, $.i18n.prop('volume_attach_success', DefaultEncoder().encodeForHTML(volumeId), DefaultEncoder().encodeForHTML(instanceId)));
               thisObj.tableWrapper.eucatable('refreshTable');
             } else {
-              notifyError($.i18n.prop('volume_attach_error', volumeId, instanceId), undefined_error);
+              notifyError($.i18n.prop('volume_attach_error', DefaultEncoder().encodeForHTML(volumeId), DefaultEncoder().encodeForHTML(instanceId)), undefined_error);
             }
           },
         error:
           function(jqXHR, textStatus, errorThrown){
-            notifyError($.i18n.prop('volume_attach_error', volumeId, instanceId), getErrorMessage(jqXHR));
+            notifyError($.i18n.prop('volume_attach_error', DefaultEncoder().encodeForHTML(volumeId), DefaultEncoder().encodeForHTML(instanceId)), getErrorMessage(jqXHR));
           }
       });
     },
@@ -502,7 +563,7 @@
           function(data, textStatus, jqXHR){
             if ( data.results ) {
               var volId = data.results.id;
-              notifySuccess(null, $.i18n.prop('volume_create_success', volId));
+              notifySuccess(null, $.i18n.prop('volume_create_success', DefaultEncoder().encodeForHTML(volId)));
               thisObj.tableWrapper.eucatable('refreshTable');
               thisObj.tableWrapper.eucatable('glowRow', volId);
             } else {
@@ -549,6 +610,9 @@
               if(done < all)
                 notifyMulti(100*(done/all), $.i18n.prop('volume_detach_progress', all));
               else {
+	        // XSS Node:: 'volume_detach_fail' would contain a chunk HTML code in the failure description string.
+	     	// Message Example - Failed to send release request to Cloud for {0} IP address(es). <a href="#">Click here for details. </a>
+	        // For this reason, the message string must be rendered as html()
                 var $msg = $('<div>').addClass('multiop-summary').append(
                   $('<div>').addClass('multiop-summary-success').html($.i18n.prop('volume_detach_done', (all-error.length), all)));
                 if (error.length > 0)
@@ -565,7 +629,7 @@
 
     _deleteAction : function() {
       var thisObj = this;
-      volumesToDelete = thisObj.tableWrapper.eucatable('getSelectedRows', 1);
+      volumesToDelete = thisObj.tableWrapper.eucatable('getSelectedRows', 10);
       if( volumesToDelete.length > 0 ) {
         var matrix = [];
         $.each(volumesToDelete, function(idx, volume){
@@ -582,7 +646,7 @@
 
     _attachAction : function() {
       var thisObj = this;
-      var volumeToAttach = thisObj.tableWrapper.eucatable('getSelectedRows', 1)[0];
+      var volumeToAttach = thisObj.tableWrapper.eucatable('getSelectedRows', 10)[0];
       thisObj.dialogAttachVolume(volumeToAttach, null);
     },
 
@@ -601,9 +665,21 @@
     },
 
     _createSnapshotAction : function() {
-      var volumeToUse = this.tableWrapper.eucatable('getSelectedRows', 1)[0];
+      var volumeToUse = this.tableWrapper.eucatable('getSelectedRows', 10)[0];
       addSnapshot(volumeToUse);
     },
+
+    _tagResourceAction : function(){
+      var thisObj = this;
+      var volume = thisObj.tableWrapper.eucatable('getSelectedRows', 10)[0];
+      if ( volume.length > 0 ) {
+        // Create a widget object for displaying the resource tag information
+        var $tagInfo = $('<div>').addClass('resource-tag-table-expanded-volume').addClass('clearfix').euca_resource_tag({resource: 'volume', resource_id: volume, cancelButtonCallback: function(){ thisObj.tagDialog.eucadialog("close"); }, widgetMode: 'edit' });
+        thisObj.tagDialog.eucadialog('addNote','tag-modification-display-box', $tagInfo);   // This line should be adjusted once the right template is created for the resource tag.  030713
+        thisObj.tagDialog.eucadialog('open');
+      }
+    },
+
 
     _createMenuActions : function() {
       var thisObj = this;
@@ -615,6 +691,7 @@
         itemsList['detach'] = { "name": volume_action_detach, callback: function(key, opt) {;}, disabled: function(){ return true;} }
         itemsList['create_snapshot'] = { "name": volume_action_create_snapshot, callback: function(key, opt) {;}, disabled: function(){ return true;} }
         itemsList['delete'] = { "name": volume_action_delete, callback: function(key, opt) {;}, disabled: function(){ return true;} }
+        itemsList['tag'] = {"name":'Tag Resource', callback: function(key, opt) {;}, disabled: function(){ return true;} }
       })();
 
       // add attach action
@@ -656,7 +733,38 @@
         if (addOption)
           itemsList['delete'] = { "name": volume_action_delete, callback: function(key, opt) { thisObj._deleteAction(); } }
       }
+
+      // add resource tag option	031913
+      if ( volumes.length === 1) {
+        itemsList['tag'] = {"name":'Tag Resource', callback: function(key, opt){ thisObj._tagResourceAction(); }}
+      }
+
       return itemsList;
+    },
+
+    _expandCallback : function(row){ 
+      var thisObj = this;
+      var volId = row[10];
+      var results = describe('volume');
+      var volume = null;
+      for(v in results){
+        if(results[v].id === volId){
+          volume = results[v];
+          break;
+        }
+      }
+
+      if(!volume)
+        return null;
+
+      var $wrapper = $('<div>');
+
+      $tagInfo = $('<div>').addClass('resource-tag-table-expanded-instance').addClass('clearfix').attr('id', volume.id).euca_resource_tag({resource: 'volume', resource_id: volume.id, widgetMode: 'view-only'});
+      
+      $tabspace = $('<div>').addClass('eucatabspace-main-div').eucatabspace(); 
+      $tabspace.eucatabspace('addTabPage', 'Tag', $tagInfo);
+      $wrapper.append($tabspace)
+      return $wrapper;
     },
 
 /**** Public Methods ****/

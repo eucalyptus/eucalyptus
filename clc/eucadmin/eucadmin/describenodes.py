@@ -1,4 +1,4 @@
-# Copyright 2011-2012 Eucalyptus Systems, Inc.
+# Copyright 2013 Eucalyptus Systems, Inc.
 #
 # Redistribution and use of this software in source and binary forms,
 # with or without modification, are permitted provided that the following
@@ -23,27 +23,61 @@
 # (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-import eucadmin.describerequest
+import eucadmin
+from eucadmin.describeinstances import DescribeInstances
+from eucadmin.describeservices  import DescribeServices
 
-class DescribeNodes(eucadmin.describerequest.DescribeRequest):
-    ServiceName = 'Node'
-    Description = 'List Node controllers.'
 
-    def __init__(self, **kwargs):
-        eucadmin.describerequest.DescribeRequest.__init__(self, **kwargs)
-        self.list_markers.append('euca:instances')
+class DescribeNodes(eucadmin.EucadminRequest):
+    Description = 'List node controllers and their instances'
+    ServiceClass = eucadmin.EucAdmin
 
-    def cli_formatter(self, data):
-        nodes = getattr(data, 'euca:registered')
-        for node in nodes:
-            instances = node.get('euca:instances')
-            if isinstance(instances, list):
-                instance_ids = [instance.get('euca:entry') for instance in
-                                node.get('euca:instances', [])]
-            else:
-                # If boto's XML parsing bug hasn't been fixed then instances
-                # will be a dict with only one or zero instances per node.
-                instance_ids = []
-            fmt = ['NODE', node.get('euca:name'), node.get('euca:clusterName')]
-            fmt.extend(instance_ids)
-            print '\t'.join(map(str, fmt))
+    def main(self, **args):
+        obj = DescribeServices(debug=self.args.get('debug'))
+        services = obj.main(all=True, filter_type='node', **args)
+        service_statuses = services['euca:DescribeServicesResponseType'] \
+            ['euca:serviceStatuses']
+        nodes = {}
+        for service in service_statuses:
+            sid = service['euca:serviceId']
+            hostname = sid.get('euca:hostName')
+            nodes[sid['euca:name']] = {'partition': sid['euca:partition'],
+                                       'name': sid['euca:name'],
+                                       'hostname': hostname,
+                                       'state': service['euca:localState'],
+                                       'details': service['euca:details'],
+                                       'instances': {}}
+
+        obj = DescribeInstances(debug=self.args.get('debug'))
+        inst_response = obj.main(**args)
+        reservations = inst_response['DescribeInstancesResponse'] \
+            ['reservationSet']
+        for reservation in reservations:
+            for instance in reservation.get('instancesSet', []):
+                i_info = {}
+                for tag in instance.get('tagSet', []):
+                     if tag['key'] == 'euca:node' and tag['value'] in nodes:
+                         node = nodes[tag['value']]
+                         node['instances'][instance['instanceId']] = i_info
+                     elif tag['key'] == 'euca:node:migration:destination':
+                         i_info['migration_dest'] = tag['value']
+                     # 'euca:node:migration-source'
+        return nodes
+
+    def cli_formatter(self, nodes):
+        for node_name, node in nodes.iteritems():
+            print '\t'.join(('NODE', node['partition'],
+                             node['hostname'] or '', node_name,
+                             node['state'],
+                             ', '.join('%s=%s' % (key, val) for key, val in
+                                       node.get('details', {}).iteritems())))
+            for inst_id, instance in node['instances'].iteritems():
+                if 'migration_dest' in instance:
+                    print '\t'.join(('INSTANCE', inst_id, 'MIGRATING-TO',
+                                     instance['migration_dest']))
+                else:
+                    print '\t'.join(('INSTANCE', inst_id))
+
+    def main_cli(self):
+        eucadmin.print_version_if_necessary()
+        self.do_cli()

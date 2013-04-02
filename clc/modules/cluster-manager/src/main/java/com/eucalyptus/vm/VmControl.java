@@ -122,13 +122,13 @@ import com.google.common.base.Function;
 import com.google.common.base.Objects;
 import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
+import com.google.common.base.Strings;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Multimap;
 import com.google.common.collect.Sets;
 import com.google.common.collect.TreeMultimap;
-import com.google.gwt.thirdparty.guava.common.collect.Iterators;
 
 import edu.ucsb.eucalyptus.msgs.CreatePlacementGroupResponseType;
 import edu.ucsb.eucalyptus.msgs.CreatePlacementGroupType;
@@ -181,9 +181,23 @@ public class VmControl {
     Allocation allocInfo = Allocations.run( request );
     final EntityTransaction db = Entities.get( VmInstance.class );
     try {
+      if ( !Strings.isNullOrEmpty( allocInfo.getClientToken() ) ) {
+        final List<VmInstance> instances = VmInstances.listByClientToken(
+            allocInfo.getOwnerFullName( ).asAccountFullName(),
+            allocInfo.getClientToken(), RestrictedTypes.filterPrivileged() );
+        if ( !instances.isEmpty() ) {
+          final VmInstance vm = instances.get( 0 );
+          final ReservationInfoType reservationInfoType = TypeMappers.transform( vm, ReservationInfoType.class );
+          Iterables.addAll( reservationInfoType.getInstancesSet(),
+              Iterables.transform( instances, TypeMappers.lookup( VmInstance.class, RunningInstancesItemType.class ) ) );
+          reply.setRsvInfo( reservationInfoType );
+          return reply;
+        }
+      }
+
       Predicates.and( VerifyMetadata.get( ), AdmissionControl.run( ), ContractEnforcement.run() ).apply( allocInfo );
       allocInfo.commit( );
-      
+
       ReservationInfoType reservation = new ReservationInfoType( allocInfo.getReservationId( ),
                                                                  allocInfo.getOwnerFullName( ).getAccountNumber( ),
                                                                  Lists.transform( allocInfo.getNetworkGroups( ), CloudMetadatas.toDisplayName( ) ) );
@@ -236,7 +250,7 @@ public class VmControl {
         }
         final EntityTransaction db = Entities.get( VmInstance.class );
         try {
-          VmInstance v = Entities.merge( vm );
+          VmInstance v = VmState.TERMINATED.apply( vm ) ? vm : Entities.merge( vm );
           if ( instanceMap.put( v.getReservationId( ), VmInstances.transform( v ) ) && !reservations.containsKey( v.getReservationId( ) ) ) {
             reservations.put( v.getReservationId( ), new ReservationInfoType( v.getReservationId( ), v.getOwner( ).getAccountNumber( ), v.getNetworkNames( ) ) );
           }
@@ -249,8 +263,7 @@ public class VmControl {
                 RunningInstancesItemType ret = VmInstances.transform( vm );
                 if ( ret != null && vm.getReservationId( ) != null ) {
                   if ( instanceMap.put( vm.getReservationId( ), VmInstances.transform( vm ) ) && !reservations.containsKey( vm.getReservationId( ) ) ) {
-                    reservations.put( vm.getReservationId( ),
-                                      new ReservationInfoType( vm.getReservationId( ), vm.getOwner( ).getAccountNumber( ), vm.getNetworkNames( ) ) );
+                    reservations.put( vm.getReservationId( ), TypeMappers.transform( vm, ReservationInfoType.class ) );
                   }
                 }
               } catch ( Exception ex1 ) {
@@ -329,6 +342,12 @@ public class VmControl {
           TerminateInstancesItemType result = null;
           try {
             VmInstance vm = RestrictedTypes.doPrivileged( instanceId, VmInstance.class );
+            if ( MigrationState.isMigrating( vm ) ) {
+              throw Exceptions.toUndeclared( "Cannot terminate an instance which is currently migrating: "
+                                             + vm.getInstanceId( )
+                                             + " "
+                                             + vm.getMigrationTask( ) );
+            }
             oldCode = vm.getState( ).getCode( );
             oldState = vm.getState( ).getName( );
             if ( VmState.STOPPED.apply( vm ) ) {
@@ -561,7 +580,7 @@ public class VmControl {
           try {
             final VmInstance v = VmInstances.lookup( instanceId );
             if ( RestrictedTypes.filterPrivileged( ).apply( v ) ) {
-              if ( v.getBootRecord( ).getMachine( ) instanceof BlockStorageImageInfo ) {
+              if ( !MigrationState.isMigrating( v ) && v.getBootRecord( ).getMachine( ) instanceof BlockStorageImageInfo ) {
                 final int oldCode = v.getState( ).getCode( ), newCode = VmState.STOPPING.getCode( );
                 final String oldState = v.getState( ).getName( ), newState = VmState.STOPPING.getName( );
                 TerminateInstancesItemType termInfo = new TerminateInstancesItemType( v.getInstanceId( ), oldCode, oldState, newCode, newState );

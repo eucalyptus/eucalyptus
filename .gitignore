@@ -1,3 +1,4 @@
+*.orig
 *~
 *.ajsv
 *.class
@@ -6,11 +7,14 @@
 *.pyo
 */generated
 .DS_Store
+.nbrun
 .settings/grze_localhost.launch
 .settings/grze_office.launch
 .sw*
 .*.sw*
+console/jstests/node_modules/*
 autom4te.cache
+clc/.nogit
 clc/bin
 clc/.classpath.bak
 clc/bind.log
@@ -89,3 +93,7 @@ node/test_hooks
 node/test_nc
 util/euca-generate-fault
 /.settings
+.idea/
+.groovy/
+*.[ei]ml
+atlassian-ide-plugin.xml

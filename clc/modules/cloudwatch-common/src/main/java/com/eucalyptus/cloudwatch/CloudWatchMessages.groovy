@@ -18,12 +18,15 @@
  * additional information or have any questions.
  ************************************************************************/
 package com.eucalyptus.cloudwatch;
-import edu.ucsb.eucalyptus.msgs.BaseMessage;
-import edu.ucsb.eucalyptus.msgs.EucalyptusData;
+import java.util.ArrayList;
+import java.util.Date;
 
 import com.eucalyptus.binding.HttpEmbedded;
 import com.eucalyptus.binding.HttpParameterMapping;
 import com.eucalyptus.component.ComponentId;
+
+import edu.ucsb.eucalyptus.msgs.BaseMessage;
+import edu.ucsb.eucalyptus.msgs.EucalyptusData;
 
 public class GetMetricStatisticsType extends CloudWatchMessage {
   String namespace;
@@ -89,6 +92,7 @@ public class PutMetricAlarmType extends CloudWatchMessage {
   String alarmDescription;
   Boolean actionsEnabled;
   @HttpEmbedded
+  @HttpParameterMapping(parameter="OKActions")
   ResourceList okActions;
   @HttpEmbedded
   ResourceList alarmActions;
@@ -335,7 +339,7 @@ public class MetricAlarm extends EucalyptusData {
   Boolean actionsEnabled;
   ResourceList okActions;
   ResourceList alarmActions;
-  ResourceList unknownActions;
+  ResourceList insufficientDataActions;
   String stateValue;
   String stateReason;
   String stateReasonData;

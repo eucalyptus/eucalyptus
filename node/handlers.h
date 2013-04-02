@@ -116,6 +116,9 @@
 
 //! NC State structure
 struct nc_state_t {
+    boolean is_enabled;               //!< flag determining if the node controller is enabled
+    char version[CHAR_BUFFER_SIZE];   //!< version of the node controller
+
     struct handlers *H;         //!< selected handler
     struct handlers *D;         //!< default  handler
     hypervisorCapabilityType capability;
@@ -139,6 +142,7 @@ struct nc_state_t {
     int createImage_cleanup_threshold;
     int teardown_state_duration;
     int migration_ready_threshold;
+    boolean migration_capable;
     //! @}
 
     //! @{

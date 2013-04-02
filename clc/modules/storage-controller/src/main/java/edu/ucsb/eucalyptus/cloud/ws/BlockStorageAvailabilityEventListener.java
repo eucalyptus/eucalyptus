@@ -26,6 +26,7 @@ import java.util.List;
 import java.util.Set;
 import org.apache.log4j.Logger;
 import com.eucalyptus.bootstrap.Bootstrap;
+import com.eucalyptus.bootstrap.BootstrapArgs;
 import com.eucalyptus.bootstrap.Hosts;
 import com.eucalyptus.cluster.Clusters;
 import com.eucalyptus.component.Topology;
@@ -55,7 +56,7 @@ public class BlockStorageAvailabilityEventListener implements EventListener<Cloc
 
   @Override
   public void fireEvent( final ClockTick event ) {
-    if ( Topology.isEnabledLocally( Storage.class ) && Bootstrap.isFinished() ) {
+    if ( BootstrapArgs.isCloudController( ) && Bootstrap.isOperational() ) {
       final List<Availability> resourceAvailability = Lists.newArrayList();
       final Set<String> partitions =
           Sets.newHashSet( Iterables.transform( Clusters.getInstance().listValues(), HasFullName.GET_PARTITION ) );

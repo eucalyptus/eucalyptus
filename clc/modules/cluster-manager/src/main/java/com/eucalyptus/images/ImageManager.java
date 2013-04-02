@@ -78,8 +78,6 @@ import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.policy.PolicySpec;
 import com.eucalyptus.auth.principal.Account;
 import com.eucalyptus.auth.principal.AccountFullName;
-import com.eucalyptus.auth.principal.AccountFullName;
-import com.eucalyptus.auth.principal.Account;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.cloud.CloudMetadatas;
 import com.eucalyptus.cloud.ImageMetadata;
@@ -247,6 +245,8 @@ public class ImageManager {
   }
   
   public DeregisterImageResponseType deregister( DeregisterImageType request ) throws EucalyptusCloudException {
+    if(!request.getImageId( ).matches("(emi-|eki-|eri-)\\w{8}"))
+      throw new EucalyptusCloudException( "Invalid id: " + "\"" + request.getImageId( ) + "\"" );
     DeregisterImageResponseType reply = request.getReply( );
     final Context ctx = Contexts.lookup( );
     final String requestAccountId = ctx.getUserFullName( ).getAccountNumber( );
@@ -273,6 +273,10 @@ public class ImageManager {
       return reply;
     } catch ( InstanceNotTerminatedException re ) {
       throw new EucalyptusCloudException( re );
+    } catch ( EucalyptusCloudException ex ) {
+      if ( ex.getCause() instanceof NoSuchElementException )
+        throw new EucalyptusCloudException( "The image id '[" +  request.getImageId( ) + "]' does not exist");
+      else throw ex;
     } finally {
       db.commit( );
     }

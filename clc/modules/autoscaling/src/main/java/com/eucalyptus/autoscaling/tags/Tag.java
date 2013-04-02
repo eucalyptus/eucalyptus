@@ -29,6 +29,8 @@ import javax.persistence.DiscriminatorType;
 import javax.persistence.Inheritance;
 import javax.persistence.InheritanceType;
 import javax.persistence.PersistenceContext;
+import javax.persistence.PrePersist;
+import javax.persistence.PreUpdate;
 import javax.persistence.Table;
 import javax.persistence.Transient;
 import org.hibernate.annotations.Cache;
@@ -54,11 +56,15 @@ import com.google.common.base.Preconditions;
 public class Tag<T extends Tag<T>> extends AbstractOwnedPersistent implements AutoScalingTagMetadata {
   private static final long serialVersionUID = 1L;
 
+  @SuppressWarnings( "FieldCanBeLocal" )
+  @Column( name = "metadata_resource_id", nullable = false )
+  private String resourceId;
+
   @Column( name = "metadata_tag_value", nullable = false, length = 256 )
   private String value;
 
   @Column( name = "metadata_propagate_at_launch", nullable = false )
-  private Boolean propagateAtLaunch; // TODO:STEVE: Move this to AutoScalingGroupTag?
+  private Boolean propagateAtLaunch;
 
   @Transient
   @Nonnull
@@ -121,7 +127,7 @@ public class Tag<T extends Tag<T>> extends AbstractOwnedPersistent implements Au
 
   @SuppressWarnings( "unchecked" )
   @Nullable
-  public final String getResourceId(){
+  public String getResourceId(){
     return resourceIdFunction.apply( (T) this );
   }
 
@@ -134,6 +140,19 @@ public class Tag<T extends Tag<T>> extends AbstractOwnedPersistent implements Au
   public static Tag withOwner( @Nonnull final OwnerFullName ownerFullName ) {
     Preconditions.checkNotNull( ownerFullName, "ownerFullName" );
     return new Tag( null, Functions.constant( null ), ownerFullName, null, null, null );
+  }
+
+  /**
+   * The resource ID can be set for query by example usage.
+   */
+  protected void setResourceId( final String resourceId ) {
+    this.resourceId = resourceId;
+  }
+
+  @PrePersist
+  @PreUpdate
+  private void generatedFieldUpdate( ) {
+    setResourceId( getResourceId() );
   }
 }
 

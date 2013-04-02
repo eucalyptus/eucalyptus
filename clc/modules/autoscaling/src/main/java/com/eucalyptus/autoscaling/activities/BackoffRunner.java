@@ -59,7 +59,7 @@ public class BackoffRunner {
     return instance; 
   }
   
-  private BackoffRunner(){    
+  BackoffRunner(){
   }
   
   boolean taskInProgress( final String uniqueKey ) {
@@ -70,20 +70,8 @@ public class BackoffRunner {
   
   boolean runTask( final TaskWithBackOff task ) {
     if ( !scalingEnabled() && task.isScalingTask() ) return false;
-      
-    final long timestamp = timestamp();
-    boolean run = false;
-    final TaskInfo previous = 
-        tasksInProgress.putIfAbsent( task.getUniqueKey(), task.info( new TaskInfo( task, timestamp, 0 ) ) );
-    if ( previous == null ) {
-      run = true;  
-    } else if ( previous.canFollow( timestamp, task.getBackoffGroup() ) && 
-        tasksInProgress.remove( task.getUniqueKey(), previous ) && 
-        tasksInProgress.putIfAbsent( 
-            task.getUniqueKey(),
-            task.info( new TaskInfo( task, timestamp, previous.getNextFailureCount( task.getBackoffGroup() ) ) ) )==null ) {
-      run = true;
-    }
+
+    boolean run = doRunTask( task, timestamp() );
     if ( run ) {
       task.runTask();
     } else {
@@ -92,7 +80,7 @@ public class BackoffRunner {
     
     return run;
   }
-  
+
   private boolean scalingEnabled() {
     return ENABLE_SCALING_ACTIVITIES != null && ENABLE_SCALING_ACTIVITIES;
   }
@@ -100,7 +88,23 @@ public class BackoffRunner {
   protected long timestamp() {
     return System.currentTimeMillis();
   }
-  
+
+  private static boolean doRunTask( final TaskWithBackOff task, final long timestamp ) {
+    boolean run = false;
+    final TaskInfo previous =
+        tasksInProgress.putIfAbsent( task.getUniqueKey(), task.info( new TaskInfo( task, timestamp, 0 ) ) );
+    if ( previous == null ) {
+      run = true;
+    } else if ( previous.canFollow( timestamp, task.getBackoffGroup() ) &&
+        tasksInProgress.remove( task.getUniqueKey(), previous ) &&
+        tasksInProgress.putIfAbsent(
+            task.getUniqueKey(),
+            task.info( new TaskInfo( task, timestamp, previous.getNextFailureCount( task.getBackoffGroup() ) ) ) )==null ) {
+      run = true;
+    }
+    return run;
+  }
+
   static abstract class TaskWithBackOff {
     private final String uniqueKey;
     private final String backoffGroup;
@@ -147,7 +151,10 @@ public class BackoffRunner {
     final void success() {
       final TaskWithBackOff onSuccess = onSuccess();
       if ( onSuccess != null ) {
-        if (!tasksInProgress.replace( getUniqueKey(), taskInfo, onSuccess.info( new TaskInfo( onSuccess, System.currentTimeMillis(), 0 ) ) ) ) {
+        final boolean run = getUniqueKey().equals( onSuccess.getUniqueKey() ) ?
+            tasksInProgress.replace( getUniqueKey(), taskInfo, onSuccess.info( new TaskInfo( onSuccess, System.currentTimeMillis(), 0 ) ) ) :
+            doRunTask( onSuccess, System.currentTimeMillis() );
+        if ( !run ) {
           logger.info( "Unable to create activity: " + onSuccess.getBackoffGroup() + " for " + onSuccess.getUniqueKey() );
         } else {
           future.set( true );

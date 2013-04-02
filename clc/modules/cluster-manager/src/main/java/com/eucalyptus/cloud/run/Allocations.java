@@ -68,6 +68,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
+import javax.annotation.Nullable;
 import javax.persistence.EntityTransaction;
 import org.apache.log4j.Logger;
 import org.bouncycastle.util.encoders.Base64;
@@ -92,6 +93,7 @@ import com.eucalyptus.vm.VmInstance;
 import com.eucalyptus.vm.VmInstances;
 import com.eucalyptus.vmtypes.VmType;
 import com.eucalyptus.vmtypes.VmTypes;
+import com.google.common.base.Strings;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import edu.ucsb.eucalyptus.msgs.HasRequest;
@@ -111,7 +113,9 @@ public class Allocations {
     private final int                  minCount;
     private final int                  maxCount;
     private final boolean              usePrivateAddressing;
-    private final boolean 	       monitoring;
+    private final boolean              monitoring;
+    @Nullable
+    private final String               clientToken;
     
     /** verified references determined by the request **/
     private Partition                  partition;
@@ -129,16 +133,15 @@ public class Allocations {
     private Date                       expiration;
     
     private Allocation( final RunInstancesType request ) {
-      super( );
       this.context = Contexts.lookup( );
       this.instanceIds = Maps.newHashMap( );
       this.request = request;
       this.minCount = request.getMinCount( );
       this.maxCount = request.getMaxCount( );
-      
-      this.monitoring = request.getMonitoring() == null ? Boolean.FALSE : request.getMonitoring();
-     
       this.usePrivateAddressing = "private".equals(request.getAddressingType());
+      this.monitoring = request.getMonitoring() == null ? Boolean.FALSE : request.getMonitoring();
+      this.clientToken = Strings.emptyToNull( request.getClientToken( ) );
+     
       this.ownerFullName = this.context.getUserFullName( );
       if ( ( this.request.getInstanceType( ) == null ) || "".equals( this.request.getInstanceType( ) ) ) {
         this.request.setInstanceType( VmTypes.defaultTypeName( ) );
@@ -170,7 +173,8 @@ public class Allocations {
                         final VmType vmType,
                         final Set<NetworkGroup> networkGroups,
                         final boolean isUsePrivateAddressing, 
-                        final boolean monitoring 
+                        final boolean monitoring,
+                        final String clientToken
                         ) {
       super( );
       this.context = Contexts.lookup( );
@@ -189,6 +193,7 @@ public class Allocations {
       this.expiration = expiration;
       this.vmType = vmType;
       this.monitoring = monitoring;
+      this.clientToken = clientToken;
       
       this.networkGroups = new HashMap<String, NetworkGroup>( ) {
         {
@@ -351,6 +356,18 @@ public class Allocations {
         return monitoring;
     }
 
+    @Nullable
+    public String getClientToken( ) {
+      return clientToken;
+    }
+
+    @Nullable
+    public String getUniqueClientToken( ) {
+      return clientToken == null ?
+          null :
+          getOwnerFullName().getAccountNumber() + ":" + clientToken;
+    }
+
     public String getInstanceId( int index ) {
       while ( this.instanceIds.size( ) < index + 1 ) {
         this.instanceIds.put( index, VmInstances.getId( ( long ) this.getReservationIndex( ), index ) );
@@ -383,6 +400,7 @@ public class Allocations {
                            vm.getVmType( ),
                            vm.getNetworkGroups( ),
                            vm.isUsePrivateAddressing(),
-                           vm.getMonitoring() );
+                           vm.getMonitoring(),
+                           vm.getClientToken() );
   }
 }

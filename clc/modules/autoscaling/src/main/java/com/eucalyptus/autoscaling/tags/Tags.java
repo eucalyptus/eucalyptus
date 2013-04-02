@@ -31,6 +31,7 @@ import com.eucalyptus.entities.Transactions;
 import com.eucalyptus.records.Logs;
 import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.util.OwnerFullName;
+import com.eucalyptus.util.Strings;
 import com.eucalyptus.util.TypeMapper;
 import com.eucalyptus.util.TypeMappers;
 import com.google.common.base.Function;
@@ -106,6 +107,10 @@ public class Tags {
 
   public static Function<Tag,String> value() {
     return TagFunctions.VALUE;
+  }
+
+  public static Function<Tag,String> propagateAtLaunch() {
+    return TagFunctions.PROPAGATE_AT_LAUNCH;
   }
 
   public static void delete( final Tag example ) throws NoSuchMetadataException {
@@ -192,6 +197,12 @@ public class Tags {
       @Override
       public String apply(final Tag tag ) {
         return tag.getKey();
+      }
+    },
+    PROPAGATE_AT_LAUNCH {
+      @Override
+      public String apply(final Tag tag ) {
+        return Strings.toString( tag.getPropagateAtLaunch() );
       }
     },
     RESOURCE_TYPE {

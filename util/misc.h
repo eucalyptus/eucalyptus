@@ -148,6 +148,7 @@ int verify_helpers(char **helpers, char **helpers_path, int num_helpers);
 int timeread(int fd, void *buf, size_t bytes, int timeout);
 int add_euca_to_path(const char *euca_home_supplied);
 pid_t timewait(pid_t pid, int *status, int timeout_sec);
+int killwait(pid_t pid);
 int param_check(const char *func, ...);
 int check_process(pid_t pid, char *search);
 int check_directory(const char *dir);
@@ -195,6 +196,7 @@ int get_blkid(const char *dev_path, char *uuid, unsigned int uuid_size);
 char parse_boolean(const char *s);
 int drop_privs(void);
 int timeshell(char *command, char *stdout_str, char *stderr_str, int max_size, int timeout);
+int get_remoteDevForNC(const char * the_iqn, const char * remoteDev, char * remoteDevForNC, int remoteDevForNCLen);
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |

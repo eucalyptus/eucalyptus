@@ -83,6 +83,7 @@ import edu.ucsb.eucalyptus.msgs.PostObjectResponseType;
 import edu.ucsb.eucalyptus.msgs.PutObjectResponseType;
 import edu.ucsb.eucalyptus.msgs.WalrusDeleteResponseType;
 import edu.ucsb.eucalyptus.msgs.WalrusErrorMessageType;
+import edu.ucsb.eucalyptus.msgs.WalrusHeadResponseType;
 
 @ChannelPipelineCoverage("one")
 public class WalrusOutboundHandler extends MessageStackHandler {
@@ -150,6 +151,10 @@ public class WalrusOutboundHandler extends MessageStackHandler {
 				}
 			} else if(msg instanceof WalrusDeleteResponseType) {
 				httpResponse.setStatus(HttpResponseStatus.NO_CONTENT);
+				httpResponse.setMessage(null);
+			} else if(msg instanceof WalrusHeadResponseType) {
+				//This is a HEAD request, don't put a body
+				httpResponse.setStatus(HttpResponseStatus.OK);
 				httpResponse.setMessage(null);
 			}
 		}

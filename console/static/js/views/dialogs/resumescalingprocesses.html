@@ -1,0 +1,28 @@
+<div>
+    <div class="title" data-msg="resume_scaling_group_dialog_title">Resume scaling processes</div>
+    <div class="body">
+		<p data-msg="resume_scaling_group_dialog_text">Check the boxes to resume processes. Disabled boxes indicate already-running processes.</p>
+		<a data-msg="resume_scaling_processes_dialog_link_label" data-on-click=":close">Select all processes</a>
+		<div class="form-row clearfix checkbox-only">
+		<input type="checkbox" id="scaling-resume-launch-instances">
+		<label for="scaling-resume-launch-instances" data-msg="resume_scaling_processes_dialog_launch_instance">Launch instances</label><br>
+		<input type="checkbox" id="scaling-resume-terminate-instances">
+		<label for="scaling-resume-terminate-instances" data-msg="resume_scaling_processes_dialog_terminate_instance">Terminate instances</label><br>
+		<input type="checkbox" id="scaling-resume-health-check">
+		<label for="scaling-resume-health-check" data-msg="resume_scaling_processes_dialog_health_check">Health check</label><br>
+		<input type="checkbox" id="scaling-resume-replace-unhealthy-instances">
+		<label for="scaling-resume-replace unhealthy-instances" data msg="resume_scaling_processes_dialog_replace_unhealthy">Replace unhealthy instances</label><br>
+		<input type="checkbox" id="scaling-resume-balance-instances">
+		<label for="scaling-resume-balance-instances" data-msg="resume_scaling_processes_dialog_az_balance">Balance instances across availability zones</label><br>
+		<input type="checkbox" id="scaling-resume-add-instances-to-lb">
+		<label for="scaling-resume-add-instances-to-lb" data-msg="resume_scaling_processes_dialog_add_to_lb">Add instances to load balancers on launch</label><br>
+		</div>
+		<div data-text=":status" style="height:20px"></div>
+        <div class="ui-dialog-buttonpane ui-widget-content ui-helper-clearfix">
+            <div class="ui-dialog-buttonset">
+                <a data-ui-button=":submitButton" data-msg="resume_scaling_processes_dialog_resume_btn">Scale group</a>
+                <a data-ui-button=":cancelButton" data-msg="dialog_cancel_btn">Cancel</a>
+            </div>
+        </div>
+    </div>
+</div>

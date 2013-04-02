@@ -136,6 +136,11 @@ public class RegisterInstancesWithLoadBalancerType extends LoadBalancingMessage 
   @HttpEmbedded 
   Instances instances;
   public RegisterInstancesWithLoadBalancerType() {  }
+  public RegisterInstancesWithLoadBalancerType( String loadBalancerName,
+                                                Collection<String> instanceIds ) {
+    this.loadBalancerName = loadBalancerName
+    this.instances = new Instances( member: instanceIds.collect{ instanceId -> new Instance( instanceId: instanceId ) } as ArrayList<Instance> )
+  }
 }
 public class AttachLoadBalancerToSubnetsResponseType extends LoadBalancingMessage {
   public AttachLoadBalancerToSubnetsResponseType() {  }
@@ -302,10 +307,10 @@ public class SetLoadBalancerPoliciesOfListenerResponseType extends LoadBalancing
 }
 public class HealthCheck extends EucalyptusData {
   String target;
-  BigInteger interval;
-  BigInteger timeout;
-  BigInteger unhealthyThreshold;
-  BigInteger healthyThreshold;
+  Integer interval;
+  Integer timeout;
+  Integer unhealthyThreshold;
+  Integer healthyThreshold;
   public HealthCheck() {  }
 }
 public class DescribeLoadBalancerPolicyTypesResult extends EucalyptusData {
@@ -575,6 +580,11 @@ public class DescribeInstanceHealthType extends LoadBalancingMessage {
   @HttpEmbedded
   Instances instances;
   public DescribeInstanceHealthType() {  }
+  public DescribeInstanceHealthType( String loadBalancerName,
+                                     Collection<String> instanceIds ) {
+    this.loadBalancerName = loadBalancerName
+    this.instances = new Instances( member: instanceIds.collect{ instanceId -> new Instance( instanceId: instanceId ) } as ArrayList<Instance> )
+  }
 }
 public class CreateLBCookieStickinessPolicyType extends LoadBalancingMessage {
   String loadBalancerName;
@@ -607,6 +617,11 @@ public class DeregisterInstancesFromLoadBalancerType extends LoadBalancingMessag
   @HttpEmbedded
   Instances instances;
   public DeregisterInstancesFromLoadBalancerType() {  }
+  public DeregisterInstancesFromLoadBalancerType( String loadBalancerName,
+                                                  Collection<String> instanceIds ) {
+    this.loadBalancerName = loadBalancerName
+    this.instances = new Instances( member: instanceIds.collect{ instanceId -> new Instance( instanceId: instanceId ) } as ArrayList<Instance> )
+  }
 }
 public class AttachLoadBalancerToSubnetsType extends LoadBalancingMessage {
   String loadBalancerName;

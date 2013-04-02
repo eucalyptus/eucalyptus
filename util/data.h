@@ -94,6 +94,7 @@
 #define SMALL_CHAR_BUFFER_SIZE                     64   //!< Small string buffer size
 #define CHAR_BUFFER_SIZE                          512   //!< Regular string buffer size
 #define BIG_CHAR_BUFFER_SIZE                     1024   //!< Large string buffer size
+#define VERY_BIG_CHAR_BUFFER_SIZE				 4096   //!< Extra large string buffer size
 #define HOSTNAME_SIZE                             255   //!< Hostname buffer size
 #define CREDENTIAL_SIZE                          1024   //!< Migration-credential buffer size
 
@@ -170,7 +171,8 @@ typedef enum _ncResourceType {
     NC_RESOURCE_KERNEL,         //!< Kernel
     NC_RESOURCE_EPHEMERAL,      //!< Ephemeral
     NC_RESOURCE_SWAP,           //!< SWAP
-    NC_RESOURCE_EBS             //!< EBS
+    NC_RESOURCE_EBS,            //!< EBS
+    NC_RESOURCE_BOOT,           //!< BOOTABLE
 } ncResourceType;
 
 //! NC Resource Location Type Enumeration
@@ -254,7 +256,8 @@ typedef struct ncMetadata_t {
 typedef struct virtualBootRecord_t {
     //! @{
     //! @name first six fields arrive in requests (RunInstance, {Attach|Detach} Volume)
-    char resourceLocation[CHAR_BUFFER_SIZE];    //!< http|walrus|cloud|sc|iqn|aoe://... or none
+    char resourceLocation[VERY_BIG_CHAR_BUFFER_SIZE];    //!< http|walrus|cloud|sc|iqn|aoe://... or none
+    char * resourceLocationPtr; //!< pointer to a full version of resourceLocation, used by CC for IQN=LUN demuxing
     char guestDeviceName[SMALL_CHAR_BUFFER_SIZE];   //!< x?[vhsf]d[a-z]?[1-9]*
     long long sizeBytes;        //!< Size of the boot record in bytes
     char formatName[SMALL_CHAR_BUFFER_SIZE];    //!< ext2|ext3|swap|none
@@ -288,6 +291,7 @@ typedef struct virtualMachine_t {
     virtualBootRecord *ramdisk; //!< Ramdisk boot record information
     virtualBootRecord *swap;    //!< SWAP boot record information
     virtualBootRecord *ephemeral0;  //!< Ephemeral boot record information
+    virtualBootRecord *boot; //!< Boot sector
     virtualBootRecord virtualBootRecord[EUCA_MAX_VBRS]; //!< List of virtual boot records
     int virtualBootRecordLen;   //!< Number of VBRS in the list
     libvirtNicType nicType;     //!< Defines the virtual machine NIC type
@@ -306,7 +310,7 @@ typedef struct netConfig_t {
 //! Structure defining NC Volumes
 typedef struct ncVolume_t {
     char volumeId[CHAR_BUFFER_SIZE];    //!< Remote volume identifier string
-    char remoteDev[CHAR_BUFFER_SIZE];   //!< Remote device name string
+    char remoteDev[VERY_BIG_CHAR_BUFFER_SIZE];   //!< Remote device name string
     char localDev[CHAR_BUFFER_SIZE];    //!< Local device name string
     char localDevReal[CHAR_BUFFER_SIZE];    //!< Local device name (real) string
     char stateName[CHAR_BUFFER_SIZE];   //!< Volume state name string
@@ -407,6 +411,7 @@ typedef struct ncInstance_t {
 typedef struct ncResource_t {
     char nodeStatus[CHAR_BUFFER_SIZE];  //!< Node status as a string
     char iqn[CHAR_BUFFER_SIZE]; //!< IQN
+    boolean migrationCapable;   //!< Whether NC is capable of live-migrating VM without shared storage
     int memorySizeMax;          //!< Maximum memory size supported by this node controller
     int memorySizeAvailable;    //!< Currently available memory on this node controller
     int diskSizeMax;            //!< Maximum disk size supported by this node controller
@@ -481,7 +486,7 @@ int total_instances(bunchOfInstances ** ppHead);
 
 //! @{
 //! @name Resources APIs
-ncResource *allocate_resource(const char *sNodeStatus, const char *sIQN, int memorySizeMax, int memorySizeAvailable, int diskSizeMax,
+ncResource *allocate_resource(const char *sNodeStatus, boolean migrationCapable, const char *sIQN, int memorySizeMax, int memorySizeAvailable, int diskSizeMax,
                               int diskSizeAvailable, int numberOfCoresMax, int numberOfCoresAvailable, const char *sPublicSubnets) _attribute_wur_;
 void free_resource(ncResource ** ppresource);
 //! @}

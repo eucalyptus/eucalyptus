@@ -60,7 +60,7 @@
     NEEDED TO COMPLY WITH ANY SUCH LICENSES OR RIGHTS.
   -->
 
-<project name="eucalyptus" basedir=".">
+<project name="eucalyptus" default="build" basedir="." xmlns:ivy="antlib:org.apache.ivy.ant">
 	<property environment="localenv" />
 	<property name="euca.home.0" value="${localenv.EUCALYPTUS}" />
 	<condition property="euca.home" value="/opt/eucalyptus" else="${localenv.EUCALYPTUS}">
@@ -82,6 +82,7 @@
 	<property name="deps.lib" value="cloud-lib" />
 	<property name="bind.timestamp" value="target/.bind-timestamp" />
 	<property name="bind.msgs" value="modules/msgs/src/main/resources/msgs-binding.xml" />
+    <property name="ivy.jar" value="/usr/share/java/ivy.jar" />
 	<!--================================== groovy builder ==================================-->
 	<path id="groovy-classpath">
 		<fileset dir="${deps.lib.dir}">
@@ -91,20 +92,26 @@
 			<include name="**/*.jar" />
 		</fileset>
 	</path>
+
+	<!-- Fix for RHEL bug 810067 -->
+	<taskdef uri="antlib:org.apache.ivy.ant" classpath="${ivy.jar}" />
+
+	<ivy:buildlist reference="build-module-path" onmissingdescriptor="skip">
+		<fileset dir="modules" includes="**/build.xml"/>
+	</ivy:buildlist>
+	<echo message="**** BUILDPATH: ${toString:build-module-path}" level="verbose" />
+
 	<taskdef onerror="ignore" name="groovy" classpathref="groovy-classpath" classname="org.codehaus.groovy.ant.Groovy" />
 	<macrodef name="call-module-target">
 		<attribute name="target" />
 		<sequential>
-			<property name="antTarget" value="@{target}" />
-			<groovy maxmemory="1024m" src="modules/module-inc.groovy" classpathref="groovy-classpath">
-				<jvmarg value="-XX:MaxPermSize=512m" />
-			</groovy>
+			<subant target="@{target}" buildpathref="build-module-path"/>
 		</sequential>
 	</macrodef>
 	<!--================================== build targets ==================================-->
 	<target name="build">
-		<ant dir="." inheritall="false" target="build-all" />
-		<ant dir="." inheritall="false" target="jar" />
+		<ant inheritall="false" target="build-all" />
+		<ant inheritall="false" target="jar" />
 	</target>
 	
 	<target name="build-all">

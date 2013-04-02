@@ -196,13 +196,13 @@ public class Topology {
       };
       if ( Hosts.isCoordinator( ) && busy.compareAndSet( false, true ) ) {
         try {
-          Queue.INTERNAL.enqueue( call );
+          Queue.EXTERNAL.enqueue( call );
         } catch ( Exception ex ) {
           busy.set( false );
         }
       } else if ( counter.incrementAndGet( ) % 5 == 0 && busy.compareAndSet( false, true ) ) {
         try {
-          Queue.INTERNAL.enqueue( call );
+          Queue.EXTERNAL.enqueue( call );
         } catch ( Exception ex ) {
           busy.set( false );
         }
@@ -701,7 +701,7 @@ public class Topology {
     @Override
     public Future<ServiceConfiguration> apply( final ServiceConfiguration input ) {
       final Callable<ServiceConfiguration> call = Topology.callable( input, Topology.get( State.ENABLED ) );
-      final Future<ServiceConfiguration> future = Queue.EXTERNAL.enqueue( call );
+      final Future<ServiceConfiguration> future = Queue.INTERNAL.enqueue( call );
       return future;
     }
     
@@ -1154,7 +1154,9 @@ public class Topology {
       ServiceConfiguration endResult = input;
       try {
         endResult = ServiceTransitions.pathTo( input, nextState ).get( );
-        Logs.extreme( ).debug( this.toString( endResult, initialState, nextState ) );
+        if ( !nextState.equals( initialState ) ) {
+          LOG.info( this.toString( endResult, initialState, nextState ) );
+        }
         return endResult;
       } catch ( final Exception ex ) {
         if ( Exceptions.isCausedBy( ex, ExistingTransitionException.class ) ) {
