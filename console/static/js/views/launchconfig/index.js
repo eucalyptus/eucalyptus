@@ -9,8 +9,8 @@ define([
   'models/launchconfig',
   './model/imagemodel',
   './model/typemodel',
-  'models/sgroup',
-  'models/keypair',
+  './model/securitygroup',
+  './model/keypair',
   './model/advancedmodel',
   './model/blockmaps',
   './model/snapshots'

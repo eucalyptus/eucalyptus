@@ -3,7 +3,7 @@
     <h3 class="required-label">Security</h3>
   </div>
   <div id="launch-wizard-security-main-contents">
-    <div class="wizard-section-label">Select security options:</div>
+    <div class="wizard-section-label" class="required-label">Select security options:</div>
     <div id="launch-wizard-security-keypair"> 
       <div class="form-row clearfix upper-sibling">
         <label for="launch-wizard-security-keypair-selector">Key name</label>
@@ -26,6 +26,7 @@
           <option data-each-keypair="keypairs" data-value="keypair.name" data-title="keypair.name" data-text="keypair.name"></option>
         </select>
     </div>
+    <div class="field-error" data-text="launchConfigErrors.key"></div>
     <div class="form-row clearfix lower-sibling">
       <label for="launch-instance-create-keypair-link">Or:</label>
       <a href="#" id="launch-instance-create-keypair-link">Create new key pair</a>
@@ -42,6 +43,7 @@
       <option data-each-sgroup="sgroups" data-title="sgroup.name" data-value="sgroup.name" data-text="sgroup.description"></option>
     </select>
   </div>
+  <div class="field-error" data-text="launchConfigErrors.group"></div>
   <div class="form-row clearfix lower-sibling">
     <label for="launch-instance-create-sg-link">Or:</label><a href="#" id="launch-instance-create-sg-link">Create new security group</a>
   </div>
@@ -58,7 +60,7 @@
 -->
           <li data-text="rule.ip_protocol"></li>
           <li data-text="rule.to_port"></li>
-          <li><span data-each-grant="rule.grants" data-text="grant.cidr_ip"></span><span>&nbsp;</span></li>
+          <li><span data-each-grant="rule.grants" data-entitytext="grant.cidr_ip"></span><span>&nbsp;</span></li>
         </ul>
       </div>
 <!--        

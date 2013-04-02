@@ -1,5 +1,5 @@
-define([], function() {
-  return Backbone.Model.extend({
+define(['models/sgroup'], function(sgroup) {
+  return sgroup.extend({
       rules_egress: [], 
       __obj_name__: "SecurityGroup", 
       name: "", 
@@ -34,6 +34,13 @@ define([], function() {
       connection: [], 
       vpc_id: null, 
       id: null, 
-      owner_id: "" 
+      owner_id: "",
+
+      validation: {
+        name: {
+            required: true,
+            msg: 'A security group selection is required.'
+        }
+      }
   });
 });

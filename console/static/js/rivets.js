@@ -109,3 +109,9 @@ rivets.binders["msg"] = {
       }
     }
 }
+
+rivets.binders['entitytext'] = {
+    routine: function(el, value) {
+      return rivets.binders.text(el, $('<div/>').html(value).text());
+    }
+}

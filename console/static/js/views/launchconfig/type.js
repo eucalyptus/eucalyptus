@@ -73,7 +73,6 @@ define([
 
     self.model.on('validated:invalid', function(model, errors) {
       scope.launchConfigErrors.type_number = errors.type_number;
-      //self.render();
     });
 
 

@@ -24,6 +24,7 @@ define([
           if(groupWhere.length > 0) {
               self.model.set(group.toJSON());
               self.model.set('security_show', true);
+              
           }
         },
 
@@ -34,10 +35,22 @@ define([
           });
           this.keymodel.set(key.toJSON());
           self.model.set('security_show', true);
+        },
+
+        launchConfigErrors: {
+          key: null,
+          group: null
         }
 
       };
      
+      self.model.on('validated:invalid', function(obj, errors) {
+        scope.launchConfigErrors.group = errors.name;
+      });
+
+      this.options.keymodel.on('validated:invalid', function(obj, errors) {
+        scope.launchConfigErrors.key = errors.name;
+      });
 
       $(this.el).html(template)
       this.rView = rivets.bind(this.$el, scope);
@@ -46,6 +59,18 @@ define([
 
     render: function() {
       this.rView.sync();
+    },
+
+    isValid: function() {
+      this.options.keymodel.validate(_.pick(this.options.keymodel.toJSON(), 'name'));
+      if (!this.options.keymodel.isValid()) {
+          return false;
+      }
+      this.model.validate(_.pick(this.model.toJSON(), 'name'));
+      if(!this.model.isValid()) {
+        return false;
+      }
+      return true;
     }
 });
 });

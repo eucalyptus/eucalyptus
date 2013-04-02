@@ -1,11 +1,18 @@
-define([], function() {
-  return Backbone.Model.extend({
+define(['models/keypair'], function(keypair) {
+  return keypair.extend({
     __obj_name__: "KeyPair",
     name: '',
     region: [],
     material: null,
     item: '',
     connection: [],
-    fingerprint: ''
+    fingerprint: '',
+
+    validation: {
+        name: {
+          required: true,
+          msg: 'A keypair selection is required.'
+        }
+    }
   });
 });
