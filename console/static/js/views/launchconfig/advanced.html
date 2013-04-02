@@ -52,20 +52,22 @@
             <th>Create From Snapshot</th>
             <th>Size (GB)</th>
             <th>Delete on Termination</th>
+            <th></th>
          </tr>
        </thead>
        <tbody>
 
 
         <tr data-each-volume="blockDeviceMappings">
-          <td data-text="">Root
+          <td data-text=":getVolLabel">Root
           </td>
           <td data-text="volume.map_name">
           </td>
           <td data-text="volume.snapshot_id">
           </td>
           <td data-text="volume.size"></td>
-          <td class="centered-cell"><input disabled data-checked="volume.delete_on_termination" class="launch-wizard-advanced-storage-delOnTerm" type="checkbox"></td>
+          <td class="centered-cell"><input data-disabled=":checkDisabledIf" data-checked="volume.delete_on_termination" class="launch-wizard-advanced-storage-delOnTerm" type="checkbox"></td>
+          <td><div data-on-click=":delStorageVol" data-addclass=":deleteButtonIf"><div></td>
         </tr> 
 
 
@@ -73,8 +75,8 @@
         <tr>
           <td>
             <select data-enabled="enableStorageVolume" data-on-change=":setStorageVolume"  class="launch-wizard-advanced-storage-volume-selector" title="Select the source of the additional storage">
-              <option value="root">Root</option>
               <option value="EBS">EBS</option>
+              <option value="root">Root</option>
             </select>
           </td>
           <td>
@@ -85,12 +87,19 @@
               <option data-each-snapshot="snapshots" data-value="snapshot.id" data-text="snapshot.id"></option>
             </select>
           </td>
-<td><input class="launch-wizard-advanced-storage-size-input" title="Specify the size of the storage in whole gigabytes" type="text"></td>
-<td class="centered-cell"><input class="launch-wizard-advanced-storage-delOnTerm" type="checkbox"></td>
-</tr></tbody>
-</table></div>
+          <td>
+            <input class="launch-wizard-advanced-storage-size-input" title="Specify the size of the storage in whole gigabytes" type="text">
+         </td>
+         <td class="centered-cell">
+          <input class="launch-wizard-advanced-storage-delOnTerm" type="checkbox">
+        </td>
+        <td><div class="icon_approve" data-on-click=":setStorageVolume"></div></td>
+      </tr>
+    </tbody>
+</table>
 </div>
-<input value="emi-EDBA3EEA" id="launch-wizard-image-emi" type="hidden">
+</div>
+<!-- <input value="emi-EDBA3EEA" id="launch-wizard-image-emi" type="hidden"> -->
 </div>
 <div id="launch-wizard-buttons-advanced" class="launch-wizard-buttons"> <button class="button" id="launch-wizard-buttons-advanced-launch">Launch instance(s)</button>
 </div>
