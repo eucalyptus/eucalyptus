@@ -156,23 +156,6 @@ static char_map **c_m = NULL;
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |
- |                             EXPORTED PROTOTYPES                            |
- |                                                                            |
-\*----------------------------------------------------------------------------*/
-
-wchar_t *varsub(const wchar_t * s, const wchar_map * vars[]);
-wchar_map **varmap_alloc(wchar_map ** map, const wchar_t * key, const wchar_t * val);
-void varmap_free(wchar_map ** map);
-char *c_varsub(const char *s, const char_map * vars[]);
-char_map **c_varmap_alloc(char_map ** map, const char *key, const char *val);
-void c_varmap_free(char_map ** map);
-
-#ifdef _UNIT_TEST
-int main(int argc, char **argv);
-#endif /* _UNIT_TEST */
-
-/*----------------------------------------------------------------------------*\
- |                                                                            |
  |                              STATIC PROTOTYPES                             |
  |                                                                            |
 \*----------------------------------------------------------------------------*/
@@ -356,7 +339,7 @@ static char *c_wcappendn(char *dst, const char *src, size_t src_limit)
 //! @note caller is responsible to free the returned string
 //!
 //! @todo This currently will not sub any variables if it can't sub *all* variables. This is unfriendly:
-// !      it should sub what it can.
+//!       it should sub what it can.
 //!
 wchar_t *varsub(const wchar_t * s, const wchar_map * vars[])
 {

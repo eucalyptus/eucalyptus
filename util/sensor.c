@@ -153,7 +153,7 @@ const char *euca_client_component_name = "ignore";
 const char *sensorCounterTypeName[] = {
     "[unused]",
     "summation",
-    "average"
+    "average",
 };
 
 /*----------------------------------------------------------------------------*\
@@ -175,42 +175,6 @@ static void *competitor_function_writer(void *ptr);
 static void *competitor_function_reader(void *ptr);
 static long long _sn = -1;
 static double val = 0.0;
-#endif /* _UNIT_TEST */
-
-/*----------------------------------------------------------------------------*\
- |                                                                            |
- |                             EXPORTED PROTOTYPES                            |
- |                                                                            |
-\*----------------------------------------------------------------------------*/
-
-int sensor_init(sem * sem, sensorResourceCache * resources, int resources_size, boolean run_bottom_half, int (*update_euca_config_function) (void));
-int sensor_config(int new_history_size, long long new_collection_interval_time_ms);
-int sensor_suspend_polling(void);
-int sensor_resume_polling(void);
-int sensor_set_hyp_sem(sem * sem);
-int sensor_get_config(int *history_size, long long *collection_interval_time_ms);
-int sensor_get_num_resources(void);
-sensorCounterType sensor_str2type(const char *counterType);
-const char *sensor_type2str(sensorCounterType type);
-int sensor_res2str(char *buf, int bufLen, sensorResource ** srs, int srsLen);
-int sensor_get_dummy_instance_data(long long sn, const char *instanceId, const char **sensorIds, int sensorIdsLen, sensorResource ** srs, int srsLen);
-int sensor_merge_records(sensorResource * srs[], int srsLen, boolean fail_on_oom);
-int sensor_add_value(const char *instanceId, const char *metricName, const int counterType, const char *dimensionName, const long long sequenceNum,
-                     const long long timestampMs, const boolean available, const double value);
-int sensor_get_value(const char *instanceId, const char *metricName, const int counterType, const char *dimensionName, long long *sequenceNum,
-                     long long *timestampMs, boolean * available, double *value, long long *intervalMs, int *valLen);
-int sensor_get_instance_data(const char *instanceId, char **sensorIds, int sensorIdsLen, sensorResource ** sr_out, int srLen);
-int sensor_add_resource(const char *resourceName, const char *resourceType, const char *resourceUuid);
-int sensor_set_resource_alias(const char *resourceName, const char *resourceAlias);
-int sensor_remove_resource(const char *resourceName);
-int sensor_shift_metric(const char *resourceName, const char *metricName);
-int sensor_set_dimension_alias(const char *resourceName, const char *metricName, const int counterType, const char *dimensionName, const char *dimensionAlias);
-int sensor_set_volume(const char *instanceId, const char *volumeId, const char *guestDev);
-int sensor_refresh_resources(char resourceNames[][MAX_SENSOR_NAME_LEN], char resourceAliases[][MAX_SENSOR_NAME_LEN], int size);
-int sensor_validate_resources(sensorResource ** srs, int srsLen);
-
-#ifdef _UNIT_TEST
-int main(int argc, char **argv);
 #endif /* _UNIT_TEST */
 
 /*----------------------------------------------------------------------------*\
@@ -1395,9 +1359,8 @@ bail:
 //!
 //! @see sensor_merge_records()
 //!
-int sensor_add_value(const char *instanceId,
-                     const char *metricName, const int counterType, const char *dimensionName, const long long sequenceNum,
-                     const long long timestampMs, const boolean available, const double value)
+int sensor_add_value(const char *instanceId, const char *metricName, const int counterType, const char *dimensionName, const long long sequenceNum, const long long timestampMs,
+                     const boolean available, const double value)
 {
     // this data structure is a carrier for the value
     sensorResource sr = {
@@ -1461,10 +1424,8 @@ int sensor_add_value(const char *instanceId,
 //!
 //! @return EUCA_OK on success or EUCA_ERROR on failure
 //!
-int sensor_get_value(const char *instanceId,
-                     const char *metricName,
-                     const int counterType, const char *dimensionName, long long *sequenceNum, long long *timestampMs, boolean * available,
-                     double *value, long long *intervalMs, int *valLen)
+int sensor_get_value(const char *instanceId, const char *metricName, const int counterType, const char *dimensionName, long long *sequenceNum, long long *timestampMs,
+                     boolean * available, double *value, long long *intervalMs, int *valLen)
 {
     int ret = EUCA_ERROR;
     if (sensor_state == NULL || sensor_state->initialized == FALSE)

@@ -166,68 +166,6 @@
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |
- |                             EXPORTED PROTOTYPES                            |
- |                                                                            |
-\*----------------------------------------------------------------------------*/
-
-int verify_helpers(char **helpers, char **helpers_path, int num_helpers);
-int timeread(int fd, void *buf, size_t bytes, int timeout);
-int add_euca_to_path(const char *euca_home_supplied);
-pid_t timewait(pid_t pid, int *status, int timeout_sec);
-int killwait(pid_t pid);
-int param_check(const char *func, ...);
-int check_process(pid_t pid, char *search);
-int check_directory(const char *dir);
-int check_file_newer_than(const char *file, time_t mtime);
-int check_block(const char *file);
-int check_file(const char *file);
-int check_path(const char *path);
-int statfs_path(const char *path, unsigned long long *fs_bytes_size, unsigned long long *fs_bytes_available, int *fs_id);
-char *fp2str(FILE * fp);
-char *system_output(char *shell_command);
-char *getConfString(char configFiles[][MAX_PATH], int numFiles, char *key);
-int get_conf_var(const char *path, const char *name, char **value);
-char **from_var_to_char_list(const char *v);
-int hash_code(const char *s);
-int hash_code_bin(const char *buf, int buf_size);
-char *get_string_stats(const char *s);
-int daemonmaintain(char *cmd, char *procname, char *pidfile, int force, char *rootwrap);
-int daemonrun(char *incmd, char *pidfile);
-int vrun(const char *fmt, ...) _attribute_format_(1, 2);
-int cat(const char *file_name);
-int touch(const char *path);
-int diff(const char *path1, const char *path2);
-long long dir_size(const char *path);
-int write2file(const char *path, char *str);
-char *file2strn(const char *path, const ssize_t limit);
-char *file2str(const char *path);
-char *file2str_seek(char *file, size_t size, int mode);
-int uint32compar(const void *ina, const void *inb);
-int safekillfile(char *pidfile, char *procname, int sig, char *rootwrap);
-int safekill(pid_t pid, char *procname, int sig, char *rootwrap);
-int maxint(int a, int b);
-int minint(int a, int b);
-int copy_file(const char *src, const char *dst);
-long long file_size(const char *file_path);
-char *xpath_content(const char *xml, const char *xpath);
-int construct_uri(char *uri, char *uriType, char *host, int port, char *path);
-int tokenize_uri(char *uri, char *uriType, char *host, int *port, char *path);
-int ensure_directories_exist(const char *path, int is_file_path, const char *user, const char *group, mode_t mode);
-long long time_usec(void);
-long long time_ms(void);
-char *safe_mkdtemp(char *template);
-int safe_mkstemp(char *template);
-int get_blkid(const char *dev_path, char *uuid, unsigned int uuid_size);
-char parse_boolean(const char *s);
-int drop_privs(void);
-int timeshell(char *command, char *stdout_str, char *stderr_str, int max_size, int timeout);
-
-#ifdef _UNIT_TEST
-int main(int argc, char **argv);
-#endif /* _UNIT_TEST */
-
-/*----------------------------------------------------------------------------*\
- |                                                                            |
  |                              STATIC PROTOTYPES                             |
  |                                                                            |
 \*----------------------------------------------------------------------------*/
@@ -2773,10 +2711,13 @@ int main(int argc, char **argv)
         assert(get_remoteDevForNC(the_iqn, remoteDev, remoteDevForNC, sizeof(remoteDevForNC)) == 0);
         assert(strcmp(remoteDevForNC, "a,b,2,f,g,h") == 0);
 
-        char *remoteDevForNCGood =
-            "b483-1000,,1,kyF3TR2zPQ/t01+U6irzECGiVdrVbOPGPjVDJqmYwhWDaWAd5P98YkGzUmhrr/C3K1+M5qO//dXtFOyU90uxL0OuBdumb3zPJ3Tpfx7O0cQ8x+2XufKJl47G8Ca3vkravOXqyRV7hmFrvGsSZXk0eqzBN7liYBzkUdpj3zhe0PMwxft+e1WyQSAvNNB/Ea41jkrG8T0X2amYE9gflqmOZlWLUiJLZV6GgJ7rV3Xb3uKtEaLqHISuaGsK1FGT0oZzpNdd4DPTeo8mo+XfphlMq0NAIZl/+VdUfCRbGhU977koY4nPX3W7xwg+ZP5S3qGF+b9R7mrUD8s4izRkqSEZjg==,,192.168.25.182,iqn.1992-04.com.emc:cx.apm00121200804.a6";
-        remoteDev =
-            "b483-1000,,iqn.1994-05.com.redhat:d0d578d4d530=1|iqn.1994-05.com.redhat:e4a4c74e2470=1,kyF3TR2zPQ/t01+U6irzECGiVdrVbOPGPjVDJqmYwhWDaWAd5P98YkGzUmhrr/C3K1+M5qO//dXtFOyU90uxL0OuBdumb3zPJ3Tpfx7O0cQ8x+2XufKJl47G8Ca3vkravOXqyRV7hmFrvGsSZXk0eqzBN7liYBzkUdpj3zhe0PMwxft+e1WyQSAvNNB/Ea41jkrG8T0X2amYE9gflqmOZlWLUiJLZV6GgJ7rV3Xb3uKtEaLqHISuaGsK1FGT0oZzpNdd4DPTeo8mo+XfphlMq0NAIZl/+VdUfCRbGhU977koY4nPX3W7xwg+ZP5S3qGF+b9R7mrUD8s4izRkqSEZjg==,,192.168.25.182,iqn.1992-04.com.emc:cx.apm00121200804.a6";
+        char *remoteDevForNCGood = "b483-1000,,1,kyF3TR2zPQ/t01+U6irzECGiVdrVbOPGPjVDJqmYwhWDaWAd5P98YkGzUmhrr/C3K1+M5qO//dXtFOyU90uxL0OuBdumb3zPJ3Tpfx7O0cQ8x+2XufKJl47G8Ca3vk"
+            "ravOXqyRV7hmFrvGsSZXk0eqzBN7liYBzkUdpj3zhe0PMwxft+e1WyQSAvNNB/Ea41jkrG8T0X2amYE9gflqmOZlWLUiJLZV6GgJ7rV3Xb3uKtEaLqHISuaGsK1FGT0oZzpNdd4DPTe"
+            "o8mo+XfphlMq0NAIZl/+VdUfCRbGhU977koY4nPX3W7xwg+ZP5S3qGF+b9R7mrUD8s4izRkqSEZjg==,,192.168.25.182,iqn.1992-04.com.emc:cx.apm00121200804.a6";
+        remoteDev = "b483-1000,,iqn.1994-05.com.redhat:d0d578d4d530=1|iqn.1994-05.com.redhat:e4a4c74e2470=1,kyF3TR2zPQ/t01+U6irzECGiVdrVbOPGPjVDJqmYwhWDaWAd5P98YkGzUmhrr/C3K1+"
+            "M5qO//dXtFOyU90uxL0OuBdumb3zPJ3Tpfx7O0cQ8x+2XufKJl47G8Ca3vkravOXqyRV7hmFrvGsSZXk0eqzBN7liYBzkUdpj3zhe0PMwxft+e1WyQSAvNNB/Ea41jkrG8T0X2amYE9gflqmOZlWLUiJLZ"
+            "V6GgJ7rV3Xb3uKtEaLqHISuaGsK1FGT0oZzpNdd4DPTeo8mo+XfphlMq0NAIZl/+VdUfCRbGhU977koY4nPX3W7xwg+ZP5S3qGF+b9R7mrUD8s4izRkqSEZjg==,,192.168.25.182,iqn.1992-04.co"
+            "m.emc:cx.apm00121200804.a6";
         the_iqn = "iqn.1994-05.com.redhat:d0d578d4d530";
         assert(get_remoteDevForNC(the_iqn, remoteDev, remoteDevForNC, sizeof(remoteDevForNC)) == 0);
         assert(strcmp(remoteDevForNC, remoteDevForNCGood) == 0);

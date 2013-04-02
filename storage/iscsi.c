@@ -151,18 +151,6 @@ static sem *iscsi_sem = NULL;          //!< for serializing attach and detach in
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |
- |                             EXPORTED PROTOTYPES                            |
- |                                                                            |
-\*----------------------------------------------------------------------------*/
-
-void init_iscsi(const char *euca_home);
-char *connect_iscsi_target(const char *dev_string);
-int disconnect_iscsi_target(const char *dev_string);
-char *get_iscsi_target(const char *dev_string);
-int check_iscsi(const char *dev_string);
-
-/*----------------------------------------------------------------------------*\
- |                                                                            |
  |                              STATIC PROTOTYPES                             |
  |                                                                            |
 \*----------------------------------------------------------------------------*/

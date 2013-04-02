@@ -179,13 +179,13 @@ typedef enum {
 typedef enum {
     BLOBSTORE_COPY,
     BLOBSTORE_MAP,
-    BLOBSTORE_SNAPSHOT
+    BLOBSTORE_SNAPSHOT,
 } blockmap_relation_t;
 
 typedef enum {
     BLOBSTORE_DEVICE,
     BLOBSTORE_BLOCKBLOB,
-    BLOBSTORE_ZERO
+    BLOBSTORE_ZERO,
 } blockmap_source_t;
 
 /*----------------------------------------------------------------------------*\

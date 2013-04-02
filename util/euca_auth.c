@@ -164,34 +164,6 @@ static pthread_mutex_t init_mutex = PTHREAD_MUTEX_INITIALIZER;
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |
- |                             EXPORTED PROTOTYPES                            |
- |                                                                            |
-\*----------------------------------------------------------------------------*/
-
-int euca_init_cert(void);
-char *euca_get_cert(u8 options);
-char *base64_enc(u8 * sIn, int size);
-char *base64_dec(u8 * sIn, int size);
-char *hexify(unsigned char *data, int data_len);
-char *calc_fingerprint(const char *cert_filename);
-void free_key_value_pair_array(struct key_value_pair_array *kv_array);
-struct key_value_pair *deconstruct_header(const char *header_str, char delimiter);
-struct key_value_pair_array *convert_header_list_to_array(const struct curl_slist *header_list, char delimiter);
-char *construct_canonical_headers(struct key_value_pair_array *hdr_array);
-char *construct_canonical_uri(const char *url);
-char *construct_canonical_query(const char *url);
-char *construct_signed_headers(struct key_value_pair_array *hdr_array);
-char *eucav2_sign_request(const char *verb, const char *url, const struct curl_slist *headers);
-char *euca_sign_url(const char *sVerb, const char *sDate, const char *sURL);
-char *process_url(const char *content, int url_component);
-
-#ifdef _UNIT_TEST
-void print_key_value_pair_array(const struct key_value_pair_array *kv_array);
-int main(int argc, char **argv);
-#endif // _UNIT_TEST
-
-/*----------------------------------------------------------------------------*\
- |                                                                            |
  |                              STATIC PROTOTYPES                             |
  |                                                                            |
 \*----------------------------------------------------------------------------*/

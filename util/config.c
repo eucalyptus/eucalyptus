@@ -154,19 +154,6 @@ static time_t lastConfigMtime = 0;
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |
- |                             EXPORTED PROTOTYPES                            |
- |                                                                            |
-\*----------------------------------------------------------------------------*/
-
-void configInitValues(configEntry aNewConfigKeysRestart[], configEntry aNewConfigKeysNoRestart[]);
-int isConfigModified(char asConfigFiles[][MAX_PATH], u32 numFiles);
-char *configFileValue(const char *sKey);
-boolean configFileValueLong(const char *sKey, long *pVal);
-int readConfigFile(char asConfigFiles[][MAX_PATH], int numFiles);
-void configReadLogParams(int *pLogLevel, int *pLogRollNumber, long *pLogMaxSizeBytes, char **psLogPrefix);
-
-/*----------------------------------------------------------------------------*\
- |                                                                            |
  |                              STATIC PROTOTYPES                             |
  |                                                                            |
 \*----------------------------------------------------------------------------*/

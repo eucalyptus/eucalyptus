@@ -166,21 +166,6 @@ static bunchOfInstances **instances = NULL;
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |
- |                             EXPORTED PROTOTYPES                            |
- |                                                                            |
-\*----------------------------------------------------------------------------*/
-
-int check_backing_store(bunchOfInstances ** global_instances);
-int stat_backing_store(const char *conf_instances_path, blobstore_meta * work_meta, blobstore_meta * cache_meta);
-int init_backing_store(const char *conf_instances_path, unsigned int conf_work_size_mb, unsigned int conf_cache_size_mb);
-int save_instance_struct(const ncInstance * instance);
-ncInstance *load_instance_struct(const char *instanceId);
-int create_instance_backing(ncInstance * instance);
-int clone_bundling_backing(ncInstance * instance, const char *filePrefix, char *blockPath);
-int destroy_instance_backing(ncInstance * instance, boolean do_destroy_files);
-
-/*----------------------------------------------------------------------------*\
- |                                                                            |
  |                              STATIC PROTOTYPES                             |
  |                                                                            |
 \*----------------------------------------------------------------------------*/

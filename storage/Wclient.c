@@ -164,8 +164,8 @@ boolean debug = FALSE;
 
 #define USAGE()                                                                                                                                                      \
 {                                                                                                                                                                    \
-	fprintf (stderr, "Usage: Wclient [GetDecryptedImage|GetObject|HttpPut] -h [host:port] -u [URL] -m [manifest] -f [in|out file] -l [login] -p [password] [-z]\n"); \
-	exit (1);                                                                                                                                                        \
+	fprintf(stderr, "Usage: Wclient [GetDecryptedImage|GetObject|HttpPut] -h [host:port] -u [URL] -m [manifest] -f [in|out file] -l [login] -p [password] [-z]\n"); \
+	exit(1);                                                                                                                                                        \
 }
 
 /*----------------------------------------------------------------------------*\

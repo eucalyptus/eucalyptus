@@ -197,7 +197,7 @@ typedef enum {                         //!< paths to files containing...
 enum {
     DMSETUP,
     ROOTWRAP,
-    LASTHELPER
+    LASTHELPER,
 };
 
 /*----------------------------------------------------------------------------*\
@@ -280,7 +280,7 @@ static const char *blobstore_metadata_suffixes[] = {
     "loopback",
     "sig",
     "refs",
-    "hollow"
+    "hollow",
 };
 
 static void (*err_fn) (const char *msg) = NULL;
@@ -328,58 +328,6 @@ static char *cache_path = NULL;
 static blobstore *work_bs = NULL;
 static blobstore *cache_bs = NULL;
 static map *blob_map;
-#endif /* _EUCA_BLOBS */
-
-/*----------------------------------------------------------------------------*\
- |                                                                            |
- |                             EXPORTED PROTOTYPES                            |
- |                                                                            |
-\*----------------------------------------------------------------------------*/
-
-//! @{
-//! @name blobstore operations
-const char *blobstore_get_error_str(blobstore_error_t error);
-const char *blobstore_get_last_msg(void);
-const char *blobstore_get_last_trace(void);
-void blobstore_set_error_function(void (*fn) (const char *msg));
-struct flock *flock_whole_file(struct flock *l, short type);
-int blobstore_init(void);
-int blobstore_cleanup(void);
-blobstore *blobstore_open(const char *path, unsigned long long limit_blocks, unsigned int flags, blobstore_format_t format,
-                          blobstore_revocation_t revocation_policy, blobstore_snapshot_t snapshot_policy);
-int blobstore_close(blobstore * bs);
-int blobstore_lock(blobstore * bs, long long timeout_usec);
-int blobstore_unlock(blobstore * bs);
-int blobstore_delete(blobstore * bs);
-int blobstore_get_error(void);
-ssize_t get_line_desc(char **ppLine, size_t * n, int fd);
-int blobstore_stat(blobstore * bs, blobstore_meta * meta);
-int blobstore_fsck(blobstore * bs, int (*examiner) (const blockblob * bb));
-int blobstore_search(blobstore * bs, const char *regex, blockblob_meta ** results);
-int blobstore_delete_regex(blobstore * bs, const char *regex);
-//! @}
-
-//! @{
-//! @name blockblob operations
-blockblob *blockblob_open(blobstore * bs, const char *id, unsigned long long size_bytes, unsigned int flags, const char *sig, unsigned long long timeout_usec);
-int blockblob_close(blockblob * bb);
-int blockblob_delete(blockblob * bb, long long timeout_usec, char do_force);
-int blockblob_copy(blockblob * src_bb, unsigned long long src_offset_bytes, blockblob * dst_bb, unsigned long long dst_offset_bytes, unsigned long long len_bytes); //
-int blockblob_clone(blockblob * bb, const blockmap * map, unsigned int map_size);
-const char *blockblob_get_dev(blockblob * bb);
-const char *blockblob_get_file(blockblob * bb);
-unsigned long long blockblob_get_size_blocks(blockblob * bb);
-unsigned long long blockblob_get_size_bytes(blockblob * bb);
-int blockblob_sync(const char *dev_path, const blockblob * bb);
-//! @}
-
-#ifdef _UNIT_TEST
-int do_file_lock_test(void);
-int main(int argc, char **argv);
-#endif /* _UNIT_TEST */
-
-#ifdef _EUCA_BLOBS
-int main(int argc, char *argv[]);
 #endif /* _EUCA_BLOBS */
 
 /*----------------------------------------------------------------------------*\

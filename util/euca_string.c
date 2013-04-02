@@ -137,21 +137,6 @@
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |
- |                             EXPORTED PROTOTYPES                            |
- |                                                                            |
-\*----------------------------------------------------------------------------*/
-
-char *euca_strreplace(char **haystack, char *source, char *value);
-boolean euca_lscanf(const char *haystack, const char *format, void *value);
-char *euca_strestr(const char *haystack, const char *begin, const char *end);
-long long euca_strtoll(const char *string, const char *begin, const char *end);
-char *euca_strduptolower(const char *restrict string);
-char *euca_strdupcat(char *restrict s1, const char *restrict s2);
-char *euca_strncat(char *restrict dest, const char *restrict src, size_t size);
-char *euca_strncpy(char *restrict to, const char *restrict from, size_t size);
-
-/*----------------------------------------------------------------------------*\
- |                                                                            |
  |                              STATIC PROTOTYPES                             |
  |                                                                            |
 \*----------------------------------------------------------------------------*/

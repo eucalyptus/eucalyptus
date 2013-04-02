@@ -138,23 +138,6 @@
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |
- |                             EXPORTED PROTOTYPES                            |
- |                                                                            |
-\*----------------------------------------------------------------------------*/
-
-sem *sem_alloc(const int val, const char *typeName);
-sem *sem_realloc(const int val, const char *typeName, u32 flags);
-sem *sem_alloc_posix(sem_t * pExternalLock);
-void sem_free(sem * pSem);
-
-int sem_prolaag(sem * pSem, boolean doLog);
-int sem_p(sem * pSem);
-
-int sem_verhogen(sem * pSem, boolean doLog);
-int sem_v(sem * pSem);
-
-/*----------------------------------------------------------------------------*\
- |                                                                            |
  |                              STATIC PROTOTYPES                             |
  |                                                                            |
 \*----------------------------------------------------------------------------*/

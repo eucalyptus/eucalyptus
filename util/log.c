@@ -151,7 +151,7 @@ const char *log_level_names[] = {
     "WARN",
     "ERROR",
     "FATAL",
-    "OFF"
+    "OFF",
 };
 
 //!
@@ -177,7 +177,7 @@ const char *log_level_prefix[] = {
     "%T %L |",                         // WARN
     "%T %L |",                         // ERROR
     "%T %L |",                         // FATAL
-    ""
+    "",
 };
 
 /*----------------------------------------------------------------------------*\
@@ -214,27 +214,6 @@ static char log_custom_prefix[34] = USE_STANDARD_PREFIX;    //!< any other strin
 static sem *log_sem = NULL;            //!< if set, the semaphore will be used when logging & rotating logs
 static int syslog_facility = -1;       //!< if not -1 then we are logging to a syslog facility
 //! @}
-
-/*----------------------------------------------------------------------------*\
- |                                                                            |
- |                             EXPORTED PROTOTYPES                            |
- |                                                                            |
-\*----------------------------------------------------------------------------*/
-
-int log_level_int(const char *level);
-void log_params_set(int log_level_in, int log_roll_number_in, long log_max_size_bytes_in);
-int log_level_get(void);
-void log_params_get(int *log_level_out, int *log_roll_number_out, long *log_max_size_bytes_out);
-int log_file_set(const char *file);
-int log_prefix_set(const char *log_spec);
-int log_facility_set(const char *facility, const char *component_name);
-int log_sem_set(sem * s);
-int logfile(const char *file, int log_level_in, int log_roll_number_in);
-int logprintf(const char *format, ...) _attribute_format_(1, 2);
-int logprintfl(const char *func, const char *file, int line, log_level_e level, const char *format, ...) _attribute_format_(5, 6);
-int logcat(int debug_level, const char *file_path);
-void eventlog(char *hostTag, char *userTag, char *cid, char *eventTag, char *other);
-void log_dump_trace(char *buf, int buf_size);
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |

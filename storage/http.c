@@ -172,23 +172,6 @@ static boolean curl_initialized = FALSE;    //!< boolean to indicate if we have 
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |
- |                             EXPORTED PROTOTYPES                            |
- |                                                                            |
-\*----------------------------------------------------------------------------*/
-
-int http_put(const char *file_path, const char *url, const char *login, const char *password);
-
-char *url_encode(const char *unencoded);
-char *url_decode(const char *encoded);
-int http_get(const char *url, const char *outfile);
-int http_get_timeout(const char *url, const char *outfile, int total_retries, int first_timeout, int connect_timeout, int total_timeout);
-
-#ifdef _UNIT_TEST
-int main(int argc, char **argv);
-#endif /* _UNIT_TEST */
-
-/*----------------------------------------------------------------------------*\
- |                                                                            |
  |                              STATIC PROTOTYPES                             |
  |                                                                            |
 \*----------------------------------------------------------------------------*/

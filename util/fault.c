@@ -224,25 +224,6 @@ const char *euca_this_component_name = "generate-fault";
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |
- |                             EXPORTED PROTOTYPES                            |
- |                                                                            |
-\*----------------------------------------------------------------------------*/
-
-int init_eucafaults(const char *fileprefix);
-boolean is_redundant_eucafault(const char *fault_id, const char_map ** vars);
-boolean log_eucafault_map(const char *fault_id, const char_map ** map);
-int log_eucafault(const char *fault_id, ...);
-
-#ifdef _UNIT_TEST
-int main(int argc, char **argv);
-#endif /* _UNIT_TEST */
-
-#ifdef EUCA_GENERATE_FAULT
-int main(int argc, char **argv);
-#endif /* EUCA_GENERATE_FAULT */
-
-/*----------------------------------------------------------------------------*\
- |                                                                            |
  |                              STATIC PROTOTYPES                             |
  |                                                                            |
 \*----------------------------------------------------------------------------*/

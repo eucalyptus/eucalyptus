@@ -151,21 +151,6 @@
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |
- |                             EXPORTED PROTOTYPES                            |
- |                                                                            |
-\*----------------------------------------------------------------------------*/
-
-int hash_b64enc_string(const char *in, char **out);
-
-int str2md5str(char *sBuf, u32 bufSize, const char *sValue);
-
-char *file2md5str(const char *path);
-
-u32 jenkins(const char *key, size_t len);
-int hexjenkins(char *sBuf, u32 bufSize, const char *sValue);
-
-/*----------------------------------------------------------------------------*\
- |                                                                            |
  |                              STATIC PROTOTYPES                             |
  |                                                                            |
 \*----------------------------------------------------------------------------*/

@@ -126,14 +126,14 @@ const char *hypervsorCapabilityTypeNames[] = {
     "unknown",
     "xen",
     "hw",
-    "xen+hw"
+    "xen+hw",
 };
 
 //! List of string to convert the LIBVIRT device type enumeration
 const char *libvirtDevTypeNames[] = {
     "disk",
     "floppy",
-    "cdrom"
+    "cdrom",
 };
 
 //! List of string to convert the LIBVIRT bus types enumeration
@@ -141,13 +141,13 @@ const char *libvirtBusTypeNames[] = {
     "ide",
     "scsi",
     "virtio",
-    "xen"
+    "xen",
 };
 
 //! List of string to convert the LIBVIRT source types enumeration
 const char *libvirtSourceTypeNames[] = {
     "file",
-    "block"
+    "block",
 };
 
 //! List of string to convert the LIBVIRT NIC types enumeration
@@ -155,7 +155,7 @@ const char *libvirtNicTypeNames[] = {
     "none",
     "e1000",
     "rtl8139",
-    "virtio"
+    "virtio",
 };
 
 //! List of string to convert the NC resource types enumeration
@@ -166,7 +166,7 @@ const char *ncResourceTypeName[] = {
     "ephemeral",
     "swap",
     "ebs",
-    "boot"
+    "boot",
 };
 
 //! String value of each instance state enumeration entry
@@ -190,7 +190,7 @@ const char *instance_state_names[] = {
 
     "Pending",
     "Extant",
-    "Teardown"
+    "Teardown",
 };
 
 //! String value of each bundling progress state enumeration entry
@@ -199,7 +199,7 @@ const char *bundling_progress_names[] = {
     "bundling",
     "succeeded",
     "failed",
-    "cancelled"
+    "cancelled",
 };
 
 //! String value of each create image progress state enumeration entry
@@ -208,7 +208,7 @@ const char *createImage_progress_names[] = {
     "creating",
     "succeeded",
     "failed",
-    "cancelled"
+    "cancelled",
 };
 
 //! String value of each migrate-related state enumeration entry
@@ -217,7 +217,7 @@ const char *migration_state_names[] = {
     "preparing",
     "ready",
     "migrating",
-    "cleaning"
+    "cleaning",
 };
 
 //! String value of each error enumeration entry
@@ -238,7 +238,7 @@ const char *euca_error_names[] = {
     "access denied error",
     "no space available error",
     "timeout error",
-    "unknown"
+    "unknown",
 };
 
 /*----------------------------------------------------------------------------*\
@@ -246,43 +246,6 @@ const char *euca_error_names[] = {
  |                              STATIC VARIABLES                              |
  |                                                                            |
 \*----------------------------------------------------------------------------*/
-
-/*----------------------------------------------------------------------------*\
- |                                                                            |
- |                             EXPORTED PROTOTYPES                            |
- |                                                                            |
-\*----------------------------------------------------------------------------*/
-
-int allocate_virtualMachine(virtualMachine * pVirtMachineOut, const virtualMachine * pVirtMachingIn);
-int allocate_netConfig(netConfig * pNetCfg, const char *sPvMac, const char *sPvIp, const char *sPbIp, int vlan, int networkIndex);
-
-ncMetadata *allocate_metadata(const char *sCorrelationId, const char *sUserId) _attribute_wur_;
-void free_metadata(ncMetadata ** ppMeta);
-
-ncInstance *allocate_instance(const char *sUUID, const char *sInstanceId, const char *sReservationId, virtualMachine * pVirtMachine,
-                              const char *sStateName, int stateCode, const char *sUserId, const char *sOwnerId, const char *sAccountId,
-                              netConfig * pNetCfg, const char *sKeyName, const char *sUserData, const char *sLaunchIndex, const char *sPlatform,
-                              int expiryTime, char **asGroupNames, int groupNamesSize) _attribute_wur_;
-ncInstance *clone_instance(const ncInstance * old_instance);
-void free_instance(ncInstance ** ppInstance);
-int add_instance(bunchOfInstances ** ppHead, ncInstance * pInstance);
-int remove_instance(bunchOfInstances ** ppHead, ncInstance * pInstance);
-int for_each_instance(bunchOfInstances ** ppHead, void (*pFunction) (bunchOfInstances **, ncInstance *, void *), void *pParam);
-ncInstance *find_instance(bunchOfInstances ** ppHead, const char *instanceId);
-ncInstance *get_instance(bunchOfInstances ** ppHead);
-int total_instances(bunchOfInstances ** ppHead);
-
-ncResource *allocate_resource(const char *sNodeStatus, boolean migrationCapable, const char *sIQN, int memorySizeMax, int memorySizeAvailable, int diskSizeMax,
-                              int diskSizeAvailable, int numberOfCoresMax, int numberOfCoresAvailable, const char *sPublicSubnets) _attribute_wur_;
-void free_resource(ncResource ** ppresource);
-
-boolean is_volume_used(const ncVolume * pVolume);
-ncVolume *save_volume(ncInstance * pInstance, const char *sVolumeId, const char *sRemoteDev, const char *sLocalDev, const char *sLocalDevReal, const char *sStateName);
-ncVolume *free_volume(ncInstance * pInstance, const char *sVolumeId);
-
-bundleTask *allocate_bundleTask(ncInstance * pInstance) _attribute_wur_;
-
-migration_states migration_state_from_string(const char *migration_state_name);
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |
