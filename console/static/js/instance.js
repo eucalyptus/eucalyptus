@@ -951,10 +951,10 @@
 
     _tagResourceAction : function(){
       var thisObj = this;
-      var instance = thisObj.tableWrapper.eucatable('getSelectedRows', 17)[0];
+      var instance = thisObj.tableWrapper.eucatable('getSelectedRows', 17);
       if ( instance.length > 0 ) {
         require(['app'], function(app) {
-           app.dialog('edittags', app.data.instance.get(instance));
+           app.dialog('edittags', app.data.instance.get(instance[0]));
         });
        }
     },
