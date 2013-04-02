@@ -173,7 +173,7 @@ define([], function() {
       var offset = -(position - index);
       if (!navigationController || navigationController(offset)) {
         if (typeof self.current === 'object' && typeof self.current.isValid === 'function') {
-            if (! self.current.isValid()) {
+            if (! self.current.isValid() && index > position) {
               return self.current;
             }
         }
