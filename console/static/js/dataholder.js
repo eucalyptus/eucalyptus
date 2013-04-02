@@ -36,6 +36,8 @@ function(Backbone, ScalingGroups, Volumes, Images, LaunchConfigs, Instances, Eip
     shared.volume = shared.volumes;
     shared.launchconfig = shared.launchConfigs;
     shared.scalingGroup = shared.scalingGroups;
+    shared.scalinggroup = shared.scalingGroups;
+    shared.scalinggrp = shared.scalingGroups;
 
 	shared.launchConfigs.fetch();
 	shared.scalingGroups.fetch();
