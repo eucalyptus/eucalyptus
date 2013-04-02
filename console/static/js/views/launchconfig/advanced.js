@@ -2,9 +2,13 @@ define([
 	'dataholder',
   'text!./advanced.html!strip',
   'rivets',
-	], function( dataholder, template, rivets ) {
+  './model/blockmap'
+	], function( dataholder, template, rivets, blockmap ) {
 	return Backbone.View.extend({
     title: 'Advanced',
+    launchConfigErrors: new Backbone.Model({size: ''}),
+    
+     
 
 		initialize : function() {
 
@@ -49,7 +53,10 @@ define([
         },
 
         setStorageVolume: function(e, obj) {
-          var m = new Backbone.Model();
+          var m = new blockmap();
+          self.launchConfigErrors.clear();
+          m.on('validated:invalid', function(o, errors) { self.launchConfigErrors.set('size', errors.size)});
+
           var tr = $(e.target).closest('tr');
           var vol = tr.find('.launch-wizard-advanced-storage-volume-selector').val();
           var dev = "/dev/" + tr.find('.launch-wizard-advanced-storage-mapping-input').val();
@@ -72,8 +79,10 @@ define([
               ephemeral_name: null    
           });
 
-          this.blockDeviceMappings.add(m);
-           console.log("DEVMAP", this.blockDeviceMappings); 
+          m.validate();
+          if (m.isValid()) {
+            this.blockDeviceMappings.add(m);
+          }
         },
 
         delStorageVol: function(e, obj) {
@@ -109,7 +118,9 @@ define([
             var partition = model.get('map_name').replace(/\/dev\/([a-z]*)([0-9]{1,2})/, '$2');
             return drive + (++partition);
           }
-        }
+        },
+
+        launchConfigErrors: self.launchConfigErrors
 
       };
 

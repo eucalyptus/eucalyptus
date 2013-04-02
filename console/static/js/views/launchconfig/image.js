@@ -45,8 +45,8 @@ define([
                 self.model.set('image_platform', images.image.get('platform') ? images.image.get('platform') : 'Linux');
                 self.model.set('image_location', images.image.get('location'));
                 self.model.set('image_description', images.image.get('description'));
-                self.model.set('image_iconclass', this.setClass(images.image));
                 */
+                self.model.set('image_iconclass', this.setClass(images.image));
                 self.image_selected = images.image.get('id');
                 self.model.set(images.image.toJSON());
                 self.model.set('platform', this.setClass(self.model));
