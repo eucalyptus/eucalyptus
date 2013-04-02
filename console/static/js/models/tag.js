@@ -5,6 +5,7 @@ define([
     'backbone'
 ], function(Backbone) {
     var model = Backbone.Model.extend({
+      idAttribute: 'uid',
       validation: {
         
         // ====================

@@ -3018,8 +3018,8 @@ textarea.console-output {
 
 /*------- euca icons -------*/
 
-.Eucalyptis_IconSheet_20{ background: url(/images/csg-5150d9193b75a.png) no-repeat top left;  background-position: 0 0; width: 27px; height: 27px; } 
-.Eucalyptis_IconSheet_22{ background: url(/images/csg-5150d9193b75a.png) no-repeat top left;  background-position: 0 -77px; width: 27px; height: 27px; } 
+.icon_cancel{ background: url(/images/csg-5150d9193b75a.png) no-repeat top left;  background-position: 0 0; width: 27px; height: 27px; } 
+a:hover .icon_cancel{ background: url(/images/csg-5150d9193b75a.png) no-repeat top left;  background-position: 0 -77px; width: 27px; height: 27px; } 
 .icon_approve{background: url(/images/csg-5150d9193b75a.png) no-repeat top left;  background-position: 0 -154px; width: 27px; height: 27px; } 
  a:hover .icon_approve{background: url(/images/csg-5150d9193b75a.png) no-repeat top left;  background-position: 0 -231px; width: 27px; height: 27px; } 
 .icon_delete{background: url(/images/csg-5150d9193b75a.png) no-repeat top left;  background-position: 0 -308px; width: 27px; height: 27px; } 
@@ -3212,3 +3212,10 @@ filter: progid:DXImageTransform.Microsoft.gradient( startColorstr='#ededed', end
   float: left;
 }
 
+.tags-edited {
+  color: black;
+}
+
+.tags-deleted {
+  color: red;
+}
