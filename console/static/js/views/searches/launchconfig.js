@@ -27,7 +27,7 @@ define([
 
 
     var config = {
-      facets: ['all_text', 'os', 'instance_type'],
+      facets: ['all_text', 'os', 'instance_type', 'root_device_type'],
       localize: {
         state: 'Status',
         't1.micro': 'Micro',
@@ -42,14 +42,25 @@ define([
           if (img && img.platform) {
             add(img.platform);
           }
+        },
+        root_device_type: function(search, item, add) {
+          var img = imageForID[item.image_id];
+          if (img && img.root_device_type == item.root_device_type) {
+            add(img.root_device_type);
+          }
         }
       },
       search: {
         os: function(search, facetSearch, item, itemsFacetValue, hit) {
-          console.log("ITEM", item);
           var img = imageForID[item.image_id];
-          console.log("IMAGE FOR ID", img);
           if (img && facetSearch === img.platform) {
+            hit();
+          }
+          return true;
+        },
+        root_device_type: function(search, facetSearch, item, itemsFacetValue, hit) {
+          var img = imageForID[item.image_id];
+          if (img && facetSearch === img.root_device_type) {
             hit();
           }
           return true;
