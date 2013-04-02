@@ -13,9 +13,10 @@ define([
             var tags = new Backbone.Collection();
 
             // Clone the collection and add a status field;
-            args.model.get('tags').each(function(t) { 
+            var origtags = args.model.get('tags');
+            origtags.each(function(t) { 
                 var newt = new Tag(t.toJSON());
-                newt.set({_clean: true, _deleted: false, _edited: false, _edit: false});
+                newt.set({_clean: true, _deleted: false, _edited: false, _edit: false, _new: false});
                 tags.push(newt);
             });
 
@@ -30,7 +31,7 @@ define([
                 create: function() {
                     console.log('create');
                     var newt = new Tag(self.scope.newtag.toJSON());
-                    newt.set({_clean: true, _deleted: false, _edited: false, _edit: false});
+                    newt.set({_clean: true, _deleted: false, _edited: false, _edit: false, _new: true});
                     newt.set('id', args.model.get('id') + '-' + newt.get('name'));
                     self.scope.tags.add(newt);
                     self.scope.newtag.clear();
@@ -71,6 +72,11 @@ define([
 
                 confirmButton: {
                   click: function() {
+                       tags.each(function(t) {
+                           console.log(t);
+                           if (t.get('_new') && !t.get('_deleted')) origtags.push(t);
+                           if (t.get('_deleted')) _.each(origtags.where({id: t.id}), function(ot) { console.log('remove', ot); origtags.remove(ot) });
+                       });
                        self.close();
                   }
                 }

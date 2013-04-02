@@ -160,12 +160,7 @@
       }
 
       if ( selectedScaling.length >= 1) {
-        itemsList['delete'] = {"name":scaling_action_delete, callback: function(key, opt){
-          var in_use = false;
-          // Until DescribeScalingActivities is implemented on CLC, we can't tell if
-          // something is in progress. For now, we'll always allow the user to try.
-          thisObj._dialogAction('deleteScalingGroup', {groups:selectedScaling, not_allowed:in_use});
-        }}
+        itemsList['delete'] = {"name":scaling_action_delete, callback: function(key, opt){ thisObj._dialogAction('deletescalinggroup', selectedScaling); }}
       }
 
       return itemsList;
@@ -173,8 +168,9 @@
 
     _dialogAction: function(dialog, selectedScaling) {
         require(['underscore', 'app'], function(_, app) {
-
-            app.dialog(dialog, _.map(selectedScaling, function(s) { return app.data.scalinggrp.get(s); }));
+            var sgrps = new Backbone.Collection();
+            _.each(selectedScaling, function(s) { sgrps.push(app.data.scalinggrp.get(s)); });
+            app.dialog(dialog, sgrps);
         });
     }
   });

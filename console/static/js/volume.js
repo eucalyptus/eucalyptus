@@ -670,14 +670,12 @@
     },
 
     _tagResourceAction : function(){
-      var thisObj = this;
-      var volume = thisObj.tableWrapper.eucatable('getSelectedRows', 10)[0];
-      if ( volume.length > 0 ) {
-        // Create a widget object for displaying the resource tag information
-        var $tagInfo = $('<div>').addClass('resource-tag-table-expanded-volume').addClass('clearfix').euca_resource_tag({resource: 'volume', resource_id: volume, cancelButtonCallback: function(){ thisObj.tagDialog.eucadialog("close"); }, widgetMode: 'edit' });
-        thisObj.tagDialog.eucadialog('addNote','tag-modification-display-box', $tagInfo);   // This line should be adjusted once the right template is created for the resource tag.  030713
-        thisObj.tagDialog.eucadialog('open');
-      }
+      var selected = this.tableWrapper.eucatable('getSelectedRows', 10);
+      if ( selected.length > 0 ) {
+        require(['app'], function(app) {
+           app.dialog('edittags', app.data.volume.get(selected[0]));
+        });
+       }
     },
 
     _expandCallback : function(row){ 
