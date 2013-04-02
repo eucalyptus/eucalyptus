@@ -1573,6 +1573,10 @@ public class BlockStorage {
 
 	public static class VolumeDeleterTask extends CheckerTask {
 
+		public VolumeDeleterTask() {
+			this.name = "VolumeDeleter";
+		}
+		
 		@Override
 		public void run() {
 			EntityWrapper<VolumeInfo> db = StorageProperties.getEntityWrapper();
