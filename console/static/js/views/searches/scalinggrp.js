@@ -5,7 +5,8 @@ define([
     var config = {
       facets: ['launch_config_name', 'health_check_type', 'availability_zones'],
       localize: {
-        launch_config_name: 'Launch Config'
+        launch_config_name: 'Launch Config',
+        EC2 : 'Compute'
       }
     }
     return new Search(images, config);
