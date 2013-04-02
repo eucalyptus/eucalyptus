@@ -34,6 +34,7 @@ from json import JSONDecoder
 from boto.ec2 import EC2Connection
 from boto.ec2.ec2object import EC2Object
 from boto.regioninfo import RegionInfo
+from boto.ec2.instance import Instance
 from boto.ec2.blockdevicemapping import BlockDeviceType
 from boto.ec2.image import ImageAttribute
 from boto.ec2.instance import ConsoleOutput
@@ -120,7 +121,11 @@ class BotoJsonEncoder(JSONEncoder):
             logging.error(e)
 
     def default(self, obj):
-        if issubclass(obj.__class__, EC2Object):
+        if isinstance(obj, boto.ec2.instance.Instance):
+            values = self.__sanitize_and_copy__(obj.__dict__)
+            values['__obj_name__'] = 'Instance'
+            return (values)
+        elif issubclass(obj.__class__, EC2Object):
             values = self.__sanitize_and_copy__(obj.__dict__)
             values['__obj_name__'] = obj.__class__.__name__
             return (values)
