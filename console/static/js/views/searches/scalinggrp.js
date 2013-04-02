@@ -1,7 +1,13 @@
 define([
-    'views/searches/generic',
+  'views/searches/generic',
 ], function(Search) {
-    return function(images) {
-      return new Search(images, ['launch_config_name', 'health_check_type', 'availability_zones'], {}, null);
+  return function(images) {
+    var config = {
+      facets: ['launch_config_name', 'health_check_type', 'availability_zones'],
+      localize: {
+        launch_config_name: 'Launch Config'
+      }
     }
+    return new Search(images, config);
+  }
 });
