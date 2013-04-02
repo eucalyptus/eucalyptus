@@ -1,21 +1,18 @@
 define([
+   'app',
    './eucadialogview',
    'text!./quickscaledialog.html!strip',
-], function(EucaDialogView, template) {
+], function(app, EucaDialogView, template) {
     return EucaDialogView.extend({
         initialize : function(args) {
             var self = this;
+            var original = args.model[0];
+            var model = original.clone();
             this.template = template;
-            this.name = args.items.name,
-            this.original = args.items.desired,
             this.scope = {
-                qscale: new Backbone.Model({
-                    name: args.items.name,
-                    size: args.items.size,
-                    minimum: args.items.min,
-                    maximum: args.items.max,
-                    desired: args.items.desired
-                }),
+                errors: new Backbone.Model(),
+
+                qscale: model,
 
                 cancelButton: {
                     click: function() {
@@ -25,18 +22,22 @@ define([
 
                 submitButton: {
                     click: function() {
-                      if (self.original != self.scope.qscale.get('desired')) {
-                        require(['app'], function(app) {
-                          app.data.scalingGroup.get(self.name).setDesiredCapacity(self.scope.qscale.get('desired'));
-                          self.close();
-                        });
-                      }
-                      else {
-                        self.close();
-                      }
+                       original.set(model.toJSON());
+                       self.close();
                     }
                 }
             }
+
+            this.scope.qscale.on('change', function(model) {
+                console.log('CHANGE', arguments);
+                self.scope.qscale.validate(model.changed);
+            });
+
+            this.scope.qscale.on('validated', function(valid, model, errors) {
+                _.each(_.keys(model.changed), function(key) { 
+                    self.scope.errors.set(key, errors[key]); 
+                });
+            });
 
             this._do_init();
         },

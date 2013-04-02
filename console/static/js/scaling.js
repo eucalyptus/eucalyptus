@@ -153,15 +153,7 @@
       })();
 
       if ( selectedScaling.length === 1) {
-        itemsList['quick'] = {"name":scaling_action_quick, callback: function(key, opt){
-          var scaling_groups = describe('scalinggrp');
-          _.find(scaling_groups, function(group) {
-            if (group.name == selectedScaling[0]) {
-              var params = {name:group.name, size:group.instances.length, min:group.min_size, max:group.max_size, desired:group.desired_capacity};
-              thisObj._dialogAction('quickscaledialog', params);
-            }
-          });
-        }}
+        itemsList['quick'] = {"name":scaling_action_quick, callback: function(key, opt){ thisObj._dialogAction('quickscaledialog', selectedScaling); }}
         itemsList['suspend'] = {"name":scaling_action_suspend, callback: function(key, opt){ thisObj._dialogAction('suspendscalinggroup', selectedScaling); }}
         itemsList['resume'] = {"name":scaling_action_resume, callback: function(key, opt){ thisObj._dialogAction('resumescalinggroup', selectedScaling); }}
         itemsList['edit'] = {"name":scaling_action_edit, callback: function(key, opt){ thisObj._dialogAction('editscalinggroup', selectedScaling); }}
@@ -180,9 +172,9 @@
     },
 
     _dialogAction: function(dialog, selectedScaling) {
-        console.log('Would do', dialog, selectedScaling);
-        require(['views/dialogs/' + dialog], function(dialog) {
-            new dialog({items: selectedScaling});
+        require(['underscore', 'app'], function(_, app) {
+
+            app.dialog(dialog, _.map(selectedScaling, function(s) { return app.data.scalinggrp.get(s); }));
         });
     }
   });
