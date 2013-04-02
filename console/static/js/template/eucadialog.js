@@ -303,15 +303,26 @@
       $head.append($tr);
       $.each(resources.contents, function(i, row){
         $tr = $('<tr>');
-        $.each(row, function(j, val){
+        if(resources.included_display_id == true){     // SPECIAL CASE: included_display_id: true   row[0] = id, row[1] = display_id
           $td = $('<td>');
-          if (resources.hideColumn == j){
-            $td.css('display', 'none');
-            $td.text(val);			// BEFORE XSS: $td.append(val);		NEEDS TO VERIFY	020313 
-          } else
-            $td.append($('<span>').attr('title', val).text(addEllipsis(val,maxLimit)));
+          $td.append($('<span>').attr('title', row[0]).text(addEllipsis(row[1],maxLimit)));
           $tr.append($td);
-        });
+          $td2 = $('<td>');                    // Construct an extra, invisible column to store the resource id
+          $td2.css('display', 'none');
+          $td2.text(row[0]);
+          $tr.append($td2); 
+        }else{
+          $.each(row, function(j, val){
+            $td = $('<td>');
+            if (resources.hideColumn == j){
+              $td.css('display', 'none');
+              $td.text(val);			// BEFORE XSS: $td.append(val);		NEEDS TO VERIFY	020313 
+            } else {
+              $td.append($('<span>').attr('title', val).text(addEllipsis(val,maxLimit)));
+            };
+            $tr.append($td);
+          });
+        };
         $body.append($tr);
       });
       return true; 

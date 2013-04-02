@@ -70,14 +70,18 @@
               },
             },
             { 
-	      // Display the id of the instance in the main table
+	      // Display the display_id of the instance in the main table
+	      // If display_id doesn't exist, display its id
 	      // Allow the id to be clickable to display the platform data above
 	      // Use CSS 'twist'
 	      "aTargets":[2],
-	      "mRender" : function(data){
-                 return eucatableDisplayColumnTypeTwist(data, data, 255);
-	      },
-              "mData": "display_id",
+              "mData": function(source){
+                this_title = source.id;
+                this_id = source.id;
+                if(source.display_id)
+                  this_id = source.display_id;
+                return eucatableDisplayColumnTypeTwist(this_title, this_id, 255);
+              },
             },
             { 
 	      // Display the status of the instance in the main table
@@ -218,13 +222,26 @@
               "mData": "ip_address",
             },
             { 
-	      // Hidden column for the instance of the instance
+	      // Hidden column for the instance id of the instance
               "bVisible": false,
               "aTargets":[17],
 	      "mRender": function(data) {
                 return DefaultEncoder().encodeForHTML(data);
               },
               "mData": "id",
+            },
+            { 
+	      // Hidden column for the display_id of the instance
+              "bVisible": false,
+              "aTargets":[18],
+	      "mRender": function(data) {
+                return DefaultEncoder().encodeForHTML(data);
+              },
+              "mData": function(source){
+                if(source.display_id)
+                  return source.display_id;
+                return null;
+              },
             },
           ]
         },
@@ -538,24 +555,30 @@
 /// Action methods
     _terminateAction : function(){
       var thisObj = this;
-      var instances = thisObj.tableWrapper.eucatable('getSelectedRows', 2);
+      var instances = thisObj.tableWrapper.eucatable('getSelectedRows', 17);
+      var display_ids = thisObj.tableWrapper.eucatable('getSelectedRows', 18);
       var rootType = thisObj.tableWrapper.eucatable('getSelectedRows', 11);
       if ( instances.length > 0 ) {
         var matrix = [];
+        // Push the instance id and its display_id into the matrix
         $.each(instances, function(idx,id){
-//          id = $(id).html();  // After dataTable 1.9 integration, this operation is no longer needed. 030413
-          matrix.push([id]);
+          this_display_id = id;
+          if( display_ids[idx] != null )
+            this_display_id = display_ids[idx];
+          matrix.push([id, this_display_id]);
         });
         if ($.inArray('ebs',rootType)>=0){
           thisObj.termDialog.eucadialog('addNote','ebs-backed-warning', instance_dialog_ebs_warning); 
         }
-        thisObj.termDialog.eucadialog('setSelectedResources', {title: [instance_label], contents: matrix});
+        // included_display_id : true is added to attach instance ID to the second column in the eucadialog resource table -- Kyo 040113   No Joke
+        thisObj.termDialog.eucadialog('setSelectedResources', {title: [instance_label], contents: matrix, included_display_id: true});
         thisObj.termDialog.eucadialog('open');
        }
     },
+
     _terminateInstances : function(){
       var thisObj = this;
-      var instances = thisObj.termDialog.eucadialog('getSelectedResources',0);
+      var instances = thisObj.termDialog.eucadialog('getSelectedResources', 1);    // Now eucadialog's column[1] contains the instance id 
       var toTerminate = instances.slice(0);
       var instIds = '';
       for(i=0; i<instances.length; i++)
@@ -591,20 +614,23 @@
     },
     _rebootAction : function(){
       var thisObj = this;
-      var instances = thisObj.tableWrapper.eucatable('getSelectedRows', 2);
+      var instances = thisObj.tableWrapper.eucatable('getSelectedRows', 17);
+      var display_ids = thisObj.tableWrapper.eucatable('getSelectedRows', 18);
       if ( instances.length > 0 ) {
         var matrix = [];
         $.each(instances, function(idx,id){
-//          id = $(id).html();  // After dataTable 1.9 integration, this operation is no longer needed. 030413
-          matrix.push([id]);
+          this_display_id = id;
+          if( display_ids[idx] != null )
+            this_display_id = display_ids[idx];
+          matrix.push([id, this_display_id]);
         });
-        thisObj.rebootDialog.eucadialog('setSelectedResources', {title: [instance_label], contents: matrix});
+        thisObj.rebootDialog.eucadialog('setSelectedResources', {title: [instance_label], contents: matrix, included_display_id: true});
         thisObj.rebootDialog.eucadialog('open');
        }
     },
     _rebootInstances : function(){
       var thisObj = this;
-      var instances = thisObj.rebootDialog.eucadialog('getSelectedResources',0);
+      var instances = thisObj.rebootDialog.eucadialog('getSelectedResources', 1);
       //instances = instances.join(' ');
       var instIds = '';
       for(i=0; i<instances.length; i++)
@@ -631,20 +657,23 @@
     },
     _stopAction : function(){
       var thisObj = this;
-      var instances = thisObj.tableWrapper.eucatable('getSelectedRows', 2);
+      var instances = thisObj.tableWrapper.eucatable('getSelectedRows', 17);
+      var instances = thisObj.tableWrapper.eucatable('getSelectedRows', 18);
       if ( instances.length > 0 ) {
         var matrix = [];
         $.each(instances, function(idx,id){
-//          id = $(id).html();   // After dataTable 1.9 integration, this operation is no longer needed. 030413
-          matrix.push([id]);
+          this_display_id = id;
+          if( display_ids[idx] != null )
+            this_display_id = display_ids[idx];
+          matrix.push([id, this_display_id]);
         });
-        thisObj.stopDialog.eucadialog('setSelectedResources', {title: [instance_label], contents: matrix});
+        thisObj.rebootDialog.eucadialog('setSelectedResources', {title: [instance_label], contents: matrix, included_display_id: true});
         thisObj.stopDialog.eucadialog('open');
        }
     },
     _stopInstances : function(){
       var thisObj = this;
-      var instances = thisObj.stopDialog.eucadialog('getSelectedResources',0);
+      var instances = thisObj.stopDialog.eucadialog('getSelectedResources', 1);
       var toStop = instances.slice(0);
       var instIds = '';
       for(i=0; i<instances.length; i++)
@@ -678,7 +707,7 @@
     },
     _startInstances : function(){
       var thisObj = this;
-      var instances = thisObj.tableWrapper.eucatable('getSelectedRows', 2);
+      var instances = thisObj.tableWrapper.eucatable('getSelectedRows', 17);
 //      $.each(instances, function(idx, instance){
 //        instances[idx] = $(instance).html();   // After dataTable 1.9 integration, this operation is no longer needed. 030413
 //      });
@@ -717,7 +746,7 @@
     },
     _connectAction : function(){
       var thisObj = this;
-      var instances = thisObj.tableWrapper.eucatable('getSelectedRows', 2);
+      var instances = thisObj.tableWrapper.eucatable('getSelectedRows', 17);
       var oss = thisObj.tableWrapper.eucatable('getSelectedRows', 1);
       var keyname = thisObj.tableWrapper.eucatable('getSelectedRows', 8);
       var ip = thisObj.tableWrapper.eucatable('getSelectedRows', 6);
@@ -779,34 +808,37 @@
     },
     _consoleAction : function() {
       var thisObj = this;
-      var instances = thisObj.tableWrapper.eucatable('getSelectedRows', 2);
-      instances=instances[0];
-//      instances = $(instances).html();    // After dataTable 1.9 integration, this operation is no longer needed. 030413
+      var instance = thisObj.tableWrapper.eucatable('getSelectedRows', 17)[0];
+      var display_id = thisObj.tableWrapper.eucatable('getSelectedRows', 18)[0];
       $.when( 
         $.ajax({
           type:"POST",
           url:"/ec2?Action=GetConsoleOutput",
-          data:"_xsrf="+$.cookie('_xsrf')+"&InstanceId="+instances,
+          data:"_xsrf="+$.cookie('_xsrf')+"&InstanceId="+instance,
           dataType:"json",
           async:true,
         })).done(function(data){
+          // Convert the value 'instance' to its display_id 
+          if( display_id != null ){
+            instance = display_id;
+          }
           if(data && data.results){
-            var newTitle = $.i18n.prop('instance_dialog_console_title',  DefaultEncoder().encodeForHTML(instances));
+            var newTitle = $.i18n.prop('instance_dialog_console_title',  DefaultEncoder().encodeForHTML(instance));
             thisObj.consoleDialog.data('eucadialog').option('title', newTitle);
             thisObj.consoleDialog.find('#instance-console-output').children().detach();
             thisObj.consoleDialog.find('#instance-console-output').append(
               $('<textarea>').attr('id', 'instance-console-output-text').addClass('console-output').text(data.results.output));
             thisObj.consoleDialog.eucadialog('open');
           }else{
-            notifyError($.i18n.prop('instance_console_error',  DefaultEncoder().encodeForHTML(instances)), undefined_error);
+            notifyError($.i18n.prop('instance_console_error',  DefaultEncoder().encodeForHTML(instance)), undefined_error);
           }
         }).fail(function(out){
-          notifyError($.i18n.prop('instance_console_error',  DefaultEncoder().encodeForHTML(instances)), getErrorMessage(out));
+          notifyError($.i18n.prop('instance_console_error',  DefaultEncoder().encodeForHTML(instance)), getErrorMessage(out));
         });
     },
     _attachAction : function() {
       var thisObj = this;
-      var instanceToAttach = thisObj.tableWrapper.eucatable('getSelectedRows', 2)[0];
+      var instanceToAttach = thisObj.tableWrapper.eucatable('getSelectedRows', 17)[0];
 //      instanceToAttach=$(instanceToAttach).html();   // After dataTable 1.9 integration, this operation is no longer needed. 030413
       attachVolume(null, instanceToAttach);
     },
@@ -814,7 +846,7 @@
     _initDetachDialog : function(dfd) {  // should resolve dfd object
       var thisObj = this;
       var results = describe('volume');
-      var instance = this.tableWrapper.eucatable('getSelectedRows', 2)[0];
+      var instance = this.tableWrapper.eucatable('getSelectedRows', 17)[0];
  //     instance = $(instance).html();   // After dataTable 1.9 integration, this operation is no longer needed. 030413
       $msg = this.detachDialog.find('#volume-detach-msg');
       $msg.html($.i18n.prop('inst_volume_dialog_detach_text', DefaultEncoder().encodeForHTML(instance)));
@@ -867,7 +899,7 @@
     },
 
     _detachAction : function(){
-      var instance = this.tableWrapper.eucatable('getSelectedRows', 2)[0];
+      var instance = this.tableWrapper.eucatable('getSelectedRows', 17)[0];
 //      instance = $(instance).html();   // After dataTable 1.9 integration, this operation is no longer needed. 030413
       $instId = this.detachDialog.find('#volume-detach-instance-id');
       $instId.val(instance);
@@ -930,7 +962,7 @@
     },
     _associateAction : function(){
       var thisObj = this;
-      var instance = thisObj.tableWrapper.eucatable('getSelectedRows', 2)[0];
+      var instance = thisObj.tableWrapper.eucatable('getSelectedRows', 17)[0];
 //      instance = $(instance).html();  // After dataTable 1.9 integration, this operation is no longer needed. 030413
       associateIp(instance);
     },
@@ -965,7 +997,7 @@
 
     _launchMore : function(){
       var thisObj = this;
-      var id = this.tableWrapper.eucatable('getSelectedRows', 2)[0];
+      var id = this.tableWrapper.eucatable('getSelectedRows', 17)[0];
 //      id = $(id).html();    // After dataTable 1.9 integration, this operaiton is no longer needed. 030413
       var filter = {};
       var result = describe('instance');
@@ -1044,7 +1076,7 @@
     },
     _initLaunchMoreDialog : function(){
       var thisObj = this;
-      var id = this.tableWrapper.eucatable('getSelectedRows', 2)[0];
+      var id = this.tableWrapper.eucatable('getSelectedRows', 17)[0];
 //      id = $(id).html();       // After dataTable 1.9 integration, this operation is no longer needed.  030413 
       var filter = {};
       var result = describe('instance');
