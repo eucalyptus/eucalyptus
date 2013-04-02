@@ -134,7 +134,7 @@
 //! @{
 //! @name Manages the configurations parameters that are only picked on application restart
 
-static u32 configRestartLen = 0;    //!< Number of items present in the restart list
+static u32 configRestartLen = 0;       //!< Number of items present in the restart list
 static configEntry *aConfigKeysRestart = NULL;  //!< The key pair list of items where key is the config parameter name and value is the default value
 static char *asConfigValuesRestart[256] = { NULL }; //!< The list of modified values for each items in the list
 
@@ -143,7 +143,7 @@ static char *asConfigValuesRestart[256] = { NULL }; //!< The list of modified va
 //! @{
 //! @name Manages the configurations parameters that are only picked at all time during the application lifecycle
 
-static u32 configNoRestartLen = 0;  //!< Number of items present in the no-restart list
+static u32 configNoRestartLen = 0;     //!< Number of items present in the no-restart list
 static configEntry *aConfigKeysNoRestart = NULL;    //!< The key pair list of items where key is the config parameter name and value is the default value
 static char *asConfigValuesNoRestart[256] = { NULL };   //!< The list of modified values for each items in the list
 
@@ -391,8 +391,7 @@ int readConfigFile(char asConfigFiles[][MAX_PATH], int numFiles)
 
         if (configNoRestartLen) {
             if ((!old && new) || (old && !new) || ((old && new) && strcmp(old, new))) {
-                LOGINFO("configuration file changed (KEY=%s, ORIGVALUE=%s, NEWVALUE=%s): change will take effect immediately.\n",
-                        aConfigKeysNoRestart[i].key, SP(old), SP(new));
+                LOGINFO("configuration file changed (KEY=%s, ORIGVALUE=%s, NEWVALUE=%s): change will take effect immediately.\n", aConfigKeysNoRestart[i].key, SP(old), SP(new));
                 ret++;
                 EUCA_FREE(asConfigValuesNoRestart[i]);
                 asConfigValuesNoRestart[i] = new;

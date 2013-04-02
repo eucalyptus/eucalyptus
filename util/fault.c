@@ -74,7 +74,7 @@
  |                                                                            |
 \*----------------------------------------------------------------------------*/
 
-#define _FILE_OFFSET_BITS 64    // so large-file support works on 32-bit systems
+#define _FILE_OFFSET_BITS 64           // so large-file support works on 32-bit systems
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -163,8 +163,8 @@ enum faultdir_types {
 
 //! Linked list of faults being deliberately suppressed.
 struct suppress_list {
-    char *id;                   //!< Fault identifier string
-    struct suppress_list *next; //!< Pointer to the next fault in line
+    char *id;                          //!< Fault identifier string
+    struct suppress_list *next;        //!< Pointer to the next fault in line
 };
 
 /*----------------------------------------------------------------------------*\
@@ -531,8 +531,7 @@ static boolean add_eucafault(const xmlDoc * new_doc)
         }
     } else {
         LOGTRACE("Appending to existing document.\n");
-        if (xmlAddNextSibling(xmlFirstElementChild(xmlDocGetRootElement(ef_doc)), xmlFirstElementChild(xmlDocGetRootElement((xmlDoc *) new_doc))) ==
-            NULL) {
+        if (xmlAddNextSibling(xmlFirstElementChild(xmlDocGetRootElement(ef_doc)), xmlFirstElementChild(xmlDocGetRootElement((xmlDoc *) new_doc))) == NULL) {
             LOGERROR("Problem adding fault to existing registry.\n");
             return FALSE;
         }
@@ -691,7 +690,7 @@ int init_eucafaults(const char *fileprefix)
     if (faults_loaded) {
         LOGTRACE("Attempt to reinitialize fault registry? Skipping...\n");
         pthread_mutex_unlock(&fault_mutex);
-        return -faults_loaded;  // Negative return because already loaded.
+        return -faults_loaded;         // Negative return because already loaded.
     }
 
     char *euca_env = getenv(EUCALYPTUS_ENV_VAR_NAME);
@@ -996,7 +995,7 @@ boolean is_redundant_eucafault(const char *fault_id, const char_map ** vars)
         int i;
         for (i = 0; new[i] != '\0' && old[i] != '\0'; i++)
             if (new[i] != old[i])
-                break;          // not the same string
+                break;                 // not the same string
 
         if (new[i] == '\0' && old[i] == '\0') { // found the match in the LL
             EUCA_FREE(new);
@@ -1159,9 +1158,7 @@ int main(int argc, char **argv)
         faultlog = stdout;
 
         // Reusing & abusing opt. :)
-        opt =
-            log_eucafault(argv[optind], "daemon", "Balrog", "hostIp", "127.0.0.1", "brokerIp", "127.0.0.2", "endpointIp", "127.0.0.3", "unmatched!",
-                          NULL);
+        opt = log_eucafault(argv[optind], "daemon", "Balrog", "hostIp", "127.0.0.1", "brokerIp", "127.0.0.2", "endpointIp", "127.0.0.3", "unmatched!", NULL);
         LOGDEBUG("log_eucafault args returned: %d\n", opt);
 
         // This allows substitution-argument pairs for unit test to be
@@ -1214,10 +1211,10 @@ static void usage(const char *argv0)
 //!
 int main(int argc, char **argv)
 {
-    drop_privs();               // become 'eucalyptus' so log file is created with the right privs
+    drop_privs();                      // become 'eucalyptus' so log file is created with the right privs
     log_params_set(EUCA_LOG_WARN, 0, 0);    // set log level
-    log_prefix_set("%L");       // only print log level
-    log_file_set(NULL);         // log output goes to STANDARD_FILESTREAM
+    log_prefix_set("%L");              // only print log level
+    log_file_set(NULL);                // log output goes to STANDARD_FILESTREAM
 
     char *component = NULL;
     int opt;

@@ -201,8 +201,7 @@ int doGetLogs(char *service, char **outCCLog, char **outNCLog, char **outHTTPDLo
     axis2_stub_t *stub = NULL;
 
     if (!service || !outCCLog || !outNCLog || !outHTTPDLog || !outAxis2Log) {
-        printf("Invalid params: service=%s, outCCLog=%p, outNCLog=%p outHTTPDLog=%p, outAxis2Log=%p!\n", service, outCCLog, outNCLog, outHTTPDLog,
-               outAxis2Log);
+        printf("Invalid params: service=%s, outCCLog=%p, outNCLog=%p outHTTPDLog=%p, outAxis2Log=%p!\n", service, outCCLog, outNCLog, outHTTPDLog, outAxis2Log);
         return (EUCA_INVALID_ERROR);
     }
 

@@ -216,7 +216,7 @@ void map_set(map * m, const char *key, void *val)
                 if (mp->next == NULL) {
                     mp->next = map_create(1);
                     mp = mp->next;
-                    if (mp != NULL) //! @todo need to return an error if calloc failed
+                    if (mp != NULL)    //! @todo need to return an error if calloc failed
                         set(mp, key, val);
                     return;
                 }

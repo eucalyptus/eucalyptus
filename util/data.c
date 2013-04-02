@@ -277,8 +277,7 @@ ncResource *allocate_resource(const char *sNodeStatus, boolean migrationCapable,
 void free_resource(ncResource ** ppresource);
 
 boolean is_volume_used(const ncVolume * pVolume);
-ncVolume *save_volume(ncInstance * pInstance, const char *sVolumeId, const char *sRemoteDev, const char *sLocalDev, const char *sLocalDevReal,
-                      const char *sStateName);
+ncVolume *save_volume(ncInstance * pInstance, const char *sVolumeId, const char *sRemoteDev, const char *sLocalDev, const char *sLocalDevReal, const char *sStateName);
 ncVolume *free_volume(ncInstance * pInstance, const char *sVolumeId);
 
 bundleTask *allocate_bundleTask(ncInstance * pInstance) _attribute_wur_;
@@ -961,8 +960,7 @@ boolean is_volume_used(const ncVolume * pVolume)
 //!       \li If the volume is found or if we have an empty slot, the volume information will be saved
 //!       \li If the volume is not found and if we do not have empty slot, NULL is returned and nothing is saved
 //!
-ncVolume *save_volume(ncInstance * pInstance, const char *sVolumeId, const char *sRemoteDev, const char *sLocalDev, const char *sLocalDevReal,
-                      const char *sStateName)
+ncVolume *save_volume(ncInstance * pInstance, const char *sVolumeId, const char *sRemoteDev, const char *sLocalDev, const char *sLocalDevReal, const char *sStateName)
 {
     ncVolume *pVol = NULL;
 

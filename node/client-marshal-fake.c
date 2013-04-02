@@ -77,12 +77,12 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <fcntl.h>              /* For O_* constants */
-#include <sys/stat.h>           /* For mode constants */
+#include <fcntl.h>                     /* For O_* constants */
+#include <sys/stat.h>                  /* For mode constants */
 #include <semaphore.h>
 #include <sys/mman.h>
-#include <sys/stat.h>           /* For mode constants */
-#include <fcntl.h>              /* For O_* constants */
+#include <sys/stat.h>                  /* For mode constants */
+#include <fcntl.h>                     /* For O_* constants */
 
 #include <eucalyptus.h>
 #define HANDLERS_FANOUT
@@ -112,8 +112,8 @@ typedef struct fakeconfig_t fakeconfig;
 \*----------------------------------------------------------------------------*/
 
 enum {
-    SHARED_MEM,                 //!< Shared memory
-    SHARED_FILE,                //!< Shared file
+    SHARED_MEM,                        //!< Shared memory
+    SHARED_FILE,                       //!< Shared file
 };
 
 /*----------------------------------------------------------------------------*\
@@ -125,7 +125,7 @@ enum {
  //! Fake Client Configuration Structure
 struct fakeconfig_t {
     ncInstance global_instances[MAX_FAKE_INSTANCES];    //!< list of instances
-    ncResource res;             //!< NC component resources
+    ncResource res;                    //!< NC component resources
     time_t current;
     time_t last;
 };
@@ -144,8 +144,8 @@ struct fakeconfig_t {
  |                                                                            |
 \*----------------------------------------------------------------------------*/
 
-fakeconfig *myconfig = NULL;    //!< fake configuration
-sem_t *fakelock = NULL;         //!< fake configuration lock
+fakeconfig *myconfig = NULL;           //!< fake configuration
+sem_t *fakelock = NULL;                //!< fake configuration lock
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |
@@ -178,8 +178,7 @@ int ncBundleInstanceStub(ncStub * pStub, ncMetadata * pMeta, char *instanceId, c
                          char *userPublicKey, char *S3Policy, char *S3PolicySig);
 int ncBundleRestartInstanceStub(ncStub * pStub, ncMetadata * pMeta, char *instanceId);
 int ncCancelBundleTaskStub(ncStub * pStub, ncMetadata * pMeta, char *instanceId);
-int ncDescribeBundleTasksStub(ncStub * pStub, ncMetadata * pMeta, char **instIds, int instIdsLen, bundleTask *** outBundleTasks,
-                              int *outBundleTasksLen);
+int ncDescribeBundleTasksStub(ncStub * pStub, ncMetadata * pMeta, char **instIds, int instIdsLen, bundleTask *** outBundleTasks, int *outBundleTasksLen);
 int ncDescribeResourceStub(ncStub * pStub, ncMetadata * pMeta, char *resourceType, ncResource ** outRes);
 int ncAttachVolumeStub(ncStub * pStub, ncMetadata * pMeta, char *instanceId, char *volumeId, char *remoteDev, char *localDev);
 int ncDetachVolumeStub(ncStub * pStub, ncMetadata * pMeta, char *instanceId, char *volumeId, char *remoteDev, char *localDev, int force);
@@ -390,23 +389,23 @@ ncStub *ncStubCreate(char *endpoint_uri, char *logfile, char *homedir)
     uri = endpoint_uri;
 
     // extract node name from the endpoint
-    p = strstr(uri, "://");     // find "http[s]://..."
+    p = strstr(uri, "://");            // find "http[s]://..."
     if (p == NULL) {
         LOGERROR("fakeNC: ncStubCreate received invalid URI %s\n", uri);
         return NULL;
     }
 
-    node_name = strdup(p + 3);  // copy without the protocol prefix
+    node_name = strdup(p + 3);         // copy without the protocol prefix
     if (node_name == NULL) {
         LOGERROR("fakeNC: ncStubCreate is out of memory\n");
         return NULL;
     }
 
     if ((p = strchr(node_name, ':')) != NULL)
-        *p = '\0';              // cut off the port
+        *p = '\0';                     // cut off the port
 
     if ((p = strchr(node_name, '/')) != NULL)
-        *p = '\0';              // if there is no port
+        *p = '\0';                     // if there is no port
 
     LOGDEBUG("fakeNC: DEBUG: requested URI %s\n", uri);
 
@@ -655,8 +654,7 @@ int ncDescribeInstancesStub(ncStub * pStub, ncMetadata * pMeta, char **instIds, 
 
             memcpy(newinst, &(myconfig->global_instances[i]), sizeof(ncInstance));
             (*outInsts)[numinsts] = newinst;
-            LOGDEBUG("fakeNC: describeInstances(): idx=%d numinsts=%d instanceId=%s stateName=%s\n", i, numinsts, newinst->instanceId,
-                     newinst->stateName);
+            LOGDEBUG("fakeNC: describeInstances(): idx=%d numinsts=%d instanceId=%s stateName=%s\n", i, numinsts, newinst->instanceId, newinst->stateName);
             numinsts++;
         }
     }
@@ -727,8 +725,7 @@ int ncCancelBundleTaskStub(ncStub * pStub, ncMetadata * pMeta, char *instanceId)
 //!
 //! @return Always return EUCA_OK
 //!
-int ncDescribeBundleTasksStub(ncStub * pStub, ncMetadata * pMeta, char **instIds, int instIdsLen, bundleTask *** outBundleTasks,
-                              int *outBundleTasksLen)
+int ncDescribeBundleTasksStub(ncStub * pStub, ncMetadata * pMeta, char **instIds, int instIdsLen, bundleTask *** outBundleTasks, int *outBundleTasksLen)
 {
     return (EUCA_OK);
 }
@@ -794,8 +791,7 @@ int ncAttachVolumeStub(ncStub * pStub, ncMetadata * pMeta, char *instanceId, cha
     int vdone = 0;
     int foundidx = -1;
 
-    LOGDEBUG("fakeNC:  attachVolume(): params: instanceId=%s volumeId=%s remoteDev=%s localDev=%s\n", SP(instanceId), SP(volumeId), SP(remoteDev),
-             SP(localDev));
+    LOGDEBUG("fakeNC:  attachVolume(): params: instanceId=%s volumeId=%s remoteDev=%s localDev=%s\n", SP(instanceId), SP(volumeId), SP(remoteDev), SP(localDev));
     if (!instanceId || !volumeId || !remoteDev || !localDev) {
         LOGDEBUG("fakeNC:  attachVolume(): bad input params\n");
         return (EUCA_ERROR);
@@ -853,8 +849,7 @@ int ncDetachVolumeStub(ncStub * pStub, ncMetadata * pMeta, char *instanceId, cha
     int vdone = 0;
     int foundidx = -1;
 
-    LOGDEBUG("fakeNC:  detachVolume(): params: instanceId=%s volumeId=%s remoteDev=%s localDev=%s\n", SP(instanceId), SP(volumeId), SP(remoteDev),
-             SP(localDev));
+    LOGDEBUG("fakeNC:  detachVolume(): params: instanceId=%s volumeId=%s remoteDev=%s localDev=%s\n", SP(instanceId), SP(volumeId), SP(remoteDev), SP(localDev));
     if (!instanceId || !volumeId || !remoteDev || !localDev) {
         LOGDEBUG("fakeNC:  detachVolume(): bad input params\n");
         return (EUCA_ERROR);

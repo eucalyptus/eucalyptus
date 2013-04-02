@@ -74,36 +74,36 @@
  |                                                                            |
 \*----------------------------------------------------------------------------*/
 
-#define _FILE_OFFSET_BITS 64    // so large-file support works on 32-bit systems
+#define _FILE_OFFSET_BITS 64           // so large-file support works on 32-bit systems
 #include <stdio.h>
 #include <stdlib.h>
 #define _GNU_SOURCE
-#include <string.h>             // strlen, strcpy
-#include <ctype.h>              // isspace
+#include <string.h>                    // strlen, strcpy
+#include <ctype.h>                     // isspace
 #include <assert.h>
 #include <stdarg.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <unistd.h>
 #include <time.h>
-#include <math.h>               // powf
-#include <fcntl.h>              // open
-#include <utime.h>              // utime
+#include <math.h>                      // powf
+#include <fcntl.h>                     // open
+#include <utime.h>                     // utime
 #include <sys/wait.h>
 #include <sys/types.h>
-#include <dirent.h>             // opendir, etc
-#include <errno.h>              // errno
-#include <sys/time.h>           // gettimeofday
+#include <dirent.h>                    // opendir, etc
+#include <errno.h>                     // errno
+#include <sys/time.h>                  // gettimeofday
 #include <limits.h>
 #include <openssl/md5.h>
-#include <sys/mman.h>           // mmap
+#include <sys/mman.h>                  // mmap
 #include <pthread.h>
 
 #include "eucalyptus.h"
 #include "misc.h"
 #include "hash.h"
-#include "euca_auth.h"          // base64_enc
-#include "vnetwork.h"           // OK / ERROR
+#include "euca_auth.h"                 // base64_enc
+#include "vnetwork.h"                  // OK / ERROR
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |

@@ -215,10 +215,10 @@ int doDescribeServices(ncMetadata * pMeta, serviceInfoType * serviceIds, int ser
     char host[MAX_PATH] = { 0 };
     char path[MAX_PATH] = { 0 };
     serviceStatusType *myStatus = NULL;
-    int do_report_cluster = 1; // always do report on the cluster, otherwise CC won't get ENABLED
+    int do_report_cluster = 1;         // always do report on the cluster, otherwise CC won't get ENABLED
     int do_report_nodes = 0;
     int do_report_all = 0;
-    char * my_partition = NULL;
+    char *my_partition = NULL;
 
     rc = initialize(pMeta);
     if (rc) {
@@ -251,31 +251,26 @@ int doDescribeServices(ncMetadata * pMeta, serviceInfoType * serviceIds, int ser
                             memcpy(&(config->ccStatus.serviceId), &(serviceIds[i]), sizeof(serviceInfoType));
                         }
                     } else if (!strcmp(serviceIds[i].type, "node")) {
-                        do_report_nodes = 1; // report on node services if requested explicitly
+                        do_report_nodes = 1;    // report on node services if requested explicitly
                     }
                 }
             }
         }
     }
     sem_mypost(CONFIG);
-    if (serviceIdsLen < 1) { // if the describe request is not specific, report on everything
+    if (serviceIdsLen < 1) {           // if the describe request is not specific, report on everything
         do_report_cluster = 1;
         do_report_nodes = 1;
         do_report_all = 1;
-    } else { // if the describe request is specific, identify which types are requested
+    } else {                           // if the describe request is specific, identify which types are requested
         do_report_cluster = 0;
         do_report_nodes = 0;
         do_report_all = 0;
         for (i = 0; i < serviceIdsLen; i++) {
-            LOGDEBUG("received input serviceId[%d]: %s %s %s %s\n", 
-                     i,
-                     serviceIds[i].type,
-                     serviceIds[i].partition,
-                     serviceIds[i].name,
-                     serviceIds[i].uris[0]);
+            LOGDEBUG("received input serviceId[%d]: %s %s %s %s\n", i, serviceIds[i].type, serviceIds[i].partition, serviceIds[i].name, serviceIds[i].uris[0]);
             if (strlen(serviceIds[i].type)) {
                 if (!strcmp(serviceIds[i].type, "cluster")) {
-                    do_report_cluster = 1; // report on cluster services if requested explicitly
+                    do_report_cluster = 1;  // report on cluster services if requested explicitly
                 } else if (!strcmp(serviceIds[i].type, "node")) {
                     do_report_nodes++; // count number of and report on node services if requested explicitly
                 }
@@ -332,36 +327,31 @@ int doDescribeServices(ncMetadata * pMeta, serviceInfoType * serviceIds, int ser
             LOGFATAL("out of memory!\n");
             unlock_exit(1);
         }
-        
+
         myStatus = *outStatuses;
-        snprintf(myStatus->localState, 32, "%s", config->ccStatus.localState); // ENABLED, DISABLED, STOPPED, NOTREADY
-        snprintf(myStatus->details, 1024, "%s", config->ccStatus.details); // string that gets printed by 'euca-describe-services -E'
+        snprintf(myStatus->localState, 32, "%s", config->ccStatus.localState);  // ENABLED, DISABLED, STOPPED, NOTREADY
+        snprintf(myStatus->details, 1024, "%s", config->ccStatus.details);  // string that gets printed by 'euca-describe-services -E'
         myStatus->localEpoch = config->ccStatus.localEpoch;
         memcpy(&(myStatus->serviceId), &(config->ccStatus.serviceId), sizeof(serviceInfoType));
-        LOGDEBUG("external services\t uri[%d]: %s %s %s %s %s\n", 
-                 1,
-                 myStatus->serviceId.type,
-                 myStatus->serviceId.partition,
-                 myStatus->serviceId.name,
-                 myStatus->localState,
-                 myStatus->serviceId.uris[0]);
+        LOGDEBUG("external services\t uri[%d]: %s %s %s %s %s\n",
+                 1, myStatus->serviceId.type, myStatus->serviceId.partition, myStatus->serviceId.name, myStatus->localState, myStatus->serviceId.uris[0]);
     }
-    
+
     if (do_report_nodes) {
-        extern ccResourceCache * resourceCache;
+        extern ccResourceCache *resourceCache;
         ccResourceCache resourceCacheLocal;
-        
+
         sem_mywait(RESCACHE);
         memcpy(&resourceCacheLocal, resourceCache, sizeof(ccResourceCache));
         sem_mypost(RESCACHE);
-        
-        if (resourceCacheLocal.numResources > 0 && my_partition != NULL) { // parition is unknown at early stages of CC initialization
-            
+
+        if (resourceCacheLocal.numResources > 0 && my_partition != NULL) {  // parition is unknown at early stages of CC initialization
+
             if (do_report_all) {
                 *outStatusesLen += resourceCacheLocal.numResources;
             } else if (do_report_nodes) {
-				*outStatusesLen += do_report_nodes;
-        	}
+                *outStatusesLen += do_report_nodes;
+            }
             *outStatuses = EUCA_REALLOC(*outStatuses, *outStatusesLen, sizeof(serviceStatusType));
             if (!*outStatuses) {
                 LOGFATAL("out of memory!\n");
@@ -369,25 +359,25 @@ int doDescribeServices(ncMetadata * pMeta, serviceInfoType * serviceIds, int ser
             }
 
             for (int idIdx = 0; idIdx < *outStatusesLen; idIdx++) {
-                if (do_report_all||!strcmp(serviceIds[idIdx].type, "node")) {
+                if (do_report_all || !strcmp(serviceIds[idIdx].type, "node")) {
                     for (int rIdx = 0; idIdx < *outStatusesLen && rIdx < resourceCacheLocal.numResources; rIdx++) {
-                        ccResource * r = resourceCacheLocal.resources + rIdx;
-                        if (do_report_all||(strlen(serviceIds[idIdx].name) && strlen(r->ip) && !strcmp(serviceIds[idIdx].name, r->ip))) {
+                        ccResource *r = resourceCacheLocal.resources + rIdx;
+                        if (do_report_all || (strlen(serviceIds[idIdx].name) && strlen(r->ip) && !strcmp(serviceIds[idIdx].name, r->ip))) {
                             myStatus = *outStatuses + do_report_cluster + idIdx;
                             idIdx += do_report_all;
                             {
                                 int resState = r->state;
                                 int resNcState = r->ncState;
-                                char * state = "BUGGY";
-                                char * msg = "";
-                                if ( resState == RESUP ) {
-                                    if ( resNcState == ENABLED ) {
+                                char *state = "BUGGY";
+                                char *msg = "";
+                                if (resState == RESUP) {
+                                    if (resNcState == ENABLED) {
                                         state = "ENABLED";
                                         msg = "the node is operating normally";
-                                    } else if ( resNcState == STOPPED ) {
+                                    } else if (resNcState == STOPPED) {
                                         state = "STOPPED";
                                         msg = "the node is not accepting new instances";
-                                    } else if ( resNcState == NOTREADY ) {
+                                    } else if (resNcState == NOTREADY) {
                                         state = "NOTREADY";
                                         if (strnlen(r->nodeMessage, 1024)) {
                                             msg = r->nodeMessage;
@@ -395,19 +385,19 @@ int doDescribeServices(ncMetadata * pMeta, serviceInfoType * serviceIds, int ser
                                             msg = "the node is currently experiencing problems and needs attention";
                                         }
                                     }
-                                } else if ( resState == RESASLEEP || resState == RESWAKING ) {
+                                } else if (resState == RESASLEEP || resState == RESWAKING) {
                                     state = "NOTREADY";
                                     msg = "the node is currently in the sleep state";
-                                } else if ( resState == RESDOWN ) {
+                                } else if (resState == RESDOWN) {
                                     state = "NOTREADY";
-                                    if (strnlen(r->nodeMessage, 1024)){
+                                    if (strnlen(r->nodeMessage, 1024)) {
                                         msg = r->nodeMessage;
                                     } else {
                                         msg = "the node is not responding to the cluster controller";
                                     }
                                 }
                                 snprintf(myStatus->localState, 32, "%s", state);
-                                snprintf(myStatus->details, 1024, "%s", msg); // string that gets printed by 'euca-describe-services -E'
+                                snprintf(myStatus->details, 1024, "%s", msg);   // string that gets printed by 'euca-describe-services -E'
                             }
                             myStatus->localEpoch = config->ccStatus.localEpoch;
                             sprintf(myStatus->serviceId.type, "node");
@@ -416,19 +406,14 @@ int doDescribeServices(ncMetadata * pMeta, serviceInfoType * serviceIds, int ser
                             sprintf(myStatus->serviceId.uris[0], r->ncURL);
                             myStatus->serviceId.urisLen = 1;
                             LOGDEBUG("external services\t uri[%d]: %s %s %s %s %s\n",
-                                     idIdx,
-                                     myStatus->serviceId.type,
-                                     myStatus->serviceId.partition,
-                                     myStatus->serviceId.name,
-                                     myStatus->localState,
-                                     myStatus->serviceId.uris[0]);
+                                     idIdx, myStatus->serviceId.type, myStatus->serviceId.partition, myStatus->serviceId.name, myStatus->localState, myStatus->serviceId.uris[0]);
                         }
                     }
                 }
             }
         }
     }
-    
+
     LOGDEBUG("done\n");
     return (0);
 }
@@ -457,15 +442,15 @@ int doStartService(ncMetadata * pMeta, serviceInfoType * serviceIds, int service
     LOGDEBUG("invoked: userId=%s\n", SP(pMeta ? pMeta->userId : "UNKNOWN"));
 
     int start_cc = 0;
-    for (int i=0; i<serviceIdsLen; i++) {
-        if (strcmp(serviceIds[i].type, "cluster")==0) {
+    for (int i = 0; i < serviceIdsLen; i++) {
+        if (strcmp(serviceIds[i].type, "cluster") == 0) {
             start_cc = 1;
-        } else if (strcmp(serviceIds[i].type, "node")==0) {
+        } else if (strcmp(serviceIds[i].type, "node") == 0) {
             //GRZE: This is currently a NOOP; also "enabled" would not be right
             //ret = doModifyNode(pMeta, serviceIds[i].name, "enabled");
         }
     }
-    if (serviceIdsLen<1) {
+    if (serviceIdsLen < 1) {
         start_cc = 1;
     }
     if (start_cc != 1)
@@ -519,15 +504,15 @@ int doStopService(ncMetadata * pMeta, serviceInfoType * serviceIds, int serviceI
     LOGDEBUG("invoked: userId=%s\n", SP(pMeta ? pMeta->userId : "UNKNOWN"));
 
     int stop_cc = 0;
-    for (int i=0; i<serviceIdsLen; i++) {
-        if (strcmp(serviceIds[i].type, "cluster")==0) {
+    for (int i = 0; i < serviceIdsLen; i++) {
+        if (strcmp(serviceIds[i].type, "cluster") == 0) {
             stop_cc = 1;
-        } else if (strcmp(serviceIds[i].type, "node")==0) {
+        } else if (strcmp(serviceIds[i].type, "node") == 0) {
             //GRZE: map stop operation to modifyNode("disabled") here
             ret = doModifyNode(pMeta, serviceIds[i].name, "disabled");
         }
     }
-    if (serviceIdsLen<1) {
+    if (serviceIdsLen < 1) {
         stop_cc = 1;
     }
     if (stop_cc != 1)
@@ -582,14 +567,14 @@ int doEnableService(ncMetadata * pMeta, serviceInfoType * serviceIds, int servic
     LOGDEBUG("invoked: userId=%s\n", SP(pMeta ? pMeta->userId : "UNKNOWN"));
 
     int enable_cc = 0;
-    for (int i=0; i<serviceIdsLen; i++) {
-        if (strcmp(serviceIds[i].type, "cluster")==0) {
+    for (int i = 0; i < serviceIdsLen; i++) {
+        if (strcmp(serviceIds[i].type, "cluster") == 0) {
             enable_cc = 1;
-        } else if (strcmp(serviceIds[i].type, "node")==0) {
+        } else if (strcmp(serviceIds[i].type, "node") == 0) {
             ret = doModifyNode(pMeta, serviceIds[i].name, "enabled");
         }
     }
-    if (serviceIdsLen<1) {
+    if (serviceIdsLen < 1) {
         enable_cc = 1;
     }
     if (enable_cc != 1)
@@ -635,7 +620,7 @@ int doEnableService(ncMetadata * pMeta, serviceInfoType * serviceIds, int servic
         }
     }
 
- done:
+done:
     LOGTRACE("done\n");
     return (ret);
 }
@@ -664,14 +649,14 @@ int doDisableService(ncMetadata * pMeta, serviceInfoType * serviceIds, int servi
     LOGDEBUG("invoked: userId=%s\n", SP(pMeta ? pMeta->userId : "UNKNOWN"));
 
     int disable_cc = 0;
-    for (int i=0; i<serviceIdsLen; i++) {
-        if (strcmp(serviceIds[i].type, "cluster")==0) {
+    for (int i = 0; i < serviceIdsLen; i++) {
+        if (strcmp(serviceIds[i].type, "cluster") == 0) {
             disable_cc = 1;
-        } else if (strcmp(serviceIds[i].type, "node")==0) {
+        } else if (strcmp(serviceIds[i].type, "node") == 0) {
             ret = doModifyNode(pMeta, serviceIds[i].name, "disabled");
         }
     }
-    if (serviceIdsLen<1) {
+    if (serviceIdsLen < 1) {
         disable_cc = 1;
     }
     if (disable_cc != 1)
@@ -694,7 +679,7 @@ int doDisableService(ncMetadata * pMeta, serviceInfoType * serviceIds, int servi
     }
     sem_mypost(CONFIG);
 
- done:
+done:
     LOGTRACE("done\n");
     return (ret);
 }
@@ -782,11 +767,9 @@ int instIpSync(ccInstance * inst, void *in)
 
     LOGDEBUG("instanceId=%s CCpublicIp=%s CCprivateIp=%s CCprivateMac=%s CCvlan=%d CCnetworkIndex=%d NCpublicIp=%s NCprivateIp=%s NCprivateMac=%s "
              "NCvlan=%d NCnetworkIndex=%d\n", inst->instanceId, inst->ccnet.publicIp, inst->ccnet.privateIp, inst->ccnet.privateMac, inst->ccnet.vlan,
-             inst->ccnet.networkIndex, inst->ncnet.publicIp, inst->ncnet.privateIp, inst->ncnet.privateMac, inst->ncnet.vlan,
-             inst->ncnet.networkIndex);
+             inst->ccnet.networkIndex, inst->ncnet.publicIp, inst->ncnet.privateIp, inst->ncnet.privateMac, inst->ncnet.vlan, inst->ncnet.networkIndex);
 
-    if (inst->ccnet.vlan == 0 && inst->ccnet.networkIndex == 0 && inst->ccnet.publicIp[0] == '\0' && inst->ccnet.privateIp[0] == '\0'
-        && inst->ccnet.privateMac[0] == '\0') {
+    if (inst->ccnet.vlan == 0 && inst->ccnet.networkIndex == 0 && inst->ccnet.publicIp[0] == '\0' && inst->ccnet.privateIp[0] == '\0' && inst->ccnet.privateMac[0] == '\0') {
         // ccnet is completely empty, make a copy of ncnet
         LOGDEBUG("ccnet is empty, copying ncnet\n");
         memcpy(&(inst->ccnet), &(inst->ncnet), sizeof(netConfig));
@@ -825,16 +808,14 @@ int instIpSync(ccInstance * inst, void *in)
     inst->ccnet.vlan = inst->ncnet.vlan;
     if (inst->ccnet.vlan >= 0) {
         if (!vnetconfig->networks[inst->ccnet.vlan].active) {
-            LOGWARN("detected instance from NC that is running in a currently inactive network; will attempt to re-activate network '%d'\n",
-                    inst->ccnet.vlan);
+            LOGWARN("detected instance from NC that is running in a currently inactive network; will attempt to re-activate network '%d'\n", inst->ccnet.vlan);
             ret++;
         }
     }
     // networkIndex cases
     if (inst->ccnet.networkIndex != inst->ncnet.networkIndex) {
         // problem
-        LOGERROR("CC and NC networkIndicies differ instanceId=%s CCnetworkIndex=%d NCnetworkIndex=%d\n", inst->instanceId, inst->ccnet.networkIndex,
-                 inst->ncnet.networkIndex);
+        LOGERROR("CC and NC networkIndicies differ instanceId=%s CCnetworkIndex=%d NCnetworkIndex=%d\n", inst->instanceId, inst->ccnet.networkIndex, inst->ncnet.networkIndex);
     }
     inst->ccnet.networkIndex = inst->ncnet.networkIndex;
 

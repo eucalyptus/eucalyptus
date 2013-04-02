@@ -550,7 +550,7 @@ adb_DescribeSensorsResponse_t *DescribeSensorsMarshal(adb_DescribeSensors_t * de
             }
             EUCA_FREE(outResources);
 
-            result = EUCA_OK;   // success
+            result = EUCA_OK;          // success
         }
     }
 
@@ -765,8 +765,7 @@ adb_DescribeNetworksResponse_t *DescribeNetworksMarshal(adb_DescribeNetworks_t *
 //!
 //! @note
 //!
-adb_DescribePublicAddressesResponse_t *DescribePublicAddressesMarshal(adb_DescribePublicAddresses_t * describePublicAddresses,
-                                                                      const axutil_env_t * env)
+adb_DescribePublicAddressesResponse_t *DescribePublicAddressesMarshal(adb_DescribePublicAddresses_t * describePublicAddresses, const axutil_env_t * env)
 {
     adb_describePublicAddressesType_t *dpa = NULL;
     adb_DescribePublicAddressesResponse_t *ret = NULL;
@@ -1066,8 +1065,7 @@ adb_ConfigureNetworkResponse_t *ConfigureNetworkMarshal(adb_ConfigureNetwork_t *
 
         rc = 1;
         if (!DONOTHING) {
-            rc = doConfigureNetwork(&ccMeta, accountId, type, namedLen, sourceNames, userNames, netLen, sourceNets, destName, destUserName, protocol,
-                                    minPort, maxPort);
+            rc = doConfigureNetwork(&ccMeta, accountId, type, namedLen, sourceNames, userNames, netLen, sourceNets, destName, destUserName, protocol, minPort, maxPort);
         }
 
         EUCA_FREE(userNames);
@@ -1460,21 +1458,21 @@ int ccInstanceUnmarshal(adb_ccInstanceType_t * dst, ccInstance * src, const axut
     }
     //GRZE: these strings should be made an enum indexed by the migration_states_t
     if (src->migration_state == MIGRATION_PREPARING) {
-    	adb_ccInstanceType_set_migrationStateName(dst, env, "preparing");
-        if (strlen(src->migration_src)&&strlen(src->migration_dst)) {
-        	adb_ccInstanceType_set_migrationDestination(dst, env, src->migration_dst);
-        	adb_ccInstanceType_set_migrationSource(dst, env, src->migration_src);
+        adb_ccInstanceType_set_migrationStateName(dst, env, "preparing");
+        if (strlen(src->migration_src) && strlen(src->migration_dst)) {
+            adb_ccInstanceType_set_migrationDestination(dst, env, src->migration_dst);
+            adb_ccInstanceType_set_migrationSource(dst, env, src->migration_src);
         }
     } else if (src->migration_state == MIGRATION_IN_PROGRESS) {
-    	adb_ccInstanceType_set_migrationStateName(dst, env, "migrating");
-        if (strlen(src->migration_src)&&strlen(src->migration_dst)) {
-        	adb_ccInstanceType_set_migrationDestination(dst, env, src->migration_dst);
-        	adb_ccInstanceType_set_migrationSource(dst, env, src->migration_src);
+        adb_ccInstanceType_set_migrationStateName(dst, env, "migrating");
+        if (strlen(src->migration_src) && strlen(src->migration_dst)) {
+            adb_ccInstanceType_set_migrationDestination(dst, env, src->migration_dst);
+            adb_ccInstanceType_set_migrationSource(dst, env, src->migration_src);
         }
     } else {
-    	adb_ccInstanceType_set_migrationStateName(dst, env, "none");
-//    	adb_ccInstanceType_set_migrationDestination_nil(dst, env);
-//    	adb_ccInstanceType_set_migrationSource_nil(dst, env);
+        adb_ccInstanceType_set_migrationStateName(dst, env, "none");
+//      adb_ccInstanceType_set_migrationDestination_nil(dst, env);
+//      adb_ccInstanceType_set_migrationSource_nil(dst, env);
     }
 
     adb_ccInstanceType_set_blkbytes(dst, env, src->blkbytes);

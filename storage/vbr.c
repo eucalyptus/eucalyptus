@@ -77,12 +77,12 @@
 #define _GNU_SOURCE
 #include <stdio.h>
 #include <stdlib.h>
-#include <string.h>             // strcasestr
+#include <string.h>                    // strcasestr
 #include <unistd.h>
 #include <string.h>
 #include <sys/types.h>
 #include <sys/stat.h>
-#include <sys/wait.h>           // waitpid
+#include <sys/wait.h>                  // waitpid
 #include <stdarg.h>
 #include <fcntl.h>
 #include <errno.h>
@@ -91,7 +91,7 @@
 #include <dirent.h>
 
 #include <eucalyptus.h>
-#include <misc.h>               // logprintfl, ensure_...
+#include <misc.h>                      // logprintfl, ensure_...
 #include <hash.h>
 #include <data.h>
 #include <euca_string.h>
@@ -196,8 +196,7 @@ static boolean do_fork = 0;
 
 int vbr_add_ascii(const char *spec_str, virtualMachine * vm_type);
 int vbr_parse(virtualMachine * vm, ncMetadata * pMeta);
-int vbr_legacy(const char *instanceId, virtualMachine * params, char *imageId, char *imageURL, char *kernelId, char *kernelURL, char *ramdiskId,
-               char *ramdiskURL);
+int vbr_legacy(const char *instanceId, virtualMachine * params, char *imageId, char *imageURL, char *kernelId, char *kernelURL, char *ramdiskId, char *ramdiskURL);
 
 int art_add_dep(artifact * a, artifact * dep);
 void art_free(artifact * a);
@@ -261,8 +260,7 @@ static int find_or_create_artifact(int do_create, artifact * a, blobstore * work
 static blobstore *create_teststore(int size_blocks, const char *base, const char *name, blobstore_format_t format, blobstore_revocation_t revocation,
                                    blobstore_snapshot_t snapshot);
 static void add_vbr(virtualMachine * vm, long long size, ncResourceFormatType format, char *formatName, const char *id, ncResourceType type,
-                    ncResourceLocationType locationType, int diskNumber, int partitionNumber, libvirtBusType guestDeviceBus,
-                    char *preparedResourceLocation);
+                    ncResourceLocationType locationType, int diskNumber, int partitionNumber, libvirtBusType guestDeviceBus, char *preparedResourceLocation);
 static int provision_vm(const char *id, const char *sshkey, const char *eki, const char *eri, const char *emi, blobstore * cache_bs,
                         blobstore * work_bs, boolean do_make_work_copy);
 static int cleanup_vms(void);
@@ -449,8 +447,7 @@ static int parse_rec(virtualBootRecord * vbr, virtualMachine * vm, ncMetadata * 
 
     // identify the type of resource location from location string
     int error = EUCA_OK;
-    if (strcasestr(vbr->resourceLocation, "http://") == vbr->resourceLocation
-        || strcasestr(vbr->resourceLocation, "https://") == vbr->resourceLocation) {
+    if (strcasestr(vbr->resourceLocation, "http://") == vbr->resourceLocation || strcasestr(vbr->resourceLocation, "https://") == vbr->resourceLocation) {
         if (strcasestr(vbr->resourceLocation, "/services/Walrus/")) {
             vbr->locationType = NC_LOCATION_WALRUS;
         } else {
@@ -495,7 +492,7 @@ static int parse_rec(virtualBootRecord * vbr, virtualMachine * vm, ncMetadata * 
             return EUCA_ERROR;
         }
 
-    } else {                    // should be a valid device
+    } else {                           // should be a valid device
 
         // trim off "/dev/" prefix, if present, and verify the rest
         if (strstr(vbr->guestDeviceName, "/dev/") == vbr->guestDeviceName) {
@@ -538,15 +535,15 @@ static int parse_rec(virtualBootRecord * vbr, virtualMachine * vm, ncMetadata * 
                 return EUCA_ERROR;
             }
 
-            size_t letters_len = 3; // e.g. "sda"
+            size_t letters_len = 3;    // e.g. "sda"
             if (t == 'x')
-                letters_len = 4;    // e.g., "xvda"
+                letters_len = 4;       // e.g., "xvda"
             if (t == 'f')
-                letters_len = 2;    // e.g., "fd0"
+                letters_len = 2;       // e.g., "fd0"
             char d = vbr->guestDeviceName[letters_len - 2]; // when 3+, the 'd'
             char n = vbr->guestDeviceName[letters_len - 1]; // when 3+, the disk number
             if (strlen(vbr->guestDeviceName) > letters_len) {
-                long long int p = 0;    // partition or floppy drive number
+                long long int p = 0;   // partition or floppy drive number
                 errno = 0;
                 p = strtoll(vbr->guestDeviceName + letters_len, NULL, 10);
                 if (errno != 0) {
@@ -650,7 +647,7 @@ int vbr_parse(virtualMachine * vm, ncMetadata * pMeta)
         if (vbr->type != NC_RESOURCE_KERNEL && vbr->type != NC_RESOURCE_RAMDISK)
             partitions[vbr->guestDeviceBus][vbr->diskNumber][vbr->partitionNumber] = vbr;
 
-        if (vm->root == NULL) { // we have not identified the EMI yet
+        if (vm->root == NULL) {        // we have not identified the EMI yet
             if (vbr->type == NC_RESOURCE_IMAGE) {
                 vm->root = vbr;
             }
@@ -718,8 +715,7 @@ int vbr_parse(virtualMachine * vm, ncMetadata * pMeta)
 //!
 //! @note
 //!
-int vbr_legacy(const char *instanceId, virtualMachine * params, char *imageId, char *imageURL, char *kernelId, char *kernelURL, char *ramdiskId,
-               char *ramdiskURL)
+int vbr_legacy(const char *instanceId, virtualMachine * params, char *imageId, char *imageURL, char *kernelId, char *kernelURL, char *ramdiskId, char *ramdiskURL)
 {
     int i;
     int found_image = 0;
@@ -753,7 +749,7 @@ int vbr_legacy(const char *instanceId, virtualMachine * params, char *imageId, c
                 return EUCA_ERROR;
             }
 
-            {                   // create root partition VBR
+            {                          // create root partition VBR
                 virtualBootRecord *vbr = &(params->virtualBootRecord[i++]);
                 euca_strncpy(vbr->resourceLocation, imageURL, sizeof(vbr->resourceLocation));
                 euca_strncpy(vbr->guestDeviceName, "sda1", sizeof(vbr->guestDeviceName));
@@ -763,7 +759,7 @@ int vbr_legacy(const char *instanceId, virtualMachine * params, char *imageId, c
                 euca_strncpy(vbr->formatName, "none", sizeof(vbr->formatName));
                 params->virtualBootRecordLen++;
             }
-            {                   // create ephemeral partition VBR
+            {                          // create ephemeral partition VBR
                 virtualBootRecord *vbr = &(params->virtualBootRecord[i++]);
                 euca_strncpy(vbr->resourceLocation, "none", sizeof(vbr->resourceLocation));
                 euca_strncpy(vbr->guestDeviceName, "sda2", sizeof(vbr->guestDeviceName));
@@ -773,7 +769,7 @@ int vbr_legacy(const char *instanceId, virtualMachine * params, char *imageId, c
                 euca_strncpy(vbr->formatName, "ext2", sizeof(vbr->formatName));
                 params->virtualBootRecordLen++;
             }
-            {                   // create swap partition VBR
+            {                          // create swap partition VBR
                 virtualBootRecord *vbr = &(params->virtualBootRecord[i++]);
                 euca_strncpy(vbr->resourceLocation, "none", sizeof(vbr->resourceLocation));
                 euca_strncpy(vbr->guestDeviceName, "sda3", sizeof(vbr->guestDeviceName));
@@ -845,7 +841,7 @@ static void update_vbr_with_backing_info(artifact * a)
     virtualBootRecord *vbr = a->vbr;
 
     assert(a->bb);
-    if (!a->must_be_file &&     // not required to be a file
+    if (!a->must_be_file &&            // not required to be a file
         strlen(blockblob_get_dev(a->bb)) && // there is a block device
         blockblob_get_file(a->bb) == NULL &&    // there is NO file access
         (blobstore_snapshot_t) a->bb->store->snapshot_policy != BLOBSTORE_SNAPSHOT_NONE) {  // without snapshots we can use files
@@ -940,7 +936,7 @@ static int partition_creator(artifact * a)
     case NC_FORMAT_NONE:
         format = EUCA_OK;
         break;
-    case NC_FORMAT_EXT2:       //! @TODO distinguish ext2 and ext3!
+    case NC_FORMAT_EXT2:              //! @TODO distinguish ext2 and ext3!
     case NC_FORMAT_EXT3:
         format = diskutil_mkfs(dest_dev, a->size_bytes);
         break;
@@ -975,7 +971,7 @@ static void set_disk_dev(virtualBootRecord * vbr)
     char type[3] = "\0\0\0";
     if (vbr->guestDeviceType == DEV_TYPE_FLOPPY) {
         type[0] = 'f';
-    } else {                    // a disk 
+    } else {                           // a disk 
         switch (vbr->guestDeviceBus) {
         case BUS_TYPE_IDE:
             type[0] = 'h';
@@ -992,7 +988,7 @@ static void set_disk_dev(virtualBootRecord * vbr)
             break;
         case BUS_TYPES_TOTAL:
         default:
-            type[0] = '?';      // error
+            type[0] = '?';             // error
             break;
         }
     }
@@ -1001,7 +997,7 @@ static void set_disk_dev(virtualBootRecord * vbr)
     if (vbr->guestDeviceType == DEV_TYPE_FLOPPY) {
         assert(vbr->diskNumber >= 0 && vbr->diskNumber <= 9);
         disk = '0' + vbr->diskNumber;
-    } else {                    // a disk 
+    } else {                           // a disk 
         assert(vbr->diskNumber >= 0 && vbr->diskNumber <= 26);
         disk = 'a' + vbr->diskNumber;
     }
@@ -1047,16 +1043,16 @@ static int disk_creator(artifact * a)
     }
 blockmap map[EUCA_MAX_PARTITIONS] = { {mbr_op, BLOBSTORE_ZERO, {blob:NULL}
                                            , 0, 0, MBR_BLOCKS}
-    };                          // initially only MBR is in the map
+    };                                 // initially only MBR is in the map
 
     // run through partitions, add their sizes, populate the map
     virtualBootRecord *p1 = NULL;
     virtualBootRecord *disk = a->vbr;
-    int map_entries = 1;        // first map entry is for the MBR
-    int root_entry = -1;        // we do not know the root entry 
-    int root_part = -1;         // we do not know the root partition
-    int boot_entry = -1;        // we do not know the boot entry
-    int boot_part = -1;         // we do not know the boot partition
+    int map_entries = 1;               // first map entry is for the MBR
+    int root_entry = -1;               // we do not know the root entry 
+    int root_part = -1;                // we do not know the root partition
+    int boot_entry = -1;               // we do not know the boot entry
+    int boot_part = -1;                // we do not know the boot partition
     const char *kernel_path = NULL;
     const char *ramdisk_path = NULL;
     long long offset_bytes = SECTOR_SIZE * MBR_BLOCKS;  // first partition begins after MBR
@@ -1135,8 +1131,8 @@ blockmap map[EUCA_MAX_PARTITIONS] = { {mbr_op, BLOBSTORE_ZERO, {blob:NULL}
     for (int i = 1; i < map_entries; i++) { // map [0] is for the MBR
         LOGINFO("[%s] adding partition %d to partition table (%s)\n", a->instanceId, i, blockblob_get_dev(a->bb));
         if (diskutil_part(blockblob_get_dev(a->bb), // issues `parted mkpart`
-                          "primary",    //! @TODO make this work with more than 4 partitions
-                          NULL, // do not create file system
+                          "primary",   //! @TODO make this work with more than 4 partitions
+                          NULL,        // do not create file system
                           map[i].first_block_dst,   // first sector
                           map[i].first_block_dst + map[i].len_blocks - 1) != EUCA_OK) {
             LOGERROR("[%s] failed to add partition %d to disk: %d %s\n", a->instanceId, i, blobstore_get_error(), blobstore_get_last_msg());
@@ -1217,7 +1213,7 @@ blockmap map[EUCA_MAX_PARTITIONS] = { {mbr_op, BLOBSTORE_ZERO, {blob:NULL}
             goto unmount;
         }
         // change user of the blob device back to 'eucalyptus' (grub sets it to 'boot')
-        sleep(1);               // without this, perms on dev-mapper devices can flip back, presumably because in-kernel ops complete after grub process finishes
+        sleep(1);                      // without this, perms on dev-mapper devices can flip back, presumably because in-kernel ops complete after grub process finishes
         if (diskutil_ch(blockblob_get_dev(a->bb), EUCALYPTUS_ADMIN, NULL, 0) != EUCA_OK) {
             LOGINFO("[%s] failed to change user for '%s' to '%s'\n", a->instanceId, blockblob_get_dev(a->bb), EUCALYPTUS_ADMIN);
         }
@@ -1326,23 +1322,23 @@ static int copy_creator(artifact * a)
     virtualBootRecord *vbr = a->vbr;
     assert(vbr);
 
-    if (dep->bb != NULL) {      // skip copy if source is NULL (as in the case of a bypassed redundant work artifact due to caching failure)
+    if (dep->bb != NULL) {             // skip copy if source is NULL (as in the case of a bypassed redundant work artifact due to caching failure)
         LOGINFO("[%s] copying/cloning blob %s to blob %s\n", a->instanceId, dep->bb->id, a->bb->id);
         if (a->must_be_file) {
             if (blockblob_copy(dep->bb, 0L, a->bb, 0L, 0L) == -1) {
-                LOGERROR("[%s] failed to copy blob %s to blob %s: %d %s\n", a->instanceId, dep->bb->id, a->bb->id, blobstore_get_error(),
-                         blobstore_get_last_msg());
+                LOGERROR("[%s] failed to copy blob %s to blob %s: %d %s\n", a->instanceId, dep->bb->id, a->bb->id, blobstore_get_error(), blobstore_get_last_msg());
                 return blobstore_get_error();
             }
         } else {
             blockmap_relation_t op = BLOBSTORE_SNAPSHOT;    // use snapshot by default as it is faster
             if ((blobstore_snapshot_t) a->bb->store->snapshot_policy == BLOBSTORE_SNAPSHOT_NONE) {
-                op = BLOBSTORE_COPY;    // but fall back to copy when snapshots are not possible or desired
+                op = BLOBSTORE_COPY;   // but fall back to copy when snapshots are not possible or desired
             }
-            blockmap map[] = { {op, BLOBSTORE_BLOCKBLOB, {blob:dep->bb}, 0, 0, round_up_sec(dep->size_bytes) / 512} };
+blockmap map[] = { {op, BLOBSTORE_BLOCKBLOB, {blob:dep->bb}
+                                , 0, 0, round_up_sec(dep->size_bytes) / 512}
+            };
             if (blockblob_clone(a->bb, map, 1) == -1) {
-                LOGERROR("[%s] failed to clone/copy blob %s to blob %s: %d %s\n", a->instanceId, dep->bb->id, a->bb->id, blobstore_get_error(),
-                         blobstore_get_last_msg());
+                LOGERROR("[%s] failed to clone/copy blob %s to blob %s: %d %s\n", a->instanceId, dep->bb->id, a->bb->id, blobstore_get_error(), blobstore_get_last_msg());
                 return blobstore_get_error();
             }
         }
@@ -1480,8 +1476,7 @@ void art_free(artifact * a)
             for (int i = 0; i < MAX_ARTIFACT_DEPS && a->deps[i]; i++) {
                 ART_FREE(a->deps[i]);
             }
-            LOGTRACE("[%s] freeing artifact %03d|%s size=%lld vbr=%p cache=%d file=%d\n", a->instanceId, a->seq, a->id, a->size_bytes, a->vbr,
-                     a->may_be_cached, a->must_be_file);
+            LOGTRACE("[%s] freeing artifact %03d|%s size=%lld vbr=%p cache=%d file=%d\n", a->instanceId, a->seq, a->id, a->size_bytes, a->vbr, a->may_be_cached, a->must_be_file);
             EUCA_FREE(a);
         }
     }
@@ -1520,8 +1515,7 @@ void arts_free(artifact * array[], unsigned int array_len)
 //!
 static void art_print_tree(const char *prefix, artifact * a)
 {
-    LOGDEBUG("[%s] artifacts tree: %s%03d|%s cache=%d file=%d creator=%p vbr=%p\n", a->instanceId, prefix, a->seq, a->id, a->may_be_cached,
-             a->must_be_file, a->creator, a->vbr);
+    LOGDEBUG("[%s] artifacts tree: %s%03d|%s cache=%d file=%d creator=%p vbr=%p\n", a->instanceId, prefix, a->seq, a->id, a->may_be_cached, a->must_be_file, a->creator, a->vbr);
 
     char new_prefix[512];
     snprintf(new_prefix, sizeof(new_prefix), "%s\t", prefix);
@@ -1631,10 +1625,9 @@ artifact *art_alloc(const char *id, const char *sig, long long size_bytes, boole
         return NULL;
 
     static int seq = 0;
-    a->seq = ++seq;             // not thread safe, but seq's are just for debugging
+    a->seq = ++seq;                    // not thread safe, but seq's are just for debugging
     euca_strncpy(a->instanceId, current_instanceId, sizeof(a->instanceId)); // for logging
-    LOGDEBUG("[%s] allocated artifact %03d|%s size=%lld vbr=%p cache=%d file=%d\n", a->instanceId, seq, id, size_bytes, vbr, may_be_cached,
-             must_be_file);
+    LOGDEBUG("[%s] allocated artifact %03d|%s size=%lld vbr=%p cache=%d file=%d\n", a->instanceId, seq, id, size_bytes, vbr, may_be_cached, must_be_file);
 
     if (id)
         euca_strncpy(a->id, id, sizeof(a->id));
@@ -1667,11 +1660,11 @@ artifact *art_alloc(const char *id, const char *sig, long long size_bytes, boole
 static void convert_id(const char *src, char *dst, unsigned int size)
 {
     if (strcasestr(src, "emi-") == src) {
-        const char *s = src + 4;    // position aftter 'emi'
-        char *d = dst + strlen(dst);    // position after 'dsk' or 'emi' or whatever
+        const char *s = src + 4;       // position aftter 'emi'
+        char *d = dst + strlen(dst);   // position after 'dsk' or 'emi' or whatever
         *d++ = '-';
         while ((*s >= '0') && (*s <= 'z')   // copy letters and numbers up to a hyphen
-               && (d - dst < size)) {   // don't overrun dst
+               && (d - dst < size)) {  // don't overrun dst
             *d++ = *s++;
         }
         *d = '\0';
@@ -1809,11 +1802,11 @@ w_out:
     case NC_LOCATION_NONE:{
             assert(vbr->sizeBytes > 0L);
 
-            char art_sig[ART_SIG_MAX];  // signature for this artifact based on its salient characteristics
+            char art_sig[ART_SIG_MAX]; // signature for this artifact based on its salient characteristics
             if (snprintf(art_sig, sizeof(art_sig), "id=%s size=%lld format=%s\n\n", vbr->id, vbr->sizeBytes, vbr->formatName) >= sizeof(art_sig))   // output was truncated
                 break;
 
-            char buf[32];       // first part of artifact ID
+            char buf[32];              // first part of artifact ID
             char *art_pref;
             if (strcmp(vbr->id, "none") == 0) {
                 if (snprintf(buf, sizeof(buf), "prt-%05lld%s", vbr->sizeBytes / 1048576, vbr->formatName) >= sizeof(buf))   // output was truncated
@@ -1823,7 +1816,7 @@ w_out:
                 art_pref = vbr->id;
             }
 
-            char art_id[48];    // ID of the artifact (append -##### hash of sig)
+            char art_id[48];           // ID of the artifact (append -##### hash of sig)
             if (art_gen_id(art_id, sizeof(art_id), art_pref, art_sig) != EUCA_OK)
                 break;
 
@@ -1845,7 +1838,7 @@ w_out:
         char art_sig[ART_SIG_MAX];
         euca_strncpy(art_sig, a->sig, sizeof(art_sig));
 
-        if (sshkey) {           // if SSH key is included, recalculate sig and ID
+        if (sshkey) {                  // if SSH key is included, recalculate sig and ID
             if (strlen(sshkey) > sizeof(a->sshkey)) {
                 LOGERROR("[%s] received SSH key is too long\n", a->instanceId);
                 goto free;
@@ -1960,8 +1953,8 @@ static artifact *art_alloc_disk(virtualBootRecord * vbr, artifact * prereqs[], i
 
     artifact *disk;
 
-    if (emi_disk) {             //! we have a full disk (@TODO remove this unused if-condition)
-        if (do_make_work_copy) {    // allocate a work copy of it
+    if (emi_disk) {                    //! we have a full disk (@TODO remove this unused if-condition)
+        if (do_make_work_copy) {       // allocate a work copy of it
             disk_size_bytes = emi_disk->size_bytes;
             if ((strlen(art_sig) + strlen(emi_disk->sig)) >= sizeof(art_sig)) { // overflow
                 LOGERROR("[%s] internal buffers (ART_SIG_MAX) too small for signature\n", current_instanceId);
@@ -1969,16 +1962,15 @@ static artifact *art_alloc_disk(virtualBootRecord * vbr, artifact * prereqs[], i
             }
             strncat(art_sig, emi_disk->sig, sizeof(art_sig) - strlen(art_sig) - 1);
 
-            if ((disk = art_alloc(emi_disk->id, art_sig, emi_disk->size_bytes, FALSE, FALSE, FALSE, copy_creator, NULL)) == NULL
-                || art_add_dep(disk, emi_disk) != EUCA_OK) {
+            if ((disk = art_alloc(emi_disk->id, art_sig, emi_disk->size_bytes, FALSE, FALSE, FALSE, copy_creator, NULL)) == NULL || art_add_dep(disk, emi_disk) != EUCA_OK) {
                 goto free;
             }
         } else {
-            disk = emi_disk;    // no work copy needed - we're done
+            disk = emi_disk;           // no work copy needed - we're done
         }
 
-    } else {                    // allocate the 'raw' disk artifact
-        char art_id[48];        // ID of the artifact (append -##### hash of sig)
+    } else {                           // allocate the 'raw' disk artifact
+        char art_id[48];               // ID of the artifact (append -##### hash of sig)
         if (art_gen_id(art_id, sizeof(art_id), art_pref, art_sig) != EUCA_OK)
             return NULL;
 
@@ -2055,7 +2047,7 @@ artifact *vbr_alloc_tree(virtualMachine * vm, boolean do_make_bootable, boolean 
     int total_prereq_vbrs = 0;
     virtualBootRecord *parts[BUS_TYPES_TOTAL][EUCA_MAX_DISKS][EUCA_MAX_PARTITIONS];
     int total_parts = 0;
-    bzero(parts, sizeof(parts));    //! @fixme: chuck - this is not zeroing out the whole array!!!
+    bzero(parts, sizeof(parts));       //! @fixme: chuck - this is not zeroing out the whole array!!!
     for (int i = 0; i < EUCA_MAX_VBRS && i < vm->virtualBootRecordLen; i++) {
         virtualBootRecord *vbr = &(vm->virtualBootRecord[i]);
         if (vbr->type == NC_RESOURCE_KERNEL || vbr->type == NC_RESOURCE_RAMDISK) {
@@ -2097,7 +2089,7 @@ artifact *vbr_alloc_tree(virtualMachine * vm, boolean do_make_bootable, boolean 
             for (int k = 0; k < EUCA_MAX_PARTITIONS; k++) {
                 virtualBootRecord *vbr = parts[i][j][k];
                 const char *use_sshkey = NULL;
-                if (vbr) {      // either a disk (k==0) or a partition (k>0)
+                if (vbr) {             // either a disk (k==0) or a partition (k>0)
                     if (vbr->type == NC_RESOURCE_IMAGE && k > 0) {  // only inject SSH key into an EMI which has a single partition (whole disk)
                         use_sshkey = sshkey;
                     }
@@ -2119,14 +2111,13 @@ artifact *vbr_alloc_tree(virtualMachine * vm, boolean do_make_bootable, boolean 
                         goto out;
                     }
                     disk_arts[0] = art_alloc_disk(&(vm->virtualBootRecord[vm->virtualBootRecordLen]),
-                                                  prereq_arts, total_prereq_arts, disk_arts + 1, partitions, NULL, do_make_bootable,
-                                                  do_make_work_copy);
+                                                  prereq_arts, total_prereq_arts, disk_arts + 1, partitions, NULL, do_make_bootable, do_make_work_copy);
                     if (disk_arts[0] == NULL) {
                         arts_free(disk_arts, EUCA_MAX_PARTITIONS);
                         goto free;
                     }
                     vm->virtualBootRecordLen++;
-                    break;      // out of the inner loop
+                    break;             // out of the inner loop
                 }
             }
 
@@ -2138,7 +2129,7 @@ artifact *vbr_alloc_tree(virtualMachine * vm, boolean do_make_bootable, boolean 
                         goto free;
                     }
                     disk_arts[k] = NULL;
-                    if (k == 0) {   // for a disk partition artifacts, if any, are already attached to it
+                    if (k == 0) {      // for a disk partition artifacts, if any, are already attached to it
                         break;
                     }
                 }
@@ -2179,7 +2170,7 @@ static int find_or_create_blob(int flags, blobstore * bs, const char *id, long l
     // open with a short timeout (0-1000 usec), as we do not want to block 
     // here - we let higher-level functions do retries if necessary
     bb = blockblob_open(bs, id, size_bytes, flags, sig, FIND_BLOB_TIMEOUT_USEC);
-    if (bb) {                   // success!
+    if (bb) {                          // success!
         *bbp = bb;
     } else {
         ret = blobstore_get_error();
@@ -2229,7 +2220,7 @@ static int find_or_create_artifact(int do_create, artifact * a, blobstore * work
     if (a->id_is_path) {
         if (check_path(a->id)) {
             if (do_create) {
-                return EUCA_OK; // creating only matters for blobs, which get locked, not for files
+                return EUCA_OK;        // creating only matters for blobs, which get locked, not for files
             } else {
                 return BLOBSTORE_ERROR_NOENT;
             }
@@ -2264,7 +2255,7 @@ static int find_or_create_artifact(int do_create, artifact * a, blobstore * work
                 a->may_be_cached = FALSE;   // so we won't check cache on future invocations
             goto try_work;
 
-        } else {                // for all others we return the error or success
+        } else {                       // for all others we return the error or success
             if (ret == BLOBSTORE_ERROR_OK)
                 a->is_in_cache = TRUE;
             return ret;
@@ -2316,7 +2307,7 @@ int art_implement_tree(artifact * root, blobstore * work_bs, blobstore * cache_b
 
     int ret = EUCA_OK;
     int tries = 0;
-    do {                        // we may have to retry multiple times due to competition
+    do {                               // we may have to retry multiple times due to competition
         int num_opened_deps = 0;
         boolean do_deps = TRUE;
         boolean do_create = TRUE;
@@ -2324,12 +2315,12 @@ int art_implement_tree(artifact * root, blobstore * work_bs, blobstore * cache_b
         if (tries++)
             usleep(ARTIFACT_RETRY_SLEEP_USEC);
 
-        if (!root->creator) {   // sentinel nodes do not have a creator
+        if (!root->creator) {          // sentinel nodes do not have a creator
             do_create = FALSE;
 
-        } else {                // not a sentinel
+        } else {                       // not a sentinel
             if (root->vbr && root->vbr->type == NC_RESOURCE_EBS)
-                goto create;    // EBS artifacts have no disk manifestation and no dependencies, so skip to creation
+                goto create;           // EBS artifacts have no disk manifestation and no dependencies, so skip to creation
 
             // try to open the artifact
             switch (ret = find_or_create_artifact(FIND, root, work_bs, cache_bs, work_prefix, &(root->bb))) {
@@ -2345,7 +2336,7 @@ int art_implement_tree(artifact * root, blobstore * work_bs, blobstore * cache_b
             case BLOBSTORE_ERROR_MFILE:    // out of file descriptors for locking => same problem
                 goto retry_or_fail;
                 break;
-            default:           // all other errors
+            default:                  // all other errors
                 LOGERROR("[%s] failed to provision artifact %03d|%s (error=%d) on try %d\n", root->instanceId, root->seq, root->id, ret, tries);
                 goto retry_or_fail;
             }
@@ -2354,7 +2345,7 @@ int art_implement_tree(artifact * root, blobstore * work_bs, blobstore * cache_b
         // at this point the artifact we need does not seem to exist
         // (though it could be created before we get around to that)
 
-        if (do_deps) {          // recursively go over dependencies, if any
+        if (do_deps) {                 // recursively go over dependencies, if any
             for (int i = 0; i < MAX_ARTIFACT_DEPS && root->deps[i]; i++) {
 
                 // recalculate the time that remains in the timeout period
@@ -2368,22 +2359,21 @@ int art_implement_tree(artifact * root, blobstore * work_bs, blobstore * cache_b
                 }
                 switch (ret = art_implement_tree(root->deps[i], work_bs, cache_bs, work_prefix, new_timeout_usec)) {
                 case BLOBSTORE_ERROR_OK:
-                    if (do_create) {    // we'll hold the dependency open for the creator
+                    if (do_create) {   // we'll hold the dependency open for the creator
                         num_opened_deps++;
-                    } else {    // this is a sentinel, we're not creating anything, so release the dep immediately
+                    } else {           // this is a sentinel, we're not creating anything, so release the dep immediately
                         if (root->deps[i]->bb && (blockblob_close(root->deps[i]->bb) == -1)) {
                             LOGERROR("[%s] failed to close dependency of %s: %d %s (potential resource leak!) on try %d\n",
                                      root->instanceId, root->id, blobstore_get_error(), blobstore_get_last_msg(), tries);
                         }
                         root->deps[i]->bb = 0;  // for debugging
                     }
-                    break;      // out of the switch statement
+                    break;             // out of the switch statement
                 case BLOBSTORE_ERROR_AGAIN:    // timed out => the competition took too long
                 case BLOBSTORE_ERROR_MFILE:    // out of file descriptors for locking => same problem
                     goto retry_or_fail;
-                default:       // all other errors
-                    LOGERROR("[%s] failed to provision dependency %s for artifact %s (error=%d) on try %d\n", root->instanceId, root->deps[i]->id,
-                             root->id, ret, tries);
+                default:              // all other errors
+                    LOGERROR("[%s] failed to provision dependency %s for artifact %s (error=%d) on try %d\n", root->instanceId, root->deps[i]->id, root->id, ret, tries);
                     goto retry_or_fail;
                 }
             }
@@ -2404,7 +2394,7 @@ int art_implement_tree(artifact * root, blobstore * work_bs, blobstore * cache_b
                 LOGDEBUG("[%s] bypassing redundant artifact %03d|%s on try %d\n", root->instanceId, root->seq, root->id, tries);
                 root->bb = root->deps[0]->bb;
                 root->deps[0]->bb = NULL;
-                num_opened_deps--;  // so we won't attempt to close deps's blockblob
+                num_opened_deps--;     // so we won't attempt to close deps's blockblob
             } else {
 
                 // try to create the artifact since last time we checked it did not exist
@@ -2421,20 +2411,19 @@ int art_implement_tree(artifact * root, blobstore * work_bs, blobstore * cache_b
                 case BLOBSTORE_ERROR_MFILE:    // out of file descriptors for locking => same problem
                     goto retry_or_fail;
                     break;
-                default:       // all other errors
-                    LOGERROR("[%s] failed to allocate artifact %s (%d %s) on try %d\n", root->instanceId, root->id, ret, blobstore_get_last_msg(),
-                             tries);
+                default:              // all other errors
+                    LOGERROR("[%s] failed to allocate artifact %s (%d %s) on try %d\n", root->instanceId, root->id, ret, blobstore_get_last_msg(), tries);
                     goto retry_or_fail;
                 }
             }
 
 create:
-            ret = root->creator(root);  // create and open this artifact for exclusive use
+            ret = root->creator(root); // create and open this artifact for exclusive use
             if (ret != EUCA_OK) {
                 LOGERROR("[%s] failed to create artifact %s (error=%d, may retry) on try %d\n", root->instanceId, root->id, ret, tries);
                 // delete the partially created artifact so we can retry with a clean slate
                 if (root->id_is_path) { // artifact is not a blob, but a file
-                    unlink(root->id);   // attempt to delete, but it may not even exist
+                    unlink(root->id);  // attempt to delete, but it may not even exist
 
                 } else {
                     if (blockblob_delete(root->bb, DELETE_BLOB_TIMEOUT_USEC, 0) == -1) {
@@ -2459,11 +2448,11 @@ retry_or_fail:
         // close all opened dependent blobs, whether we're trying again or returning
         for (int i = 0; i < num_opened_deps; i++) {
             blockblob_close(root->deps[i]->bb);
-            root->deps[i]->bb = 0;  // for debugging
+            root->deps[i]->bb = 0;     // for debugging
         }
 
     } while ((ret == BLOBSTORE_ERROR_AGAIN || ret == BLOBSTORE_ERROR_MFILE) // only timeout-type error causes us to keep trying
-             && (timeout_usec == 0  // indefinitely if there is no timeout at all
+             && (timeout_usec == 0     // indefinitely if there is no timeout at all
                  || (time_usec() - started) < timeout_usec));   // or until we exceed the timeout
 
     if (ret != EUCA_OK) {
@@ -2492,8 +2481,7 @@ retry_or_fail:
 //!
 //! @note
 //!
-static blobstore *create_teststore(int size_blocks, const char *base, const char *name, blobstore_format_t format, blobstore_revocation_t revocation,
-                                   blobstore_snapshot_t snapshot)
+static blobstore *create_teststore(int size_blocks, const char *base, const char *name, blobstore_format_t format, blobstore_revocation_t revocation, blobstore_snapshot_t snapshot)
 {
     static int ts = 0;
     if (ts == 0) {
@@ -2575,8 +2563,7 @@ static void add_vbr(virtualMachine * vm,
 //!
 //! @note
 //!
-static int provision_vm(const char *id, const char *sshkey, const char *eki, const char *eri, const char *emi, blobstore * cache_bs,
-                        blobstore * work_bs, boolean do_make_work_copy)
+static int provision_vm(const char *id, const char *sshkey, const char *eki, const char *eri, const char *emi, blobstore * cache_bs, blobstore * work_bs, boolean do_make_work_copy)
 {
     pthread_mutex_lock(&competitors_mutex);
     virtualMachine *vm = &(vm_slots[next_instances_slot]);  // we don't use vm_slots[] pointers in code
@@ -2678,11 +2665,11 @@ static void *competitor_function(void *ptr)
 
     if (do_fork) {
         pid = fork();
-        if (pid < 0) {          // fork problem
+        if (pid < 0) {                 // fork problem
             *(long long *)ptr = 1;
             return NULL;
 
-        } else if (pid > 0) {   // parent
+        } else if (pid > 0) {          // parent
             int status;
             waitpid(pid, &status, 0);
             *(long long *)ptr = WEXITSTATUS(status);
@@ -2788,7 +2775,7 @@ int main(int argc, char **argv)
     int warnings = 0;
     char cwd[1024];
 
-    if(getcwd(cwd, sizeof(cwd)) != NULL) {
+    if (getcwd(cwd, sizeof(cwd)) != NULL) {
         srandom(time(NULL));
         blobstore_set_error_function(dummy_err_fn);
 
@@ -2832,18 +2819,18 @@ int main(int argc, char **argv)
         printf("\n\n\n\n\nrunning test with use of work blobstore\n");
 
         int emis_in_use = 1;
-    	if (errors += provision_vm(GEN_ID(), KEY1, EKI1, ERI1, EMI1, cache_bs, work_bs, TRUE))
+        if (errors += provision_vm(GEN_ID(), KEY1, EKI1, ERI1, EMI1, cache_bs, work_bs, TRUE))
             goto out;
-            
+
 #define CHECK_BLOBS \
     warnings += check_blob (cache_bs, "blocks", 4 + 1 * emis_in_use);   \
     warnings += check_blob (work_bs, "blocks", 6 * provisioned_instances);
-    CHECK_BLOBS;
-    warnings += cleanup_vms();
-    CHECK_BLOBS;
+        CHECK_BLOBS;
+        warnings += cleanup_vms();
+        CHECK_BLOBS;
 
         for (int i = 0; i < SERIAL_ITERATIONS; i++) {
-        	errors += provision_vm(GEN_ID(), KEY1, EKI1, ERI1, EMI1, cache_bs, work_bs, TRUE);
+            errors += provision_vm(GEN_ID(), KEY1, EKI1, ERI1, EMI1, cache_bs, work_bs, TRUE);
         }
         if (errors) {
             printf("error: failed sequential instance provisioning test\n");
@@ -2860,7 +2847,7 @@ int main(int argc, char **argv)
             }
             printf("===============================================\n");
             printf("spawning %d competing %s\n", COMPETITIVE_PARTICIPANTS, (do_fork) ? ("processes") : ("threads"));
-            emis_in_use++;          // we'll have threads creating a new EMI
+            emis_in_use++;             // we'll have threads creating a new EMI
             pthread_t threads[COMPETITIVE_PARTICIPANTS];
             long long thread_par[COMPETITIVE_PARTICIPANTS];
             int thread_par_sum = 0;
