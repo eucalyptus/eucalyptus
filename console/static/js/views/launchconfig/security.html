@@ -3,7 +3,7 @@
     <h3 class="required-label">Security</h3>
   </div>
   <div id="launch-wizard-security-main-contents">
-    <div class="wizard-section-label">Select security options:</div>
+    <div class="wizard-section-label" class="required-label">Select security options:</div>
     <div id="launch-wizard-security-keypair"> 
       <div class="form-row clearfix upper-sibling">
         <label for="launch-wizard-security-keypair-selector">Key name</label>
@@ -22,9 +22,11 @@
           <option title="tmp9" value="tmp9">tmp9</option>
           <option value="none">None (advanced option)</option>
 -->
+          <option value="" selected disabled>Select key pair</option>
           <option data-each-keypair="keypairs" data-value="keypair.name" data-title="keypair.name" data-text="keypair.name"></option>
         </select>
     </div>
+    <div class="field-error" data-text="launchConfigErrors.key"></div>
     <div class="form-row clearfix lower-sibling">
       <label for="launch-instance-create-keypair-link">Or:</label>
       <a href="#" id="launch-instance-create-keypair-link">Create new key pair</a>
@@ -37,16 +39,18 @@
       <option selected title="default" value="default">default</option>
       <option title="group2" value="group2">group2</option>
 -->
+      <option value="" selected disabled>Select Security Group</option>
       <option data-each-sgroup="sgroups" data-title="sgroup.name" data-value="sgroup.name" data-text="sgroup.description"></option>
     </select>
   </div>
+  <div class="field-error" data-text="launchConfigErrors.group"></div>
   <div class="form-row clearfix lower-sibling">
     <label for="launch-instance-create-sg-link">Or:</label><a href="#" id="launch-instance-create-sg-link">Create new security group</a>
   </div>
   <div id="launch-wizard-security-sg-detail">
-    <div class="launcher-sgroup-details-label"><span>Security group </span><span data-text="configmodel.security_group_name"></span><span> incoming traffic rules</span></div>
+    <div class="launcher-sgroup-details-label"><span>Security group </span><span data-text="configmodel.name"></span><span> incoming traffic rules</span></div>
 
-    <div data-each-rule="configmodel.security_group_rules" class="launcher-sgroup-rule clearfix">
+    <div data-each-rule="configmodel.rules" class="launcher-sgroup-rule clearfix">
       <div class="launcher-sgroup-rule-label">Rule:</div>
         <ul>
 <!--
@@ -56,7 +60,7 @@
 -->
           <li data-text="rule.ip_protocol"></li>
           <li data-text="rule.to_port"></li>
-          <li><span data-each-grant="rule.grants" data-text="grant.cidr_ip"></span><span>&nbsp;</span></li>
+          <li><span data-each-grant="rule.grants" data-entitytext="grant.cidr_ip"></span><span>&nbsp;</span></li>
         </ul>
       </div>
 <!--        

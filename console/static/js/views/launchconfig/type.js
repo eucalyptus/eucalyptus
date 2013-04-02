@@ -44,7 +44,7 @@ define([
             keyLabel: "Key",
             valLabel: "Value",
             add: function(e, me) {
-                console.log("TAGS", arguments);
+                e.preventDefault();
               var key = $('.keyfield').val();
               var val = $('.valuefield').val();
               if(me.list.where({key: key}).length == 0) {
@@ -58,26 +58,37 @@ define([
             },
             remove: function(e, me) {
               me.list.remove(me.row);
-            }
+            },
+        },
+    
+        launchConfigErrors: {
+          type_number: ''
         }
-      };
+    };
 
     scope.tags.list.on('add remove change reset', function() {
         self.render();
-        console.log("TAGSCHANGE", this.model.tags);
     });
+
+    self.model.on('validated:invalid', function(model, errors) {
+      scope.launchConfigErrors.type_number = errors.type_number;
+    });
+
 
     $(this.el).html(template);
      this.rView = rivets.bind(this.$el, scope);
      this.render();
-     console.log("TYPEVIEW", this.model);
     },
 
 
     render: function() {
       this.rView.sync();
-      
-      
+    },
+
+    isValid: function() {
+      this.model.validate(_.pick(this.model.toJSON(),'type_number'));
+      return this.model.isValid();
     }
+
   });
 });
