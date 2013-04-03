@@ -59,6 +59,9 @@ public class LoadBalancerBackendInstance extends UserMetadata<LoadBalancerBacken
 	@Transient
 	private static final long serialVersionUID = 1L;
 	
+	@Transient
+	private String partition = null;
+	
 	public enum STATE {
 		InService, OutOfService
 	}
@@ -86,10 +89,11 @@ public class LoadBalancerBackendInstance extends UserMetadata<LoadBalancerBacken
 		this.loadbalancer = lb;
 		this.setState(STATE.OutOfService);
 		
-		List<RunningInstancesItemType> instanceIds = EucalyptusActivityTasks.getInstance().describeInstances(Lists.newArrayList(vmId));
+		List<RunningInstancesItemType> instanceIds = EucalyptusActivityTasks.getInstance().describeUserInstances(userFullName.getUserId(), Lists.newArrayList(vmId));
 	    for(RunningInstancesItemType instance : instanceIds ) {
-	      if(instance.getInstanceId().equals(vmId)){
+	      if(instance.getInstanceId().equals(vmId) && instance.getStateName().equals("running")){
 	        this.vmInstance = instance;
+	        this.partition = instance.getPlacement();
 	        break;
 	      }
 	    }
@@ -167,14 +171,17 @@ public class LoadBalancerBackendInstance extends UserMetadata<LoadBalancerBacken
     
 	@Override
 	public String getPartition() {
-
-    String localPartition = null;
-    List<RunningInstancesItemType> instances = EucalyptusActivityTasks.getInstance().describeInstances(Lists.newArrayList(this.vmInstance.getInstanceId()));
-    for (RunningInstancesItemType instance : instances ) {
-      localPartition = instance.getPlacement();
-      break;
-    }
-    return localPartition != null ? localPartition : null;
+		if(this.partition!=null)
+			return this.partition;
+		else{
+		    String localPartition = null;
+		    List<RunningInstancesItemType> instances = EucalyptusActivityTasks.getInstance().describeUserInstances(this.loadbalancer.getOwnerUserId(), Lists.newArrayList(this.vmInstance.getInstanceId()));
+		    for (RunningInstancesItemType instance : instances ) {
+		      localPartition = instance.getPlacement();
+		      break;
+		    }
+		    return localPartition != null ? localPartition : null;
+		}
 	}
 
 	@Override

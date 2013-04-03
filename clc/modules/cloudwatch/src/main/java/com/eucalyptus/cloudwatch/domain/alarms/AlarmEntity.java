@@ -19,7 +19,7 @@ import org.hibernate.annotations.CacheConcurrencyStrategy;
 import org.hibernate.annotations.Entity;
 import org.hibernate.annotations.Type;
 
-import com.eucalyptus.cloudwatch.domain.dimension.AbstractPersistentWithDimensions;
+import com.eucalyptus.cloudwatch.domain.AbstractPersistentWithDimensions;
 import com.eucalyptus.cloudwatch.domain.metricdata.MetricEntity.MetricType;
 import com.eucalyptus.cloudwatch.domain.metricdata.MetricEntity.Units;
 

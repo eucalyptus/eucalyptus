@@ -103,7 +103,7 @@ public class PolicySpec {
   public static final String VENDOR_STS = "sts";
   public static final String VENDOR_AUTOSCALING = "autoscaling";
   public static final String VENDOR_CLOUDWATCH = "cloudwatch";
-  public static final String VENDOR_LOADBALANCING = "loadbalancing";
+  public static final String VENDOR_LOADBALANCING = "elasticloadbalancing";
   
   
   public static final Set<String> VENDORS = ImmutableSet.of(

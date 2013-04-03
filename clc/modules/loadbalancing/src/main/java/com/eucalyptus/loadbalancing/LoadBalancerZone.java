@@ -36,7 +36,6 @@ import org.apache.log4j.Logger;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
 import org.hibernate.annotations.Entity;
-import org.jgroups.util.UUID;
 
 import com.eucalyptus.entities.AbstractPersistent;
 import com.eucalyptus.loadbalancing.activities.LoadBalancerServoInstance;
@@ -75,7 +74,7 @@ public class LoadBalancerZone extends AbstractPersistent {
 	@Column(name="zone_name", nullable=false)
 	private String zoneName = null;
 	
-	@Column(name="unique_name", nullable=false)
+	@Column(name="unique_name", nullable=false, unique=true)
 	private String uniqueName = null;
 
 	@OneToMany(fetch = FetchType.LAZY, mappedBy = "zone")
@@ -109,7 +108,7 @@ public class LoadBalancerZone extends AbstractPersistent {
     }
 
     protected String createUniqueName( ) {
-    	return String.format("zone-%s-%s", this.loadbalancer.getDisplayName(), this.zoneName);
+    	return String.format("zone-%s-%s-%s", this.loadbalancer.getOwnerAccountNumber(), this.loadbalancer.getDisplayName(), this.zoneName);
     }
 	  
 	@Override

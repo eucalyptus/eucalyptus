@@ -54,6 +54,7 @@ public class LoadBalancerListener extends AbstractPersistent
 		LoadBalancerListener newInstance = new LoadBalancerListener();
 		newInstance.loadbalancer = lb;
 		newInstance.loadbalancerPort = lbPort;
+		newInstance.uniqueName = newInstance.createUniqueName();
 		return newInstance;
 	}
 	
@@ -110,6 +111,9 @@ public class LoadBalancerListener extends AbstractPersistent
 	@Column(name="certificate_id", nullable=true)
 	private String sslCertificateArn = null;
 	
+	@Column(name="unique_name", nullable=false, unique=true)
+	private String uniqueName = null;
+	
 	public int getInstancePort(){
 		return this.instancePort;
 	}
@@ -145,6 +149,15 @@ public class LoadBalancerListener extends AbstractPersistent
 		}
 	}
 
+    @PrePersist
+    private void generateOnCommit( ) {
+    	if(this.uniqueName==null)
+    		this.uniqueName = createUniqueName( );
+    }
+
+    protected String createUniqueName( ) {
+    	return String.format("listener-%s-%s-%s", this.loadbalancer.getOwnerAccountNumber(), this.loadbalancer.getDisplayName(), this.loadbalancerPort);
+    }
 	@Override
 	public String toString(){
 		return String.format("Listener for %s: %nProtocol=%s, Port=%d, InstancePort=%d, InstanceProtocol=%s, CertId=%s", 

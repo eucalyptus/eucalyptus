@@ -51,7 +51,7 @@ class AutoScalingMessageValidation {
     // Generic
     STRING_128( "(?s).{1,128}" ),
     STRING_256( "(?s).{1,256}" ),
-    UUID( "[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}" ),
+    UUID_VERBOSE( "[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}|verbose" ),
 
     // Auto scaling
     ADJUSTMENT( "ChangeInCapacity|ExactCapacity|PercentChangeInCapacity" ),

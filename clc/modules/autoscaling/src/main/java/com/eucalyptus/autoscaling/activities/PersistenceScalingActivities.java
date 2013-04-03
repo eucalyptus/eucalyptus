@@ -19,12 +19,25 @@
  ************************************************************************/
 package com.eucalyptus.autoscaling.activities;
 
+import java.util.Collection;
+import java.util.Collections;
+import java.util.Date;
 import java.util.List;
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
+import org.hibernate.criterion.Conjunction;
+import org.hibernate.criterion.Restrictions;
+import com.eucalyptus.autoscaling.common.AutoScalingMetadatas;
+import com.eucalyptus.autoscaling.groups.AutoScalingGroup;
 import com.eucalyptus.autoscaling.metadata.AbstractOwnedPersistents;
 import com.eucalyptus.autoscaling.metadata.AutoScalingMetadataException;
 import com.eucalyptus.util.Callback;
+import com.eucalyptus.util.CollectionUtils;
 import com.eucalyptus.util.OwnerFullName;
+import com.google.common.base.Functions;
 import com.google.common.base.Predicate;
+import com.google.common.base.Predicates;
+import com.google.common.collect.Lists;
 
 /**
  *
@@ -34,18 +47,56 @@ public class PersistenceScalingActivities extends ScalingActivities {
   private PersistenceSupport persistenceSupport = new PersistenceSupport();
 
   @Override
-  public List<ScalingActivity> list( final OwnerFullName ownerFullName ) throws AutoScalingMetadataException {
+  public List<ScalingActivity> list( @Nullable final OwnerFullName ownerFullName ) throws AutoScalingMetadataException {
     return persistenceSupport.list( ownerFullName );
   }
 
   @Override
-  public List<ScalingActivity> list( final OwnerFullName ownerFullName, 
-                                     final Predicate<? super ScalingActivity> filter ) throws AutoScalingMetadataException {
+  public List<ScalingActivity> list( @Nullable final OwnerFullName ownerFullName,
+                                     @Nonnull  final Predicate<? super ScalingActivity> filter ) throws AutoScalingMetadataException {
     return persistenceSupport.list( ownerFullName, filter );
   }
 
   @Override
-  public ScalingActivity lookup( final OwnerFullName ownerFullName, 
+  public List<ScalingActivity> list( @Nullable final OwnerFullName ownerFullName,
+                                     @Nullable final AutoScalingGroup group,
+                                     @Nonnull  final Collection<String> activityIds,
+                                     @Nonnull  final Predicate<? super ScalingActivity> filter ) throws AutoScalingMetadataException {
+    final ScalingActivity example = ScalingActivity.withOwner( ownerFullName );
+    final Conjunction conjunction = Restrictions.conjunction();
+    final Collection<Predicate<? super ScalingActivity>> predicates = Lists.newArrayList();
+    predicates.add( filter );
+    if ( group != null ) {
+      predicates.add( CollectionUtils.propertyPredicate( group.getArn(), Functions.compose( AutoScalingMetadatas.toArn(), ScalingActivities.group() ) ) );
+      conjunction.add( Restrictions.eq( "autoScalingGroupName", group.getAutoScalingGroupName() ) );
+    }
+    if ( !activityIds.isEmpty() ) {
+      conjunction.add( Restrictions.in( "displayName", activityIds ) );
+    }
+    return persistenceSupport.listByExample(
+        example,
+        Predicates.and( predicates ),
+        conjunction,
+        Collections.<String,String>emptyMap() );
+  }
+
+  @Override
+  public List<ScalingActivity> listByActivityStatusCode( @Nullable final OwnerFullName ownerFullName,
+                                                         @Nonnull final Collection<ActivityStatusCode> statusCodes ) throws AutoScalingMetadataException {
+    final ScalingActivity example = ScalingActivity.withOwner( ownerFullName );
+    final Conjunction conjunction = Restrictions.conjunction();
+    if ( !statusCodes.isEmpty() ) {
+      conjunction.add( Restrictions.in( "statusCode", statusCodes ) );
+    }
+    return persistenceSupport.listByExample(
+        example,
+        Predicates.alwaysTrue(),
+        conjunction,
+        Collections.<String, String>emptyMap() );
+  }
+
+  @Override
+  public ScalingActivity lookup( final OwnerFullName ownerFullName,
                                  final String activityId ) throws AutoScalingMetadataException {
     return persistenceSupport.lookupByExample( 
         persistenceSupport.exampleWithName( ownerFullName, activityId ), 
@@ -68,6 +119,15 @@ public class PersistenceScalingActivities extends ScalingActivities {
   @Override
   public boolean delete( final ScalingActivity scalingActivity ) throws AutoScalingMetadataException {
     return persistenceSupport.delete( scalingActivity );
+  }
+
+  @Override
+  public int deleteByCreatedAge( @Nullable final OwnerFullName ownerFullName,
+                                 final long createdBefore ) throws AutoScalingMetadataException {
+    return persistenceSupport.deleteByExample(
+        ScalingActivity.withOwner( ownerFullName ),
+        Restrictions.lt( "creationTimestamp", new Date( createdBefore ) ),
+        Collections.<String,String>emptyMap() ).size();
   }
 
   @Override

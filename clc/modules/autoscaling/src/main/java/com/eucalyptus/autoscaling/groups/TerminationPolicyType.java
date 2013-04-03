@@ -81,7 +81,7 @@ public enum TerminationPolicyType implements TerminationPolicyTypeMetadata {
   ClosestToNextInstanceHour {
     @Override
     public List<AutoScalingInstance> selectForTermination( final List<AutoScalingInstance> instances ) {
-      final Function<AutoScalingInstance,Integer> secondsToInstanceHourFunction =
+      final Function<? super AutoScalingInstance,Integer> secondsToInstanceHourFunction =
           Functions.compose( DateToTimeUntilNextHour.INSTANCE, createdDate() );
       final Integer secondsToInstanceHour = CollectionUtils.reduce(
           Iterables.transform( instances, secondsToInstanceHourFunction ),
@@ -145,7 +145,7 @@ public enum TerminationPolicyType implements TerminationPolicyTypeMetadata {
   
   private static <T> List<AutoScalingInstance> filterByPropertyEquality( final List<AutoScalingInstance> instances, 
                                                                          final T target,
-                                                                         final Function<AutoScalingInstance,T> propertyFunction ) {
+                                                                         final Function<? super AutoScalingInstance,T> propertyFunction ) {
     return Lists.newArrayList( Iterables.filter(
         instances,
         Predicates.compose( Predicates.equalTo( target ), propertyFunction ) ) );
