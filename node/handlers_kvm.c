@@ -140,6 +140,7 @@
 
 // coming from handlers.c
 extern sem *hyp_sem;
+extern sem *migr_sem;
 extern sem *inst_sem;
 extern bunchOfInstances *global_instances;
 
@@ -570,11 +571,17 @@ static void *migrating_thread(void *arg)
     virConnectPtr *conn = NULL;
     int migration_error = 0;
 
+    LOGDEBUG("invoked for %s\n", instance->instanceId);
+
+    sem_p(migr_sem);
     if ((conn = check_hypervisor_conn()) == NULL) {
         LOGERROR("[%s] cannot migrate instance %s (failed to connect to hypervisor), giving up and rolling back.\n", instance->instanceId, instance->instanceId);
         migration_error++;
         goto out;
+    } else {
+        LOGDEBUG("[%s] check_hypervisor_conn() OK\n", instance->instanceId);
     }
+    sem_v(migr_sem);
 
     sem_p(hyp_sem);
     {
@@ -590,19 +597,26 @@ static void *migrating_thread(void *arg)
 
     char duri [1024];
     snprintf(duri, sizeof(duri), "qemu+tls://%s/system", instance->migration_dst);
+
     virConnectPtr dconn = NULL;
+
+    sem_p(migr_sem);
+    LOGDEBUG("[%s] connecting to libvirt to migrate instance using URI '%s'\n", instance->instanceId, duri);
     dconn = virConnectOpen(duri);
     if (dconn == NULL) {
         LOGWARN("[%s] cannot migrate instance using TLS (failed to connect to remote), retrying using SSH.\n", instance->instanceId);
         snprintf(duri, sizeof(duri), "qemu+ssh://%s/system", instance->migration_dst);
+        LOGDEBUG("[%s] connecting to libvirt to migrate instance using URI '%s'\n", instance->instanceId, duri);
         dconn = virConnectOpen(duri);
         if (dconn == NULL) {
             LOGERROR("[%s] cannot migrate instance using TLS or SSH (failed to connect to remote), giving up and rolling back.\n", instance->instanceId);
             migration_error++;
+            sem_v(migr_sem);
             goto out;
         }
     }
 
+    LOGDEBUG("[%s] migrating instance\n", instance->instanceId);
     virDomain *ddom = virDomainMigrate(dom,
                                        dconn,
                                        VIR_MIGRATE_LIVE | VIR_MIGRATE_NON_SHARED_DISK,
@@ -610,6 +624,8 @@ static void *migrating_thread(void *arg)
                                        NULL, // destination URI as seen from source (optional)
                                        0L); // bandwidth limitation (0 => unlimited)
     virConnectClose(dconn);
+    LOGDEBUG("[%s] instance migrated\n", instance->instanceId);
+    sem_v(migr_sem);
 
     if (ddom == NULL) {
         LOGERROR("[%s] cannot migrate instance %s, giving up and rolling back.\n", instance->instanceId, instance->instanceId);
@@ -634,6 +650,9 @@ static void *migrating_thread(void *arg)
 
     if (dom)
         virDomainFree(dom);
+
+    LOGDEBUG("done\n");
+
     return NULL;
 }
 
@@ -673,7 +692,7 @@ static int doMigrateInstances(struct nc_state_t *nc, ncMetadata * pMeta, ncInsta
 
     // FIXME: Optimize the location of this loop, placing it inside various conditionals below?
     for (int inst_idx = 0; inst_idx < instancesLen; inst_idx++) {
-        ncInstance *instance_req = instances[0];
+        ncInstance *instance_req = instances[inst_idx];
         char *sourceNodeName = instance_req->migration_src;
         char *destNodeName = instance_req->migration_dst;
 
@@ -888,20 +907,35 @@ static int doMigrateInstances(struct nc_state_t *nc, ncMetadata * pMeta, ncInsta
         sem_v(inst_sem);
         if (error) {
             if (error == EUCA_DUPLICATE_ERROR) {
-                // FIXME: Handle this way, ensure deletion after migration, or remove and re-add?
-                LOGINFO("[%s] instance struct already exists (from previous migration?), not adding\n", instance->instanceId);
+                // FIXME: Ensure deletion after migration, or replace (remove and re-add)?
+                LOGINFO("[%s] instance struct already exists (from previous migration?), deleting and re-adding...\n", instance->instanceId);
+                error = remove_instance(&global_instances, instance);
+                if (error) {
+                    LOGERROR("[%s] could not replace (remove) instance struct, failing...\n", instance->instanceId);
+                    goto failed_dest;
+                }
+                error = add_instance(&global_instances, instance);
+                if (error) {
+                    LOGERROR("[%s] could not replace (add) instance struct, failing...\n", instance->instanceId);
+                    goto failed_dest;
+                }
             } else {
-                LOGERROR("[%s] could not add instance struct\n", instance->instanceId);
+                LOGERROR("[%s] could not add instance struct, failing...\n", instance->instanceId);
                 goto failed_dest;
             }
         }
 
-        goto out;
+        continue;
 
         failed_dest:
 
         ret = EUCA_ERROR;
         EUCA_FREE(instance);
+
+        // FIXME: This isn't really right, as it will cause an error
+        // return for a multi-instance request even if some instances
+        // were successfully set up.
+        goto out;
 
         } else {
             LOGERROR("unexpected migration request (node %s is neither source nor destination)\n", pMeta->nodeName);
