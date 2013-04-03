@@ -11,9 +11,10 @@ define([
             title: 'Image',
             count: 0,
             image_selected: null,
+
             initialize : function() {
-          var self = this;
-          var scope = {
+              var self = this;
+              var scope = {
               view: this,
               blockmaps: self.options.blockMaps,
 
@@ -74,9 +75,13 @@ define([
               }
           };
           self.model.on('validated:invalid', function(model, errors) {
-              console.log('ERROR', errors);
               scope.launchConfigErrors.image_id = errors.id; 
               self.render(); 
+          });
+
+          self.model.on('validated:valid', function()  {
+            scope.launchConfigErrors.image_id = null;
+            self.render();
           });
 
           scope.images = scope.search.filtered;
