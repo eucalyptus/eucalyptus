@@ -16,6 +16,9 @@ define([
             console.log(arguments);
             tags.add(model);
         });
+        self.get('tags').on('change', function(model, models) {
+            self.trigger('change');
+        });
         _.each(this.namedColumns, function(c) {
             self.on('change:'+c, function() { 
                 self.refreshNamedColumns();
