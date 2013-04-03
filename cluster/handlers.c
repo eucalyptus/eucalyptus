@@ -245,114 +245,6 @@ char *SCHEDPOLICIES[SCHEDLAST] = {
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |
- |                             EXPORTED PROTOTYPES                            |
- |                                                                            |
-\*----------------------------------------------------------------------------*/
-
-void doInitCC(void);
-int doBundleInstance(ncMetadata * pMeta, char *instanceId, char *bucketName, char *filePrefix, char *walrusURL, char *userPublicKey, char *S3Policy, char *S3PolicySig);
-int doBundleRestartInstance(ncMetadata * pMeta, char *instanceId);
-int doCancelBundleTask(ncMetadata * pMeta, char *instanceId);
-int ncClientCall(ncMetadata * pMeta, int timeout, int ncLock, char *ncURL, char *ncOp, ...);
-int ncGetTimeout(time_t op_start, time_t op_max, int numCalls, int idx);
-int doAttachVolume(ncMetadata * pMeta, char *volumeId, char *instanceId, char *remoteDev, char *localDev);
-int doDetachVolume(ncMetadata * pMeta, char *volumeId, char *instanceId, char *remoteDev, char *localDev, int force);
-int doConfigureNetwork(ncMetadata * pMeta, char *accountId, char *type, int namedLen, char **sourceNames, char **userNames, int netLen,
-                       char **sourceNets, char *destName, char *destUserName, char *protocol, int minPort, int maxPort);
-int doFlushNetwork(ncMetadata * pMeta, char *accountId, char *destName);
-int doAssignAddress(ncMetadata * pMeta, char *uuid, char *src, char *dst);
-int doDescribePublicAddresses(ncMetadata * pMeta, publicip ** outAddresses, int *outAddressesLen);
-int doUnassignAddress(ncMetadata * pMeta, char *src, char *dst);
-int doStopNetwork(ncMetadata * pMeta, char *accountId, char *netName, int vlan);
-int doDescribeNetworks(ncMetadata * pMeta, char *nameserver, char **ccs, int ccsLen, vnetConfig * outvnetConfig);
-int doStartNetwork(ncMetadata * pMeta, char *accountId, char *uuid, char *netName, int vlan, char *nameserver, char **ccs, int ccsLen);
-int doDescribeResources(ncMetadata * pMeta, virtualMachine ** ccvms, int vmLen, int **outTypesMax, int **outTypesAvail, int *outTypesLen, ccResource ** outNodes, int *outNodesLen);
-int changeState(ccResource * in, int newstate);
-int refresh_resources(ncMetadata * pMeta, int timeout, int dolock);
-int refresh_instances(ncMetadata * pMeta, int timeout, int dolock);
-int refresh_sensors(ncMetadata * pMeta, int timeout, int dolock);
-int doDescribeInstances(ncMetadata * pMeta, char **instIds, int instIdsLen, ccInstance ** outInsts, int *outInstsLen);
-int powerUp(ccResource * res);
-int powerDown(ncMetadata * pMeta, ccResource * node);
-void print_netConfig(char *prestr, netConfig * in);
-int ncInstance_to_ccInstance(ccInstance * dst, ncInstance * src);
-int ccInstance_to_ncInstance(ncInstance * dst, ccInstance * src);
-int schedule_instance(virtualMachine * vm, char *targetNode, int *outresid);
-int schedule_instance_roundrobin(virtualMachine * vm, int *outresid);
-int schedule_instance_explicit(virtualMachine * vm, char *targetNode, int *outresid);
-int schedule_instance_greedy(virtualMachine * vm, int *outresid);
-int schedule_instance_migration(ncInstance * instance, char **includeNodes, char **excludeNodes, int *outresid);
-int doRunInstances(ncMetadata * pMeta, char *amiId, char *kernelId, char *ramdiskId, char *amiURL, char *kernelURL, char *ramdiskURL, char **instIds,
-                   int instIdsLen, char **netNames, int netNamesLen, char **macAddrs, int macAddrsLen, int *networkIndexList, int networkIndexListLen,
-                   char **uuids, int uuidsLen, int minCount, int maxCount, char *accountId, char *ownerId, char *reservationId, virtualMachine * ccvm,
-                   char *keyName, int vlan, char *userData, char *launchIndex, char *platform, int expiryTime, char *targetNode, ccInstance ** outInsts, int *outInstsLen);
-int doGetConsoleOutput(ncMetadata * pMeta, char *instanceId, char **consoleOutput);
-int doRebootInstances(ncMetadata * pMeta, char **instIds, int instIdsLen);
-int doTerminateInstances(ncMetadata * pMeta, char **instIds, int instIdsLen, int force, int **outStatus);
-int doCreateImage(ncMetadata * pMeta, char *instanceId, char *volumeId, char *remoteDev);
-int doDescribeSensors(ncMetadata * pMeta, int historySize, long long collectionIntervalTimeMs, char **instIds, int instIdsLen, char **sensorIds,
-                      int sensorIdsLen, sensorResource *** outResources, int *outResourcesLen);
-int doModifyNode(ncMetadata * pMeta, char *nodeName, char *stateName);
-int doMigrateInstances(ncMetadata * pMeta, char *nodeName, char *nodeAction);
-int setup_shared_buffer(void **buf, char *bufname, size_t bytes, sem_t ** lock, char *lockname, int mode);
-int initialize(ncMetadata * pMeta);
-int ccIsEnabled(void);
-int ccIsDisabled(void);
-int ccChangeState(int newstate);
-int ccGetStateString(char *statestr, int n);
-int ccCheckState(int clcTimer);
-int doBrokerPairing(void);
-void *monitor_thread(void *in);
-int init_pthreads(void);
-int init_log(void);
-int init_thread(void);
-int update_config(void);
-int init_config(void);
-int syncNetworkState(void);
-int checkActiveNetworks(void);
-int maintainNetworkState(void);
-int restoreNetworkState(void);
-int reconfigureNetworkFromCLC(void);
-int refreshNodes(ccConfig * config, ccResource ** res, int *numHosts);
-void shawn(void);
-int allocate_ccResource(ccResource * out, char *ncURL, char *ncService, int ncPort, char *hostname, char *mac, char *ip, int maxMemory,
-                        int availMemory, int maxDisk, int availDisk, int maxCores, int availCores, int state, int laststate, time_t stateChange, time_t idleStart);
-int free_instanceNetwork(char *mac, int vlan, int force, int dolock);
-int allocate_ccInstance(ccInstance * out, char *id, char *amiId, char *kernelId, char *ramdiskId, char *amiURL, char *kernelURL, char *ramdiskURL,
-                        char *ownerId, char *accountId, char *state, char *ccState, time_t ts, char *reservationId, netConfig * ccnet,
-                        netConfig * ncnet, virtualMachine * ccvm, int ncHostIdx, char *keyName, char *serviceTag, char *userData, char *launchIndex,
-                        char *platform, char *bundleTaskStateName, char groupNames[][64], ncVolume * volumes, int volumesSize);
-int pubIpCmp(ccInstance * inst, void *ip);
-int privIpCmp(ccInstance * inst, void *ip);
-int privIpSet(ccInstance * inst, void *ip);
-int pubIpSet(ccInstance * inst, void *ip);
-int map_instanceCache(int (*match) (ccInstance *, void *), void *matchParam, int (*operate) (ccInstance *, void *), void *operateParam);
-void print_instanceCache(void);
-void print_ccInstance(char *tag, ccInstance * in);
-void set_clean_instanceCache(void);
-void set_dirty_instanceCache(void);
-int is_clean_instanceCache(void);
-void invalidate_instanceCache(void);
-int refresh_instanceCache(char *instanceId, ccInstance * in);
-int add_instanceCache(char *instanceId, ccInstance * in);
-int del_instanceCacheId(char *instanceId);
-int find_instanceCacheId(char *instanceId, ccInstance ** out);
-int find_instanceCacheIP(char *ip, ccInstance ** out);
-void print_resourceCache(void);
-void invalidate_resourceCache(void);
-int refresh_resourceCache(char *host, ccResource * in);
-int add_resourceCache(char *host, ccResource * in);
-int del_resourceCacheId(char *host);
-int find_resourceCacheId(char *host, ccResource ** out);
-void unlock_exit(int code);
-int sem_mywait(int lockno);
-int sem_mypost(int lockno);
-int image_cache(char *id, char *url);
-int image_cache_invalidate(void);
-int image_cache_proxykick(ccResource * res, int *numHosts);
-
-/*----------------------------------------------------------------------------*\
- |                                                                            |
  |                              STATIC PROTOTYPES                             |
  |                                                                            |
 \*----------------------------------------------------------------------------*/
@@ -846,7 +738,7 @@ int ncClientCall(ncMetadata * pMeta, int timeout, int ncLock, char *ncURL, char 
                     rc = write(filedes[1], *outRes, sizeof(ncResource));
                     rc = 0;
                 } else {
-                    (*errMsg) = axutil_error_get_message(ncs->env->error);
+                    (*errMsg) = (char *) axutil_error_get_message(ncs->env->error);
                     if (*errMsg && (len = strnlen(*errMsg, 1024 - 1))) {
                         len += 1;
                         rc = write(filedes[1], &rc, sizeof(int));   //NOTE: we write back rc as well
@@ -2200,7 +2092,7 @@ int refresh_resources(ncMetadata * pMeta, int timeout, int dolock)
                     }
                     euca_strncpy(resourceCacheStage->resources[i].nodeStatus, ncResDst->nodeStatus, 24);
 ////                    // temporarily duplicate the NC reported value in the node message for debugging
-                    sprintf(resourceCacheStage->resources[i].nodeMessage, "");
+                    strcpy(resourceCacheStage->resources[i].nodeMessage, "");
                     // set iqn, if set
                     if (strlen(ncResDst->iqn)) {
                         snprintf(resourceCacheStage->resources[i].iqn, 128, "%s", ncResDst->iqn);

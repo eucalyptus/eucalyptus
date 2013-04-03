@@ -159,7 +159,7 @@ enum {
     NCCALL29,
     NCCALL30,
     NCCALL31,
-    ENDLOCK
+    ENDLOCK,
 };
 
 enum {
@@ -170,44 +170,44 @@ enum {
     ENABLED,
     STOPPED,
     NOTREADY,
-    SHUTDOWNCC
+    SHUTDOWNCC,
 };
 
 enum {
     RESDOWN,
     RESUP,
     RESASLEEP,
-    RESWAKING
+    RESWAKING,
 };
 
 enum {
     INSTINVALID,
     INSTVALID,
-    INSTCONFLICT
+    INSTCONFLICT,
 };
 
 enum {
     RESINVALID,
-    RESVALID
+    RESVALID,
 };
 
 enum {
     MONITOR = 0,
     SENSOR,
-    NUM_THREADS
+    NUM_THREADS,
 };
 
 enum {
     CONFIGLOCK,
     CACHELOCK,
-    VNETCONFIGLOCK
+    VNETCONFIGLOCK,
 };
 
 enum {
     SCHEDGREEDY,
     SCHEDROUNDROBIN,
     SCHEDPOWERSAVE,
-    SCHEDLAST
+    SCHEDLAST,
 };
 
 /*----------------------------------------------------------------------------*\

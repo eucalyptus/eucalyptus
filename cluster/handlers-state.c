@@ -154,25 +154,6 @@ extern vnetConfig *vnetconfig;
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |
- |                             EXPORTED PROTOTYPES                            |
- |                                                                            |
-\*----------------------------------------------------------------------------*/
-
-int doDescribeServices(ncMetadata * pMeta, serviceInfoType * serviceIds, int serviceIdsLen, serviceStatusType ** outStatuses, int *outStatusesLen);
-int doStartService(ncMetadata * pMeta, serviceInfoType * serviceIds, int serviceIdsLen);
-int doStopService(ncMetadata * pMeta, serviceInfoType * serviceIds, int serviceIdsLen);
-int doEnableService(ncMetadata * pMeta, serviceInfoType * serviceIds, int serviceIdsLen);
-int doDisableService(ncMetadata * pMeta, serviceInfoType * serviceIds, int serviceIdsLen);
-int doShutdownService(ncMetadata * pMeta);
-
-int validCmp(ccInstance * inst, void *in);
-int instIpSync(ccInstance * inst, void *in);
-int instNetParamsSet(ccInstance * inst, void *in);
-int instNetReassignAddrs(ccInstance * inst, void *in);
-int clean_network_state(void);
-
-/*----------------------------------------------------------------------------*\
- |                                                                            |
  |                              STATIC PROTOTYPES                             |
  |                                                                            |
 \*----------------------------------------------------------------------------*/
