@@ -90,7 +90,13 @@ public class Tags {
                                 final Criterion criterion,
                                 final Map<String,String> aliases ) throws NoSuchMetadataException {
     try {
-      return Transactions.filter( example, filter, criterion, aliases );
+      return Transactions.filteredTransform( example, criterion, aliases, filter, new Function<Tag,Tag>(){
+        @Override
+        public Tag apply( final Tag tag ) {
+          tag.getResourceId(); // Ensure initialized within transaction (see EUCA-5456)
+          return tag;
+        }
+      } );
     } catch ( Exception e ) {
       throw new NoSuchMetadataException( "Failed to find tags for " + LogUtil.dumpObject(example), e );
     }
