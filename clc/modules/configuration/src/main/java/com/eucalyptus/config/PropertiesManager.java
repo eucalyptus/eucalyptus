@@ -181,7 +181,8 @@ public class PropertiesManager {
           }
         } else { 
         try {
-          entry.setValue( request.getValue( ) );
+          String inValue = request.getValue( );
+          entry.setValue( ( inValue == null ) ? "" : inValue );
         } catch ( Exception e ) {
           entry.setValue( oldValue );
         }
