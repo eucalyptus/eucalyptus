@@ -2122,7 +2122,7 @@ int vnetGenerateDHCP(vnetConfig * vnetconfig, int *numHosts)
 
             if (vnetconfig->euca_ns != 0) {
                 euca_nameserver = hex2dot(vnetconfig->euca_ns);
-                snprintf(nameservers, 1024, "%s, %s", nameserver, euca_nameserver);
+                snprintf(nameservers, 1024, "%s, %s", euca_nameserver, nameserver);
             } else {
                 snprintf(nameservers, 1024, "%s", nameserver);
             }
