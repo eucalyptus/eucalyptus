@@ -1767,11 +1767,11 @@ static int init(void)
         for (h = available_handlers; *h; h++) {
             if (!strncmp((*h)->name, "default", CHAR_BUFFER_SIZE))
                 nc_state.D = *h;
-            
+
             if (!strncmp((*h)->name, hypervisor, CHAR_BUFFER_SIZE))
                 nc_state.H = *h;
         }
-        
+
         if (nc_state.H == NULL) {
             LOGFATAL("requested hypervisor type (%s) is not available\n", hypervisor);
             EUCA_FREE(hypervisor);
@@ -1797,7 +1797,7 @@ static int init(void)
                 LOGINFO("found state from NC v%s while starting NC v%s\n", nc_state_disk.version, nc_state.version);
                 // any NC upgrade/downgrade-related code can go here
             }
-            
+
             // check on the state
             if (nc_state_disk.is_enabled == FALSE) {
                 LOGINFO("NC will start up as DISABLED based on disk state\n");
@@ -2188,7 +2188,7 @@ static int init(void)
 
     int initFail = 0;
 
-    if (tmp && !(!strcmp(tmp, "SYSTEM") || !strcmp(tmp, "STATIC") || 
+    if (tmp && !(!strcmp(tmp, "SYSTEM") || !strcmp(tmp, "STATIC") ||
                 !strcmp(tmp, "MANAGED-NOVLAN") || !strcmp(tmp, "MANAGED"))) {
             char errorm[256];
             memset(errorm,0,256);
@@ -3011,6 +3011,7 @@ int doMigrateInstances(ncMetadata * pMeta, ncInstance ** instances, int instance
 
     LOGTRACE("invoked\n");
 
+    LOGDEBUG("verifying %d instance[s] for migration...\n", instancesLen);
     for (int i = 0; i < instancesLen; i++) {
         LOGDEBUG("verifying instance # %d...\n", i);
         if (instances[i]) {
@@ -3018,6 +3019,12 @@ int doMigrateInstances(ncMetadata * pMeta, ncInstance ** instances, int instance
                      action, i,
                      instances[i]->instanceId, instances[i]->migration_src, instances[i]->migration_dst,
                      (credentials == NULL) ? ("unavailable") : ("present"));
+            if (!strcmp(instances[i]->migration_src, instances[i]->migration_dst)) {
+                LOGERROR("[%s] rejecting proposed SAME-NODE migration from %s to %s\n",
+                         instances[i]->instanceId, instances[i]->migration_src,
+                         instances[i]->migration_dst);
+                return (EUCA_UNSUPPORTED_ERROR);
+            }
         }
     }
 
