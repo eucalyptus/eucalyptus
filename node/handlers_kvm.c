@@ -795,7 +795,7 @@ static int doMigrateInstances(struct nc_state_t *nc, ncMetadata * pMeta, ncInsta
         instance->combinePartitions = nc->convert_to_disk;
         instance->do_inject_key = nc->do_inject_key;
 
-        if ((error = create_instance_backing(instance))) {
+        if ((error = create_instance_backing(instance, TRUE))) {
             LOGERROR("[%s] failed to prepare images for instance (error=%d)\n", instance->instanceId, error);
             goto failed_dest;
         }

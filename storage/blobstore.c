@@ -369,6 +369,7 @@ int blockblob_copy(blockblob * src_bb, unsigned long long src_offset_bytes, bloc
 int blockblob_clone(blockblob * bb, const blockmap * map, unsigned int map_size);
 const char *blockblob_get_dev(blockblob * bb);
 const char *blockblob_get_file(blockblob * bb);
+blobstore * blockblob_get_blobstore(blockblob * bb);
 unsigned long long blockblob_get_size_blocks(blockblob * bb);
 unsigned long long blockblob_get_size_bytes(blockblob * bb);
 int blockblob_sync(const char *dev_path, const blockblob * bb);
@@ -4522,6 +4523,18 @@ const char *blockblob_get_file(blockblob * bb)
         return NULL;
     }
     return bb->blocks_path;
+}
+
+//!
+//! Returns the blobstore of the blob
+//! @param[in] bb
+//!
+//! @return pointer to the blobstore 
+//!
+
+blobstore * blockblob_get_blobstore(blockblob * bb)
+{
+    return bb->store;
 }
 
 //!
