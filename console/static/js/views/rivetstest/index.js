@@ -20,7 +20,7 @@ define([
                     toggle: true
                 });
                 
-                console.log("VOLUMES: " + JSON.stringify(app.data.launchConfigs))
+                console.log("VOLUMES: " + JSON.stringify(app.data.scalingGroups))
                 
                 for (var key in app.data) {
                   console.log('KEY ' + key + ': ' + JSON.stringify(app.data[key]));

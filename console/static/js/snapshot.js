@@ -297,8 +297,8 @@
 
     _expandCallback : function(row){ 
       var $el = $('<div />');
-      require(['views/expandos/volume'], function(expando) {
-         new expando({el: $el, id: row[1]});
+      require(['app', 'views/expandos/snapshot'], function(app, expando) {
+         new expando({el: $el, model: app.data.snapshot.get(row[10])});
       });
       return $el;
     },
@@ -567,13 +567,11 @@
     },
 
     _tagResourceAction : function(){
-      var thisObj = this;
-      var snapshot = thisObj.tableWrapper.eucatable('getSelectedRows', 10)[0];
-      if ( snapshot.length > 0 ) {
-        // Create a widget object for displaying the resource tag information
-        var $tagInfo = $('<div>').addClass('resource-tag-table-expanded-snapshot').addClass('clearfix').euca_resource_tag({resource: 'snapshot', resource_id: snapshot, cancelButtonCallback: function(){ thisObj.tagDialog.eucadialog("close"); }, widgetMode: 'edit' });
-        thisObj.tagDialog.eucadialog('addNote','tag-modification-display-box', $tagInfo);   // This line should be adjusted once the right template is created for the resource tag.  030713
-        thisObj.tagDialog.eucadialog('open');
+      var selected = this.tableWrapper.eucatable('getSelectedRows', 10);
+      if ( selected.length > 0 ) {
+        require(['app'], function(app) {
+           app.dialog('edittags', app.data.snapshot.get(selected[0]));
+        });
        }
     },
 

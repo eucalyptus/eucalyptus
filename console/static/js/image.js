@@ -220,10 +220,9 @@ launch_instance_image_table_platform_linux, launch_instance_image_table_platform
     },
 
     _expandCallback : function(row){ 
-      var thisObj = this;
       var $el = $('<div />');
-      require(['views/expandos/image'], function(expando) {
-         new expando({el: $el, id: row[1]});
+      require(['app', 'views/expandos/image'], function(app, expando) {
+         new expando({el: $el, model: app.data.images.get(row[9])});
       });
       return $el;
     },
@@ -245,14 +244,12 @@ launch_instance_image_table_platform_linux, launch_instance_image_table_platform
     },
 
     _tagResourceAction : function(){
-      var thisObj = this;
-      var image = thisObj.tableWrapper.eucatable('getSelectedRows', 9)[0];
-      if ( image.length > 0 ) {
-        // Create a widget object for displaying the resource tag information
-        var $tagInfo = $('<div>').addClass('resource-tag-table-expanded-image').addClass('clearfix').euca_resource_tag({resource: 'image', resource_id: image, cancelButtonCallback: function(){ thisObj.tagDialog.eucadialog("close"); }, widgetMode: 'edit' });
-        thisObj.tagDialog.eucadialog('addNote','tag-modification-display-box', $tagInfo);   // This line should be adjusted once the right template is created for the resource tag.  030713
-        thisObj.tagDialog.eucadialog('open');
-      };
+      var selected = this.tableWrapper.eucatable('getSelectedRows', 9);
+      if ( selected.length > 0 ) {
+        require(['app'], function(app) {
+           app.dialog('edittags', app.data.image.get(selected[0]));
+        });
+       }
     },
 
 

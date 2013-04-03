@@ -49,14 +49,10 @@ class BotoWalrusInterface(WalrusInterface):
             path = '/'
             port=None
             token=None
-        if boto.__version__ < '2.6':
-            self.conn = S3Connection(access_id, secret_key, host=clc_host,
+        self.conn = S3Connection(access_id, secret_key, host=clc_host,
                                   port=port, path=path,
                                   is_secure=True, security_token=token, debug=0)
-        else:
-            self.conn = S3Connection(access_id, secret_key, host=clc_host,
-                                  port=port, path=path, validate_certs=False,
-                                  is_secure=True, security_token=token, debug=0)
+        self.conn.https_validate_certificates = False
         self.conn.http_connection_kwargs['timeout'] = 30
 
     def __save_json__(self, obj, name):

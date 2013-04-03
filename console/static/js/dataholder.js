@@ -8,9 +8,10 @@ define([
 	'models/eips',
 	'models/keypairs',
 	'models/sgroups',
-	'models/snapshots'
+	'models/snapshots',
+    'sharedtags'
 ], 
-function(Backbone, ScalingGroups,Volumes,Images,LaunchConfigs,Instances, Eips, KeyPairs, SecurityGroups, Snapshots) {
+function(Backbone, ScalingGroups, Volumes, Images, LaunchConfigs, Instances, Eips, KeyPairs, SecurityGroups, Snapshots, tags) {
 	var shared = {
 		launchConfigs: new LaunchConfigs(),
 		scalingGroups: new ScalingGroups(),
@@ -29,10 +30,14 @@ function(Backbone, ScalingGroups,Volumes,Images,LaunchConfigs,Instances, Eips, K
         snapshot : new Snapshots()
 	};
 
+	shared.tags = tags;
+
     shared.image = shared.images;
     shared.volume = shared.volumes;
     shared.launchconfig = shared.launchConfigs;
     shared.scalingGroup = shared.scalingGroups;
+    shared.scalinggroup = shared.scalingGroups;
+    shared.scalinggrp = shared.scalingGroups;
 
 	shared.launchConfigs.fetch();
 	shared.scalingGroups.fetch();

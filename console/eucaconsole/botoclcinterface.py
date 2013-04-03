@@ -47,15 +47,11 @@ class BotoClcInterface(ClcInterface):
             path = '/'
             reg = None
             port=443
-        if boto.__version__ < '2.6':
-            self.conn = EC2Connection(access_id, secret_key, region=reg,
+        self.conn = EC2Connection(access_id, secret_key, region=reg,
                                   port=port, path=path,
                                   is_secure=True, security_token=token, debug=debug)
-        else:
-            self.conn = EC2Connection(access_id, secret_key, region=reg,
-                                  port=port, path=path, validate_certs=False,
-                                  is_secure=True, security_token=token, debug=debug)
         self.conn.APIVersion = '2012-03-01'
+        self.conn.https_validate_certificates = False
         self.conn.http_connection_kwargs['timeout'] = 30
 
     def __save_json__(self, obj, name):

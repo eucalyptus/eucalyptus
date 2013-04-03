@@ -5,6 +5,7 @@ define([
     return Backbone.View.extend({
       
       initialize: function(args) {
+        var self = this;
         this.$el.html(template);
         this.rView = rivets.bind(this.$el, args.model);
         console.log("ROWLIST", args);    
@@ -15,10 +16,10 @@ define([
       },
 
       remove: function() {
-
       },
   
       render: function() {
+        console.log('list render');
         this.rView.sync();
         return this;
       }

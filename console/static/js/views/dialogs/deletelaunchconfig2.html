@@ -1,10 +1,11 @@
 <div>
     <div class="title" data-msg="delete_launch_config_dialog_title">Delete launch configuration</div>
     <div class="body">
-		<p data-msg="delete_launch_config_dialog_in_use_warning">In-use warning displays</p>
+		<p data-msg="delete_launch_config_dialog_in_use_warning_first_para">You may only delete launch configurations that are not in use by scaling groups.</p>
+		<p data-msg="delete_launch_config_dialog_in_use_warning_second_para">Please suspend launch processes on your affected scaling group(s), then use the Edit Scaling Group option to change the launch configuration in use for each. You can then retry the delete launch configuration operation.</p>
 		<div class="selected-resources">
 			<table>
-				<thead><tr><th data-msg="delete_launch_config_dialog_hdr_launch_config">LAUNCH CONFIGURATION</th><thdata-msg="delete_launch_config_dialog_hdr_scaling_group">SCALING GROUP</th></tr>
+				<thead><tr><th data-msg="delete_launch_config_dialog_hdr_launch_config">LAUNCH CONFIGURATION</th><th data-msg="delete_launch_config_dialog_hdr_scaling_group">SCALING GROUP</th></tr>
 				</thead>
 				<tbody>
 					<tr data-each-item="items"><td><span data-text="item.config"></span></td><td><span data-text="item.group"></span></td></tr>

@@ -133,8 +133,8 @@
 
     _expandCallback : function(row){ 
       var $el = $('<div />');
-      require(['views/expandos/scaling'], function(expando) {
-         new expando({el: $el, id: row[1]});
+      require(['app', 'views/expandos/scaling'], function(app, expando) {
+         new expando({el: $el, model: app.data.scalingGroups.get(row[7]) });
       });
       return $el;
     },
@@ -153,36 +153,24 @@
       })();
 
       if ( selectedScaling.length === 1) {
-        itemsList['quick'] = {"name":scaling_action_quick, callback: function(key, opt){
-          var scaling_groups = describe('scalinggrp');
-          _.find(scaling_groups, function(group) {
-            if (group.name == selectedScaling[0]) {
-              var params = {name:group.name, size:group.instances.length, min:group.min_size, max:group.max_size, desired:group.desired_capacity};
-              thisObj._dialogAction('quickscaledialog', params);
-            }
-          });
-        }}
+        itemsList['quick'] = {"name":scaling_action_quick, callback: function(key, opt){ thisObj._dialogAction('quickscaledialog', selectedScaling); }}
         itemsList['suspend'] = {"name":scaling_action_suspend, callback: function(key, opt){ thisObj._dialogAction('suspendscalinggroup', selectedScaling); }}
         itemsList['resume'] = {"name":scaling_action_resume, callback: function(key, opt){ thisObj._dialogAction('resumescalinggroup', selectedScaling); }}
         itemsList['edit'] = {"name":scaling_action_edit, callback: function(key, opt){ thisObj._dialogAction('editscalinggroup', selectedScaling); }}
       }
 
       if ( selectedScaling.length >= 1) {
-        itemsList['delete'] = {"name":scaling_action_delete, callback: function(key, opt){
-          var in_use = false;
-          // Until DescribeScalingActivities is implemented on CLC, we can't tell if
-          // something is in progress. For now, we'll always allow the user to try.
-          thisObj._dialogAction('deleteScalingGroup', {groups:selectedScaling, not_allowed:in_use});
-        }}
+        itemsList['delete'] = {"name":scaling_action_delete, callback: function(key, opt){ thisObj._dialogAction('deletescalinggroup', selectedScaling); }}
       }
 
       return itemsList;
     },
 
     _dialogAction: function(dialog, selectedScaling) {
-        console.log('Would do', dialog, selectedScaling);
-        require(['views/dialogs/' + dialog], function(dialog) {
-            new dialog({items: selectedScaling});
+        require(['underscore', 'app'], function(_, app) {
+            var sgrps = new Backbone.Collection();
+            _.each(selectedScaling, function(s) { sgrps.push(app.data.scalinggrp.get(s)); });
+            app.dialog(dialog, sgrps);
         });
     }
   });
