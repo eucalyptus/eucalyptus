@@ -158,21 +158,6 @@ static pthread_mutex_t xml_mutex = PTHREAD_MUTEX_INITIALIZER;   //!< process-glo
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |
- |                             EXPORTED PROTOTYPES                            |
- |                                                                            |
-\*----------------------------------------------------------------------------*/
-
-int gen_nc_xml(const struct nc_state_t *nc_state_param);
-int read_nc_xml(struct nc_state_t *nc_state_param);
-int gen_instance_xml(const ncInstance * instance);
-int gen_libvirt_instance_xml(const ncInstance * instance);
-int gen_volume_xml(const char *volumeId, const ncInstance * instance, const char *localDevReal, const char *remoteDev);
-int gen_libvirt_volume_xml(const char *volumeId, const ncInstance * instance);
-char **get_xpath_content(const char *xml_path, const char *xpath);
-char *get_xpath_content_at(const char *xml_path, const char *xpath, int index, char *buf, int buf_len);
-
-/*----------------------------------------------------------------------------*\
- |                                                                            |
  |                              STATIC PROTOTYPES                             |
  |                                                                            |
 \*----------------------------------------------------------------------------*/

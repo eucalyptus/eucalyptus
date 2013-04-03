@@ -140,31 +140,6 @@ pthread_mutex_t ncHandlerLock = PTHREAD_MUTEX_INITIALIZER;
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |
- |                             EXPORTED PROTOTYPES                            |
- |                                                                            |
-\*----------------------------------------------------------------------------*/
-
-void adb_InitService(void);
-
-adb_ncAssignAddressResponse_t *ncAssignAddressMarshal(adb_ncAssignAddress_t * ncAssignAddress, const axutil_env_t * env);
-adb_ncPowerDownResponse_t *ncPowerDownMarshal(adb_ncPowerDown_t * ncPowerDown, const axutil_env_t * env);
-adb_ncStartNetworkResponse_t *ncStartNetworkMarshal(adb_ncStartNetwork_t * ncStartNetwork, const axutil_env_t * env);
-adb_ncDescribeResourceResponse_t *ncDescribeResourceMarshal(adb_ncDescribeResource_t * ncDescribeResource, const axutil_env_t * env);
-adb_ncRunInstanceResponse_t *ncRunInstanceMarshal(adb_ncRunInstance_t * ncRunInstance, const axutil_env_t * env);
-adb_ncDescribeInstancesResponse_t *ncDescribeInstancesMarshal(adb_ncDescribeInstances_t * ncDescribeInstances, const axutil_env_t * env);
-adb_ncRebootInstanceResponse_t *ncRebootInstanceMarshal(adb_ncRebootInstance_t * ncRebootInstance, const axutil_env_t * env);
-adb_ncGetConsoleOutputResponse_t *ncGetConsoleOutputMarshal(adb_ncGetConsoleOutput_t * ncGetConsoleOutput, const axutil_env_t * env);
-adb_ncTerminateInstanceResponse_t *ncTerminateInstanceMarshal(adb_ncTerminateInstance_t * ncTerminateInstance, const axutil_env_t * env);
-adb_ncAttachVolumeResponse_t *ncAttachVolumeMarshal(adb_ncAttachVolume_t * ncAttachVolume, const axutil_env_t * env);
-adb_ncDetachVolumeResponse_t *ncDetachVolumeMarshal(adb_ncDetachVolume_t * ncDetachVolume, const axutil_env_t * env);
-adb_ncBundleInstanceResponse_t *ncBundleInstanceMarshal(adb_ncBundleInstance_t * ncBundleInstance, const axutil_env_t * env);
-adb_ncBundleRestartInstanceResponse_t *ncBundleRestartInstanceMarshal(adb_ncBundleRestartInstance_t * ncBundleRestartInstance, const axutil_env_t * env);
-adb_ncCancelBundleTaskResponse_t *ncCancelBundleTaskMarshal(adb_ncCancelBundleTask_t * ncCancelBundleTask, const axutil_env_t * env);
-adb_ncDescribeBundleTasksResponse_t *ncDescribeBundleTasksMarshal(adb_ncDescribeBundleTasks_t * ncDescribeBundleTasks, const axutil_env_t * env);
-adb_ncDescribeSensorsResponse_t *ncDescribeSensorsMarshal(adb_ncDescribeSensors_t * ncDescribeSensors, const axutil_env_t * env);
-
-/*----------------------------------------------------------------------------*\
- |                                                                            |
  |                              STATIC PROTOTYPES                             |
  |                                                                            |
 \*----------------------------------------------------------------------------*/

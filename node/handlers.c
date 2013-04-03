@@ -141,11 +141,6 @@
 #define MIN_BLOBSTORE_SIZE_MB                        10 //!< even with boot-from-EBS one will need work space for kernel and ramdisk
 #define FS_BUFFER_PERCENT                            0.03   //!< leave 3% extra when deciding on blobstore sizes automatically
 #define WORK_BS_PERCENT                              0.33   //!< give a third of available space to work, the rest to cache
-#define DISABLED_CHECK \
-    if (nc_state.is_enabled == FALSE) { \
-        LOGERROR("operation %s is not allowed when node is DISABLED\n", __func__); \
-        return EUCA_ERROR; \
-    }                                  //<! rejection of certain operations when NC is disabled
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |
@@ -214,7 +209,7 @@ configEntry configKeysRestartNC[] = {
     {"EUCALYPTUS", "/"},
     {"NC_PORT", "8775"},
     {"NC_SERVICE", "axis2/services/EucalyptusNC"},
-    {NULL, NULL}
+    {NULL, NULL},
 };
 
 configEntry configKeysNoRestartNC[] = {
@@ -222,7 +217,7 @@ configEntry configKeysNoRestartNC[] = {
     {"LOGROLLNUMBER", "10"},
     {"LOGMAXSIZE", "104857600"},
     {"LOGPREFIX", ""},
-    {NULL, NULL}
+    {NULL, NULL},
 };
 
 /*----------------------------------------------------------------------------*\
@@ -242,52 +237,8 @@ static struct handlers *available_handlers[] = {
     &default_libvirt_handlers,
     &xen_libvirt_handlers,
     &kvm_libvirt_handlers,
-    NULL
+    NULL,
 };
-
-/*----------------------------------------------------------------------------*\
- |                                                                            |
- |                             EXPORTED PROTOTYPES                            |
- |                                                                            |
-\*----------------------------------------------------------------------------*/
-
-int get_value(char *s, const char *name, long long *valp);
-void libvirt_err_handler(void *userData, virErrorPtr error);
-int convert_dev_names(const char *localDev, char *localDevReal, char *localDevTag);
-int update_disk_aliases(ncInstance * instance);
-void print_running_domains(void);
-virConnectPtr *check_hypervisor_conn();
-void change_state(ncInstance * instance, instance_states state);
-int wait_state_transition(ncInstance * instance, instance_states from_state, instance_states to_state);
-void copy_instances(void);
-void *monitoring_thread(void *arg);
-void *startup_thread(void *arg);
-void *restart_thread(void *arg);
-void adopt_instances();
-int doDescribeInstances(ncMetadata * pMeta, char **instIds, int instIdsLen, ncInstance *** outInsts, int *outInstsLen);
-int doAssignAddress(ncMetadata * pMeta, char *instanceId, char *publicIp);
-int doPowerDown(ncMetadata * pMeta);
-int doRunInstance(ncMetadata * pMeta, char *uuid, char *instanceId, char *reservationId, virtualMachine * params, char *imageId, char *imageURL,
-                  char *kernelId, char *kernelURL, char *ramdiskId, char *ramdiskURL, char *ownerId, char *accountId, char *keyName,
-                  netConfig * netparams, char *userData, char *launchIndex, char *platform, int expiryTime, char **groupNames, int groupNamesSize, ncInstance ** outInst);
-int doTerminateInstance(ncMetadata * pMeta, char *instanceId, int force, int *shutdownState, int *previousState);
-int doRebootInstance(ncMetadata * pMeta, char *instanceId);
-int doGetConsoleOutput(ncMetadata * pMeta, char *instanceId, char **consoleOutput);
-int doDescribeResource(ncMetadata * pMeta, char *resourceType, ncResource ** outRes);
-int doStartNetwork(ncMetadata * pMeta, char *uuid, char **remoteHosts, int remoteHostsLen, int port, int vlan);
-int doAttachVolume(ncMetadata * pMeta, char *instanceId, char *volumeId, char *remoteDev, char *localDev);
-int doDetachVolume(ncMetadata * pMeta, char *instanceId, char *volumeId, char *remoteDev, char *localDev, int force, int grab_inst_sem);
-int doBundleInstance(ncMetadata * pMeta, char *instanceId, char *bucketName, char *filePrefix, char *walrusURL, char *userPublicKey, char *S3Policy, char *S3PolicySig);
-int doBundleRestartInstance(ncMetadata * pMeta, char *instanceId);
-int doCancelBundleTask(ncMetadata * pMeta, char *instanceId);
-int doDescribeBundleTasks(ncMetadata * pMeta, char **instIds, int instIdsLen, bundleTask *** outBundleTasks, int *outBundleTasksLen);
-int doCreateImage(ncMetadata * pMeta, char *instanceId, char *volumeId, char *remoteDev);
-int doDescribeSensors(ncMetadata * pMeta, int historySize, long long collectionIntervalTimeMs, char **instIds, int instIdsLen, char **sensorIds,
-                      int sensorIdsLen, sensorResource *** outResources, int *outResourcesLen);
-int doModifyNode(ncMetadata * pMeta, char *stateName);
-int doMigrateInstances(ncMetadata * pMeta, ncInstance ** instances, int instancesLen, char *action, char *credentials);
-ncInstance *find_global_instance(const char *instanceId);
-int migration_rollback_src(ncInstance * instance);
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |
@@ -307,6 +258,15 @@ static int init(void);
  |                                   MACROS                                   |
  |                                                                            |
 \*----------------------------------------------------------------------------*/
+
+//! rejection of certain operations when NC is disabled
+#define DISABLED_CHECK                                                             \
+{                                                                                  \
+    if (nc_state.is_enabled == FALSE) {                                            \
+        LOGERROR("operation %s is not allowed when node is DISABLED\n", __func__); \
+        return EUCA_ERROR;                                                         \
+    }                                                                              \
+}
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |

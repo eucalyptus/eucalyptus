@@ -146,19 +146,6 @@ static char hooks_path[MAX_PATH] = { 0 };   //!< hook path
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |
- |                             EXPORTED PROTOTYPES                            |
- |                                                                            |
-\*----------------------------------------------------------------------------*/
-
-int init_hooks(const char *euca_dir, const char *hooks_dir);
-int call_hooks(const char *event_name, const char *param1);
-
-#ifdef __STANDALONE
-int main(int argc, char **argv);
-#endif /* __STANDALONE */
-
-/*----------------------------------------------------------------------------*\
- |                                                                            |
  |                              STATIC PROTOTYPES                             |
  |                                                                            |
 \*----------------------------------------------------------------------------*/

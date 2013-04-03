@@ -129,37 +129,6 @@
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |
- |                             EXPORTED PROTOTYPES                            |
- |                                                                            |
-\*----------------------------------------------------------------------------*/
-
-ncStub *ncStubCreate(char *endpoint_uri, char *logfile, char *homedir);
-int ncStubDestroy(ncStub * pStub);
-
-int ncRunInstanceStub(ncStub * pStub, ncMetadata * pMeta, char *uuid, char *instanceId, char *reservationId, virtualMachine * params, char *imageId,
-                      char *imageURL, char *kernelId, char *kernelURL, char *ramdiskId, char *ramdiskURL, char *ownerId, char *accountId,
-                      char *keyName, netConfig * netparams, char *userData, char *launchIndex, char *platform, int expiryTime, char **groupNames,
-                      int groupNamesSize, ncInstance ** outInstPtr);
-int ncTerminateInstanceStub(ncStub * pStub, ncMetadata * pMeta, char *instanceId, int force, int *shutdownState, int *previousState);
-int ncAssignAddressStub(ncStub * pStub, ncMetadata * pMeta, char *instanceId, char *publicIp);
-int ncPowerDownStub(ncStub * pStub, ncMetadata * pMeta);
-int ncDescribeInstancesStub(ncStub * pStub, ncMetadata * pMeta, char **instIds, int instIdsLen, ncInstance *** outInsts, int *outInstsLen);
-int ncBundleInstanceStub(ncStub * pStub, ncMetadata * pMeta, char *instanceId, char *bucketName, char *filePrefix, char *walrusURL,
-                         char *userPublicKey, char *S3Policy, char *S3PolicySig);
-int ncBundleRestartInstanceStub(ncStub * pStub, ncMetadata * pMeta, char *instanceId);
-int ncCancelBundleTaskStub(ncStub * pStub, ncMetadata * pMeta, char *instanceId);
-int ncDescribeBundleTasksStub(ncStub * pStub, ncMetadata * pMeta, char **instIds, int instIdsLen, bundleTask *** outBundleTasks, int *outBundleTasksLen);
-int ncDescribeResourceStub(ncStub * pStub, ncMetadata * pMeta, char *resourceType, ncResource ** outRes);
-int ncAttachVolumeStub(ncStub * pStub, ncMetadata * pMeta, char *instanceId, char *volumeId, char *remoteDev, char *localDev);
-int ncDetachVolumeStub(ncStub * pStub, ncMetadata * pMeta, char *instanceId, char *volumeId, char *remoteDev, char *localDev, int force);
-int ncCreateImageStub(ncStub * pStub, ncMetadata * pMeta, char *instanceId, char *volumeId, char *remoteDev);
-int ncDescribeSensorsStub(ncStub * pStub, ncMetadata * pMeta, int historySize, long long collectionIntervalTimeMs, char **instIds, int instIdsLen,
-                          char **sensorIds, int sensorIdsLen, sensorResource *** outResources, int *outResourcesLen);
-int ncModifyNodeStub(ncStub * pStub, ncMetadata * pMeta, char *stateName);
-int ncMigrateInstancesStub(ncStub * pStub, ncMetadata * pMeta, ncInstance ** instances, int instancesLen, char *action, char *credentials);
-
-/*----------------------------------------------------------------------------*\
- |                                                                            |
  |                              STATIC PROTOTYPES                             |
  |                                                                            |
 \*----------------------------------------------------------------------------*/
