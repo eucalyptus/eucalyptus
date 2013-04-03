@@ -3087,7 +3087,7 @@ int schedule_instance_roundrobin(virtualMachine * vm, int *outresid)
         int mem, disk, cores;
 
         res = &(resourceCache->resources[i]);
-        if (res->state != RESDOWN) {
+        if ((res->state != RESDOWN) && (res->ncState == ENABLED)) {
             mem = res->availMemory - vm->mem;
             disk = res->availDisk - vm->disk;
             cores = res->availCores - vm->cores;
@@ -3189,7 +3189,7 @@ int schedule_instance_explicit(virtualMachine * vm, char *targetNode, int *outre
         res = &(resourceCache->resources[i]);
         if (!strcmp(res->hostname, targetNode)) {
             done++;
-            if (res->state == RESUP) {
+            if ((res->state == RESUP) && (res->ncState == ENABLED)) {
                 mem = res->availMemory - vm->mem;
                 disk = res->availDisk - vm->disk;
                 cores = res->availCores - vm->cores;
@@ -3197,7 +3197,7 @@ int schedule_instance_explicit(virtualMachine * vm, char *targetNode, int *outre
                 if (mem >= 0 && disk >= 0 && cores >= 0) {
                     resid = i;
                 }
-            } else if (res->state == RESASLEEP) {
+            } else if ((res->state == RESASLEEP) && (res->ncState == ENABLED)) {
                 mem = res->availMemory - vm->mem;
                 disk = res->availDisk - vm->disk;
                 cores = res->availCores - vm->cores;
@@ -3259,7 +3259,7 @@ int schedule_instance_greedy(virtualMachine * vm, int *outresid)
         int mem, disk, cores;
 
         res = &(resourceCache->resources[i]);
-        if ((res->state == RESUP || res->state == RESWAKING) && resid == -1) {
+        if ((res->state == RESUP || res->state == RESWAKING) && (resid == -1) && (res->ncState == ENABLED)) {
             mem = res->availMemory - vm->mem;
             disk = res->availDisk - vm->disk;
             cores = res->availCores - vm->cores;
@@ -3268,7 +3268,7 @@ int schedule_instance_greedy(virtualMachine * vm, int *outresid)
                 resid = i;
                 done++;
             }
-        } else if (res->state == RESASLEEP && sleepresid == -1) {
+        } else if ((res->state == RESASLEEP) && (sleepresid == -1) && (res->ncState == ENABLED)) {
             mem = res->availMemory - vm->mem;
             disk = res->availDisk - vm->disk;
             cores = res->availCores - vm->cores;
@@ -4301,38 +4301,35 @@ int doMigrateInstances(ncMetadata * pMeta, char *nodeName, char *instanceId, cha
     memcpy(&resourceCacheLocal, resourceCache, sizeof(ccResourceCache));
     sem_mypost(RESCACHE);
 
-    // FIXME: this assumes two nodes, one of which is a source and one of which is a destination.
-    for (i = 0; i < resourceCacheLocal.numResources && (src_index == -1 || dst_index == -1); i++) {
+    for (i = 0; i < resourceCacheLocal.numResources && (src_index == -1); i++) {
         if (resourceCacheLocal.resources[i].state != RESASLEEP) {
             if (!strcmp(resourceCacheLocal.resources[i].hostname, nodeName)) {
                 // found it
                 src_index = i;
+/*
             } else {
                 // FIXME: This goes away once we're doing real scheduling.
                 if (dst_index == -1) {
                     if (resourceCacheLocal.resources[i].ncState == ENABLED) {
-                        if (!strcmp(nodeAction, "prepare")) {
+                        if (preparing) {
                             LOGDEBUG("node %s is enabled, scheduling\n",
                                      resourceCacheLocal.resources[i].hostname);
                         }
                         // This will be ignored if we're not preparing.
                         dst_index = i;
                     } else {
-                        if (!strcmp(nodeAction, "prepare")) {
+                        if (preparing) {
                             LOGDEBUG("node %s is NOT enabled, skipping\n",
                                      resourceCacheLocal.resources[i].hostname);
                         }
                     }
                 }
+*/
             }
         }
     }
     if (src_index == -1) {
-        LOGERROR("node requested for migration (%s) cannot be found\n", SP(nodeName));
-        goto out;
-    }
-    if (preparing && (dst_index == -1)) {
-        LOGERROR("have instances to migrate, but no destinations\n");
+        LOGERROR("node requested (%s) for migration cannot be found\n", SP(nodeName));
         goto out;
     }
 
@@ -4348,7 +4345,7 @@ int doMigrateInstances(ncMetadata * pMeta, char *nodeName, char *instanceId, cha
                         continue;
                     }
                 }
-                // FIXME: Wrap.
+                // FIXME: Wrap alloc()'s
                 cc_instances = EUCA_REALLOC(cc_instances, found_instances + 1, sizeof(ccInstance *));
                 cc_instances[found_instances] = EUCA_ZALLOC(1, sizeof(ccInstance));
                 memcpy(cc_instances[found_instances], &(instanceCache->instances[i]), sizeof(ccInstance));
@@ -4372,39 +4369,52 @@ int doMigrateInstances(ncMetadata * pMeta, char *nodeName, char *instanceId, cha
         goto out;
     } else if (found_instances > 1 && !strcmp(nodeAction, "commit")) {
         LOGWARN("trying to perform a migration commit with multiple (%d) instances. Just thought I'd warn you...\n", found_instances);
-        // FIXME: Should unwind allocations and bail out right here.
+        // FIXME: Should unwind allocations and bail out right here--this is nonsense!
     }
 
     for (int idx = 0; idx < found_instances; idx++) {
-        // FIXME: Wrap.
+        // FIXME: Wrap alloc()'s.
         nc_instances = EUCA_REALLOC(nc_instances, idx + 1, sizeof(ncInstance *));
         nc_instances[idx] = EUCA_ZALLOC(1, sizeof(ncInstance));
         LOGTRACE("[%s] converting cc_instances[%d] -> nc_instances[%d]\n",
                  cc_instances[idx]->instanceId, idx, idx);
         ccInstance_to_ncInstance(nc_instances[idx], cc_instances[idx]);
-        // FIXME: ccInstance_to_ncInstance() should copy these hostnames as well.
         strncpy(nc_instances[idx]->migration_src, resourceCacheLocal.resources[src_index].hostname, HOSTNAME_SIZE);
-        strncpy(nc_instances[idx]->migration_dst, resourceCacheLocal.resources[dst_index].hostname, HOSTNAME_SIZE);
+        // Don't know .migration_dst yet, will copy that in after scheduling.
         LOGTRACE("[%s] migration hostnames: CC(%s > %s), NC(%s > %s)\n", nc_instances[idx]->instanceId,
                  SP(cc_instances[idx]->migration_src), SP(cc_instances[idx]->migration_dst),
                  nc_instances[idx]->migration_src, nc_instances[idx]->migration_dst);
     }
 
-    /*
     if (preparing) {
-        char *migration_dst = strdup((*nc_instances)[0].migration_dst);
-        // FIXME: temporary hack for testing an idea: need to fill in include & exclude lists.
-        rc = schedule_instance_migration(&nc_instances, &migration_dst, NULL, &dst_index);
-        EUCA_FREE(migration_dst);
+        for (int idx = 0; idx < found_instances; idx++) {
+            //   char *migration_dst = strdup((*nc_instances)[0].migration_dst);
+            // FIXME: temporary hack for testing an idea: need to fill in include & exclude lists.
+            //rc = schedule_instance_migration(&nc_instances, &migration_dst, NULL, &dst_index);
+            rc = schedule_instance_migration(nc_instances[idx], NULL , NULL, &dst_index);
+            //EUCA_FREE(migration_dst);
 
-        if (rc || (dst_index == -1)) {
-            LOGERROR("[%s] cannot schedule destination node (%s) for migration\n", nc_instance.instanceId, nc_instance.migration_dst);
-            goto out;
+            if (rc || (dst_index == -1)) {
+                LOGERROR("[%s] cannot schedule destination node for migration from source %s\n",
+                         nc_instances[idx]->instanceId, nc_instances[idx]->migration_src);
+                goto out;
+            } else {
+                strncpy(nc_instances[idx]->migration_dst, resourceCacheLocal.resources[dst_index].hostname, HOSTNAME_SIZE);
+                LOGINFO("[%s] scheduled instance migration from %s to %s\n",
+                        nc_instances[idx]->instanceId, nc_instances[idx]->migration_src,
+                        nc_instances[idx]->migration_dst);
+            }
         }
+    }
+
+    /* dst_index == -1 shunted off in above 'goto out' statement.
+    if (preparing && (dst_index == -1)) {
+        LOGERROR("have instances to migrate, but no destinations\n");
+        goto out;
     }
     */
 
-    LOGINFO("migrating from %s to %s\n", SP(resourceCacheLocal.resources[src_index].hostname), SP(resourceCacheLocal.resources[dst_index].hostname));
+    //LOGINFO("migrating from %s to %s\n", SP(resourceCacheLocal.resources[src_index].hostname), SP(resourceCacheLocal.resources[dst_index].hostname));
 
     if (!strcmp(nodeAction, "prepare")) {
         // notify source
@@ -4415,7 +4425,8 @@ int doMigrateInstances(ncMetadata * pMeta, char *nodeName, char *instanceId, cha
         rc = ncClientCall(pMeta, timeout, resourceCacheLocal.resources[src_index].lockidx, resourceCacheLocal.resources[src_index].ncURL, "ncMigrateInstances",
                           nc_instances, found_instances, nodeAction, NULL);
         if (rc) {
-            LOGERROR("failed: request to prepare migration on source\n");
+            LOGERROR("failed: request to prepare migration[s] from source %s\n",
+                     resourceCacheLocal.resources[src_index].hostname);
             ret = 1;
             goto out;
         } else {
@@ -4429,20 +4440,32 @@ int doMigrateInstances(ncMetadata * pMeta, char *nodeName, char *instanceId, cha
                     // found the instance in the cache
                     cacheInstance->migration_state = MIGRATION_PREPARING;
                     refresh_instanceCache(cc_instances[idx]->instanceId, cacheInstance);
+                    EUCA_FREE(cacheInstance);
                 }
             }
         }
-        // notify the destination
+        // notify the destinations
         timeout = ncGetTimeout(time(NULL), OP_TIMEOUT, 1, 0);
-        LOGDEBUG("about to ncClientCall destination node '%s' with nc_instances (%s %d) %s\n",
-                 SP(resourceCacheLocal.resources[dst_index].hostname), nodeAction, found_instances,
-                 SP(found_instances == 1 ? nc_instances[0]->instanceId : ""));
-        rc = ncClientCall(pMeta, timeout, resourceCacheLocal.resources[dst_index].lockidx, resourceCacheLocal.resources[dst_index].ncURL, "ncMigrateInstances",
-                          nc_instances, found_instances, nodeAction, NULL);
-        if (rc) {
-            LOGERROR("failed: request to prepare migration on destination\n");
-            ret = 1;
-            goto out;
+        for (int idx = 0; idx < found_instances; idx++) {
+            LOGDEBUG("[%s] about to ncClientCall destination node '%s' with nc_instances (%s %d)\n",
+                     SP(nc_instances[idx]->instanceId),
+                     SP(nc_instances[idx]->migration_dst), nodeAction, 1);
+
+            dst_index = -1;
+            for (int res_idx = 0; res_idx < resourceCacheLocal.numResources && (dst_index == -1); res_idx++) {
+                if (!strcmp(resourceCacheLocal.resources[res_idx].hostname, nc_instances[idx]->migration_dst)) {
+                    dst_index = res_idx;
+                }
+            }
+
+            rc = ncClientCall(pMeta, timeout, resourceCacheLocal.resources[dst_index].lockidx, resourceCacheLocal.resources[dst_index].ncURL, "ncMigrateInstances",
+                              &(nc_instances[idx]), 1, nodeAction, NULL);
+            if (rc) {
+                LOGERROR("[%s] failed: request to prepare migration on destination %s\n",
+                         nc_instances[idx]->instanceId, resourceCacheLocal.resources[dst_index].hostname);
+                ret = 1;
+                goto out;
+            }
         }
     } else if (!strcmp(nodeAction, "commit")) {
         // call commit on source
