@@ -4310,8 +4310,19 @@ int doMigrateInstances(ncMetadata * pMeta, char *nodeName, char *instanceId, cha
             } else {
                 // FIXME: This goes away once we're doing real scheduling.
                 if (dst_index == -1) {
-                    // This will be ignored if we're not preparing.
-                    dst_index = i;
+                    if (resourceCacheLocal.resources[i].ncState == ENABLED) {
+                        if (!strcmp(nodeAction, "prepare")) {
+                            LOGDEBUG("node %s is enabled, scheduling\n",
+                                     resourceCacheLocal.resources[i].hostname);
+                        }
+                        // This will be ignored if we're not preparing.
+                        dst_index = i;
+                    } else {
+                        if (!strcmp(nodeAction, "prepare")) {
+                            LOGDEBUG("node %s is NOT enabled, skipping\n",
+                                     resourceCacheLocal.resources[i].hostname);
+                        }
+                    }
                 }
             }
         }
