@@ -1,5 +1,5 @@
 rivets.configure({
-	adapter: {
+    adapter: {
         iterate: function(obj, callback) {
             if (obj instanceof Backbone.Collection) {
                 var l = obj.length;
@@ -21,7 +21,7 @@ rivets.configure({
                 }
             }
         },
-	    subscribe: function(obj, keypath, callback) {
+        subscribe: function(obj, keypath, callback) {
             if (obj instanceof Backbone.Model) {
                 obj.on('change:' + keypath, function (m, v) { callback(v) });
             } else if (obj instanceof Backbone.Collection) {
@@ -32,8 +32,8 @@ rivets.configure({
                 // No easy portable way to observe plain objects.
                 // console.log('plain object');
             }
-	    },
-	    unsubscribe: function(obj, keypath, callback) {
+        },
+        unsubscribe: function(obj, keypath, callback) {
             if (obj instanceof Backbone.Model)  {
                 obj.off('change:' + keypath, function (m, v) { callback(v) });
             } else if (obj instanceof Backbone.Collection) {
@@ -44,8 +44,8 @@ rivets.configure({
                 // No easy portable way to observe plain objects.
                 // console.log('plain object');
             }
-	    },
-	    read: function(obj, keypath) {
+        },
+        read: function(obj, keypath) {
             if (obj == null) return null;
             if (typeof keypath === 'undefined' || keypath === '') return obj;
 
@@ -56,8 +56,8 @@ rivets.configure({
             } else {
                 return obj[keypath];
             }
-	    },
-	    publish: function(obj, keypath, value) {
+        },
+        publish: function(obj, keypath, value) {
             if (obj instanceof Backbone.Model)  {
                 obj.set(keypath, value);
             } else if (obj instanceof Backbone.Collection) {
@@ -65,8 +65,8 @@ rivets.configure({
             } else {
                 obj[keypath] = value;
             }
-	    }
-	}
+        }
+    }
 });
 
 rivets.binders["ui-*"] = {
