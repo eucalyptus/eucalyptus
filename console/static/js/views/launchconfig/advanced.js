@@ -16,8 +16,8 @@ define([
       var scope = {
         userData: '',
         userFilename: '',
-        kernels: '',
-        ramdisks: '',
+        kernels: new Backbone.Collection(), 
+        ramdisks: new Backbone.Collection(),
         enableMonitoring: true,
         privateNetwork: false,
         volumes: '',
@@ -113,7 +113,7 @@ define([
 
         mapName: function() {
           var model = this.blockDeviceMappings.at(this.blockDeviceMappings.length - 1);
-          if(undefined !== model) {
+          if(undefined !== model && undefined != model.get('map_name')) {
             var drive = model.get('map_name').replace(/\/dev\/([a-z]*)([0-9]{1,2})/, '$1');
             var partition = model.get('map_name').replace(/\/dev\/([a-z]*)([0-9]{1,2})/, '$2');
             return drive + (++partition);
@@ -125,6 +125,14 @@ define([
       };
 
       scope.blockDeviceMappings.on('change add reset remove', function() {self.render();});
+      dataholder.images.on('reset', function() {
+        scope.kernels.add(dataholder.images.where({type: 'kernel'}));
+        scope.ramdisks.add(dataholder.images.where({type: 'ramdisk'}));
+      });
+
+      scope.kernels.on('reset change', self.render);
+      scope.ramdisks.on('reset change', self.render); 
+
       $(this.el).html(template)
       this.rView = rivets.bind(this.$el, scope);
       this.render();
