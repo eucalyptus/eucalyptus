@@ -55,11 +55,27 @@
       $.each(thisObj.options.endpoints, function(idx, ep){
         var name = ep.name;
         var url = ep.url;
+
         // add setup backbone collections in endpoints array
         if (ep.collection != null) {
           //console.log("set up model for "+name);
-          require(['models/'+ep.collection], function(collection) {
-            ep.model = new collection();
+          require(['underscore', 'app'], function(_, app) {
+            ep.model = app.data[ep.name];
+
+            var doUpdate = _.debounce(function() {
+              console.log('EUCADATA', name, ep.model.length);
+              thisObj._data[name] = {
+                lastupdated: new Date(),
+                results: ep.model.toJSON()
+              }
+              if(thisObj._listeners[name] && thisObj._listeners[name].length >0) {
+                $.each(thisObj._listeners[name], function (idx, callback){
+                  callback['callback'].apply(thisObj);
+                });
+              }
+            }, 10, true);
+            ep.model.on('change reset add', doUpdate);
+
             // set up callback for timer which updates model if necessary
             thisObj._callbacks[name] = {callback: function(){
               if(!thisObj._enabled || thisObj.countPendingReq() > MAX_PENDING_REQ ) {
@@ -68,53 +84,14 @@
               if (thisObj._data_needs && thisObj._data_needs.indexOf(ep.type) == -1) {
                 return;
               }
-              var paramData = "_xsrf="+$.cookie('_xsrf');
-              if (ep.params != undefined) {
-                 $.each(ep.params, function(key, value){
-                     paramData += "&"+key+"="+value;
-                 });
-              }
               if (ep.model == undefined) {
                 return;
               }
-              ep.model.sync("read", ep.model, {
-                success: function(model, response){
-                  //console.log("read data "+name+" = "+JSON.stringify(response));
-                  thisObj._numPending--;
-                  thisObj._data[name] = {
-                    lastupdated: new Date(),
-                    results: $.parseJSON(JSON.stringify(response))
-                  }
-                  if(thisObj._listeners[name] && thisObj._listeners[name].length >0) {
-                    $.each(thisObj._listeners[name], function (idx, callback){
-                      callback['callback'].apply(thisObj);
-                    });
-                  }
-                },
-                //error: function(jqXHR, textStatus, errorThrown){ 
-                error: function(jqXHR, response){
-                  console.log("error reading data "+name+" status:"+response);
-                  thisObj._errorCode = response
-                  thisObj._numPending--;
-                  if(thisObj._data[name]){
-                    var last = thisObj._data[name]['lastupdated'];
-                    var now = new Date();
-                    var elapsedSec = Math.round((now-last)/1000);             
-                    if((jqXHR.status === 401 || jqXHR === 403)  ||
-                       (elapsedSec > thisObj.options.refresh_interval_sec*thisObj.options.max_refresh_attempt)){
-                      delete thisObj._data[name];
-                      thisObj._data[name] = null;
-                    }
-                    if(thisObj.getStatus() !== 'online'){
-                      errorAndLogout(thisObj._errorCode);
-                    }
-                    if (jqXHR.status === 504) {
-                      notifyError($.i18n.prop('data_load_timeout'));
-                    }
-                 }
-               }
-             });
+              ep.model.fetch();
             }, repeat: null};
+
+            ep.model.fetch();
+
             var interval = thisObj.options.refresh_interval_sec*1000;
             thisObj._callbacks[name].repeat = runRepeat(thisObj._callbacks[name].callback, interval, true); // random ms is added to distribute sync interval
           });

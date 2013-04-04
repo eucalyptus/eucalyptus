@@ -1,13 +1,14 @@
 define([
  'app',
  'underscore',
+ 'backbone',
  './eucaexpandoview',
  'text!./instance.html!strip',
-], function(app, _, EucaExpandoView, template) {
+], function(app, _, Backbone, EucaExpandoView, template) {
     return EucaExpandoView.extend({
         initialize : function(args) {
             this.template = template;
-            this.model = this.model ? this.model : {};
+            this.model = this.model ? this.model : new Backbone.Model();
             if (this.model) {
                 var id = this.model.get('id');
                 this.model.set('volumes', app.data.volume.reduce(function(c, v) {
