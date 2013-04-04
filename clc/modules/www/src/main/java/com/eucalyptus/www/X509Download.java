@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * Copyright 2009-2013 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -94,6 +94,7 @@ import com.eucalyptus.component.id.Tokens;
 import com.eucalyptus.component.id.Walrus;
 import com.eucalyptus.crypto.Certs;
 import com.eucalyptus.crypto.util.PEMFiles;
+import com.eucalyptus.loadbalancing.LoadBalancing;
 import com.eucalyptus.util.Internets;
 import com.eucalyptus.ws.StackConfiguration;
 import com.google.gwt.safehtml.shared.SafeHtmlBuilder;
@@ -265,9 +266,14 @@ public class X509Download extends HttpServlet {
         sb.append( "\necho WARN:  Auto Scaling service URL is not configured. >&2" );
       }
       if ( Topology.isEnabled( CloudWatch.class ) ) {
-	sb.append( "\nexport AWS_CLOUDWATCH_URL=" + ServiceUris.remotePublicify( CloudWatch.class ) );
+        sb.append( "\nexport AWS_CLOUDWATCH_URL=" + ServiceUris.remotePublicify( CloudWatch.class ) );
       } else {
-	sb.append( "\necho WARN:  Cloud Watch service URL is not configured. >&2" );
+        sb.append( "\necho WARN:  Cloud Watch service URL is not configured. >&2" );
+      }
+      if ( Topology.isEnabled( LoadBalancing.class ) ) {
+        sb.append( "\nexport AWS_ELB_URL=" + ServiceUris.remotePublicify( LoadBalancing.class ) );
+      } else {
+        sb.append( "\necho WARN:  Load Balancing service URL is not configured. >&2" );
       }
       sb.append( "\nexport EUSTORE_URL=" + StackConfiguration.DEFAULT_EUSTORE_URL );
       sb.append( "\nexport EC2_PRIVATE_KEY=${EUCA_KEY_DIR}/" + baseName + "-pk.pem" );
