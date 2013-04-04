@@ -144,41 +144,6 @@
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |
- |                             EXPORTED PROTOTYPES                            |
- |                                                                            |
-\*----------------------------------------------------------------------------*/
-
-ncStub *ncStubCreate(char *endpoint_uri, char *logfile, char *homedir);
-int ncStubDestroy(ncStub * pStub);
-
-int ncRunInstanceStub(ncStub * pStub, ncMetadata * pMeta, char *uuid, char *instanceId, char *reservationId, virtualMachine * params, char *imageId,
-                      char *imageURL, char *kernelId, char *kernelURL, char *ramdiskId, char *ramdiskURL, char *ownerId, char *accountId,
-                      char *keyName, netConfig * netparams, char *userData, char *launchIndex, char *platform, int expiryTime, char **groupNames,
-                      int groupNamesSize, ncInstance ** outInstPtr);
-int ncGetConsoleOutputStub(ncStub * pStub, ncMetadata * pMeta, char *instanceId, char **consoleOutput);
-int ncRebootInstanceStub(ncStub * pStub, ncMetadata * pMeta, char *instanceId);
-int ncTerminateInstanceStub(ncStub * pStub, ncMetadata * pMeta, char *instId, int force, int *shutdownState, int *previousState);
-int ncDescribeInstancesStub(ncStub * pStub, ncMetadata * pMeta, char **instIds, int instIdsLen, ncInstance *** outInsts, int *outInstsLen);
-int ncDescribeResourceStub(ncStub * pStub, ncMetadata * pMeta, char *resourceType, ncResource ** outRes);
-int ncAssignAddressStub(ncStub * pStub, ncMetadata * pMeta, char *instanceId, char *publicIp);
-int ncPowerDownStub(ncStub * pStub, ncMetadata * pMeta);
-int ncStartNetworkStub(ncStub * pStub, ncMetadata * pMeta, char *uuid, char **peers, int peersLen, int port, int vlan, char **outStatus);
-int ncAttachVolumeStub(ncStub * pStub, ncMetadata * pMeta, char *instanceId, char *volumeId, char *remoteDev, char *localDev);
-int ncDetachVolumeStub(ncStub * pStub, ncMetadata * pMeta, char *instanceId, char *volumeId, char *remoteDev, char *localDev, int force);
-int ncBundleInstanceStub(ncStub * pStub, ncMetadata * pMeta, char *instanceId, char *bucketName, char *filePrefix, char *walrusURL,
-                         char *userPublicKey, char *S3Policy, char *S3PolicySig);
-int ncBundleRestartInstanceStub(ncStub * pStub, ncMetadata * pMeta, char *instanceId);
-int ncCancelBundleTaskStub(ncStub * pStub, ncMetadata * pMeta, char *instanceId);
-int ncDescribeBundleTasksStub(ncStub * pStub, ncMetadata * pMeta, char **instIds, int instIdsLen, bundleTask *** outBundleTasks,
-                              int *outBundleTasksLen);
-int ncCreateImageStub(ncStub * pStub, ncMetadata * pMeta, char *instanceId, char *volumeId, char *remoteDev);
-int ncDescribeSensorsStub(ncStub * pStub, ncMetadata * pMeta, int historySize, long long collectionIntervalTimeMs, char **instIds, int instIdsLen,
-                          char **sensorIds, int sensorIdsLen, sensorResource *** outResources, int *outResourcesLen);
-int ncModifyNodeStub(ncStub * pStub, ncMetadata * pMeta, char *stateName);
-int ncMigrateInstancesStub(ncStub * pStub, ncMetadata * pMeta, ncInstance ** instances, int instancesLen, char *action, char *credentials);
-
-/*----------------------------------------------------------------------------*\
- |                                                                            |
  |                              STATIC PROTOTYPES                             |
  |                                                                            |
 \*----------------------------------------------------------------------------*/
@@ -214,7 +179,7 @@ ncStub *ncStubCreate(char *endpoint_uri, char *logfile, char *homedir)
     axis2_char_t *client_home;
     axis2_stub_t *stub;
 
-    axutil_error_init(); // initialize error strings in Axis2
+    axutil_error_init();               // initialize error strings in Axis2
 
     if (logfile) {
         env = axutil_env_create_all(logfile, AXIS2_LOG_LEVEL_TRACE);
@@ -241,23 +206,23 @@ ncStub *ncStubCreate(char *endpoint_uri, char *logfile, char *homedir)
     uri = endpoint_uri;
 
     // extract node name from the endpoint
-    p = strstr(uri, "://");     // find "http[s]://..."
+    p = strstr(uri, "://");            // find "http[s]://..."
     if (p == NULL) {
         LOGERROR("received invalid URI %s\n", uri);
         return NULL;
     }
 
-    node_name = strdup(p + 3);  // copy without the protocol prefix
+    node_name = strdup(p + 3);         // copy without the protocol prefix
     if (node_name == NULL) {
         LOGERROR("is out of memory\n");
         return NULL;
     }
 
     if ((p = strchr(node_name, ':')) != NULL)
-        *p = '\0';              // cut off the port
+        *p = '\0';                     // cut off the port
 
     if ((p = strchr(node_name, '/')) != NULL)
-        *p = '\0';              // if there is no port
+        *p = '\0';                     // if there is no port
 
     // see if we should redirect to a local broker
     if (strstr(uri, "EucalyptusBroker")) {
@@ -577,8 +542,8 @@ int ncTerminateInstanceStub(ncStub * pStub, ncMetadata * pMeta, char *instId, in
             status = 1;
         }
         //! @todo fix the state char->int conversion
-        *shutdownState = 0;     //strdup(adb_ncTerminateInstanceResponseType_get_shutdownState(response, env));
-        *previousState = 0;     //strdup(adb_ncTerminateInstanceResponseType_get_previousState(response, env));
+        *shutdownState = 0;            //strdup(adb_ncTerminateInstanceResponseType_get_shutdownState(response, env));
+        *previousState = 0;            //strdup(adb_ncTerminateInstanceResponseType_get_previousState(response, env));
     }
 
     return (status);
@@ -695,7 +660,7 @@ int ncDescribeResourceStub(ncStub * pStub, ncMetadata * pMeta, char *resourceTyp
     adb_ncDescribeResource_set_ncDescribeResource(input, env, request);
 
     if ((output = axis2_stub_op_EucalyptusNC_ncDescribeResource(stub, env, input)) == NULL) {
-        
+
         LOGERROR(NULL_ERROR_MSG);
         status = -1;
     } else {
@@ -706,7 +671,7 @@ int ncDescribeResourceStub(ncStub * pStub, ncMetadata * pMeta, char *resourceTyp
         }
 
         res = allocate_resource((char *)adb_ncDescribeResourceResponseType_get_nodeStatus(response, env),
-                                (boolean)adb_ncDescribeResourceResponseType_get_migrationCapable(response, env),
+                                (boolean) adb_ncDescribeResourceResponseType_get_migrationCapable(response, env),
                                 (char *)adb_ncDescribeResourceResponseType_get_iqn(response, env),
                                 (int)adb_ncDescribeResourceResponseType_get_memorySizeMax(response, env),
                                 (int)adb_ncDescribeResourceResponseType_get_memorySizeAvailable(response, env),
@@ -1194,8 +1159,7 @@ int ncCancelBundleTaskStub(ncStub * pStub, ncMetadata * pMeta, char *instanceId)
 //!
 //! @return Always return EUCA_OK
 //!
-int ncDescribeBundleTasksStub(ncStub * pStub, ncMetadata * pMeta, char **instIds, int instIdsLen, bundleTask *** outBundleTasks,
-                              int *outBundleTasksLen)
+int ncDescribeBundleTasksStub(ncStub * pStub, ncMetadata * pMeta, char **instIds, int instIdsLen, bundleTask *** outBundleTasks, int *outBundleTasksLen)
 {
     int i = 0;
     int status = 0;

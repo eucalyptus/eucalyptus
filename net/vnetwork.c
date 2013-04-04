@@ -74,7 +74,7 @@
  |                                                                            |
 \*----------------------------------------------------------------------------*/
 
-#define _FILE_OFFSET_BITS 64    // so large-file support works on 32-bit systems
+#define _FILE_OFFSET_BITS 64           // so large-file support works on 32-bit systems
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -90,7 +90,7 @@
 #include <fcntl.h>
 #include <stdarg.h>
 #include <ifaddrs.h>
-#include <math.h>               /* log2 */
+#include <math.h>                      /* log2 */
 #include <sys/socket.h>
 #include <netdb.h>
 #include <arpa/inet.h>
@@ -144,100 +144,13 @@
  |                                                                            |
 \*----------------------------------------------------------------------------*/
 
-char *iptablesCache = NULL;     //!< contains the IP tables cache
+char *iptablesCache = NULL;            //!< contains the IP tables cache
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |
  |                              STATIC VARIABLES                              |
  |                                                                            |
 \*----------------------------------------------------------------------------*/
-
-/*----------------------------------------------------------------------------*\
- |                                                                            |
- |                             EXPORTED PROTOTYPES                            |
- |                                                                            |
-\*----------------------------------------------------------------------------*/
-
-int vnetInit(vnetConfig * vnetconfig, char *mode, char *eucahome, char *path, int role, char *pubInterface, char *privInterface, char *numberofaddrs,
-             char *network, char *netmask, char *broadcast, char *nameserver, char *domainname, char *router, char *daemon, char *dhcpuser,
-             char *bridgedev, char *localIp, char *macPrefix);
-int vnetSetMetadataRedirect(vnetConfig * vnetconfig);
-int vnetUnsetMetadataRedirect(vnetConfig * vnetconfig);
-int vnetInitTunnels(vnetConfig * vnetconfig);
-int vnetAddHost(vnetConfig * vnetconfig, char *mac, char *ip, int vlan, int idx);
-int vnetDelHost(vnetConfig * vnetconfig, char *mac, char *ip, int vlan);
-int vnetRefreshHost(vnetConfig * vnetconfig, char *mac, char *ip, int vlan, int idx);
-int vnetEnableHost(vnetConfig * vnetconfig, char *mac, char *ip, int vlan);
-int vnetDisableHost(vnetConfig * vnetconfig, char *mac, char *ip, int vlan);
-int vnetDeleteChain(vnetConfig * vnetconfig, char *userName, char *netName);
-int vnetCreateChain(vnetConfig * vnetconfig, char *userName, char *netName);
-int vnetSaveTablesToMemory(vnetConfig * vnetconfig);
-int vnetRestoreTablesFromMemory(vnetConfig * vnetconfig);
-int vnetFlushTable(vnetConfig * vnetconfig, char *userName, char *netName);
-int vnetApplySingleEBTableRule(vnetConfig * vnetconfig, char *table, char *rule);
-int vnetApplySingleTableRule(vnetConfig * vnetconfig, char *table, char *rule);
-int vnetTableRule(vnetConfig * vnetconfig, char *type, char *destUserName, char *destName, char *sourceUserName, char *sourceNet, char *sourceNetName,
-                  char *protocol, int minPort, int maxPort);
-int vnetSetVlan(vnetConfig * vnetconfig, int vlan, char *uuid, char *user, char *network);
-int vnetGetVlan(vnetConfig * vnetconfig, char *user, char *network);
-int vnetGetAllVlans(vnetConfig * vnetconfig, char ***outusers, char ***outnets, int *len);
-int vnetGenerateNetworkParams(vnetConfig * vnetconfig, char *instId, int vlan, int nidx, char *outmac, char *outpubip, char *outprivip);
-int vnetGetNextHost(vnetConfig * vnetconfig, char *mac, char *ip, int vlan, int idx);
-int vnetCountLocalIP(vnetConfig * vnetconfig);
-int vnetCheckLocalIP(vnetConfig * vnetconfig, uint32_t ip);
-int vnetAddLocalIP(vnetConfig * vnetconfig, uint32_t ip);
-int vnetAddDev(vnetConfig * vnetconfig, char *dev);
-int vnetDelDev(vnetConfig * vnetconfig, char *dev);
-int vnetGenerateDHCP(vnetConfig * vnetconfig, int *numHosts);
-int vnetKickDHCP(vnetConfig * vnetconfig);
-int vnetAddCCS(vnetConfig * vnetconfig, uint32_t cc);
-int vnetDelCCS(vnetConfig * vnetconfig, uint32_t cc);
-int vnetSetCCS(vnetConfig * vnetconfig, char **ccs, int ccsLen);
-int vnetStartInstanceNetwork(vnetConfig * vnetconfig, int vlan, char *publicIp, char *privateIp, char *macaddr);
-int vnetStopInstanceNetwork(vnetConfig * vnetconfig, int vlan, char *publicIp, char *privateIp, char *macaddr);
-int vnetStartNetworkManaged(vnetConfig * vnetconfig, int vlan, char *uuid, char *userName, char *netName, char **outbrname);
-int vnetAttachTunnels(vnetConfig * vnetconfig, int vlan, char *newbrname);
-int vnetDetachTunnels(vnetConfig * vnetconfig, int vlan, char *newbrname);
-int vnetTeardownTunnels(vnetConfig * vnetconfig);
-int vnetTeardownTunnelsVTUN(vnetConfig * vnetconfig);
-int vnetSetupTunnels(vnetConfig * vnetconfig);
-int vnetSetupTunnelsVTUN(vnetConfig * vnetconfig);
-int vnetAddGatewayIP(vnetConfig * vnetconfig, int vlan, char *devname, int localIpId);
-int vnetApplyArpTableRules(vnetConfig * vnetconfig);
-int vnetDelGatewayIP(vnetConfig * vnetconfig, int vlan, char *devname, int localIpId);
-int vnetStopNetworkManaged(vnetConfig * vnetconfig, int vlan, char *userName, char *netName);
-int vnetStartNetwork(vnetConfig * vnetconfig, int vlan, char *uuid, char *userName, char *netName, char **outbrname);
-int vnetGetPublicIP(vnetConfig * vnetconfig, char *ip, char **dstip, int *allocated, int *addrdevno);
-int vnetCheckPublicIP(vnetConfig * vnetconfig, char *ip);
-int vnetAddPublicIP(vnetConfig * vnetconfig, char *inip);
-int vnetAssignAddress(vnetConfig * vnetconfig, char *src, char *dst);
-int vnetAllocatePublicIP(vnetConfig * vnetconfig, char *uuid, char *ip, char *dstip);
-int vnetDeallocatePublicIP(vnetConfig * vnetconfig, char *uuid, char *ip, char *dstip);
-int vnetSetPublicIP(vnetConfig * vnetconfig, char *uuid, char *ip, char *dstip, int setval);
-int vnetReassignAddress(vnetConfig * vnetconfig, char *uuid, char *src, char *dst);
-int vnetUnassignAddress(vnetConfig * vnetconfig, char *src, char *dst);
-int vnetStopNetwork(vnetConfig * vnetconfig, int vlan, char *userName, char *netName);
-int instId2mac(vnetConfig * vnetconfig, char *instId, char *outmac);
-int ip2mac(vnetConfig * vnetconfig, char *ip, char **mac);
-int mac2ip(vnetConfig * vnetconfig, char *mac, char **ip);
-uint32_t dot2hex(char *in);
-int getdevinfo(char *dev, uint32_t ** outips, uint32_t ** outnms, int *len);
-void hex2mac(unsigned char in[6], char **out);
-void mac2hex(char *in, unsigned char out[6]);
-int maczero(unsigned char in[6]);
-int machexcmp(char *ina, unsigned char inb[6]);
-char *hex2dot(uint32_t in);
-char *ipdot2macdot(char *ip, char *macprefix);
-int vnetLoadIPTables(vnetConfig * vnetconfig);
-int check_chain(vnetConfig * vnetconfig, char *userName, char *netName);
-int check_deviceup(char *dev);
-int check_device(char *dev);
-int check_bridgestp(char *br);
-int check_bridgedev(char *br, char *dev);
-int check_bridge(char *brname);
-int check_tablerule(vnetConfig * vnetconfig, char *table, char *rule);
-int check_isip(char *ip);
-char *host2ip(char *host);
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |
@@ -1786,8 +1699,7 @@ int vnetGenerateNetworkParams(vnetConfig * vnetconfig, char *instId, int vlan, i
     u32 inip = 0;
 
     if (!vnetconfig || !instId || !outmac || !outpubip || !outprivip) {
-        LOGERROR("bad input params: vnetconfig=%p, instId=%s, outmac=%s, outpubip=%s outprivip=%s\n", vnetconfig, SP(instId), SP(outmac),
-                 SP(outpubip), SP(outprivip));
+        LOGERROR("bad input params: vnetconfig=%p, instId=%s, outmac=%s, outpubip=%s outprivip=%s\n", vnetconfig, SP(instId), SP(outmac), SP(outpubip), SP(outprivip));
         return (EUCA_INVALID_ERROR);
     }
 
@@ -1894,8 +1806,7 @@ int vnetGetNextHost(vnetConfig * vnetconfig, char *mac, char *ip, int vlan, int 
     }
 
     for (i = start; i <= stop; i++) {
-        if (maczero(vnetconfig->networks[vlan].addrs[i].mac) && vnetconfig->networks[vlan].addrs[i].ip != 0
-            && vnetconfig->networks[vlan].addrs[i].active == 0) {
+        if (maczero(vnetconfig->networks[vlan].addrs[i].mac) && vnetconfig->networks[vlan].addrs[i].ip != 0 && vnetconfig->networks[vlan].addrs[i].active == 0) {
             hex2mac(vnetconfig->networks[vlan].addrs[i].mac, &newmac);
             strncpy(mac, newmac, strlen(newmac));
             EUCA_FREE(newmac);
@@ -2104,8 +2015,7 @@ int vnetGenerateDHCP(vnetConfig * vnetconfig, int *numHosts)
         return (EUCA_ACCESS_ERROR);
     }
 
-    fprintf(fp,
-            "# automatically generated config file for DHCP server\ndefault-lease-time 86400;\nmax-lease-time 86400;\nddns-update-style none;\n\n");
+    fprintf(fp, "# automatically generated config file for DHCP server\ndefault-lease-time 86400;\nmax-lease-time 86400;\nddns-update-style none;\n\n");
 
     fprintf(fp, "shared-network euca {\n");
     for (i = 0; i < vnetconfig->max_vlan; i++) {
@@ -3241,7 +3151,6 @@ int vnetStopNetworkManaged(vnetConfig * vnetconfig, int vlan, char *userName, ch
             LOGERROR("cmd '%s' failed\n", cmd);
             ret = EUCA_ERROR;
         }
-
         // DAN temporary for QA, re-enable for release
         snprintf(newdevname, 32, "%s.%d", vnetconfig->privInterface, vlan);
         if ((rc = check_device(newdevname)) == 0) {

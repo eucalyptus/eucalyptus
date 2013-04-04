@@ -98,7 +98,7 @@ int run_command_and_get_pid(char *cmd, char **args)
             exit(-1);
         char *home = getenv(EUCALYPTUS_ENV_VAR_NAME);
         if (!home) {
-            home = strdup("");  /* root by default */
+            home = strdup("");         /* root by default */
         } else {
             home = strdup(home);
         }

@@ -77,11 +77,11 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
-#include <unistd.h>             /* close */
+#include <unistd.h>                    /* close */
 #include <assert.h>
 #include <string.h>
 #include <strings.h>
-#include <fcntl.h>              /* open */
+#include <fcntl.h>                     /* open */
 #include <signal.h>
 #include <sys/types.h>
 #include <sys/wait.h>
@@ -147,19 +147,7 @@ static char connect_storage_cmd_path[MAX_PATH] = { 0 };
 static char disconnect_storage_cmd_path[MAX_PATH] = { 0 };
 static char get_storage_cmd_path[MAX_PATH] = { 0 };
 
-static sem *iscsi_sem = NULL;   //!< for serializing attach and detach invocations
-
-/*----------------------------------------------------------------------------*\
- |                                                                            |
- |                             EXPORTED PROTOTYPES                            |
- |                                                                            |
-\*----------------------------------------------------------------------------*/
-
-void init_iscsi(const char *euca_home);
-char *connect_iscsi_target(const char *dev_string);
-int disconnect_iscsi_target(const char *dev_string);
-char *get_iscsi_target(const char *dev_string);
-int check_iscsi(const char *dev_string);
+static sem *iscsi_sem = NULL;          //!< for serializing attach and detach invocations
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |

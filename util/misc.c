@@ -74,12 +74,12 @@
  |                                                                            |
 \*----------------------------------------------------------------------------*/
 
-#define _FILE_OFFSET_BITS 64    // so large-file support works on 32-bit systems
+#define _FILE_OFFSET_BITS 64           // so large-file support works on 32-bit systems
 #include <stdio.h>
 #include <stdlib.h>
 #define _GNU_SOURCE
-#include <string.h>             // strlen, strcpy
-#include <ctype.h>              // isspace
+#include <string.h>                    // strlen, strcpy
+#include <ctype.h>                     // isspace
 #include <assert.h>
 #include <stdarg.h>
 #include <sys/types.h>
@@ -87,16 +87,16 @@
 #include <sys/vfs.h>
 #include <unistd.h>
 #include <time.h>
-#include <math.h>               // powf
-#include <fcntl.h>              // open
-#include <utime.h>              // utime
+#include <math.h>                      // powf
+#include <fcntl.h>                     // open
+#include <utime.h>                     // utime
 #include <sys/wait.h>
 #include <pwd.h>
-#include <dirent.h>             // opendir, etc
-#include <sys/errno.h>          // errno
-#include <sys/time.h>           // gettimeofday
+#include <dirent.h>                    // opendir, etc
+#include <sys/errno.h>                 // errno
+#include <sys/time.h>                  // gettimeofday
 #include <limits.h>
-#include <sys/mman.h>           // mmap
+#include <sys/mman.h>                  // mmap
 #include <pthread.h>
 
 #include "eucalyptus.h"
@@ -163,68 +163,6 @@
  |                              STATIC VARIABLES                              |
  |                                                                            |
 \*----------------------------------------------------------------------------*/
-
-/*----------------------------------------------------------------------------*\
- |                                                                            |
- |                             EXPORTED PROTOTYPES                            |
- |                                                                            |
-\*----------------------------------------------------------------------------*/
-
-int verify_helpers(char **helpers, char **helpers_path, int num_helpers);
-int timeread(int fd, void *buf, size_t bytes, int timeout);
-int add_euca_to_path(const char *euca_home_supplied);
-pid_t timewait(pid_t pid, int *status, int timeout_sec);
-int killwait(pid_t pid);
-int param_check(const char *func, ...);
-int check_process(pid_t pid, char *search);
-int check_directory(const char *dir);
-int check_file_newer_than(const char *file, time_t mtime);
-int check_block(const char *file);
-int check_file(const char *file);
-int check_path(const char *path);
-int statfs_path(const char *path, unsigned long long *fs_bytes_size, unsigned long long *fs_bytes_available, int *fs_id);
-char *fp2str(FILE * fp);
-char *system_output(char *shell_command);
-char *getConfString(char configFiles[][MAX_PATH], int numFiles, char *key);
-int get_conf_var(const char *path, const char *name, char **value);
-char **from_var_to_char_list(const char *v);
-int hash_code(const char *s);
-int hash_code_bin(const char *buf, int buf_size);
-char *get_string_stats(const char *s);
-int daemonmaintain(char *cmd, char *procname, char *pidfile, int force, char *rootwrap);
-int daemonrun(char *incmd, char *pidfile);
-int vrun(const char *fmt, ...) _attribute_format_(1, 2);
-int cat(const char *file_name);
-int touch(const char *path);
-int diff(const char *path1, const char *path2);
-long long dir_size(const char *path);
-int write2file(const char *path, char *str);
-char *file2strn(const char *path, const ssize_t limit);
-char *file2str(const char *path);
-char *file2str_seek(char *file, size_t size, int mode);
-int uint32compar(const void *ina, const void *inb);
-int safekillfile(char *pidfile, char *procname, int sig, char *rootwrap);
-int safekill(pid_t pid, char *procname, int sig, char *rootwrap);
-int maxint(int a, int b);
-int minint(int a, int b);
-int copy_file(const char *src, const char *dst);
-long long file_size(const char *file_path);
-char *xpath_content(const char *xml, const char *xpath);
-int construct_uri(char *uri, char *uriType, char *host, int port, char *path);
-int tokenize_uri(char *uri, char *uriType, char *host, int *port, char *path);
-int ensure_directories_exist(const char *path, int is_file_path, const char *user, const char *group, mode_t mode);
-long long time_usec(void);
-long long time_ms(void);
-char *safe_mkdtemp(char *template);
-int safe_mkstemp(char *template);
-int get_blkid(const char *dev_path, char *uuid, unsigned int uuid_size);
-char parse_boolean(const char *s);
-int drop_privs(void);
-int timeshell(char *command, char *stdout_str, char *stderr_str, int max_size, int timeout);
-
-#ifdef _UNIT_TEST
-int main(int argc, char **argv);
-#endif /* _UNIT_TEST */
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |
@@ -295,7 +233,7 @@ int verify_helpers(char **helpers, char **helpers_path, int num_helpers)
             if (!rc && S_ISREG(statbuf.st_mode)) {
                 done++;
             }
-        } else {                // no full path was given, so search $PATH
+        } else {                       // no full path was given, so search $PATH
             if ((tok = getenv("PATH")) == NULL) {
                 missing_helpers = -1;
                 goto cleanup;
@@ -419,7 +357,7 @@ int add_euca_to_path(const char *euca_home_supplied)
         old_path = "";
 
     snprintf(new_path, sizeof(new_path), EUCALYPTUS_DATA_DIR ":"    // (connect|disconnect iscsi, get_xen_info, getstats, get_sys_info)
-             EUCALYPTUS_SBIN_DIR ":"    // (eucalyptus-cloud, euca_conf, euca_sync_key, euca-* admin commands)
+             EUCALYPTUS_SBIN_DIR ":"   // (eucalyptus-cloud, euca_conf, euca_sync_key, euca-* admin commands)
              EUCALYPTUS_LIBEXEC_DIR ":" // (rootwrap, mountwrap)
              "%s", euca_home, euca_home, euca_home, old_path);
 
@@ -481,7 +419,7 @@ int killwait(pid_t pid)
 {
     int status = 0;
 
-    kill(pid, SIGTERM);         // should be able to do
+    kill(pid, SIGTERM);                // should be able to do
     if (timewait(pid, &status, 1) == 0) {
         LOGERROR("child process {%u} failed to terminate. Attempting SIGKILL.\n", pid);
         kill(pid, SIGKILL);
@@ -896,7 +834,7 @@ char *fp2str(FILE * fp)
         buf = new_buf;
         LOGEXTREME("enlarged buf to %d\n", buf_max);
 
-        do {                    // read in until EOF or buffer is full
+        do {                           // read in until EOF or buffer is full
             last_read = fgets(buf + buf_current, buf_max - buf_current, fp);
             if (last_read != NULL) {
                 buf_current = strlen(buf);
@@ -1245,7 +1183,7 @@ int hash_code_bin(const char *buf, int buf_size)
 char *get_string_stats(const char *s)
 {
     size_t len = 0;
-    static char out[OUTSIZE] = "";  //! @todo malloc this?
+    static char out[OUTSIZE] = "";     //! @todo malloc this?
 
     out[0] = '\0';
     if ((s != NULL) && (s[0] != '\0')) {
@@ -1304,7 +1242,7 @@ int daemonmaintain(char *cmd, char *procname, char *pidfile, int force, char *ro
                         fclose(FH);
                     }
                 }
-                
+
                 EUCA_FREE(pidstr);
             }
         }
@@ -1545,7 +1483,7 @@ int diff(const char *path1, const char *path2)
 
         close(fd1);
         close(fd2);
-        return (-(read1 + read2));  // both should be 0s if files are equal
+        return (-(read1 + read2));     // both should be 0s if files are equal
     }
     return EUCA_ERROR;
 }
@@ -2016,12 +1954,12 @@ static char *next_tag(const char *xml, int *start, int *end, int *single, int *c
     const char *last_ch = NULL;
 
     for (p = xml; *p; p++) {
-        if (*p == '<') {        // found a new tag
-            tag_start = (p - xml);  // record the char so its offset can be returned
+        if (*p == '<') {               // found a new tag
+            tag_start = (p - xml);     // record the char so its offset can be returned
 
             *closing = 0;
             if ((*(p + 1) == '/') || (*(p + 1) == '?')) {
-                if (*(p + 1) == '/')    // if followed by '/' then it is a "closing" tag
+                if (*(p + 1) == '/')   // if followed by '/' then it is a "closing" tag
                     *closing = 1;
                 name_start = (p - xml + 2);
                 p++;
@@ -2037,15 +1975,15 @@ static char *next_tag(const char *xml, int *start, int *end, int *single, int *c
         }
 
         if (*p == '>') {
-            if (name_start == -1)   // never saw '<', error
+            if (name_start == -1)      // never saw '<', error
                 break;
 
-            if (p < (xml + 2))  // tag is too short, error
+            if (p < (xml + 2))         // tag is too short, error
                 break;
 
             last_ch = p - 1;
             if ((*last_ch == '/') || (*last_ch == '?')) {
-                *single = 1;    // preceded by '/' then it is a "single" tag
+                *single = 1;           // preceded by '/' then it is a "single" tag
                 last_ch--;
             } else {
                 *single = 0;
@@ -2113,14 +2051,14 @@ static char *find_cont(const char *xml, char *xpath)
     for (xml_offset = 0; (name = next_tag(xml + xml_offset, &tag_start, &tag_end, &single, &closing)) != NULL; xml_offset += tag_end + 1) {
         if (single) {
             // not interested in singles because we are looking for content
-        } else if (!closing) {  // opening a tag
+        } else if (!closing) {         // opening a tag
             // put name and pointer to content onto the stack
             stk_p++;
-            if (stk_p == _STK_SIZE) // exceeding stack size, error
+            if (stk_p == _STK_SIZE)    // exceeding stack size, error
                 goto cleanup;
             n_stk[stk_p] = euca_strduptolower(name);    // put a lower-case-only copy onto stack
             c_stk[stk_p] = xml + xml_offset + tag_end + 1;
-        } else {                // closing tag
+        } else {                       // closing tag
             // get the name in all lower-case, for consistency with xpath
             name_lc = euca_strduptolower(name);
             EUCA_FREE(name);
@@ -2142,7 +2080,7 @@ static char *find_cont(const char *xml, char *xpath)
             }
 
             // pop the stack whether we have a match or not
-            if (stk_p < 0)      // past the bottom of the stack, error
+            if (stk_p < 0)             // past the bottom of the stack, error
                 goto cleanup;
 
             contp = c_stk[stk_p];
@@ -2164,9 +2102,9 @@ static char *find_cont(const char *xml, char *xpath)
     }
 
 cleanup:
-    EUCA_FREE(name);            // for exceptions
+    EUCA_FREE(name);                   // for exceptions
     for (i = 0; i <= stk_p; i++)
-        EUCA_FREE(n_stk[i]);    // free everything on the stack
+        EUCA_FREE(n_stk[i]);           // free everything on the stack
     return (ret);
 
 #undef _STK_SIZE
@@ -2365,7 +2303,7 @@ int ensure_directories_exist(const char *path, int is_file_path, const char *use
                     return (-1);
                 }
 
-                ret = 1;        // we created a directory
+                ret = 1;               // we created a directory
 
                 if (diskutil_ch(path_copy, user, group, mode) != EUCA_OK) {
                     LOGERROR("failed to change perms on path %s\n", path_copy);
@@ -2374,7 +2312,7 @@ int ensure_directories_exist(const char *path, int is_file_path, const char *use
                 }
             }
 
-            path_copy[i] = '/'; // restore the slash
+            path_copy[i] = '/';        // restore the slash
         }
     }
 
@@ -2513,11 +2451,11 @@ int drop_privs(void)
     int s = 0;
     struct passwd pwd = { 0 };
     struct passwd *result = NULL;
-    char buf[16384] = { 0 };    // man-page said this is enough
+    char buf[16384] = { 0 };           // man-page said this is enough
 
     s = getpwnam_r(EUCALYPTUS_ADMIN, &pwd, buf, sizeof(buf), &result);
     if (result == NULL)
-        return (EUCA_ERROR);    // not found if s==0, check errno otherwise
+        return (EUCA_ERROR);           // not found if s==0, check errno otherwise
 
     if (setgid(pwd.pw_gid) != 0)
         return (EUCA_ERROR);
@@ -2681,34 +2619,34 @@ int timeshell(char *command, char *stdout_str, char *stderr_str, int max_size, i
 //! @post
 //!
 //! @note
-int get_remoteDevForNC(const char * the_iqn, const char * remoteDev, char * remoteDevForNC, int remoteDevForNCLen)
+int get_remoteDevForNC(const char *the_iqn, const char *remoteDev, char *remoteDevForNC, int remoteDevForNCLen)
 {
-    assert(remoteDevForNC!=NULL);
-    assert(remoteDevForNCLen>0);
-    remoteDevForNC[0] = '\0'; // clear out the destination string
+    assert(remoteDevForNC != NULL);
+    assert(remoteDevForNCLen > 0);
+    remoteDevForNC[0] = '\0';          // clear out the destination string
 
-    char * remoteDevCopy = strdup(remoteDev);
+    char *remoteDevCopy = strdup(remoteDev);
     if (remoteDevCopy == NULL) {
         LOGERROR("out of memory\n");
         return 1;
     }
 
     int ret = 1;
-    char * toka;
-    char * ptra = remoteDevCopy;
+    char *toka;
+    char *ptra = remoteDevCopy;
     for (int i = 0; (toka = strsep(&ptra, DEV_STR_DELIMITER)); i++) {
-        if (i == 2) { // IQN strings are in the 3rd field
-            if (strstr(toka, DEV_STR_KEY_VAL_DELIMITER) == NULL) { // old format, just the LUN, don't munge it
+        if (i == 2) {                  // IQN strings are in the 3rd field
+            if (strstr(toka, DEV_STR_KEY_VAL_DELIMITER) == NULL) {  // old format, just the LUN, don't munge it
                 ret = 0;
             } else {
-                char * ptrb;
-                char * tokb = strtok_r(toka, DEV_STR_IQNS_DELIMITER, &ptrb);
+                char *ptrb;
+                char *tokb = strtok_r(toka, DEV_STR_IQNS_DELIMITER, &ptrb);
                 while (tokb) {
-                    char * ptrc;
-                    char * an_iqn = strtok_r(tokb, DEV_STR_KEY_VAL_DELIMITER, &ptrc);
-                    char * lun    = strtok_r(NULL, DEV_STR_KEY_VAL_DELIMITER, &ptrc);
+                    char *ptrc;
+                    char *an_iqn = strtok_r(tokb, DEV_STR_KEY_VAL_DELIMITER, &ptrc);
+                    char *lun = strtok_r(NULL, DEV_STR_KEY_VAL_DELIMITER, &ptrc);
                     if (an_iqn && lun) {
-                        if (strcmp (an_iqn, the_iqn) == 0) {
+                        if (strcmp(an_iqn, the_iqn) == 0) {
                             toka = lun;
                             ret = 0;
                             break;
@@ -2718,14 +2656,14 @@ int get_remoteDevForNC(const char * the_iqn, const char * remoteDev, char * remo
                 }
             }
         }
-        
+
         strncat(remoteDevForNC, toka, remoteDevForNCLen);
-        if (ptra != NULL) { // there are more fields to come
+        if (ptra != NULL) {            // there are more fields to come
             strncat(remoteDevForNC, DEV_STR_DELIMITER, remoteDevForNCLen);
         }
     }
     free(remoteDevCopy);
-    
+
     return ret;
 }
 
@@ -2759,25 +2697,30 @@ int main(int argc, char **argv)
 
     {
         printf("testing get_remoteDevForNC\n");
-        char * remoteDev = "a,b,c=1|d=2|e=3,f,g,h";
-        char * the_iqn = "d";
+        char *remoteDev = "a,b,c=1|d=2|e=3,f,g,h";
+        char *the_iqn = "d";
         char remoteDevForNC[4096] = "foobar";
-        assert(get_remoteDevForNC(the_iqn, remoteDev, remoteDevForNC, sizeof(remoteDevForNC))==0);
-        assert(strcmp(remoteDevForNC, "a,b,2,f,g,h")==0);
-        
+        assert(get_remoteDevForNC(the_iqn, remoteDev, remoteDevForNC, sizeof(remoteDevForNC)) == 0);
+        assert(strcmp(remoteDevForNC, "a,b,2,f,g,h") == 0);
+
         remoteDev = "a,b,d=2,f,g,h";
-        assert(get_remoteDevForNC(the_iqn, remoteDev, remoteDevForNC, sizeof(remoteDevForNC))==0);
-        assert(strcmp(remoteDevForNC, "a,b,2,f,g,h")==0);
-        
+        assert(get_remoteDevForNC(the_iqn, remoteDev, remoteDevForNC, sizeof(remoteDevForNC)) == 0);
+        assert(strcmp(remoteDevForNC, "a,b,2,f,g,h") == 0);
+
         remoteDev = "a,b,2,f,g,h";
-        assert(get_remoteDevForNC(the_iqn, remoteDev, remoteDevForNC, sizeof(remoteDevForNC))==0);
-        assert(strcmp(remoteDevForNC, "a,b,2,f,g,h")==0);
-        
-        char * remoteDevForNCGood = "b483-1000,,1,kyF3TR2zPQ/t01+U6irzECGiVdrVbOPGPjVDJqmYwhWDaWAd5P98YkGzUmhrr/C3K1+M5qO//dXtFOyU90uxL0OuBdumb3zPJ3Tpfx7O0cQ8x+2XufKJl47G8Ca3vkravOXqyRV7hmFrvGsSZXk0eqzBN7liYBzkUdpj3zhe0PMwxft+e1WyQSAvNNB/Ea41jkrG8T0X2amYE9gflqmOZlWLUiJLZV6GgJ7rV3Xb3uKtEaLqHISuaGsK1FGT0oZzpNdd4DPTeo8mo+XfphlMq0NAIZl/+VdUfCRbGhU977koY4nPX3W7xwg+ZP5S3qGF+b9R7mrUD8s4izRkqSEZjg==,,192.168.25.182,iqn.1992-04.com.emc:cx.apm00121200804.a6";
-        remoteDev = "b483-1000,,iqn.1994-05.com.redhat:d0d578d4d530=1|iqn.1994-05.com.redhat:e4a4c74e2470=1,kyF3TR2zPQ/t01+U6irzECGiVdrVbOPGPjVDJqmYwhWDaWAd5P98YkGzUmhrr/C3K1+M5qO//dXtFOyU90uxL0OuBdumb3zPJ3Tpfx7O0cQ8x+2XufKJl47G8Ca3vkravOXqyRV7hmFrvGsSZXk0eqzBN7liYBzkUdpj3zhe0PMwxft+e1WyQSAvNNB/Ea41jkrG8T0X2amYE9gflqmOZlWLUiJLZV6GgJ7rV3Xb3uKtEaLqHISuaGsK1FGT0oZzpNdd4DPTeo8mo+XfphlMq0NAIZl/+VdUfCRbGhU977koY4nPX3W7xwg+ZP5S3qGF+b9R7mrUD8s4izRkqSEZjg==,,192.168.25.182,iqn.1992-04.com.emc:cx.apm00121200804.a6";
+        assert(get_remoteDevForNC(the_iqn, remoteDev, remoteDevForNC, sizeof(remoteDevForNC)) == 0);
+        assert(strcmp(remoteDevForNC, "a,b,2,f,g,h") == 0);
+
+        char *remoteDevForNCGood = "b483-1000,,1,kyF3TR2zPQ/t01+U6irzECGiVdrVbOPGPjVDJqmYwhWDaWAd5P98YkGzUmhrr/C3K1+M5qO//dXtFOyU90uxL0OuBdumb3zPJ3Tpfx7O0cQ8x+2XufKJl47G8Ca3vk"
+            "ravOXqyRV7hmFrvGsSZXk0eqzBN7liYBzkUdpj3zhe0PMwxft+e1WyQSAvNNB/Ea41jkrG8T0X2amYE9gflqmOZlWLUiJLZV6GgJ7rV3Xb3uKtEaLqHISuaGsK1FGT0oZzpNdd4DPTe"
+            "o8mo+XfphlMq0NAIZl/+VdUfCRbGhU977koY4nPX3W7xwg+ZP5S3qGF+b9R7mrUD8s4izRkqSEZjg==,,192.168.25.182,iqn.1992-04.com.emc:cx.apm00121200804.a6";
+        remoteDev = "b483-1000,,iqn.1994-05.com.redhat:d0d578d4d530=1|iqn.1994-05.com.redhat:e4a4c74e2470=1,kyF3TR2zPQ/t01+U6irzECGiVdrVbOPGPjVDJqmYwhWDaWAd5P98YkGzUmhrr/C3K1+"
+            "M5qO//dXtFOyU90uxL0OuBdumb3zPJ3Tpfx7O0cQ8x+2XufKJl47G8Ca3vkravOXqyRV7hmFrvGsSZXk0eqzBN7liYBzkUdpj3zhe0PMwxft+e1WyQSAvNNB/Ea41jkrG8T0X2amYE9gflqmOZlWLUiJLZ"
+            "V6GgJ7rV3Xb3uKtEaLqHISuaGsK1FGT0oZzpNdd4DPTeo8mo+XfphlMq0NAIZl/+VdUfCRbGhU977koY4nPX3W7xwg+ZP5S3qGF+b9R7mrUD8s4izRkqSEZjg==,,192.168.25.182,iqn.1992-04.co"
+            "m.emc:cx.apm00121200804.a6";
         the_iqn = "iqn.1994-05.com.redhat:d0d578d4d530";
-        assert(get_remoteDevForNC(the_iqn, remoteDev, remoteDevForNC, sizeof(remoteDevForNC))==0);
-        assert(strcmp(remoteDevForNC, remoteDevForNCGood)==0);
+        assert(get_remoteDevForNC(the_iqn, remoteDev, remoteDevForNC, sizeof(remoteDevForNC)) == 0);
+        assert(strcmp(remoteDevForNC, remoteDevForNCGood) == 0);
     }
 
     printf("testing system_output() in misc.c\n");

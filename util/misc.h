@@ -79,10 +79,10 @@
 
 #include <stdio.h>
 #include <stdarg.h>
-#include <unistd.h>             // ssize_t
-#include <sys/types.h>          // mode_t
+#include <unistd.h>                    // ssize_t
+#include <sys/types.h>                 // mode_t
 #include <linux/limits.h>
-#include <stdint.h>             // uint32_t
+#include <stdint.h>                    // uint32_t
 
 #include <eucalyptus.h>
 
@@ -110,9 +110,9 @@
  |                                                                            |
 \*----------------------------------------------------------------------------*/
 
-typedef unsigned char boolean;  //!< @todo move this somewhere more global?
+typedef unsigned char boolean;         //!< @todo move this somewhere more global?
 
-#include "log.h"                // so everyone picks up the logging functions
+#include "log.h"                       // so everyone picks up the logging functions
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |
@@ -196,7 +196,7 @@ int get_blkid(const char *dev_path, char *uuid, unsigned int uuid_size);
 char parse_boolean(const char *s);
 int drop_privs(void);
 int timeshell(char *command, char *stdout_str, char *stderr_str, int max_size, int timeout);
-int get_remoteDevForNC(const char * the_iqn, const char * remoteDev, char * remoteDevForNC, int remoteDevForNCLen);
+int get_remoteDevForNC(const char *the_iqn, const char *remoteDev, char *remoteDevForNC, int remoteDevForNCLen);
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |

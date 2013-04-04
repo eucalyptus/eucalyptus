@@ -86,8 +86,8 @@
 #include <errno.h>
 
 #include <eucalyptus.h>
-#include <misc.h>               // logprintfl
-#include <ipc.h>                // sem
+#include <misc.h>                      // logprintfl
+#include <ipc.h>                       // sem
 #include <euca_string.h>
 
 #include "diskutil.h"
@@ -178,50 +178,15 @@ static char *helpers[LASTHELPER] = {
     "tune2fs",
     "umount",
     "euca_rootwrap",
-    "euca_mountwrap"
+    "euca_mountwrap",
 };
 
 static char *helpers_path[LASTHELPER] = { NULL };
 
 static char stage_files_dir[EUCA_MAX_PATH] = "";
 static int initialized = 0;
-static sem *loop_sem = NULL;    //!< semaphore held while attaching/detaching loopback devices
+static sem *loop_sem = NULL;           //!< semaphore held while attaching/detaching loopback devices
 static unsigned char grub_version = 0;
-
-/*----------------------------------------------------------------------------*\
- |                                                                            |
- |                             EXPORTED PROTOTYPES                            |
- |                                                                            |
-\*----------------------------------------------------------------------------*/
-
-int diskutil_init(boolean require_grub);
-int diskutil_cleanup(void);
-int diskutil_ddzero(const char *path, const long long sectors, boolean zero_fill);
-int diskutil_dd(const char *in, const char *out, const int bs, const long long count);
-int diskutil_dd2(const char *in, const char *out, const int bs, const long long count, const long long seek, const long long skip);
-int diskutil_mbr(const char *path, const char *type);
-int diskutil_part(const char *path, char *part_type, const char *fs_type, const long long first_sector, const long long last_sector);
-sem *diskutil_get_loop_sem(void);
-int diskutil_loop_check(const char *path, const char *lodev);
-int diskutil_loop(const char *path, const long long offset, char *lodev, int lodev_size);
-int diskutil_unloop(const char *lodev);
-int diskutil_mkswap(const char *lodev, const long long size_bytes);
-int diskutil_mkfs(const char *lodev, const long long size_bytes);
-int diskutil_tune(const char *lodev);
-int diskutil_sectors(const char *path, const int part, long long *first, long long *last);
-int diskutil_mount(const char *dev, const char *mnt_pt);
-int diskutil_umount(const char *dev);
-int diskutil_write2file(const char *file, const char *str);
-int diskutil_grub(const char *path, const char *mnt_pt, const int part, const char *kernel, const char *ramdisk);
-int diskutil_grub_files(const char *mnt_pt, const int part, const char *kernel, const char *ramdisk);
-int diskutil_grub_mbr(const char *path, const int part);
-int diskutil_grub2_mbr(const char *path, const int part, const char *mnt_pt);
-int diskutil_ch(const char *path, const char *user, const char *group, const int perms);
-int diskutil_mkdir(const char *path);
-int diskutil_cp(const char *from, const char *to);
-
-long long round_up_sec(long long bytes);
-long long round_down_sec(long long bytes);
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |
@@ -230,8 +195,7 @@ long long round_down_sec(long long bytes);
 \*----------------------------------------------------------------------------*/
 
 static int try_stage_dir(const char *dir);
-static char *pruntf(boolean log_error, char *format, ...)
-_attribute_wur_ _attribute_format_(2, 3);
+static char *pruntf(boolean log_error, char *format, ...) _attribute_wur_ _attribute_format_(2, 3);
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |
@@ -461,8 +425,7 @@ int diskutil_dd2(const char *in, const char *out, const int bs, const long long 
         LOGINFO("               to '%s'\n", out);
         LOGINFO("               of %lld blocks (bs=%d), seeking %lld, skipping %lld\n", count, bs, seek, skip);
         output =
-            pruntf(TRUE, "%s %s if=%s of=%s bs=%d count=%lld seek=%lld skip=%lld conv=notrunc,fsync", helpers_path[ROOTWRAP], helpers_path[DD], in,
-                   out, bs, count, seek, skip);
+            pruntf(TRUE, "%s %s if=%s of=%s bs=%d count=%lld seek=%lld skip=%lld conv=notrunc,fsync", helpers_path[ROOTWRAP], helpers_path[DD], in, out, bs, count, seek, skip);
         if (!output) {
             LOGERROR("cannot copy '%s'\n", in);
             LOGERROR("                to '%s'\n", out);
@@ -533,8 +496,7 @@ int diskutil_part(const char *path, char *part_type, const char *fs_type, const 
 
     if (path && part_type) {
         output = pruntf(TRUE, "LD_PRELOAD='' %s %s --script %s mkpart %s %s %llds %llds",
-                        helpers_path[ROOTWRAP], helpers_path[PARTED], path, part_type, ((fs_type != NULL) ? (fs_type) : ("")), first_sector,
-                        last_sector);
+                        helpers_path[ROOTWRAP], helpers_path[PARTED], path, part_type, ((fs_type != NULL) ? (fs_type) : ("")), first_sector, last_sector);
         if (!output) {
             LOGERROR("cannot add a partition\n");
             return (EUCA_ERROR);
@@ -1301,7 +1263,7 @@ int diskutil_grub2_mbr(const char *path, const int part, const char *mnt_pt)
             _PR();
             snprintf(s, sizeof(s), "quit\n");
             _PR();
-            rc = pclose(fp);    // base success on exit code of grub
+            rc = pclose(fp);           // base success on exit code of grub
         }
 
         if (rc) {
@@ -1316,10 +1278,10 @@ int diskutil_grub2_mbr(const char *path, const int part, const char *mnt_pt)
                        && ((read_bytes = read(tfd, buf + bytes_read, 1)) > 0))
                     if (buf[bytes_read++] == '\n')
                         break;
-                if (read_bytes < 0) // possibly truncated output, ensure there is newline
+                if (read_bytes < 0)    // possibly truncated output, ensure there is newline
                     buf[bytes_read++] = '\n';
                 buf[bytes_read] = '\0';
-                LOGDEBUG("\t%s", buf);  // log grub 1 prompts and our inputs
+                LOGDEBUG("\t%s", buf); // log grub 1 prompts and our inputs
                 if (strstr(buf, "Done."))   // this indicates that grub 1 succeeded (the message has been there since 2000)
                     saw_done = TRUE;
             } while (read_bytes > 0);
@@ -1353,8 +1315,7 @@ int diskutil_grub2_mbr(const char *path, const int part, const char *mnt_pt)
             LOGINFO("%s", device_map_buf);
         }
 
-        output =
-            pruntf(TRUE, "%s %s --modules='part_msdos ext2' --root-directory=%s '(hd0)'", helpers_path[ROOTWRAP], helpers_path[GRUB_INSTALL], mnt_pt);
+        output = pruntf(TRUE, "%s %s --modules='part_msdos ext2' --root-directory=%s '(hd0)'", helpers_path[ROOTWRAP], helpers_path[GRUB_INSTALL], mnt_pt);
         if (!output) {
             LOGERROR("failed to install grub 2 on disk '%s' mounted on '%s'\n", path, mnt_pt);
         } else {
@@ -1521,7 +1482,7 @@ static char *pruntf(boolean log_error, char *format, ...)
 
     output = EUCA_ALLOC(outsize, sizeof(char));
     if (output) {
-        output[0] = '\0';       // make sure we return an empty string if there is no output
+        output[0] = '\0';              // make sure we return an empty string if there is no output
     }
 
     while ((output != NULL) && (bytes = fread(output + (outsize - 1025), 1, 1024, IF)) > 0) {
