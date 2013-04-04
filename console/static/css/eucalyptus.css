@@ -2400,6 +2400,7 @@ span.on-error {
 
 .wizardTitle {
   margin-bottom: 8px;
+  margin-left: -19px;
 }
 
 .wizard-step #filter-wrapper {

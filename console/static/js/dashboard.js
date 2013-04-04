@@ -201,7 +201,8 @@
 
         var az=$instObj.find('#dashboard-instance-az select').val();
 
-        var results = describe('summary');
+        var results = describe('summary')[0];
+        console.log('SUMMARY', results);
         $instObj.find('#dashboard-instance-running span').text(results.inst_running);
         $instObj.find('#dashboard-instance-stopped span').text(results.inst_stopped);
         var scalinginsts = describe('scalinginst');

@@ -24,7 +24,7 @@ define([
   }
 
   function finish() {
-    alert("Congratulations!  You finished a pointless wizard!")
+    alert("Placeholder function for saving the new launch config.");
   }
 
   var launchConfigModel = new launchconfigModel();
@@ -42,11 +42,12 @@ define([
           .add(new page3({model: securityModel, keymodel: keyModel}))
           .add(new page4({model: advancedModel, blockMaps: blockMaps, snapshots: snapShots}))
           .setHideDisabledButtons(true)
-          .setFinishText('Launch Instance(s)').setFinishChecker(canFinish)
+          .setFinishText('Create launch configuration').setFinishChecker(canFinish)
           .finisher(finish)
           .summary(new summary( {imageModel: imageModel, typeModel: typeModel, securityModel: securityModel, keymodel: keyModel, advancedModel: advancedModel} ));
 //  var ViewType = wizard.makeView(options, wizardTemplate);
-  var ViewType = viewBuilder.build()
+  var ViewType = viewBuilder.build();
+
   return ViewType;
 });
 

@@ -1,8 +1,10 @@
 define([
+    'underscore',
     'backbone',
-	'models/scalinggrps',
+    'sharedtags',
+    'models/scalinggrps',
 	'models/scalinginsts',
-	'models/volumes', 
+	'models/volumes',
 	'models/images',
 	'models/launchconfigs',
 	'models/instances',
@@ -12,45 +14,47 @@ define([
 	'models/snapshots',
 	'models/balancers',
 	'models/insthealths',
-    'sharedtags'
-], 
-function(Backbone, ScalingGroups, ScalingInstances, Volumes, Images, LaunchConfigs, Instances, Eips, KeyPairs, SecurityGroups, Snapshots, Balancers, InstHealths, tags) {
-	var shared = {
-		launchConfigs: new LaunchConfigs(),
-		scalingGroups: new ScalingGroups(),
-		scalinginsts: new ScalingInstances(),
-		volumes: new Volumes(),
-		images: new Images(),
-		instance: new Instances(),
-		loadBalancers: new Balancers(),
-		instHealths: new InstHealths(),
-        eip : new Eips(),
-        keypair : new KeyPairs(),
-        sgroup : new SecurityGroups(),
-        snapshot : new Snapshots(),
-	};
+	'models/summarys',
+	'models/zones',
+	'models/buckets'
+	], 
+function(_, Backbone, tags) {
+    var self = this;
+    var sconfs = [
+    ['scalinggrp', 'scalinggroup', 'scalingGroup', 'scalingGroups'],
+	['scalinginst', 'scalinginsts'],
+	['volume', 'volumes'],
+	['image', 'images'],
+	['launchconfig', 'launchconfigs', 'launchConfigs'],
+	['instance'],
+	['eip'],
+	['keypair'],
+	['sgroup'],
+	['snapshot'],
+	['balancer'],
+	['insthealth', 'instHealths'],
+	['summary'],
+	['zone'],
+	['bucket'],
+    ];
 
-	shared.tags = tags;
+    var shared = {};
+    var args = arguments;
+    var srcs = _.map(_.range(3, args.length), function(n) { 
+        return args[n]; 
+    });
 
-    shared.image = shared.images;
-    shared.volume = shared.volumes;
-    shared.launchconfig = shared.launchConfigs;
-    shared.scalingGroup = shared.scalingGroups;
-    shared.scalinggroup = shared.scalingGroups;
-    shared.scalinggrp = shared.scalingGroups;
+    _.each(srcs, function(src, index) {
+       var clz = srcs[index];
+       var obj = new clz();
+       _.each(sconfs[index], function(name) {
+           shared[name] = obj;
+       });
+       obj.fetch();
+    });
 
-	shared.launchConfigs.fetch();
-	shared.scalingGroups.fetch();
-	shared.scalinginsts.fetch();
-	shared.volumes.fetch();
-	shared.images.fetch();
-	shared.instance.fetch();
-    shared.loadBalancers.fetch();
-    shared.instHealths.fetch();
-    shared.eip.fetch();
-    shared.keypair.fetch();
-    shared.sgroup.fetch();
-    shared.snapshot.fetch();
+    shared.tags = tags;
+    shared.tag = tags;
 
 	return shared;
 });
