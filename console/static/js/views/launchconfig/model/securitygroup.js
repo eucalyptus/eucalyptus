@@ -41,6 +41,10 @@ define(['models/sgroup'], function(sgroup) {
             required: true,
             msg: 'A security group selection is required.'
         }
+      },
+
+      finish: function(outputModel) {
+        outputModel.set('security_groups', this.toJSON());
       }
   });
 });

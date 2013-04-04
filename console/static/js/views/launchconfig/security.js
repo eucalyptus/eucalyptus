@@ -95,7 +95,7 @@ define([
       };
      
       self.model.on('validated:invalid', function(obj, errors) {
-        scope.launchConfigErrors.group = errors.name;
+        scope.launchConfigErrors.group = app.msg(errors.name);
         self.render();
       });
 
@@ -105,7 +105,7 @@ define([
       });
 
       this.options.keymodel.on('validated:invalid', function(obj, errors) {
-        scope.launchConfigErrors.key = errors.name;
+        scope.launchConfigErrors.key = app.msg(errors.name);
         self.render();
       });
 
@@ -121,7 +121,6 @@ define([
 
     render: function() {
       this.rView.sync();
-      console.log("KEY", this.options.keymodel);
     },
 
     isValid: function() {

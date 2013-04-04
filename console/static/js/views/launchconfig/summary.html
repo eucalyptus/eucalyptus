@@ -1,16 +1,16 @@
-<div class="summary-title">Summary</div>
+<div class="summary-title" data-msg="launch_instance_summary_header">Summary</div>
 <div id="summary-image"> 
   <div id="summary-icon" class="image-type summary" data-show="imageModel.image_iconclass">
-    <div>Image:</div>
+    <div data-msg="launch_instance_summary_image">Image:</div>
     <span data-text="imageModel.id">emi-EDBA3EEA</span>
-    <div>Platform:</div>
+    <div data-msg="launch_instance_summary_platform">Platform:</div>
     <span data-text="imageModel.platform">Linux</span>
   </div>
 </div>
 
 <div id="summary-type" data-show="typeModel.type_show">
   <div id="summary-type-icon" class="type-type summary">
-      <div>Size:</div>
+      <div data-msg="launch_instance_summary_type">Size:</div>
       <span data-text="typeModel.instance_type"></span>
       <!--
       <div>Instances:</div>
@@ -26,16 +26,16 @@
         <label for="summary-hasTags">Tag(s) added.</label>
       </div>
       -->
-      <div>Name:</div>
+      <div >Name:</div>
       <span data-text="typeModel.type_names"></span>
   </div>  
 </div>
 
 <div id="summary-security" data-show="securityModel.security_show">
   <div id="summary-security-icon" class="security-type summary">
-    <div>Key Pair:</div>
+    <div idata-msg="launch_instance_summary_keypair">Key Pair:</div>
     <span data-text="keymodel.name"></span>
-    <div>Security Group:</div>
+    <div data-msg="launch_instance_summary_sg">Security Group:</div>
     <span data-text="securityModel.name"></span>
   </div>
 </div>

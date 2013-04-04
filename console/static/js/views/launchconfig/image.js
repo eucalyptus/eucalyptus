@@ -69,7 +69,7 @@ define([
               }
           };
           self.model.on('validated:invalid', function(model, errors) {
-              scope.launchConfigErrors.image_id = errors.id; 
+              scope.launchConfigErrors.image_id = app.msg(errors.id); 
               self.render(); 
           });
 

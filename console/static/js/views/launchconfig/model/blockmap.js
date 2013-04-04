@@ -24,6 +24,10 @@ define([], function() {
         min: 1,
         msg: 'The volume size must be a positive number.'
       }
+    },
+
+    finish: function(outputModel) {
+      outputModel.set('block_device_mappings', this.toJSON());
     }
   });
 });

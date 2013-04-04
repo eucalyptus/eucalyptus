@@ -1,4 +1,5 @@
 define([
+  'app',
   'wizard',
   'text!./template.html',
   './image',
@@ -14,18 +15,8 @@ define([
   './model/advancedmodel',
   './model/blockmaps',
   './model/snapshots'
-], function(Wizard, wizardTemplate, page1, page2, page3, page4, summary, launchconfigModel, imageModel, typeModel, securityModel, keyPair, advancedModel, blockMaps, snapShots) {
+], function(app, Wizard, wizardTemplate, page1, page2, page3, page4, summary, launchconfigModel, imageModel, typeModel, securityModel, keyPair, advancedModel, blockMaps, snapShots) {
   var wizard = new Wizard();
-
-  function canFinish(position, problems) {
-    // VALIDATE THE MODEL HERE AND IF THERE ARE PROBLEMS,
-    // ADD THEM INTO THE PASSED ARRAY
-    return position === 2;
-  }
-
-  function finish() {
-    alert("Placeholder function for saving the new launch config.");
-  }
 
   var launchConfigModel = new launchconfigModel();
   var imageModel = new imageModel();
@@ -36,13 +27,45 @@ define([
   var blockMaps = new blockMaps();
   var snapShots = new snapShots();
 
+  function canFinish(position, problems) {
+    // VALIDATE THE MODEL HERE AND IF THERE ARE PROBLEMS,
+    // ADD THEM INTO THE PASSED ARRAY
+   //    return position === 2;
+
+     return imageModel.isValid() & typeModel.isValid() & securityModel.isValid();
+  }
+
+  function finish() {
+    imageModel.finish(launchConfigModel);
+    typeModel.finish(launchConfigModel);
+    securityModel.finish(launchConfigModel);
+    advancedModel.finish(launchConfigModel);
+    keyModel.finish(launchConfigModel);
+    blockMaps.finish(launchConfigModel);
+
+    launchConfigModel.on('validated.invalid', function(e, errors) {
+      console.log("LAUNCH CONFIG INVALID: ", errors, e);
+    });
+
+    launchConfigModel.validate();
+    if(launchConfigModel.isValid()) {
+      launchConfigModel.sync();
+      console.log("LAUNCH CONFIG SYNC", launchConfigModel.toJSON());
+      alert("Wizard complete. Check the console log for debug info.");
+    } else {
+      // what do we do if it isn't valid?
+      //alert('Final checklist was invalid.');
+      console.log("LAUNCH CONFIG INVALID: ", launchConfigModel.toJSON());
+    }
+  }
+
   var viewBuilder = wizard.viewBuilder(wizardTemplate)
           .add(new page1({model: imageModel, blockMaps: blockMaps}))
           .add(new page2({model: typeModel}))
           .add(new page3({model: securityModel, keymodel: keyModel}))
           .add(new page4({model: advancedModel, blockMaps: blockMaps, snapshots: snapShots}))
           .setHideDisabledButtons(true)
-          .setFinishText('Create launch configuration').setFinishChecker(canFinish)
+          .setFinishText(app.msg('create_launch_config_btn_create')).setFinishChecker(canFinish)
           .finisher(finish)
           .summary(new summary( {imageModel: imageModel, typeModel: typeModel, securityModel: securityModel, keymodel: keyModel, advancedModel: advancedModel} ));
 //  var ViewType = wizard.makeView(options, wizardTemplate);
