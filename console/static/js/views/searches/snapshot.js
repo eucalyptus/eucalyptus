@@ -1,6 +1,7 @@
 define([
   'views/searches/generic',
-], function(Search) {
+  'views/searches/tagsearch'
+], function(Search, TagSearch) {
   return function(snapshots) {
 
     var config = {
@@ -19,7 +20,6 @@ define([
       }
       , search: {
         progress: function(search, facetSearch, item, itemsFacetValue, hit) {
-          console.log("Facet search " + facetSearch + " itemsValue " + itemsFacetValue);
           switch (facetSearch) {
             case 'completed' :
               if ('100%' === itemsFacetValue) {
@@ -36,6 +36,6 @@ define([
       }
     }
 
-    return new Search(snapshots, config);
+    return new Search(snapshots, new TagSearch(config, snapshots));
   }
 });

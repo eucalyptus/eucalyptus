@@ -1,14 +1,15 @@
 define([
   'views/searches/generic',
-], function(Search) {
-  return function(images) {
+  'views/searches/tagsearch'
+], function(Search, TagSearch) {
+  return function(sgroups) {
     var config = {
-      facets: ['launch_config_name', 'health_check_type', 'availability_zones'],
+      facets: ['all_text', 'launch_config_name', 'health_check_type', 'availability_zones'],
       localize: {
         launch_config_name: 'Launch Config',
         EC2 : 'Compute'
       }
     }
-    return new Search(images, config);
+    return new Search(sgroups, new TagSearch(config, sgroups));
   }
 });

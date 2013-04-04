@@ -1,6 +1,7 @@
 define([
   'views/searches/generic',
-], function(Search) {
+  'views/searches/tagsearch'
+], function(Search, TagSearch) {
   return function(images) {
 
     var USER_ID = "601265054777"; //FIXME
@@ -18,9 +19,6 @@ define([
       }
 
       , match: {
-        root_device : function(search, item, add) {
-          console.log("ITEM IS ", item);
-        },
         ownerId: function(search, item, add) {
           add('me');
         }
@@ -37,6 +35,6 @@ define([
       }
     };
 
-    return new Search(images, config);
+    return new Search(images, new TagSearch(config, images));
   }
 });

@@ -1,7 +1,8 @@
 define([
   'app',
   'views/searches/generic',
-], function(app, Search) {
+  'views/searches/tagsearch'
+], function(app, Search, TagSearch) {
 
   // FIXME - Ean - how do we trigger updates
   // to imageForID if the data changes?
@@ -9,20 +10,18 @@ define([
   // up an image by ID without ending up iterating
   // imageCount * launchConfigCount times?
 
-  return function(images) {
+  return function(launchConfigs) {
 
     var imageForID = {
     };
     // FIXME - app.data.images *has* contents, but
     // the result of toJSON() is empty - not sure
     // what to do here
-    app.data.images.toJSON().forEach(function(image) {
-      console.log("IMAGE ", image);
-      imageForID[image.id] = {
-        root_device_type: image.root_device_type,
-        platform: image.platform
+    app.data.images.toJSON().forEach(function(launhConfig) {
+      imageForID[launhConfig.id] = {
+        root_device_type: launhConfig.root_device_type,
+        platform: launhConfig.platform
       };
-      console.log("ADD IMAGE ", imageForID[image.id]);
     });
 
 
@@ -30,10 +29,10 @@ define([
       facets: ['all_text', 'os', 'instance_type', 'root_device_type'],
       localize: {
         state: 'Status',
-        't1.micro': 'Micro',
-        'm1.small': 'Standard',
-        'c1.medium': 'High Memory',
-        'm1.large': 'High CPU',
+        't1.micro': 'T1 Micro',
+        'm1.small': 'M1 Small',
+        'c1.medium': 'C1 Medium',
+        'm1.large': 'M1 Large',
         'os': 'Operating System'
       },
       match: {
@@ -67,6 +66,6 @@ define([
         }
       }
     }
-    return new Search(images, config);
+    return new Search(launchConfigs, new TagSearch(config, launchConfigs));
   }
 });

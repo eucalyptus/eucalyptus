@@ -119,11 +119,8 @@ define(['app', 'dataholder'], function(app, dh) {
           if (config.propertyForFacet && config.propertyForFacet[facet]) {
               var nm = val[config.propertyForFacet[facet]];
               if (nm) { // avoid null
-                console.log("VALUE ", nm);
                 add(val + '', localize(nm));
               }
-          } else {
-            console.log("No matching strategy for " + JSON.stringify(img) + " as facet " + facet);
           }
         }
     }
