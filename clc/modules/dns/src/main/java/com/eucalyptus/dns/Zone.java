@@ -536,6 +536,11 @@ public class Zone {
 		return lookup(name, type);
 	}
 
+	public SetResponse
+	findRecords(Name name, int type, boolean internal) {
+		return lookup(name, type);
+	}
+
 	/**
 	 * Looks up Records in the zone, finding exact matches only.
 	 * @param name The name to look up

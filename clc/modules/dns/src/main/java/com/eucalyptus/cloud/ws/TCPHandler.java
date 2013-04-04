@@ -94,7 +94,9 @@ public class TCPHandler extends ConnectionHandler {
 			byte [] response = null;
 			try {
 				query = new Message(inBytes);
-				response = generateReply(query, inBytes, inBytes.length, socket);
+				String client = socket.getInetAddress().getHostAddress();
+				boolean internal = isInternal(client);
+				response = generateReply(query, inBytes, inBytes.length, socket, internal);
 				if (response == null)
 					return;
 			}

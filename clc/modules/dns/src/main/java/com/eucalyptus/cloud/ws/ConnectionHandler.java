@@ -96,6 +96,7 @@ package com.eucalyptus.cloud.ws;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.net.Socket;
+import java.net.Socket;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -120,9 +121,13 @@ import org.xbill.DNS.TSIG;
 import org.xbill.DNS.TSIGRecord;
 import org.xbill.DNS.Type;
 
+import org.apache.log4j.Logger;
+
 import com.eucalyptus.dns.SetResponse;
 import com.eucalyptus.dns.Zone;
 import com.eucalyptus.dns.Cache;
+
+import com.eucalyptus.vm.VmInstances;
 
 public class ConnectionHandler extends Thread {
 
@@ -130,10 +135,13 @@ public class ConnectionHandler extends Thread {
 	static final int FLAG_SIGONLY = 2;
 
 	Map caches = new ConcurrentHashMap();
+        Map publicCaches = new ConcurrentHashMap();
+        private static final Logger LOG = Logger.getLogger( ConnectionHandler.class );
+	
 	//Map TSIGs;
 
 	byte []
-	      generateReply(Message query, byte [] in, int length, Socket s)
+	      generateReply(Message query, byte [] in, int length, Socket s, boolean internal)
 	throws IOException
 	{
 		Header header;
@@ -192,11 +200,11 @@ public class ConnectionHandler extends Thread {
 			 */    if (!Type.isRR(type) && type != Type.ANY)
 				 return errorMessage(query, Rcode.NOTIMP);
 
-			 byte rcode = addAnswer(response, name, type, dclass, 0, flags);
+			 byte rcode = addAnswer(response, name, type, dclass, 0, flags, internal);
 			 if (rcode != Rcode.NOERROR && rcode != Rcode.NXDOMAIN)
 				 return errorMessage(query, rcode);
 
-			 addAdditional(response, type, flags);
+			 addAdditional(response, type, flags, internal);
 
 			 if (queryOPT != null) {
 				 int optflags = (flags == FLAG_DNSSECOK) ? ExtendedFlags.DO : 0;
@@ -209,16 +217,34 @@ public class ConnectionHandler extends Thread {
 		return response.toWire(maxLength);
 	}
 
+	public boolean
+	isInternal(String client) {
+		try {
+			VmInstances.lookupByPublicIp( client );
+			LOG.debug("DNS Client " + client + " is internal");
+			return true;
+		} catch ( Exception e ) {
+			try {
+				VmInstances.lookupByPrivateIp( client );
+				LOG.debug("DNS Client " + client + " is internal");
+				return true;
+			} catch ( Exception e1 ) {
+				LOG.debug("DNS Client " + client + " is external");
+				return false;
+			}
+		}
+	}
+
 	public Zone
-	findBestZone(Name name) {
+	findBestZone(Name name, boolean internal) {
 		Zone foundzone = null;
-		foundzone = (Zone) ZoneManager.getZone(name);
+		foundzone = (Zone) ZoneManager.getZone(name, internal);
 		if (foundzone != null)
 			return foundzone;
 		int labels = name.labels();
 		for (int i = 1; i < labels; i++) {
 			Name tname = new Name(name, i);
-			foundzone = (Zone) ZoneManager.getZone(tname);
+			foundzone = (Zone) ZoneManager.getZone(tname, internal);
 			if (foundzone != null)
 				return foundzone;
 		}
@@ -226,13 +252,13 @@ public class ConnectionHandler extends Thread {
 	}
 
 	public RRset
-	findExactMatch(Name name, int type, int dclass, boolean glue) {
-		Zone zone = findBestZone(name);
+	findExactMatch(Name name, int type, int dclass, boolean glue, boolean internal) {
+		Zone zone = findBestZone(name, internal);
 		if (zone != null)
 			return zone.findExactMatch(name, type);
 		else {
 			RRset [] rrsets;
-			Cache cache = getCache(dclass);
+			Cache cache = getCache(dclass, internal);
 			if (glue)
 				rrsets = cache.findAnyRecords(name, type);
 			else
@@ -245,33 +271,33 @@ public class ConnectionHandler extends Thread {
 	}
 
 	private void
-	addGlue(Message response, Name name, int type, int flags) {
-		RRset a = findExactMatch(name, type, DClass.IN, true);
+	addGlue(Message response, Name name, int type, int flags, boolean internal) {
+		RRset a = findExactMatch(name, type, DClass.IN, true, internal);
 		if (a == null)
 			return;
 		addRRset(name, response, a, Section.ADDITIONAL, flags);
 	}
 
 	private void
-	addAdditional2(Message response, int section, int type, int flags) {
+	addAdditional2(Message response, int section, int type, int flags, boolean internal) {
 		Record [] records = response.getSectionArray(section);
 		for (int i = 0; i < records.length; i++) {
 			Record r = records[i];
 			Name glueName = r.getAdditionalName();
 			if (glueName != null)
-				addGlue(response, glueName, type, flags);
+				addGlue(response, glueName, type, flags, internal);
 		}
 	}
 
 	private final void
-	addAdditional(Message response, int type, int flags) {
-		addAdditional2(response, Section.ANSWER, type, flags);
-		addAdditional2(response, Section.AUTHORITY, type, flags);
+	addAdditional(Message response, int type, int flags, boolean internal) {
+		addAdditional2(response, Section.ANSWER, type, flags, internal);
+		addAdditional2(response, Section.AUTHORITY, type, flags, internal);
 	}
 
 	byte
 	addAnswer(Message response, Name name, int type, int dclass,
-			int iterations, int flags)
+			int iterations, int flags, boolean internal)
 	{
 		SetResponse sr;
 		byte rcode = Rcode.NOERROR;
@@ -284,16 +310,16 @@ public class ConnectionHandler extends Thread {
 			flags |= FLAG_SIGONLY;
 		}
 
-		Zone zone = findBestZone(name);
+		Zone zone = findBestZone(name, internal);
+		Cache cache = getCache(dclass, internal);
 		if (zone != null)
-			sr = zone.findRecords(name, type);
+			sr = zone.findRecords(name, type, internal);
 		else {
-			Cache cache = getCache(dclass);
 			sr = cache.lookupRecords(name, type, Credibility.NORMAL);
 		}
 
 		if (sr.isUnknown()) {
-			addCacheNS(response, getCache(dclass), name);
+			addCacheNS(response, cache, name);
 		}
 		if (sr.isNXDOMAIN()) {
 			response.getHeader().setRcode(Rcode.NXDOMAIN);
@@ -323,7 +349,7 @@ public class ConnectionHandler extends Thread {
 			if (zone != null && iterations == 0)
 				response.getHeader().setFlag(Flags.AA);
 			rcode = addAnswer(response, cname.getTarget(),
-					type, dclass, iterations + 1, flags);
+					type, dclass, iterations + 1, flags, internal);
 		}
 		else if (sr.isDNAME()) {
 			DNAMERecord dname = sr.getDNAME();
@@ -342,7 +368,7 @@ public class ConnectionHandler extends Thread {
 				if (zone != null && iterations == 0)
 					response.getHeader().setFlag(Flags.AA);
 				rcode = addAnswer(response, newname, type, dclass,
-						iterations + 1, flags);
+						iterations + 1, flags, internal);
 			}
 		}
 		else if (sr.isSuccessful()) {
@@ -358,7 +384,7 @@ public class ConnectionHandler extends Thread {
 					response.getHeader().setFlag(Flags.AA);
 			}
 			else
-				addCacheNS(response, getCache(dclass), name);
+				addCacheNS(response, cache, name);
 		}
 		return rcode;
 	}
@@ -486,11 +512,20 @@ public class ConnectionHandler extends Thread {
 	}
 
 	public Cache
-	getCache(int dclass) {
-		Cache c = (Cache) caches.get(new Integer(dclass));
-		if (c == null) {
-			c = new Cache(dclass);
-			caches.put(new Integer(dclass), c);
+	getCache(int dclass, boolean internal) {
+		Cache c = null;
+                if (internal) {
+			c = (Cache) caches.get(new Integer(dclass));
+			if (c == null) {
+				c = new Cache(dclass);
+				caches.put(new Integer(dclass), c);
+			}
+		} else {
+			c = (Cache) publicCaches.get(new Integer(dclass));
+			if (c == null) {
+				c = new Cache(dclass);
+				publicCaches.put(new Integer(dclass), c);
+			}
 		}
 		return c;
 	}

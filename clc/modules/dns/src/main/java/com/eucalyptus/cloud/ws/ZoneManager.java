@@ -93,7 +93,7 @@ public class ZoneManager {
 
 	public static Zone getZone(String name) {
 		try {
-			return getZone(new Name(name));
+			return getZone(new Name(name), false);
 					//zones.get(new Name(name));
 		} catch(Exception ex) {
 			LOG.error(ex);
@@ -102,21 +102,45 @@ public class ZoneManager {
 	}
 
 	public static Zone getZone(Name name) {
+		return getZone(name, false);
+	}
+
+	public static Zone getZone(String name, boolean internal) {
+		try {
+			return getZone(new Name(name), internal);
+			//zones.get(new Name(name));
+		} catch(Exception ex) {
+			LOG.error(ex);
+		}
+		return null;
+	}
+
+	public static Zone getZone(Name name, boolean internal) {
 
 		if ( Bootstrap.isFinished( ) ) {
 			if(name.toString().endsWith("in-addr.arpa.")) {
 				//create new transient zone to handle reverse lookups
 				return TransientZone.getPtrZone(name);
-			} else {
-				try {
-					if(!ZoneManager.zones.containsKey(TransientZone.getExternalName())){
-						ZoneManager.registerZone(TransientZone.getExternalName( ),TransientZone.getInstanceExternalZone());
-					} else if(!ZoneManager.zones.containsKey(TransientZone.getInternalName())){
-						ZoneManager.registerZone(TransientZone.getInternalName(),TransientZone.getInstanceInternalZone());
-					}	
-				} catch(Exception e) {
-					LOG.debug( e, e );
+			} 
+			try {
+				Name internalName = TransientZone.getInternalName();
+				Name externalName = TransientZone.getExternalName();
+
+				if(!ZoneManager.zones.containsKey(externalName)){
+					ZoneManager.registerZone(externalName,TransientZone.getInstanceExternalZone());
+					LOG.info("Registering zone: " + externalName.toString());
+				} else if(!ZoneManager.zones.containsKey(internalName)){
+					ZoneManager.registerZone(internalName,TransientZone.getInstanceInternalZone());
+					LOG.info("Registering zone: " + internalName.toString());
 				}
+				if (name == internalName && !internal) {
+					LOG.error("Invalid external query for " + internalName.toString());
+					return null;
+				}
+			} catch(Exception e) {
+				LOG.debug( e, e );
+				// If not an internal request, how do we ensure that we
+				// don't return something we shouldn't here?
 			}
 			return zones.get(name);
 		} else {

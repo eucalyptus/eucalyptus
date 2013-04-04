@@ -100,7 +100,7 @@ import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
-
+import java.net.InetAddress;
 
 public class UDPHandler extends ConnectionHandler {
     private static Logger LOG = Logger.getLogger( UDPHandler.class );
@@ -116,6 +116,7 @@ public class UDPHandler extends ConnectionHandler {
             byte [] in = new byte[udpLength];
             DatagramPacket indp = new DatagramPacket(in, in.length);
             DatagramPacket outdp = null;
+            boolean internal = false;
             while (true) {
                 indp.setLength(in.length);
                 try {
@@ -127,10 +128,13 @@ public class UDPHandler extends ConnectionHandler {
                 Message query;
                 byte [] response = null;
                 try {
+                    String client = indp.getAddress().getHostAddress();
+                    internal = isInternal(client);
+
                     query = new Message(in);
                     response = generateReply(query, in,
                             indp.getLength(),
-                            null);
+                            null, internal);
                     if (response == null)
                         continue;
                 }

@@ -158,6 +158,19 @@ public class TransientZone extends Zone {
  */
 @Override
   public SetResponse findRecords( Name name, int type ) {
+    return this.findRecords( name, type, false );
+  }
+
+@Override
+  public SetResponse findRecords( Name name, int type, boolean internal ) {
+    if (!name.toString().endsWith(this.getOrigin().toString())) {
+      return super.findRecords( name, type );
+    }
+    if ( internal ) {
+      LOG.debug("Processing internal request for " + name.toString() + " in Zone " + getOrigin().toString());
+    } else {
+      LOG.debug("Processing external request for " + name.toString() + " in Zone " + getOrigin().toString());
+    }
     if( StackConfiguration.USE_INSTANCE_DNS && name.toString( ).matches("euca-.+{3}-.+{3}-.+{3}-.+{3}\\..*") ) {
       try {
     	if(type == Type.AAAA)
@@ -170,14 +183,26 @@ public class TransientZone extends Zone {
           .append(tryIp[1]).append(".")
           .append(tryIp[2]).append(".")
           .append(tryIp[3]).toString( );
-        try {
-          VmInstances.lookupByPublicIp( ipCandidate );
-        } catch ( Exception e ) {
+        if ( getExternalName().subdomain(getOrigin()) ) {
+          try {
+            VmInstance vmInst = VmInstances.lookupByPublicIp( ipCandidate );
+            LOG.debug("Found public record for IP " + ipCandidate);
+            if ( internal ) {
+              ipCandidate = vmInst.getPrivateAddress();
+              LOG.debug("Translating to internal IP " + ipCandidate);
+            }
+          } catch ( Exception e ) {
+            return super.findRecords( name, type );
+          }
+        } else if ( internal && getInternalName().subdomain(getOrigin()) ) {
           try {
             VmInstances.lookupByPrivateIp( ipCandidate );
+            LOG.debug("Found private record for IP " + ipCandidate);            
           } catch ( Exception e1 ) {
             return super.findRecords( name, type );
           }
+        } else {
+          return super.findRecords( name, type );
         }
         InetAddress ip = InetAddress.getByName( ipCandidate );
         SetResponse resp = new SetResponse(SetResponse.SUCCESSFUL);
