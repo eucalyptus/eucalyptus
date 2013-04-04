@@ -739,7 +739,7 @@ int ncClientCall(ncMetadata * pMeta, int timeout, int ncLock, char *ncURL, char 
                     rc = write(filedes[1], *outRes, sizeof(ncResource));
                     rc = 0;
                 } else {
-                    (*errMsg) = axutil_error_get_message(ncs->env->error);
+                    (*errMsg) = (char *) axutil_error_get_message(ncs->env->error);
                     if (*errMsg && (len = strnlen(*errMsg, 1024 - 1))) {
                         len += 1;
                         rc = write(filedes[1], &rc, sizeof(int));   //NOTE: we write back rc as well
@@ -2093,7 +2093,7 @@ int refresh_resources(ncMetadata * pMeta, int timeout, int dolock)
                     }
                     euca_strncpy(resourceCacheStage->resources[i].nodeStatus, ncResDst->nodeStatus, 24);
 ////                    // temporarily duplicate the NC reported value in the node message for debugging
-                    sprintf(resourceCacheStage->resources[i].nodeMessage, "");
+                    strcpy(resourceCacheStage->resources[i].nodeMessage, "");
                     // set iqn, if set
                     if (strlen(ncResDst->iqn)) {
                         snprintf(resourceCacheStage->resources[i].iqn, 128, "%s", ncResDst->iqn);
