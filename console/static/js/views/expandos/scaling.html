@@ -7,7 +7,7 @@
     <li><a href="#tabs-5" data-msg="tab_tags">Tags</a></li>
   </ul>
   <div id="tabs-1" class="tab">
-      <ul class="instance-expanded clearfix">
+      <ul class="scaling-group-expanded clearfix">
 	    <li><div class="expanded-title" data-msg="scaling_table_expanded_name">SCALING GROUP NAME</div><div class="expanded-value" data-text="name">myGroup</div></li>
 	    <li><div class="expanded-title" data-msg="scaling_table_expanded_launch_configs">CURRENT LAUNCH CONFIGURATION</div><div class="expanded-value" data-text="launch_config_name">myconfig</div></li>
 	    <li><div class="expanded-title" data-msg="scaling_table_expanded_zones">AVAILABILITY ZONES</div><div class="expanded-value">zone 2</div></li>
@@ -17,16 +17,16 @@
 	  </ul>
   </div>
   <div id="tabs-2" class="tab">
-      <ul class="instance-expanded clearfix">
+      <ul class="scaling-group-policies-expanded clearfix">
 	    <li><div class="expanded-section-label" data-msg="scaling_table_expanded_term_policies">Instance termination policies (in execution order):</div><div class="expanded-value">Oldest instance</div><div class="expanded-value">Default</div></li>
 	  </ul>
-      <ul class="instance-expanded clearfix">
+      <ul class="scaling-group-policies-expanded clearfix">
 	    <li><div class="expanded-section-label" data-msg="scaling_table_expanded_scaling_policies">Scaling policies:</div></li>
       </ul>
-      <ul class="instance-expanded clearfix">
+      <ul class="scaling-group-policies-expanded clearfix">
 		<li><div class="expanded-label" data-msg="scaling_table_expanded_scaling_policy_default_cooldown">Default cooldown period (secs):<span class="expanded-value" data-text="default_cooldown">30</span></div></li>
       </ul>
-      <ul class="instance-expanded clearfix">
+      <ul class="scaling-group-policies-expanded clearfix">
 		<li>
 		<table>
 			<thead><tr><th data-msg="scaling_table_expanded_scaling_policy_name">NAME</th><th data-msg="scaling_table_expanded_scaling_policy_amount">AMOUNT</th><th data-msg="scaling_table_expanded_scaling_policy_measure">MEASURE</th><th data-msg="scaling_table_expanded_scaling_policy_trigger_metric">TRIGGER METRIC</th><th data-msg="scaling_table_expanded_scaling_policy_trigger_threshold">TRIGGER THRESHOLD</th></tr>
@@ -39,13 +39,13 @@
 	  </ul>
   </div>
   <div id="tabs-3" class="tab">
-	  <ul class="instance-expanded clearfix">
+	  <ul class="scaling-group-instances-expanded clearfix">
 	  	<li><div class="form-row clearfix checkbox-only"><input type="checkbox" id="scaling-expanded-launch-instance-on-term"><label for="scaling-expanded-launch-instance-on-term" data-msg="scaling_table_expanded_launch_instance_on_term">Launch new instance when an instance is terminated</label></div></li>
 	  </ul>
-      <ul class="instance-expanded clearfix">
+      <ul class="scaling-group-instances-expanded clearfix">
 	    <li><div class="form-row clearfix checkbox-only"><input type="checkbox" id="scaling-expanded-check-health"><label for="scaling-expanded-check-health" data-msg="scaling_table_expanded_check_health_on_launch">Begin checking health immediately when instance replaces unhealthy one</label></div></li>
 	  </ul>
-      <ul class="instance-expanded clearfix">
+      <ul class="scaling-group-instances-expanded clearfix">
 		<li>
 		<table>
 			<thead><tr><th data-msg="scaling_table_expanded_instance_id">ID</th><th data-msg="scaling_table_expanded_instance_health_status">HEALTH STATUS</th><th data-msg="scaling_table_expanded_instance_zone">AVAILABILITY ZONE</th><th data-msg="scaling_table_expanded_instance_launch_config">LAUNCH CONFIGURATION</th><th data-msg="scaling_table_expanded_instance_state">STATE</th></tr>
@@ -58,7 +58,7 @@
 	  </ul>
   </div>
   <div id="tabs-4" class="tab">
-      <ul class="instance-expanded clearfix">
+      <ul class="scaling-group-processes-expanded clearfix">
 	    <li>
 		<table>
 			<thead><tr><th data-msg="scaling_table_expanded_process">PROCESS</th><th data-msg="scaling_table_expanded_suspended_state">SUSPENDED?</th></tr>
@@ -76,10 +76,10 @@
 	  </ul>
   </div>
   <div id="tabs-5" class="tab">
-      <ul class="instance-expanded clearfix">
+      <ul class="tags-expanded clearfix">
         <li><div class="form-row clearfix checkbox-only"><input type="checkbox" id="scaling-expanded-apply-tags-to-instances"><label for="scaling-expanded-apply-tags-to-instances" data-msg="">Also apply tags to instances in this scaling group</label></div></li>
       </ul>
-      <ul class="instance-expanded clearfix">	    
+      <ul class="tags-expanded clearfix">	    
 	    <li>
 		<table>
 			<thead><tr><th data-msg="tag_display_hdr_key">KEY</th><th data-msg="tag_display_hdr_value">VALUE</th></tr>
