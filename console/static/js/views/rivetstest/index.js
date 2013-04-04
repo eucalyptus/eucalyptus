@@ -38,6 +38,13 @@ define([
             var scope = {
                 foo: { bar: { baz: 'Its deep, man' } },
 adam: new Backbone.Model({
+	onClick: function() {
+		console.log('adam.onClick');
+		return false;
+	},
+	funcValue: function() {
+		return "function-value";
+	},
 	lastName: 'Heath',
 	extension: '307',
 	emailAddress: 'doogie@brainfood.com',
