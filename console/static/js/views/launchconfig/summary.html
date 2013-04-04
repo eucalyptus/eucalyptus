@@ -1,6 +1,6 @@
 <div class="summary-title">Summary</div>
 <div id="summary-image"> 
-  <div id="summary-icon" class="image-type summary">
+  <div id="summary-icon" class="image-type summary" data-show="imageModel.image_iconclass">
     <div>Image:</div>
     <span data-text="imageModel.id">emi-EDBA3EEA</span>
     <div>Platform:</div>
@@ -12,6 +12,7 @@
   <div id="summary-type-icon" class="type-type summary">
       <div>Size:</div>
       <span data-text="typeModel.instance_type"></span>
+      <!--
       <div>Instances:</div>
       <span data-text="typeModel.type_number"></span>
       <div>Zone:</div>
@@ -24,6 +25,9 @@
         <input id="summary-hasTags" type="checkbox" data-checked="typeModel.type_hasTags">
         <label for="summary-hasTags">Tag(s) added.</label>
       </div>
+      -->
+      <div>Name:</div>
+      <span data-text="typeModel.type_names"></span>
   </div>  
 </div>
 

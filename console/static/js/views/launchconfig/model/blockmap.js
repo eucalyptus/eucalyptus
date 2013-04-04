@@ -15,6 +15,15 @@ define([], function() {
     
     initialize: function() {
 
+    },
+
+    validation: {
+      size: {
+        required: true,
+        pattern: 'number',
+        min: 1,
+        msg: 'The volume size must be a positive number.'
+      }
     }
   });
 });

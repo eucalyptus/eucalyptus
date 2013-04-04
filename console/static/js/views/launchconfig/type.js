@@ -20,6 +20,7 @@ define([
               var names = target.value.split(',');
               self.model.set('type_names', names);
               self.model.set('type_hasNames', 'true');
+              self.model.set('instance_type', $("#launch-instance-type-size").val());
               break;
             case 'launch-instance-type-num-instance':
               self.model.set('type_number', target.value);
@@ -62,7 +63,8 @@ define([
         },
     
         launchConfigErrors: {
-          type_number: ''
+          type_number: '',
+          type_names: ''
         }
     };
 
@@ -72,6 +74,14 @@ define([
 
     self.model.on('validated:invalid', function(model, errors) {
       scope.launchConfigErrors.type_number = errors.type_number;
+      scope.launchConfigErrors.type_names = errors.type_names;
+      self.render();
+    });
+
+    self.model.on('validated:valid', function(model, errors) {
+      scope.launchConfigErrors.type_number = null;
+      scope.launchConfigErrors.type_names = null;
+      self.render();
     });
 
 
@@ -86,7 +96,8 @@ define([
     },
 
     isValid: function() {
-      this.model.validate(_.pick(this.model.toJSON(),'type_number'));
+      //this.model.validate(_.pick(this.model.toJSON(),'type_number'));
+      this.model.validate(_.pick(this.model.toJSON(),'type_names'));
       return this.model.isValid();
     }
 
