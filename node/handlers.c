@@ -2,7 +2,7 @@
 // vim: set softtabstop=4 shiftwidth=4 tabstop=4 expandtab:
 
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * Copyright 2009-2013 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -191,6 +191,10 @@ const char *euca_client_component_name = "cc";  //!< Name of this component's cl
 
 /* used by lower level handlers */
 sem *hyp_sem = NULL;            //!< semaphore for serializing domain creation
+
+// FIXME: This semaphore is probably superfluous and should be removed (with hyp_sem used in its place).
+sem *migr_sem = NULL;           //!< semaphore for serializing migrations
+
 sem *inst_sem = NULL;           //!< guarding access to global instance structs
 sem *inst_copy_sem = NULL;      //!< guarding access to global instance structs
 sem *addkey_sem = NULL;         //!< guarding access to global instance structs
@@ -837,7 +841,7 @@ static void refresh_instance_info(struct nc_state_t *nc, ncInstance * instance)
                 save_instance_struct(instance);
                 // Done upon return in monitoring_thread().
                 //copy_instances();
-                LOGINFO("[%s] incoming migration complete\n", instance->instanceId);
+                LOGINFO("[%s] incoming migration complete.\n", instance->instanceId);
 
             } else if (new_state == SHUTOFF || new_state == SHUTDOWN) {
                 // this is normal at the beginning of incoming migration, before a domain is created in PAUSED state
@@ -2477,6 +2481,7 @@ int doDescribeInstances(ncMetadata * pMeta, char **instIds, int instIdsLen, ncIn
     }
     EUCA_FREE(file_name);
 
+    LOGTRACE("done\n");
     return (EUCA_OK);
 }
 
@@ -3004,16 +3009,25 @@ int doMigrateInstances(ncMetadata * pMeta, ncInstance ** instances, int instance
     if (init())
         return (EUCA_ERROR);
 
-    LOGDEBUG("invoked (action=%s instance[0].{id=%s src=%s dst=%s) creds=%s\n",
-             action,
-             instances[0]->instanceId, instances[0]->migration_src, instances[0]->migration_dst,
-             (credentials == NULL) ? ("unavailable") : ("present"));
+    LOGTRACE("invoked\n");
+
+    for (int i = 0; i < instancesLen; i++) {
+        LOGDEBUG("verifying instance # %d...\n", i);
+        if (instances[i]) {
+            LOGDEBUG("invoked (action=%s instance[%d].{id=%s src=%s dst=%s) creds=%s\n",
+                     action, i,
+                     instances[i]->instanceId, instances[i]->migration_src, instances[i]->migration_dst,
+                     (credentials == NULL) ? ("unavailable") : ("present"));
+        }
+    }
 
     if (nc_state.H->doMigrateInstances) {
         ret = nc_state.H->doMigrateInstances(&nc_state, pMeta, instances, instancesLen, action, credentials);
     } else {
         ret = nc_state.D->doMigrateInstances(&nc_state, pMeta, instances, instancesLen, action, credentials);
     }
+
+    LOGTRACE("done\n");
 
     return ret;
 }
@@ -3061,7 +3075,7 @@ int is_migration_src(const ncInstance * instance)
 //!
 //! Rollback a pending migration request on a source NC
 //!
-//! FIXME: Currently only safe to call under the protection of inst_sem, such as from the migrating_thread().
+//! Currently only safe to call under the protection of inst_sem, such as from the migrating_thread().
 //!
 //! @param[in] instance pointer to the instance struct
 //!
