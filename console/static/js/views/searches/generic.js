@@ -60,6 +60,7 @@ define(['app', 'dataholder'], function(app, dh) {
       }
       result = capitalize(name.split(/_/g)).join(' ');
       result = capitalize(result.split(/-/g)).join(' ');
+      result = capitalize(result.split(/\./g)).join(' ');
       result = result.replace(/&#x2f;/g, '/')
       result = result.replace(/&#.{0,3};/g, '')
       return result;

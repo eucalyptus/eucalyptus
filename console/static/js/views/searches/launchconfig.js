@@ -29,10 +29,6 @@ define([
       facets: ['all_text', 'os', 'instance_type', 'root_device_type'],
       localize: {
         state: 'Status',
-        't1.micro': 'T1 Micro',
-        'm1.small': 'M1 Small',
-        'c1.medium': 'C1 Medium',
-        'm1.large': 'M1 Large',
         'os': 'Operating System'
       },
       match: {
