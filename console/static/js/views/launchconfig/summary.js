@@ -25,6 +25,7 @@ define([
       this.$el.html(template);
       this.riv = rivets.bind(this.$el, scope);
       this.render();
+  
     },
 
     render: function() {
@@ -35,6 +36,7 @@ define([
       var target = this.$el.find('#summary-icon');
       target.removeClass();
       target.addClass('image-type').addClass('summary').addClass(this.options.imageModel.get('image_iconclass'));
-    }
+    },
+
   });
 });

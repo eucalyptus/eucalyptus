@@ -1,25 +1,25 @@
 <div>
-    <div class="title"><span data-msg="quick_scale_dialog_title">Quick scale</span></div>
+    <div class="title" data-msg="quick_scale_dialog_title">Quick scale</div>
     <div class="body">
-	    <div class="form-row clearfix"><label data-msg="quick_scale_dialog_scaling_group">Scaling group:</label> <span data-text="qscale.name">Group Name</span></div>
-        <div class="form-row clearfix"><p><label data-msg="quick_scale_dialog_current_size">Current size</label> <span data-text="qscale.size">0</span></p></div>
+	    <div class="form-row top-form-row clearfix"><label data-msg="quick_scale_dialog_scaling_group">Scaling group:</label> <span data-text="qscale.name">Group Name</span></div>
+        <div class="form-row clearfix"><label data-msg="quick_scale_dialog_current_size">Current size</label> <span data-text="qscale.size">0</span></div>
 	    <p data-msg="quick_scale_dialog_instance_text">Set the desired number of instances to quick scale your scaling group to that size.</p>
         <div class="scaling-group-instances">
-		                <div class="form-row clearfix scale-max">
-		                    <label for="maximum" data-msg="create_scaling_group_general_instances_max">Maximum</label>
-		                    <span data-text="qscale.max_size">0</span>
-		                </div>
+            <div class="form-row clearfix scale-max">
+                <label for="maximum" data-msg="create_scaling_group_general_instances_max">Maximum</label>
+                <span data-text="qscale.max_size">0</span>
+            </div>
 
-		                <div class="form-row clearfix scale-desired">
-		                    <label for="desired" data-msg="create_scaling_group_general_instances_desired">Desired</label>
-		                    <input class="smallNumber" name="desired" id="desired" type="number" data-value="qscale.desired_capacity"><div data-text="errors.desired_capacity"></div>
-		                </div>
+            <div class="form-row clearfix scale-desired">
+                <label for="desired" data-msg="create_scaling_group_general_instances_desired">Desired</label>
+                <input class="smallNumber" name="desired" id="desired" type="number" data-value="qscale.desired_capacity"><div data-text="errors.desired_capacity"></div>
+            </div>
 
-		                <div class="form-row clearfix scale-min">
-		                    <label for="minimum" data-msg="create_scaling_group_general_instances_min">Minimum</label>
-		                    <span data-text="qscale.min_size">0</span>
-		                </div>
-		            </div>
+            <div class="form-row clearfix scale-min">
+                <label for="minimum" data-msg="create_scaling_group_general_instances_min">Minimum</label>
+                <span data-text="qscale.min_size">0</span>
+            </div>
+        </div>
         <div data-text=":status" style="height:20px"></div>
         <div class="ui-dialog-buttonpane ui-widget-content ui-helper-clearfix">
             <div class="ui-dialog-buttonset">

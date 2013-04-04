@@ -20,13 +20,6 @@ define([
                     toggle: true
                 });
                 
-                console.log("VOLUMES: " + JSON.stringify(app.data.scalingGroups))
-                
-                for (var key in app.data) {
-                  console.log('KEY ' + key + ': ' + JSON.stringify(app.data[key]));
-                }
-                
-
             var explicitFacets = {
               architecture : [{name : 'i386', label: 'i386 32-bit'}, {name : 'x86_64' , label : 'AMD64 64-bit'}]
             };
@@ -42,8 +35,19 @@ define([
             var tag = new Tag({resource_type: 'instance'});
             var lc = new LaunchConfig({name: 'my launch configuration'});
 
-
             var scope = {
+                foo: { bar: { baz: 'Its deep, man' } },
+adam: new Backbone.Model({
+	lastName: 'Heath',
+	extension: '307',
+	emailAddress: 'doogie@brainfood.com',
+	tags: [
+		{name: 'one', value: 1},
+		{name: 'two', value: 2},
+		{name: 'three', value: 3}
+	]
+}),
+
                 errors: new Backbone.Model({}),
                 lc_errors: new Backbone.Model({}),
                 test: test,

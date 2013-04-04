@@ -37,19 +37,81 @@ define([
           self.model.set('security_show', true);
         },
 
+        isKeySelected: function(obj) { 
+          if (this.keymodel.get('name') == obj.keypair.get('name')) {
+            return true;
+          } 
+          return false;
+        },
+
+        isGroupSelected: function(obj) { 
+          if (this.configmodel.get('name') == obj.sgroup.get('name')) {
+            return true;
+          } 
+          return false;
+        },
+
         launchConfigErrors: {
           key: null,
           group: null
+        },
+
+        newKeyPair: function() {
+            addKeypair( function(){ 
+              var oldKeypairs = [];
+              $.each($section.find('#launch-wizard-security-keypair-selector').find('option'), function(){
+                oldKeypairs.push($(this).val());
+              });
+
+              var numKeypairs = oldKeypairs.length;
+              refresh('keypair'); 
+              thisObj._keypairCallback = runRepeat(function(){
+                populateKeypair(oldKeypairs); 
+                if($section.find('#launch-wizard-security-keypair-selector').find('option').length  > numKeypairs){
+                  cancelRepeat(thisObj._keypairCallback);
+                }
+              }, 2000); 
+            });
+        },
+
+        newSecGroup: function() {
+          addGroup( function() {
+              var oldGroups = [];
+              $.each($section.find('#launch-wizard-security-sg-selector').find('option'), function(){
+                oldGroups.push($(this).val());
+              });
+              var numGroups = oldGroups.length;
+              refresh('sgroup');
+              thisObj._sgCallback = runRepeat(function(){ 
+                populateSGroup(oldGroups);
+                if($section.find('#launch-wizard-security-sg-selector').find('option').length > numGroups){
+                  cancelRepeat(thisObj._sgCallback);
+                }  
+             }, 2000);
+            });
         }
+
 
       };
      
       self.model.on('validated:invalid', function(obj, errors) {
         scope.launchConfigErrors.group = errors.name;
+        self.render();
+      });
+
+      self.model.on('validated:valid', function(obj, errors) {
+        scope.launchConfigErrors.group = null;
+        self.render();
       });
 
       this.options.keymodel.on('validated:invalid', function(obj, errors) {
         scope.launchConfigErrors.key = errors.name;
+        self.render();
+      });
+
+      this.options.keymodel.on('validated:valid', function(obj, errors) {
+        scope.launchConfigErrors.key = null;
+        self.render();
       });
 
       $(this.el).html(template)
@@ -59,6 +121,7 @@ define([
 
     render: function() {
       this.rView.sync();
+      console.log("KEY", this.options.keymodel);
     },
 
     isValid: function() {

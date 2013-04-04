@@ -1,11 +1,11 @@
-// balancer model
+// instance health model
 //
 
 define([
   './eucamodel'
 ], function(EucaModel) {
   var model = EucaModel.extend({
-    idAttribute: 'name',
+    idAttribute: 'instance_id',
   });
   return model;
 });
