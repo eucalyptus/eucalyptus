@@ -11,9 +11,10 @@ define([
             title: 'Image',
             count: 0,
             image_selected: null,
+
             initialize : function() {
-          var self = this;
-          var scope = {
+              var self = this;
+              var scope = {
               view: this,
               blockmaps: self.options.blockMaps,
 
@@ -40,13 +41,7 @@ define([
               select: function(e, images) {
                 $(e.currentTarget).parent().find('tr').removeClass('selected-row');
                 $(e.currentTarget).addClass('selected-row');
-                /*
-                self.model.set('image_id', images.image.get('id'));
-                self.model.set('image_platform', images.image.get('platform') ? images.image.get('platform') : 'Linux');
-                self.model.set('image_location', images.image.get('location'));
-                self.model.set('image_description', images.image.get('description'));
                 self.model.set('image_iconclass', this.setClass(images.image));
-                */
                 self.image_selected = images.image.get('id');
                 self.model.set(images.image.toJSON());
                 self.model.set('platform', this.setClass(self.model));
@@ -74,9 +69,13 @@ define([
               }
           };
           self.model.on('validated:invalid', function(model, errors) {
-              console.log('ERROR', errors);
               scope.launchConfigErrors.image_id = errors.id; 
               self.render(); 
+          });
+
+          self.model.on('validated:valid', function()  {
+            scope.launchConfigErrors.image_id = null;
+            self.render();
           });
 
           scope.images = scope.search.filtered;
