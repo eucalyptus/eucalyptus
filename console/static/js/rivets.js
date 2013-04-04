@@ -46,7 +46,6 @@ rivets.configure({
         },
 	    subscribe: function(obj, keypath, callback) {
 		    return diveIntoObject(obj, keypath, function(obj, keypath) {
-                console.log('model listen', obj, keypath);
                 if (obj instanceof Backbone.Model) {
                     obj.on('change:' + keypath, callback);
                 } else if (obj instanceof Backbone.Collection) {
