@@ -848,21 +848,8 @@ static void update_vbr_with_backing_info(artifact * a, blobstore * work_bs)
     if (!a->must_be_file &&     // not required to be a file
         strlen(blockblob_get_dev(a->bb)) && // there is a block device
         blockblob_get_file(a->bb) == NULL &&    // there is NO file access
-        (blobstore_snapshot_t) a->bb->store->snapshot_policy != BLOBSTORE_SNAPSHOT_NONE) {  // without snapshots we can use files
-
-        // try to create symlink so dev names are predictable regadless
-        // of whether the device is a loopback dev or a device mapper dev
-        // this is important for migration
-        const char * path = blockblob_get_dev(a->bb);
-        if (blockblob_get_blobstore(a->bb) == work_bs) {
-            char linkpath[1024];
-            snprintf(linkpath, sizeof(linkpath), "%s.dev", a->bb->blocks_path); //! @TODO do not use private field blocks_path
-            if (symlink(path, linkpath)==0) {
-                LOGDEBUG("[%s] symlinked %s to %s\n", a->instanceId, path, linkpath);
-                path = linkpath;
-            }
-        }
-        euca_strncpy(vbr->backingPath, path, sizeof(vbr->backingPath));
+        (blobstore_snapshot_t) a->bb->store->snapshot_policy != BLOBSTORE_SNAPSHOT_NONE) { // without snapshots we can use files
+        euca_strncpy(vbr->backingPath, blockblob_get_dev(a->bb), sizeof(vbr->backingPath));
         vbr->backingType = SOURCE_TYPE_BLOCK;
     } else {
         assert(blockblob_get_file(a->bb));
@@ -870,6 +857,19 @@ static void update_vbr_with_backing_info(artifact * a, blobstore * work_bs)
         vbr->backingType = SOURCE_TYPE_FILE;
     }
     vbr->sizeBytes = a->bb->size_bytes;
+
+    // create a symlink so backing file/dev is predictable regadless
+    // of whether the device is a loopback dev or a device mapper dev
+    // or a file: this is important for migration
+    { 
+        const char * path = vbr->backingPath;
+        char linkpath[1024];
+        snprintf(linkpath, sizeof(linkpath), "%s.dev", a->bb->blocks_path); //! @TODO do not use private field blocks_path
+        if (symlink(path, linkpath)==0) {
+            LOGDEBUG("[%s] symlinked %s to %s\n", a->instanceId, path, linkpath);
+            euca_strncpy(vbr->backingPath, linkpath, sizeof(vbr->backingPath));
+        }
+    }
 }
 
 //!
