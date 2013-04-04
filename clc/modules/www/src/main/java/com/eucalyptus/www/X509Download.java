@@ -93,6 +93,7 @@ import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.component.id.Tokens;
 import com.eucalyptus.component.id.Walrus;
 import com.eucalyptus.crypto.Certs;
+import com.eucalyptus.crypto.Crypto;
 import com.eucalyptus.crypto.util.PEMFiles;
 import com.eucalyptus.loadbalancing.LoadBalancing;
 import com.eucalyptus.util.Internets;
@@ -320,7 +321,10 @@ public class X509Download extends HttpServlet {
       /** write the private key to the zip stream **/
       zipOut.putArchiveEntry( entry = new ZipArchiveEntry( baseName + "-pk.pem" ) );
       entry.setUnixMode( 0600 );
-      zipOut.write( PEMFiles.getBytes( keyPair.getPrivate( ) ) );
+      zipOut.write( PEMFiles.getBytes(
+          "RSA PRIVATE KEY",
+          Crypto.getCertificateProvider().getEncoded( keyPair.getPrivate() )
+      ) );
       zipOut.closeArchiveEntry( );
       
       /** write the X509 certificate to the zip stream **/

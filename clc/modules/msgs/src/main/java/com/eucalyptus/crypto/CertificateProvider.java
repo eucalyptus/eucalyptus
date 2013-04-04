@@ -75,6 +75,7 @@ public interface CertificateProvider extends BaseSecurityProvider {
    */
   public abstract KeyPair generateKeyPair( );
   public abstract String getFingerPrint( Key privKey );
+  public abstract byte[] getEncoded( PrivateKey privateKey );
   
   /**
    * Following operations produce a signed certificate. If the <tt>signer</tt> certificate is null, then the certificate generated is self signed.

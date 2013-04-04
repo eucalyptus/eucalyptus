@@ -64,12 +64,14 @@ package com.eucalyptus.auth.crypto;
 
 import java.math.BigInteger;
 import java.security.Key;
+import java.security.KeyFactory;
 import java.security.KeyPair;
 import java.security.KeyPairGenerator;
 import java.security.MessageDigest;
 import java.security.PrivateKey;
 import java.security.SecureRandom;
 import java.security.cert.X509Certificate;
+import java.security.spec.PKCS8EncodedKeySpec;
 import java.util.Calendar;
 import java.util.zip.Adler32;
 import javax.security.auth.x500.X500Principal;
@@ -246,6 +248,23 @@ public final class DefaultCryptoProvider implements CryptoProvider, CertificateP
     }
   }
 
+  /**
+   * Get the PKCS#8 encoded bytes for the key.
+   *
+   * @param privateKey The key to encode.
+   * @return The bytes
+   */
+  @Override
+  public byte[] getEncoded( final PrivateKey privateKey ) {
+    try {
+      return KeyFactory.getInstance( KEY_ALGORITHM, "BC" )
+          .getKeySpec( privateKey, PKCS8EncodedKeySpec.class ).getEncoded();
+    } catch ( Exception e ) {
+      LOG.error( e, e );
+    }
+    return privateKey.getEncoded(); // Fallback to PKCS#1
+  }
+
   @Override
   public String generateSystemSignature( ) {
     return this.generateSystemToken( ComponentIds.lookup( Eucalyptus.class ).name( ).getBytes( ) );
@@ -276,6 +295,7 @@ public final class DefaultCryptoProvider implements CryptoProvider, CertificateP
   public String getFingerPrint( Key privKey ) {
     return getFingerPrint( privKey.getEncoded( ) );
   }
+
   @Override
   public String getFingerPrint( byte[] data ) {
     try {
