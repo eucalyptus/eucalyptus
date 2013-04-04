@@ -195,7 +195,8 @@ static unsigned char grub_version = 0;
 \*----------------------------------------------------------------------------*/
 
 static int try_stage_dir(const char *dir);
-static char *pruntf(boolean log_error, char *format, ...) _attribute_wur_ _attribute_format_(2, 3);
+static char *pruntf(boolean log_error, char *format, ...)
+_attribute_wur_ _attribute_format_(2, 3);
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |

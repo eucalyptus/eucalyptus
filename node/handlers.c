@@ -185,16 +185,16 @@ const char *euca_client_component_name = "cc";  //!< Name of this component's cl
 #endif /* NO_COMP */
 
 /* used by lower level handlers */
-sem *hyp_sem = NULL;            //!< semaphore for serializing domain creation
+sem *hyp_sem = NULL;                   //!< semaphore for serializing domain creation
 
 // FIXME: This semaphore is probably superfluous and should be removed (with hyp_sem used in its place).
-sem *migr_sem = NULL;           //!< semaphore for serializing migrations
+sem *migr_sem = NULL;                  //!< semaphore for serializing migrations
 
-sem *inst_sem = NULL;           //!< guarding access to global instance structs
-sem *inst_copy_sem = NULL;      //!< guarding access to global instance structs
-sem *addkey_sem = NULL;         //!< guarding access to global instance structs
-sem *loop_sem = NULL;           //!< created in diskutils.c for serializing 'losetup' invocations
-sem *log_sem = NULL;            //!< used by log.c
+sem *inst_sem = NULL;                  //!< guarding access to global instance structs
+sem *inst_copy_sem = NULL;             //!< guarding access to global instance structs
+sem *addkey_sem = NULL;                //!< guarding access to global instance structs
+sem *loop_sem = NULL;                  //!< created in diskutils.c for serializing 'losetup' invocations
+sem *log_sem = NULL;                   //!< used by log.c
 
 bunchOfInstances *global_instances = NULL;  //!< pointer to the instance list
 bunchOfInstances *global_instances_copy = NULL; //!< pointer to the copied instance list

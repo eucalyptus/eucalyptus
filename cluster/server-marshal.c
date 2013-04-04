@@ -1994,7 +1994,6 @@ adb_MigrateInstancesResponse_t *MigrateInstancesMarshal(adb_MigrateInstances_t *
     nodeName = adb_migrateInstancesType_get_sourceHost(mit, env);
     instanceId = adb_migrateInstancesType_get_instanceId(mit, env);
 
-
     status = AXIS2_TRUE;
     if (!DONOTHING) {
         rc = doMigrateInstances(&ccMeta, nodeName, instanceId, "prepare");
