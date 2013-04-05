@@ -154,7 +154,8 @@
       var $buttonPane = $dialog.find('.ui-dialog-buttonpane');
       var $titleBar = $dialog.find('.ui-dialog-titlebar');
       var $contentPane =  this.element.find('.dialog-inner-content');
-      $contentPane.after($('<div>').addClass('dialog-help-content').append(thisObj.options.help.content).hide()); 
+      var helpContent = thisObj.options.help ? thisObj.options.help.content : '';
+      $contentPane.after($('<div>').addClass('dialog-help-content').append(helpContent).hide()); 
       var $helpPane = this.element.find('.dialog-help-content');
       var $resourcePane = this.element.find('.selected-resources');
       var $helpLink = $titleBar.find('.'+thisObj.options.help_icon_class+' a');

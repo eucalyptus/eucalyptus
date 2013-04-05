@@ -62,7 +62,7 @@
           require(['underscore', 'app'], function(_, app) {
             ep.model = app.data[ep.name];
 
-            var doUpdate = _.debounce(function() {
+            var doUpdate = function() {
               console.log('EUCADATA', name, ep.model.length);
               thisObj._data[name] = {
                 lastupdated: new Date(),
@@ -73,8 +73,9 @@
                   callback['callback'].apply(thisObj);
                 });
               }
-            }, 10, true);
-            ep.model.on('change reset add', doUpdate);
+            }
+            //doUpdate = _.debounce(doUpdate, 10, true);
+            ep.model.on('change reset add', _.debounce(doUpdate, 100, true));
 
             // set up callback for timer which updates model if necessary
             thisObj._callbacks[name] = {callback: function(){
@@ -89,8 +90,6 @@
               }
               ep.model.fetch();
             }, repeat: null};
-
-            ep.model.fetch();
 
             var interval = thisObj.options.refresh_interval_sec*1000;
             thisObj._callbacks[name].repeat = runRepeat(thisObj._callbacks[name].callback, interval, true); // random ms is added to distribute sync interval
