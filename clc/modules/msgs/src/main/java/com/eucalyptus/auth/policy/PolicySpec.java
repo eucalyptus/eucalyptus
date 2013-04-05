@@ -664,6 +664,7 @@ public class PolicySpec {
     .add( EC2_RESOURCE_VOLUME )
     .add( EC2_RESOURCE_SNAPSHOT )
     .add( EC2_RESOURCE_VMTYPE )
+    .add( EC2_RESOURCE_TAG )
     .build();
 
   public static final Pattern IPV4_ADDRESS_RANGE_PATTERN = Pattern.compile( "(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})(?:-(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3}))?" );
