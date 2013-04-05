@@ -35,7 +35,7 @@ define(['app', 'dataholder'], function(app, dh) {
     
     var sortKeyList = function(list, keyName) {
       return _.chain(list)
-              .sort()
+              .sort(keyName)
               .uniq()
               .value()
     }
@@ -79,6 +79,10 @@ define(['app', 'dataholder'], function(app, dh) {
               || typeof on[key] === 'function'
               || done[key];
     }
+    
+    var searchOptions = {
+      preserveOrder : true
+    };
 
     function deriveFacets() {
       var derivedFacets = [];
@@ -95,11 +99,14 @@ define(['app', 'dataholder'], function(app, dh) {
         }
         config.facetsCustomizer.apply(self, [add, append]);
       }
-      var result = sortKeyList(derivedFacets, 'label');
+      var result = derivedFacets;
+      derivedFacets.sort(function(a, b) {
+        return a.label > b.label ? 1 : a.label < b.label ? -1 : 0;
+      })
       appended.forEach(function(additional) {
         result.push(additional);
       });
-      return result;
+      return _.uniq(result);
     }
 
     function findMatches(facet, searchTerm, img, add) {
@@ -173,7 +180,7 @@ define(['app', 'dataholder'], function(app, dh) {
       }
       return result;
     }
-
+    
     this.images = images;
     this.filtered = images.clone();
     this.lastSearch = '';
@@ -213,11 +220,11 @@ define(['app', 'dataholder'], function(app, dh) {
       self.filtered.reset(results);
     }
     this.facetMatches = function(callback) {
-      callback(deriveFacets());
+      callback(deriveFacets(), searchOptions);
     }
     
     this.valueMatches = function(facet, searchTerm, callback) {
-      callback(deriveMatches(facet, searchTerm))
+      callback(deriveMatches(facet, searchTerm), searchOptions)
     }
     
     function up() {

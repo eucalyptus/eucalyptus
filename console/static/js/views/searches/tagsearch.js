@@ -11,7 +11,10 @@ define([], function() {
           if (typeof dataItem.toJSON === 'function') {
             dataItem = dataItem.toJSON();
           }
+        } else {
+          continue;
         }
+        
         for (var j = 0; j < dataItem.length; j++) {
           var tag = dataItem[j];
           if (tag && tag.name) {
@@ -54,11 +57,18 @@ define([], function() {
         config.facetsCustomizer.apply(this, add, append);
       }
       var tags = getTags();
+      var hasTags = 0;
       for (var tagName in tags) {
-        append(tagName + ' (tag)', tagName + '(tag)');
+        hasTags++;
+        if (hasTags) break;
+      }
+      if (hasTags) {
+        append ('tags', '      -- TAGS --');
+      }
+      for (var tagName in tags) {
+        append(tagName + ' _tag', tagName);
       }
     };
-
 
     self.search = {};
     if (config.search) {
@@ -88,8 +98,9 @@ define([], function() {
         }
       }
       var tags = getTags();
+      
       for (var tagName in tags) {
-        var searchName = tagName + ' (tag)';
+        var searchName = tagName + ' _tag';
         result[searchName] = function(search, facetSearch, item, itemsFacetValue, hit) {
 
           // FIXME Whoa, WTF - the search parameter is a *string* like
