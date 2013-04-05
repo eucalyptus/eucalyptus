@@ -179,6 +179,8 @@ define(['app', 'dataholder'], function(app, dh) {
     this.lastSearch = '';
     this.lastFacets = new Backbone.Model({});
     this.search = function(search, facets) {
+        self.lastSearch = search;
+        self.lastFacets = facets;
         var jfacets = facets.toJSON();
         var results = self.images.filter(function(model) {
         return _.every(jfacets, function(facet) {
