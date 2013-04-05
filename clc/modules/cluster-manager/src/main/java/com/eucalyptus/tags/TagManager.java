@@ -169,7 +169,7 @@ public class TagManager {
                     context.getAccount(),
                     PolicySpec.EC2_DELETETAGS,
                     context.getUser() ) ) {
-                  Tags.delete( example, TagSupport.fromResource( resource ).exampleCriterion( example ), Collections.<String,String>emptyMap() );
+                  Tags.delete( example );
                 }
               } catch ( NoSuchMetadataException e ) {
                 log.trace( e );
@@ -192,8 +192,7 @@ public class TagManager {
   public DescribeTagsResponseType describeTags( final DescribeTagsType request ) throws Exception {
     final DescribeTagsResponseType reply = request.getReply( );
     final Context context = Contexts.lookup();
-    
-    //TODO:STEVE: Cloud admin can list all tags?
+
     final Filter filter = Filters.generate( request.getFilterSet(), Tag.class );
     final Ordering<Tag> ordering = Ordering.natural().onResultOf( Tags.resourceId() )
         .compound( Ordering.natural().onResultOf( Tags.key() ) )
