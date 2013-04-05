@@ -9,11 +9,17 @@ var doObjectRead = function(obj, id) {
     }
 };
 var diveIntoObject = function(obj, keypath, callback) {
+    if (!keypath) {
+        return callback(obj, null);
+    }
     //return callback(obj, keypath);
-    var keyparts = keypath.split(/\./);
+    var keyparts = keypath.replace(/^:/, '').split(/\./);
     //console.log('diveIntoObject(keyparts):', obj, keyparts);
     while (keyparts.length > 1) {
         var part = keyparts.shift();
+        if (part.length == 0) {
+            continue;
+        }
         //console.log('diveIntoObject:', obj, part);
         obj = doObjectRead(obj, part);
     }
@@ -22,7 +28,7 @@ var diveIntoObject = function(obj, keypath, callback) {
 };
 rivets.configure({
     adapter: {
-//        parsingSupport: true,
+        parsingSupport: true,
         iterate: function(obj, callback) {
             if (obj instanceof Backbone.Collection) {
                 var l = obj.length;
@@ -46,7 +52,7 @@ rivets.configure({
         },
 	    subscribe: function(obj, keypath, callback) {
   //          console.log('SUBSCRIBE',arguments);
-//		    return diveIntoObject(obj, keypath, function(obj, keypath) {
+            return diveIntoObject(obj, keypath, function(obj, keypath) {
                 if (obj instanceof Backbone.Model) {
                     obj.on('change:' + keypath, callback);
                 } else if (obj instanceof Backbone.Collection) {
@@ -55,10 +61,10 @@ rivets.configure({
                     // No easy portable way to observe plain objects.
                     // console.log('plain object');
                 }
- //           });
+            });
         },
         unsubscribe: function(obj, keypath, callback) {
-//		    diveIntoObject(obj, keypath, function(obj, keypath) {
+            diveIntoObject(obj, keypath, function(obj, keypath) {
                 if (obj instanceof Backbone.Model)  {
                     obj.off('change:' + keypath, callback);
                 } else if (obj instanceof Backbone.Collection) {
@@ -67,24 +73,16 @@ rivets.configure({
                     // No easy portable way to observe plain objects.
                     // console.log('plain object');
                 }
- //           });
+            });
         },
         read: function(obj, keypath) {
             if (obj == null) return null;
-            if (typeof keypath === 'undefined' || keypath === '') return obj;
+            if (typeof keypath === 'undefined') return obj;
 
-//		    return diveIntoObject(obj, keypath, function(obj, keypath) {
-                if (obj instanceof Backbone.Model)  {
-                    return obj.get(keypath);
-                } else if (obj instanceof Backbone.Collection)  {
-                    return obj.at(keypath);
-                } else {
-                    return obj[keypath];
-                }
- //           });
+            return diveIntoObject(obj, keypath, doObjectRead);
         },
         publish: function(obj, keypath, value) {
-//		    diveIntoObject(obj, keypath, function(obj, keypath) {
+            diveIntoObject(obj, keypath, function(obj, keypath) {
                 if (obj instanceof Backbone.Model)  {
                     obj.set(keypath, value);
                 } else if (obj instanceof Backbone.Collection) {
@@ -92,7 +90,7 @@ rivets.configure({
                 } else {
                     obj[keypath] = value;
                 }
- //           });
+            });
         }
     }
 });
