@@ -1,4 +1,6 @@
 var doObjectRead = function(obj, id) {
+    if (obj === null) return obj;
+    if (!id) return obj;
     //console.log('doObjectRead:', obj, id, obj instanceof Backbone.Model, obj instanceof Backbone.Collection);
     if (obj instanceof Backbone.Model)  {
         return obj.get(id);
