@@ -1991,21 +1991,30 @@ adb_MigrateInstancesResponse_t *MigrateInstancesMarshal(adb_MigrateInstances_t *
     int rc = 0;
     axis2_bool_t status = AXIS2_TRUE;
     char statusMessage[256] = { 0 };
-    char *nodeName = NULL;
+    char *sourceNode = NULL;
     char *instanceId = NULL;
+    char **destinationNodes = NULL;
+    int destinationNodeCount = 0;
+    int allowHosts;
     ncMetadata ccMeta = { 0 };
 
     mit = adb_MigrateInstances_get_MigrateInstances(migrateInstances, env);
 
     EUCA_MESSAGE_UNMARSHAL(migrateInstancesType, mit, (&ccMeta));
 
-    nodeName = adb_migrateInstancesType_get_sourceHost(mit, env);
+    sourceNode = adb_migrateInstancesType_get_sourceHost(mit, env);
     instanceId = adb_migrateInstancesType_get_instanceId(mit, env);
+    allowHosts = adb_migrateInstancesType_get_allowHosts(mit, env);
+    destinationNodeCount = adb_migrateInstancesType_sizeof_destinationHost(mit, env);
 
+    destinationNodes = EUCA_ZALLOC(destinationNodeCount, sizeof(char *));
+    for (int i = 0; i < destinationNodeCount; i++) {
+        destinationNodes[i] = adb_migrateInstancesType_get_destinationHost_at(mit, env, i);
+    }
 
     status = AXIS2_TRUE;
     if (!DONOTHING) {
-        rc = doMigrateInstances(&ccMeta, nodeName, instanceId, "prepare");
+        rc = doMigrateInstances(&ccMeta, sourceNode, instanceId, destinationNodes, destinationNodeCount, allowHosts, "prepare");
         if (rc) {
             LOGERROR("doMigrateInstances() failed\n");
             status = AXIS2_FALSE;
@@ -2025,5 +2034,6 @@ adb_MigrateInstancesResponse_t *MigrateInstancesMarshal(adb_MigrateInstances_t *
     ret = adb_MigrateInstancesResponse_create(env);
     adb_MigrateInstancesResponse_set_MigrateInstancesResponse(ret, env, mirt);
 
+    EUCA_FREE(destinationNodes);
     return (ret);
 }

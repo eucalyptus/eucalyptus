@@ -399,6 +399,7 @@ int schedule_instance(virtualMachine * vm, char *targetNode, int *outresid);
 int schedule_instance_roundrobin(virtualMachine * vm, int *outresid);
 int schedule_instance_explicit(virtualMachine * vm, char *targetNode, int *outresid);
 int schedule_instance_greedy(virtualMachine * vm, int *outresid);
+int schedule_instance_migration(ncInstance *instance, char **includeNodes, char **excludeNodes, int includeNodeCount, int excludeNodeCount, int inresid, int *outresid);
 int doRunInstances(ncMetadata * pMeta, char *amiId, char *kernelId, char *ramdiskId, char *amiURL, char *kernelURL, char *ramdiskURL, char **instIds,
                    int instIdsLen, char **netNames, int netNamesLen, char **macAddrs, int macAddrsLen, int *networkIndexList, int networkIndexListLen,
                    char **uuids, int uuidsLen, int minCount, int maxCount, char *accountId, char *ownerId, char *reservationId, virtualMachine * ccvm,
@@ -411,7 +412,7 @@ int doCreateImage(ncMetadata * pMeta, char *instanceId, char *volumeId, char *re
 int doDescribeSensors(ncMetadata * pMeta, int historySize, long long collectionIntervalTimeMs, char **instIds, int instIdsLen, char **sensorIds,
                       int sensorIdsLen, sensorResource *** outResources, int *outResourcesLen);
 int doModifyNode(ncMetadata * pMeta, char *nodeName, char *nodeState);
-int doMigrateInstances(ncMetadata * pMeta, char *nodeName, char *instanceId, char *nodeAction);
+int doMigrateInstances(ncMetadata * pMeta, char *sourceNode, char *instanceId, char **destinationNodes, int destinationNodeCount, int allowHosts, char *nodeAction);
 int setup_shared_buffer(void **buf, char *bufname, size_t bytes, sem_t ** lock, char *lockname, int mode);
 int initialize(ncMetadata * pMeta);
 int ccIsEnabled(void);

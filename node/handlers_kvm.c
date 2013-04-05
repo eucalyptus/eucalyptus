@@ -673,11 +673,11 @@ static void *migrating_thread(void *arg)
 static int doMigrateInstances(struct nc_state_t *nc, ncMetadata * pMeta, ncInstance ** instances, int instancesLen, char *action, char *credentials)
 {
     int ret = EUCA_OK;
-    //int inst_idx = 0;
+
+    // FIXME: Make this friendlier.
     assert(instancesLen > 0);
 
     LOGDEBUG("verifing %d instance[s] for migration...\n", instancesLen);
-    // Try to verify instancesLen instances are present and that all involve the same endpoints.
     for (int inst_idx = 0; inst_idx < instancesLen; inst_idx++) {
         LOGDEBUG("verifying instance # %d...\n", inst_idx);
         if (instances[inst_idx]) {
