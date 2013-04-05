@@ -283,7 +283,7 @@ int schedule_instance(virtualMachine * vm, char *targetNode, int *outresid);
 int schedule_instance_roundrobin(virtualMachine * vm, int *outresid);
 int schedule_instance_explicit(virtualMachine * vm, char *targetNode, int *outresid);
 int schedule_instance_greedy(virtualMachine * vm, int *outresid);
-int schedule_instance_migration(ncInstance *instance, char **includeNodes, char **excludeNodes, int *outresid);
+int schedule_instance_migration(ncInstance *instance, char **includeNodes, char **excludeNodes, int includeNodeCount, int excludeNodeCount, int inresid, int *outresid);
 int doRunInstances(ncMetadata * pMeta, char *amiId, char *kernelId, char *ramdiskId, char *amiURL, char *kernelURL, char *ramdiskURL, char **instIds,
                    int instIdsLen, char **netNames, int netNamesLen, char **macAddrs, int macAddrsLen, int *networkIndexList, int networkIndexListLen,
                    char **uuids, int uuidsLen, int minCount, int maxCount, char *accountId, char *ownerId, char *reservationId, virtualMachine * ccvm,
@@ -3122,9 +3122,12 @@ int schedule_instance_roundrobin(virtualMachine * vm, int *outresid)
 }
 
 //!
-//! @param[in]  vm
+//! @param[in]  instance
 //! @param[in]  includeNodes
 //! @param[in]  excludeNodes
+//! @param[in]  includeNodeCount
+//! @param[in]  excludeNodeCount
+//! @param[in]  inresid
 //! @param[out] outresid
 //!
 //! @return
@@ -3133,7 +3136,7 @@ int schedule_instance_roundrobin(virtualMachine * vm, int *outresid)
 //!
 //! @note
 //!
-int schedule_instance_migration(ncInstance *instance, char **includeNodes, char **excludeNodes, int *outresid)
+int schedule_instance_migration(ncInstance *instance, char **includeNodes, char **excludeNodes, int includeNodeCount, int excludeNodeCount, int inresid, int *outresid)
 {
     int ret = 0;
 
@@ -3146,19 +3149,44 @@ int schedule_instance_migration(ncInstance *instance, char **includeNodes, char 
     }
 
     // This is easy: we can keep calling the round-robin scheduler until we get a node we like.
-    //    if (config->schedPolicy == SCHEDROUNDROBIN) {
-
-
-
-    // Fall back to configured scheduling policy.
-    ret = schedule_instance(&(instance->params), NULL, outresid);
-
-    if (ret) {
-        LOGERROR("[%s] migration scheduler could not schedule destination node (%s).\n",
-                 instance->instanceId, instance->migration_dst);
+    if (config->schedPolicy == SCHEDROUNDROBIN) {
+        int first_try = -1; // To break loops.
+        int done = 0;
+        int found = 0;
+        while (!done) {
+            ret = schedule_instance_roundrobin(&(instance->params), outresid);
+            if (*outresid != inresid) {
+                // Found a destination node that's not the source node.
+                LOGDEBUG("[%s] scheduled: src_index=%d, dst_index=%d\n", instance->instanceId, inresid, *outresid);
+                done++;
+                found++;
+            } else {
+                // Tried to schduled to the source node, so retry.
+                LOGDEBUG("[%s] can't schedule src_index=%d == dst_index=%d, trying again...\n",
+                         instance->instanceId, inresid, *outresid);
+                if (first_try == -1) {
+                    first_try = *outresid;
+                } else if (*outresid == first_try) {
+                    LOGERROR("[%s] has looped around without scheduling a destination, breaking loop\n", instance->instanceId);
+                    done++;
+                }
+            }
+        }
+        if (!found) {
+            ret = 1;
+        }
+    } else {
+        // If not ROUNDROBIN, fall back to configured scheduling policy and hope (for now).
+        // FIXME: (Why should be obvious.)
+        ret = schedule_instance(&(instance->params), NULL, outresid);
     }
 
  out:
+    if (ret) {
+        LOGERROR("[%s] migration scheduler could not schedule destination node\n", instance->instanceId);
+        *outresid = -1;
+    }
+
     LOGDEBUG("done\n");
 
     return (ret);
@@ -4389,8 +4417,13 @@ int doMigrateInstances(ncMetadata * pMeta, char *sourceNode, char *instanceId, c
 
     if (preparing) {
         for (int idx = 0; idx < found_instances; idx++) {
-            // FIXME: temporary, for testing an idea: need to fill in include & exclude lists.
-            rc = schedule_instance_migration(nc_instances[idx], NULL , NULL, &dst_index);
+            if (allowHosts) {
+                // destinationHosts is whitelist, pass as includeNodes.
+                rc = schedule_instance_migration(nc_instances[idx], destinationNodes, NULL, destinationNodeCount, 0, src_index, &dst_index);
+            } else {
+                // destinationHosts is blacklist, pass as excludeNodes.
+                rc = schedule_instance_migration(nc_instances[idx], NULL, destinationNodes, 0, destinationNodeCount, src_index, &dst_index);
+            }
 
             if (rc || (dst_index == -1)) {
                 LOGERROR("[%s] cannot schedule destination node for migration from source %s\n",
