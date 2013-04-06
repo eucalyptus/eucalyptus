@@ -225,7 +225,7 @@ int main(int argc, char **argv);
 
 static int prep_location(virtualBootRecord * vbr, ncMetadata * pMeta, const char *typeName);
 static int parse_rec(virtualBootRecord * vbr, virtualMachine * vm, ncMetadata * pMeta);
-static void update_vbr_with_backing_info(artifact * a, blobstore * work_bs);
+static void update_vbr_with_backing_info(artifact * a);
 
 //! @{
 //! @name Creator Functions
@@ -837,7 +837,7 @@ int vbr_legacy(const char *instanceId, virtualMachine * params, char *imageId, c
 //!
 //! @note
 //!
-static void update_vbr_with_backing_info(artifact * a, blobstore * work_bs)
+static void update_vbr_with_backing_info(artifact * a)
 {
     assert(a);
     if (a->vbr == NULL)
@@ -859,12 +859,20 @@ static void update_vbr_with_backing_info(artifact * a, blobstore * work_bs)
     vbr->sizeBytes = a->bb->size_bytes;
 
     // create a symlink so backing file/dev is predictable regadless
-    // of whether the device is a loopback dev or a device mapper dev
-    // or a file: this is important for migration
+    // of whether the backing is a loopback dev or a device mapper dev
+    // or a file: this is needed for migration to work
     { 
         const char * path = vbr->backingPath;
-        char linkpath[1024];
-        snprintf(linkpath, sizeof(linkpath), "%s.dev", a->bb->blocks_path); //! @TODO do not use private field blocks_path
+        char bbdirpath[PATH_MAX];
+        blockblob_get_dir(a->bb, bbdirpath, sizeof(bbdirpath)); // fill in blob's base directory
+        char * linkname = "[invalid]";
+        if (! strcmp(vbr->guestDeviceName, "none")) {
+            linkname = vbr->typeName;;
+        } else {
+            linkname = vbr->guestDeviceName;
+        }
+        char linkpath[PATH_MAX];
+        snprintf(linkpath, sizeof(linkpath), "%s/link-to-%s", bbdirpath, linkname);
         if (symlink(path, linkpath)==0) {
             LOGDEBUG("[%s] symlinked %s to %s\n", a->instanceId, path, linkpath);
             euca_strncpy(vbr->backingPath, linkpath, sizeof(vbr->backingPath));
@@ -2115,7 +2123,7 @@ artifact *vbr_alloc_tree(virtualMachine * vm, boolean do_make_bootable, boolean 
     int total_prereq_arts = 0;
     for (int i = 0; i < total_prereq_vbrs; i++) {
         virtualBootRecord *vbr = prereq_vbrs[i];
-        artifact *dep = art_alloc_vbr(vbr, do_make_work_copy, is_migration_dest, TRUE, NULL);
+        artifact *dep = art_alloc_vbr(vbr, do_make_work_copy, FALSE, TRUE, NULL); // is_migration_dest==FALSE because eki and eri *must* be filled in for migration
         if (dep == NULL)
             goto free;
         prereq_arts[total_prereq_arts++] = dep;
@@ -2374,7 +2382,7 @@ int art_implement_tree(artifact * root, blobstore * work_bs, blobstore * cache_b
             switch (ret = find_or_create_artifact(FIND, root, work_bs, cache_bs, work_prefix, &(root->bb))) {
             case BLOBSTORE_ERROR_OK:
                 LOGDEBUG("[%s] found existing artifact %03d|%s on try %d\n", root->instanceId, root->seq, root->id, tries);
-                update_vbr_with_backing_info(root, work_bs);
+                update_vbr_with_backing_info(root);
                 do_deps = FALSE;
                 do_create = FALSE;
                 break;
@@ -2490,7 +2498,7 @@ create:
                 }
             } else {
                 if (root->vbr && root->vbr->type != NC_RESOURCE_EBS)
-                    update_vbr_with_backing_info(root, work_bs);
+                    update_vbr_with_backing_info(root);
             }
         }
 

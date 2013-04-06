@@ -191,7 +191,7 @@ typedef enum {                  //!< paths to files containing...
     BLOCKBLOB_PATH_SIG,         //!< ...signature of the blob, if provided from outside
     BLOCKBLOB_PATH_REFS,        //!< ...names of blockblobs that depend on this blockblob, if any
     BLOCKBLOB_PATH_HOLLOW,      //!< ...nothing, but the file acts as a marker of 'hollow' blobs
-    BLOCKBLOB_PATH_TOTAL,
+    BLOCKBLOB_PATH_TOTAL
 } blockblob_path_t;
 
 enum {
@@ -4534,7 +4534,35 @@ const char *blockblob_get_file(blockblob * bb)
 
 blobstore * blockblob_get_blobstore(blockblob * bb)
 {
+    if (bb == NULL) {
+        ERR(BLOBSTORE_ERROR_INVAL, NULL);
+        return NULL;
+    }
     return bb->store;
+}
+
+//!
+//! Returns the directory in which the blob files are located
+//!
+//! @param[in] bb
+//!
+//! @return success (0) or failure (-1)
+//!
+int blockblob_get_dir(blockblob * bb, char * buf, int buflen)
+{
+    if (bb == NULL) {
+        ERR(BLOBSTORE_ERROR_INVAL, NULL);
+        return -1;
+    }
+    euca_strncpy(buf, bb->blocks_path, buflen);
+    for (int i = (strlen(buf)-1); i>1; i--) {
+        if (buf[i]=='/') {
+            buf[i]='\0';
+            return 0;
+        }
+    }
+    ERR(BLOBSTORE_ERROR_INVAL, NULL);
+    return -1;
 }
 
 //!
