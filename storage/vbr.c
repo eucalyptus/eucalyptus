@@ -1069,11 +1069,6 @@ static int disk_creator(artifact * a)
     if (a->do_make_bootable) {
         a->size_bytes += (SECTOR_SIZE * BOOT_BLOCKS);
     }
-    if (a->do_not_download) {
-        LOGINFO("[%s] skipping construction of %s\n", a->instanceId, a->id);
-        return EUCA_OK;
-    }
-    LOGINFO("[%s] constructing disk of size %lld bytes in %s (%s)\n", a->instanceId, a->size_bytes, a->id, blockblob_get_dev(a->bb));
 
     blockmap_relation_t mbr_op = BLOBSTORE_SNAPSHOT;
     blockmap_relation_t part_op = BLOBSTORE_MAP;    // use map by default as it is faster
@@ -1103,7 +1098,7 @@ blockmap map[EUCA_MAX_PARTITIONS] = { {mbr_op, BLOBSTORE_ZERO, {blob:NULL}
         offset_bytes += (SECTOR_SIZE * BOOT_BLOCKS);
     }
 
-    LOGINFO("[%s] offset_bytes=%llu\n", a->instanceId, offset_bytes);
+    LOGDEBUG("[%s] offset for the first partition will be %llu bytes\n", a->instanceId, offset_bytes);
 
     assert(disk);
     for (int i = 0; i < MAX_ARTIFACT_DEPS && a->deps[i]; i++) {
@@ -1155,6 +1150,12 @@ blockmap map[EUCA_MAX_PARTITIONS] = { {mbr_op, BLOBSTORE_ZERO, {blob:NULL}
     disk->guestDeviceBus = p1->guestDeviceBus;
     disk->diskNumber = p1->diskNumber;
     set_disk_dev(disk);
+
+    if (a->do_not_download) {
+        LOGINFO("[%s] skipping construction of %s\n", a->instanceId, a->id);
+        return EUCA_OK;
+    }
+    LOGINFO("[%s] constructing disk of size %lld bytes in %s (%s)\n", a->instanceId, a->size_bytes, a->id, blockblob_get_dev(a->bb));
 
     // map the partitions to the disk
     if (blockblob_clone(a->bb, map, map_entries) == -1) {
@@ -2382,7 +2383,8 @@ int art_implement_tree(artifact * root, blobstore * work_bs, blobstore * cache_b
             switch (ret = find_or_create_artifact(FIND, root, work_bs, cache_bs, work_prefix, &(root->bb))) {
             case BLOBSTORE_ERROR_OK:
                 LOGDEBUG("[%s] found existing artifact %03d|%s on try %d\n", root->instanceId, root->seq, root->id, tries);
-                update_vbr_with_backing_info(root);
+                if (work_bs && blockblob_get_blobstore(root->bb) == work_bs)
+                    update_vbr_with_backing_info(root);
                 do_deps = FALSE;
                 do_create = FALSE;
                 break;
@@ -2498,7 +2500,8 @@ create:
                 }
             } else {
                 if (root->vbr && root->vbr->type != NC_RESOURCE_EBS)
-                    update_vbr_with_backing_info(root);
+                    if (work_bs && blockblob_get_blobstore(root->bb) == work_bs)
+                        update_vbr_with_backing_info(root);
             }
         }
 
