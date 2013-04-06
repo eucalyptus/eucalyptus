@@ -60,96 +60,62 @@
  *   NEEDED TO COMPLY WITH ANY SUCH LICENSES OR RIGHTS.
  ************************************************************************/
 
-package com.eucalyptus.images;
+package com.eucalyptus.vm;
 
 import javax.persistence.Column;
-import javax.persistence.DiscriminatorColumn;
-import javax.persistence.DiscriminatorType;
-import javax.persistence.DiscriminatorValue;
-import javax.persistence.EnumType;
-import javax.persistence.Enumerated;
-import javax.persistence.Inheritance;
-import javax.persistence.InheritanceType;
-import javax.persistence.JoinColumn;
-import javax.persistence.ManyToOne;
-import javax.persistence.PersistenceContext;
-import javax.persistence.Table;
+import javax.persistence.Embeddable;
 
-import org.hibernate.annotations.Cache;
-import org.hibernate.annotations.CacheConcurrencyStrategy;
-import org.hibernate.annotations.Entity;
+import org.hibernate.annotations.Parent;
 
-import com.eucalyptus.cloud.ImageMetadata;
-import com.eucalyptus.cloud.ImageMetadata.DeviceMappingType;
-import com.eucalyptus.entities.AbstractPersistent;
+@Embeddable
+public class VmEphemeralAttachment implements Comparable<VmEphemeralAttachment>{
+	 
+	@Parent
+	private VmInstance vmInstance;
+	
+	@Column(name = "metadata_vm_ephemeral_id")
+	private String ephemeralId;
 
-/**
- * @see <a href="http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/block-device-mapping-concepts.html">Block Device Mappings</a>
- */
-@Entity
-@javax.persistence.Entity
-@PersistenceContext( name = "eucalyptus_cloud" )
-@Table( name = "metadata_device_mappings" )
-@Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
-@Inheritance( strategy = InheritanceType.SINGLE_TABLE )
-@DiscriminatorColumn( name = "metadata_device_mapping_discriminator", discriminatorType = DiscriminatorType.STRING )
-@DiscriminatorValue( value = "basic" )
-public class DeviceMapping extends AbstractPersistent {
-  
-  @Column( name = "metadata_device_mapping_type" )
-  @Enumerated( EnumType.STRING )
-  private ImageMetadata.DeviceMappingType deviceMappingType;
-  
-  @Column( name = "metadata_device_mapping_device_name" )
-  private String                  deviceName;
+	@Column(name = "metadata_vm_device")
+	private String device;
 
-  @Column( name = "metadata_device_mapping_virtual_name" )
-  private String                  virtualName;
+	public VmInstance getVmInstance() {
+		return vmInstance;
+	}
 
-  @ManyToOne
-  @JoinColumn( name = "metadata_image_dev_map_fk", insertable = false, updatable = false )
-  private ImageInfo               parent;
-  
-  protected DeviceMapping( ) {
-  }
-  
-  public DeviceMapping( ImageInfo parent, DeviceMappingType deviceMappingType, String deviceName, String virtualName ) {
-    this.parent = parent;
-    this.deviceName = deviceName;
-    this.deviceMappingType = deviceMappingType;
-    this.virtualName = virtualName;
-  }
-  
-  public String getDeviceName( ) {
-    return this.deviceName;
-  }
-  
-  public void setDeviceName( String deviceName ) {
-    this.deviceName = deviceName;
-  }
-  
-  public ImageInfo getParent( ) {
-    return this.parent;
-  }
-  
-  public void setParent( ImageInfo parent ) {
-    this.parent = parent;
-  }
+	public void setVmInstance(VmInstance vmInstance) {
+		this.vmInstance = vmInstance;
+	}
 
-  public ImageMetadata.DeviceMappingType getDeviceMappingType( ) {
-    return this.deviceMappingType;
-  }
+	public String getEphemeralId() {
+		return ephemeralId;
+	}
 
-  protected void setDeviceMappingType( ImageMetadata.DeviceMappingType deviceMappingType ) {
-    this.deviceMappingType = deviceMappingType;
-  }
+	public void setEphemeralId(String ephemeralId) {
+		this.ephemeralId = ephemeralId;
+	}
 
-  public String getVirtualName( ) {
-    return this.virtualName;
-  }
+	public String getDevice() {
+		return device;
+	}
 
-  public void setVirtualName( String virtualName ) {
-    this.virtualName = virtualName;
-  }
-  
+	public void setDevice(String device) {
+		this.device = device;
+	}
+
+	VmEphemeralAttachment() {
+		super();
+	}
+	
+	public VmEphemeralAttachment(VmInstance vmInstance, String ephemeralId, String device) {
+		super();
+		this.vmInstance = vmInstance;
+		this.ephemeralId = ephemeralId;
+		this.device = device;
+	}
+
+	@Override
+	public int compareTo(VmEphemeralAttachment that) {
+		return this.device.compareToIgnoreCase(that.device); 
+	}
 }

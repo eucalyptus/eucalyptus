@@ -424,6 +424,7 @@ public class BlockDeviceMappingItemType extends EucalyptusData {  //** added 200
   String deviceName;
   Integer size; // in megabytes //TODO:GRZE: maybe remove
   String format; // optional, defaults to none (none, ext3, ntfs, swap) //TODO:GRZE: maybe remove
+  Boolean noDevice; // suppress mapping, added 2013-03
   @HttpEmbedded (multiple = true)
   EbsDeviceMapping ebs;
   def BlockDeviceMappingItemType(final virtualName, final deviceName) {
@@ -433,7 +434,35 @@ public class BlockDeviceMappingItemType extends EucalyptusData {  //** added 200
   
   def BlockDeviceMappingItemType() {
   }
+
+  // Adding hashCode() and equals() to support set operations on BlockDeviceMappingItemType objects
+  
+  @Override
+  public int hashCode() {
+	final int prime = 31;
+	int result = 1;
+	result = prime * result + ((deviceName == null) ? 0 : deviceName.hashCode());
+	return result;
+  }
+
+  @Override
+  public boolean equals(Object obj) {
+	if (this == obj)
+		return true;
+	if (obj == null)
+		return false;
+	if (getClass() != obj.getClass())
+		return false;
+	BlockDeviceMappingItemType other = (BlockDeviceMappingItemType) obj;
+	if (deviceName == null) {
+		if (other.deviceName != null)
+			return false;
+	} else if (!deviceName.equals(other.deviceName))
+		return false;
+	return true;
+  }
 }
+
 public class InstanceStateType extends EucalyptusData {
   int code;
   String name;
