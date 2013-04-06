@@ -63,17 +63,13 @@
       this.type = type;
       this.model = model;
       this.keypath = keypath;
-      //this.unbind = __bind(this.unbind, this);
-
-      //this.bind = __bind(this.bind, this);
-
-      //this.publish = __bind(this.publish, this);
-
+      this.unbind = __bind(this.unbind, this);
+      this.bind = __bind(this.bind, this);
+      this.publish = __bind(this.publish, this);
       this.sync = __bind(this.sync, this);
+      this.set = __bind(this.set, this);
 
-      //this.set = __bind(this.set, this);
-
-      //this.formattedValue = __bind(this.formattedValue, this);
+      this.formattedValue = __bind(this.formattedValue, this);
 
       this.options = (options || (options = {}));
       this.binder = options.binder ? (this.args = options.args, options.binder) : findBinder(type, this);
