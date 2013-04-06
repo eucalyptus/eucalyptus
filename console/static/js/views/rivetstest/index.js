@@ -8,8 +8,9 @@ define([
     'models/scalinggrp',
     'views/searches/volume',
     'models/launchconfig',
-    'models/tag'
- ], function( app, dh, template, rivets, TestDialog, QuickScaleDialog, ScalingGroup, Search, LaunchConfig, Tag) {
+    'models/tag',
+    './leaktest',
+ ], function( app, dh, template, rivets, TestDialog, QuickScaleDialog, ScalingGroup, Search, LaunchConfig, Tag, Leaker) {
 	return Backbone.View.extend({
 		initialize : function() {
 			var self = this;
@@ -20,13 +21,6 @@ define([
                     toggle: true
                 });
                 
-                console.log("VOLUMES: " + JSON.stringify(app.data.scalingGroups))
-                
-                for (var key in app.data) {
-                  console.log('KEY ' + key + ': ' + JSON.stringify(app.data[key]));
-                }
-                
-
             var explicitFacets = {
               architecture : [{name : 'i386', label: 'i386 32-bit'}, {name : 'x86_64' , label : 'AMD64 64-bit'}]
             };
@@ -42,8 +36,33 @@ define([
             var tag = new Tag({resource_type: 'instance'});
             var lc = new LaunchConfig({name: 'my launch configuration'});
 
+            var leakScope = new Backbone.Model({count: 0});
 
             var scope = {
+                foo: { bar: { baz: 'Its deep, man' } },
+                leaktest: function() {
+                    leakScope.set('count', leakScope.get('count') + 1);
+                    $('.leaktest', self.$el).empty();
+                    new Leaker({el: $('.leaktest', self.$el), model: leakScope});
+                },
+adam: new Backbone.Model({
+	onClick: function() {
+		console.log('adam.onClick');
+		return false;
+	},
+	funcValue: function() {
+		return "function-value";
+	},
+	lastName: 'Heath',
+	extension: '307',
+	emailAddress: 'doogie@brainfood.com',
+	tags: [
+		{name: 'one', value: 1},
+		{name: 'two', value: 2},
+		{name: 'three', value: 3}
+	]
+}),
+
                 errors: new Backbone.Model({}),
                 lc_errors: new Backbone.Model({}),
                 test: test,
@@ -197,7 +216,11 @@ define([
             });
 
 			this.$el.html(template);
+
 			this.rivetsView = rivets.bind(this.$el, this.scope);
+
+            new Leaker({el: $('.leaktest', this.$el), model: leakScope});
+
 			$(':input[data-value]', this.$el).keyup(function() { $(this).trigger('change'); });
 			this.render();
 		},
