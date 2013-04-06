@@ -54,8 +54,10 @@ rivets.configure({
         },
 	    subscribe: function(obj, keypath, callback) {
   //          console.log('SUBSCRIBE',arguments);
+ //           console.log('subscribe', keypath);
             return diveIntoObject(obj, keypath, function(obj, keypath) {
                 if (obj instanceof Backbone.Model) {
+                //    console.log('subscribe ', keypath, callback);
                     obj.on('change:' + keypath, callback);
                 } else if (obj instanceof Backbone.Collection) {
                     obj.on('add remove reset change', callback);
@@ -66,8 +68,10 @@ rivets.configure({
             });
         },
         unsubscribe: function(obj, keypath, callback) {
+//            console.log('unsubscribe', keypath);
             diveIntoObject(obj, keypath, function(obj, keypath) {
                 if (obj instanceof Backbone.Model)  {
+                 //   console.log('unsubscribe ', keypath, callback);
                     obj.off('change:' + keypath, callback);
                 } else if (obj instanceof Backbone.Collection) {
                     obj.off('add remove reset change', callback);
@@ -102,6 +106,7 @@ rivets.binders["ui-*"] = {
         var self = this;
         // console.log('UI', this.args[0], el);
         require(['views/ui/' + this.args[0] + '/index'], function(view) {
+            //console.log('BIND', self.bbLastValue);
             self.bbView = new view({
                 model: self.bbLastValue ? self.bbLastValue : {},
                 innerHtml: $(el).html()
@@ -113,6 +118,7 @@ rivets.binders["ui-*"] = {
     routine: function(el, value) {
         this.bbLastValue = value;
         if (this.bbView) {
+           if (this.bbView.model != null) rivets.unbind(el, this.bbView.model);
            this.bbView.model = value;
            this.bbView.render();
         }

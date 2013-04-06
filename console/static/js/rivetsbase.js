@@ -63,23 +63,42 @@
       this.type = type;
       this.model = model;
       this.keypath = keypath;
-      this.unbind = __bind(this.unbind, this);
+      //this.unbind = __bind(this.unbind, this);
 
-      this.bind = __bind(this.bind, this);
+      //this.bind = __bind(this.bind, this);
 
-      this.publish = __bind(this.publish, this);
+      //this.publish = __bind(this.publish, this);
 
       this.sync = __bind(this.sync, this);
 
-      this.set = __bind(this.set, this);
+      //this.set = __bind(this.set, this);
 
-      this.formattedValue = __bind(this.formattedValue, this);
+      //this.formattedValue = __bind(this.formattedValue, this);
 
       this.options = (options || (options = {}));
       this.binder = options.binder ? (this.args = options.args, options.binder) : findBinder(type, this);
       this.formatters = options.formatters || [];
+
+      var _this = this;
+      this.deconstruct = __bind(this.deconstruct, this);
+      var destroyCallback = function() {
+          _this.deconstruct();
+          jQuery(el).off('destroyed', destroyCallback);
+      };
+      jQuery(el).on('destroyed', destroyCallback);
     }
 
+    Binding.prototype.deconstruct = function(value) {
+      this.unbind();
+      this.el = document.createElement('div');
+      if (this.options.destroyedHandler) {
+        this.options.destroyedHandler(this);
+      }
+      if (false) for (var key in this) {
+        this[key] = null;
+        delete this[key];
+      }
+    };
     Binding.prototype.formattedValue = function(value) {
       var model;
       model = this.model;
@@ -161,8 +180,8 @@
       }
       sync = this.sync;
       keypath = this.keypath;
-      if (!(this.options.bypass || !binder.tokenizes)) {
-        if (keypath) {
+      if (!this.options.bypass) {
+        if (keypath && !binder.tokenizes) {
           adapter.unsubscribe(this.model, keypath, sync);
         }
       }
@@ -205,9 +224,17 @@
   defaultExpressionParser = function(view, node, type, models, value) {
     var adapter, bindMethod, binding, context, dependencies, firstPart, keypath, matches, model, options, parsingSupport, path, pipes, splitPath, subBinding, subs, unbindMethod, values;
     if (expressionRegex.test(value)) {
+    //function Binding(el, type, model, keypath, options) {
       binding = new Binding(node, type, models);
       values = [];
       subs = [];
+      binding.options.destroyedHandler = function(child) {
+        for (var i = 0; i < subs.length; i++) {
+          if (subs[i] === child) {
+       	    subs[i] = null;
+          }
+        }
+      };
       while (value && expressionRegex.test(value)) {
         matches = expressionRegex.exec(value);
         value = value.substring(matches[0].length);
@@ -284,7 +311,7 @@
       _map(['bind', 'unbind', 'sync'], function(method) {
         _this[method] = function() {
           _map(_this.bindings, function(binding) {
-            binding[method].call(binding);
+            if (binding != null) binding[method].call(binding);
           });
         };
       });
@@ -329,6 +356,23 @@
               type = n.replace(bindingRegExp, '');
               binding = defaultExpressionParser(_this, node, type, models, attribute.value);
               if (binding) {
+                binding.options.destroyedHandler = function(child) {
+                  var nullCount = 0, foundChild
+                  for (var i = 0; i < bindings.length; i++) {
+                    if (bindings[i] === child) {
+                      bindings[i] = null;
+                      foundChild = true;
+                    }
+                    if (bindings[i] === null) {
+                      nullCount++;
+                    }
+                  }
+                  if (foundChild && nullCount == bindings.length) {
+                    _this.els = [];
+                    _this.models = convertToModel({});
+                    //console.log('PURELY NULL VIEW', _this, child);
+                  }
+                };
                 bindings.push(binding);
               }
             }
@@ -357,7 +401,7 @@
       _results = [];
       for (_i = 0, _len = _ref.length; _i < _len; _i++) {
         binding = _ref[_i];
-        if (fn(binding)) {
+        if (binding != null && fn(binding)) {
           _results.push(binding);
         }
       }
