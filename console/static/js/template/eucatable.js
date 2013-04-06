@@ -104,7 +104,7 @@
             }
         });
         thisObj.bbdata.on('change reset', function() {
-            thisObj.refreshTable()
+//            thisObj.refreshTable()
         });
         thisObj.refreshTable();
       });
@@ -223,12 +223,14 @@
           $(allTds).each(function(){ 
             row[i++] = $(this).html();
           }); 
+          /*
           $expand = thisObj.options.expand_callback(row);
           if($expand === null){
             var text = $currentRow.find('a.twist').text(); 
             $currentRow.find('a.twist').parent().text(text);
             $currentRow.find('a.twist').remove();
           }
+          */
         }
         
         if(!$currentRow.data('events') || !('click.datatable' in $currentRow.data('events'))){
@@ -238,6 +240,7 @@
                 // We must regenerate the row so that any events are correctly rebound.
                 $expand = thisObj.options.expand_callback(row);
 
+                //thisObj.element.find('table tbody').find('tr.expanded').remove(); // remove all expanded
                 thisObj.element.find('table tbody').find('tr.expanded').remove(); // remove all expanded
                 thisObj.element.find('table tbody').find('a.expanded').removeClass('expanded');
                 if(!$expand.hasClass('expanded-row-inner-wrapper'))
@@ -246,6 +249,7 @@
                   $currentRow.after($('<tr>').addClass('expanded').append(
                                   $('<td>').attr('colspan', $currentRow.find('td').length).append(
                                     $expand)));
+                  $currentRow.find('tr.expanded').show();
                   $currentRow.find('a.twist').addClass('expanded');
                 }
               }else{
