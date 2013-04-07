@@ -7,7 +7,7 @@ define([
 	], function( app, dataholder, template, rivets, blockmap ) {
 	return Backbone.View.extend({
     title: 'Advanced',
-    launchConfigErrors: new Backbone.Model({size: ''}),
+    launchConfigErrors: new Backbone.Model({volume_size: ''}),
     
 		initialize : function() {
 
@@ -32,13 +32,7 @@ define([
 
         },
 
-        setBlockDevMappings: function() {
-          _.each(this.blockDeviceMappings.models, function(bdmap, index) {
-            self.model.block_device_mappings[bdmap.get('map_name')] = bdmap;
-            self.model.block_device_mappings[bdmap.get('map_name')].unset('map_name');
-          });
-        },
-
+    
 /*
         setPrivateNetwork: function() {
 
@@ -55,7 +49,7 @@ define([
         setStorageVolume: function(e, obj) {
           var m = new blockmap();
           self.launchConfigErrors.clear();
-          m.on('validated:invalid', function(o, errors) { self.launchConfigErrors.set('size', errors.size)});
+          m.on('validated:invalid', function(o, errors) { self.launchConfigErrors.set('volume_volume_size', errors.volume_size)});
 
           var tr = $(e.target).closest('tr');
           var vol = tr.find('.launch-wizard-advanced-storage-volume-selector').val();
@@ -65,7 +59,7 @@ define([
           var del = tr.find('.launch-wizard-advanced-storage-delOnTerm').prop('checked');
 
           m.set({
-              map_name: dev,
+              device_name: dev,
               status: null,
               __obj_name__: "BlockDeviceType",
               attach_time: null,
@@ -73,7 +67,7 @@ define([
               volume_id: null,
               connection: null,
               snapshot_id: snap,
-              size: size,
+              volume_size: size,
               ebs: "",
               delete_on_termination: del,
               ephemeral_name: null    
@@ -91,7 +85,7 @@ define([
         },
 
         getVolLabel: function(obj) {
-          if (obj.volume.get('map_name') == '/dev/sda1') {
+          if (obj.volume.get('device_name') == '/dev/sda1') {
               return 'Root';
           } else {
               return 'EBS';
@@ -113,9 +107,9 @@ define([
 
         mapName: function() {
           var model = this.blockDeviceMappings.at(this.blockDeviceMappings.length - 1);
-          if(undefined !== model && undefined != model.get('map_name')) {
-            var drive = model.get('map_name').replace(/\/dev\/([a-z]*)([0-9]{1,2})/, '$1');
-            var partition = model.get('map_name').replace(/\/dev\/([a-z]*)([0-9]{1,2})/, '$2');
+          if(undefined !== model && undefined != model.get('device_name')) {
+            var drive = model.get('device_name').replace(/\/dev\/([a-z]*)([0-9]{1,2})/, '$1');
+            var partition = model.get('device_name').replace(/\/dev\/([a-z]*)([0-9]{1,2})/, '$2');
             return drive + (++partition);
           }
         },
