@@ -74,8 +74,8 @@ define([
     });
 
     self.model.on('validated:invalid', function(model, errors) {
-      scope.launchConfigErrors.type_number = app.msg(errors.type_number);
-      scope.launchConfigErrors.type_names = app.msg(errors.type_names);
+      scope.launchConfigErrors.type_number = errors.type_number;
+      scope.launchConfigErrors.type_names = errors.type_names;
       self.render();
     });
 
