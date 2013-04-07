@@ -29,6 +29,7 @@
     addDialog : null,
     attachDialog : null,
     tagDialog : null,
+    newDeleteVolDialog : null,
     attachButtonId : 'volume-attach-btn',
     createButtonId : 'volumes-add-btn',
     _init : function() {
@@ -328,6 +329,19 @@
         help: {content: $tag_help, url: help_instance.dialog_terminate_content_url},
       });
       // tag dialog ends
+
+      // backbone integrated dialog -- create volume
+      $tmpl = $('html body').find('.templates #volumeAddDlgTmpl').clone();
+      $rendered = $($tmpl.render($.extend($.i18n.map, help_instance)));
+      var $new_delete_vol_dialog = $rendered.children().first();
+      var $new_delete_vol_help = $rendered.children().last();
+      this.newDeleteDialog = $new_delete_vol_dialog.eucadialog({
+        id: 'delete volume',
+        title: 'Delete Volume BB',
+        help: {content: $new_delete_vol_help, url: help_instance.dialog_terminate_content_url},
+      });
+      // end of create volume
+
     },
 
     _destroy : function() {
@@ -678,6 +692,15 @@
        }
     },
 
+    _deleteVolumeAction : function() {
+      var dialog = 'deletevolumedialog';
+      var selected = this.tableWrapper.eucatable('getSelectedRows', 10);
+      require(['views/dialogs/' + dialog], function( dialog) {
+        new dialog({items: selected});
+      });
+    },
+
+
     _expandCallback : function(row){ 
       var $el = $('<div />');
       require(['app', 'views/expandos/volume'], function(app, expando) {
@@ -698,6 +721,7 @@
         itemsList['create_snapshot'] = { "name": volume_action_create_snapshot, callback: function(key, opt) {;}, disabled: function(){ return true;} }
         itemsList['delete'] = { "name": volume_action_delete, callback: function(key, opt) {;}, disabled: function(){ return true;} }
         itemsList['tag'] = {"name":'Tag Resource', callback: function(key, opt) {;}, disabled: function(){ return true;} }
+        itemsList['delete_volume'] = {"name":'Delete Volume', callback: function(key, opt) {;}, disabled: function(){ return true;} }
       })();
 
       // add attach action
@@ -744,6 +768,9 @@
       if ( volumes.length === 1) {
         itemsList['tag'] = {"name":'Tag Resource', callback: function(key, opt){ thisObj._tagResourceAction(); }}
       }
+
+      // temp
+      itemsList['delete_volume'] = {"name":'Delete Volume', callback: function(key, opt){ thisObj._deleteVolumeAction(); }}
 
       return itemsList;
     },

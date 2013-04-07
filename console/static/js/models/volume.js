@@ -92,8 +92,22 @@ define([
                   function(jqXHR, textStatus, errorThrown){
                     notifyError($.i18n.prop('volume_create_error'), getErrorMessage(jqXHR));
                   }
-                });
-              } 
+              });
+            }else if(method == 'delete'){
+              var id = model.get('id');
+              var parameter = "_xsrf="+$.cookie('_xsrf');
+              parameter += "&VolumeId="+id;
+              $.ajax({
+                type: "POST",
+                url: "/ec2?Action=DeleteVolume",
+                data: parameter,
+                dataType: "json",
+                async: true,
+                success: options.success,
+                error: options.error
+              });
+            }
+ 
           }
 
     });
