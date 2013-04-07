@@ -65,11 +65,11 @@
         <tr data-each-volume="blockDeviceMappings">
           <td data-text=":getVolLabel" data-msg="launch_instance_root">Root
           </td>
-          <td data-text="volume.map_name">
+          <td data-text="volume.device_name">
           </td>
           <td data-text="volume.snapshot_id">
           </td>
-          <td data-text="volume.size"></td>
+          <td data-text="volume.volume_size"></td>
           <td class="centered-cell"><input data-disabled=":checkDisabledIf" data-checked="volume.delete_on_termination" class="launch-wizard-advanced-storage-delOnTerm" type="checkbox"></td>
           <td><div data-on-click=":delStorageVol" data-addclass=":deleteButtonIf"><div></td>
         </tr> 
@@ -101,7 +101,7 @@
       </tr>
     </tbody>
 </table>
-<div class="field-error" data-text="launchConfigErrors.size"></div>
+<div class="field-error" data-text="launchConfigErrors.volume_size"></div>
 </div>
 </div>
 <!-- <input value="emi-EDBA3EEA" id="launch-wizard-image-emi" type="hidden"> -->

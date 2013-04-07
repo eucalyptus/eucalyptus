@@ -2251,6 +2251,10 @@ a.sg-my-ip {
   overflow: auto;
 }
 
+.wizard-step-closed-view-container {
+  width: 200px;
+}
+
 /* Security Group dialogs get narrower labels, due to narrow dialog width */
 
 .group.content-section .form-row label,

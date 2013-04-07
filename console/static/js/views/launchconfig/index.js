@@ -32,7 +32,7 @@ define([
     // ADD THEM INTO THE PASSED ARRAY
    //    return position === 2;
 
-     return imageModel.isValid() & typeModel.isValid() & securityModel.isValid();
+     return imageModel.isValid() & typeModel.isValid(); // & securityModel.isValid();
   }
 
   function finish() {
@@ -44,18 +44,15 @@ define([
     blockMaps.finish(launchConfigModel);
 
     launchConfigModel.on('validated.invalid', function(e, errors) {
-      console.log("LAUNCH CONFIG INVALID: ", errors, e);
     });
 
     launchConfigModel.validate();
     if(launchConfigModel.isValid()) {
-      launchConfigModel.sync();
-      console.log("LAUNCH CONFIG SYNC", launchConfigModel.toJSON());
-      alert("Wizard complete. Check the console log for debug info.");
+      launchConfigModel.sync('create', launchConfigModel);
+      //alert("Wizard complete. Check the console log for debug info.");
     } else {
       // what do we do if it isn't valid?
-      //alert('Final checklist was invalid.');
-      console.log("LAUNCH CONFIG INVALID: ", launchConfigModel.toJSON());
+      alert('Final checklist was invalid.');
     }
   }
 
