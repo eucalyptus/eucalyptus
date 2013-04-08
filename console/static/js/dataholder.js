@@ -30,7 +30,7 @@ function(_, Backbone, tags) {
 	['eip'],
 	['keypair'],
 	['sgroup'],
-	['snapshot'],
+	['snapshot', 'snapshots'],
 	['balancer'],
 	['insthealth', 'instHealths'],
 	['summary'],
