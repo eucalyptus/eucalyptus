@@ -26,16 +26,15 @@ define([
                 },
 
                 detachButton: function() {
-	          // FOR EACH VOLUME IN THE LIST 'items'
+	          // FOR EACH VOLUME ID IN THE LIST
 	          _.each(args.volume_ids, function(item) {           // Need a better way to access the list of volumes rather than direct args.
 		    console.log("Volume Item: " + item);
 		    // FIND THE MODEL THAT MATCHES THE VOLUME ID WITH 'item'
 		    var match = App.data.volume.find(function(model){ return model.get('id') == item; });
 
-		    // PERFORM DELETE CALL OM THE MODEL            Need to handle multi ajax call and multi-notification -- Kyo 040813
-		    match.sync('detach', match, {
-		      // IN CASE OF AJAX CALL'S SUCCESS
-		      success: function(data, response, jqXHR){
+                    // CONSTRUCT AJAX CALL RESPONSE OPTIONS
+                    var detachAjaxCallResponse = {
+		      success: function(data, response, jqXHR){   // AJAX CALL SUCCESS OPTION
 		        console.log("Callback " + response + " for " + item);
 		        if(data.results){
 		          console.log("sync: Volume " +item+ " Detached = " + data.results );
@@ -44,24 +43,25 @@ define([
 		          notifyError($.i18n.prop('delete_volume_error', DefaultEncoder().encodeForHTML(item)), undefined_error);  // incorrect prop
 		        }
 		      },
-		      // IN CASE OD AJAX CALL'S ERROR
-		      error: function(jqXHR, textStatus, errorThrown){
+		      error: function(jqXHR, textStatus, errorThrown){   // AJAX CALL ERROR OPTION
 		        notifyError($.i18n.prop('delete_volume_error', DefaultEncoder().encodeForHTML(item)), getErrorMessage(jqXHR));  // incorrect prop 
 		      }
-		    });
+                    };
+
+		    // PERFORM DETACH CALL OM THE MODEL            Need to handle multi ajax call and multi-notification -- Kyo 040813
+		    match.sync('detach', match, detachAjaxCallResponse);
 
 	          });
 
 	          // DISPLAY THE MODEL LIST FOR VOLUME AFTER THE DETACH OPERATION -- FOR DEBUG
 	          App.data.volume.each(function(item){
-		    console.log("Volume After Detach: " + item.toJSON().id);
+		    console.log("Volume After Detach: " + item.get('id'));
 	          });
 
                   // CLOSE THE DIALOG
                   self.close();
                 }
           }
-
           this._do_init();
         },
 	});

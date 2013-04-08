@@ -70,10 +70,9 @@ define([
 		  console.log("Instance ID: " + instanceId);
 		  console.log("Attach as device: " + device);
 
-		  // PERFORM ATTACH CALL OM THE MODEL
-		  self.scope.volume.sync('attach', self.scope.volume, {
-		    // CASE OF AJAX CALL'S SUCCESS
-		    success: function(data, response, jqXHR){
+                  // CONSTRUCT AJAX CALL RESPONSE OPTIONS
+                  var attachAjaxCallResponse = {
+		    success: function(data, response, jqXHR){   // AJAX CALL SUCCESS OPTION
 		      console.log("Callback " + response + " for " + volumeId);
 		      if(data.results){
 		        notifySuccess(null, $.i18n.prop('volume_attach_success', volumeId, instanceId));    // XSS Risk  -- Kyo 040713
@@ -81,12 +80,14 @@ define([
 		        notifyError($.i18n.prop('volume_attach_error', volumeId, instanceId), undefined_error);   // XSS Risk
 		      }
 		    },
-		    // CASE OF AJAX CALL'S ERROR
-		    error: function(jqXHR, textStatus, errorThrown){
+		    error: function(jqXHR, textStatus, errorThrown){  // AJAX CALL ERROR OPTION
 		      console.log("Callback " + textStatus  + " for " + volumeId + " error: " + getErrorMessage(jqXHR));
 		      notifyError($.i18n.prop('volume_attach_error', volumeId, instanceId), getErrorMessage(jqXHR));   // XSS Risk
 		    }
-		  });
+                  };
+
+		  // PERFORM ATTACH CALL OM THE MODEL
+		  self.scope.volume.sync('attach', self.scope.volume, attachAjaxCallResponse);
 
 	         // DISPLAY THE VOLUME'S STATUS -- FOR DEBUG
 		 App.data.volume.each(function(item){
