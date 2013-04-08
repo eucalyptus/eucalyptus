@@ -216,8 +216,6 @@
         // add custom td handlers
         var $currentRow = $(tr);
         var $expand = null;
-        // don't do this since we never turn off expando-row anymore
-        /*
         if(thisObj.options.expand_callback && thisObj.table){
           var allTds = thisObj.table.fnGetTds($currentRow[0]);      
           var row = [];
@@ -225,16 +223,16 @@
           $(allTds).each(function(){ 
             row[i++] = $(this).html();
           }); 
-          /*
+        // don't do this since we never turn off expando-row anymore
+        /*
           $expand = thisObj.options.expand_callback(row);
           if($expand === null){
             var text = $currentRow.find('a.twist').text(); 
             $currentRow.find('a.twist').parent().text(text);
             $currentRow.find('a.twist').remove();
           }
-          */
-        }
         */
+        }
         
         if(!$currentRow.data('events') || !('click' in $currentRow.data('events'))){
           $currentRow.unbind('click').bind('click', function (e) {
