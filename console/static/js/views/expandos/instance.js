@@ -18,8 +18,8 @@ define([
                 this.model.set('image', app.data.image.get(this.model.get('image_id')));
                 this.model.set('scaling', app.data.scalinginsts.get(id));
                 this.model.set('instHealth', app.data.instHealths.get(id));
-                this.scope = _.extend(this.model, {});
             }
+            this.scope = this.model;//_.extend(this.model, {});
             this._do_init();
         },
 	});

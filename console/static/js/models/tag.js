@@ -47,7 +47,6 @@ define([
             function(data, textStatus, jqXHR){
               if ( data.results ) {
                 notifySuccess(null, $.i18n.prop('tag_create_success', DefaultEncoder().encodeForHTML(model.get('name'))));
-                thisObj.tableWrapper.eucatable('refreshTable');
               } else {
                 notifyError($.i18n.prop('tag_create_error', DefaultEncoder().encodeForHTML(model.get('name'))), undefined_error);
               }

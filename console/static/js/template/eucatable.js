@@ -216,6 +216,8 @@
         // add custom td handlers
         var $currentRow = $(tr);
         var $expand = null;
+        // don't do this since we never turn off expando-row anymore
+        /*
         if(thisObj.options.expand_callback && thisObj.table){
           var allTds = thisObj.table.fnGetTds($currentRow[0]);      
           var row = [];
@@ -230,6 +232,7 @@
             $currentRow.find('a.twist').remove();
           }
         }
+        */
         
         if(!$currentRow.data('events') || !('click.datatable' in $currentRow.data('events'))){
           $currentRow.unbind('click.datatable').bind('click.datatable', function (e) {
@@ -238,7 +241,7 @@
                 // We must regenerate the row so that any events are correctly rebound.
                 $expand = thisObj.options.expand_callback(row);
 
-                thisObj.element.find('table tbody').find('tr.expanded').remove(); // remove all expanded
+                //thisObj.element.find('table tbody').find('tr.expanded').remove(); // remove all expanded
                 thisObj.element.find('table tbody').find('a.expanded').removeClass('expanded');
                 if(!$expand.hasClass('expanded-row-inner-wrapper'))
                   $expand.addClass('expanded-row-inner-wrapper');
@@ -558,11 +561,50 @@ if (true) {
       if(! $('html body').eucadata('isEnabled'))
         return;
       var oSettings = this.table.fnSettings();
+      var tbody = this.element.find('table tbody'); 
+      var selected = tbody.find('tr.selected-row');
+      var expanded = tbody.find('tr.expanded');
 
-      // Don't use eucadata
-      //$('html body').eucadata('refresh', oSettings.sAjaxSource);
+      this.table.fnReloadAjax(this.table.oSettings, undefined, function() {
+        if (selected != undefined && selected.length > 0) {
+          $.each(selected, function(idx, row) {
+            $(row).toggleClass('selected-row');
+            $($(row).find('input[type="checkbox"]')[0]).attr('checked', true);
+          });
+        }
+        if (expanded != undefined && expanded.length > 0) {
+        }
+       
+        var $checkAll = this.table.find('thead').find(':input[type="checkbox"]');
+        var checked = $checkAll.is(':checked');
+        if(checked)
+          $checkAll.trigger('click.datatable');
+      });
+    },
 
-      this.table.fnReloadAjax(undefined, undefined, true);
+    glowRow : function(val, columnId) {
+      var thisObj = this;
+      var cId = columnId || 1;
+      var token = null; 
+      var counter = 0;
+      token = runRepeat(function(){
+        if ( thisObj._glowRow(val, cId)){
+          cancelRepeat(token);
+          setTimeout(function(){ thisObj._removeGlow(val, cId);}, GLOW_DURATION_SEC*1000); // remove glow effect after 7 sec
+        } else if (counter++ > 30){ // give up glow effect after 60 seconds
+          cancelRepeat(token);
+        }
+      }, 2000);
+    },
+
+    redraw : function() {
+      this._refreshTableInterval();
+    },
+
+    // (optional) columnIdx: if undefined, returns matrix [row_idx, col_key]
+    getSelectedRows : function (columnIdx) {
+      var dataTable = this.table;
+      if ( !dataTable )
      
       var $checkAll = this.table.find('thead').find(':input[type="checkbox"]');
       var checked = $checkAll.is(':checked');
