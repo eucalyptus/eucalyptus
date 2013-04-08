@@ -5,7 +5,6 @@ define([
     './eucamodel'
 ], function(EucaModel) {
     var model = EucaModel.extend({
-        idAttribute: 'name',
         namedColumns: ['id', 'volume_id'],
         validation: {
 
