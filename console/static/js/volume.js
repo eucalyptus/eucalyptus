@@ -691,7 +691,15 @@
       var dialog = 'createsnapshotdialog';
       var selected = this.tableWrapper.eucatable('getSelectedRows', 10);
       require(['views/dialogs/' + dialog], function( dialog) {
-        new dialog({items: selected});
+        new dialog({volume_id: selected});
+      });
+    },
+
+    _newAttachVolumeAction : function() {
+      var dialog = 'attachvolumedialog';
+      var selected = this.tableWrapper.eucatable('getSelectedRows', 10);
+      require(['views/dialogs/' + dialog], function( dialog) {
+        new dialog({volume_id: selected});
       });
     },
 
@@ -717,6 +725,7 @@
         itemsList['tag'] = {"name":'Tag Resource', callback: function(key, opt) {;}, disabled: function(){ return true;} }
         itemsList['delete_volume'] = {"name":'Delete Volume', callback: function(key, opt) {;}, disabled: function(){ return true;} }     // Backbone Dialog -- Kyo 040613
         itemsList['create_snapshot_bb'] = {"name":'Create Snapshot', callback: function(key, opt) {;}, disabled: function(){ return true;} }  // Backbone Dialog -- Kyo 040713
+        itemsList['attach_volume_bb'] = {"name":'Attach', callback: function(key, opt) {;}, disabled: function(){ return true;} }  // Backbone Dialog -- Kyo 040713
       })();
 
       // add attach action
@@ -771,6 +780,10 @@
 
       if(volumes.length === 1) {
         itemsList['create_snapshot_bb'] = {"name":'Create Snapshot', callback: function(key, opt){ thisObj._newCreateSnapshotAction(); }}
+      };
+
+      if(volumes.length === 1) {
+        itemsList['attach_volume_bb'] = {"name":'Attach Volume', callback: function(key, opt){ thisObj._newAttachVolumeAction(); }}
       };
 
       return itemsList;

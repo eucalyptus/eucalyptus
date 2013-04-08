@@ -11,7 +11,7 @@ define([
 
             this.scope = {
                 status: 'Ignore me for now',
-                snapshot: new Snapshot({volume_id: args.items, description: 'empty'}),
+                snapshot: new Snapshot({volume_id: args.volume_id, description: 'empty'}),
 
                 cancelButton: function() {
                   self.close();

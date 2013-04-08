@@ -63,52 +63,53 @@ define([
               required: false
             },
           },
-          sync: function(method, model, options){
-            var collection = this;
-            if(method == 'create'){
-              var availability_zone = model.get('availablity_zone');
-              var snapshot_id = model.get('snapshot_id');
-              var parameter = "_xsrf="+$.cookie('_xsrf');
-              parameter += "&Size="+size+"&AvailabilityZone="+availability_zone;
-              if(snapshot_id != undefined){
-                parameter += "&SnapshotId="+snapshot_id;
-              }
-              $.ajax({
+          makeAjaxCall: function(url, param, options){
+            $.ajax({
                 type: "POST",
-                url: "/ec2?Action=CreateVolume",
-                data: parameter,
-                dataType: "json",
-                async: true,
-                success:
-                  function(data, textStatus, jqXHR){
-                    if(data.results){
-                      var volId = data.results.id;
-                      notifySuccess(null, $.i18n.prop('volume_create_success', DefaultEncoder().encodeForHTML(volId)));
-                    }else{
-                      notifyError($.i18n.prop('volume_create_error'), undefined_error);
-                    }
-                  },
-                error:
-                  function(jqXHR, textStatus, errorThrown){
-                    notifyError($.i18n.prop('volume_create_error'), getErrorMessage(jqXHR));
-                  }
-              });
-            }else if(method == 'delete'){
-              var id = model.get('id');
-              var parameter = "_xsrf="+$.cookie('_xsrf');
-              parameter += "&VolumeId="+id;
-              $.ajax({
-                type: "POST",
-                url: "/ec2?Action=DeleteVolume",
-                data: parameter,
+                url: url,
+                data: param,
                 dataType: "json",
                 async: true,
                 success: options.success,
                 error: options.error
-              });
+            });
+          },
+          sync: function(method, model, options){
+            if(method == 'create'){
+              this.syncMethod_Create(model, options);
+            }else if(method == 'delete'){
+              this.syncMethod_Delete(model, options);
+            }else if(method == 'attach'){
+              this.syncMethod_Attach(model, options);
             }
- 
-          }
+          },
+          syncMethod_Create: function(model, options){
+            var url = "/ec2?Action=CreateVolume";
+            var availability_zone = model.get('availablity_zone');
+            var snapshot_id = model.get('snapshot_id');
+            var parameter = "_xsrf="+$.cookie('_xsrf');
+            parameter += "&Size="+size+"&AvailabilityZone="+availability_zone;
+            if(snapshot_id != undefined){
+              parameter += "&SnapshotId="+snapshot_id;
+            }
+            this.makeAjaxCall(url, parameter, options);
+          },
+          syncMethod_Delete: function(model, options){
+            var url = "/ec2?Action=DeleteVolume";
+            var id = model.get('id');
+            var parameter = "_xsrf="+$.cookie('_xsrf');
+            parameter += "&VolumeId="+id;
+            this.makeAjaxCall(url, parameter, options);
+          },
+          syncMethod_Attach: function(model, options){
+            var url = "/ec2?Action=AttachVolume";
+            var volume_id = model.get('volume_id');
+            var instance_id = model.get('instance_id');
+            var device = model.get('device');
+            var parameter = "_xsrf="+$.cookie('_xsrf');
+            parameter += "&VolumeId="+volume_id+"&InstanceId="+instance_id+"&Device="+device;
+            this.makeAjaxCall(url, parameter, options);
+          },
 
     });
     return model;
