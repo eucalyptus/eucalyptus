@@ -42,3 +42,14 @@ require.config({
 require(['underscore', 'backbone', 'backbone-validation'], function(_, Backbone) {
     _.extend(Backbone.Model.prototype, Backbone.Validation.mixin);
 });
+
+var oldClean = jQuery.cleanData;
+
+$.cleanData = function( elems ) {
+    for ( var i = 0, elem;
+    (elem = elems[i]) !== undefined; i++ ) {
+        //console.log('cleandata', elem);
+        $(elem).triggerHandler("destroyed");
+    }
+    oldClean.apply(this, arguments);
+};

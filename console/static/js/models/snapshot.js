@@ -45,35 +45,30 @@ define([
               required: false
             },
         },
+        makeAjaxCall: function(url, param, options){
+          $.ajax({
+            type: "POST",
+            url: url,
+            data: param,
+            dataType: "json",
+            async: true,
+            success: options.success,
+            error: options.error
+          });
+        },
         sync: function(method, model, options){
-            var collection = this;
-            if(method == 'create'){
-              var volume_id = model.get('volume_id');
-              var description = model.get('description');
-              var parameter = "_xsrf="+$.cookie('_xsrf');
-              parameter += "&VolumeId="+volume_id+"&Description="+description;
-              $.ajax({
-                type: "POST",
-                url: "/ec2?Action=CreateSnapshot",
-                data: parameter,
-                dataType: "json",
-                async: true,
-                success:
-                  function(data, textStatus, jqXHR){
-                    if(data.results){
-                      var snapId = data.results.id;
-                      notifySuccess(null, $.i18n.prop('snapshot_create_success', DefaultEncoder().encodeForHTML(snapId), DefaultEncoder().encodeForHTML(volumeId)));
-                    }else{
-                      notifyError($.i18n.prop('snapshot_create_error', DefaultEncoder().encodeForHTML(volumeId)), undefined_error);
-                    }
-                  },
-                error:
-                  function(jqXHR, textStatus, errorThrown){
-                    notifyError($.i18n.prop('snapshot_create_error', DefaultEncoder().encodeForHTML(volumeId)), getErrorMessage(jqXHR));
-                  }
-                });
-              }
-          }    
+          if(method == 'create'){
+            this.syncMethod_Create(model, options);  
+          }
+        },
+        syncMethod_Create: function(model, options){
+          var url = "/ec2?Action=CreateSnapshot";
+          var volume_id = $.trim(model.get('volume_id'));
+          var description = toBase64($.trim(model.get('description')));
+          var parameter = "_xsrf="+$.cookie('_xsrf');
+          parameter += "&VolumeId="+volume_id+"&Description="+description;
+          this.makeAjaxCall(url, parameter, options);
+        },    
     });
     return model;
 });

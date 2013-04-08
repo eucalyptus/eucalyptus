@@ -1,18 +1,15 @@
 define([
   'views/searches/generic',
-], function(Search) {
+  'views/searches/tagsearch'
+], function(Search, TagSearch) {
   return function(instances) {
     var config = {
       facets: ['state', 'root_device_name', 'group_name',
         'placement', 'instance_type']
       , localize: {
-        state: 'Status',
-        't1.micro': 'Micro',
-        'm1.small': 'Standard',
-        'c1.medium': 'High Memory',
-        'm1.large' : 'High CPU'
+        state: 'Status'
       }
     };
-    return new Search(instances, config);
+    return new Search(instances, new TagSearch(config, instances));
   }
 });

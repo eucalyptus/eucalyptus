@@ -1,6 +1,7 @@
 define([
-    'views/searches/generic',
-], function(Search) {
+  'views/searches/generic',
+  'views/searches/tagsearch'
+], function(Search, TagSearch) {
   
     var config = {
       facets : ['all_text', 'attach_data'],
@@ -10,7 +11,7 @@ define([
       localize : function(what) {
         switch (what) {
           case 'attach_data' : 
-            return 'Attachement';
+            return 'Attachment';
         }
         // 'Attached' is actually an object
         // of some sort
@@ -20,7 +21,7 @@ define([
       }
     };
   
-    return function(images) {
-      return new Search(images, config);
+    return function(volumes) {
+      return new Search(volumes, new TagSearch(config, volumes));
     }
 });

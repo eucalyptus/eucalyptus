@@ -1,7 +1,11 @@
 define([
     'views/searches/generic',
-], function(Search) {
-  return function(images) {
-    return new Search(images, ['all_text']);
+    'views/searches/tagsearch'
+], function(Search, TagSearch) {
+  return function(keypairs) {
+    var config = {
+      facets : ['all_text']
+    }
+    return new Search(keypairs, new TagSearch(config, keypairs));
   }
 });

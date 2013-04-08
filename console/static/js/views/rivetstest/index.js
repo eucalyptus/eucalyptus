@@ -8,8 +8,9 @@ define([
     'models/scalinggrp',
     'views/searches/volume',
     'models/launchconfig',
-    'models/tag'
- ], function( app, dh, template, rivets, TestDialog, QuickScaleDialog, ScalingGroup, Search, LaunchConfig, Tag) {
+    'models/tag',
+    './leaktest',
+ ], function( app, dh, template, rivets, TestDialog, QuickScaleDialog, ScalingGroup, Search, LaunchConfig, Tag, Leaker) {
 	return Backbone.View.extend({
 		initialize : function() {
 			var self = this;
@@ -35,9 +36,23 @@ define([
             var tag = new Tag({resource_type: 'instance'});
             var lc = new LaunchConfig({name: 'my launch configuration'});
 
+            var leakScope = new Backbone.Model({count: 0});
+
             var scope = {
                 foo: { bar: { baz: 'Its deep, man' } },
+                leaktest: function() {
+                    leakScope.set('count', leakScope.get('count') + 1);
+                    $('.leaktest', self.$el).empty();
+                    new Leaker({el: $('.leaktest', self.$el), model: leakScope});
+                },
 adam: new Backbone.Model({
+	onClick: function() {
+		console.log('adam.onClick');
+		return false;
+	},
+	funcValue: function() {
+		return "function-value";
+	},
 	lastName: 'Heath',
 	extension: '307',
 	emailAddress: 'doogie@brainfood.com',
@@ -201,7 +216,11 @@ adam: new Backbone.Model({
             });
 
 			this.$el.html(template);
+
 			this.rivetsView = rivets.bind(this.$el, this.scope);
+
+            new Leaker({el: $('.leaktest', this.$el), model: leakScope});
+
 			$(':input[data-value]', this.$el).keyup(function() { $(this).trigger('change'); });
 			this.render();
 		},
