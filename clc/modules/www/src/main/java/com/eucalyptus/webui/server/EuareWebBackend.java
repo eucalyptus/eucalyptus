@@ -520,7 +520,7 @@ public class EuareWebBackend {
     result.addField( group.getName( ) );
     result.addField( group.getPath( ) );
     result.addField( account.getName( ) );
-    result.addField( ( new EuareResourceName( account.getName( ), PolicySpec.IAM_RESOURCE_GROUP, group.getPath( ), group.getName( ) ) ).toString( ) );
+    result.addField( ( new EuareResourceName( account.getAccountNumber( ), PolicySpec.IAM_RESOURCE_GROUP, group.getPath( ), group.getName( ) ) ).toString( ) );
     result.addField( QueryBuilder.get( ).start( QueryType.account ).add( ID, account.getAccountNumber( ) ).url( ) );
     result.addField( QueryBuilder.get( ).start( QueryType.user ).add( GROUPID, group.getGroupId( ) ).url( ) );
     result.addField( QueryBuilder.get( ).start( QueryType.policy ).add( GROUPID, group.getGroupId( ) ).url( ) );
@@ -662,7 +662,7 @@ public class EuareWebBackend {
     result.addField( account.getName( ) );
     result.addField( user.isEnabled( ).toString( ) );
     result.addField( user.getRegistrationStatus( ).name( ) );
-    result.addField( ( new EuareResourceName( account.getName( ), PolicySpec.IAM_RESOURCE_USER, user.getPath( ), user.getName( ) ) ).toString( ) );
+    result.addField( ( new EuareResourceName( account.getAccountNumber( ), PolicySpec.IAM_RESOURCE_USER, user.getPath( ), user.getName( ) ) ).toString( ) );
     result.addField( QueryBuilder.get( ).start( QueryType.account ).add( ID, account.getAccountNumber( ) ).url( ) );
     result.addField( QueryBuilder.get( ).start( QueryType.group ).add( USERID, user.getUserId( ) ).url( ) );
     result.addField( QueryBuilder.get( ).start( QueryType.policy ).add( USERID, user.getUserId( ) ).url( ) );

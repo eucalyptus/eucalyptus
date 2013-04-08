@@ -63,7 +63,7 @@
 package com.eucalyptus.vm;
 
 import static com.eucalyptus.util.Parameters.checkParam;
-import static org.hamcrest.Matchers.*;
+import static org.hamcrest.Matchers.notNullValue;
 
 import java.util.Arrays;
 import java.util.List;
@@ -95,11 +95,11 @@ import com.eucalyptus.images.KernelImageInfo;
 import com.eucalyptus.images.RamdiskImageInfo;
 import com.eucalyptus.keys.KeyPairs;
 import com.eucalyptus.keys.SshKeyPair;
-import com.eucalyptus.vmtypes.VmType;
-import com.eucalyptus.vmtypes.VmTypes;
 import com.eucalyptus.upgrade.Upgrades.EntityUpgrade;
 import com.eucalyptus.upgrade.Upgrades.Version;
 import com.eucalyptus.util.Exceptions;
+import com.eucalyptus.vmtypes.VmType;
+import com.eucalyptus.vmtypes.VmTypes;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Sets;
 
@@ -126,14 +126,16 @@ public class VmBootRecord {
   @CollectionTable( name = "metadata_instances_persistent_volumes" )
   @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
   private Set<VmVolumeAttachment> persistentVolumes = Sets.newHashSet( );
+  @ElementCollection
+  @CollectionTable( name = "metadata_instances_ephemeral_storage" )
+  @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
+  private Set<VmEphemeralAttachment> ephmeralStorage = Sets.newHashSet( );
   
   @Column( name = "metadata_vm_monitoring")
   private Boolean 		  monitoring;
   
   @Column( name = "metadata_vm_user_data" )
   private byte[]                  userData;
-  @Column( name = "metadata_vm_delete_on_terminate" )
-  private boolean                 deleteOnTerminate;
   @Lob
   @Type(type="org.hibernate.type.StringClobType")
   @Column( name = "metadata_vm_sshkey" )
@@ -197,12 +199,16 @@ public class VmBootRecord {
     return !this.persistentVolumes.isEmpty( );
   }
   
-  public boolean getDeleteOnTerminate( ) {
-    return this.deleteOnTerminate;
+  public Set<VmEphemeralAttachment> getEphmeralStorage() {
+    return ephmeralStorage;
   }
 
-  public void setDeleteOnTerminate( boolean deleteOnTerminate ) {
-    this.deleteOnTerminate = deleteOnTerminate;
+  public void setEphmeralStorage(Set<VmEphemeralAttachment> ephmeralStorage) {
+    this.ephmeralStorage = ephmeralStorage;
+  }
+  
+  public boolean hasEphemeralStorage( ) {
+	return !this.ephmeralStorage.isEmpty( );
   }
 
   byte[] getUserData( ) {
@@ -355,7 +361,6 @@ private void setMachineImage( ImageInfo machineImage ) {
         List<VmInstance> entities = Entities.query( new VmInstance( ) );
         for ( VmInstance entry : entities ) {
           LOG.debug( "Upgrading BootRecord: " + entry.toString() );
-          entry.setDeleteOnTerminate(false);
           Entities.persist(entry);
         }
         db.commit( );

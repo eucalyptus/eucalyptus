@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * Copyright 2009-2013 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -62,7 +62,6 @@
 
 package com.eucalyptus.ws.client.pipeline;
 
-import java.security.GeneralSecurityException;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import org.apache.log4j.Logger;
@@ -74,7 +73,6 @@ import com.eucalyptus.component.ComponentId.ComponentPart;
 import com.eucalyptus.empyrean.Empyrean;
 import com.eucalyptus.ws.Handlers;
 import com.eucalyptus.ws.StackConfiguration;
-import com.eucalyptus.ws.handlers.InternalWsSecHandler;
 
 @ComponentPart( Empyrean.class )
 public class InternalClientPipeline implements ChannelPipelineFactory {
@@ -94,7 +92,6 @@ public class InternalClientPipeline implements ChannelPipelineFactory {
     pipeline.addLast( "addressing", Handlers.addressingHandler( ) );
     pipeline.addLast( "soap", Handlers.soapHandler( ) );
     pipeline.addLast( "binding", Handlers.bindingHandler( ) );
-    pipeline.addLast( "impersonation", Handlers.internalImpersonationHandler( ) );
     return pipeline;
   }
   

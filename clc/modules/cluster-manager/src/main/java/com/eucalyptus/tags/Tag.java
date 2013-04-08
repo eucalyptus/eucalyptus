@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * Copyright 2009-2013 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -29,6 +29,8 @@ import javax.persistence.DiscriminatorType;
 import javax.persistence.Inheritance;
 import javax.persistence.InheritanceType;
 import javax.persistence.PersistenceContext;
+import javax.persistence.PrePersist;
+import javax.persistence.PreUpdate;
 import javax.persistence.Table;
 import javax.persistence.Transient;
 import org.hibernate.annotations.Cache;
@@ -61,11 +63,17 @@ public class Tag<T extends Tag<T>> extends UserMetadata<Tag.State> implements Ta
     available
   }
 
+  @SuppressWarnings( "FieldCanBeLocal" )
+  @Column( name = "metadata_resource_id", nullable = false )
+  private String resourceId;
+
   @Column( name = "metadata_tag_value", nullable = false, length = 256 )
   @Nullable
+
   private String value;
   @Transient
   @Nonnull
+
   private Function<? super T,String> resourceIdFunction = Functions.constant( null );
   @Transient
   @Nullable
@@ -89,6 +97,13 @@ public class Tag<T extends Tag<T>> extends UserMetadata<Tag.State> implements Ta
     setOwner( ownerFullName );
     setDisplayName( key );
     setValue( value );
+  }
+
+  /**
+   * Must be called from constructor
+   */
+  protected void init() {
+    setResourceId( getResourceId() ); // Set for query by example use
   }
 
   @Override
@@ -117,7 +132,9 @@ public class Tag<T extends Tag<T>> extends UserMetadata<Tag.State> implements Ta
   @SuppressWarnings( "unchecked" )
   @Nullable
   public final String getResourceId(){ 
-    return resourceIdFunction.apply( (T) this ); 
+    return resourceId != null ?
+        resourceId :
+        extractResourceId( );
   }
 
   @Nullable
@@ -147,5 +164,22 @@ public class Tag<T extends Tag<T>> extends UserMetadata<Tag.State> implements Ta
   public static Tag withOwner( @Nonnull final OwnerFullName ownerFullName ) {
     Preconditions.checkNotNull( ownerFullName, "ownerFullName" );
     return new Tag( null, Functions.constant( null ), ownerFullName, null, null );
+  }
+
+  /**
+   * The resource ID can be set for query by example usage.
+   */
+  private void setResourceId( final String resourceId ) {
+    this.resourceId = resourceId;
+  }
+
+  private String extractResourceId() {
+    return resourceIdFunction.apply( (T) this );
+  }
+
+  @PrePersist
+  @PreUpdate
+  private void generatedFieldUpdate( ) {
+    setResourceId( extractResourceId() );
   }
 }

@@ -67,8 +67,11 @@ import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Set;
 import java.util.concurrent.ExecutionException;
+
 import javax.persistence.EntityTransaction;
+
 import org.apache.log4j.Logger;
+
 import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.principal.AccountFullName;
 import com.eucalyptus.auth.principal.UserFullName;
@@ -103,9 +106,9 @@ import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.RestrictedTypes;
 import com.eucalyptus.util.async.AsyncRequests;
+import com.eucalyptus.vm.MigrationState;
 import com.eucalyptus.vm.VmInstance;
 import com.eucalyptus.vm.VmInstance.VmState;
-import com.eucalyptus.vm.MigrationState;
 import com.eucalyptus.vm.VmInstances;
 import com.eucalyptus.vm.VmVolumeAttachment;
 import com.google.common.base.Function;
@@ -113,6 +116,7 @@ import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Sets;
 import com.google.common.primitives.Ints;
+
 import edu.ucsb.eucalyptus.msgs.AttachStorageVolumeResponseType;
 import edu.ucsb.eucalyptus.msgs.AttachStorageVolumeType;
 import edu.ucsb.eucalyptus.msgs.AttachVolumeResponseType;
@@ -152,6 +156,10 @@ public class VolumeManager {
         Snapshot snap = Transactions.find( Snapshot.named( null, snapId ) );
         if ( !RestrictedTypes.filterPrivileged( ).apply( snap ) ) {
           throw new EucalyptusCloudException( "Not authorized to use snapshot " + snapId + " by " + ctx.getUser( ).getName( ) );
+        }
+        // Volume created from a snapshot cannot be smaller than the size of the snapshot
+        if (volSize != null && snap != null && snap.getVolumeSize() != null && volSize < snap.getVolumeSize()) {
+          throw new EucalyptusCloudException( "Volume size cannot be less than snapshot size" );
         }
       } catch ( ExecutionException ex ) {
         throw new EucalyptusCloudException( "Failed to create volume because the referenced snapshot id is invalid: " + snapId );
@@ -410,17 +418,8 @@ public class VolumeManager {
     request.setRemoteDevice( scAttachResponse.getRemoteDeviceString( ) );
     
     AttachedVolume attachVol = new AttachedVolume( volume.getDisplayName( ), vm.getInstanceId( ), request.getDevice( ), request.getRemoteDevice( ) );
-
-    if ("/dev/sda1".equals( deviceName ) && vm.getBootRecord( ).isBlockStorage( ) ) {
-      if ( this.getDeleteOnTerminate( vm ) ) {
-        vm.addPersistentVolume( deviceName, volume );
-      } else {
-        vm.addPermanentVolume( deviceName, volume );
-      }
-    } else {
-      vm.addTransientVolume( deviceName, scAttachResponse.getRemoteDeviceString( ), volume );
-      AsyncRequests.newRequest( new VolumeAttachCallback( request ) ).dispatch( ccConfig );
-    }
+    vm.addTransientVolume( deviceName, scAttachResponse.getRemoteDeviceString( ), volume );
+    AsyncRequests.newRequest( new VolumeAttachCallback( request ) ).dispatch( ccConfig );
     
     EventRecord.here( VolumeManager.class, EventClass.VOLUME, EventType.VOLUME_ATTACH )
                .withDetails( volume.getOwner( ).toString( ), volume.getDisplayName( ), "instance", vm.getInstanceId( ) )
@@ -447,9 +446,8 @@ public class VolumeManager {
     
     VmInstance vm = null;
     AttachedVolume volume = null;
-    VmVolumeAttachment vmVolAttach = null;
     try {
-      vmVolAttach = VmInstances.lookupVolumeAttachment( request.getVolumeId( ) );
+      VmVolumeAttachment vmVolAttach = VmInstances.lookupVolumeAttachment( request.getVolumeId( ) );
       volume = VmVolumeAttachment.asAttachedVolume( vmVolAttach.getVmInstance( ) ).apply( vmVolAttach );
       vm = vmVolAttach.getVmInstance( );
     } catch ( NoSuchElementException ex ) {
@@ -488,9 +486,6 @@ public class VolumeManager {
     		Logs.extreme( ).debug( e, e );
     		//GRZE: attach is idempotent, failure here is ok, throw new EucalyptusCloudException( e.getMessage( ) );
     	}
-      if ( vm.isBlockStorage( ) && "/dev/sda1".equals( vmVolAttach.getDevice( ) ) ) {
-        this.setDeleteOnTerminate( vm , vmVolAttach.getDeleteOnTerminate( ) );
-      }
     	vm.removeVolumeAttachment( volume.getVolumeId( ) );
     } else {
     	Cluster cluster = null;
@@ -520,35 +515,6 @@ public class VolumeManager {
     reply.setDetachedVolume( volume );
     Volumes.fireUsageEvent(vol, VolumeEvent.forVolumeDetach(vm.getInstanceUuid(), vm.getInstanceId()));
     return reply;
-  }
-  
-  public boolean getDeleteOnTerminate( VmInstance vm ) throws EucalyptusCloudException {
-  final EntityTransaction db = Entities.get( VmInstance.class );
-    try {
-      final VmInstance foundVm = Entities.uniqueResult( VmInstance.named( null, vm.getInstanceId( ) ) );
-      boolean ret = foundVm.getDeleteOnTerminate();
-      db.commit();
-      return ret;
-    }catch ( Exception ex ) {
-      Logs.extreme( ).error( ex , ex );
-      throw new EucalyptusCloudException( ex.getMessage( ) , ex);
-    } finally {
-      if ( db.isActive() ) db.rollback( );
-    }
-  }
-
-  public void setDeleteOnTerminate( VmInstance vm , boolean deleteOnTerminate ) {
-  final EntityTransaction db = Entities.get( VmInstance.class );
-    try {
-      final VmInstance foundVm = Entities.uniqueResult( VmInstance.named( null, vm.getInstanceId( ) ) );
-      foundVm.setDeleteOnTerminate( deleteOnTerminate );
-      db.commit();
-    }catch ( Exception ex ) {
-      Logs.extreme( ).error( ex , ex );
-      LOG.error( ex , ex );
-    } finally {
-      if ( db.isActive() ) db.rollback( );
-    }
   }
 
 }

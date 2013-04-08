@@ -45,14 +45,17 @@ import com.google.common.base.Predicates;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 
-@ConfigurableClass( root = "reporting", description = "Parameters controlling reporting")
+@ConfigurableClass( root = "cloud.monitor", description = "Parameters controlling cloud watch and reporting")
 public class DescribeSensorsListener implements EventListener<Hertz> {
 
   @ConfigurableField(initial = "5", description = "How often the reporting system requests information from the cluster controller")
   public static long DEFAULT_POLL_INTERVAL_MINS = 5;
   
   private Integer COLLECTION_INTERVAL_TIME_MS;
-  private Integer HISTORY_SIZE = 5;
+
+  @ConfigurableField(initial = "5", description = "The initial history size of metrics to be send from the cc to the clc")
+  public static Integer HISTORY_SIZE = 5;
+
   private Integer MAX_WRITE_INTERVAL_MS = 86400000;
   private Integer SENSOR_QUERY_BATCH_SIZE = 10;
   
@@ -64,60 +67,60 @@ public class DescribeSensorsListener implements EventListener<Hertz> {
   
   @Override
   public void fireEvent( Hertz event ) {
-    if ( !Bootstrap.isOperational( ) || !BootstrapArgs.isCloudController( ) || !event.isAsserted( DEFAULT_POLL_INTERVAL_MINS ) ) {
+    if (!Bootstrap.isOperational() || !BootstrapArgs.isCloudController() || !event.isAsserted(DEFAULT_POLL_INTERVAL_MINS)) {
       return;
     } else {
       if (DEFAULT_POLL_INTERVAL_MINS >= 1) {
-	  COLLECTION_INTERVAL_TIME_MS = ((int) TimeUnit.MINUTES
-		  .toMillis(DEFAULT_POLL_INTERVAL_MINS) / 2);
+        COLLECTION_INTERVAL_TIME_MS = ((int) TimeUnit.MINUTES
+            .toMillis(DEFAULT_POLL_INTERVAL_MINS) / 2);
       } else {
-	  COLLECTION_INTERVAL_TIME_MS = 0; 
+        COLLECTION_INTERVAL_TIME_MS = 0;
       }
 
-      if (COLLECTION_INTERVAL_TIME_MS == 0 ) {	
-	  LOG.debug("The instance usage report is disabled");
+      if (COLLECTION_INTERVAL_TIME_MS == 0 || HISTORY_SIZE > 15 || HISTORY_SIZE < 1) {
+        LOG.debug("The instance usage report is disabled");
       } else if (COLLECTION_INTERVAL_TIME_MS <= MAX_WRITE_INTERVAL_MS) {
 
-	  try {
+        try {
 
-	      if (event.isAsserted(TimeUnit.MINUTES
-		      .toSeconds(DEFAULT_POLL_INTERVAL_MINS))) {
-		  if (Bootstrap.isFinished() && Hosts.isCoordinator()) {
+          if (event.isAsserted(TimeUnit.MINUTES
+              .toSeconds(DEFAULT_POLL_INTERVAL_MINS))) {
+            if (Bootstrap.isFinished() && Hosts.isCoordinator()) {
 
-		      List<VmInstance> instList = VmInstances.list( VmState.RUNNING );
-		      
-		      List<String> instIdList = Lists.newArrayList();
-		      
-		      for (final VmInstance inst : instList) {
-		        instIdList.add(inst.getInstanceId());
-		      }
-		      Iterable<List<String>> processInts = Iterables.paddedPartition(instIdList, SENSOR_QUERY_BATCH_SIZE);
-		      
+              List<VmInstance> instList = VmInstances.list(VmState.RUNNING);
 
-		      for (final ServiceConfiguration ccConfig : Topology
-			      .enabledServices(ClusterController.class)) {
-			  for(List<String> instIds : processInts) {
+              List<String> instIdList = Lists.newArrayList();
 
-			  ArrayList<String> instanceIds = Lists.newArrayList(instIds);
-			  Iterables.removeIf(instanceIds, Predicates.isNull());
-			  
-			  AsyncRequests.newRequest(
-				  new DescribeSensorCallback(HISTORY_SIZE,
-					  COLLECTION_INTERVAL_TIME_MS, instanceIds))
-					  .dispatch(ccConfig);
-			  LOG.debug("DecribeSensorCallback has been successfully executed");
-			  }
-		      }
-		  }
-	      }
-	  } catch (Exception ex) {
-	      LOG.error("Unable to listen for describe sensors events", ex);
-	  }
+              for (final VmInstance inst : instList) {
+                instIdList.add(inst.getInstanceId());
+              }
+              Iterable<List<String>> processInts = Iterables.paddedPartition(instIdList, SENSOR_QUERY_BATCH_SIZE);
+
+
+              for (final ServiceConfiguration ccConfig : Topology
+                  .enabledServices(ClusterController.class)) {
+                for (List<String> instIds : processInts) {
+
+                  ArrayList<String> instanceIds = Lists.newArrayList(instIds);
+                  Iterables.removeIf(instanceIds, Predicates.isNull());
+
+                  AsyncRequests.newRequest(
+                      new DescribeSensorCallback(HISTORY_SIZE,
+                          COLLECTION_INTERVAL_TIME_MS, instanceIds))
+                      .dispatch(ccConfig);
+                  LOG.debug("DecribeSensorCallback has been successfully executed");
+                }
+              }
+            }
+          }
+        } catch (Exception ex) {
+          LOG.error("Unable to listen for describe sensors events", ex);
+        }
 
       } else {
-	  LOG.error("DEFAULT_POLL_INTERVAL_MINS : "
-		  + DEFAULT_POLL_INTERVAL_MINS
-		  + " must be less than 1440 minutes");
+        LOG.error("DEFAULT_POLL_INTERVAL_MINS : "
+            + DEFAULT_POLL_INTERVAL_MINS
+            + " must be less than 1440 minutes");
       }
     }
   }

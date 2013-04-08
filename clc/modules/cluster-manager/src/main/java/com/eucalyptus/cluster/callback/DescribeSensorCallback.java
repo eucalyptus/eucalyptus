@@ -26,18 +26,30 @@ import java.util.Date;
 import java.util.List;
 import java.util.NoSuchElementException;
 
-import org.apache.log4j.Logger;
-
-import com.eucalyptus.auth.Accounts;
-import com.eucalyptus.auth.AuthException;
-import com.eucalyptus.auth.principal.Account;
-import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.cloudwatch.CloudWatch;
 import com.eucalyptus.cloudwatch.Dimension;
 import com.eucalyptus.cloudwatch.Dimensions;
 import com.eucalyptus.cloudwatch.MetricData;
 import com.eucalyptus.cloudwatch.MetricDatum;
 import com.eucalyptus.cloudwatch.PutMetricDataType;
+import com.eucalyptus.cloudwatch.PutMetricDataResponseType;
+
+import com.eucalyptus.util.EucalyptusCloudException;
+import edu.ucsb.eucalyptus.msgs.BaseMessage;
+import edu.ucsb.eucalyptus.msgs.DescribeSensorsResponse;
+import edu.ucsb.eucalyptus.msgs.DescribeSensorsType;
+import edu.ucsb.eucalyptus.msgs.MetricCounterType;
+import edu.ucsb.eucalyptus.msgs.MetricDimensionsType;
+import edu.ucsb.eucalyptus.msgs.MetricsResourceType;
+import edu.ucsb.eucalyptus.msgs.SensorsResourceType;
+import edu.ucsb.eucalyptus.msgs.MetricDimensionsValuesType;
+
+import org.apache.log4j.Logger;
+
+import com.eucalyptus.auth.Accounts;
+import com.eucalyptus.auth.AuthException;
+import com.eucalyptus.auth.principal.Account;
+import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.ServiceConfigurations;
@@ -58,82 +70,99 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Ordering;
 
-import edu.ucsb.eucalyptus.msgs.DescribeSensorsResponse;
-import edu.ucsb.eucalyptus.msgs.DescribeSensorsType;
-import edu.ucsb.eucalyptus.msgs.MetricCounterType;
-import edu.ucsb.eucalyptus.msgs.MetricDimensionsType;
-import edu.ucsb.eucalyptus.msgs.MetricsResourceType;
-import edu.ucsb.eucalyptus.msgs.SensorsResourceType;
-import edu.ucsb.eucalyptus.msgs.MetricDimensionsValuesType;
-
 public class DescribeSensorCallback extends
     BroadcastCallback<DescribeSensorsType, DescribeSensorsResponse> {
 
-  private static final Logger LOG = Logger.getLogger( DescribeSensorCallback.class );
+  private static final Logger LOG = Logger.getLogger(DescribeSensorCallback.class);
   private static final String RESOURCE_TYPE_INSTANCE = "instance";
   private final int historySize;
   private final int collectionIntervalTimeMs;
   private final ArrayList<String> instanceIds;
   private final ListenerRegistry listener = ListenerRegistry.getInstance();
 
-  public DescribeSensorCallback( final int historySize,
-                                 final int collectionIntervalTimeMS, final ArrayList<String> instanceIds) {
+  public DescribeSensorCallback(final int historySize,
+                                final int collectionIntervalTimeMS, final ArrayList<String> instanceIds) {
     this.historySize = historySize;
     this.collectionIntervalTimeMs = collectionIntervalTimeMS;
     this.instanceIds = instanceIds;
-    
+
     final DescribeSensorsType msg =
-        new DescribeSensorsType( this.historySize, this.collectionIntervalTimeMs, this.instanceIds);
+        new DescribeSensorsType(this.historySize, this.collectionIntervalTimeMs, this.instanceIds);
 
     try {
-      msg.setUser( Accounts.lookupSystemAdmin() );
-    } catch ( AuthException e ) {
-      LOG.error( "Unable to find the system user", e );
+      msg.setUser(Accounts.lookupSystemAdmin());
+    } catch (AuthException e) {
+      LOG.error("Unable to find the system user", e);
     }
 
-    this.setRequest( msg );
+    this.setRequest(msg);
   }
 
   @Override
-  public void initialize( final DescribeSensorsType msg ) {
+  public void initialize(final DescribeSensorsType msg) {
   }
 
   @Override
   public BroadcastCallback<DescribeSensorsType, DescribeSensorsResponse> newInstance() {
-    return new DescribeSensorCallback( this.historySize, this.collectionIntervalTimeMs, this.instanceIds);
+    return new DescribeSensorCallback(this.historySize, this.collectionIntervalTimeMs, this.instanceIds);
   }
 
   @Override
-  public void fireException( Throwable e ) {
-    LOG.debug( "Request failed: "
-        + LogUtil.subheader( this.getRequest().toString(
-        "eucalyptus_ucsb_edu" ) ) );
-    Logs.extreme().error( e, e );
+  public void fireException(Throwable e) {
+    LOG.debug("Request failed: "
+        + LogUtil.subheader(this.getRequest().toString(
+        "eucalyptus_ucsb_edu")));
+    Logs.extreme().error(e, e);
   }
 
   @Override
-  public void fire( final DescribeSensorsResponse msg ) {
+  public void fire(final DescribeSensorsResponse msg) {
     try {
       final Iterable<String> uuidList =
-          Iterables.transform( VmInstances.list( VmState.RUNNING ), VmInstances.toInstanceUuid() );
+          Iterables.transform(VmInstances.list(VmState.RUNNING), VmInstances.toInstanceUuid());
 
-      //TODO : Find instances with monitoring enabled bit set to true
-      
-      for ( final SensorsResourceType sensorData : msg.getSensorsResources() ) {
-        if ( !RESOURCE_TYPE_INSTANCE.equals(sensorData.getResourceType()) ||
-            !Iterables.contains( uuidList, sensorData.getResourceUuid() ) )
+      for (final SensorsResourceType sensorData : msg.getSensorsResources()) {
+        if (!RESOURCE_TYPE_INSTANCE.equals(sensorData.getResourceType()) ||
+            !Iterables.contains(uuidList, sensorData.getResourceUuid()))
           continue;
 
-        for ( final MetricsResourceType metricType : sensorData.getMetrics() ) {
-          for ( final MetricCounterType counterType : metricType.getCounters() ) {
-            for ( final MetricDimensionsType dimensionType : counterType.getDimensions() ) {
+        for (final MetricsResourceType metricType : sensorData.getMetrics()) {
+          for (final MetricCounterType counterType : metricType.getCounters()) {
+            for (final MetricDimensionsType dimensionType : counterType.getDimensions()) {
+
               // find and fire most recent value for metric/dimension
               final List<MetricDimensionsValuesType> values =
-                  Lists.newArrayList( dimensionType.getValues() );
-              Collections.sort( values, Ordering.natural().onResultOf( GetTimestamp.INSTANCE ) );
+                  Lists.newArrayList(dimensionType.getValues());
 
-              if ( !values.isEmpty() ) {
-                final MetricDimensionsValuesType latestValue = Iterables.getLast( values );
+              //CloudWatch use case of metric data
+
+              if(!values.isEmpty()) {
+
+                for (MetricDimensionsValuesType value : values) {
+                  final Double currentValue = value.getValue();
+                  final Long currentTimeStamp = value.getTimestamp().getTime();
+                  sendSystemMetric(new Supplier<InstanceUsageEvent>() {
+                    @Override
+                    public InstanceUsageEvent get() {
+                      return new InstanceUsageEvent(
+                          sensorData.getResourceUuid(),
+                          sensorData.getResourceName(),
+                          metricType.getMetricName(),
+                          dimensionType.getSequenceNum(),
+                          dimensionType.getDimensionName(),
+                          currentValue,
+                          currentTimeStamp);
+                    }
+                  });
+                }
+              }
+
+              //Reporting use case of metric data from the cc
+
+              Collections.sort(values, Ordering.natural().onResultOf(GetTimestamp.INSTANCE));
+
+              if (!values.isEmpty()) {
+                final MetricDimensionsValuesType latestValue = Iterables.getLast(values);
                 final Double usageValue = latestValue.getValue();
                 final Long usageTimestamp = latestValue.getTimestamp().getTime();
                 final long sequenceNumber = dimensionType.getSequenceNum() + (values.size() - 1);
@@ -147,207 +176,219 @@ public class DescribeSensorCallback extends
                         sequenceNumber,
                         dimensionType.getDimensionName(),
                         usageValue,
-                        usageTimestamp );
+                        usageTimestamp);
                   }
-                } );
+                });
               }
             }
           }
         }
       }
-    } catch ( Exception ex ) {
-      LOG.debug( "Unable to fire describe sensors call back", ex );
+    } catch (Exception ex) {
+      LOG.debug("Unable to fire describe sensors call back", ex);
     }
   }
 
-  private void fireUsageEvent( Supplier<InstanceUsageEvent> instanceUsageEventSupplier ) {
+  private void fireUsageEvent(Supplier<InstanceUsageEvent> instanceUsageEventSupplier) {
     InstanceUsageEvent event = null;
     event = instanceUsageEventSupplier.get();
     try {
-      listener.fireEvent( event );
-    } catch ( EventFailedException e ) {
-      LOG.debug( "Failed to fire instance usage event"
-          + (event!=null?event:""), e );
+      listener.fireEvent(event);
+    } catch (EventFailedException e) {
+      LOG.debug("Failed to fire instance usage event"
+          + (event != null ? event : ""), e);
     }
-    
-    try { 
-      sendSystemMetric( event );
-    } catch (NoSuchElementException nse) {
-      LOG.debug(nse,nse);
-    } catch (Exception ex){
-      LOG.error("Unable to send the request to the cloud watch service.");
-      LOG.debug(ex,ex);
-    }
-    
   }
 
-  private enum GetTimestamp implements Function<MetricDimensionsValuesType,Date> {
+  private enum GetTimestamp implements Function<MetricDimensionsValuesType, Date> {
     INSTANCE;
 
     @Override
-    public Date apply(  final MetricDimensionsValuesType metricDimensionsValuesType ) {
+    public Date apply(final MetricDimensionsValuesType metricDimensionsValuesType) {
       return metricDimensionsValuesType.getTimestamp();
     }
   }
-  
-  private void sendSystemMetric(final InstanceUsageEvent event) throws Exception {
 
-      //prototype implementation 
-     
-      final VmInstance instance = VmInstances.lookup(event.getInstanceId());
+  private void sendSystemMetric(Supplier<InstanceUsageEvent> cloudWatchSupplier) throws Exception {
+    InstanceUsageEvent event = null;
+    event = cloudWatchSupplier.get();
 
-      if (!instance.getInstanceId().equals(event.getInstanceId())
-	      || !instance.getBootRecord().isMonitoring()) {
-	  throw new NoSuchElementException("Instance : " + event.getInstanceId() + " monitoring is not enabled");
+    final VmInstance instance = VmInstances.lookup(event.getInstanceId());
+
+    if (!instance.getInstanceId().equals(event.getInstanceId())
+        || !instance.getBootRecord().isMonitoring()) {
+      throw new NoSuchElementException("Instance : " + event.getInstanceId() + " monitoring is not enabled");
+    }
+
+    if (instance.getInstanceId().equals(event.getInstanceId())
+        && instance.getBootRecord().isMonitoring()) {
+
+      PutMetricDataType putMetricData = new PutMetricDataType();
+      MetricDatum metricDatum = new MetricDatum();
+      ArrayList<Dimension> dimArray = Lists.newArrayList();
+
+      if (event.getDimension() != null && event.getValue() != null) {
+
+        if (event.getDimension().startsWith("vol-")) {
+          putMetricData.setNamespace("AWS/EBS");
+          Dimension volDim = new Dimension();
+          volDim.setName("VolumeId");
+          volDim.setValue(event.getDimension());
+          dimArray.add(volDim);
+          // Need to replace metric name
+          if (event.getMetric().startsWith("Disk")) {
+            final String convertedEBSMetricName = event.getMetric()
+                .replace("Disk", "Volume");
+            metricDatum.setMetricName(convertedEBSMetricName);
+          } else {
+            metricDatum.setMetricName(event.getMetric());
+          }
+        } else {
+          putMetricData.setNamespace("AWS/EC2");
+
+          Dimension instanceIdDim = new Dimension();
+          instanceIdDim.setName("InstanceId");
+          instanceIdDim.setValue(instance.getInstanceId());
+          dimArray.add(instanceIdDim);
+
+          Dimension imageIdDim = new Dimension();
+          imageIdDim.setName("ImageId");
+          imageIdDim.setValue(instance.getImageId());
+          dimArray.add(imageIdDim);
+
+          Dimension instanceTypeDim = new Dimension();
+          instanceTypeDim.setName("InstanceType");
+          instanceTypeDim.setValue(instance.getVmType()
+              .getDisplayName());
+          dimArray.add(instanceTypeDim);
+
+          // convert ephemeral disks metrics
+          if (event.getMetric().equals("VolumeTotalReadTime")) {
+            metricDatum.setMetricName("DiskReadBytes");
+          } else if (event.getMetric().endsWith("External")) {
+            final String convertedEC2NetworkMetricName = event
+                .getMetric().replace("External", "");
+            metricDatum
+                .setMetricName(convertedEC2NetworkMetricName);
+          } else if (event.getMetric().equals("VolumeTotalWriteTime")) {
+            metricDatum.setMetricName("DiskWriteBytes");
+          } else {
+            metricDatum.setMetricName(event.getMetric());
+          }
+        }
+      } else {
+        LOG.debug("Event does not contain a dimension");
+        throw new Exception();
       }
 
-      if (instance.getInstanceId().equals(event.getInstanceId())
-	      && instance.getBootRecord().isMonitoring()) {
+      Dimensions dims = new Dimensions();
+      dims.setMember(dimArray);
 
-	  PutMetricDataType putMetricData = new PutMetricDataType();
-	  MetricDatum metricDatum = new MetricDatum();
-	  ArrayList<Dimension> dimArray = Lists.newArrayList();
+      MetricData metricData = new MetricData();
 
-	  if (event.getDimension() != null && event.getValue() != null) {
+      metricDatum.setTimestamp(new Date(event.getValueTimestamp()));
+      metricDatum.setDimensions(dims);
+      metricDatum.setValue(event.getValue());
 
-	      if (event.getDimension().startsWith("vol-")) {
-		  putMetricData.setNamespace("AWS/EBS");
-		  Dimension volDim = new Dimension();
-		  volDim.setName("VolumeId");
-		  volDim.setValue(event.getDimension());
-		  dimArray.add(volDim);
-		  // Need to replace metric name
-		  if (event.getMetric().startsWith("Disk")) {
-		      final String convertedEBSMetricName = event.getMetric()
-			      .replace("Disk", "Volume");
-		      metricDatum.setMetricName(convertedEBSMetricName);
-		  } else {
-		      metricDatum.setMetricName(event.getMetric());
-		  }
-	      } else {
-		  putMetricData.setNamespace("AWS/EC2");
+      final String unitType = containsUnitType(metricDatum.getMetricName());
+      metricDatum.setUnit(unitType);
 
-		  Dimension instanceIdDim = new Dimension();
-		  instanceIdDim.setName("InstanceId");
-		  instanceIdDim.setValue(instance.getInstanceId());
-		  dimArray.add(instanceIdDim);
 
-		  Dimension imageIdDim = new Dimension();
-		  imageIdDim.setName("ImageId");
-		  imageIdDim.setValue(instance.getImageId());
-		  dimArray.add(imageIdDim);
-
-		  Dimension instanceTypeDim = new Dimension();
-		  instanceTypeDim.setName("InstanceType");
-		  instanceTypeDim.setValue(instance.getVmType()
-			  .getDisplayName());
-		  dimArray.add(instanceTypeDim);
-
-		  // convert ephemeral disks metrics
-		  if (event.getMetric().equals("VolumeTotalReadTime")) {
-		      metricDatum.setMetricName("DiskReadBytes");
-		  } else if (event.getMetric().endsWith("External")) {
-		      final String convertedEC2NetworkMetricName = event
-			      .getMetric().replace("External", "");
-		      metricDatum
-		      .setMetricName(convertedEC2NetworkMetricName);
-		  } else if (event.getMetric().equals("VolumeTotalWriteTime")) {
-		      metricDatum.setMetricName("DiskWriteBytes");	  
-		  } else {
-		      metricDatum.setMetricName(event.getMetric());
-		  }
-	      }
-	  } else {
-	      LOG.debug("Event does not contain a dimension");
-	      throw new Exception();
-	  }
-
-	  Dimensions dims = new Dimensions();
-	  dims.setMember(dimArray);
-
-	  MetricData metricData = new MetricData();
-
-	  metricDatum.setTimestamp(new Date(event.getValueTimestamp()));
-	  metricDatum.setDimensions(dims);
-	  metricDatum.setValue(event.getValue());
-
-	  final String unitType = containsUnitType(metricDatum.getMetricName());
-	  metricDatum.setUnit(unitType);
-	  
-
-	  if (event.getMetric().equals("CPUUtilization")) {
-		  metricDatum.setMetricName("CPUUtilizationMS"); // this is actually the data in milliseconds, not percentage
-	  }
-	  metricData.setMember(Lists.newArrayList(metricDatum));
-	  putMetricData.setMetricData(metricData);
-
-	  Account account = Accounts.getAccountProvider().lookupAccountById(
-		  instance.getOwnerAccountNumber());
-
-	  User user = account.lookupUserByName(User.ACCOUNT_ADMIN);
-	  putMetricData.setEffectiveUserId(user.getUserId());
-
-	  ServiceConfiguration serviceConfiguration = ServiceConfigurations
-		  .createEphemeral(ComponentIds.lookup(CloudWatch.class));
-	  AsyncRequests.dispatch(serviceConfiguration, putMetricData);
-
+      if (metricDatum.getMetricName().equals("CPUUtilization")) {
+        metricDatum.setMetricName("CPUUtilizationMS"); // this is actually the data in milliseconds, not percentage
       }
+      if (metricDatum.getMetricName().equals("VolumeReadOps")) {
+        metricDatum.setMetricName("VolumeReadOpsTotal"); // this is actually the total volume read Ops since volume creation, not for the period
+      }
+      if (metricDatum.getMetricName().equals("VolumeWriteOps")) {
+        metricDatum.setMetricName("VolumeWriteOpsTotal"); // this is actually the total volume write Ops since volume creation, not for the period
+      }
+      if (metricDatum.getMetricName().equals("VolumeReadBytes")) {
+        metricDatum.setMetricName("VolumeReadBytesTotal"); // this is actually the total volume read bytes since volume creation, not for the period
+      }
+      if (metricDatum.getMetricName().equals("VolumeWriteBytes")) {
+        metricDatum.setMetricName("VolumeWriteBytesTotal"); // this is actually the total volume write bytes since volume creation, not for the period
+      }
+      if (metricDatum.getMetricName().equals("VolumeTotalReadTime")) {
+        metricDatum.setMetricName("VolumeTotalReadTimeTotal"); // this is actually the total volume read time since volume creation, not for the period
+      }
+      if (metricDatum.getMetricName().equals("VolumeTotalWriteTime")) {
+        metricDatum.setMetricName("VolumeTotalWriteTimeTotal"); // this is actually the total volume write time since volume creation, not for the period
+      }
+      
+      metricData.setMember(Lists.newArrayList(metricDatum));
+      putMetricData.setMetricData(metricData);
+
+      Account account = Accounts.getAccountProvider().lookupAccountById(
+          instance.getOwnerAccountNumber());
+
+      User user = account.lookupUserByName(User.ACCOUNT_ADMIN);
+      putMetricData.setEffectiveUserId(user.getUserId());
+
+      ServiceConfiguration serviceConfiguration = ServiceConfigurations
+          .createEphemeral(ComponentIds.lookup(CloudWatch.class));
+      BaseMessage reply = (BaseMessage) AsyncRequests.dispatch(serviceConfiguration, putMetricData).get();
+      if (!(reply instanceof PutMetricDataResponseType)) {
+        throw new EucalyptusCloudException("Unable to send put metric data to cloud watch");
+      }
+
+    }
   }
-   
+
   private enum Bytes {
     VolumeReadBytes,
-    VolumeWriteBytes, 
+    VolumeWriteBytes,
     DiskReadBytes,
     DiskWriteBytes,
     NetworkIn,
-    NetworkOut; 
+    NetworkOut
   }
-  
+
   private enum Count {
-    VolumeWriteOps, 
+    VolumeWriteOps,
     VolumeQueueLength,
     VolumeConsumedReadWriteOps,
     DiskReadOps,
-    DiskWriteOps, 
+    DiskWriteOps,
     StatusCheckFailed,
-    VolumeReadOps;
+    VolumeReadOps
   }
-  
+
   private enum Seconds {
     VolumeTotalReadTime,
     VolumeTotalWriteTime,
-    VolumeIdleTime;
+    VolumeIdleTime
   }
-  
+
   private enum Percent {
-    VolumeThroughputPercentage, 
-    CPUUtilization; 
+    VolumeThroughputPercentage,
+    CPUUtilization
   }
-  
+
   private String containsUnitType(final String metricType) {
-      //TODO:KEN find cleaner method of finding the metric type
+    //TODO:KEN find cleaner method of finding the metric type
+    try {
+      Enum.valueOf(Bytes.class, metricType);
+      return "Bytes";
+    } catch (IllegalArgumentException ex1) {
       try {
-	  Enum.valueOf(Bytes.class, metricType);
-	  return "Bytes";
-      } catch (IllegalArgumentException ex1) {
-	  try {
-	      Enum.valueOf(Count.class, metricType);
-	      return "Count";
-	  } catch (IllegalArgumentException ex2) {
-	      try {
-		  Enum.valueOf(Seconds.class, metricType);
-		  return "Seconds";
-	      } catch (IllegalArgumentException ex4) {
-		  try {
-		      Enum.valueOf(Percent.class, metricType);
-		      return "Percent";
-		  } catch (IllegalArgumentException ex5) {
-		      throw new NoSuchElementException(
-			      "Unknown system unit type : " + metricType);
-		  }
-	      }
-	  }
+        Enum.valueOf(Count.class, metricType);
+        return "Count";
+      } catch (IllegalArgumentException ex2) {
+        try {
+          Enum.valueOf(Seconds.class, metricType);
+          return "Seconds";
+        } catch (IllegalArgumentException ex4) {
+          try {
+            Enum.valueOf(Percent.class, metricType);
+            return "Percent";
+          } catch (IllegalArgumentException ex5) {
+            throw new NoSuchElementException(
+                "Unknown system unit type : " + metricType);
+          }
+        }
       }
+    }
   }
 
 }

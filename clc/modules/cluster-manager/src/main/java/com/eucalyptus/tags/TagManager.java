@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * Copyright 2009-2013 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -29,6 +29,7 @@ import com.eucalyptus.auth.Permissions;
 import com.eucalyptus.auth.policy.PolicySpec;
 import com.eucalyptus.auth.principal.AccountFullName;
 import com.eucalyptus.auth.principal.UserFullName;
+import com.eucalyptus.auth.principal.Principals;
 import com.eucalyptus.cloud.CloudMetadata;
 import com.eucalyptus.cloud.util.MetadataException;
 import com.eucalyptus.cloud.util.NoSuchMetadataException;
@@ -44,6 +45,7 @@ import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.OwnerFullName;
 import com.eucalyptus.util.RestrictedTypes;
+import com.eucalyptus.util.Wrappers;
 import com.google.common.base.Function;
 import com.google.common.base.Objects;
 import com.google.common.base.Predicate;
@@ -55,7 +57,6 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Ordering;
 import edu.ucsb.eucalyptus.cloud.InvalidParameterValueException;
-import edu.ucsb.eucalyptus.msgs.BaseMessage;
 import edu.ucsb.eucalyptus.msgs.CreateTagsResponseType;
 import edu.ucsb.eucalyptus.msgs.CreateTagsType;
 import edu.ucsb.eucalyptus.msgs.DeleteResourceTag;
@@ -107,7 +108,7 @@ public class TagManager {
         public boolean apply( final Void v ) {
           final List<CloudMetadata> resources = Lists.transform( resourceIds, resourceLookup() );
           if ( !Iterables.all( resources, Predicates.and( Predicates.notNull(), typeSpecificFilters(), RestrictedTypes.filterPrivileged() ) )  ) {
-            return false;            
+            return false;
           }
 
           for ( final CloudMetadata resource : resources ) {
@@ -168,7 +169,7 @@ public class TagManager {
                     context.getAccount(),
                     PolicySpec.EC2_DELETETAGS,
                     context.getUser() ) ) {
-                  Tags.delete( example, TagSupport.fromResource( resource ).exampleCriterion( example ), Collections.<String,String>emptyMap() );
+                  Tags.delete( example );
                 }
               } catch ( NoSuchMetadataException e ) {
                 log.trace( e );
@@ -191,8 +192,7 @@ public class TagManager {
   public DescribeTagsResponseType describeTags( final DescribeTagsType request ) throws Exception {
     final DescribeTagsResponseType reply = request.getReply( );
     final Context context = Contexts.lookup();
-    
-    //TODO:STEVE: Cloud admin can list all tags?
+
     final Filter filter = Filters.generate( request.getFilterSet(), Tag.class );
     final Ordering<Tag> ordering = Ordering.natural().onResultOf( Tags.resourceId() )
         .compound( Ordering.natural().onResultOf( Tags.key() ) )
@@ -222,12 +222,9 @@ public class TagManager {
   }
 
   private static boolean isReserved( final String text ) {
-    //TODO:STEVE: Review impersonation mechanism.
-    //TODO:GRZE: Review impersonation mechanism. 
-    final BaseMessage request = Contexts.lookup().getRequest();      
     return
-        request.getEffectiveUserId() == null &&
-        Iterables.any( reservedPrefixes, prefix( text ) );          
+        !Principals.isSameUser( Principals.systemUser(), Wrappers.unwrap( Context.class, Contexts.lookup() ).getUser() ) &&
+        Iterables.any( reservedPrefixes, prefix( text ) );
   }
   
   private static Predicate<String> prefix( final String text ) {

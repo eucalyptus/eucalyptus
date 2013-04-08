@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * Copyright 2009-2013 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -67,6 +67,7 @@ public class NetworkGroupTag extends Tag<NetworkGroupTag> {
                           @Nullable final String value ) {
     super( "security-group", ResourceIdFunction.INSTANCE, ownerFullName, key, value );
     setNetworkGroup( networkGroup );
+    init();
   }
 
   public NetworkGroup getNetworkGroup() {

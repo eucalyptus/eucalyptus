@@ -5,7 +5,7 @@ import com.eucalyptus.binding.HttpEmbedded
 
 public class ResourceTag extends EucalyptusData {
   String key;
-  String value;
+  String value = ""
 
   public ResourceTag() {
   }

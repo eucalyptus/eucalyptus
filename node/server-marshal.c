@@ -140,32 +140,6 @@ pthread_mutex_t ncHandlerLock = PTHREAD_MUTEX_INITIALIZER;
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |
- |                             EXPORTED PROTOTYPES                            |
- |                                                                            |
-\*----------------------------------------------------------------------------*/
-
-void adb_InitService(void);
-
-adb_ncAssignAddressResponse_t *ncAssignAddressMarshal(adb_ncAssignAddress_t * ncAssignAddress, const axutil_env_t * env);
-adb_ncPowerDownResponse_t *ncPowerDownMarshal(adb_ncPowerDown_t * ncPowerDown, const axutil_env_t * env);
-adb_ncStartNetworkResponse_t *ncStartNetworkMarshal(adb_ncStartNetwork_t * ncStartNetwork, const axutil_env_t * env);
-adb_ncDescribeResourceResponse_t *ncDescribeResourceMarshal(adb_ncDescribeResource_t * ncDescribeResource, const axutil_env_t * env);
-adb_ncRunInstanceResponse_t *ncRunInstanceMarshal(adb_ncRunInstance_t * ncRunInstance, const axutil_env_t * env);
-adb_ncDescribeInstancesResponse_t *ncDescribeInstancesMarshal(adb_ncDescribeInstances_t * ncDescribeInstances, const axutil_env_t * env);
-adb_ncRebootInstanceResponse_t *ncRebootInstanceMarshal(adb_ncRebootInstance_t * ncRebootInstance, const axutil_env_t * env);
-adb_ncGetConsoleOutputResponse_t *ncGetConsoleOutputMarshal(adb_ncGetConsoleOutput_t * ncGetConsoleOutput, const axutil_env_t * env);
-adb_ncTerminateInstanceResponse_t *ncTerminateInstanceMarshal(adb_ncTerminateInstance_t * ncTerminateInstance, const axutil_env_t * env);
-adb_ncAttachVolumeResponse_t *ncAttachVolumeMarshal(adb_ncAttachVolume_t * ncAttachVolume, const axutil_env_t * env);
-adb_ncDetachVolumeResponse_t *ncDetachVolumeMarshal(adb_ncDetachVolume_t * ncDetachVolume, const axutil_env_t * env);
-adb_ncBundleInstanceResponse_t *ncBundleInstanceMarshal(adb_ncBundleInstance_t * ncBundleInstance, const axutil_env_t * env);
-adb_ncBundleRestartInstanceResponse_t *ncBundleRestartInstanceMarshal(adb_ncBundleRestartInstance_t * ncBundleRestartInstance,
-                                                                      const axutil_env_t * env);
-adb_ncCancelBundleTaskResponse_t *ncCancelBundleTaskMarshal(adb_ncCancelBundleTask_t * ncCancelBundleTask, const axutil_env_t * env);
-adb_ncDescribeBundleTasksResponse_t *ncDescribeBundleTasksMarshal(adb_ncDescribeBundleTasks_t * ncDescribeBundleTasks, const axutil_env_t * env);
-adb_ncDescribeSensorsResponse_t *ncDescribeSensorsMarshal(adb_ncDescribeSensors_t * ncDescribeSensors, const axutil_env_t * env);
-
-/*----------------------------------------------------------------------------*\
- |                                                                            |
  |                              STATIC PROTOTYPES                             |
  |                                                                            |
 \*----------------------------------------------------------------------------*/
@@ -500,8 +474,7 @@ adb_ncRunInstanceResponse_t *ncRunInstanceMarshal(adb_ncRunInstance_t * ncRunIns
             EUCA_MESSAGE_UNMARSHAL(ncRunInstanceType, input, (&meta));
 
             error = doRunInstance(&meta, uuid, instanceId, reservationId, &params, imageId, imageURL, kernelId, kernelURL, ramdiskId, ramdiskURL,
-                                  ownerId, accountId, keyName, &netparams, userData, launchIndex, platform, expiryTime, groupNames, groupNamesSize,
-                                  &outInst);
+                                  ownerId, accountId, keyName, &netparams, userData, launchIndex, platform, expiryTime, groupNames, groupNamesSize, &outInst);
 
             if (error != EUCA_OK) {
                 LOGERROR("[%s] failed error=%d\n", instanceId, error);
@@ -1029,8 +1002,7 @@ adb_ncBundleInstanceResponse_t *ncBundleInstanceMarshal(adb_ncBundleInstance_t *
 //!
 //! @return a pointer to the request's response structure
 //!
-adb_ncBundleRestartInstanceResponse_t *ncBundleRestartInstanceMarshal(adb_ncBundleRestartInstance_t * ncBundleRestartInstance,
-                                                                      const axutil_env_t * env)
+adb_ncBundleRestartInstanceResponse_t *ncBundleRestartInstanceMarshal(adb_ncBundleRestartInstance_t * ncBundleRestartInstance, const axutil_env_t * env)
 {
     int error = EUCA_OK;
     ncMetadata meta = { 0 };
@@ -1286,9 +1258,7 @@ adb_ncDescribeSensorsResponse_t *ncDescribeSensorsMarshal(adb_ncDescribeSensors_
         // do it
         EUCA_MESSAGE_UNMARSHAL(ncDescribeSensorsType, input, (&meta));
 
-        error =
-            doDescribeSensors(&meta, historySize, collectionIntervalTimeMs, instIds, instIdsLen, sensorIds, sensorIdsLen, &outResources,
-                              &outResourcesLen);
+        error = doDescribeSensors(&meta, historySize, collectionIntervalTimeMs, instIds, instIdsLen, sensorIds, sensorIdsLen, &outResources, &outResourcesLen);
 
         if (error != EUCA_OK) {
             LOGERROR("failed error=%d\n", error);

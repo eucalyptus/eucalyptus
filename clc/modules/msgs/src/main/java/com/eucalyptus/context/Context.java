@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * Copyright 2009-2013 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -87,7 +87,6 @@ import com.eucalyptus.auth.principal.UserFullName;
 import com.eucalyptus.http.MappingHttpRequest;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
-import com.eucalyptus.util.OwnerFullName;
 import com.eucalyptus.ws.server.Statistics;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 
@@ -102,7 +101,13 @@ public class Context {
   private User                         user      = null;
   private Subject                      subject   = null;
   private Map<Contract.Type, Contract> contracts = null;
-  
+
+  Context( ) {
+    this.correlationId = null;
+    this.httpRequest = null;
+    this.channel = null;
+  }
+
   protected Context( String dest, final BaseMessage msg ) {
     this.correlationId = msg.getCorrelationId( );
     this.creationTime = System.nanoTime( );
@@ -160,9 +165,7 @@ public class Context {
   }
   
   public BaseMessage getRequest( ) {
-    if ( this.request == null && this.httpRequest != null && this.httpRequest.getMessage( ) != null ) {
-      this.request = ( BaseMessage ) this.httpRequest.getMessage( );
-    }
+    initRequest();
     return check( this.request );
   }
   
@@ -193,7 +196,7 @@ public class Context {
   }
   
   public String getServiceName( ) {
-    MuleEvent e = null;
+    MuleEvent e;
     if ( ( e = this.muleEvent.get( ) ) != null ) {
       return e.getService( ).getName( );
     } else {
@@ -218,8 +221,14 @@ public class Context {
     }
     this.contracts = null;
   }
-  
-  private final static <TYPE> TYPE check( final TYPE obj ) {
+
+  private void initRequest() {
+    if ( this.request == null && this.httpRequest != null && this.httpRequest.getMessage( ) != null ) {
+      this.request = ( BaseMessage ) this.httpRequest.getMessage( );
+    }
+  }
+
+  private static <TYPE> TYPE check( final TYPE obj ) {
     if ( obj == null ) {
       StackTraceElement steMethod = Thread.currentThread( ).getStackTrace( )[1];
       StackTraceElement steCaller = Thread.currentThread( ).getStackTrace( )[2];
@@ -249,4 +258,50 @@ public class Context {
     }
   }
   
+  static Context maybeImpersonating( Context ctx ) {
+    ctx.initRequest();
+    if ( ctx.request != null ) {
+      final String userId = ctx.request.getEffectiveUserId( );
+      if ( userId != null &&
+           !Principals.isFakeIdentify(userId) &&
+           ctx.hasAdministrativePrivileges( ) ) {
+        try {
+          final User user = Accounts.lookupUserById( userId );
+          return createImpersona( ctx, user );
+        } catch ( AuthException ex ) {
+          return ctx;
+        }
+      }
+    }
+    return ctx;
+  }
+
+  private static Context createImpersona( final Context ctx, final User user ) {
+    return new DelegatingContextSupport( ctx ) {
+      @Override
+      public User getUser( ) {
+        return user;
+      }
+      
+      @Override
+      public Account getAccount( ) {
+        try {
+          return user.getAccount( );
+        } catch ( AuthException ex ) {
+          LOG.error( ex, ex );
+          throw new IllegalStateException( "Context populated with ill-defined user:  no corresponding account found.", ex );
+        }
+      }
+
+      @Override
+      public UserFullName getUserFullName( ) {
+        return UserFullName.getInstance( user );
+      }
+
+      @Override
+      public boolean hasAdministrativePrivileges( ) {
+        return user.isSystemAdmin();
+      }
+    };
+  }
 }

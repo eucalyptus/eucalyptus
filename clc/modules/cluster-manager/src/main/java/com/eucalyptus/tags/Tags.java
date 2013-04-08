@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * Copyright 2009-2013 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -20,10 +20,13 @@
 package com.eucalyptus.tags;
 
 import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import javax.persistence.EntityTransaction;
 import org.hibernate.criterion.Criterion;
+import org.hibernate.criterion.Junction;
+import org.hibernate.criterion.Restrictions;
 import com.eucalyptus.cloud.util.NoSuchMetadataException;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.Transactions;
@@ -99,17 +102,21 @@ public class Tags {
   /**
    * Count tags matching the given example and criteria.
    *
+   * <p>The count will not include reserved tags.</p>
+   *
    * @param example The tag example
-   * @param criterion The database criterion to restrict the results
-   * @param aliases Aliases for the database criterion
    * @return The matching tag count.
    */
-  public static long count( final Tag example,
-                            final Criterion criterion,
-                            final Map<String,String> aliases ) {
-    EntityTransaction transaction = Entities.get( example );
+  public static long count( final Tag example ) {
+    final EntityTransaction transaction = Entities.get( example );
     try {
-      return Entities.count( example, criterion, aliases );
+      final Junction reservedTagKey = Restrictions.disjunction();
+      reservedTagKey.add( Restrictions.like( "displayName", "aws:%" ) );
+      reservedTagKey.add( Restrictions.like( "displayName", "euca:%" ) );
+      return Entities.count(
+          example,
+          Restrictions.not( reservedTagKey ),
+          Collections.<String,String>emptyMap() );
     } finally {
       transaction.rollback();
     }
@@ -127,21 +134,12 @@ public class Tags {
     return TagFunctions.VALUE;
   }
 
-  public static void delete( final Tag example,
-                             final Criterion criterion,
-                             final Map<String,String> aliases ) throws NoSuchMetadataException {
+  public static void delete( final Tag example ) throws NoSuchMetadataException {
     final EntityTransaction db = Entities.get(Tag.class);
     try {
-      final List<Tag> entities = Entities.query( example, false, criterion, aliases );
-      if ( entities.size() == 0 ) {
-        throw new NoSuchMetadataException( "Tag not found for delete: " + example.getKey() + " for " + example.getOwner() );
-      } else if ( entities.size() < 1 ) {
-        throw new NoSuchMetadataException( "Multiple matching tags found for delete: " + example.getKey() + " for " + example.getOwner() );
-      }
-      Entities.delete( entities.get( 0 ) );
+      final Tag entity = Entities.uniqueResult( example );
+      Entities.delete( entity );
       db.commit( );
-    } catch ( NoSuchMetadataException e ) {
-      throw e;
     } catch ( Exception ex ) {
       Logs.exhaust().error( ex, ex );
       db.rollback( );
