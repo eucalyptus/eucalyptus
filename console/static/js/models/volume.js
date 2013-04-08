@@ -81,6 +81,8 @@ define([
               this.syncMethod_Delete(model, options);
             }else if(method == 'attach'){
               this.syncMethod_Attach(model, options);
+            }else if(method == 'detach'){
+              this.syncMethod_Detach(model, options);
             }
           },
           syncMethod_Create: function(model, options){
@@ -108,6 +110,13 @@ define([
             var device = model.get('device');
             var parameter = "_xsrf="+$.cookie('_xsrf');
             parameter += "&VolumeId="+volume_id+"&InstanceId="+instance_id+"&Device="+device;
+            this.makeAjaxCall(url, parameter, options);
+          },
+          syncMethod_Detach: function(model, options){
+            var url = "/ec2?Action=DetachVolume";
+            var volume_id = model.get('id');             // Need consistency in ID label  -- Kyo 040813
+            var parameter = "_xsrf="+$.cookie('_xsrf');
+            parameter += "&VolumeId="+volume_id;
             this.makeAjaxCall(url, parameter, options);
           },
 

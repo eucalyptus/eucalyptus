@@ -703,6 +703,14 @@
       });
     },
 
+    _newDetachVolumeAction : function() {
+      var dialog = 'detachvolumedialog';
+      var selected = this.tableWrapper.eucatable('getSelectedRows', 10);
+      require(['views/dialogs/' + dialog], function( dialog) {
+        new dialog({volume_ids: selected});
+      });
+    },
+
     _expandCallback : function(row){ 
       var $el = $('<div />');
       require(['app', 'views/expandos/volume'], function(app, expando) {
@@ -725,13 +733,16 @@
         itemsList['tag'] = {"name":'Tag Resource', callback: function(key, opt) {;}, disabled: function(){ return true;} }
         itemsList['delete_volume'] = {"name":'Delete Volume', callback: function(key, opt) {;}, disabled: function(){ return true;} }     // Backbone Dialog -- Kyo 040613
         itemsList['create_snapshot_bb'] = {"name":'Create Snapshot', callback: function(key, opt) {;}, disabled: function(){ return true;} }  // Backbone Dialog -- Kyo 040713
-        itemsList['attach_volume_bb'] = {"name":'Attach', callback: function(key, opt) {;}, disabled: function(){ return true;} }  // Backbone Dialog -- Kyo 040713
+        itemsList['attach_volume_bb'] = {"name":'Attach Volume', callback: function(key, opt) {;}, disabled: function(){ return true;} }  // Backbone Dialog -- Kyo 040713
+        itemsList['detach_volume_bb'] = {"name":'Detach Volume', callback: function(key, opt) {;}, disabled: function(){ return true;} }  // Backbone Dialog -- Kyo 040713
       })();
 
       // add attach action
       if ( volumes.length === 1 && volumes[0].status === 'available' ){
         itemsList['attach'] = { "name": volume_action_attach, callback: function(key, opt) { thisObj._attachAction(); } }
+        itemsList['attach_volume_bb'] = {"name":'Attach Volume', callback: function(key, opt){ thisObj._newAttachVolumeAction(); }}   // Backbone Dialog -- Kyo 040813
       }
+
       // detach actions
       if ( volumes.length > 0 ) {
         addOption = true;
@@ -747,14 +758,20 @@
               break;
           }
         }
-        if (addOption)
+        if (addOption){
           itemsList['detach'] = { "name": volume_action_detach, callback: function(key, opt) { thisObj._detachAction(); } }
+          itemsList['detach_volume_bb'] = { "name": "Detach Volume", callback: function(key, opt) { thisObj._newDetachVolumeAction(); } }    // Backbone Dialog -- Kyo 040813
+        }
       }
+
       // create snapshot-action
       if ( volumes.length === 1) {
-         if ( volumes[0].status === 'in-use' || volumes[0].status === 'available' )
+         if ( volumes[0].status === 'in-use' || volumes[0].status === 'available' ){
             itemsList['create_snapshot'] = { "name": volume_action_create_snapshot, callback: function(key, opt) { thisObj._createSnapshotAction(); } }
+            itemsList['create_snapshot_bb'] = {"name":'Create Snapshot', callback: function(key, opt){ thisObj._newCreateSnapshotAction(); }}   // BAckbone Dialog -- Kyo 040813
+         }
       }
+
       // add delete action
       if ( volumes.length > 0 ) {
         addOption = true;
@@ -764,27 +781,16 @@
             break;
           }
         }
-        if (addOption)
+        if (addOption){
           itemsList['delete'] = { "name": volume_action_delete, callback: function(key, opt) { thisObj._deleteAction(); } }
+          itemsList['delete_volume'] = {"name":'Delete Volume', callback: function(key, opt){ thisObj._deleteVolumeAction(); }}  // Backbone Dialog -- Kyo 040813
+        }
       }
 
       // add resource tag option	031913
       if (volumes.length === 1) {
         itemsList['tag'] = {"name":'Tag Resource', callback: function(key, opt){ thisObj._tagResourceAction(); }}
       }
-
-      // Backbone dialog menu   -- Kyo 040613
-      if(volumes.length > 0){
-        itemsList['delete_volume'] = {"name":'Delete Volume', callback: function(key, opt){ thisObj._deleteVolumeAction(); }}
-      };
-
-      if(volumes.length === 1) {
-        itemsList['create_snapshot_bb'] = {"name":'Create Snapshot', callback: function(key, opt){ thisObj._newCreateSnapshotAction(); }}
-      };
-
-      if(volumes.length === 1) {
-        itemsList['attach_volume_bb'] = {"name":'Attach Volume', callback: function(key, opt){ thisObj._newAttachVolumeAction(); }}
-      };
 
       return itemsList;
     },

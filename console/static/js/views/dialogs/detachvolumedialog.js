@@ -1,6 +1,6 @@
 define([
    './eucadialogview',
-   'text!./deletevolumedialog.html!strip',
+   'text!./detachvolumedialog.html!strip',
    'app',
 ], function(EucaDialogView, template, App) {
     return EucaDialogView.extend({
@@ -10,27 +10,36 @@ define([
 
             this.scope = {
                 status: 'Ignore me for now',
-                items: args.items, 
+                items: function(){                   // Feels very hacky -- Kyo 040813
+                  var volume_list = [];
+                  _.each(args.volume_ids, function(v){
+                    var match = App.data.volume.find(function(model){ return model.get('id') == v; });
+                    var instance_id = match.toJSON().attach_data.instance_id;
+                    volume_list.push({volume_id: v, instance_id: instance_id});
+                    console.log("Volume: " + v + " Instance: " + instance_id);
+                  });
+                  return volume_list;
+                },
 
                 cancelButton: function() {
                   self.close();
                 },
 
-                deleteButton: function() {
+                detachButton: function() {
 	          // FOR EACH VOLUME IN THE LIST 'items'
-	          _.each(self.scope.items, function(item) {
+	          _.each(args.volume_ids, function(item) {           // Need a better way to access the list of volumes rather than direct args.
 		    console.log("Volume Item: " + item);
 		    // FIND THE MODEL THAT MATCHES THE VOLUME ID WITH 'item'
 		    var match = App.data.volume.find(function(model){ return model.get('id') == item; });
 
-		    // PERFORM DELETE CALL OM THE MODEL              NEED to handle multi-ajax and multi-notificaiton -- Kyo 040813
-		    match.sync('delete', match, {
+		    // PERFORM DELETE CALL OM THE MODEL            Need to handle multi ajax call and multi-notification -- Kyo 040813
+		    match.sync('detach', match, {
 		      // IN CASE OF AJAX CALL'S SUCCESS
 		      success: function(data, response, jqXHR){
 		        console.log("Callback " + response + " for " + item);
 		        if(data.results){
-		          console.log("sync: Volume " +item+ " Deleted = " + data.results );
-		          notifySuccess(null, $.i18n.prop('volume_create_success', DefaultEncoder().encodeForHTML(item)));  // incorrect prop; Need to be fixed  -- Kyo 040813
+		          console.log("sync: Volume " +item+ " Detached = " + data.results );
+		          notifySuccess(null, $.i18n.prop('volume_create_success', DefaultEncoder().encodeForHTML(item)));  // incorrect prop; Need to be fixed  -- Kyoe 040813
 		        }else{
 		          notifyError($.i18n.prop('delete_volume_error', DefaultEncoder().encodeForHTML(item)), undefined_error);  // incorrect prop
 		        }
@@ -41,13 +50,11 @@ define([
 		      }
 		    });
 
-		    // DESTORY THIS MODEL
-		    match.destroy({wait: true});
 	          });
 
-	          // DISPLAY THE MODEL LIST FOR VOLUME AFTER THE DESTROY OPERATION -- FOR DEBUG
+	          // DISPLAY THE MODEL LIST FOR VOLUME AFTER THE DETACH OPERATION -- FOR DEBUG
 	          App.data.volume.each(function(item){
-		    console.log("Volume After Delete: " + item.toJSON().id);
+		    console.log("Volume After Detach: " + item.toJSON().id);
 	          });
 
                   // CLOSE THE DIALOG
