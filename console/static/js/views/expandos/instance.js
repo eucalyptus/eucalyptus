@@ -8,6 +8,7 @@ define([
     return EucaExpandoView.extend({
         initialize : function(args) {
             this.template = template;
+
             var tmp = this.model ? this.model : new Backbone.Model();
             var id = tmp.get('id');
             this.model = new Backbone.Model();
