@@ -97,7 +97,7 @@ public class LoadBalancerASGroupCreator extends AbstractEventHandler<NewLoadbala
 		// create user data to supply to haproxy tooling
 		InstanceUserDataBuilder userDataBuilder  = null;
 		try{
-			userDataBuilder=new InstanceUserDataWithCredential(evt.getContext().getUserFullName());
+			userDataBuilder= new DefaultInstanceUserDataBuilder();
 		}catch(Exception ex){
 			throw new EventHandlerException("failed to create service parameters", ex);
 		}
@@ -227,7 +227,7 @@ public class LoadBalancerASGroupCreator extends AbstractEventHandler<NewLoadbala
 		}
 	}
 	
-	private static class DefaultInstanceUserDataBuilder implements InstanceUserDataBuilder {
+	private class DefaultInstanceUserDataBuilder implements InstanceUserDataBuilder {
 		ConcurrentHashMap<String,String> dataDict= null;
 		protected DefaultInstanceUserDataBuilder(){
 			dataDict = new ConcurrentHashMap<String,String>();

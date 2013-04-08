@@ -597,11 +597,14 @@ public class EventHandlerChainNew extends EventHandlerChain<NewLoadbalancerEvent
 				/// for new servo instances, find the IP and register it with DNS
 				for(LoadBalancerServoInstance instance : registerDnsARec){
 					String ipAddr = null;
+					String privateIpAddr = null;
 					try{
 						List<RunningInstancesItemType> result = 
 								EucalyptusActivityTasks.getInstance().describeSystemInstances(Lists.newArrayList(instance.getInstanceId()));
-						if(result!=null && result.size()>0)
+						if(result!=null && result.size()>0){
 							ipAddr = result.get(0).getIpAddress();
+							privateIpAddr = result.get(0).getPrivateIpAddress();
+						}
 					}catch(Exception ex){
 						LOG.warn("failed to run describe-instances", ex);
 						continue;
@@ -623,6 +626,8 @@ public class EventHandlerChainNew extends EventHandlerChain<NewLoadbalancerEvent
 					try{
 						final LoadBalancerServoInstance update = Entities.uniqueResult(instance);
 						update.setAddress(ipAddr);
+						if(privateIpAddr!=null)
+							update.setPrivateIp(privateIpAddr);
 						Entities.persist(update);
 						db.commit();
 					}catch(NoSuchElementException ex){
