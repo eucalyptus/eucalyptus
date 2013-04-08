@@ -48,29 +48,19 @@ define([
         sync: function(method, model, options){
             var collection = this;
             if(method == 'create'){
-              var volume_id = model.get('volume_id');
-              var description = model.get('description');
+              var volume_id = $.trim(model.get('volume_id'));
+              var description = toBase64($.trim(model.get('description')));
               var parameter = "_xsrf="+$.cookie('_xsrf');
               parameter += "&VolumeId="+volume_id+"&Description="+description;
+              console.log("Model Snapshot Sync Create: " + parameter);
               $.ajax({
                 type: "POST",
                 url: "/ec2?Action=CreateSnapshot",
                 data: parameter,
                 dataType: "json",
                 async: true,
-                success:
-                  function(data, textStatus, jqXHR){
-                    if(data.results){
-                      var snapId = data.results.id;
-                      notifySuccess(null, $.i18n.prop('snapshot_create_success', DefaultEncoder().encodeForHTML(snapId), DefaultEncoder().encodeForHTML(volumeId)));
-                    }else{
-                      notifyError($.i18n.prop('snapshot_create_error', DefaultEncoder().encodeForHTML(volumeId)), undefined_error);
-                    }
-                  },
-                error:
-                  function(jqXHR, textStatus, errorThrown){
-                    notifyError($.i18n.prop('snapshot_create_error', DefaultEncoder().encodeForHTML(volumeId)), getErrorMessage(jqXHR));
-                  }
+                success: options.success,
+                error: options.error
                 });
               }
           }    
