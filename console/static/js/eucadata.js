@@ -74,7 +74,6 @@
                 });
               }
             }
-            //doUpdate = _.debounce(doUpdate, 10, true);
             ep.model.on('sync change add reset', _.debounce(doUpdate, 100, true));
 
             // set up callback for timer which updates model if necessary
