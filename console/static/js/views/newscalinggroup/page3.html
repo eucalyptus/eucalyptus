@@ -3,18 +3,20 @@
         <h3 data-msg="create_scaling_group_section_header_policies">Policies</h3>
         <div class="launch-wizard-type-main-contents">
             <div class="launch-wizard-type-option">
-                <div class="form-subrow">
-                    <div class="form-row clearfix">
-                        <input type="checkbox" data-msg="">Oldest Instance</input> <span class="subrow-buttons"><button>Up</button><button>Down</button></span>
-                    </div>
-                    <div class="form-row clearfix">
-                        <input type="checkbox" data-msg="">Newest Instance</input> <span class="subrow-buttons"><button>Up</button><button>Down</button></span>
-                    </div>
-                    <div class="form-row clearfix">
-                        <input type="checkbox" data-msg="">Oldest Launch Configuration</input> <span class="subrow-buttons"><button>Up</button><button>Down</button></span>
-                    </div>
-                    <div class="form-row clearfix">
-                        <input type="checkbox" data-msg="">Closest To Complete Running Hour</input> <span class="subrow-buttons"><button>Up</button><button>Down</button></span>
+                <div class="form-subrow" style="height:180px">
+                    <div data-ui-sortable="">
+                        <div class="form-row clearfix">
+                            <span data-ui-toggle="toggletest.value"></span><span>Oldest Instance</span>
+                        </div>
+                        <div class="form-row clearfix">
+                            <span data-ui-toggle="toggletest.value"></span><span>Newest Instance</span>
+                        </div>
+                        <div class="form-row clearfix">
+                            <span data-ui-toggle="toggletest.value"></span><span>Oldest Launch Configuration</span>
+                        </div>
+                        <div class="form-row clearfix">
+                            <span data-ui-toggle="toggletest.value"></span><span>Closest To Complete Running Hour</span>
+                        </div>
                     </div>
                 </div>
             </div>

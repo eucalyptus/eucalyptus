@@ -104,7 +104,7 @@
             }
         });
         thisObj.bbdata.on('change reset', function() {
-//            thisObj.refreshTable()
+            thisObj.refreshTable.call(thisObj)
         });
         thisObj.refreshTable();
       });

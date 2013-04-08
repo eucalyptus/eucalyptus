@@ -30,14 +30,14 @@
 		
 		this.each(function(){
 			var $this = $(this);
-			if($this.attr('tagName') == 'INPUT'){
+			if(this.nodeName == 'INPUT'){
 				var id=$this.attr('id');
 				label(settings.keepLabel, id);
-				$this.addClass('iT_checkbox').before('<label class="itoggle" for="'+id+'"><span></span></label>');
+				$this.addClass('iT_checkbox').wrap('<label class="itoggle"></label>');
 				if($this.attr('checked')){
-					$this.prev('label').addClass('iTon');
+					$this.parents('label').addClass('iTon');
 				}else{
-					$this.prev('label').addClass('iToff');
+					$this.parents('label').addClass('iToff');
 				}
 			}else{
 				$this.children('input:'+settings.type).each(function(){

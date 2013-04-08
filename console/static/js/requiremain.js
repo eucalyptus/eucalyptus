@@ -10,7 +10,7 @@ require.config({
         baseUrl: 'js',
         paths: {
 		'underscore': 'underscore-1.4.3',
-		'backbone': 'backbone-0.9.10',
+		'backbone': 'backbone-1.0',
         'visualsearch' : 'visualsearch/build/visualsearch',
 		'backbone-validation': 'backbone-validation-min'
         },

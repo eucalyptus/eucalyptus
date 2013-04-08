@@ -63,7 +63,7 @@
             ep.model = app.data[ep.name];
 
             var doUpdate = function() {
-              console.log('EUCADATA', name, ep.model.length);
+//              console.log('EUCADATA', name, ep.model.length);
               thisObj._data[name] = {
                 lastupdated: new Date(),
                 results: ep.model.toJSON()
@@ -75,7 +75,7 @@
               }
             }
             //doUpdate = _.debounce(doUpdate, 10, true);
-            ep.model.on('change reset add', _.debounce(doUpdate, 100, true));
+            ep.model.on('sync change add reset', _.debounce(doUpdate, 100, true));
 
             // set up callback for timer which updates model if necessary
             thisObj._callbacks[name] = {callback: function(){
