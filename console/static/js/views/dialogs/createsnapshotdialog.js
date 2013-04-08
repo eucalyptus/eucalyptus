@@ -3,7 +3,8 @@ define([
    'text!./createsnapshotdialog.html!strip',
    'models/snapshot',
    'app',
-], function(EucaDialogView, template, Snapshot, App) {
+   'backbone',
+], function(EucaDialogView, template, Snapshot, App, Backbone) {
     return EucaDialogView.extend({
 
         initialize : function(args) {
