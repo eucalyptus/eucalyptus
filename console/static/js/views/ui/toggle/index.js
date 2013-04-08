@@ -5,32 +5,27 @@ define([
 	return Backbone.View.extend({
 		initialize : function() {
 			this.$el.html(template);
+            console.log('iToggle');
+			this.rview = rivets.bind(this.$el, {model: this.model});
             $('input', this.$el).iToggle({
-                easing: 'easeOutExpo',
-                type: 'radio',
-                keepLabel: true,
-                easing: 'easeInExpo',
-                speed: 300,
-                onClick: function(){
-                    //Function here
+                click: function(){
+                    console.log("click");
                 },
                 onClickOn: function(){
-                    //Function here
+                    console.log("activated");
                 },
                 onClickOff: function(){
-                    //Function here
-                },
-                onSlide: function(){
-                    //Function here
+                    console.log("deactivated");
                 },
                 onSlideOn: function(){
                     //Function here
+                    console.log("activated");
                 },
                 onSlideOff: function(){
                     //Function here
+                    console.log("deactivated");
                 },
             });
-			this.rview = rivets.bind(this.$el, this);
 			this.render();
 		},
 		render : function() {

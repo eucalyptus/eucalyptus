@@ -14,7 +14,7 @@ define([
         var self = this;
         this.each(function(m) {
             var newtags = tags.where({res_id: m.get('id')});
-            m.get('tags').reset(newtags);
+            m.get('tags').set(newtags);
         });
     },
     sync: function(method, model, options) {
@@ -32,7 +32,8 @@ define([
             if (describe.results) {
               var results = describe.results;
               _.each(results, function(r) { r.tags = new Backbone.Collection(); });
-              options.success && options.success(model, results, options);
+//              options.success && options.success(model, results, options);
+              options.success && options.success(results);
               collection.resetTags();
             } else {
               ;//TODO: how to notify errors?

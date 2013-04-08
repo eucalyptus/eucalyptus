@@ -77,12 +77,16 @@ define([
                            console.log('TAG', t);
                            if (t.get('_new') && !t.get('_deleted')) { 
                                console.log('add', t); 
-                               origtags.add(t);
+                               t.save({ success: function() {
+                                origtags.add(t);
+                               }});
                            }
                            if (t.get('_deleted')) {
                                _.each(origtags.where({id: t.get('id')}), function(ot) { 
                                    console.log('remove', ot); 
-                                   origtags.remove(ot) 
+                                   t.destroy({ success: function() {
+                                    origtags.remove(ot) 
+                                   }});
                                });
                            }
                            if (t.get('_edited')) {

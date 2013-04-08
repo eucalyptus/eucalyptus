@@ -34,12 +34,12 @@ define([
     sync: function(method, model, options) {
       if (method == 'create') {
         var data = "_xsrf="+$.cookie('_xsrf');
-        data += "&ResourceId.1="+model.get('resource_id');
+        data += "&ResourceId.1="+model.get('res_id');
         data += "&Tag.1.Key="+model.get('name');
         data += "&Tag.1.Value="+model.get('value');
         $.ajax({
           type:"POST",
-          url:"/autoscaling?Action=CreateTags",
+          url:"/ec2?Action=CreateTags",
           data:data,
           dataType:"json",
           async:true,
@@ -59,12 +59,12 @@ define([
       }
       else if (method == 'delete') {
         var data = "_xsrf="+$.cookie('_xsrf');
-        data += "&ResourceId.1="+model.get('resource_id');
+        data += "&ResourceId.1="+model.get('res_id');
         data += "&Tag.1.Key="+model.get('name');
         data += "&Tag.1.Value="+model.get('value');
         $.ajax({
           type:"POST",
-          url:"/autoscaling?Action=DeleteTags",
+          url:"/ec2?Action=DeleteTags",
           data:data,
           dataType:"json",
           async:true,

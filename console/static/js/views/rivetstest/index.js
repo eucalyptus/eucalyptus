@@ -1,6 +1,7 @@
 define([
     'app',
 	'dataholder',
+    'backbone',
 	'text!./template.html!strip',
     'rivets',
     'views/dialogs/testdialog',
@@ -10,7 +11,7 @@ define([
     'models/launchconfig',
     'models/tag',
     './leaktest',
- ], function( app, dh, template, rivets, TestDialog, QuickScaleDialog, ScalingGroup, Search, LaunchConfig, Tag, Leaker) {
+ ], function( app, dh, Backbone, template, rivets, TestDialog, QuickScaleDialog, ScalingGroup, Search, LaunchConfig, Tag, Leaker) {
 	return Backbone.View.extend({
 		initialize : function() {
 			var self = this;
@@ -39,6 +40,7 @@ define([
             var leakScope = new Backbone.Model({count: 0});
 
             var scope = {
+                testBool: new Backbone.Model({value: true}),
                 foo: { bar: { baz: 'Its deep, man' } },
                 leaktest: function() {
                     leakScope.set('count', leakScope.get('count') + 1);

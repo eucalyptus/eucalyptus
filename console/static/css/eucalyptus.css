@@ -3266,3 +3266,8 @@ filter: progid:DXImageTransform.Microsoft.gradient( startColorstr='#ededed', end
 .tag-edit:hover .tag-control {
     visibility: visible;
 }
+
+.ui-sortable span {
+    vertical-align: top;
+    line-height: 27px;
+}
