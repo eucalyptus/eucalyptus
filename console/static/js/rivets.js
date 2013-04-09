@@ -100,10 +100,12 @@ rivets.configure({
 });
 
 rivets.binders["ui-*"] = {
+    tokenizes: true,
     bind: function(el) {
         var self = this;
         // console.log('UI', this.args[0], el);
         require(['views/ui/' + this.args[0] + '/index'], function(view) {
+            console.log('BIND', self.bbLastValue);
             self.bbView = new view({
                 model: self.bbLastValue != null ? self.bbLastValue : {},
                 parentmodel: self.model,
@@ -140,6 +142,17 @@ rivets.binders["msg"] = {
       } else {
         return el.textContent = value != null ? value : '';
       }
+    }
+}
+
+rivets.binders["tooltip"] = {
+    tokenizes: true,
+    routine: function(el, keyname) {
+      var value = window[this.keypath];
+
+      if (value == null) return;
+
+      return $(el).attr('title', value);
     }
 }
 

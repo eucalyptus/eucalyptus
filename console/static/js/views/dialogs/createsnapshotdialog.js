@@ -3,7 +3,8 @@ define([
    'text!./createsnapshotdialog.html!strip',
    'models/snapshot',
    'app',
-], function(EucaDialogView, template, Snapshot, App) {
+   'backbone',
+], function(EucaDialogView, template, Snapshot, App, Backbone) {
     return EucaDialogView.extend({
 
         initialize : function(args) {
@@ -14,11 +15,14 @@ define([
                 status: 'Ignore me for now',
                 snapshot: new Snapshot({volume_id: args.volume_id, description: ''}),
 
-                cancelButton: function() {
-                  self.close();
+                cancelButton: {
+                    click: function() {
+                      self.close();
+                    },
                 },
 
-                createButton: function() {
+                createButton: {
+                    click: function() {
 		  // GET THE INPUT FROM HTML VIEW
 		  var volumeId = self.scope.snapshot.get('volume_id');
 		  var description = self.scope.snapshot.get('description');
@@ -56,6 +60,7 @@ define([
 	          // CLOSE THE DIALOG
 	         self.close();
                }
+            }
             }
 
             this._do_init();
