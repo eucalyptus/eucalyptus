@@ -97,7 +97,7 @@ public enum MigrationState {
      */
     @Override
     public boolean apply( @Nullable VmInstance input ) {
-      return input.getRuntimeState( ).getMigrationTask( ).getState( ).isMigrating( );
+	return VmInstance.VmState.RUNNING.apply( input ) && input.getRuntimeState( ).getMigrationTask( ).getState( ).isMigrating( );
     }
     
   }
