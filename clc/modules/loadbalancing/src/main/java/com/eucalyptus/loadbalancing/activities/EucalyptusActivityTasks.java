@@ -48,7 +48,6 @@ import com.eucalyptus.auth.euare.ListRolesType;
 import com.eucalyptus.auth.euare.RoleType;
 import com.eucalyptus.auth.principal.AccountFullName;
 import com.eucalyptus.auth.principal.Principals;
-import com.eucalyptus.auth.principal.Role;
 import com.eucalyptus.autoscaling.activities.DispatchingClient;
 import com.eucalyptus.autoscaling.activities.EucalyptusClient;
 import com.eucalyptus.autoscaling.common.AutoScaling;
@@ -1490,7 +1489,7 @@ public class EucalyptusActivityTasks {
 			req.setGroupName(this.groupName);
 			IpPermissionType perm = new IpPermissionType();
 			perm.setToPort(this.portNum);
-			perm.setIpRanges(Lists.newArrayList(Arrays.asList("0.0.0.0/0")));
+			perm.setCidrIpRanges( Lists.newArrayList( Arrays.asList( "0.0.0.0/0" ) ) );
 			perm.setIpProtocol(this.protocol); // udp too?
 			req.setIpPermissions(Lists.newArrayList(Arrays.asList(perm)));
 			return req;
@@ -1525,7 +1524,7 @@ public class EucalyptusActivityTasks {
 			req.setGroupName(this.groupName);
 			IpPermissionType perm = new IpPermissionType();
 			perm.setToPort(this.portNum);
-			perm.setIpRanges(Lists.newArrayList(Arrays.asList("0.0.0.0/0")));
+			perm.setCidrIpRanges( Lists.newArrayList( Arrays.asList( "0.0.0.0/0" ) ) );
 			perm.setIpProtocol(this.protocol);
 			req.setIpPermissions(Lists.newArrayList(Arrays.asList(perm)));
 			return req;

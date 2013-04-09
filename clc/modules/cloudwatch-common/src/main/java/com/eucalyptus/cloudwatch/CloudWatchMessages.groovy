@@ -118,7 +118,6 @@ public class DescribeAlarmHistoryResult extends EucalyptusData {
   String nextToken;
   public DescribeAlarmHistoryResult() {  }
 }
-@HttpEmbedded
 public class DimensionFilter extends EucalyptusData {
   String name;
   String value;
