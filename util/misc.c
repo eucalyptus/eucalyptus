@@ -469,14 +469,14 @@ pid_t timewait(pid_t pid, int *status, int timeout_sec)
     return (rc);
 }
 
-//! 
+//!
 //! Attempt to kill a process. This could wait up to 3 seconds to confirm/infirm the
 //! success of the kill operations.
 //!
 //! @param pid the process identifier for the process we're terminating
 //!
 //! @return EUCA_OK on success or EUCA_ERROR on failure
-//! 
+//!
 int killwait(pid_t pid)
 {
     int status = 0;
@@ -1304,7 +1304,7 @@ int daemonmaintain(char *cmd, char *procname, char *pidfile, int force, char *ro
                         fclose(FH);
                     }
                 }
-                
+
                 EUCA_FREE(pidstr);
             }
         }
@@ -2718,16 +2718,43 @@ int get_remoteDevForNC(const char * the_iqn, const char * remoteDev, char * remo
                 }
             }
         }
-        
+
         strncat(remoteDevForNC, toka, remoteDevForNCLen);
         if (ptra != NULL) { // there are more fields to come
             strncat(remoteDevForNC, DEV_STR_DELIMITER, remoteDevForNCLen);
         }
     }
     free(remoteDevCopy);
-    
+
     return ret;
 }
+
+//!
+//! @param[in] string string
+//! @param[in] list   list of strings
+//! @param[in] count  number of entries in list
+//!
+//!
+//! @return FALSE if string not in list of strings, TRUE if string is in list.
+//!
+
+int check_for_string_in_list (char *string, char **list, int count)
+{
+    if (!string || !count || !list || !(*list)) {
+        return FALSE;
+    }
+
+    for (int i = 0; i < count; i++) {
+        if (!list[i]) {
+            return FALSE;
+        }
+        if (!strcmp(string, list[i])) {
+            return TRUE;
+        }
+    }
+    return FALSE;
+}
+
 
 #ifdef _UNIT_TEST
 //!
@@ -2764,15 +2791,15 @@ int main(int argc, char **argv)
         char remoteDevForNC[4096] = "foobar";
         assert(get_remoteDevForNC(the_iqn, remoteDev, remoteDevForNC, sizeof(remoteDevForNC))==0);
         assert(strcmp(remoteDevForNC, "a,b,2,f,g,h")==0);
-        
+
         remoteDev = "a,b,d=2,f,g,h";
         assert(get_remoteDevForNC(the_iqn, remoteDev, remoteDevForNC, sizeof(remoteDevForNC))==0);
         assert(strcmp(remoteDevForNC, "a,b,2,f,g,h")==0);
-        
+
         remoteDev = "a,b,2,f,g,h";
         assert(get_remoteDevForNC(the_iqn, remoteDev, remoteDevForNC, sizeof(remoteDevForNC))==0);
         assert(strcmp(remoteDevForNC, "a,b,2,f,g,h")==0);
-        
+
         char * remoteDevForNCGood = "b483-1000,,1,kyF3TR2zPQ/t01+U6irzECGiVdrVbOPGPjVDJqmYwhWDaWAd5P98YkGzUmhrr/C3K1+M5qO//dXtFOyU90uxL0OuBdumb3zPJ3Tpfx7O0cQ8x+2XufKJl47G8Ca3vkravOXqyRV7hmFrvGsSZXk0eqzBN7liYBzkUdpj3zhe0PMwxft+e1WyQSAvNNB/Ea41jkrG8T0X2amYE9gflqmOZlWLUiJLZV6GgJ7rV3Xb3uKtEaLqHISuaGsK1FGT0oZzpNdd4DPTeo8mo+XfphlMq0NAIZl/+VdUfCRbGhU977koY4nPX3W7xwg+ZP5S3qGF+b9R7mrUD8s4izRkqSEZjg==,,192.168.25.182,iqn.1992-04.com.emc:cx.apm00121200804.a6";
         remoteDev = "b483-1000,,iqn.1994-05.com.redhat:d0d578d4d530=1|iqn.1994-05.com.redhat:e4a4c74e2470=1,kyF3TR2zPQ/t01+U6irzECGiVdrVbOPGPjVDJqmYwhWDaWAd5P98YkGzUmhrr/C3K1+M5qO//dXtFOyU90uxL0OuBdumb3zPJ3Tpfx7O0cQ8x+2XufKJl47G8Ca3vkravOXqyRV7hmFrvGsSZXk0eqzBN7liYBzkUdpj3zhe0PMwxft+e1WyQSAvNNB/Ea41jkrG8T0X2amYE9gflqmOZlWLUiJLZV6GgJ7rV3Xb3uKtEaLqHISuaGsK1FGT0oZzpNdd4DPTeo8mo+XfphlMq0NAIZl/+VdUfCRbGhU977koY4nPX3W7xwg+ZP5S3qGF+b9R7mrUD8s4izRkqSEZjg==,,192.168.25.182,iqn.1992-04.com.emc:cx.apm00121200804.a6";
         the_iqn = "iqn.1994-05.com.redhat:d0d578d4d530";

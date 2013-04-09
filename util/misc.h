@@ -197,6 +197,7 @@ char parse_boolean(const char *s);
 int drop_privs(void);
 int timeshell(char *command, char *stdout_str, char *stderr_str, int max_size, int timeout);
 int get_remoteDevForNC(const char * the_iqn, const char * remoteDev, char * remoteDevForNC, int remoteDevForNCLen);
+int check_for_string_in_list (char *string, char **list, int count);
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |

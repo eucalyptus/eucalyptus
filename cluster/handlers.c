@@ -283,7 +283,7 @@ int schedule_instance(virtualMachine * vm, char *targetNode, int *outresid);
 int schedule_instance_roundrobin(virtualMachine * vm, int *outresid);
 int schedule_instance_explicit(virtualMachine * vm, char *targetNode, int *outresid);
 int schedule_instance_greedy(virtualMachine * vm, int *outresid);
-int schedule_instance_migration(ncInstance *instance, char **includeNodes, char **excludeNodes, int includeNodeCount, int excludeNodeCount, int inresid, int *outresid);
+int schedule_instance_migration(ncInstance *instance, char **includeNodes, char **excludeNodes, int includeNodeCount, int excludeNodeCount, int inresid, int *outresid, ccResourceCache *resourceCacheLocal);
 int doRunInstances(ncMetadata * pMeta, char *amiId, char *kernelId, char *ramdiskId, char *amiURL, char *kernelURL, char *ramdiskURL, char **instIds,
                    int instIdsLen, char **netNames, int netNamesLen, char **macAddrs, int macAddrsLen, int *networkIndexList, int networkIndexListLen,
                    char **uuids, int uuidsLen, int minCount, int maxCount, char *accountId, char *ownerId, char *reservationId, virtualMachine * ccvm,
@@ -2508,7 +2508,6 @@ int refresh_instances(ncMetadata * pMeta, int timeout, int dolock)
                                 EUCA_FREE(ip);
                             }
 
-                            //#if 0
                             if ((myInstance->ccnet.publicIp[0] != '\0' && strcmp(myInstance->ccnet.publicIp, "0.0.0.0"))
                                 && (myInstance->ncnet.publicIp[0] == '\0' || !strcmp(myInstance->ncnet.publicIp, "0.0.0.0"))) {
                                 // CC has network info, NC does not
@@ -2520,7 +2519,6 @@ int refresh_instances(ncMetadata * pMeta, int timeout, int dolock)
                                     LOGWARN("could not send AssignAddress to NC\n");
                                 }
                             }
-                            //#endif
 
                             refresh_instanceCache(myInstance->instanceId, myInstance);
                             if (!strcmp(myInstance->state, "Extant")) {
@@ -3121,6 +3119,7 @@ int schedule_instance_roundrobin(virtualMachine * vm, int *outresid)
     return (0);
 }
 
+
 //!
 //! @param[in]  instance
 //! @param[in]  includeNodes
@@ -3136,48 +3135,94 @@ int schedule_instance_roundrobin(virtualMachine * vm, int *outresid)
 //!
 //! @note
 //!
-int schedule_instance_migration(ncInstance *instance, char **includeNodes, char **excludeNodes, int includeNodeCount, int excludeNodeCount, int inresid, int *outresid)
+int schedule_instance_migration(ncInstance *instance, char **includeNodes, char **excludeNodes, int includeNodeCount, int excludeNodeCount, int inresid, int *outresid, ccResourceCache *resourceCacheLocal)
 {
     int ret = 0;
 
-    LOGDEBUG("invoked\n");
+    LOGDEBUG("invoked: include=%d, exclude=%d\n", includeNodeCount, excludeNodeCount);
 
     if (includeNodes && excludeNodes) {
         LOGERROR("[%s] migration scheduler cannot be called with both nodes to include and nodes to exclude; the options are mutually exclusive.\n", instance->instanceId);
         ret = 1;
         goto out;
     }
-
-    // This is easy: we can keep calling the round-robin scheduler until we get a node we like.
-    if (config->schedPolicy == SCHEDROUNDROBIN) {
+    // Trivial case: migration to a specific node:
+    if (includeNodeCount == 1) {
+        LOGINFO("[%s] attempting to schedule migration to specific node: %s\n", instance->instanceId,
+                includeNodes[0]);
+        if (!strcmp(instance->migration_src, includeNodes[0])) {
+            LOGERROR("[%s] can't schedule SAME-NODE migration from %s to %s\n", instance->instanceId,
+                     instance->migration_src, includeNodes[0]);
+            ret = 1;
+            goto out;
+        }
+        ret = schedule_instance(&(instance->params), includeNodes[0], outresid);
+    } else if (config->schedPolicy == SCHEDROUNDROBIN) {
+        // This is relatively easy: we can keep calling the round-robin scheduler until we get a node we like.
         int first_try = -1; // To break loops.
         int done = 0;
         int found = 0;
         while (!done) {
             ret = schedule_instance_roundrobin(&(instance->params), outresid);
-            if (*outresid != inresid) {
+
+            if (first_try == -1) {
+                first_try = *outresid;
+            } else if (*outresid == first_try) {
+                LOGERROR("[%s] has looped around without scheduling a destination, breaking loop\n", instance->instanceId);
+                // We've already been here. We know this one won't work.
+                //done++;
+                break;
+            }
+
+            if (*outresid == inresid) {
+                // Tried to schduled to the source node, so retry.
+                LOGDEBUG("[%s] can't schedule src_index=%d == dst_index=%d (%s > %s), trying again...\n",
+                         instance->instanceId, inresid, *outresid, instance->migration_src,
+                         resourceCacheLocal->resources[*outresid].hostname);
+            } else if (excludeNodeCount) {
+                LOGDEBUG("[%s] checking exclusion list (%d entries) [0]=%s\n", instance->instanceId, excludeNodeCount, excludeNodes[0]);
+                if (check_for_string_in_list(resourceCacheLocal->resources[*outresid].hostname,
+                                             excludeNodes, excludeNodeCount)) {
+                    // Exclusion list takes priority over inclusion list.
+                    LOGDEBUG("[%s] can't schedule src_index=%d, dst_index=%d because node %s is in destination-exclusion list (%d entries)\n",
+                             instance->instanceId, inresid, *outresid, resourceCacheLocal->resources[*outresid].hostname, excludeNodeCount);
+                } else {
+                    // Found one.
+                    // Double check.
+                    if (*outresid != inresid) {
+                        LOGDEBUG("[%s] scheduled: src_index=%d, dst_index=%d -- node %s is not in destination-exclusion list (%d entries)\n",
+                                 instance->instanceId, inresid, *outresid, resourceCacheLocal->resources[*outresid].hostname, excludeNodeCount);
+                        done++;
+                        found++;
+                    }
+                }
+            } else if (includeNodeCount) {
+                if (!check_for_string_in_list(resourceCacheLocal->resources[*outresid].hostname,
+                                              includeNodes, includeNodeCount)) {
+                    LOGDEBUG("[%s] can't schedule src_index=%d, dst_index=%d because node %s is not in destination-inclusion list (%d entries)\n",
+                             instance->instanceId, inresid, *outresid, resourceCacheLocal->resources[*outresid].hostname, includeNodeCount);
+                } else {
+                    LOGDEBUG("[%s] scheduled: src_index=%d, dst_index=%d -- node %s is in destination-inclusion list (%d entries)\n",
+                             instance->instanceId, inresid, *outresid, resourceCacheLocal->resources[*outresid].hostname, includeNodeCount);
+                    done++;
+                    found++;
+                }
+            } else if (*outresid != inresid) {
                 // Found a destination node that's not the source node.
-                LOGDEBUG("[%s] scheduled: src_index=%d, dst_index=%d\n", instance->instanceId, inresid, *outresid);
+                LOGDEBUG("[%s] scheduled: src_index=%d, dst_index=%d (%s > %s)\n", instance->instanceId, inresid, *outresid, instance->migration_src, resourceCacheLocal->resources[*outresid].hostname);
                 done++;
                 found++;
-            } else {
-                // Tried to schduled to the source node, so retry.
-                LOGDEBUG("[%s] can't schedule src_index=%d == dst_index=%d, trying again...\n",
-                         instance->instanceId, inresid, *outresid);
-                if (first_try == -1) {
-                    first_try = *outresid;
-                } else if (*outresid == first_try) {
-                    LOGERROR("[%s] has looped around without scheduling a destination, breaking loop\n", instance->instanceId);
-                    done++;
-                }
             }
         }
         if (!found) {
             ret = 1;
         }
+    } else if ((config->schedPolicy == SCHEDGREEDY) || (config->schedPolicy == SCHEDPOWERSAVE)) {
+        //
+        ret = schedule_instance_greedy(&(instance->params), outresid);
     } else {
         // If not ROUNDROBIN, fall back to configured scheduling policy and hope (for now).
-        // FIXME: (Why should be obvious.)
+        // FIXME: This doesn't avoid scheduling source nodes or handle includeNodes/excludeNodes.
         ret = schedule_instance(&(instance->params), NULL, outresid);
     }
 
@@ -4419,10 +4464,12 @@ int doMigrateInstances(ncMetadata * pMeta, char *sourceNode, char *instanceId, c
         for (int idx = 0; idx < found_instances; idx++) {
             if (allowHosts) {
                 // destinationHosts is whitelist, pass as includeNodes.
-                rc = schedule_instance_migration(nc_instances[idx], destinationNodes, NULL, destinationNodeCount, 0, src_index, &dst_index);
+                LOGDEBUG("[%s] scheduling instance with a destination-inclusion list\n", nc_instances[idx]->instanceId);
+                rc = schedule_instance_migration(nc_instances[idx], destinationNodes, NULL, destinationNodeCount, 0, src_index, &dst_index, &resourceCacheLocal);
             } else {
+                LOGDEBUG("[%s] scheduling instance with a destination-exclusion list\n", nc_instances[idx]->instanceId);
                 // destinationHosts is blacklist, pass as excludeNodes.
-                rc = schedule_instance_migration(nc_instances[idx], NULL, destinationNodes, 0, destinationNodeCount, src_index, &dst_index);
+                rc = schedule_instance_migration(nc_instances[idx], NULL, destinationNodes, 0, destinationNodeCount, src_index, &dst_index, &resourceCacheLocal);
             }
 
             if (rc || (dst_index == -1)) {
