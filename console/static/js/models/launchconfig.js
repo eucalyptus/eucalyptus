@@ -117,7 +117,6 @@ define([
               function(data, textStatus, jqXHR){
                 if ( data.results ) {
                   notifySuccess(null, $.i18n.prop('create_launch_config_run_success', DefaultEncoder().encodeForHTML(volumeId), DefaultEncoder().encodeForHTML(instanceId)));
-                  thisObj.tableWrapper.eucatable('refreshTable');
                 } else {
                   notifyError($.i18n.prop('create_launch_config_run_error', DefaultEncoder().encodeForHTML(model.name), DefaultEncoder().encodeForHTML(model.name)), undefined_error);
                 }

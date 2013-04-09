@@ -4,35 +4,28 @@
     <li><a href="#tabs-2" data-msg="tab_tags">Tags</a></li>
   </ul>
   <div id="tabs-1" class="tab">
-      <ul class="instance-expanded clearfix">
-		<li><div class="expanded-title" data-msg="snapshot_table_expanded_volume_name">VOLUME</div><div class="expanded-value" data-text="display_id">myvol</div></li>
-		<li><div class="expanded-title" data-msg="snapshot_table_expanded_volume_id">VOLUME ID</div><div class="expanded-value" data-text="id">vol-75645353</div></li>
-		<li><div class="expanded-title" data-msg="snapshot_table_expanded_status">STATUS</div><div class="expanded-value" data-text="status">Available</div></li>
-		<li><div class="expanded-title" data-msg="volume_table_expanded_creation_time">CREATION TIME</div><div class="expanded-value" data-text="create_time">9:45:53 AM</div></li>
+      <ul class="volume-expanded clearfix">
+		<li><div class="expanded-title" data-msg="snapshot_table_expanded_volume_name">VOLUME</div><div class="expanded-value" data-text="volume.display_id"></div></li>
+		<li><div class="expanded-title" data-msg="snapshot_table_expanded_volume_id">VOLUME ID</div><div class="expanded-value" data-text="volume.id"></div></li>
+		<li><div class="expanded-title" data-msg="snapshot_table_expanded_status">STATUS</div><div class="expanded-value" data-text="volume.status"></div></li>
+		<li><div class="expanded-title" data-msg="volume_table_expanded_creation_time">CREATION TIME</div><div class="expanded-value" data-text="volume.create_time"></div></li>
       </ul>
-      <ul class="instance-expanded clearfix">
-		<li><div class="expanded-title" data-msg="volume_table_expanded_attached_instance_name">ATTACHED TO INSTANCE (NAME)</div><div class="expanded-value">my instance</div></li>
-		<li><div class="expanded-title" data-msg="volume_table_expanded_attached_instance_id">ATTACHED TO INSTANCE (ID)</div><div class="expanded-value">i-75846374</div></li>
-		<li><div class="expanded-title" data-msg="snapshot_table_expanded_size">SIZE (GB)</div><div class="expanded-value" data-text="size">2</div></li>
-		<li><div class="expanded-title" data-msg="volume_table_expanded_az">AVAILABILITY ZONE</div><div class="expanded-value" data-text="zone">zone 2</div></li>
+      <ul class="volume-expanded clearfix">
+		<li><div class="expanded-title" data-msg="volume_table_expanded_attached_instance_name">ATTACHED TO INSTANCE (NAME)</div><div class="expanded-value"></div></li>
+		<li><div class="expanded-title" data-msg="volume_table_expanded_attached_instance_id">ATTACHED TO INSTANCE (ID)</div><div class="expanded-value" data-text="volume.atttach_data.instance_id"></div></li>
+		<li><div class="expanded-title" data-msg="snapshot_table_expanded_size">SIZE (GB)</div><div class="expanded-value" data-text="volume.size"></div></li>
+		<li><div class="expanded-title" data-msg="volume_table_expanded_az">AVAILABILITY ZONE</div><div class="expanded-value" data-text="volume.zone"></div></li>
       </ul>
-      <ul class="instance-expanded clearfix">
-		<li><div class="expanded-title" data-msg="snapshot_table_expanded_name">SNAPSHOT NAME</div><div class="expanded-value">mysnap</div></li> 
-		<li><div class="expanded-title" data-msg="snapshot_table_expanded_id">SNAPSHOT ID</div><div class="expanded-value" data-text="snapshot_id">snap-75645353</div></li>
+      <ul class="volume-expanded clearfix">
+		<li><div class="expanded-title" data-msg="snapshot_table_expanded_name">SNAPSHOT NAME</div><div class="expanded-value" data-text="snapshot.display_id"></div></li> 
+		<li><div class="expanded-title" data-msg="snapshot_table_expanded_id">SNAPSHOT ID</div><div class="expanded-value" data-text="snapshot.id"></div></li>
 	  </ul>
 	</div>
 	
 	<div id="tabs-2" class="tab">
-	  <ul class="instance-expanded clearfix">
+	  <ul class="tags-expanded clearfix">
 	  	<li>
         <div data-ui-tags="tags"></div>
-		<table>
-			<thead><tr><th data-msg="tag_display_hdr_key">KEY</th><th data-msg="tag_display_hdr_value">VALUE</th></tr>
-			</thead>
-			<tbody>
-				<tr data-each-item="tags"><td><span data-text="item.name"></span></td><td><span data-text="item.value"></span></td></tr>
-			</tbody>
-		</table>
 		</li>
 	  </ul>
 	</div>

@@ -13,7 +13,6 @@ define([
             self.refreshNamedColumns();
         });
         self.get('tags').on('add', function(model, models) {
-            console.log(arguments);
             tags.add(model);
         });
         self.get('tags').on('change', function(model, models) {

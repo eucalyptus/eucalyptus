@@ -1,11 +1,10 @@
 define([
    'underscore',
-   './eucadialogview',
-   'text!./edittags.html!strip',
+   'text!./template.html!strip',
    'backbone',
    'models/tag'
-], function(_, EucaDialogView, template, Backbone, Tag) {
-    return EucaDialogView.extend({
+], function(_, template, Backbone, Tag) {
+    return Backbone.View.extend({
         initialize : function(args) {
             var self = this;
             this.template = template;
@@ -100,9 +99,15 @@ define([
                        self.close();
                   }
                 }
-            }
+            } // end of scope
 
-            this._do_init();
+			this.$el.html(template);
+			this.rview = rivets.bind(this.$el, this.scope);
+			this.render(this.scope);
         },
+		render : function() {
+            this.rview.sync();
+			return this;
+		}
 	});
 });

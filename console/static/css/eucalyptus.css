@@ -3216,4 +3216,28 @@ filter: progid:DXImageTransform.Microsoft.gradient( startColorstr='#ededed', end
     display: inline-block;
 }
 
+.tags-edited {
+  color: black;
+}
+.tags-deleted {
+  color: red;
+}
+.ui-dialog .scaling-group-instances {
+	height: 200px;
+}
+.ui-dialog .scale-max label {
+	margin-top: 34px;
+}
 
+.tag-edit .tag-control {
+    visibility: hidden;
+}
+
+.tag-edit:hover .tag-control {
+    visibility: visible;
+}
+
+.ui-sortable span {
+    vertical-align: top;
+    line-height: 27px;
+}

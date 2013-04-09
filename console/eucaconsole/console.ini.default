@@ -1,6 +1,6 @@
 [server]
 # set this value to the address or dns name of your cloud front end
-clchost=10.101.1.36
+clchost=localhost
 # this is used in the about dialog to direct people to the admin console
 clcwebport=8443
 

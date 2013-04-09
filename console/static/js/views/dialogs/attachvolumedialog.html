@@ -1,0 +1,28 @@
+<div>
+    <div class="title" data-msg="attach_volume_dialog_title">Attach volume to instance</div>
+    <div class="body">
+                <div class="form-row top-form-row clearfix">
+                  <label for="volume-attach-volume-id" class="required-label" data-msg="volume_dialog_attach_volume_label">Volume</label>
+                  <input type="text" id="volume-attach-volume-id" class="required" data-value="volume.volume_id"/>
+                </div>
+                <div class="form-row clearfix">
+                  <label for="volume-attach-instance-id" class="required-label" data-msg="volume_dialog_attach_instance_label">Instance</label>
+                  <input type="text" id="volume-attach-instance-id" class="required" data-value="volume.instance_id"/>
+                </div>
+                <div class="form-row clearfix">
+                  <label for="volume-attach-device-name" class="required-label" data-msg="volume_dialog_attach_device_label">Attach as device</label>
+                  <input type="text" id="volume-attach-device-name" class="required" data-value="volume.device"/>
+                </div>
+
+                <p class="required-hint">{{!: required_fields }}</p>
+		
+                <div data-text="status" style="height:20px"></div>
+                
+                <div class="ui-dialog-buttonpane ui-widget-content ui-helper-clearfix">
+                  <div class="ui-dialog-buttonset">
+                    <button type="button" data-on-click="attachButton">Attach</button>
+                    <button type="button" data-on-click="cancelButton">Cancel</button>
+                  </div>
+                </div>
+    </div>
+</div>

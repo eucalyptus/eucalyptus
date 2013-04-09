@@ -53,11 +53,9 @@ rivets.configure({
             }
         },
 	    subscribe: function(obj, keypath, callback) {
-  //          console.log('SUBSCRIBE',arguments);
  //           console.log('subscribe', keypath);
             return diveIntoObject(obj, keypath, function(obj, keypath) {
                 if (obj instanceof Backbone.Model) {
-                //    console.log('subscribe ', keypath, callback);
                     obj.on('change:' + keypath, callback);
                 } else if (obj instanceof Backbone.Collection) {
                     obj.on('add remove reset change', callback);
@@ -102,13 +100,16 @@ rivets.configure({
 });
 
 rivets.binders["ui-*"] = {
+    tokenizes: true,
     bind: function(el) {
         var self = this;
         // console.log('UI', this.args[0], el);
         require(['views/ui/' + this.args[0] + '/index'], function(view) {
-            //console.log('BIND', self.bbLastValue);
+            console.log('BIND', self.bbLastValue);
             self.bbView = new view({
-                model: self.bbLastValue ? self.bbLastValue : {},
+                model: self.bbLastValue != null ? self.bbLastValue : {},
+                parentmodel: self.model,
+                keypath: self.keypath,
                 innerHtml: $(el).html()
             });
             $(el).replaceWith($(self.bbView.el).children());
@@ -118,9 +119,7 @@ rivets.binders["ui-*"] = {
     routine: function(el, value) {
         this.bbLastValue = value;
         if (this.bbView) {
-           if (this.bbView.model != null) rivets.unbind(el, this.bbView.model);
-           this.bbView.model = value;
-           this.bbView.render();
+           this.bbView.render(value);
         }
     }
 }

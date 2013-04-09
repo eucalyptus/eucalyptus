@@ -1,6 +1,7 @@
 define([
   'views/searches/generic',
-], function(Search) {
+  'views/searches/tagsearch'
+], function(Search, TagSearch) {
   return function(addresses) {
 
     var config = {
@@ -25,7 +26,7 @@ define([
         assignment: function(search, facetSearch, item, itemsFacetValue, hit) {
           if (facetSearch === 'unassigned' && !item.instanceId) {
             hit();
-          } else if (facetSearch == 'assigned' && item.instanceId) {
+          } else if (facetSearch === 'assigned' && item.instanceId) {
             hit();
           }
           // Return true so the standard search code 
@@ -35,6 +36,6 @@ define([
       }
     }
 
-    return new Search(addresses, config);
+    return new Search(addresses, new TagSearch(config, addresses));
   }
 });

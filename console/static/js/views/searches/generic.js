@@ -35,7 +35,7 @@ define(['app', 'dataholder'], function(app, dh) {
     
     var sortKeyList = function(list, keyName) {
       return _.chain(list)
-              .sort()
+              .sort(keyName)
               .uniq()
               .value()
     }
@@ -60,6 +60,7 @@ define(['app', 'dataholder'], function(app, dh) {
       }
       result = capitalize(name.split(/_/g)).join(' ');
       result = capitalize(result.split(/-/g)).join(' ');
+      result = capitalize(result.split(/\./g)).join(' ');
       result = result.replace(/&#x2f;/g, '/')
       result = result.replace(/&#.{0,3};/g, '')
       return result;
@@ -78,6 +79,10 @@ define(['app', 'dataholder'], function(app, dh) {
               || typeof on[key] === 'function'
               || done[key];
     }
+    
+    var searchOptions = {
+      preserveOrder : true
+    };
 
     function deriveFacets() {
       var derivedFacets = [];
@@ -94,11 +99,14 @@ define(['app', 'dataholder'], function(app, dh) {
         }
         config.facetsCustomizer.apply(self, [add, append]);
       }
-      var result = sortKeyList(derivedFacets, 'label');
+      var result = derivedFacets;
+      derivedFacets.sort(function(a, b) {
+        return a.label > b.label ? 1 : a.label < b.label ? -1 : 0;
+      })
       appended.forEach(function(additional) {
         result.push(additional);
       });
-      return result;
+      return _.uniq(result);
     }
 
     function findMatches(facet, searchTerm, img, add) {
@@ -119,11 +127,8 @@ define(['app', 'dataholder'], function(app, dh) {
           if (config.propertyForFacet && config.propertyForFacet[facet]) {
               var nm = val[config.propertyForFacet[facet]];
               if (nm) { // avoid null
-                console.log("VALUE ", nm);
                 add(val + '', localize(nm));
               }
-          } else {
-            console.log("No matching strategy for " + JSON.stringify(img) + " as facet " + facet);
           }
         }
     }
@@ -175,12 +180,14 @@ define(['app', 'dataholder'], function(app, dh) {
       }
       return result;
     }
-
+    
     this.images = images;
     this.filtered = images.clone();
     this.lastSearch = '';
     this.lastFacets = new Backbone.Model({});
     this.search = function(search, facets) {
+        self.lastSearch = search;
+        self.lastFacets = facets;
         var jfacets = facets.toJSON();
         var results = self.images.filter(function(model) {
         return _.every(jfacets, function(facet) {
@@ -213,11 +220,11 @@ define(['app', 'dataholder'], function(app, dh) {
       self.filtered.reset(results);
     }
     this.facetMatches = function(callback) {
-      callback(deriveFacets());
+      callback(deriveFacets(), searchOptions);
     }
     
     this.valueMatches = function(facet, searchTerm, callback) {
-      callback(deriveMatches(facet, searchTerm))
+      callback(deriveMatches(facet, searchTerm), searchOptions)
     }
     
     function up() {
