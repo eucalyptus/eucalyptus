@@ -163,7 +163,7 @@
         context_menu_actions : function(row) {
           return thisObj._createMenuActions();
         },
-         expand_callback : function(row){ // row = [col1, col2, ..., etc]
+        expand_callback : function(row){ // row = [col1, col2, ..., etc]
           return thisObj._expandCallback(row);
         },
         menu_click_create : function (args) { thisObj._createAction() },

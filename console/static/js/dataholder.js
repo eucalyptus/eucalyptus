@@ -26,7 +26,7 @@ function(_, Backbone, tags) {
 	['volume', 'volumes'],
 	['image', 'images'],
 	['launchconfig', 'launchconfigs', 'launchConfigs'],
-	['instance'],
+	['instance', 'instances'],
 	['eip'],
 	['keypair'],
 	['sgroup'],
