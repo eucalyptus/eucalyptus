@@ -495,6 +495,7 @@ public class VmTypes {
       vmTypeInfo.setRoot( img.getDisplayName( ), ( ( StaticDiskImage ) img ).getManifestLocation( ), imgSize );
     } else if ( img instanceof BlockStorageImageInfo ) {
       vmTypeInfo = VmTypes.BlockStorageVmTypeInfoMapper.INSTANCE.apply( vmType );
+      vmTypeInfo.setRootDeviceName(img.getRootDeviceName());
       vmTypeInfo.setEbsRoot( img.getDisplayName( ), null, imgSize );
       // Getting rid of default ephemeral partition for bfebs instances to match AWS behavior. Fixes EUCA-3461, EUCA-3271  
       // vmTypeInfo.setEphemeral( 0, "sdb", diskSize, "none" );
