@@ -30,7 +30,6 @@ import javax.persistence.Table;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
 import org.hibernate.annotations.Entity;
-import com.eucalyptus.auth.policy.PolicySpec;
 import com.eucalyptus.cloud.CloudMetadata;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.TransactionException;
@@ -76,11 +75,6 @@ public class NetworkGroupTag extends Tag<NetworkGroupTag> {
 
   public void setNetworkGroup( final NetworkGroup networkGroup ) {
     this.networkGroup = networkGroup;
-  }
-
-  @Override
-  public String getPolicyResourceType() {
-    return PolicySpec.EC2_RESOURCE_SECURITYGROUP;
   }
 
   @Nonnull

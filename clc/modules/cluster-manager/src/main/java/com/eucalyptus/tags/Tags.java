@@ -40,6 +40,7 @@ import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
 import com.google.common.collect.Iterables;
 import edu.ucsb.eucalyptus.msgs.ResourceTag;
+import edu.ucsb.eucalyptus.msgs.TagInfo;
 
 /**
  * Utility functions for Tag
@@ -260,6 +261,21 @@ public class Tags {
     @Override
     public ResourceTag apply( final Tag tag ) {
       return new ResourceTag( tag.getKey(), tag.getValue() );
+    }
+  }
+
+  @TypeMapper
+  public enum TagToTagInfo implements Function<Tag, TagInfo> {
+    INSTANCE;
+
+    @Override
+    public TagInfo apply( final Tag tag ) {
+      final TagInfo info = new TagInfo();
+      info.setKey( tag.getKey() );
+      info.setValue( tag.getValue() );
+      info.setResourceId( tag.getResourceId() );
+      info.setResourceType( tag.getResourceType() );
+      return info;
     }
   }
 }

@@ -319,8 +319,7 @@ public class ClusterAllocator implements Runnable {
     final VmTypeInfo vmInfo = this.allocInfo.getVmTypeInfo( );
     Request cb = null;
     try {
-      final VirtualBootRecord root = vmInfo.lookupRoot( );
-      final VmTypeInfo childVmInfo = this.makeVmTypeInfo( vmInfo, token, root );
+      final VmTypeInfo childVmInfo = this.makeVmTypeInfo( vmInfo, token );
       cb = this.makeRunRequest( token, childVmInfo, networkName );
       this.messages.addRequest( State.CREATE_VMS, cb );
       LOG.debug( "Queued RunInstances: " + token );
@@ -331,13 +330,14 @@ public class ClusterAllocator implements Runnable {
   }
   
   // Modifying the logic to enable multiple block device mappings for boot from ebs. Fixes EUCA-3254 and implements EUCA-4786
-  private VmTypeInfo makeVmTypeInfo( final VmTypeInfo vmInfo, final ResourceToken token, final VirtualBootRecord root ) throws Exception {
+  private VmTypeInfo makeVmTypeInfo( final VmTypeInfo vmInfo, final ResourceToken token ) throws Exception {
     VmTypeInfo childVmInfo = vmInfo.child( );
     
-    if ( root.isBlockStorage() ) {
+    if ( this.allocInfo.getBootSet( ).getMachine( ) instanceof BlockStorageImageInfo ) {
      final VmInstance vm = VmInstances.lookup( token.getInstanceId( ) );
       Set<VmVolumeAttachment> volumeAttachments = vm.getBootRecord().getPersistentVolumes();
       Set<VmEphemeralAttachment> ephemeralAttachments = vm.getBootRecord().getEphmeralStorage();
+      VirtualBootRecord root = childVmInfo.lookupRoot();
     
 	  for (final VmVolumeAttachment volumeAttachment : volumeAttachments) {
 	    String volumeId = volumeAttachment.getVolumeId();
@@ -345,11 +345,10 @@ public class ClusterAllocator implements Runnable {
 	    String remoteDeviceString = null;
 	    Volume volume = null;
 	
-	    //if (rootVolumeId.equals(volumeId)) {
 	    if ( volumeAttachment.getIsRootDevice() ) {
 	      volume = token.getRootVolume( );
-	      vbr = childVmInfo.lookupRoot();
-	      vbr.setGuestDeviceName(volumeAttachment.getDevice());
+	      vbr = root;
+	      vbr.setGuestDeviceName(volumeAttachment.getDevice()); // A redundant measure
 	      vbr.setSize(volume.getSize()*1024l*1024l);
 	    } else {
 	      volume = Volumes.lookup(this.allocInfo.getOwnerFullName(), volumeId);
@@ -357,12 +356,14 @@ public class ClusterAllocator implements Runnable {
 		  childVmInfo.getVirtualBootRecord().add(vbr);
 	    }
 	
+	    LOG.debug("Wait for volume " + volume.getDisplayName() +  " to become available");
 	    final ServiceConfiguration scConfig = waitForVolume(volume);
 	  
 	    try {
+	      LOG.debug("About to attach volume " + volume.getDisplayName() + " to instance " + vm.getDisplayName());
 	      AttachStorageVolumeType attachMsg = new AttachStorageVolumeType(Nodes.lookupIqns(this.cluster.getConfiguration()), volumeId);
 		  final AttachStorageVolumeResponseType scAttachResponse = AsyncRequests.sendSync(scConfig, attachMsg);
-		  LOG.debug(scAttachResponse);
+		  LOG.debug(volume.getDisplayName() + ", " + vm.getDisplayName() +": Attach response from SC: " +scAttachResponse);
 		  remoteDeviceString = scAttachResponse.getRemoteDeviceString();
 		  if (remoteDeviceString == null) {
 		    throw new EucalyptusCloudException("Failed to get remote device string for " + volumeId + " while running instance "
@@ -381,8 +382,10 @@ public class ClusterAllocator implements Runnable {
 	  for( VmEphemeralAttachment ephemeral : ephemeralAttachments ) {
 	    childVmInfo.setEphemeral( 0, ephemeral.getDevice(), (this.allocInfo.getVmType().getDisk( ))*1024l*1024l*1024l, "none" );
 	  }
-    }
 	  
+	  LOG.debug("Instance information: " + childVmInfo.dump());
+    }
+  
     return childVmInfo;
   }
   
