@@ -145,6 +145,17 @@ rivets.binders["msg"] = {
     }
 }
 
+rivets.binders["tooltip"] = {
+    tokenizes: true,
+    routine: function(el, keyname) {
+      var value = window[this.keypath];
+
+      if (value == null) return;
+
+      return $(el).attr('title', value);
+    }
+}
+
 rivets.binders["include"] = {
     bind: function(el) {
         var self = this;
