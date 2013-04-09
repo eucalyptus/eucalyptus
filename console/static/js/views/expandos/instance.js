@@ -1,9 +1,9 @@
 define([
- 'app',
- 'underscore',
- 'backbone',
- './eucaexpandoview',
- 'text!./instance.html!strip',
+  'app',
+  'underscore',
+  'backbone',
+  './eucaexpandoview',
+  'text!./instance.html!strip',
 ], function(app, _, Backbone, EucaExpandoView, template) {
   return EucaExpandoView.extend({
     initialize : function(args) {
