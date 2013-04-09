@@ -78,10 +78,6 @@ define([
               this.syncMethod_Create(model, options);
             }else if(method == 'delete'){
               this.syncMethod_Delete(model, options);
-            }else if(method == 'attach'){
-              this.syncMethod_Attach(model, options);
-            }else if(method == 'detach'){
-              this.syncMethod_Detach(model, options);
             }
           },
           syncMethod_Create: function(model, options){
@@ -102,18 +98,17 @@ define([
             parameter += "&VolumeId="+id;
             this.makeAjaxCall(url, parameter, options);
           },
-          syncMethod_Attach: function(model, options){
+
+          attach: function(instance_id, device, options){
             var url = "/ec2?Action=AttachVolume";
-            var volume_id = model.get('volume_id');
-            var instance_id = model.get('instance_id');
-            var device = model.get('device');
+            var volume_id = this.get('volume_id');
             var parameter = "_xsrf="+$.cookie('_xsrf');
             parameter += "&VolumeId="+volume_id+"&InstanceId="+instance_id+"&Device="+device;
             this.makeAjaxCall(url, parameter, options);
           },
-          syncMethod_Detach: function(model, options){
+          detach: function(options){
             var url = "/ec2?Action=DetachVolume";
-            var volume_id = model.get('id');             // Need consistency in ID label  -- Kyo 040813
+            var volume_id = this.get('id');             // Need consistency in ID label  -- Kyo 040813
             var parameter = "_xsrf="+$.cookie('_xsrf');
             parameter += "&VolumeId="+volume_id;
             this.makeAjaxCall(url, parameter, options);

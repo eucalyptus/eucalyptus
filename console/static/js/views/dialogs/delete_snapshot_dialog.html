@@ -1,0 +1,25 @@
+<div>
+    <div class="title" data-msg="delete_snapshot_dialog_title">Delete snapshots</div>
+    <div class="body">
+          <p data-msg="delete_snapshot_dialog_text">Are you sure you want to delete the following snpshots?</p>
+            <div class="selected-resources">
+	    <table>
+	      <thead>
+                <tr><th data-msg="delete_snapshot_dialog_hdr_snapshot">SNAPSHOT</th></tr>
+              </thead>
+	      <tbody>
+	        <tr data-each-item="items"><td><span data-text="item"></span></td></tr>
+	      </tbody>
+	    </table>
+	    </div>
+		
+          <div data-text="status" style="height:20px"></div>
+                
+          <div class="ui-dialog-buttonpane ui-widget-content ui-helper-clearfix">
+            <div class="ui-dialog-buttonset">
+              <button type="button" data-on-click="deleteButton">Yes, delete</button>
+              <button type="button" data-on-click="cancelButton">Cancel</button>
+            </div>
+          </div>
+    </div>
+</div>

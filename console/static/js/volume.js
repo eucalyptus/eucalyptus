@@ -680,7 +680,7 @@
     },
 
     _deleteVolumeAction : function() {
-      var dialog = 'deletevolumedialog';
+      var dialog = 'delete_volume_dialog';
       var selected = this.tableWrapper.eucatable('getSelectedRows', 10);
       require(['views/dialogs/' + dialog], function( dialog) {
         new dialog({items: selected});
@@ -688,7 +688,7 @@
     },
 
     _newCreateSnapshotAction : function() {
-      var dialog = 'createsnapshotdialog';
+      var dialog = 'create_snapshot_dialog';
       var selected = this.tableWrapper.eucatable('getSelectedRows', 10);
       require(['views/dialogs/' + dialog], function( dialog) {
         new dialog({volume_id: selected});
@@ -696,7 +696,7 @@
     },
 
     _newAttachVolumeAction : function() {
-      var dialog = 'attachvolumedialog';
+      var dialog = 'attach_volume_dialog';
       var selected = this.tableWrapper.eucatable('getSelectedRows', 10);
       require(['views/dialogs/' + dialog], function( dialog) {
         new dialog({volume_id: selected});
@@ -704,10 +704,17 @@
     },
 
     _newDetachVolumeAction : function() {
-      var dialog = 'detachvolumedialog';
+      var dialog = 'detach_volume_dialog';
       var selected = this.tableWrapper.eucatable('getSelectedRows', 10);
       require(['views/dialogs/' + dialog], function( dialog) {
         new dialog({volume_ids: selected});
+      });
+    },
+
+    _newCreateVolumeAction : function(){
+      var dialog = 'create_volume_dialog';
+      require(['app'], function(app) {
+        app.dialog(dialog);
       });
     },
 
@@ -735,6 +742,7 @@
         itemsList['create_snapshot_bb'] = {"name":'Create Snapshot', callback: function(key, opt) {;}, disabled: function(){ return true;} }  // Backbone Dialog -- Kyo 040713
         itemsList['attach_volume_bb'] = {"name":'Attach Volume', callback: function(key, opt) {;}, disabled: function(){ return true;} }  // Backbone Dialog -- Kyo 040713
         itemsList['detach_volume_bb'] = {"name":'Detach Volume', callback: function(key, opt) {;}, disabled: function(){ return true;} }  // Backbone Dialog -- Kyo 040713
+        itemsList['create_volume_bb'] = {"name":'Create Volume', callback: function(key, opt) {;}, disabled: function(){ return true;} }  // Backbone Dialog -- Kyo 040713
       })();
 
       // add attach action
@@ -791,6 +799,9 @@
       if (volumes.length === 1) {
         itemsList['tag'] = {"name":'Tag Resource', callback: function(key, opt){ thisObj._tagResourceAction(); }}
       }
+
+     // TEMP. Adding the new Create Volume Dialog into MORE ACTIONS Tab while integrating
+     itemsList['create_volume_bb'] = {"name":'Create Volume', callback: function(key, opt){ thisObj._newCreateVolumeAction(); }}  // Backbone Dialog -- Kyo 040913
 
       return itemsList;
     },
