@@ -216,12 +216,12 @@ public class DescribeSensorCallback extends
     final VmInstance instance = VmInstances.lookup(event.getInstanceId());
 
     if (!instance.getInstanceId().equals(event.getInstanceId())
-        || !instance.getBootRecord().isMonitoring()) {
+        || !instance.getMonitoring()) {
       throw new NoSuchElementException("Instance : " + event.getInstanceId() + " monitoring is not enabled");
     }
 
     if (instance.getInstanceId().equals(event.getInstanceId())
-        && instance.getBootRecord().isMonitoring()) {
+        && instance.getMonitoring()) {
 
       PutMetricDataType putMetricData = new PutMetricDataType();
       MetricDatum metricDatum = new MetricDatum();

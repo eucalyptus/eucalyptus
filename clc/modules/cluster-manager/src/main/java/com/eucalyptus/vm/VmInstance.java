@@ -2051,7 +2051,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
           runningInstance.setClientToken( input.getClientToken() );
           runningInstance.setNameOrArn( input.getNameOrArn( ) );
 
-          if (input.getBootRecord().isMonitoring()) {
+          if (input.getMonitoring()) {
             runningInstance.setMonitoring("enabled");
           } else {
             runningInstance.setMonitoring("disabled");  
