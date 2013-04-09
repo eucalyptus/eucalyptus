@@ -82,6 +82,7 @@ define([
           },
           syncMethod_Create: function(model, options){
             var url = "/ec2?Action=CreateVolume";
+            var size = model.get('size');
             var availability_zone = model.get('availablity_zone');
             var snapshot_id = model.get('snapshot_id');
             var parameter = "_xsrf="+$.cookie('_xsrf');
@@ -101,7 +102,7 @@ define([
 
           attach: function(instance_id, device, options){
             var url = "/ec2?Action=AttachVolume";
-            var volume_id = this.get('volume_id');
+            var volume_id = this.get('id');            // Need consistency in ID label  -- Kyo 040813
             var parameter = "_xsrf="+$.cookie('_xsrf');
             parameter += "&VolumeId="+volume_id+"&InstanceId="+instance_id+"&Device="+device;
             this.makeAjaxCall(url, parameter, options);

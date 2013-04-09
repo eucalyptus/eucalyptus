@@ -3,105 +3,125 @@ define([
    'text!./create_volume_dialog.html!strip',
    'models/volume',
    'app',
-], function(EucaDialogView, template, Volume, App) {
+   'backbone',
+], function(EucaDialogView, template, Volume, App, Backbone) {
     return EucaDialogView.extend({
+
+        setupSelectOptions: function(args){
+           var self = this;
+           this.template = template;
+
+           // SETUP THE SNAPSHOT SELECT OPTIONS
+           var $snapshotSelector = this.$el.find("#volume-add-snapshot-selector");
+           $snapshotSelector.append($('<option>', { 
+               value: undefined,
+               text : "NONE" 
+             }));
+           App.data.snapshot.each(function (model) {
+             console.log("Snapshot: " + model.get('id'));
+             $snapshotSelector.append($('<option>', { 
+               value: model.get('id'),
+               text : model.get('id') 
+             }));
+           });
+
+           $snapshotSelector.change( function(){
+             snapshotId = $snapshotSelector.val();
+             if(snapshotId) {
+               var snapshot = describe('snapshot', snapshotId);
+             //  $volSize.val(snapshot['volume_size']);
+               self.scope.item.snapshot_id = snapshotId;           // super hackish ... --- Kyo 040813
+               self.scope.item.size = snapshot['volume_size'];     // sper hackish .. --- Kyo 040813
+             }
+           });
+
+           // SETUP THE AVAILABILITY ZONE SELECT OPTIONS
+           var $azSelector = this.$el.find("#volume-add-az-selector");
+           var results = describe('zone');
+           if (results && results.length > 1)
+             $azSelector.append($('<option>').attr('value', '').text($.i18n.map['volume_dialog_zone_select']));
+           var azArr = []; 
+           for( res in results) {
+             var azName = results[res].name;
+             azArr.push(azName);
+           }
+           var sortedAz = sortArray(azArr);
+           $azSelector.append($('<option>').attr('value', "Default").text("Default"));  // QUICK TEMP HACK TO FORCE USER TO CHOOSE A.ZONE  --- Kyo 040913
+           $.each(sortedAz,function(idx, azName){
+             $azSelector.append($('<option>').attr('value', azName).text(azName));
+           });
+
+           $azSelector.change( function(){
+             azone = $azSelector.val();
+             if(azone) {
+               self.scope.item.zone = azone;           // super hackish ... --- Kyo 040813
+               console.log("AZone: " + azone);
+             }
+           });
+
+        },
 
         initialize : function(args) {
             var self = this;
             this.template = template;
 
-            // FIND THE VOLUME MODEL IF MATCHED 'args.volume_id'
-	    var matched_volume;
-            if( args.volume_id != undefined ){
-              matched_volume = App.data.volume.find(function(model){ return model.get('id') == args.volume_id; });
-              if( matched_volume != undefined ){
-     	        console.log("Found the matching model Volume: " + matched_volume.get('id'));
-              }
-            }
-
-            // FIND THE INSTANCE MODEL IF MATCH 'args.instance_id'
-	    var matched_instance;
-            if( args.instance_id != undefined ){
-              matched_instance = App.data.instance.find(function(model){ return model.get('id') == args.instance_id; });
-              if( matched_instance != undefined ){
-     	        console.log("Found the matching model Instance: " + matched_instance.get('id'));
-              }
-            }
-
-            // CONSTRUCT THE LIST OF INSTANCE IDS FOR AUTO-COMPLETE
-            var inst_ids = [];
-            if( matched_instance == undefined ){
-              App.data.instance.each(function(item){
-                console.log("Instance ID: " + item.toJSON().id +":" + item.toJSON()._state.name + ":" + item.toJSON().placement);
-                if( item.toJSON()._state.name === 'running' ){
-                  inst_ids.push(item.toJSON().id);
-                }
-              });
-              var sorted = sortArray(inst_ids);
-/*
-              $instanceSelector.autocomplete({
-                source: sorted,
-                select: function(event, ui) {
-                if ($.trim(asText($deviceName.val())) == ''){
-                  $deviceName.val(thisObj._suggestNextDeviceName(ui.item.value));
-                }
-                if ($deviceName.val() != '' && $volumeSelector.val() != '')
-                  thisObj.attachDialog.eucadialog('activateButton', thisObj.attachButtonId);
-                }
-              });
-              $instanceSelector.watermark(instance_id_watermark);
-*/
-            }
-
             this.scope = {
-                status: 'Ignore me for now',
-                volume: new Volume({volume_id: args.volume_id, instance_id: args.instance_id, device: args.device}),
+                status: '',
+                volume: new Volume(),
+                item: {snapshot_id: args.snapshot_id, size: args.size, zone: args.zone},
 
-                cancelButton: function() {
-                  self.close();
+                cancelButton: {
+                  click: function() {
+                    self.close();
+                  }
                 },
 
-                attachButton: function() {
-                  // GET THE INPUT FROM THE HTML VIEW
-		  var volumeId = self.scope.volume.get('volume_id');
-		  var instanceId = self.scope.volume.get('instance_id');
-		  var device = self.scope.volume.get('device');
-		  console.log("Selected Volume ID: " + volumeId);
-		  console.log("Instance ID: " + instanceId);
-		  console.log("Attach as device: " + device);
+                createButton: {
+                  click: function() {
+                    // GET THE INPUT FROM THE HTML VIEW
+		    var snapshotId = self.scope.item.snapshot_id;
+		    var size = self.scope.item.size;
+		    var zone = self.scope.item.zone;
+		    console.log("Selected Snapshot ID: " + snapshotId);
+		    console.log("Size: " + size);
+		    console.log("Zone: " + zone);
 
-                  // CONSTRUCT AJAX CALL RESPONSE OPTIONS
-                  var attachAjaxCallResponse = {
-		    success: function(data, response, jqXHR){   // AJAX CALL SUCCESS OPTION
-		      console.log("Callback " + response + " for " + volumeId);
-		      if(data.results){
-		        notifySuccess(null, $.i18n.prop('volume_attach_success', volumeId, instanceId));    // XSS Risk  -- Kyo 040713
-		      }else{
-		        notifyError($.i18n.prop('volume_attach_error', volumeId, instanceId), undefined_error);   // XSS Risk
+                    // CONSTRUCT AJAX CALL RESPONSE OPTIONS
+                    var createAjaxCallResponse = {
+		      success: function(data, response, jqXHR){   // AJAX CALL SUCCESS OPTION
+		        console.log("Callback " + response);
+                        if(data.results){
+                          var volId = data.results.id;
+                          notifySuccess(null, $.i18n.prop('volume_create_success', volId));   // XSS RISK --- Kyo 040813
+                        }else{
+                          notifyError($.i18n.prop('volume_create_error'), undefined_error);
+                        }
+		      },
+		      error: function(jqXHR, textStatus, errorThrown){  // AJAX CALL ERROR OPTION
+		        console.log("Callback " + textStatus  + " error: " + getErrorMessage(jqXHR));
+                        notifyError($.i18n.prop('volume_create_error'), getErrorMessage(jqXHR));
 		      }
-		    },
-		    error: function(jqXHR, textStatus, errorThrown){  // AJAX CALL ERROR OPTION
-		      console.log("Callback " + textStatus  + " for " + volumeId + " error: " + getErrorMessage(jqXHR));
-		      notifyError($.i18n.prop('volume_attach_error', volumeId, instanceId), getErrorMessage(jqXHR));   // XSS Risk
-		    }
-                  };
+                    };
 
-		  // PERFORM ATTACH CALL OM THE MODEL
-//		  self.scope.volume.sync('attach', self.scope.volume, attachAjaxCallResponse);
-                  self.scope.volume.attach(instanceId, device, attachAjaxCallResponse);
+		    // PERFORM CREATE CALL OM THE MODEL
+                    self.scope.volume = new Volume({snapshot_id: snapshotId, size: size, availablity_zone: zone});
+                    self.scope.volume.sync('create', self.scope.volume, createAjaxCallResponse);
 
-	         // DISPLAY THE VOLUME'S STATUS -- FOR DEBUG
-		 App.data.volume.each(function(item){
-		   console.log("Volume After Attach: " + item.toJSON().id +":"+ item.toJSON().instance_id);
-	         });
+	           // DISPLAY THE VOLUME'S STATUS -- FOR DEBUG
+		   App.data.volume.each(function(item){
+		     console.log("Volume After create: " + item.toJSON().id +":"+ item.toJSON().size);
+	           });
 
-	        // CLOSE THE DIALOG
-	        self.close();
+	          // CLOSE THE DIALOG
+	          self.close();
+                }
               }
 
             }
 
             this._do_init();
+
+            this.setupSelectOptions(args);
         },
 	});
 });
