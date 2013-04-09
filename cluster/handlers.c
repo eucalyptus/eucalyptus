@@ -3179,31 +3179,19 @@ int schedule_instance_migration(ncInstance *instance, char **includeNodes, char 
                 LOGDEBUG("[%s] can't schedule src_index=%d == dst_index=%d (%s > %s), trying again...\n",
                          instance->instanceId, inresid, *outresid, instance->migration_src,
                          resourceCacheLocal->resources[*outresid].hostname);
-            } else if (excludeNodeCount) {
-                LOGDEBUG("[%s] checking exclusion list (%d entries) [0]=%s\n", instance->instanceId, excludeNodeCount, excludeNodes[0]);
-                if (check_for_string_in_list(resourceCacheLocal->resources[*outresid].hostname,
-                                             excludeNodes, excludeNodeCount)) {
-                    // Exclusion list takes priority over inclusion list.
-                    LOGDEBUG("[%s] can't schedule src_index=%d, dst_index=%d because node %s is in destination-exclusion list (%d entries)\n",
-                             instance->instanceId, inresid, *outresid, resourceCacheLocal->resources[*outresid].hostname, excludeNodeCount);
-                } else {
-                    // Found one.
-                    // Double check.
-                    if (*outresid != inresid) {
-                        LOGDEBUG("[%s] scheduled: src_index=%d, dst_index=%d -- node %s is not in destination-exclusion list (%d entries)\n",
-                                 instance->instanceId, inresid, *outresid, resourceCacheLocal->resources[*outresid].hostname, excludeNodeCount);
-                        done++;
-                        found++;
-                    }
-                }
+            } else if (check_for_string_in_list(resourceCacheLocal->resources[*outresid].hostname,
+                                                excludeNodes, excludeNodeCount)) {
+                // Exclusion list takes priority over inclusion list.
+                LOGDEBUG("[%s] can't schedule src_index=%d, dst_index=%d because node %s is in destination-exclusion list\n",
+                         instance->instanceId, inresid, *outresid, resourceCacheLocal->resources[*outresid].hostname);
             } else if (includeNodeCount) {
                 if (!check_for_string_in_list(resourceCacheLocal->resources[*outresid].hostname,
                                               includeNodes, includeNodeCount)) {
-                    LOGDEBUG("[%s] can't schedule src_index=%d, dst_index=%d because node %s is not in destination-inclusion list (%d entries)\n",
-                             instance->instanceId, inresid, *outresid, resourceCacheLocal->resources[*outresid].hostname, includeNodeCount);
+                    LOGDEBUG("[%s] can't schedule src_index=%d, dst_index=%d because node %s is not in destination-inclusion list\n",
+                             instance->instanceId, inresid, *outresid, resourceCacheLocal->resources[*outresid].hostname);
                 } else {
-                    LOGDEBUG("[%s] scheduled: src_index=%d, dst_index=%d -- node %s is in destination-inclusion list (%d entries)\n",
-                             instance->instanceId, inresid, *outresid, resourceCacheLocal->resources[*outresid].hostname, includeNodeCount);
+                    LOGDEBUG("[%s] scheduled: src_index=%d, dst_index=%d (%s > %s) -- destination node is in inclusion list\n",
+                             instance->instanceId, inresid, *outresid, resourceCacheLocal->resources[*outresid].hostname, instance->migration_src);
                     done++;
                     found++;
                 }
