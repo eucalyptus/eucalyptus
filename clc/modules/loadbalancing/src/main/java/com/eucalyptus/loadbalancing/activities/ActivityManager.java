@@ -96,7 +96,7 @@ public class ActivityManager {
 	}
 	
 	public void fire(LoadbalancingEvent evt) throws EventFailedException {
-		ListenerRegistry.getInstance().fireEvent(evt);
+		ListenerRegistry.getInstance().fireThrowableEvent(evt);
 	}
 	
 	enum LoadbalancerEventListener implements EventListener<LoadbalancingEvent>{

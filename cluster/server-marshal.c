@@ -136,12 +136,6 @@
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |
- |                             EXPORTED PROTOTYPES                            |
- |                                                                            |
-\*----------------------------------------------------------------------------*/
-
-/*----------------------------------------------------------------------------*\
- |                                                                            |
  |                              STATIC PROTOTYPES                             |
  |                                                                            |
 \*----------------------------------------------------------------------------*/
@@ -550,7 +544,7 @@ adb_DescribeSensorsResponse_t *DescribeSensorsMarshal(adb_DescribeSensors_t * de
             }
             EUCA_FREE(outResources);
 
-            result = EUCA_OK;   // success
+            result = EUCA_OK;          // success
         }
     }
 
@@ -765,8 +759,7 @@ adb_DescribeNetworksResponse_t *DescribeNetworksMarshal(adb_DescribeNetworks_t *
 //!
 //! @note
 //!
-adb_DescribePublicAddressesResponse_t *DescribePublicAddressesMarshal(adb_DescribePublicAddresses_t * describePublicAddresses,
-                                                                      const axutil_env_t * env)
+adb_DescribePublicAddressesResponse_t *DescribePublicAddressesMarshal(adb_DescribePublicAddresses_t * describePublicAddresses, const axutil_env_t * env)
 {
     adb_describePublicAddressesType_t *dpa = NULL;
     adb_DescribePublicAddressesResponse_t *ret = NULL;
@@ -1066,8 +1059,7 @@ adb_ConfigureNetworkResponse_t *ConfigureNetworkMarshal(adb_ConfigureNetwork_t *
 
         rc = 1;
         if (!DONOTHING) {
-            rc = doConfigureNetwork(&ccMeta, accountId, type, namedLen, sourceNames, userNames, netLen, sourceNets, destName, destUserName, protocol,
-                                    minPort, maxPort);
+            rc = doConfigureNetwork(&ccMeta, accountId, type, namedLen, sourceNames, userNames, netLen, sourceNets, destName, destUserName, protocol, minPort, maxPort);
         }
 
         EUCA_FREE(userNames);
@@ -1299,6 +1291,7 @@ adb_DescribeResourcesResponse_t *DescribeResourcesMarshal(adb_DescribeResources_
             //      adb_describeResourcesResponseType_add_serviceTags(drrt, env, outNodes[i].ncURL);
             adb_ccNodeType_t *nt = NULL;
 
+            LOGTRACE("node %s %s\n", outNodes[i].ncURL, outNodes[i].iqn);
             nt = adb_ccNodeType_create(env);
             adb_ccNodeType_set_serviceTag(nt, env, outNodes[i].ncURL);
             adb_ccNodeType_set_iqn(nt, env, outNodes[i].iqn);
@@ -1456,6 +1449,24 @@ int ccInstanceUnmarshal(adb_ccInstanceType_t * dst, ccInstance * src, const axut
     }
     if (strlen(src->bundleTaskStateName)) {
         adb_ccInstanceType_set_bundleTaskStateName(dst, env, src->bundleTaskStateName);
+    }
+    //GRZE: these strings should be made an enum indexed by the migration_states_t
+    if (src->migration_state == MIGRATION_PREPARING) {
+        adb_ccInstanceType_set_migrationStateName(dst, env, "preparing");
+        if (strlen(src->migration_src) && strlen(src->migration_dst)) {
+            adb_ccInstanceType_set_migrationDestination(dst, env, src->migration_dst);
+            adb_ccInstanceType_set_migrationSource(dst, env, src->migration_src);
+        }
+    } else if (src->migration_state == MIGRATION_IN_PROGRESS) {
+        adb_ccInstanceType_set_migrationStateName(dst, env, "migrating");
+        if (strlen(src->migration_src) && strlen(src->migration_dst)) {
+            adb_ccInstanceType_set_migrationDestination(dst, env, src->migration_dst);
+            adb_ccInstanceType_set_migrationSource(dst, env, src->migration_src);
+        }
+    } else {
+        adb_ccInstanceType_set_migrationStateName(dst, env, "none");
+//      adb_ccInstanceType_set_migrationDestination_nil(dst, env);
+//      adb_ccInstanceType_set_migrationSource_nil(dst, env);
     }
 
     adb_ccInstanceType_set_blkbytes(dst, env, src->blkbytes);
@@ -1973,6 +1984,7 @@ adb_MigrateInstancesResponse_t *MigrateInstancesMarshal(adb_MigrateInstances_t *
     axis2_bool_t status = AXIS2_TRUE;
     char statusMessage[256] = { 0 };
     char *nodeName = NULL;
+    char *instanceId = NULL;
     ncMetadata ccMeta = { 0 };
 
     mit = adb_MigrateInstances_get_MigrateInstances(migrateInstances, env);
@@ -1980,10 +1992,11 @@ adb_MigrateInstancesResponse_t *MigrateInstancesMarshal(adb_MigrateInstances_t *
     EUCA_MESSAGE_UNMARSHAL(migrateInstancesType, mit, (&ccMeta));
 
     nodeName = adb_migrateInstancesType_get_sourceHost(mit, env);
+    instanceId = adb_migrateInstancesType_get_instanceId(mit, env);
 
     status = AXIS2_TRUE;
     if (!DONOTHING) {
-        rc = doMigrateInstances(&ccMeta, nodeName, "prepare");
+        rc = doMigrateInstances(&ccMeta, nodeName, instanceId, "prepare");
         if (rc) {
             LOGERROR("doMigrateInstances() failed\n");
             status = AXIS2_FALSE;

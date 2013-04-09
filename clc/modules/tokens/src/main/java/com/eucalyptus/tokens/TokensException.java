@@ -28,6 +28,7 @@ import com.eucalyptus.util.EucalyptusCloudException;
 public class TokensException extends EucalyptusCloudException {
 
   public static final String NOT_AUTHORIZED = "NotAuthorized";
+  public static final String INVALID_PARAMETER = "InvalidParameterValue";
 
   private final HttpResponseStatus status;
   private final String error;

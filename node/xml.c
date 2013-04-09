@@ -79,10 +79,10 @@
 #include <stdlib.h>
 #include <assert.h>
 #define __USE_GNU
-#include <string.h>             // strlen, strcpy
+#include <string.h>                    // strlen, strcpy
 #include <time.h>
-#include <sys/types.h>          // umask
-#include <sys/stat.h>           // umask
+#include <sys/types.h>                 // umask
+#include <sys/stat.h>                  // umask
 #include <pthread.h>
 #include <libxml/xmlmemory.h>
 #include <libxml/debugXML.h>
@@ -97,12 +97,12 @@
 
 #include <eucalyptus.h>
 #include <eucalyptus-config.h>
-#include <backing.h>            // umask
+#include <backing.h>                   // umask
 #include <data.h>
 #include <misc.h>
 #include <euca_string.h>
 
-#include "handlers.h"           // nc_state_t
+#include "handlers.h"                  // nc_state_t
 #include "xml.h"
 
 /*----------------------------------------------------------------------------*\
@@ -149,24 +149,12 @@
  |                                                                            |
 \*----------------------------------------------------------------------------*/
 
-static boolean initialized = FALSE; //!< To determine if the XML library has been initialized
+static boolean initialized = FALSE;    //!< To determine if the XML library has been initialized
 static boolean config_use_virtio_root = 0;  //!< Set to TRUE if we are using VIRTIO root
 static boolean config_use_virtio_disk = 0;  //!< Set to TRUE if we are using VIRTIO disks
 static boolean config_use_virtio_net = 0;   //!< Set to TRUE if we are using VIRTIO network
-static char xslt_path[MAX_PATH];    //!< Destination path for the XSLT files
+static char xslt_path[MAX_PATH];       //!< Destination path for the XSLT files
 static pthread_mutex_t xml_mutex = PTHREAD_MUTEX_INITIALIZER;   //!< process-global mutex
-
-/*----------------------------------------------------------------------------*\
- |                                                                            |
- |                             EXPORTED PROTOTYPES                            |
- |                                                                            |
-\*----------------------------------------------------------------------------*/
-
-int gen_instance_xml(const ncInstance * instance);
-int gen_libvirt_instance_xml(const ncInstance * instance);
-int gen_volume_xml(const char *volumeId, const ncInstance * instance, const char *localDevReal, const char *remoteDev);
-int gen_libvirt_volume_xml(const char *volumeId, const ncInstance * instance);
-char **get_xpath_content(const char *xml_path, const char *xpath);
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |
@@ -183,8 +171,7 @@ static int path_check(const char *path, const char *name);
 static int write_xml_file(const xmlDocPtr doc, const char *instanceId, const char *path, const char *type);
 
 static void error_handler(void *ctx, const char *fmt, ...) _attribute_format_(2, 3);
-static int apply_xslt_stylesheet(const char *xsltStylesheetPath, const char *inputXmlPath, const char *outputXmlPath, char *outputXmlBuffer,
-                                 int outputXmlBufferSize);
+static int apply_xslt_stylesheet(const char *xsltStylesheetPath, const char *inputXmlPath, const char *outputXmlPath, char *outputXmlBuffer, int outputXmlBufferSize);
 
 #ifdef __STANDALONE
 static void create_dummy_instance(const char *file);
@@ -193,17 +180,17 @@ int main(int argc, char **argv);
 
 #ifdef __STANDALONE2
 int main(int argc, char **argv)
-#endif                          /* __STANDALONE2 */
+#endif                                 /* __STANDALONE2 */
 /*----------------------------------------------------------------------------*\
  |                                                                            |
  |                                   MACROS                                   |
  |                                                                            |
 \*----------------------------------------------------------------------------*/
-#ifdef __STANDALONE             // if compiling as a stand-alone binary (for unit testing)
+#ifdef __STANDALONE                    // if compiling as a stand-alone binary (for unit testing)
 #define INIT() if (!initialized) init(NULL)
 #elif __STANDALONE2
 #define INIT() if (!initialized) init(NULL)
-#else                           // if linking against an NC, find nc_state symbol
+#else                                  // if linking against an NC, find nc_state symbol
 extern struct nc_state_t nc_state;
 #define INIT() if (!initialized) init(&nc_state)
 #endif
@@ -231,7 +218,7 @@ static void init(struct nc_state_t *nc_state)
     {
         if (!initialized) {
             xmlInitParser();
-            LIBXML_TEST_VERSION;    // verifies that loaded library matches the compiled library
+            LIBXML_TEST_VERSION;       // verifies that loaded library matches the compiled library
             xmlSubstituteEntitiesDefault(1);    // substitute entities while parsing
             xmlSetGenericErrorFunc(NULL, error_handler);    // catches errors/warnings that libxml2 writes to stderr
             xsltSetGenericErrorFunc(NULL, error_handler);   // catches errors/warnings that libslt writes to stderr
@@ -254,7 +241,7 @@ static void init(struct nc_state_t *nc_state)
 static void cleanup(void)
 {
     xsltCleanupGlobals();
-    xmlCleanupParser();         // calls xmlCleanupGlobals()
+    xmlCleanupParser();                // calls xmlCleanupGlobals()
 }
 #endif /* 0 */
 
@@ -290,7 +277,7 @@ static int write_xml_file(const xmlDocPtr doc, const char *instanceId, const cha
     int ret = 0;
     mode_t old_umask = umask(~BACKING_FILE_PERM);   // ensure the generated XML file has the right perms
 
-    chmod(path, BACKING_FILE_PERM); // ensure perms in case when XML file exists
+    chmod(path, BACKING_FILE_PERM);    // ensure perms in case when XML file exists
     if ((ret = xmlSaveFormatFileEnc(path, doc, "UTF-8", 1)) > 0) {
         LOGDEBUG("[%s] wrote %s XML to %s\n", instanceId, type, path);
     } else {
@@ -298,6 +285,78 @@ static int write_xml_file(const xmlDocPtr doc, const char *instanceId, const cha
     }
     umask(old_umask);
     return ((ret > 0) ? (EUCA_OK) : (EUCA_ERROR));
+}
+
+//!
+//! Writes Node Controller state to disk, into an XML file
+//!
+//! @param[in] nc_state pointer to NC's global state struct to be savedd
+//! 
+//! @return EUCA_OK on success or EUCA_ERROR on failure to write the file
+//!
+
+int gen_nc_xml(const struct nc_state_t *nc_state_param)
+{
+    int ret = EUCA_ERROR;
+    char path[MAX_PATH] = "";
+    xmlDocPtr doc = NULL;
+    xmlNodePtr nc = NULL;
+    xmlNodePtr version = NULL;
+    xmlNodePtr enabled = NULL;
+
+    INIT();
+
+    pthread_mutex_lock(&xml_mutex);
+    {
+        doc = xmlNewDoc(BAD_CAST "1.0");
+        nc = xmlNewNode(NULL, BAD_CAST "nc");
+        xmlDocSetRootElement(doc, nc);
+
+        version = xmlNewChild(nc, NULL, BAD_CAST "version", BAD_CAST(nc_state_param->version));
+        enabled = xmlNewChild(nc, NULL, BAD_CAST "enabled", BAD_CAST(nc_state_param->is_enabled ? "true" : "false"));
+
+        snprintf(path, sizeof(path), EUCALYPTUS_NC_STATE_FILE, nc_state.home);
+        ret = write_xml_file(doc, "global", path, "nc");
+        xmlFreeDoc(doc);
+    }
+    pthread_mutex_unlock(&xml_mutex);
+
+    return (ret);
+}
+
+//!
+//! Reads Node Controller state from disk
+//!
+//! @param[in] nc_state pointer to NC's global state struct to be updated
+//! 
+//! @return EUCA_OK on success or EUCA_ERROR on failure to read the file
+//!
+int read_nc_xml(struct nc_state_t *nc_state_param)
+{
+    int ret = EUCA_OK;
+    char path[MAX_PATH] = "";
+    char buf[1024];
+
+    snprintf(path, sizeof(path), EUCALYPTUS_NC_STATE_FILE, nc_state.home);
+    bzero(nc_state_param, sizeof(struct nc_state_t));
+
+    if (get_xpath_content_at(path, "/nc/version", 0, nc_state_param->version, sizeof(nc_state_param->version)) == NULL) {
+        LOGDEBUG("failed to read /nc/version from %s\n", path);
+        return EUCA_ERROR;
+    }
+
+    if (get_xpath_content_at(path, "/nc/enabled", 0, buf, sizeof(buf)) == NULL) {
+        LOGDEBUG("failed to read /nc/enabled from %s\n", path);
+        return EUCA_ERROR;
+    }
+    if (strcmp(buf, "true") == 0) {
+        nc_state_param->is_enabled = 1;
+    } else if (strcmp(buf, "false") != 0) {
+        LOGDEBUG("failed to parse /nc/enabled as {true|false} in %s\n", path);
+        return EUCA_ERROR;
+    }
+
+    return ret;
 }
 
 //!
@@ -369,14 +428,14 @@ int gen_instance_xml(const ncInstance * instance)
         if (instance->params.kernel) {
             path = instance->params.kernel->backingPath;
             if (path_check(path, "kernel"))
-                goto free;      // sanity check
+                goto free;             // sanity check
             _ELEMENT(instanceNode, "kernel", path);
         }
 
         if (instance->params.ramdisk) {
             path = instance->params.ramdisk->backingPath;
             if (path_check(path, "ramdisk"))
-                goto free;      // sanity check
+                goto free;             // sanity check
             _ELEMENT(instanceNode, "ramdisk", path);
         }
 
@@ -430,7 +489,7 @@ int gen_instance_xml(const ncInstance * instance)
                     if ((vbr->partitionNumber == 0) && (vbr->type == NC_RESOURCE_IMAGE)) {
                         continue;
                     }
-                } else {        // on all other os + hypervisor combinations, disks are used, so partitions must be skipped
+                } else {               // on all other os + hypervisor combinations, disks are used, so partitions must be skipped
                     if (vbr->partitionNumber > 0) {
                         continue;
                     }
@@ -551,8 +610,7 @@ static void error_handler(void *ctx, const char *fmt, ...)
 //!
 //! @return EUCA_OK on success or proper error code. Known error code returned include EUCA_ERROR and EUCA_IO_ERROR.
 //!
-static int apply_xslt_stylesheet(const char *xsltStylesheetPath, const char *inputXmlPath, const char *outputXmlPath, char *outputXmlBuffer,
-                                 int outputXmlBufferSize)
+static int apply_xslt_stylesheet(const char *xsltStylesheetPath, const char *inputXmlPath, const char *outputXmlPath, char *outputXmlBuffer, int outputXmlBufferSize)
 {
     int err = EUCA_OK;
     int i = 0;
@@ -742,7 +800,7 @@ int gen_libvirt_volume_xml(const char *volumeId, const ncInstance * instance)
 //! @param[in] xml_path a string containing the path to the XML file to parse
 //! @param[in] xpath a string contianing the XPATH expression to evaluate
 //!
-//! @return a pointer to a list of strings
+//! @return a pointer to a list of strings (strings and array must be freed by caller)
 //!
 char **get_xpath_content(const char *xml_path, const char *xpath)
 {
@@ -787,6 +845,50 @@ char **get_xpath_content(const char *xml_path, const char *xpath)
     }
     pthread_mutex_unlock(&xml_mutex);
     return (res);
+}
+
+//!
+//! Returns text content of the N-th result of an xpath query.
+//!
+//! If a buffer was provided, the result is copied into it and the pointer to the 
+//! buffer is returned. If the buffer is NULL, the result is returned in a string
+//! that the caller must free. If there were no values or if index is out of range
+//! NULL is returned.
+//!
+//! To be useful, the query should point to an XML element that does not have any 
+//! children.
+//!
+//! @param[in] xml_path a string containing the path to the XML file to parse
+//! @param[in] xpath a string contianing the XPATH expression to evaluate
+//! @param[in] index of the value to retrieve
+//! @param[in] buf string buffer to copy value into (if NULL, a malloced value is returned)
+//! @param[in] buf_len length of the buffer (irrelevant if buf is NULL)
+//!
+//! @return a pointer to a string with the first result (must be freed by caller) or to buf, if specified
+//!
+char *get_xpath_content_at(const char *xml_path, const char *xpath, int index, char *buf, int buf_len)
+{
+    char **res_array = NULL;
+    char *res = NULL;
+
+    if ((res_array = get_xpath_content(xml_path, xpath)) != NULL) {
+        for (int i = 0; res_array[i]; i++) {
+            if (i == index) {
+                if (buf != NULL) {
+                    strncpy(buf, res_array[i], buf_len);
+                    EUCA_FREE(res_array[i]);
+                    res = buf;
+                } else {
+                    res = res_array[i]; // caller has to free res_array[i]
+                }
+            } else {
+                EUCA_FREE(res_array[i]);    // we always free all other results
+            }
+        }
+        EUCA_FREE(res_array);
+    }
+
+    return res;
 }
 
 #ifdef __STANDALONE

@@ -2,7 +2,7 @@
 // vim: set softtabstop=4 shiftwidth=4 tabstop=4 expandtab:
 
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * Copyright 2009-2013 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -159,7 +159,7 @@ enum {
     NCCALL29,
     NCCALL30,
     NCCALL31,
-    ENDLOCK
+    ENDLOCK,
 };
 
 enum {
@@ -170,44 +170,44 @@ enum {
     ENABLED,
     STOPPED,
     NOTREADY,
-    SHUTDOWNCC
+    SHUTDOWNCC,
 };
 
 enum {
     RESDOWN,
     RESUP,
     RESASLEEP,
-    RESWAKING
+    RESWAKING,
 };
 
 enum {
     INSTINVALID,
     INSTVALID,
-    INSTCONFLICT
+    INSTCONFLICT,
 };
 
 enum {
     RESINVALID,
-    RESVALID
+    RESVALID,
 };
 
 enum {
     MONITOR = 0,
     SENSOR,
-    NUM_THREADS
+    NUM_THREADS,
 };
 
 enum {
     CONFIGLOCK,
     CACHELOCK,
-    VNETCONFIGLOCK
+    VNETCONFIGLOCK,
 };
 
 enum {
     SCHEDGREEDY,
     SCHEDROUNDROBIN,
     SCHEDPOWERSAVE,
-    SCHEDLAST
+    SCHEDLAST,
 };
 
 /*----------------------------------------------------------------------------*\
@@ -280,11 +280,14 @@ typedef struct resource_t {
     int maxCores;
     int availCores;
     // state information
-    int state, lastState;
+    int state, lastState, ncState;
     time_t stateChange;
     time_t idleStart;
     int running;
     int lockidx;
+    char nodeMessage[1024];
+    char nodeStatus[24];
+
 } ccResource;
 
 typedef struct ccResourceCache_t {
@@ -363,8 +366,7 @@ extern char *SCHEDPOLICIES[SCHEDLAST];
 \*----------------------------------------------------------------------------*/
 
 void doInitCC(void);
-int doBundleInstance(ncMetadata * pMeta, char *instanceId, char *bucketName, char *filePrefix, char *walrusURL, char *userPublicKey, char *S3Policy,
-                     char *S3PolicySig);
+int doBundleInstance(ncMetadata * pMeta, char *instanceId, char *bucketName, char *filePrefix, char *walrusURL, char *userPublicKey, char *S3Policy, char *S3PolicySig);
 int doBundleRestartInstance(ncMetadata * pMeta, char *instanceId);
 int doCancelBundleTask(ncMetadata * pMeta, char *instanceId);
 int ncClientCall(ncMetadata * pMeta, int timeout, int ncLock, char *ncURL, char *ncOp, ...);
@@ -380,8 +382,7 @@ int doUnassignAddress(ncMetadata * pMeta, char *src, char *dst);
 int doStopNetwork(ncMetadata * pMeta, char *accountId, char *netName, int vlan);
 int doDescribeNetworks(ncMetadata * pMeta, char *nameserver, char **ccs, int ccsLen, vnetConfig * outvnetConfig);
 int doStartNetwork(ncMetadata * pMeta, char *accountId, char *uuid, char *netName, int vlan, char *nameserver, char **ccs, int ccsLen);
-int doDescribeResources(ncMetadata * pMeta, virtualMachine ** ccvms, int vmLen, int **outTypesMax, int **outTypesAvail, int *outTypesLen,
-                        ccResource ** outNodes, int *outNodesLen);
+int doDescribeResources(ncMetadata * pMeta, virtualMachine ** ccvms, int vmLen, int **outTypesMax, int **outTypesAvail, int *outTypesLen, ccResource ** outNodes, int *outNodesLen);
 int changeState(ccResource * in, int newstate);
 int refresh_resources(ncMetadata * pMeta, int timeout, int dolock);
 int refresh_instances(ncMetadata * pMeta, int timeout, int dolock);
@@ -399,8 +400,7 @@ int schedule_instance_greedy(virtualMachine * vm, int *outresid);
 int doRunInstances(ncMetadata * pMeta, char *amiId, char *kernelId, char *ramdiskId, char *amiURL, char *kernelURL, char *ramdiskURL, char **instIds,
                    int instIdsLen, char **netNames, int netNamesLen, char **macAddrs, int macAddrsLen, int *networkIndexList, int networkIndexListLen,
                    char **uuids, int uuidsLen, int minCount, int maxCount, char *accountId, char *ownerId, char *reservationId, virtualMachine * ccvm,
-                   char *keyName, int vlan, char *userData, char *launchIndex, char *platform, int expiryTime, char *targetNode,
-                   ccInstance ** outInsts, int *outInstsLen);
+                   char *keyName, int vlan, char *userData, char *launchIndex, char *platform, int expiryTime, char *targetNode, ccInstance ** outInsts, int *outInstsLen);
 int doGetConsoleOutput(ncMetadata * pMeta, char *instanceId, char **consoleOutput);
 int doRebootInstances(ncMetadata * pMeta, char **instIds, int instIdsLen);
 int doTerminateInstances(ncMetadata * pMeta, char **instIds, int instIdsLen, int force, int **outStatus);
@@ -408,7 +408,7 @@ int doCreateImage(ncMetadata * pMeta, char *instanceId, char *volumeId, char *re
 int doDescribeSensors(ncMetadata * pMeta, int historySize, long long collectionIntervalTimeMs, char **instIds, int instIdsLen, char **sensorIds,
                       int sensorIdsLen, sensorResource *** outResources, int *outResourcesLen);
 int doModifyNode(ncMetadata * pMeta, char *nodeName, char *nodeState);
-int doMigrateInstances(ncMetadata * pMeta, char *nodeName, char *nodeAction);
+int doMigrateInstances(ncMetadata * pMeta, char *nodeName, char *instanceId, char *nodeAction);
 int setup_shared_buffer(void **buf, char *bufname, size_t bytes, sem_t ** lock, char *lockname, int mode);
 int initialize(ncMetadata * pMeta);
 int ccIsEnabled(void);
@@ -431,8 +431,7 @@ int reconfigureNetworkFromCLC(void);
 int refreshNodes(ccConfig * config, ccResource ** res, int *numHosts);
 void shawn(void);
 int allocate_ccResource(ccResource * out, char *ncURL, char *ncService, int ncPort, char *hostname, char *mac, char *ip, int maxMemory,
-                        int availMemory, int maxDisk, int availDisk, int maxCores, int availCores, int state, int laststate, time_t stateChange,
-                        time_t idleStart);
+                        int availMemory, int maxDisk, int availDisk, int maxCores, int availCores, int state, int laststate, time_t stateChange, time_t idleStart);
 int free_instanceNetwork(char *mac, int vlan, int force, int dolock);
 int allocate_ccInstance(ccInstance * out, char *id, char *amiId, char *kernelId, char *ramdiskId, char *amiURL, char *kernelURL, char *ramdiskURL,
                         char *ownerId, char *accountId, char *state, char *ccState, time_t ts, char *reservationId, netConfig * ccnet,

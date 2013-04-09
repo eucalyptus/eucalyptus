@@ -64,14 +64,17 @@ package com.eucalyptus.vm;
 
 import java.util.Date;
 import java.util.NoSuchElementException;
+
 import javax.persistence.Column;
 import javax.persistence.Embeddable;
 import javax.persistence.Lob;
+
 import org.hibernate.annotations.Parent;
 import org.hibernate.annotations.Type;
-import org.hibernate.type.StringClobType;
+
 import com.google.common.base.Function;
 import com.google.common.base.Predicate;
+
 import edu.ucsb.eucalyptus.msgs.AttachedVolume;
 
 @Embeddable
@@ -159,21 +162,22 @@ public class VmVolumeAttachment implements Comparable<VmVolumeAttachment> {
   
   @Parent
   private VmInstance vmInstance;
-  @Column( name = "metadata_vm_volume_id",
-           unique = true )
-  private String     volumeId;
+  @Column( name = "metadata_vm_volume_id", unique = true )
+  private String	volumeId;
   @Column( name = "metadata_vm_volume_device" )
-  private String     device;
+  private String	device;
   @Lob
   @Type(type="org.hibernate.type.StringClobType")
-  @Column( name = "metadata_vm_volume_remove_device" )
-  private String     remoteDevice;
+  @Column( name = "metadata_vm_volume_remote_device" )
+  private String	remoteDevice;
   @Column( name = "metadata_vm_volume_status" )
-  private String     status;
+  private String	status;
   @Column( name = "metadata_vm_volume_attach_time" )
-  private Date       attachTime;
+  private Date		attachTime;
   @Column( name = "metadata_vm_vol_delete_on_terminate" )
-  private Boolean    deleteOnTerminate;
+  private Boolean	deleteOnTerminate;
+  @Column( name = "metadata_vm_volume_is_root_device" )
+  private Boolean	isRootDevice;
   
   //  @OneToOne
 //  @JoinTable( name = "metadata_vm_has_volume", joinColumns = { @JoinColumn( name = "metadata_vm_id" ) }, inverseJoinColumns = { @JoinColumn( name = "metadata_volume_id" ) } )
@@ -186,18 +190,24 @@ public class VmVolumeAttachment implements Comparable<VmVolumeAttachment> {
   
   VmVolumeAttachment( VmInstance vmInstance, String volumeId, String device, String remoteDevice, String status, Date attachTime,
                               Boolean deleteOnTerminate ) {
-    super( );
-    this.vmInstance = vmInstance;
-    this.volumeId = volumeId;
-    this.device = device;
-    this.remoteDevice = remoteDevice;
-    this.status = status;
-    this.attachTime = attachTime;
-    this.deleteOnTerminate = deleteOnTerminate;
+    this( vmInstance, volumeId, device, remoteDevice, status, attachTime, deleteOnTerminate, Boolean.FALSE );
   }
   
   public VmVolumeAttachment( VmInstance vmInstance, String volumeId, String device, String remoteDevice, String status, Date attachTime ) {
     this( vmInstance, volumeId, device, remoteDevice, status, attachTime, Boolean.TRUE );
+  }
+  
+  public VmVolumeAttachment(VmInstance vmInstance, String volumeId, String device, String remoteDevice, String status, Date attachTime,
+			Boolean deleteOnTerminate, Boolean rootDevice) {
+    super();
+	this.vmInstance = vmInstance;
+	this.volumeId = volumeId;
+	this.device = device;
+	this.remoteDevice = remoteDevice;
+	this.status = status;
+	this.attachTime = attachTime;
+	this.deleteOnTerminate = deleteOnTerminate;
+	this.isRootDevice = rootDevice;
   }
   
   public static Function<AttachedVolume, VmVolumeAttachment> fromAttachedVolume( final VmInstance vm ) {
@@ -313,7 +323,15 @@ public class VmVolumeAttachment implements Comparable<VmVolumeAttachment> {
     this.vmInstance = vmInstance;
   }
   
-  @Override
+  public Boolean getIsRootDevice() {
+	return isRootDevice;
+  }
+	
+  public void setIsRootDevice(Boolean isRootDevice) {
+	this.isRootDevice = isRootDevice;
+  }
+
+@Override
   public String toString( ) {
     StringBuilder builder = new StringBuilder( );
     builder.append( "VmVolumeAttachment:" );
@@ -378,5 +396,4 @@ public class VmVolumeAttachment implements Comparable<VmVolumeAttachment> {
     }
     return true;
   }
-  
 }

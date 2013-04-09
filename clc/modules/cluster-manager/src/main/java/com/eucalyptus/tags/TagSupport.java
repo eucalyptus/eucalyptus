@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * Copyright 2009-2013 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -88,10 +88,6 @@ public abstract class TagSupport {
                                       String key, 
                                       String value );
 
-  /**
-   * Warning: The returned example will NOT match a specific resource. to match
-   * a particular resource additional criteria are required.
-   */
   public abstract Tag example( @Nonnull CloudMetadata metadata,
                                @Nonnull OwnerFullName ownerFullName,
                                @Nullable String key,
@@ -105,20 +101,10 @@ public abstract class TagSupport {
     return tag;
   }
 
-  public Criterion exampleCriterion( final Tag example ) {
-    final DetachedCriteria detachedCriteria = DetachedCriteria.forClass( resourceClass )
-        .add( Restrictions.in( resourceClassIdField, Lists.newArrayList( example.getResourceId() ) ) )
-        .setProjection( Projections.id() );
-    return Property.forName( tagClassResourceField ).in( detachedCriteria );
-  }
-
   public final long count( @Nonnull CloudMetadata metadata,
                            @Nonnull OwnerFullName ownerFullName ) {
     final Tag example = example( metadata, ownerFullName, null, null );
-    return Tags.count(
-        example,
-        exampleCriterion( example ),
-        Collections.<String,String>emptyMap()  );
+    return Tags.count( example );
   }
 
   public abstract CloudMetadata lookup( String identifier ) throws TransactionException;

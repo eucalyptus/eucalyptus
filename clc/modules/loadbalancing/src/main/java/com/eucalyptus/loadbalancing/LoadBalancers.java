@@ -20,22 +20,27 @@
 
 package com.eucalyptus.loadbalancing;
 
+import static com.eucalyptus.loadbalancing.LoadBalancingMetadata.LoadBalancerMetadata;
+import static com.eucalyptus.util.RestrictedTypes.QuantityMetricFunction;
 import java.util.Collection;
 import java.util.List;
 import java.util.NoSuchElementException;
 import javax.persistence.EntityTransaction;
-import javax.validation.ConstraintViolationException;
 
 import org.apache.log4j.Logger;
+
 import com.eucalyptus.auth.principal.UserFullName;
 import com.eucalyptus.entities.Entities;
-import com.eucalyptus.entities.TransactionException;
 import com.eucalyptus.loadbalancing.LoadBalancerListener.PROTOCOL;
+import com.eucalyptus.loadbalancing.activities.EucalyptusActivityTasks;
 import com.eucalyptus.loadbalancing.activities.LoadBalancerServoInstance;
 import com.eucalyptus.util.Exceptions;
+import com.eucalyptus.util.OwnerFullName;
 import com.google.common.base.Function;
 import com.google.common.base.Predicate;
 import com.google.common.base.Strings;
+
+import edu.ucsb.eucalyptus.msgs.ClusterInfoType;
 
 /**
  * @author Sang-Min Park
@@ -47,10 +52,11 @@ public class LoadBalancers {
 		return LoadBalancers.addLoadbalancer(user,  lbName, null);
 	}
 	
+	/// TODO: SPARK: FIX THIS - Loadbalancer belongs to account
 	public static LoadBalancer getLoadbalancer(UserFullName user, String lbName){
 		 final EntityTransaction db = Entities.get( LoadBalancer.class );
 		 try {
-			 final LoadBalancer lb = Entities.uniqueResult( LoadBalancer.named( user, lbName )); 
+			 final LoadBalancer lb = Entities.uniqueResult( LoadBalancer.named( user.getAccountName(), lbName )); 
 			 db.commit();
 			 return lb;
 		 }catch(NoSuchElementException ex){
@@ -67,7 +73,7 @@ public class LoadBalancers {
 		 final EntityTransaction db = Entities.get( LoadBalancer.class );
 		 try {
 		        try {
-		        	if(Entities.uniqueResult( LoadBalancer.named( user, lbName )) != null)
+		        	if(Entities.uniqueResult( LoadBalancer.named( user.getAccountName(), lbName )) != null)
 		        		throw new LoadBalancingException(LoadBalancingException.DUPLICATE_LOADBALANCER_EXCEPTION);
 		        } catch ( NoSuchElementException e ) {
 		        	final LoadBalancer lb = LoadBalancer.newInstance(user, lbName);
@@ -88,7 +94,7 @@ public class LoadBalancers {
 	public static void deleteLoadbalancer(UserFullName user, String lbName) throws LoadBalancingException {
 		final EntityTransaction db = Entities.get( LoadBalancer.class );
 		try{
-			final LoadBalancer lb = Entities.uniqueResult( LoadBalancer.named(user, lbName));	
+			final LoadBalancer lb = Entities.uniqueResult( LoadBalancer.named(user.getAccountName(), lbName));	
 			Entities.delete(lb);
 			db.commit();
 		}catch (NoSuchElementException e){
@@ -111,7 +117,10 @@ public class LoadBalancers {
 		        	}catch(Exception ex){
 		    	    	return new AccessPointNotFoundException();
 		    	    }
-		        	
+		        	  //IAM support to restricted lb modification
+		     	   if(!LoadBalancingMetadatas.filterPrivileged().apply(lb)) {
+		     	       return new AccessPointNotFoundException();
+		     	   }
 		        	try{
 		        		for(Listener listener : listeners){
 		        			if(!LoadBalancerListener.acceptable(listener))
@@ -175,30 +184,51 @@ public class LoadBalancers {
 	}
 	
 	public static void addZone(final String lbName, final UserFullName ownerFullName, final Collection<String> zones) throws LoadBalancingException{
-		// TODO: SPARK: validate the zones
+		List<ClusterInfoType> clusters = null;
+		try{
+			clusters = EucalyptusActivityTasks.getInstance().describeAvailabilityZones();
+		}catch(Exception ex){
+			throw new LoadBalancingException("Failed to check the requested zones");
+		}
+		for(String zone : zones){
+			boolean found = false;
+			for(ClusterInfoType cluster: clusters){	 // assume that describe-availability-zones return only enabled clusters
+				if(zone.equals(cluster.getZoneName())){
+					found = true;
+					break;
+				}
+			}
+			if(!found)
+				throw new LoadBalancingException("No cluster named "+zone+" is available");
+		}
+		
 	   	LoadBalancer lb = null;
     	try{
     		lb = LoadBalancers.getLoadbalancer(ownerFullName, lbName);
     	}catch(Exception ex){
 	    	throw new AccessPointNotFoundException();
 	    }
-		final EntityTransaction db = Entities.get( LoadBalancerZone.class );
-		for(String zone : zones){
-    		// check the listener 
-			try{
-				final LoadBalancerZone sample = LoadBalancerZone.named(lb, zone);
-				final LoadBalancerZone exist = Entities.uniqueResult(sample);
-				LOG.warn("existing zone is found: "+exist);
-				db.commit();
-			}catch(NoSuchElementException ex){
-				final LoadBalancerZone newZone = LoadBalancerZone.named(lb, zone);
-				Entities.persist(newZone);
-				db.commit();
-			}catch(Exception ex){
-				db.rollback();
-				LOG.error("failed to persist the zone "+zone, ex);
+    	try{
+			for(String zone : zones){
+				final EntityTransaction db = Entities.get( LoadBalancerZone.class );
+				// check the listener 
+				try{
+					final LoadBalancerZone sample = LoadBalancerZone.named(lb, zone);
+					final LoadBalancerZone exist = Entities.uniqueResult(sample);
+					LOG.warn("existing zone is found: "+exist);
+					db.commit();
+				}catch(NoSuchElementException ex){
+					final LoadBalancerZone newZone = LoadBalancerZone.named(lb, zone);
+					Entities.persist(newZone);
+					db.commit();
+				}catch(Exception ex){
+					db.rollback();
+					LOG.error("failed to persist the zone "+zone, ex);
+				}
 			}
-		}  
+    	}catch(Exception ex){
+    		throw new LoadBalancingException("Failed to add zone", ex);
+    	}
 	}
 	
 	public static void removeZone(final String lbName, final UserFullName ownerFullName, final Collection<String> zones) throws LoadBalancingException{
@@ -287,4 +317,19 @@ public class LoadBalancers {
 			throw new LoadBalancingException("failed to query servo instances");
 		}
 	}
+
+  @QuantityMetricFunction( LoadBalancerMetadata.class )
+  public enum CountLoadBalancers implements Function<OwnerFullName, Long> {
+    INSTANCE;
+
+    @Override
+    public Long apply( final OwnerFullName input ) {
+      final EntityTransaction db = Entities.get( LoadBalancer.class );
+      try {
+        return Entities.count( LoadBalancer.named( input.getAccountName(), null ) );
+      } finally {
+        db.rollback( );
+      }
+    }
+  }
 }

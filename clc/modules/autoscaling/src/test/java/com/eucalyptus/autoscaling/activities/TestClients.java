@@ -20,6 +20,7 @@
 package com.eucalyptus.autoscaling.activities;
 
 import javax.annotation.Nullable;
+import com.eucalyptus.cloudwatch.CloudWatchMessage;
 import com.eucalyptus.loadbalancing.LoadBalancingMessage;
 import com.eucalyptus.util.Callback;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
@@ -28,8 +29,8 @@ import edu.ucsb.eucalyptus.msgs.EucalyptusMessage;
 /**
  * Groovy can't handle the generics so using Java + Callback
  */
-class TestClients {
-  interface RequestHandler {
+public class TestClients {
+  public interface RequestHandler {
     BaseMessage handle( BaseMessage request );
   }
 
@@ -69,6 +70,29 @@ class TestClients {
     public <REQ extends LoadBalancingMessage, RES extends LoadBalancingMessage> void dispatch( REQ request,
                                                                                                Callback.Checked<RES> callback,
                                                                                                @Nullable Runnable then ) {
+      try {
+        callback.fire( (RES)handler.handle( request ) );
+      } catch ( Exception e ) {
+        callback.fireException( e );
+      } finally {
+        if ( then != null ) then.run();
+      }
+    }
+  }
+
+  public static class TesCloudWatchClient extends CloudWatchClient {
+    private final RequestHandler handler;
+
+    TesCloudWatchClient( String userId, RequestHandler handler ) {
+      super(userId);
+      this.handler = handler;
+    }
+
+    @SuppressWarnings( "unchecked" )
+    @Override
+    public <REQ extends CloudWatchMessage, RES extends CloudWatchMessage> void dispatch( REQ request,
+                                                                                         Callback.Checked<RES> callback,
+                                                                                         @Nullable Runnable then ) {
       try {
         callback.fire( (RES)handler.handle( request ) );
       } catch ( Exception e ) {

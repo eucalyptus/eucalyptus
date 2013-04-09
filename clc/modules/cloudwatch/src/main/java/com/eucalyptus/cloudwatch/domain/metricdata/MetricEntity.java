@@ -7,15 +7,13 @@ import javax.persistence.EnumType;
 import javax.persistence.Enumerated;
 import javax.persistence.MappedSuperclass;
 
-import com.eucalyptus.cloudwatch.domain.dimension.AbstractPersistentWithDimensions;
+import com.eucalyptus.cloudwatch.domain.AbstractPersistentWithDimensions;
 
 @MappedSuperclass
 public abstract class MetricEntity extends AbstractPersistentWithDimensions {
 
   @Column(name = "account_id", nullable = false)
   private String accountId;
-  @Column(name = "user_id", nullable = false)
-  private String userId;
   @Column(name = "namespace", nullable = false)
   private String namespace;
   @Column(name = "metric_name", nullable = false)
@@ -44,12 +42,37 @@ public abstract class MetricEntity extends AbstractPersistentWithDimensions {
   }
 
   public enum Units {
-    Seconds, Microseconds, Milliseconds, Bytes, Kilobytes, Megabytes, Gigabytes, Terabytes, Bits, Kilobits, Megabits, Gigabits, Terabits, Percent, Count, BytesPerSecond, KilobytesPerSecond, MegabytesPerSecond, GigabytesPerSecond, TerabytesPerSecond, BitsPerSecond, KilobitsPerSecond, MegabitsPerSecond, GigabitsPerSecond, TerabitsPerSecond, CountPerSecond, None(
-        "");
+    Seconds, 
+    Microseconds, 
+    Milliseconds, 
+    Bytes, 
+    Kilobytes, 
+    Megabytes, 
+    Gigabytes, 
+    Terabytes, 
+    Bits,
+    Kilobits, 
+    Megabits, 
+    Gigabits, 
+    Terabits, 
+    Percent, 
+    Count, 
+    BytesPerSecond("Bytes/Second"), 
+    KilobytesPerSecond("Kilobytes/Second"), 
+    MegabytesPerSecond("Megabytes/Second"), 
+    GigabytesPerSecond("Gigabytes/Second"), 
+    TerabytesPerSecond("Terabytes/Second"), 
+    BitsPerSecond("Bits/Second"),
+    KilobitsPerSecond("Kilobits/Second"), 
+    MegabitsPerSecond("Megabits/Second"), 
+    GigabitsPerSecond("Gigabits/Second"), 
+    TerabitsPerSecond("Terabits/Second"), 
+    CountPerSecond("Count/Second"), 
+    None("None");
     private String value;
 
     Units() {
-      this.value = name().replace("Per", "/");
+      this.value = name();
     }
 
     Units(String value) {
@@ -67,7 +90,7 @@ public abstract class MetricEntity extends AbstractPersistentWithDimensions {
           return units;
         }
       }
-      return Units.None;
+      throw new IllegalArgumentException("Unknown unit " + value);
     }
   }
 
@@ -78,14 +101,6 @@ public abstract class MetricEntity extends AbstractPersistentWithDimensions {
 
   public void setAccountId(String accountId) {
     this.accountId = accountId;
-  }
-
-  public String getUserId() {
-    return userId;
-  }
-
-  public void setUserId(String userId) {
-    this.userId = userId;
   }
 
   public String getNamespace() {
@@ -170,7 +185,7 @@ public abstract class MetricEntity extends AbstractPersistentWithDimensions {
 
   @Override
   public String toString() {
-    return "MetricEntity [accountId=" + accountId + ", userId=" + userId
+    return "MetricEntity [accountId=" + accountId 
         + ", namespace=" + namespace + ", metricName=" + metricName
         + ", dimensionHash=" + dimensionHash + ", units=" + units
         + ", metricType=" + metricType + ", timestamp=" + timestamp

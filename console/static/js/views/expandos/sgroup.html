@@ -1,0 +1,42 @@
+<div data-ui-tabs=":button" id="tabs" >
+  <ul>
+    <li><a href="#tabs-1">General</a></li>
+    <li><a href="#tabs-2">Tags</a></li>
+
+  </ul>
+  <div id="tabs-1" class="tab">
+      <ul class="instance-expanded clearfix">
+		<li><div class="expanded-title">SECURITY GROUP NAME</div><div class="expanded-value">mygroup</div></li> 
+		<li><div class="expanded-title">DESCRIPTION</div><div class="expanded-value">full of rules</div></li>
+        <li><div class="expanded-section-label">Incoming traffic rules:</div></li>
+	  	<li>
+		<table>
+			<thead>
+				<tr><th>PROTOCOL</th><th>PORT/TYPE</th><th>SOURCE</th></tr>
+			</thead>
+			<tbody>
+				<tr><td>ICMP</td><td>Parameter problem, Bad IP header</td><td>groupname@account</td></tr>
+				<tr><td>TCP</td><td>22</td><td>mygroup</td></tr>
+				<tr><td>UDP</td><td>8844-8888</td><td>123.456.123.22/24</td></tr>
+			</tbody>
+		</table>
+		</li>
+	 </ul>
+  </div>
+
+  <div id="tabs-2" class="tab">
+      <ul class="instance-expanded clearfix">
+        <li>
+		<table>
+			<thead><tr><th>KEY</th><th>VALUE</th></tr>
+			</thead>
+			<tbody>
+				<tr><td>Name</td><td>My image</td></tr>
+				<tr><td>Department</td><td>marketing</td></tr>
+			</tbody>
+		</table>
+		</li>
+	  </ul>
+  </div>
+
+<div style="clear:both"></div>

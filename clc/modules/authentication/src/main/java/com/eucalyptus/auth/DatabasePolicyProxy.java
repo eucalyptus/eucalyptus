@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * Copyright 2009-2013 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -64,7 +64,10 @@ package com.eucalyptus.auth;
 
 import java.util.List;
 import org.apache.log4j.Logger;
+import com.eucalyptus.auth.entities.AuthorizationEntity;
 import com.eucalyptus.auth.entities.PolicyEntity;
+import com.eucalyptus.auth.entities.StatementEntity;
+import com.eucalyptus.auth.principal.Authorization;
 import com.eucalyptus.auth.principal.Group;
 import com.eucalyptus.auth.principal.Policy;
 import com.eucalyptus.entities.Transactions;
@@ -114,10 +117,30 @@ public class DatabasePolicyProxy implements Policy {
         }
       } );
     } catch ( ExecutionException e ) {
-      Debugging.logError( LOG, e, "Failed to setName for " + this.delegate );
+      Debugging.logError( LOG, e, "Failed to getGroup for " + this.delegate );
       throw new AuthException( e );
     }
     return results.get( 0 );
   }
-  
+
+  @Override
+  public List<Authorization> getAuthorizations() throws AuthException {
+    final List<Authorization> results = Lists.newArrayList( );
+    try {
+      Transactions.one( PolicyEntity.newInstanceWithId( this.delegate.getPolicyId( ) ), new Tx<PolicyEntity>( ) {
+        @Override
+        public void fire( PolicyEntity t ) {
+          for ( final StatementEntity statementEntity : t.getStatements() ) {
+            for ( final AuthorizationEntity authorizationEntity : statementEntity.getAuthorizations() ) {
+              results.add( new DatabaseAuthorizationProxy( authorizationEntity ) );
+            }
+          }
+        }
+      } );
+    } catch ( ExecutionException e ) {
+      Debugging.logError( LOG, e, "Failed to getAuthorizations for " + this.delegate );
+      throw new AuthException( e );
+    }
+    return results;
+  }
 }

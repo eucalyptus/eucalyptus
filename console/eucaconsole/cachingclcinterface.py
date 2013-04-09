@@ -50,6 +50,8 @@ class CachingClcInterface(ClcInterface):
     def __init__(self, clcinterface, config):
         self.clc = clcinterface
         pollfreq = config.getint('server', 'pollfreq')
+        if pollfreq < 5:    # let's say min frequency is 5
+            pollfreq = 5
         try:
             freq = config.getint('server', 'pollfreq.zones')
         except ConfigParser.NoOptionError:
@@ -135,13 +137,22 @@ class CachingClcInterface(ClcInterface):
         numStopped = 0;
         if self.caches['instances'].values:
             for reservation in self.caches['instances'].values:
-                for inst in reservation.instances:
-                    if zone == 'all' or inst.placement == zone:
-                        state = inst.state
-                        if state == 'running':
-                            numRunning += 1
-                        elif state == 'stopped':
-                            numStopped += 1 
+                if issubclass(reservation.__class__, EC2Object):
+                    for inst in reservation.instances:
+                        if zone == 'all' or inst.placement == zone:
+                            state = inst.state
+                            if state == 'running':
+                                numRunning += 1
+                            elif state == 'stopped':
+                                numStopped += 1 
+                else:
+                    for inst in reservation['instances']:
+                        if zone == 'all' or inst['placement'] == zone:
+                            state = inst['state']
+                            if state == 'running':
+                                numRunning += 1
+                            elif state == 'stopped':
+                                numStopped += 1 
         summary['inst_running'] = numRunning
         summary['inst_stopped'] = numStopped
         summary['keypair'] = len(self.caches['keypairs'].values)if self.caches['keypairs'].values else 0

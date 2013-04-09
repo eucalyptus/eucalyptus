@@ -63,16 +63,18 @@
 package edu.ucsb.eucalyptus.msgs;
 
 import org.jboss.netty.handler.codec.http.HttpResponseStatus
+
+import com.eucalyptus.binding.HttpParameterMapping
 import com.eucalyptus.component.ComponentId
-import com.eucalyptus.component.ComponentId.ComponentMessage
 import com.eucalyptus.component.ServiceConfiguration
 import com.eucalyptus.component.ServiceConfigurations
+import com.eucalyptus.component.ComponentId.ComponentMessage
 import com.eucalyptus.component.id.ComponentService
 import com.eucalyptus.component.id.Eucalyptus
 import com.eucalyptus.system.Threads
 import com.eucalyptus.util.Exceptions
+
 import edu.ucsb.eucalyptus.cloud.VirtualBootRecord
-import com.eucalyptus.binding.HttpParameterMapping
 
 
 public class ComponentType extends EucalyptusData {
@@ -312,12 +314,12 @@ public class MetricsResourceType extends EucalyptusData {
 public class MetricCounterType extends EucalyptusData {
     String type;
     Long collectionIntervalMs;
-    Long sequenceNum;
     ArrayList<MetricDimensionsType> dimensions = new ArrayList<MetricDimensionsType>();
 }
 
 public class MetricDimensionsType extends EucalyptusData {
     String dimensionName;
+    Long sequenceNum;
     ArrayList<MetricDimensionsValuesType> values = new ArrayList<MetricDimensionsValuesType>();
 }
 
@@ -357,7 +359,7 @@ public class VmTypeInfo extends EucalyptusData implements Cloneable {
   Integer memory;
   Integer disk;
   Integer cores;
-  String rootDeviceName = "sda1";
+  String rootDeviceName;
   
   ArrayList<BlockDeviceMappingItemType> deviceMappings = new ArrayList<BlockDeviceMappingItemType>();
   ArrayList<VirtualBootRecord> virtualBootRecord = new ArrayList<VirtualBootRecord>();
@@ -382,6 +384,17 @@ public class VmTypeInfo extends EucalyptusData implements Cloneable {
   @Override
   public String toString() {
     return "VmTypeInfo ${name} mem=${memory} disk=${disk} cores=${cores}";
+  }
+  
+  public String dump() {
+   StringBuilder sb = new StringBuilder();
+   sb.append("VmTypeInfo ${name} mem=${memory} disk=${disk} cores=${cores} rootDeviceName=${rootDeviceName} ");
+   for (VirtualBootRecord vbr : this.virtualBootRecord) {
+    sb.append("{VirtualBootRecord deviceName=").append(vbr.getGuestDeviceName())
+	  .append(" resourceLocation=").append(vbr.resourceLocation)
+	  .append(" size=").append(vbr.size).append("} ");
+	}
+	return sb.toString();
   }
   
   public void setEbsRoot( String imageId, String iqn, Long sizeBytes ) {
@@ -411,7 +424,7 @@ public class VmTypeInfo extends EucalyptusData implements Cloneable {
   public VirtualBootRecord lookupRoot( ) throws NoSuchElementException {
     VirtualBootRecord ret;
     if (( ret = this.virtualBootRecord.find{ VirtualBootRecord vbr -> vbr.type == "machine" })==null ) {
-      ret = this.virtualBootRecord.find{ VirtualBootRecord vbr -> vbr.type == "ebs" && ( vbr.guestDeviceName == "sda" || vbr.guestDeviceName == "xvda" ) };
+      ret = this.virtualBootRecord.find{ VirtualBootRecord vbr -> vbr.type == "ebs" && ( vbr.guestDeviceName == this.rootDeviceName || vbr.guestDeviceName == "xvda" ) };
     }
     if( ret != null ) {
       return ret;

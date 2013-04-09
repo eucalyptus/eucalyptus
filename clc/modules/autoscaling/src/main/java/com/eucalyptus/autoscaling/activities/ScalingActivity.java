@@ -19,13 +19,20 @@
  ************************************************************************/
 package com.eucalyptus.autoscaling.activities;
 
+import static com.eucalyptus.autoscaling.common.AutoScalingMetadata.ScalingActivityMetadata;
+import java.util.Collection;
 import java.util.Date;
+import java.util.List;
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
+import javax.persistence.CollectionTable;
 import javax.persistence.Column;
+import javax.persistence.ElementCollection;
 import javax.persistence.EnumType;
 import javax.persistence.Enumerated;
 import javax.persistence.JoinColumn;
 import javax.persistence.ManyToOne;
+import javax.persistence.OrderColumn;
 import javax.persistence.PersistenceContext;
 import javax.persistence.PrePersist;
 import javax.persistence.PreUpdate;
@@ -37,6 +44,8 @@ import com.eucalyptus.autoscaling.common.AutoScalingMetadatas;
 import com.eucalyptus.autoscaling.groups.AutoScalingGroup;
 import com.eucalyptus.autoscaling.metadata.AbstractOwnedPersistent;
 import com.eucalyptus.util.OwnerFullName;
+import com.google.common.base.Joiner;
+import com.google.common.collect.Lists;
 
 /**
  *
@@ -46,7 +55,7 @@ import com.eucalyptus.util.OwnerFullName;
 @PersistenceContext( name = "eucalyptus_autoscaling" )
 @Table( name = "metadata_scaling_activities" )
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
-public class ScalingActivity extends AbstractOwnedPersistent {
+public class ScalingActivity extends AbstractOwnedPersistent implements ScalingActivityMetadata {
 
   private static final long serialVersionUID = 1L;
 
@@ -58,10 +67,7 @@ public class ScalingActivity extends AbstractOwnedPersistent {
   @Column( name = "metadata_auto_scaling_group_name", nullable = false, updatable = false )
   private String autoScalingGroupName;
 
-  @Column( name = "metadata_cause", nullable = false )
-  private String cause;
-
-  @Column( name = "metadata_description" )
+  @Column( name = "metadata_description", nullable = false )
   private String description;
 
   @Column( name = "metadata_details" )
@@ -70,12 +76,25 @@ public class ScalingActivity extends AbstractOwnedPersistent {
   @Column( name = "metadata_end_time" )
   private Date endTime;
 
-  @Column( name = "metadata_progress" )
-  private int progress;
+  @Column( name = "metadata_progress", nullable = false )
+  private Integer progress;
 
   @Column( name = "metadata_status_code", nullable = false )
   @Enumerated( EnumType.STRING )
-  private ActivityStatusCode activityStatusCode;
+  private ActivityStatusCode statusCode;
+
+  @Column( name = "metadata_status_message" )
+  private String statusMessage;
+
+  @Column( name = "metadata_client_token" )
+  private String clientToken;
+
+  @ElementCollection
+  @CollectionTable( name = "metadata_scaling_activity_causes" )
+  @JoinColumn( name = "metadata_scaling_activity_id" )
+  @OrderColumn( name = "metadata_cause_index")
+  @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
+  private List<ActivityCause> causes = Lists.newArrayList( );
 
   protected ScalingActivity() {    
   }
@@ -114,14 +133,6 @@ public class ScalingActivity extends AbstractOwnedPersistent {
     this.autoScalingGroupName = autoScalingGroupName;
   }
 
-  public String getCause() {
-    return cause;
-  }
-
-  public void setCause( final String cause ) {
-    this.cause = cause;
-  }
-
   public String getDescription() {
     return description;
   }
@@ -154,20 +165,50 @@ public class ScalingActivity extends AbstractOwnedPersistent {
     this.progress = progress;
   }
 
-  public ActivityStatusCode getActivityStatusCode() {
-    return activityStatusCode;
+  public ActivityStatusCode getStatusCode() {
+    return statusCode;
   }
 
-  public void setActivityStatusCode( final ActivityStatusCode activityStatusCode ) {
-    this.activityStatusCode = activityStatusCode;
+  public void setStatusCode( final ActivityStatusCode statusCode ) {
+    this.statusCode = statusCode;
+  }
+
+  public String getStatusMessage() {
+    return statusMessage;
+  }
+
+  public void setStatusMessage( final String statusMessage ) {
+    this.statusMessage = statusMessage;
+  }
+
+  public String getClientToken() {
+    return clientToken;
+  }
+
+  public void setClientToken( final String clientToken ) {
+    this.clientToken = clientToken;
+  }
+
+  public List<ActivityCause> getCauses() {
+    return causes;
+  }
+
+  public void setCauses( final List<ActivityCause> causes ) {
+    this.causes = causes;
+  }
+
+  public String getCauseAsString() {
+    return Joiner.on( "  " ).join( getCauses() );
   }
 
   public static ScalingActivity create( @Nonnull final AutoScalingGroup group,
-                                        @Nonnull final String cause ) {
+                                        @Nullable final String clientToken,
+                                        @Nonnull final Collection<ActivityCause> causes ) {
     final ScalingActivity activity = new ScalingActivity( group.getOwner() );
     activity.setGroup( group );
-    activity.setCause( cause );
-    activity.setActivityStatusCode( ActivityStatusCode.InProgress );    
+    activity.setClientToken( clientToken );
+    activity.setCauses( Lists.newArrayList( causes ) );
+    activity.setStatusCode( ActivityStatusCode.InProgress );
     return activity;
   }
   
@@ -177,7 +218,7 @@ public class ScalingActivity extends AbstractOwnedPersistent {
    * @param ownerFullName The owner
    * @return The example
    */
-  public static ScalingActivity withOwner( final OwnerFullName ownerFullName ) {
+  public static ScalingActivity withOwner( @Nullable final OwnerFullName ownerFullName ) {
     return new ScalingActivity( ownerFullName );
   }
 

@@ -13,10 +13,10 @@ import javax.persistence.EntityTransaction;
 
 import org.apache.log4j.Logger;
 import org.hibernate.Criteria;
+import org.hibernate.criterion.Order;
 import org.hibernate.criterion.Restrictions;
 
-import com.eucalyptus.cloudwatch.domain.dimension.DimensionEntity;
-import com.eucalyptus.cloudwatch.domain.listmetrics.ListMetric;
+import com.eucalyptus.cloudwatch.domain.DimensionEntity;
 import com.eucalyptus.cloudwatch.domain.metricdata.MetricEntity.MetricType;
 import com.eucalyptus.cloudwatch.domain.metricdata.MetricEntity.Units;
 import com.eucalyptus.cloudwatch.hashing.HashUtils;
@@ -30,13 +30,13 @@ import com.google.common.collect.Sets;
 
 public class MetricManager {
 	public static final Logger LOG = Logger.getLogger(MetricManager.class);
-  public static void addMetric(String accountId, String userId,
+  public static void addMetric(String accountId, 
       String metricName, String namespace, Map<String, String> dimensionMap,
       MetricType metricType, Units units, Date timestamp, Double sampleSize,
       Double sampleMax, Double sampleMin, Double sampleSum) {
     if (dimensionMap == null) {
       dimensionMap = new HashMap<String, String>();
-    } else if (dimensionMap.size() > ListMetric.MAX_DIM_NUM) {
+    } else if (dimensionMap.size() > MetricEntity.MAX_DIM_NUM) {
       throw new IllegalArgumentException("Too many dimensions for metric, "
           + dimensionMap.size());
     }
@@ -62,7 +62,6 @@ public class MetricManager {
       MetricEntity metric = MetricEntityFactory.getNewMetricEntity(metricType,
           dimensionHash);
       metric.setAccountId(accountId);
-      metric.setUserId(userId);
       metric.setMetricName(metricName);
       metric.setNamespace(namespace);
       metric.setDimensions(dimensions);// arguable, but has complete list
@@ -169,7 +168,7 @@ public class MetricManager {
       MetricType metricType, Units units, Date startTime, Date endTime, Integer period) {
     if (dimensionMap == null) {
       dimensionMap = new HashMap<String, String>();
-    } else if (dimensionMap.size() > ListMetric.MAX_DIM_NUM) {
+    } else if (dimensionMap.size() > MetricEntity.MAX_DIM_NUM) {
       throw new IllegalArgumentException("Too many dimensions for metric, "
           + dimensionMap.size());
     }
@@ -227,6 +226,8 @@ public class MetricManager {
       if (units != null) {
         criteria = criteria.add(Restrictions.eq("units", units));
       }
+      criteria = criteria.addOrder( Order.asc("creationTimestamp") );
+      criteria = criteria.addOrder( Order.asc("naturalId") );
       Collection results = criteria.list();
       for (Object o: results) {
         MetricEntity me = (MetricEntity) o;
@@ -265,6 +266,8 @@ public class MetricManager {
       EntityTransaction db = Entities.get(c);
       try {
         Criteria criteria = Entities.createCriteria(c);
+        criteria = criteria.addOrder( Order.asc("creationTimestamp") );
+        criteria = criteria.addOrder( Order.asc("naturalId") );
         Collection dbResults = criteria.list();
         for (Object result : dbResults) {
           allResults.add((MetricEntity) result);

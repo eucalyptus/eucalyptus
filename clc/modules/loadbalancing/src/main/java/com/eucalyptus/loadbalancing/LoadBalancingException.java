@@ -21,20 +21,25 @@ package com.eucalyptus.loadbalancing;
 
 import com.eucalyptus.ws.EucalyptusWebServiceException;
 import com.eucalyptus.ws.Role;
-import com.eucalyptus.ws.protocol.QueryBindingInfo;
 
 /**
+ * Error responses for LoadBalancing service extend this class.
+ *
+ * <p>An example error code for load balancing is "AccessPointNotFound".</p>
+ *
+ * http://docs.aws.amazon.com/ElasticLoadBalancing/latest/APIReference/CommonErrors.html
+ *
  * @author Chris Grzegorczyk <grze@eucalyptus.com>
  */
 public class LoadBalancingException extends EucalyptusWebServiceException {
-  
-	public static final String DUPLICATE_LOADBALANCER_EXCEPTION = "Duplicate loadbalancer name is found";
-	public static final String LOADBALANCER_CREATE_EXCEPTION = "Failed to create a new loadbalancer";
+  private static final long serialVersionUID = 1L;
+
+  public static final String DUPLICATE_LOADBALANCER_EXCEPTION = "Duplicate loadbalancer name is found";
 	
 	public static final Role DEFAULT_ROLE = Role.Sender;
 	public static final String DEFAULT_CODE = "400";  //  TODO: SPARK: Figure out the use of code
-	
-	public LoadBalancingException(final String message){
+
+  public LoadBalancingException(final String message){
 		this(DEFAULT_CODE, DEFAULT_ROLE, message);
 	}
 	public LoadBalancingException(final String message, Throwable inner){
