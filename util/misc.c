@@ -407,14 +407,14 @@ pid_t timewait(pid_t pid, int *status, int timeout_sec)
     return (rc);
 }
 
-//! 
+//!
 //! Attempt to kill a process. This could wait up to 3 seconds to confirm/infirm the
 //! success of the kill operations.
 //!
 //! @param pid the process identifier for the process we're terminating
 //!
 //! @return EUCA_OK on success or EUCA_ERROR on failure
-//! 
+//!
 int killwait(pid_t pid)
 {
     int status = 0;
@@ -2666,6 +2666,33 @@ int get_remoteDevForNC(const char *the_iqn, const char *remoteDev, char *remoteD
 
     return ret;
 }
+
+//!
+//! @param[in] string string
+//! @param[in] list   list of strings
+//! @param[in] count  number of entries in list
+//!
+//!
+//! @return FALSE if string not in list of strings, TRUE if string is in list.
+//!
+
+int check_for_string_in_list (char *string, char **list, int count)
+{
+    if (!string || !count || !list || !(*list)) {
+        return FALSE;
+    }
+
+    for (int i = 0; i < count; i++) {
+        if (!list[i]) {
+            return FALSE;
+        }
+        if (!strcmp(string, list[i])) {
+            return TRUE;
+        }
+    }
+    return FALSE;
+}
+
 
 #ifdef _UNIT_TEST
 //!
