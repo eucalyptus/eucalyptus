@@ -50,7 +50,10 @@ import com.eucalyptus.loadbalancing.activities.LoadBalancerServoInstance;
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
 public class LoadBalancerZone extends AbstractPersistent {
 	private static Logger    LOG     = Logger.getLogger( LoadBalancerZone.class );
-
+	public enum STATE {
+		InService, OutOfService
+	}
+	
 	@Transient
 	private static final long serialVersionUID = 1L;
 
@@ -76,6 +79,9 @@ public class LoadBalancerZone extends AbstractPersistent {
 	
 	@Column(name="unique_name", nullable=false, unique=true)
 	private String uniqueName = null;
+	
+	@Column(name="zone_state", nullable=true)
+	private String zoneState = null;
 
 	@OneToMany(fetch = FetchType.LAZY, mappedBy = "zone")
     @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
@@ -99,6 +105,15 @@ public class LoadBalancerZone extends AbstractPersistent {
 	
 	public Collection<LoadBalancerBackendInstance> getBackendInstances(){
 		return backendInstances;
+	}
+	
+	public void setState(STATE state){
+		this.zoneState = state.name();
+	}
+	
+	public STATE getState(){
+		final STATE state = Enum.valueOf(STATE.class, this.zoneState);
+		return state;
 	}
 
     @PrePersist

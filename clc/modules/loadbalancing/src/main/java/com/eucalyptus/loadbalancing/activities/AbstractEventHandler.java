@@ -41,4 +41,9 @@ public abstract class AbstractEventHandler<T extends LoadbalancingEvent> impleme
 		// TODO Auto-generated method stub
 		return this.chain;
 	}
+	
+	@Override
+	public boolean skipRemaining(){
+		return false;
+	}
 }

@@ -55,6 +55,7 @@ import com.eucalyptus.loadbalancing.LoadBalancing;
 import com.google.common.collect.Lists;
 
 import edu.ucsb.eucalyptus.msgs.RunningInstancesItemType;
+import edu.ucsb.eucalyptus.msgs.SecurityGroupItemType;
 
 /**
  * @author Sang-Min Park (spark@eucalyptus.com)
@@ -317,18 +318,29 @@ public class EventHandlerChainNew extends EventHandlerChain<NewLoadbalancerEvent
 			String groupName = String.format("euca-internal-%s-%s", lb.getOwnerAccountNumber(), lb.getDisplayName());
 			String groupDesc = String.format("group for loadbalancer %s", evt.getLoadBalancer());
 			
+			// check if there's an existing group with the same name
+			boolean groupFound = false;
 			try{
-				EucalyptusActivityTasks.getInstance().deleteSecurityGroup(groupName);
+				List<SecurityGroupItemType> groups = EucalyptusActivityTasks.getInstance().describeSecurityGroups(Lists.newArrayList(groupName));
+				if(groups!=null && groups.size()>0){
+					final SecurityGroupItemType current = groups.get(0);
+					if(groupName.equals(current.getGroupName()))
+						groupFound=true;
+				}
 			}catch(Exception ex){
-				;
+				groupFound=false;
 			}
 			
 			// create a new security group
-			try{
-				EucalyptusActivityTasks.getInstance().createSecurityGroup(groupName, groupDesc);
+			if(! groupFound){
+				try{
+					EucalyptusActivityTasks.getInstance().createSecurityGroup(groupName, groupDesc);
+					createdGroup = groupName;
+				}catch(Exception ex){
+					throw new EventHandlerException("Failed to create the security group for loadbalancer", ex);
+				}
+			}else{
 				createdGroup = groupName;
-			}catch(Exception ex){
-				throw new EventHandlerException("Failed to create the security group for loadbalancer", ex);
 			}
 	
 			final EntityTransaction db = Entities.get( LoadBalancerSecurityGroup.class );
@@ -544,7 +556,8 @@ public class EventHandlerChainNew extends EventHandlerChain<NewLoadbalancerEvent
 				List<LoadBalancerServoInstance> registerDnsARec = Lists.newArrayList();
 				for(LoadBalancerServoInstance instance : servoRecords){
 					/// CASE 2: EXISTING SERVO INSTANCES ARE NOT FOUND IN THE QUERY RESPONSE 
-					if(! foundInstances.containsKey(instance.getInstanceId())){
+					if(! foundInstances.containsKey(instance.getInstanceId()) && 
+							! instance.getState().equals(LoadBalancerServoInstance.STATE.Retired)){
 						db = Entities.get( LoadBalancerServoInstance.class );
 						try{
 							final LoadBalancerServoInstance update = Entities.uniqueResult(instance);
@@ -576,7 +589,8 @@ public class EventHandlerChainNew extends EventHandlerChain<NewLoadbalancerEvent
 								newState = LoadBalancerServoInstance.STATE.OutOfService;
 						}
 						
-						if(!curState.equals(newState)){
+						if(!curState.equals(LoadBalancerServoInstance.STATE.Retired) && 
+								!curState.equals(newState)){
 							if(newState.equals(LoadBalancerServoInstance.STATE.InService))
 								registerDnsARec.add(instance);
 							db = Entities.get( LoadBalancerServoInstance.class );
