@@ -739,7 +739,7 @@ int ncClientCall(ncMetadata * pMeta, int timeout, int ncLock, char *ncURL, char 
                     rc = write(filedes[1], *outRes, sizeof(ncResource));
                     rc = 0;
                 } else {
-                    (*errMsg) = (char *) axutil_error_get_message(ncs->env->error);
+                    (*errMsg) = (char *)axutil_error_get_message(ncs->env->error);
                     if (*errMsg && (len = strnlen(*errMsg, 1024 - 1))) {
                         len += 1;
                         rc = write(filedes[1], &rc, sizeof(int));   //NOTE: we write back rc as well
@@ -3587,7 +3587,7 @@ int doGetConsoleOutput(ncMetadata * pMeta, char *instanceId, char **consoleOutpu
     char pwfile[MAX_PATH] = "";
     time_t op_start = 0;
     ccInstance *myInstance = NULL;
-    ccResourceCache resourceCacheLocal = {0};
+    ccResourceCache resourceCacheLocal = { {{{0}}} };
 
     op_start = time(NULL);
     *consoleOutput = NULL;
