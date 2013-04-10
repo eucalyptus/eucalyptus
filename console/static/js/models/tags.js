@@ -19,7 +19,8 @@ define([
           var results = data.results;
           _.each(results, function(r) { r.id = r.res_id + '-' + r.name; });
           if (results) {
-            options.success && options.success(model, results, options);
+//          options.success && options.success(model, results, options);
+            options.success && options.success(results);
           }
         });
       }

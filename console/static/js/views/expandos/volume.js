@@ -1,8 +1,8 @@
 define([
- 'app',
- 'underscore',
- './eucaexpandoview',
- 'text!./volume.html!strip',
+  'app',
+  'underscore',
+  './eucaexpandoview',
+  'text!./volume.html!strip',
 ], function(app, _, EucaExpandoView, template) {
   return EucaExpandoView.extend({
     initialize : function(args) {

@@ -1,9 +1,9 @@
 define([
- 'app',
- 'underscore',
- 'backbone',
- './eucaexpandoview',
- 'text!./instance.html!strip',
+  'app',
+  'underscore',
+  'backbone',
+  './eucaexpandoview',
+  'text!./instance.html!strip',
 ], function(app, _, Backbone, EucaExpandoView, template) {
   return EucaExpandoView.extend({
     initialize : function(args) {
@@ -12,9 +12,9 @@ define([
       var id = tmp.get('id');
       this.model = new Backbone.Model();
       this.model.set('instance', tmp);
+      this.model.set('test', new Backbone.Collection([{foo: 'bar'}, {foo: 'blah'}]));
       this.model.set('volumes', app.data.volume.reduce(function(c, v) {
-                        //return v.get('attach_data').instance_id = id ? c.add(v) : c;
-                        return c.add(v);
+                        return v.get('attach_data').instance_id = id ? c.add(v) : c;
                       }, new Backbone.Collection()));
       this.model.set('image', app.data.image.get(this.model.get('instance').get('image_id')));
       this.model.set('scaling', app.data.scalinginsts.get(id));

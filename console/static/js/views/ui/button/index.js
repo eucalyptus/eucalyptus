@@ -4,10 +4,14 @@ define([
 	], function( template, rivets ) {
 	return Backbone.View.extend({
 		initialize : function(args) {
-			console.log('UI: Button');
-			this.$el.html(template);
-			$('.buttoncontent', this.$el).html(args.innerHtml);
-			this.rview = rivets.bind(this.$el, args.model);
+            var $tmpl = $(template);
+            var $wrk = $('<span />');
+            var $el = this.$el;
+            this.$el.replaceWith($wrk);
+            $wrk.append($el);
+            $wrk.wrapInner($tmpl);
+			this.rview = rivets.bind($wrk, args.model);
+            return $tmpl;
 		},
 		click : function() {
 			if (this.model.click) {

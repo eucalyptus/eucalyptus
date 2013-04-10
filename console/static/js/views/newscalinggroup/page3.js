@@ -8,12 +8,13 @@ define([
           title: 'Policies', 
 
           initialize: function() {
+            $(this.el).html(template)
+            this.rview = rivets.bind(this.$el, this.model);
             this.render();
           },
 
           render: function() {
-            $(this.el).html(template)
-            rivets.bind(this.$el, this);
+            this.rview.sync();
           }
         });
 });

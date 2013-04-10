@@ -220,7 +220,11 @@
       (function(){
          menuItems['edit'] = {"name":sgroup_action_edit, callback: function(key, opt) { ; }, disabled: function(){ return true; }};
          menuItems['delete'] = {"name":sgroup_action_delete, callback: function(key, opt) { thisObj._deleteAction(); }};
+         menuItems['newcreate'] = {"name":'new create', callback: function(key, opt) { thisObj._newCreateAction(); }};
       })();
+      if(numSelected == 0){
+         menuItems['newcreate'] = {"name":'new create', callback: function(key, opt) { thisObj._newCreateAction(); }};
+      }
       if(numSelected == 1){
         menuItems['edit'] = {"name":sgroup_action_edit, callback: function(key, opt) { thisObj._editAction(); }}
       }
@@ -902,6 +906,12 @@
 
     _getTableWrapper : function() {
       return this.tableWrapper;
+    },
+
+    _newCreateAction : function() {
+      require(['app'], function(app) {
+        app.dialog('create_security_group', {});
+      });
     },
 
     _deleteAction : function() {

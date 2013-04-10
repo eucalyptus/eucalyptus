@@ -455,8 +455,8 @@ class LoginResponse(ProxyResponse):
 
         vmtypes = []
         # TODO: should trigger canned vmtypes for mock as well
-        #if True:
-        if self.user_session.host_override:
+        if True:
+        #if self.user_session.host_override:
             vmtypes.append(dict(name='t1.micro', cores='1', memory='256', disk='5'))
             vmtypes.append(dict(name='m1.small', cores='1', memory='256', disk='5'))
             vmtypes.append(dict(name='m1.medium', cores='1', memory='512', disk='10'))

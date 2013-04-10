@@ -5,7 +5,7 @@
   </ul>
   <div id="tabs-1" class="tab">
       <ul class="snapshot-expanded clearfix">
-		<li><div class="expanded-title" data-msg="snapshot_table_expanded_name">SNAPSHOT NAME</div><div class="expanded-value" data-text="snapshot.display_name"></div></li> 
+		<li><div class="expanded-title" data-msg="snapshot_table_expanded_name">SNAPSHOT NAME</div><div class="expanded-value" data-text="snapshot.display_id"></div></li> 
 		<li><div class="expanded-title" data-msg="snapshot_table_expanded_id">SNAPSHOT ID</div><div class="expanded-value" data-text="snapshot.id"></div></li>
 		<li><div class="expanded-title" data-msg="snapshot_table_expanded_status">STATUS</div><div class="expanded-value" data-text="snapshot.progress"></div></li>
 		<li><div class="expanded-title" data-msg="snapshot_table_expanded_size">SIZE (GB)</div><div class="expanded-value" data-text="snapshot.volume_size"></div></li>
@@ -21,13 +21,7 @@
   <div id="tabs-2" class="tab">
 	  <ul class="tags-expanded clearfix">
 	  	<li>
-		<table>
-			<thead><tr><th data-msg="tag_display_hdr_key">KEY</th><th data-msg="tag_display_hdr_value">VALUE</th></tr>
-			</thead>
-			<tbody>
-				<tr data-each-item="tags"><td><span data-text="item.name"></span></td><td><span data-text="item.value"></span></td></tr>
-			</tbody>
-		</table>
+            <div data-ui-tags="tags"></div>
 		</li>
 	  </ul>
   </div>

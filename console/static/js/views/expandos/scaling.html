@@ -1,21 +1,26 @@
 <div data-ui-tabs="" id="tabs" >
   <ul>
     <li><a href="#tabs-1" data-msg="tab_general">General</a></li>
+    <!--
     <li><a href="#tabs-2" data-msg="tab_policies">Policies</a></li>
+    -->
     <li><a href="#tabs-3" data-msg="tab_instances">Instances</a></li>
+    <!--
     <li><a href="#tabs-4" data-msg="tab_processes">Processes</a></li>
+    -->
     <li><a href="#tabs-5" data-msg="tab_tags">Tags</a></li>
   </ul>
   <div id="tabs-1" class="tab">
       <ul class="scaling-group-expanded clearfix">
-	    <li><div class="expanded-title" data-msg="scaling_table_expanded_name">SCALING GROUP NAME</div><div class="expanded-value" data-text="name"></div></li>
-	    <li><div class="expanded-title" data-msg="scaling_table_expanded_launch_configs">CURRENT LAUNCH CONFIGURATION</div><div class="expanded-value" data-text="launch_config_name"></div></li>
-	    <li><div class="expanded-title" data-msg="scaling_table_expanded_zones">AVAILABILITY ZONES</div><div class="expanded-value"></div></li>
-	    <li><div class="expanded-title" data-msg="scaling_table_expanded_lb">LOAD BALANCERS</div><div class="expanded-value"></div></li>
-	    <li><div class="expanded-title" data-msg="scaling_table_expanded_health">HEALTH CHECK</div><div class="expanded-label" data-msg="scaling_table_expanded_health_check_type">Type:<span class="expanded-value" data-text="health_check_type"></span></div><div class="expanded-label" data-msg="scaling_table_expanded_health_check_grace_period">Grace period (secs):<span class="expanded-value"data-text="health_check_period"></span></div></li>
-	    <li><div class="expanded-title" data-msg="scaling_table_expanded_instances">INSTANCES</div><div class="expanded-label" data-msg="scaling_table_expanded_instances_max">Maximum<span class="expanded-value" data-text="max_size"></span></div><div class="expanded-label" data-msg="scaling_table_expanded_instances_desired">Desired<span class="expanded-value" data-text="desired_capacity"></span></div><div class="expanded-label" data-msg="scaling_table_expanded_instances_min">Minimum<span class="expanded-value" data-text="min_size"></span></div></li>
+	    <li><div class="expanded-title" data-msg="scaling_table_expanded_name">SCALING GROUP NAME</div><div class="expanded-value" data-text="group.name"></div></li>
+	    <li><div class="expanded-title" data-msg="scaling_table_expanded_launch_configs">CURRENT LAUNCH CONFIGURATION</div><div class="expanded-value" data-text="group.launch_config_name"></div></li>
+	    <li><div class="expanded-title" data-msg="scaling_table_expanded_zones">AVAILABILITY ZONES</div><div class="expanded-value" data-text="group.availability_zones.0"></div></li>
+	    <li><div class="expanded-title" data-msg="scaling_table_expanded_lb">LOAD BALANCERS</div><div class="expanded-value" data-text="group.load_balancers.0"></div></li>
+	    <li><div class="expanded-title" data-msg="scaling_table_expanded_health">HEALTH CHECK</div><div class="expanded-label" data-msg="scaling_table_expanded_health_check_type">Type:<span class="expanded-value" data-text="group.health_check_type"></span></div><div class="expanded-label" data-msg="scaling_table_expanded_health_check_grace_period">Grace period (secs):<span class="expanded-value"data-text="group.health_check_period"></span></div></li>
+	    <li><div class="expanded-title" data-msg="scaling_table_expanded_instances">INSTANCES</div><div class="expanded-label" data-msg="scaling_table_expanded_instances_max">Maximum<span class="expanded-value" data-text="group.max_size"></span></div><div class="expanded-label" data-msg="scaling_table_expanded_instances_desired">Desired<span class="expanded-value" data-text="group.desired_capacity"></span></div><div class="expanded-label" data-msg="scaling_table_expanded_instances_min">Minimum<span class="expanded-value" data-text="group.min_size"></span></div></li>
 	  </ul>
   </div>
+  <!--
   <div id="tabs-2" class="tab">
       <ul class="scaling-group-policies-expanded clearfix">
 	    <li><div class="expanded-section-label" data-msg="scaling_table_expanded_term_policies">Instance termination policies (in execution order):</div><div class="expanded-value">Oldest instance</div><div class="expanded-value">Default</div></li>
@@ -38,12 +43,13 @@
 		</li>
 	  </ul>
   </div>
+  -->
   <div id="tabs-3" class="tab">
 	  <ul class="scaling-group-instances-expanded clearfix">
-	  	<li><div class="form-row clearfix checkbox-only"><input type="checkbox" id="scaling-expanded-launch-instance-on-term"><label for="scaling-expanded-launch-instance-on-term" data-msg="scaling_table_expanded_launch_instance_on_term">Launch new instance when an instance is terminated</label></div></li>
+	  	<li><div class="form-row clearfix checkbox-only"><input type="checkbox" disabled="yes" id="scaling-expanded-launch-instance-on-term"><label for="scaling-expanded-launch-instance-on-term" data-msg="scaling_table_expanded_launch_instance_on_term">Launch new instance when an instance is terminated</label></div></li>
 	  </ul>
       <ul class="scaling-group-instances-expanded clearfix">
-	    <li><div class="form-row clearfix checkbox-only"><input type="checkbox" id="scaling-expanded-check-health"><label for="scaling-expanded-check-health" data-msg="scaling_table_expanded_check_health_on_launch">Begin checking health immediately when instance replaces unhealthy one</label></div></li>
+	    <li><div class="form-row clearfix checkbox-only"><input type="checkbox" disabled="yes" id="scaling-expanded-check-health"><label for="scaling-expanded-check-health" data-msg="scaling_table_expanded_check_health_on_launch">Begin checking health immediately when instance replaces unhealthy one</label></div></li>
 	  </ul>
       <ul class="scaling-group-instances-expanded clearfix">
 		<li>
@@ -51,12 +57,18 @@
 			<thead><tr><th data-msg="scaling_table_expanded_instance_id">ID</th><th data-msg="scaling_table_expanded_instance_health_status">HEALTH STATUS</th><th data-msg="scaling_table_expanded_instance_zone">AVAILABILITY ZONE</th><th data-msg="scaling_table_expanded_instance_launch_config">LAUNCH CONFIGURATION</th><th data-msg="scaling_table_expanded_instance_state">STATE</th></tr>
 			</thead>
 			<tbody>
-				<tr data-each-item="items"><td><span _data-text="item.unknownVariable">Dummy text for now</span></td><td><span _data-text="item.unknownVariable">Dummy text for now</span><td><span _data-text="item.unknownVariable">Dummy text for now</span></td><td><span _data-text="item.unknownVariable">Dummy text for now</span></td><td><span _data-text="item.unknownVariable">Dummy text for now</span></td></tr>
+				<tr data-each-item="group.instances">
+                  <td><span _data-text="item.instance_id"></span></td>
+                  <td><span _data-text="item.health_status"></span></td>
+                  <td><span _data-text="item.availability_zone"></span></td>
+                  <td><span _data-text="item.launch_config_name"></span></td>
+                  <td><span _data-text="item.lifecycle_state"></span></td></tr>
 			</tbody>
 		</table>
 		</li>	
 	  </ul>
   </div>
+  <!--
   <div id="tabs-4" class="tab">
       <ul class="scaling-group-processes-expanded clearfix">
 	    <li>
@@ -75,6 +87,7 @@
 		</li>
 	  </ul>
   </div>
+  -->
   <div id="tabs-5" class="tab">
       <ul class="tags-expanded clearfix">
         <li><div class="form-row clearfix checkbox-only"><input type="checkbox" id="scaling-expanded-apply-tags-to-instances"><label for="scaling-expanded-apply-tags-to-instances" data-msg="">Also apply tags to instances in this scaling group</label></div></li>

@@ -53,11 +53,9 @@ rivets.configure({
             }
         },
 	    subscribe: function(obj, keypath, callback) {
-  //          console.log('SUBSCRIBE',arguments);
  //           console.log('subscribe', keypath);
             return diveIntoObject(obj, keypath, function(obj, keypath) {
                 if (obj instanceof Backbone.Model) {
-                //    console.log('subscribe ', keypath, callback);
                     obj.on('change:' + keypath, callback);
                 } else if (obj instanceof Backbone.Collection) {
                     obj.on('add remove reset change', callback);
@@ -102,25 +100,29 @@ rivets.configure({
 });
 
 rivets.binders["ui-*"] = {
+    block: true,
+    tokenizes: true,
     bind: function(el) {
         var self = this;
-        // console.log('UI', this.args[0], el);
+        el.removeAttribute('data-ui-' + this.args[0]);
+        var marker = this.marker;
+        if (!marker) {
+          var parentNode = el.parentNode;
+          marker = this.marker = parentNode.insertBefore(document.createComment(" ui: " + this.args[0] + " "), el);
+        }
         require(['views/ui/' + this.args[0] + '/index'], function(view) {
-            //console.log('BIND', self.bbLastValue);
             self.bbView = new view({
-                model: self.bbLastValue ? self.bbLastValue : {},
-                innerHtml: $(el).html()
+                model: self.bbLastValue != null ? self.bbLastValue : {},
+                binding: self,
+                el: el
             });
-            $(el).replaceWith($(self.bbView.el).children());
-            return self.bbView.el;
+            return el;
         });
     },
     routine: function(el, value) {
         this.bbLastValue = value;
         if (this.bbView) {
-           if (this.bbView.model != null) rivets.unbind(el, this.bbView.model);
-           this.bbView.model = value;
-           this.bbView.render();
+           this.bbView.render(value);
         }
     }
 }
@@ -143,6 +145,17 @@ rivets.binders["msg"] = {
       } else {
         return el.textContent = value != null ? value : '';
       }
+    }
+}
+
+rivets.binders["tooltip"] = {
+    tokenizes: true,
+    routine: function(el, keyname) {
+      var value = window[this.keypath];
+
+      if (value == null) return;
+
+      return $(el).attr('title', value);
     }
 }
 
