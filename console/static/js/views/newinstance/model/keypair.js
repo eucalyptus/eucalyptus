@@ -16,7 +16,7 @@ define(['models/keypair'], function(keypair) {
     },
 
     finish: function(outputModel) {
-      outputModel.set('KeyName', this.get('name'));
+      outputModel.set('key_name', this.get('name'));
     }
   });
 });

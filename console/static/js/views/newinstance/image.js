@@ -61,7 +61,9 @@ define([
                     map[subkeys[j]] = maps[key][subkeys[j]];
                   }
                 }
-                self.options.blockMaps.reset(new BlockMap(map));
+                if(map !== undefined) {
+                  self.options.blockMaps.reset(new BlockMap(map));
+                }
               },
 
               

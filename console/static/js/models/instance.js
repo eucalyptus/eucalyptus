@@ -40,6 +40,7 @@ define([
       disable_api_termination: null,
       instance_initiated_shutdown_behavior: null,
       license: [],
+      addressing_type: null,
       private_ip_addresses: null,
       client_token: null,
       network_interface: [],
@@ -163,6 +164,8 @@ define([
                 data += "&IamInstanceProfile."+(idx)+".Name="+prof.name;
               });
             }
+            if(model.get('addressing_type') != undefined)
+              data += "&AddressingType="+model.get('addressing_type');
             if(model.get('ebs_optimized') != undefined)
               data += "&EbsOptimized=" + model.get('ebs_optimized');
             if(model.get('curlopts') != undefined) 

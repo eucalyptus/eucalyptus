@@ -16,28 +16,22 @@ define([
         kernels: new Backbone.Collection(), 
         ramdisks: new Backbone.Collection(),
         enableMonitoring: true,
-        ///privateNetwork: false,
+        privateNetwork: false,
         snapshots: dataholder.snapshot,
         blockDeviceMappings: self.options.blockMaps,
-        enableStorageVolume: false,
-        enableMapping: false,
-        enableSnapshot: false,
+        enableStorageVolume: true,
+        enableMapping: true,
+        enableSnapshot: true,
         deleteOnTerm: true,
 
         setKernel: function(e, obj) {
           self.model.set('kernel_id', e.target.value);
         },
 
-        setDelOnTerm: function() {
-
+        setPrivateNetwork: function(e, item) {
+          self.model.set('private_network', e.target.value);
         },
 
-    
-/*
-        setPrivateNetwork: function() {
-
-        },
-*/
         setMonitoring: function(e, item) {
             self.model.set('instance_monitoring', e.target.value);
         },
@@ -68,7 +62,13 @@ define([
               connection: null,
               snapshot_id: snap,
               volume_size: size,
-              ebs: "",
+              ebs: {
+                snapshot_id: snap,
+                volume_size: size,
+                delete_on_termination: del,
+                volume_type: null,
+                iopts: null 
+              },
               delete_on_termination: del,
               ephemeral_name: null    
           });
@@ -111,6 +111,8 @@ define([
             var drive = model.get('device_name').replace(/\/dev\/([a-z]*)([0-9]{1,2})/, '$1');
             var partition = model.get('device_name').replace(/\/dev\/([a-z]*)([0-9]{1,2})/, '$2');
             return drive + (++partition);
+          } else {
+            return 'sda1';
           }
         },
 
