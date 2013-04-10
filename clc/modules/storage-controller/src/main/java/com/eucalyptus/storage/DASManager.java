@@ -248,7 +248,6 @@ public class DASManager implements LogicalStorageManager {
 
 	protected String createLogicalVolume(String volumeId, String vgName, String lvName, long size) throws EucalyptusCloudException {
 		// return SystemUtil.run(new String[]{EUCA_ROOT_WRAPPER, "lvcreate", "-n", lvName, "-L", String.valueOf(size) + "G", vgName});
-		//return SystemUtil.run(new String[]{EUCA_ROOT_WRAPPER, "lvcreate", "-n", lvName, "-L", String.valueOf(size) + "M", vgName});
 		return SystemUtil.run(new String[]{EUCA_ROOT_WRAPPER, "lvcreate", "--addtag", volumeId, "-n", lvName, "-L", String.valueOf(size) + "M", vgName});
 	}
 
@@ -278,7 +277,6 @@ public class DASManager implements LogicalStorageManager {
 	}
 
 	protected String createLogicalVolume(String volumeId, String vgName, String lvName) throws EucalyptusCloudException {
-		//return SystemUtil.run(new String[]{StorageProperties.EUCA_ROOT_WRAPPER, "lvcreate", "-n", lvName, "-l", "100%FREE", vgName});
 		return SystemUtil.run(new String[]{StorageProperties.EUCA_ROOT_WRAPPER, "lvcreate", "--addtag", volumeId, "-n", lvName, "-l", "100%FREE", vgName});
 	}
 
@@ -451,7 +449,6 @@ public class DASManager implements LogicalStorageManager {
 		//create file and attach to loopback device
 		try {
 			//create logical volume
-			//createLogicalVolume(lvName, (size * StorageProperties.KB));
 			createLogicalVolume(volumeId, lvName, (size * StorageProperties.KB));
 			lvmVolumeInfo.setVolumeId(volumeId);
 			lvmVolumeInfo.setVgName(volumeGroup);
@@ -493,7 +490,6 @@ public class DASManager implements LogicalStorageManager {
 						absoluteSize = size * StorageProperties.KB;
 					}
 					//create physical volume, volume group and logical volume
-					//createLogicalVolume(lvName, absoluteSize);
 					createLogicalVolume(volumeId, lvName, absoluteSize);
 					//duplicate snapshot volume
 					String absoluteLVName = lvmRootDirectory + PATH_SEPARATOR + volumeGroup + PATH_SEPARATOR + lvName;
@@ -537,7 +533,6 @@ public class DASManager implements LogicalStorageManager {
 				assert(parentVolumeFile.exists());
 				long absouluteSize = (parentVolumeFile.length() / StorageProperties.MB);
 				//create physical volume, volume group and logical volume
-				//createLogicalVolume(lvName, absouluteSize);
 				createLogicalVolume(volumeId, lvName, absouluteSize);
 				//duplicate snapshot volume
 				String absoluteLVName = lvmRootDirectory + PATH_SEPARATOR + volumeGroup + PATH_SEPARATOR + lvName;
