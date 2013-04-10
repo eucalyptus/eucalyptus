@@ -58,6 +58,8 @@ define([
         sync: function(method, model, options){
           if(method == 'create'){
             this.syncMethod_Create(model, options);  
+          }else if(method == 'delete'){
+            this.syncMethod_Delete(model, options);
           }
         },
         syncMethod_Create: function(model, options){
@@ -67,7 +69,26 @@ define([
           var parameter = "_xsrf="+$.cookie('_xsrf');
           parameter += "&VolumeId="+volume_id+"&Description="+description;
           this.makeAjaxCall(url, parameter, options);
-        },    
+        },
+        syncMethod_Delete: function(model, options){
+          var url = "/ec2?Action=DeleteSnapshot";
+          var id = model.get('id');
+          var parameter = "_xsrf="+$.cookie('_xsrf');
+          parameter += "&SnapshotId="+id;
+          this.makeAjaxCall(url, parameter, options);
+        },
+
+        registerSnapshot: function(name, desc, isWindows, options){
+          var url = "/ec2?Action=RegisterImage";
+          var id = this.get('id');
+          var parameter = "_xsrf="+$.cookie('_xsrf');
+          parameter += "&SnapshotId="+id+"&Name="+name+"&Description="+toBase64($.trim(desc));
+          if(isWindows){
+            parameter += "&KernelId=windows";
+          }
+          this.makeAjaxCall(url, parameter, options);
+        },
+    
     });
     return model;
 });

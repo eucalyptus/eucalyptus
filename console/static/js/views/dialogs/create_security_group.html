@@ -1,0 +1,134 @@
+<div>
+    <div class="title">Create new security group</div>
+    <div class="body">
+        <div data-ui-tabs="">
+          <ul>
+            <li><a href="#tabs-1">Group</a></li>
+            <li><a href="#tabs-2">Rules</a></li>
+            <li><a href="#tabs-3">Tags</a></li>
+          </ul>
+          <div id="tabs-1" class="tab">
+
+            <div class="group content-section">
+              <h3>Group</h3>
+              <div class="content-section-label">Define your group:</div>
+              <div class="form-row">
+                <label for="sgroup-name" class="required-label">Name</label>
+                <input type="text" id="sgroup-name" class="required" title="Enter a name for your security group." maxlength="254">
+                <div id="sgroup-name-error" class="sg-error-msg">must be alpha-numeric or space, dash, underscore</div>
+              </div>
+              <div class="form-row">
+                <label for="sgroup-description" class="required-label">Description</label>
+                <textarea id="sgroup-description" class="description" title="Enter a description for your security group."></textarea>
+                <div id="sgroup-description-error" class="sg-error-msg"></div>
+              </div>
+            </div>
+
+          </div>
+
+          <div id="tabs-2" class="tab">
+            <div class="rules content-section">
+            <h3>Rules</h3>
+            <div class="content-section-label">Add rules:</div>
+            <div class="form-row">
+            <label for="sgroup-template">Protocol</label>
+            <select id="sgroup-template" title="Select a protocol for your security group rule.">
+            <option value="none">Select protocol</option>
+            <optgroup label="">
+            <option>SSH (TCP port 22, for terminal access)</option>
+            <option>RDP (TCP port 3389, for Windows instances)</option>
+            <option>HTTP (TCP port 80, for web servers)</option>
+            <option>HTTPS (TCP port 443, for web servers)</option>
+            <option>MS SQL (TCP port 1433)</option>
+            <option>MySQL (TCP port 3306)</option>
+            </optgroup>
+            <optgroup label="----------------">
+            <option>POP3 (TCP port 110)</option>
+            <option>POP3S (TCP port 995)</option>
+            <option>LDAP (TCP port 389)</option>
+            <option>IMAP (TCP port 143)</option>
+            <option>SMTP (TCP port 465)</option>
+            </optgroup>
+            <optgroup label="----------------">
+            <option>Custom TCP</option>
+            <option>Custom UDP</option>
+            <option>Custom ICMP</option>
+            </optgroup>
+            </select>
+            </div>
+            <div id="sgroup-more-rules" style="display: none;">
+            <div class="form-row">
+            <div id="sgroup-port-option">
+            <label for="sgroup-ports">Port range</label>
+            <input type="text" id="sgroup-ports" class="required" title="Enter a single port number or indicate a port range using a dash (for example, 2000-2020).">
+            <div id="sgroup-ports-error" class="sg-error-msg"></div>
+            </div>
+            <div id="sgroup-type-option" style="display: none;">
+            <label for="sgroup-ports">Port range</label>
+            <select id="sgroup-type" title="Enter a single port number or indicate a port range using a dash (for example, 2000-2020).">
+            <option value="0">Echo reply</option>
+            <option value="3">Destination unreachable</option>
+            <option value="4">Source quench</option>
+            <option value="5">Redirect message</option>
+            <option value="6">Alternate host address</option>
+            <option value="8">Echo request</option>
+            <option value="9">Router advertisement</option>
+            <option value="10">Router solicitation</option>
+            <option value="11">Timeout exceeded</option>
+            <option value="12">Parameter problem: Bad IP header</option>
+            <option value="13">Timestamp</option>
+            <option value="14">Timestamp reply</option>
+            <option value="15">Information request</option>
+            <option value="16">Infromation reply</option>
+            <option value="17">Address mask request</option>
+            <option value="18">Address mask reply</option>
+            <option value="30">Traceroute</option>
+            <option value="31">Diagram conversion error</option>
+            <option value="32">Mobile host redirect</option>
+            <option value="33">Where are you</option>
+            <option value="34">Here I am</option>
+            <option value="35">Mobile registration request</option>
+            <option value="36">Mobile registration reply</option>
+            <option value="37">Domain name request</option>
+            <option value="38">Domain name reply</option>
+            <option value="39">SKIP algorithm discovery protocol</option>
+            <option value="40">Photuris, security failures</option>
+            <option value="-1">All</option>
+            </select>
+            </div>
+            <div class="dialog-notifications"></div>
+            </div>
+            <div class="form-row sg-inline-options">
+            <span>Allow traffic from</span><input type="radio" name="allow-radio" id="sgroup-allow-ip" title="Select this to enable access from an IP address or CIDR range." value="ip"><span>IP address</span><input type="text" id="allow-ip" class="medium-textinput" title="Enter an IP address or a CIDR range that you want to allow to access instances that use this security group.">
+            <a href="#" id="sgroup-ip-check" class="sg-my-ip">Use my IP address</a>
+            <div id="allow-ip-error" class="sg-error-msg"></div>
+            </div>
+            <div class="form-row sg-options-row">
+            <input type="radio" name="allow-radio" id="sgroup-allow-group" title="Select this to enable access from another security group." value="group"><span>Other security group</span><input type="text" id="allow-group" class="medium-textinput ui-autocomplete-input" title="Enter the name of another security group that you want to allow access. To specify a group in another account, use the format 'userid/groupname'. The userid should be a 12-digit number." placeholder="enter a security group" disabled="" autocomplete="off"><span role="status" aria-live="polite" class="ui-helper-hidden-accessible"></span>
+            </div>
+            <div class="section-button-bar">
+            <a href="#" id="sgroup-add-rule" class="button section-button ui-state-disabled">Add another rule</a>
+            </div>
+            <div id="sgroup-rules-list"></div>
+            </div>
+            <!-- END #sgroup-more-rules -->
+            </div>
+
+          </div>
+           
+          <div id="tabs-3" class="tab">
+            <div class="rules content-section">
+                <h3>Tags</h3>
+                <div data-ui-edittags="securityGroup"></div>
+            </div>
+          </div>
+        </div>
+ 
+        <div class="ui-dialog-buttonpane ui-widget-content ui-helper-clearfix">
+          <div class="ui-dialog-buttonset">
+            <span data-ui-button=":createButton">Create</span>
+            <span data-ui-button=":cancelButton">Cancel</span> 
+          </div>
+        </div>
+    </div>
+</div>

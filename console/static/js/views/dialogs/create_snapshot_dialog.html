@@ -1,0 +1,41 @@
+<div>
+    <div class="title" data-msg="create_snapshot_dialog_title">Create snapshot from volume</div>
+    <div class="body">
+        <div data-ui-tabs="" id="tabs" >
+          <ul>
+            <li><a href="#tabs-1">Snapshot Info</a></li>
+            <li><a href="#tabs-2">Snapshot Tags</a></li>
+          </ul>
+          <div id="tabs-1" class="tab">
+
+		<p data-msg="snapshot_create_dialog_text"></p>
+                <div class="form-row" id="snapshot-create-dialog-vol-id">
+                  <label for="snapshot-create-volume-id" class="required-label" data-msg="snapshot_create_dialog_volume_label"></label>
+                  <input type="text" id="snapshot-create-volume-id" class="required" data-tooltip="snapshot_create_dialog_volume_tip" data-value="snapshot.volume_id"/>
+                </div>
+                <div class="form-row" id="snapshot-create-dialog-desc">
+                  <label for="snapshot-create-description" data-msg="snapshot_create_dialog_description_label"></label>
+                  <textarea id="snapshot-create-description" class="description" data-tooltip="snapshot_create_dialog_description_tip" data-value="snapshot.description"/>
+                </div>
+                <div id="snapshot-create-dialog-no-volumes" style="display:none">
+                 <p data-msg="snapshot_create_dialog_no_volumes_text"></p>
+                 <p><a href="#" id="snapshot-create-dialog-new-vol" data-msg="snapshot_create_dialog_no_volumes_link"></a></p>
+                </div>
+                <p class="required-hint" data-msg="required_fields"></p>
+		
+                <div data-text="status" style="height:20px"></div>
+           
+            </div>
+                <div id="tabs-2" class="tab">
+                  <div data-ui-edittags="snapshot"></div>
+                </div>
+            </div>
+ 
+            <div class="ui-dialog-buttonpane ui-widget-content ui-helper-clearfix">
+              <div class="ui-dialog-buttonset">
+                <span data-ui-button=":createButton">Create</span>
+                <span data-ui-button=":cancelButton">Cancel</span> 
+              </div>
+            </div>
+    </div>
+</div>

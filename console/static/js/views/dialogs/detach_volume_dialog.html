@@ -1,0 +1,23 @@
+<div>
+    <div class="title" data-msg="detach_volume_dialog_title">Detach Volumes</div>
+    <div class="body">
+		<p data-msg="detach_volume_dialog_text">If you detach a volume, the instance can no longer read or write to it. Are you sure you want to detach the following volumes?</p>
+		<div class="selected-resources">
+		  <table>
+		    <thead>
+                      <tr><th data-msg="detach_volume_dialog_hdr_volume">VOLUME</th><th data-msg="detach_volume_dialog_hdr_instance">INSTANCE</th></tr>
+                    </thead>
+	            <tbody>
+                      <tr data-each-item="items"><td><span data-text="item.volume_id"></span></td><td><span data-text="item.instance_id"></span></td></tr>
+		    </tbody>
+		  </table>
+		</div>
+		<div data-text="status" style="height:20px"></div>
+                <div class="ui-dialog-buttonpane ui-widget-content ui-helper-clearfix">
+                <div class="ui-dialog-buttonset">
+                  <a data-ui-button=":detachButton">Yes, detach</a>
+                  <a data-ui-button=":cancelButton">Cancel</a> 
+            </div>
+        </div>
+    </div>
+</div>

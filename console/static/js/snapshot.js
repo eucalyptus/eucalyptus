@@ -313,17 +313,27 @@
         itemsList['create_volume'] = { "name": snapshot_action_create_volume, callback: function(key, opt) {;}, disabled: function(){ return true;} };
         itemsList['register'] = { "name": snapshot_action_register, callback: function(key, opt) {;}, disabled: function(){ return true;} }
         itemsList['tag'] = { "name": 'Tag Resource', callback: function(key, opt) {;}, disabled: function(){ return true;} }
+        itemsList['delete_snapshot_bb'] = { "name": snapshot_action_delete, callback: function(key, opt) {;}, disabled: function(){ return true;} }  // Backbone Integration --- Kyo 040813
+        itemsList['create_volume_bb'] = { "name": snapshot_action_create_volume, callback: function(key, opt) {;}, disabled: function(){ return true;} }  // Backbone Integration --- Kyo 040813
+        itemsList['register_snapshot_bb'] = { "name": snapshot_action_register, callback: function(key, opt) {;}, disabled: function(){ return true;} }  // Backbone Integration --- Kyo 040813
+        itemsList['create_snapshot_bb'] = { "name": 'Create new snapshot', callback: function(key, opt) {;}, disabled: function(){ return true;} }  // Backbone Integration --- Kyo 040813
       })();
 
       if ( selectedSnapshots.length > 0 && selectedSnapshots.indexOf('pending') == -1 ){
-        itemsList['delete'] = { "name": snapshot_action_delete, callback: function(key, opt) { thisObj._deleteAction(); } }
+	itemsList['delete'] = { "name": snapshot_action_delete, callback: function(key, opt) { thisObj._deleteAction(); } }
+        itemsList['delete_snapshot_bb'] = { "name": snapshot_action_delete, callback: function(key, opt) { thisObj._newDeleteSnapshotAction(); } }
       }
       
       if ( selectedSnapshots.length === 1 && onlyInArray('completed', selectedSnapshots)){
         itemsList['register'] = { "name": snapshot_action_register, callback: function(key, opt) { thisObj._registerAction(); } }
         itemsList['create_volume'] = { "name": snapshot_action_create_volume, callback: function(key, opt) { thisObj._createVolumeAction(); } }
         itemsList['tag'] = {"name":'Tag Resource', callback: function(key, opt){ thisObj._tagResourceAction(); }}
+        itemsList['register_snapshot_bb'] = { "name": snapshot_action_register, callback: function(key, opt) { thisObj._newRegisterSnapshotAction(); } }
+        itemsList['create_volume_bb'] = { "name": snapshot_action_create_volume, callback: function(key, opt) { thisObj._newCreateVolumeAction(); } }
       }
+
+      // TEMP. Create Snapshot item will be available here during the backbone integration  --- Kyo 040813
+      itemsList['create_snapshot_bb'] = { "name": "Create new snapshot", callback: function(key, opt) { thisObj._newCreateSnapshotAction(); } }
 
       return itemsList;
     },
@@ -574,6 +584,39 @@
         });
        }
     },
+
+    _newDeleteSnapshotAction : function(){
+      var dialog = 'delete_snapshot_dialog';
+      var selected = this.tableWrapper.eucatable('getSelectedRows', 10);
+      require(['views/dialogs/' + dialog], function( dialog) {
+        new dialog({items: selected});
+      });
+    },
+
+    _newCreateVolumeAction : function(){
+      var dialog = 'create_volume_dialog';
+      var selected = this.tableWrapper.eucatable('getSelectedRows', 10);
+      require(['app'], function(app) {
+        app.dialog(dialog, app.data.snapshot.get(selected[0]));
+      });
+    },
+
+    _newRegisterSnapshotAction : function(){
+      var dialog = 'register_snapshot_dialog';
+      var selected = this.tableWrapper.eucatable('getSelectedRows', 10);
+      require(['views/dialogs/' + dialog], function( dialog) {
+        new dialog({item: selected});
+      });
+    },
+
+    _newCreateSnapshotAction : function(){
+      var dialog = 'create_snapshot_dialog';
+      require(['app'], function(app) {
+        app.dialog(dialog);
+      });
+    },
+
+
 
 
 /**** Public Methods ****/

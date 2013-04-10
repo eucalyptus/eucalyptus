@@ -100,20 +100,23 @@ rivets.configure({
 });
 
 rivets.binders["ui-*"] = {
+    block: true,
     tokenizes: true,
     bind: function(el) {
         var self = this;
-        // console.log('UI', this.args[0], el);
+        el.removeAttribute('data-ui-' + this.args[0]);
+        var marker = this.marker;
+        if (!marker) {
+          var parentNode = el.parentNode;
+          marker = this.marker = parentNode.insertBefore(document.createComment(" ui: " + this.args[0] + " "), el);
+        }
         require(['views/ui/' + this.args[0] + '/index'], function(view) {
-            console.log('BIND', self.bbLastValue);
             self.bbView = new view({
                 model: self.bbLastValue != null ? self.bbLastValue : {},
-                parentmodel: self.model,
-                keypath: self.keypath,
-                innerHtml: $(el).html()
+                binding: self,
+                el: el
             });
-            $(el).replaceWith($(self.bbView.el).children());
-            return self.bbView.el;
+            return el;
         });
     },
     routine: function(el, value) {
@@ -142,6 +145,17 @@ rivets.binders["msg"] = {
       } else {
         return el.textContent = value != null ? value : '';
       }
+    }
+}
+
+rivets.binders["tooltip"] = {
+    tokenizes: true,
+    routine: function(el, keyname) {
+      var value = window[this.keypath];
+
+      if (value == null) return;
+
+      return $(el).attr('title', value);
     }
 }
 

@@ -4,10 +4,9 @@ define([
 	], function( template, rivets ) {
 	return Backbone.View.extend({
 		initialize : function(args) {
-            template = template.replace(/%%KEYPATH%%/g, args.keypath);
+            template = template.replace(/%%KEYPATH%%/g, args.binding.keypath);
 			this.$el.html(template);
-            console.log('CHECKBOX', this.model);
-			this.rview = rivets.bind(this.$el, args.parentmodel);
+			this.rview = rivets.bind(this.$el, args.binding.model);
 			this.render(this.model);
 		},
 		render : function(newValue) {

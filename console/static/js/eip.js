@@ -58,8 +58,8 @@
 	      // Display the allocated public IP in eucatable
 	      "aTargets":[1],
       	      "mRender": function(data) {
-		return DefaultEncoder().encodeForHTML(data);
-	      },
+                 return eucatableDisplayColumnTypeTwist(data, data, 255);
+	          },
               "mData": "public_ip",
               "iDataSort": 4
             },
@@ -93,6 +93,11 @@
               "mData": function(source) {
                 return ipv4AsInteger(source.public_ip);
               },
+            },
+            {
+              "bVisible": false,
+	          "aTargets":[5],
+              "mData": "public_ip",
             }
           ],
         },
@@ -233,6 +238,14 @@
     },
 
     _destroy : function() {
+    },
+
+    _expandCallback : function(row){ 
+      var $el = $('<div />');
+      require(['app', 'views/expandos/ipaddress'], function(app, expando) {
+         new expando({el: $el, model: app.data.eip.get(row[5]) });
+      });
+      return $el;
     },
 
     _createMenuActions : function() {
@@ -514,12 +527,6 @@
       var thisObj = this;
       var eipsToAssociate = thisObj.tableWrapper.eucatable('getSelectedRows', 1);
       thisObj.dialogAssociateIp(eipsToAssociate[0], null);
-    },
-
-    _expandCallback : function(row){ 
-      var thisObj = this;
-      var ip = row[1];
-      return null;
     },
 
 /**** Public Methods ****/
