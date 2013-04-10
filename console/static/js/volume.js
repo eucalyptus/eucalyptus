@@ -40,34 +40,30 @@
       this.baseTable = $volTable;
       this.tableWrapper = $volTable.eucatable({
         id : 'volumes', // user of this widget should customize these options,
-        data_deps: ['volumes'],
+        data_deps: ['volumes', 'snapshots', 'tags'],
         hidden : thisObj.options['hidden'],
         dt_arg : {
           "sAjaxSource": 'volume',
           "aaSorting": [[ 7, "desc" ]],
           "aoColumnDefs": [
             {
-	      // Display the checkbox button in the main table
+              // Display the checkbox button in the main table
               "bSortable": false,
               "aTargets":[0],
               "mData": function(source) { return '<input type="checkbox"/>' },
               "sClass": "checkbox-cell"
             },
             {
-	      // Display the id of the volume in the main table
-	      "aTargets":[1], 
+              // Display the id of the volume in the main table
+              "aTargets":[1], 
               "mRender": function(data){
                  return eucatableDisplayColumnTypeTwist(data, data, 255);
               },
-              "mData": function(source){
-                 if(source.display_id)
-                   return source.display_id;
-                 return source.id;
-              },
-	    },
+              "mData": "display_id",
+            },
             {
-	      // Display the status of the volume in the main table
-	      "aTargets":[2],
+              // Display the status of the volume in the main table
+              "aTargets":[2],
               "mData": function(source) { 
                  return eucatableDisplayColumnTypeVolumeStatus(source.status);
                },
@@ -77,9 +73,9 @@
               "sWidth": 50,
             },
             { 
-	      // Display the size of the volume in the main table
-	      "aTargets":[3],
-	      "mRender": function(data) {
+              // Display the size of the volume in the main table
+              "aTargets":[3],
+              "mRender": function(data) {
                 if(isInt(data)) 
                   return data;
                 else
@@ -89,63 +85,57 @@
               "sClass": "centered-cell"
             },
             { 
-	      // Display the instance id of the attached volume in the main table
-	      "aTargets":[4],
+              // Display the instance id of the attached volume in the main table
+              "aTargets":[4],
               "mRender": function(data) {
                 return DefaultEncoder().encodeForHTML(data);
               },
               "mData": "attach_data.instance_id",
-	    },
+            },
             { 
-	      // Display the snapshot id of the volume in the main table
-	      "aTargets":[5],
-	      "mRender": function(data) {
+              // Display the snapshot id of the volume in the main table
+              "aTargets":[5],
+              "mRender": function(data) {
                 return DefaultEncoder().encodeForHTML(data);
               },
               "mData": "display_snapshot_id",
-	    },
+            },
             { 
-	      // Display the availibility zone of the volume in the main table
-	      "aTargets":[6],
-	      "mRender": function(data) {
+              // Display the availibility zone of the volume in the main table
+              "aTargets":[6],
+              "mRender": function(data) {
                 return DefaultEncoder().encodeForHTML(data);
               },
               "mData": "zone",
-	    },
+            },
             { 
-	      // Display the creation time of the volume in the main table
-	      "aTargets":[7], 
+              // Display the creation time of the volume in the main table
+              "aTargets":[7], 
               "asSorting" : [ 'desc', 'asc' ],
               "mRender": function(data) { return formatDateTime(data); },
               "mData": "create_time",
               "iDataSort": 9
             },
             {
-	      // Invisible column for the status, used for sort
+              // Invisible column for the status, used for sort
               "bVisible": false,
               "aTargets":[8],
-	      "mRender": function(data) {
-                return DefaultEncoder().encodeForHTML(data);
-              },
               "mData": "status",
             },
             {
-	      // Invisible column for the creation time, used for sort
+              // Invisible column for the creation time, used for sort
               "bVisible": false,
               "aTargets":[9],
-	      "mRender": function(data) {
-		return data;			// escaping causes the sort operation to fail	013013
+              "mRender": function(data) {
+                return data;			// escaping causes the sort operation to fail	013013
               },
               "mData": "create_time",
               "sType": "date"
             },
             {
-	      // Invisible column for the id
+              // Invisible column for the id
               "bVisible": false,
               "aTargets":[10],
-	      "mRender": function(data) {
-                return DefaultEncoder().encodeForHTML(data);
-              },
               "mData": "id",
             }
           ],
@@ -481,6 +471,12 @@
       var error = [];
       doMultiAjax(volumesToDelete, function(item, dfd){
         var volumeId = item; 
+                    require(['app'], function(app) {
+                      _.each(self.scope.items, function(item) {
+                        app.data.launchconfig.get(item).destroy({wait: true});
+                      });
+                      self.close();
+                    });
         $.ajax({
           type:"POST",
           url:"/ec2?Action=DeleteVolume",
@@ -721,7 +717,7 @@
     _expandCallback : function(row){ 
       var $el = $('<div />');
       require(['app', 'views/expandos/volume'], function(app, expando) {
-         new expando({el: $el, model: app.data.volume.get(row[10]) });
+         new expando({el: $el, model: app.data.volumes.get(row[10]) });
       });
       return $el;
     },
