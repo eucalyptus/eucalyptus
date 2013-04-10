@@ -7,13 +7,40 @@ define([
 ], function(EucaDialogView, template, Snapshot, App, Backbone) {
     return EucaDialogView.extend({
 
+        setupAutoComplete: function(args){
+            var self = this;
+            this.template = template;
+            
+            // FIND THE VOLUME MODEL IF MATCHED 'args.volume_id'  --- FOR DEBUG. NOT NEEDED  Kyo 040913
+            if( args.volume_id != undefined ){
+              var matched_volume = App.data.volume.find(function(model){ return model.get('id') == args.volume_id; });
+              if( matched_volume != undefined ){
+     	        console.log("Found the matching model Volume: " + matched_volume.get('id'));
+              }
+            }else{
+              // ELSE CONSTRCUT THE AUTO-COMPLETE FOR THE VOLUME INPUT
+              var vol_ids = [];
+              App.data.volume.each(function(v){
+                console.log("Volume ID: " + v.get('id') + ":" + v.get('status'));
+                vol_ids.push(v.get('id'));
+              });
+              var sorted = sortArray(vol_ids);
+              console.log("selector: " + sorted);
+              var $volumeSelector = this.$el.find('#snapshot-create-volume-id');
+              $volumeSelector.autocomplete({
+                source: sorted
+              });
+            }; 
+        },
+
         initialize : function(args) {
             var self = this;
             this.template = template;
 
             this.scope = {
-                status: 'Ignore me for now',
-                snapshot: new Snapshot({volume_id: args.volume_id, description: ''}),
+                status: '',
+                snapshot: new Snapshot(),
+                item: {volume_id: args.volume_id, description: ''},
 
                 cancelButton: {
                   click: function() {
@@ -24,8 +51,8 @@ define([
                 createButton: {
                   click: function() {
 	            // GET THE INPUT FROM HTML VIEW
-	            var volumeId = self.scope.snapshot.get('volume_id');
-	            var description = self.scope.snapshot.get('description');
+	            var volumeId = self.scope.item.volume_id;
+	            var description = self.scope.item.description;
 		    console.log("Selected Volume ID: " + volumeId);
 		    console.log("Volume Description: " + description);
 
@@ -47,6 +74,7 @@ define([
 	            };
 
 	            // PERFORM CREATE CALL OM THE MODEL
+	            self.scope.snapshot = new Snapshot({volume_id: volumeId, description: description}); 
 	            self.scope.snapshot.sync('create', self.scope.snapshot, createAjaxCallResponse);
 
 	            // DISPLAY THE MODEL LIST FOR VOLUME AFTER THE DESTROY OPERATION
@@ -58,9 +86,11 @@ define([
 	            self.close();
                   }
                 }
-            }
+            };
 
             this._do_init();
+
+            this.setupAutoComplete(args);
         },
-	});
+    });
 });

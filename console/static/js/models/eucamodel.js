@@ -28,7 +28,7 @@ define([
     refreshNamedColumns: function() {
         var self = this;
         _.each(this.namedColumns, function(column) {
-            var matched = self.get('tags').where({res_id: self.get('id'), name: 'Name'});
+            var matched = self.get('tags').where({res_id: self.get(column), name: 'Name'});
             if (matched.length) {
                 var tag = matched[0];
                 self.set('display_' + column, tag.get('value'));
