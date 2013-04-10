@@ -392,7 +392,7 @@ public class OverlayManager extends DASManager {
 	}
 
 	//creates a logical volume (and a new physical volume and volume group)
-	public void createLogicalVolume(String loDevName, String vgName, String lvName) throws EucalyptusCloudException {
+	public void createLogicalVolume(String volumeId, String loDevName, String vgName, String lvName) throws EucalyptusCloudException {
 		String returnValue = createPhysicalVolume(loDevName);
 		if(returnValue.length() == 0) {
 			throw new EucalyptusCloudException("Unable to create physical volume for " + loDevName);
@@ -401,7 +401,7 @@ public class OverlayManager extends DASManager {
 		if(returnValue.length() == 0) {
 			throw new EucalyptusCloudException("Unable to create volume group " + vgName + " for " + loDevName);
 		}
-		returnValue = createLogicalVolume(vgName, lvName);
+		returnValue = createLogicalVolume(volumeId, vgName, lvName);
 		if(returnValue.length() == 0) {
 			throw new EucalyptusCloudException("Unable to create logical volume " + lvName + " in volume group " + vgName);
 		}
@@ -442,7 +442,7 @@ public class OverlayManager extends DASManager {
 			lvmVolumeInfo.setLoDevName(loDevName);
 
 			//create physical volume, volume group and logical volume
-			createLogicalVolume(loDevName, vgName, lvName);
+			createLogicalVolume(volumeId, loDevName, vgName, lvName);
 			lvmVolumeInfo.setVgName(vgName);
 			lvmVolumeInfo.setLvName(lvName);
 
@@ -504,7 +504,7 @@ public class OverlayManager extends DASManager {
 					lvmVolumeInfo.setLoDevName(loDevName);
 
 					//create physical volume, volume group and logical volume
-					createLogicalVolume(loDevName, vgName, lvName);
+					createLogicalVolume(volumeId, loDevName, vgName, lvName);
 					//duplicate snapshot volume
 					String absoluteLVName = lvmRootDirectory + PATH_SEPARATOR + vgName + PATH_SEPARATOR + lvName;
 					duplicateLogicalVolume(loFileName, absoluteLVName);
@@ -569,7 +569,7 @@ public class OverlayManager extends DASManager {
 				String loDevName = createLoopback(rawFileName, absoluteSize);
 				lvmVolumeInfo.setLoDevName(loDevName);
 				//create physical volume, volume group and logical volume
-				createLogicalVolume(loDevName, vgName, lvName);
+				createLogicalVolume(volumeId, loDevName, vgName, lvName);
 				//duplicate snapshot volume
 				String absoluteLVName = lvmRootDirectory + PATH_SEPARATOR + vgName + PATH_SEPARATOR + lvName;
 				String absoluteParentLVName = lvmRootDirectory + PATH_SEPARATOR + parentVgName + PATH_SEPARATOR + parentLvName;
