@@ -77,8 +77,8 @@
  |                                                                            |
 \*----------------------------------------------------------------------------*/
 
-#include "data.h"               // ncInstance
-#include "blobstore.h"          // blobstore_meta
+#include "data.h"                      // ncInstance
+#include "blobstore.h"                 // blobstore_meta
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |

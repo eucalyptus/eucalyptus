@@ -134,19 +134,6 @@
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |
- |                             EXPORTED PROTOTYPES                            |
- |                                                                            |
-\*----------------------------------------------------------------------------*/
-
-adb_DescribeServicesResponse_t *DescribeServicesMarshal(adb_DescribeServices_t * describeServices, const axutil_env_t * env);
-adb_StartServiceResponse_t *StartServiceMarshal(adb_StartService_t * startService, const axutil_env_t * env);
-adb_StopServiceResponse_t *StopServiceMarshal(adb_StopService_t * stopService, const axutil_env_t * env);
-adb_EnableServiceResponse_t *EnableServiceMarshal(adb_EnableService_t * enableService, const axutil_env_t * env);
-adb_DisableServiceResponse_t *DisableServiceMarshal(adb_DisableService_t * disableService, const axutil_env_t * env);
-adb_ShutdownServiceResponse_t *ShutdownServiceMarshal(adb_ShutdownService_t * shutdownService, const axutil_env_t * env);
-
-/*----------------------------------------------------------------------------*\
- |                                                                            |
  |                              STATIC PROTOTYPES                             |
  |                                                                            |
 \*----------------------------------------------------------------------------*/

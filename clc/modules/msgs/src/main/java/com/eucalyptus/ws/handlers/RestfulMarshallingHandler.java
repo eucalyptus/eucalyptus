@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * Copyright 2009-2013 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -151,7 +151,11 @@ public abstract class RestfulMarshallingHandler extends MessageStackHandler {
     this.namespace = namespace;
     this.binding = BindingManager.getBinding( this.namespace );
   }
-  
+
+  protected String getNamespaceForVersion( String bindingVersion ) {
+    return String.format( this.namespacePattern, bindingVersion );
+  }
+
   private void setNamespaceVersion( String bindingVersion ) {
     String newNs = null;
     try {

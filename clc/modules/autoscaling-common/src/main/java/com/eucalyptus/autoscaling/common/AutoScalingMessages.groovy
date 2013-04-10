@@ -40,7 +40,7 @@ public class Alarm extends EucalyptusData {
 }
 public class MetricGranularityTypes extends EucalyptusData {
   public MetricGranularityTypes() {  }
-  ArrayList<MetricGranularityType> member = new ArrayList<MetricGranularityType>()
+  ArrayList<MetricGranularityType> member = [ new MetricGranularityType(granularity: "1Minute") ]
 }
 public class DescribeAutoScalingNotificationTypesResponseType extends AutoScalingMessage {
   public DescribeAutoScalingNotificationTypesResponseType() {  }
@@ -290,6 +290,9 @@ public class PutNotificationConfigurationType extends AutoScalingMessage {
 }
 public class MetricCollectionTypes extends EucalyptusData {
   public MetricCollectionTypes() {  }
+  public MetricCollectionTypes( Collection<String> types ) {
+    member.addAll( types.collect{ type -> new MetricCollectionType( metric: type ) } )
+  }
   ArrayList<MetricCollectionType> member = new ArrayList<MetricCollectionType>()
 }
 public class CreateAutoScalingGroupResponseType extends AutoScalingMessage {
@@ -488,6 +491,9 @@ public class CreateAutoScalingGroupType extends AutoScalingMessage {
     if ( maxSize && desiredCapacity && desiredCapacity > maxSize ) {
       errors.put( "DesiredCapacity", "DesiredCapacity must not be greater than MaxSize" )
     }
+    if ( availabilityZones && availabilityZones.member.isEmpty() ) {
+      errors.put( "AvailabilityZones.member.1", "AvailabilityZones.member.1 is required" )
+    }
     errors
   }
 }
@@ -537,7 +543,6 @@ public class AvailabilityZones extends EucalyptusData {
     if ( zones != null ) member.addAll( zones )
   }
   @AutoScalingMessageValidation.FieldRegex(AutoScalingMessageValidation.FieldRegexValue.EC2_NAME)
-  @AutoScalingMessageValidation.FieldRange(min=1L)
   @HttpParameterMapping(parameter="member")
   ArrayList<String> member = new ArrayList<String>()
 }
@@ -690,7 +695,7 @@ public class UpdateAutoScalingGroupResponseType extends AutoScalingMessage {
 }
 public class EnabledMetric extends EucalyptusData {
   String metric
-  String granularity
+  String granularity = "1Minute"
   public EnabledMetric() {  }
 }
 public class DescribePoliciesResponseType extends AutoScalingMessage {
@@ -737,7 +742,7 @@ public class ExecutePolicyResponseType extends AutoScalingMessage {
 }
 public class ActivityIds extends EucalyptusData {
   public ActivityIds() {  }
-  @AutoScalingMessageValidation.FieldRegex(AutoScalingMessageValidation.FieldRegexValue.UUID)
+  @AutoScalingMessageValidation.FieldRegex(AutoScalingMessageValidation.FieldRegexValue.UUID_VERBOSE)
   @HttpParameterMapping(parameter="member")
   ArrayList<String> member = new ArrayList<String>()
 }
@@ -772,6 +777,13 @@ public class DescribeScalingActivitiesType extends AutoScalingMessage {
   Integer maxRecords
   String nextToken
   public DescribeScalingActivitiesType() {  }
+  public List<String> activityIds() {
+    List<String> ids = Lists.newArrayList()
+    if ( activityIds != null ) {
+      ids = activityIds.getMember()
+    }
+    return ids
+  }
 }
 public class LaunchConfigurationType extends EucalyptusData {
   String launchConfigurationName
@@ -860,7 +872,7 @@ public class UpdateAutoScalingGroupType extends AutoScalingMessage {
 }
 public class DescribeMetricCollectionTypesResult extends EucalyptusData {
   MetricCollectionTypes metrics
-  MetricGranularityTypes granularities
+  MetricGranularityTypes granularities = new MetricGranularityTypes()
   public DescribeMetricCollectionTypesResult() {  }
 }
 public class BlockDeviceMappingType extends EucalyptusData {
@@ -908,6 +920,9 @@ public class AutoScalingGroupsType extends EucalyptusData {
 }
 public class EnabledMetrics extends EucalyptusData {
   public EnabledMetrics() {  }
+  public EnabledMetrics( Collection<String> enabledMetrics ) {
+    if ( enabledMetrics != null ) member.addAll( enabledMetrics.collect{ metric -> new EnabledMetric(metric: metric) } )
+  }
   ArrayList<EnabledMetric> member = new ArrayList<EnabledMetric>()
 }
 public class SetDesiredCapacityType extends AutoScalingMessage {

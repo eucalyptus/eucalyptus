@@ -63,12 +63,14 @@
 package com.eucalyptus.entities;
 
 import java.lang.reflect.UndeclaredThrowableException;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 import javax.persistence.EntityTransaction;
 import org.apache.log4j.Logger;
 import org.hibernate.criterion.Criterion;
+import org.hibernate.criterion.Restrictions;
 import com.eucalyptus.records.Logs;
 import com.eucalyptus.util.Callback;
 import com.eucalyptus.util.EucalyptusCloudException;
@@ -144,13 +146,20 @@ public class Transactions {
       public void fire( T t ) {}
     } );
   }
-  
+
   public static <T> List<T> each( T search, Callback<T> c ) throws TransactionException {
+    return each( search, Restrictions.conjunction(), Collections.<String,String>emptyMap(), c );
+  }
+
+  public static <T> List<T> each( final T search,
+                                  final Criterion criterion,
+                                  final Map<String,String> aliases,
+                                  final Callback<T> c ) throws TransactionException {
     checkParam( search, notNullValue() );
     checkParam( c, notNullValue() );
     EntityTransaction db = Transactions.get( search );
     try {
-      List<T> res = Entities.query( search );
+      List<T> res = Entities.query( search, false, criterion, aliases );
       for ( T t : res ) {
         try {
           c.fire( t );

@@ -65,9 +65,11 @@ package com.eucalyptus.images;
 import javax.persistence.Column;
 import javax.persistence.DiscriminatorValue;
 import javax.persistence.PersistenceContext;
+
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
 import org.hibernate.annotations.Entity;
+
 import com.eucalyptus.auth.principal.UserFullName;
 import com.eucalyptus.cloud.ImageMetadata;
 
@@ -85,6 +87,8 @@ public class BlockStorageImageInfo extends ImageInfo implements BootableImageInf
   private String  kernelId;
   @Column( name = "metadata_image_ramdisk_id" )
   private String  ramdiskId;
+  @Column( name = "metadata_image_root_device" )
+  private String rootDeviceName;
   
   BlockStorageImageInfo( ) {
     super( ImageMetadata.Type.machine );
@@ -97,12 +101,13 @@ public class BlockStorageImageInfo extends ImageInfo implements BootableImageInf
   BlockStorageImageInfo( UserFullName userFullName, String imageId, String imageName, String imageDescription, Long imageSizeBytes,
                          ImageMetadata.Architecture arch, ImageMetadata.Platform platform,
                          String kernelId, String ramdiskId,
-                         String snapshotId, Boolean deleteOnTerminate ) {
+                         String snapshotId, Boolean deleteOnTerminate, String rootDeviceName ) {
     super( userFullName, imageId, ImageMetadata.Type.machine, imageName, imageDescription, imageSizeBytes, arch, platform );
     this.kernelId = kernelId;
     this.ramdiskId = ramdiskId;
     this.snapshotId = snapshotId;
     this.deleteOnTerminate = deleteOnTerminate;
+    this.rootDeviceName = rootDeviceName;
   }
   
   public String getSnapshotId( ) {
@@ -151,11 +156,15 @@ public class BlockStorageImageInfo extends ImageInfo implements BootableImageInf
 
   @Override
   public String getRootDeviceName( ) {
-    return "/dev/sda1";
+    return this.rootDeviceName;
   }
 
   @Override
   public String getRootDeviceType( ) {
     return "ebs";
+  }
+  
+  public void setRootDevice(String rootDevice) {
+	this.rootDeviceName = rootDevice;
   }
 }

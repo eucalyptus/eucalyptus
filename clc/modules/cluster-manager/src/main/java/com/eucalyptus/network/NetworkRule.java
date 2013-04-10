@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * Copyright 2009-2013 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -62,9 +62,7 @@
 
 package com.eucalyptus.network;
 
-import java.util.Arrays;
 import java.util.Collection;
-import java.util.Map.Entry;
 import java.util.Set;
 import javax.persistence.CollectionTable;
 import javax.persistence.Column;
@@ -78,9 +76,6 @@ import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
 import org.hibernate.annotations.Entity;
 import com.eucalyptus.entities.AbstractPersistent;
-import com.google.common.base.Functions;
-import com.google.common.collect.Lists;
-import com.google.common.collect.Multimap;
 import com.google.common.collect.Sets;
 
 @Entity
@@ -99,7 +94,7 @@ public class NetworkRule extends AbstractPersistent {
   private static final int RULE_MAX_PORT = 65535;
 
   public enum Protocol {
-    icmp, tcp, udp;
+    icmp, tcp, udp
   }
   
   @Transient
@@ -126,7 +121,7 @@ public class NetworkRule extends AbstractPersistent {
   
   private NetworkRule( final Protocol protocol, final Integer lowPort, final Integer highPort,
                        final Collection<String> ipRanges,
-                       final Multimap<String, String> peers ) {
+                       final Collection<NetworkPeer> peers ) {
     this.protocol = protocol;
     if ( Protocol.tcp.equals( protocol ) || Protocol.udp.equals( protocol ) ) {
       if ( lowPort < RULE_MIN_PORT || highPort < RULE_MIN_PORT ) {
@@ -143,20 +138,18 @@ public class NetworkRule extends AbstractPersistent {
       this.ipRanges.addAll( ipRanges );
     }
     if ( peers != null ) {
-      for ( final Entry<String, String> entry : peers.entries( ) ) {
-        this.networkPeers.add( new NetworkPeer( this, entry.getKey( ), entry.getValue( ) ) );
-      }
+      this.networkPeers.addAll( peers );
     }
   }
   
   public static NetworkRule create( Protocol protocol, final Integer lowPort, final Integer highPort,
-                                    final Multimap<String, String> peers,
+                                    final Collection<NetworkPeer> peers,
                                     final Collection<String> ipRanges ) {
     return new NetworkRule( protocol, lowPort, highPort, ipRanges, peers );
   }
   
   public static NetworkRule create( final String protocol, final Integer lowPort, final Integer highPort,
-                                    final Multimap<String, String> peers,
+                                    final Collection<NetworkPeer> peers,
                                     final Collection<String> ipRanges ) {
     return create( Protocol.valueOf( protocol ), lowPort, highPort, peers, ipRanges );
   }

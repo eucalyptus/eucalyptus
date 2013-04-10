@@ -76,7 +76,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
-#include <unistd.h>             /* usleep */
+#include <unistd.h>                    /* usleep */
 #include <string.h>
 #include <pthread.h>
 
@@ -134,21 +134,6 @@ const char *euca_this_component_name = "test";
  |                              STATIC VARIABLES                              |
  |                                                                            |
 \*----------------------------------------------------------------------------*/
-
-/*----------------------------------------------------------------------------*\
- |                                                                            |
- |                             EXPORTED PROTOTYPES                            |
- |                                                                            |
-\*----------------------------------------------------------------------------*/
-
-void test_sem_fork(void);
-
-void *thread_a(void *arg);
-void *thread_b(void *arg);
-
-void test_sem_pthreads(void);
-
-int main(int argc, char *argv[]);
 
  /*----------------------------------------------------------------------------*\
  |                                                                            |
@@ -239,7 +224,7 @@ void test_sem_fork(void)
             }
             sem_v(s);
         }
-        exit(0);                /* child quits */
+        exit(0);                       // child quits
     }
 
     SEM_FREE(s);

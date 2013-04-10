@@ -76,14 +76,14 @@
 
 #include <stdlib.h>
 #include <time.h>
-#include <unistd.h>             // close, stat
+#include <unistd.h>                    // close, stat
 #include <assert.h>
 #include <string.h>
 #include <strings.h>
-#include <fcntl.h>              // open
-#include <ctype.h>              // tolower, isdigit
-#include <sys/types.h>          // stat
-#include <sys/stat.h>           // stat
+#include <fcntl.h>                     // open
+#include <ctype.h>                     // tolower, isdigit
+#include <sys/types.h>                 // stat
+#include <sys/stat.h>                  // stat
 #include <curl/curl.h>
 #include <curl/easy.h>
 
@@ -128,21 +128,21 @@
 
 #ifndef _UNIT_TEST
 struct read_request {
-    FILE *fp;                   //!< input file pointer to be used by curl READERs
-    long long total_read;       //!< bytes written during the operation
-    long long total_calls;      //!< write calls made during the operation
-    time_t timestamp;           //!< timestamp for periodically printing progress messages
-    long long file_size;        //!< file size in bytes, to print in progress messages
+    FILE *fp;                          //!< input file pointer to be used by curl READERs
+    long long total_read;              //!< bytes written during the operation
+    long long total_calls;             //!< write calls made during the operation
+    time_t timestamp;                  //!< timestamp for periodically printing progress messages
+    long long file_size;               //!< file size in bytes, to print in progress messages
 };
 
 struct write_request {
-    FILE *fp;                   //!< output file pointer to be used by curl WRITERs
-    long long total_wrote;      //!< bytes written during the operation
-    long long total_calls;      //!< write calls made during the operation
+    FILE *fp;                          //!< output file pointer to be used by curl WRITERs
+    long long total_wrote;             //!< bytes written during the operation
+    long long total_calls;             //!< write calls made during the operation
 #if defined (CAN_GZIP)
-    z_stream strm;              //!< stream struct used by zlib
-    int ret;                    //!< return value of last inflate() call
-#endif                          /* CAN_GZIP */
+    z_stream strm;                     //!< stream struct used by zlib
+    int ret;                           //!< return value of last inflate() call
+#endif                                 /* CAN_GZIP */
 };
 #endif /* ! _UNIT_TEST */
 
@@ -169,23 +169,6 @@ struct write_request {
 #ifndef _UNIT_TEST
 static boolean curl_initialized = FALSE;    //!< boolean to indicate if we have already initialize libcurl
 #endif /* ! _UNIT_TEST */
-
-/*----------------------------------------------------------------------------*\
- |                                                                            |
- |                             EXPORTED PROTOTYPES                            |
- |                                                                            |
-\*----------------------------------------------------------------------------*/
-
-int http_put(const char *file_path, const char *url, const char *login, const char *password);
-
-char *url_encode(const char *unencoded);
-char *url_decode(const char *encoded);
-int http_get(const char *url, const char *outfile);
-int http_get_timeout(const char *url, const char *outfile, int total_retries, int first_timeout, int connect_timeout, int total_timeout);
-
-#ifdef _UNIT_TEST
-int main(int argc, char **argv);
-#endif /* _UNIT_TEST */
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |

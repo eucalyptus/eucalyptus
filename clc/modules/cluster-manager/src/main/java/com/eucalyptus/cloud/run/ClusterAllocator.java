@@ -63,11 +63,18 @@
 package com.eucalyptus.cloud.run;
 
 import static com.eucalyptus.images.Images.findEbsRootOptionalSnapshot;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map.Entry;
 import java.util.NoSuchElementException;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
+
 import javax.persistence.EntityTransaction;
+
 import org.apache.log4j.Logger;
+
 import com.eucalyptus.blockstorage.Volume;
 import com.eucalyptus.blockstorage.Volumes;
 import com.eucalyptus.cloud.ResourceToken;
@@ -88,7 +95,6 @@ import com.eucalyptus.entities.Entities;
 import com.eucalyptus.images.BlockStorageImageInfo;
 import com.eucalyptus.images.Images;
 import com.eucalyptus.keys.SshKeyPair;
-import com.eucalyptus.network.ExtantNetwork;
 import com.eucalyptus.network.NetworkGroup;
 import com.eucalyptus.network.NetworkGroups;
 import com.eucalyptus.node.Nodes;
@@ -102,14 +108,15 @@ import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.util.async.AsyncRequests;
 import com.eucalyptus.util.async.Request;
 import com.eucalyptus.util.async.StatefulMessageSet;
+import com.eucalyptus.vm.VmEphemeralAttachment;
 import com.eucalyptus.vm.VmInstance;
 import com.eucalyptus.vm.VmInstance.VmState;
 import com.eucalyptus.vm.VmInstances;
 import com.eucalyptus.vm.VmVolumeAttachment;
-import com.google.common.base.Function;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
+
 import edu.emory.mathcs.backport.java.util.concurrent.TimeUnit;
 import edu.ucsb.eucalyptus.cloud.VirtualBootRecord;
 import edu.ucsb.eucalyptus.cloud.VmKeyInfo;
@@ -229,39 +236,81 @@ public class ClusterAllocator implements Runnable {
     }
   }
   
+  // Modifying the logic to enable multiple block device mappings for boot from ebs. Fixes EUCA-3254 and implements EUCA-4786
   private void setupVolumeMessages( ) throws NoSuchElementException, MetadataException, ExecutionException {
-    if ( this.allocInfo.getBootSet( ).getMachine( ) instanceof BlockStorageImageInfo ) {
-      final ServiceConfiguration sc = Topology.lookup( Storage.class, this.cluster.getConfiguration( ).lookupPartition( ) );
-      final VirtualBootRecord root = this.allocInfo.getVmTypeInfo( ).lookupRoot( );
-      if ( root.isBlockStorage( ) ) {
-        final String rootDevName = "/dev/sda1";
-        final BlockStorageImageInfo imgInfo = ( ( BlockStorageImageInfo ) this.allocInfo.getBootSet( ).getMachine( ) );
-        Long volSizeBytes = imgInfo.getImageSizeBytes( );
-        Boolean deleteOnTerminate = imgInfo.getDeleteOnTerminate( );
-        for ( final BlockDeviceMappingItemType blockDevMapping :
-              Iterables.filter( this.allocInfo.getRequest().getBlockDeviceMapping(), findEbsRootOptionalSnapshot(rootDevName) ) ) {
-            deleteOnTerminate = blockDevMapping.getEbs( ).getDeleteOnTermination( );
-            if ( blockDevMapping.getEbs( ).getVolumeSize( ) != null ) {
-              volSizeBytes = BYTES_PER_GB * blockDevMapping.getEbs( ).getVolumeSize( );
+    
+	if (  this.allocInfo.getBootSet( ).getMachine( ) instanceof BlockStorageImageInfo  ) {
+	  List<BlockDeviceMappingItemType> instanceDeviceMappings = new ArrayList<BlockDeviceMappingItemType>(this.allocInfo.getRequest().getBlockDeviceMapping());
+		
+	  final ServiceConfiguration sc = Topology.lookup( Storage.class, this.cluster.getConfiguration( ).lookupPartition( ) );
+      
+      final BlockStorageImageInfo imgInfo = ( ( BlockStorageImageInfo ) this.allocInfo.getBootSet( ).getMachine( ) );   	                
+      String rootDevName = imgInfo.getRootDeviceName();
+      Long volSizeBytes = imgInfo.getImageSizeBytes( );
+    	        
+      // Find out the root volume size so that device mappings that don't have a size or snapshot ID can use the root volume size
+      for ( final BlockDeviceMappingItemType blockDevMapping : Iterables.filter( instanceDeviceMappings, findEbsRootOptionalSnapshot(rootDevName) ) ) {
+    	if ( blockDevMapping.getEbs( ).getVolumeSize( ) != null ) {
+    	  volSizeBytes = BYTES_PER_GB * blockDevMapping.getEbs( ).getVolumeSize( );
+    	}
+      } 
+    	  
+      int rootVolSizeInGb = ( int ) Math.ceil( volSizeBytes / BYTES_PER_GB );
+    	        
+      for ( final ResourceToken token : this.allocInfo.getAllocationTokens( ) ) {
+    	final VmInstance vm = VmInstances.lookup( token.getInstanceId( ) );
+        if ( !vm.getBootRecord( ).hasPersistentVolumes( ) ) { // First time a bfebs instance starts up, there are no persistent volumes
+          
+          for (BlockDeviceMappingItemType mapping : instanceDeviceMappings) {
+            if( Images.isEbsMapping( mapping ) ) {
+              LOG.debug("About to prepare volume for instance " + vm.getDisplayName() + " to be mapped to " + mapping.getDeviceName() + " device");
+              // If volume size does not exist in the device mapping: 
+              // Check if the snapshot ID is present in the device mapping. If yes, send -1 to indicate that the volume must be same size as the snapshot
+              // If not, use the root volume size. 
+              final Volume volume = Volumes.createStorageVolume( sc, this.allocInfo.getOwnerFullName( ), mapping.getEbs().getSnapshotId(), 
+            		  mapping.getEbs().getVolumeSize() != null ? mapping.getEbs().getVolumeSize() : (mapping.getEbs().getSnapshotId() != null ? -1 : rootVolSizeInGb), 
+            				  this.allocInfo.getRequest( ) );
+              Boolean isRootDevice = mapping.getDeviceName().equals(rootDevName);
+              if ( mapping.getEbs().getDeleteOnTermination() ) {
+                vm.addPersistentVolume( mapping.getDeviceName(), volume, isRootDevice );
+              } else {
+                vm.addPermanentVolume( mapping.getDeviceName(), volume, isRootDevice );
+              }
+              // Populate all volumes into resource token so they can be used for attach ops and vbr construction
+              if( isRootDevice ) {
+               	token.setRootVolume( volume ); 
+              } else {
+            	token.getEbsVolumes().put(mapping.getDeviceName(), volume);  
+              }
+            } else if ( mapping.getVirtualName() != null ) {
+              vm.addEphemeralAttachment(mapping.getDeviceName(), mapping.getVirtualName());
+              // Populate all ephemeral devices into resource token so they can used for vbr construction
+              token.getEphemeralDisks().put(mapping.getDeviceName(), mapping.getVirtualName());
             }
-        }
-        final int sizeGb = ( int ) Math.ceil( volSizeBytes / BYTES_PER_GB );
-        LOG.debug( "About to prepare root volume using bootable block storage: " + imgInfo + " and vbr: " + root );
-        for ( final ResourceToken token : this.allocInfo.getAllocationTokens( ) ) {
-          final VmInstance vm = VmInstances.lookup( token.getInstanceId( ) );
-          final Volume vol;
-          if ( !vm.getBootRecord( ).hasPersistentVolumes( ) ) {
-            vol = Volumes.createStorageVolume( sc, this.allocInfo.getOwnerFullName( ), imgInfo.getSnapshotId( ), sizeGb, this.allocInfo.getRequest( ) );
-            if ( deleteOnTerminate ) {
-              vm.addPersistentVolume( rootDevName, vol );
+          }
+        } else { // This block is hit when starting a stopped bfebs instance
+          // Although volume attachment records exist and the volumes are marked attached, all volumes are in detached state when the instance is stopped. 
+          // Go through all volume attachments and populate them into the resource token so they can be used for attach ops and vbr construction
+          boolean foundRoot = false;
+          for (VmVolumeAttachment attachment : vm.getBootRecord( ).getPersistentVolumes( )) {
+        	final Volume volume = Volumes.lookup( null, attachment.getVolumeId( ) );
+            if (attachment.getIsRootDevice() || attachment.getDevice().equals(rootDevName) ) {
+              token.setRootVolume( volume );
+              foundRoot = true;
             } else {
-              vm.addPermanentVolume( rootDevName, vol );
+              token.getEbsVolumes().put(attachment.getDevice(), volume);
             }
-            token.setRootVolume( vol );
-          } else {
-            final VmVolumeAttachment volumeAttachment = vm.getBootRecord( ).getPersistentVolumes( ).iterator( ).next( );
-            vol = Volumes.lookup( null, volumeAttachment.getVolumeId( ) );
-            token.setRootVolume( vol );
+          }
+          
+          // Root volume may have been detached. In that case throw an error and exit
+          if ( !foundRoot ) {
+          	LOG.error("No volume attachment found for root device. Attach a volume to root device and retry");
+          	throw new MetadataException("No volume attachment found for root device. Attach a volume to root device and retry");
+          }
+          
+          // Go through all ephemeral attachment records and populate them into resource token so they can used for vbr construction
+          for (VmEphemeralAttachment attachment : vm.getBootRecord( ).getEphmeralStorage()) {
+        	token.getEphemeralDisks().put(attachment.getDevice(), attachment.getEphemeralId());
           }
         }
       }
@@ -290,8 +339,7 @@ public class ClusterAllocator implements Runnable {
     final VmTypeInfo vmInfo = this.allocInfo.getVmTypeInfo( );
     Request cb = null;
     try {
-      final VirtualBootRecord root = vmInfo.lookupRoot( );
-      final VmTypeInfo childVmInfo = this.makeVmTypeInfo( vmInfo, token, root );
+      final VmTypeInfo childVmInfo = this.makeVmTypeInfo( vmInfo, token );
       cb = this.makeRunRequest( token, childVmInfo, networkName );
       this.messages.addRequest( State.CREATE_VMS, cb );
       LOG.debug( "Queued RunInstances: " + token );
@@ -301,46 +349,81 @@ public class ClusterAllocator implements Runnable {
     }
   }
   
-  private VmTypeInfo makeVmTypeInfo( final VmTypeInfo vmInfo, final ResourceToken token, final VirtualBootRecord root ) throws Exception {
-    VmTypeInfo childVmInfo = vmInfo;
-    if ( root.isBlockStorage( ) ) {
-      childVmInfo = vmInfo.child( );
-      final Volume vol = token.getRootVolume( );
-      final ServiceConfiguration scConfig = waitForVolume( vol );
+  // Modifying the logic to enable multiple block device mappings for boot from ebs. Fixes EUCA-3254 and implements EUCA-4786
+  // Using resource token to construct vbr record rather than volume attachments from the database as there might be race condition
+  // where the vm instance record may not have been updated with the volume attachments. EUCA-5670
+  private VmTypeInfo makeVmTypeInfo( final VmTypeInfo vmInfo, final ResourceToken token ) throws Exception {
+    VmTypeInfo childVmInfo = vmInfo.child( );
+    
+    if ( this.allocInfo.getBootSet( ).getMachine( ) instanceof BlockStorageImageInfo ) {  
       
-      VirtualBootRecord vbrRootDevice = childVmInfo.lookupRoot( );
-      String volumeId = vol.getDisplayName( );
-      String remoteDeviceString = null;
-      try {
-        AttachStorageVolumeType attachMsg = new AttachStorageVolumeType( Nodes.lookupIqns( this.cluster.getConfiguration( ) ), volumeId );
-        final AttachStorageVolumeResponseType scAttachResponse = AsyncRequests.sendSync( scConfig, attachMsg );
-        LOG.debug( scAttachResponse );
-        remoteDeviceString = scAttachResponse.getRemoteDeviceString( );
-        if ( remoteDeviceString == null ) {
-          throw new EucalyptusCloudException( "Failed to get remote device string for " + volumeId + " while running instance " + token.getInstanceId( ) );
-        } else {
-          vbrRootDevice.setResourceLocation( remoteDeviceString );
-          final String updateRemoteDevString = remoteDeviceString;
-          final Function<String, VmInstance> updateInstance = new Function<String, VmInstance>( ) {
-            public VmInstance apply( final String input ) {
-              VmVolumeAttachment attachment = VmInstances.lookupVolumeAttachment( input );
-              attachment.setRemoteDevice( updateRemoteDevString );
-              return attachment.getVmInstance( );
-            }
-          };
-          try {
-            Entities.asTransaction( VmInstance.class, updateInstance ).apply( volumeId );
-          } catch ( Exception ex ) {
-            LOG.error( ex );
-            Logs.extreme( ).error( ex, ex );
-          }
-        }
-      } catch ( final Exception ex ) {
-        LOG.error( ex );
-        Logs.extreme( ).error( ex, ex );
-        throw ex;
-      }
-    }//TODO:GRZE:OMGFIXME: move this for bfe to later stage.
+      String instanceId = token.getInstanceId();
+      
+      // Deal with the root volume first
+      VirtualBootRecord rootVbr = childVmInfo.lookupRoot();
+      Volume rootVolume = token.getRootVolume();
+      
+      // Wait for root volume
+      LOG.debug("Wait for root ebs volume " + rootVolume.getDisplayName() +  " to become available");
+	  final ServiceConfiguration scConfig = waitForVolume(rootVolume);
+	  
+	  // Attach root volume
+	  try {
+	    LOG.debug("About to attach volume " + rootVolume.getDisplayName() + " to instance " + instanceId);
+	    AttachStorageVolumeType attachMsg = new AttachStorageVolumeType(Nodes.lookupIqns(this.cluster.getConfiguration()), rootVolume.getDisplayName());
+		final AttachStorageVolumeResponseType scAttachResponse = AsyncRequests.sendSync(scConfig, attachMsg);
+		LOG.debug("Attach response from SC for volume " + rootVolume.getDisplayName() + " and instance " + instanceId + "\n" + scAttachResponse);
+		String remoteDeviceString = scAttachResponse.getRemoteDeviceString();
+        if (remoteDeviceString == null) {
+		  throw new EucalyptusCloudException("Failed to get remote device string for root volume " + rootVolume.getDisplayName() + " while running instance " + instanceId);
+	    } else {
+	      rootVbr.setResourceLocation(remoteDeviceString);
+	      rootVbr.setSize(rootVolume.getSize() * BYTES_PER_GB);
+		  //vm.updatePersistantVolume(remoteDeviceString, rootVolume); Skipping this step for now as no one seems to be using it
+	    }
+	  } catch (final Exception ex) {
+		LOG.error(ex);
+		Logs.extreme().error(ex, ex);
+		throw ex;
+	  }
+	  
+      // Deal with the remaining ebs volumes
+	  for (Entry<String, Volume> mapping : token.getEbsVolumes().entrySet()) {
+		Volume volume = mapping.getValue();
+		if (volume.getSize() <= 0) {
+		  volume = Volumes.lookup(this.allocInfo.getOwnerFullName(), mapping.getValue().getDisplayName());	
+		}
+		String volumeId = volume.getDisplayName();  
+		
+	    LOG.debug("Wait for volume " + volumeId +  " to become available");
+	    final ServiceConfiguration scConfigLocal = waitForVolume(volume);
+	  
+	    try {
+	      LOG.debug("About to attach volume " + volume.getDisplayName() + " to instance " + instanceId);
+	      AttachStorageVolumeType attachMsg = new AttachStorageVolumeType(Nodes.lookupIqns(this.cluster.getConfiguration()), volumeId);
+		  final AttachStorageVolumeResponseType scAttachResponse = AsyncRequests.sendSync(scConfigLocal, attachMsg);
+		  LOG.debug("Attach response from SC for volume " + volumeId + " and instance " + instanceId + scAttachResponse);
+		  String remoteDeviceString = scAttachResponse.getRemoteDeviceString();
+		  if (remoteDeviceString == null) {
+			  throw new EucalyptusCloudException("Failed to get remote device string for root volume " + volumeId + " while running instance " + instanceId);
+		  } else {
+			VirtualBootRecord vbr = new VirtualBootRecord(volumeId, remoteDeviceString, "ebs", mapping.getKey(), (volume.getSize() * BYTES_PER_GB), "none");
+			childVmInfo.getVirtualBootRecord().add(vbr);
+		    //vm.updatePersistantVolume(remoteDeviceString, volume); Skipping this step for now as no one seems to be using it
+		  }
+	    } catch (final Exception ex) {
+	      LOG.error(ex);
+		  Logs.extreme().error(ex, ex);
+		  throw ex;
+	    }
+	  }
+	  
+	  for( String deviceName : token.getEphemeralDisks().keySet()  ) {
+	    childVmInfo.setEphemeral( 0, deviceName, (this.allocInfo.getVmType().getDisk( ) * BYTES_PER_GB), "none" );
+	  }
+	  
+	  LOG.debug("Instance information: " + childVmInfo.dump());
+    }
     return childVmInfo;
   }
   
