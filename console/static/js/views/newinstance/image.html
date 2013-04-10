@@ -1,0 +1,44 @@
+<div class="wizard-step">
+<div class="wizardTitle"><h3 class="required-label" data-msg=launch_instance_section_header_image">Image</h3></div>
+<div id="launch-wizard-image-main-contents">
+
+  <div data-ui-vsearch="search"></div>
+
+  <div id="launch-wizard-image-table">
+  
+    <div id="launch-images_wrapper" class="dataTables_wrapper">
+      <div style="float:left;" class="wizard-section-label required-label" data-msg="launch_instance_image_table_header">Select image</div>
+       <div id="table-wrapper" >
+         <div class="wizard-step-scrollcontainer">
+         <table id="launch-images" class="display">
+          <thead>
+            <tr>
+              <th colspan="1" rowspan="1" class="sorting_asc"></th>
+            </tr>
+          </thead>
+          <tbody >
+            <tr data-each-image="images" data-addclass=":isOdd" data-on-click=":select">
+              <td>
+                <div class="image-type" data-addclass=":setClass">
+                  <div class="image-name" data-text="image.name"></div>
+                  <div class="image-id-arch">
+                    <span data-text="image.id"></span>
+                    <span data-text="image.architecture"></span><br/>
+                    <span data-entitytext="image.description"></span>
+                  </div>
+                </div>
+              </td>
+            </tr>  
+          </tbody>
+        </table>
+        </div>
+        <div class="field-error" data-text="launchConfigErrors.image_id"></div>
+        <div style="visibility: hidden;" class="dataTables_processing" id="launch-images_processing">
+          <img src="images/dots32.gif"> &nbsp; <span data-msg="processing_data">Loading...</span>
+        </div>
+       <!--  <div class="clear"></div> -->
+      </div>
+    </div>
+  </div>
+</div>
+</div>
