@@ -1,21 +1,29 @@
 <div>
     <div class="title" data-msg="delete_volume_dialog_title">Delete Volume</div>
     <div class="body">
-		<p data-msg="delete_volume_dialog_text">Are you sure you want to delete the following volumes?</p>
-		<div class="selected-resources">
-			<table>
-				<thead><tr><th data-msg="delete_volume_dialog_hdr_volume">VOLUME</th></tr></thead>
-				<tbody>
-					<tr data-each-item="items"><td><span data-text="item"></span></td></tr>
-				</tbody>
-			</table>
-		</div>
-		<div data-text="status" style="height:20px"></div>
-        <div class="ui-dialog-buttonpane ui-widget-content ui-helper-clearfix">
+      <div id="volumes-euca-dialog-wrapper">
+        <div id="volumes-euca-dialog" class="euca-dialog">
+          <div class="dialog-inner-content">
+            <p data-msg="volume_dialog__del_text">Are you sure you want to delete the following volumes?</p>
+            <div class="selected-resources">
+              <table>
+                <thead>
+                  <tr><th data-msg="delete_volume_dialog_hdr_volume">VOLUME</th></tr>
+                </thead>
+                <tbody>
+                  <tr data-each-item="items"><td><span data-text="item"></span></td></tr>
+                </tbody>
+              </table>
+	    </div>
+	    <div data-text="status" style="height:20px"></div>
+          </div>
+          <div class="ui-dialog-buttonpane ui-widget-content ui-helper-clearfix">
             <div class="ui-dialog-buttonset">
-                <button type="button" data-on-click="deleteButton">Delete</button>
-                <button type="button" data-on-click="cancelButton">Cancel</button>
+              <a data-ui-button=":deleteButton">Yes, delete</a>
+              <a data-ui-button=":cancelButton">Cancel</a>
             </div>
+          </div>
         </div>
+      </div>
     </div>
 </div>

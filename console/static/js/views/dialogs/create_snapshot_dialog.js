@@ -12,7 +12,7 @@ define([
             this.template = template;
 
             this.scope = {
-                status: 'Ignore me for now',
+                status: '',
                 snapshot: new Snapshot({volume_id: args.volume_id, description: ''}),
 
                 cancelButton: {
