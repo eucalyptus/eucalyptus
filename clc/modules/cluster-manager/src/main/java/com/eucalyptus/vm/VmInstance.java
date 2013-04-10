@@ -1753,14 +1753,14 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
   }
   
   // Update the volume attachment and volume records to reflect the remote device string
-  public void updatePersistantVolume( final String remoteDevice, final Volume vol, final VmVolumeAttachment volAttachment ) {
+  public void updatePersistantVolume( final String remoteDevice, final Volume vol ) {
 	final EntityTransaction db = Entities.get( VmInstance.class );
 	VmInstance instanceEntity = Entities.merge( this );
 	Volume volEntity = Entities.merge( vol );
 	try {
 	  final Set<VmVolumeAttachment> attachments = instanceEntity.bootRecord.getPersistentVolumes();
 	  for (VmVolumeAttachment attachment : attachments ) {
-	    if (attachment.equals(volAttachment)) {
+	    if (attachment.getVolumeId().equals(volEntity.getDisplayName())) {
 	      attachment.setRemoteDevice(remoteDevice);
 	      break;
 	    }
@@ -2051,7 +2051,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
           runningInstance.setClientToken( input.getClientToken() );
           runningInstance.setNameOrArn( input.getNameOrArn( ) );
 
-          if (input.getBootRecord().isMonitoring()) {
+          if (input.getMonitoring()) {
             runningInstance.setMonitoring("enabled");
           } else {
             runningInstance.setMonitoring("disabled");  

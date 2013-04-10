@@ -100,6 +100,7 @@ import com.eucalyptus.upgrade.Upgrades.Version;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.vmtypes.VmType;
 import com.eucalyptus.vmtypes.VmTypes;
+import com.google.common.base.Objects;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Sets;
 
@@ -264,10 +265,10 @@ public boolean isBlockStorage( ) {
   }
   
   public final Boolean isMonitoring() {
-    return monitoring;
-}
+    return Objects.firstNonNull( monitoring, Boolean.FALSE );
+  }
 
-private void setMachineImage( ImageInfo machineImage ) {
+  private void setMachineImage( ImageInfo machineImage ) {
     this.machineImage = machineImage;
   }
   

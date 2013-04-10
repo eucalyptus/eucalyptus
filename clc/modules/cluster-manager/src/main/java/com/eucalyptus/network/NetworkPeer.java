@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * Copyright 2009-2013 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -62,13 +62,15 @@
 
 package com.eucalyptus.network;
 
+import java.io.Serializable;
+import javax.annotation.Nullable;
 import javax.persistence.Column;
 import javax.persistence.Embeddable;
 import javax.persistence.Transient;
 import org.hibernate.annotations.Parent;
 
 @Embeddable
-public class NetworkPeer {
+public class NetworkPeer implements Serializable {
   @Transient
   private static final long serialVersionUID = 1L;
   @Parent
@@ -77,13 +79,25 @@ public class NetworkPeer {
   private String            otherAccountId;
   @Column( name = "network_rule_peer_network_user_group" )
   private String            groupName;
-  
+  @Column( name = "network_rule_peer_network_group_id" )
+  private String            groupId;
+
   NetworkPeer( ) {}
-  
-  NetworkPeer( final NetworkRule networkRule, final String userQueryKey, final String groupName ) {
+
+  NetworkPeer( final String userQueryKey,
+               final String groupName,
+               final String groupId ) {
+    this( null, userQueryKey, groupName, groupId );
+  }
+
+  NetworkPeer( @Nullable final NetworkRule networkRule,
+               final String userQueryKey,
+               final String groupName,
+               final String groupId ) {
     this.networkRule = networkRule;
     this.otherAccountId = userQueryKey;
     this.groupName = groupName;
+    this.groupId = groupId;
   }
   
   public String getUserQueryKey( ) {
@@ -101,14 +115,28 @@ public class NetworkPeer {
   public void setGroupName( final String groupName ) {
     this.groupName = groupName;
   }
-  
+
+  /**
+   * Group ID will not be present for peers created prior to 3.3.
+   *
+   * @return The group ID or null if not available
+   */
+  @Nullable
+  public String getGroupId() {
+    return groupId;
+  }
+
+  public void setGroupId( final String groupId ) {
+    this.groupId = groupId;
+  }
+
   @Override
   public boolean equals( final Object o ) {
     if ( this == o ) return true;
     if ( ( o == null ) || !this.getClass( ).equals( o.getClass( ) ) ) return false;
     
     final NetworkPeer that = ( NetworkPeer ) o;
-    
+
     if ( !this.groupName.equals( that.groupName ) ) return false;
     if ( !this.otherAccountId.equals( that.otherAccountId ) ) return false;
     
@@ -125,7 +153,7 @@ public class NetworkPeer {
   
   @Override
   public String toString( ) {
-    return String.format( "NetworkPeer:userQueryKey=%s:groupName=%s", this.otherAccountId, this.groupName );
+    return String.format( "NetworkPeer:userQueryKey=%s:groupName=%s:groupId=%s", this.otherAccountId, this.groupName, this.groupId );
   }
   
   private NetworkRule getNetworkRule( ) {

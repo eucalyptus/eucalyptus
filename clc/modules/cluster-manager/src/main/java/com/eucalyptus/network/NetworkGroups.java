@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * Copyright 2009-2013 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -65,11 +65,13 @@ package com.eucalyptus.network;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
+import javax.annotation.Nullable;
 import javax.persistence.EntityTransaction;
 import javax.persistence.PersistenceException;
 import org.apache.log4j.Logger;
@@ -105,11 +107,10 @@ import com.eucalyptus.util.TypeMappers;
 import com.google.common.base.Enums;
 import com.google.common.base.Function;
 import com.google.common.base.Predicate;
-import com.google.common.collect.ArrayListMultimap;
+import com.google.common.base.Strings;
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
-import com.google.common.collect.Multimap;
 import com.google.common.collect.Multimaps;
 import com.google.common.collect.SetMultimap;
 import com.google.common.collect.Sets;
@@ -478,20 +479,12 @@ public class NetworkGroups {
     }
   }
   
-  public static NetworkGroup lookup( final String groupId ) throws NoSuchMetadataException {
-    EntityTransaction db = Entities.get( NetworkGroup.class );
-    try {
-      NetworkGroup entity = Entities.uniqueResult( NetworkGroup.named( null, groupId ) );
-      db.commit( );
-      return entity;
-    } catch ( Exception ex ) {
-      Logs.exhaust( ).error( ex, ex );
-      db.rollback( );
-      throw new NoSuchMetadataException( "Failed to find security group: " + groupId, ex );
-    }
+  public static NetworkGroup lookupByGroupId( final String groupId ) throws NoSuchMetadataException {
+    return lookupByGroupId( null, groupId );
   }
-  
-  public static NetworkGroup lookupByGroupId( final OwnerFullName ownerFullName, final String groupId ) throws NoSuchMetadataException {
+
+  public static NetworkGroup lookupByGroupId( @Nullable final OwnerFullName ownerFullName,
+                                              final String groupId ) throws NoSuchMetadataException {
       EntityTransaction db = Entities.get( NetworkGroup.class );
       try {
         NetworkGroup entity = Entities.uniqueResult( NetworkGroup.withGroupId(ownerFullName, groupId) );
@@ -610,14 +603,44 @@ public class NetworkGroups {
       throw new MetadataException( "Failed to create group: " + groupName + " for " + userFullName.toString( ), PersistenceExceptions.transform( ex ) );
     }
   }
-  
+
+  /**
+   * Resolve Group Names / Identifiers for the given permissions.
+   *
+   * <p>Caller must have open transaction.</p>
+   *
+   * @param permissions - The permissions to update
+   * @throws MetadataException If an error occurs
+   */
+  public static void resolvePermissions( final Iterable<IpPermissionType> permissions ) throws MetadataException {
+    for ( final IpPermissionType ipPermission : permissions ) {
+      if ( ipPermission.getGroups() != null ) for ( final UserIdGroupPairType groupInfo : ipPermission.getGroups() ) {
+        if ( !Strings.isNullOrEmpty( groupInfo.getSourceGroupId() ) ) {
+          final NetworkGroup networkGroup = NetworkGroups.lookupByGroupId( groupInfo.getSourceGroupId() );
+          groupInfo.setSourceUserId( networkGroup.getOwnerAccountNumber() );
+          groupInfo.setSourceGroupName( networkGroup.getDisplayName() );
+        } else if ( Strings.isNullOrEmpty( groupInfo.getSourceUserId() ) ||
+            Strings.isNullOrEmpty( groupInfo.getSourceGroupName() )) {
+          throw new MetadataException( "Group ID or User ID/Group Name required." );
+        } else {
+          final NetworkGroup networkGroup =
+              NetworkGroups.lookup( AccountFullName.getInstance( groupInfo.getSourceUserId() ), groupInfo.getSourceGroupName() );
+          groupInfo.setSourceGroupId( networkGroup.getGroupId() );
+        }
+      }
+    }
+  }
+
   @TypeMapper
   public enum NetworkPeerAsUserIdGroupPairType implements Function<NetworkPeer, UserIdGroupPairType> {
     INSTANCE;
     
     @Override
     public UserIdGroupPairType apply( final NetworkPeer peer ) {
-      return new UserIdGroupPairType( peer.getUserQueryKey( ), peer.getGroupName( ) );
+      return new UserIdGroupPairType(
+          peer.getUserQueryKey( ),
+          peer.getGroupName( ),
+          peer.getGroupId( ) );
     }
   }
   
@@ -631,7 +654,7 @@ public class NetworkGroups {
       final Iterable<UserIdGroupPairType> peers = Iterables.transform( rule.getNetworkPeers( ),
                                                                        TypeMappers.lookup( NetworkPeer.class, UserIdGroupPairType.class ) );
       Iterables.addAll( ipPerm.getGroups( ), peers );
-      ipPerm.getIpRanges( ).addAll( rule.getIpRanges( ) );
+      ipPerm.setCidrIpRanges( rule.getIpRanges( ) );
       return ipPerm;
     }
   }
@@ -660,14 +683,14 @@ public class NetworkGroups {
   }
   
   @TypeMapper
-  public enum IpPermissionTypeExtractNetworkPeers implements Function<IpPermissionType, Multimap<String, String>> {
+  public enum IpPermissionTypeExtractNetworkPeers implements Function<IpPermissionType, Collection<NetworkPeer>> {
     INSTANCE;
     
     @Override
-    public Multimap<String, String> apply( IpPermissionType ipPerm ) {
-      Multimap<String, String> networkPeers = ArrayListMultimap.create( );
+    public Collection<NetworkPeer> apply( IpPermissionType ipPerm ) {
+      final Collection<NetworkPeer> networkPeers = Lists.newArrayList();
       for ( UserIdGroupPairType peerInfo : ipPerm.getGroups( ) ) {
-        networkPeers.put( peerInfo.getSourceUserId( ), peerInfo.getSourceGroupName( ) );
+        networkPeers.add( new NetworkPeer( peerInfo.getSourceUserId(), peerInfo.getSourceGroupName(), peerInfo.getSourceGroupId() ) );
       }
       return networkPeers;
     }
@@ -704,9 +727,9 @@ public class NetworkGroups {
                                                  IpPermissionTypeExtractNetworkPeers.INSTANCE.apply( ipPerm ), empty );
           ruleList.add( rule );
         }
-      } else if ( !ipPerm.getIpRanges( ).isEmpty( ) ) {
+      } else if ( !ipPerm.getCidrIpRanges().isEmpty( ) ) {
         List<String> ipRanges = Lists.newArrayList( );
-        for ( String range : ipPerm.getIpRanges( ) ) {
+        for ( String range : ipPerm.getCidrIpRanges() ) {
           String[] rangeParts = range.split( "/" );
           try {
             if ( Integer.parseInt( rangeParts[1] ) > 32 || Integer.parseInt( rangeParts[1] ) < 0 ) continue;
