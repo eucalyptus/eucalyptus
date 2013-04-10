@@ -471,12 +471,6 @@
       var error = [];
       doMultiAjax(volumesToDelete, function(item, dfd){
         var volumeId = item; 
-                    require(['app'], function(app) {
-                      _.each(self.scope.items, function(item) {
-                        app.data.launchconfig.get(item).destroy({wait: true});
-                      });
-                      self.close();
-                    });
         $.ajax({
           type:"POST",
           url:"/ec2?Action=DeleteVolume",
@@ -732,9 +726,8 @@
         itemsList['attach'] = { "name": volume_action_attach, callback: function(key, opt) {;}, disabled: function(){ return true;} } 
         itemsList['detach'] = { "name": volume_action_detach, callback: function(key, opt) {;}, disabled: function(){ return true;} }
         itemsList['create_snapshot'] = { "name": volume_action_create_snapshot, callback: function(key, opt) {;}, disabled: function(){ return true;} }
-        itemsList['delete'] = { "name": volume_action_delete, callback: function(key, opt) {;}, disabled: function(){ return true;} }
+        itemsList['delete'] = {"name":'Delete', callback: function(key, opt) {;}, disabled: function(){ return true;} }     // Backbone Dialog -- Kyo 040613
         itemsList['tag'] = {"name":'Tag Resource', callback: function(key, opt) {;}, disabled: function(){ return true;} }
-        itemsList['delete_volume'] = {"name":'Delete Volume', callback: function(key, opt) {;}, disabled: function(){ return true;} }     // Backbone Dialog -- Kyo 040613
         itemsList['create_snapshot_bb'] = {"name":'Create Snapshot', callback: function(key, opt) {;}, disabled: function(){ return true;} }  // Backbone Dialog -- Kyo 040713
         itemsList['attach_volume_bb'] = {"name":'Attach Volume', callback: function(key, opt) {;}, disabled: function(){ return true;} }  // Backbone Dialog -- Kyo 040713
         itemsList['detach_volume_bb'] = {"name":'Detach Volume', callback: function(key, opt) {;}, disabled: function(){ return true;} }  // Backbone Dialog -- Kyo 040713

@@ -20,35 +20,50 @@ define([
         deleteButton: {
           click: function() {
               // FOR EACH VOLUME IN THE LIST 'items'
-              _.each(self.scope.items, function(item) {
-                console.log("Volume Item: " + item);
-                // FIND THE MODEL THAT MATCHES THE VOLUME ID WITH 'item'
-                var match = App.data.volume.find(function(model){ return model.get('id') == item; });
-                // CONSTRUCT THE AJAX RESPONSE OPTIONS
-                var deleteAjaxCallResponse = {
-                  success: function(data, response, jqXHR){   // AJAX CALL SUCCESS OPTION
-                    console.log("Callback " + response);
-                    if(data.results){
-                      console.log("sync: Volume " +item+ " Deleted = " + data.results );
-                      notifySuccess(null, $.i18n.prop('volume_create_success', DefaultEncoder().encodeForHTML(item)));  // incorrect prop; Need to be fixed  -- Kyo 040813
-                    }else{
-                      notifyError($.i18n.prop('delete_volume_error', DefaultEncoder().encodeForHTML(item)), undefined_error);  // incorrect prop
+              var done = 0;
+              var all = self.scope.items.length;
+              var error = [];
+              doMultiAjax(self.scope.items, function(item, dfd) {
+                console.log("Volume to be deleted: "+item);
+                var volumeId = item;
+                var volume = App.data.volumes.get(item);
+                volume.destroy({
+                  wait: true,
+                  success:
+                    function(model, response, options) {
+                      console.log("response = "+JSON.stringify(response));
+                      if (response.results && data.results == true) {
+                        ;
+                      } else {
+                        error.push({id:volumeId, reason: undefined_error});
+                      }
+                      options.complete(model, response);
+                    },
+                  error:
+                    function(model, xhr, options) {
+                      console.log("response = "+JSON.stringify(xhr));
+                      error.push({id:volumeId, reason: getErrorMessage(xhr)});
+                      options.complete(model, xhr);
+                    },
+                  complete:
+                    function(model, response) {
+                      done++;
+                      if (done < all) {
+                        notifyMulti(100*(done/all), $.i18n.prop('volume_delete_progress', all));
+                      }
+                      else {
+                        var $msg = $('<div>').addClass('multiop-summary').append(
+                                   $('<div>').addClass('multiop-summary-success').
+                                       html($.i18n.prop('volume_delete_done', (all-error.length), all)));
+                        if (error.length > 0)
+                            $msg.append($('<div>').addClass('multiop-summary-failure').
+                                       html($.i18n.prop('volume_delete_fail', error.length)));
+                        notifyMulti(100, $msg.html(), error);
+                      }
+                      dfd.resolve();
                     }
-                  },
-                  error: function(jqXHR, textStatus, errorThrown){   // AJAX CALL ERROR OPTION
-                    notifyError($.i18n.prop('delete_volume_error', DefaultEncoder().encodeForHTML(item)), getErrorMessage(jqXHR));  // incorrect prop 
-                  }
-                };
-                // PERFORM DELETE CALL OM THE MODEL NEED to handle multi-ajax and multi-notificaiton -- Kyo 040813
-                match.sync('delete', match, deleteAjaxCallResponse);
-                // DESTORY THIS MODEL
-                match.destroy({wait: true});
+                });
               });
-              // DISPLAY THE MODEL LIST FOR VOLUME AFTER THE DESTROY OPERATION -- FOR DEBUG
-              App.data.volume.each(function(item){
-                console.log("Volume After Delete: " + item.get('id'));
-              });
-              // CLOSE THE DIALOG
               self.close();
           }
         },
