@@ -14,40 +14,43 @@ define([
   './model/advancedmodel',
   './model/blockmaps',
   './model/snapshots'
-], function(Wizard, wizardTemplate, page1, page2, page3, page4, summary, launchconfigModel, imageModel, typeModel, securityModel, keyPair, advancedModel, blockMaps, snapShots) {
-  var wizard = new Wizard();
+], function(Wizard, wizardTemplate, page1, page2, page3, page4, summary, launchconfigModelClz, imageModelClz, typeModelClz, securityModelClz, keyPairClz, advancedModelClz, blockMapsClz, snapShotsClz) {
+  var res = function() {
+      var wizard = new Wizard();
 
-  function canFinish(position, problems) {
-    // VALIDATE THE MODEL HERE AND IF THERE ARE PROBLEMS,
-    // ADD THEM INTO THE PASSED ARRAY
-    return position === 2;
+      function canFinish(position, problems) {
+        // VALIDATE THE MODEL HERE AND IF THERE ARE PROBLEMS,
+        // ADD THEM INTO THE PASSED ARRAY
+        return position === 2;
+      }
+
+      function finish() {
+        alert("Placeholder function for saving the new launch config.");
+      }
+
+      var launchConfigModel = new launchconfigModelClz();
+      var imageModel = new imageModelClz();
+      var typeModel = new typeModelClz();
+      var securityModel = new securityModelClz();
+      var keyModel = new keyPairClz();
+      var advancedModel = new advancedModelClz();
+      var blockMaps = new blockMapsClz();
+      var snapShots = new snapShotsClz();
+
+      var viewBuilder = wizard.viewBuilder(wizardTemplate)
+              .add(new page1({model: imageModel, blockMaps: blockMaps}))
+              .add(new page2({model: typeModel}))
+              .add(new page3({model: securityModel, keymodel: keyModel}))
+              .add(new page4({model: advancedModel, blockMaps: blockMaps, snapshots: snapShots}))
+              .setHideDisabledButtons(true)
+              .setFinishText('Create launch configuration').setFinishChecker(canFinish)
+              .finisher(finish)
+              .summary(new summary( {imageModel: imageModel, typeModel: typeModel, securityModel: securityModel, keymodel: keyModel, advancedModel: advancedModel} ));
+    //  var ViewType = wizard.makeView(options, wizardTemplate);
+      var ViewType = viewBuilder.build();
+
+      return ViewType;
   }
-
-  function finish() {
-    alert("Placeholder function for saving the new launch config.");
-  }
-
-  var launchConfigModel = new launchconfigModel();
-  var imageModel = new imageModel();
-  var typeModel = new typeModel();
-  var securityModel = new securityModel();
-  var keyModel = new keyPair();
-  var advancedModel = new advancedModel();
-  var blockMaps = new blockMaps();
-  var snapShots = new snapShots();
-
-  var viewBuilder = wizard.viewBuilder(wizardTemplate)
-          .add(new page1({model: imageModel, blockMaps: blockMaps}))
-          .add(new page2({model: typeModel}))
-          .add(new page3({model: securityModel, keymodel: keyModel}))
-          .add(new page4({model: advancedModel, blockMaps: blockMaps, snapshots: snapShots}))
-          .setHideDisabledButtons(true)
-          .setFinishText('Create launch configuration').setFinishChecker(canFinish)
-          .finisher(finish)
-          .summary(new summary( {imageModel: imageModel, typeModel: typeModel, securityModel: securityModel, keymodel: keyModel, advancedModel: advancedModel} ));
-//  var ViewType = wizard.makeView(options, wizardTemplate);
-  var ViewType = viewBuilder.build();
-
-  return ViewType;
+  return res;
 });
 

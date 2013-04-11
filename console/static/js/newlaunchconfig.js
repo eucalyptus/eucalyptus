@@ -23,57 +23,11 @@
     options : { },
     _init : function() {
       var thisObj = this;
-        require([
-          'wizard',
-          'text!views/launchconfig/template.html',
-          'views/launchconfig/image',
-          'views/launchconfig/type',
-          'views/launchconfig/security',
-          'views/launchconfig/advanced',
-          'views/launchconfig/summary',
-          'models/launchconfig',
-          'views/launchconfig/model/imagemodel',
-          'views/launchconfig/model/typemodel',
-          'views/launchconfig/model/securitygroup',
-          'views/launchconfig/model/keypair',
-          'views/launchconfig/model/advancedmodel',
-          'views/launchconfig/model/blockmaps',
-          'views/launchconfig/model/snapshots'
-        ], function(Wizard, wizardTemplate, page1, page2, page3, page4, summary, launchconfigModel, imageModel, typeModel, securityModel, keyPair, advancedModel, blockMaps, snapShots) {
-          var wizard = new Wizard();
-
-          function canFinish(position, problems) {
-            // VALIDATE THE MODEL HERE AND IF THERE ARE PROBLEMS,
-            // ADD THEM INTO THE PASSED ARRAY
-            return position === 2;
-          }
-
-          function finish() {
-            alert("Placeholder function for saving the new launch config.");
-          }
-
-          var launchConfigModel = new launchconfigModel();
-          var imageModel = new imageModel();
-          var typeModel = new typeModel();
-          var securityModel = new securityModel();
-          var keyModel = new keyPair();
-          var advancedModel = new advancedModel();
-          var blockMaps = new blockMaps();
-          var snapShots = new snapShots();
-
-          var viewBuilder = wizard.viewBuilder(wizardTemplate)
-                  .add(new page1({model: imageModel, blockMaps: blockMaps}))
-                  .add(new page2({model: typeModel}))
-                  .add(new page3({model: securityModel, keymodel: keyModel}))
-                  .add(new page4({model: advancedModel, blockMaps: blockMaps, snapshots: snapShots}))
-                  .setHideDisabledButtons(true)
-                  .setFinishText('Create launch configuration').setFinishChecker(canFinish)
-                  .finisher(finish)
-                  .summary(new summary( {imageModel: imageModel, typeModel: typeModel, securityModel: securityModel, keymodel: keyModel, advancedModel: advancedModel} ));
-        //  var ViewType = wizard.makeView(options, wizardTemplate);
-          var ViewType = viewBuilder.build();
-          new ViewType({el: thisObj.element}) 
-        });
+      require(['views/launchconfig/index'], function(wizardFactory) {
+        var View = wizardFactory();
+        var view = new View({el: thisObj.element});
+	    view.render();
+      });
     },
 
     _create : function() { 
