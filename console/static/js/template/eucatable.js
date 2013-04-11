@@ -103,7 +103,8 @@
                 valueMatches : thisObj.searchConfig.valueMatches
             }
         });
-        thisObj.bbdata.on('change reset', function() {
+        thisObj.bbdata.on('change add remove reset', function() {
+            console.log('bbdata refresh');
             thisObj.refreshTable.call(thisObj)
         });
         thisObj.refreshTable();

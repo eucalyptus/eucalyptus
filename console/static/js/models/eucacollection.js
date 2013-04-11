@@ -1,21 +1,10 @@
 define([
   'underscore',
-  'sharedtags',
-  'backbone'
-], function(_, tags, Backbone) {
+  'backbone',
+], function(_, Backbone) {
   var EucaCollection = Backbone.Collection.extend({
     initialize: function() {
         var self = this;
-        tags.on('add change reset', function() {
-            self.resetTags();
-        });        
-    },
-    resetTags: function() {
-        var self = this;
-        this.each(function(m) {
-            var newtags = tags.where({res_id: m.get('id')});
-            m.get('tags').set(newtags);
-        });
     },
     sync: function(method, model, options) {
       var collection = this;
@@ -31,10 +20,11 @@ define([
           function(describe) {
             if (describe.results) {
               var results = describe.results;
-              _.each(results, function(r) { r.tags = new Backbone.Collection(); });
-//              options.success && options.success(model, results, options);
+              _.each(results, function(r) {
+                if (r.tags != null) delete r.tags;
+              });
               options.success && options.success(results);
-              collection.resetTags();
+              //collection.resetTags();
             } else {
               ;//TODO: how to notify errors?
               console.log('regrettably, its an error');
