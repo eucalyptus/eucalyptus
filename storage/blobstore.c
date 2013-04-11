@@ -4456,6 +4456,46 @@ const char *blockblob_get_file(blockblob * bb)
 }
 
 //!
+//! Returns the blobstore of the blob
+//! @param[in] bb
+//!
+//! @return pointer to the blobstore 
+//!
+
+blobstore *blockblob_get_blobstore(blockblob * bb)
+{
+    if (bb == NULL) {
+        ERR(BLOBSTORE_ERROR_INVAL, NULL);
+        return NULL;
+    }
+    return bb->store;
+}
+
+//!
+//! Returns the directory in which the blob files are located
+//!
+//! @param[in] bb
+//!
+//! @return success (0) or failure (-1)
+//!
+int blockblob_get_dir(blockblob * bb, char *buf, int buflen)
+{
+    if (bb == NULL) {
+        ERR(BLOBSTORE_ERROR_INVAL, NULL);
+        return -1;
+    }
+    euca_strncpy(buf, bb->blocks_path, buflen);
+    for (int i = (strlen(buf) - 1); i > 1; i--) {
+        if (buf[i] == '/') {
+            buf[i] = '\0';
+            return 0;
+        }
+    }
+    ERR(BLOBSTORE_ERROR_INVAL, NULL);
+    return -1;
+}
+
+//!
 //!
 //!
 //! @param[in] bb

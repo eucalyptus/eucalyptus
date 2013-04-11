@@ -222,9 +222,9 @@ static void art_print_tree(const char *prefix, artifact * a);
 static int art_gen_id(char *buf, unsigned int buf_size, const char *first, const char *sig);
 static void convert_id(const char *src, char *dst, unsigned int size);
 static char *url_get_digest(const char *url);
-static artifact *art_alloc_vbr(virtualBootRecord * vbr, boolean do_make_work_copy, boolean must_be_file, const char *sshkey);
+static artifact *art_alloc_vbr(virtualBootRecord * vbr, boolean do_make_work_copy, boolean is_migration_dest, boolean must_be_file, const char *sshkey);
 static artifact *art_alloc_disk(virtualBootRecord * vbr, artifact * prereqs[], int num_prereqs, artifact * parts[], int num_parts,
-                                artifact * emi_disk, boolean do_make_bootable, boolean do_make_work_copy);
+                                artifact * emi_disk, boolean do_make_bootable, boolean do_make_work_copy, boolean is_migration_dest);
 static int find_or_create_blob(int flags, blobstore * bs, const char *id, long long size_bytes, const char *sig, blockblob ** bbp);
 static int find_or_create_artifact(int do_create, artifact * a, blobstore * work_bs, blobstore * cache_bs, const char *work_prefix, blockblob ** bbp);
 
@@ -825,6 +825,27 @@ static void update_vbr_with_backing_info(artifact * a)
         vbr->backingType = SOURCE_TYPE_FILE;
     }
     vbr->sizeBytes = a->bb->size_bytes;
+
+    // create a symlink so backing file/dev is predictable regadless
+    // of whether the backing is a loopback dev or a device mapper dev
+    // or a file: this is needed for migration to work
+    {
+        const char *path = vbr->backingPath;
+        char bbdirpath[PATH_MAX];
+        blockblob_get_dir(a->bb, bbdirpath, sizeof(bbdirpath)); // fill in blob's base directory
+        char *linkname = "[invalid]";
+        if (!strcmp(vbr->guestDeviceName, "none")) {
+            linkname = vbr->typeName;;
+        } else {
+            linkname = vbr->guestDeviceName;
+        }
+        char linkpath[PATH_MAX];
+        snprintf(linkpath, sizeof(linkpath), "%s/link-to-%s", bbdirpath, linkname);
+        if (symlink(path, linkpath) == 0) {
+            LOGDEBUG("[%s] symlinked %s to %s\n", a->instanceId, path, linkpath);
+            euca_strncpy(vbr->backingPath, linkpath, sizeof(vbr->backingPath));
+        }
+    }
 }
 
 //!
@@ -846,6 +867,10 @@ static int url_creator(artifact * a)
     const char *dest_path = blockblob_get_file(a->bb);
 
     assert(vbr->preparedResourceLocation);
+    if (a->do_not_download) {
+        LOGINFO("[%s] skipping download of %s\n", a->instanceId, vbr->preparedResourceLocation);
+        return EUCA_OK;
+    }
     LOGINFO("[%s] downloading %s\n", a->instanceId, vbr->preparedResourceLocation);
     if (http_get(vbr->preparedResourceLocation, dest_path) != EUCA_OK) {
         LOGERROR("[%s] failed to download component %s\n", a->instanceId, vbr->preparedResourceLocation);
@@ -874,6 +899,10 @@ static int walrus_creator(artifact * a)
     const char *dest_path = blockblob_get_file(a->bb);
 
     assert(vbr->preparedResourceLocation);
+    if (a->do_not_download) {
+        LOGINFO("[%s] skipping download of %s\n", a->instanceId, vbr->preparedResourceLocation);
+        return EUCA_OK;
+    }
     LOGINFO("[%s] downloading %s\n", a->instanceId, vbr->preparedResourceLocation);
     if (walrus_image_by_manifest_url(vbr->preparedResourceLocation, dest_path, TRUE) != EUCA_OK) {
         LOGERROR("[%s] failed to download component %s\n", a->instanceId, vbr->preparedResourceLocation);
@@ -902,6 +931,10 @@ static int partition_creator(artifact * a)
     const char *dest_dev = blockblob_get_dev(a->bb);
 
     assert(dest_dev);
+    if (a->do_not_download) {
+        LOGINFO("[%s] skipping formatting of %s\n", a->instanceId, a->id);
+        return EUCA_OK;
+    }
     LOGINFO("[%s] creating partition of size %lld bytes and type %s in %s\n", a->instanceId, a->size_bytes, vbr->formatName, a->id);
     int format = EUCA_ERROR;
     switch (vbr->format) {
@@ -1004,7 +1037,6 @@ static int disk_creator(artifact * a)
     if (a->do_make_bootable) {
         a->size_bytes += (SECTOR_SIZE * BOOT_BLOCKS);
     }
-    LOGINFO("[%s] constructing disk of size %lld bytes in %s (%s)\n", a->instanceId, a->size_bytes, a->id, blockblob_get_dev(a->bb));
 
     blockmap_relation_t mbr_op = BLOBSTORE_SNAPSHOT;
     blockmap_relation_t part_op = BLOBSTORE_MAP;    // use map by default as it is faster
@@ -1035,7 +1067,7 @@ blockmap map[EUCA_MAX_PARTITIONS] = { {mbr_op, BLOBSTORE_ZERO, {blob:NULL}
         offset_bytes += (SECTOR_SIZE * BOOT_BLOCKS);
     }
 
-    LOGINFO("[%s] offset_bytes=%llu\n", a->instanceId, offset_bytes);
+    LOGDEBUG("[%s] offset for the first partition will be %llu bytes\n", a->instanceId, offset_bytes);
 
     assert(disk);
     for (int i = 0; i < MAX_ARTIFACT_DEPS && a->deps[i]; i++) {
@@ -1087,6 +1119,12 @@ blockmap map[EUCA_MAX_PARTITIONS] = { {mbr_op, BLOBSTORE_ZERO, {blob:NULL}
     disk->guestDeviceBus = p1->guestDeviceBus;
     disk->diskNumber = p1->diskNumber;
     set_disk_dev(disk);
+
+    if (a->do_not_download) {
+        LOGINFO("[%s] skipping construction of %s\n", a->instanceId, a->id);
+        return EUCA_OK;
+    }
+    LOGINFO("[%s] constructing disk of size %lld bytes in %s (%s)\n", a->instanceId, a->size_bytes, a->id, blockblob_get_dev(a->bb));
 
     // map the partitions to the disk
     if (blockblob_clone(a->bb, map, map_entries) == -1) {
@@ -1294,6 +1332,11 @@ static int copy_creator(artifact * a)
     artifact *dep = a->deps[0];
     virtualBootRecord *vbr = a->vbr;
     assert(vbr);
+
+    if (a->do_not_download) {
+        LOGINFO("[%s] skipping copying to %s\n", a->instanceId, a->bb->id);
+        return EUCA_OK;
+    }
 
     if (dep->bb != NULL) {             // skip copy if source is NULL (as in the case of a bypassed redundant work artifact due to caching failure)
         LOGINFO("[%s] copying/cloning blob %s to blob %s\n", a->instanceId, dep->bb->id, a->bb->id);
@@ -1697,7 +1740,7 @@ static char *url_get_digest(const char *url)
 //!
 //! @note
 //!
-static artifact *art_alloc_vbr(virtualBootRecord * vbr, boolean do_make_work_copy, boolean must_be_file, const char *sshkey)
+static artifact *art_alloc_vbr(virtualBootRecord * vbr, boolean do_make_work_copy, boolean is_migration_dest, boolean must_be_file, const char *sshkey)
 {
     artifact *a = NULL;
     char *blob_sig = NULL;
@@ -1728,7 +1771,7 @@ static artifact *art_alloc_vbr(virtualBootRecord * vbr, boolean do_make_work_cop
                 goto u_out;
 
             // allocate artifact struct
-            a = art_alloc(art_id, blob_sig, bb_size_bytes, TRUE, must_be_file, FALSE, url_creator, vbr);
+            a = art_alloc(art_id, blob_sig, bb_size_bytes, !is_migration_dest, must_be_file, FALSE, url_creator, vbr);
 
 u_out:
             EUCA_FREE(blob_sig);
@@ -1755,7 +1798,7 @@ u_out:
                 goto w_out;
             }
             // allocate artifact struct
-            a = art_alloc(art_id, blob_sig, bb_size_bytes, TRUE, must_be_file, FALSE, walrus_creator, vbr);
+            a = art_alloc(art_id, blob_sig, bb_size_bytes, !is_migration_dest, must_be_file, FALSE, walrus_creator, vbr);
 
 w_out:
             EUCA_FREE(blob_sig);
@@ -1793,14 +1836,16 @@ w_out:
             if (art_gen_id(art_id, sizeof(art_id), art_pref, art_sig) != EUCA_OK)
                 break;
 
-            a = art_alloc(art_id, art_sig, vbr->sizeBytes, TRUE, must_be_file, FALSE, partition_creator, vbr);
+            a = art_alloc(art_id, art_sig, vbr->sizeBytes, !is_migration_dest, must_be_file, FALSE, partition_creator, vbr);
             break;
         }
     default:
         LOGERROR("[%s] unrecognized locationType %d\n", current_instanceId, vbr->locationType);
         break;
     }
-
+    if (a) {
+        a->do_not_download = is_migration_dest;
+    }
     // allocate another artifact struct if a work copy is requested
     // or if an SSH key is supplied
     if (a && (do_make_work_copy || sshkey)) {
@@ -1834,6 +1879,7 @@ w_out:
 
         a2 = art_alloc(art_id, art_sig, a->size_bytes, !do_make_work_copy, must_be_file, FALSE, copy_creator, vbr);
         if (a2) {
+            a2->do_not_download = is_migration_dest;
             if (sshkey)
                 euca_strncpy(a2->sshkey, sshkey, sizeof(a2->sshkey));
 
@@ -1876,7 +1922,7 @@ out:
 //! @note
 //!
 static artifact *art_alloc_disk(virtualBootRecord * vbr, artifact * prereqs[], int num_prereqs, artifact * parts[], int num_parts,
-                                artifact * emi_disk, boolean do_make_bootable, boolean do_make_work_copy)
+                                artifact * emi_disk, boolean do_make_bootable, boolean do_make_work_copy, boolean is_migration_dest)
 {
     char art_sig[ART_SIG_MAX] = "";
     char art_pref[EUCA_MAX_PATH] = "dsk";
@@ -1953,6 +1999,7 @@ static artifact *art_alloc_disk(virtualBootRecord * vbr, artifact * prereqs[], i
             return NULL;
         }
         disk->do_make_bootable = do_make_bootable;
+        disk->do_not_download = is_migration_dest;
 
         // attach partitions as dependencies of the raw disk        
         for (int i = 0; i < num_parts; i++) {
@@ -2010,7 +2057,7 @@ void art_set_instanceId(const char *instanceId)
 //!
 //! @note
 //!
-artifact *vbr_alloc_tree(virtualMachine * vm, boolean do_make_bootable, boolean do_make_work_copy, const char *sshkey, const char *instanceId)
+artifact *vbr_alloc_tree(virtualMachine * vm, boolean do_make_bootable, boolean do_make_work_copy, boolean is_migration_dest, const char *sshkey, const char *instanceId)
 {
     if (instanceId)
         euca_strncpy(current_instanceId, instanceId, sizeof(current_instanceId));
@@ -2041,7 +2088,7 @@ artifact *vbr_alloc_tree(virtualMachine * vm, boolean do_make_bootable, boolean 
     int total_prereq_arts = 0;
     for (int i = 0; i < total_prereq_vbrs; i++) {
         virtualBootRecord *vbr = prereq_vbrs[i];
-        artifact *dep = art_alloc_vbr(vbr, do_make_work_copy, TRUE, NULL);
+        artifact *dep = art_alloc_vbr(vbr, do_make_work_copy, FALSE, TRUE, NULL);   // is_migration_dest==FALSE because eki and eri *must* be filled in for migration
         if (dep == NULL)
             goto free;
         prereq_arts[total_prereq_arts++] = dep;
@@ -2066,7 +2113,7 @@ artifact *vbr_alloc_tree(virtualMachine * vm, boolean do_make_bootable, boolean 
                     if (vbr->type == NC_RESOURCE_IMAGE && k > 0) {  // only inject SSH key into an EMI which has a single partition (whole disk)
                         use_sshkey = sshkey;
                     }
-                    disk_arts[k] = art_alloc_vbr(vbr, do_make_work_copy, FALSE, use_sshkey);    // this brings in disks or partitions and their work copies, if requested
+                    disk_arts[k] = art_alloc_vbr(vbr, do_make_work_copy, is_migration_dest, FALSE, use_sshkey); // this brings in disks or partitions and their work copies, if requested
                     if (disk_arts[k] == NULL) {
                         arts_free(disk_arts, EUCA_MAX_PARTITIONS);
                         goto free;
@@ -2084,7 +2131,7 @@ artifact *vbr_alloc_tree(virtualMachine * vm, boolean do_make_bootable, boolean 
                         goto out;
                     }
                     disk_arts[0] = art_alloc_disk(&(vm->virtualBootRecord[vm->virtualBootRecordLen]),
-                                                  prereq_arts, total_prereq_arts, disk_arts + 1, partitions, NULL, do_make_bootable, do_make_work_copy);
+                                                  prereq_arts, total_prereq_arts, disk_arts + 1, partitions, NULL, do_make_bootable, do_make_work_copy, is_migration_dest);
                     if (disk_arts[0] == NULL) {
                         arts_free(disk_arts, EUCA_MAX_PARTITIONS);
                         goto free;
@@ -2299,7 +2346,8 @@ int art_implement_tree(artifact * root, blobstore * work_bs, blobstore * cache_b
             switch (ret = find_or_create_artifact(FIND, root, work_bs, cache_bs, work_prefix, &(root->bb))) {
             case BLOBSTORE_ERROR_OK:
                 LOGDEBUG("[%s] found existing artifact %03d|%s on try %d\n", root->instanceId, root->seq, root->id, tries);
-                update_vbr_with_backing_info(root);
+                if (work_bs && blockblob_get_blobstore(root->bb) == work_bs)
+                    update_vbr_with_backing_info(root);
                 do_deps = FALSE;
                 do_create = FALSE;
                 break;
@@ -2413,7 +2461,8 @@ create:
                 }
             } else {
                 if (root->vbr && root->vbr->type != NC_RESOURCE_EBS)
-                    update_vbr_with_backing_info(root);
+                    if (work_bs && blockblob_get_blobstore(root->bb) == work_bs)
+                        update_vbr_with_backing_info(root);
             }
         }
 
@@ -2552,7 +2601,7 @@ static int provision_vm(const char *id, const char *sshkey, const char *eki, con
     add_vbr(vm, VBR_SIZE, NC_FORMAT_SWAP, "swap", "none", NC_RESOURCE_SWAP, NC_LOCATION_NONE, 0, 2, BUS_TYPE_SCSI, NULL);
 
     euca_strncpy(current_instanceId, strstr(id, "/") + 1, sizeof(current_instanceId));
-    artifact *sentinel = vbr_alloc_tree(vm, FALSE, do_make_work_copy, sshkey, id);
+    artifact *sentinel = vbr_alloc_tree(vm, FALSE, do_make_work_copy, FALSE, sshkey, id);
     if (sentinel == NULL) {
         printf("error: vbr_alloc_tree failed id=%s\n", id);
         return 1;

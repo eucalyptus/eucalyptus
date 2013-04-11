@@ -120,6 +120,7 @@ typedef struct _artifact {
     boolean is_in_cache;               //!< indicates if the artifact is known to reside in cache (value only valid after artifact allocation)
     boolean must_be_file;              //!< the bits for this artifact must reside in a regular file (rather than just on a block device)
     boolean must_be_hollow;            //!< create the artifact with BLOBSTORE_FLAG_HOLLOW set (so its size won count toward the limit)
+    boolean do_not_download;           //!< flag that tells creator functions to avoid actual content download (useful on migration destinations)
     int (*creator) (struct _artifact * a);  //!< function that can create this artifact based on info in this struct (must be NULL for a sentinel)
     long long size_bytes;              //!< size of the artifact, in bytes (OPTIONAL for some types)
     virtualBootRecord *vbr;            //!< VBR associated with the artifact (OPTIONAL for some types)
@@ -162,7 +163,7 @@ artifact *art_alloc(const char *id, const char *sig, long long size_bytes, boole
                     int (*creator) (artifact * a), virtualBootRecord * vbr);
 
 void art_set_instanceId(const char *instanceId);
-artifact *vbr_alloc_tree(virtualMachine * vm, boolean do_make_bootable, boolean do_make_work_copy, const char *sshkey, const char *instanceId);
+artifact *vbr_alloc_tree(virtualMachine * vm, boolean do_make_bootable, boolean do_make_work_copy, boolean is_migration_dest, const char *sshkey, const char *instanceId);
 int art_implement_tree(artifact * root, blobstore * work_bs, blobstore * cache_bs, const char *work_prefix, long long timeout_usec);
 
 /*----------------------------------------------------------------------------*\

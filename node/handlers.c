@@ -1206,7 +1206,7 @@ void *startup_thread(void *arg)
     instance->combinePartitions = nc_state.convert_to_disk;
     instance->do_inject_key = nc_state.do_inject_key;
 
-    if ((error = create_instance_backing(instance)) // do the heavy lifting on the disk
+    if ((error = create_instance_backing(instance, FALSE))  // do the heavy lifting on the disk
         || (error = gen_instance_xml(instance)) // create euca-specific instance XML file
         || (error = gen_libvirt_instance_xml(instance))) {  // transform euca-specific XML into libvirt XML
         LOGERROR("[%s] failed to prepare images for instance (error=%d)\n", instance->instanceId, error);
