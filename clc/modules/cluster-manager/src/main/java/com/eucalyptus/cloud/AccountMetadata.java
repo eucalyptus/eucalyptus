@@ -150,7 +150,6 @@ public abstract class AccountMetadata<STATE extends Enum<STATE>> extends Abstrac
       : null );
   }
   
-  @Override
   public String getOwnerAccountName( ) {
     return this.ownerAccountName;
   }

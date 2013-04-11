@@ -45,7 +45,6 @@ public class TestAggregationQueue {
       mqi.setSampleSum((double) i);
       mqi.setTimestamp(now);
       mqi.setUnits(Units.None);
-      mqi.setUserId("user1");
       list.add(mqi);
     }
 
@@ -74,7 +73,6 @@ public class TestAggregationQueue {
     assertEquals(even.getNamespace(), "namespace1");
     assertEquals(even.getTimestamp(), now);
     assertEquals(even.getUnits(), Units.None);
-    assertEquals(even.getUserId(), "user1");
 
     // odd totals are 1,3,5,7,9 so total = 25, max = 9, min = 1, count = 5
     assertEquals(odd.getSampleMax().doubleValue(), 9.0, TOLERANCE);
@@ -88,7 +86,6 @@ public class TestAggregationQueue {
     assertEquals(odd.getNamespace(), "namespace1");
     assertEquals(odd.getTimestamp(), now);
     assertEquals(odd.getUnits(), Units.None);
-    assertEquals(odd.getUserId(), "user1");
   }
 
   @Test
@@ -116,7 +113,6 @@ public class TestAggregationQueue {
       mqi.setSampleSum((double) i);
       mqi.setTimestamp(now);
       mqi.setUnits(Units.None);
-      mqi.setUserId("user1");
       list.add(mqi);
     }
 
@@ -145,7 +141,6 @@ public class TestAggregationQueue {
     assertEquals(even.getNamespace(), "namespace1");
     assertEquals(even.getTimestamp(), now);
     assertEquals(even.getUnits(), Units.None);
-    assertEquals(even.getUserId(), "user1");
 
     // odd totals are 1,3,5,7,9 so total = 25, max = 9, min = 1, count = 5
     assertEquals(odd.getSampleMax().doubleValue(), 9.0, TOLERANCE);
@@ -159,7 +154,6 @@ public class TestAggregationQueue {
     assertEquals(odd.getNamespace(), "namespace1");
     assertEquals(odd.getTimestamp(), now);
     assertEquals(odd.getUnits(), Units.None);
-    assertEquals(odd.getUserId(), "user1");
   }
 
 
@@ -188,7 +182,6 @@ public class TestAggregationQueue {
       mqi.setSampleSum((double) i);
       mqi.setTimestamp(now);
       mqi.setUnits(Units.None);
-      mqi.setUserId("user1");
       list.add(mqi);
     }
 
@@ -217,7 +210,6 @@ public class TestAggregationQueue {
     assertEquals(even.getNamespace(), "namespace1");
     assertEquals(even.getTimestamp(), now);
     assertEquals(even.getUnits(), Units.None);
-    assertEquals(even.getUserId(), "user1");
 
     // odd totals are 1,3,5,7,9 so total = 25, max = 9, min = 1, count = 5
     assertEquals(odd.getSampleMax().doubleValue(), 9.0, TOLERANCE);
@@ -231,7 +223,6 @@ public class TestAggregationQueue {
     assertEquals(odd.getNamespace(), "namespace1");
     assertEquals(odd.getTimestamp(), now);
     assertEquals(odd.getUnits(), Units.None);
-    assertEquals(odd.getUserId(), "user1");
   }
   
   @Test
@@ -259,7 +250,6 @@ public class TestAggregationQueue {
       mqi.setSampleSum((double) i);
       mqi.setTimestamp(now);
       mqi.setUnits(Units.None);
-      mqi.setUserId("user1");
       list.add(mqi);
     }
 
@@ -288,7 +278,6 @@ public class TestAggregationQueue {
     assertEquals(even.getNamespace(), "namespace0");
     assertEquals(even.getTimestamp(), now);
     assertEquals(even.getUnits(), Units.None);
-    assertEquals(even.getUserId(), "user1");
 
     // odd totals are 1,3,5,7,9 so total = 25, max = 9, min = 1, count = 5
     assertEquals(odd.getSampleMax().doubleValue(), 9.0, TOLERANCE);
@@ -302,7 +291,6 @@ public class TestAggregationQueue {
     assertEquals(odd.getNamespace(), "namespace1");
     assertEquals(odd.getTimestamp(), now);
     assertEquals(odd.getUnits(), Units.None);
-    assertEquals(odd.getUserId(), "user1");
   }
 
   @Test
@@ -331,7 +319,6 @@ public class TestAggregationQueue {
       mqi.setSampleSum((double) i);
       mqi.setTimestamp((i % 2 == 0) ? now : later);
       mqi.setUnits(Units.None);
-      mqi.setUserId("user1");
       list.add(mqi);
     }
 
@@ -360,7 +347,6 @@ public class TestAggregationQueue {
     assertEquals(even.getNamespace(), "namespace1");
     assertEquals(even.getTimestamp(), now);
     assertEquals(even.getUnits(), Units.None);
-    assertEquals(even.getUserId(), "user1");
 
     // odd totals are 1,3,5,7,9 so total = 25, max = 9, min = 1, count = 5
     assertEquals(odd.getSampleMax().doubleValue(), 9.0, TOLERANCE);
@@ -374,7 +360,6 @@ public class TestAggregationQueue {
     assertEquals(odd.getNamespace(), "namespace1");
     assertEquals(odd.getTimestamp(), later);
     assertEquals(odd.getUnits(), Units.None);
-    assertEquals(odd.getUserId(), "user1");
   }
 
   @Test
@@ -402,7 +387,6 @@ public class TestAggregationQueue {
       mqi.setSampleSum((double) i);
       mqi.setTimestamp(now);
       mqi.setUnits((i % 2 == 0) ? Units.None : Units.Count);
-      mqi.setUserId("user1");
       list.add(mqi);
     }
 
@@ -431,7 +415,6 @@ public class TestAggregationQueue {
     assertEquals(even.getNamespace(), "namespace1");
     assertEquals(even.getTimestamp(), now);
     assertEquals(even.getUnits(), Units.None);
-    assertEquals(even.getUserId(), "user1");
 
     // odd totals are 1,3,5,7,9 so total = 25, max = 9, min = 1, count = 5
     assertEquals(odd.getSampleMax().doubleValue(), 9.0, TOLERANCE);
@@ -445,78 +428,6 @@ public class TestAggregationQueue {
     assertEquals(odd.getNamespace(), "namespace1");
     assertEquals(odd.getTimestamp(), now);
     assertEquals(odd.getUnits(), Units.Count);
-    assertEquals(odd.getUserId(), "user1");
-  }
-
-  @Test
-  public void testDistinctUsers() {
-    final Date now = MetricManager.stripSeconds(new Date());
-      // throw some different dimension order in there...
-    final Map<String,String> hashMap = new HashMap<String, String>();
-    hashMap.put("dim1", "val1");
-    hashMap.put("dim2", "val2");
-    final Map<String,String> treeMap = new TreeMap<String, String>();
-    treeMap.put("dim2", "val2");
-    treeMap.put("dim1", "val1");
-  
-    ArrayList<MetricQueueItem> list = new ArrayList<MetricQueueItem>();
-    for (int i=0;i<10;i++) {
-      MetricQueueItem mqi = new MetricQueueItem();
-      mqi.setAccountId("account1");
-      mqi.setDimensionMap((i % 3 == 0) ? hashMap: treeMap); // just a random dimension order
-      mqi.setMetricName("metric1");
-      mqi.setMetricType(MetricType.Custom);
-      mqi.setNamespace("namespace1");
-      mqi.setSampleMax((double) i);
-      mqi.setSampleMin((double) i);
-      mqi.setSampleSize((double) 1);
-      mqi.setSampleSum((double) i);
-      mqi.setTimestamp(now);
-      mqi.setUnits(Units.None);
-      mqi.setUserId("user" + (i % 2));
-      list.add(mqi);
-    }
-
-    List<MetricQueueItem> aggregateList = MetricDataQueue.aggregate(list);
-    // should be two items...
-    assertEquals(2, aggregateList.size());
-    // since we are not sure which order, one should have userId user0
-    // and one should have user1
-    MetricQueueItem odd, even;
-    if (aggregateList.get(0).getUserId().equals("user0")) {
-      even = aggregateList.get(0);
-      odd = aggregateList.get(1);
-    } else {
-      even = aggregateList.get(1);
-      odd = aggregateList.get(0);
-    }
-    // even totals are 0,2,4,6,8 so total = 20, max = 8, min = 0, count = 5
-    assertEquals(even.getSampleMax().doubleValue(), 8.0, TOLERANCE);
-    assertEquals(even.getSampleMin().doubleValue(), 0.0, TOLERANCE);
-    assertEquals(even.getSampleSize().doubleValue(), 5.0, TOLERANCE);
-    assertEquals(even.getSampleSum().doubleValue(), 20.0, TOLERANCE);
-    assertEquals(even.getAccountId(), "account1");
-    assertEquals(even.getDimensionMap(), hashMap); // really either should be ok
-    assertEquals(even.getMetricName(), "metric1");
-    assertEquals(even.getMetricType(), MetricType.Custom);
-    assertEquals(even.getNamespace(), "namespace1");
-    assertEquals(even.getTimestamp(), now);
-    assertEquals(even.getUnits(), Units.None);
-    assertEquals(even.getUserId(), "user0");
-
-    // odd totals are 1,3,5,7,9 so total = 25, max = 9, min = 1, count = 5
-    assertEquals(odd.getSampleMax().doubleValue(), 9.0, TOLERANCE);
-    assertEquals(odd.getSampleMin().doubleValue(), 1.0, TOLERANCE);
-    assertEquals(odd.getSampleSize().doubleValue(), 5.0, TOLERANCE);
-    assertEquals(odd.getSampleSum().doubleValue(), 25.0, TOLERANCE);
-    assertEquals(odd.getAccountId(), "account1");
-    assertEquals(odd.getDimensionMap(), treeMap); // really either should be ok
-    assertEquals(odd.getMetricName(), "metric1");
-    assertEquals(odd.getMetricType(), MetricType.Custom);
-    assertEquals(odd.getNamespace(), "namespace1");
-    assertEquals(odd.getTimestamp(), now);
-    assertEquals(odd.getUnits(), Units.None);
-    assertEquals(odd.getUserId(), "user1");
   }
 
   @Test
@@ -544,7 +455,6 @@ public class TestAggregationQueue {
       mqi.setSampleSum((double) i);
       mqi.setTimestamp(now);
       mqi.setUnits(Units.None);
-      mqi.setUserId("user1");
       list.add(mqi);
     }
 
@@ -573,7 +483,6 @@ public class TestAggregationQueue {
     assertEquals(even.getNamespace(), "namespace1");
     assertEquals(even.getTimestamp(), now);
     assertEquals(even.getUnits(), Units.None);
-    assertEquals(even.getUserId(), "user1");
 
     // odd totals are 1,3,5,7,9 so total = 25, max = 9, min = 1, count = 5
     assertEquals(odd.getSampleMax().doubleValue(), 9.0, TOLERANCE);
@@ -587,7 +496,6 @@ public class TestAggregationQueue {
     assertEquals(odd.getNamespace(), "namespace1");
     assertEquals(odd.getTimestamp(), now);
     assertEquals(odd.getUnits(), Units.None);
-    assertEquals(odd.getUserId(), "user1");
   }
 
   /*

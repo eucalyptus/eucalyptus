@@ -136,12 +136,6 @@
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |
- |                             EXPORTED PROTOTYPES                            |
- |                                                                            |
-\*----------------------------------------------------------------------------*/
-
-/*----------------------------------------------------------------------------*\
- |                                                                            |
  |                              STATIC PROTOTYPES                             |
  |                                                                            |
 \*----------------------------------------------------------------------------*/
@@ -550,7 +544,7 @@ adb_DescribeSensorsResponse_t *DescribeSensorsMarshal(adb_DescribeSensors_t * de
             }
             EUCA_FREE(outResources);
 
-            result = EUCA_OK;   // success
+            result = EUCA_OK;          // success
         }
     }
 
@@ -765,8 +759,7 @@ adb_DescribeNetworksResponse_t *DescribeNetworksMarshal(adb_DescribeNetworks_t *
 //!
 //! @note
 //!
-adb_DescribePublicAddressesResponse_t *DescribePublicAddressesMarshal(adb_DescribePublicAddresses_t * describePublicAddresses,
-                                                                      const axutil_env_t * env)
+adb_DescribePublicAddressesResponse_t *DescribePublicAddressesMarshal(adb_DescribePublicAddresses_t * describePublicAddresses, const axutil_env_t * env)
 {
     adb_describePublicAddressesType_t *dpa = NULL;
     adb_DescribePublicAddressesResponse_t *ret = NULL;
@@ -1066,8 +1059,7 @@ adb_ConfigureNetworkResponse_t *ConfigureNetworkMarshal(adb_ConfigureNetwork_t *
 
         rc = 1;
         if (!DONOTHING) {
-            rc = doConfigureNetwork(&ccMeta, accountId, type, namedLen, sourceNames, userNames, netLen, sourceNets, destName, destUserName, protocol,
-                                    minPort, maxPort);
+            rc = doConfigureNetwork(&ccMeta, accountId, type, namedLen, sourceNames, userNames, netLen, sourceNets, destName, destUserName, protocol, minPort, maxPort);
         }
 
         EUCA_FREE(userNames);
@@ -1460,21 +1452,21 @@ int ccInstanceUnmarshal(adb_ccInstanceType_t * dst, ccInstance * src, const axut
     }
     //GRZE: these strings should be made an enum indexed by the migration_states_t
     if (src->migration_state == MIGRATION_PREPARING) {
-    	adb_ccInstanceType_set_migrationStateName(dst, env, "preparing");
-        if (strlen(src->migration_src)&&strlen(src->migration_dst)) {
-        	adb_ccInstanceType_set_migrationDestination(dst, env, src->migration_dst);
-        	adb_ccInstanceType_set_migrationSource(dst, env, src->migration_src);
+        adb_ccInstanceType_set_migrationStateName(dst, env, "preparing");
+        if (strlen(src->migration_src) && strlen(src->migration_dst)) {
+            adb_ccInstanceType_set_migrationDestination(dst, env, src->migration_dst);
+            adb_ccInstanceType_set_migrationSource(dst, env, src->migration_src);
         }
     } else if (src->migration_state == MIGRATION_IN_PROGRESS) {
-    	adb_ccInstanceType_set_migrationStateName(dst, env, "migrating");
-        if (strlen(src->migration_src)&&strlen(src->migration_dst)) {
-        	adb_ccInstanceType_set_migrationDestination(dst, env, src->migration_dst);
-        	adb_ccInstanceType_set_migrationSource(dst, env, src->migration_src);
+        adb_ccInstanceType_set_migrationStateName(dst, env, "migrating");
+        if (strlen(src->migration_src) && strlen(src->migration_dst)) {
+            adb_ccInstanceType_set_migrationDestination(dst, env, src->migration_dst);
+            adb_ccInstanceType_set_migrationSource(dst, env, src->migration_src);
         }
     } else {
-    	adb_ccInstanceType_set_migrationStateName(dst, env, "none");
-//    	adb_ccInstanceType_set_migrationDestination_nil(dst, env);
-//    	adb_ccInstanceType_set_migrationSource_nil(dst, env);
+        adb_ccInstanceType_set_migrationStateName(dst, env, "none");
+//      adb_ccInstanceType_set_migrationDestination_nil(dst, env);
+//      adb_ccInstanceType_set_migrationSource_nil(dst, env);
     }
 
     adb_ccInstanceType_set_blkbytes(dst, env, src->blkbytes);
@@ -1991,21 +1983,30 @@ adb_MigrateInstancesResponse_t *MigrateInstancesMarshal(adb_MigrateInstances_t *
     int rc = 0;
     axis2_bool_t status = AXIS2_TRUE;
     char statusMessage[256] = { 0 };
-    char *nodeName = NULL;
+    char *sourceNode = NULL;
     char *instanceId = NULL;
+    char **destinationNodes = NULL;
+    int destinationNodeCount = 0;
+    int allowHosts;
     ncMetadata ccMeta = { 0 };
 
     mit = adb_MigrateInstances_get_MigrateInstances(migrateInstances, env);
 
     EUCA_MESSAGE_UNMARSHAL(migrateInstancesType, mit, (&ccMeta));
 
-    nodeName = adb_migrateInstancesType_get_sourceHost(mit, env);
+    sourceNode = adb_migrateInstancesType_get_sourceHost(mit, env);
     instanceId = adb_migrateInstancesType_get_instanceId(mit, env);
+    allowHosts = adb_migrateInstancesType_get_allowHosts(mit, env);
+    destinationNodeCount = adb_migrateInstancesType_sizeof_destinationHost(mit, env);
 
+    destinationNodes = EUCA_ZALLOC(destinationNodeCount, sizeof(char *));
+    for (int i = 0; i < destinationNodeCount; i++) {
+        destinationNodes[i] = adb_migrateInstancesType_get_destinationHost_at(mit, env, i);
+    }
 
     status = AXIS2_TRUE;
     if (!DONOTHING) {
-        rc = doMigrateInstances(&ccMeta, nodeName, instanceId, "prepare");
+        rc = doMigrateInstances(&ccMeta, sourceNode, instanceId, destinationNodes, destinationNodeCount, allowHosts, "prepare");
         if (rc) {
             LOGERROR("doMigrateInstances() failed\n");
             status = AXIS2_FALSE;
@@ -2025,5 +2026,6 @@ adb_MigrateInstancesResponse_t *MigrateInstancesMarshal(adb_MigrateInstances_t *
     ret = adb_MigrateInstancesResponse_create(env);
     adb_MigrateInstancesResponse_set_MigrateInstancesResponse(ret, env, mirt);
 
+    EUCA_FREE(destinationNodes);
     return (ret);
 }

@@ -75,7 +75,7 @@
  |                                                                            |
 \*----------------------------------------------------------------------------*/
 
-#define _FILE_OFFSET_BITS 64    // so large-file support works on 32-bit systems
+#define _FILE_OFFSET_BITS 64           // so large-file support works on 32-bit systems
 #include <stdio.h>
 #include <stdlib.h>
 #include <sys/types.h>
@@ -83,13 +83,13 @@
 #include <sys/stat.h>
 #include <sys/ipc.h>
 #include <sys/sem.h>
-#include <fcntl.h>              /* For O_* */
+#include <fcntl.h>                     /* For O_* */
 #include <string.h>
 #include <strings.h>
 #include <assert.h>
 
 #include "eucalyptus.h"
-#include "misc.h"               /* logprintfl */
+#include "misc.h"                      /* logprintfl */
 #include "ipc.h"
 
 /*----------------------------------------------------------------------------*\
@@ -135,23 +135,6 @@
  |                              STATIC VARIABLES                              |
  |                                                                            |
 \*----------------------------------------------------------------------------*/
-
-/*----------------------------------------------------------------------------*\
- |                                                                            |
- |                             EXPORTED PROTOTYPES                            |
- |                                                                            |
-\*----------------------------------------------------------------------------*/
-
-sem *sem_alloc(const int val, const char *typeName);
-sem *sem_realloc(const int val, const char *typeName, u32 flags);
-sem *sem_alloc_posix(sem_t * pExternalLock);
-void sem_free(sem * pSem);
-
-int sem_prolaag(sem * pSem, boolean doLog);
-int sem_p(sem * pSem);
-
-int sem_verhogen(sem * pSem, boolean doLog);
-int sem_v(sem * pSem);
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |

@@ -18,7 +18,7 @@
  * additional information or have any questions.
  ************************************************************************/
 
-package com.eucalyptus.cloudwatch.domain.cpu;
+package com.eucalyptus.cloudwatch.domain.absolute;
 
 import java.util.Date;
 
@@ -33,23 +33,47 @@ import org.hibernate.annotations.Entity;
 import com.eucalyptus.entities.AbstractPersistent;
 @Entity @javax.persistence.Entity
 @PersistenceContext(name="eucalyptus_cloudwatch")
-@Table(name="cpu_utilization")
+@Table(name="absolute_metric_history")
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
-public class CPUUtilizationEntity extends AbstractPersistent {
+public class AbsoluteMetricHistory extends AbstractPersistent {
 
-  public CPUUtilizationEntity() {
+  public AbsoluteMetricHistory() {
   }
-  @Column(name = "instance_id", nullable = false)
-  private String instanceId;
+  @Column(name = "namespace", nullable = false)
+  private String namespace;
+  @Column(name = "metric_name", nullable = false)
+  private String metricName;
+  @Column(name = "dimension_name", nullable = false)
+  private String dimensionName;
+  @Column(name = "dimension_value", nullable = false)
+  private String dimensionValue;
   @Column(name = "timestamp", nullable = false)
   private Date timestamp;
-  @Column(name = "machine_usage_milliseconds", nullable = false)
-  private Long machineUsageMilliseconds;
-  public String getInstanceId() {
-    return instanceId;
+  @Column(name = "last_metric_value", nullable = false)
+  private Double lastMetricValue;
+  public String getNamespace() {
+    return namespace;
   }
-  public void setInstanceId(String instanceId) {
-    this.instanceId = instanceId;
+  public void setNamespace(String namespace) {
+    this.namespace = namespace;
+  }
+  public String getMetricName() {
+    return metricName;
+  }
+  public void setMetricName(String metricName) {
+    this.metricName = metricName;
+  }
+  public String getDimensionName() {
+    return dimensionName;
+  }
+  public void setDimensionName(String dimensionName) {
+    this.dimensionName = dimensionName;
+  }
+  public String getDimensionValue() {
+    return dimensionValue;
+  }
+  public void setDimensionValue(String dimensionValue) {
+    this.dimensionValue = dimensionValue;
   }
   public Date getTimestamp() {
     return timestamp;
@@ -57,10 +81,12 @@ public class CPUUtilizationEntity extends AbstractPersistent {
   public void setTimestamp(Date timestamp) {
     this.timestamp = timestamp;
   }
-  public Long getMachineUsageMilliseconds() {
-    return machineUsageMilliseconds;
+  public Double getLastMetricValue() {
+    return lastMetricValue;
   }
-  public void setMachineUsageMilliseconds(Long machineUsageMilliseconds) {
-    this.machineUsageMilliseconds = machineUsageMilliseconds;
+  public void setLastMetricValue(Double lastMetricValue) {
+    this.lastMetricValue = lastMetricValue;
   }
+  
+
 }

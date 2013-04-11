@@ -62,21 +62,14 @@
 
 package com.eucalyptus.vmtypes;
 
-import java.util.Arrays;
-import java.util.List;
-import java.util.Map;
 import java.util.NavigableSet;
 import java.util.NoSuchElementException;
 import java.util.Set;
-import java.util.TreeSet;
 import java.util.concurrent.ConcurrentMap;
-import java.util.concurrent.ConcurrentNavigableMap;
-import java.util.concurrent.ConcurrentSkipListMap;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicMarkableReference;
+
 import javax.annotation.Nullable;
-import javax.persistence.EntityTransaction;
+
 import com.eucalyptus.cloud.CloudMetadata.VmTypeMetadata;
 import com.eucalyptus.cloud.ImageMetadata;
 import com.eucalyptus.cloud.ImageMetadata.StaticDiskImage;
@@ -86,8 +79,6 @@ import com.eucalyptus.cloud.util.NoSuchMetadataException;
 import com.eucalyptus.configurable.ConfigurableClass;
 import com.eucalyptus.configurable.ConfigurableField;
 import com.eucalyptus.entities.Entities;
-import com.eucalyptus.entities.EntityWrapper;
-import com.eucalyptus.entities.TransactionException;
 import com.eucalyptus.images.BlockStorageImageInfo;
 import com.eucalyptus.images.BootableImageInfo;
 import com.eucalyptus.util.Classes;
@@ -95,11 +86,10 @@ import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.RestrictedTypes.Resolver;
 import com.google.common.base.Function;
 import com.google.common.base.Predicate;
-import com.google.common.base.Strings;
 import com.google.common.collect.ForwardingConcurrentMap;
 import com.google.common.collect.MapMaker;
-import com.google.common.collect.ObjectArrays;
 import com.google.common.collect.Sets;
+
 import edu.ucsb.eucalyptus.msgs.VmTypeInfo;
 
 @ConfigurableClass( root = "cloud.vmtypes",
@@ -505,8 +495,10 @@ public class VmTypes {
       vmTypeInfo.setRoot( img.getDisplayName( ), ( ( StaticDiskImage ) img ).getManifestLocation( ), imgSize );
     } else if ( img instanceof BlockStorageImageInfo ) {
       vmTypeInfo = VmTypes.BlockStorageVmTypeInfoMapper.INSTANCE.apply( vmType );
+      vmTypeInfo.setRootDeviceName(img.getRootDeviceName());
       vmTypeInfo.setEbsRoot( img.getDisplayName( ), null, imgSize );
-      vmTypeInfo.setEphemeral( 0, "sdb", diskSize, "none" );
+      // Getting rid of default ephemeral partition for bfebs instances to match AWS behavior. Fixes EUCA-3461, EUCA-3271  
+      // vmTypeInfo.setEphemeral( 0, "sdb", diskSize, "none" );
     } else {
       throw new InvalidMetadataException( "Failed to identify the root machine image type: " + img );
     }

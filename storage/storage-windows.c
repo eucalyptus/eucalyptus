@@ -74,10 +74,10 @@
  |                                                                            |
 \*----------------------------------------------------------------------------*/
 
-#define _FILE_OFFSET_BITS 64    // so large-file support works on 32-bit systems
+#define _FILE_OFFSET_BITS 64           // so large-file support works on 32-bit systems
 #include <stdio.h>
 #include <stdlib.h>
-#define __USE_GNU               /* strnlen */
+#define __USE_GNU                      /* strnlen */
 #include <string.h>
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -86,8 +86,8 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <errno.h>
-#include <dirent.h>             /* open|read|close dir */
-#include <time.h>               /* time() */
+#include <dirent.h>                    /* open|read|close dir */
+#include <time.h>                      /* time() */
 #include <stdint.h>
 #include <arpa/inet.h>
 
@@ -147,16 +147,6 @@
  |                              STATIC VARIABLES                              |
  |                                                                            |
 \*----------------------------------------------------------------------------*/
-
-/*----------------------------------------------------------------------------*\
- |                                                                            |
- |                             EXPORTED PROTOTYPES                            |
- |                                                                            |
-\*----------------------------------------------------------------------------*/
-
-int decryptWindowsPassword(char *encpass, int encsize, char *pkfile, char **out);
-int encryptWindowsPassword(char *pass, char *key, char **out, int *outsize);
-int makeWindowsFloppy(char *euca_home, char *rundir_path, char *keyName, char *instName);
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |

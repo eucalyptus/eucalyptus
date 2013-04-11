@@ -167,6 +167,7 @@ public abstract class LaunchConfigurations {
       if ( launchConfiguration.getIamInstanceProfile() != null ) {
         runInstances.setInstanceProfileNameOrArn( launchConfiguration.getIamInstanceProfile() );
       }
+      runInstances.setUserData(launchConfiguration.getUserData());
       return runInstances;
     }
   }

@@ -35,18 +35,18 @@ public class MetricTest {
     dimensionMap4.put("dim8", "dim8");
     dimensionMap4.put("dim9", "dim9");
     dimensionMap4.put("dim10", "dim10");
-    MetricManager.addMetric("account1", "user1", "metric1", "name1", null,
+    MetricManager.addMetric("account1", "metric1", "name1", null,
         MetricType.Custom, Units.None, new Date(), 1.0, 1.0, 1.0, 1.0);
-    MetricManager.addMetric("account1", "user1", "metric1", "name1",
+    MetricManager.addMetric("account1", "metric1", "name1",
         dimensionMap1, MetricType.System, Units.BitsPerSecond,
         new Date(System.currentTimeMillis() - 10000000), 1.0, 2.0, 2.0, 2.0);
-    MetricManager.addMetric("account1", "user1", "metric1", "name1",
+    MetricManager.addMetric("account1", "metric1", "name1",
         dimensionMap2, MetricType.System, Units.Count,
         new Date(System.currentTimeMillis() - 20000000), 1.0, 3.0, 3.0, 3.0);
-    MetricManager.addMetric("account1", "user1", "metric1", "name1",
+    MetricManager.addMetric("account1", "metric1", "name1",
         dimensionMap3, MetricType.System, Units.Count,
         new Date(System.currentTimeMillis() - 20000000), 1.0, 3.0, 3.0, 3.0);
-    MetricManager.addMetric("account1", "user1", "metric1", "name1",
+    MetricManager.addMetric("account1", "metric1", "name1",
         dimensionMap4, MetricType.System, Units.Count,
         new Date(System.currentTimeMillis() - 20000000), 1.0, 3.0, 3.0, 3.0);
     for (MetricEntity me : MetricManager.getAllMetrics()) {

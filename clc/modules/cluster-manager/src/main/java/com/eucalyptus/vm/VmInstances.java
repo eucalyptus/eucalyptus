@@ -988,7 +988,7 @@ public class VmInstances {
           .withStringProperty( "key-name", VmInstanceFilterFunctions.KEY_NAME )
           .withStringProperty( "launch-index", VmInstanceFilterFunctions.LAUNCH_INDEX )
           .withDateProperty( "launch-time", VmInstanceDateFilterFunctions.LAUNCH_TIME )
-          .withUnsupportedProperty( "monitoring-state" )
+          .withStringProperty( "monitoring-state", VmInstanceFilterFunctions.MONITORING_STATE )
           .withStringProperty( "owner-id", VmInstanceFilterFunctions.OWNER_ID )
           .withUnsupportedProperty( "placement-group-name" )
           .withStringProperty( "platform", VmInstanceFilterFunctions.PLATFORM )
@@ -1370,6 +1370,12 @@ public class VmInstances {
       @Override
       public String apply( final VmInstance instance ) {
         return Strings.toString( instance.getLaunchRecord().getLaunchIndex() );
+      }
+    },
+    MONITORING_STATE {
+      @Override
+      public String apply( final VmInstance instance ) {
+        return instance.getMonitoring() ? "enabled" : "disabled";
       }
     },
     OWNER_ID {

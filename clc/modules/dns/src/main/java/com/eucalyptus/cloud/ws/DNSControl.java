@@ -63,14 +63,13 @@
 package com.eucalyptus.cloud.ws;
 
 import com.eucalyptus.context.Contexts;
-import com.eucalyptus.dns.TransientZone;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.util.DNSProperties;
 
 import edu.ucsb.eucalyptus.cloud.AccessDeniedException;
 import com.eucalyptus.util.EucalyptusCloudException;
-import com.google.gwt.thirdparty.guava.common.collect.Lists;
+import com.google.common.collect.Lists;
 
 import edu.ucsb.eucalyptus.cloud.entities.*;
 import edu.ucsb.eucalyptus.msgs.*;

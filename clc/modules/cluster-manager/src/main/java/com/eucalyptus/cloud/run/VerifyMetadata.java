@@ -63,9 +63,13 @@
 package com.eucalyptus.cloud.run;
 
 import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
+
+import org.apache.commons.lang.StringUtils;
 import org.apache.log4j.Logger;
+
 import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.cloud.ImageMetadata;
@@ -79,10 +83,14 @@ import com.eucalyptus.cloud.util.VerificationException;
 import com.eucalyptus.cluster.Clusters;
 import com.eucalyptus.component.Partition;
 import com.eucalyptus.component.Partitions;
-import com.eucalyptus.component.id.ClusterController;
 import com.eucalyptus.context.Context;
+import com.eucalyptus.images.BlockStorageImageInfo;
+import com.eucalyptus.images.BootableImageInfo;
+import com.eucalyptus.images.DeviceMapping;
 import com.eucalyptus.images.Emis;
 import com.eucalyptus.images.Emis.BootableSet;
+import com.eucalyptus.images.ImageInfo;
+import com.eucalyptus.images.Images;
 import com.eucalyptus.keys.KeyPairs;
 import com.eucalyptus.keys.SshKeyPair;
 import com.eucalyptus.network.NetworkGroup;
@@ -95,13 +103,18 @@ import com.google.common.base.Function;
 import com.google.common.base.Joiner;
 import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
+import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
+
+import edu.ucsb.eucalyptus.msgs.BlockDeviceMappingItemType;
 import edu.ucsb.eucalyptus.msgs.RunInstancesType;
 
 public class VerifyMetadata {
   private static Logger LOG = Logger.getLogger( VerifyMetadata.class );
+  private static final long BYTES_PER_GB = ( 1024L * 1024L * 1024L );
+  
   public static Predicate<Allocation> get( ) {
     return Predicates.and( Lists.transform( verifiers, AsPredicate.INSTANCE ) );
   }
@@ -113,7 +126,8 @@ public class VerifyMetadata {
   
   private static final ArrayList<? extends MetadataVerifier> verifiers = Lists.newArrayList( VmTypeVerifier.INSTANCE, PartitionVerifier.INSTANCE,
                                                                                                 ImageVerifier.INSTANCE, KeyPairVerifier.INSTANCE,
-                                                                                                NetworkGroupVerifier.INSTANCE );
+                                                                                                NetworkGroupVerifier.INSTANCE, 
+                                                                                                BlockDeviceMapVerifier.INSTANCE );
   
   private enum AsPredicate implements Function<MetadataVerifier, Predicate<Allocation>> {
     INSTANCE;
@@ -262,6 +276,97 @@ public class VerifyMetadata {
       } else {
         allocInfo.setNetworkRules( networkRuleGroups );
       }
+      return true;
+    }
+  }
+  
+  /**
+   * <p>Verification logic for block device mappings in the run instance request. 
+   * Merges device mappings from the image registration with those from the run instance request, the later getting higher priority. 
+   * Populates the final set of device mappings for boot from ebs instances only. </p>
+   * <p>Fixes EUCA-4047 and implements EUCA-4786</p> 
+   */
+  enum BlockDeviceMapVerifier implements MetadataVerifier {
+    INSTANCE;
+    
+	@Override
+    public boolean apply( Allocation allocInfo ) throws MetadataException {
+      
+      BootableImageInfo imageInfo = allocInfo.getBootSet().getMachine();   
+      final ArrayList<BlockDeviceMappingItemType> instanceMappings = allocInfo.getRequest().getBlockDeviceMapping() != null 
+    		  													? allocInfo.getRequest().getBlockDeviceMapping() 
+    		  													: new ArrayList<BlockDeviceMappingItemType>()  ;
+      List<DeviceMapping> imageMappings = new ArrayList<DeviceMapping>(((ImageInfo) imageInfo).getDeviceMappings());
+      
+      // Figure out the final set of mappings for this instance and add it to the request before verifying the mappings. 
+      
+      //    for ( DeviceMapping imageMapping : imageMappings ) {
+      //  	if( !Iterables.any( instanceMappings, Images.findBlockDeviceMappingItempType( imageMapping.getDeviceName() ) ) ) {
+      //  	  instanceMappings.add(Images.DeviceMappingDetails.INSTANCE.apply(imageMapping));	  
+      //  	}
+      //    }
+    
+      // Is this an overkill?? Should I rather go with the above logic. Damn complexity seems same... 
+      // probably m * n where m is the number of image mappings and n is the number of instance mappings
+      instanceMappings.addAll(Lists.transform(Lists.newArrayList(Iterables.filter(imageMappings, new Predicate<DeviceMapping>(){
+ 		@Override
+ 		public boolean apply(DeviceMapping arg0) {
+  	      return !Iterables.any( instanceMappings, Images.findBlockDeviceMappingItempType( arg0.getDeviceName() ));
+ 		}
+      })), Images.DeviceMappingDetails.INSTANCE));
+      
+      if ( imageInfo instanceof BlockStorageImageInfo ) { //bfebs image   
+     
+        if ( !instanceMappings.isEmpty() ) {
+        
+          //Verify all block device mappings. Dont fuss if both snapshot id and volume size are left blank
+          Images.isDeviceMappingListValid (instanceMappings, Boolean.TRUE, Boolean.TRUE );
+          
+          BlockStorageImageInfo bfebsImage = (BlockStorageImageInfo) imageInfo;
+          Integer imageSizeGB = (int) ( bfebsImage.getImageSizeBytes( ) / BYTES_PER_GB );
+          Integer userRequestedSizeGB = null;
+           
+          // Find the root block device mapping in the run instance request. Validate it
+          BlockDeviceMappingItemType rootBlockDevice = Iterables.find( instanceMappings, Images.findEbsRootOptionalSnapshot( bfebsImage.getRootDeviceName() ), null );
+          if( rootBlockDevice != null) {
+            // Ensure that root device is not mapped to a different snapshot, logical device or suppressed.
+            // Verify that the root device size is not smaller than the image size
+            if ( StringUtils.isNotBlank(rootBlockDevice.getEbs().getSnapshotId()) && 
+        		  !StringUtils.equals(rootBlockDevice.getEbs().getSnapshotId(), bfebsImage.getSnapshotId()) ) {
+              throw new InvalidMetadataException( "Snapshot ID cannot be modified for the root device. " +
+                					"Source snapshot from the image registration will be used for creating the root device" );
+            } else if ( StringUtils.isNotBlank(rootBlockDevice.getVirtualName()) ) {
+              throw new InvalidMetadataException( "Logical type cannot be modified for the root device. " +
+             		"Source snapshot from the image registration will be used for creating the root device" );
+            } else if ( rootBlockDevice.getNoDevice() != null && rootBlockDevice.getNoDevice() ) {
+              throw new InvalidMetadataException( "Root device cannot be suppressed. " + 
+              		"Source snapshot from the image registration will be used for creating the root device" );
+            } else if ( (userRequestedSizeGB = rootBlockDevice.getEbs().getVolumeSize() ) != null && userRequestedSizeGB < imageSizeGB ) {
+              throw new InvalidMetadataException("Root device volume cannot be smaller than the image size");
+            }
+            
+            // Gather all the information for the root device mapping and populate it in the run instance request
+            if( rootBlockDevice.getEbs().getSnapshotId() == null ) {
+            	rootBlockDevice.getEbs().setSnapshotId(bfebsImage.getSnapshotId());
+            }
+            if( rootBlockDevice.getEbs().getVolumeSize() == null ) {
+            	rootBlockDevice.getEbs().setVolumeSize(imageSizeGB);	
+            } 
+            if( rootBlockDevice.getEbs().getDeleteOnTermination() == null ) {
+            	rootBlockDevice.getEbs().setDeleteOnTermination(bfebsImage.getDeleteOnTerminate());
+            }
+          } else {
+        	  // This should never happen. Root device mapping will always exist in the block storage image and or run instance request 
+        	  throw new InvalidMetadataException("Root block device mapping not found\n"); 
+          }
+        }
+      } else { // Instance store image
+        //Verify all block device mappings. EBS mappings must be considered invalid since AWS doesn't support it
+        Images.isDeviceMappingListValid (instanceMappings, Boolean.TRUE, Boolean.FALSE );
+      }
+      
+      // Set the final list of block device mappings in the run instance request (necessary if the instance mappings were null). Checked with grze that its okay
+      allocInfo.getRequest().setBlockDeviceMapping(instanceMappings);
       return true;
     }
   }
