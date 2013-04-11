@@ -676,9 +676,9 @@ static int doMigrateInstances(struct nc_state_t *nc, ncMetadata * pMeta, ncInsta
         LOGDEBUG("verifying instance # %d...\n", inst_idx);
         if (instances[inst_idx]) {
             ncInstance *instance_idx = instances[inst_idx];
-            LOGDEBUG("[%s] proposed migration from %s to %s\n", instance_idx->instanceId, instance_idx->migration_src, instance_idx->migration_dst);
+            LOGDEBUG("[%s] proposed migration action '%s' (%s > %s)\n", instance_idx->instanceId, action, instance_idx->migration_src, instance_idx->migration_dst);
         } else {
-            LOGERROR("Mismatch between count of instances to migrate (%d) and instance list\n", instancesLen);
+            LOGERROR("Mismatch between migration instance count (%d) and length of instance list\n", instancesLen);
             return (EUCA_ERROR);
         }
     }
