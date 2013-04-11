@@ -203,7 +203,7 @@ define(['app', 'dataholder'], function(app, dh) {
             }
           }
           var rex = new RegExp('.*' + facet.value + '.*', 'img');
-          if ('all_text' === facet.category) {
+          if ('all_text' === facet.category || 'text' === facet.category) {
             return drillThrough(model, rex, 0);
           } else {
             if (typeof curr === 'object') {

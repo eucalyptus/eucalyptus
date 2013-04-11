@@ -547,6 +547,51 @@ function setupAjax(){
  });
 }
 
+function doMultiAction(itemList, collection, opFunction, progressMessage, doneMessage, failMessage){
+  var done = 0;
+  var all = itemList.length;
+  var error = [];
+  doMultiAjax(itemList, function(item, dfd) {
+    var itemId = item;
+    var model = collection.get(item);
+    opFunction(model, {
+      success:
+        function(model, response, options) {
+          console.log("response = "+JSON.stringify(response));
+          if (response.results && data.results == true) {
+            ;
+          } else {
+            error.push({id:itemId, reason: undefined_error});
+          }
+          options.complete(model, response);
+        },
+      error:
+        function(model, xhr, options) {
+          console.log("response = "+JSON.stringify(xhr));
+          error.push({id:itemId, reason: getErrorMessage(xhr)});
+          options.complete(model, xhr);
+        },
+      complete:
+        function(model, response) {
+          done++;
+          if (done < all) {
+            notifyMulti(100*(done/all), $.i18n.prop(progressMessage, all));
+          }
+          else {
+            var $msg = $('<div>').addClass('multiop-summary').append(
+                       $('<div>').addClass('multiop-summary-success').
+                           html($.i18n.prop(doneMessage, (all-error.length), all)));
+            if (error.length > 0)
+                $msg.append($('<div>').addClass('multiop-summary-failure').
+                           html($.i18n.prop(failMessage, error.length)));
+            notifyMulti(100, $msg.html(), error);
+          }
+          dfd.resolve();
+        }
+    });
+  })
+}
+
 function doMultiAjax(array, callback, delayMs){
   if (!array || array.length <=0 || !callback)
     return;
