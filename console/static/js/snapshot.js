@@ -596,8 +596,8 @@
     _newCreateVolumeAction : function(){
       var dialog = 'create_volume_dialog';
       var selected = this.tableWrapper.eucatable('getSelectedRows', 10);
-      require(['app'], function(app) {
-        app.dialog(dialog, app.data.snapshot.get(selected[0]));
+      require(['views/dialogs/' + dialog], function( dialog) {
+        new dialog({snapshot_id: selected});
       });
     },
 

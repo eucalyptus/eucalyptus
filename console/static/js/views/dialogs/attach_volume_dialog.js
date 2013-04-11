@@ -7,101 +7,104 @@ define([
 ], function(EucaDialogView, template, Volume, App, Backbone) {
     return EucaDialogView.extend({
 
+        // GENERATE HASHMAP WITH POSSIBLE DEVICE NAMES FOR ATTACH VOLUME OPERATION
+        _generateRecommendedDeviceNames : function(count) {
+            possibleNames = {};
+            for(i=0; i<11 && i<=count; i++){    // Generate char 'f' to 'p'
+              possibleNames['/dev/sd'+String.fromCharCode(102+i)] = 1;
+            }
+            return possibleNames;
+        },
+
+        // LEGACY CODE FOR PROVIDING SUGGESTED DEVICE NAME FOR ATTACH VOLUME OPERATION
+        _suggestNextDeviceName : function(instanceId) {
+            var instance = App.data.instance.get(instanceId);   // ISSUE: Fails to quickly obtain up-to-date device information due to delay -- Kyo 040813
+            if(instance == undefined){
+              return 'error';
+            }
+            var instanceObj = instance.get('block_device_mapping');
+            var count = _.size(instanceObj) + 1;
+            console.log("Object device_mapping: " + JSON.stringify(instanceObj));
+            console.log("Next device_mapping Index: " + count);
+            possibleNames = this._generateRecommendedDeviceNames(count);
+            for(device in instanceObj){
+              possibleNames[device] = 0;     // Zero out the hashmap for existing device names
+            }
+            for(n in possibleNames){
+              if(possibleNames[n] == 1){    // Pick the first string with the open hash item
+                return n;
+              }
+            }
+            return 'error';
+        },
+
+        // SET UP AUTOCOMPLETE FOR THE VOLUME INPUT BOX  --- NOT TESTED  Kyo 041013
+        setupAutoCompleteForVolumeInputBox: function(args){
+            var self = this;
+
+            var vol_ids = [];
+            App.data.volume.each(function(item){
+              console.log("Volume ID: " + item.toJSON().id + ":" + item.toJSON().status);
+              if( item.toJSON().status === 'detached' ){
+                vol_ids.push(item.toJSON().id);
+              }
+            });
+            var sorted = sortArray(vol_ids);
+            console.log("Autocomplete Volume List: " + sorted);
+            var $volumeSelector = this.$el.find('#volume-attach-volume-id');
+            $volumeSelector.autocomplete({
+              source: sorted
+            });
+        },
+
+        // SET UP AUTOCOMPLETE FOR THE INSTANCE INPUT BOX
+        setupAutoCompleteForInstanceInputBox: function(args){
+            var self = this;
+
+            var inst_ids = [];
+            App.data.instance.each(function(item){
+              console.log("Instance ID: " + item.toJSON().id +":" + item.toJSON()._state.name + ":" + item.toJSON().placement);
+              if( item.toJSON()._state.name === 'running' ){
+                inst_ids.push(item.toJSON().id);
+              }
+            });
+
+            var sorted = sortArray(inst_ids);
+            console.log("Autocomplete Instance List: " + sorted);
+
+            var $instanceSelector = this.$el.find('#volume-attach-instance-id');
+            $instanceSelector.autocomplete({
+              source: sorted,
+              select: function(event, ui){
+                var deviceName = self._suggestNextDeviceName(ui.item.value);
+                self.scope.volume.set({device: deviceName});
+              }
+            });
+        },
+
+        // SET UP AUTOCOMPLETE FOR INPUT BOXES
         setupAutoComplete: function(args){
             var self = this;
-            this.template = template;
 
-            // FIND THE VOLUME MODEL IF MATCHED 'args.volume_id'  --- FOR DEBUG. NOT NEEDED  Kyo 040813
-            if( args.volume_id != undefined ){
-              var matched_volume = App.data.volume.find(function(model){ return model.get('id') == args.volume_id; });
-              if( matched_volume != undefined ){
-     	        console.log("Found the matching model Volume: " + matched_volume.get('id'));
-              }
-            }else{
-              // ELSE CONSTRCUT THE AUTO-COMPLETE FOR THE VOLUME INPUT
-              var vol_ids = [];
-              App.data.volume.each(function(item){
-                console.log("Volume ID: " + item.toJSON().id + ":" + item.toJSON().status);
-                if( item.toJSON().status === 'detached' ){
-                  vol_ids.push(item.toJSON().id);
-                }
-              });
-              var sorted = sortArray(vol_ids);
-              console.log("selector: " + sorted);
-              var $volumeSelector = this.$el.find('#volume-attach-volume-id');
-              $volumeSelector.autocomplete({
-                source: sorted
-              });
-            } 
+            // CASE: WHEN CALLED FROM THE INSTANCE PAGE -- NOT TESTED YET
+            if( args.volume_id == undefined ){
+              setupAutoCompleteForVolumeInputBox(args);
+            };
 
-            // FIND THE INSTANCE MODEL IF MATCH 'args.instance_id'   ---   FOR DEBUG. NOT NEEDED Kyo 040813
-            if( args.instance_id != undefined ){
-              var matched_instance = App.data.instance.find(function(model){ return model.get('id') == args.instance_id; });
-              if( matched_instance != undefined ){
-     	        console.log("Found the matching model Instance: " + matched_instance.get('id'));
-              }
-            }else{
-              // CONSTRUCT THE LIST OF INSTANCE IDS FOR AUTO-COMPLETE
-              var inst_ids = [];
-              App.data.instance.each(function(item){
-                console.log("Instance ID: " + item.toJSON().id +":" + item.toJSON()._state.name + ":" + item.toJSON().placement);
-                if( item.toJSON()._state.name === 'running' ){
-                  inst_ids.push(item.toJSON().id);
-                }
-              });
-              var sorted = sortArray(inst_ids);
-              console.log("selector: " + sorted);
-              var $instanceSelector = this.$el.find('#volume-attach-instance-id');
-              var $deviceName = this.$el.find('#volume-attach-device-name');
-              $instanceSelector.autocomplete({
-                source: sorted,
-                select: function(event, ui){
-                  if($deviceName.val() == ''){
-                    var this_device = self._suggestNextDeviceName(ui.item.value);
-                    $deviceName.val(this_device);
-                    self.scope.item.device = this_device;    // Super Hackish Way --- Kyo 040813
-                  }
-                }
-              });
+            // CASE: WHEN CALLED FROM THE VOLUME PAGE
+            if( args.instance_id == undefined ){
+              this.setupAutoCompleteForInstanceInputBox(args);
             }; 
         },
 
-        _generateRecommendedDeviceNames : function(count) {
-          possibleNames = {};
-          for(i=0; i<11 && i<=count; i++){ // f..p
-            possibleNames['/dev/sd'+String.fromCharCode(102+i)] = 1;
-          }
-          return possibleNames;
-        },
-
-        _suggestNextDeviceName : function(instanceId) {
-          //var instance = describe('instance', instanceId);
-          var instance = App.data.instance.get(instanceId);   // Fails to quickly obtain the device information due to delay, or max is 2 ? -- Kyo 040813
-          if (instance) {
-            var count = 1;
-            console.log("device_mapping: " + instance.get('block_device_mapping'));
-            for(device in instance.get('block_device_mapping')) count++;
-            console.log("device_mapping count: " + count);
-            possibleNames = this._generateRecommendedDeviceNames(count);
-            for(device in instance.get('block_device_mapping')){
-              possibleNames[device] = 0;
-            }
-             for(n in possibleNames){
-               if (possibleNames[n] == 1){
-                 return n;
-               }
-             }
-          }
-          return '';
-        },
-
+        // INITIALIZE THE VIEW
         initialize : function(args) {
             var self = this;
             this.template = template;
 
             this.scope = {
                 status: '',
-                item: {volume_id: args.volume_id, instance_id: args.instance_id, device: args.device},
+                volume: new Volume({volume_id: args.volume_id, instance_id: args.instance_id, device: args.device}),
 
                 cancelButton: {
                   click: function() {
@@ -112,9 +115,9 @@ define([
                 attachButton: {
                   click: function() {
                     // GET THE INPUT FROM THE HTML VIEW
-		    var volumeId = self.scope.item.volume_id;
-		    var instanceId = self.scope.item.instance_id;
-		    var device = self.scope.item.device;
+                    var volumeId = self.scope.volume.get('volume_id');
+                    var instanceId = self.scope.volume.get('instance_id');
+                    var device = self.scope.volume.get('device');
 		    console.log("Selected Volume ID: " + volumeId);
 		    console.log("Instance ID: " + instanceId);
 		    console.log("Attach as device: " + device);
@@ -140,7 +143,7 @@ define([
 
 	           // DISPLAY THE VOLUME'S STATUS -- FOR DEBUG
 		   App.data.volume.each(function(item){
-		     console.log("Volume After Attach: " + item.toJSON().id +":"+ item.toJSON().status);
+		     console.log("Volume After Attach: " + item.toJSON().id +"   Status:"+ item.toJSON().status);
 	           });
 
 	          // CLOSE THE DIALOG
@@ -148,11 +151,11 @@ define([
                 }
               }
 
-            }
+            };
 
             this._do_init();
 
             this.setupAutoComplete(args);
         },
-	});
+    });
 });
