@@ -764,8 +764,19 @@ static int doMigrateInstances(struct nc_state_t *nc, ncMetadata * pMeta, ncInsta
                 LOGERROR("action '%s' is not valid on destination node\n", action);
                 return (EUCA_UNSUPPORTED_ERROR);
             } else if (!strcmp(action, "rollback")) {
-                LOGERROR("action '%s' has not yet been implemented on destination node\n", action);
-                return (EUCA_UNSUPPORTED_ERROR);
+                LOGDEBUG("destination requested to rollback\n");
+                sem_p(inst_sem);
+                {
+                    ncInstance * instance = find_instance(&global_instances, instance_req->instanceId);
+                    if (instance!=NULL) {
+                        LOGDEBUG("[%s] marked for cleanup\n", instance->instanceId);
+                        change_state(instance, SHUTOFF);
+                        instance->migration_state = MIGRATION_CLEANING;
+                        save_instance_struct(instance);
+                    }
+                }
+                sem_v(inst_sem);
+                return EUCA_OK;
             } else if (strcmp(action, "prepare") != 0) {
                 LOGERROR("action '%s' is not valid or not implemented\n", action);
                 return (EUCA_INVALID_ERROR);
