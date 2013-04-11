@@ -3,8 +3,9 @@ define([
    './eucadialogview',
    'text!./edittags.html!strip',
    'backbone',
-   'models/tag'
-], function(_, EucaDialogView, template, Backbone, Tag) {
+   'models/tag',
+   'sharedtags'
+], function(_, EucaDialogView, template, Backbone, Tag, SharedTags) {
     return EucaDialogView.extend({
         initialize : function(args) {
             var self = this;
@@ -32,7 +33,7 @@ define([
                     console.log('create');
                     var newt = new Tag(self.scope.newtag.toJSON());
                     newt.set({_clean: true, _deleted: false, _edited: false, _edit: false, _new: true});
-                    newt.set('id', args.model.get('id') + '-' + newt.get('name'));
+//                    newt.set('id', args.model.get('id') + '-' + newt.get('name'));
                     newt.set('res_id', args.model.get('id'));
                     self.scope.tags.add(newt);
                     self.scope.newtag.clear();
@@ -78,7 +79,8 @@ define([
                            if (t.get('_new') && !t.get('_deleted')) { 
                                console.log('add', t); 
                                t.save({ success: function() {
-                                origtags.add(t);
+                                t.set('id', t.get('res_id') + '-' + t.get('name'));
+                                SharedTags.add(t);
                                }});
                            }
                            if (t.get('_deleted')) {

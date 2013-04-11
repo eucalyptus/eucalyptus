@@ -25,6 +25,7 @@ define([
             self.refreshNamedColumns();
         });
     },
+    // Override set locally so that we can properly update the tags collection
     set: function(key, val, options) {    
         var attrs; 
         if (key == null) return this;
