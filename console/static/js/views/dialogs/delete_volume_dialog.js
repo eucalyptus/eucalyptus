@@ -24,7 +24,7 @@ define([
                               options['wait'] = true;
                               model.destroy(options);
                             },
-                            volume_delete_progress, volume_delete_done, volume_delete_fail);
+                            'volume_delete_progress', 'volume_delete_done', 'volume_delete_fail');
               self.close();
           }
         },
