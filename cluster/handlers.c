@@ -4350,26 +4350,35 @@ int doMigrateInstances(ncMetadata * pMeta, char *actionNode, char *instanceId, c
                 }
             }
         }
-        // notify the destinations
-        timeout = ncGetTimeout(time(NULL), OP_TIMEOUT, 1, 0);
-        for (int idx = 0; idx < found_instances; idx++) {
-            LOGDEBUG("[%s] about to ncClientCall destination node '%s' with nc_instances (%s %d)\n",
-                     SP(nc_instances[idx]->instanceId), SP(nc_instances[idx]->migration_dst), nodeAction, 1);
 
-            dst_index = -1;
-            for (int res_idx = 0; res_idx < resourceCacheLocal.numResources && (dst_index == -1); res_idx++) {
-                if (!strcmp(resourceCacheLocal.resources[res_idx].hostname, nc_instances[idx]->migration_dst)) {
-                    dst_index = res_idx;
+        // notify the destinations, but do it asynchronously so that we can return to caller.
+        // (spec says only prepare call to source should block.)
+        pid_t pid = fork();
+        if (!pid) {
+            timeout = ncGetTimeout(time(NULL), OP_TIMEOUT, 1, 0);
+            for (int idx = 0; idx < found_instances; idx++) {
+                LOGDEBUG("[%s] about to ncClientCall destination node '%s' with nc_instances (%s %d)\n",
+                         SP(nc_instances[idx]->instanceId), SP(nc_instances[idx]->migration_dst), nodeAction, 1);
+
+                dst_index = -1;
+                for (int res_idx = 0; res_idx < resourceCacheLocal.numResources && (dst_index == -1); res_idx++) {
+                    if (!strcmp(resourceCacheLocal.resources[res_idx].hostname, nc_instances[idx]->migration_dst)) {
+                        dst_index = res_idx;
+                    }
+                }
+
+                rc = ncClientCall(pMeta, timeout, resourceCacheLocal.resources[dst_index].lockidx, resourceCacheLocal.resources[dst_index].ncURL, "ncMigrateInstances",
+                                  &(nc_instances[idx]), 1, nodeAction, NULL);
+                if (rc) {
+                    LOGERROR("[%s] failed: request to prepare migration on destination %s\n", nc_instances[idx]->instanceId, resourceCacheLocal.resources[dst_index].hostname);
+                    exit(1);
                 }
             }
-
-            rc = ncClientCall(pMeta, timeout, resourceCacheLocal.resources[dst_index].lockidx, resourceCacheLocal.resources[dst_index].ncURL, "ncMigrateInstances",
-                              &(nc_instances[idx]), 1, nodeAction, NULL);
-            if (rc) {
-                LOGERROR("[%s] failed: request to prepare migration on destination %s\n", nc_instances[idx]->instanceId, resourceCacheLocal.resources[dst_index].hostname);
-                ret = 1;
-                goto out;
-            }
+            LOGDEBUG("called destination nodes[s] to prepare for %d incoming migrations[s]\n", found_instances);
+            exit(0);
+        } else {
+            // parent
+            LOGDEBUG("calling destination node[s] asynchronously to prepare for %d incoming migration[s]; using pid %d\n", found_instances, pid);
         }
     } else if (committing) {
         // call commit on source
