@@ -42,46 +42,37 @@ public class MetricDataQueue {
     return singleton;
   }
 
-  private static AtomicBoolean busy = new AtomicBoolean(false);
-
   private void queue(Supplier<MetricQueueItem> metriMetaDataSupplier) {
     final MetricQueueItem metricData = metriMetaDataSupplier.get();
     dataQueue.offer(metricData);
-    if (!busy.get()) {
-      flushDataQueue();
-    }
   }
 
-  private void flushDataQueue() {
-    busy.set(true);
-
-    Runnable safeRunner = new Runnable() {
-      @Override
-      public void run() {
-        try {
-          List<MetricQueueItem> dataBatch = Lists.newArrayList();
-          dataQueue.drainTo(dataBatch);
-          dataBatch = aggregate(dataBatch);
-          for (final MetricQueueItem metricData : dataBatch) {
-            MetricManager.addMetric(metricData.getAccountId(), 
-                metricData.getMetricName(), metricData.getNamespace(), 
-                metricData.getDimensionMap(), metricData.getMetricType(), 
-                metricData.getUnits(), metricData.getTimestamp(), 
-                metricData.getSampleSize(), metricData.getSampleMax(), 
-                metricData.getSampleMin(), metricData.getSampleSum());
-            ListMetricManager.addMetric(metricData.getAccountId(), metricData.getMetricName(),
-                metricData.getNamespace(), metricData.getDimensionMap(), metricData.getMetricType());
-          }
-          dataQueue.clear();
-          busy.set(false);
-        } catch (Exception ex) {
-          ex.printStackTrace();
-          LOG.error(ex,ex);
+  private static Runnable safeRunner = new Runnable() {
+    @Override
+    public void run() {
+      try {
+        List<MetricQueueItem> dataBatch = Lists.newArrayList();
+        dataQueue.drainTo(dataBatch);
+        dataBatch = aggregate(dataBatch);
+        for (final MetricQueueItem metricData : dataBatch) {
+          MetricManager.addMetric(metricData.getAccountId(), 
+              metricData.getMetricName(), metricData.getNamespace(), 
+              metricData.getDimensionMap(), metricData.getMetricType(), 
+              metricData.getUnits(), metricData.getTimestamp(), 
+              metricData.getSampleSize(), metricData.getSampleMax(), 
+              metricData.getSampleMin(), metricData.getSampleSum());
+          ListMetricManager.addMetric(metricData.getAccountId(), metricData.getMetricName(),
+              metricData.getNamespace(), metricData.getDimensionMap(), metricData.getMetricType());
         }
+      } catch (Exception ex) {
+        ex.printStackTrace();
+        LOG.error(ex,ex);
       }
+    }
+  };
 
-    };
-    dataFlushTimer.schedule(safeRunner, 1, TimeUnit.MINUTES);
+  static {
+    dataFlushTimer.scheduleWithFixedDelay(safeRunner, 0, 1, TimeUnit.MINUTES);
   }
 
   public static List<MetricQueueItem> aggregate(List<MetricQueueItem> dataBatch) {

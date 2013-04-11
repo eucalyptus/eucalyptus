@@ -39,6 +39,7 @@ import com.eucalyptus.util.OwnerFullName;
 import com.google.common.base.Function;
 import com.google.common.base.Predicate;
 import com.google.common.base.Strings;
+import com.google.common.collect.Lists;
 
 import edu.ucsb.eucalyptus.msgs.ClusterInfoType;
 
@@ -215,10 +216,12 @@ public class LoadBalancers {
 				try{
 					final LoadBalancerZone sample = LoadBalancerZone.named(lb, zone);
 					final LoadBalancerZone exist = Entities.uniqueResult(sample);
-					LOG.warn("existing zone is found: "+exist);
+					exist.setState(LoadBalancerZone.STATE.InService);
+					Entities.persist(exist);
 					db.commit();
 				}catch(NoSuchElementException ex){
 					final LoadBalancerZone newZone = LoadBalancerZone.named(lb, zone);
+					newZone.setState(LoadBalancerZone.STATE.InService);
 					Entities.persist(newZone);
 					db.commit();
 				}catch(Exception ex){
@@ -267,6 +270,15 @@ public class LoadBalancers {
 			db.rollback();
 			throw Exceptions.toUndeclared(ex);
 		}
+	}
+	
+	public static List<LoadBalancerZone> findZonesInService(final LoadBalancer lb){
+		final List<LoadBalancerZone> inService = Lists.newArrayList();
+		for(final LoadBalancerZone zone : lb.getZones()){
+			if(zone.getState().equals(LoadBalancerZone.STATE.InService))
+				inService.add(zone);
+		}
+		return inService;
 	}
 	
 	public static LoadBalancerDnsRecord getDnsRecord(final LoadBalancer lb) throws LoadBalancingException{

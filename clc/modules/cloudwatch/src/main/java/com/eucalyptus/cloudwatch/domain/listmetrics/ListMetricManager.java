@@ -9,6 +9,7 @@ import java.util.Set;
 import java.util.TreeMap;
 import java.util.TreeSet;
 
+import javax.annotation.Nullable;
 import javax.persistence.EntityTransaction;
 
 import org.apache.log4j.Logger;
@@ -24,14 +25,15 @@ import com.eucalyptus.cloudwatch.domain.metricdata.MetricEntity;
 import com.eucalyptus.cloudwatch.domain.metricdata.MetricEntity.MetricType;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.records.Logs;
+import com.google.common.base.Predicate;
 import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.Multimap;
 import com.google.common.collect.Sets;
 
 public class ListMetricManager {
-	private static final Logger LOG = Logger.getLogger(ListMetricManager.class);
+  private static final Logger LOG = Logger.getLogger(ListMetricManager.class);
   public static void addMetric(String accountId, String metricName, String namespace, Map<String, String> dimensionMap, MetricType metricType) {
-	  if (dimensionMap == null) {
+    if (dimensionMap == null) {
       dimensionMap = new HashMap<String, String>();
     } else if (dimensionMap.size() > ListMetric.MAX_DIM_NUM) {
       throw new IllegalArgumentException("Too many dimensions for metric, " + dimensionMap.size());
@@ -45,8 +47,20 @@ public class ListMetricManager {
     }
     Set<Set<DimensionEntity>> permutations = null;
     if (metricType == MetricType.System) {
-      permutations = Sets.powerSet(dimensions);
-    } else {
+      // do dimension folding (i.e. insert 2^n metrics.  
+      // All with the same metric name and namespace, but one for each subset of the dimension set passed in, including all, and none)
+      if (!metricName.equals("AWS/EC2")) {
+        permutations = Sets.powerSet(dimensions);
+      } else {
+        // Hack: no values in AWS/EC2 have more than one dimension, so fold, but only choose dimension subsets of size at most 1.
+        // See EUCA-do dimension folding (i.e. insert 2^n metrics.  
+        // All with the same metric name and namespace, but one for each subset of the dimension set passed in, including all, and none)
+        permutations = Sets.filter(Sets.powerSet(dimensions), new Predicate<Set<DimensionEntity>>(){
+          public boolean apply(@Nullable Set<DimensionEntity> candidate) {
+            return (candidate != null && candidate.size() < 2);
+          } } );
+      }
+    } else { // no folding on custom metrics
       permutations = Sets.newHashSet();
       permutations.add(dimensions);
     }

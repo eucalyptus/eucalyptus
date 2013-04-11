@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * Copyright 2009-2013 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -630,6 +630,98 @@ public class HmacLoginModuleTest {
     assertTrue("Authentication successful", hmacV2LoginModule().authenticate(creds));
   }
 
+  /**
+   * AWS Java SDK 1.3.27
+   */
+  @Test
+  public void testAWSJavaSDK_1_3_27_Sigv2() throws Exception {
+    final HmacCredentials creds = creds(
+        "Xn7WHmdCX7+QqJDWD/7Fau5lIgQoV8tq5gcLq2TTyk0=",
+        Maps.newHashMap(ImmutableMap.<String,String>builder()
+            .put( "Action", "TerminateInstances" )
+            .put( "SignatureMethod", "HmacSHA256" )
+            .put( "InstanceId.1", "i-C7D241F0" )
+            .put( "AWSAccessKeyId", "M2JFNG1R6BH2WXWC4GEAE" )
+            .put( "SignatureVersion", "2" )
+            .put( "Version", "2012-12-01" )
+            .put( "Timestamp", "2013-03-04T20:44:58.852Z" )
+            .build()),
+        "POST", "/services/Eucalyptus", "10.111.1.65:8773",
+        2,
+        Hmac.HmacSHA256);
+    assertTrue("Authentication successful", hmacV2LoginModule("LuB6vcOGvBFkUYTGMd7CtwTJlgIN1BprPo9yfSoe").authenticate(creds));
+  }
+
+  /**
+   * Amazon CLI/AutoScaling 1.0.61.2 API 2011-01-01
+   *
+   * NOTE: Signature is invalid due to signed path being "/services/autoscaling"
+   */
+  @Test
+  public void testAWSAutoScalingCLI_1_0_61_2_Sigv2() throws Exception {
+    final HmacCredentials creds = creds(
+        "ILCkibsyRv/4nsUToJnKMZAjSrYTx++UFfuxXERyCkg=",
+        Maps.newHashMap(ImmutableMap.<String,String>builder()
+            .put( "MaxRecords", "20" )
+            .put( "Version", "2011-01-01" )
+            .put( "Action", "DescribeAutoScalingGroups" )
+            .put( "SignatureVersion", "2" )
+            .put( "SignatureMethod", "HmacSHA256" )
+            .put( "Timestamp", "2013-04-04T01:47:05.199Z" )
+            .put( "AWSAccessKeyId", "7C6LEIR2VTIXHPTXTCEAD" )
+            .build()),
+        "GET", "/services/AutoScaling/", "10.111.1.116:8773",
+        2,
+        Hmac.HmacSHA256);
+    assertTrue("Authentication successful", hmacV2LoginModule("7pG138tHUyt5YjOd4gRLZSOX6Nn77skFg29r1SQk").authenticate(creds));
+  }
+
+  /**
+   * Amazon CLI/CloudWatch 1.0.13.4 API 2010-08-01
+   *
+   * NOTE: Signature is invalid due to signed path being "/services/cloudwatch"
+   */
+  @Test
+  public void testAWSCloudWatchCLI_1_0_13_4_Sigv2() throws Exception {
+    final HmacCredentials creds = creds(
+        "JEDUx0NOenXpnidyKzH/Ut+HCzqcFF3l0icDeXJ8lOw=",
+        Maps.newHashMap(ImmutableMap.<String,String>builder()
+            .put( "Version", "2010-08-01" )
+            .put( "Action", "DeleteAlarms" )
+            .put( "SignatureVersion", "2" )
+            .put( "SignatureMethod", "HmacSHA256" )
+            .put( "Timestamp", "2013-04-04T01:50:57.725Z" )
+            .put( "AWSAccessKeyId", "7C6LEIR2VTIXHPTXTCEAD" )
+            .build()),
+        "GET", "/services/CloudWatch/", "10.111.1.116:8773",
+        2,
+        Hmac.HmacSHA256);
+    assertTrue("Authentication successful", hmacV2LoginModule("7pG138tHUyt5YjOd4gRLZSOX6Nn77skFg29r1SQk").authenticate(creds));
+  }
+
+  /**
+   * Amazon CLI/ElasticLoadBalancing 1.0.17.0 API 2012-06-01
+   *
+   * NOTE: Signature is invalid due to signed path being "/services/loadbalancing"
+   */
+  @Test
+  public void testAWSElasticLoadBalancingCLI_1_0_17_0_Sigv2() throws Exception {
+    final HmacCredentials creds = creds(
+        "NAbXQmUTwLxyT1cqXbOi6iMX7TQt5haL9KgrhBO+zaA=",
+        Maps.newHashMap(ImmutableMap.<String,String>builder()
+            .put( "Version", "2012-06-01" )
+            .put( "Action", "DescribeLoadBalancers" )
+            .put( "SignatureVersion", "2" )
+            .put( "SignatureMethod", "HmacSHA256" )
+            .put( "Timestamp", "2013-04-04T01:54:27.366Z" )
+            .put( "AWSAccessKeyId", "7C6LEIR2VTIXHPTXTCEAD" )
+            .build()),
+        "GET", "/services/LoadBalancing/", "10.111.1.116:8773",
+        2,
+        Hmac.HmacSHA256);
+    assertTrue("Authentication successful", hmacV2LoginModule("7pG138tHUyt5YjOd4gRLZSOX6Nn77skFg29r1SQk").authenticate(creds));
+  }
+
   @Test
   public void testSignatureV4TestSuite() throws Exception {
     final File tempZipFile = File.createTempFile( "aws4_testsuite", ".zip" );
@@ -839,10 +931,14 @@ public class HmacLoginModuleTest {
   }
 
   private Hmacv2LoginModule hmacV2LoginModule() {
+    return hmacV2LoginModule( "ZRvYnXG04PxhYuP228IWLmCG0o3kYIr2fPByxMlb" );
+  }
+
+  private Hmacv2LoginModule hmacV2LoginModule( final String secret ) {
     return new Hmacv2LoginModule(){
       @Override
       protected AccessKey lookupAccessKey(final HmacCredentials credentials) throws AuthException {
-        return accessKey();
+        return accessKey( secret );
       }
 
       @Override

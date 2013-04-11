@@ -31,6 +31,8 @@ import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.principal.AccessKey;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.auth.principal.UserFullName;
+import com.eucalyptus.autoscaling.common.AutoScalingGroupType;
+import com.eucalyptus.autoscaling.common.DescribeAutoScalingGroupsResponseType;
 import com.eucalyptus.configurable.ConfigurableClass;
 import com.eucalyptus.configurable.ConfigurableField;
 import com.eucalyptus.configurable.ConfigurableFieldType;
@@ -84,6 +86,10 @@ public class LoadBalancerASGroupCreator extends AbstractEventHandler<NewLoadbala
 	public void apply(NewLoadbalancerEvent evt) throws EventHandlerException {
 		if(LOADBALANCER_EMI == null)
 			throw new EventHandlerException("Loadbalancer's EMI is not configured");
+		
+		if(evt.getZones() == null || evt.getZones().size() <= 0)
+			return;	// do nothing when zone is not specified
+		
 		LoadBalancer lb = null;
 		try{
 			lb = LoadBalancers.getLoadbalancer(evt.getContext().getUserFullName(), evt.getLoadBalancer());
@@ -97,7 +103,7 @@ public class LoadBalancerASGroupCreator extends AbstractEventHandler<NewLoadbala
 		// create user data to supply to haproxy tooling
 		InstanceUserDataBuilder userDataBuilder  = null;
 		try{
-			userDataBuilder=new InstanceUserDataWithCredential(evt.getContext().getUserFullName());
+			userDataBuilder= new DefaultInstanceUserDataBuilder();
 		}catch(Exception ex){
 			throw new EventHandlerException("failed to create service parameters", ex);
 		}
@@ -118,27 +124,53 @@ public class LoadBalancerASGroupCreator extends AbstractEventHandler<NewLoadbala
 			;
 		}
 		
-		// create launch config based on the parameters
+		boolean asgFound = false;
 		try{
-			StoredResult<String> sgroupSetup = this.getChain().findHandler(SecurityGroupSetup.class);
-			final List<String> group = sgroupSetup.getResult();
-			final String sgroupName = group.size()>0 ? group.get(0) : null;
-			EucalyptusActivityTasks.getInstance().createLaunchConfiguration(LOADBALANCER_EMI, LOADBALANCER_INSTANCE_TYPE, instanceProfileName,
-					launchConfigName, sgroupName, userDataBuilder.build());
-			this.launchConfigName = launchConfigName;
-		}catch(Exception ex){
-			throw new EventHandlerException("Failed to create launch configuration", ex);
+			final DescribeAutoScalingGroupsResponseType response = 
+					EucalyptusActivityTasks.getInstance().describeAutoScalingGroups(Lists.newArrayList(groupName));
+			final List<AutoScalingGroupType> groups =
+					response.getDescribeAutoScalingGroupsResult().getAutoScalingGroups().getMember();
+			if(groups.size()>0 && groups.get(0).getAutoScalingGroupName().equals(groupName)){
+				asgFound =true;
+				launchConfigName = groups.get(0).getLaunchConfigurationName();
+			}
+		}catch(final Exception ex){
+			asgFound = false;
 		}
 		
-		// create autoscaling group with zones and desired capacity
-		int capacity = 1;
-		try{
-			final List<String> availabilityZones = Lists.newArrayList(evt.getZones());
-			capacity = availabilityZones.size() * this.capacityPerZone;
-			EucalyptusActivityTasks.getInstance().createAutoScalingGroup(groupName, availabilityZones, capacity, launchConfigName);
+		// create launch config based on the parameters
+		int capacity =1;
+		if(!asgFound){
+			try{
+				StoredResult<String> sgroupSetup = this.getChain().findHandler(SecurityGroupSetup.class);
+				final List<String> group = sgroupSetup.getResult();
+				final String sgroupName = group.size()>0 ? group.get(0) : null;
+				EucalyptusActivityTasks.getInstance().createLaunchConfiguration(LOADBALANCER_EMI, LOADBALANCER_INSTANCE_TYPE, instanceProfileName,
+						launchConfigName, sgroupName, userDataBuilder.build());
+				this.launchConfigName = launchConfigName;
+			}catch(Exception ex){
+				throw new EventHandlerException("Failed to create launch configuration", ex);
+			}
+			
+			// create autoscaling group with zones and desired capacity
+			try{
+				final List<String> availabilityZones = Lists.newArrayList(evt.getZones());
+				capacity = availabilityZones.size() * this.capacityPerZone;
+				EucalyptusActivityTasks.getInstance().createAutoScalingGroup(groupName, availabilityZones, capacity, launchConfigName);
+				this.asgName = groupName;
+			}catch(Exception ex){
+				throw new EventHandlerException("Failed to create autoscaling group", ex);
+			}
+		}else{
+			try{
+				final List<String> availabilityZones = Lists.newArrayList(evt.getZones());
+				capacity = availabilityZones.size() * this.capacityPerZone;
+				EucalyptusActivityTasks.getInstance().updateAutoScalingGroup(groupName, availabilityZones, capacity);
+			}catch(Exception ex){
+				throw new EventHandlerException("Failed to update the autoscaling group", ex);
+			}
 			this.asgName = groupName;
-		}catch(Exception ex){
-			throw new EventHandlerException("Failed to create autoscaling group", ex);
+			this.launchConfigName = launchConfigName;
 		}
 		
 		// commit ASG record to the database
@@ -227,7 +259,7 @@ public class LoadBalancerASGroupCreator extends AbstractEventHandler<NewLoadbala
 		}
 	}
 	
-	private static class DefaultInstanceUserDataBuilder implements InstanceUserDataBuilder {
+	private class DefaultInstanceUserDataBuilder implements InstanceUserDataBuilder {
 		ConcurrentHashMap<String,String> dataDict= null;
 		protected DefaultInstanceUserDataBuilder(){
 			dataDict = new ConcurrentHashMap<String,String>();

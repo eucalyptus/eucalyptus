@@ -327,6 +327,7 @@
     <structure name="InstanceMonitoring" field="instanceMonitoring" usage="optional" type="com.eucalyptus.autoscaling.common.InstanceMonitoring"/>
     <value name="SpotPrice" field="spotPrice" usage="optional"/>
     <value name="IamInstanceProfile" field="iamInstanceProfile" usage="optional"/>
+    <value name="EbsOptimized" field="ebsOptimized" usage="optional"/>
   </mapping>
   <mapping name="CreateLaunchConfigurationResponse" class="com.eucalyptus.autoscaling.common.CreateLaunchConfigurationResponseType">
     <structure map-as="com.eucalyptus.autoscaling.common.AutoScalingMessage"/>
