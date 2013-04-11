@@ -2421,8 +2421,7 @@ int refresh_instances(ncMetadata * pMeta, int timeout, int dolock)
                     LOGDEBUG("[%s] notifying node %s to roll back migration\n", migration_instance, migration_host);
                     doMigrateInstances(pMeta, migration_host, migration_instance, NULL, 0, 0, "rollback");
                 } else {
-                    LOGWARN("unexpected migration action '%s' for node %s -- doing nothing\n",
-                            migration_action, migration_host);
+                    LOGWARN("unexpected migration action '%s' for node %s -- doing nothing\n", migration_action, migration_host);
                 }
                 EUCA_FREE(migration_host);
             }
@@ -2987,7 +2986,6 @@ int schedule_instance_roundrobin(virtualMachine * vm, int *outresid)
     return (0);
 }
 
-
 //!
 //! @param[in]  instance
 //! @param[in]  includeNodes
@@ -3003,7 +3001,8 @@ int schedule_instance_roundrobin(virtualMachine * vm, int *outresid)
 //!
 //! @note
 //!
-int schedule_instance_migration(ncInstance *instance, char **includeNodes, char **excludeNodes, int includeNodeCount, int excludeNodeCount, int inresid, int *outresid, ccResourceCache *resourceCacheLocal)
+int schedule_instance_migration(ncInstance * instance, char **includeNodes, char **excludeNodes, int includeNodeCount, int excludeNodeCount, int inresid, int *outresid,
+                                ccResourceCache * resourceCacheLocal)
 {
     int ret = 0;
 
@@ -3016,18 +3015,16 @@ int schedule_instance_migration(ncInstance *instance, char **includeNodes, char 
     }
     // Trivial case: migration to a specific node:
     if (includeNodeCount == 1) {
-        LOGINFO("[%s] attempting to schedule migration to specific node: %s\n", instance->instanceId,
-                includeNodes[0]);
+        LOGINFO("[%s] attempting to schedule migration to specific node: %s\n", instance->instanceId, includeNodes[0]);
         if (!strcmp(instance->migration_src, includeNodes[0])) {
-            LOGERROR("[%s] can't schedule SAME-NODE migration from %s to %s\n", instance->instanceId,
-                     instance->migration_src, includeNodes[0]);
+            LOGERROR("[%s] can't schedule SAME-NODE migration from %s to %s\n", instance->instanceId, instance->migration_src, includeNodes[0]);
             ret = 1;
             goto out;
         }
         ret = schedule_instance(&(instance->params), includeNodes[0], outresid);
     } else if (config->schedPolicy == SCHEDROUNDROBIN) {
         // This is relatively easy: we can keep calling the round-robin scheduler until we get a node we like.
-        int first_try = -1; // To break loops.
+        int first_try = -1;            // To break loops.
         int done = 0;
         int found = 0;
         while (!done) {
@@ -3045,16 +3042,13 @@ int schedule_instance_migration(ncInstance *instance, char **includeNodes, char 
             if (*outresid == inresid) {
                 // Tried to schduled to the source node, so retry.
                 LOGDEBUG("[%s] can't schedule src_index=%d == dst_index=%d (%s > %s), trying again...\n",
-                         instance->instanceId, inresid, *outresid, instance->migration_src,
-                         resourceCacheLocal->resources[*outresid].hostname);
-            } else if (check_for_string_in_list(resourceCacheLocal->resources[*outresid].hostname,
-                                                excludeNodes, excludeNodeCount)) {
+                         instance->instanceId, inresid, *outresid, instance->migration_src, resourceCacheLocal->resources[*outresid].hostname);
+            } else if (check_for_string_in_list(resourceCacheLocal->resources[*outresid].hostname, excludeNodes, excludeNodeCount)) {
                 // Exclusion list takes priority over inclusion list.
                 LOGDEBUG("[%s] can't schedule src_index=%d, dst_index=%d because node %s is in destination-exclusion list\n",
                          instance->instanceId, inresid, *outresid, resourceCacheLocal->resources[*outresid].hostname);
             } else if (includeNodeCount) {
-                if (!check_for_string_in_list(resourceCacheLocal->resources[*outresid].hostname,
-                                              includeNodes, includeNodeCount)) {
+                if (!check_for_string_in_list(resourceCacheLocal->resources[*outresid].hostname, includeNodes, includeNodeCount)) {
                     LOGDEBUG("[%s] can't schedule src_index=%d, dst_index=%d because node %s is not in destination-inclusion list\n",
                              instance->instanceId, inresid, *outresid, resourceCacheLocal->resources[*outresid].hostname);
                 } else {
@@ -3065,7 +3059,8 @@ int schedule_instance_migration(ncInstance *instance, char **includeNodes, char 
                 }
             } else if (*outresid != inresid) {
                 // Found a destination node that's not the source node.
-                LOGDEBUG("[%s] scheduled: src_index=%d, dst_index=%d (%s > %s)\n", instance->instanceId, inresid, *outresid, instance->migration_src, resourceCacheLocal->resources[*outresid].hostname);
+                LOGDEBUG("[%s] scheduled: src_index=%d, dst_index=%d (%s > %s)\n", instance->instanceId, inresid, *outresid, instance->migration_src,
+                         resourceCacheLocal->resources[*outresid].hostname);
                 done++;
                 found++;
             }
@@ -3082,7 +3077,7 @@ int schedule_instance_migration(ncInstance *instance, char **includeNodes, char 
         ret = schedule_instance(&(instance->params), NULL, outresid);
     }
 
- out:
+out:
     if (ret) {
         LOGERROR("[%s] migration scheduler could not schedule destination node\n", instance->instanceId);
         *outresid = -1;
@@ -4180,7 +4175,7 @@ out:
 //!
 //! @note
 //!
-int doMigrateInstances(ncMetadata * pMeta, char *actionNode, char *instanceId, char **destinationNodes, int destinationNodeCount, int allowHosts,  char *nodeAction)
+int doMigrateInstances(ncMetadata * pMeta, char *actionNode, char *instanceId, char **destinationNodes, int destinationNodeCount, int allowHosts, char *nodeAction)
 {
     int i, rc, ret = 0, timeout;
     int src_index = -1, dst_index = -1;
@@ -4204,7 +4199,9 @@ int doMigrateInstances(ncMetadata * pMeta, char *actionNode, char *instanceId, c
     }
     if (!strcmp(nodeAction, "prepare")) {
         if (actionNode && instanceId) {
-            LOGWARN("[%s] specified migration preparation using both instance ID and source node (%s). Ignoring source-node specification and migrating the single specfied instance.\n", SP(instanceId), SP(actionNode));
+            LOGWARN
+                ("[%s] specified migration preparation using both instance ID and source node (%s). Ignoring source-node specification and migrating the single specfied instance.\n",
+                 SP(instanceId), SP(actionNode));
         }
         if (instanceId) {
             LOGINFO("preparing migration for specific instance %s\n", SP(instanceId));
@@ -4242,8 +4239,7 @@ int doMigrateInstances(ncMetadata * pMeta, char *actionNode, char *instanceId, c
             }
         }
         if (src_index == -1) {
-            LOGERROR("node requested (%s) for migration action '%s' cannot be found\n", SP(actionNode),
-                     SP(nodeAction));
+            LOGERROR("node requested (%s) for migration action '%s' cannot be found\n", SP(actionNode), SP(nodeAction));
             goto out;
         }
     }
@@ -4319,14 +4315,11 @@ int doMigrateInstances(ncMetadata * pMeta, char *actionNode, char *instanceId, c
             }
 
             if (rc || (dst_index == -1)) {
-                LOGERROR("[%s] cannot schedule destination node for migration from source %s\n",
-                         nc_instances[idx]->instanceId, nc_instances[idx]->migration_src);
+                LOGERROR("[%s] cannot schedule destination node for migration from source %s\n", nc_instances[idx]->instanceId, nc_instances[idx]->migration_src);
                 goto out;
             } else {
                 strncpy(nc_instances[idx]->migration_dst, resourceCacheLocal.resources[dst_index].hostname, HOSTNAME_SIZE);
-                LOGINFO("[%s] scheduled instance migration from %s to %s\n",
-                        nc_instances[idx]->instanceId, nc_instances[idx]->migration_src,
-                        nc_instances[idx]->migration_dst);
+                LOGINFO("[%s] scheduled instance migration from %s to %s\n", nc_instances[idx]->instanceId, nc_instances[idx]->migration_src, nc_instances[idx]->migration_dst);
             }
         }
     }
@@ -4339,8 +4332,7 @@ int doMigrateInstances(ncMetadata * pMeta, char *actionNode, char *instanceId, c
         rc = ncClientCall(pMeta, timeout, resourceCacheLocal.resources[src_index].lockidx, resourceCacheLocal.resources[src_index].ncURL, "ncMigrateInstances",
                           nc_instances, found_instances, nodeAction, NULL);
         if (rc) {
-            LOGERROR("failed: request to prepare migration[s] from source %s\n",
-                     resourceCacheLocal.resources[src_index].hostname);
+            LOGERROR("failed: request to prepare migration[s] from source %s\n", resourceCacheLocal.resources[src_index].hostname);
             ret = 1;
             goto out;
         } else {
@@ -4362,8 +4354,7 @@ int doMigrateInstances(ncMetadata * pMeta, char *actionNode, char *instanceId, c
         timeout = ncGetTimeout(time(NULL), OP_TIMEOUT, 1, 0);
         for (int idx = 0; idx < found_instances; idx++) {
             LOGDEBUG("[%s] about to ncClientCall destination node '%s' with nc_instances (%s %d)\n",
-                     SP(nc_instances[idx]->instanceId),
-                     SP(nc_instances[idx]->migration_dst), nodeAction, 1);
+                     SP(nc_instances[idx]->instanceId), SP(nc_instances[idx]->migration_dst), nodeAction, 1);
 
             dst_index = -1;
             for (int res_idx = 0; res_idx < resourceCacheLocal.numResources && (dst_index == -1); res_idx++) {
@@ -4375,8 +4366,7 @@ int doMigrateInstances(ncMetadata * pMeta, char *actionNode, char *instanceId, c
             rc = ncClientCall(pMeta, timeout, resourceCacheLocal.resources[dst_index].lockidx, resourceCacheLocal.resources[dst_index].ncURL, "ncMigrateInstances",
                               &(nc_instances[idx]), 1, nodeAction, NULL);
             if (rc) {
-                LOGERROR("[%s] failed: request to prepare migration on destination %s\n",
-                         nc_instances[idx]->instanceId, resourceCacheLocal.resources[dst_index].hostname);
+                LOGERROR("[%s] failed: request to prepare migration on destination %s\n", nc_instances[idx]->instanceId, resourceCacheLocal.resources[dst_index].hostname);
                 ret = 1;
                 goto out;
             }

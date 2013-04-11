@@ -2942,13 +2942,9 @@ int doMigrateInstances(ncMetadata * pMeta, ncInstance ** instances, int instance
         LOGDEBUG("verifying instance # %d...\n", i);
         if (instances[i]) {
             LOGDEBUG("invoked (action=%s instance[%d].{id=%s src=%s dst=%s) creds=%s\n",
-                     action, i,
-                     instances[i]->instanceId, instances[i]->migration_src, instances[i]->migration_dst,
-                     (credentials == NULL) ? ("unavailable") : ("present"));
+                     action, i, instances[i]->instanceId, instances[i]->migration_src, instances[i]->migration_dst, (credentials == NULL) ? ("unavailable") : ("present"));
             if (!strcmp(instances[i]->migration_src, instances[i]->migration_dst)) {
-                LOGERROR("[%s] rejecting proposed SAME-NODE migration from %s to %s\n",
-                         instances[i]->instanceId, instances[i]->migration_src,
-                         instances[i]->migration_dst);
+                LOGERROR("[%s] rejecting proposed SAME-NODE migration from %s to %s\n", instances[i]->instanceId, instances[i]->migration_src, instances[i]->migration_dst);
                 return (EUCA_UNSUPPORTED_ERROR);
             }
         }

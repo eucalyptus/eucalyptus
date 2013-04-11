@@ -397,11 +397,12 @@ int schedule_instance(virtualMachine * vm, char *targetNode, int *outresid);
 int schedule_instance_roundrobin(virtualMachine * vm, int *outresid);
 int schedule_instance_explicit(virtualMachine * vm, char *targetNode, int *outresid);
 int schedule_instance_greedy(virtualMachine * vm, int *outresid);
-int schedule_instance_migration(ncInstance *instance, char **includeNodes, char **excludeNodes, int includeNodeCount, int excludeNodeCount, int inresid, int *outresid, ccResourceCache *resourceCacheLocal);
-int doRunInstances(ncMetadata * pMeta, char *amiId, char *kernelId, char *ramdiskId, char *amiURL, char *kernelURL, char *ramdiskURL, char **instIds,
-                   int instIdsLen, char **netNames, int netNamesLen, char **macAddrs, int macAddrsLen, int *networkIndexList, int networkIndexListLen,
-                   char **uuids, int uuidsLen, int minCount, int maxCount, char *accountId, char *ownerId, char *reservationId, virtualMachine * ccvm,
-                   char *keyName, int vlan, char *userData, char *launchIndex, char *platform, int expiryTime, char *targetNode, ccInstance ** outInsts, int *outInstsLen);
+int schedule_instance_migration(ncInstance * instance, char **includeNodes, char **excludeNodes, int includeNodeCount, int excludeNodeCount, int inresid, int *outresid,
+                                ccResourceCache * resourceCacheLocal);
+int doRunInstances(ncMetadata * pMeta, char *amiId, char *kernelId, char *ramdiskId, char *amiURL, char *kernelURL, char *ramdiskURL, char **instIds, int instIdsLen,
+                   char **netNames, int netNamesLen, char **macAddrs, int macAddrsLen, int *networkIndexList, int networkIndexListLen, char **uuids, int uuidsLen, int minCount,
+                   int maxCount, char *accountId, char *ownerId, char *reservationId, virtualMachine * ccvm, char *keyName, int vlan, char *userData, char *launchIndex,
+                   char *platform, int expiryTime, char *targetNode, ccInstance ** outInsts, int *outInstsLen);
 int doGetConsoleOutput(ncMetadata * pMeta, char *instanceId, char **consoleOutput);
 int doRebootInstances(ncMetadata * pMeta, char **instIds, int instIdsLen);
 int doTerminateInstances(ncMetadata * pMeta, char **instIds, int instIdsLen, int force, int **outStatus);

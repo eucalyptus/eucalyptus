@@ -2676,7 +2676,7 @@ int get_remoteDevForNC(const char *the_iqn, const char *remoteDev, char *remoteD
 //! @return FALSE if string not in list of strings, TRUE if string is in list.
 //!
 
-int check_for_string_in_list (char *string, char **list, int count)
+int check_for_string_in_list(char *string, char **list, int count)
 {
     if (!string || !count || !list || !(*list)) {
         return FALSE;
@@ -2692,7 +2692,6 @@ int check_for_string_in_list (char *string, char **list, int count)
     }
     return FALSE;
 }
-
 
 #ifdef _UNIT_TEST
 //!
