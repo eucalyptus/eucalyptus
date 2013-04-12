@@ -3037,6 +3037,8 @@ int migration_rollback_src(ncInstance * instance)
         return TRUE;
     }
     // Not source node?
-    LOGERROR("[%s] request to roll back migration of instance on non-source/destination node %s\n", instance->instanceId, nc_state.ip)
+    LOGERROR("[%s] request to roll back migration of instance on non-source/destination node %s\n", instance->instanceId, nc_state.ip);
+        instance->migration_state = NOT_MIGRATING;
+        save_instance_struct(instance);
         return FALSE;
 }
