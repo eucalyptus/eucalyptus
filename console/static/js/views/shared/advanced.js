@@ -6,6 +6,7 @@ define([
   './model/blockmap'
 	], function( app, dataholder, template, rivets, blockmap ) {
 	return Backbone.View.extend({
+    tpl: template,
     title: 'Advanced',
     launchConfigErrors: new Backbone.Model({volume_size: ''}),
     
@@ -43,7 +44,7 @@ define([
         setStorageVolume: function(e, obj) {
           var m = new blockmap();
           self.launchConfigErrors.clear();
-          m.on('validated:invalid', function(o, errors) { self.launchConfigErrors.set('volume_volume_size', errors.volume_size)});
+          m.on('validated:invalid', function(o, errors) { self.launchConfigErrors.set('volume_size', errors.volume_size)});
 
           var tr = $(e.target).closest('tr');
           var vol = tr.find('.launch-wizard-advanced-storage-volume-selector').val();
@@ -133,7 +134,7 @@ define([
       scope.ramdisks.on('reset change', self.render);
       
 
-      $(this.el).html(template)
+      $(this.el).html(this.tpl)
       this.rView = rivets.bind(this.$el, scope);
       this.render();
 		},

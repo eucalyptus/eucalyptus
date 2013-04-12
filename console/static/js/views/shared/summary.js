@@ -3,6 +3,7 @@ define([
   'rivets'
 ], function(template, rivets) {
   return Backbone.View.extend({
+    tpl: template,
     initialize: function() {
 
       /*this.model.bind('change:type_size', this.render , this);
@@ -22,7 +23,7 @@ define([
       };
 
       scope.imageModel.bind('change:image_iconclass', this.swapIconClass, this);
-      this.$el.html(template);
+      this.$el.html(this.tpl);
       this.riv = rivets.bind(this.$el, scope);
       this.render();
   

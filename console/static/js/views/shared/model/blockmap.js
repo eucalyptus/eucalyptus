@@ -8,7 +8,7 @@ define([], function() {
      volume_id: null, 
      connection: null, 
      snapshot_id: null, 
-     volume_size: 0, 
+     volume_size: null, 
      ebs: "", 
      delete_on_termination: false, 
      ephemeral_name: null,

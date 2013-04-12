@@ -5,6 +5,7 @@ define([
   'rivets',
 	], function( app, dataholder, template, rivets ) {
   return Backbone.View.extend({
+    tpl: template,
     title: 'Type',
 
     initialize : function() {
@@ -86,7 +87,7 @@ define([
     });
 
 
-    $(this.el).html(template);
+    $(this.el).html(this.tpl);
      this.rView = rivets.bind(this.$el, scope);
      this.render();
     },

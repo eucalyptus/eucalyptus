@@ -23,9 +23,10 @@
     options : { },
     _init : function() {
       var thisObj = this;
-      require(['views/newinstance/index'], function(View) {
+      require(['views/newinstance/index'], function(wizardFactory) {
+        var View = wizardFactory();
         var view = new View({el: thisObj.element});
-	view.render();
+      	view.render();
       });
     },
 
