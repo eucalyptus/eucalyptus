@@ -57,7 +57,7 @@
               // Display the id of the volume in the main table
               "aTargets":[1], 
               "mRender": function(data){
-                 return eucatableDisplayColumnTypeTwist(data, data, 255);
+                return eucatableDisplayColumnTypeTwist(data, data, 255);
               },
               "mData": "display_id",
             },
