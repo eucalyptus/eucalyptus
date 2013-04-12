@@ -770,8 +770,8 @@ static int doMigrateInstances(struct nc_state_t *nc, ncMetadata * pMeta, ncInsta
                 LOGINFO("destination node requested to roll back migration\n");
                 sem_p(inst_sem);
                 {
-                    ncInstance * instance = find_instance(&global_instances, instance_req->instanceId);
-                    if (instance!=NULL) {
+                    ncInstance *instance = find_instance(&global_instances, instance_req->instanceId);
+                    if (instance != NULL) {
                         LOGDEBUG("[%s] marked for cleanup\n", instance->instanceId);
                         change_state(instance, SHUTOFF);
                         instance->migration_state = MIGRATION_CLEANING;

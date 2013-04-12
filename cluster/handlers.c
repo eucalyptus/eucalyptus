@@ -2989,13 +2989,14 @@ int schedule_instance_roundrobin(virtualMachine * vm, int *outresid)
 }
 
 //!
-//! @param[in]  instance
-//! @param[in]  includeNodes
-//! @param[in]  excludeNodes
-//! @param[in]  includeNodeCount
-//! @param[in]  excludeNodeCount
-//! @param[in]  inresid
-//! @param[out] outresid
+//! @param[in]  instance           instance to migrate
+//! @param[in]  includeNodes       hosts to be included as possible migration destinations
+//! @param[in]  excludeNodes       hosts to be excluded as migration destinations
+//! @param[in]  includeNodeCount   number of host entries in destination-inclusion list
+//! @param[in]  excludeNodeCount   number of host entries in destination-exclusion list
+//! @param[in]  inresid            resource-cache index of migration source node
+//! @param[out] outresid           resource-cache index of scheduled migration destination node
+//! @param[in]  resourceCacheLocal local copy of global resource cache
 //!
 //! @return
 //!
@@ -3024,7 +3025,16 @@ int schedule_instance_migration(ncInstance * instance, char **includeNodes, char
             goto out;
         }
         ret = schedule_instance(&(instance->params), includeNodes[0], outresid);
-    } else if (config->schedPolicy == SCHEDROUNDROBIN) {
+    } else {
+        if (config->schedPolicy == SCHEDROUNDROBIN) {
+            LOGDEBUG("[%s] scheduling migration using ROUNDROBIN scheduler\n", instance->instanceId);
+        } else if (config->schedPolicy == SCHEDGREEDY || config->schedPolicy == SCHEDPOWERSAVE) {
+            LOGINFO
+                ("[%s] scheduling migration using ROUNDROBIN scheduler, despite GREEDY or POWERSAVE scheduler specification in Eucalyptus configuration file; GREEDY scheduling can be emulated by selecting specific destination nodes for migrations\n",
+                 instance->instanceId);
+        } else {
+            LOGWARN("[%s] unknown scheduler configuration--scheduling migration using ROUNDROBIN scheduler\n", instance->instanceId);
+        }
         // This is relatively easy: we can keep calling the round-robin scheduler until we get a node we like.
         int first_try = -1;            // To break loops.
         int done = 0;
@@ -3070,13 +3080,6 @@ int schedule_instance_migration(ncInstance * instance, char **includeNodes, char
         if (!found) {
             ret = 1;
         }
-    } else if ((config->schedPolicy == SCHEDGREEDY) || (config->schedPolicy == SCHEDPOWERSAVE)) {
-        //
-        ret = schedule_instance_greedy(&(instance->params), outresid);
-    } else {
-        // If not ROUNDROBIN, fall back to configured scheduling policy and hope (for now).
-        // FIXME: This doesn't avoid scheduling source nodes or handle includeNodes/excludeNodes.
-        ret = schedule_instance(&(instance->params), NULL, outresid);
     }
 
 out:
