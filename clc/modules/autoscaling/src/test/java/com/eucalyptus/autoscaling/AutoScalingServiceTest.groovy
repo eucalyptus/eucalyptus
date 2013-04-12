@@ -368,7 +368,7 @@ class AutoScalingServiceTest {
   @Test
   void testTerminateInstances() {
     Accounts.setAccountProvider( accountProvider() )
-    AutoScalingGroup group;
+    AutoScalingGroup group
     AutoScalingService service = service( launchConfigurationStore(), autoScalingGroupStore( [
         group = new AutoScalingGroup(
             naturalId: '88777c80-7248-11e2-bcfd-0800200c9a66',
@@ -404,7 +404,7 @@ class AutoScalingServiceTest {
       ) )
 
     Activity activity =
-      terminateInstanceInAutoScalingGroupResponseType.terminateInstanceInAutoScalingGroupResult.activity;
+      terminateInstanceInAutoScalingGroupResponseType.terminateInstanceInAutoScalingGroupResult.activity
 
     assertNotNull( "Activity", activity )
     assertEquals( "Activity identifier", 'b7717740-7246-11e2-bcfd-0800200c9a66', activity.activityId )
@@ -691,6 +691,12 @@ class AutoScalingServiceTest {
       }
 
       @Override
+      void markExpiredPendingUnhealthy(AutoScalingGroup group,
+                                       Collection<String> instanceIds,
+                                       long maxAge) {
+      }
+
+      @Override
       Set<String> verifyInstanceIds(String accountNumber,
                                     Collection<String> instanceIds) {
         return [] as Set
@@ -883,7 +889,7 @@ class AutoScalingServiceTest {
           description: "Description",
           details:  "Details",
           progress: 13
-        ) ];
+        ) ]
       }
 
       @Override

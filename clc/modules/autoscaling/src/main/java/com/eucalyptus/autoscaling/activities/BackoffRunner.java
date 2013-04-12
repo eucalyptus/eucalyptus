@@ -22,9 +22,9 @@ package com.eucalyptus.autoscaling.activities;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
-import java.util.concurrent.TimeUnit;
 import javax.annotation.Nullable;
 import org.apache.log4j.Logger;
+import com.eucalyptus.autoscaling.config.AutoScalingConfiguration;
 import com.eucalyptus.util.async.CheckedListenableFuture;
 import com.eucalyptus.util.async.Futures;
 import com.google.common.collect.Maps;
@@ -35,10 +35,6 @@ import com.google.common.collect.Maps;
 public class BackoffRunner {
 
   private static final Logger logger = Logger.getLogger( BackoffRunner.class );
-  
-  private static final long taskTimeout = TimeUnit.MINUTES.toMillis( 5 );
-  private static final long maxBackoff = TimeUnit.MINUTES.toMillis( 10 );
-  private static final long initialBackoff = TimeUnit.SECONDS.toMillis( 9 );
   
   private static final ConcurrentMap<String,TaskInfo> tasksInProgress = Maps.newConcurrentMap();
 
@@ -69,6 +65,18 @@ public class BackoffRunner {
 
   protected long timestamp() {
     return System.currentTimeMillis();
+  }
+
+  private static long getTaskTimeout() {
+    return AutoScalingConfiguration.getActivityTimeoutMillis();
+  }
+
+  private static long getMaxBackoff() {
+    return AutoScalingConfiguration.getActivityMaxBackoffMillis();
+  }
+
+  private static long getInitialBackoff() {
+    return AutoScalingConfiguration.getActivityInitialBackoffMillis();
   }
 
   private static boolean doRunTask( final TaskWithBackOff task, final long timestamp ) {
@@ -181,11 +189,11 @@ public class BackoffRunner {
     }
     
     private long calculateBackoff() {
-      long backoff = initialBackoff;
-      for ( int i=0; i<failureCount && backoff < maxBackoff ; i++ ) {
+      long backoff = getInitialBackoff();
+      for ( int i=0; i<failureCount && backoff < getMaxBackoff() ; i++ ) {
         backoff *= 2;        
       }
-      return Math.min( backoff, maxBackoff ); 
+      return Math.min( backoff, getMaxBackoff() );
     }
     
     private int getNextFailureCount( final String group ) {
@@ -201,7 +209,7 @@ public class BackoffRunner {
     }
     
     private boolean isTimedOut( final long timestamp ) {
-      return timestamp - created > taskTimeout;
+      return timestamp - created > getTaskTimeout();
     }
 
     private boolean isSuccess() {

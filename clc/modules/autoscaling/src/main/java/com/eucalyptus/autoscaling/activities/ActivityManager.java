@@ -23,6 +23,7 @@ import static com.eucalyptus.autoscaling.activities.BackoffRunner.TaskWithBackOf
 import static com.eucalyptus.autoscaling.activities.ZoneUnavailabilityMarkers.ZoneCallback;
 import static com.eucalyptus.autoscaling.instances.AutoScalingInstances.availabilityZone;
 import static com.eucalyptus.autoscaling.instances.AutoScalingInstances.instanceId;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
@@ -36,6 +37,7 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -178,8 +180,8 @@ public class ActivityManager {
   private final ZoneUnavailabilityMarkers zoneAvailabilityMarkers;
   private final ZoneMonitor zoneMonitor;
   private final BackoffRunner runner = BackoffRunner.getInstance( );
-  private final ConcurrentMap<String,Integer> launchFailureCounters = Maps.newConcurrentMap(); // TODO:STEVE:expire entries (also below)
-  private final ConcurrentMap<String,Long> untrackedInstanceTimestamps = Maps.newConcurrentMap();
+  private final ConcurrentMap<String,TimestampedValue<Integer>> launchFailureCounters = Maps.newConcurrentMap();
+  private final ConcurrentMap<String,TimestampedValue<Void>> untrackedInstanceTimestamps = Maps.newConcurrentMap();
   private final List<UnstableInstanceState> unstableInstanceStates = ImmutableList.<UnstableInstanceState>builder()
       .add( state( LifecycleState.Terminating, ConfigurationState.Instantiated, terminateInstancesTask() ) )
       .add( state( LifecycleState.Terminating, ConfigurationState.Registered, removeFromLoadBalancerOrTerminate() ) )
@@ -402,6 +404,18 @@ public class ActivityManager {
       }
     } catch ( Exception e ) {
       logger.error( e, e );
+    }
+
+    // Clean up state
+    expireValues( launchFailureCounters, AutoScalingConfiguration.getActivityMaxBackoffMillis() * AutoScalingConfiguration.getSuspensionLaunchAttemptsThreshold() );
+    expireValues( untrackedInstanceTimestamps, AutoScalingConfiguration.getUntrackedInstanceTimeoutMillis() + TimeUnit.MINUTES.toMillis( 10 ) );
+  }
+
+  private <T> void expireValues( final ConcurrentMap<String,TimestampedValue<T>> map, long maxAge ) {
+    for ( final Map.Entry<String,TimestampedValue<T>> entry : map.entrySet() ) {
+      if ( entry.getValue().getTimestamp() < maxAge ) {
+        map.remove( entry.getKey(), entry.getValue() );
+      }
     }
   }
 
@@ -850,9 +864,11 @@ public class ActivityManager {
 
   private DescribeInstanceStatusType monitorInstances( final Collection<String> instanceIds ) {
     final DescribeInstanceStatusType describeInstanceStatusType = new DescribeInstanceStatusType();
+    describeInstanceStatusType.setIncludeAllInstances( true );
     describeInstanceStatusType.getInstancesSet().addAll( instanceIds );
-    describeInstanceStatusType.getFilterSet().add( filter( "system-status.status", "ok" ) );
-    describeInstanceStatusType.getFilterSet().add( filter( "instance-status.status", "ok" ) );
+    describeInstanceStatusType.getFilterSet().add( filter( "instance-state-name", "pending", "running" ) );
+    describeInstanceStatusType.getFilterSet().add( filter( "system-status.status", "not-applicable", "initializing", "ok" ) );
+    describeInstanceStatusType.getFilterSet().add( filter( "instance-status.status", "not-applicable", "initializing", "ok"  ) );
     return describeInstanceStatusType;
   }
 
@@ -863,10 +879,10 @@ public class ActivityManager {
     return describeTagsType;
   }
 
-  private Filter filter( final String name, final String value ) {
+  private Filter filter( final String name, final String... values ) {
     final Filter filter = new Filter();
     filter.setName( name );
-    filter.getValueSet().add( value );
+    filter.getValueSet().addAll( Arrays.asList( values ) );
     return filter;
   }
 
@@ -1014,11 +1030,11 @@ public class ActivityManager {
 
   private boolean shouldSuspendDueToLaunchFailure( final AutoScalingGroup group ) {
     while ( true ) {
-      final Integer count = launchFailureCounters.get( group.getArn() );
-      final Integer newCount = Objects.firstNonNull( count, 0 ) + 1;
+      final TimestampedValue<Integer> count = launchFailureCounters.get( group.getArn() );
+      final TimestampedValue<Integer> newCount = new TimestampedValue<Integer>( Objects.firstNonNull( count, new TimestampedValue<Integer>(0) ).getValue() + 1 );
       if ( ( count == null && launchFailureCounters.putIfAbsent( group.getArn(), newCount ) == null ) ||
            ( count != null && launchFailureCounters.replace( group.getArn(), count, newCount ) ) ) {
-        return newCount >= AutoScalingConfiguration.getSuspensionLaunchAttemptsThreshold();
+        return newCount.getValue() >= AutoScalingConfiguration.getSuspensionLaunchAttemptsThreshold();
       }
     }
   }
@@ -1029,11 +1045,11 @@ public class ActivityManager {
 
   private boolean shouldTerminateUntrackedInstance( final String instanceId ) {
     while ( true ) {
-      final Long timestamp = untrackedInstanceTimestamps.get( instanceId );
-      final Long newTimestamp = Objects.firstNonNull( timestamp, timestamp() );
+      final TimestampedValue<Void> timestamp = untrackedInstanceTimestamps.get( instanceId );
+      final TimestampedValue<Void> newTimestamp = Objects.firstNonNull( timestamp, new TimestampedValue<Void>(null) );
       if ( ( timestamp == null && untrackedInstanceTimestamps.putIfAbsent( instanceId, newTimestamp ) == null ) ||
           timestamp != null ) {
-        return (timestamp() - newTimestamp) >= AutoScalingConfiguration.getUntrackedInstanceTimeoutMillis();
+        return (timestamp() - newTimestamp.getTimestamp()) >= AutoScalingConfiguration.getUntrackedInstanceTimeoutMillis();
       }
     }
   }
@@ -2025,6 +2041,9 @@ public class ActivityManager {
     private final AtomicReference<List<String>> healthyInstanceIds = new AtomicReference<List<String>>(
         Collections.<String>emptyList()
     );
+    private final AtomicReference<List<String>> knownInstanceIds = new AtomicReference<List<String>>(
+        Collections.<String>emptyList()
+    );
 
     private MonitoringScalingActivityTask( final ScalingActivity activity,
                                            final List<String> instanceIds ) {
@@ -2042,20 +2061,29 @@ public class ActivityManager {
     @Override
     void dispatchSuccess( final ActivityContext context,
                           final DescribeInstanceStatusResponseType response ) {
+      final List<String> knownInstanceIds = Lists.newArrayList();
       final List<String> healthyInstanceIds = Lists.newArrayList();
       if ( response.getInstanceStatusSet() != null &&
           response.getInstanceStatusSet().getItem() != null ) {
         for ( final InstanceStatusItemType instanceStatus : response.getInstanceStatusSet().getItem() ){
-          if ( instanceStatus.getInstanceStatus() != null &&
+          knownInstanceIds.add( instanceStatus.getInstanceId() );
+          if ( instanceStatus.getInstanceState() != null &&
+              instanceStatus.getInstanceStatus() != null &&
+              "running".equals( instanceStatus.getInstanceState().getName( ) ) &&
               "ok".equals( instanceStatus.getInstanceStatus().getStatus() ) ) {
             healthyInstanceIds.add( instanceStatus.getInstanceId() );
           }
         }
       }
 
+      this.knownInstanceIds.set( ImmutableList.copyOf( knownInstanceIds ) );
       this.healthyInstanceIds.set( ImmutableList.copyOf( healthyInstanceIds ) );
 
       setActivityFinalStatus( ActivityStatusCode.Successful );
+    }
+
+    List<String> getKnownInstanceIds() {
+      return knownInstanceIds.get();
     }
 
     List<String> getHealthyInstanceIds() {
@@ -2103,14 +2131,20 @@ public class ActivityManager {
 
     @Override
     void partialSuccess( final List<MonitoringScalingActivityTask> tasks ) {
-      final Set<String> transitionToHealthy = Sets.newHashSet( pendingInstanceIds );
+      final Set<String> transitionToInService = Sets.newHashSet( pendingInstanceIds );
+      final Set<String> transitionToUnhealthy = Sets.newHashSet( pendingInstanceIds );
+      final Set<String> transitionToUnhealthyIfExpired = Sets.newHashSet( pendingInstanceIds );
       final Set<String> healthyInstanceIds = Sets.newHashSet();
+      final Set<String> knownInstanceIds = Sets.newHashSet();
 
       for ( final MonitoringScalingActivityTask task : tasks ) {
-        healthyInstanceIds.addAll( task.getHealthyInstanceIds() );
+        knownInstanceIds.addAll( task.getKnownInstanceIds( ) );
+        healthyInstanceIds.addAll( task.getHealthyInstanceIds( ) );
       }
 
-      transitionToHealthy.retainAll( healthyInstanceIds );
+      transitionToInService.retainAll( healthyInstanceIds );
+      transitionToUnhealthy.removeAll( knownInstanceIds );
+      transitionToUnhealthyIfExpired.removeAll( healthyInstanceIds );
 
       if ( scalingProcessEnabled( ScalingProcessType.HealthCheck, getGroup() ) ) try {
         autoScalingInstances.markMissingInstancesUnhealthy( getGroup(), healthyInstanceIds );
@@ -2118,12 +2152,26 @@ public class ActivityManager {
         logger.error( e, e );
       }
 
-      if ( !transitionToHealthy.isEmpty() ) try {
+      try {
+        autoScalingInstances.markExpiredPendingUnhealthy(
+            getGroup(),
+            transitionToUnhealthy,
+            timestamp() );
+
+        autoScalingInstances.markExpiredPendingUnhealthy(
+            getGroup(),
+            transitionToUnhealthyIfExpired,
+            timestamp() - AutoScalingConfiguration.getPendingInstanceTimeoutMillis() );
+      } catch ( AutoScalingMetadataException e ) {
+        logger.error( e, e );
+      }
+
+      if ( !transitionToInService.isEmpty() ) try {
         autoScalingInstances.transitionState(
             getGroup(),
             LifecycleState.Pending,
             LifecycleState.InService,
-            transitionToHealthy );
+            transitionToInService );
       } catch ( AutoScalingMetadataException e ) {
         logger.error( e, e );
       }
@@ -2721,6 +2769,41 @@ public class ActivityManager {
     }
 
     abstract void doWork( ) throws Exception;
+  }
+
+  private static class TimestampedValue<T> {
+    private final T value;
+    private final long timestamp;
+
+    private TimestampedValue( final T value ) {
+      this.value = value;
+      this.timestamp = System.currentTimeMillis();
+    }
+
+    public T getValue() {
+      return value;
+    }
+
+    public long getTimestamp() {
+      return timestamp;
+    }
+
+    @Override
+    public boolean equals( final Object o ) {
+      if ( this == o ) return true;
+      if ( o == null || getClass() != o.getClass() ) return false;
+
+      final TimestampedValue that = (TimestampedValue) o;
+
+      return timestamp == that.timestamp && !(value != null ? !value.equals( that.value ) : that.value != null);
+    }
+
+    @Override
+    public int hashCode() {
+      int result = value != null ? value.hashCode() : 0;
+      result = 31 * result + (int) (timestamp ^ (timestamp >>> 32));
+      return result;
+    }
   }
 
   private enum CauseTransform implements Function<GroupScalingCause,ActivityCause> {

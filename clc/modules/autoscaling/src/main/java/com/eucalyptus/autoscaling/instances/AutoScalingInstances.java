@@ -62,6 +62,8 @@ public abstract class AutoScalingInstances {
 
   public abstract void markMissingInstancesUnhealthy( AutoScalingGroup group, Collection<String> instanceIds ) throws AutoScalingMetadataException;
 
+  public abstract void markExpiredPendingUnhealthy( AutoScalingGroup group, Collection<String> instanceIds, long maxAge ) throws AutoScalingMetadataException;
+
   public abstract Set<String> verifyInstanceIds( String accountNumber, Collection<String> instanceIds ) throws AutoScalingMetadataException;
 
   public abstract void transitionState( AutoScalingGroup group, LifecycleState from, LifecycleState to, Collection<String> instanceIds ) throws AutoScalingMetadataException;

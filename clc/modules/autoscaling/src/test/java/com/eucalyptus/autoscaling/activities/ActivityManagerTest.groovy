@@ -750,7 +750,7 @@ class ActivityManagerTest {
         instance( 104, group, "Zone2" ),
     ]
     List<ScalingActivity> scalingActivities = []
-    List<String> failedZones = [ "Zone1" ];
+    List<String> failedZones = [ "Zone1" ]
     ActivityManager manager = activityManager( group, scalingActivities, instances, true, [], [], failedZones )
 
     assertEquals( "Group capacity", 4, invoke( Integer.class, group, "getCapacity") )
@@ -777,7 +777,7 @@ class ActivityManagerTest {
       assertNotNull( "Scaling activity "+(i+1)+" has end date", invoke( Date.class, scalingActivities.get(i), "getEndTime" ) )
     }
 
-    failedZones.clear();
+    failedZones.clear()
     failedZones.add( "Zone2" )
 
     // Should fail over to Zone1
@@ -799,7 +799,7 @@ class ActivityManagerTest {
       assertNotNull( "Scaling activity "+(i+1)+" has end date", invoke( Date.class, scalingActivities.get(i), "getEndTime" ) )
     }
 
-    failedZones.clear();
+    failedZones.clear()
 
     // Should use both Zone1 and Zone2
     doScaling( scalingActivities, manager )
@@ -1076,7 +1076,7 @@ class ActivityManagerTest {
         configurationState: configurationState,
         creationTimestamp: new Date(),
         lastUpdateTimestamp: new Date()
-    );
+    )
   }
 
   def <T> T invoke( Class<T> resultClass, Object object, String method, Class[] parameterClasses, Object[] parameters = [] ) {
@@ -1088,12 +1088,12 @@ class ActivityManagerTest {
 
   private void doScaling( List<ScalingActivity> scalingActivities,
                           ActivityManager manager) {
-    int count = 0;
-    int activityCount = -1;
+    int count = 0
+    int activityCount = -1
     while ( activityCount != scalingActivities.size() && count < 100 ) {
       activityCount = scalingActivities.size()
       manager.doScaling()
-      count++;
+      count++
     }
   }
 
@@ -1116,23 +1116,23 @@ class ActivityManagerTest {
       BackoffRunner runner = new BackoffRunner() {
         @Override
         protected long timestamp() {
-          return testTimestamp()
+          testTimestamp()
         }
       }
 
       @Override
       protected long timestamp() {
-        return testTimestamp()
+        testTimestamp()
       }
 
       long testTimestamp() {
-        return System.currentTimeMillis() + timeOffset;
+        System.currentTimeMillis() + timeOffset
       }
 
       @Override
       void doScaling() {
         super.doScaling()
-        timeOffset += TimeUnit.MINUTES.toMillis( 10 ); // ff time a bit
+        timeOffset += TimeUnit.MINUTES.toMillis( 15 ) // ff time a bit
       }
 
       @Override
@@ -1474,7 +1474,7 @@ class ActivityManagerTest {
 
   AutoScalingInstances autoScalingInstanceStore( List<AutoScalingInstance> instances = [] ) {
     new AutoScalingInstances(){
-      long timestamp = System.currentTimeMillis() - 1000;
+      long timestamp = System.currentTimeMillis() - 1000
 
       @Override
       List<AutoScalingInstance> list(OwnerFullName ownerFullName) {
@@ -1539,6 +1539,12 @@ class ActivityManagerTest {
              !instanceIds.contains(invoke( String.class, instance, "getInstanceId")  ) ) {
             invoke( Void.class, instance, "setHealthStatus", [ HealthStatus.class ] as Class[], [ HealthStatus.Unhealthy ] as Object[] )
           } }
+      }
+
+      @Override
+      void markExpiredPendingUnhealthy(AutoScalingGroup group,
+                                       Collection<String> instanceIds,
+                                       long maxAge) {
       }
 
       @Override
