@@ -166,7 +166,7 @@ public class Nodes {
         } else if ( stillKnownTags.contains( serviceTag ) ) {
           NodeInfo nodeInfo = clusterNodeMap.get( serviceTag );
           nodeInfo.touch( );
-          // nodeInfo.setIqn( serviceTag );
+          nodeInfo.setIqn( node.getIqn() );
           Nodes.updateServiceConfiguration( ccConfig, nodeInfo );
         }
       } catch ( NoSuchElementException e ) {
