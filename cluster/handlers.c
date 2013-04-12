@@ -2415,7 +2415,7 @@ int refresh_instances(ncMetadata * pMeta, int timeout, int dolock)
             if (migration_host) {
                 if (!strcmp(migration_action, "commit")) {
                     LOGDEBUG("[%s] notifying source %s to commit migration\n", migration_instance, migration_host);
-                    // FIXME: Really only need to specify the instance here.
+                    // Note: Really only need to specify the instance here.
                     doMigrateInstances(pMeta, migration_host, migration_instance, NULL, 0, 0, "commit");
                 } else if (!strcmp(migration_action, "rollback")) {
                     LOGDEBUG("[%s] notifying node %s to roll back migration\n", migration_instance, migration_host);
@@ -2868,8 +2868,10 @@ int ccInstance_to_ncInstance(ncInstance * dst, ccInstance * src)
     euca_strncpy(dst->createImageTaskStateName, src->createImageTaskStateName, 64);
     euca_strncpy(dst->userData, src->userData, 16384);
     euca_strncpy(dst->stateName, src->state, 16);
+    euca_strncpy(dst->migration_src, src->migration_src, HOSTNAME_SIZE);
+    euca_strncpy(dst->migration_dst, src->migration_dst, HOSTNAME_SIZE);
     dst->launchTime = src->ts;
-    //dst->migration_state = src->migration_state;
+    dst->migration_state = src->migration_state;
 
     memcpy(&(dst->ncnet), &(src->ncnet), sizeof(netConfig));
 
@@ -4215,9 +4217,6 @@ int doMigrateInstances(ncMetadata * pMeta, char *actionNode, char *instanceId, c
     } else if (!strcmp(nodeAction, "rollback")) {
         // This could actually be the destination node.
         LOGINFO("rolling back migration on node %s\n", SP(actionNode));
-        // FIXME: Remove this warning once rollback has been implemented.
-        LOGWARN("rollbacks have not yet been fully implemented\n");
-        //return (1);
         rollback = 1;
     } else {
         LOGERROR("invalid action parameter: %s\n", nodeAction);
@@ -4283,11 +4282,10 @@ int doMigrateInstances(ncMetadata * pMeta, char *actionNode, char *instanceId, c
         } else {
             LOGINFO("no instances running on host %s\n", SP(actionNode));
         }
-        EUCA_FREE(cc_instances);
         goto out;
     } else if (found_instances > 1 && committing) {
-        LOGWARN("trying to perform a migration commit with multiple (%d) instances. Just thought I'd warn you...\n", found_instances);
-        // FIXME: Should unwind allocations and bail out right here--this is nonsense!
+        LOGERROR("internal error: trying to perform a migration commit with multiple (%d) instances\n", found_instances);
+        goto out;
     }
 
     for (int idx = 0; idx < found_instances; idx++) {
