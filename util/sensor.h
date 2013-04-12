@@ -89,8 +89,8 @@
 #define MAX_SENSOR_NAME_LEN                      64
 #define MAX_SENSOR_VALUES                        15 //!< by default 10 on CLC
 #define MAX_SENSOR_DIMENSIONS                    (5 + EUCA_MAX_VOLUMES) //!< root, ephemeral[0-1], vol-XYZ
-#define MAX_SENSOR_COUNTERS                      2  //!< we only have two types of counters (summation|average) for now
-#define MAX_SENSOR_METRICS                       12 //!< currently 11 are implemented
+#define MAX_SENSOR_COUNTERS                      2  //!< we only have two types of counters in use (summation|latest) for now
+#define MAX_SENSOR_METRICS                       12 //!< currently 12 are implemented
 #else /* ! _UNIT_TEST */
 #define MAX_SENSOR_NAME_LEN                      64
 #define MAX_SENSOR_VALUES                         5 // smaller sizes, for easier testing of limits
@@ -124,7 +124,8 @@
 typedef enum {
     SENSOR_UNUSED = 0,
     SENSOR_SUMMATION,
-    SENSOR_AVERAGE
+    SENSOR_AVERAGE,
+    SENSOR_LATEST
 } sensorCounterType;
 
 /*----------------------------------------------------------------------------*\
