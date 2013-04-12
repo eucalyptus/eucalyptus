@@ -98,6 +98,7 @@ public final class DefaultCryptoProvider implements CryptoProvider, CertificateP
   private static final String KEY_SIGNING_ALGORITHM = "SHA512WithRSA";
   private static final int    KEY_SIZE              = 2048;
   public static String        PROVIDER              = "BC";
+  private static final String PRIVATE_KEY_FORMAT    = System.getProperty( DefaultCryptoProvider.class.getName() + ".privateKeyFormat", "" );
   private static Logger       LOG                   = Logger.getLogger( DefaultCryptoProvider.class );
   
   public DefaultCryptoProvider( ) {}
@@ -236,7 +237,7 @@ public final class DefaultCryptoProvider implements CryptoProvider, CertificateP
     KeyPairGenerator keyGen = null;
     try {
       EventRecord.caller( DefaultCryptoProvider.class, EventType.GENERATE_KEYPAIR );
-      keyGen = KeyPairGenerator.getInstance( KEY_ALGORITHM, "BC" );
+      keyGen = KeyPairGenerator.getInstance( KEY_ALGORITHM, PROVIDER );
       SecureRandom random = new SecureRandom( );
     //TODO: RELEASE: see line:110
       keyGen.initialize( KEY_SIZE, random );
@@ -256,13 +257,13 @@ public final class DefaultCryptoProvider implements CryptoProvider, CertificateP
    */
   @Override
   public byte[] getEncoded( final PrivateKey privateKey ) {
-    try {
-      return KeyFactory.getInstance( KEY_ALGORITHM, "BC" )
+    if ( "pkcs8".equals( PRIVATE_KEY_FORMAT ) ) try {
+      return KeyFactory.getInstance( KEY_ALGORITHM, PROVIDER )
           .getKeySpec( privateKey, PKCS8EncodedKeySpec.class ).getEncoded();
     } catch ( Exception e ) {
       LOG.error( e, e );
     }
-    return privateKey.getEncoded(); // Fallback to PKCS#1
+    return privateKey.getEncoded();
   }
 
   @Override
