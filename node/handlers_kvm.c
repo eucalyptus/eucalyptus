@@ -610,7 +610,7 @@ static void *migrating_thread(void *arg)
         }
     }
 
-    LOGDEBUG("[%s] migrating instance\n", instance->instanceId);
+    LOGINFO("[%s] migrating instance\n", instance->instanceId);
     virDomain *ddom = virDomainMigrate(dom,
                                        dconn,
                                        VIR_MIGRATE_LIVE | VIR_MIGRATE_NON_SHARED_DISK,
@@ -618,13 +618,14 @@ static void *migrating_thread(void *arg)
                                        NULL,    // destination URI as seen from source (optional)
                                        0L); // bandwidth limitation (0 => unlimited)
     virConnectClose(dconn);
-    LOGDEBUG("[%s] instance migrated\n", instance->instanceId);
     sem_v(migr_sem);
 
     if (ddom == NULL) {
         LOGERROR("[%s] cannot migrate instance %s, giving up and rolling back.\n", instance->instanceId, instance->instanceId);
         migration_error++;
         goto out;
+    } else {
+        LOGINFO("[%s] instance migrated\n", instance->instanceId);
     }
     virDomainFree(ddom);
 
@@ -668,8 +669,10 @@ static int doMigrateInstances(struct nc_state_t *nc, ncMetadata * pMeta, ncInsta
 {
     int ret = EUCA_OK;
 
-    // FIXME: Make this friendlier.
-    assert(instancesLen > 0);
+    if (instancesLen <= 0) {
+        LOGERROR("called with invalid instancesLen (%d)\n", instancesLen);
+        return (EUCA_INVALID_ERROR);
+    }
 
     LOGDEBUG("verifing %d instance[s] for migration...\n", instancesLen);
     for (int inst_idx = 0; inst_idx < instancesLen; inst_idx++) {
@@ -764,7 +767,7 @@ static int doMigrateInstances(struct nc_state_t *nc, ncMetadata * pMeta, ncInsta
                 LOGERROR("action '%s' is not valid on destination node\n", action);
                 return (EUCA_UNSUPPORTED_ERROR);
             } else if (!strcmp(action, "rollback")) {
-                LOGDEBUG("destination requested to rollback\n");
+                LOGINFO("destination node requested to roll back migration\n");
                 sem_p(inst_sem);
                 {
                     ncInstance * instance = find_instance(&global_instances, instance_req->instanceId);
