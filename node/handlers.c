@@ -985,7 +985,7 @@ void *monitoring_thread(void *arg)
                 if (instance->migrationTime) {
                     LOGWARN("[%s] has been in migration-ready state on %s for %d seconds (threshold is %d), rolling back [%d].\n",
                             instance->instanceId, instance->migration_src, (int)(now - instance->migrationTime), nc_state.migration_ready_threshold, instance->migrationTime);
-                    migration_rollback_src(instance);
+                    migration_rollback(instance);
                     continue;
                 } else {
                     if (instance->state == BOOTING) {
@@ -997,8 +997,7 @@ void *monitoring_thread(void *arg)
                         // the migration-completed code on the destination to avoid this in the future.)
                         LOGWARN("[%s] in instance state '%s' is ready to migrate but has a zero instance migrationTime.\n",
                                 instance->instanceId, instance_state_names[instance->state]);
-                        // FIXME: Is this always safe?
-                        migration_rollback_src(instance);
+                        migration_rollback(instance);
                     }
                 }
             }
@@ -3010,7 +3009,7 @@ int is_migration_src(const ncInstance * instance)
 //!
 //! @return true or false
 //!
-int migration_rollback_src(ncInstance * instance)
+int migration_rollback(ncInstance * instance)
 {
     // FIXME: duplicated code in two parts of conditional. Refactor.
     if (is_migration_src(instance)) {

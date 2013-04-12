@@ -632,7 +632,7 @@ static void *migrating_thread(void *arg)
 out:
     sem_p(inst_sem);
     if (migration_error) {
-        migration_rollback_src(instance);
+        migration_rollback(instance);
     } else {
         // If this is set to NOT_MIGRATING here, it's briefly possible for
         // both the source and destination nodes to report the same instance
@@ -754,7 +754,7 @@ static int doMigrateInstances(struct nc_state_t *nc, ncMetadata * pMeta, ncInsta
             } else if (strcmp(action, "rollback") == 0) {
                 LOGINFO("[%s] rolling back migration (%s > %s) on source\n", instance->instanceId, instance->migration_src, instance->migration_dst);
                 sem_p(inst_sem);
-                migration_rollback_src(instance);
+                migration_rollback(instance);
                 sem_v(inst_sem);
             } else {
                 LOGERROR("[%s] action '%s' is not valid\n", instance->instanceId, action);

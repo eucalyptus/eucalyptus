@@ -308,7 +308,7 @@ int find_and_terminate_instance(struct nc_state_t *nc_state, ncMetadata * pMeta,
 void copy_instances(void);
 int is_migration_dst(const ncInstance * instance);
 int is_migration_src(const ncInstance * instance);
-int migration_rollback_src(ncInstance * instance);
+int migration_rollback(ncInstance * instance);
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |
