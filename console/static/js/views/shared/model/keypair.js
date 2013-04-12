@@ -13,6 +13,10 @@ define(['models/keypair'], function(keypair) {
           required: true,
           msg: 'A keypair selection is required.'
         }
+    },
+
+    finish: function(outputModel) {
+      outputModel.set('key_name', this.get('name'));
     }
   });
 });

@@ -37,13 +37,13 @@
    </div>
 
 <!-- ## Network -->
-<!--   
+   
    <div class="form-row clearfix orphan-row" id="launch-wizard-advanced-network"> 
-     <label for="launch-wizard-advanced-input-network">Network</label>
-     <input data-checked="privateNetwork" id="launch-wizard-advanced-input-network" title="Select this to prevent a public IP address from being assigned to your instance(s). They will only be accessible from other instances in the same security group." type="checkbox">
-     <label for="launch-wizard-advanced-input-network" class="plaintext-label">Use private addressing only</label>
+     <label for="launch-wizard-advanced-input-network" data-msg="launch_instance_advanced_network">Network</label>
+     <input data-on-change=":setPrivateNetwork" data-checked="privateNetwork" id="launch-wizard-advanced-input-network" title="Select this to prevent a public IP address from being assigned to your instance(s). They will only be accessible from other instances in the same security group." type="checkbox">
+     <label for="launch-wizard-advanced-input-network" class="plaintext-label" data-msg="launch_instance_advanced_network_desc">Use private addressing only</label>
    </div>
--->
+
 
   <div id="launch-wizard-advanced-storage"> 
     <div class="wizard-section-label" data-msg="storage_label">Storage</div>

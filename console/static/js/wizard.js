@@ -172,14 +172,19 @@ define([], function() {
       }
       var offset = -(position - index);
       if (!navigationController || navigationController(offset)) {
-        if (typeof self.current === 'object' && typeof self.current.isValid === 'function') {
-            if (! self.current.isValid() && index > position) {
-              return self.current;
-            }
+        if (! self.isValid() && index > position) {
+          return self.current;
         }
         position = index;
       }
       return self.current;
+    }
+
+    self.isValid = function() {
+      if (typeof self.current === 'object' && typeof self.current.isValid === 'function') {
+          return self.current.isValid();
+      }
+      return true;
     }
 
     // next
@@ -283,9 +288,32 @@ define([], function() {
       }
 
       function addClickHandler(i) {
+       /* 
+        // Can't do this. Need to make a distinction between the title tab,
+        // next button and finish button, which may be displayed before the last step.
+        // This throws a div over all of them and catches the event no matter which 
+        // item was clicked on. This also prevents the rollover highlighting on
+        // the buttons from working. Added a class to the div and css change to 
+        // give it a fixed width and uncover the nav buttons.
+        //
         events['click ' + '#' + closedViewName(i)] = function() {
           self.goTo(i);
           this.render();
+        };
+        */
+
+        events['click ' + mapping.finishButton] = function() {
+          if (options.finish && self.isValid()) {
+              options.finish();
+          }    
+        };
+        events['click ' + mapping.nextButton] = function() {
+            self.goTo(position + 1);
+            this.render();  
+        };
+        events['click ' + '#wizardClosed-' + i] = function() {
+            self.goTo(i);
+            this.render();  
         };
       }
 
@@ -363,7 +391,8 @@ define([], function() {
           function addClosed(i, toWhat) {
             var CV = self.closedView(i);
             var container = $('<div>', {
-              id: closedViewName(i)
+              id: closedViewName(i),
+              class: 'wizard-step-closed-view-container'
             });
             var element = new CV($(this.wizardBelow)).$el;
             container.append(element);

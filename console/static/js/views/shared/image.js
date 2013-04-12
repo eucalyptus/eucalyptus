@@ -52,7 +52,8 @@ define([
                 for(i=0; i<keys.length; i++) {
                   var key = keys[i];
                   var map = {
-                    map_name: key
+                    device_name: key,
+                    volume_size: maps[key].size
                   };
                   
                   var subkeys = _.keys(maps[key]);
@@ -60,7 +61,9 @@ define([
                     map[subkeys[j]] = maps[key][subkeys[j]];
                   }
                 }
-                self.options.blockMaps.reset(new BlockMap(map));
+                if(map !== undefined) {
+                  self.options.blockMaps.reset(new BlockMap(map));
+                }
               },
 
               

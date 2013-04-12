@@ -19,12 +19,12 @@
  ************************************************************************/
 
 (function($, eucalyptus) {
-  $.widget('eucalyptus.newlaunchconfig', $.eucalyptus.eucawidget, {
+  $.widget('eucalyptus.newinstance', $.eucalyptus.eucawidget, {
     options : { },
     _init : function() {
       var thisObj = this;
-      require(['views/launchconfig/index'], function(WizardFactory) {
-        var View = WizardFactory();
+      require(['views/newinstance/index'], function(wizardFactory) {
+        var View = wizardFactory();
         var view = new View({el: thisObj.element});
       	view.render();
       });

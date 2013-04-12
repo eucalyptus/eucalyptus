@@ -1,5 +1,5 @@
 <div class="wizard-step">
-<div class="wizardTitle"><h3 class="required-label" >Image</h3></div>
+<div class="wizardTitle"><h3 class="required-label" data-msg=launch_instance_section_header_image">Image</h3></div>
 <div id="launch-wizard-image-main-contents">
 
   <div data-ui-vsearch="search"></div>
@@ -7,8 +7,7 @@
   <div id="launch-wizard-image-table">
   
     <div id="launch-images_wrapper" class="dataTables_wrapper">
-      <!-- <div id="searchcontainer" class="wizard-step visual_search"></div> -->
-      <div style="float:left;" class="wizard-section-label required-label">Select image</div>
+      <div style="float:left;" class="wizard-section-label required-label" data-msg="launch_instance_image_table_header">Select image</div>
        <div id="table-wrapper" >
          <div class="wizard-step-scrollcontainer">
          <table id="launch-images" class="display">
@@ -18,19 +17,6 @@
             </tr>
           </thead>
           <tbody >
-          <!--
-            <tr class="odd selected-row">
-              <td>
-                <div class="linux image-type">
-                  <div class="image-name">Linux</div>
-                  <div class="image-id-arch">
-                    <span>emi-EDBA3EEA</span><span>64 bit</span>
-                  </div>
-                  to test pagination
-                </div>
-              </td>
-            </tr>
-          -->
             <tr data-each-image="images" data-addclass=":isOdd" data-on-click=":select">
               <td>
                 <div class="image-type" data-addclass=":setClass">
@@ -48,7 +34,7 @@
         </div>
         <div class="field-error" data-text="launchConfigErrors.image_id"></div>
         <div style="visibility: hidden;" class="dataTables_processing" id="launch-images_processing">
-          <img src="images/dots32.gif"> &nbsp; <span>Loading...</span>
+          <img src="images/dots32.gif"> &nbsp; <span data-msg="processing_data">Loading...</span>
         </div>
        <!--  <div class="clear"></div> -->
       </div>

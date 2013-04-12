@@ -1,39 +1,26 @@
 <div class="wizard-step">
   <div class="wizardTitle">
-    <h3 class="required-label">Security</h3>
+    <h3 class="required-label" data-msg="launch_instance_section_header_security">Security</h3>
   </div>
   <div id="launch-wizard-security-main-contents">
-    <div class="wizard-section-label" class="required-label">Select security options:</div>
+    <div class="wizard-section-label" class="required-label" data-msg="launch_instance_security_header">Select security options:</div>
     <div id="launch-wizard-security-keypair"> 
       <div class="form-row clearfix upper-sibling">
-        <label for="launch-wizard-security-keypair-selector">Key name</label>
+        <label for="launch-wizard-security-keypair-selector" data-msg="launch_instance_security_keypair">Key name</label>
         <select data-on-change=":setKeyPair" id="launch-wizard-security-keypair-selector" title="Select a key pair for your instance">
-<!--
-          <option title="spark" value="spark">spark</option>
-          <option title="tmp1" value="tmp1">tmp1</option>
-          <option title="tmp10" value="tmp10">tmp10</option>
-          <option title="tmp2" value="tmp2">tmp2</option>
-          <option title="tmp3" value="tmp3">tmp3</option>
-          <option title="tmp4" value="tmp4">tmp4</option>
-          <option title="tmp5" value="tmp5">tmp5</option>
-          <option title="tmp6" value="tmp6">tmp6</option>
-          <option title="tmp7" value="tmp7">tmp7</option>
-          <option title="tmp8" value="tmp8">tmp8</option>
-          <option title="tmp9" value="tmp9">tmp9</option>
-          <option value="none">None (advanced option)</option>
--->
           <option value="" selected disabled>Select key pair</option>
           <option data-selected=":isKeySelected" data-each-keypair="keypairs" data-value="keypair.name" data-title="keypair.name" data-text="keypair.name"></option>
-        </select>
+        </select> 
+<!-- <div data-ui-stateful_selector="keyselect"></div> -->
     </div>
     <div class="field-error" data-text="launchConfigErrors.key"></div>
     <div class="form-row clearfix lower-sibling">
       <label for="launch-instance-create-keypair-link">Or:</label>
-      <a data-on-click=":newKeyPair" href="#" id="launch-instance-create-keypair-link">Create new key pair</a>
+      <a data-on-click=":newKeyPair" href="#" id="launch-instance-create-keypair-link" data-msg="launch_instance_security_create_kp">Create new key pair</a>
     </div>
   </div>
   <div id="launch-wizard-security-sgroup"> <div class="form-row clearfix upper-sibling">
-    <label for="launch-wizard-security-sg-selector">Security group</label>
+    <label for="launch-wizard-security-sg-selector" data-msg="launch_instance_security_sgroup">Security group</label>
     <select data-on-change=":setSecurityGroup" id="launch-wizard-security-sg-selector" title="Select a security group for your instance">
 <!--    
       <option selected title="default" value="default">default</option>
@@ -45,13 +32,13 @@
   </div>
   <div class="field-error" data-text="launchConfigErrors.group"></div>
   <div class="form-row clearfix lower-sibling">
-    <label for="launch-instance-create-sg-link">Or:</label><a data-on-click=":newSecGroup" href="#" id="launch-instance-create-sg-link">Create new security group</a>
+    <label for="launch-instance-create-sg-link">Or:</label><a data-on-click=":newSecGroup" href="#" id="launch-instance-create-sg-link" data-msg="launch_instance_security_create_sg">Create new security group</a>
   </div>
   <div id="launch-wizard-security-sg-detail">
     <div class="launcher-sgroup-details-label"><span>Security group </span><span data-text="configmodel.name"></span><span> incoming traffic rules</span></div>
 
     <div data-each-rule="configmodel.rules" class="launcher-sgroup-rule clearfix">
-      <div class="launcher-sgroup-rule-label">Rule:</div>
+      <div class="launcher-sgroup-rule-label" data-msg="launch_instance_security_rule">Rule:</div>
         <ul>
 <!--
         <li>icmp</li>

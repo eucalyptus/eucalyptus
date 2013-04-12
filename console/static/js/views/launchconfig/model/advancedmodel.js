@@ -1,7 +1,7 @@
-define([], function() {
-  return Backbone.Model.extend({
-    initialize: function() {
-
+define(['views/shared/model/advancedmodel'], function(Advanced) {
+  return Advanced.extend({
+    finish: function(outputModel) {
+      outputModel.set(this.toJSON());
     }
   });
 });

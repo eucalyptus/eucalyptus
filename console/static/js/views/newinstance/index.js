@@ -3,23 +3,24 @@ define([
   'wizard',
   'text!./template.html',
   '../shared/image',
-  './type',
+  '../shared/type',
   '../shared/security',
-  './advanced',
-  './summary',
-  'models/launchconfig',
+  '../shared/advanced',
+  '../shared/summary',
+  'models/instance',
   '../shared/model/imagemodel',
-  './model/typemodel',
-  './model/securitygroup',
+  '../shared/model/typemodel',
+  '../shared/model/securitygroup',
   '../shared/model/keypair',
-  './model/advancedmodel',
+  '../shared/model/advancedmodel',
   '../shared/model/blockmaps',
   '../shared/model/snapshots'
-], function(app, Wizard, wizardTemplate, page1, page2, page3, page4, summary, launchconfigModel, image, type, security, keyPair, advanced, block, snap) {
+], function(app, Wizard, wizardTemplate, page1, page2, page3, page4, summary, instance, image, type, security, keyPair, advanced, block, snap) {
+
   var config = function() {
     var wizard = new Wizard();
 
-    var launchConfigModel = new launchconfigModel();
+    var instanceModel = new instance();
     var imageModel = new image();
     var typeModel = new type();
     var securityModel = new security();
@@ -37,23 +38,24 @@ define([
     }
 
     function finish() {
-      imageModel.finish(launchConfigModel);
-      typeModel.finish(launchConfigModel);
-      securityModel.finish(launchConfigModel);
-      advancedModel.finish(launchConfigModel);
-      keyModel.finish(launchConfigModel);
-      blockMaps.finish(launchConfigModel);
+      imageModel.finish(instanceModel);
+      typeModel.finish(instanceModel);
+      securityModel.finish(instanceModel);
+      advancedModel.finish(instanceModel);
+      keyModel.finish(instanceModel);
+      blockMaps.finish(instanceModel);
 
-      launchConfigModel.on('validated.invalid', function(e, errors) {
+      instanceModel.on('validated:invalid', function(e, errors) {
+        console.log("INSTANCEMODEl INVALID:", errors);
       });
 
-      launchConfigModel.validate();
-      if(launchConfigModel.isValid()) {
-        launchConfigModel.sync('create', launchConfigModel);
+      instanceModel.validate();
+      if(instanceModel.isValid()) {
         //alert("Wizard complete. Check the console log for debug info.");
+        instanceModel.sync('create', instanceModel);
       } else {
-        // what do we do if it isn't valid?
         alert('Final checklist was invalid.');
+
       }
     }
 
@@ -63,7 +65,7 @@ define([
             .add(new page3({model: securityModel, keymodel: keyModel}))
             .add(new page4({model: advancedModel, blockMaps: blockMaps, snapshots: snapShots}))
             .setHideDisabledButtons(true)
-            .setFinishText(app.msg('create_launch_config_btn_create')).setFinishChecker(canFinish)
+            .setFinishText(app.msg('launch_instance_btn_launch')).setFinishChecker(canFinish)
             .finisher(finish)
             .summary(new summary( {imageModel: imageModel, typeModel: typeModel, securityModel: securityModel, keymodel: keyModel, advancedModel: advancedModel} ));
   //  var ViewType = wizard.makeView(options, wizardTemplate);

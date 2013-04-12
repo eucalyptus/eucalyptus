@@ -1,6 +1,6 @@
 define([], function() {
   return Backbone.Model.extend({
-     map_name: "/dev/sda1",
+     device_name: "/dev/sda1",
      status: null, 
      __obj_name__: "BlockDeviceType", 
      attach_time: null, 
@@ -8,7 +8,7 @@ define([], function() {
      volume_id: null, 
      connection: null, 
      snapshot_id: null, 
-     size: 0, 
+     volume_size: null, 
      ebs: "", 
      delete_on_termination: false, 
      ephemeral_name: null,
@@ -18,12 +18,16 @@ define([], function() {
     },
 
     validation: {
-      size: {
+      volume_size: {
         required: true,
         pattern: 'number',
         min: 1,
         msg: 'The volume size must be a positive number.'
       }
+    },
+
+    finish: function(outputModel) {
+      outputModel.set('block_device_mappings', this.toJSON());
     }
   });
 });

@@ -121,7 +121,6 @@ define([
 
     render: function() {
       this.rView.sync();
-      console.log("KEY", this.options.keymodel);
     },
 
     isValid: function() {
