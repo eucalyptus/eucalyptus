@@ -715,7 +715,7 @@ static int doMigrateInstances(struct nc_state_t *nc, ncMetadata * pMeta, ncInsta
                 euca_strncpy(instance->migration_src, sourceNodeName, HOSTNAME_SIZE);
                 euca_strncpy(instance->migration_dst, destNodeName, HOSTNAME_SIZE);
                 instance->migrationTime = time(NULL);
-                LOGINFO("[%s] migration source preparing %s > %s [%d]\n", instance->instanceId, instance->migration_src, instance->migration_dst, instance->migrationTime);
+                LOGINFO("[%s] migration source preparing %s > %s\n", instance->instanceId, instance->migration_src, instance->migration_dst);
                 save_instance_struct(instance);
                 copy_instances();
                 sem_v(inst_sem);
@@ -730,7 +730,7 @@ static int doMigrateInstances(struct nc_state_t *nc, ncMetadata * pMeta, ncInsta
                     return (EUCA_DUPLICATE_ERROR);
                 } else if (instance->migration_state != MIGRATION_READY) {
                     LOGERROR("[%s] request to commit migration %s > %s when source migration_state='%s' (not 'ready')\n", instance->instanceId,
-                             sourceNodeName, destNodeName, migration_state_names[instance->migration_state]);
+                             SP(sourceNodeName), SP(destNodeName), migration_state_names[instance->migration_state]);
                     sem_v(inst_sem);
                     return (EUCA_UNSUPPORTED_ERROR);
                 }
@@ -752,7 +752,7 @@ static int doMigrateInstances(struct nc_state_t *nc, ncMetadata * pMeta, ncInsta
                     return (EUCA_THREAD_ERROR);
                 }
             } else if (strcmp(action, "rollback") == 0) {
-                LOGINFO("[%s] rolling back migration of instance on source %s\n", instance->instanceId, instance->migration_src);
+                LOGINFO("[%s] rolling back migration (%s > %s) on source\n", instance->instanceId, instance->migration_src, instance->migration_dst);
                 sem_p(inst_sem);
                 migration_rollback_src(instance);
                 sem_v(inst_sem);
@@ -764,10 +764,10 @@ static int doMigrateInstances(struct nc_state_t *nc, ncMetadata * pMeta, ncInsta
         } else if (!strcmp(pMeta->nodeName, destNodeName)) {    // this is a migrate request to destination
 
             if (!strcmp(action, "commit")) {
-                LOGERROR("action '%s' is not valid on destination node\n", action);
+                LOGERROR("[%s] action '%s' for migration (%s > %s) is not valid on destination node\n", instance_req->instanceId, action, SP(sourceNodeName), SP(destNodeName));
                 return (EUCA_UNSUPPORTED_ERROR);
             } else if (!strcmp(action, "rollback")) {
-                LOGINFO("destination node requested to roll back migration\n");
+                LOGINFO("[%s] rolling back migration (%s > %s) on destination\n", instance_req->instanceId, SP(sourceNodeName), SP(destNodeName));
                 sem_p(inst_sem);
                 {
                     ncInstance *instance = find_instance(&global_instances, instance_req->instanceId);
@@ -781,7 +781,7 @@ static int doMigrateInstances(struct nc_state_t *nc, ncMetadata * pMeta, ncInsta
                 sem_v(inst_sem);
                 return EUCA_OK;
             } else if (strcmp(action, "prepare") != 0) {
-                LOGERROR("action '%s' is not valid or not implemented\n", action);
+                LOGERROR("[%s] action '%s' is not valid or not implemented\n", instance_req->instanceId, action);
                 return (EUCA_INVALID_ERROR);
             }
             // Everything from here on is specific to "prepare"
@@ -797,7 +797,7 @@ static int doMigrateInstances(struct nc_state_t *nc, ncMetadata * pMeta, ncInsta
             instance->migration_state = MIGRATION_PREPARING;
             euca_strncpy(instance->migration_src, sourceNodeName, HOSTNAME_SIZE);
             euca_strncpy(instance->migration_dst, destNodeName, HOSTNAME_SIZE);
-            LOGINFO("[%s] migration destination preparing %s > %s\n", instance->instanceId, instance->migration_src, instance->migration_dst);
+            LOGINFO("[%s] migration destination preparing %s > %s\n", instance->instanceId, SP(instance->migration_src), SP(instance->migration_dst));
             save_instance_struct(instance);
             sem_v(inst_sem);
 
