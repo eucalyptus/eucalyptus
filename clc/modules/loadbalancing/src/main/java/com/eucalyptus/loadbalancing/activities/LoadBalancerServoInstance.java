@@ -82,6 +82,9 @@ public class LoadBalancerServoInstance extends AbstractPersistent {
     @Column(name="metadata_address", nullable=true)
     private String address = null;
 
+    @Column(name="metadata_private_ip", nullable=true)
+    private String privateIp = null;
+    
     private LoadBalancerServoInstance(){
     }
     private LoadBalancerServoInstance(final LoadBalancerZone lbzone){
@@ -191,6 +194,14 @@ public class LoadBalancerServoInstance extends AbstractPersistent {
     
     public void setAvailabilityZone(LoadBalancerZone zone){
     	this.zone = zone;
+    }
+    
+    public String getPrivateIp(){
+    	return this.privateIp;
+    }
+    
+    public void setPrivateIp(final String ipAddr){
+    	this.privateIp = ipAddr;
     }
     
 	@Override

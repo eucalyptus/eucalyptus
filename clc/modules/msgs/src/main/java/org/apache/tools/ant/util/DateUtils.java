@@ -123,6 +123,11 @@ public final class DateUtils {
             = "yyyy-MM-dd";
 
     /**
+     * ISO8601 pattern for date.
+     */
+    public static final String ALT_ISO8601_DATE_PATTERN = "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'";
+    
+    /**
      * ISO8601-like pattern for time.  <tt>HH:mm:ss</tt>
      */
     public static final String ISO8601_TIME_PATTERN

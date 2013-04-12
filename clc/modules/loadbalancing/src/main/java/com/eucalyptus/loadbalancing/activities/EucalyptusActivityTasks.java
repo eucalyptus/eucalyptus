@@ -65,6 +65,8 @@ import com.eucalyptus.autoscaling.common.DeleteLaunchConfigurationType;
 import com.eucalyptus.autoscaling.common.DescribeAutoScalingGroupsResponseType;
 import com.eucalyptus.autoscaling.common.DescribeAutoScalingGroupsType;
 import com.eucalyptus.autoscaling.common.SecurityGroups;
+import com.eucalyptus.autoscaling.common.UpdateAutoScalingGroupResponseType;
+import com.eucalyptus.autoscaling.common.UpdateAutoScalingGroupType;
 import com.eucalyptus.autoscaling.configurations.LaunchConfiguration;
 import com.eucalyptus.cloudwatch.CloudWatch;
 import com.eucalyptus.cloudwatch.CloudWatchMessage;
@@ -107,6 +109,8 @@ import edu.ucsb.eucalyptus.msgs.DescribeAvailabilityZonesResponseType;
 import edu.ucsb.eucalyptus.msgs.DescribeAvailabilityZonesType;
 import edu.ucsb.eucalyptus.msgs.DescribeInstancesResponseType;
 import edu.ucsb.eucalyptus.msgs.DescribeInstancesType;
+import edu.ucsb.eucalyptus.msgs.DescribeSecurityGroupsResponseType;
+import edu.ucsb.eucalyptus.msgs.DescribeSecurityGroupsType;
 import edu.ucsb.eucalyptus.msgs.DnsMessage;
 import edu.ucsb.eucalyptus.msgs.EucalyptusMessage;
 import edu.ucsb.eucalyptus.msgs.IpPermissionType;
@@ -120,6 +124,7 @@ import edu.ucsb.eucalyptus.msgs.RevokeSecurityGroupIngressType;
 import edu.ucsb.eucalyptus.msgs.RunInstancesResponseType;
 import edu.ucsb.eucalyptus.msgs.RunInstancesType;
 import edu.ucsb.eucalyptus.msgs.RunningInstancesItemType;
+import edu.ucsb.eucalyptus.msgs.SecurityGroupItemType;
 import edu.ucsb.eucalyptus.msgs.TerminateInstancesResponseType;
 import edu.ucsb.eucalyptus.msgs.TerminateInstancesType;
 import edu.ucsb.eucalyptus.msgs.TerminateInstancesItemType;
@@ -446,6 +451,19 @@ public class EucalyptusActivityTasks {
 		} 
 	}
 	
+	public List<SecurityGroupItemType> describeSecurityGroups(List<String> groupNames){
+		final EucalyptusDescribeSecurityGroupTask task = new EucalyptusDescribeSecurityGroupTask(groupNames);
+		final CheckedListenableFuture<Boolean> result = task.dispatch(new EucalyptusSystemActivity());
+		try{
+			if(result.get()){
+				return task.getResult();
+			}else
+				throw new EucalyptusActivityException("failed to describe security groups");
+		}catch(Exception ex){
+			throw Exceptions.toUndeclared(ex);
+		} 
+	}
+	
 	public void authorizeSecurityGroup(String groupName, String protocol, int portNum){
 		final EucalyptusAuthorizeIngressRuleTask task = new EucalyptusAuthorizeIngressRuleTask(groupName, protocol, portNum);
 		final CheckedListenableFuture<Boolean> result = task.dispatch(new EucalyptusSystemActivity());
@@ -605,6 +623,20 @@ public class EucalyptusActivityTasks {
 				return task.getResponse();
 			}else
 				throw new EucalyptusActivityException("failed to describe autoscaling groups");
+		}catch(Exception ex){
+			throw Exceptions.toUndeclared(ex);
+		}
+	}
+	
+	public void updateAutoScalingGroup(final String groupName, final List<String> zones, final int capacity){
+		final AutoScalingUpdateGroupTask task=
+				new AutoScalingUpdateGroupTask(groupName, zones, capacity, null);
+		final CheckedListenableFuture<Boolean> result = task.dispatch(new AutoScalingSystemActivity());
+		try{
+			if(result.get()){
+				return;
+			}else
+				throw new EucalyptusActivityException("failed to enable zones in autoscaling group");
 		}catch(Exception ex){
 			throw Exceptions.toUndeclared(ex);
 		}
@@ -942,6 +974,57 @@ public class EucalyptusActivityTasks {
 			}catch(Exception ex){
 				;
 			}
+		}
+		
+	}
+	
+	private class AutoScalingUpdateGroupTask extends EucalyptusActivityTask<AutoScalingMessage, AutoScaling>{
+		private String groupName = null;
+		private List<String> availabilityZones = null;
+		private Integer capacity = null;
+		private String launchConfigName = null;
+		
+		private AutoScalingUpdateGroupTask(final String groupName, final List<String> zones, 
+				final Integer capacity, final String launchConfig){
+			this.groupName = groupName;
+			this.availabilityZones = zones;
+			this.capacity = capacity;
+			this.launchConfigName = launchConfig;
+		}
+		
+		private UpdateAutoScalingGroupType updateAutoScalingGroup(){
+			final UpdateAutoScalingGroupType req = new UpdateAutoScalingGroupType();
+			req.setAutoScalingGroupName(this.groupName);
+			
+			if(this.availabilityZones!=null && this.availabilityZones.size()>0){
+				AvailabilityZones zones = new AvailabilityZones();
+				zones.setMember(Lists.<String>newArrayList());
+				zones.getMember().addAll(this.availabilityZones);
+				req.setAvailabilityZones(zones);
+			}
+			if(this.capacity!=null){
+				req.setDesiredCapacity(this.capacity);
+				req.setMaxSize(this.capacity);
+				req.setMinSize(this.capacity);
+			}
+			if(this.launchConfigName!=null){
+				req.setLaunchConfigurationName(this.launchConfigName);
+			}
+			return req;
+		}
+		@Override
+		void dispatchInternal(
+				ActivityContext<AutoScalingMessage, AutoScaling> context,
+				Checked<AutoScalingMessage> callback) {
+			final DispatchingClient<AutoScalingMessage, AutoScaling> client = context.getClient();
+			client.dispatch(updateAutoScalingGroup(), callback);
+		}
+
+		@Override
+		void dispatchSuccess(
+				ActivityContext<AutoScalingMessage, AutoScaling> context,
+				AutoScalingMessage response) {
+			final UpdateAutoScalingGroupResponseType resp = (UpdateAutoScalingGroupResponseType) response;
 		}
 		
 	}
@@ -1568,6 +1651,41 @@ public class EucalyptusActivityTasks {
 				ActivityContext<EucalyptusMessage, Eucalyptus> context,
 				EucalyptusMessage response) {
 			final DeleteSecurityGroupResponseType resp = (DeleteSecurityGroupResponseType) response;
+		}
+	}
+	
+	private class EucalyptusDescribeSecurityGroupTask extends EucalyptusActivityTask<EucalyptusMessage, Eucalyptus>{
+		private List<String> groups = null;
+		private List<SecurityGroupItemType> result = null;
+		EucalyptusDescribeSecurityGroupTask(final List<String> groups){
+			this.groups = groups;
+		}
+		
+		
+		private DescribeSecurityGroupsType describeSecurityGroups(){
+			final DescribeSecurityGroupsType req = new DescribeSecurityGroupsType();
+			req.setSecurityGroupSet(Lists.newArrayList(this.groups));
+			return req;
+		}
+		
+		@Override
+		void dispatchInternal(
+				ActivityContext<EucalyptusMessage, Eucalyptus> context,
+				Checked<EucalyptusMessage> callback) {
+			final DispatchingClient<EucalyptusMessage, Eucalyptus> client = context.getClient();
+			client.dispatch(describeSecurityGroups(), callback);			
+		}
+
+		@Override
+		void dispatchSuccess(
+				ActivityContext<EucalyptusMessage, Eucalyptus> context,
+				EucalyptusMessage response) {
+			final DescribeSecurityGroupsResponseType resp = (DescribeSecurityGroupsResponseType) response;
+			this.result = resp.getSecurityGroupInfo();
+		}
+	
+		public List<SecurityGroupItemType> getResult(){
+			return this.result;
 		}
 	}
 	

@@ -66,8 +66,10 @@ import java.io.UnsupportedEncodingException;
 import java.security.MessageDigest;
 import java.security.PrivateKey;
 import java.security.cert.X509Certificate;
+import com.eucalyptus.crypto.Crypto;
 import com.eucalyptus.crypto.util.B64;
 import com.eucalyptus.crypto.util.PEMFiles;
+import com.google.common.base.Charsets;
 
 public class X509CertHelper {
   
@@ -88,19 +90,14 @@ public class X509CertHelper {
   }
   
   public static X509Certificate pemToCertificate( String pem ) {
-    try {
-      return PEMFiles.getCert( pem.getBytes( "UTF-8" ) );
-    } catch ( UnsupportedEncodingException e ) {
-      return PEMFiles.getCert( pem.getBytes( ) );
-    }
+    return PEMFiles.getCert( pem.getBytes( Charsets.UTF_8 ) );
   }
   
   public static String privateKeyToPem( PrivateKey pk ) {
-    try {
-      return new String( PEMFiles.getBytes( pk ), "UTF-8" );
-    } catch ( UnsupportedEncodingException e ) {
-      return new String( PEMFiles.getBytes( pk ) );
-    }
+    return new String( PEMFiles.getBytes(
+        "RSA PRIVATE KEY",
+        Crypto.getCertificateProvider().getEncoded( pk )
+    ), Charsets.UTF_8 );
   }
   
   public static String calcFingerprint(X509Certificate cert) {
@@ -124,6 +121,5 @@ public class X509CertHelper {
 
     return builder.toString();
   }
-
   
 }
