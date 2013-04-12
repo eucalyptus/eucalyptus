@@ -3036,9 +3036,13 @@ int migration_rollback_src(ncInstance * instance)
         LOGINFO("[%s] migration state reset.\n", instance->instanceId);
         return TRUE;
     }
-    // Not source node?
+    // Neither source nor destination node?
     LOGERROR("[%s] request to roll back migration of instance on non-source/destination node %s\n", instance->instanceId, nc_state.ip);
-        instance->migration_state = NOT_MIGRATING;
-        save_instance_struct(instance);
-        return FALSE;
+    // We've seen this case caused by a bug in the migration code--one that left the migration_dst blank in the instance struct.
+    // So if this happens, we'll assume the rollback request was valid, and we'll reset its state and time so that it will get cleaned up--rather than stuck!
+    instance->migration_state = NOT_MIGRATING;
+    instance->migrationTime = 0;
+    save_instance_struct(instance);
+    copy_instances();
+    return FALSE;
 }
