@@ -74,7 +74,7 @@
                 });
               }
             }
-            ep.model.on('sync change add reset', _.debounce(doUpdate, 100, true));
+            ep.model.on('sync reset change add remove', _.debounce(doUpdate, 100, true));
 
             // set up callback for timer which updates model if necessary
             thisObj._callbacks[name] = {callback: function(){
@@ -87,7 +87,7 @@
               if (ep.model == undefined) {
                 return;
               }
-              ep.model.fetch();
+              ep.model.fetch({merge: true, add: true, remove: true});
             }, repeat: null};
 
             var interval = thisObj.options.refresh_interval_sec*1000;

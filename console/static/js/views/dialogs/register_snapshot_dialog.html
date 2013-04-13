@@ -1,32 +1,32 @@
 <div>
     <div class="title" data-msg="register_snapshot_dialog_title">Register snapshot as image</div>
     <div class="body">
-          <div id="snapshot-register-dialog" class="euca-dialog">
-            <div class="dialog-inner-content">
-              <p data-msg="snapshot_register_dialog_text"></p>
-              <div class="form-row">
-                <label for="snapshot-register-image-name" class="required-label" data-msg="snapshot_register_dialog_image_name"></label>
-                <input type="text" id="snapshot-register-image-name" class="required" data-value="item.name"/>
-              </div>
-              <div class="form-row">
-                <label for="snapshot-register-image-desc" data-msg="snapshot_register_dialog_image_desc"></label>
-                <textarea id="snapshot-register-image-desc" class="description" data-value="item.description"/>
-              </div>
-              <div class="form-row clearfix checkbox-only">
-                <input type="checkbox" id="snapshot-register-image-os" data-value="item.os"/>
-                <label for="snapshot-register-image-os" data-msg="snapshot_register_dialog_image_os"></label>
-              </div>
-              <div class="required-hint" data-msg="required_fields"></div>
+      <div id="snapshot-euca-dialog-wrapper">
+        <div id="snapshot-register-dialog" class="euca-dialog">
+          <div class="dialog-inner-content">
+            <p data-msg="snapshot_register_dialog_text"></p>
+            <div class="form-row">
+              <label for="snapshot-register-image-name" class="required-label" data-msg="snapshot_register_dialog_image_name"></label>
+              <input type="text" id="snapshot-register-image-name" class="required" data-value="item.name"/>
             </div>
-          </div>
-		
-          <div data-text="status" style="height:20px"></div>
-                
-          <div class="ui-dialog-buttonpane ui-widget-content ui-helper-clearfix">
-            <div class="ui-dialog-buttonset">
-              <button type="button" data-on-click="registerButton">Register</button>
-              <button type="button" data-on-click="cancelButton">Cancel</button>
+            <div class="form-row">
+              <label for="snapshot-register-image-desc" data-msg="snapshot_register_dialog_image_desc"></label>
+              <textarea id="snapshot-register-image-desc" class="description" data-value="item.description"/>
             </div>
+            <div class="form-row clearfix checkbox-only">
+              <input type="checkbox" id="snapshot-register-image-os" data-value="item.os"/>
+              <label for="snapshot-register-image-os" data-msg="snapshot_register_dialog_image_os"></label>
+            </div>
+            <div class="required-hint" data-msg="required_fields"></div>
           </div>
+        </div>
+        <div data-text="status" style="height:20px"></div>
+        <div class="ui-dialog-buttonpane ui-widget-content ui-helper-clearfix">
+          <div class="ui-dialog-buttonset">
+            <a data-ui-button=":registerButton">Register</a>
+            <a data-ui-button=":cancelButton">Cancel</a>
+          </div>
+        </div>
+      </div>
     </div>
 </div>

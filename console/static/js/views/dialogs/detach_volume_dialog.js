@@ -2,7 +2,8 @@ define([
    './eucadialogview',
    'text!./detach_volume_dialog.html!strip',
    'app',
-], function(EucaDialogView, template, App) {
+   'backbone',
+], function(EucaDialogView, template, App, Backbone) {
     return EucaDialogView.extend({
         initialize : function(args) {
             var self = this;

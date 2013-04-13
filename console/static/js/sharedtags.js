@@ -3,6 +3,6 @@ define([
 ], 
 function(Tags) {
     var tags = new Tags();
-	tags.fetch();
+	tags.fetch({merge: true, add: true, remove: true});
 	return tags;
 });

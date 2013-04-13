@@ -8,27 +8,48 @@ define([
   var EucaModel = Backbone.Model.extend({
     initialize: function() {
         var self = this;
-        if (self.get('tags') == null) self.set('tags', new Backbone.Collection());
-        self.get('tags').on('add reset change', function() {
+
+        // Prepopulate the tags for this model
+        if (self.get('tags') == null) {
+            self.set('tags', new Backbone.Collection(tags.where({res_id: self.get('id')})));
+            self.refreshNamedColumns();
+        }
+
+        // If global tags are refreshed, update the model
+        tags.on('sync add remove reset change', _.debounce(function() {
+            self.get('tags').set(tags.where({res_id: self.get('id')}));
+        },100));
+
+        // If local tags are refreshed, update the model
+        self.get('tags').on('add remove reset change', function() {
             self.refreshNamedColumns();
         });
-        self.get('tags').on('add', function(model, models) {
-            tags.add(model);
-        });
-        self.get('tags').on('change', function(model, models) {
-            self.trigger('change');
-        });
-        _.each(this.namedColumns, function(c) {
-            self.on('change:'+c, function() { 
-                self.refreshNamedColumns();
-            });
-        });
-        self.refreshNamedColumns();
+    },
+    // Override set locally so that we can properly update the tags collection
+    set: function(key, val, options) {    
+        var attrs; 
+        if (key == null) return this;
+
+        if (typeof key === 'object') {
+            attrs = key;
+            options = val;
+        } else {
+            (attrs = {})[key] = val;
+        }
+
+        options || (options = {});
+
+        if (attrs.tags != null && this.get('tags') != null) {
+            this.get('tags').set(attrs.tags.models);
+            return this;
+        }
+
+        return Backbone.Model.prototype.set.call(this, attrs, options);
     },
     refreshNamedColumns: function() {
         var self = this;
         _.each(this.namedColumns, function(column) {
-            var matched = self.get('tags').where({res_id: self.get('id'), name: 'Name'});
+            var matched = tags.where({res_id: self.get(column), name: 'Name'});
             if (matched.length) {
                 var tag = matched[0];
                 self.set('display_' + column, tag.get('value'));

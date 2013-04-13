@@ -24,7 +24,6 @@ define([
       };
     });
 
-
     var config = {
       facets: ['all_text', 'os', 'instance_type', 'root_device_type'],
       localize: {
@@ -33,15 +32,24 @@ define([
       },
       match: {
         os: function(search, item, add) {
-          var img = imageForID[item.image_id];
-          if (img && img.platform) {
-            add(img.platform);
+          console.log("ITERATE");
+          var found = {};
+          for (var key in imageForID) {
+            var val = imageForID[key];
+          }
+          if (!found[val.platform]) {
+            found[val.platform] = true;
+            add(val.platform);
           }
         },
         root_device_type: function(search, item, add) {
-          var img = imageForID[item.image_id];
-          if (img && img.root_device_type == item.root_device_type) {
-            add(img.root_device_type);
+          var found = {};
+          for (var key in imageForID) {
+            var val = imageForID[key];
+            if (!found[val.root_device_type]) {
+              found[val.root_device_type] = true;
+              add(val.root_device_type);
+            }
           }
         }
       },

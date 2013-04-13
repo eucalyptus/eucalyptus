@@ -203,7 +203,7 @@ define(['app', 'dataholder'], function(app, dh) {
             }
           }
           var rex = new RegExp('.*' + facet.value + '.*', 'img');
-          if ('all_text' === facet.category) {
+          if ('all_text' === facet.category || 'text' === facet.category) {
             return drillThrough(model, rex, 0);
           } else {
             if (typeof curr === 'object') {
@@ -217,7 +217,7 @@ define(['app', 'dataholder'], function(app, dh) {
       }).map(function(model) {
         return model.toJSON();
       });
-      self.filtered.reset(results);
+      self.filtered.set(results);
     }
     this.facetMatches = function(callback) {
       callback(deriveFacets(), searchOptions);
@@ -231,7 +231,7 @@ define(['app', 'dataholder'], function(app, dh) {
       self.search(self.lastSearch, self.lastFacets);
     }
     
-    images.on('change reset', up);
+    images.on('sync add remove destroy change reset', up);
     up();
   }
 });
