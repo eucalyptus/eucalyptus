@@ -20,6 +20,7 @@
 package com.eucalyptus.autoscaling.instances;
 
 import static com.eucalyptus.autoscaling.common.AutoScalingMetadata.AutoScalingInstanceMetadata;
+import java.util.Date;
 import java.util.concurrent.TimeUnit;
 import javax.annotation.Nonnull;
 import javax.persistence.Column;
@@ -31,6 +32,8 @@ import javax.persistence.PersistenceContext;
 import javax.persistence.PrePersist;
 import javax.persistence.PreUpdate;
 import javax.persistence.Table;
+import javax.persistence.Temporal;
+import javax.persistence.TemporalType;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
 import org.hibernate.annotations.Entity;
@@ -51,7 +54,7 @@ import com.google.common.base.Objects;
 public class AutoScalingInstance extends AbstractOwnedPersistent implements AutoScalingInstanceMetadata {
   private static final long serialVersionUID = 1L;
 
-  @Column( name = "metadata_availability_zone", nullable = false )
+  @Column( name = "metadata_availability_zone", nullable = false, updatable = false )
   private String availabilityZone;
 
   @Column( name = "metadata_health_status", nullable = false )
@@ -63,15 +66,19 @@ public class AutoScalingInstance extends AbstractOwnedPersistent implements Auto
   @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
   private AutoScalingGroup autoScalingGroup;
 
-  @Column( name = "metadata_auto_scaling_group_name", nullable = false  )
+  @Column( name = "metadata_auto_scaling_group_name", nullable = false, updatable = false )
   private String autoScalingGroupName;
 
-  @Column( name = "metadata_launch_configuration_name", nullable = false )
+  @Column( name = "metadata_launch_configuration_name", nullable = false, updatable = false )
   private String launchConfigurationName;
 
   @Column( name = "metadata_lifecycle_state", nullable = false )
   @Enumerated( EnumType.STRING )
   private LifecycleState lifecycleState;
+
+  @Temporal( TemporalType.TIMESTAMP)
+  @Column( name = "in_service_timestamp" )
+  private Date inServiceTimestamp;
 
   @Column( name = "metadata_configuration_state", nullable = false )
   @Enumerated( EnumType.STRING )
@@ -143,6 +150,14 @@ public class AutoScalingInstance extends AbstractOwnedPersistent implements Auto
     this.lifecycleState = lifecycleState;
   }
 
+  public Date getInServiceTimestamp() {
+    return inServiceTimestamp;
+  }
+
+  public void setInServiceTimestamp( final Date inServiceTimestamp ) {
+    this.inServiceTimestamp = inServiceTimestamp;
+  }
+
   public ConfigurationState getConfigurationState() {
     return configurationState;
   }
@@ -161,8 +176,9 @@ public class AutoScalingInstance extends AbstractOwnedPersistent implements Auto
 
   public boolean healthStatusGracePeriodExpired() {
     final long gracePeriodMillis = TimeUnit.SECONDS.toMillis( 
-        Objects.firstNonNull( getAutoScalingGroup( ).getHealthCheckGracePeriod(), 300 ) );
-    return System.currentTimeMillis() - getCreationTimestamp().getTime() > gracePeriodMillis;
+        Objects.firstNonNull( getAutoScalingGroup( ).getHealthCheckGracePeriod(), 0 ) );
+    // last update timestamp will be when InService state entered
+    return getInServiceTimestamp()!=null && System.currentTimeMillis() - getInServiceTimestamp().getTime() > gracePeriodMillis;
   }
 
   public int incrementRegistrationAttempts() {
@@ -215,12 +231,6 @@ public class AutoScalingInstance extends AbstractOwnedPersistent implements Auto
     return example;
   }
 
-  public static AutoScalingInstance withLifecycleState( final LifecycleState lifecycleState ) {
-    final AutoScalingInstance example = new AutoScalingInstance();
-    example.setLifecycleState( lifecycleState );
-    return example;
-  }
-
   public static AutoScalingInstance withStates( final LifecycleState lifecycleState,
                                                 final ConfigurationState configurationState ) {
     final AutoScalingInstance example = new AutoScalingInstance();
@@ -249,5 +259,8 @@ public class AutoScalingInstance extends AbstractOwnedPersistent implements Auto
   @PreUpdate
   private void preUpdate() {
     autoScalingGroupName = AutoScalingMetadatas.toDisplayName().apply( autoScalingGroup );
+    if ( lifecycleState == LifecycleState.InService && getInServiceTimestamp() == null ) {
+      setInServiceTimestamp( new Date() );
+    }
   }
 }

@@ -2260,23 +2260,27 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
       state.setCode( displayState.getCode() );
       state.setName( displayState.getName() );
       instanceStatusItemType.setInstanceState( state );
-      instanceStatusItemType.setInstanceStatus( buildStatus() );
-      instanceStatusItemType.setSystemStatus( buildStatus() );
+      instanceStatusItemType.setInstanceStatus( buildStatus( displayState) );
+      instanceStatusItemType.setSystemStatus( buildStatus( displayState ) );
 
       return instanceStatusItemType;
     }
 
-    private InstanceStatusType buildStatus() {
-      final InstanceStatusDetailsSetItemType statusDetailsItem = new InstanceStatusDetailsSetItemType();
-      statusDetailsItem.setName( "reachability" );
-      statusDetailsItem.setStatus( "passed" );
-
-      final InstanceStatusDetailsSetType statusDetails = new InstanceStatusDetailsSetType();
-      statusDetails.getItem().add( statusDetailsItem );
-
+    private InstanceStatusType buildStatus( final VmState vmState ) {
       final InstanceStatusType instanceStatus = new InstanceStatusType();
-      instanceStatus.setStatus( "ok" );
-      instanceStatus.setDetails( statusDetails );
+      if ( VmState.RUNNING == vmState ) {
+        final InstanceStatusDetailsSetItemType statusDetailsItem = new InstanceStatusDetailsSetItemType();
+        statusDetailsItem.setName( "reachability" );
+        statusDetailsItem.setStatus( "passed" );
+
+        final InstanceStatusDetailsSetType statusDetails = new InstanceStatusDetailsSetType();
+        statusDetails.getItem().add( statusDetailsItem );
+
+        instanceStatus.setStatus( "ok" );
+        instanceStatus.setDetails( statusDetails );
+      } else {
+        instanceStatus.setStatus( "not-applicable" );
+      }
       return instanceStatus;
     }
   }

@@ -49,7 +49,7 @@ public class ListMetricManager {
     if (metricType == MetricType.System) {
       // do dimension folding (i.e. insert 2^n metrics.  
       // All with the same metric name and namespace, but one for each subset of the dimension set passed in, including all, and none)
-      if (!metricName.equals("AWS/EC2")) {
+      if (!namespace.equals("AWS/EC2")) {
         permutations = Sets.powerSet(dimensions);
       } else {
         // Hack: no values in AWS/EC2 have more than one dimension, so fold, but only choose dimension subsets of size at most 1.

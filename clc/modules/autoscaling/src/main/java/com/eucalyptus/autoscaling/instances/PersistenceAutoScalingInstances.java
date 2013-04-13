@@ -24,6 +24,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import org.apache.log4j.Logger;
 import org.hibernate.criterion.Criterion;
 import org.hibernate.criterion.Property;
 import org.hibernate.criterion.Restrictions;
@@ -44,6 +45,8 @@ import com.google.common.collect.Sets;
  *
  */
 public class PersistenceAutoScalingInstances extends AutoScalingInstances {
+
+  private final Logger logger = Logger.getLogger( PersistenceAutoScalingInstances.class ) ;
 
   private PersistenceSupport persistenceSupport = new PersistenceSupport();
 
@@ -112,17 +115,17 @@ public class PersistenceAutoScalingInstances extends AutoScalingInstances {
     final AutoScalingInstance example = exampleForGroup( group );
     example.setHealthStatus( HealthStatus.Healthy );
 
-    final List<AutoScalingInstance> instancesToMark = persistenceSupport.listByExample( 
+    final List<AutoScalingInstance> instancesToMark = persistenceSupport.listByExample(
         example,
-        Predicates.or( LifecycleState.Pending, LifecycleState.InService ),
+        LifecycleState.InService,
         instanceIds.isEmpty() ?
             Restrictions.conjunction() :
-            Restrictions.not( Property.forName( "displayName" ).in( instanceIds ) ), 
+            Restrictions.not( Property.forName( "displayName" ).in( instanceIds ) ),
         Collections.<String,String>emptyMap() );
-    
+
     for ( final AutoScalingInstance instance : instancesToMark ) {
       try {
-        persistenceSupport.updateByExample( 
+        persistenceSupport.updateByExample(
             AutoScalingInstance.withUuid( instance.getNaturalId() ),
             group.getOwner(),
             instance.getInstanceId(),
@@ -130,10 +133,49 @@ public class PersistenceAutoScalingInstances extends AutoScalingInstances {
               @Override
               public void fire( final AutoScalingInstance instance ) {
                 if ( instance.healthStatusGracePeriodExpired() ) {
+                  logger.info( "Marking instance unhealthy: " + instance.getInstanceId() );
+                  instance.setHealthStatus( HealthStatus.Unhealthy );
+                } else {
+                  logger.debug( "Instance not healthy but within grace period: " + instance.getInstanceId() );
+                }
+              }
+            });
+      } catch ( final AutoScalingMetadataNotFoundException e ) {
+        // removed, no need to mark unhealthy
+      }
+    }
+  }
+
+  @Override
+  public void markExpiredPendingUnhealthy( final AutoScalingGroup group,
+                                           final Collection<String> instanceIds,
+                                           final long maxAge ) throws AutoScalingMetadataException {
+    final AutoScalingInstance example = exampleForGroup( group );
+    example.setHealthStatus( HealthStatus.Healthy );
+
+    final List<AutoScalingInstance> instancesToMark = instanceIds.isEmpty() ?
+        Collections.<AutoScalingInstance>emptyList() :
+        persistenceSupport.listByExample(
+          example,
+          LifecycleState.Pending,
+          Property.forName( "displayName" ).in( instanceIds ),
+          Collections.<String,String>emptyMap() );
+
+    for ( final AutoScalingInstance instance : instancesToMark ) {
+      try {
+        persistenceSupport.updateByExample(
+            AutoScalingInstance.withUuid( instance.getNaturalId() ),
+            group.getOwner(),
+            instance.getInstanceId(),
+            new Callback<AutoScalingInstance>(){
+              @Override
+              public void fire( final AutoScalingInstance instance ) {
+                if ( instance.getCreationTimestamp().getTime() < maxAge ) {
+                  logger.info( "Marking pending instance unhealthy: " + instance.getInstanceId() );
                   instance.setHealthStatus( HealthStatus.Unhealthy );
                 }
               }
-            });      
+            });
       } catch ( final AutoScalingMetadataNotFoundException e ) {
         // removed, no need to mark unhealthy
       }

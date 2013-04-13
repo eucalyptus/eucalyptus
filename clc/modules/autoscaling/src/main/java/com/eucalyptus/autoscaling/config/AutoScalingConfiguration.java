@@ -78,11 +78,23 @@ public class AutoScalingConfiguration {
   @ConfigurableField( initial = "5m", description = "Timeout for termination of untracked auto scaling instances." )
   public static volatile String untrackedInstanceTimeout = "5m";
 
+  @ConfigurableField( initial = "15m", description = "Timeout for a pending instance.", changeListener = AutoScalingIntervalPropertyChangeListener.class )
+  public static volatile String pendingInstanceTimeout = "15m";
+
+  @ConfigurableField( initial = "15m", description = "Maximum backoff period for failing activities.", changeListener = AutoScalingIntervalPropertyChangeListener.class )
+  public static volatile String activityMaxBackoff = "15m";
+
+  @ConfigurableField( initial = "9s", description = "Initial backoff period for failing activities.", changeListener = AutoScalingIntervalPropertyChangeListener.class )
+  public static volatile String activityInitialBackoff = "9s";
+
   private static AtomicLong activityTimeoutMillis = new AtomicLong( Intervals.parse( activityTimeout, TimeUnit.MINUTES.toMillis( 5 ) ) );
   private static AtomicLong activityExpiryMillis =  new AtomicLong( Intervals.parse( activityExpiry, TimeUnit.DAYS.toMillis( 42 ) ) );
   private static AtomicLong zoneFailureThresholdMillis = new AtomicLong( Intervals.parse( zoneFailureThreshold, TimeUnit.MINUTES.toMillis( 5 ) ) );
   private static AtomicLong suspensionTimeoutMillis = new AtomicLong( Intervals.parse( suspensionTimeout, TimeUnit.DAYS.toMillis( 1 ) ) );
   private static AtomicLong untrackedInstanceTimeoutMillis = new AtomicLong( Intervals.parse( untrackedInstanceTimeout, TimeUnit.MINUTES.toMillis( 5 ) ) );
+  private static AtomicLong pendingInstanceTimeoutMillis = new AtomicLong( Intervals.parse( pendingInstanceTimeout, TimeUnit.MINUTES.toMillis( 15 ) ) );
+  private static AtomicLong activityMaxBackoffMillis = new AtomicLong( Intervals.parse( activityMaxBackoff, TimeUnit.MINUTES.toMillis( 15 ) ) );
+  private static AtomicLong activityInitialBackoffMillis = new AtomicLong( Intervals.parse( activityInitialBackoff, TimeUnit.SECONDS.toMillis( 9 ) ) );
   private static AtomicReference<EnumSet<ScalingProcessType>> suspendedProcessesSet = new AtomicReference<EnumSet<ScalingProcessType>>( toEnumSet( ScalingProcessType.class, suspendedProcesses ) );
   private static AtomicReference<EnumSet<ActivityTask>> suspendedTasksSet = new AtomicReference<EnumSet<ActivityTask>>( toEnumSet( ActivityTask.class, suspendedTasks ) );
 
@@ -116,6 +128,18 @@ public class AutoScalingConfiguration {
 
   public static long getUntrackedInstanceTimeoutMillis() {
     return untrackedInstanceTimeoutMillis.get();
+  }
+
+  public static long getPendingInstanceTimeoutMillis() {
+    return pendingInstanceTimeoutMillis.get();
+  }
+
+  public static long getActivityMaxBackoffMillis() {
+    return activityMaxBackoffMillis.get();
+  }
+
+  public static long getActivityInitialBackoffMillis() {
+    return activityInitialBackoffMillis.get();
   }
 
   public static EnumSet<ScalingProcessType> getSuspendedProcesses() {
