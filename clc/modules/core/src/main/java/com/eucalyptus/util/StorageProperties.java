@@ -182,7 +182,7 @@ public class StorageProperties {
 	}
 
 	public enum Status {
-		creating, available, pending, completed, failed, error, deleting
+		creating, available, pending, completed, failed, error, deleting, deleted
 	}
 
 	public enum StorageParameters {

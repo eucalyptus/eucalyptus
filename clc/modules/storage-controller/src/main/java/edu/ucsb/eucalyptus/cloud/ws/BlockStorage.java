@@ -343,7 +343,8 @@ public class BlockStorage {
 			VolumeInfo foundVolume = volumeList.get(0);
 			//check its status
 			String status = foundVolume.getStatus();
-			if(status.equals(StorageProperties.Status.available.toString()) || status.equals(StorageProperties.Status.failed.toString())) {
+			if(status.equals(StorageProperties.Status.available.toString()) || 
+					status.equals(StorageProperties.Status.failed.toString())) {
 				foundVolume.setStatus(StorageProperties.Status.deleting.toString());
 				reply.set_return(Boolean.TRUE);
 			} 
@@ -1514,7 +1515,7 @@ public class BlockStorage {
 		public VolumeDeleterTask() {
 			this.name = "VolumeDeleter";
 		}
-		
+
 		@Override
 		public void run() {
 			EntityWrapper<VolumeInfo> db = StorageProperties.getEntityWrapper();
@@ -1535,7 +1536,7 @@ public class BlockStorage {
 				VolumeInfo foundVolume;
 				try {
 					foundVolume = db.getUnique(new VolumeInfo(volumeId));
-					db.delete(foundVolume);
+					foundVolume.setStatus(StorageProperties.Status.deleted.toString());
 					db.commit();
 					EucaSemaphoreDirectory.removeSemaphore(volumeId);
 				} catch (EucalyptusCloudException e) {
@@ -1544,13 +1545,13 @@ public class BlockStorage {
 			}
 		}
 	}
-	
+
 	public static class SnapshotDeleterTask extends CheckerTask {
 
 		public SnapshotDeleterTask() {
 			this.name = "SnapshotDeleter";
 		}
-		
+
 		@Override
 		public void run() {
 			EntityWrapper<SnapshotInfo> db = StorageProperties.getEntityWrapper();
@@ -1572,7 +1573,7 @@ public class BlockStorage {
 				SnapshotInfo foundSnapshotInfo;
 				try {
 					foundSnapshotInfo = db.getUnique(snapInfo);
-					db.delete(foundSnapshotInfo);
+					foundSnapshotInfo.setStatus(StorageProperties.Status.deleted.toString());
 					db.commit();
 				} catch (EucalyptusCloudException e) {
 					db.rollback();
