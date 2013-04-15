@@ -93,7 +93,7 @@ import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Multimap;
 import com.google.common.collect.Ordering;
-import edu.emory.mathcs.backport.java.util.Collections;
+import java.util.Collections;
 
 @SuppressWarnings( "unchecked" )
 public class PersistenceContexts {
