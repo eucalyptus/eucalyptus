@@ -129,12 +129,13 @@ foreach my $dom (@domains) {
 	my $stats = $diskstats{$dev_name};
 	my $dim = $disk->{target}->{dev};
 	if (defined $stats) {
-	    print_stat ($dom, $disk_ts, $dim, "DiskReadOps",          $stats->{reads_comp});
-	    print_stat ($dom, $disk_ts, $dim, "DiskWriteOps",         $stats->{writes_comp});
-	    print_stat ($dom, $disk_ts, $dim, "DiskReadBytes",        $stats->{sect_read} * $BYTES_PER_SECTOR);
-	    print_stat ($dom, $disk_ts, $dim, "DiskWriteBytes",       $stats->{sect_written} * $BYTES_PER_SECTOR);
-	    print_stat ($dom, $disk_ts, $dim, "VolumeTotalReadTime",  $stats->{mill_read} / $MILLS_PER_SECOND);
-	    print_stat ($dom, $disk_ts, $dim, "VolumeTotalWriteTime", $stats->{mill_written} / $MILLS_PER_SECOND);
+	    print_stat ($dom, $disk_ts, $dim, "summation", "DiskReadOps",          $stats->{reads_comp});
+	    print_stat ($dom, $disk_ts, $dim, "summation", "DiskWriteOps",         $stats->{writes_comp});
+	    print_stat ($dom, $disk_ts, $dim, "summation", "DiskReadBytes",        $stats->{sect_read} * $BYTES_PER_SECTOR);
+	    print_stat ($dom, $disk_ts, $dim, "summation", "DiskWriteBytes",       $stats->{sect_written} * $BYTES_PER_SECTOR);
+	    print_stat ($dom, $disk_ts, $dim, "summation", "VolumeTotalReadTime",  $stats->{mill_read} / $MILLS_PER_SECOND);
+	    print_stat ($dom, $disk_ts, $dim, "summation", "VolumeTotalWriteTime", $stats->{mill_written} / $MILLS_PER_SECOND);
+	    print_stat ($dom, $disk_ts, $dim, "latest",    "VolumeQueueLength",    $stats->{ios_progress});
 	}
     }
 }
@@ -145,12 +146,12 @@ sub get_ts {
 }
 
 sub print_stat {
-    my ($dom, $ts, $dimension, $counter, $value) = @_;
+    my ($dom, $ts, $dimension, $type, $counter, $value) = @_;
     my $s = "\t"; # separator
     print $dom->get_name() . $s
 	. $ts              . $s
 	. $counter         . $s
-	. "summation"      . $s
+	. $type            . $s
 	. $dimension       . $s
 	. $value           . "\n";
 }

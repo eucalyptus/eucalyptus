@@ -134,20 +134,6 @@ inline static void set(map * m, const char *key, void *val);
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |
- |                             EXPORTED PROTOTYPES                            |
- |                                                                            |
-\*----------------------------------------------------------------------------*/
-
-map *map_create(int size);
-void map_set(map * m, const char *key, void *val);
-void *map_get(map * m, char *key);
-
-#ifdef _TEST_MAP
-int main(int argc, char *argv[]);
-#endif /* _TEST_MAP */
-
-/*----------------------------------------------------------------------------*\
- |                                                                            |
  |                              STATIC PROTOTYPES                             |
  |                                                                            |
 \*----------------------------------------------------------------------------*/
@@ -216,7 +202,7 @@ void map_set(map * m, const char *key, void *val)
                 if (mp->next == NULL) {
                     mp->next = map_create(1);
                     mp = mp->next;
-                    if (mp != NULL) //! @todo need to return an error if calloc failed
+                    if (mp != NULL)    //! @todo need to return an error if calloc failed
                         set(mp, key, val);
                     return;
                 }

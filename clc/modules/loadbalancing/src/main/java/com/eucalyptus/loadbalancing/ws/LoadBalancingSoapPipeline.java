@@ -35,7 +35,7 @@ import com.eucalyptus.ws.stages.UnrollableStage;
  */
 @ComponentId.ComponentPart( LoadBalancing.class )
 public class LoadBalancingSoapPipeline extends FilteredPipeline {
-  private static final String DEFAULT_LOADBALANCING_SOAP_NAMESPACE = "http://elasticloadbalancing.amazonaws.com/doc/2011-04-05/";
+  private static final String DEFAULT_LOADBALANCING_SOAP_NAMESPACE = "http://elasticloadbalancing.amazonaws.com/doc/2012-06-01/";
   private final UnrollableStage auth = new SoapUserAuthenticationStage( );
 
   @Override
@@ -54,7 +54,7 @@ public class LoadBalancingSoapPipeline extends FilteredPipeline {
     pipeline.addLast( "binding",
         new BindingHandler(
             BindingManager.getBinding( DEFAULT_LOADBALANCING_SOAP_NAMESPACE ),
-            Pattern.compile( "http://elasticloadbalancing.amazonaws.com/doc/2011-04-05/" ) ) //TODO:GEN2OOLS: replace version with pattern : \\d\\d\\d\\d-\\d\\d-\\d\\d
+            Pattern.compile( "http://elasticloadbalancing.amazonaws.com/doc/\\d\\d\\d\\d-\\d\\d-\\d\\d/" ) )
     );
     return pipeline;
   }

@@ -274,7 +274,7 @@ public class Binding {
     StringWriter out = new StringWriter( );
     try {
       param.serialize( out );
-      return this.fromOM( out.toString( ).replaceAll( param.getNamespace( ).getNamespaceURI( ), out.toString( ) ) );
+      return this.fromOM( out.toString( ).replace( param.getNamespace( ).getNamespaceURI( ), namespace ) );
     } catch ( Exception e ) {
       LOG.warn( e, e );
       throw new WebServicesException( e.getMessage( ) );

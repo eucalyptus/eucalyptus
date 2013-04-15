@@ -79,7 +79,7 @@ public class LoadBalancerDnsRecord extends AbstractPersistent {
 
 	public static LoadBalancerDnsRecord named(final LoadBalancer lb){
 		final LoadBalancerDnsRecord instance = new LoadBalancerDnsRecord(lb);
-		instance.dnsName = lb.getDisplayName();
+		instance.dnsName = String.format("%s-%s", lb.getOwnerAccountNumber(), lb.getDisplayName());
 		instance.dnsZone = LOADBALANCER_DNS_SUBDOMAIN;
 		instance.uniqueName = instance.createUniqueName();
 		return instance;
@@ -95,7 +95,7 @@ public class LoadBalancerDnsRecord extends AbstractPersistent {
 	@Column(name="dns_zone", nullable=false)
 	private String dnsZone = null;
 
-	@Column(name="unique_name", nullable=false)
+	@Column(name="unique_name", nullable=false, unique=true)
 	private String uniqueName = null;
 
     
@@ -137,7 +137,7 @@ public class LoadBalancerDnsRecord extends AbstractPersistent {
     }
 
     protected String createUniqueName( ) {
-    	return String.format("dns-%s-%s", this.loadbalancer.getDisplayName(), this.getDnsName());
+    	return String.format("dns-%s-%s-%s", this.loadbalancer.getOwnerAccountNumber(), this.loadbalancer.getDisplayName(), this.getDnsName());
     }
 		
 	@Override

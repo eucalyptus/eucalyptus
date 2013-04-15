@@ -537,7 +537,23 @@ public class Faults {
     INSTANCE;
     @Override
     public CheckException apply( final ServiceStatusDetail input ) {
-      final ServiceConfiguration config = ServiceConfigurations.lookupByName( input.getServiceName( ) );
+      ServiceConfiguration config = null;
+      final String serviceName = Strings.emptyToNull( input.getServiceName() );
+      try {
+        config = ServiceConfigurations.lookupByName( serviceName );
+      } catch ( RuntimeException e ) {
+        for ( Component c : Components.list( ) ) {
+          for ( ServiceConfiguration s : c.services() ) {
+            if ( serviceName.equals( s.getName() ) ) {
+              config = s;
+              break;
+            }
+          }
+        }
+        if(config==null){
+          throw e;
+        }
+      }
       Severity severity = Severity.DEBUG;
       if ( input.getSeverity( ) != null ) {
         severity = Severity.valueOf( input.getSeverity( ) );

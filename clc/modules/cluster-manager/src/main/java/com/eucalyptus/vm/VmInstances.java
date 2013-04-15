@@ -255,6 +255,9 @@ public class VmInstances {
   @ConfigurableField( description = "Maximum amount of time (in seconds) that the network topology service takes to propagate state changes.",
                       initial = "" + 60 * 60 * 1000 )
   public static Long      NETWORK_METADATA_REFRESH_TIME = 15l;
+  @ConfigurableField( description = "Maximum amount of time (in seconds) that migration state will take to propagate state changes (e.g., to tags).",
+                      initial = "" + 60 )
+  public static Long      MIGRATION_REFRESH_TIME        = 60l;
   @ConfigurableField( description = "Prefix to use for instance MAC addresses.",
                       initial = "d0:0d" )
   public static String    MAC_PREFIX                    = "d0:0d";
@@ -985,7 +988,7 @@ public class VmInstances {
           .withStringProperty( "key-name", VmInstanceFilterFunctions.KEY_NAME )
           .withStringProperty( "launch-index", VmInstanceFilterFunctions.LAUNCH_INDEX )
           .withDateProperty( "launch-time", VmInstanceDateFilterFunctions.LAUNCH_TIME )
-          .withUnsupportedProperty( "monitoring-state" )
+          .withStringProperty( "monitoring-state", VmInstanceFilterFunctions.MONITORING_STATE )
           .withStringProperty( "owner-id", VmInstanceFilterFunctions.OWNER_ID )
           .withUnsupportedProperty( "placement-group-name" )
           .withStringProperty( "platform", VmInstanceFilterFunctions.PLATFORM )
@@ -1367,6 +1370,12 @@ public class VmInstances {
       @Override
       public String apply( final VmInstance instance ) {
         return Strings.toString( instance.getLaunchRecord().getLaunchIndex() );
+      }
+    },
+    MONITORING_STATE {
+      @Override
+      public String apply( final VmInstance instance ) {
+        return instance.getMonitoring() ? "enabled" : "disabled";
       }
     },
     OWNER_ID {

@@ -65,16 +65,19 @@ package com.eucalyptus.blockstorage;
 import static com.eucalyptus.cloud.ImageMetadata.State.available;
 import static com.eucalyptus.cloud.ImageMetadata.State.pending;
 import static com.eucalyptus.images.Images.inState;
-import static com.eucalyptus.reporting.event.SnapShotEvent.SnapShotAction;
+
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
+
 import javax.persistence.EntityTransaction;
 import javax.persistence.PersistenceException;
+
 import org.apache.log4j.Logger;
+
 import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.principal.AccountFullName;
 import com.eucalyptus.cloud.CloudMetadatas;
@@ -96,6 +99,7 @@ import com.eucalyptus.images.Images;
 import com.eucalyptus.records.Logs;
 import com.eucalyptus.reporting.event.EventActionInfo;
 import com.eucalyptus.reporting.event.SnapShotEvent;
+import com.eucalyptus.reporting.event.SnapShotEvent.SnapShotAction;
 import com.eucalyptus.system.Threads;
 import com.eucalyptus.tags.Filter;
 import com.eucalyptus.tags.Filters;
@@ -110,6 +114,7 @@ import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
 import com.google.common.base.Supplier;
 import com.google.common.collect.Iterables;
+
 import edu.ucsb.eucalyptus.msgs.CreateSnapshotResponseType;
 import edu.ucsb.eucalyptus.msgs.CreateSnapshotType;
 import edu.ucsb.eucalyptus.msgs.DeleteSnapshotResponseType;
@@ -305,7 +310,9 @@ public class SnapshotManager {
   }
 
   private static boolean isReservedSnapshot( final String snapshotId ) {
-    return Predicates.or( ImageSnapshotReservation.INSTANCE ).apply( snapshotId );
+	// Fix for EUCA-4932. Any snapshot associated with an (available or pending) image as a root/non-root device is a reserved snapshot
+	// and can't be deleted without first unregistering the image
+    return Predicates.or( SnapshotInUseVerifier.INSTANCE ).apply( snapshotId );
   }
 
   private enum ImageSnapshotReservation implements Predicate<String> {
@@ -318,7 +325,22 @@ public class SnapshotManager {
           inState(EnumSet.of( pending, available ) ) );
     }
   }
+  
+  /**
+   * <p>Predicate to check if a snapshot is associated with a pending or available boot from ebs image.
+   * Returns true if the snapshot is used in the image registration with root or non root devices.</p>
+   */
+  private enum SnapshotInUseVerifier implements Predicate<String> {
+	INSTANCE;
 
+	@Override
+	public boolean apply( final String identifier ) {
+	  return Iterables.any(
+	    Entities.query(Images.exampleBSDMappingWithSnapshotId(identifier), true),
+	    Images.imageInState(EnumSet.of( pending, available ) ) );
+	}
+  }
+  
   private static void fireUsageEvent( final Snapshot snap,
                                       final EventActionInfo<SnapShotAction> actionInfo ) {
     try {

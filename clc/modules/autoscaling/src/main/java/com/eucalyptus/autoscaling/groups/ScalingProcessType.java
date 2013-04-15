@@ -40,7 +40,7 @@ public enum ScalingProcessType implements Predicate<AutoScalingGroup>, ScalingPr
   Terminate,
   ;
 
-@Override
+  @Override
   public boolean apply( @Nullable final AutoScalingGroup group ) {
     boolean enabled = true;
 

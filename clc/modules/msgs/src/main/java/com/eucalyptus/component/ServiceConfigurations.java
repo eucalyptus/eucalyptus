@@ -69,6 +69,8 @@ import java.util.List;
 import java.util.NoSuchElementException;
 import javax.persistence.EntityTransaction;
 import javax.persistence.PersistenceException;
+
+import com.google.common.base.*;
 import org.apache.log4j.Logger;
 import com.eucalyptus.bootstrap.Hosts;
 import com.eucalyptus.component.Faults.CheckException;
@@ -85,10 +87,6 @@ import com.eucalyptus.util.Internets;
 import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.util.TypeMapper;
 import com.eucalyptus.util.TypeMappers;
-import com.google.common.base.Function;
-import com.google.common.base.Functions;
-import com.google.common.base.Predicate;
-import com.google.common.base.Predicates;
 import com.google.common.collect.Collections2;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
@@ -485,7 +483,24 @@ public class ServiceConfigurations {
     INSTANCE;
     @Override
     public ServiceStatusDetail apply( final CheckException input ) {
-      final ServiceConfiguration config = ServiceConfigurations.lookupByName( input.getServiceName( ) );
+      ServiceConfiguration config = null;
+      final String serviceName = Strings.nullToEmpty(input.getServiceName());
+      try {
+        config = ServiceConfigurations.lookupByName( serviceName );
+      } catch ( RuntimeException e ) {
+        for ( Component c : Components.list( ) ) {
+          for ( ServiceConfiguration s : c.services() ) {
+            if ( serviceName.equals( s.getName() ) ) {
+              config = s;
+              break;
+            }
+          }
+        }
+        if(config==null){
+          throw e;
+        }
+      }
+      final ServiceConfiguration finalConfig = config;
       return new ServiceStatusDetail( ) {
         {
           this.setSeverity( input.getSeverity( ).toString( ) );
@@ -497,9 +512,9 @@ public class ServiceConfigurations {
           this.setStackTrace( input.getStackString( ) != null
             ? input.getStackString( )
             : Exceptions.string( new RuntimeException( "Error while mapping service event record:  No stack information available" ) ) );
-          this.setServiceFullName( config.getFullName( ).toString( ) );
-          this.setServiceHost( config.getHostName( ) );
-          this.setServiceName( input.getServiceName( ) );
+          this.setServiceFullName( finalConfig.getFullName().toString( ) );
+          this.setServiceHost( finalConfig.getHostName() );
+          this.setServiceName( serviceName );
         }
       };
     }

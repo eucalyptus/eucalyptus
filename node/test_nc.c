@@ -135,14 +135,6 @@ const char *euca_this_component_name = "nc";    //!< Eucalyptus Component Name
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |
- |                             EXPORTED PROTOTYPES                            |
- |                                                                            |
-\*----------------------------------------------------------------------------*/
-
-int main(int argc, char *argv[]);
-
-/*----------------------------------------------------------------------------*\
- |                                                                            |
  |                              STATIC PROTOTYPES                             |
  |                                                                            |
 \*----------------------------------------------------------------------------*/
@@ -293,7 +285,7 @@ int main(int argc, char *argv[])
 
     eucahome = getenv(EUCALYPTUS_ENV_VAR_NAME);
     if (!eucahome) {
-        eucahome = strdup("");  // root by default
+        eucahome = strdup("");         // root by default
     } else {
         eucahome = strdup(eucahome);
     }
@@ -301,7 +293,7 @@ int main(int argc, char *argv[])
     add_euca_to_path(eucahome);
 
     fprintf(stderr, "looking for system utilities...\n");
-    if (diskutil_init(FALSE))   // NC does not require GRUB for now
+    if (diskutil_init(FALSE))          // NC does not require GRUB for now
         exit(1);
 
     // check if euca2ools commands for bundle-instance are available
@@ -312,7 +304,7 @@ int main(int argc, char *argv[])
         "euca-delete-bundle"
     };
 
-    char *helpers_path[3];      // load paths from eucalyptus.conf or set to NULL
+    char *helpers_path[3];             // load paths from eucalyptus.conf or set to NULL
     helpers_path[0] = find_conf_value(eucahome, "NC_BUNDLE_UPLOAD_PATH");
     helpers_path[1] = find_conf_value(eucahome, "NC_CHECK_BUCKET_PATH");
     helpers_path[2] = find_conf_value(eucahome, "NC_DELETE_BUNDLE_PATH");

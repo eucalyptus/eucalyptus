@@ -146,9 +146,9 @@
  |                                                                            |
 \*----------------------------------------------------------------------------*/
 
-static boolean initialized = FALSE; //!< Boolean to make sure we have initialized this module
-static char sCertFileName[FILENAME] = "";    //!< Certificate file name
-static char sPrivKeyFileName[FILENAME] = ""; //!< Private key file name
+static boolean initialized = FALSE;    //!< Boolean to make sure we have initialized this module
+static char sCertFileName[FILENAME] = "";   //!< Certificate file name
+static char sPrivKeyFileName[FILENAME] = "";    //!< Private key file name
 static char hex_digits[16] = { '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'a', 'b', 'c', 'd', 'e', 'f' };
 
 static regex_t *uri_regex = NULL;
@@ -161,34 +161,6 @@ static const char *url_pattern = "([^:?&]+://)([^:/?&]+)(:([0-9]+)?)?(/[^?&=]*)?
 
 //! Mutex to guard certificate and ssl init to enforce the function as a singleton.
 static pthread_mutex_t init_mutex = PTHREAD_MUTEX_INITIALIZER;
-
-/*----------------------------------------------------------------------------*\
- |                                                                            |
- |                             EXPORTED PROTOTYPES                            |
- |                                                                            |
-\*----------------------------------------------------------------------------*/
-
-int euca_init_cert(void);
-char *euca_get_cert(u8 options);
-char *base64_enc(u8 * sIn, int size);
-char *base64_dec(u8 * sIn, int size);
-char *hexify(unsigned char *data, int data_len);
-char *calc_fingerprint(const char *cert_filename);
-void free_key_value_pair_array(struct key_value_pair_array *kv_array);
-struct key_value_pair *deconstruct_header(const char *header_str, char delimiter);
-struct key_value_pair_array *convert_header_list_to_array(const struct curl_slist *header_list, char delimiter);
-char *construct_canonical_headers(struct key_value_pair_array *hdr_array);
-char *construct_canonical_uri(const char *url);
-char *construct_canonical_query(const char *url);
-char *construct_signed_headers(struct key_value_pair_array *hdr_array);
-char *eucav2_sign_request(const char *verb, const char *url, const struct curl_slist *headers);
-char *euca_sign_url(const char *sVerb, const char *sDate, const char *sURL);
-char *process_url(const char *content, int url_component);
-
-#ifdef _UNIT_TEST
-void print_key_value_pair_array(const struct key_value_pair_array *kv_array);
-int main(int argc, char **argv);
-#endif // _UNIT_TEST
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |
@@ -341,7 +313,7 @@ char *euca_get_cert(u8 options)
                     got--;
 
                 if (sCert[got - 1] == '\n')
-                    got--;      // because of indenting
+                    got--;             // because of indenting
             }
 
             sCert[got] = '\0';
@@ -396,7 +368,7 @@ char *base64_enc(u8 * sIn, int size)
                 }
             }
 
-            BIO_free_all(pBio64);   // frees both bio64 and biomem
+            BIO_free_all(pBio64);      // frees both bio64 and biomem
         }
     }
     return (sEncVal);
@@ -483,7 +455,7 @@ char *hexify(unsigned char *data, int data_len)
         hex_str[i * 2 + 1] = hex_digits[(data[i] % 16)];
     }
 
-    hex_str[data_len * 2] = '\0';   //make sure it's null terminated
+    hex_str[data_len * 2] = '\0';      //make sure it's null terminated
     return (hex_str);
 }
 
@@ -506,31 +478,29 @@ char *calc_fingerprint(const char *cert_filename)
 {
 #define MD5_FINGERPRINT_SIZE        16
 
-    u8 *cert_buffer = NULL;  // read buffer for certificate
-    int fd = 0;                     // file descriptor for reading cert file
+    u8 *cert_buffer = NULL;            // read buffer for certificate
+    int fd = 0;                        // file descriptor for reading cert file
     int read_size = 0;
     int err;
     u32 n = 0;
     char errmsg[1024] = "";
     char *fingerprint_str = NULL;
     u8 fingerprint[EVP_MAX_MD_SIZE] = { 0 };
-    ssize_t file_buffer_size = 0;   // size of read buffer
+    ssize_t file_buffer_size = 0;      // size of read buffer
     BIO *bio = NULL;
     X509 *x509_cert = NULL;
     struct stat cert_file_stats = { 0 };    // file stat structure for getting the size of the file
-    const EVP_MD *digest_function = NULL;  // digest of the cert
+    const EVP_MD *digest_function = NULL;   // digest of the cert
 
     if (cert_filename == NULL) {
         LOGERROR("got a null filename, returning null");
         return (NULL);
     }
-
     // Check the file and get the file size for allocation of buffers
     if (stat(cert_filename, &cert_file_stats) == -1) {
         LOGERROR("error in stat() of %s\n", cert_filename);
         return (NULL);
     }
-
     //! @TODO: can this be removed?
     // double the byte-count, for extra
     file_buffer_size = cert_file_stats.st_size * 2;
@@ -679,7 +649,7 @@ struct key_value_pair *deconstruct_header(const char *header_str, char delimiter
     size_t value_len = 0;
     char *name_str = NULL;
     char *value_str = NULL;
-    char delim_string[3] = { ' ', delimiter , '\0' };
+    char delim_string[3] = { ' ', delimiter, '\0' };
     struct key_value_pair *header = NULL;
 
     if (header_str == NULL) {
@@ -688,7 +658,7 @@ struct key_value_pair *deconstruct_header(const char *header_str, char delimiter
     }
 
     src_len = strlen(header_str);
-    i = strspn(header_str, " ");    //get any initial space padding
+    i = strspn(header_str, " ");       //get any initial space padding
 
     //Get the header name
     name_start = i;
@@ -700,7 +670,6 @@ struct key_value_pair *deconstruct_header(const char *header_str, char delimiter
         LOGERROR("failed to allocate memory for the header name string. Returning null");
         return (NULL);
     }
-
     //copy the name into new buffer
     strncpy(name_str, &(header_str[name_start]), name_len);
 
@@ -717,7 +686,6 @@ struct key_value_pair *deconstruct_header(const char *header_str, char delimiter
         EUCA_FREE(name_str);
         return (NULL);
     }
-
     // skip the colon itself
     i++;
 
@@ -779,9 +747,9 @@ struct key_value_pair_array *convert_header_list_to_array(const struct curl_slis
         list_length++;
     }
 
-    if((hdr_array = (struct key_value_pair_array *)EUCA_ZALLOC(1, sizeof(struct key_value_pair_array))) == NULL) {
+    if ((hdr_array = (struct key_value_pair_array *)EUCA_ZALLOC(1, sizeof(struct key_value_pair_array))) == NULL) {
         LOGERROR("failed to allocate memory for the key/pair struct. Returning null");
-        return(NULL);
+        return (NULL);
     }
 
     hdr_array->size = list_length;
@@ -843,7 +811,6 @@ char *construct_canonical_headers(struct key_value_pair_array *hdr_array)
         LOGERROR("cannon allocate memory for canonical header string. Returning null.");
         return (NULL);
     }
-
     // Create string
     for (i = 0; i < hdr_array->size; i++) {
         name_length = strlen(hdr_array->data[i]->key);
@@ -925,7 +892,7 @@ static int count_query_params(const char *query_str)
 
     while (query_str[i] != '\0') {
         if (query_str[i++] == '&')
-            param_count++;      //reached the end of a param, count it
+            param_count++;             //reached the end of a param, count it
     }
 
     // Correct since we probably didn't see a & as the last char, so the last param wasn't counted
@@ -961,7 +928,7 @@ char *construct_canonical_query(const char *url)
     char *token = NULL;
     char *last_amp = NULL;
     char *canonical_query = NULL;
-    size_t total_size = 0;         //the size to allocate for the canonical_query string later
+    size_t total_size = 0;             //the size to allocate for the canonical_query string later
     size_t param_len = 0;
     size_t subtoken_len;
     size_t write_size = 0;
@@ -1020,7 +987,7 @@ char *construct_canonical_query(const char *url)
 
         // Not done, Value needs to be parsed
         if ((subtoken_len + 1) < param_len) {
-            subtoken_len++;     //increment over the '='
+            subtoken_len++;            //increment over the '='
             if ((v = (char *)EUCA_ZALLOC((param_len - subtoken_len + 1), sizeof(char))) == NULL) {
                 EUCA_FREE(querystring);
                 free_key_value_pair_array(params);
@@ -1032,7 +999,6 @@ char *construct_canonical_query(const char *url)
             strncpy(v, &(token[subtoken_len]), param_len - subtoken_len);
             v[param_len - subtoken_len] = '\0';
         }
-
         // Convert the pair of strings into a key_value_pair struct
         if (i < params->size) {
             if ((params->data[i] = (struct key_value_pair *)EUCA_ZALLOC(1, sizeof(struct key_value_pair))) == NULL) {
@@ -1087,7 +1053,7 @@ char *construct_canonical_query(const char *url)
     }
 
     if ((last_amp = strrchr(canonical_query, '&')) != NULL) {
-        (*last_amp) = '\0';     // set the last amp to null terminator
+        (*last_amp) = '\0';            // set the last amp to null terminator
     }
 
     EUCA_FREE(querystring);
@@ -1126,12 +1092,11 @@ char *construct_signed_headers(struct key_value_pair_array *hdr_array)
         signed_size += strlen(hdr_array->data[i]->key) + 1; // add one for each semicolon to add
     }
 
-    signed_size++;              // add one for null-terminated
+    signed_size++;                     // add one for null-terminated
     if ((signed_header_str = (char *)calloc(signed_size, sizeof(char))) == NULL) {
         LOGERROR("construct_signed_headers: Could not allocate memory for signed header string. Returning null");
         return (NULL);
     }
-
     // Create string
     for (int i = 0; i < hdr_array->size; i++) {
         name_length = strlen(hdr_array->data[i]->key);
@@ -1252,7 +1217,7 @@ char *eucav2_sign_request(const char *verb, const char *url, const struct curl_s
                 } else {
                     // finally, SHA256 and sign with PK
                     LOGDEBUG("signing input %s\n", get_string_stats(canonical_request));
-                    SHA256(((u8 *)canonical_request), strlen(canonical_request), sha256);
+                    SHA256(((u8 *) canonical_request), strlen(canonical_request), sha256);
 
                     if ((ret = RSA_sign(NID_sha256, sha256, SHA256_DIGEST_LENGTH, sig, &siglen, rsa)) != 1) {
                         LOGDEBUG("RSA_sign() failed\n");
@@ -1395,7 +1360,7 @@ static void init_url_regex(void)
             return;
         }
 
-        if((uri_regex = (regex_t *) EUCA_ZALLOC(1, sizeof(regex_t))) == NULL) {
+        if ((uri_regex = (regex_t *) EUCA_ZALLOC(1, sizeof(regex_t))) == NULL) {
             pthread_mutex_unlock(&regex_init_mutex);
             return;
         }
@@ -1502,7 +1467,7 @@ char *process_url(const char *content, int url_component)
         return (NULL);
     }
 
-    if((match_array = (regmatch_t *) EUCA_ZALLOC(uri_regex->re_nsub, sizeof(regmatch_t))) == NULL) {
+    if ((match_array = (regmatch_t *) EUCA_ZALLOC(uri_regex->re_nsub, sizeof(regmatch_t))) == NULL) {
         LOGERROR("Failed to allocate memory.\n");
         return (NULL);
     }
@@ -1511,7 +1476,7 @@ char *process_url(const char *content, int url_component)
         for (i = 0; i < uri_regex->re_nsub; i++) {
             substr_size = match_array[i].rm_eo - match_array[i].rm_so;
             if ((substr_size > 0) && (i == url_component)) {
-                if((substr = (char *)EUCA_ZALLOC(substr_size, sizeof(char) + 1)) != NULL) {
+                if ((substr = (char *)EUCA_ZALLOC(substr_size, sizeof(char) + 1)) != NULL) {
                     strncpy(substr, &(content[match_array[i].rm_so]), substr_size);
                     substr[substr_size] = '\0';
                     EUCA_FREE(match_array);
@@ -1523,7 +1488,7 @@ char *process_url(const char *content, int url_component)
 
     EUCA_FREE(match_array);
 
-    if((empty_str = (char *)EUCA_ZALLOC(1, sizeof(char))) != NULL) {
+    if ((empty_str = (char *)EUCA_ZALLOC(1, sizeof(char))) != NULL) {
         return (empty_str);
     }
 

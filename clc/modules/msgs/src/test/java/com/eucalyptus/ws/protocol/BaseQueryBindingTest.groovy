@@ -1,3 +1,22 @@
+/*************************************************************************
+ * Copyright 2009-2013 Eucalyptus Systems, Inc.
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; version 3 of the License.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see http://www.gnu.org/licenses/.
+ *
+ * Please contact Eucalyptus Systems, Inc., 6755 Hollister Ave., Goleta
+ * CA 93117, USA or visit http://www.eucalyptus.com/licenses/ if you need
+ * additional information or have any questions.
+ ************************************************************************/
 package com.eucalyptus.ws.protocol
 
 import static org.junit.Assert.*
@@ -11,6 +30,7 @@ import com.google.common.collect.Lists
 import com.eucalyptus.binding.HttpParameterMapping
 import com.eucalyptus.binding.HttpEmbedded
 import edu.ucsb.eucalyptus.msgs.EucalyptusData
+import com.eucalyptus.binding.HttpEmbeddeds
 
 /**
  * 
@@ -97,6 +117,33 @@ class BaseQueryBindingTest {
     assertEquals( "Data value", [ new HttpEmbeddedData( httpEmbeddedData2: new HttpEmbeddedData2( member: ["a","b","c"], ints: [3,2,1] ) ), new HttpEmbeddedData( httpEmbeddedData2: new HttpEmbeddedData2( member: ["z","y","x"], ints: [1,2,3] ) ) ], httpEmbeddedAnnotated.data )
   }
 
+  @Test
+  void testHttpEmbeddedVersionedAnnotationA() {
+    BaseQueryBinding binding = new TestQueryBinding( new TestBinding() ){
+      @Override protected String getNamespaceForVersion(String bindingVersion) { bindingVersion }
+      @Override String getNamespace() { "A" }
+    };
+
+    Object HttpEmbeddedAnnotatedObject = bind( binding, "/service?Operation=HttpEmbeddedVersioned&embedded.member.1=a&embedded.member.2=b&embedded.member.3=c&embedded.ints.1=3&embedded.ints.2=2&embedded.ints.3=1")
+    assertTrue( "Multiple bound value", HttpEmbeddedAnnotatedObject instanceof HttpEmbeddedVersioned )
+    HttpEmbeddedVersioned httpEmbeddedAnnotated = (HttpEmbeddedVersioned) HttpEmbeddedAnnotatedObject
+    assertEquals( "Data value", [ new HttpEmbeddedData( httpEmbeddedData2: new HttpEmbeddedData2( member: ["a","b","c"], ints: [3,2,1] ) ) ], httpEmbeddedAnnotated.data )
+  }
+
+  @Test
+  void testHttpEmbeddedVersionedAnnotationB() {
+    BaseQueryBinding binding = new TestQueryBinding( new TestBinding() ){
+      @Override protected String getNamespaceForVersion(String bindingVersion) { bindingVersion }
+      @Override String getNamespace() { "B" }
+    };
+
+    Object HttpEmbeddedAnnotatedObject = bind( binding, "/service?Operation=HttpEmbeddedVersioned&Data.1.embedded.member.1=a&Data.1.embedded.member.2=b&Data.1.embedded.member.3=c&Data.1.embedded.ints.1=3&Data.1.embedded.ints.2=2&Data.1.embedded.ints.3=1" +
+        "&Data.2.embedded.member.1=z&Data.2.embedded.member.2=y&Data.2.embedded.member.3=x&Data.2.embedded.ints.1=1&Data.2.embedded.ints.2=2&Data.2.embedded.ints.3=3")
+    assertTrue( "Multiple bound value", HttpEmbeddedAnnotatedObject instanceof HttpEmbeddedVersioned )
+    HttpEmbeddedVersioned httpEmbeddedAnnotated = (HttpEmbeddedVersioned) HttpEmbeddedAnnotatedObject
+    assertEquals( "Data value", [ new HttpEmbeddedData( httpEmbeddedData2: new HttpEmbeddedData2( member: ["a","b","c"], ints: [3,2,1] ) ), new HttpEmbeddedData( httpEmbeddedData2: new HttpEmbeddedData2( member: ["z","y","x"], ints: [1,2,3] ) ) ], httpEmbeddedAnnotated.data )
+  }
+
   Object bind( BaseQueryBinding binding, String url ) {
     binding.bind( new MappingHttpRequest( HttpVersion.HTTP_1_1, HttpMethod.GET, url ) )
   }
@@ -109,6 +156,7 @@ class BaseQueryBindingTest {
         HttpEmbeddedAnnotated.class,
         HttpEmbeddedData.class,
         HttpEmbeddedData2.class,
+        HttpEmbeddedVersioned.class,
     ]
 
     TestBinding() {
@@ -220,4 +268,25 @@ class HttpEmbeddedAnnotated extends EucalyptusMessage {
   }
 }
 
+class HttpEmbeddedVersioned extends EucalyptusMessage {
+  @HttpEmbeddeds([
+    @HttpEmbedded( version="A" ),
+    @HttpEmbedded( version="B", multiple = true )
+  ])
+  ArrayList<HttpEmbeddedData> data = Lists.newArrayList()
 
+  boolean equals(final o) {
+    if (this.is(o)) return true
+    if (getClass() != o.class) return false
+
+    final HttpEmbeddedAnnotated that = (HttpEmbeddedAnnotated) o
+
+    if (data != that.data) return false
+
+    return true
+  }
+
+  int hashCode() {
+    return data.hashCode()
+  }
+}
