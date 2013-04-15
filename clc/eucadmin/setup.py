@@ -25,9 +25,11 @@
 # (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+import glob
 import sys
 import os
 from distutils.command.build_scripts import build_scripts
+from distutils.command.install_data import install_data
 from distutils.core import setup
 from distutils.sysconfig import get_python_lib
 import fileinput
@@ -37,6 +39,13 @@ cfg = ConfigParser.ConfigParser()
 cfg.read('setup.cfg')
 prefix  = cfg.get('install', 'prefix')
 version = cfg.get('meta',    'version')
+
+class ExecutableDataFiles(install_data):
+    def run(self):
+        install_data.run(self)
+        for x in self.outfiles:
+            if x.startswith(sys.prefix+"/lib/eucadmin/validator-scripts/"):
+                os.chmod(x, 0755)
 
 class build_scripts_with_path_headers(build_scripts):
     def run(self):
@@ -92,6 +101,7 @@ admin_scripts = ["bin/euca_conf",
                  "bin/euca-register-storage-controller",
                  "bin/euca-register-vmware-broker",
                  "bin/euca-register-walrus",
+                 "bin/euca-validator",
                  "bin/eureport-delete-data",
                  "bin/eureport-export-data",
                  "bin/eureport-generate-report",
@@ -113,6 +123,18 @@ setup(name="eucadmin",
                       'Operating System :: OS Independent',
                       'Topic :: Internet',
                       ],
-      cmdclass={'build_scripts': build_scripts_with_path_headers},
+      install_requires=[
+          "argparse",
+          "PyYAML",
+          "paramiko",
+          "PyGreSQL",
+          "M2Crypto",
+      ],
+      data_files=[
+          (sys.prefix+"/lib/eucadmin", ['config/validator.yaml']),
+          (sys.prefix+"/lib/eucadmin/validator-scripts", glob.glob('validator-scripts/*')),
+      ],
+      cmdclass={'build_scripts': build_scripts_with_path_headers,
+                'install_data':  ExecutableDataFiles},
       scripts=admin_scripts,
       )
