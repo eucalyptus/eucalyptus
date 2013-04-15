@@ -25,7 +25,7 @@ import com.eucalyptus.cloudwatch.CloudWatchMessage;
 /**
  *
  */
-class CloudWatchClient extends DispatchingClient<CloudWatchMessage,CloudWatch> {
+public class CloudWatchClient extends DispatchingClient<CloudWatchMessage,CloudWatch> {
 
   public CloudWatchClient( final String userId ) {
     super( userId, CloudWatch.class );

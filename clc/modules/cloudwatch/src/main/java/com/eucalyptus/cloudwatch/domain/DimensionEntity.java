@@ -1,4 +1,4 @@
-package com.eucalyptus.cloudwatch.domain.dimension;
+package com.eucalyptus.cloudwatch.domain;
 
 public class DimensionEntity implements Comparable<DimensionEntity>{
   private String name;

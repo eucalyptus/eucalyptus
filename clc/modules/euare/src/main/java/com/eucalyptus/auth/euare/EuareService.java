@@ -1884,7 +1884,7 @@ public class EuareService {
     u.setUserName( userFound.getName( ) );
     u.setUserId( userFound.getUserId( ) );
     u.setPath( userFound.getPath( ) );
-    u.setArn( ( new EuareResourceName( account.getName( ), PolicySpec.IAM_RESOURCE_USER, userFound.getPath( ), userFound.getName( ) ) ).toString( ) );
+    u.setArn( ( new EuareResourceName( account.getAccountNumber( ), PolicySpec.IAM_RESOURCE_USER, userFound.getPath( ), userFound.getName( ) ) ).toString( ) );
   }
   
   private void fillUserResultExtra( UserType u, User userFound ) {
@@ -1897,7 +1897,7 @@ public class EuareService {
     g.setPath( groupFound.getPath( ) );
     g.setGroupName( groupFound.getName() );
     g.setGroupId( groupFound.getGroupId() );
-    g.setArn( (new EuareResourceName( account.getName(), PolicySpec.IAM_RESOURCE_GROUP, groupFound.getPath(), groupFound.getName() )).toString() );
+    g.setArn( (new EuareResourceName( account.getAccountNumber(), PolicySpec.IAM_RESOURCE_GROUP, groupFound.getPath(), groupFound.getName() )).toString() );
   }
 
 

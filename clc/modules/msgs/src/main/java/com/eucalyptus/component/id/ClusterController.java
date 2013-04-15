@@ -115,42 +115,6 @@ public class ClusterController extends ComponentId {
     return this.getServicePath( pathParts );
   }
   
-  @Partition( value = { ClusterController.class }, manyToOne = true )
-  @InternalService
-  @FaultLogPrefix( "cloud" ) // nc stub, but within clc
-  public static class NodeController extends ComponentId {
-    
-    public NodeController( ) {
-      super( "node" );
-    }
-    
-    @Override
-    public Integer getPort( ) {
-      return 8775;
-    }
-    
-    @Override
-    public String getLocalEndpointName( ) {
-      return ServiceUris.remote( this, Internets.localHostInetAddress( ), this.getPort( ) ).toASCIIString( );
-    }
-    
-    @Override
-    public String getServicePath( final String... pathParts ) {
-      return "/axis2/services/EucalyptusNC";
-    }
-    
-    @Override
-    public String getInternalServicePath( final String... pathParts ) {
-      return this.getServicePath( pathParts );
-    }
-    
-    @Override
-    public boolean isRegisterable( ) {
-      return false;
-    }
-
-  }
-  
   @Partition( ClusterController.class )
   @InternalService
   @FaultLogPrefix( "cloud" )

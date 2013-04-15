@@ -3,14 +3,13 @@ package com.eucalyptus.cloudwatch.domain.metricdata;
 import java.util.Collection;
 import java.util.Date;
 
-import com.eucalyptus.cloudwatch.domain.dimension.DimensionEntity;
+import com.eucalyptus.cloudwatch.domain.DimensionEntity;
 import com.eucalyptus.cloudwatch.domain.metricdata.MetricEntity.MetricType;
 import com.eucalyptus.cloudwatch.domain.metricdata.MetricEntity.Units;
 
 public class MetricStatistics {
 
   private String accountId;
-  private String userId;
   private String namespace;
   private String metricName;
   private Units units;
@@ -30,16 +29,6 @@ public class MetricStatistics {
 
   public void setAccountId(String accountId) {
     this.accountId = accountId;
-  }
-
-
-  public String getUserId() {
-    return userId;
-  }
-
-
-  public void setUserId(String userId) {
-    this.userId = userId;
   }
 
 
@@ -144,7 +133,6 @@ public class MetricStatistics {
 
   public MetricStatistics(MetricEntity me, Date startTime, Integer period) {
     this.accountId = me.getAccountId();
-    this.userId = me.getUserId();
     this.namespace = me.getNamespace();
     this.metricName = me.getMetricName();
     this.units = me.getUnits();

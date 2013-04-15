@@ -74,7 +74,7 @@
                 });
               }
             }
-            ep.model.on('sync reset change add remove', _.debounce(doUpdate, 100, true));
+            ep.model.on('sync reset change add remove', _.debounce(doUpdate, 100, false));
 
             // set up callback for timer which updates model if necessary
             thisObj._callbacks[name] = {callback: function(){

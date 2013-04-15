@@ -28,6 +28,19 @@ import com.eucalyptus.component.ComponentId;
 import com.eucalyptus.binding.HttpEmbedded
 import com.eucalyptus.binding.HttpParameterMapping
 
+
+
+public class DescribeLoadBalancersByServoType extends LoadBalancingMessage {
+	String instanceId;
+	public DescribeLoadBalancersByServoType() {  }
+}
+
+public class DescribeLoadBalancersByServoResponseType extends LoadBalancingMessage {
+	public DescribeLoadBalancersResponseType() {  }
+	DescribeLoadBalancersResult describeLoadBalancersResult = new DescribeLoadBalancersResult();
+	ResponseMetadata responseMetadata = new ResponseMetadata();
+}
+
 public class PutServoStatesType extends LoadBalancingMessage {
 	String instanceId;
 	

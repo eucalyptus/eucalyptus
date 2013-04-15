@@ -167,7 +167,10 @@
         expand_callback : function(row){ // row = [col1, col2, ..., etc]
           return thisObj._expandCallback(row);
         },
-        menu_click_create : function (args) { thisObj._createAction() },
+        menu_click_create : function (args) { 
+//          thisObj._createAction()
+            thisObj._newCreateSnapshotAction();   // BACKBONE INTEGRATED DIALOG --- Kyo 041013
+        },
         help_click : function(evt) {
           thisObj._flipToHelp(evt, {content: $snapshotHelp, url: help_snapshot.landing_content_url});
         },
@@ -309,31 +312,31 @@
       var selectedSnapshots = thisObj.baseTable.eucatable('getSelectedRows', 7); // 7th column=status (this is snapshot's knowledge)
       var itemsList = {};
       (function(){
-        itemsList['delete'] = { "name": snapshot_action_delete, callback: function(key, opt) {;}, disabled: function(){ return true;} };
-        itemsList['create_volume'] = { "name": snapshot_action_create_volume, callback: function(key, opt) {;}, disabled: function(){ return true;} };
-        itemsList['register'] = { "name": snapshot_action_register, callback: function(key, opt) {;}, disabled: function(){ return true;} }
+//        itemsList['delete'] = { "name": snapshot_action_delete, callback: function(key, opt) {;}, disabled: function(){ return true;} };
+//        itemsList['create_volume'] = { "name": snapshot_action_create_volume, callback: function(key, opt) {;}, disabled: function(){ return true;} };
+//        itemsList['register'] = { "name": snapshot_action_register, callback: function(key, opt) {;}, disabled: function(){ return true;} }
+        itemsList['delete_snapshot'] = { "name": snapshot_action_delete, callback: function(key, opt) {;}, disabled: function(){ return true;} }  // Backbone Integration --- Kyo 040813
+        itemsList['create_volume'] = { "name": snapshot_action_create_volume, callback: function(key, opt) {;}, disabled: function(){ return true;} }  // Backbone Integration --- Kyo 040813
+        itemsList['register_snapshot'] = { "name": snapshot_action_register, callback: function(key, opt) {;}, disabled: function(){ return true;} }  // Backbone Integration --- Kyo 040813
         itemsList['tag'] = { "name": 'Tag Resource', callback: function(key, opt) {;}, disabled: function(){ return true;} }
-        itemsList['delete_snapshot_bb'] = { "name": snapshot_action_delete, callback: function(key, opt) {;}, disabled: function(){ return true;} }  // Backbone Integration --- Kyo 040813
-        itemsList['create_volume_bb'] = { "name": snapshot_action_create_volume, callback: function(key, opt) {;}, disabled: function(){ return true;} }  // Backbone Integration --- Kyo 040813
-        itemsList['register_snapshot_bb'] = { "name": snapshot_action_register, callback: function(key, opt) {;}, disabled: function(){ return true;} }  // Backbone Integration --- Kyo 040813
-        itemsList['create_snapshot_bb'] = { "name": 'Create new snapshot', callback: function(key, opt) {;}, disabled: function(){ return true;} }  // Backbone Integration --- Kyo 040813
+//        itemsList['create_snapshot'] = { "name": 'Create new snapshot', callback: function(key, opt) {;}, disabled: function(){ return true;} }  // Backbone Integration --- Kyo 040813
       })();
 
       if ( selectedSnapshots.length > 0 && selectedSnapshots.indexOf('pending') == -1 ){
-	itemsList['delete'] = { "name": snapshot_action_delete, callback: function(key, opt) { thisObj._deleteAction(); } }
-        itemsList['delete_snapshot_bb'] = { "name": snapshot_action_delete, callback: function(key, opt) { thisObj._newDeleteSnapshotAction(); } }
+//	itemsList['delete'] = { "name": snapshot_action_delete, callback: function(key, opt) { thisObj._deleteAction(); } }
+        itemsList['delete_snapshot'] = { "name": snapshot_action_delete, callback: function(key, opt) { thisObj._newDeleteSnapshotAction(); } }
       }
       
       if ( selectedSnapshots.length === 1 && onlyInArray('completed', selectedSnapshots)){
-        itemsList['register'] = { "name": snapshot_action_register, callback: function(key, opt) { thisObj._registerAction(); } }
-        itemsList['create_volume'] = { "name": snapshot_action_create_volume, callback: function(key, opt) { thisObj._createVolumeAction(); } }
+//        itemsList['register'] = { "name": snapshot_action_register, callback: function(key, opt) { thisObj._registerAction(); } }
+//        itemsList['create_volume'] = { "name": snapshot_action_create_volume, callback: function(key, opt) { thisObj._createVolumeAction(); } }
         itemsList['tag'] = {"name":'Tag Resource', callback: function(key, opt){ thisObj._tagResourceAction(); }}
-        itemsList['register_snapshot_bb'] = { "name": snapshot_action_register, callback: function(key, opt) { thisObj._newRegisterSnapshotAction(); } }
-        itemsList['create_volume_bb'] = { "name": snapshot_action_create_volume, callback: function(key, opt) { thisObj._newCreateVolumeAction(); } }
+        itemsList['register_snapshot'] = { "name": snapshot_action_register, callback: function(key, opt) { thisObj._newRegisterSnapshotAction(); } }
+        itemsList['create_volume'] = { "name": snapshot_action_create_volume, callback: function(key, opt) { thisObj._newCreateVolumeAction(); } }
       }
 
       // TEMP. Create Snapshot item will be available here during the backbone integration  --- Kyo 040813
-      itemsList['create_snapshot_bb'] = { "name": "Create new snapshot", callback: function(key, opt) { thisObj._newCreateSnapshotAction(); } }
+//      itemsList['create_snapshot'] = { "name": "Create new snapshot", callback: function(key, opt) { thisObj._newCreateSnapshotAction(); } }
 
       return itemsList;
     },
@@ -596,8 +599,8 @@
     _newCreateVolumeAction : function(){
       var dialog = 'create_volume_dialog';
       var selected = this.tableWrapper.eucatable('getSelectedRows', 10);
-      require(['app'], function(app) {
-        app.dialog(dialog, app.data.snapshot.get(selected[0]));
+      require(['views/dialogs/' + dialog], function( dialog) {
+        new dialog({snapshot_id: selected});
       });
     },
 

@@ -125,8 +125,8 @@
 #include <axis2_client.h>
 #include <axis2_stub.h>
 
-#include "misc.h"               // check_file, logprintf
-#include "fault.h"              // log_eucafault
+#include "misc.h"                      // check_file, logprintf
+#include "fault.h"                     // log_eucafault
 #include "euca_axis.h"
 
 /*----------------------------------------------------------------------------*\
@@ -175,21 +175,6 @@
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |
- |                             EXPORTED PROTOTYPES                            |
- |                                                                            |
-\*----------------------------------------------------------------------------*/
-
-axis2_status_t __euca_authenticate(const axutil_env_t * pEnv, axis2_msg_ctx_t * pOutMsgCtx, axis2_op_ctx_t * pOpCtx);
-axis2_status_t verify_references(axiom_node_t * pSigNode, const axutil_env_t * pEnv, axis2_msg_ctx_t * pMsgCtx, axiom_soap_envelope_t * pEnvelope,
-                                 rampart_context_t * pRampartCtx);
-int verify_node(axiom_node_t * pSigNode, const axutil_env_t * pEnv, axis2_msg_ctx_t * pMsgCtx, axis2_char_t * sRef, short *pSigElems,
-                rampart_context_t * pRampartCtx);
-int verify_addr_hdr_elem_loc(axiom_node_t * pSigNode, const axutil_env_t * pEnv, axis2_char_t * sRef);
-
-int InitWSSEC(axutil_env_t * pEnv, axis2_stub_t * pStub, char *sPolicyFile);
-
-/*----------------------------------------------------------------------------*\
- |                                                                            |
  |                              STATIC PROTOTYPES                             |
  |                                                                            |
 \*----------------------------------------------------------------------------*/
@@ -224,8 +209,7 @@ static void throw_fault(void);
 static void throw_fault(void)
 {
     init_eucafaults(euca_this_component_name);
-    log_eucafault("1009", "sender", euca_client_component_name, "receiver", euca_this_component_name, "keys_dir",
-                  "$EUCALYPTUS/var/lib/eucalyptus/keys/", NULL);
+    log_eucafault("1009", "sender", euca_client_component_name, "receiver", euca_this_component_name, "keys_dir", "$EUCALYPTUS/var/lib/eucalyptus/keys/", NULL);
 }
 
 //!
@@ -243,7 +227,7 @@ static void throw_fault(void)
 //!
 axis2_status_t __euca_authenticate(const axutil_env_t * pEnv, axis2_msg_ctx_t * pOutMsgCtx, axis2_op_ctx_t * pOpCtx)
 {
-    axis2_msg_ctx_t *pMsgCtx = NULL;    //<--- incoming msg context, it is NULL, see?
+    axis2_msg_ctx_t *pMsgCtx = NULL;   //<--- incoming msg context, it is NULL, see?
     rampart_context_t *pRampartCtx = NULL;
     axutil_property_t *pProperty = NULL;
     axiom_soap_envelope_t *pSoapEnvelope = NULL;
@@ -294,8 +278,7 @@ axis2_status_t __euca_authenticate(const axutil_env_t * pEnv, axis2_msg_ctx_t * 
         NO_U_FAIL("No node ds:KeyInfo -- required: signature key");
 
     // the wsse:SecurityTokenReference
-    if ((pSecTokenRefNode =
-         oxs_axiom_get_first_child_node_by_name(pEnv, pKeyInfoNode, OXS_NODE_SECURITY_TOKEN_REFRENCE, OXS_WSSE_XMLNS, NULL)) == NULL)
+    if ((pSecTokenRefNode = oxs_axiom_get_first_child_node_by_name(pEnv, pKeyInfoNode, OXS_NODE_SECURITY_TOKEN_REFRENCE, OXS_WSSE_XMLNS, NULL)) == NULL)
         NO_U_FAIL("No node wsse:SecurityTokenReference -- required: signing token");
     // in theory this is the branching point for supporting all kinds of tokens -- we only do BST Direct Reference
     // Find the wsse:Reference to the BinarySecurityToken
@@ -377,8 +360,7 @@ axis2_status_t __euca_authenticate(const axutil_env_t * pEnv, axis2_msg_ctx_t * 
 //!
 //! @post
 //!
-axis2_status_t verify_references(axiom_node_t * pSigNode, const axutil_env_t * pEnv, axis2_msg_ctx_t * pMsgCtx, axiom_soap_envelope_t * pEnvelope,
-                                 rampart_context_t * pRampartCtx)
+axis2_status_t verify_references(axiom_node_t * pSigNode, const axutil_env_t * pEnv, axis2_msg_ctx_t * pMsgCtx, axiom_soap_envelope_t * pEnvelope, rampart_context_t * pRampartCtx)
 {
     int i = 0;
     axiom_node_t *pSiNode = NULL;
@@ -467,8 +449,7 @@ axis2_status_t verify_references(axiom_node_t * pSigNode, const axutil_env_t * p
 //!
 //! @post
 //!
-int verify_node(axiom_node_t * pSigNode, const axutil_env_t * pEnv, axis2_msg_ctx_t * pMsgCtx, axis2_char_t * sRef, short *pSigElems,
-                rampart_context_t * pRampartCtx)
+int verify_node(axiom_node_t * pSigNode, const axutil_env_t * pEnv, axis2_msg_ctx_t * pMsgCtx, axis2_char_t * sRef, short *pSigElems, rampart_context_t * pRampartCtx)
 {
     axiom_node_t *pParent = NULL;
 

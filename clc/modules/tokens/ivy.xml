@@ -1,7 +1,8 @@
 <ivy-module version="2.0">
     <info organisation="com.eucalyptus" module="eucalyptus-tokens"/>
     <dependencies>
-        <dependency org="com.eucalyptus" name="eucalyptus-ws" rev="latest.integration"/>
+        <dependency name="eucalyptus-tokens-common" rev="latest.integration"/>
+        <dependency name="eucalyptus-ws" rev="latest.integration"/>
     </dependencies>
 </ivy-module>
 

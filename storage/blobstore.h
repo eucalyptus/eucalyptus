@@ -136,7 +136,7 @@
 //! Defines the blobstore error codes
 typedef enum {
     BLOBSTORE_ERROR_OK = 0,
-    BLOBSTORE_ERROR_GENERAL,    //!< here for compatibility with 'ERROR' elsewhere in Eucalyptus
+    BLOBSTORE_ERROR_GENERAL,           //!< here for compatibility with 'ERROR' elsewhere in Eucalyptus
 
     //! @{
     //! @name system errno equivalents
@@ -159,33 +159,33 @@ typedef enum {
 } blobstore_error_t;
 
 typedef enum {
-    BLOBSTORE_REVOCATION_ANY,   //!< on create, defaults to NONE; on open, allows for whatever policy is in effect
-    BLOBSTORE_REVOCATION_NONE,  //!< on create, error will be returned when blobstore is full
-    BLOBSTORE_REVOCATION_LRU,   //!< on create, unlocked items are purged in priority+LRU order, when possible
+    BLOBSTORE_REVOCATION_ANY,          //!< on create, defaults to NONE; on open, allows for whatever policy is in effect
+    BLOBSTORE_REVOCATION_NONE,         //!< on create, error will be returned when blobstore is full
+    BLOBSTORE_REVOCATION_LRU,          //!< on create, unlocked items are purged in priority+LRU order, when possible
 } blobstore_revocation_t;
 
 typedef enum {
-    BLOBSTORE_SNAPSHOT_ANY,     //!< on create, pick DM if possible; on open, allows for whatever policy is in effect
-    BLOBSTORE_SNAPSHOT_NONE,    //!< snapshots are not used, disk copies are used for cloning
-    BLOBSTORE_SNAPSHOT_DM,      //!< device mapper snapshots are used for cloning
+    BLOBSTORE_SNAPSHOT_ANY,            //!< on create, pick DM if possible; on open, allows for whatever policy is in effect
+    BLOBSTORE_SNAPSHOT_NONE,           //!< snapshots are not used, disk copies are used for cloning
+    BLOBSTORE_SNAPSHOT_DM,             //!< device mapper snapshots are used for cloning
 } blobstore_snapshot_t;
 
 typedef enum {
-    BLOBSTORE_FORMAT_ANY,       //!< on create, defaults to FILES_VISIBLE; on open, allows for whatever policy is in effect
-    BLOBSTORE_FORMAT_FILES,     //!< blob content/backing and metadata are stored under blobstore path in individual files
-    BLOBSTORE_FORMAT_DIRECTORY, //!< all blob data are stored in a separate subdirectory under blobstore path
+    BLOBSTORE_FORMAT_ANY,              //!< on create, defaults to FILES_VISIBLE; on open, allows for whatever policy is in effect
+    BLOBSTORE_FORMAT_FILES,            //!< blob content/backing and metadata are stored under blobstore path in individual files
+    BLOBSTORE_FORMAT_DIRECTORY,        //!< all blob data are stored in a separate subdirectory under blobstore path
 } blobstore_format_t;
 
 typedef enum {
     BLOBSTORE_COPY,
     BLOBSTORE_MAP,
-    BLOBSTORE_SNAPSHOT
+    BLOBSTORE_SNAPSHOT,
 } blockmap_relation_t;
 
 typedef enum {
     BLOBSTORE_DEVICE,
     BLOBSTORE_BLOCKBLOB,
-    BLOBSTORE_ZERO
+    BLOBSTORE_ZERO,
 } blockmap_source_t;
 
 /*----------------------------------------------------------------------------*\
@@ -195,31 +195,31 @@ typedef enum {
 \*----------------------------------------------------------------------------*/
 
 typedef struct _blobstore {
-    char id[BLOBSTORE_MAX_PATH];    //!< ID of the blobstore, to handle directory moving
-    char path[BLOBSTORE_MAX_PATH];  //!< full path to blobstore directory
-    unsigned long long limit_blocks;    //!< maximum space, in 512-byte blocks, that all blobs in store may use together
+    char id[BLOBSTORE_MAX_PATH];       //!< ID of the blobstore, to handle directory moving
+    char path[BLOBSTORE_MAX_PATH];     //!< full path to blobstore directory
+    unsigned long long limit_blocks;   //!< maximum space, in 512-byte blocks, that all blobs in store may use together
     blobstore_revocation_t revocation_policy;
     blobstore_snapshot_t snapshot_policy;
     blobstore_format_t format;
-    int fd;                     //!< file descriptor of the blobstore metadata file
+    int fd;                            //!< file descriptor of the blobstore metadata file
 } blobstore;
 
 typedef struct _blockblob {
-    blobstore *store;           //!< pointer to the store for this blob
-    char id[BLOBSTORE_MAX_PATH];    //!< ID of the blob (used as part of file/directory name)
+    blobstore *store;                  //!< pointer to the store for this blob
+    char id[BLOBSTORE_MAX_PATH];       //!< ID of the blob (used as part of file/directory name)
     char blocks_path[BLOBSTORE_MAX_PATH];   //!< full path of the content or snapshot backing file
     char device_path[BLOBSTORE_MAX_PATH];   //!< full path of a block device on which blob can be accessed
-    char dm_name[MAX_DM_NAME];  //!< name of the main device mapper device if this is a clone
-    unsigned long long size_bytes;  //!< size of the blob in bytes
+    char dm_name[MAX_DM_NAME];         //!< name of the main device mapper device if this is a clone
+    unsigned long long size_bytes;     //!< size of the blob in bytes
     unsigned long long blocks_allocated;    //!< actual number of blocks on disk taken by the blob
     blobstore_snapshot_t snapshot_type; //!< ANY = not initialized/known, NONE = not a snapshot, DM = DM-based snapshot
-    unsigned int in_use;        //!< flags showing how the blockblob is being used (OPENED, LOCKED, LINKED)
-    unsigned char is_hollow;    //!< blockblob is 'hollow' - its size doesn't count toward the limit
-    time_t last_accessed;       //!< timestamp of last access
-    time_t last_modified;       //!< timestamp of last modification
-    double priority;            //!< priority, for assisting LRU
-    int fd_lock;                //!< file descriptor of the blockblob lock file
-    int fd_blocks;              //!< file descriptor of the blockblob content file
+    unsigned int in_use;               //!< flags showing how the blockblob is being used (OPENED, LOCKED, LINKED)
+    unsigned char is_hollow;           //!< blockblob is 'hollow' - its size doesn't count toward the limit
+    time_t last_accessed;              //!< timestamp of last access
+    time_t last_modified;              //!< timestamp of last modification
+    double priority;                   //!< priority, for assisting LRU
+    int fd_lock;                       //!< file descriptor of the blockblob lock file
+    int fd_blocks;                     //!< file descriptor of the blockblob content file
 
     // LL pointers
     struct _blockblob *next;
@@ -239,29 +239,29 @@ typedef struct _blockmap {
 } blockmap;
 
 typedef struct _blockblob_meta {
-    char id[BLOBSTORE_MAX_PATH];    //!< ID of the blob (used as part of file/directory name)
-    unsigned long long size_bytes;  //!< size of the blob in bytes
-    unsigned int in_use;        //!< flags showing how the blockblob is being used (OPENED, LOCKED, LINKED)
-    unsigned char is_hollow;    //!< blockblob is 'hollow' - its size doesn't count toward the limit
-    time_t last_accessed;       //!< timestamp of last access
-    time_t last_modified;       //!< timestamp of last modification
-    blobstore *bs;              //!< pointer to blobstore, if one is open
+    char id[BLOBSTORE_MAX_PATH];       //!< ID of the blob (used as part of file/directory name)
+    unsigned long long size_bytes;     //!< size of the blob in bytes
+    unsigned int in_use;               //!< flags showing how the blockblob is being used (OPENED, LOCKED, LINKED)
+    unsigned char is_hollow;           //!< blockblob is 'hollow' - its size doesn't count toward the limit
+    time_t last_accessed;              //!< timestamp of last access
+    time_t last_modified;              //!< timestamp of last modification
+    blobstore *bs;                     //!< pointer to blobstore, if one is open
 
     struct _blockblob_meta *next;
     struct _blockblob_meta *prev;
 } blockblob_meta;
 
 typedef struct _blobstore_meta {
-    char id[BLOBSTORE_MAX_PATH];    //!< ID of the blobstore, to handle directory moving
-    char path[PATH_MAX];        //!< canonical path of the blobstore directory
-    unsigned long long blocks_limit;    //!< max size of the blobstore, in blocks
+    char id[BLOBSTORE_MAX_PATH];       //!< ID of the blobstore, to handle directory moving
+    char path[PATH_MAX];               //!< canonical path of the blobstore directory
+    unsigned long long blocks_limit;   //!< max size of the blobstore, in blocks
     unsigned long long blocks_unlocked; //!< number of blocks in blobstore allocated to blobs that are not in use and is not mapped
-    unsigned long long blocks_locked;   //!< number of blocks in blobstore allocated to blobs that are in use or is mapped (a dependency)
+    unsigned long long blocks_locked;  //!< number of blocks in blobstore allocated to blobs that are in use or is mapped (a dependency)
     unsigned long long blocks_allocated;    //!< number of blocks in blobstore that have been allocated on disk
-    unsigned long long fs_bytes_size;   //!< size, in bytes, of the file system that blobstore resides on
+    unsigned long long fs_bytes_size;  //!< size, in bytes, of the file system that blobstore resides on
     unsigned long long fs_bytes_available;  //!< bytes available on the file system that blobstore resides on
-    int fs_id;                  //!< hash of file system ID, as returned by statfs()
-    unsigned int num_blobs;     //!< count of blobs in the blobstore
+    int fs_id;                         //!< hash of file system ID, as returned by statfs()
+    unsigned int num_blobs;            //!< count of blobs in the blobstore
     blobstore_revocation_t revocation_policy;
     blobstore_snapshot_t snapshot_policy;
     blobstore_format_t format;
@@ -314,14 +314,15 @@ int blobstore_delete_regex(blobstore * bs, const char *regex);
 
 //! @{
 //! @name blockblob operations
-blockblob *blockblob_open(blobstore * bs, const char *id, unsigned long long size_bytes, unsigned int flags, const char *sig,
-                          unsigned long long timeout_usec);
+blockblob *blockblob_open(blobstore * bs, const char *id, unsigned long long size_bytes, unsigned int flags, const char *sig, unsigned long long timeout_usec);
 int blockblob_close(blockblob * bb);
 int blockblob_delete(blockblob * bb, long long timeout_usec, char do_force);
 int blockblob_copy(blockblob * src_bb, unsigned long long src_offset_bytes, blockblob * dst_bb, unsigned long long dst_offset_bytes, unsigned long long len_bytes); //
 int blockblob_clone(blockblob * bb, const blockmap * map, unsigned int map_size);
 const char *blockblob_get_dev(blockblob * bb);
 const char *blockblob_get_file(blockblob * bb);
+blobstore *blockblob_get_blobstore(blockblob * bb);
+int blockblob_get_dir(blockblob * bb, char *buf, int buflen);
 unsigned long long blockblob_get_size_blocks(blockblob * bb);
 unsigned long long blockblob_get_size_bytes(blockblob * bb);
 int blockblob_sync(const char *dev_path, const blockblob * bb);

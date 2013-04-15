@@ -57,6 +57,17 @@ define([
                 self.set('display_' + column, self.get(column));
             }
         });
+    },
+    makeAjaxCall: function(url, param, options){
+      $.ajax({
+        type: "POST",
+        url: url,
+        data: param,
+        dataType: "json",
+        async: true,
+        success: options.success,
+        error: options.error
+      });
     }
   });
   return EucaModel;

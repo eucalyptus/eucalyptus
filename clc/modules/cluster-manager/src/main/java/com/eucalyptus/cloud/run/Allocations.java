@@ -116,7 +116,10 @@ public class Allocations {
     private final boolean              monitoring;
     @Nullable
     private final String               clientToken;
-    
+
+    @Nullable
+    private final String               nameOrArn;
+
     /** verified references determined by the request **/
     private Partition                  partition;
     private SshKeyPair                 sshKeyPair;
@@ -146,6 +149,20 @@ public class Allocations {
       if ( ( this.request.getInstanceType( ) == null ) || "".equals( this.request.getInstanceType( ) ) ) {
         this.request.setInstanceType( VmTypes.defaultTypeName( ) );
       }
+
+      final String iamInstanceProfileArn =  this.request.getIamInstanceProfileArn();
+      final String iamInstanceProfileName = this.request.getIamInstanceProfileName();
+
+      if (!iamInstanceProfileArn.equals("")) {
+        this.nameOrArn = iamInstanceProfileArn;
+        this.request.setInstanceProfileNameOrArn(this.nameOrArn);
+      } else if (!iamInstanceProfileName.equals("")) {
+        this.nameOrArn = iamInstanceProfileName;
+        this.request.setInstanceProfileNameOrArn(this.nameOrArn);
+      } else {
+        this.nameOrArn = "";
+      }
+
       this.reservationIndex = UniqueIds.nextIndex( VmInstance.class, ( long ) request.getMaxCount( ) );
       this.reservationId = VmInstances.getId( this.reservationIndex, 0 ).replaceAll( "i-", "r-" );
       this.request.setMonitoring(this.monitoring);
@@ -174,7 +191,8 @@ public class Allocations {
                         final Set<NetworkGroup> networkGroups,
                         final boolean isUsePrivateAddressing, 
                         final boolean monitoring,
-                        final String clientToken
+                        final String clientToken,
+                        final String nameOrArn
                         ) {
       super( );
       this.context = Contexts.lookup( );
@@ -194,6 +212,7 @@ public class Allocations {
       this.vmType = vmType;
       this.monitoring = monitoring;
       this.clientToken = clientToken;
+      this.nameOrArn = nameOrArn;
       
       this.networkGroups = new HashMap<String, NetworkGroup>( ) {
         {
@@ -362,6 +381,11 @@ public class Allocations {
     }
 
     @Nullable
+    public String getNameOrArn ( ) {
+      return nameOrArn;
+    }
+
+    @Nullable
     public String getUniqueClientToken( ) {
       return clientToken == null ?
           null :
@@ -401,6 +425,7 @@ public class Allocations {
                            vm.getNetworkGroups( ),
                            vm.isUsePrivateAddressing(),
                            vm.getMonitoring(),
-                           vm.getClientToken() );
+                           vm.getClientToken(),
+                           vm.getNameOrArn());
   }
 }

@@ -139,6 +139,22 @@ public abstract class AbstractOwnedPersistents<AOP extends AbstractOwnedPersiste
     }
   }
 
+  public List<AOP> deleteByExample( final AOP example,
+                                    final Criterion criterion,
+                                    final Map<String,String> aliases ) throws AutoScalingMetadataException {
+    try {
+      return Transactions.each( example, criterion, aliases, new Callback<AOP>(){
+        @Override
+        public void fire( final AOP input ) {
+          Entities.delete( input );
+        }
+      } );
+    } catch ( Exception e ) {
+      throw new AutoScalingMetadataException( "Error deleting "+typeDescription+"s by example: "+LogUtil.dumpObject( example ), e );
+    }
+  }
+
+
   //TODO:STEVE: Use transactions with retries where ever appropriate
   public <R> R transactionWithRetry( final Class<?> entityType,
                                      final WorkCallback<R> work ) throws AutoScalingMetadataException {
@@ -164,7 +180,7 @@ public abstract class AbstractOwnedPersistents<AOP extends AbstractOwnedPersiste
     }
   }
 
-  public static Function<AutoScalingInstance,Date> createdDate() {
+  public static Function<AbstractOwnedPersistent,Date> createdDate() {
     return AbstractOwnedPersistentDateProperties.CREATED;  
   }
 
@@ -186,11 +202,11 @@ public abstract class AbstractOwnedPersistents<AOP extends AbstractOwnedPersiste
     return ownerFullName == null ? text : text + " for " + ownerFullName;
   }
 
-  private enum AbstractOwnedPersistentDateProperties implements Function<AutoScalingInstance,Date> {
+  private enum AbstractOwnedPersistentDateProperties implements Function<AbstractOwnedPersistent,Date> {
     CREATED {
       @Override
-      public Date apply( final AutoScalingInstance autoScalingInstance ) {
-        return autoScalingInstance.getCreationTimestamp();
+      public Date apply( final AbstractOwnedPersistent abstractOwnedPersistent ) {
+        return abstractOwnedPersistent.getCreationTimestamp();
       }
     }
   }

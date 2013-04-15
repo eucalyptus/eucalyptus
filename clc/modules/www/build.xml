@@ -123,7 +123,7 @@
 	<target name="compile-src">
 		<mkdir dir="${build.dir}"/>
 		<mkdir dir="${test.dir}"/>
-		<javac deprecation="false" srcdir="${src.dir}" destdir="${build.dir}" classpathref="gwtclasspath" failonerror="true" debug="true" source="1.6" target="1.6" />
+		<javac deprecation="false" srcdir="${src.dir}" destdir="${build.dir}" classpathref="gwtclasspath" failonerror="true" debug="true" source="1.7" target="1.7" />
 	</target>
 
 	<target name="clean">

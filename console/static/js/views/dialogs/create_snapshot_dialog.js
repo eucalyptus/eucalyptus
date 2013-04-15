@@ -7,25 +7,21 @@ define([
 ], function(EucaDialogView, template, Snapshot, App, Backbone) {
     return EucaDialogView.extend({
 
+
+        // SET UP AUTOCOMPLETE FOR THE VOLUME INPUT BOX
         setupAutoComplete: function(args){
             var self = this;
-            this.template = template;
             
-            // FIND THE VOLUME MODEL IF MATCHED 'args.volume_id'  --- FOR DEBUG. NOT NEEDED  Kyo 040913
-            if( args.volume_id != undefined ){
-              var matched_volume = App.data.volume.find(function(model){ return model.get('id') == args.volume_id; });
-              if( matched_volume != undefined ){
-     	        console.log("Found the matching model Volume: " + matched_volume.get('id'));
-              }
-            }else{
-              // ELSE CONSTRCUT THE AUTO-COMPLETE FOR THE VOLUME INPUT
+            if( args.volume_id == undefined ){
               var vol_ids = [];
               App.data.volume.each(function(v){
-                console.log("Volume ID: " + v.get('id') + ":" + v.get('status'));
+                console.log("Volume ID: " + v.get('id') + "  Status:" + v.get('status'));
                 vol_ids.push(v.get('id'));
               });
+
               var sorted = sortArray(vol_ids);
-              console.log("selector: " + sorted);
+              console.log("Autocomplete Volume List: " + sorted);
+
               var $volumeSelector = this.$el.find('#snapshot-create-volume-id');
               $volumeSelector.autocomplete({
                 source: sorted

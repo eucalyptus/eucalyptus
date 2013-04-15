@@ -333,7 +333,7 @@ public class WalrusManager {
 
 					buckets.add(new BucketListEntry(bucketInfo.getBucketName(),
 							DateUtils.format(bucketInfo.getCreationDate().getTime(), 
-									DateUtils.RFC822_DATETIME_PATTERN)));
+									DateUtils.ALT_ISO8601_DATE_PATTERN)));
 				}
 			}
 			db.commit();
@@ -1895,7 +1895,7 @@ public class WalrusManager {
 							if (delimiter != null) {
 								parts = objectKey.substring(prefix.length()).split(delimiter);
 								if (parts.length > 1) {
-									prefixString = parts[0] + delimiter;
+									prefixString = prefix + delimiter + parts[0] + delimiter;
 									if(!prefixes.containsKey(prefixString)) {
 										if(resultKeyCount == maxKeys) {
 											//This is a new record, so we know we're truncating if this is true
@@ -1924,7 +1924,7 @@ public class WalrusManager {
 							ListEntry listEntry = new ListEntry();
 							listEntry.setKey(objectKey);
 							listEntry.setEtag(objectInfo.getEtag());
-							listEntry.setLastModified(DateUtils.format(objectInfo.getLastModified().getTime(), DateUtils.RFC822_DATETIME_PATTERN));
+							listEntry.setLastModified(DateUtils.format(objectInfo.getLastModified().getTime(), DateUtils.ALT_ISO8601_DATE_PATTERN));
 							listEntry.setStorageClass(objectInfo.getStorageClass());
 
 							try {									
@@ -3516,7 +3516,7 @@ public class WalrusManager {
 								versionEntry.setKey(objectKey);
 								versionEntry.setVersionId(objectInfo.getVersionId());
 								versionEntry.setEtag(objectInfo.getEtag());
-								versionEntry.setLastModified(DateUtils.format(objectInfo.getLastModified().getTime(),DateUtils.RFC822_DATETIME_PATTERN));
+								versionEntry.setLastModified(DateUtils.format(objectInfo.getLastModified().getTime(), DateUtils.ALT_ISO8601_DATE_PATTERN));
 								try {
 									String displayName = Accounts.lookupAccountById(objectInfo.getOwnerId()).getName();
 									versionEntry.setOwner(new CanonicalUserType(objectInfo.getOwnerId(), displayName));
@@ -3533,7 +3533,7 @@ public class WalrusManager {
 								DeleteMarkerEntry deleteMarkerEntry = new DeleteMarkerEntry();
 								deleteMarkerEntry.setKey(objectKey);
 								deleteMarkerEntry.setVersionId(objectInfo.getVersionId());
-								deleteMarkerEntry.setLastModified(DateUtils.format(objectInfo.getLastModified().getTime(), DateUtils.RFC822_DATETIME_PATTERN));
+								deleteMarkerEntry.setLastModified(DateUtils.format(objectInfo.getLastModified().getTime(), DateUtils.ALT_ISO8601_DATE_PATTERN));
 
 								try {
 									String ownerId = objectInfo.getOwnerId();

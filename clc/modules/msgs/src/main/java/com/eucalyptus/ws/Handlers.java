@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * Copyright 2009-2013 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -127,7 +127,6 @@ import com.eucalyptus.records.Logs;
 import com.eucalyptus.system.Ats;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.ws.handlers.BindingHandler;
-import com.eucalyptus.ws.handlers.InternalImpersonationHandler;
 import com.eucalyptus.ws.handlers.InternalWsSecHandler;
 import com.eucalyptus.ws.handlers.QueryTimestampHandler;
 import com.eucalyptus.ws.handlers.SoapMarshallingHandler;
@@ -156,7 +155,6 @@ public class Handlers {
   private static final ChannelHandler                        addressingHandler        = new AddressingHandler( );
   private static final ConcurrentMap<String, BindingHandler> bindingHandlers          = new MapMaker( ).makeComputingMap( BindingHandlerLookup.INSTANCE );
   private static final ChannelHandler                        bindingHandler           = new BindingHandler( BindingManager.getDefaultBinding( ) );
-  private static final ChannelHandler                        internalImpersonationHandler = new InternalImpersonationHandler();
   private static final HashedWheelTimer                      timer                    = new HashedWheelTimer( );                                                                                             //TODO:GRZE: configurable
                                                                                                                                                                                                               
   enum ServerPipelineFactory implements ChannelPipelineFactory {
@@ -556,9 +554,5 @@ public class Handlers {
   
   public static ChannelHandler internalWsSecHandler( ) {
     return internalWsSecHandler;
-  }
-    
-  public static ChannelHandler internalImpersonationHandler() {
-    return internalImpersonationHandler;
   }
 }
