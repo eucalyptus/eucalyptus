@@ -1895,7 +1895,7 @@ public class WalrusManager {
 							if (delimiter != null) {
 								parts = objectKey.substring(prefix.length()).split(delimiter);
 								if (parts.length > 1) {
-									prefixString = parts[0] + delimiter;
+									prefixString = prefix + delimiter + parts[0] + delimiter;
 									if(!prefixes.containsKey(prefixString)) {
 										if(resultKeyCount == maxKeys) {
 											//This is a new record, so we know we're truncating if this is true
