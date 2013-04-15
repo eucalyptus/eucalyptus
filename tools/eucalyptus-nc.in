@@ -170,7 +170,7 @@ do_start() {
     	if [ $? -ne 0 ] ; then
         	echo "Terminating! This Node Controller does not have CPU virtualization support. You will not be able to run instances."
         	echo 
-        	$EUCALYPTUS/usr/sbin/euca-generate-fault -c nc 1012 component nc     
+        	$EUCALYPTUS/usr/sbin/euca-generate-fault -c nc 1013 component nc     
         	exit 1
     	fi
 
@@ -181,7 +181,7 @@ do_start() {
          		if [ $? -ne 0 ] ; then
 	                echo "Unable to load KVM module, VT-x may be disabled in your systems BIOS, please enable it. You will not be able to launch instances."
 	                echo
-        	        $EUCALYPTUS/usr/sbin/euca-generate-fault -c nc 1012 component nc
+        	        $EUCALYPTUS/usr/sbin/euca-generate-fault -c nc 1013 component nc
 	            fi
         fi
 
@@ -191,7 +191,7 @@ do_start() {
                 if [ $? -ne 0 ] ; then
                     echo "Unable to load KVM module, AMD-V may be disabled in your systems BIOS, please enable it. You will not be able to launch instances."
                     echo
-                    $EUCALYPTUS/usr/sbin/euca-generate-fault -c nc 1012 component nc
+                    $EUCALYPTUS/usr/sbin/euca-generate-fault -c nc 1013 component nc
                 fi
         fi  
 
