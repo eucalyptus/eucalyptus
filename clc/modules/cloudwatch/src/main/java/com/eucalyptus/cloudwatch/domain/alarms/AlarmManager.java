@@ -76,14 +76,12 @@ public class AlarmManager {
       if (accountId != null) {
         criteria = criteria.add( Restrictions.eq( "accountId" , accountId ) );
       }
-      db.commit();
-      return (Long) criteria.uniqueResult(); 
+      return (Long) criteria.uniqueResult();
     } catch (RuntimeException ex) {
       Logs.extreme().error(ex, ex);
       throw ex;
     } finally {
-      if (db.isActive())
-        db.rollback();
+      db.rollback();
     }
   }
   public static void putMetricAlarm(String accountId, Boolean actionsEnabled,
