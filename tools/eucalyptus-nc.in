@@ -155,44 +155,44 @@ do_start() {
 	    $EUCALYPTUS/usr/sbin/euca-generate-fault -c nc 1008 daemon ntp
         fi
 
-    # check for virt extensions in CPU
-    # First, lets check CPU flags to see if we have hardware support 
+	    # check for virt extensions in CPU
+    	# First, lets check CPU flags to see if we have hardware support 
 
-    HYPERVISOR=$(grep ^HYPERVISOR ${EUCALYPTUS}/etc/eucalyptus/eucalyptus.conf | cut -d'"' -f 2)
-    CPU_MODEL=$(egrep -m1 -w '^flags[[:blank:]]*:' /proc/cpuinfo | egrep -wo '(vmx|svm)')
+    	HYPERVISOR=$(grep ^HYPERVISOR ${EUCALYPTUS}/etc/eucalyptus/eucalyptus.conf | cut -d'"' -f 2)
+    	CPU_MODEL=$(egrep -m1 -w '^flags[[:blank:]]*:' /proc/cpuinfo | egrep -wo '(vmx|svm)')
 
-    # Be heavy-handed, exit with failure on lack of CPU virtualization support.
+    	# Be heavy-handed, exit with failure on lack of CPU virtualization support.
 
-    egrep -m1 -w '^flags[[:blank:]]*:' /proc/cpuinfo | egrep -wo '(vmx|svm)'
-    if [ $? -ne 0 ] ; then
-        echo "Terminating! This Node Controller does not have CPU virtualization support. You will not be able to run instances."
-        echo 
-        $EUCALYPTUS/usr/sbin/euca-generate-fault -c nc 1012 component nc     
-        exit 1
-    fi
+    	egrep -m1 -w '^flags[[:blank:]]*:' /proc/cpuinfo | egrep -wo '(vmx|svm)'
+    	if [ $? -ne 0 ] ; then
+        	echo "Terminating! This Node Controller does not have CPU virtualization support. You will not be able to run instances."
+        	echo 
+        	$EUCALYPTUS/usr/sbin/euca-generate-fault -c nc 1012 component nc     
+        	exit 1
+    	fi
 
-    # Now we check to see if it's enabled in BIOS by loading the kvm modules. Warn rather than exit and suggest the user enables this. 
-    # For Intel systems
-    if [ $CPU_MODEL == vmx -a $HYPERVISOR == kvm ] ; then
-        modprobe kvm_intel
-            if [ $? -ne 0 ] ; then
-                echo "Unable to load KVM module, VT-x may be disabled in your systems BIOS, please enable it. You will not be able to launch instances."
-                echo
-                $EUCALYPTUS/usr/sbin/euca-generate-fault -c nc 1012 component nc
-            fi
-    fi
+	    # Now we check to see if it's enabled in BIOS by loading the kvm modules. Warn rather than exit and suggest the user enables this. 
+    	# For Intel systems
+    	if [ $CPU_MODEL == vmx -a $HYPERVISOR == kvm ] ; then
+       		modprobe kvm_intel
+         		if [ $? -ne 0 ] ; then
+	                echo "Unable to load KVM module, VT-x may be disabled in your systems BIOS, please enable it. You will not be able to launch instances."
+	                echo
+        	        $EUCALYPTUS/usr/sbin/euca-generate-fault -c nc 1012 component nc
+	            fi
+        fi
 
-    # For AMD systems
-    if [ $CPU_MODEL == svm -a $HYPERVISOR == kvm ] ; then
-        modprobe kvm_amd
-            if [ $? -ne 0 ] ; then
-                echo "Unable to load KVM module, AMD-V may be disabled in your systems BIOS, please enable it. You will not be able to launch instances."
-                echo
-                $EUCALYPTUS/usr/sbin/euca-generate-fault -c nc 1012 component nc
-            fi
-    fi
+        # For AMD systems
+        if [ $CPU_MODEL == svm -a $HYPERVISOR == kvm ] ; then
+            modprobe kvm_amd
+                if [ $? -ne 0 ] ; then
+                    echo "Unable to load KVM module, AMD-V may be disabled in your systems BIOS, please enable it. You will not be able to launch instances."
+                    echo
+                    $EUCALYPTUS/usr/sbin/euca-generate-fault -c nc 1012 component nc
+                fi
+        fi  
 
-	# fixes #469984
+    	# fixes #469984
 	IPTABLES="`which iptables 2> /dev/null`"
 	if [ -n "$IPTABLES" ]; then
 		[ -x $IPTABLES ] && $IPTABLES -L -n > /dev/null 2> /dev/null
