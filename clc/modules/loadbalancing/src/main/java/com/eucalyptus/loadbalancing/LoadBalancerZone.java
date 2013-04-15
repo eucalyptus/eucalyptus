@@ -36,7 +36,6 @@ import org.apache.log4j.Logger;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
 import org.hibernate.annotations.Entity;
-import org.jgroups.util.UUID;
 
 import com.eucalyptus.entities.AbstractPersistent;
 import com.eucalyptus.loadbalancing.activities.LoadBalancerServoInstance;
@@ -51,7 +50,10 @@ import com.eucalyptus.loadbalancing.activities.LoadBalancerServoInstance;
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
 public class LoadBalancerZone extends AbstractPersistent {
 	private static Logger    LOG     = Logger.getLogger( LoadBalancerZone.class );
-
+	public enum STATE {
+		InService, OutOfService
+	}
+	
 	@Transient
 	private static final long serialVersionUID = 1L;
 
@@ -75,8 +77,11 @@ public class LoadBalancerZone extends AbstractPersistent {
 	@Column(name="zone_name", nullable=false)
 	private String zoneName = null;
 	
-	@Column(name="unique_name", nullable=false)
+	@Column(name="unique_name", nullable=false, unique=true)
 	private String uniqueName = null;
+	
+	@Column(name="zone_state", nullable=true)
+	private String zoneState = null;
 
 	@OneToMany(fetch = FetchType.LAZY, mappedBy = "zone")
     @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
@@ -101,6 +106,15 @@ public class LoadBalancerZone extends AbstractPersistent {
 	public Collection<LoadBalancerBackendInstance> getBackendInstances(){
 		return backendInstances;
 	}
+	
+	public void setState(STATE state){
+		this.zoneState = state.name();
+	}
+	
+	public STATE getState(){
+		final STATE state = Enum.valueOf(STATE.class, this.zoneState);
+		return state;
+	}
 
     @PrePersist
     private void generateOnCommit( ) {
@@ -109,7 +123,7 @@ public class LoadBalancerZone extends AbstractPersistent {
     }
 
     protected String createUniqueName( ) {
-    	return String.format("zone-%s-%s", this.loadbalancer.getDisplayName(), this.zoneName);
+    	return String.format("zone-%s-%s-%s", this.loadbalancer.getOwnerAccountNumber(), this.loadbalancer.getDisplayName(), this.zoneName);
     }
 	  
 	@Override

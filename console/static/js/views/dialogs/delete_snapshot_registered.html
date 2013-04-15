@@ -1,0 +1,28 @@
+<div>
+    <div class="title" data-msg="snapshot_delete_dialog_title">Delete snapshots</div>
+    <div class="body">
+      <div class="dialog-inner-content">
+		<p data-msg="snapshot_delete_dialog_with_dereg_text"></p>
+		<div class="selected-resources">
+			<table>
+				<thead><tr><th data-msg="snapshot_delete_hdr"></th><th data-msg="snapshot_delete_hdr_registered"></th></tr>
+				</thead>
+				<tbody>
+					<tr data-each-item="matrix">
+            <td><span data-text="item.0"></span></td>
+            <td><span data-text="item.1"></span></td>
+          </tr>
+				</tbody>
+			</table>
+		</div>
+		<div data-text=":status" style="height:20px"></div>
+        <div class="ui-dialog-buttonpane ui-widget-content ui-helper-clearfix">
+            <div class="ui-dialog-buttonset">
+	            <span data-ui-button=":deleteButton" data-msg="dialog_delete_btn"></span>
+	            <span data-ui-button=":cancelButton" data-msg="dialog_cancel_btn"></span>
+            </div>
+        </div>
+      </div>
+    </div>
+</div>
+

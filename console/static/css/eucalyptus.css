@@ -1295,7 +1295,7 @@ tr.odd + tr.expanded td {
 
 .expanded ul {
   float: left;
-  margin: 0 0 6px;
+  margin: 0 0 5px;
   padding: 0;
   list-style-type: none;
 }
@@ -1303,11 +1303,11 @@ tr.odd + tr.expanded td {
 .expanded ul li {
   float: left;
   margin: 0;
-  width: 150px;
+  width: 90px; /*100px;*/
 }
 
 .expanded ul li:last-child {
-  width: 275px;
+  width: 320px;
 }
 
 ul.volume-expanded li:last-child {
@@ -1344,7 +1344,7 @@ ul.ramdisk-expanded li:nth-child(5) {
 }
 
 .expanded-value {
-  padding: 0 4px 6px;
+  padding: 0 4px;
 }
 
 /* ======= Help page related ===== */
@@ -2199,7 +2199,7 @@ a.sg-my-ip {
 
 .wizard-wrapper {
   float: left;
-  width: 800px;
+  width: 775px;
 }
 
 .launch-wizard-intro-text {
@@ -2249,6 +2249,10 @@ a.sg-my-ip {
 .wizard-step-scrollcontainer {
   height: 205px;
   overflow: auto;
+}
+
+.wizard-step-closed-view-container {
+  width: 200px;
 }
 
 /* Security Group dialogs get narrower labels, due to narrow dialog width */
@@ -2328,7 +2332,7 @@ a.sg-my-ip {
 
 .wizard-summary-wrapper {
   float: right;
-  width: 280px; 
+  width: 280px;
 }
 
 .wizard-summary {
@@ -2339,17 +2343,9 @@ a.sg-my-ip {
 }
 
 .summary-title {
-  color: #02405f;
-  text-align: center;
-  font-size: 24px;
   font-family: 'PlayBold', Arial, sans-serif;
-}
-
-#summary-image,
-#summary-type,
-#summary-security,
-#summary-advanced {
-  padding: 0 25px;
+  font-size: 24px; 
+  color: #02405f;
 }
 
 .summary {
@@ -2400,7 +2396,6 @@ span.on-error {
 
 .wizardTitle {
   margin-bottom: 8px;
-  margin-left: -19px;
 }
 
 .wizard-step #filter-wrapper {
@@ -3027,8 +3022,8 @@ textarea.console-output {
 
 /*------- euca icons -------*/
 
-.icon_cancel{ background: url(/images/csg-5150d9193b75a.png) no-repeat top left;  background-position: 0 0; width: 27px; height: 27px; } 
-a:hover .icon_cancel{ background: url(/images/csg-5150d9193b75a.png) no-repeat top left;  background-position: 0 -77px; width: 27px; height: 27px; } 
+.Eucalyptis_IconSheet_20{ background: url(/images/csg-5150d9193b75a.png) no-repeat top left;  background-position: 0 0; width: 27px; height: 27px; } 
+.Eucalyptis_IconSheet_22{ background: url(/images/csg-5150d9193b75a.png) no-repeat top left;  background-position: 0 -77px; width: 27px; height: 27px; } 
 .icon_approve{background: url(/images/csg-5150d9193b75a.png) no-repeat top left;  background-position: 0 -154px; width: 27px; height: 27px; } 
  a:hover .icon_approve{background: url(/images/csg-5150d9193b75a.png) no-repeat top left;  background-position: 0 -231px; width: 27px; height: 27px; } 
 .icon_delete{background: url(/images/csg-5150d9193b75a.png) no-repeat top left;  background-position: 0 -308px; width: 27px; height: 27px; } 
@@ -3210,41 +3205,16 @@ filter: progid:DXImageTransform.Microsoft.gradient( startColorstr='#ededed', end
 #scaling-topselector { margin:0 14px;}
 
 .ui-keyval-fields {
-    float: left;
+    display: inline-block;
 }
 
 .ui-keyval-buttons {
-    float: left;
+    display: inline-block;
 }
 
 .ui-keyval-buttons div {
-  float: left;
+    display: inline-block;
 }
-
-/* ======= Scaling Group Instances Indicator ======= */
-
-.scaling-group-instances {
-  padding: 10px 0 0;
-  background: transparent url(../images/thermometer.png) no-repeat 224px 42px;
-}
-
-.scaling-group-instances .wizard-section-label {
-  margin-left: 35px;
-}
-
-.scale-max {
-  
-}
-
-.scale-desired {
-  padding: 24px 0 22px;
-}
-
-.scale-min {
-
-}
-
-/* ======= Tag Related styles ======= */
 
 .tags-edited {
   color: black;

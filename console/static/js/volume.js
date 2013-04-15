@@ -57,7 +57,7 @@
               // Display the id of the volume in the main table
               "aTargets":[1], 
               "mRender": function(data){
-                 return eucatableDisplayColumnTypeTwist(data, data, 255);
+                return eucatableDisplayColumnTypeTwist(data, data, 255);
               },
               "mData": "display_id",
             },
@@ -156,7 +156,10 @@
         expand_callback : function(row){ // row = [col1, col2, ..., etc]
           return thisObj._expandCallback(row);
         },
-        menu_click_create : function (args) { thisObj._createAction() },
+        menu_click_create : function (args) {
+//          thisObj._createAction()
+            thisObj._newCreateVolumeAction();       // BACKBONE INTEGRATED DIALOG  --- Kyo 041013 
+        },
         help_click : function(evt) {
           thisObj._flipToHelp(evt, {content: $volHelp, url: help_volume.landing_content_url});
         },
@@ -723,21 +726,22 @@
       var itemsList = {};
 
       (function(){
-        itemsList['attach'] = { "name": volume_action_attach, callback: function(key, opt) {;}, disabled: function(){ return true;} } 
-        itemsList['detach'] = { "name": volume_action_detach, callback: function(key, opt) {;}, disabled: function(){ return true;} }
-        itemsList['create_snapshot'] = { "name": volume_action_create_snapshot, callback: function(key, opt) {;}, disabled: function(){ return true;} }
-        itemsList['delete'] = {"name":'Delete', callback: function(key, opt) {;}, disabled: function(){ return true;} }     // Backbone Dialog -- Kyo 040613
+//        itemsList['attach'] = { "name": volume_action_attach, callback: function(key, opt) {;}, disabled: function(){ return true;} } 
+//        itemsList['detach'] = { "name": volume_action_detach, callback: function(key, opt) {;}, disabled: function(){ return true;} }
+//        itemsList['create_snapshot'] = { "name": volume_action_create_snapshot, callback: function(key, opt) {;}, disabled: function(){ return true;} }
+//        itemsList['delete'] = {"name":'Delete', callback: function(key, opt) {;}, disabled: function(){ return true;} }     // Backbone Dialog -- Kyo 040613
+        itemsList['attach_volume'] = {"name": volume_action_attach, callback: function(key, opt) {;}, disabled: function(){ return true;} }  // Backbone Dialog -- Kyo 040713
+        itemsList['detach_volume'] = {"name": volume_action_detach, callback: function(key, opt) {;}, disabled: function(){ return true;} }  // Backbone Dialog -- Kyo 040713
+        itemsList['create_snapshot_from_volume'] = {"name": volume_action_create_snapshot, callback: function(key, opt) {;}, disabled: function(){ return true;} }  // Backbone Dialog -- Kyo 040713
+        itemsList['delete_volume'] = {"name": volume_action_delete, callback: function(key, opt) {;}, disabled: function(){ return true;} }     // Backbone Dialog -- Kyo 040613
         itemsList['tag'] = {"name":'Tag Resource', callback: function(key, opt) {;}, disabled: function(){ return true;} }
-        itemsList['create_snapshot_bb'] = {"name":'Create Snapshot', callback: function(key, opt) {;}, disabled: function(){ return true;} }  // Backbone Dialog -- Kyo 040713
-        itemsList['attach_volume_bb'] = {"name":'Attach Volume', callback: function(key, opt) {;}, disabled: function(){ return true;} }  // Backbone Dialog -- Kyo 040713
-        itemsList['detach_volume_bb'] = {"name":'Detach Volume', callback: function(key, opt) {;}, disabled: function(){ return true;} }  // Backbone Dialog -- Kyo 040713
-        itemsList['create_volume_bb'] = {"name":'Create Volume', callback: function(key, opt) {;}, disabled: function(){ return true;} }  // Backbone Dialog -- Kyo 040713
+//        itemsList['create_volume_bb'] = {"name":'Create Volume', callback: function(key, opt) {;}, disabled: function(){ return true;} }  // Backbone Dialog -- Kyo 040713
       })();
 
       // add attach action
       if ( volumes.length === 1 && volumes[0].status === 'available' ){
-        itemsList['attach'] = { "name": volume_action_attach, callback: function(key, opt) { thisObj._attachAction(); } }
-        itemsList['attach_volume_bb'] = {"name":'Attach Volume', callback: function(key, opt){ thisObj._newAttachVolumeAction(); }}   // Backbone Dialog -- Kyo 040813
+//        itemsList['attach'] = { "name": volume_action_attach, callback: function(key, opt) { thisObj._attachAction(); } }
+        itemsList['attach_volume'] = {"name": volume_action_attach, callback: function(key, opt){ thisObj._newAttachVolumeAction(); }}   // Backbone Dialog -- Kyo 040813
       }
 
       // detach actions
@@ -756,16 +760,16 @@
           }
         }
         if (addOption){
-          itemsList['detach'] = { "name": volume_action_detach, callback: function(key, opt) { thisObj._detachAction(); } }
-          itemsList['detach_volume_bb'] = { "name": "Detach Volume", callback: function(key, opt) { thisObj._newDetachVolumeAction(); } }    // Backbone Dialog -- Kyo 040813
+//          itemsList['detach'] = { "name": volume_action_detach, callback: function(key, opt) { thisObj._detachAction(); } }
+          itemsList['detach_volume'] = { "name": volume_action_detach, callback: function(key, opt) { thisObj._newDetachVolumeAction(); } }    // Backbone Dialog -- Kyo 040813
         }
       }
 
       // create snapshot-action
       if ( volumes.length === 1) {
          if ( volumes[0].status === 'in-use' || volumes[0].status === 'available' ){
-            itemsList['create_snapshot'] = { "name": volume_action_create_snapshot, callback: function(key, opt) { thisObj._createSnapshotAction(); } }
-            itemsList['create_snapshot_bb'] = {"name":'Create Snapshot', callback: function(key, opt){ thisObj._newCreateSnapshotAction(); }}   // BAckbone Dialog -- Kyo 040813
+//            itemsList['create_snapshot'] = { "name": volume_action_create_snapshot, callback: function(key, opt) { thisObj._createSnapshotAction(); } }
+            itemsList['create_snapshot_from_volume'] = {"name": volume_action_create_snapshot, callback: function(key, opt){ thisObj._newCreateSnapshotAction(); }}   // BAckbone Dialog -- Kyo 040813
          }
       }
 
@@ -779,8 +783,8 @@
           }
         }
         if (addOption){
-          itemsList['delete'] = { "name": volume_action_delete, callback: function(key, opt) { thisObj._deleteAction(); } }
-          itemsList['delete_volume'] = {"name":'Delete Volume', callback: function(key, opt){ thisObj._deleteVolumeAction(); }}  // Backbone Dialog -- Kyo 040813
+//          itemsList['delete'] = { "name": volume_action_delete, callback: function(key, opt) { thisObj._deleteAction(); } }
+          itemsList['delete_volume'] = {"name": volume_action_delete, callback: function(key, opt){ thisObj._deleteVolumeAction(); }}  // Backbone Dialog -- Kyo 040813
         }
       }
 
@@ -790,7 +794,7 @@
       }
 
      // TEMP. Adding the new Create Volume Dialog into MORE ACTIONS Tab while integrating
-     itemsList['create_volume_bb'] = {"name":'Create Volume', callback: function(key, opt){ thisObj._newCreateVolumeAction(); }}  // Backbone Dialog -- Kyo 040913
+//     itemsList['create_volume_bb'] = {"name":'Create Volume', callback: function(key, opt){ thisObj._newCreateVolumeAction(); }}  // Backbone Dialog -- Kyo 040913
 
       return itemsList;
     },

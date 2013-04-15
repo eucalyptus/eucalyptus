@@ -55,7 +55,7 @@
 	      // Use CSS 'twist'
 	      "aTargets":[1],
               "mRender" : function(data) {
-		   return eucatableDisplayColumnTypeTwist(data, data, 75);
+                return eucatableDisplayColumnTypeTwist(data, data, 75);
               },
               "mData": "name",
               "iDataSort": 7,
@@ -170,18 +170,12 @@
 	      // Invisible column for storing the description variable, used for sorting 
 	      "bVisible": false,
               "aTargets":[6],
-	      "mRender" : function(data){
-		return DefaultEncoder().encodeForHTML(data);
-	       },
                "mData": "description",
 	    },
 	    { 
 	      // Invisible column for storing the name variable, used for sorting
 	      "bVisible": false,
               "aTargets":[7],
-	      "mRender" : function(data){
-		return DefaultEncoder().encodeForHTML(data);
-	       },
                "mData": "name",
 	    },
           ],
@@ -196,7 +190,7 @@
         menu_actions : function(){
           return thisObj._createMenuActions(); 
         },
-         expand_callback : function(row){ // row = [col1, col2, ..., etc]
+        expand_callback : function(row){ // row = [col1, col2, ..., etc]
           return thisObj._expandCallback(row);
         },
         menu_click_create : function (args) { thisObj._createAction(); },
@@ -1013,7 +1007,7 @@
     _expandCallback : function(row){ 
       var $el = $('<div />');
       require(['app', 'views/expandos/sgroup'], function(app, expando) {
-         new expando({el: $el, model: app.data.sgroup.get(row[1])});
+        new expando({el: $el, model: app.data.sgroup.get(row[7])});
       });
       return $el;
     },

@@ -23,7 +23,6 @@ import javax.persistence.Column;
 import javax.persistence.JoinColumn;
 import javax.persistence.ManyToOne;
 import javax.persistence.PersistenceContext;
-import javax.persistence.PrePersist;
 import javax.persistence.Table;
 import javax.persistence.Transient;
 
@@ -34,7 +33,6 @@ import org.hibernate.annotations.Entity;
 
 import com.eucalyptus.entities.AbstractPersistent;
 import com.eucalyptus.loadbalancing.LoadBalancer;
-import com.eucalyptus.loadbalancing.LoadBalancerBackendInstance;
 import com.eucalyptus.loadbalancing.LoadBalancerDnsRecord;
 import com.eucalyptus.loadbalancing.LoadBalancerSecurityGroup;
 import com.eucalyptus.loadbalancing.LoadBalancerZone;
@@ -53,7 +51,7 @@ public class LoadBalancerServoInstance extends AbstractPersistent {
 	private static final long serialVersionUID = 1L;
 	
 	enum STATE {
-		Pending, InService, Error, OutOfService
+		Pending, InService, Error, OutOfService, Retired
 	}
 	
     @ManyToOne
@@ -67,7 +65,11 @@ public class LoadBalancerServoInstance extends AbstractPersistent {
     @ManyToOne
     @JoinColumn( name = "metadata_dns_fk", nullable=true)
     private LoadBalancerDnsRecord dns = null; 
-        
+    
+    @ManyToOne
+    @JoinColumn( name = "metadata_asg_fk", nullable=true)
+    private LoadBalancerAutoScalingGroup autoscaling_group = null; 
+       
     @Transient
     private LoadBalancer loadbalancer = null;
     
@@ -80,17 +82,22 @@ public class LoadBalancerServoInstance extends AbstractPersistent {
     @Column(name="metadata_address", nullable=true)
     private String address = null;
 
+    @Column(name="metadata_private_ip", nullable=true)
+    private String privateIp = null;
+    
     private LoadBalancerServoInstance(){
     }
     private LoadBalancerServoInstance(final LoadBalancerZone lbzone){
     	this.state = STATE.Pending.name();
     	this.zone = lbzone;
     	this.loadbalancer = zone.getLoadbalancer();
+    	this.dns = this.loadbalancer.getDns();
     }
     private LoadBalancerServoInstance(final LoadBalancerZone lbzone, final LoadBalancerSecurityGroup group){
     	this.state = STATE.Pending.name();
     	this.zone = lbzone;
     	this.loadbalancer = zone.getLoadbalancer();
+    	this.dns= this.loadbalancer.getDns();
     	this.security_group = group;
     }
     private LoadBalancerServoInstance(final LoadBalancerZone lbzone, final LoadBalancerSecurityGroup group, final LoadBalancerDnsRecord dns){
@@ -99,6 +106,14 @@ public class LoadBalancerServoInstance extends AbstractPersistent {
     	this.loadbalancer = zone.getLoadbalancer();
     	this.security_group = group;
     	this.dns = dns;
+    }
+    
+    public static LoadBalancerServoInstance newInstance(final LoadBalancerZone lbzone, final LoadBalancerSecurityGroup group, final LoadBalancerDnsRecord dns, final LoadBalancerAutoScalingGroup as_group, String instanceId)
+    {
+    	final LoadBalancerServoInstance instance = new LoadBalancerServoInstance(lbzone, group, dns);
+    	instance.setInstanceId(instanceId);
+    	instance.setAutoScalingGroup(as_group);
+    	return instance;
     }
     
     public static LoadBalancerServoInstance named(final LoadBalancerZone lbzone){
@@ -112,6 +127,9 @@ public class LoadBalancerServoInstance extends AbstractPersistent {
     	return sample;
     }
     
+    public static LoadBalancerServoInstance named(){
+    	return new LoadBalancerServoInstance();
+    }
     public static LoadBalancerServoInstance withState(String state){
     	final LoadBalancerServoInstance sample = new LoadBalancerServoInstance();
     	sample.state = state;
@@ -164,6 +182,26 @@ public class LoadBalancerServoInstance extends AbstractPersistent {
 
     public LoadBalancerDnsRecord getDns(){
     	return this.dns;
+    }
+   
+    public void setAutoScalingGroup(LoadBalancerAutoScalingGroup group){
+    	this.autoscaling_group = group;
+    }
+    
+    public LoadBalancerAutoScalingGroup getAutoScalingGroup(){
+    	return this.autoscaling_group;
+    }
+    
+    public void setAvailabilityZone(LoadBalancerZone zone){
+    	this.zone = zone;
+    }
+    
+    public String getPrivateIp(){
+    	return this.privateIp;
+    }
+    
+    public void setPrivateIp(final String ipAddr){
+    	this.privateIp = ipAddr;
     }
     
 	@Override

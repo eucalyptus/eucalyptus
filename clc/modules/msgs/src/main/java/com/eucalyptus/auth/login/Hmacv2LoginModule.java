@@ -73,6 +73,7 @@ import com.eucalyptus.auth.principal.AccessKey;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.crypto.Hmac;
 import com.eucalyptus.crypto.util.SecurityParameter;
+import com.google.common.base.Strings;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Ordering;
 
@@ -88,23 +89,28 @@ public class Hmacv2LoginModule extends HmacLoginModuleSupport {
     String sig = credentials.getSignature( );
     checkForReplay( sig );
     AccessKey accessKey = lookupAccessKey( credentials );
-    User user = accessKey.getUser( );
-    String secretKey = accessKey.getSecretKey( );
-    String canonicalString = this.makeSubjectString( credentials.getVerb( ), credentials.getHeaderHost( ), credentials.getServicePath( ), credentials.getParameters( ) );
-    String canonicalStringWithPort = this.makeSubjectString( credentials.getVerb( ), credentials.getHeaderHost( ) + ":" + credentials.getHeaderPort( ), credentials.getServicePath( ), credentials.getParameters( ) );
-    String computedSig = this.getSignature( secretKey, canonicalString, credentials.getSignatureMethod( ) );
+    User user = accessKey.getUser();
+    String secretKey = accessKey.getSecretKey();
+    String canonicalString = this.makeSubjectString( credentials.getVerb(), credentials.getHeaderHost(), credentials.getServicePath(), credentials.getParameters() );
+    String canonicalStringWithPort = this.makeSubjectString( credentials.getVerb(), credentials.getHeaderHost() + ":" + credentials.getHeaderPort(), credentials.getServicePath(), credentials.getParameters() );
+    String canonicalStringWithAwsCliPath = this.makeSubjectString( credentials.getVerb( ), credentials.getHeaderHost( ) + ":" + credentials.getHeaderPort( ), convertForAwsCli( credentials.getServicePath() ), credentials.getParameters( ) );
+    String computedSig = this.getSignature( secretKey, canonicalString, credentials.getSignatureMethod() );
     String computedSigWithPort = this.getSignature( secretKey, canonicalStringWithPort, credentials.getSignatureMethod( ) );
-    if ( !computedSig.equals( sig ) && !computedSigWithPort.equals( sig ) ) {
+    String computedSigWithAwsCliPath = this.getSignature( secretKey, canonicalStringWithAwsCliPath, credentials.getSignatureMethod( ) );
+    if ( !computedSig.equals( sig ) && !computedSigWithPort.equals( sig ) && !computedSigWithAwsCliPath.equals( sig ) ) {
       sig = sanitize( urldecode( sig ) );
       computedSig = this.getSignature( secretKey, canonicalString.replaceAll("\\+","%2B"), credentials.getSignatureMethod( ) ).replaceAll("\\+"," ");
       computedSigWithPort = this.getSignature( secretKey, canonicalStringWithPort.replaceAll("\\+","%2B"), credentials.getSignatureMethod( ) ).replaceAll("\\+"," ");
-      if( !computedSig.equals( sig ) && !computedSigWithPort.equals( sig ) ) {
+      computedSigWithAwsCliPath = this.getSignature( secretKey, canonicalStringWithAwsCliPath.replaceAll("\\+","%2B"), credentials.getSignatureMethod( ) ).replaceAll("\\+"," ");
+      if( !computedSig.equals( sig ) && !computedSigWithPort.equals( sig ) && !computedSigWithAwsCliPath.equals( sig ) ) {
         computedSig = this.getSignature( secretKey, canonicalString.replaceAll("\\+","%20"), credentials.getSignatureMethod( ) ).replaceAll("\\+"," ");
         computedSigWithPort = this.getSignature( secretKey, canonicalStringWithPort.replaceAll("\\+","%20"), credentials.getSignatureMethod( ) ).replaceAll("\\+"," ");
-        if( !computedSig.equals( sig ) && !computedSigWithPort.equals( sig ) ) {
+        computedSigWithAwsCliPath = this.getSignature( secretKey, canonicalStringWithAwsCliPath.replaceAll("\\+","%20"), credentials.getSignatureMethod( ) ).replaceAll("\\+"," ");
+        if( !computedSig.equals( sig ) && !computedSigWithPort.equals( sig ) && !computedSigWithAwsCliPath.equals( sig ) ) {
           computedSig = this.getSignature( secretKey, canonicalString.replaceAll("\\*","%2A"), credentials.getSignatureMethod( ) ).replaceAll("\\+"," ");
           computedSigWithPort = this.getSignature( secretKey, canonicalStringWithPort.replaceAll("\\*","%2A"), credentials.getSignatureMethod( ) ).replaceAll("\\+"," ");
-          if( !computedSig.equals( sig ) && !computedSigWithPort.equals( sig ) ) {
+          computedSigWithAwsCliPath = this.getSignature( secretKey, canonicalStringWithAwsCliPath.replaceAll("\\*","%2A"), credentials.getSignatureMethod( ) ).replaceAll("\\+"," ");
+          if( !computedSig.equals( sig ) && !computedSigWithPort.equals( sig ) && !computedSigWithAwsCliPath.equals( sig ) ) {
             return false;
           }
         }
@@ -154,6 +160,22 @@ public class Hmacv2LoginModule extends HmacLoginModuleSupport {
       LOG.error( e, e );
       throw new AuthenticationException( "Failed to compute signature" );
     }
+  }
+
+  /**
+   * Convert for compatibility with AWS CLI tools.
+   *
+   * 1) Trim the trailing "/"
+   * 2) Convert to lower case
+   *
+   * @return The converted path.
+   */
+  private String convertForAwsCli( final String path ) {
+    String converted = Strings.nullToEmpty( path );
+    if ( converted.endsWith( "/" ) ) {
+      converted = converted.substring( 0, converted.length() - 1 );
+    }
+    return converted.toLowerCase();
   }
 
 }

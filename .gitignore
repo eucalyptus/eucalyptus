@@ -93,3 +93,7 @@ node/test_hooks
 node/test_nc
 util/euca-generate-fault
 /.settings
+.idea/
+.groovy/
+*.[ei]ml
+atlassian-ide-plugin.xml

@@ -1,13 +1,12 @@
 <!-- Wizard (left side) -->
 <div id="scaling-table" class="wizard-wrapper">
-    <div id="new-scaling-group" class="launcher-wrapper">
-        <div class="launch-wizard-pointer"></div>
-        <!-- <h1 class="box-header" id="launch-wizard-header">Create new launch configuration</h1> -->
-        <div class="box-header" id="launch-wizard-header"><span>Create new launch configuration<div class="help-link"><a href="#">?</a></div></span></div>
-        <div class="launch-wizard-intro-text">
-            <div id="launch-wizard-note">An ID will be auto-generated when you launch this instance.</div>
-        </div>
-
+  <div id="new-scaling-group" class="launcher-wrapper">
+    <div class="launch-wizard-pointer"></div>
+    <!-- <h1 class="box-header" id="launch-wizard-header">Create new launch configuration</h1> -->
+    <div class="box-header" id="launch-wizard-header"><span data-msg="create_launch_config_header">Create new launch configuration<div class="help-link"><a href="#">?</a></div></span></div>
+    <div class="launch-wizard-intro-text">
+    <!-- <div id="launch-wizard-note">An ID will be auto-generated when you launch this instance.</div> -->
+    </div>
         <div id="wizard" class="wizard-steps clearfix">
             <div id="wizardAbove" class="">Above</div>
             <div id="wizardContent"></div>
@@ -25,7 +24,6 @@
             <div id="wizardBelow">Below</div>
         </div>
         <!-- END .wizard-steps -->
-
     </div>
 </div>
 <!-- END Wizard -->
@@ -45,6 +43,6 @@
         <div id="wizardSummary" class="summary wizard-summary">
         </div> 
         <div class="wizard-cancel" id="launch-wizard-cancel">
-          <span>[<a href="#launchconfig">Cancel this instance</a>]</span>
+          <span>[<a href="#launchconfig" data-msg="create_launch_config_cancel">Cancel this launch config</a>]</span>
         </div> 
     </div>

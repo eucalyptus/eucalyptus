@@ -26,6 +26,7 @@
 from boto.roboto.awsqueryrequest import AWSQueryRequest
 from boto.roboto.param import Param
 import eucadmin
+from eucadmin.modifyservice import ModifyService
 
 class MigrateInstances(AWSQueryRequest):
     ServicePath = '/services/Eucalyptus'
@@ -45,7 +46,11 @@ class MigrateInstances(AWSQueryRequest):
               Param(name='exclude_dest', long_name='exclude-dest',
                     ptype='string', cardinality='*', request_param=False,
                     doc=('migrate to any host except this one (may be used '
-                    'more than once)'))]
+                    'more than once)')),
+              Param(name='stop_source', long_name='stop-source',
+                    ptype='boolean', default=False, request_param=False,
+                    doc=('also stop the source node controller to prevent new '
+                         'instances from running on it (requires --source)'))]
 
     def get_connection(self, **args):
         if self.connection is None:
@@ -71,15 +76,24 @@ class MigrateInstances(AWSQueryRequest):
                              '--source is required')
         if self.args.get('dest'):
             if self.args.get('exclude_dest'):
-                raise ValueError('error: argument --to-host: not allowed '
-                                 'with --not-to-host')
+                raise ValueError('error: argument --dest: not allowed '
+                                 'with --exclude-dest')
             self.request_params['AllowHosts'] = 'true'
             for i, host in enumerate(self.args['dest'], 1):
                 self.request_params['DestinationHost.{0}'.format(i)] = host
-        elif self.args.get('not_to_nost'):
+        elif self.args.get('exclude_dest'):
             self.request_params['AllowHosts'] = 'false'
             for i, host in enumerate(self.args['exclude_dest'], 1):
                 self.request_params['DestinationHost.{0}'.format(i)] = host
+
+        if self.args['stop_source']:
+            source = self.args.get('source')
+            if source is None:
+                raise ValueError('error: argument --stop-source: only valid '
+                                 'with --source, not -i/--instance')
+            obj = ModifyService(debug=self.args.get('debug'))
+            obj.main(name=self.args['source'], state='STOP')
+
         return self.send(**args)
 
     def main_cli(self):

@@ -59,6 +59,9 @@ public class LoadBalancerBackendInstance extends UserMetadata<LoadBalancerBacken
 	@Transient
 	private static final long serialVersionUID = 1L;
 	
+	@Transient
+	private String partition = null;
+	
 	public enum STATE {
 		InService, OutOfService
 	}
@@ -86,14 +89,7 @@ public class LoadBalancerBackendInstance extends UserMetadata<LoadBalancerBacken
 		this.loadbalancer = lb;
 		this.setState(STATE.OutOfService);
 		
-		List<RunningInstancesItemType> instanceIds = EucalyptusActivityTasks.getInstance().describeInstances(Lists.newArrayList(vmId));
-	    for(RunningInstancesItemType instance : instanceIds ) {
-	      if(instance.getInstanceId().equals(vmId)){
-	        this.vmInstance = instance;
-	        break;
-	      }
-	    }
-    	if(this.vmInstance == null)
+		if(this.getVmInstance() == null)
     		throw new IllegalArgumentException("Cannot find the instance with id="+vmId);
 
     	final EntityTransaction db = Entities.get( LoadBalancerBackendInstance.class );
@@ -134,6 +130,21 @@ public class LoadBalancerBackendInstance extends UserMetadata<LoadBalancerBacken
 	}
 	
 	public RunningInstancesItemType getVmInstance(){
+		try{
+			if(this.vmInstance==null){
+				List<RunningInstancesItemType> instanceIds = 
+					EucalyptusActivityTasks.getInstance().describeUserInstances(this.getOwnerUserId(), Lists.newArrayList(this.displayName));
+				for(RunningInstancesItemType instance : instanceIds ) {
+				      if(instance.getInstanceId().equals(this.getDisplayName()) && instance.getStateName().equals("running")){
+				        this.vmInstance = instance;
+				        this.partition = instance.getPlacement();
+				        break;
+				      }
+				}
+			}
+		}catch(Exception ex){
+			;
+		}
 		return this.vmInstance;
 	}
 
@@ -167,14 +178,17 @@ public class LoadBalancerBackendInstance extends UserMetadata<LoadBalancerBacken
     
 	@Override
 	public String getPartition() {
-
-    String localPartition = null;
-    List<RunningInstancesItemType> instances = EucalyptusActivityTasks.getInstance().describeInstances(Lists.newArrayList(this.vmInstance.getInstanceId()));
-    for (RunningInstancesItemType instance : instances ) {
-      localPartition = instance.getPlacement();
-      break;
-    }
-    return localPartition != null ? localPartition : null;
+		if(this.partition!=null)
+			return this.partition;
+		else{
+			final RunningInstancesItemType vm = this.getVmInstance();
+			return vm != null? vm.getPlacement() : null;
+		}
+	}
+	
+	public String getIpAddress(){
+		final RunningInstancesItemType vm = this.getVmInstance();
+		return vm!=null ? vm.getIpAddress() : null;
 	}
 
 	@Override

@@ -67,7 +67,14 @@
   </mapping>
   <mapping name="MigrateInstances" class="edu.ucsb.eucalyptus.msgs.MigrateInstancesType" extends="edu.ucsb.eucalyptus.msgs.CloudTopologyMessage">
     <structure map-as="edu.ucsb.eucalyptus.msgs.CloudTopologyMessage" />
-    <value name="sourceHost" field="sourceHost" usage="required" />
+    <value name="sourceHost" field="sourceHost" usage="optional" />
+    <value name="instanceId" field="instanceId" usage="optional" />
+    <structure usage="optional">
+      <collection field="destinationHosts" factory="org.jibx.runtime.Utility.arrayListFactory">
+        <value name="destinationHost" type="java.lang.String" />
+      </collection>
+    </structure>
+    <value name="allowHosts" field="allowHosts" usage="optional" />
   </mapping>
   <mapping name="MigrateInstancesResponse" class="edu.ucsb.eucalyptus.msgs.MigrateInstancesResponseType" extends="edu.ucsb.eucalyptus.msgs.CloudTopologyMessage">
     <structure map-as="edu.ucsb.eucalyptus.msgs.CloudTopologyMessage" />

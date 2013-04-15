@@ -288,7 +288,7 @@ that describes a Eucalyptus instance to be launched.
                     <console type="pty"/>
                 </xsl:when>
 	</xsl:choose>
-                <!-- <graphics type='vnc' port='-1' autoport='yes' keymap='en-us' listen='0.0.0.0'/> -->
+                <!-- <graphics type='vnc' port='-1' autoport='yes' keymap='en-us' -->
             </devices>
         </domain>
     </xsl:template>

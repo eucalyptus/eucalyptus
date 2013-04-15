@@ -52,10 +52,13 @@ public class DescribeAlarmsType extends CloudWatchMessage {
   public DescribeAlarmsType() {  }
 }
 public class Dimensions extends EucalyptusData {
-  public Dimensions() {  }
   @HttpEmbedded(multiple=true)
   @HttpParameterMapping(parameter="member")
   ArrayList<Dimension> member = new ArrayList<Dimension>();
+  public Dimensions() {  }
+  public Dimensions( Dimension... dimensions ) {
+    member.addAll( dimensions as List<Dimension> )
+  }
 }
 public class PutMetricDataType extends CloudWatchMessage {
   String namespace;
@@ -115,7 +118,6 @@ public class DescribeAlarmHistoryResult extends EucalyptusData {
   String nextToken;
   public DescribeAlarmHistoryResult() {  }
 }
-@HttpEmbedded
 public class DimensionFilter extends EucalyptusData {
   String name;
   String value;
@@ -125,6 +127,10 @@ public class Dimension extends EucalyptusData {
   String name;
   String value;
   public Dimension() {  }
+  public Dimension( String name, String value ) {
+    this.name = name
+    this.value = value
+  }
 }
 public class SetAlarmStateResponseType extends CloudWatchMessage {
   public SetAlarmStateResponseType() {  }

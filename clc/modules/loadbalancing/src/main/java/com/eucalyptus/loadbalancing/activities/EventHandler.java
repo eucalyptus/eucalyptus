@@ -26,5 +26,6 @@ package com.eucalyptus.loadbalancing.activities;
 public interface EventHandler<T extends LoadbalancingEvent> {
 	public void apply(T evt) throws EventHandlerException;
 	public void rollback() throws EventHandlerException;
+	public boolean skipRemaining();
 	public EventHandlerChain<T> getChain();
 }

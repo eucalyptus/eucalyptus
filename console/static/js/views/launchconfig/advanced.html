@@ -1,38 +1,38 @@
 <div class="wizard-step">
-  <div class="wizardTitle"><h3>Advanced</h3></div>
+  <div class="wizardTitle"><h3 data-msg="launch_instance_section_header_advanced">Advanced</h3></div>
   <div id="launch-wizard-advanced-main-contents">
-    <div class="wizard-section-label">Select advanced options:</div>
+    <div class="wizard-section-label" data-msg="launch_instance_advanced_header">Select advanced options:</div>
 
       <div id="launch-wizard-advanced-userdata"> 
         <div class="form-row clearfix upper-sibling">
-          <label for="launch-wizard-advanced-input-userdata">User data</label>
-          <textarea data-text="user_data" class="description" title="Enter custom user data to be passed to the instances or click the choose file button" id="launch-wizard-advanced-input-userdata"></textarea>
+           <label for="launch-wizard-advanced-input-userdata" data-msg="launch_instance_advanced_userdata">User data</label>
+          <textarea data-text="model.user_data" class="description" title="Enter custom user data to be passed to the instances or click the choose file button" id="launch-wizard-advanced-input-userdata"></textarea>
       </div>
       <div class="form-row clearfix lower-sibling">
-        <label for="launch-wizard-advanced-input-userfile">Or:</label>
+        <label for="launch-wizard-advanced-input-userfile" data-msg="launch_instance_advanced_attachfile">Or:</label>
         <input data-value="user_filename" id="launch-wizard-advanced-input-userfile" type="file">
       </div>
     </div>
 
     <div id="launch-wizard-advanced-kernelramdisk"> 
       <div id="launch-wizard-advanced-kernel" class="form-row clearfix">
-        <label for="launch-wizard-advanced-kernel-selector">Kernel ID</label>
+        <label for="launch-wizard-advanced-kernel-selector" data-msg="launch_instance_advanced_kernel">Kernel ID</label>
         <select data-on-change=":setKernel" id="launch-wizard-advanced-kernel-selector" title="Select a specific kernel ID">
-          <option value="default">Use default from image</option>
+          <option value="default" data-msg="launch_instance_advanced_usedefault">Use default from image</option>
           <option data-each-kernel="kernels" data-value="kernel.id" data-text="kernel.id"></option>
         </select>
       </div>
       <div id="launch-wizard-advanced-ramdisk" class="form-row clearfix">
-        <label for="launch-wizard-advanced-ramdisk-selector">RAM disk ID</label>
+        <label for="launch-wizard-advanced-ramdisk-selector" data-msg="launch_instance_advanced_ramdisk">RAM disk ID</label>
         <select data-on-change=":setRamDisk" id="launch-wizard-advanced-ramdisk-selector" title="Select a specific RAM disk ID">
-          <option value="default">Use default from image</option>
+          <option value="default" data-msg="launch_instance_advanced_usedefault">Use default from image</option>
           <option data-each-ramdisk="ramdisks" data-value="ramdisk.id" data-text="ramdisk.id"></option></select>
       </div>
    </div>
 
    <div class="form-row clearfix orphan-row" id="launch-wizard-advanced-monitoring"> 
-     <label for="launch-wizard-advanced-input-monitoring">Monitoring</label>
-     <input data-checked="enableMonitoring" id="launch-wizard-advanced-input-monitoring" title="" type="checkbox">
+     <label for="launch-wizard-advanced-input-monitoring" data-msg="monitoring_label">Monitoring</label>
+     <input data-on-change=:setMonitoring" data-checked="enableMonitoring" id="launch-wizard-advanced-input-monitoring" title="" type="checkbox">
      <label for="launch-wizard-advanced-input-network" class="plaintext-label">Enable detailed monitoring</label>
    </div>
 
@@ -46,16 +46,16 @@
 -->
 
   <div id="launch-wizard-advanced-storage"> 
-    <div class="wizard-section-label">Storage</div>
+    <div class="wizard-section-label" data-msg="storage_label">Storage</div>
     <div id="launch-wizard-advanced-storage-table-wrapper">
       <table class="device-map-table">
         <thead>
           <tr>
-            <th>Volume</th>
-            <th>Mapping</th>
-            <th>Create From Snapshot</th>
-            <th>Size (GB)</th>
-            <th>Delete on Termination</th>
+            <th data-msg="launch_instance_advanced_th_volume">Volume</th>
+            <th data-msg="launch_instance_advanced_th_mapping">Mapping</th>
+            <th data-msg="launch_instance_advanced_th_create">Create From Snapshot</th>
+            <th data-msg="launch_instance_advanced_th_size">Size (GB)</th>
+            <th data-msg="launch_instance_advanced_th_delete">Delete on Termination</th>
             <th></th>
          </tr>
        </thead>
@@ -63,13 +63,13 @@
 
 
         <tr data-each-volume="blockDeviceMappings">
-          <td data-text=":getVolLabel">Root
+          <td data-text=":getVolLabel" data-msg="launch_instance_root">Root
           </td>
-          <td data-text="volume.map_name">
+          <td data-text="volume.device_name">
           </td>
           <td data-text="volume.snapshot_id">
           </td>
-          <td data-text="volume.size"></td>
+          <td data-text="volume.volume_size"></td>
           <td class="centered-cell"><input data-disabled=":checkDisabledIf" data-checked="volume.delete_on_termination" class="launch-wizard-advanced-storage-delOnTerm" type="checkbox"></td>
           <td><div data-on-click=":delStorageVol" data-addclass=":deleteButtonIf"><div></td>
         </tr> 
@@ -78,9 +78,9 @@
 
         <tr>
           <td>
-            <select data-enabled="enableStorageVolume" data-on-change=":setStorageVolume"  class="launch-wizard-advanced-storage-volume-selector" title="Select the source of the additional storage">
-              <option value="EBS">EBS</option>
-              <option value="root">Root</option>
+            <select data-enabled="enableStorageVolume" class="launch-wizard-advanced-storage-volume-selector" title="Select the source of the additional storage">
+              <option value="EBS" data-msg="launch_instance_ebs">EBS</option>
+              <option value="root" data-msg="launch_instance_root">Root</option>
             </select>
           </td>
           <td>
@@ -101,10 +101,10 @@
       </tr>
     </tbody>
 </table>
-<div class="field-error" data-text="launchConfigErrors.size"></div>
+<div class="field-error" data-text="launchConfigErrors.volume_size"></div>
 </div>
 </div>
 <!-- <input value="emi-EDBA3EEA" id="launch-wizard-image-emi" type="hidden"> -->
 </div>
-<div id="launch-wizard-buttons-advanced" class="launch-wizard-buttons"> <button class="button" id="launch-wizard-buttons-advanced-launch">Create launch configuration</button>
+<!-- <div id="launch-wizard-buttons-advanced" class="launch-wizard-buttons"> <button class="button" id="launch-wizard-buttons-advanced-launch">Create launch configuration</button> -->
 </div>

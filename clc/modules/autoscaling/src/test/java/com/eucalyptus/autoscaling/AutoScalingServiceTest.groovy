@@ -96,6 +96,13 @@ import com.eucalyptus.autoscaling.tags.Tag
 import com.eucalyptus.autoscaling.tags.Tags
 import com.eucalyptus.auth.principal.Role
 import com.eucalyptus.autoscaling.instances.ConfigurationState
+import javax.annotation.Nullable
+import javax.annotation.Nonnull
+import com.eucalyptus.autoscaling.activities.CloudWatchClient
+import com.eucalyptus.autoscaling.activities.TestClients
+import com.eucalyptus.cloudwatch.DescribeAlarmsType
+import com.eucalyptus.cloudwatch.DescribeAlarmsResponseType
+import com.eucalyptus.autoscaling.activities.ActivityCause
 
 /**
  * 
@@ -198,9 +205,7 @@ class AutoScalingServiceTest {
       healthCheckGracePeriod: 4,
       healthCheckType: "EC2",
       loadBalancerNames: new LoadBalancerNames( member: [ "balancer-1", "balancer-2" ] ),
-      placementGroup: "placementgroup",
       terminationPolicies: new TerminationPolicies( member: [ "NewestInstance", "Default" ] ),
-      vpcZoneIdentifier: "vpc-1",      
     ) )
 
     DescribeAutoScalingGroupsResponseType emptyDescribeResponse =
@@ -363,7 +368,7 @@ class AutoScalingServiceTest {
   @Test
   void testTerminateInstances() {
     Accounts.setAccountProvider( accountProvider() )
-    AutoScalingGroup group;
+    AutoScalingGroup group
     AutoScalingService service = service( launchConfigurationStore(), autoScalingGroupStore( [
         group = new AutoScalingGroup(
             naturalId: '88777c80-7248-11e2-bcfd-0800200c9a66',
@@ -399,12 +404,12 @@ class AutoScalingServiceTest {
       ) )
 
     Activity activity =
-      terminateInstanceInAutoScalingGroupResponseType.terminateInstanceInAutoScalingGroupResult.activity;
+      terminateInstanceInAutoScalingGroupResponseType.terminateInstanceInAutoScalingGroupResult.activity
 
     assertNotNull( "Activity", activity )
     assertEquals( "Activity identifier", 'b7717740-7246-11e2-bcfd-0800200c9a66', activity.activityId )
     assertEquals( "Activity group name", "Group1", activity.autoScalingGroupName )
-    assertEquals( "Activity cause", "Some cause", activity.cause )
+    assertEquals( "Activity cause", "At 2013-02-01T12:34:56Z Some cause.", activity.cause )
     assertEquals( "Activity start time", date( "2013-02-01T12:34:56.789Z" ), activity.startTime )
     assertEquals( "Activity status code", "InProgress", activity.statusCode )
     assertEquals( "Activity description", "Description", activity.description )
@@ -417,16 +422,25 @@ class AutoScalingServiceTest {
       autoScalingGroupStore = autoScalingGroupStore(),
       autoScalingInstanceStore = autoScalingInstanceStore(),
       scalingPolicyStore = scalingPolicyStore(),
-      activityManager = activityManager()
+      activityManager = activityManager(),
+      scalingActivities = autoScalingActivitiesStore()
   ) {
     new AutoScalingService( 
         launchConfigurationStore,         
         autoScalingGroupStore, 
         autoScalingInstanceStore,
         scalingPolicyStore,
-        activityManager )
+        activityManager,
+        scalingActivities )
   }
-  
+
+  def <T> T invoke( Class<T> resultClass, Object object, String method, Class[] parameterClasses, Object[] parameters = [] ) {
+    // A groovy metaclass issue or class path issue prevents some method
+    // invocations from succeeding without a bit of voodoo
+    Object result = object.getClass().getMethod( method, parameterClasses ).invoke( object, parameters )
+    result == null ? null : resultClass.cast( result )
+  }
+
   AccountProvider accountProvider() {
     new AccountProvider() {
       @Override
@@ -677,6 +691,12 @@ class AutoScalingServiceTest {
       }
 
       @Override
+      void markExpiredPendingUnhealthy(AutoScalingGroup group,
+                                       Collection<String> instanceIds,
+                                       long maxAge) {
+      }
+
+      @Override
       Set<String> verifyInstanceIds(String accountNumber,
                                     Collection<String> instanceIds) {
         return [] as Set
@@ -760,16 +780,100 @@ class AutoScalingServiceTest {
       @Override
       ScalingPolicy save(final ScalingPolicy scalingPolicy) {
         scalingPolicy.setId( "1" )
+        scalingPolicy.setAutoScalingGroupName( scalingPolicy.getGroup().getAutoScalingGroupName() )
         policies.add( scalingPolicy )
         scalingPolicy
       }
     }
   }
-  
+
+  ScalingActivities autoScalingActivitiesStore( List<ScalingActivity> activities = [] ) {
+    new ScalingActivities() {
+      @Override
+      List<ScalingActivity> list(@Nullable OwnerFullName ownerFullName) {
+        ownerFullName == null ?
+          activities :
+          activities.findAll { activity -> invoke( String.class, activity, "getOwnerAccountNumber").equals( ownerFullName.accountNumber ) }
+      }
+
+      @Override
+      List<ScalingActivity> list(@Nullable OwnerFullName ownerFullName,
+                                 @Nonnull Predicate<? super ScalingActivity> filter) {
+        list( ownerFullName ).findAll { activity -> filter.apply( activity ) } as List
+      }
+
+      @Override
+      ScalingActivity lookup(OwnerFullName ownerFullName,
+                             String activityId) {
+        ScalingActivity activity = activities.find{ activity -> invoke( String.class, activity, "getActivityId").equals( activityId ) }
+        if ( activity == null ) {
+          throw new AutoScalingMetadataNotFoundException("Scaling activity not found: " + activityId)
+        }
+        activity
+      }
+
+      @Override
+      List<ScalingActivity> list(@Nullable OwnerFullName ownerFullName,
+                                 @Nullable AutoScalingGroup group,
+                                 @Nonnull Collection<String> activityIds,
+                                 @Nonnull Predicate<? super ScalingActivity> filter) {
+        activities.findAll{ activity ->
+          (activityIds.isEmpty() || activityIds.contains( invoke( String.class, activity, "getActivityId") ) ) &&
+              (ownerFullName==null || invoke( String.class, activity, "getOwnerAccountNumber").equals( ownerFullName.accountNumber ))
+        }
+      }
+
+      @Override
+      List<ScalingActivity> listByActivityStatusCode(@Nullable OwnerFullName ownerFullName,
+                                                     @Nonnull  Collection<ActivityStatusCode> statusCodes) {
+        []
+      }
+
+      @Override
+      ScalingActivity update(OwnerFullName ownerFullName,
+                             String activityId,
+                             Callback<ScalingActivity> activityUpdateCallback) {
+        ScalingActivity activity = lookup( ownerFullName, activityId )
+        activityUpdateCallback.fire( activity )
+        activity
+      }
+
+      @Override
+      boolean delete(ScalingActivity scalingActivity) {
+        activities.remove(scalingActivity)
+      }
+
+      @Override
+      int deleteByCreatedAge(@Nullable OwnerFullName ownerFullName,
+                             long createdBefore) {
+        0
+      }
+
+      @Override
+      ScalingActivity save(ScalingActivity scalingActivity) {
+        scalingActivity.setId( "1" )
+        scalingActivity.setNaturalId( UUID.randomUUID( ).toString( ) )
+        scalingActivity.setCreationTimestamp( new Date() )
+        scalingActivity.setLastUpdateTimestamp( new Date() )
+        activities.add( scalingActivity )
+        scalingActivity
+      }
+    }
+  }
+
   ActivityManager activityManager() {
     new ActivityManager() {
       @Override
       void doScaling() {
+      }
+
+      @Override
+      CloudWatchClient createCloudWatchClientForUser( final String userId ) {
+        new TestClients.TesCloudWatchClient( userId, { request ->
+          if (request instanceof DescribeAlarmsType ) {
+            new DescribeAlarmsResponseType( )
+          }
+        } as TestClients.RequestHandler )
       }
 
       @Override
@@ -779,13 +883,13 @@ class AutoScalingServiceTest {
           naturalId: 'b7717740-7246-11e2-bcfd-0800200c9a66',
           group: group,
           autoScalingGroupName: group.getClass().getMethod("getAutoScalingGroupName").invoke( group ),
-          activityStatusCode: ActivityStatusCode.InProgress,
-          cause: "Some cause",
+          statusCode: ActivityStatusCode.InProgress,
+          causes: [ new ActivityCause( date( "2013-02-01T12:34:56.789Z"), "Some cause") ],
           creationTimestamp: date( "2013-02-01T12:34:56.789Z" ),
           description: "Description",
           details:  "Details",
           progress: 13
-        ) ];
+        ) ]
       }
 
       @Override

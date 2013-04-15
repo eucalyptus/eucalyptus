@@ -129,7 +129,11 @@ public class Timestamps {
     }
     throw new AuthenticationException( "Invalid timestamp format: " + timestamp  );
   }
-  
+
+  public static String formatIso8601Timestamp( final Date date ) {
+    return sdf( iso8601Timestamp ).format( date );
+  }
+
   public static String formatShortIso8601Timestamp( final Date date ) {
     return sdf( iso8601ShortTimestamp ).format( date );    
   }
@@ -143,6 +147,11 @@ public class Timestamps {
     format.setTimeZone( TimeZone.getTimeZone( "GMT" ) );
     return format;
   }
+
+  /**
+   * ISO 8601 short timestamp format
+   */
+  private static final String iso8601Timestamp = "yyyy-MM-dd'T'HH:mm:ss'Z'";
 
   /**
    * ISO 8601 short timestamp format

@@ -62,17 +62,6 @@ define([
               required: false
             },
           },
-          makeAjaxCall: function(url, param, options){
-            $.ajax({
-                type: "POST",
-                url: url,
-                data: param,
-                dataType: "json",
-                async: true,
-                success: options.success,
-                error: options.error
-            });
-          },
           sync: function(method, model, options){
             if(method == 'create'){
               this.syncMethod_Create(model, options);

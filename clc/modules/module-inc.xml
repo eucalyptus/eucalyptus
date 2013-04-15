@@ -176,7 +176,7 @@
 		<echo message="[COMPILE] ${builder.target} for ${ant.project.name}" />
 		<antcall target="clean" />
 		<antcall target="build-mkdirs" inheritall="true" inheritrefs="true" />
-		<javac srcdir="${src.dir}" classpathref="classpath" destdir="${build.dir}" deprecation="false" failonerror="true" debug="true" sourcepathref="srcpath" source="1.6" target="1.6" encoding="utf-8" listfiles="true" />
+		<javac srcdir="${src.dir}" classpathref="classpath" destdir="${build.dir}" deprecation="false" failonerror="true" debug="true" sourcepathref="srcpath" source="1.7" target="1.7" encoding="utf-8" listfiles="true" />
 	</target>
 	<target name="should-build-groovy">
 		<mkdir dir="${build.dir}" />
@@ -190,7 +190,7 @@
 		<antcall target="build-mkdirs" inheritall="true" inheritrefs="true" />
 		<taskdef name="groovyc" classname="org.codehaus.groovy.ant.Groovyc" classpathref="classpath" />
 		<groovyc srcdir="${src.dir}" classpathref="classpath" sourcepathref="srcpath" destdir="${build.dir}" verbose="true" listfiles="true">
-			<javac source="1.6" target="1.6" encoding="utf-8" debug="true" />
+			<javac source="1.7" target="1.7" encoding="utf-8" debug="true" />
 		</groovyc>
 	</target>
 	<target name="builder-test">
@@ -207,7 +207,7 @@
 		<antcall target="${builder.target}" inheritall="true" inheritrefs="true" />
 		<taskdef name="groovyc" classname="org.codehaus.groovy.ant.Groovyc" classpathref="classpath" />
 		<groovyc srcdir="${test.dir}" classpathref="classpath" sourcepathref="srcpath" destdir="${build.dir}" verbose="true" listfiles="true">
-			<javac target="1.5" debug="true" />
+			<javac target="1.7" debug="true" />
 		</groovyc>
 	</target>
 

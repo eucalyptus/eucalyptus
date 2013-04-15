@@ -155,7 +155,8 @@
             option['security'] = filter['security'];
           if(filter && filter['advanced'])
             option['advanced'] = filter['advanced'];
-          this.element.launcher(option);
+          //this.element.launcher(option);
+          this.element.newinstance(option);
           break;
         case 'image':
           this.element.image();

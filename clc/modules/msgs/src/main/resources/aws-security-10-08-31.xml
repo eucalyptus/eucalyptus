@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
-  Copyright 2009-2012 Eucalyptus Systems, Inc.
+  Copyright 2009-2013 Eucalyptus Systems, Inc.
 
   This program is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
@@ -137,12 +137,13 @@
     <collection name="groups" factory="org.jibx.runtime.Utility.arrayListFactory" field="groups">
       <structure name="item" map-as="edu.ucsb.eucalyptus.msgs.UserIdGroupPairType" />
     </collection>
-    <collection name="ipRanges" factory="org.jibx.runtime.Utility.arrayListFactory" field="ipRanges"
-      item-type="java.lang.String">
-      <structure name="item">
-        <value name="cidrIp" />
-      </structure>
+    <collection name="ipRanges" factory="org.jibx.runtime.Utility.arrayListFactory" field="ipRanges">
+      <structure name="item" map-as="edu.ucsb.eucalyptus.msgs.CidrIpType" />
     </collection>
+  </mapping>
+
+  <mapping class="edu.ucsb.eucalyptus.msgs.CidrIpType" abstract="true">
+    <value name="cidrIp" field="cidrIp" usage="required" />
   </mapping>
 
   <mapping name="AuthorizeSecurityGroupIngressResponse" class="edu.ucsb.eucalyptus.msgs.AuthorizeSecurityGroupIngressResponseType"

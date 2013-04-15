@@ -342,6 +342,12 @@ public class VmControl {
           TerminateInstancesItemType result = null;
           try {
             VmInstance vm = RestrictedTypes.doPrivileged( instanceId, VmInstance.class );
+            if ( MigrationState.isMigrating( vm ) ) {
+              throw Exceptions.toUndeclared( "Cannot terminate an instance which is currently migrating: "
+                                             + vm.getInstanceId( )
+                                             + " "
+                                             + vm.getMigrationTask( ) );
+            }
             oldCode = vm.getState( ).getCode( );
             oldState = vm.getState( ).getName( );
             if ( VmState.STOPPED.apply( vm ) ) {
@@ -574,7 +580,7 @@ public class VmControl {
           try {
             final VmInstance v = VmInstances.lookup( instanceId );
             if ( RestrictedTypes.filterPrivileged( ).apply( v ) ) {
-              if ( v.getBootRecord( ).getMachine( ) instanceof BlockStorageImageInfo ) {
+              if ( !MigrationState.isMigrating( v ) && v.getBootRecord( ).getMachine( ) instanceof BlockStorageImageInfo ) {
                 final int oldCode = v.getState( ).getCode( ), newCode = VmState.STOPPING.getCode( );
                 final String oldState = v.getState( ).getName( ), newState = VmState.STOPPING.getName( );
                 TerminateInstancesItemType termInfo = new TerminateInstancesItemType( v.getInstanceId( ), oldCode, oldState, newCode, newState );

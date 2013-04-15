@@ -1,0 +1,69 @@
+<div class="wizard-step">
+<div class="wizardTitle"><h3 class="required-label" data-text="jerry">Image</h3></div>
+<div id="launch-wizard-image-main-contents">
+  <div id="launch-wizard-image-table">
+  
+    <div id="launch-images_wrapper" class="dataTables_wrapper">
+      <div style="float:left;" class="wizard-section-label required-label">Select image</div>
+       <div id="table-wrapper" style="float:left">
+         <div>
+         <table id="launch-images" class="display">
+          <thead>
+            <tr>
+              <th colspan="1" rowspan="1" class="sorting_asc"></th>
+            </tr>
+          </thead>
+          <tbody >
+          <!--
+            <tr class="odd selected-row">
+              <td>
+                <div class="linux image-type">
+                  <div class="image-name">Linux</div>
+                  <div class="image-id-arch">
+                    <span>emi-EDBA3EEA</span><span>64 bit</span>
+                  </div>
+                  to test pagination
+                </div>
+              </td>
+            </tr>
+          -->
+            <% _.each(images.models, function(image, index) { %>
+            <tr class="<% if (index % 2 == 0) { %>even<% } else { %>odd<%}%>">
+              <td>
+                <div class="image-type <%= imageNames[image.id] %>">
+                  <div class="image-name"><%= image.attributes.name %></div>
+                  <div class="image-id-arch">
+                    <span><%= image.id %></span>
+                    <span><%= image.attributes.architecture %></span>
+                    <span><%= image.attributes.description %></span>
+                  </div>
+                </div>
+              </td>
+            </tr>  
+            <% }); %>
+          </tbody>
+        </table>
+        </div>
+        <div style="visibility: hidden;" class="dataTables_processing" id="launch-images_processing">
+          <img src="images/dots32.gif"> &nbsp; <span>Loading...</span>
+        </div>
+        <div class="clear"></div>
+        <div id="launch-images_paginate" class="dataTables_paginate paging_full_numbers">
+          <span id="launch-images_first" class="first paginate_button paginate_button_disabled">First</span>
+          <span id="launch-images_previous" class="previous paginate_button paginate_button_disabled">Previous</span>
+          <span>
+            <span class="paginate_active">1</span>
+            <span class="paginate_button">2</span>
+            <span class="paginate_button">3</span>
+            <span class="paginate_button">4</span>
+          </span>
+          <span id="launch-images_next" class="next paginate_button">Next</span>
+          <span id="launch-images_last" class="last paginate_button">Last</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+</div>
+</div>
+</div>
