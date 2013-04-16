@@ -490,7 +490,8 @@
 
      if(numSelected === 1 && 'running' in stateMap && $.inArray(instIds[0], stateMap['running']>=0)){
        menuItems['console'] = {"name":instance_action_console, callback: function(key, opt) { thisObj._consoleAction(); }}
-       menuItems['attach'] = {"name":instance_action_attach, callback: function(key, opt) { thisObj._attachAction(); }}
+//       menuItems['attach'] = {"name":instance_action_attach, callback: function(key, opt) { thisObj._attachAction(); }}
+       menuItems['attach'] = {"name":instance_action_attach, callback: function(key, opt) { thisObj._newAttachAction(); }}
      }
  
      // detach-volume is for one selected instance 
@@ -502,8 +503,9 @@
          if( state==='attached' && !isRootVolume(instIds[0], vol))
            attachedFound = true;
        });   
-       if(attachedFound)
+       if(attachedFound){
          menuItems['detach'] = {"name":instance_action_detach, callback: function(key, opt) { thisObj._detachAction(); }}
+       }
      }
 
      // TODO: assuming associate-address is valid for only running/pending instances
@@ -852,6 +854,14 @@
       var instanceToAttach = thisObj.tableWrapper.eucatable('getSelectedRows', 17)[0];
 //      instanceToAttach=$(instanceToAttach).html();   // After dataTable 1.9 integration, this operation is no longer needed. 030413
       attachVolume(null, instanceToAttach);
+    },
+    // NEW DIALOG THAT USES THE BACKBONE INTEGRATION
+    _newAttachAction : function() {
+      var dialog = 'attach_volume_dialog';
+      var selected = this.tableWrapper.eucatable('getSelectedRows', 17);
+      require(['views/dialogs/' + dialog], function( dialog) {
+        new dialog({instance_id: selected});
+      });
     },
 
     _initDetachDialog : function(dfd) {  // should resolve dfd object
