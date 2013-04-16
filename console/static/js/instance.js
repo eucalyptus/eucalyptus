@@ -868,9 +868,28 @@
       var thisObj = this;
       var results = describe('volume');
       var instance = this.tableWrapper.eucatable('getSelectedRows', 17)[0];
- //     instance = $(instance).html();   // After dataTable 1.9 integration, this operation is no longer needed. 030413
+
+      // FIX TO DISPLAY THE NAME TAG OF THE INSTANCE --- Kyo 041513
+      var nameTag = null;
+      var this_instance = require('app').data.instance.get(instance);
+      if( this_instance ){
+        var this_tags = this_instance.get('tags');
+        this_tags.each(function(tag){
+          if( tag.get('name') == 'Name' || tag.get('name') == 'name' ){
+            nameTag = tag.get('value');
+          };
+        });
+      }
+
       $msg = this.detachDialog.find('#volume-detach-msg');
-      $msg.html($.i18n.prop('inst_volume_dialog_detach_text', DefaultEncoder().encodeForHTML(instance)));
+
+      // FIX TO DISPLAY THE NAME TAG OF THE INSTANCE --- Kyo 041513
+      if( nameTag == null ){
+        $msg.html($.i18n.prop('inst_volume_dialog_detach_text', DefaultEncoder().encodeForHTML(instance)));
+      }else{ 
+       $msg.html($.i18n.prop('inst_volume_dialog_detach_text', DefaultEncoder().encodeForHTML(nameTag)));
+      }
+
       var $p = this.detachDialog.find('#volume-detach-select-all');
       $p.children().detach();
       $p.html('');
@@ -883,12 +902,19 @@
       });
       $p.append(inst_volume_dialog_select_all_msg, '&nbsp;', $selectAll);
       volumes = [];
+      volume_ids = [];   // ADDITIONAL ARRAY FOR HOLDING THE VOLUME ID   -- Kyo 041513
       $.each(results, function(idx, volume){
         if ( volume.attach_data && volume.attach_data['status'] ){
           var inst = volume.attach_data['instance_id'];
           var state = volume.attach_data['status'];
           if( state === 'attached' && inst === instance && !isRootVolume(inst, volume.id) ){
-            volumes.push(volume.id);
+            // FIX TO DISPLAY THE NAME TAG OF THE VOLUME  --- Kyo 041513
+            if( volume.display_id != null ){
+              volumes.push(volume.display_id);   // PASS THE DISPLAY ID IF EXISTS
+            }else{
+              volumes.push(volume.id);   // OR USE THE VOLUME ID
+            }
+            volume_ids.push(volume.id);   // ALWAYS HOLD THE VOLUME ID FOR THE ARRAY 'volume_ids'
           }
         }
       });
@@ -902,7 +928,8 @@
           if (volumes.length > inx) {
             volId = volumes[inx];
 	    volId = DefaultEncoder().encodeForHTML(volId);
-            $cb = $('<input>').attr('type', 'checkbox').attr('value', volId);
+            real_vol_id = volume_ids[inx];                    // XSS RISK ?  --- Kyo 041513
+            $cb = $('<input>').attr('type', 'checkbox').attr('value', volId).attr('title', real_vol_id);   // USE THE TITLE ATTR TO HIDE THE VOLUME ID
             $row.append($('<td>').append($cb,'&nbsp;', volId));
             $cb.click( function() {
               if ( thisObj.detachDialog.find("input:checked").length > 0 )
@@ -921,7 +948,6 @@
 
     _detachAction : function(){
       var instance = this.tableWrapper.eucatable('getSelectedRows', 17)[0];
-//      instance = $(instance).html();   // After dataTable 1.9 integration, this operation is no longer needed. 030413
       $instId = this.detachDialog.find('#volume-detach-instance-id');
       $instId.val(instance);
       this.detachDialog.eucadialog('open');
@@ -932,7 +958,8 @@
       var checkedVolumes = thisObj.detachDialog.find("input:checked"); 
       var selectedVolumes = [];
       $.each(checkedVolumes, function(idx, vol){ 
-        selectedVolumes.push($(vol).val());
+        //selectedVolumes.push($(vol).val());
+        selectedVolumes.push($(vol).attr('title'));   // FIX TO USE THE TITLE VALUE WHICH CONTAINS THE VOLUME ID --- Kyo 041513
       }); 
       var done = 0;
       var all = selectedVolumes.length;
