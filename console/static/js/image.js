@@ -33,7 +33,7 @@
       this.baseTable = $imgTable;
       this.tableWrapper = $imgTable.eucatable({
         id : 'images', // user of this widget should customize these options,
-        data_deps: ['images'],
+        data_deps: ['images', 'tags'],
         hidden: thisObj.options['hidden'],
         dt_arg : {
           "sAjaxSource": 'image',

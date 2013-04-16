@@ -91,6 +91,7 @@
         if (typeof source === 'undefined') {
           throw new Error("No property '" + target + " on app.data");
         }
+        thisObj.source = source;
         thisObj.searchConfig = new searchConfig(source);
         thisObj.bbdata = thisObj.searchConfig.filtered;
         thisObj.vsearch = VS.init({
@@ -349,11 +350,13 @@
       $wrapper.insertAfter(filterArr[filterArr.length-1]);
       $(filterArr).each(function(){$(this).remove();});
 
-if (true) {
       $wrapper.empty();
       $wrapper.prepend('<div class="dataTables_filter" id="images_filter"><a class="table-refresh" href="#">Refresh</a></div>');
+      $wrapper.find('.table-refresh').click(function(){
+        thisObj.refreshSource();
+      });
+
       $wrapper.prepend(thisObj.$vel);
-}         
     },   
 
     // args.txt_create (e.g., Create new key)
@@ -593,6 +596,13 @@ if (true) {
         if(checked)
           $checkAll.trigger('click.datatable');
       });
+    },
+
+    // Force a refresh of the underlying data source.
+    refreshSource : function() {
+      // Force a fetch from backbone
+      console.log('Fetch source');
+      this.source.fetch();
     },
 
     glowRow : function(val, columnId) {
