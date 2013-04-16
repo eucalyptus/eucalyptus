@@ -573,6 +573,11 @@ if (true) {
       var selected = tbody.find('tr.selected-row');
       var expanded = tbody.find('tr.expanded');
 
+      // TODO: This call being removed it what caused refresh to stop pulling new data.
+      // I think this function has been hijacked to do periodic refreshes instead of the above
+      // _refreshTableInterval which used to handle the periodic updates - DAK
+      //
+      //$('html body').eucadata('refresh', oSettings.sAjaxSource);
       this.table.fnReloadAjax(this.table.oSettings, undefined, function() {
         if (selected != undefined && selected.length > 0) {
           $.each(selected, function(idx, row) {
@@ -633,10 +638,6 @@ if (true) {
           cancelRepeat(token);
         }
       }, 2000);
-    },
-
-    redraw : function() {
-      this._refreshTableInterval();
     },
 
     // (optional) columnIdx: if undefined, returns matrix [row_idx, col_key]

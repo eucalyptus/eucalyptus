@@ -33,6 +33,7 @@ define([
         ).fail(
           // Failure
           function(jqXHR, textStatus) {
+            var errorCode = jqXHR.status;
             //console.log('EUCACOLLECTION (error for '+name+') : '+textStatus);
             options.error && options.error(jqXHR, textStatus, options);
           }

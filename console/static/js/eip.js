@@ -537,8 +537,24 @@
         thisObj.associateDialog.find('#eip-associate-instance-txt').text(eip_associate_dialog_text(ip));
         thisObj.associateDialog.dialog('open');
       }else if(instance){
-        thisObj.associateDialog.find('#associate-fixed-value').text(instance);
-        thisObj.associateDialog.find('#eip-associate-instance-txt').text(instance_dialog_associate_ip_text(instance));
+        // FIX TO DISPLAY THE NAME TAG OF THE INSTANCE   ---   Kyo 041513
+        var nameTag = null;
+        var this_instance = require('app').data.instance.get(instance);
+        if( this_instance ){
+          var this_tags = this_instance.get('tags');
+          this_tags.each(function(tag){
+            if( tag.get('name') == 'Name' || tag.get('name') == 'name' ){
+              nameTag = tag.get('value');
+            };
+          });
+        }
+
+        thisObj.associateDialog.find('#associate-fixed-value').text(instance);   // INSTANCE ID
+        if( nameTag != null ){
+          thisObj.associateDialog.find('#eip-associate-instance-txt').text(instance_dialog_associate_ip_text(nameTag));   // NAME TAG
+        }else{
+          thisObj.associateDialog.find('#eip-associate-instance-txt').text(instance_dialog_associate_ip_text(instance));  // INSTANCE ID
+        }
         thisObj.associateDialog.dialog('open');
       }
     },
@@ -546,9 +562,27 @@
       var thisObj = this;
       if ( addresses.length > 0 ) {
         var matrix = [];
+//        console.log("Addresses Data: " + JSON.stringify(addresses));
+        // FIX TO DISPLAY THE NAME TAG FOR THE INSTANCES   ---   Kyo 041513
         $.each(addresses, function(idx, ip){
-          matrix.push([ip.public_ip, ip.instance_id]); 
+          var nameTag = null;
+          var this_instance = require('app').data.instance.get(ip.instance_id);
+          if( this_instance ){
+            var this_tags = this_instance.get('tags');
+            this_tags.each(function(tag){
+//              console.log("Tag: " + JSON.stringify(tag.toJSON()));
+              if( tag.get('name') == 'Name' || tag.get('name') == 'name' ){
+                nameTag = tag.get('value');
+              };
+            });
+          }; 
+          if( nameTag == null ){
+            matrix.push([ip.public_ip, ip.instance_id]);
+          }else{
+            matrix.push([ip.public_ip, nameTag]);
+          }
         });
+
         thisObj.disassociateDialog.eucadialog('setSelectedResources', {title: [ip_address_label, instance_label], contents: matrix});
         thisObj.disassociateDialog.dialog('open');
       }
