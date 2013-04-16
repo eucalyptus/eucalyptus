@@ -334,6 +334,22 @@
       });
       this._setupDialogFeatures(this.addDialog, createButtonId);
 
+      require([
+        'rivets', 
+        'models/sgroup', 
+        'text!views/dialogs/create_security_group_fixup.html!strip'
+        ], function(rivets, SecurityGroup, TabbedDialogTmpl) {
+        var $content = thisObj.addDialog.find('.content-sections-wrapper');
+        $content.append($(TabbedDialogTmpl));
+        $content.find('h3').remove();
+        $content.css('background', 'none');
+        $content.find('#tabs-1').append($content.find('.group.content-section'));
+        $content.find('#tabs-2').append($content.find('.rules.content-section'));
+        rivets.bind($content, {
+           securityGroup: new SecurityGroup() 
+        });
+      });
+
       var $tmpl = $('html body').find('.templates #sgroupEditDlgTmpl').clone();
       var $rendered = $($tmpl.render($.extend($.i18n.map, help_sgroup)));
       var $edit_dialog = $rendered.children().first();
