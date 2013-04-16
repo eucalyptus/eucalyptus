@@ -1,3 +1,5 @@
+define([
+   'underscore',
    'text!./template.html!strip',
    'backbone',
    'models/tag'
