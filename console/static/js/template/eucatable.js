@@ -353,7 +353,7 @@
       $wrapper.empty();
       $wrapper.prepend('<div class="dataTables_filter" id="images_filter"><a class="table-refresh" href="#">Refresh</a></div>');
       $wrapper.find('.table-refresh').click(function(){
-        thisObj.refreshTable();
+        thisObj.refreshSource();
       });
 
       $wrapper.prepend(thisObj.$vel);
@@ -591,7 +591,10 @@
         if(checked)
           $checkAll.trigger('click.datatable');
       });
+    },
 
+    // Force a refresh of the underlying data source.
+    refreshSource : function() {
       // Force a fetch from backbone
       console.log('Fetch source');
       this.source.fetch();
