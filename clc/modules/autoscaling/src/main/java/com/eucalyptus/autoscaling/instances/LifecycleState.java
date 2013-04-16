@@ -64,6 +64,18 @@ public enum LifecycleState implements Predicate<AutoScalingInstance> {
   }
 
   /**
+   * Get a Predicate for view matching.
+   */
+  public Predicate<AutoScalingInstanceCoreView> forView() {
+    return new Predicate<AutoScalingInstanceCoreView>() {
+      @Override
+      public boolean apply( @Nullable final AutoScalingInstanceCoreView instance ) {
+        return instance != null && LifecycleState.this == instance.getLifecycleState();
+      }
+    };
+  }
+
+  /**
    * A predicate to transition from one state to another.
    *
    * <p>The state of a given instance is transitioned if the state of the

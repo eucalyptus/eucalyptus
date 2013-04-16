@@ -17,49 +17,32 @@
  * CA 93117, USA or visit http://www.eucalyptus.com/licenses/ if you need
  * additional information or have any questions.
  ************************************************************************/
-package com.eucalyptus.autoscaling.configurations;
+package com.eucalyptus.autoscaling.groups;
 
-import javax.annotation.Nullable;
-import javax.persistence.Column;
-import javax.persistence.Embeddable;
+import java.util.List;
+import com.eucalyptus.autoscaling.configurations.LaunchConfigurationCoreView;
+import com.eucalyptus.util.TypeMappers;
+import com.google.common.collect.ImmutableList;
 
 /**
  *
  */
-@Embeddable
-public class EbsParameters {
-  
-  //TODO:STEVE: Fix persistence annotations so column names are used ...
-  @Column( name = "metadata_snapshot_id" )
-  private String snapshotId;
+public class AutoScalingGroupScalingView extends AutoScalingGroupCoreView {
 
-  @Column( name = "metadata_volume_size" )
-  private Integer volumeSize;
+  private final ImmutableList<TerminationPolicyType> terminationPolicies;
+  private final LaunchConfigurationCoreView launchConfiguration;
 
-  protected EbsParameters() {      
+  public AutoScalingGroupScalingView( final AutoScalingGroup group ) {
+    super( group );
+    terminationPolicies = ImmutableList.copyOf( group.getTerminationPolicies() );
+    launchConfiguration = TypeMappers.transform( group.getLaunchConfiguration(), LaunchConfigurationCoreView.class );
   }
 
-  protected EbsParameters( final String snapshotId,
-                           final Integer volumeSize ) {
-    this.snapshotId = snapshotId;
-    this.volumeSize = volumeSize;
+  public List<TerminationPolicyType> getTerminationPolicies() {
+    return terminationPolicies;
   }
 
-  @Nullable
-  public String getSnapshotId() {
-    return snapshotId;
-  }
-
-  public void setSnapshotId( final String snapshotId ) {
-    this.snapshotId = snapshotId;
-  }
-
-  @Nullable
-  public Integer getVolumeSize() {
-    return volumeSize;
-  }
-
-  public void setVolumeSize( final Integer volumeSize ) {
-    this.volumeSize = volumeSize;
+  public LaunchConfigurationCoreView getLaunchConfiguration() {
+    return launchConfiguration;
   }
 }

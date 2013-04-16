@@ -21,7 +21,6 @@ package com.eucalyptus.autoscaling.groups;
 
 import static com.eucalyptus.autoscaling.common.AutoScalingMetadata.TerminationPolicyTypeMetadata;
 import static com.eucalyptus.autoscaling.instances.AutoScalingInstances.launchConfigurationName;
-import static com.eucalyptus.autoscaling.metadata.AbstractOwnedPersistents.createdDate;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
@@ -29,8 +28,7 @@ import java.util.Date;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 import com.eucalyptus.auth.principal.Principals;
-import com.eucalyptus.autoscaling.instances.AutoScalingInstance;
-import com.eucalyptus.autoscaling.metadata.AbstractOwnedPersistents;
+import com.eucalyptus.autoscaling.instances.AutoScalingInstanceCoreView;
 import com.eucalyptus.util.CollectionUtils;
 import com.eucalyptus.util.OwnerFullName;
 import com.google.common.base.Function;
@@ -47,42 +45,42 @@ public enum TerminationPolicyType implements TerminationPolicyTypeMetadata {
   
   OldestInstance {
     @Override
-    public List<AutoScalingInstance> selectForTermination( final List<AutoScalingInstance> instances ) {
+    public List<AutoScalingInstanceCoreView> selectForTermination( final List<AutoScalingInstanceCoreView> instances ) {
       final Date oldest = dateOfOldestInstance( instances );
-      return filterByPropertyEquality( instances, oldest, createdDate() );
+      return filterByPropertyEquality( instances, oldest, InstanceCreatedDate.INSTANCE );
     }
   }, 
   
   OldestLaunchConfiguration {
     @Override
-    public List<AutoScalingInstance> selectForTermination( final List<AutoScalingInstance> instances ) {
+    public List<AutoScalingInstanceCoreView> selectForTermination( final List<AutoScalingInstanceCoreView> instances ) {
       final Date oldest = dateOfOldestInstance( instances );
-      final AutoScalingInstance instanceWithOldestLaunchConfiguration = 
+      final AutoScalingInstanceCoreView instanceWithOldestLaunchConfiguration =
           Iterables.find(
               instances, 
-              Predicates.compose( Predicates.equalTo( oldest ), createdDate() ), 
+              Predicates.compose( Predicates.equalTo( oldest ), InstanceCreatedDate.INSTANCE ),
               null 
           );
       final String oldestLaunchConfiguration = instanceWithOldestLaunchConfiguration == null ?
           null :
           instanceWithOldestLaunchConfiguration.getLaunchConfigurationName();
-      return filterByPropertyEquality( instances, oldestLaunchConfiguration, launchConfigurationName() );
+      return filterByPropertyEquality( instances, oldestLaunchConfiguration, launchConfigurationName( ) );
     }
   }, 
   
   NewestInstance {
     @Override
-    public List<AutoScalingInstance> selectForTermination( final List<AutoScalingInstance> instances ) {
+    public List<AutoScalingInstanceCoreView> selectForTermination( final List<AutoScalingInstanceCoreView> instances ) {
       final Date newest = dateOfNewestInstance( instances );
-      return filterByPropertyEquality( instances, newest, createdDate() );
+      return filterByPropertyEquality( instances, newest, InstanceCreatedDate.INSTANCE );
     }
   }, 
   
   ClosestToNextInstanceHour {
     @Override
-    public List<AutoScalingInstance> selectForTermination( final List<AutoScalingInstance> instances ) {
-      final Function<? super AutoScalingInstance,Integer> secondsToInstanceHourFunction =
-          Functions.compose( DateToTimeUntilNextHour.INSTANCE, createdDate() );
+    public List<AutoScalingInstanceCoreView> selectForTermination( final List<AutoScalingInstanceCoreView> instances ) {
+      final Function<? super AutoScalingInstanceCoreView,Integer> secondsToInstanceHourFunction =
+          Functions.compose( DateToTimeUntilNextHour.INSTANCE, InstanceCreatedDate.INSTANCE );
       final Integer secondsToInstanceHour = CollectionUtils.reduce(
           Iterables.transform( instances, secondsToInstanceHourFunction ),
           Integer.MAX_VALUE,
@@ -93,10 +91,10 @@ public enum TerminationPolicyType implements TerminationPolicyTypeMetadata {
   
   Default {
     @Override
-    public List<AutoScalingInstance> selectForTermination( final List<AutoScalingInstance> instances ) {
-      final List<AutoScalingInstance> oldestList = OldestLaunchConfiguration.selectForTermination( instances );
-      final List<AutoScalingInstance> closestToInstanceHour = ClosestToNextInstanceHour.selectForTermination( oldestList );
-      final List<AutoScalingInstance> result;
+    public List<AutoScalingInstanceCoreView> selectForTermination( final List<AutoScalingInstanceCoreView> instances ) {
+      final List<AutoScalingInstanceCoreView> oldestList = OldestLaunchConfiguration.selectForTermination( instances );
+      final List<AutoScalingInstanceCoreView> closestToInstanceHour = ClosestToNextInstanceHour.selectForTermination( oldestList );
+      final List<AutoScalingInstanceCoreView> result;
       
       if ( closestToInstanceHour.size() == 1 ) {
         result = closestToInstanceHour;        
@@ -121,7 +119,7 @@ public enum TerminationPolicyType implements TerminationPolicyTypeMetadata {
     return Principals.systemFullName();
   }
   
-  public abstract List<AutoScalingInstance> selectForTermination( List<AutoScalingInstance> instances );
+  public abstract List<AutoScalingInstanceCoreView> selectForTermination( List<AutoScalingInstanceCoreView> instances );
 
   /**
    * Select an instance for termination from the given list.
@@ -131,10 +129,10 @@ public enum TerminationPolicyType implements TerminationPolicyTypeMetadata {
    * @return The instance selected for termination
    * @throws IllegalArgumentException if passed an empty list
    */
-  public static AutoScalingInstance selectForTermination( final Collection<TerminationPolicyType> terminationPolicyTypes,
-                                                          final List<AutoScalingInstance> instances ) {
+  public static AutoScalingInstanceCoreView selectForTermination( final Collection<TerminationPolicyType> terminationPolicyTypes,
+                                                                  final List<AutoScalingInstanceCoreView> instances ) {
     if ( instances.isEmpty() ) throw new IllegalArgumentException( "No instances provided" );
-    List<AutoScalingInstance> currentList = instances;
+    List<AutoScalingInstanceCoreView> currentList = instances;
     for ( TerminationPolicyType terminationPolicyType : 
         Iterables.concat( terminationPolicyTypes, Collections.singleton( TerminationPolicyType.Default ) ) ) {
       if ( currentList.size() == 1 ) break;
@@ -143,27 +141,27 @@ public enum TerminationPolicyType implements TerminationPolicyTypeMetadata {
     return currentList.get( 0 );   
   }
   
-  private static <T> List<AutoScalingInstance> filterByPropertyEquality( final List<AutoScalingInstance> instances, 
-                                                                         final T target,
-                                                                         final Function<? super AutoScalingInstance,T> propertyFunction ) {
+  private static <T> List<AutoScalingInstanceCoreView> filterByPropertyEquality( final List<AutoScalingInstanceCoreView> instances,
+                                                                                 final T target,
+                                                                                 final Function<? super AutoScalingInstanceCoreView,T> propertyFunction ) {
     return Lists.newArrayList( Iterables.filter(
         instances,
         Predicates.compose( Predicates.equalTo( target ), propertyFunction ) ) );
   }
 
-  private static Date dateOfOldestInstance( final List<AutoScalingInstance> instances ) {
+  private static Date dateOfOldestInstance( final List<AutoScalingInstanceCoreView> instances ) {
     return dateOfInstance( instances, new Date( Long.MAX_VALUE ), Ordering.<Date>natural() );
   }
 
-  private static Date dateOfNewestInstance( final List<AutoScalingInstance> instances ) {
+  private static Date dateOfNewestInstance( final List<AutoScalingInstanceCoreView> instances ) {
     return dateOfInstance( instances, new Date( 0 ), Ordering.<Date>natural().reverse() );
   }
 
-  private static Date dateOfInstance( final List<AutoScalingInstance> instances,
+  private static Date dateOfInstance( final List<AutoScalingInstanceCoreView> instances,
                                       final Date initialDate,
                                       final Comparator<Date> comparator ) {
     return CollectionUtils.reduce(
-        Iterables.transform( instances, AbstractOwnedPersistents.createdDate() ),
+        Iterables.transform( instances, InstanceCreatedDate.INSTANCE ),
         initialDate,
         CollectionUtils.comparator( comparator ) );
   }
@@ -176,5 +174,14 @@ public enum TerminationPolicyType implements TerminationPolicyTypeMetadata {
       long timeInHour = date.getTime() % TimeUnit.HOURS.toMillis( 1 );
       return (int)(( TimeUnit.HOURS.toMillis( 1 ) - timeInHour ) / 1000L);
     }
-  }  
+  }
+
+  private enum InstanceCreatedDate implements Function<AutoScalingInstanceCoreView,Date> {
+    INSTANCE;
+
+    @Override
+    public Date apply( final AutoScalingInstanceCoreView instance ) {
+      return new Date( instance.getCreationTimestamp( ) );
+    }
+  }
 }

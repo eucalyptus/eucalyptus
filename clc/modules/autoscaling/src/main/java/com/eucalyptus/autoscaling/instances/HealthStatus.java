@@ -48,4 +48,16 @@ public enum HealthStatus implements Predicate<AutoScalingInstance> {
   public boolean apply( @Nullable final AutoScalingInstance instance ) {
     return instance != null && this == instance.getHealthStatus();
   }
+
+  /**
+   * Get a Predicate for view matching.
+   */
+  public Predicate<AutoScalingInstanceCoreView> forView() {
+    return new Predicate<AutoScalingInstanceCoreView>() {
+      @Override
+      public boolean apply( @Nullable final AutoScalingInstanceCoreView instance ) {
+        return instance != null && HealthStatus.this == instance.getHealthStatus();
+      }
+    };
+  }
 }

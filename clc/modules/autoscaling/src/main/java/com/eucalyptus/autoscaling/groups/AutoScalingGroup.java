@@ -25,6 +25,7 @@ import java.util.Collections;
 import java.util.Date;
 import java.util.List;
 import java.util.Set;
+import javax.annotation.Nullable;
 import javax.persistence.CascadeType;
 import javax.persistence.CollectionTable;
 import javax.persistence.Column;
@@ -46,6 +47,7 @@ import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
 import org.hibernate.annotations.Entity;
 import com.eucalyptus.autoscaling.activities.ScalingActivity;
+import com.eucalyptus.autoscaling.instances.AutoScalingInstance;
 import com.eucalyptus.autoscaling.metadata.AbstractOwnedPersistent;
 import com.eucalyptus.autoscaling.configurations.LaunchConfiguration;
 import com.eucalyptus.autoscaling.policies.ScalingPolicy;
@@ -157,10 +159,13 @@ public class AutoScalingGroup extends AbstractOwnedPersistent implements AutoSca
   @OneToMany( fetch = FetchType.LAZY, cascade = CascadeType.ALL, orphanRemoval = true, mappedBy = "group" )
   private Collection<AutoScalingGroupTag> tags = Lists.newArrayList();
 
+  @OneToMany( fetch = FetchType.LAZY, cascade = CascadeType.REFRESH, mappedBy = "autoScalingGroup" )
+  private List<AutoScalingInstance> instances = Lists.newArrayList();
+
   protected AutoScalingGroup() {
   }
 
-  protected AutoScalingGroup( final OwnerFullName owner ) {
+  protected AutoScalingGroup( @Nullable final OwnerFullName owner ) {
     super( owner );
   }
 
@@ -300,6 +305,10 @@ public class AutoScalingGroup extends AbstractOwnedPersistent implements AutoSca
     this.scalingCauses = scalingCauses;
   }
 
+  public List<AutoScalingInstance> getAutoScalingInstances() {
+    return instances;
+  }
+
   public void updateDesiredCapacity( final int desiredCapacity,
                                      final String reason ) {
     if ( !this.desiredCapacity.equals( desiredCapacity ) ) {
@@ -340,7 +349,7 @@ public class AutoScalingGroup extends AbstractOwnedPersistent implements AutoSca
    * @param ownerFullName The owner
    * @return The example
    */
-  public static AutoScalingGroup withOwner( final OwnerFullName ownerFullName ) {
+  public static AutoScalingGroup withOwner( @Nullable final OwnerFullName ownerFullName ) {
     return new AutoScalingGroup( ownerFullName );
   }
 

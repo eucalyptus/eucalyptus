@@ -19,47 +19,28 @@
  ************************************************************************/
 package com.eucalyptus.autoscaling.configurations;
 
-import javax.annotation.Nullable;
-import javax.persistence.Column;
-import javax.persistence.Embeddable;
+import java.util.List;
+import com.google.common.collect.ImmutableList;
 
 /**
- *
+ * Immutable core view of a launch configuration.
  */
-@Embeddable
-public class EbsParameters {
-  
-  //TODO:STEVE: Fix persistence annotations so column names are used ...
-  @Column( name = "metadata_snapshot_id" )
-  private String snapshotId;
+public class LaunchConfigurationCoreView extends LaunchConfigurationMinimumView {
 
-  @Column( name = "metadata_volume_size" )
-  private Integer volumeSize;
+  private final ImmutableList<BlockDeviceMapping> blockDeviceMappings;
+  private final ImmutableList<String> securityGroups;
 
-  protected EbsParameters() {      
+  public LaunchConfigurationCoreView( final LaunchConfiguration launchConfiguration ) {
+    super( launchConfiguration );
+    this.blockDeviceMappings = ImmutableList.copyOf( launchConfiguration.getBlockDeviceMappings() );
+    this.securityGroups = ImmutableList.copyOf( launchConfiguration.getSecurityGroups() );
   }
 
-  protected EbsParameters( final String snapshotId,
-                           final Integer volumeSize ) {
-    this.snapshotId = snapshotId;
-    this.volumeSize = volumeSize;
+  public List<String> getSecurityGroups() {
+    return securityGroups;
   }
 
-  @Nullable
-  public String getSnapshotId() {
-    return snapshotId;
-  }
-
-  public void setSnapshotId( final String snapshotId ) {
-    this.snapshotId = snapshotId;
-  }
-
-  @Nullable
-  public Integer getVolumeSize() {
-    return volumeSize;
-  }
-
-  public void setVolumeSize( final Integer volumeSize ) {
-    this.volumeSize = volumeSize;
+  public List<BlockDeviceMapping> getBlockDeviceMappings() {
+    return blockDeviceMappings;
   }
 }

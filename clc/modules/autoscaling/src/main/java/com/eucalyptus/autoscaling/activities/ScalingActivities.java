@@ -19,6 +19,8 @@
  ************************************************************************/
 package com.eucalyptus.autoscaling.activities;
 
+import static com.eucalyptus.autoscaling.common.AutoScalingMetadata.AutoScalingGroupMetadata;
+import static com.eucalyptus.autoscaling.common.AutoScalingMetadata.ScalingActivityMetadata;
 import java.util.Collection;
 import java.util.List;
 import javax.annotation.Nonnull;
@@ -37,10 +39,10 @@ import com.google.common.base.Predicate;
  *
  */
 public abstract class ScalingActivities {
-  public abstract List<ScalingActivity> list( @Nullable OwnerFullName ownerFullName ) throws AutoScalingMetadataException;
 
-  public abstract List<ScalingActivity> list( @Nullable OwnerFullName ownerFullName,
-                                              @Nonnull  Predicate<? super ScalingActivity> filter ) throws AutoScalingMetadataException;
+  public abstract <T> List<T> list( @Nullable OwnerFullName ownerFullName,
+                                    @Nonnull  Predicate<? super ScalingActivity> filter,
+                                    @Nonnull  Function<? super ScalingActivity,T> transform ) throws AutoScalingMetadataException;
 
   /**
    * List scaling activities with optional filters by group and id.
@@ -52,22 +54,21 @@ public abstract class ScalingActivities {
    * @return The list of matching ScalingActivities
    * @throws AutoScalingMetadataException If an error occurs.
    */
-  public abstract List<ScalingActivity> list( @Nullable OwnerFullName ownerFullName,
-                                              @Nullable AutoScalingGroup group,
-                                              @Nonnull  Collection<String> activityIds,
-                                              @Nonnull  Predicate<? super ScalingActivity> filter ) throws AutoScalingMetadataException;
+  public abstract <T> List<T> list( @Nullable OwnerFullName ownerFullName,
+                                    @Nullable AutoScalingGroupMetadata group,
+                                    @Nonnull  Collection<String> activityIds,
+                                    @Nonnull  Predicate<? super ScalingActivity> filter,
+                                    @Nonnull  Function<? super ScalingActivity,T> transform ) throws AutoScalingMetadataException;
 
-  public abstract List<ScalingActivity> listByActivityStatusCode( @Nullable OwnerFullName ownerFullName,
-                                                                  @Nonnull Collection<ActivityStatusCode> statusCodes ) throws AutoScalingMetadataException;
+  public abstract <T> List<T> listByActivityStatusCode( @Nullable OwnerFullName ownerFullName,
+                                                        @Nonnull  Collection<ActivityStatusCode> statusCodes,
+                                                        @Nonnull  Function<? super ScalingActivity,T> transform ) throws AutoScalingMetadataException;
 
-  public abstract ScalingActivity lookup( OwnerFullName ownerFullName,
-                                          String activityId ) throws AutoScalingMetadataException;
+  public abstract void update( OwnerFullName ownerFullName,
+                               String activityId,
+                               Callback<ScalingActivity> activityUpdateCallback ) throws AutoScalingMetadataException;
 
-  public abstract ScalingActivity update( OwnerFullName ownerFullName,
-                                          String activityId,
-                                          Callback<ScalingActivity> activityUpdateCallback ) throws AutoScalingMetadataException;
-
-  public abstract boolean delete( ScalingActivity scalingActivity ) throws AutoScalingMetadataException;
+  public abstract boolean delete( ScalingActivityMetadata scalingActivity ) throws AutoScalingMetadataException;
 
   public abstract int deleteByCreatedAge( @Nullable OwnerFullName ownerFullName,
                                           long createdBefore ) throws AutoScalingMetadataException;

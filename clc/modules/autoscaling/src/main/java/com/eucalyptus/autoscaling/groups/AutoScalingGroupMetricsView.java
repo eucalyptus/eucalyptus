@@ -17,49 +17,24 @@
  * CA 93117, USA or visit http://www.eucalyptus.com/licenses/ if you need
  * additional information or have any questions.
  ************************************************************************/
-package com.eucalyptus.autoscaling.configurations;
+package com.eucalyptus.autoscaling.groups;
 
-import javax.annotation.Nullable;
-import javax.persistence.Column;
-import javax.persistence.Embeddable;
+import java.util.Set;
+import com.google.common.collect.ImmutableSet;
 
 /**
- *
+ * Immutable metrics view of an auto scaling group.
  */
-@Embeddable
-public class EbsParameters {
-  
-  //TODO:STEVE: Fix persistence annotations so column names are used ...
-  @Column( name = "metadata_snapshot_id" )
-  private String snapshotId;
+public class AutoScalingGroupMetricsView extends AutoScalingGroupCoreView {
 
-  @Column( name = "metadata_volume_size" )
-  private Integer volumeSize;
+  private final ImmutableSet<MetricCollectionType> enabledMetrics;
 
-  protected EbsParameters() {      
+  public AutoScalingGroupMetricsView( final AutoScalingGroup group ) {
+    super( group );
+    this.enabledMetrics = ImmutableSet.copyOf( group.getEnabledMetrics() );
   }
 
-  protected EbsParameters( final String snapshotId,
-                           final Integer volumeSize ) {
-    this.snapshotId = snapshotId;
-    this.volumeSize = volumeSize;
-  }
-
-  @Nullable
-  public String getSnapshotId() {
-    return snapshotId;
-  }
-
-  public void setSnapshotId( final String snapshotId ) {
-    this.snapshotId = snapshotId;
-  }
-
-  @Nullable
-  public Integer getVolumeSize() {
-    return volumeSize;
-  }
-
-  public void setVolumeSize( final Integer volumeSize ) {
-    this.volumeSize = volumeSize;
+  public Set<MetricCollectionType> getEnabledMetrics() {
+    return enabledMetrics;
   }
 }
