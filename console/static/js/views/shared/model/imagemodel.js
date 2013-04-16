@@ -1,5 +1,5 @@
-define(['models/image'], function(image) {
-    return image.extend({
+define([], function() {
+    return Backbone.Model.extend({
 
       validation: {
         id: {

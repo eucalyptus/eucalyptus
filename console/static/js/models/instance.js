@@ -117,8 +117,10 @@ define([
                   data += "&BlockDeviceMapping."+(idx)+".Ebs.SnapshotId="+mapping.ebs.snapshot_id;
                   data += "&BlockDeviceMapping."+(idx)+".Ebs.VolumeSize="+mapping.ebs.volume_size;
                   data += "&BlockDeviceMapping."+(idx)+".Ebs.DeleteOnTermination="+mapping.ebs.delete_on_termination;
+                  if(mapping.ebs.volume_type != undefined)
                   data += "&BlockDeviceMapping."+(idx)+".Ebs.VolumeType="+mapping.ebs.volume_type;
-                  data += "&BlockDeviceMapping."+(idx)+".Ebs.Iopts="+mapping.ebs.iopts;
+                  if(mapping.ebs.iopts != undefined) 
+                    data += "&BlockDeviceMapping."+(idx)+".Ebs.Iopts="+mapping.ebs.iopts;
                 }
               });
             }
