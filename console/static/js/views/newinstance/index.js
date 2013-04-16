@@ -4,6 +4,7 @@ define([
   'text!./template.html',
   '../shared/image',
   '../shared/type',
+  './tags',
   '../shared/security',
   '../shared/advanced',
   '../shared/summary',
@@ -15,7 +16,7 @@ define([
   '../shared/model/advancedmodel',
   '../shared/model/blockmaps',
   '../shared/model/snapshots'
-], function(app, Wizard, wizardTemplate, page1, page2, page3, page4, summary, instance, image, type, security, keyPair, advanced, block, snap) {
+], function(app, Wizard, wizardTemplate, page1, page2, page2_5, page3, page4, summary, instance, image, type, security, keyPair, advanced, block, snap) {
 
   var config = function() {
     var wizard = new Wizard();
@@ -34,7 +35,7 @@ define([
       // ADD THEM INTO THE PASSED ARRAY
      //    return position === 2;
 
-       return imageModel.isValid() & typeModel.isValid(); // & securityModel.isValid();
+       return imageModel.isValid() & typeModel.isValid() & (position == 3); // & securityModel.isValid();
     }
 
     function finish() {
@@ -62,6 +63,7 @@ define([
     var viewBuilder = wizard.viewBuilder(wizardTemplate)
             .add(new page1({model: imageModel, blockMaps: blockMaps}))
             .add(new page2({model: typeModel}))
+            .add(new page2_5())
             .add(new page3({model: securityModel, keymodel: keyModel}))
             .add(new page4({model: advancedModel, blockMaps: blockMaps, snapshots: snapShots}))
             .setHideDisabledButtons(true)
