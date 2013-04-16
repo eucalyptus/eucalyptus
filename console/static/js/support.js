@@ -318,7 +318,7 @@ function associateIp(instance) {
 function disassociateIp(address){
   $('html body').find(DOM_BINDING['hidden']).children().detach();
   $('html body').find(DOM_BINDING['hidden']).eip({from_instance: true, hidden:true});
-  $('html body').find(DOM_BINDING['hidden']).eip('dialogDisassociateIp', [address]);
+  $('html body').find(DOM_BINDING['hidden']).eip('dialogDisassociateIp', address);   // STRIPPED OFF [ ] TO ALLOW MULTI-INSTANCES   --- Kyo 041513
 }
 
 function allocateIP() {

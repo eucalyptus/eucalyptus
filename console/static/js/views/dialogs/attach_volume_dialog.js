@@ -38,14 +38,23 @@ define([
             return 'error';
         },
 
-        // SET UP AUTOCOMPLETE FOR THE VOLUME INPUT BOX  --- NOT TESTED  Kyo 041013
+        // SET UP THE NEXT DEVICE NAME GIVEN THE INSTANCE ID
+        setupNextDeviceName: function(args){
+          var self = this;
+
+          var deviceName = self._suggestNextDeviceName(args.instance_id);
+          self.scope.volume.set({device: deviceName});
+
+        },
+
+        // SET UP AUTOCOMPLETE FOR THE VOLUME INPUT BOX
         setupAutoCompleteForVolumeInputBox: function(args){
             var self = this;
 
             var vol_ids = [];
             App.data.volume.each(function(item){
-              console.log("Volume ID: " + item.toJSON().id + ":" + item.toJSON().status);
-              if( item.toJSON().status === 'detached' ){
+              console.log("Volume ID: " + item.get('id') + ":" + item.get('status'));
+              if( item.get('status') === 'available' ){
                 vol_ids.push(item.toJSON().id);
               }
             });
@@ -82,18 +91,31 @@ define([
             });
         },
 
+        disableVolumeInputBox: function(){
+          var $volumeSelector = this.$el.find('#volume-attach-volume-id');
+          $volumeSelector.attr('disabled', 'disabled');
+        },
+
+        disableInstanceInputBox: function(){
+          var $instanceSelector = this.$el.find('#volume-attach-instance-id');
+          $instanceSelector.attr('disabled', 'disabled');
+        },
+
         // SET UP AUTOCOMPLETE FOR INPUT BOXES
         setupAutoComplete: function(args){
             var self = this;
 
-            // CASE: WHEN CALLED FROM THE INSTANCE PAGE -- NOT TESTED YET
+            // CASE: WHEN CALLED FROM THE INSTANCE PAGE
             if( args.volume_id == undefined ){
-              setupAutoCompleteForVolumeInputBox(args);
+              this.setupAutoCompleteForVolumeInputBox(args);
+              this.setupNextDeviceName(args);
+              this.disableInstanceInputBox();
             };
 
             // CASE: WHEN CALLED FROM THE VOLUME PAGE
             if( args.instance_id == undefined ){
               this.setupAutoCompleteForInstanceInputBox(args);
+              this.disableVolumeInputBox();
             }; 
         },
 
