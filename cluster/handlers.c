@@ -4182,6 +4182,7 @@ out:
 //!
 int doMigrateInstances(ncMetadata * pMeta, char *actionNode, char *instanceId, char **destinationNodes, int destinationNodeCount, int allowHosts, char *nodeAction)
 {
+    char credentials[CREDENTIAL_SIZE];
     int i, rc, ret = 0, timeout;
     int src_index = -1, dst_index = -1;
     int preparing = 0;
@@ -4327,11 +4328,14 @@ int doMigrateInstances(ncMetadata * pMeta, char *actionNode, char *instanceId, c
 
     if (preparing) {
         // notify source
+        // FIXME: add real credentials.
+        snprintf(credentials, CREDENTIAL_SIZE, "MIGRATE");
         timeout = ncGetTimeout(time(NULL), OP_TIMEOUT, 1, 0);
+        // FIXME: REMOVE THE DISPLAY OF CREDENTIALS BEFORE WE GO LIVE!
         LOGDEBUG("about to ncClientCall source node '%s' with nc_instances (%s %d) %s\n",
                  SP(resourceCacheLocal.resources[src_index].hostname), nodeAction, found_instances, SP(found_instances == 1 ? nc_instances[0]->instanceId : ""));
         rc = ncClientCall(pMeta, timeout, resourceCacheLocal.resources[src_index].lockidx, resourceCacheLocal.resources[src_index].ncURL, "ncMigrateInstances",
-                          nc_instances, found_instances, nodeAction, NULL);
+                          nc_instances, found_instances, nodeAction, credentials);
         if (rc) {
             LOGERROR("failed: request to prepare migration[s] from source %s\n", resourceCacheLocal.resources[src_index].hostname);
             ret = 1;
@@ -4358,8 +4362,9 @@ int doMigrateInstances(ncMetadata * pMeta, char *actionNode, char *instanceId, c
         if (!pid) {
             timeout = ncGetTimeout(time(NULL), OP_TIMEOUT, 1, 0);
             for (int idx = 0; idx < found_instances; idx++) {
-                LOGDEBUG("[%s] about to ncClientCall destination node '%s' with nc_instances (%s %d)\n",
-                         SP(nc_instances[idx]->instanceId), SP(nc_instances[idx]->migration_dst), nodeAction, 1);
+                // FIXME: REMOVE THE DISPLAY OF CREDENTIALS BEFORE WE GO LIVE!
+                LOGDEBUG("[%s] about to ncClientCall destination node '%s' with nc_instances (%s %d) [%s]\n",
+                         SP(nc_instances[idx]->instanceId), SP(nc_instances[idx]->migration_dst), nodeAction, 1, credentials);
 
                 dst_index = -1;
                 for (int res_idx = 0; res_idx < resourceCacheLocal.numResources && (dst_index == -1); res_idx++) {
@@ -4369,7 +4374,7 @@ int doMigrateInstances(ncMetadata * pMeta, char *actionNode, char *instanceId, c
                 }
 
                 rc = ncClientCall(pMeta, timeout, resourceCacheLocal.resources[dst_index].lockidx, resourceCacheLocal.resources[dst_index].ncURL, "ncMigrateInstances",
-                                  &(nc_instances[idx]), 1, nodeAction, NULL);
+                                  &(nc_instances[idx]), 1, nodeAction, credentials);
                 if (rc) {
                     LOGERROR("[%s] failed: request to prepare migration on destination %s\n", nc_instances[idx]->instanceId, resourceCacheLocal.resources[dst_index].hostname);
                     exit(1);
