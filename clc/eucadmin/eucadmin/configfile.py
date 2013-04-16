@@ -173,6 +173,7 @@ class ConfigFile(dict):
                 m = kvRE.match(line)
                 if not m:
                     # There's an invalid line here.  Should we remove it?
+                    idx += 1
                     continue
                 match = m.groups()
                 if not self.has_key(match[0]):
@@ -184,8 +185,8 @@ class ConfigFile(dict):
                     self._ordered_key_list.pop(self._ordered_key_list.index(match[0]))
                 else:
                     if self[match[0]] != match[1]:
-                        self._content[idx] = line.replace(match[1],
-                                                          self[match[0]])
+                        self._content[idx] = line.replace('"%s"' % match[1],
+                                                          '"%s"' % self[match[0]])
                     unseenKeys.pop(unseenKeys.index(match[0]))
             idx += 1
 
