@@ -113,18 +113,12 @@
 	      // Hidden column for the status of the snapshot
               "bVisible": false,
               "aTargets":[7],
-	      "mRender": function(data) {
-                return DefaultEncoder().encodeForHTML(data);
-              },
               "mData": "status",
             },
             {
 	      // Hidden column for the unprocessed creation time/start time of the snapshot
               "bVisible": false,
               "aTargets":[8],
-	      "mRender": function(data) {
-                return data;			// sort fails when encoded	011330 -- needs to verify
-              },
               "mData": "start_time",
               "sType": "date"
             },
@@ -132,18 +126,12 @@
 	      // Hidden column for the uncut description of the snapshot
               "bVisible": false,
               "aTargets":[9],
-	      "mRender": function(data) {
-                return DefaultEncoder().encodeForHTML(data);
-              },
               "mData": "description",
             },
             {
                // Hidden column for the uncut id of the snapshot
                "bVisible": false,
                "aTargets":[10],
-               "mRender": function(data) {
-                return DefaultEncoder().encodeForHTML(data);
-              },
               "mData": "id",
             },
           ],
