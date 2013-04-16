@@ -74,9 +74,11 @@ import javax.persistence.JoinColumn;
 import javax.persistence.ManyToOne;
 import javax.persistence.PersistenceContext;
 import javax.persistence.Table;
+
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
 import org.hibernate.annotations.Entity;
+
 import com.eucalyptus.cloud.ImageMetadata;
 import com.eucalyptus.cloud.ImageMetadata.DeviceMappingType;
 import com.eucalyptus.entities.AbstractPersistent;

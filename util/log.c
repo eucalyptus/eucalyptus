@@ -84,17 +84,17 @@
 #include <sys/time.h>
 #include <sys/types.h>
 #include <unistd.h>
-#include <sys/syscall.h>        // to get thread id
-#include <sys/resource.h>       // rusage
-#include <execinfo.h>           // backtrace
+#include <sys/syscall.h>               // to get thread id
+#include <sys/resource.h>              // rusage
+#include <execinfo.h>                  // backtrace
 #include <errno.h>
-#define SYSLOG_NAMES            // we want facilities as strings
+#define SYSLOG_NAMES                   // we want facilities as strings
 #include <syslog.h>
 
 #include "eucalyptus.h"
 #include "log.h"
-#include "misc.h"               // TRUE/FALSE
-#include "ipc.h"                // semaphores
+#include "misc.h"                      // TRUE/FALSE
+#include "ipc.h"                       // semaphores
 #include "euca_string.h"
 
 /*----------------------------------------------------------------------------*\
@@ -151,7 +151,7 @@ const char *log_level_names[] = {
     "WARN",
     "ERROR",
     "FATAL",
-    "OFF"
+    "OFF",
 };
 
 //!
@@ -170,14 +170,14 @@ const char *log_level_names[] = {
 //!
 const char *log_level_prefix[] = {
     "",
-    "%T %L %t9 %m-24 %F-33 |",  // EXTREME
-    "%T %L %t9 %m-24 |",        // TRACE
-    "%T %L %t9 %m-24 |",        // DEBUG
-    "%T %L |",                  // INFO
-    "%T %L |",                  // WARN
-    "%T %L |",                  // ERROR
-    "%T %L |",                  // FATAL
-    ""
+    "%T %L %t9 %m-24 %F-33 |",         // EXTREME
+    "%T %L %t9 %m-24 |",               // TRACE
+    "%T %L %t9 %m-24 |",               // DEBUG
+    "%T %L |",                         // INFO
+    "%T %L |",                         // WARN
+    "%T %L |",                         // ERROR
+    "%T %L |",                         // FATAL
+    "",
 };
 
 /*----------------------------------------------------------------------------*\
@@ -197,11 +197,11 @@ static ino_t log_ino = -1;
 
 //! @{
 //! @name parameters, for now unmodifiable
-static const boolean timelog = FALSE;   //!< change to TRUE for 'TIMELOG' entries
+static const boolean timelog = FALSE;  //!< change to TRUE for 'TIMELOG' entries
 static const boolean do_close_fd = FALSE;   //!< whether to close log fd after each message
 static const boolean do_stat_log = TRUE;    //!< whether to monitor file for changes
-static char log_name[32] = "euca";  //!< name of the log, such as "euca-nc" or "euca-cc" for syslog
-static const int syslog_options = 0;    //!< flags to be passed to openlog(), such as LOG_PID
+static char log_name[32] = "euca";     //!< name of the log, such as "euca-nc" or "euca-cc" for syslog
+static const int syslog_options = 0;   //!< flags to be passed to openlog(), such as LOG_PID
 //! @}
 
 //! @{
@@ -211,30 +211,9 @@ static int log_roll_number = 10;
 static long log_max_size_bytes = MAXLOGFILESIZE;
 static char log_file_path[EUCA_MAX_PATH] = "";
 static char log_custom_prefix[34] = USE_STANDARD_PREFIX;    //!< any other string means use it as custom prefix
-static sem *log_sem = NULL;     //!< if set, the semaphore will be used when logging & rotating logs
-static int syslog_facility = -1;    //!< if not -1 then we are logging to a syslog facility
+static sem *log_sem = NULL;            //!< if set, the semaphore will be used when logging & rotating logs
+static int syslog_facility = -1;       //!< if not -1 then we are logging to a syslog facility
 //! @}
-
-/*----------------------------------------------------------------------------*\
- |                                                                            |
- |                             EXPORTED PROTOTYPES                            |
- |                                                                            |
-\*----------------------------------------------------------------------------*/
-
-int log_level_int(const char *level);
-void log_params_set(int log_level_in, int log_roll_number_in, long log_max_size_bytes_in);
-int log_level_get(void);
-void log_params_get(int *log_level_out, int *log_roll_number_out, long *log_max_size_bytes_out);
-int log_file_set(const char *file);
-int log_prefix_set(const char *log_spec);
-int log_facility_set(const char *facility, const char *component_name);
-int log_sem_set(sem * s);
-int logfile(const char *file, int log_level_in, int log_roll_number_in);
-int logprintf(const char *format, ...) _attribute_format_(1, 2);
-int logprintfl(const char *func, const char *file, int line, log_level_e level, const char *format, ...) _attribute_format_(5, 6);
-int logcat(int debug_level, const char *file_path);
-void eventlog(char *hostTag, char *userTag, char *cid, char *eventTag, char *other);
-void log_dump_trace(char *buf, int buf_size);
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |
@@ -419,7 +398,7 @@ void log_params_set(int log_level_in, int log_roll_number_in, long log_max_size_
     // update the max size for any file
     if (log_max_size_bytes_in >= 0 && log_max_size_bytes != log_max_size_bytes_in) {
         log_max_size_bytes = log_max_size_bytes_in;
-        if (get_file(FALSE))    // that will rotate log files if needed
+        if (get_file(FALSE))           // that will rotate log files if needed
             release_file();
     }
 }
@@ -836,8 +815,8 @@ int logprintfl(const char *func, const char *file, int line, log_level_e level, 
         // see if we have a formatting character or a regular one
         c = prefix_spec[0];
         cn = prefix_spec[1];
-        if ((c != '%')          // not a special formatting char
-            || (c == '%' && cn == '%')  // formatting char, escaped
+        if ((c != '%')                 // not a special formatting char
+            || (c == '%' && cn == '%') // formatting char, escaped
             || (c == '%' && cn == '\0')) {  // formatting char at the end
             s[0] = c;
             s[1] = '\0';

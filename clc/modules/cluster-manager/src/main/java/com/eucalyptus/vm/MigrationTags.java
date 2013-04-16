@@ -60,59 +60,86 @@
  *   NEEDED TO COMPLY WITH ANY SUCH LICENSES OR RIGHTS.
  ************************************************************************/
 
-package com.eucalyptus.cluster;
+package com.eucalyptus.vm;
 
-import java.util.List;
-import java.util.Map;
-import java.util.NoSuchElementException;
-import java.util.Set;
-import com.eucalyptus.component.ServiceConfiguration;
+import javax.annotation.Nullable;
+import org.apache.log4j.Logger;
 import com.eucalyptus.component.Topology;
-import com.eucalyptus.component.id.ClusterController;
-import com.eucalyptus.vm.VmInstance;
-import com.google.common.base.Joiner;
-import com.google.common.collect.Lists;
-import com.google.common.collect.Sets;
-import edu.ucsb.eucalyptus.cloud.NodeInfo;
+import com.eucalyptus.component.id.Eucalyptus;
+import com.eucalyptus.util.async.AsyncRequests;
+import com.google.common.base.Predicate;
+import com.google.common.base.Strings;
+import edu.ucsb.eucalyptus.msgs.CreateTagsType;
+import edu.ucsb.eucalyptus.msgs.DeleteResourceTag;
+import edu.ucsb.eucalyptus.msgs.DeleteTagsType;
+import edu.ucsb.eucalyptus.msgs.ResourceTag;
+import edu.ucsb.eucalyptus.msgs.ResourceTagMessage;
 
-public class Nodes {
+enum MigrationTags implements Predicate<VmInstance> {
+  STATE,
+  SOURCE,
+  DESTINATION;
+  private static Logger LOG = Logger.getLogger( MigrationTags.class );
   
-  /**
-   * GRZE:TODO: should return the node's service configuration
-   * @param ccConfig
-   * @param ncHostOrTag
-   * @return
-   */
-  public static NodeInfo lookupNodeInfo( ServiceConfiguration ccConfig, String ncHostOrTag ) {
-    Map<String, NodeInfo> map = Clusters.lookup( ccConfig ).getNodeHostMap( );
-    if ( map.containsKey( ncHostOrTag ) ) {
-      return map.get( ncHostOrTag );
-    } else {
-      throw new NoSuchElementException( "Failed to lookup node using " + ncHostOrTag + ".  Available nodes are: " + Joiner.on("\n").join( map.keySet( ) ) );
+  public String toString( ) {
+    return "euca:node:migration:" + this.name( ).toLowerCase( );
+  }
+  
+  public static void deleteFor( final VmInstance vm ) {
+    final DeleteTagsType deleteTags = new DeleteTagsType( );
+    deleteTags.getTagSet( ).add( MigrationTags.STATE.deleteTag( ) );
+    deleteTags.getTagSet( ).add( MigrationTags.SOURCE.deleteTag( ) );
+    deleteTags.getTagSet( ).add( MigrationTags.DESTINATION.deleteTag( ) );
+    deleteTags.getResourcesSet( ).add( vm.getInstanceId( ) );
+    deleteTags.setEffectiveUserId( vm.getOwnerUserId( ) );//GRZE:TODO: update impersonation impl later.
+    dispatch( deleteTags );
+  }
+  
+  private static void dispatch( final ResourceTagMessage tagMessage ) {
+    try {
+      AsyncRequests.dispatch( Topology.lookup( Eucalyptus.class ), tagMessage );
+    } catch ( Exception ex ) {
+      LOG.trace( ex );
     }
   }
   
-  public static List<String> lookupIqns( ServiceConfiguration ccConfig ) {
-    Cluster cluster = Clusters.lookup( ccConfig );
-    Set<String> ret = Sets.newHashSet( );
-    for ( NodeInfo node : cluster.getNodeMap( ).values( ) ) {
-      if ( node.getIqn( ) != null ) {
-        ret.add( node.getIqn( ) );
-      }
+  public static void createFor( final VmInstance vm ) {
+    final VmMigrationTask migrationTask = vm.getRuntimeState( ).getMigrationTask( );
+    final CreateTagsType createTags = new CreateTagsType( );
+    createTags.getTagSet( ).add( MigrationTags.STATE.getTag( migrationTask.getState( ).name( ) ) );
+    if ( !Strings.isNullOrEmpty( migrationTask.getSourceHost( ) ) ) {
+      createTags.getTagSet( ).add( MigrationTags.SOURCE.getTag( migrationTask.getSourceHost( ) ) );
     }
-    return Lists.newArrayList( ret );
+    if ( !Strings.isNullOrEmpty( migrationTask.getDestinationHost( ) ) ) {
+      createTags.getTagSet( ).add( MigrationTags.DESTINATION.getTag( migrationTask.getDestinationHost( ) ) );
+    }
+    createTags.getResourcesSet( ).add( vm.getInstanceId( ) );
+    createTags.setEffectiveUserId( vm.getOwnerUserId( ) );//GRZE:TODO: update impersonation impl later.
+    dispatch( createTags );
   }
   
-  public static List<String> lookupIqn( VmInstance vm ) {
-    ServiceConfiguration ccConfig = Topology.lookup( ClusterController.class, vm.lookupPartition( ) );
-    Cluster cluster = Clusters.lookup( ccConfig );
-    NodeInfo node = cluster.getNode( vm.getServiceTag( ) );
-    if ( node == null ) {
-      throw new NoSuchElementException( "Failed to look up node information for " + vm.getInstanceId( ) + " with service tag " + vm.getServiceTag( ) );
-    } else if ( node.getIqn( ) == null ) {
-      throw new NoSuchElementException( "Error looking up iqn for node " + vm.getServiceTag( ) + " (" + vm.getInstanceId( ) + "): node does not have an iqn." );
+  ResourceTag getTag( String value ) {
+    return new ResourceTag( this.toString( ), value );
+  }
+  
+  private DeleteResourceTag deleteTag( ) {
+    DeleteResourceTag rsrcTag = new DeleteResourceTag( );
+    rsrcTag.setKey( this.toString( ) );
+    return rsrcTag;
+  }
+  
+  @Override
+  public boolean apply( @Nullable VmInstance input ) {
+    VmMigrationTask task = input.getRuntimeState( ).getMigrationTask( );
+    if ( MigrationState.none.equals( task.getState( ) ) ) {
+      MigrationTags.deleteFor( input );
     } else {
-      return Lists.newArrayList( node.getIqn( ) );
+      MigrationTags.createFor( input );
     }
+    return true;
+  }
+  
+  public static void update( VmInstance input ) {
+    SOURCE.apply( input );
   }
 }

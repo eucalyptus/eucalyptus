@@ -7,8 +7,7 @@ define([
     return EucaDialogView.extend({
         initialize : function(args) {
             var self = this;
-//            this.template = args.model.not_allowed ? template2 : template;
-            this.template = template;
+            this.template = args.model.instances != null ? template2 : template;
 
             this.scope = {
                 status: '',

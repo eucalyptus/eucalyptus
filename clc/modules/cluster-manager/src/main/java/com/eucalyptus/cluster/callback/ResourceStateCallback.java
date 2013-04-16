@@ -62,14 +62,16 @@
 
 package com.eucalyptus.cluster.callback;
 
-import org.apache.log4j.Logger;
 import com.eucalyptus.cluster.Cluster;
+import com.eucalyptus.node.Nodes;
 import com.eucalyptus.util.async.FailedRequestException;
 import com.eucalyptus.vmtypes.VmType;
 import com.eucalyptus.vmtypes.VmTypes;
+import com.google.common.base.Joiner;
 import edu.ucsb.eucalyptus.msgs.DescribeResourcesResponseType;
 import edu.ucsb.eucalyptus.msgs.DescribeResourcesType;
 import edu.ucsb.eucalyptus.msgs.VmTypeInfo;
+import org.apache.log4j.Logger;
 
 public class ResourceStateCallback extends StateUpdateMessageCallback<Cluster, DescribeResourcesType, DescribeResourcesResponseType> {
   private static Logger LOG = Logger.getLogger( ResourceStateCallback.class );
@@ -96,16 +98,14 @@ public class ResourceStateCallback extends StateUpdateMessageCallback<Cluster, D
   @Override
   public void fire( DescribeResourcesResponseType reply ) {
     this.getSubject( ).getNodeState( ).update( reply.getResources( ) );
-    LOG.debug( "Adding node service tags: " + reply.getServiceTags( ) );
-    /**
-     * TODO:GRZE: if not present emulate {@link ClusterController.NodeController} using {@link Component#setup()}
-     * TODO:GRZE: emulate update of emulate {@link ClusterController.NodeController} state
-     * TODO:GRZE: {@link Component#destroy()} for the NodeControllers which are not reported by the CC.
-     */
+    LOG.debug( "Adding node service tags: " + Joiner.on( ", " ).join( reply.getNodes() ) );
     if( !reply.getNodes( ).isEmpty( ) ) {
-      this.getSubject( ).updateNodeInfo( reply.getNodes( ) );
-    } else {
-      this.getSubject( ).updateNodeInfo( reply.getServiceTags( ) );
+      try {
+        Nodes.updateNodeInfo( this.getSubject( ).getConfiguration( ), reply.getNodes( ) );
+      } catch ( Exception e ) {
+        LOG.error( e );
+        LOG.trace( e, e );
+      }
     }
   }
   

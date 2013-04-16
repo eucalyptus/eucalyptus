@@ -64,9 +64,13 @@ package com.eucalyptus.cloud;
 
 import java.util.Calendar;
 import java.util.Date;
+import java.util.Map;
 import java.util.UUID;
+
 import javax.annotation.Nullable;
+
 import org.apache.log4j.Logger;
+
 import com.eucalyptus.address.Address;
 import com.eucalyptus.blockstorage.Volume;
 import com.eucalyptus.cloud.CloudMetadata.VmInstanceMetadata;
@@ -81,6 +85,7 @@ import com.eucalyptus.network.ExtantNetwork;
 import com.eucalyptus.network.PrivateNetworkIndex;
 import com.eucalyptus.util.OwnerFullName;
 import com.eucalyptus.vm.VmInstance;
+import com.google.common.collect.Maps;
 
 public class ResourceToken implements VmInstanceMetadata, Comparable<ResourceToken> {
   private static Logger       LOG    = Logger.getLogger( ResourceToken.class );
@@ -90,6 +95,10 @@ public class ResourceToken implements VmInstanceMetadata, Comparable<ResourceTok
   private final String        instanceUuid;
   @Nullable
   private Volume              rootVolume;
+  @Nullable
+  private Map<String, Volume> ebsVolumes;
+  @Nullable
+  private Map<String, String> ephemeralDisks;
   @Nullable
   private Address             address;
   @Nullable
@@ -303,6 +312,28 @@ public class ResourceToken implements VmInstanceMetadata, Comparable<ResourceTok
   
   public void setRootVolume( Volume rootVolume ) {
     this.rootVolume = rootVolume;
+  }
+
+  public Map<String, Volume> getEbsVolumes() {
+	if (this.ebsVolumes == null) {
+	  this.ebsVolumes = Maps.newHashMap();
+	}
+	return ebsVolumes;
+  }
+
+  public void setEbsVolumes(Map<String, Volume> ebsVolumes) {
+	this.ebsVolumes = ebsVolumes;
+  }
+
+  public Map<String, String> getEphemeralDisks() {
+	if (this.ephemeralDisks == null){
+	  this.ephemeralDisks = Maps.newHashMap();
+	}
+	return ephemeralDisks;
+  }
+
+  public void setEphemeralDisks(Map<String, String> ephemeralDisks) {
+	this.ephemeralDisks = ephemeralDisks;
   }
 
 }

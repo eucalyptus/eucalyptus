@@ -187,6 +187,7 @@
     _reloadSummaries : function($instObj, $storageObj, $netsecObj){
       var thisObj = this;
       $('html body').eucadata('addCallback', 'summary', 'dashboard-summary', function(){
+        var results = describe('summary')[0];
         // remove busy indicators when data arrives
         $instObj.find('#dashboard-instance-running div img').remove();
         $instObj.find('#dashboard-instance-stopped div img').remove();
@@ -201,8 +202,6 @@
 
         var az=$instObj.find('#dashboard-instance-az select').val();
 
-        var results = describe('summary')[0];
-        console.log('SUMMARY', results);
         $instObj.find('#dashboard-instance-running span').text(results.inst_running);
         $instObj.find('#dashboard-instance-stopped span').text(results.inst_stopped);
         var scalinginsts = describe('scalinginst');

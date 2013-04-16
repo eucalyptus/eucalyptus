@@ -2,7 +2,7 @@
 // vim: set softtabstop=4 shiftwidth=4 tabstop=4 expandtab:
 
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * Copyright 2009-2013 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -76,16 +76,16 @@
 
 #include <stdio.h>
 #include <stdlib.h>
-#define __USE_GNU               /* strnlen */
-#include <string.h>             /* strlen, strcpy */
+#define __USE_GNU                      /* strnlen */
+#include <string.h>                    /* strlen, strcpy */
 #include <time.h>
-#include <sys/types.h>          /* fork */
-#include <sys/wait.h>           /* waitpid */
+#include <sys/types.h>                 /* fork */
+#include <sys/wait.h>                  /* waitpid */
 #include <unistd.h>
 #include <assert.h>
 #include <errno.h>
 #include <pthread.h>
-#include <signal.h>             /* SIGINT */
+#include <signal.h>                    /* SIGINT */
 #include <sys/stat.h>
 #include <fcntl.h>
 
@@ -102,7 +102,7 @@
 #include "handlers.h"
 #include "xml.h"
 #include "hooks.h"
-#include "vbr.h"                // vbr_parse
+#include "vbr.h"                       // vbr_parse
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |
@@ -140,6 +140,7 @@
 
 // coming from handlers.c
 extern sem *hyp_sem;
+extern sem *migr_sem;
 extern sem *inst_sem;
 extern bunchOfInstances *global_instances;
 
@@ -152,12 +153,6 @@ extern bunchOfInstances *global_instances;
 /*----------------------------------------------------------------------------*\
  |                                                                            |
  |                              STATIC VARIABLES                              |
- |                                                                            |
-\*----------------------------------------------------------------------------*/
-
-/*----------------------------------------------------------------------------*\
- |                                                                            |
- |                             EXPORTED PROTOTYPES                            |
  |                                                                            |
 \*----------------------------------------------------------------------------*/
 
@@ -302,7 +297,7 @@ static void *rebooting_thread(void *arg)
     {
         // for KVM, must stop and restart the instance
         LOGDEBUG("[%s] destroying domain\n", instance->instanceId);
-        error = virDomainDestroy(dom);  // @todo change to Shutdown? is this synchronous?
+        error = virDomainDestroy(dom); // @todo change to Shutdown? is this synchronous?
         virDomainFree(dom);
     }
     sem_v(hyp_sem);
@@ -335,7 +330,7 @@ static void *rebooting_thread(void *arg)
     for (int i = 0; i < EUCA_MAX_VOLUMES; ++i) {
         volume = &instance->volumes[i];
         if (strcmp(volume->stateName, VOL_STATE_ATTACHED) && strcmp(volume->stateName, VOL_STATE_ATTACHING))
-            continue;           // skip the entry unless attached or attaching
+            continue;                  // skip the entry unless attached or attaching
 
         LOGDEBUG("[%s] volumes [%d] = '%s'\n", instance->instanceId, i, volume->stateName);
 
@@ -372,7 +367,7 @@ static void *rebooting_thread(void *arg)
                 if (err) {
                     LOGERROR("[%s][%s] failed to reattach volume (attempt %d of %d)\n", instance->instanceId, volume->volumeId, j, REATTACH_RETRIES);
                     LOGDEBUG("[%s][%s] error from virDomainAttachDevice: %d xml: %s\n", instance->instanceId, volume->volumeId, err, xml);
-                    sleep(3);   // sleep a bit and retry
+                    sleep(3);          // sleep a bit and retry
                 } else {
                     LOGINFO("[%s][%s] volume reattached as '%s'\n", instance->instanceId, volume->volumeId, volume->localDevReal);
                     break;
@@ -570,11 +565,17 @@ static void *migrating_thread(void *arg)
     virConnectPtr *conn = NULL;
     int migration_error = 0;
 
+    LOGDEBUG("invoked for %s\n", instance->instanceId);
+
+    sem_p(migr_sem);
     if ((conn = check_hypervisor_conn()) == NULL) {
         LOGERROR("[%s] cannot migrate instance %s (failed to connect to hypervisor), giving up and rolling back.\n", instance->instanceId, instance->instanceId);
         migration_error++;
         goto out;
+    } else {
+        LOGDEBUG("[%s] check_hypervisor_conn() OK\n", instance->instanceId);
     }
+    sem_v(migr_sem);
 
     sem_p(hyp_sem);
     {
@@ -588,41 +589,50 @@ static void *migrating_thread(void *arg)
         goto out;
     }
 
-    char duri [1024];
-    // FIXME: Make TLS/SSH a config-file item and/or make fallback from one to the other configurable?
+    char duri[1024];
     snprintf(duri, sizeof(duri), "qemu+tls://%s/system", instance->migration_dst);
+
     virConnectPtr dconn = NULL;
+
+    sem_p(migr_sem);
+    LOGDEBUG("[%s] connecting to libvirt to migrate instance using URI '%s'\n", instance->instanceId, duri);
     dconn = virConnectOpen(duri);
     if (dconn == NULL) {
-        LOGERROR("[%s] cannot migrate instance using TLS (failed to connect to remote), retrying using SSH.\n", instance->instanceId);
+        LOGWARN("[%s] cannot migrate instance using TLS (failed to connect to remote), retrying using SSH.\n", instance->instanceId);
         snprintf(duri, sizeof(duri), "qemu+ssh://%s/system", instance->migration_dst);
+        LOGDEBUG("[%s] connecting to libvirt to migrate instance using URI '%s'\n", instance->instanceId, duri);
         dconn = virConnectOpen(duri);
         if (dconn == NULL) {
-            LOGERROR("[%s] cannot migrate instance using SSH (failed to connect to remote), giving up and rolling back.\n", instance->instanceId);
+            LOGERROR("[%s] cannot migrate instance using TLS or SSH (failed to connect to remote), giving up and rolling back.\n", instance->instanceId);
             migration_error++;
+            sem_v(migr_sem);
             goto out;
         }
     }
 
+    LOGINFO("[%s] migrating instance\n", instance->instanceId);
     virDomain *ddom = virDomainMigrate(dom,
                                        dconn,
                                        VIR_MIGRATE_LIVE | VIR_MIGRATE_NON_SHARED_DISK,
-                                       NULL, // new name on destination (optional)
-                                       NULL, // destination URI as seen from source (optional)
+                                       NULL,    // new name on destination (optional)
+                                       NULL,    // destination URI as seen from source (optional)
                                        0L); // bandwidth limitation (0 => unlimited)
     virConnectClose(dconn);
+    sem_v(migr_sem);
 
     if (ddom == NULL) {
         LOGERROR("[%s] cannot migrate instance %s, giving up and rolling back.\n", instance->instanceId, instance->instanceId);
         migration_error++;
         goto out;
+    } else {
+        LOGINFO("[%s] instance migrated\n", instance->instanceId);
     }
     virDomainFree(ddom);
 
- out:
+out:
     sem_p(inst_sem);
     if (migration_error) {
-        migration_rollback_src(instance);
+        migration_rollback(instance);
     } else {
         // If this is set to NOT_MIGRATING here, it's briefly possible for
         // both the source and destination nodes to report the same instance
@@ -635,6 +645,9 @@ static void *migrating_thread(void *arg)
 
     if (dom)
         virDomainFree(dom);
+
+    LOGDEBUG("done\n");
+
     return NULL;
 }
 
@@ -655,228 +668,282 @@ static void *migrating_thread(void *arg)
 static int doMigrateInstances(struct nc_state_t *nc, ncMetadata * pMeta, ncInstance ** instances, int instancesLen, char *action, char *credentials)
 {
     int ret = EUCA_OK;
-    assert(instancesLen > 0);
-    ncInstance *instance_req = instances[0];
-    char *sourceNodeName = instance_req->migration_src;
-    char *destNodeName = instance_req->migration_dst;
 
-    // this is a call to the source of migration
-    if (!strcmp(pMeta->nodeName, sourceNodeName)) {
+    if (instancesLen <= 0) {
+        LOGERROR("called with invalid instancesLen (%d)\n", instancesLen);
+        return (EUCA_INVALID_ERROR);
+    }
 
-        // locate the instance structure
-        ncInstance *instance;
-        sem_p(inst_sem);
-        {
-            instance = find_instance(&global_instances, instance_req->instanceId);
+    LOGDEBUG("verifing %d instance[s] for migration...\n", instancesLen);
+    for (int inst_idx = 0; inst_idx < instancesLen; inst_idx++) {
+        LOGDEBUG("verifying instance # %d...\n", inst_idx);
+        if (instances[inst_idx]) {
+            ncInstance *instance_idx = instances[inst_idx];
+            LOGDEBUG("[%s] proposed migration action '%s' (%s > %s)\n", instance_idx->instanceId, action, instance_idx->migration_src, instance_idx->migration_dst);
+        } else {
+            LOGERROR("Mismatch between migration instance count (%d) and length of instance list\n", instancesLen);
+            return (EUCA_ERROR);
         }
-        sem_v(inst_sem);
-        if (instance == NULL) {
-            LOGERROR("[%s] cannot find instance\n", instance_req->instanceId);
-            return (EUCA_NOT_FOUND_ERROR);
-        }
+    }
 
-        if (strcmp (action, "prepare") == 0) {
+    // FIXME: Optimize the location of this loop, placing it inside various conditionals below?
+    for (int inst_idx = 0; inst_idx < instancesLen; inst_idx++) {
+        ncInstance *instance_req = instances[inst_idx];
+        char *sourceNodeName = instance_req->migration_src;
+        char *destNodeName = instance_req->migration_dst;
+
+        LOGDEBUG("[%s] processing instance # %d (%s > %s)\n", instance_req->instanceId, inst_idx, instance_req->migration_src, instance_req->migration_dst);
+
+        // this is a call to the source of migration
+        if (!strcmp(pMeta->nodeName, sourceNodeName)) {
+
+            // locate the instance structure
+            ncInstance *instance;
             sem_p(inst_sem);
-            instance->migration_state = MIGRATION_READY;
+            {
+                instance = find_instance(&global_instances, instance_req->instanceId);
+            }
+            sem_v(inst_sem);
+            if (instance == NULL) {
+                LOGERROR("[%s] cannot find instance\n", instance_req->instanceId);
+                return (EUCA_NOT_FOUND_ERROR);
+            }
+
+            if (strcmp(action, "prepare") == 0) {
+                sem_p(inst_sem);
+                instance->migration_state = MIGRATION_READY;
+                euca_strncpy(instance->migration_src, sourceNodeName, HOSTNAME_SIZE);
+                euca_strncpy(instance->migration_dst, destNodeName, HOSTNAME_SIZE);
+                instance->migrationTime = time(NULL);
+                LOGINFO("[%s] migration source preparing %s > %s\n", instance->instanceId, instance->migration_src, instance->migration_dst);
+                save_instance_struct(instance);
+                copy_instances();
+                sem_v(inst_sem);
+
+            } else if (strcmp(action, "commit") == 0) {
+
+                sem_p(inst_sem);
+                if (instance->migration_state == MIGRATION_IN_PROGRESS) {
+                    LOGWARN("[%s] duplicate request to migration source to initiate %s > %s (already migrating)\n", instance->instanceId,
+                            instance->migration_src, instance->migration_dst);
+                    sem_v(inst_sem);
+                    return (EUCA_DUPLICATE_ERROR);
+                } else if (instance->migration_state != MIGRATION_READY) {
+                    LOGERROR("[%s] request to commit migration %s > %s when source migration_state='%s' (not 'ready')\n", instance->instanceId,
+                             SP(sourceNodeName), SP(destNodeName), migration_state_names[instance->migration_state]);
+                    sem_v(inst_sem);
+                    return (EUCA_UNSUPPORTED_ERROR);
+                }
+                instance->migration_state = MIGRATION_IN_PROGRESS;
+                LOGINFO("[%s] migration source initiating %s > %s\n", instance->instanceId, instance->migration_src, instance->migration_dst);
+                save_instance_struct(instance);
+                copy_instances();
+                sem_v(inst_sem);
+
+                // since migration may take a while, we do them in a thread
+                pthread_t tcb = { 0 };
+                if (pthread_create(&tcb, NULL, migrating_thread, (void *)instance)) {
+                    LOGERROR("[%s] failed to spawn a migration thread\n", instance->instanceId);
+                    return (EUCA_THREAD_ERROR);
+                }
+
+                if (pthread_detach(tcb)) {
+                    LOGERROR("[%s] failed to detach the migration thread\n", instance->instanceId);
+                    return (EUCA_THREAD_ERROR);
+                }
+            } else if (strcmp(action, "rollback") == 0) {
+                LOGINFO("[%s] rolling back migration (%s > %s) on source\n", instance->instanceId, instance->migration_src, instance->migration_dst);
+                sem_p(inst_sem);
+                migration_rollback(instance);
+                sem_v(inst_sem);
+            } else {
+                LOGERROR("[%s] action '%s' is not valid\n", instance->instanceId, action);
+                return (EUCA_INVALID_ERROR);
+            }
+
+        } else if (!strcmp(pMeta->nodeName, destNodeName)) {    // this is a migrate request to destination
+
+            if (!strcmp(action, "commit")) {
+                LOGERROR("[%s] action '%s' for migration (%s > %s) is not valid on destination node\n", instance_req->instanceId, action, SP(sourceNodeName), SP(destNodeName));
+                return (EUCA_UNSUPPORTED_ERROR);
+            } else if (!strcmp(action, "rollback")) {
+                LOGINFO("[%s] rolling back migration (%s > %s) on destination\n", instance_req->instanceId, SP(sourceNodeName), SP(destNodeName));
+                sem_p(inst_sem);
+                {
+                    ncInstance *instance = find_instance(&global_instances, instance_req->instanceId);
+                    if (instance != NULL) {
+                        LOGDEBUG("[%s] marked for cleanup\n", instance->instanceId);
+                        change_state(instance, SHUTOFF);
+                        instance->migration_state = MIGRATION_CLEANING;
+                        save_instance_struct(instance);
+                    }
+                }
+                sem_v(inst_sem);
+                return EUCA_OK;
+            } else if (strcmp(action, "prepare") != 0) {
+                LOGERROR("[%s] action '%s' is not valid or not implemented\n", instance_req->instanceId, action);
+                return (EUCA_INVALID_ERROR);
+            }
+            // Everything from here on is specific to "prepare"
+
+            // allocate a new instance struct
+            ncInstance *instance = clone_instance(instance_req);
+            if (instance == NULL) {
+                LOGERROR("[%s] could not allocate instance struct\n", instance_req->instanceId);
+                goto failed_dest;
+            }
+
+            sem_p(inst_sem);
+            instance->migration_state = MIGRATION_PREPARING;
             euca_strncpy(instance->migration_src, sourceNodeName, HOSTNAME_SIZE);
             euca_strncpy(instance->migration_dst, destNodeName, HOSTNAME_SIZE);
-            instance->migrationTime = time(NULL);
-            LOGINFO("[%s] migration source preparing %s > %s [%d]\n", instance->instanceId, instance->migration_src, instance->migration_dst, instance->migrationTime);
+            LOGINFO("[%s] migration destination preparing %s > %s\n", instance->instanceId, SP(instance->migration_src), SP(instance->migration_dst));
             save_instance_struct(instance);
-            copy_instances();
             sem_v(inst_sem);
 
-        } else if (strcmp (action, "commit") == 0) {
+            int error;
 
-            sem_p(inst_sem);
-            if (instance->migration_state == MIGRATION_IN_PROGRESS) {
-                LOGWARN("[%s] duplicate request to migration source to initiate %s > %s (already migrating)\n", instance->instanceId,
-                        instance->migration_src, instance->migration_dst);
-                sem_v(inst_sem);
-                return (EUCA_DUPLICATE_ERROR);
-            } else if (instance->migration_state != MIGRATION_READY) {
-                LOGERROR("[%s] request to commit migration %s > %s when source migration_state='%s' (not 'ready')\n", instance->instanceId,
-                         sourceNodeName, destNodeName, migration_state_names[instance->migration_state]);
-                sem_v(inst_sem);
-                return (EUCA_UNSUPPORTED_ERROR);
+            if (vbr_parse(&(instance->params), pMeta) != EUCA_OK) {
+                goto failed_dest;
             }
-            instance->migration_state = MIGRATION_IN_PROGRESS;
-            LOGINFO("[%s] migration source initiating %s > %s\n", instance->instanceId, instance->migration_src, instance->migration_dst);
-            save_instance_struct(instance);
-            copy_instances();
-            sem_v(inst_sem);
-
-            // since migration may take a while, we do them in a thread
-            pthread_t tcb = { 0 };
-            if (pthread_create(&tcb, NULL, migrating_thread, (void *)instance)) {
-                LOGERROR("[%s] failed to spawn a migration thread\n", instance->instanceId);
-                return (EUCA_THREAD_ERROR);
+            // set up networking
+            char *brname = NULL;
+            if ((error = vnetStartNetwork(nc->vnetconfig, instance->ncnet.vlan, NULL, NULL, NULL, &brname)) != EUCA_OK) {
+                LOGERROR("[%s] start network failed for instance, terminating it\n", instance->instanceId);
+                EUCA_FREE(brname);
+                goto failed_dest;
             }
+            // TODO: move stuff in startup_thread() into a function?
 
-            if (pthread_detach(tcb)) {
-                LOGERROR("[%s] failed to detach the migration thread\n", instance->instanceId);
-                return (EUCA_THREAD_ERROR);
+            instance->combinePartitions = nc->convert_to_disk;
+            instance->do_inject_key = nc->do_inject_key;
+
+            if ((error = create_instance_backing(instance, TRUE))) {
+                LOGERROR("[%s] failed to prepare images for instance (error=%d)\n", instance->instanceId, error);
+                goto failed_dest;
             }
-        } else if (strcmp (action, "rollback") == 0) {
-            LOGINFO("[%s] rolling back migration of instance on source %s\n", instance->instanceId, instance->migration_src);
-            sem_p(inst_sem);
-            migration_rollback_src(instance);
-            sem_v(inst_sem);
-        } else {
-            LOGERROR("[%s] action '%s' is not valid\n", instance->instanceId, action);
-            return (EUCA_INVALID_ERROR);
-        }
+            // attach any volumes
+            for (int v = 0; v < EUCA_MAX_VOLUMES; v++) {
+                ncVolume *volume = &instance->volumes[v];
+                if (strcmp(volume->stateName, VOL_STATE_ATTACHED) && strcmp(volume->stateName, VOL_STATE_ATTACHING))
+                    continue;          // skip the entry unless attached or attaching
+                LOGDEBUG("[%s] volumes [%d] = '%s'\n", instance->instanceId, v, volume->stateName);
 
-    } else if (!strcmp(pMeta->nodeName, destNodeName)) { // this is a migrate request to destination
+                // TODO: factor what the following out of here and doAttachVolume() in handlers_default.c
 
-        if (strcmp (action, "prepare") != 0) {
-            // FIXME: "commit" will remain invalid, but "rollback" must be implemented!
-            LOGERROR("action '%s' is not valid or not implemented\n", action);
-            return (EUCA_INVALID_ERROR);
-        }
+                int is_iscsi_target = 0;
+                int have_remote_device = 0;
+                char *xml = NULL;
 
-        // allocate a new instance struct
-        ncInstance *instance = clone_instance(instance_req);
-        if (instance == NULL) {
-            LOGERROR("[%s] could not allocate instance struct\n", instance_req->instanceId);
-            goto failed_dest;
-        }
+                char localDevReal[32], localDevTag[256], remoteDevReal[132];
+                char *tagBuf = localDevTag;
+                ret = convert_dev_names(volume->localDev, localDevReal, tagBuf);
+                if (ret)
+                    goto unroll;
 
-        sem_p(inst_sem);
-        instance->migration_state = MIGRATION_PREPARING;
-        euca_strncpy(instance->migration_src, sourceNodeName, HOSTNAME_SIZE);
-        euca_strncpy(instance->migration_dst, destNodeName, HOSTNAME_SIZE);
-        LOGINFO("[%s] migration destination preparing %s > %s\n", instance->instanceId, instance->migration_src, instance->migration_dst);
-        save_instance_struct(instance);
-        sem_v(inst_sem);
+                // do iscsi connect shellout if remoteDev is an iSCSI target
 
-        int error;
+                if (check_iscsi(volume->remoteDev)) {
+                    char *remoteDevStr = NULL;
+                    is_iscsi_target = 1;
 
-        if (vbr_parse(&(instance->params), pMeta) != EUCA_OK) {
-            goto failed_dest;
-        }
-
-        // set up networking
-        char *brname = NULL;
-        if ((error = vnetStartNetwork(nc->vnetconfig, instance->ncnet.vlan, NULL, NULL, NULL, &brname)) != EUCA_OK) {
-            LOGERROR("[%s] start network failed for instance, terminating it\n", instance->instanceId);
-            EUCA_FREE(brname);
-            goto failed_dest;
-        }
-        // TODO: move stuff in startup_thread() into a function?
-
-        instance->combinePartitions = nc->convert_to_disk;
-        instance->do_inject_key = nc->do_inject_key;
-
-        if ((error = create_instance_backing(instance))) {
-            LOGERROR("[%s] failed to prepare images for instance (error=%d)\n", instance->instanceId, error);
-            goto failed_dest;
-        }
-        // attach any volumes
-        for (int v = 0; v < EUCA_MAX_VOLUMES; v++) {
-            ncVolume *volume = &instance->volumes[v];
-            if (strcmp(volume->stateName, VOL_STATE_ATTACHED) && strcmp(volume->stateName, VOL_STATE_ATTACHING))
-                continue;       // skip the entry unless attached or attaching
-            LOGDEBUG("[%s] volumes [%d] = '%s'\n", instance->instanceId, v, volume->stateName);
-
-            // TODO: factor what the following out of here and doAttachVolume() in handlers_default.c
-
-            int is_iscsi_target = 0;
-            int have_remote_device = 0;
-            char *xml = NULL;
-
-            char localDevReal[32], localDevTag[256], remoteDevReal[132];
-            char *tagBuf = localDevTag;
-            ret = convert_dev_names(volume->localDev, localDevReal, tagBuf);
-            if (ret)
-                goto unroll;
-
-            // do iscsi connect shellout if remoteDev is an iSCSI target
-
-            if (check_iscsi(volume->remoteDev)) {
-                char *remoteDevStr = NULL;
-                is_iscsi_target = 1;
-
-                // get credentials, decrypt them, login into target
-                remoteDevStr = connect_iscsi_target(volume->remoteDev);
-                if (!remoteDevStr || !strstr(remoteDevStr, "/dev")) {
-                    LOGERROR("[%s][%s] failed to connect to iscsi target\n", instance->instanceId, volume->volumeId);
-                    remoteDevReal[0] = '\0';
+                    // get credentials, decrypt them, login into target
+                    remoteDevStr = connect_iscsi_target(volume->remoteDev);
+                    if (!remoteDevStr || !strstr(remoteDevStr, "/dev")) {
+                        LOGERROR("[%s][%s] failed to connect to iscsi target\n", instance->instanceId, volume->volumeId);
+                        remoteDevReal[0] = '\0';
+                    } else {
+                        LOGDEBUG("[%s][%s] attached iSCSI target of host device '%s'\n", instance->instanceId, volume->volumeId, remoteDevStr);
+                        snprintf(remoteDevReal, sizeof(remoteDevReal), "%s", remoteDevStr);
+                        have_remote_device = 1;
+                    }
+                    EUCA_FREE(remoteDevStr);
                 } else {
-                    LOGDEBUG("[%s][%s] attached iSCSI target of host device '%s'\n", instance->instanceId, volume->volumeId, remoteDevStr);
-                    snprintf(remoteDevReal, sizeof(remoteDevReal), "%s", remoteDevStr);
+                    snprintf(remoteDevReal, sizeof(remoteDevReal), "%s", volume->remoteDev);
                     have_remote_device = 1;
                 }
-                EUCA_FREE(remoteDevStr);
-            } else {
-                snprintf(remoteDevReal, sizeof(remoteDevReal), "%s", volume->remoteDev);
-                have_remote_device = 1;
+
+                // something went wrong above, abort
+                if (!have_remote_device) {
+                    goto unroll;
+                }
+                // make sure there is a block device
+                if (check_block(remoteDevReal)) {
+                    LOGERROR("[%s][%s] cannot verify that host device '%s' is available for hypervisor attach\n", instance->instanceId, volume->volumeId, remoteDevReal);
+                    goto unroll;
+                }
+                // generate XML for libvirt attachment request
+                if (gen_volume_xml(volume->volumeId, instance, localDevReal, remoteDevReal) // creates vol-XXX.xml
+                    || gen_libvirt_volume_xml(volume->volumeId, instance)) {    // creates vol-XXX-libvirt.xml via XSLT transform
+                    LOGERROR("[%s][%s] could not produce attach device xml\n", instance->instanceId, volume->volumeId);
+                    goto unroll;
+                }
+                // invoke hooks
+                char path[MAX_PATH];
+                char lpath[MAX_PATH];
+                snprintf(path, sizeof(path), EUCALYPTUS_VOLUME_XML_PATH_FORMAT, instance->instancePath, volume->volumeId);  // vol-XXX.xml
+                snprintf(lpath, sizeof(lpath), EUCALYPTUS_VOLUME_LIBVIRT_XML_PATH_FORMAT, instance->instancePath, volume->volumeId);    // vol-XXX-libvirt.xml
+                if (call_hooks(NC_EVENT_PRE_ATTACH, lpath)) {
+                    LOGERROR("[%s][%s] cancelled volume attachment via hooks\n", instance->instanceId, volume->volumeId);
+                    goto unroll;
+                }
+                // read in libvirt XML, which may have been modified by the hook above
+                if ((xml = file2str(lpath)) == NULL) {
+                    LOGERROR("[%s][%s] failed to read volume XML from %s\n", instance->instanceId, volume->volumeId, lpath);
+                    goto unroll;
+                }
+
+                continue;
+unroll:
+                // TODO: unroll all volume attachments
+                break;
             }
 
-            // something went wrong above, abort
-            if (!have_remote_device) {
-                goto unroll;
-            }
-            // make sure there is a block device
-            if (check_block(remoteDevReal)) {
-                LOGERROR("[%s][%s] cannot verify that host device '%s' is available for hypervisor attach\n", instance->instanceId, volume->volumeId,
-                         remoteDevReal);
-                goto unroll;
-            }
-            // generate XML for libvirt attachment request
-            if (gen_volume_xml(volume->volumeId, instance, localDevReal, remoteDevReal) // creates vol-XXX.xml
-                || gen_libvirt_volume_xml(volume->volumeId, instance)) {    // creates vol-XXX-libvirt.xml via XSLT transform
-                LOGERROR("[%s][%s] could not produce attach device xml\n", instance->instanceId, volume->volumeId);
-                goto unroll;
-            }
-            // invoke hooks
-            char path[MAX_PATH];
-            char lpath[MAX_PATH];
-            snprintf(path, sizeof(path), EUCALYPTUS_VOLUME_XML_PATH_FORMAT, instance->instancePath, volume->volumeId);  // vol-XXX.xml
-            snprintf(lpath, sizeof(lpath), EUCALYPTUS_VOLUME_LIBVIRT_XML_PATH_FORMAT, instance->instancePath, volume->volumeId);    // vol-XXX-libvirt.xml
-            if (call_hooks(NC_EVENT_PRE_ATTACH, lpath)) {
-                LOGERROR("[%s][%s] cancelled volume attachment via hooks\n", instance->instanceId, volume->volumeId);
-                goto unroll;
-            }
-            // read in libvirt XML, which may have been modified by the hook above
-            if ((xml = file2str(lpath)) == NULL) {
-                LOGERROR("[%s][%s] failed to read volume XML from %s\n", instance->instanceId, volume->volumeId, lpath);
-                goto unroll;
+            sem_p(inst_sem);
+            instance->migration_state = MIGRATION_READY;
+            instance->bootTime = time(NULL);    // otherwise nc_state.booting_cleanup_threshold will kick in
+            change_state(instance, BOOTING);    // not STAGING, since in that mode we don't poll hypervisor for info
+            LOGINFO("[%s] migration destination ready %s > %s\n", instance->instanceId, instance->migration_src, instance->migration_dst);
+            save_instance_struct(instance);
+            error = add_instance(&global_instances, instance);
+            copy_instances();
+            sem_v(inst_sem);
+            if (error) {
+                if (error == EUCA_DUPLICATE_ERROR) {
+                    // FIXME: Ensure deletion after migration, or replace (remove and re-add)?
+                    LOGINFO("[%s] instance struct already exists (from previous migration?), deleting and re-adding...\n", instance->instanceId);
+                    error = remove_instance(&global_instances, instance);
+                    if (error) {
+                        LOGERROR("[%s] could not replace (remove) instance struct, failing...\n", instance->instanceId);
+                        goto failed_dest;
+                    }
+                    error = add_instance(&global_instances, instance);
+                    if (error) {
+                        LOGERROR("[%s] could not replace (add) instance struct, failing...\n", instance->instanceId);
+                        goto failed_dest;
+                    }
+                } else {
+                    LOGERROR("[%s] could not add instance struct, failing...\n", instance->instanceId);
+                    goto failed_dest;
+                }
             }
 
             continue;
-unroll:
-            // TODO: unroll all volume attachments
-            break;
-        }
 
-        sem_p(inst_sem);
-        instance->migration_state = MIGRATION_READY;
-        instance->bootTime = time(NULL); // otherwise nc_state.booting_cleanup_threshold will kick in
-        change_state(instance, BOOTING); // not STAGING, since in that mode we don't poll hypervisor for info
-        LOGINFO("[%s] migration destination ready %s > %s\n", instance->instanceId, instance->migration_src, instance->migration_dst);
-        save_instance_struct(instance);
-        error = add_instance(&global_instances, instance);
-        copy_instances();
-        sem_v(inst_sem);
-        if (error) {
-            if (error == EUCA_DUPLICATE_ERROR) {
-                // FIXME: Handle this way, ensure deletion after migration, or remove and re-add?
-                LOGINFO("[%s] instance struct already exists (from previous migration?), not adding\n", instance->instanceId);
-            } else {
-                LOGERROR("[%s] could not add instance struct\n", instance->instanceId);
-                goto failed_dest;
-            }
-        }
-
-        goto out;
 failed_dest:
-        ret = EUCA_ERROR;
-        EUCA_FREE(instance);
 
-    } else {
-        LOGERROR("unexpected migration request (node %s is neither source nor destination)\n", pMeta->nodeName);
-        ret = EUCA_ERROR;
+            ret = EUCA_ERROR;
+            EUCA_FREE(instance);
+
+            // FIXME: This isn't really right, as it will cause an error
+            // return for a multi-instance request even if some instances
+            // were successfully set up.
+            goto out;
+
+        } else {
+            LOGERROR("unexpected migration request (node %s is neither source nor destination)\n", pMeta->nodeName);
+            ret = EUCA_ERROR;
+        }
     }
 
 out:

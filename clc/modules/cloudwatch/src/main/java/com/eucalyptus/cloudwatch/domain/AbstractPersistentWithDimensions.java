@@ -1,4 +1,4 @@
-package com.eucalyptus.cloudwatch.domain.dimension;
+package com.eucalyptus.cloudwatch.domain;
 
 import java.lang.reflect.Method;
 import java.util.Collection;

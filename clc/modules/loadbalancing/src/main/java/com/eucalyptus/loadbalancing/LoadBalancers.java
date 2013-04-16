@@ -20,25 +20,26 @@
 
 package com.eucalyptus.loadbalancing;
 
+import static com.eucalyptus.loadbalancing.LoadBalancingMetadata.LoadBalancerMetadata;
+import static com.eucalyptus.util.RestrictedTypes.QuantityMetricFunction;
 import java.util.Collection;
 import java.util.List;
 import java.util.NoSuchElementException;
 import javax.persistence.EntityTransaction;
-import javax.validation.ConstraintViolationException;
 
 import org.apache.log4j.Logger;
+
 import com.eucalyptus.auth.principal.UserFullName;
-import com.eucalyptus.cluster.Cluster;
-import com.eucalyptus.component.Component;
 import com.eucalyptus.entities.Entities;
-import com.eucalyptus.entities.TransactionException;
 import com.eucalyptus.loadbalancing.LoadBalancerListener.PROTOCOL;
 import com.eucalyptus.loadbalancing.activities.EucalyptusActivityTasks;
 import com.eucalyptus.loadbalancing.activities.LoadBalancerServoInstance;
 import com.eucalyptus.util.Exceptions;
+import com.eucalyptus.util.OwnerFullName;
 import com.google.common.base.Function;
 import com.google.common.base.Predicate;
 import com.google.common.base.Strings;
+import com.google.common.collect.Lists;
 
 import edu.ucsb.eucalyptus.msgs.ClusterInfoType;
 
@@ -52,10 +53,11 @@ public class LoadBalancers {
 		return LoadBalancers.addLoadbalancer(user,  lbName, null);
 	}
 	
+	/// TODO: SPARK: FIX THIS - Loadbalancer belongs to account
 	public static LoadBalancer getLoadbalancer(UserFullName user, String lbName){
 		 final EntityTransaction db = Entities.get( LoadBalancer.class );
 		 try {
-			 final LoadBalancer lb = Entities.uniqueResult( LoadBalancer.named( user, lbName )); 
+			 final LoadBalancer lb = Entities.uniqueResult( LoadBalancer.named( user.getAccountName(), lbName )); 
 			 db.commit();
 			 return lb;
 		 }catch(NoSuchElementException ex){
@@ -72,7 +74,7 @@ public class LoadBalancers {
 		 final EntityTransaction db = Entities.get( LoadBalancer.class );
 		 try {
 		        try {
-		        	if(Entities.uniqueResult( LoadBalancer.named( user, lbName )) != null)
+		        	if(Entities.uniqueResult( LoadBalancer.named( user.getAccountName(), lbName )) != null)
 		        		throw new LoadBalancingException(LoadBalancingException.DUPLICATE_LOADBALANCER_EXCEPTION);
 		        } catch ( NoSuchElementException e ) {
 		        	final LoadBalancer lb = LoadBalancer.newInstance(user, lbName);
@@ -93,7 +95,7 @@ public class LoadBalancers {
 	public static void deleteLoadbalancer(UserFullName user, String lbName) throws LoadBalancingException {
 		final EntityTransaction db = Entities.get( LoadBalancer.class );
 		try{
-			final LoadBalancer lb = Entities.uniqueResult( LoadBalancer.named(user, lbName));	
+			final LoadBalancer lb = Entities.uniqueResult( LoadBalancer.named(user.getAccountName(), lbName));	
 			Entities.delete(lb);
 			db.commit();
 		}catch (NoSuchElementException e){
@@ -116,7 +118,10 @@ public class LoadBalancers {
 		        	}catch(Exception ex){
 		    	    	return new AccessPointNotFoundException();
 		    	    }
-		        	
+		        	  //IAM support to restricted lb modification
+		     	   if(!LoadBalancingMetadatas.filterPrivileged().apply(lb)) {
+		     	       return new AccessPointNotFoundException();
+		     	   }
 		        	try{
 		        		for(Listener listener : listeners){
 		        			if(!LoadBalancerListener.acceptable(listener))
@@ -211,10 +216,12 @@ public class LoadBalancers {
 				try{
 					final LoadBalancerZone sample = LoadBalancerZone.named(lb, zone);
 					final LoadBalancerZone exist = Entities.uniqueResult(sample);
-					LOG.warn("existing zone is found: "+exist);
+					exist.setState(LoadBalancerZone.STATE.InService);
+					Entities.persist(exist);
 					db.commit();
 				}catch(NoSuchElementException ex){
 					final LoadBalancerZone newZone = LoadBalancerZone.named(lb, zone);
+					newZone.setState(LoadBalancerZone.STATE.InService);
 					Entities.persist(newZone);
 					db.commit();
 				}catch(Exception ex){
@@ -265,6 +272,15 @@ public class LoadBalancers {
 		}
 	}
 	
+	public static List<LoadBalancerZone> findZonesInService(final LoadBalancer lb){
+		final List<LoadBalancerZone> inService = Lists.newArrayList();
+		for(final LoadBalancerZone zone : lb.getZones()){
+			if(zone.getState().equals(LoadBalancerZone.STATE.InService))
+				inService.add(zone);
+		}
+		return inService;
+	}
+	
 	public static LoadBalancerDnsRecord getDnsRecord(final LoadBalancer lb) throws LoadBalancingException{
 		/// create the next dns record
 		final EntityTransaction db = Entities.get( LoadBalancerDnsRecord.class );
@@ -313,4 +329,19 @@ public class LoadBalancers {
 			throw new LoadBalancingException("failed to query servo instances");
 		}
 	}
+
+  @QuantityMetricFunction( LoadBalancerMetadata.class )
+  public enum CountLoadBalancers implements Function<OwnerFullName, Long> {
+    INSTANCE;
+
+    @Override
+    public Long apply( final OwnerFullName input ) {
+      final EntityTransaction db = Entities.get( LoadBalancer.class );
+      try {
+        return Entities.count( LoadBalancer.named( input.getAccountName(), null ) );
+      } finally {
+        db.rollback( );
+      }
+    }
+  }
 }

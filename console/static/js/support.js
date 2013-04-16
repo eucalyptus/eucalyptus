@@ -551,6 +551,9 @@ function doMultiAction(itemList, collection, opFunction, progressMessage, doneMe
   var done = 0;
   var all = itemList.length;
   var error = [];
+  var progressMsg = progressMessage;
+  var doneMsg = doneMessage;
+  var failMsg = failMessage;
   doMultiAjax(itemList, function(item, dfd) {
     var itemId = item;
     var model = collection.get(item);
@@ -558,7 +561,7 @@ function doMultiAction(itemList, collection, opFunction, progressMessage, doneMe
       success:
         function(model, response, options) {
           console.log("response = "+JSON.stringify(response));
-          if (response.results && data.results == true) {
+          if (response.results && response.results == true) {
             ;
           } else {
             error.push({id:itemId, reason: undefined_error});
@@ -575,15 +578,15 @@ function doMultiAction(itemList, collection, opFunction, progressMessage, doneMe
         function(model, response) {
           done++;
           if (done < all) {
-            notifyMulti(100*(done/all), $.i18n.prop(progressMessage, all));
+            notifyMulti(100*(done/all), $.i18n.prop(progressMsg, all));
           }
           else {
             var $msg = $('<div>').addClass('multiop-summary').append(
                        $('<div>').addClass('multiop-summary-success').
-                           html($.i18n.prop(doneMessage, (all-error.length), all)));
+                           html($.i18n.prop(doneMsg, (all-error.length), all)));
             if (error.length > 0)
                 $msg.append($('<div>').addClass('multiop-summary-failure').
-                           html($.i18n.prop(failMessage, error.length)));
+                           html($.i18n.prop(failMsg, error.length)));
             notifyMulti(100, $msg.html(), error);
           }
           dfd.resolve();

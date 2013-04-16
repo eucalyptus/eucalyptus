@@ -1,7 +1,7 @@
 <div data-ui-tabs="" id="tabs" >
   <ul>
     <li><a href="#tabs-1" data-msg="tab_general">General</a></li>
-    <li><a href="#tabs-2" data-msg="tab_volumes">Volumes</a></li>
+    <li><a href="#tabs-2" data-msg="tab_mappings">Volumes</a></li>
     <li><a href="#tabs-3" data-msg="tab_tags">Tags</a></li>
   </ul>
   <div id="tabs-1" class="tab">
@@ -17,7 +17,7 @@
       </ul>
       <ul class="image-expanded clearfix">
 		<li><div class="expanded-title" data-msg="image_table_expanded_os">OS</div><div class="expanded-value" data-text="image.platform"></div></li>
-		<li><div class="expanded-title" data-msg="image_table_expanded_snapshot">SNAPSHOT</div><div class="expanded-value"></div></li>
+		<li><div class="expanded-title" data-msg="image_table_expanded_snapshot">SNAPSHOT</div><div class="expanded-value" data-text="snapshot_id"></div></li>
 		<li><div class="expanded-title" data-msg="image_table_expanded_account">REGISTERING ACCOUNT</div><div class="expanded-value" data-text="image.owner_id"></div></li>
 		<li><div class="expanded-title" data-msg="image_table_expanded_manifest">MANIFEST PATH</div><div class="expanded-value" data-text="image.location"></div></li>
      </ul>
@@ -42,31 +42,28 @@
   </div>
 
   <div id="tabs-2" class="tab">
-      <ul class="volume-table-expanded clearfix">
-		<li>
-		<table>
-			<thead><tr><th data-msg="volume_table_expanded_volume_id">VOLUME ID</th><th data-msg="volume_table_expanded_device_mapping">DEVICE MAPPING</th><th data-msg="volume_table_expanded_creation_time">CREATION TIME</th></tr>
+		<table class="expanded-table">
+			<thead>
+              <tr>
+                <th data-msg="images_table_expand_mapping_device"></th>
+                <th data-msg="images_table_expand_mapping_snapshot"></th>
+                <th data-msg="images_table_expand_mapping_size"></th>
+                <th data-msg="images_table_expand_mapping_dot"></th>
+              </tr>
 			</thead>
 			<tbody>
-				<tr data-each-item="items"><td><span _data-text="item.unknownVariable"></span></td><td><span _data-text="item.unknownVariable"></span><td><span _data-text="item.unknownVariable"></span></td></tr>
+              <tr data-each-item="bdm">
+                <td><span data-text="item.device"></span></td>
+                <td><span data-text="item.snapshot_id"></span></td>
+                <td><span data-text="item.size"></span></td>
+                <td><span data-text="item.delete_on_terminate"></span></td>
+              </tr>
 			</tbody>
 		</table>
-		</li>
-	  </ul>
   </div>
 
   <div id="tabs-3" class="tab">
-	  <ul class="tags-expanded clearfix">
-	  	<li>
-		<table>
-			<thead><tr><th data-msg="tag_display_hdr_key">KEY</th><th data-msg="tag_display_hdr_value">VALUE</th></tr>
-			</thead>
-			<tbody>
-				<tr data-each-item="tags"><td><span data-text="item.name"></span></td><td><span data-text="item.value"></span></td></tr>
-			</tbody>
-		</table>
-		</li>
-	  </ul>
+          <div class="expanded-table" data-ui-tags="image.tags"></div>
   </div>
 
 <div style="clear:both"></div>

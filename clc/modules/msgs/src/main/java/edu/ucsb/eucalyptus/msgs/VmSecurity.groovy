@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * Copyright 2009-2013 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -65,6 +65,8 @@ package edu.ucsb.eucalyptus.msgs
 import com.eucalyptus.auth.policy.PolicyResourceType
 import com.eucalyptus.binding.HttpEmbedded
 import com.eucalyptus.binding.HttpParameterMapping
+import com.eucalyptus.binding.HttpEmbeddeds
+import com.eucalyptus.binding.HttpParameterMappings
 
 @PolicyResourceType( "securitygroup" )
 public class VmSecurityMessage extends EucalyptusMessage{
@@ -89,7 +91,10 @@ public class AuthorizeSecurityGroupIngressType extends VmSecurityMessage {
   String groupUserId;
   String groupName;
   String groupId;
-  @HttpEmbedded
+  @HttpEmbeddeds([
+    @HttpEmbedded( version="2009-11-30" ),
+    @HttpEmbedded( multiple=true )
+  ])
   ArrayList<IpPermissionType> ipPermissions = new ArrayList<IpPermissionType>();
 }
 /** *******************************************************************************/
@@ -115,7 +120,10 @@ public class RevokeSecurityGroupIngressType extends VmSecurityMessage {
   String groupUserId;
   String groupName;
   String groupId;
-  @HttpEmbedded
+  @HttpEmbeddeds([
+    @HttpEmbedded( version="2009-11-30" ),
+    @HttpEmbedded( multiple=true )
+  ])
   ArrayList<IpPermissionType> ipPermissions = new ArrayList<IpPermissionType>();
 }
 /** *******************************************************************************/
@@ -155,10 +163,16 @@ public class IpPermissionType extends EucalyptusData {
   String ipProtocol;
   int fromPort;
   int toPort;
-  @HttpEmbedded
+  @HttpEmbeddeds([
+    @HttpEmbedded( version="2009-11-30" ),
+    @HttpEmbedded( multiple=true )
+  ])
   ArrayList<UserIdGroupPairType> groups = new ArrayList<UserIdGroupPairType>();
-  @HttpParameterMapping(parameter = "CidrIp")
-  ArrayList<String> ipRanges = new ArrayList<String>();
+  @HttpEmbeddeds([
+    @HttpEmbedded( version="2009-11-30" ),
+    @HttpEmbedded( multiple=true )
+  ])
+  ArrayList<CidrIpType> ipRanges = new ArrayList<CidrIpType>();
   
   def IpPermissionType(){
   }
@@ -168,18 +182,39 @@ public class IpPermissionType extends EucalyptusData {
     this.fromPort = fromPort;
     this.toPort = toPort;
   }
+
+  List<String> getCidrIpRanges( ) {
+    ipRanges.collect{ cidrIp -> cidrIp.getCidrIp() }
+  }
+
+  void setCidrIpRanges( Collection<String> cidrIps ) {
+    ipRanges = cidrIps.collect{ cidrIp -> new CidrIpType( cidrIp: cidrIp ) }
+  }
 }
 public class UserIdGroupPairType extends EucalyptusData {
-  @HttpParameterMapping(parameter = "SourceSecurityGroupOwnerId")
+  @HttpParameterMappings([
+    @HttpParameterMapping( version="2009-11-30", parameter="SourceSecurityGroupOwnerId" ),
+    @HttpParameterMapping( parameter="UserId" )
+  ])
   String sourceUserId;
-  @HttpParameterMapping(parameter = "SourceSecurityGroupName")
+  @HttpParameterMappings([
+    @HttpParameterMapping( version="2009-11-30", parameter="SourceSecurityGroupName" ),
+    @HttpParameterMapping( parameter="GroupName" )
+  ])
   String sourceGroupName;
-  
+  @HttpParameterMapping( parameter="GroupId" )
+  String sourceGroupId;
+
   def UserIdGroupPairType(){
   }
   
-  def UserIdGroupPairType(final sourceUserId, final sourceGroupName) {
-    this.sourceUserId = sourceUserId;
-    this.sourceGroupName = sourceGroupName;
+  def UserIdGroupPairType( String userId, String groupName, String groupId ) {
+    this.sourceUserId = userId
+    this.sourceGroupName = groupName
+    this.sourceGroupId = groupId
   }
+}
+
+public class CidrIpType extends EucalyptusData {
+  String cidrIp
 }

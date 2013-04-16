@@ -9,7 +9,6 @@ import com.google.common.collect.Maps;
 
 public class MetricQueueItem {
   private String accountId;
-  private String userId;
   private String metricName;
   private String namespace;
   private Map<String, String> dimensionMap;
@@ -23,7 +22,6 @@ public class MetricQueueItem {
 
   public MetricQueueItem(MetricQueueItem other) {
     this.accountId = other.accountId;
-    this.userId = other.userId;
     this.metricName = other.metricName;
     this.namespace = other.namespace;
     this.dimensionMap = (other.dimensionMap == null ? null : Maps.newHashMap(other.dimensionMap));
@@ -44,14 +42,6 @@ public class MetricQueueItem {
 
   public void setAccountId(String accountId) {
     this.accountId = accountId;
-  }
-
-  public String getUserId() {
-    return userId;
-  }
-
-  public void setUserId(String userId) {
-    this.userId = userId;
   }
 
   public String getMetricName() {
@@ -136,7 +126,7 @@ public class MetricQueueItem {
 
   @Override
   public String toString() {
-    return "MetricQueueItem [accountId=" + accountId + ", userId=" + userId
+    return "MetricQueueItem [accountId=" + accountId
         + ", metricName=" + metricName + ", namespace=" + namespace
         + ", dimensionMap=" + dimensionMap + ", metricType=" + metricType
         + ", units=" + units + ", timestamp=" + timestamp + ", sampleSize="

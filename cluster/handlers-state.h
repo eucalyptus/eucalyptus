@@ -121,10 +121,10 @@
 \*----------------------------------------------------------------------------*/
 
 int doDescribeServices(ncMetadata * pMeta, serviceInfoType * serviceIds, int serviceIdsLen, serviceStatusType ** outStatuses, int *outStatusesLen);
-int doStartService(ncMetadata * pMeta);
-int doStopService(ncMetadata * pMeta);
-int doEnableService(ncMetadata * pMeta);
-int doDisableService(ncMetadata * pMeta);
+int doStartService(ncMetadata * pMeta, serviceInfoType * serviceIds, int serviceIdsLen);
+int doStopService(ncMetadata * pMeta, serviceInfoType * serviceIds, int serviceIdsLen);
+int doEnableService(ncMetadata * pMeta, serviceInfoType * serviceIds, int serviceIdsLen);
+int doDisableService(ncMetadata * pMeta, serviceInfoType * serviceIds, int serviceIdsLen);
 int doShutdownService(ncMetadata * pMeta);
 
 int validCmp(ccInstance * inst, void *in);

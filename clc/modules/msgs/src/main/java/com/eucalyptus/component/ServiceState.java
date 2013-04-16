@@ -122,7 +122,7 @@ public class ServiceState implements StateMachine<ServiceConfiguration, Componen
         from( State.DISABLED ).to( State.DISABLED ).error( State.NOTREADY ).on( Transition.DISABLED_CHECK ).addListener( ServiceTransitions.StateCallbacks.STATIC_PROPERTIES_ADD ).run( ServiceTransitions.TransitionActions.CHECK );
         from( State.ENABLED ).to( State.DISABLED ).error( State.NOTREADY ).on( Transition.DISABLE ).addListener( ServiceTransitions.StateCallbacks.FIRE_STATE_EVENT ).run( ServiceTransitions.TransitionActions.DISABLE );
         from( State.ENABLED ).to( State.ENABLED ).error( State.NOTREADY ).on( Transition.ENABLED_CHECK ).addListener( ServiceTransitions.StateCallbacks.STATIC_PROPERTIES_ADD ).run( ServiceTransitions.TransitionActions.CHECK );
-        from( State.STOPPED ).to( State.INITIALIZED ).error( State.BROKEN ).on( Transition.DESTROY ).run( ServiceTransitions.TransitionActions.DESTROY );
+        from( State.STOPPED ).to( State.INITIALIZED ).error( State.BROKEN ).on( Transition.DESTROY ).run( /*ServiceTransitions.TransitionActions.DESTROY*/noop );//GRZE: DESTROY removes the service configuration so leaving INITIALIZED becomes impossible 
         from( State.BROKEN ).to( State.STOPPED ).error( State.BROKEN ).on( Transition.STOPPING_BROKEN ).run( noop );
         from( State.BROKEN ).to( State.INITIALIZED ).error( State.BROKEN ).on( Transition.RELOAD ).run( noop );
         from( State.STOPPED ).to( State.PRIMORDIAL ).error( State.BROKEN ).on( Transition.REMOVING ).run( ServiceTransitions.TransitionActions.DESTROY );//TODO:GRZE: handle deregistering transition here.

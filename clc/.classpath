@@ -36,6 +36,7 @@
 	<classpathentry kind="src" path="modules/loadbalancing/src/main/java"/>
 	<classpathentry kind="src" path="modules/loadbalancing-common/src/main/java"/>
 	<classpathentry kind="src" path="modules/tokens/src/main/java"/>
+	<classpathentry kind="src" path="modules/tokens-common/src/main/java"/>
 	<classpathentry kind="con" path="GROOVY_SUPPORT"/>
 	<classpathentry kind="lib" path="lib/activemq-core-5.4.1.jar"/>
 	<classpathentry kind="lib" path="lib/ant-1.7.jar"/>

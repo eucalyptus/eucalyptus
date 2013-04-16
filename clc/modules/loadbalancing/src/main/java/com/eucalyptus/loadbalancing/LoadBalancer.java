@@ -19,6 +19,7 @@
  ************************************************************************/
 package com.eucalyptus.loadbalancing;
 
+import static com.eucalyptus.loadbalancing.LoadBalancingMetadata.LoadBalancerMetadata;
 import java.util.Collection;
 import java.util.NoSuchElementException;
 
@@ -39,10 +40,10 @@ import org.hibernate.annotations.CacheConcurrencyStrategy;
 import org.hibernate.annotations.Entity;
 import org.hibernate.annotations.Parent;
 
-import com.eucalyptus.cloud.CloudMetadata.LoadBalancingMetadata;
 import com.eucalyptus.cloud.UserMetadata;
 import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.id.Eucalyptus;
+import com.eucalyptus.loadbalancing.activities.LoadBalancerAutoScalingGroup;
 import com.eucalyptus.util.FullName;
 import com.eucalyptus.util.OwnerFullName;
 import com.google.common.base.Predicate;
@@ -57,7 +58,7 @@ import com.google.common.collect.Iterables;
 @PersistenceContext( name = "eucalyptus_loadbalancing" )
 @Table( name = "metadata_loadbalancer" )
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
-public class LoadBalancer extends UserMetadata<LoadBalancer.STATE> implements LoadBalancingMetadata {    
+public class LoadBalancer extends UserMetadata<LoadBalancer.STATE> implements LoadBalancerMetadata {
 	private static Logger    LOG     = Logger.getLogger( LoadBalancer.class );
 
 	@Transient
@@ -71,6 +72,10 @@ public class LoadBalancer extends UserMetadata<LoadBalancer.STATE> implements Lo
 		super(null, null);
 	}
 	
+	private LoadBalancer(final String lbName){
+		super(null, lbName);
+	}
+	
 	private LoadBalancer(final OwnerFullName userFullName, final String lbName){
 		super(userFullName, lbName);
 	}
@@ -79,8 +84,10 @@ public class LoadBalancer extends UserMetadata<LoadBalancer.STATE> implements Lo
 		return new LoadBalancer(userFullName, lbName);
 	}
 	
-	static LoadBalancer named(final OwnerFullName userName, final String lbName){
-		return new LoadBalancer(userName, lbName);
+	static LoadBalancer named(final String accountName, final String lbName){
+		final LoadBalancer instance= new LoadBalancer(lbName);
+		instance.setOwnerAccountName(accountName);
+		return instance;
 	}
 	
 	@Column( name = "loadbalancer_scheme", nullable=true)
@@ -101,6 +108,10 @@ public class LoadBalancer extends UserMetadata<LoadBalancer.STATE> implements Lo
 	@OneToMany(fetch = FetchType.LAZY, orphanRemoval = false, mappedBy = "loadbalancer")
 	@Cache( usage= CacheConcurrencyStrategy.TRANSACTIONAL )
 	private Collection<LoadBalancerSecurityGroup> groups = null;
+
+	@OneToOne(fetch = FetchType.LAZY, cascade = CascadeType.ALL, orphanRemoval = true, mappedBy = "loadbalancer")
+	@Cache( usage= CacheConcurrencyStrategy.TRANSACTIONAL )
+	private LoadBalancerAutoScalingGroup autoscale_group = null;
 	
 	@OneToOne(fetch = FetchType.LAZY, cascade = CascadeType.ALL, orphanRemoval = true, mappedBy = "loadbalancer")
 	@Cache( usage= CacheConcurrencyStrategy.TRANSACTIONAL )
@@ -175,6 +186,10 @@ public class LoadBalancer extends UserMetadata<LoadBalancer.STATE> implements Lo
 	
 	public Collection<LoadBalancerSecurityGroup> getGroups(){
 		return this.groups;
+	}
+	
+	public LoadBalancerAutoScalingGroup getAutoScaleGroup(){
+		return this.autoscale_group;
 	}
 	
 	void setHealthCheck(int healthyThreshold, int interval, String target, int timeout, int unhealthyThreshold)

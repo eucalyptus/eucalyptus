@@ -4124,6 +4124,10 @@ if test -n "${AXIS2C_HOME}" ; then
                 for x in ${AXIS2C_HOME}/include/axis2-* ${AXIS2C_HOME}/include/rampart-*; do
                         INCLUDES="${INCLUDES} -I$x"
                 done
+        else
+                for x in /usr/include/axis2-* /usr/include/rampart-*; do
+                        INCLUDES="${INCLUDES} -I$x"
+                done
         fi
         if test -d "${AXIS2C_HOME}"/lib ; then
                 LDFLAGS="-L${AXIS2C_HOME}/lib ${LDFLAGS}"

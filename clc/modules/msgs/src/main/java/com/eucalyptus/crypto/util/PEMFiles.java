@@ -68,13 +68,12 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
-import java.io.UnsupportedEncodingException;
 import java.security.KeyPair;
-import java.security.PrivateKey;
 import java.security.cert.X509Certificate;
 import org.apache.log4j.Logger;
 import org.bouncycastle.openssl.PEMReader;
 import org.bouncycastle.openssl.PEMWriter;
+import org.bouncycastle.util.io.pem.PemObject;
 import com.eucalyptus.records.EventType;
 import com.eucalyptus.records.EventRecord;
 
@@ -120,6 +119,10 @@ public class PEMFiles {
       LOG.error( e, e );//this can never happen
     }
     return pemByteOut.toByteArray( );
+  }
+
+  public static byte[] getBytes( final String type, final byte[] bytes ) {
+    return getBytes( new PemObject( type, bytes ) );
   }
 
   public static X509Certificate getCert( final byte[] o ) {

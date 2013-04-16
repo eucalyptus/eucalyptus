@@ -25,6 +25,7 @@ import java.util.Set;
 import javax.persistence.EntityTransaction;
 import com.eucalyptus.autoscaling.common.AutoScalingGroupType;
 import com.eucalyptus.autoscaling.common.AutoScalingMetadata;
+import com.eucalyptus.autoscaling.common.EnabledMetrics;
 import com.eucalyptus.autoscaling.common.ProcessType;
 import com.eucalyptus.autoscaling.common.SuspendedProcessType;
 import com.eucalyptus.autoscaling.common.SuspendedProcesses;
@@ -48,6 +49,7 @@ import com.google.common.base.Objects;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Collections2;
 import com.google.common.collect.Iterables;
+import com.google.common.collect.Ordering;
 
 /**
  *
@@ -123,14 +125,15 @@ public abstract class AutoScalingGroups {
       type.setCreatedTime( group.getCreationTimestamp() );
       type.setDefaultCooldown( group.getDefaultCooldown() );
       type.setDesiredCapacity( group.getDesiredCapacity() );
-      //type.setEnabledMetrics(); //TODO:STEVE: auto scaling group mapping for enabled metrics
+      type.setEnabledMetrics( new EnabledMetrics( group.getEnabledMetrics() == null ?
+          null :
+          Ordering.natural().sortedCopy( Iterables.transform( group.getEnabledMetrics(), Strings.toStringFunction() ) ) ) );
       type.setHealthCheckGracePeriod( group.getHealthCheckGracePeriod() );
       type.setHealthCheckType( Strings.toString( group.getHealthCheckType() ) );
       type.setLaunchConfigurationName( AutoScalingMetadatas.toDisplayName().apply( group.getLaunchConfiguration() ) );
       type.setLoadBalancerNames( new LoadBalancerNames( group.getLoadBalancerNames() ) );
       type.setMaxSize( group.getMaxSize() );
       type.setMinSize( group.getMinSize() );
-      type.setStatus( group.getStatus() );
       final Collection<SuspendedProcess> suspendedProcesses = group.getSuspendedProcesses();
       if ( suspendedProcesses != null && !suspendedProcesses.isEmpty() ) {
         type.setSuspendedProcesses( new SuspendedProcesses() );

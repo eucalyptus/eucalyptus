@@ -155,17 +155,17 @@ public class BlockStorage {
 	static VolumeService volumeService;
 	static SnapshotService snapshotService;
 	static StorageCheckerService checkerService;
-	
+
 	//TODO: zhill, this can be added later for snapshot abort capabilities
 	//static ConcurrentHashMap<String,HttpTransfer> httpTransferMap; //To keep track of current transfers to support aborting
-	
+
 	public static Random randomGenerator = new Random();
 
 	public static void configure() throws EucalyptusCloudException {
 		StorageProperties.updateWalrusUrl();
 		StorageProperties.updateName();
 		StorageProperties.updateStorageHost();
-		
+
 		try {
 			blockManager = StorageManagers.getInstance();
 			if(blockManager != null) {
@@ -177,7 +177,7 @@ public class BlockStorage {
 		} catch (Exception e) {
 			throw new EucalyptusCloudException(e);
 		}
-				
+
 		checker = new BlockStorageChecker(blockManager);
 		volumeService = new VolumeService();
 		snapshotService = new SnapshotService();
@@ -192,7 +192,7 @@ public class BlockStorage {
 			checker.startupChecks();
 		}
 	}
-	
+
 	public static void checkPending() {
 		if(checker != null) {
 			StorageProperties.updateWalrusUrl();
@@ -242,6 +242,8 @@ public class BlockStorage {
 		for(CheckerTask checker : blockManager.getCheckers()) {
 			checkerService.add(checker);
 		}
+		checkerService.add(new VolumeDeleterTask());
+		checkerService.add(new SnapshotDeleterTask());
 		StorageProperties.enableSnapshots = StorageProperties.enableStorage = true;
 	}
 
@@ -254,7 +256,7 @@ public class BlockStorage {
 			checkerService.add(checkerTask);
 		}
 	}
-	
+
 	public UpdateStorageConfigurationResponseType UpdateStorageConfiguration(UpdateStorageConfigurationType request) throws EucalyptusCloudException {
 		UpdateStorageConfigurationResponseType reply = (UpdateStorageConfigurationResponseType) request.getReply();
 		if(ComponentIds.lookup(Eucalyptus.class).name( ).equals(request.getEffectiveUserId()))
@@ -336,21 +338,21 @@ public class BlockStorage {
 		volumeInfo.setVolumeId(volumeId);
 		List<VolumeInfo> volumeList = db.query(volumeInfo);
 
-		//always return true. 
-		reply.set_return(Boolean.TRUE);
+		reply.set_return(Boolean.FALSE);
 		if(volumeList.size() > 0) {
 			VolumeInfo foundVolume = volumeList.get(0);
 			//check its status
 			String status = foundVolume.getStatus();
-			if(status.equals(StorageProperties.Status.available.toString()) || status.equals(StorageProperties.Status.failed.toString())) {
-				VolumeDeleter volumeDeleter = new VolumeDeleter(volumeId);
-				volumeService.add(volumeDeleter);
+			if(status.equals(StorageProperties.Status.available.toString()) || 
+					status.equals(StorageProperties.Status.failed.toString())) {
+				foundVolume.setStatus(StorageProperties.Status.deleting.toString());
+				reply.set_return(Boolean.TRUE);
 			} 
 		} 
 		db.commit();
 		return reply;
 	}
-	
+
 	/**
 	 * Checks to see if a new snapshot of size volSize will exceed the quota
 	 * @param volSize
@@ -365,7 +367,7 @@ public class BlockStorage {
 
 		//TODO: zhill, fix this logic by adding a size value to the snapshot record, should do the calculation on the DB
 		// this will be very poor for performance as the number of snapshots increases.
-		
+
 		//Only look for snaps that are not failed and not error
 		query.add(Restrictions.not(Restrictions.and(
 				Restrictions.eq("status", StorageProperties.Status.failed.toString()), 
@@ -390,7 +392,7 @@ public class BlockStorage {
 				dbTrans.rollback();
 			}
 		}
-		
+
 	}
 
 	public CreateStorageSnapshotResponseType CreateStorageSnapshot( CreateStorageSnapshotType request ) throws EucalyptusCloudException {
@@ -422,7 +424,7 @@ public class BlockStorage {
 			}
 			dbTrans = null;
 		}
-		
+
 		if(sourceVolumeInfo == null) {
 			//Another check to be sure that we have the source volume
 			throw new NoSuchVolumeException(volumeId);
@@ -436,7 +438,7 @@ public class BlockStorage {
 					LOG.info("Snapshot " + snapshotId + " exceeds total snapshot size limit of " + WalrusInfo.getWalrusInfo().getStorageMaxTotalSnapshotSizeInGb());
 					throw new EntityTooLargeException(snapshotId);
 				}
-				
+
 				SnapshotInfo snapshotInfo = new SnapshotInfo(snapshotId);
 				EntityTransaction snapTrans = Entities.get(SnapshotInfo.class);
 				Date startTime = new Date();
@@ -446,7 +448,7 @@ public class BlockStorage {
 					snapshotInfo.setStartTime(startTime);
 					snapshotInfo.setProgress("0");
 					snapshotInfo.setStatus(StorageProperties.Status.creating.toString());
-					
+
 					/* Change to support sync snap consistency point set on CLC round-trip */
 					/*
 					 * Always do this operation. On backends that don't support it they will
@@ -470,9 +472,9 @@ public class BlockStorage {
 						Context ctx = null;
 						try {
 							ctx = Contexts.lookup(request.getCorrelationId());
-							 if(!ctx.getChannel().isOpen()) {
-								 throw new NoSuchContextException("Channel is closed");
-							 }
+							if(!ctx.getChannel().isOpen()) {
+								throw new NoSuchContextException("Channel is closed");
+							}
 						} catch(NoSuchContextException e) {
 							if(snapPointId != null) {
 								//Other end hung up, mark this as failed since this is a sync operation
@@ -491,7 +493,7 @@ public class BlockStorage {
 					} finally {
 						Entities.persist(snapshotInfo);
 					}
-					
+
 					/* Resume old code path and finish the snapshot process if already started */				
 					//snapshot asynchronously
 					String snapshotSet = "snapset-" + UUID.randomUUID();					
@@ -521,7 +523,7 @@ public class BlockStorage {
 		}
 		return reply;
 	}
-	
+
 	//returns snapshots in progress or at the SC
 	public DescribeStorageSnapshotsResponseType DescribeStorageSnapshots( DescribeStorageSnapshotsType request ) throws EucalyptusCloudException {
 		DescribeStorageSnapshotsResponseType reply = ( DescribeStorageSnapshotsResponseType ) request.getReply();
@@ -571,17 +573,17 @@ public class BlockStorage {
 		SnapshotInfo snapshotInfo = new SnapshotInfo(snapshotId);
 		List<SnapshotInfo> snapshotInfos = db.query(snapshotInfo);
 
-		reply.set_return(true);
+		reply.set_return(false);
 		if(snapshotInfos.size() > 0) {
 			SnapshotInfo  foundSnapshotInfo = snapshotInfos.get(0);
 			String status = foundSnapshotInfo.getStatus();
-			db.commit();
 			if(status.equals(StorageProperties.Status.available.toString()) || status.equals(StorageProperties.Status.failed.toString())) {
-				SnapshotDeleter snapshotDeleter = new SnapshotDeleter(snapshotId);
-				snapshotService.add(snapshotDeleter);
+				foundSnapshotInfo.setStatus(StorageProperties.Status.deleting.toString());
+				db.commit();
+				reply.set_return(true);
 			} else {
 				//snapshot is still in progress.
-				reply.set_return(false);
+				db.rollback();
 				throw new SnapshotInUseException(snapshotId);
 			}
 		} else {
@@ -620,10 +622,10 @@ public class BlockStorage {
 			//the SC knows nothing about this snapshot.
 			db.rollback();
 		}
-		
+
 		return reply;
 	}*/
-	
+
 	public void DeleteWalrusSnapshot(String snapshotId) {
 		HttpWriter httpWriter = new HttpWriter("DELETE", "snapset", snapshotId, "DeleteWalrusSnapshot", null);
 		try {
@@ -652,13 +654,13 @@ public class BlockStorage {
 		if(StorageProperties.shouldEnforceUsageLimits) {
 			if(size != null) {
 				int totalVolumeSize = 0;
-               		        VolumeInfo volInfo = new VolumeInfo();
-                		EntityWrapper<VolumeInfo> db = StorageProperties.getEntityWrapper();
-                       		List<VolumeInfo> volInfos = db.query(volInfo);
-                        	for (VolumeInfo vInfo : volInfos) {
+				VolumeInfo volInfo = new VolumeInfo();
+				EntityWrapper<VolumeInfo> db = StorageProperties.getEntityWrapper();
+				List<VolumeInfo> volInfos = db.query(volInfo);
+				for (VolumeInfo vInfo : volInfos) {
 					if (!vInfo.getStatus().equals(StorageProperties.Status.failed.toString()) &&
-						!vInfo.getStatus().equals(StorageProperties.Status.error.toString())) {
-                       	         		totalVolumeSize += vInfo.getSize();
+							!vInfo.getStatus().equals(StorageProperties.Status.error.toString())) {
+						totalVolumeSize += vInfo.getSize();
 					}
 				}
 				db.rollback();
@@ -795,7 +797,7 @@ public class BlockStorage {
 			}
 		}
 	}
-	
+
 	/*
 	 * Does a check of the snapshot's status as reflected in the DB.
 	 */
@@ -905,7 +907,7 @@ public class BlockStorage {
 			String deviceConnectString = blockManager.attachVolume(volumeId, nodeIqns);
 			reply.setRemoteDeviceString(deviceConnectString);
 		} catch (EucalyptusCloudException ex) {
-		  LOG.error(ex, ex);
+			LOG.error(ex, ex);
 			throw ex;
 		}
 		return reply;
@@ -987,7 +989,7 @@ public class BlockStorage {
 			this.snapshotId = snapshotId;
 			this.snapPointId = snapPointId;
 		}
-		
+
 		@Override
 		public void run() {
 			EucaSemaphore semaphore = EucaSemaphoreDirectory.getSolitarySemaphore(volumeId);
@@ -999,7 +1001,7 @@ public class BlockStorage {
 				}
 				Boolean shouldTransferSnapshots = true;
 				List<String> returnValues = null;
-				
+
 				try {
 					//Check to ensure that a failed/cancellation has not be set
 					if(!isSnapshotMarkedFailed(snapshotId)) {
@@ -1011,7 +1013,7 @@ public class BlockStorage {
 				} finally {
 					semaphore.release();
 				}
-				
+
 				if(shouldTransferSnapshots) {
 					if(returnValues.size() < 2) {
 						throw new EucalyptusCloudException("Unable to transfer snapshot");
@@ -1020,7 +1022,7 @@ public class BlockStorage {
 					String snapshotSize = returnValues.get(1);
 					int retry = StorageInfo.getStorageInfo().getMaxSnapTransferRetries();
 					boolean transferSuccess = false;
-					
+
 					//Use exponential backoff for retries
 					int backoffTime = 1;
 					while(!transferSuccess) {
@@ -1044,7 +1046,7 @@ public class BlockStorage {
 							throw new EucalyptusCloudException("Snapshot " + this.snapshotId + " marked as failed by another thread");
 						}
 					}
-					
+
 					try {
 						blockManager.finishVolume(snapshotId);
 					} catch(EucalyptusCloudException ex) {
@@ -1052,7 +1054,7 @@ public class BlockStorage {
 						LOG.error(ex);
 					}
 				}
-				
+
 				SnapshotInfo snapInfo = new SnapshotInfo(snapshotId);
 				SnapshotInfo snapshotInfo = null;
 				EntityWrapper<SnapshotInfo> db = StorageProperties.getEntityWrapper();
@@ -1092,7 +1094,7 @@ public class BlockStorage {
 					LOG.error("Disconnecting snapshot " + snapshotId + " on failed snapshot attempt", e1);
 					blockManager.cleanSnapshot(snapshotId);
 				}
-				
+
 				SnapshotInfo snapInfo = new SnapshotInfo(snapshotId);
 				EntityWrapper<SnapshotInfo> db = StorageProperties.getEntityWrapper();
 				try {
@@ -1137,7 +1139,7 @@ public class BlockStorage {
 			Map<String, String> httpParamaters = new HashMap<String, String>();
 			HttpWriter httpWriter;
 			httpWriter = new HttpWriter("PUT", snapshotFile, sizeAsString, callback, volumeBucket, snapshotId, "StoreSnapshot", null, httpParamaters);
-			
+
 			//TODO: zhill, leaving this in for future use if we add snapshot abort capability
 			//Add to the map to make available for cancellation asynchronously
 			//httpTransferMap.put(snapshotId, httpWriter);
@@ -1151,42 +1153,6 @@ public class BlockStorage {
 			 * finally {
 				//httpTransferMap.remove(snapshotId);
 			}*/
-		}
-	}
-
-	private class SnapshotDeleter extends SnapshotTask {
-		private String snapshotId;
-
-		public SnapshotDeleter(String snapshotId) {
-			this.snapshotId = snapshotId;
-		}
-
-		@Override
-		public void run() {
-			try {
-				blockManager.deleteSnapshot(snapshotId);
-			} catch (EucalyptusCloudException e1) {
-				LOG.error(e1);
-				return;
-			}
-			SnapshotInfo snapInfo = new SnapshotInfo(snapshotId);
-			EntityWrapper<SnapshotInfo> db = StorageProperties.getEntityWrapper();
-			SnapshotInfo foundSnapshotInfo;
-			try {
-				foundSnapshotInfo = db.getUnique(snapInfo);
-				db.delete(foundSnapshotInfo);
-				db.commit();
-			} catch (EucalyptusCloudException e) {
-				db.rollback();
-				LOG.error(e);
-				return;
-			}
-			HttpWriter httpWriter = new HttpWriter("DELETE", "snapset", snapshotId, "DeleteWalrusSnapshot", null);
-			try {
-				httpWriter.run();
-			} catch(EucalyptusCloudException ex) {
-				LOG.error(ex);
-			}
 		}
 	}
 
@@ -1219,7 +1185,7 @@ public class BlockStorage {
 				}
 			}
 		}
-		
+
 		@Override
 		public void run() {
 			boolean success = true;
@@ -1248,7 +1214,7 @@ public class BlockStorage {
 								// This SC definitely does not have a record of the snapshot in its DB. Check for the snpahsot on the storage backend.
 								// Clusters/zones/partitions may be connected to the same storage backend in which case snapshot does not have to be downloaded
 								// from Walrus.
-								
+
 								int walrusSnapSize = getSnapshotSize(snapshotId);
 
 								if (!blockManager.getFromBackend(snapshotId, walrusSnapSize)) {
@@ -1258,7 +1224,7 @@ public class BlockStorage {
 									/* START: Snapshot preparation on storage back end */
 
 									String tmpSnapshotFileName = null;
-									
+
 									try {
 										// Download the snapshot from walrus and find out the size
 										tmpSnapshotFileName = getSnapshot(snapshotId);
@@ -1430,13 +1396,13 @@ public class BlockStorage {
 					if(success) {
 						//Check resource constraints, if thresholds are exceeded, fail the operation
 						if(StorageProperties.shouldEnforceUsageLimits) {
-                                			int totalVolumeSize = 0;
-                   			                VolumeInfo volInfo = new VolumeInfo();
-			                                volInfo.setStatus(StorageProperties.Status.available.toString());
-                     			                List<VolumeInfo> volInfos = db.query(volInfo);
-			                                for (VolumeInfo vInfo : volInfos) {
-                     			                   totalVolumeSize += vInfo.getSize();
-                               				}
+							int totalVolumeSize = 0;
+							VolumeInfo volInfo = new VolumeInfo();
+							volInfo.setStatus(StorageProperties.Status.available.toString());
+							List<VolumeInfo> volInfos = db.query(volInfo);
+							for (VolumeInfo vInfo : volInfos) {
+								totalVolumeSize += vInfo.getSize();
+							}
 							if((totalVolumeSize + size) > StorageInfo.getStorageInfo().getMaxTotalVolumeSizeInGb() ||
 									(size > StorageInfo.getStorageInfo().getMaxVolumeSizeInGB())) {
 								LOG.error("Max Total Volume size limit exceeded creating " + volumeId + ". Removing volume and cancelling operation");
@@ -1459,33 +1425,6 @@ public class BlockStorage {
 			} catch(EucalyptusCloudException ex) {
 				db.rollback();
 				LOG.error(ex);
-			}
-		}
-	}
-
-	public class VolumeDeleter extends VolumeTask {
-		private String volumeId;
-
-		public VolumeDeleter(String volumeId) {
-			this.volumeId = volumeId;
-		}
-
-		@Override
-		public void run() {
-			try {
-				blockManager.deleteVolume(volumeId);
-			} catch (EucalyptusCloudException e1) {
-				LOG.error(e1);
-			}
-			EntityWrapper<VolumeInfo> db = StorageProperties.getEntityWrapper();
-			VolumeInfo foundVolume;
-			try {
-				foundVolume = db.getUnique(new VolumeInfo(volumeId));
-				db.delete(foundVolume);
-				db.commit();
-				EucaSemaphoreDirectory.removeSemaphore(volumeId);
-			} catch (EucalyptusCloudException e) {
-				db.rollback();
 			}
 		}
 	}
@@ -1570,4 +1509,85 @@ public class BlockStorage {
 		CreateStorageVolumeResponseType createStorageVolumeResponse = CreateStorageVolume(createStorageVolume);
 		return reply;
 	}
+
+	public static class VolumeDeleterTask extends CheckerTask {
+
+		public VolumeDeleterTask() {
+			this.name = "VolumeDeleter";
+		}
+
+		@Override
+		public void run() {
+			EntityWrapper<VolumeInfo> db = StorageProperties.getEntityWrapper();
+			VolumeInfo searchVolume = new VolumeInfo();
+			searchVolume.setStatus(StorageProperties.Status.deleting.toString());
+			List<VolumeInfo> volumes = db.query(searchVolume);
+			db.commit();
+			for (VolumeInfo vol : volumes) {
+				String volumeId = vol.getVolumeId();
+				LOG.info("Volume: " + volumeId + " was marked for deletion. Cleaning up...");
+				try {
+					blockManager.deleteVolume(volumeId);
+				} catch (EucalyptusCloudException e) {
+					LOG.error(e, e);
+					continue;
+				}
+				db = StorageProperties.getEntityWrapper();
+				VolumeInfo foundVolume;
+				try {
+					foundVolume = db.getUnique(new VolumeInfo(volumeId));
+					foundVolume.setStatus(StorageProperties.Status.deleted.toString());
+					db.commit();
+					EucaSemaphoreDirectory.removeSemaphore(volumeId);
+				} catch (EucalyptusCloudException e) {
+					db.rollback();
+				}
+			}
+		}
+	}
+
+	public static class SnapshotDeleterTask extends CheckerTask {
+
+		public SnapshotDeleterTask() {
+			this.name = "SnapshotDeleter";
+		}
+
+		@Override
+		public void run() {
+			EntityWrapper<SnapshotInfo> db = StorageProperties.getEntityWrapper();
+			SnapshotInfo searchSnap = new SnapshotInfo();
+			searchSnap.setStatus(StorageProperties.Status.deleting.toString());
+			List<SnapshotInfo> snapshots = db.query(searchSnap);
+			db.commit();
+			for (SnapshotInfo snap : snapshots) {
+				String snapshotId = snap.getSnapshotId();
+				LOG.info("Snapshot: " + snapshotId + " was marked for deletion. Cleaning up...");
+				try {
+					blockManager.deleteSnapshot(snapshotId);
+				} catch (EucalyptusCloudException e1) {
+					LOG.error(e1);
+					return;
+				}
+				SnapshotInfo snapInfo = new SnapshotInfo(snapshotId);
+				db = StorageProperties.getEntityWrapper();
+				SnapshotInfo foundSnapshotInfo;
+				try {
+					foundSnapshotInfo = db.getUnique(snapInfo);
+					foundSnapshotInfo.setStatus(StorageProperties.Status.deleted.toString());
+					db.commit();
+				} catch (EucalyptusCloudException e) {
+					db.rollback();
+					LOG.error(e);
+					return;
+				}
+				HttpWriter httpWriter = new HttpWriter("DELETE", "snapset", snapshotId, "DeleteWalrusSnapshot", null);
+				try {
+					httpWriter.run();
+				} catch(EucalyptusCloudException ex) {
+					LOG.error(ex);
+				}
+			}
+		}
+	}
+
 }

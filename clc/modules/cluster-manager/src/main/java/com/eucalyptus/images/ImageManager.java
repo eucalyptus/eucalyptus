@@ -62,17 +62,23 @@
 
 package com.eucalyptus.images;
 
+import static com.eucalyptus.util.Parameters.checkParam;
+import static org.hamcrest.Matchers.notNullValue;
+
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
+
 import javax.persistence.PersistenceException;
 import javax.xml.xpath.XPath;
 import javax.xml.xpath.XPathConstants;
 import javax.xml.xpath.XPathExpressionException;
+
 import org.apache.log4j.Logger;
 import org.w3c.dom.Document;
 import org.w3c.dom.NodeList;
+
 import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.policy.PolicySpec;
@@ -110,6 +116,7 @@ import com.google.common.base.Predicate;
 import com.google.common.base.Supplier;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
+
 import edu.ucsb.eucalyptus.msgs.ConfirmProductInstanceResponseType;
 import edu.ucsb.eucalyptus.msgs.ConfirmProductInstanceType;
 import edu.ucsb.eucalyptus.msgs.CreateImageResponseType;
@@ -173,17 +180,23 @@ public class ImageManager {
   }
   
   public RegisterImageResponseType register( final RegisterImageType request ) throws EucalyptusCloudException, AuthException, IllegalContextAccessException, NoSuchElementException, PersistenceException {
-    final Context ctx = Contexts.lookup( );
+	final Context ctx = Contexts.lookup( );
     ImageInfo imageInfo = null;
     final String rootDevName = ( request.getRootDeviceName( ) != null )
       ? request.getRootDeviceName( )
-      : "/dev/sda1";
+      : Images.DEFAULT_ROOT_DEVICE;
     final String eki = request.getKernelId( );
     final String eri = request.getRamdiskId( );
+    
     if ( request.getImageLocation( ) != null ) {
+      // Verify all the device mappings first.
+      bdmInstanceStoreImageVerifier( ).apply( request );
+      
+      //When there is more than one verifier, something like this can be handy: Predicates.and(bdmVerifier(Boolean.FALSE)...).apply(request);
+      
       final ImageManifest manifest = ImageManifests.lookup( request.getImageLocation( ) );
       LOG.debug( "Obtained manifest information for requested image registration: " + manifest );
-      List<DeviceMapping> vbr = Lists.transform( request.getBlockDeviceMappings( ), Images.deviceMappingGenerator( imageInfo ) );
+      List<DeviceMapping> vbr = Lists.transform( request.getBlockDeviceMappings( ), Images.deviceMappingGenerator( imageInfo, null ) );
       final ImageMetadata.Architecture arch = ( request.getArchitecture( ) == null
         ? null
         : ImageMetadata.Architecture.valueOf( request.getArchitecture( ) ) );
@@ -203,6 +216,9 @@ public class ImageManager {
       imageInfo = RestrictedTypes.allocateUnitlessResource( allocator );
       imageInfo.getDeviceMappings( ).addAll( vbr );
     } else if ( rootDevName != null && Iterables.any( request.getBlockDeviceMappings( ), Images.findEbsRoot( rootDevName ) ) ) {
+      // Verify all the device mappings first. Dont fuss if both snapshot id and volume size are left blank
+      bdmBfebsImageVerifier( ).apply( request );
+      
       Supplier<ImageInfo> allocator = new Supplier<ImageInfo>( ) {
         
         @Override
@@ -510,5 +526,33 @@ public class ImageManager {
         return imageDetails.getImageId();
       }
     }
+  }
+  
+  /**
+   * <p>Predicate to validate the block device mappings in instance store image registration request.
+   * Suppressing a device mapping is allowed and ebs mappings are considered invalid.</p>
+   */
+  private static Predicate<RegisterImageType> bdmInstanceStoreImageVerifier () {
+    return new Predicate<RegisterImageType>( ) {
+	  @Override
+	  public boolean apply(RegisterImageType arg0) {
+		checkParam( arg0, notNullValue( ) );
+		return Images.isDeviceMappingListValid( arg0.getBlockDeviceMappings(), Boolean.TRUE, Boolean.FALSE );
+	  }	  
+	};
+  }
+  
+  /**
+   * <p>Predicate to validate the block device mappings in boot from ebs image registration request.
+   * Suppressing a device mapping is not allowed and ebs mappings are considered valid</p>
+   */
+  private static Predicate<RegisterImageType> bdmBfebsImageVerifier () {
+	  return new Predicate<RegisterImageType>( ) {
+	  @Override
+	  public boolean apply(RegisterImageType arg0) {
+		checkParam( arg0, notNullValue( ) );
+	    return Images.isDeviceMappingListValid( arg0.getBlockDeviceMappings(), Boolean.FALSE, Boolean.TRUE );
+	  }	  
+	};
   }
 }

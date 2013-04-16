@@ -200,8 +200,7 @@ public class ConnectionHandler extends Thread {
 
 			 if (queryOPT != null) {
 				 int optflags = (flags == FLAG_DNSSECOK) ? ExtendedFlags.DO : 0;
-				 OPTRecord opt = new OPTRecord((short)4096, rcode, (byte)0,
-						 optflags);
+				 OPTRecord opt = new OPTRecord((short)4096, rcode, (byte)0, optflags);
 				 response.addRecord(opt, Section.ADDITIONAL);
 			 }
 		}
@@ -285,8 +284,15 @@ public class ConnectionHandler extends Thread {
 		}
 
 		Zone zone = findBestZone(name);
-		if (zone != null)
+		if (zone != null) {
+			if (type == Type.AAAA) {
+				addSOA(response, zone);
+				response.getHeader().setFlag(Flags.AA);
+				return (Rcode.NOERROR);
+			}
+			
 			sr = zone.findRecords(name, type);
+		}
 		else {
 			Cache cache = getCache(dclass);
 			sr = cache.lookupRecords(name, type, Credibility.NORMAL);
@@ -341,16 +347,14 @@ public class ConnectionHandler extends Thread {
 				addRRset(name, response, rrset, Section.ANSWER, flags);
 				if (zone != null && iterations == 0)
 					response.getHeader().setFlag(Flags.AA);
-				rcode = addAnswer(response, newname, type, dclass,
-						iterations + 1, flags);
+				rcode = addAnswer(response, newname, type, dclass, iterations + 1, flags);
 			}
 		}
 		else if (sr.isSuccessful()) {
 			RRset [] rrsets = sr.answers();
 			if(rrsets != null) {
 				for (int i = 0; i < rrsets.length; i++)
-					addRRset(name, response, rrsets[i],
-							Section.ANSWER, flags);
+					addRRset(name, response, rrsets[i], Section.ANSWER, flags);
 			}
 			if (zone != null) {
 				addNS(response, zone, flags);
@@ -372,8 +376,7 @@ public class ConnectionHandler extends Thread {
 	private final void
 	addNS(Message response, Zone zone, int flags) {
 		RRset nsRecords = zone.getNS();
-		addRRset(nsRecords.getName(), response, nsRecords,
-				Section.AUTHORITY, flags);
+		addRRset(nsRecords.getName(), response, nsRecords, Section.AUTHORITY, flags);
 	}
 
 	private final void

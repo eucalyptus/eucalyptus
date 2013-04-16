@@ -6,15 +6,15 @@
           <div class="dialog-inner-content">
             <div class="form-row top-form-row">
               <label for="volume-attach-volume-id" class="required-label" data-msg="volume_dialog_attach_volume_label"></label>
-              <input type="text" id="volume-attach-volume-id" class="required" data-tooltip="volume_attach_volume_id_text_tip" data-value="item.volume_id"/>
+              <input type="text" id="volume-attach-volume-id" class="required" data-tooltip="volume_attach_volume_id_text_tip" data-value="volume.volume_id"/>
             </div>
             <div class="form-row">
               <label for="volume-attach-instance-id" class="required-label" data-msg="volume_dialog_attach_instance_label"></label>
-              <input type="text" id="volume-attach-instance-id" class="required" data-tooltip="volume_attach_instance_id_text_tip" data-value="item.instance_id"/>
+              <input type="text" id="volume-attach-instance-id" class="required" data-tooltip="volume_attach_instance_id_text_tip" data-value="volume.instance_id"/>
             </div>
             <div class="form-row">
               <label for="volume-attach-device-name" class="required-label" data-msg="volume_dialog_attach_device_label"></label>
-              <input type="text" id="volume-attach-device-name" class="required" data-tooltip="volume_attach_device_name_text_tip" data-value="item.device"/>
+              <input type="text" id="volume-attach-device-name" class="required" data-tooltip="volume_attach_device_name_text_tip" data-value="volume.device"/>
             </div>
             <p class="required-hint" data-msg="required_fields"></p>
           </div>
@@ -22,8 +22,8 @@
         <div data-text="status" style="height:20px"></div>
         <div class="ui-dialog-buttonpane ui-widget-content ui-helper-clearfix">
           <div class="ui-dialog-buttonset">
-            <a data-ui-button=":attachButton">Attach</a>
-            <a data-ui-button=":cancelButton">Cancel</a> 
+            <span data-ui-button=":attachButton">Attach</span>
+            <span data-ui-button=":cancelButton">Cancel</span> 
           </div>
         </div>
       </div>

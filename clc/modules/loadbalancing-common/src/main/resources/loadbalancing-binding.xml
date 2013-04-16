@@ -18,6 +18,15 @@
     </collection>
     <value name="RequestId" field="requestId" usage="required"/>
   </mapping>
+  <mapping name="DescribeLoadBalancersByServo" class="com.eucalyptus.loadbalancing.DescribeLoadBalancersByServoType" extends="com.eucalyptus.loadbalancing.LoadBalancingMessage">
+    <structure map-as="com.eucalyptus.loadbalancing.LoadBalancingMessage"/>
+    <value name="InstanceId" field="instanceId" usage="required"/>
+  </mapping>
+  <mapping name="DescribeLoadBalancersByServoResponse" class="com.eucalyptus.loadbalancing.DescribeLoadBalancersByServoResponseType" extends="com.eucalyptus.loadbalancing.LoadBalancingMessage">
+    <structure map-as="com.eucalyptus.loadbalancing.LoadBalancingMessage"/>
+    <structure name="DescribeLoadBalancersResult" field="describeLoadBalancersResult" usage="required" type="com.eucalyptus.loadbalancing.DescribeLoadBalancersResult"/>
+    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.loadbalancing.ResponseMetadata"/>
+  </mapping>
   <mapping name="PutServoStates" class="com.eucalyptus.loadbalancing.PutServoStatesType" extends="com.eucalyptus.loadbalancing.LoadBalancingMessage">
     <structure map-as="com.eucalyptus.loadbalancing.LoadBalancingMessage"/>
     <value name="InstanceId" field="instanceId" usage="required"/>
