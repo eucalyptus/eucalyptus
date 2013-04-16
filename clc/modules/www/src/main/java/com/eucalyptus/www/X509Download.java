@@ -223,11 +223,7 @@ public class X509Download extends HttpServlet {
       StringBuilder sb = new StringBuilder( );
       //TODO:GRZE:FIXME velocity
       String userNumber = u.getAccount( ).getAccountNumber( );
-      sb.append( "if [ $(uname) == \"Darwin\" ]; then" );
-      sb.append( "  EUCA_KEY_DIR=$(dirname `pwd -P`)" );
-      sb.append( "else" );
-      sb.append( "  EUCA_KEY_DIR=$(dirname $(readlink -f ${BASH_SOURCE:-$0}))" );
-      sb.append( "fi" );
+      sb.append( "EUCA_KEY_DIR=$(cd $(dirname ${BASH_SOURCE:-$0}); pwd -P)" );
       if ( Topology.isEnabled( Eucalyptus.class ) ) {//GRZE:NOTE: this is temporary
         sb.append( "\nexport EC2_URL=" + ServiceUris.remotePublicify( Topology.lookup( Eucalyptus.class ) ) );
       } else {
