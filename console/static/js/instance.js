@@ -510,10 +510,21 @@
      if(numSelected === 1 && ('running' in stateMap || 'pending' in stateMap) && ($.inArray(instIds[0], stateMap['running']>=0) || $.inArray(instIds[0], stateMap['pending'] >=0)))
        menuItems['associate'] = {"name":instance_action_associate, callback: function(key, opt){thisObj._associateAction(); }}
   
-     // TODO: assuming disassociate-address is for only one selected instance 
-     if(numSelected  === 1 && instIds[0] in thisObj.instIpMap)
-       menuItems['disassociate'] = {"name":instance_action_disassociate, callback: function(key, opt){thisObj._disassociateAction();}}
- 
+     // TODO: assuming disassociate-address is for only one selected instance
+     // ADJUSTED: More than 1 instance can be selected for disassociate action  --- Kyo 041513 
+     if(numSelected  >= 1 ){
+       var associatedCount = 0;
+       $.each(selectedRows, function(rowIdx, row){
+//         console.log("InstanceIPMap: " + thisObj.instIpMap[row['id'].toLowerCase()]);
+         if( thisObj.instIpMap[row['id'].toLowerCase()] != null ){
+           associatedCount++;
+         } 
+       });
+       if( numSelected == associatedCount ){
+         menuItems['disassociate'] = {"name":instance_action_disassociate, callback: function(key, opt){thisObj._disassociateAction();}}
+       };
+     }
+
      if(numSelected == 1){
        menuItems['tag'] = {"name":'Tag Resource', callback: function(key, opt){ thisObj._tagResourceAction(); }}
      }
@@ -963,22 +974,23 @@
     _associateAction : function(){
       var thisObj = this;
       var instance = thisObj.tableWrapper.eucatable('getSelectedRows', 17)[0];
-//      instance = $(instance).html();  // After dataTable 1.9 integration, this operation is no longer needed. 030413
       associateIp(instance);
     },
     _disassociateAction : function(){
       var thisObj = this;
-      var ip = thisObj.tableWrapper.eucatable('getSelectedRows', 16)[0];
+      var ips = thisObj.tableWrapper.eucatable('getSelectedRows', 16);
       var results = describe('eip');
-      var addr = null;
-      for(i in results){
-        if (results[i].public_ip === ip){
-          addr = results[i];
-          break;
+      var addrs = [];
+      _.each(ips, function(ip){
+        for(i in results){
+          if (results[i].public_ip === ip){
+            addrs.push(results[i]);
+          }
         }
+      });
+      if(addrs.length >= 1){
+        disassociateIp(addrs);
       }
-      if(addr)
-        disassociateIp(addr);
     },
 
     _tagResourceAction : function(){

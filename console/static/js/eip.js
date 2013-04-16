@@ -546,9 +546,27 @@
       var thisObj = this;
       if ( addresses.length > 0 ) {
         var matrix = [];
+//        console.log("Addresses Data: " + JSON.stringify(addresses));
+        // FIX TO DISPLAY THE NAME TAG FOR THE INSTANCES   ---   Kyo 041513
         $.each(addresses, function(idx, ip){
-          matrix.push([ip.public_ip, ip.instance_id]); 
+          var nameTag = null;
+          var this_instance = require('app').data.instance.get(ip.instance_id);
+          if( this_instance ){
+            var this_tags = this_instance.get('tags');
+            this_tags.each(function(tag){
+//              console.log("Tag: " + JSON.stringify(tag.toJSON()));
+              if( tag.get('name') == 'Name' || tag.get('name') == 'name' ){
+                nameTag = tag.get('value');
+              };
+            });
+          }; 
+          if( nameTag == null ){
+            matrix.push([ip.public_ip, ip.instance_id]);
+          }else{
+            matrix.push([ip.public_ip, nameTag]);
+          }
         });
+
         thisObj.disassociateDialog.eucadialog('setSelectedResources', {title: [ip_address_label, instance_label], contents: matrix});
         thisObj.disassociateDialog.dialog('open');
       }
