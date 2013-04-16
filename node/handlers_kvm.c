@@ -679,7 +679,8 @@ static int doMigrateInstances(struct nc_state_t *nc, ncMetadata * pMeta, ncInsta
         LOGDEBUG("verifying instance # %d...\n", inst_idx);
         if (instances[inst_idx]) {
             ncInstance *instance_idx = instances[inst_idx];
-            LOGDEBUG("[%s] proposed migration action '%s' (%s > %s)\n", instance_idx->instanceId, action, instance_idx->migration_src, instance_idx->migration_dst);
+            // FIXME: REMOVE THE DISPLAY OF CREDENTIALS BEFORE WE GO LIVE!
+            LOGDEBUG("[%s] proposed migration action '%s' (%s > %s) [%s]\n", SP(instance_idx->instanceId), SP(action), SP(instance_idx->migration_src), SP(instance_idx->migration_dst), SP(credentials));
         } else {
             LOGERROR("Mismatch between migration instance count (%d) and length of instance list\n", instancesLen);
             return (EUCA_ERROR);
@@ -711,11 +712,20 @@ static int doMigrateInstances(struct nc_state_t *nc, ncMetadata * pMeta, ncInsta
 
             if (strcmp(action, "prepare") == 0) {
                 sem_p(inst_sem);
+                LOGINFO("[%s] migration source preparing %s > %s [%s]\n", instance->instanceId, sourceNodeName, destNodeName, credentials);
+                char generate_keys[MAX_PATH];
+                char *euca_base = getenv(EUCALYPTUS_ENV_VAR_NAME);
+                snprintf(generate_keys, MAX_PATH, EUCALYPTUS_GENERATE_MIGRATION_KEYS, euca_base ? euca_base : "", euca_base ? euca_base : "");
+                LOGDEBUG("[%s] migration key-generator path: '%s'\n", instance->instanceId, generate_keys)
+                // FOO
+
                 instance->migration_state = MIGRATION_READY;
                 euca_strncpy(instance->migration_src, sourceNodeName, HOSTNAME_SIZE);
                 euca_strncpy(instance->migration_dst, destNodeName, HOSTNAME_SIZE);
+                euca_strncpy(instance->migration_credentials, credentials, CREDENTIAL_SIZE);
+                //snprintf(instance->migration_credentials, CREDENTIAL_SIZE, "C=US,O=nc-CC_15,L=%s,CN=10.111.5.x", credentials);
                 instance->migrationTime = time(NULL);
-                LOGINFO("[%s] migration source preparing %s > %s\n", instance->instanceId, instance->migration_src, instance->migration_dst);
+                // FIXME: REMOVE THE DISPLAY OF CREDENTIALS BEFORE WE GO LIVE!
                 save_instance_struct(instance);
                 copy_instances();
                 sem_v(inst_sem);
@@ -735,7 +745,8 @@ static int doMigrateInstances(struct nc_state_t *nc, ncMetadata * pMeta, ncInsta
                     return (EUCA_UNSUPPORTED_ERROR);
                 }
                 instance->migration_state = MIGRATION_IN_PROGRESS;
-                LOGINFO("[%s] migration source initiating %s > %s\n", instance->instanceId, instance->migration_src, instance->migration_dst);
+                // FIXME: REMOVE THE DISPLAY OF CREDENTIALS BEFORE WE GO LIVE!
+                LOGINFO("[%s] migration source initiating %s > %s [%s]\n", instance->instanceId, instance->migration_src, instance->migration_dst, instance->migration_credentials);
                 save_instance_struct(instance);
                 copy_instances();
                 sem_v(inst_sem);
@@ -784,7 +795,7 @@ static int doMigrateInstances(struct nc_state_t *nc, ncMetadata * pMeta, ncInsta
                 LOGERROR("[%s] action '%s' is not valid or not implemented\n", instance_req->instanceId, action);
                 return (EUCA_INVALID_ERROR);
             }
-            // Everything from here on is specific to "prepare"
+            // Everything from here on is specific to "prepare" on a destination.
 
             // allocate a new instance struct
             ncInstance *instance = clone_instance(instance_req);
@@ -797,7 +808,9 @@ static int doMigrateInstances(struct nc_state_t *nc, ncMetadata * pMeta, ncInsta
             instance->migration_state = MIGRATION_PREPARING;
             euca_strncpy(instance->migration_src, sourceNodeName, HOSTNAME_SIZE);
             euca_strncpy(instance->migration_dst, destNodeName, HOSTNAME_SIZE);
-            LOGINFO("[%s] migration destination preparing %s > %s\n", instance->instanceId, SP(instance->migration_src), SP(instance->migration_dst));
+            euca_strncpy(instance->migration_credentials, credentials, CREDENTIAL_SIZE);
+            // FIXME: REMOVE THE DISPLAY OF CREDENTIALS BEFORE WE GO LIVE!
+            LOGINFO("[%s] migration destination preparing %s > %s [%s]\n", instance->instanceId, SP(instance->migration_src), SP(instance->migration_dst), SP(instance->migration_credentials));
             save_instance_struct(instance);
             sem_v(inst_sem);
 
@@ -934,10 +947,6 @@ failed_dest:
 
             ret = EUCA_ERROR;
             EUCA_FREE(instance);
-
-            // FIXME: This isn't really right, as it will cause an error
-            // return for a multi-instance request even if some instances
-            // were successfully set up.
             goto out;
 
         } else {
