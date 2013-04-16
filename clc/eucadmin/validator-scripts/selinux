@@ -1,0 +1,45 @@
+#!/bin/sh
+
+# This script checks whether SELinux is currently in enforcing mode,
+# and also whether it would be in enforcing mode the next time the system
+# reboots.  If currently enforcing, returns a failure.  If it would be
+# enforcing upon reboot, it returns success, but with a warning.
+
+print_kv() {
+  while true; do
+    echo -n "\"$1\": \"$2\""
+    shift 2
+    if (( "$#" )); then echo -n ', '; else break; fi
+  done
+}
+
+CURRENT=$( getenforce )
+FAILED=0
+if [ "$CURRENT" == "Enforcing" ]; then
+  FAILED=1
+fi
+
+if [ -f /etc/sysconfig/selinux ]; then
+  . /etc/sysconfig/selinux
+fi
+
+# Get args for the default kernel
+ARGS=$( grubby --info $( grubby --default-kernel ) | grep ^args )
+# default is enabled if selinux=0 is not specified
+BOOT=$( echo $ARGS | sed 's/.*selinux=\([0|1]\)/\1/;tx;s/.*/1/;:x' )
+
+if [ "$BOOT" == "1" ] && [ "$SELINUX" == "enforcing" ]; then
+  WARN='SELinux is enabled and enforcing upon reboot'
+fi
+
+echo -n '{ '
+print_kv "failed" "$FAILED" \
+         "current" "$CURRENT" \
+         "sysconfig" "$SELINUX" \
+         "boot" "$BOOT"
+if [ -n "$WARN" ]; then
+  echo -n ', '
+  print_kv "warn" "$WARN" \
+           "resolution" "Set 'SELINUX' to 'permissive' in /etc/sysconfig/selinux"
+fi
+echo -n ' }'
