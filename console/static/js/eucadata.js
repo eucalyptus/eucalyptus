@@ -91,23 +91,12 @@
             }, repeat: null};
 
             var interval = thisObj.options.refresh_interval_sec*1000;
-            thisObj._callbacks[name].repeat = runRepeat(thisObj._callbacks[name].callback, interval, true); // random ms is added to distribute sync interval
+            thisObj._callbacks[name].repeat = runRepeat(thisObj._callbacks[name].callback, interval, true);
           });
         }
       });
-      //this._describe();
     }, 
     _destroy : function(){
-    },
-    _describe : function(){
-      var thisObj = this;
-      $.each(thisObj.options.endpoints, function(idx, ep){
-        var name = ep.name;
-        // probobly don't need randomness when we're requesting a lot less data in general
-        //var interval = getRandomInt((thisObj.options.refresh_interval_sec*1000)/2,(thisObj.options.refresh_interval_sec*1000)*2);
-        var interval = thisObj.options.refresh_interval_sec*1000;
-        thisObj._callbacks[name].repeat = runRepeat(thisObj._callbacks[name].callback, interval, true); // random ms is added to distribute sync interval
-      });
     },
      
 /***** Public Methods *****/
