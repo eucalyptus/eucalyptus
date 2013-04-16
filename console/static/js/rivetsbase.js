@@ -198,7 +198,7 @@
         keypath = dependency.substr(1);
       } else {
         dependency = dependency.split('.');
-        model = getAdapter().read(binder.view.models(dependency.shift()));
+        model = getAdapter().read(binder.view.models, dependency.shift());
         keypath = dependency.join('.');
       }
       callback(model, keypath);
