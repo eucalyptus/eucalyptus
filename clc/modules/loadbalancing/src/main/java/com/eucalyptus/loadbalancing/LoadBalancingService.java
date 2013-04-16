@@ -523,7 +523,19 @@ public class LoadBalancingService {
           }catch(Exception ex){
             ;
           }
-                                            /// (backend server description)
+                                            /// backend server description
+          									/// source security group
+          try{
+        	  desc.setSourceSecurityGroup(new SourceSecurityGroup());
+        	  LoadBalancerSecurityGroup group = lb.getGroup();
+        	  if(group!=null){
+        		  desc.getSourceSecurityGroup().setOwnerAlias(group.getGroupOwnerAccountId());
+        		  desc.getSourceSecurityGroup().setGroupName(group.getName());
+        	  }
+          }catch(Exception ex){
+        	  ;
+          }
+         
           descs.add(desc);
         }
         return descs;

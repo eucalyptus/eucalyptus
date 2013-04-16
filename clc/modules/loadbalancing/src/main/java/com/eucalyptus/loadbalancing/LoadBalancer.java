@@ -105,9 +105,9 @@ public class LoadBalancer extends UserMetadata<LoadBalancer.STATE> implements Lo
 	@Cache( usage= CacheConcurrencyStrategy.TRANSACTIONAL )
 	private Collection<LoadBalancerZone> zones = null;
 	
-	@OneToMany(fetch = FetchType.LAZY, orphanRemoval = false, mappedBy = "loadbalancer")
+	@OneToOne(fetch = FetchType.LAZY, orphanRemoval = false, mappedBy = "loadbalancer")
 	@Cache( usage= CacheConcurrencyStrategy.TRANSACTIONAL )
-	private Collection<LoadBalancerSecurityGroup> groups = null;
+	private LoadBalancerSecurityGroup group = null;
 
 	@OneToOne(fetch = FetchType.LAZY, cascade = CascadeType.ALL, orphanRemoval = true, mappedBy = "loadbalancer")
 	@Cache( usage= CacheConcurrencyStrategy.TRANSACTIONAL )
@@ -184,8 +184,8 @@ public class LoadBalancer extends UserMetadata<LoadBalancer.STATE> implements Lo
 		return this.zones;
 	}
 	
-	public Collection<LoadBalancerSecurityGroup> getGroups(){
-		return this.groups;
+	public LoadBalancerSecurityGroup getGroup(){
+		return this.group;
 	}
 	
 	public LoadBalancerAutoScalingGroup getAutoScaleGroup(){
