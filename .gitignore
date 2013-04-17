@@ -13,6 +13,7 @@
 .sw*
 .*.sw*
 console/jstests/node_modules/*
+console/eucaconsole/version.py
 autom4te.cache
 clc/.nogit
 clc/bin

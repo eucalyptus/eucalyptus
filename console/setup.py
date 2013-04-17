@@ -45,8 +45,8 @@ data_files.append(('/etc/eucalyptus-console', ['eucaconsole/console.ini']))
 version = getVersion()
 with open('eucaconsole/version.py', 'w') as fp:
     fp.write("""# Do not edit. This file is generated.
-__version__ = '{}'
-""".format(version))
+__version__ = '%s'
+""" % (version))
 
 setup (name="Eucalyptus Management Console",
     version = version,
