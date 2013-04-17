@@ -26,6 +26,7 @@ use Getopt::Std;
 $config_file = "/etc/libvirt/libvirtd.conf";
 
 %DNs = ();
+@DN_order = ('C', 'O', 'L', 'CN');
 
 # printf for debug (verbose) output.
 sub dprint
@@ -35,7 +36,8 @@ sub dprint
 
 sub process_dn_list
 {
-#  print @_;
+  dprint "In process_dn_list...\n";
+  dprint @_;
   chomp @_;
 
   my $dn_list = join (' ', @_);
@@ -51,7 +53,7 @@ sub process_dn_list
 
   foreach (@dn_list) {
     s/^\s*"//;
-    s/"\s*$//;
+    s/",*\s*$//;
   }
 
   print join ("\n", @dn_list);
@@ -64,6 +66,7 @@ sub process_dn_list
     foreach (@dn) {
       if (/^CN=.*/) {
 	$dn = $_;
+	push @dn_fields, $_;
       } else {
 	push @dn_fields, $_;
       }
@@ -74,20 +77,68 @@ sub process_dn_list
   }
 
   foreach (keys %DNs) {
-    print "$_,$DNs{$_}\n";
+    print "$DNs{$_}\n";
   }
 
-
-  my $foo = <STDIN>
+  my $foo = <STDIN>;
 }
 
-getopts ('vrc:');
+sub save_new_dn_list
+{
+  my $header_printed = 0;
+  my $hash_line = 0;
+
+  if (defined($opt_r) && ($opt_r eq "")) {
+    dprint "Removing ALL entries from tls_allowed_dn_list\n";
+    print CONFIG_OUT "tls_allowed_dn_list = []\n";
+    return;
+  }
+
+  if ($opt_r) {
+    my $val = delete $DNs{"CN=" . $opt_r};
+    if (!$val) {
+      dprint "Did not find key '$opt_r' in tls_allowed_dn_list\n";
+    } else {
+      dprint "Removed '$opt_r' from tls_allowed_dn_list\n";
+    }
+  }
+
+  my $hash_size = keys %DNs;
+
+  foreach (keys %DNs) {
+    if (!$header_printed) {
+      print CONFIG_OUT "tls_allowed_dn_list = [\"$DNs{$_}\",";
+      ++$header_printed;
+      if (++$hash_line == $hash_size) {
+	print CONFIG_OUT "]\n";
+      } else {
+	print CONFIG_OUT "\n";
+      }
+    } else {
+      print CONFIG_OUT "                       \"$DNs{$_}\",";
+      if (++$hash_line == $hash_size) {
+	print CONFIG_OUT "]\n";
+      } else {
+	print CONFIG_OUT "\n";
+      }
+    }
+  }
+}
+
+getopts ('vr:c:');
 
 if ($opt_c) {
   $config_file = $opt_c;
 }
 
 dprint "Using config file: $config_file\n";
+
+if (defined ($opt_r)) {
+  dprint "opt_r defined\n";
+  if ($opt_r eq "") {
+    dprint "opt_r empty\n";
+  }
+}
 
 $new_config = $config_file . ".new";
 
@@ -109,6 +160,7 @@ while (<CONFIG_IN>) {
       my @dn_list;
       push @dn_list, $_;
       process_dn_list(@dn_list);
+      save_new_dn_list();
       ++$dn_list_found;
     } else {
       # Entries spread over multiple lines--not as easy.
@@ -125,11 +177,12 @@ while (<CONFIG_IN>) {
     if (/.*\]/) {
       # Found. Multi-line entry complete--finish & process.
       process_dn_list(@dn_list);
+      save_new_dn_list();
       undef @dn_list;
       ++$dn_list_found;
       $in_dn_list = 0;
     }
   } else {
-    print $_;
+    print CONFIG_OUT $_;
   }
 }
