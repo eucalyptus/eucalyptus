@@ -103,7 +103,9 @@ public class EventHandlerChainNew extends EventHandlerChain<NewLoadbalancerEvent
 			   // zones
 			   // user
 			
-			//  check if the currently allocated resources + newly requested resources is within the limit
+			// check if the keyname is configured and is existing
+			
+			// check if the currently allocated resources + newly requested resources is within the limit
 		}
 
 		@Override

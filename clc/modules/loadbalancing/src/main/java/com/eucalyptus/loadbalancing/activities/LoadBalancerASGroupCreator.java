@@ -68,6 +68,13 @@ public class LoadBalancerASGroupCreator extends AbstractEventHandler<NewLoadbala
 		type = ConfigurableFieldType.KEYVALUE )
 	public static String LOADBALANCER_INSTANCE_TYPE = "m1.small";
 	
+	@ConfigurableField( displayName = "loadbalancer_vm_keyname", 
+			description = "keyname to use when debugging loadbalancer VMs",
+			readonly = false,
+			type = ConfigurableFieldType.KEYVALUE )
+		public static String LOADBALANCER_VM_KEYNAME = null;
+		
+	
 	private LoadBalancer loadbalancer = null;
 	private int capacityPerZone = 1;
 	
@@ -145,8 +152,11 @@ public class LoadBalancerASGroupCreator extends AbstractEventHandler<NewLoadbala
 				StoredResult<String> sgroupSetup = this.getChain().findHandler(SecurityGroupSetup.class);
 				final List<String> group = sgroupSetup.getResult();
 				final String sgroupName = group.size()>0 ? group.get(0) : null;
+				final String keyName = 
+						LOADBALANCER_VM_KEYNAME!=null && LOADBALANCER_VM_KEYNAME.length()>0 ? LOADBALANCER_VM_KEYNAME : null;
+						
 				EucalyptusActivityTasks.getInstance().createLaunchConfiguration(LOADBALANCER_EMI, LOADBALANCER_INSTANCE_TYPE, instanceProfileName,
-						launchConfigName, sgroupName, userDataBuilder.build());
+						launchConfigName, sgroupName, keyName, userDataBuilder.build());
 				this.launchConfigName = launchConfigName;
 			}catch(Exception ex){
 				throw new EventHandlerException("Failed to create launch configuration", ex);

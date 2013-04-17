@@ -558,9 +558,9 @@ public class EucalyptusActivityTasks {
 	}
 	
 	public void createLaunchConfiguration(final String imageId, final String instanceType, final String instanceProfileName, final String launchConfigName,
-			final String securityGroup, final String userData){
+			final String securityGroup, final String keyName, final String userData){
 		final AutoScalingCreateLaunchConfigTask task = 
-				new AutoScalingCreateLaunchConfigTask(imageId, instanceType, instanceProfileName, launchConfigName, securityGroup, userData);
+				new AutoScalingCreateLaunchConfigTask(imageId, instanceType, instanceProfileName, launchConfigName, securityGroup, keyName, userData);
 		final CheckedListenableFuture<Boolean> result = task.dispatch(new AutoScalingSystemActivity());
 		try{
 			if(result.get()){
@@ -1173,14 +1173,16 @@ public class EucalyptusActivityTasks {
 		private String instanceProfileName = null;
 		private String launchConfigName = null;
 		private String securityGroup = null;
+		private String keyName = null;
 		private String userData = null;
 		private AutoScalingCreateLaunchConfigTask(final String imageId, final String instanceType, String instanceProfileName,
-				final String launchConfigName, final String sgroupName, final String userData){
+				final String launchConfigName, final String sgroupName, final String keyName, final String userData){
 			this.imageId = imageId;
 			this.instanceType = instanceType;
 			this.instanceProfileName = instanceProfileName;
 			this.launchConfigName = launchConfigName;
 			this.securityGroup = sgroupName;
+			this.keyName = keyName; 
 			this.userData = userData;
 		}
 		
@@ -1190,6 +1192,8 @@ public class EucalyptusActivityTasks {
 			req.setInstanceType(this.instanceType);
 			if(this.instanceProfileName!=null)
 				req.setIamInstanceProfile(this.instanceProfileName);
+			if(this.keyName!=null)
+				req.setKeyName(this.keyName);
 			
 			req.setLaunchConfigurationName(this.launchConfigName);
 			SecurityGroups groups = new SecurityGroups();

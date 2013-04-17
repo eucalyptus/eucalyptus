@@ -61,6 +61,7 @@ import com.google.common.collect.Collections2;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
+import com.google.common.net.HostSpecifier;
 
 /**
  * @author Sang-Min Park
@@ -306,6 +307,22 @@ public class LoadBalancingService {
     final UserFullName ownerFullName = ctx.getUserFullName();
     final String lbName = request.getLoadBalancerName();
 
+    // verify loadbalancer name
+    final Predicate<String> nameChecker = new Predicate<String>(){
+		@Override
+		public boolean apply(@Nullable String arg0) {
+			if(arg0==null)
+				return false;
+			if(!HostSpecifier.isValid(String.format("%s.com", arg0)))
+				return false;
+			return true;
+		}
+    };
+    
+    if(!nameChecker.apply(lbName)){
+    	throw new LoadBalancingException("Invalid character found in the loadbalancer name");
+    }
+    
     final Supplier<LoadBalancer> allocator = new Supplier<LoadBalancer>() {
       @Override
       public LoadBalancer get() {
