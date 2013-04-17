@@ -28,8 +28,8 @@
                 {key:'storage', text:storage_label},
                 {key:'netsec', text:netsec_label}],
 		    submenus : { storage: [{key:'volume', text:volumes_label}, {key:'snapshot', text:snapshots_label}, /*{key:'bucket', text:buckets_label},*/ ],
-                  netsec: [/*{key:'balancing', text:balancers_label},*/ {key:'sgroup',text:sgroups_label},{key:'keypair',text:keypairs_label},{key:'eip',text:eips_label}],
-                  instance: [{key:'instance', text:instances_label}, {key:'scaling', text:scaling_label}, {key:'rivetstest', text:'Testbed'} ]},
+                  netsec: [/*{key:'balancing', text:balancers_label},*/ {key:'sgroup',text:sgroups_label},{key:'keypair',text:keypairs_label},{key:'eip',text:eips_label}]},
+//                  instance: [{key:'instance', text:instances_label}, {key:'scaling', text:scaling_label}, {key:'rivetstest', text:'Testbed'} ]},
       },
 
       _init : function() { },
