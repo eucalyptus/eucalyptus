@@ -91,13 +91,13 @@ define([
           if (model.get('block_device_mappings') != undefined) {
             var mappings = model.get('block_device_mappings');
             $.each(mappings, function(idx, mapping) {
-              data += "&BlockDeviceMapping."+(idx-1)+".DeviceName="+mapping.device_name;
+              data += "&BlockDeviceMapping."+(idx)+".DeviceName="+mapping.device_name;
               if (mapping.virtual_name != undefined) {
-                data += "&BlockDeviceMapping."+(idx-1)+".VirtualName="+mapping.virtual_name;
+                data += "&BlockDeviceMapping."+(idx)+".VirtualName="+mapping.virtual_name;
               }
               else {
-                data += "&BlockDeviceMapping."+(idx-1)+".Ebs.SnapshotId="+mapping.snapshot_id;
-                data += "&BlockDeviceMapping."+(idx-1)+".Ebs.VolumeSize="+mapping.volume_size;
+                data += "&BlockDeviceMapping."+(idx)+".Ebs.SnapshotId="+mapping.snapshot_id;
+                data += "&BlockDeviceMapping."+(idx)+".Ebs.VolumeSize="+mapping.volume_size;
               }
             });
           }
@@ -116,7 +116,7 @@ define([
             success:
               function(data, textStatus, jqXHR){
                 if ( data.results ) {
-                  notifySuccess(null, $.i18n.prop('create_launch_config_run_success', DefaultEncoder().encodeForHTML(model.name), DefaultEncoder().encodeForHTML(instanceId)));
+                  notifySuccess(null, $.i18n.prop('create_launch_config_run_success', DefaultEncoder().encodeForHTML(model.name), DefaultEncoder().encodeForHTML(data.results.request_id)));
                 } else {
                   notifyError($.i18n.prop('create_launch_config_run_error', DefaultEncoder().encodeForHTML(model.name), DefaultEncoder().encodeForHTML(model.name)), undefined_error);
                 }
