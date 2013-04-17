@@ -91,8 +91,10 @@ import javax.crypto.Cipher;
 import javax.crypto.SecretKey;
 import javax.crypto.spec.IvParameterSpec;
 import javax.crypto.spec.SecretKeySpec;
+import javax.xml.XMLConstants;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
+import javax.xml.parsers.ParserConfigurationException;
 import javax.xml.transform.Result;
 import javax.xml.transform.Source;
 import javax.xml.transform.Transformer;
@@ -126,6 +128,8 @@ import com.eucalyptus.system.Threads;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.Lookups;
 import com.eucalyptus.util.WalrusProperties;
+import com.eucalyptus.util.XMLParser;
+
 import edu.ucsb.eucalyptus.cloud.AccessDeniedException;
 import edu.ucsb.eucalyptus.cloud.BucketLogData;
 import edu.ucsb.eucalyptus.cloud.DecryptionFailedException;
@@ -152,7 +156,6 @@ import edu.ucsb.eucalyptus.util.EucaSemaphore;
 import edu.ucsb.eucalyptus.util.EucaSemaphoreDirectory;
 import edu.ucsb.eucalyptus.util.WalrusDataMessenger;
 import edu.ucsb.eucalyptus.util.WalrusMonitor;
-import edu.ucsb.eucalyptus.util.XMLParser;
 
 public class WalrusImageManager {
 	private static Logger LOG = Logger.getLogger( WalrusImageManager.class );
@@ -587,7 +590,7 @@ public class WalrusImageManager {
 						sigCloud.update(verificationString.getBytes());
 						String signature = new String(Hashes.bytesToHex(sigCloud.sign()));
 						//TODO: refactor
-						DocumentBuilder docBuilder = DocumentBuilderFactory.newInstance( ).newDocumentBuilder( );
+						DocumentBuilder docBuilder = XMLParser.getDocBuilder();
 						fileInputStream = new FileInputStream( file );
 						Document docRoot = docBuilder.parse( fileInputStream );
 						Element sigElement = docRoot.createElement("signature");						
