@@ -668,6 +668,7 @@ out:
 static int doMigrateInstances(struct nc_state_t *nc, ncMetadata * pMeta, ncInstance ** instances, int instancesLen, char *action, char *credentials)
 {
     int ret = EUCA_OK;
+    int credentials_prepared = 0;
 
     if (instancesLen <= 0) {
         LOGERROR("called with invalid instancesLen (%d)\n", instancesLen);
@@ -680,7 +681,7 @@ static int doMigrateInstances(struct nc_state_t *nc, ncMetadata * pMeta, ncInsta
         if (instances[inst_idx]) {
             ncInstance *instance_idx = instances[inst_idx];
             // FIXME: REMOVE THE DISPLAY OF CREDENTIALS BEFORE WE GO LIVE!
-            LOGDEBUG("[%s] proposed migration action '%s' (%s > %s) [%s]\n", SP(instance_idx->instanceId), SP(action), SP(instance_idx->migration_src), SP(instance_idx->migration_dst), SP(credentials));
+            LOGDEBUG("[%s] proposed migration action '%s' (%s > %s) [%s]\n", SP(instance_idx->instanceId), SP(action), SP(instance_idx->migration_src), SP(instance_idx->migration_dst), SP(instance_idx->migration_credentials));
         } else {
             LOGERROR("Mismatch between migration instance count (%d) and length of instance list\n", instancesLen);
             return (EUCA_ERROR);
@@ -713,11 +714,21 @@ static int doMigrateInstances(struct nc_state_t *nc, ncMetadata * pMeta, ncInsta
             if (strcmp(action, "prepare") == 0) {
                 sem_p(inst_sem);
                 LOGINFO("[%s] migration source preparing %s > %s [%s]\n", instance->instanceId, sourceNodeName, destNodeName, credentials);
-                char generate_keys[MAX_PATH];
-                char *euca_base = getenv(EUCALYPTUS_ENV_VAR_NAME);
-                snprintf(generate_keys, MAX_PATH, EUCALYPTUS_GENERATE_MIGRATION_KEYS, euca_base ? euca_base : "", euca_base ? euca_base : "");
-                LOGDEBUG("[%s] migration key-generator path: '%s'\n", instance->instanceId, generate_keys)
-                // FOO
+                if (!credentials_prepared) {
+                    char generate_keys[MAX_PATH];
+                    char *euca_base = getenv(EUCALYPTUS_ENV_VAR_NAME);
+                    snprintf(generate_keys, MAX_PATH, EUCALYPTUS_GENERATE_MIGRATION_KEYS " %s %s restart", euca_base ? euca_base : "", euca_base ? euca_base : "", sourceNodeName, credentials);
+                    LOGDEBUG("instance[0]=%s migration key-generator path: '%s'\n", instance->instanceId, generate_keys);
+                    int sysret = system(generate_keys);
+                    if (sysret) {
+                        LOGERROR("instance[0]=%s '%s' failed with exit code %d\n", instance->instanceId, generate_keys, WEXITSTATUS(sysret));
+                        sem_v(inst_sem);
+                        return (EUCA_SYSTEM_ERROR);
+                    } else {
+                        LOGDEBUG("instance[0]=%s migration key-generation succeeded\n", instance->instanceId);
+                        credentials_prepared++;
+                    }
+                }
 
                 instance->migration_state = MIGRATION_READY;
                 euca_strncpy(instance->migration_src, sourceNodeName, HOSTNAME_SIZE);
