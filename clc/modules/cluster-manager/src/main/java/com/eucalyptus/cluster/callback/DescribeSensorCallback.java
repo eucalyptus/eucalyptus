@@ -120,12 +120,12 @@ public class DescribeSensorCallback extends
     try {
       final Iterable<String> uuidList =
           Iterables.transform(VmInstances.list(VmState.RUNNING), VmInstances.toInstanceUuid());
-
+      LOG.debug("DescribeSensorCallback (fire) called at " + new Date());
       for (final SensorsResourceType sensorData : msg.getSensorsResources()) {
         if (!RESOURCE_TYPE_INSTANCE.equals(sensorData.getResourceType()) ||
             !Iterables.contains(uuidList, sensorData.getResourceUuid()))
           continue;
-
+        
         for (final MetricsResourceType metricType : sensorData.getMetrics()) {
           for (final MetricCounterType counterType : metricType.getCounters()) {
             for (final MetricDimensionsType dimensionType : counterType.getDimensions()) {
@@ -137,10 +137,18 @@ public class DescribeSensorCallback extends
               //CloudWatch use case of metric data
 
               if(!values.isEmpty()) {
+                // best to enter older data first...
+                Collections.sort(values, Ordering.natural().onResultOf(GetTimestamp.INSTANCE));
 
                 for (MetricDimensionsValuesType value : values) {
-                  final Double currentValue = value.getValue();
+                  LOG.debug("ResourceUUID: " + sensorData.getResourceUuid());
+                  LOG.debug("ResourceName: " + sensorData.getResourceName());
+                  LOG.debug("Metric: " + metricType.getMetricName());
+                  LOG.debug("Dimension: " + dimensionType.getDimensionName());
+                  LOG.debug("Timestamp: " + value.getTimestamp());
+                  LOG.debug("Value: " + value.getValue());
                   final Long currentTimeStamp = value.getTimestamp().getTime();
+                  final Double currentValue = value.getValue();
                   sendSystemMetric(new Supplier<InstanceUsageEvent>() {
                     @Override
                     public InstanceUsageEvent get() {
@@ -158,7 +166,6 @@ public class DescribeSensorCallback extends
               }
 
               //Reporting use case of metric data from the cc
-
               Collections.sort(values, Ordering.natural().onResultOf(GetTimestamp.INSTANCE));
 
               if (!values.isEmpty()) {
@@ -264,14 +271,18 @@ public class DescribeSensorCallback extends
 
           // convert ephemeral disks metrics
           if (event.getMetric().equals("VolumeTotalReadTime")) {
-            metricDatum.setMetricName("DiskReadBytes");
-          } else if (event.getMetric().endsWith("External")) {
-            final String convertedEC2NetworkMetricName = event
-                .getMetric().replace("External", "");
-            metricDatum
-                .setMetricName(convertedEC2NetworkMetricName);
+            return; // AWS doesn't have a TotalReadTime metric for the root volume, or EC2
+//            metricDatum.setMetricName("DiskReadBytes");
+
+// Commenting out the below because while metrics that end with external need to be sent, we will deal with them in cloudwatch           
+//          } else if (event.getMetric().endsWith("External")) {
+//            final String convertedEC2NetworkMetricName = event
+//                .getMetric().replace("External", "");
+//            metricDatum
+//                .setMetricName(convertedEC2NetworkMetricName);
           } else if (event.getMetric().equals("VolumeTotalWriteTime")) {
-            metricDatum.setMetricName("DiskWriteBytes");
+            return; // AWS doesn't have a TotalWriteTime metric for the root volume, or EC2
+//            metricDatum.setMetricName("DiskWriteBytes");
           } else {
             metricDatum.setMetricName(event.getMetric());
           }
@@ -295,25 +306,49 @@ public class DescribeSensorCallback extends
 
 
       if (metricDatum.getMetricName().equals("CPUUtilization")) {
-        metricDatum.setMetricName("CPUUtilizationMS"); // this is actually the data in milliseconds, not percentage
+        metricDatum.setMetricName("CPUUtilizationMSAbsolute"); // this is actually the data in milliseconds, not percentage
       }
       if (metricDatum.getMetricName().equals("VolumeReadOps")) {
-        metricDatum.setMetricName("VolumeReadOpsTotal"); // this is actually the total volume read Ops since volume creation, not for the period
+        metricDatum.setMetricName("VolumeReadOpsAbsolute"); // this is actually the total volume read Ops since volume creation, not for the period
       }
       if (metricDatum.getMetricName().equals("VolumeWriteOps")) {
-        metricDatum.setMetricName("VolumeWriteOpsTotal"); // this is actually the total volume write Ops since volume creation, not for the period
+        metricDatum.setMetricName("VolumeWriteOpsAbsolute"); // this is actually the total volume write Ops since volume creation, not for the period
       }
       if (metricDatum.getMetricName().equals("VolumeReadBytes")) {
-        metricDatum.setMetricName("VolumeReadBytesTotal"); // this is actually the total volume read bytes since volume creation, not for the period
+        metricDatum.setMetricName("VolumeReadBytesAbsolute"); // this is actually the total volume read bytes since volume creation, not for the period
       }
       if (metricDatum.getMetricName().equals("VolumeWriteBytes")) {
-        metricDatum.setMetricName("VolumeWriteBytesTotal"); // this is actually the total volume write bytes since volume creation, not for the period
+        metricDatum.setMetricName("VolumeWriteBytesAbsolute"); // this is actually the total volume write bytes since volume creation, not for the period
       }
       if (metricDatum.getMetricName().equals("VolumeTotalReadTime")) {
-        metricDatum.setMetricName("VolumeTotalReadTimeTotal"); // this is actually the total volume read time since volume creation, not for the period
+        metricDatum.setMetricName("VolumeTotalReadTimeAbsolute"); // this is actually the total volume read time since volume creation, not for the period
       }
       if (metricDatum.getMetricName().equals("VolumeTotalWriteTime")) {
-        metricDatum.setMetricName("VolumeTotalWriteTimeTotal"); // this is actually the total volume write time since volume creation, not for the period
+        metricDatum.setMetricName("VolumeTotalWriteTimeAbsolute"); // this is actually the total volume write time since volume creation, not for the period
+      }
+      if (metricDatum.getMetricName().equals("DiskReadOps")) {
+        metricDatum.setMetricName("DiskReadOpsAbsolute"); // this is actually the total disk read Ops since instance creation, not for the period
+      }
+      if (metricDatum.getMetricName().equals("DiskWriteOps")) {
+        metricDatum.setMetricName("DiskWriteOpsAbsolute"); // this is actually the total disk write Ops since instance creation, not for the period
+      }
+      if (metricDatum.getMetricName().equals("DiskReadBytes")) {
+        metricDatum.setMetricName("DiskReadBytesAbsolute"); // this is actually the total disk read bytes since instance creation, not for the period
+      }
+      if (metricDatum.getMetricName().equals("DiskWriteBytes")) {
+        metricDatum.setMetricName("DiskWriteBytesAbsolute"); // this is actually the total disk write bytes since instance creation, not for the period
+      }
+      if (metricDatum.getMetricName().equals("NetworkIn")) {
+        metricDatum.setMetricName("NetworkInAbsolute"); // this is actually the total network in bytes since instance creation, not for the period
+      }
+      if (metricDatum.getMetricName().equals("NetworkInExternal")) {
+        metricDatum.setMetricName("NetworkInExternalAbsolute"); // this is actually the total network in external bytes since instance creation, not for the period
+      }
+      if (metricDatum.getMetricName().equals("NetworkOut")) {
+        metricDatum.setMetricName("NetworkOutAbsolute"); // this is actually the total network out bytes since instance creation, not for the period
+      }
+      if (metricDatum.getMetricName().equals("NetworkOutExternal")) {
+        metricDatum.setMetricName("NetworkOutExternalAbsolute"); // this is actually the total network out external bytes since instance creation, not for the period
       }
       
       metricData.setMember(Lists.newArrayList(metricDatum));
@@ -341,7 +376,9 @@ public class DescribeSensorCallback extends
     DiskReadBytes,
     DiskWriteBytes,
     NetworkIn,
-    NetworkOut
+    NetworkInExternal,
+    NetworkOut,
+    NetworkOutExternal
   }
 
   private enum Count {
