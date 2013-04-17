@@ -128,6 +128,10 @@ class GetCredentials(AWSQueryRequest):
     def get_accesskey_secretkey(self, **args):
         self.args.update(args)
         self.process_args()
+        result = self.get_keys()
+        return '\t'.join(result)
+
+    def get_keys(self):
         self.setup_query()
         con1 = db.connect(host='localhost:8777', user='eucalyptus', password=self.db_pass, database='eucalyptus_auth')
         cur1 = con1.cursor()
@@ -138,9 +142,12 @@ class GetCredentials(AWSQueryRequest):
                           join auth_group g on gu.auth_group_id=g.id 
                           join auth_account a on g.auth_group_owning_account=a.id 
                          where a.auth_account_name=%(acctname)s and g.auth_group_name=%(grpname)s and k.auth_access_key_active=TRUE""",
-                     params={'acctname': self.account, 'grpname': '_' + self.user})
+                     params={'acctname': self.args.get('account'),
+                             'grpname': '_' + self.args.get('user')})
         result = cur1.fetchall()
-        return '\t'.join(result[0])
+        if not len(result):
+            return ("", "")
+        return result[0]
 
     def get_token(self):
         con1 = db.connect(host='localhost:8777', user='eucalyptus', password=self.db_pass, database='eucalyptus_auth')

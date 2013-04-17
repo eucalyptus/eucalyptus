@@ -21,7 +21,7 @@ package com.eucalyptus.autoscaling.groups;
 
 import static com.eucalyptus.autoscaling.common.AutoScalingMetadata.MetricCollectionTypeMetadata;
 import com.eucalyptus.auth.principal.Principals;
-import com.eucalyptus.autoscaling.instances.AutoScalingInstance;
+import com.eucalyptus.autoscaling.instances.AutoScalingInstanceCoreView;
 import com.eucalyptus.autoscaling.instances.LifecycleState;
 import com.eucalyptus.util.CollectionUtils;
 import com.eucalyptus.util.OwnerFullName;
@@ -34,56 +34,56 @@ public enum MetricCollectionType implements MetricCollectionTypeMetadata {
 
   GroupDesiredCapacity {
     @Override
-    public Double getValue( final AutoScalingGroup autoScalingGroup,
-                            final Iterable<AutoScalingInstance> autoScalingInstances ) {
+    public Double getValue( final AutoScalingGroupMinimumView autoScalingGroup,
+                            final Iterable<? extends AutoScalingInstanceCoreView> autoScalingInstances ) {
       return (double) autoScalingGroup.getDesiredCapacity();
     }
   },
 
   GroupInServiceInstances {
     @Override
-    public Double getValue( final AutoScalingGroup autoScalingGroup,
-                            final Iterable<AutoScalingInstance> autoScalingInstances ) {
+    public Double getValue( final AutoScalingGroupMinimumView autoScalingGroup,
+                            final Iterable<? extends AutoScalingInstanceCoreView> autoScalingInstances ) {
       return countInstancesInState( autoScalingInstances, LifecycleState.InService );
     }
   },
 
   GroupMaxSize {
     @Override
-    public Double getValue( final AutoScalingGroup autoScalingGroup,
-                            final Iterable<AutoScalingInstance> autoScalingInstances ) {
+    public Double getValue( final AutoScalingGroupMinimumView autoScalingGroup,
+                            final Iterable<? extends AutoScalingInstanceCoreView> autoScalingInstances ) {
       return (double) autoScalingGroup.getMaxSize();
     }
   },
 
   GroupMinSize {
     @Override
-    public Double getValue( final AutoScalingGroup autoScalingGroup,
-                            final Iterable<AutoScalingInstance> autoScalingInstances ) {
+    public Double getValue( final AutoScalingGroupMinimumView autoScalingGroup,
+                            final Iterable<? extends AutoScalingInstanceCoreView> autoScalingInstances ) {
       return (double) autoScalingGroup.getMinSize();
     }
   },
 
   GroupPendingInstances {
     @Override
-    public Double getValue( final AutoScalingGroup autoScalingGroup,
-                            final Iterable<AutoScalingInstance> autoScalingInstances ) {
+    public Double getValue( final AutoScalingGroupMinimumView autoScalingGroup,
+                            final Iterable<? extends AutoScalingInstanceCoreView> autoScalingInstances ) {
       return countInstancesInState( autoScalingInstances, LifecycleState.Pending );
     }
   },
 
   GroupTerminatingInstances {
     @Override
-    public Double getValue( final AutoScalingGroup autoScalingGroup,
-                            final Iterable<AutoScalingInstance> autoScalingInstances ) {
+    public Double getValue( final AutoScalingGroupMinimumView autoScalingGroup,
+                            final Iterable<? extends AutoScalingInstanceCoreView> autoScalingInstances ) {
       return countInstancesInState( autoScalingInstances, LifecycleState.Terminating );
     }
   },
 
   GroupTotalInstances {
     @Override
-    public Double getValue( final AutoScalingGroup autoScalingGroup,
-                            final Iterable<AutoScalingInstance> autoScalingInstances ) {
+    public Double getValue( final AutoScalingGroupMinimumView autoScalingGroup,
+                            final Iterable<? extends AutoScalingInstanceCoreView> autoScalingInstances ) {
       return (double) Iterables.size( autoScalingInstances );
     }
   },
@@ -100,11 +100,11 @@ public enum MetricCollectionType implements MetricCollectionTypeMetadata {
     return Principals.systemFullName();
   }
 
-  public abstract Double getValue( AutoScalingGroup autoScalingGroup,
-                                   Iterable<AutoScalingInstance> autoScalingInstances );
+  public abstract Double getValue( AutoScalingGroupMinimumView autoScalingGroup,
+                                   Iterable<? extends AutoScalingInstanceCoreView> autoScalingInstances );
 
-  private static Double countInstancesInState( final Iterable<AutoScalingInstance> autoScalingInstances,
+  private static Double countInstancesInState( final Iterable<? extends AutoScalingInstanceCoreView> autoScalingInstances,
                                                final LifecycleState state ) {
-    return (double) CollectionUtils.reduce( autoScalingInstances, 0, CollectionUtils.count( state ) );
+    return (double) CollectionUtils.reduce( autoScalingInstances, 0, CollectionUtils.count( state.forView() ) );
   }
 }

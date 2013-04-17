@@ -19,6 +19,7 @@
  ************************************************************************/
 package com.eucalyptus.autoscaling.groups;
 
+import static com.eucalyptus.autoscaling.common.AutoScalingMetadata.AutoScalingGroupMetadata;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
@@ -37,6 +38,8 @@ import com.eucalyptus.autoscaling.metadata.AbstractOwnedPersistentsWithResourceN
 import com.eucalyptus.autoscaling.metadata.AutoScalingMetadataException;
 import com.eucalyptus.util.Callback;
 import com.eucalyptus.util.OwnerFullName;
+import com.google.common.base.Function;
+import com.google.common.base.Functions;
 import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
 import com.google.common.collect.Lists;
@@ -50,23 +53,19 @@ public class PersistenceAutoScalingGroups extends AutoScalingGroups {
   private PersistenceSupport persistenceSupport = new PersistenceSupport();
   
   @Override
-  public List<AutoScalingGroup> list( final OwnerFullName ownerFullName ) throws AutoScalingMetadataException {
-    return persistenceSupport.list( ownerFullName );
+  public <T> List<T> list( final OwnerFullName ownerFullName,
+                           final Predicate<? super AutoScalingGroup> filter,
+                           final Function<? super AutoScalingGroup,T> transform ) throws AutoScalingMetadataException {
+    return persistenceSupport.list( ownerFullName, filter, transform );
   }
 
   @Override
-  public List<AutoScalingGroup> list( final OwnerFullName ownerFullName, 
-                                      final Predicate<? super AutoScalingGroup> filter ) throws AutoScalingMetadataException {
-    return persistenceSupport.list( ownerFullName, filter );
+  public <T> List<T> listRequiringScaling( final Function<? super AutoScalingGroup,T> transform ) throws AutoScalingMetadataException {
+    return persistenceSupport.listByExample( AutoScalingGroup.requiringScaling(), Predicates.alwaysTrue(), transform );
   }
 
   @Override
-  public List<AutoScalingGroup> listRequiringScaling() throws AutoScalingMetadataException {
-    return persistenceSupport.listByExample( AutoScalingGroup.requiringScaling(), Predicates.alwaysTrue() );
-  }
-
-  @Override
-  public List<AutoScalingGroup> listRequiringInstanceReplacement() throws AutoScalingMetadataException {
+  public <T> List<T> listRequiringInstanceReplacement( final Function<? super AutoScalingGroup,T> transform ) throws AutoScalingMetadataException {
     final DetachedCriteria criteria = DetachedCriteria.forClass( AutoScalingInstance.class )
         .add( Example.create( AutoScalingInstance.withHealthStatus( HealthStatus.Unhealthy ) ) )
         .setProjection( Projections.property( "autoScalingGroup" ) );
@@ -75,11 +74,13 @@ public class PersistenceAutoScalingGroups extends AutoScalingGroups {
         AutoScalingGroup.withOwner( null ),
         Predicates.alwaysTrue(),
         Property.forName( "id" ).in( criteria ),
-        Collections.<String, String>emptyMap() );
+        Collections.<String, String>emptyMap(),
+        transform );
   }
 
   @Override
-  public List<AutoScalingGroup> listRequiringMonitoring( final long interval ) throws AutoScalingMetadataException {
+  public <T> List<T> listRequiringMonitoring( final long interval,
+                                              final Function<? super AutoScalingGroup,T> transform ) throws AutoScalingMetadataException {
     // We want to select some groups depending on the interval / time 
     int group = (int)((System.currentTimeMillis() / interval) % 6 );
 
@@ -124,19 +125,22 @@ public class PersistenceAutoScalingGroups extends AutoScalingGroups {
         AutoScalingGroup.withOwner( null ),
         Predicates.alwaysTrue(),
         likeAnyOf,
-        Collections.<String,String>emptyMap() );
+        Collections.<String,String>emptyMap(),
+        transform );
   }
 
   @Override
-  public AutoScalingGroup lookup( final OwnerFullName ownerFullName, final String autoScalingGroupName ) throws AutoScalingMetadataException {
-    return persistenceSupport.lookup( ownerFullName, autoScalingGroupName );
+  public <T> T lookup( final OwnerFullName ownerFullName,
+                       final String autoScalingGroupName,
+                       final Function<? super AutoScalingGroup,T> transform ) throws AutoScalingMetadataException {
+    return persistenceSupport.lookup( ownerFullName, autoScalingGroupName, transform );
   }
 
   @Override
-  public AutoScalingGroup update( final OwnerFullName ownerFullName,
-                                  final String autoScalingGroupName,
-                                  final Callback<AutoScalingGroup> groupUpdateCallback ) throws AutoScalingMetadataException {
-    return persistenceSupport.update( ownerFullName, autoScalingGroupName, groupUpdateCallback );
+  public void update( final OwnerFullName ownerFullName,
+                      final String autoScalingGroupName,
+                      final Callback<AutoScalingGroup> groupUpdateCallback ) throws AutoScalingMetadataException {
+    persistenceSupport.update( ownerFullName, autoScalingGroupName, groupUpdateCallback );
   }
 
   @Override
@@ -146,8 +150,7 @@ public class PersistenceAutoScalingGroups extends AutoScalingGroups {
         @Override
         public Void doWork() throws AutoScalingMetadataException {
           final List<AutoScalingGroup> groups =
-              //TODO:STEVE: can this query be improved? (restrict by contents of ElementCollection)
-              persistenceSupport.listByExample( AutoScalingGroup.withOwner( null ), Predicates.alwaysTrue()  );
+              persistenceSupport.listByExample( AutoScalingGroup.withOwner( null ), Predicates.alwaysTrue(), Functions.<AutoScalingGroup>identity() );
           for ( final AutoScalingGroup group : groups ) {
             if ( !Sets.union( Sets.newHashSet( group.getAvailabilityZones() ), availabilityZones ).isEmpty() ) {
               group.setScalingRequired( true );
@@ -160,7 +163,7 @@ public class PersistenceAutoScalingGroups extends AutoScalingGroups {
   }
 
   @Override
-  public boolean delete( final AutoScalingGroup autoScalingGroup ) throws AutoScalingMetadataException {
+  public boolean delete( final AutoScalingGroupMetadata autoScalingGroup ) throws AutoScalingMetadataException {
     return persistenceSupport.delete( autoScalingGroup );
   }
 

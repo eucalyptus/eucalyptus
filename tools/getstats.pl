@@ -104,7 +104,7 @@ foreach my $dom (@domains) {
     # multiple samples can be used by the caller of this script to calculate a
     # running average using the technique at the bottom of the URL
     #   %CPU = 100 x cpu_time_diff_nano / (time_interval_seconds x nr_cores x 10^9)
-    print_stat ($dom, get_ts(), "default", "CPUUtilization", (($dom->get_info()->{cpuTime})/1000000));  # convert nanos to millis
+    print_stat ($dom, get_ts(), "default", "summation", "CPUUtilization", (($dom->get_info()->{cpuTime})/1000000));  # convert nanos to millis
 
     my $xml_text = $dom->get_xml_description($flags=0);
     my $xml_struct = XMLin($xml_text, ForceArray => [ 'disk', 'interface' ]); # parse domain's XML dump to find disks and NICs
@@ -118,8 +118,8 @@ foreach my $dom (@domains) {
 	$tx_bytes += $dom->interface_stats($guest_nic)->{tx_bytes};
     }
     my $ts = get_ts();
-    print_stat ($dom, $ts, "total", "NetworkIn",  $rx_bytes);
-    print_stat ($dom, $ts, "total", "NetworkOut", $tx_bytes);
+    print_stat ($dom, $ts, "total", "summation", "NetworkIn",  $rx_bytes);
+    print_stat ($dom, $ts, "total", "summation", "NetworkOut", $tx_bytes);
 
     # iterate over disks of the instance and pull out relevant stats from the %diskstats dictionary
     foreach my $disk (@{$xml_struct->{devices}->{disk}}) {
