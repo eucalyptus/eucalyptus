@@ -1,6 +1,5 @@
-define(['models/keypair'], function(keypair) {
-  return keypair.extend({
-    __obj_name__: "KeyPair",
+define([], function() {
+  return Backbone.Model.extend({
     name: '',
     region: [],
     material: null,

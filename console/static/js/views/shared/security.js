@@ -22,7 +22,9 @@ define([
                         return sg.get('name') == e.target.value;
           });
           if(groupWhere.length > 0) {
+              group.unset('tags');  // workaround - nested objects break next line
               self.model.set(group.toJSON());
+              //self.model.set('id', group.get('id'));
               self.model.set('security_show', true);
               
           }
@@ -33,6 +35,7 @@ define([
           var key = _.find(keyWhere, function(k) {
                       return k.get('name') == e.target.value;
           });
+          key.unset('tags'); // workaround - nested objects break next line
           this.keymodel.set(key.toJSON());
           self.model.set('security_show', true);
         },
