@@ -13,6 +13,7 @@ define([
       image_id: null,
       min_count: null,
       max_count: null,
+      tags: [{}],
 
       //options
       key_name: null,
@@ -174,7 +175,8 @@ define([
               data += "&curlopts=" + model.get('curlopts');
             if(model.get('return_curl_handle') != undefined)
               data += "&return_curl_handle=" + model.get('return_curl_handle');
-
+              
+            var self = this;
             $.ajax({
               type:"POST",
               url:"/ec2?Action=RunInstances",
@@ -186,6 +188,7 @@ define([
                   if ( data.results ) {
                     console.log("RUN INSTANCE: ", data);
                     notifySuccess(null, $.i18n.prop('instance_run_success', DefaultEncoder().encodeForHTML(data.results[0].id)));
+                    self.tags(data.results, model);
                   } else {
                     notifyError($.i18n.prop('instance_run_error', DefaultEncoder().encodeForHTML(model.name), DefaultEncoder().encodeForHTML(model.name)), undefined_error);
                   }
@@ -195,6 +198,7 @@ define([
                   notifyError($.i18n.prop('instance_run_error', DefaultEncoder().encodeForHTML(model.name), DefaultEncoder().encodeForHTML(model.name)), getErrorMessage(jqXHR));
                 }
             });
+
           }
           else if (method == 'delete' && model.get('instance_id') != undefined) {
             $.ajax({
@@ -214,6 +218,36 @@ define([
               error:
                 function(jqXHR, textStatus, errorThrown){
                   notifyError($.i18n.prop('delete_launch_config_error', DefaultEncoder().encodeForHTML(name)), getErrorMessage(jqXHR));
+                }
+            });
+          }
+        },
+
+        tags: function(instanceData, model) {
+          var tagData = "_xsrf="+$.cookie('_xsrf');
+          // each instance gets each tag
+          if(model.get('tags') != undefined) {
+            $.each(instanceData, function(idx, inst) {
+              tagData += "&ResourceId." + idx + "=" + inst.id;
+            });
+            _.each(model.get('tags'), function(tag, jdx, tags) {
+              tagData += "&Tag." + jdx + ".Key=" + tag.get('name');
+              tagData += "&Tag." + jdx + ".Value=" + tag.get('value');
+            });
+          
+            $.ajax({
+              type: "POST",
+              url: "/ec2?Action=CreateTags",
+              data: tagData,
+              dataType: "json",
+              async: "true",
+              success: 
+                function(data, textStatus, jqXHR) {
+                  console.log("RUN INSTANCE TAGS SUCCESS: ", data.return);   
+                },
+              error: 
+                function(jqXHR, textStatus, errorThrown) {
+                  console.log("RUN INSTANCE TAGS FAIL: ", data.return);
                 }
             });
           }

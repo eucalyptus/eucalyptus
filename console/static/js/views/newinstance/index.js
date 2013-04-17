@@ -11,12 +11,13 @@ define([
   'models/instance',
   '../shared/model/imagemodel',
   '../shared/model/typemodel',
+  '../shared/model/tag',
   '../shared/model/securitygroup',
   '../shared/model/keypair',
   '../shared/model/advancedmodel',
   '../shared/model/blockmaps',
   '../shared/model/snapshots'
-], function(app, Wizard, wizardTemplate, page1, page2, page2_5, page3, page4, summary, instance, image, type, security, keyPair, advanced, block, snap) {
+], function(app, Wizard, wizardTemplate, page1, page2, page2_5, page3, page4, summary, instance, image, type, tag, security, keyPair, advanced, block, snap) {
 
   var config = function() {
     var wizard = new Wizard();
@@ -29,6 +30,7 @@ define([
     var advancedModel = new advanced();
     var blockMaps = new block();
     var snapShots = new snap();
+    var tagsModel = new tag();
 
     function canFinish(position, problems) {
       // VALIDATE THE MODEL HERE AND IF THERE ARE PROBLEMS,
@@ -45,6 +47,7 @@ define([
       advancedModel.finish(instanceModel);
       keyModel.finish(instanceModel);
       blockMaps.finish(instanceModel);
+      tagsModel.finish(instanceModel);
 
       instanceModel.on('validated:invalid', function(e, errors) {
         console.log("INSTANCEMODEl INVALID:", errors);
@@ -63,7 +66,7 @@ define([
     var viewBuilder = wizard.viewBuilder(wizardTemplate)
             .add(new page1({model: imageModel, blockMaps: blockMaps}))
             .add(new page2({model: typeModel}))
-            .add(new page2_5({model: new Backbone.Model()}))
+            .add(new page2_5({model: tagsModel}))
             .add(new page3({model: securityModel, keymodel: keyModel}))
             .add(new page4({model: advancedModel, blockMaps: blockMaps, snapshots: snapShots}))
             .setHideDisabledButtons(true)
