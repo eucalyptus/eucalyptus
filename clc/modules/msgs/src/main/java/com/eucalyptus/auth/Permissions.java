@@ -75,67 +75,68 @@ import com.eucalyptus.context.Contexts;
 import com.eucalyptus.context.IllegalContextAccessException;
 
 public class Permissions {
-  
-  private static Logger LOG = Logger.getLogger( Permissions.class );
-  
-  private static PolicyEngine policyEngine;
-  
-  public static void setPolicyEngine( PolicyEngine engine ) {
-    synchronized( Permissions.class ) {
-      LOG.info( "Setting the policy engine to: " + engine.getClass( ) );
-      policyEngine = engine;
-    }
-  }
 
-  public static boolean isAuthorized( String vendor, String resourceType, String resourceName, Account resourceAccount, String action, User requestUser ) {
-    return isAuthorized( PolicySpec.qualifiedName( vendor, resourceType ), resourceName, resourceAccount, PolicySpec.qualifiedName( vendor, action ), requestUser );
-  }
+	private static Logger LOG = Logger.getLogger( Permissions.class );
 
-  public static boolean isAuthorized( String resourceType, String resourceName, Account resourceAccount, String action, User requestUser ) {
-    try {
-      // If we are not in a request context, e.g. the UI, use a dummy contract map.
-      // TODO(wenye): we should consider how to handle this if we allow the EC2 operations in the UI.
-      final Map<Contract.Type, Contract> contracts = newHashMap();
-      policyEngine.evaluateAuthorization( resourceType, resourceName, resourceAccount, action, requestUser, contracts );
-      pushToContext(contracts);
-      return true;
-    } catch ( AuthException e ) {
-      LOG.error( "Denied resource access to " + resourceType + ":" + resourceName + " of " + resourceAccount + " for " + requestUser, e );
-    } catch ( Exception e ) {
-      LOG.debug( "Exception in resource access to " + resourceType + ":" + resourceName + " of " + resourceAccount + " for " + requestUser, e );      
-    }
-    return false;
-  }
+	private static PolicyEngine policyEngine;
 
-  public static boolean isAuthorized( PrincipalType principalType, String principalName, Policy resourcePolicy, String resourceType, String resourceName, Account resourceAccount, String action, User requestUser ) {
-    try {
-      final Map<Contract.Type, Contract> contracts = newHashMap();
-      policyEngine.evaluateAuthorization( principalType, principalName, resourcePolicy, resourceType, resourceName, resourceAccount, action, requestUser, contracts );
-      pushToContext( contracts );
-      return true;
-    } catch ( AuthException e ) {
-      LOG.error( "Denied resource access for " + principalType + ":" + principalName + " / " + requestUser, e );
-    } catch ( Exception e ) {
-      LOG.debug( "Exception in resource access for " + principalType + ":" + principalName + " / " + requestUser, e );
-    }
-    return false;
-  }
+	public static void setPolicyEngine( PolicyEngine engine ) {
+		synchronized( Permissions.class ) {
+			LOG.info( "Setting the policy engine to: " + engine.getClass( ) );
+			policyEngine = engine;
+		}
+	}
 
-  public static boolean canAllocate( String vendor, String resourceType, String resourceName, String action, User requestUser, Long quantity ) {
-    try {
-      policyEngine.evaluateQuota( vendor + ":" + resourceType, resourceName, vendor + ":" + action, requestUser, quantity );
-      return true;
-    } catch ( AuthException e ) {
-      LOG.debug( "Denied resource allocation of " + resourceType + ":" + resourceName + " by " + quantity + " for " + requestUser, e );
-    }
-    return false;
-  }
+	public static boolean isAuthorized( String vendor, String resourceType, String resourceName, Account resourceAccount, String action, User requestUser ) {
+		return isAuthorized( PolicySpec.qualifiedName( vendor, resourceType ), resourceName, resourceAccount, PolicySpec.qualifiedName( vendor, action ), requestUser );
+	}
 
-  private static void pushToContext( final Map<Contract.Type, Contract> contracts ) {
-    try {
-      Contexts.lookup().setContracts( contracts );
-    } catch ( IllegalContextAccessException e ) {
-      LOG.debug( "Not in a request context", e );
-    }
-  }
+	public static boolean isAuthorized( String resourceType, String resourceName, Account resourceAccount, String action, User requestUser ) {
+		try {
+			// If we are not in a request context, e.g. the UI, use a dummy contract map.
+			// TODO(wenye): we should consider how to handle this if we allow the EC2 operations in the UI.
+			final Map<Contract.Type, Contract> contracts = newHashMap();
+			policyEngine.evaluateAuthorization( resourceType, resourceName, resourceAccount, action, requestUser, contracts );
+			pushToContext(contracts);
+			return true;
+		} catch ( AuthException e ) {
+			LOG.error( "Denied resource access to " + resourceType + ":" + resourceName + " of " + resourceAccount + " for " + requestUser, e );
+		} catch ( Exception e ) {
+			LOG.debug( "Exception in resource access to " + resourceType + ":" + resourceName + " of " + resourceAccount + " for " + requestUser, e );      
+		}
+		return false;
+	}
+
+	public static boolean isAuthorized( PrincipalType principalType, String principalName, Policy resourcePolicy, String resourceType, String resourceName, Account resourceAccount, String action, User requestUser ) {
+		try {
+			final Map<Contract.Type, Contract> contracts = newHashMap();
+			policyEngine.evaluateAuthorization( principalType, principalName, resourcePolicy, resourceType, resourceName, resourceAccount, action, requestUser, contracts );
+			pushToContext( contracts );
+			return true;
+		} catch ( AuthException e ) {
+			LOG.error( "Denied resource access for " + principalType + ":" + principalName + " / " + requestUser, e );
+		} catch ( Exception e ) {
+			LOG.debug( "Exception in resource access for " + principalType + ":" + principalName + " / " + requestUser, e );
+		}
+		return false;
+	}
+
+	public static boolean canAllocate( String vendor, String resourceType, String resourceName, String action, User requestUser, Long quantity ) {
+		try {
+			policyEngine.evaluateQuota( vendor + ":" + resourceType, resourceName, vendor + ":" + action, requestUser, quantity );
+			return true;
+		} catch ( AuthException e ) {
+			LOG.debug( "Denied resource allocation of " + resourceType + ":" + resourceName + " by " + quantity + " for " + requestUser, e );
+		}
+		return false;
+	}
+
+	private static void pushToContext( final Map<Contract.Type, Contract> contracts ) {
+		try {
+			Contexts.lookup().setContracts( contracts );
+		} catch ( IllegalContextAccessException e ) {
+			LOG.debug( "Not in a request context", e );
+		}
+	}
+
 }
