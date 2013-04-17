@@ -713,7 +713,17 @@ static int doMigrateInstances(struct nc_state_t *nc, ncMetadata * pMeta, ncInsta
 
             if (strcmp(action, "prepare") == 0) {
                 sem_p(inst_sem);
-                LOGINFO("[%s] migration source preparing %s > %s [%s]\n", instance->instanceId, sourceNodeName, destNodeName, credentials);
+                instance->migration_state = MIGRATION_PREPARING;
+                euca_strncpy(instance->migration_src, sourceNodeName, HOSTNAME_SIZE);
+                euca_strncpy(instance->migration_dst, destNodeName, HOSTNAME_SIZE);
+                euca_strncpy(instance->migration_credentials, credentials, CREDENTIAL_SIZE);
+                instance->migrationTime = time(NULL);
+                save_instance_struct(instance);
+                copy_instances();
+
+                // Establish migration-credential keys if this is the first instance preparation for this host.
+                // FIXME: REMOVE THE DISPLAY OF CREDENTIALS BEFORE WE GO LIVE!
+                LOGINFO("[%s] migration source preparing %s > %s [%s]\n", SP(instance->instanceId), SP(instance->migration_src), SP(instance->migration_dst), SP(instance->migration_credentials));
                 if (!credentials_prepared) {
                     char generate_keys[MAX_PATH];
                     char *euca_base = getenv(EUCALYPTUS_ENV_VAR_NAME);
@@ -731,12 +741,10 @@ static int doMigrateInstances(struct nc_state_t *nc, ncMetadata * pMeta, ncInsta
                 }
 
                 instance->migration_state = MIGRATION_READY;
-                euca_strncpy(instance->migration_src, sourceNodeName, HOSTNAME_SIZE);
-                euca_strncpy(instance->migration_dst, destNodeName, HOSTNAME_SIZE);
-                euca_strncpy(instance->migration_credentials, credentials, CREDENTIAL_SIZE);
-                //snprintf(instance->migration_credentials, CREDENTIAL_SIZE, "C=US,O=nc-CC_15,L=%s,CN=10.111.5.x", credentials);
-                instance->migrationTime = time(NULL);
-                // FIXME: REMOVE THE DISPLAY OF CREDENTIALS BEFORE WE GO LIVE!
+                //euca_strncpy(instance->migration_src, sourceNodeName, HOSTNAME_SIZE);
+                //euca_strncpy(instance->migration_dst, destNodeName, HOSTNAME_SIZE);
+                //euca_strncpy(instance->migration_credentials, credentials, CREDENTIAL_SIZE);
+                //instance->migrationTime = time(NULL);
                 save_instance_struct(instance);
                 copy_instances();
                 sem_v(inst_sem);
@@ -820,9 +828,27 @@ static int doMigrateInstances(struct nc_state_t *nc, ncMetadata * pMeta, ncInsta
             euca_strncpy(instance->migration_src, sourceNodeName, HOSTNAME_SIZE);
             euca_strncpy(instance->migration_dst, destNodeName, HOSTNAME_SIZE);
             euca_strncpy(instance->migration_credentials, credentials, CREDENTIAL_SIZE);
+            save_instance_struct(instance);
+
+            // Establish migration-credential keys.
             // FIXME: REMOVE THE DISPLAY OF CREDENTIALS BEFORE WE GO LIVE!
             LOGINFO("[%s] migration destination preparing %s > %s [%s]\n", instance->instanceId, SP(instance->migration_src), SP(instance->migration_dst), SP(instance->migration_credentials));
-            save_instance_struct(instance);
+            char generate_keys[MAX_PATH];
+            char *euca_base = getenv(EUCALYPTUS_ENV_VAR_NAME);
+
+            // FIXME: Don't call key-generation script with 'restart' here: we'll restart after we hook the client key signature into libvirtd.conf
+            snprintf(generate_keys, MAX_PATH, EUCALYPTUS_GENERATE_MIGRATION_KEYS " %s %s restart", euca_base ? euca_base : "", euca_base ? euca_base : "", instance->migration_dst, instance->migration_credentials);
+            LOGDEBUG("instance[0]=%s migration key-generator path: '%s'\n", instance->instanceId, generate_keys);
+            int sysret = system(generate_keys);
+            if (sysret) {
+                LOGERROR("instance[0]=%s '%s' failed with exit code %d\n", instance->instanceId, generate_keys, WEXITSTATUS(sysret));
+                sem_v(inst_sem);
+                goto failed_dest;
+            } else {
+                LOGDEBUG("instance[0]=%s migration key-generation succeeded\n", instance->instanceId);
+                credentials_prepared++;
+            }
+
             sem_v(inst_sem);
 
             int error;
@@ -956,7 +982,10 @@ unroll:
 
 failed_dest:
 
-            ret = EUCA_ERROR;
+            // Set to generic EUCA_ERROR unless already set to a more-specific error.
+            if (ret == EUCA_OK) {
+                ret = EUCA_ERROR;
+            }
             EUCA_FREE(instance);
             goto out;
 
