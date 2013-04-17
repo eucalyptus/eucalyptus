@@ -35,7 +35,14 @@ define([
                               options['wait'] = true;
                               model.detach(options);
                             },
-                            'volume_detach_progress', 'volume_detach_done', 'volume_detach_fail');
+                            'volume_detach_progress', 'volume_detach_done', 'volume_detach_fail',
+                            function(response) {
+                              if (response.results && response.results == 'detaching') {
+                                return; // all good
+                              } else {
+                                return undefined_error;
+                              }
+                            });
              self.close();
            }  
          }

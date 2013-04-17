@@ -547,7 +547,7 @@ function setupAjax(){
  });
 }
 
-function doMultiAction(itemList, collection, opFunction, progressMessage, doneMessage, failMessage){
+function doMultiAction(itemList, collection, opFunction, progressMessage, doneMessage, failMessage, validate){
   var done = 0;
   var all = itemList.length;
   var error = [];
@@ -560,19 +560,25 @@ function doMultiAction(itemList, collection, opFunction, progressMessage, doneMe
     opFunction(model, {
       success:
         function(model, response, options) {
-          console.log("response = "+JSON.stringify(response));
-          if (response.results && response.results == true) {
-            ;
-          } else {
-            error.push({id:itemId, reason: undefined_error});
+          var error = null;
+          if (validate) {
+            error = validate(response);
           }
+          else {
+            if (response.results && response.results == true) {
+              ; // all good
+            } else {
+              error = undefined_error;
+            }
+          }
+          if (error) error.push({id:itemId, reason: error});
           options.complete(model, response);
         },
       error:
         function(model, xhr, options) {
           console.log("response = "+JSON.stringify(xhr));
           error.push({id:itemId, reason: getErrorMessage(xhr)});
-          options.complete(model, xhr);
+          options.complete(model, null);
         },
       complete:
         function(model, response) {
