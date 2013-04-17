@@ -16,6 +16,7 @@ define([
       var scope = {
         kernels: new Backbone.Collection(), 
         ramdisks: new Backbone.Collection(),
+        user_data: self.model.get('user_data'),
         enableMonitoring: true,
         privateNetwork: false,
         snapshots: dataholder.snapshot,
@@ -115,6 +116,10 @@ define([
           } else {
             return 'sda1';
           }
+        },
+
+        userdata: function(e,obj) {
+          self.model.set('user_data', $.base64.encode(e.target.value));
         },
 
         launchConfigErrors: self.launchConfigErrors
