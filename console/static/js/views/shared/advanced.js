@@ -14,8 +14,8 @@ define([
 
       var self = this;
       var scope = {
-        kernels: new Backbone.Collection(), 
-        ramdisks: new Backbone.Collection(),
+        kernels: new Backbone.Collection(dataholder.images.where({type: 'kernel'})), 
+        ramdisks: new Backbone.Collection(dataholder.images.where({type: 'ramdisk'})),
         user_data: self.model.get('user_data'),
         enableMonitoring: true,
         privateNetwork: false,
