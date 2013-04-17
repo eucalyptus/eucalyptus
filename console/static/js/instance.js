@@ -36,8 +36,6 @@
     instPassword : {}, // only windows instances
     detachButtonId : 'btn-vol-detach',
     _init : function() {
-            console.log ( "INIT!!!" );
-        
       var thisObj = this;
       var $tmpl = $('html body').find('.templates #instanceTblTmpl').clone();
       var $wrapper = $($tmpl.render($.extend($.i18n.map, help_instance)));
