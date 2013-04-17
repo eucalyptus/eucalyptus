@@ -59,8 +59,8 @@
               }
               
               if (isValid) {
-                var account = $form.find('input[id=account]').val();
-                var user = $form.find('input[id=username]').val();
+                var account = $.eucaData.u_session['account'];
+                var user = $.eucaData.u_session['username']
                 thisObj._changePassword(account, user, current, newpwd);
               }
               return false;
@@ -214,6 +214,7 @@
         error: function(jqXHR, textStatus, errorThrown){
           thisObj.changepwdDialog.eucadialog("close");
           thisObj.errorDialog.eucadialog('open');
+          var msgdiv = thisObj.errorDialog.find("#login-error-message p")
           msgdiv.addClass('dialog-error').html($.i18n.prop('login_change_passwd_error', errorThrown));
         }
  	    });
