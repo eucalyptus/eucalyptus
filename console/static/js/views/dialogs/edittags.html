@@ -3,39 +3,7 @@
     <div class="body">
 		<p data-msg="resource_tag_widget_head_text">Edit tags</p>
 		<div class="selected-resources">
-            <table>
-            <thead><td><span data-msg="tag_display_hdr_key">KEY</span></td><td><span data-msg="tag_display_hdr_value">VALUE</span></td></thead>
-            <tbody data-each-tag="tags" class="tag-edit">
-                <tr data-show="tag._clean">
-                    <td><span data-text="tag.name"></span></td>
-                    <td><span data-text="tag.value"></span></td>
-                    <td><div class="icon_edit tag-control" data-on-click=":edit"></div></td>
-                    <td><div class="icon_delete tag-control" data-on-click=":delete"></div></td>
-                </tr>
-                <tr data-show="tag._edit">
-                    <td><span data-text="tag.name"></span></td>
-                    <td><input data-value="tag.value"></input></td>
-                    <td><div class="icon_approve tag-control" data-on-click=":confirm"></div></td>
-                    <td><div class="icon_cancel tag-control" data-on-click=":restore"></div></td>
-                </tr>
-                <tr data-show="tag._deleted" class="tags-deleted">
-                    <td><span data-text="tag.name"></span></td>
-                    <td><span data-text="tag.value"></span></td>
-                    <td><div class="icon_cancel tag-control" data-on-click=":restore"></div></td>
-                    <td></td>
-                </tr>
-                <tr data-show="tag._edited" class="tags-edited">
-                    <td><span data-text="tag.name"></span></td>
-                    <td><span data-text="tag.value"></span></td>
-                    <td><div class="icon_cancel tag-control" data-on-click=":restore"></div></td>
-                    <td></td>
-                </tr>
-            </tbody>
-            <tbody class="tag-edit">
-                <tr><td><input data-value="newtag.name"></input></td><td><input data-value="newtag.value"></input></td><td><div class="icon_approve tag-control" data-on-click=":create"></div></td><td style="width:27px"></td></tr>
-                <tr><td><span data-text="errors.name"></input></td><td><span data-text="errors.value"></span></td><td></td><td></td></tr>
-            </tbody>
-            </table>
+            <div data-ui-edittags="model"></div>
 		</div>
 		<div data-text=":status" style="height:20px"></div>
         <div class="ui-dialog-buttonpane ui-widget-content ui-helper-clearfix">
