@@ -103,7 +103,9 @@ public class EventHandlerChainNew extends EventHandlerChain<NewLoadbalancerEvent
 			   // zones
 			   // user
 			
-			//  check if the currently allocated resources + newly requested resources is within the limit
+			// check if the keyname is configured and is existing
+			
+			// check if the currently allocated resources + newly requested resources is within the limit
 		}
 
 		@Override
@@ -296,6 +298,7 @@ public class EventHandlerChainNew extends EventHandlerChain<NewLoadbalancerEvent
 	
 	static class SecurityGroupSetup extends AbstractEventHandler<NewLoadbalancerEvent> implements StoredResult<String>{
 		private String createdGroup = null;
+		private String groupOwnerAccountId = null;
 		NewLoadbalancerEvent event = null;
 		SecurityGroupSetup(EventHandlerChain<NewLoadbalancerEvent> chain){
 			super(chain);
@@ -324,8 +327,10 @@ public class EventHandlerChainNew extends EventHandlerChain<NewLoadbalancerEvent
 				List<SecurityGroupItemType> groups = EucalyptusActivityTasks.getInstance().describeSecurityGroups(Lists.newArrayList(groupName));
 				if(groups!=null && groups.size()>0){
 					final SecurityGroupItemType current = groups.get(0);
-					if(groupName.equals(current.getGroupName()))
+					if(groupName.equals(current.getGroupName())){
 						groupFound=true;
+						this.groupOwnerAccountId = current.getAccountId();
+					}
 				}
 			}catch(Exception ex){
 				groupFound=false;
@@ -336,19 +341,29 @@ public class EventHandlerChainNew extends EventHandlerChain<NewLoadbalancerEvent
 				try{
 					EucalyptusActivityTasks.getInstance().createSecurityGroup(groupName, groupDesc);
 					createdGroup = groupName;
+					List<SecurityGroupItemType> groups = EucalyptusActivityTasks.getInstance().describeSecurityGroups(Lists.newArrayList(groupName));
+					if(groups!=null && groups.size()>0){
+						final SecurityGroupItemType current = groups.get(0);
+						if(groupName.equals(current.getGroupName())){
+							this.groupOwnerAccountId = current.getAccountId();
+						}
+					}
 				}catch(Exception ex){
 					throw new EventHandlerException("Failed to create the security group for loadbalancer", ex);
 				}
 			}else{
 				createdGroup = groupName;
 			}
+			
+			if(this.createdGroup == null || this.groupOwnerAccountId == null)
+				throw new EventHandlerException("Failed to create the security group for loadbalancer");
 	
 			final EntityTransaction db = Entities.get( LoadBalancerSecurityGroup.class );
 			try{
-				Entities.uniqueResult(LoadBalancerSecurityGroup.named( lb, groupName));
+				Entities.uniqueResult(LoadBalancerSecurityGroup.named( lb, this.groupOwnerAccountId, groupName));
 				db.commit();
 			}catch(NoSuchElementException ex){
-				final LoadBalancerSecurityGroup newGroup = LoadBalancerSecurityGroup.named( lb, groupName);
+				final LoadBalancerSecurityGroup newGroup = LoadBalancerSecurityGroup.named( lb, this.groupOwnerAccountId, groupName);
 				LoadBalancerSecurityGroup written = Entities.persist(newGroup);
 				Entities.flush(written);
 				db.commit();
@@ -380,7 +395,7 @@ public class EventHandlerChainNew extends EventHandlerChain<NewLoadbalancerEvent
 
 			final EntityTransaction db = Entities.get( LoadBalancerSecurityGroup.class );
 			try{
-				final LoadBalancerSecurityGroup sample = LoadBalancerSecurityGroup.named(lb, this.createdGroup);
+				final LoadBalancerSecurityGroup sample = LoadBalancerSecurityGroup.named(lb, this.groupOwnerAccountId,  this.createdGroup);
 				final LoadBalancerSecurityGroup toDelete = Entities.uniqueResult(sample);
 				Entities.delete(toDelete);
 				db.commit();
@@ -516,11 +531,10 @@ public class EventHandlerChainNew extends EventHandlerChain<NewLoadbalancerEvent
 									}
 									if(zone == null)
 										throw new Exception("No availability zone with name="+instance.getAvailabilityZone()+" found for loadbalancer "+lb.getDisplayName());
-									final List<LoadBalancerSecurityGroup> sgroups = Lists.newArrayList(lb.getGroups());
+									final LoadBalancerSecurityGroup sgroup = lb.getGroup();
 									
-									if(sgroups == null || sgroups.size()<=0)
+									if(sgroup == null)
 										throw new Exception("No security group is found for loadbalancer "+lb.getDisplayName());
-									final LoadBalancerSecurityGroup sgroup= sgroups.get(0);
 									final LoadBalancerDnsRecord dns = lb.getDns();
 									final LoadBalancerServoInstance newInstance = LoadBalancerServoInstance.newInstance(zone, sgroup, dns, group, instanceId);
 									newServos.add(newInstance); /// persist later

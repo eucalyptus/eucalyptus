@@ -57,9 +57,9 @@ public class EventHandlerChainNewListeners extends EventHandlerChain<CreateListe
 			String groupName = null;
 			try{
 				lb = LoadBalancers.getLoadbalancer(evt.getContext().getUserFullName(), evt.getLoadBalancer());
-				Collection<LoadBalancerSecurityGroup> groups = lb.getGroups();
-				if(groups.size()>0)
-					groupName = groups.toArray(new LoadBalancerSecurityGroup[groups.size()])[0].getName();
+				LoadBalancerSecurityGroup group = lb.getGroup();
+				if(group!=null)
+					groupName = group.getName();
 			}catch(Exception ex){
 				throw new EventHandlerException("could not find the loadbalancer", ex);
 			}
@@ -87,9 +87,9 @@ public class EventHandlerChainNewListeners extends EventHandlerChain<CreateListe
 			String groupName = null;
 			try{
 				lb = LoadBalancers.getLoadbalancer(this.event.getContext().getUserFullName(), this.event.getLoadBalancer());
-				Collection<LoadBalancerSecurityGroup> groups = lb.getGroups();
-				if(groups.size()>0)
-					groupName = groups.toArray(new LoadBalancerSecurityGroup[groups.size()])[0].getName();
+				final LoadBalancerSecurityGroup group = lb.getGroup();
+				if(group!=null)
+					groupName = group.getName();
 			}catch(Exception ex){
 				;
 			}
