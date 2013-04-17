@@ -23,6 +23,7 @@ define([
 
             this.scope = {
                 newtag: new Tag(),
+
                 tags: tags, 
 
                 status: '',

@@ -24,8 +24,12 @@ define([
             var backup = new Backbone.Collection();
 
             this.scope = {
+                model: args.model,
+
+/*
                 newtag: new Tag(),
                 tags: tags, 
+
 
                 status: '',
 
@@ -65,6 +69,7 @@ define([
                     backup.add(scope.tag.toJSON());
                     scope.tag.set({_clean: false, _deleted: true, _edited: false, _edit: false});
                 },
+                */
 
                 cancelButton: {
                     click: function() {
