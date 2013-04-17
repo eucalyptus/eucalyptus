@@ -182,6 +182,8 @@ public class PersistenceAutoScalingInstances extends AutoScalingInstances {
                 if ( instance.getCreationTimestamp().getTime() < maxAge ) {
                   logger.info( "Marking pending instance unhealthy: " + instance.getInstanceId() );
                   instance.setHealthStatus( HealthStatus.Unhealthy );
+                } else {
+                  logger.debug( "Not marking pending instance unhealthy (within timeout): " + instance.getInstanceId() );
                 }
               }
             });
