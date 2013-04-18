@@ -9,14 +9,21 @@ define([
             var self = this;
             this.template = template;
 
-            var tags = new Backbone.Collection();
+            //var tags = new Backbone.Collection();
 
             // Clone the collection and add a status field;
+            /*
             var origtags = args.model.get('tags');
             origtags.each(function(t) { 
                 var newt = new Tag(t.toJSON());
                 newt.set({_clean: true, _deleted: false, _edited: false, _edit: false, _new: false});
                 tags.push(newt);
+            });
+            */
+
+            var tags = args.model.get('tags');
+            tags.each(function(t) {
+                t.set({_clean: true, _deleted: false, _edited: false, _edit: false, _new: false});
             });
 
             var backup = new Backbone.Collection();
@@ -32,7 +39,6 @@ define([
                     console.log('create');
                     var newt = new Tag(self.scope.newtag.toJSON());
                     newt.set({_clean: true, _deleted: false, _edited: false, _edit: false, _new: true});
-                    //newt.set('id', args.model.get('id') + '-' + newt.get('name'));
                     newt.set('res_id', args.model.get('id'));
                     self.scope.tags.add(newt);
                     self.scope.newtag.clear();
@@ -64,43 +70,11 @@ define([
                     backup.add(scope.tag.toJSON());
                     scope.tag.set({_clean: false, _deleted: true, _edited: false, _edit: false});
                 },
-
-                cancelButton: {
-                    click: function() {
-                       self.close();
-                    }
-                },
-
-                confirmButton: {
-                  click: function() {
-                       tags.each(function(t) {
-                           console.log('TAG', t);
-                           if (t.get('_new') && !t.get('_deleted')) { 
-                               console.log('add', t); 
-                               t.save({ success: function() {
-                                origtags.add(t);
-                               }});
-                           }
-                           if (t.get('_deleted')) {
-                               _.each(origtags.where({id: t.get('id')}), function(ot) { 
-                                   console.log('remove', ot); 
-                                   t.destroy({ success: function() {
-                                    origtags.remove(ot) 
-                                   }});
-                               });
-                           }
-                           if (t.get('_edited')) {
-                               console.log('update', t); 
-                               _.each(origtags.where({id: t.get('id')}), function(ot) { 
-                                   console.log('update run', ot, t); 
-                                   ot.set('value', t.get('value'));
-                               });
-                           }
-                       });
-                       self.close();
-                  }
-                }
             } // end of scope
+
+            args.model.on('submit', function() {
+                self.scope.create();
+            });
 
 			this.$el.html(template);
 			this.rview = rivets.bind(this.$el, this.scope);
