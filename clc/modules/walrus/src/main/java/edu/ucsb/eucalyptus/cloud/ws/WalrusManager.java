@@ -357,7 +357,7 @@ public class WalrusManager {
 		}
 		return reply;
 	}
-	
+
 	/**
 	 * Handles a HEAD request to the bucket. Just returns 200ok if bucket exists and user has access. Otherwise
 	 * returns 404 if not found or 403 if no accesss.
@@ -494,7 +494,7 @@ public class WalrusManager {
 
 				/* Send an event to reporting to report this S3 usage. */				
 				//reportWalrusEvent(genBucketEvent(ctx, true));
-				
+
 				//fireBucketUsageEvent(S3BucketEvent.forS3BucketCreate(), bucket.getNaturalId(), bucket.getBucketName(), ctx.getUserFullName(), bucket.getBucketSize() );
 
 			} else {
@@ -506,10 +506,10 @@ public class WalrusManager {
 		reply.setBucket(bucketName);
 		return reply;
 	}
-	
+
 	/* These functions are for reporting S3 usage */
 
-	
+
 	private boolean checkBucketName(String bucketName) {
 		if(!bucketName.matches("^[A-Za-z0-9][A-Za-z0-9._-]+"))
 			return false;
@@ -595,17 +595,17 @@ public class WalrusManager {
 					// Actually remove the bucket from the backing store
 					try {
 						storageManager.deleteBucket(bucketName);
-						
+
 						/* Send an event to reporting to report this S3 usage. */
-							    
-					        //fireBucketUsageEvent(S3BucketAction.BUCKETDELETE, bucketFound.getNaturalId(), 
-					        //	bucketFound.getBucketName(), ctx.getUserFullName(), bucketFound.getBucketSize()); 
-	    
+
+						//fireBucketUsageEvent(S3BucketAction.BUCKETDELETE, bucketFound.getNaturalId(), 
+						//	bucketFound.getBucketName(), ctx.getUserFullName(), bucketFound.getBucketSize()); 
+
 					} catch (Exception ex) {
 						// set exception code in reply
 						LOG.error(ex);
 					}
-					
+
 					Status status = new Status();
 					status.setCode(204);
 					status.setDescription("No Content");
@@ -955,12 +955,12 @@ public class WalrusManager {
 									throw new ContentMismatchException(bucketName + "/" + objectKey);
 								}
 							}
-							
+
 							// Fix for EUCA-2275:
 							// Moved up policy and bucket size checks on the temporary object. The temp object is committed (renamed) only after it clears the checks.
 							// If any of the checks fail, temp object is cleaned up and the process errors out. If the PUT request is overwriting an existing object, the object is left untouched.
 							// So the fix ensures proper clean up of temp files (no orphaned files) and does not overwrite existing data when policy or bucket size checks fail
-				
+
 							if (!ctx.hasAdministrativePrivileges() &&
 									!Permissions.canAllocate(PolicySpec.VENDOR_S3,
 											PolicySpec.S3_RESOURCE_OBJECT,
@@ -1000,7 +1000,7 @@ public class WalrusManager {
 									throw ex;
 								}
 							} while(!success && (retryCount < 5));
-							
+
 							// commit object
 							try {
 								if (fileIO != null) { 
@@ -1058,7 +1058,7 @@ public class WalrusManager {
 							foundObject.setLast(true);
 							foundObject.setDeleted(false);
 							reply.setSize(size);
-							
+
 							if (logData != null) {
 								logData.setObjectSize(size);
 								updateLogData(bucket, logData);
@@ -1104,7 +1104,7 @@ public class WalrusManager {
 									LOG.error("Deletion of delete marker failed for: " + bucketName + "/" + objectKey, ex);	
 								}															
 							}
-														
+
 							dbObject.commit();
 
 							if (logData != null) {
@@ -1135,7 +1135,7 @@ public class WalrusManager {
 							} catch (Exception ex) {
 								LOG.debug("Failed to fire reporting event for walrus PUT object operation", ex);
 							}
-							
+
 							break;
 						} else {
 							assert (WalrusDataMessage.isData(dataMessage));
@@ -1169,14 +1169,14 @@ public class WalrusManager {
 			messenger.removeQueue(key, randomKey);
 			throw new NoSuchBucketException(bucketName);
 		}
-		
-		
+
+
 		reply.setEtag(md5);
 		reply.setLastModified(DateUtils.format(lastModified.getTime(),
 				DateUtils.RFC822_DATETIME_PATTERN));
 		return reply;
 	}
-	
+
 	private void cleanupTempObject(Context ctx, String bucketName, String tempObjectName){
 		ObjectDeleter objectDeleter = new ObjectDeleter(bucketName,
 				tempObjectName,
@@ -1245,7 +1245,7 @@ public class WalrusManager {
 		putObject.setStorageClass(request.getStorageClass());
 
 		PutObjectResponseType putObjectResponse = putObject(putObject);
-		
+
 		String etag = putObjectResponse.getEtag();
 		reply.setEtag(etag);
 		reply.setLastModified(putObjectResponse.getLastModified());
@@ -1385,11 +1385,11 @@ public class WalrusManager {
 							request.getBase64Data()).getBytes();
 					foundObject.setObjectName(objectName);
 					Long size = (long) base64Data.length;
-					
+
 					// Fix for EUCA-2275:
 					// Moved up policy and bucket size checks on the temporary object. The object is committed (written) only after it clears the checks.
 					// So the fix ensures that no files are orphaned and does not overwrite existing data when policy or bucket size checks fail
-					
+
 					if (!ctx.hasAdministrativePrivileges() &&
 							!Permissions.canAllocate(PolicySpec.VENDOR_S3,
 									PolicySpec.S3_RESOURCE_OBJECT,
@@ -1421,7 +1421,7 @@ public class WalrusManager {
 							throw ex;
 						}
 					} while(!success && (retryCount < 5));
-					
+
 					try {
 						FileIO fileIO = storageManager.prepareForWrite(
 								bucketName, objectName);
@@ -1436,7 +1436,7 @@ public class WalrusManager {
 					md5 = Hashes.getHexString(Digest.MD5.get().digest(base64Data));
 					foundObject.setEtag(md5);
 					foundObject.setSize(size);
-					
+
 					// Add meta data if specified
 					if (request.getMetaData() != null)
 						foundObject.replaceMetaData(request.getMetaData());
@@ -1462,7 +1462,7 @@ public class WalrusManager {
 					} catch (Exception ex) {
 						LOG.debug("Failed to fire reporting event for walrus inline PUT object operation", ex);
 					}
-					
+
 					/* SOAP */
 				} catch (Exception ex) {
 					LOG.error(ex);
@@ -1744,7 +1744,7 @@ public class WalrusManager {
 		final String accountNumber;
 
 		public ObjectDeleter(String bucketName, String objectName, String objectKey, String version,
-		    Long size, String user, String userId, String account, String accountNumber) {
+				Long size, String user, String userId, String account, String accountNumber) {
 			this.bucketName = bucketName;
 			this.objectName = objectName;
 			this.objectKey = objectKey;
@@ -1761,15 +1761,15 @@ public class WalrusManager {
 				storageManager.deleteObject(bucketName, objectName);
 				if (WalrusProperties.trackUsageStatistics && (size > 0))
 
-				/* Send an event to reporting to report this S3 usage. */
-				if ( size > 0 ) {
-					try {
-						fireObjectUsageEvent( S3ObjectAction.OBJECTDELETE,
-								this.bucketName, this.objectKey, this.version, this.userId, this.size );
-					} catch (Exception ex) {
-						LOG.debug("Failed to fire reporting event for walrus DELETE object operation", ex);
+					/* Send an event to reporting to report this S3 usage. */
+					if ( size > 0 ) {
+						try {
+							fireObjectUsageEvent( S3ObjectAction.OBJECTDELETE,
+									this.bucketName, this.objectKey, this.version, this.userId, this.size );
+						} catch (Exception ex) {
+							LOG.debug("Failed to fire reporting event for walrus DELETE object operation", ex);
+						}
 					}
-				}
 			} catch (Exception ex) {
 				LOG.error(ex, ex);
 			}
@@ -2341,13 +2341,13 @@ public class WalrusManager {
 							db.rollback();
 							throw new AccessDeniedException("Key", objectKey, logData);
 						}
-						
+
 						String invalidValue = this.findInvalidGrant(accessControlList.getGrants());
 						if(invalidValue != null) {
 							db.rollback();
 							throw new WalrusException("InvalidArgument", "Invalid canned-acl or grant list permission: " + invalidValue, "Key", objectKey, HttpResponseStatus.BAD_REQUEST);
 						}
-						
+
 						List<GrantInfo> grantInfos = new ArrayList<GrantInfo>();
 						objectInfo.resetGlobalGrants();
 						objectInfo.addGrants(objectInfo.getOwnerId(), bucket.getOwnerId(), grantInfos, accessControlList);
@@ -2414,7 +2414,7 @@ public class WalrusManager {
 		if (getMetaData == null) {
 			getMetaData = false;
 		}
-		
+
 		Boolean getData = request.getGetData();
 		if(getData == null){
 			getData = false;
@@ -2507,13 +2507,13 @@ public class WalrusManager {
 								}
 								storageManager.sendObject(request, httpResponse, bucketName, torrentFile, torrentLength, null,
 										DateUtils.format(lastModified.getTime(),DateUtils.RFC822_DATETIME_PATTERN),
-												"application/x-bittorrent",
-												"attachment; filename="
-														+ objectKey
-														+ ".torrent;", request
-														.getIsCompressed(),
-														null, logData);
-								
+										"application/x-bittorrent",
+										"attachment; filename="
+												+ objectKey
+												+ ".torrent;", request
+												.getIsCompressed(),
+												null, logData);
+
 								return null;
 							} else {
 								//No torrent exists
@@ -2566,7 +2566,7 @@ public class WalrusManager {
 								throw new EucalyptusCloudException(e);
 							}
 							reply.setBase64Data(Hashes.base64encode(base64Data));
-							
+
 							//fireUsageEvent For Get Object 
 						} else {
 							// support for large objects
@@ -2578,7 +2578,7 @@ public class WalrusManager {
 											contentDisposition, request
 											.getIsCompressed(), versionId,
 											logData);
-							
+
 							//fireUsageEvent For Get Object 
 							return null;
 						}
@@ -2647,7 +2647,7 @@ public class WalrusManager {
 		Context ctx = Contexts.lookup();
 		Account account = ctx.getAccount();
 		Status status = new Status();
-		
+
 		Boolean getData = request.getGetData();
 		if(getData == null){
 			getData = false;
@@ -3085,7 +3085,7 @@ public class WalrusManager {
 								reply.setVersionId(destinationVersionId);
 							}							
 							db.commit();
-							
+
 							try {
 								// Fixes EUCA-3756. Reporting event for copy objects
 								fireObjectCreationEvent(
@@ -3098,7 +3098,7 @@ public class WalrusManager {
 							} catch (Exception ex) {
 								LOG.debug("Failed to fire reporting event for walrus COPY object operation", ex);
 							}
-							
+
 							return reply;
 						} else {
 							db.rollback();
@@ -3181,7 +3181,7 @@ public class WalrusManager {
 			for (Grant grant: grants) {
 				grantValid = false;
 				permission = grant.getPermission();
-				
+
 				//Do toString comparisons to be sure that the enum acl value is in the proper form for requests (since '-' is not a valid char in enums)
 				for(WalrusProperties.CannedACL cannedACL : WalrusProperties.CannedACL.values()) {
 					if(permission.equals(cannedACL.toString())) {						
@@ -3196,7 +3196,7 @@ public class WalrusManager {
 						break;
 					}
 				}
-				
+
 				if(!grantValid) {
 					return permission;
 				}
@@ -3204,7 +3204,7 @@ public class WalrusManager {
 		}
 		return null;
 	}
-	
+
 	public GetBucketLoggingStatusResponseType getBucketLoggingStatus(
 			GetBucketLoggingStatusType request) throws EucalyptusCloudException {
 		GetBucketLoggingStatusResponseType reply = (GetBucketLoggingStatusResponseType) request
@@ -3334,9 +3334,9 @@ public class WalrusManager {
 		Context ctx = Contexts.lookup();
 		Account account = ctx.getAccount();
 		String prefix = request.getPrefix();
-		if (prefix == null) {
+		/*if (prefix == null) {
 			prefix = "";
-		}
+		}*/
 
 		String keyMarker = request.getKeyMarker();
 		String versionMarker = request.getVersionIdMarker();
@@ -3370,10 +3370,6 @@ public class WalrusManager {
 							bucketName,
 							null)))) {
 
-				if (bucket.isVersioningDisabled()) {
-					db.rollback();
-					throw new EucalyptusCloudException("Versioning has not been enabled for bucket: " + bucketName);
-				}
 
 				if (logData != null) {
 					updateLogData(bucket, logData);
@@ -3398,9 +3394,15 @@ public class WalrusManager {
 				if (maxKeys >= 0) {
 					reply.setMaxKeys(maxKeys);
 				}
-				if (delimiter != null){
-					reply.setDelimiter(delimiter);
+
+				reply.setDelimiter(delimiter);			
+				reply.setKeyMarker(keyMarker);
+
+				if (bucket.isVersioningDisabled()) {
+					db.commit();
+					return reply;
 				}
+
 				if(maxKeys == 0) {
 					//No keys requested, so just return
 					reply.setVersions(new ArrayList<VersionEntry>());
@@ -3422,8 +3424,8 @@ public class WalrusManager {
 				objCriteria.addOrder(Order.desc("lastModified"));
 				objCriteria.setMaxResults(queryStrideSize); //add one to, hopefully, indicate truncation in one call												
 
-				if(keyMarker != null) {
-					if(versionMarker != null) {
+				if(keyMarker.length() > 0) {
+					if(versionMarker.length() > 0) {
 						Date resumeDate = null;
 						try {
 							ObjectInfo markerObj = new ObjectInfo();
@@ -3435,6 +3437,7 @@ public class WalrusManager {
 								resumeDate = lastFromPrevObj.getLastModified();
 							}
 							else {
+								dbObject.rollback();
 								throw new NoSuchEntityException("VersionIDMarker " + versionMarker + " does not match an existing object version");
 							}
 						} catch (TransactionException e) {
@@ -3448,7 +3451,7 @@ public class WalrusManager {
 					}
 				}
 
-				if(prefix != null && !prefix.equals("")) {
+				if(prefix.length() > 0) {
 					objCriteria.add(Restrictions.like("objectKey", prefix, MatchMode.START));
 				}
 
@@ -3481,7 +3484,7 @@ public class WalrusManager {
 							}
 
 							//Check if it will get aggregated as a commonprefix
-							if (delimiter != null) {
+							if (delimiter.length() > 0) {
 								parts = objectKey.substring(prefix.length()).split(delimiter);
 								if (parts.length > 1) {
 									prefixString = parts[0] + delimiter;
@@ -3790,7 +3793,7 @@ public class WalrusManager {
 	 * corresponding delete event so we fire one prior to the create event.
 	 */
 	private void fireObjectCreationEvent( final String bucketName, final String objectKey,
-	    final String version, final String userId, final Long size, final Long oldSize ) {
+			final String version, final String userId, final Long size, final Long oldSize ) {
 		try {
 			if ( oldSize != null && oldSize > 0 ) {
 				fireObjectUsageEvent( S3ObjectAction.OBJECTDELETE,
@@ -3811,7 +3814,7 @@ public class WalrusManager {
 	}
 
 	private static void fireObjectUsageEvent( S3ObjectAction actionInfo, String bucketName,
-		    String objectKey, String version, String ownerUserId, Long sizeInBytes) {
+			String objectKey, String version, String ownerUserId, Long sizeInBytes) {
 		try {
 			ListenerRegistry.getInstance().fireEvent(
 					S3ObjectEvent.with( actionInfo, bucketName, objectKey, version, ownerUserId, sizeInBytes ) );
@@ -3819,5 +3822,5 @@ public class WalrusManager {
 			LOG.error( e, e );
 		}
 	}
-    
+
 }
