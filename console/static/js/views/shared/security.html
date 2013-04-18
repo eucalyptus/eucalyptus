@@ -7,7 +7,7 @@
     <div id="launch-wizard-security-keypair"> 
       <div class="form-row clearfix upper-sibling">
         <label for="launch-wizard-security-keypair-selector" data-msg="launch_instance_security_keypair">Key name</label>
-        <select data-on-change=":setKeyPair" id="launch-wizard-security-keypair-selector" title="Select a key pair for your instance">
+        <select data-on-change=":setKeyPair" id="launch-wizard-security-keypair-selector" data-tooltip="launch_instance_key_select_tip">
           <option value="" selected disabled>Select key pair</option>
           <option data-selected=":isKeySelected" data-each-keypair="keypairs" data-value="keypair.name" data-title="keypair.name" data-text="keypair.name"></option>
         </select> 
@@ -21,12 +21,12 @@
   </div>
   <div id="launch-wizard-security-sgroup"> <div class="form-row clearfix upper-sibling">
     <label for="launch-wizard-security-sg-selector" data-msg="launch_instance_security_sgroup">Security group</label>
-    <select data-on-change=":setSecurityGroup" id="launch-wizard-security-sg-selector" title="Select a security group for your instance">
+    <select data-on-change=":setSecurityGroup" id="launch-wizard-security-sg-selector" data-tooltip="launch_instance_sgroup_select_tip">
 <!--    
       <option selected title="default" value="default">default</option>
       <option title="group2" value="group2">group2</option>
 -->
-      <option value="" selected disabled>Select Security Group</option>
+      <option value="" selected disabled data-msg="launch_instance_security_header">Select Security Group</option>
       <option data-selected=":isGroupSelected" data-each-sgroup="sgroups" data-title="sgroup.name" data-value="sgroup.name" data-text="sgroup.description"></option>
     </select>
   </div>
