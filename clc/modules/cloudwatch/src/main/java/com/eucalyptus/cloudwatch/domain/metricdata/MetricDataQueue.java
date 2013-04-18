@@ -120,8 +120,10 @@ public class MetricDataQueue {
       .put("VolumeWriteOpsAbsolute", "VolumeWriteOps")
       .put("VolumeReadBytesAbsolute", "VolumeReadBytes")
       .put("VolumeWriteBytesAbsolute", "VolumeWriteBytes")
+      .put("VolumeConsumedReadWriteOpsAbsolute", "VolumeConsumedReadWriteOps")
       .put("VolumeTotalReadTimeAbsolute", "VolumeTotalReadTime")
       .put("VolumeTotalWriteTimeAbsolute", "VolumeTotalWriteTime")
+      .put("VolumeTotalReadWriteTimeAbsolute", "VolumeTotalReadWriteTime")
       .build();
 
   private static final Map<String, String> EC2_ABSOLUTE_METRICS = 
@@ -148,10 +150,12 @@ public class MetricDataQueue {
       // CPUUtilization
       // VolumeReadOps
       // VolumeWriteOps
+      // VolumeConsumedReadWriteOps
       // VolumeReadBytes
       // VolumeWriteBytes
       // VolumeTotalReadTime
       // VolumeTotalWriteTime
+      // VolumeTotalReadWriteTime (used to calculate VolumeIdleTime)
       // DiskReadOps
       // DiskWriteOps
       // DiskReadBytes
@@ -174,9 +178,22 @@ public class MetricDataQueue {
           // we check if the point below is a 'first' point, or maybe a point in the past.  Either case reject it.
           if (!adjustAbsoluteVolumeStatisticSet(datum, datum.getMetricName(), EBS_ABSOLUTE_METRICS.get(datum.getMetricName()), volumeId)) continue; 
         }
-        // one special case here (hack) -- we bind a derived metric to one of the voumne metrics, VolumeReadOpsAbsolute, just arbitrarily.
-        if ("VolumeReadOpsAbsolute".equals(datum.getMetricName())) { // special case
+        // special cases
+        // 1) VolumeThroughputPercentage -- this is 100% for provisioned volumes, and we need to insert a
+        //                                  data point for every timestamp that a volume event occurs.
+        //                                  To make sure we don't duplicate the effort, we choose one event at random, VolumeReadOps,
+        //                                  and create this new metric arbitrarily
+        if ("VolumeReadOps".equals(datum.getMetricName())) { // special case
           dataToInsert.add(createVolumeThroughputMetric(datum));
+        }
+        // 2) VolumeIdleTime -- we piggy back off of the metric we don't need VolumeTotalReadWriteTime, and convert it to VolumeIdleTime
+        if ("VolumeTotalReadWriteTime".equals(datum.getMetricName())) {
+          convertVolumeTotalReadWriteTimeToVolumeIdleTime(datum);
+        }
+        // 3) VolumeQueueLength -- this one comes in essentially correct, but we don't have a time duration for it, so we piggy back off
+        //                         the absolute metric framework
+        if ("VolumeQueueLength".equals(datum.getMetricName())) {
+          if (!adjustAbsoluteVolumeQueueLengthStatisticSet(datum, volumeId)) continue;
         }
       }
       
@@ -234,6 +251,40 @@ public class MetricDataQueue {
 
       });
     }
+  }
+
+  private boolean adjustAbsoluteVolumeQueueLengthStatisticSet(
+      MetricDatum datum, String volumeId) {
+    // the metric value is correct, we just need a statistic set with the sample count.
+    // to get this we create a placeholder absolute metric, value always 0, just to get time duration/sample count
+    MetricDatum absolutePlaceHolder = new MetricDatum();
+    absolutePlaceHolder.setMetricName("VolumeQueueLengthPlaceHolderAbsolute");
+    absolutePlaceHolder.setValue(0.0);
+    absolutePlaceHolder.setTimestamp(datum.getTimestamp());
+    if (!adjustAbsoluteVolumeStatisticSet(absolutePlaceHolder, absolutePlaceHolder.getMetricName(), "VolumeQueueLengthPlaceHolder", volumeId)) return false;
+    // otherwise, we have a duration/sample count
+    double sampleCount = absolutePlaceHolder.getStatisticValues().getSampleCount();
+    double value = datum.getValue();
+    datum.setValue(null);
+    StatisticSet statisticSet = new StatisticSet();
+    statisticSet.setMaximum(value);
+    statisticSet.setMinimum(value);
+    statisticSet.setSum(value * sampleCount);
+    statisticSet.setSampleCount(sampleCount);
+    return true;
+  }
+
+  private void convertVolumeTotalReadWriteTimeToVolumeIdleTime(final MetricDatum datum) {
+    // we convert this to VolumeIdleTime = Period Length - VolumeTotalReadWriteTime on the period (though won't be negative)
+    datum.setMetricName("VolumeIdleTime");
+    double totalReadWriteTime = datum.getStatisticValues().getSum(); // value is in seconds
+    double totalPeriodTime = 60.0 * datum.getStatisticValues().getSampleCount();
+    double totalIdleTime = totalPeriodTime - totalReadWriteTime;
+    if (totalIdleTime < 0) totalIdleTime = 0; // if we have read and written more than in the period, don't go negative
+    datum.getStatisticValues().setSum(totalIdleTime);
+    double averageIdleTime = totalIdleTime / datum.getStatisticValues().getSampleCount();
+    datum.getStatisticValues().setMaximum(averageIdleTime);
+    datum.getStatisticValues().setMinimum(averageIdleTime);
   }
 
   private MetricDatum createVolumeThroughputMetric(MetricDatum datum) {
@@ -295,6 +346,10 @@ public class MetricDataQueue {
   }
 
 
+  
+  
+  
+  
   private boolean adjustAbsoluteInstanceStatisticSet(MetricDatum datum, String absoluteMetricName,
       String relativeMetricName, String instanceId) {
     if (instanceId == null) return false;
