@@ -200,6 +200,11 @@
                    thisObj.associateDialog.eucadialog('showFieldError', '#associate-selected-value', eip_associate_invalid_ip_address);
                  }
                } else {
+                 // ADDED TO STRIP OFF THE NAME TAG FORM THE SELECTED INSTANCE STRING  --- Kyo 041713
+                 if( String(selectedValue).match(/^\w+-\w+\s+/) ){
+                   selectedValue = String(selectedValue).split(" ")[0];
+		   console.log("Volume ID: " + selectedValue);
+                 }
                  $eip_associate_dialog.eucadialog("close");
                  thisObj._associateIp(fixedValue, selectedValue);
                }
@@ -470,8 +475,24 @@
             if (state == undefined) {
                 state = instance._state.name;
             }
-            if (state === 'running') 
-              inst_ids.push(instance.id);
+            if (state === 'running'){
+              // CONVERTING THE INSTANCE ID INTO ID + NAME TAG STRING --- Kyo 041713
+              var nameTag = null;
+              var this_instance = require('app').data.instance.get(instance.id);
+              if( this_instance ){
+                var this_tags = this_instance.get('tags');
+                this_tags.each(function(tag){
+                  if( tag.get('name') == 'Name' || tag.get('name') == 'name' ){
+                    nameTag = tag.get('value');
+                  };
+                });
+              }
+              var this_string = instance.id;
+              if( nameTag != null ){
+                this_string += " (" + nameTag + ")";
+              }
+              inst_ids.push(this_string);
+            }
           }
         }
         if ( inst_ids.length === 0 )

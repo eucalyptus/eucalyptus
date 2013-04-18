@@ -2,25 +2,44 @@
     <div class="title" data-msg="create_volume_dialog_title">Create new volume</div>
     <div class="body">
     <div id="volumes-add-dialog-wrapper">
-      <div id="volumes-add-dialog" class="euca-dialog">
-        <div class="dialog-inner-content">
-          <p data-msg="volume_dialog_add_text"></p>
-          <div class="form-row">
-            <label for="volume-add-snapshot-selector" data-msg="volume_dialog_snapshot_label"></label>
-            <select data-tooltip="volume_dialog_snapshot_tip" id="volume-add-snapshot-selector" data-value="volume.snapshot_id"></select>
+      <div data-ui-tabs="">
+        <ul>
+          <li><a href="#tabs-1">Volume</a></li>
+          <li><a href="#tabs-2">Tag</a></li>
+        </ul>
+        <div id="tabs-1" class="tab">
+
+          <div id="volumes-add-dialog" class="euca-dialog">
+            <div class="dialog-inner-content">
+              <p data-msg="volume_dialog_add_text"></p>
+              <div class="form-row">
+                <label for="volume-add-snapshot-selector" data-msg="volume_dialog_snapshot_label"></label>
+                <select data-tooltip="volume_dialog_snapshot_tip" id="volume-add-snapshot-selector" data-value="volume.snapshot_id"></select>
+              </div>
+              <div class="form-row">
+                <label for="volume-size" class="required-label" data-msg="volume_dialog_size_label"></label>
+                <input type="text" id="volume-size" class="short-textinput required" data-tooltip="volume_dialog_size_tip" data-value="volume.size"/>
+              </div>
+              <p data-msg="volume_dialog_az_text"></p>
+              <div class="form-row">
+                <label for="volume-add-az-selector" class="required-label" data-msg="volume_dialog_az_label"></label>
+                <select data-tooltip="volume_dialog_az_tip" id="volume-add-az-selector" data-value="volume.zone"></select>
+              </div>
+              <p class="required-hint" data-msg="required_fields"></p>
+            </div>
           </div>
-          <div class="form-row">
-            <label for="volume-size" class="required-label" data-msg="volume_dialog_size_label"></label>
-            <input type="text" id="volume-size" class="short-textinput required" data-tooltip="volume_dialog_size_tip" data-value="volume.size"/>
+
+        </div>
+        <div id="tabs-2" class="tab">
+
+          <div class="rules content-section">
+            <h3>Tags</h3>
+            <div data-ui-edittags="volume"></div>
           </div>
-          <p data-msg="volume_dialog_az_text"></p>
-          <div class="form-row">
-            <label for="volume-add-az-selector" class="required-label" data-msg="volume_dialog_az_label"></label>
-            <select data-tooltip="volume_dialog_az_tip" id="volume-add-az-selector" data-value="volume.zone"></select>
-          </div>
-          <p class="required-hint" data-msg="required_fields"></p>
+
         </div>
       </div>
+
       <div data-text="status" style="height:20px"></div>
       <div class="ui-dialog-buttonpane ui-widget-content ui-helper-clearfix">
         <div class="ui-dialog-buttonset">
@@ -28,5 +47,6 @@
           <span data-ui-button=":cancelButton">Cancel</span> 
         </div>
       </div>
+
     </div>
 </div>
