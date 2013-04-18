@@ -186,7 +186,7 @@ public class LoadBalancers {
 	public static void addZone(final String lbName, final UserFullName ownerFullName, final Collection<String> zones) throws LoadBalancingException{
 		List<ClusterInfoType> clusters = null;
 		try{
-			clusters = EucalyptusActivityTasks.getInstance().describeAvailabilityZones();
+			clusters = EucalyptusActivityTasks.getInstance().describeAvailabilityZones(false);
 		}catch(Exception ex){
 			throw new LoadBalancingException("Failed to check the requested zones");
 		}

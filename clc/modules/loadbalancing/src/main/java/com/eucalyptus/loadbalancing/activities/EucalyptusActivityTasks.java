@@ -20,6 +20,7 @@
 package com.eucalyptus.loadbalancing.activities;
 
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
@@ -107,12 +108,18 @@ import edu.ucsb.eucalyptus.msgs.DeleteSecurityGroupResponseType;
 import edu.ucsb.eucalyptus.msgs.DeleteSecurityGroupType;
 import edu.ucsb.eucalyptus.msgs.DescribeAvailabilityZonesResponseType;
 import edu.ucsb.eucalyptus.msgs.DescribeAvailabilityZonesType;
+import edu.ucsb.eucalyptus.msgs.DescribeImagesResponseType;
+import edu.ucsb.eucalyptus.msgs.DescribeImagesType;
 import edu.ucsb.eucalyptus.msgs.DescribeInstancesResponseType;
 import edu.ucsb.eucalyptus.msgs.DescribeInstancesType;
+import edu.ucsb.eucalyptus.msgs.DescribeKeyPairsResponseItemType;
+import edu.ucsb.eucalyptus.msgs.DescribeKeyPairsResponseType;
+import edu.ucsb.eucalyptus.msgs.DescribeKeyPairsType;
 import edu.ucsb.eucalyptus.msgs.DescribeSecurityGroupsResponseType;
 import edu.ucsb.eucalyptus.msgs.DescribeSecurityGroupsType;
 import edu.ucsb.eucalyptus.msgs.DnsMessage;
 import edu.ucsb.eucalyptus.msgs.EucalyptusMessage;
+import edu.ucsb.eucalyptus.msgs.ImageDetails;
 import edu.ucsb.eucalyptus.msgs.IpPermissionType;
 import edu.ucsb.eucalyptus.msgs.RemoveMultiANameResponseType;
 import edu.ucsb.eucalyptus.msgs.RemoveMultiANameType;
@@ -410,8 +417,8 @@ public class EucalyptusActivityTasks {
 		}
 	}
 	
-	public List<ClusterInfoType> describeAvailabilityZones(){
-		final EucalyptusDescribeAvailabilityZonesTask task = new EucalyptusDescribeAvailabilityZonesTask();
+	public List<ClusterInfoType> describeAvailabilityZones(boolean verbose){
+		final EucalyptusDescribeAvailabilityZonesTask task = new EucalyptusDescribeAvailabilityZonesTask(verbose);
 		final CheckedListenableFuture<Boolean> result = task.dispatch(new EucalyptusSystemActivity());
 		try{
 			if(result.get()){
@@ -671,6 +678,19 @@ public class EucalyptusActivityTasks {
 		}
 	}
 	
+	public List<DescribeKeyPairsResponseItemType> describeKeyPairs(final List<String> keyNames){
+		final EucaDescribeKeyPairsTask task =
+				new EucaDescribeKeyPairsTask(keyNames);
+		final CheckedListenableFuture<Boolean> result = task.dispatch(new EucalyptusSystemActivity());
+		try{
+			if(result.get()){
+				return task.getResult();
+			}else
+				throw new EucalyptusActivityException("failed to describe keypairs");
+		}catch(Exception ex){
+			throw Exceptions.toUndeclared(ex);
+		}
+	}
 	public void deleteRole(final String roleName){
 		final EuareDeleteRoleTask task =
 				new EuareDeleteRoleTask(roleName);
@@ -738,6 +758,95 @@ public class EucalyptusActivityTasks {
 				throw new EucalyptusActivityException("failed to add role to the instance profile");
 		}catch(Exception ex){
 			throw Exceptions.toUndeclared(ex);
+		}
+	}
+	
+	public List<ImageDetails> describeImages(final List<String> imageIds){
+		final EucaDescribeImagesTask task =
+				new EucaDescribeImagesTask(imageIds);
+		final CheckedListenableFuture<Boolean> result = task.dispatch(new EucalyptusSystemActivity());
+		try{
+			if(result.get()){
+				return task.getResult();
+			}else
+				throw new EucalyptusActivityException("failed to describe keypairs");
+		}catch(Exception ex){
+			throw Exceptions.toUndeclared(ex);	
+		}
+	}
+	
+	private class EucaDescribeImagesTask extends EucalyptusActivityTask<EucalyptusMessage, Eucalyptus>{
+		private List<String> imageIds = null;
+		private List<ImageDetails> result = null;
+		private EucaDescribeImagesTask(final List<String> imageIds){
+			this.imageIds = imageIds;
+		}
+		
+		private DescribeImagesType describeImages(){
+			final DescribeImagesType req = new DescribeImagesType();
+			if(this.imageIds!=null && this.imageIds.size()>0){
+				req.setImagesSet(new ArrayList(imageIds));
+			}
+			return req;
+		}
+		
+		@Override
+		void dispatchInternal(
+				ActivityContext<EucalyptusMessage, Eucalyptus> context,
+				Checked<EucalyptusMessage> callback) {
+			final DispatchingClient<EucalyptusMessage, Eucalyptus> client = context.getClient();
+			client.dispatch(describeImages(), callback);				
+		}
+
+		@Override
+		void dispatchSuccess(ActivityContext<EucalyptusMessage, Eucalyptus> context, 
+				EucalyptusMessage response) {
+			final DescribeImagesResponseType resp = (DescribeImagesResponseType) response;
+			result = resp.getImagesSet();			
+		}
+		
+		List<ImageDetails> getResult(){
+			return this.result;
+		}
+	}
+	
+	private class EucaDescribeKeyPairsTask extends EucalyptusActivityTask<EucalyptusMessage, Eucalyptus>{
+		private List<String> keyNames = null;
+		private List<DescribeKeyPairsResponseItemType> result = null;
+		private EucaDescribeKeyPairsTask(){}
+		private EucaDescribeKeyPairsTask(final String keyName){
+			this.keyNames = Lists.newArrayList(keyName);
+		}
+		private EucaDescribeKeyPairsTask(final List<String> keyNames){
+			this.keyNames = keyNames;
+		}
+		
+		private DescribeKeyPairsType describeKeyPairs(){
+			final DescribeKeyPairsType req = new DescribeKeyPairsType();
+			if(this.keyNames!=null){
+				req.setKeySet(new ArrayList<String>(this.keyNames));
+			}
+			return req;
+		}
+		
+		@Override
+		void dispatchInternal(
+				ActivityContext<EucalyptusMessage, Eucalyptus> context,
+				Checked<EucalyptusMessage> callback) {
+			final DispatchingClient<EucalyptusMessage, Eucalyptus> client = context.getClient();
+			client.dispatch(describeKeyPairs(), callback);	
+		}
+
+		@Override
+		void dispatchSuccess(
+				ActivityContext<EucalyptusMessage, Eucalyptus> context,
+				EucalyptusMessage response) {
+			final DescribeKeyPairsResponseType resp = (DescribeKeyPairsResponseType) response;
+			result = resp.getKeySet();
+		}
+		
+		List<DescribeKeyPairsResponseItemType> getResult(){
+			return result;
 		}
 	}
 	
@@ -1256,11 +1365,16 @@ public class EucalyptusActivityTasks {
 
 	private class EucalyptusDescribeAvailabilityZonesTask extends EucalyptusActivityTask<EucalyptusMessage, Eucalyptus> {
 		private List<ClusterInfoType> zones = null; 
-		private EucalyptusDescribeAvailabilityZonesTask(){
+		private boolean verbose = false;
+		private EucalyptusDescribeAvailabilityZonesTask(boolean verbose){
+			this.verbose = verbose;
 		}
 		
 		private DescribeAvailabilityZonesType describeAvailabilityZones(){
 			final DescribeAvailabilityZonesType req = new DescribeAvailabilityZonesType();
+			if(this.verbose){
+				req.setAvailabilityZoneSet(Lists.newArrayList("verbose"));
+			}
 		    return req;
 		}
 		

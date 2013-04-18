@@ -388,7 +388,8 @@ public class LoadBalancingService {
     	//TODO SPARK: TEST
     	LOG.error("failed to fire new loadbalancer event", e);
     	rollback.apply(lbName);
-    	throw new LoadBalancingException(String.format("Faild to create the requested loadblanacer: %s", lbName), e);
+    	final String reason = e.getCause() != null && e.getCause().getMessage()!=null ? e.getCause().getMessage() : "internal error";
+    	throw new LoadBalancingException(String.format("Faild to create the requested loadblanacer: %s", reason), e);
     }
 
     Collection<Listener> listeners=request.getListeners().getMember();
@@ -403,7 +404,8 @@ public class LoadBalancingService {
     	}catch(EventFailedException e){
     		LOG.error("failed to fire createListener event", e);
         	rollback.apply(lbName);
-        	throw new LoadBalancingException(String.format("Faild to create the requested loadblanacer: %s", lbName), e);
+        	final String reason = e.getCause() != null && e.getCause().getMessage()!=null ? e.getCause().getMessage() : "internal error";
+        	throw new LoadBalancingException(String.format("Faild to create the requested loadblanacer: %s", reason), e);
     	}
     }
     
@@ -615,11 +617,16 @@ public class LoadBalancingService {
           LoadBalancers.deleteLoadbalancer( ownerFullName, lbToDelete );
         }
       }
-    } catch ( Exception e ) {
+    }catch (EventFailedException e){
+        LOG.error( "Error deleting the loadbalancer: " + e.getMessage(), e );
+    	final String reason = e.getCause() != null && e.getCause().getMessage()!=null ? e.getCause().getMessage() : "internal error";
+    	throw new LoadBalancingException( String.format("Failed to delete the loadbalancer: %s", reason), e );
+    }catch ( Exception e ) {
       // success if the lb is not found in the system
       if ( !(e.getCause() instanceof NoSuchElementException) ) {
         LOG.error( "Error deleting the loadbalancer: " + e.getMessage(), e );
-        throw new LoadBalancingException( "Failed to delete the loadbalancer " + lbToDelete, e );
+        final String reason = "internal error";
+        throw new LoadBalancingException( String.format("Failed to delete the loadbalancer: %s", reason), e );
       }
     }
     DeleteLoadBalancerResult result = new DeleteLoadBalancerResult();
@@ -629,26 +636,25 @@ public class LoadBalancingService {
   }
   
   public CreateLoadBalancerListenersResponseType createLoadBalancerListeners(CreateLoadBalancerListenersType request) throws EucalyptusCloudException {
-	    final CreateLoadBalancerListenersResponseType reply = request.getReply( );
-	    final Context ctx = Contexts.lookup( );
-	    final UserFullName ownerFullName = ctx.getUserFullName( );
-	    final String lbName = request.getLoadBalancerName();
-	    final Collection<Listener> listeners = request.getListeners().getMember();
-
-	
-	try{
+	  final CreateLoadBalancerListenersResponseType reply = request.getReply( );
+	  final Context ctx = Contexts.lookup( );
+	  final UserFullName ownerFullName = ctx.getUserFullName( );
+	  final String lbName = request.getLoadBalancerName();
+	  final Collection<Listener> listeners = request.getListeners().getMember();
+	  try{
     		CreateListenerEvent evt = new CreateListenerEvent();
     		evt.setLoadBalancer(lbName);
     		evt.setContext(ctx);
     		evt.setListeners(listeners);
     		ActivityManager.getInstance().fire(evt);
-    	}catch(EventFailedException e){
+	  }catch(final EventFailedException e){
     		LOG.error("failed to fire CreateListener event", e);
-    		throw new LoadBalancingException("failed to create listener: internal error",e );
-    	}
-	    LoadBalancers.createLoadbalancerListener(lbName,  ownerFullName, listeners);
-	    reply.set_return(true);
-	    return reply;
+    		final String reason = e.getCause()!=null && e.getCause().getMessage()!=null ? e.getMessage() : "internal error";
+    		throw new LoadBalancingException(String.format("failed to create listener: %s", reason), e );
+	  }
+	  LoadBalancers.createLoadbalancerListener(lbName,  ownerFullName, listeners);
+	  reply.set_return(true);
+	  return reply;
   }
   
   public DeleteLoadBalancerListenersResponseType deleteLoadBalancerListeners(DeleteLoadBalancerListenersType request) throws EucalyptusCloudException {
@@ -677,7 +683,7 @@ public class LoadBalancingService {
     }
     catch(Exception ex){
       LOG.error("Failed to find the loadbalancer="+lbName);
-      throw new LoadBalancingException("failed to retrieve the loadbalancer", ex);
+      throw new LoadBalancingException("failed to find the loadbalancer", ex);
     }
 
    //IAM support to restricted lb modification
@@ -725,7 +731,8 @@ public class LoadBalancingService {
       ActivityManager.getInstance().fire(evt);
     }catch(EventFailedException e){
       LOG.error("failed to fire DeleteListener event", e);
-      throw new LoadBalancingException("failed to delete listener: internal error",e );
+      final String reason = e.getCause()!=null && e.getCause().getMessage()!=null ? e.getCause().getMessage() : "internal error";
+      throw new LoadBalancingException(String.format("failed to delete listener: %s",reason),e );
     }
 
     reply.set_return(Entities.asTransaction(LoadBalancerListener.class, remover).apply(toDelete));
@@ -791,7 +798,8 @@ public class LoadBalancingService {
     		ActivityManager.getInstance().fire(evt);
     	}catch(EventFailedException e){
     		LOG.error("failed to fire RegisterInstances event", e);
-    		throw new LoadBalancingException("failed to register instances: internal error",e );
+    		final String reason = e.getCause()!=null && e.getCause().getMessage()!=null ? e.getCause().getMessage() : "internal error";
+    		throw new LoadBalancingException(String.format("failed to register instances: %s", reason), e );
     	}
 	    
 	    if(instances!=null){
@@ -892,7 +900,8 @@ public class LoadBalancingService {
     		ActivityManager.getInstance().fire(evt);
     	}catch(EventFailedException e){
     		LOG.error("failed to fire DeregisterInstances event", e);
-    		throw new LoadBalancingException("failed to deregister instances: internal error",e );
+    	    final String reason = e.getCause()!=null && e.getCause().getMessage()!=null ? e.getCause().getMessage() : "internal error";
+    		throw new LoadBalancingException(String.format("failed to deregister instances: %s", reason),e );
     	}
 	    
 	    reply.set_return(Entities.asTransaction(LoadBalancerBackendInstance.class, remover).apply(null));
@@ -919,7 +928,8 @@ public class LoadBalancingService {
 	    		ActivityManager.getInstance().fire(evt);
 	    	}catch(EventFailedException e){
 	    		LOG.error("failed to execute EnabledZone event", e);
-	    		throw new LoadBalancingException("failed to enable zones: internal error",e );
+	    	    final String reason = e.getCause()!=null && e.getCause().getMessage()!=null ? e.getCause().getMessage() : "internal error";
+	    		throw new LoadBalancingException(String.format("failed to enable zones: %s", reason),e );
 	    	}
 	    }
 	    List<String> availableZones = Lists.newArrayList();
@@ -960,7 +970,8 @@ public class LoadBalancingService {
 	    		ActivityManager.getInstance().fire(evt);
 	    	}catch(EventFailedException e){
 	    		LOG.error("failed to execute DisabledZone event", e);
-	    		throw new LoadBalancingException("failed to disable zones: internal error",e );
+	    	    final String reason = e.getCause()!=null && e.getCause().getMessage()!=null ? e.getCause().getMessage() : "internal error";
+	    		throw new LoadBalancingException(String.format("failed to disable zones: %s", reason), e );
 	    }  
 	  }
 	  

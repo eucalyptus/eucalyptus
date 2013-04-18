@@ -294,7 +294,6 @@ public class LoadBalancerASGroupCreator extends AbstractEventHandler<NewLoadbala
 				this.add("eucalyptus_port", port);
 				this.add("eucalyptus_path", path);
 				
-				/// TODO: SPARK: ELB service host different from eucalyptus
 				this.add("elb_host", host);
 				this.add("elb_port", port);	/// elb service path
 			}catch(Exception ex){
@@ -319,5 +318,4 @@ public class LoadBalancerASGroupCreator extends AbstractEventHandler<NewLoadbala
 	interface InstanceUserDataBuilder {
 		String build();
 	}
-
 }
