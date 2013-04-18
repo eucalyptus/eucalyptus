@@ -1,3 +1,22 @@
+/*************************************************************************
+ * Copyright 2009-2013 Eucalyptus Systems, Inc.
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; version 3 of the License.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see http://www.gnu.org/licenses/.
+ *
+ * Please contact Eucalyptus Systems, Inc., 6755 Hollister Ave., Goleta
+ * CA 93117, USA or visit http://www.eucalyptus.com/licenses/ if you need
+ * additional information or have any questions.
+ ************************************************************************/
 package com.eucalyptus.cloudwatch.domain.listmetrics;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -11,7 +30,8 @@ import java.util.NoSuchElementException;
 
 import org.apache.log4j.Logger;
 
-import com.eucalyptus.cloudwatch.domain.dimension.DimensionEntity;
+import com.eucalyptus.cloudwatch.domain.DimensionEntity;
+import com.eucalyptus.cloudwatch.domain.metricdata.MetricEntity.MetricType;
 import com.google.common.collect.Lists;
 
 
@@ -63,7 +83,7 @@ public class ListMetricsTest {
     try {
       ListMetricManager.deleteAllMetrics();
       // TODO make assertSize like a junit test
-      LOG.fatal("Assertion Result: " + assertSize(0, ListMetricManager.listMetrics(null, null, null, null, null, null)));
+      LOG.fatal("Assertion Result: " + assertSize(0, ListMetricManager.listMetrics(null, null, null, null, null, null, null, null)));
       Date start = new Date();
 
       String accountId = "account_this";
@@ -80,7 +100,7 @@ public class ListMetricsTest {
       for (String metricName : metricNames) {
         for (String namespace : namespaces) {
           for (Collection<DimensionEntity> dimensions: new PowerChoiceIterable<DimensionEntity>(dimensionChoices)) {
-            ListMetricManager.addMetric(accountId, metricName, namespace, toDimensionMap(dimensions));
+            ListMetricManager.addMetric(accountId, metricName, namespace, toDimensionMap(dimensions), MetricType.Custom);
           }
         }
       }
@@ -99,7 +119,7 @@ public class ListMetricsTest {
       for (String metricName : metricNames) {
         for (String namespace : namespaces) {
           for (Collection<DimensionEntity> dimensions: new PowerChoiceIterable<DimensionEntity>(dimensionChoices)) {
-            ListMetricManager.addMetric(accountId, metricName, namespace, toDimensionMap(dimensions));
+            ListMetricManager.addMetric(accountId, metricName, namespace, toDimensionMap(dimensions), MetricType.Custom);
           }
         }
       }
@@ -150,7 +170,7 @@ public class ListMetricsTest {
             for (Date after: afters) {
               for (Date before: befores) {
                 for (Collection<DimensionEntity> dimensions: new PowerChoiceIterable<DimensionEntity>(dimensionChoices)) {
-                  Collection<ListMetric> metrics = ListMetricManager.listMetrics(accountName, metricName, namespace, toDimensionMap(dimensions), after, before);
+                  Collection<ListMetric> metrics = ListMetricManager.listMetrics(accountName, metricName, namespace, toDimensionMap(dimensions), after, before, null, null);
                   int numValues = predictedResults(accountName, metricName, 
                       namespace, toDimensionMap(dimensions), 
                       after, before, start, middle, end, n);
@@ -171,13 +191,13 @@ public class ListMetricsTest {
           }
         }
       }
-      LOG.fatal("Assertion Result: " + assertSize(intPow(2,3) * intPow(3,n), ListMetricManager.listMetrics(null, null, null, null, null, null)));
+      LOG.fatal("Assertion Result: " + assertSize(intPow(2,3) * intPow(3,n), ListMetricManager.listMetrics(null, null, null, null, null, null, null, null)));
       ListMetricManager.deleteMetrics(start);
-      LOG.fatal("Assertion Result: " + assertSize(intPow(2,3) * intPow(3,n), ListMetricManager.listMetrics(null, null, null, null, null, null)));
+      LOG.fatal("Assertion Result: " + assertSize(intPow(2,3) * intPow(3,n), ListMetricManager.listMetrics(null, null, null, null, null, null, null, null)));
       ListMetricManager.deleteMetrics(middle);
-      LOG.fatal("Assertion Result: " + assertSize(intPow(2,2) * intPow(3,n), ListMetricManager.listMetrics(null, null, null, null, null, null)));
+      LOG.fatal("Assertion Result: " + assertSize(intPow(2,2) * intPow(3,n), ListMetricManager.listMetrics(null, null, null, null, null, null, null, null)));
       ListMetricManager.deleteMetrics(end);
-      LOG.fatal("Assertion Result: " + assertSize(0, ListMetricManager.listMetrics(null, null, null, null, null, null)));
+      LOG.fatal("Assertion Result: " + assertSize(0, ListMetricManager.listMetrics(null, null, null, null, null, null, null, null)));
     } catch (Throwable ex) {
       LOG.fatal(ex, ex);
       ex.printStackTrace();
@@ -434,13 +454,13 @@ public class ListMetricsTest {
       String value = "value" + j;
       dimensions.put(name,  value);
     }
-    ListMetricManager.addMetric(accountId, metricName, namespace, dimensions);
+    ListMetricManager.addMetric(accountId, metricName, namespace, dimensions, MetricType.Custom);
   }
 
   public static void testInsertUpdate() throws Exception {
     ListMetricManager.deleteAllMetrics();
     // TODO make assertSize like a junit test
-    LOG.fatal("Assertion Result: " + assertSize(0, ListMetricManager.listMetrics(null, null, null, null, null, null)));
+    LOG.fatal("Assertion Result: " + assertSize(0, ListMetricManager.listMetrics(null, null, null, null, null, null, null, null)));
     for (int i=2;i<=10;i++) {
       insertMetricsWithDimensions(i);
     }
@@ -448,7 +468,7 @@ public class ListMetricsTest {
     for (int i=10;i>=2;i--) {
       insertMetricsWithDimensions(i);
     }
-    LOG.fatal("Assertion Result: " + assertSize(10, ListMetricManager.listMetrics(null, null, null, null, null, null)));
+    LOG.fatal("Assertion Result: " + assertSize(10, ListMetricManager.listMetrics(null, null, null, null, null, null, null, null)));
   }
 
 }

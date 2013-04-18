@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
-  Copyright 2009-2012 Eucalyptus Systems, Inc.
+  Copyright 2009-2013 Eucalyptus Systems, Inc.
 
   This program is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
@@ -71,14 +71,15 @@
 
   <mapping name="DeleteSecurityGroup" class="edu.ucsb.eucalyptus.msgs.DeleteSecurityGroupType" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
     <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage" />
-    <value name="groupName" field="groupName" />
+    <value name="groupId" field="groupId" usage="optional"/>
+    <value name="groupName" field="groupName" usage="optional"/>
   </mapping>
 
   <mapping name="CreateSecurityGroupResponse" class="edu.ucsb.eucalyptus.msgs.CreateSecurityGroupResponseType"
     extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
     <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage" />
-      <value name="groupId" field="groupId" />
-      <value name="return" get-method="get_return" set-method="set_return" />
+    <value name="return" get-method="get_return" set-method="set_return" />
+    <value name="groupId" field="groupId"/>
   </mapping>
 
   <mapping name="CreateSecurityGroup" class="edu.ucsb.eucalyptus.msgs.CreateSecurityGroupType" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
@@ -119,13 +120,14 @@
   </mapping>
 
   <mapping class="edu.ucsb.eucalyptus.msgs.UserIdGroupPairType" abstract="true">
-    <value name="userId" field="sourceUserId" usage="required" />
-    <value name="groupName" field="sourceGroupName" usage="required" />
+    <value name="userId" field="sourceUserId" usage="optional" />
+    <value name="groupName" field="sourceGroupName" usage="optional" />
+    <value name="groupId" field="sourceGroupId" usage="optional" />
   </mapping>
 
   <mapping class="edu.ucsb.eucalyptus.msgs.SecurityGroupItemType" abstract="true">
     <value name="ownerId" field="accountId" />
-    <value name="groupId" field="groupId" />
+    <value name="groupId" field="groupId" usage="optional"/>
     <value name="groupName" field="groupName" />
     <value name="groupDescription" field="groupDescription" />
     <collection name="ipPermissions" factory="org.jibx.runtime.Utility.arrayListFactory" field="ipPermissions">
@@ -145,12 +147,13 @@
     <collection name="groups" factory="org.jibx.runtime.Utility.arrayListFactory" field="groups">
       <structure name="item" map-as="edu.ucsb.eucalyptus.msgs.UserIdGroupPairType" />
     </collection>
-    <collection name="ipRanges" factory="org.jibx.runtime.Utility.arrayListFactory" field="ipRanges"
-      item-type="java.lang.String">
-      <structure name="item">
-        <value name="cidrIp" />
-      </structure>
+    <collection name="ipRanges" factory="org.jibx.runtime.Utility.arrayListFactory" field="ipRanges">
+      <structure name="item" map-as="edu.ucsb.eucalyptus.msgs.CidrIpType" />
     </collection>
+  </mapping>
+
+  <mapping class="edu.ucsb.eucalyptus.msgs.CidrIpType" abstract="true">
+    <value name="cidrIp" field="cidrIp" usage="required" />
   </mapping>
 
   <mapping name="AuthorizeSecurityGroupIngressResponse" class="edu.ucsb.eucalyptus.msgs.AuthorizeSecurityGroupIngressResponseType"
@@ -163,12 +166,12 @@
     extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
     <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage" />
     <value name="userId" field="groupUserId" usage="optional" />
-    <value name="groupName" field="groupName" />
+    <value name="groupId" field="groupId" usage="optional"/>
+    <value name="groupName" field="groupName" usage="optional"/>
     <collection name="ipPermissions" factory="org.jibx.runtime.Utility.arrayListFactory" field="ipPermissions">
       <structure name="item" map-as="edu.ucsb.eucalyptus.msgs.IpPermissionType" />
     </collection>
   </mapping>
-
 
   <mapping name="RevokeSecurityGroupIngressResponse" class="edu.ucsb.eucalyptus.msgs.RevokeSecurityGroupIngressResponseType"
     extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
@@ -180,7 +183,8 @@
     extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
     <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage" />
     <value name="userId" field="groupUserId" usage="optional" />
-    <value name="groupName" field="groupName" />
+    <value name="groupId" field="groupId" usage="optional"/>
+    <value name="groupName" field="groupName" usage="optional"/>
     <collection name="ipPermissions" factory="org.jibx.runtime.Utility.arrayListFactory" field="ipPermissions">
       <structure name="item" map-as="edu.ucsb.eucalyptus.msgs.IpPermissionType" />
     </collection>

@@ -1,3 +1,22 @@
+/*************************************************************************
+ * Copyright 2009-2013 Eucalyptus Systems, Inc.
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; version 3 of the License.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see http://www.gnu.org/licenses/.
+ *
+ * Please contact Eucalyptus Systems, Inc., 6755 Hollister Ave., Goleta
+ * CA 93117, USA or visit http://www.eucalyptus.com/licenses/ if you need
+ * additional information or have any questions.
+ ************************************************************************/
 package com.eucalyptus.autoscaling.activities
 
 import com.eucalyptus.auth.Accounts
@@ -7,25 +26,58 @@ import com.eucalyptus.auth.principal.Account
 import com.eucalyptus.auth.principal.Certificate
 import com.eucalyptus.auth.principal.Group
 import com.eucalyptus.auth.principal.Principals
+import com.eucalyptus.auth.principal.Role
 import com.eucalyptus.auth.principal.User
+import com.eucalyptus.autoscaling.common.AutoScalingMetadata
 import com.eucalyptus.autoscaling.configurations.LaunchConfiguration
 import com.eucalyptus.autoscaling.configurations.LaunchConfigurations
 import com.eucalyptus.autoscaling.groups.AutoScalingGroup
 import com.eucalyptus.autoscaling.groups.AutoScalingGroups
+import com.eucalyptus.autoscaling.groups.HealthCheckType
+import com.eucalyptus.autoscaling.groups.ScalingProcessType
+import com.eucalyptus.autoscaling.groups.SuspendedProcess
+import com.eucalyptus.autoscaling.groups.TerminationPolicyType
 import com.eucalyptus.autoscaling.instances.AutoScalingInstance
 import com.eucalyptus.autoscaling.instances.AutoScalingInstances
+import com.eucalyptus.autoscaling.instances.ConfigurationState
 import com.eucalyptus.autoscaling.instances.HealthStatus
 import com.eucalyptus.autoscaling.instances.LifecycleState
+import com.eucalyptus.autoscaling.metadata.AbstractOwnedPersistent
 import com.eucalyptus.autoscaling.metadata.AutoScalingMetadataNotFoundException
+import com.eucalyptus.autoscaling.tags.Tag
 import com.eucalyptus.crypto.util.Timestamps
+import com.eucalyptus.loadbalancing.DeregisterInstancesFromLoadBalancerResponseType
+import com.eucalyptus.loadbalancing.DeregisterInstancesFromLoadBalancerResult
+import com.eucalyptus.loadbalancing.DeregisterInstancesFromLoadBalancerType
+import com.eucalyptus.loadbalancing.DescribeInstanceHealthResponseType
+import com.eucalyptus.loadbalancing.DescribeInstanceHealthResult
+import com.eucalyptus.loadbalancing.DescribeInstanceHealthType
+import com.eucalyptus.loadbalancing.InstanceState
+import com.eucalyptus.loadbalancing.InstanceStates
+import com.eucalyptus.loadbalancing.Instances
+import com.eucalyptus.loadbalancing.RegisterInstancesWithLoadBalancerResponseType
+import com.eucalyptus.loadbalancing.RegisterInstancesWithLoadBalancerResult
+import com.eucalyptus.loadbalancing.RegisterInstancesWithLoadBalancerType
 import com.eucalyptus.util.Callback
 import com.eucalyptus.util.OwnerFullName
 import com.eucalyptus.util.TypeMappers
+import com.eucalyptus.ws.WebServicesException
+import com.google.common.base.Function
+import com.google.common.base.Functions
 import com.google.common.base.Predicate
+import com.google.common.base.Predicates
+import com.google.common.base.Strings
 import com.google.common.base.Supplier
 import com.google.common.base.Suppliers
+import com.google.common.collect.Sets
 import edu.ucsb.eucalyptus.cloud.NotImplementedException
 import edu.ucsb.eucalyptus.msgs.CreateTagsType
+import edu.ucsb.eucalyptus.msgs.DescribeInstanceStatusResponseType
+import edu.ucsb.eucalyptus.msgs.DescribeInstanceStatusType
+import edu.ucsb.eucalyptus.msgs.DescribeTagsType
+import edu.ucsb.eucalyptus.msgs.InstanceStatusItemType
+import edu.ucsb.eucalyptus.msgs.InstanceStatusSetType
+import edu.ucsb.eucalyptus.msgs.InstanceStatusType
 import edu.ucsb.eucalyptus.msgs.ReservationInfoType
 import edu.ucsb.eucalyptus.msgs.RunInstancesResponseType
 import edu.ucsb.eucalyptus.msgs.RunInstancesType
@@ -34,34 +86,12 @@ import edu.ucsb.eucalyptus.msgs.TerminateInstancesType
 import static org.junit.Assert.*
 import org.junit.BeforeClass
 import org.junit.Test
-
-import java.security.cert.X509Certificate
-import com.eucalyptus.autoscaling.tags.Tag
-import com.eucalyptus.autoscaling.instances.ConfigurationState
-import com.eucalyptus.loadbalancing.DeregisterInstancesFromLoadBalancerType
-import com.eucalyptus.loadbalancing.RegisterInstancesWithLoadBalancerType
-import com.eucalyptus.loadbalancing.RegisterInstancesWithLoadBalancerResponseType
-import com.eucalyptus.loadbalancing.RegisterInstancesWithLoadBalancerResult
-import com.eucalyptus.loadbalancing.Instances
-import com.eucalyptus.loadbalancing.DeregisterInstancesFromLoadBalancerResponseType
-import com.eucalyptus.loadbalancing.DeregisterInstancesFromLoadBalancerResult
-import com.eucalyptus.autoscaling.groups.HealthCheckType
-import edu.ucsb.eucalyptus.msgs.DescribeInstanceStatusType
-import edu.ucsb.eucalyptus.msgs.DescribeInstanceStatusResponseType
-import edu.ucsb.eucalyptus.msgs.InstanceStatusSetType
-import edu.ucsb.eucalyptus.msgs.InstanceStatusItemType
-import edu.ucsb.eucalyptus.msgs.InstanceStatusType
-import edu.ucsb.eucalyptus.msgs.DescribeTagsType
-import com.eucalyptus.loadbalancing.DescribeInstanceHealthType
-import com.eucalyptus.loadbalancing.DescribeInstanceHealthResponseType
-import com.eucalyptus.loadbalancing.DescribeInstanceHealthResult
-import com.eucalyptus.loadbalancing.InstanceStates
-import com.eucalyptus.loadbalancing.InstanceState
-import com.google.common.collect.Sets
-import com.google.common.base.Strings
 import java.lang.reflect.Method
-import com.eucalyptus.autoscaling.metadata.AbstractOwnedPersistent
-import com.eucalyptus.autoscaling.groups.TerminationPolicyType
+import java.security.cert.X509Certificate
+import java.util.concurrent.TimeUnit
+import javax.annotation.Nonnull
+import javax.annotation.Nullable
+import edu.ucsb.eucalyptus.msgs.InstanceStateType
 
 /**
  * 
@@ -72,7 +102,16 @@ class ActivityManagerTest {
   @BeforeClass
   static void before() {
     TypeMappers.TypeMapperDiscovery discovery = new TypeMappers.TypeMapperDiscovery()
+    discovery.processClass( AutoScalingGroups.AutoScalingGroupCoreViewTransform.class )
+    discovery.processClass( AutoScalingGroups.AutoScalingGroupMinimumViewTransform.class )
+    discovery.processClass( AutoScalingGroups.AutoScalingGroupMetricsViewTransform.class )
+    discovery.processClass( AutoScalingGroups.AutoScalingGroupScalingViewTransform.class )
+    discovery.processClass( AutoScalingInstances.AutoScalingInstanceCoreViewTransform.class )
+    discovery.processClass( AutoScalingInstances.AutoScalingInstanceGroupViewTransform.class )
+    discovery.processClass( LaunchConfigurations.LaunchConfigurationCoreViewTransform.class )
+    discovery.processClass( LaunchConfigurations.LaunchConfigurationMinimumViewTransform.class )
     discovery.processClass( LaunchConfigurations.LaunchConfigurationToRunInstances.class )
+    discovery.processClass( ScalingActivities.ScalingActivityTransform.class )
   }
   
   @Test
@@ -118,9 +157,9 @@ class ActivityManagerTest {
     assertEquals( "Instances 2 id", "i-00000002", invoke( String.class, instances.get(1), "getInstanceId" ) )
     assertEquals( "Instances 2 az", "Zone1", invoke( String.class, instances.get(1), "getAvailabilityZone" ) )
     assertEquals( "Scaling activity count", 2, scalingActivities.size() )
-    assertEquals( "Scaling activity 1 status", ActivityStatusCode.Successful, invoke( ActivityStatusCode.class, scalingActivities.get(0), "getActivityStatusCode" ) )
+    assertEquals( "Scaling activity 1 status", ActivityStatusCode.Successful, invoke( ActivityStatusCode.class, scalingActivities.get(0), "getStatusCode" ) )
     assertNotNull( "Scaling activity 1 has end date", invoke( Date.class, scalingActivities.get(0), "getEndTime" ) )
-    assertEquals( "Scaling activity 2 status", ActivityStatusCode.Successful, invoke( ActivityStatusCode.class, scalingActivities.get(1), "getActivityStatusCode" ) )
+    assertEquals( "Scaling activity 2 status", ActivityStatusCode.Successful, invoke( ActivityStatusCode.class, scalingActivities.get(1), "getStatusCode" ) )
     assertNotNull( "Scaling activity 2 has end date", invoke( Date.class, scalingActivities.get(1), "getEndTime" ) )
   }
 
@@ -201,9 +240,9 @@ class ActivityManagerTest {
     assertEquals( "Instances 2 az", "Zone1", invoke( String.class, instances.get(1), "getAvailabilityZone" ) )
     assertEquals( "Instances 2 config state", ConfigurationState.Registered, invoke( ConfigurationState.class, instances.get(1), "getConfigurationState" ) )
     assertEquals( "Scaling activity count", 2, scalingActivities.size() )
-    assertEquals( "Scaling activity 1 status", ActivityStatusCode.Successful, invoke( ActivityStatusCode.class, scalingActivities.get(0), "getActivityStatusCode" ) )
+    assertEquals( "Scaling activity 1 status", ActivityStatusCode.Successful, invoke( ActivityStatusCode.class, scalingActivities.get(0), "getStatusCode" ) )
     assertNotNull( "Scaling activity 1 has end date", invoke( Date.class, scalingActivities.get(0), "getEndTime" ) )
-    assertEquals( "Scaling activity 2 status", ActivityStatusCode.Successful, invoke( ActivityStatusCode.class, scalingActivities.get(1), "getActivityStatusCode" ) )
+    assertEquals( "Scaling activity 2 status", ActivityStatusCode.Successful, invoke( ActivityStatusCode.class, scalingActivities.get(1), "getStatusCode" ) )
     assertNotNull( "Scaling activity 2 has end date", invoke( Date.class, scalingActivities.get(1), "getEndTime" ) )
   }
 
@@ -509,9 +548,9 @@ class ActivityManagerTest {
     assertFalse( "Group scaling required", invoke( Boolean.class, group, "getScalingRequired") )
     assertEquals( "Instance count", 0, instances.size() )
     assertEquals( "Scaling activity count", 2, scalingActivities.size() )
-    assertEquals( "Scaling activity 1 status", ActivityStatusCode.Successful, invoke( ActivityStatusCode.class, scalingActivities.get(0), "getActivityStatusCode" ) )
+    assertEquals( "Scaling activity 1 status", ActivityStatusCode.Successful, invoke( ActivityStatusCode.class, scalingActivities.get(0), "getStatusCode" ) )
     assertNotNull( "Scaling activity 1 has end date", invoke( Date.class, scalingActivities.get(0), "getEndTime" ) )
-    assertEquals( "Scaling activity 2 status", ActivityStatusCode.Successful, invoke( ActivityStatusCode.class, scalingActivities.get(1), "getActivityStatusCode" ) )
+    assertEquals( "Scaling activity 2 status", ActivityStatusCode.Successful, invoke( ActivityStatusCode.class, scalingActivities.get(1), "getStatusCode" ) )
     assertNotNull( "Scaling activity 2 has end date", invoke( Date.class, scalingActivities.get(1), "getEndTime" ) )
   }
 
@@ -582,13 +621,13 @@ class ActivityManagerTest {
     assertFalse( "Group scaling required", invoke( Boolean.class, group, "getScalingRequired") )
     assertEquals( "Instance count", 0, instances.size() )
     assertEquals( "Scaling activity count", 4, scalingActivities.size() )
-    assertEquals( "Scaling activity 1 status", ActivityStatusCode.Successful, invoke( ActivityStatusCode.class, scalingActivities.get(0), "getActivityStatusCode" ) )
+    assertEquals( "Scaling activity 1 status", ActivityStatusCode.Successful, invoke( ActivityStatusCode.class, scalingActivities.get(0), "getStatusCode" ) )
     assertNotNull( "Scaling activity 1 has end date", invoke( Date.class, scalingActivities.get(0), "getEndTime" ) )
-    assertEquals( "Scaling activity 2 status", ActivityStatusCode.Successful, invoke( ActivityStatusCode.class, scalingActivities.get(1), "getActivityStatusCode" ) )
+    assertEquals( "Scaling activity 2 status", ActivityStatusCode.Successful, invoke( ActivityStatusCode.class, scalingActivities.get(1), "getStatusCode" ) )
     assertNotNull( "Scaling activity 2 has end date", invoke( Date.class, scalingActivities.get(1), "getEndTime" ) )
-    assertEquals( "Scaling activity 3 status", ActivityStatusCode.Successful, invoke( ActivityStatusCode.class, scalingActivities.get(2), "getActivityStatusCode" ) )
+    assertEquals( "Scaling activity 3 status", ActivityStatusCode.Successful, invoke( ActivityStatusCode.class, scalingActivities.get(2), "getStatusCode" ) )
     assertNotNull( "Scaling activity 3 has end date", invoke( Date.class, scalingActivities.get(2), "getEndTime" ) )
-    assertEquals( "Scaling activity 4 status", ActivityStatusCode.Successful, invoke( ActivityStatusCode.class, scalingActivities.get(3), "getActivityStatusCode" ) )
+    assertEquals( "Scaling activity 4 status", ActivityStatusCode.Successful, invoke( ActivityStatusCode.class, scalingActivities.get(3), "getStatusCode" ) )
     assertNotNull( "Scaling activity 4 has end date", invoke( Date.class, scalingActivities.get(3), "getEndTime" ) )
   }
 
@@ -648,7 +687,7 @@ class ActivityManagerTest {
     assertEquals( "Instances 8 az", "Zone4", invoke( String.class, instances.get(7), "getAvailabilityZone" ) )
     assertEquals( "Scaling activity count", 8, scalingActivities.size() )
     for ( int i=0; i<8; i++ ) {
-      assertEquals( "Scaling activity "+(i+1)+" status", ActivityStatusCode.Successful, invoke( ActivityStatusCode.class, scalingActivities.get(i), "getActivityStatusCode" ) )
+      assertEquals( "Scaling activity "+(i+1)+" status", ActivityStatusCode.Successful, invoke( ActivityStatusCode.class, scalingActivities.get(i), "getStatusCode" ) )
       assertNotNull( "Scaling activity "+(i+1)+" has end date", invoke( Date.class, scalingActivities.get(i), "getEndTime" ) )
     }
   }
@@ -705,7 +744,7 @@ class ActivityManagerTest {
     assertEquals( "Instances 6 az", "Zone4", invoke( String.class, instances.get(5), "getAvailabilityZone" ) )
     assertEquals( "Scaling activity count", 6, scalingActivities.size() )
     for ( int i=0; i<6; i++ ) {
-      assertEquals( "Scaling activity "+(i+1)+" status", ActivityStatusCode.Successful, invoke( ActivityStatusCode.class, scalingActivities.get(i), "getActivityStatusCode" ) )
+      assertEquals( "Scaling activity "+(i+1)+" status", ActivityStatusCode.Successful, invoke( ActivityStatusCode.class, scalingActivities.get(i), "getStatusCode" ) )
       assertNotNull( "Scaling activity "+(i+1)+" has end date", invoke( Date.class, scalingActivities.get(i), "getEndTime" ) )
     }
   }
@@ -743,7 +782,7 @@ class ActivityManagerTest {
         instance( 104, group, "Zone2" ),
     ]
     List<ScalingActivity> scalingActivities = []
-    List<String> failedZones = [ "Zone1" ];
+    List<String> failedZones = [ "Zone1" ]
     ActivityManager manager = activityManager( group, scalingActivities, instances, true, [], [], failedZones )
 
     assertEquals( "Group capacity", 4, invoke( Integer.class, group, "getCapacity") )
@@ -766,11 +805,11 @@ class ActivityManagerTest {
     assertEquals( "Instances 4 az", "Zone2", invoke( String.class, instances.get(3), "getAvailabilityZone" ) )
     assertEquals( "Scaling activity count", 4, scalingActivities.size() )
     for ( int i=0; i<4; i++ ) {
-      assertEquals( "Scaling activity "+(i+1)+" status", ActivityStatusCode.Successful, invoke( ActivityStatusCode.class, scalingActivities.get(i), "getActivityStatusCode" ) )
+      assertEquals( "Scaling activity "+(i+1)+" status", ActivityStatusCode.Successful, invoke( ActivityStatusCode.class, scalingActivities.get(i), "getStatusCode" ) )
       assertNotNull( "Scaling activity "+(i+1)+" has end date", invoke( Date.class, scalingActivities.get(i), "getEndTime" ) )
     }
 
-    failedZones.clear();
+    failedZones.clear()
     failedZones.add( "Zone2" )
 
     // Should fail over to Zone1
@@ -788,11 +827,11 @@ class ActivityManagerTest {
     assertEquals( "Instances 4 az", "Zone1", invoke( String.class, instances.get(3), "getAvailabilityZone" ) )
     assertEquals( "Scaling activity count", 12, scalingActivities.size() )
     for ( int i=0; i<12; i++ ) {
-      assertEquals( "Scaling activity "+(i+1)+" status", ActivityStatusCode.Successful, invoke( ActivityStatusCode.class, scalingActivities.get(i), "getActivityStatusCode" ) )
+      assertEquals( "Scaling activity "+(i+1)+" status", ActivityStatusCode.Successful, invoke( ActivityStatusCode.class, scalingActivities.get(i), "getStatusCode" ) )
       assertNotNull( "Scaling activity "+(i+1)+" has end date", invoke( Date.class, scalingActivities.get(i), "getEndTime" ) )
     }
 
-    failedZones.clear();
+    failedZones.clear()
 
     // Should use both Zone1 and Zone2
     doScaling( scalingActivities, manager )
@@ -809,7 +848,7 @@ class ActivityManagerTest {
     assertEquals( "Instances 4 az", "Zone2", invoke( String.class, instances.get(3), "getAvailabilityZone" ) )
     assertEquals( "Scaling activity count", 16, scalingActivities.size() )
     for ( int i=0; i<16; i++ ) {
-      assertEquals( "Scaling activity "+(i+1)+" status", ActivityStatusCode.Successful, invoke( ActivityStatusCode.class, scalingActivities.get(i), "getActivityStatusCode" ) )
+      assertEquals( "Scaling activity "+(i+1)+" status", ActivityStatusCode.Successful, invoke( ActivityStatusCode.class, scalingActivities.get(i), "getStatusCode" ) )
       assertNotNull( "Scaling activity "+(i+1)+" has end date", invoke( Date.class, scalingActivities.get(i), "getEndTime" ) )
     }
   }
@@ -935,9 +974,9 @@ class ActivityManagerTest {
     assertEquals( "Instances 3 id", "i-00000004", invoke( String.class, instances.get(2), "getInstanceId" ) )
     assertEquals( "Instances 3 az", "Zone2", invoke( String.class, instances.get(2), "getAvailabilityZone" ) )
     assertEquals( "Scaling activity count", 2, scalingActivities.size() )
-    assertEquals( "Scaling activity 1 status", ActivityStatusCode.Successful, invoke( ActivityStatusCode.class, scalingActivities.get(0), "getActivityStatusCode" ) )
+    assertEquals( "Scaling activity 1 status", ActivityStatusCode.Successful, invoke( ActivityStatusCode.class, scalingActivities.get(0), "getStatusCode" ) )
     assertNotNull( "Scaling activity 1 has end date", invoke( Date.class, scalingActivities.get(0), "getEndTime" ) )
-    assertEquals( "Scaling activity 2 status", ActivityStatusCode.Successful, invoke( ActivityStatusCode.class, scalingActivities.get(1), "getActivityStatusCode" ) )
+    assertEquals( "Scaling activity 2 status", ActivityStatusCode.Successful, invoke( ActivityStatusCode.class, scalingActivities.get(1), "getStatusCode" ) )
     assertNotNull( "Scaling activity 2 has end date", invoke( Date.class, scalingActivities.get(1), "getEndTime" ) )    
   }
 
@@ -989,10 +1028,59 @@ class ActivityManagerTest {
     assertEquals( "Instances 2 az", "Zone1", invoke( String.class, instances.get(1), "getAvailabilityZone" ) )
     assertEquals( "Scaling activity count", 3, scalingActivities.size() )
     for ( int i=0; i<3; i++ ) {
-      assertEquals( "Scaling activity "+(i+1)+" status", ActivityStatusCode.Successful, invoke( ActivityStatusCode.class, scalingActivities.get(i), "getActivityStatusCode" ) )
+      assertEquals( "Scaling activity "+(i+1)+" status", ActivityStatusCode.Successful, invoke( ActivityStatusCode.class, scalingActivities.get(i), "getStatusCode" ) )
       assertNotNull( "Scaling activity "+(i+1)+" has end date", invoke( Date.class, scalingActivities.get(i), "getEndTime" ) )
     }
-  }  
+  }
+
+  @Test
+  void testAdministrativeSuspension() {
+    Accounts.setAccountProvider( accountProvider() )
+
+    AutoScalingGroup group = new AutoScalingGroup(
+        id: "1",
+        naturalId: "1",
+        availabilityZones: [ "Zone1" ],
+        displayName: "Group1",
+        launchConfiguration: new LaunchConfiguration(
+            id: "1",
+            naturalId: "1",
+            ownerAccountNumber: "000000000000",
+            displayName: "Config1",
+            imageId: "emi-00000000",
+            instanceType: "m1.small",
+        ),
+        scalingRequired: true,
+        desiredCapacity: 1,
+        capacity:  0,
+        minSize: 0,
+        maxSize: 3,
+        creationTimestamp: timestamp( "2000-01-01T00:00:00.000" ),
+        lastUpdateTimestamp: timestamp( "2000-01-01T00:00:00.000" ),
+        ownerAccountNumber: "000000000000",
+        version: 1,
+    )
+    List<AutoScalingInstance> instances = []
+    List<ScalingActivity> scalingActivities = []
+    ActivityManager manager = activityManager( group, scalingActivities, instances, false )
+
+    assertEquals( "Group capacity", 0, invoke( Integer.class, group, "getCapacity") )
+    assertEquals( "Instance count", 0, instances.size() )
+    assertEquals( "Scaling activity count", 0, scalingActivities.size() )
+
+    doScaling( scalingActivities, manager )
+
+    assertEquals( "Group capacity", 0, invoke( Integer.class, group, "getCapacity") )
+    assertTrue( "Group scaling required", invoke( Boolean.class, group, "getScalingRequired") )
+    assertEquals( "Group suspended processes size", 1, invoke( Set.class, group, "getSuspendedProcesses").size() )
+    assertEquals( "Group suspended processes", ScalingProcessType.Launch, ((SuspendedProcess)invoke( Set.class, group, "getSuspendedProcesses").iterator().next()).getScalingProcessType() )
+    assertEquals( "Instance count", 0, instances.size() )
+    assertEquals( "Scaling activity count", 15, scalingActivities.size() )
+    for ( int i=0; i<15; i++ ) {
+      assertEquals( "Scaling activity "+(i+1)+" status", ActivityStatusCode.Failed, invoke( ActivityStatusCode.class, scalingActivities.get(i), "getStatusCode" ) )
+      assertNotNull( "Scaling activity "+(i+1)+" has end date", invoke( Date.class, scalingActivities.get(i), "getEndTime" ) )
+    }
+  }
 
   Date timestamp( String text ) {
     Timestamps.parseIso8601Timestamp( text )
@@ -1020,7 +1108,7 @@ class ActivityManagerTest {
         configurationState: configurationState,
         creationTimestamp: new Date(),
         lastUpdateTimestamp: new Date()
-    );
+    )
   }
 
   def <T> T invoke( Class<T> resultClass, Object object, String method, Class[] parameterClasses, Object[] parameters = [] ) {
@@ -1032,10 +1120,12 @@ class ActivityManagerTest {
 
   private void doScaling( List<ScalingActivity> scalingActivities,
                           ActivityManager manager) {
-    int activityCount = -1;
-    while ( activityCount != scalingActivities.size() ) {
+    int count = 0
+    int activityCount = -1
+    while ( activityCount != scalingActivities.size() && count < 100 ) {
       activityCount = scalingActivities.size()
       manager.doScaling()
+      count++
     }
   }
 
@@ -1053,8 +1143,29 @@ class ActivityManagerTest {
         zoneAvailabilityMarkers(),
         zoneMonitor(unavailableZones)
     ) {
+      long timeOffset = 0
       int instanceCount = 0
-      BackoffRunner runner = new BackoffRunner()
+      BackoffRunner runner = new BackoffRunner() {
+        @Override
+        protected long timestamp() {
+          testTimestamp()
+        }
+      }
+
+      @Override
+      protected long timestamp() {
+        testTimestamp()
+      }
+
+      long testTimestamp() {
+        System.currentTimeMillis() + timeOffset
+      }
+
+      @Override
+      void doScaling() {
+        super.doScaling()
+        timeOffset += TimeUnit.MINUTES.toMillis( 15 ) // ff time a bit
+      }
 
       @Override
       void runTask(ActivityManager.ScalingProcessTask task) {
@@ -1070,22 +1181,25 @@ class ActivityManagerTest {
       EucalyptusClient createEucalyptusClientForUser(String userId) {
         new TestClients.TestEucalyptusClient( userId, { request ->
           if (request instanceof RunInstancesType) {
-                new RunInstancesResponseType(
-                    rsvInfo: new ReservationInfoType(
-                        instancesSet: [
-                            new RunningInstancesItemType(
-                                instanceId: "i-0000000" + (++instanceCount),
-                                placement: ((RunInstancesType) request).availabilityZone,
-                            )
-                        ]
-                    )
-                )
+            if ( "emi-00000000".equals( request.imageId ) )
+                throw new WebServicesException( "Test error triggered by using emi-00000000" )
+            new RunInstancesResponseType(
+                  rsvInfo: new ReservationInfoType(
+                      instancesSet: [
+                          new RunningInstancesItemType(
+                              instanceId: "i-0000000" + (++instanceCount),
+                              placement: ((RunInstancesType) request).availabilityZone,
+                          )
+                      ]
+                  )
+              )
           } else if ( request instanceof DescribeInstanceStatusType ) {
             new DescribeInstanceStatusResponseType(
               instanceStatusSet: new InstanceStatusSetType(
                   item: request.instancesSet.collect { instanceId ->
                     new InstanceStatusItemType(
                         instanceId: instanceId,
+                        instanceState: new InstanceStateType( code: 16, name: "running" ),
                         instanceStatus: new InstanceStatusType( status: unhealthyInstanceIds.contains( instanceId ) ? "impaired" : "ok" ),
                         systemStatus: new InstanceStatusType( status: "ok" ),
                     )
@@ -1146,7 +1260,7 @@ class ActivityManagerTest {
       }
 
       @Override
-      List<Tag> getTags(AutoScalingGroup autoScalingGroup) {
+      List<Tag> getTags(AutoScalingMetadata.AutoScalingGroupMetadata autoScalingGroup) {
         []
       }
     }
@@ -1221,6 +1335,11 @@ class ActivityManagerTest {
       }
 
       @Override
+      Role lookupRoleById(final String roleId) {
+        throw new NotImplementedException()
+      }
+
+      @Override
       Certificate lookupCertificate(final X509Certificate cert) {
         throw new NotImplementedException()
       }
@@ -1240,40 +1359,53 @@ class ActivityManagerTest {
   ScalingActivities autoScalingActivitiesStore( List<ScalingActivity> activities = [] ) {
     new ScalingActivities() {
       @Override
-      List<ScalingActivity> list(OwnerFullName ownerFullName) {
-        ownerFullName == null ?
-        activities :
-        activities.findAll { activity -> invoke( String.class, activity, "getOwnerAccountNumber").equals( ownerFullName.accountNumber ) }
+      <T> List<T> list(@Nullable OwnerFullName ownerFullName,
+                       @Nonnull Predicate<? super ScalingActivity> filter,
+                       @Nonnull Function<? super ScalingActivity, T> transform ) {
+        activities
+            .findAll { activity -> ( ownerFullName==null || invoke( String.class, activity, "getOwnerAccountNumber").equals( ownerFullName.accountNumber ) ) && filter.apply( activity ) }
+            .collect { activity -> transform.apply( activity ) }
       }
 
       @Override
-      List<ScalingActivity> list(OwnerFullName ownerFullName, 
-                                 Predicate<? super ScalingActivity> filter) {
-        list( ownerFullName ).findAll { activity -> filter.apply( activity ) } as List
+      <T> List<T> list(@Nullable OwnerFullName ownerFullName,
+                       @Nullable AutoScalingMetadata.AutoScalingGroupMetadata group,
+                       @Nonnull  Collection<String> activityIds,
+                       @Nonnull  Predicate<? super ScalingActivity> filter,
+                       @Nonnull  Function<? super ScalingActivity, T> transform) {
+        activities
+            .findAll{ activity ->
+              (activityIds.isEmpty() || activityIds.contains( invoke( String.class, activity, "getActivityId") ) ) &&
+              (ownerFullName==null || invoke( String.class, activity, "getOwnerAccountNumber").equals( ownerFullName.accountNumber ))
+            }
+            .collect { activity -> transform.apply( activity ) }
       }
 
       @Override
-      ScalingActivity lookup(OwnerFullName ownerFullName, 
-                             String activityId) {
-        ScalingActivity activity = activities.find{ activity -> invoke( String.class, activity, "getActivityId").equals( activityId ) }
-        if ( activity == null ) {
-          throw new AutoScalingMetadataNotFoundException("Scaling activity not found: " + activityId)
-        }
-        activity
+      <T> List<T> listByActivityStatusCode(@Nullable OwnerFullName ownerFullName,
+                                           @Nonnull  Collection<ActivityStatusCode> statusCodes,
+                                           @Nonnull  Function<? super ScalingActivity, T> transform) {
+        []
       }
 
       @Override
-      ScalingActivity update(OwnerFullName ownerFullName, 
-                             String activityId, 
-                             Callback<ScalingActivity> activityUpdateCallback) {
-        ScalingActivity activity = lookup( ownerFullName, activityId )
+      void update(OwnerFullName ownerFullName,
+                  String activityId,
+                  Callback<ScalingActivity> activityUpdateCallback) {
+        ScalingActivity activity = activities.find{ ScalingActivity activity -> activityId.equals( invoke( String.class, activity, "getDisplayName") ) }
+        if ( !activity ) throw new AutoScalingMetadataNotFoundException("Activity not found: " + activityId)
         activityUpdateCallback.fire( activity )
-        activity
       }
 
       @Override
-      boolean delete(ScalingActivity scalingActivity) {
+      boolean delete(AutoScalingMetadata.ScalingActivityMetadata scalingActivity) {
         activities.remove(scalingActivity)
+      }
+
+      @Override
+      int deleteByCreatedAge(@Nullable OwnerFullName ownerFullName,
+                             long createdBefore) {
+        0
       }
 
       @Override
@@ -1291,34 +1423,38 @@ class ActivityManagerTest {
   AutoScalingGroups autoScalingGroupStore( List<AutoScalingGroup> groups = [], boolean healthChecks = false ) {
     new AutoScalingGroups() {
       @Override
-      List<AutoScalingGroup> list(OwnerFullName ownerFullName) {
-        groups.findAll { group -> invoke( String.class, group, "getOwnerAccountNumber").equals( ownerFullName.accountNumber ) }
+      <T> List<T> list(@Nullable OwnerFullName ownerFullName,
+                       @Nonnull Predicate<? super AutoScalingGroup> filter,
+                       @Nonnull Function<? super AutoScalingGroup, T> transform ) {
+        groups
+            .findAll { group -> ( ownerFullName==null || invoke( String.class, group, "getOwnerAccountNumber").equals( ownerFullName.accountNumber ) ) && filter.apply( group ) }
+            .collect { group -> transform.apply( group ) }
       }
 
       @Override
-      List<AutoScalingGroup> list(OwnerFullName ownerFullName, Predicate<? super AutoScalingGroup> filter) {
-        list( ownerFullName ).findAll { group -> filter.apply( group ) } as List
+      <T> List<T> listRequiringScaling(@Nonnull Function<? super AutoScalingGroup, T> transform) {
+        groups
+            .findAll { group -> Boolean.TRUE.equals( invoke( Boolean.class, group, "getScalingRequired") ) }
+            .collect { group -> transform.apply( group ) }
       }
 
       @Override
-      List<AutoScalingGroup> listRequiringScaling() {
-        groups.findAll { group -> Boolean.TRUE.equals( invoke( Boolean.class, group, "getScalingRequired") ) }
-      }
-
-      @Override
-      List<AutoScalingGroup> listRequiringInstanceReplacement() {
+      <T> List<T> listRequiringInstanceReplacement(@Nonnull Function<? super AutoScalingGroup, T> transform) {
         []
       }
 
       @Override
-      List<AutoScalingGroup> listRequiringMonitoring(long interval) {
+      <T> List<T> listRequiringMonitoring(long interval,
+                                          @Nonnull Function<? super AutoScalingGroup, T> transform) {
         healthChecks ?
-          groups :
+          groups.collect { group -> transform.apply( group ) } :
           []
       }
 
       @Override
-      AutoScalingGroup lookup(OwnerFullName ownerFullName, String autoScalingGroupName) {
+      <T> T lookup(OwnerFullName ownerFullName,
+                   String autoScalingGroupName,
+                   Function<? super AutoScalingGroup, T> transform) {
         AutoScalingGroup group = groups.find { AutoScalingGroup group ->
           invoke( String.class, group, "getArn" ).equals( autoScalingGroupName ) ||
               ( invoke( String.class, group, "getDisplayName" ).equals( autoScalingGroupName ) && // work around some groovy metaclass issue
@@ -1327,16 +1463,15 @@ class ActivityManagerTest {
         if ( group == null ) {
           throw new AutoScalingMetadataNotFoundException("Group not found: " + autoScalingGroupName)
         }
-        group
+        transform.apply( group )
       }
 
       @Override
-      AutoScalingGroup update(OwnerFullName ownerFullName,
-                              String autoScalingGroupName,
-                              Callback<AutoScalingGroup> groupUpdateCallback) {
-        AutoScalingGroup group = lookup( ownerFullName, autoScalingGroupName )
+      void update(OwnerFullName ownerFullName,
+                  String autoScalingGroupName,
+                  Callback<AutoScalingGroup> groupUpdateCallback) {
+        AutoScalingGroup group = lookup( ownerFullName, autoScalingGroupName, Functions.<AutoScalingGroup>identity() )
         groupUpdateCallback.fire( group )
-        group
       }
 
       @Override
@@ -1349,7 +1484,7 @@ class ActivityManagerTest {
       }
 
       @Override
-      boolean delete(AutoScalingGroup autoScalingGroup) {
+      boolean delete(AutoScalingMetadata.AutoScalingGroupMetadata autoScalingGroup) {
         groups.remove( autoScalingGroup )
       }
 
@@ -1365,65 +1500,74 @@ class ActivityManagerTest {
 
   AutoScalingInstances autoScalingInstanceStore( List<AutoScalingInstance> instances = [] ) {
     new AutoScalingInstances(){
-      long timestamp = System.currentTimeMillis() - 1000;
+      long timestamp = System.currentTimeMillis() - 1000
 
       @Override
-      List<AutoScalingInstance> list(OwnerFullName ownerFullName) {
-        ownerFullName == null ?
-          instances :
-          instances.findAll { instance -> invoke( String.class, instance, "getOwnerAccountNumber" ).equals( ownerFullName.accountNumber ) }
+      <T> List<T> list(@Nullable OwnerFullName ownerFullName,
+                       @Nonnull Predicate<? super AutoScalingInstance> filter,
+                       @Nonnull Function<? super AutoScalingInstance, T> transform ) {
+        instances
+            .findAll { instance -> ( ownerFullName==null || invoke( String.class, instance, "getOwnerAccountNumber").equals( ownerFullName.accountNumber ) ) && filter.apply( instance ) }
+            .collect { instance -> transform.apply( instance ) }
       }
 
       @Override
-      List<AutoScalingInstance> list(OwnerFullName ownerFullName, Predicate<? super AutoScalingInstance> filter) {
-        list( ownerFullName ).findAll { instance -> filter.apply( instance ) } as List
-      }
-
-      @Override
-      List<AutoScalingInstance> listByGroup(OwnerFullName ownerFullName, String groupName) {
+      <T> List<T> listByGroup(OwnerFullName ownerFullName,
+                              String groupName,
+                              Function<? super AutoScalingInstance, T> transform) {
         list( ownerFullName, { AutoScalingInstance instance -> 
           groupName.equals( invoke( String.class, instance, "getAutoScalingGroupName" ) ) 
-        } as Predicate )
+        } as Predicate, transform )
       }
 
       @Override
-      List<AutoScalingInstance> listByGroup(AutoScalingGroup group) {
+      <T> List<T> listByGroup(AutoScalingMetadata.AutoScalingGroupMetadata group,
+                              Predicate<? super AutoScalingInstance> filter,
+                              Function<? super AutoScalingInstance, T> transform) {
         group == null ?
-          list( null ) :
+          list( null, filter, transform ) :
           listByGroup(
             invoke( OwnerFullName.class, group, "getOwner" ),
-            invoke( String.class, group, "getAutoScalingGroupName" ) )
+            invoke( String.class, group, "getAutoScalingGroupName" ),
+            Functions.identity() )
+              .findAll{ AutoScalingInstance instance -> filter.apply( instance ) }
+              .collect{ AutoScalingInstance instance -> transform.apply( instance ) }
       }
 
       @Override
-      List<AutoScalingInstance> listByState(LifecycleState lifecycleState,
-                                            ConfigurationState configurationState) {
-        instances.findAll { instance -> lifecycleState.apply( instance ) && configurationState.apply( instance ) }
+      <T> List<T> listByState(LifecycleState lifecycleState,
+                              ConfigurationState configurationState,
+                              Function<? super AutoScalingInstance, T> transform) {
+        instances
+            .findAll { instance -> lifecycleState.apply( instance ) && configurationState.apply( instance ) }
+            .collect { instance -> transform.apply( instance ) }
       }
 
       @Override
-      List<AutoScalingInstance> listUnhealthyByGroup( AutoScalingGroup group ) {
+      <T> List<T> listUnhealthyByGroup(AutoScalingMetadata.AutoScalingGroupMetadata group,
+                                       Function<? super AutoScalingInstance, T> transform) {
         []
       }
 
       @Override
-      AutoScalingInstance lookup(OwnerFullName ownerFullName, String instanceId) {
-        list( ownerFullName ).find { instance ->
+      <T> T lookup(OwnerFullName ownerFullName,
+                   String instanceId,
+                   Function<? super AutoScalingInstance, T> transform) {
+        transform.apply( list( ownerFullName, Predicates.alwaysTrue(), Functions.<AutoScalingInstance>identity() ).find { instance ->
           invoke( String.class, instance, "getInstanceId").equals( instanceId )
-        }
+        } )
       }
 
       @Override
-      AutoScalingInstance update(OwnerFullName ownerFullName,
-                                 String instanceId,
-                                 Callback<AutoScalingInstance> instanceUpdateCallback) {
-        AutoScalingInstance instance = lookup( ownerFullName, instanceId )
+      void update(OwnerFullName ownerFullName,
+                  String instanceId,
+                  Callback<AutoScalingInstance> instanceUpdateCallback) {
+        AutoScalingInstance instance = lookup( ownerFullName, instanceId, Functions.<AutoScalingInstance>identity() )
         instanceUpdateCallback.fire( instance )
-        instance
       }
 
       @Override
-      void markMissingInstancesUnhealthy(AutoScalingGroup group,
+      void markMissingInstancesUnhealthy(AutoScalingMetadata.AutoScalingGroupMetadata group,
                                          Collection<String> instanceIds) {
         instances.each { instance ->
           if (invoke( String.class, group, "getAutoScalingGroupName").equals( invoke( String.class, instance, "getAutoScalingGroupName") ) &&
@@ -1433,13 +1577,19 @@ class ActivityManagerTest {
       }
 
       @Override
+      void markExpiredPendingUnhealthy(AutoScalingMetadata.AutoScalingGroupMetadata group,
+                                       Collection<String> instanceIds,
+                                       long maxAge) {
+      }
+
+      @Override
       Set<String> verifyInstanceIds(String accountNumber,
                                     Collection<String> instanceIds) {
         [] as Set
       }
 
       @Override
-      void transitionState(AutoScalingGroup group,
+      void transitionState(AutoScalingMetadata.AutoScalingGroupMetadata group,
                            LifecycleState from,
                            LifecycleState to,
                            Collection<String> instanceIds) {
@@ -1449,7 +1599,7 @@ class ActivityManagerTest {
       }
 
       @Override
-      void transitionConfigurationState(AutoScalingGroup group,
+      void transitionConfigurationState(AutoScalingMetadata.AutoScalingGroupMetadata group,
                                         ConfigurationState from,
                                         ConfigurationState to,
                                         Collection<String> instanceIds) {
@@ -1459,18 +1609,18 @@ class ActivityManagerTest {
       }
 
       @Override
-      int registrationFailure(AutoScalingGroup group,
+      int registrationFailure(AutoScalingMetadata.AutoScalingGroupMetadata group,
                               Collection<String> instanceIds) {
         0
       }
 
       @Override
-      boolean delete(AutoScalingInstance autoScalingInstance) {
+      boolean delete(AutoScalingMetadata.AutoScalingInstanceMetadata autoScalingInstance) {
         instances.remove( autoScalingInstance )
       }
 
       @Override
-      boolean deleteByGroup(AutoScalingGroup group) {
+      boolean deleteByGroup(AutoScalingMetadata.AutoScalingGroupMetadata group) {
         instances.removeAll( instances.findAll { instance -> group.autoScalingGroupName.equals( instance.autoScalingGroupName ) } )
       }
 

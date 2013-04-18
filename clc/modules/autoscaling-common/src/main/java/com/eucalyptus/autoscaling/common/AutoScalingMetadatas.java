@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * Copyright 2009-2013 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -21,7 +21,6 @@ package com.eucalyptus.autoscaling.common;
 
 import static com.eucalyptus.autoscaling.common.AutoScalingMetadata.AutoScalingMetadataWithResourceName;
 import java.util.Collection;
-import com.eucalyptus.util.CollectionUtils;
 import com.eucalyptus.util.RestrictedTypes;
 import com.google.common.base.Function;
 import com.google.common.base.Predicate;
@@ -30,16 +29,7 @@ import com.google.common.base.Predicates;
 /**
  *
  */
-public class AutoScalingMetadatas {
-  
-  public static <T extends AutoScalingMetadata> Function<T, String> toDisplayName( ) {
-    return new Function<T, String>( ) {
-      @Override
-      public String apply( T metadata ) {
-        return metadata == null ? null : metadata.getDisplayName( );
-      }
-    };
-  }
+public class AutoScalingMetadatas extends RestrictedTypes {
   
   public static <T extends AutoScalingMetadataWithResourceName> Function<T, String> toArn( ) {
     return new Function<T, String>( ) {
@@ -50,33 +40,10 @@ public class AutoScalingMetadatas {
     };
   }
   
-  public static <T extends AutoScalingMetadata> Predicate<T> filterById( final Collection<String> requestedIdentifiers ) {
-    return filterByProperty( requestedIdentifiers, toDisplayName() );
-  }
-
   public static <T extends AutoScalingMetadataWithResourceName> Predicate<T> filterByArn( final Collection<String> requestedArns ) {
     return filterByProperty( requestedArns, toArn() );
   }
 
-  public static <T extends AutoScalingMetadata> Predicate<T> filterByProperty( final String requestedValue,
-                                                                               final Function<? super T,String> extractor ) {
-    return filterByProperty( CollectionUtils.<String>listUnit().apply( requestedValue ), extractor );
-  }
-
-  public static <T extends AutoScalingMetadata> Predicate<T> filterByProperty( final Collection<String> requestedValues,
-                                                                               final Function<? super T,String> extractor ) {
-    return new Predicate<T>( ) {
-      @Override
-      public boolean apply( T input ) {
-        return requestedValues == null || requestedValues.isEmpty( ) || requestedValues.contains( extractor.apply( input ) );
-      }
-    };
-  }
-
-  public static <T extends AutoScalingMetadata> Predicate<T> filterPrivilegesById( final Collection<String> requestedIdentifiers ) {
-    return Predicates.and( filterById( requestedIdentifiers ), filterPrivileged() );
-  }
-  
   public static <T extends AutoScalingMetadataWithResourceName> Predicate<T> filterPrivilegesByIdOrArn( final Collection<String> requestedItems ) {
     final Collection<String> names = AutoScalingResourceName.simpleNames( requestedItems );
     final Collection<String> arns =  AutoScalingResourceName.arns( requestedItems );
@@ -89,10 +56,6 @@ public class AutoScalingMetadatas {
               AutoScalingMetadatas.<T>filterByArn( arns ) :
               AutoScalingMetadatas.<T>filterById( names ),
         filterPrivileged() );    
-  }
-  
-  public static <T extends AutoScalingMetadata> Predicate<T> filterPrivileged() {
-    return RestrictedTypes.filterPrivileged();
   }
 
 }

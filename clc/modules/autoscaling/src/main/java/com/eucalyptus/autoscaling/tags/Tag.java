@@ -125,10 +125,11 @@ public class Tag<T extends Tag<T>> extends AbstractOwnedPersistent implements Au
     this.propagateAtLaunch = propagateAtLaunch;
   }
 
-  @SuppressWarnings( "unchecked" )
   @Nullable
   public String getResourceId(){
-    return resourceIdFunction.apply( (T) this );
+    return resourceId != null ?
+        resourceId :
+        extractResourceId( );
   }
 
   @Nullable
@@ -149,10 +150,15 @@ public class Tag<T extends Tag<T>> extends AbstractOwnedPersistent implements Au
     this.resourceId = resourceId;
   }
 
+  @SuppressWarnings( "unchecked" )
+  private String extractResourceId() {
+    return resourceIdFunction.apply( (T) this );
+  }
+
   @PrePersist
   @PreUpdate
   private void generatedFieldUpdate( ) {
-    setResourceId( getResourceId() );
+    setResourceId( extractResourceId() );
   }
 }
 

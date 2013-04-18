@@ -1,7 +1,8 @@
 <ivy-module version="2.0">
     <info organisation="com.eucalyptus" module="eucalyptus-cluster-manager"/>
     <dependencies>
-        <dependency org="com.eucalyptus" name="eucalyptus-core" rev="latest.integration"/>
+        <dependency name="eucalyptus-core" rev="latest.integration"/>
+        <dependency name="eucalyptus-tokens-common" rev="latest.integration"/>
     </dependencies>
 </ivy-module>
 

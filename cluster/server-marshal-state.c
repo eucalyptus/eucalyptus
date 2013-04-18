@@ -134,19 +134,6 @@
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |
- |                             EXPORTED PROTOTYPES                            |
- |                                                                            |
-\*----------------------------------------------------------------------------*/
-
-adb_DescribeServicesResponse_t *DescribeServicesMarshal(adb_DescribeServices_t * describeServices, const axutil_env_t * env);
-adb_StartServiceResponse_t *StartServiceMarshal(adb_StartService_t * startService, const axutil_env_t * env);
-adb_StopServiceResponse_t *StopServiceMarshal(adb_StopService_t * stopService, const axutil_env_t * env);
-adb_EnableServiceResponse_t *EnableServiceMarshal(adb_EnableService_t * enableService, const axutil_env_t * env);
-adb_DisableServiceResponse_t *DisableServiceMarshal(adb_DisableService_t * disableService, const axutil_env_t * env);
-adb_ShutdownServiceResponse_t *ShutdownServiceMarshal(adb_ShutdownService_t * shutdownService, const axutil_env_t * env);
-
-/*----------------------------------------------------------------------------*\
- |                                                                            |
  |                              STATIC PROTOTYPES                             |
  |                                                                            |
 \*----------------------------------------------------------------------------*/
@@ -186,9 +173,10 @@ adb_DescribeServicesResponse_t *DescribeServicesMarshal(adb_DescribeServices_t *
     char statusMessage[256];
     ncMetadata ccMeta;
 
-    serviceStatusType *outStatuses = NULL;
     serviceInfoType *serviceIds = NULL;
-    int serviceIdsLen = 0, outStatusesLen = 0, i;
+    int serviceIdsLen = 0;
+    serviceStatusType *outStatuses = NULL;
+    int outStatusesLen = 0;
 
     adbinput = adb_DescribeServices_get_DescribeServices(describeServices, env);
     adbresp = adb_describeServicesResponseType_create(env);
@@ -201,7 +189,7 @@ adb_DescribeServicesResponse_t *DescribeServicesMarshal(adb_DescribeServices_t *
     //  localDev = adb_describeServicesType_get_localDev(adbinput, env);
     serviceIdsLen = adb_describeServicesType_sizeof_serviceIds(adbinput, env);
     serviceIds = EUCA_ZALLOC(serviceIdsLen, sizeof(serviceInfoType));
-    for (i = 0; i < serviceIdsLen; i++) {
+    for (int i = 0; i < serviceIdsLen; i++) {
         copy_service_info_type_from_adb(&(serviceIds[i]), adb_describeServicesType_get_serviceIds_at(adbinput, env, i), env);
     }
 
@@ -214,7 +202,7 @@ adb_DescribeServicesResponse_t *DescribeServicesMarshal(adb_DescribeServices_t *
         snprintf(statusMessage, 255, "ERROR");
     }
 
-    for (i = 0; i < outStatusesLen; i++) {
+    for (int i = 0; i < outStatusesLen; i++) {
         adb_serviceStatusType_t *stt;
         adb_serviceInfoType_t *sit;
 
@@ -278,13 +266,21 @@ adb_StartServiceResponse_t *StartServiceMarshal(adb_StartService_t * startServic
         adb_startServiceResponseType_add_serviceIds(adbresp, env, adb_startServiceType_get_serviceIds_at(adbinput, env, i));
     }
 
+    // pull out serviceIds[] entries, which indicate which services to 'Start'
+    int serviceIdsLen = adb_startServiceType_sizeof_serviceIds(adbinput, env);
+    serviceInfoType *serviceIds = EUCA_ZALLOC(serviceIdsLen, sizeof(serviceInfoType));
+    for (i = 0; i < serviceIdsLen; i++) {
+        copy_service_info_type_from_adb(&(serviceIds[i]), adb_startServiceType_get_serviceIds_at(adbinput, env, i), env);
+    }
+
     status = AXIS2_TRUE;
-    rc = doStartService(&ccMeta);
+    rc = doStartService(&ccMeta, serviceIds, serviceIdsLen);
     if (rc) {
         logprintf("ERROR: doStartService() returned FAIL\n");
         status = AXIS2_FALSE;
         snprintf(statusMessage, 255, "ERROR");
     }
+    EUCA_FREE(serviceIds);
 
     adb_startServiceResponseType_set_return(adbresp, env, status);
     if (status == AXIS2_FALSE) {
@@ -333,13 +329,21 @@ adb_StopServiceResponse_t *StopServiceMarshal(adb_StopService_t * stopService, c
         adb_stopServiceResponseType_add_serviceIds(adbresp, env, adb_stopServiceType_get_serviceIds_at(adbinput, env, i));
     }
 
+    // pull out serviceIds[] entries, which indicate which services to 'Stop'
+    int serviceIdsLen = adb_stopServiceType_sizeof_serviceIds(adbinput, env);
+    serviceInfoType *serviceIds = EUCA_ZALLOC(serviceIdsLen, sizeof(serviceInfoType));
+    for (i = 0; i < serviceIdsLen; i++) {
+        copy_service_info_type_from_adb(&(serviceIds[i]), adb_stopServiceType_get_serviceIds_at(adbinput, env, i), env);
+    }
+
     status = AXIS2_TRUE;
-    rc = doStopService(&ccMeta);
+    rc = doStopService(&ccMeta, serviceIds, serviceIdsLen);
     if (rc) {
         logprintf("ERROR: doStopService() returned FAIL\n");
         status = AXIS2_FALSE;
         snprintf(statusMessage, 255, "ERROR");
     }
+    EUCA_FREE(serviceIds);
 
     adb_stopServiceResponseType_set_return(adbresp, env, status);
     if (status == AXIS2_FALSE) {
@@ -388,13 +392,21 @@ adb_EnableServiceResponse_t *EnableServiceMarshal(adb_EnableService_t * enableSe
         adb_enableServiceResponseType_add_serviceIds(adbresp, env, adb_enableServiceType_get_serviceIds_at(adbinput, env, i));
     }
 
+    // pull out serviceIds[] entries, which indicate which services to 'Disable'
+    int serviceIdsLen = adb_enableServiceType_sizeof_serviceIds(adbinput, env);
+    serviceInfoType *serviceIds = EUCA_ZALLOC(serviceIdsLen, sizeof(serviceInfoType));
+    for (i = 0; i < serviceIdsLen; i++) {
+        copy_service_info_type_from_adb(&(serviceIds[i]), adb_enableServiceType_get_serviceIds_at(adbinput, env, i), env);
+    }
+
     status = AXIS2_TRUE;
-    rc = doEnableService(&ccMeta);
+    rc = doEnableService(&ccMeta, serviceIds, serviceIdsLen);
     if (rc) {
         logprintf("ERROR: doEnableService() returned FAIL\n");
         status = AXIS2_FALSE;
         snprintf(statusMessage, 255, "ERROR");
     }
+    EUCA_FREE(serviceIds);
 
     adb_enableServiceResponseType_set_return(adbresp, env, status);
     if (status == AXIS2_FALSE) {
@@ -443,13 +455,21 @@ adb_DisableServiceResponse_t *DisableServiceMarshal(adb_DisableService_t * disab
         adb_disableServiceResponseType_add_serviceIds(adbresp, env, adb_disableServiceType_get_serviceIds_at(adbinput, env, i));
     }
 
+    // pull out serviceIds[] entries, which indicate which services to 'Disable'
+    int serviceIdsLen = adb_disableServiceType_sizeof_serviceIds(adbinput, env);
+    serviceInfoType *serviceIds = EUCA_ZALLOC(serviceIdsLen, sizeof(serviceInfoType));
+    for (i = 0; i < serviceIdsLen; i++) {
+        copy_service_info_type_from_adb(&(serviceIds[i]), adb_disableServiceType_get_serviceIds_at(adbinput, env, i), env);
+    }
+
     status = AXIS2_TRUE;
-    rc = doDisableService(&ccMeta);
+    rc = doDisableService(&ccMeta, serviceIds, serviceIdsLen);
     if (rc) {
         logprintf("ERROR: doDisableService() returned FAIL\n");
         status = AXIS2_FALSE;
         snprintf(statusMessage, 255, "ERROR");
     }
+    EUCA_FREE(serviceIds);
 
     adb_disableServiceResponseType_set_return(adbresp, env, status);
     if (status == AXIS2_FALSE) {

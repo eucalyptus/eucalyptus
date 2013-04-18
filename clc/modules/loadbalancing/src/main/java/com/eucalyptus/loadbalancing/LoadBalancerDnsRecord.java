@@ -21,6 +21,7 @@ import com.eucalyptus.configurable.ConfigurableField;
 import com.eucalyptus.configurable.ConfigurableFieldType;
 import com.eucalyptus.entities.AbstractPersistent;
 import com.eucalyptus.loadbalancing.activities.LoadBalancerServoInstance;
+import com.eucalyptus.util.Exceptions;
 
 import edu.ucsb.eucalyptus.cloud.entities.SystemConfiguration;
 
@@ -79,7 +80,19 @@ public class LoadBalancerDnsRecord extends AbstractPersistent {
 
 	public static LoadBalancerDnsRecord named(final LoadBalancer lb){
 		final LoadBalancerDnsRecord instance = new LoadBalancerDnsRecord(lb);
-		instance.dnsName = lb.getDisplayName();
+		
+		String dnsPrefix = String.format("%s-%s", lb.getDisplayName(), lb.getOwnerAccountNumber());
+		dnsPrefix = dnsPrefix.replace(".", "_");
+		
+		final int maxPrefixLength = 253 - 
+				String.format(".%s.%s", LOADBALANCER_DNS_SUBDOMAIN, 
+						SystemConfiguration.getSystemConfiguration().getDnsDomain()).length();
+		if(maxPrefixLength < 0 )
+			throw Exceptions.toUndeclared("invalid dns name length");
+		if(dnsPrefix.length() > maxPrefixLength)
+			dnsPrefix = dnsPrefix.substring(0, maxPrefixLength);
+				
+		instance.dnsName = dnsPrefix;
 		instance.dnsZone = LOADBALANCER_DNS_SUBDOMAIN;
 		instance.uniqueName = instance.createUniqueName();
 		return instance;
@@ -95,7 +108,7 @@ public class LoadBalancerDnsRecord extends AbstractPersistent {
 	@Column(name="dns_zone", nullable=false)
 	private String dnsZone = null;
 
-	@Column(name="unique_name", nullable=false)
+	@Column(name="unique_name", nullable=false, unique=true)
 	private String uniqueName = null;
 
     
@@ -137,7 +150,7 @@ public class LoadBalancerDnsRecord extends AbstractPersistent {
     }
 
     protected String createUniqueName( ) {
-    	return String.format("dns-%s-%s", this.loadbalancer.getDisplayName(), this.getDnsName());
+    	return String.format("dns-%s-%s-%s", this.loadbalancer.getOwnerAccountNumber(), this.loadbalancer.getDisplayName(), this.getDnsName());
     }
 		
 	@Override

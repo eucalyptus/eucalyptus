@@ -75,7 +75,7 @@
 \*----------------------------------------------------------------------------*/
 
 #include <stdio.h>
-#include <unistd.h>             /* getopt */
+#include <unistd.h>                    /* getopt */
 
 #include <data.h>
 
@@ -134,7 +134,7 @@
  |                                                                            |
 \*----------------------------------------------------------------------------*/
 
-boolean debug = FALSE;          //!< Enables debug mode if set to TRUE
+boolean debug = FALSE;                 //!< Enables debug mode if set to TRUE
 
 #ifndef NO_COMP
 const char *euca_this_component_name = "nc";    //!< Eucalyptus Component Name
@@ -144,12 +144,6 @@ const char *euca_client_component_name = "user";    //!< The client component na
 /*----------------------------------------------------------------------------*\
  |                                                                            |
  |                              STATIC VARIABLES                              |
- |                                                                            |
-\*----------------------------------------------------------------------------*/
-
-/*----------------------------------------------------------------------------*\
- |                                                                            |
- |                             EXPORTED PROTOTYPES                            |
  |                                                                            |
 \*----------------------------------------------------------------------------*/
 
@@ -220,8 +214,7 @@ void usage(void)
             "\t\t-G [str:str: ] \t- group names to store with instance\n"
             "\t\t-s [stateName] \t- name of state\n"
             "\t\t\t\tUse {enabled|disabled} for modifyNode operation\n"
-            "\t\t\t\tUse {prepare|commit|rollback} for migrateInstances opration\n"
-            "\t\t-M [src:dst:cr]\t- migration request source and destination IPs + credentials\n");
+            "\t\t\t\tUse {prepare|commit|rollback} for migrateInstances opration\n" "\t\t-M [src:dst:cr]\t- migration request source and destination IPs + credentials\n");
 
     exit(1);
 }
@@ -448,7 +441,7 @@ int main(int argc, char **argv)
             timestamp_str = optarg;
             break;
         case 'h':
-            usage();            // will exit
+            usage();                   // will exit
             break;
         case 'B':
             nc_endpoint = "/services/EucalyptusBroker";
@@ -794,10 +787,14 @@ int main(int argc, char **argv)
     /***********************************************************/
     } else if (!strcmp(command, "_convertTimestamp")) {
         CHECK_PARAM(timestamp_str, "timestamp");
+        long long ts_in = atoll(timestamp_str);
 
-        axutil_date_time_t *dt = unixms_to_datetime(stub->env, 0123L);
-        long long ts_l = datetime_to_unixms(dt, stub->env);
-        printf("timestamp: %lld\n", ts_l);
+        axutil_date_time_t *dt = unixms_to_datetime(stub->env, ts_in);
+        char * dt_in = axutil_date_time_serialize_date_time(dt, stub->env);
+
+        long long ts_out = datetime_to_unixms(dt, stub->env);
+        printf("timestamp:  in = %lld %s\n", ts_in, dt_in);
+        printf("           out = %lld\n", ts_out);
 
     /***********************************************************/
     } else {

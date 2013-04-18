@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * Copyright 2009-2013 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -65,7 +65,9 @@ package com.eucalyptus.vm;
 import java.util.NoSuchElementException;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ConcurrentSkipListMap;
+import javax.persistence.EntityTransaction;
 import org.apache.log4j.Logger;
+import com.eucalyptus.entities.Entities;
 import com.eucalyptus.records.Logs;
 import com.eucalyptus.util.ByteArray;
 import com.eucalyptus.util.Exceptions;
@@ -91,11 +93,17 @@ public class VmMetadata {
   private static//
   Function<MetadataRequest, ByteArray>                        metaDataFunc              = new Function<MetadataRequest, ByteArray>( ) {
                                                                                           public ByteArray apply( MetadataRequest arg0 ) {
-                                                                                            String res = arg0.getVmInstance( ).getByKey( arg0.getLocalPath( ) );
-                                                                                            if ( res == null ) {
-                                                                                              throw new NullPointerException( "Failed to lookup path: " + arg0.getLocalPath( ) );
-                                                                                            } else {
-                                                                                              return ByteArray.newInstance( res );
+                                                                                            final EntityTransaction db = Entities.get( VmInstance.class );
+                                                                                            try {
+                                                                                              final VmInstance instance = Entities.merge( arg0.getVmInstance() );
+                                                                                              String res = instance.getByKey( arg0.getLocalPath( ) );
+                                                                                              if ( res == null ) {
+                                                                                                throw new NullPointerException( "Failed to lookup path: " + arg0.getLocalPath( ) );
+                                                                                              } else {
+                                                                                                return ByteArray.newInstance( res );
+                                                                                              }
+                                                                                            } finally {
+                                                                                              db.rollback();
                                                                                             }
                                                                                           }
                                                                                         };

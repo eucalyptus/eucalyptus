@@ -43,6 +43,11 @@ from datetime import timedelta
 from .botoclcinterface import BotoClcInterface
 from token import TokenAuthenticator
 
+try:
+    from .version import __version__
+except:
+    __version__ = 'DEVELOPMENT'
+
 sessions = {}
 config = None
 global_session = None
@@ -138,7 +143,7 @@ class GlobalSession(object):
 
     @property
     def version(self):
-        return '3.3.0'
+        return __version__
     
     @property
     def admin_console_url(self):
@@ -455,7 +460,8 @@ class LoginResponse(ProxyResponse):
 
         vmtypes = []
         # TODO: should trigger canned vmtypes for mock as well
-        if self.user_session.host_override:
+        #if self.user_session.host_override:
+        if True:
             vmtypes.append(dict(name='t1.micro', cores='1', memory='256', disk='5'))
             vmtypes.append(dict(name='m1.small', cores='1', memory='256', disk='5'))
             vmtypes.append(dict(name='m1.medium', cores='1', memory='512', disk='10'))

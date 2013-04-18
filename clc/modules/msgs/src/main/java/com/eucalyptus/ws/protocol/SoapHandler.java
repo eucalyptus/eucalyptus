@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * Copyright 2009-2013 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -64,16 +64,16 @@ package com.eucalyptus.ws.protocol;
 
 import java.util.Iterator;
 import java.util.List;
+import javax.xml.soap.SOAPConstants;
 import org.apache.axiom.om.OMElement;
 import org.apache.axiom.soap.SOAPEnvelope;
+import org.apache.axiom.soap.SOAPFactory;
 import org.apache.axiom.soap.SOAPFault;
 import org.apache.axiom.soap.SOAPHeader;
 import org.apache.axiom.soap.SOAPHeaderBlock;
 import org.apache.log4j.Logger;
-import org.jboss.netty.channel.ChannelEvent;
 import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.ChannelPipelineCoverage;
-import org.jboss.netty.channel.ExceptionEvent;
 import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import com.eucalyptus.binding.Binding;
@@ -154,8 +154,12 @@ public class SoapHandler extends MessageStackHandler {
           ( ( MappingHttpResponse ) httpMessage ).setStatus( errMsg.getHttpStatus( ) );
         }
       } else {
-        httpMessage.setSoapEnvelope( HoldMe.getOMSOAP11Factory( ).getDefaultEnvelope( ) );
-        httpMessage.getSoapEnvelope( ).getBody( ).addChild( httpMessage.getOmMessage( ) );
+        final SOAPFactory factory = HoldMe.getOMSOAP11Factory( );
+        final SOAPEnvelope soapEnvelope = factory.createSOAPEnvelope( factory.createOMNamespace( SOAPConstants.URI_NS_SOAP_1_1_ENVELOPE, "" ) );
+        factory.createSOAPHeader( soapEnvelope );
+        factory.createSOAPBody( soapEnvelope );
+        httpMessage.setSoapEnvelope( soapEnvelope );
+        httpMessage.getSoapEnvelope( ).getBody( ).addChild( httpMessage.getOmMessage() );
       }
     }
   }

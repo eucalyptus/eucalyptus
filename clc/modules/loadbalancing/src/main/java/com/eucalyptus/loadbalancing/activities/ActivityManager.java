@@ -33,58 +33,6 @@ import com.eucalyptus.util.Exceptions;
  */
 public class ActivityManager {
 
-	/* CONSIDERATIONS
-	 * 	1. LB vm launching event
-	 * 	   -- create load balancer? probably not 
-	 * 	   -- listener attached to the loadbalancer? maybe
-	 * 	   -- there exist an instance to the loadbalancer: how to deal with frequent update?
-	 * 	2. LB vm terminating event
-	 *	   -- load balancer deleted? probably not
-	 *     -- no more listener attached? maybe
-	 *     -- no instance in the pool?
-	 * 	3. LB VM-to-loadbalancer relation registry
-	 * 
-	 * 	4. LB VM caching
-	 *     
-	 * 	5. EMI backing the servo VM
-	 * 
-	 * 	6. event-to-action logic should be abstract and be part of activities package
-	 * 
-	 * 	7. multi zones
-	 * 
-	 * 	8. scaling and HA
-	 * 
-	 * 	9. admin configurable properties
-	 * 
-	 * 	10. DNS registry
-	 * 
-	 * INTERFACE FROM LOADBALANCING SERVICE TO ACTIVITY MGR
-	 *  1. Operation check
-	 *     -- should create-lb, add-listener, add-instances, etc return ok?
-	 *     
-	 *  2. Event listing
-	 *     -- create lb, listener, add instances
-	 *     
-	 *  3. Event publication
-	 *  
-	 *  4. LB status check
-	 *     -- are the LBs running ok? 
-	 *     -- any mgmt issues? multi-zones, ha, scaling, etc
-	 *     
-	 *  5. Health check callback
-	 *  
-	 *  6. CloudWatch callback
-	 *  
-	 *   
-	 *  INTERFACE FROM ADMIN TO ACTIVITY MGR
-	 *  1. Management events
-	 *     -- max # LB Vms, LB Vms per user, etc 
-	 *     
-	 *  2. Service enabling/disabling
-	 *  
-	 *  3. Changing EMIs backing LB VMs
-	 *  
-	 */
     private static final Logger LOG = Logger.getLogger( ActivityManager.class );
 
 	private ActivityManager(){
@@ -96,7 +44,7 @@ public class ActivityManager {
 	}
 	
 	public void fire(LoadbalancingEvent evt) throws EventFailedException {
-		ListenerRegistry.getInstance().fireEvent(evt);
+		ListenerRegistry.getInstance().fireThrowableEvent(evt);
 	}
 	
 	enum LoadbalancerEventListener implements EventListener<LoadbalancingEvent>{
@@ -163,16 +111,21 @@ public class ActivityManager {
 		EnabledZone(EnabledZoneEvent.class){
 			@Override
 			public void fireEvent(LoadbalancingEvent event) {
-				// NULL-OP
-				// TODO: SPARK: Should validate the zone name
-				return;
+				try{
+					EventHandlerChains.onEnableZones().execute((EnabledZoneEvent) event);
+				}catch(EventHandlerChainException ex){
+					throw Exceptions.toUndeclared(ex);
+				}
 			}
 		},
 		DisabledZone(DisabledZoneEvent.class){
 			@Override
 			public void fireEvent(LoadbalancingEvent event) {
-				// NULL-OP event sink
-				return;
+				try{
+					EventHandlerChains.onDisableZones().execute((DisabledZoneEvent) event);
+				}catch(EventHandlerChainException ex){
+					throw Exceptions.toUndeclared(ex);
+				}
 			}
 		};
 		

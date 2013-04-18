@@ -23,20 +23,21 @@
     options : {  
       refresh_interval_sec : REFRESH_INTERVAL_SEC,
       max_refresh_attempt : 3,
-      endpoints: [{name:'summary', type:'dash', url: '/ec2?Action=GetDashSummary'},
-                  {name:'instance', type:'instances', url: '/ec2?Action=DescribeInstances'},
-                  {name:'image', type:'images', url: '/ec2?Action=DescribeImages'},
-                  {name:'volume', type:'volumes', url: '/ec2?Action=DescribeVolumes'},
-                  {name:'snapshot', type:'snapshots', url: '/ec2?Action=DescribeSnapshots'},
-                  {name:'eip', type:'addresses', url: '/ec2?Action=DescribeAddresses'},
-                  {name:'keypair', type:'keypairs', url: '/ec2?Action=DescribeKeyPairs'},
-                  {name:'sgroup', type:'groups', url: '/ec2?Action=DescribeSecurityGroups'},
-                  {name:'zone', type:'zones', url: '/ec2?Action=DescribeAvailabilityZones'},
-                  {name:'tag', type:'tags', url: '/ec2?Action=DescribeTags'},
-                  {name:'bucket', type:'buckets', url: '/s3?Action=DescribeBuckets'},
-                  {name:'balancer', type:'balancers', url: '/elb?Action=DescribeLoadBalancers'},
-                  {name:'scalinggrp', type:'scalinggrps', url: '/autoscaling?Action=DescribeAutoScalingGroups'},
-                  {name:'scalinginst', type:'scalinginsts', url: '/autoscaling?Action=DescribeAutoScalingInstances'}
+      endpoints: [{name:'summary', type:'dash', collection: 'summarys'},
+                  {name:'instance', type:'instances', collection: 'instances'},
+                  {name:'image', type:'images', collection: 'images'},
+                  {name:'volume', type:'volumes', collection: 'volumes'},
+                  {name:'snapshot', type:'snapshots', collection: 'snapshots'},
+                  {name:'eip', type:'addresses', collection: 'addresses'},
+                  {name:'keypair', type:'keypairs', collection: 'keypairs'},
+                  {name:'sgroup', type:'groups', collection: 'sgroups'},
+                  {name:'zone', type:'zones', collection: 'zones'},
+                  {name:'tag', type:'tags', collection: 'tags'},
+                  {name:'bucket', type:'buckets', collection: 'buckets'},
+                  {name:'balancer', type:'balancers', collection: 'balancers'},
+                  {name:'scalinggrp', type:'scalinggrps', collection: 'scalinggrps'},
+                  {name:'scalinginst', type:'scalinginsts', collection: 'scalinginsts'},
+                  {name:'launchconfig', type:'launchconfigs', collection: 'launchconfigs'}
       ], 
     },
     _data : {summary:[], instance:null, image:null, volume:null, snapshot:null, eip:null, keypair: null, sgroup: null, zone: null, tag: null, bucket: null, balancer: null, scalinggrp: null, scalinginst: null},
@@ -54,68 +55,72 @@
       $.each(thisObj.options.endpoints, function(idx, ep){
         var name = ep.name;
         var url = ep.url;
-        thisObj._callbacks[name] = {callback: function(){
-         if(!thisObj._enabled || thisObj.countPendingReq() > MAX_PENDING_REQ ) {
-           return;
-         }
-         if (thisObj._data_needs && thisObj._data_needs.indexOf(ep.type) == -1) {
-           return;
-         }
-         var paramData = "_xsrf="+$.cookie('_xsrf');
-         if (ep.params != undefined) {
-            $.each(ep.params, function(key, value){
-                paramData += "&"+key+"="+value;
-            });
-         }
-         //console.log("param string = "+paramData);
-         $.ajax({
-           type: "POST",
-           url: url,
-           data: paramData,
-           dataType: "json",
-           async: "false",
-           beforeSend: function(jqXHR, settings){
-             thisObj._numPending++;
-           },
-           success: function(data, textStatus, jqXHR){
-             thisObj._numPending--;
-             if (data.results) {
-               thisObj._data[name] = {
-                 lastupdated: new Date(),
-                 results: data.results,
-               }
-               if(thisObj._listeners[name] && thisObj._listeners[name].length >0) {
-                 $.each(thisObj._listeners[name], function (idx, callback){
-                   callback['callback'].apply(thisObj);
+        // add setup backbone collections in endpoints array
+        if (ep.collection != null) {
+          //console.log("set up model for "+name);
+          require(['models/'+ep.collection], function(collection) {
+            ep.model = new collection();
+            // set up callback for timer which updates model if necessary
+            thisObj._callbacks[name] = {callback: function(){
+              if(!thisObj._enabled || thisObj.countPendingReq() > MAX_PENDING_REQ ) {
+                return;
+              }
+              if (thisObj._data_needs && thisObj._data_needs.indexOf(ep.type) == -1) {
+                return;
+              }
+              var paramData = "_xsrf="+$.cookie('_xsrf');
+              if (ep.params != undefined) {
+                 $.each(ep.params, function(key, value){
+                     paramData += "&"+key+"="+value;
                  });
+              }
+              if (ep.model == undefined) {
+                return;
+              }
+              ep.model.sync("read", ep.model, {
+                success: function(model, response){
+                  //console.log("read data "+name+" = "+JSON.stringify(response));
+                  thisObj._numPending--;
+                  thisObj._data[name] = {
+                    lastupdated: new Date(),
+                    results: $.parseJSON(JSON.stringify(response))
+                  }
+                  if(thisObj._listeners[name] && thisObj._listeners[name].length >0) {
+                    $.each(thisObj._listeners[name], function (idx, callback){
+                      callback['callback'].apply(thisObj);
+                    });
+                  }
+                },
+                //error: function(jqXHR, textStatus, errorThrown){ 
+                error: function(jqXHR, response){
+                  console.log("error reading data "+name+" status:"+response);
+                  thisObj._errorCode = response
+                  thisObj._numPending--;
+                  if(thisObj._data[name]){
+                    var last = thisObj._data[name]['lastupdated'];
+                    var now = new Date();
+                    var elapsedSec = Math.round((now-last)/1000);             
+                    if((jqXHR.status === 401 || jqXHR === 403)  ||
+                       (elapsedSec > thisObj.options.refresh_interval_sec*thisObj.options.max_refresh_attempt)){
+                      delete thisObj._data[name];
+                      thisObj._data[name] = null;
+                    }
+                    if(thisObj.getStatus() !== 'online'){
+                      errorAndLogout(thisObj._errorCode);
+                    }
+                    if (jqXHR.status === 504) {
+                      notifyError($.i18n.prop('data_load_timeout'));
+                    }
+                 }
                }
-             }else {
-               ;
-             }
-           },
-           error: function(jqXHR, textStatus, errorThrown){ 
-             thisObj._errorCode = jqXHR.status;
-             thisObj._numPending--;
-             if(thisObj._data[name]){
-               var last = thisObj._data[name]['lastupdated'];
-               var now = new Date();
-               var elapsedSec = Math.round((now-last)/1000);             
-               if((jqXHR.status === 401 || jqXHR === 403)  ||
-                  (elapsedSec > thisObj.options.refresh_interval_sec*thisObj.options.max_refresh_attempt)){
-                 delete thisObj._data[name];
-                 thisObj._data[name] = null;
-               }
-               if(thisObj.getStatus() !== 'online'){
-                 errorAndLogout(thisObj._errorCode);
-               }
-               if (jqXHR.status === 504) {
-                 notifyError($.i18n.prop('data_load_timeout'));
-               }
-            }
-          }});
-        }, repeat: null};
+             });
+            }, repeat: null};
+            var interval = thisObj.options.refresh_interval_sec*1000;
+            thisObj._callbacks[name].repeat = runRepeat(thisObj._callbacks[name].callback, interval, true); // random ms is added to distribute sync interval
+          });
+        }
       });
-      this._describe();
+      //this._describe();
     }, 
     _destroy : function(){
     },

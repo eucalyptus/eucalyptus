@@ -19,17 +19,24 @@
  ************************************************************************/
 package com.eucalyptus.loadbalancing.activities;
 
+import java.util.Date;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
-import java.util.Set;
-import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 
 import javax.persistence.EntityTransaction;
 import org.apache.log4j.Logger;
 
+import com.eucalyptus.auth.euare.InstanceProfileType;
+import com.eucalyptus.auth.euare.RoleType;
+import com.eucalyptus.autoscaling.common.AutoScalingGroupType;
+import com.eucalyptus.autoscaling.common.AutoScalingGroupsType;
+import com.eucalyptus.autoscaling.common.DescribeAutoScalingGroupsResponseType;
+import com.eucalyptus.autoscaling.common.DescribeAutoScalingGroupsResult;
+import com.eucalyptus.autoscaling.common.Instance;
+import com.eucalyptus.autoscaling.common.Instances;
 import com.eucalyptus.bootstrap.Bootstrap;
-import com.eucalyptus.cloud.CloudMetadatas;
 import com.eucalyptus.component.Topology;
 import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.configurable.ConfigurableClass;
@@ -45,14 +52,13 @@ import com.eucalyptus.loadbalancing.LoadBalancerSecurityGroup;
 import com.eucalyptus.loadbalancing.LoadBalancerZone;
 import com.eucalyptus.loadbalancing.LoadBalancers;
 import com.eucalyptus.loadbalancing.LoadBalancing;
-import com.google.common.base.Function;
-import com.google.common.base.Predicate;
-import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
-import com.google.common.collect.Sets;
 
+import edu.ucsb.eucalyptus.msgs.ClusterInfoType;
+import edu.ucsb.eucalyptus.msgs.DescribeKeyPairsResponseItemType;
+import edu.ucsb.eucalyptus.msgs.ImageDetails;
 import edu.ucsb.eucalyptus.msgs.RunningInstancesItemType;
+import edu.ucsb.eucalyptus.msgs.SecurityGroupItemType;
 
 /**
  * @author Sang-Min Park (spark@eucalyptus.com)
@@ -69,25 +75,12 @@ public class EventHandlerChainNew extends EventHandlerChain<NewLoadbalancerEvent
 			)
 	public static String LOADBALANCER_NUM_VM = "1";
 	
-	@ConfigurableField( displayName = "loadbalancer_loadbalancer_per_user",
-			description = "max number of loadbalancers per user",
-			initial = "5",
-			readonly = false,
-			type = ConfigurableFieldType.KEYVALUE)
-	public static String MAX_LOADBALANCER_PER_USER = "5";
-	
-	@ConfigurableField ( displayName = "loadbalancer_vm_per_user",
-			description = "max number of virtual machines per user",
-			initial = "5",
-			readonly = false,
-			type = ConfigurableFieldType.KEYVALUE)
-	public static String MAX_VM_PER_USER = "5";
-	
 	@Override
 	public EventHandlerChain<NewLoadbalancerEvent> build() {
 		this.insert(new AdmissionControl(this));
-		/// TODO: SPARK: setup security group
-	  	this.insert(new DatabaseInsert(this));
+		this.insert(new IAMRoleSetup(this));
+		this.insert(new InstanceProfileSetup(this));
+	  	this.insert(new DNSANameSetup(this));
 	  	this.insert(new SecurityGroupSetup(this));
 	  	int numVm = 1;
 	  	try{
@@ -95,37 +88,299 @@ public class EventHandlerChainNew extends EventHandlerChain<NewLoadbalancerEvent
 	  	}catch(NumberFormatException ex){
 	  		LOG.warn("unable to parse loadbalancer_num_vm");
 	  	}
-	  	this.insert(new LoadbalancerInstanceLauncher(this, numVm));
-	  	this.insert(new DatabaseUpdate(this));
-    /// SPARK: TODO: should check the loadbalancer's DNS and map the pub IP of instances to the DNS
-		return this;	
+	  	this.insert(new LoadBalancerASGroupCreator(this, numVm));
+	
+	  	return this;	
 	}
 	
-	public static class AdmissionControl extends AbstractEventHandler<NewLoadbalancerEvent> {
+	static class AdmissionControl extends AbstractEventHandler<NewLoadbalancerEvent> {
 		AdmissionControl(EventHandlerChain<NewLoadbalancerEvent> chain){
 			super(chain);
 		}
 		@Override
 		public void apply(NewLoadbalancerEvent evt) throws EventHandlerException {
-			// TODO Auto-generated method stub
+			// is the loadbalancer_emi found?
+			final String emi = LoadBalancerASGroupCreator.LOADBALANCER_EMI;
+			List<ImageDetails> images = null;
+			try{
+				images = EucalyptusActivityTasks.getInstance().describeImages(Lists.newArrayList(emi));
+				if(images==null || images.size()<=0 ||! images.get(0).getImageId().toLowerCase().equals(emi.toLowerCase()))
+					throw new EventHandlerException("No loadbalancer EMI is found");
+			}catch(final EventHandlerException ex){
+				throw ex;
+			}
+			catch(final Exception ex){
+				throw new EventHandlerException("failed to validate the loadbalancer EMI", ex);
+			}
 			
-			// check if the requested parameter is valid
-			   // loadbalancer
-			   // zones
-			   // user
 			
-			//  check if the currently allocated resources + newly requested resources is within the limit
+			// zones: is the CC found?
+			final List<String> requestedZones = Lists.newArrayList(evt.getZones());
+			List<ClusterInfoType> clusters = null;
+			try{
+				clusters = EucalyptusActivityTasks.getInstance().describeAvailabilityZones(true);
+				for(final ClusterInfoType cc : clusters){
+					requestedZones.remove(cc.getZoneName());
+				}
+			}catch(final Exception ex){
+				throw new EventHandlerException("failed to validate the requested zones", ex);
+			}
+			if(requestedZones.size()>0){
+				throw new EventHandlerException("unknown zone is requested");
+			}
+			
+			// are there enough resources?
+			final String instanceType = LoadBalancerASGroupCreator.LOADBALANCER_INSTANCE_TYPE;
+			int numVm = 1;
+		  	try{
+		  		numVm = Integer.parseInt(EventHandlerChainNew.LOADBALANCER_NUM_VM);
+		  	}catch(final NumberFormatException ex){
+		  		LOG.warn("unable to parse loadbalancer_num_vm");
+		  	}
+		  	for(final String zone : evt.getZones()){
+				final int capacity = findAvailableResources(clusters, zone, instanceType);
+				if(numVm>capacity){
+					throw new EventHandlerException(String.format("Not enough resources in %s", zone));
+				}
+			}
+			
+			// check if the keyname is configured and exists
+			final String keyName = LoadBalancerASGroupCreator.LOADBALANCER_VM_KEYNAME;
+			if(keyName!=null && keyName.length()>0){
+				try{
+					final List<DescribeKeyPairsResponseItemType> keypairs = EucalyptusActivityTasks.getInstance().describeKeyPairs(Lists.newArrayList(keyName));
+					if(keypairs==null || keypairs.size()<=0 || !keypairs.get(0).getKeyName().equals(keyName))
+						throw new Exception();
+				}catch(Exception ex){
+					throw new EventHandlerException(String.format("The configured keyname is not found"));
+				}
+			}
+		}
+		
+		private int findAvailableResources(final List<ClusterInfoType> clusters, final String zoneName, final String instanceType){
+			// parse euca-describe-availability-zones verbose response
+			// WARNING: this is not a standard API!
+			
+			for(int i =0; i<clusters.size(); i++){
+				final ClusterInfoType cc = clusters.get(i);
+				if(zoneName.equals(cc.getZoneName())){
+					for(int j=i+1; j< clusters.size(); j++){
+						final ClusterInfoType candidate = clusters.get(j);
+						if(candidate.getZoneName()!=null && candidate.getZoneName().toLowerCase().contains(instanceType.toLowerCase())){
+							//<zoneState>0002 / 0002   2    512    10</zoneState>
+							final String state = candidate.getZoneState();
+							final String[] tokens = state.split("/");
+							if(tokens!=null && tokens.length>0){
+								try{
+									String strNum = tokens[0].trim().replaceFirst("0+", "");
+									if(strNum.length()<=0)
+										strNum="0";
+									
+									return Integer.parseInt(strNum);
+								}catch(final NumberFormatException ex){
+									break;
+								}catch(final Exception ex){
+									break;
+								}
+							}
+						}
+					}
+					break;
+				}
+			}
+			return Integer.MAX_VALUE; // when check fails, let's assume its abundant
 		}
 
 		@Override
 		public void rollback() throws EventHandlerException {
-			// TODO Auto-generated method stub
-			
+			;
 		}
 	}
 	
-	public static class SecurityGroupSetup extends AbstractEventHandler<NewLoadbalancerEvent> implements StoredResult<String>{
+	static class IAMRoleSetup extends AbstractEventHandler<NewLoadbalancerEvent> implements StoredResult<String>{
+		public static final String DEFAULT_ROLE_PATH_PREFIX = "/internal/loadbalancer";
+		public static final String DEFAULT_ROLE_NAME = "loadbalancer-vm";
+		public static final String DEFAULT_ASSUME_ROLE_POLICY = 
+				"{\"Statement\":[{\"Effect\":\"Allow\",\"Principal\":{\"Service\":[\"ec2.amazonaws.com\"]},\"Action\":[\"sts:AssumeRole\"]}]}" 
+				+
+				"{\"Statement\":[{\"Action\": \"elasticloadbalancing:*\",\"Effect\": \"Allow\",\"Resource\": \"*\"}]}";
+		
+		private RoleType role = null;
+		protected IAMRoleSetup(EventHandlerChain<NewLoadbalancerEvent> chain) {
+			super(chain);
+			// TODO Auto-generated constructor stub
+		}
+
+		@Override
+		public List<String> getResult() {
+			return this.role!=null ? Lists.newArrayList(this.role.getRoleName()) : Lists.<String>newArrayList();
+		}
+
+		@Override
+		public void apply(NewLoadbalancerEvent evt)
+				throws EventHandlerException {
+			// list-roles.
+			try{
+				List<RoleType> result = EucalyptusActivityTasks.getInstance().listRoles(DEFAULT_ROLE_PATH_PREFIX);
+				if(result != null){
+					for(RoleType r : result){
+						if(DEFAULT_ROLE_NAME.equals(r.getRoleName())){
+							role = r;
+							break;
+						}	
+					}
+				}
+			}catch(Exception ex){
+				throw new EventHandlerException("Failed to list IAM roles", ex);
+			}
+
+			// if no role found, create a new role with assume-role policy for elb
+			if(role==null){	/// create a new role
+				try{
+					role = EucalyptusActivityTasks.getInstance().createRole(DEFAULT_ROLE_NAME, DEFAULT_ROLE_PATH_PREFIX, DEFAULT_ASSUME_ROLE_POLICY);
+				}catch(Exception ex){
+					throw new EventHandlerException("Failed to create the role for ELB Vms");
+				}
+			}
+			
+			if(role==null)
+				throw new EventHandlerException("No role is found for LoadBalancer Vms");		
+		}
+
+		@Override
+		public void rollback() throws EventHandlerException {
+			; // role and instance profile are system-wide for all loadalancers; no need to delete them
+		}	
+	}
+	
+
+	static class InstanceProfileSetup extends AbstractEventHandler<NewLoadbalancerEvent> implements StoredResult<String>{
+		public static final String DEFAULT_INSTANCE_PROFILE_PATH_PREFIX="/internal/loadbalancer";
+		public static final String DEFAULT_INSTANCE_PROFILE_NAME = "loadbalancer-vm";
+
+		private InstanceProfileType instanceProfile = null;
+		protected InstanceProfileSetup(
+				EventHandlerChain<NewLoadbalancerEvent> chain) {
+			super(chain);
+		}
+
+		@Override
+		public List<String> getResult() {
+			return this.instanceProfile!=null ? Lists.newArrayList(this.instanceProfile.getInstanceProfileName()) : Lists.<String>newArrayList();
+		}
+
+		@Override
+		public void apply(NewLoadbalancerEvent evt)
+				throws EventHandlerException {
+			// list instance profiles
+			try{
+				//   check if the instance profile for ELB VM is found
+				List<InstanceProfileType> instanceProfiles =
+						EucalyptusActivityTasks.getInstance().listInstanceProfiles(DEFAULT_INSTANCE_PROFILE_PATH_PREFIX);
+				for(InstanceProfileType ip : instanceProfiles){
+					if(DEFAULT_INSTANCE_PROFILE_NAME.equals(ip.getInstanceProfileName())){
+						instanceProfile = ip;
+						break;
+					}
+				}
+			}catch(Exception ex){
+				throw new EventHandlerException("Failed to list instance profiles", ex);
+			}
+			
+			if(instanceProfile == null){	//   if not create one
+				try{
+					instanceProfile = 
+							EucalyptusActivityTasks.getInstance().createInstanceProfile(DEFAULT_INSTANCE_PROFILE_NAME, DEFAULT_INSTANCE_PROFILE_PATH_PREFIX);
+				}catch(Exception ex){
+					throw new EventHandlerException("Failed to create instance profile", ex);
+				}
+			}
+			if(instanceProfile == null)
+				throw new EventHandlerException("No instance profile for loadbalancer VM is found");
+			
+			// make sure the role is added to the instance profile; if not add it.
+			final List<String> result = this.chain.findHandler(IAMRoleSetup.class).getResult();
+			String lbRoleName = null;
+			if(result!=null && result.size()>0)
+				lbRoleName = result.get(0);
+			
+			try{
+				List<RoleType> roles = instanceProfile.getRoles().getMember();
+				boolean roleFound = false;
+				for(RoleType role : roles){
+					if(role.getRoleName().equals(lbRoleName)){
+						roleFound=true;
+						break;
+					}
+				}
+				if(!roleFound)
+					throw new NoSuchElementException();
+			}catch(Exception ex){
+				if(lbRoleName == null)
+					throw new EventHandlerException("No role name is found for loadbalancer VMs");
+				try{
+					EucalyptusActivityTasks.getInstance().addRoleToInstanceProfile(this.instanceProfile.getInstanceProfileName(), lbRoleName);
+				}catch(Exception ex2){
+					throw new EventHandlerException("Failed to add role to the instance profile", ex2);
+				}
+			}
+		}
+		
+		@Override
+		public void rollback() throws EventHandlerException {
+			;
+		}
+	}
+	
+	static class DNSANameSetup extends AbstractEventHandler<NewLoadbalancerEvent> {
+		private String dnsName = null;
+		private String dnsZone= null;
+		DNSANameSetup(EventHandlerChain<NewLoadbalancerEvent> chain){
+			super(chain);
+		}
+		
+		@Override
+		public void apply(NewLoadbalancerEvent evt) throws EventHandlerException {	
+			LoadBalancer lb = null;
+			LoadBalancerDnsRecord dns = null;
+			try{
+				lb = LoadBalancers.getLoadbalancer(evt.getContext().getUserFullName(), evt.getLoadBalancer());
+				dns = lb.getDns();
+			}catch(NoSuchElementException ex){
+				throw new EventHandlerException("Failed to find the loadbalancer "+evt.getLoadBalancer(), ex);
+			}catch(Exception ex){
+				throw new EventHandlerException("Failed due to query exception", ex);
+			}
+			if(dns==null)
+				throw new EventHandlerException("No dns record is found with the loadbalancer "+evt.getLoadBalancer());
+			
+			try{
+				EucalyptusActivityTasks.getInstance().removeMultiARecord(dns.getZone(), dns.getName());
+				EucalyptusActivityTasks.getInstance().createARecord(dns.getZone(), dns.getName());
+				this.dnsName = dns.getName();
+				this.dnsZone = dns.getZone();
+			}catch(Exception ex){
+				throw new EventHandlerException("Failed to create new multiA name record");
+			}
+		}
+		
+
+		@Override
+		public void rollback() 
+				throws EventHandlerException {
+			if(this.dnsName!=null && this.dnsZone!= null){
+				try{
+					EucalyptusActivityTasks.getInstance().removeMultiARecord(this.dnsZone, this.dnsName);
+				}catch(Exception ex){
+					LOG.warn(String.format("failed to remove the multi A record (%s-%s)", this.dnsZone, this.dnsName), ex);
+				}
+			}
+		}
+	}
+	
+	static class SecurityGroupSetup extends AbstractEventHandler<NewLoadbalancerEvent> implements StoredResult<String>{
 		private String createdGroup = null;
+		private String groupOwnerAccountId = null;
 		NewLoadbalancerEvent event = null;
 		SecurityGroupSetup(EventHandlerChain<NewLoadbalancerEvent> chain){
 			super(chain);
@@ -135,17 +390,6 @@ public class EventHandlerChainNew extends EventHandlerChain<NewLoadbalancerEvent
 		public void apply(NewLoadbalancerEvent evt)
 				throws EventHandlerException {
 			this.event = evt;
-			String groupName = String.format("euca-lb-%s-%s", evt.getLoadBalancer(), 
-					UUID.randomUUID().toString().substring(0, 5));
-			String groupDesc = String.format("group for loadbalancer %s", evt.getLoadBalancer());
-			// create a new security group
-			try{
-				EucalyptusActivityTasks.getInstance().createSecurityGroup(groupName, groupDesc);
-				createdGroup = groupName;
-			}catch(Exception ex){
-				throw new EventHandlerException("Failed to create the security group for loadbalancer", ex);
-			}
-			
 			// set security group with the loadbalancer; update db
 			LoadBalancer lb = null;
 			try{
@@ -156,12 +400,52 @@ public class EventHandlerChainNew extends EventHandlerChain<NewLoadbalancerEvent
 				throw new EventHandlerException("Error while looking for loadbalancer with name="+evt.getLoadBalancer(), ex);
 			}
 
+			String groupName = String.format("euca-internal-%s-%s", lb.getOwnerAccountNumber(), lb.getDisplayName());
+			String groupDesc = String.format("group for loadbalancer %s", evt.getLoadBalancer());
+			
+			// check if there's an existing group with the same name
+			boolean groupFound = false;
+			try{
+				List<SecurityGroupItemType> groups = EucalyptusActivityTasks.getInstance().describeSecurityGroups(Lists.newArrayList(groupName));
+				if(groups!=null && groups.size()>0){
+					final SecurityGroupItemType current = groups.get(0);
+					if(groupName.equals(current.getGroupName())){
+						groupFound=true;
+						this.groupOwnerAccountId = current.getAccountId();
+					}
+				}
+			}catch(Exception ex){
+				groupFound=false;
+			}
+			
+			// create a new security group
+			if(! groupFound){
+				try{
+					EucalyptusActivityTasks.getInstance().createSecurityGroup(groupName, groupDesc);
+					createdGroup = groupName;
+					List<SecurityGroupItemType> groups = EucalyptusActivityTasks.getInstance().describeSecurityGroups(Lists.newArrayList(groupName));
+					if(groups!=null && groups.size()>0){
+						final SecurityGroupItemType current = groups.get(0);
+						if(groupName.equals(current.getGroupName())){
+							this.groupOwnerAccountId = current.getAccountId();
+						}
+					}
+				}catch(Exception ex){
+					throw new EventHandlerException("Failed to create the security group for loadbalancer", ex);
+				}
+			}else{
+				createdGroup = groupName;
+			}
+			
+			if(this.createdGroup == null || this.groupOwnerAccountId == null)
+				throw new EventHandlerException("Failed to create the security group for loadbalancer");
+	
 			final EntityTransaction db = Entities.get( LoadBalancerSecurityGroup.class );
 			try{
-				Entities.uniqueResult(LoadBalancerSecurityGroup.named( lb, groupName));
+				Entities.uniqueResult(LoadBalancerSecurityGroup.named( lb, this.groupOwnerAccountId, groupName));
 				db.commit();
 			}catch(NoSuchElementException ex){
-				final LoadBalancerSecurityGroup newGroup = LoadBalancerSecurityGroup.named( lb, groupName);
+				final LoadBalancerSecurityGroup newGroup = LoadBalancerSecurityGroup.named( lb, this.groupOwnerAccountId, groupName);
 				LoadBalancerSecurityGroup written = Entities.persist(newGroup);
 				Entities.flush(written);
 				db.commit();
@@ -193,7 +477,7 @@ public class EventHandlerChainNew extends EventHandlerChain<NewLoadbalancerEvent
 
 			final EntityTransaction db = Entities.get( LoadBalancerSecurityGroup.class );
 			try{
-				final LoadBalancerSecurityGroup sample = LoadBalancerSecurityGroup.named(lb, this.createdGroup);
+				final LoadBalancerSecurityGroup sample = LoadBalancerSecurityGroup.named(lb, this.groupOwnerAccountId,  this.createdGroup);
 				final LoadBalancerSecurityGroup toDelete = Entities.uniqueResult(sample);
 				Entities.delete(toDelete);
 				db.commit();
@@ -216,277 +500,255 @@ public class EventHandlerChainNew extends EventHandlerChain<NewLoadbalancerEvent
 		}
 	}
 	
-	public static class DatabaseInsert extends AbstractEventHandler<NewLoadbalancerEvent> implements StoredResult<String>{
-		private List<String> uniqueEntries = Lists.newArrayList();
-		DatabaseInsert(EventHandlerChain<NewLoadbalancerEvent> chain){
-			super(chain);
-		}
-		@Override
-		public void apply(NewLoadbalancerEvent evt)
-				throws EventHandlerException {
-			
-			LoadBalancer lb = null;
-			try{
-				lb = LoadBalancers.getLoadbalancer(evt.getContext().getUserFullName(), evt.getLoadBalancer());
-			}catch(NoSuchElementException ex){
-				throw new EventHandlerException("can't find the specified loadbalancer user owns", ex);
-			}catch(Exception ex){
-				throw new EventHandlerException("can't query the loadbalancer due to unknown reason", ex);
-			}
-			
-			List<LoadBalancerZone> zones = Lists.newArrayList();
+	// periodically queries autoscaling group, finds the instances, and update the servo instance records
+	// based on the query result
+	public static class AutoscalingGroupInstanceChecker implements EventListener<ClockTick> {
+		private static int AUTOSCALE_GROUP_CHECK_INTERVAL_SEC = 10;
 		
-			for (String zoneName : evt.getZones()){
-				LoadBalancerZone lbZone = null;
-				try{
-					lbZone = LoadBalancers.findZone(lb, zoneName);
-					zones.add(lbZone);
-					// save the servoinstance entry to the DB
-				}catch(NoSuchElementException ex){
-					throw new EventHandlerException("Can't find the zone in user's loadbalancer ("+zoneName+")", ex);
-				}catch(Exception ex){
-					throw new EventHandlerException("Can't find the zone due to unknown reason");
-				}
-			}
-			
-			final Function<LoadBalancerZone, LoadBalancerServoInstance> persistInstance = 
-					new Function<LoadBalancerZone, LoadBalancerServoInstance>( ) {
-		        public LoadBalancerServoInstance apply( final LoadBalancerZone zone ) {
-					final LoadBalancerServoInstance instance = LoadBalancerServoInstance.named(zone);
-					instance.setState(LoadBalancerServoInstance.STATE.Pending);
-					instance.setInstanceId(UUID.randomUUID().toString().substring(0, 6));
-					LoadBalancerServoInstance written = Entities.persist(instance);
-					return written;
-		        }
-		    }; 
-			for(LoadBalancerZone zone : zones){
-				LoadBalancerServoInstance persist = Entities.asTransaction(LoadBalancerServoInstance.class, persistInstance).apply(zone);
-				this.uniqueEntries.add(persist.getInstanceId());
-			}
+		public static void register(){
+			Listeners.register(ClockTick.class, new AutoscalingGroupInstanceChecker() );
 		}
-
+		
 		@Override
-		public void rollback() throws EventHandlerException {
-			final EntityTransaction db = Entities.get(LoadBalancerServoInstance.class);
-			for(String unique : this.uniqueEntries){
+		public void fireEvent(ClockTick event) {
+			
+			if ( Bootstrap.isFinished() &&
+			          Topology.isEnabledLocally( LoadBalancing.class ) &&
+			          Topology.isEnabled( Eucalyptus.class ) ) {
+				
+				// lookup all LoadBalancerAutoScalingGroup records
+				EntityTransaction db = Entities.get( LoadBalancerAutoScalingGroup.class );
+				List<LoadBalancerAutoScalingGroup> groups = Lists.newArrayList();
+				Map<String, LoadBalancerAutoScalingGroup>  allGroupMap = new ConcurrentHashMap<String, LoadBalancerAutoScalingGroup>();
 				try{
-					final LoadBalancerServoInstance exist = 
-							Entities.uniqueResult(LoadBalancerServoInstance.named(unique));
-					Entities.delete(exist);
+					groups = Entities.query(LoadBalancerAutoScalingGroup.named(), true);
 					db.commit();
+					for(LoadBalancerAutoScalingGroup g : groups){
+						allGroupMap.put(g.getName(), g);
+					}
 				}catch(NoSuchElementException ex){
 					db.rollback();
-					LOG.warn("failed to find the loadbalanncer vm to delete");
 				}catch(Exception ex){
 					db.rollback();
-					LOG.error("failed to delete the loadbalancer vm");
 				}
-			}
-			this.uniqueEntries.clear();
-		}
-
-		@Override
-		public List<String> getResult() {
-			// TODO Auto-generated method stub
-			return this.uniqueEntries;
-		}
-	}
-	
-	public static class DatabaseUpdate extends AbstractEventHandler<NewLoadbalancerEvent>{
-		private StoredResult<String> launcher = null;
-		private StoredResult<String> insert = null;
-		
-		DatabaseUpdate(EventHandlerChain<NewLoadbalancerEvent> chain){
-			super(chain);
-			launcher = chain.findHandler(LoadbalancerInstanceLauncher.class);
-			insert = chain.findHandler(DatabaseInsert.class);
-		}
-		
-		@Override
-		public void apply(NewLoadbalancerEvent evt)
-				throws EventHandlerException {
-			// get the inserted entries
-			final List<String> uniqueEntries = insert.getResult();
-			// find out new instance ids
-			final List<String> newInstances = launcher.getResult();
-			
-			LoadBalancer lb = null;
-			try{
-				lb = LoadBalancers.getLoadbalancer(evt.getContext().getUserFullName(), evt.getLoadBalancer());
-			}catch(NoSuchElementException ex){
-				throw new EventHandlerException("can't find the specified loadbalancer user owns", ex);
-			}catch(Exception ex){
-				throw new EventHandlerException("can't query the loadbalancer due to unknown reason", ex);
-			}
-			
-			String groupName = null;
-			LoadBalancerSecurityGroup group= null;
-			try{
-				StoredResult<String> sgroupResult = this.getChain().findHandler(SecurityGroupSetup.class);
-				if(sgroupResult!= null){
-					List<String> result = sgroupResult.getResult();
-					if(result!=null && result.size()>0)
-						groupName = result.get(0);
+				
+				Map<String, LoadBalancerAutoScalingGroup> groupToQuery = new ConcurrentHashMap<String, LoadBalancerAutoScalingGroup>();
+				final Date current = new Date(System.currentTimeMillis());
+				
+				// find the record eligible to check its status
+				for(final LoadBalancerAutoScalingGroup group : groups){
+					final Date lastUpdate = group.getLastUpdateTimestamp();
+					int elapsedSec = (int)((current.getTime() - lastUpdate.getTime())/1000.0);
+					if(elapsedSec > AUTOSCALE_GROUP_CHECK_INTERVAL_SEC){
+						db = Entities.get( LoadBalancerAutoScalingGroup.class );
+						try{
+							LoadBalancerAutoScalingGroup update = Entities.uniqueResult(group);
+							update.setLastUpdateTimestamp(current);
+							Entities.persist(update);
+							db.commit();
+						}catch(NoSuchElementException ex){
+							db.rollback();
+						}catch(Exception ex){
+							db.rollback();
+						}
+						groupToQuery.put(group.getName(), group);
+					}
 				}
-				if(groupName != null){
-					final EntityTransaction db = Entities.get( LoadBalancerSecurityGroup.class );
+				 
+				if(groupToQuery.size() <= 0)
+					return;
+				
+				// describe as group and find the unknown instance Ids
+				List<AutoScalingGroupType> queriedGroups = Lists.newArrayList();
+				try{
+					DescribeAutoScalingGroupsResponseType response = 
+							EucalyptusActivityTasks.getInstance().describeAutoScalingGroups(Lists.newArrayList(groupToQuery.keySet()));
+					DescribeAutoScalingGroupsResult result = response.getDescribeAutoScalingGroupsResult();
+					AutoScalingGroupsType asgroups = result.getAutoScalingGroups();
+					queriedGroups = asgroups.getMember();
+				}catch(Exception ex){
+					LOG.error("Failed to describe autoscaling groups", ex);
+					return;
+				}
+				
+				/// lookup all servoInstances in the DB
+				Map<String, LoadBalancerServoInstance> servoMap = 
+						new ConcurrentHashMap<String, LoadBalancerServoInstance>();
+				db = Entities.get( LoadBalancerServoInstance.class );
+				try{
+					final List<LoadBalancerServoInstance> result = Entities.query(LoadBalancerServoInstance.named(), true);
+					db.commit();
+					for(LoadBalancerServoInstance inst : result){
+						servoMap.put(inst.getInstanceId(), inst);
+					}
+				}catch(NoSuchElementException ex){
+					db.rollback();
+				}catch(Exception ex){
+					db.rollback();
+				}
+				 
+				/// for all found instances that's not in the servo instance DB
+				///     create servo record
+				final List<LoadBalancerServoInstance> newServos = Lists.newArrayList();
+				final Map<String, Instance> foundInstances = new ConcurrentHashMap<String, Instance>();
+				for(final AutoScalingGroupType asg : queriedGroups){
+					Instances instances = asg.getInstances();
+					if(instances!=null && instances.getMember() != null && instances.getMember().size() >0){
+						for(final Instance instance : instances.getMember()){
+							String instanceId = instance.getInstanceId();
+							foundInstances.put(instanceId, instance);
+							if(!servoMap.containsKey(instanceId)){ /// new instance found
+								try{
+									LoadBalancerAutoScalingGroup group= allGroupMap.get(asg.getAutoScalingGroupName());
+									if(group==null)
+										throw new IllegalArgumentException("The group with name "+ asg.getAutoScalingGroupName()+ " not found in the database");
+									
+									final LoadBalancer lb = group.getLoadBalancer();
+									LoadBalancerZone zone = null;
+									for(LoadBalancerZone z : lb.getZones()){
+										if(z.getName().equals(instance.getAvailabilityZone())){
+											zone = z;
+											break;
+										}
+									}
+									if(zone == null)
+										throw new Exception("No availability zone with name="+instance.getAvailabilityZone()+" found for loadbalancer "+lb.getDisplayName());
+									final LoadBalancerSecurityGroup sgroup = lb.getGroup();
+									
+									if(sgroup == null)
+										throw new Exception("No security group is found for loadbalancer "+lb.getDisplayName());
+									final LoadBalancerDnsRecord dns = lb.getDns();
+									final LoadBalancerServoInstance newInstance = LoadBalancerServoInstance.newInstance(zone, sgroup, dns, group, instanceId);
+									newServos.add(newInstance); /// persist later
+								}catch(Exception ex){
+									LOG.error("Failed to construct new servo instance", ex);
+									continue;
+								}
+							}
+						}
+					}
+				}
+				
+				// CASE 1: NEW INSTANCES WITH THE AS GROUP FOUND
+				if(newServos.size()>0){
+					db = Entities.get( LoadBalancerServoInstance.class );
 					try{
-						group = Entities.uniqueResult(LoadBalancerSecurityGroup.named(lb, groupName));
+						for(LoadBalancerServoInstance instance : newServos){
+							Entities.persist(instance);
+						}
 						db.commit();
 					}catch(Exception ex){
 						db.rollback();
-						throw ex;
+						LOG.error("Failed to persist the servo instance record", ex);
 					}
 				}
-			}catch(Exception ex){
-				;
-			}
-			
-			
-			// update the database
-			if(uniqueEntries.size() != newInstances.size())
-				throw new EventHandlerException("Number of launched instances doesn't match with the database record");
-			
-			final EntityTransaction db = Entities.get( LoadBalancerServoInstance.class );
-			try{
-				for(String uniqueId : uniqueEntries){
-					String instanceId= newInstances.remove(0);
-					final LoadBalancerServoInstance exist = 
-							Entities.uniqueResult(LoadBalancerServoInstance.named(uniqueId)); //.fromUniqueName(uniqueId));
-					exist.setInstanceId(instanceId);
-					if(group!= null)
-						exist.setSecurityGroup(group);
-					Entities.persist(exist);
+				
+				List<LoadBalancerServoInstance> servoRecords = Lists.newArrayList();
+				for(String groupName : groupToQuery.keySet()){
+					final LoadBalancerAutoScalingGroup group = groupToQuery.get(groupName);
+					servoRecords.addAll(group.getServos());
 				}
-				db.commit();
-			}catch(NoSuchElementException ex){
-				db.rollback();
-				throw new EventHandlerException("can't find the loadbalancer VM from the db", ex);
-			}catch(Exception ex){
-				db.rollback();
-				throw new EventHandlerException("failed to update the loadbalancer VM entries", ex);
-			}
+				
+				List<LoadBalancerServoInstance> registerDnsARec = Lists.newArrayList();
+				for(LoadBalancerServoInstance instance : servoRecords){
+					/// CASE 2: EXISTING SERVO INSTANCES ARE NOT FOUND IN THE QUERY RESPONSE 
+					if(! foundInstances.containsKey(instance.getInstanceId()) && 
+							! instance.getState().equals(LoadBalancerServoInstance.STATE.Retired)){
+						db = Entities.get( LoadBalancerServoInstance.class );
+						try{
+							final LoadBalancerServoInstance update = Entities.uniqueResult(instance);
+							update.setState(LoadBalancerServoInstance.STATE.Error);
+							Entities.persist(update);
+							db.commit();
+						}catch(NoSuchElementException ex){
+							db.rollback();
+						}catch(Exception ex){
+							db.rollback();
+						}
+					}else{/// CASE 3: INSTANCE STATE UPDATED
+						Instance instanceCurrent = foundInstances.get(instance.getInstanceId());
+						final String healthState = instanceCurrent.getHealthStatus();
+						final String lifecycleState = instanceCurrent.getLifecycleState();
+						LoadBalancerServoInstance.STATE curState = instance.getState();
+						LoadBalancerServoInstance.STATE newState = curState;
+					
+						if(healthState != null && ! healthState.equals("Healthy")){
+							newState = LoadBalancerServoInstance.STATE.Error;
+						}else if (lifecycleState != null){
+							if(lifecycleState.equals("Pending"))
+								newState = LoadBalancerServoInstance.STATE.Pending;
+							else if(lifecycleState.equals("Quarantined"))
+								newState = LoadBalancerServoInstance.STATE.Error;
+							else if(lifecycleState.equals("InService"))
+								newState = LoadBalancerServoInstance.STATE.InService;
+							else if(lifecycleState.equals("Terminating") || lifecycleState.equals("Terminated"))
+								newState = LoadBalancerServoInstance.STATE.OutOfService;
+						}
+						
+						if(!curState.equals(LoadBalancerServoInstance.STATE.Retired) && 
+								!curState.equals(newState)){
+							if(newState.equals(LoadBalancerServoInstance.STATE.InService))
+								registerDnsARec.add(instance);
+							db = Entities.get( LoadBalancerServoInstance.class );
+							try{
+								final LoadBalancerServoInstance update = Entities.uniqueResult(instance);
+								update.setState(newState);
+								Entities.persist(update);
+								db.commit();
+							}catch(NoSuchElementException ex){
+								db.rollback();
+							}catch(Exception ex){
+								db.rollback();
+							}
+						}
+					}
+				}
+				
+				/// for new servo instances, find the IP and register it with DNS
+				for(LoadBalancerServoInstance instance : registerDnsARec){
+					String ipAddr = null;
+					String privateIpAddr = null;
+					try{
+						List<RunningInstancesItemType> result = 
+								EucalyptusActivityTasks.getInstance().describeSystemInstances(Lists.newArrayList(instance.getInstanceId()));
+						if(result!=null && result.size()>0){
+							ipAddr = result.get(0).getIpAddress();
+							privateIpAddr = result.get(0).getPrivateIpAddress();
+						}
+					}catch(Exception ex){
+						LOG.warn("failed to run describe-instances", ex);
+						continue;
+					}
+					if(ipAddr == null || ipAddr.length()<=0){
+						LOG.warn("no ipaddress found for instance "+instance.getInstanceId());
+						continue;
+					}
+					try{
+						String zone = instance.getDns().getZone();
+						String name = instance.getDns().getName();
+						EucalyptusActivityTasks.getInstance().addARecord(zone, name, ipAddr);
+					}catch(Exception ex){
+						LOG.warn("failed to register new ipaddress with dns A record", ex);
+						continue;
+					}
+
+					db = Entities.get( LoadBalancerServoInstance.class );
+					try{
+						final LoadBalancerServoInstance update = Entities.uniqueResult(instance);
+						update.setAddress(ipAddr);
+						if(privateIpAddr!=null)
+							update.setPrivateIp(privateIpAddr);
+						Entities.persist(update);
+						db.commit();
+					}catch(NoSuchElementException ex){
+						db.rollback();
+						LOG.warn("failed to find the servo instance named "+instance.getInstanceId(), ex);
+					}catch(Exception ex){
+						db.rollback();
+						LOG.warn("failed to update servo instance's ip address", ex);
+					}
+				}
+			}	
 		}
-
-		@Override
-		public void rollback() throws EventHandlerException {
-			;
-		}
-	}
-
-	public static class ServoInstancePendingToRunningChecker implements EventListener<ClockTick> {
-		public static void register( ) {
-	      Listeners.register( ClockTick.class, new ServoInstancePendingToRunningChecker() );
-	    }
-
-
-	    @Override
-	    public void fireEvent( final ClockTick event ) {
-	      if ( Bootstrap.isFinished() &&
-	          Topology.isEnabledLocally( LoadBalancing.class ) &&
-	          Topology.isEnabled( Eucalyptus.class ) ) {
-	    	  /// find all servo instances in PENDING STATE
-	    	  final EntityTransaction db = Entities.get( LoadBalancerServoInstance.class );
-	    	  final LoadBalancerServoInstance sample = 
-	    			  LoadBalancerServoInstance.withState(LoadBalancerServoInstance.STATE.Pending.name());
-	    	  List<LoadBalancerServoInstance> instances = null;
-	    	  try{
-	    		  instances = Entities.query(sample);
-	    		  db.commit();
-	    	  }catch(NoSuchElementException ex){
-	    		  db.rollback();
-	    	  }catch(Exception ex){
-	    		  db.rollback();
-	    		  LOG.warn("Loadbalancer: failed to query servo instances");
-	    	  }
-
-	    	  if(instances==null || instances.size()==0)
-	    		  return;
-	    	  
-	    	  /// for each:
-	    	  final List<String> param = Lists.newArrayList();
-	    	  final Map<String, String> latestState = Maps.newHashMap();
-	    	  final Map<String, String> addressMap = Maps.newHashMap();
-	    	  for(final LoadBalancerServoInstance instance : instances){
-	    		/// 	call describe instance
-		    	  String instanceId = instance.getInstanceId();
-	    		  if(instanceId == null || !instanceId.startsWith("i-"))
-	    			  continue;
-	    		  param.clear();
-	    		  param.add(instanceId);
-	    		  String instanceState = null;
-	    		  String address = null;
-	    		  try{
-	    			  final List<RunningInstancesItemType> result = 
-	    					  EucalyptusActivityTasks.getInstance().describeInstances(param);
-	    			  if (result.isEmpty())
-	    				  throw new Exception("Describe instances returned no result");
-	    			  instanceState = result.get(0).getStateName();
-	    			  address = result.get(0).getIpAddress();
-	    		  }catch(final Exception ex){
-	    			  LOG.warn("failed to query instances", ex);
-	    			  continue;
-	    		  }
-	    		  if(instanceState.equals("running")){
-	    	    	  ///		if update dns A rec:
-	    			  latestState.put(instanceId, LoadBalancerServoInstance.STATE.InService.name());
-	    			  if(address!=null)
-	    				  addressMap.put(instanceId, address);
-	    		  }else if(instanceState.equals("pending")){
-	    			  latestState.put(instanceId, LoadBalancerServoInstance.STATE.Pending.name());
-	    		  }else{
-	    			  /// error condition (shutting-down, terminated, etc...)
-	    			  latestState.put(instanceId, LoadBalancerServoInstance.STATE.Error.name());
-	    		  }
-	    	  }
-
-	    	  List<LoadBalancerServoInstance> newInServiceInstances = Lists.newArrayList();
-	    	  for(final String instanceId : latestState.keySet()){
-	    		  String nextState = latestState.get(instanceId);
-	    		  if(nextState == "pending")
-	    			  continue; // no change
-	    		  
-		    	  final EntityTransaction dbUpdate = Entities.get( LoadBalancerServoInstance.class );
-	    		  try{
-	    			  final LoadBalancerServoInstance instance =
-	    					  Entities.uniqueResult(LoadBalancerServoInstance.named(instanceId));
-	    			  instance.setState(Enum.valueOf(LoadBalancerServoInstance.STATE.class, nextState));
-	    			  if(addressMap.containsKey(instanceId))
-	    				  instance.setAddress(addressMap.get(instanceId));
-	    			  Entities.persist(instance);
-	    			  dbUpdate.commit();
-	    			  if(nextState.equals(LoadBalancerServoInstance.STATE.InService.name()))
-	    				  newInServiceInstances.add(instance);
-	    		  }catch(NoSuchElementException ex){
-	    			  dbUpdate.rollback();
-	    			  LOG.error("could not find the servo instance with id="+instanceId, ex);
-	    		  }catch(Exception ex){
-	    			  dbUpdate.rollback();
-	    			  LOG.error("unknown error occured during the servo instance update ("+instanceId+")", ex);
-	    		  }
-	    	  }
-	    	  
-	    	  for(LoadBalancerServoInstance servo : newInServiceInstances){
-	    		 final LoadBalancer lb= servo.getAvailabilityZone().getLoadbalancer();
-	    		 final LoadBalancerDnsRecord dns = lb.getDns();
-	    		 try{
-	    			 EucalyptusActivityTasks.getInstance().updateARecord(dns.getZone(), dns.getName(), servo.getAddress());
-	    		 }catch(Exception ex){
-	    			 LOG.error("failed to update dns A records", ex);
-	    			 continue;
-	    		 }
-		    	 final EntityTransaction db2 = Entities.get(LoadBalancerServoInstance.class);
-	    		 try{
-	    			 LoadBalancerServoInstance update = Entities.uniqueResult(servo);
-	    			 update.setDns(dns);
-	    			 Entities.persist(update);
-	    			 db2.commit();
-	    		 }catch(Exception ex){
-	    			 db2.rollback();
-	    			 LOG.error("failed to update dns record of the servo instance");
-	    		 }
-	    	  }
-	      }
-	    }
 	}
 }

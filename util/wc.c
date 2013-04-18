@@ -81,15 +81,15 @@
 #include <stdio.h>
 #include <stdlib.h>
 #define _GNU_SOURCE
-#include <ctype.h>              // isspace
+#include <ctype.h>                     // isspace
 #include <assert.h>
 #include <stdarg.h>
-#include <errno.h>              // errno
-#include <locale.h>             // setlocale
+#include <errno.h>                     // errno
+#include <locale.h>                    // setlocale
 #include <string.h>
 
 #include "eucalyptus.h"
-#include "misc.h"               // boolean
+#include "misc.h"                      // boolean
 #include "wc.h"
 
 /*----------------------------------------------------------------------------*\
@@ -152,23 +152,6 @@ static const char *c_s1 = "The quick ${color} ${subject} jumps over the lazy ${o
 static const char *c_s2 = "${}A m${}alformed ${color} string${}${}";
 static const char *c_s3 = "An undefined ${variable}";
 static char_map **c_m = NULL;
-#endif /* _UNIT_TEST */
-
-/*----------------------------------------------------------------------------*\
- |                                                                            |
- |                             EXPORTED PROTOTYPES                            |
- |                                                                            |
-\*----------------------------------------------------------------------------*/
-
-wchar_t *varsub(const wchar_t * s, const wchar_map * vars[]);
-wchar_map **varmap_alloc(wchar_map ** map, const wchar_t * key, const wchar_t * val);
-void varmap_free(wchar_map ** map);
-char *c_varsub(const char *s, const char_map * vars[]);
-char_map **c_varmap_alloc(char_map ** map, const char *key, const char *val);
-void c_varmap_free(char_map ** map);
-
-#ifdef _UNIT_TEST
-int main(int argc, char **argv);
 #endif /* _UNIT_TEST */
 
 /*----------------------------------------------------------------------------*\
@@ -356,7 +339,7 @@ static char *c_wcappendn(char *dst, const char *src, size_t src_limit)
 //! @note caller is responsible to free the returned string
 //!
 //! @todo This currently will not sub any variables if it can't sub *all* variables. This is unfriendly:
-// !      it should sub what it can.
+//!       it should sub what it can.
 //!
 wchar_t *varsub(const wchar_t * s, const wchar_map * vars[])
 {
@@ -458,7 +441,7 @@ wchar_map **varmap_alloc(wchar_map ** map, const wchar_t * key, const wchar_t * 
         if ((map[i] = EUCA_ALLOC(1, sizeof(wchar_map))) != NULL) {
             map[i]->key = wcsdup(key);
             map[i]->val = wcsdup(val);
-            map[i + 1] = NULL;  // NULL terminator
+            map[i + 1] = NULL;         // NULL terminator
         }
     }
 
@@ -484,7 +467,7 @@ void varmap_free(wchar_map ** map)
             i++;
         }
 
-        EUCA_FREE(map[i]);      // NULL terminator
+        EUCA_FREE(map[i]);             // NULL terminator
         EUCA_FREE(map);
     }
 }
@@ -631,7 +614,7 @@ char_map **c_varmap_alloc(char_map ** map, const char *key, const char *val)
         if ((map[i] = EUCA_ALLOC(1, sizeof(char_map))) != NULL) {
             map[i]->key = strdup(key);
             map[i]->val = strdup(val);
-            map[i + 1] = NULL;  // NULL terminator
+            map[i + 1] = NULL;         // NULL terminator
         }
     }
 
@@ -657,7 +640,7 @@ void c_varmap_free(char_map ** map)
             i++;
         }
 
-        EUCA_FREE(map[i]);      // NULL terminator
+        EUCA_FREE(map[i]);             // NULL terminator
         EUCA_FREE(map);
     }
 }

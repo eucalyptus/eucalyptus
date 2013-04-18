@@ -31,4 +31,5 @@ public class CloudWatchException extends EucalyptusWebServiceException {
                                final String message ) {
     super( code, role, message );
   }
+
 }

@@ -1,3 +1,22 @@
+/*************************************************************************
+ * Copyright 2009-2013 Eucalyptus Systems, Inc.
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; version 3 of the License.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see http://www.gnu.org/licenses/.
+ *
+ * Please contact Eucalyptus Systems, Inc., 6755 Hollister Ave., Goleta
+ * CA 93117, USA or visit http://www.eucalyptus.com/licenses/ if you need
+ * additional information or have any questions.
+ ************************************************************************/
 package com.eucalyptus.cloudwatch.domain.metricdata;
 
 import java.util.Date;
@@ -7,15 +26,13 @@ import javax.persistence.EnumType;
 import javax.persistence.Enumerated;
 import javax.persistence.MappedSuperclass;
 
-import com.eucalyptus.cloudwatch.domain.dimension.AbstractPersistentWithDimensions;
+import com.eucalyptus.cloudwatch.domain.AbstractPersistentWithDimensions;
 
 @MappedSuperclass
 public abstract class MetricEntity extends AbstractPersistentWithDimensions {
 
   @Column(name = "account_id", nullable = false)
   private String accountId;
-  @Column(name = "user_id", nullable = false)
-  private String userId;
   @Column(name = "namespace", nullable = false)
   private String namespace;
   @Column(name = "metric_name", nullable = false)
@@ -44,12 +61,37 @@ public abstract class MetricEntity extends AbstractPersistentWithDimensions {
   }
 
   public enum Units {
-    Seconds, Microseconds, Milliseconds, Bytes, Kilobytes, Megabytes, Gigabytes, Terabytes, Bits, Kilobits, Megabits, Gigabits, Terabits, Percent, Count, BytesPerSecond, KilobytesPerSecond, MegabytesPerSecond, GigabytesPerSecond, TerabytesPerSecond, BitsPerSecond, KilobitsPerSecond, MegabitsPerSecond, GigabitsPerSecond, TerabitsPerSecond, CountPerSecond, None(
-        "");
+    Seconds, 
+    Microseconds, 
+    Milliseconds, 
+    Bytes, 
+    Kilobytes, 
+    Megabytes, 
+    Gigabytes, 
+    Terabytes, 
+    Bits,
+    Kilobits, 
+    Megabits, 
+    Gigabits, 
+    Terabits, 
+    Percent, 
+    Count, 
+    BytesPerSecond("Bytes/Second"), 
+    KilobytesPerSecond("Kilobytes/Second"), 
+    MegabytesPerSecond("Megabytes/Second"), 
+    GigabytesPerSecond("Gigabytes/Second"), 
+    TerabytesPerSecond("Terabytes/Second"), 
+    BitsPerSecond("Bits/Second"),
+    KilobitsPerSecond("Kilobits/Second"), 
+    MegabitsPerSecond("Megabits/Second"), 
+    GigabitsPerSecond("Gigabits/Second"), 
+    TerabitsPerSecond("Terabits/Second"), 
+    CountPerSecond("Count/Second"), 
+    None("None");
     private String value;
 
     Units() {
-      this.value = name().replace("Per", "/");
+      this.value = name();
     }
 
     Units(String value) {
@@ -67,7 +109,7 @@ public abstract class MetricEntity extends AbstractPersistentWithDimensions {
           return units;
         }
       }
-      return Units.None;
+      throw new IllegalArgumentException("Unknown unit " + value);
     }
   }
 
@@ -78,14 +120,6 @@ public abstract class MetricEntity extends AbstractPersistentWithDimensions {
 
   public void setAccountId(String accountId) {
     this.accountId = accountId;
-  }
-
-  public String getUserId() {
-    return userId;
-  }
-
-  public void setUserId(String userId) {
-    this.userId = userId;
   }
 
   public String getNamespace() {
@@ -170,7 +204,7 @@ public abstract class MetricEntity extends AbstractPersistentWithDimensions {
 
   @Override
   public String toString() {
-    return "MetricEntity [accountId=" + accountId + ", userId=" + userId
+    return "MetricEntity [accountId=" + accountId 
         + ", namespace=" + namespace + ", metricName=" + metricName
         + ", dimensionHash=" + dimensionHash + ", units=" + units
         + ", metricType=" + metricType + ", timestamp=" + timestamp

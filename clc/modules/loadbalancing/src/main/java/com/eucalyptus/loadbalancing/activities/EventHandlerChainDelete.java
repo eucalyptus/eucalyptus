@@ -24,7 +24,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
 
-import javax.annotation.Nullable;
 import javax.persistence.EntityTransaction;
 
 import org.apache.log4j.Logger;
@@ -38,8 +37,6 @@ import com.eucalyptus.loadbalancing.LoadBalancerDnsRecord;
 import com.eucalyptus.loadbalancing.LoadBalancerSecurityGroup;
 import com.eucalyptus.loadbalancing.LoadBalancerZone;
 import com.eucalyptus.loadbalancing.LoadBalancers;
-import com.google.common.base.Function;
-import com.google.common.collect.Collections2;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 
@@ -54,105 +51,32 @@ public class EventHandlerChainDelete extends EventHandlerChain<DeleteLoadbalance
 
 	@Override
 	public EventHandlerChain<DeleteLoadbalancerEvent> build() {
-		this.insert(new ServoInstanceFinder(this));
 		this.insert(new DnsARecordRemover(this));
-		this.insert(new LoadbalancerInstanceTerminator(this));
+		this.insert(new AutoScalingGroupRemover(this));
 		this.insert(new SecurityGroupRemover(this));  /// remove security group
-		/// delete the DB entry
-		this.insert(new DatabaseUpdate(this));
 		return this;
 	}
-
-	public static class ServoInstanceFinder extends AbstractEventHandler<DeleteLoadbalancerEvent> implements StoredResult<String>{
-		private List<String> instances = Lists.newArrayList();
 	
-		ServoInstanceFinder(EventHandlerChain<DeleteLoadbalancerEvent> chain){
-			super(chain);
-		}
-		@Override
-		public void apply(DeleteLoadbalancerEvent evt)
-				throws EventHandlerException {
-			// find all servo instances that belong to the deleted loadbalancer 
-			LoadBalancer lb = null;
-			try{ 
-				lb= LoadBalancers.getLoadbalancer(evt.getContext().getUserFullName(), evt.getLoadBalancer());
-			}catch(NoSuchElementException ex){
-				return;
-			}catch(Exception ex){
-				LOG.warn("Failed to find the loadbalancer");
-				return;
-			}
-			
-			final EntityTransaction db = Entities.get( LoadBalancerZone.class );
-			final List<LoadBalancerServoInstance> members = Lists.newArrayList();
-			try{
-				final Collection<LoadBalancerZone> zones = lb.getZones();
-				if(zones == null || zones.size()==0)
-					return;
-				
-				for(LoadBalancerZone z : zones){
-					final LoadBalancerZone zone = Entities.uniqueResult(z);
-					members.addAll(zone.getServoInstances());
-				}
-			}catch(Exception ex){
-				LOG.warn("Failed to find the loadbalancer VMs", ex);
-				return;
-			}finally{
-				db.commit();
-			}
-			
-			/// disassociate servo from lbzone; update the status to OutOfService
-			final EntityTransaction db2 = Entities.get( LoadBalancerServoInstance.class );
-			try{
-				for(final LoadBalancerServoInstance instance : members){
-					final LoadBalancerServoInstance exist = Entities.uniqueResult(instance);
-					exist.leaveZone();	 /// LoadBalancer, LoadBalancerZone, LoadBalancerDnsRecord can be deleted
-					exist.unmapDns();
-					exist.setState(LoadBalancerServoInstance.STATE.OutOfService);
-					Entities.persist(exist);
-				}
-				db2.commit();
-			}catch(Exception ex){
-				db2.rollback();
-			}
-			
-			instances.addAll(Collections2.transform(members, new Function<LoadBalancerServoInstance, String>(){
-				@Override
-				public String apply(@Nullable LoadBalancerServoInstance arg0) {
-					return arg0.getInstanceId();
-				}
-			}));
-			LOG.debug("found "+instances.size()+ " loadbalancer VMs to terminate");
-		}
-
-		@Override
-		public void rollback() throws EventHandlerException {
-			;
-		}
-
-		@Override
-		public List<String> getResult() {
-			return instances;
-		}
-	}
-	
-	
-	public static class DnsARecordRemover extends AbstractEventHandler<DeleteLoadbalancerEvent>{
-
+	private static class DnsARecordRemover extends AbstractEventHandler<DeleteLoadbalancerEvent>{
 		DnsARecordRemover(
 				EventHandlerChain<DeleteLoadbalancerEvent> chain) {
 			super(chain);
-			// TODO Auto-generated constructor stub
 		}
 
 		@Override
 		public void apply(DeleteLoadbalancerEvent evt)
 				throws EventHandlerException {
-			final StoredResult<String> instances= this.getChain().findHandler(ServoInstanceFinder.class);
+//			final StoredResult<String> instances= this.getChain().findHandler(ServoInstanceFinder.class);
 			// find the LoadBalancerDnsRecord
 			LoadBalancer lb = null;
+			List<LoadBalancerServoInstance> servos = Lists.newArrayList();
 			try{ 
 				lb= LoadBalancers.getLoadbalancer(evt.getContext().getUserFullName(), evt.getLoadBalancer());
+				if(lb.getZones()!=null){
+					for(LoadBalancerZone zone : lb.getZones()){
+						servos.addAll(zone.getServoInstances());
+					}
+				}
 			}catch(NoSuchElementException ex){
 				return;
 			}catch(Exception ex){
@@ -162,86 +86,145 @@ public class EventHandlerChainDelete extends EventHandlerChain<DeleteLoadbalance
 			final LoadBalancerDnsRecord dns = lb.getDns();
 			
 			// find ServoInstance
-			for(String instanceId : instances.getResult()){
-				final EntityTransaction db = Entities.get( LoadBalancerServoInstance.class );
-				String address = null;
-				try{
-					LoadBalancerServoInstance sample = 
-							LoadBalancerServoInstance.named(instanceId);
-					LoadBalancerServoInstance instance = Entities.uniqueResult(sample);
-					address = instance.getAddress();
-				}catch(NoSuchElementException ex){
-					;
-				}catch(Exception ex){
-					LOG.warn("failed to query loadbalancer servo instance", ex);
-				}finally{
-					db.commit();
-				}
-				
-				if(address==null)
+			for(LoadBalancerServoInstance instance: servos){
+				String	address = instance.getAddress();
+				if(address==null || address.length()<=0)
 					continue;
 				try{
 					EucalyptusActivityTasks.getInstance().removeARecord(dns.getZone(), dns.getName(), address);
 				}catch(Exception ex){
-					LOG.error(String.format("failed to remove dns a record (zone=%s, name=%s, address=%s", 
+					LOG.error(String.format("failed to remove dns a record (zone=%s, name=%s, address=%s)", 
 							dns.getZone(), dns.getName(), address), ex);
+				}
+			}
+			
+			try{
+				EucalyptusActivityTasks.getInstance().removeMultiARecord(dns.getZone(), dns.getName());
+			}catch(Exception ex){
+				LOG.error(String.format("failed to remove dns a record (zone=%s,  name=%s)", dns.getZone(), dns.getName()), ex);
+			}
+		}
+
+		@Override
+		public void rollback() throws EventHandlerException {
+			;
+		}
+	}
+	
+	public static class AutoScalingGroupRemover extends AbstractEventHandler<DeleteLoadbalancerEvent> {
+		protected AutoScalingGroupRemover(
+				EventHandlerChain<DeleteLoadbalancerEvent> chain) {
+			super(chain);
+		}
+
+		@Override
+		public void apply(DeleteLoadbalancerEvent evt) throws EventHandlerException{
+			LoadBalancer lb = null;
+			try{ 
+				lb= LoadBalancers.getLoadbalancer(evt.getContext().getUserFullName(), evt.getLoadBalancer());
+			}catch(NoSuchElementException ex){
+				return;
+			}catch(Exception ex){
+				LOG.warn("Failed to find the loadbalancer named " + evt.getLoadBalancer(), ex);
+				return;
+			}	
+			LoadBalancerAutoScalingGroup group = lb.getAutoScaleGroup();
+			if(group == null){
+				LOG.warn(String.format("Loadbalancer %s had no autoscale group associated with it", lb.getDisplayName()));
+				return;
+			}
+			
+			final String groupName = group.getName();
+			final String launchConfigName = group.getLaunchConfigName();
+			boolean error = false;
+			try{
+				EucalyptusActivityTasks.getInstance().deleteAutoScalingGroup(groupName, true);
+				// willl terminate all instances
+			}catch(Exception ex){
+				LOG.warn("Failed to delete autoscale group "+groupName, ex);
+				error = true;
+			}
+			
+			try{
+				EucalyptusActivityTasks.getInstance().deleteLaunchConfiguration(launchConfigName);
+			}catch(Exception ex){
+				LOG.warn("Failed to delete launch configuration " + launchConfigName, ex);
+				error = true;
+			}
+
+			EntityTransaction db = Entities.get( LoadBalancerServoInstance.class );
+			try{
+				for(LoadBalancerServoInstance instance : lb.getAutoScaleGroup().getServos()){
+					final LoadBalancerServoInstance found = Entities.uniqueResult(instance);
+					found.setDns(null);
+					found.setAvailabilityZone(null);
+					found.setAutoScalingGroup(null);
+					// InService --> Retired
+					// Pending --> Retired
+					// OutOfService --> Retired
+					// Error --> Retired
+					found.setState(LoadBalancerServoInstance.STATE.Retired); 
+					Entities.persist(found);
+				}
+				db.commit();
+			}catch(Exception ex){
+				db.rollback();
+				LOG.error("Failed to update servo instance record", ex);
+			}
+		
+			// AutoScalingGroup record will be deleted as a result of cascaded delete
+		}
+
+		@Override
+		public void rollback() throws EventHandlerException {
+			;
+		}
+	}
+	
+	private static class SecurityGroupRemover extends AbstractEventHandler<DeleteLoadbalancerEvent>{
+		SecurityGroupRemover(EventHandlerChain<DeleteLoadbalancerEvent> chain){
+			super(chain);
+		}
+
+		@Override
+		public void apply(DeleteLoadbalancerEvent evt)
+				throws EventHandlerException {
+			LoadBalancer lb = null;
+			LoadBalancerSecurityGroup group = null;
+			try{
+				lb = LoadBalancers.getLoadbalancer(evt.getContext().getUserFullName(), evt.getLoadBalancer());
+				if(lb.getGroup()!=null){
+					group = lb.getGroup();
+				}
+			}catch(NoSuchElementException ex){
+				return;
+			}catch(Exception ex){
+				LOG.error("Error while looking for loadbalancer with name="+evt.getLoadBalancer(), ex);
+				return;
+			}
+
+			if(group!= null){
+				final EntityTransaction db = Entities.get( LoadBalancerSecurityGroup.class );
+				try{
+					final LoadBalancerSecurityGroup exist = Entities.uniqueResult(group);
+					exist.setLoadBalancer(null);	// this allows the loadbalancer to be deleted
+					exist.setState(LoadBalancerSecurityGroup.STATE.OutOfService);
+					Entities.persist(exist);
+					db.commit();
+				}catch(Exception ex){
+					db.rollback();
+					LOG.warn("Could not disassociate the group from loadbalancer");
 				}
 			}
 		}
 
 		@Override
 		public void rollback() throws EventHandlerException {
-			// TODO Auto-generated method stub
-		}
-	}
-
-	public static class LoadbalancerInstanceTerminator extends AbstractEventHandler<DeleteLoadbalancerEvent> implements StoredResult<String> {
-		private StoredResult<String> finder = null;
-		LoadbalancerInstanceTerminator(EventHandlerChain<DeleteLoadbalancerEvent> chain){
-			super(chain);
-			finder = chain.findHandler(ServoInstanceFinder.class);
-		}
-				
-		private List<String> terminatedInstances = null;
-		@Override
-		public void apply(DeleteLoadbalancerEvent evt) throws EventHandlerException {
-			// TODO Auto-generated method stub
-			
-			// find the servo instances for the affected LB
-			List<String> terminated = null;
-			List<String> toTerminate = this.finder.getResult();
-		  	try{
-		  		terminated = EucalyptusActivityTasks.getInstance().terminateInstances(toTerminate);
-		  	}catch(Exception ex){
-		  		LOG.warn("failed to terminate the instances", ex);
-		  		return;
-		  	}
-		  	this.terminatedInstances = terminated;
-		  	
-		  	for (String gone : terminated){
-		  		toTerminate.remove(gone);
-		  	}
-		  	if(toTerminate.size()>0){
-		  		StringBuilder sb = new StringBuilder();
-		  		for(String error : toTerminate)
-		  			sb.append(error+" ");
-		  		String strErrorInstances = new String(sb);
-		  		LOG.error("Some instances were not terminated: "+strErrorInstances);
-		  	}
-		}
-	
-		@Override
-		public void rollback() throws EventHandlerException {
-			; // no rollback if termination fails..?
-		}
-	
-		@Override
-		public List<String> getResult() {
-			// TODO Auto-generated method stub
-			return this.terminatedInstances == null ? Lists.<String>newArrayList() : this.terminatedInstances;
+			;
 		}
 	}
 	
+	/// delete security group if all its instances are terminated; delete from db
 	public static class SecurityGroupCleanup implements EventListener<ClockTick> {
 		public static void register( ) {
 		      Listeners.register( ClockTick.class, new SecurityGroupCleanup() );
@@ -295,82 +278,21 @@ public class EventHandlerChainDelete extends EventHandlerChain<DeleteLoadbalance
 		}
 	}
 	
-	public static class SecurityGroupRemover extends AbstractEventHandler<DeleteLoadbalancerEvent>{
-		SecurityGroupRemover(EventHandlerChain<DeleteLoadbalancerEvent> chain){
-			super(chain);
-		}
-
-		@Override
-		public void apply(DeleteLoadbalancerEvent evt)
-				throws EventHandlerException {
-			LoadBalancer lb = null;
-			LoadBalancerSecurityGroup group = null;
-			try{
-				lb = LoadBalancers.getLoadbalancer(evt.getContext().getUserFullName(), evt.getLoadBalancer());
-				if(lb.getGroups().size() > 0){
-					List<LoadBalancerSecurityGroup> groups = Lists.newArrayList(lb.getGroups());
-					group = groups.get(0);
-				}
-			}catch(NoSuchElementException ex){
-				return;
-			}catch(Exception ex){
-				LOG.error("Error while looking for loadbalancer with name="+evt.getLoadBalancer(), ex);
-				return;
-			}
-
-			if(group!= null){
-				final EntityTransaction db = Entities.get( LoadBalancerSecurityGroup.class );
-				try{
-					final LoadBalancerSecurityGroup exist = Entities.uniqueResult(group);
-					exist.setLoadBalancer(null);	// this allows the loadbalancer to be deleted
-					exist.retire();
-					Entities.persist(exist);
-					db.commit();
-				}catch(Exception ex){
-					db.rollback();
-					LOG.warn("Could not disassociate the group from loadbalancer");
-				}
-			}
-		}
-
-		@Override
-		public void rollback() throws EventHandlerException {
-			// TODO Auto-generated method stub
-		}
-	}
-
-	public static class DatabaseUpdate extends AbstractEventHandler<DeleteLoadbalancerEvent>{
-		DatabaseUpdate(EventHandlerChain<DeleteLoadbalancerEvent> chain){
-			super(chain);
-		}
-		
-		@Override
-		public void apply(DeleteLoadbalancerEvent evt)
-				throws EventHandlerException {
-			;
-		}
-
-		@Override
-		public void rollback() throws EventHandlerException {
-			;
-		}
-	}
-	
-	/// checks the latest status of the servo instances and update the database accordingly
-	public static class ServoInstanceRemover implements EventListener<ClockTick> {
+	/// checks the latest status of the servo instances and delete from db if terminated
+	public static class ServoInstanceCleanup implements EventListener<ClockTick> {
 		public static void register( ) {
-	      Listeners.register( ClockTick.class, new ServoInstanceRemover() );
+	      Listeners.register( ClockTick.class, new ServoInstanceCleanup() );
 	    }
 
 		@Override
 		public void fireEvent(ClockTick event) {
 			// find all OutOfService instances
-			List<LoadBalancerServoInstance> outOfService=null;
+			List<LoadBalancerServoInstance> retired=null;
 			final EntityTransaction db = Entities.get( LoadBalancerServoInstance.class );
 			try{
 				LoadBalancerServoInstance sample = 
-						LoadBalancerServoInstance.withState(LoadBalancerServoInstance.STATE.OutOfService.name());
-				outOfService = Entities.query(sample);
+						LoadBalancerServoInstance.withState(LoadBalancerServoInstance.STATE.Retired.name());
+				retired = Entities.query(sample);
 				db.commit();
 			}catch(NoSuchElementException ex){
 				db.rollback();
@@ -379,14 +301,14 @@ public class EventHandlerChainDelete extends EventHandlerChain<DeleteLoadbalance
 				LOG.warn("failed to query loadbalancer servo instance", ex);
 			}
 
-			if(outOfService == null || outOfService.size()<=0)
+			if(retired == null || retired.size()<=0)
 				return;
 			
 			  /// for each:
 			// describe instances
 	    	final List<String> param = Lists.newArrayList();
 	    	final Map<String, String> latestState = Maps.newHashMap();
-	    	for(final LoadBalancerServoInstance instance : outOfService){
+	    	for(final LoadBalancerServoInstance instance : retired){
 	    		/// 	call describe instance
 		    	String instanceId = instance.getInstanceId();
 	    		if(instanceId == null)
@@ -396,7 +318,7 @@ public class EventHandlerChainDelete extends EventHandlerChain<DeleteLoadbalance
 	    		String instanceState = null;
 	    		try{
 	    			final List<RunningInstancesItemType> result = 
-	    					  EucalyptusActivityTasks.getInstance().describeInstances(param);
+	    					  EucalyptusActivityTasks.getInstance().describeSystemInstances(param);
 	    			if (result.isEmpty())
 	    				instanceState= "terminated";
 	    			else
@@ -423,9 +345,6 @@ public class EventHandlerChainDelete extends EventHandlerChain<DeleteLoadbalance
 	    			}
 	    		}
 	    	}
-	    	
 		}
 	}
-	
-	
 }

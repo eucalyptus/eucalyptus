@@ -1,3 +1,22 @@
+/*************************************************************************
+ * Copyright 2009-2013 Eucalyptus Systems, Inc.
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; version 3 of the License.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see http://www.gnu.org/licenses/.
+ *
+ * Please contact Eucalyptus Systems, Inc., 6755 Hollister Ave., Goleta
+ * CA 93117, USA or visit http://www.eucalyptus.com/licenses/ if you need
+ * additional information or have any questions.
+ ************************************************************************/
 package com.eucalyptus.ws.protocol
 
 import static org.junit.Assert.*
@@ -23,6 +42,8 @@ import org.jboss.netty.handler.codec.http.HttpVersion
 import org.jboss.netty.handler.codec.http.HttpMethod
 import com.eucalyptus.binding.HttpParameterMapping
 import java.text.SimpleDateFormat
+import com.eucalyptus.binding.HttpEmbeddeds
+import com.eucalyptus.binding.HttpParameterMappings
 
 /**
  * 
@@ -91,11 +112,11 @@ class QueryBindingTestSupport {
             EucalyptusData.class.isAssignableFrom( classToAssert) ||
             EucalyptusMessage.class.isAssignableFrom( classToAssert ))
         assertTrue( "Field must be annotated as HttpEmbedded: " + target.getName() + "." + field.getName(),
-            Ats.from( field ).has( HttpEmbedded.class ) )
+            Ats.from( field ).has( HttpEmbedded.class ) || Ats.from( field ).has( HttpEmbeddeds.class ) )
         assertAnnotationsRecursively( classToAssert )
       } else {
         assertFalse( "Field does not need HttpEmbedded annotation" + target.getName() + "." + field.getName(),
-            Ats.from( field ).has( HttpEmbedded.class ) )
+            Ats.from( field ).has( HttpEmbedded.class ) || Ats.from( field ).has( HttpEmbeddeds.class ) )
       }
     }
   }
@@ -105,9 +126,16 @@ class QueryBindingTestSupport {
         String.class.equals( clazz ) ||
         Boolean.class.equals( clazz ) ||
         Integer.class.equals( clazz ) ||
+        Integer.TYPE.equals( clazz ) ||
         Long.class.equals( clazz ) ||
         Double.class.equals( clazz ) ||
         Date.class.equals( clazz ))
+  }
+
+  void bindAndAssertParameters( BaseQueryBinding binding, Class messageClass, String action, Object bean, Map<String,String> parameters ) {
+    Object message = bind( binding, action, parameters )
+    assertTrue( action + ' message type', messageClass.isInstance( message ) )
+    assertRecursiveEquality( action, "", bean, message )
   }
 
   void bindAndAssertObject( BaseQueryBinding binding, Class messageClass, String action, Object bean, int expectedParameterCount ) {
@@ -180,7 +208,10 @@ class QueryBindingTestSupport {
   String name( Field field ) {
     String name = field.getAnnotation( HttpParameterMapping.class )?.parameter()
     if ( name == null ) {
-      name = String.valueOf(field.getName().charAt(0).toUpperCase()) + field.getName().substring(1)
+      name = field.getAnnotation( HttpParameterMappings.class )?.value()?.last()?.parameter()
+      if ( name == null ) {
+        name = String.valueOf(field.getName().charAt(0).toUpperCase()) + field.getName().substring(1)
+      }
     }
     name
   }

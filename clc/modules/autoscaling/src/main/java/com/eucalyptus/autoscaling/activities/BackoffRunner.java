@@ -22,12 +22,9 @@ package com.eucalyptus.autoscaling.activities;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
-import java.util.concurrent.TimeUnit;
 import javax.annotation.Nullable;
 import org.apache.log4j.Logger;
-import com.eucalyptus.configurable.ConfigurableClass;
-import com.eucalyptus.configurable.ConfigurableField;
-import com.eucalyptus.configurable.ConfigurableFieldType;
+import com.eucalyptus.autoscaling.config.AutoScalingConfiguration;
 import com.eucalyptus.util.async.CheckedListenableFuture;
 import com.eucalyptus.util.async.Futures;
 import com.google.common.collect.Maps;
@@ -35,21 +32,9 @@ import com.google.common.collect.Maps;
 /**
  * Runs tasks with duplication checks and back-off
  */
-@ConfigurableClass(root = "autoscaling", description = "Parameters controlling Auto Scaling")
 public class BackoffRunner {
 
   private static final Logger logger = Logger.getLogger( BackoffRunner.class );
-  
-  @ConfigurableField( displayName = "Enable scaling activities", 
-                      description = "Enable or disable scaling activities",
-                      initial = "true", 
-                      readonly = false,
-                      type = ConfigurableFieldType.BOOLEAN )
-  public static Boolean ENABLE_SCALING_ACTIVITIES = Boolean.TRUE;
-
-  private static final long taskTimeout = TimeUnit.MINUTES.toMillis( 5 );
-  private static final long maxBackoff = TimeUnit.MINUTES.toMillis( 10 );
-  private static final long initialBackoff = TimeUnit.SECONDS.toMillis( 9 );
   
   private static final ConcurrentMap<String,TaskInfo> tasksInProgress = Maps.newConcurrentMap();
 
@@ -59,7 +44,7 @@ public class BackoffRunner {
     return instance; 
   }
   
-  private BackoffRunner(){    
+  BackoffRunner(){
   }
   
   boolean taskInProgress( final String uniqueKey ) {
@@ -69,24 +54,29 @@ public class BackoffRunner {
   }
   
   boolean runTask( final TaskWithBackOff task ) {
-    if ( !scalingEnabled() && task.isScalingTask() ) return false;
-
     boolean run = doRunTask( task, timestamp() );
     if ( run ) {
       task.runTask();
     } else {
       logger.info( "Not running task " + task );
     }
-    
     return run;
   }
 
-  private boolean scalingEnabled() {
-    return ENABLE_SCALING_ACTIVITIES != null && ENABLE_SCALING_ACTIVITIES;
-  }
-  
   protected long timestamp() {
     return System.currentTimeMillis();
+  }
+
+  private static long getTaskTimeout() {
+    return AutoScalingConfiguration.getActivityTimeoutMillis();
+  }
+
+  private static long getMaxBackoff() {
+    return AutoScalingConfiguration.getActivityMaxBackoffMillis();
+  }
+
+  private static long getInitialBackoff() {
+    return AutoScalingConfiguration.getActivityInitialBackoffMillis();
   }
 
   private static boolean doRunTask( final TaskWithBackOff task, final long timestamp ) {
@@ -127,13 +117,6 @@ public class BackoffRunner {
       return null;
     }
 
-    /**
-     * Tasks such as user initiated instance termination are not scaling tasks. 
-     */
-    boolean isScalingTask(){
-      return true;
-    }
-    
     final String getUniqueKey() {
       return uniqueKey;
     }
@@ -176,7 +159,6 @@ public class BackoffRunner {
   }
   
   private final static class TaskInfo {
-    private final String key;
     private final String group;
     private final long created;
     private final Future<Boolean> resultFuture;
@@ -185,7 +167,6 @@ public class BackoffRunner {
     private TaskInfo( final TaskWithBackOff task, 
                       final long created,
                       final int failureCount ) {
-      this.key = task.getUniqueKey();
       this.group = task.getBackoffGroup();
       this.created = created;
       this.resultFuture = task.getFuture();
@@ -208,11 +189,11 @@ public class BackoffRunner {
     }
     
     private long calculateBackoff() {
-      long backoff = initialBackoff;
-      for ( int i=0; i<failureCount && backoff < maxBackoff ; i++ ) {
+      long backoff = getInitialBackoff();
+      for ( int i=0; i<failureCount && backoff < getMaxBackoff() ; i++ ) {
         backoff *= 2;        
       }
-      return Math.min( backoff, maxBackoff ); 
+      return Math.min( backoff, getMaxBackoff() );
     }
     
     private int getNextFailureCount( final String group ) {
@@ -228,7 +209,7 @@ public class BackoffRunner {
     }
     
     private boolean isTimedOut( final long timestamp ) {
-      return timestamp - created > taskTimeout;
+      return timestamp - created > getTaskTimeout();
     }
 
     private boolean isSuccess() {

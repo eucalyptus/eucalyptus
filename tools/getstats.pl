@@ -104,7 +104,7 @@ foreach my $dom (@domains) {
     # multiple samples can be used by the caller of this script to calculate a
     # running average using the technique at the bottom of the URL
     #   %CPU = 100 x cpu_time_diff_nano / (time_interval_seconds x nr_cores x 10^9)
-    print_stat ($dom, get_ts(), "default", "CPUUtilization", (($dom->get_info()->{cpuTime})/1000000));  # convert nanos to millis
+    print_stat ($dom, get_ts(), "default", "summation", "CPUUtilization", (($dom->get_info()->{cpuTime})/1000000));  # convert nanos to millis
 
     my $xml_text = $dom->get_xml_description($flags=0);
     my $xml_struct = XMLin($xml_text, ForceArray => [ 'disk', 'interface' ]); # parse domain's XML dump to find disks and NICs
@@ -118,8 +118,8 @@ foreach my $dom (@domains) {
 	$tx_bytes += $dom->interface_stats($guest_nic)->{tx_bytes};
     }
     my $ts = get_ts();
-    print_stat ($dom, $ts, "total", "NetworkIn",  $rx_bytes);
-    print_stat ($dom, $ts, "total", "NetworkOut", $tx_bytes);
+    print_stat ($dom, $ts, "total", "summation", "NetworkIn",  $rx_bytes);
+    print_stat ($dom, $ts, "total", "summation", "NetworkOut", $tx_bytes);
 
     # iterate over disks of the instance and pull out relevant stats from the %diskstats dictionary
     foreach my $disk (@{$xml_struct->{devices}->{disk}}) {
@@ -129,12 +129,13 @@ foreach my $dom (@domains) {
 	my $stats = $diskstats{$dev_name};
 	my $dim = $disk->{target}->{dev};
 	if (defined $stats) {
-	    print_stat ($dom, $disk_ts, $dim, "DiskReadOps",          $stats->{reads_comp});
-	    print_stat ($dom, $disk_ts, $dim, "DiskWriteOps",         $stats->{writes_comp});
-	    print_stat ($dom, $disk_ts, $dim, "DiskReadBytes",        $stats->{sect_read} * $BYTES_PER_SECTOR);
-	    print_stat ($dom, $disk_ts, $dim, "DiskWriteBytes",       $stats->{sect_written} * $BYTES_PER_SECTOR);
-	    print_stat ($dom, $disk_ts, $dim, "VolumeTotalReadTime",  $stats->{mill_read} / $MILLS_PER_SECOND);
-	    print_stat ($dom, $disk_ts, $dim, "VolumeTotalWriteTime", $stats->{mill_written} / $MILLS_PER_SECOND);
+	    print_stat ($dom, $disk_ts, $dim, "summation", "DiskReadOps",          $stats->{reads_comp});
+	    print_stat ($dom, $disk_ts, $dim, "summation", "DiskWriteOps",         $stats->{writes_comp});
+	    print_stat ($dom, $disk_ts, $dim, "summation", "DiskReadBytes",        $stats->{sect_read} * $BYTES_PER_SECTOR);
+	    print_stat ($dom, $disk_ts, $dim, "summation", "DiskWriteBytes",       $stats->{sect_written} * $BYTES_PER_SECTOR);
+	    print_stat ($dom, $disk_ts, $dim, "summation", "VolumeTotalReadTime",  $stats->{mill_read} / $MILLS_PER_SECOND);
+	    print_stat ($dom, $disk_ts, $dim, "summation", "VolumeTotalWriteTime", $stats->{mill_written} / $MILLS_PER_SECOND);
+	    print_stat ($dom, $disk_ts, $dim, "latest",    "VolumeQueueLength",    $stats->{ios_progress});
 	}
     }
 }
@@ -145,12 +146,12 @@ sub get_ts {
 }
 
 sub print_stat {
-    my ($dom, $ts, $dimension, $counter, $value) = @_;
+    my ($dom, $ts, $dimension, $type, $counter, $value) = @_;
     my $s = "\t"; # separator
     print $dom->get_name() . $s
 	. $ts              . $s
 	. $counter         . $s
-	. "summation"      . $s
+	. $type            . $s
 	. $dimension       . $s
 	. $value           . "\n";
 }

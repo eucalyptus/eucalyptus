@@ -1,3 +1,22 @@
+/*************************************************************************
+ * Copyright 2009-2013 Eucalyptus Systems, Inc.
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; version 3 of the License.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see http://www.gnu.org/licenses/.
+ *
+ * Please contact Eucalyptus Systems, Inc., 6755 Hollister Ave., Goleta
+ * CA 93117, USA or visit http://www.eucalyptus.com/licenses/ if you need
+ * additional information or have any questions.
+ ************************************************************************/
 package com.eucalyptus.cloudwatch.domain.metricdata;
 
 import java.util.Date;
@@ -9,7 +28,6 @@ import com.google.common.collect.Maps;
 
 public class MetricQueueItem {
   private String accountId;
-  private String userId;
   private String metricName;
   private String namespace;
   private Map<String, String> dimensionMap;
@@ -23,7 +41,6 @@ public class MetricQueueItem {
 
   public MetricQueueItem(MetricQueueItem other) {
     this.accountId = other.accountId;
-    this.userId = other.userId;
     this.metricName = other.metricName;
     this.namespace = other.namespace;
     this.dimensionMap = (other.dimensionMap == null ? null : Maps.newHashMap(other.dimensionMap));
@@ -44,14 +61,6 @@ public class MetricQueueItem {
 
   public void setAccountId(String accountId) {
     this.accountId = accountId;
-  }
-
-  public String getUserId() {
-    return userId;
-  }
-
-  public void setUserId(String userId) {
-    this.userId = userId;
   }
 
   public String getMetricName() {
@@ -136,7 +145,7 @@ public class MetricQueueItem {
 
   @Override
   public String toString() {
-    return "MetricQueueItem [accountId=" + accountId + ", userId=" + userId
+    return "MetricQueueItem [accountId=" + accountId
         + ", metricName=" + metricName + ", namespace=" + namespace
         + ", dimensionMap=" + dimensionMap + ", metricType=" + metricType
         + ", units=" + units + ", timestamp=" + timestamp + ", sampleSize="

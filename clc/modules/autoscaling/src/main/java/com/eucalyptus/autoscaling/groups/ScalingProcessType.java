@@ -40,18 +40,18 @@ public enum ScalingProcessType implements Predicate<AutoScalingGroup>, ScalingPr
   Terminate,
   ;
 
-@Override
+  @Override
   public boolean apply( @Nullable final AutoScalingGroup group ) {
-    boolean enabled = true;
+    return group == null || isEnabled( this, group.getSuspendedProcesses() );
+  }
 
-    if ( group != null ) for ( final SuspendedProcess suspendedProcess : group.getSuspendedProcesses() ) {
-      if ( suspendedProcess.getScalingProcessType() == this ) {
-        enabled = false;
-        break;
+  public Predicate<AutoScalingGroupCoreView> forView() {
+    return new Predicate<AutoScalingGroupCoreView>() {
+      @Override
+      public boolean apply( final AutoScalingGroupCoreView group ) {
+        return group == null || isEnabled( ScalingProcessType.this, group.getSuspendedProcesses() );
       }
-    }
-
-    return enabled;
+    };
   }
 
   @Override
@@ -63,4 +63,17 @@ public enum ScalingProcessType implements Predicate<AutoScalingGroup>, ScalingPr
   public OwnerFullName getOwner() {
     return Principals.systemFullName();
   }
+
+  private static boolean isEnabled( final ScalingProcessType scalingProcessType,
+                                    final Iterable<SuspendedProcess> suspendedProcesses ) {
+    boolean enabled = true;
+
+    for ( final SuspendedProcess suspendedProcess : suspendedProcesses ) {
+      if ( suspendedProcess.getScalingProcessType() == scalingProcessType ) {
+        enabled = false;
+        break;
+      }
+    }
+
+    return enabled;  }
 }

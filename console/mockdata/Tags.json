@@ -1,5 +1,32 @@
 [
   {
+    "res_type": "instance", 
+    "connection": [], 
+    "__obj_name__": "Tag", 
+    "name": "Name", 
+    "item": "&#xa;        ", 
+    "res_id": "i-94604245", 
+    "value": "Image Processor"
+  }, 
+  {
+    "res_type": "snapshot", 
+    "connection": [], 
+    "__obj_name__": "Tag", 
+    "name": "Name", 
+    "item": "&#xa;        ", 
+    "res_id": "snap-D9193F44", 
+    "value": "March Dev Backup"
+  }, 
+  {
+    "res_type": "instance", 
+    "connection": [], 
+    "__obj_name__": "Tag", 
+    "name": "Name", 
+    "item": "&#xa;        ", 
+    "res_id": "i-E0B347C0", 
+    "value": "Marketing Worker"
+  }, 
+  {
     "res_type": "image", 
     "connection": [], 
     "__obj_name__": "Tag", 
@@ -7,6 +34,51 @@
     "item": "&#xa;        ", 
     "res_id": "ami-30e40159", 
     "value": "LifeguardDevel"
+  }, 
+  {
+    "res_type": "image", 
+    "connection": [], 
+    "__obj_name__": "Tag", 
+    "name": "Name", 
+    "item": "&#xa;        ", 
+    "res_id": "eki-3B833B83", 
+    "value": "MyAwesomeImage"
+  }, 
+  {
+    "res_type": "image", 
+    "connection": [], 
+    "__obj_name__": "Tag", 
+    "name": "Name", 
+    "item": "&#xa;        ", 
+    "res_id": "emi-C68B3E29", 
+    "value": "Grumpy Cat Linux"
+  }, 
+  {
+    "res_type": "volume", 
+    "connection": [], 
+    "__obj_name__": "Tag", 
+    "name": "Name", 
+    "item": "&#xa;        ", 
+    "res_id": "vol-5DC73BD9", 
+    "value": "2T MySQL Database"
+  }, 
+  {
+    "res_type": "volume", 
+    "connection": [], 
+    "__obj_name__": "Tag", 
+    "name": "Name", 
+    "item": "&#xa;        ", 
+    "res_id": "vol-270A3EDB", 
+    "value": "Test Volume"
+  }, 
+  {
+    "res_type": "snapshot", 
+    "connection": [], 
+    "__obj_name__": "Tag", 
+    "name": "Name", 
+    "item": "&#xa;        ", 
+    "res_id": "snap-D9193F44", 
+    "value": "Quick Backup"
   }, 
   {
     "res_type": "image", 

@@ -490,6 +490,12 @@ public class ListBucketType extends WalrusRequestType {
 	String marker;
 	String maxKeys;
 	String delimiter;
+	
+	def ListBucketType() {
+	  prefix = "";
+	  marker = "";
+	  delimiter = "";
+	}
 }
 
 public class ListBucketResponseType extends WalrusResponseType {
@@ -500,9 +506,9 @@ public class ListBucketResponseType extends WalrusResponseType {
 	int maxKeys;
 	String delimiter;
 	boolean isTruncated;
-	ArrayList<MetaDataEntry> metaData = new ArrayList<MetaDataEntry>();
-	ArrayList<ListEntry> contents = new ArrayList<ListEntry>();
-	ArrayList<PrefixEntry> commonPrefixes = new ArrayList<PrefixEntry>();
+	ArrayList<MetaDataEntry> metaData;
+	ArrayList<ListEntry> contents;
+	ArrayList<PrefixEntry> commonPrefixes;
 }
 
 public class ListEntry extends EucalyptusData {

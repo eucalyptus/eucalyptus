@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * Copyright 2009-2013 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -112,7 +112,7 @@ public class CollectionUtils {
    * @param <I> The iterable type
    * @return The final value
    */
-  public static <T,I> T reduce( final Iterable<I> iterable, 
+  public static <T,I> T reduce( final Iterable<? extends I> iterable,
                                 final T initialValue, 
                                 final Function<T,Function<I,T>> reducer ) {
     T value = initialValue;

@@ -17,7 +17,6 @@
  * CA 93117, USA or visit http://www.eucalyptus.com/licenses/ if you need
  * additional information or have any questions.
  ************************************************************************/
-
 (function($, eucalyptus) {
   $.widget('eucalyptus.instance', $.eucalyptus.eucawidget, {
     options : {
@@ -37,6 +36,8 @@
     instPassword : {}, // only windows instances
     detachButtonId : 'btn-vol-detach',
     _init : function() {
+            console.log ( "INIT!!!" );
+        
       var thisObj = this;
       var $tmpl = $('html body').find('.templates #instanceTblTmpl').clone();
       var $wrapper = $($tmpl.render($.extend($.i18n.map, help_instance)));
@@ -275,7 +276,7 @@
       var $tag_dialog = $rendered.children().first();
       var $tag_help = $rendered.children().last();
       this.tagDialog = $tag_dialog.eucadialog({
-        id: 'instances-terminate',
+        id: 'instances-tag-resource',
         title: 'Add/Edit tags',
         help: {content: $tag_help, url: help_instance.dialog_terminate_content_url},
       });

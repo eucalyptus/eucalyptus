@@ -19,19 +19,20 @@
  ************************************************************************/
 package com.eucalyptus.autoscaling.metadata;
 
-import java.util.Date;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import javax.annotation.Nullable;
 import org.hibernate.criterion.Criterion;
-import com.eucalyptus.autoscaling.instances.AutoScalingInstance;
+import com.eucalyptus.auth.principal.AccountFullName;
+import com.eucalyptus.autoscaling.common.AutoScalingMetadata;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.Transactions;
 import com.eucalyptus.util.Callback;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.util.OwnerFullName;
+import com.eucalyptus.util.RestrictedType;
 import com.google.common.base.Function;
 import com.google.common.base.Predicate;
 
@@ -46,11 +47,13 @@ public abstract class AbstractOwnedPersistents<AOP extends AbstractOwnedPersiste
     this.typeDescription = typeDescription;
   }
 
-  public AOP lookupByExample( final AOP example,
-                              @Nullable final OwnerFullName ownerFullName,
-                              final String key ) throws AutoScalingMetadataException {
+  public <T> T lookupByExample( final AOP example,
+                                @Nullable final OwnerFullName ownerFullName,
+                                final String key,
+                                final Predicate<? super AOP> filter,
+                                final Function<? super AOP,T> transform ) throws AutoScalingMetadataException {
     try {
-      return Transactions.find( example );
+      return Transactions.one( example, filter, transform );
     } catch ( NoSuchElementException e ) {
       throw new AutoScalingMetadataNotFoundException( qualifyOwner("Unable to find "+typeDescription+" '"+key+"'", ownerFullName), e );
     } catch ( Exception e ) {
@@ -66,30 +69,33 @@ public abstract class AbstractOwnedPersistents<AOP extends AbstractOwnedPersiste
     }
   }
 
-  public List<AOP> list( final OwnerFullName ownerFullName,
-                         final Predicate<? super AOP> filter ) throws AutoScalingMetadataException {
+  public <T> List<T> list( final OwnerFullName ownerFullName,
+                           final Predicate<? super AOP> filter,
+                           final Function<? super AOP,T> transform ) throws AutoScalingMetadataException {
     try {
-      return Transactions.filter( exampleWithOwner( ownerFullName ), filter );
+      return Transactions.filteredTransform( exampleWithOwner( ownerFullName ), filter, transform );
     } catch ( Exception e ) {
       throw new AutoScalingMetadataException( qualifyOwner( "Failed to find "+typeDescription+"s", ownerFullName ), e );
     }
   }
 
-  public List<AOP> listByExample( final AOP example,
-                                  final Predicate<? super AOP> filter ) throws AutoScalingMetadataException {
+  public <T> List<T> listByExample( final AOP example,
+                                    final Predicate<? super AOP> filter,
+                                    final Function<? super AOP,T> transform ) throws AutoScalingMetadataException {
     try {
-      return Transactions.filter( example, filter );
+      return Transactions.filteredTransform( example, filter, transform );
     } catch ( Exception e ) {
       throw new AutoScalingMetadataException( "Failed to find "+typeDescription+"s by example: " + LogUtil.dumpObject(example), e );
     }
   }
 
-  public List<AOP> listByExample( final AOP example,
-                                  final Predicate<? super AOP> filter,
-                                  final Criterion criterion,
-                                  final Map<String,String> aliases ) throws AutoScalingMetadataException {
+  public <T> List<T> listByExample( final AOP example,
+                                    final Predicate<? super AOP> filter,
+                                    final Criterion criterion,
+                                    final Map<String,String> aliases,
+                                    final Function<? super AOP,T> transform ) throws AutoScalingMetadataException {
     try {
-      return Transactions.filter( example, filter, criterion, aliases );
+      return Transactions.filteredTransform( example, criterion, aliases, filter, transform );
     } catch ( Exception e ) {
       throw new AutoScalingMetadataException( "Failed to find "+typeDescription+"s by example: " + LogUtil.dumpObject(example), e );
     }
@@ -116,9 +122,9 @@ public abstract class AbstractOwnedPersistents<AOP extends AbstractOwnedPersiste
     }
   }
 
-  public boolean delete( final AOP metadata ) throws AutoScalingMetadataException {
+  public boolean delete( final AutoScalingMetadata metadata ) throws AutoScalingMetadataException {
     try {
-      return Transactions.delete( exampleWithUuid( metadata.getNaturalId( ) ) );
+      return Transactions.delete( exampleWithName( AccountFullName.getInstance( metadata.getOwner().getAccountNumber() ), metadata.getDisplayName() ) );
     } catch ( NoSuchElementException e ) {
       return false;
     } catch ( Exception e ) {
@@ -138,6 +144,22 @@ public abstract class AbstractOwnedPersistents<AOP extends AbstractOwnedPersiste
       throw new AutoScalingMetadataException( "Error deleting "+typeDescription+"s by example: "+LogUtil.dumpObject( example ), e );
     }
   }
+
+  public List<AOP> deleteByExample( final AOP example,
+                                    final Criterion criterion,
+                                    final Map<String,String> aliases ) throws AutoScalingMetadataException {
+    try {
+      return Transactions.each( example, criterion, aliases, new Callback<AOP>(){
+        @Override
+        public void fire( final AOP input ) {
+          Entities.delete( input );
+        }
+      } );
+    } catch ( Exception e ) {
+      throw new AutoScalingMetadataException( "Error deleting "+typeDescription+"s by example: "+LogUtil.dumpObject( example ), e );
+    }
+  }
+
 
   //TODO:STEVE: Use transactions with retries where ever appropriate
   public <R> R transactionWithRetry( final Class<?> entityType,
@@ -164,18 +186,14 @@ public abstract class AbstractOwnedPersistents<AOP extends AbstractOwnedPersiste
     }
   }
 
-  public static Function<AutoScalingInstance,Date> createdDate() {
-    return AbstractOwnedPersistentDateProperties.CREATED;  
-  }
-
   public static interface WorkCallback<T> {
     public T doWork() throws AutoScalingMetadataException;
   }
 
-  protected String describe( final AOP metadata ) {
+  protected String describe( final RestrictedType metadata ) {
     return metadata.getDisplayName();  
-  }      
-  
+  }
+
   protected abstract AOP exampleWithUuid( String uuid );
 
   protected abstract AOP exampleWithOwner( OwnerFullName ownerFullName );
@@ -185,14 +203,4 @@ public abstract class AbstractOwnedPersistents<AOP extends AbstractOwnedPersiste
   protected final String qualifyOwner( final String text, final OwnerFullName ownerFullName ) {
     return ownerFullName == null ? text : text + " for " + ownerFullName;
   }
-
-  private enum AbstractOwnedPersistentDateProperties implements Function<AutoScalingInstance,Date> {
-    CREATED {
-      @Override
-      public Date apply( final AutoScalingInstance autoScalingInstance ) {
-        return autoScalingInstance.getCreationTimestamp();
-      }
-    }
-  }
-
 }

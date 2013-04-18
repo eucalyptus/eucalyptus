@@ -72,17 +72,24 @@ public class VmId {
   private VmInstance vmInstance;
   @Column( name = "metadata_vm_reservation_id" )
   private String     reservationId;
+  @Column( name = "metadata_vm_client_token", updatable = false )
+  private String     clientToken;
+  @Column( name = "metadata_vm_nameorarn", updatable = false )
+  private String     nameOrArn;
+  @Column( name = "metadata_vm_client_token_unique", unique = true, updatable = false )
+  private String     uniqueClientToken;
   @Column( name = "metadata_vm_instance_id" )
   private String     instanceId;
   
   VmId( ) {
-    super( );
   }
   
-  VmId( String reservationId, String instanceId ) {
-    super( );
+  VmId( String reservationId, String instanceId, String clientToken, String uniqueClientToken, String nameOrArn) {
     this.reservationId = reservationId;
+    this.clientToken = clientToken;
+    this.uniqueClientToken = uniqueClientToken;
     this.instanceId = instanceId;
+    this.nameOrArn = nameOrArn;
   }
   
   private VmInstance getVmInstance( ) {
@@ -92,11 +99,23 @@ public class VmId {
   public String getReservationId( ) {
     return this.reservationId;
   }
-  
+
   public String getInstanceId( ) {
     return this.instanceId;
   }
-  
+
+  public String getClientToken( ) {
+    return this.clientToken;
+  }
+
+  public String getNameOrArn ( ) {
+    return this.nameOrArn != null ? this.nameOrArn : "";
+  }
+
+  public String getUniqueClientToken( ) {
+    return this.uniqueClientToken;
+  }
+
   private void setVmInstance( VmInstance vmInstance ) {
     this.vmInstance = vmInstance;
   }
@@ -104,9 +123,21 @@ public class VmId {
   private void setReservationId( String reservationId ) {
     this.reservationId = reservationId;
   }
-  
+
   private void setInstanceId( String instanceId ) {
     this.instanceId = instanceId;
+  }
+
+  private void setClientToken( String clientToken ) {
+    this.clientToken = clientToken;
+  }
+
+  private void setNameOrArn ( ) {
+    this.nameOrArn = nameOrArn;
+  }
+
+  private void setUniqueClientToken( String uniqueClientToken ) {
+    this.uniqueClientToken = uniqueClientToken;
   }
 
   @Override
@@ -114,7 +145,9 @@ public class VmId {
     StringBuilder builder = new StringBuilder( );
     builder.append( "VmId:" );
     if ( this.reservationId != null ) builder.append( "reservationId=" ).append( this.reservationId ).append( ":" );
+    if ( this.clientToken != null ) builder.append( "clientToken=" ).append( this.clientToken ).append( ":" );
     if ( this.instanceId != null ) builder.append( "instanceId=" ).append( this.instanceId );
+    if ( this.nameOrArn != null ) builder.append( "nameOrArn= ").append( this.nameOrArn );
     return builder.toString( );
   }
 

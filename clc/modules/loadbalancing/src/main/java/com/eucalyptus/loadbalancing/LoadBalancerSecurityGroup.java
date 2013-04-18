@@ -24,8 +24,8 @@ import java.util.Collection;
 import javax.persistence.Column;
 import javax.persistence.FetchType;
 import javax.persistence.JoinColumn;
-import javax.persistence.ManyToOne;
 import javax.persistence.OneToMany;
+import javax.persistence.OneToOne;
 import javax.persistence.PersistenceContext;
 import javax.persistence.PrePersist;
 import javax.persistence.Table;
@@ -57,9 +57,10 @@ public class LoadBalancerSecurityGroup extends AbstractPersistent {
 
 	private LoadBalancerSecurityGroup(){}
 	
-	private LoadBalancerSecurityGroup(LoadBalancer lb, String groupName){
+	private LoadBalancerSecurityGroup(LoadBalancer lb, String ownerAccountId, String groupName){
 		this.loadbalancer = lb;
 		this.groupName = groupName;
+		this.ownerAccountId = ownerAccountId;
 		this.state= STATE.InService.name();
 	}
 	
@@ -67,14 +68,14 @@ public class LoadBalancerSecurityGroup extends AbstractPersistent {
 		return new LoadBalancerSecurityGroup(); // query all
 	}
 
-	public static LoadBalancerSecurityGroup named(LoadBalancer lb, String groupName){
-		final LoadBalancerSecurityGroup instance = new LoadBalancerSecurityGroup(lb, groupName);
+	public static LoadBalancerSecurityGroup named(LoadBalancer lb, String ownerAccountId, String groupName){
+		final LoadBalancerSecurityGroup instance = new LoadBalancerSecurityGroup(lb, ownerAccountId, groupName);
 		instance.uniqueName = instance.createUniqueName();
 		return instance;
 	}
 	
-	public static LoadBalancerSecurityGroup named(LoadBalancer lb, String groupName, STATE state){
-		final LoadBalancerSecurityGroup instance = new LoadBalancerSecurityGroup(lb, groupName);
+	public static LoadBalancerSecurityGroup named(LoadBalancer lb, String ownerAccountId, String groupName, STATE state){
+		final LoadBalancerSecurityGroup instance = new LoadBalancerSecurityGroup(lb, ownerAccountId, groupName);
 		instance.state = state.name();
 		instance.uniqueName = instance.createUniqueName();
 		return instance;
@@ -86,12 +87,15 @@ public class LoadBalancerSecurityGroup extends AbstractPersistent {
 		return instance;
 	}
 	
-    @ManyToOne
+    @OneToOne
     @JoinColumn( name = "metadata_loadbalancer_fk", nullable=true)
     private LoadBalancer loadbalancer = null;
 
 	@Column(name="group_name", nullable=false)
     private String groupName = null;
+	
+	@Column(name="group_owner_account_id", nullable=false)
+	private String ownerAccountId = null;
 	
 	@Column(name="metadata_state", nullable=false)
 	private String state = null;
@@ -106,6 +110,11 @@ public class LoadBalancerSecurityGroup extends AbstractPersistent {
 	public String getName(){
 		return this.groupName;
 	}
+	
+	public String getGroupOwnerAccountId(){
+		return this.ownerAccountId;
+	}
+	
 	public Collection<LoadBalancerServoInstance> getServoInstances(){
 		return this.servoInstances;
 	}
@@ -117,9 +126,9 @@ public class LoadBalancerSecurityGroup extends AbstractPersistent {
 	public void setLoadBalancer(final LoadBalancer lb){
 		this.loadbalancer = lb;
 	}
-
-	public void retire(){
-		this.state = STATE.OutOfService.name();
+	
+	public void setState(STATE state){
+		this.state = state.name();
 	}
 	
 	public STATE getState(){
@@ -133,7 +142,7 @@ public class LoadBalancerSecurityGroup extends AbstractPersistent {
 	}
 
 	private String createUniqueName(){
-		return String.format("loadbalancer-%s-sgroup-%s", this.loadbalancer, this.groupName);
+		return String.format("loadbalancer-sgroup-%s-%s-%s-%s", this.loadbalancer.getOwnerAccountNumber(), this.loadbalancer.getDisplayName(), this.ownerAccountId, this.groupName);
 	}
 	
 	@Override

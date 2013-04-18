@@ -19,6 +19,7 @@
  ************************************************************************/
 package com.eucalyptus.autoscaling.metadata;
 
+import javax.annotation.Nullable;
 import javax.persistence.Column;
 import javax.persistence.MappedSuperclass;
 import javax.persistence.PrePersist;
@@ -28,12 +29,13 @@ import com.eucalyptus.auth.principal.Principals;
 import com.eucalyptus.auth.principal.UserFullName;
 import com.eucalyptus.entities.AbstractPersistent;
 import com.eucalyptus.util.OwnerFullName;
+import com.eucalyptus.util.RestrictedType;
 
 /**
  *
  */
 @MappedSuperclass
-public class AbstractOwnedPersistent extends AbstractPersistent {
+public class AbstractOwnedPersistent extends AbstractPersistent implements RestrictedType.AccountRestrictedType, RestrictedType.UserRestrictedType {
   private static final long serialVersionUID = 1L;
   
   @Column( name = "metadata_display_name" )
@@ -54,7 +56,7 @@ public class AbstractOwnedPersistent extends AbstractPersistent {
   protected AbstractOwnedPersistent() {    
   }
 
-  protected AbstractOwnedPersistent( final OwnerFullName owner ) {
+  protected AbstractOwnedPersistent( @Nullable final OwnerFullName owner ) {
     setOwner( owner );
   }
 
@@ -77,6 +79,7 @@ public class AbstractOwnedPersistent extends AbstractPersistent {
     this.displayName = displayName;
   }
 
+  @Override
   public String getOwnerAccountNumber() {
     return ownerAccountNumber;
   }
@@ -85,14 +88,7 @@ public class AbstractOwnedPersistent extends AbstractPersistent {
     this.ownerAccountNumber = ownerAccountNumber;
   }
 
-  public OwnerFullName getOwnerFullNameCached() {
-    return ownerFullNameCached;
-  }
-
-  protected void setOwnerFullNameCached( final OwnerFullName ownerFullNameCached ) {
-    this.ownerFullNameCached = ownerFullNameCached;
-  }
-
+  @Override
   public String getOwnerUserId() {
     return ownerUserId;
   }
@@ -101,6 +97,7 @@ public class AbstractOwnedPersistent extends AbstractPersistent {
     this.ownerUserId = ownerUserId;
   }
 
+  @Override
   public String getOwnerUserName() {
     return ownerUserName;
   }
@@ -137,7 +134,7 @@ public class AbstractOwnedPersistent extends AbstractPersistent {
     }
   }
 
-  public void setOwner( OwnerFullName owner ) {
+  public void setOwner( @Nullable OwnerFullName owner ) {
     this.ownerFullNameCached = null;
     this.setOwnerAccountNumber( owner != null
         ? owner.getAccountNumber( )
@@ -151,11 +148,7 @@ public class AbstractOwnedPersistent extends AbstractPersistent {
   }
 
   protected String getUniqueName( ) {
-    if ( this.uniqueName == null ) {
-      return this.uniqueName = this.createUniqueName( );
-    } else {
-      return this.uniqueName;
-    }
+    return this.uniqueName;
   }
 
   protected void setUniqueName( String uniqueName ) {

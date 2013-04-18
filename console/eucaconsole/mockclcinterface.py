@@ -85,7 +85,7 @@ class MockClcInterface(ClcInterface):
     def get_all_zones(self, filters, callback=None):
         return self.zones
 
-    def get_all_images(self, owners, filters, callback=None):
+    def get_all_images(self, owners=None, filters=None, callback=None):
         return self.images
 
     # returns list of snapshots attributes

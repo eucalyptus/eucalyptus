@@ -66,7 +66,7 @@ import java.lang.reflect.Field;
 import org.apache.log4j.Logger;
 import com.eucalyptus.bootstrap.ServiceJarDiscovery;
 import com.google.common.collect.ObjectArrays;
-import edu.emory.mathcs.backport.java.util.Arrays;
+import java.util.Arrays;
 
 public class PropertiesDiscovery extends ServiceJarDiscovery {
   private static Logger LOG = Logger.getLogger( PropertiesDiscovery.class );

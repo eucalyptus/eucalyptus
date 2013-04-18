@@ -419,7 +419,11 @@ public class Volumes {
         return State.GENERATING;
       }
     } else if ( State.ANNIHILATING.equals( volumeState ) ) {
-      return State.ANNIHILATING;
+      if ("deleted".equals(storageState) ) {
+        return State.ANNIHILATED;
+      } else {
+        return State.ANNIHILATING;
+      }
     } else if ( !State.ANNIHILATING.equals( volumeState ) && !State.BUSY.equals( volumeState ) ) {
       if ("failed".equals(storageState) ) {
         return State.FAIL;

@@ -19,10 +19,10 @@
  ************************************************************************/
 package com.eucalyptus.autoscaling.policies;
 
+import static com.eucalyptus.autoscaling.common.AutoScalingMetadata.ScalingPolicyMetadata;
 import java.util.List;
 import javax.persistence.EntityTransaction;
 import com.eucalyptus.autoscaling.metadata.AutoScalingMetadataException;
-import com.eucalyptus.autoscaling.common.AutoScalingMetadata;
 import com.eucalyptus.autoscaling.common.AutoScalingMetadatas;
 import com.eucalyptus.autoscaling.common.ScalingPolicyType;
 import com.eucalyptus.autoscaling.groups.AutoScalingGroup;
@@ -40,21 +40,21 @@ import com.google.common.base.Predicate;
  */
 public abstract class ScalingPolicies {
 
-  public abstract List<ScalingPolicy> list( OwnerFullName ownerFullName ) throws AutoScalingMetadataException;
+  public abstract <T> List<T> list( OwnerFullName ownerFullName,
+                                    Predicate<? super ScalingPolicy> filter,
+                                    Function<? super ScalingPolicy,T> transform ) throws AutoScalingMetadataException;
 
-  public abstract List<ScalingPolicy> list( OwnerFullName ownerFullName,
-                                            Predicate<? super ScalingPolicy> filter ) throws AutoScalingMetadataException;
-
-  public abstract ScalingPolicy lookup( OwnerFullName ownerFullName,
-                                        String autoScalingGroupName,
-                                        String policyName ) throws AutoScalingMetadataException;
+  public abstract <T> T lookup( OwnerFullName ownerFullName,
+                                String autoScalingGroupName,
+                                String policyName,
+                                Function<? super ScalingPolicy,T> transform ) throws AutoScalingMetadataException;
 
   public abstract ScalingPolicy update( OwnerFullName ownerFullName,
                                         String autoScalingGroupName,
                                         String policyName,                                        
                                         Callback<ScalingPolicy> policyUpdateCallback ) throws AutoScalingMetadataException;
 
-  public abstract boolean delete( ScalingPolicy scalingPolicy ) throws AutoScalingMetadataException;
+  public abstract boolean delete( ScalingPolicyMetadata scalingPolicy ) throws AutoScalingMetadataException;
 
   public abstract ScalingPolicy save( ScalingPolicy scalingPolicy ) throws AutoScalingMetadataException;
 
@@ -98,6 +98,16 @@ public abstract class ScalingPolicies {
   }
 
   @TypeMapper
+  public enum ScalingPolicyViewTransform implements Function<ScalingPolicy, ScalingPolicyView> {
+    INSTANCE;
+
+    @Override
+    public ScalingPolicyView apply( final ScalingPolicy scalingPolicy ) {
+      return new ScalingPolicyView( scalingPolicy );
+    }
+  }
+
+  @TypeMapper
   public enum ScalingPolicyTransform implements Function<ScalingPolicy, ScalingPolicyType> {
     INSTANCE;
 
@@ -113,13 +123,12 @@ public abstract class ScalingPolicies {
       type.setScalingAdjustment( policy.getScalingAdjustment() );
       type.setMinAdjustmentStep( policy.getMinAdjustmentStep() );
       type.setCooldown( policy.getCooldown() );
-      // type.setAlarms(); //TODO:STEVE: Alarms for scaling policies
-      
+
       return type;
     }
   }
 
-  @RestrictedTypes.QuantityMetricFunction( AutoScalingMetadata.ScalingPolicyMetadata.class )
+  @RestrictedTypes.QuantityMetricFunction( ScalingPolicyMetadata.class )
   public enum CountScalingPolicies implements Function<OwnerFullName, Long> {
     INSTANCE;
 

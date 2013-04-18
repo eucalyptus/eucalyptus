@@ -43,16 +43,7 @@
         dt_arg : {
           "bProcessing": true,
           "bServerSide": true,
-          "sAjaxDataProp": function(json) {
-            return json;
-          },
-          "sAjaxSource": 'balancer',
-          "fnServerData": function (sSource, aoData, fnCallback) {
-                data = $('html body').eucadata('get', sSource);
-                data.iTotalRecords = data.length;
-                data.iTotalDisplayRecords = data.length;
-                fnCallback(data);
-          },
+          "sAjaxSource": 'balancers',
           "bAutoWidth" : false,
           "sPaginationType": "full_numbers",
           "aoColumns": [
@@ -97,9 +88,6 @@
         }
       });
       this.tableWrapper.appendTo(this.element);
-      $('html body').eucadata('addCallback', 'balancer', 'balance-landing', function() {
-        thisObj.tableWrapper.eucatable('redraw');
-      });
     },
 
     _create : function() { 

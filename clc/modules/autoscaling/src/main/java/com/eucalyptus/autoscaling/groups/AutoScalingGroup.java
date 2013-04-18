@@ -25,6 +25,7 @@ import java.util.Collections;
 import java.util.Date;
 import java.util.List;
 import java.util.Set;
+import javax.annotation.Nullable;
 import javax.persistence.CascadeType;
 import javax.persistence.CollectionTable;
 import javax.persistence.Column;
@@ -46,11 +47,13 @@ import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
 import org.hibernate.annotations.Entity;
 import com.eucalyptus.autoscaling.activities.ScalingActivity;
+import com.eucalyptus.autoscaling.instances.AutoScalingInstance;
 import com.eucalyptus.autoscaling.metadata.AbstractOwnedPersistent;
 import com.eucalyptus.autoscaling.configurations.LaunchConfiguration;
 import com.eucalyptus.autoscaling.policies.ScalingPolicy;
 import com.eucalyptus.autoscaling.tags.AutoScalingGroupTag;
 import com.eucalyptus.util.OwnerFullName;
+import com.google.common.base.Joiner;
 import com.google.common.base.Objects;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
@@ -101,9 +104,6 @@ public class AutoScalingGroup extends AbstractOwnedPersistent implements AutoSca
   @Enumerated( EnumType.STRING )
   private HealthCheckType healthCheckType;
 
-  @Column( name = "metadata_status" )
-  private String status;  //TODO:STEVE: status
-
   @ElementCollection
   @CollectionTable( name = "metadata_auto_scaling_group_availability_zones" )
   @Column( name = "metadata_availability_zone" )
@@ -121,8 +121,6 @@ public class AutoScalingGroup extends AbstractOwnedPersistent implements AutoSca
   @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
   private List<TerminationPolicyType> terminationPolicies = Lists.newArrayList();
   
-  //TODO:STEVE: enabled metrics?
-
   @ElementCollection
   @CollectionTable( name = "metadata_auto_scaling_group_load_balancers" )
   @Column( name = "metadata_load_balancer_name" )
@@ -137,7 +135,20 @@ public class AutoScalingGroup extends AbstractOwnedPersistent implements AutoSca
   @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
   private Set<SuspendedProcess> suspendedProcesses = Sets.newHashSet();
 
-  //TODO:STEVE: include unsupported properties -> placementGroup, vpcZoneIdentifier
+  @ElementCollection
+  @CollectionTable( name = "metadata_auto_scaling_group_enabled_metrics" )
+  @Column( name = "metadata_metric" )
+  @JoinColumn( name = "metadata_auto_scaling_group_id" )
+  @Enumerated( EnumType.STRING )
+  @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
+  private Set<MetricCollectionType> enabledMetrics = Sets.newHashSet();
+
+  @ElementCollection
+  @CollectionTable( name = "metadata_auto_scaling_group_scaling_causes" )
+  @JoinColumn( name = "metadata_auto_scaling_group_id" )
+  @OrderColumn( name = "metadata_scaling_causes_index")
+  @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
+  private List<GroupScalingCause> scalingCauses = Lists.newArrayList();
 
   @OneToMany( fetch = FetchType.LAZY, cascade = CascadeType.REMOVE, orphanRemoval = true, mappedBy = "group" )
   private Collection<ScalingActivity> scalingActivity;
@@ -148,10 +159,13 @@ public class AutoScalingGroup extends AbstractOwnedPersistent implements AutoSca
   @OneToMany( fetch = FetchType.LAZY, cascade = CascadeType.ALL, orphanRemoval = true, mappedBy = "group" )
   private Collection<AutoScalingGroupTag> tags = Lists.newArrayList();
 
+  @OneToMany( fetch = FetchType.LAZY, cascade = CascadeType.REFRESH, mappedBy = "autoScalingGroup" )
+  private List<AutoScalingInstance> instances = Lists.newArrayList();
+
   protected AutoScalingGroup() {
   }
 
-  protected AutoScalingGroup( final OwnerFullName owner ) {
+  protected AutoScalingGroup( @Nullable final OwnerFullName owner ) {
     super( owner );
   }
 
@@ -243,14 +257,6 @@ public class AutoScalingGroup extends AbstractOwnedPersistent implements AutoSca
     this.healthCheckType = healthCheckType;
   }
 
-  public String getStatus() {
-    return status;
-  }
-
-  public void setStatus( final String status ) {
-    this.status = status;
-  }
-
   public List<String> getAvailabilityZones() {
     return availabilityZones;
   }
@@ -283,7 +289,34 @@ public class AutoScalingGroup extends AbstractOwnedPersistent implements AutoSca
     this.suspendedProcesses = suspendedProcesses;
   }
 
-  public void updateDesiredCapacity( final int desiredCapacity ) {
+  public Set<MetricCollectionType> getEnabledMetrics() {
+    return enabledMetrics;
+  }
+
+  public void setEnabledMetrics( final Set<MetricCollectionType> enabledMetrics ) {
+    this.enabledMetrics = enabledMetrics;
+  }
+
+  public List<GroupScalingCause> getScalingCauses() {
+    return scalingCauses;
+  }
+
+  public void setScalingCauses( final List<GroupScalingCause> scalingCauses ) {
+    this.scalingCauses = scalingCauses;
+  }
+
+  public List<AutoScalingInstance> getAutoScalingInstances() {
+    return instances;
+  }
+
+  public void updateDesiredCapacity( final int desiredCapacity,
+                                     final String reason ) {
+    if ( !this.desiredCapacity.equals( desiredCapacity ) ) {
+      scalingCauses.add( new GroupScalingCause( reason ) );
+      while ( scalingCauses.size() > 100 ) {
+        scalingCauses.remove( 0 );
+      }
+    }
     this.scalingRequired = scalingRequired || capacity == null || !capacity.equals( desiredCapacity );
     this.desiredCapacity = desiredCapacity;
   }
@@ -291,6 +324,12 @@ public class AutoScalingGroup extends AbstractOwnedPersistent implements AutoSca
   public void updateAvailabilityZones( final List<String> availabilityZones ) {
     final Set<String> currentZones = Sets.newHashSet( this.availabilityZones );
     final Set<String> newZones = Sets.newHashSet( availabilityZones );
+    if ( !currentZones.equals( newZones ) ) {
+      final String removedZones = Joiner.on(",").join( Sets.difference( currentZones, newZones ) );
+      final String addedZones = Joiner.on(",").join( Sets.difference( newZones, currentZones ) );
+      scalingCauses.add( new GroupScalingCause( String.format( "a user request removed the zones %1$s from this AutoScalingGroup making them invalid", removedZones ) ) );
+      scalingCauses.add( new GroupScalingCause( String.format( "a user request added the zones %1$s to this AutoScalingGroup and the group may require rebalancing", addedZones ) ) );
+    }
     this.scalingRequired = scalingRequired || !currentZones.equals( newZones );
     this.availabilityZones = availabilityZones;
   }
@@ -310,7 +349,7 @@ public class AutoScalingGroup extends AbstractOwnedPersistent implements AutoSca
    * @param ownerFullName The owner
    * @return The example
    */
-  public static AutoScalingGroup withOwner( final OwnerFullName ownerFullName ) {
+  public static AutoScalingGroup withOwner( @Nullable final OwnerFullName ownerFullName ) {
     return new AutoScalingGroup( ownerFullName );
   }
 

@@ -49,10 +49,10 @@ ant_min_version="1.6.5"
 # these are for large files (>2GB)
 LDFLAGS="`getconf LFS64_LDFLAGS` `getconf LFS_LDFLAGS` $LDFLAGS"
 LIBS="`getconf LFS64_LIBS` `getconf LFS_LIBS` $LIBS"
-CFLAGS="`getconf LFS64_CFLAGS` `getconf LFS_CFLAGS`"
+CFLAGS="${CFLAGS} `getconf LFS64_CFLAGS` `getconf LFS_CFLAGS`"
 
 # compile options
-CFLAGS="${CFLAGS} -Wall -fPIC -DHAVE_CONFIG_H -std=gnu99"
+CFLAGS="${CFLAGS} -Wall -Wno-unused-variable -fPIC -DHAVE_CONFIG_H -std=gnu99"
 INCLUDES="${INCLUDES} -I. -I.. -Igenerated -I${TOP}/storage -I${TOP}/node -I${TOP}/util -I${TOP}/net"
 
 # Arguments checking
@@ -122,6 +122,10 @@ AM_PYTHON_CHECK_VERSION([$PYTHON], [3.0],
 if test -n "${AXIS2C_HOME}" ; then
         if test -d "${AXIS2C_HOME}"/include ; then
                 for x in ${AXIS2C_HOME}/include/axis2-* ${AXIS2C_HOME}/include/rampart-*; do
+                        INCLUDES="${INCLUDES} -I$x"
+                done
+        else
+                for x in /usr/include/axis2-* /usr/include/rampart-*; do
                         INCLUDES="${INCLUDES} -I$x"
                 done
         fi

@@ -28,6 +28,7 @@
     //forceDetachDialog : null, // forceDetach is not supported
     addDialog : null,
     attachDialog : null,
+    tagDialog : null,
     attachButtonId : 'volume-attach-btn',
     createButtonId : 'volumes-add-btn',
     _init : function() {
@@ -55,10 +56,14 @@
             {
 	      // Display the id of the volume in the main table
 	      "aTargets":[1], 
-	      "mRender": function(data) {
-                return getTagForResource(data);
+              "mRender": function(data){
+                 return eucatableDisplayColumnTypeTwist(data, data, 255);
               },
-              "mData": "id",
+              "mData": function(source){
+                 if(source.display_id)
+                   return source.display_id;
+                 return source.id;
+              },
 	    },
             {
 	      // Display the status of the volume in the main table
@@ -97,7 +102,7 @@
 	      "mRender": function(data) {
                 return DefaultEncoder().encodeForHTML(data);
               },
-              "mData": "snapshot_id",
+              "mData": "display_snapshot_id",
 	    },
             { 
 	      // Display the availibility zone of the volume in the main table
@@ -133,6 +138,15 @@
               },
               "mData": "create_time",
               "sType": "date"
+            },
+            {
+	      // Invisible column for the id
+              "bVisible": false,
+              "aTargets":[10],
+	      "mRender": function(data) {
+                return DefaultEncoder().encodeForHTML(data);
+              },
+              "mData": "id",
             }
           ],
         },
@@ -148,6 +162,9 @@
         },
         context_menu_actions : function(row) {
           return thisObj._createMenuActions();
+        },
+         expand_callback : function(row){ // row = [col1, col2, ..., etc]
+          return thisObj._expandCallback(row);
         },
         menu_click_create : function (args) { thisObj._createAction() },
         help_click : function(evt) {
@@ -300,6 +317,17 @@
           return null;
       });
       // volume create dialog end
+      // tag dialog begins
+      $tmpl = $('html body').find('.templates #resourceTagWidgetTmpl').clone();
+      $rendered = $($tmpl.render($.extend($.i18n.map, help_instance)));
+      var $tag_dialog = $rendered.children().first();
+      var $tag_help = $rendered.children().last();
+      this.tagDialog = $tag_dialog.eucadialog({
+        id: 'volumes-tag-resource',
+        title: 'Add/Edit tags',
+        help: {content: $tag_help, url: help_instance.dialog_terminate_content_url},
+      });
+      // tag dialog ends
     },
 
     _destroy : function() {
@@ -601,7 +629,7 @@
 
     _deleteAction : function() {
       var thisObj = this;
-      volumesToDelete = thisObj.tableWrapper.eucatable('getSelectedRows', 1);
+      volumesToDelete = thisObj.tableWrapper.eucatable('getSelectedRows', 10);
       if( volumesToDelete.length > 0 ) {
         var matrix = [];
         $.each(volumesToDelete, function(idx, volume){
@@ -618,7 +646,7 @@
 
     _attachAction : function() {
       var thisObj = this;
-      var volumeToAttach = thisObj.tableWrapper.eucatable('getSelectedRows', 1)[0];
+      var volumeToAttach = thisObj.tableWrapper.eucatable('getSelectedRows', 10)[0];
       thisObj.dialogAttachVolume(volumeToAttach, null);
     },
 
@@ -637,9 +665,21 @@
     },
 
     _createSnapshotAction : function() {
-      var volumeToUse = this.tableWrapper.eucatable('getSelectedRows', 1)[0];
+      var volumeToUse = this.tableWrapper.eucatable('getSelectedRows', 10)[0];
       addSnapshot(volumeToUse);
     },
+
+    _tagResourceAction : function(){
+      var thisObj = this;
+      var volume = thisObj.tableWrapper.eucatable('getSelectedRows', 10)[0];
+      if ( volume.length > 0 ) {
+        // Create a widget object for displaying the resource tag information
+        var $tagInfo = $('<div>').addClass('resource-tag-table-expanded-volume').addClass('clearfix').euca_resource_tag({resource: 'volume', resource_id: volume, cancelButtonCallback: function(){ thisObj.tagDialog.eucadialog("close"); }, widgetMode: 'edit' });
+        thisObj.tagDialog.eucadialog('addNote','tag-modification-display-box', $tagInfo);   // This line should be adjusted once the right template is created for the resource tag.  030713
+        thisObj.tagDialog.eucadialog('open');
+      }
+    },
+
 
     _createMenuActions : function() {
       var thisObj = this;
@@ -651,6 +691,7 @@
         itemsList['detach'] = { "name": volume_action_detach, callback: function(key, opt) {;}, disabled: function(){ return true;} }
         itemsList['create_snapshot'] = { "name": volume_action_create_snapshot, callback: function(key, opt) {;}, disabled: function(){ return true;} }
         itemsList['delete'] = { "name": volume_action_delete, callback: function(key, opt) {;}, disabled: function(){ return true;} }
+        itemsList['tag'] = {"name":'Tag Resource', callback: function(key, opt) {;}, disabled: function(){ return true;} }
       })();
 
       // add attach action
@@ -692,7 +733,38 @@
         if (addOption)
           itemsList['delete'] = { "name": volume_action_delete, callback: function(key, opt) { thisObj._deleteAction(); } }
       }
+
+      // add resource tag option	031913
+      if ( volumes.length === 1) {
+        itemsList['tag'] = {"name":'Tag Resource', callback: function(key, opt){ thisObj._tagResourceAction(); }}
+      }
+
       return itemsList;
+    },
+
+    _expandCallback : function(row){ 
+      var thisObj = this;
+      var volId = row[10];
+      var results = describe('volume');
+      var volume = null;
+      for(v in results){
+        if(results[v].id === volId){
+          volume = results[v];
+          break;
+        }
+      }
+
+      if(!volume)
+        return null;
+
+      var $wrapper = $('<div>');
+
+      $tagInfo = $('<div>').addClass('resource-tag-table-expanded-instance').addClass('clearfix').attr('id', volume.id).euca_resource_tag({resource: 'volume', resource_id: volume.id, widgetMode: 'view-only'});
+      
+      $tabspace = $('<div>').addClass('eucatabspace-main-div').eucatabspace(); 
+      $tabspace.eucatabspace('addTabPage', 'Tag', $tagInfo);
+      $wrapper.append($tabspace)
+      return $wrapper;
     },
 
 /**** Public Methods ****/

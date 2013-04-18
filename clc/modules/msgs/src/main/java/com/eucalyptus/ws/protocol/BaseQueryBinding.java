@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * Copyright 2009-2013 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -62,6 +62,7 @@
 
 package com.eucalyptus.ws.protocol;
 
+import java.lang.annotation.Annotation;
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
 import java.lang.reflect.ParameterizedType;
@@ -79,11 +80,14 @@ import com.eucalyptus.binding.Binding;
 import com.eucalyptus.binding.BindingException;
 import com.eucalyptus.binding.BindingManager;
 import com.eucalyptus.binding.HttpEmbedded;
+import com.eucalyptus.binding.HttpEmbeddeds;
 import com.eucalyptus.binding.HttpParameterMapping;
+import com.eucalyptus.binding.HttpParameterMappings;
 import com.eucalyptus.crypto.util.Timestamps;
 import com.eucalyptus.http.MappingHttpRequest;
 import com.eucalyptus.ws.handlers.RestfulMarshallingHandler;
 import com.google.common.base.Function;
+import com.google.common.base.Strings;
 import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
 import com.google.common.collect.Lists;
@@ -360,7 +364,7 @@ public class BaseQueryBinding<T extends Enum<T>> extends RestfulMarshallingHandl
           theList.add( convertToType( Suppliers.ofInstance(params.remove( paramFieldPair.getKey() )), genericType ) );
         } else {
           final List<String> keys = Lists.newArrayList( params.keySet( ) );
-          final Pattern paramPattern = Pattern.compile( Pattern.quote(paramFieldPair.getKey( )) + "\\.([1-9][0-9]*)" );
+          final Pattern paramPattern = Pattern.compile( Pattern.quote(paramFieldPair.getKey( )) + "\\.([0-9]{1,7})" );
           final Map<String,Object> indexToValueMap = new TreeMap<String,Object>( Ordering.natural().onResultOf( FunctionToInteger.INSTANCE ) );
           for ( final String k : keys ) {    
             final Matcher matcher = paramPattern.matcher( k );
@@ -370,8 +374,9 @@ public class BaseQueryBinding<T extends Enum<T>> extends RestfulMarshallingHandl
           }
           theList.addAll( indexToValueMap.values() );
         }
-      } else if ( declaredField.isAnnotationPresent( HttpEmbedded.class ) ) {
-        final HttpEmbedded annoteEmbedded = declaredField.getAnnotation( HttpEmbedded.class );
+      } else if ( declaredField.isAnnotationPresent( HttpEmbedded.class ) ||
+                  declaredField.isAnnotationPresent( HttpEmbeddeds.class )) {
+        final HttpEmbedded annoteEmbedded = getHttpEmbeddedAnnotation( declaredField );
         // :: build the parameter map and call populate object recursively :://
         if ( annoteEmbedded.multiple( ) ) {
           final List<String> keys = Lists.newArrayList( params.keySet( ) );
@@ -379,8 +384,9 @@ public class BaseQueryBinding<T extends Enum<T>> extends RestfulMarshallingHandl
           for ( final String k : keys ) {            
             if ( k.startsWith( paramFieldPair.getKey( ) + "." ) ) {
               final String currentValue = params.remove( k );
-              final String setKey = k.replaceAll( "^"+ paramFieldPair.getKey( ) + "\\.(\\d+)\\..*", "$1" );
-              final String subKey = k.replaceAll( "^"+ paramFieldPair.getKey( ) + "\\.\\d+\\." , "" );
+              final String setKey = k.replaceAll( "^"+ paramFieldPair.getKey( ) + "\\.([0-9]{1,7})\\..*", "$1" );
+              if ( setKey.length() > 7 ) continue;
+              final String subKey = k.replaceAll( "^"+ paramFieldPair.getKey( ) + "\\.[0-9]{1,7}\\." , "" );
               Map<String,String> subMap = subParamMaps.get( setKey );
               if ( subMap == null ) {
                 subParamMaps.put( setKey, subMap = Maps.newHashMap() );  
@@ -403,7 +409,7 @@ public class BaseQueryBinding<T extends Enum<T>> extends RestfulMarshallingHandl
     }
     return failedMappings;
   }
-  
+
   private List<String> populateEmbedded( final Class<?> genericType, final Map<String, String> params, @SuppressWarnings( "rawtypes" ) final ArrayList theList ) throws InstantiationException, IllegalAccessException {
     final GroovyObject embedded = ( GroovyObject ) genericType.newInstance( );
     final Map<String, String> embeddedFields = this.buildFieldMap( genericType );
@@ -423,9 +429,8 @@ public class BaseQueryBinding<T extends Enum<T>> extends RestfulMarshallingHandl
       for ( final Field f : fields ) {
         if ( Modifier.isStatic( f.getModifiers( ) ) )
           continue;
-        else if ( f.isAnnotationPresent( HttpParameterMapping.class ) ) {
-          fieldMap.put( f.getAnnotation( HttpParameterMapping.class ).parameter( ), f.getName( ) );
-//          fieldMap.put( f.getName( ).substring( 0, 1 ).toUpperCase( ).concat( f.getName( ).substring( 1 ) ), f.getName( ) );
+        else if ( f.isAnnotationPresent( HttpParameterMapping.class ) || f.isAnnotationPresent( HttpParameterMappings.class ) ) {
+          fieldMap.put( getHttpParameterMappingAnnotation( f ).parameter(), f.getName( ) );
         } else {
           fieldMap.put( f.getName( ).substring( 0, 1 ).toUpperCase( ).concat( f.getName( ).substring( 1 ) ), f.getName( ) );
         }
@@ -434,7 +439,57 @@ public class BaseQueryBinding<T extends Enum<T>> extends RestfulMarshallingHandl
     }
     return fieldMap;
   }
-  
+
+  private HttpEmbedded getHttpEmbeddedAnnotation( final Field field ) {
+    if ( field.isAnnotationPresent( HttpEmbedded.class ) ) {
+      return field.getAnnotation( HttpEmbedded.class );
+    } else {
+      return getVersionedAnnotation(
+          field.getAnnotation( HttpEmbeddeds.class ).value(),
+          HttpEmbeddedVersionExtractor.INSTANCE );
+    }
+  }
+
+  private HttpParameterMapping getHttpParameterMappingAnnotation( final Field field ) {
+    if ( field.isAnnotationPresent( HttpParameterMapping.class ) ) {
+      return field.getAnnotation( HttpParameterMapping.class );
+    } else {
+      return getVersionedAnnotation(
+          field.getAnnotation( HttpParameterMappings.class ).value(),
+          HttpParameterMappingVersionExtractor.INSTANCE );
+    }
+  }
+
+  private <T extends Annotation> T getVersionedAnnotation( final T[] values,
+                                                           final Function<T,String> versionExtractor ) {
+    for ( final T t : values ) {
+      final String version = versionExtractor.apply( t );
+      if ( Strings.isNullOrEmpty( version ) ) continue;
+      if ( getNamespace().compareTo( getNamespaceForVersion( version ) ) < 1 ) {
+        return t;
+      }
+    }
+    return values[ values.length - 1 ];
+  }
+
+  private enum HttpEmbeddedVersionExtractor implements Function<HttpEmbedded,String> {
+    INSTANCE;
+
+    @Override
+    public String apply( final HttpEmbedded httpEmbedded ) {
+      return httpEmbedded.version();
+    }
+  }
+
+  private enum HttpParameterMappingVersionExtractor implements Function<HttpParameterMapping,String> {
+    INSTANCE;
+
+    @Override
+    public String apply( final HttpParameterMapping httpParameterMapping ) {
+      return httpParameterMapping.version();
+    }
+  }
+
   private enum FunctionToInteger implements Function<String,Integer> {
     INSTANCE {
       @Override

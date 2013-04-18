@@ -19,21 +19,27 @@
  ************************************************************************/
 package com.eucalyptus.loadbalancing;
 
+import com.eucalyptus.auth.policy.PolicySpec;
 import com.eucalyptus.component.ComponentId;
-import com.eucalyptus.component.ComponentId.FaultLogPrefix;
-import com.eucalyptus.component.ComponentId.Partition;
-import com.eucalyptus.component.ComponentId.PolicyVendor;
-import com.eucalyptus.component.ComponentId.PublicService;
 import com.eucalyptus.component.id.Eucalyptus;
 
 
 /**
  * @author Chris Grzegorczyk <grze@eucalyptus.com>
  */
-@PublicService  //TODO:GEN2OOLS: Remove if not a public service
-@Partition( Eucalyptus.class )
-@FaultLogPrefix( "cloud" )
-//@ComponentId.PolicyVendor //TODO:GEN2OOLS: Add vendor if appropriate (see PolicySpec)
-public class LoadBalancing extends ComponentId {
-  
+@ComponentId.Partition( Eucalyptus.class )
+@ComponentId.PublicService
+@ComponentId.PolicyVendor( PolicySpec.VENDOR_LOADBALANCING )
+@ComponentId.FaultLogPrefix( "cloud" )
+
+ public class LoadBalancing extends ComponentId {
+
+
+    public static LoadBalancing INSTANCE = new LoadBalancing( );
+    @Override
+    public boolean isPublicService( ) {
+        return true;
+      }
+
 }
+

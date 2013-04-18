@@ -126,9 +126,11 @@ import com.eucalyptus.records.Logs;
 import com.eucalyptus.reporting.event.ResourceAvailabilityEvent;
 import com.eucalyptus.tags.FilterSupport;
 import com.eucalyptus.util.Callback;
+import com.eucalyptus.util.CollectionUtils;
 import com.eucalyptus.util.HasNaturalId;
 import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.util.OwnerFullName;
+import com.eucalyptus.util.RestrictedTypes;
 import com.eucalyptus.util.RestrictedTypes.QuantityMetricFunction;
 import com.eucalyptus.util.RestrictedTypes.Resolver;
 import com.eucalyptus.util.Strings;
@@ -136,7 +138,6 @@ import com.eucalyptus.util.async.AsyncRequests;
 import com.eucalyptus.util.async.Callbacks;
 import com.eucalyptus.util.async.DelegatingRemoteCallback;
 import com.eucalyptus.util.async.RemoteCallback;
-import com.eucalyptus.util.async.Request;
 import com.eucalyptus.vm.VmInstance.Transitions;
 import com.eucalyptus.vm.VmInstance.VmState;
 import com.eucalyptus.vm.VmInstance.VmStateSet;
@@ -254,6 +255,9 @@ public class VmInstances {
   @ConfigurableField( description = "Maximum amount of time (in seconds) that the network topology service takes to propagate state changes.",
                       initial = "" + 60 * 60 * 1000 )
   public static Long      NETWORK_METADATA_REFRESH_TIME = 15l;
+  @ConfigurableField( description = "Maximum amount of time (in seconds) that migration state will take to propagate state changes (e.g., to tags).",
+                      initial = "" + 60 )
+  public static Long      MIGRATION_REFRESH_TIME        = 60l;
   @ConfigurableField( description = "Prefix to use for instance MAC addresses.",
                       initial = "d0:0d" )
   public static String    MAC_PREFIX                    = "d0:0d";
@@ -715,7 +719,10 @@ public class VmInstances {
       public List<VmInstance> get() {
         return Entities.query( VmInstance.named( ownerFullName, null ), false, criterion, aliases );
       }
-    }, predicate );
+    }, Predicates.and(
+        RestrictedTypes.filterByOwner( ownerFullName ),
+        checkPredicate( predicate )
+    ) );
   }
 
   public static List<VmInstance> list( @Nullable String instanceId,
@@ -731,7 +738,25 @@ public class VmInstances {
       public List<VmInstance> get() {
         return Entities.query( VmInstance.named( ownerFullName, instanceId ) );
       }
-    }, predicate );
+    }, Predicates.and(
+        RestrictedTypes.filterByOwner( ownerFullName ),
+        checkPredicate( predicate )
+    ) );
+  }
+
+  public static List<VmInstance> listByClientToken( @Nullable final OwnerFullName ownerFullName,
+                                                    @Nullable final String clientToken,
+                                                    @Nullable Predicate<? super VmInstance> predicate ) {
+    return list( new Supplier<List<VmInstance>>() {
+      @Override
+      public List<VmInstance> get() {
+        return Entities.query( VmInstance.withToken( ownerFullName, clientToken ) );
+      }
+    }, Predicates.and(
+        CollectionUtils.propertyPredicate( clientToken, VmInstanceFilterFunctions.CLIENT_TOKEN ),
+        RestrictedTypes.filterByOwner( ownerFullName ),
+        checkPredicate( predicate )
+        ) );
   }
 
   private static List<VmInstance> list( @Nonnull Supplier<List<VmInstance>> instancesSupplier,
@@ -946,7 +971,7 @@ public class VmInstances {
           .withStringSetProperty( "block-device-mapping.device-name", VmInstanceStringSetFilterFunctions.BLOCK_DEVICE_MAPPING_DEVICE_NAME )
           .withStringSetProperty( "block-device-mapping.status", VmInstanceStringSetFilterFunctions.BLOCK_DEVICE_MAPPING_STATUS )
           .withStringSetProperty( "block-device-mapping.volume-id", VmInstanceStringSetFilterFunctions.BLOCK_DEVICE_MAPPING_VOLUME_ID )
-          .withUnsupportedProperty( "client-token" )
+          .withStringProperty( "client-token", VmInstanceFilterFunctions.CLIENT_TOKEN )
           .withStringProperty( "dns-name", VmInstanceFilterFunctions.DNS_NAME )
           .withStringSetProperty( "group-id", VmInstanceStringSetFilterFunctions.GROUP_ID )
           .withStringSetProperty( "group-name", VmInstanceStringSetFilterFunctions.GROUP_NAME )
@@ -963,7 +988,7 @@ public class VmInstances {
           .withStringProperty( "key-name", VmInstanceFilterFunctions.KEY_NAME )
           .withStringProperty( "launch-index", VmInstanceFilterFunctions.LAUNCH_INDEX )
           .withDateProperty( "launch-time", VmInstanceDateFilterFunctions.LAUNCH_TIME )
-          .withUnsupportedProperty( "monitoring-state" )
+          .withStringProperty( "monitoring-state", VmInstanceFilterFunctions.MONITORING_STATE )
           .withStringProperty( "owner-id", VmInstanceFilterFunctions.OWNER_ID )
           .withUnsupportedProperty( "placement-group-name" )
           .withStringProperty( "platform", VmInstanceFilterFunctions.PLATFORM )
@@ -1019,6 +1044,7 @@ public class VmInstances {
           .withPersistenceAlias( "bootRecord.vmType", "vmType" )
           .withPersistenceFilter( "architecture", "image.architecture", Sets.newHashSet("bootRecord.machineImage"), Enums.valueOfFunction( ImageMetadata.Architecture.class ) )
           .withPersistenceFilter( "availability-zone", "placement.partitionName", Collections.<String>emptySet() )
+          .withPersistenceFilter( "client-token", "vmId.clientToken" )
           .withPersistenceFilter( "group-id", "networkGroups.groupId" )
           .withPersistenceFilter( "group-name", "networkGroups.displayName" )
           .withPersistenceFilter( "image-id", "image.displayName", Sets.newHashSet("bootRecord.machineImage") )
@@ -1288,6 +1314,12 @@ public class VmInstances {
         return instance.getPartition();
       }
     },
+    CLIENT_TOKEN {
+      @Override
+      public String apply( final VmInstance instance ) {
+        return instance.getClientToken();
+      }
+    },
     DNS_NAME {
       @Override
       public String apply( final VmInstance instance ) {
@@ -1338,6 +1370,12 @@ public class VmInstances {
       @Override
       public String apply( final VmInstance instance ) {
         return Strings.toString( instance.getLaunchRecord().getLaunchIndex() );
+      }
+    },
+    MONITORING_STATE {
+      @Override
+      public String apply( final VmInstance instance ) {
+        return instance.getMonitoring() ? "enabled" : "disabled";
       }
     },
     OWNER_ID {

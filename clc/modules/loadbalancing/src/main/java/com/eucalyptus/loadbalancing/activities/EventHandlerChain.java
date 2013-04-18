@@ -44,18 +44,21 @@ public abstract class EventHandlerChain<T extends LoadbalancingEvent> {
 			try{
 				reverseHandler.addFirst(handler); // failed handler will rollback too
 				handler.apply(evt);
-				
+				if(handler.skipRemaining()){
+					LOG.info("skipping the remaining handlers");
+					break;
+				}
 			}catch(Exception e){
-				LOG.error(e);
 				LOG.warn("starting to rollback");
-				EventHandlerChainException toThrow = 
-						new EventHandlerChainException(
-								String.format("failed handling %s, in handler %s", evt, handler), e, true);
+				final String msg = e.getMessage()!=null ? e.getMessage() : 
+					String.format("failed handling %s at %s", evt, handler);
+				final EventHandlerChainException toThrow = 
+						new EventHandlerChainException(msg, e, true);
 				for (EventHandler<T> h : reverseHandler){
 					try{
 						h.rollback();
 					}catch(Exception ex){
-						LOG.warn("failed to rollback at " + h.toString());
+						LOG.warn("rollback failed at " + h.toString(), ex);
 						toThrow.setRollback(false); // fail once, rollback status is set to false
 					}
 				}

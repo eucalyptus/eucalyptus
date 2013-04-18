@@ -44,6 +44,8 @@
         hidden: thisObj.options['hidden'],
         dt_arg : {
           "sAjaxSource": 'eip',
+          "bAutoWidth" : false,
+          "sPaginationType": "full_numbers",
           "aoColumnDefs": [
             {
 	      // Display the checkbox button in the main table

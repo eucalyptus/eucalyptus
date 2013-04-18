@@ -158,7 +158,7 @@ static final int DNAME		= 5;
  * The Cache/Zone has successfully answered the question for the
  * requested name/type/class.
  */
-static final int SUCCESSFUL	= 6;
+public static final int SUCCESSFUL	= 6;
 
 private static final SetResponse unknown = new SetResponse(UNKNOWN);
 private static final SetResponse nxdomain = new SetResponse(NXDOMAIN);
@@ -177,14 +177,14 @@ SetResponse(int type, RRset rrset) {
 	this.data = rrset;
 }
 
-SetResponse(int type) {
+public SetResponse(int type) {
 	if (type < 0 || type > 6)
 		throw new IllegalArgumentException("invalid type");
 	this.type = type;
 	this.data = null;
 }
 
-static SetResponse
+public static SetResponse
 ofType(int type) {
 	switch (type) {
 		case UNKNOWN:
@@ -206,7 +206,7 @@ ofType(int type) {
 	}
 }
 
-void
+public void
 addRRset(RRset rrset) {
 	if (data == null)
 		data = new ArrayList();

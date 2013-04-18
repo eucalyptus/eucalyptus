@@ -1,3 +1,22 @@
+/*************************************************************************
+ * Copyright 2009-2013 Eucalyptus Systems, Inc.
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; version 3 of the License.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see http://www.gnu.org/licenses/.
+ *
+ * Please contact Eucalyptus Systems, Inc., 6755 Hollister Ave., Goleta
+ * CA 93117, USA or visit http://www.eucalyptus.com/licenses/ if you need
+ * additional information or have any questions.
+ ************************************************************************/
 package com.eucalyptus.cloudwatch.domain.metricdata;
 
 import java.util.Date;
@@ -15,7 +34,6 @@ public class PutMetricDataAggregationKey {
   private String namespace;
   private Date timestamp;
   private Units units;
-  private String userId;
 
   public PutMetricDataAggregationKey(MetricQueueItem item) {
     this.accountId = item.getAccountId();
@@ -25,7 +43,6 @@ public class PutMetricDataAggregationKey {
     this.namespace = item.getNamespace();
     this.timestamp = item.getTimestamp();
     this.units = item.getUnits();
-    this.userId = item.getUserId();
   }
 
   @Override
@@ -45,7 +62,6 @@ public class PutMetricDataAggregationKey {
     result = prime * result
         + ((timestamp == null) ? 0 : timestamp.hashCode());
     result = prime * result + ((units == null) ? 0 : units.hashCode());
-    result = prime * result + ((userId == null) ? 0 : userId.hashCode());
     return result;
   }
 
@@ -86,11 +102,6 @@ public class PutMetricDataAggregationKey {
     } else if (!timestamp.equals(other.timestamp))
       return false;
     if (units != other.units)
-      return false;
-    if (userId == null) {
-      if (other.userId != null)
-        return false;
-    } else if (!userId.equals(other.userId))
       return false;
     return true;
   }

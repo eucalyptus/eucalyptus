@@ -39,30 +39,33 @@ public class EventHandlerChains {
 		return (new EventHandlerChainNewListeners()).build();
 	}
 	
-	private static  EventHandlerChain<DeleteListenerEvent> onDeleteListenerChain = null;
 	public static EventHandlerChain<DeleteListenerEvent> onDeleteListener(){
 		return (new EventHandlerChainDeleteListeners()).build();
+	}
+	
+	public static EventHandlerChain<EnabledZoneEvent> onEnableZones(){
+		return (new EventHandlerChainEnableZone()).build();
+	}
+	
+	public static EventHandlerChain<DisabledZoneEvent> onDisableZones(){
+		return (new EventHandlerChainDisableZone()).build();
 	}
 	
 	public static EventHandlerChain<RegisterInstancesEvent> onRegisterInstances(){
 		return new EventHandlerChain<RegisterInstancesEvent>(){
 				@Override
 				public EventHandlerChain<RegisterInstancesEvent> build() {
-					// TODO Auto-generated method stub
 					return this;
 				}
 			}.build();
 	}
 	
-	private static EventHandlerChain<DeregisterInstancesEvent> onDeregisterInstancesChain = null;
 	public static EventHandlerChain<DeregisterInstancesEvent> onDeregisterInstances(){
 		return new EventHandlerChain<DeregisterInstancesEvent>(){
 				@Override
 				public EventHandlerChain<DeregisterInstancesEvent> build() {
-					// TODO Auto-generated method stub
 					return this;
 				}
 			}.build();
-	}
-		
+	}		
 }

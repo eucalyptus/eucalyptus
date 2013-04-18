@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * Copyright 2009-2013 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -30,7 +30,6 @@ import javax.persistence.Table;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
 import org.hibernate.annotations.Entity;
-import com.eucalyptus.auth.policy.PolicySpec;
 import com.eucalyptus.cloud.CloudMetadata;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.TransactionException;
@@ -67,6 +66,7 @@ public class NetworkGroupTag extends Tag<NetworkGroupTag> {
                           @Nullable final String value ) {
     super( "security-group", ResourceIdFunction.INSTANCE, ownerFullName, key, value );
     setNetworkGroup( networkGroup );
+    init();
   }
 
   public NetworkGroup getNetworkGroup() {
@@ -75,11 +75,6 @@ public class NetworkGroupTag extends Tag<NetworkGroupTag> {
 
   public void setNetworkGroup( final NetworkGroup networkGroup ) {
     this.networkGroup = networkGroup;
-  }
-
-  @Override
-  public String getPolicyResourceType() {
-    return PolicySpec.EC2_RESOURCE_SECURITYGROUP;
   }
 
   @Nonnull

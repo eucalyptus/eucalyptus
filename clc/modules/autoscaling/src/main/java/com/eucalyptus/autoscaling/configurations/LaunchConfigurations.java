@@ -45,15 +45,15 @@ import edu.ucsb.eucalyptus.msgs.RunInstancesType;
  */
 public abstract class LaunchConfigurations {
 
-  public abstract List<LaunchConfiguration> list( OwnerFullName ownerFullName ) throws AutoScalingMetadataException;
+  public abstract <T> List<T> list( OwnerFullName ownerFullName,
+                                    Predicate<? super LaunchConfiguration> filter,
+                                    Function<? super LaunchConfiguration, T> transform ) throws AutoScalingMetadataException;
 
-  public abstract List<LaunchConfiguration> list( OwnerFullName ownerFullName,
-                                                  Predicate<? super LaunchConfiguration> filter ) throws AutoScalingMetadataException;
-
-  public abstract LaunchConfiguration lookup( OwnerFullName ownerFullName,
-                                              String launchConfigurationNameOrArn ) throws AutoScalingMetadataException;
+  public abstract <T> T lookup( OwnerFullName ownerFullName,
+                                String launchConfigurationNameOrArn,
+                                Function<? super LaunchConfiguration, T> transform ) throws AutoScalingMetadataException;
   
-  public abstract boolean delete( LaunchConfiguration launchConfiguration ) throws AutoScalingMetadataException;
+  public abstract boolean delete( LaunchConfigurationMetadata launchConfiguration ) throws AutoScalingMetadataException;
 
   public abstract LaunchConfiguration save( LaunchConfiguration launchConfiguration ) throws AutoScalingMetadataException;
   
@@ -85,7 +85,27 @@ public abstract class LaunchConfigurations {
       return launchConfigurations.save( build() );
     }
   }
-  
+
+  @TypeMapper
+  public enum LaunchConfigurationCoreViewTransform implements Function<LaunchConfiguration,LaunchConfigurationCoreView> {
+    INSTANCE;
+
+    @Override
+    public LaunchConfigurationCoreView apply( final LaunchConfiguration launchConfiguration ) {
+      return new LaunchConfigurationCoreView( launchConfiguration );
+    }
+  }
+
+  @TypeMapper
+  public enum LaunchConfigurationMinimumViewTransform implements Function<LaunchConfiguration,LaunchConfigurationMinimumView> {
+    INSTANCE;
+
+    @Override
+    public LaunchConfigurationMinimumView apply( final LaunchConfiguration launchConfiguration ) {
+      return new LaunchConfigurationMinimumView( launchConfiguration );
+    }
+  }
+
   @TypeMapper
   public enum LaunchConfigurationTransform implements Function<LaunchConfiguration, LaunchConfigurationType> {
     INSTANCE;
@@ -95,6 +115,7 @@ public abstract class LaunchConfigurations {
       final LaunchConfigurationType type = new LaunchConfigurationType();
 
       type.setCreatedTime( launchConfiguration.getCreationTimestamp() );
+      type.setIamInstanceProfile( launchConfiguration.getIamInstanceProfile() );
       type.setImageId( launchConfiguration.getImageId() );
       if (launchConfiguration.getInstanceMonitoring() != null) 
         type.setInstanceMonitoring( new InstanceMonitoring( launchConfiguration.getInstanceMonitoring() ) );
@@ -134,11 +155,11 @@ public abstract class LaunchConfigurations {
   }
 
   @TypeMapper
-  public enum LaunchConfigurationToRunInstances implements Function<LaunchConfiguration,RunInstancesType> {
+  public enum LaunchConfigurationToRunInstances implements Function<LaunchConfigurationCoreView,RunInstancesType> {
     INSTANCE;
 
     @Override
-    public RunInstancesType apply( final LaunchConfiguration launchConfiguration ) {
+    public RunInstancesType apply( final LaunchConfigurationCoreView launchConfiguration ) {
       final RunInstancesType runInstances = new RunInstancesType();
       runInstances.setKernelId( launchConfiguration.getKernelId() );
       runInstances.setRamdiskId( launchConfiguration.getRamdiskId() );
@@ -163,6 +184,10 @@ public abstract class LaunchConfigurations {
       runInstances.setKeyName( launchConfiguration.getKeyName() );
       runInstances.setGroupSet( Lists.newArrayList( launchConfiguration.getSecurityGroups() ) );
       runInstances.setMonitoring( launchConfiguration.getInstanceMonitoring() );
+      if ( launchConfiguration.getIamInstanceProfile() != null ) {
+        runInstances.setInstanceProfileNameOrArn( launchConfiguration.getIamInstanceProfile() );
+      }
+      runInstances.setUserData(launchConfiguration.getUserData());
       return runInstances;
     }
   }
