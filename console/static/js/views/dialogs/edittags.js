@@ -22,7 +22,7 @@ define([
 
                 confirmButton: {
                   click: function() {
-                       args.model.trigger('confirm');
+                       self.scope.model.trigger('confirm');
                        args.model.get('tags').each(function(t) {
                            if (t.get('_new') && !t.get('_deleted')) { 
                                t.save();
