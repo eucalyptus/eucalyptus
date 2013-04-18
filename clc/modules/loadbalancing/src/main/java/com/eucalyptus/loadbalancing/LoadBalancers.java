@@ -56,7 +56,7 @@ public class LoadBalancers {
 	public static LoadBalancer getLoadbalancer(UserFullName user, String lbName){
 		 final EntityTransaction db = Entities.get( LoadBalancer.class );
 		 try {
-			 final LoadBalancer lb = Entities.uniqueResult( LoadBalancer.named( user.getAccountName(), lbName )); 
+			 final LoadBalancer lb = Entities.uniqueResult( LoadBalancer.named( user, lbName )); 
 			 db.commit();
 			 return lb;
 		 }catch(NoSuchElementException ex){
@@ -73,7 +73,7 @@ public class LoadBalancers {
 		 final EntityTransaction db = Entities.get( LoadBalancer.class );
 		 try {
 		        try {
-		        	if(Entities.uniqueResult( LoadBalancer.named( user.getAccountName(), lbName )) != null)
+		        	if(Entities.uniqueResult( LoadBalancer.named( user, lbName )) != null)
 		        		throw new LoadBalancingException(LoadBalancingException.DUPLICATE_LOADBALANCER_EXCEPTION);
 		        } catch ( NoSuchElementException e ) {
 		        	final LoadBalancer lb = LoadBalancer.newInstance(user, lbName);
@@ -94,7 +94,7 @@ public class LoadBalancers {
 	public static void deleteLoadbalancer(UserFullName user, String lbName) throws LoadBalancingException {
 		final EntityTransaction db = Entities.get( LoadBalancer.class );
 		try{
-			final LoadBalancer lb = Entities.uniqueResult( LoadBalancer.named(user.getAccountName(), lbName));	
+			final LoadBalancer lb = Entities.uniqueResult( LoadBalancer.named(user, lbName));	
 			Entities.delete(lb);
 			db.commit();
 		}catch (NoSuchElementException e){
@@ -337,7 +337,7 @@ public class LoadBalancers {
     public Long apply( final OwnerFullName input ) {
       final EntityTransaction db = Entities.get( LoadBalancer.class );
       try {
-        return Entities.count( LoadBalancer.named( input.getAccountName(), null ) );
+        return Entities.count( LoadBalancer.named( input, null ) );
       } finally {
         db.rollback( );
       }

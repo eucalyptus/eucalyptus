@@ -444,7 +444,7 @@ public class LoadBalancingService {
              .byPrivileges( )
              .buildPredicate( );
 
-            final List<LoadBalancer> lbs = Entities.query( LoadBalancer.named( ownerFullName.getAccountName() , null ), true);
+            final List<LoadBalancer> lbs = Entities.query( LoadBalancer.named( ownerFullName , null ), true);
             return Sets.newHashSet( Iterables.transform( Iterables.filter( lbs, requestedAndAccessible ), LoadBalancingMetadatas.toDisplayName() ) );
           }
       };
@@ -454,7 +454,7 @@ public class LoadBalancingService {
 	  @Override
 	  public LoadBalancer apply(final String lbName){
 	    try{
-	      return Entities.uniqueResult(LoadBalancer.named(ownerFullName.getAccountName(), lbName));
+	      return Entities.uniqueResult(LoadBalancer.named(ownerFullName, lbName));
 	    }catch(NoSuchElementException ex){
 	      return null;
 	    }catch(Exception ex){
