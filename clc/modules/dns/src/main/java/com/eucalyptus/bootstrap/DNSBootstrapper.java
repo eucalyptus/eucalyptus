@@ -67,7 +67,7 @@ import com.eucalyptus.cloud.ws.DNSControl;
 import com.eucalyptus.component.id.Dns;
 
 @Provides( Dns.class )
-@RunDuring( Bootstrap.Stage.CloudServiceInit )
+@RunDuring( Bootstrap.Stage.Final )
 @DependsLocal( Dns.class )
 public class DNSBootstrapper extends Bootstrapper.Simple {
 	private static Logger          LOG = Logger.getLogger( DNSBootstrapper.class );
