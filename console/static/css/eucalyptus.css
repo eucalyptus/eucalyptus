@@ -2673,10 +2673,21 @@ span.on-error {
   padding: 10px 0;
 }
 
+#summary-type ul {
+  list-style-type: none;
+  margin: 5px 0 0;
+  padding: 0;
+}
+
 #summary-advanced ul {
   list-style-type: none;
   margin: 5px 0 0;
   padding: 0;
+}
+
+#summary-type li {
+  background: transparent url(../images/wizard-summary-sprites.png) no-repeat 0 -1750px;
+  padding: 0 0 4px 22px;
 }
 
 #summary-advanced li {

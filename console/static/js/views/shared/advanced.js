@@ -14,6 +14,7 @@ define([
 
       var self = this;
       var scope = {
+        advancedModel: self.model,
         kernels: new Backbone.Collection(dataholder.images.where({type: 'kernel'})), 
         ramdisks: new Backbone.Collection(dataholder.images.where({type: 'ramdisk'})),
         user_data: self.model.get('user_data'),
@@ -127,12 +128,17 @@ define([
       };
 
       scope.blockDeviceMappings.on('change add reset remove', function() {
+          self.model.set('bdmaps_configured', true);
           self.render();
       });
 
       dataholder.images.on('reset', function() {
         scope.kernels.add(dataholder.images.where({type: 'kernel'}));
         scope.ramdisks.add(dataholder.images.where({type: 'ramdisk'}));
+      });
+
+      this.model.on('change', function() {
+        self.model.set('advanced_show', true);
       });
 
       scope.kernels.on('reset change', self.render);
