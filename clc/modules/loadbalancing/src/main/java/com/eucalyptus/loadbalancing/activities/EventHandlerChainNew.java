@@ -499,7 +499,7 @@ public class EventHandlerChainNew extends EventHandlerChain<NewLoadbalancerEvent
 			return result;
 		}
 	}
-		
+	
 	// periodically queries autoscaling group, finds the instances, and update the servo instance records
 	// based on the query result
 	public static class AutoscalingGroupInstanceChecker implements EventListener<ClockTick> {

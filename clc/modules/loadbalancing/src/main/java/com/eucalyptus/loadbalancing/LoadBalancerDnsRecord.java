@@ -81,7 +81,7 @@ public class LoadBalancerDnsRecord extends AbstractPersistent {
 	public static LoadBalancerDnsRecord named(final LoadBalancer lb){
 		final LoadBalancerDnsRecord instance = new LoadBalancerDnsRecord(lb);
 		
-		String dnsPrefix = String.format("%s-%s", lb.getOwnerAccountNumber(), lb.getDisplayName());;
+		String dnsPrefix = String.format("%s-%s", lb.getDisplayName(), lb.getOwnerAccountNumber());
 		dnsPrefix = dnsPrefix.replace(".", "_");
 		
 		final int maxPrefixLength = 253 - 

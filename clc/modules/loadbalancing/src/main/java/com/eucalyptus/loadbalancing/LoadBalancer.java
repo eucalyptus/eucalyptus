@@ -192,7 +192,7 @@ public class LoadBalancer extends UserMetadata<LoadBalancer.STATE> implements Lo
 		return this.autoscale_group;
 	}
 	
-	void setHealthCheck(int healthyThreshold, int interval, String target, int timeout, int unhealthyThreshold)
+	public void setHealthCheck(int healthyThreshold, int interval, String target, int timeout, int unhealthyThreshold)
 		throws IllegalArgumentException
 	{
 		// check the validity of the health check param
@@ -224,7 +224,7 @@ public class LoadBalancer extends UserMetadata<LoadBalancer.STATE> implements Lo
 			}
 		}else if (target.startsWith("TCP") || target.startsWith("SSL")){
 			String copy = target;
-			copy.replace("TCP:","").replace("SSL:", "");
+			copy = copy.replace("TCP:","").replace("SSL:", "");
 			try{
 				int portNum = Integer.parseInt(copy);
 				if(!(portNum > 0 && portNum < 65536))

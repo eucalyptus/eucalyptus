@@ -114,9 +114,8 @@ public class LoadBalancingService {
 	    			
 	    		desc.setDnsName(dns.getDnsName());           /// dns name
 	    			                                 
-	    		/// instances
 	    		if(zone.getBackendInstances().size()>0){
-	    			desc.setInstances(new Instances());
+  		  			desc.setInstances(new Instances());
 	    			desc.getInstances().setMember(new ArrayList<Instance>(
 	    		    	Collections2.transform(zone.getBackendInstances(), new Function<LoadBalancerBackendInstance, Instance>(){
     		    			@Override
@@ -257,6 +256,14 @@ public class LoadBalancingService {
 				 		  if (state.equals(LoadBalancerBackendInstance.STATE.InService.name()) || 
 				 				  state.equals(LoadBalancerBackendInstance.STATE.OutOfService.name())){
 				 			  found.setState(Enum.valueOf(LoadBalancerBackendInstance.STATE.class, state));
+				 			 
+				 			  if(state.equals(LoadBalancerBackendInstance.STATE.OutOfService.name())){
+				 				  found.setReasonCode("Instance");
+				 				  found.setDescription("Instance has failed at least the UnhealthyThreshold number of health checks consecutively.");
+				 			  } else{
+				 				  found.setReasonCode(null);
+				 				  found.setDescription(null);
+				 			  }  
 				 			  Entities.persist(found);
 				 		  }
 				 		  db.commit();
@@ -1085,6 +1092,9 @@ public class LoadBalancingService {
  		state.setState(instance.getState().name());
  		if(instance.getState().equals(LoadBalancerBackendInstance.STATE.OutOfService) && instance.getReasonCode()!=null)
  			state.setReasonCode(instance.getReasonCode());
+ 		if(instance.getDescription()!=null)
+ 			state.setDescription(instance.getDescription());
+ 		
  		stateList.add(state);
  	}
  	
