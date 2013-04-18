@@ -26,8 +26,12 @@
         <label for="summary-hasTags">Tag(s) added.</label>
       </div>
       -->
-      <div >Name:</div>
-      <span data-text="typeModel.type_names"></span>
+      <div>
+       <ul>
+          <li data-show="typeModel.type_hasNames"><span>Name(s) added</span></li>
+          <li data-show="typeModel.type_hasTags"><span>Tag(s) added</span></li>
+        </ul>
+      </div>
   </div>  
 </div>
 
@@ -41,6 +45,14 @@
 </div>
 
 <div id="summary-advanced" data-show="advancedModel.advanced_show">
-
+  <div id="summary-advanced-icon" class="advanced-type summary">Advanced options:
+    <ul>
+      <li data-show="advancedModel.user_data"><span>User data added</span></li>
+      <li data-show="advancedModel.kernel_id"><span>Kernel ID changed</span></li>
+      <li data-show="advancedModel.ramdisk_id"><span>Ramdisk ID changed</span></li>
+      <li data-show="advancedModel.private_network"><span>Uses private addressing</span></li>
+      <li data-show="advancedModel.bdmaps_configured"><span>Storage configured</span></li>
+    </ul>
+  </div>
 </div>
 

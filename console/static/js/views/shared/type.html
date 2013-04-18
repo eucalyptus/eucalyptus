@@ -6,7 +6,7 @@
 
   <div id="launch-wizard-type-option-num-instance" class="form-row clearfix">
     <label for="launch-instance-type-num-instance" class="required-label" data-msg="launch_instance_type_option_numinstance">Number of instances</label>
-    <input data-on-change=":setField" class="short-textinput" id="launch-instance-type-num-instance" title="Enter the number of instances you want to create" type="text">
+    <input data-on-change=":setField" class="short-textinput" id="launch-instance-type-num-instance" data-tooltip="launch_instance_type_num_instance_tip" type="text">
     <div class="field-error" data-text="launchConfigErrors.type_number"></div>
   </div>
 
@@ -45,9 +45,10 @@
 <div class="launch-wizard-type-option">
 <div id="launch-wizard-type-option-az" class="form-row clearfix">
   <label for="launch-instance-type-az" data-msg="launch_instance_type_option_az">Availability zone</label>
-  <select data-on-change=":setField" id="launch-instance-type-az" title="Select the availability zone for your new instance(s)">
+  <select data-on-change=":setField" id="launch-instance-type-az" data-tooltip="launch_instance_az_select_tip">
     <option value="Any" data-msg="launch_instance_type_option_az_any">No Preference</option>
-    <option value="PARTI00">PARTI00</option></select>
+    <!-- <option value="PARTI00">PARTI00</option></select> -->
+    <option data-each-zone="zones" data-value="zone.name" data-text="zone.name"></option>
 </div>
 </div>
 

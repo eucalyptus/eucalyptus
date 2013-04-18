@@ -12,7 +12,10 @@ define([
 
       var self = this;
       this.model.tags = new Backbone.Collection();
+      this.model.zones = dataholder.zone;
       var scope = {
+
+        zones: self.model.zones,
 
         setField: function(e, el) {
           var target = e.target;
@@ -31,7 +34,7 @@ define([
               self.model.set('instance_type', target.value);
               break;
             case 'launch-instance-type-az':
-              self.model.set('type_zone', target.value);
+              self.model.set('zone', target.value);
               break;
             default:
           }

@@ -82,7 +82,7 @@ define([
             self.render();
           });
 
-          scope.images = scope.search.filtered;
+          scope.images = scope.search.filtered.where({type: 'machine'});
           this.scope = scope;
           scope.search.filtered.on('change reset', function() {
               self.render();
