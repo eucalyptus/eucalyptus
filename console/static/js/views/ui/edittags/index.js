@@ -26,6 +26,10 @@ define([
                 t.set({_clean: true, _deleted: false, _edited: false, _edit: false, _new: false});
             });
 
+            args.model.on('confirm', function() {
+                self.scope.create();
+            });
+
             var backup = new Backbone.Collection();
 
             this.scope = {
@@ -40,9 +44,11 @@ define([
                     var newt = new Tag(self.scope.newtag.toJSON());
                     newt.set({_clean: true, _deleted: false, _edited: false, _edit: false, _new: true});
                     newt.set('res_id', args.model.get('id'));
-                    self.scope.tags.add(newt);
-                    self.scope.newtag.clear();
-                    self.render();
+                    if (newt.get('name') && newt.get('value') && newt.get('name') !== '' && newt.get('value') !== '') {
+                        self.scope.tags.add(newt);
+                        self.scope.newtag.clear();
+                        self.render();
+                    }
                 },
                 
                 edit: function(element, scope) {
@@ -71,10 +77,6 @@ define([
                     scope.tag.set({_clean: false, _deleted: true, _edited: false, _edit: false});
                 },
             } // end of scope
-
-            args.model.on('submit', function() {
-                self.scope.create();
-            });
 
 			this.$el.html(template);
 			this.rview = rivets.bind(this.$el, this.scope);
