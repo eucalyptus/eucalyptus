@@ -105,8 +105,6 @@ import com.eucalyptus.autoscaling.common.EnableMetricsCollectionType;
 import com.eucalyptus.autoscaling.common.ExecutePolicyResponseType;
 import com.eucalyptus.autoscaling.common.ExecutePolicyType;
 import com.eucalyptus.autoscaling.common.Filter;
-import com.eucalyptus.autoscaling.common.Instance;
-import com.eucalyptus.autoscaling.common.Instances;
 import com.eucalyptus.autoscaling.common.LaunchConfigurationType;
 import com.eucalyptus.autoscaling.common.MetricCollectionTypes;
 import com.eucalyptus.autoscaling.common.ProcessType;
@@ -134,9 +132,12 @@ import com.eucalyptus.autoscaling.common.UpdateAutoScalingGroupResponseType;
 import com.eucalyptus.autoscaling.common.UpdateAutoScalingGroupType;
 import com.eucalyptus.autoscaling.config.AutoScalingConfiguration;
 import com.eucalyptus.autoscaling.configurations.LaunchConfiguration;
+import com.eucalyptus.autoscaling.configurations.LaunchConfigurationMinimumView;
 import com.eucalyptus.autoscaling.configurations.LaunchConfigurations;
 import com.eucalyptus.autoscaling.configurations.PersistenceLaunchConfigurations;
 import com.eucalyptus.autoscaling.groups.AutoScalingGroup;
+import com.eucalyptus.autoscaling.groups.AutoScalingGroupCoreView;
+import com.eucalyptus.autoscaling.groups.AutoScalingGroupMinimumView;
 import com.eucalyptus.autoscaling.groups.AutoScalingGroups;
 import com.eucalyptus.autoscaling.groups.MetricCollectionType;
 import com.eucalyptus.autoscaling.groups.HealthCheckType;
@@ -145,16 +146,17 @@ import com.eucalyptus.autoscaling.groups.ScalingProcessType;
 import com.eucalyptus.autoscaling.groups.SuspendedProcess;
 import com.eucalyptus.autoscaling.groups.TerminationPolicyType;
 import com.eucalyptus.autoscaling.instances.AutoScalingInstance;
+import com.eucalyptus.autoscaling.instances.AutoScalingInstanceGroupView;
 import com.eucalyptus.autoscaling.instances.AutoScalingInstances;
 import com.eucalyptus.autoscaling.instances.HealthStatus;
 import com.eucalyptus.autoscaling.instances.PersistenceAutoScalingInstances;
-import com.eucalyptus.autoscaling.metadata.AbstractOwnedPersistents;
 import com.eucalyptus.autoscaling.metadata.AutoScalingMetadataException;
 import com.eucalyptus.autoscaling.metadata.AutoScalingMetadataNotFoundException;
 import com.eucalyptus.autoscaling.policies.AdjustmentType;
 import com.eucalyptus.autoscaling.policies.PersistenceScalingPolicies;
 import com.eucalyptus.autoscaling.policies.ScalingPolicies;
 import com.eucalyptus.autoscaling.policies.ScalingPolicy;
+import com.eucalyptus.autoscaling.policies.ScalingPolicyView;
 import com.eucalyptus.autoscaling.tags.AutoScalingGroupTag;
 import com.eucalyptus.autoscaling.tags.Tag;
 import com.eucalyptus.autoscaling.tags.TagSupport;
@@ -257,27 +259,20 @@ public class AutoScalingService {
 
     try {
       final List<AutoScalingGroupType> results = reply.getDescribeAutoScalingGroupsResult().getAutoScalingGroups().getMember();
-      final List<AutoScalingGroup> groups = autoScalingGroups.list( ownerFullName, requestedAndAccessible );
+      results.addAll( autoScalingGroups.list(
+          ownerFullName,
+          requestedAndAccessible,
+          TypeMappers.lookup( AutoScalingGroup.class, AutoScalingGroupType.class ) ) );
+
       final Map<String,List<Tag>> tagsMap = TagSupport.forResourceClass( AutoScalingGroup.class )
           .getResourceTagMap( ctx.getUserFullName().asAccountFullName(),
-              Iterables.transform( groups, AutoScalingMetadatas.toDisplayName() ), Predicates.alwaysTrue() );
-
-      for ( final AutoScalingGroup autoScalingGroup : groups ) {
-        final AutoScalingGroupType type = TypeMappers.transform( autoScalingGroup, AutoScalingGroupType.class );
-        final Instances instances = new Instances();
-        Iterables.addAll( instances.getMember(),
-            Iterables.transform(
-                autoScalingInstances.listByGroup( autoScalingGroup ),
-                TypeMappers.lookup( AutoScalingInstance.class, Instance.class ) ) );        
-        if ( !instances.getMember().isEmpty() ) {
-          type.setInstances( instances );
-        }
+              Iterables.transform( results, AutoScalingGroupType.groupName() ), Predicates.alwaysTrue() );
+      for ( final AutoScalingGroupType type : results ) {
         final TagDescriptionList tags = new TagDescriptionList();
-        Tags.addFromTags( tags.getMember(), TagDescription.class, tagsMap.get( autoScalingGroup.getAutoScalingGroupName() ) );
+        Tags.addFromTags( tags.getMember(), TagDescription.class, tagsMap.get( type.getAutoScalingGroupName() ) );
         if ( !tags.getMember().isEmpty() ) {
           type.setTags( tags );
         }
-        results.add( type );
       }
     } catch ( Exception e ) {
       handleException( e );
@@ -363,9 +358,10 @@ public class AutoScalingService {
     final DeleteLaunchConfigurationResponseType reply = request.getReply( );
     final Context ctx = Contexts.lookup( );
     try {
-      final LaunchConfiguration launchConfiguration = launchConfigurations.lookup(
+      final LaunchConfigurationMinimumView launchConfiguration = launchConfigurations.lookup(
           ctx.getUserFullName( ).asAccountFullName( ),
-          request.getLaunchConfigurationName( ) );
+          request.getLaunchConfigurationName( ),
+          TypeMappers.lookup( LaunchConfiguration.class, LaunchConfigurationMinimumView.class ) );
       if ( RestrictedTypes.filterPrivileged().apply( launchConfiguration ) ) {
         launchConfigurations.delete( launchConfiguration );
       } // else treat this as though the configuration does not exist
@@ -403,20 +399,20 @@ public class AutoScalingService {
 
       final List<ScalingPolicyType> results =
           reply.getDescribePoliciesResult().getScalingPolicies().getMember();
-      final List<ScalingPolicy> scalingPolicies =
-          this.scalingPolicies.list( ownerFullName, requestedAndAccessible );
-      final List<String> scalingPolicyArns = Lists.transform( scalingPolicies, AutoScalingMetadatas.toArn() );
+      results.addAll( scalingPolicies.list(
+          ownerFullName,
+          requestedAndAccessible,
+          TypeMappers.lookup( ScalingPolicy.class, ScalingPolicyType.class ) ) );
+
+      final List<String> scalingPolicyArns = Lists.transform( results, ScalingPolicyType.policyArn() );
       final Map<String,Collection<String>> policyArnToAlarmArns =
           activityManager.getAlarmsForPolicies( ctx.getUserFullName( ), scalingPolicyArns );
 
-      for ( final ScalingPolicy scalingPolicy : scalingPolicies ) {
-        final ScalingPolicyType scalingPolicyType =
-            TypeMappers.transform( scalingPolicy, ScalingPolicyType.class );
-        final Collection<String> alarmArns = policyArnToAlarmArns.get( scalingPolicy.getArn() );
+      for ( final ScalingPolicyType scalingPolicyType : results ) {
+        final Collection<String> alarmArns = policyArnToAlarmArns.get( scalingPolicyType.getPolicyARN() );
         if ( alarmArns != null && !alarmArns.isEmpty() ) {
           scalingPolicyType.setAlarms( new Alarms( alarmArns ) );
         }
-        results.add( scalingPolicyType );
       }
     } catch ( Exception e ) {
       handleException( e );
@@ -485,7 +481,7 @@ public class AutoScalingService {
           final AutoScalingGroups.PersistingBuilder builder = autoScalingGroups.create(
               ctx.getUserFullName(),
               request.getAutoScalingGroupName(),
-              launchConfigurations.lookup( ctx.getUserFullName().asAccountFullName(), request.getLaunchConfigurationName() ),
+              launchConfigurations.lookup( ctx.getUserFullName().asAccountFullName(), request.getLaunchConfigurationName(), Functions.<LaunchConfiguration>identity() ),
               minSize,
               maxSize )
               .withAvailabilityZones( request.availabilityZones() )
@@ -533,17 +529,22 @@ public class AutoScalingService {
         ctx.getUserFullName( ).asAccountFullName( );
 
     try {
-      final AutoScalingGroup group = com.google.common.base.Strings.isNullOrEmpty( request.getAutoScalingGroupName() ) ?
+      final AutoScalingGroupMinimumView group = com.google.common.base.Strings.isNullOrEmpty( request.getAutoScalingGroupName() ) ?
           null :
-          autoScalingGroups.lookup( ownerFullName, request.getAutoScalingGroupName() );
+          autoScalingGroups.lookup(
+              ownerFullName,
+              request.getAutoScalingGroupName(),
+              TypeMappers.lookup( AutoScalingGroup.class, AutoScalingGroupMinimumView.class ) );
 
-      final List<ScalingActivity> scalingActivities =
-          this.scalingActivities.list( ownerFullName, group, request.activityIds(), AutoScalingMetadatas.filterPrivileged() );
-      Collections.sort( scalingActivities, Ordering.natural().reverse().onResultOf( AbstractOwnedPersistents.createdDate() ) );
+      final List<Activity> scalingActivities = this.scalingActivities.list(
+          ownerFullName,
+          group,
+          request.activityIds(),
+          AutoScalingMetadatas.filterPrivileged(),
+          TypeMappers.lookup( ScalingActivity.class, Activity.class ) );
+      Collections.sort( scalingActivities, Ordering.natural().reverse().onResultOf( Activity.startTime() ) );
 
-      Iterables.addAll(
-          reply.getDescribeScalingActivitiesResult().getActivities().getMember(),
-          Iterables.transform( scalingActivities, TypeMappers.lookup( ScalingActivity.class, Activity.class ) ) );
+      reply.getDescribeScalingActivitiesResult().getActivities().getMember().addAll( scalingActivities );
     } catch ( AutoScalingMetadataNotFoundException e ) {
       throw new ValidationErrorException( "Auto scaling group not found: " + request.getAutoScalingGroupName() );
     } catch ( AutoScalingMetadataException e ) {
@@ -626,12 +627,13 @@ public class AutoScalingService {
     final Context ctx = Contexts.lookup( );
     final AccountFullName accountFullName = ctx.getUserFullName( ).asAccountFullName( );
     try {
-      final ScalingPolicy scalingPolicy;
+      final ScalingPolicyView scalingPolicy;
       try {
         scalingPolicy = scalingPolicies.lookup( 
           accountFullName,
           request.getAutoScalingGroupName(),
-          request.getPolicyName() );        
+          request.getPolicyName(),
+          TypeMappers.lookup( ScalingPolicy.class, ScalingPolicyView.class ));
       } catch ( AutoScalingMetadataNotFoundException e ) {
         throw new ValidationErrorException( "Scaling policy not found: " + request.getPolicyName() );
       }
@@ -784,7 +786,7 @@ public class AutoScalingService {
 
             final ScalingPolicies.PersistingBuilder builder = scalingPolicies.create(
                 ctx.getUserFullName( ),
-                autoScalingGroups.lookup( accountFullName, request.getAutoScalingGroupName() ),
+                autoScalingGroups.lookup( accountFullName, request.getAutoScalingGroupName(), Functions.<AutoScalingGroup>identity() ),
                 request.getPolicyName(),
                 adjustmentType,
                 request.getScalingAdjustment() )
@@ -825,10 +827,11 @@ public class AutoScalingService {
     final DeletePolicyResponseType reply = request.getReply( );
     final Context ctx = Contexts.lookup( );
     try {
-      final ScalingPolicy scalingPolicy = scalingPolicies.lookup(
+      final ScalingPolicyView scalingPolicy = scalingPolicies.lookup(
           ctx.getUserFullName( ).asAccountFullName( ),
           request.getAutoScalingGroupName(),
-          request.getPolicyName( ) );
+          request.getPolicyName( ),
+          TypeMappers.lookup( ScalingPolicy.class, ScalingPolicyView.class ) );
       if ( RestrictedTypes.filterPrivileged().apply( scalingPolicy ) ) {
         scalingPolicies.delete( scalingPolicy );
       } // else treat this as though the configuration does not exist
@@ -1014,9 +1017,10 @@ public class AutoScalingService {
     try {
       final List<AutoScalingInstanceDetails> results = 
           reply.getDescribeAutoScalingInstancesResult().getAutoScalingInstances().getMember();
-      for ( final AutoScalingInstance autoScalingInstance : autoScalingInstances.list( ownerFullName, requestedAndAccessible ) ) {
-        results.add( TypeMappers.transform( autoScalingInstance, AutoScalingInstanceDetails.class ) );
-      }
+      results.addAll( autoScalingInstances.list(
+          ownerFullName,
+          requestedAndAccessible,
+          TypeMappers.lookup( AutoScalingInstance.class, AutoScalingInstanceDetails.class ) ) );
     } catch ( Exception e ) {
       handleException( e );
     }
@@ -1088,25 +1092,29 @@ public class AutoScalingService {
     
     final Context ctx = Contexts.lookup( );
     try {
-      final AutoScalingGroup autoScalingGroup = autoScalingGroups.lookup(
+      final AutoScalingGroupCoreView group = autoScalingGroups.lookup(
           ctx.getUserFullName( ).asAccountFullName( ),
-          request.getAutoScalingGroupName() );
-      if ( RestrictedTypes.filterPrivileged().apply( autoScalingGroup ) ) {
+          request.getAutoScalingGroupName(),
+          TypeMappers.lookup( AutoScalingGroup.class, AutoScalingGroupCoreView.class ) );
+      if ( RestrictedTypes.filterPrivileged().apply( group ) ) {
         // Terminate instances first if requested (but don't wait for success ...)
         if ( Objects.firstNonNull( request.getForceDelete(), Boolean.FALSE ) ) {
-          final List<AutoScalingInstance> instances = autoScalingInstances.listByGroup( autoScalingGroup );
-          if ( !instances.isEmpty() ) {
+          final List<String> instanceIds = autoScalingInstances.listByGroup(
+              group,
+              Predicates.alwaysTrue(),
+              AutoScalingInstances.instanceId() );
+          if ( !instanceIds.isEmpty() ) {
             final List<ScalingActivity> activities =
-                activityManager.terminateInstances( autoScalingGroup, instances );
+                activityManager.terminateInstances( group, instanceIds );
             if ( activities==null || activities.isEmpty() ) {
               throw new ScalingActivityInProgressException("Scaling activity in progress");
             }
-            autoScalingInstances.deleteByGroup( autoScalingGroup );
+            autoScalingInstances.deleteByGroup( group );
           }
         } else {
-          failIfScaling( activityManager, autoScalingGroup );
+          failIfScaling( activityManager, group );
         }
-        autoScalingGroups.delete( autoScalingGroup );
+        autoScalingGroups.delete( group );
       } // else treat this as though the group does not exist
     } catch ( AutoScalingMetadataNotFoundException e ) {
       // so nothing to delete, move along      
@@ -1172,7 +1180,7 @@ public class AutoScalingService {
               autoScalingGroup.setHealthCheckType( Enums.valueOfFunction( HealthCheckType.class ).apply( request.getHealthCheckType( ) ) );
             if ( request.getLaunchConfigurationName( ) != null )
               try {
-                autoScalingGroup.setLaunchConfiguration( launchConfigurations.lookup( accountFullName, request.getLaunchConfigurationName() ) );
+                autoScalingGroup.setLaunchConfiguration( launchConfigurations.lookup( accountFullName, request.getLaunchConfigurationName(), Functions.<LaunchConfiguration>identity() ) );
               } catch ( AutoScalingMetadataNotFoundException e ) {
                 throw Exceptions.toUndeclared( new ValidationErrorException( "Launch configuration not found: " + request.getLaunchConfigurationName() ) );
               } catch ( AutoScalingMetadataException e ) {
@@ -1251,9 +1259,10 @@ public class AutoScalingService {
 
     try {
       final List<LaunchConfigurationType> results = reply.getDescribeLaunchConfigurationsResult( ).getLaunchConfigurations().getMember();
-      for ( final LaunchConfiguration launchConfiguration : launchConfigurations.list( ownerFullName, requestedAndAccessible ) ) {
-        results.add( TypeMappers.transform( launchConfiguration, LaunchConfigurationType.class ) );
-      }
+      results.addAll( launchConfigurations.list(
+          ownerFullName,
+          requestedAndAccessible,
+          TypeMappers.lookup( LaunchConfiguration.class, LaunchConfigurationType.class ) ) );
     } catch ( Exception e ) {
       handleException( e );
     }
@@ -1338,14 +1347,17 @@ public class AutoScalingService {
         ctx.getUserFullName( ).asAccountFullName( );
 
     try {
-      final AutoScalingInstance instance = 
-          autoScalingInstances.lookup( ownerFullName, request.getInstanceId() );
+      final AutoScalingInstanceGroupView instance = autoScalingInstances.lookup(
+          ownerFullName,
+          request.getInstanceId(),
+          TypeMappers.lookup( AutoScalingInstance.class, AutoScalingInstanceGroupView.class ));
       if ( !RestrictedTypes.filterPrivileged().apply( instance ) ) {
         throw new AutoScalingMetadataNotFoundException("Instance not found");
       }
       
-      final List<ScalingActivity> activities = 
-          activityManager.terminateInstances( instance.getAutoScalingGroup(), Lists.newArrayList( instance ) );
+      final List<ScalingActivity> activities = activityManager.terminateInstances(
+          instance.getAutoScalingGroup(),
+          Collections.singletonList( instance.getInstanceId() ) );
       if ( activities == null || activities.isEmpty() ) {
         throw new ScalingActivityInProgressException("Scaling activity in progress");
       }
@@ -1379,7 +1391,7 @@ public class AutoScalingService {
   }
 
   private static void failIfScaling( final ActivityManager activityManager,
-                                     final AutoScalingGroup group ) {
+                                     final AutoScalingGroupMetadata group ) {
     if ( activityManager.scalingInProgress( group ) ) {
       throw Exceptions.toUndeclared( new ScalingActivityInProgressException("Scaling activity in progress") );      
     }

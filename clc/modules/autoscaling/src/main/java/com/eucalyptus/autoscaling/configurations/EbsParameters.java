@@ -40,7 +40,7 @@ public class EbsParameters {
   }
 
   protected EbsParameters( final String snapshotId,
-                 final Integer volumeSize ) {
+                           final Integer volumeSize ) {
     this.snapshotId = snapshotId;
     this.volumeSize = volumeSize;
   }

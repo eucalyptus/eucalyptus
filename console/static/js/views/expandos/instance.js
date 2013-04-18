@@ -12,6 +12,11 @@ define([
       var id = tmp.get('id');
       this.model = new Backbone.Model();
       this.model.set('instance', tmp);
+      var state = tmp.get('state');
+      if (state == undefined) {
+        state = tmp.get('_state').name;
+      }
+      this.model.set('status', state);
       this.model.set('test', new Backbone.Collection([{foo: 'bar'}, {foo: 'blah'}]));
       this.model.set('volumes', app.data.volume.reduce(function(c, v) {
                         return v.get('attach_data').instance_id == id ? c.add(v) : c;

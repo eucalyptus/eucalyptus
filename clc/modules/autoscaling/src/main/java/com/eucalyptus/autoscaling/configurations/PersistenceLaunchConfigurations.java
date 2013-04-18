@@ -19,11 +19,13 @@
  ************************************************************************/
 package com.eucalyptus.autoscaling.configurations;
 
+import static com.eucalyptus.autoscaling.common.AutoScalingMetadata.LaunchConfigurationMetadata;
 import java.util.List;
 import com.eucalyptus.autoscaling.common.AutoScalingResourceName;
 import com.eucalyptus.autoscaling.metadata.AbstractOwnedPersistentsWithResourceNameSupport;
 import com.eucalyptus.autoscaling.metadata.AutoScalingMetadataException;
 import com.eucalyptus.util.OwnerFullName;
+import com.google.common.base.Function;
 import com.google.common.base.Predicate;
 
 /**
@@ -34,23 +36,21 @@ public class PersistenceLaunchConfigurations extends LaunchConfigurations {
   private PersistenceSupport persistenceSupport = new PersistenceSupport();
   
   @Override
-  public List<LaunchConfiguration> list( final OwnerFullName ownerFullName ) throws AutoScalingMetadataException {
-    return persistenceSupport.list( ownerFullName );
+  public <T> List<T> list( final OwnerFullName ownerFullName,
+                           final Predicate<? super LaunchConfiguration> filter,
+                           final Function<? super LaunchConfiguration, T> transform ) throws AutoScalingMetadataException {
+    return persistenceSupport.list( ownerFullName, filter, transform );
   }
 
   @Override
-  public List<LaunchConfiguration> list( final OwnerFullName ownerFullName,
-                                         final Predicate<? super LaunchConfiguration> filter ) throws AutoScalingMetadataException {
-    return persistenceSupport.list( ownerFullName, filter );
+  public <T> T lookup( final OwnerFullName ownerFullName,
+                       final String launchConfigurationNameOrArn,
+                       final Function<? super LaunchConfiguration, T> transform ) throws AutoScalingMetadataException {
+    return persistenceSupport.lookup( ownerFullName, launchConfigurationNameOrArn, transform );
   }
 
   @Override
-  public LaunchConfiguration lookup( final OwnerFullName ownerFullName, final String launchConfigurationNameOrArn ) throws AutoScalingMetadataException {
-    return persistenceSupport.lookup( ownerFullName, launchConfigurationNameOrArn );
-  }
-
-  @Override
-  public boolean delete( final LaunchConfiguration launchConfiguration ) throws AutoScalingMetadataException {
+  public boolean delete( final LaunchConfigurationMetadata launchConfiguration ) throws AutoScalingMetadataException {
     return persistenceSupport.delete( launchConfiguration );
   }
 

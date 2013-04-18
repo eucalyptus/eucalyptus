@@ -231,7 +231,8 @@ define(['app', 'dataholder'], function(app, dh) {
       self.search(self.lastSearch, self.lastFacets);
     }
     
-    images.on('sync add remove destroy change reset', up);
+    images.on('add remove destroy change', up);
+    images.on('sync reset', function() { /*console.log('upstream data was reset');*/ });
     up();
   }
 });

@@ -364,7 +364,7 @@ public class BaseQueryBinding<T extends Enum<T>> extends RestfulMarshallingHandl
           theList.add( convertToType( Suppliers.ofInstance(params.remove( paramFieldPair.getKey() )), genericType ) );
         } else {
           final List<String> keys = Lists.newArrayList( params.keySet( ) );
-          final Pattern paramPattern = Pattern.compile( Pattern.quote(paramFieldPair.getKey( )) + "\\.([1-9][0-9]*)" );
+          final Pattern paramPattern = Pattern.compile( Pattern.quote(paramFieldPair.getKey( )) + "\\.([0-9]{1,7})" );
           final Map<String,Object> indexToValueMap = new TreeMap<String,Object>( Ordering.natural().onResultOf( FunctionToInteger.INSTANCE ) );
           for ( final String k : keys ) {    
             final Matcher matcher = paramPattern.matcher( k );
@@ -384,8 +384,9 @@ public class BaseQueryBinding<T extends Enum<T>> extends RestfulMarshallingHandl
           for ( final String k : keys ) {            
             if ( k.startsWith( paramFieldPair.getKey( ) + "." ) ) {
               final String currentValue = params.remove( k );
-              final String setKey = k.replaceAll( "^"+ paramFieldPair.getKey( ) + "\\.(\\d+)\\..*", "$1" );
-              final String subKey = k.replaceAll( "^"+ paramFieldPair.getKey( ) + "\\.\\d+\\." , "" );
+              final String setKey = k.replaceAll( "^"+ paramFieldPair.getKey( ) + "\\.([0-9]{1,7})\\..*", "$1" );
+              if ( setKey.length() > 7 ) continue;
+              final String subKey = k.replaceAll( "^"+ paramFieldPair.getKey( ) + "\\.[0-9]{1,7}\\." , "" );
               Map<String,String> subMap = subParamMaps.get( setKey );
               if ( subMap == null ) {
                 subParamMaps.put( setKey, subMap = Maps.newHashMap() );  

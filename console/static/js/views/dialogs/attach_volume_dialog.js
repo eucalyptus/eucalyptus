@@ -38,15 +38,25 @@ define([
             return 'error';
         },
 
-        // SET UP AUTOCOMPLETE FOR THE VOLUME INPUT BOX  --- NOT TESTED  Kyo 041013
+        // SET UP THE NEXT DEVICE NAME GIVEN THE INSTANCE ID
+        setupNextDeviceName: function(args){
+          var self = this;
+          var deviceName = self._suggestNextDeviceName(args.instance_id);
+          self.scope.volume.set({device: deviceName});
+        },
+
+        // SET UP AUTOCOMPLETE FOR THE VOLUME INPUT BOX
         setupAutoCompleteForVolumeInputBox: function(args){
             var self = this;
 
             var vol_ids = [];
             App.data.volume.each(function(item){
-              console.log("Volume ID: " + item.toJSON().id + ":" + item.toJSON().status);
-              if( item.toJSON().status === 'detached' ){
-                vol_ids.push(item.toJSON().id);
+              console.log("Volume ID: " + item.get('id') + ":" + item.get('status'));
+              if( item.get('status') === 'available' ){
+                // TRY TO FIND ITS NAME TAG
+                var nameTag = self.findNameTag(item);
+                var autocomplete_string = String(self.createIdNameTagString(item.get('id'), nameTag));
+                vol_ids.push(autocomplete_string);
               }
             });
             var sorted = sortArray(vol_ids);
@@ -54,7 +64,7 @@ define([
             var $volumeSelector = this.$el.find('#volume-attach-volume-id');
             $volumeSelector.autocomplete({
               source: sorted
-            });
+           });
         },
 
         // SET UP AUTOCOMPLETE FOR THE INSTANCE INPUT BOX
@@ -63,9 +73,12 @@ define([
 
             var inst_ids = [];
             App.data.instance.each(function(item){
-              console.log("Instance ID: " + item.toJSON().id +":" + item.toJSON()._state.name + ":" + item.toJSON().placement);
-              if( item.toJSON()._state.name === 'running' ){
-                inst_ids.push(item.toJSON().id);
+              console.log("Instance ID: " + item.get('id') +":" + item.get('_state').name + ":" + item.get('placement'));
+              if( item.get('_state').name === 'running' ){
+                // TRY TO FIND ITS NAME TAG
+                var nameTag = self.findNameTag(item);
+                var autocomplete_string = String(self.createIdNameTagString(item.get('id'), nameTag));
+                inst_ids.push(autocomplete_string);
               }
             });
 
@@ -76,25 +89,70 @@ define([
             $instanceSelector.autocomplete({
               source: sorted,
               select: function(event, ui){
-                var deviceName = self._suggestNextDeviceName(ui.item.value);
+                var selected_instance_id = ui.item.value.split(" ")[0];
+                var deviceName = self._suggestNextDeviceName(selected_instance_id);
                 self.scope.volume.set({device: deviceName});
               }
             });
+        },
+
+        disableVolumeInputBox: function(){
+          var $volumeSelector = this.$el.find('#volume-attach-volume-id');
+          $volumeSelector.attr('disabled', 'disabled');
+        },
+
+        disableInstanceInputBox: function(){
+          var $instanceSelector = this.$el.find('#volume-attach-instance-id');
+          $instanceSelector.attr('disabled', 'disabled');
         },
 
         // SET UP AUTOCOMPLETE FOR INPUT BOXES
         setupAutoComplete: function(args){
             var self = this;
 
-            // CASE: WHEN CALLED FROM THE INSTANCE PAGE -- NOT TESTED YET
+            // CASE: WHEN CALLED FROM THE INSTANCE PAGE
             if( args.volume_id == undefined ){
-              setupAutoCompleteForVolumeInputBox(args);
+              // SET UP THE AUTOCOMPLETE FOR VOLUME INPUT BOX
+              this.setupAutoCompleteForVolumeInputBox(args);
+              // DISCOVER THE NEXT DEVICE NAME FOR THE INSTANCE
+              this.setupNextDeviceName(args);
+              // DISABLE THE INSTANCE INPUT BOX
+              this.disableInstanceInputBox();
+              // DISPLAY ITS NAME TAG FOR INSTANCE ID
+              var foundNameTag = self.findNameTag(App.data.instance.get(args.instance_id));
+              self.scope.volume.set({instance_id: String(self.createIdNameTagString(args.instance_id, foundNameTag))});
             };
 
             // CASE: WHEN CALLED FROM THE VOLUME PAGE
             if( args.instance_id == undefined ){
+              // SET UP THE AUTOCOMPLETE FOR INSTANCE INPUT BOX
               this.setupAutoCompleteForInstanceInputBox(args);
+              // DISABLE THE VOLUME INPUT BOX
+              this.disableVolumeInputBox();
+              // DISPLAY ITS NAME TAG FOR VOLUME ID
+              var foundNameTag = self.findNameTag(App.data.volume.get(args.volume_id));
+              self.scope.volume.set({volume_id: String(self.createIdNameTagString(args.volume_id, foundNameTag))});
             }; 
+        },
+
+        // CONSTRUCT A STRING THAT DISPLAY BOTH RESOURCE ID AND ITS NAME TAG
+        createIdNameTagString: function(resource_id, name_tag){
+          var this_string = resource_id;
+          if( name_tag != null ){
+            this_string += " (" + name_tag + ")";
+          }
+          return this_string;
+        }, 
+
+        // UTILITY FUNCTION TO DISCOVER THE NAME TAG OF CLOUD RESOURCE MODEL
+        findNameTag: function(model){
+          var nameTag = null;
+          model.get('tags').each(function(tag){
+            if( tag.get('name').toLowerCase() == 'name' ){
+              nameTag = tag.get('value');
+            };
+          });
+          return nameTag;
         },
 
         // INITIALIZE THE VIEW
@@ -118,9 +176,20 @@ define([
                     var volumeId = self.scope.volume.get('volume_id');
                     var instanceId = self.scope.volume.get('instance_id');
                     var device = self.scope.volume.get('device');
+
 		    console.log("Selected Volume ID: " + volumeId);
-		    console.log("Instance ID: " + instanceId);
+		    console.log("Selected Instance ID: " + instanceId);
 		    console.log("Attach as device: " + device);
+
+                    // EXTRACT THE RESOURCE ID IF THE NAME TAG WAS FOLLOWED
+                    if( volumeId.match(/^\w+-\w+\s+/) ){
+                      volumeId = volumeId.split(" ")[0];
+		      console.log("Volume ID: " + volumeId);
+                    }
+                    if( instanceId.match(/^\w+-\w+\s+/) ){
+                      instanceId = instanceId.split(" ")[0];
+		      console.log("Instance ID: " + instanceId);
+                    }
 
                     // CONSTRUCT AJAX CALL RESPONSE OPTIONS
                     var attachAjaxCallResponse = {

@@ -43,6 +43,11 @@ from datetime import timedelta
 from .botoclcinterface import BotoClcInterface
 from token import TokenAuthenticator
 
+try:
+    from .version import __version__
+except:
+    __version__ = 'DEVELOPMENT'
+
 sessions = {}
 config = None
 global_session = None
@@ -138,7 +143,7 @@ class GlobalSession(object):
 
     @property
     def version(self):
-        return '3.3.0'
+        return __version__
     
     @property
     def admin_console_url(self):

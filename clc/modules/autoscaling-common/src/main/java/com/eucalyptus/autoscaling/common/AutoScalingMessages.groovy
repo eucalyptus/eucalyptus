@@ -29,6 +29,7 @@ import java.lang.reflect.Field
 import javax.annotation.Nonnull
 import com.eucalyptus.system.Ats
 import com.google.common.collect.Maps
+import com.google.common.base.Function
 
 public class DescribeMetricCollectionTypesType extends AutoScalingMessage {
   public DescribeMetricCollectionTypesType() {  }
@@ -332,6 +333,10 @@ public class Activity extends EucalyptusData {
   Integer progress
   String details
   public Activity() {  }
+
+  public static Function<Activity, String> startTime() {
+    { Activity activity -> activity.startTime } as Function<Activity, String>
+  }
 }
 public class SuspendedProcesses extends EucalyptusData {
   public SuspendedProcesses() {  }
@@ -974,6 +979,10 @@ public class AutoScalingGroupType extends EucalyptusData {
   TagDescriptionList tags
   TerminationPolicies terminationPolicies
   public AutoScalingGroupType() {  }
+
+  public static Function<AutoScalingGroupType, String> groupName() {
+    { AutoScalingGroupType group -> group.autoScalingGroupName } as Function<AutoScalingGroupType, String>
+  }
 }
 public class DeleteLaunchConfigurationType extends AutoScalingMessage {
   @Nonnull @AutoScalingMessageValidation.FieldRegex(AutoScalingMessageValidation.FieldRegexValue.NAME_OR_ARN)
@@ -999,6 +1008,10 @@ public class ScalingPolicyType extends EucalyptusData {
   Alarms alarms
   Integer minAdjustmentStep
   public ScalingPolicyType() {  }
+
+  public static Function<ScalingPolicyType, String> policyArn() {
+    { ScalingPolicyType policy -> policy.policyARN } as Function<ScalingPolicyType, String>
+  }
 }
 public class AutoScalingGroupNames extends EucalyptusData {
   public AutoScalingGroupNames() {  }

@@ -13,12 +13,15 @@ define([
    
              var $snapshotSelector = this.$el.find("#volume-add-snapshot-selector");
 
-             var selected_snapshot_id = App.data.snapshot.get(args.snapshot_id).get('id');
-             var selected_snapshot_size = App.data.snapshot.get(selected_snapshot_id).get('volume_size');
+             var snapshot_model = App.data.snapshot.get(args.snapshot_id);
+             var selected_snapshot_id = snapshot_model.get('id');
+             var selected_snapshot_size = snapshot_model.get('volume_size');
              console.log("Selected Snapshot ID: " + selected_snapshot_id);
+             var nameTag = self.findNameTag(snapshot_model);
+             var snapshot_name_string = self.createIdNameTagString(selected_snapshot_id, nameTag);
              $snapshotSelector.append($('<option>', {
                  value: selected_snapshot_id,
-                 text : selected_snapshot_id
+                 text : snapshot_name_string
              }));
              self.scope.volume.set({snapshot_id: selected_snapshot_id});
              self.scope.volume.set({size: selected_snapshot_size});
@@ -42,9 +45,11 @@ define([
              }));
              App.data.snapshot.each(function (model, index) {
                console.log("Snapshot: " + model.get('id') + " :" + index);
+               var nameTag = self.findNameTag(model);
+               var snapshot_name_string = self.createIdNameTagString(model.get('id'), nameTag);
                $snapshotSelector.append($('<option>', { 
                  value: model.get('id'),
-                 text : model.get('id') 
+                 text : snapshot_name_string 
                }));
              });
 
@@ -98,6 +103,26 @@ define([
 
            // SETUP THE AVAILABILITY ZONE SELECT OPTIONS
            this.setupSelectOptionsForAzoneBox(args);
+        },
+
+        // CONSTRUCT A STRING THAT DISPLAY BOTH RESOURCE ID AND ITS NAME TAG
+        createIdNameTagString: function(resource_id, name_tag){
+          var this_string = resource_id;
+          if( name_tag != null ){
+            this_string += " (" + name_tag + ")";
+          }
+          return this_string;
+        },
+
+        // UTILITY FUNCTION TO DISCOVER THE NAME TAG OF CLOUD RESOURCE MODEL
+        findNameTag: function(model){
+          var nameTag = null;
+          model.get('tags').each(function(tag){
+            if( tag.get('name').toLowerCase() == 'name' ){
+              nameTag = tag.get('value');
+            };
+          });
+          return nameTag;
         },
 
         initialize : function(args) {

@@ -32,19 +32,16 @@ define([
 
         if (typeof key === 'object') {
             attrs = key;
-            options = val;
         } else {
             (attrs = {})[key] = val;
         }
 
-        options || (options = {});
-
         if (attrs.tags != null && this.get('tags') != null) {
             this.get('tags').set(attrs.tags.models);
-            return this;
+            attrs.tags = this.get('tags');
         }
 
-        return Backbone.Model.prototype.set.call(this, attrs, options);
+        return Backbone.Model.prototype.set.call(this, key, val, options);
     },
     refreshNamedColumns: function() {
         var self = this;

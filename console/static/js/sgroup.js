@@ -214,13 +214,11 @@
       (function(){
          menuItems['edit'] = {"name":sgroup_action_edit, callback: function(key, opt) { ; }, disabled: function(){ return true; }};
          menuItems['delete'] = {"name":sgroup_action_delete, callback: function(key, opt) { thisObj._deleteAction(); }};
-         menuItems['newcreate'] = {"name":'new create', callback: function(key, opt) { thisObj._newCreateAction(); }};
+         menuItems['tag'] = {"name":'Tag Resource', callback: function(key, opt) { thisObj._tagResourceAction(); }};
       })();
-      if(numSelected == 0){
-         menuItems['newcreate'] = {"name":'new create', callback: function(key, opt) { thisObj._newCreateAction(); }};
-      }
       if(numSelected == 1){
         menuItems['edit'] = {"name":sgroup_action_edit, callback: function(key, opt) { thisObj._editAction(); }}
+        menuItems['tag'] = {"name":'Tag Resource', callback: function(key, opt) { thisObj._tagResourceAction(); }}
       }
       return menuItems;
     },
@@ -333,6 +331,22 @@
         },
       });
       this._setupDialogFeatures(this.addDialog, createButtonId);
+
+      require([
+        'rivets', 
+        'models/sgroup', 
+        'text!views/dialogs/create_security_group_fixup.html!strip'
+        ], function(rivets, SecurityGroup, TabbedDialogTmpl) {
+        var $content = thisObj.addDialog.find('.content-sections-wrapper');
+        $content.append($(TabbedDialogTmpl));
+        $content.find('h3').remove();
+        $content.css('background', 'none');
+        $content.find('#tabs-1').append($content.find('.group.content-section'));
+        $content.find('#tabs-2').append($content.find('.rules.content-section'));
+        rivets.bind($content, {
+           securityGroup: new SecurityGroup() 
+        });
+      });
 
       var $tmpl = $('html body').find('.templates #sgroupEditDlgTmpl').clone();
       var $rendered = $($tmpl.render($.extend($.i18n.map, help_sgroup)));
@@ -770,6 +784,14 @@
       this.tableWrapper.eucatable('reDrawTable');
     },
 
+    _tagResourceAction : function(){
+      var selected = this.tableWrapper.eucatable('getSelectedRows', 7);
+      if ( selected.length > 0 ) {
+        require(['app'], function(app) {
+           app.dialog('edittags', app.data.sgroup.get(selected[0]));
+        });
+       }
+    },
 
     _deleteSelectedSecurityGroups : function (groupsToDelete) {
       var thisObj = this;

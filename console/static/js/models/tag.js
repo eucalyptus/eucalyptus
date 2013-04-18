@@ -14,7 +14,7 @@ define([
       // ====================
         
       res_id: {
-        pattern: /^\w{1,3}-\w{8}/,
+        pattern: /^\w{1,4}-\w{8}/,
         required: true
       },
       resource_type: {

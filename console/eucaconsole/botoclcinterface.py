@@ -26,6 +26,7 @@
 import boto
 import ConfigParser
 import json
+from boto.ec2.snapshot import Snapshot
 from boto.ec2.connection import EC2Connection
 from boto.ec2.regioninfo import RegionInfo
 
@@ -258,7 +259,10 @@ class BotoClcInterface(ClcInterface):
 
     # returns snapshot info
     def create_snapshot(self, volume_id, description):
-        return self.conn.create_snapshot(volume_id, description)
+        params = {'VolumeId': volume_id}
+        if description:
+            params['Description'] = description[0:255]
+        return self.conn.get_object('CreateSnapshot', params, Snapshot, verb='POST')
 
     # returns True if successful
     def delete_snapshot(self, snapshot_id):

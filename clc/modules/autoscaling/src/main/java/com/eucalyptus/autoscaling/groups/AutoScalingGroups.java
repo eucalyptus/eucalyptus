@@ -19,17 +19,20 @@
  ************************************************************************/
 package com.eucalyptus.autoscaling.groups;
 
+import static com.eucalyptus.autoscaling.common.AutoScalingMetadata.AutoScalingGroupMetadata;
 import java.util.Collection;
 import java.util.List;
 import java.util.Set;
 import javax.persistence.EntityTransaction;
 import com.eucalyptus.autoscaling.common.AutoScalingGroupType;
-import com.eucalyptus.autoscaling.common.AutoScalingMetadata;
 import com.eucalyptus.autoscaling.common.EnabledMetrics;
+import com.eucalyptus.autoscaling.common.Instance;
+import com.eucalyptus.autoscaling.common.Instances;
 import com.eucalyptus.autoscaling.common.ProcessType;
 import com.eucalyptus.autoscaling.common.SuspendedProcessType;
 import com.eucalyptus.autoscaling.common.SuspendedProcesses;
 import com.eucalyptus.autoscaling.common.TagType;
+import com.eucalyptus.autoscaling.instances.AutoScalingInstance;
 import com.eucalyptus.autoscaling.metadata.AutoScalingMetadataException;
 import com.eucalyptus.autoscaling.common.AutoScalingMetadatas;
 import com.eucalyptus.autoscaling.common.AvailabilityZones;
@@ -56,27 +59,28 @@ import com.google.common.collect.Ordering;
  */
 public abstract class AutoScalingGroups {
 
-  public abstract List<AutoScalingGroup> list( OwnerFullName ownerFullName ) throws AutoScalingMetadataException;
+  public abstract <T> List<T> list( OwnerFullName ownerFullName,
+                                    Predicate<? super AutoScalingGroup> filter,
+                                    Function<? super AutoScalingGroup,T> transform ) throws AutoScalingMetadataException;
 
-  public abstract List<AutoScalingGroup> list( OwnerFullName ownerFullName,
-                                               Predicate<? super AutoScalingGroup> filter ) throws AutoScalingMetadataException;
+  public abstract <T> List<T> listRequiringScaling( Function<? super AutoScalingGroup,T> transform ) throws AutoScalingMetadataException;
 
-  public abstract List<AutoScalingGroup> listRequiringScaling( ) throws AutoScalingMetadataException;
+  public abstract <T> List<T> listRequiringInstanceReplacement( Function<? super AutoScalingGroup,T> transform ) throws AutoScalingMetadataException;
 
-  public abstract List<AutoScalingGroup> listRequiringInstanceReplacement( ) throws AutoScalingMetadataException;
-
-  public abstract List<AutoScalingGroup> listRequiringMonitoring( long interval ) throws AutoScalingMetadataException;
+  public abstract <T> List<T> listRequiringMonitoring( long interval,
+                                                       Function<? super AutoScalingGroup,T> transform ) throws AutoScalingMetadataException;
   
-  public abstract AutoScalingGroup lookup( OwnerFullName ownerFullName,
-                                           String autoScalingGroupName ) throws AutoScalingMetadataException;
+  public abstract <T> T lookup( OwnerFullName ownerFullName,
+                                String autoScalingGroupName,
+                                Function<? super AutoScalingGroup,T> transform ) throws AutoScalingMetadataException;
 
-  public abstract AutoScalingGroup update( OwnerFullName ownerFullName,
-                                           String autoScalingGroupName,
-                                           Callback<AutoScalingGroup> groupUpdateCallback ) throws AutoScalingMetadataException;
+  public abstract void update( OwnerFullName ownerFullName,
+                               String autoScalingGroupName,
+                              Callback<AutoScalingGroup> groupUpdateCallback ) throws AutoScalingMetadataException;
 
   public abstract void markScalingRequiredForZones( Set<String> availabilityZones ) throws AutoScalingMetadataException;
 
-  public abstract boolean delete( AutoScalingGroup autoScalingGroup ) throws AutoScalingMetadataException;
+  public abstract boolean delete( AutoScalingGroupMetadata autoScalingGroup ) throws AutoScalingMetadataException;
 
   public abstract AutoScalingGroup save( AutoScalingGroup autoScalingGroup ) throws AutoScalingMetadataException;
 
@@ -146,8 +150,55 @@ public abstract class AutoScalingGroups {
       type.setTerminationPolicies( new TerminationPolicies( group.getTerminationPolicies() == null ? 
           null : 
           Collections2.transform( group.getTerminationPolicies(), Strings.toStringFunction() ) ) );
+      if ( group.getAutoScalingInstances() != null && !group.getAutoScalingInstances().isEmpty() ) {
+        type.setInstances( new Instances() );
+        Iterables.addAll( type.getInstances().getMember(),
+            Iterables.transform(
+                group.getAutoScalingInstances(),
+                TypeMappers.lookup( AutoScalingInstance.class, Instance.class ) ) );
+      }
 
       return type;
+    }
+  }
+
+  @TypeMapper
+  public enum AutoScalingGroupMinimumViewTransform implements Function<AutoScalingGroup, AutoScalingGroupMinimumView> {
+    INSTANCE;
+
+    @Override
+    public AutoScalingGroupMinimumView apply( final AutoScalingGroup group ) {
+      return new AutoScalingGroupMinimumView( group );
+    }
+  }
+
+  @TypeMapper
+  public enum AutoScalingGroupCoreViewTransform implements Function<AutoScalingGroup, AutoScalingGroupCoreView> {
+    INSTANCE;
+
+    @Override
+    public AutoScalingGroupCoreView apply( final AutoScalingGroup group ) {
+      return new AutoScalingGroupCoreView( group );
+    }
+  }
+
+  @TypeMapper
+  public enum AutoScalingGroupScalingViewTransform implements Function<AutoScalingGroup, AutoScalingGroupScalingView> {
+    INSTANCE;
+
+    @Override
+    public AutoScalingGroupScalingView apply( final AutoScalingGroup group ) {
+      return new AutoScalingGroupScalingView( group );
+    }
+  }
+
+  @TypeMapper
+  public enum AutoScalingGroupMetricsViewTransform implements Function<AutoScalingGroup, AutoScalingGroupMetricsView> {
+    INSTANCE;
+
+    @Override
+    public AutoScalingGroupMetricsView apply( final AutoScalingGroup group ) {
+      return new AutoScalingGroupMetricsView( group );
     }
   }
 
@@ -190,7 +241,7 @@ public abstract class AutoScalingGroups {
     }
   }
 
-  @RestrictedTypes.QuantityMetricFunction( AutoScalingMetadata.AutoScalingGroupMetadata.class )
+  @RestrictedTypes.QuantityMetricFunction( AutoScalingGroupMetadata.class )
   public enum CountAutoScalingGroups implements Function<OwnerFullName, Long> {
     INSTANCE;
 

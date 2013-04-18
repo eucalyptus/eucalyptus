@@ -19,13 +19,15 @@
  ************************************************************************/
 package com.eucalyptus.autoscaling.instances;
 
+import static com.eucalyptus.autoscaling.common.AutoScalingMetadata.AutoScalingGroupMetadata;
+import static com.eucalyptus.autoscaling.common.AutoScalingMetadata.AutoScalingInstanceMetadata;
 import java.util.Collection;
 import java.util.List;
 import java.util.Set;
 import com.eucalyptus.autoscaling.common.AutoScalingInstanceDetails;
+import com.eucalyptus.autoscaling.common.AutoScalingMetadata;
 import com.eucalyptus.autoscaling.common.AutoScalingMetadatas;
 import com.eucalyptus.autoscaling.common.Instance;
-import com.eucalyptus.autoscaling.groups.AutoScalingGroup;
 import com.eucalyptus.autoscaling.metadata.AutoScalingMetadataException;
 import com.eucalyptus.util.Callback;
 import com.eucalyptus.util.OwnerFullName;
@@ -38,43 +40,48 @@ import com.google.common.base.Predicate;
  *
  */
 public abstract class AutoScalingInstances {
-  public abstract List<AutoScalingInstance> list( OwnerFullName ownerFullName ) throws AutoScalingMetadataException;
+  public abstract <T> List<T> list( OwnerFullName ownerFullName,
+                                    Predicate<? super AutoScalingInstance> filter,
+                                    Function<? super AutoScalingInstance,T> transform ) throws AutoScalingMetadataException;
 
-  public abstract List<AutoScalingInstance> list( OwnerFullName ownerFullName,
-                                                  Predicate<? super AutoScalingInstance> filter ) throws AutoScalingMetadataException;
+  public abstract <T> List<T> listByGroup( OwnerFullName ownerFullName,
+                                           String groupName,
+                                           Function<? super AutoScalingInstance,T> transform ) throws AutoScalingMetadataException;
 
-  public abstract List<AutoScalingInstance> listByGroup( OwnerFullName ownerFullName,
-                                                         String groupName ) throws AutoScalingMetadataException;
+  public abstract <T> List<T>  listByGroup( AutoScalingGroupMetadata group,
+                                            Predicate<? super AutoScalingInstance> filter,
+                                            Function<? super AutoScalingInstance,T> transform ) throws AutoScalingMetadataException;
 
-  public abstract List<AutoScalingInstance> listByGroup( AutoScalingGroup group ) throws AutoScalingMetadataException;
+  public abstract <T> List<T>  listByState( LifecycleState lifecycleState,
+                                            ConfigurationState configurationState,
+                                            Function<? super AutoScalingInstance,T> transform ) throws AutoScalingMetadataException;
 
-  public abstract List<AutoScalingInstance> listByState( LifecycleState lifecycleState,
-                                                         ConfigurationState configurationState ) throws AutoScalingMetadataException;
+  public abstract <T> List<T>  listUnhealthyByGroup( AutoScalingGroupMetadata group,
+                                                     Function<? super AutoScalingInstance,T> transform ) throws AutoScalingMetadataException;
 
-  public abstract List<AutoScalingInstance> listUnhealthyByGroup( AutoScalingGroup group ) throws AutoScalingMetadataException;
+  public abstract <T> T lookup( OwnerFullName ownerFullName,
+                                String instanceId,
+                                Function<? super AutoScalingInstance,T> transform ) throws AutoScalingMetadataException;
 
-  public abstract AutoScalingInstance lookup( OwnerFullName ownerFullName,
-                                              String instanceId ) throws AutoScalingMetadataException;
+  public abstract void update( OwnerFullName ownerFullName,
+                               String instanceId,
+                               Callback<AutoScalingInstance> instanceUpdateCallback ) throws AutoScalingMetadataException;
 
-  public abstract AutoScalingInstance update( OwnerFullName ownerFullName,
-                                              String instanceId,
-                                              Callback<AutoScalingInstance> instanceUpdateCallback ) throws AutoScalingMetadataException;
+  public abstract void markMissingInstancesUnhealthy( AutoScalingGroupMetadata group, Collection<String> instanceIds ) throws AutoScalingMetadataException;
 
-  public abstract void markMissingInstancesUnhealthy( AutoScalingGroup group, Collection<String> instanceIds ) throws AutoScalingMetadataException;
-
-  public abstract void markExpiredPendingUnhealthy( AutoScalingGroup group, Collection<String> instanceIds, long maxAge ) throws AutoScalingMetadataException;
+  public abstract void markExpiredPendingUnhealthy( AutoScalingGroupMetadata group, Collection<String> instanceIds, long maxAge ) throws AutoScalingMetadataException;
 
   public abstract Set<String> verifyInstanceIds( String accountNumber, Collection<String> instanceIds ) throws AutoScalingMetadataException;
 
-  public abstract void transitionState( AutoScalingGroup group, LifecycleState from, LifecycleState to, Collection<String> instanceIds ) throws AutoScalingMetadataException;
+  public abstract void transitionState( AutoScalingGroupMetadata group, LifecycleState from, LifecycleState to, Collection<String> instanceIds ) throws AutoScalingMetadataException;
 
-  public abstract void transitionConfigurationState( AutoScalingGroup group, ConfigurationState from, ConfigurationState to, Collection<String> instanceIds ) throws AutoScalingMetadataException;
+  public abstract void transitionConfigurationState( AutoScalingGroupMetadata group, ConfigurationState from, ConfigurationState to, Collection<String> instanceIds ) throws AutoScalingMetadataException;
 
-  public abstract int registrationFailure( AutoScalingGroup group, Collection<String> instanceIds ) throws AutoScalingMetadataException;
+  public abstract int registrationFailure( AutoScalingGroupMetadata group, Collection<String> instanceIds ) throws AutoScalingMetadataException;
 
-  public abstract boolean delete( AutoScalingInstance autoScalingInstance ) throws AutoScalingMetadataException;
+  public abstract boolean delete( AutoScalingInstanceMetadata autoScalingInstance ) throws AutoScalingMetadataException;
 
-  public abstract boolean deleteByGroup( final AutoScalingGroup group ) throws AutoScalingMetadataException;
+  public abstract boolean deleteByGroup( final AutoScalingGroupMetadata group ) throws AutoScalingMetadataException;
 
   public abstract AutoScalingInstance save( AutoScalingInstance autoScalingInstance ) throws AutoScalingMetadataException;
 
@@ -82,16 +89,16 @@ public abstract class AutoScalingInstances {
     return AutoScalingMetadatas.toDisplayName();
   }
 
-  public static Function<AutoScalingInstance,String> launchConfigurationName() {
-    return AutoScalingInstanceProperties.LAUNCH_CONFIGURATION_NAME;  
+  public static Function<AutoScalingInstanceCoreView,String> launchConfigurationName() {
+    return AutoScalingInstanceProperties.LAUNCH_CONFIGURATION_NAME;
   }
 
-  public static Function<AutoScalingInstance,String> groupArn() {
-    return AutoScalingInstanceProperties.GROUP_ARN;
-  }
-  
-  public static Function<AutoScalingInstance,String> availabilityZone() {
+  public static Function<AutoScalingInstanceCoreView,String> availabilityZone() {
     return AutoScalingInstanceProperties.AVAILABILITY_ZONE; 
+  }
+
+  public static Function<AutoScalingInstanceGroupView,String> groupArn() {
+    return AutoScalingInstanceGroupProperties.GROUP_ARN;
   }
 
   @TypeMapper
@@ -112,6 +119,26 @@ public abstract class AutoScalingInstances {
   }
 
   @TypeMapper
+  public enum AutoScalingInstanceCoreViewTransform implements Function<AutoScalingInstance, AutoScalingInstanceCoreView> {
+    INSTANCE;
+
+    @Override
+    public AutoScalingInstanceCoreView apply( final AutoScalingInstance autoScalingInstance ) {
+      return new AutoScalingInstanceCoreView( autoScalingInstance );
+    }
+  }
+
+  @TypeMapper
+  public enum AutoScalingInstanceGroupViewTransform implements Function<AutoScalingInstance, AutoScalingInstanceGroupView> {
+    INSTANCE;
+
+    @Override
+    public AutoScalingInstanceGroupView apply( final AutoScalingInstance autoScalingInstance ) {
+      return new AutoScalingInstanceGroupView( autoScalingInstance );
+    }
+  }
+
+  @TypeMapper
   public enum AutoScalingInstanceSummaryTransform implements Function<AutoScalingInstance, Instance> {
     INSTANCE;
 
@@ -126,25 +153,28 @@ public abstract class AutoScalingInstances {
       return details;
     }
   }
-  
-  private enum AutoScalingInstanceProperties implements Function<AutoScalingInstance,String> {
-    AVAILABILITY_ZONE {
-      @Override
-      public String apply( final AutoScalingInstance autoScalingInstance ) {
-        return autoScalingInstance.getAvailabilityZone();
-      }
-    },
+
+  private enum AutoScalingInstanceGroupProperties implements Function<AutoScalingInstanceGroupView,String> {
     GROUP_ARN {
       @Override
-      public String apply( final AutoScalingInstance autoScalingInstance ) {
-        return AutoScalingMetadatas.toArn().apply( autoScalingInstance.getAutoScalingGroup() ); 
+      public String apply( final AutoScalingInstanceGroupView autoScalingInstance ) {
+        return AutoScalingMetadatas.toArn().apply( autoScalingInstance.getAutoScalingGroup() );
+      }
+    },
+  }
+
+  private enum AutoScalingInstanceProperties implements Function<AutoScalingInstanceCoreView,String> {
+    AVAILABILITY_ZONE {
+      @Override
+      public String apply( final AutoScalingInstanceCoreView autoScalingInstance ) {
+        return autoScalingInstance.getAvailabilityZone();
       }
     },
     LAUNCH_CONFIGURATION_NAME {
       @Override
-      public String apply( final AutoScalingInstance autoScalingInstance ) {
+      public String apply( final AutoScalingInstanceCoreView autoScalingInstance ) {
         return autoScalingInstance.getLaunchConfigurationName();
       }
-    }
+    },
   }
 }

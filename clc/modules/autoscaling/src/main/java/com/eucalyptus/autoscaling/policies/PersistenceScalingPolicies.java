@@ -19,12 +19,14 @@
  ************************************************************************/
 package com.eucalyptus.autoscaling.policies;
 
+import static com.eucalyptus.autoscaling.common.AutoScalingMetadata.ScalingPolicyMetadata;
 import java.util.List;
 import com.eucalyptus.autoscaling.common.AutoScalingResourceName;
 import com.eucalyptus.autoscaling.metadata.AbstractOwnedPersistentsWithResourceNameSupport;
 import com.eucalyptus.autoscaling.metadata.AutoScalingMetadataException;
 import com.eucalyptus.util.Callback;
 import com.eucalyptus.util.OwnerFullName;
+import com.google.common.base.Function;
 import com.google.common.base.Predicate;
 
 /**
@@ -35,21 +37,18 @@ public class PersistenceScalingPolicies extends ScalingPolicies {
   private final PersistenceSupport persistenceSupport = new PersistenceSupport();
   
   @Override
-  public List<ScalingPolicy> list( final OwnerFullName ownerFullName ) throws AutoScalingMetadataException {
-    return persistenceSupport.list( ownerFullName );
+  public <T> List<T> list( final OwnerFullName ownerFullName,
+                           final Predicate<? super ScalingPolicy> filter,
+                           final Function<? super ScalingPolicy,T> transform  ) throws AutoScalingMetadataException {
+    return persistenceSupport.list( ownerFullName, filter, transform );
   }
 
   @Override
-  public List<ScalingPolicy> list( final OwnerFullName ownerFullName,
-                                   final Predicate<? super ScalingPolicy> filter ) throws AutoScalingMetadataException {
-    return persistenceSupport.list( ownerFullName, filter );
-  }
-
-  @Override
-  public ScalingPolicy lookup( final OwnerFullName ownerFullName,
-                               final String autoScalingGroupName,
-                               final String policyName ) throws AutoScalingMetadataException {
-    return persistenceSupport.lookup( ownerFullName, autoScalingGroupName, policyName );
+  public <T> T lookup( final OwnerFullName ownerFullName,
+                       final String autoScalingGroupName,
+                       final String policyName,
+                       final Function<? super ScalingPolicy,T> transform ) throws AutoScalingMetadataException {
+    return persistenceSupport.lookup( ownerFullName, autoScalingGroupName, policyName, transform );
   }
 
   @Override
@@ -61,7 +60,7 @@ public class PersistenceScalingPolicies extends ScalingPolicies {
   }
 
   @Override
-  public boolean delete( final ScalingPolicy scalingPolicy ) throws AutoScalingMetadataException {
+  public boolean delete( final ScalingPolicyMetadata scalingPolicy ) throws AutoScalingMetadataException {
     return persistenceSupport.delete( scalingPolicy );
   }
 

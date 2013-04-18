@@ -29,6 +29,10 @@ import os
 
 DATA_DIR='/usr/share/eucalyptus-console'
 
+def getVersion():
+    with open('../VERSION') as fp:
+        return fp.read().rstrip()
+
 def getDataFiles(path):
     return [ (os.path.join(DATA_DIR, root),
         [ os.path.join(root, f) for f in files ])
@@ -37,8 +41,15 @@ def getDataFiles(path):
 data_files = getDataFiles("static")
 data_files.append(('/etc/eucalyptus-console', ['eucaconsole/console.ini']))
 
+# Read in version and generate version module
+version = getVersion()
+with open('eucaconsole/version.py', 'w') as fp:
+    fp.write("""# Do not edit. This file is generated.
+__version__ = '%s'
+""" % (version))
+
 setup (name="Eucalyptus Management Console",
-    version = "0",
+    version = version,
     description = "Eucalyptus User Interface Console",
     long_description = "Eucalyptus User Interface Console",
     author = "Sang-Min Park, David Kavanagh, Vasiliy Kochergin",

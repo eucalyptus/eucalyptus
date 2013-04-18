@@ -118,6 +118,28 @@ class BaseQueryBindingTest {
   }
 
   @Test
+  void testHttpEmbeddedAnnotationZeroIndex() {
+    BaseQueryBinding binding = new TestQueryBinding( new TestBinding() );
+
+    Object HttpEmbeddedAnnotatedObject = bind( binding, "/service?Operation=HttpEmbeddedAnnotated&Data.0.embedded.member.0=a&Data.0.embedded.member.1=b&Data.0.embedded.member.2=c&Data.0.embedded.ints.0=3&Data.0.embedded.ints.1=2&Data.0.embedded.ints.2=1" +
+        "&Data.1.embedded.member.0=z&Data.1.embedded.member.1=y&Data.1.embedded.member.2=x&Data.1.embedded.ints.0=1&Data.1.embedded.ints.1=2&Data.1.embedded.ints.2=3")
+    assertTrue( "Multiple bound value", HttpEmbeddedAnnotatedObject instanceof HttpEmbeddedAnnotated )
+    HttpEmbeddedAnnotated httpEmbeddedAnnotated = (HttpEmbeddedAnnotated) HttpEmbeddedAnnotatedObject
+    assertEquals( "Data value", [ new HttpEmbeddedData( httpEmbeddedData2: new HttpEmbeddedData2( member: ["a","b","c"], ints: [3,2,1] ) ), new HttpEmbeddedData( httpEmbeddedData2: new HttpEmbeddedData2( member: ["z","y","x"], ints: [1,2,3] ) ) ], httpEmbeddedAnnotated.data )
+  }
+
+  @Test
+  void testHttpEmbeddedAnnotationLeadingZeroIndex() {
+    BaseQueryBinding binding = new TestQueryBinding( new TestBinding() );
+
+    Object HttpEmbeddedAnnotatedObject = bind( binding, "/service?Operation=HttpEmbeddedAnnotated&Data.0000001.embedded.member.01=a&Data.001.embedded.member.002=b&Data.001.embedded.member.003=c&Data.001.embedded.ints.001=3&Data.001.embedded.ints.002=2&Data.001.embedded.ints.003=1" +
+        "&Data.002.embedded.member.001=z&Data.002.embedded.member.002=y&Data.002.embedded.member.003=x&Data.002.embedded.ints.001=1&Data.002.embedded.ints.002=2&Data.002.embedded.ints.003=3")
+    assertTrue( "Multiple bound value", HttpEmbeddedAnnotatedObject instanceof HttpEmbeddedAnnotated )
+    HttpEmbeddedAnnotated httpEmbeddedAnnotated = (HttpEmbeddedAnnotated) HttpEmbeddedAnnotatedObject
+    assertEquals( "Data value", [ new HttpEmbeddedData( httpEmbeddedData2: new HttpEmbeddedData2( member: ["a","b","c"], ints: [3,2,1] ) ), new HttpEmbeddedData( httpEmbeddedData2: new HttpEmbeddedData2( member: ["z","y","x"], ints: [1,2,3] ) ) ], httpEmbeddedAnnotated.data )
+  }
+
+  @Test
   void testHttpEmbeddedVersionedAnnotationA() {
     BaseQueryBinding binding = new TestQueryBinding( new TestBinding() ){
       @Override protected String getNamespaceForVersion(String bindingVersion) { bindingVersion }

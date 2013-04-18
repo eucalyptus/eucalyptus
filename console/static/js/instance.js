@@ -36,8 +36,6 @@
     instPassword : {}, // only windows instances
     detachButtonId : 'btn-vol-detach',
     _init : function() {
-            console.log ( "INIT!!!" );
-        
       var thisObj = this;
       var $tmpl = $('html body').find('.templates #instanceTblTmpl').clone();
       var $wrapper = $($tmpl.render($.extend($.i18n.map, help_instance)));
@@ -45,7 +43,7 @@
       var $instHelp = $wrapper.children().last();
       thisObj.tableWrapper = $instTable.eucatable({
         id : 'instances', // user of this widget should customize these options,
-        data_deps: ['instances', 'volumes', 'addresses'],
+        data_deps: ['instances', 'volumes', 'addresses', 'tags'],
         hidden: thisObj.options['hidden'],
         dt_arg : {
           "sAjaxSource": 'instance',
@@ -490,7 +488,8 @@
 
      if(numSelected === 1 && 'running' in stateMap && $.inArray(instIds[0], stateMap['running']>=0)){
        menuItems['console'] = {"name":instance_action_console, callback: function(key, opt) { thisObj._consoleAction(); }}
-       menuItems['attach'] = {"name":instance_action_attach, callback: function(key, opt) { thisObj._attachAction(); }}
+//       menuItems['attach'] = {"name":instance_action_attach, callback: function(key, opt) { thisObj._attachAction(); }}
+       menuItems['attach'] = {"name":instance_action_attach, callback: function(key, opt) { thisObj._newAttachAction(); }}
      }
  
      // detach-volume is for one selected instance 
@@ -502,18 +501,30 @@
          if( state==='attached' && !isRootVolume(instIds[0], vol))
            attachedFound = true;
        });   
-       if(attachedFound)
+       if(attachedFound){
          menuItems['detach'] = {"name":instance_action_detach, callback: function(key, opt) { thisObj._detachAction(); }}
+       }
      }
 
      // TODO: assuming associate-address is valid for only running/pending instances
      if(numSelected === 1 && ('running' in stateMap || 'pending' in stateMap) && ($.inArray(instIds[0], stateMap['running']>=0) || $.inArray(instIds[0], stateMap['pending'] >=0)))
        menuItems['associate'] = {"name":instance_action_associate, callback: function(key, opt){thisObj._associateAction(); }}
   
-     // TODO: assuming disassociate-address is for only one selected instance 
-     if(numSelected  === 1 && instIds[0] in thisObj.instIpMap)
-       menuItems['disassociate'] = {"name":instance_action_disassociate, callback: function(key, opt){thisObj._disassociateAction();}}
- 
+     // TODO: assuming disassociate-address is for only one selected instance
+     // ADJUSTED: More than 1 instance can be selected for disassociate action  --- Kyo 041513 
+     if(numSelected  >= 1 ){
+       var associatedCount = 0;
+       $.each(selectedRows, function(rowIdx, row){
+//         console.log("InstanceIPMap: " + thisObj.instIpMap[row['id'].toLowerCase()]);
+         if( thisObj.instIpMap[row['id'].toLowerCase()] != null ){
+           associatedCount++;
+         } 
+       });
+       if( numSelected == associatedCount ){
+         menuItems['disassociate'] = {"name":instance_action_disassociate, callback: function(key, opt){thisObj._disassociateAction();}}
+       };
+     }
+
      if(numSelected == 1){
        menuItems['tag'] = {"name":'Tag Resource', callback: function(key, opt){ thisObj._tagResourceAction(); }}
      }
@@ -842,14 +853,41 @@
 //      instanceToAttach=$(instanceToAttach).html();   // After dataTable 1.9 integration, this operation is no longer needed. 030413
       attachVolume(null, instanceToAttach);
     },
+    // NEW DIALOG THAT USES THE BACKBONE INTEGRATION
+    _newAttachAction : function() {
+      var dialog = 'attach_volume_dialog';
+      var selected = this.tableWrapper.eucatable('getSelectedRows', 17);
+      require(['views/dialogs/' + dialog], function( dialog) {
+        new dialog({instance_id: selected});
+      });
+    },
 
     _initDetachDialog : function(dfd) {  // should resolve dfd object
       var thisObj = this;
       var results = describe('volume');
       var instance = this.tableWrapper.eucatable('getSelectedRows', 17)[0];
- //     instance = $(instance).html();   // After dataTable 1.9 integration, this operation is no longer needed. 030413
+
+      // FIX TO DISPLAY THE NAME TAG OF THE INSTANCE --- Kyo 041513
+      var nameTag = null;
+      var this_instance = require('app').data.instance.get(instance);
+      if( this_instance ){
+        var this_tags = this_instance.get('tags');
+        this_tags.each(function(tag){
+          if( tag.get('name') == 'Name' || tag.get('name') == 'name' ){
+            nameTag = tag.get('value');
+          };
+        });
+      }
+
       $msg = this.detachDialog.find('#volume-detach-msg');
-      $msg.html($.i18n.prop('inst_volume_dialog_detach_text', DefaultEncoder().encodeForHTML(instance)));
+
+      // FIX TO DISPLAY THE NAME TAG OF THE INSTANCE --- Kyo 041513
+      if( nameTag == null ){
+        $msg.html($.i18n.prop('inst_volume_dialog_detach_text', DefaultEncoder().encodeForHTML(instance)));
+      }else{ 
+       $msg.html($.i18n.prop('inst_volume_dialog_detach_text', DefaultEncoder().encodeForHTML(nameTag)));
+      }
+
       var $p = this.detachDialog.find('#volume-detach-select-all');
       $p.children().detach();
       $p.html('');
@@ -862,12 +900,19 @@
       });
       $p.append(inst_volume_dialog_select_all_msg, '&nbsp;', $selectAll);
       volumes = [];
+      volume_ids = [];   // ADDITIONAL ARRAY FOR HOLDING THE VOLUME ID   -- Kyo 041513
       $.each(results, function(idx, volume){
         if ( volume.attach_data && volume.attach_data['status'] ){
           var inst = volume.attach_data['instance_id'];
           var state = volume.attach_data['status'];
           if( state === 'attached' && inst === instance && !isRootVolume(inst, volume.id) ){
-            volumes.push(volume.id);
+            // FIX TO DISPLAY THE NAME TAG OF THE VOLUME  --- Kyo 041513
+            if( volume.display_id != null ){
+              volumes.push(volume.display_id);   // PASS THE DISPLAY ID IF EXISTS
+            }else{
+              volumes.push(volume.id);   // OR USE THE VOLUME ID
+            }
+            volume_ids.push(volume.id);   // ALWAYS HOLD THE VOLUME ID FOR THE ARRAY 'volume_ids'
           }
         }
       });
@@ -881,7 +926,8 @@
           if (volumes.length > inx) {
             volId = volumes[inx];
 	    volId = DefaultEncoder().encodeForHTML(volId);
-            $cb = $('<input>').attr('type', 'checkbox').attr('value', volId);
+            real_vol_id = volume_ids[inx];                    // XSS RISK ?  --- Kyo 041513
+            $cb = $('<input>').attr('type', 'checkbox').attr('value', volId).attr('title', real_vol_id);   // USE THE TITLE ATTR TO HIDE THE VOLUME ID
             $row.append($('<td>').append($cb,'&nbsp;', volId));
             $cb.click( function() {
               if ( thisObj.detachDialog.find("input:checked").length > 0 )
@@ -900,7 +946,6 @@
 
     _detachAction : function(){
       var instance = this.tableWrapper.eucatable('getSelectedRows', 17)[0];
-//      instance = $(instance).html();   // After dataTable 1.9 integration, this operation is no longer needed. 030413
       $instId = this.detachDialog.find('#volume-detach-instance-id');
       $instId.val(instance);
       this.detachDialog.eucadialog('open');
@@ -911,7 +956,8 @@
       var checkedVolumes = thisObj.detachDialog.find("input:checked"); 
       var selectedVolumes = [];
       $.each(checkedVolumes, function(idx, vol){ 
-        selectedVolumes.push($(vol).val());
+        //selectedVolumes.push($(vol).val());
+        selectedVolumes.push($(vol).attr('title'));   // FIX TO USE THE TITLE VALUE WHICH CONTAINS THE VOLUME ID --- Kyo 041513
       }); 
       var done = 0;
       var all = selectedVolumes.length;
@@ -963,22 +1009,23 @@
     _associateAction : function(){
       var thisObj = this;
       var instance = thisObj.tableWrapper.eucatable('getSelectedRows', 17)[0];
-//      instance = $(instance).html();  // After dataTable 1.9 integration, this operation is no longer needed. 030413
       associateIp(instance);
     },
     _disassociateAction : function(){
       var thisObj = this;
-      var ip = thisObj.tableWrapper.eucatable('getSelectedRows', 16)[0];
+      var ips = thisObj.tableWrapper.eucatable('getSelectedRows', 16);
       var results = describe('eip');
-      var addr = null;
-      for(i in results){
-        if (results[i].public_ip === ip){
-          addr = results[i];
-          break;
+      var addrs = [];
+      _.each(ips, function(ip){
+        for(i in results){
+          if (results[i].public_ip === ip){
+            addrs.push(results[i]);
+          }
         }
+      });
+      if(addrs.length >= 1){
+        disassociateIp(addrs);
       }
-      if(addr)
-        disassociateIp(addr);
     },
 
     _tagResourceAction : function(){

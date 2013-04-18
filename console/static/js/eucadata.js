@@ -87,27 +87,38 @@
               if (ep.model == undefined) {
                 return;
               }
-              ep.model.fetch({merge: true, add: true, remove: true});
+              ep.model.fetch({merge: true, add: true, remove: true,
+                              error:function(textStatus, jqXHR, options) {
+                                console.log("fetch error status :"+jqXHR.status);
+                                thisObj._errorCode = jqXHR.status;
+                                thisObj._numPending--;
+                                if(thisObj._data[name]){
+                                  var last = thisObj._data[name]['lastupdated'];
+                                  var now = new Date();
+                                  var elapsedSec = Math.round((now-last)/1000);             
+                                  if((jqXHR.status === 401 || jqXHR === 403)  ||
+                                     (elapsedSec > thisObj.options.refresh_interval_sec*thisObj.options.max_refresh_attempt)){
+                                    delete thisObj._data[name];
+                                    thisObj._data[name] = null;
+                                    console.log('deleted data after '+jqXHR.status);
+                                  }
+                                  if(thisObj.getStatus() !== 'online'){
+                                    errorAndLogout(thisObj._errorCode);
+                                  }
+                                  if (jqXHR.status === 504) {
+                                    notifyError($.i18n.prop('data_load_timeout'));
+                                  }
+                                }
+                              }});
             }, repeat: null};
 
             var interval = thisObj.options.refresh_interval_sec*1000;
-            thisObj._callbacks[name].repeat = runRepeat(thisObj._callbacks[name].callback, interval, true); // random ms is added to distribute sync interval
+            thisObj._callbacks[name].repeat = runRepeat(thisObj._callbacks[name].callback, interval, true);
           });
         }
       });
-      //this._describe();
     }, 
     _destroy : function(){
-    },
-    _describe : function(){
-      var thisObj = this;
-      $.each(thisObj.options.endpoints, function(idx, ep){
-        var name = ep.name;
-        // probobly don't need randomness when we're requesting a lot less data in general
-        //var interval = getRandomInt((thisObj.options.refresh_interval_sec*1000)/2,(thisObj.options.refresh_interval_sec*1000)*2);
-        var interval = thisObj.options.refresh_interval_sec*1000;
-        thisObj._callbacks[name].repeat = runRepeat(thisObj._callbacks[name].callback, interval, true); // random ms is added to distribute sync interval
-      });
     },
      
 /***** Public Methods *****/

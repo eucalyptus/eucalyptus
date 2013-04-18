@@ -154,6 +154,7 @@ const char *sensorCounterTypeName[] = {
     "[unused]",
     "summation",
     "average",
+    "latest"
 };
 
 /*----------------------------------------------------------------------------*\

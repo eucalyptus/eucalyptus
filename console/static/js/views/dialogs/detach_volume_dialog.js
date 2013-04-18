@@ -1,27 +1,50 @@
 define([
   './eucadialogview',
   'text!./detach_volume_dialog.html!strip',
+  'models/volume',
   'app',
   'backbone',
-], function(EucaDialogView, template, App, Backbone) {
+], function(EucaDialogView, template, Volume, App, Backbone) {
    return EucaDialogView.extend({
-     initialize : function(args) {
+
+    findNameTag: function(model){
+      var nameTag = null;
+      model.get('tags').each(function(tag){
+        if( tag.get('name').toLowerCase() == 'name' ){
+          nameTag = tag.get('value');
+        };
+      });
+      return nameTag;
+     },
+
+    initialize: function(args) {
        var self = this;
        this.template = template;
 
+       var volume_list = new Backbone.Collection();
+       // INTERATE THROUGH THE INPUT VOLUME ID LIST
+       _.each(args.volume_ids, function(vid){
+         // FIND THE INSTANCE ID FOR EACH VOLUME ATTACHED
+         var instance_id = App.data.volume.get(vid).get('attach_data').instance_id;
+         console.log("Volume: " + vid + " Instance: " + instance_id);
+         // FIND THE NAME TAG FOR THE VOLUME
+         var volNameTag = self.findNameTag(App.data.volume.get(vid));
+         if( volNameTag == null ){
+           volNameTag = vid;
+         }
+         // FIND THE NAME TAG FOR THE INSTANCE
+         var instanceNameTag = self.findNameTag(App.data.instance.get(instance_id));
+         if( instanceNameTag == null ){
+           instanceNameTag = instance_id;
+         }
+         // CREATE A LIST WITH THE NAME TAGS
+         volume_list.push(new Volume({volume_id: volNameTag, instance_id: instanceNameTag}));
+       });
+
        this.scope = {
          status: '',
-         items: function(){                   // Feels very hacky -- Kyo 040813
-           var volume_list = [];
-           _.each(args.volume_ids, function(v){
-             var match = App.data.volume.find(function(model){ return model.get('id') == v; });
-             var instance_id = match.toJSON().attach_data.instance_id;
-             volume_list.push({volume_id: v, instance_id: instance_id});
-             console.log("Volume: " + v + " Instance: " + instance_id);
-           });
-           return volume_list;
-         },
-
+         items: volume_list,
+        
          cancelButton: {
            click: function() {
              self.close();
@@ -30,11 +53,20 @@ define([
 
          detachButton: {
            click: function() {
-              doMultiAction(self.scope.items, App.data.volumes,
+
+              doMultiAction(args.volume_ids, App.data.volumes,
                             function(model, options) {
+                              options['wait'] = true;
                               model.detach(options);
                             },
-                            'volume_detach_progress', 'volume_detach_done', 'volume_detach_fail');
+                            'volume_detach_progress', 'volume_detach_done', 'volume_detach_fail',
+                            function(response) {
+                              if (response.results && response.results == 'detaching') {
+                                return; // all good
+                              } else {
+                                return undefined_error;
+                              }
+                            });
              self.close();
            }  
          }
