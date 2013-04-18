@@ -357,7 +357,7 @@ public class WalrusManager {
 		}
 		return reply;
 	}
-	
+
 	/**
 	 * Handles a HEAD request to the bucket. Just returns 200ok if bucket exists and user has access. Otherwise
 	 * returns 404 if not found or 403 if no accesss.
@@ -1758,15 +1758,15 @@ public class WalrusManager {
 				storageManager.deleteObject(bucketName, objectName);
 				if (WalrusProperties.trackUsageStatistics && (size > 0))
 
-				/* Send an event to reporting to report this S3 usage. */
-				if ( size > 0 ) {
-					try {
-						fireObjectUsageEvent( S3ObjectAction.OBJECTDELETE,
-								this.bucketName, this.objectKey, this.version, this.userId, this.size );
-					} catch (Exception ex) {
-						LOG.debug("Failed to fire reporting event for walrus DELETE object operation", ex);
+					/* Send an event to reporting to report this S3 usage. */
+					if ( size > 0 ) {
+						try {
+							fireObjectUsageEvent( S3ObjectAction.OBJECTDELETE,
+									this.bucketName, this.objectKey, this.version, this.userId, this.size );
+						} catch (Exception ex) {
+							LOG.debug("Failed to fire reporting event for walrus DELETE object operation", ex);
+						}
 					}
-				}
 			} catch (Exception ex) {
 				LOG.error(ex, ex);
 			}
@@ -2504,13 +2504,13 @@ public class WalrusManager {
 								}
 								storageManager.sendObject(request, httpResponse, bucketName, torrentFile, torrentLength, null,
 										DateUtils.format(lastModified.getTime(),DateUtils.RFC822_DATETIME_PATTERN),
-												"application/x-bittorrent",
-												"attachment; filename="
-														+ objectKey
-														+ ".torrent;", request
-														.getIsCompressed(),
-														null, logData);
-								
+										"application/x-bittorrent",
+										"attachment; filename="
+												+ objectKey
+												+ ".torrent;", request
+												.getIsCompressed(),
+												null, logData);
+
 								return null;
 							} else {
 								//No torrent exists
@@ -3367,9 +3367,9 @@ public class WalrusManager {
 		Context ctx = Contexts.lookup();
 		Account account = ctx.getAccount();
 		String prefix = request.getPrefix();
-		if (prefix == null) {
+		/*if (prefix == null) {
 			prefix = "";
-		}
+		}*/
 
 		String keyMarker = request.getKeyMarker();
 		String versionMarker = request.getVersionIdMarker();
@@ -3403,10 +3403,6 @@ public class WalrusManager {
 							bucketName,
 							null)))) {
 
-				if (bucket.isVersioningDisabled()) {
-					db.rollback();
-					throw new EucalyptusCloudException("Versioning has not been enabled for bucket: " + bucketName);
-				}
 
 				if (logData != null) {
 					updateLogData(bucket, logData);
@@ -3431,9 +3427,15 @@ public class WalrusManager {
 				if (maxKeys >= 0) {
 					reply.setMaxKeys(maxKeys);
 				}
-				if (delimiter != null){
-					reply.setDelimiter(delimiter);
+
+				reply.setDelimiter(delimiter);			
+				reply.setKeyMarker(keyMarker);
+
+				if (bucket.isVersioningDisabled()) {
+					db.commit();
+					return reply;
 				}
+
 				if(maxKeys == 0) {
 					//No keys requested, so just return
 					reply.setVersions(new ArrayList<VersionEntry>());
@@ -3455,8 +3457,8 @@ public class WalrusManager {
 				objCriteria.addOrder(Order.desc("lastModified"));
 				objCriteria.setMaxResults(queryStrideSize); //add one to, hopefully, indicate truncation in one call												
 
-				if(keyMarker != null) {
-					if(versionMarker != null) {
+				if(keyMarker.length() > 0) {
+					if(versionMarker.length() > 0) {
 						Date resumeDate = null;
 						try {
 							ObjectInfo markerObj = new ObjectInfo();
@@ -3468,6 +3470,7 @@ public class WalrusManager {
 								resumeDate = lastFromPrevObj.getLastModified();
 							}
 							else {
+								dbObject.rollback();
 								throw new NoSuchEntityException("VersionIDMarker " + versionMarker + " does not match an existing object version");
 							}
 						} catch (TransactionException e) {
@@ -3481,7 +3484,7 @@ public class WalrusManager {
 					}
 				}
 
-				if(prefix != null && !prefix.equals("")) {
+				if(prefix.length() > 0) {
 					objCriteria.add(Restrictions.like("objectKey", prefix, MatchMode.START));
 				}
 
@@ -3514,7 +3517,7 @@ public class WalrusManager {
 							}
 
 							//Check if it will get aggregated as a commonprefix
-							if (delimiter != null) {
+							if (delimiter.length() > 0) {
 								parts = objectKey.substring(prefix.length()).split(delimiter);
 								if (parts.length > 1) {
 									prefixString = parts[0] + delimiter;
