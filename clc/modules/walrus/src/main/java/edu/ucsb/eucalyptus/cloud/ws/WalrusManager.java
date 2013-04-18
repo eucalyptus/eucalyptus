@@ -1779,9 +1779,6 @@ public class WalrusManager {
 		Context ctx = Contexts.lookup();
 		Account account = ctx.getAccount();
 		String prefix = request.getPrefix();
-		if (prefix == null) {
-			prefix = "";
-		}
 
 		String marker = request.getMarker();
 		int maxKeys = -1;
@@ -1830,11 +1827,12 @@ public class WalrusManager {
 
 				reply.setName(bucketName);
 				reply.setIsTruncated(false);
-				reply.setPrefix(prefix);						
+				reply.setPrefix(prefix);
+				reply.setMarker(marker);
 				if (maxKeys >= 0) {
 					reply.setMaxKeys(maxKeys);
 				}
-				if (delimiter != null){
+				if (delimiter.length() > 0){
 					reply.setDelimiter(delimiter);
 				}
 				if(maxKeys == 0) {
@@ -1857,11 +1855,11 @@ public class WalrusManager {
 				objCriteria.addOrder(Order.asc("objectKey"));						
 				objCriteria.setMaxResults(queryStrideSize); //add one to, hopefully, indicate truncation in one call												
 
-				if(marker != null) {
+				if(marker.length() > 0) {
 					objCriteria.add(Restrictions.ge("objectKey", marker));							
 				}
 
-				if(prefix != null && !prefix.equals("")) {
+				if(prefix.length() > 0) {
 					objCriteria.add(Restrictions.like("objectKey", prefix, MatchMode.START));
 				}
 
@@ -1889,7 +1887,7 @@ public class WalrusManager {
 							objectKey = objectInfo.getObjectKey();
 
 							//Check if it will get aggregated as a commonprefix
-							if (delimiter != null) {
+							if (delimiter.length() > 0) {
 								parts = objectKey.substring(prefix.length()).split(delimiter);
 								if (parts.length > 1) {
 									prefixString = prefix + delimiter + parts[0] + delimiter;
