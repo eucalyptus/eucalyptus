@@ -13,28 +13,40 @@ define([
       var self = this;
       this.model.tags = new Backbone.Collection();
       this.model.zones = dataholder.zone;
-      var scope = {
+      this.model.set('type_number', 1); // preload 1
+      this.model.set('zone', 'Any'); // preload no zone preference
+      this.model.set('instance_type', 'm1.small'); // preload first choice
 
+      var scope = {
+        typeModel: self.model,
         zones: self.model.zones,
+
+        isZoneSelected: function(obj) { 
+          if (self.model.get('zone') == obj.zone.get('name')) {
+            return true;
+          } 
+          return false;
+        },
+
 
         setField: function(e, el) {
           var target = e.target;
-          self.model.set('type_show', 'true');
+          //self.model.set('type_show', 'true');
           switch(target.id) {
             case 'launch-instance-names':
               var names = target.value.split(',');
               self.model.set('type_names', names);
-              self.model.set('type_hasNames', 'true');
-              self.model.set('instance_type', $("#launch-instance-type-size").val());
+              //self.model.set('type_hasNames', 'true');
+              //self.model.set('instance_type', $("#launch-instance-type-size").val());
               break;
             case 'launch-instance-type-num-instance':
-              self.model.set('type_number', target.value);
+              //self.model.set('type_number', target.value);
               break;
             case 'launch-instance-type-size':
-              self.model.set('instance_type', target.value);
+              //self.model.set('instance_type', target.value);
               break;
             case 'launch-instance-type-az':
-              self.model.set('zone', target.value);
+              //self.model.set('zone', target.value);
               break;
             default:
           }
@@ -87,6 +99,10 @@ define([
       scope.launchConfigErrors.type_number = null;
       scope.launchConfigErrors.type_names = null;
       self.render();
+    });
+   
+    self.model.on('change', function() {
+      self.model.set('type_show', true);
     });
 
 

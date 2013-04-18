@@ -31,6 +31,21 @@ define([
           self.model.set('kernel_id', e.target.value);
         },
 
+        isKernelSelected: function(obj) { 
+          if (self.model.get('kernel_id') == obj.kernel.get('id')) {
+            return true;
+          } 
+          return false;
+        },
+
+        isRamdiskSelected: function(obj) { 
+          if (self.model.get('ramdisk_id') == obj.ramdisk.get('id')) {
+            return true;
+          } 
+          return false;
+        },
+
+
         setPrivateNetwork: function(e, item) {
           self.model.set('private_network', e.target.value);
         },
