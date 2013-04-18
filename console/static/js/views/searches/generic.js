@@ -232,7 +232,7 @@ define(['app', 'dataholder'], function(app, dh) {
     }
     
     images.on('add remove destroy change', up);
-    images.on('sync reset', function() { console.log('upstream data was reset'); });
+    images.on('sync reset', function() { /*console.log('upstream data was reset');*/ });
     up();
   }
 });

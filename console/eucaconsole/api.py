@@ -173,7 +173,7 @@ class ScaleHandler(BaseAPIHandler):
 
         try:
             action = self.get_argument("Action")
-            if action.find('Get') == -1:
+            if action.find('Describe') == -1:
                 self.user_session.session_last_used = time.time()
                 self.check_xsrf_cookie()
 
@@ -350,7 +350,7 @@ class BalanceHandler(BaseAPIHandler):
 
         try:
             action = self.get_argument("Action")
-            if action.find('Get') == -1:
+            if action.find('Describe') == -1:
                 self.user_session.session_last_used = time.time()
                 self.check_xsrf_cookie()
 
@@ -434,7 +434,7 @@ class WatchHandler(BaseAPIHandler):
 
         try:
             action = self.get_argument("Action")
-            if action.find('Get') == -1:
+            if action.find('Describe') == -1:
                 self.user_session.session_last_used = time.time()
                 self.check_xsrf_cookie()
 
@@ -914,7 +914,7 @@ class ComputeHandler(BaseAPIHandler):
 
         try:
             action = self.get_argument("Action")
-            if action.find('Describe') == -1:
+            if action.find('Describe') == -1 and action.find('GetDashSummary') == -1:
                 self.user_session.session_last_used = time.time()
                 self.check_xsrf_cookie()
 
