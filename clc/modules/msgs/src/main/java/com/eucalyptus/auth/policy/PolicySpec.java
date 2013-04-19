@@ -586,6 +586,10 @@ public class PolicySpec {
   public static final String LOADBALANCING_REGISTERINSTANCESWITHLOADBALANCER = "registerinstanceswithloadbalancer";
   public static final String LOADBALANCING_APPLYSECURITYGROUPSTOLOADBALANCER = "applysecuritygroupstoloadbalancer";
   public static final String LOADBALANCING_DESCRIBELOADBALANCERS = "describeloadbalancers";
+  // Non-AWS, Euca-specific ELB operations
+  public static final String LOADBALANCING_DESCRIBELOADBALANCERSBYSERVO = "describeloadbalancersbyservo";
+  public static final String LOADBALANCING_PUTSERVOSTATES = "putservostates";
+  
   
   public static final Set<String> LOADBALANCING_ACTIONS = new ImmutableSet.Builder<String>()
       .add(LOADBALANCING_DESCRIBELOADBALANCERPOLICYTYPES)
@@ -611,6 +615,8 @@ public class PolicySpec {
       .add(LOADBALANCING_REGISTERINSTANCESWITHLOADBALANCER)
       .add(LOADBALANCING_APPLYSECURITYGROUPSTOLOADBALANCER)
       .add(LOADBALANCING_DESCRIBELOADBALANCERS)
+      .add(LOADBALANCING_DESCRIBELOADBALANCERSBYSERVO)
+      .add(LOADBALANCING_PUTSERVOSTATES)
       .build();
   
   // Map vendor to actions
