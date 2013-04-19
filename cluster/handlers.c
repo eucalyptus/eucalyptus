@@ -112,6 +112,8 @@
 #include <euca_string.h>
 #include <axutil_error.h>
 
+#include <ebs_utils.h>
+
 /*----------------------------------------------------------------------------*\
  |                                                                            |
  |                                  DEFINES                                   |
@@ -250,7 +252,7 @@ char *SCHEDPOLICIES[SCHEDLAST] = {
 \*----------------------------------------------------------------------------*/
 
 static int migration_handler(ccInstance * myInstance, char *host, char *src, char *dst, migration_states migration_state, char **node, char **instance, char **action);
-
+static int populateOutboundMeta(ncMetadata *pMeta);
 /*----------------------------------------------------------------------------*\
  |                                                                            |
  |                                   MACROS                                   |
@@ -509,6 +511,38 @@ int doCancelBundleTask(ncMetadata * pMeta, char *instanceId)
     return (ret);
 }
 
+//! Remove cluster and storage services from other partitions so NCs only get globals and cluster-local services
+//! Modifies the meta in-place
+void filter_services(ncMetadata *meta, char *filter_partition) {
+	int i = 0, j = 0;
+	serviceInfoType tmp;
+	int copySize = sizeof(serviceInfoType);
+	for(i = 0; i < meta->servicesLen; i++) {
+		//Only filter cluster controllers and storage controllers.
+		if((!strcmp(meta->services[i].type,"cluster") || !strcmp(meta->services[i].type,"storage")) && strcmp(meta->services[i].partition, filter_partition)) {
+			//Not equal, remove by making string len 0.
+			LOGTRACE("Filtering out service: %s , %s\n", meta->services[i].name, meta->services[i].partition);
+
+			//Null the strings.
+			meta->services[i].name[0]='\0';
+			meta->services[i].partition[0]='\0';
+			meta->services[i].type[0]='\0';
+			for(j = 0; j < meta->services[i].urisLen; j++)
+			{
+				meta->services[i].uris[j][0]='\0';
+			}
+			meta->services[i].urisLen = 0;
+
+			//Swap this one and the one at the end and decrement the length.
+			memcpy(&tmp, &(meta->services[i]),copySize);
+			memcpy(&(meta->services[i]),&(meta->services[meta->servicesLen-1]),copySize);
+			memcpy(&(meta->services[meta->servicesLen-1]),&(tmp),copySize);
+			meta->servicesLen--;
+		}
+	}
+}
+
+
 //!
 //!
 //!
@@ -565,6 +599,15 @@ int ncClientCall(ncMetadata * pMeta, int timeout, int ncLock, char *ncURL, char 
         } else {
             localmeta->userId = strdup("eucalyptus");
         }
+
+        //TODO: zhill, change this to only be invoked on DescribeInstances and/or DescribeResources?
+        //Update meta from config
+        if(populateOutboundMeta(localmeta)) {
+        	LOGERROR("Failed to update output service metadata\n");
+        }
+
+        //Don't need to filter, CC should only have received.
+        //filter_services(localmeta, config->ccStatus.serviceId.partition);
 
         close(filedes[0]);
         ncs = ncStubCreate(ncURL, NULL, NULL);
@@ -1201,7 +1244,7 @@ int doAttachVolume(ncMetadata * pMeta, char *volumeId, char *instanceId, char *r
 
     LOGINFO("[%s][%s] attaching volume\n", SP(instanceId), SP(volumeId));
     LOGDEBUG("invoked: userId=%s, volumeId=%s, instanceId=%s, remoteDev=%s, localDev=%s\n", SP(pMeta ? pMeta->userId : "UNSET"),
-             SP(volumeId), SP(instanceId), SP(remoteDev), SP(localDev));
+    		SP(volumeId), SP(instanceId), SP(remoteDev), SP(localDev));
     if (!volumeId || !instanceId || !remoteDev || !localDev) {
         LOGERROR("bad input params\n");
         return (1);
@@ -1229,15 +1272,8 @@ int doAttachVolume(ncMetadata * pMeta, char *volumeId, char *instanceId, char *r
         timeout = ncGetTimeout(op_start, OP_TIMEOUT, stop - start, i);
         timeout = maxint(timeout, ATTACH_VOL_TIMEOUT_SECONDS);
 
-        // pick out the right LUN from the remove device string
-        char remoteDevForNC[VERY_BIG_CHAR_BUFFER_SIZE];
-        if (get_remoteDevForNC(resourceCacheLocal.resources[i].iqn, remoteDev, remoteDevForNC, sizeof(remoteDevForNC))) {
-            LOGERROR("failed to parse remote dev string in request\n");
-            rc = 1;
-        } else {
-            rc = ncClientCall(pMeta, timeout, resourceCacheLocal.resources[i].lockidx, resourceCacheLocal.resources[i].ncURL, "ncAttachVolume",
-                              instanceId, volumeId, remoteDevForNC, localDev);
-        }
+        rc = ncClientCall(pMeta, timeout, resourceCacheLocal.resources[i].lockidx, resourceCacheLocal.resources[i].ncURL, "ncAttachVolume",
+        		instanceId, volumeId, remoteDev, localDev);
 
         if (rc) {
             ret = 1;
@@ -1276,6 +1312,7 @@ int doDetachVolume(ncMetadata * pMeta, char *volumeId, char *instanceId, char *r
     ccInstance *myInstance;
     time_t op_start;
     ccResourceCache resourceCacheLocal;
+
     i = 0;
     myInstance = NULL;
     op_start = time(NULL);
@@ -1313,15 +1350,8 @@ int doDetachVolume(ncMetadata * pMeta, char *volumeId, char *instanceId, char *r
         timeout = ncGetTimeout(op_start, OP_TIMEOUT, stop - start, i);
         timeout = maxint(timeout, DETACH_VOL_TIMEOUT_SECONDS);
 
-        // pick out the right LUN from the remove device string
-        char remoteDevForNC[VERY_BIG_CHAR_BUFFER_SIZE];
-        if (get_remoteDevForNC(resourceCacheLocal.resources[i].iqn, remoteDev, remoteDevForNC, sizeof(remoteDevForNC))) {
-            LOGERROR("failed to parse remote dev string in request\n");
-            rc = 1;
-        } else {
-            rc = ncClientCall(pMeta, timeout, resourceCacheLocal.resources[i].lockidx, resourceCacheLocal.resources[i].ncURL, "ncDetachVolume",
-                              instanceId, volumeId, remoteDevForNC, localDev, force);
-        }
+        rc = ncClientCall(pMeta, timeout, resourceCacheLocal.resources[i].lockidx, resourceCacheLocal.resources[i].ncURL, "ncDetachVolume",
+                                     instanceId, volumeId, remoteDev, localDev, force);
         if (rc) {
             ret = 1;
         } else {
@@ -3467,18 +3497,6 @@ int doRunInstances(ncMetadata * pMeta, char *amiId, char *kernelId, char *ramdis
             sem_mypost(CONFIG);
 
             res = &(resourceCache->resources[resid]);
-
-            // pick out the right LUN from the long version of the remote device string and create the remote dev string that NC expects
-            for (int i = 0; i < EUCA_MAX_VBRS && i < ncvm.virtualBootRecordLen; i++) {
-                virtualBootRecord *vbr = &(ncvm.virtualBootRecord[i]);
-                if (strcmp(vbr->typeName, "ebs"))   // skip all except EBS entries
-                    continue;
-                if (get_remoteDevForNC(res->iqn, vbr->resourceLocationPtr, vbr->resourceLocation, sizeof(vbr->resourceLocation))) {
-                    LOGERROR("failed to parse remote dev string in VBR[%d]\n", i);
-                    rc = 1;
-                }
-            }
-
             if (rc) {
                 // could not find resource
                 LOGERROR("scheduler could not find resource to run the instance on\n");
@@ -4519,6 +4537,48 @@ int setup_shared_buffer(void **buf, char *bufname, size_t bytes, sem_t ** lock, 
     return (ret);
 }
 
+//copy from cc config into message metadata.
+static int populateOutboundMeta(ncMetadata *pMeta)
+{
+	int i = 0;
+	int servCount = 0;
+	if (pMeta != NULL) {
+		sem_mywait(CONFIG);
+		memcpy(pMeta->services, config->services, sizeof(serviceInfoType) * 16);
+		memcpy(pMeta->disabledServices, config->disabledServices, sizeof(serviceInfoType) * 16);
+		memcpy(pMeta->notreadyServices, config->notreadyServices, sizeof(serviceInfoType) * 16);
+
+		//Update the epoch if not already populated with latest from CC
+		if(pMeta->epoch < config->ccStatus.localEpoch) {
+			pMeta->epoch = config->ccStatus.localEpoch;
+		}
+		sem_mypost(CONFIG);
+
+		pMeta->servicesLen = 0;
+		pMeta->disabledServicesLen = 0;
+		pMeta->notreadyServicesLen = 0;
+		for(i = 0; i < 16; i++) {
+			if(strlen(config->services[i].name) > 0)
+			{
+				pMeta->servicesLen++;
+			}
+			if(strlen(config->disabledServices[i].name) > 0)
+			{
+				pMeta->disabledServicesLen++;
+			}
+			if(strlen(config->notreadyServices[i].name) > 0)
+			{
+				pMeta->notreadyServicesLen++;
+			}
+		}
+
+	} else {
+		return 1;
+	}
+
+	return 0;
+}
+
 //!
 //!
 //!
@@ -4579,10 +4639,14 @@ int initialize(ncMetadata * pMeta)
         // store information from CLC that needs to be kept up-to-date in the CC
         if (pMeta != NULL) {
             int i;
+            LOGTRACE("Initializing ncMeta: enabled %d, disabled %d, notready %d\n", pMeta->servicesLen, pMeta->disabledServicesLen, pMeta->notreadyServicesLen);
             sem_mywait(CONFIG);
-            memcpy(config->services, pMeta->services, sizeof(serviceInfoType) * 16);
-            memcpy(config->disabledServices, pMeta->disabledServices, sizeof(serviceInfoType) * 16);
-            memcpy(config->notreadyServices, pMeta->notreadyServices, sizeof(serviceInfoType) * 16);
+            if(pMeta->epoch >= config->ccStatus.localEpoch) {
+            	memcpy(config->services, pMeta->services, sizeof(serviceInfoType) * 16);
+            	memcpy(config->disabledServices, pMeta->disabledServices, sizeof(serviceInfoType) * 16);
+            	memcpy(config->notreadyServices, pMeta->notreadyServices, sizeof(serviceInfoType) * 16);
+            	config->ccStatus.localEpoch = pMeta->epoch;
+            }
 
             for (i = 0; i < 16; i++) {
                 if (strlen(config->services[i].type)) {
@@ -7020,7 +7084,7 @@ void print_ccInstance(char *tag, ccInstance * in)
         if (in->volumes[i].volumeId[0] != '\0') {
             strncat(volbuf, in->volumes[i].volumeId, CHAR_BUFFER_SIZE);
             strncat(volbuf, ",", 1);
-            strncat(volbuf, in->volumes[i].remoteDev, VERY_BIG_CHAR_BUFFER_SIZE);
+            strncat(volbuf, in->volumes[i].attachmentToken, CHAR_BUFFER_SIZE);
             strncat(volbuf, ",", 1);
             strncat(volbuf, in->volumes[i].localDev, CHAR_BUFFER_SIZE);
             strncat(volbuf, ",", 1);

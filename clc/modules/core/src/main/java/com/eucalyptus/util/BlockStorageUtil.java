@@ -76,6 +76,7 @@ import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.ServiceConfigurations;
 import com.eucalyptus.component.auth.SystemCredentials;
 import com.eucalyptus.component.id.ClusterController;
+import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.component.id.Storage;
 import com.eucalyptus.crypto.Ciphers;
 
@@ -120,6 +121,39 @@ public class BlockStorageUtil {
 			Cipher cipher = Ciphers.RSA_PKCS1.get();
 			cipher.init(Cipher.DECRYPT_MODE, scPrivateKey);
 			return new String(cipher.doFinal(Base64.decode(encryptedPassword)));
+		} catch(Exception ex) {
+			LOG.error(ex);
+			throw new EucalyptusCloudException("Unable to decrypt storage target password", ex);
+		}
+	}
+	
+	//Encrypt data using the node public key
+	public static String encryptForNode(String data) throws EucalyptusCloudException {
+    try {
+      List<ServiceConfiguration> clusterList = ServiceConfigurations.listPartition( ClusterController.class, StorageProperties.NAME );
+      if( clusterList.size() < 1 ) {
+        String msg = "Failed to find a cluster with the corresponding partition name for this SC: " + StorageProperties.NAME + "\nFound: " + clusterList.toString( ).replaceAll( ", ", ",\n" );
+        throw new EucalyptusCloudException(msg);
+      } else {
+        ServiceConfiguration clusterConfig = clusterList.get( 0 );
+        PublicKey ncPublicKey = Partitions.lookup( clusterConfig ).getNodeCertificate( ).getPublicKey();
+        Cipher cipher = Ciphers.RSA_PKCS1.get();
+        cipher.init(Cipher.ENCRYPT_MODE, ncPublicKey);
+        return new String(Base64.encode(cipher.doFinal(data.getBytes())));
+      }
+    } catch ( Exception e ) {
+			LOG.error( "Unable to encrypt storage target password: " + e.getMessage( ), e );
+			throw new EucalyptusCloudException("Unable to encrypt storage target password: " + e.getMessage(), e);
+		}
+	}
+	
+	//Decrypt data encrypted with the Cloud public key
+	public static String decryptWithCloud(String data) throws EucalyptusCloudException {
+		PrivateKey scPrivateKey = SystemCredentials.lookup(Eucalyptus.class).getPrivateKey();
+		try {
+			Cipher cipher = Ciphers.RSA_PKCS1.get();
+			cipher.init(Cipher.DECRYPT_MODE, scPrivateKey);
+			return new String(cipher.doFinal(Base64.decode(data)));
 		} catch(Exception ex) {
 			LOG.error(ex);
 			throw new EucalyptusCloudException("Unable to decrypt storage target password", ex);

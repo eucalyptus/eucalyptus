@@ -60,50 +60,112 @@
  *   NEEDED TO COMPLY WITH ANY SUCH LICENSES OR RIGHTS.
  ************************************************************************/
 
-package com.eucalyptus.ws.client.pipeline;
+package edu.ucsb.eucalyptus.cloud.entities;
 
-import java.util.Map;
-import java.util.concurrent.TimeUnit;
-import org.jboss.netty.channel.ChannelHandler;
-import org.jboss.netty.channel.ChannelPipeline;
-import org.jboss.netty.channel.ChannelPipelineFactory;
-import org.jboss.netty.channel.Channels;
-import com.eucalyptus.component.ComponentId.ComponentPart;
-import com.eucalyptus.component.id.ClusterController;
-import com.eucalyptus.ws.Handlers;
-import com.eucalyptus.ws.StackConfiguration;
-import com.eucalyptus.ws.handlers.ClusterWsSecHandler;
-import com.google.common.base.Supplier;
-import com.google.common.base.Suppliers;
+import java.util.Collection;
+import java.util.Set;
 
-@ComponentPart( ClusterController.class )
-public final class ClusterClientPipelineFactory implements ChannelPipelineFactory {
-  private enum ClusterWsSec implements Supplier<ChannelHandler> {
-    INSTANCE;
-    
-    @Override
-    public ChannelHandler get( ) {
-      return new ClusterWsSecHandler( );
+import javax.persistence.CascadeType;
+import javax.persistence.Column;
+import javax.persistence.Embedded;
+import javax.persistence.FetchType;
+import javax.persistence.JoinColumn;
+import javax.persistence.OneToMany;
+import javax.persistence.PersistenceContext;
+import javax.persistence.Table;
 
-    }
-  };
-  
-  private static final Supplier<ChannelHandler> wsSecHandler = Suppliers.memoize( ClusterWsSec.INSTANCE );
-  
-  @Override
-  public ChannelPipeline getPipeline( ) throws Exception {
-    final ChannelPipeline pipeline = Channels.pipeline( );
-    for ( final Map.Entry<String, ChannelHandler> e : Handlers.channelMonitors( TimeUnit.SECONDS, StackConfiguration.CLIENT_INTERNAL_TIMEOUT_SECS ).entrySet( ) ) {
-      pipeline.addLast( e.getKey( ), e.getValue( ) );
-    }
-    pipeline.addLast( "decoder", Handlers.newHttpResponseDecoder( ) );
-    pipeline.addLast( "aggregator", Handlers.newHttpChunkAggregator( ) );
-    pipeline.addLast( "encoder", Handlers.httpRequestEncoder( ) );
-    pipeline.addLast( "serializer", Handlers.soapMarshalling( ) );
-    pipeline.addLast( "wssec", wsSecHandler.get( ) );
-    pipeline.addLast( "addressing", Handlers.newAddressingHandler( "EucalyptusCC#" ) );
-    pipeline.addLast( "soap", Handlers.soapHandler( ) );
-    pipeline.addLast( "binding", Handlers.bindingHandler( "eucalyptus_ucsb_edu" ) );
-    return pipeline;
-  }
+import org.hibernate.annotations.Cache;
+import org.hibernate.annotations.CacheConcurrencyStrategy;
+import org.hibernate.annotations.Entity;
+import org.hibernate.annotations.NotFound;
+import org.hibernate.annotations.NotFoundAction;
+
+import com.eucalyptus.entities.AbstractPersistent;
+
+@Entity 
+@javax.persistence.Entity
+@PersistenceContext(name="eucalyptus_storage")
+@Table( name = "volume_tokens" )
+@Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
+public class VolumeToken extends AbstractPersistent {
+	private static final long serialVersionUID = 1L;
+
+	@Column(name="token", unique=true, nullable = false)
+	private String token;
+
+	@Column(name="volume_id")
+	private String volumeId;
+	
+	@Column(name="is_valid")
+	private Boolean isValid;
+	
+	@OneToMany( fetch = FetchType.LAZY, cascade = CascadeType.REMOVE, orphanRemoval = true, mappedBy = "token" )
+	private Set<VolumeExportRecord> exportRecords;
+	
+	public VolumeToken() {
+		volumeId = null;
+		token = null;
+	}
+	
+	public VolumeToken(String volId) {
+		this.volumeId = volId;		
+		this.token = null;
+		this.exportRecords = null;
+		this.isValid = null;
+	}
+	
+	public VolumeToken(String volId, String token, boolean valid) {
+		this.volumeId = volId;
+		this.token = token;
+		this.exportRecords = null;
+		this.isValid = valid;
+	}
+	
+	public VolumeToken(boolean isValid) {
+		this.volumeId = null;
+		this.token = null;
+		this.exportRecords = null;
+		this.isValid = isValid;
+	}
+
+	public String getVolumeId() {
+		return volumeId;
+	}
+
+	public void setVolumeId(String volumeId) {
+		this.volumeId = volumeId;
+	}
+
+	public String getToken() {
+		return token;
+	}
+
+	public void setToken(String token) {
+		this.token = token;
+	}
+
+	public Boolean getIsValid() {
+		return isValid;
+	}
+
+	public void setIsValid(Boolean isValid) {
+		this.isValid = isValid;
+	}
+
+	public Set<VolumeExportRecord> getExportRecords() {
+		return exportRecords;
+	}
+
+	public void setExportRecords(Set<VolumeExportRecord> exportRecords) {
+		this.exportRecords = exportRecords;
+	}
+	
+	public void addExportRecord(VolumeExportRecord record) {
+		this.exportRecords.add(record);
+	}
+	
+	public void removeExportRecord(VolumeExportRecord record) {
+		this.exportRecords.remove(record);
+	}
+
 }

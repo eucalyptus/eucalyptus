@@ -60,50 +60,45 @@
  *   NEEDED TO COMPLY WITH ANY SUCH LICENSES OR RIGHTS.
  ************************************************************************/
 
-package com.eucalyptus.ws.client.pipeline;
+package com.eucalyptus.ws.server;
 
-import java.util.Map;
-import java.util.concurrent.TimeUnit;
-import org.jboss.netty.channel.ChannelHandler;
 import org.jboss.netty.channel.ChannelPipeline;
-import org.jboss.netty.channel.ChannelPipelineFactory;
-import org.jboss.netty.channel.Channels;
+import org.jboss.netty.handler.codec.http.HttpRequest;
+import com.eucalyptus.binding.BindingManager;
 import com.eucalyptus.component.ComponentId.ComponentPart;
-import com.eucalyptus.component.id.ClusterController;
+import com.eucalyptus.component.id.Storage;
 import com.eucalyptus.ws.Handlers;
-import com.eucalyptus.ws.StackConfiguration;
-import com.eucalyptus.ws.handlers.ClusterWsSecHandler;
-import com.google.common.base.Supplier;
-import com.google.common.base.Suppliers;
+import com.eucalyptus.ws.handlers.BindingHandler;
+import com.eucalyptus.ws.stages.ExternalSCAuthenticationStage;
+import com.eucalyptus.ws.stages.UnrollableStage;
 
-@ComponentPart( ClusterController.class )
-public final class ClusterClientPipelineFactory implements ChannelPipelineFactory {
-  private enum ClusterWsSec implements Supplier<ChannelHandler> {
-    INSTANCE;
-    
-    @Override
-    public ChannelHandler get( ) {
-      return new ClusterWsSecHandler( );
 
-    }
-  };
-  
-  private static final Supplier<ChannelHandler> wsSecHandler = Suppliers.memoize( ClusterWsSec.INSTANCE );
-  
+@ComponentPart( Storage.class )
+public class ExternalStorageControllerSoapPipeline extends FilteredPipeline {
+	private static final String SC_EXTERNAL_SOAP_NAMESPACE = "storagecontroller_eucalyptus_ucsb_edu";
+
+	private final UnrollableStage auth = new ExternalSCAuthenticationStage( );
+
+	@Override
+  public boolean checkAccepts( final HttpRequest message ) {
+    return (message.getUri( ).endsWith( "/services/Storage" ) || message.getUri( ).endsWith( "/services/Storage/" )) && message.getHeaderNames().contains( "SOAPAction" ) && message.getHeader("SOAPAction").trim().startsWith("\"EucalyptusSC#");
+  }
+
   @Override
-  public ChannelPipeline getPipeline( ) throws Exception {
-    final ChannelPipeline pipeline = Channels.pipeline( );
-    for ( final Map.Entry<String, ChannelHandler> e : Handlers.channelMonitors( TimeUnit.SECONDS, StackConfiguration.CLIENT_INTERNAL_TIMEOUT_SECS ).entrySet( ) ) {
-      pipeline.addLast( e.getKey( ), e.getValue( ) );
-    }
-    pipeline.addLast( "decoder", Handlers.newHttpResponseDecoder( ) );
-    pipeline.addLast( "aggregator", Handlers.newHttpChunkAggregator( ) );
-    pipeline.addLast( "encoder", Handlers.httpRequestEncoder( ) );
-    pipeline.addLast( "serializer", Handlers.soapMarshalling( ) );
-    pipeline.addLast( "wssec", wsSecHandler.get( ) );
-    pipeline.addLast( "addressing", Handlers.newAddressingHandler( "EucalyptusCC#" ) );
-    pipeline.addLast( "soap", Handlers.soapHandler( ) );
-    pipeline.addLast( "binding", Handlers.bindingHandler( "eucalyptus_ucsb_edu" ) );
+  public String getName( ) {
+    return "storage-controller-external-soap";
+  }
+
+  @Override
+  public ChannelPipeline addHandlers( ChannelPipeline pipeline ) {  	
+  	pipeline.addLast( "deserialize", Handlers.soapMarshalling( ) );
+    //pipeline.addLast( "ws-security", Handlers.internalWsSecHandler() );
+    auth.unrollStage(pipeline);    
+    pipeline.addLast( "ws-addressing", Handlers.newAddressingHandler( "EucalyptusSC#" ) );
+    pipeline.addLast( "build-soap-envelope", Handlers.soapHandler( ) );
+    //pipeline.addLast( "binding", Handlers.bindingHandler( ) );        //
+    pipeline.addLast( "binding", new BindingHandler( BindingManager.getBinding(SC_EXTERNAL_SOAP_NAMESPACE)));    
     return pipeline;
   }
+
 }

@@ -63,19 +63,21 @@
  *   NEEDED TO COMPLY WITH ANY SUCH LICENSES OR RIGHTS.
  ************************************************************************/
 
-#ifndef _INCLUDE_ISCSI_H_
-#define _INCLUDE_ISCSI_H_
+//!
+//! @file sc/sc-client-marshal.h
+//! This defines the AXIS2C Client requests handling
+//!
 
-//!
-//! @file storage/iscsi.h
-//! Need to provide description
-//!
+#ifndef _INCLUDE_SCCLIENT_MARSHAL_H_
+#define _INCLUDE_SCCLIENT_MARSHAL_H_
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |
  |                                  INCLUDES                                  |
  |                                                                            |
 \*----------------------------------------------------------------------------*/
+
+#include "axis2_stub_EucalyptusSC.h" /* for axis2_ and axutil_ defs */
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |
@@ -101,6 +103,15 @@
  |                                                                            |
 \*----------------------------------------------------------------------------*/
 
+//! SC Stub structure
+typedef struct scStub_t {
+    axutil_env_t *env;          //!< Pointer to the AXIS2 environment structure
+    axis2_char_t *client_home;  //!< The AXIS2 client home directory path string
+    axis2_char_t *endpoint_uri; //!< The AXIS2 endpoint URI string
+    axis2_char_t *node_name;    //!< The AXIS2 node name parameter string
+    axis2_stub_t *stub;         //!< Pointer to the AXIS2 stub structure
+} scStub;
+
 /*----------------------------------------------------------------------------*\
  |                                                                            |
  |                             EXPORTED VARIABLES                             |
@@ -112,12 +123,10 @@
  |                             EXPORTED PROTOTYPES                            |
  |                                                                            |
 \*----------------------------------------------------------------------------*/
-
-void init_iscsi(const char *euca_home);
-char *connect_iscsi_target(const char *dev_string);
-int disconnect_iscsi_target(const char *dev_string, int do_rescan);
-char *get_iscsi_target(const char *dev_string);
-int check_iscsi(const char *dev_string);
+scStub *scStubCreate(char *endpoint_uri, char *logfile, char *homedir);
+int scStubDestroy(scStub * pStub);
+int scExportVolumeStub(scStub * pStub, char *correlationId, char *userId, char *volumeId, char *token, char *ip, char *iqn, char **connection_string);
+int scUnexportVolumeStub(scStub * pStub, char *correlationId, char *userId, char *volumeId, char *token, char *ip, char *iqn);
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |
@@ -137,4 +146,4 @@ int check_iscsi(const char *dev_string);
  |                                                                            |
 \*----------------------------------------------------------------------------*/
 
-#endif /* ! _INCLUDE_ISCSI_H_ */
+#endif /* ! _INCLUDE_SCCLIENT_MARSHAL_H_ */

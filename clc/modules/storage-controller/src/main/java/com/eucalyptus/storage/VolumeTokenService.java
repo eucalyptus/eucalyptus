@@ -60,50 +60,44 @@
  *   NEEDED TO COMPLY WITH ANY SUCH LICENSES OR RIGHTS.
  ************************************************************************/
 
-package com.eucalyptus.ws.client.pipeline;
+package com.eucalyptus.storage;
 
-import java.util.Map;
-import java.util.concurrent.TimeUnit;
-import org.jboss.netty.channel.ChannelHandler;
-import org.jboss.netty.channel.ChannelPipeline;
-import org.jboss.netty.channel.ChannelPipelineFactory;
-import org.jboss.netty.channel.Channels;
-import com.eucalyptus.component.ComponentId.ComponentPart;
-import com.eucalyptus.component.id.ClusterController;
-import com.eucalyptus.ws.Handlers;
-import com.eucalyptus.ws.StackConfiguration;
-import com.eucalyptus.ws.handlers.ClusterWsSecHandler;
-import com.google.common.base.Supplier;
-import com.google.common.base.Suppliers;
+import com.eucalyptus.util.EucalyptusCloudException;
 
-@ComponentPart( ClusterController.class )
-public final class ClusterClientPipelineFactory implements ChannelPipelineFactory {
-  private enum ClusterWsSec implements Supplier<ChannelHandler> {
-    INSTANCE;
-    
-    @Override
-    public ChannelHandler get( ) {
-      return new ClusterWsSecHandler( );
+import edu.ucsb.eucalyptus.cloud.entities.VolumeToken;
 
-    }
-  };
-  
-  private static final Supplier<ChannelHandler> wsSecHandler = Suppliers.memoize( ClusterWsSec.INSTANCE );
-  
-  @Override
-  public ChannelPipeline getPipeline( ) throws Exception {
-    final ChannelPipeline pipeline = Channels.pipeline( );
-    for ( final Map.Entry<String, ChannelHandler> e : Handlers.channelMonitors( TimeUnit.SECONDS, StackConfiguration.CLIENT_INTERNAL_TIMEOUT_SECS ).entrySet( ) ) {
-      pipeline.addLast( e.getKey( ), e.getValue( ) );
-    }
-    pipeline.addLast( "decoder", Handlers.newHttpResponseDecoder( ) );
-    pipeline.addLast( "aggregator", Handlers.newHttpChunkAggregator( ) );
-    pipeline.addLast( "encoder", Handlers.httpRequestEncoder( ) );
-    pipeline.addLast( "serializer", Handlers.soapMarshalling( ) );
-    pipeline.addLast( "wssec", wsSecHandler.get( ) );
-    pipeline.addLast( "addressing", Handlers.newAddressingHandler( "EucalyptusCC#" ) );
-    pipeline.addLast( "soap", Handlers.soapHandler( ) );
-    pipeline.addLast( "binding", Handlers.bindingHandler( "eucalyptus_ucsb_edu" ) );
-    return pipeline;
-  }
+/**
+ * A token issuing and resolving service.
+ * @author zhill
+ *
+ */
+public interface VolumeTokenService {
+	
+	/**
+	 * Generate a new token for the specified resource
+	 * @param resource
+	 * @return
+	 */
+	public VolumeToken issueToken(String resource) throws EucalyptusCloudException;
+
+	/**
+	 * Check the token but do not invalidate
+	 * @param token
+	 * @return
+	 */
+	public boolean checkToken(String resource, String token) throws EucalyptusCloudException;
+	
+	/**
+	 * If the token is invalid will return false, if was valid returns true.
+	 * Sets the token to invalid. Subsequent checks/invalidations will return false
+	 * @param token
+	 * @return
+	 */
+	public boolean invalidateToken(String resource, String token) throws EucalyptusCloudException;
+
+	/**
+	 * Invalidates all tokens and removes them.
+	 */
+	public void flushTokens() throws EucalyptusCloudException;
+	
 }

@@ -63,19 +63,20 @@
  *   NEEDED TO COMPLY WITH ANY SUCH LICENSES OR RIGHTS.
  ************************************************************************/
 
-#ifndef _INCLUDE_ISCSI_H_
-#define _INCLUDE_ISCSI_H_
-
 //!
-//! @file storage/iscsi.h
+//! @file util/adb-service-helpers.h
 //! Need to provide description
 //!
+
+#ifndef _INCLUDE_ADB_SERVICE_HELPERS_H_
+#define _INCLUDE_ADB_SERVICE_HELPERS_H_
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |
  |                                  INCLUDES                                  |
  |                                                                            |
 \*----------------------------------------------------------------------------*/
+
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |
@@ -113,12 +114,6 @@
  |                                                                            |
 \*----------------------------------------------------------------------------*/
 
-void init_iscsi(const char *euca_home);
-char *connect_iscsi_target(const char *dev_string);
-int disconnect_iscsi_target(const char *dev_string, int do_rescan);
-char *get_iscsi_target(const char *dev_string);
-int check_iscsi(const char *dev_string);
-
 /*----------------------------------------------------------------------------*\
  |                                                                            |
  |                           STATIC INLINE PROTOTYPES                         |
@@ -131,10 +126,76 @@ int check_iscsi(const char *dev_string);
  |                                                                            |
 \*----------------------------------------------------------------------------*/
 
+//! Macro to unmarshal a message from the server
+#define EUCA_MESSAGE_UNMARSHAL(_thefunc, _theadb, _themeta)                                                             \
+{                                                                                                                       \
+	int i = 0;                                                                                                          \
+	int j = 0;                                                                                                          \
+	adb_serviceInfoType_t *sit = NULL;                                                                                  \
+	bzero((_themeta), sizeof(ncMetadata));                                                                              \
+	(_themeta)->correlationId = adb_##_thefunc##_get_correlationId((_theadb), env);                                     \
+	(_themeta)->userId = adb_##_thefunc##_get_userId((_theadb), env);                                                   \
+	(_themeta)->epoch = adb_##_thefunc##_get_epoch((_theadb), env);                                                     \
+	(_themeta)->servicesLen = adb_##_thefunc##_sizeof_services((_theadb), env);                                         \
+	for (i = 0; ((i < (_themeta)->servicesLen) && (i < 16)); i++) {                                                     \
+		sit = adb_##_thefunc##_get_services_at((_theadb), env, i);                                                      \
+		snprintf((_themeta)->services[i].type, 32, "%s", adb_serviceInfoType_get_type(sit, env));                       \
+		snprintf((_themeta)->services[i].name, 32, "%s", adb_serviceInfoType_get_name(sit, env));                       \
+		snprintf((_themeta)->services[i].partition, 32, "%s", adb_serviceInfoType_get_partition(sit, env));             \
+		(_themeta)->services[i].urisLen = adb_serviceInfoType_sizeof_uris(sit, env);                                    \
+		for (j = 0; ((j < (_themeta)->services[i].urisLen) && (j < 8)); j++) {                                          \
+			snprintf((_themeta)->services[i].uris[j], 512, "%s", adb_serviceInfoType_get_uris_at(sit, env, j));         \
+		}                                                                                                               \
+	}                                                                                                                   \
+	(_themeta)->disabledServicesLen = adb_##_thefunc##_sizeof_disabledServices((_theadb), env);                         \
+	for (i = 0; ((i < (_themeta)->disabledServicesLen) && (i < 16)); i++) {                                             \
+		sit = adb_##_thefunc##_get_disabledServices_at((_theadb), env, i);                                              \
+		snprintf((_themeta)->disabledServices[i].type, 32, "%s", adb_serviceInfoType_get_type(sit, env));               \
+		snprintf((_themeta)->disabledServices[i].name, 32, "%s", adb_serviceInfoType_get_name(sit, env));               \
+		snprintf((_themeta)->disabledServices[i].partition, 32, "%s", adb_serviceInfoType_get_partition(sit, env));     \
+		(_themeta)->disabledServices[i].urisLen = adb_serviceInfoType_sizeof_uris(sit, env);                            \
+		for (j = 0; ((j < (_themeta)->disabledServices[i].urisLen) && (j < 8)); j++) {                                  \
+			snprintf((_themeta)->disabledServices[i].uris[j], 512, "%s", adb_serviceInfoType_get_uris_at(sit, env, j)); \
+		}                                                                                                               \
+	}                                                                                                                   \
+	(_themeta)->notreadyServicesLen = adb_##_thefunc##_sizeof_notreadyServices((_theadb), env);                         \
+	for (i = 0; ((i < (_themeta)->notreadyServicesLen) && (i < 16)); i++) {                                             \
+		sit = adb_##_thefunc##_get_notreadyServices_at((_theadb), env, i);                                              \
+		snprintf((_themeta)->notreadyServices[i].type, 32, "%s", adb_serviceInfoType_get_type(sit, env));               \
+		snprintf((_themeta)->notreadyServices[i].name, 32, "%s", adb_serviceInfoType_get_name(sit, env));               \
+		snprintf((_themeta)->notreadyServices[i].partition, 32, "%s", adb_serviceInfoType_get_partition(sit, env));     \
+		(_themeta)->notreadyServices[i].urisLen = adb_serviceInfoType_sizeof_uris(sit, env);                            \
+		for (j = 0; ((j < (_themeta)->notreadyServices[i].urisLen) && (j < 8)); j++) {                                  \
+			snprintf((_themeta)->notreadyServices[i].uris[j], 512, "%s", adb_serviceInfoType_get_uris_at(sit, env, j)); \
+		}                                                                                                               \
+	}                                                                                                                   \
+}
+
+//! Macro to marshal a message to the client
+#define EUCA_MESSAGE_MARSHAL(_thefunc, _theadb, _themeta)                               \
+{                                                                                       \
+	int i = 0;                                                                          \
+	int j = 0;                                                                          \
+	adb_serviceInfoType_t *sit = NULL;                                                  \
+	adb_##_thefunc##_set_correlationId((_theadb), env, (_themeta)->correlationId);      \
+	adb_##_thefunc##_set_userId((_theadb), env, (_themeta)->userId);                    \
+	adb_##_thefunc##_set_epoch((_theadb), env,  (_themeta)->epoch);                     \
+	for (i = 0; ((i < (_themeta)->servicesLen) && (i < 16)); i++) {                     \
+		sit = adb_serviceInfoType_create(env);                                          \
+		adb_serviceInfoType_set_type(sit, env, (_themeta)->services[i].type);           \
+		adb_serviceInfoType_set_name(sit, env, (_themeta)->services[i].name);           \
+		adb_serviceInfoType_set_partition(sit, env, (_themeta)->services[i].partition); \
+		for (j = 0; ((j < (_themeta)->services[i].urisLen) && (j < 8)); j++) {	        \
+			adb_serviceInfoType_add_uris(sit, env, (_themeta)->services[i].uris[j]);    \
+		}                                                                               \
+		adb_##_thefunc##_add_services((_theadb), env, sit);                             \
+	}                                                                                   \
+}
+
 /*----------------------------------------------------------------------------*\
  |                                                                            |
  |                          STATIC INLINE IMPLEMENTATION                      |
  |                                                                            |
 \*----------------------------------------------------------------------------*/
 
-#endif /* ! _INCLUDE_ISCSI_H_ */
+#endif /* ! _INCLUDE_ADB_HELPERS_H_ */
