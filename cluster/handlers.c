@@ -4330,7 +4330,7 @@ int doMigrateInstances(ncMetadata * pMeta, char *actionNode, char *instanceId, c
     if (preparing) {
         // notify source
         // FIXME: add real credentials.
-        snprintf(credentials, CREDENTIAL_SIZE, "MIGRATE");
+        snprintf(credentials, CREDENTIAL_SIZE, "%lu", time(NULL));
         timeout = ncGetTimeout(time(NULL), OP_TIMEOUT, 1, 0);
         // FIXME: REMOVE THE DISPLAY OF CREDENTIALS BEFORE WE GO LIVE!
         LOGDEBUG("about to ncClientCall source node '%s' with nc_instances (%s %d) %s\n",
@@ -4392,6 +4392,7 @@ int doMigrateInstances(ncMetadata * pMeta, char *actionNode, char *instanceId, c
         timeout = ncGetTimeout(time(NULL), OP_TIMEOUT, 1, 0);
         LOGDEBUG("about to ncClientCall source node '%s' with nc_instances (%s %d) %s\n",
                  SP(resourceCacheLocal.resources[src_index].hostname), nodeAction, found_instances, SP(found_instances == 1 ? nc_instances[0]->instanceId : ""));
+        // No need to send credentials with commit call: they were already passed to source and destination during prepare call.
         rc = ncClientCall(pMeta, timeout, resourceCacheLocal.resources[src_index].lockidx, resourceCacheLocal.resources[src_index].ncURL, "ncMigrateInstances",
                           nc_instances, found_instances, nodeAction, NULL);
         if (rc) {
