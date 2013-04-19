@@ -8,6 +8,9 @@ define([
 	return Backbone.View.extend({
     tpl: template,
     title: 'Advanced',
+    isOptional: true,
+    optionLinkText: app.msg('launch_instance_btn_next_advanced'),
+
     launchConfigErrors: new Backbone.Model({volume_size: ''}),
     
 		initialize : function() {
