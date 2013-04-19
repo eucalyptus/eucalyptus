@@ -43,7 +43,6 @@ define([
 
         setField: function(e, el) {
           var target = e.target;
-          //self.model.set('type_show', 'true');
           switch(target.id) {
             case 'launch-instance-names':
               var names = target.value.split(',');
@@ -121,11 +120,6 @@ define([
       self.render();
     });
    
-    self.model.on('change', function() {
-      self.model.set('type_show', true);
-    });
-
-
 
     $(this.el).html(this.tpl);
      this.rView = rivets.bind(this.$el, scope);
@@ -146,7 +140,17 @@ define([
         return false;
 
       return true;
-    }
+    },
+
+    // called from wizard.js when each step is displayed.
+    // there is also a matching blur() hook. 
+    focus: function() {
+      this.model.set('type_show', true);
+    },
+
+    blur: function() {
+      // nothing, just here for example
+    },
 
   });
 });
