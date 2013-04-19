@@ -2,17 +2,17 @@
 
 # Run on NC. Usage:
 #
-# libvirtd-auth.pl [-v] [-c config-file] [-a client secret | -r client | -z]
+# authorize-migration-keys.pl [-v] [-c config-file] [-a client secret | -r client | -z]
 #
 # Where:
 #
-# libvirtd-auth.pl -a client secret
+# authorize-migration-keys.pl -a client secret
 #   ...will authorized the specified migration client (IP address) using 'secret' as the shared secret.
 #
-# libvirtd-auth.pl -z
+# authorize-migration-keys.pl -z
 #   ...will revoke all migration clients.
 #
-# libvirtd-auth.pl -r client
+# authorize-migration-keys.pl -r client
 #   ...will revoke only the specified migration client (IP address).
 #
 # All usage cases accept [-c config-file] to specify a fully-qualified path
@@ -22,9 +22,10 @@
 # All usage cases also accept [-v] as a "verbose" flag.
 
 use Getopt::Std;
+use File::Copy;
 
 $config_file = "/etc/libvirt/libvirtd.conf";
-$keypath = "$ENV{'EUCALYPTUS'}/var/lib/eucalyptus/keys/cluster-cert.pem";
+$keypath = "$ENV{'EUCALYPTUS'}/var/lib/eucalyptus/keys/node-cert.pem";
 $certtool = "certtool -i --infile";
 
 #%DNs = ();
@@ -68,7 +69,7 @@ sub generate_new_dn
     dprint "Constructing a new DN entry for '$DN{CN}' : '$DN{L}' ...\n"
   } else {
     # This is reason to fail the migration!
-    print STDERR "Cannot construct a new DN entry for '$DN{CN}' : '$DN{L} ... exiting'\n";
+    print STDERR "Cannot construct a new DN entry for '$DN{CN}' : '$DN{L}' ... exiting'\n";
     exit 1;
   }
 
@@ -186,7 +187,7 @@ $opts = 0;
 
 if (($opts != 1) or (($opt_a ne '') and ($ARGV[0] eq '')) or ($ARGV[0] and ($opt_a eq ''))) {
   usage();
-  exit(1);
+  exit 1;
 }
 
 if ($opt_c) {
@@ -197,6 +198,7 @@ dprint "Using config file: $config_file\n";
 
 $new_config = $config_file . ".new";
 $orig_config = $config_file . ".orig";
+$backup_config = $config_file . ".bak";
 
 open (CONFIG_IN, "<$config_file") or
   die "Cannot open existing config file ($config_file): $!\n";
@@ -207,7 +209,7 @@ if ($linkret) {
   dprint "Could not link to '$orig_config': $!\n";
 }
 
-# Eliminate any stragglers. Without remorse.
+# Eliminate any straggler backup files.
 unlink ($new_config);
 open (CONFIG_OUT, ">$new_config") or
   die "Cannot open new config file ($new_config): $!\n";
@@ -252,5 +254,7 @@ while (<CONFIG_IN>) {
 
 # Move new file into place.
 # FIXME: add error-checking or all file operations: link, unlink, rename..
-unlink ($config_file);
+move ($config_file, $backup_config);
 rename ($new_config, $config_file);
+
+exit 0;

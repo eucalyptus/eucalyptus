@@ -124,7 +124,7 @@ install: build
 	@$(INSTALL) -m 755 create-loop-devices $(DESTDIR)$(datarootdir)/eucalyptus
 	@$(INSTALL) -m 644 nc-hooks/example.sh $(DESTDIR)$(etcdir)/eucalyptus/nc-hooks/
 	@$(INSTALL) -m 755 generate-migration-keys.sh $(DESTDIR)$(sbindir)
-	@$(INSTALL) -m 755 libvirtd-auth.ph $(DESTDIR)$(sbindir)
+	@$(INSTALL) -m 755 authorize-migration-keys.pl $(DESTDIR)$(sbindir)
 
 uninstall:
 	@$(RM) -f $(DESTDIR)$(etcdir)/init.d/eucalyptus-cloud
@@ -151,4 +151,4 @@ uninstall:
 	@$(RM) -f $(DESTDIR)$(sbindir)/euca-lictool
 	@$(RM) -f $(DESTDIR)$(datarootdir)/eucalyptus/create-loop-devices
 	@$(RM) -f $(DESTDIR)$(sbindir)/generate-migration-keys.sh
-	@$(RM) -f $(DESTDIR)$(sbindir)/libvirtd-auth.pl
+	@$(RM) -f $(DESTDIR)$(sbindir)/authorize-migration-keys.pl

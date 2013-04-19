@@ -167,6 +167,7 @@
 #define EUCALYPTUS_VIRSH                         EUCALYPTUS_ROOTWRAP " virsh"
 #define EUCALYPTUS_DETACH                        EUCALYPTUS_ROOTWRAP " " EUCALYPTUS_HELPER_DIR "/detach.pl"
 #define EUCALYPTUS_GENERATE_MIGRATION_KEYS       EUCALYPTUS_ROOTWRAP " " EUCALYPTUS_HELPER_DIR "/generate-migration-keys.sh"
+#define EUCALYPTUS_AUTHORIZE_MIGRATION_KEYS      EUCALYPTUS_ROOTWRAP " " EUCALYPTUS_HELPER_DIR "/authorize-migration-keys.pl"
 
 #define EUCALYPTUS_CONNECT_ISCSI                 EUCALYPTUS_ROOTWRAP " " EUCALYPTUS_HELPER_DIR "/connect_iscsitarget.pl"
 #define EUCALYPTUS_DISCONNECT_ISCSI              EUCALYPTUS_ROOTWRAP " " EUCALYPTUS_HELPER_DIR "/disconnect_iscsitarget.pl"

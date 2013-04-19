@@ -681,7 +681,8 @@ static int doMigrateInstances(struct nc_state_t *nc, ncMetadata * pMeta, ncInsta
         if (instances[inst_idx]) {
             ncInstance *instance_idx = instances[inst_idx];
             // FIXME: REMOVE THE DISPLAY OF CREDENTIALS BEFORE WE GO LIVE!
-            LOGDEBUG("[%s] proposed migration action '%s' (%s > %s) [%s]\n", SP(instance_idx->instanceId), SP(action), SP(instance_idx->migration_src), SP(instance_idx->migration_dst), SP(instance_idx->migration_credentials));
+            LOGDEBUG("[%s] proposed migration action '%s' (%s > %s) [%s]\n", SP(instance_idx->instanceId), SP(action), SP(instance_idx->migration_src),
+                     SP(instance_idx->migration_dst), SP(instance_idx->migration_credentials));
         } else {
             LOGERROR("Mismatch between migration instance count (%d) and length of instance list\n", instancesLen);
             return (EUCA_ERROR);
@@ -723,11 +724,13 @@ static int doMigrateInstances(struct nc_state_t *nc, ncMetadata * pMeta, ncInsta
 
                 // Establish migration-credential keys if this is the first instance preparation for this host.
                 // FIXME: REMOVE THE DISPLAY OF CREDENTIALS BEFORE WE GO LIVE!
-                LOGINFO("[%s] migration source preparing %s > %s [%s]\n", SP(instance->instanceId), SP(instance->migration_src), SP(instance->migration_dst), SP(instance->migration_credentials));
+                LOGINFO("[%s] migration source preparing %s > %s [%s]\n", SP(instance->instanceId), SP(instance->migration_src), SP(instance->migration_dst),
+                        SP(instance->migration_credentials));
                 if (!credentials_prepared) {
                     char generate_keys[MAX_PATH];
                     char *euca_base = getenv(EUCALYPTUS_ENV_VAR_NAME);
-                    snprintf(generate_keys, MAX_PATH, EUCALYPTUS_GENERATE_MIGRATION_KEYS " %s %s restart", euca_base ? euca_base : "", euca_base ? euca_base : "", sourceNodeName, credentials);
+                    snprintf(generate_keys, MAX_PATH, EUCALYPTUS_GENERATE_MIGRATION_KEYS " %s %s restart", euca_base ? euca_base : "", euca_base ? euca_base : "", sourceNodeName,
+                             credentials);
                     LOGDEBUG("instance[0]=%s migration key-generator path: '%s'\n", instance->instanceId, generate_keys);
                     int sysret = system(generate_keys);
                     if (sysret) {
@@ -735,7 +738,7 @@ static int doMigrateInstances(struct nc_state_t *nc, ncMetadata * pMeta, ncInsta
                         sem_v(inst_sem);
                         return (EUCA_SYSTEM_ERROR);
                     } else {
-                        LOGDEBUG("instance[0]=%s migration key-generation succeeded\n", instance->instanceId);
+                        LOGDEBUG("instance[0]=%s migration key generation succeeded\n", instance->instanceId);
                         credentials_prepared++;
                     }
                 }
@@ -832,21 +835,35 @@ static int doMigrateInstances(struct nc_state_t *nc, ncMetadata * pMeta, ncInsta
 
             // Establish migration-credential keys.
             // FIXME: REMOVE THE DISPLAY OF CREDENTIALS BEFORE WE GO LIVE!
-            LOGINFO("[%s] migration destination preparing %s > %s [%s]\n", instance->instanceId, SP(instance->migration_src), SP(instance->migration_dst), SP(instance->migration_credentials));
+            LOGINFO("[%s] migration destination preparing %s > %s [%s]\n", instance->instanceId, SP(instance->migration_src), SP(instance->migration_dst),
+                    SP(instance->migration_credentials));
             char generate_keys[MAX_PATH];
             char *euca_base = getenv(EUCALYPTUS_ENV_VAR_NAME);
 
-            // FIXME: Don't call key-generation script with 'restart' here: we'll restart after we hook the client key signature into libvirtd.conf
-            snprintf(generate_keys, MAX_PATH, EUCALYPTUS_GENERATE_MIGRATION_KEYS " %s %s restart", euca_base ? euca_base : "", euca_base ? euca_base : "", instance->migration_dst, instance->migration_credentials);
-            LOGDEBUG("instance[0]=%s migration key-generator path: '%s'\n", instance->instanceId, generate_keys);
+            // First, call config-file modification script to authorize source node.
+            snprintf(generate_keys, MAX_PATH, EUCALYPTUS_AUTHORIZE_MIGRATION_KEYS " -a %s %s", euca_base ? euca_base : "", euca_base ? euca_base : "", instance->migration_src,
+                     instance->migration_credentials);
+            LOGDEBUG("instance=%s migration key-authorizer path: '%s'\n", instance->instanceId, generate_keys);
             int sysret = system(generate_keys);
             if (sysret) {
-                LOGERROR("instance[0]=%s '%s' failed with exit code %d\n", instance->instanceId, generate_keys, WEXITSTATUS(sysret));
+                LOGERROR("instance=%s '%s' failed with exit code %d\n", instance->instanceId, generate_keys, WEXITSTATUS(sysret));
                 sem_v(inst_sem);
                 goto failed_dest;
             } else {
-                LOGDEBUG("instance[0]=%s migration key-generation succeeded\n", instance->instanceId);
-                credentials_prepared++;
+                LOGDEBUG("instance=%s migration key authorization succeeded\n", instance->instanceId);
+            }
+
+            // Now generate the keys we'll need and restart libvirtd to pick up all the changes.
+            snprintf(generate_keys, MAX_PATH, EUCALYPTUS_GENERATE_MIGRATION_KEYS " %s %s restart", euca_base ? euca_base : "", euca_base ? euca_base : "", instance->migration_dst,
+                     instance->migration_credentials);
+            LOGDEBUG("instance=%s migration key-generator path: '%s'\n", instance->instanceId, generate_keys);
+            sysret = system(generate_keys);
+            if (sysret) {
+                LOGERROR("instance=%s '%s' failed with exit code %d\n", instance->instanceId, generate_keys, WEXITSTATUS(sysret));
+                sem_v(inst_sem);
+                goto failed_dest;
+            } else {
+                LOGDEBUG("instance=%s migration key generation succeeded\n", instance->instanceId);
             }
 
             sem_v(inst_sem);

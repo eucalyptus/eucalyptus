@@ -224,6 +224,8 @@ configEntry configKeysNoRestartNC[] = {
     {NULL, NULL},
 };
 
+int incoming_migrations_in_progress = 0;
+
 /*----------------------------------------------------------------------------*\
  |                                                                            |
  |                              STATIC VARIABLES                              |
@@ -779,7 +781,9 @@ static void refresh_instance_info(struct nc_state_t *nc, ncInstance * instance)
         // migration-related logic
         if (is_migration_dst(instance)) {
             if (old_state == BOOTING && new_state == PAUSED) {
-                LOGINFO("[%s] incoming (%s < %s) migration in progress\n", instance->instanceId, instance->migration_dst, instance->migration_src);
+                ++incoming_migrations_in_progress;
+                LOGINFO("[%s] incoming (%s < %s) migration in progress (1 of %d)\n", instance->instanceId, instance->migration_dst, instance->migration_src,
+                        incoming_migrations_in_progress);
                 instance->migration_state = MIGRATION_IN_PROGRESS;
                 LOGDEBUG("[%s] incoming (%s < %s) migration_state set to '%s'\n", instance->instanceId,
                          instance->migration_dst, instance->migration_src, migration_state_names[instance->migration_state]);
@@ -792,10 +796,24 @@ static void refresh_instance_info(struct nc_state_t *nc, ncInstance * instance)
                 bzero(instance->migration_dst, HOSTNAME_SIZE);
                 instance->migrationTime = 0;
                 save_instance_struct(instance);
-                // Done upon return in monitoring_thread().
-                //copy_instances();
-                LOGINFO("[%s] incoming migration complete.\n", instance->instanceId);
+                // copy_intances is called upon return in monitoring_thread().
+                --incoming_migrations_in_progress;
+                LOGINFO("[%s] incoming migration complete (%d other migrations currently in progress)\n", instance->instanceId, incoming_migrations_in_progress);
 
+                // FIXME: Consolidate this sequence and the sequence in handlers_kvm.c into a util function?
+                if (!incoming_migrations_in_progress) {
+                    LOGINFO("no remaining incoming migrations -- deauthorizing migration clients\n");
+                    char deauthorize_keys[MAX_PATH];
+                    char *euca_base = getenv(EUCALYPTUS_ENV_VAR_NAME);
+                    snprintf(deauthorize_keys, MAX_PATH, EUCALYPTUS_AUTHORIZE_MIGRATION_KEYS " -z", euca_base ? euca_base : "", euca_base ? euca_base : "");
+                    LOGDEBUG("migration key-deauthorizer path: '%s'\n", deauthorize_keys);
+                    int sysret = system(deauthorize_keys);
+                    if (sysret) {
+                        LOGWARN("'%s' failed with exit code %d\n", deauthorize_keys, WEXITSTATUS(sysret));
+                    } else {
+                        LOGDEBUG("migration key deauthorization succeeded\n");
+                    }
+                }
             } else if (new_state == SHUTOFF || new_state == SHUTDOWN) {
                 // this is normal at the beginning of incoming migration, before a domain is created in PAUSED state
                 break;
@@ -3024,7 +3042,7 @@ int migration_rollback(ncInstance * instance)
         return TRUE;
     } else if (is_migration_dst(instance)) {
         // FIXME: Do I want to protect this functionality by requiring something like a 'force' option be passed to this function?
-        LOGWARN("[%s] resetting migration state '%s' to 'none' for an already-migrated (%s < %s) instance. SOMETHING WENT WRONG SOMEWHERE!\n",
+        LOGWARN("[%s] resetting migration state '%s' to 'none' for an already-migrated (%s < %s) instance. Something went wrong somewhere...\n",
                 instance->instanceId, migration_state_names[instance->migration_state], instance->migration_dst, instance->migration_src);
         instance->migration_state = NOT_MIGRATING;
         bzero(instance->migration_src, HOSTNAME_SIZE);
