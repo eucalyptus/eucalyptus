@@ -52,12 +52,7 @@ public class EventHandlerChains {
 	}
 	
 	public static EventHandlerChain<RegisterInstancesEvent> onRegisterInstances(){
-		return new EventHandlerChain<RegisterInstancesEvent>(){
-				@Override
-				public EventHandlerChain<RegisterInstancesEvent> build() {
-					return this;
-				}
-			}.build();
+		return (new EventHandlerChainRegisterInstances()).build();
 	}
 	
 	public static EventHandlerChain<DeregisterInstancesEvent> onDeregisterInstances(){
