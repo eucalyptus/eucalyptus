@@ -225,7 +225,7 @@ public class X509Download extends HttpServlet {
       StringBuilder sb = new StringBuilder( );
       //TODO:GRZE:FIXME velocity
       String userNumber = u.getAccount( ).getAccountNumber( );
-      sb.append( "EUCA_KEY_DIR=$(dirname $(readlink -f ${BASH_SOURCE}))" );
+      sb.append( "EUCA_KEY_DIR=$(cd $(dirname ${BASH_SOURCE:-$0}); pwd -P)" );
       if ( Topology.isEnabled( Eucalyptus.class ) ) {//GRZE:NOTE: this is temporary
         sb.append( "\nexport EC2_URL=" + ServiceUris.remotePublicify( Topology.lookup( Eucalyptus.class ) ) );
       } else {
@@ -284,6 +284,8 @@ public class X509Download extends HttpServlet {
       sb.append( "\nexport EC2_ACCOUNT_NUMBER='" + u.getAccount( ).getAccountNumber( ) + "'" );
       sb.append( "\nexport EC2_ACCESS_KEY='" + userAccessKey + "'" );
       sb.append( "\nexport EC2_SECRET_KEY='" + userSecretKey + "'" );
+      sb.append( "\nexport AWS_ACCESS_KEY='" + userAccessKey + "'" );
+      sb.append( "\nexport AWS_SECRET_KEY='" + userSecretKey + "'" );
       sb.append( "\nexport AWS_CREDENTIAL_FILE=${EUCA_KEY_DIR}/iamrc" );
       sb.append( "\nexport EC2_USER_ID='" + userNumber + "'" );
       sb.append( "\nalias ec2-bundle-image=\"ec2-bundle-image --cert ${EC2_CERT} --privatekey ${EC2_PRIVATE_KEY} --user ${EC2_ACCOUNT_NUMBER} --ec2cert ${EUCALYPTUS_CERT}\"" );

@@ -25,9 +25,11 @@ import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.concurrent.ConcurrentHashMap;
 
+import javax.annotation.Nullable;
 import javax.persistence.EntityTransaction;
 import org.apache.log4j.Logger;
 
+import com.eucalyptus.auth.euare.GetRolePolicyResult;
 import com.eucalyptus.auth.euare.InstanceProfileType;
 import com.eucalyptus.auth.euare.RoleType;
 import com.eucalyptus.autoscaling.common.AutoScalingGroupType;
@@ -52,6 +54,7 @@ import com.eucalyptus.loadbalancing.LoadBalancerSecurityGroup;
 import com.eucalyptus.loadbalancing.LoadBalancerZone;
 import com.eucalyptus.loadbalancing.LoadBalancers;
 import com.eucalyptus.loadbalancing.LoadBalancing;
+import com.google.common.base.Predicate;
 import com.google.common.collect.Lists;
 
 import edu.ucsb.eucalyptus.msgs.ClusterInfoType;
@@ -80,6 +83,7 @@ public class EventHandlerChainNew extends EventHandlerChain<NewLoadbalancerEvent
 		this.insert(new AdmissionControl(this));
 		this.insert(new IAMRoleSetup(this));
 		this.insert(new InstanceProfileSetup(this));
+		this.insert(new IAMPolicySetup(this));
 	  	this.insert(new DNSANameSetup(this));
 	  	this.insert(new SecurityGroupSetup(this));
 	  	int numVm = 1;
@@ -112,7 +116,6 @@ public class EventHandlerChainNew extends EventHandlerChain<NewLoadbalancerEvent
 			catch(final Exception ex){
 				throw new EventHandlerException("failed to validate the loadbalancer EMI", ex);
 			}
-			
 			
 			// zones: is the CC found?
 			final List<String> requestedZones = Lists.newArrayList(evt.getZones());
@@ -201,10 +204,7 @@ public class EventHandlerChainNew extends EventHandlerChain<NewLoadbalancerEvent
 		public static final String DEFAULT_ROLE_PATH_PREFIX = "/internal/loadbalancer";
 		public static final String DEFAULT_ROLE_NAME = "loadbalancer-vm";
 		public static final String DEFAULT_ASSUME_ROLE_POLICY = 
-				"{\"Statement\":[{\"Effect\":\"Allow\",\"Principal\":{\"Service\":[\"ec2.amazonaws.com\"]},\"Action\":[\"sts:AssumeRole\"]}]}" 
-				+
-				"{\"Statement\":[{\"Action\": \"elasticloadbalancing:*\",\"Effect\": \"Allow\",\"Resource\": \"*\"}]}";
-		
+				"{\"Statement\":[{\"Effect\":\"Allow\",\"Principal\":{\"Service\":[\"ec2.amazonaws.com\"]},\"Action\":[\"sts:AssumeRole\"]}]}";		
 		private RoleType role = null;
 		protected IAMRoleSetup(EventHandlerChain<NewLoadbalancerEvent> chain) {
 			super(chain);
@@ -332,15 +332,77 @@ public class EventHandlerChainNew extends EventHandlerChain<NewLoadbalancerEvent
 		}
 	}
 	
+	static class IAMPolicySetup extends AbstractEventHandler<NewLoadbalancerEvent> {
+		private static final String SERVO_ROLE_POLICY_NAME = "euca-internal-loadbalancer-vm-policy";
+		private static final String SERVO_ROLE_POLICY_DOCUMENT=
+				"{\"Statement\":[{\"Action\": [\"elasticloadbalancing:DescribeLoadBalancersByServo\", \"elasticloadbalancing:PutServoStates\"],\"Effect\": \"Allow\",\"Resource\": \"*\"}]}";
+				
+			protected IAMPolicySetup(EventHandlerChain<NewLoadbalancerEvent> chain) {
+			super(chain);
+		}
+
+		@Override
+		public void apply(NewLoadbalancerEvent evt)
+				throws EventHandlerException {
+			String roleName = null;
+			try{
+				StoredResult<String> roleResult = this.chain.findHandler(IAMRoleSetup.class);
+				if(roleResult.getResult()!=null && roleResult.getResult().size()>0)
+					roleName = roleResult.getResult().get(0);
+				if(roleName==null)
+					throw new Exception();
+			}catch(final Exception ex){
+				throw new EventHandlerException("could not find the role name for loadbalancer vm");
+			}
+			
+			GetRolePolicyResult policy  = null;
+			/// GetRolePolicy: check if there's an existing policy doc
+			try{
+				policy = EucalyptusActivityTasks.getInstance().getRolePolicy(roleName, SERVO_ROLE_POLICY_NAME);
+			}catch(final Exception ex){
+				;
+			}
+			
+			boolean putPolicy = false;
+			if(policy == null || policy.getPolicyName() == null || !policy.getPolicyName().equals(SERVO_ROLE_POLICY_NAME)){
+				putPolicy=true;
+			}else if (!SERVO_ROLE_POLICY_DOCUMENT.toLowerCase().equals(policy.getPolicyDocument().toLowerCase())){
+				try{
+					EucalyptusActivityTasks.getInstance().deleteRolePolicy(roleName, SERVO_ROLE_POLICY_NAME);
+				}catch(final Exception ex){
+					LOG.warn("failed to delete role policy", ex);
+				}
+				putPolicy = true;
+			}else{
+				putPolicy = false;
+			}
+			
+			if(putPolicy){
+				try{
+					EucalyptusActivityTasks.getInstance().putRolePolicy(roleName, SERVO_ROLE_POLICY_NAME, SERVO_ROLE_POLICY_DOCUMENT);
+				}catch(final Exception ex){
+					throw new EventHandlerException("failed to put role policy for loadbalancer vm");
+				}
+			}
+		}
+
+		@Override
+		public void rollback() throws EventHandlerException {
+			;			
+		}
+	}
+	
 	static class DNSANameSetup extends AbstractEventHandler<NewLoadbalancerEvent> {
 		private String dnsName = null;
 		private String dnsZone= null;
+		private NewLoadbalancerEvent event = null;
 		DNSANameSetup(EventHandlerChain<NewLoadbalancerEvent> chain){
 			super(chain);
 		}
 		
 		@Override
 		public void apply(NewLoadbalancerEvent evt) throws EventHandlerException {	
+			this.event = evt;
 			LoadBalancer lb = null;
 			LoadBalancerDnsRecord dns = null;
 			try{
@@ -403,6 +465,18 @@ public class EventHandlerChainNew extends EventHandlerChain<NewLoadbalancerEvent
 			String groupName = String.format("euca-internal-%s-%s", lb.getOwnerAccountNumber(), lb.getDisplayName());
 			String groupDesc = String.format("group for loadbalancer %s", evt.getLoadBalancer());
 			
+			EntityTransaction db = Entities.get( LoadBalancerSecurityGroup.class );
+			try{
+				final LoadBalancerSecurityGroup exist = Entities.uniqueResult(LoadBalancerSecurityGroup.named( lb, this.groupOwnerAccountId, groupName));
+				db.commit();
+				if(exist!=null)
+					throw new EventHandlerException("Cleaning-up resources for the loadbalancer with same name");
+			}catch(NoSuchElementException ex){
+				db.rollback();
+			}catch(Exception ex){
+				db.rollback();
+			}
+			
 			// check if there's an existing group with the same name
 			boolean groupFound = false;
 			try{
@@ -440,14 +514,13 @@ public class EventHandlerChainNew extends EventHandlerChain<NewLoadbalancerEvent
 			if(this.createdGroup == null || this.groupOwnerAccountId == null)
 				throw new EventHandlerException("Failed to create the security group for loadbalancer");
 	
-			final EntityTransaction db = Entities.get( LoadBalancerSecurityGroup.class );
+			db = Entities.get( LoadBalancerSecurityGroup.class );
 			try{
 				Entities.uniqueResult(LoadBalancerSecurityGroup.named( lb, this.groupOwnerAccountId, groupName));
 				db.commit();
 			}catch(NoSuchElementException ex){
 				final LoadBalancerSecurityGroup newGroup = LoadBalancerSecurityGroup.named( lb, this.groupOwnerAccountId, groupName);
 				LoadBalancerSecurityGroup written = Entities.persist(newGroup);
-				Entities.flush(written);
 				db.commit();
 			}catch(Exception ex){
 				db.rollback();
@@ -469,26 +542,29 @@ public class EventHandlerChainNew extends EventHandlerChain<NewLoadbalancerEvent
 			}catch(Exception ex){
 				return;
 			}
+			
 			try{
 				EucalyptusActivityTasks.getInstance().deleteSecurityGroup(this.createdGroup);
 			}catch(Exception ex){
-				throw new EventHandlerException("Failed to delete the security group in rollback", ex);
+				; // when there's any servo instance referencing the security group
+				        // SecurityGroupCleanup will clean up records
 			}
-
+			
 			final EntityTransaction db = Entities.get( LoadBalancerSecurityGroup.class );
 			try{
-				final LoadBalancerSecurityGroup sample = LoadBalancerSecurityGroup.named(lb, this.groupOwnerAccountId,  this.createdGroup);
-				final LoadBalancerSecurityGroup toDelete = Entities.uniqueResult(sample);
-				Entities.delete(toDelete);
+				final LoadBalancerSecurityGroup group =
+						Entities.uniqueResult(LoadBalancerSecurityGroup.named( lb, this.groupOwnerAccountId, this.createdGroup));
+				group.setState(LoadBalancerSecurityGroup.STATE.OutOfService);
+				group.setLoadBalancer(null);
+				Entities.persist(group);
 				db.commit();
 			}catch(NoSuchElementException ex){
 				db.rollback();
 			}catch(Exception ex){
 				db.rollback();
-				throw new EventHandlerException("Error while deleting security group record in rollback", ex);
+				LOG.error("failed to mark the security group OutOfService", ex);
 			}
 		}
-		
 
 		@Override
 		public List<String> getResult() {

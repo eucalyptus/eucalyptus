@@ -98,7 +98,8 @@ public class LoadBalancingService {
   		;
   	  }catch(Exception ex){
   		LOG.warn("failed to query loadbalancer for servo instance: "+instanceId);
-  	  }			  
+  	  }
+	  
 	  
   	  final Function<LoadBalancerZone, Set<LoadBalancerDescription>> lookupLBDescriptions = new Function<LoadBalancerZone, Set<LoadBalancerDescription>> () {
 		  @Override
@@ -178,8 +179,8 @@ public class LoadBalancingService {
   	  };
 
 	  Set<LoadBalancerDescription> descs = null;
-  	  if(zone != null && zone.getState().equals(LoadBalancerZone.STATE.InService)){
-  		  descs= lookupLBDescriptions.apply(zone);
+  	  if(zone != null && LoadBalancingMetadatas.filterPrivileged().apply( zone.getLoadbalancer() ) && zone.getState().equals(LoadBalancerZone.STATE.InService)){
+  			 descs= lookupLBDescriptions.apply(zone);
   	  }else
   		  descs = Sets.<LoadBalancerDescription>newHashSet();
   		  
@@ -220,7 +221,7 @@ public class LoadBalancingService {
 			  LOG.warn("failed to query servo instance");
 		  }
 	  }
-	  if(lb==null)
+	  if(lb==null || !LoadBalancingMetadatas.filterPrivileged().apply( lb ))
 		  return reply;
 	  
 	  /// INSTANCE HEALTH CHECK UPDATE
@@ -356,11 +357,11 @@ public class LoadBalancingService {
     	@Override
     	public Boolean apply(String lbName){
     		try{
-    			LoadBalancers.deleteDnsRecord(dns);
-    		}catch(LoadBalancingException ex){
-    			LOG.error("failed to rollback the dns records", ex);
+    			LoadBalancers.unsetForeignKeys(ctx.getUserFullName(), lbName);
+    		}catch(Exception ex){
+    			LOG.warn("unable to unset foreign keys", ex);
     		}
-    		
+
     		try{
         		LoadBalancers.deleteLoadbalancer(ownerFullName, lbName);
         	}catch(LoadBalancingException ex){

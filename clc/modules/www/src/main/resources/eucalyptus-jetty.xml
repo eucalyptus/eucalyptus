@@ -62,7 +62,7 @@
     NEEDED TO COMPLY WITH ANY SUCH LICENSES OR RIGHTS.
   -->
 
-<Configure id="Server" class="org.mortbay.jetty.Server">
+<Configure id="Server" class="org.eclipse.jetty.server.Server">
   <Call name="addConnector">
     <Arg>
       <New class="com.eucalyptus.bootstrap.HttpServerBootstrapper$ConfiguredSslSelectChannelConnector">
@@ -77,20 +77,18 @@
         <Set name="password">eucalyptus</Set>
         <Set name="keyPassword">eucalyptus</Set>
         <Set name="trustPassword">eucalyptus</Set>
-        <Set name="ThreadPool">
-          <New class="org.mortbay.thread.QueuedThreadPool">
+        <!-- Set name="ThreadPool">
+          <New class="org.eclipse.jetty.util.thread.QueuedThreadPool">
             <Set name="minThreads">10</Set>
             <Set name="maxThreads">25</Set>
-            <Set name="lowThreads">5</Set>
-            <Set name="SpawnOrShrinkAt">2</Set>
           </New>
-        </Set>
+        </Set -->
       </New>
     </Arg>
   </Call>
   <Call name="addConnector">
     <Arg>
-      <New class="org.mortbay.jetty.nio.SelectChannelConnector">
+      <New class="org.eclipse.jetty.server.nio.SelectChannelConnector">
         <Set name="Port">
           <SystemProperty name="euca.http.port" default="8080" />
         </Set>
@@ -98,26 +96,26 @@
     </Arg>
   </Call>
   <Set name="handler">
-    <New id="Handlers" class="org.mortbay.jetty.handler.rewrite.RewriteHandler">
+    <New id="Handlers" class="org.eclipse.jetty.rewrite.handler.RewriteHandler">
       <Set name="rules">
-        <Array type="org.mortbay.jetty.handler.rewrite.Rule">
+        <Array type="org.eclipse.jetty.rewrite.handler.Rule">
           <Item>
             <New id="httpsRedirect" class="com.eucalyptus.www.Redirect" />
           </Item>
         </Array>
       </Set>
       <Set name="handler">
-        <New id="Handlers" class="org.mortbay.jetty.handler.HandlerCollection">
+        <New id="Handlers" class="org.eclipse.jetty.server.handler.HandlerCollection">
           <Set name="handlers">
-            <Array type="org.mortbay.jetty.Handler">
+            <Array type="org.eclipse.jetty.server.Handler">
               <Item>
-                <New id="Contexts" class="org.mortbay.jetty.handler.ContextHandlerCollection" />
+                <New id="Contexts" class="org.eclipse.jetty.server.handler.ContextHandlerCollection" />
               </Item>
               <Item>
-                <New id="DefaultHandler" class="org.mortbay.jetty.handler.DefaultHandler" />
+                <New id="DefaultHandler" class="org.eclipse.jetty.server.handler.DefaultHandler" />
               </Item>
               <Item>
-                <New id="RequestLog" class="org.mortbay.jetty.handler.RequestLogHandler" />
+                <New id="RequestLog" class="org.eclipse.jetty.server.handler.RequestLogHandler" />
               </Item>
             </Array>
           </Set>
@@ -132,7 +130,7 @@
   </Call>
   <Call name="addLifeCycle">
     <Arg>
-      <New class="org.mortbay.jetty.deployer.ContextDeployer">
+      <New class="org.eclipse.jetty.deploy.ContextDeployer">
         <Set name="contexts">
           <Ref id="Contexts" />
         </Set>
@@ -144,7 +142,7 @@
   </Call>
   <Ref id="RequestLog">
     <Set name="requestLog">
-      <New id="RequestLogImpl" class="org.mortbay.jetty.NCSARequestLog">
+      <New id="RequestLogImpl" class="org.eclipse.jetty.server.NCSARequestLog">
         <Set name="filename"><SystemProperty name="euca.log.dir" default="./log" />/jetty-request-yyyy_mm_dd.log</Set>
         <Set name="filenameDateFormat">yyyy_MM_dd</Set>
         <Set name="retainDays">90</Set>

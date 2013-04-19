@@ -23,6 +23,7 @@ import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.concurrent.ConcurrentHashMap;
 
+import javax.annotation.Nullable;
 import javax.persistence.EntityTransaction;
 
 import org.apache.log4j.Logger;
@@ -44,6 +45,7 @@ import com.eucalyptus.loadbalancing.LoadBalancers;
 import com.eucalyptus.loadbalancing.activities.EventHandlerChainNew.InstanceProfileSetup;
 import com.eucalyptus.loadbalancing.activities.EventHandlerChainNew.SecurityGroupSetup;
 import com.eucalyptus.util.Exceptions;
+import com.google.common.base.Predicate;
 import com.google.common.collect.Lists;
 
 /**
@@ -74,7 +76,7 @@ public class LoadBalancerASGroupCreator extends AbstractEventHandler<NewLoadbala
 			type = ConfigurableFieldType.KEYVALUE )
 		public static String LOADBALANCER_VM_KEYNAME = null;
 		
-	
+	private NewLoadbalancerEvent event = null;
 	private LoadBalancer loadbalancer = null;
 	private int capacityPerZone = 1;
 	
@@ -93,7 +95,7 @@ public class LoadBalancerASGroupCreator extends AbstractEventHandler<NewLoadbala
 	public void apply(NewLoadbalancerEvent evt) throws EventHandlerException {
 		if(LOADBALANCER_EMI == null)
 			throw new EventHandlerException("Loadbalancer's EMI is not configured");
-		
+		this.event = evt;
 		if(evt.getZones() == null || evt.getZones().size() <= 0)
 			return;	// do nothing when zone is not specified
 		
@@ -218,21 +220,6 @@ public class LoadBalancerASGroupCreator extends AbstractEventHandler<NewLoadbala
 				EucalyptusActivityTasks.getInstance().deleteLaunchConfiguration(this.launchConfigName);
 			}catch(Exception ex){
 				LOG.error("failed to delete launch configuration - "+this.launchConfigName);
-			}
-		}
-
-		// find asgroup record from db and delete
-		if(this.loadbalancer != null){
-			final EntityTransaction db = Entities.get( LoadBalancerAutoScalingGroup.class );
-			try{
-				LoadBalancerAutoScalingGroup found = Entities.uniqueResult(LoadBalancerAutoScalingGroup.named(this.loadbalancer));
-				Entities.delete(found);
-				db.commit();
-			}catch(NoSuchElementException ex){
-				db.rollback();
-			}catch(Exception ex){
-				db.rollback();
-				LOG.warn("failed to delete the autoscaling group record");
 			}
 		}
 	}

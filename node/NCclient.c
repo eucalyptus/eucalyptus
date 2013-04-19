@@ -687,7 +687,7 @@ int main(int argc, char **argv)
                     if (strlen(inst->volumes[j].volumeId) > 0) {
                         if (vol_count > 0)
                             printf("                                ");
-                        printf("%s %s %s\n", inst->volumes[j].volumeId, inst->volumes[j].remoteDev, inst->volumes[j].localDev);
+                        printf("%s %s %s\n", inst->volumes[j].volumeId, inst->volumes[j].attachmentToken, inst->volumes[j].localDev);
                     }
                 }
                 if (vol_count)
@@ -790,7 +790,7 @@ int main(int argc, char **argv)
         long long ts_in = atoll(timestamp_str);
 
         axutil_date_time_t *dt = unixms_to_datetime(stub->env, ts_in);
-        char * dt_in = axutil_date_time_serialize_date_time(dt, stub->env);
+        char *dt_in = axutil_date_time_serialize_date_time(dt, stub->env);
 
         long long ts_out = datetime_to_unixms(dt, stub->env);
         printf("timestamp:  in = %lld %s\n", ts_in, dt_in);

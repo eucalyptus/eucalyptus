@@ -77,6 +77,9 @@ if (!-x $ISCSIADM) {
 
 # check input params
 $dev_string = untaint(shift @ARGV);
+
+#2nd param is if a rescan should be done or not
+$do_rescan = untaint(shift @ARGV);
 ($euca_home, $user, $auth_mode, $lun, $encrypted_password, @paths) = parse_devstring($dev_string);
 
 if (is_null_or_empty($euca_home)) {
@@ -119,10 +122,15 @@ while (@paths > 0) {
     # keep trying lun deletion until it is really gone
     for ($i = 0; $i < 10; $i++) {
       delete_lun($netdev, $ip, $store, $lun);
-      # rescan target
-      run_cmd(1, 1, "$ISCSIADM -m session -R");
-      last if is_null_or_empty(get_iscsi_device($netdev, $ip, $store, $lun));
-      sleep(5);
+      
+      if($do_rescan == $yes_rescan) {
+      	# rescan target
+      	run_cmd(1, 1, "$ISCSIADM -m session -R");
+      	last if is_null_or_empty(get_iscsi_device($netdev, $ip, $store, $lun));
+      	sleep(5);
+      } else {
+      	#Don't rescan, continue
+      }
     }
     print STDERR "Tried deleting lun $i times\n";
     next if retry_until_true(\&has_device_attached, [$netdev, $ip, $store], 5) == 1;

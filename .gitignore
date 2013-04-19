@@ -61,6 +61,7 @@ gatherlog/libEucalyptusGL.so
 Makedefs
 storage/euca_imager
 storage/Wclient
+storage/SCclient
 tools/euca_conf
 tools/eucalyptus-cc
 tools/eucalyptus-cloud
@@ -78,6 +79,7 @@ clc/eucadmin/eucadmin/__init__.py
 storage/euca-blobs
 storage/test_blobstore
 storage/test_vbr
+storage/test_ebs
 TAGS
 cluster/CCclient_full
 cluster/cc-client-policy.xml

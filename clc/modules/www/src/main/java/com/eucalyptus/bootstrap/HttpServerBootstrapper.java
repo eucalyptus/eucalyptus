@@ -67,10 +67,11 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.net.URL;
+import java.nio.channels.SocketChannel;
 import org.apache.log4j.Logger;
-import org.mortbay.jetty.Server;
-import org.mortbay.jetty.security.SslSelectChannelConnector;
-import org.mortbay.xml.XmlConfiguration;
+import org.eclipse.jetty.server.Server;
+import org.eclipse.jetty.server.ssl.SslSelectChannelConnector;
+import org.eclipse.jetty.xml.XmlConfiguration;
 import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.component.id.HttpService;
 import com.eucalyptus.configurable.ConfigurableClass;
@@ -120,7 +121,8 @@ public class HttpServerBootstrapper extends Bootstrapper {
     if ( System.getProperty( "http.proxyPort" ) != null ) {
       httpProxyPort = System.getProperty( "http.proxyPort" );
     }
-    jettyServer = new org.mortbay.jetty.Server( );
+    jettyServer = new org.eclipse.jetty.server.Server( );
+    System.setProperty( "org.eclipse.jetty.util.log.DEBUG", "true" );
     System.setProperty( "euca.http.port", "" + HTTP_PORT );
     System.setProperty( "euca.https.port", "" + HTTPS_PORT );
     URL defaultConfig = ClassLoader.getSystemResource( "eucalyptus-jetty.xml" );
@@ -252,9 +254,14 @@ public class HttpServerBootstrapper extends Bootstrapper {
   }
 
   public static final class ConfiguredSslSelectChannelConnector extends SslSelectChannelConnector {
-    @Override
     protected SSLEngine createSSLEngine() throws IOException {
-      final SSLEngine engine = super.createSSLEngine();
+      SocketChannel channel = SocketChannel.open();
+      return super.createSSLEngine(channel);
+    }
+
+    @Override
+    protected SSLEngine createSSLEngine(SocketChannel channel) throws IOException {
+      final SSLEngine engine = super.createSSLEngine(channel);
       engine.setEnabledCipherSuites( getEnabledCipherSuites(HTTPS_CIPHERS, engine.getSupportedCipherSuites()) );
       return engine;
     }

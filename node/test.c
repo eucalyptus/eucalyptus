@@ -257,23 +257,23 @@ int main(int argc, char **argv)
         for (i = 0; i < EUCA_MAX_VOLUMES; i++) {
             char id[10];
             sprintf(id, "v-%d", i);
-            v = save_volume(inst, id, "rd", "ld", "ldr", VOL_STATE_ATTACHED);
+            v = save_volume(inst, id, "tok", "rd", "ld", "ldr", VOL_STATE_ATTACHED);
             assert(v != NULL);
         }
         assert(is_volume_used(v));
-        assert(save_volume(inst, "too-much", "rd", "ld", "ldr", VOL_STATE_ATTACHED) == NULL);
-        assert(save_volume(inst, v->volumeId, NULL, NULL, NULL, NULL) != NULL);
-        assert(save_volume(inst, v->volumeId, "RD", NULL, NULL, NULL) != NULL);
-        assert(save_volume(inst, v->volumeId, NULL, "LD", NULL, NULL) != NULL);
-        assert(save_volume(inst, v->volumeId, NULL, NULL, "LDR", NULL) != NULL);
-        assert(save_volume(inst, v->volumeId, NULL, NULL, NULL, VOL_STATE_DETACHED) != NULL);
-        assert(strcmp(v->remoteDev, "RD") == 0);
-        assert(save_volume(inst, "v-x1", NULL, NULL, NULL, VOL_STATE_ATTACHING) != NULL);
-        assert(save_volume(inst, "v-x2", NULL, NULL, NULL, VOL_STATE_ATTACHING) == NULL);
-        assert(save_volume(inst, "v-x1", NULL, NULL, NULL, VOL_STATE_DETACHING) != NULL);
-        assert(save_volume(inst, "v-x2", NULL, NULL, NULL, VOL_STATE_ATTACHING) == NULL);
-        assert(save_volume(inst, "v-x1", NULL, NULL, NULL, VOL_STATE_DETACHING_FAILED) != NULL);
-        assert(save_volume(inst, "v-x2", NULL, NULL, NULL, VOL_STATE_ATTACHING) == NULL);
+        assert(save_volume(inst, "too-much", "tok", "rd", "ld", "ldr", VOL_STATE_ATTACHED) == NULL);
+        assert(save_volume(inst, v->volumeId, NULL, NULL, NULL, NULL, NULL) != NULL);
+        assert(save_volume(inst, v->volumeId, NULL, "RD", NULL, NULL, NULL) != NULL);
+        assert(save_volume(inst, v->volumeId, NULL, NULL, "LD", NULL, NULL) != NULL);
+        assert(save_volume(inst, v->volumeId, NULL, NULL, NULL, "LDR", NULL) != NULL);
+        assert(save_volume(inst, v->volumeId, NULL, NULL, NULL, NULL, VOL_STATE_DETACHED) != NULL);
+        assert(strcmp(v->attachmentToken, "RD") == 0);
+        assert(save_volume(inst, "v-x1", NULL, NULL, NULL, NULL, VOL_STATE_ATTACHING) != NULL);
+        assert(save_volume(inst, "v-x2", NULL, NULL, NULL, NULL, VOL_STATE_ATTACHING) == NULL);
+        assert(save_volume(inst, "v-x1", NULL, NULL, NULL, NULL, VOL_STATE_DETACHING) != NULL);
+        assert(save_volume(inst, "v-x2", NULL, NULL, NULL, NULL, VOL_STATE_ATTACHING) == NULL);
+        assert(save_volume(inst, "v-x1", NULL, NULL, NULL, NULL, VOL_STATE_DETACHING_FAILED) != NULL);
+        assert(save_volume(inst, "v-x2", NULL, NULL, NULL, NULL, VOL_STATE_ATTACHING) == NULL);
         assert(free_volume(inst, "v-x1") != NULL);
         for (i = 0; i < EUCA_MAX_VOLUMES - 1; i++) {
             char id[10];

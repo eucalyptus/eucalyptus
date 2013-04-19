@@ -68,6 +68,8 @@ CCWSDLNAME=eucalyptus_cc.wsdl
 CCWSDL=$(WSDLPATH)/$(CCWSDLNAME)
 NCWSDLNAME=eucalyptus_nc.wsdl
 NCWSDL=$(WSDLPATH)/$(NCWSDLNAME)
+SCWSDLNAME=eucalyptus_sc.wsdl
+SCWSDL=$(WSDLPATH)/$(SCWSDLNAME)
 SERVICE_SO=libEucalyptusNC.so
 SERVICE_NAME=EucalyptusNC
 CLIENT=NCclient
@@ -78,7 +80,8 @@ NC_LIBS	= $(LIBS) $(LDFLAGS) -lvirt -lcurl -lssl -lcrypto -lrampart `xslt-config
 AXIOM_LIBS = -lrampart -laxis2_http_sender -laxis2_http_receiver -laxis2_http_common -laxis2_engine -laxis2_axiom -laxutil -lneethi
 OPENSSL_LIBS = -lssl -lcrypto
 NC_HANDLERS=handlers_xen.o handlers_kvm.o handlers_default.o xml.o hooks.o
-STORAGE_OBJS=../storage/backing.o ../storage/diskutil.o ../storage/blobstore.o ../storage/walrus.o ../storage/vbr.o ../storage/iscsi.o
+STORAGE_OBJS=../storage/backing.o ../storage/diskutil.o ../storage/blobstore.o ../storage/walrus.o ../storage/vbr.o ../storage/iscsi.o ../storage/ebs_utils.o ../storage/sc-client-marshal-adb.o ../storage/storage-controller.o
+
 BUILD_ID=-DEUCA_COMPILE_TIMESTAMP=\""[built `date --rfc-3339='sec'`]"\"
 #EFENCE=-lefence
 
@@ -90,7 +93,7 @@ build: all
 
 buildall: server client clientlib test_nc test
 
-generated/stubs: $(NCWSDL)
+generated/stubs: $(NCWSDL) $(SCWSDL) 
 	@echo Generating server stubs
 	rm -rf generated
 	mkdir -p generated
@@ -98,6 +101,8 @@ generated/stubs: $(NCWSDL)
 	@echo Adding marshalling calls to server stubs
 #	../tools/add_marshalling.pl generated/axis2_skel_*.c generated/axis2_svc_skel_*.c
 	../tools/add_marshalling.pl generated/axis2_skel_*.c
+	@echo Generating SCclient stubs
+	sh $(WSDL2C) -uri $(SCWSDL) -g -d adb -u -uw -f -o generated | grep -v 'the classpath'
 	@echo Generating client stubs
 	sh $(WSDL2C) -uri $(NCWSDL) -g -d adb -u -uw -f -o generated | grep -v 'the classpath'
 	@echo Compiling the stubs
@@ -111,7 +116,7 @@ generated/stubs: $(NCWSDL)
 .c.o:
 	$(CC) -c $(BUILD_ID) $(CPPFLAGS) $(CFLAGS) `xslt-config --cflags` $(INCLUDES) $<
 
-server: $(SERVICE_SO)
+server: $(SCLIBS) $(SERVICE_SO)
 
 ../storage/backing.o: ../storage/backing.c ../util/log.o ../util/misc.o ../util/euca_string.o ../util/data.o
 	make -C ../storage
@@ -155,22 +160,31 @@ server: $(SERVICE_SO)
 ../util/sensor.o: ../util/sensor.c
 	make -C ../util
 
-$(SERVICE_SO): generated/stubs $(STORAGE_OBJS) ../net/vnetwork.o ../util/log.o ../util/misc.o ../util/euca_string.o ../util/sensor.o ../util/hash.o ../util/data.o server-marshal.o handlers.o $(NC_HANDLERS) ../util/eucalyptus.h ../util/euca_auth.o ../storage/http.o
-	$(CC) -o $(SERVICE_SO) -shared generated/adb_*.o generated/axis2*_skel_*.o server-marshal.o handlers.o $(NC_HANDLERS) $(STORAGE_OBJS) ../net/*.o ../util/*.o ../storage/http.o ../storage/storage-windows.o $(NC_LIBS) $(EFENCE)
+../storage/ebs_utils.o: ../storage/ebs_utils.c
+	make -C ../storage
+	
+../storage/sc-client-marshal-adb.o: ../storage/sc-client-marshal-adb.c
+	make -C ../storage
 
-clientlib: generated/stubs ../util/data.o client-marshal-adb.o
+../storage/storage-controller.o: ../storage/storage-controller.c ../storage/sc-client-marshal-adb.o
+	make -C ../storage
+
+$(SERVICE_SO): generated/stubs $(STORAGE_OBJS) ../net/vnetwork.o ../util/log.o ../util/misc.o ../util/euca_string.o ../util/sensor.o ../util/hash.o ../util/data.o server-marshal.o handlers.o $(NC_HANDLERS) ../util/eucalyptus.h ../util/euca_auth.o ../storage/http.o
+	$(CC) -shared generated/*.o server-marshal.o handlers.o $(NC_HANDLERS) $(STORAGE_OBJS) ../net/*.o ../util/*.o ../storage/http.o ../storage/storage-windows.o $(SCLIBS) $(NC_LIBS) $(EFENCE) -o $(SERVICE_SO)
+
+clientlib: generated/stubs ../util/data.o $(SCLIBS) client-marshal-adb.o
 
 client: $(CLIENT) $(CLIENT)_local
 
 fake: $(CLIENT)_fake
 
 $(CLIENT): generated/stubs $(STORAGE_OBJS) ../util/log.o ../util/misc.o ../util/euca_string.o ../util/sensor.o ../util/data.o client-marshal-adb.o client-marshal-local.o $(CLIENT).c ../storage/vbr.o
-	$(CC) -o $(CLIENT) $(CPPFLAGS) $(CFLAGS) $(INCLUDES) generated/adb_*.o generated/axis2_stub_*.o $(AXIOM_LIBS) client-marshal-adb.o ../util/*.o $(AXIOM_LIBS) $(OPENSSL_LIBS) ../storage/diskutil.o ../net/*.o -lm $(CLIENT).c ../storage/http.o -lcurl ../storage/storage-windows.o $(NC_LIBS)
+	$(CC) -o $(CLIENT) $(CPPFLAGS) $(CFLAGS) $(INCLUDES) -shared generated/adb_*.o generated/axis2_stub_*.o $(AXIOM_LIBS) client-marshal-adb.o ../util/*.o $(AXIOM_LIBS) $(OPENSSL_LIBS) ../storage/diskutil.o ../net/*.o -lm $(CLIENT).c ../storage/http.o -lcurl ../storage/storage-windows.o $(NC_LIBS)
 
 $(CLIENT)_fake: generated/stubs $(STORAGE_OBJS) ../util/log.o ../util/misc.o ../util/euca_string.o ../util/sensor.o ../util/data.o client-marshal-adb.o client-marshal-local.o client-marshal-fake.o $(CLIENT).c ../storage/vbr.o
 
 $(CLIENT)_local: generated/stubs $(STORAGE_OBJS) ../util/log.o ../util/misc.o ../util/euca_string.o ../util/sensor.o ../util/data.o client-marshal-adb.o client-marshal-local.o handlers.o $(NC_HANDLERS) $(CLIENT).c ../util/euca_auth.o ../storage/vbr.o
-	$(CC) -o $(CLIENT)_local -DNO_COMP $(INCLUDES) $(CPPFLAGS) $(CFLAGS) client-marshal-local.o ../util/*.o $(STORAGE_OBJS) ../net/*.o handlers.o $(NC_HANDLERS) $(CLIENT).c $(NC_LIBS) ../storage/http.o ../storage/storage-windows.o
+	$(CC) -o $(CLIENT)_local -DNO_COMP $(INCLUDES) $(CPPFLAGS) $(CFLAGS) -shared client-marshal-local.o ../util/*.o $(STORAGE_OBJS) ../net/*.o handlers.o $(NC_HANDLERS) $(CLIENT).c $(NC_LIBS) ../storage/http.o ../storage/storage-windows.o $(SCLIBS)
 
 test: test.c ../util/log.o ../util/misc.o ../util/euca_string.o ../util/sensor.o ../util/data.o
 	$(CC) $(CPPFLAGS) $(CFLAGS) $(INCLUDES) $(NC_LIBS) -o test test.c ../util/log.o ../util/misc.o ../util/euca_string.o ../util/sensor.o ../storage/diskutil.o ../util/data.o ../util/euca_auth.o $(OPENSSL_LIBS) ../util/ipc.o

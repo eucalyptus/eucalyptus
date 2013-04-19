@@ -95,10 +95,9 @@
 #include <euca_auth.h>
 #include <backing.h>
 #include <diskutil.h>
-#include <iscsi.h>
 #include <sensor.h>
 #include <euca_string.h>
-
+#include <ebs_utils.h>
 #include "handlers.h"
 #include "xml.h"
 #include "hooks.h"
@@ -335,7 +334,7 @@ static void *rebooting_thread(void *arg)
         LOGDEBUG("[%s] volumes [%d] = '%s'\n", instance->instanceId, i, volume->stateName);
 
         // get credentials, decrypt them
-        remoteDevStr = get_iscsi_target(volume->remoteDev);
+        remoteDevStr = get_volume_local_device(volume->connectionString);
         if (!remoteDevStr || !strstr(remoteDevStr, "/dev")) {
             LOGERROR("[%s] failed to get local name of host iscsi device when re-attaching\n", instance->instanceId);
             rc = 1;
@@ -377,7 +376,7 @@ static void *rebooting_thread(void *arg)
             log_level_for_devstring = EUCA_LOG_TRACE;
             if (err)
                 log_level_for_devstring = EUCA_LOG_DEBUG;
-            EUCALOG(log_level_for_devstring, "[%s][%s] remote device string: %s\n", instance->instanceId, volume->volumeId, volume->remoteDev);
+            EUCALOG(log_level_for_devstring, "[%s][%s] remote device connection string: %s\n", instance->instanceId, volume->volumeId, volume->connectionString);
         }
 
         EUCA_FREE(xml);
@@ -654,6 +653,7 @@ out:
 //!
 //! Handles the instance migration request.
 //!
+//! @param[in]  nc a pointer to the node controller (NC) state
 //! @param[in]  pMeta a pointer to the node controller (NC) metadata structure
 //! @param[in]  instances metadata for the instance to migrate to destination
 //! @param[in]  instancesLen number of instances in the instance list
@@ -668,6 +668,7 @@ out:
 static int doMigrateInstances(struct nc_state_t *nc, ncMetadata * pMeta, ncInstance ** instances, int instancesLen, char *action, char *credentials)
 {
     int ret = EUCA_OK;
+    int credentials_prepared = 0;
 
     if (instancesLen <= 0) {
         LOGERROR("called with invalid instancesLen (%d)\n", instancesLen);
@@ -679,7 +680,8 @@ static int doMigrateInstances(struct nc_state_t *nc, ncMetadata * pMeta, ncInsta
         LOGDEBUG("verifying instance # %d...\n", inst_idx);
         if (instances[inst_idx]) {
             ncInstance *instance_idx = instances[inst_idx];
-            LOGDEBUG("[%s] proposed migration action '%s' (%s > %s)\n", instance_idx->instanceId, action, instance_idx->migration_src, instance_idx->migration_dst);
+            LOGDEBUG("[%s] proposed migration action '%s' (%s > %s) [creds=%s]\n", SP(instance_idx->instanceId), SP(action), SP(instance_idx->migration_src),
+                     SP(instance_idx->migration_dst), (instance_idx->migration_credentials == NULL) ? "unavailable" : "present");
         } else {
             LOGERROR("Mismatch between migration instance count (%d) and length of instance list\n", instancesLen);
             return (EUCA_ERROR);
@@ -711,11 +713,35 @@ static int doMigrateInstances(struct nc_state_t *nc, ncMetadata * pMeta, ncInsta
 
             if (strcmp(action, "prepare") == 0) {
                 sem_p(inst_sem);
-                instance->migration_state = MIGRATION_READY;
+                instance->migration_state = MIGRATION_PREPARING;
                 euca_strncpy(instance->migration_src, sourceNodeName, HOSTNAME_SIZE);
                 euca_strncpy(instance->migration_dst, destNodeName, HOSTNAME_SIZE);
+                euca_strncpy(instance->migration_credentials, credentials, CREDENTIAL_SIZE);
                 instance->migrationTime = time(NULL);
-                LOGINFO("[%s] migration source preparing %s > %s\n", instance->instanceId, instance->migration_src, instance->migration_dst);
+                save_instance_struct(instance);
+                copy_instances();
+
+                // Establish migration-credential keys if this is the first instance preparation for this host.
+                LOGINFO("[%s] migration source preparing %s > %s [creds=%s]\n", SP(instance->instanceId), SP(instance->migration_src), SP(instance->migration_dst),
+                        (instance->migration_credentials == NULL) ? "unavailable" : "present");
+                if (!credentials_prepared) {
+                    char generate_keys[MAX_PATH];
+                    char *euca_base = getenv(EUCALYPTUS_ENV_VAR_NAME);
+                    snprintf(generate_keys, MAX_PATH, EUCALYPTUS_GENERATE_MIGRATION_KEYS " %s %s restart", euca_base ? euca_base : "", euca_base ? euca_base : "", sourceNodeName,
+                             credentials);
+                    LOGDEBUG("instance[0]=%s migration key-generator path: '%s'\n", instance->instanceId, generate_keys);
+                    int sysret = system(generate_keys);
+                    if (sysret) {
+                        LOGERROR("instance[0]=%s '%s' failed with exit code %d\n", instance->instanceId, generate_keys, WEXITSTATUS(sysret));
+                        sem_v(inst_sem);
+                        return (EUCA_SYSTEM_ERROR);
+                    } else {
+                        LOGDEBUG("instance[0]=%s migration key generation succeeded\n", instance->instanceId);
+                        credentials_prepared++;
+                    }
+                }
+
+                instance->migration_state = MIGRATION_READY;
                 save_instance_struct(instance);
                 copy_instances();
                 sem_v(inst_sem);
@@ -735,7 +761,8 @@ static int doMigrateInstances(struct nc_state_t *nc, ncMetadata * pMeta, ncInsta
                     return (EUCA_UNSUPPORTED_ERROR);
                 }
                 instance->migration_state = MIGRATION_IN_PROGRESS;
-                LOGINFO("[%s] migration source initiating %s > %s\n", instance->instanceId, instance->migration_src, instance->migration_dst);
+                LOGINFO("[%s] migration source initiating %s > %s [creds=%s]\n", instance->instanceId, instance->migration_src, instance->migration_dst,
+                        (instance->migration_credentials == NULL) ? "unavailable" : "present");
                 save_instance_struct(instance);
                 copy_instances();
                 sem_v(inst_sem);
@@ -784,7 +811,7 @@ static int doMigrateInstances(struct nc_state_t *nc, ncMetadata * pMeta, ncInsta
                 LOGERROR("[%s] action '%s' is not valid or not implemented\n", instance_req->instanceId, action);
                 return (EUCA_INVALID_ERROR);
             }
-            // Everything from here on is specific to "prepare"
+            // Everything from here on is specific to "prepare" on a destination.
 
             // allocate a new instance struct
             ncInstance *instance = clone_instance(instance_req);
@@ -797,8 +824,41 @@ static int doMigrateInstances(struct nc_state_t *nc, ncMetadata * pMeta, ncInsta
             instance->migration_state = MIGRATION_PREPARING;
             euca_strncpy(instance->migration_src, sourceNodeName, HOSTNAME_SIZE);
             euca_strncpy(instance->migration_dst, destNodeName, HOSTNAME_SIZE);
-            LOGINFO("[%s] migration destination preparing %s > %s\n", instance->instanceId, SP(instance->migration_src), SP(instance->migration_dst));
+            euca_strncpy(instance->migration_credentials, credentials, CREDENTIAL_SIZE);
             save_instance_struct(instance);
+
+            // Establish migration-credential keys.
+            LOGINFO("[%s] migration destination preparing %s > %s [creds=%s]\n", instance->instanceId, SP(instance->migration_src), SP(instance->migration_dst),
+                    (instance->migration_credentials == NULL) ? "unavailable" : "present");
+            char generate_keys[MAX_PATH];
+            char *euca_base = getenv(EUCALYPTUS_ENV_VAR_NAME);
+
+            // First, call config-file modification script to authorize source node.
+            snprintf(generate_keys, MAX_PATH, EUCALYPTUS_AUTHORIZE_MIGRATION_KEYS " -a %s %s", euca_base ? euca_base : "", euca_base ? euca_base : "", instance->migration_src,
+                     instance->migration_credentials);
+            LOGDEBUG("instance=%s migration key-authorizer path: '%s'\n", instance->instanceId, generate_keys);
+            int sysret = system(generate_keys);
+            if (sysret) {
+                LOGERROR("instance=%s '%s' failed with exit code %d\n", instance->instanceId, generate_keys, WEXITSTATUS(sysret));
+                sem_v(inst_sem);
+                goto failed_dest;
+            } else {
+                LOGDEBUG("instance=%s migration key authorization succeeded\n", instance->instanceId);
+            }
+
+            // Now generate the keys we'll need and restart libvirtd to pick up all the changes.
+            snprintf(generate_keys, MAX_PATH, EUCALYPTUS_GENERATE_MIGRATION_KEYS " %s %s restart", euca_base ? euca_base : "", euca_base ? euca_base : "", instance->migration_dst,
+                     instance->migration_credentials);
+            LOGDEBUG("instance=%s migration key-generator path: '%s'\n", instance->instanceId, generate_keys);
+            sysret = system(generate_keys);
+            if (sysret) {
+                LOGERROR("instance=%s '%s' failed with exit code %d\n", instance->instanceId, generate_keys, WEXITSTATUS(sysret));
+                sem_v(inst_sem);
+                goto failed_dest;
+            } else {
+                LOGDEBUG("instance=%s migration key generation succeeded\n", instance->instanceId);
+            }
+
             sem_v(inst_sem);
 
             int error;
@@ -834,43 +894,56 @@ static int doMigrateInstances(struct nc_state_t *nc, ncMetadata * pMeta, ncInsta
                 int is_iscsi_target = 0;
                 int have_remote_device = 0;
                 char *xml = NULL;
-
+                char *remoteDevStr = NULL;
+                char scUrl[512];
                 char localDevReal[32], localDevTag[256], remoteDevReal[132];
                 char *tagBuf = localDevTag;
+                ebs_volume_data *vol_data = NULL;
                 ret = convert_dev_names(volume->localDev, localDevReal, tagBuf);
                 if (ret)
                     goto unroll;
 
-                // do iscsi connect shellout if remoteDev is an iSCSI target
+                //Do the ebs connect.
+                LOGTRACE("[%s][%s] Connecting EBS volume to local host\n", instance->instanceId, volume->volumeId);
+                get_service_url("storage",nc, scUrl);
 
-                if (check_iscsi(volume->remoteDev)) {
-                    char *remoteDevStr = NULL;
-                    is_iscsi_target = 1;
-
-                    // get credentials, decrypt them, login into target
-                    remoteDevStr = connect_iscsi_target(volume->remoteDev);
-                    if (!remoteDevStr || !strstr(remoteDevStr, "/dev")) {
-                        LOGERROR("[%s][%s] failed to connect to iscsi target\n", instance->instanceId, volume->volumeId);
-                        remoteDevReal[0] = '\0';
-                    } else {
-                        LOGDEBUG("[%s][%s] attached iSCSI target of host device '%s'\n", instance->instanceId, volume->volumeId, remoteDevStr);
-                        snprintf(remoteDevReal, sizeof(remoteDevReal), "%s", remoteDevStr);
-                        have_remote_device = 1;
-                    }
-                    EUCA_FREE(remoteDevStr);
+                if(strlen(scUrl) == 0) {
+                	LOGERROR("[%s][%s] Failed to lookup enabled Storage Controller. Cannot attach volume %s\n",instance->instanceId, volume->volumeId, scUrl);
+                	have_remote_device = 0;
+                	ret = EUCA_ERROR;
+                	goto unroll;
                 } else {
-                    snprintf(remoteDevReal, sizeof(remoteDevReal), "%s", volume->remoteDev);
-                    have_remote_device = 1;
+                	LOGTRACE("[%s][%s] Using SC URL: %s\n", instance->instanceId, volume->volumeId, scUrl );
                 }
+
+                //Do the ebs connect.
+                LOGTRACE("[%s][%s] Connecting EBS volume to local host\n", instance->instanceId, volume->volumeId);
+                int rc = connect_ebs_volume(scUrl, volume->attachmentToken, nc->config_use_ws_sec, nc->config_sc_policy_file, nc->ip, nc->iqn, &remoteDevStr, &vol_data);
+                if(rc) {
+                	LOGERROR("Error connecting ebs volume %s\n", volume->attachmentToken);
+                	have_remote_device=0;
+                	ret = EUCA_ERROR;
+                	goto unroll;
+                }
+
+                if (!remoteDevStr || !strstr(remoteDevStr, "/dev")) {
+                	LOGERROR("[%s][%s] failed to connect to iscsi target\n", instance->instanceId, volume->volumeId);
+                	remoteDevReal[0] = '\0';
+                } else {
+                	LOGDEBUG("[%s][%s] attached iSCSI target of host device '%s'\n", instance->instanceId, volume->volumeId, remoteDevStr);
+                	snprintf(remoteDevReal, sizeof(remoteDevReal), "%s", remoteDevStr);
+                	have_remote_device = 1;
+                }
+                EUCA_FREE(remoteDevStr);
 
                 // something went wrong above, abort
                 if (!have_remote_device) {
-                    goto unroll;
+                	goto unroll;
                 }
                 // make sure there is a block device
                 if (check_block(remoteDevReal)) {
-                    LOGERROR("[%s][%s] cannot verify that host device '%s' is available for hypervisor attach\n", instance->instanceId, volume->volumeId, remoteDevReal);
-                    goto unroll;
+                	LOGERROR("[%s][%s] cannot verify that host device '%s' is available for hypervisor attach\n", instance->instanceId, volume->volumeId, remoteDevReal);
+                	goto unroll;
                 }
                 // generate XML for libvirt attachment request
                 if (gen_volume_xml(volume->volumeId, instance, localDevReal, remoteDevReal) // creates vol-XXX.xml
@@ -932,12 +1005,11 @@ unroll:
 
 failed_dest:
 
-            ret = EUCA_ERROR;
+            // Set to generic EUCA_ERROR unless already set to a more-specific error.
+            if (ret == EUCA_OK) {
+                ret = EUCA_ERROR;
+            }
             EUCA_FREE(instance);
-
-            // FIXME: This isn't really right, as it will cause an error
-            // return for a multi-instance request even if some instances
-            // were successfully set up.
             goto out;
 
         } else {

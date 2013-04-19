@@ -25,6 +25,8 @@ import static com.eucalyptus.util.RestrictedTypes.QuantityMetricFunction;
 import java.util.Collection;
 import java.util.List;
 import java.util.NoSuchElementException;
+
+import javax.annotation.Nullable;
 import javax.persistence.EntityTransaction;
 
 import org.apache.log4j.Logger;
@@ -91,8 +93,8 @@ public class LoadBalancers {
 		  throw new LoadBalancingException("Failed to create a new load-balancer instance");
 	}
 	
-	public static void deleteLoadbalancer(UserFullName user, String lbName) throws LoadBalancingException {
-		final EntityTransaction db = Entities.get( LoadBalancer.class );
+	public static void deleteLoadbalancer(final UserFullName user, final String lbName) throws LoadBalancingException {
+		/*final EntityTransaction db = Entities.get( LoadBalancer.class );
 		try{
 			final LoadBalancer lb = Entities.uniqueResult( LoadBalancer.named(user, lbName));	
 			Entities.delete(lb);
@@ -104,7 +106,21 @@ public class LoadBalancers {
 			db.rollback();
 			LOG.error("failed to delete a loadbalancer", e);
 			throw new LoadBalancingException("Failed to delete the loadbalancer "+lbName, e);
-		}
+		}*/
+		
+		Predicate<Void> delete = new Predicate<Void>(){
+			@Override
+			public boolean apply(@Nullable Void arg0) {
+				try{
+					final LoadBalancer toDelete =  Entities.uniqueResult( LoadBalancer.named(user, lbName));	
+					Entities.delete(toDelete);
+				}catch(final Exception ex){
+					return false;
+				}
+				return true;
+			}
+		};
+		Entities.asTransaction(LoadBalancer.class, delete).apply(null);
 	}
 	
 	public static void createLoadbalancerListener(final String lbName, final UserFullName ownerFullName , final Collection<Listener> listeners) throws LoadBalancingException {
@@ -326,6 +342,44 @@ public class LoadBalancers {
 		}catch(Exception ex){
 			db.rollback();
 			throw new LoadBalancingException("failed to query servo instances");
+		}
+	}
+	
+	public static void unsetForeignKeys(final UserFullName userFullName, final String loadbalancer){
+		Predicate<LoadBalancerServoInstance> unsetServoInstanceKey = new Predicate<LoadBalancerServoInstance>(){
+			@Override
+			public boolean apply(@Nullable LoadBalancerServoInstance arg0) {
+				try{
+					final LoadBalancerServoInstance update = Entities.uniqueResult(arg0);
+					//update.setSecurityGroup(null);
+					update.setAvailabilityZone(null);
+					update.setAutoScalingGroup(null);
+					update.setDns(null);
+					return true;
+				}catch(final Exception ex){
+					return false;
+				}
+			}
+		};
+		
+		LoadBalancer lb = null;
+		try{
+			lb = getLoadbalancer(userFullName, loadbalancer);
+		}catch(Exception ex){
+			return;
+		}
+		if(lb!=null){
+			if(lb.getZones()!=null){
+				for(final LoadBalancerZone zone : lb.getZones()){
+					for(final LoadBalancerServoInstance servo : zone.getServoInstances()){
+						try{
+							Entities.asTransaction(LoadBalancerServoInstance.class, unsetServoInstanceKey).apply(servo);
+						}catch(Exception ex){
+							;
+						}
+					}
+				}
+			}
 		}
 	}
 
