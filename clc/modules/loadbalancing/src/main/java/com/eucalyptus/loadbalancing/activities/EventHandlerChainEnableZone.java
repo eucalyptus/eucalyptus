@@ -94,7 +94,7 @@ public class EventHandlerChainEnableZone extends EventHandlerChain<EnabledZoneEv
 			
 			/// make sure the zones are the valid one
 			try{
-				final List<ClusterInfoType> zones = EucalyptusActivityTasks.getInstance().describeAvailabilityZones();
+				final List<ClusterInfoType> zones = EucalyptusActivityTasks.getInstance().describeAvailabilityZones(false);
 				final List<String> foundZones = Lists.transform(zones, new Function<ClusterInfoType, String>(){
 					@Override
 					public String apply(@Nullable ClusterInfoType arg0) {

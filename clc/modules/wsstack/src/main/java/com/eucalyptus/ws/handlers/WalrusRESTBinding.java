@@ -116,9 +116,9 @@ import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.util.StorageProperties;
 import com.eucalyptus.util.WalrusProperties;
 import com.eucalyptus.util.WalrusUtil;
+import com.eucalyptus.util.XMLParser;
 import com.eucalyptus.ws.InvalidOperationException;
 import com.eucalyptus.ws.util.WalrusBucketLogger;
-import com.eucalyptus.ws.util.XMLParser;
 import com.google.common.collect.Lists;
 
 import edu.ucsb.eucalyptus.cloud.BucketLogData;
@@ -327,7 +327,12 @@ public class WalrusRESTBinding extends RestfulMarshallingHandler {
 		User user = Contexts.lookup( httpRequest.getCorrelationId( ) ).getUser();
 		setRequiredParams (groovyMsg, user);
 
-		if ( !failedMappings.isEmpty() || !params.isEmpty() )
+		if ( !params.isEmpty()) {
+			//ignore params that are not consumed, EUCA-4840
+			params.clear();
+		}
+		
+		if ( !failedMappings.isEmpty() )
 		{
 			StringBuilder errMsg = new StringBuilder( "Failed to bind the following fields:\n" );
 			for ( String f : failedMappings )

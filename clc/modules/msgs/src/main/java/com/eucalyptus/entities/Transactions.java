@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * Copyright 2009-2013 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -66,6 +66,7 @@ import java.lang.reflect.UndeclaredThrowableException;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.NoSuchElementException;
 import java.util.concurrent.atomic.AtomicInteger;
 import javax.persistence.EntityTransaction;
 import org.apache.log4j.Logger;
@@ -206,11 +207,20 @@ public class Transactions {
   }
 
   public static <S, T> S one( T search, Function<T, S> f ) throws TransactionException {
+    return one( search, Predicates.alwaysTrue(), f );
+  }
+
+  public static <S, T> S one( final T search,
+                              final Predicate<? super T> predicate,
+                              final Function<? super T, S> f ) throws TransactionException {
     checkParam( search, notNullValue() );
     checkParam( f, notNullValue() );
     EntityTransaction db = Transactions.get( search );
     try {
       T entity = Entities.uniqueResult( search );
+      if ( !predicate.apply( entity ) ) {
+        throw new NoSuchElementException();
+      }
       try {
         S res = f.apply( entity );
         return res;
@@ -257,7 +267,7 @@ public class Transactions {
   
   public static <T, O> List<O> filteredTransform( final T search,
                                                   final Predicate<? super T> condition,
-                                                  final Function<T, O> transform ) throws TransactionException {
+                                                  final Function<? super T, O> transform ) throws TransactionException {
     checkParam( search, notNullValue() );
     final Supplier<List<T>> resultsSupplier = new Supplier<List<T>>() {
       @Override
@@ -273,7 +283,7 @@ public class Transactions {
                                                   final Criterion criterion,
                                                   final Map<String,String> aliases,
                                                   final Predicate<? super T> condition,
-                                                  final Function<T, O> transform ) throws TransactionException {
+                                                  final Function<? super T, O> transform ) throws TransactionException {
     checkParam( search, notNullValue() );
     final Supplier<List<T>> resultsSupplier = new Supplier<List<T>>() {
       @Override
@@ -288,7 +298,7 @@ public class Transactions {
   private static <T, O> List<O> filteredTransform( Class<?> searchClass,
                                                    Supplier<List<T>> searchResultSupplier,
                                                    Predicate<? super T> condition,
-                                                   Function<T, O> transform ) throws TransactionException {
+                                                   Function<? super T, O> transform ) throws TransactionException {
     checkParam( searchResultSupplier, notNullValue() );
     checkParam( condition, notNullValue() );
     checkParam( transform, notNullValue() );

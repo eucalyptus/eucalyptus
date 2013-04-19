@@ -1,3 +1,22 @@
+/*************************************************************************
+ * Copyright 2009-2013 Eucalyptus Systems, Inc.
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; version 3 of the License.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see http://www.gnu.org/licenses/.
+ *
+ * Please contact Eucalyptus Systems, Inc., 6755 Hollister Ave., Goleta
+ * CA 93117, USA or visit http://www.eucalyptus.com/licenses/ if you need
+ * additional information or have any questions.
+ ************************************************************************/
 package com.eucalyptus.cloudwatch.domain.metricdata;
 
 import java.util.ArrayList;
@@ -16,12 +35,14 @@ import org.apache.log4j.Logger;
 import com.eucalyptus.cloudwatch.Dimension;
 import com.eucalyptus.cloudwatch.Dimensions;
 import com.eucalyptus.cloudwatch.MetricDatum;
+import com.eucalyptus.cloudwatch.StatisticSet;
 import com.eucalyptus.cloudwatch.domain.absolute.AbsoluteMetricHelper;
 import com.eucalyptus.cloudwatch.domain.absolute.AbsoluteMetricHelper.MetricDifferenceInfo;
 import com.eucalyptus.cloudwatch.domain.listmetrics.ListMetricManager;
 import com.eucalyptus.cloudwatch.domain.metricdata.MetricEntity.MetricType;
 import com.eucalyptus.cloudwatch.domain.metricdata.MetricEntity.Units;
 import com.google.common.base.Supplier;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 
@@ -92,19 +113,54 @@ public class MetricDataQueue {
     }
     return Lists.newArrayList(aggregationMap.values());
   }
+
+  private static final Map<String, String> EBS_ABSOLUTE_METRICS = 
+      new ImmutableMap.Builder<String, String>()
+      .put("VolumeReadOpsAbsolute", "VolumeReadOps")
+      .put("VolumeWriteOpsAbsolute", "VolumeWriteOps")
+      .put("VolumeReadBytesAbsolute", "VolumeReadBytes")
+      .put("VolumeWriteBytesAbsolute", "VolumeWriteBytes")
+      .put("VolumeTotalReadTimeAbsolute", "VolumeTotalReadTime")
+      .put("VolumeTotalWriteTimeAbsolute", "VolumeTotalWriteTime")
+      .build();
+
+  private static final Map<String, String> EC2_ABSOLUTE_METRICS = 
+      new ImmutableMap.Builder<String, String>()
+      .put("DiskReadOpsAbsolute", "DiskReadOps")
+      .put("DiskWriteOpsAbsolute", "DiskWriteOps")
+      .put("DiskReadBytesAbsolute", "DiskReadBytes")
+      .put("DiskWriteBytesAbsolute", "DiskWriteBytes")
+      .put("NetworkInExternalAbsolute", "NetworkIn") // NetworkIn and NetworkInExternal are two separate metrics but need to be combined
+      .put("NetworkInAbsolute", "NetworkIn") 
+      .put("NetworkOutExternalAbsolute", "NetworkOut") // NetworkOut and NetworkOutExternal are two separate metrics but need to be combined
+      .put("NetworkOutAbsolute", "NetworkOut") 
+      .build();
+
   public void insertMetricData(final String ownerAccountId, final String nameSpace,
       final List<MetricDatum> metricDatum, final MetricType metricType) {
-    List<MetricDatum> extraData = new ArrayList<MetricDatum>(); // some metrics are derived
+    List<MetricDatum> dataToInsert = new ArrayList<MetricDatum>(); 
+    // Some points do not actually go in.  If a data point represents an absolute value, the first one does not go in.
+    // Also, some data points are added while we go through the list (derived metrics)
     Date now = new Date();
     for (final MetricDatum datum : metricDatum) {
-      // Deal with some absolute metrics
+      LOG.debug("Received metric datum: " + nameSpace + " " + datum.getMetricName() + " " + datum.getTimestamp());
+      // Deal with the absolute metrics
+      // CPUUtilization
       // VolumeReadOps
       // VolumeWriteOps
       // VolumeReadBytes
       // VolumeWriteBytes
       // VolumeTotalReadTime
       // VolumeTotalWriteTime
-      // CPUUtilization (special case)
+      // DiskReadOps
+      // DiskWriteOps
+      // DiskReadBytes
+      // DiskWriteBytes
+      // NetworkIn 
+      // NetworkInExternal (added as an additional NetworkIn metric)
+      // NetworkOut
+      // NetworkOutExternal (added as an additional NetworkOut metric)
+    
       if ("AWS/EBS".equals(nameSpace) && metricType == MetricType.System) {
         String volumeId = null;
         if ((datum.getDimensions() != null) && (datum.getDimensions().getMember() != null)) {
@@ -113,29 +169,17 @@ public class MetricDataQueue {
               volumeId = dimension.getValue();
             }
           }
-          if (volumeId != null) {
-            if ("VolumeReadOpsTotal".equals(datum.getMetricName())) {
-              if (!adjustAbsoluteVolumeValue(datum, "VolumeReadOpsTotal", "VolumeReadOps", volumeId)) continue;
-              extraData.add(createVolumeThroughputMetric(datum));
-            } 
-            if ("VolumeWriteOpsTotal".equals(datum.getMetricName())) {
-              if (!adjustAbsoluteVolumeValue(datum, "VolumeWriteOpsTotal", "VolumeWriteOps", volumeId)) continue;
-            } 
-            if ("VolumeReadBytesTotal".equals(datum.getMetricName())) {
-              if (!adjustAbsoluteVolumeValue(datum, "VolumeReadBytesTotal", "VolumeReadBytes", volumeId)) continue;
-            } 
-            if ("VolumeWriteBytesTotal".equals(datum.getMetricName())) {
-              if (!adjustAbsoluteVolumeValue(datum, "VolumeWriteBytesTotal", "VolumeWriteBytes", volumeId)) continue;
-            } 
-            if ("VolumeTotalReadTimeTotal".equals(datum.getMetricName())) {
-              if (!adjustAbsoluteVolumeValue(datum, "VolumeTotalReadTimeTotal", "VolumeTotalReadTime", volumeId)) continue;
-            } 
-            if ("VolumeTotalWriteTimeTotal".equals(datum.getMetricName())) {
-              if (!adjustAbsoluteVolumeValue(datum, "VolumeTotalWriteTimeTotal", "VolumeTotalWriteTime", volumeId)) continue;
-            } 
-          }
-        }        
-      }            
+        }
+        if (EBS_ABSOLUTE_METRICS.containsKey(datum.getMetricName())) {
+          // we check if the point below is a 'first' point, or maybe a point in the past.  Either case reject it.
+          if (!adjustAbsoluteVolumeStatisticSet(datum, datum.getMetricName(), EBS_ABSOLUTE_METRICS.get(datum.getMetricName()), volumeId)) continue; 
+        }
+        // one special case here (hack) -- we bind a derived metric to one of the voumne metrics, VolumeReadOpsAbsolute, just arbitrarily.
+        if ("VolumeReadOpsAbsolute".equals(datum.getMetricName())) { // special case
+          dataToInsert.add(createVolumeThroughputMetric(datum));
+        }
+      }
+      
       if ("AWS/EC2".equals(nameSpace) && metricType == MetricType.System) {
         String instanceId = null;
         if ((datum.getDimensions() != null) && (datum.getDimensions().getMember() != null)) {
@@ -144,16 +188,17 @@ public class MetricDataQueue {
               instanceId = dimension.getValue();
             }
           }
-          if (instanceId != null) {
-            if ("CPUUtilizationMS".equals(datum.getMetricName())) {
-              if (!adjustAbsoluteCPUValue(datum, "CPUUtilizationMS", "CPUUtilization", instanceId)) continue;
-            } 
-          }
-        }        
-      }
+        }
+        if (EC2_ABSOLUTE_METRICS.containsKey(datum.getMetricName())) {
+          if (!adjustAbsoluteInstanceStatisticSet(datum, datum.getMetricName(), EC2_ABSOLUTE_METRICS.get(datum.getMetricName()), instanceId)) continue; 
+        } else if ("CPUUtilizationMSAbsolute".equals(datum.getMetricName())) { // special case
+          // we check if the point below is a 'first' point, or maybe a point in the past.  Either case reject it.
+          if (!adjustAbsoluteInstanceCPUStatisticSet(datum, "CPUUtilizationMSAbsolute", "CPUUtilization", instanceId)) continue;
+        } 
+      }        
+      dataToInsert.add(datum); // this data point is ok
     }
-    metricDatum.addAll(extraData);
-    for (final MetricDatum datum : metricDatum) {
+    for (final MetricDatum datum : dataToInsert) {
       scrub(datum, now);
       final ArrayList<Dimension> dimensions = datum.getDimensions().getMember(); 
       queue(new Supplier<MetricQueueItem>() {
@@ -199,7 +244,17 @@ public class MetricDataQueue {
     vtpDatum.setMetricName("VolumeThroughputPercentage");
     vtpDatum.setTimestamp(datum.getTimestamp());
     vtpDatum.setUnit(Units.Percent.toString());
-    vtpDatum.setValue(100.0); // Any time we have a volume data, this value is 100%
+    // should be 100% but weigh it the same
+    if (datum.getValue() != null) {
+      vtpDatum.setValue(100.0); // Any time we have a volume data, this value is 100%
+    } else if (datum.getStatisticValues() != null) {
+      StatisticSet statisticSet = new StatisticSet();
+      statisticSet.setMaximum(100.0);
+      statisticSet.setMinimum(100.0);
+      statisticSet.setSum(100.0 * datum.getStatisticValues().getSampleCount());
+      statisticSet.setSampleCount(datum.getStatisticValues().getSampleCount());
+      vtpDatum.setStatisticValues(statisticSet);
+    }
     // use the same dimensions as current metric
     Dimensions vtpDimensions = new Dimensions();
     ArrayList<Dimension> vtpDimensionsMember = new ArrayList<Dimension>();
@@ -214,7 +269,7 @@ public class MetricDataQueue {
     return vtpDatum;
   }
 
-  private boolean adjustAbsoluteCPUValue(MetricDatum datum, String absoluteMetricName,
+  private boolean adjustAbsoluteInstanceCPUStatisticSet(MetricDatum datum, String absoluteMetricName,
       String relativeMetricName, String instanceId) {
     MetricDifferenceInfo info = AbsoluteMetricHelper.calculateDifferenceSinceLastEvent("AWS/EC2", absoluteMetricName, "InstanceId", instanceId, datum.getTimestamp(), datum.getValue());
     if (info != null) {
@@ -225,19 +280,57 @@ public class MetricDataQueue {
         percentage = 100.0 * (info.getValueDifference() / info.getElapsedTimeInMillis());
       }
       datum.setMetricName(relativeMetricName);
-      datum.setValue(percentage);
+      datum.setValue(null);
+      StatisticSet statisticSet = new StatisticSet();
+      statisticSet.setMaximum(percentage);
+      statisticSet.setMinimum(percentage);
+      double sampleCount = (double) info.getElapsedTimeInMillis() / 60000.0; // number of minutes (this weights the value)
+      statisticSet.setSum(sampleCount * percentage);
+      statisticSet.setSampleCount(sampleCount);
+      datum.setStatisticValues(statisticSet);
       datum.setUnit(Units.Percent.toString());
       return true; //don't continue;
     }
     return false; // continue
   }
 
-  private boolean adjustAbsoluteVolumeValue(MetricDatum datum,
+
+  private boolean adjustAbsoluteInstanceStatisticSet(MetricDatum datum, String absoluteMetricName,
+      String relativeMetricName, String instanceId) {
+    if (instanceId == null) return false;
+    MetricDifferenceInfo info = AbsoluteMetricHelper.calculateDifferenceSinceLastEvent("AWS/EC2", absoluteMetricName, "InstanceId", instanceId, datum.getTimestamp(), datum.getValue());
+    if (info != null) {
+      datum.setMetricName(relativeMetricName);
+      // we need to weigh this data based on the time.  use a statistic set instead of the value
+      datum.setValue(null);
+      StatisticSet statisticSet = new StatisticSet();
+      double sampleCount = (double) info.getElapsedTimeInMillis() / 60000.0; // number of minutes (this weights the value)
+      statisticSet.setSum(info.getValueDifference());
+      statisticSet.setMaximum(info.getValueDifference() / sampleCount);
+      statisticSet.setMinimum(info.getValueDifference() / sampleCount);
+      statisticSet.setSampleCount(sampleCount);
+      datum.setStatisticValues(statisticSet);
+      return true; //don't continue;
+    }
+    return false; // continue
+  }
+
+  
+  private boolean adjustAbsoluteVolumeStatisticSet(MetricDatum datum,
       String absoluteMetricName, String relativeMetricName, String volumeId) {
+    if (volumeId == null) return false;
     MetricDifferenceInfo info = AbsoluteMetricHelper.calculateDifferenceSinceLastEvent("AWS/EBS", absoluteMetricName, "VolumeId", volumeId, datum.getTimestamp(), datum.getValue());
     if (info != null) {
       datum.setMetricName(relativeMetricName);
-      datum.setValue(info.getValueDifference());
+      // we need to weigh this data based on the time.  use a statistic set instead of the value
+      datum.setValue(null);
+      StatisticSet statisticSet = new StatisticSet();
+      double sampleCount = (double) info.getElapsedTimeInMillis() / 60000.0; // number of minutes (this weights the value)
+      statisticSet.setSum(info.getValueDifference());
+      statisticSet.setMaximum(info.getValueDifference() / sampleCount);
+      statisticSet.setMinimum(info.getValueDifference() / sampleCount);
+      statisticSet.setSampleCount(sampleCount);
+      datum.setStatisticValues(statisticSet);
       return true; //don't continue;
     }
     return false; // continue
@@ -257,16 +350,4 @@ public class MetricDataQueue {
     return returnValue;
   }
 
-  private List<MetricQueueItem> collectNetworkIO (List<MetricQueueItem> dataBatch) {
-    
-    //List<MetricQueueItem> 
-    
-    for(MetricQueueItem networkItem : dataBatch) {
-	if ( networkItem.getMetricType() == MetricType.System && networkItem.getMetricName().startsWith("Network") ) {
-	    
-	}
-    }
-      
-    return dataBatch;    
-  }
 }

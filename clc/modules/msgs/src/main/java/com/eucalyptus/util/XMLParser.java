@@ -60,12 +60,17 @@
  *   NEEDED TO COMPLY WITH ANY SUCH LICENSES OR RIGHTS.
  ************************************************************************/
 
-package com.eucalyptus.ws.util;
+package com.eucalyptus.util;
 
+import org.apache.log4j.Logger;
 import org.apache.xml.dtm.ref.DTMNodeList;
 import org.w3c.dom.Document;
 import org.w3c.dom.Node;
+import org.xml.sax.EntityResolver;
+import org.xml.sax.InputSource;
+import org.xml.sax.SAXException;
 
+import javax.xml.XMLConstants;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
@@ -78,13 +83,15 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.StringReader;
 import java.util.ArrayList;
 import java.util.List;
 
 
 public class XMLParser {
 
-	private DocumentBuilderFactory docFactory;
+	private static Logger LOG = Logger.getLogger(XMLParser.class);
+
 	private DocumentBuilder docBuilder;
 	private Document docRoot;
 	private XPath xpath;
@@ -93,12 +100,7 @@ public class XMLParser {
 
 	public XMLParser() {
 		xpath = XPathFactory.newInstance().newXPath();
-		docFactory = DocumentBuilderFactory.newInstance();
-		try {
-			docBuilder = docFactory.newDocumentBuilder();
-		} catch (ParserConfigurationException ex) {
-			ex.printStackTrace();
-		}
+		docBuilder = getDocBuilder();
 	}
 
 	public XMLParser(File file) {
@@ -132,6 +134,75 @@ public class XMLParser {
 			ex.printStackTrace();
 		}
 	}
+
+	public static DocumentBuilderFactory getDocBuilderFactory() {
+		DocumentBuilderFactory dFactory = DocumentBuilderFactory.newInstance();
+		dFactory.setExpandEntityReferences(false);
+
+		try {
+			dFactory.setFeature(XMLConstants.FEATURE_SECURE_PROCESSING, true);
+		} catch(ParserConfigurationException ex) {
+			LOG.error(ex, ex);
+		}
+
+		try{
+			dFactory.setFeature("http://apache.org/xml/features/nonvalidating/load-external-dtd", false);
+		} catch(ParserConfigurationException ex) {
+			LOG.error(ex, ex);
+		}
+
+		try {
+			dFactory.setFeature("http://apache.org/xml/features/disallow-doctype-decl", true);
+		} catch(ParserConfigurationException ex) {
+			LOG.error(ex, ex);
+		}
+		return dFactory;
+	}
+
+	public static DocumentBuilder getDocBuilder() {
+		DocumentBuilderFactory dFactory = getDocBuilderFactory();
+		DocumentBuilder dBuilder = null;
+		try {
+			dBuilder = dFactory.newDocumentBuilder();
+			dBuilder.setEntityResolver(new EntityResolver() {
+				@Override
+				public InputSource resolveEntity(String publicId, String systemId)
+				throws SAXException, IOException {
+					return new InputSource(new StringReader(""));
+				}
+			});
+		} catch (ParserConfigurationException ex) {
+			LOG.error(ex, ex);
+		}	
+		return dBuilder;
+	}
+
+	public static DocumentBuilder getDocBuilderWithDTD() {
+		DocumentBuilderFactory dFactory = DocumentBuilderFactory.newInstance();
+		dFactory.setExpandEntityReferences(false);
+
+		try {
+			dFactory.setFeature(XMLConstants.FEATURE_SECURE_PROCESSING, true);
+		} catch(ParserConfigurationException ex) {
+			LOG.error(ex, ex);
+		}
+
+		DocumentBuilder dBuilder = null;
+		try {
+			dBuilder = dFactory.newDocumentBuilder();
+			dBuilder.setEntityResolver(new EntityResolver() {
+				@Override
+				public InputSource resolveEntity(String publicId, String systemId)
+				throws SAXException, IOException {
+					return new InputSource(new StringReader(""));
+				}
+			});
+		} catch (ParserConfigurationException ex) {
+			LOG.error(ex, ex);
+		}	
+		return dBuilder;
+	}
+
 
 	public String getValue(String name) {
 		try {

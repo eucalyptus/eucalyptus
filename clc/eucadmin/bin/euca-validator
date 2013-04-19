@@ -1,0 +1,6 @@
+#!/usr/bin/env python
+
+import eucadmin.validator
+
+if __name__ == "__main__":
+    eucadmin.validator.Validator.run()

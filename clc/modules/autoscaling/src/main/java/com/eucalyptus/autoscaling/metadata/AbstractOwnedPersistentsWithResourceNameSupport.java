@@ -20,11 +20,19 @@
 package com.eucalyptus.autoscaling.metadata;
 
 import static com.eucalyptus.autoscaling.common.AutoScalingMetadata.AutoScalingMetadataWithResourceName;
+import java.util.NoSuchElementException;
 import javax.annotation.Nullable;
+import com.eucalyptus.auth.principal.AccountFullName;
+import com.eucalyptus.autoscaling.common.AutoScalingMetadata;
 import com.eucalyptus.autoscaling.common.AutoScalingMetadatas;
 import com.eucalyptus.autoscaling.common.AutoScalingResourceName;
+import com.eucalyptus.entities.Transactions;
 import com.eucalyptus.util.Callback;
 import com.eucalyptus.util.OwnerFullName;
+import com.eucalyptus.util.RestrictedType;
+import com.google.common.base.Function;
+import com.google.common.base.Predicate;
+import com.google.common.base.Predicates;
 
 /**
  *
@@ -46,19 +54,24 @@ public abstract class AbstractOwnedPersistentsWithResourceNameSupport<AOP extend
     this.scopeType = scopeType;
   }
 
-  public final AOP lookup( final OwnerFullName ownerFullName,
-                           final String nameOrArn ) throws AutoScalingMetadataException {
-    return lookup( ownerFullName, null, nameOrArn );
+  public final <T> T lookup( final OwnerFullName ownerFullName,
+                             final String nameOrArn,
+                             final Function<? super AOP,T> transform ) throws AutoScalingMetadataException {
+    return lookup( ownerFullName, null, nameOrArn, transform );
   }
 
-  public final AOP lookup( final OwnerFullName ownerFullName,
-                           @Nullable final String scopeNameOrArn,
-                           final String nameOrArn ) throws AutoScalingMetadataException {
+  public final <T> T lookup( final OwnerFullName ownerFullName,
+                             @Nullable final String scopeNameOrArn,
+                             final String nameOrArn,
+                             final Function<? super AOP,T> transform ) throws AutoScalingMetadataException {
     if ( AutoScalingResourceName.isResourceName().apply( nameOrArn ) ) {
-      return validateOwner( ownerFullName, lookupByUuid( AutoScalingResourceName.parse( nameOrArn, type ).getUuid() ), nameOrArn );
+      return lookupByUuid(
+          AutoScalingResourceName.parse( nameOrArn, type ).getUuid(),
+          AutoScalingMetadatas.filterByOwner( ownerFullName ),
+          transform );
     } else {
       final String scopeName = getNameFromScopeNameOrArn( scopeNameOrArn );
-      return lookupByName( ownerFullName, scopeName, nameOrArn );
+      return lookupByName( ownerFullName, scopeName, nameOrArn, transform );
     }
   }
 
@@ -86,19 +99,41 @@ public abstract class AbstractOwnedPersistentsWithResourceNameSupport<AOP extend
     return exampleWithName( ownerFullName, name );
   }
 
-  protected AOP lookupByUuid( final String uuid ) throws AutoScalingMetadataException {
-    return lookupByExample( exampleWithUuid( uuid ), null, uuid );
+  protected <T> T lookupByUuid( final String uuid,
+                                final Predicate<? super AOP> filter,
+                                final Function<? super AOP,T> transform ) throws AutoScalingMetadataException {
+    return lookupByExample( exampleWithUuid( uuid ), null, uuid, filter, transform );
   }
 
-  protected AOP lookupByName( final OwnerFullName ownerFullName,
-                              final String scope,
-                              final String name ) throws AutoScalingMetadataException {
-    return lookupByExample( exampleWithName( ownerFullName, scope, name ), ownerFullName, name );
+  protected <T> T lookupByName( final OwnerFullName ownerFullName,
+                                final String scope,
+                                final String name,
+                                final Function<? super AOP,T> transform ) throws AutoScalingMetadataException {
+    return lookupByExample( exampleWithName( ownerFullName, scope, name ), ownerFullName, name, Predicates.alwaysTrue(), transform );
   }
 
   @Override
-  protected final String describe( final AOP metadata ) {
-    return metadata.getArn();
+  public boolean delete( final AutoScalingMetadata metadata ) throws AutoScalingMetadataException {
+    if ( metadata instanceof AutoScalingMetadataWithResourceName ) {
+      try {
+        return Transactions.delete( exampleWithUuid( AutoScalingResourceName.parse( ((AutoScalingMetadataWithResourceName)metadata).getArn(), type ).getUuid() ) );
+      } catch ( NoSuchElementException e ) {
+        return false;
+      } catch ( Exception e ) {
+        throw new AutoScalingMetadataException( "Error deleting "+typeDescription+" '"+describe( metadata )+"'", e );
+      }
+    } else {
+      return super.delete( metadata );
+    }
+  }
+
+  @Override
+  protected final String describe( final RestrictedType metadata ) {
+    if ( metadata instanceof AutoScalingMetadataWithResourceName ) {
+      return ((AutoScalingMetadataWithResourceName)metadata).getArn();
+    } else {
+      return super.describe( metadata );
+    }
   }
 
   private String getNameFromScopeNameOrArn( final String scopeNameOrArn ) {
@@ -111,15 +146,6 @@ public abstract class AbstractOwnedPersistentsWithResourceNameSupport<AOP extend
       scopeName = scopeNameOrArn;
     }
     return scopeName;
-  }
-
-  private AOP validateOwner( final OwnerFullName ownerFullName,
-                             final AOP aop,
-                             final String key ) throws AutoScalingMetadataNotFoundException {
-    if ( !AutoScalingMetadatas.filterByOwner( ownerFullName ).apply( aop ) ) {
-      throw new AutoScalingMetadataNotFoundException( qualifyOwner("Unable to find "+typeDescription+" '"+key+"'", ownerFullName) );
-    }
-    return aop;
   }
 
   private Callback<AOP> validateOwner( final OwnerFullName ownerFullName,

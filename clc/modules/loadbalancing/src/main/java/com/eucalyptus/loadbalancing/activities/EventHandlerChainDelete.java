@@ -193,9 +193,8 @@ public class EventHandlerChainDelete extends EventHandlerChain<DeleteLoadbalance
 			LoadBalancerSecurityGroup group = null;
 			try{
 				lb = LoadBalancers.getLoadbalancer(evt.getContext().getUserFullName(), evt.getLoadBalancer());
-				if(lb.getGroups().size() > 0){
-					List<LoadBalancerSecurityGroup> groups = Lists.newArrayList(lb.getGroups());
-					group = groups.get(0);
+				if(lb.getGroup()!=null){
+					group = lb.getGroup();
 				}
 			}catch(NoSuchElementException ex){
 				return;

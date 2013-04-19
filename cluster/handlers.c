@@ -4318,6 +4318,7 @@ int doMigrateInstances(ncMetadata * pMeta, char *actionNode, char *instanceId, c
 
             if (rc || (dst_index == -1)) {
                 LOGERROR("[%s] cannot schedule destination node for migration from source %s\n", nc_instances[idx]->instanceId, nc_instances[idx]->migration_src);
+                ret = 1;
                 goto out;
             } else {
                 strncpy(nc_instances[idx]->migration_dst, resourceCacheLocal.resources[dst_index].hostname, HOSTNAME_SIZE);

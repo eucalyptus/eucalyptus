@@ -21,6 +21,7 @@ import com.eucalyptus.configurable.ConfigurableField;
 import com.eucalyptus.configurable.ConfigurableFieldType;
 import com.eucalyptus.entities.AbstractPersistent;
 import com.eucalyptus.loadbalancing.activities.LoadBalancerServoInstance;
+import com.eucalyptus.util.Exceptions;
 
 import edu.ucsb.eucalyptus.cloud.entities.SystemConfiguration;
 
@@ -79,7 +80,19 @@ public class LoadBalancerDnsRecord extends AbstractPersistent {
 
 	public static LoadBalancerDnsRecord named(final LoadBalancer lb){
 		final LoadBalancerDnsRecord instance = new LoadBalancerDnsRecord(lb);
-		instance.dnsName = String.format("%s-%s", lb.getOwnerAccountNumber(), lb.getDisplayName());
+		
+		String dnsPrefix = String.format("%s-%s", lb.getDisplayName(), lb.getOwnerAccountNumber());
+		dnsPrefix = dnsPrefix.replace(".", "_");
+		
+		final int maxPrefixLength = 253 - 
+				String.format(".%s.%s", LOADBALANCER_DNS_SUBDOMAIN, 
+						SystemConfiguration.getSystemConfiguration().getDnsDomain()).length();
+		if(maxPrefixLength < 0 )
+			throw Exceptions.toUndeclared("invalid dns name length");
+		if(dnsPrefix.length() > maxPrefixLength)
+			dnsPrefix = dnsPrefix.substring(0, maxPrefixLength);
+				
+		instance.dnsName = dnsPrefix;
 		instance.dnsZone = LOADBALANCER_DNS_SUBDOMAIN;
 		instance.uniqueName = instance.createUniqueName();
 		return instance;

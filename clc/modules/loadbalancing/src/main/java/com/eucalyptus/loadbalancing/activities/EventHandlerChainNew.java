@@ -54,6 +54,9 @@ import com.eucalyptus.loadbalancing.LoadBalancers;
 import com.eucalyptus.loadbalancing.LoadBalancing;
 import com.google.common.collect.Lists;
 
+import edu.ucsb.eucalyptus.msgs.ClusterInfoType;
+import edu.ucsb.eucalyptus.msgs.DescribeKeyPairsResponseItemType;
+import edu.ucsb.eucalyptus.msgs.ImageDetails;
 import edu.ucsb.eucalyptus.msgs.RunningInstancesItemType;
 import edu.ucsb.eucalyptus.msgs.SecurityGroupItemType;
 
@@ -96,20 +99,101 @@ public class EventHandlerChainNew extends EventHandlerChain<NewLoadbalancerEvent
 		}
 		@Override
 		public void apply(NewLoadbalancerEvent evt) throws EventHandlerException {
-			// TODO Auto-generated method stub
+			// is the loadbalancer_emi found?
+			final String emi = LoadBalancerASGroupCreator.LOADBALANCER_EMI;
+			List<ImageDetails> images = null;
+			try{
+				images = EucalyptusActivityTasks.getInstance().describeImages(Lists.newArrayList(emi));
+				if(images==null || images.size()<=0 ||! images.get(0).getImageId().toLowerCase().equals(emi.toLowerCase()))
+					throw new EventHandlerException("No loadbalancer EMI is found");
+			}catch(final EventHandlerException ex){
+				throw ex;
+			}
+			catch(final Exception ex){
+				throw new EventHandlerException("failed to validate the loadbalancer EMI", ex);
+			}
 			
-			// check if the requested parameter is valid
-			   // loadbalancer
-			   // zones
-			   // user
 			
-			//  check if the currently allocated resources + newly requested resources is within the limit
+			// zones: is the CC found?
+			final List<String> requestedZones = Lists.newArrayList(evt.getZones());
+			List<ClusterInfoType> clusters = null;
+			try{
+				clusters = EucalyptusActivityTasks.getInstance().describeAvailabilityZones(true);
+				for(final ClusterInfoType cc : clusters){
+					requestedZones.remove(cc.getZoneName());
+				}
+			}catch(final Exception ex){
+				throw new EventHandlerException("failed to validate the requested zones", ex);
+			}
+			if(requestedZones.size()>0){
+				throw new EventHandlerException("unknown zone is requested");
+			}
+			
+			// are there enough resources?
+			final String instanceType = LoadBalancerASGroupCreator.LOADBALANCER_INSTANCE_TYPE;
+			int numVm = 1;
+		  	try{
+		  		numVm = Integer.parseInt(EventHandlerChainNew.LOADBALANCER_NUM_VM);
+		  	}catch(final NumberFormatException ex){
+		  		LOG.warn("unable to parse loadbalancer_num_vm");
+		  	}
+		  	for(final String zone : evt.getZones()){
+				final int capacity = findAvailableResources(clusters, zone, instanceType);
+				if(numVm>capacity){
+					throw new EventHandlerException(String.format("Not enough resources in %s", zone));
+				}
+			}
+			
+			// check if the keyname is configured and exists
+			final String keyName = LoadBalancerASGroupCreator.LOADBALANCER_VM_KEYNAME;
+			if(keyName!=null && keyName.length()>0){
+				try{
+					final List<DescribeKeyPairsResponseItemType> keypairs = EucalyptusActivityTasks.getInstance().describeKeyPairs(Lists.newArrayList(keyName));
+					if(keypairs==null || keypairs.size()<=0 || !keypairs.get(0).getKeyName().equals(keyName))
+						throw new Exception();
+				}catch(Exception ex){
+					throw new EventHandlerException(String.format("The configured keyname is not found"));
+				}
+			}
+		}
+		
+		private int findAvailableResources(final List<ClusterInfoType> clusters, final String zoneName, final String instanceType){
+			// parse euca-describe-availability-zones verbose response
+			// WARNING: this is not a standard API!
+			
+			for(int i =0; i<clusters.size(); i++){
+				final ClusterInfoType cc = clusters.get(i);
+				if(zoneName.equals(cc.getZoneName())){
+					for(int j=i+1; j< clusters.size(); j++){
+						final ClusterInfoType candidate = clusters.get(j);
+						if(candidate.getZoneName()!=null && candidate.getZoneName().toLowerCase().contains(instanceType.toLowerCase())){
+							//<zoneState>0002 / 0002   2    512    10</zoneState>
+							final String state = candidate.getZoneState();
+							final String[] tokens = state.split("/");
+							if(tokens!=null && tokens.length>0){
+								try{
+									String strNum = tokens[0].trim().replaceFirst("0+", "");
+									if(strNum.length()<=0)
+										strNum="0";
+									
+									return Integer.parseInt(strNum);
+								}catch(final NumberFormatException ex){
+									break;
+								}catch(final Exception ex){
+									break;
+								}
+							}
+						}
+					}
+					break;
+				}
+			}
+			return Integer.MAX_VALUE; // when check fails, let's assume its abundant
 		}
 
 		@Override
 		public void rollback() throws EventHandlerException {
-			// TODO Auto-generated method stub
-			
+			;
 		}
 	}
 	
@@ -296,6 +380,7 @@ public class EventHandlerChainNew extends EventHandlerChain<NewLoadbalancerEvent
 	
 	static class SecurityGroupSetup extends AbstractEventHandler<NewLoadbalancerEvent> implements StoredResult<String>{
 		private String createdGroup = null;
+		private String groupOwnerAccountId = null;
 		NewLoadbalancerEvent event = null;
 		SecurityGroupSetup(EventHandlerChain<NewLoadbalancerEvent> chain){
 			super(chain);
@@ -324,8 +409,10 @@ public class EventHandlerChainNew extends EventHandlerChain<NewLoadbalancerEvent
 				List<SecurityGroupItemType> groups = EucalyptusActivityTasks.getInstance().describeSecurityGroups(Lists.newArrayList(groupName));
 				if(groups!=null && groups.size()>0){
 					final SecurityGroupItemType current = groups.get(0);
-					if(groupName.equals(current.getGroupName()))
+					if(groupName.equals(current.getGroupName())){
 						groupFound=true;
+						this.groupOwnerAccountId = current.getAccountId();
+					}
 				}
 			}catch(Exception ex){
 				groupFound=false;
@@ -336,19 +423,29 @@ public class EventHandlerChainNew extends EventHandlerChain<NewLoadbalancerEvent
 				try{
 					EucalyptusActivityTasks.getInstance().createSecurityGroup(groupName, groupDesc);
 					createdGroup = groupName;
+					List<SecurityGroupItemType> groups = EucalyptusActivityTasks.getInstance().describeSecurityGroups(Lists.newArrayList(groupName));
+					if(groups!=null && groups.size()>0){
+						final SecurityGroupItemType current = groups.get(0);
+						if(groupName.equals(current.getGroupName())){
+							this.groupOwnerAccountId = current.getAccountId();
+						}
+					}
 				}catch(Exception ex){
 					throw new EventHandlerException("Failed to create the security group for loadbalancer", ex);
 				}
 			}else{
 				createdGroup = groupName;
 			}
+			
+			if(this.createdGroup == null || this.groupOwnerAccountId == null)
+				throw new EventHandlerException("Failed to create the security group for loadbalancer");
 	
 			final EntityTransaction db = Entities.get( LoadBalancerSecurityGroup.class );
 			try{
-				Entities.uniqueResult(LoadBalancerSecurityGroup.named( lb, groupName));
+				Entities.uniqueResult(LoadBalancerSecurityGroup.named( lb, this.groupOwnerAccountId, groupName));
 				db.commit();
 			}catch(NoSuchElementException ex){
-				final LoadBalancerSecurityGroup newGroup = LoadBalancerSecurityGroup.named( lb, groupName);
+				final LoadBalancerSecurityGroup newGroup = LoadBalancerSecurityGroup.named( lb, this.groupOwnerAccountId, groupName);
 				LoadBalancerSecurityGroup written = Entities.persist(newGroup);
 				Entities.flush(written);
 				db.commit();
@@ -380,7 +477,7 @@ public class EventHandlerChainNew extends EventHandlerChain<NewLoadbalancerEvent
 
 			final EntityTransaction db = Entities.get( LoadBalancerSecurityGroup.class );
 			try{
-				final LoadBalancerSecurityGroup sample = LoadBalancerSecurityGroup.named(lb, this.createdGroup);
+				final LoadBalancerSecurityGroup sample = LoadBalancerSecurityGroup.named(lb, this.groupOwnerAccountId,  this.createdGroup);
 				final LoadBalancerSecurityGroup toDelete = Entities.uniqueResult(sample);
 				Entities.delete(toDelete);
 				db.commit();
@@ -402,7 +499,7 @@ public class EventHandlerChainNew extends EventHandlerChain<NewLoadbalancerEvent
 			return result;
 		}
 	}
-		
+	
 	// periodically queries autoscaling group, finds the instances, and update the servo instance records
 	// based on the query result
 	public static class AutoscalingGroupInstanceChecker implements EventListener<ClockTick> {
@@ -516,11 +613,10 @@ public class EventHandlerChainNew extends EventHandlerChain<NewLoadbalancerEvent
 									}
 									if(zone == null)
 										throw new Exception("No availability zone with name="+instance.getAvailabilityZone()+" found for loadbalancer "+lb.getDisplayName());
-									final List<LoadBalancerSecurityGroup> sgroups = Lists.newArrayList(lb.getGroups());
+									final LoadBalancerSecurityGroup sgroup = lb.getGroup();
 									
-									if(sgroups == null || sgroups.size()<=0)
+									if(sgroup == null)
 										throw new Exception("No security group is found for loadbalancer "+lb.getDisplayName());
-									final LoadBalancerSecurityGroup sgroup= sgroups.get(0);
 									final LoadBalancerDnsRecord dns = lb.getDns();
 									final LoadBalancerServoInstance newInstance = LoadBalancerServoInstance.newInstance(zone, sgroup, dns, group, instanceId);
 									newServos.add(newInstance); /// persist later

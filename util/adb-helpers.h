@@ -293,9 +293,7 @@ static inline axutil_date_time_t *unixms_to_datetime(const axutil_env_t * env, l
     struct tm t = { 0 };
 
     if (env != NULL) {
-        tzset();
-        sec += timezone;               // seconds west of UTC to account for TZ
-        localtime_r(&sec, &t);
+        gmtime_r(&sec, &t);
         dt = axutil_date_time_create(env);
         axutil_date_time_set_date_time(dt, env, (t.tm_year + 1900), (t.tm_mon + 1), t.tm_mday, t.tm_hour, t.tm_min, t.tm_sec, msec);
         return (dt);

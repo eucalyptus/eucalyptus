@@ -20,13 +20,19 @@
 package com.eucalyptus.loadbalancing.activities;
 
 import java.util.Collection;
+import java.util.List;
+import java.util.NoSuchElementException;
+
+import javax.persistence.EntityTransaction;
 
 import org.apache.log4j.Logger;
 
+import com.eucalyptus.entities.Entities;
 import com.eucalyptus.loadbalancing.Listener;
 import com.eucalyptus.loadbalancing.LoadBalancer;
 import com.eucalyptus.loadbalancing.LoadBalancerSecurityGroup;
 import com.eucalyptus.loadbalancing.LoadBalancers;
+import com.google.common.collect.Lists;
 
 /**
  * @author Sang-Min Park (spark@eucalyptus.com)
@@ -38,6 +44,7 @@ public class EventHandlerChainNewListeners extends EventHandlerChain<CreateListe
 	@Override
 	public EventHandlerChain<CreateListenerEvent> build() {
 		this.insert(new AuthorizeIngressRule(this));
+		this.insert(new UpdateHealthCheckConfig(this));
 		return this;
 	}
 
@@ -57,9 +64,9 @@ public class EventHandlerChainNewListeners extends EventHandlerChain<CreateListe
 			String groupName = null;
 			try{
 				lb = LoadBalancers.getLoadbalancer(evt.getContext().getUserFullName(), evt.getLoadBalancer());
-				Collection<LoadBalancerSecurityGroup> groups = lb.getGroups();
-				if(groups.size()>0)
-					groupName = groups.toArray(new LoadBalancerSecurityGroup[groups.size()])[0].getName();
+				LoadBalancerSecurityGroup group = lb.getGroup();
+				if(group!=null)
+					groupName = group.getName();
 			}catch(Exception ex){
 				throw new EventHandlerException("could not find the loadbalancer", ex);
 			}
@@ -87,9 +94,9 @@ public class EventHandlerChainNewListeners extends EventHandlerChain<CreateListe
 			String groupName = null;
 			try{
 				lb = LoadBalancers.getLoadbalancer(this.event.getContext().getUserFullName(), this.event.getLoadBalancer());
-				Collection<LoadBalancerSecurityGroup> groups = lb.getGroups();
-				if(groups.size()>0)
-					groupName = groups.toArray(new LoadBalancerSecurityGroup[groups.size()])[0].getName();
+				final LoadBalancerSecurityGroup group = lb.getGroup();
+				if(group!=null)
+					groupName = group.getName();
 			}catch(Exception ex){
 				;
 			}
@@ -108,6 +115,72 @@ public class EventHandlerChainNewListeners extends EventHandlerChain<CreateListe
 				}
 			}
 		}
+	}	
+
+	static class UpdateHealthCheckConfig extends AbstractEventHandler<CreateListenerEvent> {
+		private static final int DEFAULT_HEALTHY_THRESHOLD = 3;
+		private static final int DEFAULT_INTERVAL = 30;
+		private static final int DEFAULT_TIMEOUT = 5;
+		private static final int DEFAULT_UNHEALTHY_THRESHOLD = 2;
+		
+		protected UpdateHealthCheckConfig(
+				EventHandlerChain<CreateListenerEvent> chain) {
+			super(chain);
+		}
+
+		@Override
+		public void apply(CreateListenerEvent evt)
+				throws EventHandlerException {
+			LoadBalancer lb = null;
+			try{
+				lb = LoadBalancers.getLoadbalancer(evt.getContext().getUserFullName(), evt.getLoadBalancer());
+			}catch(NoSuchElementException ex){
+				throw new EventHandlerException("Could not find the loadbalancer with name="+evt.getLoadBalancer(), ex);
+			}catch(Exception ex){
+				throw new EventHandlerException("Error while looking for loadbalancer with name="+evt.getLoadBalancer(), ex);
+			}
+			/* default setting in AWS
+			"HealthyThreshold": 10, 
+			"Interval": 30, 
+			"Target": "TCP:8000", 
+			"Timeout": 5, 
+			"UnhealthyThreshold": 2 */
+			try{
+				lb.getHealthCheckTarget();
+				lb.getHealthCheckInterval();
+				lb.getHealthCheckTimeout();
+				lb.getHealthCheckUnhealthyThreshold();
+				lb.getHealthyThreshold();
+			}catch(final IllegalStateException ex){ /// only when the health check is not previously configured
+				Listener firstListener = null;
+				if(evt.getListeners()==null || evt.getListeners().size()<=0)
+					throw new EventHandlerException("No listener requested");
+				
+				final List<Listener> listeners = Lists.newArrayList(evt.getListeners());
+				firstListener = listeners.get(0);
+				final String target = String.format("TCP:%d", firstListener.getInstancePort());
+				final EntityTransaction db = Entities.get( LoadBalancer.class );
+				try{
+					final LoadBalancer update = Entities.uniqueResult(lb);
+			    	update.setHealthCheck(DEFAULT_HEALTHY_THRESHOLD, DEFAULT_INTERVAL, target, DEFAULT_TIMEOUT, DEFAULT_UNHEALTHY_THRESHOLD);
+					Entities.persist(update);
+					db.commit();
+				}catch(final NoSuchElementException exx){
+					db.rollback();
+					LOG.warn("Loadbalancer not found in the database");
+				}catch(final Exception exx){
+					db.rollback();
+					LOG.warn("Unable to query the loadbalancer", ex);
+				}
+			}
+		}
+
+		@Override
+		public void rollback() throws EventHandlerException {
+			;
+		}
 	}
+		
+
 
 }
