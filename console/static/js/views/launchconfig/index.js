@@ -66,6 +66,7 @@ define([
             .add(new page4({model: advancedModel, blockMaps: blockMaps, snapshots: snapShots}))
             .setHideDisabledButtons(true)
             .setFinishText(app.msg('create_launch_config_btn_create')).setFinishChecker(canFinish)
+            .map('optionLink', '#optionLink')
             .finisher(finish)
             .summary(new summary( {imageModel: imageModel, typeModel: typeModel, securityModel: securityModel, keymodel: keyModel, advancedModel: advancedModel} ));
   //  var ViewType = wizard.makeView(options, wizardTemplate);
