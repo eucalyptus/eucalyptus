@@ -4351,7 +4351,7 @@ int doMigrateInstances(ncMetadata * pMeta, char *actionNode, char *instanceId, c
         snprintf(credentials, CREDENTIAL_SIZE, "%lu", time(NULL));
         timeout = ncGetTimeout(time(NULL), OP_TIMEOUT, 1, 0);
         // FIXME: REMOVE THE DISPLAY OF CREDENTIALS BEFORE WE GO LIVE!
-        LOGDEBUG("about to ncClientCall source node '%s' with nc_instances (%s %d) %s\n",
+        LOGDEBUG("about to ncClientCall source node '%s' with nc_instances (%s %d) [creds='%s']\n",
                  SP(resourceCacheLocal.resources[src_index].hostname), nodeAction, found_instances, SP(found_instances == 1 ? nc_instances[0]->instanceId : ""));
         rc = ncClientCall(pMeta, timeout, resourceCacheLocal.resources[src_index].lockidx, resourceCacheLocal.resources[src_index].ncURL, "ncMigrateInstances",
                           nc_instances, found_instances, nodeAction, credentials);
@@ -4382,7 +4382,7 @@ int doMigrateInstances(ncMetadata * pMeta, char *actionNode, char *instanceId, c
             timeout = ncGetTimeout(time(NULL), OP_TIMEOUT, 1, 0);
             for (int idx = 0; idx < found_instances; idx++) {
                 // FIXME: REMOVE THE DISPLAY OF CREDENTIALS BEFORE WE GO LIVE!
-                LOGDEBUG("[%s] about to ncClientCall destination node '%s' with nc_instances (%s %d) [%s]\n",
+                LOGDEBUG("[%s] about to ncClientCall destination node '%s' with nc_instances (%s %d) [creds='%s']\n",
                          SP(nc_instances[idx]->instanceId), SP(nc_instances[idx]->migration_dst), nodeAction, 1, credentials);
 
                 dst_index = -1;
