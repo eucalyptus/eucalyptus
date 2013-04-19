@@ -271,6 +271,7 @@ public class MetricDataQueue {
     statisticSet.setMinimum(value);
     statisticSet.setSum(value * sampleCount);
     statisticSet.setSampleCount(sampleCount);
+    datum.setStatisticValues(statisticSet);
     return true;
   }
 

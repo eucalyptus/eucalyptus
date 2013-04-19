@@ -321,6 +321,7 @@ public class DescribeSensorCallback extends
   }
 
   private static final Set<String> UNSUPPORTED_EC2_METRICS = ImmutableSet.of(
+      "VolumeQueueLength", 
       "VolumeTotalReadTime", 
       "VolumeTotalWriteTime", 
       "VolumeTotalReadWriteTime", 
