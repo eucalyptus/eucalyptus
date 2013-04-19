@@ -357,11 +357,11 @@ public class LoadBalancingService {
     	@Override
     	public Boolean apply(String lbName){
     		try{
-    			LoadBalancers.deleteDnsRecord(dns);
-    		}catch(LoadBalancingException ex){
-    			LOG.error("failed to rollback the dns records", ex);
+    			LoadBalancers.unsetForeignKeys(ctx.getUserFullName(), lbName);
+    		}catch(Exception ex){
+    			LOG.warn("unable to unset foreign keys", ex);
     		}
-    		
+
     		try{
         		LoadBalancers.deleteLoadbalancer(ownerFullName, lbName);
         	}catch(LoadBalancingException ex){

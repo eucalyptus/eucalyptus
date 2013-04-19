@@ -75,7 +75,7 @@ import bitronix.tm.jndi.BitronixContext;
 import com.eucalyptus.bootstrap.SystemIds;
 import com.eucalyptus.system.SubDirectory;
 
-public class EmpyreanTransactionManager extends org.mortbay.component.AbstractLifeCycle implements org.jboss.cache.transaction.TransactionManagerLookup, org.hibernate.transaction.TransactionManagerLookup {
+public class EmpyreanTransactionManager extends org.eclipse.jetty.util.component.AbstractLifeCycle implements org.jboss.cache.transaction.TransactionManagerLookup, org.hibernate.transaction.TransactionManagerLookup {
 //  public static final String JNDI_NAME = "eucalyptusTransactionManager";
   private static Logger             LOG = Logger.getLogger( EmpyreanTransactionManager.class );
   private static Context            ctx = getContext( );

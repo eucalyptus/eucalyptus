@@ -69,7 +69,7 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
 import org.apache.log4j.Logger;
-import org.mortbay.jetty.handler.rewrite.Rule;
+import org.eclipse.jetty.rewrite.handler.Rule;
 import com.eucalyptus.bootstrap.HttpServerBootstrapper;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.Topology;

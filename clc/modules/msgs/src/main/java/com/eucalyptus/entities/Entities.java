@@ -106,8 +106,9 @@ import com.google.common.base.Function;
 import com.google.common.base.Functions;
 import com.google.common.base.Predicate;
 import com.google.common.base.Strings;
+import com.google.common.cache.Cache;
+import com.google.common.cache.CacheBuilder;
 import com.google.common.collect.Lists;
-import com.google.common.collect.MapMaker;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 
@@ -117,7 +118,7 @@ public class Entities {
   @ConfigurableField( description = "Maximum number of times a transaction may be retried before giving up.",
                       initial = "5" )
   public static Integer                                          CONCURRENT_UPDATE_RETRIES = 10;
-  private static ConcurrentMap<String, String>                   txLog                     = new MapMaker( ).softKeys( ).softValues( ).makeMap( );
+  private static Cache<String, String>                           txLog                     = CacheBuilder.newBuilder().weakKeys().softValues().build(); // No softKeys available for CacheBuilder
   private static Logger                                          LOG                       = Logger.getLogger( Entities.class );
   private static ThreadLocal<String>                             txRootThreadLocal         = new ThreadLocal<String>( );
   private static ThreadLocal<ConcurrentMap<String, CascadingTx>> txStateThreadLocal        = new ThreadLocal<ConcurrentMap<String, CascadingTx>>( ) {
@@ -174,7 +175,7 @@ public class Entities {
   
   public static void removeTransaction( final CascadingTx tx ) {
     final String txId = makeTxRootName( tx );
-    txLog.remove( txStateThreadLocal.toString( ) + tx.getRecord( ).getPersistenceContext( ) );
+    txLog.invalidate( txStateThreadLocal.toString( ) + tx.getRecord( ).getPersistenceContext( ) );
     txStateThreadLocal.get( ).remove( tx.getRecord( ).getPersistenceContext( ) );
     if ( txId.equals( txStateThreadLocal.get( ) ) ) {
       for ( final Entry<String, CascadingTx> e : txStateThreadLocal.get( ).entrySet( ) ) {

@@ -64,7 +64,6 @@ package com.eucalyptus.component;
 
 import java.net.UnknownHostException;
 import java.util.List;
-import java.util.Map;
 import java.util.Map.Entry;
 import java.util.concurrent.Callable;
 import org.apache.log4j.Logger;
@@ -108,21 +107,22 @@ import com.eucalyptus.util.async.Futures;
 import com.eucalyptus.util.fsm.Automata;
 import com.eucalyptus.util.fsm.TransitionAction;
 import com.eucalyptus.util.fsm.TransitionRecord;
-import com.google.common.base.Function;
 import com.google.common.base.Joiner;
 import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
+import com.google.common.cache.CacheBuilder;
+import com.google.common.cache.CacheLoader;
+import com.google.common.cache.LoadingCache;
 import com.google.common.collect.Iterables;
-import com.google.common.collect.MapMaker;
 import com.google.common.collect.ObjectArrays;
 
 public class ServiceTransitions {
   static Logger                                     LOG   = Logger.getLogger( ServiceTransitions.class );
   private static final Component.State[]            EMPTY = {};
-  Map<TransitionActions, ServiceTransitionCallback> hi    = new MapMaker( ).makeComputingMap( new Function<TransitionActions, ServiceTransitionCallback>( ) {
+  LoadingCache<TransitionActions, ServiceTransitionCallback> hi    = CacheBuilder.newBuilder().build( new CacheLoader<TransitionActions, ServiceTransitionCallback>( ) {
                                                             
                                                             @Override
-                                                            public ServiceTransitionCallback apply( TransitionActions input ) {
+                                                            public ServiceTransitionCallback load( TransitionActions input ) {
                                                               return null;
                                                             }
                                                           } );
@@ -569,17 +569,17 @@ public class ServiceTransitions {
         }
       }
     };
-    private static Function<TransitionActions, ServiceTransitionCallback> mapper = new Function<TransitionActions, ServiceTransitionCallback>( ) {
-                                                                                   
-                                                                                   @Override
-                                                                                   public ServiceTransitionCallback apply( TransitionActions input ) {
-                                                                                     return valueOf( input.name( ) );
-                                                                                   }
-                                                                                 };
-    private static Map<TransitionActions, ServiceTransitionCallback>      map    = new MapMaker( ).makeComputingMap( mapper );
+
+    private static LoadingCache<TransitionActions, ServiceTransitionCallback> map = CacheBuilder.newBuilder().build(
+      new CacheLoader<TransitionActions, ServiceTransitionCallback>( ) {
+        @Override
+        public ServiceTransitionCallback load( TransitionActions input ) {
+          return valueOf( input.name( ) );
+        }
+      });
     
     public static ServiceTransitionCallback map( TransitionActions transition ) {
-      return map.get( transition );
+      return map.getUnchecked( transition );
     }
     
   }
@@ -701,17 +701,17 @@ public class ServiceTransitions {
         ServiceBuilders.lookup( parent.getComponentId( ) ).fireStop( parent );
       }
     };
-    private static Function<TransitionActions, ServiceTransitionCallback> mapper = new Function<TransitionActions, ServiceTransitionCallback>( ) {
-                                                                                   
-                                                                                   @Override
-                                                                                   public ServiceTransitionCallback apply( TransitionActions input ) {
-                                                                                     return ServiceLocalTransitionCallbacks.valueOf( input.name( ) );
-                                                                                   }
-                                                                                 };
-    private static Map<TransitionActions, ServiceTransitionCallback>      map    = new MapMaker( ).makeComputingMap( mapper );
+
+    private static LoadingCache<TransitionActions, ServiceTransitionCallback> map = CacheBuilder.newBuilder().build(
+      new CacheLoader<TransitionActions, ServiceTransitionCallback>( ) {
+        @Override
+        public ServiceTransitionCallback load( TransitionActions input ) {
+          return ServiceLocalTransitionCallbacks.valueOf( input.name( ) );
+        }
+      });
     
     public static ServiceTransitionCallback map( TransitionActions transition ) {
-      return map.get( transition );
+      return map.getUnchecked( transition );
     }
   }
   
@@ -784,17 +784,16 @@ public class ServiceTransitions {
       }
     };
     
-    private static Function<TransitionActions, ServiceTransitionCallback> mapper = new Function<TransitionActions, ServiceTransitionCallback>( ) {
-                                                                                   
-                                                                                   @Override
-                                                                                   public ServiceTransitionCallback apply( TransitionActions input ) {
-                                                                                     return valueOf( input.name( ) );
-                                                                                   }
-                                                                                 };
-    private static Map<TransitionActions, ServiceTransitionCallback>      map    = new MapMaker( ).makeComputingMap( mapper );
+    private static LoadingCache<TransitionActions, ServiceTransitionCallback> map = CacheBuilder.newBuilder().build(
+      new CacheLoader<TransitionActions, ServiceTransitionCallback>( ) {
+        @Override
+        public ServiceTransitionCallback load( TransitionActions input ) {
+          return valueOf( input.name( ) );
+        }
+      });
     
     public static ServiceTransitionCallback map( TransitionActions transition ) {
-      return map.get( transition );
+      return map.getUnchecked( transition );
     }
   }
   

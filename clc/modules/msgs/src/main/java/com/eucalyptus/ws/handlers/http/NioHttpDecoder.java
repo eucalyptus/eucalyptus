@@ -102,7 +102,8 @@ import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.jboss.netty.handler.codec.http.HttpResponse;
 import org.jboss.netty.handler.codec.http.HttpVersion;
 import org.jboss.netty.handler.codec.replay.ReplayingDecoder;
-import org.mortbay.log.Log;
+import org.eclipse.jetty.util.log.Log;
+import org.eclipse.jetty.util.log.Logger;
 
 import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
@@ -112,6 +113,7 @@ import com.eucalyptus.ws.StackConfiguration;
 
 public class NioHttpDecoder extends ReplayingDecoder<NioHttpDecoder.State> {
 
+  private static final           Logger LOG = Log.getLog();
   private final int              maxInitialLineLength;
   private final int              maxHeaderSize;
   private final int              maxChunkSize;
@@ -482,7 +484,7 @@ public class NioHttpDecoder extends ReplayingDecoder<NioHttpDecoder.State> {
   }
 
   private int getChunkSize( String hex ) {
-    Log.info( "Chunk Size Hex to parse:" + hex );
+    LOG.info( "Chunk Size Hex to parse:" + hex );
     hex = hex.replaceAll( "\\W", "" ).trim( );
     for ( int i = 0; i < hex.length( ); i++ ) {
       char c = hex.charAt( i );
@@ -491,7 +493,7 @@ public class NioHttpDecoder extends ReplayingDecoder<NioHttpDecoder.State> {
         break;
       }
     }
-    Log.info( "Chunk Size in Hex:" + hex );
+    LOG.info( "Chunk Size in Hex:" + hex );
     return Integer.parseInt( hex, 16 );
   }
 

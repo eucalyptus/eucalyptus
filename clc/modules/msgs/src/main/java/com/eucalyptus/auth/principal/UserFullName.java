@@ -71,11 +71,12 @@ import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.FullName;
 import com.eucalyptus.util.OwnerFullName;
-import com.google.common.collect.MapMaker;
+import com.google.common.cache.Cache;
+import com.google.common.cache.CacheBuilder;
 
 public class UserFullName implements OwnerFullName {
   private static final long serialVersionUID = 1L;
-  private static ConcurrentMap<String, UserFullName> userIdMap = new MapMaker( ).softValues( ).makeMap( );
+  private static Cache<String, UserFullName> userIdMap = CacheBuilder.newBuilder().softValues().build();
   private static Logger                              LOG       = Logger.getLogger( UserFullName.class );
   private static final String                        VENDOR    = "euare";
   private final String                               userId;
@@ -101,15 +102,15 @@ public class UserFullName implements OwnerFullName {
   }
   
   public static UserFullName getInstance( final String userId, final String... relativePath ) {
-    if ( userIdMap.containsKey( userId ) ) {
-      return userIdMap.get( userId );
+    if ( userIdMap.asMap().containsKey( userId ) ) {
+      return userIdMap.getIfPresent( userId );
     } else {
       try {
         userIdMap.put( userId, getInstance( Accounts.lookupUserById( userId ), relativePath ) );
-        return userIdMap.get( userId );
+        return userIdMap.getIfPresent( userId );
       } catch ( final AuthException ex ) {
         userIdMap.put( userId, getInstance( Principals.systemUser( ), relativePath ) );
-        return userIdMap.get( userId );
+        return userIdMap.getIfPresent( userId );
       }
     }
   }
@@ -117,10 +118,10 @@ public class UserFullName implements OwnerFullName {
   public static UserFullName getInstance( final User user, final String... relativePath ) {
     try {
       if ( ( user != null ) && !Principals.isFakeIdentify( user.getUserId( ) ) ) {
-        if ( !userIdMap.containsKey( user.getUserId( ) ) ) {
+        if ( !userIdMap.asMap().containsKey( user.getUserId( ) ) ) {
           userIdMap.put( user.getUserId( ), new UserFullName( user ) );
         }
-        return userIdMap.get( user.getUserId( ) );
+        return userIdMap.getIfPresent( user.getUserId( ) );
       } else if ( Principals.systemUser( ).equals( user ) ) {
         return new UserFullName( Principals.systemUser( ) );
       } else {

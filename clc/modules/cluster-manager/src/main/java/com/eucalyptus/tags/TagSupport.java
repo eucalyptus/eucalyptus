@@ -41,10 +41,12 @@ import com.eucalyptus.util.OwnerFullName;
 import com.google.common.base.Function;
 import com.google.common.base.Predicates;
 import com.google.common.base.Splitter;
+import com.google.common.cache.CacheBuilder;
+import com.google.common.cache.CacheLoader;
+import com.google.common.cache.LoadingCache;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
-import com.google.common.collect.MapMaker;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Ordering;
 
@@ -56,7 +58,6 @@ public abstract class TagSupport {
   private static final ConcurrentMap<String,TagSupport> supportByIdentifierPrefix = Maps.newConcurrentMap();
   private static final ConcurrentMap<Class<? extends CloudMetadata>,TagSupport> supportByClass = Maps.newConcurrentMap();
   private static final Splitter idSplitter = Splitter.on( '-' ).limit( 2 );
-  private static final ConcurrentMap<Class,Class> metadataClassMap = new MapMaker().makeComputingMap( MetadataSubclass.INSTANCE );
 
   private final Class<? extends AbstractPersistent> resourceClass;
   private final Class<? extends CloudMetadata> cloudMetadataClass;
@@ -175,7 +176,7 @@ public abstract class TagSupport {
 
   @SuppressWarnings( "unchecked" )
   private static Class<? extends CloudMetadata> subclassFor( Class<? extends CloudMetadata> metadataInstance ) {
-    return metadataClassMap.get( metadataInstance );  
+    return metadataClassMap.getUnchecked( metadataInstance );  
   }
 
   Class<? extends AbstractPersistent> getResourceClass() {
@@ -190,20 +191,19 @@ public abstract class TagSupport {
     return tagClassResourceField;
   }
 
-  private enum MetadataSubclass implements Function<Class,Class> {
-    INSTANCE;
-
-    @Override
-    public Class apply( final Class instanceClass ) {
-      final List<Class<?>> interfaces = Lists.newArrayList();
-      for ( final Class clazz : Classes.interfaceAncestors().apply( instanceClass ) ) {
-        interfaces.add( clazz );
+  private static final LoadingCache<Class,Class> metadataClassMap = CacheBuilder.newBuilder().build(
+    new CacheLoader<Class,Class>() {
+      @Override
+      public Class load( final Class instanceClass ) {
+        final List<Class<?>> interfaces = Lists.newArrayList();
+        for ( final Class clazz : Classes.interfaceAncestors().apply( instanceClass ) ) {
+          interfaces.add( clazz );
+        }
+        Collections.reverse( interfaces );
+        return Iterables.find( interfaces,
+            Predicates.and(
+                Predicates.not( Predicates.<Class<?>>equalTo( CloudMetadata.class ) ),
+                Classes.subclassOf( CloudMetadata.class ) ) );
       }
-      Collections.reverse( interfaces );
-      return Iterables.find( interfaces,
-          Predicates.and(
-              Predicates.not( Predicates.<Class<?>>equalTo( CloudMetadata.class ) ),
-              Classes.subclassOf( CloudMetadata.class ) ) );
-    }
-  }
+    });
 }
