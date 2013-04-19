@@ -31,7 +31,7 @@ extern "C" {
 
 #ifndef ARGUMENTS_VERSION
 /** @brief the program version */
-#define ARGUMENTS_VERSION "3.2.2"
+#define ARGUMENTS_VERSION "3.3.0"
 #endif
 
 /** @brief Where the command line options are stored */
@@ -43,7 +43,7 @@ struct eucalyptus_opts
   char * user_arg;	/**< @brief User to drop privs to after starting. (default='eucalyptus').  */
   char * user_orig;	/**< @brief User to drop privs to after starting. original value given at command line.  */
   const char *user_help; /**< @brief User to drop privs to after starting. help description.  */
-  char * home_arg;	/**< @brief Eucalyptus home directory. (default='//').  */
+  char * home_arg;	/**< @brief Eucalyptus home directory. (default='/').  */
   char * home_orig;	/**< @brief Eucalyptus home directory. original value given at command line.  */
   const char *home_help; /**< @brief Eucalyptus home directory. help description.  */
   char * extra_version_arg;	/**< @brief Extra version string. (default='').  */
@@ -82,7 +82,7 @@ struct eucalyptus_opts
   const char *fork_help; /**< @brief Fork and daemonize Eucalyptus. help description.  */
   int kill_flag;	/**< @brief Kill a daemonized Eucalyptus. (default=off).  */
   const char *kill_help; /**< @brief Kill a daemonized Eucalyptus. help description.  */
-  char * pidfile_arg;	/**< @brief Location for the pidfile. (default='//var/run/eucalyptus-cloud.pid').  */
+  char * pidfile_arg;	/**< @brief Location for the pidfile. (default='/var/run/eucalyptus-cloud.pid').  */
   char * pidfile_orig;	/**< @brief Location for the pidfile. original value given at command line.  */
   const char *pidfile_help; /**< @brief Location for the pidfile. help description.  */
   char * db_home_arg;	/**< @brief Set path to database home directory (default='').  */
@@ -128,7 +128,7 @@ struct eucalyptus_opts
   const char *disable_dns_help; /**< @brief DEPRECATED DO NOT USE. IT DOES NOTHING. help description.  */
   int disable_storage_flag;	/**< @brief DEPRECATED DO NOT USE. IT DOES NOTHING. (default=off).  */
   const char *disable_storage_help; /**< @brief DEPRECATED DO NOT USE. IT DOES NOTHING. help description.  */
-  char ** java_home_arg;	/**< @brief Alternative way to specify JAVA_HOME. (default='/usr/lib/jvm/java-1.6.0-openjdk-1.6.0.0.x86_64').  */
+  char ** java_home_arg;	/**< @brief Alternative way to specify JAVA_HOME. (default='/usr/lib/jvm/java-1.7.0-openjdk-1.7.0.9.x86_64').  */
   char ** java_home_orig;	/**< @brief Alternative way to specify JAVA_HOME. original value given at command line.  */
   unsigned int java_home_min; /**< @brief Alternative way to specify JAVA_HOME.'s minimum occurreces */
   unsigned int java_home_max; /**< @brief Alternative way to specify JAVA_HOME.'s maximum occurreces */

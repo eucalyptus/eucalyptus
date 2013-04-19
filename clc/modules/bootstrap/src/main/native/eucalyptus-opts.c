@@ -37,7 +37,7 @@ const char *eucalyptus_opts_full_help[] = {
   "  -V, --version                 Print version and exit",
   "\nBootstrap Configuration:",
   "  -u, --user=USERNAME           User to drop privs to after starting.  \n                                  (default=`eucalyptus')",
-  "  -h, --home=DIRECTORY          Eucalyptus home directory.  (default=`//')",
+  "  -h, --home=DIRECTORY          Eucalyptus home directory.  (default=`/')",
   "      --extra-version=EXTRAVERSION\n                                Extra version string.  (default=`')",
   "      --initialize              Perform first-time setup.  This is run one time \n                                  (only!) on the first cloud controller before \n                                  the first time it is run.  (default=off)",
   "      --upgrade                 Perform database upgrade procedure and exit \n                                  immediately after completion.  Normally, \n                                  upgrade is performed in-line with regular \n                                  execution.  This flag causes upgrade to be \n                                  run and then for the process to terminate.  \n                                  Useful for debugging upgrade failures.  \n                                  (default=off)",
@@ -50,7 +50,7 @@ const char *eucalyptus_opts_full_help[] = {
   "  -D, --define=STRING           Set system properties.",
   "  -f, --fork                    Fork and daemonize Eucalyptus.  (default=off)",
   "  -k, --kill                    Kill a daemonized Eucalyptus.  (default=off)",
-  "      --pidfile=FILENAME        Location for the pidfile.  \n                                  (default=`//var/run/eucalyptus-cloud.pid')",
+  "      --pidfile=FILENAME        Location for the pidfile.  \n                                  (default=`/var/run/eucalyptus-cloud.pid')",
   "      --db-home=DIRECTORY       Set path to database home directory  \n                                  (default=`')",
   "\nLogging Configuration:",
   "  -l, --log-level=FILENAME      Control the log level for console output.  \n                                  (default=`INFO')",
@@ -73,7 +73,7 @@ const char *eucalyptus_opts_full_help[] = {
   "      --disable-dns             DEPRECATED DO NOT USE. IT DOES NOTHING.  \n                                  (default=off)",
   "      --disable-storage         DEPRECATED DO NOT USE. IT DOES NOTHING.  \n                                  (default=off)",
   "\nJava Options:",
-  "  -j, --java-home=DIRECTORY     Alternative way to specify JAVA_HOME.  \n                                  (default=`/usr/lib/jvm/java-1.6.0-openjdk-1.6.0.0.x86_64')",
+  "  -j, --java-home=DIRECTORY     Alternative way to specify JAVA_HOME.  \n                                  (default=`/usr/lib/jvm/java-1.7.0-openjdk-1.7.0.9.x86_64')",
   "      --jvm-name=JVMNAME        Which JVM type to run (see jvm.cfg).  \n                                  (default=`-server')",
   "  -X, --jvm-args=STRING         Arguments to pass to the JVM.",
   "      --jmx                     Launch with JMX enabled.  (default=off)",
@@ -213,7 +213,7 @@ void clear_args (struct eucalyptus_opts *args_info)
   FIX_UNUSED (args_info);
   args_info->user_arg = gengetopt_strdup ("eucalyptus");
   args_info->user_orig = NULL;
-  args_info->home_arg = gengetopt_strdup ("//");
+  args_info->home_arg = gengetopt_strdup ("/");
   args_info->home_orig = NULL;
   args_info->extra_version_arg = gengetopt_strdup ("");
   args_info->extra_version_orig = NULL;
@@ -233,7 +233,7 @@ void clear_args (struct eucalyptus_opts *args_info)
   args_info->define_orig = NULL;
   args_info->fork_flag = 0;
   args_info->kill_flag = 0;
-  args_info->pidfile_arg = gengetopt_strdup ("//var/run/eucalyptus-cloud.pid");
+  args_info->pidfile_arg = gengetopt_strdup ("/var/run/eucalyptus-cloud.pid");
   args_info->pidfile_orig = NULL;
   args_info->db_home_arg = gengetopt_strdup ("");
   args_info->db_home_orig = NULL;
@@ -1321,7 +1321,7 @@ arguments_internal (
         
           if (update_arg( (void *)&(args_info->home_arg), 
                &(args_info->home_orig), &(args_info->home_given),
-              &(local_args_info.home_given), optarg, 0, "//", ARG_STRING,
+              &(local_args_info.home_given), optarg, 0, "/", ARG_STRING,
               check_ambiguity, override, 0, 0,
               "home", 'h',
               additional_error))
@@ -1436,7 +1436,7 @@ arguments_internal (
         case 'j':	/* Alternative way to specify JAVA_HOME..  */
         
           if (update_multiple_arg_temp(&java_home_list, 
-              &(local_args_info.java_home_given), optarg, 0, "/usr/lib/jvm/java-1.6.0-openjdk-1.6.0.0.x86_64", ARG_STRING,
+              &(local_args_info.java_home_given), optarg, 0, "/usr/lib/jvm/java-1.7.0-openjdk-1.7.0.9.x86_64", ARG_STRING,
               "java-home", 'j',
               additional_error))
             goto failure;
@@ -1592,7 +1592,7 @@ arguments_internal (
           
             if (update_arg( (void *)&(args_info->pidfile_arg), 
                  &(args_info->pidfile_orig), &(args_info->pidfile_given),
-                &(local_args_info.pidfile_given), optarg, 0, "//var/run/eucalyptus-cloud.pid", ARG_STRING,
+                &(local_args_info.pidfile_given), optarg, 0, "/var/run/eucalyptus-cloud.pid", ARG_STRING,
                 check_ambiguity, override, 0, 0,
                 "pidfile", '-',
                 additional_error))
@@ -1886,7 +1886,7 @@ arguments_internal (
     &(args_info->define_orig), args_info->define_given,
     local_args_info.define_given, 0,
     ARG_STRING, define_list);
-  multiple_default_value.default_string_arg = "/usr/lib/jvm/java-1.6.0-openjdk-1.6.0.0.x86_64";
+  multiple_default_value.default_string_arg = "/usr/lib/jvm/java-1.7.0-openjdk-1.7.0.9.x86_64";
   update_multiple_arg((void *)&(args_info->java_home_arg),
     &(args_info->java_home_orig), args_info->java_home_given,
     local_args_info.java_home_given, &multiple_default_value,
