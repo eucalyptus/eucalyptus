@@ -19,14 +19,14 @@
         <label for="launch-wizard-advanced-kernel-selector" data-msg="launch_instance_advanced_kernel">Kernel ID</label>
         <select data-on-change=":setKernel" id="launch-wizard-advanced-kernel-selector" data-tooltip="launch_instance_kernel_select_tip">
           <option value="default" data-msg="launch_instance_advanced_usedefault">Use default from image</option>
-          <option data-each-kernel="kernels" data-value="kernel.id" data-text="kernel.id"></option>
+          <option data-each-kernel="kernels" data-value="kernel.id" data-text="kernel.id" data-selected=":isKernelSelected"></option>
         </select>
       </div>
       <div id="launch-wizard-advanced-ramdisk" class="form-row clearfix">
         <label for="launch-wizard-advanced-ramdisk-selector" data-msg="launch_instance_advanced_ramdisk">RAM disk ID</label>
         <select data-on-change=":setRamDisk" id="launch-wizard-advanced-ramdisk-selector" data-tooltip="launch_instance_ramdisk_select_tip">
           <option value="default" data-msg="launch_instance_advanced_usedefault">Use default from image</option>
-          <option data-each-ramdisk="ramdisks" data-value="ramdisk.id" data-text="ramdisk.id"></option></select>
+          <option data-each-ramdisk="ramdisks" data-value="ramdisk.id" data-text="ramdisk.id" data-selected=":isRamdiskSelected"></option></select>
       </div>
    </div>
 
