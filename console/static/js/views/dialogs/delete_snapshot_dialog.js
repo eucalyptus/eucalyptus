@@ -5,7 +5,7 @@ define([
   'models/snapshot',
   'app',
   'backbone',
-], function(EucaDialogView, template, template2, Snapshot, App, Backbone) {
+], function(EucaDialogView, template, template_registered, Snapshot, App, Backbone) {
   return EucaDialogView.extend({
 
     findNameTag: function(model){
@@ -21,34 +21,47 @@ define([
     initialize : function(args) {
       var self = this;
 
+      var images = [];
       var matrix = [];
-      // this function in support.js uses eucadata, but it's debugged, so there.
-      var snapToImageMap = generateSnapshotToImageMap();
+      var image_hashmap = [];
       var deregisterImages = false;
-      $.each(args.items,function(idx, key){
-        matrix.push([key, snapToImageMap[key] != undefined ? 'Yes' : 'No']);
-        if (snapToImageMap[key] != undefined)
-          deregisterImages = true;
-      });
 
-      this.template = deregisterImages ? template2 : template;
+      // SCAN THE IMAGE COLLECTION TO DISCOVER THE CONNECTION TO THE SNAPSHOTS
+      App.data.images.each(function(img){
+        _.each(img.get('block_device_mapping'), function(device){
+          if( device.snapshot_id != null ){
+            images.push(img.get('id'));
+            image_hashmap[device.snapshot_id] = img.get('id');
+            console.log("Image: " + img.get('id') + " Snapshot: " + device.snapshot_id);
+          }
+        });
+      });
 
       // SNAPSHOT LIST TO CONTAIN DISPLAY_ID IF EXISTS --- Kyo 041713
       var snapshot_list = [];
       _.each(args.items, function(snapshot_id){
         var nameTag = self.findNameTag(App.data.snapshot.get(snapshot_id));
         console.log("Snapshot: " + snapshot_id + " Name Tag: " + nameTag);
-        if( nameTag == null ){
-          snapshot_list.push(snapshot_id);
-        }else{
-          snapshot_list.push(nameTag);
+        var snapshot_string = snapshot_id;
+        if( nameTag != null ){
+          snapshot_string = nameTag;
         }
+        snapshot_list.push(snapshot_string);
+
+        matrix.push([snapshot_string, image_hashmap[snapshot_id] != undefined ? 'Yes' : 'No']);
+        if( image_hashmap[snapshot_id] != undefined ){
+          deregisterImages = true;
+        } 
       });
+
+      // IF ANY SNAPSHOT IS REGISTERED, LOAD THE ALTERNATIVE VIEW 
+      this.template = deregisterImages ? template_registered : template;
 
       this.scope = {
         status: '',
         snapshots: snapshot_list,
         matrix : matrix,
+        images: images,
 
         cancelButton: {
           click: function() {
@@ -58,25 +71,13 @@ define([
         deleteButton: {
           click: function() {
 
-              // deregister images associated with snapshots first
-              var images = [];
-
-              // this function in support.js uses eucadata, but it's debugged, so there.
-              var snapToImageMap = generateSnapshotToImageMap();
-              $.each(args.items,function(idx, key){
-                if (snapToImageMap[key] != undefined) {
-                  $.each(snapToImageMap[key],function(idx, imageId){
-                    images.push(imageId);
-                  });
-                }
-              });
-
+              // DEREGISTER IMAGE FIRST
               doMultiAction(images, App.data.images,
                             function(model, options) {
                               model.destroy(options);
                             },
                             'snapshot_delete_image_progress', 'snapshot_delete_image_done', 'snapshot_delete_image_fail');
-
+              // DELETE SNAPSHOT
               doMultiAction(args.items, App.data.snapshots,
                             function(model, options) {
                               options['wait'] = true;
