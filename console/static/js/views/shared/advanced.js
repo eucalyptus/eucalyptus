@@ -170,6 +170,10 @@ define([
 
     render: function() {
       this.rView.sync();
+    },
+
+    focus: function() {
+      this.model.set('advanced_show', true);
     }
 });
 });
