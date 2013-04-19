@@ -687,7 +687,7 @@ int main(int argc, char **argv)
                     if (strlen(inst->volumes[j].volumeId) > 0) {
                         if (vol_count > 0)
                             printf("                                ");
-                        printf("%s %s %s\n", inst->volumes[j].volumeId, inst->volumes[j].remoteDev, inst->volumes[j].localDev);
+                        printf("%s %s %s\n", inst->volumes[j].volumeId, inst->volumes[j].attachmentToken, inst->volumes[j].localDev);
                     }
                 }
                 if (vol_count)

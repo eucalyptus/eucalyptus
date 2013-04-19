@@ -908,12 +908,13 @@ boolean is_volume_used(const ncVolume * pVolume)
 //!
 //! @param[in] pInstance a pointer to our instance containing the volume information to save
 //! @param[in] sVolumeId the volume identifier string (vol-XXXXXXXX)
-//! @param[in] sRemoteDev the remote device name
+//! @param[in] sAttachmentToken the attachment token associated with this volume and attachment
+//! @param[in] sConnectionString the connection string info specific to this host's volume attachment
 //! @param[in] sLocalDev the local device name
 //! @param[in] sLocalDevReal the local real device name
 //! @param[in] sStateName the current volume state name
 //!
-//! @return a pointer to the volume if found. Otherwize NULL is returned.
+//! @return a pointer to the volume if found. Otherwise NULL is returned.
 //!
 //! @pre \li Both \p pInstance and \p sVolumeId fields must not be NULL
 //!      \li A volume with \p sVolumeId for \p pInstance should exists
@@ -923,7 +924,8 @@ boolean is_volume_used(const ncVolume * pVolume)
 //!       \li If the volume is found or if we have an empty slot, the volume information will be saved
 //!       \li If the volume is not found and if we do not have empty slot, NULL is returned and nothing is saved
 //!
-ncVolume *save_volume(ncInstance * pInstance, const char *sVolumeId, const char *sRemoteDev, const char *sLocalDev, const char *sLocalDevReal, const char *sStateName)
+ncVolume *save_volume(ncInstance * pInstance, const char *sVolumeId, const char* sVolumeAttachmentToken, const char *sConnectionString, const char *sLocalDev, const char *sLocalDevReal,
+                      const char *sStateName)
 {
     ncVolume *pVol = NULL;
 
@@ -938,8 +940,11 @@ ncVolume *save_volume(ncInstance * pInstance, const char *sVolumeId, const char 
         //
         euca_strncpy(pVol->volumeId, sVolumeId, CHAR_BUFFER_SIZE);
 
-        if (sRemoteDev)
-            euca_strncpy(pVol->remoteDev, sRemoteDev, VERY_BIG_CHAR_BUFFER_SIZE);
+        if (sVolumeAttachmentToken)
+        	euca_strncpy(pVol->attachmentToken, sVolumeAttachmentToken, CHAR_BUFFER_SIZE);
+
+        if (sConnectionString)
+        	euca_strncpy(pVol->connectionString, sConnectionString, VERY_BIG_CHAR_BUFFER_SIZE);
 
         if (sLocalDev)
             euca_strncpy(pVol->localDev, sLocalDev, CHAR_BUFFER_SIZE);

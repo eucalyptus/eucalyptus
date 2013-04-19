@@ -28,6 +28,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import javax.persistence.EntityTransaction;
 import org.apache.log4j.Logger;
 
+import com.eucalyptus.auth.euare.GetRolePolicyResult;
 import com.eucalyptus.auth.euare.InstanceProfileType;
 import com.eucalyptus.auth.euare.RoleType;
 import com.eucalyptus.autoscaling.common.AutoScalingGroupType;
@@ -80,6 +81,7 @@ public class EventHandlerChainNew extends EventHandlerChain<NewLoadbalancerEvent
 		this.insert(new AdmissionControl(this));
 		this.insert(new IAMRoleSetup(this));
 		this.insert(new InstanceProfileSetup(this));
+		this.insert(new IAMPolicySetup(this));
 	  	this.insert(new DNSANameSetup(this));
 	  	this.insert(new SecurityGroupSetup(this));
 	  	int numVm = 1;
@@ -201,10 +203,7 @@ public class EventHandlerChainNew extends EventHandlerChain<NewLoadbalancerEvent
 		public static final String DEFAULT_ROLE_PATH_PREFIX = "/internal/loadbalancer";
 		public static final String DEFAULT_ROLE_NAME = "loadbalancer-vm";
 		public static final String DEFAULT_ASSUME_ROLE_POLICY = 
-				"{\"Statement\":[{\"Effect\":\"Allow\",\"Principal\":{\"Service\":[\"ec2.amazonaws.com\"]},\"Action\":[\"sts:AssumeRole\"]}]}" 
-				+
-				"{\"Statement\":[{\"Action\": \"elasticloadbalancing:*\",\"Effect\": \"Allow\",\"Resource\": \"*\"}]}";
-		
+				"{\"Statement\":[{\"Effect\":\"Allow\",\"Principal\":{\"Service\":[\"ec2.amazonaws.com\"]},\"Action\":[\"sts:AssumeRole\"]}]}";		
 		private RoleType role = null;
 		protected IAMRoleSetup(EventHandlerChain<NewLoadbalancerEvent> chain) {
 			super(chain);
@@ -329,6 +328,66 @@ public class EventHandlerChainNew extends EventHandlerChain<NewLoadbalancerEvent
 		@Override
 		public void rollback() throws EventHandlerException {
 			;
+		}
+	}
+	
+	static class IAMPolicySetup extends AbstractEventHandler<NewLoadbalancerEvent> {
+		private static final String SERVO_ROLE_POLICY_NAME = "euca-internal-loadbalancer-vm-policy";
+		private static final String SERVO_ROLE_POLICY_DOCUMENT=
+				"{\"Statement\":[{\"Action\": [\"elasticloadbalancing:DescribeLoadBalancersByServo\", \"elasticloadbalancing:PutServoStates\"],\"Effect\": \"Allow\",\"Resource\": \"*\"}]}";
+				
+			protected IAMPolicySetup(EventHandlerChain<NewLoadbalancerEvent> chain) {
+			super(chain);
+		}
+
+		@Override
+		public void apply(NewLoadbalancerEvent evt)
+				throws EventHandlerException {
+			String roleName = null;
+			try{
+				StoredResult<String> roleResult = this.chain.findHandler(IAMRoleSetup.class);
+				if(roleResult.getResult()!=null && roleResult.getResult().size()>0)
+					roleName = roleResult.getResult().get(0);
+				if(roleName==null)
+					throw new Exception();
+			}catch(final Exception ex){
+				throw new EventHandlerException("could not find the role name for loadbalancer vm");
+			}
+			
+			GetRolePolicyResult policy  = null;
+			/// GetRolePolicy: check if there's an existing policy doc
+			try{
+				policy = EucalyptusActivityTasks.getInstance().getRolePolicy(roleName, SERVO_ROLE_POLICY_NAME);
+			}catch(final Exception ex){
+				;
+			}
+			
+			boolean putPolicy = false;
+			if(policy == null || policy.getPolicyName() == null || !policy.getPolicyName().equals(SERVO_ROLE_POLICY_NAME)){
+				putPolicy=true;
+			}else if (!SERVO_ROLE_POLICY_DOCUMENT.toLowerCase().equals(policy.getPolicyDocument().toLowerCase())){
+				try{
+					EucalyptusActivityTasks.getInstance().deleteRolePolicy(roleName, SERVO_ROLE_POLICY_NAME);
+				}catch(final Exception ex){
+					LOG.warn("failed to delete role policy", ex);
+				}
+				putPolicy = true;
+			}else{
+				putPolicy = false;
+			}
+			
+			if(putPolicy){
+				try{
+					EucalyptusActivityTasks.getInstance().putRolePolicy(roleName, SERVO_ROLE_POLICY_NAME, SERVO_ROLE_POLICY_DOCUMENT);
+				}catch(final Exception ex){
+					throw new EventHandlerException("failed to put role policy for loadbalancer vm");
+				}
+			}
+		}
+
+		@Override
+		public void rollback() throws EventHandlerException {
+			;			
 		}
 	}
 	

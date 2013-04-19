@@ -38,14 +38,21 @@ import com.eucalyptus.auth.euare.CreateRoleResponseType;
 import com.eucalyptus.auth.euare.CreateRoleType;
 import com.eucalyptus.auth.euare.DeleteInstanceProfileResponseType;
 import com.eucalyptus.auth.euare.DeleteInstanceProfileType;
+import com.eucalyptus.auth.euare.DeleteRolePolicyResponseType;
+import com.eucalyptus.auth.euare.DeleteRolePolicyType;
 import com.eucalyptus.auth.euare.DeleteRoleResponseType;
 import com.eucalyptus.auth.euare.DeleteRoleType;
 import com.eucalyptus.auth.euare.EuareMessage;
+import com.eucalyptus.auth.euare.GetRolePolicyResponseType;
+import com.eucalyptus.auth.euare.GetRolePolicyResult;
+import com.eucalyptus.auth.euare.GetRolePolicyType;
 import com.eucalyptus.auth.euare.InstanceProfileType;
 import com.eucalyptus.auth.euare.ListInstanceProfilesResponseType;
 import com.eucalyptus.auth.euare.ListInstanceProfilesType;
 import com.eucalyptus.auth.euare.ListRolesResponseType;
 import com.eucalyptus.auth.euare.ListRolesType;
+import com.eucalyptus.auth.euare.PutRolePolicyResponseType;
+import com.eucalyptus.auth.euare.PutRolePolicyType;
 import com.eucalyptus.auth.euare.RoleType;
 import com.eucalyptus.auth.principal.AccountFullName;
 import com.eucalyptus.auth.principal.Principals;
@@ -761,6 +768,48 @@ public class EucalyptusActivityTasks {
 		}
 	}
 	
+	public GetRolePolicyResult getRolePolicy(String roleName, String policyName){
+		final EuareGetRolePolicyTask task =
+				new EuareGetRolePolicyTask(roleName, policyName);
+		final CheckedListenableFuture<Boolean> result = task.dispatch(new EuareSystemActivity());
+		try{
+			if(result.get()){
+				return task.getResult();
+			}else
+				throw new EucalyptusActivityException("failed to get role's policy");
+		}catch(Exception ex){
+			throw Exceptions.toUndeclared(ex);
+		}
+	}
+	
+	public void putRolePolicy(String roleName, String policyName, String policyDocument){
+		final EuarePutRolePolicyTask task = 
+				new EuarePutRolePolicyTask(roleName, policyName, policyDocument);
+		final CheckedListenableFuture<Boolean> result = task.dispatch(new EuareSystemActivity());
+		try{
+			if(result.get()){
+				return;
+			}else
+				throw new EucalyptusActivityException("failed to put role's policy");
+		}catch(Exception ex){
+			throw Exceptions.toUndeclared(ex);
+		}
+	}
+	
+	public void deleteRolePolicy(String roleName, String policyName){
+		final EuareDeleteRolePolicyTask task =
+				new EuareDeleteRolePolicyTask(roleName, policyName);
+		final CheckedListenableFuture<Boolean> result = task.dispatch(new EuareSystemActivity());
+		try{
+			if(result.get()){
+				return;
+			}else
+				throw new EucalyptusActivityException("failed to delete role's policy");
+		}catch(Exception ex){
+			throw Exceptions.toUndeclared(ex);
+		}
+	}
+	
 	public List<ImageDetails> describeImages(final List<String> imageIds){
 		final EucaDescribeImagesTask task =
 				new EucaDescribeImagesTask(imageIds);
@@ -1084,7 +1133,108 @@ public class EucalyptusActivityTasks {
 				;
 			}
 		}
+	}
+	
+	private class EuarePutRolePolicyTask extends EucalyptusActivityTask<EuareMessage, Euare> {
+		private String roleName = null;
+		private String policyName = null;
+		private String policyDocument = null;
 		
+		private EuarePutRolePolicyTask(String roleName, String policyName, String policyDocument){
+			this.roleName = roleName;
+			this.policyName = policyName;
+			this.policyDocument = policyDocument;
+		}
+		
+		private PutRolePolicyType putRolePolicy(){
+			final PutRolePolicyType req = 
+					new PutRolePolicyType();
+			req.setRoleName(this.roleName);
+			req.setPolicyName(this.policyName);
+			req.setPolicyDocument(this.policyDocument);
+			
+			return req;
+		}
+		
+		@Override
+		void dispatchInternal(ActivityContext<EuareMessage, Euare> context,
+				Checked<EuareMessage> callback) {
+			final DispatchingClient<EuareMessage, Euare> client = context.getClient();
+			client.dispatch(putRolePolicy(), callback);
+			
+		}
+		
+		@Override
+		void dispatchSuccess(ActivityContext<EuareMessage, Euare> context,
+				EuareMessage response) {
+			final PutRolePolicyResponseType resp = (PutRolePolicyResponseType) response;
+		}
+	}
+	
+	private class EuareGetRolePolicyTask extends EucalyptusActivityTask<EuareMessage, Euare> {
+		private String roleName = null;
+		private String policyName = null;
+		private GetRolePolicyResult result = null;
+		
+		private EuareGetRolePolicyTask(final String roleName, final String policyName){
+			this.roleName = roleName;
+			this.policyName = policyName;
+		}
+		
+		private GetRolePolicyType getRolePolicy(){
+			final GetRolePolicyType req = new GetRolePolicyType();
+			req.setRoleName(this.roleName);
+			req.setPolicyName(this.policyName);
+			return req;
+		}
+		
+		@Override
+		void dispatchInternal(ActivityContext<EuareMessage, Euare> context,
+				Checked<EuareMessage> callback) {
+			final DispatchingClient<EuareMessage, Euare> client = context.getClient();
+			client.dispatch(getRolePolicy(), callback);
+		}
+
+		@Override
+		void dispatchSuccess(ActivityContext<EuareMessage, Euare> context,
+				EuareMessage response) {
+			final GetRolePolicyResponseType resp = (GetRolePolicyResponseType) response;
+			this.result = resp.getGetRolePolicyResult();
+		}
+		
+		GetRolePolicyResult getResult(){
+			return this.result;
+		}
+	}
+	
+	private class EuareDeleteRolePolicyTask extends EucalyptusActivityTask<EuareMessage, Euare> {
+		private String roleName= null;
+		private String policyName = null;
+		
+		private EuareDeleteRolePolicyTask(final String roleName, final String policyName){
+			this.roleName = roleName;
+			this.policyName = policyName;
+		}
+		
+		private DeleteRolePolicyType deleteRolePolicy(){
+			final DeleteRolePolicyType req = new DeleteRolePolicyType();
+			req.setRoleName(this.roleName);
+			req.setPolicyName(this.policyName);
+			return req;
+		}
+		
+		@Override
+		void dispatchInternal(ActivityContext<EuareMessage, Euare> context,
+				Checked<EuareMessage> callback) {
+			final DispatchingClient<EuareMessage, Euare> client = context.getClient();
+			client.dispatch(deleteRolePolicy(), callback);
+		}
+
+		@Override
+		void dispatchSuccess(ActivityContext<EuareMessage, Euare> context,
+				EuareMessage response) {
+			final DeleteRolePolicyResponseType resp = (DeleteRolePolicyResponseType) response;
+		}
 	}
 	
 	private class AutoScalingUpdateGroupTask extends EucalyptusActivityTask<AutoScalingMessage, AutoScaling>{

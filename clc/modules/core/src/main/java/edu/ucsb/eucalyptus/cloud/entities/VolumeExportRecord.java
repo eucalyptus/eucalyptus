@@ -60,50 +60,136 @@
  *   NEEDED TO COMPLY WITH ANY SUCH LICENSES OR RIGHTS.
  ************************************************************************/
 
-package com.eucalyptus.ws.client.pipeline;
+package edu.ucsb.eucalyptus.cloud.entities;
 
-import java.util.Map;
-import java.util.concurrent.TimeUnit;
-import org.jboss.netty.channel.ChannelHandler;
-import org.jboss.netty.channel.ChannelPipeline;
-import org.jboss.netty.channel.ChannelPipelineFactory;
-import org.jboss.netty.channel.Channels;
-import com.eucalyptus.component.ComponentId.ComponentPart;
-import com.eucalyptus.component.id.ClusterController;
-import com.eucalyptus.ws.Handlers;
-import com.eucalyptus.ws.StackConfiguration;
-import com.eucalyptus.ws.handlers.ClusterWsSecHandler;
-import com.google.common.base.Supplier;
-import com.google.common.base.Suppliers;
+import javax.persistence.Column;
+import javax.persistence.DiscriminatorValue;
+import javax.persistence.Embeddable;
+import javax.persistence.FetchType;
+import javax.persistence.JoinColumn;
+import javax.persistence.ManyToOne;
+import javax.persistence.PersistenceContext;
+import javax.persistence.Table;
 
-@ComponentPart( ClusterController.class )
-public final class ClusterClientPipelineFactory implements ChannelPipelineFactory {
-  private enum ClusterWsSec implements Supplier<ChannelHandler> {
-    INSTANCE;
-    
-    @Override
-    public ChannelHandler get( ) {
-      return new ClusterWsSecHandler( );
+import org.hibernate.annotations.Cache;
+import org.hibernate.annotations.CacheConcurrencyStrategy;
+import org.hibernate.annotations.Entity;
+import org.hibernate.annotations.Parent;
 
-    }
-  };
-  
-  private static final Supplier<ChannelHandler> wsSecHandler = Suppliers.memoize( ClusterWsSec.INSTANCE );
+import com.eucalyptus.entities.AbstractPersistent;
+
+/*@Entity @javax.persistence.Entity
+@PersistenceContext(name="eucalyptus_storage")
+@Table( name = "volume_exports")
+@Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )*/
+
+@Entity 
+@javax.persistence.Entity
+@PersistenceContext(name="eucalyptus_storage")
+@Table( name = "volume_exports" )
+@Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
+@DiscriminatorValue( "token" )
+public class VolumeExportRecord extends AbstractPersistent {
+	private static final long serialVersionUID = 1L;
+
+	@JoinColumn( name = "token", updatable = false, nullable = false )
+  @ManyToOne( fetch = FetchType.LAZY )  
+  private VolumeToken token;
+		
+	@Column(name="host_ip")
+	private String hostIp;
+	
+	@Column(name="host_iqn")
+	private String hostIqn;
+	
+	@Column(name="is_active")
+	private Boolean isActive;
+	
+	@Column(name="volumeId")
+	private String volumeId;
+	
+	public String getVolumeId() {
+		return volumeId;
+	}
+
+	public void setVolumeId(String volumeId) {
+		this.volumeId = volumeId;
+	}
+
+	public VolumeExportRecord() {
+		token = null;
+		hostIp = null;
+		hostIqn = null;
+	}
+	
+	public VolumeExportRecord(String volumeId, VolumeToken tok, String ip, String iqn) {
+		this.volumeId = volumeId;
+		this.token = tok;
+		this.hostIp = ip;
+		this.hostIqn = iqn;
+	}
+
+	public Boolean getIsActive() {
+		return isActive;
+	}
+
+	public void setIsActive(Boolean isActive) {
+		this.isActive = isActive;
+	}
+
+	
+	public VolumeToken getToken() {
+		return token;
+	}
+
+	public void setToken(VolumeToken token) {
+		this.token = token;
+	}
+
+	public String getHostIp() {
+		return hostIp;
+	}
+
+	public void setHostIp(String hostIp) {
+		this.hostIp = hostIp;
+	}
+
+	public String getHostIqn() {
+		return hostIqn;
+	}
+
+	public void setHostIqn(String hostIqn) {
+		this.hostIqn = hostIqn;
+	}
+	
+	@Override
+  public int hashCode( ) {
+    final int prime = 31;
+    int result = 1;
+    result = prime * result + ( ( this.volumeId == null ) ? 0 : this.volumeId.hashCode( ) );
+    return result;
+  }
   
   @Override
-  public ChannelPipeline getPipeline( ) throws Exception {
-    final ChannelPipeline pipeline = Channels.pipeline( );
-    for ( final Map.Entry<String, ChannelHandler> e : Handlers.channelMonitors( TimeUnit.SECONDS, StackConfiguration.CLIENT_INTERNAL_TIMEOUT_SECS ).entrySet( ) ) {
-      pipeline.addLast( e.getKey( ), e.getValue( ) );
+  public boolean equals( Object obj ) {
+    if ( this == obj ) {
+      return true;
     }
-    pipeline.addLast( "decoder", Handlers.newHttpResponseDecoder( ) );
-    pipeline.addLast( "aggregator", Handlers.newHttpChunkAggregator( ) );
-    pipeline.addLast( "encoder", Handlers.httpRequestEncoder( ) );
-    pipeline.addLast( "serializer", Handlers.soapMarshalling( ) );
-    pipeline.addLast( "wssec", wsSecHandler.get( ) );
-    pipeline.addLast( "addressing", Handlers.newAddressingHandler( "EucalyptusCC#" ) );
-    pipeline.addLast( "soap", Handlers.soapHandler( ) );
-    pipeline.addLast( "binding", Handlers.bindingHandler( "eucalyptus_ucsb_edu" ) );
-    return pipeline;
+    if ( obj == null ) {
+      return false;
+    }
+    if ( getClass( ) != obj.getClass( ) ) {
+      return false;
+    }
+    VolumeExportRecord other = ( VolumeExportRecord ) obj;
+    if ( this.volumeId == null ) {
+      if ( other.volumeId != null ) {
+        return false;
+      }
+    } else if ( !this.volumeId.equals( other.volumeId ) || !this.hostIqn.equals(other.hostIqn) ||!this.hostIp.equals(other.hostIp)  || !this.isActive == other.isActive) {
+      return false;
+    }
+    return true;
   }
+
 }

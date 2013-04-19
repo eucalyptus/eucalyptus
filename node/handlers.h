@@ -184,6 +184,21 @@ struct nc_state_t {
     char ncCheckBucketCmd[MAX_PATH];
     char ncDeleteBundleCmd[MAX_PATH];
     //! @}
+
+    //! @name SC Client config fields
+    int config_use_ws_sec;  	//!< use WS security in SOAP
+    char config_sc_policy_file[MAX_PATH]; //!< policy config file to use for sc client ($EUCALYPTUS/var/lib/eucalyptus/keys/sc-client-policy.xml
+    //! @}
+
+    //! @name Service info state for the NC
+    serviceStatusType ncStatus;
+    serviceInfoType services[16];
+    serviceInfoType disabledServices[16];
+    serviceInfoType notreadyServices[16];
+    int servicesLen;
+    int disabledServicesLen;
+    int notreadyServicesLen;
+    //! @}
 };
 
 //! Hypervisor specific operation handlers
@@ -202,8 +217,9 @@ struct handlers {
     int (*doGetConsoleOutput) (struct nc_state_t * nc, ncMetadata * pMeta, char *instanceId, char **consoleOutput);
     int (*doDescribeResource) (struct nc_state_t * nc, ncMetadata * pMeta, char *resourceType, ncResource ** outRes);
     int (*doStartNetwork) (struct nc_state_t * nc, ncMetadata * pMeta, char *uuid, char **remoteHosts, int remoteHostsLen, int port, int vlan);
-    int (*doAttachVolume) (struct nc_state_t * nc, ncMetadata * pMeta, char *instanceId, char *volumeId, char *remoteDev, char *localDev);
-    int (*doDetachVolume) (struct nc_state_t * nc, ncMetadata * pMeta, char *instanceId, char *volumeId, char *remoteDev, char *localDev, int force, int grab_inst_sem);
+    int (*doAttachVolume) (struct nc_state_t * nc, ncMetadata * pMeta, char *instanceId, char *volumeId, char *attachmentToken, char *localDev);
+    int (*doDetachVolume) (struct nc_state_t * nc, ncMetadata * pMeta, char *instanceId, char *volumeId, char *attachmentToken, char *localDev, int force,
+                           int grab_inst_sem);
     int (*doCreateImage) (struct nc_state_t * nc, ncMetadata * pMeta, char *instanceId, char *volumeId, char *remoteDev);
     int (*doBundleInstance) (struct nc_state_t * nc, ncMetadata * pMeta, char *instanceId, char *bucketName, char *filePrefix, char *walrusURL,
                              char *userPublicKey, char *S3Policy, char *S3PolicySig);
@@ -273,8 +289,8 @@ int doRebootInstance(ncMetadata * pMeta, char *instanceId);
 int doGetConsoleOutput(ncMetadata * pMeta, char *instanceId, char **consoleOutput);
 int doDescribeResource(ncMetadata * pMeta, char *resourceType, ncResource ** outRes);
 int doStartNetwork(ncMetadata * pMeta, char *uuid, char **remoteHosts, int remoteHostsLen, int port, int vlan);
-int doAttachVolume(ncMetadata * pMeta, char *instanceId, char *volumeId, char *remoteDev, char *localDev);
-int doDetachVolume(ncMetadata * pMeta, char *instanceId, char *volumeId, char *remoteDev, char *localDev, int force, int grab_inst_sem);
+int doAttachVolume(ncMetadata * pMeta, char *instanceId, char *volumeId, char *attachmentToken, char *localDev);
+int doDetachVolume(ncMetadata * pMeta, char *instanceId, char *volumeId, char *attachmentToken, char *localDev, int force, int grab_inst_sem);
 int doBundleInstance(ncMetadata * pMeta, char *instanceId, char *bucketName, char *filePrefix, char *walrusURL, char *userPublicKey, char *S3Policy, char *S3PolicySig);
 int doBundleRestartInstance(ncMetadata * pMeta, char *instanceId);
 int doCancelBundleTask(ncMetadata * pMeta, char *instanceId);
@@ -309,6 +325,7 @@ void copy_instances(void);
 int is_migration_dst(const ncInstance * instance);
 int is_migration_src(const ncInstance * instance);
 int migration_rollback(ncInstance * instance);
+void get_service_url(const char *service_type, struct nc_state_t *nc, char *dest_buffer);
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |

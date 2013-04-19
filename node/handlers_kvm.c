@@ -95,10 +95,9 @@
 #include <euca_auth.h>
 #include <backing.h>
 #include <diskutil.h>
-#include <iscsi.h>
 #include <sensor.h>
 #include <euca_string.h>
-
+#include <ebs_utils.h>
 #include "handlers.h"
 #include "xml.h"
 #include "hooks.h"
@@ -335,7 +334,7 @@ static void *rebooting_thread(void *arg)
         LOGDEBUG("[%s] volumes [%d] = '%s'\n", instance->instanceId, i, volume->stateName);
 
         // get credentials, decrypt them
-        remoteDevStr = get_iscsi_target(volume->remoteDev);
+        remoteDevStr = get_volume_local_device(volume->connectionString);
         if (!remoteDevStr || !strstr(remoteDevStr, "/dev")) {
             LOGERROR("[%s] failed to get local name of host iscsi device when re-attaching\n", instance->instanceId);
             rc = 1;
@@ -377,7 +376,7 @@ static void *rebooting_thread(void *arg)
             log_level_for_devstring = EUCA_LOG_TRACE;
             if (err)
                 log_level_for_devstring = EUCA_LOG_DEBUG;
-            EUCALOG(log_level_for_devstring, "[%s][%s] remote device string: %s\n", instance->instanceId, volume->volumeId, volume->remoteDev);
+            EUCALOG(log_level_for_devstring, "[%s][%s] remote device connection string: %s\n", instance->instanceId, volume->volumeId, volume->connectionString);
         }
 
         EUCA_FREE(xml);
@@ -895,43 +894,56 @@ static int doMigrateInstances(struct nc_state_t *nc, ncMetadata * pMeta, ncInsta
                 int is_iscsi_target = 0;
                 int have_remote_device = 0;
                 char *xml = NULL;
-
+                char *remoteDevStr = NULL;
+                char scUrl[512];
                 char localDevReal[32], localDevTag[256], remoteDevReal[132];
                 char *tagBuf = localDevTag;
+                ebs_volume_data *vol_data = NULL;
                 ret = convert_dev_names(volume->localDev, localDevReal, tagBuf);
                 if (ret)
                     goto unroll;
 
-                // do iscsi connect shellout if remoteDev is an iSCSI target
+                //Do the ebs connect.
+                LOGTRACE("[%s][%s] Connecting EBS volume to local host\n", instance->instanceId, volume->volumeId);
+                get_service_url("storage",nc, scUrl);
 
-                if (check_iscsi(volume->remoteDev)) {
-                    char *remoteDevStr = NULL;
-                    is_iscsi_target = 1;
-
-                    // get credentials, decrypt them, login into target
-                    remoteDevStr = connect_iscsi_target(volume->remoteDev);
-                    if (!remoteDevStr || !strstr(remoteDevStr, "/dev")) {
-                        LOGERROR("[%s][%s] failed to connect to iscsi target\n", instance->instanceId, volume->volumeId);
-                        remoteDevReal[0] = '\0';
-                    } else {
-                        LOGDEBUG("[%s][%s] attached iSCSI target of host device '%s'\n", instance->instanceId, volume->volumeId, remoteDevStr);
-                        snprintf(remoteDevReal, sizeof(remoteDevReal), "%s", remoteDevStr);
-                        have_remote_device = 1;
-                    }
-                    EUCA_FREE(remoteDevStr);
+                if(strlen(scUrl) == 0) {
+                	LOGERROR("[%s][%s] Failed to lookup enabled Storage Controller. Cannot attach volume %s\n",instance->instanceId, volume->volumeId, scUrl);
+                	have_remote_device = 0;
+                	ret = EUCA_ERROR;
+                	goto unroll;
                 } else {
-                    snprintf(remoteDevReal, sizeof(remoteDevReal), "%s", volume->remoteDev);
-                    have_remote_device = 1;
+                	LOGTRACE("[%s][%s] Using SC URL: %s\n", instance->instanceId, volume->volumeId, scUrl );
                 }
+
+                //Do the ebs connect.
+                LOGTRACE("[%s][%s] Connecting EBS volume to local host\n", instance->instanceId, volume->volumeId);
+                int rc = connect_ebs_volume(scUrl, volume->attachmentToken, nc->config_use_ws_sec, nc->config_sc_policy_file, nc->ip, nc->iqn, &remoteDevStr, &vol_data);
+                if(rc) {
+                	LOGERROR("Error connecting ebs volume %s\n", volume->attachmentToken);
+                	have_remote_device=0;
+                	ret = EUCA_ERROR;
+                	goto unroll;
+                }
+
+                if (!remoteDevStr || !strstr(remoteDevStr, "/dev")) {
+                	LOGERROR("[%s][%s] failed to connect to iscsi target\n", instance->instanceId, volume->volumeId);
+                	remoteDevReal[0] = '\0';
+                } else {
+                	LOGDEBUG("[%s][%s] attached iSCSI target of host device '%s'\n", instance->instanceId, volume->volumeId, remoteDevStr);
+                	snprintf(remoteDevReal, sizeof(remoteDevReal), "%s", remoteDevStr);
+                	have_remote_device = 1;
+                }
+                EUCA_FREE(remoteDevStr);
 
                 // something went wrong above, abort
                 if (!have_remote_device) {
-                    goto unroll;
+                	goto unroll;
                 }
                 // make sure there is a block device
                 if (check_block(remoteDevReal)) {
-                    LOGERROR("[%s][%s] cannot verify that host device '%s' is available for hypervisor attach\n", instance->instanceId, volume->volumeId, remoteDevReal);
-                    goto unroll;
+                	LOGERROR("[%s][%s] cannot verify that host device '%s' is available for hypervisor attach\n", instance->instanceId, volume->volumeId, remoteDevReal);
+                	goto unroll;
                 }
                 // generate XML for libvirt attachment request
                 if (gen_volume_xml(volume->volumeId, instance, localDevReal, remoteDevReal) // creates vol-XXX.xml

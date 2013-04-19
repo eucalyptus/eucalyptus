@@ -317,7 +317,7 @@ public class Principals {
                                                 @Override
                                                 public void removeInfo(String key) throws AuthException {}
                                               };
-  
+                                                                                           
   private static final User    NOBODY_USER    = new User( ) {
                                                 private final Certificate       cert  = new Certificate( ) {
                                                                                         
@@ -568,7 +568,7 @@ public class Principals {
   public static User nobodyUser( ) {
     return NOBODY_USER;
   }
-  
+    
   public static Account nobodyAccount( ) {
     return NOBODY_ACCOUNT;
   }

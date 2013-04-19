@@ -136,17 +136,31 @@ typedef struct _artifact {
     void *internal;                    //!< OPTIONAL pointer to any other artifact-specific data 'creator' may need
 } artifact;
 
+//! Struct for local host config to use if making remote calls.
+//! Needed for calls to the SC
+typedef struct host_config {
+	char iqn[CHAR_BUFFER_SIZE];
+	char ip[HOSTNAME_SIZE];
+	char ws_sec_policy_file[EUCA_MAX_PATH];
+	int use_ws_sec;
+	char sc_url[512]; //!< Sized to the same as the serviceInfoType. Should be updated on each epoch change.
+} host_config;
+
 /*----------------------------------------------------------------------------*\
  |                                                                            |
  |                             EXPORTED VARIABLES                             |
  |                                                                            |
 \*----------------------------------------------------------------------------*/
+host_config localhost_config;
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |
  |                             EXPORTED PROTOTYPES                            |
  |                                                                            |
 \*----------------------------------------------------------------------------*/
+int vbr_init_hostconfig(char *hostIqn, char *hostIp, char *ws_sec_policy_file, int use_ws_sec);
+int vbr_update_hostconfig_scurl(char *new_sc_url);
+int get_localhost_sc_url(char *dest);
 
 int vbr_add_ascii(const char *spec_str, virtualMachine * vm_type);
 int vbr_parse(virtualMachine * vm, ncMetadata * pMeta);

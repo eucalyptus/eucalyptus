@@ -60,50 +60,81 @@
  *   NEEDED TO COMPLY WITH ANY SUCH LICENSES OR RIGHTS.
  ************************************************************************/
 
-package com.eucalyptus.ws.client.pipeline;
+package com.eucalyptus.ws.handlers;
 
-import java.util.Map;
-import java.util.concurrent.TimeUnit;
-import org.jboss.netty.channel.ChannelHandler;
-import org.jboss.netty.channel.ChannelPipeline;
-import org.jboss.netty.channel.ChannelPipelineFactory;
-import org.jboss.netty.channel.Channels;
-import com.eucalyptus.component.ComponentId.ComponentPart;
-import com.eucalyptus.component.id.ClusterController;
-import com.eucalyptus.ws.Handlers;
-import com.eucalyptus.ws.StackConfiguration;
-import com.eucalyptus.ws.handlers.ClusterWsSecHandler;
-import com.google.common.base.Supplier;
-import com.google.common.base.Suppliers;
+import java.security.cert.X509Certificate;
+import java.util.Collection;
+import org.apache.axiom.soap.SOAP11Constants;
+import org.apache.axiom.soap.SOAPConstants;
+import org.apache.axiom.soap.SOAPEnvelope;
+import org.apache.log4j.Logger;
+import org.apache.ws.security.WSConstants;
+import org.apache.ws.security.WSEncryptionPart;
+import org.jboss.netty.channel.MessageEvent;
+import com.eucalyptus.auth.principal.Principals;
+import com.eucalyptus.component.Partition;
+import com.eucalyptus.component.Partitions;
+import com.eucalyptus.component.auth.SystemCredentials;
+import com.eucalyptus.component.id.Eucalyptus;
+import com.eucalyptus.context.Contexts;
+import com.eucalyptus.crypto.util.WSSecurity;
+import com.eucalyptus.http.MappingHttpMessage;
+import com.eucalyptus.http.MappingHttpRequest;
+import com.eucalyptus.ws.WebServicesException;
+import com.eucalyptus.ws.util.CredentialProxy;
+import com.google.common.collect.Lists;
 
-@ComponentPart( ClusterController.class )
-public final class ClusterClientPipelineFactory implements ChannelPipelineFactory {
-  private enum ClusterWsSec implements Supplier<ChannelHandler> {
-    INSTANCE;
-    
-    @Override
-    public ChannelHandler get( ) {
-      return new ClusterWsSecHandler( );
-
-    }
-  };
+public class NodeWsSecHandler extends WsSecHandler {
+	private static final String WSA_NAMESPACE = "http://www.w3.org/2005/08/addressing";
+  private static Logger LOG = Logger.getLogger( NodeWsSecHandler.class );
   
-  private static final Supplier<ChannelHandler> wsSecHandler = Suppliers.memoize( ClusterWsSec.INSTANCE );
+  public NodeWsSecHandler( ) {
+    super( new CredentialProxy( Eucalyptus.class ) );
+  }
   
   @Override
-  public ChannelPipeline getPipeline( ) throws Exception {
-    final ChannelPipeline pipeline = Channels.pipeline( );
-    for ( final Map.Entry<String, ChannelHandler> e : Handlers.channelMonitors( TimeUnit.SECONDS, StackConfiguration.CLIENT_INTERNAL_TIMEOUT_SECS ).entrySet( ) ) {
-      pipeline.addLast( e.getKey( ), e.getValue( ) );
+  public Collection<WSEncryptionPart> getSignatureParts( ) {
+  	return Lists.newArrayList( 
+  			//TODO: removed this because on out-bound it is just a response..need to verify this with grze
+  			//new WSEncryptionPart( "To", WSA_NAMESPACE, "Content" ),
+        //new WSEncryptionPart( "MessageID", WSA_NAMESPACE, "Content" ),
+        //new WSEncryptionPart( "Action", WSA_NAMESPACE, "Content" ),
+  			new WSEncryptionPart( WSConstants.TIMESTAMP_TOKEN_LN, WSConstants.WSU_NS, "Content" ),
+        new WSEncryptionPart( SOAPConstants.BODY_LOCAL_NAME, SOAP11Constants.SOAP_ENVELOPE_NAMESPACE_URI, "Content" ) );
+
+  }
+  
+  @Override
+  public boolean shouldTimeStamp( ) {
+    return true;
+  }
+  
+  @Override
+  public void incomingMessage( MessageEvent event ) throws Exception {
+    final Object o = event.getMessage( );
+    if ( o instanceof MappingHttpRequest ) {
+      final MappingHttpMessage httpRequest = ( MappingHttpMessage ) o;
+      final SOAPEnvelope envelope = httpRequest.getSoapEnvelope( );
+      
+      X509Certificate cert = WSSecurity.verifyWSSec( envelope );
+      
+      if ( cert == null) {
+      	throw new WebServicesException( "Authentication failed: Certificate is null");
+      } else {
+      	boolean nodeCertFound = false;
+        for(Partition p : Partitions.list()) {
+        	if(cert.equals(p.getNodeCertificate())) {
+        		nodeCertFound = true;
+        		break;
+        	}
+        }
+        
+        if(!nodeCertFound) {
+        	throw new WebServicesException( "Authentication failed: The following certificate is not trusted:\n " + cert );
+        }
+      }
+      
+      Contexts.lookup( ( ( MappingHttpMessage ) o ).getCorrelationId( ) ).setUser( Principals.systemUser() );
     }
-    pipeline.addLast( "decoder", Handlers.newHttpResponseDecoder( ) );
-    pipeline.addLast( "aggregator", Handlers.newHttpChunkAggregator( ) );
-    pipeline.addLast( "encoder", Handlers.httpRequestEncoder( ) );
-    pipeline.addLast( "serializer", Handlers.soapMarshalling( ) );
-    pipeline.addLast( "wssec", wsSecHandler.get( ) );
-    pipeline.addLast( "addressing", Handlers.newAddressingHandler( "EucalyptusCC#" ) );
-    pipeline.addLast( "soap", Handlers.soapHandler( ) );
-    pipeline.addLast( "binding", Handlers.bindingHandler( "eucalyptus_ucsb_edu" ) );
-    return pipeline;
   }
 }
