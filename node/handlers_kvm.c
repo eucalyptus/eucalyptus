@@ -654,6 +654,7 @@ out:
 //!
 //! Handles the instance migration request.
 //!
+//! @param[in]  nc a pointer to the node controller (NC) state
 //! @param[in]  pMeta a pointer to the node controller (NC) metadata structure
 //! @param[in]  instances metadata for the instance to migrate to destination
 //! @param[in]  instancesLen number of instances in the instance list
@@ -680,9 +681,8 @@ static int doMigrateInstances(struct nc_state_t *nc, ncMetadata * pMeta, ncInsta
         LOGDEBUG("verifying instance # %d...\n", inst_idx);
         if (instances[inst_idx]) {
             ncInstance *instance_idx = instances[inst_idx];
-            // FIXME: REMOVE THE DISPLAY OF CREDENTIALS BEFORE WE GO LIVE!
-            LOGDEBUG("[%s] proposed migration action '%s' (%s > %s) [%s]\n", SP(instance_idx->instanceId), SP(action), SP(instance_idx->migration_src),
-                     SP(instance_idx->migration_dst), SP(instance_idx->migration_credentials));
+            LOGDEBUG("[%s] proposed migration action '%s' (%s > %s) [creds=%s]\n", SP(instance_idx->instanceId), SP(action), SP(instance_idx->migration_src),
+                     SP(instance_idx->migration_dst), (instance_idx->migration_credentials == NULL) ? "unavailable" : "present");
         } else {
             LOGERROR("Mismatch between migration instance count (%d) and length of instance list\n", instancesLen);
             return (EUCA_ERROR);
@@ -723,9 +723,8 @@ static int doMigrateInstances(struct nc_state_t *nc, ncMetadata * pMeta, ncInsta
                 copy_instances();
 
                 // Establish migration-credential keys if this is the first instance preparation for this host.
-                // FIXME: REMOVE THE DISPLAY OF CREDENTIALS BEFORE WE GO LIVE!
-                LOGINFO("[%s] migration source preparing %s > %s [%s]\n", SP(instance->instanceId), SP(instance->migration_src), SP(instance->migration_dst),
-                        SP(instance->migration_credentials));
+                LOGINFO("[%s] migration source preparing %s > %s [creds=%s]\n", SP(instance->instanceId), SP(instance->migration_src), SP(instance->migration_dst),
+                        (instance->migration_credentials == NULL) ? "unavailable" : "present");
                 if (!credentials_prepared) {
                     char generate_keys[MAX_PATH];
                     char *euca_base = getenv(EUCALYPTUS_ENV_VAR_NAME);
@@ -744,10 +743,6 @@ static int doMigrateInstances(struct nc_state_t *nc, ncMetadata * pMeta, ncInsta
                 }
 
                 instance->migration_state = MIGRATION_READY;
-                //euca_strncpy(instance->migration_src, sourceNodeName, HOSTNAME_SIZE);
-                //euca_strncpy(instance->migration_dst, destNodeName, HOSTNAME_SIZE);
-                //euca_strncpy(instance->migration_credentials, credentials, CREDENTIAL_SIZE);
-                //instance->migrationTime = time(NULL);
                 save_instance_struct(instance);
                 copy_instances();
                 sem_v(inst_sem);
@@ -767,8 +762,8 @@ static int doMigrateInstances(struct nc_state_t *nc, ncMetadata * pMeta, ncInsta
                     return (EUCA_UNSUPPORTED_ERROR);
                 }
                 instance->migration_state = MIGRATION_IN_PROGRESS;
-                // FIXME: REMOVE THE DISPLAY OF CREDENTIALS BEFORE WE GO LIVE!
-                LOGINFO("[%s] migration source initiating %s > %s [%s]\n", instance->instanceId, instance->migration_src, instance->migration_dst, instance->migration_credentials);
+                LOGINFO("[%s] migration source initiating %s > %s [creds=%s]\n", instance->instanceId, instance->migration_src, instance->migration_dst,
+                        (instance->migration_credentials == NULL) ? "unavailable" : "present");
                 save_instance_struct(instance);
                 copy_instances();
                 sem_v(inst_sem);
@@ -834,9 +829,8 @@ static int doMigrateInstances(struct nc_state_t *nc, ncMetadata * pMeta, ncInsta
             save_instance_struct(instance);
 
             // Establish migration-credential keys.
-            // FIXME: REMOVE THE DISPLAY OF CREDENTIALS BEFORE WE GO LIVE!
-            LOGINFO("[%s] migration destination preparing %s > %s [%s]\n", instance->instanceId, SP(instance->migration_src), SP(instance->migration_dst),
-                    SP(instance->migration_credentials));
+            LOGINFO("[%s] migration destination preparing %s > %s [creds=%s]\n", instance->instanceId, SP(instance->migration_src), SP(instance->migration_dst),
+                    (instance->migration_credentials == NULL) ? "unavailable" : "present");
             char generate_keys[MAX_PATH];
             char *euca_base = getenv(EUCALYPTUS_ENV_VAR_NAME);
 

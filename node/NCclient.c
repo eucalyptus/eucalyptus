@@ -790,7 +790,7 @@ int main(int argc, char **argv)
         long long ts_in = atoll(timestamp_str);
 
         axutil_date_time_t *dt = unixms_to_datetime(stub->env, ts_in);
-        char * dt_in = axutil_date_time_serialize_date_time(dt, stub->env);
+        char *dt_in = axutil_date_time_serialize_date_time(dt, stub->env);
 
         long long ts_out = datetime_to_unixms(dt, stub->env);
         printf("timestamp:  in = %lld %s\n", ts_in, dt_in);
