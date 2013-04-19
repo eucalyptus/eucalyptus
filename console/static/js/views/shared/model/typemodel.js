@@ -13,11 +13,16 @@ define([], function() {
         max: 99,
         msg: 'This field is required, and must be a number between 1 and 99.'
       },
-    
+/*    
       type_names: {
         required: true,
         msg: 'This field is required.'
       }
+*/
+      instance_type: {
+        required: true,
+        msg: 'You must select an instance size.'
+      },
     },
 
     finish: function(outputModel) {
