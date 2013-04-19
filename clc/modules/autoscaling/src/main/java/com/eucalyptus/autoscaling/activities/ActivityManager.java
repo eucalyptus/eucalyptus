@@ -364,6 +364,7 @@ public class ActivityManager {
             new Callback<ScalingActivity>(){
               @Override
               public void fire( final ScalingActivity scalingActivity ) {
+                logger.debug( "Timing out expired scaling activity: " + scalingActivity.getActivityId() );
                 scalingActivity.setStatusCode( ActivityStatusCode.Cancelled );
                 scalingActivity.setEndTime( new Date() );
               }
@@ -687,6 +688,9 @@ public class ActivityManager {
             Iterables.limit(
               Iterables.transform( currentInstances, RestrictedTypes.toDisplayName() ),
               Math.min( AutoScalingConfiguration.getMaxLaunchIncrement(), currentInstances.size() ) ) );
+      if ( !instancesToTerminate.isEmpty() ) {
+        logger.info( "Terminating unhealthy instances: " + instancesToTerminate );
+      }
     } catch ( final Exception e ) {
       logger.error( e, e );
     }
@@ -705,6 +709,9 @@ public class ActivityManager {
     if ( group.getCapacity() > group.getDesiredCapacity() ) {
       if ( !Iterables.all( currentInstances, Predicates.and( LifecycleState.InService.forView(), ConfigurationState.Registered.forView(), HealthStatus.Healthy.forView() ) ) ) {
         // Wait for terminations / launches to complete before further scaling.
+        if ( logger.isTraceEnabled() ) {
+          logger.trace( "Group over desired capacity ("+group.getCapacity()+"/"+group.getDesiredCapacity()+"), waiting for scaling operations to complete." );
+        }
         return new LaunchInstancesScalingProcessTask( group, 0, "" );
       }
       return perhapsTerminateInstances( group, group.getCapacity() - group.getDesiredCapacity() );
@@ -734,6 +741,9 @@ public class ActivityManager {
         setScalingNotRequired( group );
       } else if ( !scalingProcessEnabled( ScalingProcessType.AZRebalance, group ) &&
           group.getCapacity().equals( group.getDesiredCapacity() ) ) {
+        if ( logger.isTraceEnabled() ) {
+          logger.trace( "AZ rebalancing disabled, suppressing launch of "+requiredInstances+" instance(s)" );
+        }
         requiredInstances = 0; // rebalancing disabled
       }
 
@@ -906,6 +916,9 @@ public class ActivityManager {
 
   private void transitionToRegistered( final AutoScalingGroupMetadata group, final List<String> instanceIds ) {
     try {
+      if ( logger.isDebugEnabled() ) {
+        logger.debug( "Transitioning instances " + instanceIds + " to registered for group: " + group.getArn() );
+      }
       autoScalingInstances.transitionConfigurationState(
           group,
           ConfigurationState.Instantiated,
@@ -918,6 +931,9 @@ public class ActivityManager {
 
   private void transitionToDeregistered( final AutoScalingGroupMetadata group, final List<String> instanceIds ) {
     try {
+      if ( logger.isDebugEnabled() ) {
+        logger.debug( "Transitioning instances " + instanceIds + " to deregistered for group: " + group.getArn() );
+      }
       autoScalingInstances.transitionConfigurationState(
           group,
           ConfigurationState.Registered,
@@ -1150,8 +1166,10 @@ public class ActivityManager {
     abstract void dispatchInternal( ActivityContext context, Callback.Checked<RES> callback );
 
     void dispatchFailure( ActivityContext context, Throwable throwable ) {
-      // error, assume no instances run for now
       Logs.extreme().error( "Activity error", throwable );
+      if ( logger.isDebugEnabled() ) {
+        logger.debug( "Activity error", throwable );
+      }
       setActivityFinalStatus( ActivityStatusCode.Failed, throwable.getMessage(), null );
     }
 
@@ -1430,6 +1448,9 @@ public class ActivityManager {
 
     @Override
     List<LaunchInstanceScalingActivityTask> buildActivityTasks() throws AutoScalingMetadataException {
+      if ( logger.isDebugEnabled() ) {
+        logger.debug( "Launching " + launchCount + " instance(s) for group: " + getGroup().getArn() );
+      }
       final List<AutoScalingInstanceCoreView> instances = autoScalingInstances.listByGroup(
           getGroup( ),
           Predicates.alwaysTrue(),
@@ -1466,6 +1487,7 @@ public class ActivityManager {
       if ( !zoneMonitor.getUnavailableZones( 0 ).removeAll( getGroup().getAvailabilityZones() ) &&
           (getGroup().getLastUpdateTimestamp() + AutoScalingConfiguration.getSuspensionTimeoutMillis() ) < timestamp() ) {
         if ( shouldSuspendDueToLaunchFailure( getGroup() ) ) try {
+          logger.info( "Suspending launch for group: " + getGroup().getArn() );
           autoScalingGroups.update(
               getOwner(),
               getGroup().getAutoScalingGroupName(),
@@ -1491,6 +1513,10 @@ public class ActivityManager {
       final List<String> instanceIds = Lists.newArrayList();
       for ( final LaunchInstanceScalingActivityTask task : tasks ) {
         instanceIds.addAll( task.getInstanceIds() );
+      }
+
+      if ( logger.isDebugEnabled() ) {
+        logger.debug( "Launched instances " + instanceIds + " for group: " + getGroup().getArn() );
       }
 
       try {
@@ -1580,6 +1606,9 @@ public class ActivityManager {
 
     @Override
     List<AddToLoadBalancerScalingActivityTask> buildActivityTasks() throws AutoScalingMetadataException {
+      if ( logger.isDebugEnabled() ) {
+        logger.debug( "Adding instances " + instanceIds + " to load balancers for group: " + getGroup().getArn() );
+      }
       final List<AddToLoadBalancerScalingActivityTask> activities = Lists.newArrayList();
       for ( final String loadBalancerName : getGroup().getLoadBalancerNames() ) {
         activities.add( new AddToLoadBalancerScalingActivityTask(
@@ -1612,9 +1641,13 @@ public class ActivityManager {
     private void handleFailure() {
       try {
         int failureCount = autoScalingInstances.registrationFailure( getGroup(), instanceIds );
+        if ( logger.isTraceEnabled() ) {
+          logger.trace( "Failed ("+failureCount+") to add instances " + instanceIds + " to load balancers: " + getGroup().getLoadBalancerNames() );
+        }
         if ( failureCount > AutoScalingConfiguration.getMaxRegistrationRetries() ) {
           updateScalingRequiredFlag( getGroup(), true );
           autoScalingInstances.transitionState( getGroup(), LifecycleState.InService, LifecycleState.Terminating, instanceIds );
+          logger.info( "Terminating instances " + instanceIds + ", due to failure adding to load balancers: " + getGroup().getLoadBalancerNames() );
         }
       } catch ( final AutoScalingMetadataException e ) {
         logger.error( e, e );
@@ -1709,6 +1742,10 @@ public class ActivityManager {
 
     @Override
     List<RemoveFromLoadBalancerScalingActivityTask> buildActivityTasks() throws AutoScalingMetadataException {
+      if ( logger.isDebugEnabled() ) {
+        logger.debug( "Removing instances "+instanceIds+" from load balancers for group: " + getGroup().getArn() );
+      }
+
       final List<RemoveFromLoadBalancerScalingActivityTask> activities = Lists.newArrayList();
 
       try {
@@ -1845,6 +1882,9 @@ public class ActivityManager {
 
     @Override
     List<TerminateInstanceScalingActivityTask> buildActivityTasks() {
+      if ( logger.isDebugEnabled() ) {
+        logger.debug( "Terminating instances "+instanceIds+" for group: " + getGroup().getArn() );
+      }
       final List<TerminateInstanceScalingActivityTask> activities = Lists.newArrayList();
 
       try {
@@ -1978,6 +2018,9 @@ public class ActivityManager {
 
     @Override
     void dispatchInternal( final ActivityContext context, final Callback.Checked<DescribeTagsResponseType> callback ) {
+      if ( logger.isTraceEnabled() ) {
+        logger.trace( "Polling instance tags for groups in account: " + getGroup().getOwnerAccountNumber() );
+      }
       final EucalyptusClient client = context.getEucalyptusClient();
       client.dispatch( describeTags( ), callback );
     }
@@ -1992,6 +2035,9 @@ public class ActivityManager {
           final String groupName = tagInfo.getValue();
           instanceMap.put( groupName, instanceId );
         }
+      }
+      if ( logger.isTraceEnabled() ) {
+        logger.trace( "Found auto scaling tags by group (account:"+getGroup().getOwnerAccountNumber()+"): " + instanceMap );
       }
       knownAutoScalingInstanceIds.set( Multimaps.unmodifiableMultimap( instanceMap ) );
       setActivityFinalStatus( ActivityStatusCode.Successful );
@@ -2176,6 +2222,13 @@ public class ActivityManager {
 
     @Override
     List<MonitoringScalingActivityTask> buildActivityTasks() throws AutoScalingMetadataException {
+      if ( logger.isDebugEnabled() ) {
+        logger.debug( "Performing EC2 health check for group: " + getGroup().getArn() );
+      }
+      if ( logger.isTraceEnabled() ) {
+        logger.trace( "Expected pending instances: " + pendingInstanceIds );
+        logger.trace( "Expected running instances: " + expectedRunningInstanceIds );
+      }
       final List<String> instanceIds = Lists.newArrayList( Iterables.concat(
           pendingInstanceIds,
           expectedRunningInstanceIds
@@ -2194,6 +2247,11 @@ public class ActivityManager {
       for ( final MonitoringScalingActivityTask task : tasks ) {
         knownInstanceIds.addAll( task.getKnownInstanceIds( ) );
         healthyInstanceIds.addAll( task.getHealthyInstanceIds( ) );
+      }
+
+      if ( logger.isTraceEnabled() ) {
+        logger.trace( "EC2 health check known instances: " + knownInstanceIds );
+        logger.trace( "EC2 health check healthy instances: " + healthyInstanceIds );
       }
 
       transitionToInService.retainAll( healthyInstanceIds );
@@ -2288,6 +2346,9 @@ public class ActivityManager {
 
     @Override
     List<MetricsSubmissionScalingActivityTask> buildActivityTasks() throws AutoScalingMetadataException {
+      if ( logger.isTraceEnabled() ) {
+        logger.trace( "Putting metrics for group: " + getGroup().getArn() );
+      }
       return Collections.singletonList( new MetricsSubmissionScalingActivityTask( getGroup(), newActivity(), autoScalingInstances ) );
     }
   }
@@ -2355,6 +2416,12 @@ public class ActivityManager {
 
     @Override
     List<ElbMonitoringScalingActivityTask> buildActivityTasks() throws AutoScalingMetadataException {
+      if ( logger.isDebugEnabled() ) {
+        logger.debug( "Performing ELB health check for group: " + getGroup().getArn() );
+      }
+      if ( logger.isTraceEnabled() ) {
+        logger.trace( "Expected instances: " + expectedInstanceIds );
+      }
       final List<ElbMonitoringScalingActivityTask> activities = Lists.newArrayList();
       for ( final String loadBalancerName : loadBalancerNames ) {
         activities.add( new ElbMonitoringScalingActivityTask( getGroup(), newActivity(), loadBalancerName ) );
@@ -2368,6 +2435,10 @@ public class ActivityManager {
 
       for ( final ElbMonitoringScalingActivityTask task : tasks ) {
         healthyInstanceIds.removeAll( task.getUnhealthyInstanceIds() );
+      }
+
+      if ( logger.isTraceEnabled() ) {
+        logger.trace( "ELB health check healthy instances: " + healthyInstanceIds );
       }
 
       try {
@@ -2828,7 +2899,9 @@ public class ActivityManager {
 
     void perhapsWork() throws Exception {
       if ( ++count % calcFactor() == 0 && !AutoScalingConfiguration.getSuspendedTasks().contains( task ) ) {
+        logger.trace( "Running auto scaling task: " + task );
         doWork();
+        logger.trace( "Completed auto scaling task: " + task );
       }
     }
 
