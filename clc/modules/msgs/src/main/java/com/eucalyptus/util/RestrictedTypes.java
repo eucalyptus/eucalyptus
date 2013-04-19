@@ -115,17 +115,22 @@ public class RestrictedTypes {
   static Logger LOG = Logger.getLogger( RestrictedTypes.class );
   
   /**
-   * Class implementing {@link Function<String,T extends RestrictedType>}, that is, one which
-   * converts a string reference into a type reference for the object {@code T} referenced by
-   * {@code identifier}.
-   * 
+   * Annotation for use on a Class implementing Function<String,T extends RestrictedType>,
+   * that is, one which converts a string reference into a type reference for the object T
+   * referenced by {@code identifier}.
+   * <p>
    * {@code public abstract T apply( String identifier );}
-   * 
-   * @param identifier
-   * @return T the object referenced by the given {@code identifier}
-   * @throws PersistenceException if an error occurred in the underlying retrieval mechanism
-   * @throws NoSuchElementException if the requested {@code identifier} does not exist and the user
-   *           is authorized.
+   * </p>
+   *
+   * <p>
+   * The method should:
+   * <ul>
+   *   <li>return T the object referenced by the given {@code identifier}</li>
+   *   <li>throw PersistenceException if an error occurred in the underlying retrieval mechanism</li>
+   *   <li>throw NoSuchElementException if the requested {@code identifier} does not exist and the
+   *       user is authorized.</li>
+   * </ul>
+   * </p>
    */
   @Target( { ElementType.TYPE } )
   @Retention( RetentionPolicy.RUNTIME )
@@ -135,7 +140,7 @@ public class RestrictedTypes {
   
   private static final Map<Class, Function<?, ?>> resourceResolvers = Maps.newHashMap( );
   
-  public static final <T extends RestrictedType> Function<String, T> resolver( Class<?> type ) {
+  public static <T extends RestrictedType> Function<String, T> resolver( Class<T> type ) {
     return ( Function<String, T> ) checkMapByType( type, resourceResolvers );
   }
   
@@ -245,9 +250,9 @@ public class RestrictedTypes {
       String action = getIamActionByMessageType( );
       User requestUser = ctx.getUser( );
       if ( !Permissions.isAuthorized( vendor.value( ), type.value( ), identifier, null, action, requestUser ) ) {
-        throw new AuthException( "Not authorized to create: " + type + " by user: " + ctx.getUserFullName( ) );
+        throw new AuthException( "Not authorized to create: " + type.value() + " by user: " + ctx.getUserFullName( ) );
       } else if ( !Permissions.canAllocate( vendor.value( ), type.value( ), identifier, action, ctx.getUser( ), ( long ) quantity ) ) {
-        throw new AuthQuotaException( type.value( ), "Quota exceeded while trying to create: " + type + " by user: " + ctx.getUserFullName( ) );
+        throw new AuthQuotaException( type.value( ), "Quota exceeded while trying to create: " + type.value() + " by user: " + ctx.getUserFullName( ) );
       }
     }
     return runAllocator( quantity, allocator, ( Predicate ) Predicates.alwaysTrue( ) );
@@ -287,9 +292,9 @@ public class RestrictedTypes {
         try {
           String identifier = rsc.getDisplayName( );
           if ( !Permissions.isAuthorized( vendor.value( ), type.value( ), identifier, null, action, requestUser ) ) {
-            throw new AuthException( "Not authorized to create: " + type + " by user: " + ctx.getUserFullName( ) );
+            throw new AuthException( "Not authorized to create: " + type.value() + " by user: " + ctx.getUserFullName( ) );
           } else if ( !Permissions.canAllocate( vendor.value( ), type.value( ), identifier, action, ctx.getUser( ), ( long ) quantity ) ) {
-            throw new AuthQuotaException( type.value( ), "Quota exceeded while trying to create: " + type + " by user: " + ctx.getUserFullName( ) );
+            throw new AuthQuotaException( type.value( ), "Quota exceeded while trying to create: " + type.value() + " by user: " + ctx.getUserFullName( ) );
           }
         } catch ( AuthException ex ) {
           if ( rsc != null ) {
@@ -326,9 +331,9 @@ public class RestrictedTypes {
       User requestUser = ctx.getUser( );
       try {
         if ( !Permissions.isAuthorized( vendor.value( ), type.value( ), identifier, null, action, requestUser ) ) {
-          throw new AuthException( "Not authorized to create: " + type + " by user: " + ctx.getUserFullName( ) );
+          throw new AuthException( "Not authorized to create: " + type.value() + " by user: " + ctx.getUserFullName( ) );
         } else if ( !Permissions.canAllocate( vendor.value( ), type.value( ), identifier, action, ctx.getUser( ), amount ) ) {
-          throw new AuthQuotaException( type.value( ), "Quota exceeded while trying to create: " + type + " by user: " + ctx.getUserFullName( ) );
+          throw new AuthQuotaException( type.value( ), "Quota exceeded while trying to create: " + type.value() + " by user: " + ctx.getUserFullName( ) );
         }
       } catch ( AuthException ex ) {
         throw ex;

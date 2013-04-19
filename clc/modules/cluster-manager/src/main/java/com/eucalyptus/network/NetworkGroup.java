@@ -124,8 +124,8 @@ public class NetworkGroup extends UserMetadata<NetworkGroup.State> implements Ne
     ACTIVE
   }
   
-  @Column( name = "metadata_network_group_id")
-  private String 	   groupId;
+  @Column( name = "metadata_network_group_id", unique = true )
+  private String           groupId;
   
   @Column( name = "metadata_network_group_description" )
   private String           description;

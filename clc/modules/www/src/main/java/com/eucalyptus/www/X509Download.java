@@ -284,6 +284,8 @@ public class X509Download extends HttpServlet {
       sb.append( "\nexport EC2_ACCOUNT_NUMBER='" + u.getAccount( ).getAccountNumber( ) + "'" );
       sb.append( "\nexport EC2_ACCESS_KEY='" + userAccessKey + "'" );
       sb.append( "\nexport EC2_SECRET_KEY='" + userSecretKey + "'" );
+      sb.append( "\nexport AWS_ACCESS_KEY='" + userAccessKey + "'" );
+      sb.append( "\nexport AWS_SECRET_KEY='" + userSecretKey + "'" );
       sb.append( "\nexport AWS_CREDENTIAL_FILE=${EUCA_KEY_DIR}/iamrc" );
       sb.append( "\nexport EC2_USER_ID='" + userNumber + "'" );
       sb.append( "\nalias ec2-bundle-image=\"ec2-bundle-image --cert ${EC2_CERT} --privatekey ${EC2_PRIVATE_KEY} --user ${EC2_ACCOUNT_NUMBER} --ec2cert ${EUCALYPTUS_CERT}\"" );
