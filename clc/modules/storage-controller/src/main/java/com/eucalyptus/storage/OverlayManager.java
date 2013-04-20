@@ -664,10 +664,8 @@ public class OverlayManager extends DASManager {
 							// Volume cleanup flag is not set, check the volume state
 							LOG.debug("Volume " + volumeId + " is not marked for cleanup. Checking loop back device status");
 
-							// Check if the loopback has been removed, if not set it for cleanup and wait.
-							// Logical volume is not available after the loopback is removed
-							if (StringUtils.isNotBlank(foundLVMVolumeInfo.getLoDevName())
-									&& StringUtils.isNotBlank(getLoopback(foundLVMVolumeInfo.getLoDevName()))) {
+							// Volume cleanup flag is not set, check the volume state
+							if(exportManager.isExported(foundLVMVolumeInfo)) {
 								foundLVMVolumeInfo.setCleanup(true);
 								volumeManager.finish();
 								LOG.debug("Loop back device for volume " + volumeId
