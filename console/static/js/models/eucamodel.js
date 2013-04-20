@@ -24,6 +24,33 @@ define([
         self.get('tags').on('add remove reset change', function() {
             self.refreshNamedColumns();
         });
+
+        // If this model changes ID then all the tags must change as well.
+        self.on('change:id', function() {
+            self.get('tags').each(function(t) {
+                t.set('res_id', self.get('id'));
+            });
+        });
+
+        // FIXME: The following two methods ensure that tags will get created on new models.
+        //        The methodology does not seem ideal.
+        self.on('request', function() {
+            if (self.isNew() && self.get('tags').length > 0) {
+                self._tmpTags = self.get('tags').clone();
+            }
+        });
+
+        self.on('sync', function() {
+            if (self._tmpTags != null) {
+                self._tmpTags.each(function(t) {
+                   t.set('res_id', self.get('id'));
+                   if (t.get('_new') && !t.get('_deleted')) { 
+                       self.get('tags').add(t);
+                       t.save();
+                   }
+                });
+            }
+        });
     },
     // Override set locally so that we can properly update the tags collection
     set: function(key, val, options) {    
@@ -43,6 +70,10 @@ define([
 
         return Backbone.Model.prototype.set.call(this, key, val, options);
     },
+    parse: function(response) {
+        if (response != null && response.results != null) return response.results;
+        return response;
+    },
     refreshNamedColumns: function() {
         var self = this;
         _.each(this.namedColumns, function(column) {
@@ -56,15 +87,18 @@ define([
         });
     },
     makeAjaxCall: function(url, param, options){
-      $.ajax({
+      var xhr = options.xhr = $.ajax({
         type: "POST",
         url: url,
         data: param,
         dataType: "json",
         async: true,
-        success: options.success,
-        error: options.error
-      });
+      }).done(options.success)
+      .fail(options.error)
+
+      this.trigger('request', this, xhr, options);
+
+      return xhr;
     }
   });
   return EucaModel;

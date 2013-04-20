@@ -20,7 +20,7 @@ define([
               required: false
             },
             status: {
-              oneOf: ['attaching','attached', 'detaching', 'detached'],
+              oneOf: ['creating', 'created', 'attaching','attached', 'detaching', 'detached'],
               required: false
             },
             size: {
@@ -64,9 +64,9 @@ define([
           },
           sync: function(method, model, options){
             if(method == 'create'){
-              this.syncMethod_Create(model, options);
+              return this.syncMethod_Create(model, options);
             }else if(method == 'delete'){
-              this.syncMethod_Delete(model, options);
+              return this.syncMethod_Delete(model, options);
             }
           },
           syncMethod_Create: function(model, options){
@@ -79,14 +79,14 @@ define([
             if(snapshot_id != undefined){
               parameter += "&SnapshotId="+snapshot_id;
             }
-            this.makeAjaxCall(url, parameter, options);
+            return this.makeAjaxCall(url, parameter, options);
           },
           syncMethod_Delete: function(model, options){
             var url = "/ec2?Action=DeleteVolume";
             var id = model.get('id');
             var parameter = "_xsrf="+$.cookie('_xsrf');
             parameter += "&VolumeId="+id;
-            this.makeAjaxCall(url, parameter, options);
+            return this.makeAjaxCall(url, parameter, options);
           },
 
           attach: function(instance_id, device, options){

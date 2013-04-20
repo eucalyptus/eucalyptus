@@ -313,6 +313,13 @@
                               thisObj._getTableWrapper().eucatable('refreshTable');
                               thisObj._getTableWrapper().eucatable('glowRow', name);
                           }
+                          // FIXME This is a hack to simulate the lifecycle of the new backbone dialogs
+                          thisObj.addDialog.rscope.securityGroup.trigger('confirm');
+
+                          var tmpSecGroup = thisObj.addDialog.rscope.securityGroup.clone();
+                          tmpSecGroup.set('id', data.results.id);
+                          tmpSecGroup.trigger('request');
+                          tmpSecGroup.trigger('sync');
                       } else {
                           notifyError($.i18n.prop('sgroup_add_rule_error', DefaultEncoder().encodeForHTML(name)), getErrorMessage(jqXHR));
                       }
@@ -337,15 +344,18 @@
         'models/sgroup', 
         'text!views/dialogs/create_security_group_fixup.html!strip'
         ], function(rivets, SecurityGroup, TabbedDialogTmpl) {
-        var $content = thisObj.addDialog.find('.content-sections-wrapper');
-        $content.append($(TabbedDialogTmpl));
-        $content.find('h3').remove();
-        $content.css('background', 'none');
-        $content.find('#tabs-1').append($content.find('.group.content-section'));
-        $content.find('#tabs-2').append($content.find('.rules.content-section'));
-        rivets.bind($content, {
-           securityGroup: new SecurityGroup() 
-        });
+            var $content = thisObj.addDialog.find('.content-sections-wrapper');
+            $content.append($(TabbedDialogTmpl));
+            $content.find('h3').remove();
+            $content.css('background', 'none');
+            $content.find('#tabs-1').append($content.find('.group.content-section'));
+            $content.find('#tabs-2').append($content.find('.rules.content-section'));
+            thisObj.addDialog.rivets = rivets;
+            thisObj.addDialog.SecurityGroup = SecurityGroup;
+            thisObj.addDialog.rscope = {
+                securityGroup: new SecurityGroup()
+            }
+            thisObj.addDialog.rview = thisObj.addDialog.rivets.bind($content, thisObj.addDialog.rscope);
       });
 
       var $tmpl = $('html body').find('.templates #sgroupEditDlgTmpl').clone();
@@ -962,6 +972,12 @@
       thisObj.addDialog.find("#sgroup-description-error").text("");
       thisObj.addDialog.find('#sgroup-ports-error').text("");
       thisObj.addDialog.find('#allow-ip-error').text("");
+      thisObj.addDialog.find('a[href="#tabs-1"]').click();
+
+      thisObj.addDialog.rscope.securityGroup.get('tags').reset([]);
+      thisObj.addDialog.rview.sync();
+
+      gAddDialog = thisObj.addDialog;
 
       group_ids = [];
       var results = describe('sgroup');
