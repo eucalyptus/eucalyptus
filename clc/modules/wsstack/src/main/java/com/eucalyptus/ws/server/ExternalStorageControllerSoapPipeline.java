@@ -60,30 +60,45 @@
  *   NEEDED TO COMPLY WITH ANY SUCH LICENSES OR RIGHTS.
  ************************************************************************/
 
-package edu.ucsb.eucalyptus.util;
+package com.eucalyptus.ws.server;
 
-import edu.ucsb.eucalyptus.util.XMLParser;
-import junit.framework.TestCase;
+import org.jboss.netty.channel.ChannelPipeline;
+import org.jboss.netty.handler.codec.http.HttpRequest;
+import com.eucalyptus.binding.BindingManager;
+import com.eucalyptus.component.ComponentId.ComponentPart;
+import com.eucalyptus.component.id.Storage;
+import com.eucalyptus.ws.Handlers;
+import com.eucalyptus.ws.handlers.BindingHandler;
+import com.eucalyptus.ws.stages.ExternalSCAuthenticationStage;
+import com.eucalyptus.ws.stages.UnrollableStage;
 
-import java.util.List;
 
-public class XMLParserTest extends TestCase {
+@ComponentPart( Storage.class )
+public class ExternalStorageControllerSoapPipeline extends FilteredPipeline {
+	private static final String SC_EXTERNAL_SOAP_NAMESPACE = "storagecontroller_eucalyptus_ucsb_edu";
 
+	private final UnrollableStage auth = new ExternalSCAuthenticationStage( );
 
-    public void testParse() throws Exception {
-        String parseTestString = "<AccessControlPolicy> <AccessControlList> <Grant> <Grantee> <DisplayName>nekro</DisplayName> </Grantee> <Permission>FULL_CONTROL</Permission> </Grant> <Grant> <Grantee> <DisplayName>lolwho</DisplayName> </Grantee> <Permission>NO_U</Permission> </Grant></AccessControlList> </AccessControlPolicy>";
+	@Override
+  public boolean checkAccepts( final HttpRequest message ) {
+    return (message.getUri( ).endsWith( "/services/Storage" ) || message.getUri( ).endsWith( "/services/Storage/" )) && message.getHeaderNames().contains( "SOAPAction" ) && message.getHeader("SOAPAction").trim().startsWith("\"EucalyptusSC#");
+  }
 
-        XMLParser xmlParser = new XMLParser(parseTestString);
+  @Override
+  public String getName( ) {
+    return "storage-controller-external-soap";
+  }
 
-        String ownerDisplayName = xmlParser.getValue("//Owner/DisplayName");
-
-        List<String> displayNames = xmlParser.getValues("//AccessControlList/Grant/Grantee/DisplayName");
-
-        System.out.println(ownerDisplayName);
-    }
-
-    public XMLParserTest() {
-		super();
-	}
+  @Override
+  public ChannelPipeline addHandlers( ChannelPipeline pipeline ) {  	
+  	pipeline.addLast( "deserialize", Handlers.soapMarshalling( ) );
+    //pipeline.addLast( "ws-security", Handlers.internalWsSecHandler() );
+    auth.unrollStage(pipeline);    
+    pipeline.addLast( "ws-addressing", Handlers.newAddressingHandler( "EucalyptusSC#" ) );
+    pipeline.addLast( "build-soap-envelope", Handlers.soapHandler( ) );
+    //pipeline.addLast( "binding", Handlers.bindingHandler( ) );        //
+    pipeline.addLast( "binding", new BindingHandler( BindingManager.getBinding(SC_EXTERNAL_SOAP_NAMESPACE)));    
+    return pipeline;
+  }
 
 }

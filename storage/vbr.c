@@ -99,8 +99,10 @@
 #include "walrus.h"
 #include "blobstore.h"
 #include "diskutil.h"
-#include "iscsi.h"
+//#include "iscsi.h"
 #include "http.h"
+#include "ebs_utils.h"
+#include <ipc.h>
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |
@@ -167,6 +169,11 @@
  |                                                                            |
 \*----------------------------------------------------------------------------*/
 
+#ifdef _UNIT_TEST
+const char *euca_this_component_name = "sc";    //!< Eucalyptus Component Name
+const char *euca_client_component_name = "nc";    //!< The client component name
+#endif /*_UNIT_TEST */
+
 /*----------------------------------------------------------------------------*\
  |                                                                            |
  |                              STATIC VARIABLES                              |
@@ -174,6 +181,7 @@
 \*----------------------------------------------------------------------------*/
 
 static __thread char current_instanceId[512] = "";  //!< instance ID that is being serviced, for logging only
+static sem *hostconfig_sem;
 
 #ifdef _UNIT_TEST
 static blobstore *cache_bs = NULL;
@@ -214,7 +222,6 @@ static int partition_creator(artifact * a);
 static void set_disk_dev(virtualBootRecord * vbr);
 static int disk_creator(artifact * a);
 static int iqn_creator(artifact * a);
-static int aoe_creator(artifact * a);
 static int copy_creator(artifact * a);
 //! @}
 
@@ -265,6 +272,57 @@ static void dummy_err_fn(const char *msg);
  |                                                                            |
 \*----------------------------------------------------------------------------*/
 
+//! Initializes the global host config
+int vbr_init_hostconfig(char *hostIqn, char *hostIp, char *ws_sec_policy_file, int use_ws_sec)
+{
+	LOGDEBUG("Initializing host config for VBR. Setting IP, IQN, and security policy\n");
+	euca_strncpy(localhost_config.iqn, hostIqn, MAX_PATH);
+	euca_strncpy(localhost_config.ip, hostIp, MAX_PATH);
+	euca_strncpy(localhost_config.ws_sec_policy_file, ws_sec_policy_file, MAX_PATH);
+	localhost_config.use_ws_sec = use_ws_sec;
+	LOGDEBUG("VBR host config set to ip: %s iqn: %s, use_sec = %d, policy file = %s\n", localhost_config.ip, localhost_config.iqn, localhost_config.use_ws_sec, localhost_config.ws_sec_policy_file);
+	hostconfig_sem = sem_alloc(1, IPC_MUTEX_SEMAPHORE);
+	return EUCA_OK;
+}
+
+//! Semaphore protected read of the sc_url from the config
+//! Destination buffer must be at least 512 in size
+int get_localhost_sc_url(char *dest)
+{
+	int ret = 0;
+	sem_p(hostconfig_sem);
+	if(!strlen(localhost_config.sc_url)) {
+		LOGERROR("No sc url found in localhost_config.\n");
+		ret = 0;
+		goto release;
+	}
+	if(!euca_strncpy(dest, localhost_config.sc_url, 512)) {
+		LOGERROR("Failed up copy VBR hostconfig SC URL %s to destination buffer\n",localhost_config.sc_url);
+		ret = EUCA_ERROR;
+	} else {
+		ret = EUCA_OK;
+	}
+
+release:
+	sem_v(hostconfig_sem);
+	return ret;
+}
+
+
+//! Semaphore protected hostconfig update.
+int vbr_update_hostconfig_scurl(char *new_sc_url)
+{
+	sem_p(hostconfig_sem);
+	if(!euca_strncpy(localhost_config.sc_url, new_sc_url, 512)) {
+		LOGERROR("Failed up update VBR hostconfig SC URL to %s from %s\n", new_sc_url, localhost_config.sc_url);
+		sem_v(hostconfig_sem);
+		return EUCA_ERROR;
+	} else {
+		sem_v(hostconfig_sem);
+		return EUCA_OK;
+	}
+}
+
 //!
 //! Picks a service URI and prepends it to resourceLocation in VBR
 //!
@@ -285,9 +343,15 @@ static int prep_location(virtualBootRecord * vbr, ncMetadata * pMeta, const char
     for (i = 0; i < pMeta->servicesLen; i++) {
         serviceInfoType *service = &(pMeta->services[i]);
         if (strncmp(service->type, typeName, strlen(typeName) - 3) == 0 && service->urisLen > 0) {
-            char *l = vbr->resourceLocation + (strlen(typeName) + 3);   // +3 for "://", so 'l' points past, e.g., "walrus:"
-            snprintf(vbr->preparedResourceLocation, sizeof(vbr->preparedResourceLocation), "%s/%s", service->uris[0], l);   //! @TODO for now we just pick the first one
-            snprintf(vbr->resourceLocation, sizeof(vbr->resourceLocation), vbr->preparedResourceLocation);  //! @TODO trying this out
+            if(strcmp(typeName, "storage")) {
+            	//Anything other than storage/ebs
+            	char *l = vbr->resourceLocation + (strlen(typeName) + 3);   // +3 for "://", so 'l' points past, e.g., "walrus:"
+            	snprintf(vbr->preparedResourceLocation, sizeof(vbr->preparedResourceLocation), "%s/%s", service->uris[0], l);   //! @TODO for now we just pick the first one
+            	snprintf(vbr->resourceLocation, sizeof(vbr->resourceLocation), vbr->preparedResourceLocation);  //! @TODO trying this out
+            } else {
+            	//For storage, just copy the url for the SC into the preparedResourceLocation slot
+            	snprintf(vbr->preparedResourceLocation, sizeof(vbr->preparedResourceLocation), "%s", service->uris[0]);   //! @TODO for now we just pick the first one
+            }
             return EUCA_OK;
         }
     }
@@ -426,10 +490,6 @@ static int parse_rec(virtualBootRecord * vbr, virtualMachine * vm, ncMetadata * 
             vbr->locationType = NC_LOCATION_URL;
         }
         euca_strncpy(vbr->preparedResourceLocation, vbr->resourceLocation, sizeof(vbr->preparedResourceLocation));
-    } else if (strcasestr(vbr->resourceLocation, "iqn://") == vbr->resourceLocation || strchr(vbr->resourceLocation, ',')) {    //! @TODO remove this transitionary iSCSI crutch?
-        vbr->locationType = NC_LOCATION_IQN;
-    } else if (strcasestr(vbr->resourceLocation, "aoe://") == vbr->resourceLocation || strcasestr(vbr->resourceLocation, "/dev/") == vbr->resourceLocation) {   //! @TODO remove this transitionary AoE crutch
-        vbr->locationType = NC_LOCATION_AOE;
     } else if (strcasestr(vbr->resourceLocation, "walrus://") == vbr->resourceLocation) {
         vbr->locationType = NC_LOCATION_WALRUS;
         if (pMeta)
@@ -441,7 +501,7 @@ static int parse_rec(virtualBootRecord * vbr, virtualMachine * vm, ncMetadata * 
     } else if (strcasestr(vbr->resourceLocation, "sc://") == vbr->resourceLocation || strcasestr(vbr->resourceLocation, "storage://") == vbr->resourceLocation) {   //! @TODO is it 'sc' or 'storage'?
         vbr->locationType = NC_LOCATION_SC;
         if (pMeta)
-            error = prep_location(vbr, pMeta, "sc");
+            error = prep_location(vbr, pMeta, "storage");
     } else if (strcasestr(vbr->resourceLocation, "none") == vbr->resourceLocation) {
         if (vbr->type != NC_RESOURCE_EPHEMERAL && vbr->type != NC_RESOURCE_SWAP && vbr->type != NC_RESOURCE_BOOT) {
             LOGERROR("resourceLocation not specified for non-ephemeral resource '%s'\n", vbr->resourceLocation);
@@ -1267,52 +1327,37 @@ cleanup:
 //!
 //! @note
 //!
+#ifndef _NO_EBS
 static int iqn_creator(artifact * a)
 {
     assert(a);
     virtualBootRecord *vbr = a->vbr;
     assert(vbr);
 
-    char *dev = connect_iscsi_target(vbr->resourceLocation);
+    ebs_volume_data *vol_data = NULL;
+    char *dev = NULL;
+    int rc = connect_ebs_volume(vbr->preparedResourceLocation, vbr->resourceLocation, localhost_config.use_ws_sec, localhost_config.ws_sec_policy_file, localhost_config.ip, localhost_config.iqn, &dev, &vol_data);
+    if(rc) {
+    	LOGERROR("[%s] failed to attach volume during VBR construction for %s\n", a->instanceId, vbr->guestDeviceName);
+    	return EUCA_ERROR;
+    }
+
     if (!dev || !strstr(dev, "/dev")) {
+    	EUCA_FREE(vol_data);
         LOGERROR("[%s] failed to connect to iSCSI target\n", a->instanceId);
         return EUCA_ERROR;
+    } else {
+    	//Update the vbr preparedResourceLocation with the connection_string returned from token resolution
+    	euca_strncpy(vbr->preparedResourceLocation, vol_data->connect_string, sizeof(vbr->preparedResourceLocation));
     }
+
     // update VBR with device location
     euca_strncpy(vbr->backingPath, dev, sizeof(vbr->backingPath));
     vbr->backingType = SOURCE_TYPE_BLOCK;
-
+    EUCA_FREE(vol_data);
     return EUCA_OK;
 }
-
-//!
-//!
-//!
-//! @param[in] a
-//!
-//! @return
-//!
-//! @pre
-//!
-//! @note
-//!
-static int aoe_creator(artifact * a)
-{
-    assert(a);
-    virtualBootRecord *vbr = a->vbr;
-    assert(vbr);
-
-    char *dev = vbr->resourceLocation;
-    if (!dev || !strstr(dev, "/dev") || check_block(dev) != 0) {
-        LOGERROR("[%s] failed to locate AoE device %s\n", a->instanceId, dev);
-        return EUCA_ERROR;
-    }
-    // update VBR with device location
-    euca_strncpy(vbr->backingPath, dev, sizeof(vbr->backingPath));
-    vbr->backingType = SOURCE_TYPE_BLOCK;
-
-    return EUCA_OK;
-}
+#endif
 
 //!
 //!
@@ -1747,7 +1792,6 @@ static artifact *art_alloc_vbr(virtualBootRecord * vbr, boolean do_make_work_cop
 
     switch (vbr->locationType) {
     case NC_LOCATION_CLC:
-    case NC_LOCATION_SC:
         LOGERROR("[%s] location of type %d is NOT IMPLEMENTED\n", current_instanceId, vbr->locationType);
         return NULL;
 
@@ -1805,16 +1849,12 @@ w_out:
             break;
         }
 
-    case NC_LOCATION_IQN:{
+#ifndef _NO_EBS
+    case NC_LOCATION_SC: {
             a = art_alloc("iscsi-vol", NULL, -1, FALSE, FALSE, FALSE, iqn_creator, vbr);
             goto out;
         }
-
-    case NC_LOCATION_AOE:{
-            a = art_alloc("aoe-vol", NULL, -1, FALSE, FALSE, FALSE, aoe_creator, vbr);
-            goto out;
-        }
-
+#endif
     case NC_LOCATION_NONE:{
             assert(vbr->sizeBytes > 0L);
 

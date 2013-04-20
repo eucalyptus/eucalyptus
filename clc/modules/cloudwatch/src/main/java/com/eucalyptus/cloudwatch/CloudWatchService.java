@@ -528,7 +528,7 @@ public class CloudWatchService {
   private void validateWithinTwoWeeks(Date timestamp, String name) throws CloudWatchException {
     if (timestamp == null) return;
     Date now = new Date();
-    Date twoWeeksAgo = new Date(now.getTime() - 2 * 7 * 3600 * 1000L);
+    Date twoWeeksAgo = new Date(now.getTime() - 2 * 7 * 24 * 3600 * 1000L);
     long BUFFER = 2 * 3600 * 1000L; // two hours
     if (timestamp.getTime() > now.getTime() + BUFFER || timestamp.getTime() < twoWeeksAgo.getTime() - BUFFER) {
       throw new InvalidParameterValueException("The parameter " + name + ".Timestamp must specify a time within the past two weeks.");

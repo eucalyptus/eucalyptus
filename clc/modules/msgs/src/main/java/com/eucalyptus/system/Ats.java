@@ -66,14 +66,15 @@ import java.lang.annotation.Annotation;
 import java.lang.reflect.AccessibleObject;
 import java.lang.reflect.AnnotatedElement;
 import java.util.List;
-import java.util.Map;
 import java.util.NoSuchElementException;
 import com.eucalyptus.util.Classes;
 import com.google.common.base.Function;
 import com.google.common.base.Joiner;
 import com.google.common.base.Predicate;
+import com.google.common.cache.CacheBuilder;
+import com.google.common.cache.CacheLoader;
+import com.google.common.cache.LoadingCache;
 import com.google.common.collect.Lists;
-import com.google.common.collect.MapMaker;
 
 /**
  * A builder-like utility for interrogating the {@link Annotation}s that may be present on instances
@@ -157,52 +158,45 @@ public class Ats implements Predicate<Class> {
     return a instanceof Class ? ( Class ) a : null;
   }
   
-  enum AtsBuilder implements Function<Object, Ats> {
-    INSTANCE;
-    
-    @Override
-    public Ats apply( Object input ) {
-      if ( input instanceof Class ) {
-        return new Ats( ( AnnotatedElement ) input );
-      } else if ( input instanceof AnnotatedElement ) {
-        return new Ats( ( AnnotatedElement ) input );
-      } else {
-        return new Ats( ( AnnotatedElement ) input.getClass( ) );
+  private static final LoadingCache<Object, Ats> atsCache = CacheBuilder.newBuilder().build(
+    new CacheLoader<Object, Ats>() {
+      @Override
+      public Ats load( Object input ) {
+        if ( input instanceof Class ) {
+          return new Ats( ( AnnotatedElement ) input );
+        } else if ( input instanceof AnnotatedElement ) {
+          return new Ats( ( AnnotatedElement ) input );
+        } else {
+          return new Ats( ( AnnotatedElement ) input.getClass( ) );
+        }
       }
-    }
-    
-  }
+    });
   
-  enum AtsHierarchyBuilder implements Function<Object, Ats> {
-    INSTANCE;
-    
-    @Override
-    public Ats apply( Object input ) {
-      if ( input instanceof AnnotatedElement ) {
-        return new Ats( Classes.ancestors( input ).toArray( new Class[] {} ) );
-      } else {
-        return new Ats( Classes.ancestors( input ).toArray( new Class[] {} ) );
+  private static final LoadingCache<Object, Ats> atsHierarchyCache = CacheBuilder.newBuilder().build(
+    new CacheLoader<Object, Ats>() {
+      @Override
+      public Ats load( Object input ) {
+        if ( input instanceof AnnotatedElement ) {
+          return new Ats( Classes.ancestors( input ).toArray( new Class[] {} ) );
+        } else {
+          return new Ats( Classes.ancestors( input ).toArray( new Class[] {} ) );
+        }
       }
-    }
-    
-  }
-  
-  private static final Map<Object, Ats> atsCache          = new MapMaker( ).makeComputingMap( AtsBuilder.INSTANCE );
-  private static final Map<Object, Ats> atsHierarchyCache = new MapMaker( ).makeComputingMap( AtsHierarchyBuilder.INSTANCE );
+    });
   
   public static Ats from( Object o ) {
     if ( o instanceof AccessibleObject ) {
-      return atsCache.get( o );
+      return atsCache.getUnchecked( o );
     } else {
-      return atsCache.get( Classes.typeOf( o ) );
+      return atsCache.getUnchecked( Classes.typeOf( o ) );
     }
   }
   
   public static Ats inClassHierarchy( Object o ) {
     if ( o instanceof AccessibleObject ) {
-      return atsHierarchyCache.get( o );
+      return atsHierarchyCache.getUnchecked( o );
     } else {
-      return atsHierarchyCache.get( Classes.typeOf( o ) );
+      return atsHierarchyCache.getUnchecked( Classes.typeOf( o ) );
     }
   }
   

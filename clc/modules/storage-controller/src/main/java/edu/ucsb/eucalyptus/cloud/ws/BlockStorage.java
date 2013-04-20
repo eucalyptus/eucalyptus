@@ -88,6 +88,7 @@ import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.context.NoSuchContextException;
+import com.eucalyptus.crypto.Crypto;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.entities.Transactions;
@@ -97,8 +98,11 @@ import com.eucalyptus.storage.BlockStorageChecker;
 import com.eucalyptus.storage.CheckerTask;
 import com.eucalyptus.storage.LogicalStorageManager;
 import com.eucalyptus.storage.StorageManagers;
+import com.eucalyptus.storage.VolumeExports;
+import com.eucalyptus.util.BlockStorageUtil;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.StorageProperties;
+import com.google.common.collect.Lists;
 
 import edu.ucsb.eucalyptus.cloud.AccessDeniedException;
 import edu.ucsb.eucalyptus.cloud.EntityTooLargeException;
@@ -111,6 +115,7 @@ import edu.ucsb.eucalyptus.cloud.VolumeSizeExceededException;
 import edu.ucsb.eucalyptus.cloud.entities.SnapshotInfo;
 import edu.ucsb.eucalyptus.cloud.entities.StorageInfo;
 import edu.ucsb.eucalyptus.cloud.entities.VolumeInfo;
+import edu.ucsb.eucalyptus.cloud.entities.VolumeToken;
 import edu.ucsb.eucalyptus.cloud.entities.WalrusInfo;
 import edu.ucsb.eucalyptus.msgs.AttachStorageVolumeResponseType;
 import edu.ucsb.eucalyptus.msgs.AttachStorageVolumeType;
@@ -133,12 +138,18 @@ import edu.ucsb.eucalyptus.msgs.DescribeStorageVolumesResponseType;
 import edu.ucsb.eucalyptus.msgs.DescribeStorageVolumesType;
 import edu.ucsb.eucalyptus.msgs.DetachStorageVolumeResponseType;
 import edu.ucsb.eucalyptus.msgs.DetachStorageVolumeType;
+import edu.ucsb.eucalyptus.msgs.ExportVolumeResponseType;
+import edu.ucsb.eucalyptus.msgs.ExportVolumeType;
 import edu.ucsb.eucalyptus.msgs.GetStorageConfigurationResponseType;
 import edu.ucsb.eucalyptus.msgs.GetStorageConfigurationType;
 import edu.ucsb.eucalyptus.msgs.GetStorageVolumeResponseType;
 import edu.ucsb.eucalyptus.msgs.GetStorageVolumeType;
+import edu.ucsb.eucalyptus.msgs.GetVolumeTokenResponseType;
+import edu.ucsb.eucalyptus.msgs.GetVolumeTokenType;
 import edu.ucsb.eucalyptus.msgs.StorageSnapshot;
 import edu.ucsb.eucalyptus.msgs.StorageVolume;
+import edu.ucsb.eucalyptus.msgs.UnexportVolumeResponseType;
+import edu.ucsb.eucalyptus.msgs.UnexportVolumeType;
 import edu.ucsb.eucalyptus.msgs.UpdateStorageConfigurationResponseType;
 import edu.ucsb.eucalyptus.msgs.UpdateStorageConfigurationType;
 import edu.ucsb.eucalyptus.storage.StorageCheckerService;
@@ -155,7 +166,9 @@ public class BlockStorage {
 	static VolumeService volumeService;
 	static SnapshotService snapshotService;
 	static StorageCheckerService checkerService;
-
+	
+	private static final boolean ENCRYPT_TOKEN = false;
+	
 	//TODO: zhill, this can be added later for snapshot abort capabilities
 	//static ConcurrentHashMap<String,HttpTransfer> httpTransferMap; //To keep track of current transfers to support aborting
 
@@ -292,6 +305,133 @@ public class BlockStorage {
 		return reply;
 	}
 
+	public GetVolumeTokenResponseType GetVolumeToken(GetVolumeTokenType request) throws EucalyptusCloudException {
+		GetVolumeTokenResponseType reply = (GetVolumeTokenResponseType) request.getReply();
+		String volumeId = request.getVolumeId();
+		
+		if(null == volumeId) {
+			LOG.error("Cannot get token for a null-valued volumeId");
+			throw new EucalyptusCloudException("No volumeId specified in token request");			
+		}
+		
+		VolumeToken token = VolumeExports.issueToken(volumeId);
+		
+		if(ENCRYPT_TOKEN) {
+			//Encrypt the token with the NC's private key. token.getToken();
+			String encryptedToken = BlockStorageUtil.encryptForNode(token.getToken());    
+			reply.setToken(encryptedToken);
+		} else {
+			reply.setToken(token.getToken());
+		}
+		reply.setVolumeId(volumeId);
+		return reply;
+	}
+	
+	/**
+	 * Removes connection authorization for the specified iqn/ip pair in the request using
+	 * the specified token. Only performs the operation if the token is valid for the specified volume.
+	 * 
+	 * Invalidates the token upon successful de-authorization.
+	 * @param request
+	 * @return
+	 * @throws EucalyptusCloudException
+	 */
+	public UnexportVolumeResponseType UnexportVolume(UnexportVolumeType request) throws EucalyptusCloudException {
+		UnexportVolumeResponseType reply = request.getReply();
+		String token = request.getToken();
+		String volumeId = request.getVolumeId();
+		String nodeIqn = request.getIqn();
+		String nodeIp = request.getIp();
+
+		if(token.startsWith(StorageProperties.TOKEN_PREFIX)) {
+			//Strip off prefix if not already done.
+			token = token.substring(StorageProperties.TOKEN_PREFIX.length(), token.length());
+		}
+		
+		if(ENCRYPT_TOKEN) {		
+			//Encrypt the token with the NC's private key. token.getToken();
+			token = BlockStorageUtil.decryptWithCloud(token);
+		}
+		
+		EntityWrapper<VolumeInfo> db = StorageProperties.getEntityWrapper();
+		try {
+			VolumeInfo volumeInfo = db.getUnique(new VolumeInfo(volumeId));			
+		} catch (EucalyptusCloudException ex) {
+			LOG.error("Unable to find volume: " + volumeId + ex);
+			throw new NoSuchEntityException("Unable to find volume: " + volumeId + ex);
+		} finally {
+			db.commit();
+		}
+		try {
+			//Check first, don't invalidate unless success.
+			if(VolumeExports.removeExport(volumeId, token, nodeIp, nodeIqn)){
+				blockManager.detachVolume(volumeId, nodeIqn);
+			} else {
+				LOG.error("Could not remove export for volume " + volumeId + " invalid token indicated");
+			}
+		} catch (EucalyptusCloudException ex) {
+			LOG.error("Could not detach volume " + volumeId);
+			throw ex;
+		}
+		
+		return reply;
+	}
+
+	/**
+	 * Perform a volume export validated by the token presented in the request.
+	 * Upon completion of the Export operation, the identified host (by ip and iqn) will
+	 * have access to connect to the requested volume. No connection is made, just the authorization.
+	 * @param request
+	 * @return
+	 * @throws EucalyptusCloudException
+	 */
+	public ExportVolumeResponseType ExportVolume(ExportVolumeType request) throws EucalyptusCloudException {
+		ExportVolumeResponseType reply = (ExportVolumeResponseType) request.getReply();		
+		
+		String volumeId = request.getVolumeId();
+		String token = request.getToken();
+		String ip = request.getIp();
+		String iqn = request.getIqn();
+		
+		if(token.startsWith(StorageProperties.TOKEN_PREFIX)) {
+			//Strip off prefix if not already done.
+			token = token.substring(StorageProperties.TOKEN_PREFIX.length(), token.length());
+		}
+		
+		if(ENCRYPT_TOKEN) {
+			//Encrypt the token with the NC's private key. token.getToken();
+			token = BlockStorageUtil.decryptWithCloud(token);    
+		}
+		
+		reply.setVolumeId(volumeId);
+		ArrayList<String> nodeIqns = Lists.newArrayList(iqn);
+		EntityWrapper<VolumeInfo> db = StorageProperties.getEntityWrapper();
+		try {
+			VolumeInfo volumeInfo = db.getUnique(new VolumeInfo(volumeId));
+			if(volumeInfo == null) {
+				throw new EucalyptusCloudException("Volume " + volumeId + " not found");
+			}
+		} catch (EucalyptusCloudException ex) {
+			LOG.error("Unable to find volume: " + volumeId + ex);
+			throw new NoSuchEntityException("Unable to find volume: " + volumeId + ex);
+		} finally {
+			db.commit();
+		}
+		try {
+			if(VolumeExports.addExport(volumeId, token, ip, iqn)) {			
+				String deviceConnectString = blockManager.attachVolume(volumeId, nodeIqns);
+				reply.setConnectionString(deviceConnectString);
+				
+			} else {
+				throw new EucalyptusCloudException("Invalid token " + token + " received for volume " + volumeId);
+			}
+		} catch (EucalyptusCloudException ex) {
+		  LOG.error(ex, ex);
+			throw ex;
+		}
+		return reply;
+	}
+	
 	public GetStorageVolumeResponseType GetStorageVolume(GetStorageVolumeType request) throws EucalyptusCloudException {
 		GetStorageVolumeResponseType reply = (GetStorageVolumeResponseType) request.getReply();
 		if(!StorageProperties.enableStorage) {
@@ -920,7 +1060,7 @@ public class BlockStorage {
 
 		EntityWrapper<VolumeInfo> db = StorageProperties.getEntityWrapper();
 		try {
-			VolumeInfo volumeInfo = db.getUnique(new VolumeInfo(volumeId));			
+			VolumeInfo volumeInfo = db.getUnique(new VolumeInfo(volumeId));
 		} catch (EucalyptusCloudException ex) {
 			LOG.error("Unable to find volume: " + volumeId + ex);
 			throw new NoSuchEntityException("Unable to find volume: " + volumeId + ex);

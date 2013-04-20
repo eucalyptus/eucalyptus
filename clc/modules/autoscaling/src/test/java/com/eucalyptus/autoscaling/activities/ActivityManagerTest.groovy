@@ -1470,7 +1470,7 @@ class ActivityManagerTest {
       void update(OwnerFullName ownerFullName,
                   String autoScalingGroupName,
                   Callback<AutoScalingGroup> groupUpdateCallback) {
-        AutoScalingGroup group = lookup( ownerFullName, autoScalingGroupName, Functions.<AutoScalingGroup>identity() )
+        AutoScalingGroup group = lookup( ownerFullName, autoScalingGroupName, { it } as Function<AutoScalingGroup,AutoScalingGroup> )
         groupUpdateCallback.fire( group )
       }
 
@@ -1553,7 +1553,7 @@ class ActivityManagerTest {
       <T> T lookup(OwnerFullName ownerFullName,
                    String instanceId,
                    Function<? super AutoScalingInstance, T> transform) {
-        transform.apply( list( ownerFullName, Predicates.alwaysTrue(), Functions.<AutoScalingInstance>identity() ).find { instance ->
+        transform.apply( list( ownerFullName, Predicates.alwaysTrue(), { it } as Function<AutoScalingInstance,AutoScalingInstance> ).find { instance ->
           invoke( String.class, instance, "getInstanceId").equals( instanceId )
         } )
       }
@@ -1562,7 +1562,7 @@ class ActivityManagerTest {
       void update(OwnerFullName ownerFullName,
                   String instanceId,
                   Callback<AutoScalingInstance> instanceUpdateCallback) {
-        AutoScalingInstance instance = lookup( ownerFullName, instanceId, Functions.<AutoScalingInstance>identity() )
+        AutoScalingInstance instance = lookup( ownerFullName, instanceId, { it } as Function<AutoScalingInstance,AutoScalingInstance> )
         instanceUpdateCallback.fire( instance )
       }
 

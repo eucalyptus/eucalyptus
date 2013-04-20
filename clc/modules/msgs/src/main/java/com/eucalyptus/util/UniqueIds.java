@@ -83,7 +83,9 @@ import com.eucalyptus.entities.Entities;
 import com.eucalyptus.upgrade.Upgrades.PreUpgrade;
 import com.eucalyptus.util.UniqueIds.PersistedCounter.Transaction;
 import com.google.common.base.Function;
-import com.google.common.collect.MapMaker;
+import com.google.common.cache.CacheBuilder;
+import com.google.common.cache.CacheLoader;
+import com.google.common.cache.LoadingCache;
 import static com.eucalyptus.upgrade.Upgrades.Version.v3_2_0;
 
 public class UniqueIds implements Serializable {
@@ -165,12 +167,11 @@ public class UniqueIds implements Serializable {
     return Transaction.NEXT_INDEX.apply( nextIndex( counterName, 1 ) );
   }
   
-  private static final Map<String,Function<Long, Long>> counterMap = new MapMaker( ).makeComputingMap( new Function<String,Function<Long, Long>>(){
-
+  private static final LoadingCache<String,Function<Long, Long>> counterMap = CacheBuilder.newBuilder().build(
+    new CacheLoader<String,Function<Long, Long>>(){
     @Override
-    public Function<Long, Long> apply( final String counterName ) {
+    public Function<Long, Long> load( final String counterName ) {
       return new Function<Long, Long>( ) {
-        
         @Override
         public Long apply( Long arg0 ) {
           Long ret = 0l;
@@ -193,7 +194,7 @@ public class UniqueIds implements Serializable {
     }} );
   
   private static Long nextIndex( final String counterName, long extent ) {
-    return Entities.asTransaction( PersistedCounter.class, counterMap.get( counterName ), 1000 ).apply( extent );
+    return Entities.asTransaction( PersistedCounter.class, counterMap.getUnchecked( counterName ), 1000 ).apply( extent );
     
   }
   

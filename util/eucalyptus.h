@@ -2,7 +2,7 @@
 // vim: set softtabstop=4 shiftwidth=4 tabstop=4 expandtab:
 
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * Copyright 2009-2013 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -166,6 +166,8 @@
 #define EUCALYPTUS_DISK_CONVERT                  EUCALYPTUS_ROOTWRAP " " EUCALYPTUS_HELPER_DIR "/partition2disk"
 #define EUCALYPTUS_VIRSH                         EUCALYPTUS_ROOTWRAP " virsh"
 #define EUCALYPTUS_DETACH                        EUCALYPTUS_ROOTWRAP " " EUCALYPTUS_HELPER_DIR "/detach.pl"
+#define EUCALYPTUS_GENERATE_MIGRATION_KEYS       EUCALYPTUS_ROOTWRAP " " EUCALYPTUS_HELPER_DIR "/generate-migration-keys.sh"
+#define EUCALYPTUS_AUTHORIZE_MIGRATION_KEYS      EUCALYPTUS_ROOTWRAP " " EUCALYPTUS_HELPER_DIR "/authorize-migration-keys.pl"
 
 #define EUCALYPTUS_CONNECT_ISCSI                 EUCALYPTUS_ROOTWRAP " " EUCALYPTUS_HELPER_DIR "/connect_iscsitarget.pl"
 #define EUCALYPTUS_DISCONNECT_ISCSI              EUCALYPTUS_ROOTWRAP " " EUCALYPTUS_HELPER_DIR "/disconnect_iscsitarget.pl"
@@ -224,6 +226,7 @@
 #define CONFIG_NC_CREATEIMAGE_CLEANUP_THRESHOLD "NC_CREATEIMAGE_CLEANUP_THRESHOLD"
 #define CONFIG_NC_TEARDOWN_STATE_DURATION       "NC_TEARDOWN_STATE_DURATION"
 #define CONFIG_NC_MIGRATION_READY_THRESHOLD     "NC_MIGRATION_READY_THRESHOLD"
+#define CONFIG_ENABLE_WS_SECURITY				"ENABLE_WS_SECURITY"
 
 //! @}
 

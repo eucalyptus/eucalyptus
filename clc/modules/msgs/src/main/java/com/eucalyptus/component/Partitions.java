@@ -81,7 +81,9 @@ import com.eucalyptus.entities.TransactionException;
 import com.eucalyptus.system.SubDirectory;
 import com.eucalyptus.util.Exceptions;
 import com.google.common.base.Function;
-import com.google.common.collect.MapMaker;
+import com.google.common.cache.CacheBuilder;
+import com.google.common.cache.CacheLoader;
+import com.google.common.cache.LoadingCache;
 
 public class Partitions {
   static Logger         LOG                 = Logger.getLogger( Partitions.class );
@@ -111,39 +113,39 @@ public class Partitions {
     }
   }
   
-  private static final Map<String,Partition> partitionMap = new MapMaker().makeComputingMap( LookupPartition.INSTANCE );
-  enum LookupPartition implements Function<String, Partition> {
-    INSTANCE;
-    public Partition apply( final String input ) {
-      try {
-        Databases.awaitSynchronized( );
-        EntityTransaction db = Entities.get( Partition.class );
-        Partition p = null;
+  private static final LoadingCache<String, Partition> partitionMap = CacheBuilder.newBuilder().build(
+    new CacheLoader<String, Partition>() {
+      @Override
+      public Partition load( final String input ) {
         try {
-          p = Entities.uniqueResult( Partition.newInstanceNamed( input ) );
-          db.commit( );
-          return p;
+          Databases.awaitSynchronized( );
+          EntityTransaction db = Entities.get( Partition.class );
+          Partition p = null;
+          try {
+            p = Entities.uniqueResult( Partition.newInstanceNamed( input ) );
+            db.commit( );
+            return p;
+          } catch ( NoSuchElementException ex ) {
+            db.rollback( );
+            throw ex;
+          } catch ( Exception ex ) {
+            db.rollback( );
+            throw Exceptions.toUndeclared( ex );
+          }
         } catch ( NoSuchElementException ex ) {
-          db.rollback( );
           throw ex;
-        } catch ( Exception ex ) {
-          db.rollback( );
-          throw Exceptions.toUndeclared( ex );
+        } catch ( DatabaseStateException ex ) {
+          Databases.awaitSynchronized( );
+          return load( input );
+        } catch ( RuntimeException ex ) {
+          throw ex;
         }
-      } catch ( NoSuchElementException ex ) {
-        throw ex;
-      } catch ( DatabaseStateException ex ) {
-        Databases.awaitSynchronized( );
-        return INSTANCE.apply( input );
-      } catch ( RuntimeException ex ) {
-        throw ex;
       }
-    }
-  }
+    });
   
 
   public static Partition lookupByName( String partitionName ) {
-    return partitionMap.get( partitionName );
+    return partitionMap.getUnchecked( partitionName );
   }
   
   public static Partition lookup( final ServiceConfiguration config ) {

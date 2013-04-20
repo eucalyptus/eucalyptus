@@ -137,10 +137,11 @@ import com.eucalyptus.ws.protocol.SoapHandler;
 import com.eucalyptus.ws.server.NioServerHandler;
 import com.eucalyptus.ws.server.ServiceContextHandler;
 import com.eucalyptus.ws.server.ServiceHackeryHandler;
-import com.google.common.base.Function;
+import com.google.common.cache.CacheBuilder;
+import com.google.common.cache.CacheLoader;
+import com.google.common.cache.LoadingCache;
 import com.google.common.base.Joiner;
 import com.google.common.collect.Lists;
-import com.google.common.collect.MapMaker;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 
 public class Handlers {
@@ -153,7 +154,6 @@ public class Handlers {
   private static final ChannelHandler                        internalWsSecHandler     = new InternalWsSecHandler( );
   private static final ChannelHandler                        soapHandler              = new SoapHandler( );
   private static final ChannelHandler                        addressingHandler        = new AddressingHandler( );
-  private static final ConcurrentMap<String, BindingHandler> bindingHandlers          = new MapMaker( ).makeComputingMap( BindingHandlerLookup.INSTANCE );
   private static final ChannelHandler                        bindingHandler           = new BindingHandler( BindingManager.getDefaultBinding( ) );
   private static final HashedWheelTimer                      timer                    = new HashedWheelTimer( );                                                                                             //TODO:GRZE: configurable
                                                                                                                                                                                                               
@@ -275,31 +275,29 @@ public class Handlers {
     return new AddressingHandler( addressingPrefix );
   }
   
-  enum BindingHandlerLookup implements Function<String, BindingHandler> {
-    INSTANCE;
-    
-    @Override
-    public BindingHandler apply( String bindingName ) {
-      String maybeBindingName = "";
-      if ( BindingManager.isRegisteredBinding( bindingName ) ) {
-        return new BindingHandler( BindingManager.getBinding( bindingName ) );
-      } else if ( BindingManager.isRegisteredBinding( maybeBindingName = BindingManager.sanitizeNamespace( bindingName ) ) ) {
-        return new BindingHandler( BindingManager.getBinding( maybeBindingName ) );
-      } else {
-        throw Exceptions.trace( "Failed to find registerd binding for name: " + bindingName
-                                + ".  Also tried looking for sanitized name: "
-                                + maybeBindingName );
+  private static final LoadingCache<String, BindingHandler> bindingHandlers = CacheBuilder.newBuilder().build(
+    new CacheLoader<String, BindingHandler>() {
+      @Override
+      public BindingHandler load( String bindingName ) {
+        String maybeBindingName = "";
+        if ( BindingManager.isRegisteredBinding( bindingName ) ) {
+          return new BindingHandler( BindingManager.getBinding( bindingName ) );
+        } else if ( BindingManager.isRegisteredBinding( maybeBindingName = BindingManager.sanitizeNamespace( bindingName ) ) ) {
+          return new BindingHandler( BindingManager.getBinding( maybeBindingName ) );
+        } else {
+          throw Exceptions.trace( "Failed to find registerd binding for name: " + bindingName
+                                  + ".  Also tried looking for sanitized name: "
+                                  + maybeBindingName );
       }
     }
-    
-  }
+  });
   
   public static ChannelHandler bindingHandler( ) {
     return bindingHandler;
   }
   
   public static ChannelHandler bindingHandler( final String bindingName ) {
-    return bindingHandlers.get( bindingName );
+    return bindingHandlers.getUnchecked( bindingName );
   }
   
   public static ChannelHandler httpRequestEncoder( ) {

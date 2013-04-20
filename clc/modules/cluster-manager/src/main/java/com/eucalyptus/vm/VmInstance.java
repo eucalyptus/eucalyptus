@@ -2300,4 +2300,5 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
   public VmMigrationTask getMigrationTask( ) {
     return this.runtimeState.getMigrationTask( );
   }
+
 }

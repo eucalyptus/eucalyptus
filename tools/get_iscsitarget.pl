@@ -122,6 +122,9 @@ if (is_null_or_empty($lun)) {
   $lun = -1;
 }
 
+#Rescan
+rescan_all_sessions();
+
 @devices = ();
 # iterate through each path, login/refresh for the new lun
 while (@paths > 0) {

@@ -79,8 +79,10 @@ import com.eucalyptus.util.Classes;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.google.common.base.Function;
 import com.google.common.base.Joiner;
+import com.google.common.cache.CacheBuilder;
+import com.google.common.cache.CacheLoader;
+import com.google.common.cache.LoadingCache;
 import com.google.common.collect.ComputationException;
-import com.google.common.collect.MapMaker;
 import com.google.common.collect.Maps;
 
 /**
@@ -130,23 +132,19 @@ public class StorageManagers extends ServiceJarDiscovery {
     return 0.0d;
   }
   
-  private static final Map<String, LogicalStorageManager> managerInstances = new MapMaker( ).makeComputingMap( LookupStorageManager.INSTANCE );
-  
-  enum LookupStorageManager implements Function<String, LogicalStorageManager> {
-    INSTANCE;
-    
-    @Override
-    public LogicalStorageManager apply( String arg0 ) {
-      LogicalStorageManager bsm = Classes.newInstance( lookupManager( arg0 ) );
-      try {
-        bsm.checkPreconditions( );
-        return bsm;
-      } catch ( EucalyptusCloudException ex ) {
-        throw new ComputationException( ex );
+  private static final LoadingCache<String, LogicalStorageManager> managerInstances = CacheBuilder.newBuilder().build(
+    new CacheLoader<String, LogicalStorageManager>() {
+      @Override
+      public LogicalStorageManager load( String arg0 ) {
+        LogicalStorageManager bsm = Classes.newInstance( lookupManager( arg0 ) );
+        try {
+          bsm.checkPreconditions( );
+          return bsm;
+        } catch ( EucalyptusCloudException ex ) {
+          throw new ComputationException( ex );
+        }
       }
-    }
-    
-  }
+    });
   
   private static AtomicReference<String> lastManager = new AtomicReference<String>( );
   
@@ -154,7 +152,7 @@ public class StorageManagers extends ServiceJarDiscovery {
     if ( lastManager.get( ) == null || UNSET.equals(lastManager.get())) {
       throw new NoSuchElementException( "SC blockstorageamanger not configured. Found empty or unset manager(" + lastManager + ").  Legal values are: " + Joiner.on( "," ).join( managers.keySet( ) ) );
     } else {
-      return managerInstances.get( lastManager.get( ) );
+      return managerInstances.getUnchecked( lastManager.get( ) );
     }
   }
   
@@ -175,16 +173,14 @@ public class StorageManagers extends ServiceJarDiscovery {
   
   public static synchronized void flushManagerInstances() throws EucalyptusCloudException {
   	LOG.debug("Flushing all block storage manager instances");
-  	managerInstances.clear();
+  	managerInstances.invalidateAll();
   	lastManager.set(UNSET);
   }
   
   public static synchronized void flushManagerInstance(String key) throws EucalyptusCloudException {
   	LOG.debug("Flusing block storage manager instance: " + key);
-		lastManager.set(UNSET);
-  	if(managerInstances.containsKey(key)) {  		
-  		managerInstances.remove(key);
-  	}
+	lastManager.set(UNSET);
+	managerInstances.invalidate(key);
   }
   
   public static Class<? extends LogicalStorageManager> lookupManager( String arg0 ) {

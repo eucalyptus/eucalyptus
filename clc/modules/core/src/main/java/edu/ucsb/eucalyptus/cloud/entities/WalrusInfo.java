@@ -72,7 +72,8 @@ import javax.persistence.PersistenceContext;
 import javax.persistence.Table;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
-import org.mortbay.log.Log;
+import org.eclipse.jetty.util.log.Log;
+import org.eclipse.jetty.util.log.Logger;
 
 import com.eucalyptus.configurable.ConfigurableClass;
 import com.eucalyptus.configurable.ConfigurableField;
@@ -111,6 +112,8 @@ public class WalrusInfo extends AbstractPersistent {
 	@ConfigurableField( description = "Total Walrus storage capacity for Objects", displayName = "Walrus object capacity (GB)" )
 	@Column( name = "storage_walrus_total_capacity" )
 	private Integer storageMaxTotalCapacity;
+
+	private static final Logger LOG = Log.getLog();
 
 	public WalrusInfo() {}
 
@@ -225,7 +228,7 @@ public class WalrusInfo extends AbstractPersistent {
       capacity = (capacity > 1 ? capacity - 1 : capacity);
       
     } catch(Exception e) {
-      Log.warn("Unable to detect usable space in the directory:" + WalrusProperties.bucketRootDirectory + " because of exception: " + e.getMessage() + ". Using Walrus default: " + WalrusProperties.DEFAULT_INITIAL_CAPACITY + "GB");
+      LOG.warn("Unable to detect usable space in the directory:" + WalrusProperties.bucketRootDirectory + " because of exception: " + e.getMessage() + ". Using Walrus default: " + WalrusProperties.DEFAULT_INITIAL_CAPACITY + "GB");
     }
     return capacity;
 	}

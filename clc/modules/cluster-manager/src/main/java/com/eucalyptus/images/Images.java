@@ -128,17 +128,16 @@ public class Images {
     final boolean executableSelf = executableSet.remove( SELF );
     final boolean executableAll = executableSet.remove( "all" );
     return new Predicate<ImageInfo>( ) {
-      
       @Override
       public boolean apply( ImageInfo image ) {
-        if ( executableSet.isEmpty( ) ) {
+        if ( executableSet.isEmpty( ) && !executableSelf && !executableAll ) {
           return true;
         } else {
           UserFullName userFullName = Contexts.lookup( ).getUserFullName( );
-          boolean filtered = ( executableAll && image.getImagePublic( ) );
-          filtered |= ( executableSelf && ( image.getOwner( ).isOwner( userFullName ) || image.hasPermission( userFullName.getAccountNumber( ) ) ) );
-          filtered |= ( image.getOwner( ).isOwner( userFullName ) && image.hasPermission( executableSet.toArray( new String[] {} ) ) );
-          return filtered;
+          return
+              ( executableAll && image.getImagePublic( ) ) ||
+              ( executableSelf && image.hasPermission( userFullName.getAccountNumber( ) ) ) ||
+              image.hasPermission( executableSet.toArray( new String[ executableSet.size() ] ) );
         }
       }
       

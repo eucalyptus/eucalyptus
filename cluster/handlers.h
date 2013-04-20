@@ -468,6 +468,9 @@ int image_cache(char *id, char *url);
 int image_cache_invalidate(void);
 int image_cache_proxykick(ccResource * res, int *numHosts);
 
+//! For filtering service infos in the meta passed to the NC
+void filter_services(ncMetadata *meta, char *filter_partition);
+
 /*----------------------------------------------------------------------------*\
  |                                                                            |
  |                           STATIC INLINE PROTOTYPES                         |
