@@ -92,6 +92,7 @@
 	<property name="test.dir" value="${basedir}/src/test/java" />
 	<property name="conf.dir" value="${basedir}/conf" />
 	<property name="rsrc.dir" value="${basedir}/src/main/resources" />
+	<property name="test.resources.dir" value="${basedir}/src/test/resources" />
 	<property name="target.dir" value="${project.basedir}/target" />
 	<property name="jar.file" value="${target.dir}/${ant.project.name}-${euca.version}.jar" />
 	<property name="lib.dir" value="${project.basedir}/lib" />
@@ -123,6 +124,16 @@
 			<include name="**/*" />
 		</fileset>
 	</path>
+	<path id="resources-classpath">
+		<dirset dir="${modules.dir}">
+			<include name="**/src/main/resources" />
+		</dirset>
+	</path>
+	<path id="test-resources-classpath">
+		<dirset dir="${modules.dir}">
+			<include name="**/src/test/resources" />
+		</dirset>
+	</path>
 	<!--================================== copy conf ==================================-->
 	<target name="copy-conf">
 		<copy todir="${DESTDIR}${euca.conf.dir}">
@@ -132,15 +143,19 @@
 		</copy>
 	</target>
 	<!--================================== make macro ==================================-->
-	<macrodef name="native-make">
+	<target name="native-make-if-enabled" unless="module.skipNativeMake">
+		<exec failifexecutionfails="true" failonerror="true" dir="${makeDir}" executable="/usr/bin/make">
+				<arg value="${makeTarget}" />
+		</exec>
+   </target>
+    <macrodef name="native-make">
 		<attribute name="target" />
 		<attribute name="dir" />
 		<sequential>
-			<property name="makeTarget" value="@{target}" />
-			<property name="makeDir" value="@{dir}" />
-			<exec failifexecutionfails="true" failonerror="true" dir="${makeDir}" executable="/usr/bin/make">
-				<arg value="${makeTarget}" />
-			</exec>
+			<antcall target="native-make-if-enabled">
+				<param name="makeTarget" value="@{target}" />
+				<param name="makeDir" value="@{dir}" />
+			</antcall>
 		</sequential>
 	</macrodef>
 	<!--================================== init target ==================================-->
@@ -176,7 +191,7 @@
 		<echo message="[COMPILE] ${builder.target} for ${ant.project.name}" />
 		<antcall target="clean" />
 		<antcall target="build-mkdirs" inheritall="true" inheritrefs="true" />
-		<javac srcdir="${src.dir}" classpathref="classpath" destdir="${build.dir}" deprecation="false" failonerror="true" debug="true" sourcepathref="srcpath" source="1.7" target="1.7" encoding="utf-8" listfiles="true" />
+		<javac srcdir="${src.dir}" classpathref="classpath" destdir="${build.dir}" deprecation="false" failonerror="true" debug="true" sourcepathref="srcpath" source="1.7" target="1.7" encoding="utf-8" listfiles="true"  includeantruntime="false"/>
 	</target>
 	<target name="should-build-groovy">
 		<mkdir dir="${build.dir}" />
@@ -209,6 +224,27 @@
 		<groovyc srcdir="${test.dir}" classpathref="classpath" sourcepathref="srcpath" destdir="${build.dir}" verbose="true" listfiles="true">
 			<javac target="1.7" debug="true" />
 		</groovyc>
+	</target>
+
+	<!--================================== test target ==================================-->
+	<target name="junit" depends="builder-test">
+		<property name="junit.halt" value="on"/>
+		<property name="junit.reports.dir" value="${build.dir}/reports/junit"/>
+		<mkdir dir="${junit.reports.dir}"/>
+		<junit fork="on" printsummary="off" haltonerror="${junit.halt}" haltonfailure="${junit.halt}" includeantruntime="yes" showoutput="yes">
+			<formatter type="plain" usefile="false"/>
+			<formatter type="xml" />
+			<classpath>
+				<path refid="test-resources-classpath"/>
+				<path refid="resources-classpath"/>
+				<path refid="classpath"/>
+			</classpath>
+		   <batchtest todir="${junit.reports.dir}">
+				<fileset dir="${build.dir}">
+						<include name="**/*Test.class"/>
+				</fileset>
+			</batchtest>
+		</junit>
 	</target>
 
 	<!--================================== jar target ==================================-->
