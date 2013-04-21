@@ -2,9 +2,10 @@ define([
    './eucadialogview',
    'text!./create_volume_dialog.html!strip',
    'models/volume',
+   'models/tag',
    'app',
    'backbone',
-], function(EucaDialogView, template, Volume, App, Backbone) {
+], function(EucaDialogView, template, Volume, Tag, App, Backbone) {
     return EucaDialogView.extend({
 
 
@@ -145,29 +146,37 @@ define([
                     var snapshotId = self.scope.volume.get('snapshot_id');          
                     var size = self.scope.volume.get('size');                      
                     var zone = self.scope.volume.get('availablity_zone');         
+                    var name = self.scope.volume.get('name');
 		    console.log("Selected Snapshot ID: " + snapshotId);
 		    console.log("Size: " + size);
 		    console.log("Zone: " + zone);
+                    console.log("Name: " + name);
 
+                    // CREATE A NAME TAG
+                    if( name != null ){
+                      var nametag = new Tag();
+                      nametag.set({res_id: self.scope.volume.get('id'), name: 'Name', value: name, _clean: true, _new: true, _deleted: false});
+                      self.scope.volume.trigger('add_tag', nametag);
+                    }
 
 		    // PERFORM CREATE CALL OM THE MODEL
-            self.scope.volume.trigger('confirm');
-            self.scope.volume.save({}, {
-                success: function(model, response, options){   // AJAX CALL SUCCESS OPTION
-                    if(model != null){
-                        var volId = model.get('id');
-                        notifySuccess(null, $.i18n.prop('volume_create_success', volId));   // XSS RISK --- Kyo 040813
-                    }else{
-                        notifyError($.i18n.prop('volume_create_error'), undefined_error);
-                    }
-                },
-                error: function(model, jqXHR, options){  // AJAX CALL ERROR OPTION
-                    console.log("Callback " + getErrorMessage(jqXHR));
-                    notifyError($.i18n.prop('volume_create_error'), getErrorMessage(jqXHR));
-                }
-            });
+                    self.scope.volume.trigger('confirm');
+                    self.scope.volume.save({}, {
+                      success: function(model, response, options){   // AJAX CALL SUCCESS OPTION
+                        if(model != null){
+                          var volId = model.get('id');
+                          notifySuccess(null, $.i18n.prop('volume_create_success', volId));   // XSS RISK --- Kyo 040813
+                        }else{
+                          notifyError($.i18n.prop('volume_create_error'), undefined_error);
+                        }
+                      },
+                      error: function(model, jqXHR, options){  // AJAX CALL ERROR OPTION
+                        console.log("Error: " + getErrorMessage(jqXHR));
+                        notifyError($.i18n.prop('volume_create_error'), getErrorMessage(jqXHR));
+                      }
+                  });
 
-	       // DISPLAY THE VOLUME'S STATUS -- FOR DEBUG
+	           // DISPLAY THE VOLUME'S STATUS -- FOR DEBUG
 		   App.data.volume.each(function(item){
 		     console.log("Volume After create: " + item.toJSON().id +":"+ item.toJSON().size);
 	           });

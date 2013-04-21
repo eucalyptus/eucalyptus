@@ -2,9 +2,10 @@ define([
    './eucadialogview',
    'text!./create_snapshot_dialog.html!strip',
    'models/snapshot',
+   'models/tag',
    'app',
    'backbone',
-], function(EucaDialogView, template, Snapshot, App, Backbone) {
+], function(EucaDialogView, template, Snapshot, Tag, App, Backbone) {
     return EucaDialogView.extend({
 
         disableVolumeInputBox: function(){
@@ -82,35 +83,45 @@ define([
 	            // GET THE INPUT FROM HTML VIEW
 	            var volumeId = self.scope.snapshot.get('volume_id');
 	            var description = self.scope.snapshot.get('description');
+                    var name = self.scope.snapshot.get('name');
 		    console.log("Selected Volume ID: " + volumeId);
 		    console.log("Volume Description: " + description);
+		    console.log("Name: " + name);
 
                     // EXTRACT THE RESOURCE ID IF THE NAME TAG WAS FOLLOWED
                     if( volumeId.match(/^\w+-\w+\s+/) ){
                       volumeId = volumeId.split(" ")[0];
 		      console.log("Volume ID: " + volumeId);
+                      self.scope.snapshot.set({volume_id: volumeId});
+                    }
+
+                    // ADD NAME TAG
+                    if( name != null ){
+                      var nametag = new Tag();
+                      nametag.set({res_id: self.scope.snapshot.get('id'), name: 'Name', value: name, _clean: true, _new: true, _deleted: false});
+                      self.scope.snapshot.trigger('add_tag', nametag);
                     }
 
 	            // CONSTRUCT AJAX CALL RESPONSE OPTIONS
 	            var createAjaxCallResponse = {
-	              success: function(data, response, jqXHR){   // AJAX CALL SUCCESS OPTION
-		        console.log("Callback " + response + " for " + volumeId);
-			if(data.results){
-			  snapId = data.results.id;
+	              success: function(model, response, options){   // AJAX CALL SUCCESS OPTION
+		        console.log("Returned Model ID: " + model.get('id') + " for " + volumeId);
+			if(model != null){
+			  snapId = model.get('id');
 			  notifySuccess(null, $.i18n.prop('snapshot_create_success', snapId, volumeId));    // XSS risk  -- Kyo 040713
 			}else{
 			  notifyError($.i18n.prop('snapshot_create_error', volumeId, undefined_error));     // XSS risk
 			}
 	              },
-		      error: function(jqXHR, textStatus, errorThrown){  // AJAX CALL ERROR OPTION
-		        console.log("Callback " + textStatus  + " for " + volumeId + " error: " + getErrorMessage(jqXHR));
+		      error: function(model, jqXHR, options){  // AJAX CALL ERROR OPTION
+		        console.log("Errored for " + volumeId + " error: " + getErrorMessage(jqXHR));
 			notifyError($.i18n.prop('snapshot_create_error', volumeId), getErrorMessage(jqXHR));                     // XSS risk
 		      }
 	            };
 
 	            // PERFORM CREATE CALL OM THE MODEL
-	            var new_snapshot = new Snapshot({volume_id: volumeId, description: description}); 
-	            new_snapshot.sync('create', new_snapshot, createAjaxCallResponse);
+                    self.scope.snapshot.trigger('confirm');
+                    self.scope.snapshot.save({}, createAjaxCallResponse); 
 
 	            // DISPLAY THE MODEL LIST FOR VOLUME AFTER THE DESTROY OPERATION
 	            App.data.snapshot.each(function(item){

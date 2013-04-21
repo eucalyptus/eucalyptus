@@ -52,6 +52,11 @@ define([
                 model.get('tags').set(tags.models);
             });
 
+            // ADDED TO ALLOW DIALOGS TO ADD NAME TAG  --- Kyo 042113
+            model.on('add_tag', function(this_tag) {
+              self.scope.tags.add(this_tag);
+            });
+
             var backup = new Backbone.Collection();
 
             this.scope = {
