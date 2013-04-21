@@ -22,7 +22,7 @@ package com.eucalyptus.tags
 /**
  * 
  */
-class TagSupportTest {
+class TagTestSupport {
   
   void assertValidTagSupport( final TagSupport tagSupport,
                               final Class<? extends Tag> tagClass ) {

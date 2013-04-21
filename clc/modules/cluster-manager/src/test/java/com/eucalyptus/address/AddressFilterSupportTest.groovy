@@ -25,7 +25,7 @@ import org.junit.Test
 /**
  * Unit tests for address (elastic IP) filter support
  */
-class AddressFilterSupportTest extends FilterSupportTest.InstanceTest<Address> {
+class AddressFilterSupportTest extends FilterSupportTest.InstanceTestSupport<Address> {
 
   @Test
   void testPredicateFilters() {

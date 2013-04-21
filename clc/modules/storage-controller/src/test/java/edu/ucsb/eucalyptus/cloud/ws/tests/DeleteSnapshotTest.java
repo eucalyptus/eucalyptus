@@ -62,46 +62,48 @@
 
 package edu.ucsb.eucalyptus.cloud.ws.tests;
 
-import com.eucalyptus.auth.util.Hashes;
+import org.junit.BeforeClass;
+import org.junit.Ignore;
+import org.junit.Test;
+import com.eucalyptus.util.EucalyptusCloudException;
 
 import edu.ucsb.eucalyptus.cloud.ws.BlockStorage;
-import edu.ucsb.eucalyptus.msgs.CreateStorageVolumeResponseType;
-import edu.ucsb.eucalyptus.msgs.CreateStorageVolumeType;
-import junit.framework.TestCase;
+import edu.ucsb.eucalyptus.msgs.DeleteStorageSnapshotResponseType;
+import edu.ucsb.eucalyptus.msgs.DeleteStorageSnapshotType;
 
-public class CreateVolumeFromSnapshotTest extends TestCase {
+@Ignore("Manual development test")
+public class DeleteSnapshotTest {
 
     static BlockStorage blockStorage;
 
-    public void testCreateVolume() throws Exception {
+    @Test
+    public void testDeleteSnapshot() throws Exception {
 
-        String userId = "admin";
+        String snapshotBucket = "snapset";
+        String snapshotId = "snap-C7fyA7Tuj9ecmg..";
 
-        String snapshotId = "snap-ApSNO9uFwfdlYw..";
-        String volumeId = "vol-" + Hashes.getRandom(10);
-        CreateStorageVolumeType createVolumeFromSnapshotRequest = new CreateStorageVolumeType();
-        createVolumeFromSnapshotRequest.setVolumeId(volumeId);
-        createVolumeFromSnapshotRequest.setUserId(userId);
-        createVolumeFromSnapshotRequest.setSnapshotId(snapshotId);
-        CreateStorageVolumeResponseType createVolumeFromSnapshotResponse = blockStorage.CreateStorageVolume(createVolumeFromSnapshotRequest);
-        System.out.println(createVolumeFromSnapshotResponse);
+        DeleteStorageSnapshotType deleteSnapshot = new DeleteStorageSnapshotType();
+        deleteSnapshot.setUserId("admin");
+        deleteSnapshot.setSnapshotId(snapshotId);
+        DeleteStorageSnapshotResponseType deleteSnapshotResponse = blockStorage.DeleteStorageSnapshot(deleteSnapshot);
+        System.out.println(deleteSnapshotResponse);
         while(true);
-        /* DeleteStorageSnapshotType deleteSnapshotRequest = new DeleteStorageSnapshotType();
-        deleteSnapshotRequest.setUserId(userId);
-        deleteSnapshotRequest.setSnapshotId(snapshotId);
-        DeleteStorageSnapshotResponseType deleteSnapshotResponseType = blockStorage.DeleteStorageSnapshot(deleteSnapshotRequest);
-        System.out.println(deleteSnapshotResponseType);
-
-        DeleteStorageVolumeType deleteVolumeRequest = new DeleteStorageVolumeType();
-        deleteVolumeRequest.setUserId(userId);
-        deleteVolumeRequest.setVolumeId(volumeId);
-        DeleteStorageVolumeResponseType deleteVolumeResponse = blockStorage.DeleteStorageVolume(deleteVolumeRequest);
-        System.out.println(deleteVolumeResponse);     */
     }
 
-    public void setUp() {
+  @Test
+  public void testWalrusDeleteSnapshot() throws Exception {
+
+        String snapshotId = "snap-zVl2kZJmjhxnEg..";
+        blockStorage.DeleteWalrusSnapshot(snapshotId);
+    }
+
+    @BeforeClass
+    public static void setUp() {
         blockStorage = new BlockStorage();
-    }
-
-
+        try {
+			BlockStorage.configure();
+		} catch (EucalyptusCloudException e) {
+			e.printStackTrace();
+		}
+    }    
 }

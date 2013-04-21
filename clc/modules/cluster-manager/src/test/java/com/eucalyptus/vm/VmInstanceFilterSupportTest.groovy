@@ -30,7 +30,7 @@ import com.eucalyptus.images.RamdiskImageInfo
  * Unit tests for instance filter support
  */
 @SuppressWarnings("GroovyAccessibility")
-class VmInstanceFilterSupportTest extends FilterSupportTest.InstanceTest<VmInstance> {
+class VmInstanceFilterSupportTest extends FilterSupportTest.InstanceTestSupport<VmInstance> {
 
   @Test
   void testFilteringSupport() {
