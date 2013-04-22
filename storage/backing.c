@@ -99,8 +99,8 @@
 #include "walrus.h"
 #include "storage-windows.h"
 #include "backing.h"
-#include "iscsi.h"
 #include "vbr.h"
+#include <ebs_utils.h>
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |
@@ -880,16 +880,23 @@ int destroy_instance_backing(ncInstance * instance, boolean do_destroy_files)
     char work_regex[1024] = { 0 };     // {userId}/{instanceId}/.*
     struct dirent *entry = NULL;
     struct dirent **files = NULL;
+    char scURL[512];
     ncVolume *volume = NULL;
     virtualMachine *vm = &(instance->params);
     virtualBootRecord *vbr = NULL;
 
+    if(get_localhost_sc_url(scURL) || !strlen(scURL)) {
+    	LOGERROR("Could not get SC URL from localhost config in vbr struct.\n");
+    	ret = EUCA_ERROR;
+    	return ret;
+    }
+
     // find and detach iSCSI targets, if any
     for (i = 0; ((i < EUCA_MAX_VBRS) && (i < vm->virtualBootRecordLen)); i++) {
         vbr = &(vm->virtualBootRecord[i]);
-        if (vbr->locationType == NC_LOCATION_IQN) {
-            if (disconnect_iscsi_target(vbr->resourceLocation)) {
-                LOGERROR("[%s] failed to disconnect iSCSI target attached to %s\n", instance->instanceId, vbr->backingPath);
+        if (vbr->locationType == NC_LOCATION_SC) {
+        	if(disconnect_ebs_volume(scURL, localhost_config.use_ws_sec, localhost_config.ws_sec_policy_file, vbr->resourceLocation, vbr->preparedResourceLocation, localhost_config.ip, localhost_config.iqn) != 0) {
+        		LOGERROR("[%s] failed to disconnect iSCSI target attached to %s\n", instance->instanceId, vbr->backingPath);
             }
         }
     }
@@ -899,7 +906,7 @@ int destroy_instance_backing(ncInstance * instance, boolean do_destroy_files)
         if (!is_volume_used(volume))
             continue;
 
-        if (disconnect_iscsi_target(volume->remoteDev) != 0) {
+        if (disconnect_ebs_volume(scURL, localhost_config.use_ws_sec, localhost_config.ws_sec_policy_file, volume->attachmentToken, volume->connectionString, localhost_config.ip, localhost_config.iqn) != 0) {
             LOGERROR("[%s][%s] failed to disconnet iscsi target\n", instance->instanceId, volume->volumeId);
         }
     }

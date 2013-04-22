@@ -220,13 +220,13 @@ char *connect_iscsi_target(const char *dev_string)
 }
 
 //!
-//!
+//! Disconnects the iscsi device by closing the session and deleting the lun locally.
 //!
 //! @param[in] dev_string
 //!
 //! @return -1 for any failures, 0 if a timeout occured or a positive value is success.
 //!
-int disconnect_iscsi_target(const char *dev_string)
+int disconnect_iscsi_target(const char *dev_string, int do_rescan)
 {
     char command[MAX_PATH] = { 0 };
     char stdout_str[MAX_OUTPUT] = { 0 };
@@ -235,7 +235,12 @@ int disconnect_iscsi_target(const char *dev_string)
 
     assert(strlen(home));
 
-    snprintf(command, MAX_PATH, "%s %s,%s", disconnect_storage_cmd_path, home, dev_string);
+    if(do_rescan) {
+    	snprintf(command, MAX_PATH, "%s %s,%s", disconnect_storage_cmd_path, home, dev_string);
+    } else {
+    	snprintf(command, MAX_PATH, "%s %s,%s %s", disconnect_storage_cmd_path, home, dev_string, "norescan");
+    }
+
     LOGTRACE("invoking `%s`\n", command);
 
     sem_p(iscsi_sem);

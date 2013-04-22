@@ -37,7 +37,7 @@ define([
       // ADD THEM INTO THE PASSED ARRAY
      //    return position === 2;
 
-       return imageModel.isValid() & typeModel.isValid() & (position == 3); // & securityModel.isValid();
+       return imageModel.isValid() & typeModel.isValid() & (position == 3 || position == 4); // & securityModel.isValid();
     }
 
     function finish() {
@@ -50,13 +50,13 @@ define([
       tagsModel.finish(instanceModel);
 
       instanceModel.on('validated:invalid', function(e, errors) {
-        console.log("INSTANCEMODEl INVALID:", errors);
       });
 
       instanceModel.validate();
       if(instanceModel.isValid()) {
-        //alert("Wizard complete. Check the console log for debug info.");
         instanceModel.sync('create', instanceModel);
+        var $container = $('html body').find(DOM_BINDING['main']);
+        $container.maincontainer("changeSelected", null, {selected:'instance'});
       } else {
         alert('Final checklist was invalid.');
 
@@ -73,7 +73,6 @@ define([
             .setFinishText(app.msg('launch_instance_btn_launch')).setFinishChecker(canFinish)
             .finisher(finish)
             .summary(new summary( {imageModel: imageModel, typeModel: typeModel, securityModel: securityModel, keymodel: keyModel, advancedModel: advancedModel} ));
-  //  var ViewType = wizard.makeView(options, wizardTemplate);
     var ViewType = viewBuilder.build();
     return ViewType;
   }

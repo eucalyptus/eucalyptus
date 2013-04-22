@@ -14,8 +14,10 @@ define([
 
       var self = this;
       var scope = {
-        kernels: new Backbone.Collection(), 
-        ramdisks: new Backbone.Collection(),
+        advancedModel: self.model,
+        kernels: new Backbone.Collection(dataholder.images.where({type: 'kernel'})), 
+        ramdisks: new Backbone.Collection(dataholder.images.where({type: 'ramdisk'})),
+        user_data: self.model.get('user_data'),
         enableMonitoring: true,
         privateNetwork: false,
         snapshots: dataholder.snapshot,
@@ -28,6 +30,21 @@ define([
         setKernel: function(e, obj) {
           self.model.set('kernel_id', e.target.value);
         },
+
+        isKernelSelected: function(obj) { 
+          if (self.model.get('kernel_id') == obj.kernel.get('id')) {
+            return true;
+          } 
+          return false;
+        },
+
+        isRamdiskSelected: function(obj) { 
+          if (self.model.get('ramdisk_id') == obj.ramdisk.get('id')) {
+            return true;
+          } 
+          return false;
+        },
+
 
         setPrivateNetwork: function(e, item) {
           self.model.set('private_network', e.target.value);
@@ -117,17 +134,26 @@ define([
           }
         },
 
+        userdata: function(e,obj) {
+          self.model.set('user_data', $.base64.encode(e.target.value));
+        },
+
         launchConfigErrors: self.launchConfigErrors
 
       };
 
       scope.blockDeviceMappings.on('change add reset remove', function() {
+          self.model.set('bdmaps_configured', true);
           self.render();
       });
 
       dataholder.images.on('reset', function() {
         scope.kernels.add(dataholder.images.where({type: 'kernel'}));
         scope.ramdisks.add(dataholder.images.where({type: 'ramdisk'}));
+      });
+
+      this.model.on('change', function() {
+        self.model.set('advanced_show', true);
       });
 
       scope.kernels.on('reset change', self.render);

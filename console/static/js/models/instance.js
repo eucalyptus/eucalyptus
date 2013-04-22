@@ -96,12 +96,13 @@ define([
             if (model.get('RamdiskId') != undefined)
               data += "&RamdiskId="+model.get('ramdisk_id');
             if (model.get('placement') != undefined) {
-              var placements = model.get('placement');
-              $.each(placements, function(idx, placement) {
-                data += "&Placement."+(idx)+".AvailabilityZone="+placement.availability_zone;
-                data += "&Placement."+(idx)+".GroupName="+placement.group_name;
-                data += "&Placement."+(idx)+".Tenancy="+placement.tenancy;
-              });
+              var placement = model.get('placement');
+              if(placement.availability_zone != undefined) 
+                data += "&Placement.AvailabilityZone="+placement.availability_zone;
+              if(placement.group_name != undefined)
+                data += "&Placement.GroupName="+placement.group_name;
+              if(placement.tenancy != undefined)
+                data += "&Placement.Tenancy="+placement.tenancy;
             }
             if (model.get('block_device_mappings') != undefined) {
               var mappings = model.get('block_device_mappings');

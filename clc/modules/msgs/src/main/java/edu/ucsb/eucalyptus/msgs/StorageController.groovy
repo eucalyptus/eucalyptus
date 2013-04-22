@@ -61,17 +61,16 @@
  ************************************************************************/
 
 package edu.ucsb.eucalyptus.msgs;
-
-import com.eucalyptus.component.ComponentId.ComponentMessage
-import com.eucalyptus.component.id.Storage
-
-public class StorageResponseType extends BaseMessage {
-	def StorageResponseType() {}
-}
+import com.eucalyptus.component.id.Storage;
+import com.eucalyptus.component.ComponentId.ComponentMessage;
 
 @ComponentMessage(Storage.class)
 public class StorageRequestType extends BaseMessage {
 	def StorageRequestType() {}
+}
+
+public class StorageResponseType extends BaseMessage {
+	def StorageResponseType() {}
 }
 
 public class StorageErrorMessageType extends BaseMessage {
@@ -90,6 +89,34 @@ public class StorageErrorMessageType extends BaseMessage {
 	}
 }
 
+public class ExportVolumeType extends StorageRequestType {
+	String volumeId;
+	String token;
+	String ip;
+	String iqn;
+	
+	def ExportVolumeType() {}
+}
+
+public class ExportVolumeResponseType extends StorageResponseType {
+	String volumeId;
+	String connectionString;
+	def ExportVolumeResponseType() {}
+	
+}
+
+public class UnexportVolumeType extends StorageRequestType {
+	String volumeId;
+	String token;
+	String ip;
+	String iqn;
+	def UnexportVolumeType() {}
+}
+
+public class UnexportVolumeResponseType extends StorageResponseType {
+}
+
+
 public class GetStorageVolumeType extends StorageRequestType {
 	String volumeId;
 }
@@ -102,6 +129,21 @@ public class GetStorageVolumeResponseType extends StorageResponseType {
 	String snapshotId;
 	//These fields are implementation specific. Major and minor device numbers for AoE
 	String actualDeviceName;
+}
+
+public class GetVolumeTokenType extends StorageRequestType {
+	String volumeId;
+
+	def GetVolumeTokenType() {}
+	
+	def GetVolumeTokenType(String vol) {
+		this.volumeId = vol;
+	}
+}
+
+public class GetVolumeTokenResponseType extends StorageResponseType {
+	String volumeId;
+	String token;
 }
 
 public class UpdateStorageConfigurationType extends StorageRequestType {
@@ -361,11 +403,9 @@ public class StorageUsageStatsRecord extends StatEventRecord {
 public class CloneVolumeType extends StorageRequestType {
 	String volumeId;
 	
-	def CloneVolumeType() {		
-	}
+	def CloneVolumeType() {}
 }
 
 public class CloneVolumeResponseType extends StorageResponseType {
-	def CloneVolumeResponseType() {		
-	}
+	def CloneVolumeResponseType() {}
 }

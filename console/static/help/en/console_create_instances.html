@@ -9,15 +9,15 @@
 <meta name="abstract" content="This screen allows you create a new instance."/>
 <meta name="description" content="This screen allows you create a new instance."/>
 <meta name="prodname" content="Eucalyptus"/>
-<meta name="version" content="3.2"/>
-<meta name="copyright" content="Eucalyptus Systems 2012" type="primary"/>
-<meta name="DC.Rights.Owner" content="Eucalyptus Systems 2012" type="primary"/>
+<meta name="version" content="3.3"/>
+<meta name="copyright" content="Eucalyptus Systems 2013" type="primary"/>
+<meta name="DC.Rights.Owner" content="Eucalyptus Systems 2013" type="primary"/>
 <meta name="DC.Format" content="XHTML"/>
 <meta name="DC.Identifier" content="launch_instances_ui_context"/>
 <link rel="stylesheet" type="text/css" href="/css/eucalyptus.css"/>
 <title>Create Instances</title>
 </head>
-<body id="launch_instances_ui_context" class="help-page-body">
+<body id="launch_instances_ui_context">
 
 
     <h1 class="title topictitle1">Create Instances</h1>
@@ -88,6 +88,43 @@
 
     </div>
 
+    <div class="topic task nested1" id="launch_instances_ui_tags_steps">
+        <h2 class="title topictitle2">Add Tags</h2>
+
+        
+        <div class="body taskbody"><p class="shortdesc"> To help you manage your cloud's instances, images, and other Eucalyptus
+            resources, you can optionally assign your own metadata to each resource in the form of tags. You
+            can use tags to create user-friendly names, make resource searching easier, and improve
+            coordination between multiple users. This panel allows you to specify tags for your new
+            instance(s).
+        </p>
+
+            <ol class="ol steps"><li class="li step">
+                    <div class="note note"><span class="notetitle">Note:</span> 
+                        If you don't want to add tags to your new instances, you can skip this section.
+                    </div>
+
+                    <span class="ph cmd">Type the key name for your tag into the <span class="ph uicontrol">Key</span> text
+                        box.</span>
+                </li>
+<li class="li step">
+                    <span class="ph cmd">Type the value for your tag into the <span class="ph uicontrol">Value</span> text
+                        box.</span>
+                </li>
+<li class="li step">
+                    <span class="ph cmd">If you wish to add additional tags, click the + button to the right of the
+                        Value text box.</span>
+                </li>
+<li class="li step">
+                    <span class="ph cmd"> When you are finished adding tags, click the <span class="ph uicontrol">Next: Select security</span> button to proceed
+                        to the <span class="ph uicontrol">Security</span> panel. </span>
+                </li>
+</ol>
+
+        </div>
+
+    </div>
+
     <div class="topic task nested1" id="launch_instances_ui_security_steps">
         <h2 class="title topictitle2">Specify Security</h2>
 
@@ -116,10 +153,9 @@
                                 <span class="ph uicontrol">Create new security group</span> link to display the
                                 <span class="ph uicontrol">Create new security group</span> dialog box. </div>
 
-                        <div class="note note"><span class="notetitle">Note:</span> 
-                            If you select the default security group, make sure that you've added rules 
-                            to the default security group so that you can access your instances.
-                        </div>
+                        <div class="note note"><span class="notetitle">Note:</span>  If you select the default security group, make sure that you've added
+                            rules to the default security group so that you can access your
+                            instances. </div>
 
                     
                 </li>

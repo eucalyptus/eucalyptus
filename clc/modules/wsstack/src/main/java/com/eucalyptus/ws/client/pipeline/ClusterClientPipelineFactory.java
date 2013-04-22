@@ -84,6 +84,7 @@ public final class ClusterClientPipelineFactory implements ChannelPipelineFactor
     @Override
     public ChannelHandler get( ) {
       return new ClusterWsSecHandler( );
+
     }
   };
   

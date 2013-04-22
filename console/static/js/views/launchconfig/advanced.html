@@ -6,7 +6,7 @@
       <div id="launch-wizard-advanced-userdata"> 
         <div class="form-row clearfix upper-sibling">
            <label for="launch-wizard-advanced-input-userdata" data-msg="launch_instance_advanced_userdata">User data</label>
-          <textarea data-text="model.user_data" class="description" title="Enter custom user data to be passed to the instances or click the choose file button" id="launch-wizard-advanced-input-userdata"></textarea>
+          <textarea data-on-change=":userdata" data-text="user_data" class="description" data-tooltip="launch_wizard_advanced_input_userdata_tip" id="launch-wizard-advanced-input-userdata"></textarea>
       </div>
       <div class="form-row clearfix lower-sibling">
         <label for="launch-wizard-advanced-input-userfile" data-msg="launch_instance_advanced_attachfile">Or:</label>
@@ -17,16 +17,16 @@
     <div id="launch-wizard-advanced-kernelramdisk"> 
       <div id="launch-wizard-advanced-kernel" class="form-row clearfix">
         <label for="launch-wizard-advanced-kernel-selector" data-msg="launch_instance_advanced_kernel">Kernel ID</label>
-        <select data-on-change=":setKernel" id="launch-wizard-advanced-kernel-selector" title="Select a specific kernel ID">
+        <select data-on-change=":setKernel" id="launch-wizard-advanced-kernel-selector" data-tooltip="launch_instance_kernel_select_tip">
           <option value="default" data-msg="launch_instance_advanced_usedefault">Use default from image</option>
-          <option data-each-kernel="kernels" data-value="kernel.id" data-text="kernel.id"></option>
+          <option data-each-kernel="kernels" data-value="kernel.id" data-text="kernel.id" data-selected=":isKernelSelected"></option>
         </select>
       </div>
       <div id="launch-wizard-advanced-ramdisk" class="form-row clearfix">
         <label for="launch-wizard-advanced-ramdisk-selector" data-msg="launch_instance_advanced_ramdisk">RAM disk ID</label>
-        <select data-on-change=":setRamDisk" id="launch-wizard-advanced-ramdisk-selector" title="Select a specific RAM disk ID">
+        <select data-on-change=":setRamDisk" id="launch-wizard-advanced-ramdisk-selector" data-tooltip="launch_instance_ramdisk_select_tip">
           <option value="default" data-msg="launch_instance_advanced_usedefault">Use default from image</option>
-          <option data-each-ramdisk="ramdisks" data-value="ramdisk.id" data-text="ramdisk.id"></option></select>
+          <option data-each-ramdisk="ramdisks" data-value="ramdisk.id" data-text="ramdisk.id" data-selected=":isRamdiskSelected"></option></select>
       </div>
    </div>
 
@@ -78,21 +78,21 @@
 
         <tr>
           <td>
-            <select data-enabled="enableStorageVolume" class="launch-wizard-advanced-storage-volume-selector" title="Select the source of the additional storage">
+            <select data-enabled="enableStorageVolume" class="launch-wizard-advanced-storage-volume-selector" data-tooltip="launch_instance_volume_select_tip">
               <option value="EBS" data-msg="launch_instance_ebs">EBS</option>
               <option value="root" data-msg="launch_instance_root">Root</option>
             </select>
           </td>
           <td>
-            /dev/<input data-enabled="enableMapping" data-value=":mapName" class="launch-wizard-advanced-storage-mapping-input" title="Add a mapping for the additional storage" type="text">
+            /dev/<input data-enabled="enableMapping" data-value=":mapName" class="launch-wizard-advanced-storage-mapping-input" data-tooltip="launch_wizard_advanced_storage_mapping_input_tip" type="text">
           </td>
           <td>
-            <select data-enabled="enableSnapshot" class="launch-wizard-advanced-storage-snapshot-input" title="Select a snapshot to use for the storage">
+            <select data-enabled="enableSnapshot" class="launch-wizard-advanced-storage-snapshot-input" data-tooltip="launch_instance_snapshot_select_tip">
               <option data-each-snapshot="snapshots" data-value="snapshot.id" data-text="snapshot.id"></option>
             </select>
           </td>
           <td>
-            <input class="launch-wizard-advanced-storage-size-input" title="Specify the size of the storage in whole gigabytes" type="text">
+            <input class="launch-wizard-advanced-storage-size-input" data-tooltip="launch_wizard_advanced_storage_size_input_tip" type="text">
          </td>
          <td class="centered-cell">
           <input class="launch-wizard-advanced-storage-delOnTerm" type="checkbox" checked>

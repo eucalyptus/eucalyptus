@@ -70,8 +70,6 @@ import java.util.HashMap;
 import java.util.Map;
 
 import javax.xml.parsers.DocumentBuilder;
-import javax.xml.parsers.DocumentBuilderFactory;
-import javax.xml.parsers.ParserConfigurationException;
 
 import org.apache.log4j.Appender;
 import org.apache.log4j.AppenderSkeleton;
@@ -88,6 +86,7 @@ import org.xml.sax.InputSource;
 import org.xml.sax.SAXException;
 
 import com.eucalyptus.records.Logs;
+import com.eucalyptus.util.XMLParser;
 
 
 
@@ -122,8 +121,7 @@ public class LoggingResetter {
 		SmallLoggingConfiguration smallLoggingConfiguration = null;
 		InputStream in = null;
 		try {
-			DocumentBuilderFactory dbFactory = DocumentBuilderFactory.newInstance();
-			DocumentBuilder dBuilder = dbFactory.newDocumentBuilder();
+			DocumentBuilder dBuilder = XMLParser.getDocBuilderWithDTD();
 			dBuilder.setEntityResolver(new Log4jEntityResolver());
 			URL url = Thread.currentThread().getContextClassLoader().getResource("log4j.xml");
 			if (url != null) {
@@ -141,9 +139,6 @@ public class LoggingResetter {
 			}
 			LOG.info("Finished resetting log levels");
 		} catch (IOException ex) { // nothing we can really do here...
-			LOG.error(ex);
-			LOG.warn("Unable to reset log levels");
-		} catch (ParserConfigurationException ex) { // nothing we can really do here...
 			LOG.error(ex);
 			LOG.warn("Unable to reset log levels");
 		} catch (SAXException ex) { // nothing we can really do here...

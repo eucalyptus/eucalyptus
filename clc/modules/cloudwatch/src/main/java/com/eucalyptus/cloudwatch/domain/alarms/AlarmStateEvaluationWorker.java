@@ -49,7 +49,7 @@ public class AlarmStateEvaluationWorker implements Runnable {
   }
   @Override
   public void run() {
-    LOG.info("Kicking off alarm state evaluation for " + alarmName);
+    LOG.debug("Kicking off alarm state evaluation for " + alarmName);
     EntityTransaction db = Entities.get(AlarmEntity.class);
     try {
       Criteria criteria = Entities.createCriteria(AlarmEntity.class)

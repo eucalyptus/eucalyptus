@@ -274,7 +274,7 @@ public class DatabaseRoleProxy implements Role {
       final List<AuthorizationEntity> authorizations = ( List<AuthorizationEntity> ) db
           .createCriteria( AuthorizationEntity.class ).add(
               Restrictions.and(
-                  Restrictions.eq( "type", resourceType ),
+                  Restrictions.or( Restrictions.eq( "type", resourceType ), Restrictions.eq( "type", "*" )),
                   Restrictions.in( "effect", EnumSet.of(  Authorization.EffectType.Allow, Authorization.EffectType.Deny ) ) ) )
           .createCriteria( "statement" )
           .createCriteria( "policy" )

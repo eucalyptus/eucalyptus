@@ -4,14 +4,18 @@
       <div id="snapshot-create-dialog" class="euca-dialog">
         <div data-ui-tabs="">
           <ul>
-            <li><a href="#tabs-1">Snapshot</a></li>
-            <li><a href="#tabs-2">Tag</a></li>
+            <li><a href="#tabs-1">General</a></li>
+            <li><a href="#tabs-2">Tags</a></li>
           </ul>
           <div id="tabs-1" class="tab">
 
             <div class="dialog-inner-content">  
               <div id="snapshot-create-dialog-some-volumes">
                 <p data-msg="snapshot_create_dialog_text"></p>
+                <div class="form-row" id="snapshot-create-dialog-name">
+                  <label for="snapshot-create-name" data-msg="snapshot_create_dialog_name_label"></label>
+                  <input type="text" id="snapshot-create-name" data-tooltip="snapshot_create_dialog_name_tip" data-value="snapshot.name"/>
+                </div>
                 <div class="form-row" id="snapshot-create-dialog-vol-id">
                   <label for="snapshot-create-volume-id" class="required-label" data-msg="snapshot_create_dialog_volume_label"></label>
                   <input type="text" id="snapshot-create-volume-id" class="required" data-tooltip="snapshot_create_dialog_volume_tip" data-value="snapshot.volume_id"/>
@@ -32,7 +36,6 @@
           <div id="tabs-2" class="tab">
 
             <div class="rules content-section">
-              <h3>Tags</h3>
               <div data-ui-edittags="snapshot"></div>
             </div>
 

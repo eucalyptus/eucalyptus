@@ -69,7 +69,9 @@ import java.util.concurrent.TimeUnit;
 
 import org.apache.log4j.Logger;
 
+import com.eucalyptus.component.id.Storage;
 import com.eucalyptus.storage.CheckerTask;
+import com.eucalyptus.system.Threads;
 
 public class StorageCheckerService {
 	private Logger LOG = Logger.getLogger( StorageCheckerService.class );
@@ -85,7 +87,7 @@ public class StorageCheckerService {
 			@Override
 			public void run() {
 				for (CheckerTask checker : checkers.values()) {
-					checker.run();
+					Threads.lookup(Storage.class).submit(checker);
 				}
 			}
 		}, 1, 1, TimeUnit.MINUTES);

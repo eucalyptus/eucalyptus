@@ -630,7 +630,7 @@ class AutoScalingServiceTest {
       void update(OwnerFullName ownerFullName,
                   String autoScalingGroupName,
                   Callback<AutoScalingGroup> groupUpdateCallback) {
-        AutoScalingGroup group = lookup( ownerFullName, autoScalingGroupName, Functions.<AutoScalingGroup>identity() )
+        AutoScalingGroup group = lookup( ownerFullName, autoScalingGroupName, { it } as Function<AutoScalingGroup,AutoScalingGroup> )
         groupUpdateCallback.fire( group )
       }
 
@@ -702,7 +702,7 @@ class AutoScalingServiceTest {
       <T> T lookup(OwnerFullName ownerFullName,
                    String instanceId,
                    Function<? super AutoScalingInstance, T> transform) {
-        transform.apply( list( ownerFullName, Predicates.alwaysTrue(), Functions.<AutoScalingInstance>identity() ).find { instance ->
+        transform.apply( list( ownerFullName, Predicates.alwaysTrue(), { it } as Function<AutoScalingInstance,AutoScalingInstance> ).find { instance ->
           invoke( String.class, instance, "getInstanceId").equals( instanceId )
         } )
       }
@@ -711,7 +711,7 @@ class AutoScalingServiceTest {
       void update(OwnerFullName ownerFullName,
                   String instanceId,
                   Callback<AutoScalingInstance> instanceUpdateCallback) {
-        AutoScalingInstance instance = lookup( ownerFullName, instanceId, Functions.<AutoScalingInstance>identity() )
+        AutoScalingInstance instance = lookup( ownerFullName, instanceId, { it } as Function<AutoScalingInstance,AutoScalingInstance> )
         instanceUpdateCallback.fire( instance )
       }
 
@@ -799,7 +799,7 @@ class AutoScalingServiceTest {
 
       @Override
       ScalingPolicy update(final OwnerFullName ownerFullName, final String autoScalingGroupName, final String policyName, final Callback<ScalingPolicy> policyUpdateCallback) {
-        ScalingPolicy policy = lookup( ownerFullName, autoScalingGroupName, policyName, Functions.<ScalingPolicy>identity() )
+        ScalingPolicy policy = lookup( ownerFullName, autoScalingGroupName, policyName, { it } as Function<ScalingPolicy,ScalingPolicy> )
         policyUpdateCallback.fire( policy )
         policy
       }
@@ -812,7 +812,7 @@ class AutoScalingServiceTest {
       @Override
       ScalingPolicy save(final ScalingPolicy scalingPolicy) {
         scalingPolicy.setId( "1" )
-        scalingPolicy.setAutoScalingGroupName( scalingPolicy.getGroup().getAutoScalingGroupName() )
+        invoke( Void.class, scalingPolicy, "setAutoScalingGroupName", [ String.class ] as Class[], [ invoke( String.class, invoke( AutoScalingGroup.class, scalingPolicy, "getGroup" ), "getAutoScalingGroupName" ) ] as Object[] )
         policies.add( scalingPolicy )
         scalingPolicy
       }

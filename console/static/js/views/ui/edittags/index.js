@@ -9,14 +9,52 @@ define([
             var self = this;
             this.template = template;
 
-            var tags = new Backbone.Collection();
+            //var tags = new Backbone.Collection();
 
             // Clone the collection and add a status field;
+            /*
             var origtags = args.model.get('tags');
             origtags.each(function(t) { 
                 var newt = new Tag(t.toJSON());
                 newt.set({_clean: true, _deleted: false, _edited: false, _edit: false, _new: false});
                 tags.push(newt);
+            });
+            */
+
+            var model = args.model;
+            var tags = new Backbone.Collection();
+
+            var loadTags = function() {
+                tags.set(args.model.get('tags').models);
+                tags.each(function(t) {
+                    t.set({_clean: true, _deleted: false, _edited: false, _edit: false, _new: false});
+                });
+            }
+
+            loadTags();
+            model.get('tags').on('reset', function() {
+                loadTags();
+            });
+
+            model.on('confirm', function() {
+                self.scope.create();
+                tags.each(function(t) {
+                   if (t.get('_new') && !t.get('_deleted')) { 
+                       t.save();
+                   }
+                   if (t.get('_deleted')) {
+                       t.destroy();
+                   }
+                   if (t.get('_edited')) {
+                       t.save();
+                   }
+                });
+                model.get('tags').set(tags.models);
+            });
+
+            // ADDED TO ALLOW DIALOGS TO ADD NAME TAG  --- Kyo 042113
+            model.on('add_tag', function(this_tag) {
+              self.scope.tags.add(this_tag);
             });
 
             var backup = new Backbone.Collection();
@@ -32,11 +70,12 @@ define([
                     console.log('create');
                     var newt = new Tag(self.scope.newtag.toJSON());
                     newt.set({_clean: true, _deleted: false, _edited: false, _edit: false, _new: true});
-                    //newt.set('id', args.model.get('id') + '-' + newt.get('name'));
-                    newt.set('res_id', args.model.get('id'));
-                    self.scope.tags.add(newt);
-                    self.scope.newtag.clear();
-                    self.render();
+                    newt.set('res_id', model.get('id'));
+                    if (newt.get('name') && newt.get('value') && newt.get('name') !== '' && newt.get('value') !== '') {
+                        self.scope.tags.add(newt);
+                        self.scope.newtag.clear();
+                        self.render();
+                    }
                 },
                 
                 edit: function(element, scope) {
@@ -64,42 +103,6 @@ define([
                     backup.add(scope.tag.toJSON());
                     scope.tag.set({_clean: false, _deleted: true, _edited: false, _edit: false});
                 },
-
-                cancelButton: {
-                    click: function() {
-                       self.close();
-                    }
-                },
-
-                confirmButton: {
-                  click: function() {
-                       tags.each(function(t) {
-                           console.log('TAG', t);
-                           if (t.get('_new') && !t.get('_deleted')) { 
-                               console.log('add', t); 
-                               t.save({ success: function() {
-                                origtags.add(t);
-                               }});
-                           }
-                           if (t.get('_deleted')) {
-                               _.each(origtags.where({id: t.get('id')}), function(ot) { 
-                                   console.log('remove', ot); 
-                                   t.destroy({ success: function() {
-                                    origtags.remove(ot) 
-                                   }});
-                               });
-                           }
-                           if (t.get('_edited')) {
-                               console.log('update', t); 
-                               _.each(origtags.where({id: t.get('id')}), function(ot) { 
-                                   console.log('update run', ot, t); 
-                                   ot.set('value', t.get('value'));
-                               });
-                           }
-                       });
-                       self.close();
-                  }
-                }
             } // end of scope
 
 			this.$el.html(template);

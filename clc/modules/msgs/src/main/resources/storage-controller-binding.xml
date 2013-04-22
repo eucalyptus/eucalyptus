@@ -73,71 +73,31 @@
 	<mapping class="edu.ucsb.eucalyptus.msgs.StorageResponseType"
 		abstract="true">
 	</mapping>
-	<mapping name="CreateStorageVolume"
-		class="edu.ucsb.eucalyptus.msgs.CreateStorageVolumeType" extends="edu.ucsb.eucalyptus.msgs.StorageRequestType">
-		<value name="VolumeId" field="volumeId" />
-		<value name="Size" field="size" />
-		<value name="SnapshotId" field="snapshotId" />
+	
+	<mapping name="ExportVolume" class="edu.ucsb.eucalyptus.msgs.ExportVolumeType"
+	extends="edu.ucsb.eucalyptus.msgs.StorageRequestType">
+		<value name="volumeId" field="volumeId" />
+		<value name="token" field="token"/>
+		<value name="ip" field="ip"/>
+		<value name="iqn" field="iqn"/>
 	</mapping>
 
-	<mapping name="CreateStorageVolumeResponse"
-		class="edu.ucsb.eucalyptus.msgs.CreateStorageVolumeResponseType"
-		extends="edu.ucsb.eucalyptus.msgs.StorageResponseType">
-		<value name="VolumeId" field="volumeId" />
-		<value name="Size" field="size" />
-		<value name="SnapshotId" field="snapshotId" />
-		<value name="Status" field="status" />
-		<value name="CreateTime" field="createTime" />
+	<mapping name="ExportVolumeResponse" class="edu.ucsb.eucalyptus.msgs.ExportVolumeResponseType" 
+	extends="edu.ucsb.eucalyptus.msgs.StorageResponseType">
+		<value name="volumeId" field="volumeId" />
+		<value name="connectionString" field="connectionString" />
+	</mapping>
+	
+<mapping name="UnexportVolume" class="edu.ucsb.eucalyptus.msgs.UnexportVolumeType"
+	extends="edu.ucsb.eucalyptus.msgs.StorageRequestType">
+		<value name="volumeId" field="volumeId" />
+		<value name="token" field="token"/>
+		<value name="ip" field="ip"/>
+		<value name="iqn" field="iqn"/>
 	</mapping>
 
-	<mapping name="GetStorageVolume" class="edu.ucsb.eucalyptus.msgs.GetStorageVolumeType"
-		extends="edu.ucsb.eucalyptus.msgs.StorageRequestType">
-		<value name="VolumeId" field="volumeId" />
+	<mapping name="UnexportVolumeResponse" class="edu.ucsb.eucalyptus.msgs.UnexportVolumeResponseType" 
+	extends="edu.ucsb.eucalyptus.msgs.StorageResponseType">
 	</mapping>
-
-	<mapping name="GetStorageVolumeResponse"
-		class="edu.ucsb.eucalyptus.msgs.GetStorageVolumeResponseType" extends="edu.ucsb.eucalyptus.msgs.StorageResponseType">
-		<value name="VolumeId" field="volumeId" />
-		<value name="Size" field="size" />
-		<value name="SnapshotId" field="snapshotId" />
-		<value name="Status" field="status" />
-		<value name="CreateTime" field="createTime" />
-		<value name="ActualDeviceName" field="actualDeviceName" />
-	</mapping>
-
-	<mapping name="DeleteStorageVolume"
-		class="edu.ucsb.eucalyptus.msgs.DeleteStorageVolumeType" extends="edu.ucsb.eucalyptus.msgs.StorageRequestType">
-		<value name="VolumeId" field="volumeId" />
-	</mapping>
-
-	<mapping name="DeleteStorageVolumeResponse"
-		class="edu.ucsb.eucalyptus.msgs.DeleteStorageVolumeResponseType"
-		extends="edu.ucsb.eucalyptus.msgs.StorageResponseType">
-	</mapping>
-
-	<mapping name="CreateStorageSnapshot"
-		class="edu.ucsb.eucalyptus.msgs.CreateStorageSnapshotType" extends="edu.ucsb.eucalyptus.msgs.StorageRequestType">
-		<value name="VolumeId" field="volumeId" />
-		<value name="SnapshotId" field="snapshotId" />
-	</mapping>
-
-	<mapping name="CreateStorageSnapshotResponse"
-		class="edu.ucsb.eucalyptus.msgs.CreateStorageSnapshotResponseType"
-		extends="edu.ucsb.eucalyptus.msgs.StorageResponseType">
-		<value name="VolumeId" field="volumeId" />
-		<value name="SnapshotId" field="snapshotId" />
-		<value name="Status" field="status" />
-		<value name="StartTime" field="startTime" />
-		<value name="Progress" field="progress" />
-	</mapping>
-
-	<mapping name="DeleteStorageSnapshot"
-		class="edu.ucsb.eucalyptus.msgs.DeleteStorageSnapshotType" extends="edu.ucsb.eucalyptus.msgs.StorageRequestType">
-		<value name="SnapshotId" field="snapshotId" />
-	</mapping>
-
-	<mapping name="DeleteStorageSnapshotResponse"
-		class="edu.ucsb.eucalyptus.msgs.DeleteStorageSnapshotResponseType"
-		extends="edu.ucsb.eucalyptus.msgs.StorageResponseType">
-	</mapping>
+	
 </binding>

@@ -2,10 +2,11 @@
 
 # Generates keys for TLS migration of instances between NC nodes.
 #
-# Run on NC with two arguments:
+# Run on NC with three arguments:
 #
+# 0. "source", "destination", or "both" to indicate role in migration(s).
 # 1. IP address of this host.
-# 2. Token unique to this migration.
+# 2. Unique token for migration(s).
 
 # Bail on error
 set -e
@@ -16,22 +17,37 @@ KEYDIR=$EUCALYPTUS/var/lib/eucalyptus/keys
 NCKEY=node-pk.pem
 NCCERT=node-cert.pem
 
-if [ $# -gt 1 ] ; then
-	NCADDR=$1
-	shift
-        MIGTOK=$1
-        shift
+if [ $# -eq 2 ] ; then
+    NCADDR=$1
+    shift
+    MIGTOK=$1
+    shift
+elif [ $# -eq 3 ] ; then
+    NCADDR=$1
+    shift
+    MIGTOK=$1
+    shift
+    if [ $1 = "restart" ] ; then
+        RESTART=yes
+    else
+        echo "Usage $0 NC-address migration-token [restart]" >&2
+        exit 1
+    fi
 else
-	echo "Usage $0 NC-address migration-token" >&2
-	exit 1
+    echo "Usage $0 NC-address migration-token [restart]" >&2
+    exit 1
 fi
 
 if [ ! -r $KEYDIR/$NCKEY -o ! -r $KEYDIR/$NCCERT ] ; then
-	echo "Cannot find keys ($NCKEY, $NCCERT) in $KEYDIR" >&2
-	exit 1
+    echo "Cannot find keys ($NCKEY, $NCCERT) in $KEYDIR" >&2
+    exit 1
 fi
 
+# Set working directory and save all output to a log there.
 WORKD=`mktemp -d -t tmp-$NCADDR-XXXXXXXXXX`
+
+# From here on, any stdout to screen must be explicitly forced using >&3, stderr using >&4
+exec 3>&1 4>&2 > $WORKD/generate-migration-keys.log 2>&1
 
 echo "Determining Organization from NC cert ..."
 
@@ -39,7 +55,10 @@ NCORG=`certtool -i --infile $KEYDIR/$NCCERT | grep 'Subject: .*CN=' | perl -naF'
 
 echo "... $NCORG"
 
-echo "Generating keys under $WORKD ..."
+# This should be the only message to the console other than the DN at the end,
+# and they can be teased apart by running this script with 2> directed elsewhere,
+# such as to /dev/null
+echo "Generating keys under $WORKD ..." >&4
 
 # Generate the server key.
 certtool --generate-privkey > $WORKD/serverkey.pem
@@ -81,16 +100,22 @@ echo "Installing keys ..."
 
 mkdir -p /etc/pki/libvirt/private
 chown root.root /etc/pki/libvirt/private
-cp $KEYDIR/$NCCERT /etc/pki/CA/cacert.pem
-cp $WORKD/clientcert.pem $WORKD/servercert.pem /etc/pki/libvirt/
-cp $WORKD/clientkey.pem $WORKD/serverkey.pem /etc/pki/libvirt/private/
+cp -f $KEYDIR/$NCCERT /etc/pki/CA/cacert.pem
+cp -f $WORKD/clientcert.pem $WORKD/servercert.pem /etc/pki/libvirt/
+cp -f $WORKD/clientkey.pem $WORKD/serverkey.pem /etc/pki/libvirt/private/
 chmod 600 /etc/pki/libvirt/private/serverkey.pem
 
-echo "Key installation complete, reloading libvirtd"
-
 # Despite what the documentation says, sending a SIGHUP to libvirtd does
-# not appear to update its access list of DNs. So we're doing a restart.
+# not appear to update its access list of DNs. So we're doing a full restart.
+# Ugh.
 #kill -HUP `cat $LIBVIRTPID`
-service libvirtd restart
+if [ "$RESTART" == "yes" ] ; then
+    echo "Key installation complete, reloading libvirtd."
+    service libvirtd restart
+else 
+    echo "Key installation complete, libvirtd will require manual restart."
+fi
+
+certtool -i --infile $WORKD/clientcert.pem | grep "Subject: .*CN=" | sed 's/^.*Subject: //' >&3
 
 echo "Done."

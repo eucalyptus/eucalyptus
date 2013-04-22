@@ -1814,6 +1814,7 @@ int sensor_set_volume(const char *instanceId, const char *volumeId, const char *
     ret += sensor_set_dimension_alias(instanceId, "DiskWriteBytes", SENSOR_SUMMATION, volumeId, guestDev);
     ret += sensor_set_dimension_alias(instanceId, "VolumeTotalReadTime", SENSOR_SUMMATION, volumeId, guestDev);
     ret += sensor_set_dimension_alias(instanceId, "VolumeTotalWriteTime", SENSOR_SUMMATION, volumeId, guestDev);
+    ret += sensor_set_dimension_alias(instanceId, "VolumeQueueLength", SENSOR_SUMMATION, volumeId, guestDev);
 
     return ret;
 }

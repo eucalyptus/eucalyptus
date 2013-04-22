@@ -2,7 +2,7 @@
 // vim: set softtabstop=4 shiftwidth=4 tabstop=4 expandtab:
 
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * Copyright 2009-2013 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -177,13 +177,11 @@ typedef enum _ncResourceType {
 
 //! NC Resource Location Type Enumeration
 typedef enum _ncResourceLocationType {
-    NC_LOCATION_URL,                   //!< URL type location
-    NC_LOCATION_WALRUS,                //!< Walrus type location
-    NC_LOCATION_CLC,                   //!< CLC type location
-    NC_LOCATION_SC,                    //!< SC type location
-    NC_LOCATION_IQN,                   //!< IQN type location
-    NC_LOCATION_AOE,                   //!< AOE type location
-    NC_LOCATION_NONE,                  //!< Unkown type for ephemeral disks
+    NC_LOCATION_URL,            //!< URL type location
+    NC_LOCATION_WALRUS,         //!< Walrus type location
+    NC_LOCATION_CLC,            //!< CLC type location
+    NC_LOCATION_SC,             //!< SC type location
+    NC_LOCATION_NONE,           //!< Unknown type for ephemeral disks
 } ncResourceLocationType;
 
 //! NC resource format type
@@ -256,8 +254,7 @@ typedef struct ncMetadata_t {
 typedef struct virtualBootRecord_t {
     //! @{
     //! @name first six fields arrive in requests (RunInstance, {Attach|Detach} Volume)
-    char resourceLocation[VERY_BIG_CHAR_BUFFER_SIZE];   //!< http|walrus|cloud|sc|iqn|aoe://... or none
-    char *resourceLocationPtr;         //!< pointer to a full version of resourceLocation, used by CC for IQN=LUN demuxing
+    char resourceLocation[CHAR_BUFFER_SIZE];    //!< http|walrus|cloud|sc|iqn|aoe://... or none
     char guestDeviceName[SMALL_CHAR_BUFFER_SIZE];   //!< x?[vhsf]d[a-z]?[1-9]*
     long long sizeBytes;               //!< Size of the boot record in bytes
     char formatName[SMALL_CHAR_BUFFER_SIZE];    //!< ext2|ext3|swap|none
@@ -276,7 +273,7 @@ typedef struct virtualBootRecord_t {
     libvirtBusType guestDeviceBus;     //!< BUS_TYPE_{IDE|SCSI|VIRTIO|XEN}
     libvirtSourceType backingType;     //!< SOURCE_TYPE_{FILE|BLOCK}
     char backingPath[CHAR_BUFFER_SIZE]; //!< path to file or block device that backs the resource
-    char preparedResourceLocation[CHAR_BUFFER_SIZE];    //!< e.g., URL + resourceLocation for Walrus downloads
+    char preparedResourceLocation[CHAR_BUFFER_SIZE];    //!< e.g., URL + resourceLocation for Walrus downloads, sc url for ebs volumes prior to SC call, then connection string for ebs volumes returned from SC
     //! @}
 } virtualBootRecord;
 
@@ -309,12 +306,24 @@ typedef struct netConfig_t {
 
 //! Structure defining NC Volumes
 typedef struct ncVolume_t {
-    char volumeId[CHAR_BUFFER_SIZE];   //!< Remote volume identifier string
-    char remoteDev[VERY_BIG_CHAR_BUFFER_SIZE];  //!< Remote device name string
-    char localDev[CHAR_BUFFER_SIZE];   //!< Local device name string
+    char volumeId[CHAR_BUFFER_SIZE];    //!< Remote volume identifier string
+    char attachmentToken[CHAR_BUFFER_SIZE];   //!< Remote device name string, the token reference
+    char localDev[CHAR_BUFFER_SIZE];    //!< Local device name string
     char localDevReal[CHAR_BUFFER_SIZE];    //!< Local device name (real) string
-    char stateName[CHAR_BUFFER_SIZE];  //!< Volume state name string
+    char stateName[CHAR_BUFFER_SIZE];   //!< Volume state name string
+    char connectionString[VERY_BIG_CHAR_BUFFER_SIZE];	//!< Volume Token for attachment/detachment
 } ncVolume;
+
+//TODO: zhill, use this in the CC instead of ncVolume to save mem. Need to change the adb-helpers as well to copy nc->cc
+//! Notably smaller structure for volumes on the CC since the connectionString is not part of CC state
+typedef struct ccVolume_t {
+    char volumeId[CHAR_BUFFER_SIZE];    //!< Remote volume identifier string
+    char attachmentToken[CHAR_BUFFER_SIZE];   //!< Remote device name string, the token reference
+    char localDev[CHAR_BUFFER_SIZE];    //!< Local device name string
+    char localDevReal[CHAR_BUFFER_SIZE];    //!< Local device name (real) string
+    char stateName[CHAR_BUFFER_SIZE];   //!< Volume state name string
+} ccVolume;
+
 
 //! Structure definint NC instances
 typedef struct ncInstance_t {
@@ -494,7 +503,8 @@ void free_resource(ncResource ** ppresource);
 //! @{
 //! @name Volumes APIs
 boolean is_volume_used(const ncVolume * pVolume);
-ncVolume *save_volume(ncInstance * pInstance, const char *sVolumeId, const char *sRemoteDev, const char *sLocalDev, const char *sLocalDevReal, const char *sStateName);
+ncVolume *save_volume(ncInstance * pInstance, const char *sVolumeId, const char *sVolumeAttachementToken, const char *sRemoteDev, const char *sLocalDev, const char *sLocalDevReal,
+                      const char *sStateName);
 ncVolume *free_volume(ncInstance * pInstance, const char *sVolumeId);
 //! @}
 

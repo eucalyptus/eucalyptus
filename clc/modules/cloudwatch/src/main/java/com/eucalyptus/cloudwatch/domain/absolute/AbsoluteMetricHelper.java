@@ -25,13 +25,16 @@ import java.util.Date;
 import javax.persistence.Column;
 import javax.persistence.EntityTransaction;
 
+import org.apache.log4j.Logger;
 import org.hibernate.Criteria;
 import org.hibernate.criterion.Restrictions;
+import org.mortbay.log.Log;
 
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.records.Logs;
 
 public class AbsoluteMetricHelper {
+  private static final Logger LOG = Logger.getLogger(AbsoluteMetricHelper.class);
   public static class MetricDifferenceInfo {
     private Double valueDifference;
     private Long elapsedTimeInMillis;
@@ -69,11 +72,32 @@ public class AbsoluteMetricHelper {
         Entities.persist(lastEntity);
         returnValue =  null;
       } else {
-        // TODO: should we assume all metrics are increasing?
-        long elapsedTimeInMillis = Math.abs(newTimestamp.getTime() - lastEntity.getTimestamp().getTime());
-        double valueDifference = Math.abs(newMetricValue - lastEntity.getLastMetricValue());
-        lastEntity.setTimestamp(newTimestamp);
-        lastEntity.setLastMetricValue(newMetricValue);
+        double TOLERANCE = 0.0000001; // arbitrary to check double "equality"
+        long elapsedTimeInMillis = newTimestamp.getTime() - lastEntity.getTimestamp().getTime();
+        double valueDifference = newMetricValue - lastEntity.getLastMetricValue();
+        if (elapsedTimeInMillis < 0) {
+          // a negative value of elapsedTimeInMillis means this data point is not useful
+          return null;
+        } else if (elapsedTimeInMillis == 0) {
+          if (Math.abs(valueDifference) > TOLERANCE) {
+            LOG.warn("Getting different values " + newMetricValue + " and " + lastEntity.getLastMetricValue() + " for absolute metric " + metricName + " at the same timestamp " + newTimestamp + ", keeping the second value.");
+          }
+          return null; // not a useful data point either
+        } else if (elapsedTimeInMillis > 0) { // point in the future, update the reference
+          lastEntity.setTimestamp(newTimestamp);
+          lastEntity.setLastMetricValue(newMetricValue);
+          // if the value difference is negative (i.e. has gone down, the assumption is that the NC has restarted, and the new
+          // value started from some time in the past.  Best thing to do here is either assume it is a first point again, or
+          // assume the previous point had a 0 value.  Not sure which is the better choice, but for now, we will assume the
+          // previous point had a zero value
+          if (Math.abs(valueDifference) < TOLERANCE) {
+            valueDifference = 0.0;
+          } else {
+            if (valueDifference < -TOLERANCE) {
+              valueDifference = newMetricValue - 0;
+            }
+          }
+        }
         returnValue = new MetricDifferenceInfo(valueDifference, elapsedTimeInMillis);
       }
       db.commit();

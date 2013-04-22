@@ -6,30 +6,30 @@
                 <tr data-show="tag._clean">
                     <td><span data-text="tag.name"></span></td>
                     <td><span data-text="tag.value"></span></td>
-                    <td><div class="icon_edit tag-control" data-on-click=":edit"></div></td>
-                    <td><div class="icon_delete tag-control" data-on-click=":delete"></div></td>
+                    <td><div class="icon_edit tag-control" data-on-click=":edit" data-tooltip="tag_icon_edit_tip"></div></td>
+                    <td><div class="icon_delete tag-control" data-on-click=":delete" data-tooltip="tag_icon_delete_tip"></div></td>
                 </tr>
                 <tr data-show="tag._edit">
                     <td><span data-text="tag.name"></span></td>
                     <td><input data-value="tag.value"></input></td>
-                    <td><div class="icon_approve tag-control" data-on-click=":confirm"></div></td>
-                    <td><div class="icon_cancel tag-control" data-on-click=":restore"></div></td>
+                    <td><div class="icon_approve tag-control" data-on-click=":confirm" data-tooltip="tag_icon_save_tip"></div></td>
+                    <td><div class="icon_cancel tag-control" data-on-click=":restore" data-tooltip="tag_icon_cancel_edit_tip"></div></td>
                 </tr>
                 <tr data-show="tag._deleted" class="tags-deleted">
                     <td><span data-text="tag.name"></span></td>
                     <td><span data-text="tag.value"></span></td>
-                    <td><div class="icon_cancel tag-control" data-on-click=":restore"></div></td>
+                    <td><div class="icon_cancel tag-control" data-on-click=":restore" data-tooltip="tag_icon_undo_delete_tip"></div></td>
                     <td></td>
                 </tr>
                 <tr data-show="tag._edited" class="tags-edited">
                     <td><span data-text="tag.name"></span></td>
                     <td><span data-text="tag.value"></span></td>
-                    <td><div class="icon_cancel tag-control" data-on-click=":restore"></div></td>
+                    <td><div class="icon_cancel tag-control" data-on-click=":restore" data-tooltip="tag_icon_cancel_edit_tip"></div></td>
                     <td></td>
                 </tr>
             </tbody>
             <tbody class="tag-edit">
-                <tr><td><input data-value="newtag.name"></input></td><td><input data-value="newtag.value"></input></td><td><div class="icon_approve tag-control" data-on-click=":create"></div></td><td style="width:27px"></td></tr>
+                <tr><td><input data-value="newtag.name" data-tooltip="tag_text_name_tip"></input></td><td><input data-value="newtag.value" data-tooltip="tag_text_value_tip"></input></td><td><div class="icon_add" data-on-click=":create" data-tooltip="tag_icon_add_another_tip"></div></td><td style="width:27px"></td></tr>
                 <tr><td><span data-text="errors.name"></input></td><td><span data-text="errors.value"></span></td><td></td><td></td></tr>
             </tbody>
             </table>

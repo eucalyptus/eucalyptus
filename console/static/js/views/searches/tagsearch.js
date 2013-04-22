@@ -3,52 +3,10 @@ define([], function() {
     var self = this;
 
     function getTags() {
-      var result = {};
-      var jData = data.toJSON();
-      for (var i = 0; i < jData.length; i++) {
-        var dataItem = jData[i].tags;
-        if (dataItem) {
-          if (typeof dataItem.toJSON === 'function') {
-            dataItem = dataItem.toJSON();
-          }
-        } else {
-          continue;
-        }
-        
-        for (var j = 0; j < dataItem.length; j++) {
-          var tag = dataItem[j];
-          if (tag && tag.name) {
-            var coll = result[tag.name];
-            if (!coll) {
-              coll = [];
-              result[tag.name] = coll;
-            }
-            coll.push(tag);
-          }
-        }
-        return result;
-      }
-
-      data.toJSON().forEach(function(item) {
-        if (item.tags) {
-          var t = item.tags;
-          if (typeof t.toJSON === 'function') {
-            t = t.toJSON();
-          }
-          if (t) {
-            t.forEach(function(tag) {
-              if (tag.name) {
-                var coll = result[tag.name];
-                if (!coll) {
-                  coll = [];
-                  result[tag.name] = coll;
-                }
-                coll.push(tag);
-                nue.push('tag_' + tag.name);
-              }
-            });
-          }
-        }
+      return _.groupBy(data.reduce(function(tags, m) { 
+          return _.union(tags, _.map(m.get('tags').models, function(m) { return m.toJSON(); })); 
+      }, []), function(t) { 
+          return t.name; 
       });
     }
 
@@ -62,11 +20,8 @@ define([], function() {
         hasTags++;
         if (hasTags) break;
       }
-      if (hasTags) {
-        append ('tags', '      -- TAGS --');
-      }
       for (var tagName in tags) {
-        append(tagName + ' _tag', tagName);
+        append(tagName + ' _tag', tagName, 'Tags');
       }
     };
 
@@ -105,11 +60,13 @@ define([], function() {
 
           // FIXME Whoa, WTF - the search parameter is a *string* like
           // '"Name (tag)" : "foo"'
-          var extractSearchText = /".*?":\s?"(.*)"/
+          var extractSearchText = /"(.*?) _tag":\s?"(.*)"/
           if (extractSearchText.test(search)) {
-            var actualSearchTerm = extractSearchText.exec(search)[1];
+            var sreg = extractSearchText.exec(search);
+            var tagStr = sreg[1];
+            var actualSearchTerm = sreg[2];
 
-            var currSet = tags[tagName];
+            var currSet = tags[tagStr];
             for (var i = 0; i < currSet.length; i++) {
               var oneItem = currSet[i];
               var theTags = item.tags;
@@ -124,6 +81,7 @@ define([], function() {
                 }
               });
             }
+
           }
           return true;
         };

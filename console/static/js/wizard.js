@@ -171,20 +171,38 @@ define([], function() {
         throw new Error("Out of range: " + index + " max " + pages.length);
       }
       var offset = -(position - index);
+      //validate and call onDisplay() hook.
       if (!navigationController || navigationController(offset)) {
         if (! self.isValid() && index > position) {
           return self.current;
         }
+        self.blur();
         position = index;
       }
+      self.focus();
       return self.current;
     }
 
+    // ask the step if requirements have been met before moving on
     self.isValid = function() {
       if (typeof self.current === 'object' && typeof self.current.isValid === 'function') {
           return self.current.isValid();
       }
       return true;
+    }
+
+    // let the step know that it is being displayed now
+    self.focus = function() {
+      if (typeof self.current === 'object' && typeof self.current.focus === 'function') {
+        self.current.focus();
+      }
+    }
+
+    // let the step know when it has lost focus
+    self.blur = function() {
+      if (typeof self.current === 'object' && typeof self.current.blur === 'function') {
+        self.current.blur();
+      }
     }
 
     // next

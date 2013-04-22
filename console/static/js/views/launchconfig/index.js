@@ -50,6 +50,8 @@ define([
       launchConfigModel.validate();
       if(launchConfigModel.isValid()) {
         launchConfigModel.sync('create', launchConfigModel);
+        var $container = $('html body').find(DOM_BINDING['main']);
+          $container.maincontainer("changeSelected", null, {selected:'launchconfig'});
         //alert("Wizard complete. Check the console log for debug info.");
       } else {
         // what do we do if it isn't valid?

@@ -4,14 +4,18 @@
     <div id="volumes-add-dialog-wrapper">
       <div data-ui-tabs="">
         <ul>
-          <li><a href="#tabs-1">Volume</a></li>
-          <li><a href="#tabs-2">Tag</a></li>
+          <li><a href="#tabs-1">General</a></li>
+          <li><a href="#tabs-2">Tags</a></li>
         </ul>
         <div id="tabs-1" class="tab">
 
           <div id="volumes-add-dialog" class="euca-dialog">
             <div class="dialog-inner-content">
               <p data-msg="volume_dialog_add_text"></p>
+              <div class="form-row">
+                <label for="volume-name" data-msg="volume_dialog_name_label"></label>
+                <input type="text" id="volume-name" data-tooltip="volume_dialog_name_tip" data-value="volume.name"/>
+              </div>
               <div class="form-row">
                 <label for="volume-add-snapshot-selector" data-msg="volume_dialog_snapshot_label"></label>
                 <select data-tooltip="volume_dialog_snapshot_tip" id="volume-add-snapshot-selector" data-value="volume.snapshot_id"></select>
@@ -33,7 +37,6 @@
         <div id="tabs-2" class="tab">
 
           <div class="rules content-section">
-            <h3>Tags</h3>
             <div data-ui-edittags="volume"></div>
           </div>
 

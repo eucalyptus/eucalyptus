@@ -62,13 +62,16 @@
 
 package com.eucalyptus.network;
 
+import static com.eucalyptus.upgrade.Upgrades.*;
 import static com.eucalyptus.util.Parameters.checkParam;
 import static org.hamcrest.Matchers.notNullValue;
 import java.util.Collection;
+import java.util.List;
 import java.util.HashSet;
 import java.util.Set;
 import javax.persistence.CascadeType;
 import javax.persistence.Column;
+import javax.persistence.EntityTransaction;
 import javax.persistence.FetchType;
 import javax.persistence.JoinColumn;
 import javax.persistence.OneToMany;
@@ -79,6 +82,10 @@ import javax.persistence.PreRemove;
 import javax.persistence.PreUpdate;
 import javax.persistence.Table;
 import javax.persistence.Transient;
+
+import com.eucalyptus.upgrade.Upgrades;
+import com.eucalyptus.util.Exceptions;
+import com.google.common.base.Predicate;
 import org.apache.log4j.Logger;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
@@ -117,8 +124,8 @@ public class NetworkGroup extends UserMetadata<NetworkGroup.State> implements Ne
     ACTIVE
   }
   
-  @Column( name = "metadata_network_group_id")
-  private String 	   groupId;
+  @Column( name = "metadata_network_group_id", unique = true )
+  private String           groupId;
   
   @Column( name = "metadata_network_group_description" )
   private String           description;
@@ -338,5 +345,28 @@ public class NetworkGroup extends UserMetadata<NetworkGroup.State> implements Ne
   public boolean hasExtantNetwork( ) {
     return this.extantNetwork != null;
   }
-  
+
+  @EntityUpgrade(entities = { NetworkGroup.class },  since = Version.v3_3_0, value = Eucalyptus.class)
+  public enum NetworkGroupUpgrade implements Predicate<Class> {
+    INSTANCE;
+    private static Logger LOG = Logger.getLogger( NetworkGroup.NetworkGroupUpgrade.class );
+    @Override
+    public boolean apply( Class arg0 ) {
+      EntityTransaction db = Entities.get( NetworkGroup.class );
+      try {
+        List<NetworkGroup> networkGroupList = Entities.query(new NetworkGroup());
+        for (NetworkGroup networkGroup : networkGroupList) {
+          LOG.debug("Upgrading " + networkGroup.getDisplayName());
+          if (networkGroup.getGroupId() == null ) {
+            networkGroup.setGroupId(Crypto.generateId( Integer.toHexString(networkGroup.getDisplayName().hashCode()), "sg" ));
+          }
+        }
+        db.commit();
+        return true;
+      } catch (Exception ex ) {
+        db.rollback();
+        throw Exceptions.toUndeclared(ex);
+      }
+    }
+  }
 }
