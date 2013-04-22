@@ -1062,7 +1062,28 @@
       var thisObj = this;
       thisObj.rulesList=null; 
       $('#sgroup-rules-list').text(''); 
+
+      thisObj.addDialog.find('#sgroup-name').val('');
       thisObj.addDialog.find('#sgroup-description').val('');
+
+      thisObj.addDialog.find('input[id=sgroup-name]').focus();
+      thisObj.addDialog.find('input[id=sgroup-description]').focus();
+      thisObj.addDialog.find('#sgroup-template').val('none');
+      thisObj.addDialog.find('input[id=allow-ip]').prop('disabled', false);
+      thisObj.addDialog.find('input[id=allow-group]').prop('disabled', true);
+      thisObj.addDialog.find('input[id=sgroup-allow-ip]').prop('checked', 'yes');
+      thisObj.addDialog.find('#sgroup-more-rules').css('display','none')
+      thisObj.addDialog.find("#sgroup-name-error").text("");
+      thisObj.addDialog.find("#sgroup-description-error").text("");
+      thisObj.addDialog.find('#sgroup-ports-error').text("");
+      thisObj.addDialog.find('#allow-ip-error').text("");
+      thisObj.addDialog.find('a[href="#tabs-1"]').click();
+
+      if (thisObj.addDialog.rscope && thisObj.addDialog.rscope.securityGroup != null) {
+          thisObj.addDialog.rscope.securityGroup.get('tags').reset([]);
+          thisObj.addDialog.rview.sync();
+      }
+
       if(callback)
         thisObj.addDialog.data('eucadialog').option('on_close', {callback: callback});
       thisObj.addDialog.eucadialog('open')

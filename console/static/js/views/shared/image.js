@@ -12,7 +12,7 @@ define([
             count: 0,
             image_selected: null,
 
-            initialize : function() {
+            initialize : function(args) {
               var self = this;
               var scope = {
                 view: this,
@@ -25,7 +25,7 @@ define([
 
                 isSelected: function(image) {
                   var image = this.image;
-                  if (self.image_selected == image.get('id')) {
+                  if (self.model.get('id') == image.get('id')) {
                       return ' selected-row';
                   } 
                   return '';
@@ -42,7 +42,7 @@ define([
                   $(e.currentTarget).parent().find('tr').removeClass('selected-row');
                   $(e.currentTarget).addClass('selected-row');
                   self.model.set('image_iconclass', this.setClass(images.image));
-                  self.image_selected = images.image.get('id');
+                  self.model.set('id', images.image.get('id'));
                   images.image.unset('tags'); // workaround - nested objects break the next line
                   self.model.set(images.image.toJSON());
                   self.model.set('platform', this.setClass(self.model));
@@ -82,6 +82,8 @@ define([
             self.render();
           });
 
+
+
           scope.images = scope.search.filtered.where({type: 'machine'});
           this.scope = scope;
           scope.search.filtered.on('change reset', function() {
@@ -91,6 +93,11 @@ define([
          $(this.el).html(template)
          this.rView = rivets.bind(this.$el, this.scope);
          this.render();
+
+         if(this.model.get('image') != undefined) {
+            this.$el.find('span:contains("' + this.model.get('image') + '")').closest('tr').click();
+         }
+
         },
 
         render: function() {

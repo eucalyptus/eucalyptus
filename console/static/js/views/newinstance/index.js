@@ -19,11 +19,12 @@ define([
   '../shared/model/snapshots'
 ], function(app, Wizard, wizardTemplate, page1, page2, page2_5, page3, page4, summary, instance, image, type, tag, security, keyPair, advanced, block, snap) {
 
-  var config = function() {
+  var config = function(options) {
+    console.log('WIZARD options', options);
     var wizard = new Wizard();
 
     var instanceModel = new instance();
-    var imageModel = new image();
+    var imageModel = new image(options);
     var typeModel = new type();
     var securityModel = new security();
     var keyModel = new keyPair();
@@ -64,13 +65,14 @@ define([
     }
 
     var viewBuilder = wizard.viewBuilder(wizardTemplate)
-            .add(new page1({model: imageModel, blockMaps: blockMaps}))
+            .add(new page1({model: imageModel, blockMaps: blockMaps, image: options.image}))
             .add(new page2({model: typeModel}))
             .add(new page2_5({model: tagsModel}))
             .add(new page3({model: securityModel, keymodel: keyModel}))
             .add(new page4({model: advancedModel, blockMaps: blockMaps, snapshots: snapShots}))
             .setHideDisabledButtons(true)
             .setFinishText(app.msg('launch_instance_btn_launch')).setFinishChecker(canFinish)
+            .map('optionLink', '#optionLink')
             .finisher(finish)
             .summary(new summary( {imageModel: imageModel, typeModel: typeModel, securityModel: securityModel, keymodel: keyModel, advancedModel: advancedModel} ));
     var ViewType = viewBuilder.build();
