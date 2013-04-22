@@ -73,7 +73,7 @@ const char *eucalyptus_opts_full_help[] = {
   "      --disable-dns             DEPRECATED DO NOT USE. IT DOES NOTHING.  \n                                  (default=off)",
   "      --disable-storage         DEPRECATED DO NOT USE. IT DOES NOTHING.  \n                                  (default=off)",
   "\nJava Options:",
-  "  -j, --java-home=DIRECTORY     Alternative way to specify JAVA_HOME.  \n                                  (default=`/usr/lib/jvm/java-1.7.0-openjdk-1.7.0.9.x86_64')",
+  "  -j, --java-home=DIRECTORY     Alternative way to specify JAVA_HOME.  \n                                  (default=`/usr/lib/jvm/java-1.7.0')",
   "      --jvm-name=JVMNAME        Which JVM type to run (see jvm.cfg).  \n                                  (default=`-server')",
   "  -X, --jvm-args=STRING         Arguments to pass to the JVM.",
   "      --jmx                     Launch with JMX enabled.  (default=off)",
@@ -1436,7 +1436,7 @@ arguments_internal (
         case 'j':	/* Alternative way to specify JAVA_HOME..  */
         
           if (update_multiple_arg_temp(&java_home_list, 
-              &(local_args_info.java_home_given), optarg, 0, "/usr/lib/jvm/java-1.7.0-openjdk-1.7.0.9.x86_64", ARG_STRING,
+              &(local_args_info.java_home_given), optarg, 0, "/usr/lib/jvm/java-1.7.0", ARG_STRING,
               "java-home", 'j',
               additional_error))
             goto failure;
@@ -1886,7 +1886,7 @@ arguments_internal (
     &(args_info->define_orig), args_info->define_given,
     local_args_info.define_given, 0,
     ARG_STRING, define_list);
-  multiple_default_value.default_string_arg = "/usr/lib/jvm/java-1.7.0-openjdk-1.7.0.9.x86_64";
+  multiple_default_value.default_string_arg = "/usr/lib/jvm/java-1.7.0";
   update_multiple_arg((void *)&(args_info->java_home_arg),
     &(args_info->java_home_orig), args_info->java_home_given,
     local_args_info.java_home_given, &multiple_default_value,
