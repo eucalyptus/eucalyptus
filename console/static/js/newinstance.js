@@ -23,6 +23,7 @@
     options : { },
     _init : function() {
       var thisObj = this;
+      $(thisObj.element).unbind();
       require(['views/newinstance/index'], function(wizardFactory) {
         var View = wizardFactory();
         var view = new View({el: thisObj.element});
