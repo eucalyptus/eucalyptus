@@ -97,7 +97,6 @@ import com.eucalyptus.images.Images;
 import com.eucalyptus.keys.SshKeyPair;
 import com.eucalyptus.network.NetworkGroup;
 import com.eucalyptus.network.NetworkGroups;
-import com.eucalyptus.node.Nodes;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
 import com.eucalyptus.records.Logs;
@@ -120,16 +119,18 @@ import java.util.concurrent.TimeUnit;
 import edu.ucsb.eucalyptus.cloud.VirtualBootRecord;
 import edu.ucsb.eucalyptus.cloud.VmKeyInfo;
 import edu.ucsb.eucalyptus.cloud.VmRunResponseType;
-import edu.ucsb.eucalyptus.msgs.AttachStorageVolumeResponseType;
-import edu.ucsb.eucalyptus.msgs.AttachStorageVolumeType;
 import edu.ucsb.eucalyptus.msgs.BlockDeviceMappingItemType;
 import edu.ucsb.eucalyptus.msgs.DescribeStorageVolumesResponseType;
 import edu.ucsb.eucalyptus.msgs.DescribeStorageVolumesType;
+import edu.ucsb.eucalyptus.msgs.GetVolumeTokenResponseType;
+import edu.ucsb.eucalyptus.msgs.GetVolumeTokenType;
 import edu.ucsb.eucalyptus.msgs.StorageVolume;
 import edu.ucsb.eucalyptus.msgs.VmTypeInfo;
 
 public class ClusterAllocator implements Runnable {
   private static final long BYTES_PER_GB = ( 1024L * 1024L * 1024L );
+  private static final String VOLUME_TOKEN_PREFIX = "sc://"; //Used for designating EBS volumes in the VBR
+  
   private static Logger     LOG          = Logger.getLogger( ClusterAllocator.class );
   
   enum State {
@@ -354,74 +355,95 @@ public class ClusterAllocator implements Runnable {
   private VmTypeInfo makeVmTypeInfo( final VmTypeInfo vmInfo, final ResourceToken token ) throws Exception {
     VmTypeInfo childVmInfo = vmInfo.child( );
     
-    if ( this.allocInfo.getBootSet( ).getMachine( ) instanceof BlockStorageImageInfo ) {  
-      
-      String instanceId = token.getInstanceId();
-      
-      // Deal with the root volume first
-      VirtualBootRecord rootVbr = childVmInfo.lookupRoot();
-      Volume rootVolume = token.getRootVolume();
-      
-      // Wait for root volume
-      LOG.debug("Wait for root ebs volume " + rootVolume.getDisplayName() +  " to become available");
-	  final ServiceConfiguration scConfig = waitForVolume(rootVolume);
-	  
-	  // Attach root volume
-	  try {
-	    LOG.debug("About to attach volume " + rootVolume.getDisplayName() + " to instance " + instanceId);
-	    AttachStorageVolumeType attachMsg = new AttachStorageVolumeType(Nodes.lookupIqns(this.cluster.getConfiguration()), rootVolume.getDisplayName());
-		final AttachStorageVolumeResponseType scAttachResponse = AsyncRequests.sendSync(scConfig, attachMsg);
-		LOG.debug("Attach response from SC for volume " + rootVolume.getDisplayName() + " and instance " + instanceId + "\n" + scAttachResponse);
-		String remoteDeviceString = scAttachResponse.getRemoteDeviceString();
-        if (remoteDeviceString == null) {
-		  throw new EucalyptusCloudException("Failed to get remote device string for root volume " + rootVolume.getDisplayName() + " while running instance " + instanceId);
-	    } else {
-	      rootVbr.setResourceLocation(remoteDeviceString);
-	      rootVbr.setSize(rootVolume.getSize() * BYTES_PER_GB);
-		  //vm.updatePersistantVolume(remoteDeviceString, rootVolume); Skipping this step for now as no one seems to be using it
-	    }
-	  } catch (final Exception ex) {
-		LOG.error(ex);
-		Logs.extreme().error(ex, ex);
-		throw ex;
-	  }
-	  
-      // Deal with the remaining ebs volumes
-	  for (Entry<String, Volume> mapping : token.getEbsVolumes().entrySet()) {
-		Volume volume = mapping.getValue();
-		if (volume.getSize() <= 0) {
-		  volume = Volumes.lookup(this.allocInfo.getOwnerFullName(), mapping.getValue().getDisplayName());	
-		}
-		String volumeId = volume.getDisplayName();  
-		
-	    LOG.debug("Wait for volume " + volumeId +  " to become available");
-	    final ServiceConfiguration scConfigLocal = waitForVolume(volume);
-	  
-	    try {
-	      LOG.debug("About to attach volume " + volume.getDisplayName() + " to instance " + instanceId);
-	      AttachStorageVolumeType attachMsg = new AttachStorageVolumeType(Nodes.lookupIqns(this.cluster.getConfiguration()), volumeId);
-		  final AttachStorageVolumeResponseType scAttachResponse = AsyncRequests.sendSync(scConfigLocal, attachMsg);
-		  LOG.debug("Attach response from SC for volume " + volumeId + " and instance " + instanceId + scAttachResponse);
-		  String remoteDeviceString = scAttachResponse.getRemoteDeviceString();
-		  if (remoteDeviceString == null) {
-			  throw new EucalyptusCloudException("Failed to get remote device string for root volume " + volumeId + " while running instance " + instanceId);
-		  } else {
-			VirtualBootRecord vbr = new VirtualBootRecord(volumeId, remoteDeviceString, "ebs", mapping.getKey(), (volume.getSize() * BYTES_PER_GB), "none");
-			childVmInfo.getVirtualBootRecord().add(vbr);
-		    //vm.updatePersistantVolume(remoteDeviceString, volume); Skipping this step for now as no one seems to be using it
-		  }
-	    } catch (final Exception ex) {
-	      LOG.error(ex);
-		  Logs.extreme().error(ex, ex);
-		  throw ex;
-	    }
-	  }
-	  
-	  for( String deviceName : token.getEphemeralDisks().keySet()  ) {
-	    childVmInfo.setEphemeral( 0, deviceName, (this.allocInfo.getVmType().getDisk( ) * BYTES_PER_GB), "none" );
-	  }
-	  
-	  LOG.debug("Instance information: " + childVmInfo.dump());
+    if ( this.allocInfo.getBootSet( ).getMachine( ) instanceof BlockStorageImageInfo ) {        
+    	String instanceId = token.getInstanceId();
+    	
+    	// Deal with the root volume first
+    	VirtualBootRecord rootVbr = childVmInfo.lookupRoot();
+    	Volume rootVolume = token.getRootVolume();
+    	String volumeId = rootVolume.getDisplayName( );
+    	String volumeToken = null;
+    	
+    	// Wait for root volume
+    	LOG.debug("Wait for root ebs volume " + rootVolume.getDisplayName() +  " to become available");
+    	final ServiceConfiguration scConfig = waitForVolume(rootVolume);
+    	
+    	// Attach root volume
+    	try {
+    		LOG.debug("About to get attachment token for volume " + rootVolume.getDisplayName() + " to instance " + instanceId);    		
+    		GetVolumeTokenResponseType scGetTokenResponse;
+    		try {
+        	GetVolumeTokenType req = new GetVolumeTokenType(volumeId);
+        	scGetTokenResponse = AsyncRequests.sendSync(scConfig, req);
+        } catch ( Exception e ) {
+          LOG.debug( e, e );
+          throw new EucalyptusCloudException( e.getMessage( ), e );
+        }
+    		LOG.debug("Got volume token response from SC for volume " + rootVolume.getDisplayName() + " and instance " + instanceId + "\n" + scGetTokenResponse);
+    		volumeToken = scGetTokenResponse.getToken();                
+    		if ( volumeToken == null ) {
+    			throw new EucalyptusCloudException( "Failed to get remote device string for " + volumeId + " while running instance " + token.getInstanceId( ) );
+    		} else {
+    			//Do formatting here since formatting is for messaging only.
+    			//sc://vol-X,<token>
+        	volumeToken = VOLUME_TOKEN_PREFIX + volumeId + "," + volumeToken;
+        	rootVbr.setResourceLocation(volumeToken);
+        	rootVbr.setSize(rootVolume.getSize() * BYTES_PER_GB);
+    			//vm.updatePersistantVolume(remoteDeviceString, rootVolume); Skipping this step for now as no one seems to be using it
+    		}
+    	} catch (final Exception ex) {
+    		LOG.error(ex);
+    		Logs.extreme().error(ex, ex);
+    		throw ex;
+    	}
+    	
+    	// Deal with the remaining ebs volumes
+    	for (Entry<String, Volume> mapping : token.getEbsVolumes().entrySet()) {
+    		Volume volume = mapping.getValue();
+    		if (volume.getSize() <= 0) {
+    			volume = Volumes.lookup(this.allocInfo.getOwnerFullName(), mapping.getValue().getDisplayName());	
+    		}
+    		volumeId = volume.getDisplayName();  
+    		
+    		LOG.debug("Wait for volume " + volumeId +  " to become available");
+    		final ServiceConfiguration scConfigLocal = waitForVolume(volume);
+
+    		// Attach root volume
+      	try {
+      		LOG.debug("About to get attachment token for volume " + rootVolume.getDisplayName() + " to instance " + instanceId);    		
+      		GetVolumeTokenResponseType scGetTokenResponse;
+      		try {
+          	GetVolumeTokenType req = new GetVolumeTokenType(volumeId);
+          	scGetTokenResponse = AsyncRequests.sendSync(scConfig, req);
+          } catch ( Exception e ) {
+            LOG.debug( e, e );
+            throw new EucalyptusCloudException( e.getMessage( ), e );
+          }
+
+      		LOG.debug("Got volume token response from SC for volume " + rootVolume.getDisplayName() + " and instance " + instanceId + "\n" + scGetTokenResponse);
+      		volumeToken = scGetTokenResponse.getToken();                
+      		if ( volumeToken == null ) {
+      			throw new EucalyptusCloudException( "Failed to get remote device string for " + volumeId + " while running instance " + token.getInstanceId( ) );
+      		} else {
+      			//Do formatting here since formatting is for messaging only.
+      			//sc://vol-X,<token>
+          	volumeToken = VOLUME_TOKEN_PREFIX + volumeId + "," + volumeToken;          	
+          	VirtualBootRecord vbr = new VirtualBootRecord(volumeId, volumeToken, "ebs", mapping.getKey(), (volume.getSize() * BYTES_PER_GB), "none");
+          	childVmInfo.getVirtualBootRecord().add(vbr);
+    				//vm.updatePersistantVolume(remoteDeviceString, volume); Skipping this step for now as no one seems to be using it
+      		}
+      	} catch (final Exception ex) {
+      		LOG.error(ex);
+      		Logs.extreme().error(ex, ex);
+      		throw ex;
+      	}
+    	}
+    	
+    	for( String deviceName : token.getEphemeralDisks().keySet()  ) {
+    		childVmInfo.setEphemeral( 0, deviceName, (this.allocInfo.getVmType().getDisk( ) * BYTES_PER_GB), "none" );
+    	}
+    	
+    	LOG.debug("Instance information: " + childVmInfo.dump());
     }
     return childVmInfo;
   }

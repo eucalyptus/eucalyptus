@@ -149,27 +149,25 @@ define([
 		    console.log("Size: " + size);
 		    console.log("Zone: " + zone);
 
-                    // CONSTRUCT AJAX CALL RESPONSE OPTIONS
-                    var createAjaxCallResponse = {
-		      success: function(data, response, jqXHR){   // AJAX CALL SUCCESS OPTION
-		        console.log("Callback " + response);
-                        if(data.results){
-                          var volId = data.results.id;
-                          notifySuccess(null, $.i18n.prop('volume_create_success', volId));   // XSS RISK --- Kyo 040813
-                        }else{
-                          notifyError($.i18n.prop('volume_create_error'), undefined_error);
-                        }
-		      },
-		      error: function(jqXHR, textStatus, errorThrown){  // AJAX CALL ERROR OPTION
-		        console.log("Callback " + textStatus  + " error: " + getErrorMessage(jqXHR));
-                        notifyError($.i18n.prop('volume_create_error'), getErrorMessage(jqXHR));
-		      }
-                    };
 
 		    // PERFORM CREATE CALL OM THE MODEL
-                    self.scope.volume.sync('create', self.scope.volume, createAjaxCallResponse);
+            self.scope.volume.trigger('confirm');
+            self.scope.volume.save({}, {
+                success: function(model, response, options){   // AJAX CALL SUCCESS OPTION
+                    if(model != null){
+                        var volId = model.get('id');
+                        notifySuccess(null, $.i18n.prop('volume_create_success', volId));   // XSS RISK --- Kyo 040813
+                    }else{
+                        notifyError($.i18n.prop('volume_create_error'), undefined_error);
+                    }
+                },
+                error: function(model, jqXHR, options){  // AJAX CALL ERROR OPTION
+                    console.log("Callback " + getErrorMessage(jqXHR));
+                    notifyError($.i18n.prop('volume_create_error'), getErrorMessage(jqXHR));
+                }
+            });
 
-	           // DISPLAY THE VOLUME'S STATUS -- FOR DEBUG
+	       // DISPLAY THE VOLUME'S STATUS -- FOR DEBUG
 		   App.data.volume.each(function(item){
 		     console.log("Volume After create: " + item.toJSON().id +":"+ item.toJSON().size);
 	           });

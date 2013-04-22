@@ -718,7 +718,7 @@ input[type='text'].medium-textinput {
   text-decoration: none;
   padding: 5px 24px;
   border-radius: 5px;
-  border: 1px solid rgba(90,110,90,0.4);
+  border: 1px solid #cdcdcd;
 
   background: #c8df83 url(green-gradient.svg) no-repeat 0 0;
 
@@ -848,6 +848,9 @@ ul.ui-autocomplete {
   padding: 3px 10px;
   white-space: nowrap;
 }
+
+
+table.display .expanded-table thead th  {background:none; border:none; color:#02405f; padding-top:0}
 
 
 /* ======== Content styles ======= */
@@ -1174,7 +1177,6 @@ table.display tr.heading2 td {
 
 table.display td {
   padding: 5px 8px;
-  border-bottom: 1px solid #e5e5e5;
   font-size: 11px;
   text-align: center;
 }
@@ -1251,7 +1253,6 @@ table.display tr.glow td.sorting_3 {
 
 tr.expanded td {
   padding: 0;
-  border-top: 1px solid #a9a9a9;
 }
 
 tr.even + tr.expanded td { 
@@ -3076,10 +3077,7 @@ background: -ms-linear-gradient(top,  rgba(255,255,255,1) 0%,rgba(234,234,234,1)
 background: linear-gradient(to bottom,  rgba(255,255,255,1) 0%,rgba(234,234,234,1) 22%,rgba(234,234,234,1) 82%,rgba(216,216,216,1) 100%); /* W3C */
 filter: progid:DXImageTransform.Microsoft.gradient( startColorstr='#ffffff', endColorstr='#d8d8d8',GradientType=0 ); /* IE6-8 */
 color:#5d5d5d;
-    border-top: thin solid #b8b8b8;
-    border-left: thin solid #b8b8b8;
-    border-right: thin solid #b8b8b8;
-    border-bottom: thin solid #b8b8b8;
+
     box-shadow:none;
     -webkit-border-radius: 5px 5px 0px 0px;
         border-radius: 5px 5px 0px 0px;
@@ -3105,9 +3103,9 @@ background: -o-linear-gradient(top,  #ededed 0%,#f6f6f6 53%,#ffffff 100%); /* Op
 background: -ms-linear-gradient(top,  #ededed 0%,#f6f6f6 53%,#ffffff 100%); /* IE10+ */
 background: linear-gradient(to bottom,  #ededed 0%,#f6f6f6 53%,#ffffff 100%); /* W3C */
 filter: progid:DXImageTransform.Microsoft.gradient( startColorstr='#ededed', endColorstr='#ffffff',GradientType=0 ); /* IE6-8 */
-    border-top: thin solid #b8b8b8;
-    border-left: thin solid #b8b8b8;
-    border-right: thin solid #b8b8b8;
+    border-top: thin solid #cdcdcd;
+    border-left: thin solid #cdcdcd;
+    border-right: thin solid #cdcdcd;
     border-bottom: thin solid #fff;
     box-shadow:none;
 -webkit-border-radius: 5px 5px 0px 0px;
@@ -3120,7 +3118,7 @@ filter: progid:DXImageTransform.Microsoft.gradient( startColorstr='#ededed', end
 }
 
 
-.ui-tabs .ui-tabs-panel {background:white; border-top:thin solid #b8b8b8; background:#fff url(/images/ui-tabs-panel.png) repeat-x bottom ;}
+.ui-tabs .ui-tabs-panel {background:white; border-top:thin solid #f5f5f5; background:#fff url(/images/ui-tabs-panel.png) repeat-x bottom ;}
 
 .expanded ul.ui-tabs-nav li.ui-state-default {
     width: auto;

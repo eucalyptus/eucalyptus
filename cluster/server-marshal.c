@@ -182,7 +182,7 @@ adb_AttachVolumeResponse_t *AttachVolumeMarshal(adb_AttachVolume_t * attachVolum
     int rc;
     axis2_bool_t status = AXIS2_TRUE;
     char statusMessage[256];
-    char *volumeId = NULL, *instanceId = NULL, *remoteDev = NULL, *localDev = NULL;
+    char *volumeId = NULL, *instanceId = NULL, *attachmentToken = NULL, *localDev = NULL;
     ncMetadata ccMeta;
 
     avt = adb_AttachVolume_get_AttachVolume(attachVolume, env);
@@ -191,12 +191,12 @@ adb_AttachVolumeResponse_t *AttachVolumeMarshal(adb_AttachVolume_t * attachVolum
 
     volumeId = adb_attachVolumeType_get_volumeId(avt, env);
     instanceId = adb_attachVolumeType_get_instanceId(avt, env);
-    remoteDev = adb_attachVolumeType_get_remoteDev(avt, env);
+    attachmentToken = adb_attachVolumeType_get_remoteDev(avt, env);
     localDev = adb_attachVolumeType_get_localDev(avt, env);
 
     status = AXIS2_TRUE;
     if (!DONOTHING) {
-        rc = doAttachVolume(&ccMeta, volumeId, instanceId, remoteDev, localDev);
+        rc = doAttachVolume(&ccMeta, volumeId, instanceId, attachmentToken, localDev);
         if (rc) {
             LOGERROR("doAttachVolume() failed\n");
             status = AXIS2_FALSE;
@@ -242,7 +242,7 @@ adb_DetachVolumeResponse_t *DetachVolumeMarshal(adb_DetachVolume_t * detachVolum
     char statusMessage[256] = { 0 };
     char *volumeId = NULL;
     char *instanceId = NULL;
-    char *remoteDev = NULL;
+    char *attachmentToken = NULL;
     char *localDev = NULL;
     int force = 0;
     ncMetadata ccMeta = { 0 };
@@ -253,7 +253,7 @@ adb_DetachVolumeResponse_t *DetachVolumeMarshal(adb_DetachVolume_t * detachVolum
 
     volumeId = adb_detachVolumeType_get_volumeId(dvt, env);
     instanceId = adb_detachVolumeType_get_instanceId(dvt, env);
-    remoteDev = adb_detachVolumeType_get_remoteDev(dvt, env);
+    attachmentToken = adb_detachVolumeType_get_remoteDev(dvt, env);
     localDev = adb_detachVolumeType_get_localDev(dvt, env);
     forceBool = adb_detachVolumeType_get_force(dvt, env);
     if (forceBool == AXIS2_TRUE) {
@@ -264,7 +264,7 @@ adb_DetachVolumeResponse_t *DetachVolumeMarshal(adb_DetachVolume_t * detachVolum
 
     status = AXIS2_TRUE;
     if (!DONOTHING) {
-        rc = doDetachVolume(&ccMeta, volumeId, instanceId, remoteDev, localDev, force);
+        rc = doDetachVolume(&ccMeta, volumeId, instanceId, attachmentToken, localDev, force);
         if (rc) {
             LOGERROR("doDetachVolume() failed\n");
             status = AXIS2_FALSE;
@@ -1481,7 +1481,7 @@ int ccInstanceUnmarshal(adb_ccInstanceType_t * dst, ccInstance * src, const axut
     for (i = 0; i < src->volumesSize; i++) {
         vol = adb_volumeType_create(env);
         adb_volumeType_set_volumeId(vol, env, src->volumes[i].volumeId);
-        adb_volumeType_set_remoteDev(vol, env, src->volumes[i].remoteDev);
+        adb_volumeType_set_remoteDev(vol, env, src->volumes[i].attachmentToken);
         adb_volumeType_set_localDev(vol, env, src->volumes[i].localDev);
         adb_volumeType_set_state(vol, env, src->volumes[i].stateName);
 

@@ -46,17 +46,28 @@ import com.google.common.base.Splitter;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.MapMaker;
 import com.google.common.collect.Sets;
+import com.google.common.cache.CacheBuilder;
+import com.google.common.cache.CacheLoader;
+import com.google.common.cache.LoadingCache;
+
 
 /**
  *
  */
 public class SslUtils {
-
-  private static final Map<SslCipherSuiteBuilderParams,String[]> SSL_CIPHER_LOOKUP =
-      new MapMaker().maximumSize(32).makeComputingMap( SslCipherSuiteBuilder.INSTANCE );
+  private static final LoadingCache<SslCipherSuiteBuilderParams,String[]> SSL_CIPHER_LOOKUP =
+    CacheBuilder.newBuilder().maximumSize(32).build(
+    new CacheLoader<SslCipherSuiteBuilderParams,String[]>() {
+      @Override
+      public String[] load( final SslCipherSuiteBuilderParams params ) {
+        return ciphers()
+            .with( params.getCipherStrings() )
+            .enabledCipherSuites( params.getSupportedCipherSuites() );
+      }
+    });
 
   public static String[] getEnabledCipherSuites( final String cipherStrings, final String[] supportedCipherSuites ) {
-    return SSL_CIPHER_LOOKUP.get( params(cipherStrings, supportedCipherSuites) );
+      return SSL_CIPHER_LOOKUP.getUnchecked( params(cipherStrings, supportedCipherSuites) );
   }
 
   static final class SslCipherSuiteBuilderParams {
@@ -101,17 +112,6 @@ public class SslUtils {
     static SslCipherSuiteBuilderParams params( final String cipherStrings,
                                                final String[] supportedCipherSuites  ) {
       return new SslCipherSuiteBuilderParams( cipherStrings, supportedCipherSuites );
-    }
-  }
-
-  private enum SslCipherSuiteBuilder implements Function<SslCipherSuiteBuilderParams,String[]> {
-    INSTANCE;
-
-    @Override
-    public String[] apply( final SslCipherSuiteBuilderParams params ) {
-      return ciphers()
-          .with( params.getCipherStrings() )
-          .enabledCipherSuites( params.getSupportedCipherSuites() );
     }
   }
 

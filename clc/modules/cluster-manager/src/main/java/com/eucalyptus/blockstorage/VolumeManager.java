@@ -91,7 +91,6 @@ import com.eucalyptus.context.Contexts;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.TransactionException;
 import com.eucalyptus.entities.Transactions;
-import com.eucalyptus.node.Nodes;
 import com.eucalyptus.records.EventClass;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
@@ -105,20 +104,19 @@ import com.eucalyptus.tags.Tags;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.RestrictedTypes;
+import com.eucalyptus.util.StorageProperties;
 import com.eucalyptus.util.async.AsyncRequests;
 import com.eucalyptus.vm.MigrationState;
 import com.eucalyptus.vm.VmInstance;
 import com.eucalyptus.vm.VmInstance.VmState;
 import com.eucalyptus.vm.VmInstances;
 import com.eucalyptus.vm.VmVolumeAttachment;
+import com.eucalyptus.vm.VmVolumeAttachment.AttachmentState;
 import com.google.common.base.Function;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Sets;
 import com.google.common.primitives.Ints;
-
-import edu.ucsb.eucalyptus.msgs.AttachStorageVolumeResponseType;
-import edu.ucsb.eucalyptus.msgs.AttachStorageVolumeType;
 import edu.ucsb.eucalyptus.msgs.AttachVolumeResponseType;
 import edu.ucsb.eucalyptus.msgs.AttachVolumeType;
 import edu.ucsb.eucalyptus.msgs.AttachedVolume;
@@ -133,10 +131,15 @@ import edu.ucsb.eucalyptus.msgs.DescribeVolumesType;
 import edu.ucsb.eucalyptus.msgs.DetachStorageVolumeType;
 import edu.ucsb.eucalyptus.msgs.DetachVolumeResponseType;
 import edu.ucsb.eucalyptus.msgs.DetachVolumeType;
+import edu.ucsb.eucalyptus.msgs.ExportVolumeResponseType;
+import edu.ucsb.eucalyptus.msgs.ExportVolumeType;
+import edu.ucsb.eucalyptus.msgs.GetVolumeTokenResponseType;
+import edu.ucsb.eucalyptus.msgs.GetVolumeTokenType;
 import edu.ucsb.eucalyptus.msgs.ResourceTag;
 
 public class VolumeManager {
   private static final int VOL_CREATE_RETRIES = 10;
+  
   private static Logger    LOG                = Logger.getLogger( VolumeManager.class );
   
   public CreateVolumeResponseType CreateVolume( final CreateVolumeType request ) throws EucalyptusCloudException, AuthException {
@@ -356,6 +359,43 @@ public class VolumeManager {
     return reply;
   }
   
+  /* TODO: zhill DEVELOPMENT AND DEBUG ONLY! REMOVE!!! */
+  public String TestVolumeToken(String volumeId, String partition) throws EucalyptusCloudException {
+    Partition volPartition = Partitions.lookupByName( partition );
+    ServiceConfiguration sc = Topology.lookup( Storage.class, volPartition );
+
+    GetVolumeTokenResponseType scTokenResponse;
+    try {
+    	GetVolumeTokenType req = new GetVolumeTokenType(volumeId);
+    	scTokenResponse = AsyncRequests.sendSync( sc, req );
+    } catch ( Exception e ) {
+      LOG.debug( e, e );
+      throw new EucalyptusCloudException( e.getMessage( ), e );
+    }    
+    return scTokenResponse.getToken();
+  }
+  
+  /* TODO: zhill DEVELOPMENT AND DEBUG ONLY! REMOVE!!! */
+  public String TestExportVolume(String partition, String volumeId, String token, String hostIP, String hostIqn) throws EucalyptusCloudException {
+    Partition volPartition = Partitions.lookupByName( partition );
+    ServiceConfiguration sc = Topology.lookup( Storage.class, volPartition );
+
+    ExportVolumeResponseType scTokenResponse = null;
+    try {
+    	ExportVolumeType req = new ExportVolumeType();
+    	req.setToken(token);
+    	req.setVolumeId(volumeId);
+    	req.setIp(hostIP);
+    	req.setIqn(hostIqn);
+    	scTokenResponse = AsyncRequests.sendSync( sc, req );
+    } catch ( Exception e ) {
+      LOG.debug( e, e );
+      throw new EucalyptusCloudException( e.getMessage( ), e );
+    }    
+    return scTokenResponse.getConnectionString();
+  }
+
+  
   public AttachVolumeResponseType AttachVolume( AttachVolumeType request ) throws EucalyptusCloudException {
     AttachVolumeResponseType reply = ( AttachVolumeResponseType ) request.getReply( );
     final String deviceName = request.getDevice( );
@@ -407,18 +447,22 @@ public class VolumeManager {
       throw new EucalyptusCloudException( "Can only attach volumes in the same zone: " + request.getVolumeId( ) );
     }
     ServiceConfiguration ccConfig = Topology.lookup( ClusterController.class, vm.lookupPartition( ) );
-    AttachStorageVolumeResponseType scAttachResponse;
+    GetVolumeTokenResponseType scGetTokenResponse;
     try {
-      AttachStorageVolumeType req = new AttachStorageVolumeType( Nodes.lookupIqn( vm ), volume.getDisplayName( ) );
-      scAttachResponse = AsyncRequests.sendSync( sc, req );
+    	GetVolumeTokenType req = new GetVolumeTokenType(volume.getDisplayName());
+    	scGetTokenResponse = AsyncRequests.sendSync(sc, req);
     } catch ( Exception e ) {
       LOG.debug( e, e );
       throw new EucalyptusCloudException( e.getMessage( ), e );
     }
-    request.setRemoteDevice( scAttachResponse.getRemoteDeviceString( ) );
+    
+    //TODO: zhill, this is a messaging change. The SC should not know the format, so the CLC must construct the special format
+    String token = StorageProperties.TOKEN_PREFIX + scGetTokenResponse.getVolumeId() + "," + scGetTokenResponse.getToken();
+    
+    request.setRemoteDevice(token);
     
     AttachedVolume attachVol = new AttachedVolume( volume.getDisplayName( ), vm.getInstanceId( ), request.getDevice( ), request.getRemoteDevice( ) );
-    vm.addTransientVolume( deviceName, scAttachResponse.getRemoteDeviceString( ), volume );
+    vm.addTransientVolume( deviceName, token, volume );
     AsyncRequests.newRequest( new VolumeAttachCallback( request ) ).dispatch( ccConfig );
     
     EventRecord.here( VolumeManager.class, EventClass.VOLUME, EventType.VOLUME_ATTACH )
@@ -479,6 +523,7 @@ public class VolumeManager {
       throw new EucalyptusCloudException( "Failed to lookup SC for partition: " + vm.getPartition( ), ex );
     }
     if ( VmState.STOPPED.equals( vm.getState( ) ) ) {
+    	//Ensure that the volume is not attached
     	try {
     		AsyncRequests.sendSync( scVm, new DetachStorageVolumeType( volume.getVolumeId( ) ) );
     	} catch ( Exception e ) {
@@ -502,16 +547,21 @@ public class VolumeManager {
     	request.setDevice( volume.getDevice( ).replaceAll( "unknown,requested:", "" ) );
     	request.setInstanceId( vm.getInstanceId( ) );
     	VolumeDetachCallback ncDetach = new VolumeDetachCallback( request );
-    	try {
+    	/* No SC action required, send directly to NC
+    	 * try {
     		AsyncRequests.sendSync( scVm, new DetachStorageVolumeType( volume.getVolumeId( ) ) );
     	} catch ( Exception e ) {
     		LOG.debug( e );
     		Logs.extreme( ).debug( e, e );
     		//GRZE: attach is idempotent, failure here is ok, throw new EucalyptusCloudException( e.getMessage( ) );
-    	}
+    	}*/
     	AsyncRequests.newRequest( ncDetach ).dispatch( cluster.getConfiguration( ) );
     }
-    volume.setStatus( "detaching" );
+    
+    //Update the state of the attachment to 'detaching'
+    vm.updateVolumeAttachment(request.getVolumeId(), AttachmentState.detaching);
+    
+    volume.setStatus( "detaching" );    
     reply.setDetachedVolume( volume );
     Volumes.fireUsageEvent(vol, VolumeEvent.forVolumeDetach(vm.getInstanceUuid(), vm.getInstanceId()));
     return reply;

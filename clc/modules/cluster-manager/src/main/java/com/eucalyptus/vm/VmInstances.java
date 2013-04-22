@@ -545,6 +545,7 @@ public class VmInstances {
             }
             
             try {
+            	//TODO: zhill - still send a cleanup to SC to guarantee cleanup?
               final ServiceConfiguration sc = Topology.lookup( Storage.class, vm.lookupPartition( ) );
               AsyncRequests.sendSync( sc, new DetachStorageVolumeType( arg0.getVolumeId( ) ) );
             } catch ( Exception ex ) {

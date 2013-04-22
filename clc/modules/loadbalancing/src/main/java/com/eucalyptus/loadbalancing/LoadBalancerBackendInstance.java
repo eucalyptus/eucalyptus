@@ -58,7 +58,6 @@ public class LoadBalancerBackendInstance extends UserMetadata<LoadBalancerBacken
 	private static Logger    LOG     = Logger.getLogger( LoadBalancerBackendInstance.class );
 	@Transient
 	private static final long serialVersionUID = 1L;
-	
 	@Transient
 	private String partition = null;
 	
@@ -79,6 +78,9 @@ public class LoadBalancerBackendInstance extends UserMetadata<LoadBalancerBacken
 	
 	@Column( name = "reason_code", nullable=true)
 	private String reasonCode = null;
+	
+	@Column( name = "description", nullable=true)
+	private String description = null;
 
     private LoadBalancerBackendInstance(){
     	super(null,null);
@@ -88,6 +90,8 @@ public class LoadBalancerBackendInstance extends UserMetadata<LoadBalancerBacken
 		super(userFullName, vmId);
 		this.loadbalancer = lb;
 		this.setState(STATE.OutOfService);
+		this.setReasonCode("ELB");
+		this.setDescription("Instance registration is still in progress.");
 		
 		if(this.getVmInstance() == null)
     		throw new IllegalArgumentException("Cannot find the instance with id="+vmId);
@@ -166,6 +170,14 @@ public class LoadBalancerBackendInstance extends UserMetadata<LoadBalancerBacken
     
     public void setReasonCode(final String reason){
     	this.reasonCode = reason;
+    }
+    
+    public String getDescription(){
+    	return this.description;
+    }
+    
+    public void setDescription(final String description){
+    	this.description = description;
     }
     
     public void setAvailabilityZone(final LoadBalancerZone zone){

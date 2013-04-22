@@ -86,8 +86,11 @@ import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.RestrictedTypes.Resolver;
 import com.google.common.base.Function;
 import com.google.common.base.Predicate;
+import com.google.common.base.Strings;
+import com.google.common.cache.CacheBuilder;
+import com.google.common.cache.CacheLoader;
+import com.google.common.cache.LoadingCache;
 import com.google.common.collect.ForwardingConcurrentMap;
-import com.google.common.collect.MapMaker;
 import com.google.common.collect.Sets;
 
 import edu.ucsb.eucalyptus.msgs.VmTypeInfo;
@@ -171,8 +174,8 @@ public class VmTypes {
     
     private PersistentMap( Function<K, V> getFunction ) {
       super( );
-      ConcurrentMap<K, V> map = new MapMaker( ).makeComputingMap( getFunction );
-      this.backingMap = map;
+      LoadingCache<K, V> map = CacheBuilder.newBuilder().build(CacheLoader.from(getFunction));
+      this.backingMap = map.asMap();
       Class valueType = Classes.genericsToClasses( getFunction ).get( 1 );
       this.getFunction = Entities.asTransaction( getFunction );
       this.putFunction = Entities.asTransaction( valueType, new Persister<V>( ) );

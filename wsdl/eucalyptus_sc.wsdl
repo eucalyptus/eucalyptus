@@ -1,0 +1,202 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Copyright 2009-2012 Eucalyptus Systems, Inc. This program is free software: 
+	you can redistribute it and/or modify it under the terms of the GNU General 
+	Public License as published by the Free Software Foundation; version 3 of 
+	the License. This program is distributed in the hope that it will be useful, 
+	but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY 
+	or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for 
+	more details. You should have received a copy of the GNU General Public License 
+	along with this program. If not, see http://www.gnu.org/licenses/. Please 
+	contact Eucalyptus Systems, Inc., 6755 Hollister Ave., Goleta CA 93117, USA 
+	or visit http://www.eucalyptus.com/licenses/ if you need additional information 
+	or have any questions. This file may incorporate work covered under the following 
+	copyright and permission notice: Software License Agreement (BSD License) 
+	Copyright (c) 2008, Regents of the University of California All rights reserved. 
+	Redistribution and use of this software in source and binary forms, with 
+	or without modification, are permitted provided that the following conditions 
+	are met: Redistributions of source code must retain the above copyright notice, 
+	this list of conditions and the following disclaimer. Redistributions in 
+	binary form must reproduce the above copyright notice, this list of conditions 
+	and the following disclaimer in the documentation and/or other materials 
+	provided with the distribution. THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT 
+	HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, 
+	BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS 
+	FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT 
+	OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, 
+	EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT 
+	OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS 
+	INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, 
+	STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN 
+	ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY 
+	OF SUCH DAMAGE. USERS OF THIS SOFTWARE ACKNOWLEDGE THE POSSIBLE PRESENCE 
+	OF OTHER OPEN SOURCE LICENSED MATERIAL, COPYRIGHTED MATERIAL OR PATENTED 
+	MATERIAL IN THIS SOFTWARE, AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY 
+	DISCOVERING IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA, 
+	SANTA BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY, WHICH 
+	IN THE REGENTS' DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT OF 
+	THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR WITHDRAWAL 
+	OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH ANY SUCH LICENSES 
+	OR RIGHTS. -->
+
+
+<wsdl:definitions xmlns:wsdl="http://schemas.xmlsoap.org/wsdl/"
+	xmlns:ns1="http://schemas.xmlsoap.org/soap/http" xmlns:soap="http://schemas.xmlsoap.org/wsdl/soap/"
+	xmlns:tns="http://storagecontroller.eucalyptus.ucsb.edu" xmlns:xsd="http://www.w3.org/2001/XMLSchema"
+	name="storagecontroller_eucalyptus_ucsb_edu" targetNamespace="http://storagecontroller.eucalyptus.ucsb.edu">
+
+	<wsdl:types>
+		<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+			attributeFormDefault="qualified" elementFormDefault="qualified"
+			targetNamespace="http://storagecontroller.eucalyptus.ucsb.edu" xmlns:tns="http://storagecontroller.eucalyptus.ucsb.edu">
+
+		<!--
+			<xs:complexType name="StorageMessageType" abstract="true">
+				<xs:sequence>
+					<xs:element nillable="false" minOccurs="0" name="correlationId" type="xs:string"/>
+	  			<xs:element nillable="false" minOccurs="0" name="userId" type="xs:string"/>
+	  			<xs:element nillable="true" minOccurs="0" maxOccurs="1" name="statusMessage" type="xs:string"/>
+	  			<xs:element nillable="false" minOccurs="0" maxOccurs="1" name="return" type="xs:boolean"/>
+          <xs:element nillable="false" minOccurs="0" maxOccurs="1" name="epoch" type="xs:int"/>
+          <xs:element maxOccurs="unbounded" minOccurs="0" name="services" type="tns:serviceInfoType"/>
+          <xs:element maxOccurs="unbounded" minOccurs="0" name="disabledServices" type="tns:serviceInfoType"/>
+          <xs:element maxOccurs="unbounded" minOccurs="0" name="notreadyServices" type="tns:serviceInfoType"/>
+	  <xs:element nillable="true" minOccurs="0" maxOccurs="1" name="nodeName" type="xs:string"/>
+    	
+				</xs:sequence>
+			</xs:complexType>
+			
+			<xs:complexType abstract="true" name="serviceInfoType">
+				<xs:sequence>
+					<xs:element nillable="true" minOccurs="0" maxOccurs="1" name="partition" type="xs:string" />
+					<xs:element nillable="false" minOccurs="0" maxOccurs="1" name="type" type="xs:string" />
+					<xs:element nillable="false" minOccurs="0" maxOccurs="1" name="name" type="xs:string" />
+					<xs:element nillable="false" minOccurs="0" maxOccurs="unbounded" name="uris" type="xs:string" />
+				</xs:sequence>
+			</xs:complexType>
+		-->
+			<xs:complexType name="ExportVolumeType" abstract="true">
+				<!-- <xs:complexContent>
+						<xs:extension base="tns:StorageMessageType">-->
+						<xs:sequence>
+							<xs:element nillable="false" minOccurs="1" maxOccurs="1" name="volumeId" type="xs:string" />
+							<xs:element nillable="false" minOccurs="1" maxOccurs="1" name="token" type="xs:string" />
+							<xs:element nillable="false" minOccurs="1" maxOccurs="1" name="ip" type="xs:string" />
+							<xs:element nillable="false" minOccurs="1" maxOccurs="1" name="iqn" type="xs:string" />
+						</xs:sequence>
+						<!--  </xs:extension>
+					</xs:complexContent>-->
+			</xs:complexType>
+
+			<xs:complexType name="ExportVolumeResponseType">
+					<!--<xs:complexContent>
+						<xs:extension base="tns:StorageMessageType">-->
+						<xs:sequence>
+							<xs:element nillable="false" minOccurs="1" maxOccurs="1" name="volumeId" type="xs:string" />
+							<xs:element nillable="false" minOccurs="1" maxOccurs="1" name="connectionString" type="xs:string" />
+						</xs:sequence>
+						<!--</xs:extension>
+					</xs:complexContent>-->
+			</xs:complexType>
+
+			<xs:complexType name="UnexportVolumeType">
+			<!-- <xs:complexContent>
+						<xs:extension base="tns:StorageMessageType">-->
+						<xs:sequence>
+							<xs:element nillable="false" minOccurs="1" maxOccurs="1" name="volumeId" type="xs:string" />
+							<xs:element nillable="false" minOccurs="1" maxOccurs="1" name="token" type="xs:string" />
+							<xs:element nillable="false" minOccurs="1" maxOccurs="1" name="ip" type="xs:string" />
+							<xs:element nillable="false" minOccurs="1" maxOccurs="1" name="iqn" type="xs:string" />
+						</xs:sequence>
+						<!--</xs:extension>
+					</xs:complexContent>-->
+			</xs:complexType>
+
+			<xs:complexType name="UnexportVolumeResponseType">
+			<!-- <xs:complexContent>
+						<xs:extension base="tns:StorageMessageType">-->			
+						<xs:sequence>
+						</xs:sequence>
+						<!--</xs:extension>
+					</xs:complexContent>-->
+			</xs:complexType>
+
+			<xs:element name="ExportVolume" nillable="true" type="tns:ExportVolumeType" />
+			<xs:element name="ExportVolumeResponse" nillable="true" type="tns:ExportVolumeResponseType" />
+			<xs:element name="UnexportVolume" nillable="true" type="tns:UnexportVolumeType" />
+			<xs:element name="UnexportVolumeResponse" nillable="true" type="tns:UnexportVolumeResponseType" />
+		
+		</xs:schema>
+	</wsdl:types>
+
+	<!-- Messages -->
+	<wsdl:message name="ExportVolume">
+		<wsdl:part element="tns:ExportVolume" name="ExportVolume">
+		</wsdl:part>
+	</wsdl:message>
+	
+	<wsdl:message name="ExportVolumeResponse">
+		<wsdl:part element="tns:ExportVolumeResponse" name="ExportVolumeResponse">
+		</wsdl:part>
+	</wsdl:message>
+
+	<wsdl:message name="UnexportVolume">
+		<wsdl:part element="tns:UnexportVolume" name="UnexportVolume">
+		</wsdl:part>
+	</wsdl:message>
+	
+	<wsdl:message name="UnexportVolumeResponse">
+		<wsdl:part element="tns:UnexportVolumeResponse" name="UnexportVolumeResponse">
+		</wsdl:part>
+	</wsdl:message>
+	
+	<!-- PortTypes -->
+	<wsdl:portType name="EucalyptusSC">
+		<wsdl:operation name="ExportVolume">
+			<wsdl:input message="tns:ExportVolume" name="ExportVolume">
+			</wsdl:input>
+			<wsdl:output message="tns:ExportVolumeResponse" name="ExportVolumeResponse">
+			</wsdl:output>
+		</wsdl:operation>
+		
+		<wsdl:operation name="UnexportVolume">
+			<wsdl:input message="tns:UnexportVolume" name="UnexportVolume">
+			</wsdl:input>
+			<wsdl:output message="tns:UnexportVolumeResponse" name="UnexportVolumeResponse">
+			</wsdl:output>
+		</wsdl:operation>
+	</wsdl:portType>
+
+	<!-- Binding -->
+	<wsdl:binding name="EucalyptusSCSoapBinding" type="tns:EucalyptusSC">
+		<soap:binding style="document"
+			transport="http://schemas.xmlsoap.org/soap/http" />
+
+		<wsdl:operation name="ExportVolume">
+			<soap:operation soapAction="EucalyptusSC#ExportVolume" style="document" />
+			<wsdl:input name="ExportVolume">
+				<soap:body use="literal" />
+			</wsdl:input>
+			<wsdl:output name="ExportVolumeResponse">
+				<soap:body use="literal" />
+			</wsdl:output>
+		</wsdl:operation>
+		
+		<wsdl:operation name="UnexportVolume">
+			<soap:operation soapAction="EucalyptusSC#UnexportVolume" style="document" />
+			<wsdl:input name="UnexportVolume">
+				<soap:body use="literal" />
+			</wsdl:input>
+			<wsdl:output name="UnexportVolumeResponse">
+				<soap:body use="literal" />
+			</wsdl:output>
+		</wsdl:operation>
+	</wsdl:binding>
+
+	<!-- Service -->
+	<wsdl:service name="EucalyptusSC">
+		<wsdl:port binding="tns:EucalyptusSCSoapBinding" name="EucalyptusSCPort">
+			<soap:address location="http://spinner.cs.ucsb.edu:8773/services/Storage" />
+		</wsdl:port>
+	</wsdl:service>
+
+</wsdl:definitions>

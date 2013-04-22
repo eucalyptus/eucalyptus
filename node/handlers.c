@@ -111,6 +111,7 @@
 #include <backing.h>
 #include <diskutil.h>
 #include <euca_auth.h>
+#include <euca_axis.h>
 
 #include <vbr.h>
 #include <iscsi.h>
@@ -123,6 +124,8 @@
 #include "handlers.h"
 #include "xml.h"
 #include "hooks.h"
+#include <ebs_utils.h>
+
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |
@@ -185,16 +188,16 @@ const char *euca_client_component_name = "cc";  //!< Name of this component's cl
 #endif /* NO_COMP */
 
 /* used by lower level handlers */
-sem *hyp_sem = NULL;                   //!< semaphore for serializing domain creation
 
 // FIXME: This semaphore is probably superfluous and should be removed (with hyp_sem used in its place).
 sem *migr_sem = NULL;                  //!< semaphore for serializing migrations
-
-sem *inst_sem = NULL;                  //!< guarding access to global instance structs
-sem *inst_copy_sem = NULL;             //!< guarding access to global instance structs
-sem *addkey_sem = NULL;                //!< guarding access to global instance structs
-sem *loop_sem = NULL;                  //!< created in diskutils.c for serializing 'losetup' invocations
-sem *log_sem = NULL;                   //!< used by log.c
+sem *hyp_sem = NULL;            //!< semaphore for serializing domain creation
+sem *inst_sem = NULL;           //!< guarding access to global instance structs
+sem *inst_copy_sem = NULL;      //!< guarding access to global instance structs
+sem *addkey_sem = NULL;         //!< guarding access to global instance structs
+sem *loop_sem = NULL;           //!< created in diskutils.c for serializing 'losetup' invocations
+sem *log_sem = NULL;            //!< used by log.c
+sem *service_state_sem = NULL;	//!< Used to guard service state updates (i.e. topology updates)
 
 bunchOfInstances *global_instances = NULL;  //!< pointer to the instance list
 bunchOfInstances *global_instances_copy = NULL; //!< pointer to the copied instance list
@@ -209,7 +212,7 @@ const int default_migration_ready_threshold = 60 * 15;  //!< after this many sec
 struct nc_state_t nc_state = { 0 };    //!< Global NC state structure
 
 configEntry configKeysRestartNC[] = {
-    {"ENABLE_WS_SECURITY", "Y"},
+    {CONFIG_ENABLE_WS_SECURITY, "Y"},
     {"EUCALYPTUS", "/"},
     {"NC_PORT", "8775"},
     {"NC_SERVICE", "axis2/services/EucalyptusNC"},
@@ -223,6 +226,8 @@ configEntry configKeysNoRestartNC[] = {
     {"LOGPREFIX", ""},
     {NULL, NULL},
 };
+
+int incoming_migrations_in_progress = 0;
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |
@@ -256,6 +261,10 @@ static void refresh_instance_info(struct nc_state_t *nc, ncInstance * instance);
 static void update_log_params(void);
 static void nc_signal_handler(int sig);
 static int init(void);
+static void updateServiceStateInfo(ncMetadata * pMeta);
+static void printNCServiceStateInfo();
+static void printMsgServiceStateInfo(ncMetadata *pMeta);
+
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |
@@ -277,6 +286,131 @@ static int init(void);
  |                               IMPLEMENTATION                               |
  |                                                                            |
 \*----------------------------------------------------------------------------*/
+
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                               IMPLEMENTATION                               |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+//! Copies the url string of the ENABLED service of the requested type into dest_buffer.
+//! dest_buffer MUST be the same size as the services uri array length, 512.
+//! NULL if none exists
+void get_service_url(const char *service_type, struct nc_state_t *nc, char *dest_buffer)
+{
+	int i = 0, j = 0;
+	int found = 0;
+	sem_p(service_state_sem);
+
+	for(i = 0; i < 16;i++) {
+		if(!strcmp(service_type, nc->services[i].type)) {
+			//Winner!
+			for(j = 0; j < nc->services[i].urisLen; j++) {
+				euca_strncpy(dest_buffer, nc->services[i].uris[j], 512);
+				found = 1;
+				break;
+			}
+		}
+	}
+	sem_v(service_state_sem);
+
+	if(found) {
+		LOGTRACE("Found enabled service URI for service type %s as %s\n", service_type, dest_buffer);
+	} else {
+		dest_buffer[0] = '\0'; //Ensure 0 length string
+		LOGTRACE("No enabled service found for service type %s\n", service_type);
+	}
+}
+
+static void printNCServiceStateInfo()
+{
+	int i = 0, j = 0;
+	//Don't bother if not at trace logging
+	if(log_level_get() <= EUCA_LOG_TRACE) {
+		LOGTRACE("Printing %d services\n", nc_state.servicesLen);
+		sem_p(service_state_sem);
+		for(i = 0; i < nc_state.servicesLen; i++) {
+			LOGTRACE("Service - %s %s %s %s\n", nc_state.services[i].name, nc_state.services[i].partition, nc_state.services[i].type, nc_state.services[i].uris[0]);
+		}
+		sem_v(service_state_sem);
+	}
+}
+
+static void printMsgServiceStateInfo(ncMetadata *pMeta)
+{
+	int i = 0, j = 0;
+	//Don't bother if not at trace logging
+	if(log_level_get() <= EUCA_LOG_TRACE)
+	{
+		LOGTRACE("Printing %d services\n", pMeta->servicesLen);
+		LOGTRACE("Msg-Meta epoch %d\n", pMeta->epoch);
+		for(i = 0; i < pMeta->servicesLen; i++) {
+			LOGTRACE("Msg-Meta: Service - %s %s %s %s\n", pMeta->services[i].name, pMeta->services[i].partition, pMeta->services[i].type, pMeta->services[i].uris[0]);
+		}
+	}
+}
+
+//!
+//! Update the state of the services and topology as received from the CC
+//!
+//! @param[in] pMeta a pointer to the node controller (NC) metadata structure
+//!
+//! @pre
+//!
+//! @note
+//!
+static void updateServiceStateInfo(ncMetadata * pMeta)
+{
+	int i = 0;
+	char scURL[512];
+    if (pMeta != NULL && pMeta->services != NULL) {
+        LOGTRACE("Updating NC's topology/service state info: pMeta: userId=%s correlationId=%s\n", pMeta->userId, pMeta->correlationId);
+
+        // store information from CLC that needs to be kept up-to-date in the NC
+        sem_p(service_state_sem);
+    	//Update if this is as new as what we have...added = because CC doesn't seem to bump epoch numbers, stays at 0
+    	if(pMeta->epoch >= nc_state.ncStatus.localEpoch) {
+    		//Update the epoch first
+    		nc_state.ncStatus.localEpoch = pMeta->epoch;
+
+    		//Copy new services info wholesale
+    		memcpy(nc_state.services, pMeta->services, sizeof(serviceInfoType) * 16);
+    		memcpy(nc_state.disabledServices, pMeta->disabledServices, sizeof(serviceInfoType) * 16);
+    		memcpy(nc_state.notreadyServices, pMeta->notreadyServices, sizeof(serviceInfoType) * 16);
+    		nc_state.servicesLen = pMeta->servicesLen;
+    		nc_state.disabledServicesLen = pMeta->disabledServicesLen;
+    		nc_state.notreadyServicesLen = pMeta->notreadyServicesLen;
+
+    		//Make a copy of the SC url to use outside of the semaphore
+    		for(i = 0; i < nc_state.servicesLen; i++) {
+    			if(!strcmp(nc_state.services[i].type, "storage")) {
+    				if(nc_state.services[i].urisLen > 0)
+    				{
+    					memcpy(scURL, nc_state.services[i].uris[0],512);
+    					break;
+    				}
+    			}
+    		}
+    	}
+    	sem_v(service_state_sem);
+
+    	LOGTRACE("Updating VBR localhost config sc url to: %s\n", scURL);
+    	//Push the change to the vbr code
+    	vbr_update_hostconfig_scurl(scURL);
+
+    } else {
+    	LOGTRACE("Cannot update service infos, null found\n");
+    	return;
+    }
+
+
+
+    //Print the results...
+    printNCServiceStateInfo();
+    printMsgServiceStateInfo(pMeta);
+}
+
 
 //!
 //! Utilitarian functions used in the lower level handlers. This scans the string buffer
@@ -779,7 +913,9 @@ static void refresh_instance_info(struct nc_state_t *nc, ncInstance * instance)
         // migration-related logic
         if (is_migration_dst(instance)) {
             if (old_state == BOOTING && new_state == PAUSED) {
-                LOGINFO("[%s] incoming (%s < %s) migration in progress\n", instance->instanceId, instance->migration_dst, instance->migration_src);
+                ++incoming_migrations_in_progress;
+                LOGINFO("[%s] incoming (%s < %s) migration in progress (1 of %d)\n", instance->instanceId, instance->migration_dst, instance->migration_src,
+                        incoming_migrations_in_progress);
                 instance->migration_state = MIGRATION_IN_PROGRESS;
                 LOGDEBUG("[%s] incoming (%s < %s) migration_state set to '%s'\n", instance->instanceId,
                          instance->migration_dst, instance->migration_src, migration_state_names[instance->migration_state]);
@@ -792,10 +928,24 @@ static void refresh_instance_info(struct nc_state_t *nc, ncInstance * instance)
                 bzero(instance->migration_dst, HOSTNAME_SIZE);
                 instance->migrationTime = 0;
                 save_instance_struct(instance);
-                // Done upon return in monitoring_thread().
-                //copy_instances();
-                LOGINFO("[%s] incoming migration complete.\n", instance->instanceId);
+                // copy_intances is called upon return in monitoring_thread().
+                --incoming_migrations_in_progress;
+                LOGINFO("[%s] incoming migration complete (%d other migrations currently in progress)\n", instance->instanceId, incoming_migrations_in_progress);
 
+                // FIXME: Consolidate this sequence and the sequence in handlers_kvm.c into a util function?
+                if (!incoming_migrations_in_progress) {
+                    LOGINFO("no remaining incoming migrations -- deauthorizing migration clients\n");
+                    char deauthorize_keys[MAX_PATH];
+                    char *euca_base = getenv(EUCALYPTUS_ENV_VAR_NAME);
+                    snprintf(deauthorize_keys, MAX_PATH, EUCALYPTUS_AUTHORIZE_MIGRATION_KEYS " -z", euca_base ? euca_base : "", euca_base ? euca_base : "");
+                    LOGDEBUG("migration key-deauthorizer path: '%s'\n", deauthorize_keys);
+                    int sysret = system(deauthorize_keys);
+                    if (sysret) {
+                        LOGWARN("'%s' failed with exit code %d\n", deauthorize_keys, WEXITSTATUS(sysret));
+                    } else {
+                        LOGDEBUG("migration key deauthorization succeeded\n");
+                    }
+                }
             } else if (new_state == SHUTOFF || new_state == SHUTDOWN) {
                 // this is normal at the beginning of incoming migration, before a domain is created in PAUSED state
                 break;
@@ -1675,6 +1825,12 @@ static int init(void)
         strncpy(nc_state.home, tmp, MAX_PATH - 1);
     }
 
+    //Set the SC client policy file path
+    char policyFile[MAX_PATH];
+    bzero(policyFile, MAX_PATH);
+    snprintf(policyFile, MAX_PATH, EUCALYPTUS_KEYS_DIR "/sc-client-policy.xml", nc_state.home);
+    euca_strncpy(nc_state.config_sc_policy_file, policyFile, MAX_PATH);
+
     // set the minimum log for now
     snprintf(logFile, MAX_PATH, EUCALYPTUS_LOG_DIR "/nc.log", nc_state.home);
     log_file_set(logFile);
@@ -1853,7 +2009,9 @@ static int init(void)
     inst_copy_sem = sem_alloc(1, IPC_MUTEX_SEMAPHORE);
     addkey_sem = sem_alloc(1, IPC_MUTEX_SEMAPHORE);
     log_sem = sem_alloc(1, IPC_MUTEX_SEMAPHORE);
-    if (!hyp_sem || !inst_sem || !inst_copy_sem || !addkey_sem || !log_sem) {
+    service_state_sem = sem_alloc(1, IPC_MUTEX_SEMAPHORE);
+
+    if (!hyp_sem || !inst_sem || !inst_copy_sem || !addkey_sem || !log_sem || !service_state_sem) {
         LOGFATAL("failed to create and initialize semaphores\n");
         return (EUCA_FATAL_ERROR);
     }
@@ -1873,6 +2031,11 @@ static int init(void)
     if (init_eucafaults(euca_this_component_name) == 0) {
         LOGFATAL("failed to initialize fault-logging subsystem\n");
         return (EUCA_FATAL_ERROR);
+    }
+
+    if(init_ebs_utils() != 0) {
+    	LOGFATAL("Failed to initialize ebs utils\n");
+    	return (EUCA_FATAL_ERROR);
     }
 
     init_iscsi(nc_state.home);
@@ -2197,8 +2360,22 @@ static int init(void)
         snprintf(nc_state.ncDeleteBundleCmd, MAX_PATH, "%s", EUCALYPTUS_NC_DELETE_BUNDLE);  // default value
     }
 
-    {                                  // find and set iqn
-        snprintf(nc_state.iqn, CHAR_BUFFER_SIZE, "UNSET");
+    {
+    	// set enable ws-security
+    	tmp = getConfString(nc_state.configFiles, 2, CONFIG_ENABLE_WS_SECURITY);
+    	if (tmp && !strcmp(tmp,"N")) {
+    		LOGDEBUG("Configuring no use of WS-SEC as specified in config file by explicit 'no' value\n");
+    		nc_state.config_use_ws_sec=0;
+    		EUCA_FREE(tmp);
+    	} else {
+    		LOGDEBUG("Configured to use WS-SEC by default\n");
+    		if(tmp) EUCA_FREE(tmp);
+    		nc_state.config_use_ws_sec=1;
+    	}
+    }
+
+    {                           // find and set iqn
+    	snprintf(nc_state.iqn, CHAR_BUFFER_SIZE, "UNSET");
         char *ptr = NULL, *iqn = NULL, *tmp = NULL, cmd[MAX_PATH];
         snprintf(cmd, MAX_PATH, "%s cat /etc/iscsi/initiatorname.iscsi", nc_state.rootwrap_cmd_path);
         ptr = system_output(cmd);
@@ -2241,6 +2418,40 @@ static int init(void)
             return (EUCA_FATAL_ERROR);
         }
         LOGINFO("using IP %s\n", nc_state.ip);
+
+        LOGINFO("Initializing localhost info for vbr processing\n");
+        if(vbr_init_hostconfig(nc_state.iqn, nc_state.ip, nc_state.config_sc_policy_file, nc_state.config_use_ws_sec) != 0) {
+        	LOGFATAL("Error initializing vbr localhost configuration\n");
+        	return (EUCA_FATAL_ERROR);
+        }
+    }
+
+    {
+    	LOGINFO("Initializing service state and epoch\n");
+    	//Initialize the service state info.
+    	nc_state.ncStatus.localEpoch = 0;
+    	snprintf(nc_state.ncStatus.details, 1024, "ERRORS=0");
+    	snprintf(nc_state.ncStatus.serviceId.type, 32, "node");
+    	snprintf(nc_state.ncStatus.serviceId.name, 32, "self");
+    	snprintf(nc_state.ncStatus.serviceId.partition, 32, "unset");
+    	nc_state.ncStatus.serviceId.urisLen = 0;
+    	nc_state.servicesLen = 0;
+    	nc_state.disabledServicesLen = 0;
+    	nc_state.notreadyServicesLen = 0;
+
+    	for (i = 0; i < 32 && nc_state.ncStatus.serviceId.urisLen < 8; i++) {
+    		if (nc_state.vnetconfig->localIps[i]) {
+    			char *host;
+    			host = hex2dot(nc_state.vnetconfig->localIps[i]);
+    			if (host) {
+    				snprintf(nc_state.ncStatus.serviceId.uris[nc_state.ncStatus.serviceId.urisLen], 512, "http://%s:8775/axis2/services/EucalyptusNC",
+    						host);
+    				nc_state.ncStatus.serviceId.urisLen++;
+    				EUCA_FREE(host);
+    			}
+    		}
+    	}
+    	LOGINFO("Done initializing services state\n");
     }
 
     {                                  // start the monitoring thread
@@ -2299,7 +2510,10 @@ int doDescribeInstances(ncMetadata * pMeta, char **instIds, int instIdsLen, ncIn
     if (init())
         return (EUCA_ERROR);
 
-    LOGTRACE("invoked\n");             // response will be at INFO, so this is TRACE
+    LOGTRACE("updating service state infos\n");
+    updateServiceStateInfo(pMeta);
+
+    LOGTRACE("invoked\n");      // response will be at INFO, so this is TRACE
 
     if (nc_state.H->doDescribeInstances)
         ret = nc_state.H->doDescribeInstances(&nc_state, pMeta, instIds, instIdsLen, outInsts, outInstsLen);
@@ -2619,6 +2833,9 @@ int doDescribeResource(ncMetadata * pMeta, char *resourceType, ncResource ** out
     if (init())
         return (EUCA_ERROR);
 
+    LOGTRACE("updating service state infos\n");
+    updateServiceStateInfo(pMeta);
+
     if (nc_state.H->doDescribeResource)
         ret = nc_state.H->doDescribeResource(&nc_state, pMeta, resourceType, outRes);
     else
@@ -2698,7 +2915,7 @@ int doAttachVolume(ncMetadata * pMeta, char *instanceId, char *volumeId, char *r
 //!
 //! @return EUCA_ERROR on failure or the result of the proper doDetachVolume() handler call.
 //!
-int doDetachVolume(ncMetadata * pMeta, char *instanceId, char *volumeId, char *remoteDev, char *localDev, int force, int grab_inst_sem)
+int doDetachVolume(ncMetadata * pMeta, char *instanceId, char *volumeId, char *attachmentToken, char *localDev, int force, int grab_inst_sem)
 {
     int ret = EUCA_OK;
 
@@ -2709,9 +2926,9 @@ int doDetachVolume(ncMetadata * pMeta, char *instanceId, char *volumeId, char *r
     LOGDEBUG("[%s][%s] volume detaching (localDev=%s force=%d grab_inst_sem=%d)\n", instanceId, volumeId, localDev, force, grab_inst_sem);
 
     if (nc_state.H->doDetachVolume)
-        ret = nc_state.H->doDetachVolume(&nc_state, pMeta, instanceId, volumeId, remoteDev, localDev, force, grab_inst_sem);
+        ret = nc_state.H->doDetachVolume(&nc_state, pMeta, instanceId, volumeId, attachmentToken, localDev, force, grab_inst_sem);
     else
-        ret = nc_state.D->doDetachVolume(&nc_state, pMeta, instanceId, volumeId, remoteDev, localDev, force, grab_inst_sem);
+        ret = nc_state.D->doDetachVolume(&nc_state, pMeta, instanceId, volumeId, attachmentToken, localDev, force, grab_inst_sem);
 
     return ret;
 }
@@ -2941,7 +3158,7 @@ int doMigrateInstances(ncMetadata * pMeta, ncInstance ** instances, int instance
         LOGDEBUG("verifying instance # %d...\n", i);
         if (instances[i]) {
             LOGDEBUG("invoked (action=%s instance[%d].{id=%s src=%s dst=%s) creds=%s\n",
-                     action, i, instances[i]->instanceId, instances[i]->migration_src, instances[i]->migration_dst, (credentials == NULL) ? ("unavailable") : ("present"));
+                     action, i, instances[i]->instanceId, instances[i]->migration_src, instances[i]->migration_dst, (credentials == NULL) ? "unset" : "present");
             if (!strcmp(instances[i]->migration_src, instances[i]->migration_dst)) {
                 LOGERROR("[%s] rejecting proposed SAME-NODE migration from %s to %s\n", instances[i]->instanceId, instances[i]->migration_src, instances[i]->migration_dst);
                 return (EUCA_UNSUPPORTED_ERROR);
@@ -3024,7 +3241,7 @@ int migration_rollback(ncInstance * instance)
         return TRUE;
     } else if (is_migration_dst(instance)) {
         // FIXME: Do I want to protect this functionality by requiring something like a 'force' option be passed to this function?
-        LOGWARN("[%s] resetting migration state '%s' to 'none' for an already-migrated (%s < %s) instance. SOMETHING WENT WRONG SOMEWHERE!\n",
+        LOGWARN("[%s] resetting migration state '%s' to 'none' for an already-migrated (%s < %s) instance. Something went wrong somewhere...\n",
                 instance->instanceId, migration_state_names[instance->migration_state], instance->migration_dst, instance->migration_src);
         instance->migration_state = NOT_MIGRATING;
         bzero(instance->migration_src, HOSTNAME_SIZE);

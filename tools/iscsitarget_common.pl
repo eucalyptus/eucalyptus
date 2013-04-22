@@ -192,6 +192,12 @@ sub get_iscsi_device {
   }
 }
 
+sub rescan_all_sessions {
+ 	# rescan all sessions
+  run_cmd(1, 1, "$ISCSIADM -m session -R");
+}
+
+
 sub get_first_lun {
   foreach (@_) {
     if (/$SK_LUN-\d+/) {

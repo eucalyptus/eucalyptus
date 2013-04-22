@@ -81,12 +81,14 @@ public class LoadBalancer extends UserMetadata<LoadBalancer.STATE> implements Lo
 	}
 	
 	static LoadBalancer newInstance(final OwnerFullName userFullName, final String lbName){
-		return new LoadBalancer(userFullName, lbName);
+		final LoadBalancer instance= new LoadBalancer(userFullName, lbName);
+		instance.setOwnerAccountName(userFullName.getAccountName());
+		return instance;
 	}
 	
-	static LoadBalancer named(final String accountName, final String lbName){
-		final LoadBalancer instance= new LoadBalancer(lbName);
-		instance.setOwnerAccountName(accountName);
+	static LoadBalancer named(final OwnerFullName userFullName, final String lbName){
+		final LoadBalancer instance= new LoadBalancer(userFullName, lbName);
+		instance.setOwnerAccountName(userFullName.getAccountName());
 		return instance;
 	}
 	
@@ -105,9 +107,9 @@ public class LoadBalancer extends UserMetadata<LoadBalancer.STATE> implements Lo
 	@Cache( usage= CacheConcurrencyStrategy.TRANSACTIONAL )
 	private Collection<LoadBalancerZone> zones = null;
 	
-	@OneToMany(fetch = FetchType.LAZY, orphanRemoval = false, mappedBy = "loadbalancer")
+	@OneToOne(fetch = FetchType.LAZY, orphanRemoval = false, mappedBy = "loadbalancer")
 	@Cache( usage= CacheConcurrencyStrategy.TRANSACTIONAL )
-	private Collection<LoadBalancerSecurityGroup> groups = null;
+	private LoadBalancerSecurityGroup group = null;
 
 	@OneToOne(fetch = FetchType.LAZY, cascade = CascadeType.ALL, orphanRemoval = true, mappedBy = "loadbalancer")
 	@Cache( usage= CacheConcurrencyStrategy.TRANSACTIONAL )
@@ -184,15 +186,15 @@ public class LoadBalancer extends UserMetadata<LoadBalancer.STATE> implements Lo
 		return this.zones;
 	}
 	
-	public Collection<LoadBalancerSecurityGroup> getGroups(){
-		return this.groups;
+	public LoadBalancerSecurityGroup getGroup(){
+		return this.group;
 	}
 	
 	public LoadBalancerAutoScalingGroup getAutoScaleGroup(){
 		return this.autoscale_group;
 	}
 	
-	void setHealthCheck(int healthyThreshold, int interval, String target, int timeout, int unhealthyThreshold)
+	public void setHealthCheck(int healthyThreshold, int interval, String target, int timeout, int unhealthyThreshold)
 		throws IllegalArgumentException
 	{
 		// check the validity of the health check param
@@ -224,7 +226,7 @@ public class LoadBalancer extends UserMetadata<LoadBalancer.STATE> implements Lo
 			}
 		}else if (target.startsWith("TCP") || target.startsWith("SSL")){
 			String copy = target;
-			copy.replace("TCP:","").replace("SSL:", "");
+			copy = copy.replace("TCP:","").replace("SSL:", "");
 			try{
 				int portNum = Integer.parseInt(copy);
 				if(!(portNum > 0 && portNum < 65536))

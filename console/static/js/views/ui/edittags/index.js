@@ -21,13 +21,35 @@ define([
             });
             */
 
-            var tags = args.model.get('tags');
-            tags.each(function(t) {
-                t.set({_clean: true, _deleted: false, _edited: false, _edit: false, _new: false});
+            var model = args.model;
+            var tags = new Backbone.Collection();
+
+            var loadTags = function() {
+                tags.set(args.model.get('tags').models);
+                tags.each(function(t) {
+                    t.set({_clean: true, _deleted: false, _edited: false, _edit: false, _new: false});
+                });
+            }
+
+            loadTags();
+            model.get('tags').on('reset', function() {
+                loadTags();
             });
 
-            args.model.on('confirm', function() {
+            model.on('confirm', function() {
                 self.scope.create();
+                tags.each(function(t) {
+                   if (t.get('_new') && !t.get('_deleted')) { 
+                       t.save();
+                   }
+                   if (t.get('_deleted')) {
+                       t.destroy();
+                   }
+                   if (t.get('_edited')) {
+                       t.save();
+                   }
+                });
+                model.get('tags').set(tags.models);
             });
 
             var backup = new Backbone.Collection();
@@ -43,7 +65,7 @@ define([
                     console.log('create');
                     var newt = new Tag(self.scope.newtag.toJSON());
                     newt.set({_clean: true, _deleted: false, _edited: false, _edit: false, _new: true});
-                    newt.set('res_id', args.model.get('id'));
+                    newt.set('res_id', model.get('id'));
                     if (newt.get('name') && newt.get('value') && newt.get('name') !== '' && newt.get('value') !== '') {
                         self.scope.tags.add(newt);
                         self.scope.newtag.clear();
