@@ -22,16 +22,18 @@
   $.widget('eucalyptus.newinstance', $.eucalyptus.eucawidget, {
     options : { },
     _init : function() {
+      console.log('LAUNCHER _init');
       var thisObj = this;
       $(thisObj.element).unbind();
       require(['views/newinstance/index'], function(wizardFactory) {
-        var View = wizardFactory();
+        var View = wizardFactory(thisObj.options);
         var view = new View({el: thisObj.element});
       	view.render();
       });
     },
 
     _create : function() { 
+    console.log('LAUNCHER _create');
     },
 
     _destroy : function() {

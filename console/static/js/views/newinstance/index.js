@@ -19,7 +19,8 @@ define([
   '../shared/model/snapshots'
 ], function(app, Wizard, wizardTemplate, page1, page2, page2_5, page3, page4, summary, instance, image, type, tag, security, keyPair, advanced, block, snap) {
 
-  var config = function() {
+  var config = function(options) {
+    console.log('WIZARD options', options);
     var wizard = new Wizard();
 
     var instanceModel = new instance();
@@ -64,7 +65,7 @@ define([
     }
 
     var viewBuilder = wizard.viewBuilder(wizardTemplate)
-            .add(new page1({model: imageModel, blockMaps: blockMaps}))
+            .add(new page1({model: imageModel, blockMaps: blockMaps, image: options.image}))
             .add(new page2({model: typeModel}))
             .add(new page2_5({model: tagsModel}))
             .add(new page3({model: securityModel, keymodel: keyModel}))

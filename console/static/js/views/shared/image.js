@@ -12,7 +12,7 @@ define([
             count: 0,
             image_selected: null,
 
-            initialize : function() {
+            initialize : function(args) {
               var self = this;
               var scope = {
                 view: this,
@@ -39,6 +39,7 @@ define([
                 search: new imageSearch(app.data.images),
                 
                 select: function(e, images) {
+                  console.log('LAUNCH image select:',arguments);
                   $(e.currentTarget).parent().find('tr').removeClass('selected-row');
                   $(e.currentTarget).addClass('selected-row');
                   self.model.set('image_iconclass', this.setClass(images.image));
