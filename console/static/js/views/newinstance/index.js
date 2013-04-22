@@ -24,7 +24,7 @@ define([
     var wizard = new Wizard();
 
     var instanceModel = new instance();
-    var imageModel = new image();
+    var imageModel = new image(options);
     var typeModel = new type();
     var securityModel = new security();
     var keyModel = new keyPair();
