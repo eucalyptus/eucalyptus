@@ -98,6 +98,19 @@ define([], function() {
       return pages[position].view;
     });
 
+    // nextPage (property)
+    // ------------------
+    // Get the next active page. Null if we are at the end. 
+    self.__defineGetter__("nextPage", function() {
+      if (!self.hasNext) {
+        return null;
+      }
+      //if (typeof pages[position] === 'undefined') {
+      //  return null;
+      //}
+      return pages[position + 1].view;
+    });
+
     // position (property)
     // ------------------
     // Get the current integer position
@@ -270,7 +283,7 @@ define([], function() {
 
     self.makeView = function(options, template, mapping, scope) {
       // Assume default component names, but let mapping override them if it wants
-      mapping = merge(trivialMapping('nextButton', 'prevButton', 'finishButton', 'problems', 'wizardContent', 'wizardAbove', 'wizardBelow', 'wizardSummary'), mapping || {});
+      mapping = merge(trivialMapping('nextButton', 'prevButton', 'finishButton', 'problems', 'wizardContent', 'wizardAbove', 'wizardBelow', 'wizardSummary', 'optionLink'), mapping || {});
       // Make sure options is defined
       options = options || {};
       // If there is no canFinish function, provide a default one that only
@@ -329,10 +342,17 @@ define([], function() {
             self.goTo(position + 1);
             this.render();  
         };
+        events['click ' + mapping.optionLink] = function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            self.goTo(position + 1);
+            this.render();  
+        };
         events['click ' + '#wizardClosed-' + i] = function() {
             self.goTo(i);
             this.render();  
         };
+
       }
 
       for (var i = 0; i < pages.length; i++) {
@@ -346,6 +366,7 @@ define([], function() {
           self.show();
           this.animate = true;
           this.$el.html(template);
+          this.optionLink = this.$el.find(mapping.optionLink);
           this.nextButton = this.$el.find(mapping.nextButton);
           this.prevButton = this.$el.find(mapping.prevButton);
           this.finishButton = this.$el.find(mapping.finishButton);
@@ -374,6 +395,7 @@ define([], function() {
           if (shouldAnimate) {
             this.wizardContent.slideDown("fast");
           }
+          this.optionLink.attr('disabled', (self.nextPage === null || !self.nextPage.isOptional));
           this.nextButton.attr('disabled', !self.hasNext);
           this.prevButton.attr('disabled', !self.hasPrev);
 
@@ -391,9 +413,10 @@ define([], function() {
             this.problems.append(problemLabel);
           }
           if (options.hideDisabledButtons) {
-            this.nextButton.attr('style', self.hasNext ? 'display: inline' : 'display: none')
-            this.prevButton.attr('style', self.hasPrev ? 'display: inline' : 'display: none')
-            this.finishButton.attr('style', finishable ? 'display: inline' : 'display: none')
+            this.nextButton.attr('style', (self.hasNext && !self.nextPage.isOptional) ? 'display: inline' : 'display: none');
+            this.prevButton.attr('style', self.hasPrev ? 'display: inline' : 'display: none');
+            this.finishButton.attr('style', finishable ? 'display: inline' : 'display: none');
+            this.optionLink.attr('style', (self.hasNext && self.nextPage.isOptional) ? 'display: inline' : 'display: none');
           }
           if (options.finishText) {
             this.finishButton.text(options.finishText);
@@ -404,6 +427,12 @@ define([], function() {
 
           if (options.titler) {
             this.nextButton.text(options.titler(self.position, self.current))
+          }
+          
+          // get the option link text from the optional step itself
+          if (this.optionLink !== undefined && self.hasNext && self.nextPage.isOptional) {
+            if (self.nextPage.optionLinkText != undefined)
+              this.optionLink.find('a').text(self.nextPage.optionLinkText);
           }
 
           function addClosed(i, toWhat) {
@@ -561,6 +590,7 @@ define([], function() {
 
       this.map = function(a, b) {
         mapping[a] = b;
+        return bldr;
       }
 
       this.build = function() {
