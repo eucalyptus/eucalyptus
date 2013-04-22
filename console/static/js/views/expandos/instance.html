@@ -17,7 +17,7 @@
 		<li><div class="expanded-title" data-msg="inst_tbl_hdr_keyname">KEY</div><div class="expanded-value" data-text="instance.key_name"></div></li>
 		<li><div class="expanded-title" data-msg="inst_tbl_hdr_sgroup">SECURITY GROUP</div><div class="expanded-value" data-text="instance.group_name"></div></li>		
 		<li><div class="expanded-title" data-msg="instance_table_expanded_type">INSTANCE TYPE</div><div class="expanded-value" data-text="instance.instance_type"></div></li>
-		<li><div class="expanded-title" data-msg="inst_tbl_hdr_launch_time">LAUNCH TIME</div><div class="expanded-value" data-text="instance.launch_time"></div></li>
+		<li><div class="expanded-title" data-msg="inst_tbl_hdr_launch_time">LAUNCH TIME</div><div class="expanded-value" data-text="instance.launch_time|date"></div></li>
 		<li><div class="expanded-title" data-msg="inst_tbl_hdr_image_id">IMAGE ID</div><div class="expanded-value" data-text="instance.image_id"></div></li>
 		<li><div class="expanded-title" data-msg="image_table_expanded_image_name">IMAGE NAME</div><div class="expanded-value" data-text="image.name"></div></li>
      </ul>
@@ -46,7 +46,7 @@
 				<tr data-each-volume="volumes">
                   <td><span data-text="volume.id"></span></td>
                   <td><span data-text="volume.attach_data.device"></span></td>
-                  <td><span data-text="volume.create_time"></span></td>
+                  <td><span data-text="volume.create_time|date"></span></td>
                 </tr>
 			</tbody>
 		</table>
