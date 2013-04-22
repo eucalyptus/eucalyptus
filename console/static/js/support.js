@@ -550,17 +550,35 @@ function setupAjax(){
 function doMultiAction(itemList, collection, opFunction, progressMessage, doneMessage, failMessage, validate){
   var done = 0;
   var all = itemList.length;
-  var error = [];
+  var errorList = [];
   var progressMsg = progressMessage;
   var doneMsg = doneMessage;
   var failMsg = failMessage;
   doMultiAjax(itemList, function(item, dfd) {
     var itemId = item;
+    var finish = function(model, response) {
+        done++;
+        if (done < all) {
+          notifyMulti(100*(done/all), $.i18n.prop(progressMsg, all));
+        }
+        else {
+          var $msg = $('<div>').addClass('multiop-summary').append(
+                     $('<div>').addClass('multiop-summary-success').
+                         html($.i18n.prop(doneMsg, (errorList.length), all)));
+          if (errorList.length > 0)
+              $msg.append($('<div>').addClass('multiop-summary-failure').
+                         html($.i18n.prop(failMsg, errorList.length)));
+          notifyMulti(100, $msg.html(), errorList);
+        }
+        dfd.resolve();
+      };
     var model = collection.get(item);
     opFunction(model, {
       success:
         function(model, response, options) {
           var error = null;
+          if (typeof response != 'object')
+            response = model;
           if (validate) {
             error = validate(response);
           }
@@ -571,32 +589,14 @@ function doMultiAction(itemList, collection, opFunction, progressMessage, doneMe
               error = undefined_error;
             }
           }
-          if (error) error.push({id:itemId, reason: error});
-          options.complete(model, response);
+          if (error) errorList.push({id:itemId, reason: error});
+          finish(model, response);
         },
       error:
         function(model, xhr, options) {
-          console.log("response = "+JSON.stringify(xhr));
-          error.push({id:itemId, reason: getErrorMessage(xhr)});
-          options.complete(model, null);
+          errorList.push({id:itemId, reason: getErrorMessage(xhr)});
+          finish(model, null);
         },
-      complete:
-        function(model, response) {
-          done++;
-          if (done < all) {
-            notifyMulti(100*(done/all), $.i18n.prop(progressMsg, all));
-          }
-          else {
-            var $msg = $('<div>').addClass('multiop-summary').append(
-                       $('<div>').addClass('multiop-summary-success').
-                           html($.i18n.prop(doneMsg, (all-error.length), all)));
-            if (error.length > 0)
-                $msg.append($('<div>').addClass('multiop-summary-failure').
-                           html($.i18n.prop(failMsg, error.length)));
-            notifyMulti(100, $msg.html(), error);
-          }
-          dfd.resolve();
-        }
     });
   })
 }

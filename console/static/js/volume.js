@@ -689,9 +689,8 @@
     },
 
     _newAttachVolumeAction : function() {
-      var dialog = 'attach_volume_dialog';
       var selected = this.tableWrapper.eucatable('getSelectedRows', 10);
-      require(['views/dialogs/' + dialog], function( dialog) {
+      require(['views/dialogs/attach_volume_dialog'], function(dialog) {
         new dialog({volume_id: selected});
       });
     },

@@ -26,7 +26,6 @@ define([
        _.each(args.volume_ids, function(vid){
          // FIND THE INSTANCE ID FOR EACH VOLUME ATTACHED
          var instance_id = App.data.volume.get(vid).get('attach_data').instance_id;
-         console.log("Volume: " + vid + " Instance: " + instance_id);
          // FIND THE NAME TAG FOR THE VOLUME
          var volNameTag = self.findNameTag(App.data.volume.get(vid));
          if( volNameTag == null ){
@@ -53,10 +52,8 @@ define([
 
          detachButton: {
            click: function() {
-
               doMultiAction(args.volume_ids, App.data.volumes,
                             function(model, options) {
-                              options['wait'] = true;
                               model.detach(options);
                             },
                             'volume_detach_progress', 'volume_detach_done', 'volume_detach_fail',

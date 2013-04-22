@@ -89,7 +89,6 @@
               }
               ep.model.fetch({merge: true, add: true, remove: true,
                               error:function(textStatus, jqXHR, options) {
-                                console.log("fetch error status :"+jqXHR.status);
                                 thisObj._errorCode = jqXHR.status;
                                 thisObj._numPending--;
                                 if(thisObj._data[name]){
@@ -100,7 +99,6 @@
                                      (elapsedSec > thisObj.options.refresh_interval_sec*thisObj.options.max_refresh_attempt)){
                                     delete thisObj._data[name];
                                     thisObj._data[name] = null;
-                                    console.log('deleted data after '+jqXHR.status);
                                   }
                                   if(thisObj.getStatus() !== 'online'){
                                     errorAndLogout(thisObj._errorCode);

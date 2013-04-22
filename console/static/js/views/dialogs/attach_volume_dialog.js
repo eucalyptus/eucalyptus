@@ -163,6 +163,7 @@ define([
             this.scope = {
                 status: '',
                 volume: new Volume({volume_id: args.volume_id, instance_id: args.instance_id, device: args.device}),
+                help: { content: help_volume.dialog_attach_content, url: help_volume.dialog_attach_content_url },
 
                 cancelButton: {
                   click: function() {
