@@ -39,7 +39,6 @@ define([
                 search: new imageSearch(app.data.images),
                 
                 select: function(e, images) {
-                  console.log('LAUNCH image select:',arguments);
                   $(e.currentTarget).parent().find('tr').removeClass('selected-row');
                   $(e.currentTarget).addClass('selected-row');
                   self.model.set('image_iconclass', this.setClass(images.image));
@@ -96,8 +95,6 @@ define([
          this.render();
 
          if(this.model.get('image') != undefined) {
-           var tr = this.$el.find('span:contains("' + this.model.get('image') + '")').closest('tr');
-           console.log('TR', tr);
             this.$el.find('span:contains("' + this.model.get('image') + '")').closest('tr').click();
          }
 
