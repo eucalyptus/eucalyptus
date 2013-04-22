@@ -90,7 +90,8 @@
               "mRender": function(data) {
                 return DefaultEncoder().encodeForHTML(data);
               },
-              "mData": "attach_data.instance_id",
+              "mData": "display_instance_id",
+              //"mData": "attach_data.instance_id",
             },
             { 
               // Display the snapshot id of the volume in the main table

@@ -76,6 +76,7 @@ define([
     },
     refreshNamedColumns: function() {
         var self = this;
+        if (this.promote_ids) this.promote_ids(self);
         _.each(this.namedColumns, function(column) {
             var matched = tags.where({res_id: self.get(column), name: 'Name'});
             if (matched.length) {

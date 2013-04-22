@@ -5,7 +5,11 @@ define([
     './eucamodel'
 ], function(EucaModel) {
     var model = EucaModel.extend({
-          namedColumns: ['id','snapshot_id'],
+          namedColumns: ['id','snapshot_id','instance_id'],
+          promote_ids: function(self) {
+            var tmp = self.get('attach_data');
+            if (tmp) self.set('instance_id', tmp.instance_id?tmp.instance_id:"");
+          },
           validation: {
 
             // ====================
