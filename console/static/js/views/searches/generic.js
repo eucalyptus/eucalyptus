@@ -68,7 +68,7 @@ define(['app', 'dataholder'], function(app, dh) {
 
     var siftKeyList = function(list, search) {
       return _.chain(list).filter(function(item) {
-        return new RegExp('.*' + search + '.*').test(item);
+        return RegExp('.*' + search + '.*', 'i').test(item.value);
       }).map(function(item) {
         return item === '' ? {value: item, label: 'None'} : item
       }).value();
@@ -94,8 +94,13 @@ define(['app', 'dataholder'], function(app, dh) {
         function add(property, label) {
           derivedFacets.push({value: property, label: label ? label : localize(property)});
         }
-        function append(property, label) {
-          appended.push({value: property, label: label ? label : localize(property)});
+        function append(property, label, category) {
+          var atts = {
+            value: property, 
+            label: label ? label : localize(property)
+          };
+          if (category) atts.category = category;
+          appended.push(atts);
         }
         config.facetsCustomizer.apply(self, [add, append]);
       }
@@ -130,13 +135,20 @@ define(['app', 'dataholder'], function(app, dh) {
                 add(val + '', localize(nm));
               }
           }
+        } else if (val == undefined && facet.indexOf('_tag') != -1) {
+            var sfacet = facet.replace(' _tag','');
+            _.each(img.tags,function(t) { 
+                if (t.name == sfacet) add(t.value); 
+            });
         }
+
     }
 
     function deriveMatches(facet, searchTerm) {
       var result = [];
       var found = [];
       images.toJSON().forEach(function(img) {
+        img.tags = img.tags.toJSON();
         findMatches(facet, searchTerm, img, function(val, label){
           if (found.indexOf(val) < 0) {
             found.push(val);
@@ -192,6 +204,7 @@ define(['app', 'dataholder'], function(app, dh) {
         var results = self.images.filter(function(model) {
         return _.every(jfacets, function(facet) {
           var curr = model.get(facet.category);
+          if (facet.category.indexOf('_tag') != -1) curr = model.get('tags').toJSON();
           if (config.search && config.search[facet.category]) {
             var isMatch = false;
             function hit() {
@@ -206,7 +219,7 @@ define(['app', 'dataholder'], function(app, dh) {
           if ('all_text' === facet.category || 'text' === facet.category) {
             return drillThrough(model, rex, 0);
           } else {
-            if (typeof curr === 'object') {
+            if (typeof curr === 'object' || typeof curr === 'array') {
               // Allow for searching inside tags and such
               return drillThrough(curr, rex, 0);
             } else {
