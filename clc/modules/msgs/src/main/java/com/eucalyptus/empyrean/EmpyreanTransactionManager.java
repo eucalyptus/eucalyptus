@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * Copyright 2009-2013 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -75,7 +75,7 @@ import bitronix.tm.jndi.BitronixContext;
 import com.eucalyptus.bootstrap.SystemIds;
 import com.eucalyptus.system.SubDirectory;
 
-public class EmpyreanTransactionManager extends org.eclipse.jetty.util.component.AbstractLifeCycle implements org.jboss.cache.transaction.TransactionManagerLookup, org.hibernate.transaction.TransactionManagerLookup {
+public class EmpyreanTransactionManager extends org.eclipse.jetty.util.component.AbstractLifeCycle implements org.infinispan.transaction.lookup.TransactionManagerLookup, org.hibernate.transaction.TransactionManagerLookup {
 //  public static final String JNDI_NAME = "eucalyptusTransactionManager";
   private static Logger             LOG = Logger.getLogger( EmpyreanTransactionManager.class );
   private static Context            ctx = getContext( );
@@ -99,6 +99,7 @@ public class EmpyreanTransactionManager extends org.eclipse.jetty.util.component
     }
   }
   
+  @Override
   public TransactionManager getTransactionManager( ) throws Exception {
     return tm;
   }
@@ -114,10 +115,12 @@ public class EmpyreanTransactionManager extends org.eclipse.jetty.util.component
     return new BitronixContext( );
   }
   
+  @Override
   public String getUserTransactionName( ) {
     return TransactionManagerServices.getConfiguration( ).getJndiUserTransactionName( );
   }
   
+  @Override
   public Object getTransactionIdentifier( Transaction transaction ) {
     return transaction;
   }

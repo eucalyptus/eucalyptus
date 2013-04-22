@@ -214,14 +214,6 @@
     <priority value="${euca.log.exhaustive.external}" />
     <appender-ref ref="cloud-exhaust" />
   </category>
-  <category name="org.hibernate.cache.EhCacheProvider" additivity="false">
-    <priority value="${euca.log.exhaustive.external}" />
-    <appender-ref ref="cloud-exhaust" />
-  </category>
-  <category name="net.sf.ehcache" additivity="false">
-    <priority value="${euca.log.exhaustive.external}" />
-    <appender-ref ref="cloud-exhaust" />
-  </category>
   <category name="org.jgroups.protocols.TP" additivity="false">
     <priority value="FATAL" />
     <appender-ref ref="cloud-exhaust" />

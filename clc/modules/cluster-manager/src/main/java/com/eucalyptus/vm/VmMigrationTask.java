@@ -107,7 +107,6 @@ public class VmMigrationTask {
   /**
    * Source host for the migration as it is registered.
    */
-  @Enumerated( EnumType.STRING )
   @Column( name = "metadata_vm_migration_source_host" )
   private String         sourceHost;
   

@@ -17,22 +17,28 @@
  * CA 93117, USA or visit http://www.eucalyptus.com/licenses/ if you need
  * additional information or have any questions.
  ************************************************************************/
-package com.eucalyptus.reporting.event_store;
+package com.eucalyptus.bootstrap;
 
-import java.io.Serializable;
-import org.hibernate.HibernateException;
-import org.hibernate.engine.spi.SessionImplementor;
-import org.hibernate.id.UUIDHexGenerator;
+import java.util.Map;
+import java.util.Properties;
+import org.hibernate.service.jdbc.connections.internal.ProxoolConnectionProvider;
+import org.hibernate.service.spi.Configurable;
 
 /**
- * Custom identifier generator that preserves an existing value.
+ * https://hibernate.atlassian.net/browse/HHH-7289
  */
-public class ReportingEventIdGenerator extends UUIDHexGenerator {
+public class ConfigurableProxoolConnectionProvider extends ProxoolConnectionProvider implements Configurable {
+  private static final long serialVersionUID = 1L;
+
   @Override
-  public Serializable generate( final SessionImplementor session,
-                                final Object object ) throws HibernateException {
-    final Serializable id = session.getEntityPersister(null, object)
-        .getClassMetadata().getIdentifier(object, session);
-    return id != null ? id : super.generate(session, object);
+  public void configure( final Map configurationValues ) {
+    final Map<?,?> configuration = (Map<?,?>) configurationValues;
+    final Properties properties = new Properties( );
+    for ( final Map.Entry entry : configuration.entrySet() ) {
+      properties.setProperty(
+          String.valueOf( entry.getKey() ),
+          String.valueOf( entry.getValue() ) );
+    }
+    super.configure( properties );
   }
 }
