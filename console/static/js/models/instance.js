@@ -84,8 +84,12 @@ define([
 
             if (model.get('key_name') != undefined)
               data.push({name: "KeyName", value: model.get('key_name')});
-            if (model.get('security_group') != undefined)
-              data.push({name: "=SecurityGroup", value: model.get('security_group')});
+            if (model.get('security_group') != undefined) {
+              var groups = model.get('security_group');
+              $.each(groups, function(idx, group) {
+                data.push({name: "SecurityGroup." + (idx+1) , value: group});
+              });
+            }
             if (model.get('security_group_id') != undefined)
               data.push({name: "SecurityGroupId", value:  model.get('security_group_id')});
             if (model.get('user_data') != undefined)
@@ -109,21 +113,21 @@ define([
               var mappings = model.get('block_device_mappings');
               $.each(mappings, function(idx, mapping) {
                 if(mapping.device_name != undefined)
-                  data.push({name: "BlockDeviceMapping."+(idx)+".DeviceName", value: mapping.device_name});
+                  data.push({name: "BlockDeviceMapping."+(idx+1)+".DeviceName", value: mapping.device_name});
 
                 if(mapping.no_device != undefined) {
-                  data.push({name: "BlockDeviceMapping."+(idx)+".NoDevice", value: mapping.no_device});
+                  data.push({name: "BlockDeviceMapping."+(idx+1)+".NoDevice", value: mapping.no_device});
                 }
                 if (mapping.virtual_name != undefined) {
-                  data.push({name: "BlockDeviceMapping."+(idx)+".VirtualName", value: mapping.virtual_name});
+                  data.push({name: "BlockDeviceMapping."+(idx+1)+".VirtualName", value: mapping.virtual_name});
                 } else if (mapping.ebs != undefined) {
-                  data.push({name: "BlockDeviceMapping."+(idx)+".Ebs.SnapshotId", value: mapping.ebs.snapshot_id});
-                  data.push({name: "BlockDeviceMapping."+(idx)+".Ebs.VolumeSize", value: mapping.ebs.volume_size});
-                  data.push({name: "BlockDeviceMapping."+(idx)+".Ebs.DeleteOnTermination", value: mapping.ebs.delete_on_termination});
+                  data.push({name: "BlockDeviceMapping."+(idx+1)+".Ebs.SnapshotId", value: mapping.ebs.snapshot_id});
+                  data.push({name: "BlockDeviceMapping."+(idx+1)+".Ebs.VolumeSize", value: mapping.ebs.volume_size});
+                  data.push({name: "BlockDeviceMapping."+(idx+1)+".Ebs.DeleteOnTermination", value: mapping.ebs.delete_on_termination});
                   if(mapping.ebs.volume_type != undefined)
-                  data.push({name: "BlockDeviceMapping."+(idx)+".Ebs.VolumeType", value: mapping.ebs.volume_type});
+                  data.push({name: "BlockDeviceMapping."+(idx+1)+".Ebs.VolumeType", value: mapping.ebs.volume_type});
                   if(mapping.ebs.iopts != undefined) 
-                    data.push({name: "BlockDeviceMapping."+(idx)+".Ebs.Iopts", value: mapping.ebs.iopts});
+                    data.push({name: "BlockDeviceMapping."+(idx+1)+".Ebs.Iopts", value: mapping.ebs.iopts});
                 }
               });
             }
@@ -144,19 +148,19 @@ define([
             if(model.get('network_interface') != undefined) {
               var interfaces = model.get('network_interface');
               $.each(interfaces, function(idx, interface) {
-                data.push({name: "NetworkInterface."+(idx)+".NetworkInterfaceId", value: interface.network_interface_id});
-                data.push({name: "NetworkInterface."+(idx)+".DeviceIndex", value: interface.device_index});
-                data.push({name: "NetworkInterface."+(idx)+".SubnetId", value: interface.subnet_id});
-                data.push({name: "NetworkInterface."+(idx)+".Description", value: interface.description});
-                data.push({name: "NetworkInterface."+(idx)+".PrivateIpAddress", value: interface.private_ip_address});
-                data.push({name: "NetworkInterface."+(idx)+".SecurityGroupId", value: interface.security_group_id});
-                data.push({name: "NetworkInterface."+(idx)+".DeleteOnTermination",value:  interface.delete_on_termination});
-                data.push({name: "NetworkInterface."+(idx)+".SecondaryPrivateIpAddressCount", value: interface.secondary_private_ip_address_count});
+                data.push({name: "NetworkInterface."+(idx+1)+".NetworkInterfaceId", value: interface.network_interface_id});
+                data.push({name: "NetworkInterface."+(idx+1)+".DeviceIndex", value: interface.device_index});
+                data.push({name: "NetworkInterface."+(idx+1)+".SubnetId", value: interface.subnet_id});
+                data.push({name: "NetworkInterface."+(idx+1)+".Description", value: interface.description});
+                data.push({name: "NetworkInterface."+(idx+1)+".PrivateIpAddress", value: interface.private_ip_address});
+                data.push({name: "NetworkInterface."+(idx+1)+".SecurityGroupId", value: interface.security_group_id});
+                data.push({name: "NetworkInterface."+(idx+1)+".DeleteOnTermination",value:  interface.delete_on_termination});
+                data.push({name: "NetworkInterface."+(idx+1)+".SecondaryPrivateIpAddressCount", value: interface.secondary_private_ip_address_count});
                 if(interface.private_ip_addresses != undefined) {
                   var privips = interface.private_ip_addresses;
                   $.each(privips, function(jdx, privip) {
-                    data.push({name: "NetworkInterface."+(idx)+".PrivateIpAddresses."+(jdx)+".PrivateIpAddress", value: privip.private_ip_address});
-                    data.push({name: "NetworkInterface."+(idx)+".PrivateIpAddresses."+(jdx)+".Primary", value: privip.primary});
+                    data.push({name: "NetworkInterface."+(idx+1)+".PrivateIpAddresses."+(jdx+1)+".PrivateIpAddress", value: privip.private_ip_address});
+                    data.push({name: "NetworkInterface."+(idx+1)+".PrivateIpAddresses."+(jdx+1)+".Primary", value: privip.primary});
                   });
 
                 }
@@ -165,8 +169,8 @@ define([
             if(model.get('i_am_instance_profile') != undefined) {
               var profs = model.get('i_am_instance_profile');
               $.each(profs, function(idx, prof) {
-                data.push({name: "IamInstanceProfile."+(idx)+".Arn", value: prof.arn});
-                data.push({name: "IamInstanceProfile."+(idx)+".Name", value: prof.name});
+                data.push({name: "IamInstanceProfile."+(idx+1)+".Arn", value: prof.arn});
+                data.push({name: "IamInstanceProfile."+(idx+1)+".Name", value: prof.name});
               });
             }
             if(model.get('addressing_type') != undefined)
@@ -238,8 +242,8 @@ define([
               tagData += "&ResourceId." + idx + "=" + inst.id;
             });
             _.each(model.get('tags'), function(tag, jdx, tags) {
-              tagData += "&Tag." + jdx + ".Key=" + tag.get('name');
-              tagData += "&Tag." + jdx + ".Value=" + tag.get('value');
+              tagData += "&Tag." + (jdx+1) + ".Key=" + tag.get('name');
+              tagData += "&Tag." + (jdx+1) + ".Value=" + tag.get('value');
             });
           
             $.ajax({
