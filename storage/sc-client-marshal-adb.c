@@ -64,7 +64,7 @@
  ************************************************************************/
 
 //!
-//! @file node/client-marshal-adb.c
+//! @file storage/sc-client-marshal-adb.c
 //! Need to provide description
 //!
 

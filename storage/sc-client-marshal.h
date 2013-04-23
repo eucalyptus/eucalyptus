@@ -64,7 +64,7 @@
  ************************************************************************/
 
 //!
-//! @file sc/sc-client-marshal.h
+//! @file storage/sc-client-marshal.h
 //! This defines the AXIS2C Client requests handling
 //!
 
