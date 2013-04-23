@@ -104,6 +104,13 @@
                 valueMatches : thisObj.searchConfig.valueMatches
             }
         });
+        if(thisObj.options.filters){
+          $.each(thisObj.options.filters, function(idx, filter){
+            if (filter['default']) {
+              thisObj.vsearch.searchBox.value(filter['name']+": "+filter['default'])
+            }
+          });
+        }
         thisObj.bbdata.on('change add remove reset', function() {
             console.log('bbdata refresh');
             thisObj.refreshTable.call(thisObj)
