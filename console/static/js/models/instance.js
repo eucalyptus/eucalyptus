@@ -262,6 +262,12 @@ define([
                 }
             });
           }
+        },
+
+        parse: function(response) {
+            var response = EucaModel.prototype.parse.call(this, response);
+            response.state = response._state.name;
+            return response;
         }
 
     });
