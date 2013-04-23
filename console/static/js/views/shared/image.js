@@ -1,12 +1,13 @@
 define([
     'underscore',
+    'backbone',
     'app',
 	'dataholder',
   'text!./image.html!strip',
   'rivets',
   'views/searches/image',
   './model/blockmap'
-	], function( _, app, dataholder, template, rivets, imageSearch, BlockMap ) {
+	], function( _, Backbone, app, dataholder, template, rivets, imageSearch, BlockMap ) {
 	return Backbone.View.extend({
             title: 'Image',
             count: 0,
@@ -36,7 +37,8 @@ define([
                     return inferImage(image.get('location'), image.get('description'), image.get('platform'));
                 },
 
-                search: new imageSearch(app.data.images),
+                search: new imageSearch(new Backbone.Collection(app.data.images.where({type: 'machine'}))),
+                //search: new imageSearch(app.data.images),
                 
                 select: function(e, images) {
                   $(e.currentTarget).parent().find('tr').removeClass('selected-row');
@@ -82,11 +84,9 @@ define([
             self.render();
           });
 
-
-
-          scope.images = scope.search.filtered.where({type: 'machine'});
+          scope.images = scope.search.filtered;
           this.scope = scope;
-          scope.search.filtered.on('change reset', function() {
+          scope.search.filtered.on('add remove sync change reset', function() {
               self.render();
           });
 
