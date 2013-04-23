@@ -3,7 +3,8 @@ define([], function() {
     tags: new Backbone.Collection(),
 
     finish: function(outputModel) {
-      outputModel.set('tags', this.get('tags'));
+      var tgs = this.get('tags').clone();
+      outputModel.set('tags', tgs);
     }
   });
 });

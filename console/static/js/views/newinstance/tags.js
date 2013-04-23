@@ -25,6 +25,10 @@ define([
 
     render: function() {
       this.rView.sync();
+    },
+
+    blur: function() {
+      this.model.trigger('confirm');
     }
   });
 });
