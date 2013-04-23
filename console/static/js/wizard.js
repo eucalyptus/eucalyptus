@@ -377,6 +377,12 @@ define([], function() {
           this.summary = this.$el.find(mapping.wizardSummary);
           this.render();
         },
+
+        jump: function(index) {
+          self.goTo(index);
+          this.render();
+        }, 
+
         render: function() {
           // Make sure there is something there
           var shouldAnimate = this.animate && self.position !== this.lastRendered;
