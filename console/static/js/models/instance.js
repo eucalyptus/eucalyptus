@@ -13,7 +13,7 @@ define([
       image_id: null,
       min_count: null,
       max_count: null,
-      tags: [{}],
+      tags: new Backbone.Collection(),
 
       //options
       key_name: null,
@@ -192,14 +192,14 @@ define([
               paramName: "user_data_file",
             });
 
+            var the_tags = model.get('tags').toJSON();
             $(model.get('fileinput')()).fileupload("send", {
               files: user_file,
               success:
                 function(data, textStatus, jqXHR){
                   if ( data.results ) {
-                    console.log("RUN INSTANCE: ", data);
                     notifySuccess(null, $.i18n.prop('instance_run_success', DefaultEncoder().encodeForHTML(data.results[0].id)));
-                    self.tags(data.results, model);
+                    self.set_tags(data.results, the_tags);
                   } else {
                     notifyError($.i18n.prop('instance_run_error', DefaultEncoder().encodeForHTML(model.name), DefaultEncoder().encodeForHTML(model.name)), undefined_error);
                   }
@@ -234,16 +234,16 @@ define([
           }
         },
 
-        tags: function(instanceData, model) {
+        set_tags: function(instanceData, tags) {
           var tagData = "_xsrf="+$.cookie('_xsrf');
           // each instance gets each tag
-          if(model.get('tags') != undefined) {
+          if(tags.length > 0) {
             $.each(instanceData, function(idx, inst) {
-              tagData += "&ResourceId." + idx + "=" + inst.id;
+              tagData += "&ResourceId." + (idx+1) + "=" + inst.id;
             });
-            _.each(model.get('tags'), function(tag, jdx, tags) {
-              tagData += "&Tag." + (jdx+1) + ".Key=" + tag.get('name');
-              tagData += "&Tag." + (jdx+1) + ".Value=" + tag.get('value');
+            _.each(tags, function(tag, jdx, tags) {
+              tagData += "&Tag." + (jdx+1) + ".Key=" + tag.name;
+              tagData += "&Tag." + (jdx+1) + ".Value=" + tag.value;
             });
           
             $.ajax({

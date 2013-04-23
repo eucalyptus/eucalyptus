@@ -45,7 +45,7 @@ define([
                   $(e.currentTarget).addClass('selected-row');
                   self.model.set('image_iconclass', this.setClass(images.image));
                   self.model.set('id', images.image.get('id'));
-                  images.image.unset('tags'); // workaround - nested objects break the next line
+                  //images.image.unset('tags'); // workaround - nested objects break the next line
                   self.model.set(images.image.toJSON());
                   self.model.set('platform', this.setClass(self.model));
 

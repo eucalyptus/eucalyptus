@@ -22,10 +22,11 @@ define([
                         return sg.get('name') == e.target.value;
           });
           if(groupWhere.length > 0) {
-              group.unset('tags');  // workaround - nested objects break next line
-              self.model.set(group.toJSON());
-              //self.model.set('id', group.get('id'));
+              //group.unset('tags');  // workaround - nested objects break next line
+              self.model.set('name', group.get('name'));
+              self.model.set('id', group.get('id'));
               self.model.set('security_show', true);
+              self.model.set('rules', group.get('rules'));
               
           }
         },
@@ -35,8 +36,8 @@ define([
           var key = _.find(keyWhere, function(k) {
                       return k.get('name') == e.target.value;
           });
-          key.unset('tags'); // workaround - nested objects break next line
-          this.keymodel.set(key.toJSON());
+          //key.unset('tags'); // workaround - nested objects break next line
+          this.keymodel.set('name', key.get('name'));
           self.model.set('security_show', true);
         },
 
