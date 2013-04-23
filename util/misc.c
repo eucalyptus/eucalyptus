@@ -1714,6 +1714,54 @@ char *file2str_seek(char *file, size_t size, int mode)
     return (ret);
 }
 
+int str2file(const char *str, char *path, mode_t mode, boolean mktemp)
+{
+    if (path==NULL)
+        return 1;
+
+    int fd;
+
+    // if temporary file was requested, assume that the path is actually
+    // a template for mkstemp(), with 6 X's in it, and that it is to be
+    // overwritten with the actual file path
+    if (mktemp) {
+        fd = safe_mkstemp(path);
+        if (fd < 0) {
+            LOGERROR("cannot create temporary file '%s': %s\n", path, strerror(errno));
+            return (-1);
+        }
+        if (fchmod(fd, mode)) {
+            LOGERROR("failed to change permissions on '%s': %s\n", path, strerror(errno));
+            close (fd);
+            return (-1);
+        }
+    } else {
+        fd = open(path, O_CREAT | O_EXCL | O_WRONLY, mode);
+        if (fd == -1) {
+            LOGERROR("failed to create file '%s': %s\n", path, strerror(errno));
+            return (-1);
+        }
+    }
+    
+    if (str) {
+        int to_write = strlen(str);
+        int offset = 0;
+        while (to_write > 0) {
+            int wrote = write(fd, str + offset, to_write);
+            if (wrote == -1) {
+                LOGERROR("failed to write to file '%s': %s\n", path, strerror(errno));
+                close (fd);
+                return (-1);
+            }
+            to_write -= wrote;
+            offset += wrote;
+        }
+    }
+    close(fd);
+    
+    return (EUCA_OK);
+}
+
 //!
 //!
 //!
@@ -2594,7 +2642,10 @@ int timeshell(char *command, char *stdout_str, char *stderr_str, int max_size, i
 
     remaining_time = timeout - (time(NULL) - start_time);
     if ((rc = timewait(child_pid, &status, remaining_time)) != 0) {
-        rc = WEXITSTATUS(status);
+        if (WIFEXITED(status))
+            rc = WEXITSTATUS(status);
+        else
+            rc = -1;
     } else {
         killwait(child_pid);
         LOGERROR("warning: shell execution timeout\n");
@@ -2718,6 +2769,37 @@ int main(int argc, char **argv)
         printf("Failed to retrieve the current working directory information.\n");
         return (1);
     }
+
+    // a nice big buffer with random chars
+    char buf[1048576];
+    bzero (buf, sizeof(buf));
+    for (int i=0; i<sizeof(buf)-1; i++) {
+        buf[i] = '!' + rand() % ('~' - '!');
+        if (i % 79 == 0)
+            buf[i] = '\n';
+    }
+
+    printf("testing str2file in misc.c\n");
+    char path[MAX_PATH];
+
+    strcpy(path, "/tmp/euca-misc-test-XXXXXX");
+    assert(str2file(buf, path, 0644, TRUE)==EUCA_OK); // normal case
+    assert(unlink(path)==0);
+
+    strcpy(path, "/tmp/euca-misc-test-XXXXXX");
+    assert(str2file(NULL, path, 0644, TRUE)==EUCA_OK); // empty tmp file
+    assert(unlink(path)==0);
+
+    strcpy(path, "/tmp/euca-misc-test-XXXXXX");
+    assert(str2file("", path, 0644, TRUE)==EUCA_OK); // empty tmp file
+    assert(unlink(path)==0);
+
+    assert(str2file("xyz", NULL, 0644, TRUE)!=EUCA_OK); // empty path
+    assert(str2file("xyz", NULL, 0644, FALSE)!=EUCA_OK); // empty path
+
+    strcpy(path, "/tmp/euca-misc-test-XYZ123");
+    assert(str2file(buf, path, 0644, FALSE)==EUCA_OK); // normal case non tmp file
+    assert(unlink(path)==0);
 
     srandom(time(NULL));
 

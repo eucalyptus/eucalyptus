@@ -237,6 +237,7 @@ char *SCHEDPOLICIES[SCHEDLAST] = {
     "GREEDY",
     "ROUNDROBIN",
     "POWERSAVE",
+    "USER",
 };
 
 /*----------------------------------------------------------------------------*\
@@ -2936,7 +2937,7 @@ int ccInstance_to_ncInstance(ncInstance * dst, ccInstance * src)
 //!
 //! @note
 //!
-int schedule_instance(virtualMachine * vm, char *targetNode, int *outresid)
+int schedule_instance(virtualMachine * vm, char *amiId, char *kernelId, char *ramdiskId, char *instId, char *userData, char *platform, char *targetNode, int *outresid)
 {
     int ret;
 
@@ -2948,6 +2949,8 @@ int schedule_instance(virtualMachine * vm, char *targetNode, int *outresid)
         ret = schedule_instance_roundrobin(vm, outresid);
     } else if (config->schedPolicy == SCHEDPOWERSAVE) {
         ret = schedule_instance_greedy(vm, outresid);
+    } else if (config->schedPolicy == SCHEDUSER) {
+        ret = schedule_instance_user(vm, amiId, kernelId, ramdiskId, instId, userData, platform, outresid);
     } else {
         ret = schedule_instance_greedy(vm, outresid);
     }
@@ -3054,7 +3057,7 @@ int schedule_instance_migration(ncInstance * instance, char **includeNodes, char
             ret = 1;
             goto out;
         }
-        ret = schedule_instance(&(instance->params), includeNodes[0], outresid);
+        ret = schedule_instance(&(instance->params), instance->imageId, instance->kernelId, instance->ramdiskId, instance->instanceId, instance->userData, instance->platform, includeNodes[0], outresid);
     } else {
         if (config->schedPolicy == SCHEDROUNDROBIN) {
             LOGDEBUG("[%s] scheduling migration using ROUNDROBIN scheduler\n", instance->instanceId);
@@ -3259,6 +3262,91 @@ int schedule_instance_greedy(virtualMachine * vm, int *outresid)
     if (res->state == RESASLEEP) {
         powerUp(res);
     }
+
+    return (0);
+}
+
+int schedule_instance_user(virtualMachine * vm, char *amiId, char *kernelId, char *ramdiskId, char *instId, char *userData, char *platform, int *outresid)
+{
+    int i, done, resid, sleepresid, fd, rc;
+    ccResource *res = NULL;
+    ccInstance *inst = NULL;
+    FILE *OFH = NULL;
+
+    // create a temporary file for relaying resource information to the scheduler
+    char schedfile[MAX_PATH] = "/tmp/euca-schedfile-XXXXXX";
+    if (str2file(NULL, schedfile, 0644, TRUE) != EUCA_OK)
+        return (-1);
+
+    // create a temporary file for relaying information about running instances to the scheduler
+    char instfile[MAX_PATH] = "/tmp/euca-instfile-XXXXXX";
+    if (str2file(NULL, instfile, 0644, TRUE) != EUCA_OK)
+        return (-1);
+
+    // create a temporary file for relaying instance's user data to the scheduler
+    char datafile[MAX_PATH] = "/tmp/euca-datafile-XXXXXX";
+    if (str2file(userData, datafile, 0644, TRUE) != EUCA_OK)
+        return (-1);
+
+    // clear out the result
+    *outresid = 0;
+
+    // populate the file with resource information
+    resid = sleepresid = -1;
+    done = 0;
+    OFH = fopen(schedfile, "w");
+    if (!OFH) {
+        LOGERROR("cannot open resources file '%s' for writing\n", schedfile);
+        return (-1);
+    }
+    char lbuf[512];
+    for (i = 0; i < resourceCache->numResources && !done; i++) {
+        int mem, disk, cores;
+
+        res = &(resourceCache->resources[i]);
+        if (res) {
+            snprintf(lbuf, sizeof(lbuf), "idx=%d,ip=%s,state=%d,availmem=%d,availdisk=%d,availcores=%d", i + 1, res->ip, res->state, res->availMemory, res->availDisk, res->availCores);
+            fprintf(OFH, "%s\n", lbuf);
+        }
+    }
+    fclose(OFH);
+
+    // populate the file with information about instances
+    OFH = fopen(instfile, "w");
+    if (!OFH) {
+        LOGERROR("cannot open temporary instance file '%s' for writing\n", instfile);
+        return (-1);
+    }
+    for (i = 0; i < instanceCache->numInsts; i++) {
+        inst = &(instanceCache->instances[i]);
+        if (inst) {
+            snprintf(lbuf, sizeof(lbuf), "id=%s,state=%s,nchost=%s,mem=%d,disk=%d,cores=%d,secgroupidx=%d,publicip=%s,privateip=%s,ownerId=%s,accountId=%s,launchTime=%ld",
+                     inst->instanceId, inst->state, inst->serviceTag, inst->ccvm.mem, inst->ccvm.disk, inst->ccvm.cores, inst->ccnet.vlan, inst->ccnet.publicIp,
+                     inst->ccnet.privateIp, inst->accountId, inst->ownerId, inst->ts);
+            fprintf(OFH, "%s\n", lbuf);
+        }
+    }
+    fclose(OFH);
+
+    // invoke the external scheduler, passing it the two files as well as resource requirements of the new instance
+    char cmd[MAX_PATH*3 + CHAR_BUFFER_SIZE]; // 3 paths on command line, plus other stuff
+    char stdout_str[VERY_BIG_CHAR_BUFFER_SIZE];
+    char stderr_str[VERY_BIG_CHAR_BUFFER_SIZE];
+    snprintf(cmd, sizeof(cmd), "%s %s %s %d %d %d %s %s %s",
+             config->schedPath, schedfile, instfile, vm->mem, vm->disk, vm->cores, instId, datafile, platform);
+    rc = timeshell(cmd, stdout_str, stderr_str, VERY_BIG_CHAR_BUFFER_SIZE, SCHED_TIMEOUT_SEC);
+    LOGDEBUG("external scheduler returned: %d, stdout: '%s', stderr: '%s'\n", rc, stdout_str, stderr_str);
+    unlink(schedfile);
+    unlink(instfile);
+    unlink(datafile);
+
+    resid = rc - 1; // rc for valid nodes [1..N], 0 means scheduler could not find a resource
+    if (resid < 0 || resid >= resourceCache->numResources) {
+        // didn't find a resource
+        LOGWARN("couldn't find a resource or user scheduler is incorrect\n");
+        return (1);
+    }
+    *outresid = resid;
 
     return (0);
 }
@@ -3493,7 +3581,7 @@ int doRunInstances(ncMetadata * pMeta, char *amiId, char *kernelId, char *ramdis
             resid = 0;
 
             sem_mywait(CONFIG);
-            rc = schedule_instance(ccvm, targetNode, &resid);
+            rc = schedule_instance(ccvm, amiId, kernelId, ramdiskId, instId, userData, platform, targetNode, &resid);
             sem_mypost(CONFIG);
 
             res = &(resourceCache->resources[resid]);
@@ -5604,7 +5692,7 @@ int init_config(void)
     char *tmpstr = NULL, *proxyIp = NULL;
     int rc, numHosts, use_wssec, use_tunnels, use_proxy, proxy_max_cache_size, schedPolicy, idleThresh, wakeThresh, i;
 
-    char configFiles[2][MAX_PATH], netPath[MAX_PATH], eucahome[MAX_PATH], policyFile[MAX_PATH], home[MAX_PATH], proxyPath[MAX_PATH], arbitrators[256];
+    char configFiles[2][MAX_PATH], netPath[MAX_PATH], eucahome[MAX_PATH], policyFile[MAX_PATH], home[MAX_PATH], proxyPath[MAX_PATH], arbitrators[256], schedPath[MAX_PATH];
 
     time_t instanceTimeout, ncPollingFrequency, clcPollingFrequency, ncFanout;
 
@@ -5620,6 +5708,7 @@ int init_config(void)
     bzero(configFiles[1], MAX_PATH);
     bzero(netPath, MAX_PATH);
     bzero(policyFile, MAX_PATH);
+    bzero(schedPath, MAX_PATH);
 
     snprintf(configFiles[1], MAX_PATH, EUCALYPTUS_CONF_LOCATION, home);
     snprintf(configFiles[0], MAX_PATH, EUCALYPTUS_CONF_OVERRIDE_LOCATION, home);
@@ -5898,11 +5987,10 @@ int init_config(void)
     }
 
     tmpstr = configFileValue("SCHEDPOLICY");
-    if (!tmpstr) {
+    if (tmpstr == NULL) {
         // error
-        LOGWARN("parsing config file (%s) for SCHEDPOLICY, defaulting to GREEDY\n", configFiles[0]);
+        LOGWARN("failed to parse config file (%s) for SCHEDPOLICY, defaulting to GREEDY\n", configFiles[0]);
         schedPolicy = SCHEDGREEDY;
-        tmpstr = NULL;
     } else {
         if (!strcmp(tmpstr, "GREEDY"))
             schedPolicy = SCHEDGREEDY;
@@ -5910,7 +5998,11 @@ int init_config(void)
             schedPolicy = SCHEDROUNDROBIN;
         else if (!strcmp(tmpstr, "POWERSAVE"))
             schedPolicy = SCHEDPOWERSAVE;
-        else
+        else if (access(tmpstr, X_OK) == 0) {   // scheduler is an executable path, assumed to be user scheduler
+            LOGWARN("will use user-defined scheduler at '%s'\n", tmpstr);
+            euca_strncpy(schedPath, tmpstr, sizeof(schedPath));
+            schedPolicy = SCHEDUSER;
+        } else
             schedPolicy = SCHEDGREEDY;
     }
     EUCA_FREE(tmpstr);
@@ -6087,6 +6179,7 @@ int init_config(void)
     config->use_wssec = use_wssec;
     config->use_tunnels = use_tunnels;
     config->schedPolicy = schedPolicy;
+    euca_strncpy(config->schedPath, schedPath, sizeof(config->schedPath));
     config->idleThresh = idleThresh;
     config->wakeThresh = wakeThresh;
     config->instanceTimeout = instanceTimeout;

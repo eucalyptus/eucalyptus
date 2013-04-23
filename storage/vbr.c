@@ -291,9 +291,9 @@ int get_localhost_sc_url(char *dest)
 {
 	int ret = 0;
 	sem_p(hostconfig_sem);
-	if(!strlen(localhost_config.sc_url)) {
+	if(strlen(localhost_config.sc_url)==0) {
 		LOGERROR("No sc url found in localhost_config.\n");
-		ret = 0;
+		ret = EUCA_ERROR;
 		goto release;
 	}
 	if(!euca_strncpy(dest, localhost_config.sc_url, 512)) {

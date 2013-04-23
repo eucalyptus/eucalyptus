@@ -885,10 +885,9 @@ int destroy_instance_backing(ncInstance * instance, boolean do_destroy_files)
     virtualMachine *vm = &(instance->params);
     virtualBootRecord *vbr = NULL;
 
-    if(get_localhost_sc_url(scURL) || !strlen(scURL)) {
-    	LOGERROR("Could not get SC URL from localhost config in vbr struct.\n");
-    	ret = EUCA_ERROR;
-    	return ret;
+    if(get_localhost_sc_url(scURL)!=EUCA_OK || strlen(scURL)==0) {
+    	LOGWARN("[%s] could not obtain SC URL (is SC enabled?)\n", instance->instanceId);
+        scURL[0] = '\0';
     }
 
     // find and detach iSCSI targets, if any
@@ -896,7 +895,7 @@ int destroy_instance_backing(ncInstance * instance, boolean do_destroy_files)
         vbr = &(vm->virtualBootRecord[i]);
         if (vbr->locationType == NC_LOCATION_SC) {
         	if(disconnect_ebs_volume(scURL, localhost_config.use_ws_sec, localhost_config.ws_sec_policy_file, vbr->resourceLocation, vbr->preparedResourceLocation, localhost_config.ip, localhost_config.iqn) != 0) {
-        		LOGERROR("[%s] failed to disconnect iSCSI target attached to %s\n", instance->instanceId, vbr->backingPath);
+        		LOGERROR("[%s] failed to disconnect iSCSI target attached to '%s'\n", instance->instanceId, vbr->backingPath);
             }
         }
     }

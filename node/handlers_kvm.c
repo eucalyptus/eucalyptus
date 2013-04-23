@@ -878,8 +878,10 @@ static int doMigrateInstances(struct nc_state_t *nc, ncMetadata * pMeta, ncInsta
             instance->combinePartitions = nc->convert_to_disk;
             instance->do_inject_key = nc->do_inject_key;
 
-            if ((error = create_instance_backing(instance, TRUE))) {
-                LOGERROR("[%s] failed to prepare images for instance (error=%d)\n", instance->instanceId, error);
+            if ((error = create_instance_backing(instance, TRUE))  // create files that back the disks
+                || (error = gen_instance_xml(instance)) // create euca-specific instance XML file
+                || (error = gen_libvirt_instance_xml(instance))) {  // transform euca-specific XML into libvirt XML
+                LOGERROR("[%s] failed to prepare images for migrating instance (error=%d)\n", instance->instanceId, error);
                 goto failed_dest;
             }
             // attach any volumes
@@ -978,6 +980,7 @@ unroll:
             change_state(instance, BOOTING);    // not STAGING, since in that mode we don't poll hypervisor for info
             LOGINFO("[%s] migration destination ready %s > %s\n", instance->instanceId, instance->migration_src, instance->migration_dst);
             save_instance_struct(instance);
+            
             error = add_instance(&global_instances, instance);
             copy_instances();
             sem_v(inst_sem);
