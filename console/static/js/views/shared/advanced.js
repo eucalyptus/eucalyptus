@@ -8,6 +8,9 @@ define([
 	return Backbone.View.extend({
     tpl: template,
     title: 'Advanced',
+    isOptional: true,
+    optionLinkText: app.msg('launch_instance_btn_next_advanced'),
+
     launchConfigErrors: new Backbone.Model({volume_size: ''}),
     
 		initialize : function() {
@@ -17,7 +20,6 @@ define([
         advancedModel: self.model,
         kernels: new Backbone.Collection(dataholder.images.where({type: 'kernel'})), 
         ramdisks: new Backbone.Collection(dataholder.images.where({type: 'ramdisk'})),
-        user_data: self.model.get('user_data'),
         enableMonitoring: true,
         privateNetwork: false,
         snapshots: dataholder.snapshot,
@@ -134,10 +136,6 @@ define([
           }
         },
 
-        userdata: function(e,obj) {
-          self.model.set('user_data', $.base64.encode(e.target.value));
-        },
-
         launchConfigErrors: self.launchConfigErrors
 
       };
@@ -153,7 +151,11 @@ define([
       });
 
       this.model.on('change', function() {
-        self.model.set('advanced_show', true);
+//        self.model.set('advanced_show', true);
+      });
+
+      this.model.on('change:user_data', function(e) {
+          self.model.set('user_data', $.base64.encode(e.target.value));
       });
 
       scope.kernels.on('reset change', self.render);
@@ -163,10 +165,17 @@ define([
       $(this.el).html(this.tpl)
       this.rView = rivets.bind(this.$el, scope);
       this.render();
+      // this.model.set('fileinput', this.$el.find('#launch-wizard-advanced-input-userfile'));
+       var fileinputel = this.$el.find('#launch-wizard-advanced-input-userfile');
+       this.model.set('fileinput', function() { return fileinputel; });
 		},
 
     render: function() {
       this.rView.sync();
+    },
+
+    focus: function() {
+      this.model.set('advanced_show', true);
     }
 });
 });

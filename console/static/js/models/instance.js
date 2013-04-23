@@ -76,86 +76,87 @@ define([
 
       sync: function(method, model, options) {
           if (method == 'create') {
-            var data = "_xsrf="+$.cookie('_xsrf');
-            data += "&ImageId=" + model.get('image_id');
-            data += "&MinCount=" + model.get('min_count');
-            data += "&MaxCount=" + model.get('max_count');
+            var data = new Array();
+            data.push({name: "_xsrf", value: $.cookie('_xsrf')});
+            data.push({name: "ImageId", value: model.get('image_id')});
+            data.push({name: "MinCount", value: model.get('min_count')});
+            data.push({name: "MaxCount", value: model.get('max_count')});
 
             if (model.get('key_name') != undefined)
-              data += "&KeyName="+model.get('key_name');
+              data.push({name: "KeyName", value: model.get('key_name')});
             if (model.get('security_group') != undefined)
-              data += "&=SecurityGroup="+model.get('security_group');
+              data.push({name: "=SecurityGroup", value: model.get('security_group')});
             if (model.get('security_group_id') != undefined)
-              data += "&SecurityGroupId=" + model.get('security_group_id');
+              data.push({name: "SecurityGroupId", value:  model.get('security_group_id')});
             if (model.get('user_data') != undefined)
-              data += "&UserData=" + model.get('user_data');
+              data.push({name: "UserData", value: model.get('user_data')});
             if (model.get('instance_type') != undefined)
-              data += "&InstanceType="+model.get('instance_type');
+              data.push({name: "InstanceType", value: model.get('instance_type')});
             if (model.get('kernel_id') != undefined)
-              data += "&KernelId="+model.get('kernel_id');
+              data.push({name: "KernelId", value: model.get('kernel_id')});
             if (model.get('RamdiskId') != undefined)
-              data += "&RamdiskId="+model.get('ramdisk_id');
+              data.push({name: "RamdiskId", value: model.get('ramdisk_id')});
             if (model.get('placement') != undefined) {
               var placement = model.get('placement');
               if(placement.availability_zone != undefined) 
-                data += "&Placement.AvailabilityZone="+placement.availability_zone;
+                data.push({name: "Placement.AvailabilityZone", value: placement.availability_zone});
               if(placement.group_name != undefined)
-                data += "&Placement.GroupName="+placement.group_name;
+                data.push({name: "Placement.GroupName", value: placement.group_name});
               if(placement.tenancy != undefined)
-                data += "&Placement.Tenancy="+placement.tenancy;
+                data.push({name: "Placement.Tenancy", value: placement.tenancy});
             }
             if (model.get('block_device_mappings') != undefined) {
               var mappings = model.get('block_device_mappings');
               $.each(mappings, function(idx, mapping) {
                 if(mapping.device_name != undefined)
-                  data += "&BlockDeviceMapping."+(idx)+".DeviceName="+mapping.device_name;
+                  data.push({name: "BlockDeviceMapping."+(idx)+".DeviceName", value: mapping.device_name});
 
                 if(mapping.no_device != undefined) {
-                  data += "&BlockDeviceMapping."+(idx)+".NoDevice="+mapping.no_device;
+                  data.push({name: "BlockDeviceMapping."+(idx)+".NoDevice", value: mapping.no_device});
                 }
                 if (mapping.virtual_name != undefined) {
-                  data += "&BlockDeviceMapping."+(idx)+".VirtualName="+mapping.virtual_name;
+                  data.push({name: "BlockDeviceMapping."+(idx)+".VirtualName", value: mapping.virtual_name});
                 } else if (mapping.ebs != undefined) {
-                  data += "&BlockDeviceMapping."+(idx)+".Ebs.SnapshotId="+mapping.ebs.snapshot_id;
-                  data += "&BlockDeviceMapping."+(idx)+".Ebs.VolumeSize="+mapping.ebs.volume_size;
-                  data += "&BlockDeviceMapping."+(idx)+".Ebs.DeleteOnTermination="+mapping.ebs.delete_on_termination;
+                  data.push({name: "BlockDeviceMapping."+(idx)+".Ebs.SnapshotId", value: mapping.ebs.snapshot_id});
+                  data.push({name: "BlockDeviceMapping."+(idx)+".Ebs.VolumeSize", value: mapping.ebs.volume_size});
+                  data.push({name: "BlockDeviceMapping."+(idx)+".Ebs.DeleteOnTermination", value: mapping.ebs.delete_on_termination});
                   if(mapping.ebs.volume_type != undefined)
-                  data += "&BlockDeviceMapping."+(idx)+".Ebs.VolumeType="+mapping.ebs.volume_type;
+                  data.push({name: "BlockDeviceMapping."+(idx)+".Ebs.VolumeType", value: mapping.ebs.volume_type});
                   if(mapping.ebs.iopts != undefined) 
-                    data += "&BlockDeviceMapping."+(idx)+".Ebs.Iopts="+mapping.ebs.iopts;
+                    data.push({name: "BlockDeviceMapping."+(idx)+".Ebs.Iopts", value: mapping.ebs.iopts});
                 }
               });
             }
             if (model.get('monitoring_enabled') != undefined)
-              data += "&Monitoring.Enabled="+model.get('monitoring_enabled');
+              data.push({name: "Monitoring.Enabled", value: model.get('monitoring_enabled')});
             if (model.get('subnet_id') != undefined)
-              data += "&SubnetId="+model.get('subnet_id');
+              data.push({name: "SubnetId", value: model.get('subnet_id')});
             if (model.get('disable_api_termination') != undefined)
-              data += "&DisableApiTermination="+model.get('disable_api_termination');
+              data.push({name: "DisableApiTermination", value: model.get('disable_api_termination')});
             if (model.get('instance_initiated_shutdown_behavior') != undefined)
-              data += "&InstanceInitiatedShutdownBehavior="+model.get('instance_initiated_shutdown_behavior');
+              data.push({name: "InstanceInitiatedShutdownBehavior", value: model.get('instance_initiated_shutdown_behavior')});
             if(model.get('license') != undefined)
-              data += "&License="+model.get('license');
+              data.push({name: "License", value: model.get('license')});
             if(model.get('private_ip_address') != undefined)
-              data += "&PrivateIpAddress="+model.get('private_ip_address');
+              data.push({name: "PrivateIpAddress", value: model.get('private_ip_address')});
             if(model.get('client_token') != undefined)
-              data += "&ClientToken="+model.get('client_token');
+              data.push({name: "ClientToken", value: model.get('client_token')});
             if(model.get('network_interface') != undefined) {
               var interfaces = model.get('network_interface');
               $.each(interfaces, function(idx, interface) {
-                data += "&NetworkInterface."+(idx)+".NetworkInterfaceId="+interface.network_interface_id;
-                data += "&NetworkInterface."+(idx)+".DeviceIndex="+interface.device_index;
-                data += "&NetworkInterface."+(idx)+".SubnetId="+interface.subnet_id;
-                data += "&NetworkInterface."+(idx)+".Description="+interface.description;
-                data += "&NetworkInterface."+(idx)+".PrivateIpAddress="+interface.private_ip_address;
-                data += "&NetworkInterface."+(idx)+".SecurityGroupId="+interface.security_group_id;
-                data += "&NetworkInterface."+(idx)+".DeleteOnTermination="+interface.delete_on_termination;
-                data += "&NetworkInterface."+(idx)+".SecondaryPrivateIpAddressCount="+interface.secondary_private_ip_address_count;
+                data.push({name: "NetworkInterface."+(idx)+".NetworkInterfaceId", value: interface.network_interface_id});
+                data.push({name: "NetworkInterface."+(idx)+".DeviceIndex", value: interface.device_index});
+                data.push({name: "NetworkInterface."+(idx)+".SubnetId", value: interface.subnet_id});
+                data.push({name: "NetworkInterface."+(idx)+".Description", value: interface.description});
+                data.push({name: "NetworkInterface."+(idx)+".PrivateIpAddress", value: interface.private_ip_address});
+                data.push({name: "NetworkInterface."+(idx)+".SecurityGroupId", value: interface.security_group_id});
+                data.push({name: "NetworkInterface."+(idx)+".DeleteOnTermination",value:  interface.delete_on_termination});
+                data.push({name: "NetworkInterface."+(idx)+".SecondaryPrivateIpAddressCount", value: interface.secondary_private_ip_address_count});
                 if(interface.private_ip_addresses != undefined) {
                   var privips = interface.private_ip_addresses;
                   $.each(privips, function(jdx, privip) {
-                    data += "&NetworkInterface."+(idx)+".PrivateIpAddresses."+(jdx)+".PrivateIpAddress="+privip.private_ip_address;
-                    data += "&NetworkInterface."+(idx)+".PrivateIpAddresses."+(jdx)+".Primary="+privip.primary;
+                    data.push({name: "NetworkInterface."+(idx)+".PrivateIpAddresses."+(jdx)+".PrivateIpAddress", value: privip.private_ip_address});
+                    data.push({name: "NetworkInterface."+(idx)+".PrivateIpAddresses."+(jdx)+".Primary", value: privip.primary});
                   });
 
                 }
@@ -164,26 +165,31 @@ define([
             if(model.get('i_am_instance_profile') != undefined) {
               var profs = model.get('i_am_instance_profile');
               $.each(profs, function(idx, prof) {
-                data += "&IamInstanceProfile."+(idx)+".Arn="+prof.arn;
-                data += "&IamInstanceProfile."+(idx)+".Name="+prof.name;
+                data.push({name: "IamInstanceProfile."+(idx)+".Arn", value: prof.arn});
+                data.push({name: "IamInstanceProfile."+(idx)+".Name", value: prof.name});
               });
             }
             if(model.get('addressing_type') != undefined)
-              data += "&AddressingType="+model.get('addressing_type');
+              data.push({name: "AddressingType", value: model.get('addressing_type')});
             if(model.get('ebs_optimized') != undefined)
-              data += "&EbsOptimized=" + model.get('ebs_optimized');
+              data.push({name: "EbsOptimized", value:  model.get('ebs_optimized')});
             if(model.get('curlopts') != undefined) 
-              data += "&curlopts=" + model.get('curlopts');
+              data.push({name: "curlopts", value:  model.get('curlopts')});
             if(model.get('return_curl_handle') != undefined)
-              data += "&return_curl_handle=" + model.get('return_curl_handle');
+              data.push({name: "return_curl_handle", value:  model.get('return_curl_handle')});
               
+            var user_file = model.get("user_filename") == undefined ? "none" : model.get("user_filename");
             var self = this;
-            $.ajax({
-              type:"POST",
+            $(model.get('fileinput')()).fileupload({
               url:"/ec2?Action=RunInstances",
-              data:data,
+              formData: data,
               dataType:"json",
-              async:true,
+              fileInput: null,
+              paramName: "user_data_file",
+            });
+
+            $(model.get('fileinput')()).fileupload("send", {
+              files: user_file,
               success:
                 function(data, textStatus, jqXHR){
                   if ( data.results ) {

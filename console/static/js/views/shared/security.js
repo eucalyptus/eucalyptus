@@ -61,36 +61,15 @@ define([
 
         newKeyPair: function() {
             addKeypair( function(){ 
-              var oldKeypairs = [];
-              $.each($section.find('#launch-wizard-security-keypair-selector').find('option'), function(){
-                oldKeypairs.push($(this).val());
-              });
-
-              var numKeypairs = oldKeypairs.length;
-              refresh('keypair'); 
-              thisObj._keypairCallback = runRepeat(function(){
-                populateKeypair(oldKeypairs); 
-                if($section.find('#launch-wizard-security-keypair-selector').find('option').length  > numKeypairs){
-                  cancelRepeat(thisObj._keypairCallback);
-                }
-              }, 2000); 
+              console.log('returned from security group dialog');
+              app.data.keypair.fetch();
             });
         },
 
         newSecGroup: function() {
           addGroup( function() {
-              var oldGroups = [];
-              $.each($section.find('#launch-wizard-security-sg-selector').find('option'), function(){
-                oldGroups.push($(this).val());
-              });
-              var numGroups = oldGroups.length;
-              refresh('sgroup');
-              thisObj._sgCallback = runRepeat(function(){ 
-                populateSGroup(oldGroups);
-                if($section.find('#launch-wizard-security-sg-selector').find('option').length > numGroups){
-                  cancelRepeat(thisObj._sgCallback);
-                }  
-             }, 2000);
+              console.log('returned from security group dialog');
+              app.data.sgroup.fetch();
             });
         }
 
@@ -114,6 +93,14 @@ define([
 
       this.options.keymodel.on('validated:valid', function(obj, errors) {
         scope.launchConfigErrors.key = null;
+        self.render();
+      });
+
+      app.data.sgroup.on('reset sync add remove change', function() {
+        self.render();
+      });
+
+      app.data.keypair.on('reset sync add remove change', function() {
         self.render();
       });
 
