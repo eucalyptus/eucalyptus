@@ -165,7 +165,9 @@ define([
       $(this.el).html(this.tpl)
       this.rView = rivets.bind(this.$el, scope);
       this.render();
-      this.model.set('fileinput', this.$el.find('#launch-wizard-advanced-input-userfile'));
+      // this.model.set('fileinput', this.$el.find('#launch-wizard-advanced-input-userfile'));
+       var fileinputel = this.$el.find('#launch-wizard-advanced-input-userfile');
+       this.model.set('fileinput', function() { return fileinputel; });
 		},
 
     render: function() {

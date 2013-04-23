@@ -17,7 +17,7 @@ define([
 
         // If global tags are refreshed, update the model
         tags.on('sync add remove reset change', _.debounce(function() {
-            self.get('tags').set(tags.where({res_id: self.get('id')}));
+            if (self.get('tags') != null) self.get('tags').set(tags.where({res_id: self.get('id')}));
         },100));
 
         // If local tags are refreshed, update the model
