@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * Copyright 2009-2013 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -89,13 +89,14 @@ public class DeregisterImageType extends VmImageMessage {
 }
 /** *******************************************************************************/
 public class DescribeImageAttributeResponseType extends VmImageMessage {
-  String imageId;
-  ArrayList<LaunchPermissionItemType> launchPermission = new ArrayList<LaunchPermissionItemType>();
-  ArrayList<String> productCodes = new ArrayList<String>();
-  ArrayList<String> kernel = new ArrayList<String>();
-  ArrayList<String> ramdisk = new ArrayList<String>();
-  ArrayList<BlockDeviceMappingItemType> blockDeviceMapping = new ArrayList<BlockDeviceMappingItemType>();
-  protected ArrayList realResponse;
+  String imageId
+  ArrayList<LaunchPermissionItemType> launchPermission = []
+  ArrayList<String> productCodes = []
+  ArrayList<String> kernel = []
+  ArrayList<String> ramdisk = []
+  ArrayList<BlockDeviceMappingItemType> blockDeviceMapping = []
+  ArrayList<String> description = []
+  protected ArrayList realResponse
   
   public void setRealResponse( ArrayList r ) {
     this.realResponse = r;
@@ -115,6 +116,9 @@ public class DescribeImageAttributeResponseType extends VmImageMessage {
   public boolean hasRamdisk() {
     return this.realResponse.is(this.ramdisk);
   }
+  public boolean hasDescription() {
+    return this.realResponse.is(this.description);
+  }
 }
 
 public class DescribeImageAttributeType extends VmImageMessage {
@@ -125,6 +129,7 @@ public class DescribeImageAttributeType extends VmImageMessage {
   String kernel = "hi";
   String ramdisk = "hi";
   String blockDeviceMapping = "hi";
+  String description = "hi";
   String attribute;
   
   public void applyAttribute() {
@@ -133,6 +138,7 @@ public class DescribeImageAttributeType extends VmImageMessage {
     this.kernel = null;
     this.ramdisk = null;
     this.blockDeviceMapping = null;
+    this.description = null;
     this.setProperty(attribute, "hi");
   }
 }
@@ -159,31 +165,73 @@ public class ModifyImageAttributeResponseType extends VmImageMessage {
 }
 
 public class ModifyImageAttributeType extends VmImageMessage {
+  enum ImageAttribute { LaunchPermission, ProductCode, Description }
+
   String imageId;
+  @HttpParameterMapping (parameter = "ProductCode")
+  ArrayList<String> productCodes = []
+
+  // Post 2010-06-15
+  @HttpEmbedded
+  LaunchPermissionOperationType launchPermission
+  @HttpParameterMapping( parameter = "Description.Value")
+  String description
+
+  // Up to 2010-06-15
+  @HttpParameterMapping( parameter = "UserId")
+  ArrayList<String> queryUserId = []
+  @HttpParameterMapping (parameter = ["Group","UserGroup"])
+  ArrayList<String> queryUserGroup = []
   String attribute;
   String operationType;
-  ArrayList<LaunchPermissionItemType> add = new ArrayList<LaunchPermissionItemType>();
-  ArrayList<LaunchPermissionItemType> remove = new ArrayList<LaunchPermissionItemType>();
-  @HttpParameterMapping (parameter = "UserId")
-  ArrayList<String> queryUserId = new ArrayList<String>();
-  @HttpParameterMapping (parameter = "UserGroup")
-  ArrayList<String> queryUserGroup = new ArrayList<String>();
-  @HttpParameterMapping (parameter = "ProductCode")
-  ArrayList<String> productCodes = new ArrayList<String>();
-  
-  public void applyAttribute() {
-    ArrayList<LaunchPermissionItemType> modifyMe = (operationType.equals( "add" )) ? this.add : this.remove;
-    if ( !this.queryUserId.isEmpty() ) {
-      for ( String userName: queryUserId ) {
-        modifyMe.add(LaunchPermissionItemType.getUser(userName));
-      }
-    }
-    if ( !this.queryUserGroup.isEmpty() ) {
-      for ( String groupName: queryUserGroup ) {
-        modifyMe.add(LaunchPermissionItemType.getGroup(groupName));
-      }
+
+  ImageAttribute getImageAttribute( ) {
+    if ( attribute ) {
+      'launchPermission'.equals( attribute ) ?
+        ImageAttribute.LaunchPermission :
+        ImageAttribute.ProductCode
+    } else {
+      launchPermission && (!launchPermission.getAdd().isEmpty() || !launchPermission.getRemove().isEmpty()) ?
+        ImageAttribute.LaunchPermission :
+        !productCodes.isEmpty() ?
+          ImageAttribute.ProductCode :
+          ImageAttribute.Description
     }
   }
+
+  boolean isAdd() {
+    !getAdd().isEmpty()
+  }
+
+  List<String> getUserIds() {
+    isAdd() ?
+      getAdd().collect{ it.userId }.findAll{ it } :
+      getRemove().collect{ it.userId }.findAll{ it }
+  }
+
+  boolean isGroupAll() {
+    ( getAdd().find{ 'all'.equals( it.getGroup() ) } ||
+      getRemove().find{ 'all'.equals( it.getGroup() ) } )
+  }
+
+  List<LaunchPermissionItemType> getAdd() {
+    attribute ?
+      'add'.equals( operationType ) ? asLaunchPermissionItemTypes() : [] :
+      launchPermission.getAdd()
+  }
+
+  List<LaunchPermissionItemType> getRemove() {
+    attribute ?
+      'add'.equals( operationType ) ? [] : asLaunchPermissionItemTypes() :
+      launchPermission.getRemove()
+  }
+
+  private List<LaunchPermissionItemType> asLaunchPermissionItemTypes() {
+    queryUserId.isEmpty() ?
+      queryUserGroup.collect{ new LaunchPermissionItemType( group: it ) } :
+      queryUserId.collect{ new LaunchPermissionItemType( userId: it ) }
+  }
+
 }
 /** *******************************************************************************/
 public class RegisterImageResponseType extends VmImageMessage {
@@ -247,8 +295,19 @@ public class ImageDetails extends EucalyptusData {
     return imageId.hashCode();
   }
 }
+
+public class LaunchPermissionOperationType extends EucalyptusData {
+  @HttpEmbedded( multiple = true )
+  ArrayList<LaunchPermissionItemType> add = []
+  @HttpEmbedded( multiple = true )
+  ArrayList<LaunchPermissionItemType> remove = []
+
+  def LaunchPermissionOperationType() {
+  }
+}
+
 public class LaunchPermissionItemType extends EucalyptusData {
-  
+
   String userId;
   String group;
   
@@ -260,11 +319,11 @@ public class LaunchPermissionItemType extends EucalyptusData {
     this.group = group;
   }
   
-  public static LaunchPermissionItemType getUser(String userId) {
+  public static LaunchPermissionItemType newUserLaunchPermission(String userId) {
     return new LaunchPermissionItemType(userId, null);
   }
   
-  public static LaunchPermissionItemType getGroup() {
+  public static LaunchPermissionItemType newGroupLaunchPermission() {
     return new LaunchPermissionItemType(null, "all" );
   }
   
@@ -274,6 +333,25 @@ public class LaunchPermissionItemType extends EucalyptusData {
   
   public boolean isGroup() {
     return this.group != null
+  }
+
+  boolean equals(final o) {
+    if (this.is(o)) return true
+    if (getClass() != o.class) return false
+
+    final LaunchPermissionItemType that = (LaunchPermissionItemType) o
+
+    if (getGroup() != that.getGroup()) return false
+    if (userId != that.userId) return false
+
+    return true
+  }
+
+  int hashCode() {
+    int result
+    result = (userId != null ? userId.hashCode() : 0)
+    result = 31 * result + (getGroup() != null ? getGroup().hashCode() : 0)
+    return result
   }
 }
 public class ConfirmProductInstanceResponseType extends VmImageMessage {

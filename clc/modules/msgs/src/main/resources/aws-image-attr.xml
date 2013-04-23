@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
-  Copyright 2009-2012 Eucalyptus Systems, Inc.
+  Copyright 2009-2013 Eucalyptus Systems, Inc.
 
   This program is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
@@ -68,6 +68,19 @@
     <value name="group" field="group" usage="optional" />
   </mapping>
 
+  <mapping class="edu.ucsb.eucalyptus.msgs.LaunchPermissionOperationType" abstract="true">
+    <structure name="add" usage="optional">
+      <collection field="add" factory="org.jibx.runtime.Utility.arrayListFactory">
+        <structure name="item" map-as="edu.ucsb.eucalyptus.msgs.LaunchPermissionItemType" />
+      </collection>
+    </structure>
+    <structure name="remove" usage="optional">
+      <collection field="remove" factory="org.jibx.runtime.Utility.arrayListFactory">
+        <structure name="item" map-as="edu.ucsb.eucalyptus.msgs.LaunchPermissionItemType" />
+      </collection>
+    </structure>
+  </mapping>
+
   <mapping name="ModifyImageAttributeResponse" class="edu.ucsb.eucalyptus.msgs.ModifyImageAttributeResponseType"
     extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
     <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage" />
@@ -77,27 +90,17 @@
   <mapping name="ModifyImageAttribute" class="edu.ucsb.eucalyptus.msgs.ModifyImageAttributeType" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
     <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage" />
     <value name="imageId" field="imageId" usage="required" />
-    <structure usage="optional">
-      <structure name="launchPermission" usage="optional">
-        <structure name="add" usage="optional">
-          <collection field="add" factory="org.jibx.runtime.Utility.arrayListFactory">
-            <structure name="item" map-as="edu.ucsb.eucalyptus.msgs.LaunchPermissionItemType" />
-          </collection>
-        </structure>
-        <structure name="remove" usage="optional">
-          <collection field="remove" factory="org.jibx.runtime.Utility.arrayListFactory">
-            <structure name="item" map-as="edu.ucsb.eucalyptus.msgs.LaunchPermissionItemType" />
-          </collection>
-        </structure>
-      </structure>
-    </structure>
-        <!--2007-03-01-->
+    <structure name="launchPermission" field="launchPermission" usage="optional" map-as="edu.ucsb.eucalyptus.msgs.LaunchPermissionOperationType" />
+    <!--2007-03-01-->
     <structure usage="optional" name="productCodes">
       <collection field="productCodes" factory="org.jibx.runtime.Utility.arrayListFactory" item-type="java.lang.String">
         <structure name="item">
           <value name="productCode" />
         </structure>
       </collection>
+    </structure>
+    <structure usage="optional" name="description">
+      <value name="value" field="description" usage="optional" />
     </structure>
   </mapping>
 
@@ -130,6 +133,10 @@
       test-method="hasBlockDeviceMapping">
       <structure name="item" map-as="edu.ucsb.eucalyptus.msgs.BlockDeviceMappingItemType" />
     </collection>
+    <collection name="description" usage="optional" field="description" factory="org.jibx.runtime.Utility.arrayListFactory"
+      item-type="java.lang.String" test-method="hasDescription">
+      <value name="value" usage="optional"/>
+    </collection>
   </mapping>
 
   <mapping name="DescribeImageAttribute" class="edu.ucsb.eucalyptus.msgs.DescribeImageAttributeType" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
@@ -144,6 +151,7 @@
     <value name="ramdisk" field="ramdisk" usage="optional" />
         <!--2008-02-01-->
     <value name="blockDeviceMapping" field="blockDeviceMapping" usage="optional" />
+    <value name="description" field="description" usage="optional" />
   </mapping>
 
   <mapping name="ResetImageAttributeResponse" class="edu.ucsb.eucalyptus.msgs.ResetImageAttributeResponseType"

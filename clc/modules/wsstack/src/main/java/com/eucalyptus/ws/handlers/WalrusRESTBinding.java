@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * Copyright 2009-2013 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -1083,7 +1083,8 @@ public class WalrusRESTBinding extends RestfulMarshallingHandler {
 		for ( Field f : fields )
 			if ( Modifier.isStatic( f.getModifiers( ) ) ) continue;
 			else if ( f.isAnnotationPresent( HttpParameterMapping.class ) ) {
-				fieldMap.put( f.getAnnotation( HttpParameterMapping.class ).parameter( ), f.getName( ) );
+				for( final String parameter : f.getAnnotation( HttpParameterMapping.class ).parameter( ) )
+					fieldMap.put( parameter, f.getName( ) );
 				fieldMap.put( f.getName( ).substring( 0, 1 ).toUpperCase( ).concat( f.getName( ).substring( 1 ) ), f.getName( ) );
 			} else fieldMap.put( f.getName( ).substring( 0, 1 ).toUpperCase( ).concat( f.getName( ).substring( 1 ) ), f.getName( ) );
 		return fieldMap;

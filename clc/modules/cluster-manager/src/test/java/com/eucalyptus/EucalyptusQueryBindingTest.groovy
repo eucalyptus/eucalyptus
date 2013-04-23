@@ -20,6 +20,7 @@
 package com.eucalyptus
 
 import com.eucalyptus.ws.protocol.QueryBindingTestSupport
+import static org.junit.Assert.*
 import org.junit.Test
 import com.eucalyptus.binding.Binding
 import edu.ucsb.eucalyptus.msgs.BaseMessage
@@ -27,6 +28,9 @@ import com.eucalyptus.ws.handlers.EucalyptusQueryBinding
 import edu.ucsb.eucalyptus.msgs.AuthorizeSecurityGroupIngressType
 import edu.ucsb.eucalyptus.msgs.IpPermissionType
 import edu.ucsb.eucalyptus.msgs.UserIdGroupPairType
+import edu.ucsb.eucalyptus.msgs.ModifyImageAttributeType
+import edu.ucsb.eucalyptus.msgs.LaunchPermissionOperationType
+import edu.ucsb.eucalyptus.msgs.LaunchPermissionItemType
 
 /**
  * 
@@ -58,7 +62,7 @@ class EucalyptusQueryBindingTest extends QueryBindingTestSupport {
   }
 
   @Test
-  void testMessageQueryBindings() {
+  void testSecurityMessageQueryBindings() {
     URL resource = EucalyptusQueryBindingTest.class.getResource( '/aws-security-11-01-01.xml' )
 
     String version = "2009-11-30"
@@ -201,4 +205,156 @@ class EucalyptusQueryBindingTest extends QueryBindingTestSupport {
     ] )
   }
 
+  @Test
+  void testImageAttrMessageQueryBindings() {
+    URL resource = EucalyptusQueryBindingTest.class.getResource( '/aws-image-attr.xml' )
+
+    String version = "2009-11-30"
+    EucalyptusQueryBinding eb = new EucalyptusQueryBinding() {
+      @Override
+      protected Binding getBindingWithElementClass( final String operationName ) {
+        createTestBindingFromXml( resource, operationName )
+      }
+
+      @Override
+      String getNamespace() {
+        return getNamespaceForVersion( version );
+      }
+
+      @Override
+      protected void validateBinding( final Binding currentBinding,
+                                      final String operationName,
+                                      final Map<String, String> params,
+                                      final BaseMessage eucaMsg) {
+        // Validation requires compiled bindings
+      }
+    }
+
+    // ModifyImageAttribute - 2010-06-15
+    version = "2010-06-15"
+    bindAndAssertParameters( eb, ModifyImageAttributeType.class, "ModifyImageAttribute", new ModifyImageAttributeType(
+        imageId: 'emi-0000001',
+        queryUserId: [ '111111111111', '222222222222' ],
+        queryUserGroup: [ 'G1', 'G2' ],
+        productCodes: [ 'Code1', 'Code2' ],
+        attribute: 'launchPermission',
+        operationType: 'add',
+    ), [
+        ImageId: 'emi-0000001',
+        'UserId.1': '111111111111',
+        'UserId.2': '222222222222',
+        'Group.1': 'G1',
+        'Group.2': 'G2',
+        'ProductCode.1': 'Code1',
+        'ProductCode.2': 'Code2',
+        'Attribute': 'launchPermission',
+        'OperationType': 'add',
+    ] ).with { bound ->
+      assertEquals( 'Attribute', ModifyImageAttributeType.ImageAttribute.LaunchPermission, bound.getImageAttribute( ) )
+      assertTrue( 'Is add operation', bound.isAdd() )
+      assertEquals( 'UserIds', [ '111111111111', '222222222222' ], bound.getUserIds( ) )
+      assertFalse( 'Group all', bound.isGroupAll( ) )
+      assertEquals( 'Launch permissions', [ new LaunchPermissionItemType( userId: '111111111111' ), new LaunchPermissionItemType( userId: '222222222222' ) ] as List<LaunchPermissionItemType>, bound.getAdd( ) )
+    }
+
+    // ModifyImageAttribute - 2010-06-15 - Incorrect 'UserGroup' parameter (backwards compatible)
+    version = "2010-06-15"
+    bindAndAssertParameters( eb, ModifyImageAttributeType.class, "ModifyImageAttribute", new ModifyImageAttributeType(
+        imageId: 'emi-0000001',
+        queryUserId: [ '111111111111', '222222222222' ],
+        queryUserGroup: [ 'G1', 'G2' ],
+        productCodes: [ 'Code1', 'Code2' ],
+        attribute: 'launchPermission',
+        operationType: 'add',
+    ), [
+        ImageId: 'emi-0000001',
+        'UserId.1': '111111111111',
+        'UserId.2': '222222222222',
+        'UserGroup.1': 'G1',
+        'UserGroup.2': 'G2',
+        'ProductCode.1': 'Code1',
+        'ProductCode.2': 'Code2',
+        'Attribute': 'launchPermission',
+        'OperationType': 'add',
+    ] )
+
+    // ModifyImageAttribute - 2010-06-15 / Non standard group parameter
+    version = "2010-06-15"
+    bindAndAssertParameters( eb, ModifyImageAttributeType.class, "ModifyImageAttribute", new ModifyImageAttributeType(
+        imageId: 'emi-0000001',
+        queryUserId: [ '111111111111', '222222222222' ],
+        queryUserGroup: [ 'G1', 'G2' ],
+        productCodes: [ 'Code1', 'Code2' ],
+        attribute: 'launchPermission',
+        operationType: 'add',
+    ), [
+        ImageId: 'emi-0000001',
+        'UserId.1': '111111111111',
+        'UserId.2': '222222222222',
+        'UserGroup.1': 'G1',
+        'UserGroup.2': 'G2',
+        'ProductCode.1': 'Code1',
+        'ProductCode.2': 'Code2',
+        'Attribute': 'launchPermission',
+        'OperationType': 'add',
+    ] )
+
+    // ModifyImageAttribute - 2010-08-31
+    version = "2010-08-31"
+    bindAndAssertParameters( eb, ModifyImageAttributeType.class, "ModifyImageAttribute", new ModifyImageAttributeType(
+        imageId: 'emi-0000001',
+        launchPermission: new LaunchPermissionOperationType(
+            add: [
+                new LaunchPermissionItemType( userId: '111111111111' ),
+                new LaunchPermissionItemType( userId: '222222222222' ),
+            ],
+            remove: [
+                new LaunchPermissionItemType( userId: '333333333333' ),
+                new LaunchPermissionItemType( userId: '444444444444' ),
+            ],
+        ),
+        productCodes: [ 'Code1', 'Code2' ],
+        description: 'An image',
+    ), [
+        ImageId: 'emi-0000001',
+        'LaunchPermission.Add.1.UserId': '111111111111',
+        'LaunchPermission.Add.2.UserId': '222222222222',
+        'LaunchPermission.Remove.1.UserId': '333333333333',
+        'LaunchPermission.Remove.2.UserId': '444444444444',
+        'ProductCode.1': 'Code1',
+        'ProductCode.2': 'Code2',
+        'Description.Value': 'An image',
+    ] ).with{ bound ->
+      assertEquals( 'Attribute', ModifyImageAttributeType.ImageAttribute.LaunchPermission, bound.getImageAttribute( ) )
+      assertTrue( 'Is add operation', bound.isAdd() )
+      assertEquals( 'UserIds', [ '111111111111', '222222222222' ], bound.getUserIds( ) )
+      assertFalse( 'Group all', bound.isGroupAll( ) )
+      assertEquals( 'Launch permissions', [ new LaunchPermissionItemType( userId: '111111111111' ), new LaunchPermissionItemType( userId: '222222222222' ) ] as List<LaunchPermissionItemType>, bound.getAdd( ) )
+    }
+
+    bindAndAssertParameters( eb, ModifyImageAttributeType.class, "ModifyImageAttribute", new ModifyImageAttributeType(
+        imageId: 'emi-0000001',
+        launchPermission: new LaunchPermissionOperationType(
+            add: [
+                new LaunchPermissionItemType( group: 'G1' ),
+                new LaunchPermissionItemType( group: 'G2' ),
+            ],
+            remove: [
+                new LaunchPermissionItemType( group: 'G3' ),
+                new LaunchPermissionItemType( group: 'G4' ),
+            ],
+        ),
+        productCodes: [ 'Code1', 'Code2' ],
+        description: 'An image',
+    ), [
+        ImageId: 'emi-0000001',
+        'LaunchPermission.Add.1.Group': 'G1',
+        'LaunchPermission.Add.2.Group': 'G2',
+        'LaunchPermission.Remove.1.Group': 'G3',
+        'LaunchPermission.Remove.2.Group': 'G4',
+        'ProductCode.1': 'Code1',
+        'ProductCode.2': 'Code2',
+        'Description.Value': 'An image',
+    ] )
+  }
 }
