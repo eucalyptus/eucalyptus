@@ -31,7 +31,6 @@ define([
 
       var scope = {
         typeModel: self.model,
-        zones: self.model.get('zones'),
 
         isZoneSelected: function(obj) { 
           if (self.model.get('zone') == obj.zone.get('name')) {
@@ -47,17 +46,6 @@ define([
             case 'launch-instance-names':
               var names = target.value.split(',');
               self.model.set('type_names', names);
-              //self.model.set('type_hasNames', 'true');
-              //self.model.set('instance_type', $("#launch-instance-type-size").val());
-              break;
-            case 'launch-instance-type-num-instance':
-              //self.model.set('type_number', target.value);
-              break;
-            case 'launch-instance-type-size':
-              //self.model.set('instance_type', target.value);
-              break;
-            case 'launch-instance-type-az':
-              //self.model.set('zone', target.value);
               break;
             default:
           }
@@ -67,28 +55,7 @@ define([
           return self.model.get('image_iconclass'); 
         },
 
-        tags: {
-            list: self.model.get('tags'),
-            sharedModel: self.model,
-            keyLabel: "Key",
-            valLabel: "Value",
-            add: function(e, me) {
-                e.preventDefault();
-              var key = $('.keyfield').val();
-              var val = $('.valuefield').val();
-              if(me.list.where({key: key}).length == 0) {
-                me.list.add({key: key, value: val});
-                me.sharedModel.set('type_hasTags', 'true');
-                $('.keyfield').val('');
-                $('.valuefield').val('');
-              } else {
-                $('.keyfield').addClass('ui-keyval-error');
-              }
-            },
-            remove: function(e, me) {
-              me.list.remove(me.row);
-            },
-        },
+        tags:  self.model,
 
         formatType: function(obj) {
           var buf = obj.type.get('name') + ": ";
@@ -103,10 +70,6 @@ define([
           instance_type: ''
         }
     };
-
-    scope.tags.list.on('add remove change reset', function() {
-        self.render();
-    });
 
     self.model.on('validated:invalid', function(model, errors) {
       scope.launchConfigErrors.type_number = errors.type_number;
@@ -149,7 +112,7 @@ define([
     },
 
     blur: function() {
-      // nothing, just here for example
+      this.model.trigger('confirm');
     },
 
   });

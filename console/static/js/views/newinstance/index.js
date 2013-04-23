@@ -4,20 +4,18 @@ define([
   'text!./template.html',
   '../shared/image',
   '../shared/type',
-  './tags',
   '../shared/security',
   '../shared/advanced',
   '../shared/summary',
   'models/instance',
   '../shared/model/imagemodel',
   '../shared/model/typemodel',
-  '../shared/model/tag',
   '../shared/model/securitygroup',
   '../shared/model/keypair',
   '../shared/model/advancedmodel',
   '../shared/model/blockmaps',
   '../shared/model/snapshots'
-], function(app, Wizard, wizardTemplate, page1, page2, page2_5, page3, page4, summary, instance, image, type, tag, security, keyPair, advanced, block, snap) {
+], function(app, Wizard, wizardTemplate, page1, page2, page3, page4, summary, instance, image, type, security, keyPair, advanced, block, snap) {
 
   var config = function(options) {
     var wizard = new Wizard();
@@ -30,14 +28,13 @@ define([
     var advancedModel = new advanced();
     var blockMaps = new block();
     var snapShots = new snap();
-    var tagsModel = new tag();
 
     function canFinish(position, problems) {
       // VALIDATE THE MODEL HERE AND IF THERE ARE PROBLEMS,
       // ADD THEM INTO THE PASSED ARRAY
      //    return position === 2;
 
-       return imageModel.isValid() & typeModel.isValid() & (position == 3 || position == 4); // & securityModel.isValid();
+       return imageModel.isValid() & typeModel.isValid() & position == 2; // || position == 4); // & securityModel.isValid();
     }
 
     function finish() {
@@ -47,7 +44,6 @@ define([
       advancedModel.finish(instanceModel);
       keyModel.finish(instanceModel);
       blockMaps.finish(instanceModel);
-      tagsModel.finish(instanceModel);
 
       instanceModel.on('validated:invalid', function(e, errors) {
       });
@@ -67,7 +63,6 @@ define([
     var viewBuilder = wizard.viewBuilder(wizardTemplate)
             .add(new page1({model: imageModel, blockMaps: blockMaps, image: options.image}))
             .add(new page2({model: typeModel}))
-            .add(new page2_5({model: tagsModel}))
             .add(new page3({model: securityModel, keymodel: keyModel}))
             .add(new page4({model: advancedModel, blockMaps: blockMaps, snapshots: snapShots}))
             .setHideDisabledButtons(true)

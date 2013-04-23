@@ -254,11 +254,11 @@ define([
               async: "true",
               success: 
                 function(data, textStatus, jqXHR) {
-                  console.log("RUN INSTANCE TAGS SUCCESS: ", data.return);   
+                  //console.log("RUN INSTANCE TAGS SUCCESS: ", data.return);   
                 },
               error: 
                 function(jqXHR, textStatus, errorThrown) {
-                  console.log("RUN INSTANCE TAGS FAIL: ", data.return);
+                  //console.log("RUN INSTANCE TAGS FAIL: ", data.return);
                 }
             });
           }

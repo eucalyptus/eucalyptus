@@ -28,6 +28,7 @@ define([], function() {
     finish: function(outputModel) {
       outputModel.set('name', this.get('type_names'));
       outputModel.set('instance_type', this.get('instance_type'));
+      outputModel.set('tags', this.get('tags'));
 
       // presently the UI doesn't accept two numbers - setting them the same for now
       outputModel.set('min_count', this.get('type_number'));
