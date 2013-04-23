@@ -32,12 +32,16 @@ define([
         },
 
         setKeyPair: function(e, item) {
-          var keyWhere = this.keypairs.where({name: e.target.value});
-          var key = _.find(keyWhere, function(k) {
-                      return k.get('name') == e.target.value;
-          });
-          //key.unset('tags'); // workaround - nested objects break next line
-          this.keymodel.set('name', key.get('name'));
+          if (e.target.value == 'none') {
+            this.keymodel.set('name', e.target.value);
+          } else {
+            var keyWhere = this.keypairs.where({name: e.target.value});
+            var key = _.find(keyWhere, function(k) {
+                        return k.get('name') == e.target.value;
+            });
+            //key.unset('tags'); // workaround - nested objects break next line
+            this.keymodel.set('name', key.get('name'));
+          }
           self.model.set('security_show', true);
         },
 
