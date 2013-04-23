@@ -1103,7 +1103,7 @@ release:
 //! @param[in] pMeta a pointer to the node controller (NC) metadata structure
 //! @param[in] instanceId the instance identifier string (i-XXXXXXXX)
 //! @param[in] volumeId the volume identifier string (vol-XXXXXXXX)
-//! @param[in] remoteDev the target device name
+//! @param[in] attachmentToken the target device name
 //! @param[in] localDev the local device name
 //! @param[in] force if set to 1, this will force the volume to detach
 //! @param[in] grab_inst_sem if set to 1, will require the usage of the instance semaphore
