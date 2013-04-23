@@ -37,7 +37,7 @@ define([
                     return inferImage(image.get('location'), image.get('description'), image.get('platform'));
                 },
 
-                search: new imageSearch(new Backbone.Collection(app.data.images.where({type: 'machine'}))),
+                search: new imageSearch(new Backbone.Collection(app.data.images.where({type: 'machine', state: 'available'}))),
                 //search: new imageSearch(app.data.images),
                 
                 select: function(e, images) {
