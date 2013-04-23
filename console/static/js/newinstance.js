@@ -26,14 +26,17 @@
       var thisObj = this;
       $(thisObj.element).unbind();
       require(['views/newinstance/index'], function(wizardFactory) {
+        console.log(thisObj.options);
         var View = wizardFactory(thisObj.options);
         var view = new View({el: thisObj.element});
       	view.render();
+        if(thisObj.options.image != null) 
+          view.jump(1);
+          thisObj.options.image = null;
       });
     },
 
     _create : function() { 
-    console.log('LAUNCHER _create');
     },
 
     _destroy : function() {
