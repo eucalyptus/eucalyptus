@@ -180,7 +180,7 @@ define([
               
             var user_file = model.get("user_filename") == undefined ? "none" : model.get("user_filename");
             var self = this;
-            $(model.get('fileinput')).fileupload({
+            $(model.get('fileinput')()).fileupload({
               url:"/ec2?Action=RunInstances",
               formData: data,
               dataType:"json",
@@ -188,7 +188,7 @@ define([
               paramName: "user_data_file",
             });
 
-            $(model.get('fileinput')).fileupload("send", {
+            $(model.get('fileinput')()).fileupload("send", {
               files: user_file,
               success:
                 function(data, textStatus, jqXHR){
