@@ -111,7 +111,7 @@ public class HttpServerBootstrapper extends Bootstrapper {
   public static String  httpProxyPort;
   @ConfigurableField( description = "SSL ciphers for HTTPS listener.",
                       displayName = "euca.https.ciphers" )
-  public static String  HTTPS_CIPHERS = "RSA:DSS:ECDSA:+RC4:+3DES:TLS_EMPTY_RENEGOTIATION_INFO_SCSV:!NULL:!EXPORT:!EXPORT1024:!MD5:!DES";
+  public static String  HTTPS_CIPHERS = "RSA:DSS:ECDSA:+RC4:+3DES:TLS_EMPTY_RENEGOTIATION_INFO_SCSV:!NULL:!EXPORT:!EXPORT1024:!MD5:!DES:!DHE";
 
   private static void setupJettyServer( ) throws Exception {
     //http proxy setup
@@ -137,7 +137,7 @@ public class HttpServerBootstrapper extends Bootstrapper {
 	  }
 	  if (!f.delete( ) )
 	    throw new FileNotFoundException("Failed to delete file: " + f);
-  } 
+  }
   private static void startJettyServer( ) {
     Threads.lookup( HttpService.class, HttpServerBootstrapper.class ).submit( new Runnable( ) {
       @Override
@@ -254,15 +254,10 @@ public class HttpServerBootstrapper extends Bootstrapper {
   }
 
   public static final class ConfiguredSslSelectChannelConnector extends SslSelectChannelConnector {
-    protected SSLEngine createSSLEngine() throws IOException {
-      SocketChannel channel = SocketChannel.open();
-      return super.createSSLEngine(channel);
-    }
-
     @Override
-    protected SSLEngine createSSLEngine(SocketChannel channel) throws IOException {
-      final SSLEngine engine = super.createSSLEngine(channel);
-      engine.setEnabledCipherSuites( getEnabledCipherSuites(HTTPS_CIPHERS, engine.getSupportedCipherSuites()) );
+    protected SSLEngine createSSLEngine( final SocketChannel channel ) throws IOException {
+      final SSLEngine engine = super.createSSLEngine( channel );
+      engine.setEnabledCipherSuites( getEnabledCipherSuites( HTTPS_CIPHERS, engine.getSupportedCipherSuites( ) ) );
       return engine;
     }
   }
