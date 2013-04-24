@@ -67,7 +67,6 @@ define([
         newKeyPair: function() {
             addKeypair( function(){ 
               console.log('returned from security group dialog');
-              app.data.keypair.fetch();
             });
         },
 
