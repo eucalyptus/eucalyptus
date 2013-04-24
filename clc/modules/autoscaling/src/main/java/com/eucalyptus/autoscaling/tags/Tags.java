@@ -136,18 +136,22 @@ public class Tags {
    */
   public static Tag createOrUpdate( final Tag tag ) {
     Tag result;
-    String originalValue = tag.getValue();
-    String originalUserId = tag.getOwnerUserId();
-    String originalUserName = tag.getOwnerUserName();
+    final String originalValue = tag.getValue();
+    final Boolean originalPropagate = tag.getPropagateAtLaunch();
+    final String originalUserId = tag.getOwnerUserId();
+    final String originalUserName = tag.getOwnerUserName();
     try {
       tag.setValue( null );
       tag.setOwnerUserId( null );
       tag.setOwnerUserName( null );
+      tag.setPropagateAtLaunch( null );
       final Tag existing = lookup( tag );
       existing.setValue( originalValue );
+      existing.setPropagateAtLaunch( originalPropagate );
       result = existing;
     } catch ( final NoSuchMetadataException e ) {
       tag.setValue( originalValue );
+      tag.setPropagateAtLaunch( originalPropagate );
       tag.setOwnerUserId( originalUserId );
       tag.setOwnerUserName( originalUserName );
       Entities.persist( tag );
@@ -156,6 +160,7 @@ public class Tags {
       tag.setValue( originalValue );
       tag.setOwnerUserId( originalUserId );
       tag.setOwnerUserName( originalUserName );
+      tag.setPropagateAtLaunch( originalPropagate );
     }
 
     return result;
