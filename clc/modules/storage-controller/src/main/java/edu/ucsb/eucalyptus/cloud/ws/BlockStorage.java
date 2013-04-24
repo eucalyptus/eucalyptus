@@ -510,8 +510,10 @@ public class BlockStorage {
 
 		//Only look for snaps that are not failed and not error
 		query.add(Restrictions.not(Restrictions.and(
+				Restrictions.and(
 				Restrictions.eq("status", StorageProperties.Status.failed.toString()), 
-				Restrictions.eq("status", StorageProperties.Status.error.toString()))));
+				Restrictions.eq("status", StorageProperties.Status.error.toString())),
+                                Restrictions.eq("status", StorageProperties.Status.deleted.toString()))));
 		try {
 			List<SnapshotInfo> snapInfos = (List<SnapshotInfo>)query.list();			
 			for (SnapshotInfo sInfo : snapInfos) {
@@ -799,7 +801,8 @@ public class BlockStorage {
 				List<VolumeInfo> volInfos = db.query(volInfo);
 				for (VolumeInfo vInfo : volInfos) {
 					if (!vInfo.getStatus().equals(StorageProperties.Status.failed.toString()) &&
-							!vInfo.getStatus().equals(StorageProperties.Status.error.toString())) {
+							!vInfo.getStatus().equals(StorageProperties.Status.error.toString()) &&
+							!vInfo.getStatus().equals(StorageProperties.Status.deleted.toString())) {
 						totalVolumeSize += vInfo.getSize();
 					}
 				}
