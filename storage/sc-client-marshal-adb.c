@@ -275,7 +275,7 @@ int scStubDestroy(scStub * pStub)
 //! @param[in] token the token to be Exportd by the SC
 //! @param[in] ip the NC's ip to be used for token resolution
 //! @param[in] iqn the NC's iqn to be used for token resolution
-//! @param[in] connection_info a pointer to a pointer to hold the resulting volume connection structure on return
+//! @param[in] connection_string a pointer to a pointer to hold the resulting volume connection structure on return
 //!
 //! @return EUCA_OK on success or EUCA_ERROR on failure.
 //!
@@ -334,12 +334,12 @@ int scExportVolumeStub(scStub * pStub, char *correlationId, char *userId, char *
 //! Marshals the client unexport volume token request.
 //!
 //! @param[in] pStub a pointer to the storage controller (SC) stub structure
-//! @param[in] pMeta a pointer to the NC metadata for getting node info (ip etc)
+//! @param[in] correlationId
+//! @param[in] userId
 //! @param[in] volumeId the volume identifier string (vol-XXXXXXXX)
 //! @param[in] token the token to be resolved by the SC
 //! @param[in] ip the NC's ip to be used for token resolution
 //! @param[in] iqn the NC's iqn to be used for token resolution
-//! @param[in] result pointer to int to hold return result of operation
 //!
 //! @return EUCA_OK on success or EUCA_ERROR on failure.
 //!

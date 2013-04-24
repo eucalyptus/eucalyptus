@@ -696,6 +696,7 @@ free:
 //! Implement the backing store for a given instance
 //!
 //! @param[in] instance pointer to the instance
+//! @param[in] is_migration_dest
 //!
 //! @return EUCA_OK on success or EUCA_ERROR on failure
 //!

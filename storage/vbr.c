@@ -1776,6 +1776,7 @@ static char *url_get_digest(const char *url)
 //!
 //! @param[in] vbr
 //! @param[in] do_make_work_copy
+//! @param[in] is_migration_dest
 //! @param[in] must_be_file
 //! @param[in] sshkey
 //!
@@ -1954,6 +1955,7 @@ out:
 //! @param[in] emi_disk OPTION B: the artifact of the EMI that serves as a full disk
 //! @param[in] do_make_bootable kernel injection is requested (not needed on KVM and Xen)
 //! @param[in] do_make_work_copy generated disk should be a work copy
+//! @param[in] is_migration_dest
 //!
 //! @return A pointer to 'keyed' disk artifact or NULL on error
 //!
@@ -2088,6 +2090,7 @@ void art_set_instanceId(const char *instanceId)
 //! @param[in] vm pointer to virtual machine containing the VBR
 //! @param[in] do_make_bootable make the disk bootable by copying kernel and ramdisk into it and running grub
 //! @param[in] do_make_work_copy ensure that all components that get modified at run time have work copies
+//! @param[in] is_migration_dest
 //! @param[in] sshkey key to inject into the root partition or NULL if no key
 //! @param[in] instanceId the instance identifier string (i-XXXXXXXX)
 //!

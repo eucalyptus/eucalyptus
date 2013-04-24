@@ -4009,7 +4009,7 @@ int blockblob_copy(blockblob * src_bb, unsigned long long src_offset_bytes, bloc
 //! \li 2969663 6516 linear /dev/loop1 0
 //! \li 2976179 1024 linear /dev/loop2 0
 //!
-//! @param[in,out] table the table string to sort
+//! @param[in,out] pOldTable the table string to sort
 //!
 //! @return a pointer to the newly allocated table string if successful or NULL if any
 //!         error occured.
@@ -4475,6 +4475,8 @@ blobstore *blockblob_get_blobstore(blockblob * bb)
 //! Returns the directory in which the blob files are located
 //!
 //! @param[in] bb
+//! @param[in] buf
+//! @param[in] buflen
 //!
 //! @return success (0) or failure (-1)
 //!

@@ -908,7 +908,7 @@ boolean is_volume_used(const ncVolume * pVolume)
 //!
 //! @param[in] pInstance a pointer to our instance containing the volume information to save
 //! @param[in] sVolumeId the volume identifier string (vol-XXXXXXXX)
-//! @param[in] sAttachmentToken the attachment token associated with this volume and attachment
+//! @param[in] sVolumeAttachmentToken the attachment token associated with this volume and attachment
 //! @param[in] sConnectionString the connection string info specific to this host's volume attachment
 //! @param[in] sLocalDev the local device name
 //! @param[in] sLocalDevReal the local real device name

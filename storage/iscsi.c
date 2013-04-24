@@ -223,6 +223,7 @@ char *connect_iscsi_target(const char *dev_string)
 //! Disconnects the iscsi device by closing the session and deleting the lun locally.
 //!
 //! @param[in] dev_string
+//! @param[in] do_rescan
 //!
 //! @return -1 for any failures, 0 if a timeout occured or a positive value is success.
 //!
