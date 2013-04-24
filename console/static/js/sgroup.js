@@ -320,6 +320,8 @@
                           tmpSecGroup.set('id', data.results.id);
                           tmpSecGroup.trigger('request');
                           tmpSecGroup.trigger('sync');
+
+                          require(['app'], function(app) { app.data.sgroup.fetch() });
                       } else {
                           notifyError($.i18n.prop('sgroup_add_rule_error', DefaultEncoder().encodeForHTML(name)), getErrorMessage(jqXHR));
                       }

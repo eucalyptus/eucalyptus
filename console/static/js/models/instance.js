@@ -82,7 +82,7 @@ define([
             data.push({name: "MinCount", value: model.get('min_count')});
             data.push({name: "MaxCount", value: model.get('max_count')});
 
-            if (model.get('key_name') != undefined)
+            if (model.get('key_name') != undefined && model.get('key_name') !== 'none')
               data.push({name: "KeyName", value: model.get('key_name')});
             if (model.get('security_group') != undefined) {
               var groups = model.get('security_group');
