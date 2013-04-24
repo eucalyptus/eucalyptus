@@ -426,11 +426,13 @@ release:
 //!
 int disconnect_ebs_volume(char *sc_url, int use_ws_sec, char *ws_sec_policy_file, char *volume_string, char *connect_string, char *local_ip, char *local_iqn)
 {
-	LOGTRACE("Disconnecting EBS volume %s\n");
 	int ret = 0;
 	int rc = 0;
 	int norescan = 0; //send a 0 to indicate no rescan requested
 	ebs_volume_data *vol_data = NULL;
+
+    LOGTRACE("Disconnecting EBS volume\n");
+
 	rc = deserialize_volume(volume_string, &vol_data);
 	if(rc) {
 		LOGERROR("Could not deserialize volume string %s\n", volume_string);
@@ -438,6 +440,7 @@ int disconnect_ebs_volume(char *sc_url, int use_ws_sec, char *ws_sec_policy_file
 	}
 
 	LOGTRACE("Requesting volume lock\n");
+
 	//Grab a lock.
 	sem_p(vol_sem);
 	LOGTRACE("Got volume lock\n");
@@ -445,7 +448,6 @@ int disconnect_ebs_volume(char *sc_url, int use_ws_sec, char *ws_sec_policy_file
 	LOGDEBUG("[%s] attempting to disconnect iscsi target\n", vol_data->volumeId);
 	if (disconnect_iscsi_target(connect_string, norescan) != 0) {
 		LOGERROR("[%s] failed to disconnet iscsi target\n", vol_data->volumeId);
-		//if (!force)
 		ret = EUCA_ERROR;
 		goto release;
 	}

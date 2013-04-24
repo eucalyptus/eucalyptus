@@ -221,7 +221,9 @@ static int walrus_creator(artifact * a);
 static int partition_creator(artifact * a);
 static void set_disk_dev(virtualBootRecord * vbr);
 static int disk_creator(artifact * a);
+#ifndef _NO_EBS
 static int iqn_creator(artifact * a);
+#endif // ! _NO_EBS
 static int copy_creator(artifact * a);
 //! @}
 
@@ -1357,7 +1359,7 @@ static int iqn_creator(artifact * a)
     EUCA_FREE(vol_data);
     return EUCA_OK;
 }
-#endif
+#endif // ! _NO_EBS
 
 //!
 //!
