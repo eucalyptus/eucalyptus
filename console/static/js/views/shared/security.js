@@ -69,7 +69,6 @@ define([
         newSecGroup: function() {
           addGroup( function() {
               console.log('returned from security group dialog');
-              app.data.sgroup.fetch();
             });
         }
 
