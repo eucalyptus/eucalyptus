@@ -307,6 +307,7 @@
                               notifySuccess(null, $.i18n.prop('sgroup_create_success', DefaultEncoder().encodeForHTML(name)));
                               thisObj._addIngressRule($add_dialog, name, fromPort, toPort, protocol, cidr, fromGroup, fromUser);
                               thisObj._getTableWrapper().eucatable('refreshTable');
+                              require(['app'], function(app) { app.data.sgroup.fetch(); });
                           }
                           else {
                               notifySuccess(null, $.i18n.prop('sgroup_create_success', DefaultEncoder().encodeForHTML(name)));
