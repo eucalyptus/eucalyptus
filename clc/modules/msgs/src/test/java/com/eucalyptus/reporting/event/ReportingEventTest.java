@@ -142,7 +142,7 @@ public class ReportingEventTest {
     assertEquals( "event string", "InstanceUsageEvent [uuid=51b56c1f-8c0d-3096-8c5e-e78ae6c8f4c0, instanceId=i-00000001, metric=metric, sequenceNum=1, dimension=dimension, value=12.17, valueTimestamp=1347987261899]", event.toString() );
   }
 
-  @Test(expected=AssertionError.class)
+  @Test(expected=IllegalArgumentException.class)
   public void testInstanceEventCreationFailure() {
     new InstanceUsageEvent(
         uuid( "i-00000001" ),

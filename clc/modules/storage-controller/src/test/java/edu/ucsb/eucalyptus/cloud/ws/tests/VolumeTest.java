@@ -60,39 +60,58 @@
  *   NEEDED TO COMPLY WITH ANY SUCH LICENSES OR RIGHTS.
  ************************************************************************/
 
-package com.eucalyptus.auth.ldap;
+package edu.ucsb.eucalyptus.cloud.ws.tests;
 
-import java.io.FileInputStream;
-import java.io.InputStream;
-import javax.security.auth.login.LoginContext;
-import org.apache.commons.io.output.ByteArrayOutputStream;
+import edu.ucsb.eucalyptus.cloud.ws.BlockStorage;
+import edu.ucsb.eucalyptus.msgs.*;
 
-public class LicParserTest {
-  
-  public static void main( String[] args ) throws Exception {
-    if ( args.length < 1 ) {
-      System.err.println( "Requires input lic file" );
-      System.exit( 1 ); 
+import java.util.ArrayList;
+
+import org.junit.BeforeClass;
+import org.junit.Ignore;
+import org.junit.Test;
+import com.eucalyptus.auth.util.Hashes;
+import com.eucalyptus.util.EucalyptusCloudException;
+
+@Ignore("Manual development test")
+public class VolumeTest {
+
+    static BlockStorage blockStorage;
+
+    @Test
+    public void testVolume() throws Exception {
+
+
+        String userId = "admin";
+        String volumeId = "vol-" + Hashes.getRandom(10);
+        volumeId = volumeId.replaceAll("\\.", "x");
+
+        CreateStorageVolumeType createVolumeRequest = new CreateStorageVolumeType();
+        createVolumeRequest.setUserId(userId);
+        createVolumeRequest.setVolumeId(volumeId);
+        createVolumeRequest.setSize("1");
+        CreateStorageVolumeResponseType createVolumeResponse = blockStorage.CreateStorageVolume(createVolumeRequest);
+        System.out.println(createVolumeResponse); 
+        Thread.sleep(1000);
+        DescribeStorageVolumesType describeVolumesRequest = new DescribeStorageVolumesType();
+
+        describeVolumesRequest.setUserId(userId);
+        ArrayList<String> volumeSet = new ArrayList<String>();
+        volumeSet.add(volumeId);
+        describeVolumesRequest.setVolumeSet(volumeSet);
+        DescribeStorageVolumesResponseType describeVolumesResponse = blockStorage.DescribeStorageVolumes(describeVolumesRequest);
+        StorageVolume vol = describeVolumesResponse.getVolumeSet().get(0);
+        System.out.println(vol);
+        while(true);
     }
-    InputStream input = new FileInputStream( args[0] );
-    
-    String licText = readInputAsString( input );
-    
-    LdapIntegrationConfiguration lic = LicParser.getInstance( ).parse( licText );
 
-    System.out.println( lic );
-  }
-  
-  private static String readInputAsString( InputStream in ) throws Exception {
-    ByteArrayOutputStream baos = new ByteArrayOutputStream( );
-    
-    byte[] buf = new byte[512];
-    int nRead = 0;
-    while ( ( nRead = in.read( buf ) ) >= 0 ) {
-      baos.write( buf, 0, nRead );
+    @BeforeClass
+    public static void setUp() {
+        blockStorage = new BlockStorage();
+        try {
+			BlockStorage.configure();
+		} catch (EucalyptusCloudException e) {
+			e.printStackTrace();
+		}
     }
-  
-    return new String( baos.toByteArray( ), "UTF-8" );
-  }
-  
 }

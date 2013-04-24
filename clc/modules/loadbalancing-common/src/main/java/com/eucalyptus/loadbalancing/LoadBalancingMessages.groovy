@@ -303,7 +303,7 @@ public class Listener extends EucalyptusData {
 }
 public class SetLoadBalancerPoliciesForBackendServerType extends LoadBalancingMessage {
   String loadBalancerName;
-  BigInteger instancePort;
+  Integer instancePort;
   @HttpEmbedded
   PolicyNames policyNames;
   public SetLoadBalancerPoliciesForBackendServerType() {  }
@@ -355,14 +355,13 @@ public class AppCookieStickinessPolicy extends EucalyptusData {
 }
 public class SetLoadBalancerListenerSSLCertificateType extends LoadBalancingMessage {
   String loadBalancerName;
-  BigInteger loadBalancerPort;
+  Integer loadBalancerPort;
   String sslCertificateId;
   public SetLoadBalancerListenerSSLCertificateType() {  }
 }
 public class PolicyTypeNames extends EucalyptusData {
   public PolicyTypeNames() {  }
-  
-  @HttpEmbedded(multiple=true)
+
   @HttpParameterMapping(parameter="member")
   ArrayList<String> member = new ArrayList<String>();
 }
@@ -381,7 +380,7 @@ public class LoadBalancerNames extends EucalyptusData {
 }
 public class SetLoadBalancerPoliciesOfListenerType extends LoadBalancingMessage {
   String loadBalancerName;
-  BigInteger loadBalancerPort;
+  Integer loadBalancerPort;
   @HttpEmbedded
   PolicyNames policyNames;
   public SetLoadBalancerPoliciesOfListenerType() {  }
@@ -505,7 +504,7 @@ public class LoadBalancerDescriptions extends EucalyptusData {
   ArrayList<LoadBalancerDescription> member = new ArrayList<LoadBalancerDescription>();
 }
 public class BackendServerDescription extends EucalyptusData {
-  BigInteger instancePort;
+  Integer instancePort;
   @HttpEmbedded
   PolicyNames policyNames;
   public BackendServerDescription() {  }

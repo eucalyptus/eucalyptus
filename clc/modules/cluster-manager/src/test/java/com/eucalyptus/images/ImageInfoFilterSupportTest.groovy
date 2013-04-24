@@ -28,7 +28,7 @@ import com.eucalyptus.cloud.ImageMetadata
 /**
  * Unit tests for image filter support
  */
-class ImageInfoFilterSupportTest extends FilterSupportTest.InstanceTest<ImageInfo> {
+class ImageInfoFilterSupportTest extends FilterSupportTest.InstanceTestSupport<ImageInfo> {
                                                                           
   @Test
   void testFilteringSupport() {
@@ -100,8 +100,8 @@ class ImageInfoFilterSupportTest extends FilterSupportTest.InstanceTest<ImageInf
     assertMatch(false, "name", "name1", new ImageInfo())
 
     //assertMatch(true, "owner-alias", "owner", new ImageInfo(ownerAccountName: "owner")) //TODO:STEVE: Owner alias test
-    assertMatch(false, "owner-alias", "owner", new ImageInfo(ownerAccountName: "owner2"))
-    assertMatch(false, "owner-alias", "owner", new ImageInfo())
+    //assertMatch(false, "owner-alias", "owner", new ImageInfo(ownerAccountName: "owner2"))
+    //assertMatch(false, "owner-alias", "owner", new ImageInfo())
 
     assertMatch(true, "owner-id", "owner-id1", new ImageInfo(ownerAccountNumber: "owner-id1"))
     assertMatch(false, "owner-id", "owner-id1", new ImageInfo(ownerAccountNumber: "owner-id2"))

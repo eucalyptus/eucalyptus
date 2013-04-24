@@ -62,14 +62,17 @@
 
 package edu.ucsb.eucalyptus.cloud.ws.tests;
 
+import org.junit.Ignore;
+import org.junit.Test;
 import edu.ucsb.eucalyptus.cloud.ws.WalrusControl;
 import edu.ucsb.eucalyptus.msgs.GetDecryptedImageResponseType;
 import edu.ucsb.eucalyptus.msgs.GetDecryptedImageType;
-import junit.framework.TestCase;
 
-public class BukkitImageTest extends TestCase {
+@Ignore("Manual development test")
+public class BukkitImageTest {
 
 
+    @Test
     public void testGetImage() throws Exception {
 
 		WalrusControl bukkit = new WalrusControl();
@@ -86,9 +89,5 @@ public class BukkitImageTest extends TestCase {
         System.out.println(getImageReply);
         while(true);
     }
-    
-    public BukkitImageTest() {
-		super();
-	}
 
 }

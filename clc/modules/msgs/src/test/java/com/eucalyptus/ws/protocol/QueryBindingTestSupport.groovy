@@ -143,7 +143,7 @@ class QueryBindingTestSupport {
     Map<String,String> parameters = Maps.newHashMap()
     putParameters( "", bean, parameters )
     // sanity check parameter count to ensure we're not missing something ...
-    assertEquals( "Parameter count for " + action, expectedParameterCount, parameters.size() )
+    assertEquals( "Parameter count for " + action + ": " + parameters, expectedParameterCount, parameters.size() )
     Object message = bind( binding, action, parameters )
     assertTrue( action + ' message type', messageClass.isInstance( message ) )
     assertRecursiveEquality( action, "", bean, message )
@@ -201,7 +201,7 @@ class QueryBindingTestSupport {
             parameters.put( prefix + name(field) + '.' + (index + 1), value(item) )
           }
         }
-      } else if ( valueObject != null ) {
+      } else if ( value( valueObject ) != null ) {
         parameters.put( prefix + name(field), value( valueObject ) )
       }
     }

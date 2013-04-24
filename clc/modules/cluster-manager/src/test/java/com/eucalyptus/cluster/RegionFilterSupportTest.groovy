@@ -25,7 +25,7 @@ import com.eucalyptus.tags.FilterSupportTest
 /**
  * Unit tests for snapshot filter support
  */
-class RegionFilterSupportTest extends FilterSupportTest.InstanceTest<ClusterEndpoint.Region> {
+class RegionFilterSupportTest extends FilterSupportTest.InstanceTestSupport<ClusterEndpoint.Region> {
 
   @Test
   void testFilteringSupport() {

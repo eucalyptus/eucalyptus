@@ -60,30 +60,40 @@
  *   NEEDED TO COMPLY WITH ANY SUCH LICENSES OR RIGHTS.
  ************************************************************************/
 
-package com.eucalyptus.cloud.ws.tests;
+package com.eucalyptus.auth.ldap;
 
-import com.eucalyptus.cloud.ws.DNSControl;
-import edu.ucsb.eucalyptus.msgs.UpdateARecordResponseType;
-import edu.ucsb.eucalyptus.msgs.UpdateARecordType;
-import junit.framework.TestCase;
+import java.io.FileInputStream;
+import java.io.InputStream;
+import org.apache.commons.io.output.ByteArrayOutputStream;
+import org.junit.Ignore;
 
-public class DNSControlTest extends TestCase {
-
-    private static DNSControl dnsControl;
-
-	public void testAddARecord() throws Exception {
-        String userId = "admin";
-        UpdateARecordType request = new UpdateARecordType();
-        request.setUserId(userId);
-        request.setAddress("192.168.7.1");
-        request.setName("rich.walrus.localhost.");
-        request.setTtl(604800);
-        request.setZone("localhost.");
-        UpdateARecordResponseType reply = dnsControl.UpdateARecord(request);
-        System.out.println(reply);
-	}
-
-    public void setUp() {
-        dnsControl = new DNSControl();
+@Ignore("Manual development test")
+public class LicParserTest {
+  
+  public static void main( String[] args ) throws Exception {
+    if ( args.length < 1 ) {
+      System.err.println( "Requires input lic file" );
+      System.exit( 1 ); 
     }
+    InputStream input = new FileInputStream( args[0] );
+    
+    String licText = readInputAsString( input );
+    
+    LdapIntegrationConfiguration lic = LicParser.getInstance( ).parse( licText );
+
+    System.out.println( lic );
+  }
+  
+  private static String readInputAsString( InputStream in ) throws Exception {
+    ByteArrayOutputStream baos = new ByteArrayOutputStream( );
+    
+    byte[] buf = new byte[512];
+    int nRead = 0;
+    while ( ( nRead = in.read( buf ) ) >= 0 ) {
+      baos.write( buf, 0, nRead );
+    }
+  
+    return new String( baos.toByteArray( ), "UTF-8" );
+  }
+  
 }

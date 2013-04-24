@@ -25,6 +25,7 @@ import com.eucalyptus.crypto.util.Timestamps
 import com.eucalyptus.autoscaling.instances.AutoScalingInstance
 
 import static com.eucalyptus.autoscaling.groups.TerminationPolicyType.*
+import com.eucalyptus.autoscaling.instances.AutoScalingInstanceCoreView
 
 /**
  * 
@@ -139,8 +140,8 @@ class TerminationPolicyTypeTest {
     ] ).instanceId )
   }
 
-  List<String> ids( List<AutoScalingInstance> instances ) {
-    instances.collect{ AutoScalingInstance instance -> instance.getInstanceId() }    
+  List<String> ids( List<AutoScalingInstanceCoreView> instances ) {
+    instances.collect{ AutoScalingInstanceCoreView instance -> instance.getInstanceId() }
   }
   
   Date date( String dateText ) {
@@ -148,13 +149,13 @@ class TerminationPolicyTypeTest {
   }
 
   @SuppressWarnings("GroovyAccessibility")
-  AutoScalingInstance instance( String id, 
-                                String dateText, 
-                                String launchConfigurationName ) {
-    new AutoScalingInstance( 
+  AutoScalingInstanceCoreView instance( String id,
+                                        String dateText,
+                                        String launchConfigurationName ) {
+    new AutoScalingInstanceCoreView( new AutoScalingInstance(
         displayName: id, 
         creationTimestamp: date( dateText ),
         launchConfigurationName: launchConfigurationName
-    );
+    ) );
   }
 }

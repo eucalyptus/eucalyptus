@@ -69,19 +69,23 @@ import edu.ucsb.eucalyptus.msgs.CreateStorageSnapshotType;
 import com.eucalyptus.auth.util.Hashes;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.WalrusProperties;
-import junit.framework.TestCase;
 import org.apache.commons.httpclient.HttpClient;
 import org.apache.commons.httpclient.HttpMethodBase;
 import org.apache.commons.httpclient.methods.GetMethod;
 import org.apache.commons.httpclient.methods.PutMethod;
+import org.junit.BeforeClass;
+import org.junit.Ignore;
+import org.junit.Test;
 
 
 import java.util.Date;
 
-public class CreateSnapshotTest extends TestCase {
+@Ignore("Manual development test")
+public class CreateSnapshotTest {
 
     static BlockStorage blockStorage;
 
+    @Test
     public void testCreateSnapshot() throws Exception {
 
         String userId = "admin";
@@ -100,6 +104,7 @@ public class CreateSnapshotTest extends TestCase {
         while(true);
     }
 
+    @Test
     public void testSendDummy() throws Exception {
         HttpClient httpClient = new HttpClient();
         String addr = System.getProperty(WalrusProperties.URL_PROPERTY) + "/meh/ttt.wsl?gg=vol&hh=snap";
@@ -115,6 +120,7 @@ public class CreateSnapshotTest extends TestCase {
         method.releaseConnection();
     }
 
+    @Test
     public void testGetSnapshotInfo() throws Exception {
         HttpClient httpClient = new HttpClient();
         String addr = System.getProperty(WalrusProperties.URL_PROPERTY) + "/snapset-FuXLn1MUHJ66BkK0/snap-zVl2kZJmjhxnEg..";
@@ -130,7 +136,8 @@ public class CreateSnapshotTest extends TestCase {
         method.releaseConnection();         
     }
 
-    public void setUp() {
+    @BeforeClass
+    public static void setUp() {
         blockStorage = new BlockStorage();
         try {
 			BlockStorage.configure();

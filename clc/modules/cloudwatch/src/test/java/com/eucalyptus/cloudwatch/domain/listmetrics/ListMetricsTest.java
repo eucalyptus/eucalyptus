@@ -29,13 +29,14 @@ import java.util.Map;
 import java.util.NoSuchElementException;
 
 import org.apache.log4j.Logger;
+import org.junit.Ignore;
 
 import com.eucalyptus.cloudwatch.domain.DimensionEntity;
 import com.eucalyptus.cloudwatch.domain.metricdata.MetricEntity.MetricType;
 import com.google.common.collect.Lists;
 
 
-
+@Ignore("Manual development test")
 public class ListMetricsTest {
   private static final Logger LOG = Logger.getLogger(ListMetricsTest.class);
   // The following situation is being set up

@@ -62,15 +62,20 @@
 
 package edu.ucsb.eucalyptus.cloud.ws.tests;
 
+import org.junit.BeforeClass;
+import org.junit.Ignore;
+import org.junit.Test;
 import com.eucalyptus.auth.util.Hashes;
 
 import edu.ucsb.eucalyptus.cloud.ws.WalrusControl;
 import edu.ucsb.eucalyptus.msgs.*;
-import junit.framework.TestCase;
 
-public class BukkitTest extends TestCase {
+@Ignore("Manual development test")
+public class BukkitTest {
 
 	static WalrusControl bukkit;
+
+	@Test
 	public void testWalrusControl() throws Exception {
 
 		String bucketName = "halo" + Hashes.getRandom(6);
@@ -105,7 +110,8 @@ public class BukkitTest extends TestCase {
 		System.out.println(deleteResponse);
 	}
 
-    public void setUp() {
+    @BeforeClass
+    public static void setUp() {
         bukkit = new WalrusControl();
     }
 }
