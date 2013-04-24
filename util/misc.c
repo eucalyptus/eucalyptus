@@ -1716,7 +1716,7 @@ char *file2str_seek(char *file, size_t size, int mode)
 
 int str2file(const char *str, char *path, mode_t mode, boolean mktemp)
 {
-    if (path==NULL)
+    if (path == NULL)
         return 1;
 
     int fd;
@@ -1732,7 +1732,7 @@ int str2file(const char *str, char *path, mode_t mode, boolean mktemp)
         }
         if (fchmod(fd, mode)) {
             LOGERROR("failed to change permissions on '%s': %s\n", path, strerror(errno));
-            close (fd);
+            close(fd);
             return (-1);
         }
     } else {
@@ -1742,7 +1742,7 @@ int str2file(const char *str, char *path, mode_t mode, boolean mktemp)
             return (-1);
         }
     }
-    
+
     if (str) {
         int to_write = strlen(str);
         int offset = 0;
@@ -1750,7 +1750,7 @@ int str2file(const char *str, char *path, mode_t mode, boolean mktemp)
             int wrote = write(fd, str + offset, to_write);
             if (wrote == -1) {
                 LOGERROR("failed to write to file '%s': %s\n", path, strerror(errno));
-                close (fd);
+                close(fd);
                 return (-1);
             }
             to_write -= wrote;
@@ -1758,7 +1758,7 @@ int str2file(const char *str, char *path, mode_t mode, boolean mktemp)
         }
     }
     close(fd);
-    
+
     return (EUCA_OK);
 }
 
@@ -2769,11 +2769,10 @@ int main(int argc, char **argv)
         printf("Failed to retrieve the current working directory information.\n");
         return (1);
     }
-
     // a nice big buffer with random chars
     char buf[1048576];
-    bzero (buf, sizeof(buf));
-    for (int i=0; i<sizeof(buf)-1; i++) {
+    bzero(buf, sizeof(buf));
+    for (int i = 0; i < sizeof(buf) - 1; i++) {
         buf[i] = '!' + rand() % ('~' - '!');
         if (i % 79 == 0)
             buf[i] = '\n';
@@ -2783,23 +2782,23 @@ int main(int argc, char **argv)
     char path[MAX_PATH];
 
     strcpy(path, "/tmp/euca-misc-test-XXXXXX");
-    assert(str2file(buf, path, 0644, TRUE)==EUCA_OK); // normal case
-    assert(unlink(path)==0);
+    assert(str2file(buf, path, 0644, TRUE) == EUCA_OK); // normal case
+    assert(unlink(path) == 0);
 
     strcpy(path, "/tmp/euca-misc-test-XXXXXX");
-    assert(str2file(NULL, path, 0644, TRUE)==EUCA_OK); // empty tmp file
-    assert(unlink(path)==0);
+    assert(str2file(NULL, path, 0644, TRUE) == EUCA_OK);    // empty tmp file
+    assert(unlink(path) == 0);
 
     strcpy(path, "/tmp/euca-misc-test-XXXXXX");
-    assert(str2file("", path, 0644, TRUE)==EUCA_OK); // empty tmp file
-    assert(unlink(path)==0);
+    assert(str2file("", path, 0644, TRUE) == EUCA_OK);  // empty tmp file
+    assert(unlink(path) == 0);
 
-    assert(str2file("xyz", NULL, 0644, TRUE)!=EUCA_OK); // empty path
-    assert(str2file("xyz", NULL, 0644, FALSE)!=EUCA_OK); // empty path
+    assert(str2file("xyz", NULL, 0644, TRUE) != EUCA_OK);   // empty path
+    assert(str2file("xyz", NULL, 0644, FALSE) != EUCA_OK);  // empty path
 
     strcpy(path, "/tmp/euca-misc-test-XYZ123");
-    assert(str2file(buf, path, 0644, FALSE)==EUCA_OK); // normal case non tmp file
-    assert(unlink(path)==0);
+    assert(str2file(buf, path, 0644, FALSE) == EUCA_OK);    // normal case non tmp file
+    assert(unlink(path) == 0);
 
     srandom(time(NULL));
 

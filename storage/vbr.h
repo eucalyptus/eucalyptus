@@ -139,11 +139,11 @@ typedef struct _artifact {
 //! Struct for local host config to use if making remote calls.
 //! Needed for calls to the SC
 typedef struct host_config {
-	char iqn[CHAR_BUFFER_SIZE];
-	char ip[HOSTNAME_SIZE];
-	char ws_sec_policy_file[EUCA_MAX_PATH];
-	int use_ws_sec;
-	char sc_url[512]; //!< Sized to the same as the serviceInfoType. Should be updated on each epoch change.
+    char iqn[CHAR_BUFFER_SIZE];
+    char ip[HOSTNAME_SIZE];
+    char ws_sec_policy_file[EUCA_MAX_PATH];
+    int use_ws_sec;
+    char sc_url[512];                  //!< Sized to the same as the serviceInfoType. Should be updated on each epoch change.
 } host_config;
 
 /*----------------------------------------------------------------------------*\

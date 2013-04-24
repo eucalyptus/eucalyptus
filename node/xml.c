@@ -290,7 +290,7 @@ static int write_xml_file(const xmlDocPtr doc, const char *instanceId, const cha
 //!
 //! Writes Node Controller state to disk, into an XML file
 //!
-//! @param[in] nc_state pointer to NC's global state struct to be savedd
+//! @param[in] nc_state_param pointer to NC's global state struct to be savedd
 //! 
 //! @return EUCA_OK on success or EUCA_ERROR on failure to write the file
 //!
@@ -327,7 +327,7 @@ int gen_nc_xml(const struct nc_state_t *nc_state_param)
 //!
 //! Reads Node Controller state from disk
 //!
-//! @param[in] nc_state pointer to NC's global state struct to be updated
+//! @param[in] nc_state_param pointer to NC's global state struct to be updated
 //! 
 //! @return EUCA_OK on success or EUCA_ERROR on failure to read the file
 //!

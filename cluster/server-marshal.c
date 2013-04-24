@@ -1966,7 +1966,7 @@ adb_ModifyNodeResponse_t *ModifyNodeMarshal(adb_ModifyNode_t * modifyNode, const
 //!
 //! Unmarshalls request to modify a node controller, executes, responds.
 //!
-//! @param[in] modifyNode a pointer to the request message structure
+//! @param[in] migrateInstances a pointer to the request message structure
 //! @param[in] env pointer to the AXIS2 environment structure
 //!
 //! @return

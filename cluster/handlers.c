@@ -253,7 +253,7 @@ char *SCHEDPOLICIES[SCHEDLAST] = {
 \*----------------------------------------------------------------------------*/
 
 static int migration_handler(ccInstance * myInstance, char *host, char *src, char *dst, migration_states migration_state, char **node, char **instance, char **action);
-static int populateOutboundMeta(ncMetadata *pMeta);
+static int populateOutboundMeta(ncMetadata * pMeta);
 /*----------------------------------------------------------------------------*\
  |                                                                            |
  |                                   MACROS                                   |
@@ -514,35 +514,34 @@ int doCancelBundleTask(ncMetadata * pMeta, char *instanceId)
 
 //! Remove cluster and storage services from other partitions so NCs only get globals and cluster-local services
 //! Modifies the meta in-place
-void filter_services(ncMetadata *meta, char *filter_partition) {
-	int i = 0, j = 0;
-	serviceInfoType tmp;
-	int copySize = sizeof(serviceInfoType);
-	for(i = 0; i < meta->servicesLen; i++) {
-		//Only filter cluster controllers and storage controllers.
-		if((!strcmp(meta->services[i].type,"cluster") || !strcmp(meta->services[i].type,"storage")) && strcmp(meta->services[i].partition, filter_partition)) {
-			//Not equal, remove by making string len 0.
-			LOGTRACE("Filtering out service: %s , %s\n", meta->services[i].name, meta->services[i].partition);
+void filter_services(ncMetadata * meta, char *filter_partition)
+{
+    int i = 0, j = 0;
+    serviceInfoType tmp;
+    int copySize = sizeof(serviceInfoType);
+    for (i = 0; i < meta->servicesLen; i++) {
+        //Only filter cluster controllers and storage controllers.
+        if ((!strcmp(meta->services[i].type, "cluster") || !strcmp(meta->services[i].type, "storage")) && strcmp(meta->services[i].partition, filter_partition)) {
+            //Not equal, remove by making string len 0.
+            LOGTRACE("Filtering out service: %s , %s\n", meta->services[i].name, meta->services[i].partition);
 
-			//Null the strings.
-			meta->services[i].name[0]='\0';
-			meta->services[i].partition[0]='\0';
-			meta->services[i].type[0]='\0';
-			for(j = 0; j < meta->services[i].urisLen; j++)
-			{
-				meta->services[i].uris[j][0]='\0';
-			}
-			meta->services[i].urisLen = 0;
+            //Null the strings.
+            meta->services[i].name[0] = '\0';
+            meta->services[i].partition[0] = '\0';
+            meta->services[i].type[0] = '\0';
+            for (j = 0; j < meta->services[i].urisLen; j++) {
+                meta->services[i].uris[j][0] = '\0';
+            }
+            meta->services[i].urisLen = 0;
 
-			//Swap this one and the one at the end and decrement the length.
-			memcpy(&tmp, &(meta->services[i]),copySize);
-			memcpy(&(meta->services[i]),&(meta->services[meta->servicesLen-1]),copySize);
-			memcpy(&(meta->services[meta->servicesLen-1]),&(tmp),copySize);
-			meta->servicesLen--;
-		}
-	}
+            //Swap this one and the one at the end and decrement the length.
+            memcpy(&tmp, &(meta->services[i]), copySize);
+            memcpy(&(meta->services[i]), &(meta->services[meta->servicesLen - 1]), copySize);
+            memcpy(&(meta->services[meta->servicesLen - 1]), &(tmp), copySize);
+            meta->servicesLen--;
+        }
+    }
 }
-
 
 //!
 //!
@@ -603,10 +602,9 @@ int ncClientCall(ncMetadata * pMeta, int timeout, int ncLock, char *ncURL, char 
 
         //TODO: zhill, change this to only be invoked on DescribeInstances and/or DescribeResources?
         //Update meta from config
-        if(populateOutboundMeta(localmeta)) {
-        	LOGERROR("Failed to update output service metadata\n");
+        if (populateOutboundMeta(localmeta)) {
+            LOGERROR("Failed to update output service metadata\n");
         }
-
         //Don't need to filter, CC should only have received.
         //filter_services(localmeta, config->ccStatus.serviceId.partition);
 
@@ -1245,7 +1243,7 @@ int doAttachVolume(ncMetadata * pMeta, char *volumeId, char *instanceId, char *r
 
     LOGINFO("[%s][%s] attaching volume\n", SP(instanceId), SP(volumeId));
     LOGDEBUG("invoked: userId=%s, volumeId=%s, instanceId=%s, remoteDev=%s, localDev=%s\n", SP(pMeta ? pMeta->userId : "UNSET"),
-    		SP(volumeId), SP(instanceId), SP(remoteDev), SP(localDev));
+             SP(volumeId), SP(instanceId), SP(remoteDev), SP(localDev));
     if (!volumeId || !instanceId || !remoteDev || !localDev) {
         LOGERROR("bad input params\n");
         return (1);
@@ -1274,7 +1272,7 @@ int doAttachVolume(ncMetadata * pMeta, char *volumeId, char *instanceId, char *r
         timeout = maxint(timeout, ATTACH_VOL_TIMEOUT_SECONDS);
 
         rc = ncClientCall(pMeta, timeout, resourceCacheLocal.resources[i].lockidx, resourceCacheLocal.resources[i].ncURL, "ncAttachVolume",
-        		instanceId, volumeId, remoteDev, localDev);
+                          instanceId, volumeId, remoteDev, localDev);
 
         if (rc) {
             ret = 1;
@@ -1352,7 +1350,7 @@ int doDetachVolume(ncMetadata * pMeta, char *volumeId, char *instanceId, char *r
         timeout = maxint(timeout, DETACH_VOL_TIMEOUT_SECONDS);
 
         rc = ncClientCall(pMeta, timeout, resourceCacheLocal.resources[i].lockidx, resourceCacheLocal.resources[i].ncURL, "ncDetachVolume",
-                                     instanceId, volumeId, remoteDev, localDev, force);
+                          instanceId, volumeId, remoteDev, localDev, force);
         if (rc) {
             ret = 1;
         } else {
@@ -2198,8 +2196,9 @@ int refresh_resources(ncMetadata * pMeta, int timeout, int dolock)
 //! @param[in] host reported hostname
 //! @param[in] src source node for migration
 //! @param[in] dst destination node for migration
-//! @param[in] state reported migration state
+//! @param[in] migration_state reported migration state
 //! @param[out] node node to which to send migration action request
+//! @param[out] instance
 //! @param[out] action migration action to request of node
 //!
 //! @return EUCA_OK or EUCA
@@ -3057,7 +3056,9 @@ int schedule_instance_migration(ncInstance * instance, char **includeNodes, char
             ret = 1;
             goto out;
         }
-        ret = schedule_instance(&(instance->params), instance->imageId, instance->kernelId, instance->ramdiskId, instance->instanceId, instance->userData, instance->platform, includeNodes[0], outresid);
+        ret =
+            schedule_instance(&(instance->params), instance->imageId, instance->kernelId, instance->ramdiskId, instance->instanceId, instance->userData, instance->platform,
+                              includeNodes[0], outresid);
     } else {
         if (config->schedPolicy == SCHEDROUNDROBIN) {
             LOGDEBUG("[%s] scheduling migration using ROUNDROBIN scheduler\n", instance->instanceId);
@@ -3305,7 +3306,8 @@ int schedule_instance_user(virtualMachine * vm, char *amiId, char *kernelId, cha
 
         res = &(resourceCache->resources[i]);
         if (res) {
-            snprintf(lbuf, sizeof(lbuf), "idx=%d,ip=%s,state=%d,availmem=%d,availdisk=%d,availcores=%d", i + 1, res->ip, res->state, res->availMemory, res->availDisk, res->availCores);
+            snprintf(lbuf, sizeof(lbuf), "idx=%d,ip=%s,state=%d,availmem=%d,availdisk=%d,availcores=%d", i + 1, res->ip, res->state, res->availMemory, res->availDisk,
+                     res->availCores);
             fprintf(OFH, "%s\n", lbuf);
         }
     }
@@ -3329,18 +3331,17 @@ int schedule_instance_user(virtualMachine * vm, char *amiId, char *kernelId, cha
     fclose(OFH);
 
     // invoke the external scheduler, passing it the two files as well as resource requirements of the new instance
-    char cmd[MAX_PATH*3 + CHAR_BUFFER_SIZE]; // 3 paths on command line, plus other stuff
+    char cmd[MAX_PATH * 3 + CHAR_BUFFER_SIZE];  // 3 paths on command line, plus other stuff
     char stdout_str[VERY_BIG_CHAR_BUFFER_SIZE];
     char stderr_str[VERY_BIG_CHAR_BUFFER_SIZE];
-    snprintf(cmd, sizeof(cmd), "%s %s %s %d %d %d %s %s %s",
-             config->schedPath, schedfile, instfile, vm->mem, vm->disk, vm->cores, instId, datafile, platform);
+    snprintf(cmd, sizeof(cmd), "%s %s %s %d %d %d %s %s %s", config->schedPath, schedfile, instfile, vm->mem, vm->disk, vm->cores, instId, datafile, platform);
     rc = timeshell(cmd, stdout_str, stderr_str, VERY_BIG_CHAR_BUFFER_SIZE, SCHED_TIMEOUT_SEC);
     LOGDEBUG("external scheduler returned: %d, stdout: '%s', stderr: '%s'\n", rc, stdout_str, stderr_str);
     unlink(schedfile);
     unlink(instfile);
     unlink(datafile);
 
-    resid = rc - 1; // rc for valid nodes [1..N], 0 means scheduler could not find a resource
+    resid = rc - 1;                    // rc for valid nodes [1..N], 0 means scheduler could not find a resource
     if (resid < 0 || resid >= resourceCache->numResources) {
         // didn't find a resource
         LOGWARN("couldn't find a resource or user scheduler is incorrect\n");
@@ -4626,45 +4627,42 @@ int setup_shared_buffer(void **buf, char *bufname, size_t bytes, sem_t ** lock, 
 }
 
 //copy from cc config into message metadata.
-static int populateOutboundMeta(ncMetadata *pMeta)
+static int populateOutboundMeta(ncMetadata * pMeta)
 {
-	int i = 0;
-	int servCount = 0;
-	if (pMeta != NULL) {
-		sem_mywait(CONFIG);
-		memcpy(pMeta->services, config->services, sizeof(serviceInfoType) * 16);
-		memcpy(pMeta->disabledServices, config->disabledServices, sizeof(serviceInfoType) * 16);
-		memcpy(pMeta->notreadyServices, config->notreadyServices, sizeof(serviceInfoType) * 16);
+    int i = 0;
+    int servCount = 0;
+    if (pMeta != NULL) {
+        sem_mywait(CONFIG);
+        memcpy(pMeta->services, config->services, sizeof(serviceInfoType) * 16);
+        memcpy(pMeta->disabledServices, config->disabledServices, sizeof(serviceInfoType) * 16);
+        memcpy(pMeta->notreadyServices, config->notreadyServices, sizeof(serviceInfoType) * 16);
 
-		//Update the epoch if not already populated with latest from CC
-		if(pMeta->epoch < config->ccStatus.localEpoch) {
-			pMeta->epoch = config->ccStatus.localEpoch;
-		}
-		sem_mypost(CONFIG);
+        //Update the epoch if not already populated with latest from CC
+        if (pMeta->epoch < config->ccStatus.localEpoch) {
+            pMeta->epoch = config->ccStatus.localEpoch;
+        }
+        sem_mypost(CONFIG);
 
-		pMeta->servicesLen = 0;
-		pMeta->disabledServicesLen = 0;
-		pMeta->notreadyServicesLen = 0;
-		for(i = 0; i < 16; i++) {
-			if(strlen(config->services[i].name) > 0)
-			{
-				pMeta->servicesLen++;
-			}
-			if(strlen(config->disabledServices[i].name) > 0)
-			{
-				pMeta->disabledServicesLen++;
-			}
-			if(strlen(config->notreadyServices[i].name) > 0)
-			{
-				pMeta->notreadyServicesLen++;
-			}
-		}
+        pMeta->servicesLen = 0;
+        pMeta->disabledServicesLen = 0;
+        pMeta->notreadyServicesLen = 0;
+        for (i = 0; i < 16; i++) {
+            if (strlen(config->services[i].name) > 0) {
+                pMeta->servicesLen++;
+            }
+            if (strlen(config->disabledServices[i].name) > 0) {
+                pMeta->disabledServicesLen++;
+            }
+            if (strlen(config->notreadyServices[i].name) > 0) {
+                pMeta->notreadyServicesLen++;
+            }
+        }
 
-	} else {
-		return 1;
-	}
+    } else {
+        return 1;
+    }
 
-	return 0;
+    return 0;
 }
 
 //!
@@ -4729,11 +4727,11 @@ int initialize(ncMetadata * pMeta)
             int i;
             LOGTRACE("Initializing ncMeta: enabled %d, disabled %d, notready %d\n", pMeta->servicesLen, pMeta->disabledServicesLen, pMeta->notreadyServicesLen);
             sem_mywait(CONFIG);
-            if(pMeta->epoch >= config->ccStatus.localEpoch) {
-            	memcpy(config->services, pMeta->services, sizeof(serviceInfoType) * 16);
-            	memcpy(config->disabledServices, pMeta->disabledServices, sizeof(serviceInfoType) * 16);
-            	memcpy(config->notreadyServices, pMeta->notreadyServices, sizeof(serviceInfoType) * 16);
-            	config->ccStatus.localEpoch = pMeta->epoch;
+            if (pMeta->epoch >= config->ccStatus.localEpoch) {
+                memcpy(config->services, pMeta->services, sizeof(serviceInfoType) * 16);
+                memcpy(config->disabledServices, pMeta->disabledServices, sizeof(serviceInfoType) * 16);
+                memcpy(config->notreadyServices, pMeta->notreadyServices, sizeof(serviceInfoType) * 16);
+                config->ccStatus.localEpoch = pMeta->epoch;
             }
 
             for (i = 0; i < 16; i++) {

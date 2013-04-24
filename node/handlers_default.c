@@ -880,7 +880,7 @@ static int doAttachVolume(struct nc_state_t *nc, ncMetadata * pMeta, char *insta
     char *tagBuf;
     char *localDevName;
     char localDevReal[32], localDevTag[256], remoteDevReal[132];
-    char scUrl[512]; //Tmp holder for sc url for sc call.
+    char scUrl[512];                   //Tmp holder for sc url for sc call.
     ncVolume *volume;
     ebs_volume_data *vol_data = NULL;
     char *remoteDevStr = NULL;
@@ -925,7 +925,6 @@ static int doAttachVolume(struct nc_state_t *nc, ncMetadata * pMeta, char *insta
         }
         return EUCA_HYPERVISOR_ERROR;
     }
-
     // mark volume as 'attaching', save token value as we got from the wire
 
     sem_p(inst_sem);
@@ -937,38 +936,37 @@ static int doAttachVolume(struct nc_state_t *nc, ncMetadata * pMeta, char *insta
         LOGERROR("[%s][%s] failed to update the volume record, aborting volume attachment\n", instanceId, volumeId);
         return EUCA_ERROR;
     }
-
     //Do the ebs connect.
     LOGTRACE("[%s][%s] Connecting EBS volume to local host\n", instanceId, volumeId);
-    get_service_url("storage",nc, scUrl);
+    get_service_url("storage", nc, scUrl);
 
-    if(strlen(scUrl) == 0) {
-    	LOGERROR("[%s][%s] Failed to lookup enabled Storage Controller. Cannot attach volume %s\n",instanceId, volumeId, scUrl);
-    	have_remote_device = 0;
-    	ret = EUCA_ERROR;
-    	goto release;
+    if (strlen(scUrl) == 0) {
+        LOGERROR("[%s][%s] Failed to lookup enabled Storage Controller. Cannot attach volume %s\n", instanceId, volumeId, scUrl);
+        have_remote_device = 0;
+        ret = EUCA_ERROR;
+        goto release;
     } else {
-    	LOGTRACE("[%s][%s] Using SC URL: %s\n", instanceId, volumeId, scUrl );
+        LOGTRACE("[%s][%s] Using SC URL: %s\n", instanceId, volumeId, scUrl);
     }
 
     int rc = connect_ebs_volume(scUrl, attachmentToken, nc->config_use_ws_sec, nc->config_sc_policy_file, nc->ip, nc->iqn, &remoteDevStr, &vol_data);
-    if(rc) {
-    	LOGERROR("Error connecting ebs volume %s\n", attachmentToken);
-    	have_remote_device=0;
-    	ret = EUCA_ERROR;
-    	goto release;
+    if (rc) {
+        LOGERROR("Error connecting ebs volume %s\n", attachmentToken);
+        have_remote_device = 0;
+        ret = EUCA_ERROR;
+        goto release;
     }
 
     if (!remoteDevStr || !strstr(remoteDevStr, "/dev")) {
-    	LOGERROR("[%s][%s] failed to connect to iscsi target\n", instanceId, volumeId);
-    	remoteDevReal[0] = '\0';
-    	have_remote_device=0;
-    	ret = EUCA_ERROR;
-    	goto release;
+        LOGERROR("[%s][%s] failed to connect to iscsi target\n", instanceId, volumeId);
+        remoteDevReal[0] = '\0';
+        have_remote_device = 0;
+        ret = EUCA_ERROR;
+        goto release;
     } else {
-    	LOGDEBUG("[%s][%s] attached iSCSI target of host device '%s'\n", instanceId, volumeId, remoteDevStr);
-    	snprintf(remoteDevReal, sizeof(remoteDevReal), "%s", remoteDevStr);
-    	have_remote_device = 1;
+        LOGDEBUG("[%s][%s] attached iSCSI target of host device '%s'\n", instanceId, volumeId, remoteDevStr);
+        snprintf(remoteDevReal, sizeof(remoteDevReal), "%s", remoteDevStr);
+        have_remote_device = 1;
     }
 
     // Update volume with new connection info
@@ -978,10 +976,9 @@ static int doAttachVolume(struct nc_state_t *nc, ncMetadata * pMeta, char *insta
     copy_instances();
     sem_v(inst_sem);
     if (!volume) {
-    	LOGERROR("[%s][%s] failed to update the volume record, aborting volume attachment\n", instanceId, volumeId);
-    	return EUCA_ERROR;
+        LOGERROR("[%s][%s] failed to update the volume record, aborting volume attachment\n", instanceId, volumeId);
+        return EUCA_ERROR;
     }
-
     // make sure there is a block device
     if (check_block(remoteDevReal)) {
         LOGERROR("[%s][%s] cannot verify that host device '%s' is available for hypervisor attach\n", instanceId, volumeId, remoteDevReal);
@@ -1046,7 +1043,7 @@ release:
         next_vol_state = VOL_STATE_ATTACHING_FAILED;
     }
     sem_p(inst_sem);
-    volume = save_volume(instance, volumeId, NULL, NULL, NULL, NULL, next_vol_state); // now we can record remoteDevReal
+    volume = save_volume(instance, volumeId, NULL, NULL, NULL, NULL, next_vol_state);   // now we can record remoteDevReal
     save_instance_struct(instance);
     copy_instances();
     update_disk_aliases(instance);     // ask sensor subsystem to track the volume
@@ -1065,11 +1062,11 @@ release:
     // if iSCSI and there were problems, try to disconnect the target
     if (ret != EUCA_OK && have_remote_device) {
         LOGDEBUG("[%s][%s] attempting to disconnect iscsi target due to attachment failure\n", instanceId, volumeId);
-        if(vol_data != NULL && vol_data->connect_string != NULL) {
-        	rc = disconnect_ebs_volume(scUrl, nc->config_use_ws_sec, nc->config_sc_policy_file, attachmentToken, vol_data->connect_string, nc->ip, nc->iqn);
-        	if(rc) {
-        		LOGERROR("[%s][%s] Error disconnecting ebs volume on error rollback.\n", instanceId, volumeId);
-        	}
+        if (vol_data != NULL && vol_data->connect_string != NULL) {
+            rc = disconnect_ebs_volume(scUrl, nc->config_use_ws_sec, nc->config_sc_policy_file, attachmentToken, vol_data->connect_string, nc->ip, nc->iqn);
+            if (rc) {
+                LOGERROR("[%s][%s] Error disconnecting ebs volume on error rollback.\n", instanceId, volumeId);
+            }
         }
     }
 
@@ -1082,8 +1079,10 @@ release:
         log_level_for_devstring = EUCA_LOG_DEBUG;
     EUCALOG(log_level_for_devstring, "[%s][%s] remote device string: %s\n", instanceId, volumeId, remoteDevStr);
 
-    if(vol_data) EUCA_FREE(vol_data);
-    if(remoteDevStr) EUCA_FREE(remoteDevStr);
+    if (vol_data)
+        EUCA_FREE(vol_data);
+    if (remoteDevStr)
+        EUCA_FREE(remoteDevStr);
 
     EUCA_FREE(xml);
 
@@ -1103,7 +1102,7 @@ release:
 //! @param[in] pMeta a pointer to the node controller (NC) metadata structure
 //! @param[in] instanceId the instance identifier string (i-XXXXXXXX)
 //! @param[in] volumeId the volume identifier string (vol-XXXXXXXX)
-//! @param[in] remoteDev the target device name
+//! @param[in] attachmentToken the target device name
 //! @param[in] localDev the local device name
 //! @param[in] force if set to 1, this will force the volume to detach
 //! @param[in] grab_inst_sem if set to 1, will require the usage of the instance semaphore
@@ -1181,13 +1180,11 @@ static int doDetachVolume(struct nc_state_t *nc, ncMetadata * pMeta, char *insta
         LOGERROR("[%s][%s] failed to update the volume record, aborting volume detachment\n", instanceId, volumeId);
         return EUCA_ERROR;
     }
-
     //Lookup the volume info locally for detachment
-    if(volume->connectionString == NULL) {
-    	LOGERROR("[%s][%s] failed to find the local volume attachment record, aborting volume detachment\n", instanceId, volumeId);
-    	return EUCA_ERROR;
+    if (volume->connectionString == NULL) {
+        LOGERROR("[%s][%s] failed to find the local volume attachment record, aborting volume detachment\n", instanceId, volumeId);
+        return EUCA_ERROR;
     }
-
     // do iscsi connect shellout if remoteDev is an iSCSI target
     char *remoteDevStr = NULL;
 
@@ -1195,11 +1192,11 @@ static int doDetachVolume(struct nc_state_t *nc, ncMetadata * pMeta, char *insta
     //Used to have check if iscsi here, not necessary with AOE deprecation.
     remoteDevStr = get_volume_local_device(volume->connectionString);
     if (!remoteDevStr || !strstr(remoteDevStr, "/dev")) {
-    	LOGERROR("[%s][%s] failed to get local name of host iscsi device\n", instanceId, volumeId);
-    	remoteDevReal[0] = '\0';
+        LOGERROR("[%s][%s] failed to get local name of host iscsi device\n", instanceId, volumeId);
+        remoteDevReal[0] = '\0';
     } else {
-    	snprintf(remoteDevReal, sizeof(remoteDevReal), "%s", remoteDevStr);
-    	have_remote_device = 1;
+        snprintf(remoteDevReal, sizeof(remoteDevReal), "%s", remoteDevStr);
+        have_remote_device = 1;
     }
     EUCA_FREE(remoteDevStr);
 
@@ -1275,15 +1272,15 @@ release:
     }
     // if iSCSI, try to disconnect the target
     if (have_remote_device) {
-    	//Do the ebs disconnect.
-    	LOGTRACE("[%s][%s] Disconnecting EBS volume to local host\n", instanceId, volumeId);
-    	get_service_url("storage",nc, scUrl);
-    	LOGTRACE("[%s][%s] Using SC Url: %s\n", instanceId, volumeId, scUrl);
+        //Do the ebs disconnect.
+        LOGTRACE("[%s][%s] Disconnecting EBS volume to local host\n", instanceId, volumeId);
+        get_service_url("storage", nc, scUrl);
+        LOGTRACE("[%s][%s] Using SC Url: %s\n", instanceId, volumeId, scUrl);
 
-        if(disconnect_ebs_volume(scUrl, nc->config_use_ws_sec, nc->config_sc_policy_file, attachmentToken, volume->connectionString, nc->ip, nc->iqn) != 0) {
+        if (disconnect_ebs_volume(scUrl, nc->config_use_ws_sec, nc->config_sc_policy_file, attachmentToken, volume->connectionString, nc->ip, nc->iqn) != 0) {
             LOGERROR("[%s][%s] failed to disconnect iscsi target\n", instanceId, volumeId);
             if (!force)
-            	ret = EUCA_ERROR;
+                ret = EUCA_ERROR;
         }
     }
 

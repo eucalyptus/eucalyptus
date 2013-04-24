@@ -497,7 +497,7 @@ int ncRebootInstanceStub(ncStub * pStub, ncMetadata * pMeta, char *instanceId)
 //!
 //! @return EUCA_OK on success or EUCA_ERROR on failure.
 //!
-int ncTerminateInstanceStub(ncStub * pStub, ncMetadata * pMeta, char *instId, int force, int *shutdownState, int *previousState)
+int ncTerminateInstanceStub(ncStub * pStub, ncMetadata * pMeta, char *instanceId, int force, int *shutdownState, int *previousState)
 {
     int status = 0;
     axutil_env_t *env = NULL;
@@ -522,7 +522,7 @@ int ncTerminateInstanceStub(ncStub * pStub, ncMetadata * pMeta, char *instId, in
         EUCA_MESSAGE_MARSHAL(ncTerminateInstanceType, request, pMeta);
     }
 
-    adb_ncTerminateInstanceType_set_instanceId(request, env, instId);
+    adb_ncTerminateInstanceType_set_instanceId(request, env, instanceId);
     if (force) {
         adb_ncTerminateInstanceType_set_force(request, env, AXIS2_TRUE);
     } else {

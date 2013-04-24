@@ -696,6 +696,7 @@ free:
 //! Implement the backing store for a given instance
 //!
 //! @param[in] instance pointer to the instance
+//! @param[in] is_migration_dest
 //!
 //! @return EUCA_OK on success or EUCA_ERROR on failure
 //!
@@ -885,17 +886,18 @@ int destroy_instance_backing(ncInstance * instance, boolean do_destroy_files)
     virtualMachine *vm = &(instance->params);
     virtualBootRecord *vbr = NULL;
 
-    if(get_localhost_sc_url(scURL)!=EUCA_OK || strlen(scURL)==0) {
-    	LOGWARN("[%s] could not obtain SC URL (is SC enabled?)\n", instance->instanceId);
+    if (get_localhost_sc_url(scURL) != EUCA_OK || strlen(scURL) == 0) {
+        LOGWARN("[%s] could not obtain SC URL (is SC enabled?)\n", instance->instanceId);
         scURL[0] = '\0';
     }
-
     // find and detach iSCSI targets, if any
     for (i = 0; ((i < EUCA_MAX_VBRS) && (i < vm->virtualBootRecordLen)); i++) {
         vbr = &(vm->virtualBootRecord[i]);
         if (vbr->locationType == NC_LOCATION_SC) {
-        	if(disconnect_ebs_volume(scURL, localhost_config.use_ws_sec, localhost_config.ws_sec_policy_file, vbr->resourceLocation, vbr->preparedResourceLocation, localhost_config.ip, localhost_config.iqn) != 0) {
-        		LOGERROR("[%s] failed to disconnect iSCSI target attached to '%s'\n", instance->instanceId, vbr->backingPath);
+            if (disconnect_ebs_volume
+                (scURL, localhost_config.use_ws_sec, localhost_config.ws_sec_policy_file, vbr->resourceLocation, vbr->preparedResourceLocation, localhost_config.ip,
+                 localhost_config.iqn) != 0) {
+                LOGERROR("[%s] failed to disconnect iSCSI target attached to '%s'\n", instance->instanceId, vbr->backingPath);
             }
         }
     }
@@ -905,7 +907,9 @@ int destroy_instance_backing(ncInstance * instance, boolean do_destroy_files)
         if (!is_volume_used(volume))
             continue;
 
-        if (disconnect_ebs_volume(scURL, localhost_config.use_ws_sec, localhost_config.ws_sec_policy_file, volume->attachmentToken, volume->connectionString, localhost_config.ip, localhost_config.iqn) != 0) {
+        if (disconnect_ebs_volume
+            (scURL, localhost_config.use_ws_sec, localhost_config.ws_sec_policy_file, volume->attachmentToken, volume->connectionString, localhost_config.ip,
+             localhost_config.iqn) != 0) {
             LOGERROR("[%s][%s] failed to disconnet iscsi target\n", instance->instanceId, volume->volumeId);
         }
     }

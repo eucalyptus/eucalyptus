@@ -878,7 +878,7 @@ static int doMigrateInstances(struct nc_state_t *nc, ncMetadata * pMeta, ncInsta
             instance->combinePartitions = nc->convert_to_disk;
             instance->do_inject_key = nc->do_inject_key;
 
-            if ((error = create_instance_backing(instance, TRUE))  // create files that back the disks
+            if ((error = create_instance_backing(instance, TRUE))   // create files that back the disks
                 || (error = gen_instance_xml(instance)) // create euca-specific instance XML file
                 || (error = gen_libvirt_instance_xml(instance))) {  // transform euca-specific XML into libvirt XML
                 LOGERROR("[%s] failed to prepare images for migrating instance (error=%d)\n", instance->instanceId, error);
@@ -907,45 +907,45 @@ static int doMigrateInstances(struct nc_state_t *nc, ncMetadata * pMeta, ncInsta
 
                 //Do the ebs connect.
                 LOGTRACE("[%s][%s] Connecting EBS volume to local host\n", instance->instanceId, volume->volumeId);
-                get_service_url("storage",nc, scUrl);
+                get_service_url("storage", nc, scUrl);
 
-                if(strlen(scUrl) == 0) {
-                	LOGERROR("[%s][%s] Failed to lookup enabled Storage Controller. Cannot attach volume %s\n",instance->instanceId, volume->volumeId, scUrl);
-                	have_remote_device = 0;
-                	ret = EUCA_ERROR;
-                	goto unroll;
+                if (strlen(scUrl) == 0) {
+                    LOGERROR("[%s][%s] Failed to lookup enabled Storage Controller. Cannot attach volume %s\n", instance->instanceId, volume->volumeId, scUrl);
+                    have_remote_device = 0;
+                    ret = EUCA_ERROR;
+                    goto unroll;
                 } else {
-                	LOGTRACE("[%s][%s] Using SC URL: %s\n", instance->instanceId, volume->volumeId, scUrl );
+                    LOGTRACE("[%s][%s] Using SC URL: %s\n", instance->instanceId, volume->volumeId, scUrl);
                 }
 
                 //Do the ebs connect.
                 LOGTRACE("[%s][%s] Connecting EBS volume to local host\n", instance->instanceId, volume->volumeId);
                 int rc = connect_ebs_volume(scUrl, volume->attachmentToken, nc->config_use_ws_sec, nc->config_sc_policy_file, nc->ip, nc->iqn, &remoteDevStr, &vol_data);
-                if(rc) {
-                	LOGERROR("Error connecting ebs volume %s\n", volume->attachmentToken);
-                	have_remote_device=0;
-                	ret = EUCA_ERROR;
-                	goto unroll;
+                if (rc) {
+                    LOGERROR("Error connecting ebs volume %s\n", volume->attachmentToken);
+                    have_remote_device = 0;
+                    ret = EUCA_ERROR;
+                    goto unroll;
                 }
 
                 if (!remoteDevStr || !strstr(remoteDevStr, "/dev")) {
-                	LOGERROR("[%s][%s] failed to connect to iscsi target\n", instance->instanceId, volume->volumeId);
-                	remoteDevReal[0] = '\0';
+                    LOGERROR("[%s][%s] failed to connect to iscsi target\n", instance->instanceId, volume->volumeId);
+                    remoteDevReal[0] = '\0';
                 } else {
-                	LOGDEBUG("[%s][%s] attached iSCSI target of host device '%s'\n", instance->instanceId, volume->volumeId, remoteDevStr);
-                	snprintf(remoteDevReal, sizeof(remoteDevReal), "%s", remoteDevStr);
-                	have_remote_device = 1;
+                    LOGDEBUG("[%s][%s] attached iSCSI target of host device '%s'\n", instance->instanceId, volume->volumeId, remoteDevStr);
+                    snprintf(remoteDevReal, sizeof(remoteDevReal), "%s", remoteDevStr);
+                    have_remote_device = 1;
                 }
                 EUCA_FREE(remoteDevStr);
 
                 // something went wrong above, abort
                 if (!have_remote_device) {
-                	goto unroll;
+                    goto unroll;
                 }
                 // make sure there is a block device
                 if (check_block(remoteDevReal)) {
-                	LOGERROR("[%s][%s] cannot verify that host device '%s' is available for hypervisor attach\n", instance->instanceId, volume->volumeId, remoteDevReal);
-                	goto unroll;
+                    LOGERROR("[%s][%s] cannot verify that host device '%s' is available for hypervisor attach\n", instance->instanceId, volume->volumeId, remoteDevReal);
+                    goto unroll;
                 }
                 // generate XML for libvirt attachment request
                 if (gen_volume_xml(volume->volumeId, instance, localDevReal, remoteDevReal) // creates vol-XXX.xml
@@ -980,7 +980,7 @@ unroll:
             change_state(instance, BOOTING);    // not STAGING, since in that mode we don't poll hypervisor for info
             LOGINFO("[%s] migration destination ready %s > %s\n", instance->instanceId, instance->migration_src, instance->migration_dst);
             save_instance_struct(instance);
-            
+
             error = add_instance(&global_instances, instance);
             copy_instances();
             sem_v(inst_sem);
