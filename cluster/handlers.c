@@ -2197,8 +2197,9 @@ int refresh_resources(ncMetadata * pMeta, int timeout, int dolock)
 //! @param[in] host reported hostname
 //! @param[in] src source node for migration
 //! @param[in] dst destination node for migration
-//! @param[in] state reported migration state
+//! @param[in] migration_state reported migration state
 //! @param[out] node node to which to send migration action request
+//! @param[out] instance
 //! @param[out] action migration action to request of node
 //!
 //! @return EUCA_OK or EUCA
