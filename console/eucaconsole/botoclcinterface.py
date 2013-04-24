@@ -208,12 +208,12 @@ class BotoClcInterface(ClcInterface):
                                  ip_protocol=None, from_port=None, to_port=None,
                                  cidr_ip=None, group_id=None,
                                  src_security_group_group_id=None):
-        return self.conn.authorize_security_group_deprecated(name, 
+        return self.conn.authorize_security_group(name, 
                                  src_security_group_name,
                                  src_security_group_owner_id,
                                  ip_protocol, from_port, to_port,
-                                 cidr_ip)#, group_id,
-                                 #src_security_group_group_id)
+                                 cidr_ip, group_id,
+                                 src_security_group_group_id)
 
     # returns True if successful
     def revoke_security_group(self, name=None,
@@ -222,12 +222,12 @@ class BotoClcInterface(ClcInterface):
                                  ip_protocol=None, from_port=None, to_port=None,
                                  cidr_ip=None, group_id=None,
                                  src_security_group_group_id=None):
-        return self.conn.revoke_security_group_deprecated(name,
+        return self.conn.revoke_security_group(name,
                                  src_security_group_name,
                                  src_security_group_owner_id,
                                  ip_protocol, from_port, to_port,
-                                 cidr_ip)#, group_id,
-                                 #src_security_group_group_id)
+                                 cidr_ip, group_id,
+                                 src_security_group_group_id)
 
     def get_all_volumes(self, filters=None, callback=None):
         obj = self.conn.get_all_volumes(filters)
