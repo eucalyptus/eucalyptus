@@ -431,7 +431,9 @@
         if ( results ) {
           for( res in results) {
             var instance = results[res];
-            if ( instance.state === 'running' ) 
+            var state = instance.state;
+            if (state == undefined) state = instance._state.name;
+            if (state === 'running') 
               inst_ids.push(instance.id);
           }
         }
