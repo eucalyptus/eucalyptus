@@ -18,6 +18,7 @@
  * additional information or have any questions.
  ************************************************************************/
 package com.eucalyptus.cloudwatch;
+import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.Date;
 
@@ -157,14 +158,17 @@ public class EnableAlarmActionsType extends CloudWatchMessage {
 }
 @ComponentId.ComponentMessage(CloudWatch.class)
 public class CloudWatchMessage extends BaseMessage {
-    @Override
-    def <TYPE extends BaseMessage> TYPE getReply() {
-	TYPE type = super.getReply()
-	if (type.properties.containsKey("responseMetadata")) {
-	  ((ResponseMetadata) type.properties.get("responseMetadata")).requestId = getCorrelationId();
-	}
-	return type
-      }
+  @Override
+  def <TYPE extends BaseMessage> TYPE getReply() {
+    TYPE type = super.getReply()
+    try {
+      Field responseMetadataField = type.class.getDeclaredField("responseMetadata")
+      responseMetadataField.setAccessible( true ) 
+      ((ResponseMetadata) responseMetadataField.get( type )).requestId = getCorrelationId()
+    } catch ( Exception e ) {       
+    }
+    return type
+  }
 }
 public class DescribeAlarmsForMetricType extends CloudWatchMessage {
   String metricName;
