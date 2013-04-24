@@ -93,6 +93,7 @@ public class EventHandlerChainNew extends EventHandlerChain<NewLoadbalancerEvent
 	  		LOG.warn("unable to parse loadbalancer_num_vm");
 	  	}
 	  	this.insert(new LoadBalancerASGroupCreator(this, numVm));
+	  	this.insert(new TagCreator(this));
 	
 	  	return this;	
 	}
@@ -442,6 +443,7 @@ public class EventHandlerChainNew extends EventHandlerChain<NewLoadbalancerEvent
 	
 	static class SecurityGroupSetup extends AbstractEventHandler<NewLoadbalancerEvent> implements StoredResult<String>{
 		private String createdGroup = null;
+		private String createdGroupId = null;
 		private String groupOwnerAccountId = null;
 		NewLoadbalancerEvent event = null;
 		SecurityGroupSetup(EventHandlerChain<NewLoadbalancerEvent> chain){
@@ -485,6 +487,7 @@ public class EventHandlerChainNew extends EventHandlerChain<NewLoadbalancerEvent
 					final SecurityGroupItemType current = groups.get(0);
 					if(groupName.equals(current.getGroupName())){
 						groupFound=true;
+						this.createdGroupId = current.getGroupId();
 						this.groupOwnerAccountId = current.getAccountId();
 					}
 				}
@@ -502,6 +505,7 @@ public class EventHandlerChainNew extends EventHandlerChain<NewLoadbalancerEvent
 						final SecurityGroupItemType current = groups.get(0);
 						if(groupName.equals(current.getGroupName())){
 							this.groupOwnerAccountId = current.getAccountId();
+							this.createdGroupId= current.getGroupId();
 						}
 					}
 				}catch(Exception ex){
@@ -572,7 +576,52 @@ public class EventHandlerChainNew extends EventHandlerChain<NewLoadbalancerEvent
 			List<String> result = Lists.newArrayList();
 			if(this.createdGroup != null)
 				result.add(this.createdGroup);
+			if(this.createdGroupId != null)
+				result.add(this.createdGroupId);
 			return result;
+		}
+	}
+	
+	public static class TagCreator extends AbstractEventHandler<NewLoadbalancerEvent> {
+		public static final String TAG_KEY = "Name";
+		public static final String TAG_VALUE = "loadbalancer-resources";
+		
+		private String sgroup = null;
+		protected TagCreator(EventHandlerChain<NewLoadbalancerEvent> chain) {
+			super(chain);
+		}
+
+		@Override
+		public void apply(NewLoadbalancerEvent evt)
+				throws EventHandlerException {
+			// security group
+			try{
+				StoredResult<String> result =
+						this.chain.findHandler(SecurityGroupSetup.class);
+				sgroup = result.getResult().get(1); // get(0) = group name, get(1)= id
+			}catch(final Exception ex){
+				LOG.warn("could not find the security group for the loadbalancer", ex);
+				sgroup = null;
+			}
+			
+			if(sgroup!=null){
+				try{
+					EucalyptusActivityTasks.getInstance().createTags(TAG_KEY, TAG_VALUE, Lists.newArrayList(sgroup));
+				}catch(final Exception ex){
+					LOG.warn("could not tag the security group", ex);
+				}
+			}
+		}
+
+		@Override
+		public void rollback() throws EventHandlerException {
+			if(this.sgroup!=null){
+				try{
+					EucalyptusActivityTasks.getInstance().deleteTags(TAG_KEY, TAG_VALUE, Lists.newArrayList(sgroup));
+				}catch(final Exception ex){
+					;
+				}
+			}
 		}
 	}
 	

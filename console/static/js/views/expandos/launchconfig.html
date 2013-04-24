@@ -1,17 +1,43 @@
-<div data-ui-tabs=":button" id="tabs" >
+<div data-ui-tabs="" id="tabs" >
   <ul>
-    <li><a href="#tabs-1">Instance</a></li>
-    <li><a href="#tabs-2">Volumes</a></li>
+    <li><a href="#tabs-1" data-msg="tab_instance">Instance</a></li>
+    <li><a href="#tabs-2" data-msg="tab_volumes">Volumes</a></li>
   </ul>
   <div id="tabs-1" class="tab">
-  <ul class="instance-expanded clearfix"><li><div class="expanded-title">INSTANCE TYPE</div><div class="expanded-value">m1.small</div></li><li><div class="expanded-title">OS</div><div class="expanded-value">linux</div></li><li><div class="expanded-title">KERNEL ID</div><div class="expanded-value">eki-3B833B83</div></li><li><div class="expanded-title">RAM DISK ID</div><div class="expanded-value">eri-22583D83</div></li><li><div class="expanded-title">ROOT DEVICE</div><div class="expanded-value">instance-store</div></li><li><div class="expanded-title">RESERVATION ID</div><div class="expanded-value">r-D6564489</div></li><li><div class="expanded-title">ACCOUNT ID</div><div class="expanded-value">878210294747</div></li><li><div class="expanded-title">IMAGE MANIFEST</div><div class="expanded-value">tmpobxi939ocl&amp;#x2f;precise-server-cloudimg-amd64-ext3.img.manifest.xml</div></li></ul>
+    <ul class="launch-config-expanded clearfix">
+	  <li><div class="expanded-title" data-msg="launch_config_table_expanded_name">LAUNCH CONFIG</div><div class="expanded-value" data-text="config.name"></div></li>
+	  <li><div class="expanded-title" data-msg="launch_config_table_expanded_image_name">IMAGE NAME</div><div class="expanded-value" data-text="config.display_image_id"></div></li>
+	  <li><div class="expanded-title" data-msg="launch_config_table_expanded_image_id">IMAGE ID</div><div class="expanded-value" data-text="config.image_id"></div></li>
+      <li><div class="expanded-title" data-msg="launch_config_table_expanded_kernel_id">KERNEL ID</div><div class="expanded-value" data-text="config.kernel_id"></div></li>
+	  <li><div class="expanded-title" data-msg="launch_config_table_expanded_ramdisk_id">RAM DISK ID</div><div class="expanded-value" data-text="config.ramdisk_id"></div></li>
+      <li><div class="expanded-title" data-msg="launch_config_table_expanded_image_manifest">IMAGE MANIFEST</div><div class="expanded-value" data-text="image.location"></div></li>
+    </ul>
+    <ul class="launch-config-expanded clearfix">
+	  <li><div class="expanded-title" data-msg="launch_config_table_expanded_vm_type">INSTANCE TYPE</div><div class="expanded-value" data-text="config.instance_type"></div></li>
+	  <li><div class="expanded-title" data-msg="launch_config_table_expanded_os">OS</div><div class="expanded-value" data-text="image.platform"></div></li>
+	  <li><div class="expanded-title" data-msg="launch_config_table_expanded_root_device">ROOT DEVICE</div><div class="expanded-value" data-text="image.platform"></div></li>
+	  <li><div class="expanded-title" data-msg="launch_config_table_expanded_key">KEY NAME</div><div class="expanded-value" data-text="config.key_name"></div></li>
+	  <li><div class="expanded-title" data-msg="launch_config_table_expanded_sgroup">SECURITY GROUP</div><div class="expanded-value" data-text="config.security_groups.0"></div></li>
+	  <li><div class="expanded-title" data-msg="launch_config_table_expanded_createtime">CREATION TIME</div><div class="expanded-value" data-text="config.created_time"></div></li>
+	</ul>
   </div>
   <div id="tabs-2" class="tab">
-      <ul class="instance-expanded clearfix">
-        <li><div class="expanded-title">Volume Id</div><div class="expanded-value">vol-xxxxx</div></li>
-        <li><div class="expanded-title">Device Mapping</div><div class="expanded-value">/dev/sda</div></li>
-        <li><div class="expanded-title">Creation Time</div><div class="expanded-value">Aug 21, 2012 07:34:23AM</div></li>
+      <ul class="volume-table-expanded clearfix">
+		<li>
+		<table>
+			<thead><tr><th data-msg="volume_table_expanded_volume_id">VOLUME ID</th><th data-msg="volume_table_expanded_device_mapping">DEVICE MAPPING</th><th data-msg="volume_table_expanded_creation_time">CREATION TIME</th></tr>
+			</thead>
+			<tbody>
+				<tr data-each-item="config.block_device_mappings">
+                  <td><span _data-text="item.unknownVariable"></span></td>
+                  <td><span _data-text="item.unknownVariable"></span></td>
+                  <td><span _data-text="item.unknownVariable"></span></td>
+                </tr>
+			</tbody>
+		</table>
+		</li>
       </ul>
   </div>
 </div>
+
 <div style="clear:both"></div>

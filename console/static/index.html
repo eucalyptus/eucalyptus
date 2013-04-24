@@ -31,7 +31,7 @@
     </style>
 
     <link rel="stylesheet" href="/js/visualsearch/build/visualsearch-datauri.css" type="text/css" media="screen" charset="utf-8"> 
-
+    <link rel="stylesheet" href="/css/engage.itoggle.css" type="text/css" media="screen" charset="utf-8"> 
 
     <!-- encoder libarary for XSS protection -->
     <script type="text/javascript" language="javascript" src="lib/esapi/Codec.js"></script>
@@ -47,7 +47,7 @@
     <script type="text/javascript" language="javascript" src="lib/jquery.datatables-1.9.4.js "></script>
     <script type="text/javascript" language="javascript" src="lib/jquery.i18n.properties-min-1.0.9.js"></script>
     <script type="text/javascript" language="javascript" src="lib/jsrender.js"></script>
-    <script type="text/javascript" language="javascript" src="lib/jquery.flip.js"></script>
+    <script type="text/javascript" language="javascript" src="lib/jquery.flippy.min.js"></script>
     <script type="text/javascript" language="javascript" src="lib/jquery.cookie.js"></script>
     <script type="text/javascript" language="javascript" src="lib/jquery.iframe-transport.js"></script>
     <script type="text/javascript" language="javascript" src="lib/jquery.fileupload.js"></script>
@@ -59,18 +59,12 @@
     <script type="text/javascript" language="javascript" src="lib/jquery.md5.js"></script>
 
     <!-- Backbone support -->
-    <!-- Backbone support -->
     <script data-main="js/requiremain" type="text/javascript" language="javascript" src="js/require.js"></script>
-<!--
-    <script type="text/javascript" language="javascript" src="js/underscore-1.4.3.js"></script>
-    <script type="text/javascript" language="javascript" src="js/backbone-0.9.10.js"></script>
-    <script src="/js/visualsearch/build/visualsearch.js" type="text/javascript" charset="utf-8"></script>
--->
 
     <!-- Eucalyptus UI javascripts -->
     <script type="text/javascript" language="javascript" src="js/jquery_ext.js"></script>
     <script type="text/javascript" language="javascript" src="js/jquery_generate_file.js"></script>
-    <script type="text/javascript" language="javascript" src="js/engage.itoggle-min.js"></script>
+    <script type="text/javascript" language="javascript" src="js/engage.itoggle.js"></script>
     <script type="text/javascript" language="javascript" src="js/login.js"></script>
     <script type="text/javascript" language="javascript" src="js/main.js"></script>
     <script type="text/javascript" language="javascript" src="js/eucalyptus.js"></script>
@@ -109,6 +103,7 @@
     <script type="text/javascript" language="javascript" src="js/wizimagetest.js"></script>
     <script type="text/javascript" language="javascript" src="js/launchconfig.js"></script>
     <script type="text/javascript" language="javascript" src="js/newlaunchconfig.js"></script>
+    <script type="text/javascript" language="javascript" src="js/newinstance.js"></script>
   </head> 
 
   <body>
@@ -277,11 +272,13 @@
                   <span></span> {{!>dashboard_instance_stopped}}
                 </div>
               </div>
+              <!--
               <div id="dashboard-scaling-groups" class="db-instances-scaling clearfix" title="{{!: dashboard_instances_scaling_tip }}">
                 <div class="status-readout">
                   <span></span> {{!>dashboard_instance_scaling}}
                 </div>
               </div>
+              -->
               <div id="dashboard-instance-launch">
                 <a href="#" class="xlarge-button" title="{{!: dashboard_instance_launch_tip }}">{{!>dashboard_launch_new_instance}}</a>
               </div> 
@@ -416,7 +413,7 @@
             </div>
           </div>
         </div>
-      </script>adsf  
+      </script>  
 
       <script id="keypairDelDlgTmpl" type="text/x-jsrender">
         <div id="keys-euca-dialog-wrapper">
@@ -1455,7 +1452,7 @@
                     <input type="checkbox" id="instances-check-all">
                   </th>
                   <th>{{!>inst_tbl_hdr_os}}</th>
-                  <th>{{!>inst_tbl_hdr_id}}</th>
+                  <th>{{!>inst_tbl_hdr_instance}}</th>
                   <th>{{!>inst_tbl_hdr_state}}</th>
                   <th>{{!>inst_tbl_hdr_image_id}}</th>
                   <th>{{!>inst_tbl_hdr_availability_zone}}</th>
@@ -1735,8 +1732,8 @@
                     <div id="launch-wizard-type-header" class="twist launch-wizard-section-header"> </div>
                     <div id="launch-wizard-type-contents" class="launch-wizard-section">
                       <div id="launch-wizard-type-main-contents">
-                        <div id="launch-wizard-type-size">
-                          <div class="launch-wizard-selection">{{!>launch_instance_type_size_header}}</div>
+                        <div id="launch-wizard-type-size" class="form-row clearfix">
+                          <label for="launch-instance-type-size" class="launch-wizard-selection">{{!>launch_instance_type_size_header}}</label>
                           <select id="launch-instance-type-size" class="wizard-selection-content"></select>
                         </div>
                         <div id="launch-wizard-type-options"> </div>

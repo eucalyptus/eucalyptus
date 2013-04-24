@@ -821,60 +821,12 @@ public class HmacLoginModuleTest {
     assertTrue("Authentication successful", hmacV4LoginModule("ea9nMgw6353ANsJeylVkNIIzuCU0hz0xtErRbcj0").authenticate(creds));
   }
 
-  /**
-   * Test V4 signature with url parameters requiring encoding (special characters)
-   */
-  @Test
-  public void testHmacV4ParameterEncoding() {    
-//    final HmacCredentials creds = new HmacCredentials(
-//        "1234567890",
-//        "df98544c510062599b12919a4298273390528b1ab17906f3b92e4e0af4c71c6d",
-//        "host;user-agent;x-amz-content-sha256;x-amz-date",
-//        "JERQK4M0QE8RUZLLPRSVQ/20121025/us-east-1/iam/aws4_request",
-//        ImmutableMap.<String,List<String>>builder().build(),
-//        ImmutableMap.<String,List<String>>builder()
-//          .put( "host", Lists.newArrayList("192.168.51.194:8773"))
-//          .put( "x-amz-date",Lists.newArrayList("20121025T231945Z"))
-//          .put( "authorization",Lists.newArrayList("AWS4-HMAC-SHA256 Credential=JERQK4M0QE8RUZLLPRSVQ/20121025/us-east-1/iam/aws4_request, SignedHeaders=host;user-agent;x-amz-content-sha256;x-amz-date, Signature=df98544c510062599b12919a4298273390528b1ab17906f3b92e4e0af4c71c6d"))
-//          .put( "user-agent",Lists.newArrayList("aws-sdk-java/1.3.22 Linux/3.4.11-1.fc16.x86_64 Java_HotSpot(TM)_64-Bit_Server_VM/20.6-b01"))
-//          .put( "x-amz-content-sha256",Lists.newArrayList("7022d945186bfa138afb05bbf3826cce2c26f70d08213a6ae391f87d74ba1ac4"))
-//          .put( "content-type", Lists.newArrayList("application/x-www-form-urlencoded; charset=utf-8") )
-//          .put( "content-length", Lists.newArrayList("57") )
-//          .put( "connection", Lists.newArrayList("Keep-Alive") )
-//          .build(),
-//        "POST",
-//        "/",
-//        "GroupName=TestGroup&Action=CreateGroup&Version=2010-05-08"
-//    );
-//    assertTrue("Authentication successful", hmacV4LoginModule().authenticate(creds));
-    fail("not implemented");
-  }
-
-  /**
-   * Test V4 signature with the parameters on the URL (not header)
-   * 
-   * https://iam.amazonaws.com/?maxItems=100
-   * &Action=ListGroupsForUser
-   * &UserName=Test
-   * &Version=2010-05-08
-   * &X-Amz-Date=20120228T022210Z
-   * &X-Amz-Algorithm=AWS4-HMAC-SHA256
-   * &X-Amz-Credential=AKIAIOSFODNN7EXAMPLE/20120228/us-east-1/iam/aws4_request
-   * &X-Amz-SignedHeaders=host
-   * &X-Amz-Signature=HEX(calculated-signature-from-task-3)
-   * &X-Amz-SignedHeaders=host
-   */
-  @Test
-  public void testHmacV4DateParameter() {
-    fail("not implemented");
-  }
-
-  private HmacLoginModuleSupportTest loginModule() {
-    return new HmacLoginModuleSupportTest(); 
+  private TestHmacLoginModule loginModule() {
+    return new TestHmacLoginModule();
   }
   
-  private static class HmacLoginModuleSupportTest extends HmacLoginModuleSupport {
-    private HmacLoginModuleSupportTest() {
+  private static class TestHmacLoginModule extends HmacLoginModuleSupport {
+    private TestHmacLoginModule() {
       super(-1);
     }
     

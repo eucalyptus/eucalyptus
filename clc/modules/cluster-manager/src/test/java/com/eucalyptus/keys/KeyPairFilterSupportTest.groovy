@@ -25,7 +25,7 @@ import org.junit.Test
 /**
  * Unit tests for (SSH) key pair filter support
  */
-class KeyPairFilterSupportTest extends FilterSupportTest.InstanceTest<SshKeyPair> {
+class KeyPairFilterSupportTest extends FilterSupportTest.InstanceTestSupport<SshKeyPair> {
 
   @Test
   void testFilteringSupport() {

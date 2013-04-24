@@ -128,7 +128,7 @@ struct eucalyptus_opts
   const char *disable_dns_help; /**< @brief DEPRECATED DO NOT USE. IT DOES NOTHING. help description.  */
   int disable_storage_flag;	/**< @brief DEPRECATED DO NOT USE. IT DOES NOTHING. (default=off).  */
   const char *disable_storage_help; /**< @brief DEPRECATED DO NOT USE. IT DOES NOTHING. help description.  */
-  char ** java_home_arg;	/**< @brief Alternative way to specify JAVA_HOME. (default='/usr/lib/jvm/java-1.7.0-openjdk-1.7.0.9.x86_64').  */
+  char ** java_home_arg;	/**< @brief Alternative way to specify JAVA_HOME. (default='/usr/lib/jvm/java-1.7.0').  */
   char ** java_home_orig;	/**< @brief Alternative way to specify JAVA_HOME. original value given at command line.  */
   unsigned int java_home_min; /**< @brief Alternative way to specify JAVA_HOME.'s minimum occurreces */
   unsigned int java_home_max; /**< @brief Alternative way to specify JAVA_HOME.'s maximum occurreces */

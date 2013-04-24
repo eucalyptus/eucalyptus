@@ -98,6 +98,19 @@ define([], function() {
       return pages[position].view;
     });
 
+    // nextPage (property)
+    // ------------------
+    // Get the next active page. Null if we are at the end. 
+    self.__defineGetter__("nextPage", function() {
+      if (!self.hasNext) {
+        return null;
+      }
+      //if (typeof pages[position] === 'undefined') {
+      //  return null;
+      //}
+      return pages[position + 1].view;
+    });
+
     // position (property)
     // ------------------
     // Get the current integer position
@@ -171,10 +184,38 @@ define([], function() {
         throw new Error("Out of range: " + index + " max " + pages.length);
       }
       var offset = -(position - index);
+      //validate and call onDisplay() hook.
       if (!navigationController || navigationController(offset)) {
+        if (! self.isValid() && index > position) {
+          return self.current;
+        }
+        self.blur();
         position = index;
       }
+      self.focus();
       return self.current;
+    }
+
+    // ask the step if requirements have been met before moving on
+    self.isValid = function() {
+      if (typeof self.current === 'object' && typeof self.current.isValid === 'function') {
+          return self.current.isValid();
+      }
+      return true;
+    }
+
+    // let the step know that it is being displayed now
+    self.focus = function() {
+      if (typeof self.current === 'object' && typeof self.current.focus === 'function') {
+        self.current.focus();
+      }
+    }
+
+    // let the step know when it has lost focus
+    self.blur = function() {
+      if (typeof self.current === 'object' && typeof self.current.blur === 'function') {
+        self.current.blur();
+      }
     }
 
     // next
@@ -242,7 +283,7 @@ define([], function() {
 
     self.makeView = function(options, template, mapping, scope) {
       // Assume default component names, but let mapping override them if it wants
-      mapping = merge(trivialMapping('nextButton', 'prevButton', 'finishButton', 'problems', 'wizardContent', 'wizardAbove', 'wizardBelow', 'wizardSummary'), mapping || {});
+      mapping = merge(trivialMapping('nextButton', 'prevButton', 'finishButton', 'problems', 'wizardContent', 'wizardAbove', 'wizardBelow', 'wizardSummary', 'optionLink'), mapping || {});
       // Make sure options is defined
       options = options || {};
       // If there is no canFinish function, provide a default one that only
@@ -259,8 +300,8 @@ define([], function() {
       // (if any)
       var events = {};
       events['click ' + mapping.nextButton] = function() {
-        self.next();
-        this.render();
+        //self.next();
+        //this.render();
       };
       events['click ' + mapping.prevButton] = function() {
         self.prev();
@@ -278,10 +319,40 @@ define([], function() {
       }
 
       function addClickHandler(i) {
+       /* 
+        // Can't do this. Need to make a distinction between the title tab,
+        // next button and finish button, which may be displayed before the last step.
+        // This throws a div over all of them and catches the event no matter which 
+        // item was clicked on. This also prevents the rollover highlighting on
+        // the buttons from working. Added a class to the div and css change to 
+        // give it a fixed width and uncover the nav buttons.
+        //
         events['click ' + '#' + closedViewName(i)] = function() {
           self.goTo(i);
           this.render();
         };
+        */
+
+        events['click ' + mapping.finishButton] = function() {
+          if (options.finish && self.isValid()) {
+              options.finish();
+          }    
+        };
+        events['click ' + mapping.nextButton] = function() {
+            self.goTo(position + 1);
+            this.render();  
+        };
+        events['click ' + mapping.optionLink] = function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            self.goTo(position + 1);
+            this.render();  
+        };
+        events['click ' + '#wizardClosed-' + i] = function() {
+            self.goTo(i);
+            this.render();  
+        };
+
       }
 
       for (var i = 0; i < pages.length; i++) {
@@ -295,6 +366,7 @@ define([], function() {
           self.show();
           this.animate = true;
           this.$el.html(template);
+          this.optionLink = this.$el.find(mapping.optionLink);
           this.nextButton = this.$el.find(mapping.nextButton);
           this.prevButton = this.$el.find(mapping.prevButton);
           this.finishButton = this.$el.find(mapping.finishButton);
@@ -305,6 +377,12 @@ define([], function() {
           this.summary = this.$el.find(mapping.wizardSummary);
           this.render();
         },
+
+        jump: function(index) {
+          self.goTo(index);
+          this.render();
+        }, 
+
         render: function() {
           // Make sure there is something there
           var shouldAnimate = this.animate && self.position !== this.lastRendered;
@@ -323,6 +401,7 @@ define([], function() {
           if (shouldAnimate) {
             this.wizardContent.slideDown("fast");
           }
+          this.optionLink.attr('disabled', (self.nextPage === null || !self.nextPage.isOptional));
           this.nextButton.attr('disabled', !self.hasNext);
           this.prevButton.attr('disabled', !self.hasPrev);
 
@@ -340,9 +419,10 @@ define([], function() {
             this.problems.append(problemLabel);
           }
           if (options.hideDisabledButtons) {
-            this.nextButton.attr('style', self.hasNext ? 'display: inline' : 'display: none')
-            this.prevButton.attr('style', self.hasPrev ? 'display: inline' : 'display: none')
-            this.finishButton.attr('style', finishable ? 'display: inline' : 'display: none')
+            this.nextButton.attr('style', (self.hasNext && !self.nextPage.isOptional) ? 'display: inline' : 'display: none');
+            this.prevButton.attr('style', self.hasPrev ? 'display: inline' : 'display: none');
+            this.finishButton.attr('style', finishable ? 'display: inline' : 'display: none');
+            this.optionLink.attr('style', (self.hasNext && self.nextPage.isOptional) ? 'display: inline' : 'display: none');
           }
           if (options.finishText) {
             this.finishButton.text(options.finishText);
@@ -354,11 +434,18 @@ define([], function() {
           if (options.titler) {
             this.nextButton.text(options.titler(self.position, self.current))
           }
+          
+          // get the option link text from the optional step itself
+          if (this.optionLink !== undefined && self.hasNext && self.nextPage.isOptional) {
+            if (self.nextPage.optionLinkText != undefined)
+              this.optionLink.find('a').text(self.nextPage.optionLinkText);
+          }
 
           function addClosed(i, toWhat) {
             var CV = self.closedView(i);
             var container = $('<div>', {
-              id: closedViewName(i)
+              id: closedViewName(i),
+              class: 'wizard-step-closed-view-container'
             });
             var element = new CV($(this.wizardBelow)).$el;
             container.append(element);
@@ -509,6 +596,7 @@ define([], function() {
 
       this.map = function(a, b) {
         mapping[a] = b;
+        return bldr;
       }
 
       this.build = function() {

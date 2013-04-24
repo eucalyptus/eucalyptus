@@ -318,7 +318,7 @@ function associateIp(instance) {
 function disassociateIp(address){
   $('html body').find(DOM_BINDING['hidden']).children().detach();
   $('html body').find(DOM_BINDING['hidden']).eip({from_instance: true, hidden:true});
-  $('html body').find(DOM_BINDING['hidden']).eip('dialogDisassociateIp', [address]);
+  $('html body').find(DOM_BINDING['hidden']).eip('dialogDisassociateIp', address);   // STRIPPED OFF [ ] TO ALLOW MULTI-INSTANCES   --- Kyo 041513
 }
 
 function allocateIP() {
@@ -545,6 +545,60 @@ function setupAjax(){
    type: "POST",
    timeout: 30000
  });
+}
+
+function doMultiAction(itemList, collection, opFunction, progressMessage, doneMessage, failMessage, validate){
+  var done = 0;
+  var all = itemList.length;
+  var errorList = [];
+  var progressMsg = progressMessage;
+  var doneMsg = doneMessage;
+  var failMsg = failMessage;
+  doMultiAjax(itemList, function(item, dfd) {
+    var itemId = item;
+    var finish = function(model, response) {
+        done++;
+        if (done < all) {
+          notifyMulti(100*(done/all), $.i18n.prop(progressMsg, all));
+        }
+        else {
+          var $msg = $('<div>').addClass('multiop-summary').append(
+                     $('<div>').addClass('multiop-summary-success').
+                         html($.i18n.prop(doneMsg, (errorList.length), all)));
+          if (errorList.length > 0)
+              $msg.append($('<div>').addClass('multiop-summary-failure').
+                         html($.i18n.prop(failMsg, errorList.length)));
+          notifyMulti(100, $msg.html(), errorList);
+        }
+        dfd.resolve();
+      };
+    var model = collection.get(item);
+    opFunction(model, {
+      success:
+        function(model, response, options) {
+          var error = null;
+          if (typeof response != 'object')
+            response = model;
+          if (validate) {
+            error = validate(response);
+          }
+          else {
+            if (response.results && response.results == true) {
+              ; // all good
+            } else {
+              error = undefined_error;
+            }
+          }
+          if (error) errorList.push({id:itemId, reason: error});
+          finish(model, response);
+        },
+      error:
+        function(model, xhr, options) {
+          errorList.push({id:itemId, reason: getErrorMessage(xhr)});
+          finish(model, null);
+        },
+    });
+  })
 }
 
 function doMultiAjax(array, callback, delayMs){

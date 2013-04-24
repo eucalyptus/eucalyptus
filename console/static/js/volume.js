@@ -40,34 +40,30 @@
       this.baseTable = $volTable;
       this.tableWrapper = $volTable.eucatable({
         id : 'volumes', // user of this widget should customize these options,
-        data_deps: ['volumes'],
+        data_deps: ['volumes', 'snapshots', 'tags'],
         hidden : thisObj.options['hidden'],
         dt_arg : {
           "sAjaxSource": 'volume',
           "aaSorting": [[ 7, "desc" ]],
           "aoColumnDefs": [
             {
-	      // Display the checkbox button in the main table
+              // Display the checkbox button in the main table
               "bSortable": false,
               "aTargets":[0],
               "mData": function(source) { return '<input type="checkbox"/>' },
               "sClass": "checkbox-cell"
             },
             {
-	      // Display the id of the volume in the main table
-	      "aTargets":[1], 
+              // Display the id of the volume in the main table
+              "aTargets":[1], 
               "mRender": function(data){
-                 return eucatableDisplayColumnTypeTwist(data, data, 255);
+                return eucatableDisplayColumnTypeTwist(data, data, 255);
               },
-              "mData": function(source){
-                 if(source.display_id)
-                   return source.display_id;
-                 return source.id;
-              },
-	    },
+              "mData": "display_id",
+            },
             {
-	      // Display the status of the volume in the main table
-	      "aTargets":[2],
+              // Display the status of the volume in the main table
+              "aTargets":[2],
               "mData": function(source) { 
                  return eucatableDisplayColumnTypeVolumeStatus(source.status);
                },
@@ -77,9 +73,9 @@
               "sWidth": 50,
             },
             { 
-	      // Display the size of the volume in the main table
-	      "aTargets":[3],
-	      "mRender": function(data) {
+              // Display the size of the volume in the main table
+              "aTargets":[3],
+              "mRender": function(data) {
                 if(isInt(data)) 
                   return data;
                 else
@@ -89,63 +85,58 @@
               "sClass": "centered-cell"
             },
             { 
-	      // Display the instance id of the attached volume in the main table
-	      "aTargets":[4],
+              // Display the instance id of the attached volume in the main table
+              "aTargets":[4],
               "mRender": function(data) {
                 return DefaultEncoder().encodeForHTML(data);
               },
-              "mData": "attach_data.instance_id",
-	    },
+              "mData": "display_instance_id",
+              //"mData": "attach_data.instance_id",
+            },
             { 
-	      // Display the snapshot id of the volume in the main table
-	      "aTargets":[5],
-	      "mRender": function(data) {
+              // Display the snapshot id of the volume in the main table
+              "aTargets":[5],
+              "mRender": function(data) {
                 return DefaultEncoder().encodeForHTML(data);
               },
               "mData": "display_snapshot_id",
-	    },
+            },
             { 
-	      // Display the availibility zone of the volume in the main table
-	      "aTargets":[6],
-	      "mRender": function(data) {
+              // Display the availibility zone of the volume in the main table
+              "aTargets":[6],
+              "mRender": function(data) {
                 return DefaultEncoder().encodeForHTML(data);
               },
               "mData": "zone",
-	    },
+            },
             { 
-	      // Display the creation time of the volume in the main table
-	      "aTargets":[7], 
+              // Display the creation time of the volume in the main table
+              "aTargets":[7], 
               "asSorting" : [ 'desc', 'asc' ],
               "mRender": function(data) { return formatDateTime(data); },
               "mData": "create_time",
               "iDataSort": 9
             },
             {
-	      // Invisible column for the status, used for sort
+              // Invisible column for the status, used for sort
               "bVisible": false,
               "aTargets":[8],
-	      "mRender": function(data) {
-                return DefaultEncoder().encodeForHTML(data);
-              },
               "mData": "status",
             },
             {
-	      // Invisible column for the creation time, used for sort
+              // Invisible column for the creation time, used for sort
               "bVisible": false,
               "aTargets":[9],
-	      "mRender": function(data) {
-		return data;			// escaping causes the sort operation to fail	013013
+              "mRender": function(data) {
+                return data;			// escaping causes the sort operation to fail	013013
               },
               "mData": "create_time",
               "sType": "date"
             },
             {
-	      // Invisible column for the id
+              // Invisible column for the id
               "bVisible": false,
               "aTargets":[10],
-	      "mRender": function(data) {
-                return DefaultEncoder().encodeForHTML(data);
-              },
               "mData": "id",
             }
           ],
@@ -163,10 +154,13 @@
         context_menu_actions : function(row) {
           return thisObj._createMenuActions();
         },
-         expand_callback : function(row){ // row = [col1, col2, ..., etc]
+        expand_callback : function(row){ // row = [col1, col2, ..., etc]
           return thisObj._expandCallback(row);
         },
-        menu_click_create : function (args) { thisObj._createAction() },
+        menu_click_create : function (args) {
+//          thisObj._createAction()
+            thisObj._newCreateVolumeAction();       // BACKBONE INTEGRATED DIALOG  --- Kyo 041013 
+        },
         help_click : function(evt) {
           thisObj._flipToHelp(evt, {content: $volHelp, url: help_volume.landing_content_url});
         },
@@ -328,6 +322,7 @@
         help: {content: $tag_help, url: help_instance.dialog_terminate_content_url},
       });
       // tag dialog ends
+
     },
 
     _destroy : function() {
@@ -670,14 +665,58 @@
     },
 
     _tagResourceAction : function(){
-      var thisObj = this;
-      var volume = thisObj.tableWrapper.eucatable('getSelectedRows', 10)[0];
-      if ( volume.length > 0 ) {
-        // Create a widget object for displaying the resource tag information
-        var $tagInfo = $('<div>').addClass('resource-tag-table-expanded-volume').addClass('clearfix').euca_resource_tag({resource: 'volume', resource_id: volume, cancelButtonCallback: function(){ thisObj.tagDialog.eucadialog("close"); }, widgetMode: 'edit' });
-        thisObj.tagDialog.eucadialog('addNote','tag-modification-display-box', $tagInfo);   // This line should be adjusted once the right template is created for the resource tag.  030713
-        thisObj.tagDialog.eucadialog('open');
-      }
+      var selected = this.tableWrapper.eucatable('getSelectedRows', 10);
+      if ( selected.length > 0 ) {
+        require(['app'], function(app) {
+           app.dialog('edittags', app.data.volume.get(selected[0]));
+        });
+       }
+    },
+
+    _deleteVolumeAction : function() {
+      var dialog = 'delete_volume_dialog';
+      var selected = this.tableWrapper.eucatable('getSelectedRows', 10);
+      require(['views/dialogs/' + dialog], function( dialog) {
+        new dialog({items: selected});
+      });
+    },
+
+    _newCreateSnapshotAction : function() {
+      var dialog = 'create_snapshot_dialog';
+      var selected = this.tableWrapper.eucatable('getSelectedRows', 10);
+      require(['views/dialogs/' + dialog], function( dialog) {
+        new dialog({volume_id: selected});
+      });
+    },
+
+    _newAttachVolumeAction : function() {
+      var selected = this.tableWrapper.eucatable('getSelectedRows', 10);
+      require(['views/dialogs/attach_volume_dialog'], function(dialog) {
+        new dialog({volume_id: selected});
+      });
+    },
+
+    _newDetachVolumeAction : function() {
+      var dialog = 'detach_volume_dialog';
+      var selected = this.tableWrapper.eucatable('getSelectedRows', 10);
+      require(['views/dialogs/' + dialog], function( dialog) {
+        new dialog({volume_ids: selected});
+      });
+    },
+
+    _newCreateVolumeAction : function(){
+      var dialog = 'create_volume_dialog';
+      require(['app'], function(app) {
+        app.dialog(dialog);
+      });
+    },
+
+    _expandCallback : function(row){ 
+      var $el = $('<div />');
+      require(['app', 'views/expandos/volume'], function(app, expando) {
+         new expando({el: $el, model: app.data.volumes.get(row[10]) });
+      });
+      return $el;
     },
 
 
@@ -687,17 +726,24 @@
       var itemsList = {};
 
       (function(){
-        itemsList['attach'] = { "name": volume_action_attach, callback: function(key, opt) {;}, disabled: function(){ return true;} } 
-        itemsList['detach'] = { "name": volume_action_detach, callback: function(key, opt) {;}, disabled: function(){ return true;} }
-        itemsList['create_snapshot'] = { "name": volume_action_create_snapshot, callback: function(key, opt) {;}, disabled: function(){ return true;} }
-        itemsList['delete'] = { "name": volume_action_delete, callback: function(key, opt) {;}, disabled: function(){ return true;} }
+//        itemsList['attach'] = { "name": volume_action_attach, callback: function(key, opt) {;}, disabled: function(){ return true;} } 
+//        itemsList['detach'] = { "name": volume_action_detach, callback: function(key, opt) {;}, disabled: function(){ return true;} }
+//        itemsList['create_snapshot'] = { "name": volume_action_create_snapshot, callback: function(key, opt) {;}, disabled: function(){ return true;} }
+//        itemsList['delete'] = {"name":'Delete', callback: function(key, opt) {;}, disabled: function(){ return true;} }     // Backbone Dialog -- Kyo 040613
+        itemsList['attach_volume'] = {"name": volume_action_attach, callback: function(key, opt) {;}, disabled: function(){ return true;} }  // Backbone Dialog -- Kyo 040713
+        itemsList['detach_volume'] = {"name": volume_action_detach, callback: function(key, opt) {;}, disabled: function(){ return true;} }  // Backbone Dialog -- Kyo 040713
+        itemsList['create_snapshot_from_volume'] = {"name": volume_action_create_snapshot, callback: function(key, opt) {;}, disabled: function(){ return true;} }  // Backbone Dialog -- Kyo 040713
+        itemsList['delete_volume'] = {"name": volume_action_delete, callback: function(key, opt) {;}, disabled: function(){ return true;} }     // Backbone Dialog -- Kyo 040613
         itemsList['tag'] = {"name":'Tag Resource', callback: function(key, opt) {;}, disabled: function(){ return true;} }
+//        itemsList['create_volume_bb'] = {"name":'Create Volume', callback: function(key, opt) {;}, disabled: function(){ return true;} }  // Backbone Dialog -- Kyo 040713
       })();
 
       // add attach action
       if ( volumes.length === 1 && volumes[0].status === 'available' ){
-        itemsList['attach'] = { "name": volume_action_attach, callback: function(key, opt) { thisObj._attachAction(); } }
+//        itemsList['attach'] = { "name": volume_action_attach, callback: function(key, opt) { thisObj._attachAction(); } }
+        itemsList['attach_volume'] = {"name": volume_action_attach, callback: function(key, opt){ thisObj._newAttachVolumeAction(); }}   // Backbone Dialog -- Kyo 040813
       }
+
       // detach actions
       if ( volumes.length > 0 ) {
         addOption = true;
@@ -713,14 +759,20 @@
               break;
           }
         }
-        if (addOption)
-          itemsList['detach'] = { "name": volume_action_detach, callback: function(key, opt) { thisObj._detachAction(); } }
+        if (addOption){
+//          itemsList['detach'] = { "name": volume_action_detach, callback: function(key, opt) { thisObj._detachAction(); } }
+          itemsList['detach_volume'] = { "name": volume_action_detach, callback: function(key, opt) { thisObj._newDetachVolumeAction(); } }    // Backbone Dialog -- Kyo 040813
+        }
       }
+
       // create snapshot-action
       if ( volumes.length === 1) {
-         if ( volumes[0].status === 'in-use' || volumes[0].status === 'available' )
-            itemsList['create_snapshot'] = { "name": volume_action_create_snapshot, callback: function(key, opt) { thisObj._createSnapshotAction(); } }
+         if ( volumes[0].status === 'in-use' || volumes[0].status === 'available' ){
+//            itemsList['create_snapshot'] = { "name": volume_action_create_snapshot, callback: function(key, opt) { thisObj._createSnapshotAction(); } }
+            itemsList['create_snapshot_from_volume'] = {"name": volume_action_create_snapshot, callback: function(key, opt){ thisObj._newCreateSnapshotAction(); }}   // BAckbone Dialog -- Kyo 040813
+         }
       }
+
       // add delete action
       if ( volumes.length > 0 ) {
         addOption = true;
@@ -730,41 +782,21 @@
             break;
           }
         }
-        if (addOption)
-          itemsList['delete'] = { "name": volume_action_delete, callback: function(key, opt) { thisObj._deleteAction(); } }
-      }
-
-      // add resource tag option	031913
-      if ( volumes.length === 1) {
-        itemsList['tag'] = {"name":'Tag Resource', callback: function(key, opt){ thisObj._tagResourceAction(); }}
-      }
-
-      return itemsList;
-    },
-
-    _expandCallback : function(row){ 
-      var thisObj = this;
-      var volId = row[10];
-      var results = describe('volume');
-      var volume = null;
-      for(v in results){
-        if(results[v].id === volId){
-          volume = results[v];
-          break;
+        if (addOption){
+//          itemsList['delete'] = { "name": volume_action_delete, callback: function(key, opt) { thisObj._deleteAction(); } }
+          itemsList['delete_volume'] = {"name": volume_action_delete, callback: function(key, opt){ thisObj._deleteVolumeAction(); }}  // Backbone Dialog -- Kyo 040813
         }
       }
 
-      if(!volume)
-        return null;
+      // add resource tag option	031913
+      if (volumes.length === 1) {
+        itemsList['tag'] = {"name":'Tag Resource', callback: function(key, opt){ thisObj._tagResourceAction(); }}
+      }
 
-      var $wrapper = $('<div>');
+     // TEMP. Adding the new Create Volume Dialog into MORE ACTIONS Tab while integrating
+//     itemsList['create_volume_bb'] = {"name":'Create Volume', callback: function(key, opt){ thisObj._newCreateVolumeAction(); }}  // Backbone Dialog -- Kyo 040913
 
-      $tagInfo = $('<div>').addClass('resource-tag-table-expanded-instance').addClass('clearfix').attr('id', volume.id).euca_resource_tag({resource: 'volume', resource_id: volume.id, widgetMode: 'view-only'});
-      
-      $tabspace = $('<div>').addClass('eucatabspace-main-div').eucatabspace(); 
-      $tabspace.eucatabspace('addTabPage', 'Tag', $tagInfo);
-      $wrapper.append($tabspace)
-      return $wrapper;
+      return itemsList;
     },
 
 /**** Public Methods ****/

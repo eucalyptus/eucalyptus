@@ -430,7 +430,9 @@ public class BaseQueryBinding<T extends Enum<T>> extends RestfulMarshallingHandl
         if ( Modifier.isStatic( f.getModifiers( ) ) )
           continue;
         else if ( f.isAnnotationPresent( HttpParameterMapping.class ) || f.isAnnotationPresent( HttpParameterMappings.class ) ) {
-          fieldMap.put( getHttpParameterMappingAnnotation( f ).parameter(), f.getName( ) );
+          for ( String parameter : getHttpParameterMappingAnnotation( f ).parameter() ) {
+            fieldMap.put( parameter, f.getName( ) );
+          }
         } else {
           fieldMap.put( f.getName( ).substring( 0, 1 ).toUpperCase( ).concat( f.getName( ).substring( 1 ) ), f.getName( ) );
         }

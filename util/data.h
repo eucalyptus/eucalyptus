@@ -177,11 +177,11 @@ typedef enum _ncResourceType {
 
 //! NC Resource Location Type Enumeration
 typedef enum _ncResourceLocationType {
-    NC_LOCATION_URL,            //!< URL type location
-    NC_LOCATION_WALRUS,         //!< Walrus type location
-    NC_LOCATION_CLC,            //!< CLC type location
-    NC_LOCATION_SC,             //!< SC type location
-    NC_LOCATION_NONE,           //!< Unknown type for ephemeral disks
+    NC_LOCATION_URL,                   //!< URL type location
+    NC_LOCATION_WALRUS,                //!< Walrus type location
+    NC_LOCATION_CLC,                   //!< CLC type location
+    NC_LOCATION_SC,                    //!< SC type location
+    NC_LOCATION_NONE,                  //!< Unknown type for ephemeral disks
 } ncResourceLocationType;
 
 //! NC resource format type
@@ -306,24 +306,23 @@ typedef struct netConfig_t {
 
 //! Structure defining NC Volumes
 typedef struct ncVolume_t {
-    char volumeId[CHAR_BUFFER_SIZE];    //!< Remote volume identifier string
-    char attachmentToken[CHAR_BUFFER_SIZE];   //!< Remote device name string, the token reference
-    char localDev[CHAR_BUFFER_SIZE];    //!< Local device name string
+    char volumeId[CHAR_BUFFER_SIZE];   //!< Remote volume identifier string
+    char attachmentToken[CHAR_BUFFER_SIZE]; //!< Remote device name string, the token reference
+    char localDev[CHAR_BUFFER_SIZE];   //!< Local device name string
     char localDevReal[CHAR_BUFFER_SIZE];    //!< Local device name (real) string
-    char stateName[CHAR_BUFFER_SIZE];   //!< Volume state name string
-    char connectionString[VERY_BIG_CHAR_BUFFER_SIZE];	//!< Volume Token for attachment/detachment
+    char stateName[CHAR_BUFFER_SIZE];  //!< Volume state name string
+    char connectionString[VERY_BIG_CHAR_BUFFER_SIZE];   //!< Volume Token for attachment/detachment
 } ncVolume;
 
 //TODO: zhill, use this in the CC instead of ncVolume to save mem. Need to change the adb-helpers as well to copy nc->cc
 //! Notably smaller structure for volumes on the CC since the connectionString is not part of CC state
 typedef struct ccVolume_t {
-    char volumeId[CHAR_BUFFER_SIZE];    //!< Remote volume identifier string
-    char attachmentToken[CHAR_BUFFER_SIZE];   //!< Remote device name string, the token reference
-    char localDev[CHAR_BUFFER_SIZE];    //!< Local device name string
+    char volumeId[CHAR_BUFFER_SIZE];   //!< Remote volume identifier string
+    char attachmentToken[CHAR_BUFFER_SIZE]; //!< Remote device name string, the token reference
+    char localDev[CHAR_BUFFER_SIZE];   //!< Local device name string
     char localDevReal[CHAR_BUFFER_SIZE];    //!< Local device name (real) string
-    char stateName[CHAR_BUFFER_SIZE];   //!< Volume state name string
+    char stateName[CHAR_BUFFER_SIZE];  //!< Volume state name string
 } ccVolume;
-
 
 //! Structure definint NC instances
 typedef struct ncInstance_t {

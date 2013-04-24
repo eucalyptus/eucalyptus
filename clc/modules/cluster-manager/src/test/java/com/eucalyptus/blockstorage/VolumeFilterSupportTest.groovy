@@ -18,13 +18,14 @@
  * additional information or have any questions.
  ************************************************************************/
 package com.eucalyptus.blockstorage;
-import com.eucalyptus.auth.principal.UserFullName;
+
+
 import com.eucalyptus.tags.FilterSupportTest;
-import com.eucalyptus.vm.VmVolumeAttachment;
-import com.eucalyptus.vm.VmVolumeState;
+
+
 import org.junit.Test;
 
-class VolumeFilterSupportTest extends FilterSupportTest.InstanceTest<Volume> {
+class VolumeFilterSupportTest extends FilterSupportTest.InstanceTestSupport<Volume> {
 	@Test
 	void testFilteringSupport() {
 	  assertValid( new Volumes.VolumeFilterSupport() );

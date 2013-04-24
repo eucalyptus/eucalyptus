@@ -19,13 +19,13 @@
  ************************************************************************/
 package com.eucalyptus.network
 
-import com.eucalyptus.tags.TagSupportTest
 import org.junit.Test
+import com.eucalyptus.tags.TagTestSupport
 
 /**
  * 
  */
-class NetworkGroupTagSupportTest extends TagSupportTest {
+class NetworkGroupTagSupportTest extends TagTestSupport {
 
   @Test
   void testValidTagSupport() {

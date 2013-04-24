@@ -173,7 +173,7 @@ class ScaleHandler(BaseAPIHandler):
 
         try:
             action = self.get_argument("Action")
-            if action.find('Get') == -1:
+            if action.find('Describe') == -1:
                 self.user_session.session_last_used = time.time()
                 self.check_xsrf_cookie()
 
@@ -252,7 +252,25 @@ class ScaleHandler(BaseAPIHandler):
                 kernel_id = self.get_argument('KernelId', None)
                 ramdisk_id = self.get_argument('RamdiskId', None)
                 groups = self.get_argument_list('SecurityGroups.member')
-                bdm = self.get_argument_list('BlockDeviceMappings.member')
+                # get block device mappings
+                bdm = []
+                mapping = self.get_argument('BlockDeviceMapping.1.DeviceName', None)
+                idx = 1
+                while mapping:
+                    pre = 'BlockDeviceMapping.%d' % idx
+                    dev_name = mapping
+                    block_dev_type = boto.ec2.autoscale.launchconfig.BlockDeviceMapping()
+                    block_dev_type.ephemeral_name = self.get_argument('%s.VirtualName' % pre, None)
+                    if not(block_dev_type.ephemeral_name):
+                        block_dev_type.snapshot_id = \
+                                self.get_argument('%s.Ebs.SnapshotId' % pre, None)
+                        block_dev_type.size = \
+                                self.get_argument('%s.Ebs.VolumeSize' % pre, None)
+                    bdm[dev_name] = block_dev_type
+                    idx += 1
+                    mapping = self.get_argument('BlockDeviceMapping.%d.DeviceName' % idx, None)
+                if len(bdm) == 0:
+                    bdm = None
                 monitoring = self.get_argument('Instancemonitoring.Enabled', '') == 'true'
                 spot_price = self.get_argument('SpotPrice', None)
                 iam_instance_profile = self.get_argument('IamInstanceProfile', None)
@@ -332,7 +350,7 @@ class BalanceHandler(BaseAPIHandler):
 
         try:
             action = self.get_argument("Action")
-            if action.find('Get') == -1:
+            if action.find('Describe') == -1:
                 self.user_session.session_last_used = time.time()
                 self.check_xsrf_cookie()
 
@@ -416,7 +434,7 @@ class WatchHandler(BaseAPIHandler):
 
         try:
             action = self.get_argument("Action")
-            if action.find('Get') == -1:
+            if action.find('Describe') == -1:
                 self.user_session.session_last_used = time.time()
                 self.check_xsrf_cookie()
 
@@ -896,7 +914,7 @@ class ComputeHandler(BaseAPIHandler):
 
         try:
             action = self.get_argument("Action")
-            if action.find('Describe') == -1:
+            if action.find('Describe') == -1 and action.find('GetDashSummary') == -1:
                 self.user_session.session_last_used = time.time()
                 self.check_xsrf_cookie()
 

@@ -88,7 +88,19 @@ define([
             data += "&KernelId="+model.get('kernel_id');
           if (model.get('ramdisk_id') != undefined)
             data += "&RamdiskId="+model.get('ramdisk_id');
-          //TODO: block device mapping
+          if (model.get('block_device_mappings') != undefined) {
+            var mappings = model.get('block_device_mappings');
+            $.each(mappings, function(idx, mapping) {
+              data += "&BlockDeviceMapping."+(idx)+".DeviceName="+mapping.device_name;
+              if (mapping.virtual_name != undefined) {
+                data += "&BlockDeviceMapping."+(idx)+".VirtualName="+mapping.virtual_name;
+              }
+              else {
+                data += "&BlockDeviceMapping."+(idx)+".Ebs.SnapshotId="+mapping.snapshot_id;
+                data += "&BlockDeviceMapping."+(idx)+".Ebs.VolumeSize="+mapping.volume_size;
+              }
+            });
+          }
           if (model.get('instance_monitoring') != undefined)
             data += "&InstanceMonitoring="+model.get('instance_monitoring');
           if (model.get('spot_price') != undefined)
@@ -104,8 +116,7 @@ define([
             success:
               function(data, textStatus, jqXHR){
                 if ( data.results ) {
-                  notifySuccess(null, $.i18n.prop('create_launch_config_run_success', DefaultEncoder().encodeForHTML(volumeId), DefaultEncoder().encodeForHTML(instanceId)));
-                  thisObj.tableWrapper.eucatable('refreshTable');
+                  notifySuccess(null, $.i18n.prop('create_launch_config_run_success', DefaultEncoder().encodeForHTML(model.name), DefaultEncoder().encodeForHTML(data.results.request_id)));
                 } else {
                   notifyError($.i18n.prop('create_launch_config_run_error', DefaultEncoder().encodeForHTML(model.name), DefaultEncoder().encodeForHTML(model.name)), undefined_error);
                 }

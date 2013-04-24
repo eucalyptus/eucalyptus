@@ -99,6 +99,7 @@
 #define OP_TIMEOUT_PERNODE                       20
 #define OP_TIMEOUT_MIN                            5
 #define LOG_INTERVAL_SUMMARY_SEC                 60
+#define SCHED_TIMEOUT_SEC                         8 //! timeout for user scheduler
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |
@@ -207,6 +208,7 @@ enum {
     SCHEDGREEDY,
     SCHEDROUNDROBIN,
     SCHEDPOWERSAVE,
+    SCHEDUSER,
     SCHEDLAST,
 };
 
@@ -326,6 +328,7 @@ typedef struct ccConfig_t {
     int initialized;
     int kick_dhcp;
     int schedPolicy;
+    char schedPath[MAX_PATH];
     int schedState;
     int idleThresh;
     int wakeThresh;
@@ -393,9 +396,10 @@ int powerDown(ncMetadata * pMeta, ccResource * node);
 void print_netConfig(char *prestr, netConfig * in);
 int ncInstance_to_ccInstance(ccInstance * dst, ncInstance * src);
 int ccInstance_to_ncInstance(ncInstance * dst, ccInstance * src);
-int schedule_instance(virtualMachine * vm, char *targetNode, int *outresid);
+int schedule_instance(virtualMachine * vm, char *amiId, char *kernelId, char *ramdiskId, char *instId, char *userData, char *platform, char *targetNode, int *outresid);
 int schedule_instance_roundrobin(virtualMachine * vm, int *outresid);
 int schedule_instance_explicit(virtualMachine * vm, char *targetNode, int *outresid);
+int schedule_instance_user(virtualMachine * vm, char *amiId, char *kernelId, char *ramdiskId, char *instId, char *userData, char *platform, int *outresid);
 int schedule_instance_greedy(virtualMachine * vm, int *outresid);
 int schedule_instance_migration(ncInstance * instance, char **includeNodes, char **excludeNodes, int includeNodeCount, int excludeNodeCount, int inresid, int *outresid,
                                 ccResourceCache * resourceCacheLocal);
@@ -469,7 +473,7 @@ int image_cache_invalidate(void);
 int image_cache_proxykick(ccResource * res, int *numHosts);
 
 //! For filtering service infos in the meta passed to the NC
-void filter_services(ncMetadata *meta, char *filter_partition);
+void filter_services(ncMetadata * meta, char *filter_partition);
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |

@@ -343,10 +343,9 @@ public class RunningInstancesItemType extends EucalyptusData implements Comparab
   String privateIpAddress;
   String rootDeviceType = "instance-store";
   String rootDeviceName = "/dev/sda1";
-  //IamInstanceProfile
-  String nameOrArn= "";
   ArrayList<InstanceBlockDeviceMapping> blockDevices = new ArrayList<InstanceBlockDeviceMapping>();
   String clientToken;
+  IamInstanceProfile iamInstanceProfile = new IamInstanceProfile();
   ArrayList<ResourceTag> tagSet = new ArrayList<ResourceTag>();
 
   @Override
@@ -587,6 +586,18 @@ public class MonitorInstanceState extends EucalyptusData {
   String monitoringState;
   public MonitorInstanceState() {}
 }
+
+public class IamInstanceProfile extends EucalyptusData {
+  String arn;
+  String id;
+  public IamInstanceProfile() {}
+
+    def IamInstanceProfile(String arn, String id) {
+        this.arn = arn;
+        this.id = id;
+    }
+}
+
 public class MonitorInstancesResponseType extends VmControlMessage {
   ArrayList<MonitorInstanceState> instancesSet = new ArrayList<MonitorInstanceState>();
   public MonitorInstancesResponseType() {  }

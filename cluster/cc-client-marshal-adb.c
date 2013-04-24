@@ -1768,7 +1768,6 @@ int cc_modifyNode(char *nodeName, char *stateName, axutil_env_t * env, axis2_stu
 //! Marshalls and invokes the node controller modification request
 //!
 //! @param[in] nodeName the IP of the Node Controller to affect
-//! @param[in] stateName the state to transition the NC into
 //! @param[in] env pointer to the AXIS2 environment structure
 //! @param[in] pStub a pointer to the AXIS2 stub structure
 //!

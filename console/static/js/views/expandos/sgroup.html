@@ -1,23 +1,32 @@
-<div data-ui-tabs=":button" id="tabs" >
+<div data-ui-tabs="" id="tabs" >
   <ul>
-    <li><a href="#tabs-1">General</a></li>
-    <li><a href="#tabs-2">Tags</a></li>
-
+    <li><a href="#tabs-1" data-msg="tab_general">General</a></li>
+    <li><a href="#tabs-2" data-msg="tab_tags">Tags</a></li>
   </ul>
   <div id="tabs-1" class="tab">
-      <ul class="instance-expanded clearfix">
-		<li><div class="expanded-title">SECURITY GROUP NAME</div><div class="expanded-value">mygroup</div></li> 
-		<li><div class="expanded-title">DESCRIPTION</div><div class="expanded-value">full of rules</div></li>
-        <li><div class="expanded-section-label">Incoming traffic rules:</div></li>
+      <ul class="sgroup-expanded clearfix">
+		<li><div class="expanded-title" data-msg="sgroup_table_expanded_sgroup_name">SECURITY GROUP NAME</div><div class="expanded-value" data-text="sgroup.name"></div></li> 
+		<li><div class="expanded-title" data-msg="sgroup_table_expanded_description">DESCRIPTION</div><div class="expanded-value" data-text="sgroup.description"></div></li>
+     </ul>
+     <ul class="sgroup-expanded clearfix">
+        <li><div class="expanded-section-label" data-msg="sgroup_table_expanded_ingress_rules">Incoming traffic rules:</div></li>
+     </ul>
+     <ul class="sgroup-expanded clearfix">
 	  	<li>
 		<table>
 			<thead>
-				<tr><th>PROTOCOL</th><th>PORT/TYPE</th><th>SOURCE</th></tr>
+              <tr>
+                <th data-msg="sgroup_table_expanded_protocol"></th>
+                <th data-msg="sgroup_table_expanded_port_type"></th>
+                <th data-msg="sgroup_table_expanded_source"></th>
+              </tr>
 			</thead>
 			<tbody>
-				<tr><td>ICMP</td><td>Parameter problem, Bad IP header</td><td>groupname@account</td></tr>
-				<tr><td>TCP</td><td>22</td><td>mygroup</td></tr>
-				<tr><td>UDP</td><td>8844-8888</td><td>123.456.123.22/24</td></tr>
+              <tr data-each-item="rules">
+                <td><span data-text="item.protocol"></span></td>
+                <td><span data-text="item.port"></span></td>
+                <td><span data-text="item.source"></span></td>
+              </tr>
 			</tbody>
 		</table>
 		</li>
@@ -25,18 +34,7 @@
   </div>
 
   <div id="tabs-2" class="tab">
-      <ul class="instance-expanded clearfix">
-        <li>
-		<table>
-			<thead><tr><th>KEY</th><th>VALUE</th></tr>
-			</thead>
-			<tbody>
-				<tr><td>Name</td><td>My image</td></tr>
-				<tr><td>Department</td><td>marketing</td></tr>
-			</tbody>
-		</table>
-		</li>
-	  </ul>
+          <div class="expanded-table" data-ui-tags="sgroup.tags"></div>
   </div>
 
 <div style="clear:both"></div>

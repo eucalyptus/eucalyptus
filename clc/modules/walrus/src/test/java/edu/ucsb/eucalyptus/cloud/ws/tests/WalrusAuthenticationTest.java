@@ -23,6 +23,7 @@ import java.io.File;
 import java.util.concurrent.LinkedBlockingQueue;
 
 import org.junit.Assert;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import org.jboss.netty.buffer.ChannelBuffer;
@@ -41,6 +42,7 @@ import edu.ucsb.eucalyptus.cloud.ws.HttpReader;
 import edu.ucsb.eucalyptus.cloud.ws.HttpWriter;
 import edu.ucsb.eucalyptus.util.WalrusDataMessage;
 
+@Ignore("Manual development test")
 public class WalrusAuthenticationTest {
 	
 	private static ChannelBuffer getRandomContent(int size) {

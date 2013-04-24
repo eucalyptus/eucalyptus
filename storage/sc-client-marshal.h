@@ -64,7 +64,7 @@
  ************************************************************************/
 
 //!
-//! @file sc/sc-client-marshal.h
+//! @file storage/sc-client-marshal.h
 //! This defines the AXIS2C Client requests handling
 //!
 
@@ -77,7 +77,7 @@
  |                                                                            |
 \*----------------------------------------------------------------------------*/
 
-#include "axis2_stub_EucalyptusSC.h" /* for axis2_ and axutil_ defs */
+#include "axis2_stub_EucalyptusSC.h"   /* for axis2_ and axutil_ defs */
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |
@@ -105,11 +105,11 @@
 
 //! SC Stub structure
 typedef struct scStub_t {
-    axutil_env_t *env;          //!< Pointer to the AXIS2 environment structure
-    axis2_char_t *client_home;  //!< The AXIS2 client home directory path string
-    axis2_char_t *endpoint_uri; //!< The AXIS2 endpoint URI string
-    axis2_char_t *node_name;    //!< The AXIS2 node name parameter string
-    axis2_stub_t *stub;         //!< Pointer to the AXIS2 stub structure
+    axutil_env_t *env;                 //!< Pointer to the AXIS2 environment structure
+    axis2_char_t *client_home;         //!< The AXIS2 client home directory path string
+    axis2_char_t *endpoint_uri;        //!< The AXIS2 endpoint URI string
+    axis2_char_t *node_name;           //!< The AXIS2 node name parameter string
+    axis2_stub_t *stub;                //!< Pointer to the AXIS2 stub structure
 } scStub;
 
 /*----------------------------------------------------------------------------*\

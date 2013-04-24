@@ -89,11 +89,11 @@
           ],
         },
         text : {
-          header_title : launchconfig_h_title,
-          create_resource : launchconfig_create,
-          resource_found : 'launchconfig_found',
-          resource_search : launchconfig_search,
-          resource_plural : launchconfig_plural,
+          header_title : launch_config_h_title,
+          create_resource : launch_config_create,
+          resource_found : 'launch_config_found',
+          resource_search : launch_config_search,
+          resource_plural : launch_config_plural,
         },
         expand_callback : function(row){ // row = [col1, col2, ..., etc]
           return thisObj._expandCallback(row);
@@ -126,9 +126,8 @@
 
     _expandCallback : function(row){ 
       var $el = $('<div />');
-      console.log('expandcallback');
-      require(['views/expandos/launchconfig'], function(expando) {
-         new expando({el: $el, id: row[6]});
+      require(['app', 'views/expandos/launchconfig'], function(app, expando) {
+         new expando({el: $el, model: app.data.launchconfig.get(row[6]) });
       });
       return $el;
     },
@@ -139,15 +138,15 @@
       var itemsList = {};
 
       (function(){
-        itemsList['create'] = { "name": launchconfig_action_create, callback: function(key, opt) {;}, disabled: function(){ return true;} }
-        itemsList['delete'] = { "name": launchconfig_action_delete, callback: function(key, opt) {;}, disabled: function(){ return true;} }
+        itemsList['create'] = { "name": launch_config_action_create_scaling_group, callback: function(key, opt) {;}, disabled: function(){ return true;} }
+        itemsList['delete'] = { "name": launch_config_action_delete, callback: function(key, opt) {;}, disabled: function(){ return true;} }
       })();
 
       if ( selectedLaunchConfig.length === 1) {
-        itemsList['create'] = {"name":launchconfig_action_create, callback: function(key, opt){ thisObj._dialogAction('createscalinggroupfromlaunchconfig', selectedLaunchConfig); }}
+        itemsList['create'] = {"name":launch_config_action_create_scaling_group, callback: function(key, opt){ thisObj._dialogAction('createscalinggroupfromlaunchconfig', selectedLaunchConfig); }}
       }
       if ( selectedLaunchConfig.length >= 1) {
-        itemsList['delete'] = {"name":launchconfig_action_delete, callback: function(key, opt){
+        itemsList['delete'] = {"name":launch_config_action_delete, callback: function(key, opt){
           var scaling_groups = describe('scalinggrp');
           var in_use = false;
           var groups = [];

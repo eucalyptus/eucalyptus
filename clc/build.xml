@@ -131,7 +131,13 @@
 		<call-module-target target="jar"/>
 	</target>
 
-	<!--================================== clean targets ==================================-->
+	<!--================================== test targets ===================================-->
+	<target name="junit">
+		<property name="module.skipNativeMake" value="true"/>
+		<call-module-target target="junit"/>
+	</target>
+
+    <!--================================== clean targets ==================================-->
 	<target name="indent">
 		<call-module-target target="indent"/>
 	</target>

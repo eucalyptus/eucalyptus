@@ -97,21 +97,21 @@
           var $main = $('html body').find('.euca-main-outercontainer .inner-container');
           $main.login({ 'support_url' : support_url, 'admin_url' : admin_url, doLogin : function(evt, args) {
               var tok = args.param.account+':'+args.param.username+':'+args.param.password;
-              var hash = toBase64(tok);  // btoa(tok) --> not supported on ie9
+              var hash = toBase64(tok);
               var remember = (args.param.remember!=null)?"yes":"no";
-	      $.ajax({
-	        type:"POST",
- 	        data:"action=login&remember="+remember+"&Authorization="+hash, 
+              $.ajax({
+                type:"POST",
+                data:"action=login&remember="+remember+"&Authorization="+hash, 
                 beforeSend: function (xhr) { 
-                   $main.find('#euca-main-container').append(
+                  $main.find('#euca-main-container').append(
                      $('<div>').addClass('spin-wheel').append( 
                       $('<img>').attr('src','images/dots32.gif'))); // spinwheel
                    $main.find('#euca-main-container').show();
                 },
     	        dataType:"json",
-	        async:"false",
-	        success: function(out, textStatus, jqXHR) {
-	          $.extend($.eucaData, {'g_session':out.global_session, 'u_session':out.user_session});
+                async:"false",
+                success: function(out, textStatus, jqXHR) {
+                  $.extend($.eucaData, {'g_session':out.global_session, 'u_session':out.user_session});
                   eucalyptus.help({'language':out.global_session.language}); // loads help files
                   args.onSuccess($.eucaData); // call back to login UI
                   if (args.param.account.substring(args.param.account.length-13) == 'amazonaws.com') {
@@ -123,7 +123,7 @@
                   $container.children().detach(); // remove spinwheel
                   args.onError(errorThrown);
                   if (errorThrown.search("Forbidden")>-1) {
-	                $.extend($.eucaData, {'g_session':jqXHR.global_session, 'u_session':jqXHR.user_session});
+                    $.extend($.eucaData, {'g_session':jqXHR.global_session, 'u_session':jqXHR.user_session});
                     eucalyptus.help({'language':jqXHR.global_session.language}); // loads help files
                   }
                 }

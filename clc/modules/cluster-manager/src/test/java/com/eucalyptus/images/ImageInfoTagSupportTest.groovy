@@ -19,13 +19,13 @@
  ************************************************************************/
 package com.eucalyptus.images
 
-import com.eucalyptus.tags.TagSupportTest
+import com.eucalyptus.tags.TagTestSupport
 import org.junit.Test
 
 /**
  * 
  */
-class ImageInfoTagSupportTest extends TagSupportTest {
+class ImageInfoTagSupportTest extends TagTestSupport {
   
   @Test
   void testValidTagSupport() {

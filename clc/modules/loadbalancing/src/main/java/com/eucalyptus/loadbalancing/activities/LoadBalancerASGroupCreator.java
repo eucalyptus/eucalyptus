@@ -44,6 +44,7 @@ import com.eucalyptus.loadbalancing.LoadBalancer;
 import com.eucalyptus.loadbalancing.LoadBalancers;
 import com.eucalyptus.loadbalancing.activities.EventHandlerChainNew.InstanceProfileSetup;
 import com.eucalyptus.loadbalancing.activities.EventHandlerChainNew.SecurityGroupSetup;
+import com.eucalyptus.loadbalancing.activities.EventHandlerChainNew.TagCreator;
 import com.eucalyptus.util.Exceptions;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Lists;
@@ -168,7 +169,8 @@ public class LoadBalancerASGroupCreator extends AbstractEventHandler<NewLoadbala
 			try{
 				final List<String> availabilityZones = Lists.newArrayList(evt.getZones());
 				capacity = availabilityZones.size() * this.capacityPerZone;
-				EucalyptusActivityTasks.getInstance().createAutoScalingGroup(groupName, availabilityZones, capacity, launchConfigName);
+				EucalyptusActivityTasks.getInstance().createAutoScalingGroup(groupName, availabilityZones, 
+						capacity, launchConfigName, TagCreator.TAG_KEY, TagCreator.TAG_VALUE);
 				this.asgName = groupName;
 			}catch(Exception ex){
 				throw new EventHandlerException("Failed to create autoscaling group", ex);

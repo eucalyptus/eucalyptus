@@ -1,7 +1,15 @@
 define([
-    'views/searches/generic',
-], function(Search) {
-    return function(images) {
-      return new Search(images, ['group_name', 'root_device_name', 'name', 'placement', 'owner_id', 'image_id'], {}, null);
-    }
+  'views/searches/generic',
+  'views/searches/tagsearch'
+], function(Search, TagSearch) {
+  return function(instances) {
+    var config = {
+      facets: ['state', 'root_device_name', 'group_name',
+        'placement', 'instance_type']
+      , localize: {
+        state: 'Status'
+      }
+    };
+    return new Search(instances, new TagSearch(config, instances));
+  }
 });
