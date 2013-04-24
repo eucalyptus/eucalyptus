@@ -10,6 +10,7 @@
         <select data-on-change=":setKeyPair" id="launch-wizard-security-keypair-selector" data-tooltip="launch_instance_key_select_tip">
           <option value="" selected disabled>Select key pair</option>
           <option data-selected=":isKeySelected" data-each-keypair="keypairs" data-value="keypair.name" data-title="keypair.name" data-text="keypair.name"></option>
+          <option value="none" data-msg="launch_instance_security_keypair_none"></option>
         </select> 
 <!-- <div data-ui-stateful_selector="keyselect"></div> -->
     </div>
