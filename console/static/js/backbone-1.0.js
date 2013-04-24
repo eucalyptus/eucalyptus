@@ -248,9 +248,6 @@
     var attrs = attributes || {};
     options || (options = {});
     this.cid = _.uniqueId('c');
-    if (this.cid == 'c88') {
-	    console.log('oops');
-    }
     this.attributes = {};
     _.extend(this, _.pick(options, modelOptions));
     if (options.parse) attrs = this.parse(attrs, options) || {};

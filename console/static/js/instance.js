@@ -401,6 +401,7 @@
          }},
          width: 750
       });
+      var tagdiv = this.launchMoreDialog.find("launch-more-tags");
       // end launch more dialog
     },
 
