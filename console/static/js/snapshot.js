@@ -38,7 +38,7 @@
       this.baseTable = $snapshotTable;
       this.tableWrapper = $snapshotTable.eucatable({
         id : 'snapshots', // user of this widget should customize these options,
-        data_deps: ['snapshots'],
+        data_deps: ['snapshots', 'tags'],
         hidden: thisObj.options['hidden'],
         dt_arg : {
           "sAjaxSource": 'snapshot',
@@ -113,18 +113,12 @@
 	      // Hidden column for the status of the snapshot
               "bVisible": false,
               "aTargets":[7],
-	      "mRender": function(data) {
-                return DefaultEncoder().encodeForHTML(data);
-              },
               "mData": "status",
             },
             {
 	      // Hidden column for the unprocessed creation time/start time of the snapshot
               "bVisible": false,
               "aTargets":[8],
-	      "mRender": function(data) {
-                return data;			// sort fails when encoded	011330 -- needs to verify
-              },
               "mData": "start_time",
               "sType": "date"
             },
@@ -132,18 +126,12 @@
 	      // Hidden column for the uncut description of the snapshot
               "bVisible": false,
               "aTargets":[9],
-	      "mRender": function(data) {
-                return DefaultEncoder().encodeForHTML(data);
-              },
               "mData": "description",
             },
             {
                // Hidden column for the uncut id of the snapshot
                "bVisible": false,
                "aTargets":[10],
-               "mRender": function(data) {
-                return DefaultEncoder().encodeForHTML(data);
-              },
               "mData": "id",
             },
           ],
@@ -155,6 +143,9 @@
           resource_search : snapshot_search,
           resource_plural : snapshot_plural,
         },
+         expand_callback : function(row){ // row = [col1, col2, ..., etc]
+          return thisObj._expandCallback(row);
+        },
         menu_actions : function(args){ 
           return thisObj._createMenuActions();
         },
@@ -164,7 +155,10 @@
         expand_callback : function(row){ // row = [col1, col2, ..., etc]
           return thisObj._expandCallback(row);
         },
-        menu_click_create : function (args) { thisObj._createAction() },
+        menu_click_create : function (args) { 
+//          thisObj._createAction()
+            thisObj._newCreateSnapshotAction();   // BACKBONE INTEGRATED DIALOG --- Kyo 041013
+        },
         help_click : function(evt) {
           thisObj._flipToHelp(evt, {content: $snapshotHelp, url: help_snapshot.landing_content_url});
         },
@@ -292,26 +286,45 @@
     _destroy : function() {
     },
 
+    _expandCallback : function(row){ 
+      var $el = $('<div />');
+      require(['app', 'views/expandos/snapshot'], function(app, expando) {
+         new expando({el: $el, model: app.data.snapshot.get(row[10])});
+      });
+      return $el;
+    },
+
+
     _createMenuActions : function() {
       var thisObj = this;
       var selectedSnapshots = thisObj.baseTable.eucatable('getSelectedRows', 7); // 7th column=status (this is snapshot's knowledge)
       var itemsList = {};
       (function(){
-        itemsList['delete'] = { "name": snapshot_action_delete, callback: function(key, opt) {;}, disabled: function(){ return true;} };
-        itemsList['create_volume'] = { "name": snapshot_action_create_volume, callback: function(key, opt) {;}, disabled: function(){ return true;} };
-        itemsList['register'] = { "name": snapshot_action_register, callback: function(key, opt) {;}, disabled: function(){ return true;} }
+//        itemsList['delete'] = { "name": snapshot_action_delete, callback: function(key, opt) {;}, disabled: function(){ return true;} };
+//        itemsList['create_volume'] = { "name": snapshot_action_create_volume, callback: function(key, opt) {;}, disabled: function(){ return true;} };
+//        itemsList['register'] = { "name": snapshot_action_register, callback: function(key, opt) {;}, disabled: function(){ return true;} }
+        itemsList['delete_snapshot'] = { "name": snapshot_action_delete, callback: function(key, opt) {;}, disabled: function(){ return true;} }  // Backbone Integration --- Kyo 040813
+        itemsList['create_volume'] = { "name": snapshot_action_create_volume, callback: function(key, opt) {;}, disabled: function(){ return true;} }  // Backbone Integration --- Kyo 040813
+        itemsList['register_snapshot'] = { "name": snapshot_action_register, callback: function(key, opt) {;}, disabled: function(){ return true;} }  // Backbone Integration --- Kyo 040813
         itemsList['tag'] = { "name": 'Tag Resource', callback: function(key, opt) {;}, disabled: function(){ return true;} }
+//        itemsList['create_snapshot'] = { "name": 'Create new snapshot', callback: function(key, opt) {;}, disabled: function(){ return true;} }  // Backbone Integration --- Kyo 040813
       })();
 
       if ( selectedSnapshots.length > 0 && selectedSnapshots.indexOf('pending') == -1 ){
-        itemsList['delete'] = { "name": snapshot_action_delete, callback: function(key, opt) { thisObj._deleteAction(); } }
+//	itemsList['delete'] = { "name": snapshot_action_delete, callback: function(key, opt) { thisObj._deleteAction(); } }
+        itemsList['delete_snapshot'] = { "name": snapshot_action_delete, callback: function(key, opt) { thisObj._newDeleteSnapshotAction(); } }
       }
       
       if ( selectedSnapshots.length === 1 && onlyInArray('completed', selectedSnapshots)){
-        itemsList['register'] = { "name": snapshot_action_register, callback: function(key, opt) { thisObj._registerAction(); } }
-        itemsList['create_volume'] = { "name": snapshot_action_create_volume, callback: function(key, opt) { thisObj._createVolumeAction(); } }
+//        itemsList['register'] = { "name": snapshot_action_register, callback: function(key, opt) { thisObj._registerAction(); } }
+//        itemsList['create_volume'] = { "name": snapshot_action_create_volume, callback: function(key, opt) { thisObj._createVolumeAction(); } }
         itemsList['tag'] = {"name":'Tag Resource', callback: function(key, opt){ thisObj._tagResourceAction(); }}
+        itemsList['register_snapshot'] = { "name": snapshot_action_register, callback: function(key, opt) { thisObj._newRegisterSnapshotAction(); } }
+        itemsList['create_volume'] = { "name": snapshot_action_create_volume, callback: function(key, opt) { thisObj._newCreateVolumeAction(); } }
       }
+
+      // TEMP. Create Snapshot item will be available here during the backbone integration  --- Kyo 040813
+//      itemsList['create_snapshot'] = { "name": "Create new snapshot", callback: function(key, opt) { thisObj._newCreateSnapshotAction(); } }
 
       return itemsList;
     },
@@ -555,40 +568,47 @@
     },
 
     _tagResourceAction : function(){
-      var thisObj = this;
-      var snapshot = thisObj.tableWrapper.eucatable('getSelectedRows', 10)[0];
-      if ( snapshot.length > 0 ) {
-        // Create a widget object for displaying the resource tag information
-        var $tagInfo = $('<div>').addClass('resource-tag-table-expanded-snapshot').addClass('clearfix').euca_resource_tag({resource: 'snapshot', resource_id: snapshot, cancelButtonCallback: function(){ thisObj.tagDialog.eucadialog("close"); }, widgetMode: 'edit' });
-        thisObj.tagDialog.eucadialog('addNote','tag-modification-display-box', $tagInfo);   // This line should be adjusted once the right template is created for the resource tag.  030713
-        thisObj.tagDialog.eucadialog('open');
+      var selected = this.tableWrapper.eucatable('getSelectedRows', 10);
+      if ( selected.length > 0 ) {
+        require(['app'], function(app) {
+           app.dialog('edittags', app.data.snapshot.get(selected[0]));
+        });
        }
     },
 
-    _expandCallback : function(row){ 
-      var thisObj = this;
-      var snapId = row[10];
-      var results = describe('snapshot');
-      var snapshot = null;
-      for(s in results){
-        if(results[s].id === snapId){
-          snapshot = results[s];
-          break;
-        }
-      }
-
-      if(!snapshot)
-        return null;
-
-      var $wrapper = $('<div>');
-
-      $tagInfo = $('<div>').addClass('resource-tag-table-expanded-instance').addClass('clearfix').attr('id', snapshot.id).euca_resource_tag({resource: 'snapshot', resource_id: snapshot.id, widgetMode: 'view-only'});
-      
-      $tabspace = $('<div>').addClass('eucatabspace-main-div').eucatabspace(); 
-      $tabspace.eucatabspace('addTabPage', 'Tag', $tagInfo);
-      $wrapper.append($tabspace)
-      return $wrapper;
+    _newDeleteSnapshotAction : function(){
+      var dialog = 'delete_snapshot_dialog';
+      var selected = this.tableWrapper.eucatable('getSelectedRows', 10);
+      require(['views/dialogs/' + dialog], function( dialog) {
+        new dialog({items: selected});
+      });
     },
+
+    _newCreateVolumeAction : function(){
+      var dialog = 'create_volume_dialog';
+      var selected = this.tableWrapper.eucatable('getSelectedRows', 10);
+      require(['views/dialogs/' + dialog], function( dialog) {
+        new dialog({snapshot_id: selected});
+      });
+    },
+
+    _newRegisterSnapshotAction : function(){
+      var dialog = 'register_snapshot_dialog';
+      var selected = this.tableWrapper.eucatable('getSelectedRows', 10);
+      require(['views/dialogs/' + dialog], function( dialog) {
+        new dialog({item: selected});
+      });
+    },
+
+    _newCreateSnapshotAction : function(){
+      var dialog = 'create_snapshot_dialog';
+      require(['app'], function(app) {
+        app.dialog(dialog);
+      });
+    },
+
+
+
 
 /**** Public Methods ****/
     close: function() {

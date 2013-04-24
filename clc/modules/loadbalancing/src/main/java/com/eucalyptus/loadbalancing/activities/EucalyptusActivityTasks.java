@@ -66,6 +66,8 @@ import com.eucalyptus.autoscaling.common.CreateAutoScalingGroupResponseType;
 import com.eucalyptus.autoscaling.common.CreateAutoScalingGroupType;
 import com.eucalyptus.autoscaling.common.CreateLaunchConfigurationResponseType;
 import com.eucalyptus.autoscaling.common.CreateLaunchConfigurationType;
+import com.eucalyptus.autoscaling.common.CreateOrUpdateTagsResponseType;
+import com.eucalyptus.autoscaling.common.CreateOrUpdateTagsType;
 import com.eucalyptus.autoscaling.common.DeleteAutoScalingGroupResponseType;
 import com.eucalyptus.autoscaling.common.DeleteAutoScalingGroupType;
 import com.eucalyptus.autoscaling.common.DeleteLaunchConfigurationResponseType;
@@ -73,6 +75,8 @@ import com.eucalyptus.autoscaling.common.DeleteLaunchConfigurationType;
 import com.eucalyptus.autoscaling.common.DescribeAutoScalingGroupsResponseType;
 import com.eucalyptus.autoscaling.common.DescribeAutoScalingGroupsType;
 import com.eucalyptus.autoscaling.common.SecurityGroups;
+import com.eucalyptus.autoscaling.common.TagType;
+import com.eucalyptus.autoscaling.common.Tags;
 import com.eucalyptus.autoscaling.common.UpdateAutoScalingGroupResponseType;
 import com.eucalyptus.autoscaling.common.UpdateAutoScalingGroupType;
 import com.eucalyptus.autoscaling.configurations.LaunchConfiguration;
@@ -111,8 +115,13 @@ import edu.ucsb.eucalyptus.msgs.CreateMultiARecordResponseType;
 import edu.ucsb.eucalyptus.msgs.CreateMultiARecordType;
 import edu.ucsb.eucalyptus.msgs.CreateSecurityGroupResponseType;
 import edu.ucsb.eucalyptus.msgs.CreateSecurityGroupType;
+import edu.ucsb.eucalyptus.msgs.CreateTagsResponseType;
+import edu.ucsb.eucalyptus.msgs.CreateTagsType;
+import edu.ucsb.eucalyptus.msgs.DeleteResourceTag;
 import edu.ucsb.eucalyptus.msgs.DeleteSecurityGroupResponseType;
 import edu.ucsb.eucalyptus.msgs.DeleteSecurityGroupType;
+import edu.ucsb.eucalyptus.msgs.DeleteTagsResponseType;
+import edu.ucsb.eucalyptus.msgs.DeleteTagsType;
 import edu.ucsb.eucalyptus.msgs.DescribeAvailabilityZonesResponseType;
 import edu.ucsb.eucalyptus.msgs.DescribeAvailabilityZonesType;
 import edu.ucsb.eucalyptus.msgs.DescribeImagesResponseType;
@@ -133,6 +142,7 @@ import edu.ucsb.eucalyptus.msgs.RemoveMultiANameType;
 import edu.ucsb.eucalyptus.msgs.RemoveMultiARecordResponseType;
 import edu.ucsb.eucalyptus.msgs.RemoveMultiARecordType;
 import edu.ucsb.eucalyptus.msgs.ReservationInfoType;
+import edu.ucsb.eucalyptus.msgs.ResourceTag;
 import edu.ucsb.eucalyptus.msgs.RevokeSecurityGroupIngressResponseType;
 import edu.ucsb.eucalyptus.msgs.RevokeSecurityGroupIngressType;
 import edu.ucsb.eucalyptus.msgs.RunInstancesResponseType;
@@ -586,9 +596,10 @@ public class EucalyptusActivityTasks {
 		}
 	}
 	
-	public void createAutoScalingGroup(final String groupName, final List<String> availabilityZones, final int capacity, final String launchConfigName){
+	public void createAutoScalingGroup(final String groupName, final List<String> availabilityZones, final int capacity, final String launchConfigName, 
+			final String tagKey, final String tagValue){
 		final AutoScalingCreateGroupTask task =
-				new AutoScalingCreateGroupTask(groupName, availabilityZones, capacity, launchConfigName);
+				new AutoScalingCreateGroupTask(groupName, availabilityZones, capacity, launchConfigName, tagKey, tagValue);
 		final CheckedListenableFuture<Boolean> result = task.dispatch(new AutoScalingSystemActivity());
 		try{
 			if(result.get()){
@@ -824,6 +835,62 @@ public class EucalyptusActivityTasks {
 		}
 	}
 	
+	public void createTags(final String tagKey, final String tagValue, final List<String> resources){
+		final EucaCreateTagsTask task =
+				new EucaCreateTagsTask(tagKey, tagValue, resources);
+		final CheckedListenableFuture<Boolean> result = task.dispatch(new EucalyptusSystemActivity());
+		try{
+			if(result.get()){
+				return;
+			}else
+				throw new EucalyptusActivityException("failed to create tags");
+		}catch(Exception ex){
+			throw Exceptions.toUndeclared(ex);	
+		}
+	}
+	
+	public void deleteTags(final String tagKey, final String tagValue, final List<String> resources){
+		final EucaDeleteTagsTask task = 
+				new EucaDeleteTagsTask(tagKey, tagValue, resources);
+		final CheckedListenableFuture<Boolean> result = task.dispatch(new EucalyptusSystemActivity());
+		try{
+			if(result.get()){
+				return;
+			}else
+				throw new EucalyptusActivityException("failed to delete tags");
+		}catch(Exception ex){
+			throw Exceptions.toUndeclared(ex);	
+		}
+	}
+	
+	public void createOrUpdateAutoscalingTags(final String tagKey, final String tagValue, final String asgName){
+		final AutoscalingCreateOrUpdateTagsTask task =
+				new AutoscalingCreateOrUpdateTagsTask(tagKey, tagValue, asgName);
+		final CheckedListenableFuture<Boolean> result = task.dispatch(new AutoScalingSystemActivity());
+		try{
+			if(result.get()){
+				return;
+			}else
+				throw new EucalyptusActivityException("failed to create/update autoscaling tags");
+		}catch(Exception ex){
+			throw Exceptions.toUndeclared(ex);	
+		}
+	}
+	
+	public void deleteAutoscalingTags(final String tagKey, final String tagValue, final String asgName){
+		final AutoscalingDeleteTagsTask task =
+				new AutoscalingDeleteTagsTask(tagKey, tagValue, asgName);
+		final CheckedListenableFuture<Boolean> result = task.dispatch(new AutoScalingSystemActivity());
+		try{
+			if(result.get()){
+				return;
+			}else
+				throw new EucalyptusActivityException("failed to delete autoscaling tags");
+		}catch(Exception ex){
+			throw Exceptions.toUndeclared(ex);	
+		}
+	}
+	
 	private class EucaDescribeImagesTask extends EucalyptusActivityTask<EucalyptusMessage, Eucalyptus>{
 		private List<String> imageIds = null;
 		private List<ImageDetails> result = null;
@@ -856,6 +923,163 @@ public class EucalyptusActivityTasks {
 		
 		List<ImageDetails> getResult(){
 			return this.result;
+		}
+	}
+	
+	private class AutoscalingDeleteTagsTask extends EucalyptusActivityTask<AutoScalingMessage, AutoScaling>{
+		private String tagKey = null;
+		private String tagValue = null;
+		private String asgName = null;
+		
+		private AutoscalingDeleteTagsTask(final String tagKey, final String tagValue, final String asgName){
+			this.tagKey = tagKey;
+			this.tagValue = tagValue;
+			this.asgName = asgName;
+		}
+		
+		private com.eucalyptus.autoscaling.common.DeleteTagsType deleteTags(){
+			final com.eucalyptus.autoscaling.common.DeleteTagsType req = new com.eucalyptus.autoscaling.common.DeleteTagsType();
+			final Tags tags = new Tags();
+			final TagType tag = new TagType();
+			tag.setKey(this.tagKey);
+			tag.setValue(this.tagValue);
+			tag.setPropagateAtLaunch(true);
+			tag.setResourceType("auto-scaling-group");
+			tag.setResourceId(this.asgName);
+			tags.setMember(Lists.newArrayList(tag));
+			req.setTags(tags);
+			return req;
+		}
+		
+		@Override
+		void dispatchInternal(
+				ActivityContext<AutoScalingMessage, AutoScaling> context,
+				Checked<AutoScalingMessage> callback) {
+			final DispatchingClient<AutoScalingMessage, AutoScaling> client = context.getClient();
+			client.dispatch(deleteTags(), callback);	
+		}
+
+		@Override
+		void dispatchSuccess(
+				ActivityContext<AutoScalingMessage, AutoScaling> context,
+				AutoScalingMessage response) {
+			final com.eucalyptus.autoscaling.common.DeleteTagsResponseType resp = (com.eucalyptus.autoscaling.common.DeleteTagsResponseType) response;			
+		}	
+	}
+	
+	private class AutoscalingCreateOrUpdateTagsTask extends EucalyptusActivityTask<AutoScalingMessage, AutoScaling>{
+		private String tagKey = null;
+		private String tagValue = null;
+		private String asgName = null;
+		
+		private AutoscalingCreateOrUpdateTagsTask(final String tagKey, final String tagValue, final String asgName){
+			this.tagKey = tagKey;
+			this.tagValue = tagValue;
+			this.asgName = asgName;
+		}
+		
+		private CreateOrUpdateTagsType createOrUpdateTags(){
+			final CreateOrUpdateTagsType req = new CreateOrUpdateTagsType();
+			final Tags tags = new Tags();
+			final TagType tag = new TagType();
+			tag.setKey(this.tagKey);
+			tag.setValue(this.tagValue);
+			tag.setPropagateAtLaunch(true);
+			tag.setResourceType("auto-scaling-group");
+			tag.setResourceId(this.asgName);
+			tags.setMember(Lists.newArrayList(tag));
+			req.setTags(tags);
+			return req;
+		}
+		
+		@Override
+		void dispatchInternal(
+				ActivityContext<AutoScalingMessage, AutoScaling> context,
+				Checked<AutoScalingMessage> callback) {
+			final DispatchingClient<AutoScalingMessage, AutoScaling> client = context.getClient();
+			client.dispatch(createOrUpdateTags(), callback);	
+		}
+
+		@Override
+		void dispatchSuccess(
+				ActivityContext<AutoScalingMessage, AutoScaling> context,
+				AutoScalingMessage response) {
+			final CreateOrUpdateTagsResponseType resp = (CreateOrUpdateTagsResponseType) response;			
+		}
+		
+	}
+	
+	
+	private class EucaDeleteTagsTask extends EucalyptusActivityTask<EucalyptusMessage, Eucalyptus>{
+		private String tagKey = null;
+		private String tagValue = null;
+		private List<String> resources = null;
+		
+		private EucaDeleteTagsTask(final String tagKey, final String tagValue, final List<String> resources){
+			this.tagKey = tagKey;
+			this.tagValue = tagValue;
+			this.resources = resources;
+		}
+		
+		private DeleteTagsType deleteTags(){
+			final DeleteTagsType req = new DeleteTagsType();
+			req.setResourcesSet(Lists.newArrayList(this.resources));
+			final DeleteResourceTag tag = new DeleteResourceTag();
+			tag.setKey(this.tagKey);
+			tag.setValue(this.tagValue);
+			req.setTagSet(Lists.newArrayList(tag));
+			return req;
+		}
+		
+		@Override
+		void dispatchInternal(
+				ActivityContext<EucalyptusMessage, Eucalyptus> context,
+				Checked<EucalyptusMessage> callback) {
+
+			final DispatchingClient<EucalyptusMessage, Eucalyptus> client = context.getClient();
+			client.dispatch(deleteTags(), callback);				
+		}
+
+		@Override
+		void dispatchSuccess(
+				ActivityContext<EucalyptusMessage, Eucalyptus> context,
+				EucalyptusMessage response) {
+			final DeleteTagsResponseType resp = (DeleteTagsResponseType) response;
+		}
+	}
+	
+	private class EucaCreateTagsTask extends EucalyptusActivityTask<EucalyptusMessage, Eucalyptus>{
+		private String tagKey = null;
+		private String tagValue = null;
+		private List<String> resources = null;
+		private EucaCreateTagsTask(final String tagKey, final String tagValue, final List<String> resources){
+			this.tagKey = tagKey;
+			this.tagValue = tagValue;
+			this.resources = resources;
+		}
+		private CreateTagsType createTags(){
+			final CreateTagsType req = new CreateTagsType();
+			req.setResourcesSet(Lists.newArrayList(this.resources));
+			final ResourceTag tag = new ResourceTag();
+			tag.setKey(this.tagKey);
+			tag.setValue(this.tagValue);
+			req.setTagSet(Lists.newArrayList(tag));
+			return req;
+		}
+		
+		@Override
+		void dispatchInternal(
+				ActivityContext<EucalyptusMessage, Eucalyptus> context,
+				Checked<EucalyptusMessage> callback) {
+			final DispatchingClient<EucalyptusMessage, Eucalyptus> client = context.getClient();
+			client.dispatch(createTags(), callback);	
+		}
+
+		@Override
+		void dispatchSuccess(
+				ActivityContext<EucalyptusMessage, Eucalyptus> context,
+				EucalyptusMessage response) {
+			final CreateTagsResponseType resp = (CreateTagsResponseType) response;
 		}
 	}
 	
@@ -1329,12 +1553,17 @@ public class EucalyptusActivityTasks {
 		private List<String> availabilityZones = null;
 		private int capacity = 1;
 		private String launchConfigName = null;
+		private String tagKey = null;
+		private String tagValue = null;
 		
-		private AutoScalingCreateGroupTask(final String groupName, final List<String> zones, final int capacity, final String launchConfig){
+		private AutoScalingCreateGroupTask(final String groupName, final List<String> zones, 
+				final int capacity, final String launchConfig, final String tagKey, final String tagValue){
 			this.groupName = groupName;
 			this.availabilityZones = zones;
 			this.capacity = capacity;
 			this.launchConfigName = launchConfig;
+			this.tagKey = tagKey;
+			this.tagValue = tagValue;
 		}
 		
 		private CreateAutoScalingGroupType createAutoScalingGroup(){
@@ -1349,6 +1578,15 @@ public class EucalyptusActivityTasks {
 			req.setMinSize(this.capacity);
 			req.setHealthCheckType("EC2");
 			req.setLaunchConfigurationName(this.launchConfigName);
+			final Tags tags = new Tags();
+			final TagType tag = new TagType();
+			tag.setKey(this.tagKey);
+			tag.setValue(this.tagValue);
+			tag.setPropagateAtLaunch(true);
+			tag.setResourceType("auto-scaling-group");
+			tag.setResourceId(this.groupName);
+			tags.setMember(Lists.newArrayList(tag));
+			req.setTags(tags);
 			return req;
 		}
 		

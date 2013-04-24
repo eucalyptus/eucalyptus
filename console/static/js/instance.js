@@ -36,8 +36,6 @@
     instPassword : {}, // only windows instances
     detachButtonId : 'btn-vol-detach',
     _init : function() {
-            console.log ( "INIT!!!" );
-        
       var thisObj = this;
       var $tmpl = $('html body').find('.templates #instanceTblTmpl').clone();
       var $wrapper = $($tmpl.render($.extend($.i18n.map, help_instance)));
@@ -45,7 +43,7 @@
       var $instHelp = $wrapper.children().last();
       thisObj.tableWrapper = $instTable.eucatable({
         id : 'instances', // user of this widget should customize these options,
-        data_deps: ['instances', 'volumes', 'addresses'],
+        data_deps: ['instances', 'volumes', 'addresses', 'tags'],
         hidden: thisObj.options['hidden'],
         dt_arg : {
           "sAjaxSource": 'instance',
@@ -70,14 +68,18 @@
               },
             },
             { 
-	      // Display the id of the instance in the main table
+	      // Display the display_id of the instance in the main table
+	      // If display_id doesn't exist, display its id
 	      // Allow the id to be clickable to display the platform data above
 	      // Use CSS 'twist'
 	      "aTargets":[2],
-	      "mRender" : function(data){
-                 return eucatableDisplayColumnTypeTwist(data, data, 255);
-	      },
-              "mData": "id",
+              "mData": function(source){
+                this_title = source.id;
+                this_id = source.id;
+                if(source.display_id)
+                  this_id = source.display_id;
+                return eucatableDisplayColumnTypeTwist(this_title, this_id, 255);
+              },
             },
             { 
 	      // Display the status of the instance in the main table
@@ -217,6 +219,28 @@
               },
               "mData": "ip_address",
             },
+            { 
+	      // Hidden column for the instance id of the instance
+              "bVisible": false,
+              "aTargets":[17],
+	      "mRender": function(data) {
+                return DefaultEncoder().encodeForHTML(data);
+              },
+              "mData": "id",
+            },
+            { 
+	      // Hidden column for the display_id of the instance
+              "bVisible": false,
+              "aTargets":[18],
+	      "mRender": function(data) {
+                return DefaultEncoder().encodeForHTML(data);
+              },
+              "mData": function(source){
+                if(source.display_id)
+                  return source.display_id;
+                return null;
+              },
+            },
           ]
         },
         text : {
@@ -244,7 +268,7 @@
         expand_callback : function(row){ // row = [col1, col2, ..., etc]
           return thisObj._expandCallback(row);
         },
-        filters : [{name:"inst_state", default: thisObj.options.state_filter, options: ['all','running','pending','stopped','terminated'], text: [instance_state_selector_all,instance_state_selector_running,instance_state_selector_pending,instance_state_selector_stopped,instance_state_selector_terminated], filter_col:12}, 
+        filters : [{name:"state", default: thisObj.options.state_filter, options: ['all','running','pending','stopped','terminated'], text: [instance_state_selector_all,instance_state_selector_running,instance_state_selector_pending,instance_state_selector_stopped,instance_state_selector_terminated], filter_col:12}, 
                    {name:"inst_type", options: ['all', 'ebs','instance-store'], text: [instance_type_selector_all, instance_type_selector_ebs, instance_type_selector_instancestore], filter_col:11}],
         legend : ['running','pending','stopping','stopped','shuttingdown','terminated']
       }) //end of eucatable
@@ -464,7 +488,8 @@
 
      if(numSelected === 1 && 'running' in stateMap && $.inArray(instIds[0], stateMap['running']>=0)){
        menuItems['console'] = {"name":instance_action_console, callback: function(key, opt) { thisObj._consoleAction(); }}
-       menuItems['attach'] = {"name":instance_action_attach, callback: function(key, opt) { thisObj._attachAction(); }}
+//       menuItems['attach'] = {"name":instance_action_attach, callback: function(key, opt) { thisObj._attachAction(); }}
+       menuItems['attach'] = {"name":instance_action_attach, callback: function(key, opt) { thisObj._newAttachAction(); }}
      }
  
      // detach-volume is for one selected instance 
@@ -476,18 +501,30 @@
          if( state==='attached' && !isRootVolume(instIds[0], vol))
            attachedFound = true;
        });   
-       if(attachedFound)
+       if(attachedFound){
          menuItems['detach'] = {"name":instance_action_detach, callback: function(key, opt) { thisObj._detachAction(); }}
+       }
      }
 
      // TODO: assuming associate-address is valid for only running/pending instances
      if(numSelected === 1 && ('running' in stateMap || 'pending' in stateMap) && ($.inArray(instIds[0], stateMap['running']>=0) || $.inArray(instIds[0], stateMap['pending'] >=0)))
        menuItems['associate'] = {"name":instance_action_associate, callback: function(key, opt){thisObj._associateAction(); }}
   
-     // TODO: assuming disassociate-address is for only one selected instance 
-     if(numSelected  === 1 && instIds[0] in thisObj.instIpMap)
-       menuItems['disassociate'] = {"name":instance_action_disassociate, callback: function(key, opt){thisObj._disassociateAction();}}
- 
+     // TODO: assuming disassociate-address is for only one selected instance
+     // ADJUSTED: More than 1 instance can be selected for disassociate action  --- Kyo 041513 
+     if(numSelected  >= 1 ){
+       var associatedCount = 0;
+       $.each(selectedRows, function(rowIdx, row){
+//         console.log("InstanceIPMap: " + thisObj.instIpMap[row['id'].toLowerCase()]);
+         if( thisObj.instIpMap[row['id'].toLowerCase()] != null ){
+           associatedCount++;
+         } 
+       });
+       if( numSelected == associatedCount ){
+         menuItems['disassociate'] = {"name":instance_action_disassociate, callback: function(key, opt){thisObj._disassociateAction();}}
+       };
+     }
+
      if(numSelected == 1){
        menuItems['tag'] = {"name":'Tag Resource', callback: function(key, opt){ thisObj._tagResourceAction(); }}
      }
@@ -529,24 +566,30 @@
 /// Action methods
     _terminateAction : function(){
       var thisObj = this;
-      var instances = thisObj.tableWrapper.eucatable('getSelectedRows', 2);
+      var instances = thisObj.tableWrapper.eucatable('getSelectedRows', 17);
+      var display_ids = thisObj.tableWrapper.eucatable('getSelectedRows', 18);
       var rootType = thisObj.tableWrapper.eucatable('getSelectedRows', 11);
       if ( instances.length > 0 ) {
         var matrix = [];
+        // Push the instance id and its display_id into the matrix
         $.each(instances, function(idx,id){
-//          id = $(id).html();  // After dataTable 1.9 integration, this operation is no longer needed. 030413
-          matrix.push([id]);
+          this_display_id = id;
+          if( display_ids[idx] != null )
+            this_display_id = display_ids[idx];
+          matrix.push([id, this_display_id]);
         });
         if ($.inArray('ebs',rootType)>=0){
           thisObj.termDialog.eucadialog('addNote','ebs-backed-warning', instance_dialog_ebs_warning); 
         }
-        thisObj.termDialog.eucadialog('setSelectedResources', {title: [instance_label], contents: matrix});
+        // included_display_id : true is added to attach instance ID to the second column in the eucadialog resource table -- Kyo 040113   No Joke
+        thisObj.termDialog.eucadialog('setSelectedResources', {title: [instance_label], contents: matrix, included_display_id: true});
         thisObj.termDialog.eucadialog('open');
        }
     },
+
     _terminateInstances : function(){
       var thisObj = this;
-      var instances = thisObj.termDialog.eucadialog('getSelectedResources',0);
+      var instances = thisObj.termDialog.eucadialog('getSelectedResources', 1);    // Now eucadialog's column[1] contains the instance id 
       var toTerminate = instances.slice(0);
       var instIds = '';
       for(i=0; i<instances.length; i++)
@@ -582,20 +625,23 @@
     },
     _rebootAction : function(){
       var thisObj = this;
-      var instances = thisObj.tableWrapper.eucatable('getSelectedRows', 2);
+      var instances = thisObj.tableWrapper.eucatable('getSelectedRows', 17);
+      var display_ids = thisObj.tableWrapper.eucatable('getSelectedRows', 18);
       if ( instances.length > 0 ) {
         var matrix = [];
         $.each(instances, function(idx,id){
-//          id = $(id).html();  // After dataTable 1.9 integration, this operation is no longer needed. 030413
-          matrix.push([id]);
+          this_display_id = id;
+          if( display_ids[idx] != null )
+            this_display_id = display_ids[idx];
+          matrix.push([id, this_display_id]);
         });
-        thisObj.rebootDialog.eucadialog('setSelectedResources', {title: [instance_label], contents: matrix});
+        thisObj.rebootDialog.eucadialog('setSelectedResources', {title: [instance_label], contents: matrix, included_display_id: true});
         thisObj.rebootDialog.eucadialog('open');
        }
     },
     _rebootInstances : function(){
       var thisObj = this;
-      var instances = thisObj.rebootDialog.eucadialog('getSelectedResources',0);
+      var instances = thisObj.rebootDialog.eucadialog('getSelectedResources', 1);
       //instances = instances.join(' ');
       var instIds = '';
       for(i=0; i<instances.length; i++)
@@ -622,20 +668,23 @@
     },
     _stopAction : function(){
       var thisObj = this;
-      var instances = thisObj.tableWrapper.eucatable('getSelectedRows', 2);
+      var instances = thisObj.tableWrapper.eucatable('getSelectedRows', 17);
+      var instances = thisObj.tableWrapper.eucatable('getSelectedRows', 18);
       if ( instances.length > 0 ) {
         var matrix = [];
         $.each(instances, function(idx,id){
-//          id = $(id).html();   // After dataTable 1.9 integration, this operation is no longer needed. 030413
-          matrix.push([id]);
+          this_display_id = id;
+          if( display_ids[idx] != null )
+            this_display_id = display_ids[idx];
+          matrix.push([id, this_display_id]);
         });
-        thisObj.stopDialog.eucadialog('setSelectedResources', {title: [instance_label], contents: matrix});
+        thisObj.rebootDialog.eucadialog('setSelectedResources', {title: [instance_label], contents: matrix, included_display_id: true});
         thisObj.stopDialog.eucadialog('open');
        }
     },
     _stopInstances : function(){
       var thisObj = this;
-      var instances = thisObj.stopDialog.eucadialog('getSelectedResources',0);
+      var instances = thisObj.stopDialog.eucadialog('getSelectedResources', 1);
       var toStop = instances.slice(0);
       var instIds = '';
       for(i=0; i<instances.length; i++)
@@ -669,7 +718,7 @@
     },
     _startInstances : function(){
       var thisObj = this;
-      var instances = thisObj.tableWrapper.eucatable('getSelectedRows', 2);
+      var instances = thisObj.tableWrapper.eucatable('getSelectedRows', 17);
 //      $.each(instances, function(idx, instance){
 //        instances[idx] = $(instance).html();   // After dataTable 1.9 integration, this operation is no longer needed. 030413
 //      });
@@ -708,7 +757,7 @@
     },
     _connectAction : function(){
       var thisObj = this;
-      var instances = thisObj.tableWrapper.eucatable('getSelectedRows', 2);
+      var instances = thisObj.tableWrapper.eucatable('getSelectedRows', 17);
       var oss = thisObj.tableWrapper.eucatable('getSelectedRows', 1);
       var keyname = thisObj.tableWrapper.eucatable('getSelectedRows', 8);
       var ip = thisObj.tableWrapper.eucatable('getSelectedRows', 6);
@@ -770,45 +819,75 @@
     },
     _consoleAction : function() {
       var thisObj = this;
-      var instances = thisObj.tableWrapper.eucatable('getSelectedRows', 2);
-      instances=instances[0];
-//      instances = $(instances).html();    // After dataTable 1.9 integration, this operation is no longer needed. 030413
+      var instance = thisObj.tableWrapper.eucatable('getSelectedRows', 17)[0];
+      var display_id = thisObj.tableWrapper.eucatable('getSelectedRows', 18)[0];
       $.when( 
         $.ajax({
           type:"POST",
           url:"/ec2?Action=GetConsoleOutput",
-          data:"_xsrf="+$.cookie('_xsrf')+"&InstanceId="+instances,
+          data:"_xsrf="+$.cookie('_xsrf')+"&InstanceId="+instance,
           dataType:"json",
           async:true,
         })).done(function(data){
+          // Convert the value 'instance' to its display_id 
+          if( display_id != null ){
+            instance = display_id;
+          }
           if(data && data.results){
-            var newTitle = $.i18n.prop('instance_dialog_console_title',  DefaultEncoder().encodeForHTML(instances));
+            var newTitle = $.i18n.prop('instance_dialog_console_title',  DefaultEncoder().encodeForHTML(instance));
             thisObj.consoleDialog.data('eucadialog').option('title', newTitle);
             thisObj.consoleDialog.find('#instance-console-output').children().detach();
             thisObj.consoleDialog.find('#instance-console-output').append(
               $('<textarea>').attr('id', 'instance-console-output-text').addClass('console-output').text(data.results.output));
             thisObj.consoleDialog.eucadialog('open');
           }else{
-            notifyError($.i18n.prop('instance_console_error',  DefaultEncoder().encodeForHTML(instances)), undefined_error);
+            notifyError($.i18n.prop('instance_console_error',  DefaultEncoder().encodeForHTML(instance)), undefined_error);
           }
         }).fail(function(out){
-          notifyError($.i18n.prop('instance_console_error',  DefaultEncoder().encodeForHTML(instances)), getErrorMessage(out));
+          notifyError($.i18n.prop('instance_console_error',  DefaultEncoder().encodeForHTML(instance)), getErrorMessage(out));
         });
     },
     _attachAction : function() {
       var thisObj = this;
-      var instanceToAttach = thisObj.tableWrapper.eucatable('getSelectedRows', 2)[0];
+      var instanceToAttach = thisObj.tableWrapper.eucatable('getSelectedRows', 17)[0];
 //      instanceToAttach=$(instanceToAttach).html();   // After dataTable 1.9 integration, this operation is no longer needed. 030413
       attachVolume(null, instanceToAttach);
+    },
+    // NEW DIALOG THAT USES THE BACKBONE INTEGRATION
+    _newAttachAction : function() {
+      var dialog = 'attach_volume_dialog';
+      var selected = this.tableWrapper.eucatable('getSelectedRows', 17);
+      require(['views/dialogs/' + dialog], function( dialog) {
+        new dialog({instance_id: selected});
+      });
     },
 
     _initDetachDialog : function(dfd) {  // should resolve dfd object
       var thisObj = this;
       var results = describe('volume');
-      var instance = this.tableWrapper.eucatable('getSelectedRows', 2)[0];
- //     instance = $(instance).html();   // After dataTable 1.9 integration, this operation is no longer needed. 030413
+      var instance = this.tableWrapper.eucatable('getSelectedRows', 17)[0];
+
+      // FIX TO DISPLAY THE NAME TAG OF THE INSTANCE --- Kyo 041513
+      var nameTag = null;
+      var this_instance = require('app').data.instance.get(instance);
+      if( this_instance ){
+        var this_tags = this_instance.get('tags');
+        this_tags.each(function(tag){
+          if( tag.get('name') == 'Name' || tag.get('name') == 'name' ){
+            nameTag = tag.get('value');
+          };
+        });
+      }
+
       $msg = this.detachDialog.find('#volume-detach-msg');
-      $msg.html($.i18n.prop('inst_volume_dialog_detach_text', DefaultEncoder().encodeForHTML(instance)));
+
+      // FIX TO DISPLAY THE NAME TAG OF THE INSTANCE --- Kyo 041513
+      if( nameTag == null ){
+        $msg.html($.i18n.prop('inst_volume_dialog_detach_text', DefaultEncoder().encodeForHTML(instance)));
+      }else{ 
+       $msg.html($.i18n.prop('inst_volume_dialog_detach_text', DefaultEncoder().encodeForHTML(nameTag)));
+      }
+
       var $p = this.detachDialog.find('#volume-detach-select-all');
       $p.children().detach();
       $p.html('');
@@ -821,12 +900,19 @@
       });
       $p.append(inst_volume_dialog_select_all_msg, '&nbsp;', $selectAll);
       volumes = [];
+      volume_ids = [];   // ADDITIONAL ARRAY FOR HOLDING THE VOLUME ID   -- Kyo 041513
       $.each(results, function(idx, volume){
         if ( volume.attach_data && volume.attach_data['status'] ){
           var inst = volume.attach_data['instance_id'];
           var state = volume.attach_data['status'];
           if( state === 'attached' && inst === instance && !isRootVolume(inst, volume.id) ){
-            volumes.push(volume.id);
+            // FIX TO DISPLAY THE NAME TAG OF THE VOLUME  --- Kyo 041513
+            if( volume.display_id != null ){
+              volumes.push(volume.display_id);   // PASS THE DISPLAY ID IF EXISTS
+            }else{
+              volumes.push(volume.id);   // OR USE THE VOLUME ID
+            }
+            volume_ids.push(volume.id);   // ALWAYS HOLD THE VOLUME ID FOR THE ARRAY 'volume_ids'
           }
         }
       });
@@ -840,7 +926,8 @@
           if (volumes.length > inx) {
             volId = volumes[inx];
 	    volId = DefaultEncoder().encodeForHTML(volId);
-            $cb = $('<input>').attr('type', 'checkbox').attr('value', volId);
+            real_vol_id = volume_ids[inx];                    // XSS RISK ?  --- Kyo 041513
+            $cb = $('<input>').attr('type', 'checkbox').attr('value', volId).attr('title', real_vol_id);   // USE THE TITLE ATTR TO HIDE THE VOLUME ID
             $row.append($('<td>').append($cb,'&nbsp;', volId));
             $cb.click( function() {
               if ( thisObj.detachDialog.find("input:checked").length > 0 )
@@ -858,8 +945,7 @@
     },
 
     _detachAction : function(){
-      var instance = this.tableWrapper.eucatable('getSelectedRows', 2)[0];
-//      instance = $(instance).html();   // After dataTable 1.9 integration, this operation is no longer needed. 030413
+      var instance = this.tableWrapper.eucatable('getSelectedRows', 17)[0];
       $instId = this.detachDialog.find('#volume-detach-instance-id');
       $instId.val(instance);
       this.detachDialog.eucadialog('open');
@@ -870,7 +956,8 @@
       var checkedVolumes = thisObj.detachDialog.find("input:checked"); 
       var selectedVolumes = [];
       $.each(checkedVolumes, function(idx, vol){ 
-        selectedVolumes.push($(vol).val());
+        //selectedVolumes.push($(vol).val());
+        selectedVolumes.push($(vol).attr('title'));   // FIX TO USE THE TITLE VALUE WHICH CONTAINS THE VOLUME ID --- Kyo 041513
       }); 
       var done = 0;
       var all = selectedVolumes.length;
@@ -921,33 +1008,33 @@
     },
     _associateAction : function(){
       var thisObj = this;
-      var instance = thisObj.tableWrapper.eucatable('getSelectedRows', 2)[0];
-//      instance = $(instance).html();  // After dataTable 1.9 integration, this operation is no longer needed. 030413
+      var instance = thisObj.tableWrapper.eucatable('getSelectedRows', 17)[0];
       associateIp(instance);
     },
     _disassociateAction : function(){
       var thisObj = this;
-      var ip = thisObj.tableWrapper.eucatable('getSelectedRows', 16)[0];
+      var ips = thisObj.tableWrapper.eucatable('getSelectedRows', 16);
       var results = describe('eip');
-      var addr = null;
-      for(i in results){
-        if (results[i].public_ip === ip){
-          addr = results[i];
-          break;
+      var addrs = [];
+      _.each(ips, function(ip){
+        for(i in results){
+          if (results[i].public_ip === ip){
+            addrs.push(results[i]);
+          }
         }
+      });
+      if(addrs.length >= 1){
+        disassociateIp(addrs);
       }
-      if(addr)
-        disassociateIp(addr);
     },
 
     _tagResourceAction : function(){
       var thisObj = this;
-      var instance = thisObj.tableWrapper.eucatable('getSelectedRows', 2)[0];
+      var instance = thisObj.tableWrapper.eucatable('getSelectedRows', 17);
       if ( instance.length > 0 ) {
-        // Create a widget object for displaying the resource tag information
-        var $tagInfo = $('<div>').addClass('resource-tag-table-expanded-instance').addClass('clearfix').euca_resource_tag({resource: 'instance', resource_id: instance, cancelButtonCallback: function(){ thisObj.tagDialog.eucadialog("close"); }, widgetMode: 'edit' });
-        thisObj.tagDialog.eucadialog('addNote','tag-modification-display-box', $tagInfo);   // This line should be adjusted once the right template is created for the resource tag.  030713
-        thisObj.tagDialog.eucadialog('open');
+        require(['app'], function(app) {
+           app.dialog('edittags', app.data.instance.get(instance[0]));
+        });
        }
     },
 
@@ -957,7 +1044,7 @@
 
     _launchMore : function(){
       var thisObj = this;
-      var id = this.tableWrapper.eucatable('getSelectedRows', 2)[0];
+      var id = this.tableWrapper.eucatable('getSelectedRows', 17)[0];
 //      id = $(id).html();    // After dataTable 1.9 integration, this operaiton is no longer needed. 030413
       var filter = {};
       var result = describe('instance');
@@ -1036,7 +1123,7 @@
     },
     _initLaunchMoreDialog : function(){
       var thisObj = this;
-      var id = this.tableWrapper.eucatable('getSelectedRows', 2)[0];
+      var id = this.tableWrapper.eucatable('getSelectedRows', 17)[0];
 //      id = $(id).html();       // After dataTable 1.9 integration, this operation is no longer needed.  030413 
       var filter = {};
       var result = describe('instance');
@@ -1140,121 +1227,13 @@
       $('html body').find(DOM_BINDING['hidden']).launcher('makeAdvancedSection', $advanced);
       $advanced.find('#launch-wizard-image-emi').val(image.id).trigger('change');
     },
-    _expandCallback : function(row){
+    _expandCallback : function(row){ 
       var thisObj = this;
-      var instId = $(row[2]).html();			// XSS Note:: Replaced .html() to text() - Kyo 020613
-      var results = describe('instance');		// Note:: describe() is such a generic name; be descriptive when naming a global function - Kyo 020613
-      var instance = null; 
-      for(i in results){				// Note:: Create a global function that performs "describe(<resource>, ID)" - Kyo 020613
-        if(results[i].id === instId){
-          instance = results[i];
-          break;
-        }
-      }
-      if(!instance)
-        return null; 
-      var $wrapper = $('<div>');
-      var prodCode = ''; 
-      if(instance['product_codes'] && instance['product_codes'].length > 0)
-        prodCode = instance['product_codes'].join(' ');
-      var image = describe('image',instance['image_id']);	// Note:: If appears that this function exists. See the previous note above ^ - Kyo 020613
- 
-      var os = 'unknown';
-      if(image && image['platform'])
-        os = image['platform']
-      else 
-        os = 'linux';
-      var manifest = 'unknown';
-      if(image && image.location)
-        manifest = image.location; 
-      var $instInfo = $('<div>').addClass('instance-table-expanded-instance').addClass('clearfix').append(
-      $('<div>').addClass('expanded-section-label').text(instance_table_expanded_instance),
-      $('<div>').addClass('expanded-section-content').addClass('clearfix').append(
-        $('<ul>').addClass('instance-expanded').addClass('clearfix').append(
-          $('<li>').append( 
-            $('<div>').addClass('expanded-title').text(instance_table_expanded_type),
-            $('<div>').addClass('expanded-value').text(instance['instance_type'])),
-          $('<li>').append(
-            $('<div>').addClass('expanded-title').text(inst_tbl_hdr_os),
-            $('<div>').addClass('expanded-value').text(os)),
-          $('<li>').append(
-            $('<div>').addClass('expanded-title').text(instance_table_expanded_kernel),
-            $('<div>').addClass('expanded-value').text(instance['kernel'])),
-          $('<li>').append(
-            $('<div>').addClass('expanded-title').text(instance_table_expanded_ramdisk),
-            $('<div>').addClass('expanded-value').text(instance['ramdisk'])),
-          $('<li>').append(
-            $('<div>').addClass('expanded-title').text(instance_table_expanded_root),
-            $('<div>').addClass('expanded-value').text(instance['root_device_type'])),
-          $('<li>').append(
-            $('<div>').addClass('expanded-title').text(instance_table_expanded_reservation),
-            $('<div>').addClass('expanded-value').text(instance['reservation_id'])),
-          $('<li>').append(
-            $('<div>').addClass('expanded-title').text(instance_table_expanded_account),
-            $('<div>').addClass('expanded-value').text(instance['owner_id'])),
-          $('<li>').append(
-            $('<div>').addClass('expanded-title').text(instance_table_expanded_manifest),
-            $('<div>').addClass('expanded-value').text(manifest)))));
-
-      var $volInfo = null;
-      if(instance.block_device_mapping && Object.keys(instance.block_device_mapping).length >0){
-        results = describe('volume');
-        var attachedVols = {};
-        for (i in results){
-          var vol = results[i];
-          if(vol.attach_data && vol.attach_data.instance_id ===instId) 
-            attachedVols[vol.id] = vol;
-        }
-        $volInfo = $('<div>').addClass('instance-table-expanded-volume').addClass('clearfix').append(
-            $('<div>').addClass('expanded-section-label').text(instance_table_expanded_volume),
-            $('<div>').addClass('expanded-section-content').addClass('clearfix'));
-        $.each(instance.block_device_mapping, function(key, mapping){
-          var creationTime = '';
-          if(mapping.volume_id in attachedVols){
-            creationTime = attachedVols[mapping.volume_id].create_time;
-            creationTime = formatDateTime(creationTime); 
-            $volInfo.find('.expanded-section-content').append(
-              $('<ul>').addClass('volume-expanded').addClass('clearfix').append(
-                $('<li>').append(
-                  $('<div>').addClass('expanded-title').text(instance_table_expanded_volid),
-                  $('<div>').addClass('expanded-value').text(mapping.volume_id)),
-                $('<li>').append(
-                  $('<div>').addClass('expanded-title').text(instance_table_expanded_devmap),
-                  $('<div>').addClass('expanded-value').text(key)),
-                $('<li>').append(
-                  $('<div>').addClass('expanded-title').text(instance_table_expanded_createtime),
-                  $('<div>').addClass('expanded-value').text(creationTime))));
-          }
-        });
-      } 
-//      $wrapper.append($instInfo);
-
-//        $wrapper.append($volInfo);
-
-      // Create a widget object for displaying the resource tag information
-      $tagInfo = $('<div>').addClass('resource-tag-table-expanded-instance').addClass('clearfix').attr('id', instance.id).euca_resource_tag({resource: 'instance', resource_id: instance.id, widgetMode: 'view-only'});
-
-      $tabspace = $('<div>').addClass('eucatabspace-main-div').eucatabspace(); 
-      $tabspace.eucatabspace('addTabPage', 'Instance', $instInfo);
-      $tabspace.eucatabspace('addTabPage', 'Volume', $volInfo);
-      $tabspace.eucatabspace('addTabPage', 'Tag', $tagInfo);
-      $wrapper.append($tabspace);
-/*
-      $wrapper.append(
-	$('<div>').attr('id', 'tabs').append(
-	   $('<ui>').append(
-	   	$('<li>').append(
-		   $('<a>').attr('href','#tabs-1').text('Instance')),
-		$('<li>').append(
-                   $('<a>').attr('href','#tabs-2').text('Volume')),
-		$('<li>').append(
-                   $('<a>').attr('href','#tabs-3').text('Tag'))),
-	   $('<div>').attr('id', 'tabs-1').append($instInfo),
-	   $('<div>').attr('id', 'tabs-2').append($volInfo),
-	  // $('<div>').attr('id', 'tabs-3').append($('<div>').text('Name: <name_here>').html())));
-	   $('<div>').attr('id', 'tabs-3').append($tabspace)));
-*/	
-      return $wrapper;
+      var $el = $('<div />');
+      require(['app', 'views/expandos/instance'], function(app, expando) {
+         new expando({el: $el, model: app.data.instance.get(row[17]) });
+      });
+      return $el;
     },
 /**** Public Methods ****/
     close: function() {

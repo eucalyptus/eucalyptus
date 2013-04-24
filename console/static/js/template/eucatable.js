@@ -59,6 +59,7 @@
       var dtArg = this._getTableParam();
 
       thisObj.tableArg = dtArg;
+      this.sAjaxSource = dtArg.sAjaxSource;
       this.table = this.element.find('table').dataTable(dtArg);
       var $header = this._decorateHeader();
       this._decorateSearchBar();
@@ -90,6 +91,7 @@
         if (typeof source === 'undefined') {
           throw new Error("No property '" + target + " on app.data");
         }
+        thisObj.source = source;
         thisObj.searchConfig = new searchConfig(source);
         thisObj.bbdata = thisObj.searchConfig.filtered;
         thisObj.vsearch = VS.init({
@@ -102,8 +104,16 @@
                 valueMatches : thisObj.searchConfig.valueMatches
             }
         });
-        thisObj.bbdata.on('change reset', function() {
-            thisObj.refreshTable()
+        if(thisObj.options.filters){
+          $.each(thisObj.options.filters, function(idx, filter){
+            if (filter['default']) {
+              thisObj.vsearch.searchBox.value(filter['name']+": "+filter['default'])
+            }
+          });
+        }
+        thisObj.bbdata.on('change add remove reset', function() {
+            console.log('bbdata refresh');
+            thisObj.refreshTable.call(thisObj)
         });
         thisObj.refreshTable();
       });
@@ -145,7 +155,6 @@
          }
       */
       dt_arg['fnServerData'] = function (sSource, aoData, fnCallback) {
-        console.log('fnServerData', arguments);
         var data = {};
         data.aaData = thisObj.bbdata ? thisObj.bbdata.toJSON() : [];
         data.iTotalRecords = data.aaData.length;
@@ -160,7 +169,7 @@
           var $createNew = $('<a>').attr('href','#').text(thisObj.options.text.create_resource);
           $createNew.click( function() { 
             thisObj.options.menu_click_create(); 
-            $('html body').trigger('click.datatable', 'create-new');
+            $('html body').trigger('click', 'create-new');
             return false;
           });
           text = $emptyDataTd.html();
@@ -199,8 +208,8 @@
       $('#table_' + this.options.id + '_count').text($.i18n.prop(thisObj.options.text.resource_found, oSettings.fnRecordsDisplay()));
       this.element.find('table thead tr').each(function(index, tr){
         var $checkAll = $(tr).find(':input[type="checkbox"]');
-        if(! $checkAll.data('events') || !('click.datatable' in $checkAll.data('events'))){
-          $checkAll.unbind('click.datatable').bind('click.datatable', function (e) {
+        if(! $checkAll.data('events') || !('click' in $checkAll.data('events'))){
+          $checkAll.unbind('click').bind('click', function (e) {
             var checked = $(this).is(':checked');
             thisObj.element.find('table tbody tr').each(function(innerIdx, innerTr){
               if(checked)
@@ -223,21 +232,25 @@
           $(allTds).each(function(){ 
             row[i++] = $(this).html();
           }); 
+        // don't do this since we never turn off expando-row anymore
+        /*
           $expand = thisObj.options.expand_callback(row);
           if($expand === null){
             var text = $currentRow.find('a.twist').text(); 
             $currentRow.find('a.twist').parent().text(text);
             $currentRow.find('a.twist').remove();
           }
+        */
         }
         
-        if(!$currentRow.data('events') || !('click.datatable' in $currentRow.data('events'))){
-          $currentRow.unbind('click.datatable').bind('click.datatable', function (e) {
-            // We must regenerate the row so that any events are correctly rebound.
-            $expand = thisObj.options.expand_callback(row);
+        if(!$currentRow.data('events') || !('click' in $currentRow.data('events'))){
+          $currentRow.unbind('click').bind('click', function (e) {
             if($(e.target).is('a') && $(e.target).hasClass('twist') && thisObj.options.expand_callback){
               if(!$currentRow.next().hasClass('expanded')){
-                thisObj.element.find('table tbody').find('tr.expanded').remove(); // remove all expanded
+                // Generate the expanded area
+                $expand = thisObj.options.expand_callback(row);
+
+                //thisObj.element.find('table tbody').find('tr.expanded').remove(); // remove all expanded
                 thisObj.element.find('table tbody').find('a.expanded').removeClass('expanded');
                 if(!$expand.hasClass('expanded-row-inner-wrapper'))
                   $expand.addClass('expanded-row-inner-wrapper');
@@ -248,8 +261,15 @@
                   $currentRow.find('a.twist').addClass('expanded');
                 }
               }else{
-                thisObj.element.find('table tbody').find('tr.expanded').remove(); // remove all expanded 
-                thisObj.element.find('table tbody').find('a.expanded').removeClass('expanded');
+                //thisObj.element.find('table tbody').find('tr.expanded').remove(); // remove all expanded 
+                var $twist = $currentRow.find('a.twist');
+                $currentRow.next().toggle();
+                if ($twist.hasClass('expanded')) {
+                    $twist.removeClass('expanded');
+                } else {
+                    $twist.addClass('expanded');
+                }
+                //thisObj.element.find('table tbody').find('a.expanded').removeClass('expanded');
               }
             }else{
               var $selectedRow = $currentRow; 
@@ -337,11 +357,13 @@
       $wrapper.insertAfter(filterArr[filterArr.length-1]);
       $(filterArr).each(function(){$(this).remove();});
 
-if (true) {
       $wrapper.empty();
       $wrapper.prepend('<div class="dataTables_filter" id="images_filter"><a class="table-refresh" href="#">Refresh</a></div>');
+      $wrapper.find('.table-refresh').click(function(){
+        thisObj.refreshSource();
+      });
+
       $wrapper.prepend(thisObj.$vel);
-}         
     },   
 
     // args.txt_create (e.g., Create new key)
@@ -387,12 +409,12 @@ if (true) {
       // add action to create new
       this.element.find('#table-' + this.options.id + '-new').click(function(e) {
         thisObj._trigger('menu_click_create', e); // users of the table should listen to
-        $('html body').trigger('click.datatable', 'create-new');
+        $('html body').trigger('click', 'create-new');
         return false;
       });
       this.element.find('#table-' + this.options.id + '-extra').click(function(e) {
         thisObj._trigger('menu_click_extra', e); // users of the table should listen to
-        $('html body').trigger('click.datatable', 'create-extra');
+        $('html body').trigger('click', 'create-extra');
         return false;
       });
       return $tableTop;
@@ -427,17 +449,17 @@ if (true) {
               $.each(menu_actions, function (key, menu){
                 $ul.append(
                   $('<li>').attr('id', thisObj.options.id + '-' + key).append(
-                    $('<a>').attr('href','#').text(menu.name).unbind('click.datatable').bind('click.datatable', menu.callback)));
+                    $('<a>').attr('href','#').text(menu.name).unbind('click').bind('click', menu.callback)));
               });
               $menuDiv.append($ul);
             }
-            $('html body').trigger('click.datatable','table:instance');
+            $('html body').trigger('click','table:instance');
             if($ul.hasClass('toggle-on')){
               $.each(menu_actions, function (key, menu){
                 if(menu.disabled){
-                  $ul.find('#'+thisObj.options.id + '-'+key).addClass('disabled').find('a').removeAttr('href').unbind('click.datatable');
+                  $ul.find('#'+thisObj.options.id + '-'+key).addClass('disabled').find('a').removeAttr('href').unbind('click');
                 }else{
-                  $ul.find('#'+thisObj.options.id + '-'+key).removeClass('disabled').find('a').attr('href','#').unbind('click.datatable').bind('click.datatable',menu.callback);
+                  $ul.find('#'+thisObj.options.id + '-'+key).removeClass('disabled').find('a').attr('href','#').unbind('click').bind('click',menu.callback);
                 }
               }); 
               $('html body').eucaevent('add_click', 'table:instance', e);
@@ -448,6 +470,7 @@ if (true) {
       return $menuDiv;
     },
 
+    
     _decorateLegendPagination : function (args) {
       var thisObj = this;
       var $wrapper = $('<div>').addClass('legend-pagination-wrapper clearfix');
@@ -556,16 +579,32 @@ if (true) {
       if(! $('html body').eucadata('isEnabled'))
         return;
       var oSettings = this.table.fnSettings();
+      var tbody = this.element.find('table tbody'); 
+      var selected = tbody.find('tr.selected-row');
+      var expanded = tbody.find('tr.expanded');
 
-      // Don't use eucadata
-      //$('html body').eucadata('refresh', oSettings.sAjaxSource);
+      this.table.fnReloadAjax(this.table.oSettings, undefined, function() {
+        if (selected != undefined && selected.length > 0) {
+          $.each(selected, function(idx, row) {
+            $(row).toggleClass('selected-row');
+            $($(row).find('input[type="checkbox"]')[0]).attr('checked', true);
+          });
+        }
+        if (expanded != undefined && expanded.length > 0) {
+        }
+       
+        var $checkAll = this.table.find('thead').find(':input[type="checkbox"]');
+        var checked = $checkAll.is(':checked');
+        if(checked)
+          $checkAll.trigger('click.datatable');
+      });
+    },
 
-      this.table.fnReloadAjax(undefined, undefined, true);
-     
-      var $checkAll = this.table.find('thead').find(':input[type="checkbox"]');
-      var checked = $checkAll.is(':checked');
-      if(checked)
-        $checkAll.trigger('click.datatable');
+    // Force a refresh of the underlying data source.
+    refreshSource : function() {
+      // Force a fetch from backbone
+      console.log('Fetch source');
+      this.source.fetch();
     },
 
     glowRow : function(val, columnId) {
@@ -585,6 +624,32 @@ if (true) {
 
     redraw : function() {
       this._refreshTableInterval();
+    },
+
+    // (optional) columnIdx: if undefined, returns matrix [row_idx, col_key]
+    getSelectedRows : function (columnIdx) {
+      var dataTable = this.table;
+      if ( !dataTable )
+     
+      var $checkAll = this.table.find('thead').find(':input[type="checkbox"]');
+      var checked = $checkAll.is(':checked');
+      if(checked)
+        $checkAll.trigger('click');
+    },
+
+    glowRow : function(val, columnId) {
+      var thisObj = this;
+      var cId = columnId || 1;
+      var token = null; 
+      var counter = 0;
+      token = runRepeat(function(){
+        if ( thisObj._glowRow(val, cId)){
+          cancelRepeat(token);
+          setTimeout(function(){ thisObj._removeGlow(val, cId);}, GLOW_DURATION_SEC*1000); // remove glow effect after 7 sec
+        } else if (counter++ > 30){ // give up glow effect after 60 seconds
+          cancelRepeat(token);
+        }
+      }, 2000);
     },
 
     // (optional) columnIdx: if undefined, returns matrix [row_idx, col_key]

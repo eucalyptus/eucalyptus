@@ -177,6 +177,7 @@ int write2file(const char *path, char *str);
 char *file2strn(const char *path, const ssize_t limit);
 char *file2str(const char *path);
 char *file2str_seek(char *file, size_t size, int mode);
+int str2file(const char *str, char *path, mode_t mode, boolean mktemp);
 int uint32compar(const void *ina, const void *inb);
 int safekillfile(char *pidfile, char *procname, int sig, char *rootwrap);
 int safekill(pid_t pid, char *procname, int sig, char *rootwrap);

@@ -33,7 +33,7 @@
       this.baseTable = $imgTable;
       this.tableWrapper = $imgTable.eucatable({
         id : 'images', // user of this widget should customize these options,
-        data_deps: ['images'],
+        data_deps: ['images', 'tags'],
         hidden: thisObj.options['hidden'],
         dt_arg : {
           "sAjaxSource": 'image',
@@ -177,11 +177,11 @@
         menu_actions : function(args){
           return thisObj._createMenuActions();
         },
-        context_menu_actions : function(row) {
-          return thisObj._createMenuActions();
-        },
         expand_callback : function(row){ // row = [col1, col2, ..., etc]
           return thisObj._expandCallback(row);
+        },
+        context_menu_actions : function(row) {
+          return thisObj._createMenuActions();
         },
         help_click : function(evt) {
           thisObj._flipToHelp(evt, {content:$imgHelp, url: help_image.landing_content_url});
@@ -219,6 +219,14 @@ launch_instance_image_table_platform_linux, launch_instance_image_table_platform
     _destroy : function() {
     },
 
+    _expandCallback : function(row){ 
+      var $el = $('<div />');
+      require(['app', 'views/expandos/image'], function(app, expando) {
+         new expando({el: $el, model: app.data.images.get(row[9])});
+      });
+      return $el;
+    },
+
     _createMenuActions : function() {
       var thisObj = this;
       var images = thisObj.baseTable.eucatable('getSelectedRows');
@@ -236,126 +244,14 @@ launch_instance_image_table_platform_linux, launch_instance_image_table_platform
     },
 
     _tagResourceAction : function(){
-      var thisObj = this;
-      var image = thisObj.tableWrapper.eucatable('getSelectedRows', 9)[0];
-      if ( image.length > 0 ) {
-        // Create a widget object for displaying the resource tag information
-        var $tagInfo = $('<div>').addClass('resource-tag-table-expanded-image').addClass('clearfix').euca_resource_tag({resource: 'image', resource_id: image, cancelButtonCallback: function(){ thisObj.tagDialog.eucadialog("close"); }, widgetMode: 'edit' });
-        thisObj.tagDialog.eucadialog('addNote','tag-modification-display-box', $tagInfo);   // This line should be adjusted once the right template is created for the resource tag.  030713
-        thisObj.tagDialog.eucadialog('open');
-      };
+      var selected = this.tableWrapper.eucatable('getSelectedRows', 9);
+      if ( selected.length > 0 ) {
+        require(['app'], function(app) {
+           app.dialog('edittags', app.data.image.get(selected[0]));
+        });
+       }
     },
 
-    _expandCallback : function(row){ 
-      var thisObj = this;
-      var imgId = row[9];
-      var results = describe('image');
-      var image = null;
-      var kernel = null;
-      var ramdisk = null;
-      for(i in results){
-        if(results[i].id === imgId){
-          image = results[i];
-          break;
-        }
-      }
-      if(!image)
-        return null;
-      for(i in results){
-        if(results[i].id === image.kernel_id)
-          kernel = results[i];
-        if(results[i].id === image.ramdisk_id)
-          ramdisk = results[i];
-      }
-      var snapshot = '';
-      if(image.block_device_mapping){
-        vol = image.block_device_mapping[getRootDeviceName(image)];
-        if (vol)
-          snapshot = vol['snapshot_id'];
-      }
- 
-      var $wrapper = $('<div>');
-      var $imgInfo = $('<div>').addClass('image-table-expanded-machine').addClass('clearfix').append(
-                       $('<div>').addClass('expanded-section-label').text(image_table_expanded_machine).after(
-                       $('<div>').addClass('expanded-section-content').addClass('clearfix').append(
-                         $('<ul>').addClass('image-expanded').addClass('clearfix').append(
-                           $('<li>').append( 
-                             $('<div>').addClass('expanded-title').text(image_table_expanded_image_id),
-                             $('<div>').addClass('expanded-value').text(image['id'])),
-                           $('<li>').append(
-                             $('<div>').addClass('expanded-title').text(image_table_expanded_snapshot_id),
-                             $('<div>').addClass('expanded-value').text(snapshot)),
-                           $('<li>').append(
-                             $('<div>').addClass('expanded-title').text(image_table_expanded_account),
-                             $('<div>').addClass('expanded-value').text(image['owner_id'])),
-                           $('<li>').append(
-                             $('<div>').addClass('expanded-title').text(image_table_expanded_manifest),
-                             $('<div>').addClass('expanded-value').text(image['location']))))));
-
-      var $kernelInfo = null;
-      if(kernel){
-        $kernelInfo = $('<div>').addClass('image-table-expanded-kernel').addClass('clearfix').append(
-                        $('<div>').addClass('expanded-section-label').text(image_table_expanded_kernel).after(
-                          $('<div>').addClass('expanded-section-content').addClass('clearfix').append(
-                            $('<ul>').addClass('kernel-expanded').addClass('clearfix').append(
-                              $('<li>').append(
-                                $('<div>').addClass('expanded-title').text(image_table_expanded_kernel_id),
-                                $('<div>').addClass('expanded-value').text(kernel['id'])),
-                              $('<li>').append(
-                                $('<div>').addClass('expanded-title').text(image_table_expanded_name),
-                                $('<div>').addClass('expanded-value').text(kernel['name'])),
-                              $('<li>').append(
-                                $('<div>').addClass('expanded-title').text(image_table_expanded_arch),
-                                $('<div>').addClass('expanded-value').text(kernel['architecture'])),
-                              $('<li>').append(
-                                $('<div>').addClass('expanded-title').text(image_table_expanded_manifest),
-                                $('<div>').addClass('expanded-value').text(kernel['location'])),
-                              $('<li>').append(
-                                $('<div>').addClass('expanded-title').text(image_table_expanded_desc),
-                                $('<div>').addClass('expanded-value').text(kernel['description'] ? kernel['description'] : '&nbsp;'))))));
-      }
-      var $ramdiskInfo = null;
-      if(ramdisk){
-        $ramdiskInfo = $('<div>').addClass('image-table-expanded-ramdisk').addClass('clearfix').append(
-                         $('<div>').addClass('expanded-section-label').text(image_table_expanded_ramdisk).after(
-                           $('<div>').addClass('expanded-section-content').addClass('clearfix').append(
-                             $('<ul>').addClass('ramdisk-expanded').addClass('clearfix').append(
-                               $('<li>').append(
-                                 $('<div>').addClass('expanded-title').text(image_table_expanded_ramdisk_id),
-                                 $('<div>').addClass('expanded-value').text(ramdisk['id'])),
-                               $('<li>').append(
-                                 $('<div>').addClass('expanded-title').text(image_table_expanded_name),
-                                 $('<div>').addClass('expanded-value').text(ramdisk['name'])),
-                               $('<li>').append(
-                                 $('<div>').addClass('expanded-title').text(image_table_expanded_arch),
-                                 $('<div>').addClass('expanded-value').text(ramdisk['architecture'])),
-                               $('<li>').append(
-                                 $('<div>').addClass('expanded-title').text(image_table_expanded_manifest),
-                                 $('<div>').addClass('expanded-value').text(ramdisk['location'])),
-                               $('<li>').append(
-                                 $('<div>').addClass('expanded-title').text(image_table_expanded_desc),
-                                 $('<div>').addClass('expanded-value').text(ramdisk['description'] ? ramdisk['description'] : '&nbsp;'))))));
-      }
-/*
-      $wrapper.append($imgInfo);
-      if($kernelInfo)
-        $wrapper.append($kernelInfo);
-      if($ramdiskInfo)
-        $wrapper.append($ramdiskInfo);
-*/
-      // Create a widget object for displaying the resource tag information
-      $tagInfo = $('<div>').addClass('resource-tag-table-expanded-instance').addClass('clearfix').attr('id', image.id).euca_resource_tag({resource: 'image', resource_id: image.id, widgetMode: 'view-only'});
-      
-      $tabspace = $('<div>').addClass('eucatabspace-main-div').eucatabspace(); 
-      $tabspace.eucatabspace('addTabPage', 'Image', $imgInfo);
-      if($kernelInfo)
-        $tabspace.eucatabspace('addTabPage', 'Kernel', $kernelInfo);
-      if($ramdiskInfo)
-        $tabspace.eucatabspace('addTabPage', 'Ramdisk', $ramdiskInfo);  
-      $tabspace.eucatabspace('addTabPage', 'Tag', $tagInfo);
-      $wrapper.append($tabspace)
-      return $wrapper;
-    },
 
 /**** Public Methods ****/
     close: function() {

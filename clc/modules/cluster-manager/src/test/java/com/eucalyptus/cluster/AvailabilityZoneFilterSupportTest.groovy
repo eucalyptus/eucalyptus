@@ -25,7 +25,7 @@ import com.eucalyptus.tags.FilterSupportTest
 /**
  * Unit tests for availability zone filter support
  */
-class AvailabilityZoneFilterSupportTest extends FilterSupportTest.InstanceTest<Cluster> {
+class AvailabilityZoneFilterSupportTest extends FilterSupportTest.InstanceTestSupport<Cluster> {
 
   @Test
   void testFilteringSupport() {

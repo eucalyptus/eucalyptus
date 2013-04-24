@@ -403,6 +403,8 @@ int doDescribeServices(ncMetadata * pMeta, serviceInfoType * serviceIds, int ser
 //!
 //!
 //! @param[in] pMeta a pointer to the node controller (NC) metadata structure
+//! @param[in] serviceIds
+//! @param[in] serviceIdsLen
 //!
 //! @return
 //!
@@ -465,6 +467,8 @@ done:
 //!
 //!
 //! @param[in] pMeta a pointer to the node controller (NC) metadata structure
+//! @param[in] serviceIds
+//! @param[in] serviceIdsLen
 //!
 //! @return
 //!
@@ -526,6 +530,8 @@ done:
 //!
 //!
 //! @param[in] pMeta a pointer to the node controller (NC) metadata structure
+//! @param[in] serviceIds
+//! @param[in] serviceIdsLen
 //!
 //! @return
 //!
@@ -610,6 +616,8 @@ done:
 //!
 //!
 //! @param[in] pMeta a pointer to the node controller (NC) metadata structure
+//! @param[in] serviceIds
+//! @param[in] serviceIdsLen
 //!
 //! @return
 //!

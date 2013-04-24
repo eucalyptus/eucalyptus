@@ -5,6 +5,7 @@ define([
 ],
 function(EucaModel) {
   var model = EucaModel.extend({
+    idAttribute: 'name',
     validation: {
            
             // ====================

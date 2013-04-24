@@ -1,18 +1,34 @@
 define([
-   './eucaexpandoview',
-   'text!./instance.html!strip',
-], function(EucaExpandoView, template) {
-    return EucaExpandoView.extend({
-        initialize : function(args) {
-            console.log('init');
-            this.id = args && args.id ? args.id : undefined;
-            this.template = template;
-            this.scope = {
-                button: {
-                    click: function() { alert('ding dong'); }
-                }
-            }
-            this._do_init();
-        },
-	});
+  'app',
+  'underscore',
+  'backbone',
+  './eucaexpandoview',
+  'text!./instance.html!strip',
+], function(app, _, Backbone, EucaExpandoView, template) {
+  return EucaExpandoView.extend({
+    initialize : function(args) {
+      this.template = template;
+      var tmp = this.model ? this.model : new Backbone.Model();
+      var id = tmp.get('id');
+      this.model = new Backbone.Model();
+      this.model.set('instance', tmp);
+      var state = tmp.get('state');
+      if (state == undefined) {
+        state = tmp.get('_state').name;
+      }
+      this.model.set('status', state);
+      this.model.set('test', new Backbone.Collection([{foo: 'bar'}, {foo: 'blah'}]));
+      this.model.set('volumes', app.data.volume.reduce(function(c, v) {
+                        return v.get('attach_data').instance_id == id ? c.add(v) : c;
+                      }, new Backbone.Collection()));
+      this.model.set('image', app.data.image.get(this.model.get('instance').get('image_id')));
+      this.model.set('scaling', app.data.scalinginsts.get(id));
+      this.model.set('instHealth', app.data.instHealths.get(id));
+      this.scope = this.model;//_.extend(this.model, {});
+      this._do_init();
+    },
+    remove : function() {
+      this.model.destroy();
+    }
+  });
 });

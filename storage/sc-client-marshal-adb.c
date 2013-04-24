@@ -64,7 +64,7 @@
  ************************************************************************/
 
 //!
-//! @file node/client-marshal-adb.c
+//! @file storage/sc-client-marshal-adb.c
 //! Need to provide description
 //!
 
@@ -206,23 +206,23 @@ scStub *scStubCreate(char *endpoint_uri, char *logfile, char *homedir)
     uri = endpoint_uri;
 
     // extract node name from the endpoint
-    p = strstr(uri, "://");     // find "http[s]://..."
+    p = strstr(uri, "://");            // find "http[s]://..."
     if (p == NULL) {
         LOGERROR("received invalid URI %s\n", uri);
         return NULL;
     }
 
-    node_name = strdup(p + 3);  // copy without the protocol prefix
+    node_name = strdup(p + 3);         // copy without the protocol prefix
     if (node_name == NULL) {
         LOGERROR("is out of memory\n");
         return NULL;
     }
 
     if ((p = strchr(node_name, ':')) != NULL)
-        *p = '\0';              // cut off the port
+        *p = '\0';                     // cut off the port
 
     if ((p = strchr(node_name, '/')) != NULL)
-        *p = '\0';              // if there is no port
+        *p = '\0';                     // if there is no port
 
     //! @todo what if endpoint_uri, home, or env are NULL?
     stub = axis2_stub_create_EucalyptusSC(env, client_home, (axis2_char_t *) uri);
@@ -275,7 +275,7 @@ int scStubDestroy(scStub * pStub)
 //! @param[in] token the token to be Exportd by the SC
 //! @param[in] ip the NC's ip to be used for token resolution
 //! @param[in] iqn the NC's iqn to be used for token resolution
-//! @param[in] connection_info a pointer to a pointer to hold the resulting volume connection structure on return
+//! @param[in] connection_string a pointer to a pointer to hold the resulting volume connection structure on return
 //!
 //! @return EUCA_OK on success or EUCA_ERROR on failure.
 //!
@@ -289,8 +289,8 @@ int scExportVolumeStub(scStub * pStub, char *correlationId, char *userId, char *
     adb_ExportVolumeType_t *request = NULL;
     adb_ExportVolumeResponseType_t *response = NULL;
 
-    if(!connection_string) {
-    	return -1;
+    if (!connection_string) {
+        return -1;
     }
 
     env = pStub->env;
@@ -313,17 +313,17 @@ int scExportVolumeStub(scStub * pStub, char *correlationId, char *userId, char *
         status = -1;
     } else {
         response = adb_ExportVolumeResponse_get_ExportVolumeResponse(output, env);
-        if(response == NULL) {
+        if (response == NULL) {
             LOGERROR("[%s] returned an error\n", volumeId);
             *connection_string = NULL;
             status = 1;
         } else {
-        	//Set return values
-        	char *returned_vol_id = adb_ExportVolumeResponseType_get_volumeId(response,env);
-        	//Ensure that the returned token is for the requested vol.
-        	if(strcmp(returned_vol_id, volumeId) == 0) {
-        		*connection_string = adb_ExportVolumeResponseType_get_connectionString(response,env);
-        	}
+            //Set return values
+            char *returned_vol_id = adb_ExportVolumeResponseType_get_volumeId(response, env);
+            //Ensure that the returned token is for the requested vol.
+            if (strcmp(returned_vol_id, volumeId) == 0) {
+                *connection_string = adb_ExportVolumeResponseType_get_connectionString(response, env);
+            }
         }
     }
 
@@ -334,50 +334,49 @@ int scExportVolumeStub(scStub * pStub, char *correlationId, char *userId, char *
 //! Marshals the client unexport volume token request.
 //!
 //! @param[in] pStub a pointer to the storage controller (SC) stub structure
-//! @param[in] pMeta a pointer to the NC metadata for getting node info (ip etc)
+//! @param[in] correlationId
+//! @param[in] userId
 //! @param[in] volumeId the volume identifier string (vol-XXXXXXXX)
 //! @param[in] token the token to be resolved by the SC
 //! @param[in] ip the NC's ip to be used for token resolution
 //! @param[in] iqn the NC's iqn to be used for token resolution
-//! @param[in] result pointer to int to hold return result of operation
 //!
 //! @return EUCA_OK on success or EUCA_ERROR on failure.
 //!
 int scUnexportVolumeStub(scStub * pStub, char *correlationId, char *userId, char *volumeId, char *token, char *ip, char *iqn)
 {
-	int status = 0;
-	axutil_env_t *env = NULL;
-	axis2_stub_t *stub = NULL;
-	adb_UnexportVolume_t *input = NULL;
-	adb_UnexportVolumeResponse_t *output = NULL;
-	adb_UnexportVolumeType_t *request = NULL;
-	adb_UnexportVolumeResponseType_t *response = NULL;
+    int status = 0;
+    axutil_env_t *env = NULL;
+    axis2_stub_t *stub = NULL;
+    adb_UnexportVolume_t *input = NULL;
+    adb_UnexportVolumeResponse_t *output = NULL;
+    adb_UnexportVolumeType_t *request = NULL;
+    adb_UnexportVolumeResponseType_t *response = NULL;
 
-	env = pStub->env;
-	stub = pStub->stub;
-	input = adb_UnexportVolume_create(env);
-	request = adb_UnexportVolumeType_create(env);
+    env = pStub->env;
+    stub = pStub->stub;
+    input = adb_UnexportVolume_create(env);
+    request = adb_UnexportVolumeType_create(env);
 
-	// set op-specific input fields
-	adb_UnexportVolumeType_set_token(request, env, token);
-	adb_UnexportVolumeType_set_volumeId(request, env, volumeId);
-	adb_UnexportVolumeType_set_ip(request, env, ip);
-	adb_UnexportVolumeType_set_iqn(request, env, iqn);
+    // set op-specific input fields
+    adb_UnexportVolumeType_set_token(request, env, token);
+    adb_UnexportVolumeType_set_volumeId(request, env, volumeId);
+    adb_UnexportVolumeType_set_ip(request, env, ip);
+    adb_UnexportVolumeType_set_iqn(request, env, iqn);
 
-	//Add the request structure to the message type
-	adb_UnexportVolume_set_UnexportVolume(input, env, request);
+    //Add the request structure to the message type
+    adb_UnexportVolume_set_UnexportVolume(input, env, request);
 
-	// do it
-	if ((output = axis2_stub_op_EucalyptusSC_UnexportVolume(stub, env, input)) == NULL) {
-		LOGERROR(NULL_ERROR_MSG);
-		status = -1;
-	} else {
-		response = adb_UnexportVolumeResponse_get_UnexportVolumeResponse(output, env);
-		if(response == NULL) {
-			LOGERROR("[%s] returned an error\n", volumeId);
-			status = 1;
-		}
-	}
-	return (status);
+    // do it
+    if ((output = axis2_stub_op_EucalyptusSC_UnexportVolume(stub, env, input)) == NULL) {
+        LOGERROR(NULL_ERROR_MSG);
+        status = -1;
+    } else {
+        response = adb_UnexportVolumeResponse_get_UnexportVolumeResponse(output, env);
+        if (response == NULL) {
+            LOGERROR("[%s] returned an error\n", volumeId);
+            status = 1;
+        }
+    }
+    return (status);
 }
-

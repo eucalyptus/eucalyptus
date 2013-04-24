@@ -1,0 +1,57 @@
+/* ---------------------------------------------
+	TOGGLE.CSS
+-----------------------------------------------*/
+
+input.iT_checkbox_on{
+	display:block !important;
+	float:left;
+	position:relative !important;
+	top:-43px !important;
+	left:100px !important;
+	margin-bottom:-43px;
+	}
+
+/* -----------------------------
+	This is the important bit
+-------------------------------*/
+
+label.ilabel{
+	display:block;
+	font-size:12px;
+	padding-bottom:10px;
+	cursor:pointer;
+	}
+
+label.itoggle,
+label.itoggle span{
+	display: inline-block;
+	width: 93px;
+	height: 27px;
+	background: url(../images/itoggle.png) left bottom no-repeat;
+	cursor:pointer;
+	text-indent:-5000px;
+	}
+label.itoggle.iToff{
+	background-position:right bottom;
+	}
+label.itoggle span{
+	background-position: left top;
+	margin: 0;
+	}
+input.iT_checkbox{
+	position:absolute;
+	top:-9999px;
+	left:-9999px;
+	}
+
+/*	
+	If you want the corners to be
+	transparent, add these two lines
+	to the main block above. Only
+	works on webkit and mozilla browsers
+	For more reliable results, make your
+	own png using the supplied .psd
+	
+	-moz-border-radius:6px;
+	-webkit-border-radius:6px;
+*/

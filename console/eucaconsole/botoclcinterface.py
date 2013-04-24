@@ -26,6 +26,7 @@
 import boto
 import ConfigParser
 import json
+from boto.ec2.snapshot import Snapshot
 from boto.ec2.connection import EC2Connection
 from boto.ec2.regioninfo import RegionInfo
 
@@ -47,15 +48,11 @@ class BotoClcInterface(ClcInterface):
             path = '/'
             reg = None
             port=443
-        if boto.__version__ < '2.6':
-            self.conn = EC2Connection(access_id, secret_key, region=reg,
+        self.conn = EC2Connection(access_id, secret_key, region=reg,
                                   port=port, path=path,
                                   is_secure=True, security_token=token, debug=debug)
-        else:
-            self.conn = EC2Connection(access_id, secret_key, region=reg,
-                                  port=port, path=path, validate_certs=False,
-                                  is_secure=True, security_token=token, debug=debug)
         self.conn.APIVersion = '2012-03-01'
+        self.conn.https_validate_certificates = False
         self.conn.http_connection_kwargs['timeout'] = 30
 
     def __save_json__(self, obj, name):
@@ -262,7 +259,10 @@ class BotoClcInterface(ClcInterface):
 
     # returns snapshot info
     def create_snapshot(self, volume_id, description):
-        return self.conn.create_snapshot(volume_id, description)
+        params = {'VolumeId': volume_id}
+        if description:
+            params['Description'] = description[0:255]
+        return self.conn.get_object('CreateSnapshot', params, Snapshot, verb='POST')
 
     # returns True if successful
     def delete_snapshot(self, snapshot_id):

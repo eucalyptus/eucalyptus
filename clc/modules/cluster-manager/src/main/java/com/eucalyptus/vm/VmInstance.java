@@ -91,6 +91,31 @@ import javax.persistence.PersistenceContext;
 import javax.persistence.PreRemove;
 import javax.persistence.Table;
 
+
+import com.eucalyptus.auth.AuthException;
+import com.eucalyptus.auth.principal.InstanceProfile;
+import com.eucalyptus.component.ServiceConfiguration;
+import com.eucalyptus.component.Partition;
+import com.eucalyptus.component.Partitions;
+import com.eucalyptus.component.ComponentIds;
+import com.eucalyptus.component.Topology;
+import com.eucalyptus.component.ServiceConfigurations;
+import com.eucalyptus.component.id.Tokens;
+import com.eucalyptus.crypto.Crypto;
+import com.eucalyptus.crypto.Digest;
+import com.eucalyptus.util.async.AsyncRequests;
+import com.google.common.base.*;
+import edu.ucsb.eucalyptus.msgs.AttachedVolume;
+import edu.ucsb.eucalyptus.msgs.IamInstanceProfile;
+import edu.ucsb.eucalyptus.msgs.InstanceBlockDeviceMapping;
+import edu.ucsb.eucalyptus.msgs.InstanceStateType;
+import edu.ucsb.eucalyptus.msgs.InstanceStatusDetailsSetItemType;
+import edu.ucsb.eucalyptus.msgs.InstanceStatusDetailsSetType;
+import edu.ucsb.eucalyptus.msgs.InstanceStatusItemType;
+import edu.ucsb.eucalyptus.msgs.InstanceStatusType;
+import edu.ucsb.eucalyptus.msgs.ReservationInfoType;
+import edu.ucsb.eucalyptus.msgs.RunningInstancesItemType;
+
 import org.apache.log4j.Logger;
 import org.bouncycastle.util.encoders.Base64;
 import org.hibernate.annotations.Cache;
@@ -1310,8 +1335,16 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
 
       String roleName = null;
       try {
-        userAccount = Accounts.lookupAccountByName(Account.SYSTEM_ACCOUNT);
-        profile = userAccount.lookupInstanceProfileByName(this.getNameOrArn());
+        userAccount = Accounts.lookupAccountById(this.getOwnerAccountNumber());
+        String profileName;
+        if ( this.getNameOrArn().startsWith("arn:") ) {
+          final String rawName = this.getNameOrArn();
+          final int nameIndex = this.getNameOrArn().lastIndexOf('/');
+          profileName = this.getNameOrArn().substring(nameIndex + 1, rawName.length());
+        } else {
+          profileName = this.getNameOrArn();
+        }
+        profile = userAccount.lookupInstanceProfileByName(profileName);
         Role role = profile.getRole();
         roleArn = Accounts.getRoleArn(role);
         role.getRoleId();
@@ -1320,9 +1353,8 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
         LOG.debug(e);
       }
 
-      //request.setDurationSeconds(3600); //TODO :
       assumeRoleType.setRoleArn(roleArn);
-      assumeRoleType.setRoleSessionName("2JETSAA0QB8PGZOCA5FJI");
+      assumeRoleType.setRoleSessionName(Crypto.generateId(roleArn, this.getOwner().getUserId()));
       assumeRoleType.setEffectiveUserId(this.ownerUserId);
 
       AssumeRoleResponseType assumeRoleResponseType = null;
@@ -2049,7 +2081,46 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
           
           runningInstance.setLaunchTime( input.getLaunchRecord( ).getLaunchTime( ) );
           runningInstance.setClientToken( input.getClientToken() );
-          runningInstance.setNameOrArn( input.getNameOrArn( ) );
+
+          if ( !input.getNameOrArn().equals("") && input.getNameOrArn().startsWith("arn:") ) {
+
+            final String rawName = input.getNameOrArn();
+            final int nameIndex = input.getNameOrArn().lastIndexOf('/');
+            final String name = input.getNameOrArn().substring(nameIndex + 1, rawName.length());
+
+            InstanceProfile instanceProfile;
+
+            try {
+              instanceProfile = Accounts.lookupAccountById(input.getOwnerAccountNumber())
+                .lookupInstanceProfileByName(name);
+              final String profileArn = Accounts.getInstanceProfileArn(instanceProfile);
+              IamInstanceProfile iamInstanceProfile = new IamInstanceProfile();
+              iamInstanceProfile.setArn(profileArn);
+              iamInstanceProfile.setId(instanceProfile.getInstanceProfileId());
+              runningInstance.setIamInstanceProfile(iamInstanceProfile);
+
+            } catch (NoSuchElementException nsee ) {
+              LOG.debug("profile arn : " + name, nsee);
+            }
+
+          } else if (!input.getNameOrArn().equals("") && !input.getNameOrArn().startsWith("arn:") ) {
+
+            InstanceProfile instanceProfile;
+
+            try {
+
+              instanceProfile = Accounts.lookupAccountById(input.getOwnerAccountNumber())
+                .lookupInstanceProfileByName(input.getNameOrArn());
+              final String profileArn = Accounts.getInstanceProfileArn(instanceProfile);
+              IamInstanceProfile iamInstanceProfile = new IamInstanceProfile();
+              iamInstanceProfile.setArn(profileArn);
+              iamInstanceProfile.setId(instanceProfile.getInstanceProfileId());
+              runningInstance.setIamInstanceProfile(iamInstanceProfile);
+            } catch (NoSuchElementException nsee ) {
+              LOG.debug("profile name : " + input.getNameOrArn(),nsee);
+            }
+
+          }
 
           if (input.getMonitoring()) {
             runningInstance.setMonitoring("enabled");

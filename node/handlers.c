@@ -126,7 +126,6 @@
 #include "hooks.h"
 #include <ebs_utils.h>
 
-
 /*----------------------------------------------------------------------------*\
  |                                                                            |
  |                                  DEFINES                                   |
@@ -191,13 +190,13 @@ const char *euca_client_component_name = "cc";  //!< Name of this component's cl
 
 // FIXME: This semaphore is probably superfluous and should be removed (with hyp_sem used in its place).
 sem *migr_sem = NULL;                  //!< semaphore for serializing migrations
-sem *hyp_sem = NULL;            //!< semaphore for serializing domain creation
-sem *inst_sem = NULL;           //!< guarding access to global instance structs
-sem *inst_copy_sem = NULL;      //!< guarding access to global instance structs
-sem *addkey_sem = NULL;         //!< guarding access to global instance structs
-sem *loop_sem = NULL;           //!< created in diskutils.c for serializing 'losetup' invocations
-sem *log_sem = NULL;            //!< used by log.c
-sem *service_state_sem = NULL;	//!< Used to guard service state updates (i.e. topology updates)
+sem *hyp_sem = NULL;                   //!< semaphore for serializing domain creation
+sem *inst_sem = NULL;                  //!< guarding access to global instance structs
+sem *inst_copy_sem = NULL;             //!< guarding access to global instance structs
+sem *addkey_sem = NULL;                //!< guarding access to global instance structs
+sem *loop_sem = NULL;                  //!< created in diskutils.c for serializing 'losetup' invocations
+sem *log_sem = NULL;                   //!< used by log.c
+sem *service_state_sem = NULL;         //!< Used to guard service state updates (i.e. topology updates)
 
 bunchOfInstances *global_instances = NULL;  //!< pointer to the instance list
 bunchOfInstances *global_instances_copy = NULL; //!< pointer to the copied instance list
@@ -263,8 +262,7 @@ static void nc_signal_handler(int sig);
 static int init(void);
 static void updateServiceStateInfo(ncMetadata * pMeta);
 static void printNCServiceStateInfo();
-static void printMsgServiceStateInfo(ncMetadata *pMeta);
-
+static void printMsgServiceStateInfo(ncMetadata * pMeta);
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |
@@ -287,7 +285,6 @@ static void printMsgServiceStateInfo(ncMetadata *pMeta);
  |                                                                            |
 \*----------------------------------------------------------------------------*/
 
-
 /*----------------------------------------------------------------------------*\
  |                                                                            |
  |                               IMPLEMENTATION                               |
@@ -299,56 +296,55 @@ static void printMsgServiceStateInfo(ncMetadata *pMeta);
 //! NULL if none exists
 void get_service_url(const char *service_type, struct nc_state_t *nc, char *dest_buffer)
 {
-	int i = 0, j = 0;
-	int found = 0;
-	sem_p(service_state_sem);
+    int i = 0, j = 0;
+    int found = 0;
+    sem_p(service_state_sem);
 
-	for(i = 0; i < 16;i++) {
-		if(!strcmp(service_type, nc->services[i].type)) {
-			//Winner!
-			for(j = 0; j < nc->services[i].urisLen; j++) {
-				euca_strncpy(dest_buffer, nc->services[i].uris[j], 512);
-				found = 1;
-				break;
-			}
-		}
-	}
-	sem_v(service_state_sem);
+    for (i = 0; i < 16; i++) {
+        if (!strcmp(service_type, nc->services[i].type)) {
+            //Winner!
+            for (j = 0; j < nc->services[i].urisLen; j++) {
+                euca_strncpy(dest_buffer, nc->services[i].uris[j], 512);
+                found = 1;
+                break;
+            }
+        }
+    }
+    sem_v(service_state_sem);
 
-	if(found) {
-		LOGTRACE("Found enabled service URI for service type %s as %s\n", service_type, dest_buffer);
-	} else {
-		dest_buffer[0] = '\0'; //Ensure 0 length string
-		LOGTRACE("No enabled service found for service type %s\n", service_type);
-	}
+    if (found) {
+        LOGTRACE("Found enabled service URI for service type %s as %s\n", service_type, dest_buffer);
+    } else {
+        dest_buffer[0] = '\0';         //Ensure 0 length string
+        LOGTRACE("No enabled service found for service type %s\n", service_type);
+    }
 }
 
 static void printNCServiceStateInfo()
 {
-	int i = 0, j = 0;
-	//Don't bother if not at trace logging
-	if(log_level_get() <= EUCA_LOG_TRACE) {
-		LOGTRACE("Printing %d services\n", nc_state.servicesLen);
-		sem_p(service_state_sem);
-		for(i = 0; i < nc_state.servicesLen; i++) {
-			LOGTRACE("Service - %s %s %s %s\n", nc_state.services[i].name, nc_state.services[i].partition, nc_state.services[i].type, nc_state.services[i].uris[0]);
-		}
-		sem_v(service_state_sem);
-	}
+    int i = 0, j = 0;
+    //Don't bother if not at trace logging
+    if (log_level_get() <= EUCA_LOG_TRACE) {
+        LOGTRACE("Printing %d services\n", nc_state.servicesLen);
+        sem_p(service_state_sem);
+        for (i = 0; i < nc_state.servicesLen; i++) {
+            LOGTRACE("Service - %s %s %s %s\n", nc_state.services[i].name, nc_state.services[i].partition, nc_state.services[i].type, nc_state.services[i].uris[0]);
+        }
+        sem_v(service_state_sem);
+    }
 }
 
-static void printMsgServiceStateInfo(ncMetadata *pMeta)
+static void printMsgServiceStateInfo(ncMetadata * pMeta)
 {
-	int i = 0, j = 0;
-	//Don't bother if not at trace logging
-	if(log_level_get() <= EUCA_LOG_TRACE)
-	{
-		LOGTRACE("Printing %d services\n", pMeta->servicesLen);
-		LOGTRACE("Msg-Meta epoch %d\n", pMeta->epoch);
-		for(i = 0; i < pMeta->servicesLen; i++) {
-			LOGTRACE("Msg-Meta: Service - %s %s %s %s\n", pMeta->services[i].name, pMeta->services[i].partition, pMeta->services[i].type, pMeta->services[i].uris[0]);
-		}
-	}
+    int i = 0, j = 0;
+    //Don't bother if not at trace logging
+    if (log_level_get() <= EUCA_LOG_TRACE) {
+        LOGTRACE("Printing %d services\n", pMeta->servicesLen);
+        LOGTRACE("Msg-Meta epoch %d\n", pMeta->epoch);
+        for (i = 0; i < pMeta->servicesLen; i++) {
+            LOGTRACE("Msg-Meta: Service - %s %s %s %s\n", pMeta->services[i].name, pMeta->services[i].partition, pMeta->services[i].type, pMeta->services[i].uris[0]);
+        }
+    }
 }
 
 //!
@@ -362,55 +358,51 @@ static void printMsgServiceStateInfo(ncMetadata *pMeta)
 //!
 static void updateServiceStateInfo(ncMetadata * pMeta)
 {
-	int i = 0;
-	char scURL[512];
+    int i = 0;
+    char scURL[512];
     if (pMeta != NULL && pMeta->services != NULL) {
         LOGTRACE("Updating NC's topology/service state info: pMeta: userId=%s correlationId=%s\n", pMeta->userId, pMeta->correlationId);
 
         // store information from CLC that needs to be kept up-to-date in the NC
         sem_p(service_state_sem);
-    	//Update if this is as new as what we have...added = because CC doesn't seem to bump epoch numbers, stays at 0
-    	if(pMeta->epoch >= nc_state.ncStatus.localEpoch) {
-    		//Update the epoch first
-    		nc_state.ncStatus.localEpoch = pMeta->epoch;
+        //Update if this is as new as what we have...added = because CC doesn't seem to bump epoch numbers, stays at 0
+        if (pMeta->epoch >= nc_state.ncStatus.localEpoch) {
+            //Update the epoch first
+            nc_state.ncStatus.localEpoch = pMeta->epoch;
 
-    		//Copy new services info wholesale
-    		memcpy(nc_state.services, pMeta->services, sizeof(serviceInfoType) * 16);
-    		memcpy(nc_state.disabledServices, pMeta->disabledServices, sizeof(serviceInfoType) * 16);
-    		memcpy(nc_state.notreadyServices, pMeta->notreadyServices, sizeof(serviceInfoType) * 16);
-    		nc_state.servicesLen = pMeta->servicesLen;
-    		nc_state.disabledServicesLen = pMeta->disabledServicesLen;
-    		nc_state.notreadyServicesLen = pMeta->notreadyServicesLen;
+            //Copy new services info wholesale
+            memcpy(nc_state.services, pMeta->services, sizeof(serviceInfoType) * 16);
+            memcpy(nc_state.disabledServices, pMeta->disabledServices, sizeof(serviceInfoType) * 16);
+            memcpy(nc_state.notreadyServices, pMeta->notreadyServices, sizeof(serviceInfoType) * 16);
+            nc_state.servicesLen = pMeta->servicesLen;
+            nc_state.disabledServicesLen = pMeta->disabledServicesLen;
+            nc_state.notreadyServicesLen = pMeta->notreadyServicesLen;
 
-    		//Make a copy of the SC url to use outside of the semaphore
-    		for(i = 0; i < nc_state.servicesLen; i++) {
-    			if(!strcmp(nc_state.services[i].type, "storage")) {
-    				if(nc_state.services[i].urisLen > 0)
-    				{
-    					memcpy(scURL, nc_state.services[i].uris[0],512);
-    					break;
-    				}
-    			}
-    		}
-    	}
-    	sem_v(service_state_sem);
+            //Make a copy of the SC url to use outside of the semaphore
+            for (i = 0; i < nc_state.servicesLen; i++) {
+                if (!strcmp(nc_state.services[i].type, "storage")) {
+                    if (nc_state.services[i].urisLen > 0) {
+                        memcpy(scURL, nc_state.services[i].uris[0], 512);
+                        break;
+                    }
+                }
+            }
+        }
+        sem_v(service_state_sem);
 
-    	LOGTRACE("Updating VBR localhost config sc url to: %s\n", scURL);
-    	//Push the change to the vbr code
-    	vbr_update_hostconfig_scurl(scURL);
+        LOGTRACE("Updating VBR localhost config sc url to: %s\n", scURL);
+        //Push the change to the vbr code
+        vbr_update_hostconfig_scurl(scURL);
 
     } else {
-    	LOGTRACE("Cannot update service infos, null found\n");
-    	return;
+        LOGTRACE("Cannot update service infos, null found\n");
+        return;
     }
-
-
 
     //Print the results...
     printNCServiceStateInfo();
     printMsgServiceStateInfo(pMeta);
 }
-
 
 //!
 //! Utilitarian functions used in the lower level handlers. This scans the string buffer
@@ -934,10 +926,10 @@ static void refresh_instance_info(struct nc_state_t *nc, ncInstance * instance)
 
                 // FIXME: Consolidate this sequence and the sequence in handlers_kvm.c into a util function?
                 if (!incoming_migrations_in_progress) {
-                    LOGINFO("no remaining incoming migrations -- deauthorizing migration clients\n");
+                    LOGINFO("no remaining incoming migrations -- deauthorizing all migration clients\n");
                     char deauthorize_keys[MAX_PATH];
                     char *euca_base = getenv(EUCALYPTUS_ENV_VAR_NAME);
-                    snprintf(deauthorize_keys, MAX_PATH, EUCALYPTUS_AUTHORIZE_MIGRATION_KEYS " -z", euca_base ? euca_base : "", euca_base ? euca_base : "");
+                    snprintf(deauthorize_keys, MAX_PATH, EUCALYPTUS_AUTHORIZE_MIGRATION_KEYS " -D -r", euca_base ? euca_base : "", euca_base ? euca_base : "");
                     LOGDEBUG("migration key-deauthorizer path: '%s'\n", deauthorize_keys);
                     int sysret = system(deauthorize_keys);
                     if (sysret) {
@@ -2033,9 +2025,9 @@ static int init(void)
         return (EUCA_FATAL_ERROR);
     }
 
-    if(init_ebs_utils() != 0) {
-    	LOGFATAL("Failed to initialize ebs utils\n");
-    	return (EUCA_FATAL_ERROR);
+    if (init_ebs_utils() != 0) {
+        LOGFATAL("Failed to initialize ebs utils\n");
+        return (EUCA_FATAL_ERROR);
     }
 
     init_iscsi(nc_state.home);
@@ -2361,21 +2353,22 @@ static int init(void)
     }
 
     {
-    	// set enable ws-security
-    	tmp = getConfString(nc_state.configFiles, 2, CONFIG_ENABLE_WS_SECURITY);
-    	if (tmp && !strcmp(tmp,"N")) {
-    		LOGDEBUG("Configuring no use of WS-SEC as specified in config file by explicit 'no' value\n");
-    		nc_state.config_use_ws_sec=0;
-    		EUCA_FREE(tmp);
-    	} else {
-    		LOGDEBUG("Configured to use WS-SEC by default\n");
-    		if(tmp) EUCA_FREE(tmp);
-    		nc_state.config_use_ws_sec=1;
-    	}
+        // set enable ws-security
+        tmp = getConfString(nc_state.configFiles, 2, CONFIG_ENABLE_WS_SECURITY);
+        if (tmp && !strcmp(tmp, "N")) {
+            LOGDEBUG("Configuring no use of WS-SEC as specified in config file by explicit 'no' value\n");
+            nc_state.config_use_ws_sec = 0;
+            EUCA_FREE(tmp);
+        } else {
+            LOGDEBUG("Configured to use WS-SEC by default\n");
+            if (tmp)
+                EUCA_FREE(tmp);
+            nc_state.config_use_ws_sec = 1;
+        }
     }
 
-    {                           // find and set iqn
-    	snprintf(nc_state.iqn, CHAR_BUFFER_SIZE, "UNSET");
+    {                                  // find and set iqn
+        snprintf(nc_state.iqn, CHAR_BUFFER_SIZE, "UNSET");
         char *ptr = NULL, *iqn = NULL, *tmp = NULL, cmd[MAX_PATH];
         snprintf(cmd, MAX_PATH, "%s cat /etc/iscsi/initiatorname.iscsi", nc_state.rootwrap_cmd_path);
         ptr = system_output(cmd);
@@ -2420,38 +2413,37 @@ static int init(void)
         LOGINFO("using IP %s\n", nc_state.ip);
 
         LOGINFO("Initializing localhost info for vbr processing\n");
-        if(vbr_init_hostconfig(nc_state.iqn, nc_state.ip, nc_state.config_sc_policy_file, nc_state.config_use_ws_sec) != 0) {
-        	LOGFATAL("Error initializing vbr localhost configuration\n");
-        	return (EUCA_FATAL_ERROR);
+        if (vbr_init_hostconfig(nc_state.iqn, nc_state.ip, nc_state.config_sc_policy_file, nc_state.config_use_ws_sec) != 0) {
+            LOGFATAL("Error initializing vbr localhost configuration\n");
+            return (EUCA_FATAL_ERROR);
         }
     }
 
     {
-    	LOGINFO("Initializing service state and epoch\n");
-    	//Initialize the service state info.
-    	nc_state.ncStatus.localEpoch = 0;
-    	snprintf(nc_state.ncStatus.details, 1024, "ERRORS=0");
-    	snprintf(nc_state.ncStatus.serviceId.type, 32, "node");
-    	snprintf(nc_state.ncStatus.serviceId.name, 32, "self");
-    	snprintf(nc_state.ncStatus.serviceId.partition, 32, "unset");
-    	nc_state.ncStatus.serviceId.urisLen = 0;
-    	nc_state.servicesLen = 0;
-    	nc_state.disabledServicesLen = 0;
-    	nc_state.notreadyServicesLen = 0;
+        LOGINFO("Initializing service state and epoch\n");
+        //Initialize the service state info.
+        nc_state.ncStatus.localEpoch = 0;
+        snprintf(nc_state.ncStatus.details, 1024, "ERRORS=0");
+        snprintf(nc_state.ncStatus.serviceId.type, 32, "node");
+        snprintf(nc_state.ncStatus.serviceId.name, 32, "self");
+        snprintf(nc_state.ncStatus.serviceId.partition, 32, "unset");
+        nc_state.ncStatus.serviceId.urisLen = 0;
+        nc_state.servicesLen = 0;
+        nc_state.disabledServicesLen = 0;
+        nc_state.notreadyServicesLen = 0;
 
-    	for (i = 0; i < 32 && nc_state.ncStatus.serviceId.urisLen < 8; i++) {
-    		if (nc_state.vnetconfig->localIps[i]) {
-    			char *host;
-    			host = hex2dot(nc_state.vnetconfig->localIps[i]);
-    			if (host) {
-    				snprintf(nc_state.ncStatus.serviceId.uris[nc_state.ncStatus.serviceId.urisLen], 512, "http://%s:8775/axis2/services/EucalyptusNC",
-    						host);
-    				nc_state.ncStatus.serviceId.urisLen++;
-    				EUCA_FREE(host);
-    			}
-    		}
-    	}
-    	LOGINFO("Done initializing services state\n");
+        for (i = 0; i < 32 && nc_state.ncStatus.serviceId.urisLen < 8; i++) {
+            if (nc_state.vnetconfig->localIps[i]) {
+                char *host;
+                host = hex2dot(nc_state.vnetconfig->localIps[i]);
+                if (host) {
+                    snprintf(nc_state.ncStatus.serviceId.uris[nc_state.ncStatus.serviceId.urisLen], 512, "http://%s:8775/axis2/services/EucalyptusNC", host);
+                    nc_state.ncStatus.serviceId.urisLen++;
+                    EUCA_FREE(host);
+                }
+            }
+        }
+        LOGINFO("Done initializing services state\n");
     }
 
     {                                  // start the monitoring thread
@@ -2513,7 +2505,7 @@ int doDescribeInstances(ncMetadata * pMeta, char **instIds, int instIdsLen, ncIn
     LOGTRACE("updating service state infos\n");
     updateServiceStateInfo(pMeta);
 
-    LOGTRACE("invoked\n");      // response will be at INFO, so this is TRACE
+    LOGTRACE("invoked\n");             // response will be at INFO, so this is TRACE
 
     if (nc_state.H->doDescribeInstances)
         ret = nc_state.H->doDescribeInstances(&nc_state, pMeta, instIds, instIdsLen, outInsts, outInstsLen);
@@ -2908,7 +2900,7 @@ int doAttachVolume(ncMetadata * pMeta, char *instanceId, char *volumeId, char *r
 //! @param[in] pMeta a pointer to the node controller (NC) metadata structure
 //! @param[in] instanceId the instance identifier string (i-XXXXXXXX)
 //! @param[in] volumeId the volume identifier string (vol-XXXXXXXX)
-//! @param[in] remoteDev the target device name
+//! @param[in] attachmentToken the target device name
 //! @param[in] localDev the local device name
 //! @param[in] force if set to 1, this will force the volume to detach
 //! @param[in] grab_inst_sem if set to 1, will require the usage of the instance semaphore

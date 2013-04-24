@@ -55,7 +55,7 @@
 	      // Use CSS 'twist'
 	      "aTargets":[1],
               "mRender" : function(data) {
-		   return eucatableDisplayColumnTypeTwist(data, data, 75);
+                return eucatableDisplayColumnTypeTwist(data, data, 75);
               },
               "mData": "name",
               "iDataSort": 7,
@@ -170,18 +170,12 @@
 	      // Invisible column for storing the description variable, used for sorting 
 	      "bVisible": false,
               "aTargets":[6],
-	      "mRender" : function(data){
-		return DefaultEncoder().encodeForHTML(data);
-	       },
                "mData": "description",
 	    },
 	    { 
 	      // Invisible column for storing the name variable, used for sorting
 	      "bVisible": false,
               "aTargets":[7],
-	      "mRender" : function(data){
-		return DefaultEncoder().encodeForHTML(data);
-	       },
                "mData": "name",
 	    },
           ],
@@ -220,9 +214,11 @@
       (function(){
          menuItems['edit'] = {"name":sgroup_action_edit, callback: function(key, opt) { ; }, disabled: function(){ return true; }};
          menuItems['delete'] = {"name":sgroup_action_delete, callback: function(key, opt) { thisObj._deleteAction(); }};
+         menuItems['tag'] = {"name":'Tag Resource', callback: function(key, opt) { thisObj._tagResourceAction(); }};
       })();
       if(numSelected == 1){
         menuItems['edit'] = {"name":sgroup_action_edit, callback: function(key, opt) { thisObj._editAction(); }}
+        menuItems['tag'] = {"name":'Tag Resource', callback: function(key, opt) { thisObj._tagResourceAction(); }}
       }
       return menuItems;
     },
@@ -317,6 +313,13 @@
                               thisObj._getTableWrapper().eucatable('refreshTable');
                               thisObj._getTableWrapper().eucatable('glowRow', name);
                           }
+                          // FIXME This is a hack to simulate the lifecycle of the new backbone dialogs
+                          thisObj.addDialog.rscope.securityGroup.trigger('confirm');
+
+                          var tmpSecGroup = thisObj.addDialog.rscope.securityGroup.clone();
+                          tmpSecGroup.set('id', data.results.id);
+                          tmpSecGroup.trigger('request');
+                          tmpSecGroup.trigger('sync');
                       } else {
                           notifyError($.i18n.prop('sgroup_add_rule_error', DefaultEncoder().encodeForHTML(name)), getErrorMessage(jqXHR));
                       }
@@ -335,6 +338,25 @@
         },
       });
       this._setupDialogFeatures(this.addDialog, createButtonId);
+
+      require([
+        'rivets', 
+        'models/sgroup', 
+        'text!views/dialogs/create_security_group_fixup.html!strip'
+        ], function(rivets, SecurityGroup, TabbedDialogTmpl) {
+            var $content = thisObj.addDialog.find('.content-sections-wrapper');
+            $content.append($(TabbedDialogTmpl));
+            $content.find('h3').remove();
+            $content.css('background', 'none');
+            $content.find('#tabs-1').append($content.find('.group.content-section'));
+            $content.find('#tabs-2').append($content.find('.rules.content-section'));
+            thisObj.addDialog.rivets = rivets;
+            thisObj.addDialog.SecurityGroup = SecurityGroup;
+            thisObj.addDialog.rscope = {
+                securityGroup: new SecurityGroup()
+            }
+            thisObj.addDialog.rview = thisObj.addDialog.rivets.bind($content, thisObj.addDialog.rscope);
+      });
 
       var $tmpl = $('html body').find('.templates #sgroupEditDlgTmpl').clone();
       var $rendered = $($tmpl.render($.extend($.i18n.map, help_sgroup)));
@@ -772,6 +794,14 @@
       this.tableWrapper.eucatable('reDrawTable');
     },
 
+    _tagResourceAction : function(){
+      var selected = this.tableWrapper.eucatable('getSelectedRows', 7);
+      if ( selected.length > 0 ) {
+        require(['app'], function(app) {
+           app.dialog('edittags', app.data.sgroup.get(selected[0]));
+        });
+       }
+    },
 
     _deleteSelectedSecurityGroups : function (groupsToDelete) {
       var thisObj = this;
@@ -904,6 +934,12 @@
       return this.tableWrapper;
     },
 
+    _newCreateAction : function() {
+      require(['app'], function(app) {
+        app.dialog('create_security_group', {});
+      });
+    },
+
     _deleteAction : function() {
       var thisObj = this;
       var $tableWrapper = this._getTableWrapper();
@@ -936,6 +972,12 @@
       thisObj.addDialog.find("#sgroup-description-error").text("");
       thisObj.addDialog.find('#sgroup-ports-error').text("");
       thisObj.addDialog.find('#allow-ip-error').text("");
+      thisObj.addDialog.find('a[href="#tabs-1"]').click();
+
+      thisObj.addDialog.rscope.securityGroup.get('tags').reset([]);
+      thisObj.addDialog.rview.sync();
+
+      gAddDialog = thisObj.addDialog;
 
       group_ids = [];
       var results = describe('sgroup');
@@ -999,69 +1041,15 @@
       });
     },
 
-    _expandCallback : function(row){
-      var thisObj = this;
-      var groupName = row[7];
-      var results = describe('sgroup');
-      var group = null;
-      for(i in results){
-        if (results[i].name === groupName){
-          group = results[i];
-          break;
-        }
-      }
-      if(!group || !group.rules || group.rules.length <= 0){
-        return null;
-      }
-      var $wrapper = $('<div>').addClass('sgroup-table-expanded-group').addClass('clearfix').append(
-          $('<div>').addClass('expanded-section-label').text(sgroup_table_expanded_title), 
-          $('<div>').addClass('expanded-section-content').addClass('clearfix'));
-      if(group.rules && group.rules.length > 0){
-        var $list = $wrapper.find('div').last();
-        $.each(group.rules, function (idx, rule){
-          var protocol = rule['ip_protocol'];
-          var port = rule['from_port'];
-          if(rule['to_port'] !== rule['from_port'])
-            port += '-'+rule['to_port']; 
-          var type = '';
-          if(protocol === 'icmp'){
-            // TODO : define icmp type
-            ;
-          }
-          var portOrType = type ? type: port;
-          var portOrTypeTitle = type ? sgroup_table_expanded_type : sgroup_table_expanded_port;
 
-          var src = [];
-          var grants = rule['grants'];
-          $.each(grants, function(idx, grant){
-            if(grant.cidr_ip && grant.cidr_ip.length>0){
-              src.push(grant.cidr_ip);
-            }else if(grant.owner_id && grant.owner_id.length>0){
-              if(group.owner_id === grant.owner_id)
-                src.push(grant.groupName);
-              else
-                src.push(grant.owner_id+'/'+grant.groupName);
-            }
-          });
-          src = src.join(', '); 
- 
-          $list.append(
-            $('<div>').addClass('sgroup-expanded-rule').append(
-              $('<div>').addClass('rule-label').text(sgroup_table_expanded_rule),
-              $('<ul>').addClass('rule-expanded').addClass('clearfix').append(
-                $('<li>').append( 
-                  $('<div>').addClass('expanded-title').text(sgroup_table_expanded_protocol),
-                  $('<div>').addClass('expanded-value').text(protocol)),
-                $('<li>').append( 
-                  $('<div>').addClass('expanded-title').text(portOrTypeTitle),
-                  $('<div>').addClass('expanded-value').text(portOrType)),
-                $('<li>').append( 
-                  $('<div>').addClass('expanded-title').text(sgroup_table_expanded_source),
-                  $('<div>').addClass('expanded-value').text(src)))));
-        });
-      }
-      return $('<div>').append($wrapper);
+    _expandCallback : function(row){ 
+      var $el = $('<div />');
+      require(['app', 'views/expandos/sgroup'], function(app, expando) {
+        new expando({el: $el, model: app.data.sgroup.get(row[7])});
+      });
+      return $el;
     },
+
 
 /**** Public Methods ****/
     close: function() {
@@ -1074,7 +1062,28 @@
       var thisObj = this;
       thisObj.rulesList=null; 
       $('#sgroup-rules-list').text(''); 
+
+      thisObj.addDialog.find('#sgroup-name').val('');
       thisObj.addDialog.find('#sgroup-description').val('');
+
+      thisObj.addDialog.find('input[id=sgroup-name]').focus();
+      thisObj.addDialog.find('input[id=sgroup-description]').focus();
+      thisObj.addDialog.find('#sgroup-template').val('none');
+      thisObj.addDialog.find('input[id=allow-ip]').prop('disabled', false);
+      thisObj.addDialog.find('input[id=allow-group]').prop('disabled', true);
+      thisObj.addDialog.find('input[id=sgroup-allow-ip]').prop('checked', 'yes');
+      thisObj.addDialog.find('#sgroup-more-rules').css('display','none')
+      thisObj.addDialog.find("#sgroup-name-error").text("");
+      thisObj.addDialog.find("#sgroup-description-error").text("");
+      thisObj.addDialog.find('#sgroup-ports-error').text("");
+      thisObj.addDialog.find('#allow-ip-error').text("");
+      thisObj.addDialog.find('a[href="#tabs-1"]').click();
+
+      if (thisObj.addDialog.rscope && thisObj.addDialog.rscope.securityGroup != null) {
+          thisObj.addDialog.rscope.securityGroup.get('tags').reset([]);
+          thisObj.addDialog.rview.sync();
+      }
+
       if(callback)
         thisObj.addDialog.data('eucadialog').option('on_close', {callback: callback});
       thisObj.addDialog.eucadialog('open')
