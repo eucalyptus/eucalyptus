@@ -303,6 +303,7 @@
                   async:"false",
                   success: function (data, textstatus, jqXHR) {
                       if (data.results && data.results.status == true) {
+                          require(['app'], function(app) { app.data.sgroup.fetch(); });
                           if (fromPort.length > 0) {
                               notifySuccess(null, $.i18n.prop('sgroup_create_success', DefaultEncoder().encodeForHTML(name)));
                               thisObj._addIngressRule($add_dialog, name, fromPort, toPort, protocol, cidr, fromGroup, fromUser);
@@ -320,7 +321,6 @@
                           tmpSecGroup.set('id', data.results.id);
                           tmpSecGroup.trigger('request');
                           tmpSecGroup.trigger('sync');
-                          require(['app'], function(app) { app.data.sgroup.fetch(); });
                       } else {
                           notifyError($.i18n.prop('sgroup_add_rule_error', DefaultEncoder().encodeForHTML(name)), getErrorMessage(jqXHR));
                       }

@@ -104,10 +104,10 @@ define([
       });
 
       app.data.sgroup.on('add', function(model, collection) {
-        self.render();
         self.model.set('name', model.get('name'));
         self.model.set('id', model.get('id'));
         self.model.set('rules', model.get('rules'));
+        self.render();
       });
 
       app.data.keypair.on('reset sync remove change', function() {
