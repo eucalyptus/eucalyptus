@@ -1,6 +1,25 @@
 #!/bin/bash
-
-# Generates keys for TLS migration of instances between NC nodes.
+#
+# Script to generate keys for TLS migration of instances between NC nodes.
+#
+# Copyright 2013 Eucalyptus Systems, Inc.
+#
+# This Program Is Free Software: You Can Redistribute It And/Or Modify
+# It Under The Terms Of The Gnu General Public License As Published By
+# The Free Software Foundation; Version 3 Of The License.
+#
+# This Program Is Distributed In The Hope That It Will Be Useful,
+# But Without Any Warranty; Without Even The Implied Warranty Of
+# Merchantability Or Fitness For A Particular Purpose.  See The
+# Gnu General Public License For More Details.
+#
+# You Should Have Received A Copy Of The Gnu General Public License
+# Along With This Program.  If Not, See Http://Www.Gnu.Org/Licenses/.
+#
+# Please Contact Eucalyptus Systems, Inc., 6755 Hollister Ave., Goleta
+# Ca 93117, Usa Or Visit Http://Www.Eucalyptus.Com/Licenses/ If You Need
+# Additional Information Or Have Any Questions.
+#
 #
 # Run on NC with three arguments:
 #
@@ -17,6 +36,11 @@ KEYDIR=$EUCALYPTUS/var/lib/eucalyptus/keys
 NCKEY=node-pk.pem
 NCCERT=node-cert.pem
 
+if [ "$1" == "-v" ] ; then
+    VERBOSE=true
+    shift
+fi
+
 if [ $# -eq 2 ] ; then
     NCADDR=$1
     shift
@@ -30,11 +54,11 @@ elif [ $# -eq 3 ] ; then
     if [ $1 = "restart" ] ; then
         RESTART=yes
     else
-        echo "Usage $0 NC-address migration-token [restart]" >&2
+        echo "Usage $0 [-v] NC-address migration-token [restart]" >&2
         exit 1
     fi
 else
-    echo "Usage $0 NC-address migration-token [restart]" >&2
+    echo "Usage $0 [-v] NC-address migration-token [restart]" >&2
     exit 1
 fi
 
@@ -55,10 +79,14 @@ NCORG=`certtool -i --infile $KEYDIR/$NCCERT | grep 'Subject: .*CN=' | perl -naF'
 
 echo "... $NCORG"
 
-# This should be the only message to the console other than the DN at the end,
-# and they can be teased apart by running this script with 2> directed elsewhere,
-# such as to /dev/null
-echo "Generating keys under $WORKD ..." >&4
+# When run with -v, this should be the only message to the console other than the DN at the end,
+# and they can be teased apart by running this script with 2> directed elsewhere, such as to /dev/null.
+if [ -n "$VERBOSE" ] ; then
+    echo "Generating keys under $WORKD ..." >&4
+else
+    echo "Generating keys under $WORKD ..." >&2
+fi
+
 
 # Generate the server key.
 certtool --generate-privkey > $WORKD/serverkey.pem
@@ -80,8 +108,7 @@ certtool --generate-privkey > $WORKD/clientkey.pem
 
 # Create the client template.
 # I'm using the 'locality' field to hold the migration-specific
-# credential/token for now. This will probably change.
-#
+# credential/token for now. This may change.
 cat > $WORKD/client.info <<EOT
 country = US
 locality = $MIGTOK
@@ -91,7 +118,6 @@ tls_www_client
 encryption_key
 signing_key
 EOT
-# state = CA
 
 certtool --generate-certificate --load-privkey $WORKD/clientkey.pem --load-ca-certificate $KEYDIR/$NCCERT --load-ca-privkey $KEYDIR/$NCKEY --template $WORKD/client.info --outfile $WORKD/clientcert.pem 2> $WORKD/clientcert.txt
 
@@ -111,11 +137,15 @@ chmod 600 /etc/pki/libvirt/private/serverkey.pem
 #kill -HUP `cat $LIBVIRTPID`
 if [ "$RESTART" == "yes" ] ; then
     echo "Key installation complete, reloading libvirtd."
-    service libvirtd restart
+    /sbin/service libvirtd restart
 else 
     echo "Key installation complete, libvirtd will require manual restart."
 fi
 
-certtool -i --infile $WORKD/clientcert.pem | grep "Subject: .*CN=" | sed 's/^.*Subject: //' >&3
+if [ -n "$VERBOSE" ] ; then
+    certtool -i --infile $WORKD/clientcert.pem | grep "Subject: .*CN=" | sed 's/^.*Subject: //' >&3
+else
+    certtool -i --infile $WORKD/clientcert.pem | grep "Subject: .*CN=" | sed 's/^.*Subject: //'
+fi
 
 echo "Done."

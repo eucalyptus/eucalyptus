@@ -934,10 +934,10 @@ static void refresh_instance_info(struct nc_state_t *nc, ncInstance * instance)
 
                 // FIXME: Consolidate this sequence and the sequence in handlers_kvm.c into a util function?
                 if (!incoming_migrations_in_progress) {
-                    LOGINFO("no remaining incoming migrations -- deauthorizing migration clients\n");
+                    LOGINFO("no remaining incoming migrations -- deauthorizing all migration clients\n");
                     char deauthorize_keys[MAX_PATH];
                     char *euca_base = getenv(EUCALYPTUS_ENV_VAR_NAME);
-                    snprintf(deauthorize_keys, MAX_PATH, EUCALYPTUS_AUTHORIZE_MIGRATION_KEYS " -z", euca_base ? euca_base : "", euca_base ? euca_base : "");
+                    snprintf(deauthorize_keys, MAX_PATH, EUCALYPTUS_AUTHORIZE_MIGRATION_KEYS " -D -r", euca_base ? euca_base : "", euca_base ? euca_base : "");
                     LOGDEBUG("migration key-deauthorizer path: '%s'\n", deauthorize_keys);
                     int sysret = system(deauthorize_keys);
                     if (sysret) {

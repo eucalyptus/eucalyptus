@@ -2,7 +2,7 @@
 #
 # Init script for the Eucalyptus node controller
 #
-# Copyright 2009-2012 Eucalyptus Systems, Inc.
+# Copyright 2009-2013 Eucalyptus Systems, Inc.
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -203,6 +203,27 @@ do_start() {
 	if ! $EUCALYPTUS/usr/sbin/euca_conf --check nc ; then
 		exit 1
 	fi
+
+        # Ensure libvirtd can start up in "--listen" mode by generating unusable stub keys if none are already present.
+        if [ ! -f /etc/pki/libvirt/servercert.pem ]; then
+                if [ ! -x $EUCALYPTUS/usr/share/eucalyptus/generate-migration-keys.sh ]; then
+                        echo
+                        echo "Cannot generate stub migration keys for libvirtd: missing generate-migration-keys.sh."
+                else
+                        $EUCALYPTUS/usr/share/eucalyptus/generate-migration-keys.sh `hostname` INACTIVE
+                fi
+        fi
+
+        # Ensure any previously authorized migration credentials have been removed from libvirtd.conf
+        # and that it defaults to not allowing client connections.
+        #
+        # Restarts libvirtd (synchronously) as a side-effect.
+        if [ ! -x $EUCALYPTUS/usr/share/eucalyptus/authorize-migration-keys.pl ]; then
+                echo
+                echo "Cannot reset migration credentials in libvirtd.conf: missing authorize-migration-keys.pl."
+        else
+                $EUCALYPTUS/usr/share/eucalyptus/authorize-migration-keys.pl -D -r
+        fi
 
 	# we have a program to test the hypervisor and more for the NC
 	if [ ! -x $EUCALYPTUS/usr/sbin/euca_test_nc ]; then
