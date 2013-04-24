@@ -2101,15 +2101,16 @@ int refresh_resources(ncMetadata * pMeta, int timeout, int dolock)
                         resourceCacheStage->resources[i].availCores = 0;
                         changeState(&(resourceCacheStage->resources[i]), RESDOWN);
                         resourceCacheStage->resources[i].ncState = NOTREADY;
+                        resourceCacheStage->resources[i].migrationCapable = FALSE;
                         euca_strncpy(resourceCacheStage->resources[i].nodeMessage, SP(errMsg), 1024);
                         LOGERROR("error message from ncDescribeResource: %s\n", resourceCacheStage->resources[i].nodeMessage);
                     }
                 } else {
-                    LOGDEBUG("received data from node=%s status=%s mem=%d/%d disk=%d/%d cores=%d/%d migrationCapable=%d\n",
+                    LOGDEBUG("received data from node=%s status=%s mem=%d/%d disk=%d/%d cores=%d/%d migrationCapable=%s\n",
                              resourceCacheStage->resources[i].hostname,
                              ncResDst->nodeStatus,
                              ncResDst->memorySizeAvailable, ncResDst->memorySizeMax,
-                             ncResDst->diskSizeAvailable, ncResDst->diskSizeMax, ncResDst->numberOfCoresAvailable, ncResDst->numberOfCoresMax, ncResDst->migrationCapable);
+                             ncResDst->diskSizeAvailable, ncResDst->diskSizeMax, ncResDst->numberOfCoresAvailable, ncResDst->numberOfCoresMax, (ncResDst->migrationCapable == TRUE) ? "TRUE" : "FALSE");
                     resourceCacheStage->resources[i].maxMemory = ncResDst->memorySizeMax;
                     resourceCacheStage->resources[i].availMemory = ncResDst->memorySizeAvailable;
                     resourceCacheStage->resources[i].maxDisk = ncResDst->diskSizeMax;
@@ -2121,6 +2122,7 @@ int refresh_resources(ncMetadata * pMeta, int timeout, int dolock)
                     } else if (!strcmp(ncResDst->nodeStatus, "disabled")) {
                         resourceCacheStage->resources[i].ncState = STOPPED;
                     }
+                    resourceCacheStage->resources[i].migrationCapable = ncResDst->migrationCapable;
                     euca_strncpy(resourceCacheStage->resources[i].nodeStatus, ncResDst->nodeStatus, 24);
 ////                    // temporarily duplicate the NC reported value in the node message for debugging
                     strcpy(resourceCacheStage->resources[i].nodeMessage, "");

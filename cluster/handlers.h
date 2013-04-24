@@ -287,7 +287,7 @@ typedef struct resource_t {
     int lockidx;
     char nodeMessage[1024];
     char nodeStatus[24];
-
+    boolean migrationCapable;
 } ccResource;
 
 typedef struct ccResourceCache_t {
