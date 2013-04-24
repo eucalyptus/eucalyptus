@@ -330,6 +330,8 @@ public class LoadBalancingService {
     if(!nameChecker.apply(lbName)){
     	throw new LoadBalancingException("Invalid character found in the loadbalancer name");
     }
+    if(request.getListeners()!=null && request.getListeners().getMember()!=null)
+    	LoadBalancers.validateListener(lbName, ownerFullName, request.getListeners().getMember());
     
     final Supplier<LoadBalancer> allocator = new Supplier<LoadBalancer>() {
       @Override
@@ -402,7 +404,7 @@ public class LoadBalancingService {
 
     Collection<Listener> listeners=request.getListeners().getMember();
     if(listeners!=null && listeners.size()>0){
-    	LoadBalancers.createLoadbalancerListener(lbName,  ownerFullName, listeners);
+    	LoadBalancers.createLoadbalancerListener(lbName,  ownerFullName, Lists.newArrayList(listeners));
     	try{
     		CreateListenerEvent evt = new CreateListenerEvent();
     		evt.setLoadBalancer(lbName);
@@ -648,7 +650,11 @@ public class LoadBalancingService {
 	  final Context ctx = Contexts.lookup( );
 	  final UserFullName ownerFullName = ctx.getUserFullName( );
 	  final String lbName = request.getLoadBalancerName();
-	  final Collection<Listener> listeners = request.getListeners().getMember();
+	  final List<Listener> listeners = request.getListeners().getMember();
+
+	  if(listeners!=null)
+		  LoadBalancers.validateListener(lbName, ownerFullName, listeners);
+	    
 	  try{
     		CreateListenerEvent evt = new CreateListenerEvent();
     		evt.setLoadBalancer(lbName);
