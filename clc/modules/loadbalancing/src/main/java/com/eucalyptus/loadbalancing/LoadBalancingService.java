@@ -179,7 +179,7 @@ public class LoadBalancingService {
   	  };
 
 	  Set<LoadBalancerDescription> descs = null;
-  	  if(zone != null && LoadBalancingMetadatas.filterPrivileged().apply( zone.getLoadbalancer() ) && zone.getState().equals(LoadBalancerZone.STATE.InService)){
+  	  if(zone != null && LoadBalancingMetadatas.filterPrivilegedWithoutOwner().apply( zone.getLoadbalancer() ) && zone.getState().equals(LoadBalancerZone.STATE.InService)){
   			 descs= lookupLBDescriptions.apply(zone);
   	  }else
   		  descs = Sets.<LoadBalancerDescription>newHashSet();
@@ -221,7 +221,7 @@ public class LoadBalancingService {
 			  LOG.warn("failed to query servo instance");
 		  }
 	  }
-	  if(lb==null || !LoadBalancingMetadatas.filterPrivileged().apply( lb ))
+	  if(lb==null || !LoadBalancingMetadatas.filterPrivilegedWithoutOwner().apply( lb ))
 		  return reply;
 	  
 	  /// INSTANCE HEALTH CHECK UPDATE
