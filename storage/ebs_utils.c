@@ -1,9 +1,79 @@
-/*
- * ebs_utils.c
+// -*- mode: C; c-basic-offset: 4; tab-width: 4; indent-tabs-mode: nil -*-
+// vim: set softtabstop=4 shiftwidth=4 tabstop=4 expandtab:
+
+/*************************************************************************
+ * Copyright 2009-2012 Eucalyptus Systems, Inc.
  *
- *  Created on: Apr 4, 2013
- *      Author: zhill
- */
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; version 3 of the License.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see http://www.gnu.org/licenses/.
+ *
+ * Please contact Eucalyptus Systems, Inc., 6755 Hollister Ave., Goleta
+ * CA 93117, USA or visit http://www.eucalyptus.com/licenses/ if you need
+ * additional information or have any questions.
+ *
+ * This file may incorporate work covered under the following copyright
+ * and permission notice:
+ *
+ *   Software License Agreement (BSD License)
+ *
+ *   Copyright (c) 2008, Regents of the University of California
+ *   All rights reserved.
+ *
+ *   Redistribution and use of this software in source and binary forms,
+ *   with or without modification, are permitted provided that the
+ *   following conditions are met:
+ *
+ *     Redistributions of source code must retain the above copyright
+ *     notice, this list of conditions and the following disclaimer.
+ *
+ *     Redistributions in binary form must reproduce the above copyright
+ *     notice, this list of conditions and the following disclaimer
+ *     in the documentation and/or other materials provided with the
+ *     distribution.
+ *
+ *   THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+ *   "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+ *   LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
+ *   FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE
+ *   COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
+ *   INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
+ *   BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+ *   LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+ *   CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+ *   LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN
+ *   ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+ *   POSSIBILITY OF SUCH DAMAGE. USERS OF THIS SOFTWARE ACKNOWLEDGE
+ *   THE POSSIBLE PRESENCE OF OTHER OPEN SOURCE LICENSED MATERIAL,
+ *   COPYRIGHTED MATERIAL OR PATENTED MATERIAL IN THIS SOFTWARE,
+ *   AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
+ *   IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA,
+ *   SANTA BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY,
+ *   WHICH IN THE REGENTS' DISCRETION MAY INCLUDE, WITHOUT LIMITATION,
+ *   REPLACEMENT OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO
+ *   IDENTIFIED, OR WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT
+ *   NEEDED TO COMPLY WITH ANY SUCH LICENSES OR RIGHTS.
+ ************************************************************************/
+
+//!
+//! @file storage/ebs_utils.c
+//! Need description
+//!
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                                  INCLUDES                                  |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
 #include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -15,11 +85,88 @@
 #include "storage-controller.h"
 #include "ebs_utils.h"
 
-static sem *vol_sem = NULL; //! Semaphore to protect volume operations
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                                  DEFINES                                   |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
 
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                                  TYPEDEFS                                  |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                                ENUMERATIONS                                |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                                 STRUCTURES                                 |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                             EXTERNAL VARIABLES                             |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+/* Should preferably be handled in header file */
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                              GLOBAL VARIABLES                              |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+#ifdef _UNIT_TEST
+const char *euca_this_component_name = "sc";    //!< Eucalyptus Component Name
+const char *euca_client_component_name = "nc";    //!< The client component name
+#endif /* _UNIT_TEST */
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                              STATIC VARIABLES                              |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+static sem *vol_sem = NULL; //!< Semaphore to protect volume operations
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                              STATIC PROTOTYPES                             |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                                   MACROS                                   |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                               IMPLEMENTATION                               |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+//!
 //! Initialize ebs data structures and semaphores for EBS
 //! Should only be called once!
-int init_ebs_utils()
+//!
+//! @return
+//!
+//! @pre
+//!
+//! @post
+//!
+//! @note
+//!
+int init_ebs_utils(void)
 {
 	LOGINFO("Initializing EBS utils\n");
 	if(vol_sem == NULL) {
@@ -29,18 +176,40 @@ int init_ebs_utils()
 	return EUCA_OK;
 }
 
-//! Gets the local device for the volume (i.e. /dev/sdf
+//!
+//! Gets the local device for the volume (i.e. /dev/sdf)
+//!
+//! @param[in] connection_string
+//!
+//! @return
+//!
+//! @pre
+//!
+//! @post
+//!
+//! @note
+//!
 char *get_volume_local_device(const char *connection_string)
 {
-	//Invoke the iscsi stuff.
+	// Invoke the iscsi stuff.
 	return get_iscsi_target(connection_string);
 }
 
+//!
 //! Replaces "sc://" with the actual url of the storage service. Caller must provide the sc-url
 //!
 //! @param[in] volume_string containing the encoded volume information
-//! @param[in] place to write modified string
+//! @param[in] scUrl
+//! @param[in] dest_string place to write modified string
+//!
 //! @return ok|fail
+//!
+//! @pre
+//!
+//! @post
+//!
+//! @note
+//!
 int replace_sc_url(const char * volume_string, const char * scUrl, char * restrict dest_string)
 {
 	int prefix_length = strlen(VOLUME_STRING_PREFIX);
@@ -74,16 +243,25 @@ int replace_sc_url(const char * volume_string, const char * scUrl, char * restri
 	return EUCA_OK;
 }
 
+//!
 //! Parses the volume string and returns a newly allocated ebs_volume_data structure via the parameter.
 //! Caller must free the returned structure.
-//!Format expected:
-//! sc://volumeId,token.
-//! OR
-//! http://schost:port/services/Storage/volumeId,token
+//! Format expected:
+//!    sc://volumeId,token.
+//!    OR
+//!    http://schost:port/services/Storage/volumeId,token
 //!
-//! @param[in] string containing the encoded volume information
+//! @param[in] volume_string containing the encoded volume information
 //! @param[in] dest a pointer to a pointer for ebs_volume_data, the referenced pointer will be set to newly allocated struct
+//!
 //! @return ok|fail
+//!
+//! @pre
+//!
+//! @post
+//!
+//! @note
+//!
 int deserialize_volume(char *volume_string, ebs_volume_data **dest)
 {
 	if(volume_string == NULL) {
@@ -114,8 +292,21 @@ int deserialize_volume(char *volume_string, ebs_volume_data **dest)
 	return EUCA_OK;
 }
 
+//!
 //! Serializes the ebs_volume_data struct into a single string that is
 //! pointed to by the 'dest' argument
+//!
+//! @param[in] vol_data
+//! @param[in] dest
+//!
+//! @return
+//!
+//! @pre
+//!
+//! @post
+//!
+//! @note
+//!
 int serialize_volume(ebs_volume_data *vol_data, char **dest)
 {
 	if(vol_data == NULL)
@@ -141,6 +332,26 @@ int serialize_volume(ebs_volume_data *vol_data, char **dest)
 	return EUCA_OK;
 }
 
+//!
+//! New version, uses external sc url...likely derived from service info
+//!
+//! @param[in] sc_url
+//! @param[in] attachment_token
+//! @param[in] use_ws_sec
+//! @param[in] ws_sec_policy_file
+//! @param[in] local_ip
+//! @param[in] local_iqn
+//! @param[in] result_device
+//! @param[in] vol_data
+//!
+//! @return
+//!
+//! @pre
+//!
+//! @post
+//!
+//! @note
+//!
 int connect_ebs_volume(char *sc_url, char *attachment_token, int use_ws_sec, char *ws_sec_policy_file, char *local_ip, char *local_iqn, char **result_device, ebs_volume_data **vol_data)
 {
 	int rc = 0;
@@ -194,8 +405,25 @@ release:
     return ret;
 }
 
+//!
 //! Detach a local device that is iSCSI and disconnect the session.
-//! NOTE: should only be invoked after detachment from the guest
+//!
+//! @param[in] sc_url
+//! @param[in] use_ws_sec
+//! @param[in] ws_sec_policy_file
+//! @param[in] volume_string
+//! @param[in] connect_string
+//! @param[in] local_ip
+//! @param[in] local_iqn
+//!
+//! @return
+//!
+//! @pre
+//!
+//! @post
+//!
+//! @note should only be invoked after detachment from the guest
+//!
 int disconnect_ebs_volume(char *sc_url, int use_ws_sec, char *ws_sec_policy_file, char *volume_string, char *connect_string, char *local_ip, char *local_iqn)
 {
 	LOGTRACE("Disconnecting EBS volume %s\n");
@@ -257,7 +485,24 @@ release:
 	return ret;
 }
 
+//!
 //! Assumes that the vol_data struct is populated, including the connection_string
+//!
+//! @param[in] sc_url
+//! @param[in] use_ws_sec
+//! @param[in] ws_sec_policy_file
+//! @param[in] vol_data
+//! @param[in] local_ip
+//! @param[in] local_iqn
+//!
+//! @return
+//!
+//! @pre
+//!
+//! @post
+//!
+//! @note
+//!
 int disconnect_ebs_volume_with_struct(char *sc_url, int use_ws_sec, char *ws_sec_policy_file, ebs_volume_data *vol_data, char *local_ip, char *local_iqn)
 {
 	int ret = 0;
@@ -316,11 +561,14 @@ release:
 }
 
 #ifdef _UNIT_TEST
-const char *euca_this_component_name = "sc";    //!< Eucalyptus Component Name
-const char *euca_client_component_name = "nc";    //!< The client component name
-
-
-//! Unit testing code
+//!
+//! Main entry point of the application
+//!
+//! @param[in] argc the number of parameter passed on the command line
+//! @param[in] argv the list of arguments
+//!
+//! @return EUCA_OK on success or EUCA_ERROR on failure.
+//!
 int main(int argc, char** argv)
 {
 	char *sc_url_prefix = "sc://";
@@ -372,7 +620,6 @@ int main(int argc, char** argv)
 	result = replace_sc_url(serialized3, "http://localhost.com:8773/services/Storage", url_out3);
 	printf("Result string %s\n", url_out3);*/
 
+	return(0);
 }
-#endif
-
-
+#endif /* _UNIT_TEST */
