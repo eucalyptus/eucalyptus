@@ -132,13 +132,14 @@ class QueryBindingTestSupport {
         Date.class.equals( clazz ))
   }
 
-  void bindAndAssertParameters( BaseQueryBinding binding, Class messageClass, String action, Object bean, Map<String,String> parameters ) {
+  def <T> T bindAndAssertParameters( BaseQueryBinding binding, Class<T> messageClass, String action, Object bean, Map<String,String> parameters ) {
     Object message = bind( binding, action, parameters )
     assertTrue( action + ' message type', messageClass.isInstance( message ) )
     assertRecursiveEquality( action, "", bean, message )
+    (T) message
   }
 
-  void bindAndAssertObject( BaseQueryBinding binding, Class messageClass, String action, Object bean, int expectedParameterCount ) {
+  def <T> T  bindAndAssertObject( BaseQueryBinding binding, Class<T> messageClass, String action, Object bean, int expectedParameterCount ) {
     Map<String,String> parameters = Maps.newHashMap()
     putParameters( "", bean, parameters )
     // sanity check parameter count to ensure we're not missing something ...
@@ -146,6 +147,7 @@ class QueryBindingTestSupport {
     Object message = bind( binding, action, parameters )
     assertTrue( action + ' message type', messageClass.isInstance( message ) )
     assertRecursiveEquality( action, "", bean, message )
+    (T) message
   }
 
   void assertRecursiveEquality( String action, String prefix, Object expected, Object actual ) {
@@ -206,9 +208,9 @@ class QueryBindingTestSupport {
   }
 
   String name( Field field ) {
-    String name = field.getAnnotation( HttpParameterMapping.class )?.parameter()
+    String name = (field.getAnnotation( HttpParameterMapping.class )?.parameter() as List<String>)?.get( 0 )
     if ( name == null ) {
-      name = field.getAnnotation( HttpParameterMappings.class )?.value()?.last()?.parameter()
+      name = ((field.getAnnotation( HttpParameterMappings.class )?.value() as List<HttpParameterMapping>)?.last()?.parameter() as List<String>)?.get( 0 )
       if ( name == null ) {
         name = String.valueOf(field.getName().charAt(0).toUpperCase()) + field.getName().substring(1)
       }
