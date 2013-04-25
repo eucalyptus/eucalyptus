@@ -207,7 +207,7 @@ What follows is a comprehensive list of dependencies that must be satisfied befo
 Prerequisites for compiling from source
 
     * C compilers
-    * Java Developer Kit (SDK) version 1.6 or above
+    * Java Developer Kit (SDK) version 1.7 or above
     * Apache ant 1.6.5 or above
     * libc development files
     * pthreads development files
