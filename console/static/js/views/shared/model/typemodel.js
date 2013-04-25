@@ -13,12 +13,13 @@ define([], function() {
         max: 99,
         msg: 'This field is required, and must be a number between 1 and 99.'
       },
-/*    
-      type_names: {
-        required: true,
-        msg: 'This field is required.'
-      }
-*/
+    
+      type_names_count: function(value, attr, computedState) {
+          if (value != undefined && value > 0 && value != computedState.type_number) {
+            return 'If names are supplied, a name is required for each instance to be launched.';
+          }
+      },
+
       instance_type: {
         required: true,
         msg: 'You must select an instance size.'
@@ -26,7 +27,7 @@ define([], function() {
     },
 
     finish: function(outputModel) {
-      outputModel.set('name', this.get('type_names'));
+      outputModel.set('names', this.get('type_names'));
       outputModel.set('instance_type', this.get('instance_type'));
       outputModel.set('tags', this.get('tags'));
 

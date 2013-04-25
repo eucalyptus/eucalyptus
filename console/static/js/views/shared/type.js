@@ -13,6 +13,8 @@ define([
       var self = this;
       this.model.set('tags', new Backbone.Collection());
       this.model.set('zones', dataholder.zone);
+      this.model.set('type_names', new Backbone.Collection());
+      this.t_names = this.model.get('type_names');
 
       // for the instance types/sizes pulldown, sorted asc
       var typesTemp = new Backbone.Collection();
@@ -44,8 +46,16 @@ define([
           var target = e.target;
           switch(target.id) {
             case 'launch-instance-names':
-              var names = target.value.split(',');
-              self.model.set('type_names', names);
+              if(target.value == '') {
+                self.t_names.reset();
+              } else {
+                var names = target.value.split(',');
+                self.t_names.reset();
+                for(i=0; i<names.length; i++) {
+                  var trimmed = names[i].replace(/^\s\s*/, '').replace(/\s\s*$/, '');
+                  self.t_names.add({name: "Name", value: trimmed});
+                }
+              }
               break;
             default:
           }
@@ -67,22 +77,29 @@ define([
     
         launchConfigErrors: {
           type_number: '',
-          instance_type: ''
+          instance_type: '',
+          type_names_count: ''
         }
     };
 
     self.model.on('validated:invalid', function(model, errors) {
       scope.launchConfigErrors.type_number = errors.type_number;
       scope.launchConfigErrors.instance_type = errors.instance_type;
+      scope.launchConfigErrors.type_names_count = errors.type_names_count;
       self.render();
     });
 
     self.model.on('validated:valid', function(model, errors) {
       scope.launchConfigErrors.type_number = null;
       scope.launchConfigErrors.instance_type = null;
+      scope.launchConfigErrors.type_names_count = null;
       self.render();
     });
-   
+  
+   // used for instance name/number congruity validation... see below
+   self.t_names.on('add reset sync change remove', function() {
+      self.model.set('type_names_count', self.model.get('type_names').length);
+   });
 
     $(this.el).html(this.tpl);
      this.rView = rivets.bind(this.$el, scope);
@@ -94,11 +111,18 @@ define([
     },
 
     isValid: function() {
+      var json = this.model.toJSON();
       this.model.validate(_.pick(this.model.toJSON(),'type_number'));
       if (!this.model.isValid())
         return false;
 
       this.model.validate(_.pick(this.model.toJSON(),'instance_type'));
+      if (!this.model.isValid())
+        return false;
+
+      // cannot pass a collection like type_names in here. Have to maintain
+      // the count of the collection separately.
+      this.model.validate(_.pick(json, 'type_names_count'));
       if (!this.model.isValid())
         return false;
 
