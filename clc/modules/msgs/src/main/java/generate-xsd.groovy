@@ -156,7 +156,7 @@ def processComplexType = { Class compId, Class c, recurse={} ->
 }
 
 def processMessageType = { Class<? extends ComponentId> compId, Class c ->
-  if ( /*compId.newInstance( ).isAdminService( )*/true ) {
+  if ( compId.newInstance( ).isAdminService( ) ) {
     messageTypes.put( compId, c );
     c.getDeclaredFields( ).findAll( filterComplex ).each { Field f ->
       processComplexType( compId, f.getType( ), processComplexType );
