@@ -138,6 +138,10 @@ define([
         return false;
       }
       return true;
+    },
+
+    focus: function() {
+      this.model.set('security_show', true);
     }
 });
 });
