@@ -71,19 +71,12 @@ import java.util.NoSuchElementException;
 import java.util.Set;
 
 import javax.persistence.PersistenceException;
-import javax.xml.xpath.XPath;
-import javax.xml.xpath.XPathConstants;
-import javax.xml.xpath.XPathExpressionException;
 
 import org.apache.log4j.Logger;
-import org.w3c.dom.Document;
-import org.w3c.dom.NodeList;
 
 import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.AuthException;
-import com.eucalyptus.auth.policy.PolicySpec;
 import com.eucalyptus.auth.principal.AccountFullName;
-import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.cloud.CloudMetadatas;
 import com.eucalyptus.cloud.ImageMetadata;
 import com.eucalyptus.cluster.Cluster;
@@ -144,10 +137,10 @@ public class ImageManager {
   private static final String ADD = "add";
   
   public DescribeImagesResponseType describe( final DescribeImagesType request ) throws EucalyptusCloudException, TransactionException {
-    DescribeImagesResponseType reply = request.getReply( );
+    DescribeImagesResponseType reply = request.getReply();
     final Context ctx = Contexts.lookup( );
     final String requestAccountId = ctx.getUserFullName( ).getAccountNumber( );
-    final List<String> ownersSet = request.getOwnersSet( );
+    final List<String> ownersSet = request.getOwnersSet();
     if ( ownersSet.remove( Images.SELF ) ) {
       ownersSet.add( requestAccountId );
     }
@@ -175,12 +168,12 @@ public class ImageManager {
     }
 
     reply.getImagesSet( ).addAll( imageDetailsList );
-    ImageUtil.cleanDeregistered( );
+    ImageUtil.cleanDeregistered();
     return reply;
   }
   
   public RegisterImageResponseType register( final RegisterImageType request ) throws EucalyptusCloudException, AuthException, IllegalContextAccessException, NoSuchElementException, PersistenceException {
-	final Context ctx = Contexts.lookup( );
+	final Context ctx = Contexts.lookup();
     ImageInfo imageInfo = null;
     final String rootDevName = ( request.getRootDeviceName( ) != null )
       ? request.getRootDeviceName( )
@@ -244,34 +237,14 @@ public class ImageManager {
     return reply;
   }
   
-  private List<String> extractProductCodes( Document inputSource, XPath xpath ) {
-    List<String> prodCodes = Lists.newArrayList( );
-    NodeList productCodes = null;
-    try {
-      productCodes = ( NodeList ) xpath.evaluate( "/manifest/machine_configuration/product_codes/product_code/text()", inputSource, XPathConstants.NODESET );
-      for ( int i = 0; i < productCodes.getLength( ); i++ ) {
-        for ( String productCode : productCodes.item( i ).getNodeValue( ).split( "," ) ) {
-          prodCodes.add( productCode );
-        }
-      }
-    } catch ( XPathExpressionException e ) {
-      LOG.error( e, e );
-    }
-    return prodCodes;
-  }
-  
   public DeregisterImageResponseType deregister( DeregisterImageType request ) throws EucalyptusCloudException {
-    if(!request.getImageId( ).matches("(emi-|eki-|eri-)\\w{8}"))
-      throw new EucalyptusCloudException( "Invalid id: " + "\"" + request.getImageId( ) + "\"" );
     DeregisterImageResponseType reply = request.getReply( );
     final Context ctx = Contexts.lookup( );
     final String requestAccountId = ctx.getUserFullName( ).getAccountNumber( );
-    final User requestUser = Contexts.lookup( ).getUser( );
-    final String action = PolicySpec.requestToAction( request );
-    
+
     EntityWrapper<ImageInfo> db = EntityWrapper.get( ImageInfo.class );
     try {
-      ImageInfo imgInfo = db.getUnique( Images.exampleWithImageId( request.getImageId( ) ) );
+      ImageInfo imgInfo = db.getUnique( Images.exampleWithImageId( imageIdentifier( request.getImageId( ) ) ) );
       if ( !ctx.hasAdministrativePrivileges( ) &&
            ( !imgInfo.getOwnerAccountNumber( ).equals( requestAccountId ) ||
                !RestrictedTypes.filterPrivileged( ).apply( imgInfo ) ) ) {
@@ -330,7 +303,7 @@ public class ImageManager {
     
     final EntityWrapper<ImageInfo> db = EntityWrapper.get( ImageInfo.class );
     try {
-      final ImageInfo imgInfo = db.getUnique( Images.exampleWithImageId( request.getImageId( ) ) );
+      final ImageInfo imgInfo = db.getUnique( Images.exampleWithImageId( imageIdentifier( request.getImageId( ) ) ) );
       if ( !ctx.hasAdministrativePrivileges( ) &&
            ( !imgInfo.getOwnerAccountNumber( ).equals( requestAccountId ) || !RestrictedTypes.filterPrivileged( ).apply( imgInfo ) ) ) {
         throw new EucalyptusCloudException( "Not authorized to describe image attribute" );
@@ -406,7 +379,7 @@ public class ImageManager {
 
     final EntityWrapper<ImageInfo> db = EntityWrapper.get( ImageInfo.class );
     try {
-      final ImageInfo imgInfo = db.getUnique( Images.exampleWithImageId( request.getImageId( ) ) );
+      final ImageInfo imgInfo = db.getUnique( Images.exampleWithImageId( imageIdentifier( request.getImageId( ) ) ) );
       if ( !ctx.hasAdministrativePrivileges( ) &&
            ( !imgInfo.getOwnerAccountNumber( ).equals( requestAccountId ) ||
                !RestrictedTypes.filterPrivileged( ).apply( imgInfo ) ) ) {
@@ -455,7 +428,7 @@ public class ImageManager {
     final String requestAccountId = ctx.getUserFullName( ).getAccountNumber( );
     EntityWrapper<ImageInfo> db = EntityWrapper.get( ImageInfo.class );
     try {
-      ImageInfo imgInfo = db.getUnique( Images.exampleWithImageId( request.getImageId( ) ) );
+      ImageInfo imgInfo = db.getUnique( Images.exampleWithImageId( imageIdentifier( request.getImageId( ) ) ) );
       if ( ctx.hasAdministrativePrivileges( ) ||
            ( imgInfo.getOwnerAccountNumber( ).equals( requestAccountId ) &&
                RestrictedTypes.filterPrivileged( ).apply( imgInfo ) ) ) {
@@ -515,7 +488,13 @@ public class ImageManager {
     
     return reply;
   }
-  
+
+  private static String imageIdentifier( final String identifier ) throws EucalyptusCloudException {
+    if( identifier == null || !Images.IMAGE_ID_PATTERN.matcher( identifier ).matches() )
+      throw new EucalyptusCloudException( "Invalid id: " + "\"" + identifier + "\"" );
+    return identifier;
+  }
+
   private enum ImageDetailsToImageId implements Function<ImageDetails, String> {
     INSTANCE {
       @Override
