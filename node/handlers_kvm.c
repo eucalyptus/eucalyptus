@@ -873,10 +873,12 @@ static int doMigrateInstances(struct nc_state_t *nc, ncMetadata * pMeta, ncInsta
                 EUCA_FREE(brname);
                 goto failed_dest;
             }
+            euca_strncpy(instance->params.guestNicDeviceName, brname, sizeof(instance->params.guestNicDeviceName));
+            EUCA_FREE(brname);
+
             // TODO: move stuff in startup_thread() into a function?
 
-            instance->combinePartitions = nc->convert_to_disk;
-            instance->do_inject_key = nc->do_inject_key;
+            set_instance_params(instance);
 
             if ((error = create_instance_backing(instance, TRUE))   // create files that back the disks
                 || (error = gen_instance_xml(instance)) // create euca-specific instance XML file

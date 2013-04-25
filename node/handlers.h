@@ -313,6 +313,7 @@ int wait_state_transition(ncInstance * instance, instance_states from_state, ins
 void adopt_instances();
 int get_instance_xml(const char *gen_libvirt_cmd_path, char *userId, char *instanceId, char *platform, char *ramdiskId, char *kernelId,
                      char *disk_path, virtualMachine * params, char *privMac, char *brname, int use_virtio_net, int use_virtio_root, char **xml);
+void set_instance_params(ncInstance *instance);
 void *monitoring_thread(void *arg);
 void *startup_thread(void *arg);
 void *restart_thread(void *arg);
