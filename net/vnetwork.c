@@ -1715,7 +1715,10 @@ int vnetGenerateNetworkParams(vnetConfig * vnetconfig, char *instId, int vlan, i
         for (i = vnetconfig->addrIndexMin; ((i < vnetconfig->addrIndexMax) && !found); i++) {
 #if 0
             LOGDEBUG("HELLO: %d outmac:%s inip:%s ip:%s mac:%d match:%d\n", i, outmac, hex2dot(inip), hex2dot(vnetconfig->networks[0].addrs[i].ip), machexcmp(outmac,
-                     vnetconfig->networks[0].addrs[i].mac), (vnetconfig->networks[0].addrs[i].ip == inip));
+                                                                                                                                                              vnetconfig->
+                                                                                                                                                              networks[0].addrs[i].
+                                                                                                                                                              mac),
+                     (vnetconfig->networks[0].addrs[i].ip == inip));
 #endif // 0
 
             if (!machexcmp(outmac, vnetconfig->networks[0].addrs[i].mac) && (vnetconfig->networks[0].addrs[i].ip == inip)) {
@@ -4119,25 +4122,25 @@ void hex2mac(u8 in[6], char **out)
 //!
 //! @note if \p in is NULL or if its of an invalid format, \p out will remain unchanged
 //!
-u8 * mac2hex(char *in, u8 out[6])
+u8 *mac2hex(char *in, u8 out[6])
 {
     int rc = 0;
     u32 tmp[6] = { 0 };
 
     if (in != NULL) {
         bzero(out, 6);
-        rc = sscanf(in, "%X:%X:%X:%X:%X:%X", ((u32 *)&tmp[0]), ((u32 *)&tmp[1]), ((u32 *)&tmp[2]), ((u32 *)&tmp[3]), ((u32 *)&tmp[4]), ((u32 *)&tmp[5]));
+        rc = sscanf(in, "%X:%X:%X:%X:%X:%X", ((u32 *) & tmp[0]), ((u32 *) & tmp[1]), ((u32 *) & tmp[2]), ((u32 *) & tmp[3]), ((u32 *) & tmp[4]), ((u32 *) & tmp[5]));
         if (rc == 6) {
-            out[0] = ((u8)tmp[0]);
-            out[1] = ((u8)tmp[1]);
-            out[2] = ((u8)tmp[2]);
-            out[3] = ((u8)tmp[3]);
-            out[4] = ((u8)tmp[4]);
-            out[5] = ((u8)tmp[5]);
-            return(out);
+            out[0] = ((u8) tmp[0]);
+            out[1] = ((u8) tmp[1]);
+            out[2] = ((u8) tmp[2]);
+            out[3] = ((u8) tmp[3]);
+            out[4] = ((u8) tmp[4]);
+            out[5] = ((u8) tmp[5]);
+            return (out);
         }
     }
-    return(NULL);
+    return (NULL);
 }
 
 //!
@@ -4173,7 +4176,7 @@ int maczero(u8 in[6])
 int machexcmp(char *ina, u8 inb[6])
 {
     u8 mconv[6] = { 0 };
-    if(mac2hex(ina, mconv) != NULL)
+    if (mac2hex(ina, mconv) != NULL)
         return (memcmp(mconv, inb, sizeof(u8) * 6));
     return (-1);
 }

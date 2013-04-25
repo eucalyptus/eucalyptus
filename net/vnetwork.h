@@ -287,7 +287,7 @@ int mac2ip(vnetConfig * vnetconfig, char *mac, char **ip);
 u32 dot2hex(char *in);
 int getdevinfo(char *dev, u32 ** outips, u32 ** outnms, int *len);
 void hex2mac(u8 in[6], char **out);
-u8 * mac2hex(char *in, u8 out[6]);
+u8 *mac2hex(char *in, u8 out[6]);
 int maczero(u8 in[6]);
 int machexcmp(char *ina, u8 inb[6]);
 char *hex2dot(u32 in);

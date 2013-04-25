@@ -6842,7 +6842,7 @@ int free_instanceNetwork(char *mac, int vlan, int force, int dolock)
     u8 hexmac[6] = { 0 };
     boolean inuse = FALSE;
 
-    if(mac2hex(mac, hexmac) == NULL)
+    if (mac2hex(mac, hexmac) == NULL)
         return (0);
 
     if (!maczero(hexmac)) {
