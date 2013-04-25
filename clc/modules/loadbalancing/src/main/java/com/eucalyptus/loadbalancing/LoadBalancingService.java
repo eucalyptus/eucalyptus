@@ -225,9 +225,6 @@ public class LoadBalancingService {
 		  return reply;
 	  
 	  /// INSTANCE HEALTH CHECK UPDATE
-	  Map<String, Integer> healthyCounter = new ConcurrentHashMap<String, Integer>(); // zone -> count
-	  Map<String, Integer> unHealthyCounter = new ConcurrentHashMap<String, Integer>();
-	  
 	  if(instances!= null && instances.getMember()!=null && instances.getMember().size()>0){
 		  final Collection<LoadBalancerBackendInstance> lbInstances = lb.getBackendInstances();
 		  if(lb != null && instances.getMember()!=null && instances.getMember().size()>0){
@@ -268,15 +265,6 @@ public class LoadBalancingService {
 				 			  Entities.persist(found);
 				 		  }
 				 		  db.commit();
-				 		  if(state.equals(LoadBalancerBackendInstance.STATE.InService.name())){
-				 			  if(!healthyCounter.containsKey(zoneName))
-				 				  healthyCounter.put(zoneName, 0);
-				 			  healthyCounter.put(zoneName, healthyCounter.get(zoneName)+1);
-				 		  }else if (state.equals(LoadBalancerBackendInstance.STATE.OutOfService.name())){
-				 			  if(!unHealthyCounter.containsKey(zoneName))
-				 				 unHealthyCounter.put(zoneName, 0);
-				 			  unHealthyCounter.put(zoneName, unHealthyCounter.get(zoneName)+1);
-				 		  }
 				 	  }catch(NoSuchElementException ex){
 				 		  db.rollback();
 				 	  }catch(Exception ex){
@@ -288,22 +276,32 @@ public class LoadBalancingService {
 		  }
 	  }
 	  
+	  /// Update Cloudwatch
+	  for(final LoadBalancerBackendInstance sample : lb.getBackendInstances()){
+		  final EntityTransaction db = Entities.get( LoadBalancerBackendInstance.class );
+	 	  try{
+	 		  final LoadBalancerBackendInstance found = Entities.uniqueResult(sample);
+	 		  final String zoneName = found.getAvailabilityZone().getName();
+	 		  if(found.getState().equals(LoadBalancerBackendInstance.STATE.InService)){
+	 			  LoadBalancerCwatchMetrics.getInstance().updateHealthy(lb.getOwnerUserId(), lb.getDisplayName(), zoneName, found.getInstanceId());
+	 		  }else if (found.getState().equals(LoadBalancerBackendInstance.STATE.OutOfService)){
+	 			  LoadBalancerCwatchMetrics.getInstance().updateUnHealthy(lb.getOwnerUserId(), lb.getDisplayName(), zoneName, found.getInstanceId());
+	 		  }
+	 		  db.commit();
+	 	  }catch(NoSuchElementException ex){
+	 		  db.rollback();
+	 	  }catch(Exception ex){
+	 		  db.rollback();
+	 		  LOG.warn("Failed to query loadbalancer backend instance", ex);
+	 	  }
+	  }
+	  
 	  if(metric!= null && metric.getMember()!= null && metric.getMember().size()>0){
 		  try{
 			  LoadBalancerCwatchMetrics.getInstance().addMetric(servoId, metric);
 		  }catch(Exception ex){
 			  LOG.error("Failed to add ELB cloudwatch metric", ex);
 		  }
-	  }
-	  
-	  for(String zone : healthyCounter.keySet()){
-		  int numHealthy = healthyCounter.get(zone);
-		  LoadBalancerCwatchMetrics.getInstance().updateHealthyCount(lb.getOwnerUserId(), lb.getDisplayName(), zone, numHealthy);
-	  }
-	  
-	  for(String zone : unHealthyCounter.keySet()){
-		  int numUnhealthy = unHealthyCounter.get(zone);
-		  LoadBalancerCwatchMetrics.getInstance().updateUnhealthyCount(lb.getOwnerUserId(), lb.getDisplayName(), zone, numUnhealthy);
 	  }
 	  
 	  return reply;
