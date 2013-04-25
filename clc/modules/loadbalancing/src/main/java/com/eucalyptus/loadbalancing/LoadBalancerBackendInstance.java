@@ -40,6 +40,8 @@ import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.loadbalancing.activities.EucalyptusActivityTasks;
+import com.eucalyptus.records.Logs;
+import com.eucalyptus.system.Threads;
 import com.eucalyptus.util.FullName;
 import com.eucalyptus.util.OwnerFullName;
 import com.google.common.collect.Lists;
@@ -126,6 +128,8 @@ public class LoadBalancerBackendInstance extends UserMetadata<LoadBalancerBacken
 		instance.setOwner(userName);
 		instance.setDisplayName(vmId);
 		instance.setState(null);
+		instance.setStateChangeStack(null);
+		
 		return instance;
 	}
 		
