@@ -71,6 +71,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.ExecutionException;
+import java.util.regex.Pattern;
 
 import javax.annotation.Nullable;
 
@@ -123,6 +124,7 @@ public class Images {
   
   static final String   SELF = "self";
   public static final String DEFAULT_ROOT_DEVICE = "/dev/sda";
+  public static final Pattern IMAGE_ID_PATTERN = Pattern.compile( "(emi-|eki-|eri-)[0-9A-F]{8}" );
   
   public static Predicate<ImageInfo> filterExecutableBy( final Collection<String> executableSet ) {
     final boolean executableSelf = executableSet.remove( SELF );
