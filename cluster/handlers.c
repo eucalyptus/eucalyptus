@@ -6838,9 +6838,13 @@ int allocate_ccResource(ccResource * out, char *ncURL, char *ncService, int ncPo
 //!
 int free_instanceNetwork(char *mac, int vlan, int force, int dolock)
 {
-    int inuse, i;
-    unsigned char hexmac[6];
-    mac2hex(mac, hexmac);
+    int i = 0;
+    u8 hexmac[6] = { 0 };
+    boolean inuse = FALSE;
+
+    if(mac2hex(mac, hexmac) == NULL)
+        return (0);
+
     if (!maczero(hexmac)) {
         return (0);
     }
@@ -6849,12 +6853,12 @@ int free_instanceNetwork(char *mac, int vlan, int force, int dolock)
         sem_mywait(INSTCACHE);
     }
 
-    inuse = 0;
+    inuse = FALSE;
     if (!force) {
         // check to make sure the mac isn't in use elsewhere
-        for (i = 0; i < MAXINSTANCES_PER_CC && !inuse; i++) {
+        for (i = 0; ((i < MAXINSTANCES_PER_CC) && !inuse); i++) {
             if (!strcmp(instanceCache->instances[i].ccnet.privateMac, mac) && strcmp(instanceCache->instances[i].state, "Teardown")) {
-                inuse++;
+                inuse = TRUE;
             }
         }
     }
