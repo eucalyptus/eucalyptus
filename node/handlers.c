@@ -1281,42 +1281,13 @@ void *monitoring_thread(void *arg)
 }
 
 //!
-//! Defines the instance startup thread
+//! Fills in some of the fields of instance struct
 //!
-//! @param[in] arg a transparent pointer to the instance structure to start
+//! @param[in] instance struct to fill in
 //!
-//! @return Always return NULL
-//!
-void *startup_thread(void *arg)
+void set_instance_params(ncInstance *instance)
 {
-    int i = 0;
-    int bitness = 0;
-    int error = EUCA_OK;
-    int status = 0;
-    int rc = 0;
-    char *xml = NULL;
-    char *brname = NULL;
     char *s = NULL;
-    pid_t cpid = 0;
-    boolean try_killing = FALSE;
-    boolean created = FALSE;
-    ncInstance *instance = ((ncInstance *) arg);
-    virDomainPtr dom = NULL;
-
-    LOGDEBUG("[%s] spawning startup thread\n", instance->instanceId);
-    if (!check_hypervisor_conn()) {
-        LOGERROR("[%s] could not contact the hypervisor, abandoning the instance\n", instance->instanceId);
-        goto shutoff;
-    }
-    // set up networking
-    if ((error = vnetStartNetwork(nc_state.vnetconfig, instance->ncnet.vlan, NULL, NULL, NULL, &brname)) != EUCA_OK) {
-        LOGERROR("[%s] start network failed for instance, terminating it\n", instance->instanceId);
-        EUCA_FREE(brname);
-        goto shutoff;
-    }
-
-    euca_strncpy(instance->params.guestNicDeviceName, brname, sizeof(instance->params.guestNicDeviceName));
-    EUCA_FREE(brname);
 
     if (nc_state.config_use_virtio_net) {
         instance->params.nicType = NIC_TYPE_VIRTIO;
@@ -1332,7 +1303,7 @@ void *startup_thread(void *arg)
 
     instance->hypervisorCapability = nc_state.capability;   // set the cap (xen/hw/hw+xen)
     if ((s = system_output("getconf LONG_BIT")) != NULL) {
-        bitness = atoi(s);
+        int bitness = atoi(s);
         if (bitness == 32 || bitness == 64) {
             instance->hypervisorBitness = bitness;
         } else {
@@ -1346,6 +1317,46 @@ void *startup_thread(void *arg)
     }
     instance->combinePartitions = nc_state.convert_to_disk;
     instance->do_inject_key = nc_state.do_inject_key;
+}
+
+//!
+//! Defines the instance startup thread
+//!
+//! @param[in] arg a transparent pointer to the instance structure to start
+//!
+//! @return Always return NULL
+//!
+void *startup_thread(void *arg)
+{
+    int i = 0;
+    int error = EUCA_OK;
+    int status = 0;
+    int rc = 0;
+    char *xml = NULL;
+    char *brname = NULL;
+    pid_t cpid = 0;
+    boolean try_killing = FALSE;
+    boolean created = FALSE;
+    ncInstance *instance = ((ncInstance *) arg);
+    virDomainPtr dom = NULL;
+
+    LOGDEBUG("[%s] spawning startup thread\n", instance->instanceId);
+    if (!check_hypervisor_conn()) {
+        LOGERROR("[%s] could not contact the hypervisor, abandoning the instance\n", instance->instanceId);
+        goto shutoff;
+    }
+
+    // set up networking
+    if ((error = vnetStartNetwork(nc_state.vnetconfig, instance->ncnet.vlan, NULL, NULL, NULL, &brname)) != EUCA_OK) {
+        LOGERROR("[%s] start network failed for instance, terminating it\n", instance->instanceId);
+        EUCA_FREE(brname);
+        goto shutoff;
+    }
+    euca_strncpy(instance->params.guestNicDeviceName, brname, sizeof(instance->params.guestNicDeviceName));
+    EUCA_FREE(brname);
+
+    // set parameters like hypervisor type, bitness, NIC type, key injection, etc.
+    set_instance_params(instance);
 
     if ((error = create_instance_backing(instance, FALSE))  // do the heavy lifting on the disk
         || (error = gen_instance_xml(instance)) // create euca-specific instance XML file
