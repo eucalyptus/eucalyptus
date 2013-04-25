@@ -62,16 +62,26 @@
 
 package com.eucalyptus.images;
 
+import java.util.List;
+
 import javax.persistence.Column;
 import javax.persistence.DiscriminatorValue;
+import javax.persistence.EntityTransaction;
 import javax.persistence.PersistenceContext;
 
+import org.apache.commons.lang.StringUtils;
+import org.apache.log4j.Logger;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
 import org.hibernate.annotations.Entity;
 
 import com.eucalyptus.auth.principal.UserFullName;
 import com.eucalyptus.cloud.ImageMetadata;
+import com.eucalyptus.entities.Entities;
+import com.eucalyptus.upgrade.Upgrades.EntityUpgrade;
+import com.eucalyptus.upgrade.Upgrades.Version;
+import com.eucalyptus.util.Exceptions;
+import com.google.common.base.Predicate;
 
 @Entity
 @javax.persistence.Entity
@@ -164,7 +174,38 @@ public class BlockStorageImageInfo extends ImageInfo implements BootableImageInf
     return "ebs";
   }
   
-  public void setRootDevice(String rootDevice) {
-	this.rootDeviceName = rootDevice;
+  public void setRootDeviceName(String rootDeviceName) {
+	this.rootDeviceName = rootDeviceName;
+  }
+  
+  @EntityUpgrade( entities = { BlockStorageImageInfo.class }, since = Version.v3_3_0, value = com.eucalyptus.component.id.Eucalyptus.class )
+  public enum BlockStorageImageInfoUpgrade_3_3_0 implements Predicate<Class> {
+    INSTANCE;
+    private static Logger LOG = Logger.getLogger( BlockStorageImageInfo.BlockStorageImageInfoUpgrade_3_3_0.class );
+    @Override
+    public boolean apply( Class arg0 ) {
+      EntityTransaction db = Entities.get( BlockStorageImageInfo.class );
+      try {
+        List<BlockStorageImageInfo> entities = Entities.query( new BlockStorageImageInfo( ) );
+        for ( BlockStorageImageInfo entry : entities ) {
+          LOG.info( "Upgrading BlockStorageImageInfo: " + entry.toString() );
+          if (StringUtils.isBlank(entry.getRootDeviceName())) {
+            entry.setRootDeviceName("/dev/sda");
+          }
+          for (DeviceMapping deviceMap : entry.getDeviceMappings()) {
+        	  if (deviceMap instanceof BlockStorageDeviceMapping && deviceMap.getDeviceName().equalsIgnoreCase("/dev/sda1")) {
+        		  deviceMap.setDeviceName("/dev/sda");
+        	  }
+          }
+          Entities.persist(entry);
+        }
+        db.commit( );
+        return true;
+      } catch ( Exception ex ) {
+    	LOG.error("Error upgrading BlockStorageImageInfo: ", ex);
+    	db.rollback();
+        throw Exceptions.toUndeclared( ex );
+      }
+    }
   }
 }
