@@ -3540,18 +3540,20 @@ int doRunInstances(ncMetadata * pMeta, char *amiId, char *kernelId, char *ramdis
         strncpy(privip, "0.0.0.0", 32);
 
         sem_mywait(VNET);
-        if (nidx == -1) {
-            rc = vnetGenerateNetworkParams(vnetconfig, instId, vlan, -1, mac, pubip, privip);
-            thenidx = -1;
-        } else {
-            rc = vnetGenerateNetworkParams(vnetconfig, instId, vlan, networkIndexList[nidx], mac, pubip, privip);
-            thenidx = nidx;
-            nidx++;
-        }
-        if (rc) {
-            foundnet = 0;
-        } else {
-            foundnet = 1;
+        {
+            if (nidx == -1) {
+                rc = vnetGenerateNetworkParams(vnetconfig, instId, vlan, -1, mac, pubip, privip);
+                thenidx = -1;
+            } else {
+                rc = vnetGenerateNetworkParams(vnetconfig, instId, vlan, networkIndexList[nidx], mac, pubip, privip);
+                thenidx = nidx;
+                nidx++;
+            }
+            if (rc) {
+                foundnet = 0;
+            } else {
+                foundnet = 1;
+            }
         }
         sem_mypost(VNET);
 

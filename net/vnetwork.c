@@ -1691,12 +1691,14 @@ int vnetGetAllVlans(vnetConfig * vnetconfig, char ***outusers, char ***outnets, 
 //!
 int vnetGenerateNetworkParams(vnetConfig * vnetconfig, char *instId, int vlan, int nidx, char *outmac, char *outpubip, char *outprivip)
 {
+    int i = 0;
     int rc = 0;
     int ret = EUCA_OK;
+    int start = 0;
+    int stop = 0;
     int networkIdx = 0;
-    int found = 0;
-    int i = 0;
     u32 inip = 0;
+    boolean found = FALSE;
 
     if (!vnetconfig || !instId || !outmac || !outpubip || !outprivip) {
         LOGERROR("bad input params: vnetconfig=%p, instId=%s, outmac=%s, outpubip=%s outprivip=%s\n", vnetconfig, SP(instId), SP(outmac), SP(outpubip), SP(outprivip));
@@ -1708,11 +1710,13 @@ int vnetGenerateNetworkParams(vnetConfig * vnetconfig, char *instId, int vlan, i
     if (!strcmp(vnetconfig->mode, "STATIC") || !strcmp(vnetconfig->mode, "STATIC-DYNMAC")) {
         // search for existing entry
         inip = dot2hex(outprivip);
-        found = 0;
-        for (i = vnetconfig->addrIndexMin; ((i < vnetconfig->addrIndexMax) && !found); i++) {
+        found = FALSE;
+        start = vnetconfig->addrIndexMin;
+        stop  = vnetconfig->addrIndexMin + vnetconfig->networks[0].numhosts;
+        for (i = start; ((i < stop) && !found); i++) {
             if (!machexcmp(outmac, vnetconfig->networks[0].addrs[i].mac) && (vnetconfig->networks[0].addrs[i].ip == inip)) {
                 vnetconfig->networks[0].addrs[i].active = 1;
-                found++;
+                found = TRUE;
                 ret = EUCA_OK;
             }
         }
@@ -1806,7 +1810,7 @@ int vnetGetNextHost(vnetConfig * vnetconfig, char *mac, char *ip, int vlan, int 
     }
 
     for (i = start; i <= stop; i++) {
-        if (maczero(vnetconfig->networks[vlan].addrs[i].mac) && vnetconfig->networks[vlan].addrs[i].ip != 0 && vnetconfig->networks[vlan].addrs[i].active == 0) {
+        if (maczero(vnetconfig->networks[vlan].addrs[i].mac) && (vnetconfig->networks[vlan].addrs[i].ip != 0) && (vnetconfig->networks[vlan].addrs[i].active == 0)) {
             hex2mac(vnetconfig->networks[vlan].addrs[i].mac, &newmac);
             strncpy(mac, newmac, strlen(newmac));
             EUCA_FREE(newmac);
