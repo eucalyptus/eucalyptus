@@ -66,13 +66,13 @@ define([
 
         newKeyPair: function() {
             addKeypair( function(){ 
-              console.log('returned from security group dialog');
+              //console.log('returned from security group dialog');
             });
         },
 
         newSecGroup: function() {
           addGroup( function() {
-              console.log('returned from security group dialog');
+              //console.log('returned from security group dialog');
             });
         }
 
@@ -99,11 +99,23 @@ define([
         self.render();
       });
 
-      app.data.sgroup.on('reset sync add remove change', function() {
+      app.data.sgroup.on('reset sync remove change', function() {
         self.render();
       });
 
-      app.data.keypair.on('reset sync add remove change', function() {
+      app.data.sgroup.on('add', function(model, collection) {
+        self.model.set('name', model.get('name'));
+        self.model.set('id', model.get('id'));
+        self.model.set('rules', model.get('rules'));
+        self.render();
+      });
+
+      app.data.keypair.on('reset sync remove change', function() {
+        self.render();
+      });
+
+      app.data.keypair.on('add', function(model, collection) {
+        scope.keymodel.set('name', model.get('name'));
         self.render();
       });
 
@@ -126,6 +138,10 @@ define([
         return false;
       }
       return true;
+    },
+
+    focus: function() {
+      this.model.set('security_show', true);
     }
 });
 });
