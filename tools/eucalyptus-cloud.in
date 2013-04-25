@@ -268,13 +268,22 @@ do_start() {
 	    $EUCALYPTUS/usr/sbin/euca-generate-fault -c cloud 1008 daemon ntp
         fi
 
+	# Check the current euca.p12 creds and backup if they have changed
+	check_creds
+
 	ulimit -n 4096
 	$EUCALYPTUS/usr/sbin/eucalyptus-cloud $CLOUD_OPTS -h $EUCALYPTUS -u $EUCA_USER --pidfile ${pidfile} -f \
 		-L console-log -o $initlog -e $initlog
+	RETVAL=$?
 
-	touch $LOCKFILE
+	# We should only create a lock file and backup creds if eucalyptus-cloud
+	# returns successfully
+	if [ $RETVAL -eq 0 ]; then
+		touch $LOCKFILE
+		backup_creds
+	fi
 
-	return $?
+	return $RETVAL
 }
 
 do_status() {
@@ -338,6 +347,43 @@ do_stop() {
 	fi
 	rm -f $pidfile
 	rm -f $LOCKFILE
+}
+
+backup_creds() {
+	local credfile="$EUCALYPTUS/var/lib/eucalyptus/keys/euca.p12"
+	local backupdir="$EUCALYPTUS/var/lib/eucalyptus/backups/keys"
+	local backupcredfile="$backupdir/euca.p12.`date +%y%m%d.%s`"
+
+	[ ! -d "$backupdir" ] && mkdir -p "$backupdir"
+
+	if [ -f "$credfile" ]; then
+		local credsum=`sha256sum "$credfile" 2>/dev/null | cut -d' ' -f1`
+		local found=false
+		for i in "$backupdir"/euca.p12*; do
+			if [ "x$credsum" = "x`sha256sum "$i" 2>/dev/null | cut -d' ' -f1`" ]; then
+				found=true
+				break
+			fi
+		done
+
+		if ! $found; then
+			cp -a "$credfile" "$backupcredfile"
+		fi
+	fi
+}
+
+check_creds() {
+	local credfile="$EUCALYPTUS/var/lib/eucalyptus/keys/euca.p12"
+	local backupdir="$EUCALYPTUS/var/lib/eucalyptus/backups/keys"
+	local backupfile="`ls -1r "$backupdir"/euca.p12* 2>/dev/null | head -n1`"
+
+	# No creds to check
+	[ -z "$backupfile" ] && return
+
+	if [ `sha256sum "$credfile" 2>/dev/null | cut -d' ' -f1` != `sha256sum "$backupfile" 2>/dev/null | cut -d' ' -f1` ]; then
+		echo "Warning: your database credentials have changed"
+		echo "Warning: most recent backup: $backupfile"
+	fi
 }
 
 # let's get the user to use
