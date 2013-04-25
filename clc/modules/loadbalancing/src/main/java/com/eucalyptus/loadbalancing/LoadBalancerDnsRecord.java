@@ -19,11 +19,16 @@ import org.hibernate.annotations.Entity;
 import com.eucalyptus.configurable.ConfigurableClass;
 import com.eucalyptus.configurable.ConfigurableField;
 import com.eucalyptus.configurable.ConfigurableFieldType;
+import com.eucalyptus.configurable.ConfigurableProperty;
+import com.eucalyptus.configurable.ConfigurablePropertyException;
+import com.eucalyptus.configurable.PropertyChangeListener;
 import com.eucalyptus.entities.AbstractPersistent;
 import com.eucalyptus.loadbalancing.activities.LoadBalancerServoInstance;
 import com.eucalyptus.util.Exceptions;
 
 import edu.ucsb.eucalyptus.cloud.entities.SystemConfiguration;
+import com.google.common.net.HostSpecifier;
+
 
 /*************************************************************************
  * Copyright 2009-2013 Eucalyptus Systems, Inc.
@@ -55,14 +60,29 @@ import edu.ucsb.eucalyptus.cloud.entities.SystemConfiguration;
 @Table( name = "metadata_dns" )
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
 public class LoadBalancerDnsRecord extends AbstractPersistent {
+
+	public static class ELBDnsChangeListener implements PropertyChangeListener {
+	   @Override
+	   public void fireChange( ConfigurableProperty t, Object newValue ) throws ConfigurablePropertyException {
+		    try {
+		      if ( newValue instanceof String ) {
+				if(!HostSpecifier.isValid(String.format("%s.com", (String) newValue)))
+					throw new ConfigurablePropertyException("Malformed domain name");
+		      }
+		    } catch ( final Exception e ) {
+				throw new ConfigurablePropertyException("Malformed domain name");
+		    }
+		}
+	}
+
 	private static Logger    LOG     = Logger.getLogger( LoadBalancerDnsRecord.class );
 	@ConfigurableField( displayName = "loadbalancer_dns_subdomain",
 			description = "loadbalancer dns subdomain",
 			initial = "lb",
 			readonly = false,
-			type = ConfigurableFieldType.KEYVALUE
+			type = ConfigurableFieldType.KEYVALUE,
+			changeListener = ELBDnsChangeListener.class
 			)
-	
 	public static String LOADBALANCER_DNS_SUBDOMAIN = "lb";
 	
 	@Transient
