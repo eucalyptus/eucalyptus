@@ -70,18 +70,6 @@ define([
           parameter += "&SnapshotId="+id;
           this.makeAjaxCall(url, parameter, options);
         },
-
-        registerSnapshot: function(name, desc, isWindows, options){
-          var url = "/ec2?Action=RegisterImage";
-          var id = this.get('id');
-          var parameter = "_xsrf="+$.cookie('_xsrf');
-          parameter += "&SnapshotId="+id+"&Name="+name+"&Description="+toBase64($.trim(desc));
-          if(isWindows){
-            parameter += "&KernelId=windows";
-          }
-          this.makeAjaxCall(url, parameter, options);
-        },
-    
     });
     return model;
 });
