@@ -60,27 +60,13 @@
  *   NEEDED TO COMPLY WITH ANY SUCH LICENSES OR RIGHTS.
  ************************************************************************/
 
-package com.eucalyptus.cloud.ws.tests;
+package edu.ucsb.eucalyptus.cloud.ws.tests;
 
-import edu.ucsb.eucalyptus.msgs.RemoveARecordResponseType;
-import edu.ucsb.eucalyptus.msgs.RemoveARecordType;
+import org.junit.runner.RunWith;
+import org.junit.runners.Suite;
 import junit.framework.TestCase;
 
-public class RemoveARecordTest extends TestCase {
-
-    private static com.eucalyptus.cloud.ws.DNSControl dnsControl;
-
-	public void testRemoveARecord() throws Exception {
-        String userId = "admin";
-        RemoveARecordType request = new RemoveARecordType();
-        request.setUserId(userId);
-        request.setName("rich.walrus.localhost.");
-        request.setZone("localhost.");
-        RemoveARecordResponseType reply = dnsControl.RemoveARecord(request);
-        System.out.println(reply);
-	}
-
-    public void setUp() {
-        dnsControl = new com.eucalyptus.cloud.ws.DNSControl();
-    }
+@RunWith(Suite.class)
+@Suite.SuiteClasses({VolumeTest.class})
+public class StorageTests extends TestCase {
 }

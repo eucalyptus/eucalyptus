@@ -26,7 +26,7 @@ import com.eucalyptus.tags.FilterSupport
 /**
  * Unit tests for bundle task filter support
  */
-class VmBundleTaskFilterSupportTask extends FilterSupportTest.InstanceTest<VmBundleTask> {
+class VmBundleTaskFilterSupportTask extends FilterSupportTest.InstanceTestSupport<VmBundleTask> {
 
   @Test
   void testFilteringSupport() {

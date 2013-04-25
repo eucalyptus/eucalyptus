@@ -123,80 +123,73 @@ public class LoadBalancers {
 		Entities.asTransaction(LoadBalancer.class, delete).apply(null);
 	}
 	
-	public static void createLoadbalancerListener(final String lbName, final UserFullName ownerFullName , final Collection<Listener> listeners) throws LoadBalancingException {
-		  final Function<Void, LoadBalancingException> validator = new Function<Void, LoadBalancingException>(){
-		        @Override
-		        public LoadBalancingException apply( Void v ) {
-		        	LoadBalancer lb = null;
-		        	try{
-		        		lb = LoadBalancers.getLoadbalancer(ownerFullName, lbName);
-		        	}catch(Exception ex){
-		    	    	return new AccessPointNotFoundException();
-		    	    }
-		        	  //IAM support to restricted lb modification
-		     	   if(!LoadBalancingMetadatas.filterPrivileged().apply(lb)) {
-		     	       return new AccessPointNotFoundException();
-		     	   }
-		        	try{
-		        		for(Listener listener : listeners){
-		        			if(!LoadBalancerListener.acceptable(listener))
-		        				return new InvalidConfigurationRequestException();
-			        		// check the listener 
-			    			if(lb.hasListener(listener.getLoadBalancerPort().intValue())){
-			    				LoadBalancerListener existing = lb.findListener(listener.getLoadBalancerPort().intValue());
-			    				if(existing.getInstancePort() == listener.getInstancePort().intValue() &&
-			    						existing.getProtocol().name().toLowerCase().equals(listener.getProtocol().toLowerCase()) &&
-			    						(existing.getCertificateId()!=null && existing.getCertificateId().equals(listener.getSslCertificateId())))
-			    					;
-			    				else
-			    					return new DuplicateListenerException();
-			    			}
-		        		}
-		        	}catch(Exception ex){
-		        		LOG.warn("duplicate check failed", ex);
-						return new DuplicateListenerException();
-		        	}
-		        	return null;
-		        	//need to check certificate 
-		        }
-		    };
-		    
-		    LoadBalancingException checkResult = Entities.asTransaction(LoadBalancer.class, validator).apply(null);
-		    if(checkResult!=null)
-		    	throw checkResult;
-		    
-		    final Predicate<Void> creator = new Predicate<Void>(){
-		        @Override
-		        public boolean apply( Void v ) {
-		        	LoadBalancer lb = null;
-		        	try{
-		        		lb= LoadBalancers.getLoadbalancer(ownerFullName, lbName);
-		        	}catch(Exception ex){
-		    	    	LOG.warn("No loadbalancer is found with name="+lbName);    
-		    	    	return false;
-		    	    }
-		        	
-		        	for(Listener listener : listeners){
-		        		// check the listener 
-		    			try{	
-		        			if(!lb.hasListener(listener.getLoadBalancerPort().intValue())){
-		        				LoadBalancerListener.Builder builder = new LoadBalancerListener.Builder(lb, listener.getInstancePort().intValue(), 
-		            					listener.getLoadBalancerPort().intValue(), LoadBalancerListener.PROTOCOL.valueOf(listener.getProtocol().toUpperCase()));
-		            			if(!Strings.isNullOrEmpty(listener.getInstanceProtocol()))
-		            				builder.instanceProtocol(PROTOCOL.valueOf(listener.getInstanceProtocol()));
-		            			
-		            			if(!Strings.isNullOrEmpty(listener.getSslCertificateId()))
-		            				builder.withSSLCerntificate(listener.getSslCertificateId());
-		            			Entities.persist(builder.build());
-		        			}
-		    			}catch(Exception ex){
-		    				LOG.warn("failed to create the listener object", ex);
-		    			}
-		        	}
-		        	return true;
-		        }
-		    };
-		    Entities.asTransaction(LoadBalancerListener.class, creator).apply(null);
+	// throw LoadBalancingException if invalid
+	public static void validateListener(final String lbName, final UserFullName ownerFullName, final List<Listener> listeners) 
+				throws LoadBalancingException{
+		LoadBalancer lb = null;
+    	try{
+    		lb = LoadBalancers.getLoadbalancer(ownerFullName, lbName);
+    	}catch(Exception ex){
+    		lb = null;
+    	}
+    	  //IAM support to restricted lb modification
+    	if(lb != null && !LoadBalancingMetadatas.filterPrivileged().apply(lb)) {
+ 	       throw new AccessPointNotFoundException();
+ 	   }
+ 	   
+		for(Listener listener : listeners){
+			if(!LoadBalancerListener.protocolSupported(listener))
+				throw new UnsupportedParameterException("The requested procotols are not supported");
+			if(!LoadBalancerListener.acceptable(listener))
+				throw new InvalidConfigurationRequestException();
+    		// check the listener 
+			if(lb!=null && lb.hasListener(listener.getLoadBalancerPort().intValue())){
+				LoadBalancerListener existing = lb.findListener(listener.getLoadBalancerPort().intValue());
+				if(existing.getInstancePort() == listener.getInstancePort().intValue() &&
+						existing.getProtocol().name().toLowerCase().equals(listener.getProtocol().toLowerCase()) &&
+						(existing.getCertificateId()!=null && existing.getCertificateId().equals(listener.getSslCertificateId())))
+					;
+				else
+					throw new DuplicateListenerException();
+			}
+		}
+	}
+	
+	
+	public static void createLoadbalancerListener(final String lbName, final UserFullName ownerFullName , final List<Listener> listeners) throws LoadBalancingException {
+		validateListener(lbName, ownerFullName, listeners);
+	    final Predicate<Void> creator = new Predicate<Void>(){
+	        @Override
+	        public boolean apply( Void v ) {
+	        	LoadBalancer lb = null;
+	        	try{
+	        		lb= LoadBalancers.getLoadbalancer(ownerFullName, lbName);
+	        	}catch(Exception ex){
+	    	    	LOG.warn("No loadbalancer is found with name="+lbName);    
+	    	    	return false;
+	    	    }
+	        	
+	        	for(Listener listener : listeners){
+	        		// check the listener 
+	    			try{	
+	        			if(!lb.hasListener(listener.getLoadBalancerPort().intValue())){
+	        				LoadBalancerListener.Builder builder = new LoadBalancerListener.Builder(lb, listener.getInstancePort().intValue(), 
+	            					listener.getLoadBalancerPort().intValue(), LoadBalancerListener.PROTOCOL.valueOf(listener.getProtocol().toUpperCase()));
+	            			if(!Strings.isNullOrEmpty(listener.getInstanceProtocol()))
+	            				builder.instanceProtocol(PROTOCOL.valueOf(listener.getInstanceProtocol()));
+	            			
+	            			if(!Strings.isNullOrEmpty(listener.getSslCertificateId()))
+	            				builder.withSSLCerntificate(listener.getSslCertificateId());
+	            			Entities.persist(builder.build());
+	        			}
+	    			}catch(Exception ex){
+	    				LOG.warn("failed to create the listener object", ex);
+	    			}
+	        	}
+	        	return true;
+	        }
+	    };
+	    Entities.asTransaction(LoadBalancerListener.class, creator).apply(null);
 	}
 	
 	public static void addZone(final String lbName, final UserFullName ownerFullName, final Collection<String> zones) throws LoadBalancingException{

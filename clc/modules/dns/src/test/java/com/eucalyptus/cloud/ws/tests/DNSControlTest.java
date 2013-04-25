@@ -60,53 +60,35 @@
  *   NEEDED TO COMPLY WITH ANY SUCH LICENSES OR RIGHTS.
  ************************************************************************/
 
-package edu.ucsb.eucalyptus.cloud.ws.tests;
+package com.eucalyptus.cloud.ws.tests;
 
-import edu.ucsb.eucalyptus.cloud.ws.BlockStorage;
-import edu.ucsb.eucalyptus.msgs.*;
-import junit.framework.TestCase;
+import org.junit.BeforeClass;
+import org.junit.Ignore;
+import org.junit.Test;
+import com.eucalyptus.cloud.ws.DNSControl;
+import edu.ucsb.eucalyptus.msgs.UpdateARecordResponseType;
+import edu.ucsb.eucalyptus.msgs.UpdateARecordType;
 
-import java.util.ArrayList;
+@Ignore("Manual development test")
+public class DNSControlTest {
 
-import com.eucalyptus.auth.util.Hashes;
-import com.eucalyptus.util.EucalyptusCloudException;
+    private static DNSControl dnsControl;
 
-public class VolumeTest extends TestCase {
-
-    static BlockStorage blockStorage;
-
-    public void testVolume() throws Exception {
-
-
+    @Test
+    public void testAddARecord() throws Exception {
         String userId = "admin";
-        String volumeId = "vol-" + Hashes.getRandom(10);
-        volumeId = volumeId.replaceAll("\\.", "x");
-
-        CreateStorageVolumeType createVolumeRequest = new CreateStorageVolumeType();
-        createVolumeRequest.setUserId(userId);
-        createVolumeRequest.setVolumeId(volumeId);
-        createVolumeRequest.setSize("1");
-        CreateStorageVolumeResponseType createVolumeResponse = blockStorage.CreateStorageVolume(createVolumeRequest);
-        System.out.println(createVolumeResponse); 
-        Thread.sleep(1000);
-        DescribeStorageVolumesType describeVolumesRequest = new DescribeStorageVolumesType();
-
-        describeVolumesRequest.setUserId(userId);
-        ArrayList<String> volumeSet = new ArrayList<String>();
-        volumeSet.add(volumeId);
-        describeVolumesRequest.setVolumeSet(volumeSet);
-        DescribeStorageVolumesResponseType describeVolumesResponse = blockStorage.DescribeStorageVolumes(describeVolumesRequest);
-        StorageVolume vol = describeVolumesResponse.getVolumeSet().get(0);
-        System.out.println(vol);
-        while(true);
+        UpdateARecordType request = new UpdateARecordType();
+        request.setUserId(userId);
+        request.setAddress("192.168.7.1");
+        request.setName("rich.walrus.localhost.");
+        request.setTtl(604800);
+        request.setZone("localhost.");
+        UpdateARecordResponseType reply = dnsControl.UpdateARecord(request);
+        System.out.println(reply);
     }
 
-    public void setUp() {
-        blockStorage = new BlockStorage();
-        try {
-			BlockStorage.configure();
-		} catch (EucalyptusCloudException e) {
-			e.printStackTrace();
-		}
+    @BeforeClass
+    public static void setUp() {
+        dnsControl = new DNSControl();
     }
 }

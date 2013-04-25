@@ -105,7 +105,11 @@ public class BlockStorageChecker {
 			} catch (EucalyptusCloudException e) {
 				LOG.error("Startup cleanup failed", e);
 			}
-			blockManager.startupChecks();
+			try {
+				blockManager.startupChecks();
+			} catch(EucalyptusCloudException e) {
+				LOG.error("Startup checks failed");
+			}
 		}
 	}
 

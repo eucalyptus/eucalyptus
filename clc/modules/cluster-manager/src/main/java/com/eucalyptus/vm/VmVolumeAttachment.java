@@ -168,7 +168,7 @@ public class VmVolumeAttachment implements Comparable<VmVolumeAttachment> {
   private String	device;
   @Lob
   @Type(type="org.hibernate.type.StringClobType")
-  @Column( name = "metadata_vm_volume_remote_device" )
+  @Column( name = "metadata_vm_volume_remote_device", columnDefinition = "TEXT default ''"  )
   private String	remoteDevice;
   @Column( name = "metadata_vm_volume_status" )
   private String	status;
@@ -176,7 +176,7 @@ public class VmVolumeAttachment implements Comparable<VmVolumeAttachment> {
   private Date		attachTime;
   @Column( name = "metadata_vm_vol_delete_on_terminate" )
   private Boolean	deleteOnTerminate;
-  @Column( name = "metadata_vm_volume_is_root_device" )
+  @Column( name = "metadata_vm_volume_is_root_device", columnDefinition = "boolean default false" )
   private Boolean	isRootDevice;
   
   //  @OneToOne

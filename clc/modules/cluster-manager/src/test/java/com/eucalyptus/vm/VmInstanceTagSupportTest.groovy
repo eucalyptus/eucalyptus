@@ -19,13 +19,13 @@
  ************************************************************************/
 package com.eucalyptus.vm
 
-import com.eucalyptus.tags.TagSupportTest
+import com.eucalyptus.tags.TagTestSupport
 import org.junit.Test
 
 /**
  * 
  */
-class VmInstanceTagSupportTest extends TagSupportTest {
+class VmInstanceTagSupportTest extends TagTestSupport {
   
   @Test
   void testValidTagSupport() {

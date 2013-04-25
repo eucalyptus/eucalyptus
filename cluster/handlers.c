@@ -2100,15 +2100,16 @@ int refresh_resources(ncMetadata * pMeta, int timeout, int dolock)
                         resourceCacheStage->resources[i].availCores = 0;
                         changeState(&(resourceCacheStage->resources[i]), RESDOWN);
                         resourceCacheStage->resources[i].ncState = NOTREADY;
+                        resourceCacheStage->resources[i].migrationCapable = FALSE;
                         euca_strncpy(resourceCacheStage->resources[i].nodeMessage, SP(errMsg), 1024);
                         LOGERROR("error message from ncDescribeResource: %s\n", resourceCacheStage->resources[i].nodeMessage);
                     }
                 } else {
-                    LOGDEBUG("received data from node=%s status=%s mem=%d/%d disk=%d/%d cores=%d/%d migrationCapable=%d\n",
+                    LOGDEBUG("received data from node=%s status=%s mem=%d/%d disk=%d/%d cores=%d/%d migrationCapable=%s\n",
                              resourceCacheStage->resources[i].hostname,
                              ncResDst->nodeStatus,
                              ncResDst->memorySizeAvailable, ncResDst->memorySizeMax,
-                             ncResDst->diskSizeAvailable, ncResDst->diskSizeMax, ncResDst->numberOfCoresAvailable, ncResDst->numberOfCoresMax, ncResDst->migrationCapable);
+                             ncResDst->diskSizeAvailable, ncResDst->diskSizeMax, ncResDst->numberOfCoresAvailable, ncResDst->numberOfCoresMax, (ncResDst->migrationCapable == TRUE) ? "TRUE" : "FALSE");
                     resourceCacheStage->resources[i].maxMemory = ncResDst->memorySizeMax;
                     resourceCacheStage->resources[i].availMemory = ncResDst->memorySizeAvailable;
                     resourceCacheStage->resources[i].maxDisk = ncResDst->diskSizeMax;
@@ -2120,6 +2121,7 @@ int refresh_resources(ncMetadata * pMeta, int timeout, int dolock)
                     } else if (!strcmp(ncResDst->nodeStatus, "disabled")) {
                         resourceCacheStage->resources[i].ncState = STOPPED;
                     }
+                    resourceCacheStage->resources[i].migrationCapable = ncResDst->migrationCapable;
                     euca_strncpy(resourceCacheStage->resources[i].nodeStatus, ncResDst->nodeStatus, 24);
 ////                    // temporarily duplicate the NC reported value in the node message for debugging
                     strcpy(resourceCacheStage->resources[i].nodeMessage, "");
@@ -3052,13 +3054,18 @@ int schedule_instance_migration(ncInstance * instance, char **includeNodes, char
     if (includeNodeCount == 1) {
         LOGINFO("[%s] attempting to schedule migration to specific node: %s\n", instance->instanceId, includeNodes[0]);
         if (!strcmp(instance->migration_src, includeNodes[0])) {
-            LOGERROR("[%s] can't schedule SAME-NODE migration from %s to %s\n", instance->instanceId, instance->migration_src, includeNodes[0]);
+            LOGERROR("[%s] cannot schedule SAME-NODE migration from %s to %s\n", instance->instanceId, instance->migration_src, includeNodes[0]);
             ret = 1;
             goto out;
         }
         ret =
             schedule_instance(&(instance->params), instance->imageId, instance->kernelId, instance->ramdiskId, instance->instanceId, instance->userData, instance->platform,
                               includeNodes[0], outresid);
+        if (resourceCacheLocal->resources[*outresid].migrationCapable == FALSE) {
+            LOGWARN("[%s] cannot schedule migration to node (%s) that is not migration capable\n", instance->instanceId, includeNodes[0]);
+            ret = 1;
+            goto out;
+        }
     } else {
         if (config->schedPolicy == SCHEDROUNDROBIN) {
             LOGDEBUG("[%s] scheduling migration using ROUNDROBIN scheduler\n", instance->instanceId);
@@ -3067,7 +3074,7 @@ int schedule_instance_migration(ncInstance * instance, char **includeNodes, char
                 ("[%s] scheduling migration using ROUNDROBIN scheduler, despite GREEDY or POWERSAVE scheduler specification in Eucalyptus configuration file; GREEDY scheduling can be emulated by selecting specific destination nodes for migrations\n",
                  instance->instanceId);
         } else {
-            LOGWARN("[%s] unknown scheduler configuration--scheduling migration using ROUNDROBIN scheduler\n", instance->instanceId);
+            LOGWARN("[%s] unsupported scheduler configuration--scheduling migration using ROUNDROBIN scheduler\n", instance->instanceId);
         }
         // This is relatively easy: we can keep calling the round-robin scheduler until we get a node we like.
         int first_try = -1;            // To break loops.
@@ -3087,15 +3094,17 @@ int schedule_instance_migration(ncInstance * instance, char **includeNodes, char
 
             if (*outresid == inresid) {
                 // Tried to schduled to the source node, so retry.
-                LOGDEBUG("[%s] can't schedule src_index=%d == dst_index=%d (%s > %s), trying again...\n",
+                LOGDEBUG("[%s] cannot schedule src_index=%d == dst_index=%d (%s > %s), trying again...\n",
                          instance->instanceId, inresid, *outresid, instance->migration_src, resourceCacheLocal->resources[*outresid].hostname);
+            } else if (resourceCacheLocal->resources[*outresid].migrationCapable == FALSE) {
+                LOGDEBUG("[%s] cannot schedule src_index=%d, dst_index=%d because node %s is not migration capable\n", instance->instanceId, inresid, *outresid, resourceCacheLocal->resources[*outresid].hostname);
             } else if (check_for_string_in_list(resourceCacheLocal->resources[*outresid].hostname, excludeNodes, excludeNodeCount)) {
                 // Exclusion list takes priority over inclusion list.
-                LOGDEBUG("[%s] can't schedule src_index=%d, dst_index=%d because node %s is in destination-exclusion list\n",
+                LOGDEBUG("[%s] cannot schedule src_index=%d, dst_index=%d because node %s is in destination-exclusion list\n",
                          instance->instanceId, inresid, *outresid, resourceCacheLocal->resources[*outresid].hostname);
             } else if (includeNodeCount) {
                 if (!check_for_string_in_list(resourceCacheLocal->resources[*outresid].hostname, includeNodes, includeNodeCount)) {
-                    LOGDEBUG("[%s] can't schedule src_index=%d, dst_index=%d because node %s is not in destination-inclusion list\n",
+                    LOGDEBUG("[%s] cannot schedule src_index=%d, dst_index=%d because node %s is not in destination-inclusion list\n",
                              instance->instanceId, inresid, *outresid, resourceCacheLocal->resources[*outresid].hostname);
                 } else {
                     LOGDEBUG("[%s] scheduled: src_index=%d, dst_index=%d (%s > %s) -- destination node is in inclusion list\n",

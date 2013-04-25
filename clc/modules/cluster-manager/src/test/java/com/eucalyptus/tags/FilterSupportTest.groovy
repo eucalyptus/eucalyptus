@@ -80,7 +80,7 @@ class FilterSupportTest {
     result.toString()
   }
 
-  static abstract class InstanceTest<RT> {
+  static abstract class InstanceTestSupport<RT> {
     void assertValidKeys( final FilterSupport<RT> filterSupport ) {
       CharMatcher upperMatcher = CharMatcher.JAVA_UPPER_CASE;
       CharMatcher spaceMatcher = CharMatcher.WHITESPACE;
@@ -199,7 +199,7 @@ class FilterSupportTest {
                       String filterKey,
                       String filterValue,
                       RT target ) {
-      Filter filter = filterSupport.generate( [ (filterKey) : [ filterValue ] as Set ], "000000000" )
+      Filter filter = filterSupport.generate( [ (filterKey) : [ filterValue ] as Set ], false, "000000000" )
       assertEquals( "Match asserton for " + filterKey, expectedMatch, filter.asPredicate().apply( target ) )
     }
 

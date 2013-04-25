@@ -25,7 +25,7 @@ import org.junit.Test
 /**
  * Unit tests for snapshot filter support
  */
-class SnapshotFilterSupportTest extends FilterSupportTest.InstanceTest<Snapshot> {
+class SnapshotFilterSupportTest extends FilterSupportTest.InstanceTestSupport<Snapshot> {
 
   @Test
   void testFilteringSupport() {
@@ -40,8 +40,8 @@ class SnapshotFilterSupportTest extends FilterSupportTest.InstanceTest<Snapshot>
 
     //TODO:STEVE: won't work, this field isn't populated
     //assertMatch( true, "owner-alias", "user1", new Snapshot( ownerAccountName: "user1" ) )
-    assertMatch( false, "owner-alias", "user1", new Snapshot( ownerAccountName: "user2" ) )
-    assertMatch( false, "owner-alias", "user1", new Snapshot( ) )
+    //assertMatch( false, "owner-alias", "user1", new Snapshot( ownerAccountName: "user2" ) )
+    //assertMatch( false, "owner-alias", "user1", new Snapshot( ) )
 
     assertMatch( true, "owner-id", "0123456789", new Snapshot( ownerAccountNumber: "0123456789" ) )
     assertMatch( false, "owner-id", "0123456789", new Snapshot( ownerAccountNumber: "0123456788" ) )

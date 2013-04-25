@@ -25,7 +25,7 @@ import com.google.common.base.Function
 /**
  * Unit tests for tag filter support
  */
-class TagFilterSupportTest extends FilterSupportTest.InstanceTest<Tag> {
+class TagFilterSupportTest extends FilterSupportTest.InstanceTestSupport<Tag> {
 
   @Test
   void testFilteringSupport() {

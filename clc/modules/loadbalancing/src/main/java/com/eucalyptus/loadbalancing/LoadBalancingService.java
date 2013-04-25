@@ -179,7 +179,7 @@ public class LoadBalancingService {
   	  };
 
 	  Set<LoadBalancerDescription> descs = null;
-  	  if(zone != null && LoadBalancingMetadatas.filterPrivileged().apply( zone.getLoadbalancer() ) && zone.getState().equals(LoadBalancerZone.STATE.InService)){
+  	  if(zone != null && LoadBalancingMetadatas.filterPrivilegedWithoutOwner().apply( zone.getLoadbalancer() ) && zone.getState().equals(LoadBalancerZone.STATE.InService)){
   			 descs= lookupLBDescriptions.apply(zone);
   	  }else
   		  descs = Sets.<LoadBalancerDescription>newHashSet();
@@ -221,7 +221,7 @@ public class LoadBalancingService {
 			  LOG.warn("failed to query servo instance");
 		  }
 	  }
-	  if(lb==null || !LoadBalancingMetadatas.filterPrivileged().apply( lb ))
+	  if(lb==null || !LoadBalancingMetadatas.filterPrivilegedWithoutOwner().apply( lb ))
 		  return reply;
 	  
 	  /// INSTANCE HEALTH CHECK UPDATE
@@ -330,6 +330,8 @@ public class LoadBalancingService {
     if(!nameChecker.apply(lbName)){
     	throw new LoadBalancingException("Invalid character found in the loadbalancer name");
     }
+    if(request.getListeners()!=null && request.getListeners().getMember()!=null)
+    	LoadBalancers.validateListener(lbName, ownerFullName, request.getListeners().getMember());
     
     final Supplier<LoadBalancer> allocator = new Supplier<LoadBalancer>() {
       @Override
@@ -402,7 +404,7 @@ public class LoadBalancingService {
 
     Collection<Listener> listeners=request.getListeners().getMember();
     if(listeners!=null && listeners.size()>0){
-    	LoadBalancers.createLoadbalancerListener(lbName,  ownerFullName, listeners);
+    	LoadBalancers.createLoadbalancerListener(lbName,  ownerFullName, Lists.newArrayList(listeners));
     	try{
     		CreateListenerEvent evt = new CreateListenerEvent();
     		evt.setLoadBalancer(lbName);
@@ -648,7 +650,11 @@ public class LoadBalancingService {
 	  final Context ctx = Contexts.lookup( );
 	  final UserFullName ownerFullName = ctx.getUserFullName( );
 	  final String lbName = request.getLoadBalancerName();
-	  final Collection<Listener> listeners = request.getListeners().getMember();
+	  final List<Listener> listeners = request.getListeners().getMember();
+
+	  if(listeners!=null)
+		  LoadBalancers.validateListener(lbName, ownerFullName, listeners);
+	    
 	  try{
     		CreateListenerEvent evt = new CreateListenerEvent();
     		evt.setLoadBalancer(lbName);

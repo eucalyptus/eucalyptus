@@ -133,6 +133,18 @@ public class LoadBalancerListener extends AbstractPersistent
 		return this.sslCertificateArn;
 	}
 	
+	public static boolean protocolSupported(Listener listener){
+		try{
+			final PROTOCOL protocol = PROTOCOL.valueOf(listener.getProtocol().toUpperCase());
+			if(PROTOCOL.HTTP.equals(protocol) || PROTOCOL.TCP.equals(protocol))
+				return true;
+			else
+				return false;
+		}catch(Exception e){
+			return false;
+		}
+	}
+	
 	public static boolean acceptable(Listener listener){
 		try{
 			if(! (listener.getInstancePort() > 0 &&

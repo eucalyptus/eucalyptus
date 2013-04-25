@@ -60,45 +60,32 @@
  *   NEEDED TO COMPLY WITH ANY SUCH LICENSES OR RIGHTS.
  ************************************************************************/
 
-package edu.ucsb.eucalyptus.cloud.ws.tests;
+package com.eucalyptus.cloud.ws.tests;
 
-import com.eucalyptus.util.EucalyptusCloudException;
+import org.junit.BeforeClass;
+import org.junit.Ignore;
+import org.junit.Test;
+import edu.ucsb.eucalyptus.msgs.RemoveARecordResponseType;
+import edu.ucsb.eucalyptus.msgs.RemoveARecordType;
 
-import edu.ucsb.eucalyptus.cloud.ws.BlockStorage;
-import edu.ucsb.eucalyptus.msgs.DeleteStorageSnapshotResponseType;
-import edu.ucsb.eucalyptus.msgs.DeleteStorageSnapshotType;
-import junit.framework.TestCase;
+@Ignore("Manual development test")
+public class RemoveARecordTest {
 
-public class DeleteSnapshotTest extends TestCase {
+    private static com.eucalyptus.cloud.ws.DNSControl dnsControl;
 
-    static BlockStorage blockStorage;
-
-
-    public void testDeleteSnapshot() throws Exception {
-
-        String snapshotBucket = "snapset";
-        String snapshotId = "snap-C7fyA7Tuj9ecmg..";
-
-        DeleteStorageSnapshotType deleteSnapshot = new DeleteStorageSnapshotType();
-        deleteSnapshot.setUserId("admin");
-        deleteSnapshot.setSnapshotId(snapshotId);
-        DeleteStorageSnapshotResponseType deleteSnapshotResponse = blockStorage.DeleteStorageSnapshot(deleteSnapshot);
-        System.out.println(deleteSnapshotResponse);
-        while(true);
+    @Test
+    public void testRemoveARecord() throws Exception {
+        String userId = "admin";
+        RemoveARecordType request = new RemoveARecordType();
+        request.setUserId(userId);
+        request.setName("rich.walrus.localhost.");
+        request.setZone("localhost.");
+        RemoveARecordResponseType reply = dnsControl.RemoveARecord(request);
+        System.out.println(reply);
     }
 
-    public void testWalrusDeleteSnapshot() throws Exception {
-
-        String snapshotId = "snap-zVl2kZJmjhxnEg..";
-        blockStorage.DeleteWalrusSnapshot(snapshotId);
+    @BeforeClass
+    public static void setUp() {
+        dnsControl = new com.eucalyptus.cloud.ws.DNSControl();
     }
-
-    public void setUp() {
-        blockStorage = new BlockStorage();
-        try {
-			BlockStorage.configure();
-		} catch (EucalyptusCloudException e) {
-			e.printStackTrace();
-		}
-    }    
 }

@@ -19,13 +19,13 @@
  ************************************************************************/
 package com.eucalyptus.blockstorage
 
-import com.eucalyptus.tags.TagSupportTest
+import com.eucalyptus.tags.TagTestSupport
 import org.junit.Test
 
 /**
  * 
  */
-class SnapshotTagSupportTest extends TagSupportTest {
+class SnapshotTagSupportTest extends TagTestSupport {
 
   @Test
   void testValidTagSupport() {

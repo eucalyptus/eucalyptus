@@ -78,7 +78,7 @@ public interface LogicalStorageManager {
 
 	public void reload();
 
-	public void startupChecks();
+	public void startupChecks() throws EucalyptusCloudException;
 
 	public void cleanVolume(String volumeId);
 
