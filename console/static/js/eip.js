@@ -193,6 +193,10 @@
                fixedValue = $eip_associate_dialog.find('#associate-fixed-value').html();
                selectedValue = $eip_associate_dialog.find('#associate-selected-value').val();
                if (thisObj.options.from_instance) {
+                 console.log("selected value = "+selectedValue);
+                 if( String(selectedValue).match(/\w+.\w+.\w+.\w+\s\(/) ){
+                   selectedValue = String(selectedValue).split(" ")[0];
+                 }
                  if ( isValidIPv4Address(selectedValue) ) {
                    $eip_associate_dialog.eucadialog("close");
                    thisObj._associateIp(selectedValue, fixedValue);
@@ -203,7 +207,6 @@
                  // ADDED TO STRIP OFF THE NAME TAG FORM THE SELECTED INSTANCE STRING  --- Kyo 041713
                  if( String(selectedValue).match(/^\w+-\w+\s+/) ){
                    selectedValue = String(selectedValue).split(" ")[0];
-		   console.log("Volume ID: " + selectedValue);
                  }
                  $eip_associate_dialog.eucadialog("close");
                  thisObj._associateIp(fixedValue, selectedValue);
@@ -265,7 +268,7 @@
       })();
 
       // add associate
-      if ( selectedEips.length == 1 && selectedEips[0] == 'unassigned' ){
+      if ( selectedEips.length == 1){// && selectedEips[0] == 'unassigned' ){
         itemsList['associate'] = { "name": eip_action_associate, callback: function(key, opt) { thisObj._associateAction(); } }
       }
       if ( selectedEips.length > 0 ){
@@ -509,8 +512,9 @@
         if (results) {
           for( res in results){
             var addr = results[res];
-            if ( ! addr.instance_id )
-              addresses.push(addr.public_ip);
+            var val = addr.public_ip;
+            if (addr.instance_id) val += " ("+addr.instance_id+")";
+            addresses.push(val);
           }
         } 
         if (addresses.length ===0 )
