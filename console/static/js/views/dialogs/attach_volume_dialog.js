@@ -132,7 +132,14 @@ define([
               // DISPLAY ITS NAME TAG FOR VOLUME ID
               var foundNameTag = self.findNameTag(App.data.volume.get(args.volume_id));
               self.scope.volume.set({volume_id: String(self.createIdNameTagString(args.volume_id, foundNameTag))});
-            }; 
+            };
+ 
+            // SETUP INPUT VALIDATOR
+            self.scope.volume.on('change', function() {
+              self.scope.error.clear();
+              self.scope.error.set(self.scope.volume.validate());
+              console.log("Validation Error: " + JSON.stringify(self.scope.error));
+            });
         },
 
         // CONSTRUCT A STRING THAT DISPLAY BOTH RESOURCE ID AND ITS NAME TAG
@@ -163,6 +170,7 @@ define([
             this.scope = {
                 status: '',
                 volume: new Volume({volume_id: args.volume_id, instance_id: args.instance_id, device: args.device}),
+                error: new Backbone.Model({}),
                 help: { content: help_volume.dialog_attach_content, url: help_volume.dialog_attach_content_url },
 
                 cancelButton: {

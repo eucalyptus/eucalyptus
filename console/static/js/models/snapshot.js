@@ -20,6 +20,10 @@ define([
             volume_id: {
               required: false
             },
+            name: {
+              rangeLength: [1, 128],
+              required: false
+            },
             status: {
               oneOf: ['pending','completed', 'error'],
               required: false

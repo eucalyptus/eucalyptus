@@ -15,19 +15,23 @@
               <div class="form-row">
                 <label for="volume-name" data-msg="volume_dialog_name_label"></label>
                 <input type="text" id="volume-name" data-tooltip="volume_dialog_name_tip" data-value="volume.name"/>
+                <span data-text="error.name"></span>
               </div>
               <div class="form-row">
                 <label for="volume-add-snapshot-selector" data-msg="volume_dialog_snapshot_label"></label>
                 <select data-tooltip="volume_dialog_snapshot_tip" id="volume-add-snapshot-selector" data-value="volume.snapshot_id"></select>
+                <span data-text="error.snapshot_id"></span>
               </div>
               <div class="form-row">
                 <label for="volume-size" class="required-label" data-msg="volume_dialog_size_label"></label>
                 <input type="text" id="volume-size" class="short-textinput required" data-tooltip="volume_dialog_size_tip" data-value="volume.size"/>
-              </div>
+                <span data-text="error.size"></span> 
+             </div>
               <p data-msg="volume_dialog_az_text"></p>
               <div class="form-row">
                 <label for="volume-add-az-selector" class="required-label" data-msg="volume_dialog_az_label"></label>
-                <select data-tooltip="volume_dialog_az_tip" id="volume-add-az-selector" data-value="volume.zone"></select>
+                <select data-tooltip="volume_dialog_az_tip" id="volume-add-az-selector" data-value="volume.availablity_zone"></select>
+                <span data-text="error.availablity_zone"></span>
               </div>
               <p class="required-hint" data-msg="required_fields"></p>
             </div>
