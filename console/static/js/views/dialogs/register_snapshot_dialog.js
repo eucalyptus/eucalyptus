@@ -7,15 +7,26 @@ define([
 ], function(EucaDialogView, template, Snapshot, App, Backbone) {
     return EucaDialogView.extend({
 
+        setupInputValidation: function(args){
+            var self = this;
+            this.template = template;
+
+            // SETUP INPUT VALIDATOR
+            self.scope.snapshot.on('change', function() {
+              self.scope.error.clear();
+              self.scope.error.set(self.scope.snapshot.validate());
+              console.log("Validation Error: " + JSON.stringify(self.scope.error));
+           });
+        },
+
         initialize : function(args) {
             var self = this;
             this.template = template;
 
             this.scope = {
                 status: '',
-                snapshot_id: args.item,
-                item: [],
-                snapshot: new Snapshot({id: args.item}),
+                snapshot: new Snapshot({snapshot_id: args.item}),
+                error: new Backbone.Model({}),
 
                 cancelButton: {
                   click: function() {
@@ -26,10 +37,10 @@ define([
                 registerButton: {
                   click: function() {
                     // GET THE INPUT FROM THE HTML VIEW
-		    var snapshotId = self.scope.snapshot_id;
-		    var name = self.scope.item.name;
-		    var description = self.scope.item.description;
-		    var isWindows = self.scope.item.os ? true : false;
+		    var snapshotId = self.scope.snapshot.get('snapshot_id');
+		    var name = self.scope.snapshot.get('name');
+		    var description = self.scope.snapshot.get('description');
+		    var isWindows = self.scope.snapshot.get('os') ? true : false;
 		    console.log("Selected Snapshot ID: " + snapshotId);
 		    console.log("Name: " + name);
 		    console.log("Description: " + description);
@@ -65,6 +76,8 @@ define([
               }
             };
             this._do_init();
+
+            this.setupInputValidation(args);
           },
     });
 });
