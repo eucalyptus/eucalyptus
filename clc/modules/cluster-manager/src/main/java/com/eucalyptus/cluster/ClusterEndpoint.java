@@ -91,6 +91,9 @@ import com.eucalyptus.tags.FilterSupport;
 import com.eucalyptus.tags.Filters;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.async.AsyncRequests;
+import com.eucalyptus.vm.VmInstance;
+import com.eucalyptus.vm.VmInstances;
+import com.eucalyptus.vm.VmInstances.TerminatedInstanceException;
 import com.eucalyptus.vmtypes.VmType;
 import com.eucalyptus.vmtypes.VmTypes;
 import com.google.common.base.Function;
@@ -139,23 +142,65 @@ public class ClusterEndpoint implements Startable {
   
   public MigrateInstancesResponseType migrateInstances( final MigrateInstancesType request ) throws EucalyptusCloudException {
     MigrateInstancesResponseType reply = request.getReply( );
-    for ( ServiceConfiguration c : Topology.enabledServices( ClusterController.class ) ) {
-      try {
-        Cluster cluster = Clusters.lookup( c );
-        if ( !Strings.isNullOrEmpty( request.getSourceHost( ) ) ) {
-          cluster.migrateInstances( request.getSourceHost( ), request.getAllowHosts( ), request.getDestinationHosts( ) );
-        } else if ( !Strings.isNullOrEmpty( request.getInstanceId( ) ) ) {
-          cluster.migrateInstance( request.getInstanceId( ), request.getAllowHosts( ), request.getDestinationHosts( ) );
-        } else {
-          throw new IllegalArgumentException( "Either the sourceHost or instanceId must be provided" );
-        }
-        return reply.markWinning( );
-      } catch ( Exception ex ) {
-        LOG.error( ex );
-        throw new EucalyptusCloudException( ex.getMessage( ), ex );
-      }
+    if ( !Contexts.lookup( ).hasAdministrativePrivileges( ) ) {
+      throw new EucalyptusCloudException( "Authorization failed." );
     }
-    return reply.markFailed( );
+    if ( !Strings.isNullOrEmpty( request.getSourceHost( ) ) ) {
+      for ( ServiceConfiguration ccConfig : Topology.enabledServices( ClusterController.class ) ) {
+        try {
+          ServiceConfiguration node = Nodes.lookup( ccConfig, request.getSourceHost( ) );//found the node!
+          Cluster cluster = Clusters.lookup( ccConfig );//lookup the cluster
+          try {
+            cluster.migrateInstances( request.getSourceHost( ), request.getAllowHosts( ), request.getDestinationHosts( ) );//submit the migration request
+            return reply.markWinning( );
+          } catch ( Exception ex ) {
+            LOG.error( ex );
+            throw new EucalyptusCloudException( "Migrating off of node "
+                                                + request.getSourceHost( )
+                                                + " failed because of: "
+                                                + Strings.nullToEmpty( ex.getMessage( ) ).replaceAll( ".*:status=", "" ), ex );
+          }
+        } catch ( EucalyptusCloudException ex ) {
+          throw ex;
+        } catch ( NoSuchElementException ex ) {
+          throw new EucalyptusCloudException( "Failed to find ENABLED cluster for node " + request.getSourceHost( ), ex );
+        } catch ( Exception ex ) {
+          LOG.error( ex );
+          throw new EucalyptusCloudException( "Migrating off of node " + request.getSourceHost( ) + " failed because of: " + ex.getMessage( ), ex );
+        }
+      }
+      throw new EucalyptusCloudException( "No ENABLED cluster found which can service the requested node: " + request.getSourceHost( ) );
+    } else if ( !Strings.isNullOrEmpty( request.getInstanceId( ) ) ) {
+      VmInstance vm;
+      try {
+        vm = VmInstances.lookup( request.getInstanceId( ) );
+        if ( !VmInstance.VmState.RUNNING.apply( vm ) ) {
+          throw new EucalyptusCloudException( "Cannot migrate a " + vm.getState( ).name( ).toLowerCase( ) + " instance: " + request.getInstanceId( ) );
+        }
+      } catch ( TerminatedInstanceException ex ) {
+        throw new EucalyptusCloudException( "Cannot migrate a terminated instance: " + request.getInstanceId( ), ex );
+      } catch ( NoSuchElementException ex ) {
+        throw new EucalyptusCloudException( "Failed to lookup requested instance: " + request.getInstanceId( ), ex );
+      }
+      try {
+        ServiceConfiguration ccConfig = Topology.lookup( ClusterController.class, vm.lookupPartition( ) );
+        Cluster cluster = Clusters.lookup( ccConfig );
+        try {
+          cluster.migrateInstance( request.getInstanceId( ), request.getAllowHosts( ), request.getDestinationHosts( ) );
+          return reply.markWinning( );
+        } catch ( Exception ex ) {
+          LOG.error( ex );
+          throw new EucalyptusCloudException( "Migrating instance "
+                                              + request.getInstanceId( )
+                                              + " failed because of: "
+                                              + Strings.nullToEmpty( ex.getMessage( ) ).replaceAll( ".*:status=", "" ), ex );
+        }
+      } catch ( NoSuchElementException ex ) {
+        throw new EucalyptusCloudException( "Failed to lookup ENABLED cluster for instance " + request.getInstanceId( ), ex );
+      }
+    } else {
+      throw new EucalyptusCloudException( "Either the sourceHost or instanceId must be provided" );
+    }
   }
 
   public DescribeAvailabilityZonesResponseType DescribeAvailabilityZones( DescribeAvailabilityZonesType request ) throws EucalyptusCloudException {
