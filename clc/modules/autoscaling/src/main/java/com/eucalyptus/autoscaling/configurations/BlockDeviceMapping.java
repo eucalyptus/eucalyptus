@@ -22,7 +22,6 @@ package com.eucalyptus.autoscaling.configurations;
 import javax.annotation.Nullable;
 import javax.persistence.Column;
 import javax.persistence.Embeddable;
-import javax.persistence.Embedded;
 
 /**
  *
@@ -36,9 +35,14 @@ public class BlockDeviceMapping {
   @Column( name = "metadata_virtual_name" )
   private String virtualName;
 
-  @Embedded
-  private EbsParameters ebsParameters;
-  
+  // EBS
+  @Column( name = "metadata_snapshot_id" )
+  private String snapshotId;
+
+  // EBS
+  @Column( name = "metadata_volume_size" )
+  private Integer volumeSize;
+
   protected BlockDeviceMapping() {    
   }
 
@@ -52,7 +56,8 @@ public class BlockDeviceMapping {
                                 final Integer volumeSize ) {
     setDeviceName( deviceName );
     setVirtualName( virtualName );
-    setEbsParameters( new EbsParameters( snapshotId, volumeSize ) );
+    setSnapshotId( snapshotId );
+    setVolumeSize( volumeSize );
   }
 
   public String getDeviceName() {
@@ -73,12 +78,21 @@ public class BlockDeviceMapping {
   }
 
   @Nullable
-  public EbsParameters getEbsParameters() {
-    return ebsParameters;
+  public String getSnapshotId() {
+    return snapshotId;
   }
 
-  public void setEbsParameters( final EbsParameters ebsParameters ) {
-    this.ebsParameters = ebsParameters;
+  public void setSnapshotId( final String snapshotId ) {
+    this.snapshotId = snapshotId;
+  }
+
+  @Nullable
+  public Integer getVolumeSize() {
+    return volumeSize;
+  }
+
+  public void setVolumeSize( final Integer volumeSize ) {
+    this.volumeSize = volumeSize;
   }
 
   @SuppressWarnings( "RedundantIfStatement" )
@@ -98,5 +112,4 @@ public class BlockDeviceMapping {
   public int hashCode() {
     return deviceName.hashCode();
   }
-
 }

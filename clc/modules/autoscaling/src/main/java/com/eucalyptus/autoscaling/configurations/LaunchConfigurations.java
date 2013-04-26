@@ -145,12 +145,11 @@ public abstract class LaunchConfigurations {
 
     @Override
     public BlockDeviceMappingType apply( final BlockDeviceMapping blockDeviceMapping ) {
-      final EbsParameters ebs = blockDeviceMapping.getEbsParameters();
-      return new BlockDeviceMappingType( 
+      return new BlockDeviceMappingType(
           blockDeviceMapping.getDeviceName(),
           blockDeviceMapping.getVirtualName(),
-          ebs != null ? ebs.getSnapshotId() : null,
-          ebs != null ? ebs.getVolumeSize() : null );
+          blockDeviceMapping.getSnapshotId(),
+          blockDeviceMapping.getVolumeSize() );
     }
   }
 
@@ -171,11 +170,10 @@ public abstract class LaunchConfigurations {
         final BlockDeviceMappingItemType type = new BlockDeviceMappingItemType();
         type.setDeviceName( mapping.getDeviceName() );
         type.setVirtualName( mapping.getVirtualName() );
-        final EbsParameters ebsParameters = mapping.getEbsParameters();
-        if ( ebsParameters != null ) {
+        if ( mapping.getSnapshotId() != null || mapping.getVolumeSize() != null ) {
           final EbsDeviceMapping ebsType = new EbsDeviceMapping();
-          ebsType.setSnapshotId( ebsParameters.getSnapshotId() );
-          ebsType.setVolumeSize( ebsParameters.getVolumeSize() );
+          ebsType.setSnapshotId( mapping.getSnapshotId() );
+          ebsType.setVolumeSize( mapping.getVolumeSize() );
           ebsType.setDeleteOnTermination( true );
           type.setEbs( ebsType );
         }
