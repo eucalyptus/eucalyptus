@@ -34,7 +34,9 @@ import javax.persistence.EntityTransaction;
 
 import org.apache.log4j.Logger;
 
+import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.AuthQuotaException;
+import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.auth.principal.UserFullName;
 import com.eucalyptus.cloudwatch.MetricData;
 import com.eucalyptus.context.Context;
@@ -593,15 +595,46 @@ public class LoadBalancingService {
     DeleteLoadBalancerResponseType reply = request.getReply();
     final String lbToDelete = request.getLoadBalancerName();
     final Context ctx = Contexts.lookup();
-    final UserFullName ownerFullName = ctx.getUserFullName();
+    final  UserFullName ownerFullName = ctx.getUserFullName();
+    Function<String, LoadBalancer> findLoadBalancer = new Function<String, LoadBalancer>(){
+		@Override
+		@Nullable
+		public LoadBalancer apply(@Nullable String lbName) {
+			try{
+				LoadBalancer lb = LoadBalancers.getLoadbalancer(ownerFullName, lbName);
+				return lb;
+			}catch(NoSuchElementException ex){
+				if(ctx.hasAdministrativePrivileges()){
+					try{
+						LoadBalancer lb = LoadBalancers.getLoadBalancerByName(lbName);		
+						final User owner = Accounts.lookupUserById(lb.getOwnerUserId());
+						ctx.setUser(owner);
+						return lb;
+					}catch(LoadBalancingException ex2){
+						throw Exceptions.toUndeclared(ex2);
+					}catch(Exception ex2){
+						throw Exceptions.toUndeclared(ex2);
+					}
+				}
+				throw ex;
+			}
+		}
+    };
+    
     try {
       if ( lbToDelete != null ) {
         LoadBalancer lb = null;
         try {
-          lb = LoadBalancers.getLoadbalancer( ownerFullName, lbToDelete );
+          lb = findLoadBalancer.apply(lbToDelete);
         } catch ( NoSuchElementException ex ) {
-          // OK, nothing to delete
+        	;
+        } catch ( Exception ex){
+        	if(ex.getCause() != null && ex.getCause() instanceof LoadBalancingException)
+        		throw (LoadBalancingException) ex.getCause();
+        	else
+        		throw ex;
         }
+        
         //IAM Support for deleting load balancers
         if ( lb != null && LoadBalancingMetadatas.filterPrivileged().apply( lb ) ) {
           Collection<LoadBalancerListener> listeners = lb.getListeners();
@@ -631,13 +664,16 @@ public class LoadBalancingService {
             LOG.error( "failed to fire DeleteLoadbalancer event", e );
             throw e;
           }
-          LoadBalancers.deleteLoadbalancer( ownerFullName, lbToDelete );
+          
+          LoadBalancers.deleteLoadbalancer( UserFullName.getInstance(lb.getOwnerUserId()), lbToDelete );
         }
       }
     }catch (EventFailedException e){
         LOG.error( "Error deleting the loadbalancer: " + e.getMessage(), e );
     	final String reason = e.getCause() != null && e.getCause().getMessage()!=null ? e.getCause().getMessage() : "internal error";
     	throw new LoadBalancingException( String.format("Failed to delete the loadbalancer: %s", reason), e );
+    }catch (LoadBalancingException e){
+    	throw e;
     }catch ( Exception e ) {
       // success if the lb is not found in the system
       if ( !(e.getCause() instanceof NoSuchElementException) ) {

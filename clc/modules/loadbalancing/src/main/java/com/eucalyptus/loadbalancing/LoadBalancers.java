@@ -50,12 +50,12 @@ import edu.ucsb.eucalyptus.msgs.ClusterInfoType;
  */
 public class LoadBalancers {
 	private static Logger    LOG     = Logger.getLogger( LoadBalancers.class );
-	public static LoadBalancer addLoadbalancer(UserFullName user, String lbName) throws LoadBalancingException
+	public static LoadBalancer addLoadbalancer(final UserFullName user, final String lbName) throws LoadBalancingException
 	{
 		return LoadBalancers.addLoadbalancer(user,  lbName, null);
 	}
 	
-	public static LoadBalancer getLoadbalancer(UserFullName user, String lbName){
+	public static LoadBalancer getLoadbalancer(final UserFullName user, final String lbName){
 		 final EntityTransaction db = Entities.get( LoadBalancer.class );
 		 try {
 			 final LoadBalancer lb = Entities.uniqueResult( LoadBalancer.named( user, lbName )); 
@@ -68,6 +68,54 @@ public class LoadBalancers {
 			 db.rollback( );
 			 LOG.error("failed to get the loadbalancer="+lbName, ex);
 			 throw Exceptions.toUndeclared(ex);
+		 }
+	}
+	
+	///
+	public static LoadBalancer getLoadBalancerByName(final String lbName) throws LoadBalancingException{
+		 final EntityTransaction db = Entities.get( LoadBalancer.class );
+		 try {
+			 final List<LoadBalancer> lbs = Entities.query( LoadBalancer.named( null, lbName )); 
+			 db.commit();
+			 if(lbs==null || lbs.size()<=0)
+				 throw new NoSuchElementException();
+			 if(lbs.size()>1)
+				 throw new LoadBalancingException("More than one loadbalancer with the same name found");
+			 return lbs.get(0);
+		 }catch(LoadBalancingException ex){
+			 throw ex;
+		 }catch(NoSuchElementException ex){
+			 throw ex;
+		 }catch(Exception ex){
+			 throw Exceptions.toUndeclared(ex);
+		 }finally{
+			 if(db.isActive())
+				 db.rollback();
+		 }
+	}
+	
+	///
+	public static LoadBalancer getLoadBalancerByDnsName(final String dnsName) throws NoSuchElementException{
+		 final EntityTransaction db = Entities.get( LoadBalancerDnsRecord.class );
+		 try{
+			 final List<LoadBalancerDnsRecord> dnsList = Entities.query(LoadBalancerDnsRecord.named());
+			 db.commit();
+			 LoadBalancer lb = null;
+			 for(final LoadBalancerDnsRecord dns : dnsList){
+				 if(dns.getDnsName()!=null && dns.getDnsName().equals(dnsName))
+					 lb= dns.getLoadBalancer();
+			 }
+			 if(lb!=null)
+				 return lb;
+			 else
+				 throw new NoSuchElementException();
+		 }catch(NoSuchElementException ex){
+			 throw ex;
+		 }catch(Exception ex){
+			 throw Exceptions.toUndeclared(ex);
+		 }finally{
+			 if(db.isActive())
+				 db.rollback();
 		 }
 	}
 	
