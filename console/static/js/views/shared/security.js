@@ -86,7 +86,7 @@ define([
         self.render();
       });
 
-      self.model.on('validated:valid', function(obj, errors) {
+      self.model.on('validated:valid change', function(obj, errors) {
         scope.launchConfigErrors.group = null;
         self.render();
       });
@@ -96,7 +96,7 @@ define([
         self.render();
       });
 
-      this.options.keymodel.on('validated:valid', function(obj, errors) {
+      this.options.keymodel.on('validated:valid change', function(obj, errors) {
         scope.launchConfigErrors.key = null;
         self.render();
       });

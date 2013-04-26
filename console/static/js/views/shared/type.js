@@ -96,7 +96,7 @@ define([
       self.render();
     });
 
-    self.model.on('validated:valid', function(model, errors) {
+    self.model.on('validated:valid change', function(model, errors) {
       scope.launchConfigErrors.type_number = null;
       scope.launchConfigErrors.instance_type = null;
       scope.launchConfigErrors.type_names_count = null;
