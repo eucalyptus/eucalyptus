@@ -33,6 +33,7 @@ define([
 
       var scope = {
         typeModel: self.model,
+        tags_col: self.model.get('tags'),
 
         isZoneSelected: function(obj) { 
           if (self.model.get('zone') == obj.zone.get('name')) {
@@ -110,6 +111,10 @@ define([
     self.model.on('change:instance_type', function() {
       $.cookie('instance_type', self.model.get('instance_type'));
       self.render();
+    });
+
+    scope.tags_col.on('add', function() {
+      self.model.set('type_hasTags', true);
     });
 
     $(this.el).html(this.tpl);
