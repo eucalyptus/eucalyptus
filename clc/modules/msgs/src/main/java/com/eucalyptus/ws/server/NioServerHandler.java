@@ -96,6 +96,7 @@ import com.eucalyptus.system.Ats;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.ws.Handlers;
 import com.eucalyptus.ws.WebServicesException;
+import com.eucalyptus.ws.server.FilteredPipeline.InternalPipeline;
 
 @ChannelPipelineCoverage( "one" )
 public class NioServerHandler extends SimpleChannelUpstreamHandler {//TODO:GRZE: this needs to move up dependency tree.
@@ -150,6 +151,9 @@ public class NioServerHandler extends SimpleChannelUpstreamHandler {//TODO:GRZE:
       final FilteredPipeline filteredPipeline = Pipelines.find( request );
       if ( this.pipeline.compareAndSet( null, filteredPipeline ) ) {
         this.pipeline.get( ).unroll( ctx.getPipeline( ) );
+        if ( filteredPipeline instanceof InternalPipeline ) {
+          Handlers.addInternalSystemHandlers( ctx.getPipeline( ) );
+        }
         final Ats ats = Ats.inClassHierarchy( filteredPipeline );
         Handlers.addComponentHandlers(
             ats.has(ComponentPart.class) ? ats.get(ComponentPart.class).value() : null,

@@ -91,7 +91,6 @@ enum MigrationTags implements Predicate<VmInstance> {
     deleteTags.getTagSet( ).add( MigrationTags.SOURCE.deleteTag( ) );
     deleteTags.getTagSet( ).add( MigrationTags.DESTINATION.deleteTag( ) );
     deleteTags.getResourcesSet( ).add( vm.getInstanceId( ) );
-    deleteTags.setEffectiveUserId( vm.getOwnerUserId( ) );//GRZE:TODO: update impersonation impl later.
     dispatch( deleteTags );
   }
   
@@ -114,7 +113,6 @@ enum MigrationTags implements Predicate<VmInstance> {
       createTags.getTagSet( ).add( MigrationTags.DESTINATION.getTag( migrationTask.getDestinationHost( ) ) );
     }
     createTags.getResourcesSet( ).add( vm.getInstanceId( ) );
-    createTags.setEffectiveUserId( vm.getOwnerUserId( ) );//GRZE:TODO: update impersonation impl later.
     dispatch( createTags );
   }
   

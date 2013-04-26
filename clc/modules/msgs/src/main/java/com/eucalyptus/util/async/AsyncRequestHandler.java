@@ -223,13 +223,10 @@ public class AsyncRequestHandler<Q extends BaseMessage, R extends BaseMessage> i
     if ( t == null ) {
       t = new NullPointerException( "teardown() called with null argument." );
     }
-    try {
-      this.logRequestFailure( t );
-      if ( this.connectFuture != null ) {
-        this.maybeCloseChannel( );
-      }
-    } finally {
-      this.response.setException( t );
+    this.logRequestFailure( t );
+    this.response.setException( t );
+    if ( this.connectFuture != null ) {
+      this.maybeCloseChannel( );
     }
   }
 
