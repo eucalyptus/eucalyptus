@@ -114,11 +114,20 @@ public class LoadBalancingService {
 	    		final LoadBalancerDnsRecord dns = lb.getDns();
 	    			
 	    		desc.setDnsName(dns.getDnsName());           /// dns name
-	    			                                 
-	    		if(zone.getBackendInstances().size()>0){
+	    		
+	    		Collection<LoadBalancerBackendInstance> notInError =
+	    				Collections2.filter(zone.getBackendInstances(), new Predicate<LoadBalancerBackendInstance>(){
+							@Override
+							public boolean apply(
+									@Nullable LoadBalancerBackendInstance arg0) {
+								return ! LoadBalancerBackendInstance.STATE.Error.equals(arg0.getBackendState());
+							}
+	    				});
+	    		
+	    		if(notInError.size()>0){
   		  			desc.setInstances(new Instances());
 	    			desc.getInstances().setMember(new ArrayList<Instance>(
-	    		    	Collections2.transform(zone.getBackendInstances(), new Function<LoadBalancerBackendInstance, Instance>(){
+	    		    	Collections2.transform(notInError, new Function<LoadBalancerBackendInstance, Instance>(){
     		    			@Override
     		    			public Instance apply(final LoadBalancerBackendInstance be){
     		    				Instance instance = new Instance();
