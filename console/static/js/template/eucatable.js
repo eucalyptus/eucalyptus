@@ -522,6 +522,7 @@
     },
 
     _glowRow : function(val, columnId){
+      if(this.table == null) return;
       var selector = ':nth-child('+(columnId+1)+')';
       var rows = this.table.fnGetNodes();
       for ( i in rows){
@@ -535,6 +536,7 @@
     },
 
     _removeGlow : function(val, columnId){
+      if(this.table == null) return;
       var selector = ':nth-child('+(columnId+1)+')';
       var rows = this.table.fnGetNodes();
       for ( i in rows){
@@ -548,6 +550,7 @@
     },
 
     _refreshTableInterval : function() {
+      if(this.table == null) return;
       var tbody = this.element.find('table tbody'); 
       if(tbody.find('tr.selected-row').length > 0 || tbody.find('tr.expanded').length > 0 || tbody.find('tr.glow').length>0 )
         return;
@@ -561,6 +564,7 @@
 /**** Public Methods ****/
     // this reloads data and refresh table
     refreshTable : function() {
+      if(this.table == null) return;
       if($('html body').eucadata('countPendingReq') > MAX_PENDING_REQ)
         return;
       if(! $('html body').eucadata('isEnabled'))

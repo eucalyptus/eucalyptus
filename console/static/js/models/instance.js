@@ -193,6 +193,7 @@ define([
             });
 
             var the_tags = model.get('tags').toJSON();
+            var name_tags = model.get('names').toJSON();
             $(model.get('fileinput')()).fileupload("send", {
               files: user_file,
               success:
@@ -200,6 +201,7 @@ define([
                   if ( data.results ) {
                     notifySuccess(null, $.i18n.prop('instance_run_success', DefaultEncoder().encodeForHTML(data.results[0].id)));
                     self.set_tags(data.results, the_tags);
+                    self.set_tags(data.results, name_tags, true);
                   } else {
                     notifyError($.i18n.prop('instance_run_error', DefaultEncoder().encodeForHTML(model.name), DefaultEncoder().encodeForHTML(model.name)), undefined_error);
                   }
@@ -234,34 +236,49 @@ define([
           }
         },
 
-        set_tags: function(instanceData, tags) {
-          var tagData = "_xsrf="+$.cookie('_xsrf');
-          // each instance gets each tag
+        set_tags: function(instanceData, tags, unique) {
+          var self = this;
           if(tags.length > 0) {
-            $.each(instanceData, function(idx, inst) {
-              tagData += "&ResourceId." + (idx+1) + "=" + inst.id;
-            });
-            _.each(tags, function(tag, jdx, tags) {
-              tagData += "&Tag." + (jdx+1) + ".Key=" + tag.name;
-              tagData += "&Tag." + (jdx+1) + ".Value=" + tag.value;
-            });
-          
-            $.ajax({
-              type: "POST",
-              url: "/ec2?Action=CreateTags",
-              data: tagData,
-              dataType: "json",
-              async: "true",
-              success: 
-                function(data, textStatus, jqXHR) {
-                  //console.log("RUN INSTANCE TAGS SUCCESS: ", data.return);   
-                },
-              error: 
-                function(jqXHR, textStatus, errorThrown) {
-                  //console.log("RUN INSTANCE TAGS FAIL: ", data.return);
-                }
-            });
+            if (unique == undefined || unique == false) {
+              // each instance gets each tag
+              var tagData = "_xsrf="+$.cookie('_xsrf');
+              $.each(instanceData, function(idx, inst) {
+                tagData += "&ResourceId." + (idx+1) + "=" + inst.id;
+              });
+              _.each(tags, function(tag, jdx, tags) {
+                tagData += "&Tag." + (jdx+1) + ".Key=" + tag.name;
+                tagData += "&Tag." + (jdx+1) + ".Value=" + tag.value;
+              });
+              self.create_tags(tagData);
+            } else {
+              // each instance receives one of the tags - expecting a tag for each instance
+              $.each(instanceData, function(idx, inst) {
+                var tagData = "_xsrf="+$.cookie('_xsrf');
+                tagData += "&ResourceId.1=" + inst.id;
+                tagData += "&Tag.1.Key=" + tags[idx].name;
+                tagData += "&Tag.1.Value=" + tags[idx].value;
+                self.create_tags(tagData);
+              });
+            }
           }
+        },
+
+        create_tags: function(tagData) {
+          $.ajax({
+            type: "POST",
+            url: "/ec2?Action=CreateTags",
+            data: tagData,
+            dataType: "json",
+            async: "true",
+            success: 
+              function(data, textStatus, jqXHR) {
+                //console.log("RUN INSTANCE TAGS SUCCESS: ", data.return);   
+              },
+            error: 
+              function(jqXHR, textStatus, errorThrown) {
+                //console.log("RUN INSTANCE TAGS FAIL: ", data.return);
+              }
+          });
         },
 
         parse: function(response) {
