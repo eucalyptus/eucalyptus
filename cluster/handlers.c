@@ -2192,8 +2192,6 @@ int refresh_resources(ncMetadata * pMeta, int timeout, int dolock)
 }
 
 //!
-//!
-//!
 //! @param[in] myInstance instance to check for migration
 //! @param[in] host reported hostname
 //! @param[in] src source node for migration
@@ -4447,12 +4445,22 @@ int doMigrateInstances(ncMetadata * pMeta, char *actionNode, char *instanceId, c
 
     if (preparing) {
         // notify source
-        // FIXME: add real credentials.
-        snprintf(credentials, CREDENTIAL_SIZE, "%lu", time(NULL));
+
+        // Generate migration credentials.
+        const char cred_chars[] = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
+        struct timeval tv;
+        gettimeofday(&tv, NULL);
+        srand(tv.tv_sec * tv.tv_usec * getpid());
+        // FIXME: Remove hard-coded 16.
+        for (int ci = 0; ci < (CREDENTIAL_SIZE - 1); ci++) {
+            credentials[ci] = cred_chars[rand() % (sizeof(cred_chars) - 1)];
+        }
+        credentials[CREDENTIAL_SIZE - 1] = 0;
+
         timeout = ncGetTimeout(time(NULL), OP_TIMEOUT, 1, 0);
         // FIXME: REMOVE THE DISPLAY OF CREDENTIALS BEFORE WE GO LIVE!
-        LOGDEBUG("about to ncClientCall source node '%s' with nc_instances (%s %d) [creds='%s']\n",
-                 SP(resourceCacheLocal.resources[src_index].hostname), nodeAction, found_instances, SP(found_instances == 1 ? nc_instances[0]->instanceId : ""));
+        LOGDEBUG("about to ncClientCall source node '%s' with nc_instances (%s %d) [creds='%s'] %s\n",
+                 SP(resourceCacheLocal.resources[src_index].hostname), nodeAction, found_instances, credentials, SP(found_instances == 1 ? nc_instances[0]->instanceId : ""));
         rc = ncClientCall(pMeta, timeout, resourceCacheLocal.resources[src_index].lockidx, resourceCacheLocal.resources[src_index].ncURL, "ncMigrateInstances",
                           nc_instances, found_instances, nodeAction, credentials);
         if (rc) {
