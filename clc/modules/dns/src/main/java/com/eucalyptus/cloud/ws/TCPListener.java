@@ -92,9 +92,9 @@ public class TCPListener extends Thread {
 			Socket s;
 			try {
 				if(socket != null) {
-					LOG.info("Listening on port: " + port);
-					s = socket.accept();
-					ConnectionHandlerFactory.handle(s);
+					LOG.trace("Listening on port: " + port);
+          TCPHandler handler = new TCPHandler((Socket)socket.accept());
+          handler.start();
 				} else {
 					LOG.error("Cannot start service. Invalid socket.");
 					return;

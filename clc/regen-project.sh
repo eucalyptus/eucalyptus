@@ -84,13 +84,7 @@ if [[ -z "${WORKSPACE_DIR}" ]]; then
   echo -e "ERROR Failed to find the eclipse workspace directory.\nERROR Is the branch in the right directory?\nERROR There should be a directory .metadata in one of the parent directories of ${SRC_DIR}" 1>&2
 fi
 printf "%-40.40s %s\n" "Eclipse Workspace Directory:" ${WORKSPACE_DIR} 
-
-if [ -z "$1" ]; then
-  NAME=${SRC_DIR//${WORKSPACE_DIR}/}
-  NAME=${NAME//\//:}
-else
-  NAME=$1
-fi
+NAME=eucalyptus
 printf "\n%-40.40s %s\n" "-> New Project Name:" ${NAME} 
 fixProjectName() {
   TARGET=$1
