@@ -21,7 +21,7 @@
     <div class="launch-wizard-select form-row">
        <label for="launch-instance-type-size" data-msg="launch_instance_type_size_header">Instance size</label>
        <select  data-value="typeModel.instance_type" id="launch-instance-type-size" class="wizard-selection-content">
-          <option data-each-type="typeModel.types" data-value="type.name" data-text=":formatType"></option>
+          <option data-each-type="typeModel.types" data-value="type.name" data-text=":formatType" data-selected=":isSelected < typeModel.instance_type"></option>
        </select>
     </div>
     <div class="field-error" data-text="launchConfigErrors.instance_type"></div>
