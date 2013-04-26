@@ -5,7 +5,7 @@ define([
   'rivets',
 	], function( app, dataholder, template, rivets ) {
 	return Backbone.View.extend({
-    title: 'Security',
+    title: app.msg("launch_instance_section_header_security"),
 
 		initialize : function() {
 
@@ -76,8 +76,12 @@ define([
           addGroup( function() {
               //console.log('returned from security group dialog');
             });
-        }
+        },
 
+        formatSecGroupRulesString: function() {
+          var msg =  $.i18n.prop('launch_instance_security_group_rule',DefaultEncoder().encodeForHTML(self.model.get('name')));
+          return msg;
+        }
 
       };
      
