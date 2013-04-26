@@ -241,6 +241,9 @@ public class NetworkGroupManager {
       final List<NetworkRule> ruleList = Lists.newArrayList( );
       NetworkGroups.resolvePermissions( request.getIpPermissions() );
       for ( final IpPermissionType ipPerm : request.getIpPermissions( ) ) {
+        if ( ipPerm.getCidrIpRanges().isEmpty() && ipPerm.getGroups().isEmpty() ) {
+          continue; // see EUCA-5934
+        }
         try {
           final List<NetworkRule> rules = NetworkGroups.IpPermissionTypeAsNetworkRule.INSTANCE.apply( ipPerm );
           ruleList.addAll( rules );
