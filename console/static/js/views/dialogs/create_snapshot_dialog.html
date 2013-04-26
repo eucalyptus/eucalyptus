@@ -1,5 +1,5 @@
 <div>
-    <div class="title" data-msg="create_snapshot_dialog_title">Create snapshot from volume</div>
+    <div class="title" data-msg="snapshot_create_dialog_title"></div>
     <div class="body">
       <div id="snapshot-create-dialog" class="euca-dialog">
         <div data-ui-tabs="">
@@ -14,7 +14,7 @@
                 <p data-msg="snapshot_create_dialog_text"></p>
                 <div class="form-row" id="snapshot-create-dialog-name">
                   <label for="snapshot-create-name" data-msg="snapshot_create_dialog_name_label"></label>
-                  <input type="text" id="snapshot-create-name" data-tooltip="snapshot_create_dialog_name_tip" data-value="snapshot.name"/>
+                  <input type="text" id="snapshot-create-name" data-value="snapshot.name"/>
                   <span data-text="error.name"></span>
                 </div>
                 <div class="form-row" id="snapshot-create-dialog-vol-id">
@@ -48,8 +48,8 @@
         <div data-text="status" style="height:20px"></div> 
         <div class="ui-dialog-buttonpane ui-widget-content ui-helper-clearfix">
           <div class="ui-dialog-buttonset">
-            <span data-ui-button=":createButton">Create</span>
-            <span data-ui-button=":cancelButton">Cancel</span> 
+            <span data-ui-button=":createButton" data-msg="snapshot_create_dialog_create_btn"></span>
+            <span data-ui-button=":cancelButton" data-msg="dialog_cancel_btn"></span> 
           </div>
         </div>
       </div>
