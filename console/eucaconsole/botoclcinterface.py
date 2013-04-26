@@ -26,6 +26,7 @@
 import boto
 import ConfigParser
 import json
+import random
 from boto.ec2.snapshot import Snapshot
 from boto.ec2.connection import EC2Connection
 from boto.ec2.regioninfo import RegionInfo
@@ -266,7 +267,15 @@ class BotoClcInterface(ClcInterface):
 
     # returns True if successful
     def delete_snapshot(self, snapshot_id):
-        return self.conn.delete_snapshot(snapshot_id)
+        result = self.conn.delete_snapshot(snapshot_id)
+        retries = 0
+        while result == False:
+          if retries == 5:
+            break;
+          time.sleep(random.random() * (2 ** retries))
+          result = self.conn.delete_snapshot(snapshot_id)
+          retries += 1
+        return result
 
     # returns list of snapshots attributes
     def get_snapshot_attribute(self, snapshot_id, attribute):
