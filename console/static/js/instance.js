@@ -401,20 +401,6 @@
          }},
          width: 750
       });
-      require([
-        'rivets', 
-        'models/instance', 
-        'text!views/dialogs/tag_edit_nub.html!strip'
-        ], function(rivets, Instance, TagNub) {
-            var tagdiv = thisObj.launchMoreDialog.find(".launch-more-tags");
-            tagdiv.append($(TagNub));
-            thisObj.launchMoreDialog.rivets = rivets;
-            thisObj.launchMoreDialog.Instance = Instance;
-            thisObj.launchMoreDialog.rscope = {
-                model: new Instance()
-            }
-            thisObj.launchMoreDialog.rview = thisObj.launchMoreDialog.rivets.bind(tagdiv, thisObj.launchMoreDialog.rscope);
-      });
       // end launch more dialog
     },
 
@@ -1087,10 +1073,12 @@
         sgroup = sgroup.val();  
 
       
+      /*
       require(['app'], function(app) {
         thisObj.launchMoreDialog.rscope.model = app.data.instances.get(id);
         thisObj.launchMoreDialog.rview.sync();
       });
+      */
 
       $('html body').find(DOM_BINDING['hidden']).launcher('updateLaunchParam', 'emi', emi);
       $('html body').find(DOM_BINDING['hidden']).launcher('updateLaunchParam', 'type', type);
@@ -1145,6 +1133,30 @@
       var thisObj = this;
       var id = this.tableWrapper.eucatable('getSelectedRows', 17)[0];
 //      id = $(id).html();       // After dataTable 1.9 integration, this operation is no longer needed.  030413 
+
+      require(['app',
+        'rivets', 
+        'models/instance', 
+        'text!views/dialogs/tag_edit_nub.html!strip'
+      ], function(app, rivets, Instance, TagNub) {
+          console.log('update scope');
+          var tagdiv = thisObj.launchMoreDialog.find(".launch-more-tags");
+          tagdiv.children().remove();
+          tagdiv.append($(TagNub));
+
+          thisObj.launchMoreDialog.rivets = rivets;
+          thisObj.launchMoreDialog.Instance = Instance;
+          thisObj.launchMoreDialog.rscope = {
+              model: new Instance()
+          }
+
+          app.data.instance.get(id).get('tags').each(function(t) {
+              thisObj.launchMoreDialog.rscope.model.get('tags').add(t.clone());
+          });
+
+          thisObj.launchMoreDialog.rview = thisObj.launchMoreDialog.rivets.bind(tagdiv, thisObj.launchMoreDialog.rscope);
+      });
+
       var filter = {};
       var result = describe('instance');
       var instance = null;
