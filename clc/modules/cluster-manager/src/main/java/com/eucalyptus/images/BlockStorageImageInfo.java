@@ -186,18 +186,24 @@ public class BlockStorageImageInfo extends ImageInfo implements BootableImageInf
     public boolean apply( Class arg0 ) {
       EntityTransaction db = Entities.get( BlockStorageImageInfo.class );
       try {
-        List<BlockStorageImageInfo> entities = Entities.query( new BlockStorageImageInfo( ) );
-        for ( BlockStorageImageInfo entry : entities ) {
-          LOG.info( "Upgrading BlockStorageImageInfo: " + entry.toString() );
-          if (StringUtils.isBlank(entry.getRootDeviceName())) {
-            entry.setRootDeviceName("/dev/sda");
+        List<BlockStorageImageInfo> images = Entities.query( new BlockStorageImageInfo( ) );
+        for ( BlockStorageImageInfo image : images ) {
+          LOG.info("Upgrading BlockStorageImageInfo: " + image.toString());
+          if (StringUtils.isBlank(image.getRootDeviceName())) {
+        	LOG.info("Setting the root device name to /dev/sda");
+            image.setRootDeviceName("/dev/sda");
           }
-          for (DeviceMapping deviceMap : entry.getDeviceMappings()) {
-        	  if (deviceMap instanceof BlockStorageDeviceMapping && deviceMap.getDeviceName().equalsIgnoreCase("/dev/sda1")) {
-        		  deviceMap.setDeviceName("/dev/sda");
-        	  }
+          DeviceMapping mapping = null;
+          if ( image.getDeviceMappings().size() == 1 && (mapping = image.getDeviceMappings().iterator().next()) != null 
+        		  && mapping instanceof BlockStorageDeviceMapping ) {
+            LOG.info("Setting the device mapping name to /dev/sda");
+            mapping.setDeviceName("/dev/sda"); 
+            LOG.info("Adding ephemeral disk at /dev/sdb");
+        	image.getDeviceMappings().add(new EphemeralDeviceMapping( image, "/dev/sdb", "ephemeral0" ));
+          } else {
+        	LOG.error("Expected to see only the root block device mapping but encountered " + image.getDeviceMappings().size() + " device mappings.");
           }
-          Entities.persist(entry);
+          Entities.persist(image);
         }
         db.commit( );
         return true;
