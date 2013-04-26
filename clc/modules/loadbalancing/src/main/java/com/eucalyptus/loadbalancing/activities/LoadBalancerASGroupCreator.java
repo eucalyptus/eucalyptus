@@ -34,6 +34,13 @@ import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.auth.principal.UserFullName;
 import com.eucalyptus.autoscaling.common.AutoScalingGroupType;
 import com.eucalyptus.autoscaling.common.DescribeAutoScalingGroupsResponseType;
+import com.eucalyptus.bootstrap.Bootstrap;
+import com.eucalyptus.bootstrap.Bootstrapper;
+import com.eucalyptus.bootstrap.DependsLocal;
+import com.eucalyptus.bootstrap.Provides;
+import com.eucalyptus.bootstrap.RunDuring;
+import com.eucalyptus.component.Components;
+import com.eucalyptus.component.Faults;
 import com.eucalyptus.configurable.ConfigurableClass;
 import com.eucalyptus.configurable.ConfigurableField;
 import com.eucalyptus.configurable.ConfigurableFieldType;
@@ -42,6 +49,7 @@ import com.eucalyptus.empyrean.ServiceStatusType;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.loadbalancing.LoadBalancer;
 import com.eucalyptus.loadbalancing.LoadBalancers;
+import com.eucalyptus.loadbalancing.LoadBalancing;
 import com.eucalyptus.loadbalancing.activities.EventHandlerChainNew.InstanceProfileSetup;
 import com.eucalyptus.loadbalancing.activities.EventHandlerChainNew.SecurityGroupSetup;
 import com.eucalyptus.loadbalancing.activities.EventHandlerChainNew.TagCreator;
@@ -76,6 +84,40 @@ public class LoadBalancerASGroupCreator extends AbstractEventHandler<NewLoadbala
 			readonly = false,
 			type = ConfigurableFieldType.KEYVALUE )
 		public static String LOADBALANCER_VM_KEYNAME = null;
+	
+	@Provides(LoadBalancing.class)
+	@RunDuring(Bootstrap.Stage.Final)
+	@DependsLocal(LoadBalancing.class)
+	public static class LoadBalancingPropertyBootstrapper extends Bootstrapper.Simple {
+
+	  private static LoadBalancingPropertyBootstrapper singleton;
+
+	  public static Bootstrapper getInstance( ) {
+	    synchronized ( LoadBalancingPropertyBootstrapper.class ) {
+	      if ( singleton == null ) {
+	        singleton = new LoadBalancingPropertyBootstrapper( );
+	        LOG.info( "Creating Load Balancing Bootstrapper instance." );
+	      } else {
+	        LOG.info( "Returning Load Balancing Bootstrapper instance." );
+	      }
+	    }
+	    return singleton;
+	  }
+
+	  @Override
+	  public boolean check( ) throws Exception {
+	    if ( LoadBalancerASGroupCreator.LOADBALANCER_EMI != null
+	        && LoadBalancerASGroupCreator.LOADBALANCER_EMI.startsWith("emi-") ) {
+	      return true;
+	    } else {
+	      throw Faults.failure( Components.lookup( LoadBalancing.class ).getLocalServiceConfiguration( ), 
+          Exceptions.error( "Load balancer EMI property is unset.  "
+              + "Use euca-modify-property -p loadbalancing.loadbalancer_emi=<load balancer emi> "
+              + "where the emi should point to the image provided in the eucalyptus-load-balancer-image package." ) );
+	    }
+	  }
+	}
+
 		
 	private NewLoadbalancerEvent event = null;
 	private LoadBalancer loadbalancer = null;
