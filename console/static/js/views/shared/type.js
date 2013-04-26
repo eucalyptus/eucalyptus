@@ -29,7 +29,7 @@ define([
 
       this.model.set('type_number', 1); // preload 1
       this.model.set('zone', 'Any'); // preload no zone preference
-      this.model.set('instance_type', 'm1.small'); // preload first choice
+
 
       var scope = {
         typeModel: self.model,
@@ -74,6 +74,12 @@ define([
           buf += obj.type.get('disk') + " " + app.msg('launch_wizard_type_description_disk') + ", ";
           return buf;
         },
+
+        isSelected: function(objects) {
+          if(objects.type.get('name') == self.model.get('instance_type')) {
+            return true;
+          }
+        },
     
         launchConfigErrors: {
           type_number: '',
@@ -96,14 +102,25 @@ define([
       self.render();
     });
   
-   // used for instance name/number congruity validation... see below
-   self.t_names.on('add reset sync change remove', function() {
+    // used for instance name/number congruity validation... see below
+    self.t_names.on('add reset sync change remove', function() {
       self.model.set('type_names_count', self.model.get('type_names').length);
-   });
+    });
+
+    self.model.on('change:instance_type', function() {
+      $.cookie('instance_type', self.model.get('instance_type'));
+      self.render();
+    });
 
     $(this.el).html(this.tpl);
      this.rView = rivets.bind(this.$el, scope);
      this.render();
+
+     if($.cookie('instance_type')) {
+       this.model.set('instance_type', $.cookie('instance_type'));
+     } else {
+       this.model.set('instance_type', 'm1.small'); // preload first choice if no cookie value
+     }
     },
 
     render: function() {
