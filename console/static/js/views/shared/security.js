@@ -10,6 +10,8 @@ define([
 		initialize : function() {
 
       var self = this;
+      this.model.set('name', 'Default');
+
       var scope = {
         configmodel: this.model,
         keymodel: this.options.keymodel,
