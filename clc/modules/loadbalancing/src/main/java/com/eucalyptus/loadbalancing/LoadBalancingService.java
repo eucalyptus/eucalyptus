@@ -436,43 +436,43 @@ public class LoadBalancingService {
     if ( !request.getLoadBalancerNames().getMember().isEmpty()) {
       requestedNames.addAll( request.getLoadBalancerNames().getMember() );
     }
-    Set<String> allowedLBNames = null;
-    final Function<Set<String>, Set<String>> lookupLBNames = new Function<Set<String>, Set<String>>( ) {
+    final boolean showAll = requestedNames.remove( "verbose" ) && ctx.hasAdministrativePrivileges();
+
+    Set<LoadBalancer> allowedLBs = null;
+    final Function<Set<String>, Set<LoadBalancer>> lookupAccountLBs = new Function<Set<String>, Set<LoadBalancer>>( ) {
           @Override
-          public Set<String> apply( final Set<String> identifiers ) {
+          public Set<LoadBalancer> apply( final Set<String> identifiers ) {
             final Predicate<? super LoadBalancer> requestedAndAccessible = LoadBalancingMetadatas.filteringFor( LoadBalancer.class )
              .byId( identifiers )
              .byPrivileges( )
              .buildPredicate( );
 
             final List<LoadBalancer> lbs = Entities.query( LoadBalancer.named( ownerFullName , null ), true);
-            return Sets.newHashSet( Iterables.transform( Iterables.filter( lbs, requestedAndAccessible ), LoadBalancingMetadatas.toDisplayName() ) );
+            return Sets.newHashSet( Iterables.filter( lbs, requestedAndAccessible ) );
           }
-      };
-    allowedLBNames = Entities.asTransaction( LoadBalancer.class, lookupLBNames ).apply( requestedNames );
-    
-	  final Function<String, LoadBalancer> getLoadBalancer = new Function<String, LoadBalancer>(){
-	  @Override
-	  public LoadBalancer apply(final String lbName){
-	    try{
-	      return Entities.uniqueResult(LoadBalancer.named(ownerFullName, lbName));
-	    }catch(NoSuchElementException ex){
-	      return null;
-	    }catch(Exception ex){
-	      LOG.warn("faied to retrieve the loadbalancer-"+lbName, ex);
-	      return null;
-	    }
-      }
     };
-
-    final Function<Set<String>, Set<LoadBalancerDescription>> lookupLBDescriptions = new Function<Set<String>, Set<LoadBalancerDescription>> () {
-      public Set<LoadBalancerDescription> apply (final Set<String> input){
+    
+    final Function<Void, Set<LoadBalancer>> lookupAllLBs = new Function<Void, Set<LoadBalancer>>( ) {
+        @Override
+        public Set<LoadBalancer> apply( final Void arg) {
+        	final List<LoadBalancer> lbs = Entities.query( LoadBalancer.named( null , null ), true);
+        	return Sets.newHashSet(lbs);
+        }
+    };
+    
+    if(showAll)
+    	allowedLBs = Entities.asTransaction(LoadBalancer.class, lookupAllLBs).apply(null);
+    else
+    	allowedLBs = Entities.asTransaction( LoadBalancer.class, lookupAccountLBs ).apply( requestedNames );
+    
+    final Function<Set<LoadBalancer>, Set<LoadBalancerDescription>> lookupLBDescriptions = new Function<Set<LoadBalancer>, Set<LoadBalancerDescription>> () {
+      public Set<LoadBalancerDescription> apply (final Set<LoadBalancer> input){
         final Set<LoadBalancerDescription> descs = Sets.newHashSet();
-        for (String lbName : input){
+        for (final LoadBalancer lb : input){
           LoadBalancerDescription desc = new LoadBalancerDescription();
-          final LoadBalancer lb = Entities.asTransaction(LoadBalancer.class, getLoadBalancer).apply(lbName);
           if(lb==null) // loadbalancer not found
             continue;
+          final String lbName = lb.getDisplayName();
           desc.setLoadBalancerName(lbName); /// loadbalancer name
           desc.setCreatedTime(lb.getCreationTimestamp());/// createdtime
           final LoadBalancerDnsRecord dns = lb.getDns();
@@ -568,7 +568,7 @@ public class LoadBalancingService {
         return descs;
       }
     };
-    Set<LoadBalancerDescription> descs = lookupLBDescriptions.apply(allowedLBNames);
+    Set<LoadBalancerDescription> descs = lookupLBDescriptions.apply(allowedLBs);
 
     DescribeLoadBalancersResult descResult = new DescribeLoadBalancersResult();
     LoadBalancerDescriptions lbDescs = new LoadBalancerDescriptions();
