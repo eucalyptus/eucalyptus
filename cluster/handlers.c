@@ -3549,18 +3549,20 @@ int doRunInstances(ncMetadata * pMeta, char *amiId, char *kernelId, char *ramdis
         strncpy(privip, "0.0.0.0", 32);
 
         sem_mywait(VNET);
-        if (nidx == -1) {
-            rc = vnetGenerateNetworkParams(vnetconfig, instId, vlan, -1, mac, pubip, privip);
-            thenidx = -1;
-        } else {
-            rc = vnetGenerateNetworkParams(vnetconfig, instId, vlan, networkIndexList[nidx], mac, pubip, privip);
-            thenidx = nidx;
-            nidx++;
-        }
-        if (rc) {
-            foundnet = 0;
-        } else {
-            foundnet = 1;
+        {
+            if (nidx == -1) {
+                rc = vnetGenerateNetworkParams(vnetconfig, instId, vlan, -1, mac, pubip, privip);
+                thenidx = -1;
+            } else {
+                rc = vnetGenerateNetworkParams(vnetconfig, instId, vlan, networkIndexList[nidx], mac, pubip, privip);
+                thenidx = nidx;
+                nidx++;
+            }
+            if (rc) {
+                foundnet = 0;
+            } else {
+                foundnet = 1;
+            }
         }
         sem_mypost(VNET);
 
@@ -6845,9 +6847,13 @@ int allocate_ccResource(ccResource * out, char *ncURL, char *ncService, int ncPo
 //!
 int free_instanceNetwork(char *mac, int vlan, int force, int dolock)
 {
-    int inuse, i;
-    unsigned char hexmac[6];
-    mac2hex(mac, hexmac);
+    int i = 0;
+    u8 hexmac[6] = { 0 };
+    boolean inuse = FALSE;
+
+    if (mac2hex(mac, hexmac) == NULL)
+        return (0);
+
     if (!maczero(hexmac)) {
         return (0);
     }
@@ -6856,12 +6862,12 @@ int free_instanceNetwork(char *mac, int vlan, int force, int dolock)
         sem_mywait(INSTCACHE);
     }
 
-    inuse = 0;
+    inuse = FALSE;
     if (!force) {
         // check to make sure the mac isn't in use elsewhere
-        for (i = 0; i < MAXINSTANCES_PER_CC && !inuse; i++) {
+        for (i = 0; ((i < MAXINSTANCES_PER_CC) && !inuse); i++) {
             if (!strcmp(instanceCache->instances[i].ccnet.privateMac, mac) && strcmp(instanceCache->instances[i].state, "Teardown")) {
-                inuse++;
+                inuse = TRUE;
             }
         }
     }

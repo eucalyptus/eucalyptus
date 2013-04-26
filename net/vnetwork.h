@@ -124,9 +124,9 @@ enum {
 \*----------------------------------------------------------------------------*/
 
 typedef struct netEntry_t {
-    unsigned char mac[6];
+    u8 mac[6];
     char active;
-    uint32_t ip;
+    u32 ip;
 } netEntry;
 
 typedef struct userEntry_t {
@@ -138,18 +138,18 @@ typedef struct userEntry_t {
 typedef struct networkEntry_t {
     int numhosts;
     char active;
-    uint32_t nw;
-    uint32_t nm;
-    uint32_t bc;
-    uint32_t dns;
-    uint32_t router;
+    u32 nw;
+    u32 nm;
+    u32 bc;
+    u32 dns;
+    u32 router;
     netEntry addrs[NUMBER_OF_HOSTS_PER_VLAN];
     time_t createTime;
 } networkEntry;
 
 typedef struct publicip_t {
-    uint32_t ip;
-    uint32_t dstip;
+    u32 ip;
+    u32 dstip;
     int allocated;
     char uuid[48];
 } publicip;
@@ -157,7 +157,7 @@ typedef struct publicip_t {
 typedef struct tunnelData_t {
     int localIpId;
     int localIpIdLast;
-    uint32_t ccs[NUMBER_OF_CCS];
+    u32 ccs[NUMBER_OF_CCS];
     time_t ccsTunnelStart[NUMBER_OF_CCS];
     time_t tunpassMtime;
     int tunneling;
@@ -173,11 +173,11 @@ typedef struct vnetConfig_t {
     char bridgedev[32];
     char mode[32];
     char macPrefix[6];
-    uint32_t localIps[32];
-    uint32_t nw;
-    uint32_t nm;
-    uint32_t euca_ns;
-    uint32_t cloudIp;
+    u32 localIps[32];
+    u32 nw;
+    u32 nm;
+    u32 euca_ns;
+    u32 cloudIp;
     char euca_domainname[256];
     int role;
     int enabled;
@@ -238,8 +238,8 @@ int vnetGetAllVlans(vnetConfig * vnetconfig, char ***outusers, char ***outnets, 
 int vnetGenerateNetworkParams(vnetConfig * vnetconfig, char *instId, int vlan, int nidx, char *outmac, char *outpubip, char *outprivip);
 int vnetGetNextHost(vnetConfig * vnetconfig, char *mac, char *ip, int vlan, int idx);
 int vnetCountLocalIP(vnetConfig * vnetconfig);
-int vnetCheckLocalIP(vnetConfig * vnetconfig, uint32_t ip);
-int vnetAddLocalIP(vnetConfig * vnetconfig, uint32_t ip);
+int vnetCheckLocalIP(vnetConfig * vnetconfig, u32 ip);
+int vnetAddLocalIP(vnetConfig * vnetconfig, u32 ip);
 
 int vnetAddDev(vnetConfig * vnetconfig, char *dev);
 int vnetDelDev(vnetConfig * vnetconfig, char *dev);
@@ -247,8 +247,8 @@ int vnetDelDev(vnetConfig * vnetconfig, char *dev);
 int vnetGenerateDHCP(vnetConfig * vnetconfig, int *numHosts);
 int vnetKickDHCP(vnetConfig * vnetconfig);
 
-int vnetAddCCS(vnetConfig * vnetconfig, uint32_t cc);
-int vnetDelCCS(vnetConfig * vnetconfig, uint32_t cc);
+int vnetAddCCS(vnetConfig * vnetconfig, u32 cc);
+int vnetDelCCS(vnetConfig * vnetconfig, u32 cc);
 int vnetSetCCS(vnetConfig * vnetconfig, char **ccs, int ccsLen);
 
 int vnetStartInstanceNetwork(vnetConfig * vnetconfig, int vlan, char *publicIp, char *privateIp, char *macaddr);
@@ -284,13 +284,13 @@ int vnetStopNetwork(vnetConfig * vnetconfig, int vlan, char *userName, char *net
 int instId2mac(vnetConfig * vnetconfig, char *instId, char *outmac);
 int ip2mac(vnetConfig * vnetconfig, char *ip, char **mac);
 int mac2ip(vnetConfig * vnetconfig, char *mac, char **ip);
-uint32_t dot2hex(char *in);
-int getdevinfo(char *dev, uint32_t ** outips, uint32_t ** outnms, int *len);
-void hex2mac(unsigned char in[6], char **out);
-void mac2hex(char *in, unsigned char out[6]);
-int maczero(unsigned char in[6]);
-int machexcmp(char *ina, unsigned char inb[6]);
-char *hex2dot(uint32_t in);
+u32 dot2hex(char *in);
+int getdevinfo(char *dev, u32 ** outips, u32 ** outnms, int *len);
+void hex2mac(u8 in[6], char **out);
+u8 *mac2hex(char *in, u8 out[6]);
+int maczero(u8 in[6]);
+int machexcmp(char *ina, u8 inb[6]);
+char *hex2dot(u32 in);
 char *ipdot2macdot(char *ip, char *macprefix);
 int vnetLoadIPTables(vnetConfig * vnetconfig);
 
