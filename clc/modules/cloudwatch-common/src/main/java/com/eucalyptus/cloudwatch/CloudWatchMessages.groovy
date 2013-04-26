@@ -56,8 +56,8 @@ public class Dimensions extends EucalyptusData {
   @HttpParameterMapping(parameter="member")
   ArrayList<Dimension> member = new ArrayList<Dimension>();
   public Dimensions() {  }
-  public Dimensions( Dimension... dimensions ) {
-    member.addAll( dimensions as List<Dimension> )
+  public Dimensions( Dimension dimension ) {
+    member.add( dimension  )
   }
 }
 public class PutMetricDataType extends CloudWatchMessage {

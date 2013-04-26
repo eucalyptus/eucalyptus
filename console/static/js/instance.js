@@ -401,6 +401,20 @@
          }},
          width: 750
       });
+      require([
+        'rivets', 
+        'models/instance', 
+        'text!views/dialogs/tag_edit_nub.html!strip'
+        ], function(rivets, Instance, TagNub) {
+            var tagdiv = thisObj.launchMoreDialog.find(".launch-more-tags");
+            tagdiv.append($(TagNub));
+            thisObj.launchMoreDialog.rivets = rivets;
+            thisObj.launchMoreDialog.Instance = Instance;
+            thisObj.launchMoreDialog.rscope = {
+                model: new Instance()
+            }
+            thisObj.launchMoreDialog.rview = thisObj.launchMoreDialog.rivets.bind(tagdiv, thisObj.launchMoreDialog.rscope);
+      });
       // end launch more dialog
     },
 
@@ -1071,6 +1085,12 @@
         sgroup = thisObj.launchMoreDialog.find('#summary-security-sg').children().last().text(); 
       else
         sgroup = sgroup.val();  
+
+      
+      require(['app'], function(app) {
+        thisObj.launchMoreDialog.rscope.model = app.data.instances.get(id);
+        thisObj.launchMoreDialog.rview.sync();
+      });
 
       $('html body').find(DOM_BINDING['hidden']).launcher('updateLaunchParam', 'emi', emi);
       $('html body').find(DOM_BINDING['hidden']).launcher('updateLaunchParam', 'type', type);

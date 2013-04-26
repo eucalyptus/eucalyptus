@@ -41,7 +41,15 @@ define([
               // DISPLAY ITS NAME TAG FOR VOLUME ID
               var foundNameTag = self.findNameTag(App.data.volume.get(args.volume_id));
               self.scope.snapshot.set({volume_id: String(self.createIdNameTagString(args.volume_id, foundNameTag))});
-            } 
+            }
+
+            // SETUP INPUT VALIDATOR
+            self.scope.snapshot.on('change', function() {
+              self.scope.error.clear();
+              self.scope.error.set(self.scope.snapshot.validate());
+              console.log("Validation Error: " + JSON.stringify(self.scope.error));
+            });
+
         },
 
         // CONSTRUCT A STRING THAT DISPLAYS BOTH RESOURCE ID AND ITS NAME TAG
@@ -71,6 +79,7 @@ define([
             this.scope = {
                 status: '',
                 snapshot: new Snapshot({volume_id: args.volume_id, description: ''}),
+                error: new Backbone.Model({}),
 
                 cancelButton: {
                   click: function() {
