@@ -917,7 +917,6 @@ static int doMigrateInstances(struct nc_state_t *nc, ncMetadata * pMeta, ncInsta
                 if (strlen(scUrl) == 0) {
                     LOGERROR("[%s][%s] Failed to lookup enabled Storage Controller. Cannot attach volume %s\n", instance->instanceId, volume->volumeId, scUrl);
                     have_remote_device = 0;
-                    ret = EUCA_ERROR;
                     goto unroll;
                 } else {
                     LOGTRACE("[%s][%s] Using SC URL: %s\n", instance->instanceId, volume->volumeId, scUrl);
@@ -932,6 +931,8 @@ static int doMigrateInstances(struct nc_state_t *nc, ncMetadata * pMeta, ncInsta
                     ret = EUCA_ERROR;
                     goto unroll;
                 }
+                // update the volume struct with connection string obtained from SC
+                euca_strncpy(volume->connectionString, vol_data->connect_string, sizeof(volume->connectionString));
 
                 if (!remoteDevStr || !strstr(remoteDevStr, "/dev")) {
                     LOGERROR("[%s][%s] failed to connect to iscsi target\n", instance->instanceId, volume->volumeId);
@@ -975,8 +976,11 @@ static int doMigrateInstances(struct nc_state_t *nc, ncMetadata * pMeta, ncInsta
 
                 continue;
 unroll:
+                ret = EUCA_ERROR;
+
                 // TODO: unroll all volume attachments
-                break;
+
+                goto failed_dest;
             }
 
             sem_p(inst_sem);
