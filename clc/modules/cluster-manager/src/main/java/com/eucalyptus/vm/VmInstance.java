@@ -91,31 +91,6 @@ import javax.persistence.PersistenceContext;
 import javax.persistence.PreRemove;
 import javax.persistence.Table;
 
-
-import com.eucalyptus.auth.AuthException;
-import com.eucalyptus.auth.principal.InstanceProfile;
-import com.eucalyptus.component.ServiceConfiguration;
-import com.eucalyptus.component.Partition;
-import com.eucalyptus.component.Partitions;
-import com.eucalyptus.component.ComponentIds;
-import com.eucalyptus.component.Topology;
-import com.eucalyptus.component.ServiceConfigurations;
-import com.eucalyptus.component.id.Tokens;
-import com.eucalyptus.crypto.Crypto;
-import com.eucalyptus.crypto.Digest;
-import com.eucalyptus.util.async.AsyncRequests;
-import com.google.common.base.*;
-import edu.ucsb.eucalyptus.msgs.AttachedVolume;
-import edu.ucsb.eucalyptus.msgs.IamInstanceProfile;
-import edu.ucsb.eucalyptus.msgs.InstanceBlockDeviceMapping;
-import edu.ucsb.eucalyptus.msgs.InstanceStateType;
-import edu.ucsb.eucalyptus.msgs.InstanceStatusDetailsSetItemType;
-import edu.ucsb.eucalyptus.msgs.InstanceStatusDetailsSetType;
-import edu.ucsb.eucalyptus.msgs.InstanceStatusItemType;
-import edu.ucsb.eucalyptus.msgs.InstanceStatusType;
-import edu.ucsb.eucalyptus.msgs.ReservationInfoType;
-import edu.ucsb.eucalyptus.msgs.RunningInstancesItemType;
-
 import org.apache.log4j.Logger;
 import org.bouncycastle.util.encoders.Base64;
 import org.hibernate.annotations.Cache;
@@ -157,6 +132,7 @@ import com.eucalyptus.component.id.ClusterController;
 import com.eucalyptus.component.id.Dns;
 import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.component.id.Tokens;
+import com.eucalyptus.crypto.Crypto;
 import com.eucalyptus.crypto.util.Timestamps;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.TransactionExecutionException;
@@ -176,6 +152,8 @@ import com.eucalyptus.records.Logs;
 import com.eucalyptus.reporting.event.InstanceCreationEvent;
 import com.eucalyptus.tokens.AssumeRoleResponseType;
 import com.eucalyptus.tokens.AssumeRoleType;
+import com.eucalyptus.upgrade.Upgrades.EntityUpgrade;
+import com.eucalyptus.upgrade.Upgrades.Version;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.FullName;
 import com.eucalyptus.util.OwnerFullName;
@@ -203,6 +181,7 @@ import com.google.common.collect.Sets;
 import edu.ucsb.eucalyptus.cloud.VirtualBootRecord;
 import edu.ucsb.eucalyptus.cloud.VmInfo;
 import edu.ucsb.eucalyptus.msgs.AttachedVolume;
+import edu.ucsb.eucalyptus.msgs.IamInstanceProfile;
 import edu.ucsb.eucalyptus.msgs.InstanceBlockDeviceMapping;
 import edu.ucsb.eucalyptus.msgs.InstanceStateType;
 import edu.ucsb.eucalyptus.msgs.InstanceStatusDetailsSetItemType;
@@ -2371,5 +2350,55 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
   public VmMigrationTask getMigrationTask( ) {
     return this.runtimeState.getMigrationTask( );
   }
-
+  
+  @EntityUpgrade( entities = { VmInstance.class }, since = Version.v3_3_0, value = com.eucalyptus.component.id.Eucalyptus.class )
+  public enum VmInstanceUpgrade_3_3_0 implements Predicate<Class> {
+    INSTANCE;
+    private static Logger LOG = Logger.getLogger( VmInstance.VmInstanceUpgrade_3_3_0.class );
+    @Override
+    public boolean apply( Class arg0 ) {
+      EntityTransaction db = Entities.get( VmInstance.class );
+      try {
+        List<VmInstance> instances = Entities.query( new VmInstance( ) );
+        for ( VmInstance vm : instances ) {
+          if( vm.getBootRecord().getMachine() instanceof BlockStorageImageInfo ) {
+        	LOG.info( "Upgrading bfebs VmInstance: " + vm.toString() );
+        	if( vm.getBootRecord().getEphmeralStorage().isEmpty() ) {
+        	  LOG.info("Adding ephemeral disk at /dev/sdb");
+        	  vm.addEphemeralAttachment("/dev/sdb", "ephemeral0");	
+        	}
+        	
+        	// Pre 3.3 code allowed only one persistent volume i.e. the root volume. Check before upgrading
+        	if ( vm.getBootRecord().getPersistentVolumes().size() == 1 ) {
+        	  VmVolumeAttachment attachment	= vm.getBootRecord().getPersistentVolumes().iterator().next();
+        	  LOG.info("Found the only VmVolumeAttachment: " + attachment.toString());
+        	  LOG.info("Setting root device flag to true");
+              attachment.setIsRootDevice(Boolean.TRUE);
+              LOG.info("Changing the device name to /dev/sda");
+              attachment.setDevice("/dev/sda");  
+        	} else { // This should not be the case updating to 3.3
+        	 // If the instance has more or less than one persistent volume, iterate through them and update the one with device "/dev/sda1"
+        	  for ( VmVolumeAttachment attachment : vm.getBootRecord().getPersistentVolumes() ) {
+        		LOG.info("Found VmVolumeAttachment: " + attachment.toString());
+        		if ( attachment.getDevice().equalsIgnoreCase("/dev/sda1") ) {
+        		  LOG.info("Setting root device flag to true");
+                  attachment.setIsRootDevice(Boolean.TRUE);
+                  LOG.info("Changing the device name from /dev/sda1 to /dev/sda");
+                  attachment.setDevice("/dev/sda");  
+                }   
+              }	
+        	}
+          }
+          Entities.persist( vm );
+        }
+        db.commit( );
+        return true;
+      } catch ( Exception ex ) {
+    	LOG.error("Error upgrading VmInstance: ", ex);
+    	db.rollback();
+        throw Exceptions.toUndeclared( ex );
+      }
+    }
+  }
 }
+																																																																																																																																																																																																																																																																																																																																																																							

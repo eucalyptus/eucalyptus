@@ -186,8 +186,8 @@ struct nc_state_t {
     //! @}
 
     //! @name SC Client config fields
-    int config_use_ws_sec;  	//!< use WS security in SOAP
-    char config_sc_policy_file[MAX_PATH]; //!< policy config file to use for sc client ($EUCALYPTUS/var/lib/eucalyptus/keys/sc-client-policy.xml
+    int config_use_ws_sec;             //!< use WS security in SOAP
+    char config_sc_policy_file[MAX_PATH];   //!< policy config file to use for sc client ($EUCALYPTUS/var/lib/eucalyptus/keys/sc-client-policy.xml
     //! @}
 
     //! @name Service info state for the NC
@@ -218,8 +218,7 @@ struct handlers {
     int (*doDescribeResource) (struct nc_state_t * nc, ncMetadata * pMeta, char *resourceType, ncResource ** outRes);
     int (*doStartNetwork) (struct nc_state_t * nc, ncMetadata * pMeta, char *uuid, char **remoteHosts, int remoteHostsLen, int port, int vlan);
     int (*doAttachVolume) (struct nc_state_t * nc, ncMetadata * pMeta, char *instanceId, char *volumeId, char *attachmentToken, char *localDev);
-    int (*doDetachVolume) (struct nc_state_t * nc, ncMetadata * pMeta, char *instanceId, char *volumeId, char *attachmentToken, char *localDev, int force,
-                           int grab_inst_sem);
+    int (*doDetachVolume) (struct nc_state_t * nc, ncMetadata * pMeta, char *instanceId, char *volumeId, char *attachmentToken, char *localDev, int force, int grab_inst_sem);
     int (*doCreateImage) (struct nc_state_t * nc, ncMetadata * pMeta, char *instanceId, char *volumeId, char *remoteDev);
     int (*doBundleInstance) (struct nc_state_t * nc, ncMetadata * pMeta, char *instanceId, char *bucketName, char *filePrefix, char *walrusURL,
                              char *userPublicKey, char *S3Policy, char *S3PolicySig);
@@ -314,6 +313,7 @@ int wait_state_transition(ncInstance * instance, instance_states from_state, ins
 void adopt_instances();
 int get_instance_xml(const char *gen_libvirt_cmd_path, char *userId, char *instanceId, char *platform, char *ramdiskId, char *kernelId,
                      char *disk_path, virtualMachine * params, char *privMac, char *brname, int use_virtio_net, int use_virtio_root, char **xml);
+void set_instance_params(ncInstance *instance);
 void *monitoring_thread(void *arg);
 void *startup_thread(void *arg);
 void *restart_thread(void *arg);

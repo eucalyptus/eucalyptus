@@ -237,6 +237,7 @@ char *SCHEDPOLICIES[SCHEDLAST] = {
     "GREEDY",
     "ROUNDROBIN",
     "POWERSAVE",
+    "USER",
 };
 
 /*----------------------------------------------------------------------------*\
@@ -252,7 +253,7 @@ char *SCHEDPOLICIES[SCHEDLAST] = {
 \*----------------------------------------------------------------------------*/
 
 static int migration_handler(ccInstance * myInstance, char *host, char *src, char *dst, migration_states migration_state, char **node, char **instance, char **action);
-static int populateOutboundMeta(ncMetadata *pMeta);
+static int populateOutboundMeta(ncMetadata * pMeta);
 /*----------------------------------------------------------------------------*\
  |                                                                            |
  |                                   MACROS                                   |
@@ -513,35 +514,34 @@ int doCancelBundleTask(ncMetadata * pMeta, char *instanceId)
 
 //! Remove cluster and storage services from other partitions so NCs only get globals and cluster-local services
 //! Modifies the meta in-place
-void filter_services(ncMetadata *meta, char *filter_partition) {
-	int i = 0, j = 0;
-	serviceInfoType tmp;
-	int copySize = sizeof(serviceInfoType);
-	for(i = 0; i < meta->servicesLen; i++) {
-		//Only filter cluster controllers and storage controllers.
-		if((!strcmp(meta->services[i].type,"cluster") || !strcmp(meta->services[i].type,"storage")) && strcmp(meta->services[i].partition, filter_partition)) {
-			//Not equal, remove by making string len 0.
-			LOGTRACE("Filtering out service: %s , %s\n", meta->services[i].name, meta->services[i].partition);
+void filter_services(ncMetadata * meta, char *filter_partition)
+{
+    int i = 0, j = 0;
+    serviceInfoType tmp;
+    int copySize = sizeof(serviceInfoType);
+    for (i = 0; i < meta->servicesLen; i++) {
+        //Only filter cluster controllers and storage controllers.
+        if ((!strcmp(meta->services[i].type, "cluster") || !strcmp(meta->services[i].type, "storage")) && strcmp(meta->services[i].partition, filter_partition)) {
+            //Not equal, remove by making string len 0.
+            LOGTRACE("Filtering out service: %s , %s\n", meta->services[i].name, meta->services[i].partition);
 
-			//Null the strings.
-			meta->services[i].name[0]='\0';
-			meta->services[i].partition[0]='\0';
-			meta->services[i].type[0]='\0';
-			for(j = 0; j < meta->services[i].urisLen; j++)
-			{
-				meta->services[i].uris[j][0]='\0';
-			}
-			meta->services[i].urisLen = 0;
+            //Null the strings.
+            meta->services[i].name[0] = '\0';
+            meta->services[i].partition[0] = '\0';
+            meta->services[i].type[0] = '\0';
+            for (j = 0; j < meta->services[i].urisLen; j++) {
+                meta->services[i].uris[j][0] = '\0';
+            }
+            meta->services[i].urisLen = 0;
 
-			//Swap this one and the one at the end and decrement the length.
-			memcpy(&tmp, &(meta->services[i]),copySize);
-			memcpy(&(meta->services[i]),&(meta->services[meta->servicesLen-1]),copySize);
-			memcpy(&(meta->services[meta->servicesLen-1]),&(tmp),copySize);
-			meta->servicesLen--;
-		}
-	}
+            //Swap this one and the one at the end and decrement the length.
+            memcpy(&tmp, &(meta->services[i]), copySize);
+            memcpy(&(meta->services[i]), &(meta->services[meta->servicesLen - 1]), copySize);
+            memcpy(&(meta->services[meta->servicesLen - 1]), &(tmp), copySize);
+            meta->servicesLen--;
+        }
+    }
 }
-
 
 //!
 //!
@@ -602,10 +602,9 @@ int ncClientCall(ncMetadata * pMeta, int timeout, int ncLock, char *ncURL, char 
 
         //TODO: zhill, change this to only be invoked on DescribeInstances and/or DescribeResources?
         //Update meta from config
-        if(populateOutboundMeta(localmeta)) {
-        	LOGERROR("Failed to update output service metadata\n");
+        if (populateOutboundMeta(localmeta)) {
+            LOGERROR("Failed to update output service metadata\n");
         }
-
         //Don't need to filter, CC should only have received.
         //filter_services(localmeta, config->ccStatus.serviceId.partition);
 
@@ -1244,7 +1243,7 @@ int doAttachVolume(ncMetadata * pMeta, char *volumeId, char *instanceId, char *r
 
     LOGINFO("[%s][%s] attaching volume\n", SP(instanceId), SP(volumeId));
     LOGDEBUG("invoked: userId=%s, volumeId=%s, instanceId=%s, remoteDev=%s, localDev=%s\n", SP(pMeta ? pMeta->userId : "UNSET"),
-    		SP(volumeId), SP(instanceId), SP(remoteDev), SP(localDev));
+             SP(volumeId), SP(instanceId), SP(remoteDev), SP(localDev));
     if (!volumeId || !instanceId || !remoteDev || !localDev) {
         LOGERROR("bad input params\n");
         return (1);
@@ -1273,7 +1272,7 @@ int doAttachVolume(ncMetadata * pMeta, char *volumeId, char *instanceId, char *r
         timeout = maxint(timeout, ATTACH_VOL_TIMEOUT_SECONDS);
 
         rc = ncClientCall(pMeta, timeout, resourceCacheLocal.resources[i].lockidx, resourceCacheLocal.resources[i].ncURL, "ncAttachVolume",
-        		instanceId, volumeId, remoteDev, localDev);
+                          instanceId, volumeId, remoteDev, localDev);
 
         if (rc) {
             ret = 1;
@@ -1351,7 +1350,7 @@ int doDetachVolume(ncMetadata * pMeta, char *volumeId, char *instanceId, char *r
         timeout = maxint(timeout, DETACH_VOL_TIMEOUT_SECONDS);
 
         rc = ncClientCall(pMeta, timeout, resourceCacheLocal.resources[i].lockidx, resourceCacheLocal.resources[i].ncURL, "ncDetachVolume",
-                                     instanceId, volumeId, remoteDev, localDev, force);
+                          instanceId, volumeId, remoteDev, localDev, force);
         if (rc) {
             ret = 1;
         } else {
@@ -2101,15 +2100,16 @@ int refresh_resources(ncMetadata * pMeta, int timeout, int dolock)
                         resourceCacheStage->resources[i].availCores = 0;
                         changeState(&(resourceCacheStage->resources[i]), RESDOWN);
                         resourceCacheStage->resources[i].ncState = NOTREADY;
+                        resourceCacheStage->resources[i].migrationCapable = FALSE;
                         euca_strncpy(resourceCacheStage->resources[i].nodeMessage, SP(errMsg), 1024);
                         LOGERROR("error message from ncDescribeResource: %s\n", resourceCacheStage->resources[i].nodeMessage);
                     }
                 } else {
-                    LOGDEBUG("received data from node=%s status=%s mem=%d/%d disk=%d/%d cores=%d/%d migrationCapable=%d\n",
+                    LOGDEBUG("received data from node=%s status=%s mem=%d/%d disk=%d/%d cores=%d/%d migrationCapable=%s\n",
                              resourceCacheStage->resources[i].hostname,
                              ncResDst->nodeStatus,
                              ncResDst->memorySizeAvailable, ncResDst->memorySizeMax,
-                             ncResDst->diskSizeAvailable, ncResDst->diskSizeMax, ncResDst->numberOfCoresAvailable, ncResDst->numberOfCoresMax, ncResDst->migrationCapable);
+                             ncResDst->diskSizeAvailable, ncResDst->diskSizeMax, ncResDst->numberOfCoresAvailable, ncResDst->numberOfCoresMax, (ncResDst->migrationCapable == TRUE) ? "TRUE" : "FALSE");
                     resourceCacheStage->resources[i].maxMemory = ncResDst->memorySizeMax;
                     resourceCacheStage->resources[i].availMemory = ncResDst->memorySizeAvailable;
                     resourceCacheStage->resources[i].maxDisk = ncResDst->diskSizeMax;
@@ -2121,6 +2121,7 @@ int refresh_resources(ncMetadata * pMeta, int timeout, int dolock)
                     } else if (!strcmp(ncResDst->nodeStatus, "disabled")) {
                         resourceCacheStage->resources[i].ncState = STOPPED;
                     }
+                    resourceCacheStage->resources[i].migrationCapable = ncResDst->migrationCapable;
                     euca_strncpy(resourceCacheStage->resources[i].nodeStatus, ncResDst->nodeStatus, 24);
 ////                    // temporarily duplicate the NC reported value in the node message for debugging
                     strcpy(resourceCacheStage->resources[i].nodeMessage, "");
@@ -2191,14 +2192,13 @@ int refresh_resources(ncMetadata * pMeta, int timeout, int dolock)
 }
 
 //!
-//!
-//!
 //! @param[in] myInstance instance to check for migration
 //! @param[in] host reported hostname
 //! @param[in] src source node for migration
 //! @param[in] dst destination node for migration
-//! @param[in] state reported migration state
+//! @param[in] migration_state reported migration state
 //! @param[out] node node to which to send migration action request
+//! @param[out] instance
 //! @param[out] action migration action to request of node
 //!
 //! @return EUCA_OK or EUCA
@@ -2936,7 +2936,7 @@ int ccInstance_to_ncInstance(ncInstance * dst, ccInstance * src)
 //!
 //! @note
 //!
-int schedule_instance(virtualMachine * vm, char *targetNode, int *outresid)
+int schedule_instance(virtualMachine * vm, char *amiId, char *kernelId, char *ramdiskId, char *instId, char *userData, char *platform, char *targetNode, int *outresid)
 {
     int ret;
 
@@ -2948,6 +2948,8 @@ int schedule_instance(virtualMachine * vm, char *targetNode, int *outresid)
         ret = schedule_instance_roundrobin(vm, outresid);
     } else if (config->schedPolicy == SCHEDPOWERSAVE) {
         ret = schedule_instance_greedy(vm, outresid);
+    } else if (config->schedPolicy == SCHEDUSER) {
+        ret = schedule_instance_user(vm, amiId, kernelId, ramdiskId, instId, userData, platform, outresid);
     } else {
         ret = schedule_instance_greedy(vm, outresid);
     }
@@ -3050,11 +3052,18 @@ int schedule_instance_migration(ncInstance * instance, char **includeNodes, char
     if (includeNodeCount == 1) {
         LOGINFO("[%s] attempting to schedule migration to specific node: %s\n", instance->instanceId, includeNodes[0]);
         if (!strcmp(instance->migration_src, includeNodes[0])) {
-            LOGERROR("[%s] can't schedule SAME-NODE migration from %s to %s\n", instance->instanceId, instance->migration_src, includeNodes[0]);
+            LOGERROR("[%s] cannot schedule SAME-NODE migration from %s to %s\n", instance->instanceId, instance->migration_src, includeNodes[0]);
             ret = 1;
             goto out;
         }
-        ret = schedule_instance(&(instance->params), includeNodes[0], outresid);
+        ret =
+            schedule_instance(&(instance->params), instance->imageId, instance->kernelId, instance->ramdiskId, instance->instanceId, instance->userData, instance->platform,
+                              includeNodes[0], outresid);
+        if (resourceCacheLocal->resources[*outresid].migrationCapable == FALSE) {
+            LOGWARN("[%s] cannot schedule migration to node (%s) that is not migration capable\n", instance->instanceId, includeNodes[0]);
+            ret = 1;
+            goto out;
+        }
     } else {
         if (config->schedPolicy == SCHEDROUNDROBIN) {
             LOGDEBUG("[%s] scheduling migration using ROUNDROBIN scheduler\n", instance->instanceId);
@@ -3063,7 +3072,7 @@ int schedule_instance_migration(ncInstance * instance, char **includeNodes, char
                 ("[%s] scheduling migration using ROUNDROBIN scheduler, despite GREEDY or POWERSAVE scheduler specification in Eucalyptus configuration file; GREEDY scheduling can be emulated by selecting specific destination nodes for migrations\n",
                  instance->instanceId);
         } else {
-            LOGWARN("[%s] unknown scheduler configuration--scheduling migration using ROUNDROBIN scheduler\n", instance->instanceId);
+            LOGWARN("[%s] unsupported scheduler configuration--scheduling migration using ROUNDROBIN scheduler\n", instance->instanceId);
         }
         // This is relatively easy: we can keep calling the round-robin scheduler until we get a node we like.
         int first_try = -1;            // To break loops.
@@ -3083,15 +3092,17 @@ int schedule_instance_migration(ncInstance * instance, char **includeNodes, char
 
             if (*outresid == inresid) {
                 // Tried to schduled to the source node, so retry.
-                LOGDEBUG("[%s] can't schedule src_index=%d == dst_index=%d (%s > %s), trying again...\n",
+                LOGDEBUG("[%s] cannot schedule src_index=%d == dst_index=%d (%s > %s), trying again...\n",
                          instance->instanceId, inresid, *outresid, instance->migration_src, resourceCacheLocal->resources[*outresid].hostname);
+            } else if (resourceCacheLocal->resources[*outresid].migrationCapable == FALSE) {
+                LOGDEBUG("[%s] cannot schedule src_index=%d, dst_index=%d because node %s is not migration capable\n", instance->instanceId, inresid, *outresid, resourceCacheLocal->resources[*outresid].hostname);
             } else if (check_for_string_in_list(resourceCacheLocal->resources[*outresid].hostname, excludeNodes, excludeNodeCount)) {
                 // Exclusion list takes priority over inclusion list.
-                LOGDEBUG("[%s] can't schedule src_index=%d, dst_index=%d because node %s is in destination-exclusion list\n",
+                LOGDEBUG("[%s] cannot schedule src_index=%d, dst_index=%d because node %s is in destination-exclusion list\n",
                          instance->instanceId, inresid, *outresid, resourceCacheLocal->resources[*outresid].hostname);
             } else if (includeNodeCount) {
                 if (!check_for_string_in_list(resourceCacheLocal->resources[*outresid].hostname, includeNodes, includeNodeCount)) {
-                    LOGDEBUG("[%s] can't schedule src_index=%d, dst_index=%d because node %s is not in destination-inclusion list\n",
+                    LOGDEBUG("[%s] cannot schedule src_index=%d, dst_index=%d because node %s is not in destination-inclusion list\n",
                              instance->instanceId, inresid, *outresid, resourceCacheLocal->resources[*outresid].hostname);
                 } else {
                     LOGDEBUG("[%s] scheduled: src_index=%d, dst_index=%d (%s > %s) -- destination node is in inclusion list\n",
@@ -3259,6 +3270,91 @@ int schedule_instance_greedy(virtualMachine * vm, int *outresid)
     if (res->state == RESASLEEP) {
         powerUp(res);
     }
+
+    return (0);
+}
+
+int schedule_instance_user(virtualMachine * vm, char *amiId, char *kernelId, char *ramdiskId, char *instId, char *userData, char *platform, int *outresid)
+{
+    int i, done, resid, sleepresid, fd, rc;
+    ccResource *res = NULL;
+    ccInstance *inst = NULL;
+    FILE *OFH = NULL;
+
+    // create a temporary file for relaying resource information to the scheduler
+    char schedfile[MAX_PATH] = "/tmp/euca-schedfile-XXXXXX";
+    if (str2file(NULL, schedfile, 0644, TRUE) != EUCA_OK)
+        return (-1);
+
+    // create a temporary file for relaying information about running instances to the scheduler
+    char instfile[MAX_PATH] = "/tmp/euca-instfile-XXXXXX";
+    if (str2file(NULL, instfile, 0644, TRUE) != EUCA_OK)
+        return (-1);
+
+    // create a temporary file for relaying instance's user data to the scheduler
+    char datafile[MAX_PATH] = "/tmp/euca-datafile-XXXXXX";
+    if (str2file(userData, datafile, 0644, TRUE) != EUCA_OK)
+        return (-1);
+
+    // clear out the result
+    *outresid = 0;
+
+    // populate the file with resource information
+    resid = sleepresid = -1;
+    done = 0;
+    OFH = fopen(schedfile, "w");
+    if (!OFH) {
+        LOGERROR("cannot open resources file '%s' for writing\n", schedfile);
+        return (-1);
+    }
+    char lbuf[512];
+    for (i = 0; i < resourceCache->numResources && !done; i++) {
+        int mem, disk, cores;
+
+        res = &(resourceCache->resources[i]);
+        if (res) {
+            snprintf(lbuf, sizeof(lbuf), "idx=%d,ip=%s,state=%d,availmem=%d,availdisk=%d,availcores=%d", i + 1, res->ip, res->state, res->availMemory, res->availDisk,
+                     res->availCores);
+            fprintf(OFH, "%s\n", lbuf);
+        }
+    }
+    fclose(OFH);
+
+    // populate the file with information about instances
+    OFH = fopen(instfile, "w");
+    if (!OFH) {
+        LOGERROR("cannot open temporary instance file '%s' for writing\n", instfile);
+        return (-1);
+    }
+    for (i = 0; i < instanceCache->numInsts; i++) {
+        inst = &(instanceCache->instances[i]);
+        if (inst) {
+            snprintf(lbuf, sizeof(lbuf), "id=%s,state=%s,nchost=%s,mem=%d,disk=%d,cores=%d,secgroupidx=%d,publicip=%s,privateip=%s,ownerId=%s,accountId=%s,launchTime=%ld",
+                     inst->instanceId, inst->state, inst->serviceTag, inst->ccvm.mem, inst->ccvm.disk, inst->ccvm.cores, inst->ccnet.vlan, inst->ccnet.publicIp,
+                     inst->ccnet.privateIp, inst->accountId, inst->ownerId, inst->ts);
+            fprintf(OFH, "%s\n", lbuf);
+        }
+    }
+    fclose(OFH);
+
+    // invoke the external scheduler, passing it the two files as well as resource requirements of the new instance
+    char cmd[MAX_PATH * 3 + CHAR_BUFFER_SIZE];  // 3 paths on command line, plus other stuff
+    char stdout_str[VERY_BIG_CHAR_BUFFER_SIZE];
+    char stderr_str[VERY_BIG_CHAR_BUFFER_SIZE];
+    snprintf(cmd, sizeof(cmd), "%s %s %s %d %d %d %s %s %s", config->schedPath, schedfile, instfile, vm->mem, vm->disk, vm->cores, instId, datafile, platform);
+    rc = timeshell(cmd, stdout_str, stderr_str, VERY_BIG_CHAR_BUFFER_SIZE, SCHED_TIMEOUT_SEC);
+    LOGDEBUG("external scheduler returned: %d, stdout: '%s', stderr: '%s'\n", rc, stdout_str, stderr_str);
+    unlink(schedfile);
+    unlink(instfile);
+    unlink(datafile);
+
+    resid = rc - 1;                    // rc for valid nodes [1..N], 0 means scheduler could not find a resource
+    if (resid < 0 || resid >= resourceCache->numResources) {
+        // didn't find a resource
+        LOGWARN("couldn't find a resource or user scheduler is incorrect\n");
+        return (1);
+    }
+    *outresid = resid;
 
     return (0);
 }
@@ -3451,18 +3547,20 @@ int doRunInstances(ncMetadata * pMeta, char *amiId, char *kernelId, char *ramdis
         strncpy(privip, "0.0.0.0", 32);
 
         sem_mywait(VNET);
-        if (nidx == -1) {
-            rc = vnetGenerateNetworkParams(vnetconfig, instId, vlan, -1, mac, pubip, privip);
-            thenidx = -1;
-        } else {
-            rc = vnetGenerateNetworkParams(vnetconfig, instId, vlan, networkIndexList[nidx], mac, pubip, privip);
-            thenidx = nidx;
-            nidx++;
-        }
-        if (rc) {
-            foundnet = 0;
-        } else {
-            foundnet = 1;
+        {
+            if (nidx == -1) {
+                rc = vnetGenerateNetworkParams(vnetconfig, instId, vlan, -1, mac, pubip, privip);
+                thenidx = -1;
+            } else {
+                rc = vnetGenerateNetworkParams(vnetconfig, instId, vlan, networkIndexList[nidx], mac, pubip, privip);
+                thenidx = nidx;
+                nidx++;
+            }
+            if (rc) {
+                foundnet = 0;
+            } else {
+                foundnet = 1;
+            }
         }
         sem_mypost(VNET);
 
@@ -3493,7 +3591,7 @@ int doRunInstances(ncMetadata * pMeta, char *amiId, char *kernelId, char *ramdis
             resid = 0;
 
             sem_mywait(CONFIG);
-            rc = schedule_instance(ccvm, targetNode, &resid);
+            rc = schedule_instance(ccvm, amiId, kernelId, ramdiskId, instId, userData, platform, targetNode, &resid);
             sem_mypost(CONFIG);
 
             res = &(resourceCache->resources[resid]);
@@ -4347,12 +4445,22 @@ int doMigrateInstances(ncMetadata * pMeta, char *actionNode, char *instanceId, c
 
     if (preparing) {
         // notify source
-        // FIXME: add real credentials.
-        snprintf(credentials, CREDENTIAL_SIZE, "%lu", time(NULL));
+
+        // Generate migration credentials.
+        const char cred_chars[] = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
+        struct timeval tv;
+        gettimeofday(&tv, NULL);
+        srand(tv.tv_sec * tv.tv_usec * getpid());
+        // FIXME: Remove hard-coded 16.
+        for (int ci = 0; ci < (CREDENTIAL_SIZE - 1); ci++) {
+            credentials[ci] = cred_chars[rand() % (sizeof(cred_chars) - 1)];
+        }
+        credentials[CREDENTIAL_SIZE - 1] = 0;
+
         timeout = ncGetTimeout(time(NULL), OP_TIMEOUT, 1, 0);
         // FIXME: REMOVE THE DISPLAY OF CREDENTIALS BEFORE WE GO LIVE!
-        LOGDEBUG("about to ncClientCall source node '%s' with nc_instances (%s %d) [creds='%s']\n",
-                 SP(resourceCacheLocal.resources[src_index].hostname), nodeAction, found_instances, SP(found_instances == 1 ? nc_instances[0]->instanceId : ""));
+        LOGDEBUG("about to ncClientCall source node '%s' with nc_instances (%s %d) [creds='%s'] %s\n",
+                 SP(resourceCacheLocal.resources[src_index].hostname), nodeAction, found_instances, credentials, SP(found_instances == 1 ? nc_instances[0]->instanceId : ""));
         rc = ncClientCall(pMeta, timeout, resourceCacheLocal.resources[src_index].lockidx, resourceCacheLocal.resources[src_index].ncURL, "ncMigrateInstances",
                           nc_instances, found_instances, nodeAction, credentials);
         if (rc) {
@@ -4538,45 +4646,42 @@ int setup_shared_buffer(void **buf, char *bufname, size_t bytes, sem_t ** lock, 
 }
 
 //copy from cc config into message metadata.
-static int populateOutboundMeta(ncMetadata *pMeta)
+static int populateOutboundMeta(ncMetadata * pMeta)
 {
-	int i = 0;
-	int servCount = 0;
-	if (pMeta != NULL) {
-		sem_mywait(CONFIG);
-		memcpy(pMeta->services, config->services, sizeof(serviceInfoType) * 16);
-		memcpy(pMeta->disabledServices, config->disabledServices, sizeof(serviceInfoType) * 16);
-		memcpy(pMeta->notreadyServices, config->notreadyServices, sizeof(serviceInfoType) * 16);
+    int i = 0;
+    int servCount = 0;
+    if (pMeta != NULL) {
+        sem_mywait(CONFIG);
+        memcpy(pMeta->services, config->services, sizeof(serviceInfoType) * 16);
+        memcpy(pMeta->disabledServices, config->disabledServices, sizeof(serviceInfoType) * 16);
+        memcpy(pMeta->notreadyServices, config->notreadyServices, sizeof(serviceInfoType) * 16);
 
-		//Update the epoch if not already populated with latest from CC
-		if(pMeta->epoch < config->ccStatus.localEpoch) {
-			pMeta->epoch = config->ccStatus.localEpoch;
-		}
-		sem_mypost(CONFIG);
+        //Update the epoch if not already populated with latest from CC
+        if (pMeta->epoch < config->ccStatus.localEpoch) {
+            pMeta->epoch = config->ccStatus.localEpoch;
+        }
+        sem_mypost(CONFIG);
 
-		pMeta->servicesLen = 0;
-		pMeta->disabledServicesLen = 0;
-		pMeta->notreadyServicesLen = 0;
-		for(i = 0; i < 16; i++) {
-			if(strlen(config->services[i].name) > 0)
-			{
-				pMeta->servicesLen++;
-			}
-			if(strlen(config->disabledServices[i].name) > 0)
-			{
-				pMeta->disabledServicesLen++;
-			}
-			if(strlen(config->notreadyServices[i].name) > 0)
-			{
-				pMeta->notreadyServicesLen++;
-			}
-		}
+        pMeta->servicesLen = 0;
+        pMeta->disabledServicesLen = 0;
+        pMeta->notreadyServicesLen = 0;
+        for (i = 0; i < 16; i++) {
+            if (strlen(config->services[i].name) > 0) {
+                pMeta->servicesLen++;
+            }
+            if (strlen(config->disabledServices[i].name) > 0) {
+                pMeta->disabledServicesLen++;
+            }
+            if (strlen(config->notreadyServices[i].name) > 0) {
+                pMeta->notreadyServicesLen++;
+            }
+        }
 
-	} else {
-		return 1;
-	}
+    } else {
+        return 1;
+    }
 
-	return 0;
+    return 0;
 }
 
 //!
@@ -4641,11 +4746,11 @@ int initialize(ncMetadata * pMeta)
             int i;
             LOGTRACE("Initializing ncMeta: enabled %d, disabled %d, notready %d\n", pMeta->servicesLen, pMeta->disabledServicesLen, pMeta->notreadyServicesLen);
             sem_mywait(CONFIG);
-            if(pMeta->epoch >= config->ccStatus.localEpoch) {
-            	memcpy(config->services, pMeta->services, sizeof(serviceInfoType) * 16);
-            	memcpy(config->disabledServices, pMeta->disabledServices, sizeof(serviceInfoType) * 16);
-            	memcpy(config->notreadyServices, pMeta->notreadyServices, sizeof(serviceInfoType) * 16);
-            	config->ccStatus.localEpoch = pMeta->epoch;
+            if (pMeta->epoch >= config->ccStatus.localEpoch) {
+                memcpy(config->services, pMeta->services, sizeof(serviceInfoType) * 16);
+                memcpy(config->disabledServices, pMeta->disabledServices, sizeof(serviceInfoType) * 16);
+                memcpy(config->notreadyServices, pMeta->notreadyServices, sizeof(serviceInfoType) * 16);
+                config->ccStatus.localEpoch = pMeta->epoch;
             }
 
             for (i = 0; i < 16; i++) {
@@ -5604,7 +5709,7 @@ int init_config(void)
     char *tmpstr = NULL, *proxyIp = NULL;
     int rc, numHosts, use_wssec, use_tunnels, use_proxy, proxy_max_cache_size, schedPolicy, idleThresh, wakeThresh, i;
 
-    char configFiles[2][MAX_PATH], netPath[MAX_PATH], eucahome[MAX_PATH], policyFile[MAX_PATH], home[MAX_PATH], proxyPath[MAX_PATH], arbitrators[256];
+    char configFiles[2][MAX_PATH], netPath[MAX_PATH], eucahome[MAX_PATH], policyFile[MAX_PATH], home[MAX_PATH], proxyPath[MAX_PATH], arbitrators[256], schedPath[MAX_PATH];
 
     time_t instanceTimeout, ncPollingFrequency, clcPollingFrequency, ncFanout;
 
@@ -5620,6 +5725,7 @@ int init_config(void)
     bzero(configFiles[1], MAX_PATH);
     bzero(netPath, MAX_PATH);
     bzero(policyFile, MAX_PATH);
+    bzero(schedPath, MAX_PATH);
 
     snprintf(configFiles[1], MAX_PATH, EUCALYPTUS_CONF_LOCATION, home);
     snprintf(configFiles[0], MAX_PATH, EUCALYPTUS_CONF_OVERRIDE_LOCATION, home);
@@ -5898,11 +6004,10 @@ int init_config(void)
     }
 
     tmpstr = configFileValue("SCHEDPOLICY");
-    if (!tmpstr) {
+    if (tmpstr == NULL) {
         // error
-        LOGWARN("parsing config file (%s) for SCHEDPOLICY, defaulting to GREEDY\n", configFiles[0]);
+        LOGWARN("failed to parse config file (%s) for SCHEDPOLICY, defaulting to GREEDY\n", configFiles[0]);
         schedPolicy = SCHEDGREEDY;
-        tmpstr = NULL;
     } else {
         if (!strcmp(tmpstr, "GREEDY"))
             schedPolicy = SCHEDGREEDY;
@@ -5910,7 +6015,11 @@ int init_config(void)
             schedPolicy = SCHEDROUNDROBIN;
         else if (!strcmp(tmpstr, "POWERSAVE"))
             schedPolicy = SCHEDPOWERSAVE;
-        else
+        else if (access(tmpstr, X_OK) == 0) {   // scheduler is an executable path, assumed to be user scheduler
+            LOGWARN("will use user-defined scheduler at '%s'\n", tmpstr);
+            euca_strncpy(schedPath, tmpstr, sizeof(schedPath));
+            schedPolicy = SCHEDUSER;
+        } else
             schedPolicy = SCHEDGREEDY;
     }
     EUCA_FREE(tmpstr);
@@ -6087,6 +6196,7 @@ int init_config(void)
     config->use_wssec = use_wssec;
     config->use_tunnels = use_tunnels;
     config->schedPolicy = schedPolicy;
+    euca_strncpy(config->schedPath, schedPath, sizeof(config->schedPath));
     config->idleThresh = idleThresh;
     config->wakeThresh = wakeThresh;
     config->instanceTimeout = instanceTimeout;
@@ -6745,9 +6855,13 @@ int allocate_ccResource(ccResource * out, char *ncURL, char *ncService, int ncPo
 //!
 int free_instanceNetwork(char *mac, int vlan, int force, int dolock)
 {
-    int inuse, i;
-    unsigned char hexmac[6];
-    mac2hex(mac, hexmac);
+    int i = 0;
+    u8 hexmac[6] = { 0 };
+    boolean inuse = FALSE;
+
+    if (mac2hex(mac, hexmac) == NULL)
+        return (0);
+
     if (!maczero(hexmac)) {
         return (0);
     }
@@ -6756,12 +6870,12 @@ int free_instanceNetwork(char *mac, int vlan, int force, int dolock)
         sem_mywait(INSTCACHE);
     }
 
-    inuse = 0;
+    inuse = FALSE;
     if (!force) {
         // check to make sure the mac isn't in use elsewhere
-        for (i = 0; i < MAXINSTANCES_PER_CC && !inuse; i++) {
+        for (i = 0; ((i < MAXINSTANCES_PER_CC) && !inuse); i++) {
             if (!strcmp(instanceCache->instances[i].ccnet.privateMac, mac) && strcmp(instanceCache->instances[i].state, "Teardown")) {
-                inuse++;
+                inuse = TRUE;
             }
         }
     }

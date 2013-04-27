@@ -99,6 +99,11 @@ public class ServiceOperations {
   public static <T extends BaseMessage, I, O> Function<I, O> lookup( final Class<T> msgType ) {
     return ( Function<I, O> ) serviceOperations.get( msgType );
   }
+
+  public static boolean isUserOperation( final BaseMessage msg ) {
+    return serviceOperations.containsKey( msg.getClass( ) ) ? Ats.from( serviceOperations.get( msg.getClass( ) ) ).get( ServiceOperation.class ).user( ) : false;
+  }
+
   
   public static class ServiceOperationDiscovery extends ServiceJarDiscovery {
     

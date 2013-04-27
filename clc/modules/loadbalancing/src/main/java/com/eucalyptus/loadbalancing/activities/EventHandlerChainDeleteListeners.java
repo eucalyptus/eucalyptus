@@ -57,8 +57,11 @@ public class EventHandlerChainDeleteListeners extends EventHandlerChain<DeleteLi
 			}catch(Exception ex){
 				throw new EventHandlerException("could not find the loadbalancer", ex);
 			}
-			if(groupName == null)
-				throw new EventHandlerException("Group name is not found");
+			
+			if(groupName == null){
+				LOG.warn("Group name is not found in the db");
+				return;
+			}
 			
 			String[] protocols = new String[]{"tcp"}; /// Loadbalancer listeners protocols: HTTP, HTTPS, TCP, SSL -> all tcp
 			for(String protocol : protocols){

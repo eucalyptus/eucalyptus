@@ -26,6 +26,7 @@
 from distutils.core import setup
 import glob
 import os
+import shutil
 
 DATA_DIR='/usr/share/eucalyptus-console'
 
@@ -47,6 +48,12 @@ with open('eucaconsole/version.py', 'w') as fp:
     fp.write("""# Do not edit. This file is generated.
 __version__ = '%s'
 """ % (version))
+
+# Overwrite console.ini with the default version
+# We want to make sure we don't include the developer config
+if os.path.isfile('eucaconsole/console.ini'):
+    shutil.move('eucaconsole/console.ini', 'eucaconsole/console.ini.bak')
+shutil.copyfile('eucaconsole/console.ini.default', 'eucaconsole/console.ini')
 
 setup (name="Eucalyptus Management Console",
     version = version,

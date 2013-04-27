@@ -32,7 +32,7 @@ class BackoffRunnerTest {
   void testRunsTask() {
     boolean taskEvaluated = false
     BackoffRunner runner = new BackoffRunner()
-    runner.runTask( new BackoffRunner.TaskWithBackOff( "key", "group" ){
+    runner.runTask( new BackoffRunner.TaskWithBackOff( "key-runs", "group" ){
       @Override
       void runTask() {
         taskEvaluated = true
@@ -47,7 +47,7 @@ class BackoffRunnerTest {
     BackoffRunner runner = new BackoffRunner()
 
     boolean taskOneEvaluated = false
-    runner.runTask( new BackoffRunner.TaskWithBackOff( "key", "group" ){
+    runner.runTask( new BackoffRunner.TaskWithBackOff( "key-simple-backoff", "group" ){
       @Override
       void runTask() {
         taskOneEvaluated = true
@@ -57,7 +57,7 @@ class BackoffRunnerTest {
     assertTrue( "Task one evaluated", taskOneEvaluated )
 
     boolean taskTwoEvaluated = false
-    runner.runTask( new BackoffRunner.TaskWithBackOff( "key", "group" ){
+    runner.runTask( new BackoffRunner.TaskWithBackOff( "key-simple-backoff", "group" ){
       @Override
       void runTask() {
         taskTwoEvaluated = true
@@ -72,7 +72,7 @@ class BackoffRunnerTest {
     BackoffRunner runner = new BackoffRunner()
 
     boolean taskOneEvaluated = false
-    runner.runTask( new BackoffRunner.TaskWithBackOff( "key1", "group" ){
+    runner.runTask( new BackoffRunner.TaskWithBackOff( "key-different-1", "group" ){
       @Override
       void runTask() {
         taskOneEvaluated = true
@@ -82,7 +82,7 @@ class BackoffRunnerTest {
     assertTrue( "Task one evaluated", taskOneEvaluated )
 
     boolean taskTwoEvaluated = false
-    runner.runTask( new BackoffRunner.TaskWithBackOff( "key2", "group" ){
+    runner.runTask( new BackoffRunner.TaskWithBackOff( "key-different-2", "group" ){
       @Override
       void runTask() {
         taskTwoEvaluated = true
@@ -97,7 +97,7 @@ class BackoffRunnerTest {
     BackoffRunner runner = new BackoffRunner()
 
     boolean taskOneEvaluated = false
-    runner.runTask( new BackoffRunner.TaskWithBackOff( "key", "group1" ){
+    runner.runTask( new BackoffRunner.TaskWithBackOff( "key-different-group", "group1" ){
       @Override
       void runTask() {
         taskOneEvaluated = true
@@ -107,7 +107,7 @@ class BackoffRunnerTest {
     assertTrue( "Task one evaluated", taskOneEvaluated )
 
     boolean taskTwoEvaluated = false
-    runner.runTask( new BackoffRunner.TaskWithBackOff( "key", "group2" ){
+    runner.runTask( new BackoffRunner.TaskWithBackOff( "key-different-group", "group2" ){
       @Override
       void runTask() {
         taskTwoEvaluated = true
@@ -128,7 +128,7 @@ class BackoffRunnerTest {
     }
 
     boolean taskOneEvaluated = false
-    runner.runTask( new BackoffRunner.TaskWithBackOff( "key", "group" ){
+    runner.runTask( new BackoffRunner.TaskWithBackOff( "key-backoff-expiry", "group" ){
       @Override
       void runTask() {
         taskOneEvaluated = true
@@ -140,7 +140,7 @@ class BackoffRunnerTest {
     timestamp += TimeUnit.SECONDS.toMillis( 10 )
     
     boolean taskTwoEvaluated = false
-    runner.runTask( new BackoffRunner.TaskWithBackOff( "key", "group" ){
+    runner.runTask( new BackoffRunner.TaskWithBackOff( "key-backoff-expiry", "group" ){
       @Override
       void runTask() {
         taskTwoEvaluated = true
@@ -161,7 +161,7 @@ class BackoffRunnerTest {
     }
 
     boolean taskOneEvaluated = false
-    runner.runTask( new BackoffRunner.TaskWithBackOff( "key", "group" ){
+    runner.runTask( new BackoffRunner.TaskWithBackOff( "key-backoff-increase", "group" ){
       @Override
       void runTask() {
         taskOneEvaluated = true
@@ -173,7 +173,7 @@ class BackoffRunnerTest {
     timestamp += TimeUnit.SECONDS.toMillis( 10 )
 
     boolean taskTwoEvaluated = false
-    runner.runTask( new BackoffRunner.TaskWithBackOff( "key", "group" ){
+    runner.runTask( new BackoffRunner.TaskWithBackOff( "key-backoff-increase", "group" ){
       @Override
       void runTask() {
         taskTwoEvaluated = true
@@ -185,7 +185,7 @@ class BackoffRunnerTest {
     timestamp += TimeUnit.SECONDS.toMillis( 10 )
 
     boolean taskThreeEvaluated = false
-    runner.runTask( new BackoffRunner.TaskWithBackOff( "key", "group" ){
+    runner.runTask( new BackoffRunner.TaskWithBackOff( "key-backoff-increase", "group" ){
       @Override
       void runTask() {
         taskThreeEvaluated = true
@@ -197,7 +197,7 @@ class BackoffRunnerTest {
     timestamp += TimeUnit.SECONDS.toMillis( 10 )
 
     boolean taskFourEvaluated = false
-    runner.runTask( new BackoffRunner.TaskWithBackOff( "key", "group" ){
+    runner.runTask( new BackoffRunner.TaskWithBackOff( "key-backoff-increase", "group" ){
       @Override
       void runTask() {
         taskFourEvaluated = true

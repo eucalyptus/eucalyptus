@@ -75,7 +75,7 @@
 \*----------------------------------------------------------------------------*/
 
 #include <stdio.h>
-#include <unistd.h>             /* getopt */
+#include <unistd.h>                    /* getopt */
 
 #include <eucalyptus.h>
 #include <misc.h>
@@ -129,11 +129,11 @@
  |                                                                            |
 \*----------------------------------------------------------------------------*/
 
-boolean debug = FALSE;          //!< Enables debug mode if set to TRUE
+boolean debug = FALSE;                 //!< Enables debug mode if set to TRUE
 
 #ifndef NO_COMP
 const char *euca_this_component_name = "sc";    //!< Eucalyptus Component Name
-const char *euca_client_component_name = "nc";    //!< The client component name
+const char *euca_client_component_name = "nc";  //!< The client component name
 #endif /* ! NO_COMP */
 
 /*----------------------------------------------------------------------------*\
@@ -173,19 +173,15 @@ const char *euca_client_component_name = "nc";    //!< The client component name
 //!
 void usage(void)
 {
-	fprintf(stderr, "usage: SCclient [command] [options]\n"
-	            "\tcommands:\t\t\trequired options:\n"
-	            "\t\tExportVolume\t\t[-t -v -i -p]\n"
-				"\t\tUnexportVolume\t\t[-t -v -i -p]\n"
-	            "\toptions:\n"
-	            "\t\t-d \t\t- print debug output\n"
-	            "\t\t-l \t\t- local invocation => do not use WSSEC\n"
-	            "\t\t-h \t\t- this help information\n"
-	            "\t\t-s [host:port] \t- SC endpoint\n"
-				"\t\t-i [str] \t- IQN to allow\n"
-				"\t\t-p [str] \t- IP to allow\n"
-				"\t\t-V [str] \t- volume ID\n"
-	            "\t\t-t [str] \t- token\n");
+    fprintf(stderr, "usage: SCclient [command] [options]\n"
+            "\tcommands:\t\t\trequired options:\n"
+            "\t\tExportVolume\t\t[-t -v -i -p]\n"
+            "\t\tUnexportVolume\t\t[-t -v -i -p]\n"
+            "\toptions:\n"
+            "\t\t-d \t\t- print debug output\n"
+            "\t\t-l \t\t- local invocation => do not use WSSEC\n"
+            "\t\t-h \t\t- this help information\n"
+            "\t\t-s [host:port] \t- SC endpoint\n" "\t\t-i [str] \t- IQN to allow\n" "\t\t-p [str] \t- IP to allow\n" "\t\t-V [str] \t- volume ID\n" "\t\t-t [str] \t- token\n");
     exit(1);
 }
 
@@ -228,13 +224,13 @@ int main(int argc, char **argv)
             token = optarg;
             break;
         case 'p':
-        	ip = optarg;
-        	break;
+            ip = optarg;
+            break;
         case 'i':
-        	iqn = optarg;
-        	break;
+            iqn = optarg;
+            break;
         case 'h':
-            usage();            // will exit
+            usage();                   // will exit
             break;
         case '?':
         default:
@@ -270,7 +266,7 @@ int main(int argc, char **argv)
     snprintf(policyFile, 1024, EUCALYPTUS_KEYS_DIR "/sc-client-policy.xml", euca_home);
     rc = get_conf_var(configFile, "ENABLE_WS_SECURITY", &tmpstr);
     if (rc != 1) {
-    	/* Default to enabled */
+        /* Default to enabled */
         use_wssec = 1;
     } else {
         if (!strcmp(tmpstr, "Y")) {
@@ -292,38 +288,38 @@ int main(int argc, char **argv)
 
     /***********************************************************/
     if (!strcmp(command, "ExportVolume")) {
-    	CHECK_PARAM(volume_id, "volume ID");
-    	CHECK_PARAM(token, "token");
-    	CHECK_PARAM(ip, "ip");
-    	CHECK_PARAM(iqn, "iqn");
-    	char *connection_string = NULL;
+        CHECK_PARAM(volume_id, "volume ID");
+        CHECK_PARAM(token, "token");
+        CHECK_PARAM(ip, "ip");
+        CHECK_PARAM(iqn, "iqn");
+        char *connection_string = NULL;
 
-    	rc = scClientCall(correlationId, userId, use_wssec, policyFile, DEFAULT_SC_CALL_TIMEOUT, sc_url, "ExportVolume", volume_id, token, ip, iqn, &connection_string);
+        rc = scClientCall(correlationId, userId, use_wssec, policyFile, DEFAULT_SC_CALL_TIMEOUT, sc_url, "ExportVolume", volume_id, token, ip, iqn, &connection_string);
         if (rc != 0) {
             printf("scExportVolume() failed: error=%d\n", rc);
             exit(1);
         } else {
-        	printf("Got response: %s\n", connection_string);
+            printf("Got response: %s\n", connection_string);
         }
 
         /***********************************************************/
     } else if (!strcmp(command, "UnexportVolume")) {
-    	CHECK_PARAM(volume_id, "volume ID");
-    	CHECK_PARAM(token, "token");
-    	CHECK_PARAM(ip, "ip");
-    	CHECK_PARAM(iqn, "iqn");
+        CHECK_PARAM(volume_id, "volume ID");
+        CHECK_PARAM(token, "token");
+        CHECK_PARAM(ip, "ip");
+        CHECK_PARAM(iqn, "iqn");
 
-    	rc = scClientCall(correlationId, userId, use_wssec, policyFile, DEFAULT_SC_CALL_TIMEOUT, sc_url, "ExportVolume", volume_id, token, ip, iqn);
-    	if (rc != 0) {
-    		printf("scUnexportVolume() failed: error=%d\n", rc);
-    		exit(1);
-    	} else {
-    		printf("Got response: %d\n", rc);
-    	}
+        rc = scClientCall(correlationId, userId, use_wssec, policyFile, DEFAULT_SC_CALL_TIMEOUT, sc_url, "ExportVolume", volume_id, token, ip, iqn);
+        if (rc != 0) {
+            printf("scUnexportVolume() failed: error=%d\n", rc);
+            exit(1);
+        } else {
+            printf("Got response: %d\n", rc);
+        }
 
-    	/***********************************************************/
+        /***********************************************************/
     } else {
-    	fprintf(stderr, "ERROR: command %s unknown (try -h)\n", command);
+        fprintf(stderr, "ERROR: command %s unknown (try -h)\n", command);
         exit(1);
     }
 

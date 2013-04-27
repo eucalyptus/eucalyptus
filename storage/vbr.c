@@ -171,7 +171,7 @@
 
 #ifdef _UNIT_TEST
 const char *euca_this_component_name = "sc";    //!< Eucalyptus Component Name
-const char *euca_client_component_name = "nc";    //!< The client component name
+const char *euca_client_component_name = "nc";  //!< The client component name
 #endif /*_UNIT_TEST */
 
 /*----------------------------------------------------------------------------*\
@@ -221,7 +221,9 @@ static int walrus_creator(artifact * a);
 static int partition_creator(artifact * a);
 static void set_disk_dev(virtualBootRecord * vbr);
 static int disk_creator(artifact * a);
+#ifndef _NO_EBS
 static int iqn_creator(artifact * a);
+#endif // ! _NO_EBS
 static int copy_creator(artifact * a);
 //! @}
 
@@ -275,52 +277,52 @@ static void dummy_err_fn(const char *msg);
 //! Initializes the global host config
 int vbr_init_hostconfig(char *hostIqn, char *hostIp, char *ws_sec_policy_file, int use_ws_sec)
 {
-	LOGDEBUG("Initializing host config for VBR. Setting IP, IQN, and security policy\n");
-	euca_strncpy(localhost_config.iqn, hostIqn, MAX_PATH);
-	euca_strncpy(localhost_config.ip, hostIp, MAX_PATH);
-	euca_strncpy(localhost_config.ws_sec_policy_file, ws_sec_policy_file, MAX_PATH);
-	localhost_config.use_ws_sec = use_ws_sec;
-	LOGDEBUG("VBR host config set to ip: %s iqn: %s, use_sec = %d, policy file = %s\n", localhost_config.ip, localhost_config.iqn, localhost_config.use_ws_sec, localhost_config.ws_sec_policy_file);
-	hostconfig_sem = sem_alloc(1, IPC_MUTEX_SEMAPHORE);
-	return EUCA_OK;
+    LOGDEBUG("Initializing host config for VBR. Setting IP, IQN, and security policy\n");
+    euca_strncpy(localhost_config.iqn, hostIqn, MAX_PATH);
+    euca_strncpy(localhost_config.ip, hostIp, MAX_PATH);
+    euca_strncpy(localhost_config.ws_sec_policy_file, ws_sec_policy_file, MAX_PATH);
+    localhost_config.use_ws_sec = use_ws_sec;
+    LOGDEBUG("VBR host config set to ip: %s iqn: %s, use_sec = %d, policy file = %s\n", localhost_config.ip, localhost_config.iqn, localhost_config.use_ws_sec,
+             localhost_config.ws_sec_policy_file);
+    hostconfig_sem = sem_alloc(1, IPC_MUTEX_SEMAPHORE);
+    return EUCA_OK;
 }
 
 //! Semaphore protected read of the sc_url from the config
 //! Destination buffer must be at least 512 in size
 int get_localhost_sc_url(char *dest)
 {
-	int ret = 0;
-	sem_p(hostconfig_sem);
-	if(!strlen(localhost_config.sc_url)) {
-		LOGERROR("No sc url found in localhost_config.\n");
-		ret = 0;
-		goto release;
-	}
-	if(!euca_strncpy(dest, localhost_config.sc_url, 512)) {
-		LOGERROR("Failed up copy VBR hostconfig SC URL %s to destination buffer\n",localhost_config.sc_url);
-		ret = EUCA_ERROR;
-	} else {
-		ret = EUCA_OK;
-	}
+    int ret = 0;
+    sem_p(hostconfig_sem);
+    if (strlen(localhost_config.sc_url) == 0) {
+        LOGERROR("No sc url found in localhost_config.\n");
+        ret = EUCA_ERROR;
+        goto release;
+    }
+    if (!euca_strncpy(dest, localhost_config.sc_url, 512)) {
+        LOGERROR("Failed up copy VBR hostconfig SC URL %s to destination buffer\n", localhost_config.sc_url);
+        ret = EUCA_ERROR;
+    } else {
+        ret = EUCA_OK;
+    }
 
 release:
-	sem_v(hostconfig_sem);
-	return ret;
+    sem_v(hostconfig_sem);
+    return ret;
 }
-
 
 //! Semaphore protected hostconfig update.
 int vbr_update_hostconfig_scurl(char *new_sc_url)
 {
-	sem_p(hostconfig_sem);
-	if(!euca_strncpy(localhost_config.sc_url, new_sc_url, 512)) {
-		LOGERROR("Failed up update VBR hostconfig SC URL to %s from %s\n", new_sc_url, localhost_config.sc_url);
-		sem_v(hostconfig_sem);
-		return EUCA_ERROR;
-	} else {
-		sem_v(hostconfig_sem);
-		return EUCA_OK;
-	}
+    sem_p(hostconfig_sem);
+    if (!euca_strncpy(localhost_config.sc_url, new_sc_url, 512)) {
+        LOGERROR("Failed up update VBR hostconfig SC URL to %s from %s\n", new_sc_url, localhost_config.sc_url);
+        sem_v(hostconfig_sem);
+        return EUCA_ERROR;
+    } else {
+        sem_v(hostconfig_sem);
+        return EUCA_OK;
+    }
 }
 
 //!
@@ -343,14 +345,14 @@ static int prep_location(virtualBootRecord * vbr, ncMetadata * pMeta, const char
     for (i = 0; i < pMeta->servicesLen; i++) {
         serviceInfoType *service = &(pMeta->services[i]);
         if (strncmp(service->type, typeName, strlen(typeName) - 3) == 0 && service->urisLen > 0) {
-            if(strcmp(typeName, "storage")) {
-            	//Anything other than storage/ebs
-            	char *l = vbr->resourceLocation + (strlen(typeName) + 3);   // +3 for "://", so 'l' points past, e.g., "walrus:"
-            	snprintf(vbr->preparedResourceLocation, sizeof(vbr->preparedResourceLocation), "%s/%s", service->uris[0], l);   //! @TODO for now we just pick the first one
-            	snprintf(vbr->resourceLocation, sizeof(vbr->resourceLocation), vbr->preparedResourceLocation);  //! @TODO trying this out
+            if (strcmp(typeName, "storage")) {
+                //Anything other than storage/ebs
+                char *l = vbr->resourceLocation + (strlen(typeName) + 3);   // +3 for "://", so 'l' points past, e.g., "walrus:"
+                snprintf(vbr->preparedResourceLocation, sizeof(vbr->preparedResourceLocation), "%s/%s", service->uris[0], l);   //! @TODO for now we just pick the first one
+                snprintf(vbr->resourceLocation, sizeof(vbr->resourceLocation), vbr->preparedResourceLocation);  //! @TODO trying this out
             } else {
-            	//For storage, just copy the url for the SC into the preparedResourceLocation slot
-            	snprintf(vbr->preparedResourceLocation, sizeof(vbr->preparedResourceLocation), "%s", service->uris[0]);   //! @TODO for now we just pick the first one
+                //For storage, just copy the url for the SC into the preparedResourceLocation slot
+                snprintf(vbr->preparedResourceLocation, sizeof(vbr->preparedResourceLocation), "%s", service->uris[0]); //! @TODO for now we just pick the first one
             }
             return EUCA_OK;
         }
@@ -1336,19 +1338,20 @@ static int iqn_creator(artifact * a)
 
     ebs_volume_data *vol_data = NULL;
     char *dev = NULL;
-    int rc = connect_ebs_volume(vbr->preparedResourceLocation, vbr->resourceLocation, localhost_config.use_ws_sec, localhost_config.ws_sec_policy_file, localhost_config.ip, localhost_config.iqn, &dev, &vol_data);
-    if(rc) {
-    	LOGERROR("[%s] failed to attach volume during VBR construction for %s\n", a->instanceId, vbr->guestDeviceName);
-    	return EUCA_ERROR;
+    int rc = connect_ebs_volume(vbr->preparedResourceLocation, vbr->resourceLocation, localhost_config.use_ws_sec, localhost_config.ws_sec_policy_file, localhost_config.ip,
+                                localhost_config.iqn, &dev, &vol_data);
+    if (rc) {
+        LOGERROR("[%s] failed to attach volume during VBR construction for %s\n", a->instanceId, vbr->guestDeviceName);
+        return EUCA_ERROR;
     }
 
     if (!dev || !strstr(dev, "/dev")) {
-    	EUCA_FREE(vol_data);
+        EUCA_FREE(vol_data);
         LOGERROR("[%s] failed to connect to iSCSI target\n", a->instanceId);
         return EUCA_ERROR;
     } else {
-    	//Update the vbr preparedResourceLocation with the connection_string returned from token resolution
-    	euca_strncpy(vbr->preparedResourceLocation, vol_data->connect_string, sizeof(vbr->preparedResourceLocation));
+        //Update the vbr preparedResourceLocation with the connection_string returned from token resolution
+        euca_strncpy(vbr->preparedResourceLocation, vol_data->connect_string, sizeof(vbr->preparedResourceLocation));
     }
 
     // update VBR with device location
@@ -1357,7 +1360,7 @@ static int iqn_creator(artifact * a)
     EUCA_FREE(vol_data);
     return EUCA_OK;
 }
-#endif
+#endif // ! _NO_EBS
 
 //!
 //!
@@ -1776,6 +1779,7 @@ static char *url_get_digest(const char *url)
 //!
 //! @param[in] vbr
 //! @param[in] do_make_work_copy
+//! @param[in] is_migration_dest
 //! @param[in] must_be_file
 //! @param[in] sshkey
 //!
@@ -1850,7 +1854,7 @@ w_out:
         }
 
 #ifndef _NO_EBS
-    case NC_LOCATION_SC: {
+    case NC_LOCATION_SC:{
             a = art_alloc("iscsi-vol", NULL, -1, FALSE, FALSE, FALSE, iqn_creator, vbr);
             goto out;
         }
@@ -1954,6 +1958,7 @@ out:
 //! @param[in] emi_disk OPTION B: the artifact of the EMI that serves as a full disk
 //! @param[in] do_make_bootable kernel injection is requested (not needed on KVM and Xen)
 //! @param[in] do_make_work_copy generated disk should be a work copy
+//! @param[in] is_migration_dest
 //!
 //! @return A pointer to 'keyed' disk artifact or NULL on error
 //!
@@ -2088,6 +2093,7 @@ void art_set_instanceId(const char *instanceId)
 //! @param[in] vm pointer to virtual machine containing the VBR
 //! @param[in] do_make_bootable make the disk bootable by copying kernel and ramdisk into it and running grub
 //! @param[in] do_make_work_copy ensure that all components that get modified at run time have work copies
+//! @param[in] is_migration_dest
 //! @param[in] sshkey key to inject into the root partition or NULL if no key
 //! @param[in] instanceId the instance identifier string (i-XXXXXXXX)
 //!

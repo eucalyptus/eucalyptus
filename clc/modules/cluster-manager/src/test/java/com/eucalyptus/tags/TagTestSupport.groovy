@@ -17,49 +17,29 @@
  * CA 93117, USA or visit http://www.eucalyptus.com/licenses/ if you need
  * additional information or have any questions.
  ************************************************************************/
-package com.eucalyptus.autoscaling.configurations;
-
-import javax.annotation.Nullable;
-import javax.persistence.Column;
-import javax.persistence.Embeddable;
+package com.eucalyptus.tags
 
 /**
- *
+ * 
  */
-@Embeddable
-public class EbsParameters {
+class TagTestSupport {
   
-  //TODO:STEVE: Fix persistence annotations so column names are used ...
-  @Column( name = "metadata_snapshot_id" )
-  private String snapshotId;
+  void assertValidTagSupport( final TagSupport tagSupport,
+                              final Class<? extends Tag> tagClass ) {
+    tagSupport.resourceClass
+    tagSupport.resourceClassIdField
+    tagSupport.tagClassResourceField
 
-  @Column( name = "metadata_volume_size" )
-  private Integer volumeSize;
-
-  protected EbsParameters() {      
+    assertValidField( "Resource ID for resource class matching", tagSupport.resourceClass, tagSupport.resourceClassIdField, String.class )
+    assertValidField( "Resource reference for tag matching", tagClass, tagSupport.tagClassResourceField, tagSupport.resourceClass )
   }
-
-  protected EbsParameters( final String snapshotId,
-                           final Integer volumeSize ) {
-    this.snapshotId = snapshotId;
-    this.volumeSize = volumeSize;
-  }
-
-  @Nullable
-  public String getSnapshotId() {
-    return snapshotId;
-  }
-
-  public void setSnapshotId( final String snapshotId ) {
-    this.snapshotId = snapshotId;
-  }
-
-  @Nullable
-  public Integer getVolumeSize() {
-    return volumeSize;
-  }
-
-  public void setVolumeSize( final Integer volumeSize ) {
-    this.volumeSize = volumeSize;
+  
+  private void assertValidField( final String description,
+                                 final Class clazz,
+                                 final String field,
+                                 final Class type ) {
+    org.junit.Assert.assertNotNull( 
+        description + ": " + field, 
+        org.springframework.util.ReflectionUtils.findField( clazz, field, type ) )    
   }
 }

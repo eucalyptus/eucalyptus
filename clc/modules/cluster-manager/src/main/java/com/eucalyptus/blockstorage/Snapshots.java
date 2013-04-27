@@ -148,19 +148,24 @@ public class Snapshots {
             snapshots.put( s.getPartition( ), s.getDisplayName( ) );
           }
           for ( final String partition : snapshots.keySet( ) ) {
-            ServiceConfiguration sc = Topology.lookup( Storage.class, Partitions.lookupByName( partition ) );
-            DescribeStorageSnapshotsType scRequest = new DescribeStorageSnapshotsType( );
-            DescribeStorageSnapshotsResponseType snapshotInfo = AsyncRequests.sendSync( sc, scRequest );
-            final Map<String, StorageSnapshot> storageSnapshots = Maps.newHashMap( );
-            for ( final StorageSnapshot storageSnapshot : snapshotInfo.getSnapshotSet( ) ) {
-              storageSnapshots.put( storageSnapshot.getSnapshotId( ), storageSnapshot );
-            }
-            for ( String snapshotId : snapshots.get( partition ) ) {
-              final StorageSnapshot storageSnapshot = storageSnapshots.remove( snapshotId );
-              updateSnapshot( snapshotId, storageSnapshot );
-            }
-            for ( StorageSnapshot unknownSnapshot : storageSnapshots.values( ) ) {
-              LOG.debug( "SnapshotStateUpdate: found unknown snapshot: " + unknownSnapshot.getSnapshotId( ) + " " + unknownSnapshot.getStatus( ) );
+        	try {
+              ServiceConfiguration sc = Topology.lookup( Storage.class, Partitions.lookupByName( partition ) );
+              DescribeStorageSnapshotsType scRequest = new DescribeStorageSnapshotsType( );
+              DescribeStorageSnapshotsResponseType snapshotInfo = AsyncRequests.sendSync( sc, scRequest );
+              final Map<String, StorageSnapshot> storageSnapshots = Maps.newHashMap( );
+              for ( final StorageSnapshot storageSnapshot : snapshotInfo.getSnapshotSet( ) ) {
+                storageSnapshots.put( storageSnapshot.getSnapshotId( ), storageSnapshot );
+              }
+              for ( String snapshotId : snapshots.get( partition ) ) {
+                final StorageSnapshot storageSnapshot = storageSnapshots.remove( snapshotId );
+                updateSnapshot( snapshotId, storageSnapshot );
+              }
+              for ( StorageSnapshot unknownSnapshot : storageSnapshots.values( ) ) {
+                LOG.debug( "SnapshotStateUpdate: found unknown snapshot: " + unknownSnapshot.getSnapshotId( ) + " " + unknownSnapshot.getStatus( ) );
+              }
+            } catch (Exception ex) {
+              LOG.error( ex );
+              Logs.extreme( ).error( ex, ex );
             }
           }
         } catch ( Exception ex ) {

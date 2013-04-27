@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * Copyright 2009-2013 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -65,26 +65,18 @@ package com.eucalyptus.images;
 import static com.eucalyptus.util.Parameters.checkParam;
 import static org.hamcrest.Matchers.notNullValue;
 
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
+import java.util.Set;
 
 import javax.persistence.PersistenceException;
-import javax.xml.xpath.XPath;
-import javax.xml.xpath.XPathConstants;
-import javax.xml.xpath.XPathExpressionException;
 
 import org.apache.log4j.Logger;
-import org.w3c.dom.Document;
-import org.w3c.dom.NodeList;
 
 import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.AuthException;
-import com.eucalyptus.auth.policy.PolicySpec;
-import com.eucalyptus.auth.principal.Account;
 import com.eucalyptus.auth.principal.AccountFullName;
-import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.cloud.CloudMetadatas;
 import com.eucalyptus.cloud.ImageMetadata;
 import com.eucalyptus.cluster.Cluster;
@@ -116,6 +108,7 @@ import com.google.common.base.Predicate;
 import com.google.common.base.Supplier;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Sets;
 
 import edu.ucsb.eucalyptus.msgs.ConfirmProductInstanceResponseType;
 import edu.ucsb.eucalyptus.msgs.ConfirmProductInstanceType;
@@ -144,10 +137,10 @@ public class ImageManager {
   private static final String ADD = "add";
   
   public DescribeImagesResponseType describe( final DescribeImagesType request ) throws EucalyptusCloudException, TransactionException {
-    DescribeImagesResponseType reply = request.getReply( );
+    DescribeImagesResponseType reply = request.getReply();
     final Context ctx = Contexts.lookup( );
     final String requestAccountId = ctx.getUserFullName( ).getAccountNumber( );
-    final List<String> ownersSet = request.getOwnersSet( );
+    final List<String> ownersSet = request.getOwnersSet();
     if ( ownersSet.remove( Images.SELF ) ) {
       ownersSet.add( requestAccountId );
     }
@@ -175,12 +168,12 @@ public class ImageManager {
     }
 
     reply.getImagesSet( ).addAll( imageDetailsList );
-    ImageUtil.cleanDeregistered( );
+    ImageUtil.cleanDeregistered();
     return reply;
   }
   
   public RegisterImageResponseType register( final RegisterImageType request ) throws EucalyptusCloudException, AuthException, IllegalContextAccessException, NoSuchElementException, PersistenceException {
-	final Context ctx = Contexts.lookup( );
+	final Context ctx = Contexts.lookup();
     ImageInfo imageInfo = null;
     final String rootDevName = ( request.getRootDeviceName( ) != null )
       ? request.getRootDeviceName( )
@@ -244,34 +237,14 @@ public class ImageManager {
     return reply;
   }
   
-  private List<String> extractProductCodes( Document inputSource, XPath xpath ) {
-    List<String> prodCodes = Lists.newArrayList( );
-    NodeList productCodes = null;
-    try {
-      productCodes = ( NodeList ) xpath.evaluate( "/manifest/machine_configuration/product_codes/product_code/text()", inputSource, XPathConstants.NODESET );
-      for ( int i = 0; i < productCodes.getLength( ); i++ ) {
-        for ( String productCode : productCodes.item( i ).getNodeValue( ).split( "," ) ) {
-          prodCodes.add( productCode );
-        }
-      }
-    } catch ( XPathExpressionException e ) {
-      LOG.error( e, e );
-    }
-    return prodCodes;
-  }
-  
   public DeregisterImageResponseType deregister( DeregisterImageType request ) throws EucalyptusCloudException {
-    if(!request.getImageId( ).matches("(emi-|eki-|eri-)\\w{8}"))
-      throw new EucalyptusCloudException( "Invalid id: " + "\"" + request.getImageId( ) + "\"" );
     DeregisterImageResponseType reply = request.getReply( );
     final Context ctx = Contexts.lookup( );
     final String requestAccountId = ctx.getUserFullName( ).getAccountNumber( );
-    final User requestUser = Contexts.lookup( ).getUser( );
-    final String action = PolicySpec.requestToAction( request );
-    
+
     EntityWrapper<ImageInfo> db = EntityWrapper.get( ImageInfo.class );
     try {
-      ImageInfo imgInfo = db.getUnique( Images.exampleWithImageId( request.getImageId( ) ) );
+      ImageInfo imgInfo = db.getUnique( Images.exampleWithImageId( imageIdentifier( request.getImageId( ) ) ) );
       if ( !ctx.hasAdministrativePrivileges( ) &&
            ( !imgInfo.getOwnerAccountNumber( ).equals( requestAccountId ) ||
                !RestrictedTypes.filterPrivileged( ).apply( imgInfo ) ) ) {
@@ -319,20 +292,18 @@ public class ImageManager {
     } catch ( NoSuchElementException e ) {}
     return reply;
   }
-  
-  public DescribeImageAttributeResponseType describeImageAttribute( DescribeImageAttributeType request ) throws EucalyptusCloudException {
+
+  public DescribeImageAttributeResponseType describeImageAttribute( final DescribeImageAttributeType request ) throws EucalyptusCloudException {
     DescribeImageAttributeResponseType reply = ( DescribeImageAttributeResponseType ) request.getReply( );
     reply.setImageId( request.getImageId( ) );
-    final Context ctx = Contexts.lookup( );
-    final String requestAccountId = ctx.getUserFullName( ).getAccountNumber( );
-    final User requestUser = Contexts.lookup( ).getUser( );
-    final String action = PolicySpec.requestToAction( request );
-    
+    final Context ctx = Contexts.lookup();
+    final String requestAccountId = ctx.getUserFullName( ).getAccountNumber();
+
     if ( request.getAttribute( ) != null ) request.applyAttribute( );
     
-    EntityWrapper<ImageInfo> db = EntityWrapper.get( ImageInfo.class );
+    final EntityWrapper<ImageInfo> db = EntityWrapper.get( ImageInfo.class );
     try {
-      ImageInfo imgInfo = db.getUnique( Images.exampleWithImageId( request.getImageId( ) ) );
+      final ImageInfo imgInfo = db.getUnique( Images.exampleWithImageId( imageIdentifier( request.getImageId( ) ) ) );
       if ( !ctx.hasAdministrativePrivileges( ) &&
            ( !imgInfo.getOwnerAccountNumber( ).equals( requestAccountId ) || !RestrictedTypes.filterPrivileged( ).apply( imgInfo ) ) ) {
         throw new EucalyptusCloudException( "Not authorized to describe image attribute" );
@@ -354,11 +325,10 @@ public class ImageManager {
       } else if ( request.getLaunchPermission( ) != null ) {
         reply.setRealResponse( reply.getLaunchPermission( ) );
         if ( imgInfo.getImagePublic( ) ) {
-          reply.getLaunchPermission( ).add( LaunchPermissionItemType.getGroup( ) );
+          reply.getLaunchPermission( ).add( LaunchPermissionItemType.newGroupLaunchPermission() );
         }
-        Iterator <String> permItr = imgInfo.getPermissions( ).iterator();        
-        while( permItr.hasNext() )
-          reply.getLaunchPermission( ).add( LaunchPermissionItemType.getUser( permItr.next() ) );
+        for ( final String permission : imgInfo.getPermissions() )
+          reply.getLaunchPermission().add( LaunchPermissionItemType.newUserLaunchPermission( permission ) );
       } else if ( request.getProductCodes( ) != null ) {
         reply.setRealResponse( reply.getProductCodes( ) );
         reply.getProductCodes( ).addAll( imgInfo.getProductCodes( ) );
@@ -368,6 +338,11 @@ public class ImageManager {
         reply.getBlockDeviceMapping( ).add( ImageUtil.EPHEMERAL );
         reply.getBlockDeviceMapping( ).add( ImageUtil.SWAP );
         reply.getBlockDeviceMapping( ).add( ImageUtil.ROOT );
+      } else if ( request.getDescription( ) != null ) {
+        reply.setRealResponse( reply.getDescription( ) );
+        if ( imgInfo.getDescription() != null ) {
+          reply.getDescription().add( imgInfo.getDescription() );
+        }
       } else {
         throw new EucalyptusCloudException( "invalid image attribute request." );
       }
@@ -377,69 +352,64 @@ public class ImageManager {
     return reply;
   }
 
-	public void verifyUserIds(final List<String> userIds) throws EucalyptusCloudException {
-		for (int i = 0; i < userIds.size(); i++) {
-			String userId = userIds.get(i);
-			try {
-				final Account account = Accounts.lookupAccountById(userId);
-			} catch (final Exception e) {
-				try {
-					final User user = Accounts.lookupUserById(userId);
-				} catch (AuthException ex) {
-					try {
-						final User user = Accounts.lookupUserByAccessKeyId(userId);
-					} catch (AuthException ex1) {
-						throw new EucalyptusCloudException("Not a valid userId : " + userId);
-					}
-				}
-			}
-		}
-	}
+  private static List<String> verifyUserIds(final List<String> userIds) throws EucalyptusCloudException {
+    final Set<String> validUserIds = Sets.newHashSet( );
+    for ( String userId : userIds ) {
+      try {
+        validUserIds.add( Accounts.lookupAccountById( userId ).getAccountNumber() );
+      } catch ( final Exception e ) {
+        try {
+          validUserIds.add( Accounts.lookupUserById( userId ).getAccount().getAccountNumber() );
+        } catch ( AuthException ex ) {
+          try {
+            validUserIds.add( Accounts.lookupUserByAccessKeyId( userId ).getAccount().getAccountNumber() );
+          } catch ( AuthException ex1 ) {
+            throw new EucalyptusCloudException( "Not a valid userId : " + userId );
+          }
+        }
+      }
+    }
+    return Lists.newArrayList( validUserIds );
+  }
 
-  public ModifyImageAttributeResponseType modifyImageAttribute( ModifyImageAttributeType request ) throws EucalyptusCloudException {
-    ModifyImageAttributeResponseType reply = ( ModifyImageAttributeResponseType ) request.getReply( );
-    final Context ctx = Contexts.lookup( );
-    final String requestAccountId = ctx.getUserFullName( ).getAccountNumber( );
-    final User requestUser = ctx.getUser( );
-    final String action = PolicySpec.requestToAction( request );
-    
-    EntityWrapper<ImageInfo> db = EntityWrapper.get( ImageInfo.class );
-    ImageInfo imgInfo = null;
+  public ModifyImageAttributeResponseType modifyImageAttribute( final ModifyImageAttributeType request ) throws EucalyptusCloudException {
+    final ModifyImageAttributeResponseType reply = ( ModifyImageAttributeResponseType ) request.getReply( );
+    final Context ctx = Contexts.lookup();
+    final String requestAccountId = ctx.getUserFullName( ).getAccountNumber();
+
+    final EntityWrapper<ImageInfo> db = EntityWrapper.get( ImageInfo.class );
     try {
-      imgInfo = db.getUnique( Images.exampleWithImageId( request.getImageId( ) ) );
+      final ImageInfo imgInfo = db.getUnique( Images.exampleWithImageId( imageIdentifier( request.getImageId( ) ) ) );
       if ( !ctx.hasAdministrativePrivileges( ) &&
            ( !imgInfo.getOwnerAccountNumber( ).equals( requestAccountId ) ||
                !RestrictedTypes.filterPrivileged( ).apply( imgInfo ) ) ) {
         throw new EucalyptusCloudException( "Not authorized to modify image attribute" );
       }
-      // Product codes
-      for ( String productCode : request.getProductCodes( ) ) {
-        imgInfo.addProductCode( productCode );
+
+      switch ( request.getImageAttribute() ) {
+        case LaunchPermission:
+          if ( request.isAdd() ) {
+            imgInfo.addPermissions( verifyUserIds( request.getUserIds() ) );
+            if ( request.isGroupAll() ) {
+              imgInfo.setImagePublic( true );
+            }
+          } else {
+            imgInfo.removePermissions( request.getUserIds() );
+            if ( request.isGroupAll() ) {
+              imgInfo.setImagePublic( false );
+            }
+          }
+          break;
+        case ProductCode:
+          for ( String productCode : request.getProductCodes( ) ) {
+            imgInfo.addProductCode( productCode );
+          }
+          break;
+        case Description:
+          imgInfo.setDescription( request.getDescription() );
+          break;
       }
-      // Launch permissions
-      if ( "launchPermission".equals( request.getAttribute( ) ) ) {
-        if (request.getQueryUserGroup( ).isEmpty( ) && request.getQueryUserId( ).isEmpty( ) )
-          throw new EucalyptusCloudException( "No userId provided" );
-        if ( ADD.equals( request.getOperationType( ) ) ) {
-        	this.verifyUserIds( request.getQueryUserId( ) );
-          imgInfo.addPermissions( request.getQueryUserId( ) );
-          // Only "all" is valid
-          if ( !request.getQueryUserGroup( ).isEmpty( ) ) {
-            imgInfo.setImagePublic( true );
-          }
-        } else {
-          for ( int i = 0; i < request.getQueryUserId( ).size( ); i++ ) {
-        		String accountId = request.getQueryUserId( ).get( i );
-        		if(!imgInfo.checkPermission( accountId ) )
-        		throw new EucalyptusCloudException( "No existing launch permission for userId " + accountId );
-          }
-          imgInfo.removePermissions( request.getQueryUserId( ) );
-          // Only "all" is valid
-          if ( !request.getQueryUserGroup( ).isEmpty( ) ) {
-            imgInfo.setImagePublic( false );
-          }
-        }
-      }
+
       db.commit( );
       reply.set_return( true );
     } catch ( EucalyptusCloudException e ) {
@@ -458,7 +428,7 @@ public class ImageManager {
     final String requestAccountId = ctx.getUserFullName( ).getAccountNumber( );
     EntityWrapper<ImageInfo> db = EntityWrapper.get( ImageInfo.class );
     try {
-      ImageInfo imgInfo = db.getUnique( Images.exampleWithImageId( request.getImageId( ) ) );
+      ImageInfo imgInfo = db.getUnique( Images.exampleWithImageId( imageIdentifier( request.getImageId( ) ) ) );
       if ( ctx.hasAdministrativePrivileges( ) ||
            ( imgInfo.getOwnerAccountNumber( ).equals( requestAccountId ) &&
                RestrictedTypes.filterPrivileged( ).apply( imgInfo ) ) ) {
@@ -518,7 +488,13 @@ public class ImageManager {
     
     return reply;
   }
-  
+
+  private static String imageIdentifier( final String identifier ) throws EucalyptusCloudException {
+    if( identifier == null || !Images.IMAGE_ID_PATTERN.matcher( identifier ).matches() )
+      throw new EucalyptusCloudException( "Invalid id: " + "\"" + identifier + "\"" );
+    return identifier;
+  }
+
   private enum ImageDetailsToImageId implements Function<ImageDetails, String> {
     INSTANCE {
       @Override

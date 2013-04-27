@@ -62,19 +62,13 @@
 
 package edu.ucsb.eucalyptus.cloud.ws.tests;
 
-import junit.framework.Test;
-import junit.framework.TestCase;
-import junit.framework.TestSuite;
+import org.junit.runner.RunWith;
+import org.junit.runners.Suite;
 
-public class WalrusBucketTests extends TestCase {
-
-
-
-    public static Test suite() {
-        final TestSuite suite = new TestSuite();
-
-        suite.addTestSuite(BukkitTest.class);
-        suite.addTestSuite(ObjectTest.class);
-        return suite;
-    }
+@RunWith(Suite.class)
+@Suite.SuiteClasses({
+    BukkitTest.class,
+    ObjectTest.class
+})
+public class WalrusBucketTests {
 }

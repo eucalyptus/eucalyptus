@@ -62,16 +62,26 @@
 
 package com.eucalyptus.images;
 
+import java.util.List;
+
 import javax.persistence.Column;
 import javax.persistence.DiscriminatorValue;
+import javax.persistence.EntityTransaction;
 import javax.persistence.PersistenceContext;
 
+import org.apache.commons.lang.StringUtils;
+import org.apache.log4j.Logger;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
 import org.hibernate.annotations.Entity;
 
 import com.eucalyptus.auth.principal.UserFullName;
 import com.eucalyptus.cloud.ImageMetadata;
+import com.eucalyptus.entities.Entities;
+import com.eucalyptus.upgrade.Upgrades.EntityUpgrade;
+import com.eucalyptus.upgrade.Upgrades.Version;
+import com.eucalyptus.util.Exceptions;
+import com.google.common.base.Predicate;
 
 @Entity
 @javax.persistence.Entity
@@ -164,7 +174,44 @@ public class BlockStorageImageInfo extends ImageInfo implements BootableImageInf
     return "ebs";
   }
   
-  public void setRootDevice(String rootDevice) {
-	this.rootDeviceName = rootDevice;
+  public void setRootDeviceName(String rootDeviceName) {
+	this.rootDeviceName = rootDeviceName;
+  }
+  
+  @EntityUpgrade( entities = { BlockStorageImageInfo.class }, since = Version.v3_3_0, value = com.eucalyptus.component.id.Eucalyptus.class )
+  public enum BlockStorageImageInfoUpgrade_3_3_0 implements Predicate<Class> {
+    INSTANCE;
+    private static Logger LOG = Logger.getLogger( BlockStorageImageInfo.BlockStorageImageInfoUpgrade_3_3_0.class );
+    @Override
+    public boolean apply( Class arg0 ) {
+      EntityTransaction db = Entities.get( BlockStorageImageInfo.class );
+      try {
+        List<BlockStorageImageInfo> images = Entities.query( new BlockStorageImageInfo( ) );
+        for ( BlockStorageImageInfo image : images ) {
+          LOG.info("Upgrading BlockStorageImageInfo: " + image.toString());
+          if (StringUtils.isBlank(image.getRootDeviceName())) {
+        	LOG.info("Setting the root device name to /dev/sda");
+            image.setRootDeviceName("/dev/sda");
+          }
+          DeviceMapping mapping = null;
+          if ( image.getDeviceMappings().size() == 1 && (mapping = image.getDeviceMappings().iterator().next()) != null 
+        		  && mapping instanceof BlockStorageDeviceMapping ) {
+            LOG.info("Setting the device mapping name to /dev/sda");
+            mapping.setDeviceName("/dev/sda"); 
+            LOG.info("Adding ephemeral disk at /dev/sdb");
+        	image.getDeviceMappings().add(new EphemeralDeviceMapping( image, "/dev/sdb", "ephemeral0" ));
+          } else {
+        	LOG.error("Expected to see only the root block device mapping but encountered " + image.getDeviceMappings().size() + " device mappings.");
+          }
+          Entities.persist(image);
+        }
+        db.commit( );
+        return true;
+      } catch ( Exception ex ) {
+    	LOG.error("Error upgrading BlockStorageImageInfo: ", ex);
+    	db.rollback();
+        throw Exceptions.toUndeclared( ex );
+      }
+    }
   }
 }

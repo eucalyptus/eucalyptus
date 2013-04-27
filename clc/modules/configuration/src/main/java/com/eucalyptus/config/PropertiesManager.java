@@ -191,6 +191,10 @@ public class PropertiesManager {
         reply.setName( request.getName( ) );
       } catch ( IllegalAccessException e ) {
         throw new EucalyptusCloudException( "Failed to set property: " + e.getMessage( ) );
+      } catch (Exception e) {
+    	  throw new EucalyptusCloudException(e);
+      } catch (Throwable e) {
+    	  throw new EucalyptusCloudException(e);
       }
     }
     return reply;

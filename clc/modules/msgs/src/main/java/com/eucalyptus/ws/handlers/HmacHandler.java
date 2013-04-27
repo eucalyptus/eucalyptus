@@ -64,6 +64,7 @@ package com.eucalyptus.ws.handlers;
 
 import java.util.List;
 import java.util.Map;
+import javax.security.auth.login.LoginException;
 import org.apache.commons.io.output.ByteArrayOutputStream;
 import org.apache.log4j.Logger;
 import org.jboss.netty.channel.ChannelPipelineCoverage;
@@ -72,6 +73,8 @@ import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.login.AuthenticationException;
 import com.eucalyptus.auth.login.HmacCredentials;
 import com.eucalyptus.auth.login.SecurityContext;
+import com.eucalyptus.auth.principal.User;
+import com.eucalyptus.context.Contexts;
 import com.eucalyptus.crypto.util.SecurityParameter;
 import com.eucalyptus.http.MappingHttpRequest;
 import com.eucalyptus.util.CollectionUtils;
@@ -114,13 +117,10 @@ public class HmacHandler extends MessageStackHandler {
       }
       if ( variant.getVersion().value() <= 2 ) {
           if ( !parameters.containsKey( SecurityParameter.AWSAccessKeyId.parameter() ) ) {
-            if ( internal ) {
-              parameters.put( SecurityParameter.AWSAccessKeyId.parameter(), Accounts.getFirstActiveAccessKeyId( Accounts.lookupSystemAdmin( ) ) );
-            } else {
-              throw new AuthenticationException( "Missing required parameter: " + SecurityParameter.AWSAccessKeyId );
-            }
+            throw new AuthenticationException( "Missing required parameter: " + SecurityParameter.AWSAccessKeyId );
           }
       }
+
       final HmacCredentials credentials = new HmacCredentials( 
           httpRequest.getCorrelationId(), 
           variant,

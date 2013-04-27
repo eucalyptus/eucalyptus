@@ -20,6 +20,7 @@
 package com.eucalyptus.loadbalancing;
 
 import java.util.Date;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
@@ -33,6 +34,7 @@ import com.eucalyptus.cloudwatch.Dimension;
 import com.eucalyptus.cloudwatch.Dimensions;
 import com.eucalyptus.cloudwatch.MetricData;
 import com.eucalyptus.cloudwatch.MetricDatum;
+import com.eucalyptus.cloudwatch.StatisticSet;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.loadbalancing.activities.EucalyptusActivityTasks;
 import com.eucalyptus.loadbalancing.activities.LoadBalancerServoInstance;
@@ -48,8 +50,8 @@ public class LoadBalancerCwatchMetrics {
 
 	private static LoadBalancerCwatchMetrics _instance = new LoadBalancerCwatchMetrics();
 	private Map<ElbDimension, ElbAggregate> metricsMap = new ConcurrentHashMap<ElbDimension, ElbAggregate>();
-	private Map<ElbDimension, Integer> healthyCountMap = new ConcurrentHashMap<ElbDimension, Integer>();
-	private Map<ElbDimension, Integer> unhealthyCountMap = new ConcurrentHashMap<ElbDimension, Integer>();
+	private Map<String, Boolean> instanceHealthMap = new ConcurrentHashMap<String, Boolean>();
+	private Map<String, ElbDimension> instanceToDimensionMap = new ConcurrentHashMap<String, ElbDimension>();
 	private Map<String, Date> lastReported = new ConcurrentHashMap<String, Date>();
 	
 	private final int CLOUDWATCH_REPORTING_INTERVAL_SEC = 60;// http://docs.aws.amazon.com/ElasticLoadBalancing/latest/DeveloperGuide/US_MonitoringLoadBalancerWithCW.html
@@ -96,17 +98,25 @@ public class LoadBalancerCwatchMetrics {
 		}
 	}
 	
-	public void updateHealthyCount(final String userId, final String loadbalancer, final String zone, int numHealthy){
-		ElbDimension dim = new ElbDimension(userId, loadbalancer, zone);
+	public void updateHealthy(final String userId, final String loadbalancer, final String zone, final String instanceId){
+		final ElbDimension dim = new ElbDimension(userId, loadbalancer, zone);
 		synchronized(lock){
-			this.healthyCountMap.put(dim, numHealthy);
+			if(!this.instanceToDimensionMap.containsKey(instanceId))
+				this.instanceToDimensionMap.put(instanceId, dim);
+			this.instanceHealthMap.put(instanceId, Boolean.TRUE);
+			if(!metricsMap.containsKey(dim))
+				metricsMap.put(dim, new ElbAggregate(loadbalancer, zone));
 		}
 	}
 	
-	public void updateUnhealthyCount(final String userId, final String loadbalancer, final String zone, int numUnHealthy){
-		ElbDimension dim = new ElbDimension(userId, loadbalancer, zone);
+	public void updateUnHealthy(final String userId, final String loadbalancer, final String zone, final String instanceId){
+		final ElbDimension dim = new ElbDimension(userId, loadbalancer, zone);
 		synchronized(lock){
-			this.unhealthyCountMap.put(dim, numUnHealthy);
+			if(!this.instanceToDimensionMap.containsKey(instanceId))
+				this.instanceToDimensionMap.put(instanceId, dim);
+			this.instanceHealthMap.put(instanceId, Boolean.FALSE);
+			if(!metricsMap.containsKey(dim))
+				metricsMap.put(dim, new ElbAggregate(loadbalancer, zone));
 		}
 	}
 	
@@ -140,8 +150,25 @@ public class LoadBalancerCwatchMetrics {
 		final MetricData data = new MetricData();		
 		data.setMember(Lists.<MetricDatum>newArrayList());
 		final List<ElbDimension> toCleanup = Lists.newArrayList();
-		
+    	
+		final Map<ElbDimension, Integer> healthyCountMap = new HashMap<ElbDimension, Integer>();
+    	final Map<ElbDimension, Integer> unhealthyCountMap = new HashMap<ElbDimension, Integer>();
+    	
 		synchronized(lock){
+			/// add HealthyHostCount and UnHealthyHostCount
+        	for(final String instanceId : this.instanceHealthMap.keySet()){
+        		final ElbDimension thisDim = this.instanceToDimensionMap.get(instanceId);
+        		if(this.instanceHealthMap.get(instanceId).booleanValue()){ // healthy	
+        			if(!healthyCountMap.containsKey(thisDim))
+        				healthyCountMap.put(thisDim, 0);
+        			healthyCountMap.put(thisDim, healthyCountMap.get(thisDim)+1);
+        		}else{
+        			if(!unhealthyCountMap.containsKey(thisDim))
+        				unhealthyCountMap.put(thisDim,  0);
+        			unhealthyCountMap.put(thisDim, unhealthyCountMap.get(thisDim)+1);
+        		}
+        	}
+        	
 			for (final ElbDimension dim : this.metricsMap.keySet()){
 				if(!dim.getUserId().equals(userId))
 					continue;
@@ -149,7 +176,6 @@ public class LoadBalancerCwatchMetrics {
 				final ElbAggregate aggr = this.metricsMap.get(dim);
 				final  List<MetricDatum> datumList = aggr.toELBStatistics();
 				
-				/// add HealthyHostCount and UnHealthyHostCount
 			 	Dimensions dims = new Dimensions();
 	        	Dimension lb = new Dimension();
 	        	lb.setName("LoadBalancerName");
@@ -158,29 +184,40 @@ public class LoadBalancerCwatchMetrics {
 	        	az.setName("AvailabilityZone");
 	        	az.setValue(dim.getAvailabilityZone());
 	        	dims.setMember(Lists.newArrayList(lb, az));
-	        	
-				if(this.healthyCountMap.containsKey(dim)){
-		        	int numHealthy = this.healthyCountMap.get(dim);
+	        		
+				if(healthyCountMap.containsKey(dim)){
+		        	int numHealthy = healthyCountMap.get(dim);
 		        	if(numHealthy > 0){
 						MetricDatum datum = new MetricDatum();
 						datum.setDimensions(dims);
 						datum.setMetricName("HealthyHostCount");
 						datum.setUnit("Count");
-						datum.setValue((double)numHealthy);
+			        	final StatisticSet sset = new StatisticSet();
+			        	sset.setSampleCount(1.0);
+			        	sset.setMaximum((double)numHealthy);
+			        	sset.setMinimum((double)numHealthy);
+			        	sset.setSum((double)numHealthy);
+			        	datum.setStatisticValues(sset);
 						datumList.add(datum);
 		        	}
 				}
-				if(this.unhealthyCountMap.containsKey(dim)){
-					int numUnhealthy = this.unhealthyCountMap.get(dim);
+				if(unhealthyCountMap.containsKey(dim)){
+					int numUnhealthy = unhealthyCountMap.get(dim);
 					if(numUnhealthy > 0){
 						MetricDatum datum = new MetricDatum();
 						datum.setDimensions(dims);
 						datum.setMetricName("UnHealthyHostCount");
 						datum.setUnit("Count");
-						datum.setValue((double)numUnhealthy);
-						datumList.add(datum);
+			        	final StatisticSet sset = new StatisticSet();
+			        	sset.setSampleCount(1.0);
+			        	sset.setMaximum((double)numUnhealthy);
+			        	sset.setMinimum((double)numUnhealthy);
+			        	sset.setSum((double)numUnhealthy);
+			        	datum.setStatisticValues(sset);
+			        	datumList.add(datum);
 					}
 				}
+	        	
 				if(datumList.size()>0)
 					data.getMember().addAll(datumList);
 				
@@ -189,8 +226,8 @@ public class LoadBalancerCwatchMetrics {
 			
 			for(ElbDimension cleanup : toCleanup){
 				this.metricsMap.remove(cleanup);
-				this.healthyCountMap.remove(cleanup);
-				this.unhealthyCountMap.remove(cleanup);
+				healthyCountMap.remove(cleanup);
+				unhealthyCountMap.remove(cleanup);
 			}
 		}
 		
@@ -270,7 +307,12 @@ public class LoadBalancerCwatchMetrics {
 	        	reqCountData.setDimensions(dims);
 	        	reqCountData.setMetricName("RequestCount");
 	        	reqCountData.setUnit("Count");
-	        	reqCountData.setValue((double)this.requestCount);
+	        	final StatisticSet sset = new StatisticSet();
+	        	sset.setSampleCount((double)this.requestCount);
+	        	sset.setMaximum(1.0);
+	        	sset.setMinimum(1.0);
+	        	sset.setSum((double)this.requestCount);
+	        	reqCountData.setStatisticValues(sset);
 	        	result.add(reqCountData);
         	}
         	if(this.httpCode_ELB_4XX>0){
@@ -278,7 +320,12 @@ public class LoadBalancerCwatchMetrics {
 	        	httpCode_ELB_4XX.setDimensions(dims);
 	        	httpCode_ELB_4XX.setMetricName("HTTPCode_ELB_4XX");
 	        	httpCode_ELB_4XX.setUnit("Count");
-	        	httpCode_ELB_4XX.setValue((double)this.httpCode_ELB_4XX);
+	        	final StatisticSet sset = new StatisticSet();
+	        	sset.setSampleCount((double)this.httpCode_ELB_4XX);
+	        	sset.setMaximum(0.0);
+	        	sset.setMinimum(0.0);
+	        	sset.setSum((double)this.httpCode_ELB_4XX);
+	        	httpCode_ELB_4XX.setStatisticValues(sset);
 	        	result.add(httpCode_ELB_4XX);
         	}
         	if(this.httpCode_ELB_5XX>0){
@@ -286,7 +333,12 @@ public class LoadBalancerCwatchMetrics {
 	        	httpCode_ELB_5XX.setDimensions(dims);
 	        	httpCode_ELB_5XX.setMetricName("HTTPCode_ELB_5XX");
 	        	httpCode_ELB_5XX.setUnit("Count");
-	        	httpCode_ELB_5XX.setValue((double)this.httpCode_ELB_5XX);
+	        	final StatisticSet sset = new StatisticSet();
+	        	sset.setSampleCount((double)this.httpCode_ELB_5XX);
+	        	sset.setMaximum(0.0);
+	        	sset.setMinimum(0.0);
+	        	sset.setSum((double)this.httpCode_ELB_5XX);
+	        	httpCode_ELB_5XX.setStatisticValues(sset);
 	        	result.add(httpCode_ELB_5XX);
         	}
         	if(this.httpCode_Backend_2XX>0){
@@ -294,7 +346,12 @@ public class LoadBalancerCwatchMetrics {
 	        	httpCode_Backend_2XX.setDimensions(dims);
 	        	httpCode_Backend_2XX.setMetricName("HTTPCode_Backend_2XX");
 	        	httpCode_Backend_2XX.setUnit("Count");
-	        	httpCode_Backend_2XX.setValue((double)this.httpCode_Backend_2XX);
+	        	final StatisticSet sset = new StatisticSet();
+	        	sset.setSampleCount((double)this.httpCode_Backend_2XX);
+	        	sset.setMaximum(0.0);
+	        	sset.setMinimum(0.0);
+	        	sset.setSum((double)this.httpCode_Backend_2XX);
+	        	httpCode_Backend_2XX.setStatisticValues(sset);
 	        	result.add(httpCode_Backend_2XX);
         	}
         	if(this.httpCode_Backend_3XX>0){
@@ -302,7 +359,12 @@ public class LoadBalancerCwatchMetrics {
 	        	httpCode_Backend_3XX.setDimensions(dims);
 	        	httpCode_Backend_3XX.setMetricName("HTTPCode_Backend_3XX");
 	        	httpCode_Backend_3XX.setUnit("Count");
-	        	httpCode_Backend_3XX.setValue((double)this.httpCode_Backend_3XX);
+	        	final StatisticSet sset = new StatisticSet();
+	        	sset.setSampleCount((double)this.httpCode_Backend_3XX);
+	        	sset.setMaximum(0.0);
+	        	sset.setMinimum(0.0);
+	        	sset.setSum((double)this.httpCode_Backend_3XX);
+	        	httpCode_Backend_3XX.setStatisticValues(sset);	        	
 	        	result.add(httpCode_Backend_3XX);
         	}
         	if(this.httpCode_Backend_4XX > 0){
@@ -310,7 +372,12 @@ public class LoadBalancerCwatchMetrics {
 	        	httpCode_Backend_4XX.setDimensions(dims);
 	        	httpCode_Backend_4XX.setMetricName("HTTPCode_Backend_4XX");
 	        	httpCode_Backend_4XX.setUnit("Count");
-	        	httpCode_Backend_4XX.setValue((double)this.httpCode_Backend_4XX);
+	        	final StatisticSet sset = new StatisticSet();
+	        	sset.setSampleCount((double)this.httpCode_Backend_4XX);
+	        	sset.setMaximum(0.0);
+	        	sset.setMinimum(0.0);
+	        	sset.setSum((double)this.httpCode_Backend_4XX);
+	        	httpCode_Backend_4XX.setStatisticValues(sset);
 	        	result.add(httpCode_Backend_4XX);
         	}
         	if(this.httpCode_Backend_5XX > 0){
@@ -318,7 +385,12 @@ public class LoadBalancerCwatchMetrics {
 	        	httpCode_Backend_5XX.setDimensions(dims);
 	        	httpCode_Backend_5XX.setMetricName("HTTPCode_Backend_5XX");
 	        	httpCode_Backend_5XX.setUnit("Count");
-	        	httpCode_Backend_5XX.setValue((double) this.httpCode_Backend_5XX);
+	        	final StatisticSet sset = new StatisticSet();
+	        	sset.setSampleCount((double)this.httpCode_Backend_5XX);
+	        	sset.setMaximum(0.0);
+	        	sset.setMinimum(0.0);
+	        	sset.setSum((double)this.httpCode_Backend_5XX);
+	        	httpCode_Backend_5XX.setStatisticValues(sset);
 	        	result.add(httpCode_Backend_5XX);
         	}
         	return result;

@@ -25,7 +25,7 @@ import com.eucalyptus.tags.FilterSupportTest
 /**
  * Unit tests for network (a.k.a. security) group filter support
  */
-class NetworkGroupFilterSupportTest extends FilterSupportTest.InstanceTest<NetworkGroup> {
+class NetworkGroupFilterSupportTest extends FilterSupportTest.InstanceTestSupport<NetworkGroup> {
   
   @Test
   void testFilteringSupport() {

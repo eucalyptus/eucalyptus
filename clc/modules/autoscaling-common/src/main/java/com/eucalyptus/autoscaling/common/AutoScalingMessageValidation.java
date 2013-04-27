@@ -100,7 +100,7 @@ class AutoScalingMessageValidation {
   static String displayName( Field field ) {
     HttpParameterMapping httpParameterMapping = Ats.from( field ).get( HttpParameterMapping.class );
     return httpParameterMapping != null ?
-        httpParameterMapping.parameter() :
+        httpParameterMapping.parameter()[0] :
         CaseFormat.LOWER_CAMEL.to( CaseFormat.UPPER_CAMEL, field.getName() );
   }
 

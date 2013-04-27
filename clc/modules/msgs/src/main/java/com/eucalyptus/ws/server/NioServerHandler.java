@@ -63,10 +63,13 @@
 package com.eucalyptus.ws.server;
 
 import static com.eucalyptus.component.ComponentId.ComponentPart;
+import java.io.ByteArrayOutputStream;
 import java.util.concurrent.Callable;
 import java.util.concurrent.atomic.AtomicReference;
 import javax.security.auth.login.LoginException;
+import org.apache.axiom.soap.SOAPEnvelope;
 import org.apache.log4j.Logger;
+import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.buffer.ChannelBuffers;
 import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelFuture;
@@ -88,6 +91,7 @@ import org.jboss.netty.handler.codec.http.HttpVersion;
 import org.jboss.netty.handler.timeout.ReadTimeoutException;
 import org.jboss.netty.handler.timeout.WriteTimeoutException;
 import com.eucalyptus.binding.Binding;
+import com.eucalyptus.binding.HoldMe;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.http.MappingHttpMessage;
 import com.eucalyptus.http.MappingHttpRequest;
@@ -96,6 +100,9 @@ import com.eucalyptus.system.Ats;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.ws.Handlers;
 import com.eucalyptus.ws.WebServicesException;
+import com.eucalyptus.ws.server.FilteredPipeline.InternalPipeline;
+import com.eucalyptus.ws.handlers.SoapMarshallingHandler;
+import com.google.common.base.Optional;
 
 @ChannelPipelineCoverage( "one" )
 public class NioServerHandler extends SimpleChannelUpstreamHandler {//TODO:GRZE: this needs to move up dependency tree.
@@ -150,6 +157,9 @@ public class NioServerHandler extends SimpleChannelUpstreamHandler {//TODO:GRZE:
       final FilteredPipeline filteredPipeline = Pipelines.find( request );
       if ( this.pipeline.compareAndSet( null, filteredPipeline ) ) {
         this.pipeline.get( ).unroll( ctx.getPipeline( ) );
+        if ( filteredPipeline instanceof InternalPipeline ) {
+          Handlers.addInternalSystemHandlers( ctx.getPipeline( ) );
+        }
         final Ats ats = Ats.inClassHierarchy( filteredPipeline );
         Handlers.addComponentHandlers(
             ats.has(ComponentPart.class) ? ats.get(ComponentPart.class).value() : null,
@@ -196,15 +206,50 @@ public class NioServerHandler extends SimpleChannelUpstreamHandler {//TODO:GRZE:
     }
   }
   
-  private void sendError( final ChannelHandlerContext ctx, final HttpResponseStatus status, Throwable t ) {
+  private void sendError( final ChannelHandlerContext ctx, final HttpResponseStatus restStatus, Throwable t ) {
     Logs.exhaust( ).error( t, t );
+
+    HttpResponseStatus status = restStatus;
+    ChannelBuffer buffer = null;
+    Optional<String> contentType = Optional.absent();
+    if ( ctx.getPipeline().get( SoapMarshallingHandler.class ) != null ) {
+      final SOAPEnvelope soapEnvelope = Binding.createFault(
+          status.getCode()<500 ? "soapenv:Client" : "soapenv:Server",
+          t.getMessage(),
+          Logs.isExtrrreeeme() ?
+            Exceptions.string( t ) :
+            t.getMessage() );
+      try {
+        final ByteArrayOutputStream byteOut = new ByteArrayOutputStream( );
+        HoldMe.canHas.lock( );
+        try {
+          soapEnvelope.serialize( byteOut );
+        } finally {
+          HoldMe.canHas.unlock( );
+        }
+        status = HttpResponseStatus.INTERNAL_SERVER_ERROR;
+        buffer = ChannelBuffers.wrappedBuffer( byteOut.toByteArray( ) );
+        contentType = Optional.of( "text/xml; charset=UTF-8" );
+      } catch ( Exception e ) {
+        Logs.exhaust().error( e, e );
+      }
+    }
+
+    if ( buffer == null ) {
+      buffer = ChannelBuffers.copiedBuffer( Binding.createRestFault( status.toString(), t.getMessage(), Logs.isExtrrreeeme()
+          ? Exceptions.string( t )
+          : t.getMessage() ), "UTF-8" );
+
+    }
+
     final HttpResponse response = new DefaultHttpResponse( HttpVersion.HTTP_1_1, status );
-    response.setHeader( HttpHeaders.Names.CONTENT_TYPE, "text/plain; charset=UTF-8" );
-    response.setContent( ChannelBuffers.copiedBuffer( Binding.createRestFault( status.toString( ), t.getMessage( ), Logs.isExtrrreeeme( )
-                                                                                 ? Exceptions.string( t )
-                                                                                 : t.getMessage( ) ), "UTF-8" ) );
+    response.addHeader( HttpHeaders.Names.CONTENT_TYPE, contentType.or( "text/plain; charset=UTF-8" ) );
+    response.addHeader( HttpHeaders.Names.CONTENT_LENGTH, String.valueOf( buffer.readableBytes( ) ) );
+    response.setContent( buffer );
+
     ChannelFuture writeFuture = Channels.future( ctx.getChannel( ) );
     writeFuture.addListener( ChannelFutureListener.CLOSE );
+    response.addHeader( HttpHeaders.Names.CONNECTION, HttpHeaders.Values.CLOSE );
     if ( ctx.getChannel( ).isConnected( ) ) {
       Channels.write( ctx, writeFuture, response );
     }

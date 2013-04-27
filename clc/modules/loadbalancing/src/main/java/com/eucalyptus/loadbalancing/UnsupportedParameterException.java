@@ -17,29 +17,16 @@
  * CA 93117, USA or visit http://www.eucalyptus.com/licenses/ if you need
  * additional information or have any questions.
  ************************************************************************/
-package com.eucalyptus.tags
+package com.eucalyptus.loadbalancing;
+import com.eucalyptus.ws.protocol.QueryBindingInfo;
 
-/**
- * 
- */
-class TagSupportTest {
-  
-  void assertValidTagSupport( final TagSupport tagSupport,
-                              final Class<? extends Tag> tagClass ) {
-    tagSupport.resourceClass
-    tagSupport.resourceClassIdField
-    tagSupport.tagClassResourceField
-
-    assertValidField( "Resource ID for resource class matching", tagSupport.resourceClass, tagSupport.resourceClassIdField, String.class )
-    assertValidField( "Resource reference for tag matching", tagClass, tagSupport.tagClassResourceField, tagSupport.resourceClass )
-  }
-  
-  private void assertValidField( final String description,
-                                 final Class clazz,
-                                 final String field,
-                                 final Class type ) {
-    org.junit.Assert.assertNotNull( 
-        description + ": " + field, 
-        org.springframework.util.ReflectionUtils.findField( clazz, field, type ) )    
-  }
+@QueryBindingInfo( statusCode = 400 )
+public class UnsupportedParameterException extends LoadBalancingException{
+	private static final long serialVersionUID = 1L;
+	public UnsupportedParameterException(){
+		super("The supplied parameters are not supported");
+	}
+	public UnsupportedParameterException(final String msg){
+		super(msg);
+	}
 }

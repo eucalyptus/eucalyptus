@@ -376,7 +376,6 @@ public class VmRuntimeState {
       {
         this.getTagSet( ).add( new ResourceTag( VM_NC_HOST_TAG, host ) );
         this.getResourcesSet( ).add( vm.getInstanceId( ) );
-        this.setEffectiveUserId( vm.getOwnerUserId( ) );//GRZE:TODO: update impersonation impl later.
       }
     };
     try {

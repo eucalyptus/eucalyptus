@@ -497,7 +497,7 @@ public class VolumeManager {
     } catch ( NoSuchElementException ex ) {
       /** no such attachment **/
     }
-    if ( MigrationState.isMigrating( vm ) ) {
+    if ( vm != null && MigrationState.isMigrating( vm ) ) {
       throw Exceptions.toUndeclared( "Cannot detach a volume from an instance which is currently migrating: "
                                      + vm.getInstanceId( )
                                      + " "
