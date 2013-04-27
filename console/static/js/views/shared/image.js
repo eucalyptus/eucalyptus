@@ -9,7 +9,7 @@ define([
   './model/blockmap'
 	], function( _, Backbone, app, dataholder, template, rivets, imageSearch, BlockMap ) {
 	return Backbone.View.extend({
-            title: 'Image',
+            title: app.msg('launch_instance_section_header_image'),
             count: 0,
             image_selected: null,
 

@@ -6,7 +6,7 @@ define([
 	], function( app, dataholder, template, rivets ) {
   return Backbone.View.extend({
     tpl: template,
-    title: 'Type',
+    title: app.msg("launch_instance_section_header_type"),
 
     initialize : function() {
 

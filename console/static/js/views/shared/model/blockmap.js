@@ -1,4 +1,4 @@
-define([], function() {
+define(['app'], function(app) {
   return Backbone.Model.extend({
      device_name: "/dev/sda1",
      status: null, 
@@ -22,7 +22,7 @@ define([], function() {
         required: true,
         pattern: 'number',
         min: 1,
-        msg: 'The volume size must be a positive number.'
+        msg: app.msg("launch_instance_error_volume_size_number")
       }
     },
 
