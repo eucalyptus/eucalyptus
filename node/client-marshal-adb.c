@@ -1464,8 +1464,9 @@ int ncMigrateInstancesStub(ncStub * pStub, ncMetadata * pMeta, ncInstance ** ins
             LOGERROR("returned an error\n");
             status = 1;
         }
-        pMeta->replyString = strdup(adb_ncMigrateInstancesResponseType_get_statusMessage(response, env));
-        // no output other than success/failure
+        char * statusMessage = adb_ncMigrateInstancesResponseType_get_statusMessage(response, env);
+        if (statusMessage != NULL)
+            pMeta->replyString = strdup(statusMessage);
     }
 
     return (status);

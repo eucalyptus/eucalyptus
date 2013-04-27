@@ -857,9 +857,9 @@ int ncClientCall(ncMetadata * pMeta, int timeout, int ncLock, char *ncURL, char 
                 if (localmeta->replyString) {
                     len = strlen(localmeta->replyString);
                 }
-                write(filedes[1], &len, sizeof(int));
+                int bytes = write(filedes[1], &len, sizeof(int));
                 if (len > 0) {
-                    write(filedes[1], localmeta->replyString, sizeof(char) * len);
+                    bytes += write(filedes[1], localmeta->replyString, sizeof(char) * len);
                 }
             }
         } else {
@@ -1169,6 +1169,7 @@ int ncClientCall(ncMetadata * pMeta, int timeout, int ncLock, char *ncURL, char 
             }
         } else if (!strcmp(ncOp, "ncMigrateInstances")) {
             if (timeout) {
+                int len = 0;
                 rbytes = timeread(filedes[0], &len, sizeof(int), timeout);
                 if (rbytes <= 0) {
                     killwait(pid);
@@ -1193,7 +1194,12 @@ int ncClientCall(ncMetadata * pMeta, int timeout, int ncLock, char *ncURL, char 
         close(filedes[0]);
         if (timeout) {
             rc = timewait(pid, &status, timeout);
-            rc = WEXITSTATUS(status);
+            if (WIFEXITED(status)) {
+                rc = WEXITSTATUS(status);
+            } else {
+                LOGERROR("BUG: child process for making '%s' request did not exit cleanly\n", ncOp);
+                rc = 1;
+            }
         } else {
             rc = 0;
         }
