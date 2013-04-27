@@ -670,6 +670,9 @@ static int doMigrateInstances(struct nc_state_t *nc, ncMetadata * pMeta, ncInsta
     int ret = EUCA_OK;
     int credentials_prepared = 0;
 
+    pMeta->replyString = strdup("NC just felt like failing the request");
+    return (EUCA_ERROR);
+
     if (instancesLen <= 0) {
         LOGERROR("called with invalid instancesLen (%d)\n", instancesLen);
         return (EUCA_INVALID_ERROR);

@@ -1414,6 +1414,7 @@ adb_ncMigrateInstancesResponse_t *ncMigrateInstancesMarshal(adb_ncMigrateInstanc
         eventlog("NC", userId, correlationId, "MigrateInstances", "begin");
 
         // do it
+        bzero((void *)&meta, sizeof(meta));
         meta.correlationId = correlationId;
         meta.userId = userId;
         meta.nodeName = nodeName;
@@ -1423,6 +1424,10 @@ adb_ncMigrateInstancesResponse_t *ncMigrateInstancesMarshal(adb_ncMigrateInstanc
             LOGERROR("failed error=%d\n", error);
 mi_error:
             adb_ncMigrateInstancesResponseType_set_return(output, env, AXIS2_FALSE);
+            if (meta.replyString != NULL) {
+                adb_ncMigrateInstancesResponseType_set_statusMessage(output, env, meta.replyString);
+                EUCA_FREE(meta.replyString);
+            }
         } else {
             // set standard fields in output
             adb_ncMigrateInstancesResponseType_set_return(output, env, AXIS2_TRUE);

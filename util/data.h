@@ -248,6 +248,7 @@ typedef struct ncMetadata_t {
     int servicesLen;                   //!< Number of available services in the available list (a value of -1 indicates an error with the services)
     int disabledServicesLen;           //!< Number of disabled services in the disabled list (a value of -1 indicates an error with the services)
     int notreadyServicesLen;           //!< Number of unavailable services in the not ready list (a value of -1 indicates an error with the services)
+    char *replyString;                 //!< If set, can be used to propagate error messages from handlers to marshalling code (and to the user)
 } ncMetadata;
 
 //! Structure defining the virtual boot record
