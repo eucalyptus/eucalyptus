@@ -1390,6 +1390,10 @@
       thisObj.launchParam[key] = val;
     },
 
+    setTags : function(tags) {
+      this.tags = tags;
+    },
+
     launch : function(){
       var thisObj = this;
       var param = thisObj.launchParam;
@@ -1474,6 +1478,22 @@
             $container.maincontainer("clearSelected");
             $container.maincontainer("changeSelected",null, {selected:'instance'});
             $container.instance('glowNewInstance', inst_ids);
+            // if tag set saved, process that now.
+            if (thisObj.tags) {
+              // save a set of tags for each instance in inst_ids.
+              _.each(inst_ids, function(id) {
+                var tags = thisObj.tags.clone();
+                _.each(tags, function(t_id) {
+                  var tag = tags.get(t_id);
+                  console.log('saving tag named : '+tag.get('name')+' for resource:'+id);
+                  tag.set('res_id', id);
+                  tag.save(); // save tags individually (less efficient)
+                });
+                delete tags;
+              });
+              // don't keep these around now that we've saved them.
+              thisObj.tags = null;
+            }
           } else {
             // XSS Note:: No need to encode "undefined_error" since it is a static string from the file "messages.properties" - Kyo
             notifyError($.i18n.prop('instance_run_error'), undefined_error);
