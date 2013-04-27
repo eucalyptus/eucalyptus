@@ -852,6 +852,16 @@ int ncClientCall(ncMetadata * pMeta, int timeout, int ncLock, char *ncURL, char 
             char *action = va_arg(al, char *);
             char *credentials = va_arg(al, char *);
             rc = ncMigrateInstancesStub(ncs, localmeta, instances, instancesLen, action, credentials);
+            if (timeout) {
+                int len = 0;
+                if (localmeta->replyString) {
+                    len = strlen(localmeta->replyString);
+                }
+                write(filedes[1], &len, sizeof(int));
+                if (len > 0) {
+                    write(filedes[1], localmeta->replyString, sizeof(char) * len);
+                }
+            }
         } else {
             LOGWARN("\tncOps=%s ppid=%d operation '%s' not found\n", ncOp, getppid(), ncOp);
             rc = 1;
@@ -1154,6 +1164,25 @@ int ncClientCall(ncMetadata * pMeta, int timeout, int ncLock, char *ncURL, char 
                         }
                         rbytes = timeread(filedes[0], sr, sizeof(sensorResource), timeout);
                         (*srs)[i] = sr;
+                    }
+                }
+            }
+        } else if (!strcmp(ncOp, "ncMigrateInstances")) {
+            if (timeout) {
+                rbytes = timeread(filedes[0], &len, sizeof(int), timeout);
+                if (rbytes <= 0) {
+                    killwait(pid);
+                    opFail = 1;
+                } else if (len > 0) {
+                    pMeta->replyString = EUCA_ALLOC(len, sizeof(char));
+                    if (pMeta->replyString == NULL) {
+                        LOGFATAL("out of memory! ncOps=%s\n", ncOp);
+                        unlock_exit(1);
+                    }
+                    rbytes = timeread(filedes[0], pMeta->replyString, len, timeout);
+                    if (rbytes <= 0) {
+                        killwait(pid);
+                        opFail = 1;
                     }
                 }
             }
