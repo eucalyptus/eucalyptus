@@ -2013,10 +2013,14 @@ adb_MigrateInstancesResponse_t *MigrateInstancesMarshal(adb_MigrateInstances_t *
             snprintf(statusMessage, 255, "ERROR");
         }
     }
+    if (ccMeta.replyString != NULL) { // if replyString is set, we have a more detailed status/error message
+        snprintf(statusMessage, sizeof(statusMessage), ccMeta.replyString);
+        EUCA_FREE(ccMeta.replyString); // the caller must free
+    }
 
     mirt = adb_migrateInstancesResponseType_create(env);
     adb_migrateInstancesResponseType_set_return(mirt, env, status);
-    if (status == AXIS2_FALSE) {
+    if (strlen(statusMessage) > 0) {
         adb_migrateInstancesResponseType_set_statusMessage(mirt, env, statusMessage);
     }
 
