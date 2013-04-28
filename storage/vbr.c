@@ -1792,7 +1792,7 @@ static char *url_get_digest(const char *url)
 static artifact *art_alloc_vbr(virtualBootRecord * vbr, boolean do_make_work_copy, boolean is_migration_dest, boolean must_be_file, const char *sshkey)
 {
     artifact *a = NULL;
-    char *blob_sig = NULL;
+    char *blob_digest = NULL;
 
     switch (vbr->locationType) {
     case NC_LOCATION_CLC:
@@ -1803,36 +1803,36 @@ static artifact *art_alloc_vbr(virtualBootRecord * vbr, boolean do_make_work_cop
             // get the digest for size and signature
             char manifestURL[MAX_PATH];
             snprintf(manifestURL, MAX_PATH, "%s.manifest.xml", vbr->preparedResourceLocation);
-            blob_sig = url_get_digest(manifestURL);
-            if (blob_sig == NULL)
+            blob_digest = url_get_digest(manifestURL);
+            if (blob_digest == NULL)
                 goto u_out;
 
             // extract size from the digest
-            long long bb_size_bytes = euca_strtoll(blob_sig, "<size>", "</size>");  // pull size from the digest
+            long long bb_size_bytes = euca_strtoll(blob_digest, "<size>", "</size>");  // pull size from the digest
             if (bb_size_bytes < 1)
                 goto u_out;
             vbr->sizeBytes = bb_size_bytes; // record size in VBR now that we know it
 
             // generate ID of the artifact (append -##### hash of sig)
             char art_id[48];
-            if (art_gen_id(art_id, sizeof(art_id), vbr->id, blob_sig) != EUCA_OK)
+            if (art_gen_id(art_id, sizeof(art_id), vbr->id, blob_digest) != EUCA_OK)
                 goto u_out;
 
             // allocate artifact struct
-            a = art_alloc(art_id, blob_sig, bb_size_bytes, !is_migration_dest, must_be_file, FALSE, url_creator, vbr);
+            a = art_alloc(art_id, art_id, bb_size_bytes, !is_migration_dest, must_be_file, FALSE, url_creator, vbr);
 
 u_out:
-            EUCA_FREE(blob_sig);
+            EUCA_FREE(blob_digest);
             break;
         }
     case NC_LOCATION_WALRUS:{
             // get the digest for size and signature
-            if ((blob_sig = walrus_get_digest(vbr->preparedResourceLocation)) == NULL) {
+            if ((blob_digest = walrus_get_digest(vbr->preparedResourceLocation)) == NULL) {
                 LOGERROR("[%s] failed to obtain image digest from  Walrus\n", current_instanceId);
                 goto w_out;
             }
             // extract size from the digest
-            long long bb_size_bytes = euca_strtoll(blob_sig, "<size>", "</size>");  // pull size from the digest
+            long long bb_size_bytes = euca_strtoll(blob_digest, "<size>", "</size>");  // pull size from the digest
             if (bb_size_bytes < 1) {
                 LOGERROR("[%s] incorrect image digest or error returned from Walrus\n", current_instanceId);
                 goto w_out;
@@ -1841,15 +1841,15 @@ u_out:
 
             // generate ID of the artifact (append -##### hash of sig)
             char art_id[48];
-            if (art_gen_id(art_id, sizeof(art_id), vbr->id, blob_sig) != EUCA_OK) {
+            if (art_gen_id(art_id, sizeof(art_id), vbr->id, blob_digest) != EUCA_OK) {
                 LOGERROR("[%s] failed to generate artifact id\n", current_instanceId);
                 goto w_out;
             }
             // allocate artifact struct
-            a = art_alloc(art_id, blob_sig, bb_size_bytes, !is_migration_dest, must_be_file, FALSE, walrus_creator, vbr);
+            a = art_alloc(art_id, art_id, bb_size_bytes, !is_migration_dest, must_be_file, FALSE, walrus_creator, vbr);
 
 w_out:
-            EUCA_FREE(blob_sig);
+            EUCA_FREE(blob_digest);
             break;
         }
 
