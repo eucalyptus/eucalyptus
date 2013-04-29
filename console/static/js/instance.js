@@ -457,7 +457,7 @@
        menuItems['detach'] = {"name":instance_action_detach, callback: function(key, opt) { ; }, disabled: function(){ return true; }};
        menuItems['associate'] = {"name":instance_action_associate, callback: function(key, opt){; }, disabled: function(){ return true; }};
        menuItems['disassociate'] = {"name":instance_action_disassociate, callback: function(key, opt){;}, disabled: function(){ return true; }};
-       menuItems['tag'] = {"name":'Tag Resource', callback: function(key, opt){;}, disabled: function(){ return true; }};
+       menuItems['tag'] = {"name":table_menu_edit_tags_action, callback: function(key, opt){;}, disabled: function(){ return true; }};
      })();
 
      if(numSelected === 1 && 'running' in stateMap && $.inArray(instIds[0], stateMap['running']>=0)){
@@ -526,7 +526,7 @@
      }
 
      if(numSelected == 1){
-       menuItems['tag'] = {"name":'Tag Resource', callback: function(key, opt){ thisObj._tagResourceAction(); }}
+       menuItems['tag'] = {"name":table_menu_edit_tags_action, callback: function(key, opt){ thisObj._tagResourceAction(); }}
      }
   
      return menuItems;
