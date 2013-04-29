@@ -233,11 +233,11 @@ launch_instance_image_table_platform_linux, launch_instance_image_table_platform
       var itemsList = {};
 
       (function(){
-        itemsList['tag'] = {"name":'Tag Resource', callback: function(key, opt) {;}, disabled: function(){ return true;} }
+        itemsList['tag'] = {"name":table_menu_edit_tags_action, callback: function(key, opt) {;}, disabled: function(){ return true;} }
       })();
 
       if ( images.length === 1) {
-        itemsList['tag'] = {"name":'Tag Resource', callback: function(key, opt){ thisObj._tagResourceAction(); }}
+        itemsList['tag'] = {"name":table_menu_edit_tags_action, callback: function(key, opt){ thisObj._tagResourceAction(); }}
       };
 
       return itemsList;

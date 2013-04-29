@@ -524,6 +524,13 @@
           source: sorted,
           select: function() { thisObj.associateDialog.eucadialog('activateButton', thisObj.associateBtnId); }
         });
+        $selector.change(function() {
+            if ($selector.val() != '') {
+                thisObj.associateDialog.eucadialog('activateButton', thisObj.associateBtnId);
+            } else {
+                $selector.watermark(address_watermark);
+            }
+        });
         $selector.watermark(address_watermark);
       }
       dfd.resolve();

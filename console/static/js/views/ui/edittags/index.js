@@ -25,7 +25,7 @@ define([
             var tags = new Backbone.Collection();
 
             var loadTags = function() {
-                tags.set(args.model.get('tags').models);
+                tags.set(args.model.get('tags').filter(function(t) { return !/^euca:/.test(t.get('name')); }));
                 tags.each(function(t) {
                     t.set({_clean: true, _deleted: false, _edited: false, _edit: false, _new: false});
                 });
@@ -43,10 +43,12 @@ define([
                        t.save();
                    }
                    if (t.get('_deleted')) {
-                       t.destroy();
+                       // STRANGE CASE: CANNOT USE .DESTORY(); IT SKIPS THE NEXT TAG IN THE LOOP   --- KYO 042613
+//                       t.destroy();
+                       t.sync('delete', t);
                    }
                    if (t.get('_edited')) {
-                       t.save();
+                       t.sync('create', t);
                    }
                 });
                 model.get('tags').set(tags.models);
@@ -59,10 +61,12 @@ define([
 
             var backup = new Backbone.Collection();
 
+            var newtag_holder = new Backbone.Collection();
+
             this.scope = {
                 newtag: new Tag(),
 
-                tags: tags, 
+                tags: tags,
 
                 status: '',
 
@@ -84,15 +88,45 @@ define([
                     backup.add(scope.tag.toJSON());
                     scope.tag.set('_state','edit');
                     scope.tag.set({_clean: false, _deleted: false, _edited: false, _edit: true});
+                    
+                    // ID HAS TO BE ALTERED IN ORDER TO PREVENT FORCED REFRESH   --- KYO 042813
+                    var tagID = scope.tag.get('id');
+                    scope.tag.set('original_id', tagID);   // PRESERVE THE ORIGINAL ID
+                    scope.tag.set('id', 'in_edit');        // ALTER THE ID
                 },
 
                 confirm: function(element, scope) {
-                    console.log('edit');
-                    scope.tag.set({_clean: false, _deleted: false, _edited: true, _edit: false});
+                    // ADDED TO ALLOW KEY MODIFICATION   --- KYO 042613
+                    var origTag = backup.get(scope.tag.get('original_id'));
+
+                    if( scope.tag.get('name') != origTag.get('name') ){
+                      // ===================
+                      // CASE OF NAME CHANGE
+                      // ===================
+
+                      // CREATE A NEW TAG WITH THE NEW KEY
+                      var newName = scope.tag.get('name');
+                      var newValue = scope.tag.get('value');
+                      var newTag = new Tag({res_id: model.get('id'), name: newName, value: newValue});
+                      newTag.set({_clean: true, _deleted: false, _edited: false, _edit: false, _new: true});
+                      tags.add(newTag);
+
+                      // DELETE THE ORIGINAL TAG
+                      var origName = origTag.get('name');
+                      var origValue = origTag.get('value');
+                      scope.tag.set({name: origName, value: origValue});   // REVERT TO THE ORIGINAL NAME AND VALUE
+                      scope.tag.set({_clean: false, _deleted: true, _edited: false, _edit: false});
+                    }else{
+                      // ====================
+                      // CASE OF VALUE CHANGE
+                      // ====================
+                      scope.tag.set({_clean: false, _deleted: false, _edited: true, _edit: false});
+                    }
+                    self.render();
                 },
 
                 restore: function(element, scope) {
-                    console.log('edit');
+                    console.log('restore');
                     scope.tag.set('value', backup.where({id: scope.tag.get('id')})[0].get('value'));
                     scope.tag.set({_clean: true, _deleted: false, _edited: false, _edit: false});
                 },
@@ -105,13 +139,13 @@ define([
                 },
             } // end of scope
 
-			this.$el.html(template);
-			this.rview = rivets.bind(this.$el, this.scope);
-			this.render(this.scope);
+            this.$el.html(template);
+            this.rview = rivets.bind(this.$el, this.scope);
+            this.render(this.scope);
         },
-		render : function() {
-            this.rview.sync();
-			return this;
-		}
-	});
+        render : function() {
+          this.rview.sync();
+          return this;
+        }
+    });
 });
