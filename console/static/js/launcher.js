@@ -1482,10 +1482,13 @@
             if (thisObj.tags) {
               // save a set of tags for each instance in inst_ids.
               _.each(inst_ids, function(id) {
+                var tagSet = thisObj.tags;
+                //console.log("tag set = "+JSON.stringify(tagSet));
                 var tags = thisObj.tags.clone();
+                //console.log("tag set2 = "+JSON.stringify(tags));
                 _.each(tags, function(t_id) {
                   var tag = tags.get(t_id);
-                  console.log('saving tag named : '+tag.get('name')+' for resource:'+id);
+                  //console.log('saving tag named : '+tag.get('name')+' for resource:'+id);
                   tag.set('res_id', id);
                   tag.save(); // save tags individually (less efficient)
                 });

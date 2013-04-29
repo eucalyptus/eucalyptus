@@ -1073,7 +1073,9 @@
         sgroup = sgroup.val();  
       
       // good time to save those tags
-      $('html body').find(DOM_BINDING['hidden']).launcher('setTags', thisObj.launchMoreDialog.rscope.model);
+      var tags = thisObj.launchMoreDialog.rscope.model.get('tags');
+      //console.log("tags on the model : "+JSON.stringify(tags));
+      $('html body').find(DOM_BINDING['hidden']).launcher('setTags', tags);
 
       $('html body').find(DOM_BINDING['hidden']).launcher('updateLaunchParam', 'emi', emi);
       $('html body').find(DOM_BINDING['hidden']).launcher('updateLaunchParam', 'type', type);
@@ -1146,15 +1148,14 @@
             model: new Instance()
           }
 
-          app.data.instance.get(id).get('tags').each(function(t) {
-            // copy tags, but exclude Name as well as aws and euca namespaces
+          //console.log("tags from clone : "+JSON.stringify(app.data.instance.get(id).get('tags').clone()));
+          var tagSet = app.data.instance.get(id).get('tags').clone(clean=true, exclude=function(t) {
             var name = t.get('name');
-            if (name != 'Name' && name.substr(0, 4) != 'euca' && name.substr(0, 3) != 'aws') {
-              var tag = t.clone();
-              tag.set('id', null);
-              thisObj.launchMoreDialog.rscope.model.get('tags').add(tag);
-            }
+            return (name == 'Name' || name.substr(0, 4) == 'euca' || name.substr(0, 3) == 'aws');
           });
+          thisObj.launchMoreDialog.rscope.model.set('tags', tagSet);
+          var tags = thisObj.launchMoreDialog.rscope.model.get('tags');
+          //console.log("tags on the model : "+JSON.stringify(tags));
 
           thisObj.launchMoreDialog.rview = thisObj.launchMoreDialog.rivets.bind(tagdiv, thisObj.launchMoreDialog.rscope);
       });
