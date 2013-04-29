@@ -6,7 +6,7 @@ alert = function() {
 };
 
 require.config({
-        baseUrl: 'js',
+        baseUrl: '../js',
         paths: {
 		'underscore': '../lib/underscore-1.4.3',
 		'backbone': '../lib/backbone-1.0',
@@ -14,6 +14,9 @@ require.config({
         'visualsearch' : '../lib/visualsearch',
         'rivets' : '../lib/rivets',
         'rivetsbase' : '../lib/rivetsbase',
+        'text' : '../lib/text',
+        'order' : '../lib/order',
+        'domReady' : '../lib/domReady',
         },
         shim: {
                 underscore : {
