@@ -97,6 +97,7 @@ import com.eucalyptus.network.NetworkGroup;
 import com.eucalyptus.network.NetworkGroups;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.RestrictedTypes;
+import com.eucalyptus.vm.VmInstances;
 import com.eucalyptus.vmtypes.VmType;
 import com.eucalyptus.vmtypes.VmTypes;
 import com.google.common.base.Function;
@@ -127,7 +128,7 @@ public class VerifyMetadata {
   private static final ArrayList<? extends MetadataVerifier> verifiers = Lists.newArrayList( VmTypeVerifier.INSTANCE, PartitionVerifier.INSTANCE,
                                                                                                 ImageVerifier.INSTANCE, KeyPairVerifier.INSTANCE,
                                                                                                 NetworkGroupVerifier.INSTANCE, 
-                                                                                                BlockDeviceMapVerifier.INSTANCE );
+                                                                                                BlockDeviceMapVerifier.INSTANCE, UserDataVerifier.INSTANCE );
   
   private enum AsPredicate implements Function<MetadataVerifier, Predicate<Allocation>> {
     INSTANCE;
@@ -370,5 +371,16 @@ public class VerifyMetadata {
       return true;
     }
   }
+  enum UserDataVerifier implements MetadataVerifier {
+    INSTANCE;
   
+    @Override
+    public boolean apply( Allocation allocInfo ) throws MetadataException {
+     byte[] userData = allocInfo.getUserData();
+      if (userData != null && userData.length > Integer.parseInt(VmInstances.USER_DATA_MAX_SIZE_KB) * 1024) {
+        throw new InvalidMetadataException("User metadata may not exceed " + VmInstances.USER_DATA_MAX_SIZE_KB + " KB");
+      }
+      return true;
+    }
+  }
 }

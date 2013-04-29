@@ -237,6 +237,48 @@ public class VmInstances {
     
   }
   
+  public static class UserDataMaxSizeChangeListener implements PropertyChangeListener {
+    /**
+     * @see com.eucalyptus.configurable.PropertyChangeListener#fireChange(com.eucalyptus.configurable.ConfigurableProperty,
+     *      java.lang.Object)
+     */
+    @Override
+    public void fireChange(final ConfigurableProperty t, final Object newValue)
+        throws ConfigurablePropertyException {
+      LOG.info("in fire change");
+      int maxSizeKB = -1;
+      try {
+        if (newValue == null) {
+          throw new NullPointerException("newValue");
+        } else if (newValue instanceof String) {
+          maxSizeKB = Integer.parseInt((String) newValue);
+        } else if (newValue instanceof Integer) {
+          maxSizeKB = (Integer) newValue;
+        } else {
+          throw new ClassCastException("Expecting Integer or String for value, got " + newValue.getClass());
+        }
+      } catch (Exception ex) {
+        throw new ConfigurablePropertyException("Invalid value " + newValue);
+      }
+      if (maxSizeKB <=0 || maxSizeKB > ABSOLUTE_USER_DATA_MAX_SIZE_KB) {
+        throw new ConfigurablePropertyException("Invalid value " + newValue + ", must be between 1 and " + ABSOLUTE_USER_DATA_MAX_SIZE_KB);
+      }
+      try {
+        t.getField().set(null, t.getTypeParser().apply(newValue));
+      } catch (IllegalArgumentException e1) {
+        e1.printStackTrace();
+        throw new ConfigurablePropertyException(e1);
+      } catch (IllegalAccessException e1) {
+        e1.printStackTrace();
+        throw new ConfigurablePropertyException(e1);
+      }
+    }
+  }
+  @ConfigurableField( description = "Max length (in KB) that the user data file can be for an instance (after base 64 decoding) " ,
+      initial = "16" , changeListener = UserDataMaxSizeChangeListener.class )
+  public static String USER_DATA_MAX_SIZE_KB = "16";
+  public static final Integer ABSOLUTE_USER_DATA_MAX_SIZE_KB = 64; // This may need to be related to chunk size in the future
+
   @ConfigurableField( description = "Number of times to retry transactions in the face of potential concurrent update conflicts.",
                       initial = "10" )
   public static final int TX_RETRIES                    = 10;
