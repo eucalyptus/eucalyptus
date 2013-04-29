@@ -39,17 +39,17 @@
     <mapping class="edu.ucsb.eucalyptus.msgs.ReservationInfoType" abstract="true">
         <value name="reservationId" field="reservationId" usage="required" />
         <value name="ownerId" field="ownerId" usage="required" />
-        <collection name="groupSet" field="groupSet" factory="org.jibx.runtime.Utility.arrayListFactory"
-                    item-type="java.lang.String">
-            <structure name="item">
-                <value name="groupId" />
-            </structure>
+        <collection name="groupSet" field="groupSet" usage="required" factory="org.jibx.runtime.Utility.arrayListFactory">
+          <structure name="item"  map-as="edu.ucsb.eucalyptus.msgs.GroupItemType"/>
         </collection>
         <collection name="instancesSet" field="instancesSet" usage="required" factory="org.jibx.runtime.Utility.arrayListFactory">
             <structure name="item" map-as="edu.ucsb.eucalyptus.msgs.RunningInstancesItemType" />
         </collection>
     </mapping>
-
+    <mapping class="edu.ucsb.eucalyptus.msgs.GroupItemType" abstract="true">
+        <value name="groupId" field="groupId" usage="required"/>
+        <value name="groupName" field="groupName" usage="required"/>
+    </mapping>
     <mapping class="edu.ucsb.eucalyptus.msgs.TerminateInstancesItemType" abstract="true">
         <value name="instanceId" field="instanceId" usage="required" />
         <structure name="currentState">

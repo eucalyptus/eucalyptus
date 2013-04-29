@@ -75,6 +75,7 @@ import java.util.NavigableSet;
 import java.util.NoSuchElementException;
 import java.util.Set;
 import java.util.TreeSet;
+import java.util.TreeMap;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
@@ -1436,6 +1437,18 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
     } ) );
   }
 
+  public TreeMap<String,String> getNetworkMap( ) { //A map that contains the security group name and id
+
+    TreeMap<String,String> networkGroupMap = Maps.newTreeMap();
+
+    for (NetworkGroup networkGroup : this.getNetworkGroups( ) ) {
+      networkGroupMap.put(networkGroup.getGroupId(), networkGroup.getDisplayName());
+    }
+
+    return networkGroupMap;
+  }
+
+
   public boolean isUsePrivateAddressing() {
     // allow for null value
     return Boolean.TRUE.equals( this.getNetworkConfig( ).getUsePrivateAddressing( ) );
@@ -2155,10 +2168,11 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
 
     @Override
     public ReservationInfoType apply( final VmInstance instance ) {
+
       return new ReservationInfoType(
           instance.getReservationId( ),
           instance.getOwner( ).getAccountNumber( ),
-          instance.getNetworkNames( ) );
+          instance.getNetworkGroups());
     }
   }
 

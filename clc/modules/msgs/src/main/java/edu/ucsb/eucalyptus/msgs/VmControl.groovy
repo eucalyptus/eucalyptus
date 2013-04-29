@@ -221,7 +221,7 @@ public class RunInstancesType extends VmControlMessage {
   int maxCount;
   String keyName;
   ArrayList<String> instanceIds = new ArrayList<String>();
-  @HttpParameterMapping (parameter = "SecurityGroup")
+  @HttpParameterMapping (parameter = ["SecurityGroup","SecurityGroupId.1"])
   ArrayList<String> groupSet = new ArrayList<String>();
   String additionalInfo;
   String userData;
@@ -307,17 +307,28 @@ public class GetPasswordDataResponseType extends VmControlMessage {
 public class ReservationInfoType extends EucalyptusData {
   String reservationId;
   String ownerId;
-  ArrayList<String> groupSet = new ArrayList<String>();
+  ArrayList<GroupItemType> groupSet = new ArrayList<GroupItemType>();
   ArrayList<RunningInstancesItemType> instancesSet = new ArrayList<RunningInstancesItemType>();
-  
+
   def ReservationInfoType(final reservationId, final ownerId, final groupSet) {
-    this.reservationId = reservationId;
-    this.ownerId = ownerId;
-    this.groupSet.addAll( groupSet );
+      this.reservationId = reservationId;
+      this.ownerId = ownerId
+      this.groupSet.add(new GroupItemType(groupSet.firstEntry().getKey(), groupSet.firstEntry().getValue()));
   }
   
   def ReservationInfoType() {
   }
+}
+
+public class GroupItemType extends EucalyptusData {
+  String groupId;
+  String groupName;
+  public GroupItemType() {}
+
+    def GroupItemType(final groupId, final groupName) {
+        this.groupId = groupId;
+        this.groupName = groupName;
+    }
 }
 public class RunningInstancesItemType extends EucalyptusData implements Comparable<RunningInstancesItemType> {
   String instanceId;

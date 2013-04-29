@@ -366,7 +366,12 @@ public class NetworkGroup extends UserMetadata<NetworkGroup.State> implements Ne
         for (NetworkGroup networkGroup : networkGroupList) {
           LOG.debug("Upgrading " + networkGroup.getDisplayName());
           if (networkGroup.getGroupId() == null ) {
-            networkGroup.setGroupId(Crypto.generateId( Integer.toHexString(networkGroup.getDisplayName().hashCode()), "sg" ));
+            final String networkGroupId = Crypto.generateId( Integer.toHexString(networkGroup.getDisplayName().hashCode()), "sg" );
+            if (!networkGroupId.equals(networkGroup.getDisplayName())) {
+              networkGroup.setGroupId(networkGroupId);
+            } else {
+              LOG.debug("Failed to upgrade security group " + networkGroup.getDisplayName() );
+            }
           }
         }
         db.commit();

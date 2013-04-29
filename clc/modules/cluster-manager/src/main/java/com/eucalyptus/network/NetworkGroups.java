@@ -503,7 +503,12 @@ public class NetworkGroups {
     }
     final EntityTransaction db = Entities.get( NetworkGroup.class );
     try {
-      final NetworkGroup ret = Entities.uniqueResult( new NetworkGroup( ownerFullName, groupName ) );
+      NetworkGroup ret;
+      if (groupName.startsWith("sg-")) {
+        ret = Entities.uniqueResult(NetworkGroup.withGroupId(ownerFullName, groupName));
+      } else {
+        ret = Entities.uniqueResult( new NetworkGroup( ownerFullName, groupName ) );
+      }
       db.commit( );
       return ret;
     } catch ( final Exception ex ) {
