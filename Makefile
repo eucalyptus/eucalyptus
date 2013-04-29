@@ -66,6 +66,7 @@ install: deploy
 	@$(INSTALL) -d $(DESTDIR)$(usrdir)/sbin
 	@$(INSTALL) -d $(DESTDIR)$(usrdir)/lib/eucalyptus
 	@$(INSTALL) -d $(DESTDIR)$(etcdir)/bash_completion.d
+	@$(INSTALL) -d $(DESTDIR)$(libexecdir)/eucalyptus
 	@for subdir in $(SUBDIRS); do \
 		(cd $$subdir && $(MAKE) $@) || exit $$? ; done
 
