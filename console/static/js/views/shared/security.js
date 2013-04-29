@@ -5,11 +5,13 @@ define([
   'rivets',
 	], function( app, dataholder, template, rivets ) {
 	return Backbone.View.extend({
-    title: 'Security',
+    title: app.msg("launch_instance_section_header_security"),
 
 		initialize : function() {
 
       var self = this;
+      this.model.set('name', 'Default');
+
       var scope = {
         configmodel: this.model,
         keymodel: this.options.keymodel,
@@ -22,21 +24,26 @@ define([
                         return sg.get('name') == e.target.value;
           });
           if(groupWhere.length > 0) {
-              group.unset('tags');  // workaround - nested objects break next line
-              self.model.set(group.toJSON());
-              //self.model.set('id', group.get('id'));
+              //group.unset('tags');  // workaround - nested objects break next line
+              self.model.set('name', group.get('name'));
+              self.model.set('id', group.get('id'));
               self.model.set('security_show', true);
+              self.model.set('rules', group.get('rules'));
               
           }
         },
 
         setKeyPair: function(e, item) {
-          var keyWhere = this.keypairs.where({name: e.target.value});
-          var key = _.find(keyWhere, function(k) {
-                      return k.get('name') == e.target.value;
-          });
-          key.unset('tags'); // workaround - nested objects break next line
-          this.keymodel.set(key.toJSON());
+          if (e.target.value == 'none') {
+            this.keymodel.set('name', e.target.value);
+          } else {
+            var keyWhere = this.keypairs.where({name: e.target.value});
+            var key = _.find(keyWhere, function(k) {
+                        return k.get('name') == e.target.value;
+            });
+            //key.unset('tags'); // workaround - nested objects break next line
+            this.keymodel.set('name', key.get('name'));
+          }
           self.model.set('security_show', true);
         },
 
@@ -61,18 +68,20 @@ define([
 
         newKeyPair: function() {
             addKeypair( function(){ 
-              console.log('returned from security group dialog');
-              app.data.keypair.fetch();
+              //console.log('returned from security group dialog');
             });
         },
 
         newSecGroup: function() {
           addGroup( function() {
-              console.log('returned from security group dialog');
-              app.data.sgroup.fetch();
+              //console.log('returned from security group dialog');
             });
-        }
+        },
 
+        formatSecGroupRulesString: function() {
+          var msg =  $.i18n.prop('launch_instance_security_group_rule',DefaultEncoder().encodeForHTML(self.model.get('name')));
+          return msg;
+        }
 
       };
      
@@ -81,7 +90,7 @@ define([
         self.render();
       });
 
-      self.model.on('validated:valid', function(obj, errors) {
+      self.model.on('validated:valid change', function(obj, errors) {
         scope.launchConfigErrors.group = null;
         self.render();
       });
@@ -91,16 +100,28 @@ define([
         self.render();
       });
 
-      this.options.keymodel.on('validated:valid', function(obj, errors) {
+      this.options.keymodel.on('validated:valid change', function(obj, errors) {
         scope.launchConfigErrors.key = null;
         self.render();
       });
 
-      app.data.sgroup.on('reset sync add remove change', function() {
+      app.data.sgroup.on('reset sync remove change', function() {
         self.render();
       });
 
-      app.data.keypair.on('reset sync add remove change', function() {
+      app.data.sgroup.on('add', function(model, collection) {
+        self.model.set('name', model.get('name'));
+        self.model.set('id', model.get('id'));
+        self.model.set('rules', model.get('rules'));
+        self.render();
+      });
+
+      app.data.keypair.on('reset sync remove change', function() {
+        self.render();
+      });
+
+      app.data.keypair.on('add', function(model, collection) {
+        scope.keymodel.set('name', model.get('name'));
         self.render();
       });
 
@@ -123,6 +144,10 @@ define([
         return false;
       }
       return true;
+    },
+
+    focus: function() {
+      this.model.set('security_show', true);
     }
 });
 });

@@ -2,17 +2,18 @@ var old = alert;
 
 alert = function() {
       console.log(new Error().stack);
-        old.apply(window, arguments);
+      old.apply(window, arguments);
 };
 
-console.log('REQUIRE CONFIG');
 require.config({
         baseUrl: 'js',
         paths: {
-		'underscore': 'underscore-1.4.3',
-		'backbone': 'backbone-1.0',
-        'visualsearch' : 'visualsearch/build/visualsearch',
-		'backbone-validation': 'backbone-validation-min'
+		'underscore': '../lib/underscore-1.4.3',
+		'backbone': '../lib/backbone-1.0',
+		'backbone-validation': '../lib/backbone-validation',
+        'visualsearch' : '../lib/visualsearch',
+        'rivets' : '../lib/rivets',
+        'rivetsbase' : '../lib/rivetsbase',
         },
         shim: {
                 underscore : {

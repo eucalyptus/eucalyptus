@@ -232,15 +232,6 @@
           $(allTds).each(function(){ 
             row[i++] = $(this).html();
           }); 
-        // don't do this since we never turn off expando-row anymore
-        /*
-          $expand = thisObj.options.expand_callback(row);
-          if($expand === null){
-            var text = $currentRow.find('a.twist').text(); 
-            $currentRow.find('a.twist').parent().text(text);
-            $currentRow.find('a.twist').remove();
-          }
-        */
         }
         
         if(!$currentRow.data('events') || !('click' in $currentRow.data('events'))){
@@ -250,8 +241,6 @@
                 // Generate the expanded area
                 $expand = thisObj.options.expand_callback(row);
 
-                //thisObj.element.find('table tbody').find('tr.expanded').remove(); // remove all expanded
-                thisObj.element.find('table tbody').find('a.expanded').removeClass('expanded');
                 if(!$expand.hasClass('expanded-row-inner-wrapper'))
                   $expand.addClass('expanded-row-inner-wrapper');
                 if($expand && $expand.length > 0){
@@ -261,7 +250,6 @@
                   $currentRow.find('a.twist').addClass('expanded');
                 }
               }else{
-                //thisObj.element.find('table tbody').find('tr.expanded').remove(); // remove all expanded 
                 var $twist = $currentRow.find('a.twist');
                 $currentRow.next().toggle();
                 if ($twist.hasClass('expanded')) {
@@ -269,7 +257,6 @@
                 } else {
                     $twist.addClass('expanded');
                 }
-                //thisObj.element.find('table tbody').find('a.expanded').removeClass('expanded');
               }
             }else{
               var $selectedRow = $currentRow; 
@@ -535,6 +522,7 @@
     },
 
     _glowRow : function(val, columnId){
+      if(this.table == null) return;
       var selector = ':nth-child('+(columnId+1)+')';
       var rows = this.table.fnGetNodes();
       for ( i in rows){
@@ -548,6 +536,7 @@
     },
 
     _removeGlow : function(val, columnId){
+      if(this.table == null) return;
       var selector = ':nth-child('+(columnId+1)+')';
       var rows = this.table.fnGetNodes();
       for ( i in rows){
@@ -561,6 +550,7 @@
     },
 
     _refreshTableInterval : function() {
+      if(this.table == null) return;
       var tbody = this.element.find('table tbody'); 
       if(tbody.find('tr.selected-row').length > 0 || tbody.find('tr.expanded').length > 0 || tbody.find('tr.glow').length>0 )
         return;
@@ -574,6 +564,7 @@
 /**** Public Methods ****/
     // this reloads data and refresh table
     refreshTable : function() {
+      if(this.table == null) return;
       if($('html body').eucadata('countPendingReq') > MAX_PENDING_REQ)
         return;
       if(! $('html body').eucadata('isEnabled'))

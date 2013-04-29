@@ -7,7 +7,7 @@ define([
 	], function( app, dataholder, template, rivets, blockmap ) {
 	return Backbone.View.extend({
     tpl: template,
-    title: 'Advanced',
+    title: app.msg("launch_instance_section_header_advanced"),
     isOptional: true,
     optionLinkText: app.msg('launch_instance_btn_next_advanced'),
 

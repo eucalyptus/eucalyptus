@@ -9,7 +9,7 @@ define([
   './model/blockmap'
 	], function( _, Backbone, app, dataholder, template, rivets, imageSearch, BlockMap ) {
 	return Backbone.View.extend({
-            title: 'Image',
+            title: app.msg('launch_instance_section_header_image'),
             count: 0,
             image_selected: null,
 
@@ -45,7 +45,7 @@ define([
                   $(e.currentTarget).addClass('selected-row');
                   self.model.set('image_iconclass', this.setClass(images.image));
                   self.model.set('id', images.image.get('id'));
-                  images.image.unset('tags'); // workaround - nested objects break the next line
+                  //images.image.unset('tags'); // workaround - nested objects break the next line
                   self.model.set(images.image.toJSON());
                   self.model.set('platform', this.setClass(self.model));
 

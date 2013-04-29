@@ -186,7 +186,7 @@ define([], function() {
       var offset = -(position - index);
       //validate and call onDisplay() hook.
       if (!navigationController || navigationController(offset)) {
-        if (! self.isValid() && index > position) {
+        if ( index > position && ! self.isValid()) {
           return self.current;
         }
         self.blur();

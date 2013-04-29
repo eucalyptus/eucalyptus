@@ -15,7 +15,7 @@ define([
             this.$el.append($('.body', $tmpl));
             this.$el.appendTo('body');
 
-            var title = $('.title', $tmpl).text();
+            var title = $.i18n.prop($('.title', $tmpl).attr('data-msg'));
             this.$el.dialog({
                 title: title,
                 autoOpen: false,  // assume the three params are fixed for all dialogs

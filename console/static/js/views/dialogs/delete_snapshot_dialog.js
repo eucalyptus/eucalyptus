@@ -29,10 +29,9 @@ define([
       // SCAN THE IMAGE COLLECTION TO DISCOVER THE CONNECTION TO THE SNAPSHOTS
       App.data.images.each(function(img){
         _.each(img.get('block_device_mapping'), function(device){
-          if( device.snapshot_id != null ){
+          if( device.snapshot_id != null && args.items.indexOf(device.snapshot_id) > -1 ){
             images.push(img.get('id'));
             image_hashmap[device.snapshot_id] = img.get('id');
-            console.log("Image: " + img.get('id') + " Snapshot: " + device.snapshot_id);
           }
         });
       });
@@ -41,7 +40,6 @@ define([
       var snapshot_list = [];
       _.each(args.items, function(snapshot_id){
         var nameTag = self.findNameTag(App.data.snapshot.get(snapshot_id));
-        console.log("Snapshot: " + snapshot_id + " Name Tag: " + nameTag);
         var snapshot_string = snapshot_id;
         if( nameTag != null ){
           snapshot_string = nameTag;
@@ -76,18 +74,21 @@ define([
                             function(model, options) {
                               model.destroy(options);
                             },
-                            'snapshot_delete_image_progress', 'snapshot_delete_image_done', 'snapshot_delete_image_fail');
-              // DELETE SNAPSHOT
-              doMultiAction(args.items, App.data.snapshots,
-                            function(model, options) {
-                              options['wait'] = true;
-                              if (images.length > 0) {
-                                // first delete will fail, following deregister.
-                                model.destroy(null);
-                              }
-                              model.destroy(options);
-                            },
-                            'snapshot_delete_progress', 'snapshot_delete_done', 'snapshot_delete_fail');
+                            'snapshot_delete_image_progress',
+                            'snapshot_delete_image_done',
+                            'snapshot_delete_image_fail',
+                            null,
+                            function() {
+                              // DELETE SNAPSHOT
+                              doMultiAction(args.items, App.data.snapshots,
+                                            function(model, options) {
+                                              options['wait'] = true;
+                                              model.destroy(options);
+                                            },
+                                            'snapshot_delete_progress',
+                                            'snapshot_delete_done',
+                                            'snapshot_delete_fail');
+                            });
               self.close();
             }
          }

@@ -701,7 +701,7 @@ class ComputeHandler(BaseAPIHandler):
             if snapshot_id:
                 rootbdm = BlockDeviceType()
                 rootbdm.snapshot_id = snapshot_id
-                bdm['/dev/sda1'] = rootbdm
+                bdm['/dev/sda'] = rootbdm
             if len(bdm) == 0:
                 bdm = None
             return clc.register_image(name, image_location, description, architecture, kernel_id, ramdisk_id, root_dev_name, bdm, callback)
