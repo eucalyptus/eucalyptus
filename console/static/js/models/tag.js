@@ -32,56 +32,63 @@ define([
     },
     sync: function(method, model, options) {
       if (method == 'create') {
-        var data = "_xsrf="+$.cookie('_xsrf');
-        data += "&ResourceId.1="+model.get('res_id');
-        data += "&Tag.1.Key="+model.get('name');
-        data += "&Tag.1.Value="+model.get('value');
-        $.ajax({
-          type:"POST",
-          url:"/ec2?Action=CreateTags",
-          data:data,
-          dataType:"json",
-          async:true,
-          success:
-            function(data, textStatus, jqXHR){
-              if ( data.results ) {
-                notifySuccess(null, $.i18n.prop('tag_create_success', DefaultEncoder().encodeForHTML(model.get('name'))));
-              } else {
-                notifyError($.i18n.prop('tag_create_error', DefaultEncoder().encodeForHTML(model.get('name'))), undefined_error);
-              }
-            },
-          error:
-            function(jqXHR, textStatus, errorThrown){
-              notifyError($.i18n.prop('tag_create_error', DefaultEncoder().encodeForHTML(model.get('name')), getErrorMessage(jqXHR)));
-            }
-          });
+        return this.syncMethod_Create(model, options);
       }
       else if (method == 'delete') {
-        var data = "_xsrf="+$.cookie('_xsrf');
-        data += "&ResourceId.1="+model.get('res_id');
-        data += "&Tag.1.Key="+model.get('name');
-        data += "&Tag.1.Value="+model.get('value');
-        $.ajax({
-          type:"POST",
-          url:"/ec2?Action=DeleteTags",
-          data:data,
-          dataType:"json",
-          async:true,
-          success:
-            function(data, textStatus, jqXHR){
-              if ( data.results ) {
-                notifySuccess(null, $.i18n.prop('tag_delete_success', DefaultEncoder().encodeForHTML(model.get('name'))));
-              } else {
-                notifyError($.i18n.prop('tag_delete_error', DefaultEncoder().encodeForHTML(model.get('name'))), undefined_error);
-              }
-            },
-          error:
-            function(jqXHR, textStatus, errorThrown){
-              notifyError($.i18n.prop('tag_delete_error', DefaultEncoder().encodeForHTML(model.get('name'))), getErrorMessage(jqXHR));
-            }
-        });
+        return this.syncMethod_Delete(model, options);
       }
+    },
+    syncMethod_Create: function(model, options){
+      var data = "_xsrf="+$.cookie('_xsrf');
+      data += "&ResourceId.1="+model.get('res_id');
+      data += "&Tag.1.Key="+model.get('name');
+      data += "&Tag.1.Value="+model.get('value');
+      $.ajax({
+        type:"POST",
+        url:"/ec2?Action=CreateTags",
+        data:data,
+        dataType:"json",
+        async:true,
+        success:
+          function(data, textStatus, jqXHR){
+            if ( data.results ) {
+	      notifySuccess(null, $.i18n.prop('tag_create_success', DefaultEncoder().encodeForHTML(model.get('name'))));
+            } else {
+	      notifyError($.i18n.prop('tag_create_error', DefaultEncoder().encodeForHTML(model.get('name'))), undefined_error);
+            } 
+          },
+        error:
+          function(jqXHR, textStatus, errorThrown){
+            notifyError($.i18n.prop('tag_create_error', DefaultEncoder().encodeForHTML(model.get('name')), getErrorMessage(jqXHR)));
+          }
+      });
+    },
+    syncMethod_Delete: function(model, options){
+      var data = "_xsrf="+$.cookie('_xsrf');
+      data += "&ResourceId.1="+model.get('res_id');
+      data += "&Tag.1.Key="+model.get('name');
+      data += "&Tag.1.Value="+model.get('value');
+      $.ajax({
+        type:"POST",
+        url:"/ec2?Action=DeleteTags",
+        data:data,
+        dataType:"json",
+        async:true,
+        success:
+          function(data, textStatus, jqXHR){
+            if ( data.results ) {
+              notifySuccess(null, $.i18n.prop('tag_delete_success', DefaultEncoder().encodeForHTML(model.get('name'))));
+            } else {
+              notifyError($.i18n.prop('tag_delete_error', DefaultEncoder().encodeForHTML(model.get('name'))), undefined_error);
+            }
+          },
+        error:
+          function(jqXHR, textStatus, errorThrown){
+            notifyError($.i18n.prop('tag_delete_error', DefaultEncoder().encodeForHTML(model.get('name'))), getErrorMessage(jqXHR));
+          }
+      });
     }
+
   });
   return model;
 });
