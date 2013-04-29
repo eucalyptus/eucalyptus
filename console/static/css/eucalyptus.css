@@ -660,6 +660,14 @@ textarea:focus,
   box-shadow: inset 0 0 4px #6699cc;
 }
 
+.VS-search input[type='text']:focus {
+  border-color: none;
+  -moz-box-shadow: none;
+  -webkit-box-shadow: none;
+  box-shadow: none;
+}
+
+
 input[type='text'].short-textinput {
   width: 40px;
   text-align: center;
