@@ -340,7 +340,7 @@ do_stop() {
 	done
 	if [ $timeout -eq 0 ]; then
 		echo "CRITICAL: timed out waiting for eucalyptus-cloud process to shut down (pid=$pid, ppid=$ppid)." >&2
-		echo "CRITICAL: this is most likely a bug; to terminate processes run: kill -9 $pid $ppid" >&2
+		echo "CRITICAL: this is most likely a bug; to kill processes (THIS MAY CAUSE DATA LOSS) run: kill -9 $pid $ppid" >&2
 		return 1
 	fi
 	rm -f $pidfile
