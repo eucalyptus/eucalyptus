@@ -25,7 +25,7 @@ define([
             var tags = new Backbone.Collection();
 
             var loadTags = function() {
-                tags.set(args.model.get('tags').models);
+                tags.set(args.model.get('tags').filter(function(t) { return !/^euca:/.test(t.get('name')); }));
                 tags.each(function(t) {
                     t.set({_clean: true, _deleted: false, _edited: false, _edit: false, _new: false});
                 });
