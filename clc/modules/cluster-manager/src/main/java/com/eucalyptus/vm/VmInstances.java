@@ -554,8 +554,9 @@ public class VmInstances {
             }
             
             try {
-              //ebs with either default deleteOnTerminate or user specified deleteOnTerminate and TERMINATING instance
-              if ( VmStateSet.TERM.apply( vm ) && arg0.getDeleteOnTerminate( ) ) {
+              //ebs with either default deleteOnTerminate or user specified deleteOnTerminate
+              //and TERMINATING OR STOPPING/STOPPED instance (EUCA-5772)
+              if ( ( VmStateSet.TERM.apply( vm ) || VmStateSet.STOP.apply( vm ) ) && arg0.getDeleteOnTerminate( ) ) {
                 final ServiceConfiguration sc = Topology.lookup( Storage.class, vm.lookupPartition( ) );
                 AsyncRequests.dispatch( sc, new DeleteStorageVolumeType( arg0.getVolumeId( ) ) );
                 Volume volume = Volumes.lookup( null, arg0.getVolumeId( ) );
