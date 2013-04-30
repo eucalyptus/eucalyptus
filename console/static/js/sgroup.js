@@ -37,7 +37,7 @@
       this.baseTable = $sgroupTable;
       this.tableWrapper = $sgroupTable.eucatable({
         id : 'sgroups', // user of this widget should customize these options,
-        data_deps: ['groups'],
+        data_deps: ['groups', 'tags'],
         hidden: thisObj.options['hidden'],
         dt_arg : {
           "sAjaxSource": 'sgroup',
