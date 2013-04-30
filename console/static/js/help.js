@@ -22,71 +22,20 @@
   eucalyptus.help = function(args){
     language = args['language']; 
     try{
-      try{
-        help_keypair.load({language:language});
-      }catch(e){
-        help_keypair.load({language:'en_US'});
-      }
-      try{
-        help_volume.load({language:language});
-      }catch(e){
-        help_volume.load({language:'en_US'});
-      }
-      try{
-        help_sgroup.load({language:language}); 
-      }catch(e){
-        help_sgroup.load({language:'en_US'}); 
-      }
-      try{
-        help_instance.load({language:language});
-      }catch(e){
-        help_instance.load({language:'en_US'});
-      }
-      try{
-        help_snapshot.load({language:language});
-      }catch(e){
-        help_snapshot.load({language:'en_US'});
-      }
-      try{
-        help_image.load({language:language}); 
-      }catch(e){
-        help_image.load({language:'en_US'}); 
-      }
-      try{
-        help_scaling.load({language:language});
-      }catch(e){
-        help_scaling.load({language:'en_US'});
-      }
-      try{
-        help_balancing.load({language:language});
-      }catch(e){
-        help_balancing.load({language:'en_US'});
-      }
-      try{
-        help_eip.load({language:language});
-      }catch(e){
-        help_eip.load({language:'en_US'});
-      }
-      try{
-        help_launcher.load({language:language});
-      }catch(e){
-        help_launcher.load({language:'en_US'});
-      }
-      try{
-        help_dashboard.load({language:language});
-      }catch(e){
-        help_dashboard.load({language:'en_US'});
-      }
-      try{
-        help_about.load({language:language});
-      }catch(e){
-        help_about.load({language:'en_US'});
-      }
-      try{
-        help_changepwd.load({language:language});
-      }catch(e){
-        help_changepwd.load({language:'en_US'});
-      }
+      // use the first to determine which language we should load for the app
+      language = load(help_keypair, language);
+      load(help_volume, language);
+      load(help_sgroup, language);
+      load(help_instance, language);
+      load(help_snapshot, language);
+      load(help_image, language);
+      load(help_scaling, language);
+      load(help_balancing, language);
+      load(help_eip, language);
+      load(help_launcher, language);
+      load(help_dashboard, language);
+      load(help_about, language);
+      load(help_changepwd, language);
     }catch(e){
       ;
     }
@@ -99,6 +48,24 @@ function getLandingHelpHeader(args){
                      $('<div>').addClass('help-link').append(
                        $('<a>').attr('href','#').html('&nbsp;')));
   return $helpHeader;
+}
+
+function load(helpObj, language){
+  var lang = language;
+  try{
+    helpObj.load({language:language});
+  }catch(e){
+    try{
+      // try the root of the language
+      lang = language.substr(0, language.indexOf('_'));
+      helpObj.load({language:lang});
+    }catch(e){
+      // now try english
+      lang = 'en';
+      helpObj.load({language:lang});
+    }
+  }
+  return lang;
 }
 
 function loadHtml(url, handler){
@@ -309,7 +276,7 @@ var help_about = {
 
 var help_changepwd = {
   load : function(arg){
-    help_changepwd.dialog_content_url = 'help/'+arg.language+'/console_changepwd.html';
+    help_changepwd.dialog_content_url = 'help/'+arg.language+'/console_change_password.html';
     loadHtml(help_changepwd.dialog_content_url, function(data){help_changepwd.dialog_content=data})
   },
   dialog_content: '',
