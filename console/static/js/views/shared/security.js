@@ -10,7 +10,14 @@ define([
 		initialize : function() {
 
       var self = this;
-      this.model.set('name', 'Default');
+
+      // set to default security group
+      // default group should ALWAYS be present
+      var dsg = dataholder.sgroup.findWhere({name: 'default'});
+      if (dsg != null) {
+        this.model = dsg.clone();
+      }
+
 
       var scope = {
         configmodel: this.model,
