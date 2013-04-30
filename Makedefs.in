@@ -31,6 +31,7 @@ usrdir		= ${prefix}/usr
 bindir		= ${prefix}/usr/bin
 sbindir		= ${prefix}/usr/sbin
 datarootdir	= ${usrdir}/share
+libexecdir  = ${usrdir}/libexec
 
 # where we are going to install eucalyptus and where are the sources
 export EUCALYPTUS	= ${prefix}
