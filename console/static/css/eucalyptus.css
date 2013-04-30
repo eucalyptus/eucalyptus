@@ -785,7 +785,7 @@ input[type='text'].medium-textinput {
   margin-top: 0em;
   margin-left: 0px;
   margin-bottom: 0px;
-  padding: 1px 0 9px 5px;
+  padding: 1px 0 9px 25px;
   width: 170px;
 }
 
@@ -856,10 +856,6 @@ ul.ui-autocomplete {
   padding: 3px 10px;
   white-space: nowrap;
 }
-
-
-table.display .expanded-table thead th  {background:none; border:none; color:#02405f; padding-top:0}
-
 
 /* ======== Content styles ======= */
 
@@ -1312,15 +1308,21 @@ tr.odd + tr.expanded td {
 .expanded ul li {
   float: left;
   margin: 0;
-  width: 90px; /*100px;*/
+  width: 120px;
 }
 
 .expanded ul li:last-child {
   width: 320px;
 }
 
-ul.volume-expanded li:last-child {
-  width: 200px;
+ul.volume-expanded li,
+ul.snapshot-expanded li {
+  width: 180px;
+}
+
+ul.volume-expanded li:last-child,
+ul.snapshot-expanded li:last-child {
+  width: 180px;
 }
 
 ul.rule-expanded li:last-child {
@@ -1353,7 +1355,22 @@ ul.ramdisk-expanded li:nth-child(5) {
 }
 
 .expanded-value {
-  padding: 0 4px;
+  padding: 0 5px 4px;
+  word-wrap: break-word;
+}
+
+
+table.display .expanded-table thead th  {
+  /* To undo the inherited table header styling */
+  background: none;
+  border: none;
+  color: #02405f;
+  padding: 0 18px 3px;
+}
+
+table.display .expanded-table tbody td {
+  background: none;
+  padding: 0 18px 8px;
 }
 
 /* ======= Help page related ===== */
@@ -1377,7 +1394,8 @@ ul.ramdisk-expanded li:nth-child(5) {
 #sgroups-table,
 #instances-table,
 #snapshot-table,
-#images-table {
+#images-table,
+.dashboard-wrapper {
   background-color: transparent !important;
 }
 
@@ -2085,6 +2103,10 @@ ul.ramdisk-expanded li:nth-child(5) {
 
 .required-label:after {
   padding-left: 2px;
+}
+
+#launch-wizard-image-table {
+  padding-top: 15px;  
 } 
 
 .selected-resources,
@@ -2238,6 +2260,10 @@ a.sg-my-ip {
   position: relative;
 }
 
+.wizard-step {
+  padding: 0 10px 10px;
+}
+
 .content-section h3 {
   position: absolute;
   top: -1px;
@@ -2254,6 +2280,12 @@ a.sg-my-ip {
   font-family: 'PlayBold', Arial, sans-serif;
   line-height: 1.5;
 }
+
+.wizard-step h3 {
+  position: relative;
+  left: -19px;
+  top: -2px;
+} 
 
 .wizard-step-scrollcontainer {
   height: 205px;
