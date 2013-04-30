@@ -2214,18 +2214,18 @@ static int migration_handler(ccInstance * myInstance, char *host, char *src, cha
     LOGDEBUG("invoked\n");
 
     if (!strcmp(host, dst)) {
-        if (migration_state == MIGRATION_READY) {
-            if (!strcmp(myInstance->state, "Teardown")) {
-                LOGDEBUG("[%s] destination node %s reports ready to receive migration, but is in Teardown--ignoring\n", myInstance->instanceId, host);
-                rc++;
-                goto out;
-            }
-            LOGDEBUG("[%s] destination node %s reports ready to receive migration, checking source node %s\n", myInstance->instanceId, host, src);
+        if ((migration_state == MIGRATION_READY) && !strcmp(myInstance->state, "Extant")) {
+/*             if (!strcmp(myInstance->state, "Teardown")) { */
+/*                 LOGDEBUG("[%s] destination node %s reports ready to receive migration, but is in Teardown--ignoring\n", myInstance->instanceId, host); */
+/*                 rc++; */
+/*                 goto out; */
+/*             } */
+            LOGDEBUG("[%s] destination node %s reports %s(%s), checking source node %s\n", myInstance->instanceId, host, myInstance->state, migration_state_names[myInstance->migration_state], src);
             ccInstance *srcInstance = NULL;
             rc = find_instanceCacheId(myInstance->instanceId, &srcInstance);
             if (!rc) {
                 if (srcInstance->migration_state == MIGRATION_READY) {
-                    LOGDEBUG("[%s] source node %s reports ready to commit migration to %s\n", myInstance->instanceId, src, dst);
+                    LOGINFO("[%s] source node %s reports ready to commit migration to %s\n", myInstance->instanceId, src, dst);
                     EUCA_FREE(*node);
                     EUCA_FREE(*instance);
                     EUCA_FREE(*action);
@@ -2251,14 +2251,35 @@ static int migration_handler(ccInstance * myInstance, char *host, char *src, cha
                 LOGERROR("[%s] could not find migration source node %s in the instance cache\n", myInstance->instanceId, src);
             }
             EUCA_FREE(srcInstance);
+        } else if (((migration_state == MIGRATION_CLEANING) || (migration_state == MIGRATION_READY)) && !strcmp(myInstance->state, "Teardown")) {
+            LOGDEBUG("[%s] destination node %s reports %s(%s), checking source node %s\n", myInstance->instanceId, host, myInstance->state, migration_state_names[myInstance->migration_state], src);
+            //LOGDEBUG("FIXME...ignoring for now...\n");
+            ccInstance *srcInstance = NULL;
+            rc = find_instanceCacheId(myInstance->instanceId, &srcInstance);
+            if (!rc) {
+                if (((srcInstance->migration_state == MIGRATION_PREPARING) || (srcInstance->migration_state == MIGRATION_READY)) && !strcmp(srcInstance->state, "Extant")) {
+                    LOGINFO("[%s] source node %s reports %s(%s), destination node %s reports %s(%s), rolling back source node\n",
+                            myInstance->instanceId, src, srcInstance->state, migration_state_names[srcInstance->migration_state], dst, myInstance->state, migration_state_names[myInstance->migration_state]);
+                    EUCA_FREE(*node);
+                    EUCA_FREE(*instance);
+                    EUCA_FREE(*action);
+                    *node = strdup(src);
+                    *instance = strdup(myInstance->instanceId);
+                    *action = strdup("rollback");
+                }
+            } else {
+                LOGDEBUG("[%s] could not find migration source node %s in the instance cache\n", myInstance->instanceId, src);
+            }
+            EUCA_FREE(srcInstance);
         } else {
-            LOGTRACE("[%s] ignoring update from destination node %s during migration\n", myInstance->instanceId, host);
+            LOGDEBUG("[%s] ignoring update from destination node %s during migration: %s(%s)\n", myInstance->instanceId, host, myInstance->state, migration_state_names[myInstance->migration_state]);
         }
     } else if (!strcmp(host, src)) {
         LOGDEBUG("[%s] received migration state '%s' from source node %s\n", myInstance->instanceId, migration_state_names[migration_state], host);
     } else {
         LOGERROR("[%s] received status from a migrating node that's neither the source (%s) nor the destination (%s): %s\n", myInstance->instanceId, src, dst, host);
     }
+
 out:
     LOGDEBUG("done\n");
     return rc;
