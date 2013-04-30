@@ -37,7 +37,7 @@ define([
         }
         return ret;
       } else {
-        return this.clone();
+        return new this.constructor(this.models);
       }
     }
   });
