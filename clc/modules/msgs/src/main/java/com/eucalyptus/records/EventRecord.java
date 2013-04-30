@@ -62,6 +62,7 @@
 
 package com.eucalyptus.records;
 
+import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 import org.mule.RequestContext;
 import org.mule.api.MuleEvent;
@@ -106,6 +107,19 @@ public class EventRecord extends BaseMessage {
     
   public static Record caller( final Class component, final EventType eventName, final Object... other ) {
     return create( component, EventClass.ORPHAN, eventName, getMessageString( other ), 2 );
+  }
+
+  public static boolean isTraceEnabled( final Class component ) {
+    return isEnabledFor( component, Level.TRACE );
+  }
+
+  public static boolean isDebugEnabled( final Class component ) {
+    return isEnabledFor( component, Level.DEBUG );
+  }
+
+  private static boolean isEnabledFor( final Class component,
+                                       final Level level ) {
+    return Logger.getLogger( component ).isEnabledFor( level );
   }
 
   private static String getMessageString( final Object[] other ) {
