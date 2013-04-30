@@ -42,7 +42,7 @@ define([
                    if (t.get('_new') && !t.get('_deleted')) { 
                        t.save();
                    }
-                   if (t.get('_deleted')) {
+                   if (t.get('_deleted') || t.get('_replaced')) {
                        // STRANGE CASE: CANNOT USE .DESTORY(); IT SKIPS THE NEXT TAG IN THE LOOP   --- KYO 042613
 //                       t.destroy();
                        t.sync('delete', t);
@@ -51,6 +51,7 @@ define([
                        t.sync('create', t);
                    }
                 });
+                // THE OPERATION BELOW MIGHT NOT WORK WHEN .SYNC() CALLS ARE USED   --- KYO 042913
                 model.get('tags').set(tags.models);
             });
 
@@ -59,9 +60,8 @@ define([
               self.scope.tags.add(this_tag);
             });
 
+            // BACKUP COLLECTION TO STORE ORIGINAL TAGS IN CASE OF EDIT AND DELETE
             var backup = new Backbone.Collection();
-
-            var newtag_holder = new Backbone.Collection();
 
             this.scope = {
                 newtag: new Tag(),
@@ -84,15 +84,30 @@ define([
                 
                 edit: function(element, scope) {
                     console.log('edit');
-                    backup.remove({id: scope.tag.get('id')});
+
+                    // RETREIVE THE ID OF THE TAG
+                    var tagID = scope.tag.get('id');
+                    console.log("TAG ID: " + tagID);
+
+                    // IF NOT DEFINED, DUE TO THE PREVIOUS EDIT, CREATE A FAKE ID 
+                    if( tagID == undefined ){
+                      tagID = scope.tag.get('res_id') + "-" + scope.tag.get('name');
+                      scope.tag.set('id', tagID);
+                      console.log("TAG ID: " + tagID);
+                    }
+
+                    // STORE THE ORIGINAL TAG IN THE BACKUP COLLECTION
+                    backup.remove({id: tagID});
                     backup.add(scope.tag.toJSON());
+
+                    // MARK THE STATE AS _EDIT
                     scope.tag.set('_state','edit');
                     scope.tag.set({_clean: false, _deleted: false, _edited: false, _edit: true});
                     
                     // ID HAS TO BE ALTERED IN ORDER TO PREVENT FORCED REFRESH   --- KYO 042813
-                    var tagID = scope.tag.get('id');
-                    scope.tag.set('original_id', tagID);   // PRESERVE THE ORIGINAL ID
-                    scope.tag.set('id', 'in_edit');        // ALTER THE ID
+                    scope.tag.set('original_id', tagID);       // PRESERVE THE ORIGINAL ID
+                    var tagID_in_edit = tagID + "-in_edit";    // ALTER THE ID TO AVOID REFRESH 
+                    scope.tag.set('id', tagID_in_edit);
                 },
 
                 confirm: function(element, scope) {
@@ -115,19 +130,28 @@ define([
                       var origName = origTag.get('name');
                       var origValue = origTag.get('value');
                       scope.tag.set({name: origName, value: origValue});   // REVERT TO THE ORIGINAL NAME AND VALUE
-                      scope.tag.set({_clean: false, _deleted: true, _edited: false, _edit: false});
+                      scope.tag.set({_clean: false, _deleted: false, _edited: false, _edit: false, _replaced: true});
                     }else{
                       // ====================
                       // CASE OF VALUE CHANGE
                       // ====================
-                      scope.tag.set({_clean: false, _deleted: false, _edited: true, _edit: false});
+                      scope.tag.set({_clean: true, _deleted: false, _edited: true, _edit: false});
                     }
                     self.render();
                 },
 
                 restore: function(element, scope) {
                     console.log('restore');
-                    scope.tag.set('value', backup.where({id: scope.tag.get('id')})[0].get('value'));
+                    // RETRIEVE THE ORIGINAL TAG FROM THE BACKUP COLLECTION
+                    var origTag = backup.get(scope.tag.get('id'));
+                    if( origTag == undefined ){
+                      origTag = backup.get(scope.tag.get('original_id'));
+                    }
+                    var origName = origTag.get('name');
+                    var origValue = origTag.get('value');
+                    scope.tag.set('name', origName);
+                    scope.tag.set('value', origValue);
+                    //scope.tag.set('value', backup.where({id: scope.tag.get('id')})[0].get('value'));
                     scope.tag.set({_clean: true, _deleted: false, _edited: false, _edit: false});
                 },
 
