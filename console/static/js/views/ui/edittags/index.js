@@ -105,8 +105,9 @@ define([
                     scope.tag.set({_clean: false, _deleted: false, _edited: false, _edit: true});
                     
                     // ID HAS TO BE ALTERED IN ORDER TO PREVENT FORCED REFRESH   --- KYO 042813
-                    scope.tag.set('original_id', tagID);   // PRESERVE THE ORIGINAL ID
-                    scope.tag.set('id', 'in_edit');        // ALTER THE ID
+                    scope.tag.set('original_id', tagID);       // PRESERVE THE ORIGINAL ID
+                    var tagID_in_edit = tagID + "-in_edit";    // ALTER THE ID TO AVOID REFRESH 
+                    scope.tag.set('id', tagID_in_edit);
                 },
 
                 confirm: function(element, scope) {
@@ -141,7 +142,16 @@ define([
 
                 restore: function(element, scope) {
                     console.log('restore');
-                    scope.tag.set('value', backup.where({id: scope.tag.get('id')})[0].get('value'));
+                    // RETRIEVE THE ORIGINAL TAG FROM THE BACKUP COLLECTION
+                    var origTag = backup.get(scope.tag.get('id'));
+                    if( origTag == undefined ){
+                      origTag = backup.get(scope.tag.get('original_id'));
+                    }
+                    var origName = origTag.get('name');
+                    var origValue = origTag.get('value');
+                    scope.tag.set('name', origName);
+                    scope.tag.set('value', origValue);
+                    //scope.tag.set('value', backup.where({id: scope.tag.get('id')})[0].get('value'));
                     scope.tag.set({_clean: true, _deleted: false, _edited: false, _edit: false});
                 },
 
