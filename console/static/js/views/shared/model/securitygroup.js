@@ -44,7 +44,7 @@ define(['app', 'models/sgroup'], function(app, sgroup) {
       },
 
       finish: function(outputModel) {
-        outputModel.set('security_group', [this.model.get('name')]);
+        outputModel.set('security_group', [this.get('name')]);
       }
   });
 });

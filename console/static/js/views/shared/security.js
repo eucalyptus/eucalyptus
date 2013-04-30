@@ -15,7 +15,9 @@ define([
       // default group should ALWAYS be present
       var dsg = dataholder.sgroup.findWhere({name: 'default'});
       if (dsg != null) {
-        this.model = dsg.clone();
+        this.model.set('name', dsg.get('name'));
+        this.model.set('id', dsg.get('id'));
+        this.model.set('rules', dsg.get('rules'));
       }
 
 
