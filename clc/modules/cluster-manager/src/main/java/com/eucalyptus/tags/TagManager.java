@@ -29,6 +29,7 @@ import com.eucalyptus.auth.principal.AccountFullName;
 import com.eucalyptus.auth.principal.UserFullName;
 import com.eucalyptus.auth.principal.Principals;
 import com.eucalyptus.cloud.CloudMetadata;
+import com.eucalyptus.cloud.ImageMetadata;
 import com.eucalyptus.cloud.util.MetadataException;
 import com.eucalyptus.cloud.util.NoSuchMetadataException;
 import com.eucalyptus.configurable.ConfigurableClass;
@@ -42,6 +43,7 @@ import com.eucalyptus.images.Images;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.OwnerFullName;
+import com.eucalyptus.util.RestrictedType;
 import com.eucalyptus.util.RestrictedTypes;
 import com.eucalyptus.util.TypeMappers;
 import com.eucalyptus.util.Wrappers;
@@ -106,7 +108,7 @@ public class TagManager {
         @Override
         public boolean apply( final Void v ) {
           final List<CloudMetadata> resources = Lists.transform( resourceIds, resourceLookup() );
-          if ( !Iterables.all( resources, Predicates.and( Predicates.notNull(), typeSpecificFilters(), RestrictedTypes.filterPrivileged() ) )  ) {
+          if ( !Iterables.all( resources, Predicates.and( Predicates.notNull(), typeSpecificFilters(), permissionsFilter() ) )  ) { //TODO:STEVE: should be without owner for images ...
             return false;
           }
 
@@ -221,6 +223,10 @@ public class TagManager {
     return TypeSpecificFilters.INSTANCE;
   }
 
+  private static Predicate<RestrictedType> permissionsFilter() {
+    return PermissionsFilter.INSTANCE;
+  }
+
   /**
    * A function to lookup cloud metadata by resource identifier.
    * 
@@ -243,6 +249,19 @@ public class TagManager {
         return null;
       }
     };
+  }
+
+  private static enum PermissionsFilter implements Predicate<RestrictedType> {
+    INSTANCE;
+
+    @Override
+    public boolean apply( final RestrictedType metadata ) {
+      if ( metadata instanceof ImageMetadata ) {
+        return RestrictedTypes.filterPrivilegedWithoutOwner( ).apply( metadata );
+      } else {
+        return RestrictedTypes.filterPrivileged( ).apply( metadata );
+      }
+    }
   }
 
   /**
