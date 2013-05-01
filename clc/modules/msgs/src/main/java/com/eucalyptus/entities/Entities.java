@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * Copyright 2009-2013 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -80,10 +80,12 @@ import javax.persistence.LockModeType;
 import javax.persistence.OptimisticLockException;
 import javax.persistence.PersistenceContext;
 import javax.persistence.Query;
+import javax.transaction.Synchronization;
 import org.apache.log4j.Logger;
 import org.hibernate.Criteria;
 import org.hibernate.HibernateException;
 import org.hibernate.Session;
+import org.hibernate.Transaction;
 import org.hibernate.criterion.Criterion;
 import org.hibernate.criterion.Example;
 import org.hibernate.criterion.MatchMode;
@@ -635,6 +637,13 @@ public class Entities {
     }
     final Number count = (Number)criteria.uniqueResult( );
     return count.longValue();
+  }
+
+  public static <T> void registerSynchronization( final Class<T> syncClass,
+                                                  final Synchronization synchronization ) {
+    final Session session = getTransaction( syncClass ).getTxState().getSession();
+    final Transaction transaction = session.getTransaction();
+    transaction.registerSynchronization( synchronization );
   }
 
   private static class TxStateThreadLocal extends ThreadLocal<ConcurrentMap<String, CascadingTx>> {

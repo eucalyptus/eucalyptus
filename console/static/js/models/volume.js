@@ -23,6 +23,10 @@ define([
             volume_id: {
               required: false
             },
+            name: {
+              rangeLength: [1, 128],
+              required: false
+            },
             status: {
               oneOf: ['creating', 'created', 'attaching','attached', 'detaching', 'detached'],
               required: false

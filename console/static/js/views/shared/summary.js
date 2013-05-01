@@ -6,12 +6,6 @@ define([
     tpl: template,
     initialize: function() {
 
-      /*this.model.bind('change:type_size', this.render , this);
-      this.model.bind('change:type_number', this.render , this);
-      this.model.bind('change:type_zone', this.render, this);
-      this.model.bind('change:type_tags', this.render, this);
-      this.model.bind('change:type_names', this.render, this);*/
-
       var scope = {
         view: this,
         imageModel: this.options.imageModel,

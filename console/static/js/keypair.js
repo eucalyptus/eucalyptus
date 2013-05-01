@@ -247,6 +247,7 @@
               script    : '/ec2?Action=GetKeyPairFile'
             });
             notifySuccess(null, $.i18n.prop('keypair_create_success', DefaultEncoder().encodeForHTML(addEllipsis(keyName, 75))));
+            require(['app'], function(app) { app.data.keypair.fetch(); });
             thisObj.tableWrapper.eucatable('refreshTable');
             thisObj.tableWrapper.eucatable('glowRow', keyName);
           } else {

@@ -1071,6 +1071,9 @@
         sgroup = thisObj.launchMoreDialog.find('#summary-security-sg').children().last().text(); 
       else
         sgroup = sgroup.val();  
+      
+      // good time to save those tags
+      $('html body').find(DOM_BINDING['hidden']).launcher('setTags', thisObj.launchMoreDialog.rscope.model);
 
       $('html body').find(DOM_BINDING['hidden']).launcher('updateLaunchParam', 'emi', emi);
       $('html body').find(DOM_BINDING['hidden']).launcher('updateLaunchParam', 'type', type);
@@ -1099,7 +1102,7 @@
             'delOnTerm':delOnTerm
           };
           deviceMap.push(mapping);
-      $('html body').find(DOM_BINDING['hidden']).launcher('launch');
+          $('html body').find(DOM_BINDING['hidden']).launcher('launch');
         }else if(volume.indexOf('ephemeral')>=0){
           var mapping = {
             'volume':volume,
@@ -1121,10 +1124,41 @@
         $('html body').find(DOM_BINDING['hidden']).launcher('updateLaunchParam', 'device_map', deviceMap);
       $('html body').find(DOM_BINDING['hidden']).launcher('launch');
     },
+
     _initLaunchMoreDialog : function(){
       var thisObj = this;
       var id = this.tableWrapper.eucatable('getSelectedRows', 17)[0];
 //      id = $(id).html();       // After dataTable 1.9 integration, this operation is no longer needed.  030413 
+
+      require(['app',
+        'rivets', 
+        'models/instance', 
+        'text!views/dialogs/tag_edit_nub.html!strip',
+      ], function(app, rivets, Instance, TagNub) {
+          console.log('update scope');
+          var tagdiv = thisObj.launchMoreDialog.find(".launch-more-tags");
+          tagdiv.children().remove();
+          tagdiv.append($(TagNub));
+
+          thisObj.launchMoreDialog.rivets = rivets;
+          thisObj.launchMoreDialog.Instance = Instance;
+          thisObj.launchMoreDialog.rscope = {
+            model: new Instance()
+          }
+
+          app.data.instance.get(id).get('tags').each(function(t) {
+            // copy tags, but exclude Name as well as aws and euca namespaces
+            var name = t.get('name');
+            if (name != 'Name' && name.substr(0, 4) != 'euca' && name.substr(0, 3) != 'aws') {
+              var tag = t.clone();
+              tag.set('id', null);
+              thisObj.launchMoreDialog.rscope.model.get('tags').add(tag);
+            }
+          });
+
+          thisObj.launchMoreDialog.rview = thisObj.launchMoreDialog.rivets.bind(tagdiv, thisObj.launchMoreDialog.rscope);
+      });
+
       var filter = {};
       var result = describe('instance');
       var instance = null;
@@ -1227,6 +1261,7 @@
       $('html body').find(DOM_BINDING['hidden']).launcher('makeAdvancedSection', $advanced);
       $advanced.find('#launch-wizard-image-emi').val(image.id).trigger('change');
     },
+
     _expandCallback : function(row){ 
       var thisObj = this;
       var $el = $('<div />');

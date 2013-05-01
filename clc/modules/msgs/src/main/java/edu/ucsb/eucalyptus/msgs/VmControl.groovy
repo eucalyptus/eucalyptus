@@ -290,7 +290,7 @@ public class GetConsoleOutputResponseType extends VmControlMessage {
 }
 
 public class GetConsoleOutputType extends VmControlMessage {
-  @HttpParameterMapping (parameter = "InstanceId.1")
+  @HttpParameterMapping (parameter = ["InstanceId", "InstanceId.1"])
   String instanceId;
 }
 

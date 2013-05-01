@@ -125,7 +125,9 @@ public class AdmissionControl {
     
     @Override
     public boolean apply( Allocation allocInfo ) {
-      EventRecord.here( AdmissionControl.class, EventType.VM_RESERVED, LogUtil.dumpObject( allocInfo ) ).trace( );
+      if ( EventRecord.isTraceEnabled( AdmissionControl.class ) ) {
+        EventRecord.here( AdmissionControl.class, EventType.VM_RESERVED, LogUtil.dumpObject( allocInfo ) ).trace( );
+      }
       List<ResourceAllocator> finished = Lists.newArrayList( );
       EntityTransaction db = Entities.get( NetworkGroup.class );
       try {

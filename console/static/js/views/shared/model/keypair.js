@@ -1,4 +1,4 @@
-define([], function() {
+define(['app'], function(app) {
   return Backbone.Model.extend({
     name: '',
     region: [],
@@ -10,7 +10,7 @@ define([], function() {
     validation: {
         name: {
           required: true,
-          msg: 'A keypair selection is required.'
+          msg: app.msg("launch_instance_error_keypair_required")
         }
     },
 

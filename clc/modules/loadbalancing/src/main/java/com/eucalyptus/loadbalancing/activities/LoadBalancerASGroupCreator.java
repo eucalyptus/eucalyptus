@@ -105,17 +105,17 @@ public class LoadBalancerASGroupCreator extends AbstractEventHandler<NewLoadbala
 	  }
 
 	  @Override
-	  public boolean check( ) throws Exception {
-	    if ( LoadBalancerASGroupCreator.LOADBALANCER_EMI != null
-	        && LoadBalancerASGroupCreator.LOADBALANCER_EMI.startsWith("emi-") ) {
-	      return true;
-	    } else {
-	      throw Faults.failure( Components.lookup( LoadBalancing.class ).getLocalServiceConfiguration( ), 
-          Exceptions.error( "Load balancer EMI property is unset.  "
-              + "Use euca-modify-property -p loadbalancing.loadbalancer_emi=<load balancer emi> "
-              + "where the emi should point to the image provided in the eucalyptus-load-balancer-image package." ) );
-	    }
-	  }
+    public boolean check( ) throws Exception {
+      if ( LoadBalancerASGroupCreator.LOADBALANCER_EMI != null
+          && LoadBalancerASGroupCreator.LOADBALANCER_EMI.startsWith("emi-") ) {
+        return true;
+      } else {
+        LOG.debug("Load balancer EMI property is unset.  \"\n" +
+            "              + \"Use euca-modify-property -p loadbalancing.loadbalancer_emi=<load balancer emi> \"\n" +
+            "              + \"where the emi should point to the image provided in the eucalyptus-load-balancer-image package.\" ");
+        return false;
+      }
+    }
 	}
 
 		

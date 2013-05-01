@@ -157,7 +157,9 @@ public class ClusterAllocator implements Runnable {
     @Override
     public boolean apply( final Allocation allocInfo ) {
       try {
-        EventRecord.here( ClusterAllocator.class, EventType.VM_PREPARE, LogUtil.dumpObject( allocInfo ) ).info( );
+        if ( EventRecord.isDebugEnabled( ClusterAllocator.class ) ) {
+          EventRecord.here( ClusterAllocator.class, EventType.VM_PREPARE, LogUtil.dumpObject( allocInfo ) ).debug( );
+        }
         final ServiceConfiguration config = Topology.lookup( ClusterController.class, allocInfo.getPartition( ) );
         final Callable<Boolean> runnable = new Callable<Boolean>( ) {
           @Override

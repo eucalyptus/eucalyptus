@@ -113,7 +113,7 @@ public class SslSetup {
                       changeListener = SslPasswordChangeListener.class )
   public static String        SERVER_PASSWORD = ComponentIds.lookup( Eucalyptus.class ).name( );
   @ConfigurableField( description = "SSL ciphers for webservices." )
-  public static String        SERVER_SSL_CIPHERS = "RSA:DSS:ECDSA:+RC4:+3DES:TLS_EMPTY_RENEGOTIATION_INFO_SCSV:!NULL:!EXPORT:!EXPORT1024:!MD5:!DES";
+  public static String        SERVER_SSL_CIPHERS = "RSA:DSS:ECDSA:+RC4:+3DES:TLS_EMPTY_RENEGOTIATION_INFO_SCSV:!NULL:!EXPORT:!EXPORT1024:!MD5:!DES:!DHE";
 
   public static class SslCertChangeListener implements PropertyChangeListener<String> {
     
