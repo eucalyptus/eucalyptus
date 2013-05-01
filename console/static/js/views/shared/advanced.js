@@ -167,6 +167,9 @@ define([
       this.render();
       // this.model.set('fileinput', this.$el.find('#launch-wizard-advanced-input-userfile'));
        var fileinputel = this.$el.find('#launch-wizard-advanced-input-userfile');
+       $(fileinputel).change(function(e) {
+        self.model.set('files', this.files);
+       });
        this.model.set('fileinput', function() { return fileinputel; });
 		},
 

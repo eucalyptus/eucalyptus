@@ -181,9 +181,10 @@ define([
               data.push({name: "curlopts", value:  model.get('curlopts')});
             if(model.get('return_curl_handle') != undefined)
               data.push({name: "return_curl_handle", value:  model.get('return_curl_handle')});
-              
-            var user_file = $(model.get("fileinput")()).val() == undefined ? "none" : $(model.get("fileinput")()).val();
+             
+            var user_file = model.get('files') == undefined ? "none" : model.get('files');
             var self = this;
+
             $(model.get('fileinput')()).fileupload({
               url:"/ec2?Action=RunInstances",
               formData: data,
