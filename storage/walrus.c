@@ -105,12 +105,15 @@
  |                                                                            |
 \*----------------------------------------------------------------------------*/
 
-#define TOTAL_RETRIES                                10 //!< download is retried in case of connection problems
-#define FIRST_TIMEOUT                                 4 //!< in seconds, goes in powers of two afterwards
+#define TOTAL_TIMEOUT_SEC                             0 //!< we do not impose a total timeout, since downloads can take a long long time
+#define CONNECT_TIMEOUT_SEC                          10 //!< initial connection timeout for Walrus requests, in seconds
+#define TOTAL_ATTEMPTS                                6 //!< download is retried in case of connection problems (2+ min of retrying)
+#define FIRST_TIMEOUT                                 2 //!< in seconds, goes in powers of two afterwards
 #define MAX_TIMEOUT                                 300 //!< in seconds, the cap for growing timeout values
 #define CHUNK                                    262144 //!< buffer size for decompression operations
 #define BUFSIZE                                  262144 //!< should be big enough for CERT and the signature
 #define STRSIZE                                    1024 //!< for short strings: files, hosts, URLs
+#define PROGRESS_UPDATE_SEC                           3 //!< how often to report on progress of long downloads
 
 #define WALRUS_ENDPOINT                          "/services/Walrus"
 #define DEFAULT_HOST_PORT                        "localhost:8773"
@@ -150,6 +153,13 @@ struct request {
 #endif                                 /* CAN_GZIP */
 };
 
+//! Defines the struct for passing information into curl progress function
+struct progress_data_t
+{
+    char * url;
+    time_t last_update;
+};
+
 /*----------------------------------------------------------------------------*\
  |                                                                            |
  |                             EXTERNAL VARIABLES                             |
@@ -181,10 +191,6 @@ static pthread_mutex_t wreq_mutex = PTHREAD_MUTEX_INITIALIZER;
 
 static int walrus_request_timeout(const char *walrus_op, const char *verb, const char *requested_url, const char *outfile, const int do_compress,
                                   int connect_timeout, int total_timeout);
-
-#ifdef EUCA_DEPRECATED_API
-static int walrus_request(const char *walrus_op, const char *verb, const char *requested_url, const char *outfile, const int do_compress);
-#endif // EUCA_DEPRECATED_API
 static size_t write_header(void *buffer, size_t size, size_t nmemb, void *params);
 static size_t write_data(void *buffer, size_t size, size_t nmemb, void *params);
 
@@ -193,6 +199,8 @@ static void print_data(unsigned char *buf, const int size);
 static void zerr(int ret, char *where);
 static size_t write_data_zlib(void *buffer, size_t size, size_t nmemb, void *params);
 #endif /* CAN_GZIP */
+
+static int progress_function(void *clientp, double dltotal, double dlnow, double ultotal, double ulnow);
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |
@@ -205,283 +213,6 @@ static size_t write_data_zlib(void *buffer, size_t size, size_t nmemb, void *par
  |                               IMPLEMENTATION                               |
  |                                                                            |
 \*----------------------------------------------------------------------------*/
-
-#ifdef EUCA_DEPRECATED_API
-//!
-//! downloads a decrypted image from Walrus based on the manifest URL,
-//! saves it to outfile
-//!
-//! @param[in] walrus_op
-//! @param[in] verb
-//! @param[in] requested_url
-//! @param[in] outfile
-//! @param[in] do_compress
-//! @param[in] connect_timeout
-//! @param[in] total_timeout
-//!
-//! @return EUCA_OK on success or proper error code. Known error code returned include: EUCA_ERROR.
-//!
-static int walrus_request_timeout(const char *walrus_op, const char *verb, const char *requested_url, const char *outfile, const int do_compress,
-                                  int connect_timeout, int total_timeout)
-{
-    int code = EUCA_ERROR;
-    char url[BUFSIZE];
-
-    pthread_mutex_lock(&wreq_mutex);   /* lock for curl construction */
-
-    euca_strncpy(url, requested_url, BUFSIZE);
-#if defined(CAN_GZIP)
-    if (do_compress)
-        snprintf(url, BUFSIZE, "%s%s", requested_url, "?IsCompressed=true");
-#endif /* CAN_GZIP */
-
-    /* isolate the PATH in the URL as it will be needed for signing */
-    char *url_path;
-    if (strncasecmp(url, "http://", 7) != 0 && strncasecmp(url, "https://", 8) != 0) {
-        LOGERROR("Walrus URL must start with http(s)://...\n");
-        pthread_mutex_unlock(&wreq_mutex);
-        return code;
-    }
-    if ((url_path = strchr(url + 8, '/')) == NULL) {    /* find first '/' after hostname */
-        LOGERROR("Walrus URL has no path\n");
-        pthread_mutex_unlock(&wreq_mutex);
-        return code;
-    }
-
-    if (euca_init_cert()) {
-        LOGERROR("failed to initialize certificate for Walrus request\n");
-        pthread_mutex_unlock(&wreq_mutex);
-        return code;
-    }
-
-    int fd = open(outfile, O_CREAT | O_WRONLY, S_IRUSR | S_IWUSR);  // we do not truncate the file
-    if (fd == -1 || lseek(fd, 0, SEEK_SET) == -1) {
-        LOGERROR("failed to open %s for writing Walrus request\n", outfile);
-        pthread_mutex_unlock(&wreq_mutex);
-        if (fd >= 0)
-            close(fd);
-        return code;
-    }
-
-    LOGDEBUG("will use URL: %s\n", url);
-
-    CURL *curl;
-    CURLcode result;
-    curl = curl_easy_init();
-    if (curl == NULL) {
-        LOGERROR("could not initialize libcurl for Walrus request\n");
-        close(fd);
-        pthread_mutex_unlock(&wreq_mutex);
-        return code;
-    }
-
-    char error_msg[CURL_ERROR_SIZE];
-    curl_easy_setopt(curl, CURLOPT_ERRORBUFFER, error_msg);
-    curl_easy_setopt(curl, CURLOPT_URL, url);
-    curl_easy_setopt(curl, CURLOPT_HEADERFUNCTION, write_header);
-    curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, 0L); //! @todo make this optional?
-    curl_easy_setopt(curl, CURLOPT_SSL_VERIFYHOST, 0L);
-    curl_easy_setopt(curl, CURLOPT_LOW_SPEED_LIMIT, 360L);  // must have at least a 360 baud modem
-    curl_easy_setopt(curl, CURLOPT_LOW_SPEED_TIME, 10L);    // abort if below speed limit for this many seconds
-    // curl_easy_setopt (curl, CURLOPT_FOLLOWLOCATION, 1); //! @todo remove the comment once we want to follow redirects (e.g., on HTTP 407)
-
-    if (strncmp(verb, "GET", 4) == 0) {
-        curl_easy_setopt(curl, CURLOPT_HTTPGET, 1L);
-    } else if (strncmp(verb, "HEAD", 5) == 0) {
-        //! @todo HEAD isn't very useful atm since we don't look at headers
-        curl_easy_setopt(curl, CURLOPT_NOBODY, 1L);
-    } else {
-        close(fd);
-        LOGERROR("invalid HTTP verb %s in Walrus request\n", verb);
-        pthread_mutex_unlock(&wreq_mutex);
-        return EUCA_ERROR;             //! @todo dealloc structs before returning!
-    }
-
-    if (connect_timeout > 0) {
-        curl_easy_setopt(curl, CURLOPT_CONNECTTIMEOUT, connect_timeout);
-    }
-    if (total_timeout > 0) {
-        curl_easy_setopt(curl, CURLOPT_TIMEOUT, total_timeout);
-    }
-
-    /* set up the default write function, but possibly override
-     * it below, if compression is desired and possible */
-    struct request params;
-    params.fd = fd;
-    curl_easy_setopt(curl, CURLOPT_WRITEDATA, &params);
-    curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, write_data);
-#if defined(CAN_GZIP)
-    if (do_compress) {
-        curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, write_data_zlib);
-    }
-#endif /* CAN_GZIP */
-
-    struct curl_slist *headers = NULL; /* beginning of a DLL with headers */
-    headers = curl_slist_append(headers, "Authorization: Euca");
-
-    char op_hdr[STRSIZE];
-    if (walrus_op != NULL) {
-        snprintf(op_hdr, STRSIZE, "EucaOperation: %s", walrus_op);
-        headers = curl_slist_append(headers, op_hdr);
-    }
-
-    time_t t = time(NULL);
-    char date_str[26];
-    if (ctime_r(&t, date_str) == NULL) {
-        close(fd);
-        pthread_mutex_unlock(&wreq_mutex);
-        return EUCA_ERROR;
-    }
-    assert(strlen(date_str) + 7 <= STRSIZE);
-    char *newline = strchr(date_str, '\n');
-    if (newline != NULL) {
-        *newline = '\0';
-    }                                  // remove newline that terminates asctime() output
-    char date_hdr[STRSIZE];
-    snprintf(date_hdr, STRSIZE, "Date: %s", date_str);
-    headers = curl_slist_append(headers, date_hdr);
-
-    char *cert_str = euca_get_cert(0); /* read the cloud-wide cert */
-    if (cert_str == NULL) {
-        close(fd);
-        pthread_mutex_unlock(&wreq_mutex);
-        return EUCA_ERROR;
-    }
-    char *cert64_str = base64_enc((unsigned char *)cert_str, strlen(cert_str));
-    assert(strlen(cert64_str) + 11 <= BUFSIZE);
-    char cert_hdr[BUFSIZE];
-    snprintf(cert_hdr, BUFSIZE, "EucaCert: %s", cert64_str);
-    LOGTRACE("base64 certificate: %s\n", get_string_stats(cert64_str));
-    headers = curl_slist_append(headers, cert_hdr);
-    EUCA_FREE(cert64_str);
-    EUCA_FREE(cert_str);
-
-    char *sig_str = euca_sign_url(verb, date_str, url_path);    /* create Walrus-compliant sig */
-    if (sig_str == NULL) {
-        close(fd);
-        pthread_mutex_unlock(&wreq_mutex);
-        return EUCA_ERROR;
-    }
-    assert(strlen(sig_str) + 16 <= BUFSIZE);
-    char sig_hdr[BUFSIZE];
-    snprintf(sig_hdr, BUFSIZE, "EucaSignature: %s", sig_str);
-    headers = curl_slist_append(headers, sig_hdr);
-
-    curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);    /* register headers */
-    if (walrus_op) {
-        LOGDEBUG("writing %s/%s output\n", verb, walrus_op);
-        LOGDEBUG("        from %s\n", url);
-        LOGDEBUG("        to %s\n", outfile);
-    } else {
-        LOGDEBUG("writing %s output to %s\n", verb, outfile);
-    }
-    int retries = TOTAL_RETRIES;
-    int timeout = FIRST_TIMEOUT;
-    do {
-        params.total_wrote = 0L;
-        params.total_calls = 0L;
-#if defined(CAN_GZIP)
-        if (do_compress) {
-            /* allocate zlib inflate state */
-            params.strm.zalloc = Z_NULL;
-            params.strm.zfree = Z_NULL;
-            params.strm.opaque = Z_NULL;
-            params.strm.avail_in = 0;
-            params.strm.next_in = Z_NULL;
-            params.ret = inflateInit2(&(params.strm), 31);
-            if (params.ret != Z_OK) {
-                zerr(params.ret, "walrus_request");
-                break;
-            }
-        }
-#endif /* CAN_GZIP */
-
-        //! @todo There used to be a 'pthread_mutex_unlock(&wreq_mutex)' before curl invocation
-        //! and a 'lock' after it, but under heavy load we were seeing failures inside
-        //! libcurl code that would propagate to NC, implying lack of thread safety in
-        //! the library. For now, we will serialize all curl operations, but in the future
-        //! an approach to parallelizing Walrus downloads is necessary
-        result = curl_easy_perform(curl);   /* do it */
-        LOGDEBUG("wrote %lld byte(s) in %lld write(s)\n", params.total_wrote, params.total_calls);
-
-#if defined(CAN_GZIP)
-        if (do_compress) {
-            inflateEnd(&(params.strm));
-            if (params.ret != Z_STREAM_END) {
-                zerr(params.ret, "walrus_request");
-            }
-        }
-#endif /* CAN_GZIP */
-
-        if (result) {                  // curl error (connection or transfer failed)
-            LOGERROR("curl error: %s (%d)\n", error_msg, result);
-
-        } else {
-            long httpcode;
-            curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &httpcode);
-            //! @todo pull out response message, too
-
-            switch (httpcode) {
-            case 200L:                /* all good */
-                LOGINFO("downloaded %s\n", outfile);
-                code = EUCA_OK;
-                break;
-            case 408L:                /* timeout, retry */
-                LOGWARN("server responded with HTTP code %ld (timeout) for %s\n", httpcode, url);
-                //logcat (EUCADEBUG, outfile); /* dump the error from outfile into the log */
-                break;
-            default:                  /* some kind of error */
-                LOGERROR("server responded with HTTP code %ld for %s\n", httpcode, url);
-                //logcat (EUCADEBUG, outfile); /* dump the error from outfile into the log */
-                retries = 0;
-                break;
-            }
-        }
-
-        if (code != EUCA_OK && retries > 0) {
-            LOGWARN("download retry %d of %d will commence in %d sec for %s\n", retries, TOTAL_RETRIES, timeout, url);
-            sleep(timeout);
-            lseek(fd, 0L, SEEK_SET);
-            timeout <<= 1;
-            if (timeout > MAX_TIMEOUT)
-                timeout = MAX_TIMEOUT;
-        }
-
-        retries--;
-    } while (code != EUCA_OK && retries > 0);
-    close(fd);
-
-    if (code != EUCA_OK) {
-        LOGWARN("removing %s\n", outfile);
-        remove(outfile);
-    }
-
-    EUCA_FREE(sig_str);
-    curl_slist_free_all(headers);
-    curl_easy_cleanup(curl);
-    pthread_mutex_unlock(&wreq_mutex);
-    return code;
-}
-
-//!
-//! Unused function
-//!
-//! @param[in] walrus_op
-//! @param[in] verb
-//! @param[in] requested_url
-//! @param[in] outfile
-//! @param[in] do_compress
-//!
-//! @return the result of the walrus_request_timeout() call.
-//!
-//! @see walrus_request_timeout()
-//!
-static int walrus_request(const char *walrus_op, const char *verb, const char *requested_url, const char *outfile, const int do_compress)
-{
-    return (walrus_request_timeout(walrus_op, verb, requested_url, outfile, do_compress, 0, 0));
-}
-
-#else // EUCA_DEPRECATED_API
 
 //!
 //! downloads a decrypted image from Walrus based on the manifest URL,
@@ -503,7 +234,6 @@ static int walrus_request_timeout(const char *walrus_op, const char *verb, const
 {
     int fd = -1;
     int code = EUCA_ERROR;
-    int retries = TOTAL_RETRIES;
     int timeout = FIRST_TIMEOUT;
     long httpcode = 0;
     char *url_path = NULL;
@@ -533,36 +263,35 @@ static int walrus_request_timeout(const char *walrus_op, const char *verb, const
 
     // isolate the PATH in the URL as it will be needed for signing
     if (strncasecmp(url, "http://", 7) != 0 && strncasecmp(url, "https://", 8) != 0) {
-        LOGERROR("{%u} walrus_request: URL must start with http(s)://...\n", ((u32) pthread_self()));
+        LOGERROR("Walrus URL must start with http(s)://...\n");
         pthread_mutex_unlock(&wreq_mutex);
         return (code);
     }
 
     if ((url_path = strchr(url + 8, '/')) == NULL) {    // find first '/' after hostname
-        LOGERROR("{%u} walrus_request: URL has no path\n", ((u32) pthread_self()));
+        LOGERROR("Walrus URL has no path\n");
         pthread_mutex_unlock(&wreq_mutex);
         return (code);
     }
 
     if (euca_init_cert()) {
-        LOGERROR("{%u} walrus_request: failed to initialize certificate\n", ((u32) pthread_self()));
+        LOGERROR("failed to initialize certificate for Walrus request\n");
         pthread_mutex_unlock(&wreq_mutex);
         return code;
     }
-    // we do not truncate the file
+    // we do not truncate the file because its size was set at blobstore allocation and
+    // it should reflect the size of the stored blob for accounting to work
     fd = open(outfile, O_CREAT | O_WRONLY, S_IRUSR | S_IWUSR);
     if ((fd == -1) || (lseek(fd, 0, SEEK_SET) == -1)) {
-        LOGERROR("{%u} walrus_request: failed to open %s for writing\n", ((u32) pthread_self()), outfile);
+        LOGERROR("failed to open %s for writing result of Walrus request\n", outfile);
         pthread_mutex_unlock(&wreq_mutex);
         if (fd >= 0)
             close(fd);
         return (code);
     }
 
-    LOGDEBUG("{%u} walrus_request: calling URL=%s\n", ((u32) pthread_self()), url);
-
     if ((curl = curl_easy_init()) == NULL) {
-        LOGERROR("{%u} walrus_request: could not initialize libcurl\n", ((u32) pthread_self()));
+        LOGERROR("could not initialize libcurl\n");
         close(fd);
         pthread_mutex_unlock(&wreq_mutex);
         return (code);
@@ -573,6 +302,18 @@ static int walrus_request_timeout(const char *walrus_op, const char *verb, const
     curl_easy_setopt(curl, CURLOPT_HEADERFUNCTION, write_header);
     curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, 0L); //! TODO: make this optional?
     curl_easy_setopt(curl, CURLOPT_SSL_VERIFYHOST, 0L);
+    curl_easy_setopt(curl, CURLOPT_LOW_SPEED_LIMIT, 360L);  // must have at least a 360 baud modem
+    curl_easy_setopt(curl, CURLOPT_LOW_SPEED_TIME, 10L);    // abort if below speed limit for this many seconds
+    curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1); //! @todo remove the comment once we want to follow redirects (e.g., on HTTP 407)
+
+    // enable periodic progress statements in the log
+    curl_easy_setopt(curl, CURLOPT_NOPROGRESS, 0L); // enable progress function invocation
+    curl_easy_setopt(curl, CURLOPT_PROGRESSFUNCTION, progress_function);
+    struct progress_data_t progress_data = {
+        .url = url,
+        .last_update = time(NULL)
+    };
+    curl_easy_setopt(curl, CURLOPT_PROGRESSDATA, &progress_data);
 
     if (strncmp(verb, "GET", 4) == 0) {
         curl_easy_setopt(curl, CURLOPT_HTTPGET, 1L);
@@ -581,7 +322,7 @@ static int walrus_request_timeout(const char *walrus_op, const char *verb, const
         curl_easy_setopt(curl, CURLOPT_NOBODY, 1L);
     } else {
         close(fd);
-        LOGERROR("{%u} walrus_request: invalid HTTP verb %s\n", ((u32) pthread_self()), verb);
+        LOGERROR("invalid HTTP verb %s for Walrus request\n", verb);
         pthread_mutex_unlock(&wreq_mutex);
         return EUCA_ERROR;             //! TODO: dealloc structs before returning!
     }
@@ -629,7 +370,7 @@ static int walrus_request_timeout(const char *walrus_op, const char *verb, const
     headers = curl_slist_append(headers, date_hdr);
 
     if ((url_host = process_url(url, URL_HOSTNAME)) == NULL) {
-        LOGERROR("{%u} walrus_request: URL has no host\n", ((u32) pthread_self()));
+        LOGERROR("Walrus URL has no host\n");
         pthread_mutex_unlock(&wreq_mutex);
         return code;
     }
@@ -651,14 +392,14 @@ static int walrus_request_timeout(const char *walrus_op, const char *verb, const
     // register headers
     curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
     if (walrus_op) {
-        LOGDEBUG("{%u} walrus_request: writing %s/%s output\n", ((u32) pthread_self()), verb, walrus_op);
-        LOGDEBUG("{%u}                 from %s\n", ((u32) pthread_self()), url);
-        LOGDEBUG("{%u}                 to %s\n", ((u32) pthread_self()), outfile);
+        LOGDEBUG("writing %s/%s output\n", verb, walrus_op);
+        LOGDEBUG("        from %s\n", url);
+        LOGDEBUG("        to %s\n", outfile);
     } else {
-        LOGDEBUG("{%u} walrus_request: writing %s output to %s\n", ((u32) pthread_self()), verb, outfile);
+        LOGDEBUG("writing %s output to %s\n", verb, outfile);
     }
 
-    do {
+    for (int attempt = 1; attempt <= TOTAL_ATTEMPTS; attempt++) {
         params.total_wrote = 0L;
         params.total_calls = 0L;
 #if defined(CAN_GZIP)
@@ -677,10 +418,14 @@ static int walrus_request_timeout(const char *walrus_op, const char *verb, const
         }
 #endif
 
-        pthread_mutex_unlock(&wreq_mutex);  // unlock for message exchange
+        //! @todo There used to be a 'pthread_mutex_unlock(&wreq_mutex)' before curl invocation
+        //! and a 'lock' after it, but under heavy load we were seeing failures inside
+        //! libcurl code that would propagate to NC, implying lack of thread safety in
+        //! the library. For now, we will serialize all curl operations, but in the future
+        //! an approach to parallelizing Walrus downloads is necessary
+        LOGINFO("downloading %s\n", url);
         result = curl_easy_perform(curl);   // do it
-        pthread_mutex_lock(&wreq_mutex);    // relock for curl teardown
-        LOGDEBUG("{%u} walrus_request: wrote %lld byte(s) in %lld write(s)\n", ((u32) pthread_self()), params.total_wrote, params.total_calls);
+        LOGDEBUG("wrote %lld byte(s) in %lld write(s)\n", params.total_wrote, params.total_calls);
 
 #if defined(CAN_GZIP)
         if (do_compress) {
@@ -691,42 +436,46 @@ static int walrus_request_timeout(const char *walrus_op, const char *verb, const
         }
 #endif
 
+        boolean bail = FALSE;
+
         if (result) {                  // curl error (connection or transfer failed)
-            LOGERROR("{%u} walrus_request: %s (%d)\n", ((u32) pthread_self()), error_msg, result);
+            LOGERROR("connection to Walrus failed: %s (%d)\n", error_msg, result);
         } else {
             curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &httpcode);
-            //! TODO: pull out response message, too
+            //! @todo pull out response message, too
 
             switch (httpcode) {
             case 200L:                // all good
-                LOGINFO("{%u} walrus_request: to %s\n", ((u32) pthread_self()), outfile);
+                LOGINFO("downloaded %s\n", outfile);
                 code = EUCA_OK;
                 break;
             case 408L:                // timeout, retry
-                LOGWARN("{%u} walrus_request: server responded with HTTP code %ld (timeout)\n", ((u32) pthread_self()), httpcode);
+                LOGWARN("server responded with HTTP code %ld (timeout) for %s\n", httpcode, url);
                 break;
             default:                  // some kind of error
-                LOGERROR("{%u} walrus_request: server responded with HTTP code %ld\n", ((u32) pthread_self()), httpcode);
-                retries = 0;
+                LOGERROR("server responded with HTTP code %ld for %s\n", httpcode, url);
+                bail = TRUE;
                 break;
             }
         }
+        
+        if (code == EUCA_OK || bail == TRUE) {
+            break; // bail out of the retry loop
 
-        if ((code != EUCA_OK) && (retries > 0)) {
-            LOGERROR("                  download retry %d of %d will commence in %d seconds\n", retries, TOTAL_RETRIES, timeout);
+        } else if ((attempt + 1) <= TOTAL_ATTEMPTS) {
+            LOGWARN("download attempt %d of %d will commence in %d sec for %s\n", (attempt + 1), TOTAL_ATTEMPTS, timeout, url);
             sleep(timeout);
-            lseek(fd, 0L, SEEK_SET);
             timeout <<= 1;
             if (timeout > MAX_TIMEOUT)
                 timeout = MAX_TIMEOUT;
+            
+            lseek(fd, 0L, SEEK_SET); // move the file pointer to the beginning for the retry
         }
-
-        retries--;
-    } while ((code != EUCA_OK) && (retries > 0));
+    }
     close(fd);
 
     if (code != EUCA_OK) {
-        LOGINFO("{%u} walrus_request: due to error, removing %s\n", ((u32) pthread_self()), outfile);
+        LOGINFO("due to error, removing %s\n", outfile);
         remove(outfile);
     }
 
@@ -737,7 +486,6 @@ static int walrus_request_timeout(const char *walrus_op, const char *verb, const
     pthread_mutex_unlock(&wreq_mutex);
     return (code);
 }
-#endif // EUCA_DEPRECATED_API
 
 //!
 //! downloads a Walrus object from the URL, saves it to outfile
@@ -752,7 +500,7 @@ static int walrus_request_timeout(const char *walrus_op, const char *verb, const
 //!
 int walrus_object_by_url(const char *url, const char *outfile, const int do_compress)
 {
-    return walrus_request_timeout(NULL, "GET", url, outfile, do_compress, 120, 0);
+    return walrus_request_timeout(NULL, "GET", url, outfile, do_compress, CONNECT_TIMEOUT_SEC, TOTAL_TIMEOUT_SEC);
 }
 
 //!
@@ -789,7 +537,7 @@ int walrus_object_by_path(const char *path, const char *outfile, const int do_co
 //!
 int walrus_image_by_manifest_url(const char *url, const char *outfile, const int do_compress)
 {
-    return walrus_request_timeout(GET_IMAGE_CMD, "GET", url, outfile, do_compress, 120, 0);
+    return walrus_request_timeout(GET_IMAGE_CMD, "GET", url, outfile, do_compress, CONNECT_TIMEOUT_SEC, TOTAL_TIMEOUT_SEC);
 }
 
 //!
@@ -918,7 +666,7 @@ static size_t write_data(void *buffer, size_t size, size_t nmemb, void *params)
     assert(params != NULL);
 
     int fd = ((struct request *)params)->fd;
-    int wrote = write(fd, buffer, size * nmemb);
+    int wrote = write(fd, buffer, size * nmemb); // any blocking in this call is not subject to connection timeouts
     ((struct request *)params)->total_wrote += wrote;
     ((struct request *)params)->total_calls++;
 
@@ -992,6 +740,8 @@ static size_t write_data_zlib(void *buffer, size_t size, size_t nmemb, void *par
     int wrote = 0;
     int ret;
 
+    // any blocking in this function is not subject to connection timeouts
+
     strm->avail_in = size * nmemb;
     strm->next_in = (unsigned char *)buffer;
     do {
@@ -1024,3 +774,16 @@ static size_t write_data_zlib(void *buffer, size_t size, size_t nmemb, void *par
     return size * nmemb;
 }
 #endif /* CAN_GZIP */
+
+static int progress_function(void *clientp, double dltotal, double dlnow, double ultotal, double ulnow)
+{
+    struct progress_data_t * progress_data = (struct progress_data_t *)clientp;
+    time_t now = time(NULL);
+
+    if ((progress_data->last_update + PROGRESS_UPDATE_SEC) <= now) {
+        double percent = (dlnow / dltotal) * 100.0;
+        LOGINFO("downloaded %.1f%% of %s\n", percent, progress_data->url);
+        progress_data->last_update = now;
+    }
+    return 0;
+}
