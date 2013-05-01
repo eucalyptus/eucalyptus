@@ -66,12 +66,10 @@ public class EventHandlerChainDelete extends EventHandlerChain<DeleteLoadbalance
 		@Override
 		public void apply(DeleteLoadbalancerEvent evt)
 				throws EventHandlerException {
-//			final StoredResult<String> instances= this.getChain().findHandler(ServoInstanceFinder.class);
-			// find the LoadBalancerDnsRecord
 			LoadBalancer lb = null;
 			List<LoadBalancerServoInstance> servos = Lists.newArrayList();
 			try{ 
-				lb= LoadBalancers.getLoadbalancer(evt.getContext().getUserFullName(), evt.getLoadBalancer());
+				lb= LoadBalancers.getLoadbalancer(evt.getContext(), evt.getLoadBalancer());
 				if(lb.getZones()!=null){
 					for(LoadBalancerZone zone : lb.getZones()){
 						servos.addAll(zone.getServoInstances());
@@ -121,7 +119,7 @@ public class EventHandlerChainDelete extends EventHandlerChain<DeleteLoadbalance
 		public void apply(DeleteLoadbalancerEvent evt) throws EventHandlerException{
 			LoadBalancer lb = null;
 			try{ 
-				lb= LoadBalancers.getLoadbalancer(evt.getContext().getUserFullName(), evt.getLoadBalancer());
+				lb= LoadBalancers.getLoadbalancer(evt.getContext(), evt.getLoadBalancer());
 			}catch(NoSuchElementException ex){
 				return;
 			}catch(Exception ex){
@@ -192,7 +190,7 @@ public class EventHandlerChainDelete extends EventHandlerChain<DeleteLoadbalance
 			LoadBalancer lb = null;
 			LoadBalancerSecurityGroup group = null;
 			try{
-				lb = LoadBalancers.getLoadbalancer(evt.getContext().getUserFullName(), evt.getLoadBalancer());
+				lb = LoadBalancers.getLoadbalancer(evt.getContext(), evt.getLoadBalancer());
 				if(lb.getGroup()!=null){
 					group = lb.getGroup();
 				}

@@ -407,7 +407,7 @@ public class EventHandlerChainNew extends EventHandlerChain<NewLoadbalancerEvent
 			LoadBalancer lb = null;
 			LoadBalancerDnsRecord dns = null;
 			try{
-				lb = LoadBalancers.getLoadbalancer(evt.getContext().getUserFullName(), evt.getLoadBalancer());
+				lb = LoadBalancers.getLoadbalancer(evt.getContext(), evt.getLoadBalancer());
 				dns = lb.getDns();
 			}catch(NoSuchElementException ex){
 				throw new EventHandlerException("Failed to find the loadbalancer "+evt.getLoadBalancer(), ex);
@@ -457,7 +457,7 @@ public class EventHandlerChainNew extends EventHandlerChain<NewLoadbalancerEvent
 			// set security group with the loadbalancer; update db
 			LoadBalancer lb = null;
 			try{
-				lb = LoadBalancers.getLoadbalancer(evt.getContext().getUserFullName(), evt.getLoadBalancer());
+				lb = LoadBalancers.getLoadbalancer(evt.getContext(), evt.getLoadBalancer());
 			}catch(NoSuchElementException ex){
 				throw new EventHandlerException("Could not find the loadbalancer with name="+evt.getLoadBalancer(), ex);
 			}catch(Exception ex){
@@ -540,7 +540,7 @@ public class EventHandlerChainNew extends EventHandlerChain<NewLoadbalancerEvent
 			// set security group with the loadbalancer; update db
 			LoadBalancer lb = null;
 			try{
-				lb = LoadBalancers.getLoadbalancer(this.event.getContext().getUserFullName(), this.event.getLoadBalancer());
+				lb = LoadBalancers.getLoadbalancer(this.event.getContext(), this.event.getLoadBalancer());
 			}catch(NoSuchElementException ex){
 				return;
 			}catch(Exception ex){

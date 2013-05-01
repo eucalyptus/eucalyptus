@@ -65,7 +65,7 @@ public class EventHandlerChainEnableZone extends EventHandlerChain<EnabledZoneEv
 		public void apply(EnabledZoneEvent evt) throws EventHandlerException {
 			LoadBalancer lb = null;
 			try{
-				lb = LoadBalancers.getLoadbalancer(evt.getContext().getUserFullName(), evt.getLoadBalancer());
+				lb = LoadBalancers.getLoadbalancer(evt.getContext(), evt.getLoadBalancer());
 			}catch(NoSuchElementException ex){
 				throw new EventHandlerException("Could not find the loadbalancer with name="+evt.getLoadBalancer(), ex);
 			}catch(Exception ex){
@@ -141,7 +141,7 @@ public class EventHandlerChainEnableZone extends EventHandlerChain<EnabledZoneEv
 			
 			LoadBalancer lb = null;
 			try{
-				lb = LoadBalancers.getLoadbalancer(evt.getContext().getUserFullName(), evt.getLoadBalancer());
+				lb = LoadBalancers.getLoadbalancer(evt.getContext(), evt.getLoadBalancer());
 			}catch(NoSuchElementException ex){
 				throw new EventHandlerException("Could not find the loadbalancer with name="+evt.getLoadBalancer(), ex);
 			}catch(Exception ex){
@@ -278,7 +278,7 @@ public class EventHandlerChainEnableZone extends EventHandlerChain<EnabledZoneEv
 		public void apply(EnabledZoneEvent evt) throws EventHandlerException {
 			LoadBalancer lb = null;
 			try{
-				lb = LoadBalancers.getLoadbalancer(evt.getContext().getUserFullName(), evt.getLoadBalancer());
+				lb = LoadBalancers.getLoadbalancer(evt.getContext(), evt.getLoadBalancer());
 			}catch(NoSuchElementException ex){
 				throw new EventHandlerException("Could not find the loadbalancer with name="+evt.getLoadBalancer(), ex);
 			}catch(Exception ex){
