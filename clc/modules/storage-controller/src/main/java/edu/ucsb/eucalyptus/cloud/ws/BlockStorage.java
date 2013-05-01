@@ -1858,7 +1858,7 @@ public class BlockStorage {
 					blockManager.deleteSnapshot(snapshotId);
 				} catch (EucalyptusCloudException e1) {
 					LOG.error(e1);
-					return;
+					continue;
 				}
 				SnapshotInfo snapInfo = new SnapshotInfo(snapshotId);
 				db = StorageProperties.getEntityWrapper();
@@ -1870,7 +1870,7 @@ public class BlockStorage {
 				} catch (EucalyptusCloudException e) {
 					db.rollback();
 					LOG.error(e);
-					return;
+					continue;
 				}
 				HttpWriter httpWriter = new HttpWriter("DELETE", "snapset", snapshotId, "DeleteWalrusSnapshot", null);
 				try {
