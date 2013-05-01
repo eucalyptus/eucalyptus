@@ -362,7 +362,7 @@ public class LoadBalancers {
 		}
 	}
 	
-	public static LoadBalancerServoInstance lookupServoInstance(String instanceId) throws LoadBalancingException {
+	public static LoadBalancerServoInstance lookupServoInstance(final String instanceId) throws LoadBalancingException {
 		final EntityTransaction db = Entities.get( LoadBalancerServoInstance.class );
 		try{
 			LoadBalancerServoInstance sample = LoadBalancerServoInstance.named(instanceId);
@@ -375,6 +375,21 @@ public class LoadBalancers {
 		}catch(Exception ex){
 			db.rollback();
 			throw new LoadBalancingException("failed to query servo instances");
+		}
+	}
+	
+	public static LoadBalancerBackendInstance lookupBackendInstance(final String instanceId) {
+		final EntityTransaction db = Entities.get( LoadBalancerBackendInstance.class ) ;
+		try{
+			final LoadBalancerBackendInstance found = Entities.uniqueResult(LoadBalancerBackendInstance.named(instanceId));
+			db.commit();
+			return found;
+		}catch(final NoSuchElementException ex){
+			db.rollback();
+			throw ex;
+		}catch(final Exception ex){
+			db.rollback();
+			throw Exceptions.toUndeclared(ex);
 		}
 	}
 	

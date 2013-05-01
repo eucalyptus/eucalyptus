@@ -26,6 +26,7 @@ import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.concurrent.ConcurrentHashMap;
 
+import javax.annotation.Nullable;
 import javax.persistence.EntityTransaction;
 
 import org.apache.log4j.Logger;
@@ -39,6 +40,8 @@ import com.eucalyptus.entities.Entities;
 import com.eucalyptus.loadbalancing.activities.EucalyptusActivityTasks;
 import com.eucalyptus.loadbalancing.activities.LoadBalancerServoInstance;
 import com.eucalyptus.util.Exceptions;
+import com.google.common.base.Predicate;
+import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 
 /**
@@ -154,9 +157,27 @@ public class LoadBalancerCwatchMetrics {
 		final Map<ElbDimension, Integer> healthyCountMap = new HashMap<ElbDimension, Integer>();
     	final Map<ElbDimension, Integer> unhealthyCountMap = new HashMap<ElbDimension, Integer>();
     	
-		synchronized(lock){
+    	final List<String> candidates = Lists.newArrayList(Iterables.filter(this.instanceHealthMap.keySet(), new Predicate<String>(){
+			@Override
+			public boolean apply(@Nullable String instanceId) {
+				try{
+					final LoadBalancerBackendInstance be = LoadBalancers.lookupBackendInstance(instanceId);
+					if(be==null)
+						return false;
+					if(be.getAvailabilityZone()==null || ! LoadBalancerZone.STATE.InService.equals(be.getAvailabilityZone().getState()))
+						return false;
+					
+					return (LoadBalancerBackendInstance.STATE.InService.equals(be.getState())||
+							LoadBalancerBackendInstance.STATE.OutOfService.equals(be.getState()));
+				}catch(final Exception ex){
+					return false;
+				}
+			}
+    	}));
+    	
+    	synchronized(lock){
 			/// add HealthyHostCount and UnHealthyHostCount
-        	for(final String instanceId : this.instanceHealthMap.keySet()){
+        	for(final String instanceId : candidates){
         		final ElbDimension thisDim = this.instanceToDimensionMap.get(instanceId);
         		if(this.instanceHealthMap.get(instanceId).booleanValue()){ // healthy	
         			if(!healthyCountMap.containsKey(thisDim))
