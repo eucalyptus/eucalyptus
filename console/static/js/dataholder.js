@@ -50,7 +50,6 @@ function(_, Backbone, tags) {
        _.each(sconfs[index], function(name) {
            shared[name] = obj;
        });
-       obj.fetch();
     });
 
     shared.tags = tags;

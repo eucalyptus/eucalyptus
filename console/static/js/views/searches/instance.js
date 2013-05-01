@@ -7,6 +7,8 @@ define([
       facets: ['state', 'root_device_name', 'group_name',
         'placement', 'instance_type']
       , localize: {
+        group_name: 'Scaling Group',
+        placement: 'Availability Zone',
         state: 'Status'
       }
     };
