@@ -779,10 +779,14 @@ static int doMigrateInstances(struct nc_state_t *nc, ncMetadata * pMeta, ncInsta
                     return (EUCA_THREAD_ERROR);
                 }
             } else if (strcmp(action, "rollback") == 0) {
-                LOGINFO("[%s] rolling back migration (%s > %s) on source\n", instance->instanceId, instance->migration_src, instance->migration_dst);
-                sem_p(inst_sem);
-                migration_rollback(instance);
-                sem_v(inst_sem);
+                if ((instance->migration_state == MIGRATION_READY) || (instance->migration_state == MIGRATION_PREPARING)) {
+                    LOGINFO("[%s] rolling back migration (%s > %s) on source\n", instance->instanceId, instance->migration_src, instance->migration_dst);
+                    sem_p(inst_sem);
+                    migration_rollback(instance);
+                    sem_v(inst_sem);
+                } else {
+                    LOGINFO("[%s] ignoring request to roll back migration on source with instance in state %s(%s) -- duplicate rollback request?\n", instance->instanceId, instance->stateName, migration_state_names[instance->migration_state]);
+                }
             } else {
                 LOGERROR("[%s] action '%s' is not valid\n", instance->instanceId, action);
                 return (EUCA_INVALID_ERROR);
@@ -811,6 +815,7 @@ static int doMigrateInstances(struct nc_state_t *nc, ncMetadata * pMeta, ncInsta
                 LOGERROR("[%s] action '%s' is not valid or not implemented\n", instance_req->instanceId, action);
                 return (EUCA_INVALID_ERROR);
             }
+
             // Everything from here on is specific to "prepare" on a destination.
 
             // allocate a new instance struct
@@ -826,6 +831,16 @@ static int doMigrateInstances(struct nc_state_t *nc, ncMetadata * pMeta, ncInsta
             euca_strncpy(instance->migration_dst, destNodeName, HOSTNAME_SIZE);
             euca_strncpy(instance->migration_credentials, credentials, CREDENTIAL_SIZE);
             save_instance_struct(instance);
+
+            /*
+             * Uncomment the following three lines to force failures during preparation of destination node.
+             * (This is intended for development/testing only!)
+             */
+            /*
+            sem_v(inst_sem);
+            LOGERROR("[%s] FORCING FAILURE!\n", instance->instanceId);
+            goto failed_dest;
+            */
 
             // Establish migration-credential keys.
             LOGINFO("[%s] migration destination preparing %s > %s [creds=%s]\n", instance->instanceId, SP(instance->migration_src), SP(instance->migration_dst),
@@ -1009,12 +1024,25 @@ unroll:
             continue;
 
 failed_dest:
+            sem_p(inst_sem);
+            // Just making sure...
+            if (instance != NULL) {
+                LOGERROR("[%s] setting instance to Teardown(cleaning) after destination failure to prepare for migration\n", instance->instanceId);
+                // Set state to Teardown(cleaning) so source won't wait until timeout to roll back.
+                instance->migration_state = MIGRATION_CLEANING;
+                instance->terminationTime = time(NULL);
+                change_state(instance, TEARDOWN);
+                save_instance_struct(instance);
+                add_instance(&global_instances, instance);  // OK if this fails--that should mean it's already been added.
+                copy_instances();
+            }
+            sem_v(inst_sem);
 
             // Set to generic EUCA_ERROR unless already set to a more-specific error.
             if (ret == EUCA_OK) {
                 ret = EUCA_ERROR;
             }
-            EUCA_FREE(instance);
+            //EUCA_FREE(instance);
             goto out;
 
         } else {

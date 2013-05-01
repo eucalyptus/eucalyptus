@@ -3163,8 +3163,14 @@ int doMigrateInstances(ncMetadata * pMeta, ncInstance ** instances, int instance
             LOGDEBUG("invoked (action=%s instance[%d].{id=%s src=%s dst=%s) creds=%s\n",
                      action, i, instances[i]->instanceId, instances[i]->migration_src, instances[i]->migration_dst, (credentials == NULL) ? "unset" : "present");
             if (!strcmp(instances[i]->migration_src, instances[i]->migration_dst)) {
-                LOGERROR("[%s] rejecting proposed SAME-NODE migration from %s to %s\n", instances[i]->instanceId, instances[i]->migration_src, instances[i]->migration_dst);
-                return (EUCA_UNSUPPORTED_ERROR);
+                if (strcmp(action, "rollback")) {
+                    // Anything but rollback.
+                    LOGERROR("[%s] rejecting proposed SAME-NODE migration from %s to %s\n", instances[i]->instanceId, instances[i]->migration_src, instances[i]->migration_dst);
+                    return (EUCA_UNSUPPORTED_ERROR);
+                } else {
+                    // Ignore the fact src & dst are the same if a rollback--it doesn't matter.
+                    LOGDEBUG("[%s] ignoring apparent same-node migration hosts (%s > %s) for action '%s'\n", instances[i]->instanceId, instances[i]->migration_src, instances[i]->migration_dst, action);
+                }
             }
         }
     }
@@ -3237,10 +3243,11 @@ int migration_rollback(ncInstance * instance)
         instance->migration_state = NOT_MIGRATING;
         bzero(instance->migration_src, HOSTNAME_SIZE);
         bzero(instance->migration_dst, HOSTNAME_SIZE);
+        bzero(instance->migration_credentials, CREDENTIAL_SIZE);
         instance->migrationTime = 0;
         save_instance_struct(instance);
         copy_instances();
-        LOGINFO("[%s] migration source rolled back.\n", instance->instanceId);
+        LOGINFO("[%s] migration source rolled back\n", instance->instanceId);
         return TRUE;
     } else if (is_migration_dst(instance)) {
         // FIXME: Do I want to protect this functionality by requiring something like a 'force' option be passed to this function?
@@ -3249,6 +3256,7 @@ int migration_rollback(ncInstance * instance)
         instance->migration_state = NOT_MIGRATING;
         bzero(instance->migration_src, HOSTNAME_SIZE);
         bzero(instance->migration_dst, HOSTNAME_SIZE);
+        bzero(instance->migration_credentials, CREDENTIAL_SIZE);
         instance->migrationTime = 0;
         save_instance_struct(instance);
         copy_instances();
