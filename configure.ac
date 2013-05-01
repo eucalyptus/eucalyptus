@@ -22,7 +22,7 @@ AC_CONFIG_HEADER([util/eucalyptus-config.h])
 AC_PREFIX_DEFAULT([/opt/eucalyptus/])
 AC_USE_SYSTEM_EXTENSIONS
 AC_CANONICAL_BUILD
-EUCA_VERSION="`cat VERSION`"
+EUCA_VERSION="$PACKAGE_VERSION"
 
 # let's figure out where is the source tree
 if test ${srcdir} = "." ; then
@@ -94,6 +94,7 @@ AC_ARG_WITH(db-suffix,
 AC_ARG_ENABLE(debug,
         [  --enable-debug                       include debugging info when compiling],
         [if test "${enableval}" != "no"; then
+                DEBUGGING_ENABLED=yes
                 CFLAGS="$CFLAGS -g -DDEBUG"
         fi])
 AC_ARG_WITH(extra-version,
@@ -161,6 +162,7 @@ AC_PROG_CC
 AC_PROG_INSTALL
 AC_PROG_MAKE_SET
 AC_PATH_PROG(RM, rm)
+AC_LANG_C
 
 if test -z "$WSDL2C"; then
         # let's search for WSDL2C.sh
@@ -224,22 +226,21 @@ fi
 
 
 # Checks for libraries.
-# FIXME: Replace `main' with a function in the library
-AC_CHECK_LIB([axis2_axiom],[main],,AC_MSG_ERROR([Cannot find axis2 libs!]))
-AC_CHECK_LIB([axis2_engine],[main],,AC_MSG_ERROR([Cannot find axis2 libs!]))
-AC_CHECK_LIB([axis2_http_common],[main],,AC_MSG_ERROR([Cannot find axis2 libs!]))
-AC_CHECK_LIB([axis2_http_receiver],[main],,AC_MSG_ERROR([Cannot find axis2 libs!]))
-AC_CHECK_LIB([axis2_http_sender],[main],,AC_MSG_ERROR([Cannot find axis2 libs!]))
-AC_CHECK_LIB([guththila],[main],,AC_MSG_ERROR([Cannot find libguththila!]))
+AC_CHECK_LIB([axis2_axiom],[axiom_node_get_parent],,AC_MSG_ERROR([Cannot find axis2 libs!]))
+AC_CHECK_LIB([axis2_engine],[axis2_msg_ctx_init],,AC_MSG_ERROR([Cannot find axis2 libs!]))
+AC_CHECK_LIB([axis2_http_common],[axis2_simple_http_svr_conn_get_peer_ip],,AC_MSG_ERROR([Cannot find axis2 libs!]))
+AC_CHECK_LIB([axis2_http_receiver],[axis2_http_server_create],,AC_MSG_ERROR([Cannot find axis2 libs!]))
+AC_CHECK_LIB([axis2_http_sender],[axis2_http_transport_sender_init],,AC_MSG_ERROR([Cannot find axis2 libs!]))
+AC_CHECK_LIB([guththila],[guththila_create_xml_stream_writer],,AC_MSG_ERROR([Cannot find libguththila!]))
 AC_CHECK_LIB([axis2_parser],[axiom_xml_reader_init],,AC_MSG_ERROR([Cannot find axis2 libs!]))
-AC_CHECK_LIB([axutil],[main],,AC_MSG_ERROR([Cannot find libaxutil]))
-AC_CHECK_LIB([m],[main])
-AC_CHECK_LIB([mod_rampart],[main],,AC_MSG_ERROR([Cannot find libmod_rampart]))
-AC_CHECK_LIB([neethi],[main],,AC_MSG_ERROR([Cannot find libneethi!]))
-AC_CHECK_LIB([pthread],[main])
-AC_CHECK_LIB([rt],[main])
-AC_CHECK_LIB([virt],[main],true,AC_MSG_ERROR([Cannot find libvirt!]))
-AC_CHECK_LIB([curl],[main],true,AC_MSG_ERROR([Cannot find libcurl!]))
+AC_CHECK_LIB([axutil],[axutil_url_get_path],,AC_MSG_ERROR([Cannot find libaxutil]))
+AC_CHECK_LIB([m],[log10])
+AC_CHECK_LIB([mod_rampart],[rampart_mod_create],,AC_MSG_ERROR([Cannot find libmod_rampart]))
+AC_CHECK_LIB([neethi],[neethi_engine_get_policy],,AC_MSG_ERROR([Cannot find libneethi!]))
+AC_CHECK_LIB([pthread],[pthread_join],,AC_MSG_ERROR([Cannot find pthreads!]))
+AC_CHECK_LIB([rt],[timer_gettime])
+AC_CHECK_LIB([virt],[virStorageVolDownload],true,AC_MSG_ERROR([Cannot find libvirt!]))
+AC_CHECK_LIB([curl],[curl_version_info],true,AC_MSG_ERROR([Cannot find libcurl!]))
 AC_CHECK_LIB([z],[inflate])
 AC_CHECK_LIB([cap],[cap_from_name],,AC_MSG_WARN([Cannot find sufficiently recent libcap will not use it]))
 AC_CHECK_LIB([xml2],[xmlFree],,AC_MSG_ERROR([Cannot find libxml2!]))
@@ -250,7 +251,6 @@ AC_HEADER_STDC
 AC_HEADER_SYS_WAIT
 AC_CHECK_HEADERS([fcntl.h limits.h stdint.h stdlib.h string.h strings.h sys/ioctl.h unistd.h sys/vfs.h zlib.h])
 AC_CHECK_HEADER([curl/curl.h],,AC_MSG_ERROR([[Cannot find curl/curl.h]]))
-dnl AC_CHECK_HEADER([curl/easy.h],,AC_MSG_ERROR([[Cannot find curl/easy.h]]))
 
 # Checks for typedefs, structures, and compiler characteristics.
 AC_C_CONST
@@ -292,29 +292,59 @@ AC_CONFIG_FILES([Makedefs
 
 AC_DEFINE_UNQUOTED([EUCA_VERSION], "$EUCA_VERSION", [Version of Eucalyptus])
 
-AC_SUBST(EUCA_VERSION)
-AC_SUBST(EXTRA_VERSION)
-AC_SUBST(TOP)
 AC_SUBST(ANT)
-AC_SUBST(RM)
-AC_SUBST(WSDL2C)
-AC_SUBST(JAVA_HOME)
 AC_SUBST(APACHE2_MODULE_DIR)
 AC_SUBST(AXIS2C_HOME)
 AC_SUBST(AXIS2C_SERVICES)
 AC_SUBST(AXIS2_HOME)
-AC_SUBST(LIBVIRT_HOME)
-AC_SUBST(VDDK_HOME)
+AC_SUBST(CFLAGS)
 AC_SUBST(EUCA_DB_HOME)
 AC_SUBST(EUCA_DB_SUFFIX)
-AC_SUBST(CFLAGS)
+AC_SUBST(EUCA_VERSION)
+AC_SUBST(EXTENSIONS)
+AC_SUBST(EXTRA_VERSION)
+AC_SUBST(INCLUDES)
+AC_SUBST(INTERFACE_THEME)
+AC_SUBST(JAVA_HOME)
 AC_SUBST(LDFLAGS)
 AC_SUBST(LIBS)
-AC_SUBST(INCLUDES)
-AC_SUBST(EXTENSIONS)
-AC_SUBST(INTERFACE_THEME)
+AC_SUBST(LIBVIRT_HOME)
 AC_SUBST(PYTHON)
-
+AC_SUBST(RM)
+AC_SUBST(TOP)
+AC_SUBST(VDDK_HOME)
+AC_SUBST(WSDL2C)
 
 
 AC_OUTPUT
+
+dnl Configuration output
+
+echo ""
+echo "  Eucalyptus ${EUCA_VERSION}"
+echo ""
+echo "  Flags and Settings:"
+echo "    CFLAGS..............: ${CFLAGS}"
+echo "    LDFLAGS.............: ${LDFLAGS}"
+echo "    LIBS................: ${LIBS}"
+echo "    Debugging Enabled...: ${DEBUGGING_ENABLED:-no}"
+echo ""
+echo "  Build Tools:"
+echo "    ANT.................: ${ANT} (${ant_version})"
+echo "    JAVA................: ${JAVA} (${java_version})"
+echo "    PYTHON..............: ${PYTHON} (${PYTHON_VERSION})"
+echo "    WSDL2C..............: ${WSDL2C}"
+echo ""
+echo "  Locations:"
+echo "    PREFIX..............: ${prefix:-Not Set}"
+echo "    APACHE2_MODULE_DIR..: ${APACHE2_MODULE_DIR:-Not Set}"
+echo "    AXIS2C_HOME.........: ${AXIS2C_HOME:-Not Set}"
+echo "    AXIS2C_SERVICES.....: ${AXIS2C_SERVICES:-Not Set}"
+echo "    AXIS2_HOME..........: ${AXIS2_HOME:-Not Set}"
+echo "    EUCA_DB_HOME........: ${EUCA_DB_HOME:-Not Set}"
+echo "    EUCA_DB_SUFFIX......: ${EUCA_DB_SUFFIX:-Not Set}"
+echo "    JAVA_HOME...........: ${JAVA_HOME:-Not Set}"
+echo "    LIBVIRT_HOME........: ${LIBVIRT_HOME:-Not Set}"
+echo "    VDDK_HOME...........: ${VDDK_HOME:-Not Set}"
+echo ""
+
