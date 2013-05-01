@@ -457,8 +457,8 @@ public class OverlayManager extends DASManager {
 		long absoluteSize = size * StorageProperties.GB + LVM_HEADER_LENGTH;
 		try {
 			//set up LVM
-			String vgName = "vg-" + Hashes.getRandom(4);
-			String lvName = "lv-" + Hashes.getRandom(4);
+			String vgName = generateVGName(volumeId); //"vg-" + Hashes.getRandom(4);
+			String lvName = generateLVName(volumeId); //"lv-" + Hashes.getRandom(4);
 			//create file and attach to loopback device
 			String loDevName = createLoopback(rawFileName, absoluteSize);
 			lvmVolumeInfo.setVolumeId(volumeId);
@@ -503,8 +503,8 @@ public class OverlayManager extends DASManager {
 		if(foundSnapshotInfo != null) {
 			String status = foundSnapshotInfo.getStatus();
 			if(status.equals(StorageProperties.Status.available.toString())) {
-				String vgName = "vg-" + Hashes.getRandom(4);
-				String lvName = "lv-" + Hashes.getRandom(4);
+				String vgName = generateVGName(volumeId); //"vg-" + Hashes.getRandom(4);
+				String lvName = generateLVName(volumeId); //"lv-" + Hashes.getRandom(4);
 				String loFileName = foundSnapshotInfo.getLoFileName();
 				String snapId = foundSnapshotInfo.getVolumeId();
 				LVMVolumeInfo lvmVolumeInfo = volumeManager.getVolumeInfo();
@@ -575,8 +575,8 @@ public class OverlayManager extends DASManager {
 		VolumeEntityWrapperManager volumeManager = new VolumeEntityWrapperManager();
 		LVMVolumeInfo foundVolumeInfo = volumeManager.getVolumeInfo(parentVolumeId);
 		if(foundVolumeInfo != null) {
-			String vgName = "vg-" + Hashes.getRandom(4);
-			String lvName = "lv-" + Hashes.getRandom(4);
+			String vgName = generateVGName(volumeId); //"vg-" + Hashes.getRandom(4);
+			String lvName = generateLVName(volumeId); //"lv-" + Hashes.getRandom(4);
 			String parentVgName = foundVolumeInfo.getVgName();
 			String parentLvName = foundVolumeInfo.getLvName();
 			LVMVolumeInfo lvmVolumeInfo = volumeManager.getVolumeInfo();
@@ -781,7 +781,7 @@ public class OverlayManager extends DASManager {
 			LVMVolumeInfo snapshotInfo = volumeManager.getVolumeInfo();
 			snapshotInfo.setVolumeId(snapshotId);
 			String vgName = foundLVMVolumeInfo.getVgName();
-			String lvName = "lv-snap-" + Hashes.getRandom(4);
+			String lvName = generateLVName(snapshotId); //"lv-snap-" + Hashes.getRandom(4);
 			String absoluteLVName = lvmRootDirectory + PATH_SEPARATOR + vgName + PATH_SEPARATOR + foundLVMVolumeInfo.getLvName();
 
 			int size = foundLVMVolumeInfo.getSize();
