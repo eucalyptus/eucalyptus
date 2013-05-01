@@ -375,12 +375,13 @@ public class ClusterAllocator implements Runnable {
     		LOG.debug("About to get attachment token for volume " + rootVolume.getDisplayName() + " to instance " + instanceId);    		
     		GetVolumeTokenResponseType scGetTokenResponse;
     		try {
-        	GetVolumeTokenType req = new GetVolumeTokenType(volumeId);
-        	scGetTokenResponse = AsyncRequests.sendSync(scConfig, req);
-        } catch ( Exception e ) {
-          LOG.debug( e, e );
-          throw new EucalyptusCloudException( e.getMessage( ), e );
-        }
+    			GetVolumeTokenType req = new GetVolumeTokenType(volumeId);
+    			scGetTokenResponse = AsyncRequests.sendSync(scConfig, req);
+    		} catch ( Exception e ) {
+    			LOG.debug( e, e );
+    			throw new EucalyptusCloudException( e.getMessage( ), e );
+    		}
+    		
     		LOG.debug("Got volume token response from SC for volume " + rootVolume.getDisplayName() + " and instance " + instanceId + "\n" + scGetTokenResponse);
     		volumeToken = scGetTokenResponse.getToken();                
     		if ( volumeToken == null ) {
@@ -410,35 +411,34 @@ public class ClusterAllocator implements Runnable {
     		LOG.debug("Wait for volume " + volumeId +  " to become available");
     		final ServiceConfiguration scConfigLocal = waitForVolume(volume);
 
-    		// Attach root volume
-      	try {
-      		LOG.debug("About to get attachment token for volume " + rootVolume.getDisplayName() + " to instance " + instanceId);    		
-      		GetVolumeTokenResponseType scGetTokenResponse;
-      		try {
-          	GetVolumeTokenType req = new GetVolumeTokenType(volumeId);
-          	scGetTokenResponse = AsyncRequests.sendSync(scConfig, req);
-          } catch ( Exception e ) {
-            LOG.debug( e, e );
-            throw new EucalyptusCloudException( e.getMessage( ), e );
-          }
-
-      		LOG.debug("Got volume token response from SC for volume " + rootVolume.getDisplayName() + " and instance " + instanceId + "\n" + scGetTokenResponse);
-      		volumeToken = scGetTokenResponse.getToken();                
-      		if ( volumeToken == null ) {
-      			throw new EucalyptusCloudException( "Failed to get remote device string for " + volumeId + " while running instance " + token.getInstanceId( ) );
-      		} else {
-      			//Do formatting here since formatting is for messaging only.
-      			//sc://vol-X,<token>
-          	volumeToken = VOLUME_TOKEN_PREFIX + volumeId + "," + volumeToken;          	
-          	VirtualBootRecord vbr = new VirtualBootRecord(volumeId, volumeToken, "ebs", mapping.getKey(), (volume.getSize() * BYTES_PER_GB), "none");
-          	childVmInfo.getVirtualBootRecord().add(vbr);
+    		try {
+    			LOG.debug("About to get attachment token for volume " + volume.getDisplayName() + " to instance " + instanceId);    		
+    			GetVolumeTokenResponseType scGetTokenResponse;
+    			try {
+    				GetVolumeTokenType req = new GetVolumeTokenType(volumeId);
+    				scGetTokenResponse = AsyncRequests.sendSync(scConfigLocal, req);
+    			} catch ( Exception e ) {
+    				LOG.debug( e, e );
+    				throw new EucalyptusCloudException( e.getMessage( ), e );
+    			}
+    			
+    			LOG.debug("Got volume token response from SC for volume " + volume.getDisplayName() + " and instance " + instanceId + "\n" + scGetTokenResponse);
+    			volumeToken = scGetTokenResponse.getToken();
+    			if ( volumeToken == null ) {
+    				throw new EucalyptusCloudException( "Failed to get remote device string for " + volumeId + " while running instance " + token.getInstanceId( ) );
+    			} else {
+    				//Do formatting here since formatting is for messaging only.
+    				//sc://vol-X,<token>
+    				volumeToken = VOLUME_TOKEN_PREFIX + volumeId + "," + volumeToken;          	
+    				VirtualBootRecord vbr = new VirtualBootRecord(volumeId, volumeToken, "ebs", mapping.getKey(), (volume.getSize() * BYTES_PER_GB), "none");
+    				childVmInfo.getVirtualBootRecord().add(vbr);
     				//vm.updatePersistantVolume(remoteDeviceString, volume); Skipping this step for now as no one seems to be using it
-      		}
-      	} catch (final Exception ex) {
-      		LOG.error(ex);
-      		Logs.extreme().error(ex, ex);
-      		throw ex;
-      	}
+    			}
+    		} catch (final Exception ex) {
+    			LOG.error(ex);
+    			Logs.extreme().error(ex, ex);
+    			throw ex;
+    		}
     	}
     	
     	for( String deviceName : token.getEphemeralDisks().keySet()  ) {

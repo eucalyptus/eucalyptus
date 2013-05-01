@@ -66,6 +66,7 @@ $ENV{'PATH'}='/bin:/usr/bin:/sbin:/usr/sbin/';
 $ISCSIADM = untaint(`which iscsiadm`);
 $MULTIPATH = untaint(`which multipath`);
 $DMSETUP = untaint(`which dmsetup`);
+$YES_RESCAN = "rescan";
 
 $CONF_IFACES_KEY = "STORAGE_INTERFACES";
 
@@ -123,13 +124,14 @@ while (@paths > 0) {
     for ($i = 0; $i < 10; $i++) {
       delete_lun($netdev, $ip, $store, $lun);
       
-      if($do_rescan == $yes_rescan) {
+      if($do_rescan eq $YES_RESCAN) {
       	# rescan target
       	run_cmd(1, 1, "$ISCSIADM -m session -R");
       	last if is_null_or_empty(get_iscsi_device($netdev, $ip, $store, $lun));
       	sleep(5);
       } else {
       	#Don't rescan, continue
+      	last if is_null_or_empty(get_iscsi_device($netdev, $ip, $store, $lun));      	
       }
     }
     print STDERR "Tried deleting lun $i times\n";

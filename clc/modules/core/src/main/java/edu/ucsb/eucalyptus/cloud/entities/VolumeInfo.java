@@ -62,67 +62,83 @@
 
 package edu.ucsb.eucalyptus.cloud.entities;
 
+import org.apache.log4j.Logger;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.*;
 import org.hibernate.annotations.Cache;
 
+import com.eucalyptus.crypto.Crypto;
 import com.eucalyptus.entities.AbstractPersistent;
+import com.eucalyptus.entities.Entities;
+import com.eucalyptus.entities.TransactionException;
+import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.StorageProperties;
+import com.google.common.base.Function;
 
 import javax.persistence.CascadeType;
 import javax.persistence.*;
+import javax.persistence.OrderBy;
+
 import org.hibernate.annotations.Entity;
 import javax.persistence.Table;
 import java.util.*;
 
-@Entity @javax.persistence.Entity
-@PersistenceContext(name="eucalyptus_storage")
-@Table( name = "Volumes" )
-@Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
+@Entity
+@javax.persistence.Entity
+@PersistenceContext(name = "eucalyptus_storage")
+@Table(name = "Volumes")
+@Cache(usage = CacheConcurrencyStrategy.TRANSACTIONAL)
 public class VolumeInfo extends AbstractPersistent {
-    @Column(name = "volume_user_name")
-    private String userName;
-    @Column(name = "volume_name", unique=true)
-    private String volumeId;
-    @Column(name = "sc_name")
-    private String scName;
-    @Column(name = "size")
-    private Integer size; //in GB
-    @Column(name = "status")
-    private String status;
-    @Column(name = "create_time")
-    private Date createTime;
-    @Column(name = "zone")
-    private String zone;
-    @Column(name = "snapshot_id")
-    private String snapshotId;
+	private static final Logger LOG = Logger.getLogger(VolumeInfo.class);
 
-    public VolumeInfo() {
-    	this.scName = StorageProperties.NAME;
-    }
+	@Column(name = "volume_user_name")
+	private String userName;
+	@Column(name = "volume_name", unique = true)
+	private String volumeId;
+	@Column(name = "sc_name")
+	private String scName;
+	@Column(name = "size")
+	private Integer size; // in GB
+	@Column(name = "status")
+	private String status;
+	@Column(name = "create_time")
+	private Date createTime;
+	@Column(name = "zone")
+	private String zone;
+	@Column(name = "snapshot_id")
+	private String snapshotId;
 
-    public VolumeInfo(String volumeId) {
-    	this();
-        this.volumeId = volumeId;
-    }
+	@NotFound( action = NotFoundAction.IGNORE )
+	@OneToMany(fetch = FetchType.LAZY, mappedBy = "volume", orphanRemoval=true, cascade = CascadeType.ALL)
+	@Cache(usage = CacheConcurrencyStrategy.TRANSACTIONAL)
+	private List<VolumeToken> attachmentTokens;
 
-    public String getUserName() {
-        return userName;
-    }
+	public VolumeInfo() {
+		this.scName = StorageProperties.NAME;
+	}
 
-    public void setUserName(String userName) {
-        this.userName = userName;
-    }
+	public VolumeInfo(String volumeId) {
+		this();
+		this.volumeId = volumeId;
+	}
 
-    public String getVolumeId() {
-        return volumeId;
-    }
+	public String getUserName() {
+		return userName;
+	}
 
-    public void setVolumeId(String volumeId) {
-        this.volumeId = volumeId;
-    }
+	public void setUserName(String userName) {
+		this.userName = userName;
+	}
 
-    public String getScName() {
+	public String getVolumeId() {
+		return volumeId;
+	}
+
+	public void setVolumeId(String volumeId) {
+		this.volumeId = volumeId;
+	}
+
+	public String getScName() {
 		return scName;
 	}
 
@@ -131,46 +147,46 @@ public class VolumeInfo extends AbstractPersistent {
 	}
 
 	public Integer getSize() {
-        return size;
-    }
+		return size;
+	}
 
-    public void setSize(Integer size) {
-        this.size = size;
-    }
+	public void setSize(Integer size) {
+		this.size = size;
+	}
 
-    public String getStatus() {
-        return status;
-    }
+	public String getStatus() {
+		return status;
+	}
 
-    public void setStatus(String status) {
-        this.status = status;
-    }
+	public void setStatus(String status) {
+		this.status = status;
+	}
 
-    public Date getCreateTime() {
-        return createTime;
-    }
+	public Date getCreateTime() {
+		return createTime;
+	}
 
-    public void setCreateTime(Date createTime) {
-        this.createTime = createTime;
-    }
+	public void setCreateTime(Date createTime) {
+		this.createTime = createTime;
+	}
 
-    public String getZone() {
-        return zone;
-    }
+	public String getZone() {
+		return zone;
+	}
 
-    public void setZone(String zone) {
-        this.zone = zone;
-    }
+	public void setZone(String zone) {
+		this.zone = zone;
+	}
 
-    public String getSnapshotId() {
-        return snapshotId;
-    }
+	public String getSnapshotId() {
+		return snapshotId;
+	}
 
-    public void setSnapshotId(String snapshotId) {
-        this.snapshotId = snapshotId;
-    }
+	public void setSnapshotId(String snapshotId) {
+		this.snapshotId = snapshotId;
+	}
 
-    @Override
+	@Override
 	public boolean equals(Object obj) {
 		if (this == obj)
 			return true;
@@ -192,9 +208,157 @@ public class VolumeInfo extends AbstractPersistent {
 		return true;
 	}
 
-    @Override
+	@Override
 	public int hashCode() {
-    	return scName.hashCode() + volumeId.hashCode();		
+		return scName.hashCode() + volumeId.hashCode();
 	}
 
+	public List<VolumeToken> getAttachmentTokens() {
+		return attachmentTokens;
+	}
+
+	public void setAttachmentTokens(List<VolumeToken> attachmentTokens) {
+		this.attachmentTokens = attachmentTokens;
+	}
+
+	/**
+	 * Returns either the single valid attachment token for the volume, or null
+	 * if none exists. Throws an exception if multiple valid tokens are found
+	 * 
+	 * @return
+	 * @throws EucalyptusCloudException
+	 */
+	public VolumeToken getAttachmentTokenIfValid(String tokenValue) throws EucalyptusCloudException {				
+		//Note: an alternate implementation is to lookup the token directly and check its volume relation and valid status directly.
+		//This is preferable because we use a consistent way to lookup the currently valid token for the volume
+		EntityTransaction db = Entities.get(VolumeInfo.class);
+		try {
+			VolumeToken tok = getCurrentValidToken();
+			if(tok == null) {
+				LOG.warn("Got request for attachment token, no valid token found for volume  " + this.getVolumeId());
+				throw new EucalyptusCloudException("No valid token found");
+			} else {
+				if(!tokenValue.equals(tok.getToken())){
+					LOG.warn("Token requested is not the current valid token for volume " + this.getVolumeId() + " request token: " + tokenValue + " current token: " + tok.getToken());
+					throw new EucalyptusCloudException("Requested token is not the current valid token");
+				} else {
+					db.commit();
+					return tok;
+				}
+			}
+		} catch(Exception e) {
+			LOG.error("Error checking for valid attachment token",e);
+			throw new EucalyptusCloudException(e);
+		} finally {
+			if(db.isActive()) {
+				db.rollback();
+			}
+		}
+	}
+	
+	/**
+	 * Return the valid token if it exists or null if not.
+	 * @return
+	 */
+	public VolumeToken getCurrentValidToken() throws EucalyptusCloudException {
+		EntityTransaction db = Entities.get(VolumeInfo.class);
+		try {
+			VolumeInfo volEntity = Entities.merge(this);
+			for(VolumeToken tok : volEntity.getAttachmentTokens()) {
+				if(tok.getIsValid()) {
+					db.commit();
+					return tok;
+				}
+			}
+			db.commit();
+		} catch(Exception e) {
+			LOG.trace("Failed to lookup valid token found for volume " + this.getVolumeId());
+		} finally {
+			if(db.isActive()) {
+				db.rollback();
+			}
+		}		
+		return null;
+	}
+	
+	/**
+	 * Get an attachment token, if valid one exists return it, otherwise create a new one.
+	 * This should only be used in very specific cases. Normally, the semantics are to either
+	 * explicitly create a new token or check an existing one.
+	 * @param ip
+	 * @param iqn
+	 * @return
+	 * @throws EucalyptusCloudException
+	 */
+	public synchronized VolumeToken getOrCreateAttachmentToken() throws EucalyptusCloudException {
+		VolumeToken token = null;
+		Function<VolumeInfo, VolumeToken> checkAddToken = new Function<VolumeInfo, VolumeToken>() {
+			@Override
+			public VolumeToken apply(VolumeInfo src) {
+				src = Entities.merge(src);
+				try {					
+					if(src.getCurrentValidToken() != null) {
+						return src.getCurrentValidToken();
+					} else {						
+						VolumeToken tok = VolumeToken.generate(src);
+						Entities.flush(tok);
+						src.getAttachmentTokens().add(tok);
+						return tok;
+					}					
+				} catch(Exception e) {
+					LOG.error("Error creating new volume token for " + volumeId);
+				}
+				return null;				
+			}
+		};		
+		token = Entities.asTransaction(VolumeInfo.class, checkAddToken).apply(this);
+		return token;
+	}
+
+	/**
+	 * Invalidates the export if it exists on the current valid token and invalidates the
+	 * token if there are no remaining exports on the token.
+	 * 
+	 * Throws an exception if no valid token exists, if the export is already invalid, or
+	 * invalidation fails.
+	 * 
+	 * @param tokenValue - the token string to use to lookup an active token
+	 * @param nodeIp - the node IP to use for lookup of export record
+	 * @param nodeIqn - the iqn for the lookup of export record
+	 */
+	public void invalidateExport(String tokenValue, String nodeIp, String nodeIqn) throws EucalyptusCloudException {
+		EntityTransaction db = Entities.get(VolumeInfo.class);
+		try {
+			VolumeInfo volEntity = Entities.merge(this);
+			volEntity.getAttachmentTokenIfValid(tokenValue).invalidateExport(nodeIp, nodeIqn);
+			db.commit();
+		} catch(Exception e) {
+			LOG.error("Could not invalidate requested export with token " + tokenValue + " to " + nodeIp + " with iqn " + nodeIqn);
+			throw new EucalyptusCloudException(e);
+		} finally {
+			if(db.isActive()) {
+				db.rollback();
+			}
+		}
+	}
+	
+	/**
+	 * Checks validity of the token and its active status as well as doing a lookup on the
+	 * ip and iqn passed to verify an active export record. Returns true IFF the token is valid
+	 * and there is an active export for the given ip,iqn pair
+	 * @param tokenValue
+	 * @param nodeIp
+	 * @param nodeIqn
+	 * @return
+	 * @throws EucalyptusCloudException
+	 */
+	public boolean canInvalidateExport(String tokenValue, String nodeIp, String nodeIqn) throws EucalyptusCloudException {		
+		try {
+			VolumeToken tok = this.getAttachmentTokenIfValid(tokenValue);
+			return (tok != null) && (tok.getValidExport(nodeIp, nodeIqn) != null);
+		} catch(Exception e) {
+			LOG.error("Could not invalidate requested export with token " + tokenValue + " to " + nodeIp + " with iqn " + nodeIqn);
+			return false;
+		}
+	}
 }

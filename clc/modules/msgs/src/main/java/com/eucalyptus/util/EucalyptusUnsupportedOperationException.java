@@ -60,62 +60,23 @@
  *   NEEDED TO COMPLY WITH ANY SUCH LICENSES OR RIGHTS.
  ************************************************************************/
 
-package edu.ucsb.eucalyptus.cloud.entities;
+package com.eucalyptus.util;
 
-import javax.persistence.Column;
-import org.hibernate.annotations.Entity;
-import javax.persistence.PersistenceContext;
-import javax.persistence.Table;
-import org.hibernate.annotations.Cache;
-import org.hibernate.annotations.CacheConcurrencyStrategy;
-import com.eucalyptus.configurable.ConfigurableClass;
-import com.eucalyptus.configurable.ConfigurableField;
-import com.eucalyptus.configurable.ConfigurableFieldType;
-import com.eucalyptus.configurable.ConfigurableIdentifier;
+public class EucalyptusUnsupportedOperationException extends EucalyptusCloudException {
 
-@PersistenceContext(name="eucalyptus_storage")
-@Table( name = "AOEMetaInfo" )
-@Entity @javax.persistence.Entity
-@Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
-@ConfigurableClass(root = "storage", description = "Storage controller AOE meta info", singleton=false, deferred = true)
-public class AOEMetaInfo extends LVMMetaInfo {
-	@ConfigurableIdentifier
-	@Column(name = "hostname")
-	private String hostName;
-	@ConfigurableField( description = "AOE Major Number", displayName = "AOE Major Number", type = ConfigurableFieldType.PRIVATE)
-	@Column(name = "major_number")
-	private Integer majorNumber;
-	@ConfigurableField( description = "AOE Minor Number", displayName = "AOE Minor Number", type = ConfigurableFieldType.PRIVATE)
-	@Column(name = "minor_number")
-	private Integer minorNumber;
+  public EucalyptusUnsupportedOperationException( ) {
+    super( "Unsupported operation." );
+  }
 
-	public AOEMetaInfo() {}
+  public EucalyptusUnsupportedOperationException( String message ) {
+    super( message );
+  }
 
-	public AOEMetaInfo(String hostName) {
-		this.hostName = hostName;
-	}
+  public EucalyptusUnsupportedOperationException( Throwable ex ) {
+    super( ex.getMessage() != null ? ex.getMessage() : "Unsupported Operation.", ex );
+  }
 
-	public Integer getMajorNumber() {
-		return majorNumber;
-	}
-
-	public void setMajorNumber(Integer majorNumber) {
-		this.majorNumber = majorNumber;
-	}
-
-	public Integer getMinorNumber() {
-		return minorNumber;
-	}
-
-	public void setMinorNumber(Integer minorNumber) {
-		this.minorNumber = minorNumber;
-	}
-
-	public String getHostName() {
-		return hostName;
-	}
-
-	public void setHostName(String hostName) {
-		this.hostName = hostName;
-	}
+  public EucalyptusUnsupportedOperationException( String message, Throwable ex ) {
+    super( message, ex );
+  }
 }
