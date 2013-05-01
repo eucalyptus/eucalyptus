@@ -182,7 +182,7 @@ define([
             if(model.get('return_curl_handle') != undefined)
               data.push({name: "return_curl_handle", value:  model.get('return_curl_handle')});
               
-            var user_file = model.get("user_filename") == undefined ? "none" : model.get("user_filename");
+            var user_file = $(model.get("fileinput")()).val() == undefined ? "none" : $(model.get("fileinput")()).val();
             var self = this;
             $(model.get('fileinput')()).fileupload({
               url:"/ec2?Action=RunInstances",

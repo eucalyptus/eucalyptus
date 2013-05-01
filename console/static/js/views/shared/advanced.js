@@ -154,8 +154,8 @@ define([
 //        self.model.set('advanced_show', true);
       });
 
-      this.model.on('change:user_data', function(e) {
-          self.model.set('user_data', $.base64.encode(e.target.value));
+      this.model.on('change:user_data_text', function(e) {
+          self.model.set('user_data', $.base64.encode(e.get('user_data_text')));
       });
 
       scope.kernels.on('reset change', self.render);
