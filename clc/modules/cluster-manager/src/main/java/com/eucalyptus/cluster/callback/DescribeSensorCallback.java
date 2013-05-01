@@ -56,6 +56,7 @@ import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.ServiceConfigurations;
+import com.eucalyptus.entities.Transactions;
 import com.eucalyptus.event.EventFailedException;
 import com.eucalyptus.event.ListenerRegistry;
 import com.eucalyptus.records.Logs;
@@ -65,6 +66,7 @@ import com.eucalyptus.util.async.AsyncRequests;
 import com.eucalyptus.util.async.BroadcastCallback;
 import com.eucalyptus.vm.VmInstance.VmState;
 import com.eucalyptus.vm.VmInstance;
+import com.eucalyptus.vm.VmInstanceTag;
 import com.eucalyptus.vm.VmInstances;
 
 import com.google.common.base.Function;
@@ -387,7 +389,18 @@ public class DescribeSensorCallback extends
           }
         } else {
           putMetricData.setNamespace("AWS/EC2");
-
+          // get autoscaling group name if it exists
+          try {
+            String autoscalingGroupName = Transactions.find(VmInstanceTag.named(instance, instance.getOwner(), "aws:autoscaling:groupName")).getValue();
+            if (autoscalingGroupName != null) {
+              Dimension autoscalingGroupNameDim = new Dimension();
+              autoscalingGroupNameDim.setName("AutoScalingGroupName");
+              autoscalingGroupNameDim.setValue(autoscalingGroupName);
+              dimArray.add(autoscalingGroupNameDim);
+            }
+          } catch (Exception ex) {
+            ; // no autoscaling group, don't bother adding
+          }
           Dimension instanceIdDim = new Dimension();
           instanceIdDim.setName("InstanceId");
           instanceIdDim.setValue(instance.getInstanceId());
