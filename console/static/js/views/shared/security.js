@@ -10,7 +10,16 @@ define([
 		initialize : function() {
 
       var self = this;
-      this.model.set('name', 'Default');
+
+      // set to default security group
+      // default group should ALWAYS be present
+      var dsg = dataholder.sgroup.findWhere({name: 'default'});
+      if (dsg != null) {
+        this.model.set('name', dsg.get('name'));
+        this.model.set('id', dsg.get('id'));
+        this.model.set('rules', dsg.get('rules'));
+      }
+
 
       var scope = {
         configmodel: this.model,

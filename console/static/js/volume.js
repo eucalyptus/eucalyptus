@@ -734,7 +734,7 @@
         itemsList['detach_volume'] = {"name": volume_action_detach, callback: function(key, opt) {;}, disabled: function(){ return true;} }  // Backbone Dialog -- Kyo 040713
         itemsList['create_snapshot_from_volume'] = {"name": volume_action_create_snapshot, callback: function(key, opt) {;}, disabled: function(){ return true;} }  // Backbone Dialog -- Kyo 040713
         itemsList['delete_volume'] = {"name": volume_action_delete, callback: function(key, opt) {;}, disabled: function(){ return true;} }     // Backbone Dialog -- Kyo 040613
-        itemsList['tag'] = {"name":'Tag Resource', callback: function(key, opt) {;}, disabled: function(){ return true;} }
+        itemsList['tag'] = {"name":table_menu_edit_tags_action, callback: function(key, opt) {;}, disabled: function(){ return true;} }
 //        itemsList['create_volume_bb'] = {"name":'Create Volume', callback: function(key, opt) {;}, disabled: function(){ return true;} }  // Backbone Dialog -- Kyo 040713
       })();
 
@@ -790,7 +790,7 @@
 
       // add resource tag option	031913
       if (volumes.length === 1) {
-        itemsList['tag'] = {"name":'Tag Resource', callback: function(key, opt){ thisObj._tagResourceAction(); }}
+        itemsList['tag'] = {"name":table_menu_edit_tags_action, callback: function(key, opt){ thisObj._tagResourceAction(); }}
       }
 
      // TEMP. Adding the new Create Volume Dialog into MORE ACTIONS Tab while integrating

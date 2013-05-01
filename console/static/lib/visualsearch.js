@@ -96,6 +96,7 @@ VS.ui.SearchBox = Backbone.View.extend({
   // as well as handling typing when a facet is selected.
   initialize : function() {
     this.app = this.options.app;
+    this.app.categoryLabels = {};
     this.flags = {
       allSelected : false
     };
@@ -186,15 +187,18 @@ VS.ui.SearchBox = Backbone.View.extend({
 
   // Add a new facet. Facet will be focused and ready to accept a value. Can also
   // specify position, in the case of adding facets from an inbetween input.
-  addFacet : function(category, initialQuery, position) {
+  addFacet : function(category, initialQuery, position, label) {
+    label     = VS.utils.inflector.trim(label);
     category     = VS.utils.inflector.trim(category);
     initialQuery = VS.utils.inflector.trim(initialQuery || '');
     if (!category) return;
     
+    this.app.categoryLabels[category] = label;
     var model = new VS.model.SearchFacet({
       category : category,
       value    : initialQuery || '',
-      app      : this.app
+      app      : this.app,
+      _label   : this.app.categoryLabels[category]
     });
     this.app.searchQuery.add(model, {at: position});
   },
@@ -1014,7 +1018,7 @@ VS.ui.SearchInput = Backbone.View.extend({
         // e.stopPropagation();
         var remainder = this.addTextFacetRemainder(ui.item.value);
         var position  = this.options.position + (remainder ? 1 : 0);
-        this.app.searchBox.addFacet(ui.item instanceof String ? ui.item : ui.item.value, '', position);
+        this.app.searchBox.addFacet(ui.item instanceof String ? ui.item : ui.item.value, '', position, ui.item.label);
         return false;
       }, this)
     });
@@ -1742,7 +1746,8 @@ VS.app.SearchParser = {
           var searchFacet = new VS.model.SearchFacet({
             category : category,
             value    : VS.utils.inflector.trim(value),
-            app      : instance
+            app      : instance,
+            _label   : instance.categoryLabels[category]
           });
           facets.push(searchFacet);
       }
@@ -1922,6 +1927,6 @@ VS.model.SearchQuery = Backbone.Collection.extend({
 window.JST = window.JST || {};
 
 window.JST['search_box'] = _.template('<div class="VS-search">\n  <div class="VS-search-box-wrapper VS-search-box">\n    <div class="VS-icon VS-icon-search"></div>\n    <div class="VS-placeholder"></div>\n    <div class="VS-search-inner"></div>\n    <div class="VS-icon VS-icon-cancel VS-cancel-search-box" title="clear search"></div>\n  </div>\n</div>');
-window.JST['search_facet'] = _.template('<% if (model.has(\'category\')) { %>\n  <div class="category"><%= model.get(\'category\') %>:</div>\n<% } %>\n\n<div class="search_facet_input_container">\n  <input type="text" class="search_facet_input ui-menu VS-interface" value="" />\n</div>\n\n<div class="search_facet_remove VS-icon VS-icon-cancel"></div>');
+window.JST['search_facet'] = _.template('<% if (model.has(\'category\')) { %>\n  <div class="category"><%= model.get(\'_label\') ? model.get(\'_label\') : model.get(\'category\') %>:</div>\n<% } %>\n\n<div class="search_facet_input_container">\n  <input type="text" class="search_facet_input ui-menu VS-interface" value="" />\n</div>\n\n<div class="search_facet_remove VS-icon VS-icon-cancel"></div>');
 window.JST['search_input'] = _.template('<input type="text" class="ui-menu" />');
 })();

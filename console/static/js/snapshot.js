@@ -306,7 +306,7 @@
         itemsList['delete_snapshot'] = { "name": snapshot_action_delete, callback: function(key, opt) {;}, disabled: function(){ return true;} }  // Backbone Integration --- Kyo 040813
         itemsList['create_volume'] = { "name": snapshot_action_create_volume, callback: function(key, opt) {;}, disabled: function(){ return true;} }  // Backbone Integration --- Kyo 040813
         itemsList['register_snapshot'] = { "name": snapshot_action_register, callback: function(key, opt) {;}, disabled: function(){ return true;} }  // Backbone Integration --- Kyo 040813
-        itemsList['tag'] = { "name": 'Tag Resource', callback: function(key, opt) {;}, disabled: function(){ return true;} }
+        itemsList['tag'] = { "name": table_menu_edit_tags_action, callback: function(key, opt) {;}, disabled: function(){ return true;} }
 //        itemsList['create_snapshot'] = { "name": 'Create new snapshot', callback: function(key, opt) {;}, disabled: function(){ return true;} }  // Backbone Integration --- Kyo 040813
       })();
 
@@ -318,7 +318,7 @@
       if ( selectedSnapshots.length === 1 && onlyInArray('completed', selectedSnapshots)){
 //        itemsList['register'] = { "name": snapshot_action_register, callback: function(key, opt) { thisObj._registerAction(); } }
 //        itemsList['create_volume'] = { "name": snapshot_action_create_volume, callback: function(key, opt) { thisObj._createVolumeAction(); } }
-        itemsList['tag'] = {"name":'Tag Resource', callback: function(key, opt){ thisObj._tagResourceAction(); }}
+        itemsList['tag'] = {"name": table_menu_edit_tags_action, callback: function(key, opt){ thisObj._tagResourceAction(); }}
         itemsList['register_snapshot'] = { "name": snapshot_action_register, callback: function(key, opt) { thisObj._newRegisterSnapshotAction(); } }
         itemsList['create_volume'] = { "name": snapshot_action_create_volume, callback: function(key, opt) { thisObj._newCreateVolumeAction(); } }
       }

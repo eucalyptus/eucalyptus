@@ -154,8 +154,8 @@ define([
 //        self.model.set('advanced_show', true);
       });
 
-      this.model.on('change:user_data', function(e) {
-          self.model.set('user_data', $.base64.encode(e.target.value));
+      this.model.on('change:user_data_text', function(e) {
+          self.model.set('user_data', $.base64.encode(e.get('user_data_text')));
       });
 
       scope.kernels.on('reset change', self.render);
@@ -167,6 +167,9 @@ define([
       this.render();
       // this.model.set('fileinput', this.$el.find('#launch-wizard-advanced-input-userfile'));
        var fileinputel = this.$el.find('#launch-wizard-advanced-input-userfile');
+       $(fileinputel).change(function(e) {
+        self.model.set('files', this.files);
+       });
        this.model.set('fileinput', function() { return fileinputel; });
 		},
 

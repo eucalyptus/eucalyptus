@@ -7,6 +7,7 @@ define([
 ], function(app, _, Backbone, EucaExpandoView, template) {
   return EucaExpandoView.extend({
     initialize : function(args) {
+      var self =  this;
       this.template = template;
       var tmp = this.model ? this.model : new Backbone.Model();
       var id = tmp.get('id');
@@ -26,6 +27,12 @@ define([
       this.model.set('instHealth', app.data.instHealths.get(id));
       this.scope = this.model;//_.extend(this.model, {});
       this._do_init();
+
+      // refresh when tags change
+      var tmptags = this.model.get('instance').get('tags');
+      tmptags.on('add remove reset sort sync', function() {
+        self.render();
+      });
     },
     remove : function() {
       this.model.destroy();

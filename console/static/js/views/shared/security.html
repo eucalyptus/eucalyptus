@@ -22,7 +22,6 @@
   <div id="launch-wizard-security-sgroup"> <div class="form-row clearfix upper-sibling">
     <label for="launch-wizard-security-sg-selector" data-msg="launch_instance_security_sgroup"></label>
     <select data-on-change=":setSecurityGroup" data-value="configmodel.name" id="launch-wizard-security-sg-selector" data-tooltip="launch_instance_sgroup_select_tip">
-      <option value="Default" selected data-msg="launch_instance_sgroup_select_default"></option>
       <option data-selected=":isGroupSelected" data-each-sgroup="sgroups" data-title="sgroup.name" data-value="sgroup.name" data-text="sgroup.name"></option>
     </select>
   </div>
