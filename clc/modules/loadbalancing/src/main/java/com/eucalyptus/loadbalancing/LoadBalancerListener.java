@@ -160,6 +160,28 @@ public class LoadBalancerListener extends AbstractPersistent
 			return false;
 		}
 	}
+	
+	public static boolean validRange(Listener listener){
+		try{
+			if(! (listener.getInstancePort() > 0 &&
+				listener.getLoadBalancerPort() > 0 &&
+				!Strings.isNullOrEmpty(listener.getProtocol())))
+				return false;
+			
+			int lbPort =listener.getLoadBalancerPort();
+			int instancePort = listener.getInstancePort();
+			
+			if (! (lbPort >= 1 && lbPort <= 65535))
+				return false;
+			
+			if (! (instancePort >= 1 && instancePort <= 65535))
+				return false;
+			
+			return true;
+		}catch(Exception e){
+			return false;
+		}
+	}
 
     @PrePersist
     private void generateOnCommit( ) {

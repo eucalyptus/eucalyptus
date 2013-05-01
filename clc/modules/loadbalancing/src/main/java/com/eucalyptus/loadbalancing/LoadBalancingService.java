@@ -33,6 +33,7 @@ import javax.persistence.EntityTransaction;
 import org.apache.log4j.Logger;
 
 import com.eucalyptus.auth.Accounts;
+import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.AuthQuotaException;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.auth.principal.UserFullName;
@@ -335,7 +336,7 @@ public class LoadBalancingService {
     };
     
     if(!nameChecker.apply(lbName)){
-    	throw new LoadBalancingException("Invalid character found in the loadbalancer name");
+    	throw new InvalidConfigurationRequestException("Invalid character found in the loadbalancer name");
     }
     if(request.getListeners()!=null && request.getListeners().getMember()!=null)
     	LoadBalancers.validateListener(request.getListeners().getMember());
@@ -358,10 +359,6 @@ public class LoadBalancingService {
       handleException( e );
     }
 
-    final LoadBalancerDnsRecord dns = LoadBalancers.getDnsRecord(lb);
-    if(dns == null || dns.getName() == null)
-    	throw new LoadBalancingException("New dns name could not be created");
-    
     Function<String, Boolean> rollback = new Function<String, Boolean>(){
     	@Override
     	public Boolean apply(String lbName){
@@ -381,16 +378,23 @@ public class LoadBalancingService {
     	}
     };
     
+    final LoadBalancerDnsRecord dns = LoadBalancers.getDnsRecord(lb);
+    if(dns == null || dns.getName() == null){
+    	rollback.apply(lbName);
+    	throw new InternalFailure400Exception("Dns name could not be created");
+    }
+    
+  
     Collection<String> zones = request.getAvailabilityZones().getMember();
     if(zones != null && zones.size()>0){
     	try{
-    	LoadBalancers.addZone(lbName, ctx, zones);
+    		LoadBalancers.addZone(lbName, ctx, zones);
     	}catch(LoadBalancingException ex){
     		rollback.apply(lbName);
     		throw ex;
     	}catch(Exception ex){
     		rollback.apply(lbName);
-    		throw new LoadBalancingException("Failed to create the loadbalancer (internal error)", ex);
+    		throw new InternalFailure400Exception("Failed to persist the zone");
     	}
     }
     
@@ -402,11 +406,10 @@ public class LoadBalancingService {
     	evt.setZones(zones);
     	ActivityManager.getInstance().fire(evt);
     }catch(EventFailedException e){
-    	//TODO SPARK: TEST
-    	LOG.error("failed to fire new loadbalancer event", e);
+    	LOG.error("failed to handle new loadbalancer event", e);
     	rollback.apply(lbName);
     	final String reason = e.getCause() != null && e.getCause().getMessage()!=null ? e.getCause().getMessage() : "internal error";
-    	throw new LoadBalancingException(String.format("Failed to create the loadbalancer: %s", reason), e);
+    	throw new InternalFailure400Exception(String.format("Failed to create the loadbalancer: %s", reason), e);
     }
 
     Collection<Listener> listeners=request.getListeners().getMember();
@@ -419,10 +422,10 @@ public class LoadBalancingService {
     		evt.setContext(ctx);
     		ActivityManager.getInstance().fire(evt);
     	}catch(EventFailedException e){
-    		LOG.error("failed to fire createListener event", e);
+    		LOG.error("failed to handle createListener event", e);
         	rollback.apply(lbName);
         	final String reason = e.getCause() != null && e.getCause().getMessage()!=null ? e.getCause().getMessage() : "internal error";
-        	throw new LoadBalancingException(String.format("Faild to create the loadbalancer: %s", reason), e);
+        	throw new InternalFailure400Exception(String.format("Faild to setup the listener: %s", reason), e);
     	}
     }
     
@@ -652,7 +655,7 @@ public class LoadBalancingService {
             evt.setPorts( ports );
             ActivityManager.getInstance().fire( evt );
           } catch ( EventFailedException e ) {
-            LOG.error( "failed to fire DeleteListener event", e );
+            LOG.error( "failed to handle DeleteListener event", e );
           }
 
           try {
@@ -661,7 +664,7 @@ public class LoadBalancingService {
             evt.setContext( ctx );
             ActivityManager.getInstance().fire( evt );
           } catch ( EventFailedException e ) {
-            LOG.error( "failed to fire DeleteLoadbalancer event", e );
+            LOG.error( "failed to handle DeleteLoadbalancer event", e );
             throw e;
           }
           
@@ -671,7 +674,7 @@ public class LoadBalancingService {
     }catch (EventFailedException e){
         LOG.error( "Error deleting the loadbalancer: " + e.getMessage(), e );
     	final String reason = e.getCause() != null && e.getCause().getMessage()!=null ? e.getCause().getMessage() : "internal error";
-    	throw new LoadBalancingException( String.format("Failed to delete the loadbalancer: %s", reason), e );
+    	throw new InternalFailure400Exception( String.format("Failed to delete the loadbalancer: %s", reason), e );
     }catch (LoadBalancingException e){
     	throw e;
     }catch ( Exception e ) {
@@ -679,7 +682,7 @@ public class LoadBalancingService {
       if ( !(e.getCause() instanceof NoSuchElementException) ) {
         LOG.error( "Error deleting the loadbalancer: " + e.getMessage(), e );
         final String reason = "internal error";
-        throw new LoadBalancingException( String.format("Failed to delete the loadbalancer: %s", reason), e );
+        throw new InternalFailure400Exception( String.format("Failed to delete the loadbalancer: %s", reason), e );
       }
     }
     DeleteLoadBalancerResult result = new DeleteLoadBalancerResult();
@@ -693,7 +696,6 @@ public class LoadBalancingService {
 	  final Context ctx = Contexts.lookup( );
 	  final String lbName = request.getLoadBalancerName();
 	  final List<Listener> listeners = request.getListeners().getMember();
-
 	  
 	  LoadBalancer lb = null;
 	  try{
@@ -704,7 +706,7 @@ public class LoadBalancingService {
 	  
   	  //IAM support to restricted lb modification
   	  if(lb != null && !LoadBalancingMetadatas.filterPrivileged().apply(lb)) {
-	       throw new AccessPointNotFoundException(); // TODO: SPARK: is this the right exception type?
+	       throw new AccessPointNotFoundException(); 
 	  }
 	  
 	  if(listeners!=null)
@@ -717,11 +719,18 @@ public class LoadBalancingService {
     		evt.setListeners(listeners);
     		ActivityManager.getInstance().fire(evt);
 	  }catch(final EventFailedException e){
-    		LOG.error("failed to fire CreateListener event", e);
+    		LOG.error("failed to handle CreateListener event", e);
     		final String reason = e.getCause()!=null && e.getCause().getMessage()!=null ? e.getMessage() : "internal error";
-    		throw new LoadBalancingException(String.format("Failed to create listener: %s", reason), e );
+    		throw new InternalFailure400Exception(String.format("Failed to create listener: %s", reason), e );
 	  }
-	  LoadBalancers.createLoadbalancerListener(lbName,  ctx, listeners);
+	  try{
+		  LoadBalancers.createLoadbalancerListener(lbName,  ctx, listeners);
+	  }catch(final LoadBalancingException ex){
+		  throw ex;
+	  }catch(final Exception e){
+		  final String reason = e.getCause()!=null && e.getCause().getMessage()!=null ? e.getMessage() : "internal error";
+    	  throw new InternalFailure400Exception(String.format("Failed to create listener: %s", reason), e );
+	  }
 	  reply.set_return(true);
 	  return reply;
   }
@@ -740,7 +749,7 @@ public class LoadBalancingService {
           }
         });
     }catch(Exception ex){
-      throw new LoadBalancingException("Invalid port number", ex);
+      throw new InvalidConfigurationRequestException("Invalid port number");
     }
 
     final LoadBalancer lb;
@@ -750,7 +759,8 @@ public class LoadBalancingService {
       throw new AccessPointNotFoundException();
     }catch(Exception ex){
       LOG.error("failed to query loadbalancer due to unknown reason", ex);
-      throw new LoadBalancingException("Failed to find the loadbalancer", ex);
+	  final String reason = ex.getCause()!=null && ex.getCause().getMessage()!=null ? ex.getMessage() : "internal error";
+      throw new InternalFailure400Exception( String.format("Failed to delete the listener: %s", reason), ex );
     }
 
    //IAM support to restricted lb modification
@@ -780,11 +790,12 @@ public class LoadBalancingService {
           try{
             final LoadBalancerListener exist = Entities.uniqueResult(LoadBalancerListener.named(lb, port));
             Entities.delete(exist);
-          }catch(NoSuchElementException ex){
-              ;
-            }catch(Exception ex){
-              LOG.error("Failed to delete the listener", ex);
-            }
+	       }catch(NoSuchElementException ex){
+	              ;
+	       }catch(Exception ex){
+	          LOG.error("Failed to delete the listener", ex);
+	          throw Exceptions.toUndeclared(ex);
+	       }
         }
         return true;
       }
@@ -797,12 +808,18 @@ public class LoadBalancingService {
       evt.setPorts(listenerPorts);
       ActivityManager.getInstance().fire(evt);
     }catch(EventFailedException e){
-      LOG.error("failed to fire DeleteListener event", e);
+      LOG.error("failed to handle DeleteListener event", e);
       final String reason = e.getCause()!=null && e.getCause().getMessage()!=null ? e.getCause().getMessage() : "internal error";
-      throw new LoadBalancingException(String.format("Failed to delete listener: %s",reason),e );
+      throw new InternalFailure400Exception(String.format("Failed to delete listener: %s",reason),e );
     }
 
-    reply.set_return(Entities.asTransaction(LoadBalancerListener.class, remover).apply(toDelete));
+    try{
+    	Entities.asTransaction(LoadBalancerListener.class, remover).apply(toDelete);
+    }catch(final Exception ex){
+    	final String reason = ex.getCause()!=null && ex.getCause().getMessage()!=null ? ex.getCause().getMessage() : "internal error";
+        throw new InternalFailure400Exception(String.format("Failed to delete listener: %s",reason), ex );
+    }
+    reply.set_return(true);
 
     return reply;
   }
@@ -830,10 +847,14 @@ public class LoadBalancingService {
 	        	for(Instance vm : instances){
 	        		if(lb.hasBackendInstance(vm.getInstanceId()))
 	        			continue;	// the vm instance is already registered
-	        		final LoadBalancerBackendInstance beInstance = 
-	        				LoadBalancerBackendInstance.newInstance(ownerFullName, lb, vm.getInstanceId());
-	        		beInstance.setState(LoadBalancerBackendInstance.STATE.OutOfService);
-	        		Entities.persist(beInstance);
+	        		try{
+		        		final LoadBalancerBackendInstance beInstance = 
+		        				LoadBalancerBackendInstance.newInstance(ownerFullName, lb, vm.getInstanceId());
+		        		beInstance.setState(LoadBalancerBackendInstance.STATE.OutOfService);
+		        		Entities.persist(beInstance);
+	        		}catch(final LoadBalancingException ex){
+	        			throw Exceptions.toUndeclared(ex);
+	        		}
 	        	}
 	        	return true;
 	        }
@@ -867,16 +888,16 @@ public class LoadBalancingService {
     	 evt.setInstances(instances);
     	 ActivityManager.getInstance().fire(evt);
      }catch(EventFailedException e){
-    	 LOG.error("failed to fire RegisterInstances event", e);
+    	 LOG.error("failed to handle RegisterInstances event", e);
     	 final String reason = e.getCause()!=null && e.getCause().getMessage()!=null ? e.getCause().getMessage() : "internal error";
-    	 throw new LoadBalancingException(String.format("Failed to register instances: %s", reason), e );
+    	 throw new InternalFailure400Exception(String.format("Failed to register instances: %s", reason), e );
      }
 	    
 	 if(instances!=null){
 	    try{
 	    	reply.set_return(Entities.asTransaction(LoadBalancerBackendInstance.class, creator).apply(lb));
 	    }catch(Exception ex){
-	    	throw new LoadBalancingException("Failed to register instances", ex);
+	    	handleException(ex);
 	    }
 	 }
 	    
@@ -931,6 +952,7 @@ public class LoadBalancingService {
 	      	    	toDelete = Entities.uniqueResult(LoadBalancerBackendInstance.named(instanceId));
 	      	    }catch(NoSuchElementException ex){
 	      	    	toDelete=null;
+	      	    	throw Exceptions.toUndeclared(new InvalidEndPointException());
 	      	    }catch(Exception ex){
 	      	    	LOG.error("Can't query loadbalancer backend instance for "+instanceId);
 	      	    	toDelete=null;
@@ -971,12 +993,16 @@ public class LoadBalancingService {
 		  evt.setInstances(instances);
 		  ActivityManager.getInstance().fire(evt);
 	  }catch(EventFailedException e){
-		  LOG.error("failed to fire DeregisterInstances event", e);
+		  LOG.error("failed to handle DeregisterInstances event", e);
     	  final String reason = e.getCause()!=null && e.getCause().getMessage()!=null ? e.getCause().getMessage() : "internal error";
-    	  throw new LoadBalancingException(String.format("Failed to deregister instances: %s", reason),e );
+    	  throw new InternalFailure400Exception(String.format("Failed to deregister instances: %s", reason),e );
 	  }
 	    
-	  reply.set_return(Entities.asTransaction(LoadBalancerBackendInstance.class, remover).apply(null));
+	  try{
+		  reply.set_return(Entities.asTransaction(LoadBalancerBackendInstance.class, remover).apply(null));
+	  }catch(final Exception ex){
+		  handleException(ex);
+	  }
 	  DeregisterInstancesFromLoadBalancerResult result = new DeregisterInstancesFromLoadBalancerResult();
 	  Instances returnInstances = new Instances();
 	  returnInstances.setMember(Entities.asTransaction(LoadBalancer.class, finder).apply(null));
@@ -1010,9 +1036,9 @@ public class LoadBalancingService {
 			  evt.setZones(zones);
 			  ActivityManager.getInstance().fire(evt);
 		  }catch(EventFailedException e){
-			  LOG.error("failed to execute EnabledZone event", e);
+			  LOG.error("failed to handle EnabledZone event", e);
 	    	  final String reason = e.getCause()!=null && e.getCause().getMessage()!=null ? e.getCause().getMessage() : "internal error";
-	    	  throw new LoadBalancingException(String.format("Failed to enable zones: %s", reason),e );
+	    	  throw new InternalFailure400Exception(String.format("Failed to enable zones: %s", reason),e );
 	      }
 	  }
 	    
@@ -1063,9 +1089,9 @@ public class LoadBalancingService {
 	    	evt.setZones(zones);
 	    	ActivityManager.getInstance().fire(evt);
 	     }catch(EventFailedException e){
-	    	LOG.error("failed to execute DisabledZone event", e);
+	    	LOG.error("failed to handle DisabledZone event", e);
 	    	final String reason = e.getCause()!=null && e.getCause().getMessage()!=null ? e.getCause().getMessage() : "internal error";
-	    	throw new LoadBalancingException(String.format("Failed to disable zones: %s", reason), e );
+	    	throw new InternalFailure400Exception(String.format("Failed to disable zones: %s", reason), e );
 	    }  
 	  }
 	  
@@ -1097,27 +1123,27 @@ public class LoadBalancingService {
 	final HealthCheck hc = request.getHealthCheck();
 	Integer healthyThreshold = hc.getHealthyThreshold();
 	if (healthyThreshold == null)
-		throw new LoadBalancingException("Healthy tresholds must be specified");
+		throw new InvalidConfigurationRequestException("Healthy tresholds must be specified");
 	Integer interval = hc.getInterval();
 	if(interval == null)
-		throw new LoadBalancingException("Interval must be specified");
+		throw new InvalidConfigurationRequestException("Interval must be specified");
 	String target = hc.getTarget();
 	if(target == null)
-		throw new LoadBalancingException("Target must be specified");
+		throw new InvalidConfigurationRequestException("Target must be specified");
 	
 	Integer timeout = hc.getTimeout();
     if(timeout==null)
-    	throw new LoadBalancingException("Timeout must be specified");
+    	throw new InvalidConfigurationRequestException("Timeout must be specified");
     Integer unhealthyThreshold = hc.getUnhealthyThreshold();
     if(unhealthyThreshold == null)
-    	throw new LoadBalancingException("Unhealthy tresholds must be specified");
+    	throw new InvalidConfigurationRequestException("Unhealthy tresholds must be specified");
     LoadBalancer lb = null;
     try{
     	lb = LoadBalancers.getLoadbalancer(ctx, lbName);
     }catch(NoSuchElementException ex){
     	throw new AccessPointNotFoundException();
     }catch(Exception ex){
-    	throw new LoadBalancingException("Failed to find the loadbalancer (internal error)");
+    	throw new InternalFailure400Exception("Failed to find the loadbalancer");
     }
     
     if( lb!=null && !LoadBalancingMetadatas.filterPrivileged().apply(lb) ) { // IAM policy restriction
@@ -1133,7 +1159,7 @@ public class LoadBalancingService {
     }catch(Exception ex){
     	db.rollback();
     	LOG.error("failed to persist health check config", ex);
-    	throw new LoadBalancingException("Failed to persist the health check request (internal error)", ex);
+    	throw new InternalFailure400Exception("Failed to persist the health check config", ex);
     }
     ConfigureHealthCheckResult result = new ConfigureHealthCheckResult();
     result.setHealthCheck(hc);
@@ -1153,7 +1179,7 @@ public class LoadBalancingService {
 	}catch(NoSuchElementException ex){
 		throw new AccessPointNotFoundException();
     }catch(Exception ex){
-    	throw new LoadBalancingException("Failed to query loadbalancer (internal error)");
+    	throw new InternalFailure400Exception("Failed to find the loadbalancer");
     }
  	
     if( lb!=null && !LoadBalancingMetadatas.filterPrivileged().apply(lb) ) { // IAM policy restriction
@@ -1276,6 +1302,11 @@ public class LoadBalancingService {
     final AuthQuotaException quotaCause = Exceptions.findCause( e, AuthQuotaException.class );
     if ( quotaCause != null ) {
       throw new TooManyAccessPointsException();
+    }
+    
+    final AuthException authCause = Exceptions.findCause(e, AuthException.class);
+    if(authCause != null) {
+    	throw new InternalFailure400Exception(authCause.getMessage());
     }
 
     LOG.error( e, e );

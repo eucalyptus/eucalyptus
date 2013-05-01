@@ -78,22 +78,6 @@ public class LoadBalancers {
 		 }
 	}
 	
-/*	private static LoadBalancer getLoadbalancer(final UserFullName user, final String lbName){
-		 final EntityTransaction db = Entities.get( LoadBalancer.class );
-		 try {
-			 final LoadBalancer lb = Entities.uniqueResult( LoadBalancer.named( user, lbName )); 
-			 db.commit();
-			 return lb;
-		 }catch(NoSuchElementException ex){
-			 db.rollback();
-			 throw ex;
-		 }catch(Exception ex){
-			 db.rollback( );
-			 LOG.error("failed to get the loadbalancer="+lbName, ex);
-			 throw Exceptions.toUndeclared(ex);
-		 }
-	} */
-	
 	///
 	public static LoadBalancer getLoadBalancerByName(final String lbName) throws LoadBalancingException{
 		 final EntityTransaction db = Entities.get( LoadBalancer.class );
@@ -147,7 +131,7 @@ public class LoadBalancers {
 		 try {
 		        try {
 		        	if(Entities.uniqueResult( LoadBalancer.namedByAccount( user.getAccountName(), lbName )) != null)
-		        		throw new LoadBalancingException(LoadBalancingException.DUPLICATE_LOADBALANCER_EXCEPTION);
+		        		throw new DuplicateAccessPointName();
 		        } catch ( NoSuchElementException e ) {
 		        	final LoadBalancer lb = LoadBalancer.newInstance(user, lbName);
 		        	if(scheme!=null)
@@ -156,7 +140,9 @@ public class LoadBalancers {
 		          	db.commit( );
 		          	return lb;
 		        }
-		    } catch ( Exception ex ) {
+		    }catch(LoadBalancingException ex){
+		    	throw ex;
+		    }catch ( Exception ex ) {
 		    	db.rollback( );
 		    	LOG.error("failed to persist a new loadbalancer", ex);
 		    	throw new LoadBalancingException("Failed to persist a new load-balancer because of: " + ex.getMessage(), ex);
@@ -185,14 +171,16 @@ public class LoadBalancers {
 		validateListener(null, listeners);
 	}
 	
-	// throw LoadBalancingException if invalid
 	public static void validateListener(final LoadBalancer lb, final List<Listener> listeners) 
 				throws LoadBalancingException{
 		for(Listener listener : listeners){
 			if(!LoadBalancerListener.protocolSupported(listener))
 				throw new UnsupportedParameterException("The requested protocol is not supported");
 			if(!LoadBalancerListener.acceptable(listener))
-				throw new InvalidConfigurationRequestException();
+				throw new InvalidConfigurationRequestException("Invalid listener format");
+			if(!LoadBalancerListener.validRange(listener))
+				throw new InvalidConfigurationRequestException("Invalid port range");
+
     		// check the listener 
 			if(lb!=null && lb.hasListener(listener.getLoadBalancerPort().intValue())){
 				LoadBalancerListener existing = lb.findListener(listener.getLoadBalancerPort().intValue());
@@ -212,7 +200,7 @@ public class LoadBalancers {
     	try{
     		lb= LoadBalancers.getLoadbalancer(ctx, lbName);
     	}catch(Exception ex){
-	    	LOG.warn("No loadbalancer is found with name="+lbName);    
+    		throw new InternalFailure400Exception("unable to find the loadbalancer");
 	    }
     	
     	validateListener(lb, listeners);
@@ -248,7 +236,7 @@ public class LoadBalancers {
 		try{
 			clusters = EucalyptusActivityTasks.getInstance().describeAvailabilityZones(false);
 		}catch(Exception ex){
-			throw new LoadBalancingException("Failed to check the requested zones");
+			throw new InternalFailure400Exception("Unable to verify the requested zones");
 		}
 		for(String zone : zones){
 			boolean found = false;
@@ -259,7 +247,7 @@ public class LoadBalancers {
 				}
 			}
 			if(!found)
-				throw new LoadBalancingException("No cluster named "+zone+" is available");
+				throw new InvalidConfigurationRequestException("No cluster named "+zone+" is available");
 		}
 		
 	   	LoadBalancer lb = null;
@@ -286,10 +274,11 @@ public class LoadBalancers {
 				}catch(Exception ex){
 					db.rollback();
 					LOG.error("failed to persist the zone "+zone, ex);
+					throw ex;
 				}
 			}
     	}catch(Exception ex){
-    		throw new LoadBalancingException("Failed to add zone", ex);
+    		throw new InternalFailure400Exception("Failed to persist the zone");
     	}
 	}
 	
