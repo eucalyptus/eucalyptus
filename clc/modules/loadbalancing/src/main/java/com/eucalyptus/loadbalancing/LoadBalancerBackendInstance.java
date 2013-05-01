@@ -47,10 +47,6 @@ import com.eucalyptus.event.ClockTick;
 import com.eucalyptus.event.EventListener;
 import com.eucalyptus.event.Listeners;
 import com.eucalyptus.loadbalancing.activities.EucalyptusActivityTasks;
-import com.eucalyptus.loadbalancing.activities.LoadBalancerAutoScalingGroup;
-import com.eucalyptus.loadbalancing.activities.EventHandlerChainNew.AutoscalingGroupInstanceChecker;
-import com.eucalyptus.records.Logs;
-import com.eucalyptus.system.Threads;
 import com.eucalyptus.util.FullName;
 import com.eucalyptus.util.OwnerFullName;
 import com.google.common.base.Function;
@@ -133,9 +129,19 @@ public class LoadBalancerBackendInstance extends UserMetadata<LoadBalancerBacken
 		return instance;
 	}
 	
-	public static LoadBalancerBackendInstance named(final OwnerFullName userName, final String vmId){
+	/*public static LoadBalancerBackendInstance named(final OwnerFullName userName, final String vmId){
 		LoadBalancerBackendInstance instance = new LoadBalancerBackendInstance();
 		instance.setOwner(userName);
+		instance.setDisplayName(vmId);
+		instance.setState(null);
+		instance.setStateChangeStack(null);
+		
+		return instance;
+	}*/
+	
+	public static LoadBalancerBackendInstance named(final String vmId){
+		LoadBalancerBackendInstance instance = new LoadBalancerBackendInstance();
+		instance.setOwner(null);
 		instance.setDisplayName(vmId);
 		instance.setState(null);
 		instance.setStateChangeStack(null);

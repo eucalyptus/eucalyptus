@@ -24,10 +24,8 @@ import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
-import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
 
 import javax.annotation.Nullable;
 import javax.persistence.EntityTransaction;
@@ -340,7 +338,7 @@ public class LoadBalancingService {
     	throw new LoadBalancingException("Invalid character found in the loadbalancer name");
     }
     if(request.getListeners()!=null && request.getListeners().getMember()!=null)
-    	LoadBalancers.validateListener(lbName, ownerFullName, request.getListeners().getMember());
+    	LoadBalancers.validateListener(request.getListeners().getMember());
     
     final Supplier<LoadBalancer> allocator = new Supplier<LoadBalancer>() {
       @Override
@@ -368,7 +366,7 @@ public class LoadBalancingService {
     	@Override
     	public Boolean apply(String lbName){
     		try{
-    			LoadBalancers.unsetForeignKeys(ctx.getUserFullName(), lbName);
+    			LoadBalancers.unsetForeignKeys(ctx, lbName);
     		}catch(Exception ex){
     			LOG.warn("unable to unset foreign keys", ex);
     		}
@@ -386,13 +384,13 @@ public class LoadBalancingService {
     Collection<String> zones = request.getAvailabilityZones().getMember();
     if(zones != null && zones.size()>0){
     	try{
-    	LoadBalancers.addZone(lbName, ownerFullName, zones);
+    	LoadBalancers.addZone(lbName, ctx, zones);
     	}catch(LoadBalancingException ex){
     		rollback.apply(lbName);
     		throw ex;
     	}catch(Exception ex){
     		rollback.apply(lbName);
-    		throw new LoadBalancingException("failed to create the loadbalancer", ex);
+    		throw new LoadBalancingException("Failed to create the loadbalancer (internal error)", ex);
     	}
     }
     
@@ -408,12 +406,12 @@ public class LoadBalancingService {
     	LOG.error("failed to fire new loadbalancer event", e);
     	rollback.apply(lbName);
     	final String reason = e.getCause() != null && e.getCause().getMessage()!=null ? e.getCause().getMessage() : "internal error";
-    	throw new LoadBalancingException(String.format("Faild to create the requested loadblanacer: %s", reason), e);
+    	throw new LoadBalancingException(String.format("Failed to create the loadbalancer: %s", reason), e);
     }
 
     Collection<Listener> listeners=request.getListeners().getMember();
     if(listeners!=null && listeners.size()>0){
-    	LoadBalancers.createLoadbalancerListener(lbName,  ownerFullName, Lists.newArrayList(listeners));
+    	LoadBalancers.createLoadbalancerListener(lbName,  ctx, Lists.newArrayList(listeners));
     	try{
     		CreateListenerEvent evt = new CreateListenerEvent();
     		evt.setLoadBalancer(lbName);
@@ -424,13 +422,13 @@ public class LoadBalancingService {
     		LOG.error("failed to fire createListener event", e);
         	rollback.apply(lbName);
         	final String reason = e.getCause() != null && e.getCause().getMessage()!=null ? e.getCause().getMessage() : "internal error";
-        	throw new LoadBalancingException(String.format("Faild to create the requested loadblanacer: %s", reason), e);
+        	throw new LoadBalancingException(String.format("Faild to create the loadbalancer: %s", reason), e);
     	}
     }
     
     final CreateLoadBalancerResult result = new CreateLoadBalancerResult();
     if(dns==null || dns.getDnsName() == null){
-    	LOG.warn("No DNS name is assigned to a loadblancer "+lbName);
+    	LOG.warn("No DNS name is assigned to the loadbalancer: "+lbName);
     }
     
     result.setDnsName(dns.getDnsName());
@@ -442,7 +440,7 @@ public class LoadBalancingService {
   public DescribeLoadBalancersResponseType describeLoadBalancers(DescribeLoadBalancersType request) throws EucalyptusCloudException {
     DescribeLoadBalancersResponseType reply = request.getReply( );
     final Context ctx = Contexts.lookup( );
-    final UserFullName ownerFullName = ctx.getUserFullName( );
+    final String accountName = ctx.getAccount().getName();
     final Set<String> requestedNames = Sets.newHashSet( );
     if ( !request.getLoadBalancerNames().getMember().isEmpty()) {
       requestedNames.addAll( request.getLoadBalancerNames().getMember() );
@@ -458,7 +456,7 @@ public class LoadBalancingService {
              .byPrivileges( )
              .buildPredicate( );
 
-            final List<LoadBalancer> lbs = Entities.query( LoadBalancer.named( ownerFullName , null ), true);
+            final List<LoadBalancer> lbs = Entities.query( LoadBalancer.namedByAccount( accountName , null ), true);
             return Sets.newHashSet( Iterables.filter( lbs, requestedAndAccessible ) );
           }
     };
@@ -595,13 +593,12 @@ public class LoadBalancingService {
     DeleteLoadBalancerResponseType reply = request.getReply();
     final String lbToDelete = request.getLoadBalancerName();
     final Context ctx = Contexts.lookup();
-    final  UserFullName ownerFullName = ctx.getUserFullName();
     Function<String, LoadBalancer> findLoadBalancer = new Function<String, LoadBalancer>(){
 		@Override
 		@Nullable
 		public LoadBalancer apply(@Nullable String lbName) {
 			try{
-				LoadBalancer lb = LoadBalancers.getLoadbalancer(ownerFullName, lbName);
+				LoadBalancer lb = LoadBalancers.getLoadbalancer(ctx, lbName);
 				return lb;
 			}catch(NoSuchElementException ex){
 				if(ctx.hasAdministrativePrivileges()){
@@ -636,7 +633,10 @@ public class LoadBalancingService {
         }
         
         //IAM Support for deleting load balancers
-        if ( lb != null && LoadBalancingMetadatas.filterPrivileged().apply( lb ) ) {
+        if (lb != null && ! LoadBalancingMetadatas.filterPrivileged().apply( lb ))
+        	throw new AccessPointNotFoundException();
+        
+        if ( lb != null ) {
           Collection<LoadBalancerListener> listeners = lb.getListeners();
           final List<Integer> ports = Lists.newArrayList( Collections2.transform( listeners, new Function<LoadBalancerListener, Integer>() {
             @Override
@@ -691,12 +691,24 @@ public class LoadBalancingService {
   public CreateLoadBalancerListenersResponseType createLoadBalancerListeners(CreateLoadBalancerListenersType request) throws EucalyptusCloudException {
 	  final CreateLoadBalancerListenersResponseType reply = request.getReply( );
 	  final Context ctx = Contexts.lookup( );
-	  final UserFullName ownerFullName = ctx.getUserFullName( );
 	  final String lbName = request.getLoadBalancerName();
 	  final List<Listener> listeners = request.getListeners().getMember();
 
+	  
+	  LoadBalancer lb = null;
+	  try{
+	  		lb = LoadBalancers.getLoadbalancer(ctx, lbName);
+	  }catch(Exception ex){
+	  		throw new AccessPointNotFoundException();
+	  }
+	  
+  	  //IAM support to restricted lb modification
+  	  if(lb != null && !LoadBalancingMetadatas.filterPrivileged().apply(lb)) {
+	       throw new AccessPointNotFoundException(); // TODO: SPARK: is this the right exception type?
+	  }
+	  
 	  if(listeners!=null)
-		  LoadBalancers.validateListener(lbName, ownerFullName, listeners);
+		  LoadBalancers.validateListener(lb, listeners);
 	    
 	  try{
     		CreateListenerEvent evt = new CreateListenerEvent();
@@ -707,9 +719,9 @@ public class LoadBalancingService {
 	  }catch(final EventFailedException e){
     		LOG.error("failed to fire CreateListener event", e);
     		final String reason = e.getCause()!=null && e.getCause().getMessage()!=null ? e.getMessage() : "internal error";
-    		throw new LoadBalancingException(String.format("failed to create listener: %s", reason), e );
+    		throw new LoadBalancingException(String.format("Failed to create listener: %s", reason), e );
 	  }
-	  LoadBalancers.createLoadbalancerListener(lbName,  ownerFullName, listeners);
+	  LoadBalancers.createLoadbalancerListener(lbName,  ctx, listeners);
 	  reply.set_return(true);
 	  return reply;
   }
@@ -717,7 +729,6 @@ public class LoadBalancingService {
   public DeleteLoadBalancerListenersResponseType deleteLoadBalancerListeners(DeleteLoadBalancerListenersType request) throws EucalyptusCloudException {
     final DeleteLoadBalancerListenersResponseType reply = request.getReply( );
     final Context ctx = Contexts.lookup( );
-    final UserFullName ownerFullName = ctx.getUserFullName( );
     final String lbName = request.getLoadBalancerName();
     final Collection<Integer> listenerPorts;
     try{
@@ -729,22 +740,21 @@ public class LoadBalancingService {
           }
         });
     }catch(Exception ex){
-      throw new LoadBalancingException("invalid port number", ex);
+      throw new LoadBalancingException("Invalid port number", ex);
     }
 
     final LoadBalancer lb;
     try{
-      lb = LoadBalancers.getLoadbalancer(ownerFullName, lbName);
+      lb = LoadBalancers.getLoadbalancer(ctx, lbName);
     }catch(NoSuchElementException ex){
       throw new AccessPointNotFoundException();
-    }
-    catch(Exception ex){
-      LOG.error("Failed to find the loadbalancer="+lbName);
-      throw new LoadBalancingException("failed to find the loadbalancer", ex);
+    }catch(Exception ex){
+      LOG.error("failed to query loadbalancer due to unknown reason", ex);
+      throw new LoadBalancingException("Failed to find the loadbalancer", ex);
     }
 
    //IAM support to restricted lb modification
-   if( !LoadBalancingMetadatas.filterPrivileged().apply(lb) ) {
+   if( lb!=null && !LoadBalancingMetadatas.filterPrivileged().apply(lb) ) {
      throw new AccessPointNotFoundException();
    }
 
@@ -789,7 +799,7 @@ public class LoadBalancingService {
     }catch(EventFailedException e){
       LOG.error("failed to fire DeleteListener event", e);
       final String reason = e.getCause()!=null && e.getCause().getMessage()!=null ? e.getCause().getMessage() : "internal error";
-      throw new LoadBalancingException(String.format("failed to delete listener: %s",reason),e );
+      throw new LoadBalancingException(String.format("Failed to delete listener: %s",reason),e );
     }
 
     reply.set_return(Entities.asTransaction(LoadBalancerListener.class, remover).apply(toDelete));
@@ -798,22 +808,25 @@ public class LoadBalancingService {
   }
   
   public RegisterInstancesWithLoadBalancerResponseType registerInstancesWithLoadBalancer(RegisterInstancesWithLoadBalancerType request) throws EucalyptusCloudException {
-	    RegisterInstancesWithLoadBalancerResponseType reply = request.getReply( );
-	    final Context ctx = Contexts.lookup( );
-	    final UserFullName ownerFullName = ctx.getUserFullName( );
-	  	    
-	    final String lbName = request.getLoadBalancerName();
-	    final Collection<Instance> instances = request.getInstances().getMember();
-	    final Predicate<Void> creator = new Predicate<Void>(){
+	  RegisterInstancesWithLoadBalancerResponseType reply = request.getReply( );
+	  final Context ctx = Contexts.lookup( );
+	  final UserFullName ownerFullName = ctx.getUserFullName( );
+	  final String lbName = request.getLoadBalancerName();
+	  final Collection<Instance> instances = request.getInstances().getMember();
+	  
+	  LoadBalancer lb = null;
+	  try{
+		  lb= LoadBalancers.getLoadbalancer(ctx, lbName);
+	  }catch(final Exception ex){
+		  throw new AccessPointNotFoundException();
+	  }
+	  if( !LoadBalancingMetadatas.filterPrivileged().apply(lb) ) { // IAM policy restriction
+		  throw new AccessPointNotFoundException();
+	  }
+	  
+	  final Predicate<LoadBalancer> creator = new Predicate<LoadBalancer>(){
 	        @Override
-	        public boolean apply( Void v ) {
-	        	LoadBalancer lb = null;
-	        	try{
-	        		lb= LoadBalancers.getLoadbalancer(ownerFullName, lbName);
-	        	}catch(Exception ex){
-	    	    	LOG.warn("No loadbalancer is found with name="+lbName);    
-	    	    	return false;
-	    	    }
+	        public boolean apply( LoadBalancer lb ) {
 	        	for(Instance vm : instances){
 	        		if(lb.hasBackendInstance(vm.getInstanceId()))
 	        			continue;	// the vm instance is already registered
@@ -824,219 +837,242 @@ public class LoadBalancingService {
 	        	}
 	        	return true;
 	        }
-	    };
-	    final Function<Void, ArrayList<Instance>> finder = new Function<Void, ArrayList<Instance>>(){
-	    	@Override
-	    	public ArrayList<Instance> apply(Void v){
-	    	  	LoadBalancer lb = null;
-	    	  	try{
-	    	  		lb=LoadBalancers.getLoadbalancer(ownerFullName, lbName);
-	    	  	}catch(Exception ex){
-	    	    	LOG.warn("No loadbalancer is found with name="+lbName);    
-	    	    	return Lists.newArrayList();
-	    	    }
-	   	  	 	Entities.refresh(lb);
-	    	    ArrayList<Instance> result = new ArrayList<Instance>(Collections2.transform(lb.getBackendInstances(), new Function<LoadBalancerBackendInstance, Instance>(){
-		    		@Override
-		    		public Instance apply(final LoadBalancerBackendInstance input){
-		    			final Instance newInst = new Instance();
-		    			newInst.setInstanceId(input.getInstanceId());
-		    			return newInst;
-		    		}}));
-	    	    return result;
-	    	}
-	    };
-	    
-	    try{
-    		RegisterInstancesEvent evt = new RegisterInstancesEvent();
-    		evt.setLoadBalancer(lbName);
-    		evt.setContext(ctx);
-    		evt.setInstances(instances);
-    		ActivityManager.getInstance().fire(evt);
-    	}catch(EventFailedException e){
-    		LOG.error("failed to fire RegisterInstances event", e);
-    		final String reason = e.getCause()!=null && e.getCause().getMessage()!=null ? e.getCause().getMessage() : "internal error";
-    		throw new LoadBalancingException(String.format("failed to register instances: %s", reason), e );
+	  };
+	  final Function<Void, ArrayList<Instance>> finder = new Function<Void, ArrayList<Instance>>(){
+	 	@Override
+	  	public ArrayList<Instance> apply(Void v){
+	 	  	LoadBalancer lb = null;
+	  	  	try{
+	  	  		lb=LoadBalancers.getLoadbalancer(ctx, lbName);
+	  	  	}catch(Exception ex){
+	  	    	LOG.warn("No loadbalancer is found with name="+lbName);    
+	  	    	return Lists.newArrayList();
+	  	    }
+	 	  	Entities.refresh(lb);
+	 	  	ArrayList<Instance> result = new ArrayList<Instance>(Collections2.transform(lb.getBackendInstances(), new Function<LoadBalancerBackendInstance, Instance>(){
+		    	@Override
+		    	public Instance apply(final LoadBalancerBackendInstance input){
+		    		final Instance newInst = new Instance();
+		    		newInst.setInstanceId(input.getInstanceId());
+		    		return newInst;
+		    	}}));
+	    	return result;
     	}
+	 };
+	 
+	 try{
+		 RegisterInstancesEvent evt = new RegisterInstancesEvent();
+		 evt.setLoadBalancer(lbName);
+    	 evt.setContext(ctx);
+    	 evt.setInstances(instances);
+    	 ActivityManager.getInstance().fire(evt);
+     }catch(EventFailedException e){
+    	 LOG.error("failed to fire RegisterInstances event", e);
+    	 final String reason = e.getCause()!=null && e.getCause().getMessage()!=null ? e.getCause().getMessage() : "internal error";
+    	 throw new LoadBalancingException(String.format("Failed to register instances: %s", reason), e );
+     }
 	    
-	    if(instances!=null){
-	    	try{
-	    		reply.set_return(Entities.asTransaction(LoadBalancerBackendInstance.class, creator).apply(null));
-	    	}catch(Exception ex){
-	    		throw new LoadBalancingException("Failed to register instances", ex);
-	    	}
+	 if(instances!=null){
+	    try{
+	    	reply.set_return(Entities.asTransaction(LoadBalancerBackendInstance.class, creator).apply(lb));
+	    }catch(Exception ex){
+	    	throw new LoadBalancingException("Failed to register instances", ex);
 	    }
+	 }
 	    
-	    RegisterInstancesWithLoadBalancerResult result = new RegisterInstancesWithLoadBalancerResult();
-	    Instances returnInstances = new Instances();
-	    returnInstances.setMember(Entities.asTransaction(LoadBalancer.class, finder).apply(null));
-	    result.setInstances(returnInstances);
-	    reply.setRegisterInstancesWithLoadBalancerResult(result);
-	    return reply;
+	 RegisterInstancesWithLoadBalancerResult result = new RegisterInstancesWithLoadBalancerResult();
+	 Instances returnInstances = new Instances();
+	 returnInstances.setMember(Entities.asTransaction(LoadBalancer.class, finder).apply(null));
+	 result.setInstances(returnInstances);
+	 reply.setRegisterInstancesWithLoadBalancerResult(result);
+	 return reply;
   }
 
   public DeregisterInstancesFromLoadBalancerResponseType deregisterInstancesFromLoadBalancer(DeregisterInstancesFromLoadBalancerType request) throws EucalyptusCloudException {
-	    DeregisterInstancesFromLoadBalancerResponseType reply = request.getReply( );
-	    final Context ctx = Contexts.lookup( );
-	    final UserFullName ownerFullName = ctx.getUserFullName( );
-	  
-	    final String lbName = request.getLoadBalancerName();
-	    final Collection<Instance> instances = request.getInstances().getMember();
+	  DeregisterInstancesFromLoadBalancerResponseType reply = request.getReply( );
+	  final Context ctx = Contexts.lookup( );
+	  final String lbName = request.getLoadBalancerName();
+	  final Collection<Instance> instances = request.getInstances().getMember();
 	    
-	    final Function<Void, Collection<String>> filter = new Function<Void, Collection<String>>(){
+	  LoadBalancer lb = null;
+	  try{
+		  lb = LoadBalancers.getLoadbalancer(ctx, lbName);
+	  }catch(Exception ex){
+		  throw new AccessPointNotFoundException();
+	  }
+	  
+	  if( lb!=null && !LoadBalancingMetadatas.filterPrivileged().apply(lb) ) { // IAM policy restriction
+		  throw new AccessPointNotFoundException();
+	  }
+	  	 
+	  final Function<LoadBalancer, Collection<String>> filter = new Function<LoadBalancer, Collection<String>>(){
 	    	@Override
-	    	public Collection<String> apply(Void v){
-	    		 LoadBalancer lb = null;
-		   	  	 try{
-		   	  		 lb = LoadBalancers.getLoadbalancer(ownerFullName, lbName);
-		   	  	 }catch(Exception ex){
-	    	    	LOG.warn("No loadbalancer is found with name="+lbName);    
-	    	    	return null;
-	    	     }
-		   	  	 Collection<String> filtered = Sets.newHashSet();
+	    	public Collection<String> apply(LoadBalancer lb){
+	    		 Collection<String> filtered = Sets.newHashSet();
 		   	  	 for(Instance inst : instances){
 		   	  		 if(lb.hasBackendInstance(inst.getInstanceId()))
 		   	  			 filtered.add(inst.getInstanceId());
 		   	  	 }
 		   	  	 return filtered;
 	    	}
-	    };
+	  };
 	    
-	    final Collection<String> instancesToRemove = Entities.asTransaction(LoadBalancer.class, filter).apply(null);
-	    if(instancesToRemove==null){
-	    	reply.set_return(false);
-	    	return reply;
-	    }
-	    final Predicate<Void> remover = new Predicate<Void>(){
-	    	@Override
-	    	public boolean apply(Void v){
-	        	for(String instanceId : instancesToRemove){
-	        	    LoadBalancerBackendInstance toDelete = null;
-	        	    try{
-	        	    	toDelete = Entities.uniqueResult(LoadBalancerBackendInstance.named(ownerFullName, instanceId));
-	        	    }catch(NoSuchElementException ex){
-	        	    	toDelete=null;
-	        	    }catch(Exception ex){
-	        	    	LOG.error("Can't query loadbalancer backend instance for "+instanceId);
-	        	    	toDelete=null;
-	        	    }	
-	        	    if(toDelete==null)
-	        			continue;
-	        		Entities.delete(toDelete);
-	        	}
-	    	    return true;
-	    	}
-	    };
-	    final Function<Void, ArrayList<Instance>> finder = new Function<Void, ArrayList<Instance>>(){
-	    	@Override
-	    	public ArrayList<Instance> apply(Void v){
-	    	  	 LoadBalancer lb = null;
-	    	  	 try{
-	    	  		lb= LoadBalancers.getLoadbalancer(ownerFullName, lbName);
-	    	  	 }catch(Exception ex){
-	     	    	LOG.warn("No loadbalancer is found with name="+lbName);    
-	     	    	return Lists.newArrayList();
-	     	    }
-	    	  	Entities.refresh(lb);
-	    	    ArrayList<Instance> result = new ArrayList<Instance>(Collections2.transform(lb.getBackendInstances(), new Function<LoadBalancerBackendInstance, Instance>(){
-		    		@Override
-		    		public Instance apply(final LoadBalancerBackendInstance input){
-		    			final Instance newInst = new Instance();
-		    			newInst.setInstanceId(input.getInstanceId());
-		    			return newInst;
-		    		}}));
-	    	    return result;
-	    	}
-	    };
+	  final Collection<String> instancesToRemove = Entities.asTransaction(LoadBalancer.class, filter).apply(lb);
+	  if(instancesToRemove==null){
+	  	reply.set_return(false);
+	  	return reply;
+	  }
+	  final Predicate<Void> remover = new Predicate<Void>(){
+	  	@Override
+	  	public boolean apply(Void v){
+	      	for(String instanceId : instancesToRemove){
+	      	    LoadBalancerBackendInstance toDelete = null;
+	      	    try{
+	      	    	toDelete = Entities.uniqueResult(LoadBalancerBackendInstance.named(instanceId));
+	      	    }catch(NoSuchElementException ex){
+	      	    	toDelete=null;
+	      	    }catch(Exception ex){
+	      	    	LOG.error("Can't query loadbalancer backend instance for "+instanceId);
+	      	    	toDelete=null;
+	      	    }	
+	      	    if(toDelete==null)
+	      			continue;
+	      		Entities.delete(toDelete);
+	      	}
+	  	    return true;
+	  	}
+	  };
+	  final Function<Void, ArrayList<Instance>> finder = new Function<Void, ArrayList<Instance>>(){
+	  	@Override
+	  	public ArrayList<Instance> apply(Void v){
+	  	  	 LoadBalancer lb = null;
+	  	  	 try{
+	  	  		lb= LoadBalancers.getLoadbalancer(ctx, lbName);
+	  	  	 }catch(Exception ex){
+	   	    	LOG.warn("No loadbalancer is found with name="+lbName);    
+	   	    	return Lists.newArrayList();
+	   	    }
+	  	  	Entities.refresh(lb);
+	  	    ArrayList<Instance> result = new ArrayList<Instance>(Collections2.transform(lb.getBackendInstances(), new Function<LoadBalancerBackendInstance, Instance>(){
+		  		@Override
+		  		public Instance apply(final LoadBalancerBackendInstance input){
+		  			final Instance newInst = new Instance();
+		  			newInst.setInstanceId(input.getInstanceId());
+		  			return newInst;
+		  		}}));
+	  	    return result;
+	  	    }
+	  	};
 	    
-	    try{
-    		DeregisterInstancesEvent evt = new DeregisterInstancesEvent();
-    		evt.setLoadBalancer(lbName);
-    		evt.setContext(ctx);
-    		evt.setInstances(instances);
-    		ActivityManager.getInstance().fire(evt);
-    	}catch(EventFailedException e){
-    		LOG.error("failed to fire DeregisterInstances event", e);
-    	    final String reason = e.getCause()!=null && e.getCause().getMessage()!=null ? e.getCause().getMessage() : "internal error";
-    		throw new LoadBalancingException(String.format("failed to deregister instances: %s", reason),e );
-    	}
+	  try{
+		  DeregisterInstancesEvent evt = new DeregisterInstancesEvent();
+		  evt.setLoadBalancer(lbName);
+		  evt.setContext(ctx);
+		  evt.setInstances(instances);
+		  ActivityManager.getInstance().fire(evt);
+	  }catch(EventFailedException e){
+		  LOG.error("failed to fire DeregisterInstances event", e);
+    	  final String reason = e.getCause()!=null && e.getCause().getMessage()!=null ? e.getCause().getMessage() : "internal error";
+    	  throw new LoadBalancingException(String.format("Failed to deregister instances: %s", reason),e );
+	  }
 	    
-	    reply.set_return(Entities.asTransaction(LoadBalancerBackendInstance.class, remover).apply(null));
-	    DeregisterInstancesFromLoadBalancerResult result = new DeregisterInstancesFromLoadBalancerResult();
-	    Instances returnInstances = new Instances();
-	    returnInstances.setMember(Entities.asTransaction(LoadBalancer.class, finder).apply(null));
-	    result.setInstances(returnInstances);
-	    reply.setDeregisterInstancesFromLoadBalancerResult(result);
-	    return reply;
+	  reply.set_return(Entities.asTransaction(LoadBalancerBackendInstance.class, remover).apply(null));
+	  DeregisterInstancesFromLoadBalancerResult result = new DeregisterInstancesFromLoadBalancerResult();
+	  Instances returnInstances = new Instances();
+	  returnInstances.setMember(Entities.asTransaction(LoadBalancer.class, finder).apply(null));
+	  result.setInstances(returnInstances);
+	  reply.setDeregisterInstancesFromLoadBalancerResult(result);
+	  return reply;
   }
   
   public EnableAvailabilityZonesForLoadBalancerResponseType enableAvailabilityZonesForLoadBalancer(EnableAvailabilityZonesForLoadBalancerType request) throws EucalyptusCloudException {
-	    final EnableAvailabilityZonesForLoadBalancerResponseType reply = request.getReply( );
-	    final Context ctx = Contexts.lookup( );
-	    final UserFullName ownerFullName = ctx.getUserFullName( );
-	    final String lbName = request.getLoadBalancerName();
-	    final Collection<String> zones = request.getAvailabilityZones().getMember();
-	    if(zones != null && zones.size()>0){
-	    	try{
-	    		final EnabledZoneEvent evt = new EnabledZoneEvent();
-	    		evt.setLoadBalancer(lbName);
-	    		evt.setContext(ctx);
-	    		evt.setZones(zones);
-	    		ActivityManager.getInstance().fire(evt);
-	    	}catch(EventFailedException e){
-	    		LOG.error("failed to execute EnabledZone event", e);
-	    	    final String reason = e.getCause()!=null && e.getCause().getMessage()!=null ? e.getCause().getMessage() : "internal error";
-	    		throw new LoadBalancingException(String.format("failed to enable zones: %s", reason),e );
-	    	}
-	    }
-	    List<String> availableZones = Lists.newArrayList();
-	    try{
-  		    LoadBalancer lb = null;
-  		    lb = LoadBalancers.getLoadbalancer(ownerFullName, lbName);
-  		    availableZones = Lists.transform(LoadBalancers.findZonesInService(lb), new Function<LoadBalancerZone,String>(){
-				@Override
-				public String apply(@Nullable LoadBalancerZone arg0) {
-					return arg0.getName();
-				}
-  		    });
-  	  	}catch(Exception ex){
-	    	;
-	    }
-  	  	final EnableAvailabilityZonesForLoadBalancerResult result = new EnableAvailabilityZonesForLoadBalancerResult();
-  	  	final AvailabilityZones availZones = new AvailabilityZones();
-  	  	availZones.setMember(Lists.newArrayList(availableZones));
-  	  	result.setAvailabilityZones(availZones);
-  	  	reply.setEnableAvailabilityZonesForLoadBalancerResult(result);
-  	  	reply.set_return(true);
+	  final EnableAvailabilityZonesForLoadBalancerResponseType reply = request.getReply( );
+	  final Context ctx = Contexts.lookup( );
+	  final String lbName = request.getLoadBalancerName();
+	  final Collection<String> zones = request.getAvailabilityZones().getMember();
 	    
-  	  	return reply;
+	  LoadBalancer lb = null;
+	  try{
+		  lb = LoadBalancers.getLoadbalancer(ctx, lbName);
+	  }catch(final Exception ex){
+		  throw new AccessPointNotFoundException();
+	  }
+		 
+	  if( lb!=null && !LoadBalancingMetadatas.filterPrivileged().apply(lb) ) { // IAM policy restriction
+		  throw new AccessPointNotFoundException();
+	  }
+	    
+	  if(zones != null && zones.size()>0){
+		  try{
+			  final EnabledZoneEvent evt = new EnabledZoneEvent();
+			  evt.setLoadBalancer(lbName);
+			  evt.setContext(ctx);
+			  evt.setZones(zones);
+			  ActivityManager.getInstance().fire(evt);
+		  }catch(EventFailedException e){
+			  LOG.error("failed to execute EnabledZone event", e);
+	    	  final String reason = e.getCause()!=null && e.getCause().getMessage()!=null ? e.getCause().getMessage() : "internal error";
+	    	  throw new LoadBalancingException(String.format("Failed to enable zones: %s", reason),e );
+	      }
+	  }
+	    
+	  List<String> availableZones = Lists.newArrayList();
+	  try{
+  		  LoadBalancer updatedLb = LoadBalancers.getLoadbalancer(ctx, lbName);
+  		  availableZones = Lists.transform(LoadBalancers.findZonesInService(updatedLb), new Function<LoadBalancerZone,String>(){
+  			 @Override
+  			 public String apply(@Nullable LoadBalancerZone arg0) {
+				return arg0.getName();
+  			 }
+  		   });
+  	  }catch(Exception ex){
+	    	;
+	  }
+	  final EnableAvailabilityZonesForLoadBalancerResult result = new EnableAvailabilityZonesForLoadBalancerResult();
+	  final AvailabilityZones availZones = new AvailabilityZones();
+	  availZones.setMember(Lists.newArrayList(availableZones));
+	  result.setAvailabilityZones(availZones);
+	  reply.setEnableAvailabilityZonesForLoadBalancerResult(result);
+  	  reply.set_return(true);
+	    
+  	  return reply;
   }
 
   public DisableAvailabilityZonesForLoadBalancerResponseType disableAvailabilityZonesForLoadBalancer(DisableAvailabilityZonesForLoadBalancerType request) throws EucalyptusCloudException {
 	  final DisableAvailabilityZonesForLoadBalancerResponseType reply = request.getReply( );
 	  final Context ctx = Contexts.lookup( );
-	  final UserFullName ownerFullName = ctx.getUserFullName( );
 	  final String lbName = request.getLoadBalancerName();
 	  final Collection<String> zones = request.getAvailabilityZones().getMember();
+	
+	  LoadBalancer lb = null;
+	  try{
+		  lb = LoadBalancers.getLoadbalancer(ctx, lbName);
+	  }catch(final Exception ex){
+		  throw new AccessPointNotFoundException();
+	  }
+	
+	  if( lb!=null && !LoadBalancingMetadatas.filterPrivileged().apply(lb) ) { // IAM policy restriction
+		  throw new AccessPointNotFoundException();
+	  }
+	  
 	  if(zones != null && zones.size()>0){
 		 try{
-	    		final DisabledZoneEvent evt = new DisabledZoneEvent();
-	    		evt.setLoadBalancer(lbName);
-	    		evt.setContext(ctx);
-	    		evt.setZones(zones);
-	    		ActivityManager.getInstance().fire(evt);
-	    	}catch(EventFailedException e){
-	    		LOG.error("failed to execute DisabledZone event", e);
-	    	    final String reason = e.getCause()!=null && e.getCause().getMessage()!=null ? e.getCause().getMessage() : "internal error";
-	    		throw new LoadBalancingException(String.format("failed to disable zones: %s", reason), e );
+	    	final DisabledZoneEvent evt = new DisabledZoneEvent();
+	    	evt.setLoadBalancer(lbName);
+	    	evt.setContext(ctx);
+	    	evt.setZones(zones);
+	    	ActivityManager.getInstance().fire(evt);
+	     }catch(EventFailedException e){
+	    	LOG.error("failed to execute DisabledZone event", e);
+	    	final String reason = e.getCause()!=null && e.getCause().getMessage()!=null ? e.getCause().getMessage() : "internal error";
+	    	throw new LoadBalancingException(String.format("Failed to disable zones: %s", reason), e );
 	    }  
 	  }
 	  
 	  List<String> availableZones = Lists.newArrayList();
 	  try{
-		  LoadBalancer lb = null;
-		  lb = LoadBalancers.getLoadbalancer(ownerFullName, lbName);
-		  availableZones = Lists.transform(LoadBalancers.findZonesInService(lb), new Function<LoadBalancerZone,String>(){
+		  final LoadBalancer updatedLb = LoadBalancers.getLoadbalancer(ctx, lbName);
+		  availableZones = Lists.transform(LoadBalancers.findZonesInService(updatedLb), new Function<LoadBalancerZone,String>(){
 			  @Override
 			  public String apply(@Nullable LoadBalancerZone arg0) {
 					return arg0.getName();
@@ -1057,32 +1093,35 @@ public class LoadBalancingService {
   public ConfigureHealthCheckResponseType configureHealthCheck(ConfigureHealthCheckType request) throws EucalyptusCloudException {
     ConfigureHealthCheckResponseType reply = request.getReply( );
     final Context ctx = Contexts.lookup( );
-	final UserFullName ownerFullName = ctx.getUserFullName( );
 	final String lbName = request.getLoadBalancerName();
 	final HealthCheck hc = request.getHealthCheck();
 	Integer healthyThreshold = hc.getHealthyThreshold();
 	if (healthyThreshold == null)
-		throw new LoadBalancingException("healthy tresholds must be specified");
+		throw new LoadBalancingException("Healthy tresholds must be specified");
 	Integer interval = hc.getInterval();
 	if(interval == null)
-		throw new LoadBalancingException("interval must be specified");
+		throw new LoadBalancingException("Interval must be specified");
 	String target = hc.getTarget();
 	if(target == null)
-		throw new LoadBalancingException("target must be specified");
+		throw new LoadBalancingException("Target must be specified");
 	
 	Integer timeout = hc.getTimeout();
     if(timeout==null)
-    	throw new LoadBalancingException("timeout must be specified");
+    	throw new LoadBalancingException("Timeout must be specified");
     Integer unhealthyThreshold = hc.getUnhealthyThreshold();
     if(unhealthyThreshold == null)
-    	throw new LoadBalancingException("unhealthy tresholds must be specified");
+    	throw new LoadBalancingException("Unhealthy tresholds must be specified");
     LoadBalancer lb = null;
     try{
-    	lb = LoadBalancers.getLoadbalancer(ownerFullName, lbName);
+    	lb = LoadBalancers.getLoadbalancer(ctx, lbName);
     }catch(NoSuchElementException ex){
     	throw new AccessPointNotFoundException();
     }catch(Exception ex){
-    	throw new LoadBalancingException("failed to find the loadbalancer due to unknown reason");
+    	throw new LoadBalancingException("Failed to find the loadbalancer (internal error)");
+    }
+    
+    if( lb!=null && !LoadBalancingMetadatas.filterPrivileged().apply(lb) ) { // IAM policy restriction
+	    throw new AccessPointNotFoundException();
     }
 
     final EntityTransaction db = Entities.get( LoadBalancer.class );
@@ -1094,7 +1133,7 @@ public class LoadBalancingService {
     }catch(Exception ex){
     	db.rollback();
     	LOG.error("failed to persist health check config", ex);
-    	throw new LoadBalancingException("failed to persist the health check request", ex);
+    	throw new LoadBalancingException("Failed to persist the health check request (internal error)", ex);
     }
     ConfigureHealthCheckResult result = new ConfigureHealthCheckResult();
     result.setHealthCheck(hc);
@@ -1105,19 +1144,22 @@ public class LoadBalancingService {
   public DescribeInstanceHealthResponseType describeInstanceHealth(DescribeInstanceHealthType request) throws EucalyptusCloudException {
     DescribeInstanceHealthResponseType reply = request.getReply( );
     final Context ctx = Contexts.lookup( );
- 	final UserFullName ownerFullName = ctx.getUserFullName( );
  	final String lbName = request.getLoadBalancerName();
  	Instances instances = request.getInstances();
  	
 	LoadBalancer lb = null;
 	try{
-		lb= LoadBalancers.getLoadbalancer(ownerFullName, lbName);
+		lb= LoadBalancers.getLoadbalancer(ctx, lbName);
 	}catch(NoSuchElementException ex){
 		throw new AccessPointNotFoundException();
     }catch(Exception ex){
-    	throw new LoadBalancingException("failed to query loadbalancer due to unknown reason");
+    	throw new LoadBalancingException("Failed to query loadbalancer (internal error)");
     }
  	
+    if( lb!=null && !LoadBalancingMetadatas.filterPrivileged().apply(lb) ) { // IAM policy restriction
+	    throw new AccessPointNotFoundException();
+    }
+
 	List<LoadBalancerBackendInstance> lbInstances = Lists.newArrayList(lb.getBackendInstances());
 	List<LoadBalancerBackendInstance> instancesFound = null;
  	if(instances != null && instances.getMember()!= null && instances.getMember().size()>0){
