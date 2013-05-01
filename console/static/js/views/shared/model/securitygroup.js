@@ -1,4 +1,4 @@
-define(['models/sgroup'], function(sgroup) {
+define(['app', 'models/sgroup'], function(app, sgroup) {
   return sgroup.extend({
       rules_egress: [], 
       __obj_name__: "SecurityGroup", 
@@ -39,13 +39,12 @@ define(['models/sgroup'], function(sgroup) {
       validation: {
         name: {
             required: true,
-            msg: 'A security group selection is required.'
+            msg: app.msg("launch_instance_error_sgroup_required")
         }
       },
 
       finish: function(outputModel) {
         outputModel.set('security_group', [this.get('name')]);
-        //outputModel.set('security_group', this.toJSON());
       }
   });
 });

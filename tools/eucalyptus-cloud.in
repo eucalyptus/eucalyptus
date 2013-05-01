@@ -325,10 +325,11 @@ do_stop() {
                 ppid=`ps -p $pid -o ppid=`
 		kill $pid > /dev/null 2>&1
 	else
-		return
+		echo "Warning: eucalyptus-cloud process was not running" >&2
+		return 2
 	fi
 
-	timeout=40
+	timeout=120
 	while [ $timeout -gt 0 ]; do
 		if do_status ; then
 			sleep 1
@@ -338,15 +339,14 @@ do_stop() {
 		fi
 	done
 	if [ $timeout -eq 0 ]; then
-#	        echo "WARNING: timed out waiting for eucalyptus-cloud process to shut down (pid=$pid, ppid=$ppid)."
-#               explicit kill -9 is dangerous with DB process running,
-#               could lead to loss of data and so we'll print the
-#               above error.
-		kill -9 $pid > /dev/null 2>&1
-		kill -9 $ppid > /dev/null 2>&1
+		echo "CRITICAL: timed out waiting for eucalyptus-cloud process to shut down (pid=$pid, ppid=$ppid)." >&2
+		echo "CRITICAL: this is most likely a bug; to kill processes (THIS MAY CAUSE DATA LOSS) run: kill -9 $pid $ppid" >&2
+		return 1
 	fi
 	rm -f $pidfile
 	rm -f $LOCKFILE
+
+	return 0
 }
 
 backup_creds() {
@@ -449,6 +449,8 @@ case "$1" in
 	esac
 	;;
   stop)
+	retval=0
+
 	if [ "$VERBOSE" != no ]; then
 		if [ "$WE_HAVE_LSB" = "Y" ]; then
 			log_daemon_msg "Stopping $DESC" "$NAME"
@@ -457,19 +459,8 @@ case "$1" in
 		fi
 	fi
 
-	# let's check there is a previous cloud running
-	if ! do_status ; then
-		echo
-		echo "No $DESC are running!"
-		if [ "$VERBOSE" != no ]; then
-			if [ "$WE_HAVE_LSB" = "Y" ]; then
-				log_end_msg 1
-			fi
-		fi
-		exit 0
-	fi
-
 	do_stop
+	retval=$?
 
 	if [ "$VERBOSE" != no ]; then
 		if [ "$WE_HAVE_LSB" = "Y" ]; then
@@ -478,6 +469,9 @@ case "$1" in
 			echo "done."
 		fi
 	fi
+    
+	exit $retval
+
 	;;
   restart)
 	$0 stop

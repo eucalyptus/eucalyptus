@@ -37,7 +37,7 @@
       this.baseTable = $sgroupTable;
       this.tableWrapper = $sgroupTable.eucatable({
         id : 'sgroups', // user of this widget should customize these options,
-        data_deps: ['groups'],
+        data_deps: ['groups', 'tags'],
         hidden: thisObj.options['hidden'],
         dt_arg : {
           "sAjaxSource": 'sgroup',
@@ -214,11 +214,11 @@
       (function(){
          menuItems['edit'] = {"name":sgroup_action_edit, callback: function(key, opt) { ; }, disabled: function(){ return true; }};
          menuItems['delete'] = {"name":sgroup_action_delete, callback: function(key, opt) { thisObj._deleteAction(); }};
-         menuItems['tag'] = {"name":'Tag Resource', callback: function(key, opt) { thisObj._tagResourceAction(); }};
+         menuItems['tag'] = {"name":table_menu_edit_tags_action, callback: function(key, opt) { thisObj._tagResourceAction(); }};
       })();
       if(numSelected == 1){
         menuItems['edit'] = {"name":sgroup_action_edit, callback: function(key, opt) { thisObj._editAction(); }}
-        menuItems['tag'] = {"name":'Tag Resource', callback: function(key, opt) { thisObj._tagResourceAction(); }}
+        menuItems['tag'] = {"name":table_menu_edit_tags_action, callback: function(key, opt) { thisObj._tagResourceAction(); }}
       }
       return menuItems;
     },
@@ -294,6 +294,7 @@
                       }
                   }
               }
+             
               $add_dialog.eucadialog("close");
               $.ajax({
                   type:"POST",
@@ -303,6 +304,17 @@
                   async:"false",
                   success: function (data, textstatus, jqXHR) {
                       if (data.results && data.results.status == true) {
+                          
+                          // FIXME This is a hack to simulate the lifecycle of the new backbone dialogs
+                          thisObj.addDialog.rscope.securityGroup.trigger('confirm');
+
+                          var tmpSecGroup = thisObj.addDialog.rscope.securityGroup.clone();
+                          tmpSecGroup.set('id', data.results.id);
+                          tmpSecGroup.trigger('request');
+                          tmpSecGroup.trigger('sync');
+
+                          require(['app'], function(app) { app.data.sgroup.fetch(); });
+
                           if (fromPort.length > 0) {
                               notifySuccess(null, $.i18n.prop('sgroup_create_success', DefaultEncoder().encodeForHTML(name)));
                               thisObj._addIngressRule($add_dialog, name, fromPort, toPort, protocol, cidr, fromGroup, fromUser);
@@ -320,6 +332,8 @@
                           tmpSecGroup.set('id', data.results.id);
                           tmpSecGroup.trigger('request');
                           tmpSecGroup.trigger('sync');
+
+                          require(['app'], function(app) { app.data.sgroup.fetch() });
                       } else {
                           notifyError($.i18n.prop('sgroup_add_rule_error', DefaultEncoder().encodeForHTML(name)), getErrorMessage(jqXHR));
                       }

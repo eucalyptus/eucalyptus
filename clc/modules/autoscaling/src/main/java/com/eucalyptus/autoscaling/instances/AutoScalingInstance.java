@@ -77,7 +77,7 @@ public class AutoScalingInstance extends AbstractOwnedPersistent implements Auto
   private LifecycleState lifecycleState;
 
   @Temporal( TemporalType.TIMESTAMP)
-  @Column( name = "in_service_timestamp" )
+  @Column( name = "metadata_in_service_timestamp" )
   private Date inServiceTimestamp;
 
   @Column( name = "metadata_configuration_state", nullable = false )

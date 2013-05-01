@@ -120,7 +120,7 @@ test: build-test
 
 gitcheck:
 ifeq ($(DISABLEGIT), 0)
-	@if ! which git &>/dev/null; then \
+	@if ! which git >/dev/null 2>&1; then \
 		echo "Must have git installed to retrieve dependencies" >&2; \
 		false; \
 	fi

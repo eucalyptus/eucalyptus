@@ -13,7 +13,7 @@ define([
       image_id: null,
       min_count: null,
       max_count: null,
-      tags: [{}],
+      tags: new Backbone.Collection(),
 
       //options
       key_name: null,
@@ -82,7 +82,7 @@ define([
             data.push({name: "MinCount", value: model.get('min_count')});
             data.push({name: "MaxCount", value: model.get('max_count')});
 
-            if (model.get('key_name') != undefined)
+            if (model.get('key_name') != undefined && model.get('key_name') !== 'none')
               data.push({name: "KeyName", value: model.get('key_name')});
             if (model.get('security_group') != undefined) {
               var groups = model.get('security_group');
@@ -181,9 +181,10 @@ define([
               data.push({name: "curlopts", value:  model.get('curlopts')});
             if(model.get('return_curl_handle') != undefined)
               data.push({name: "return_curl_handle", value:  model.get('return_curl_handle')});
-              
-            var user_file = model.get("user_filename") == undefined ? "none" : model.get("user_filename");
+             
+            var user_file = model.get('files') == undefined ? "none" : model.get('files');
             var self = this;
+
             $(model.get('fileinput')()).fileupload({
               url:"/ec2?Action=RunInstances",
               formData: data,
@@ -192,14 +193,16 @@ define([
               paramName: "user_data_file",
             });
 
+            var the_tags = model.get('tags').toJSON();
+            var name_tags = model.get('names').toJSON();
             $(model.get('fileinput')()).fileupload("send", {
               files: user_file,
               success:
                 function(data, textStatus, jqXHR){
                   if ( data.results ) {
-                    console.log("RUN INSTANCE: ", data);
                     notifySuccess(null, $.i18n.prop('instance_run_success', DefaultEncoder().encodeForHTML(data.results[0].id)));
-                    self.tags(data.results, model);
+                    self.set_tags(data.results, the_tags);
+                    self.set_tags(data.results, name_tags, true);
                   } else {
                     notifyError($.i18n.prop('instance_run_error', DefaultEncoder().encodeForHTML(model.name), DefaultEncoder().encodeForHTML(model.name)), undefined_error);
                   }
@@ -234,34 +237,55 @@ define([
           }
         },
 
-        tags: function(instanceData, model) {
-          var tagData = "_xsrf="+$.cookie('_xsrf');
-          // each instance gets each tag
-          if(model.get('tags') != undefined) {
-            $.each(instanceData, function(idx, inst) {
-              tagData += "&ResourceId." + idx + "=" + inst.id;
-            });
-            _.each(model.get('tags'), function(tag, jdx, tags) {
-              tagData += "&Tag." + (jdx+1) + ".Key=" + tag.get('name');
-              tagData += "&Tag." + (jdx+1) + ".Value=" + tag.get('value');
-            });
-          
-            $.ajax({
-              type: "POST",
-              url: "/ec2?Action=CreateTags",
-              data: tagData,
-              dataType: "json",
-              async: "true",
-              success: 
-                function(data, textStatus, jqXHR) {
-                  console.log("RUN INSTANCE TAGS SUCCESS: ", data.return);   
-                },
-              error: 
-                function(jqXHR, textStatus, errorThrown) {
-                  console.log("RUN INSTANCE TAGS FAIL: ", data.return);
-                }
-            });
+        set_tags: function(instanceData, tags, unique) {
+          var self = this;
+          if(tags.length > 0) {
+            if (unique == undefined || unique == false) {
+              // each instance gets each tag
+              var tagData = "_xsrf="+$.cookie('_xsrf');
+              $.each(instanceData, function(idx, inst) {
+                tagData += "&ResourceId." + (idx+1) + "=" + inst.id;
+              });
+              _.each(tags, function(tag, jdx, tags) {
+                tagData += "&Tag." + (jdx+1) + ".Key=" + tag.name;
+                tagData += "&Tag." + (jdx+1) + ".Value=" + tag.value;
+              });
+              self.create_tags(tagData);
+            } else {
+              // each instance receives one of the tags - expecting a tag for each instance
+              $.each(instanceData, function(idx, inst) {
+                var tagData = "_xsrf="+$.cookie('_xsrf');
+                tagData += "&ResourceId.1=" + inst.id;
+                tagData += "&Tag.1.Key=" + tags[idx].name;
+                tagData += "&Tag.1.Value=" + tags[idx].value;
+                self.create_tags(tagData);
+              });
+            }
           }
+        },
+
+        create_tags: function(tagData) {
+          $.ajax({
+            type: "POST",
+            url: "/ec2?Action=CreateTags",
+            data: tagData,
+            dataType: "json",
+            async: "true",
+            success: 
+              function(data, textStatus, jqXHR) {
+                //console.log("RUN INSTANCE TAGS SUCCESS: ", data.return);   
+              },
+            error: 
+              function(jqXHR, textStatus, errorThrown) {
+                //console.log("RUN INSTANCE TAGS FAIL: ", data.return);
+              }
+          });
+        },
+
+        parse: function(response) {
+            var response = EucaModel.prototype.parse.call(this, response);
+            response.state = response._state.name;
+            return response;
         }
 
     });

@@ -2364,7 +2364,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
           if( vm.getBootRecord().getMachine() instanceof BlockStorageImageInfo ) {
         	LOG.info( "Upgrading bfebs VmInstance: " + vm.toString() );
         	if( vm.getBootRecord().getEphmeralStorage().isEmpty() ) {
-        	  LOG.info("Adding an ephemeral storage attachment");
+        	  LOG.info("Adding ephemeral disk at /dev/sdb");
         	  vm.addEphemeralAttachment("/dev/sdb", "ephemeral0");	
         	}
         	
@@ -2374,10 +2374,8 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
         	  LOG.info("Found the only VmVolumeAttachment: " + attachment.toString());
         	  LOG.info("Setting root device flag to true");
               attachment.setIsRootDevice(Boolean.TRUE);
-              if ( attachment.getDevice().equalsIgnoreCase("/dev/sda1") ) {
-                LOG.info("Changing the device name from /dev/sda1 to /dev/sda");
-            	attachment.setDevice("/dev/sda");  
-              }
+              LOG.info("Changing the device name to /dev/sda");
+              attachment.setDevice("/dev/sda");  
         	} else { // This should not be the case updating to 3.3
         	 // If the instance has more or less than one persistent volume, iterate through them and update the one with device "/dev/sda1"
         	  for ( VmVolumeAttachment attachment : vm.getBootRecord().getPersistentVolumes() ) {

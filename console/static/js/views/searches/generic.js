@@ -35,7 +35,7 @@ define(['app', 'dataholder'], function(app, dh) {
     
     var sortKeyList = function(list, keyName) {
       return _.chain(list)
-              .sort(keyName)
+              .sortBy(function(obj){ return obj.keyName; })
               .uniq()
               .value()
     }

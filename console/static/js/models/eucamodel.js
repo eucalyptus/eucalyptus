@@ -2,8 +2,9 @@ define([
   'underscore',
   'backbone',
   'backbone-validation',
-  'sharedtags'
-], function(_, Backbone, BackboneValidation, tags) {
+  'sharedtags',
+  'models/tags'
+], function(_, Backbone, BackboneValidation, tags, Tags) {
   _.extend(Backbone.Model.prototype, Backbone.Validation.mixin);
   var EucaModel = Backbone.Model.extend({
     initialize: function() {
@@ -11,7 +12,7 @@ define([
 
         // Prepopulate the tags for this model
         if (self.get('tags') == null) {
-            self.set('tags', new Backbone.Collection(tags.where({res_id: self.get('id')})));
+            self.set('tags', new Tags(tags.where({res_id: self.get('id')})));
             self.refreshNamedColumns();
         }
 

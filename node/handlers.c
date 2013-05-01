@@ -325,10 +325,16 @@ static void printNCServiceStateInfo()
     int i = 0, j = 0;
     //Don't bother if not at trace logging
     if (log_level_get() <= EUCA_LOG_TRACE) {
+    	sem_p(service_state_sem);
         LOGTRACE("Printing %d services\n", nc_state.servicesLen);
-        sem_p(service_state_sem);
         for (i = 0; i < nc_state.servicesLen; i++) {
             LOGTRACE("Service - %s %s %s %s\n", nc_state.services[i].name, nc_state.services[i].partition, nc_state.services[i].type, nc_state.services[i].uris[0]);
+        }
+        for (i = 0; i < nc_state.disabledServicesLen; i++) {
+        	LOGTRACE("Disabled Service - %s %s %s %s\n", nc_state.disabledServices[i].name, nc_state.disabledServices[i].partition, nc_state.disabledServices[i].type, nc_state.disabledServices[i].uris[0]);
+        }
+        for (i = 0; i < nc_state.servicesLen; i++) {
+        	LOGTRACE("Notready Service - %s %s %s %s\n", nc_state.notreadyServices[i].name, nc_state.notreadyServices[i].partition, nc_state.notreadyServices[i].type, nc_state.notreadyServices[i].uris[0]);
         }
         sem_v(service_state_sem);
     }
@@ -343,6 +349,12 @@ static void printMsgServiceStateInfo(ncMetadata * pMeta)
         LOGTRACE("Msg-Meta epoch %d\n", pMeta->epoch);
         for (i = 0; i < pMeta->servicesLen; i++) {
             LOGTRACE("Msg-Meta: Service - %s %s %s %s\n", pMeta->services[i].name, pMeta->services[i].partition, pMeta->services[i].type, pMeta->services[i].uris[0]);
+        }
+        for (i = 0; i < pMeta->disabledServicesLen; i++) {
+        	LOGTRACE("Msg-Meta: Disabled Service - %s %s %s %s\n", pMeta->disabledServices[i].name, pMeta->disabledServices[i].partition, pMeta->disabledServices[i].type, pMeta->disabledServices[i].uris[0]);
+        }
+        for (i = 0; i < pMeta->servicesLen; i++) {
+        	LOGTRACE("Msg-Meta: Notready Service - %s %s %s %s\n", pMeta->notreadyServices[i].name, pMeta->notreadyServices[i].partition, pMeta->notreadyServices[i].type, pMeta->notreadyServices[i].uris[0]);
         }
     }
 }
@@ -399,7 +411,7 @@ static void updateServiceStateInfo(ncMetadata * pMeta)
         return;
     }
 
-    //Print the results...
+    //Log the results...
     printNCServiceStateInfo();
     printMsgServiceStateInfo(pMeta);
 }

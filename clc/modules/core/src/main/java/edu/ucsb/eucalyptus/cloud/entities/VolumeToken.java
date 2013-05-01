@@ -62,25 +62,33 @@
 
 package edu.ucsb.eucalyptus.cloud.entities;
 
-import java.util.Collection;
+import java.util.List;
+import java.util.NoSuchElementException;
 import java.util.Set;
 
 import javax.persistence.CascadeType;
 import javax.persistence.Column;
-import javax.persistence.Embedded;
+import javax.persistence.EntityTransaction;
 import javax.persistence.FetchType;
 import javax.persistence.JoinColumn;
+import javax.persistence.ManyToOne;
 import javax.persistence.OneToMany;
+import javax.persistence.OrderBy;
 import javax.persistence.PersistenceContext;
 import javax.persistence.Table;
 
+import org.apache.log4j.Logger;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
 import org.hibernate.annotations.Entity;
-import org.hibernate.annotations.NotFound;
-import org.hibernate.annotations.NotFoundAction;
 
+import com.eucalyptus.crypto.Crypto;
 import com.eucalyptus.entities.AbstractPersistent;
+import com.eucalyptus.entities.Entities;
+import com.eucalyptus.util.EucalyptusCloudException;
+import com.google.common.base.Function;
+import com.google.common.base.Predicate;
+import com.google.common.collect.Iterators;
 
 @Entity 
 @javax.persistence.Entity
@@ -88,52 +96,48 @@ import com.eucalyptus.entities.AbstractPersistent;
 @Table( name = "volume_tokens" )
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
 public class VolumeToken extends AbstractPersistent {
+	private static final Logger LOG = Logger.getLogger(VolumeToken.class);		
 	private static final long serialVersionUID = 1L;
+	private static final Integer TX_RETRIES = 3;
 
 	@Column(name="token", unique=true, nullable = false)
 	private String token;
 
-	@Column(name="volume_id")
-	private String volumeId;
+	@ManyToOne
+	@JoinColumn( name = "volume", nullable=true)	
+	@Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
+	private VolumeInfo volume;
 	
 	@Column(name="is_valid")
 	private Boolean isValid;
 	
-	@OneToMany( fetch = FetchType.LAZY, cascade = CascadeType.REMOVE, orphanRemoval = true, mappedBy = "token" )
-	private Set<VolumeExportRecord> exportRecords;
+	@OneToMany( fetch = FetchType.LAZY, cascade = CascadeType.ALL, orphanRemoval = true, mappedBy = "token" )
+	private List<VolumeExportRecord> exportRecords;
 	
 	public VolumeToken() {
-		volumeId = null;
+		volume = null;
 		token = null;
 	}
 	
-	public VolumeToken(String volId) {
-		this.volumeId = volId;		
+	public VolumeToken(VolumeInfo vol) {
+		this.volume = vol;
 		this.token = null;
 		this.exportRecords = null;
 		this.isValid = null;
 	}
 	
-	public VolumeToken(String volId, String token, boolean valid) {
-		this.volumeId = volId;
+	public VolumeToken(VolumeInfo vol, String token, boolean valid) {
+		this.volume = vol;
 		this.token = token;
 		this.exportRecords = null;
 		this.isValid = valid;
 	}
 	
 	public VolumeToken(boolean isValid) {
-		this.volumeId = null;
+		this.volume = null;
 		this.token = null;
 		this.exportRecords = null;
 		this.isValid = isValid;
-	}
-
-	public String getVolumeId() {
-		return volumeId;
-	}
-
-	public void setVolumeId(String volumeId) {
-		this.volumeId = volumeId;
 	}
 
 	public String getToken() {
@@ -152,20 +156,162 @@ public class VolumeToken extends AbstractPersistent {
 		this.isValid = isValid;
 	}
 
-	public Set<VolumeExportRecord> getExportRecords() {
+	public List<VolumeExportRecord> getExportRecords() {
 		return exportRecords;
 	}
 
-	public void setExportRecords(Set<VolumeExportRecord> exportRecords) {
+	public void setExportRecords(List<VolumeExportRecord> exportRecords) {
 		this.exportRecords = exportRecords;
 	}
 	
-	public void addExportRecord(VolumeExportRecord record) {
-		this.exportRecords.add(record);
-	}
-	
-	public void removeExportRecord(VolumeExportRecord record) {
-		this.exportRecords.remove(record);
+	public VolumeInfo getVolume() {
+		return volume;
 	}
 
+	public void setVolume(VolumeInfo volumeInfo) {
+		this.volume = volumeInfo;
+	}
+	  
+	/**
+	 * Create a new token for the requested volume. This does NOT guarantee uniqueness, the caller
+	 * must guarantee that only on token is generated per request
+	 * @param vol
+	 * @return
+	 */
+	public static VolumeToken generate(final VolumeInfo vol) throws EucalyptusCloudException {
+		Function<VolumeInfo, VolumeToken> addToken = new Function<VolumeInfo, VolumeToken>() {
+			@Override
+			public VolumeToken apply(VolumeInfo src) {
+				try {
+					VolumeInfo volRecord = Entities.merge(src);
+					VolumeToken token = new VolumeToken();
+					token.setVolume(volRecord);
+					token.setIsValid(true);
+					token.setToken(Crypto.generateSessionToken());					
+					return token;
+				} catch(Exception e) {
+					LOG.error("Error creating new volume token for " + vol.getVolumeId());
+				} 
+				return null;						
+			}
+		};
+		
+		try {
+			return Entities.asTransaction(VolumeInfo.class, addToken, VolumeToken.TX_RETRIES).apply(vol);
+		} catch(RuntimeException e) {
+			LOG.error("Failed to create new token for volume " + vol.getVolumeId() + " Msg: " + e.getMessage(), e);
+			throw new EucalyptusCloudException("Failed new token creation.",e);
+		}
+	}
+	
+	public VolumeExportRecord getValidExport(String ip, String iqn) throws EucalyptusCloudException {		
+		EntityTransaction db = Entities.get(VolumeToken.class);
+		try {
+			VolumeToken tokenEntity = Entities.merge(this);		
+			for(VolumeExportRecord rec : tokenEntity.getExportRecords()) {
+				if(rec.getIsActive() && rec.getHostIp().equals(ip) && rec.getHostIqn().equals(iqn)) {
+					db.commit();
+					return rec;
+				}
+			}
+			db.commit();
+		} catch(Exception e) {
+			LOG.error("Error when checking for valid export to " + ip + " and " + iqn + " for volume " + this.getVolume().getVolumeId() + " and token " + this.getToken());
+			throw new EucalyptusCloudException("Failed to check for valid export",e);
+		} finally {
+			if(db.isActive()) { 
+				db.rollback();
+			}
+		}
+		return null;
+	}
+	
+	/**
+	 * Invalidate the export for this token for the given ip and iqn
+	 * Does not remove any info, just sets invalidate
+	 * @param ip
+	 * @param iqn
+	 */
+	public void invalidateExport(final String ip, final String iqn) throws EucalyptusCloudException {
+		Function<VolumeToken, VolumeToken> deactivateExport = new Function<VolumeToken, VolumeToken>() {
+			@Override
+			public VolumeToken apply(VolumeToken tok){
+				VolumeToken tokenEntity = Entities.merge(tok);			
+				try {
+					for(VolumeExportRecord rec : tokenEntity.getExportRecords()) {
+						if(rec.getIsActive() && rec.getHostIp().equals(ip) && rec.getHostIqn().equals(iqn)) {						
+							rec.setIsActive(Boolean.FALSE);
+							break;
+						}
+					}
+					
+					Predicate<VolumeExportRecord> notActive = new Predicate<VolumeExportRecord>() {
+						@Override
+						public boolean apply(VolumeExportRecord record) {
+							return !record.getIsActive();
+						}						
+					};
+					
+					//If no records are active, then invalidate the token
+					if(Iterators.all(tokenEntity.getExportRecords().iterator(),notActive)) {
+						//Invalidate the token as well.
+						tok.setIsValid(Boolean.FALSE);
+					}
+					return tokenEntity;
+				} catch(Exception e) {
+					LOG.error("Could not invalidate export record for volume " + tok.getVolume().getVolumeId() + " token " + tok.getToken() + " ip " + ip + " iqn " + iqn, e);				
+				} 								
+				return null;
+			}		
+		};
+		
+		try {
+			if(Entities.asTransaction(VolumeExportRecord.class, deactivateExport).apply(this) == null) {
+				throw new Exception("Failed to invalidate export, got null result from deactivation");
+			}
+		} catch(Exception e) {
+			LOG.error("Failed to invalidate export: " + e.getMessage(),e);
+			throw new EucalyptusCloudException("Failed to invalidate export");
+		}
+	}
+	
+	/**
+	 * Add a new export for this token
+	 * @param ip - the ip of the client exported to
+	 * @param iqn - the iqn for the client exported to
+	 * @param connectionString - the connection string for this export
+	 */
+	public void addExport(final String ip, final String iqn, final String connectionString) throws EucalyptusCloudException {		
+		Function<VolumeToken, VolumeToken> createExport = new Function<VolumeToken, VolumeToken>() {
+			@Override
+			public VolumeToken apply(VolumeToken token) {
+				VolumeToken tok = null;				
+				tok = Entities.merge(token);
+				try {
+					if(tok.getValidExport(ip, iqn) == null || !connectionString.equals(tok.getValidExport(ip, iqn).getConnectionString())) {
+						LOG.trace("Adding new volume export record to token");
+						VolumeExportRecord record = new VolumeExportRecord();
+						record.setToken(tok);
+						record.setVolume(tok.getVolume());
+						record.setHostIp(ip);
+						record.setHostIqn(iqn);
+						record.setConnectionString(connectionString);
+						record.setIsActive(true);						
+						Entities.flush(record);
+						tok.exportRecords.add(record);
+						return tok;
+					}											
+				} catch(Exception e) {
+					LOG.error("Error adding new export record", e);
+				}
+				return tok;
+			}
+		};
+		
+		try {
+			Entities.asTransaction(VolumeToken.class, createExport).apply(this);
+		} catch(Exception e) {
+			LOG.error("Failed to add export");
+		}
+	}
 }

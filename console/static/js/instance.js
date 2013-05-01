@@ -457,7 +457,7 @@
        menuItems['detach'] = {"name":instance_action_detach, callback: function(key, opt) { ; }, disabled: function(){ return true; }};
        menuItems['associate'] = {"name":instance_action_associate, callback: function(key, opt){; }, disabled: function(){ return true; }};
        menuItems['disassociate'] = {"name":instance_action_disassociate, callback: function(key, opt){;}, disabled: function(){ return true; }};
-       menuItems['tag'] = {"name":'Tag Resource', callback: function(key, opt){;}, disabled: function(){ return true; }};
+       menuItems['tag'] = {"name":table_menu_edit_tags_action, callback: function(key, opt){;}, disabled: function(){ return true; }};
      })();
 
      if(numSelected === 1 && 'running' in stateMap && $.inArray(instIds[0], stateMap['running']>=0)){
@@ -526,7 +526,7 @@
      }
 
      if(numSelected == 1){
-       menuItems['tag'] = {"name":'Tag Resource', callback: function(key, opt){ thisObj._tagResourceAction(); }}
+       menuItems['tag'] = {"name":table_menu_edit_tags_action, callback: function(key, opt){ thisObj._tagResourceAction(); }}
      }
   
      return menuItems;
@@ -1071,6 +1071,10 @@
         sgroup = thisObj.launchMoreDialog.find('#summary-security-sg').children().last().text(); 
       else
         sgroup = sgroup.val();  
+      
+      // good time to save those tags
+      var tags = thisObj.launchMoreDialog.rscope.model.get('tags');
+      $('html body').find(DOM_BINDING['hidden']).launcher('setTags', tags);
 
       $('html body').find(DOM_BINDING['hidden']).launcher('updateLaunchParam', 'emi', emi);
       $('html body').find(DOM_BINDING['hidden']).launcher('updateLaunchParam', 'type', type);
@@ -1099,7 +1103,7 @@
             'delOnTerm':delOnTerm
           };
           deviceMap.push(mapping);
-      $('html body').find(DOM_BINDING['hidden']).launcher('launch');
+          $('html body').find(DOM_BINDING['hidden']).launcher('launch');
         }else if(volume.indexOf('ephemeral')>=0){
           var mapping = {
             'volume':volume,
@@ -1121,10 +1125,38 @@
         $('html body').find(DOM_BINDING['hidden']).launcher('updateLaunchParam', 'device_map', deviceMap);
       $('html body').find(DOM_BINDING['hidden']).launcher('launch');
     },
+
     _initLaunchMoreDialog : function(){
       var thisObj = this;
       var id = this.tableWrapper.eucatable('getSelectedRows', 17)[0];
 //      id = $(id).html();       // After dataTable 1.9 integration, this operation is no longer needed.  030413 
+
+      require(['app',
+        'rivets', 
+        'models/instance', 
+        'text!views/dialogs/tag_edit_nub.html!strip',
+      ], function(app, rivets, Instance, TagNub) {
+          console.log('update scope');
+          var tagdiv = thisObj.launchMoreDialog.find(".launch-more-tags");
+          tagdiv.children().remove();
+          tagdiv.append($(TagNub));
+
+          thisObj.launchMoreDialog.rivets = rivets;
+          thisObj.launchMoreDialog.Instance = Instance;
+          thisObj.launchMoreDialog.rscope = {
+            model: new Instance()
+          }
+
+          var tagSet = app.data.instance.get(id).get('tags').clone(clean=true, exclude=function(t) {
+                  var name = t.get('name');
+                  return (name == 'Name' || name.substr(0, 4) == 'euca' || name.substr(0, 3) == 'aws');
+                });
+          thisObj.launchMoreDialog.rscope.model.set('tags', tagSet);
+          var tags = thisObj.launchMoreDialog.rscope.model.get('tags');
+
+          thisObj.launchMoreDialog.rview = thisObj.launchMoreDialog.rivets.bind(tagdiv, thisObj.launchMoreDialog.rscope);
+      });
+
       var filter = {};
       var result = describe('instance');
       var instance = null;
@@ -1227,6 +1259,7 @@
       $('html body').find(DOM_BINDING['hidden']).launcher('makeAdvancedSection', $advanced);
       $advanced.find('#launch-wizard-image-emi').val(image.id).trigger('change');
     },
+
     _expandCallback : function(row){ 
       var thisObj = this;
       var $el = $('<div />');

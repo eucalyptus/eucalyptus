@@ -801,18 +801,21 @@ int vnetAddHost(vnetConfig * vnetconfig, char *mac, char *ip, int vlan, int idx)
         // duplicate IP found
         LOGWARN("attempting to add duplicate macmap entry, ignoring\n");
     } else if (found) {
-        mac2hex(mac, vnetconfig->networks[vlan].addrs[found].mac);
-        if (ip) {
-            vnetconfig->networks[vlan].addrs[found].ip = dot2hex(ip);
-        } else {
-            if ((newip = hex2dot(vnetconfig->networks[vlan].nw + found)) == NULL) {
-                LOGWARN("Out of memory\n");
+        if (mac2hex(mac, vnetconfig->networks[vlan].addrs[found].mac) != NULL) {
+            if (ip) {
+                vnetconfig->networks[vlan].addrs[found].ip = dot2hex(ip);
             } else {
-                vnetconfig->networks[vlan].addrs[found].ip = dot2hex(newip);
-                EUCA_FREE(newip);
+                if ((newip = hex2dot(vnetconfig->networks[vlan].nw + found)) == NULL) {
+                    LOGWARN("Out of memory\n");
+                } else {
+                    vnetconfig->networks[vlan].addrs[found].ip = dot2hex(newip);
+                    EUCA_FREE(newip);
+                }
             }
+            vnetconfig->networks[vlan].numhosts++;
+        } else {
+            LOGERROR("failed to convers mac address '%s on vlan %d'\n", mac, vlan);
         }
-        vnetconfig->networks[vlan].numhosts++;
     } else {
         LOGERROR("failed to add host %s on vlan %d\n", mac, vlan);
         return (EUCA_ERROR);
@@ -1691,12 +1694,12 @@ int vnetGetAllVlans(vnetConfig * vnetconfig, char ***outusers, char ***outnets, 
 //!
 int vnetGenerateNetworkParams(vnetConfig * vnetconfig, char *instId, int vlan, int nidx, char *outmac, char *outpubip, char *outprivip)
 {
+    int i = 0;
     int rc = 0;
     int ret = EUCA_OK;
     int networkIdx = 0;
-    int found = 0;
-    int i = 0;
     u32 inip = 0;
+    boolean found = FALSE;
 
     if (!vnetconfig || !instId || !outmac || !outpubip || !outprivip) {
         LOGERROR("bad input params: vnetconfig=%p, instId=%s, outmac=%s, outpubip=%s outprivip=%s\n", vnetconfig, SP(instId), SP(outmac), SP(outpubip), SP(outprivip));
@@ -1708,11 +1711,24 @@ int vnetGenerateNetworkParams(vnetConfig * vnetconfig, char *instId, int vlan, i
     if (!strcmp(vnetconfig->mode, "STATIC") || !strcmp(vnetconfig->mode, "STATIC-DYNMAC")) {
         // search for existing entry
         inip = dot2hex(outprivip);
-        found = 0;
+        found = FALSE;
         for (i = vnetconfig->addrIndexMin; ((i < vnetconfig->addrIndexMax) && !found); i++) {
+#if 0
+            LOGDEBUG("HELLO: %d outmac:%s inip:%s ip:%s mac:%d match:%d\n", i, outmac, hex2dot(inip), hex2dot(vnetconfig->networks[0].addrs[i].ip), machexcmp(outmac,
+                                                                                                                                                              vnetconfig->
+                                                                                                                                                              networks[0].addrs[i].
+                                                                                                                                                              mac),
+                     (vnetconfig->networks[0].addrs[i].ip == inip));
+#endif // 0
+
             if (!machexcmp(outmac, vnetconfig->networks[0].addrs[i].mac) && (vnetconfig->networks[0].addrs[i].ip == inip)) {
+#if 0
+                LOGDEBUG("WOOT: %d outmac:%s inip:%s ip:%s mac:%d match:%d\n", i, outmac, hex2dot(inip), hex2dot(vnetconfig->networks[0].addrs[i].ip),
+                         machexcmp(outmac, vnetconfig->networks[0].addrs[i].mac), (vnetconfig->networks[0].addrs[i].ip == inip));
+#endif // 0
+
                 vnetconfig->networks[0].addrs[i].active = 1;
-                found++;
+                found = TRUE;
                 ret = EUCA_OK;
             }
         }
@@ -1806,7 +1822,7 @@ int vnetGetNextHost(vnetConfig * vnetconfig, char *mac, char *ip, int vlan, int 
     }
 
     for (i = start; i <= stop; i++) {
-        if (maczero(vnetconfig->networks[vlan].addrs[i].mac) && vnetconfig->networks[vlan].addrs[i].ip != 0 && vnetconfig->networks[vlan].addrs[i].active == 0) {
+        if (maczero(vnetconfig->networks[vlan].addrs[i].mac) && (vnetconfig->networks[vlan].addrs[i].ip != 0) && (vnetconfig->networks[vlan].addrs[i].active == 0)) {
             hex2mac(vnetconfig->networks[vlan].addrs[i].mac, &newmac);
             strncpy(mac, newmac, strlen(newmac));
             EUCA_FREE(newmac);
@@ -1858,7 +1874,7 @@ int vnetCountLocalIP(vnetConfig * vnetconfig)
 //!
 //! @pre \p vnetconfig must not be NULL.
 //!
-int vnetCheckLocalIP(vnetConfig * vnetconfig, uint32_t ip)
+int vnetCheckLocalIP(vnetConfig * vnetconfig, u32 ip)
 {
     int i = 0;
 
@@ -1890,7 +1906,7 @@ int vnetCheckLocalIP(vnetConfig * vnetconfig, uint32_t ip)
 //!
 //! @pre \p vnetconfig must not be NULL.
 //!
-int vnetAddLocalIP(vnetConfig * vnetconfig, uint32_t ip)
+int vnetAddLocalIP(vnetConfig * vnetconfig, u32 ip)
 {
     int i = 0;
 
@@ -2187,7 +2203,7 @@ int vnetKickDHCP(vnetConfig * vnetconfig)
 //!
 //! @pre \p vnetconfig must not be NULL.
 //!
-int vnetAddCCS(vnetConfig * vnetconfig, uint32_t cc)
+int vnetAddCCS(vnetConfig * vnetconfig, u32 cc)
 {
     int i = 0;
 
@@ -2217,7 +2233,7 @@ int vnetAddCCS(vnetConfig * vnetconfig, uint32_t cc)
 //!
 //! @pre \p vnetconfig must not be NULL.
 //!
-int vnetDelCCS(vnetConfig * vnetconfig, uint32_t cc)
+int vnetDelCCS(vnetConfig * vnetconfig, u32 cc)
 {
     int i = 0;
     int rc = 0;
@@ -2274,7 +2290,7 @@ int vnetSetCCS(vnetConfig * vnetconfig, char **ccs, int ccsLen)
         return (EUCA_INVALID_ERROR);
     }
 
-    bzero(tmpccs, sizeof(uint32_t) * NUMBER_OF_CCS);
+    bzero(tmpccs, sizeof(u32) * NUMBER_OF_CCS);
     found = FALSE;
     for (i = 0; i < ccsLen; i++) {
         LOGDEBUG("input CC%d=%s\n", i, ccs[i]);
@@ -2288,13 +2304,13 @@ int vnetSetCCS(vnetConfig * vnetconfig, char **ccs, int ccsLen)
         }
     }
 
-    if (memcmp(tmpccs, vnetconfig->tunnels.ccs, sizeof(uint32_t) * NUMBER_OF_CCS)) {
+    if (memcmp(tmpccs, vnetconfig->tunnels.ccs, sizeof(u32) * NUMBER_OF_CCS)) {
         // internal list is different from new list, teardown and re-construct tunnels
         LOGINFO("list of CCs has changed, initiating re-construction of tunnels\n");
         if ((rc = vnetTeardownTunnels(vnetconfig)) != 0) {
             LOGERROR("unable to teardown tunnels\n");
         }
-        memcpy(vnetconfig->tunnels.ccs, tmpccs, sizeof(uint32_t) * NUMBER_OF_CCS);
+        memcpy(vnetconfig->tunnels.ccs, tmpccs, sizeof(u32) * NUMBER_OF_CCS);
     }
 
     if (!found) {
@@ -3981,7 +3997,7 @@ int mac2ip(vnetConfig * vnetconfig, char *mac, char **ip)
 //!
 //! @pre The \p in field must not be NULL and must be a valid IP address value in dot notation.
 //!
-uint32_t dot2hex(char *in)
+u32 dot2hex(char *in)
 {
     int a = 127;
     int b = 0;
@@ -4021,7 +4037,7 @@ uint32_t dot2hex(char *in)
 //!
 //! @pre \p dev, \p outips, \p outnms and \p len must not be NULL.
 //!
-int getdevinfo(char *dev, uint32_t ** outips, uint32_t ** outnms, int *len)
+int getdevinfo(char *dev, u32 ** outips, u32 ** outnms, int *len)
 {
     int rc = 0;
     int count = 0;
@@ -4050,8 +4066,8 @@ int getdevinfo(char *dev, uint32_t ** outips, uint32_t ** outnms, int *len)
                     count++;
 
                     //! @todo handle graceful out of memory condition and report it
-                    *outips = EUCA_REALLOC(*outips, count, sizeof(uint32_t));
-                    *outnms = EUCA_REALLOC(*outnms, count, sizeof(uint32_t));
+                    *outips = EUCA_REALLOC(*outips, count, sizeof(u32));
+                    *outnms = EUCA_REALLOC(*outnms, count, sizeof(u32));
 
                     (*outips)[count - 1] = dot2hex(host);
 
@@ -4080,7 +4096,7 @@ int getdevinfo(char *dev, uint32_t ** outips, uint32_t ** outnms, int *len)
 //!
 //! @note The \p (*out) field should be NULL.
 //!
-void hex2mac(unsigned char in[6], char **out)
+void hex2mac(u8 in[6], char **out)
 {
     if (out != NULL) {
         if ((*out = EUCA_ALLOC(24, sizeof(char))) != NULL) {
@@ -4095,28 +4111,36 @@ void hex2mac(unsigned char in[6], char **out)
 //! @param[in]  in the human readable MAC address value
 //! @param[out] out the output array that will contain the correct hexadecimal values.
 //!
+//! @return A pointer to the 'out' parameter if successful or NULL on failure. A failure occurs if
+//!         the 'in' parameter is NULL or if the format of the readable MAC address under 'in' is
+//!         invalid.
+//!
 //! @pre \p in must be a non NULL pointer and must be a valid MAC address format.
 //!
-//! @note if \p in is NULL or if its of an invalid format, \p out will only contain 0s
+//! @post On success, the bytes are extracted from 'in' and put into 'out'. On failure, the 'out' value
+//!       remains unchanged.
 //!
-void mac2hex(char *in, unsigned char out[6])
+//! @note if \p in is NULL or if its of an invalid format, \p out will remain unchanged
+//!
+u8 *mac2hex(char *in, u8 out[6])
 {
     int rc = 0;
     u32 tmp[6] = { 0 };
 
     if (in != NULL) {
         bzero(out, 6);
-        rc = sscanf(in, "%X:%X:%X:%X:%X:%X", ((unsigned int *)&tmp[0]), ((unsigned int *)&tmp[1]), ((unsigned int *)&tmp[2]),
-                    ((unsigned int *)&tmp[3]), ((unsigned int *)&tmp[4]), ((unsigned int *)&tmp[5]));
+        rc = sscanf(in, "%X:%X:%X:%X:%X:%X", ((u32 *) & tmp[0]), ((u32 *) & tmp[1]), ((u32 *) & tmp[2]), ((u32 *) & tmp[3]), ((u32 *) & tmp[4]), ((u32 *) & tmp[5]));
         if (rc == 6) {
-            out[0] = ((unsigned char)tmp[0]);
-            out[1] = ((unsigned char)tmp[1]);
-            out[2] = ((unsigned char)tmp[2]);
-            out[3] = ((unsigned char)tmp[3]);
-            out[4] = ((unsigned char)tmp[4]);
-            out[5] = ((unsigned char)tmp[5]);
+            out[0] = ((u8) tmp[0]);
+            out[1] = ((u8) tmp[1]);
+            out[2] = ((u8) tmp[2]);
+            out[3] = ((u8) tmp[3]);
+            out[4] = ((u8) tmp[4]);
+            out[5] = ((u8) tmp[5]);
+            return (out);
         }
     }
+    return (NULL);
 }
 
 //!
@@ -4126,11 +4150,11 @@ void mac2hex(char *in, unsigned char out[6])
 //!
 //! @return 0 if the given MAC address is ALL 0s or any other values if its not ALL 0s.
 //!
-int maczero(unsigned char in[6])
+int maczero(u8 in[6])
 {
     u8 zeromac[6] = { 0 };
-    bzero(zeromac, 6 * sizeof(unsigned char));
-    return (memcmp(in, zeromac, sizeof(unsigned char) * 6));
+    bzero(zeromac, 6 * sizeof(u8));
+    return (memcmp(in, zeromac, sizeof(u8) * 6));
 }
 
 //!
@@ -4149,11 +4173,12 @@ int maczero(unsigned char in[6])
 //!
 //! @note if ina is NULL, this will result in comparing inb with "00:00:00:00:00:00".
 //!
-int machexcmp(char *ina, unsigned char inb[6])
+int machexcmp(char *ina, u8 inb[6])
 {
     u8 mconv[6] = { 0 };
-    mac2hex(ina, mconv);
-    return (memcmp(mconv, inb, sizeof(unsigned char) * 6));
+    if (mac2hex(ina, mconv) != NULL)
+        return (memcmp(mconv, inb, sizeof(u8) * 6));
+    return (-1);
 }
 
 //!
@@ -4165,7 +4190,7 @@ int machexcmp(char *ina, unsigned char inb[6])
 //!
 //! @note The caller is responsible to free the allocated memory for the returned value
 //!
-char *hex2dot(uint32_t in)
+char *hex2dot(u32 in)
 {
     char out[16] = "";
 

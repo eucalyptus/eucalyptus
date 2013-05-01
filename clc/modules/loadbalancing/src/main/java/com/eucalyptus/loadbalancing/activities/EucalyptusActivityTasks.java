@@ -2077,6 +2077,7 @@ public class EucalyptusActivityTasks {
 			AuthorizeSecurityGroupIngressType req = new AuthorizeSecurityGroupIngressType();
 			req.setGroupName(this.groupName);
 			IpPermissionType perm = new IpPermissionType();
+			perm.setFromPort(this.portNum);
 			perm.setToPort(this.portNum);
 			perm.setCidrIpRanges( Lists.newArrayList( Arrays.asList( "0.0.0.0/0" ) ) );
 			perm.setIpProtocol(this.protocol); // udp too?

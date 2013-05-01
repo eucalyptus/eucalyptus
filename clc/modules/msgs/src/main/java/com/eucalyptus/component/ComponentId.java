@@ -218,6 +218,9 @@ public abstract class ComponentId implements HasName<ComponentId>, HasFullName<C
       ElementType.FIELD } )
   @Retention( RetentionPolicy.RUNTIME )
   public @interface ServiceOperation {
+    /**
+     * Operation is invokable by a user.
+     */
     boolean user( ) default false;
   }
   

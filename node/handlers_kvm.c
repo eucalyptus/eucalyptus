@@ -672,10 +672,11 @@ static int doMigrateInstances(struct nc_state_t *nc, ncMetadata * pMeta, ncInsta
 
     if (instancesLen <= 0) {
         LOGERROR("called with invalid instancesLen (%d)\n", instancesLen);
+        pMeta->replyString = strdup("internal error (invalid instancesLen)");
         return (EUCA_INVALID_ERROR);
     }
 
-    LOGDEBUG("verifing %d instance[s] for migration...\n", instancesLen);
+    LOGDEBUG("verifying %d instance[s] for migration...\n", instancesLen);
     for (int inst_idx = 0; inst_idx < instancesLen; inst_idx++) {
         LOGDEBUG("verifying instance # %d...\n", inst_idx);
         if (instances[inst_idx]) {
@@ -683,6 +684,7 @@ static int doMigrateInstances(struct nc_state_t *nc, ncMetadata * pMeta, ncInsta
             LOGDEBUG("[%s] proposed migration action '%s' (%s > %s) [creds=%s]\n", SP(instance_idx->instanceId), SP(action), SP(instance_idx->migration_src),
                      SP(instance_idx->migration_dst), (instance_idx->migration_credentials == NULL) ? "unavailable" : "present");
         } else {
+            pMeta->replyString = strdup("internal error (instance count mismatch)");
             LOGERROR("Mismatch between migration instance count (%d) and length of instance list\n", instancesLen);
             return (EUCA_ERROR);
         }
@@ -708,6 +710,7 @@ static int doMigrateInstances(struct nc_state_t *nc, ncMetadata * pMeta, ncInsta
             sem_v(inst_sem);
             if (instance == NULL) {
                 LOGERROR("[%s] cannot find instance\n", instance_req->instanceId);
+                pMeta->replyString = strdup("failed to locate instance to migrate");
                 return (EUCA_NOT_FOUND_ERROR);
             }
 
@@ -733,6 +736,7 @@ static int doMigrateInstances(struct nc_state_t *nc, ncMetadata * pMeta, ncInsta
                     int sysret = system(generate_keys);
                     if (sysret) {
                         LOGERROR("instance[0]=%s '%s' failed with exit code %d\n", instance->instanceId, generate_keys, WEXITSTATUS(sysret));
+                        pMeta->replyString = strdup("internal error (migration credentials generation failed)");
                         sem_v(inst_sem);
                         return (EUCA_SYSTEM_ERROR);
                     } else {
@@ -929,7 +933,6 @@ static int doMigrateInstances(struct nc_state_t *nc, ncMetadata * pMeta, ncInsta
                 if (strlen(scUrl) == 0) {
                     LOGERROR("[%s][%s] Failed to lookup enabled Storage Controller. Cannot attach volume %s\n", instance->instanceId, volume->volumeId, scUrl);
                     have_remote_device = 0;
-                    ret = EUCA_ERROR;
                     goto unroll;
                 } else {
                     LOGTRACE("[%s][%s] Using SC URL: %s\n", instance->instanceId, volume->volumeId, scUrl);
@@ -944,6 +947,8 @@ static int doMigrateInstances(struct nc_state_t *nc, ncMetadata * pMeta, ncInsta
                     ret = EUCA_ERROR;
                     goto unroll;
                 }
+                // update the volume struct with connection string obtained from SC
+                euca_strncpy(volume->connectionString, vol_data->connect_string, sizeof(volume->connectionString));
 
                 if (!remoteDevStr || !strstr(remoteDevStr, "/dev")) {
                     LOGERROR("[%s][%s] failed to connect to iscsi target\n", instance->instanceId, volume->volumeId);
@@ -987,8 +992,11 @@ static int doMigrateInstances(struct nc_state_t *nc, ncMetadata * pMeta, ncInsta
 
                 continue;
 unroll:
+                ret = EUCA_ERROR;
+
                 // TODO: unroll all volume attachments
-                break;
+
+                goto failed_dest;
             }
 
             sem_p(inst_sem);

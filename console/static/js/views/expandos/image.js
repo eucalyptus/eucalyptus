@@ -7,6 +7,7 @@ define([
 ], function(app, _, Backbone, EucaExpandoView, template) {
   return EucaExpandoView.extend({
     initialize : function(args) {
+      var self = this;
       this.template = template;
       var tmp = this.model ? this.model : new Backbone.Model();
       this.model = new Backbone.Model();
@@ -28,6 +29,11 @@ define([
       this.model.set('ramdisk', app.data.images.get(this.model.get('image').get('ramdisk_id')));
       this.scope = this.model;
       this._do_init();
+    
+      var tmptags = this.model.get('image').get('tags');
+      tmptags.on('add remove reset sort sync', function() {
+        self.render();
+      });
     },
     remove : function() {
       this.model.destroy();

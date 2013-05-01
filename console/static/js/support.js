@@ -547,7 +547,13 @@ function setupAjax(){
  });
 }
 
-function doMultiAction(itemList, collection, opFunction, progressMessage, doneMessage, failMessage, validate){
+// itemlist is a list of ids
+// collection is the backbone collection to look up the ids in
+// opFunction is a method that performs an operation (like save, etc..)
+// progress,done,fail messages are i18n properties of messages
+// validate is an optional function that checks the return code (used if not simple boolean)
+// complete is an optional function called when operations complete with success (for chaining)
+function doMultiAction(itemList, collection, opFunction, progressMessage, doneMessage, failMessage, validate, complete){
   var done = 0;
   var all = itemList.length;
   var errorList = [];
@@ -569,6 +575,9 @@ function doMultiAction(itemList, collection, opFunction, progressMessage, doneMe
               $msg.append($('<div>').addClass('multiop-summary-failure').
                          html($.i18n.prop(failMsg, errorList.length)));
           notifyMulti(100, $msg.html(), errorList);
+          if (complete) {
+            complete(done, errorList); // let's pass the total number, and error list.
+          }
         }
         dfd.resolve();
       };

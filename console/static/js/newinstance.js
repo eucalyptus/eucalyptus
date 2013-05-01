@@ -26,7 +26,6 @@
       var thisObj = this;
       $(thisObj.element).unbind();
       require(['views/newinstance/index'], function(wizardFactory) {
-        console.log(thisObj.options);
         var View = wizardFactory(thisObj.options);
         var view = new View({el: thisObj.element});
       	view.render();

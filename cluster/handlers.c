@@ -252,6 +252,8 @@ char *SCHEDPOLICIES[SCHEDLAST] = {
  |                                                                            |
 \*----------------------------------------------------------------------------*/
 
+static int schedule_instance_migration(ncInstance * instance, char **includeNodes, char **excludeNodes, int includeNodeCount, int excludeNodeCount, int inresid, int *outresid,
+                                       ccResourceCache * resourceCacheLocal, char **replyString);
 static int migration_handler(ccInstance * myInstance, char *host, char *src, char *dst, migration_states migration_state, char **node, char **instance, char **action);
 static int populateOutboundMeta(ncMetadata * pMeta);
 
@@ -850,11 +852,24 @@ int ncClientCall(ncMetadata * pMeta, int timeout, int ncLock, char *ncURL, char 
             char *action = va_arg(al, char *);
             char *credentials = va_arg(al, char *);
             rc = ncMigrateInstancesStub(ncs, localmeta, instances, instancesLen, action, credentials);
+            if (timeout) {
+                int len = 0;
+                if (localmeta->replyString) {
+                    len = strlen(localmeta->replyString);
+                }
+                int bytes = write(filedes[1], &len, sizeof(int));
+                if (len > 0) {
+                    bytes += write(filedes[1], localmeta->replyString, sizeof(char) * len);
+                }
+            }
         } else {
             LOGWARN("\tncOps=%s ppid=%d operation '%s' not found\n", ncOp, getppid(), ncOp);
             rc = 1;
         }
         LOGTRACE("\tncOps=%s ppid=%d done calling '%s' with exit code '%d'\n", ncOp, getppid(), ncOp, rc);
+        if (localmeta->replyString != NULL) {
+            LOGDEBUG("NC replied to '%s' with '%s'\n", ncOp, localmeta->replyString);
+        }
         if (rc) {
             ret = 1;
         } else {
@@ -1152,6 +1167,26 @@ int ncClientCall(ncMetadata * pMeta, int timeout, int ncLock, char *ncURL, char 
                     }
                 }
             }
+        } else if (!strcmp(ncOp, "ncMigrateInstances")) {
+            if (timeout) {
+                int len = 0;
+                rbytes = timeread(filedes[0], &len, sizeof(int), timeout);
+                if (rbytes <= 0) {
+                    killwait(pid);
+                    opFail = 1;
+                } else if (len > 0) {
+                    pMeta->replyString = EUCA_ALLOC(len, sizeof(char));
+                    if (pMeta->replyString == NULL) {
+                        LOGFATAL("out of memory! ncOps=%s\n", ncOp);
+                        unlock_exit(1);
+                    }
+                    rbytes = timeread(filedes[0], pMeta->replyString, len, timeout);
+                    if (rbytes <= 0) {
+                        killwait(pid);
+                        opFail = 1;
+                    }
+                }
+            }
         } else {
             // nothing to do in default case (succ/fail encoded in exit code)
         }
@@ -1159,7 +1194,12 @@ int ncClientCall(ncMetadata * pMeta, int timeout, int ncLock, char *ncURL, char 
         close(filedes[0]);
         if (timeout) {
             rc = timewait(pid, &status, timeout);
-            rc = WEXITSTATUS(status);
+            if (WIFEXITED(status)) {
+                rc = WEXITSTATUS(status);
+            } else {
+                LOGERROR("BUG: child process for making '%s' request did not exit cleanly\n", ncOp);
+                rc = 1;
+            }
         } else {
             rc = 0;
         }
@@ -3063,8 +3103,8 @@ int schedule_instance_roundrobin(virtualMachine * vm, int *outresid)
 //!
 //! @note
 //!
-int schedule_instance_migration(ncInstance * instance, char **includeNodes, char **excludeNodes, int includeNodeCount, int excludeNodeCount, int inresid, int *outresid,
-                                ccResourceCache * resourceCacheLocal)
+static int schedule_instance_migration(ncInstance * instance, char **includeNodes, char **excludeNodes, int includeNodeCount, int excludeNodeCount, int inresid, int *outresid,
+                                       ccResourceCache * resourceCacheLocal, char **replyString)
 {
     int ret = 0;
 
@@ -3080,6 +3120,7 @@ int schedule_instance_migration(ncInstance * instance, char **includeNodes, char
         LOGINFO("[%s] attempting to schedule migration to specific node: %s\n", instance->instanceId, includeNodes[0]);
         if (!strcmp(instance->migration_src, includeNodes[0])) {
             LOGERROR("[%s] cannot schedule SAME-NODE migration from %s to %s\n", instance->instanceId, instance->migration_src, includeNodes[0]);
+            * replyString = strdup("source and destination cannot be the same");
             ret = 1;
             goto out;
         }
@@ -3088,6 +3129,7 @@ int schedule_instance_migration(ncInstance * instance, char **includeNodes, char
                               includeNodes[0], outresid);
         if (resourceCacheLocal->resources[*outresid].migrationCapable == FALSE) {
             LOGWARN("[%s] cannot schedule migration to node (%s) that is not migration capable\n", instance->instanceId, includeNodes[0]);
+            * replyString = strdup("requested destination is not migration capable");
             ret = 1;
             goto out;
         }
@@ -3153,6 +3195,7 @@ int schedule_instance_migration(ncInstance * instance, char **includeNodes, char
 out:
     if (ret) {
         LOGERROR("[%s] migration scheduler could not schedule destination node\n", instance->instanceId);
+        * replyString = strdup("not enough resources available for migration");
         *outresid = -1;
     }
 
@@ -3574,18 +3617,20 @@ int doRunInstances(ncMetadata * pMeta, char *amiId, char *kernelId, char *ramdis
         strncpy(privip, "0.0.0.0", 32);
 
         sem_mywait(VNET);
-        if (nidx == -1) {
-            rc = vnetGenerateNetworkParams(vnetconfig, instId, vlan, -1, mac, pubip, privip);
-            thenidx = -1;
-        } else {
-            rc = vnetGenerateNetworkParams(vnetconfig, instId, vlan, networkIndexList[nidx], mac, pubip, privip);
-            thenidx = nidx;
-            nidx++;
-        }
-        if (rc) {
-            foundnet = 0;
-        } else {
-            foundnet = 1;
+        {
+            if (nidx == -1) {
+                rc = vnetGenerateNetworkParams(vnetconfig, instId, vlan, -1, mac, pubip, privip);
+                thenidx = -1;
+            } else {
+                rc = vnetGenerateNetworkParams(vnetconfig, instId, vlan, networkIndexList[nidx], mac, pubip, privip);
+                thenidx = nidx;
+                nidx++;
+            }
+            if (rc) {
+                foundnet = 0;
+            } else {
+                foundnet = 1;
+            }
         }
         sem_mypost(VNET);
 
@@ -4342,6 +4387,7 @@ int doMigrateInstances(ncMetadata * pMeta, char *actionNode, char *instanceId, c
     }
     if (!actionNode && !instanceId) {
         LOGERROR("bad input params\n");
+        pMeta->replyString = strdup("internal error (neither node nor instance were set)");
         return (1);
     }
     if (!strcmp(nodeAction, "prepare")) {
@@ -4365,6 +4411,7 @@ int doMigrateInstances(ncMetadata * pMeta, char *actionNode, char *instanceId, c
         rollback = 1;
     } else {
         LOGERROR("invalid action parameter: %s\n", nodeAction);
+        pMeta->replyString = strdup("internal error (invalid action)");
         return (1);
     }
 
@@ -4384,6 +4431,7 @@ int doMigrateInstances(ncMetadata * pMeta, char *actionNode, char *instanceId, c
         }
         if (src_index == -1) {
             LOGERROR("node requested (%s) for migration action '%s' cannot be found\n", SP(actionNode), SP(nodeAction));
+            pMeta->replyString = strdup("requested node cannot be found by the CC");
             goto out;
         }
     }
@@ -4424,9 +4472,12 @@ int doMigrateInstances(ncMetadata * pMeta, char *actionNode, char *instanceId, c
     if (!found_instances) {
         if (instanceId) {
             LOGINFO("[%s] could not find instance\n", SP(instanceId));
+            pMeta->replyString = strdup("requested instance not found");
         } else {
             LOGINFO("no instances running on host %s\n", SP(actionNode));
+            pMeta->replyString = strdup("no instances running on the host");
         }
+        ret = 1;
         goto out;
     } else if (found_instances > 1 && committing) {
         LOGERROR("internal error: trying to perform a migration commit with multiple (%d) instances\n", found_instances);
@@ -4450,11 +4501,11 @@ int doMigrateInstances(ncMetadata * pMeta, char *actionNode, char *instanceId, c
             if (allowHosts) {
                 // destinationHosts is whitelist, pass as includeNodes.
                 LOGDEBUG("[%s] scheduling instance with a destination-inclusion list\n", nc_instances[idx]->instanceId);
-                rc = schedule_instance_migration(nc_instances[idx], destinationNodes, NULL, destinationNodeCount, 0, src_index, &dst_index, &resourceCacheLocal);
+                rc = schedule_instance_migration(nc_instances[idx], destinationNodes, NULL, destinationNodeCount, 0, src_index, &dst_index, &resourceCacheLocal, &(pMeta->replyString));
             } else {
                 LOGDEBUG("[%s] scheduling instance with a destination-exclusion list\n", nc_instances[idx]->instanceId);
                 // destinationHosts is blacklist, pass as excludeNodes.
-                rc = schedule_instance_migration(nc_instances[idx], NULL, destinationNodes, 0, destinationNodeCount, src_index, &dst_index, &resourceCacheLocal);
+                rc = schedule_instance_migration(nc_instances[idx], NULL, destinationNodes, 0, destinationNodeCount, src_index, &dst_index, &resourceCacheLocal, &(pMeta->replyString));
             }
 
             if (rc || (dst_index == -1)) {
@@ -4488,6 +4539,9 @@ int doMigrateInstances(ncMetadata * pMeta, char *actionNode, char *instanceId, c
                           nc_instances, found_instances, nodeAction, credentials);
         if (rc) {
             LOGERROR("failed: request to prepare migration[s] from source %s\n", resourceCacheLocal.resources[src_index].hostname);
+            if (pMeta->replyString == NULL) { // NC did not send back an error string
+                pMeta->replyString = strdup("source host was not able to prepare for migration(s)");
+            }
             ret = 1;
             goto out;
         } else {
@@ -4577,6 +4631,7 @@ int doMigrateInstances(ncMetadata * pMeta, char *actionNode, char *instanceId, c
         }
     } else {
         LOGERROR("failed: unknown or unsupported migration action: %s\n", nodeAction);
+        pMeta->replyString = strdup("internal error (unrecognized action)");
         ret = 1;
         goto out;
     }
@@ -6880,9 +6935,13 @@ int allocate_ccResource(ccResource * out, char *ncURL, char *ncService, int ncPo
 //!
 int free_instanceNetwork(char *mac, int vlan, int force, int dolock)
 {
-    int inuse, i;
-    unsigned char hexmac[6];
-    mac2hex(mac, hexmac);
+    int i = 0;
+    u8 hexmac[6] = { 0 };
+    boolean inuse = FALSE;
+
+    if (mac2hex(mac, hexmac) == NULL)
+        return (0);
+
     if (!maczero(hexmac)) {
         return (0);
     }
@@ -6891,12 +6950,12 @@ int free_instanceNetwork(char *mac, int vlan, int force, int dolock)
         sem_mywait(INSTCACHE);
     }
 
-    inuse = 0;
+    inuse = FALSE;
     if (!force) {
         // check to make sure the mac isn't in use elsewhere
-        for (i = 0; i < MAXINSTANCES_PER_CC && !inuse; i++) {
+        for (i = 0; ((i < MAXINSTANCES_PER_CC) && !inuse); i++) {
             if (!strcmp(instanceCache->instances[i].ccnet.privateMac, mac) && strcmp(instanceCache->instances[i].state, "Teardown")) {
-                inuse++;
+                inuse = TRUE;
             }
         }
     }

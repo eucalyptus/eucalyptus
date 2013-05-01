@@ -78,52 +78,43 @@ import org.hibernate.annotations.Parent;
 
 import com.eucalyptus.entities.AbstractPersistent;
 
-/*@Entity @javax.persistence.Entity
-@PersistenceContext(name="eucalyptus_storage")
-@Table( name = "volume_exports")
-@Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )*/
-
 @Entity 
 @javax.persistence.Entity
 @PersistenceContext(name="eucalyptus_storage")
 @Table( name = "volume_exports" )
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
-@DiscriminatorValue( "token" )
 public class VolumeExportRecord extends AbstractPersistent {
 	private static final long serialVersionUID = 1L;
 
-	@JoinColumn( name = "token", updatable = false, nullable = false )
-  @ManyToOne( fetch = FetchType.LAZY )  
-  private VolumeToken token;
+	@ManyToOne  
+	@JoinColumn( name = "token", nullable = false )
+	private VolumeToken token;
+	
+	@ManyToOne
+	@JoinColumn( name = "volume", nullable = false )	
+	private VolumeInfo volume;
 		
-	@Column(name="host_ip")
+	@Column(name="host_ip", updatable = false, nullable = false)
 	private String hostIp;
 	
-	@Column(name="host_iqn")
+	@Column(name="host_iqn", updatable = false, nullable = false)
 	private String hostIqn;
 	
 	@Column(name="is_active")
 	private Boolean isActive;
+		
+	@Column(name="connection_string", length=4096)
+	private String connectionString;
 	
-	@Column(name="volumeId")
-	private String volumeId;
-	
-	public String getVolumeId() {
-		return volumeId;
-	}
-
-	public void setVolumeId(String volumeId) {
-		this.volumeId = volumeId;
-	}
-
 	public VolumeExportRecord() {
 		token = null;
 		hostIp = null;
 		hostIqn = null;
+		volume = null;
 	}
 	
-	public VolumeExportRecord(String volumeId, VolumeToken tok, String ip, String iqn) {
-		this.volumeId = volumeId;
+	public VolumeExportRecord(VolumeInfo vol, VolumeToken tok, String ip, String iqn) {
+		this.volume = vol;
 		this.token = tok;
 		this.hostIp = ip;
 		this.hostIqn = iqn;
@@ -166,7 +157,7 @@ public class VolumeExportRecord extends AbstractPersistent {
   public int hashCode( ) {
     final int prime = 31;
     int result = 1;
-    result = prime * result + ( ( this.volumeId == null ) ? 0 : this.volumeId.hashCode( ) );
+    result = prime * result + ( ( this.getId() == null ) ? 0 : this.getId().hashCode( ) );
     return result;
   }
   
@@ -182,14 +173,30 @@ public class VolumeExportRecord extends AbstractPersistent {
       return false;
     }
     VolumeExportRecord other = ( VolumeExportRecord ) obj;
-    if ( this.volumeId == null ) {
-      if ( other.volumeId != null ) {
+    if ( this.volume == null ) {
+      if ( other.volume != null ) {
         return false;
       }
-    } else if ( !this.volumeId.equals( other.volumeId ) || !this.hostIqn.equals(other.hostIqn) ||!this.hostIp.equals(other.hostIp)  || !this.isActive == other.isActive) {
+    } else if ( !this.volume.equals( other.volume ) || !this.hostIqn.equals(other.hostIqn) ||!this.hostIp.equals(other.hostIp)  || !this.isActive == other.isActive) {
       return false;
     }
     return true;
   }
+
+public String getConnectionString() {
+	return connectionString;
+}
+
+public void setConnectionString(String connectionString) {
+	this.connectionString = connectionString;
+}
+
+public VolumeInfo getVolume() {
+	return volume;
+}
+
+public void setVolume(VolumeInfo volume) {
+	this.volume = volume;
+}
 
 }

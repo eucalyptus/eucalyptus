@@ -67,7 +67,7 @@ class ModifyPropertyValue(AWSQueryRequest):
 
     ServicePath = '/services/Properties'
     ServiceClass = eucadmin.EucAdmin
-    Description = 'Modify property'
+    Description = 'Modify a cloud property or setting'
 
     Params = [Param(name='property',
                     short_name='p',
@@ -75,21 +75,22 @@ class ModifyPropertyValue(AWSQueryRequest):
                     ptype='string',
                     optional=True,
                     encoder=encode_prop,
-                    doc='Modify property (KEY=VALUE)'),
+                    doc='set a property (format: PROPERTY=VALUE)'),
               Param(name='property_from_file',
                     short_name='f',
                     long_name='property-from-file',
                     ptype='string',
                     optional=True,
                     encoder=encode_prop_from_file,
-                    doc='Modify property with content of file'),
+                    doc=('set a property using the contents of a file as its '
+                         'value (format: PROPERTY=FILE)')),
               Param(name='Reset',
                     short_name='r',
                     long_name='property-to-reset',
                     ptype='string',
                     optional=True,
                     encoder=reset_prop,
-                    doc='Reset this property to default value.')]
+                    doc='reset a property to its default value')]
 
     def get_connection(self, **args):
         if self.connection is None:

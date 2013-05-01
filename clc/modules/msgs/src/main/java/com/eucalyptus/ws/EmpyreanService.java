@@ -75,6 +75,7 @@ import com.eucalyptus.component.Partitions;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.ServiceConfigurations;
 import com.eucalyptus.component.Topology;
+import com.eucalyptus.context.Contexts;
 import com.eucalyptus.empyrean.DescribeServicesResponseType;
 import com.eucalyptus.empyrean.DescribeServicesType;
 import com.eucalyptus.empyrean.DestroyServiceResponseType;
@@ -101,6 +102,7 @@ import com.google.common.base.Joiner;
 import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
 import com.google.common.collect.Iterables;
+import com.google.common.collect.Lists;
 import static com.eucalyptus.util.Parameters.checkParam;
 import static org.hamcrest.Matchers.notNullValue;
 
@@ -378,6 +380,15 @@ public class EmpyreanService {
   }
   
   static class Filters {
+    static Predicate<ServiceConfiguration> publicService( ) {
+      return new Predicate<ServiceConfiguration>( ) {
+        @Override
+        public boolean apply( final ServiceConfiguration input ) {
+          return input.getComponentId( ).isPublicService( );
+        }
+      };
+    }
+    
     static Predicate<ServiceConfiguration> partition( final String partition ) {
       return new Predicate<ServiceConfiguration>( ) {
         @Override
@@ -429,7 +440,7 @@ public class EmpyreanService {
             return true;
           } else if ( input.getComponentId( ).isDistributedService( ) || Empyrean.class.equals( input.getComponentId( ).getClass() ) ) {
             return true;
-          } else if ( input.getComponentId( ).isPublicService( ) && listUserServices ) {
+          } else if ( input.getComponentId( ).isPublicService( ) ) {
             return Internets.testLocal( input.getHostName( ) );
           } else if ( input.getComponentId( ).isAdminService( ) && listUserServices ) {
             return Internets.testLocal( input.getHostName( ) );
@@ -443,19 +454,56 @@ public class EmpyreanService {
     }
   }
   
+  @ServiceOperation(user=true)
   public enum DescribeService implements Function<DescribeServicesType, DescribeServicesResponseType> {
     INSTANCE;
     
     @Override
     public DescribeServicesResponseType apply( final DescribeServicesType input ) {
       try {
-        return EmpyreanService.describeService( input );
+        if ( !Contexts.lookup( ).getUser( ).isSystemAdmin( ) ) {
+          return user( input );
+        } else {
+          return EmpyreanService.describeService( input );
+        }
       } catch ( final Exception ex ) {
         throw Exceptions.toUndeclared( ex );
       }
     }
     
+    public DescribeServicesResponseType user(  final DescribeServicesType request ) {
+      final DescribeServicesResponseType reply = request.getReply( );
+      /**
+       * Only show public services to normal users.
+       * Allow for filtering by component and state w/in that set. 
+       */
+      final List<Predicate<ServiceConfiguration>> filters = new ArrayList<Predicate<ServiceConfiguration>>( ) {
+        {
+          this.add( Filters.publicService( ) );
+          if ( request.getByPartition( ) != null ) {
+            this.add( Filters.partition( request.getByPartition( ) ) ); 
+          }
+          if ( request.getByState( ) != null ) {
+            this.add( Filters.state( Component.State.valueOf( request.getByState( ).toUpperCase( ) ) ) );
+          }
+        }
+      };
+      final Predicate<Component> componentFilter = ( Predicate<Component> ) (
+          request.getByServiceType( ) != null
+            ? Filters.componentType( ComponentIds.lookup( request.getByServiceType( ).toLowerCase( ) ) )
+            : Predicates.alwaysTrue( ) );
+      final Predicate<ServiceConfiguration> configPredicate = Predicates.and( filters );
+      
+      for ( final Component comp : Iterables.filter( Components.list( ), componentFilter ) ) {
+        for ( final ServiceConfiguration config : Iterables.filter( comp.services( ), configPredicate ) ) {
+          reply.getServiceStatuses( ).add( ServiceConfigurations.asServiceStatus( false, false ).apply( config ) );
+        }
+      }
+      return reply;
+    }
+    
   }
+
   
   public static DescribeServicesResponseType describeService( final DescribeServicesType request ) {
     final DescribeServicesResponseType reply = request.getReply( );

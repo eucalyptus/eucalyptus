@@ -56,7 +56,7 @@ define([
 
              $snapshotSelector.change( function(){
                snapshotId = $snapshotSelector.val();
-               if(snapshotId) {
+               if(snapshotId && snapshotId != "None") {
                  var snapshot_size = App.data.snapshot.get(snapshotId).get('volume_size');
                  self.scope.volume.set({snapshot_id: snapshotId}); 
                  self.scope.volume.set({size: snapshot_size});
@@ -104,6 +104,13 @@ define([
 
            // SETUP THE AVAILABILITY ZONE SELECT OPTIONS
            this.setupSelectOptionsForAzoneBox(args);
+
+           // SETUP INPUT VALIDATOR
+           self.scope.volume.on('change', function() {
+             self.scope.error.clear();
+             self.scope.error.set(self.scope.volume.validate());
+             console.log("Validation Error: " + JSON.stringify(self.scope.error));
+           });
         },
 
         // CONSTRUCT A STRING THAT DISPLAY BOTH RESOURCE ID AND ITS NAME TAG
@@ -133,6 +140,7 @@ define([
             this.scope = {
                 status: '',
                 volume: new Volume({snapshot_id: args.snapshot_id, size: args.size, availablity_zone: args.zone}),
+                error: new Backbone.Model({}),
 
                 cancelButton: {
                   click: function() {
@@ -145,11 +153,11 @@ define([
                     // GET THE INPUT FROM THE HTML VIEW
                     var snapshotId = self.scope.volume.get('snapshot_id');          
                     var size = self.scope.volume.get('size');                      
-                    var zone = self.scope.volume.get('availablity_zone');         
+                    var availablity_zone = self.scope.volume.get('availablity_zone');         
                     var name = self.scope.volume.get('name');
 		    console.log("Selected Snapshot ID: " + snapshotId);
 		    console.log("Size: " + size);
-		    console.log("Zone: " + zone);
+		    console.log("Zone: " + availablity_zone);
                     console.log("Name: " + name);
 
                     // CREATE A NAME TAG

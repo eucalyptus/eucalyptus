@@ -110,9 +110,11 @@ import com.eucalyptus.binding.BindingManager;
 import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.bootstrap.Hosts;
 import com.eucalyptus.component.ComponentId;
+import com.eucalyptus.component.ComponentId.ServiceOperation;
 import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.ComponentMessages;
 import com.eucalyptus.component.Components;
+import com.eucalyptus.component.ServiceOperations;
 import com.eucalyptus.component.ServiceUris;
 import com.eucalyptus.component.Topology;
 import com.eucalyptus.component.id.Eucalyptus;
@@ -140,6 +142,7 @@ import com.eucalyptus.ws.server.ServiceHackeryHandler;
 import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
+import com.google.common.base.Function;
 import com.google.common.base.Joiner;
 import com.google.common.collect.Lists;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
@@ -506,7 +509,7 @@ public class Handlers {
       final BaseMessage msg = BaseMessage.extractMessage( e );
       if ( ( request != null ) && ( msg != null ) ) {
         final User user = Contexts.lookup( request.getCorrelationId( ) ).getUser( );
-        if ( user.isSystemAdmin( ) ) {
+        if ( user.isSystemAdmin( ) || ServiceOperations.isUserOperation( msg ) ) {
           ctx.sendUpstream( e );
         } else {
           Contexts.clear( Contexts.lookup( msg.getCorrelationId( ) ) );

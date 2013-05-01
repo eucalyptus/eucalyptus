@@ -67,7 +67,7 @@ public class ScalingActivity extends AbstractOwnedPersistent implements ScalingA
   @Column( name = "metadata_auto_scaling_group_name", nullable = false, updatable = false )
   private String autoScalingGroupName;
 
-  @Column( name = "metadata_description", nullable = false )
+  @Column( name = "metadata_description" )
   private String description;
 
   @Column( name = "metadata_details" )

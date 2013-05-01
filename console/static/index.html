@@ -30,7 +30,7 @@
       @import "css/eucalyptus.css";
     </style>
 
-    <link rel="stylesheet" href="/js/visualsearch/build/visualsearch-datauri.css" type="text/css" media="screen" charset="utf-8"> 
+    <link rel="stylesheet" href="/lib/visualsearch-datauri.css" type="text/css" media="screen" charset="utf-8"> 
     <link rel="stylesheet" href="/css/engage.itoggle.css" type="text/css" media="screen" charset="utf-8"> 
 
     <!-- encoder libarary for XSS protection -->
@@ -59,12 +59,12 @@
     <script type="text/javascript" language="javascript" src="lib/jquery.md5.js"></script>
 
     <!-- Backbone support -->
-    <script data-main="js/requiremain" type="text/javascript" language="javascript" src="js/require.js"></script>
+    <script data-main="lib/main" type="text/javascript" language="javascript" src="lib/require.js"></script>
 
     <!-- Eucalyptus UI javascripts -->
     <script type="text/javascript" language="javascript" src="js/jquery_ext.js"></script>
     <script type="text/javascript" language="javascript" src="js/jquery_generate_file.js"></script>
-    <script type="text/javascript" language="javascript" src="js/engage.itoggle.js"></script>
+    <script type="text/javascript" language="javascript" src="lib/engage.itoggle.js"></script>
     <script type="text/javascript" language="javascript" src="js/login.js"></script>
     <script type="text/javascript" language="javascript" src="js/main.js"></script>
     <script type="text/javascript" language="javascript" src="js/eucalyptus.js"></script>
@@ -95,12 +95,10 @@
     <script type="text/javascript" language="javascript" src="js/template/eucatabspace.js"></script>
     <script type="text/javascript" language="javascript" src="js/template/euca_resource_tag.js"></script>
 
-    <script type="text/javascript" language="javascript" src="js/eantest.js"></script>
     <script type="text/javascript" language="javascript" src="js/rivetstest.js"></script>
     <script type="text/javascript" language="javascript" src="js/scalinggroup.js"></script>
     <script type="text/javascript" language="javascript" src="js/jpvols.js"></script>
     <script type="text/javascript" language="javascript" src="js/newscalinggroup.js"></script>
-    <script type="text/javascript" language="javascript" src="js/wizimagetest.js"></script>
     <script type="text/javascript" language="javascript" src="js/launchconfig.js"></script>
     <script type="text/javascript" language="javascript" src="js/newlaunchconfig.js"></script>
     <script type="text/javascript" language="javascript" src="js/newinstance.js"></script>
@@ -1595,6 +1593,7 @@
                       <div id="launch-more-summary-type" class="launch-more-summary-section"> </div>
                       <div id="launch-more-summary-security" class="launch-more-summary-section"> </div>
                     </div>
+                    <div class="launch-more-tags"> </div>
                 </div>
                 <!-- END content-section -->
 
@@ -1864,13 +1863,6 @@
         </div>
       </script>
       <!-- END AutoScaling table -->
-
-      <!-- Launch Wizard & Help -->
-      <script id="eantestTmpl" type="text/x-jsrender"> 
-        <div id="eantest-wrapper"> <!-- rendering will remove this extra div --> 
-          <h1>Dummy component</h1>
-        </div>
-      </script>
 
      <!-- <script type="text/javascript" language="javascript" src="../../../js/wizard.js"></script> -->
 

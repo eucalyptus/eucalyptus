@@ -359,43 +359,6 @@ public class VolumeManager {
     return reply;
   }
   
-  /* TODO: zhill DEVELOPMENT AND DEBUG ONLY! REMOVE!!! */
-  public String TestVolumeToken(String volumeId, String partition) throws EucalyptusCloudException {
-    Partition volPartition = Partitions.lookupByName( partition );
-    ServiceConfiguration sc = Topology.lookup( Storage.class, volPartition );
-
-    GetVolumeTokenResponseType scTokenResponse;
-    try {
-    	GetVolumeTokenType req = new GetVolumeTokenType(volumeId);
-    	scTokenResponse = AsyncRequests.sendSync( sc, req );
-    } catch ( Exception e ) {
-      LOG.debug( e, e );
-      throw new EucalyptusCloudException( e.getMessage( ), e );
-    }    
-    return scTokenResponse.getToken();
-  }
-  
-  /* TODO: zhill DEVELOPMENT AND DEBUG ONLY! REMOVE!!! */
-  public String TestExportVolume(String partition, String volumeId, String token, String hostIP, String hostIqn) throws EucalyptusCloudException {
-    Partition volPartition = Partitions.lookupByName( partition );
-    ServiceConfiguration sc = Topology.lookup( Storage.class, volPartition );
-
-    ExportVolumeResponseType scTokenResponse = null;
-    try {
-    	ExportVolumeType req = new ExportVolumeType();
-    	req.setToken(token);
-    	req.setVolumeId(volumeId);
-    	req.setIp(hostIP);
-    	req.setIqn(hostIqn);
-    	scTokenResponse = AsyncRequests.sendSync( sc, req );
-    } catch ( Exception e ) {
-      LOG.debug( e, e );
-      throw new EucalyptusCloudException( e.getMessage( ), e );
-    }    
-    return scTokenResponse.getConnectionString();
-  }
-
-  
   public AttachVolumeResponseType AttachVolume( AttachVolumeType request ) throws EucalyptusCloudException {
     AttachVolumeResponseType reply = ( AttachVolumeResponseType ) request.getReply( );
     final String deviceName = request.getDevice( );

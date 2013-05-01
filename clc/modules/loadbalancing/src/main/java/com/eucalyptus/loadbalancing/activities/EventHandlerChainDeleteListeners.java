@@ -50,15 +50,18 @@ public class EventHandlerChainDeleteListeners extends EventHandlerChain<DeleteLi
 			LoadBalancer lb = null;
 			String groupName = null;
 			try{
-				lb = LoadBalancers.getLoadbalancer(evt.getContext().getUserFullName(), evt.getLoadBalancer());
+				lb = LoadBalancers.getLoadbalancer(evt.getContext(), evt.getLoadBalancer());
 				final LoadBalancerSecurityGroup group = lb.getGroup();
 				if(group!=null)
 					groupName = group.getName();
 			}catch(Exception ex){
 				throw new EventHandlerException("could not find the loadbalancer", ex);
 			}
-			if(groupName == null)
-				throw new EventHandlerException("Group name is not found");
+			
+			if(groupName == null){
+				LOG.warn("Group name is not found in the db");
+				return;
+			}
 			
 			String[] protocols = new String[]{"tcp"}; /// Loadbalancer listeners protocols: HTTP, HTTPS, TCP, SSL -> all tcp
 			for(String protocol : protocols){

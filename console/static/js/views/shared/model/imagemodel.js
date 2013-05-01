@@ -1,10 +1,10 @@
-define([], function() {
+define(['app'], function(app) {
     return Backbone.Model.extend({
 
       validation: {
         id: {
             required: true,
-            msg: 'Image selection is required.'
+            msg: app.msg("launch_instance_error_image_required")
         }
       },
 

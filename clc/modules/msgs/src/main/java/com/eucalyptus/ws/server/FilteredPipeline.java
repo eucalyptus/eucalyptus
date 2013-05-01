@@ -85,13 +85,7 @@ public abstract class FilteredPipeline implements HasName<FilteredPipeline>, Fil
     InternalPipeline( ComponentId componentId ) {
       this.componentId = componentId;
     }
-    
-    @Override
-    protected void addSystemHandlers( ChannelPipeline pipeline ) {
-      Handlers.addInternalSystemHandlers( pipeline );
-      Handlers.addSystemHandlers( pipeline );
-    }
-    
+        
     private ComponentId getComponentId( ) {
       return this.componentId;
     }
@@ -99,10 +93,6 @@ public abstract class FilteredPipeline implements HasName<FilteredPipeline>, Fil
   }
   
   public FilteredPipeline( ) {}
-  
-  protected void addSystemHandlers( ChannelPipeline pipeline ) {
-    Handlers.addSystemHandlers( pipeline );
-  }
   
   public abstract String getName( );
   
