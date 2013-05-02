@@ -254,7 +254,6 @@ static struct handlers *available_handlers[] = {
  |                                                                            |
 \*----------------------------------------------------------------------------*/
 
-static void invalidate_hypervisor_conn(void);
 static void *libvirt_thread(void *ptr);
 static void refresh_instance_info(struct nc_state_t *nc, ncInstance * instance);
 static void update_log_params(void);
@@ -612,19 +611,6 @@ void print_running_domains(void)
 }
 
 //!
-//! Closes the connection with the hypervisor
-//!
-static void invalidate_hypervisor_conn(void)
-{
-    sem_p(hyp_sem);
-    {
-        virConnectClose(nc_state.conn);
-        nc_state.conn = NULL;
-    }
-    sem_v(hyp_sem);
-}
-
-//!
 //!
 //!
 //! @param[in] ptr
@@ -653,7 +639,7 @@ static void *libvirt_thread(void *ptr)
 //!
 //! @return a pointer to the hypervisor connection structure or NULL if we failed.
 //!
-virConnectPtr *check_hypervisor_conn()
+virConnectPtr lock_hypervisor_conn()
 {
     int rc = 0;
     int status = 0;
@@ -740,18 +726,26 @@ virConnectPtr *check_hypervisor_conn()
         }
     }
 
-    sem_v(hyp_sem);
-
     if (bail) {
+        sem_v(hyp_sem);
         return NULL;
     }
     LOGTRACE("thread check for libvirt succeeded\n");
 
     if (nc_state.conn == NULL) {
         LOGERROR("failed to connect to %s\n", nc_state.uri);
+        sem_v(hyp_sem);
         return NULL;
     }
-    return &(nc_state.conn);
+    return nc_state.conn;
+}
+
+//!
+//! Closes the connection with the hypervisor
+//!
+void unlock_hypervisor_conn()
+{
+    sem_v(hyp_sem);
 }
 
 //!
@@ -845,157 +839,140 @@ static void refresh_instance_info(struct nc_state_t *nc, ncInstance * instance)
     int error = 0;
     int rc = 0;
     char *ip = NULL;
-    virDomainPtr dom = NULL;
     virDomainInfo info = { 0 };
     instance_states new_state = NO_STATE;
     instance_states old_state = instance->state;
 
-    if (!check_hypervisor_conn())
-        return;
-
     // no need to bug for domains without state on Hypervisor
     if (old_state == TEARDOWN || old_state == STAGING || old_state == BUNDLING_SHUTOFF || old_state == CREATEIMAGE_SHUTOFF)
         return;
-
-    sem_p(hyp_sem);
-    {
-        dom = virDomainLookupByName(nc_state.conn, instance->instanceId);
-    }
-    sem_v(hyp_sem);
-
-    if (dom == NULL) {                 // hypervisor doesn't know about it
-        if (old_state == BUNDLING_SHUTDOWN) {
-            LOGINFO("[%s] detected disappearance of bundled domain\n", instance->instanceId);
-            change_state(instance, BUNDLING_SHUTOFF);
-        } else if (old_state == CREATEIMAGE_SHUTDOWN) {
-            LOGINFO("[%s] detected disappearance of createImage domain\n", instance->instanceId);
-            change_state(instance, CREATEIMAGE_SHUTOFF);
-        } else if (old_state == RUNNING || old_state == BLOCKED || old_state == PAUSED || old_state == SHUTDOWN) {
-            // if we just finished migration, then this is normal
-            if (is_migration_src(instance)) {
-                LOGINFO("[%s] migration completed, cleaning up\n", instance->instanceId);
-                change_state(instance, SHUTOFF);
-                return;
-            }
-            // most likely the user has shut it down from the inside
-            invalidate_hypervisor_conn();   // to rule out libvirt badness, we'll restart the connection
-            if (instance->retries) {
-                instance->retries--;
-                LOGWARN("[%s] hypervisor failed to find domain, will retry %d more times\n", instance->instanceId, instance->retries);
-            } else {
-                LOGWARN("[%s] hypervisor failed to find domain, assuming it was shut off\n", instance->instanceId);
-                change_state(instance, SHUTOFF);
-            }
-        }
-        // else 'old_state' stays in SHUTFOFF, BOOTING, CANCELED, or CRASHED
-        return;
-    }
-
-    sem_p(hyp_sem);
-    {
-        error = virDomainGetInfo(dom, &info);
-    }
-    sem_v(hyp_sem);
-
-    if ((error < 0) || (info.state == VIR_DOMAIN_NOSTATE)) {
-        LOGWARN("[%s] failed to get information for domain\n", instance->instanceId);
-        // what to do? hopefully we'll find out more later
-        sem_p(hyp_sem);
-        {
-            virDomainFree(dom);
-        }
-        sem_v(hyp_sem);
-        return;
-    }
-
-    new_state = info.state;
-    switch (old_state) {
-    case BOOTING:
-    case RUNNING:
-    case BLOCKED:
-    case PAUSED:
-        // migration-related logic
-        if (is_migration_dst(instance)) {
-            if (old_state == BOOTING && new_state == PAUSED) {
-                ++incoming_migrations_in_progress;
-                LOGINFO("[%s] incoming (%s < %s) migration in progress (1 of %d)\n", instance->instanceId, instance->migration_dst, instance->migration_src,
-                        incoming_migrations_in_progress);
-                instance->migration_state = MIGRATION_IN_PROGRESS;
-                LOGDEBUG("[%s] incoming (%s < %s) migration_state set to '%s'\n", instance->instanceId,
-                         instance->migration_dst, instance->migration_src, migration_state_names[instance->migration_state]);
-
-            } else if ((old_state == BOOTING || old_state == PAUSED)
-                       && (new_state == RUNNING || new_state == BLOCKED)) {
-                LOGINFO("[%s] completing incoming (%s < %s) migration...\n", instance->instanceId, instance->migration_dst, instance->migration_src);
-                instance->migration_state = NOT_MIGRATING;  // done!
-                bzero(instance->migration_src, HOSTNAME_SIZE);
-                bzero(instance->migration_dst, HOSTNAME_SIZE);
-                instance->migrationTime = 0;
-                save_instance_struct(instance);
-                // copy_intances is called upon return in monitoring_thread().
-                --incoming_migrations_in_progress;
-                LOGINFO("[%s] incoming migration complete (%d other migrations currently in progress)\n", instance->instanceId, incoming_migrations_in_progress);
-
-                // FIXME: Consolidate this sequence and the sequence in handlers_kvm.c into a util function?
-                if (!incoming_migrations_in_progress) {
-                    LOGINFO("no remaining incoming migrations -- deauthorizing all migration clients\n");
-                    char deauthorize_keys[MAX_PATH];
-                    char *euca_base = getenv(EUCALYPTUS_ENV_VAR_NAME);
-                    snprintf(deauthorize_keys, MAX_PATH, EUCALYPTUS_AUTHORIZE_MIGRATION_KEYS " -D -r", euca_base ? euca_base : "", euca_base ? euca_base : "");
-                    LOGDEBUG("migration key-deauthorizer path: '%s'\n", deauthorize_keys);
-                    int sysret = system(deauthorize_keys);
-                    if (sysret) {
-                        LOGWARN("'%s' failed with exit code %d\n", deauthorize_keys, WEXITSTATUS(sysret));
-                    } else {
-                        LOGDEBUG("migration key deauthorization succeeded\n");
-                    }
+    
+    { // all this is done while holding the hypervisor lock, with a valid connection
+        virConnectPtr conn = lock_hypervisor_conn();
+        if (conn == NULL)
+            return;
+        
+        virDomainPtr dom = virDomainLookupByName(conn, instance->instanceId);
+        
+        if (dom == NULL) {                 // hypervisor doesn't know about it
+            if (old_state == BUNDLING_SHUTDOWN) {
+                LOGINFO("[%s] detected disappearance of bundled domain\n", instance->instanceId);
+                change_state(instance, BUNDLING_SHUTOFF);
+            } else if (old_state == CREATEIMAGE_SHUTDOWN) {
+                LOGINFO("[%s] detected disappearance of createImage domain\n", instance->instanceId);
+                change_state(instance, CREATEIMAGE_SHUTOFF);
+            } else if (old_state == RUNNING || old_state == BLOCKED || old_state == PAUSED || old_state == SHUTDOWN) {
+                // if we just finished migration, then this is normal
+                if (is_migration_src(instance)) {
+                    LOGINFO("[%s] migration completed, cleaning up\n", instance->instanceId);
+                    change_state(instance, SHUTOFF);
+                    unlock_hypervisor_conn();
+                    return;
                 }
-            } else if (new_state == SHUTOFF || new_state == SHUTDOWN) {
-                // this is normal at the beginning of incoming migration, before a domain is created in PAUSED state
-                break;
+                // most likely the user has shut it down from the inside
+                if (instance->retries) {
+                    LOGWARN("[%s] hypervisor failed to find domain, will retry %d more time(s)\n", instance->instanceId, instance->retries);
+                    instance->retries--;
+                } else {
+                    LOGWARN("[%s] hypervisor failed to find domain, assuming it was shut off\n", instance->instanceId);
+                    change_state(instance, SHUTOFF);
+                }
             }
+            // else 'old_state' stays in SHUTFOFF, BOOTING, CANCELED, or CRASHED
+            unlock_hypervisor_conn();
+            return;
         }
-
-        if (new_state == SHUTOFF || new_state == SHUTDOWN || new_state == CRASHED) {
-            LOGWARN("[%s] hypervisor reported previously running domain as %s\n", instance->instanceId, instance_state_names[new_state]);
+        
+        error = virDomainGetInfo(dom, &info);
+        if ((error < 0) || (info.state == VIR_DOMAIN_NOSTATE)) {
+            LOGWARN("[%s] failed to get information for domain\n", instance->instanceId);
+            // what to do? hopefully we'll find out more later
+            virDomainFree(dom);
+            unlock_hypervisor_conn();
+            return;
         }
-        // change to state, whatever it happens to be
-        change_state(instance, new_state);
-        break;
-    case SHUTDOWN:
-    case SHUTOFF:
-    case CRASHED:
-        if (new_state == RUNNING || new_state == BLOCKED || new_state == PAUSED) {
-            // cannot go back!
-            LOGWARN("[%s] detected prodigal domain, terminating it\n", instance->instanceId);
-            sem_p(hyp_sem);
-            {
-                virDomainDestroy(dom);
+        
+        new_state = info.state;
+        switch (old_state) {
+        case BOOTING:
+        case RUNNING:
+        case BLOCKED:
+        case PAUSED:
+            // migration-related logic
+            if (is_migration_dst(instance)) {
+                if (old_state == BOOTING && new_state == PAUSED) {
+                    ++incoming_migrations_in_progress;
+                    LOGINFO("[%s] incoming (%s < %s) migration in progress (1 of %d)\n", instance->instanceId, instance->migration_dst, instance->migration_src,
+                            incoming_migrations_in_progress);
+                    instance->migration_state = MIGRATION_IN_PROGRESS;
+                    LOGDEBUG("[%s] incoming (%s < %s) migration_state set to '%s'\n", instance->instanceId,
+                             instance->migration_dst, instance->migration_src, migration_state_names[instance->migration_state]);
+                    
+                } else if ((old_state == BOOTING || old_state == PAUSED)
+                           && (new_state == RUNNING || new_state == BLOCKED)) {
+                    LOGINFO("[%s] completing incoming (%s < %s) migration...\n", instance->instanceId, instance->migration_dst, instance->migration_src);
+                    instance->migration_state = NOT_MIGRATING;  // done!
+                    bzero(instance->migration_src, HOSTNAME_SIZE);
+                    bzero(instance->migration_dst, HOSTNAME_SIZE);
+                    instance->migrationTime = 0;
+                    save_instance_struct(instance);
+                    // copy_intances is called upon return in monitoring_thread().
+                    --incoming_migrations_in_progress;
+                    LOGINFO("[%s] incoming migration complete (%d other migrations currently in progress)\n", instance->instanceId, incoming_migrations_in_progress);
+                    
+                    // FIXME: Consolidate this sequence and the sequence in handlers_kvm.c into a util function?
+                    if (!incoming_migrations_in_progress) {
+                        LOGINFO("no remaining incoming migrations -- deauthorizing all migration clients\n");
+                        char deauthorize_keys[MAX_PATH];
+                        char *euca_base = getenv(EUCALYPTUS_ENV_VAR_NAME);
+                        snprintf(deauthorize_keys, MAX_PATH, EUCALYPTUS_AUTHORIZE_MIGRATION_KEYS " -D -r", euca_base ? euca_base : "", euca_base ? euca_base : "");
+                        LOGDEBUG("migration key-deauthorizer path: '%s'\n", deauthorize_keys);
+                        int sysret = system(deauthorize_keys);
+                        if (sysret) {
+                            LOGWARN("'%s' failed with exit code %d\n", deauthorize_keys, WEXITSTATUS(sysret));
+                        } else {
+                            LOGDEBUG("migration key deauthorization succeeded\n");
+                        }
+                    }
+                } else if (new_state == SHUTOFF || new_state == SHUTDOWN) {
+                    // this is normal at the beginning of incoming migration, before a domain is created in PAUSED state
+                    break;
+                }
             }
-            sem_v(hyp_sem);
-        } else {
+            
+            if (new_state == SHUTOFF || new_state == SHUTDOWN || new_state == CRASHED) {
+                LOGWARN("[%s] hypervisor reported previously running domain as %s\n", instance->instanceId, instance_state_names[new_state]);
+            }
+            // change to state, whatever it happens to be
             change_state(instance, new_state);
+            break;
+        case SHUTDOWN:
+        case SHUTOFF:
+        case CRASHED:
+            if (new_state == RUNNING || new_state == BLOCKED || new_state == PAUSED) {
+                // cannot go back!
+                LOGWARN("[%s] detected prodigal domain, terminating it\n", instance->instanceId);
+                virDomainDestroy(dom);
+            } else {
+                change_state(instance, new_state);
+            }
+            break;
+        case BUNDLING_SHUTDOWN:
+        case CREATEIMAGE_SHUTDOWN:
+            LOGDEBUG("[%s] hypervisor state for bundle/createImage domain is %s\n", instance->instanceId, instance_state_names[new_state]);
+            break;
+        default:
+            LOGERROR("[%s] unexpected state (%d) in refresh\n", instance->instanceId, old_state);
         }
-        break;
-    case BUNDLING_SHUTDOWN:
-    case CREATEIMAGE_SHUTDOWN:
-        LOGDEBUG("[%s] hypervisor state for bundle/createImage domain is %s\n", instance->instanceId, instance_state_names[new_state]);
-        break;
-    default:
-        LOGERROR("[%s] unexpected state (%d) in refresh\n", instance->instanceId, old_state);
-        return;
-    }
-
-    sem_p(hyp_sem);
-    {
+        
         virDomainFree(dom);
+        unlock_hypervisor_conn();
     }
-    sem_v(hyp_sem);
-
+    
     // if instance is running, try to find out its IP address
     if (instance->state == RUNNING || instance->state == BLOCKED || instance->state == PAUSED) {
         ip = NULL;
-
+        
         if (!strncmp(instance->ncnet.publicIp, "0.0.0.0", 24)) {
             if (!strcmp(nc_state.vnetconfig->mode, "SYSTEM") || !strcmp(nc_state.vnetconfig->mode, "STATIC")) {
                 rc = mac2ip(nc_state.vnetconfig, instance->ncnet.privateMac, &ip);
@@ -1006,7 +983,7 @@ static void refresh_instance_info(struct nc_state_t *nc, ncInstance * instance)
                 }
             }
         }
-
+        
         if (!strncmp(instance->ncnet.privateIp, "0.0.0.0", 24)) {
             rc = mac2ip(nc_state.vnetconfig, instance->ncnet.privateMac, &ip);
             if (!rc && ip) {
@@ -1353,11 +1330,13 @@ void *startup_thread(void *arg)
     virDomainPtr dom = NULL;
 
     LOGDEBUG("[%s] spawning startup thread\n", instance->instanceId);
-    if (!check_hypervisor_conn()) {
+    virConnectPtr conn = lock_hypervisor_conn();
+    if (conn == NULL) {
         LOGERROR("[%s] could not contact the hypervisor, abandoning the instance\n", instance->instanceId);
         goto shutoff;
     }
-
+    unlock_hypervisor_conn(); // unlock right away, since we are just checking on it
+    
     // set up networking
     if ((error = vnetStartNetwork(nc_state.vnetconfig, instance->ncnet.vlan, NULL, NULL, NULL, &brname)) != EUCA_OK) {
         LOGERROR("[%s] start network failed for instance, terminating it\n", instance->instanceId);
@@ -1407,86 +1386,91 @@ void *startup_thread(void *arg)
             LOGINFO("[%s] attempt %d of %d to create the instance\n", instance->instanceId, i + 1, MAX_CREATE_TRYS);
         }
 
-        if (!check_hypervisor_conn()) { // check again, since we may have invalidated the connection in previous loop iteration
-            LOGERROR("[%s] could not contact the hypervisor, abandoning the instance\n", instance->instanceId);
-            goto shutoff;
-        }
-
-        sem_p(hyp_sem);
-        sem_p(loop_sem);
-
-        // We have seen virDomainCreateLinux() on occasion block indefinitely,
-        // which freezes all activity on the NC since hyp_sem and loop_sem are
-        // being held by the thread. (This is on Lucid with AppArmor enabled.)
-        // To protect against that, we invoke the function in a process and
-        // terminate it after CREATE_TIMEOUT_SEC seconds.
-        //
-        // #0  0x00007f359f0b1f93 in poll () from /lib/libc.so.6
-        // #1  0x00007f359a9a44e2 in ?? () from /usr/lib/libvirt.so.0
-        // #2  0x00007f359a9a5060 in ?? () from /usr/lib/libvirt.so.0
-        // #3  0x00007f359a9ac159 in ?? () from /usr/lib/libvirt.so.0
-        // #4  0x00007f359a98d65b in virDomainCreateXML () from /usr/lib/libvirt.so.0
-        // #5  0x00007f359b053c8e in startup_thread (arg=0x7f358813bf40) at handlers.c:644
-        // #6  0x00007f359f3619ca in start_thread () from /lib/libpthread.so.0
-        // #7  0x00007f359f0be70d in clone () from /lib/libc.so.6
-        // #8  0x0000000000000000 in ?? ()
-
-        if ((cpid = fork()) < 0) {     // fork error
-            LOGERROR("[%s] failed to fork to start instance\n", instance->instanceId);
-        } else if (cpid == 0) {        // child process - creates the domain
-            if ((dom = virDomainCreateLinux(nc_state.conn, xml, 0)) != NULL) {
-                virDomainFree(dom);    // To be safe. Docs are not clear on whether the handle exists outside the process.
-                exit(0);
+        { // all this is done while holding the hypervisor lock, with a valid connection
+            virConnectPtr conn = lock_hypervisor_conn();
+            if (conn == NULL) { // get a new connection for each loop iteration
+                LOGERROR("[%s] could not contact the hypervisor, abandoning the instance\n", instance->instanceId);
+                goto shutoff;
+            }
+            
+            sem_p(loop_sem);
+            
+            // We have seen virDomainCreateLinux() on occasion block indefinitely,
+            // which freezes all activity on the NC since hyp_sem and loop_sem are
+            // being held by the thread. (This is on Lucid with AppArmor enabled.)
+            // To protect against that, we invoke the function in a process and
+            // terminate it after CREATE_TIMEOUT_SEC seconds.
+            //
+            // #0  0x00007f359f0b1f93 in poll () from /lib/libc.so.6
+            // #1  0x00007f359a9a44e2 in ?? () from /usr/lib/libvirt.so.0
+            // #2  0x00007f359a9a5060 in ?? () from /usr/lib/libvirt.so.0
+            // #3  0x00007f359a9ac159 in ?? () from /usr/lib/libvirt.so.0
+            // #4  0x00007f359a98d65b in virDomainCreateXML () from /usr/lib/libvirt.so.0
+            // #5  0x00007f359b053c8e in startup_thread (arg=0x7f358813bf40) at handlers.c:644
+            // #6  0x00007f359f3619ca in start_thread () from /lib/libpthread.so.0
+            // #7  0x00007f359f0be70d in clone () from /lib/libc.so.6
+            // #8  0x0000000000000000 in ?? ()
+            
+            if ((cpid = fork()) < 0) {     // fork error
+                LOGERROR("[%s] failed to fork to start instance\n", instance->instanceId);
+            } else if (cpid == 0) {        // child process - creates the domain
+                if ((dom = virDomainCreateLinux(conn, xml, 0)) != NULL) {
+                    virDomainFree(dom);    // To be safe. Docs are not clear on whether the handle exists outside the process.
+                    exit(0);
+                } else {
+                    exit(1);
+                }
             } else {
-                exit(1);
+                // parent process - waits for the child, kills it if necessary
+                try_killing = FALSE;
+                if ((rc = timewait(cpid, &status, CREATE_TIMEOUT_SEC)) < 0) {
+                    LOGERROR("[%s] failed to wait for forked process: %s\n", instance->instanceId, strerror(errno));
+                    try_killing = TRUE;
+                } else if (rc == 0) {
+                    LOGERROR("[%s] timed out waiting for forked process pid=%d\n", instance->instanceId, cpid);
+                    try_killing = TRUE;
+                } else if (WEXITSTATUS(status) != 0) {
+                    LOGERROR("[%s] hypervisor failed to create the instance\n", instance->instanceId);
+                } else {
+                    created = TRUE;
+                }
+                
+                if (try_killing) {
+                    killwait(cpid);
+                }
             }
-        } else {
-            // parent process - waits for the child, kills it if necessary
-            try_killing = FALSE;
-            if ((rc = timewait(cpid, &status, CREATE_TIMEOUT_SEC)) < 0) {
-                LOGERROR("[%s] failed to wait for forked process: %s\n", instance->instanceId, strerror(errno));
-                try_killing = TRUE;
-            } else if (rc == 0) {
-                LOGERROR("[%s] timed out waiting for forked process pid=%d\n", instance->instanceId, cpid);
-                try_killing = TRUE;
-            } else if (WEXITSTATUS(status) != 0) {
-                LOGERROR("[%s] hypervisor failed to create the instance\n", instance->instanceId);
-            } else {
-                created = TRUE;
-            }
-
-            if (try_killing) {
-                killwait(cpid);
-            }
+            
+            sem_v(loop_sem);
+            unlock_hypervisor_conn();  // guard against libvirtd connection badness
         }
-
-        sem_v(loop_sem);
-        sem_v(hyp_sem);
+        
         if (created)
             break;
-        invalidate_hypervisor_conn();  // guard against libvirtd connection badness
         sleep(1);
     }
+
     if (!created) {
         goto shutoff;
     }
     //! @TODO bring back correlationId
     eventlog("NC", instance->userId, "", "instanceBoot", "begin");
 
-    sem_p(inst_sem);
-    // check one more time for cancellation
-    if (instance->state == TEARDOWN) {
-        // timed out in BOOTING
-    } else if (instance->state == CANCELED || instance->state == SHUTOFF) {
-        LOGERROR("[%s] startup of instance was cancelled\n", instance->instanceId);
-        change_state(instance, SHUTOFF);
-    } else {
-        LOGINFO("[%s] booting\n", instance->instanceId);
-        instance->bootTime = time(NULL);
-        change_state(instance, BOOTING);
+    { // make instance state changes while under lock
+        sem_p(inst_sem);
+        // check one more time for cancellation
+        if (instance->state == TEARDOWN) {
+            // timed out in BOOTING
+        } else if (instance->state == CANCELED || instance->state == SHUTOFF) {
+            LOGERROR("[%s] startup of instance was cancelled\n", instance->instanceId);
+            change_state(instance, SHUTOFF);
+        } else {
+            LOGINFO("[%s] booting\n", instance->instanceId);
+            instance->bootTime = time(NULL);
+            change_state(instance, BOOTING);
+        }
+        copy_instances();
+        sem_v(inst_sem);
     }
-    copy_instances();
-    sem_v(inst_sem);
     goto free;
 
 shutoff:                              // escape point for error conditions
@@ -1519,17 +1503,20 @@ void *restart_thread(void *arg)
     int rc = -1;
     boolean tryKilling = FALSE;
 
-    // Check the hypervisor connection
-    LOGDEBUG("[%s] spawning restart thread\n", instance->instanceId);
-    if (check_hypervisor_conn() == NULL) {
-        LOGERROR("[%s] could not contact the hypervisor, abandoning the instance\n", instance->instanceId);
-        goto shutoff;
-    }
     // set up networking
     if ((error = vnetStartNetwork(nc_state.vnetconfig, instance->ncnet.vlan, NULL, NULL, NULL, &brname)) != 0) {
         LOGERROR("[%s] start network failed for instance, terminating it\n", instance->instanceId);
         goto shutoff;
     }
+
+    // Check the hypervisor connection
+    LOGDEBUG("[%s] spawning restart thread\n", instance->instanceId);
+    virConnectPtr conn = lock_hypervisor_conn();
+    if (conn == NULL) {
+        LOGERROR("[%s] could not contact the hypervisor, abandoning the instance\n", instance->instanceId);
+        goto shutoff;
+    }
+
     // Save our instance bridge name for later use
     euca_strncpy(instance->params.guestNicDeviceName, brname, sizeof(instance->params.guestNicDeviceName));
     LOGINFO("[%s] started network\n", instance->instanceId);
@@ -1541,11 +1528,13 @@ void *restart_thread(void *arg)
 
     if (instance->state == CANCELED) {
         LOGERROR("[%s] cancelled instance startup\n", instance->instanceId);
+        unlock_hypervisor_conn();
         goto shutoff;
     }
 
     if (call_hooks(NC_EVENT_PRE_BOOT, instance->instancePath)) {
         LOGERROR("[%s] cancelled instance startup via hooks\n", instance->instanceId);
+        unlock_hypervisor_conn();
         goto shutoff;
     }
 
@@ -1560,20 +1549,18 @@ void *restart_thread(void *arg)
 
     // retry loop
     for (i = 0; i < MAX_CREATE_TRYS; i++) {
-        if (i > 0) {
+        if (i > 0)
             LOGINFO("[%s] attempt %d of %d to create the instance\n", instance->instanceId, i + 1, MAX_CREATE_TRYS);
-        }
-
-        sem_p(hyp_sem);
-        sem_p(loop_sem);
+        
         {
+            sem_p(loop_sem);
             pid_t cpid = fork();
             if (cpid < 0) {
                 // fork error
                 LOGERROR("[%s] failed to fork to start instance\n", instance->instanceId);
             } else if (cpid == 0) {
                 // child process - creates the domain
-                if ((dom = virDomainCreateLinux(nc_state.conn, xml, 0)) != NULL) {
+                if ((dom = virDomainCreateLinux(conn, xml, 0)) != NULL) {
                     // To be safe. Docs are not clear on whether the handle exists outside the process.
                     virDomainFree(dom);
                     exit(0);
@@ -1597,21 +1584,21 @@ void *restart_thread(void *arg)
                     killwait(cpid);
                 }
             }
+            sem_v(loop_sem);
         }
-        sem_v(loop_sem);
-        sem_v(hyp_sem);
-
+        
         if (created)
             break;
         sleep(1);
     }
-
+    unlock_hypervisor_conn();
+    
     if (!created) {
         goto shutoff;
     }
     //! @TODO bring back correlationId
     eventlog("NC", instance->userId, "", "instanceBoot", "begin");
-
+    
     sem_p(inst_sem);
     {
         // check one more time for cancellation
@@ -1654,47 +1641,34 @@ void adopt_instances()
     const char *dom_name = NULL;
     ncInstance *instance = NULL;
     virDomainPtr dom = NULL;
+    virConnectPtr conn = NULL;
 
-    if (!check_hypervisor_conn())
+    conn = lock_hypervisor_conn();
+    if (conn == NULL)
         return;
-
+    
     LOGINFO("looking for existing domains\n");
     virSetErrorFunc(NULL, libvirt_err_handler);
 
-    sem_p(hyp_sem);
-    {
-        num_doms = virConnectListDomains(nc_state.conn, dom_ids, MAXDOMS);
-    }
-    sem_v(hyp_sem);
-
+    num_doms = virConnectListDomains(conn, dom_ids, MAXDOMS);
     if (num_doms == 0) {
         LOGINFO("no currently running domains to adopt\n");
+        unlock_hypervisor_conn();
         return;
     }
-
     if (num_doms < 0) {
         LOGWARN("failed to find out about running domains\n");
+        unlock_hypervisor_conn();
         return;
     }
 
     for (i = 0; i < num_doms; i++) {
-        sem_p(hyp_sem);
-        {
-            dom = virDomainLookupByID(nc_state.conn, dom_ids[i]);
-        }
-        sem_v(hyp_sem);
-
+        dom = virDomainLookupByID(conn, dom_ids[i]);
         if (!dom) {
             LOGWARN("failed to lookup running domain #%d, ignoring it\n", dom_ids[i]);
             continue;
         }
-
-        sem_p(hyp_sem);
-        {
-            error = virDomainGetInfo(dom, &info);
-        }
-        sem_v(hyp_sem);
-
+        error = virDomainGetInfo(dom, &info);
         if ((error < 0) || (info.state == VIR_DOMAIN_NOSTATE)) {
             LOGWARN("failed to get info on running domain #%d, ignoring it\n", dom_ids[i]);
             continue;
@@ -1705,22 +1679,16 @@ void adopt_instances()
             continue;
         }
 
-        sem_p(hyp_sem);
         if ((dom_name = virDomainGetName(dom)) == NULL) {
-            sem_v(hyp_sem);
             LOGWARN("failed to get name of running domain #%d, ignoring it\n", dom_ids[i]);
             continue;
         }
-        sem_v(hyp_sem);
-
         if (!strcmp(dom_name, "Domain-0"))
             continue;
-
         if ((instance = load_instance_struct(dom_name)) == NULL) {
             LOGWARN("failed to recover Eucalyptus metadata of running domain %s, ignoring it\n", dom_name);
             continue;
         }
-
         if (call_hooks(NC_EVENT_ADOPTING, instance->instancePath)) {
             LOGINFO("[%s] ignoring running domain due to hooks\n", instance->instanceId);
             free_instance(&instance);
@@ -1745,13 +1713,9 @@ void adopt_instances()
 
         //! @TODO try to re-check IPs?
         LOGINFO("[%s] - adopted running domain from user %s\n", instance->instanceId, instance->userId);
-
-        sem_p(hyp_sem);
-        {
-            virDomainFree(dom);
-        }
-        sem_v(hyp_sem);
+        virDomainFree(dom);
     }
+    unlock_hypervisor_conn();
 
     sem_p(inst_sem);
     {
@@ -2068,16 +2032,18 @@ static int init(void)
     }
 
     {                                  // check on hypervisor and pull out capabilities
-        virConnectPtr *conn = check_hypervisor_conn();
+        virConnectPtr conn = lock_hypervisor_conn();
         if (conn == NULL) {
             LOGFATAL("unable to contact hypervisor\n");
             return (EUCA_FATAL_ERROR);
         }
-        char *caps_xml = virConnectGetCapabilities(*conn);
+        char *caps_xml = virConnectGetCapabilities(conn);
         if (caps_xml == NULL) {
             LOGFATAL("unable to obtain hypervisor capabilities\n");
+            unlock_hypervisor_conn();
             return (EUCA_FATAL_ERROR);
         }
+        unlock_hypervisor_conn();
         if (strstr(caps_xml, "<live/>") != NULL) {
             nc_state.migration_capable = 1;
         }

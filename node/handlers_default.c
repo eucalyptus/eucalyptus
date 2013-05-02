@@ -118,6 +118,8 @@
  |                                                                            |
 \*----------------------------------------------------------------------------*/
 
+#define VOL_RETRIES 3
+
 /*----------------------------------------------------------------------------*\
  |                                                                            |
  |                                  TYPEDEFS                                  |
@@ -430,7 +432,6 @@ static int doGetConsoleOutput(struct nc_state_t *nc, ncMetadata * pMeta, char *i
 int find_and_terminate_instance(struct nc_state_t *nc_state, ncMetadata * pMeta, char *instanceId, int force, ncInstance ** instance_p, char destroy)
 {
     ncInstance *instance = NULL;
-    virConnectPtr *conn = NULL;
     int err = 0;
     int i = 0;
 
@@ -469,19 +470,15 @@ int find_and_terminate_instance(struct nc_state_t *nc_state, ncMetadata * pMeta,
     }
 
     // try stopping the domain
-    conn = check_hypervisor_conn();
+    virConnectPtr conn = lock_hypervisor_conn();
     if (conn) {
-        sem_p(hyp_sem);
-        virDomainPtr dom = virDomainLookupByName(*conn, instanceId);
-        sem_v(hyp_sem);
+        virDomainPtr dom = virDomainLookupByName(conn, instanceId);
         if (dom) {
             // protect 'destroy' commands as we do with 'create' because we've seen problems during concurrent libvirt invocations
-            sem_p(hyp_sem);
             if (destroy)
                 err = virDomainDestroy(dom);
             else
                 err = virDomainShutdown(dom);
-            sem_v(hyp_sem);
             if (err == 0) {
                 if (destroy) {
                     LOGINFO("[%s] destroying instance\n", instanceId);
@@ -489,16 +486,12 @@ int find_and_terminate_instance(struct nc_state_t *nc_state, ncMetadata * pMeta,
                     LOGINFO("[%s] shutting down instance\n", instanceId);
                 }
             }
-
-            sem_p(hyp_sem);
-            {
-                virDomainFree(dom);    //! @todo necessary?
-            }
-            sem_v(hyp_sem);
+            virDomainFree(dom);    //! @todo necessary?
         } else {
             if (instance->state != BOOTING && instance->state != STAGING && instance->state != TEARDOWN)
                 LOGWARN("[%s] instance to be terminated not running on hypervisor\n", instanceId);
         }
+        unlock_hypervisor_conn();
     }
     return EUCA_OK;
 }
@@ -524,8 +517,10 @@ static int doTerminateInstance(struct nc_state_t *nc, ncMetadata * pMeta, char *
     char resourceName[1][MAX_SENSOR_NAME_LEN] = { {0} };
     char resourceAlias[1][MAX_SENSOR_NAME_LEN] = { {0} };
 
+    sem_p(hyp_sem); // we serialize all hypervisor calls and sensor_refresh_resources() may ultimately call the hypervisor
     euca_strncpy(resourceName[0], instanceId, MAX_SENSOR_NAME_LEN);
     sensor_refresh_resources(resourceName, resourceAlias, 1);   // refresh stats so latest instance measurements are captured before it disappears
+    sem_v(hyp_sem);
 
     sem_p(inst_sem);
     err = find_and_terminate_instance(nc, pMeta, instanceId, force, &instance, 1);
@@ -909,22 +904,24 @@ static int doAttachVolume(struct nc_state_t *nc, ncMetadata * pMeta, char *insta
     if (instance == NULL)
         return EUCA_NOT_FOUND_ERROR;
 
-    // try attaching to hypervisor
-    virConnectPtr *conn = check_hypervisor_conn();
-    if (conn == NULL) {
-        LOGERROR("[%s][%s] cannot get connection to hypervisor\n", instanceId, volumeId);
-        return EUCA_HYPERVISOR_ERROR;
-    }
-    // find domain on hypervisor
-    sem_p(hyp_sem);
-    virDomainPtr dom = virDomainLookupByName(*conn, instanceId);
-    sem_v(hyp_sem);
-    if (dom == NULL) {
-        if (instance->state != BOOTING && instance->state != STAGING) {
-            LOGWARN("[%s][%s] domain not running on hypervisor, cannot attach device\n", instanceId, volumeId);
+    { // connect to hypervisor and query it
+        virConnectPtr conn = lock_hypervisor_conn();
+        if (conn == NULL) {
+            LOGERROR("[%s][%s] cannot get connection to hypervisor\n", instanceId, volumeId);
+            return EUCA_HYPERVISOR_ERROR;
         }
-        return EUCA_HYPERVISOR_ERROR;
+        // find domain on hypervisor
+        virDomainPtr dom = virDomainLookupByName(conn, instanceId);
+        if (dom == NULL) {
+            if (instance->state != BOOTING && instance->state != STAGING) {
+                LOGWARN("[%s][%s] domain not running on hypervisor, cannot attach device\n", instanceId, volumeId);
+            }
+            unlock_hypervisor_conn();
+            return EUCA_HYPERVISOR_ERROR;
+        }
+        unlock_hypervisor_conn();
     }
+
     // mark volume as 'attaching', save token value as we got from the wire
 
     sem_p(inst_sem);
@@ -977,14 +974,17 @@ static int doAttachVolume(struct nc_state_t *nc, ncMetadata * pMeta, char *insta
     sem_v(inst_sem);
     if (!volume) {
         LOGERROR("[%s][%s] failed to update the volume record, aborting volume attachment\n", instanceId, volumeId);
-        return EUCA_ERROR;
+        ret = EUCA_ERROR;
+        goto release;
     }
+
     // make sure there is a block device
     if (check_block(remoteDevReal)) {
         LOGERROR("[%s][%s] cannot verify that host device '%s' is available for hypervisor attach\n", instanceId, volumeId, remoteDevReal);
         ret = EUCA_ERROR;
         goto release;
     }
+
     // generate XML for libvirt attachment request
     if (gen_volume_xml(volumeId, instance, localDevReal, remoteDevReal) // creates vol-XXX.xml
         || gen_libvirt_volume_xml(volumeId, instance)) {    // creates vol-XXX-libvirt.xml via XSLT transform
@@ -992,6 +992,7 @@ static int doAttachVolume(struct nc_state_t *nc, ncMetadata * pMeta, char *insta
         ret = EUCA_ERROR;
         goto release;
     }
+
     // invoke hooks
     char path[MAX_PATH];
     char lpath[MAX_PATH];
@@ -1002,63 +1003,92 @@ static int doAttachVolume(struct nc_state_t *nc, ncMetadata * pMeta, char *insta
         ret = EUCA_ERROR;
         goto release;
     }
+
     // read in libvirt XML, which may have been modified by the hook above
     if ((xml = file2str(lpath)) == NULL) {
         LOGERROR("[%s][%s] failed to read volume XML from %s\n", instance->instanceId, volumeId, lpath);
         ret = EUCA_ERROR;
         goto release;
     }
-    // protect libvirt calls because we've seen problems during concurrent libvirt invocations
-    int err = 0;
-    for (int i = 1; i < 3; i++) {
-        sem_p(hyp_sem);
-        err = virDomainAttachDevice(dom, xml);
-        sem_v(hyp_sem);
-        if (err) {
-            LOGERROR("[%s][%s] failed to attach host device '%s' to guest device '%s' on attempt %d of 3\n", instanceId, volumeId, remoteDevReal, localDevReal, i);
-            LOGDEBUG("[%s][%s] virDomainAttachDevice() failed (err=%d) XML='%s'\n", instanceId, volumeId, err, xml);
-            sleep(3);                  //sleep a bit and retry.
-        } else {
-            break;
-        }
-    }
 
-    if (err) {
-        LOGERROR("[%s][%s] failed to attach host device '%s' to guest device '%s' after 3 retries\n", instanceId, volumeId, remoteDevReal, localDevReal);
-        LOGDEBUG("[%s][%s] virDomainAttachDevice() failed (err=%d) XML='%s'\n", instanceId, volumeId, err, xml);
-        ret = EUCA_ERROR;
+    { // connect to hypervisor, find the domain, attach the volume
+        virConnectPtr conn = lock_hypervisor_conn();
+        if (conn == NULL) {
+            LOGERROR("[%s][%s] cannot get connection to hypervisor\n", instanceId, volumeId);
+            return EUCA_HYPERVISOR_ERROR;
+        }
+        // find domain on hypervisor
+        virDomainPtr dom = virDomainLookupByName(conn, instanceId);
+        if (dom == NULL) {
+            if (instance->state != BOOTING && instance->state != STAGING) {
+                LOGWARN("[%s][%s] domain not running on hypervisor, cannot attach device\n", instanceId, volumeId);
+            }
+            unlock_hypervisor_conn();
+            goto release;
+        }
+        
+        int err = 0;
+        for (int i = 1; i <= VOL_RETRIES; i++) {
+            err = virDomainAttachDevice(dom, xml);
+            if (err) {
+                LOGERROR("[%s][%s] failed to attach host device '%s' to guest device '%s' on attempt %d of 3\n", instanceId, volumeId, remoteDevReal, localDevReal, i);
+                LOGDEBUG("[%s][%s] virDomainAttachDevice() failed (err=%d) XML='%s'\n", instanceId, volumeId, err, xml);
+                sleep(3);                  // sleep a bit and retry.
+            } else {
+                break;
+            }
+        }
+        
+        if (err) {
+            LOGERROR("[%s][%s] failed to attach host device '%s' to guest device '%s' after %d tries\n", instanceId, volumeId, remoteDevReal, localDevReal, VOL_RETRIES);
+            LOGDEBUG("[%s][%s] virDomainAttachDevice() failed (err=%d) XML='%s'\n", instanceId, volumeId, err, xml);
+            ret = EUCA_ERROR;
+        }
+        
+        virDomainFree(dom);                // release libvirt resource
+        unlock_hypervisor_conn();
     }
 
 release:
 
-    sem_p(hyp_sem);
-    virDomainFree(dom);                // release libvirt resource
-    sem_v(hyp_sem);
-
-    // record volume state in memory and on disk
-    char *next_vol_state;
-    if (ret == EUCA_OK) {
-        next_vol_state = VOL_STATE_ATTACHED;
-    } else {
-        next_vol_state = VOL_STATE_ATTACHING_FAILED;
+    { // record volume state in memory and on disk
+        char *next_vol_state;
+        if (ret == EUCA_OK) {
+            next_vol_state = VOL_STATE_ATTACHED;
+        } else {
+            next_vol_state = VOL_STATE_ATTACHING_FAILED;
+        }
+        sem_p(inst_sem);
+        volume = save_volume(instance, volumeId, NULL, NULL, NULL, NULL, next_vol_state);   // now we can record remoteDevReal
+        save_instance_struct(instance);
+        copy_instances();
+        update_disk_aliases(instance);     // ask sensor subsystem to track the volume
+        sem_v(inst_sem);
     }
-    sem_p(inst_sem);
-    volume = save_volume(instance, volumeId, NULL, NULL, NULL, NULL, next_vol_state);   // now we can record remoteDevReal
-    save_instance_struct(instance);
-    copy_instances();
-    update_disk_aliases(instance);     // ask sensor subsystem to track the volume
-    sem_v(inst_sem);
+
     if (volume == NULL && xml != NULL) {
         LOGERROR("[%s][%s] failed to save the volume record, aborting volume attachment (detaching)\n", instanceId, volumeId);
-        sem_p(hyp_sem);
-        err = virDomainDetachDevice(dom, xml);
-        sem_v(hyp_sem);
+        
+        // connect to hypervisor, find the domain, detach the volume
+        virConnectPtr conn = lock_hypervisor_conn();
+        if (conn == NULL) {
+            LOGERROR("[%s][%s] cannot get connection to hypervisor\n", instanceId, volumeId);
+            return EUCA_HYPERVISOR_ERROR;
+        }
+        // find domain on hypervisor
+        virDomainPtr dom = virDomainLookupByName(conn, instanceId);
+        int err = 0;
+        if (dom != NULL) {
+            err = virDomainDetachDevice(dom, xml);
+            unlock_hypervisor_conn();
+        }
         if (err) {
             LOGERROR("[%s][%s] failed to detach as part of aborting\n", instanceId, volumeId);
             LOGDEBUG("[%s][%s] virDomainDetachDevice() failed (err=%d) XML='%s'\n", instanceId, volumeId, err, xml);
         }
         ret = EUCA_ERROR;
     }
+
     // if iSCSI and there were problems, try to disconnect the target
     if (ret != EUCA_OK && have_remote_device) {
         LOGDEBUG("[%s][%s] attempting to disconnect iscsi target due to attachment failure\n", instanceId, volumeId);
@@ -1152,19 +1182,18 @@ static int doDetachVolume(struct nc_state_t *nc, ncMetadata * pMeta, char *insta
         return EUCA_NOT_FOUND_ERROR;
 
     // try attaching to hypervisor
-    virConnectPtr *conn = check_hypervisor_conn();
+    virConnectPtr conn = lock_hypervisor_conn();
     if (conn == NULL) {
         LOGERROR("[%s][%s] cannot get connection to hypervisor\n", instanceId, volumeId);
         return EUCA_HYPERVISOR_ERROR;
     }
     // find domain on hypervisor
-    sem_p(hyp_sem);
-    virDomainPtr dom = virDomainLookupByName(*conn, instanceId);
-    sem_v(hyp_sem);
+    virDomainPtr dom = virDomainLookupByName(conn, instanceId);
     if (dom == NULL) {
         if (instance->state != BOOTING && instance->state != STAGING) {
             LOGWARN("[%s][%s] domain not running on hypervisor, cannot attach device\n", instanceId, volumeId);
         }
+        unlock_hypervisor_conn();
         return EUCA_HYPERVISOR_ERROR;
     }
     // mark volume as 'detaching'
@@ -1178,11 +1207,13 @@ static int doDetachVolume(struct nc_state_t *nc, ncMetadata * pMeta, char *insta
         sem_v(inst_sem);
     if (!volume) {
         LOGERROR("[%s][%s] failed to update the volume record, aborting volume detachment\n", instanceId, volumeId);
+        unlock_hypervisor_conn();
         return EUCA_ERROR;
     }
     //Lookup the volume info locally for detachment
     if (volume->connectionString == NULL) {
         LOGERROR("[%s][%s] failed to find the local volume attachment record, aborting volume detachment\n", instanceId, volumeId);
+        unlock_hypervisor_conn();
         return EUCA_ERROR;
     }
     // do iscsi connect shellout if remoteDev is an iSCSI target
@@ -1228,13 +1259,11 @@ static int doDetachVolume(struct nc_state_t *nc, ncMetadata * pMeta, char *insta
         ret = EUCA_ERROR;
         goto release;
     }
-    // protect libvirt calls because we've seen problems during concurrent libvirt invocations
-    sem_p(hyp_sem);
+    // protect libvirt calls because we've seen problems during concurrent libvirt invocation
     int err = virDomainDetachDevice(dom, xml);
     if (!strcmp(nc->H->name, "xen")) {
         err = xen_detach_helper(nc, instanceId, localDevReal, xml);
     }
-    sem_v(hyp_sem);
 
     if (err) {
         LOGERROR("[%s][%s] failed to detach host device '%s' from guest device '%s'\n", instanceId, volumeId, remoteDevReal, localDevReal);
@@ -1248,9 +1277,9 @@ static int doDetachVolume(struct nc_state_t *nc, ncMetadata * pMeta, char *insta
     }
 
 release:
-    sem_p(hyp_sem);
     virDomainFree(dom);                // release libvirt resource
-    sem_v(hyp_sem);
+    unlock_hypervisor_conn(); // unlock the connection to the hypervisor
+
     // record volume state in memory and on disk
     char *next_vol_state;
     if (ret == EUCA_OK) {

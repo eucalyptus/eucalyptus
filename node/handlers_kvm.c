@@ -138,7 +138,6 @@
 /* Should preferably be handled in header file */
 
 // coming from handlers.c
-extern sem *hyp_sem;
 extern sem *migr_sem;
 extern sem *inst_sem;
 extern bunchOfInstances *global_instances;
@@ -266,7 +265,7 @@ static void *rebooting_thread(void *arg)
     ncVolume *volume = NULL;
     ncInstance *instance = ((ncInstance *) arg);
     virDomainPtr dom = NULL;
-    virConnectPtr *conn = NULL;
+    virConnectPtr conn = NULL;
 
     LOGDEBUG("[%s] spawning rebooting thread\n", instance->instanceId);
     if ((xml = file2str(instance->libvirtFilePath)) == NULL) {
@@ -274,34 +273,25 @@ static void *rebooting_thread(void *arg)
         return NULL;
     }
 
-    if ((conn = check_hypervisor_conn()) == NULL) {
+    if ((conn = lock_hypervisor_conn()) == NULL) {
         LOGERROR("[%s] cannot restart instance %s, abandoning it\n", instance->instanceId, instance->instanceId);
         change_state(instance, SHUTOFF);
         EUCA_FREE(xml);
         return NULL;
     }
-
-    sem_p(hyp_sem);
-    {
-        dom = virDomainLookupByName(*conn, instance->instanceId);
-    }
-    sem_v(hyp_sem);
-
+    dom = virDomainLookupByName(conn, instance->instanceId);
     if (dom == NULL) {
+        unlock_hypervisor_conn();
         EUCA_FREE(xml);
         return NULL;
     }
 
-    sem_p(hyp_sem);
-    {
-        // for KVM, must stop and restart the instance
-        LOGDEBUG("[%s] destroying domain\n", instance->instanceId);
-        error = virDomainDestroy(dom); // @todo change to Shutdown? is this synchronous?
-        virDomainFree(dom);
-    }
-    sem_v(hyp_sem);
-
+    // for KVM, must stop and restart the instance
+    LOGDEBUG("[%s] destroying domain\n", instance->instanceId);
+    error = virDomainDestroy(dom); // @todo change to Shutdown? is this synchronous?
+    virDomainFree(dom);
     if (error) {
+        unlock_hypervisor_conn();
         EUCA_FREE(xml);
         return NULL;
     }
@@ -314,14 +304,10 @@ static void *rebooting_thread(void *arg)
     sensor_shift_metric(instance->instanceId, "NetworkOut");
 
     // domain is now shut down, create a new one with the same XML
-    sem_p(hyp_sem);
-    {
-        LOGINFO("[%s] rebooting\n", instance->instanceId);
-        dom = virDomainCreateLinux(*conn, xml, 0);
-    }
-    sem_v(hyp_sem);
+    LOGINFO("[%s] rebooting\n", instance->instanceId);
+    dom = virDomainCreateLinux(conn, xml, 0);
     EUCA_FREE(xml);
-
+    
     euca_strncpy(resourceName[0], instance->instanceId, MAX_SENSOR_NAME_LEN);
     sensor_refresh_resources(resourceName, resourceAlias, 1);   // refresh stats so we set base value accurately
 
@@ -357,11 +343,7 @@ static void *rebooting_thread(void *arg)
             err = 0;
             for (int j = 1; j < REATTACH_RETRIES; j++) {
                 // protect libvirt calls because we've seen problems during concurrent libvirt invocations
-                sem_p(hyp_sem);
-                {
-                    err = virDomainAttachDevice(dom, xml);
-                }
-                sem_v(hyp_sem);
+                err = virDomainAttachDevice(dom, xml);
 
                 if (err) {
                     LOGERROR("[%s][%s] failed to reattach volume (attempt %d of %d)\n", instance->instanceId, volume->volumeId, j, REATTACH_RETRIES);
@@ -385,16 +367,13 @@ static void *rebooting_thread(void *arg)
     if (dom == NULL) {
         LOGERROR("[%s] failed to restart instance\n", instance->instanceId);
         change_state(instance, SHUTOFF);
-        return NULL;
-    }
-
-    sem_p(hyp_sem);
-    {
+    } else {
         virDomainFree(dom);
     }
-    sem_v(hyp_sem);
-    return NULL;
 
+    unlock_hypervisor_conn();
+    return NULL;
+    
 #undef REATTACH_RETRIES
 }
 
@@ -561,13 +540,13 @@ static void *migrating_thread(void *arg)
 {
     ncInstance *instance = ((ncInstance *) arg);
     virDomainPtr dom = NULL;
-    virConnectPtr *conn = NULL;
+    virConnectPtr conn = NULL;
     int migration_error = 0;
 
     LOGDEBUG("invoked for %s\n", instance->instanceId);
 
     sem_p(migr_sem);
-    if ((conn = check_hypervisor_conn()) == NULL) {
+    if ((conn = lock_hypervisor_conn()) == NULL) {
         LOGERROR("[%s] cannot migrate instance %s (failed to connect to hypervisor), giving up and rolling back.\n", instance->instanceId, instance->instanceId);
         migration_error++;
         goto out;
@@ -576,12 +555,7 @@ static void *migrating_thread(void *arg)
     }
     sem_v(migr_sem);
 
-    sem_p(hyp_sem);
-    {
-        dom = virDomainLookupByName(*conn, instance->instanceId);
-    }
-    sem_v(hyp_sem);
-
+    dom = virDomainLookupByName(conn, instance->instanceId);
     if (dom == NULL) {
         LOGERROR("[%s] cannot migrate instance %s (failed to find domain), giving up and rolling back.\n", instance->instanceId, instance->instanceId);
         migration_error++;
@@ -629,6 +603,12 @@ static void *migrating_thread(void *arg)
     virDomainFree(ddom);
 
 out:
+    if (dom)
+        virDomainFree(dom);
+
+    if (conn != NULL)
+        unlock_hypervisor_conn();
+
     sem_p(inst_sem);
     if (migration_error) {
         migration_rollback(instance);
@@ -641,9 +621,6 @@ out:
         copy_instances();
     }
     sem_v(inst_sem);
-
-    if (dom)
-        virDomainFree(dom);
 
     LOGDEBUG("done\n");
 

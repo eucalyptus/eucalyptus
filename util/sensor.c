@@ -297,8 +297,6 @@ static int getstat_generate(getstat *** pstats)
     assert(sensor_state != NULL && state_sem != NULL);
 
     errno = 0;
-    if (hyp_sem)
-        sem_p(hyp_sem);
     char *output = NULL;
     if (!strcmp(euca_this_component_name, "cc")) {
         char getstats_cmd[MAX_PATH];
@@ -319,8 +317,6 @@ static int getstat_generate(getstat *** pstats)
         // output will be NULL, so we'll return with an error
         errno = EBADSLT;               // using an obscure errno to mean internal error
     }
-    if (hyp_sem)
-        sem_v(hyp_sem);
 
     int ret = EUCA_ERROR;
     if (output) {                      // output is a string with one line per measurement, with tab-delimited fields
@@ -464,7 +460,14 @@ static void sensor_bottom_half(void)
         }
 
         sem_v(state_sem);
+
+        // serialize invocation of sensor_refresh_resources with other hypervisor calls
+        if (hyp_sem)
+            sem_p(hyp_sem);
         sensor_refresh_resources(resourceNames, resourceAliases, MAX_SENSOR_RESOURCES);
+        if (hyp_sem)
+            sem_v(hyp_sem);
+        
         useconds_t stop_usec = time_usec();
 
         // adjust the next sleep time to account for how long sensor refresh took
@@ -1825,6 +1828,10 @@ int sensor_set_volume(const char *instanceId, const char *volumeId, const char *
 //! particular resource (useful for getting data between
 //! poll events in bottom_half(), which may be spaced far
 //! apart)
+//!
+//! NOTE: it is recommended to hold hyp_sem (hypervisor 
+//!       semaphore) while invoking this so that concurrent
+//!       calls to libvirt do not destabilize libvirtd
 //!
 //! @param[in] resourceNames
 //! @param[in] resourceAliases
