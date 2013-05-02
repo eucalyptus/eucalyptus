@@ -914,6 +914,7 @@ static void refresh_instance_info(struct nc_state_t *nc, ncInstance * instance)
                     instance->migration_state = NOT_MIGRATING;  // done!
                     bzero(instance->migration_src, HOSTNAME_SIZE);
                     bzero(instance->migration_dst, HOSTNAME_SIZE);
+                    bzero(instance->migration_credentials, CREDENTIAL_SIZE);
                     instance->migrationTime = 0;
                     save_instance_struct(instance);
                     // copy_intances is called upon return in monitoring_thread().
