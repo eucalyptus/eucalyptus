@@ -22,12 +22,13 @@ package com.eucalyptus.loadbalancing;
 import com.eucalyptus.ws.protocol.QueryBindingInfo;
 
 /**
+ * @author Sang-Min Park
  *
  */
 @QueryBindingInfo( statusCode = 400 )
-public class TooManyAccessPointsException extends LoadBalancingException {
-  private static final long serialVersionUID = 1L;
-  public TooManyAccessPointsException(){
-    super( "The quota for the number of LoadBalancers has already been reached." );
-  }
+public class DuplicateAccessPointName extends LoadBalancingException {
+	private static final long serialVersionUID = 1L;
+	public DuplicateAccessPointName(){
+		super("LoadBalancer name already exists for this account. Please choose another name.");
+	}
 }
