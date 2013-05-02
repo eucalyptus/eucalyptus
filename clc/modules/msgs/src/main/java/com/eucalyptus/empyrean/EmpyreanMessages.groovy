@@ -62,7 +62,8 @@
 
 package com.eucalyptus.empyrean
 
-import com.eucalyptus.binding.HttpParameterMapping
+import java.io.Serializable
+import java.util.ArrayList
 import com.eucalyptus.component.ComponentId.ComponentMessage
 import com.eucalyptus.util.HasSideEffect
 import edu.ucsb.eucalyptus.msgs.BaseMessage
@@ -154,8 +155,6 @@ public class DescribeServicesType extends ServiceTransitionType {
   String byHost;
   String byState;
   String byPartition;
-  @HttpParameterMapping (parameter = "ServiceName")
-  ArrayList<String> serviceNames = new ArrayList( );
 }
 public class DescribeServicesResponseType extends EmpyreanMessage {
   ArrayList<ServiceStatusType> serviceStatuses = new ArrayList<ServiceStatusType>( );

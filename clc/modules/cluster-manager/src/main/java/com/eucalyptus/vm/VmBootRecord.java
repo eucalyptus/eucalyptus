@@ -62,23 +62,28 @@
 
 package com.eucalyptus.vm;
 
+import static com.eucalyptus.util.Parameters.checkParam;
+import static org.hamcrest.Matchers.notNullValue;
+
 import java.util.Arrays;
 import java.util.List;
 import java.util.Set;
+
 import javax.persistence.CollectionTable;
 import javax.persistence.Column;
 import javax.persistence.ElementCollection;
 import javax.persistence.Embeddable;
 import javax.persistence.EntityTransaction;
-import javax.persistence.JoinColumn;
 import javax.persistence.Lob;
 import javax.persistence.ManyToOne;
 import javax.persistence.PreRemove;
+
 import org.apache.log4j.Logger;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
 import org.hibernate.annotations.Parent;
 import org.hibernate.annotations.Type;
+
 import com.eucalyptus.cloud.ImageMetadata;
 import com.eucalyptus.cloud.util.MetadataException;
 import com.eucalyptus.entities.Entities;
@@ -98,9 +103,8 @@ import com.eucalyptus.vmtypes.VmTypes;
 import com.google.common.base.Objects;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Sets;
+
 import edu.ucsb.eucalyptus.msgs.VmTypeInfo;
-import static com.eucalyptus.util.Parameters.checkParam;
-import static org.hamcrest.Matchers.notNullValue;
 
 
 
@@ -138,7 +142,6 @@ public class VmBootRecord {
   @Column( name = "metadata_vm_sshkey" )
   private String                  sshKeyString;
   @ManyToOne
-  @JoinColumn(name="metadata_vm_type_id")
   @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
   private VmType                  vmType;
   

@@ -103,16 +103,11 @@ public class VmTypeEphemeralDisk extends EucalyptusData {
   }
 }
 public class ModifyVmTypeAttributeType extends VmTypeMessage {
-  Boolean reset = false;
-  Boolean force = false;
-  String name;
-  Integer cpu;
-  Integer disk;
-  Integer memory;
+  Boolean reset;
+  VmTypeDetails vmType;
 }
 public class ModifyVmTypeAttributeResponseType extends VmTypeMessage {
   VmTypeDetails vmType;
-  VmTypeDetails previousVmType;
 }
 public class DescribeVmTypesType extends VmTypeMessage {
   Boolean verbose = false;

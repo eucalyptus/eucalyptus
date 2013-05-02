@@ -192,8 +192,8 @@ public class ClusterAllocator implements Runnable {
     try {
       this.cluster = Clusters.lookup( Topology.lookup( ClusterController.class, allocInfo.getPartition( ) ) );
       this.messages = new StatefulMessageSet<State>( this.cluster, State.values( ) );
-      this.setupNetworkMessages( );
       this.setupVolumeMessages( );
+      this.setupNetworkMessages( );
       db.commit( );
     } catch ( final Exception e ) {
       db.rollback( );

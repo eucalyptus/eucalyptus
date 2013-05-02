@@ -65,19 +65,12 @@ package com.eucalyptus.vmtypes;
 
 import javax.annotation.Nullable;
 import com.eucalyptus.cloud.CloudMetadatas;
-import com.eucalyptus.cloud.util.NoSuchMetadataException;
 import com.eucalyptus.cluster.Clusters;
 import com.eucalyptus.cluster.ResourceState.VmTypeAvailability;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.Topology;
 import com.eucalyptus.component.id.ClusterController;
-import com.eucalyptus.context.Contexts;
-import com.eucalyptus.entities.Entities;
-import com.eucalyptus.util.EucalyptusCloudException;
-import com.eucalyptus.util.Exceptions;
-import com.eucalyptus.vmtypes.VmTypes.PredefinedTypes;
 import com.google.common.base.Function;
-import com.google.common.base.Objects;
 import com.google.common.collect.Iterables;
 
 public class VmTypesManager {
@@ -121,62 +114,6 @@ public class VmTypesManager {
         }
       };
       reply.getVmTypeDetails( ).add( vmTypeDetails );
-    }
-    return reply;
-  }
-  
-  public ModifyVmTypeAttributeResponseType modifyVmType( final ModifyVmTypeAttributeType request ) throws EucalyptusCloudException {
-    final ModifyVmTypeAttributeResponseType reply = request.getReply( );
-    if ( Contexts.lookup( ).hasAdministrativePrivileges( ) ) {
-      final Function<String, VmType> modifyFunc = new Function<String, VmType>( ) {
-        
-        @Override
-        public VmType apply( String vmTypeName ) {
-          try {
-            VmType vmType = VmTypes.lookup( vmTypeName );
-            if ( request.getReset( ) ) {
-              PredefinedTypes defaultVmType = PredefinedTypes.valueOf( vmTypeName );
-              vmType.setCpu( defaultVmType.getCpu( ) );
-              vmType.setDisk( defaultVmType.getDisk( ) );
-              vmType.setMemory( defaultVmType.getMemory( ) );
-            } else {
-              vmType.setCpu( Objects.firstNonNull( request.getCpu( ), vmType.getCpu( ) ) );
-              vmType.setDisk( Objects.firstNonNull( request.getDisk( ), vmType.getDisk( ) ) );
-              vmType.setMemory( Objects.firstNonNull( request.getMemory( ), vmType.getMemory( ) ) );
-            }
-            //GRZE:TODO:EUCA-3500 do the appropriate sanity checks here.
-            return vmType;
-          } catch ( NoSuchMetadataException ex ) {
-            throw Exceptions.toUndeclared( ex );
-          }
-        }
-      };
-      try {
-        VmTypeDetails beforeDetails = new VmTypeDetails( ) {
-          {
-            VmType before = VmTypes.lookup( request.getName( ) );
-            this.setName( before.getName( ) );
-            this.setDisk( before.getDisk( ) );
-            this.setCpu( before.getCpu( ) );
-            this.setMemory( before.getMemory( ) );
-          }
-        };
-        VmTypeDetails afterDetails = new VmTypeDetails( ) {
-          {
-            VmType after = Entities.asTransaction( modifyFunc ).apply( request.getName( ) );
-            this.setName( after.getName( ) );
-            this.setDisk( after.getDisk( ) );
-            this.setCpu( after.getCpu( ) );
-            this.setMemory( after.getMemory( ) );
-          }
-        };
-        reply.setPreviousVmType( beforeDetails );
-        reply.setVmType( afterDetails );
-      } catch ( NoSuchMetadataException ex ) {
-        throw new EucalyptusCloudException( "Failed to lookup the requested instance type: " + request.getName( ), ex );
-      }
-    } else {
-      throw new EucalyptusCloudException( "Authorization failed." );
     }
     return reply;
   }

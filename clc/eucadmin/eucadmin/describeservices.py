@@ -95,13 +95,6 @@ class DescribeServices(EucadminRequest):
                     doc='Show verbose service event details.')
               ]
 
-    Args = [Param(name='service_names',
-              long_name='service-name',
-              ptype='string',
-              cardinality='*',
-              optional=True,
-              doc='[SERVICE-NAME]*')]
-
     def __init__(self, **args):
       AWSQueryRequest.__init__(self, **args)
       self.list_markers = ['euca:serviceStatuses']
@@ -111,8 +104,6 @@ class DescribeServices(EucadminRequest):
         if self.connection is None:
             args['path'] = self.ServicePath
             self.connection = self.ServiceClass(**args)
-        for i,type in enumerate(self.request_params.pop('service_names')):
-          self.request_params['ServiceName.%s'%(i+1)]=type
         return self.connection
 
     def cli_formatter(self, data):

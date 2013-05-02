@@ -457,10 +457,6 @@ public class Upgrades {
       }
     }
     
-    public Sql getConnection( String databaseName ) throws Exception {
-      return Databases.getBootstrapper( ).getConnection( this.getVersionedName( databaseName ) ); 
-    }
-    
   }
   
   /**
@@ -764,11 +760,13 @@ public class Upgrades {
           for ( Version v : Version.upgradePath( ) ) {
             ComponentUpgradeInfo upgradeInfo = ComponentUpgradeInfo.get( v, c.getClass( ) );
             for ( Callable<Boolean> p : upgradeInfo.getPreUpgrades( ) ) {
+              boolean result = false;
               try {
                 LOG.info( "Executing @PreUpgrade: " + p.getClass( ) );
-                p.call( );
+                result = p.call( );
               } catch ( Exception ex ) {
-                throw Exceptions.toUndeclared( "Upgrade failed during @PreUpgrade while executing: " + p.getClass( ) + " because of: " + ex.getMessage( ), ex );
+                result = false;
+                LOG.error( "Upgrade failed during @PreUpgrade while executing: " + p.getClass( ) + " because of: " + ex.getMessage( ), ex );
               }
             }
           }
@@ -787,13 +785,14 @@ public class Upgrades {
           for ( Version v : Version.upgradePath( ) ) {
             ComponentUpgradeInfo upgradeInfo = ComponentUpgradeInfo.get( v, c.getClass( ) );
             for ( Entry<Class, Predicate> p : upgradeInfo.getEntityUpgrades( ).entries( ) ) {
+              Boolean result = false;
               try {
                 LOG.info( "Executing @EntityUpgrade: " + p.getValue( ).getClass( ) );
-                p.getValue( ).apply( p.getKey( ) );
+                result = p.getValue( ).apply( p.getKey( ) );
               } catch ( Exception ex ) {
-                throw Exceptions.toUndeclared( "Upgrade failed during @EntityUpgrade while executing: "
-                                               + p.getValue( ).getClass( ) + " for " + p.getKey( )
-                                               + " because of: " + ex.getMessage( ), ex );
+                result = false;
+                LOG.error( "Upgrade failed during @EntityUpgrade while executing: " + p.getValue( ).getClass( ) + " for " + p.getKey( ) + " because of: "
+                           + ex.getMessage( ), ex );
               }
             }
           }
@@ -812,11 +811,13 @@ public class Upgrades {
           for ( Version v : Version.upgradePath( ) ) {
             ComponentUpgradeInfo upgradeInfo = ComponentUpgradeInfo.get( v, c.getClass( ) );
             for ( Callable<Boolean> p : upgradeInfo.getPostUpgrades( ) ) {
+              boolean result = false;
               try {
                 LOG.info( "Executing @PostUpgrade: " + p.getClass( ) );
-                p.call( );
+                result = p.call( );
               } catch ( Exception ex ) {
-                throw Exceptions.toUndeclared( "Upgrade failed during @PostUpgrade while executing: " + p.getClass( ) + " because of: " + ex.getMessage( ), ex );
+                result = false;
+                LOG.error( "Upgrade failed during @PostUpgrade while executing: " + p.getClass( ) + " because of: " + ex.getMessage( ), ex );
               }
             }
           }

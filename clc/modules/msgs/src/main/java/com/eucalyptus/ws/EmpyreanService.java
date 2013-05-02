@@ -407,15 +407,6 @@ public class EmpyreanService {
       };
     }
     
-    static Predicate<ServiceConfiguration> name( final List<String> names ) {
-      return new Predicate<ServiceConfiguration>( ) {
-        @Override
-        public boolean apply( final ServiceConfiguration input ) {
-          return ( names == null ) || names.isEmpty( ) || names.contains( input.getName( ) );
-        }
-      };
-    }
-    
     static Predicate<ServiceConfiguration> state( final Component.State state ) {
       return new Predicate<ServiceConfiguration>( ) {
         @Override
@@ -534,9 +525,6 @@ public class EmpyreanService {
           if ( request.getByState( ) != null ) {
             final Component.State stateFilter = Component.State.valueOf( request.getByState( ).toUpperCase( ) );
             this.add( Filters.state( stateFilter ) );
-          }
-          if ( !request.getServiceNames( ).isEmpty( ) ) {
-            this.add( Filters.name( request.getServiceNames( ) ) );
           }
           this.add( Filters.host( request.getByHost( ) ) );
           this.add( Filters.listAllOrInternal( request.getListAll( ), request.getListUserServices( ), request.getListInternal( ) ) );
