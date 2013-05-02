@@ -543,7 +543,7 @@ static void *migrating_thread(void *arg)
     virConnectPtr conn = NULL;
     int migration_error = 0;
 
-    LOGDEBUG("invoked for %s\n", instance->instanceId);
+    LOGTRACE("invoked for %s\n", instance->instanceId);
 
     sem_p(migr_sem);
     if ((conn = lock_hypervisor_conn()) == NULL) {
@@ -551,7 +551,7 @@ static void *migrating_thread(void *arg)
         migration_error++;
         goto out;
     } else {
-        LOGDEBUG("[%s] check_hypervisor_conn() OK\n", instance->instanceId);
+        LOGTRACE("[%s] connected to hypervisor\n", instance->instanceId);
     }
     sem_v(migr_sem);
 
@@ -568,12 +568,12 @@ static void *migrating_thread(void *arg)
     virConnectPtr dconn = NULL;
 
     sem_p(migr_sem);
-    LOGDEBUG("[%s] connecting to libvirt to migrate instance using URI '%s'\n", instance->instanceId, duri);
+    LOGDEBUG("[%s] connecting to remote hypervisor at '%s'\n", instance->instanceId, duri);
     dconn = virConnectOpen(duri);
     if (dconn == NULL) {
         LOGWARN("[%s] cannot migrate instance using TLS (failed to connect to remote), retrying using SSH.\n", instance->instanceId);
         snprintf(duri, sizeof(duri), "qemu+ssh://%s/system", instance->migration_dst);
-        LOGDEBUG("[%s] connecting to libvirt to migrate instance using URI '%s'\n", instance->instanceId, duri);
+        LOGDEBUG("[%s] connecting to remote hypervisor at '%s'\n", instance->instanceId, duri);
         dconn = virConnectOpen(duri);
         if (dconn == NULL) {
             LOGERROR("[%s] cannot migrate instance using TLS or SSH (failed to connect to remote), giving up and rolling back.\n", instance->instanceId);
