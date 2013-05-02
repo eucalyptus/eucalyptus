@@ -83,6 +83,8 @@ import org.jboss.netty.channel.group.DefaultChannelGroup;
 import org.jboss.netty.channel.socket.nio.NioClientSocketChannelFactory;
 import org.jboss.netty.channel.socket.nio.NioServerSocketChannelFactory;
 import org.jboss.netty.handler.execution.OrderedMemoryAwareThreadPoolExecutor;
+import org.jboss.netty.logging.InternalLoggerFactory;
+import org.jboss.netty.logging.Log4JLoggerFactory;
 import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.bootstrap.Bootstrapper;
 import com.eucalyptus.bootstrap.OrderedShutdown;
@@ -102,7 +104,10 @@ public class WebServices {
   @Provides( Empyrean.class )
   @RunDuring( Bootstrap.Stage.RemoteServicesInit )
   public static class WebServicesBootstrapper extends Bootstrapper.Simple {
-    
+    static {
+      InternalLoggerFactory.setDefaultFactory( new Log4JLoggerFactory( ) );
+    }
+
     @Override
     public boolean load( ) throws Exception {
       WebServices.restart( );
