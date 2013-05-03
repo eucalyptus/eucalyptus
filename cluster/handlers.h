@@ -398,7 +398,7 @@ int ncInstance_to_ccInstance(ccInstance * dst, ncInstance * src);
 int ccInstance_to_ncInstance(ncInstance * dst, ccInstance * src);
 int schedule_instance(virtualMachine * vm, char *amiId, char *kernelId, char *ramdiskId, char *instId, char *userData, char *platform, char *targetNode, int *outresid);
 int schedule_instance_roundrobin(virtualMachine * vm, int *outresid);
-int schedule_instance_explicit(virtualMachine * vm, char *targetNode, int *outresid);
+int schedule_instance_explicit(virtualMachine * vm, char *targetNode, int *outresid, boolean is_migration);
 int schedule_instance_user(virtualMachine * vm, char *amiId, char *kernelId, char *ramdiskId, char *instId, char *userData, char *platform, int *outresid);
 int schedule_instance_greedy(virtualMachine * vm, int *outresid);
 int doRunInstances(ncMetadata * pMeta, char *amiId, char *kernelId, char *ramdiskId, char *amiURL, char *kernelURL, char *ramdiskURL, char **instIds, int instIdsLen,
