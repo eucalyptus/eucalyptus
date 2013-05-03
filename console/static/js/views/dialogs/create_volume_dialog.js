@@ -17,7 +17,6 @@ define([
              var snapshot_model = App.data.snapshot.get(args.snapshot_id);
              var selected_snapshot_id = snapshot_model.get('id');
              var selected_snapshot_size = snapshot_model.get('volume_size');
-             console.log("Selected Snapshot ID: " + selected_snapshot_id);
              var nameTag = self.findNameTag(snapshot_model);
              var snapshot_name_string = self.createIdNameTagString(selected_snapshot_id, nameTag);
              $snapshotSelector.append($('<option>', {
@@ -45,7 +44,6 @@ define([
                  text : "None" 
              }));
              App.data.snapshot.each(function (model, index) {
-               console.log("Snapshot: " + model.get('id') + " :" + index);
                var nameTag = self.findNameTag(model);
                var snapshot_name_string = self.createIdNameTagString(model.get('id'), nameTag);
                $snapshotSelector.append($('<option>', { 
@@ -74,8 +72,6 @@ define([
             };
 
             App.data.zone.each(function(model, index){
-              console.log("Avail. Zone: " + JSON.stringify(model));
-              console.log("Avail. Zone Index: " + index);
               var aZoneName = model.get('name');
               if( index == 0 ){
                 self.scope.volume.set({availablity_zone: aZoneName});   // Set the first avail. zone as default
@@ -90,7 +86,6 @@ define([
               azone = $azSelector.val();
               if(azone) {
                 self.scope.volume.set({availablity_zone: azone});
-                 console.log("Selected Avail. Zone: " + azone);
               }
             });
         },
@@ -155,10 +150,6 @@ define([
                     var size = self.scope.volume.get('size');                      
                     var availablity_zone = self.scope.volume.get('availablity_zone');         
                     var name = self.scope.volume.get('name');
-		    console.log("Selected Snapshot ID: " + snapshotId);
-		    console.log("Size: " + size);
-		    console.log("Zone: " + availablity_zone);
-                    console.log("Name: " + name);
 
                     // CREATE A NAME TAG
                     if( name != null ){

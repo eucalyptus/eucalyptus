@@ -1,7 +1,7 @@
 <div>
 		<div class="selected-resources">
             <table>
-            <thead><td><span data-msg="tag_display_hdr_key">KEY</span></td><td><span data-msg="tag_display_hdr_value">VALUE</span></td></thead>
+            <thead><td><span data-msg="tag_display_hdr_key"></span></td><td><span data-msg="tag_display_hdr_value"></span></td></thead>
             <tbody data-each-tag="tags" class="tag-edit">
                 <tr data-show="tag._clean">
                     <td><span data-text="tag.name"></span></td>
@@ -31,7 +31,7 @@
 -->
             </tbody>
             <tbody class="tag-edit">
-                <tr><td><input data-value="newtag.name" data-tooltip="tag_text_name_tip"></input></td><td><input data-value="newtag.value" data-tooltip="tag_text_value_tip"></input></td><td><div class="icon_add" data-on-click=":create" data-tooltip="tag_icon_add_another_tip"></div></td><td style="width:27px"></td></tr>
+                <tr><td><input class="focus-here" data-value="newtag.name" data-tooltip="tag_text_name_tip"></input></td><td><input data-value="newtag.value" data-tooltip="tag_text_value_tip"></input></td><td><div class="icon_add" data-on-click=":create" data-tooltip="tag_icon_add_another_tip"></div></td><td style="width:27px"></td></tr>
                 <tr><td><span data-text="errors.name"></input></td><td><span data-text="errors.value"></span></td><td></td><td></td></tr>
             </tbody>
             </table>

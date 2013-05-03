@@ -6,6 +6,7 @@ define([
         _do_init : function() {
             $tmpl = $(this.template);
             iamBusy();
+            var self = this;
 
             this.scope.$el = this.$el;
             this.scope.close = this.close;
@@ -30,6 +31,13 @@ define([
                 closeOnEscape : true,
                 position: { my: 'center', at: 'center', of: window, collision: 'none'},
                 open: function(event, ui) {
+                  // this is super hacky. Trying to set focus here seems to be not late enough
+                  // so focus is actually on the first element by default, often a tab.
+                  // by waiting a little, we get focus on the desired field.
+                  setTimeout(function() {
+                      var input_el = self.$el.parent().find('.focus-here');
+                      input_el.focus();
+                    }, 500);
                 },
                 close: function(event, ui) {
                 }

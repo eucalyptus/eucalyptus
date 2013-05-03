@@ -104,17 +104,18 @@
                 valueMatches : thisObj.searchConfig.valueMatches
             }
         });
+        thisObj.bbdata.on('change add remove reset', function() {
+          console.log("calling refreshTable from bbdata on");
+          thisObj.refreshTable.call(thisObj)
+        });
         if(thisObj.options.filters){
           $.each(thisObj.options.filters, function(idx, filter){
             if (filter['default']) {
+              console.log("set default filter"+filter['default']);
               thisObj.vsearch.searchBox.value(filter['name']+": "+filter['default'])
             }
           });
         }
-        thisObj.bbdata.on('change add remove reset', function() {
-            console.log('bbdata refresh');
-            thisObj.refreshTable.call(thisObj)
-        });
         thisObj.refreshTable();
       });
     },
