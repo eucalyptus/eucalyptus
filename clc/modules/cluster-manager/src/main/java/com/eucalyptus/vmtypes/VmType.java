@@ -62,18 +62,24 @@
 
 package com.eucalyptus.vmtypes;
 
+import groovy.sql.Sql;
+import java.util.Comparator;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.Callable;
 import javax.persistence.CollectionTable;
 import javax.persistence.Column;
 import javax.persistence.ElementCollection;
+import javax.persistence.JoinColumn;
 import javax.persistence.PersistenceContext;
 import javax.persistence.Table;
 import javax.persistence.Transient;
+import org.apache.log4j.Logger;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
 import org.hibernate.annotations.Entity;
 import com.eucalyptus.auth.principal.Principals;
+import com.eucalyptus.bootstrap.Databases;
 import com.eucalyptus.cloud.CloudMetadata.VmTypeMetadata;
 import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.id.Eucalyptus;
@@ -81,11 +87,16 @@ import com.eucalyptus.crypto.Crypto;
 import com.eucalyptus.crypto.Digest;
 import com.eucalyptus.entities.AbstractPersistent;
 import com.eucalyptus.images.DeviceMapping;
+import com.eucalyptus.upgrade.Upgrades.EntityUpgrade;
+import com.eucalyptus.upgrade.Upgrades.PostUpgrade;
+import com.eucalyptus.upgrade.Upgrades.PreUpgrade;
+import com.eucalyptus.upgrade.Upgrades.Version;
 import com.eucalyptus.util.FullName;
 import com.eucalyptus.util.HasFullName;
 import com.eucalyptus.util.OwnerFullName;
-import com.eucalyptus.vmtypes.VmTypes.Format;
+import com.eucalyptus.vm.VmBootRecord;
 import com.google.common.base.Function;
+import com.google.common.base.Predicate;
 import com.google.common.base.Supplier;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
@@ -125,25 +136,33 @@ import com.google.common.collect.Sets;
 @Entity
 @javax.persistence.Entity
 @PersistenceContext( name = "eucalyptus_cloud" )
-@Table( name = "cloud_vm_types" )
+@Table( name = "cloud_vm_type" )
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
 public class VmType extends AbstractPersistent implements VmTypeMetadata, HasFullName<VmTypeMetadata> {
   @Transient
   private static final long  serialVersionUID = 1L;
+  
   @Column( name = "config_vm_type_name" )
   private String             name;
+  
   @Column( name = "config_vm_type_cpu" )
   private Integer            cpu;
+  
   @Column( name = "config_vm_type_disk" )
   private Integer            disk;
+  
   @Column( name = "config_vm_type_memory" )
   private Integer            memory;
+  
   @Column( name = "config_vm_type_ebs_only" )
   private Boolean            ebsOnly;
+  
   @Column( name = "config_vm_type_ebs_iops" )
   private Integer            ebsIopsLimit;
+  
   @Column( name = "config_vm_type_64bit_only" )
   private Boolean            x86_64only;
+  
   @ElementCollection
   @CollectionTable( name = "config_vm_types_ephemeral_disks" )
   @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
@@ -236,9 +255,33 @@ public class VmType extends AbstractPersistent implements VmTypeMetadata, HasFul
   @Override
   public int compareTo( final VmTypeMetadata that ) {
     if ( this.equals( that ) ) return 0;
-    if ( ( this.getCpu( ) <= that.getCpu( ) ) && ( this.getDisk( ) <= that.getDisk( ) ) && ( this.getMemory( ) <= that.getMemory( ) ) ) return -1;
-    if ( ( this.getCpu( ) >= that.getCpu( ) ) && ( this.getDisk( ) >= that.getDisk( ) ) && ( this.getMemory( ) >= that.getMemory( ) ) ) return 1;
-    return 0;
+    if ( this.getDisk( ) <= that.getDisk( ) ) {
+      return -1;
+    } else if ( this.getDisk( ) > that.getDisk( ) ) {
+      return 1;
+    }
+    if ( this.getMemory( ) <= that.getMemory( ) ) {
+      return -1;
+    } else if ( this.getMemory( ) > that.getMemory( ) ) {
+      return 1;
+    }
+    if ( this.getCpu( ) <= that.getCpu( ) ) {
+      return -1;
+    } else if ( this.getCpu( ) > that.getCpu( ) ) {
+      return 1;
+    }
+    return this.getDisplayName( ).compareTo( that.getDisplayName( ) );
+  }
+  
+  public enum OrderingComparator implements Comparator<VmTypeMetadata> {
+    INSTANCE;
+    @Override
+    public int compare( final VmTypeMetadata one, final VmTypeMetadata two ) { 
+      if ( one.equals( two ) ) return 0;
+      if ( ( one.getCpu( ) <= two.getCpu( ) ) && ( one.getDisk( ) <= two.getDisk( ) ) && ( one.getMemory( ) <= two.getMemory( ) ) ) return -1; 
+      if ( ( one.getCpu( ) >= two.getCpu( ) ) && ( one.getDisk( ) >= two.getDisk( ) ) && ( one.getMemory( ) >= two.getMemory( ) ) ) return 1;
+      return 0;
+    }       
   }
   
   @Override
@@ -294,11 +337,14 @@ public class VmType extends AbstractPersistent implements VmTypeMetadata, HasFul
       }
     }
   }
-
+  
   public static class EphemeralBuilder {
     private Integer              index       = 0;
+    
     private Map<Integer, String> deviceNames = Maps.newHashMap( );
+    
     private Set<EphemeralDisk>   disks       = Sets.newHashSet( );
+    
     private VmType               parent;
     
     EphemeralBuilder( VmType parent ) {
@@ -330,36 +376,36 @@ public class VmType extends AbstractPersistent implements VmTypeMetadata, HasFul
       return this.parent;
     }
   }
-
+  
   Boolean getEbsOnly( ) {
     return this.ebsOnly;
   }
-
+  
   void setEbsOnly( Boolean ebsOnly ) {
     this.ebsOnly = ebsOnly;
   }
-
+  
   Integer getEbsIopsLimit( ) {
     return this.ebsIopsLimit;
   }
-
+  
   void setEbsIopsLimit( Integer ebsIopsLimit ) {
     this.ebsIopsLimit = ebsIopsLimit;
   }
-
+  
   Boolean getX86_64only( ) {
     return this.x86_64only;
   }
-
+  
   void setX86_64only( Boolean x86_64only ) {
     this.x86_64only = x86_64only;
   }
-
+  
   Set<EphemeralDisk> getEpehemeralDisks( ) {
     return this.epehemeralDisks;
   }
-
-  public void addEphemeralDisks( EphemeralDisk...disks ) {
+  
+  public void addEphemeralDisks( EphemeralDisk... disks ) {
     EphemeralBuilder builder = this.withEphemeralDisks( );
     for ( EphemeralDisk d : disks ) {
       builder.addDisk( d );
@@ -370,12 +416,13 @@ public class VmType extends AbstractPersistent implements VmTypeMetadata, HasFul
     this.getEpehemeralDisks( ).clear( );
     return new VmType.EphemeralBuilder( this );
   }
-
+  
   public static VmType create( String name, Integer cpu, Integer disk, Integer memory ) {
     return new VmType( name, cpu, disk, memory );
   }
-
+  
   public static VmType named( String name ) {
     return new VmType( name );
   }
+  
 }

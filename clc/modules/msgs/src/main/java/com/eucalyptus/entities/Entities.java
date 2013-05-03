@@ -62,8 +62,7 @@
 
 package com.eucalyptus.entities;
 
-import static com.eucalyptus.util.Parameters.checkParam;
-import static org.hamcrest.Matchers.notNullValue;
+import groovy.lang.Closure;
 import java.lang.ref.WeakReference;
 import java.util.Collections;
 import java.util.List;
@@ -82,6 +81,7 @@ import javax.persistence.PersistenceContext;
 import javax.persistence.Query;
 import javax.transaction.Synchronization;
 import org.apache.log4j.Logger;
+import org.codehaus.groovy.runtime.MethodClosure;
 import org.hibernate.Criteria;
 import org.hibernate.HibernateException;
 import org.hibernate.Session;
@@ -113,6 +113,8 @@ import com.google.common.cache.CacheBuilder;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
+import static com.eucalyptus.util.Parameters.checkParam;
+import static org.hamcrest.Matchers.notNullValue;
 
 @ConfigurableClass( root = "bootstrap.tx",
                     description = "Parameters controlling transaction behaviour." )
