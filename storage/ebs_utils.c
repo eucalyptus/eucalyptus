@@ -391,6 +391,9 @@ int connect_ebs_volume(char *sc_url, char *attachment_token, int use_ws_sec, cha
     char *dev = connect_iscsi_target((*vol_data)->connect_string);
     if (!dev || !strstr(dev, "/dev")) {
         LOGERROR("Failed to connect to iSCSI target: %s\n", (*vol_data)->connect_string);
+        //disconnect the volume
+        ret = cleanup_volume_attachment(sc_url, use_ws_sec, ws_sec_policy_file, (*vol_data), (*vol_data)->connect_string, local_ip, local_iqn, 0);
+        LOGTRACE("cleanup_volume_attachment returned: %d\n", ret);
         ret = EUCA_ERROR;
         goto release;
     }
@@ -444,39 +447,8 @@ int disconnect_ebs_volume(char *sc_url, int use_ws_sec, char *ws_sec_policy_file
     sem_p(vol_sem);
     LOGTRACE("Got volume lock\n");
 
-    LOGDEBUG("[%s] attempting to disconnect iscsi target\n", vol_data->volumeId);
-    if (disconnect_iscsi_target(connect_string, norescan) != 0) {
-        LOGERROR("[%s] failed to disconnet iscsi target\n", vol_data->volumeId);
-        ret = EUCA_ERROR;
-        goto release;
-    }
-
-    if (ret == EUCA_ERROR) {
-        LOGDEBUG("Skipping SC Call due to previous errors\n");
-        goto release;
-    } else {
-        //TODO: decrypt token using node pk
-        LOGTRACE("Calling scClientCall with url: %s and token %s\n", sc_url, vol_data->token);
-        rc = scClientCall(NULL, NULL, use_ws_sec, ws_sec_policy_file, DEFAULT_SC_CALL_TIMEOUT, sc_url, "UnexportVolume", vol_data->volumeId, vol_data->token, local_ip, local_iqn);
-        if (rc) {
-            LOGERROR("ERROR unexporting volume %s\n", vol_data->volumeId);
-            ret = EUCA_ERROR;
-            goto release;
-        } else {
-            //Ok, now refresh local session to be sure it's gone.
-            char *refreshedDev = NULL;
-            //Should return error of not found.
-            refreshedDev = get_iscsi_target(connect_string);
-            if (refreshedDev) {
-                //Failure, should have NULL.
-                ret = EUCA_ERROR;
-                goto release;
-            } else {
-                //We're good
-                ret = EUCA_OK;
-            }
-        }
-    }
+    ret = cleanup_volume_attachment(sc_url, use_ws_sec, ws_sec_policy_file, vol_data, connect_string, local_ip, local_iqn, norescan);
+    LOGTRACE("cleanup_volume_attachment returned: %d\n", ret);
 
 release:
     LOGTRACE("Releasing volume lock\n");
@@ -508,6 +480,8 @@ int disconnect_ebs_volume_with_struct(char *sc_url, int use_ws_sec, char *ws_sec
 {
     int ret = 0;
     int rc = 0;
+    int norescan = 0;
+
     if (vol_data == NULL) {
         LOGERROR("Could not disconnect volume, got null volume data struct\n");
         return EUCA_ERROR;
@@ -517,41 +491,9 @@ int disconnect_ebs_volume_with_struct(char *sc_url, int use_ws_sec, char *ws_sec
     //Grab a lock.
     sem_p(vol_sem);
     LOGTRACE("Got volume lock\n");
-    LOGDEBUG("[%s] attempting to disconnect iscsi target\n", vol_data->volumeId);
-    if (disconnect_iscsi_target(vol_data->connect_string, 0) != 0) {
-        LOGERROR("[%s] failed to disconnet iscsi target\n", vol_data->volumeId);
-        //if (!force)
-        ret = EUCA_ERROR;
-        goto release;
-    }
 
-    if (ret == EUCA_ERROR) {
-        LOGDEBUG("Skipping SC Call due to previous errors\n");
-        goto release;
-    } else {
-        //TODO: decrypt token using node pk
-        LOGTRACE("Calling scClientCall with url: %s and token %s\n", sc_url, vol_data->token);
-        rc = scClientCall(NULL, NULL, use_ws_sec, ws_sec_policy_file, DEFAULT_SC_CALL_TIMEOUT, sc_url, "UnexportVolume", vol_data->volumeId, vol_data->token, local_ip, local_iqn);
-
-        if (!rc) {
-            LOGERROR("ERROR unexporting volume %s\n", vol_data->volumeId);
-            ret = EUCA_ERROR;
-            goto release;
-        } else {
-            //Ok, now refresh local session to be sure it's gone.
-            char *refreshedDev = NULL;
-            //Should return error of not found.
-            refreshedDev = get_iscsi_target(vol_data->connect_string);
-            if (refreshedDev) {
-                //Failure, should have NULL.
-                ret = EUCA_ERROR;
-                goto release;
-            } else {
-                //We're good
-                ret = EUCA_OK;
-            }
-        }
-    }
+    ret = cleanup_volume_attachment(sc_url, use_ws_sec, ws_sec_policy_file, vol_data, vol_data->connect_string, local_ip, local_iqn, norescan);
+    LOGTRACE("cleanup_volume_attachment returned: %d\n", ret);
 
 release:
     LOGTRACE("Releasing volume lock\n");
@@ -559,6 +501,56 @@ release:
     sem_v(vol_sem);
     LOGTRACE("Released volume lock\n");
     return ret;
+}
+
+//!
+//! Refactored logic for detaching a local iSCSI device and unexporting the volume. To be invoked only by other functions in this file after acquiring the necessary lock.
+//!
+//! @param[in] sc_url
+//! @param[in] use_ws_sec
+//! @param[in] ws_sec_policy_file
+//! @param[in] vol_data
+//! @param[in] connect_string
+//! @param[in] local_ip
+//! @param[in] local_iqn
+//!
+//! @return
+//!
+//! @pre
+//!
+//! @post
+//!
+//! @note should be invoked only by functions in this file that acquired the necessary lock.
+//!
+static int cleanup_volume_attachment (char *sc_url, int use_ws_sec, char *ws_sec_policy_file, ebs_volume_data *vol_data, char *connect_string, char *local_ip, char *local_iqn, int norescan) {
+       int rc = 0;
+
+       LOGDEBUG("[%s] attempting to disconnect iscsi target\n", vol_data->volumeId);
+       if (disconnect_iscsi_target(connect_string, norescan) != 0) {
+               LOGERROR("[%s] failed to disconnet iscsi target\n", vol_data->volumeId);
+               LOGDEBUG("Skipping SC Call due to previous errors\n");
+               return EUCA_ERROR;
+       }
+
+       //TODO: decrypt token using node pk
+       LOGTRACE("Calling scClientCall with url: %s and token %s\n", sc_url, vol_data->token);
+       rc = scClientCall(NULL, NULL, use_ws_sec, ws_sec_policy_file, DEFAULT_SC_CALL_TIMEOUT, sc_url, "UnexportVolume", vol_data->volumeId, vol_data->token, local_ip, local_iqn);
+       if (rc) {
+               LOGERROR("ERROR unexporting volume %s\n", vol_data->volumeId);
+               return EUCA_ERROR;
+       } else {
+               //Ok, now refresh local session to be sure it's gone.
+               char *refreshedDev = NULL;
+               //Should return error of not found.
+               refreshedDev = get_iscsi_target(connect_string);
+               if (refreshedDev) {
+                       //Failure, should have NULL.
+                       return EUCA_ERROR;
+               } else {
+                       //We're good
+            	   	   return EUCA_OK;
+               }
+       }
 }
 
 #ifdef _UNIT_TEST
