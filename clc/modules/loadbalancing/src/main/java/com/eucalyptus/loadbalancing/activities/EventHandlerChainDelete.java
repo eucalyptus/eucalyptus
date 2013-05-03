@@ -33,10 +33,18 @@ import com.eucalyptus.event.ClockTick;
 import com.eucalyptus.event.EventListener;
 import com.eucalyptus.event.Listeners;
 import com.eucalyptus.loadbalancing.LoadBalancer;
-import com.eucalyptus.loadbalancing.LoadBalancerDnsRecord;
+import com.eucalyptus.loadbalancing.LoadBalancerDnsRecord.LoadBalancerDnsRecordCoreView;
 import com.eucalyptus.loadbalancing.LoadBalancerSecurityGroup;
+import com.eucalyptus.loadbalancing.LoadBalancerSecurityGroup.LoadBalancerSecurityGroupCoreView;
+import com.eucalyptus.loadbalancing.LoadBalancerSecurityGroup.LoadBalancerSecurityGroupEntityTransform;
 import com.eucalyptus.loadbalancing.LoadBalancerZone;
+import com.eucalyptus.loadbalancing.LoadBalancerZone.LoadBalancerZoneCoreView;
+import com.eucalyptus.loadbalancing.LoadBalancerZone.LoadBalancerZoneEntityTransform;
 import com.eucalyptus.loadbalancing.LoadBalancers;
+import com.eucalyptus.loadbalancing.activities.LoadBalancerAutoScalingGroup.LoadBalancerAutoScalingGroupCoreView;
+import com.eucalyptus.loadbalancing.activities.LoadBalancerAutoScalingGroup.LoadBalancerAutoScalingGroupEntityTransform;
+import com.eucalyptus.loadbalancing.activities.LoadBalancerServoInstance.LoadBalancerServoInstanceCoreView;
+import com.eucalyptus.loadbalancing.activities.LoadBalancerServoInstance.LoadBalancerServoInstanceEntityTransform;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 
@@ -67,11 +75,18 @@ public class EventHandlerChainDelete extends EventHandlerChain<DeleteLoadbalance
 		public void apply(DeleteLoadbalancerEvent evt)
 				throws EventHandlerException {
 			LoadBalancer lb = null;
-			List<LoadBalancerServoInstance> servos = Lists.newArrayList();
+			List<LoadBalancerServoInstanceCoreView> servos = Lists.newArrayList();
 			try{ 
 				lb= LoadBalancers.getLoadbalancer(evt.getContext(), evt.getLoadBalancer());
+				
 				if(lb.getZones()!=null){
-					for(LoadBalancerZone zone : lb.getZones()){
+					for(final LoadBalancerZoneCoreView zoneView : lb.getZones()){
+						LoadBalancerZone zone = null;
+						try{
+							zone = LoadBalancerZoneEntityTransform.INSTANCE.apply(zoneView);
+						}catch(final Exception ex){
+							continue;
+						}
 						servos.addAll(zone.getServoInstances());
 					}
 				}
@@ -81,10 +96,10 @@ public class EventHandlerChainDelete extends EventHandlerChain<DeleteLoadbalance
 				LOG.warn("Failed to find the loadbalancer", ex);
 				return;
 			}
-			final LoadBalancerDnsRecord dns = lb.getDns();
+			final LoadBalancerDnsRecordCoreView dns = lb.getDns();
 			
 			// find ServoInstance
-			for(LoadBalancerServoInstance instance: servos){
+			for(LoadBalancerServoInstanceCoreView instance: servos){
 				String	address = instance.getAddress();
 				if(address==null || address.length()<=0)
 					continue;
@@ -126,7 +141,7 @@ public class EventHandlerChainDelete extends EventHandlerChain<DeleteLoadbalance
 				LOG.warn("Failed to find the loadbalancer named " + evt.getLoadBalancer(), ex);
 				return;
 			}	
-			LoadBalancerAutoScalingGroup group = lb.getAutoScaleGroup();
+			final LoadBalancerAutoScalingGroupCoreView group = lb.getAutoScaleGroup();
 			if(group == null){
 				LOG.warn(String.format("Loadbalancer %s had no autoscale group associated with it", lb.getDisplayName()));
 				return;
@@ -150,9 +165,26 @@ public class EventHandlerChainDelete extends EventHandlerChain<DeleteLoadbalance
 				error = true;
 			}
 
-			EntityTransaction db = Entities.get( LoadBalancerServoInstance.class );
+			LoadBalancerAutoScalingGroup scaleGroup = null;
 			try{
-				for(LoadBalancerServoInstance instance : lb.getAutoScaleGroup().getServos()){
+				final LoadBalancerAutoScalingGroupCoreView groupView = lb.getAutoScaleGroup();
+				scaleGroup = LoadBalancerAutoScalingGroupEntityTransform.INSTANCE.apply(groupView);
+			}catch(final Exception ex){
+				LOG.error("falied to update servo instance record", ex);
+			}
+			
+			if(scaleGroup==null)
+				return;
+			
+			final EntityTransaction db = Entities.get( LoadBalancerServoInstance.class );
+			try{
+				for(final LoadBalancerServoInstanceCoreView instanceView : scaleGroup.getServos()){
+					LoadBalancerServoInstance instance = null;
+					try{
+						instance=LoadBalancerServoInstanceEntityTransform.INSTANCE.apply(instanceView);
+					}catch(final Exception ex){
+						continue;
+					}
 					final LoadBalancerServoInstance found = Entities.uniqueResult(instance);
 					found.setDns(null);
 					found.setAvailabilityZone(null);
@@ -165,7 +197,7 @@ public class EventHandlerChainDelete extends EventHandlerChain<DeleteLoadbalance
 					Entities.persist(found);
 				}
 				db.commit();
-			}catch(Exception ex){
+			}catch(final Exception ex){
 				db.rollback();
 				LOG.error("Failed to update servo instance record", ex);
 			}
@@ -188,16 +220,23 @@ public class EventHandlerChainDelete extends EventHandlerChain<DeleteLoadbalance
 		public void apply(DeleteLoadbalancerEvent evt)
 				throws EventHandlerException {
 			LoadBalancer lb = null;
-			LoadBalancerSecurityGroup group = null;
+			LoadBalancerSecurityGroupCoreView groupView = null;
 			try{
 				lb = LoadBalancers.getLoadbalancer(evt.getContext(), evt.getLoadBalancer());
 				if(lb.getGroup()!=null){
-					group = lb.getGroup();
+					groupView = lb.getGroup();
 				}
 			}catch(NoSuchElementException ex){
 				return;
 			}catch(Exception ex){
 				LOG.error("Error while looking for loadbalancer with name="+evt.getLoadBalancer(), ex);
+				return;
+			}
+			LoadBalancerSecurityGroup group = null;
+			try{
+				group = LoadBalancerSecurityGroupEntityTransform.INSTANCE.apply(groupView);
+			}catch(final Exception ex){
+				LOG.error("Erorr while looking for loadbalancer group", ex);
 				return;
 			}
 
@@ -245,7 +284,7 @@ public class EventHandlerChainDelete extends EventHandlerChain<DeleteLoadbalance
 				return;
 			final List<LoadBalancerSecurityGroup> toDelete = Lists.newArrayList();
 			for(LoadBalancerSecurityGroup group : allGroups){
-				Collection<LoadBalancerServoInstance> instances = group.getServoInstances();
+				Collection<LoadBalancerServoInstanceCoreView> instances = group.getServoInstances();
 				if(instances == null || instances.size()<=0)
 					toDelete.add(group);
 			}

@@ -19,10 +19,13 @@
  ************************************************************************/
 package com.eucalyptus.loadbalancing;
 
+import javax.annotation.Nullable;
 import javax.persistence.Column;
+import javax.persistence.EntityTransaction;
 import javax.persistence.JoinColumn;
 import javax.persistence.ManyToOne;
 import javax.persistence.PersistenceContext;
+import javax.persistence.PostLoad;
 import javax.persistence.PrePersist;
 import javax.persistence.Table;
 import javax.persistence.Transient;
@@ -31,6 +34,12 @@ import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
 import org.hibernate.annotations.Entity;
 import com.eucalyptus.entities.AbstractPersistent;
+import com.eucalyptus.entities.Entities;
+import com.eucalyptus.loadbalancing.LoadBalancer.LoadBalancerCoreView;
+import com.eucalyptus.util.Exceptions;
+import com.eucalyptus.util.TypeMapper;
+import com.eucalyptus.util.TypeMappers;
+import com.google.common.base.Function;
 import com.google.common.base.Strings;
 
 /**
@@ -47,8 +56,19 @@ public class LoadBalancerListener extends AbstractPersistent
 	public enum PROTOCOL{
 		HTTP, HTTPS, TCP, SSL, NONE
 	}
+	
 	@Transient
 	private static final long serialVersionUID = 1L;
+	
+	@Transient
+	private LoadBalancerListenerRelationView view = null;
+	
+	@PostLoad
+	private void onLoad(){
+		if(this.view==null)
+			this.view = new LoadBalancerListenerRelationView(this);
+	}
+	
 	private LoadBalancerListener(){}
 	public static LoadBalancerListener named(final LoadBalancer lb, int lbPort){
 		LoadBalancerListener newInstance = new LoadBalancerListener();
@@ -196,5 +216,76 @@ public class LoadBalancerListener extends AbstractPersistent
 	public String toString(){
 		return String.format("Listener for %s: %nProtocol=%s, Port=%d, InstancePort=%d, InstanceProtocol=%s, CertId=%s", 
 				this.loadbalancer.getDisplayName(), this.protocol, this.loadbalancerPort, this.instancePort, this.instanceProtocol, this.sslCertificateArn);
+	}
+	
+	public static class LoadBalancerListenerCoreView {
+		private LoadBalancerListener listener = null;
+		
+		LoadBalancerListenerCoreView(LoadBalancerListener listener){
+			this.listener = listener;
+		}
+		
+		public int getInstancePort(){
+			return this.listener.getInstancePort();
+		}
+		public PROTOCOL getInstanceProtocol(){
+			return this.listener.getInstanceProtocol();
+		}
+		public int getLoadbalancerPort(){
+			return this.listener.getLoadbalancerPort();
+		}
+		public PROTOCOL getProtocol(){
+			return this.listener.getProtocol();
+		}
+		public String getCertificateId(){
+			return this.listener.getCertificateId();
+		}
+	}
+	
+	@TypeMapper
+	public enum LoadBalancerListenerCoreViewTransform implements Function<LoadBalancerListener, LoadBalancerListenerCoreView> {
+		INSTANCE;
+
+		@Override
+		@Nullable
+		public LoadBalancerListenerCoreView apply(
+				@Nullable LoadBalancerListener arg0) {
+			return new LoadBalancerListenerCoreView(arg0);
+		}	
+	}
+	
+	public enum LoadBalancerListenerEntityTransform implements Function<LoadBalancerListenerCoreView, LoadBalancerListener> {
+		INSTANCE;
+
+		@Override
+		@Nullable
+		public LoadBalancerListener apply(
+				@Nullable LoadBalancerListenerCoreView arg0) {
+			final EntityTransaction db = Entities.get(LoadBalancerListener.class);
+			try{
+				final LoadBalancerListener listener = Entities.uniqueResult(arg0.listener);
+				db.commit();
+				return listener;
+			}catch(final Exception ex){
+				db.rollback();
+				throw Exceptions.toUndeclared(ex);
+			}finally{
+				if(db.isActive())
+					db.rollback();
+			}
+			
+		}
+	}
+	
+	public static class LoadBalancerListenerRelationView {
+		private LoadBalancerCoreView loadbalancer = null;
+		private LoadBalancerListenerRelationView(final LoadBalancerListener listener){
+			if(listener.loadbalancer!=null)
+				this.loadbalancer = TypeMappers.transform(listener.loadbalancer, LoadBalancerCoreView.class);
+		}
+		
+		public LoadBalancerCoreView getLoadBalancer(){
+			return this.loadbalancer;
+		}
 	}
 }
