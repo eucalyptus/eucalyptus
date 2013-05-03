@@ -3008,7 +3008,7 @@ int schedule_instance(virtualMachine * vm, char *amiId, char *kernelId, char *ra
     int ret;
 
     if (targetNode != NULL) {
-        ret = schedule_instance_explicit(vm, targetNode, outresid);
+        ret = schedule_instance_explicit(vm, targetNode, outresid, FALSE);
     } else if (config->schedPolicy == SCHEDGREEDY) {
         ret = schedule_instance_greedy(vm, outresid);
     } else if (config->schedPolicy == SCHEDROUNDROBIN) {
@@ -3124,9 +3124,7 @@ static int schedule_instance_migration(ncInstance * instance, char **includeNode
             ret = 1;
             goto out;
         }
-        ret =
-            schedule_instance(&(instance->params), instance->imageId, instance->kernelId, instance->ramdiskId, instance->instanceId, instance->userData, instance->platform,
-                              includeNodes[0], outresid);
+        ret = schedule_instance_explicit(&(instance->params), includeNodes[0], outresid, TRUE);
         if (resourceCacheLocal->resources[*outresid].migrationCapable == FALSE) {
             LOGWARN("[%s] cannot schedule migration to node (%s) that is not migration capable\n", instance->instanceId, includeNodes[0]);
             * replyString = strdup("requested destination is not migration capable");
@@ -3217,7 +3215,7 @@ out:
 //!
 //! @note
 //!
-int schedule_instance_explicit(virtualMachine * vm, char *targetNode, int *outresid)
+int schedule_instance_explicit(virtualMachine * vm, char *targetNode, int *outresid, boolean is_migration)
 {
     int i, done, resid, sleepresid;
     ccResource *res;
@@ -3235,7 +3233,10 @@ int schedule_instance_explicit(virtualMachine * vm, char *targetNode, int *outre
         res = &(resourceCache->resources[i]);
         if (!strcmp(res->hostname, targetNode)) {
             done++;
-            if ((res->state == RESUP) && (res->ncState == ENABLED)) {
+            if ((res->state == RESUP) && ((res->ncState == ENABLED) || (is_migration && (res->ncState == STOPPED)))) {
+                if (is_migration && (res->ncState == STOPPED)) {
+                    LOGINFO("scheduler overriding STOPPED state of target node (due to explicit scheduling request)\n");
+                }
                 mem = res->availMemory - vm->mem;
                 disk = res->availDisk - vm->disk;
                 cores = res->availCores - vm->cores;
@@ -3243,7 +3244,10 @@ int schedule_instance_explicit(virtualMachine * vm, char *targetNode, int *outre
                 if (mem >= 0 && disk >= 0 && cores >= 0) {
                     resid = i;
                 }
-            } else if ((res->state == RESASLEEP) && (res->ncState == ENABLED)) {
+            } else if ((res->state == RESASLEEP) && ((res->ncState == ENABLED) || (is_migration && (res->ncState == STOPPED)))) {
+                if (is_migration && (res->ncState == STOPPED)) {
+                    LOGINFO("scheduler overriding STOPPED state of target node (due to explicit scheduling request)\n");
+                }
                 mem = res->availMemory - vm->mem;
                 disk = res->availDisk - vm->disk;
                 cores = res->availCores - vm->cores;
