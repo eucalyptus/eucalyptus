@@ -19,7 +19,7 @@
 
   <div id="launch-wizard-type-size">
     <div class="launch-wizard-select form-row">
-       <label for="launch-instance-type-size" data-msg="launch_instance_type_size_header"></label>
+       <label for="launch-instance-type-size" data-msg="launch_instance_type_size_label"></label>
        <select  data-value="typeModel.instance_type" id="launch-instance-type-size" class="wizard-selection-content">
           <option data-each-type="typeModel.types" data-value="type.name" data-text=":formatType" data-selected=":isSelected < typeModel.instance_type"></option>
        </select>
@@ -40,7 +40,10 @@
     </div>
     <!-- tags -->
     <div class="launch-wizard-type-option">
-      <div data-ui-edittags="tags" id="instance-wizard-tags"></div>
+      <div class="form-row clearfix">
+        <div class="wizard-section-label" data-msg="launch_instance_type_instance_tags"></div>
+        <div data-ui-edittags="tags" id="instance-wizard-tags"></div>
+      </div>
     </div>
   </div>
 
