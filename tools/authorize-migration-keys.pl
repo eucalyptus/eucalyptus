@@ -28,9 +28,14 @@
 # Where:
 #
 # authorize-migration-keys.pl -a client secret
-#   ...will authorize the specified migration client (IP address) using 'secret' as the shared secret and overwriting any previously saved shared secret for this client.
+#   ...will authorize the specified migration client (IP address) using
+#   'secret' as the shared secret and overwriting any previously saved
+#   shared secret for this client.
+#
 # authorize-migration-keys.pl -A client secret
-#   ...will authorize the specified migration client (IP address) using 'secret' as the shared secret. If a shared secret was previously saved for this client, it will left in place and NOT overwritten.
+#   ...will authorize the specified migration client (IP address) using
+#   'secret' as the shared secret. If a shared secret was previously
+#   saved for this client, it will left in place and NOT overwritten.
 #
 # authorize-migration-keys.pl -D
 #   ...will deauthorize all migration clients.
