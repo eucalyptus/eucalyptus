@@ -111,8 +111,9 @@ class DescribeServices(EucadminRequest):
         if self.connection is None:
             args['path'] = self.ServicePath
             self.connection = self.ServiceClass(**args)
-        for i,type in enumerate(self.request_params.pop('service_names')):
-          self.request_params['ServiceName.%s'%(i+1)]=type
+        if 'service_names' in self.request_params:
+          for i,type in enumerate(self.request_params.pop('service_names')):
+            self.request_params['ServiceName.%s'%(i+1)]=type
         return self.connection
 
     def cli_formatter(self, data):

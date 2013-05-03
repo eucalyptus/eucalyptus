@@ -553,10 +553,8 @@ public class Bootstrap {
     /**
      * Populate the binding cache.  Skip it when running the upgrade.
      */
-    if ( BootstrapArgs.isUpgradeSystem( ) ) {
-      LOG.info( LogUtil.header( "Populating binding cache." ) );
-      BindingCache.compileBindings( );
-    }
+    LOG.info( LogUtil.header( "Populating binding cache." ) );
+    BindingCache.compileBindings( );
     /**
      * run discovery to find (primarily) bootstrappers, msg typs, bindings, util-providers, etc. See
      * the descendants of {@link ServiceJarDiscovery}.
