@@ -32,9 +32,12 @@ import org.apache.log4j.Logger;
 import org.hibernate.Criteria;
 import org.hibernate.criterion.Restrictions;
 
+import com.eucalyptus.bootstrap.Bootstrap;
+import com.eucalyptus.cloudwatch.CloudWatch;
 import com.eucalyptus.cloudwatch.domain.alarms.AlarmEntity.StateValue;
 import com.eucalyptus.cloudwatch.domain.metricdata.MetricManager;
 import com.eucalyptus.cloudwatch.domain.metricdata.MetricStatistics;
+import com.eucalyptus.component.Topology;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.records.Logs;
 
@@ -49,29 +52,31 @@ public class AlarmStateEvaluationWorker implements Runnable {
   }
   @Override
   public void run() {
-    LOG.debug("Kicking off alarm state evaluation for " + alarmName);
-    EntityTransaction db = Entities.get(AlarmEntity.class);
-    try {
-      Criteria criteria = Entities.createCriteria(AlarmEntity.class)
-          .add( Restrictions.eq( "accountId" , accountId ) )
-          .add( Restrictions.eq( "alarmName" , alarmName ) );
-      AlarmEntity alarmEntity = (AlarmEntity) criteria.uniqueResult();
-      if (alarmEntity == null) return; // TODO: didn't find it, not good.
-      AlarmState currentState = evaluateState(alarmEntity);
-      Date evaluationDate = new Date();
-      if (currentState.getStateValue() != alarmEntity.getStateValue()) {
-        AlarmManager.changeAlarmState(alarmEntity, currentState, evaluationDate);
-        AlarmManager.executeActions(alarmEntity, currentState, true, evaluationDate);
-      } else if (moreThanOnePeriodHasPassed(alarmEntity, evaluationDate)) {
-        AlarmManager.executeActions(alarmEntity, currentState, false, evaluationDate);
+    if (Bootstrap.isFinished() && Topology.isEnabledLocally(CloudWatch.class)) {
+      LOG.debug("Kicking off alarm state evaluation for " + alarmName);
+      EntityTransaction db = Entities.get(AlarmEntity.class);
+      try {
+        Criteria criteria = Entities.createCriteria(AlarmEntity.class)
+            .add( Restrictions.eq( "accountId" , accountId ) )
+            .add( Restrictions.eq( "alarmName" , alarmName ) );
+        AlarmEntity alarmEntity = (AlarmEntity) criteria.uniqueResult();
+        if (alarmEntity == null) return; // TODO: didn't find it, not good.
+        AlarmState currentState = evaluateState(alarmEntity);
+        Date evaluationDate = new Date();
+        if (currentState.getStateValue() != alarmEntity.getStateValue()) {
+          AlarmManager.changeAlarmState(alarmEntity, currentState, evaluationDate);
+          AlarmManager.executeActions(alarmEntity, currentState, true, evaluationDate);
+        } else if (moreThanOnePeriodHasPassed(alarmEntity, evaluationDate)) {
+          AlarmManager.executeActions(alarmEntity, currentState, false, evaluationDate);
+        }
+        db.commit();
+      } catch (RuntimeException ex) { // TODO: exception in a Runnable gets lost...
+        Logs.extreme().error(ex, ex);
+        throw ex;
+      } finally {
+        if (db.isActive())
+          db.rollback();
       }
-      db.commit();
-    } catch (RuntimeException ex) { // TODO: exception in a Runnable gets lost...
-      Logs.extreme().error(ex, ex);
-      throw ex;
-    } finally {
-      if (db.isActive())
-        db.rollback();
     }
   }
 
