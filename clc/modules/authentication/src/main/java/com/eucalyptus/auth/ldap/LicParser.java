@@ -83,8 +83,10 @@ public class LicParser {
   private static final Logger LOG = Logger.getLogger( LicParser.class );
   
   private static final String COMMENT = "_comment";
-  
+ 
+  // Support LDAP protocols 
   private static final String LDAP_URL_PREFIX = "ldap://";
+  private static final String LDAPS_URL_PREFIX = "ldaps://";
   
   // Supported authentication methods
   public static final String LDAP_AUTH_METHOD_SIMPLE = "simple";
@@ -152,7 +154,7 @@ public class LicParser {
   }
 
   private String validateServerUrl( String url ) throws JSONException {
-    if ( Strings.isNullOrEmpty( url ) || !url.startsWith( LDAP_URL_PREFIX ) ) {
+    if ( Strings.isNullOrEmpty( url ) || !url.startsWith( LDAP_URL_PREFIX )  || !url.startsWith( LDAPS_URL_PREFIX ) ) {
       throw new JSONException( "Invalid server url " + url );
     }
     return url;
