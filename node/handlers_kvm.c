@@ -138,8 +138,8 @@
 /* Should preferably be handled in header file */
 
 // coming from handlers.c
-extern sem *migr_sem;
 extern sem *inst_sem;
+extern sem *hyp_sem;
 extern bunchOfInstances *global_instances;
 
 /*----------------------------------------------------------------------------*\
@@ -307,7 +307,7 @@ static void *rebooting_thread(void *arg)
     LOGINFO("[%s] rebooting\n", instance->instanceId);
     dom = virDomainCreateLinux(conn, xml, 0);
     EUCA_FREE(xml);
-    
+
     euca_strncpy(resourceName[0], instance->instanceId, MAX_SENSOR_NAME_LEN);
     sensor_refresh_resources(resourceName, resourceAlias, 1);   // refresh stats so we set base value accurately
 
@@ -373,7 +373,7 @@ static void *rebooting_thread(void *arg)
 
     unlock_hypervisor_conn();
     return NULL;
-    
+
 #undef REATTACH_RETRIES
 }
 
@@ -545,7 +545,6 @@ static void *migrating_thread(void *arg)
 
     LOGTRACE("invoked for %s\n", instance->instanceId);
 
-    sem_p(migr_sem);
     if ((conn = lock_hypervisor_conn()) == NULL) {
         LOGERROR("[%s] cannot migrate instance %s (failed to connect to hypervisor), giving up and rolling back.\n", instance->instanceId, instance->instanceId);
         migration_error++;
@@ -553,7 +552,6 @@ static void *migrating_thread(void *arg)
     } else {
         LOGTRACE("[%s] connected to hypervisor\n", instance->instanceId);
     }
-    sem_v(migr_sem);
 
     dom = virDomainLookupByName(conn, instance->instanceId);
     if (dom == NULL) {
@@ -567,7 +565,6 @@ static void *migrating_thread(void *arg)
 
     virConnectPtr dconn = NULL;
 
-    sem_p(migr_sem);
     LOGDEBUG("[%s] connecting to remote hypervisor at '%s'\n", instance->instanceId, duri);
     dconn = virConnectOpen(duri);
     if (dconn == NULL) {
@@ -578,7 +575,6 @@ static void *migrating_thread(void *arg)
         if (dconn == NULL) {
             LOGERROR("[%s] cannot migrate instance using TLS or SSH (failed to connect to remote), giving up and rolling back.\n", instance->instanceId);
             migration_error++;
-            sem_v(migr_sem);
             goto out;
         }
     }
@@ -591,7 +587,6 @@ static void *migrating_thread(void *arg)
                                        NULL,    // destination URI as seen from source (optional)
                                        0L); // bandwidth limitation (0 => unlimited)
     virConnectClose(dconn);
-    sem_v(migr_sem);
 
     if (ddom == NULL) {
         LOGERROR("[%s] cannot migrate instance %s, giving up and rolling back.\n", instance->instanceId, instance->instanceId);
@@ -700,6 +695,7 @@ static int doMigrateInstances(struct nc_state_t *nc, ncMetadata * pMeta, ncInsta
                 instance->migrationTime = time(NULL);
                 save_instance_struct(instance);
                 copy_instances();
+                sem_v(inst_sem);
 
                 // Establish migration-credential keys if this is the first instance preparation for this host.
                 LOGINFO("[%s] migration source preparing %s > %s [creds=%s]\n", SP(instance->instanceId), SP(instance->migration_src), SP(instance->migration_dst),
@@ -710,18 +706,19 @@ static int doMigrateInstances(struct nc_state_t *nc, ncMetadata * pMeta, ncInsta
                     snprintf(generate_keys, MAX_PATH, EUCALYPTUS_GENERATE_MIGRATION_KEYS " %s %s restart", euca_base ? euca_base : "", euca_base ? euca_base : "", sourceNodeName,
                              credentials);
                     LOGDEBUG("instance[0]=%s migration key-generator path: '%s'\n", instance->instanceId, generate_keys);
+                    sem_p(hyp_sem);
                     int sysret = system(generate_keys);
+                    sem_v(hyp_sem);
                     if (sysret) {
                         LOGERROR("instance[0]=%s '%s' failed with exit code %d\n", instance->instanceId, generate_keys, WEXITSTATUS(sysret));
                         pMeta->replyString = strdup("internal error (migration credentials generation failed)");
-                        sem_v(inst_sem);
                         return (EUCA_SYSTEM_ERROR);
                     } else {
                         LOGDEBUG("instance[0]=%s migration key generation succeeded\n", instance->instanceId);
                         credentials_prepared++;
                     }
                 }
-
+                sem_p(inst_sem);
                 instance->migration_state = MIGRATION_READY;
                 save_instance_struct(instance);
                 copy_instances();
@@ -812,13 +809,13 @@ static int doMigrateInstances(struct nc_state_t *nc, ncMetadata * pMeta, ncInsta
             euca_strncpy(instance->migration_dst, destNodeName, HOSTNAME_SIZE);
             euca_strncpy(instance->migration_credentials, credentials, CREDENTIAL_SIZE);
             save_instance_struct(instance);
+            sem_v(inst_sem);
 
             /*
              * Uncomment the following three lines to force failures during preparation of destination node.
              * (This is intended for development/testing only!)
              */
             /*
-            sem_v(inst_sem);
             LOGERROR("[%s] FORCING FAILURE!\n", instance->instanceId);
             goto failed_dest;
             */
@@ -833,10 +830,11 @@ static int doMigrateInstances(struct nc_state_t *nc, ncMetadata * pMeta, ncInsta
             snprintf(generate_keys, MAX_PATH, EUCALYPTUS_AUTHORIZE_MIGRATION_KEYS " -a %s %s", euca_base ? euca_base : "", euca_base ? euca_base : "", instance->migration_src,
                      instance->migration_credentials);
             LOGDEBUG("instance=%s migration key-authorizer path: '%s'\n", instance->instanceId, generate_keys);
+            sem_p(hyp_sem);
             int sysret = system(generate_keys);
+            sem_v(hyp_sem);
             if (sysret) {
                 LOGERROR("instance=%s '%s' failed with exit code %d\n", instance->instanceId, generate_keys, WEXITSTATUS(sysret));
-                sem_v(inst_sem);
                 goto failed_dest;
             } else {
                 LOGDEBUG("instance=%s migration key authorization succeeded\n", instance->instanceId);
@@ -846,16 +844,15 @@ static int doMigrateInstances(struct nc_state_t *nc, ncMetadata * pMeta, ncInsta
             snprintf(generate_keys, MAX_PATH, EUCALYPTUS_GENERATE_MIGRATION_KEYS " %s %s restart", euca_base ? euca_base : "", euca_base ? euca_base : "", instance->migration_dst,
                      instance->migration_credentials);
             LOGDEBUG("instance=%s migration key-generator path: '%s'\n", instance->instanceId, generate_keys);
+            sem_p(hyp_sem);
             sysret = system(generate_keys);
+            sem_v(hyp_sem);
             if (sysret) {
                 LOGERROR("instance=%s '%s' failed with exit code %d\n", instance->instanceId, generate_keys, WEXITSTATUS(sysret));
-                sem_v(inst_sem);
                 goto failed_dest;
             } else {
                 LOGDEBUG("instance=%s migration key generation succeeded\n", instance->instanceId);
             }
-
-            sem_v(inst_sem);
 
             int error;
 
