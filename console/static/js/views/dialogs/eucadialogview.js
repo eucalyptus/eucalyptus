@@ -49,6 +49,7 @@ define([
         },
         close : function() {
             this.$el.dialog('close');
+            this.$el.empty();
         },
         render : function() {
             this.rivetsView.sync();
