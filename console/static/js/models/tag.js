@@ -31,7 +31,7 @@ define([
       },
     },
     sync: function(method, model, options) {
-      if (method == 'create') {
+      if (method == 'create' || method == 'update') {
         return this.syncMethod_Create(model, options);
       }
       else if (method == 'delete') {
