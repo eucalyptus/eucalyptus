@@ -135,7 +135,7 @@ public class LoadBalancingService {
 	    		desc.setDnsName(dnsView.getDnsName());           /// dns name
 	    		
 	    		Collection<LoadBalancerBackendInstanceCoreView> notInError =
-	    				Collections2.filter(lb.getBackendInstances(), new Predicate<LoadBalancerBackendInstanceCoreView>(){
+	    				Collections2.filter(zone.getBackendInstances(), new Predicate<LoadBalancerBackendInstanceCoreView>(){
 							@Override
 							public boolean apply(
 									@Nullable LoadBalancerBackendInstanceCoreView arg0) {
