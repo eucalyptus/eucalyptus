@@ -111,7 +111,7 @@ public class HttpServerBootstrapper extends Bootstrapper {
   public static String  httpProxyPort;
   @ConfigurableField( description = "SSL ciphers for HTTPS listener.",
                       displayName = "euca.https.ciphers" )
-  public static String  HTTPS_CIPHERS = "RSA:DSS:ECDSA:+RC4:+3DES:TLS_EMPTY_RENEGOTIATION_INFO_SCSV:!NULL:!EXPORT:!EXPORT1024:!MD5:!DES:!DHE";
+  public static String  HTTPS_CIPHERS = "RSA:DSS:ECDSA:+RC4:+3DES:TLS_EMPTY_RENEGOTIATION_INFO_SCSV:!NULL:!EXPORT:!EXPORT1024:!MD5:!DES";
 
   private static void setupJettyServer( ) throws Exception {
     //http proxy setup
