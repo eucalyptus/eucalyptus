@@ -39,7 +39,7 @@ define([
                            t.destroy();
                        }
                    } else if (t.get('_edited')) {
-                       if( t.get('_backup').get('name') != t.get('name') ){
+                       if( (t.get('_backup') != null) && (t.get('_backup').get('name') != t.get('name')) ){
                          // CASE OF KEY CHANGE
                          t.get('_backup').destroy();
                          t.save();

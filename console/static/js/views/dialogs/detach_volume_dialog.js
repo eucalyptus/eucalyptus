@@ -7,6 +7,14 @@ define([
 ], function(EucaDialogView, template, Volume, App, Backbone) {
    return EucaDialogView.extend({
 
+    createIdNameTagString: function(resource_id, name_tag){
+      var this_string = resource_id;
+      if( name_tag != null ){
+        this_string += " (" + name_tag + ")";
+      }
+      return this_string;
+    }, 
+
     findNameTag: function(model){
       var nameTag = null;
       model.get('tags').each(function(tag){
@@ -28,16 +36,13 @@ define([
          var instance_id = App.data.volume.get(vid).get('attach_data').instance_id;
          // FIND THE NAME TAG FOR THE VOLUME
          var volNameTag = self.findNameTag(App.data.volume.get(vid));
-         if( volNameTag == null ){
-           volNameTag = vid;
-         }
+         volNameTag = self.createIdNameTagString(vid, volNameTag);
          // FIND THE NAME TAG FOR THE INSTANCE
          var instanceNameTag = self.findNameTag(App.data.instance.get(instance_id));
-         if( instanceNameTag == null ){
-           instanceNameTag = instance_id;
-         }
+         instanceNameTag = self.createIdNameTagString(instance_id, instanceNameTag);
          // CREATE A LIST WITH THE NAME TAGS
          volume_list.push(new Volume({volume_id: volNameTag, instance_id: instanceNameTag}));
+         // volume_id and instance_id are not in the ID format above, however it ok since they are display only   --- KYO 050313 
        });
 
        this.scope = {
