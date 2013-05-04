@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <projectDescription>
-	<name>eucalyptus:clc</name>
+	<name>internal:eucalyptus:clc</name>
 	<comment></comment>
 	<projects>
 	</projects>
@@ -10,11 +10,23 @@
 			<arguments>
 			</arguments>
 		</buildCommand>
+		<buildCommand>
+			<name>org.zeroturnaround.eclipse.rebelXmlBuilder</name>
+			<arguments>
+			</arguments>
+		</buildCommand>
+		<buildCommand>
+			<name>org.zeroturnaround.eclipse.remoting.remotingBuilder</name>
+			<arguments>
+			</arguments>
+		</buildCommand>
 	</buildSpec>
 	<natures>
 		<nature>org.eclipse.jdt.groovy.core.groovyNature</nature>
 		<nature>org.eclipse.jdt.core.javanature</nature>
 		<nature>org.python.pydev.pythonNature</nature>
+		<nature>org.zeroturnaround.eclipse.jrebelNature</nature>
+		<nature>org.zeroturnaround.eclipse.remoting.remotingNature</nature>
 	</natures>
 	<linkedResources>
 		<link>

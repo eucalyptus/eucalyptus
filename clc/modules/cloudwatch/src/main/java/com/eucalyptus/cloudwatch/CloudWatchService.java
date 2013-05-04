@@ -39,6 +39,7 @@ import org.apache.log4j.Logger;
 
 import com.eucalyptus.auth.Permissions;
 import com.eucalyptus.auth.policy.PolicySpec;
+import com.eucalyptus.auth.principal.Principals;
 import com.eucalyptus.cloudwatch.domain.DBCleanupService;
 import com.eucalyptus.cloudwatch.domain.alarms.AlarmEntity;
 import com.eucalyptus.cloudwatch.domain.alarms.AlarmEntity.ComparisonOperator;
@@ -62,6 +63,7 @@ import com.eucalyptus.context.Contexts;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.OwnerFullName;
+import com.eucalyptus.util.Wrappers;
 import com.google.common.collect.Collections2;
 import com.google.common.collect.Lists;
 
@@ -147,7 +149,7 @@ public class CloudWatchService {
       final OwnerFullName ownerFullName = ctx.getUserFullName();
       final List<MetricDatum> metricData = validateMetricData(request.getMetricData());
       final String namespace = validateNamespace(request.getNamespace(), true);
-      final Boolean isUserAccountAdmin = ctx.getUser().isAccountAdmin();
+      final Boolean isUserAccountAdmin = Principals.isSameUser( Principals.systemUser(), Wrappers.unwrap( Context.class, Contexts.lookup() ).getUser() );
       MetricType metricType = getMetricTypeFromNamespace(namespace);
       if (metricType == MetricType.System && !isUserAccountAdmin) {
         throw new InvalidParameterValueException("The value AWS/ for parameter Namespace is invalid.");

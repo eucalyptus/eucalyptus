@@ -138,7 +138,6 @@
 /* Should preferably be handled in header file */
 
 // coming from handlers.c
-extern sem *hyp_sem;
 extern sem *migr_sem;
 extern sem *inst_sem;
 extern bunchOfInstances *global_instances;
@@ -266,7 +265,7 @@ static void *rebooting_thread(void *arg)
     ncVolume *volume = NULL;
     ncInstance *instance = ((ncInstance *) arg);
     virDomainPtr dom = NULL;
-    virConnectPtr *conn = NULL;
+    virConnectPtr conn = NULL;
 
     LOGDEBUG("[%s] spawning rebooting thread\n", instance->instanceId);
     if ((xml = file2str(instance->libvirtFilePath)) == NULL) {
@@ -274,34 +273,25 @@ static void *rebooting_thread(void *arg)
         return NULL;
     }
 
-    if ((conn = check_hypervisor_conn()) == NULL) {
+    if ((conn = lock_hypervisor_conn()) == NULL) {
         LOGERROR("[%s] cannot restart instance %s, abandoning it\n", instance->instanceId, instance->instanceId);
         change_state(instance, SHUTOFF);
         EUCA_FREE(xml);
         return NULL;
     }
-
-    sem_p(hyp_sem);
-    {
-        dom = virDomainLookupByName(*conn, instance->instanceId);
-    }
-    sem_v(hyp_sem);
-
+    dom = virDomainLookupByName(conn, instance->instanceId);
     if (dom == NULL) {
+        unlock_hypervisor_conn();
         EUCA_FREE(xml);
         return NULL;
     }
 
-    sem_p(hyp_sem);
-    {
-        // for KVM, must stop and restart the instance
-        LOGDEBUG("[%s] destroying domain\n", instance->instanceId);
-        error = virDomainDestroy(dom); // @todo change to Shutdown? is this synchronous?
-        virDomainFree(dom);
-    }
-    sem_v(hyp_sem);
-
+    // for KVM, must stop and restart the instance
+    LOGDEBUG("[%s] destroying domain\n", instance->instanceId);
+    error = virDomainDestroy(dom); // @todo change to Shutdown? is this synchronous?
+    virDomainFree(dom);
     if (error) {
+        unlock_hypervisor_conn();
         EUCA_FREE(xml);
         return NULL;
     }
@@ -314,14 +304,10 @@ static void *rebooting_thread(void *arg)
     sensor_shift_metric(instance->instanceId, "NetworkOut");
 
     // domain is now shut down, create a new one with the same XML
-    sem_p(hyp_sem);
-    {
-        LOGINFO("[%s] rebooting\n", instance->instanceId);
-        dom = virDomainCreateLinux(*conn, xml, 0);
-    }
-    sem_v(hyp_sem);
+    LOGINFO("[%s] rebooting\n", instance->instanceId);
+    dom = virDomainCreateLinux(conn, xml, 0);
     EUCA_FREE(xml);
-
+    
     euca_strncpy(resourceName[0], instance->instanceId, MAX_SENSOR_NAME_LEN);
     sensor_refresh_resources(resourceName, resourceAlias, 1);   // refresh stats so we set base value accurately
 
@@ -357,11 +343,7 @@ static void *rebooting_thread(void *arg)
             err = 0;
             for (int j = 1; j < REATTACH_RETRIES; j++) {
                 // protect libvirt calls because we've seen problems during concurrent libvirt invocations
-                sem_p(hyp_sem);
-                {
-                    err = virDomainAttachDevice(dom, xml);
-                }
-                sem_v(hyp_sem);
+                err = virDomainAttachDevice(dom, xml);
 
                 if (err) {
                     LOGERROR("[%s][%s] failed to reattach volume (attempt %d of %d)\n", instance->instanceId, volume->volumeId, j, REATTACH_RETRIES);
@@ -385,16 +367,13 @@ static void *rebooting_thread(void *arg)
     if (dom == NULL) {
         LOGERROR("[%s] failed to restart instance\n", instance->instanceId);
         change_state(instance, SHUTOFF);
-        return NULL;
-    }
-
-    sem_p(hyp_sem);
-    {
+    } else {
         virDomainFree(dom);
     }
-    sem_v(hyp_sem);
-    return NULL;
 
+    unlock_hypervisor_conn();
+    return NULL;
+    
 #undef REATTACH_RETRIES
 }
 
@@ -561,27 +540,22 @@ static void *migrating_thread(void *arg)
 {
     ncInstance *instance = ((ncInstance *) arg);
     virDomainPtr dom = NULL;
-    virConnectPtr *conn = NULL;
+    virConnectPtr conn = NULL;
     int migration_error = 0;
 
-    LOGDEBUG("invoked for %s\n", instance->instanceId);
+    LOGTRACE("invoked for %s\n", instance->instanceId);
 
     sem_p(migr_sem);
-    if ((conn = check_hypervisor_conn()) == NULL) {
+    if ((conn = lock_hypervisor_conn()) == NULL) {
         LOGERROR("[%s] cannot migrate instance %s (failed to connect to hypervisor), giving up and rolling back.\n", instance->instanceId, instance->instanceId);
         migration_error++;
         goto out;
     } else {
-        LOGDEBUG("[%s] check_hypervisor_conn() OK\n", instance->instanceId);
+        LOGTRACE("[%s] connected to hypervisor\n", instance->instanceId);
     }
     sem_v(migr_sem);
 
-    sem_p(hyp_sem);
-    {
-        dom = virDomainLookupByName(*conn, instance->instanceId);
-    }
-    sem_v(hyp_sem);
-
+    dom = virDomainLookupByName(conn, instance->instanceId);
     if (dom == NULL) {
         LOGERROR("[%s] cannot migrate instance %s (failed to find domain), giving up and rolling back.\n", instance->instanceId, instance->instanceId);
         migration_error++;
@@ -594,12 +568,12 @@ static void *migrating_thread(void *arg)
     virConnectPtr dconn = NULL;
 
     sem_p(migr_sem);
-    LOGDEBUG("[%s] connecting to libvirt to migrate instance using URI '%s'\n", instance->instanceId, duri);
+    LOGDEBUG("[%s] connecting to remote hypervisor at '%s'\n", instance->instanceId, duri);
     dconn = virConnectOpen(duri);
     if (dconn == NULL) {
         LOGWARN("[%s] cannot migrate instance using TLS (failed to connect to remote), retrying using SSH.\n", instance->instanceId);
         snprintf(duri, sizeof(duri), "qemu+ssh://%s/system", instance->migration_dst);
-        LOGDEBUG("[%s] connecting to libvirt to migrate instance using URI '%s'\n", instance->instanceId, duri);
+        LOGDEBUG("[%s] connecting to remote hypervisor at '%s'\n", instance->instanceId, duri);
         dconn = virConnectOpen(duri);
         if (dconn == NULL) {
             LOGERROR("[%s] cannot migrate instance using TLS or SSH (failed to connect to remote), giving up and rolling back.\n", instance->instanceId);
@@ -629,6 +603,12 @@ static void *migrating_thread(void *arg)
     virDomainFree(ddom);
 
 out:
+    if (dom)
+        virDomainFree(dom);
+
+    if (conn != NULL)
+        unlock_hypervisor_conn();
+
     sem_p(inst_sem);
     if (migration_error) {
         migration_rollback(instance);
@@ -641,9 +621,6 @@ out:
         copy_instances();
     }
     sem_v(inst_sem);
-
-    if (dom)
-        virDomainFree(dom);
 
     LOGDEBUG("done\n");
 
@@ -783,10 +760,14 @@ static int doMigrateInstances(struct nc_state_t *nc, ncMetadata * pMeta, ncInsta
                     return (EUCA_THREAD_ERROR);
                 }
             } else if (strcmp(action, "rollback") == 0) {
-                LOGINFO("[%s] rolling back migration (%s > %s) on source\n", instance->instanceId, instance->migration_src, instance->migration_dst);
-                sem_p(inst_sem);
-                migration_rollback(instance);
-                sem_v(inst_sem);
+                if ((instance->migration_state == MIGRATION_READY) || (instance->migration_state == MIGRATION_PREPARING)) {
+                    LOGINFO("[%s] rolling back migration (%s > %s) on source\n", instance->instanceId, instance->migration_src, instance->migration_dst);
+                    sem_p(inst_sem);
+                    migration_rollback(instance);
+                    sem_v(inst_sem);
+                } else {
+                    LOGINFO("[%s] ignoring request to roll back migration on source with instance in state %s(%s) -- duplicate rollback request?\n", instance->instanceId, instance->stateName, migration_state_names[instance->migration_state]);
+                }
             } else {
                 LOGERROR("[%s] action '%s' is not valid\n", instance->instanceId, action);
                 return (EUCA_INVALID_ERROR);
@@ -815,6 +796,7 @@ static int doMigrateInstances(struct nc_state_t *nc, ncMetadata * pMeta, ncInsta
                 LOGERROR("[%s] action '%s' is not valid or not implemented\n", instance_req->instanceId, action);
                 return (EUCA_INVALID_ERROR);
             }
+
             // Everything from here on is specific to "prepare" on a destination.
 
             // allocate a new instance struct
@@ -830,6 +812,16 @@ static int doMigrateInstances(struct nc_state_t *nc, ncMetadata * pMeta, ncInsta
             euca_strncpy(instance->migration_dst, destNodeName, HOSTNAME_SIZE);
             euca_strncpy(instance->migration_credentials, credentials, CREDENTIAL_SIZE);
             save_instance_struct(instance);
+
+            /*
+             * Uncomment the following three lines to force failures during preparation of destination node.
+             * (This is intended for development/testing only!)
+             */
+            /*
+            sem_v(inst_sem);
+            LOGERROR("[%s] FORCING FAILURE!\n", instance->instanceId);
+            goto failed_dest;
+            */
 
             // Establish migration-credential keys.
             LOGINFO("[%s] migration destination preparing %s > %s [creds=%s]\n", instance->instanceId, SP(instance->migration_src), SP(instance->migration_dst),
@@ -1017,12 +1009,25 @@ unroll:
             continue;
 
 failed_dest:
+            sem_p(inst_sem);
+            // Just making sure...
+            if (instance != NULL) {
+                LOGERROR("[%s] setting instance to Teardown(cleaning) after destination failure to prepare for migration\n", instance->instanceId);
+                // Set state to Teardown(cleaning) so source won't wait until timeout to roll back.
+                instance->migration_state = MIGRATION_CLEANING;
+                instance->terminationTime = time(NULL);
+                change_state(instance, TEARDOWN);
+                save_instance_struct(instance);
+                add_instance(&global_instances, instance);  // OK if this fails--that should mean it's already been added.
+                copy_instances();
+            }
+            sem_v(inst_sem);
 
             // Set to generic EUCA_ERROR unless already set to a more-specific error.
             if (ret == EUCA_OK) {
                 ret = EUCA_ERROR;
             }
-            EUCA_FREE(instance);
+            //EUCA_FREE(instance);
             goto out;
 
         } else {

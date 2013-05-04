@@ -26,4 +26,8 @@ public class InvalidConfigurationRequestException extends LoadBalancingException
 	public InvalidConfigurationRequestException(){
 		super("Requested configuration change is invalid");
 	}
+	
+	public InvalidConfigurationRequestException(final String reason){
+		super(String.format("Requested configuration change is invalid: %s", reason));
+	}
 }

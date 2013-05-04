@@ -307,7 +307,8 @@ int callBundleInstanceHelper(struct nc_state_t *nc, char *instanceId, char *buck
 int get_value(char *s, const char *name, long long *valp);
 int convert_dev_names(const char *localDev, char *localDevReal, char *localDevTag);
 void print_running_domains(void);
-virConnectPtr *check_hypervisor_conn();
+virConnectPtr lock_hypervisor_conn(void);
+void unlock_hypervisor_conn(void);
 void change_state(ncInstance * instance, instance_states state);
 int wait_state_transition(ncInstance * instance, instance_states from_state, instance_states to_state);
 void adopt_instances();

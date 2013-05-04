@@ -62,6 +62,7 @@
 
 package com.eucalyptus.storage;
 
+import com.eucalyptus.storage.StorageManagers.StorageManagerProperty;
 import com.eucalyptus.util.EucalyptusCloudException;
 
 import edu.ucsb.eucalyptus.msgs.ComponentProperty;
@@ -69,6 +70,13 @@ import edu.ucsb.eucalyptus.msgs.ComponentProperty;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * This is the interface that ALL backend block storage managers must implement.
+ * To make a manager configurable by the admin/user the class should be annotated with:
+ * @StorageManagerProperty(name) annotation where 'name' is the string value that admins
+ * will use to enable that manager for a specific partition.
+ *
+ */
 public interface LogicalStorageManager {
 	public void initialize() throws EucalyptusCloudException;
 
@@ -109,7 +117,14 @@ public interface LogicalStorageManager {
 
 	public void deleteSnapshot(String snapshotId) throws EucalyptusCloudException;
 
-	public String getVolumeProperty(String volumeId) throws EucalyptusCloudException;
+	/**
+	 * Gets the connection string for the volume. This is no longer used. Connection string should be returned
+	 * on the attach call since it may be specific for a given node iqn.
+	 * @param volumeId
+	 * @return
+	 * @throws EucalyptusCloudException
+	 */
+	public String getVolumeConnectionString(String volumeId) throws EucalyptusCloudException;
 
 	public void loadSnapshots(List<String> snapshotSet, List<String> snapshotFileNames) throws EucalyptusCloudException;
 
@@ -133,9 +148,36 @@ public interface LogicalStorageManager {
 
 	public void importSnapshot(String snapshotId, String snapPath, String volumeId, int size) throws EucalyptusCloudException;
 
-	public String attachVolume(String volumeId, List<String> nodeIqns) throws EucalyptusCloudException;
+	/**
+	 * Authorize the specified iqn to access the volume. A client must be able to connect using
+	 * the returned string from this method. The string should be opaque to all but the NC
+	 * This MUST be idempotent and synchronous. Upon return a client should be able to view/connect to the
+	 * volume.
+	 * @param volumeId
+	 * @param nodeIqn
+	 * @return
+	 * @throws EucalyptusCloudException
+	 */
+	public String exportVolume(String volumeId, String nodeIqn) throws EucalyptusCloudException;
 
-	public void detachVolume(String volumeId, String nodeIqn) throws EucalyptusCloudException;
+	/**
+	 * Remove authorization/export status for the specified iqn to the specified volume.
+	 * This MUST be idempotent and synchronous. Upon return the process should be done such that if the client rescans
+	 * or refreshes the view the volume will no longer be visible to it.
+	 * @param volumeId
+	 * @param nodeIqn
+	 * @throws EucalyptusCloudException
+	 */
+	public void unexportVolume(String volumeId, String nodeIqn) throws EucalyptusCloudException, UnsupportedOperationException;
+	
+	/**
+	 * Same as unexportVolume but should remove authorization for all clients. This should be used to enforce
+	 * a final state on the volume.
+	 * This MUST be idempotent and should be synchronous
+	 * @param volumeId
+	 * @throws EucalyptusCloudException
+	 */
+	public void unexportVolumeFromAll(String volumeId) throws EucalyptusCloudException;
 
 	/* Added to allow synchronous snapshot setting */
 	/**

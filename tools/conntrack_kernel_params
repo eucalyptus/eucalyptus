@@ -60,6 +60,8 @@
 #   IDENTIFIED, OR WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT
 #   NEEDED TO COMPLY WITH ANY SUCH LICENSES OR RIGHTS.
 
+modprobe nf_conntrack_ipv4
+
 echo -n 1048576 > /proc/sys/net/netfilter/nf_conntrack_max
 echo -n 120 > /proc/sys/net/netfilter/nf_conntrack_generic_timeout
 echo -n 54000 > /proc/sys/net/netfilter/nf_conntrack_tcp_timeout_established

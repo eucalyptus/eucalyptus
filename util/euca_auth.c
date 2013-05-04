@@ -1203,7 +1203,7 @@ char *eucav2_sign_request(const char *verb, const char *url, const struct curl_s
         LOGERROR("error, failed to open private key file %s\n", sPrivKeyFileName);
         RSA_free(rsa);
     } else {
-        LOGDEBUG("reading private key file %s\n", sPrivKeyFileName);
+        LOGTRACE("reading private key file %s\n", sPrivKeyFileName);
         PEM_read_RSAPrivateKey(fp, &rsa, NULL, NULL);   /* read the PEM-encoded file into rsa struct */
         if (rsa == NULL) {
             LOGERROR("error, failed to read private key file %s\n", sPrivKeyFileName);
@@ -1216,15 +1216,15 @@ char *eucav2_sign_request(const char *verb, const char *url, const struct curl_s
                     LOGERROR("out of memory (for RSA key)\n");
                 } else {
                     // finally, SHA256 and sign with PK
-                    LOGDEBUG("signing input %s\n", get_string_stats(canonical_request));
+                    LOGTRACE("signing input %s\n", get_string_stats(canonical_request));
                     SHA256(((u8 *) canonical_request), strlen(canonical_request), sha256);
 
                     if ((ret = RSA_sign(NID_sha256, sha256, SHA256_DIGEST_LENGTH, sig, &siglen, rsa)) != 1) {
                         LOGDEBUG("RSA_sign() failed\n");
                     } else {
-                        LOGDEBUG("signing output %d\n", sig[siglen - 1]);
+                        LOGTRACE("signing output %d\n", sig[siglen - 1]);
                         sig_str = base64_enc(sig, siglen);
-                        LOGDEBUG("base64 signature %s\n", get_string_stats((char *)sig_str));
+                        LOGTRACE("base64 signature %s\n", get_string_stats((char *)sig_str));
                     }
                     EUCA_FREE(sig);
 

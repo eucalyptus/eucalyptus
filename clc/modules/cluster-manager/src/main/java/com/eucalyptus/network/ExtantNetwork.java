@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * Copyright 2009-2013 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -62,9 +62,13 @@
 
 package com.eucalyptus.network;
 
+import java.util.Collection;
 import java.util.HashSet;
+import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.Set;
+import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import javax.persistence.CascadeType;
@@ -76,14 +80,13 @@ import javax.persistence.OneToMany;
 import javax.persistence.OneToOne;
 import javax.persistence.PersistenceContext;
 import javax.persistence.Table;
-import javax.persistence.Transient;
+import javax.transaction.Synchronization;
 import org.apache.log4j.Logger;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
 import org.hibernate.annotations.Entity;
 import org.hibernate.annotations.NotFound;
 import org.hibernate.annotations.NotFoundAction;
-import org.hibernate.exception.ConstraintViolationException;
 import com.eucalyptus.cloud.AccountMetadata;
 import com.eucalyptus.cloud.UserMetadata;
 import com.eucalyptus.cloud.util.Reference;
@@ -97,6 +100,8 @@ import com.eucalyptus.entities.TransientEntityException;
 import com.eucalyptus.records.Logs;
 import com.eucalyptus.util.FullName;
 import com.eucalyptus.util.Numbers;
+import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
 
 @Entity
 @javax.persistence.Entity
@@ -104,10 +109,11 @@ import com.eucalyptus.util.Numbers;
 @Table( name = "metadata_extant_network" )
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
 public class ExtantNetwork extends UserMetadata<Reference.State> {
-  @Transient
-  private static final long              serialVersionUID = 1L;
-  @Transient
-  private static Logger                  LOG              = Logger.getLogger( ExtantNetwork.class );
+  private static final long                     serialVersionUID = 1L;
+  private static final Logger                   LOG              = Logger.getLogger( ExtantNetwork.class );
+  private static final ConcurrentMap<NetworkIndexKey,Long> inFlightNetworkIndexes = Maps.newConcurrentMap();
+
+
   @Column( name = "metadata_extant_network_tag", unique = true )
   private Integer                        tag;
   
@@ -193,7 +199,7 @@ public class ExtantNetwork extends UserMetadata<Reference.State> {
       }
     }
   }
-  
+
   public PrivateNetworkIndex allocateNetworkIndex( ) throws TransactionException {
     if ( !NetworkGroups.networkingConfiguration( ).hasNetworking( ) ) {
       try {
@@ -204,20 +210,27 @@ public class ExtantNetwork extends UserMetadata<Reference.State> {
     } else if ( !Entities.isPersistent( this ) ) {
       throw new TransientEntityException( this.toString( ) );
     } else {
-      EntityTransaction db = Entities.get( PrivateNetworkIndex.class );
+      final EntityTransaction db = Entities.get( PrivateNetworkIndex.class );
       try {
-        for ( final Long i : Numbers.shuffled( NetworkGroups.networkIndexInterval( ) ) ) {
+        final List<Long> networkIndexHolder = Lists.newArrayList();
+        Entities.registerSynchronization( ExtantNetwork.class, new Synchronization() {
+          @Override public void beforeCompletion() { }
+          @Override public void afterCompletion( final int status ) {
+            clearInFlight( networkIndexHolder );
+          }
+        } );
+        for ( final Long i : Numbers.shuffled( NetworkGroups.networkIndexInterval() ) ) {
           try {
             Entities.uniqueResult( PrivateNetworkIndex.named( this, i ) );
-            continue;
-          } catch ( final Exception ex ) {
-            try {
+          } catch ( final NoSuchElementException ex ) {
+            if ( ifNotInFlight( i ) ) try {
+              networkIndexHolder.add( i );
               PrivateNetworkIndex netIdx = Entities.persist( PrivateNetworkIndex.create( this, i ) );
               PrivateNetworkIndex ref = netIdx.allocate( );
               db.commit( );
               return ref;
             } catch ( final Exception ex1 ) {
-              continue;
+              Logs.exhaust().debug( ex1 );
             }
           }
         }
@@ -229,7 +242,23 @@ public class ExtantNetwork extends UserMetadata<Reference.State> {
       }
     }
   }
-  
+
+  private void clearInFlight( final Collection<Long> indexes ) {
+    for ( final Long index: indexes ) {
+      final NetworkIndexKey key = new NetworkIndexKey( getTag(), index );
+      inFlightNetworkIndexes.remove( key );
+    }
+  }
+
+  private boolean ifNotInFlight( final Long index ) {
+    final NetworkIndexKey key = new NetworkIndexKey( getTag(), index );
+    final Long reservedTime = inFlightNetworkIndexes.putIfAbsent( key, System.currentTimeMillis() );
+    return
+        reservedTime == null ||
+            ( reservedTime + TimeUnit.MINUTES.toMillis( 1 ) < System.currentTimeMillis() &&
+              inFlightNetworkIndexes.replace( key, reservedTime, System.currentTimeMillis() ) );
+  }
+
   public NetworkGroup getNetworkGroup( ) {
     return this.networkGroup;
   }
@@ -347,4 +376,37 @@ public class ExtantNetwork extends UserMetadata<Reference.State> {
     this.indexes.clear( );
     return true;
   }
+
+  private static final class NetworkIndexKey {
+    private Integer tag;
+    private Long index;
+
+    private NetworkIndexKey( final Integer tag,
+                             final Long index ) {
+      this.tag = tag;
+      this.index = index;
+    }
+
+    @SuppressWarnings( "RedundantIfStatement" )
+    @Override
+    public boolean equals( final Object o ) {
+      if ( this == o ) return true;
+      if ( o == null || getClass() != o.getClass() ) return false;
+
+      final NetworkIndexKey that = (NetworkIndexKey) o;
+
+      if ( index != null ? !index.equals( that.index ) : that.index != null ) return false;
+      if ( tag != null ? !tag.equals( that.tag ) : that.tag != null ) return false;
+
+      return true;
+    }
+
+    @Override
+    public int hashCode() {
+      int result = tag != null ? tag.hashCode() : 0;
+      result = 31 * result + (index != null ? index.hashCode() : 0);
+      return result;
+    }
+  }
+
 }

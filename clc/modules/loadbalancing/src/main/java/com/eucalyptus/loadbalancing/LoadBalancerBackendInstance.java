@@ -47,10 +47,6 @@ import com.eucalyptus.event.ClockTick;
 import com.eucalyptus.event.EventListener;
 import com.eucalyptus.event.Listeners;
 import com.eucalyptus.loadbalancing.activities.EucalyptusActivityTasks;
-import com.eucalyptus.loadbalancing.activities.LoadBalancerAutoScalingGroup;
-import com.eucalyptus.loadbalancing.activities.EventHandlerChainNew.AutoscalingGroupInstanceChecker;
-import com.eucalyptus.records.Logs;
-import com.eucalyptus.system.Threads;
 import com.eucalyptus.util.FullName;
 import com.eucalyptus.util.OwnerFullName;
 import com.google.common.base.Function;
@@ -98,7 +94,9 @@ public class LoadBalancerBackendInstance extends UserMetadata<LoadBalancerBacken
     	super(null,null);
     }
 	
-	private LoadBalancerBackendInstance(final OwnerFullName userFullName, final LoadBalancer lb, final String vmId) {
+	private LoadBalancerBackendInstance(final OwnerFullName userFullName, final LoadBalancer lb, final String vmId) 
+		throws LoadBalancingException
+	{
 		super(userFullName, vmId);
 		this.loadbalancer = lb;
 		this.setState(STATE.OutOfService);
@@ -106,36 +104,42 @@ public class LoadBalancerBackendInstance extends UserMetadata<LoadBalancerBacken
 		this.setDescription("Instance registration is still in progress.");
 		
 		if(this.getVmInstance() == null)
-    		throw new IllegalArgumentException("Cannot find the instance with id="+vmId);
+    		throw new InvalidEndPointException();
 
-    	final EntityTransaction db = Entities.get( LoadBalancerBackendInstance.class );
+    	final EntityTransaction db = Entities.get( LoadBalancerZone.class );
     	try{
     		final LoadBalancerZone found = Entities.uniqueResult(LoadBalancerZone.named(lb, this.vmInstance.getPlacement()));
     		this.setAvailabilityZone(found);
     		db.commit();
-    	}catch(NoSuchElementException ex){
+    	}catch(final NoSuchElementException ex){
     		db.rollback();
-    	}catch(Exception ex){
+    	}catch(final Exception ex){
     		db.rollback();
+			throw new InternalFailure400Exception("unable to find the zone");
     	}finally{
     		if(this.zone == null)
-    			throw new IllegalArgumentException("Cannot find the availability zone");
+    			throw new InternalFailure400Exception("unable to find the instance's zone");
     	}
 	}
 	
-	public static LoadBalancerBackendInstance newInstance(final OwnerFullName userFullName, final LoadBalancer lb, final String vmId){
+	public static LoadBalancerBackendInstance newInstance(final OwnerFullName userFullName, final LoadBalancer lb, final String vmId)
+		throws LoadBalancingException
+	{
 		return new LoadBalancerBackendInstance(userFullName, lb, vmId);
 	}
 	
-	public static LoadBalancerBackendInstance newInstance(final OwnerFullName userFullName, final LoadBalancer lb, final String vmId, STATE state){
+	public static LoadBalancerBackendInstance newInstance(final OwnerFullName userFullName, final LoadBalancer lb, final String vmId, STATE state)
+		throws LoadBalancingException
+	{
 		LoadBalancerBackendInstance instance= new LoadBalancerBackendInstance(userFullName, lb, vmId);
 		instance.setBackendState(state);
 		return instance;
 	}
 	
-	public static LoadBalancerBackendInstance named(final OwnerFullName userName, final String vmId){
+	
+	public static LoadBalancerBackendInstance named(final String vmId){
 		LoadBalancerBackendInstance instance = new LoadBalancerBackendInstance();
-		instance.setOwner(userName);
+		instance.setOwner(null);
 		instance.setDisplayName(vmId);
 		instance.setState(null);
 		instance.setStateChangeStack(null);

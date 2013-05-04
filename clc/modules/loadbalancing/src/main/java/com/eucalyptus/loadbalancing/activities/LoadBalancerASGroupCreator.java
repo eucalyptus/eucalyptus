@@ -144,7 +144,7 @@ public class LoadBalancerASGroupCreator extends AbstractEventHandler<NewLoadbala
 		
 		LoadBalancer lb = null;
 		try{
-			lb = LoadBalancers.getLoadbalancer(evt.getContext().getUserFullName(), evt.getLoadBalancer());
+			lb = LoadBalancers.getLoadbalancer(evt.getContext(), evt.getLoadBalancer());
 			this.loadbalancer = lb;
 		}catch(NoSuchElementException ex){
 			throw new EventHandlerException("Failed to find the loadbalancer "+evt.getLoadBalancer(), ex);

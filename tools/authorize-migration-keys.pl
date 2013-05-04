@@ -23,12 +23,14 @@
 #
 # Run on NC. Usage:
 #
-# authorize-migration-keys.pl [-v] [-r] [-c config-file] [-a client secret | -d client | -D]
+# authorize-migration-keys.pl [-v] [-r] [-c config-file] [-a client secret | -A client secret | -d client | -D]
 #
 # Where:
 #
 # authorize-migration-keys.pl -a client secret
-#   ...will authorize the specified migration client (IP address) using 'secret' as the shared secret.
+#   ...will authorize the specified migration client (IP address) using 'secret' as the shared secret and overwriting any previously saved shared secret for this client.
+# authorize-migration-keys.pl -A client secret
+#   ...will authorize the specified migration client (IP address) using 'secret' as the shared secret. If a shared secret was previously saved for this client, it will left in place and NOT overwritten.
 #
 # authorize-migration-keys.pl -D
 #   ...will deauthorize all migration clients.
@@ -61,7 +63,7 @@ sub dprint
 
 sub usage
 {
-  print STDERR "$0 [-v] [-r] [-c config-file] [-a client secret | -d client | -D]\n";
+  print STDERR "$0 [-v] [-r] [-c config-file] [-a client secret | -A client secret | -d client | -D]\n";
 }
 
 sub generate_new_dn
@@ -163,7 +165,17 @@ sub save_new_dn_list
     my ($dn_key, $dn) = generate_new_dn($opt_a, $ARGV[0]);
 
     if ($DNs{"CN=$dn_key"}) {
-      print STDERR "Duplicate entry '$dn_key' -- not adding\n";
+      dprint "Existing entry for '$dn_key' -- replacing it with '$dn'\n";
+      $DNs{"CN=$dn_key"} = $dn;
+    } else {
+      dprint "New entry '$dn' added\n";
+      $DNs{"_"} = $dn;
+    }
+  } elsif ($opt_A) {
+    my ($dn_key, $dn) = generate_new_dn($opt_A, $ARGV[0]);
+
+    if ($DNs{"CN=$dn_key"}) {
+      print STDERR "Existing entry for '$dn_key' -- not adding\n";
     } else {
       dprint "New entry '$dn' added\n";
       $DNs{"_"} = $dn;
@@ -199,15 +211,16 @@ sub save_new_dn_list
 
 # Main program begins here.
 
-getopts ('a:vDd:c:r');
+getopts ('a:A:vDd:c:r');
 
 $opts = 0;
 
 ++$opts if $opt_a;
+++$opts if $opt_A;
 ++$opts if $opt_D;
 ++$opts if $opt_d;
 
-if (($opts != 1) or (($opt_a ne '') and ($ARGV[0] eq '')) or ($ARGV[0] and ($opt_a eq ''))) {
+if (($opts != 1) or ((($opt_a ne '') or ($opt_A ne '')) and ($ARGV[0] eq '')) or ($ARGV[0] and (($opt_a eq '') and ($opt_A eq '')))) {
   usage();
   exit 1;
 }

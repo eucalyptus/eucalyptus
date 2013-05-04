@@ -258,10 +258,14 @@ public class Volumes {
             status = storageVolume.getStatus( );
             size = Integer.parseInt( storageVolume.getSize( ) );
             actualDeviceName = storageVolume.getActualDeviceName( );
-            if ( State.EXTANT.equals( initialState )
-                   && ( ( actualDeviceName == null ) || "invalid".equals( actualDeviceName ) || "unknown".equals( actualDeviceName ) ) ) {
-              volumeState = State.GENERATING;
-            } else if ( State.ANNIHILATING.equals( initialState ) && State.ANNIHILATED.equals( Volumes.transformStorageState( v.getState( ), status ) ) ) {
+            //NOTE: removed this conditional check for initial state and actual device name. An empty actualDeviceName or 'invalid'
+            //is legitimate if the volume is not exported/attached. Only on attachment request will device name be populated
+            //if ( State.EXTANT.equals( initialState )
+            //       && ( ( actualDeviceName == null ) || "invalid".equals( actualDeviceName ) || "unknown".equals( actualDeviceName ) ) ) {
+            	//
+            	//volumeState = State.GENERATING;
+            //} else if ( State.ANNIHILATING.equals( initialState ) && State.ANNIHILATED.equals( Volumes.transformStorageState( v.getState( ), status ) ) ) { 
+            if ( State.ANNIHILATING.equals( initialState ) && State.ANNIHILATED.equals( Volumes.transformStorageState( v.getState( ), status ) ) ) {
               volumeState = State.ANNIHILATED;
             } else {
               volumeState = Volumes.transformStorageState( v.getState( ), status );

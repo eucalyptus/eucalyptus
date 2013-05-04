@@ -72,12 +72,15 @@ import java.util.concurrent.TimeoutException;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import javax.persistence.EntityTransaction;
+
 import org.apache.commons.lang.StringUtils;
 import org.apache.log4j.Logger;
 
 import com.eucalyptus.auth.util.Hashes;
 import com.eucalyptus.component.Faults;
 import com.eucalyptus.component.id.Storage;
+import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.util.BlockStorageUtil;
 import com.eucalyptus.util.EucalyptusCloudException;
@@ -104,6 +107,8 @@ public class ISCSIManager implements StorageExportManager {
 	private static final int TGT_HOSED = 2000;
 	private static final int TGT_CORRUPTED = 2002;
 
+	public ISCSIManager()  {}
+	
 	@Override
 	public void checkPreconditions() throws EucalyptusCloudException {		
 		Long timeout = DirectStorageInfo.getStorageInfo().getTimeoutInMillis();
@@ -261,6 +266,11 @@ public class ISCSIManager implements StorageExportManager {
 		}
 	}
 
+	/**
+	 * Execute the tgt commands to remove the iscsi target. Removes the target for *all* hosts
+	 * @param tid
+	 * @param lun
+	 */
 	public void unexportTarget(int tid, int lun) {
 		try
 		{
@@ -317,8 +327,6 @@ public class ISCSIManager implements StorageExportManager {
 			LOG.error(t);
 		}
 	}
-
-	public ISCSIManager()  {}
 
 	@Override
 	public void configure() {
@@ -492,19 +500,49 @@ public class ISCSIManager implements StorageExportManager {
 		}
 	}
 
+	/**
+	 * Unexport the volume from ISCSI and clean the db state to indicate that
+	 */
 	public void cleanup(LVMVolumeInfo volumeInfo) throws EucalyptusCloudException {
-		if(volumeInfo instanceof ISCSIVolumeInfo) {
-			if(((ISCSIVolumeInfo) volumeInfo).getTid() > -1) {
-				ISCSIVolumeInfo iscsiVolumeInfo = (ISCSIVolumeInfo) volumeInfo;
-				unexportTarget(iscsiVolumeInfo.getTid(), iscsiVolumeInfo.getLun());
-				Long timeout = DirectStorageInfo.getStorageInfo().getTimeoutInMillis();
-				CommandOutput output = execute(new String[] { ROOT_WRAP, "tgtadm", "--lld", "iscsi", "--op", "show", "--mode", "target", "--tid", String.valueOf(iscsiVolumeInfo.getTid()) }, timeout);
-				if (StringUtils.isNotBlank(output.error)) {
-					iscsiVolumeInfo.setTid(-1);
+		if(volumeInfo instanceof ISCSIVolumeInfo) {			
+			ISCSIVolumeInfo volInfo = (ISCSIVolumeInfo)volumeInfo;
+			EntityTransaction db = Entities.get(ISCSIVolumeInfo.class);
+			try {
+				ISCSIVolumeInfo volEntity = Entities.merge(volInfo);
+				if(isExported(volEntity)) {
+					unexportTarget(volEntity.getTid(), volEntity.getLun());
+					//Verify it really is gone
+					if (!isExported(volEntity)) {
+						volEntity.setTid(-1);
+						volEntity.setLun(-1);
+						volEntity.setStoreName(null);
+					} else {
+						throw new EucalyptusCloudException("Unable to remove tid: " + volEntity.getTid());
+					}
 				} else {
-					throw new EucalyptusCloudException("Unable to remove tid: " + iscsiVolumeInfo.getTid());
+					//Ensure that db indicates the vol is not exported
+					volEntity.setTid(-1);
+					volEntity.setLun(-1);
+					volEntity.setStoreName(null);
+					volEntity.setStoreUser(null);
+				}
+				db.commit();
+				db = null;
+			} catch(Exception e){ 
+				LOG.error("Something went wrong, exiting iscsi cleanup for volume " + volumeInfo.getVolumeId());
+			} finally {
+				if(db != null && db.isActive()) {
+					try {
+						db.commit();
+					} catch(Exception e) {
+						LOG.error("Commit failded. Rolling back");
+						db.rollback();
+					}
 				}
 			}
+		} else {
+			LOG.error("Unknown volume type for volume " + volumeInfo.getVolumeId() + " - cannot cleanpup");
+			throw new EucalyptusCloudException("Unknown type for volumeInfo in ISCSI cleanup. Did not find ISCSIVolumeInfo as expected");
 		}
 	}
 
@@ -521,7 +559,7 @@ public class ISCSIManager implements StorageExportManager {
 
 	@Override
 	public boolean isExported(LVMVolumeInfo volumeInfo) throws EucalyptusCloudException {
-		if(volumeInfo instanceof ISCSIVolumeInfo) {
+		if(volumeInfo instanceof ISCSIVolumeInfo) {			
 			if(((ISCSIVolumeInfo) volumeInfo).getTid() > -1) {
 				ISCSIVolumeInfo iscsiVolumeInfo = (ISCSIVolumeInfo) volumeInfo;
 				Long timeout = DirectStorageInfo.getStorageInfo().getTimeoutInMillis();

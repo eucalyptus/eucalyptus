@@ -94,6 +94,12 @@ public class LoadBalancer extends UserMetadata<LoadBalancer.STATE> implements Lo
 		return instance;
 	}
 	
+	static LoadBalancer namedByAccount(final String accountName, final String lbName){
+		final LoadBalancer instance = new LoadBalancer(null, lbName);
+		instance.setOwnerAccountName(accountName);
+		return instance;
+	}
+	
 	@Column( name = "loadbalancer_scheme", nullable=true)
 	private String scheme = null; // only available for LoadBalancers attached to an Amazon VPC
 	

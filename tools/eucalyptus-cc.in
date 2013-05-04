@@ -408,7 +408,7 @@ fi
 export LD_LIBRARY_PATH="$AXIS2C_HOME/lib:$AXIS2C_HOME/modules/rampart:$EUCALYPTUS/usr/lib/eucalyptus"
 
 case "$1" in
-  start)
+  faststart)
 	if [ "$VERBOSE" != no ]; then
 		if [ "$WE_HAVE_LSB" = "Y" ]; then
 			log_daemon_msg "Starting $DESC" "$NAME"
@@ -453,7 +453,7 @@ case "$1" in
 		;;
 	esac
 	;;
-  cleanstart)
+  start|cleanstart)
 	if [ "$VERBOSE" != no ]; then
 		if [ "$WE_HAVE_LSB" = "Y" ]; then
 			log_daemon_msg "Starting $DESC" "$NAME"
@@ -499,7 +499,7 @@ case "$1" in
 		;;
 	esac
 	;;
-  stop)
+  faststop)
 	if [ "$VERBOSE" != no ]; then
        		if [ "$WE_HAVE_LSB" = "Y" ]; then
 			log_begin_msg "Stopping $DESC"
@@ -518,7 +518,7 @@ case "$1" in
 		fi
 	fi
 	;;
-  cleanstop)
+  stop|cleanstop)
 	if [ "$VERBOSE" != no ]; then
        		if [ "$WE_HAVE_LSB" = "Y" ]; then
 			log_begin_msg "Stopping $DESC"
@@ -544,7 +544,7 @@ case "$1" in
 		fi
 	fi
 	;;
-  restart)
+  fastrestart)
 	if [ "$VERBOSE" != no ]; then
 		if [ "$WE_HAVE_LSB" = "Y" ]; then
 			log_begin_msg "Restarting $DESC"
@@ -564,7 +564,7 @@ case "$1" in
 		fi
 	fi
   	;;
-  cleanrestart)
+  restart|cleanrestart)
 	if [ "$VERBOSE" != no ]; then
 		if [ "$WE_HAVE_LSB" = "Y" ]; then
 			log_begin_msg "Restarting $DESC"
@@ -606,7 +606,7 @@ case "$1" in
         ;;
 
   *)
-	echo "Usage: $NAME {start|stop|restart|cleanstart|cleanstop|cleanrestart}" >&2
+	echo "Usage: $NAME {start|stop|restart|status}" >&2
 	exit 3
 	;;
 esac
