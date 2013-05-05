@@ -19,7 +19,6 @@
  ************************************************************************/
 package com.eucalyptus.loadbalancing;
 
-import com.eucalyptus.ws.Role;
 import com.eucalyptus.ws.protocol.QueryBindingInfo;
 
 /**
@@ -29,6 +28,6 @@ import com.eucalyptus.ws.protocol.QueryBindingInfo;
 public class TooManyAccessPointsException extends LoadBalancingException {
   private static final long serialVersionUID = 1L;
   public TooManyAccessPointsException(){
-    super( "TooManyAccessPoints", Role.Sender, "Load balancer quota exceeded." );
+    super( "The quota for the number of LoadBalancers has already been reached." );
   }
 }

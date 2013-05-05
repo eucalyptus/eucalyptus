@@ -50,10 +50,10 @@ class DescribeVmTypes(AWSQueryRequest):
                     doc='Include information about current instance type in the system.')
               ]
     
-    Args = [Param(name='VmTypes',
+    Args = [Param(name='vmtypes',
               long_name='intance type name',
               ptype='string',
-              cardinality=1,
+              cardinality='+',
               optional=True,
               doc='[[INSTANCETYPE]...]')]
 
@@ -67,10 +67,11 @@ class DescribeVmTypes(AWSQueryRequest):
         if self.connection is None:
             args['path'] = self.ServicePath
             self.connection = self.ServiceClass(**args)
+        for i,type in enumerate(self.request_params.pop('vmtypes')):
+          self.request_params['VmTypes.%s'%(i+1)]=type
         return self.connection
 
     def cli_formatter(self, data):
-#        print data
         vmtypes = getattr(data, 'euca:vmTypeDetails')
         fmt = 'TYPE\t%-20.20s%-10d%-10d%-10d'
         detail_fmt = '%s%06d / %06d %s'

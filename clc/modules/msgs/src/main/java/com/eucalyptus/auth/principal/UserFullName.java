@@ -94,8 +94,8 @@ public class UserFullName implements OwnerFullName {
     final Account account = user.getAccount( );
     this.accountNumber = account.getAccountNumber( );
     checkParam( this.accountNumber, notNullValue() );
-    //this.accountName = account.getName( );
-    this.accountName = null;
+    this.accountName = account.getName( );
+ //   this.accountName = null;
     this.authority = new StringBuilder( ).append( FullName.PREFIX ).append( FullName.SEP ).append( VENDOR ).append( FullName.SEP ).append( FullName.SEP ).append( this.accountNumber ).append( FullName.SEP ).toString( );
     this.relativeId = FullName.ASSEMBLE_PATH_PARTS.apply( new String[] { "user", user.getName( ) } );
     this.qName = this.authority + this.relativeId;

@@ -641,21 +641,21 @@ ac_includes_default="\
 ac_header_list=
 ac_func_list=
 ac_subst_vars='LTLIBOBJS
+VDDK_HOME
+TOP
+LIBVIRT_HOME
+JAVA_HOME
 INTERFACE_THEME
-EXTENSIONS
 INCLUDES
+EXTRA_VERSION
+EXTENSIONS
+EUCA_VERSION
 EUCA_DB_SUFFIX
 EUCA_DB_HOME
-VDDK_HOME
-LIBVIRT_HOME
 AXIS2_HOME
 AXIS2C_SERVICES
 AXIS2C_HOME
 APACHE2_MODULE_DIR
-JAVA_HOME
-TOP
-EXTRA_VERSION
-EUCA_VERSION
 LIBOBJS
 JAVA
 ANT
@@ -3729,7 +3729,7 @@ IFS=$ac_save_IFS
 case $build_os in *\ *) build_os=`echo "$build_os" | sed 's/ /-/g'`;; esac
 
 
-EUCA_VERSION="`cat VERSION`"
+EUCA_VERSION="$PACKAGE_VERSION"
 
 # let's figure out where is the source tree
 if test ${srcdir} = "." ; then
@@ -3833,6 +3833,7 @@ fi
 # Check whether --enable-debug was given.
 if test "${enable_debug+set}" = set; then
   enableval=$enable_debug; if test "${enableval}" != "no"; then
+                DEBUGGING_ENABLED=yes
                 CFLAGS="$CFLAGS -g -DDEBUG"
         fi
 fi
@@ -5049,6 +5050,12 @@ $as_echo "no" >&6; }
 fi
 
 
+ac_ext=c
+ac_cpp='$CPP $CPPFLAGS'
+ac_compile='$CC -c $CFLAGS $CPPFLAGS conftest.$ac_ext >&5'
+ac_link='$CC -o conftest$ac_exeext $CFLAGS $CPPFLAGS $LDFLAGS conftest.$ac_ext $LIBS >&5'
+ac_compiler_gnu=$ac_cv_c_compiler_gnu
+
 
 if test -z "$WSDL2C"; then
         # let's search for WSDL2C.sh
@@ -5291,11 +5298,10 @@ fi
 
 
 # Checks for libraries.
-# FIXME: Replace `main' with a function in the library
 
-{ $as_echo "$as_me:$LINENO: checking for main in -laxis2_axiom" >&5
-$as_echo_n "checking for main in -laxis2_axiom... " >&6; }
-if test "${ac_cv_lib_axis2_axiom_main+set}" = set; then
+{ $as_echo "$as_me:$LINENO: checking for axiom_node_get_parent in -laxis2_axiom" >&5
+$as_echo_n "checking for axiom_node_get_parent in -laxis2_axiom... " >&6; }
+if test "${ac_cv_lib_axis2_axiom_axiom_node_get_parent+set}" = set; then
   $as_echo_n "(cached) " >&6
 else
   ac_check_lib_save_LIBS=$LIBS
@@ -5307,11 +5313,17 @@ cat confdefs.h >>conftest.$ac_ext
 cat >>conftest.$ac_ext <<_ACEOF
 /* end confdefs.h.  */
 
-
+/* Override any GCC internal prototype to avoid an error.
+   Use char because int might match the return type of a GCC
+   builtin and then its argument prototype would still apply.  */
+#ifdef __cplusplus
+extern "C"
+#endif
+char axiom_node_get_parent ();
 int
 main ()
 {
-return main ();
+return axiom_node_get_parent ();
   ;
   return 0;
 }
@@ -5337,12 +5349,12 @@ $as_echo "$ac_try_echo") >&5
 	 test "$cross_compiling" = yes ||
 	 $as_test_x conftest$ac_exeext
        }; then
-  ac_cv_lib_axis2_axiom_main=yes
+  ac_cv_lib_axis2_axiom_axiom_node_get_parent=yes
 else
   $as_echo "$as_me: failed program was:" >&5
 sed 's/^/| /' conftest.$ac_ext >&5
 
-	ac_cv_lib_axis2_axiom_main=no
+	ac_cv_lib_axis2_axiom_axiom_node_get_parent=no
 fi
 
 rm -rf conftest.dSYM
@@ -5350,9 +5362,9 @@ rm -f core conftest.err conftest.$ac_objext conftest_ipa8_conftest.oo \
       conftest$ac_exeext conftest.$ac_ext
 LIBS=$ac_check_lib_save_LIBS
 fi
-{ $as_echo "$as_me:$LINENO: result: $ac_cv_lib_axis2_axiom_main" >&5
-$as_echo "$ac_cv_lib_axis2_axiom_main" >&6; }
-if test "x$ac_cv_lib_axis2_axiom_main" = x""yes; then
+{ $as_echo "$as_me:$LINENO: result: $ac_cv_lib_axis2_axiom_axiom_node_get_parent" >&5
+$as_echo "$ac_cv_lib_axis2_axiom_axiom_node_get_parent" >&6; }
+if test "x$ac_cv_lib_axis2_axiom_axiom_node_get_parent" = x""yes; then
   cat >>confdefs.h <<_ACEOF
 #define HAVE_LIBAXIS2_AXIOM 1
 _ACEOF
@@ -5366,9 +5378,9 @@ $as_echo "$as_me: error: Cannot find axis2 libs!" >&2;}
 fi
 
 
-{ $as_echo "$as_me:$LINENO: checking for main in -laxis2_engine" >&5
-$as_echo_n "checking for main in -laxis2_engine... " >&6; }
-if test "${ac_cv_lib_axis2_engine_main+set}" = set; then
+{ $as_echo "$as_me:$LINENO: checking for axis2_msg_ctx_init in -laxis2_engine" >&5
+$as_echo_n "checking for axis2_msg_ctx_init in -laxis2_engine... " >&6; }
+if test "${ac_cv_lib_axis2_engine_axis2_msg_ctx_init+set}" = set; then
   $as_echo_n "(cached) " >&6
 else
   ac_check_lib_save_LIBS=$LIBS
@@ -5380,11 +5392,17 @@ cat confdefs.h >>conftest.$ac_ext
 cat >>conftest.$ac_ext <<_ACEOF
 /* end confdefs.h.  */
 
-
+/* Override any GCC internal prototype to avoid an error.
+   Use char because int might match the return type of a GCC
+   builtin and then its argument prototype would still apply.  */
+#ifdef __cplusplus
+extern "C"
+#endif
+char axis2_msg_ctx_init ();
 int
 main ()
 {
-return main ();
+return axis2_msg_ctx_init ();
   ;
   return 0;
 }
@@ -5410,12 +5428,12 @@ $as_echo "$ac_try_echo") >&5
 	 test "$cross_compiling" = yes ||
 	 $as_test_x conftest$ac_exeext
        }; then
-  ac_cv_lib_axis2_engine_main=yes
+  ac_cv_lib_axis2_engine_axis2_msg_ctx_init=yes
 else
   $as_echo "$as_me: failed program was:" >&5
 sed 's/^/| /' conftest.$ac_ext >&5
 
-	ac_cv_lib_axis2_engine_main=no
+	ac_cv_lib_axis2_engine_axis2_msg_ctx_init=no
 fi
 
 rm -rf conftest.dSYM
@@ -5423,9 +5441,9 @@ rm -f core conftest.err conftest.$ac_objext conftest_ipa8_conftest.oo \
       conftest$ac_exeext conftest.$ac_ext
 LIBS=$ac_check_lib_save_LIBS
 fi
-{ $as_echo "$as_me:$LINENO: result: $ac_cv_lib_axis2_engine_main" >&5
-$as_echo "$ac_cv_lib_axis2_engine_main" >&6; }
-if test "x$ac_cv_lib_axis2_engine_main" = x""yes; then
+{ $as_echo "$as_me:$LINENO: result: $ac_cv_lib_axis2_engine_axis2_msg_ctx_init" >&5
+$as_echo "$ac_cv_lib_axis2_engine_axis2_msg_ctx_init" >&6; }
+if test "x$ac_cv_lib_axis2_engine_axis2_msg_ctx_init" = x""yes; then
   cat >>confdefs.h <<_ACEOF
 #define HAVE_LIBAXIS2_ENGINE 1
 _ACEOF
@@ -5439,9 +5457,9 @@ $as_echo "$as_me: error: Cannot find axis2 libs!" >&2;}
 fi
 
 
-{ $as_echo "$as_me:$LINENO: checking for main in -laxis2_http_common" >&5
-$as_echo_n "checking for main in -laxis2_http_common... " >&6; }
-if test "${ac_cv_lib_axis2_http_common_main+set}" = set; then
+{ $as_echo "$as_me:$LINENO: checking for axis2_simple_http_svr_conn_get_peer_ip in -laxis2_http_common" >&5
+$as_echo_n "checking for axis2_simple_http_svr_conn_get_peer_ip in -laxis2_http_common... " >&6; }
+if test "${ac_cv_lib_axis2_http_common_axis2_simple_http_svr_conn_get_peer_ip+set}" = set; then
   $as_echo_n "(cached) " >&6
 else
   ac_check_lib_save_LIBS=$LIBS
@@ -5453,11 +5471,17 @@ cat confdefs.h >>conftest.$ac_ext
 cat >>conftest.$ac_ext <<_ACEOF
 /* end confdefs.h.  */
 
-
+/* Override any GCC internal prototype to avoid an error.
+   Use char because int might match the return type of a GCC
+   builtin and then its argument prototype would still apply.  */
+#ifdef __cplusplus
+extern "C"
+#endif
+char axis2_simple_http_svr_conn_get_peer_ip ();
 int
 main ()
 {
-return main ();
+return axis2_simple_http_svr_conn_get_peer_ip ();
   ;
   return 0;
 }
@@ -5483,12 +5507,12 @@ $as_echo "$ac_try_echo") >&5
 	 test "$cross_compiling" = yes ||
 	 $as_test_x conftest$ac_exeext
        }; then
-  ac_cv_lib_axis2_http_common_main=yes
+  ac_cv_lib_axis2_http_common_axis2_simple_http_svr_conn_get_peer_ip=yes
 else
   $as_echo "$as_me: failed program was:" >&5
 sed 's/^/| /' conftest.$ac_ext >&5
 
-	ac_cv_lib_axis2_http_common_main=no
+	ac_cv_lib_axis2_http_common_axis2_simple_http_svr_conn_get_peer_ip=no
 fi
 
 rm -rf conftest.dSYM
@@ -5496,9 +5520,9 @@ rm -f core conftest.err conftest.$ac_objext conftest_ipa8_conftest.oo \
       conftest$ac_exeext conftest.$ac_ext
 LIBS=$ac_check_lib_save_LIBS
 fi
-{ $as_echo "$as_me:$LINENO: result: $ac_cv_lib_axis2_http_common_main" >&5
-$as_echo "$ac_cv_lib_axis2_http_common_main" >&6; }
-if test "x$ac_cv_lib_axis2_http_common_main" = x""yes; then
+{ $as_echo "$as_me:$LINENO: result: $ac_cv_lib_axis2_http_common_axis2_simple_http_svr_conn_get_peer_ip" >&5
+$as_echo "$ac_cv_lib_axis2_http_common_axis2_simple_http_svr_conn_get_peer_ip" >&6; }
+if test "x$ac_cv_lib_axis2_http_common_axis2_simple_http_svr_conn_get_peer_ip" = x""yes; then
   cat >>confdefs.h <<_ACEOF
 #define HAVE_LIBAXIS2_HTTP_COMMON 1
 _ACEOF
@@ -5512,9 +5536,9 @@ $as_echo "$as_me: error: Cannot find axis2 libs!" >&2;}
 fi
 
 
-{ $as_echo "$as_me:$LINENO: checking for main in -laxis2_http_receiver" >&5
-$as_echo_n "checking for main in -laxis2_http_receiver... " >&6; }
-if test "${ac_cv_lib_axis2_http_receiver_main+set}" = set; then
+{ $as_echo "$as_me:$LINENO: checking for axis2_http_server_create in -laxis2_http_receiver" >&5
+$as_echo_n "checking for axis2_http_server_create in -laxis2_http_receiver... " >&6; }
+if test "${ac_cv_lib_axis2_http_receiver_axis2_http_server_create+set}" = set; then
   $as_echo_n "(cached) " >&6
 else
   ac_check_lib_save_LIBS=$LIBS
@@ -5526,11 +5550,17 @@ cat confdefs.h >>conftest.$ac_ext
 cat >>conftest.$ac_ext <<_ACEOF
 /* end confdefs.h.  */
 
-
+/* Override any GCC internal prototype to avoid an error.
+   Use char because int might match the return type of a GCC
+   builtin and then its argument prototype would still apply.  */
+#ifdef __cplusplus
+extern "C"
+#endif
+char axis2_http_server_create ();
 int
 main ()
 {
-return main ();
+return axis2_http_server_create ();
   ;
   return 0;
 }
@@ -5556,12 +5586,12 @@ $as_echo "$ac_try_echo") >&5
 	 test "$cross_compiling" = yes ||
 	 $as_test_x conftest$ac_exeext
        }; then
-  ac_cv_lib_axis2_http_receiver_main=yes
+  ac_cv_lib_axis2_http_receiver_axis2_http_server_create=yes
 else
   $as_echo "$as_me: failed program was:" >&5
 sed 's/^/| /' conftest.$ac_ext >&5
 
-	ac_cv_lib_axis2_http_receiver_main=no
+	ac_cv_lib_axis2_http_receiver_axis2_http_server_create=no
 fi
 
 rm -rf conftest.dSYM
@@ -5569,9 +5599,9 @@ rm -f core conftest.err conftest.$ac_objext conftest_ipa8_conftest.oo \
       conftest$ac_exeext conftest.$ac_ext
 LIBS=$ac_check_lib_save_LIBS
 fi
-{ $as_echo "$as_me:$LINENO: result: $ac_cv_lib_axis2_http_receiver_main" >&5
-$as_echo "$ac_cv_lib_axis2_http_receiver_main" >&6; }
-if test "x$ac_cv_lib_axis2_http_receiver_main" = x""yes; then
+{ $as_echo "$as_me:$LINENO: result: $ac_cv_lib_axis2_http_receiver_axis2_http_server_create" >&5
+$as_echo "$ac_cv_lib_axis2_http_receiver_axis2_http_server_create" >&6; }
+if test "x$ac_cv_lib_axis2_http_receiver_axis2_http_server_create" = x""yes; then
   cat >>confdefs.h <<_ACEOF
 #define HAVE_LIBAXIS2_HTTP_RECEIVER 1
 _ACEOF
@@ -5585,9 +5615,9 @@ $as_echo "$as_me: error: Cannot find axis2 libs!" >&2;}
 fi
 
 
-{ $as_echo "$as_me:$LINENO: checking for main in -laxis2_http_sender" >&5
-$as_echo_n "checking for main in -laxis2_http_sender... " >&6; }
-if test "${ac_cv_lib_axis2_http_sender_main+set}" = set; then
+{ $as_echo "$as_me:$LINENO: checking for axis2_http_transport_sender_init in -laxis2_http_sender" >&5
+$as_echo_n "checking for axis2_http_transport_sender_init in -laxis2_http_sender... " >&6; }
+if test "${ac_cv_lib_axis2_http_sender_axis2_http_transport_sender_init+set}" = set; then
   $as_echo_n "(cached) " >&6
 else
   ac_check_lib_save_LIBS=$LIBS
@@ -5599,11 +5629,17 @@ cat confdefs.h >>conftest.$ac_ext
 cat >>conftest.$ac_ext <<_ACEOF
 /* end confdefs.h.  */
 
-
+/* Override any GCC internal prototype to avoid an error.
+   Use char because int might match the return type of a GCC
+   builtin and then its argument prototype would still apply.  */
+#ifdef __cplusplus
+extern "C"
+#endif
+char axis2_http_transport_sender_init ();
 int
 main ()
 {
-return main ();
+return axis2_http_transport_sender_init ();
   ;
   return 0;
 }
@@ -5629,12 +5665,12 @@ $as_echo "$ac_try_echo") >&5
 	 test "$cross_compiling" = yes ||
 	 $as_test_x conftest$ac_exeext
        }; then
-  ac_cv_lib_axis2_http_sender_main=yes
+  ac_cv_lib_axis2_http_sender_axis2_http_transport_sender_init=yes
 else
   $as_echo "$as_me: failed program was:" >&5
 sed 's/^/| /' conftest.$ac_ext >&5
 
-	ac_cv_lib_axis2_http_sender_main=no
+	ac_cv_lib_axis2_http_sender_axis2_http_transport_sender_init=no
 fi
 
 rm -rf conftest.dSYM
@@ -5642,9 +5678,9 @@ rm -f core conftest.err conftest.$ac_objext conftest_ipa8_conftest.oo \
       conftest$ac_exeext conftest.$ac_ext
 LIBS=$ac_check_lib_save_LIBS
 fi
-{ $as_echo "$as_me:$LINENO: result: $ac_cv_lib_axis2_http_sender_main" >&5
-$as_echo "$ac_cv_lib_axis2_http_sender_main" >&6; }
-if test "x$ac_cv_lib_axis2_http_sender_main" = x""yes; then
+{ $as_echo "$as_me:$LINENO: result: $ac_cv_lib_axis2_http_sender_axis2_http_transport_sender_init" >&5
+$as_echo "$ac_cv_lib_axis2_http_sender_axis2_http_transport_sender_init" >&6; }
+if test "x$ac_cv_lib_axis2_http_sender_axis2_http_transport_sender_init" = x""yes; then
   cat >>confdefs.h <<_ACEOF
 #define HAVE_LIBAXIS2_HTTP_SENDER 1
 _ACEOF
@@ -5658,9 +5694,9 @@ $as_echo "$as_me: error: Cannot find axis2 libs!" >&2;}
 fi
 
 
-{ $as_echo "$as_me:$LINENO: checking for main in -lguththila" >&5
-$as_echo_n "checking for main in -lguththila... " >&6; }
-if test "${ac_cv_lib_guththila_main+set}" = set; then
+{ $as_echo "$as_me:$LINENO: checking for guththila_create_xml_stream_writer in -lguththila" >&5
+$as_echo_n "checking for guththila_create_xml_stream_writer in -lguththila... " >&6; }
+if test "${ac_cv_lib_guththila_guththila_create_xml_stream_writer+set}" = set; then
   $as_echo_n "(cached) " >&6
 else
   ac_check_lib_save_LIBS=$LIBS
@@ -5672,11 +5708,17 @@ cat confdefs.h >>conftest.$ac_ext
 cat >>conftest.$ac_ext <<_ACEOF
 /* end confdefs.h.  */
 
-
+/* Override any GCC internal prototype to avoid an error.
+   Use char because int might match the return type of a GCC
+   builtin and then its argument prototype would still apply.  */
+#ifdef __cplusplus
+extern "C"
+#endif
+char guththila_create_xml_stream_writer ();
 int
 main ()
 {
-return main ();
+return guththila_create_xml_stream_writer ();
   ;
   return 0;
 }
@@ -5702,12 +5744,12 @@ $as_echo "$ac_try_echo") >&5
 	 test "$cross_compiling" = yes ||
 	 $as_test_x conftest$ac_exeext
        }; then
-  ac_cv_lib_guththila_main=yes
+  ac_cv_lib_guththila_guththila_create_xml_stream_writer=yes
 else
   $as_echo "$as_me: failed program was:" >&5
 sed 's/^/| /' conftest.$ac_ext >&5
 
-	ac_cv_lib_guththila_main=no
+	ac_cv_lib_guththila_guththila_create_xml_stream_writer=no
 fi
 
 rm -rf conftest.dSYM
@@ -5715,9 +5757,9 @@ rm -f core conftest.err conftest.$ac_objext conftest_ipa8_conftest.oo \
       conftest$ac_exeext conftest.$ac_ext
 LIBS=$ac_check_lib_save_LIBS
 fi
-{ $as_echo "$as_me:$LINENO: result: $ac_cv_lib_guththila_main" >&5
-$as_echo "$ac_cv_lib_guththila_main" >&6; }
-if test "x$ac_cv_lib_guththila_main" = x""yes; then
+{ $as_echo "$as_me:$LINENO: result: $ac_cv_lib_guththila_guththila_create_xml_stream_writer" >&5
+$as_echo "$ac_cv_lib_guththila_guththila_create_xml_stream_writer" >&6; }
+if test "x$ac_cv_lib_guththila_guththila_create_xml_stream_writer" = x""yes; then
   cat >>confdefs.h <<_ACEOF
 #define HAVE_LIBGUTHTHILA 1
 _ACEOF
@@ -5810,9 +5852,9 @@ $as_echo "$as_me: error: Cannot find axis2 libs!" >&2;}
 fi
 
 
-{ $as_echo "$as_me:$LINENO: checking for main in -laxutil" >&5
-$as_echo_n "checking for main in -laxutil... " >&6; }
-if test "${ac_cv_lib_axutil_main+set}" = set; then
+{ $as_echo "$as_me:$LINENO: checking for axutil_url_get_path in -laxutil" >&5
+$as_echo_n "checking for axutil_url_get_path in -laxutil... " >&6; }
+if test "${ac_cv_lib_axutil_axutil_url_get_path+set}" = set; then
   $as_echo_n "(cached) " >&6
 else
   ac_check_lib_save_LIBS=$LIBS
@@ -5824,11 +5866,17 @@ cat confdefs.h >>conftest.$ac_ext
 cat >>conftest.$ac_ext <<_ACEOF
 /* end confdefs.h.  */
 
-
+/* Override any GCC internal prototype to avoid an error.
+   Use char because int might match the return type of a GCC
+   builtin and then its argument prototype would still apply.  */
+#ifdef __cplusplus
+extern "C"
+#endif
+char axutil_url_get_path ();
 int
 main ()
 {
-return main ();
+return axutil_url_get_path ();
   ;
   return 0;
 }
@@ -5854,12 +5902,12 @@ $as_echo "$ac_try_echo") >&5
 	 test "$cross_compiling" = yes ||
 	 $as_test_x conftest$ac_exeext
        }; then
-  ac_cv_lib_axutil_main=yes
+  ac_cv_lib_axutil_axutil_url_get_path=yes
 else
   $as_echo "$as_me: failed program was:" >&5
 sed 's/^/| /' conftest.$ac_ext >&5
 
-	ac_cv_lib_axutil_main=no
+	ac_cv_lib_axutil_axutil_url_get_path=no
 fi
 
 rm -rf conftest.dSYM
@@ -5867,9 +5915,9 @@ rm -f core conftest.err conftest.$ac_objext conftest_ipa8_conftest.oo \
       conftest$ac_exeext conftest.$ac_ext
 LIBS=$ac_check_lib_save_LIBS
 fi
-{ $as_echo "$as_me:$LINENO: result: $ac_cv_lib_axutil_main" >&5
-$as_echo "$ac_cv_lib_axutil_main" >&6; }
-if test "x$ac_cv_lib_axutil_main" = x""yes; then
+{ $as_echo "$as_me:$LINENO: result: $ac_cv_lib_axutil_axutil_url_get_path" >&5
+$as_echo "$ac_cv_lib_axutil_axutil_url_get_path" >&6; }
+if test "x$ac_cv_lib_axutil_axutil_url_get_path" = x""yes; then
   cat >>confdefs.h <<_ACEOF
 #define HAVE_LIBAXUTIL 1
 _ACEOF
@@ -5883,9 +5931,9 @@ $as_echo "$as_me: error: Cannot find libaxutil" >&2;}
 fi
 
 
-{ $as_echo "$as_me:$LINENO: checking for main in -lm" >&5
-$as_echo_n "checking for main in -lm... " >&6; }
-if test "${ac_cv_lib_m_main+set}" = set; then
+{ $as_echo "$as_me:$LINENO: checking for log10 in -lm" >&5
+$as_echo_n "checking for log10 in -lm... " >&6; }
+if test "${ac_cv_lib_m_log10+set}" = set; then
   $as_echo_n "(cached) " >&6
 else
   ac_check_lib_save_LIBS=$LIBS
@@ -5897,11 +5945,17 @@ cat confdefs.h >>conftest.$ac_ext
 cat >>conftest.$ac_ext <<_ACEOF
 /* end confdefs.h.  */
 
-
+/* Override any GCC internal prototype to avoid an error.
+   Use char because int might match the return type of a GCC
+   builtin and then its argument prototype would still apply.  */
+#ifdef __cplusplus
+extern "C"
+#endif
+char log10 ();
 int
 main ()
 {
-return main ();
+return log10 ();
   ;
   return 0;
 }
@@ -5927,12 +5981,12 @@ $as_echo "$ac_try_echo") >&5
 	 test "$cross_compiling" = yes ||
 	 $as_test_x conftest$ac_exeext
        }; then
-  ac_cv_lib_m_main=yes
+  ac_cv_lib_m_log10=yes
 else
   $as_echo "$as_me: failed program was:" >&5
 sed 's/^/| /' conftest.$ac_ext >&5
 
-	ac_cv_lib_m_main=no
+	ac_cv_lib_m_log10=no
 fi
 
 rm -rf conftest.dSYM
@@ -5940,9 +5994,9 @@ rm -f core conftest.err conftest.$ac_objext conftest_ipa8_conftest.oo \
       conftest$ac_exeext conftest.$ac_ext
 LIBS=$ac_check_lib_save_LIBS
 fi
-{ $as_echo "$as_me:$LINENO: result: $ac_cv_lib_m_main" >&5
-$as_echo "$ac_cv_lib_m_main" >&6; }
-if test "x$ac_cv_lib_m_main" = x""yes; then
+{ $as_echo "$as_me:$LINENO: result: $ac_cv_lib_m_log10" >&5
+$as_echo "$ac_cv_lib_m_log10" >&6; }
+if test "x$ac_cv_lib_m_log10" = x""yes; then
   cat >>confdefs.h <<_ACEOF
 #define HAVE_LIBM 1
 _ACEOF
@@ -5952,9 +6006,9 @@ _ACEOF
 fi
 
 
-{ $as_echo "$as_me:$LINENO: checking for main in -lmod_rampart" >&5
-$as_echo_n "checking for main in -lmod_rampart... " >&6; }
-if test "${ac_cv_lib_mod_rampart_main+set}" = set; then
+{ $as_echo "$as_me:$LINENO: checking for rampart_mod_create in -lmod_rampart" >&5
+$as_echo_n "checking for rampart_mod_create in -lmod_rampart... " >&6; }
+if test "${ac_cv_lib_mod_rampart_rampart_mod_create+set}" = set; then
   $as_echo_n "(cached) " >&6
 else
   ac_check_lib_save_LIBS=$LIBS
@@ -5966,11 +6020,17 @@ cat confdefs.h >>conftest.$ac_ext
 cat >>conftest.$ac_ext <<_ACEOF
 /* end confdefs.h.  */
 
-
+/* Override any GCC internal prototype to avoid an error.
+   Use char because int might match the return type of a GCC
+   builtin and then its argument prototype would still apply.  */
+#ifdef __cplusplus
+extern "C"
+#endif
+char rampart_mod_create ();
 int
 main ()
 {
-return main ();
+return rampart_mod_create ();
   ;
   return 0;
 }
@@ -5996,12 +6056,12 @@ $as_echo "$ac_try_echo") >&5
 	 test "$cross_compiling" = yes ||
 	 $as_test_x conftest$ac_exeext
        }; then
-  ac_cv_lib_mod_rampart_main=yes
+  ac_cv_lib_mod_rampart_rampart_mod_create=yes
 else
   $as_echo "$as_me: failed program was:" >&5
 sed 's/^/| /' conftest.$ac_ext >&5
 
-	ac_cv_lib_mod_rampart_main=no
+	ac_cv_lib_mod_rampart_rampart_mod_create=no
 fi
 
 rm -rf conftest.dSYM
@@ -6009,9 +6069,9 @@ rm -f core conftest.err conftest.$ac_objext conftest_ipa8_conftest.oo \
       conftest$ac_exeext conftest.$ac_ext
 LIBS=$ac_check_lib_save_LIBS
 fi
-{ $as_echo "$as_me:$LINENO: result: $ac_cv_lib_mod_rampart_main" >&5
-$as_echo "$ac_cv_lib_mod_rampart_main" >&6; }
-if test "x$ac_cv_lib_mod_rampart_main" = x""yes; then
+{ $as_echo "$as_me:$LINENO: result: $ac_cv_lib_mod_rampart_rampart_mod_create" >&5
+$as_echo "$ac_cv_lib_mod_rampart_rampart_mod_create" >&6; }
+if test "x$ac_cv_lib_mod_rampart_rampart_mod_create" = x""yes; then
   cat >>confdefs.h <<_ACEOF
 #define HAVE_LIBMOD_RAMPART 1
 _ACEOF
@@ -6025,9 +6085,9 @@ $as_echo "$as_me: error: Cannot find libmod_rampart" >&2;}
 fi
 
 
-{ $as_echo "$as_me:$LINENO: checking for main in -lneethi" >&5
-$as_echo_n "checking for main in -lneethi... " >&6; }
-if test "${ac_cv_lib_neethi_main+set}" = set; then
+{ $as_echo "$as_me:$LINENO: checking for neethi_engine_get_policy in -lneethi" >&5
+$as_echo_n "checking for neethi_engine_get_policy in -lneethi... " >&6; }
+if test "${ac_cv_lib_neethi_neethi_engine_get_policy+set}" = set; then
   $as_echo_n "(cached) " >&6
 else
   ac_check_lib_save_LIBS=$LIBS
@@ -6039,11 +6099,17 @@ cat confdefs.h >>conftest.$ac_ext
 cat >>conftest.$ac_ext <<_ACEOF
 /* end confdefs.h.  */
 
-
+/* Override any GCC internal prototype to avoid an error.
+   Use char because int might match the return type of a GCC
+   builtin and then its argument prototype would still apply.  */
+#ifdef __cplusplus
+extern "C"
+#endif
+char neethi_engine_get_policy ();
 int
 main ()
 {
-return main ();
+return neethi_engine_get_policy ();
   ;
   return 0;
 }
@@ -6069,12 +6135,12 @@ $as_echo "$ac_try_echo") >&5
 	 test "$cross_compiling" = yes ||
 	 $as_test_x conftest$ac_exeext
        }; then
-  ac_cv_lib_neethi_main=yes
+  ac_cv_lib_neethi_neethi_engine_get_policy=yes
 else
   $as_echo "$as_me: failed program was:" >&5
 sed 's/^/| /' conftest.$ac_ext >&5
 
-	ac_cv_lib_neethi_main=no
+	ac_cv_lib_neethi_neethi_engine_get_policy=no
 fi
 
 rm -rf conftest.dSYM
@@ -6082,9 +6148,9 @@ rm -f core conftest.err conftest.$ac_objext conftest_ipa8_conftest.oo \
       conftest$ac_exeext conftest.$ac_ext
 LIBS=$ac_check_lib_save_LIBS
 fi
-{ $as_echo "$as_me:$LINENO: result: $ac_cv_lib_neethi_main" >&5
-$as_echo "$ac_cv_lib_neethi_main" >&6; }
-if test "x$ac_cv_lib_neethi_main" = x""yes; then
+{ $as_echo "$as_me:$LINENO: result: $ac_cv_lib_neethi_neethi_engine_get_policy" >&5
+$as_echo "$ac_cv_lib_neethi_neethi_engine_get_policy" >&6; }
+if test "x$ac_cv_lib_neethi_neethi_engine_get_policy" = x""yes; then
   cat >>confdefs.h <<_ACEOF
 #define HAVE_LIBNEETHI 1
 _ACEOF
@@ -6098,9 +6164,9 @@ $as_echo "$as_me: error: Cannot find libneethi!" >&2;}
 fi
 
 
-{ $as_echo "$as_me:$LINENO: checking for main in -lpthread" >&5
-$as_echo_n "checking for main in -lpthread... " >&6; }
-if test "${ac_cv_lib_pthread_main+set}" = set; then
+{ $as_echo "$as_me:$LINENO: checking for pthread_join in -lpthread" >&5
+$as_echo_n "checking for pthread_join in -lpthread... " >&6; }
+if test "${ac_cv_lib_pthread_pthread_join+set}" = set; then
   $as_echo_n "(cached) " >&6
 else
   ac_check_lib_save_LIBS=$LIBS
@@ -6112,11 +6178,17 @@ cat confdefs.h >>conftest.$ac_ext
 cat >>conftest.$ac_ext <<_ACEOF
 /* end confdefs.h.  */
 
-
+/* Override any GCC internal prototype to avoid an error.
+   Use char because int might match the return type of a GCC
+   builtin and then its argument prototype would still apply.  */
+#ifdef __cplusplus
+extern "C"
+#endif
+char pthread_join ();
 int
 main ()
 {
-return main ();
+return pthread_join ();
   ;
   return 0;
 }
@@ -6142,12 +6214,12 @@ $as_echo "$ac_try_echo") >&5
 	 test "$cross_compiling" = yes ||
 	 $as_test_x conftest$ac_exeext
        }; then
-  ac_cv_lib_pthread_main=yes
+  ac_cv_lib_pthread_pthread_join=yes
 else
   $as_echo "$as_me: failed program was:" >&5
 sed 's/^/| /' conftest.$ac_ext >&5
 
-	ac_cv_lib_pthread_main=no
+	ac_cv_lib_pthread_pthread_join=no
 fi
 
 rm -rf conftest.dSYM
@@ -6155,21 +6227,25 @@ rm -f core conftest.err conftest.$ac_objext conftest_ipa8_conftest.oo \
       conftest$ac_exeext conftest.$ac_ext
 LIBS=$ac_check_lib_save_LIBS
 fi
-{ $as_echo "$as_me:$LINENO: result: $ac_cv_lib_pthread_main" >&5
-$as_echo "$ac_cv_lib_pthread_main" >&6; }
-if test "x$ac_cv_lib_pthread_main" = x""yes; then
+{ $as_echo "$as_me:$LINENO: result: $ac_cv_lib_pthread_pthread_join" >&5
+$as_echo "$ac_cv_lib_pthread_pthread_join" >&6; }
+if test "x$ac_cv_lib_pthread_pthread_join" = x""yes; then
   cat >>confdefs.h <<_ACEOF
 #define HAVE_LIBPTHREAD 1
 _ACEOF
 
   LIBS="-lpthread $LIBS"
 
+else
+  { { $as_echo "$as_me:$LINENO: error: Cannot find pthreads!" >&5
+$as_echo "$as_me: error: Cannot find pthreads!" >&2;}
+   { (exit 1); exit 1; }; }
 fi
 
 
-{ $as_echo "$as_me:$LINENO: checking for main in -lrt" >&5
-$as_echo_n "checking for main in -lrt... " >&6; }
-if test "${ac_cv_lib_rt_main+set}" = set; then
+{ $as_echo "$as_me:$LINENO: checking for timer_gettime in -lrt" >&5
+$as_echo_n "checking for timer_gettime in -lrt... " >&6; }
+if test "${ac_cv_lib_rt_timer_gettime+set}" = set; then
   $as_echo_n "(cached) " >&6
 else
   ac_check_lib_save_LIBS=$LIBS
@@ -6181,11 +6257,17 @@ cat confdefs.h >>conftest.$ac_ext
 cat >>conftest.$ac_ext <<_ACEOF
 /* end confdefs.h.  */
 
-
+/* Override any GCC internal prototype to avoid an error.
+   Use char because int might match the return type of a GCC
+   builtin and then its argument prototype would still apply.  */
+#ifdef __cplusplus
+extern "C"
+#endif
+char timer_gettime ();
 int
 main ()
 {
-return main ();
+return timer_gettime ();
   ;
   return 0;
 }
@@ -6211,12 +6293,12 @@ $as_echo "$ac_try_echo") >&5
 	 test "$cross_compiling" = yes ||
 	 $as_test_x conftest$ac_exeext
        }; then
-  ac_cv_lib_rt_main=yes
+  ac_cv_lib_rt_timer_gettime=yes
 else
   $as_echo "$as_me: failed program was:" >&5
 sed 's/^/| /' conftest.$ac_ext >&5
 
-	ac_cv_lib_rt_main=no
+	ac_cv_lib_rt_timer_gettime=no
 fi
 
 rm -rf conftest.dSYM
@@ -6224,9 +6306,9 @@ rm -f core conftest.err conftest.$ac_objext conftest_ipa8_conftest.oo \
       conftest$ac_exeext conftest.$ac_ext
 LIBS=$ac_check_lib_save_LIBS
 fi
-{ $as_echo "$as_me:$LINENO: result: $ac_cv_lib_rt_main" >&5
-$as_echo "$ac_cv_lib_rt_main" >&6; }
-if test "x$ac_cv_lib_rt_main" = x""yes; then
+{ $as_echo "$as_me:$LINENO: result: $ac_cv_lib_rt_timer_gettime" >&5
+$as_echo "$ac_cv_lib_rt_timer_gettime" >&6; }
+if test "x$ac_cv_lib_rt_timer_gettime" = x""yes; then
   cat >>confdefs.h <<_ACEOF
 #define HAVE_LIBRT 1
 _ACEOF
@@ -6235,9 +6317,9 @@ _ACEOF
 
 fi
 
-{ $as_echo "$as_me:$LINENO: checking for main in -lvirt" >&5
-$as_echo_n "checking for main in -lvirt... " >&6; }
-if test "${ac_cv_lib_virt_main+set}" = set; then
+{ $as_echo "$as_me:$LINENO: checking for virStorageVolDownload in -lvirt" >&5
+$as_echo_n "checking for virStorageVolDownload in -lvirt... " >&6; }
+if test "${ac_cv_lib_virt_virStorageVolDownload+set}" = set; then
   $as_echo_n "(cached) " >&6
 else
   ac_check_lib_save_LIBS=$LIBS
@@ -6249,11 +6331,17 @@ cat confdefs.h >>conftest.$ac_ext
 cat >>conftest.$ac_ext <<_ACEOF
 /* end confdefs.h.  */
 
-
+/* Override any GCC internal prototype to avoid an error.
+   Use char because int might match the return type of a GCC
+   builtin and then its argument prototype would still apply.  */
+#ifdef __cplusplus
+extern "C"
+#endif
+char virStorageVolDownload ();
 int
 main ()
 {
-return main ();
+return virStorageVolDownload ();
   ;
   return 0;
 }
@@ -6279,12 +6367,12 @@ $as_echo "$ac_try_echo") >&5
 	 test "$cross_compiling" = yes ||
 	 $as_test_x conftest$ac_exeext
        }; then
-  ac_cv_lib_virt_main=yes
+  ac_cv_lib_virt_virStorageVolDownload=yes
 else
   $as_echo "$as_me: failed program was:" >&5
 sed 's/^/| /' conftest.$ac_ext >&5
 
-	ac_cv_lib_virt_main=no
+	ac_cv_lib_virt_virStorageVolDownload=no
 fi
 
 rm -rf conftest.dSYM
@@ -6292,9 +6380,9 @@ rm -f core conftest.err conftest.$ac_objext conftest_ipa8_conftest.oo \
       conftest$ac_exeext conftest.$ac_ext
 LIBS=$ac_check_lib_save_LIBS
 fi
-{ $as_echo "$as_me:$LINENO: result: $ac_cv_lib_virt_main" >&5
-$as_echo "$ac_cv_lib_virt_main" >&6; }
-if test "x$ac_cv_lib_virt_main" = x""yes; then
+{ $as_echo "$as_me:$LINENO: result: $ac_cv_lib_virt_virStorageVolDownload" >&5
+$as_echo "$ac_cv_lib_virt_virStorageVolDownload" >&6; }
+if test "x$ac_cv_lib_virt_virStorageVolDownload" = x""yes; then
   true
 else
   { { $as_echo "$as_me:$LINENO: error: Cannot find libvirt!" >&5
@@ -6302,9 +6390,9 @@ $as_echo "$as_me: error: Cannot find libvirt!" >&2;}
    { (exit 1); exit 1; }; }
 fi
 
-{ $as_echo "$as_me:$LINENO: checking for main in -lcurl" >&5
-$as_echo_n "checking for main in -lcurl... " >&6; }
-if test "${ac_cv_lib_curl_main+set}" = set; then
+{ $as_echo "$as_me:$LINENO: checking for curl_version_info in -lcurl" >&5
+$as_echo_n "checking for curl_version_info in -lcurl... " >&6; }
+if test "${ac_cv_lib_curl_curl_version_info+set}" = set; then
   $as_echo_n "(cached) " >&6
 else
   ac_check_lib_save_LIBS=$LIBS
@@ -6316,11 +6404,17 @@ cat confdefs.h >>conftest.$ac_ext
 cat >>conftest.$ac_ext <<_ACEOF
 /* end confdefs.h.  */
 
-
+/* Override any GCC internal prototype to avoid an error.
+   Use char because int might match the return type of a GCC
+   builtin and then its argument prototype would still apply.  */
+#ifdef __cplusplus
+extern "C"
+#endif
+char curl_version_info ();
 int
 main ()
 {
-return main ();
+return curl_version_info ();
   ;
   return 0;
 }
@@ -6346,12 +6440,12 @@ $as_echo "$ac_try_echo") >&5
 	 test "$cross_compiling" = yes ||
 	 $as_test_x conftest$ac_exeext
        }; then
-  ac_cv_lib_curl_main=yes
+  ac_cv_lib_curl_curl_version_info=yes
 else
   $as_echo "$as_me: failed program was:" >&5
 sed 's/^/| /' conftest.$ac_ext >&5
 
-	ac_cv_lib_curl_main=no
+	ac_cv_lib_curl_curl_version_info=no
 fi
 
 rm -rf conftest.dSYM
@@ -6359,9 +6453,9 @@ rm -f core conftest.err conftest.$ac_objext conftest_ipa8_conftest.oo \
       conftest$ac_exeext conftest.$ac_ext
 LIBS=$ac_check_lib_save_LIBS
 fi
-{ $as_echo "$as_me:$LINENO: result: $ac_cv_lib_curl_main" >&5
-$as_echo "$ac_cv_lib_curl_main" >&6; }
-if test "x$ac_cv_lib_curl_main" = x""yes; then
+{ $as_echo "$as_me:$LINENO: result: $ac_cv_lib_curl_curl_version_info" >&5
+$as_echo "$ac_cv_lib_curl_curl_version_info" >&6; }
+if test "x$ac_cv_lib_curl_curl_version_info" = x""yes; then
   true
 else
   { { $as_echo "$as_me:$LINENO: error: Cannot find libcurl!" >&5
@@ -11283,7 +11377,6 @@ _ACEOF
 
 
 
-
 cat >confcache <<\_ACEOF
 # This file is a shell script that caches the results of configure
 # tests run on this system so they can be shared between configure
@@ -12537,4 +12630,34 @@ if test -n "$ac_unrecognized_opts" && test "$enable_option_checking" != no; then
   { $as_echo "$as_me:$LINENO: WARNING: unrecognized options: $ac_unrecognized_opts" >&5
 $as_echo "$as_me: WARNING: unrecognized options: $ac_unrecognized_opts" >&2;}
 fi
+
+
+
+echo ""
+echo "  Eucalyptus ${EUCA_VERSION}"
+echo ""
+echo "  Flags and Settings:"
+echo "    CFLAGS..............: ${CFLAGS}"
+echo "    LDFLAGS.............: ${LDFLAGS}"
+echo "    LIBS................: ${LIBS}"
+echo "    Debugging Enabled...: ${DEBUGGING_ENABLED:-no}"
+echo ""
+echo "  Build Tools:"
+echo "    ANT.................: ${ANT} (${ant_version})"
+echo "    JAVA................: ${JAVA} (${java_version})"
+echo "    PYTHON..............: ${PYTHON} (${PYTHON_VERSION})"
+echo "    WSDL2C..............: ${WSDL2C}"
+echo ""
+echo "  Locations:"
+echo "    PREFIX..............: ${prefix:-Not Set}"
+echo "    APACHE2_MODULE_DIR..: ${APACHE2_MODULE_DIR:-Not Set}"
+echo "    AXIS2C_HOME.........: ${AXIS2C_HOME:-Not Set}"
+echo "    AXIS2C_SERVICES.....: ${AXIS2C_SERVICES:-Not Set}"
+echo "    AXIS2_HOME..........: ${AXIS2_HOME:-Not Set}"
+echo "    EUCA_DB_HOME........: ${EUCA_DB_HOME:-Not Set}"
+echo "    EUCA_DB_SUFFIX......: ${EUCA_DB_SUFFIX:-Not Set}"
+echo "    JAVA_HOME...........: ${JAVA_HOME:-Not Set}"
+echo "    LIBVIRT_HOME........: ${LIBVIRT_HOME:-Not Set}"
+echo "    VDDK_HOME...........: ${VDDK_HOME:-Not Set}"
+echo ""
 

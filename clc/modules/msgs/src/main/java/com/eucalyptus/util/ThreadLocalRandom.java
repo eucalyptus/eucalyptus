@@ -153,7 +153,7 @@ public class ThreadLocalRandom extends Random {
      * Throws {@code UnsupportedOperationException}.  Setting seeds in
      * this generator is not supported.
      *
-     * @throws UnsupportedOperationException always
+     * @throws EucalyptusUnsupportedOperationException always
      */
     public void setSeed(long seed) {
         if (initialized)

@@ -89,6 +89,16 @@ define([
                                             'snapshot_delete_done',
                                             'snapshot_delete_fail');
                             });
+              if (images.length == 0) {
+                  doMultiAction(args.items, App.data.snapshots,
+                                function(model, options) {
+                                  options['wait'] = true;
+                                  model.destroy(options);
+                                },
+                                'snapshot_delete_progress',
+                                'snapshot_delete_done',
+                                'snapshot_delete_fail');
+              }
               self.close();
             }
          }

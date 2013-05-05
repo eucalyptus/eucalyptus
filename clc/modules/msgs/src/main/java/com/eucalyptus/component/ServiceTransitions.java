@@ -657,8 +657,10 @@ public class ServiceTransitions {
       
       @Override
       public void fire( final ServiceConfiguration parent ) throws Exception {
-        parent.lookupBootstrapper( ).start( );
-        ServiceBuilders.lookup( parent.getComponentId( ) ).fireStart( parent );
+        if ( !Bootstrap.isShuttingDown( ) ) {
+          parent.lookupBootstrapper( ).start( );
+          ServiceBuilders.lookup( parent.getComponentId( ) ).fireStart( parent );
+        }
       }
     },
     ENABLE {

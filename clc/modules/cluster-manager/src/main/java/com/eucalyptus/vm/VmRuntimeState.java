@@ -110,6 +110,8 @@ import edu.ucsb.eucalyptus.msgs.AttachStorageVolumeResponseType;
 import edu.ucsb.eucalyptus.msgs.AttachStorageVolumeType;
 import edu.ucsb.eucalyptus.msgs.AttachVolumeType;
 import edu.ucsb.eucalyptus.msgs.CreateTagsType;
+import edu.ucsb.eucalyptus.msgs.GetVolumeTokenResponseType;
+import edu.ucsb.eucalyptus.msgs.GetVolumeTokenType;
 import edu.ucsb.eucalyptus.msgs.ResourceTag;
 
 @Embeddable
@@ -266,15 +268,16 @@ public class VmRuntimeState {
           final String vmDevice = input.getDevice( );
           try {
             LOG.debug( vmId + ": attaching volume: " + input );
-            final AttachStorageVolumeType attachMsg = new AttachStorageVolumeType( Nodes.lookupIqns( ccConfig ), volumeId );
-            final CheckedListenableFuture<AttachStorageVolumeResponseType> scAttachReplyFuture = AsyncRequests.dispatch( scConfig, attachMsg );
+            //final AttachStorageVolumeType attachMsg = new AttachStorageVolumeType( Nodes.lookupIqns( ccConfig ), volumeId );
+            GetVolumeTokenType tokenRequest = new GetVolumeTokenType(volumeId);
+            final CheckedListenableFuture<GetVolumeTokenResponseType> scGetTokenReplyFuture = AsyncRequests.dispatch( scConfig, tokenRequest );
             final Callable<Boolean> ncAttachRequest = new Callable<Boolean>( ) {
               public Boolean call( ) {
                 try {
                   LOG.debug( vmId + ": waiting for storage volume: " + volumeId );
-                  AttachStorageVolumeResponseType scReply = scAttachReplyFuture.get( );
-                  LOG.debug( vmId + ": " + volumeId + " => " + scAttachReplyFuture.get( ) );
-                  AsyncRequests.dispatch( ccConfig, new AttachVolumeType( volumeId, vmId, vmDevice, scReply.getRemoteDeviceString( ) ) );
+                  GetVolumeTokenResponseType scReply = scGetTokenReplyFuture.get();
+                  LOG.debug( vmId + ": " + volumeId + " => " + scGetTokenReplyFuture.get( ) );
+                  AsyncRequests.dispatch( ccConfig, new AttachVolumeType( volumeId, vmId, vmDevice, scReply.getToken() ) );
 //                  final EntityTransaction db = Entities.get( VmInstance.class );
 //                  try {
 //                    final VmInstance entity = Entities.merge( vm );

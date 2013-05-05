@@ -50,7 +50,7 @@ public class EventHandlerChainDeleteListeners extends EventHandlerChain<DeleteLi
 			LoadBalancer lb = null;
 			String groupName = null;
 			try{
-				lb = LoadBalancers.getLoadbalancer(evt.getContext().getUserFullName(), evt.getLoadBalancer());
+				lb = LoadBalancers.getLoadbalancer(evt.getContext(), evt.getLoadBalancer());
 				final LoadBalancerSecurityGroup group = lb.getGroup();
 				if(group!=null)
 					groupName = group.getName();

@@ -580,7 +580,8 @@ public class VmInstances {
             
             if ( VmStateSet.TERM.apply( vm ) && !"/dev/sda1".equals( arg0.getDevice( ) ) ) {
               try {
-                arg0.getVmInstance( ).getTransientVolumeState( ).removeVolumeAttachment( arg0.getVolumeId( ) );
+            	VmInstance vmInstance = Entities.merge( arg0.getVmInstance( ) );
+                vmInstance.getTransientVolumeState( ).removeVolumeAttachment( arg0.getVolumeId( ) );
               } catch ( NoSuchElementException ex ) {
                 Logs.extreme( ).debug( ex );
               }
@@ -593,11 +594,14 @@ public class VmInstances {
             } catch ( Exception ex ) {
               LOG.debug( ex );
               Logs.extreme( ).debug( ex, ex );
+            } catch (Throwable ex) {
+                LOG.debug( ex );
+                Logs.extreme( ).debug( ex, ex );
             }
             
             try {
-              //ebs with either default deleteOnTerminate or user specified deleteOnTerminate and TERMINATING instance
-              if ( VmStateSet.TERM.apply( vm ) && arg0.getDeleteOnTerminate( ) ) {
+              //ebs with either default deleteOnTerminate or user specified deleteOnTerminate and TERMINATING
+              if ( ( VmStateSet.TERM.apply( vm ) ) && arg0.getDeleteOnTerminate( ) ) {
                 final ServiceConfiguration sc = Topology.lookup( Storage.class, vm.lookupPartition( ) );
                 AsyncRequests.dispatch( sc, new DeleteStorageVolumeType( arg0.getVolumeId( ) ) );
                 Volume volume = Volumes.lookup( null, arg0.getVolumeId( ) );
@@ -606,6 +610,9 @@ public class VmInstances {
             } catch ( Exception ex ) {
               LOG.debug( ex );
               Logs.extreme( ).debug( ex, ex );
+            } catch (Throwable ex) {
+                LOG.debug( ex );
+                Logs.extreme( ).debug( ex, ex );
             }
             
             return true;

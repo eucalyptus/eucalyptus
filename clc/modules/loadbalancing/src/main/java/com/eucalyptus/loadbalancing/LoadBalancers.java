@@ -32,6 +32,7 @@ import javax.persistence.EntityTransaction;
 import org.apache.log4j.Logger;
 
 import com.eucalyptus.auth.principal.UserFullName;
+import com.eucalyptus.context.Context;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.loadbalancing.LoadBalancerListener.PROTOCOL;
 import com.eucalyptus.loadbalancing.activities.EucalyptusActivityTasks;
@@ -50,15 +51,21 @@ import edu.ucsb.eucalyptus.msgs.ClusterInfoType;
  */
 public class LoadBalancers {
 	private static Logger    LOG     = Logger.getLogger( LoadBalancers.class );
-	public static LoadBalancer addLoadbalancer(final UserFullName user, final String lbName) throws LoadBalancingException
+	public static LoadBalancer addLoadbalancer(final UserFullName owner, final String lbName) throws LoadBalancingException
 	{
-		return LoadBalancers.addLoadbalancer(user,  lbName, null);
+		return LoadBalancers.addLoadbalancer(owner,  lbName, null);
 	}
 	
-	public static LoadBalancer getLoadbalancer(final UserFullName user, final String lbName){
+	// a loadbalancer is per-account resource; per-user access is governed by IAM policy
+	public static LoadBalancer getLoadbalancer(final Context ctx, final String lbName){
+		final LoadBalancer lb= LoadBalancers.getLoadbalancer(ctx.getAccount().getName(), lbName);
+		return lb;
+	}
+	
+	private static LoadBalancer getLoadbalancer(final String accountName, final String lbName){
 		 final EntityTransaction db = Entities.get( LoadBalancer.class );
 		 try {
-			 final LoadBalancer lb = Entities.uniqueResult( LoadBalancer.named( user, lbName )); 
+			 final LoadBalancer lb = Entities.uniqueResult( LoadBalancer.namedByAccount(accountName, lbName)); 
 			 db.commit();
 			 return lb;
 		 }catch(NoSuchElementException ex){
@@ -123,8 +130,8 @@ public class LoadBalancers {
 		 final EntityTransaction db = Entities.get( LoadBalancer.class );
 		 try {
 		        try {
-		        	if(Entities.uniqueResult( LoadBalancer.named( user, lbName )) != null)
-		        		throw new LoadBalancingException(LoadBalancingException.DUPLICATE_LOADBALANCER_EXCEPTION);
+		        	if(Entities.uniqueResult( LoadBalancer.namedByAccount( user.getAccountName(), lbName )) != null)
+		        		throw new DuplicateAccessPointName();
 		        } catch ( NoSuchElementException e ) {
 		        	final LoadBalancer lb = LoadBalancer.newInstance(user, lbName);
 		        	if(scheme!=null)
@@ -133,7 +140,9 @@ public class LoadBalancers {
 		          	db.commit( );
 		          	return lb;
 		        }
-		    } catch ( Exception ex ) {
+		    }catch(LoadBalancingException ex){
+		    	throw ex;
+		    }catch ( Exception ex ) {
 		    	db.rollback( );
 		    	LOG.error("failed to persist a new loadbalancer", ex);
 		    	throw new LoadBalancingException("Failed to persist a new load-balancer because of: " + ex.getMessage(), ex);
@@ -142,20 +151,6 @@ public class LoadBalancers {
 	}
 	
 	public static void deleteLoadbalancer(final UserFullName user, final String lbName) throws LoadBalancingException {
-		/*final EntityTransaction db = Entities.get( LoadBalancer.class );
-		try{
-			final LoadBalancer lb = Entities.uniqueResult( LoadBalancer.named(user, lbName));	
-			Entities.delete(lb);
-			db.commit();
-		}catch (NoSuchElementException e){
-			db.rollback();
-			throw new LoadBalancingException("No loadbalancer is found with name = "+lbName, e);
-		}catch (Exception e){
-			db.rollback();
-			LOG.error("failed to delete a loadbalancer", e);
-			throw new LoadBalancingException("Failed to delete the loadbalancer "+lbName, e);
-		}*/
-		
 		Predicate<Void> delete = new Predicate<Void>(){
 			@Override
 			public boolean apply(@Nullable Void arg0) {
@@ -171,25 +166,21 @@ public class LoadBalancers {
 		Entities.asTransaction(LoadBalancer.class, delete).apply(null);
 	}
 	
-	// throw LoadBalancingException if invalid
-	public static void validateListener(final String lbName, final UserFullName ownerFullName, final List<Listener> listeners) 
+	public static void validateListener(final List<Listener> listeners) 
 				throws LoadBalancingException{
-		LoadBalancer lb = null;
-    	try{
-    		lb = LoadBalancers.getLoadbalancer(ownerFullName, lbName);
-    	}catch(Exception ex){
-    		lb = null;
-    	}
-    	  //IAM support to restricted lb modification
-    	if(lb != null && !LoadBalancingMetadatas.filterPrivileged().apply(lb)) {
- 	       throw new AccessPointNotFoundException();
- 	   }
- 	   
+		validateListener(null, listeners);
+	}
+	
+	public static void validateListener(final LoadBalancer lb, final List<Listener> listeners) 
+				throws LoadBalancingException{
 		for(Listener listener : listeners){
 			if(!LoadBalancerListener.protocolSupported(listener))
-				throw new UnsupportedParameterException("The requested procotols are not supported");
+				throw new UnsupportedParameterException("The requested protocol is not supported");
 			if(!LoadBalancerListener.acceptable(listener))
-				throw new InvalidConfigurationRequestException();
+				throw new InvalidConfigurationRequestException("Invalid listener format");
+			if(!LoadBalancerListener.validRange(listener))
+				throw new InvalidConfigurationRequestException("Invalid port range");
+
     		// check the listener 
 			if(lb!=null && lb.hasListener(listener.getLoadBalancerPort().intValue())){
 				LoadBalancerListener existing = lb.findListener(listener.getLoadBalancerPort().intValue());
@@ -204,19 +195,19 @@ public class LoadBalancers {
 	}
 	
 	
-	public static void createLoadbalancerListener(final String lbName, final UserFullName ownerFullName , final List<Listener> listeners) throws LoadBalancingException {
-		validateListener(lbName, ownerFullName, listeners);
-	    final Predicate<Void> creator = new Predicate<Void>(){
+	public static void createLoadbalancerListener(final String lbName, final Context ctx , final List<Listener> listeners) throws LoadBalancingException {
+	    LoadBalancer lb = null;
+    	try{
+    		lb= LoadBalancers.getLoadbalancer(ctx, lbName);
+    	}catch(Exception ex){
+    		throw new InternalFailure400Exception("unable to find the loadbalancer");
+	    }
+    	
+    	validateListener(lb, listeners);
+    	
+		final Predicate<LoadBalancer> creator = new Predicate<LoadBalancer>(){
 	        @Override
-	        public boolean apply( Void v ) {
-	        	LoadBalancer lb = null;
-	        	try{
-	        		lb= LoadBalancers.getLoadbalancer(ownerFullName, lbName);
-	        	}catch(Exception ex){
-	    	    	LOG.warn("No loadbalancer is found with name="+lbName);    
-	    	    	return false;
-	    	    }
-	        	
+	        public boolean apply( LoadBalancer lb ) {
 	        	for(Listener listener : listeners){
 	        		// check the listener 
 	    			try{	
@@ -237,15 +228,15 @@ public class LoadBalancers {
 	        	return true;
 	        }
 	    };
-	    Entities.asTransaction(LoadBalancerListener.class, creator).apply(null);
+	    Entities.asTransaction(LoadBalancerListener.class, creator).apply(lb);
 	}
 	
-	public static void addZone(final String lbName, final UserFullName ownerFullName, final Collection<String> zones) throws LoadBalancingException{
+	public static void addZone(final String lbName, final Context ctx, final Collection<String> zones) throws LoadBalancingException{
 		List<ClusterInfoType> clusters = null;
 		try{
 			clusters = EucalyptusActivityTasks.getInstance().describeAvailabilityZones(false);
 		}catch(Exception ex){
-			throw new LoadBalancingException("Failed to check the requested zones");
+			throw new InternalFailure400Exception("Unable to verify the requested zones");
 		}
 		for(String zone : zones){
 			boolean found = false;
@@ -256,12 +247,12 @@ public class LoadBalancers {
 				}
 			}
 			if(!found)
-				throw new LoadBalancingException("No cluster named "+zone+" is available");
+				throw new InvalidConfigurationRequestException("No cluster named "+zone+" is available");
 		}
 		
 	   	LoadBalancer lb = null;
     	try{
-    		lb = LoadBalancers.getLoadbalancer(ownerFullName, lbName);
+    		lb = LoadBalancers.getLoadbalancer(ctx, lbName);
     	}catch(Exception ex){
 	    	throw new AccessPointNotFoundException();
 	    }
@@ -283,17 +274,18 @@ public class LoadBalancers {
 				}catch(Exception ex){
 					db.rollback();
 					LOG.error("failed to persist the zone "+zone, ex);
+					throw ex;
 				}
 			}
     	}catch(Exception ex){
-    		throw new LoadBalancingException("Failed to add zone", ex);
+    		throw new InternalFailure400Exception("Failed to persist the zone");
     	}
 	}
 	
-	public static void removeZone(final String lbName, final UserFullName ownerFullName, final Collection<String> zones) throws LoadBalancingException{
+	public static void removeZone(final String lbName, final Context ctx, final Collection<String> zones) throws LoadBalancingException{
 	 	LoadBalancer lb = null;
     	try{
-    		lb = LoadBalancers.getLoadbalancer(ownerFullName, lbName);
+    		lb = LoadBalancers.getLoadbalancer(ctx, lbName);
     	}catch(Exception ex){
 	    	throw new AccessPointNotFoundException();
 	    }
@@ -370,7 +362,7 @@ public class LoadBalancers {
 		}
 	}
 	
-	public static LoadBalancerServoInstance lookupServoInstance(String instanceId) throws LoadBalancingException {
+	public static LoadBalancerServoInstance lookupServoInstance(final String instanceId) throws LoadBalancingException {
 		final EntityTransaction db = Entities.get( LoadBalancerServoInstance.class );
 		try{
 			LoadBalancerServoInstance sample = LoadBalancerServoInstance.named(instanceId);
@@ -386,7 +378,22 @@ public class LoadBalancers {
 		}
 	}
 	
-	public static void unsetForeignKeys(final UserFullName userFullName, final String loadbalancer){
+	public static LoadBalancerBackendInstance lookupBackendInstance(final String instanceId) {
+		final EntityTransaction db = Entities.get( LoadBalancerBackendInstance.class ) ;
+		try{
+			final LoadBalancerBackendInstance found = Entities.uniqueResult(LoadBalancerBackendInstance.named(instanceId));
+			db.commit();
+			return found;
+		}catch(final NoSuchElementException ex){
+			db.rollback();
+			throw ex;
+		}catch(final Exception ex){
+			db.rollback();
+			throw Exceptions.toUndeclared(ex);
+		}
+	}
+	
+	public static void unsetForeignKeys(final Context ctx, final String loadbalancer){
 		Predicate<LoadBalancerServoInstance> unsetServoInstanceKey = new Predicate<LoadBalancerServoInstance>(){
 			@Override
 			public boolean apply(@Nullable LoadBalancerServoInstance arg0) {
@@ -405,7 +412,7 @@ public class LoadBalancers {
 		
 		LoadBalancer lb = null;
 		try{
-			lb = getLoadbalancer(userFullName, loadbalancer);
+			lb = getLoadbalancer(ctx, loadbalancer);
 		}catch(Exception ex){
 			return;
 		}

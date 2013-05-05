@@ -134,7 +134,6 @@
 /* Should preferably be handled in header file */
 
 // coming from handlers.c
-extern sem *hyp_sem;
 extern sem *inst_sem;
 extern bunchOfInstances *global_instances;
 
@@ -221,14 +220,18 @@ static int doInitialize(struct nc_state_t *nc)
     nc->capability = HYPERVISOR_XEN_AND_HARDWARE;   //! @todo set to XEN_PARAVIRTUALIZED if on older Xen kernel
 
     // check connection is fresh
-    if (!check_hypervisor_conn()) {
+    virConnectPtr conn = lock_hypervisor_conn();
+    if (conn == NULL) {
         return (EUCA_FATAL_ERROR);
     }
     // get resources
-    if (virNodeGetInfo(nc->conn, &ni)) {
+    if (virNodeGetInfo(conn, &ni)) {
         LOGFATAL("failed to discover resources\n");
+        unlock_hypervisor_conn();
         return (EUCA_FATAL_ERROR);
     }
+    unlock_hypervisor_conn();
+
     // dom0-min-mem has to come from xend config file
     s = system_output(nc->get_info_cmd_path);
     if (get_value(s, "dom0-min-mem", &dom0_min_mem)) {
@@ -268,7 +271,7 @@ static int doRebootInstance(struct nc_state_t *nc, ncMetadata * pMeta, char *ins
     char resourceName[1][MAX_SENSOR_NAME_LEN] = { {0} };
     char resourceAlias[1][MAX_SENSOR_NAME_LEN] = { {0} };
     ncInstance *instance = NULL;
-    virConnectPtr *conn = NULL;
+    virConnectPtr conn = NULL;
     virDomainPtr dom = NULL;
 
     sem_p(inst_sem);
@@ -281,34 +284,16 @@ static int doRebootInstance(struct nc_state_t *nc, ncMetadata * pMeta, char *ins
         return (EUCA_NOT_FOUND_ERROR);
 
     /* reboot the Xen domain */
-    if ((conn = check_hypervisor_conn()) != NULL) {
-        sem_p(hyp_sem);
-        {
-            dom = virDomainLookupByName(*conn, instanceId);
-        }
-        sem_v(hyp_sem);
-
+    if ((conn = lock_hypervisor_conn()) != NULL) {
+        dom = virDomainLookupByName(conn, instanceId);
         if (dom) {
             // stop polling so values after reboot are not picked up until after we shift the metric
             sensor_suspend_polling();
-
-            /* also protect 'reboot', just in case */
-            sem_p(hyp_sem);
-            {
-                err = virDomainReboot(dom, 0);
-            }
-            sem_v(hyp_sem);
-
+            err = virDomainReboot(dom, 0);
             if (err == 0) {
                 LOGINFO("[%s] rebooting Xen domain for instance\n", instanceId);
             }
-
-            sem_p(hyp_sem);
-            {
-                /* necessary? */
-                virDomainFree(dom);
-            }
-            sem_v(hyp_sem);
+            virDomainFree(dom); //! @todo is this necessary?
 
             // Add a shift to values of three of the metrics: ones that
             // drop back to zero after a reboot. The shift, which is based
@@ -326,6 +311,7 @@ static int doRebootInstance(struct nc_state_t *nc, ncMetadata * pMeta, char *ins
                 LOGWARN("[%s] domain to be rebooted not running on hypervisor\n", instanceId);
             }
         }
+        unlock_hypervisor_conn();
     }
 
     return (EUCA_OK);

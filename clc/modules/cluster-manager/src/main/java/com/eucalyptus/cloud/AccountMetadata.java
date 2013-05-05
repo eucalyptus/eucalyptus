@@ -155,8 +155,8 @@ public abstract class AccountMetadata<STATE extends Enum<STATE>> extends Abstrac
   }
   
   public void setOwnerAccountName( String ownerAccountName ) {
-    this.ownerAccountName = null;
-    //this.ownerAccountName = ownerAccountName;
+    // this.ownerAccountName = null;
+    this.ownerAccountName = ownerAccountName;
   }
   
   protected String getUniqueName( ) {

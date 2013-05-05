@@ -28,7 +28,6 @@ import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Set;
 import java.util.concurrent.ConcurrentMap;
-
 import com.eucalyptus.cloudwatch.CloudWatch;
 import com.eucalyptus.cloudwatch.Dimension;
 import com.eucalyptus.cloudwatch.Dimensions;
@@ -56,6 +55,7 @@ import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.ServiceConfigurations;
+import com.eucalyptus.entities.Transactions;
 import com.eucalyptus.event.EventFailedException;
 import com.eucalyptus.event.ListenerRegistry;
 import com.eucalyptus.records.Logs;
@@ -65,6 +65,7 @@ import com.eucalyptus.util.async.AsyncRequests;
 import com.eucalyptus.util.async.BroadcastCallback;
 import com.eucalyptus.vm.VmInstance.VmState;
 import com.eucalyptus.vm.VmInstance;
+import com.eucalyptus.vm.VmInstanceTag;
 import com.eucalyptus.vm.VmInstances;
 
 import com.google.common.base.Function;
@@ -204,7 +205,7 @@ public class DescribeSensorCallback extends
                           currentTimeStamp);
                     }
                   });
-                  
+
                   // special case to calculate VolumeConsumedReadWriteOps
                   // As it is (VolumeThroughputPercentage / 100) * (VolumeReadOps + VolumeWriteOps), and we are hard coding
                   // VolumeThroughputPercentage as 100%, we will just use VolumeReadOps + VolumeWriteOps
@@ -351,7 +352,7 @@ public class DescribeSensorCallback extends
       .put("NetworkOutExternal", "NetworkOutExternalAbsolute") // this is actually the total network out external bytes since instance creation, not for the period
       .build();
 
-  private void sendSystemMetric(Supplier<InstanceUsageEvent> cloudWatchSupplier) throws Exception {
+  private void sendSystemMetric(Supplier<InstanceUsageEvent> cloudWatchSupplier) {
     InstanceUsageEvent event = null;
     event = cloudWatchSupplier.get();
 
@@ -359,7 +360,8 @@ public class DescribeSensorCallback extends
 
     if (!instance.getInstanceId().equals(event.getInstanceId())
         || !instance.getMonitoring()) {
-      throw new NoSuchElementException("Instance : " + event.getInstanceId() + " monitoring is not enabled");
+      LOG.debug("Instance : " + event.getInstanceId() + " monitoring is not enabled");
+      return;
     }
 
     if (instance.getInstanceId().equals(event.getInstanceId())
@@ -387,7 +389,18 @@ public class DescribeSensorCallback extends
           }
         } else {
           putMetricData.setNamespace("AWS/EC2");
-
+          // get autoscaling group name if it exists
+          try {
+            String autoscalingGroupName = Transactions.find(VmInstanceTag.named(instance, instance.getOwner(), "aws:autoscaling:groupName")).getValue();
+            if (autoscalingGroupName != null) {
+              Dimension autoscalingGroupNameDim = new Dimension();
+              autoscalingGroupNameDim.setName("AutoScalingGroupName");
+              autoscalingGroupNameDim.setValue(autoscalingGroupName);
+              dimArray.add(autoscalingGroupNameDim);
+            }
+          } catch (Exception ex) {
+            ; // no autoscaling group, don't bother adding
+          }
           Dimension instanceIdDim = new Dimension();
           instanceIdDim.setName("InstanceId");
           instanceIdDim.setValue(instance.getInstanceId());
@@ -412,7 +425,7 @@ public class DescribeSensorCallback extends
         }
       } else {
         LOG.debug("Event does not contain a dimension");
-        throw new Exception();
+        return;
       }
 
       Dimensions dims = new Dimensions();
@@ -434,6 +447,7 @@ public class DescribeSensorCallback extends
       metricData.setMember(Lists.newArrayList(metricDatum));
       putMetricData.setMetricData(metricData);
 
+      try {
       Account account = Accounts.getAccountProvider().lookupAccountById(
           instance.getOwnerAccountNumber());
 
@@ -446,7 +460,9 @@ public class DescribeSensorCallback extends
       if (!(reply instanceof PutMetricDataResponseType)) {
         throw new EucalyptusCloudException("Unable to send put metric data to cloud watch");
       }
-
+      } catch (Exception ex) {
+        LOG.debug(ex.getMessage(),ex);
+      }
     }
   }
 

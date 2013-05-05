@@ -178,8 +178,8 @@ public class Logs {
       final PrintStream oldOut = System.out;
       final PrintStream oldErr = System.err;
       if ( !System.getProperty( "euca.log.appender", "" ).equals( "console" ) ) {
-        System.setOut( new PrintStream( new EucaLoggingOutputStream( stdLogger, Level.INFO ) ) );
-        System.setErr( new PrintStream( new EucaLoggingOutputStream( stdLogger, Level.ERROR ) ) );
+        System.setOut( new PrintStream( new EucaLoggingOutputStream( stdLogger, Level.INFO ), true ) );
+        System.setErr( new PrintStream( new EucaLoggingOutputStream( stdLogger, Level.ERROR ), true ) );
       }
       Logger.getRootLogger( ).info( LogUtil.subheader( "Starting system with debugging set as: " + Logs.logLevel.get( ) ) );
     } catch ( final Exception t ) {
@@ -195,8 +195,8 @@ public class Logs {
 	      final PrintStream oldOut = System.out;
 	      final PrintStream oldErr = System.err;
 	      if ( !System.getProperty( "euca.log.appender", "" ).equals( "console" ) ) {
-	        System.setOut( new PrintStream( new EucaLoggingOutputStream( stdLogger, Level.INFO ) ) );
-	        System.setErr( new PrintStream( new EucaLoggingOutputStream( stdLogger, Level.ERROR ) ) );
+	        System.setOut( new PrintStream( new EucaLoggingOutputStream( stdLogger, Level.INFO ), true ) );
+	        System.setErr( new PrintStream( new EucaLoggingOutputStream( stdLogger, Level.ERROR ), true ) );
 	      }
 	      Logger.getRootLogger( ).info( LogUtil.subheader( "Starting system with debugging set as: " + Logs.logLevel.get( ) ) );
 	    } catch ( final Exception t ) {

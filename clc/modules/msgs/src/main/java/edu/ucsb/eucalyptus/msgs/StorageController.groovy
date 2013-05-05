@@ -330,17 +330,13 @@ public class ConvertVolumesResponseType extends StorageComponentMessageResponseT
 
 public class AttachStorageVolumeType extends StorageRequestType {
 	String volumeId;
-	ArrayList<String> nodeIqns = new ArrayList<String>();
+	String nodeIqn;
 	
 	def AttachStorageVolumeType() {}
 	
-	def AttachStorageVolumeType(List<String> nodeIqns, String volumeId) {
-		this.nodeIqns.addAll( nodeIqns );
+	def AttachStorageVolumeType(String nodeIqn, String volumeId) {
+		this.nodeIqn = nodeIqn;
 		this.volumeId = volumeId;
-	}
-	
-	public ArrayList<String> getNodeIqns() {
-		return nodeIqns;
 	}
 }
 

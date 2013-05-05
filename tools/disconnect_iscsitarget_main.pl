@@ -66,6 +66,7 @@ $ENV{'PATH'}='/bin:/usr/bin:/sbin:/usr/sbin/';
 $ISCSIADM = untaint(`which iscsiadm`);
 $MULTIPATH = untaint(`which multipath`);
 $DMSETUP = untaint(`which dmsetup`);
+$YES_RESCAN = "rescan";
 
 $CONF_IFACES_KEY = "STORAGE_INTERFACES";
 
@@ -123,16 +124,17 @@ while (@paths > 0) {
     for ($i = 0; $i < 10; $i++) {
       delete_lun($netdev, $ip, $store, $lun);
       
-      if($do_rescan == $yes_rescan) {
+      if($do_rescan eq $YES_RESCAN) {
       	# rescan target
       	run_cmd(1, 1, "$ISCSIADM -m session -R");
       	last if is_null_or_empty(get_iscsi_device($netdev, $ip, $store, $lun));
       	sleep(5);
       } else {
       	#Don't rescan, continue
+      	last if is_null_or_empty(get_iscsi_device($netdev, $ip, $store, $lun));      	
       }
     }
-    print STDERR "Tried deleting lun $i times\n";
+    print STDERR "Tried deleting lun $lun $i times in iSCSI session IP=$ip, IQN=$store\n";
     next if retry_until_true(\&has_device_attached, [$netdev, $ip, $store], 5) == 1;
   }
   # logout
@@ -144,12 +146,12 @@ while (@paths > 0) {
     }
   }
   if (is_null_or_empty($iface)) {
-    run_cmd(1, 1, "$ISCSIADM -m node -p $ip -T $store -u");
+    run_cmd(1, 0, "$ISCSIADM -m node -p $ip -T $store -u");
   } else {
-    run_cmd(1, 1, "$ISCSIADM -m node -p $ip -T $store -I $iface -u");
+    run_cmd(1, 0, "$ISCSIADM -m node -p $ip -T $store -I $iface -u");
   }
  # Delete /var/lib/iscsi/node 
-  run_cmd(1, 1, "$ISCSIADM -m node -p $ip -T $store -o delete");
+  run_cmd(1, 0, "$ISCSIADM -m node -p $ip -T $store -o delete");
 }
 
 # Remove unused mpath device
@@ -189,7 +191,7 @@ sub delete_lun {
     }
   }
   if (is_null_or_empty($sid) || is_null_or_empty($host_number)) {
-    print STDERR "Warning: failed to get SID or Host Number.\n";
+    print STDERR "Warning: failed to get SID or Host Number for session IP=$ip, IQN=$store,lun=$lun.\n";
     return;
   }
   $delete_path = "/sys/class/iscsi_session/session$sid/device/target$host_number:0:0/$host_number:0:0:$lun/delete";
