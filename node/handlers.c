@@ -1178,7 +1178,7 @@ void *monitoring_thread(void *arg)
             // terminate a booting instance as a special case
             if (instance->state == BOOTING) {
                 LOGDEBUG("[%s] finding and terminating BOOTING instance (%d)\n", instance->instanceId,
-                         find_and_terminate_instance(nc, NULL, instance->instanceId, 1, &tmpInstance, 1));
+                         find_and_terminate_instance(nc, NULL, instance->instanceId, 1, &tmpInstance));
             }
 
             if (cleaned_up < nc_state.concurrent_cleanup_ops) {
