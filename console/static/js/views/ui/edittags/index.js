@@ -109,13 +109,13 @@ define([
 
                 restore: function(element, scope) {
                     console.log('restore');
-                    scope.tag.set({_clean: true, _deleted: false});
+                    scope.tag.set({_clean: true, _deleted: false, _edit: false});
                     self.render();
                 },
 
                 delete: function(element, scope) {
                     console.log('delete');
-                    scope.tag.set({_clean: false, _deleted: true});
+                    scope.tag.set({_clean: false, _deleted: true, _edit: false});
                 },
             } // end of scope
 

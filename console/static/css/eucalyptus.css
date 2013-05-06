@@ -3288,6 +3288,10 @@ filter: progid:DXImageTransform.Microsoft.gradient( startColorstr='#ededed', end
     visibility: visible;
 }
 
+.tag-edit .edit-tags-edit .tag-control {
+    visibility: visible;
+}
+
 .ui-sortable span {
     vertical-align: top;
     line-height: 27px;
