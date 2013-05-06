@@ -185,7 +185,6 @@ public class LoadBalancerCwatchMetrics {
 						return false;
 					if(!userId.equals(instance.getLoadBalancer().getOwnerUserId()))
 						return false; // only for the requested user
-					
 					final LoadBalancer lb = LoadBalancerEntityTransform.INSTANCE.apply(instance.getLoadBalancer());
 					final LoadBalancerBackendInstance be = LoadBalancers.lookupBackendInstance(lb, instance.getInstanceId());
 					if(be==null)

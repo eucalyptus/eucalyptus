@@ -33,6 +33,8 @@ import javax.persistence.ManyToOne;
 import javax.persistence.PersistenceContext;
 import javax.persistence.PostLoad;
 import javax.persistence.Table;
+import javax.persistence.Temporal;
+import javax.persistence.TemporalType;
 import javax.persistence.Transient;
 
 import org.apache.log4j.Logger;
@@ -104,7 +106,13 @@ public class LoadBalancerBackendInstance extends UserMetadata<LoadBalancerBacken
 	
 	@Column( name = "description", nullable=true)
 	private String description = null;
+
 	
+	@Temporal(TemporalType.TIMESTAMP)
+	@Column(name = "instance_update_timestamp", nullable=true)
+	private Date instanceUpdateTimestamp = null;
+	  
+	  
     private LoadBalancerBackendInstance(){
     	super(null,null);
     }
@@ -228,6 +236,11 @@ public class LoadBalancerBackendInstance extends UserMetadata<LoadBalancerBacken
     public LoadBalancerZoneCoreView getAvailabilityZone(){
     	return this.view.getZone();
     } 
+    
+    public void updateInstanceStateTimestamp(){
+    	final long currentTime = System.currentTimeMillis();
+    	this.instanceUpdateTimestamp = new Date(currentTime);
+    }
     
 	@Override
 	public String getPartition() {
@@ -423,6 +436,10 @@ public class LoadBalancerBackendInstance extends UserMetadata<LoadBalancerBacken
 		
 		public String getZoneName(){
 			return this.instance.zone.getName();
+		}
+		
+		public Date instanceStateLastUpdated(){
+			return this.instance.instanceUpdateTimestamp;
 		}
 	}
 	 
