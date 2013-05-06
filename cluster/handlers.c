@@ -4568,7 +4568,11 @@ int doMigrateInstances(ncMetadata * pMeta, char *actionNode, char *instanceId, c
         // (spec says only prepare call to source should block.)
         pid_t pid = fork();
         if (!pid) {
+            int inst_succ = 0;
+            int inst_fail = 0;
+
             timeout = ncGetTimeout(time(NULL), OP_TIMEOUT, 1, 0);
+            LOGDEBUG ("about to ncClientCall destination node[s] with nc_instances (%s %d) [creds='%s']\n", nodeAction, found_instances, credentials);
             for (int idx = 0; idx < found_instances; idx++) {
                 LOGDEBUG("[%s] about to ncClientCall destination node '%s' with nc_instances (%s %d) [creds='%s']\n",
                          SP(nc_instances[idx]->instanceId), SP(nc_instances[idx]->migration_dst), nodeAction, 1, credentials);
@@ -4584,10 +4588,13 @@ int doMigrateInstances(ncMetadata * pMeta, char *actionNode, char *instanceId, c
                                   &(nc_instances[idx]), 1, nodeAction, credentials);
                 if (rc) {
                     LOGERROR("[%s] failed: request to prepare migration on destination %s\n", nc_instances[idx]->instanceId, resourceCacheLocal.resources[dst_index].hostname);
-                    exit(1);
+                    ++inst_fail;
+                    //exit(1);
+                } else {
+                    ++inst_succ;
                 }
             }
-            LOGDEBUG("called destination nodes[s] to prepare for %d incoming migrations[s]\n", found_instances);
+            LOGDEBUG("called destination nodes[s] to prepare for %d incoming migrations[s], %d call[s] succeeded, %d call[s] failed\n", found_instances, inst_succ, inst_fail);
             exit(0);
         } else {
             // parent
