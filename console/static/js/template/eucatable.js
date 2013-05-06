@@ -111,6 +111,7 @@
           $.each(thisObj.options.filters, function(idx, filter){
             if (filter['default']) {
               thisObj.vsearch.searchBox.value(filter['name']+": "+filter['default'])
+              thisObj.vsearch.searchBox.searchEvent($.Event('keydown'));
             }
           });
         }
