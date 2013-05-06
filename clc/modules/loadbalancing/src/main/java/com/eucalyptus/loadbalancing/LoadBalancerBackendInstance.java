@@ -26,11 +26,13 @@ import java.util.Map;
 import java.util.NoSuchElementException;
 
 import javax.annotation.Nullable;
+import javax.persistence.CascadeType;
 import javax.persistence.Column;
 import javax.persistence.EntityTransaction;
 import javax.persistence.JoinColumn;
 import javax.persistence.ManyToOne;
 import javax.persistence.PersistenceContext;
+import javax.persistence.PostLoad;
 import javax.persistence.Table;
 import javax.persistence.Transient;
 
@@ -46,9 +48,14 @@ import com.eucalyptus.entities.Entities;
 import com.eucalyptus.event.ClockTick;
 import com.eucalyptus.event.EventListener;
 import com.eucalyptus.event.Listeners;
+import com.eucalyptus.loadbalancing.LoadBalancer.LoadBalancerCoreView;
+import com.eucalyptus.loadbalancing.LoadBalancerZone.LoadBalancerZoneCoreView;
 import com.eucalyptus.loadbalancing.activities.EucalyptusActivityTasks;
+import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.FullName;
 import com.eucalyptus.util.OwnerFullName;
+import com.eucalyptus.util.TypeMapper;
+import com.eucalyptus.util.TypeMappers;
 import com.google.common.base.Function;
 import com.google.common.collect.Lists;
 
@@ -69,15 +76,24 @@ public class LoadBalancerBackendInstance extends UserMetadata<LoadBalancerBacken
 	@Transient
 	private String partition = null;
 	
+	@Transient
+	private LoadBalancerBackendInstanceRelationView view;
+	
+	@PostLoad
+	private void onLoad(){
+		if(view==null)
+			view = new LoadBalancerBackendInstanceRelationView(this); 
+	}
+	
 	public enum STATE {
 		InService, OutOfService, Error
 	}
 	
-    @ManyToOne
+    @ManyToOne()
     @JoinColumn( name = "metadata_loadbalancer_fk" )
 	private LoadBalancer loadbalancer = null;
 
-    @ManyToOne
+    @ManyToOne()
     @JoinColumn( name = "metadata_zone_fk")
     private LoadBalancerZone zone = null;
         
@@ -181,8 +197,8 @@ public class LoadBalancerBackendInstance extends UserMetadata<LoadBalancerBacken
 		return this.vmInstance;
 	}
 
-    public LoadBalancer getLoadBalancer(){
-    	return this.loadbalancer;
+	public LoadBalancerCoreView getLoadBalancer(){
+		return this.view.getLoadBalancer();
     }
     
     public void setBackendState(final STATE state){
@@ -213,9 +229,9 @@ public class LoadBalancerBackendInstance extends UserMetadata<LoadBalancerBacken
     	this.zone = zone;
     }
    
-    public LoadBalancerZone getAvailabilityZone(){
-    	return this.zone;
-    }
+    public LoadBalancerZoneCoreView getAvailabilityZone(){
+    	return this.view.getZone();
+    } 
     
 	@Override
 	public String getPartition() {
@@ -234,7 +250,6 @@ public class LoadBalancerBackendInstance extends UserMetadata<LoadBalancerBacken
 
 	@Override
 	public FullName getFullName() {
-		// TODO Auto-generated method stub
 		return FullName.create.vendor( "euca" )
                 .region( ComponentIds.lookup( Eucalyptus.class ).name( ) )
                 .namespace( this.getOwnerAccountNumber( ) )
@@ -257,8 +272,8 @@ public class LoadBalancerBackendInstance extends UserMetadata<LoadBalancerBacken
 	
 	@Override
 	protected String createUniqueName( ) {
-	    return ( this.getOwnerAccountNumber( ) != null && this.getDisplayName( ) != null && this.getLoadBalancer() != null)
-	      ? this.getOwnerAccountNumber( ) + ":" + this.getLoadBalancer().getDisplayName()+":"+this.getDisplayName( )
+	    return ( this.getOwnerAccountNumber( ) != null && this.getDisplayName( ) != null && this.loadbalancer != null)
+	      ? this.getOwnerAccountNumber( ) + ":" + this.loadbalancer.getDisplayName()+":"+this.getDisplayName( )
 	      : null;
 	}
 	
@@ -366,5 +381,107 @@ public class LoadBalancerBackendInstance extends UserMetadata<LoadBalancerBacken
 			}
 		}
 	}
-	  
+	
+	public static class LoadBalancerBackendInstanceCoreView {
+		private LoadBalancerBackendInstance instance = null;
+		LoadBalancerBackendInstanceCoreView(LoadBalancerBackendInstance instance){
+			this.instance = instance;
+		}
+		
+		public String getDisplayName(){
+			return this.instance.getDisplayName();
+		}
+		
+		public STATE getState(){
+			return this.instance.getState();
+		}
+		
+		public String getInstanceId(){
+			return this.instance.getInstanceId();
+		}
+		
+		public RunningInstancesItemType getVmInstance(){
+			return this.instance.getVmInstance();
+		}
+
+	    public STATE getBackendState(){
+	    	return this.instance.getBackendState();
+	    }
+	    
+	    public String getReasonCode(){
+	    	return this.instance.getReasonCode();
+	    }
+	    
+	    public String getDescription(){
+	    	return this.instance.getDescription();
+	    }
+	    
+		public String getPartition() {
+			return this.instance.getPartition();
+		}
+		
+		public String getIpAddress(){
+			return this.instance.getIpAddress();
+		}
+		
+		public String getZoneName(){
+			return this.instance.zone.getName();
+		}
+	}
+	 
+	@TypeMapper
+	public enum LoadBalancerBackendInstanceCoreViewTransform implements Function<LoadBalancerBackendInstance, LoadBalancerBackendInstanceCoreView> {
+		INSTANCE;
+
+		@Override
+		@Nullable
+		public LoadBalancerBackendInstanceCoreView apply(
+				@Nullable LoadBalancerBackendInstance arg0) {
+			return new LoadBalancerBackendInstanceCoreView(arg0);
+		}
+	}
+	
+	public enum LoadBalancerBackendInstanceEntityTransform implements Function<LoadBalancerBackendInstanceCoreView, LoadBalancerBackendInstance> {
+		INSTANCE;
+
+		@Override
+		@Nullable
+		public LoadBalancerBackendInstance apply(
+				@Nullable LoadBalancerBackendInstanceCoreView arg0) {
+			final EntityTransaction db = Entities.get(LoadBalancerBackendInstance.class);
+			try{
+				final LoadBalancerBackendInstance be = Entities.uniqueResult(arg0.instance);
+				db.commit();
+				return be;
+			}catch(final Exception ex){
+				db.rollback();
+				throw Exceptions.toUndeclared(ex);
+			}finally{
+				if(db.isActive())
+					db.rollback();
+			}
+		}	
+	}
+	
+	private static class LoadBalancerBackendInstanceRelationView  {
+		private LoadBalancerZoneCoreView zone = null;
+		private LoadBalancerCoreView loadbalancer = null;
+		
+		LoadBalancerBackendInstanceRelationView(
+				LoadBalancerBackendInstance instance) {
+			if(instance.zone!=null)
+				zone = TypeMappers.transform(instance.zone, LoadBalancerZoneCoreView.class);
+			if(instance.loadbalancer!=null)
+				loadbalancer = TypeMappers.transform(instance.loadbalancer, LoadBalancerCoreView.class);
+		}
+		
+		public LoadBalancerZoneCoreView getZone(){
+			return this.zone;
+		}
+		
+		public LoadBalancerCoreView getLoadBalancer(){
+			return this.loadbalancer;
+		}
+		
+	}
 }

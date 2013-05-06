@@ -88,6 +88,7 @@ package com.eucalyptus.ws.handlers.http;
 
 import java.util.List;
 
+import org.apache.log4j.Logger;
 import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.buffer.ChannelBuffers;
 import org.jboss.netty.channel.Channel;
@@ -102,18 +103,16 @@ import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.jboss.netty.handler.codec.http.HttpResponse;
 import org.jboss.netty.handler.codec.http.HttpVersion;
 import org.jboss.netty.handler.codec.replay.ReplayingDecoder;
-import org.eclipse.jetty.util.log.Log;
-import org.eclipse.jetty.util.log.Logger;
 
 import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.context.NoSuchContextException;
 import com.eucalyptus.http.MappingHttpRequest;
+import com.eucalyptus.records.Logs;
 import com.eucalyptus.ws.StackConfiguration;
 
 public class NioHttpDecoder extends ReplayingDecoder<NioHttpDecoder.State> {
 
-  private static final           Logger LOG = Log.getLog();
   private final int              maxInitialLineLength;
   private final int              maxHeaderSize;
   private final int              maxChunkSize;
@@ -484,7 +483,9 @@ public class NioHttpDecoder extends ReplayingDecoder<NioHttpDecoder.State> {
   }
 
   private int getChunkSize( String hex ) {
-    LOG.info( "Chunk Size Hex to parse:" + hex );
+    final Logger logger = Logs.exhaust();
+    if ( logger.isTraceEnabled() )
+      logger.trace( "Chunk Size Hex to parse:" + hex );
     hex = hex.replaceAll( "\\W", "" ).trim( );
     for ( int i = 0; i < hex.length( ); i++ ) {
       char c = hex.charAt( i );
@@ -493,7 +494,8 @@ public class NioHttpDecoder extends ReplayingDecoder<NioHttpDecoder.State> {
         break;
       }
     }
-    LOG.info( "Chunk Size in Hex:" + hex );
+    if ( logger.isTraceEnabled() )
+      logger.trace( "Chunk Size in Hex:" + hex );
     return Integer.parseInt( hex, 16 );
   }
 

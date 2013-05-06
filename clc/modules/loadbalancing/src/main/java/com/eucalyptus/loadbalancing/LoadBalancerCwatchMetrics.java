@@ -37,6 +37,9 @@ import com.eucalyptus.cloudwatch.MetricData;
 import com.eucalyptus.cloudwatch.MetricDatum;
 import com.eucalyptus.cloudwatch.StatisticSet;
 import com.eucalyptus.entities.Entities;
+import com.eucalyptus.loadbalancing.LoadBalancer.LoadBalancerCoreView;
+import com.eucalyptus.loadbalancing.LoadBalancerZone.LoadBalancerZoneCoreView;
+import com.eucalyptus.loadbalancing.LoadBalancerZone.LoadBalancerZoneEntityTransform;
 import com.eucalyptus.loadbalancing.activities.EucalyptusActivityTasks;
 import com.eucalyptus.loadbalancing.activities.LoadBalancerServoInstance;
 import com.eucalyptus.util.Exceptions;
@@ -70,12 +73,10 @@ public class LoadBalancerCwatchMetrics {
 		// based on the servo Id, find the loadbalancer and the availability zone
 		// 
 		final EntityTransaction db = Entities.get( LoadBalancerServoInstance.class );
-		LoadBalancer lb = null;
-		LoadBalancerZone lbZone = null;
+		LoadBalancerZoneCoreView lbZone = null;
 		try{
 			LoadBalancerServoInstance servo = Entities.uniqueResult(LoadBalancerServoInstance.named(servoId));
 			lbZone = servo.getAvailabilityZone();
-			lb = lbZone.getLoadbalancer();
 			db.commit();
 		}catch(NoSuchElementException ex){
 			db.rollback();
@@ -84,6 +85,17 @@ public class LoadBalancerCwatchMetrics {
 			db.rollback();
 			throw Exceptions.toUndeclared("database error while querying "+servoId);
 		}
+		
+		LoadBalancerZone zone = null;
+		LoadBalancerCoreView lb = null;
+		
+		try{
+			zone = LoadBalancerZoneEntityTransform.INSTANCE.apply(lbZone);
+			lb = zone.getLoadbalancer();
+		}catch(final Exception ex){
+			return;
+		}
+		
 		final String userId = lb.getOwnerUserId();
 		final String lbName = lb.getDisplayName();
 		final String zoneName = lbZone.getName();

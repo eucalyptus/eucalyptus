@@ -1,12 +1,15 @@
 package com.eucalyptus.loadbalancing;
 import java.util.Collection;
 
+import javax.annotation.Nullable;
 import javax.persistence.Column;
+import javax.persistence.EntityTransaction;
 import javax.persistence.FetchType;
 import javax.persistence.JoinColumn;
 import javax.persistence.OneToMany;
 import javax.persistence.OneToOne;
 import javax.persistence.PersistenceContext;
+import javax.persistence.PostLoad;
 import javax.persistence.PrePersist;
 import javax.persistence.Table;
 import javax.persistence.Transient;
@@ -23,12 +26,17 @@ import com.eucalyptus.configurable.ConfigurableProperty;
 import com.eucalyptus.configurable.ConfigurablePropertyException;
 import com.eucalyptus.configurable.PropertyChangeListener;
 import com.eucalyptus.entities.AbstractPersistent;
+import com.eucalyptus.entities.Entities;
+import com.eucalyptus.loadbalancing.LoadBalancer.LoadBalancerCoreView;
 import com.eucalyptus.loadbalancing.activities.LoadBalancerServoInstance;
 import com.eucalyptus.util.Exceptions;
+import com.eucalyptus.util.TypeMapper;
+import com.eucalyptus.util.TypeMappers;
 
 import edu.ucsb.eucalyptus.cloud.entities.SystemConfiguration;
-import com.google.common.net.HostSpecifier;
 
+import com.google.common.base.Function;
+import com.google.common.net.HostSpecifier;
 
 /*************************************************************************
  * Copyright 2009-2013 Eucalyptus Systems, Inc.
@@ -87,6 +95,15 @@ public class LoadBalancerDnsRecord extends AbstractPersistent {
 	
 	@Transient
 	private static final long serialVersionUID = 1L;
+	
+	@Transient
+	private LoadBalancerDnsRecordRelationView view = null;
+	
+	@PostLoad
+	private void onLoad(){
+		if(this.view==null)
+			this.view = new LoadBalancerDnsRecordRelationView(this);
+	}
 
 	private LoadBalancerDnsRecord(){}
 	
@@ -145,6 +162,10 @@ public class LoadBalancerDnsRecord extends AbstractPersistent {
 		this.loadbalancer = lb;
 	}
 	
+	public LoadBalancerCoreView getLoadbalancer(){
+		return this.view.getLoadBalancer();
+	}
+	
 	public String getName(){
 		return String.format("%s.%s", this.dnsName, this.dnsZone);
 	}
@@ -154,14 +175,6 @@ public class LoadBalancerDnsRecord extends AbstractPersistent {
 				SystemConfiguration.getSystemConfiguration().getDnsDomain());
 	}
 	
-	public Collection<LoadBalancerServoInstance> getServoInstances(){
-		return this.servoInstances;
-	}
-	
-	public LoadBalancer getLoadBalancer(){
-		return this.loadbalancer;
-	}
-
 
     @PrePersist
     private void generateOnCommit( ) {
@@ -179,5 +192,72 @@ public class LoadBalancerDnsRecord extends AbstractPersistent {
 		if(this.dnsName!=null && this.dnsZone!=null)
 			name = String.format("Loadbalancer DNS record - %s",getDnsName());
 		return name;
+	}
+	
+
+	public static class LoadBalancerDnsRecordCoreView {
+		private LoadBalancerDnsRecord dns = null;
+		LoadBalancerDnsRecordCoreView(final LoadBalancerDnsRecord dns){
+			this.dns = dns;
+		}
+		
+		public String getZone(){
+			return this.dns.getZone();
+		}
+		
+		public String getName(){
+			return this.dns.getName();
+		}
+		
+		public String getDnsName(){
+			return this.dns.getDnsName();
+		}
+	}
+	
+	@TypeMapper
+	public enum LoadBalancerDnsRecordCoreViewTransform implements Function<LoadBalancerDnsRecord, LoadBalancerDnsRecordCoreView>{
+		INSTANCE;
+		
+		@Override
+		@Nullable
+		public LoadBalancerDnsRecordCoreView apply(
+				@Nullable LoadBalancerDnsRecord arg0) {
+			return new LoadBalancerDnsRecordCoreView(arg0);
+		}
+	}
+	
+	public enum LoadBalancerDnsRecordEntityTransform implements Function<LoadBalancerDnsRecordCoreView, LoadBalancerDnsRecord>{
+		INSTANCE;
+
+		@Override
+		@Nullable
+		public LoadBalancerDnsRecord apply(
+				@Nullable LoadBalancerDnsRecordCoreView arg0) {
+			final EntityTransaction db = Entities.get(LoadBalancerDnsRecord.class);
+			try{
+				final LoadBalancerDnsRecord dns = Entities.uniqueResult(arg0.dns);
+				db.commit();
+				return dns;
+			}catch(final Exception ex){
+				db.rollback();
+				throw Exceptions.toUndeclared(ex);
+			}finally{
+				if(db.isActive())
+					db.rollback();
+			}
+		}
+	}
+	
+	public static class LoadBalancerDnsRecordRelationView {
+		private LoadBalancerDnsRecord dns = null;
+		private LoadBalancerCoreView loadbalancer = null;
+		LoadBalancerDnsRecordRelationView(LoadBalancerDnsRecord dns){
+			this.dns = dns;
+			if(dns.loadbalancer!=null)
+				this.loadbalancer = TypeMappers.transform(dns.loadbalancer, LoadBalancerCoreView.class);
+		}
+		public LoadBalancerCoreView getLoadBalancer(){
+			return this.loadbalancer;
+		}
 	}
 }
