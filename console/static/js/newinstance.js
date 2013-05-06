@@ -22,17 +22,31 @@
   $.widget('eucalyptus.newinstance', $.eucalyptus.eucawidget, {
     options : { },
     _init : function() {
-      console.log('LAUNCHER _init');
       var thisObj = this;
+      thisObj.widgetName = 'launcher';
       $(thisObj.element).unbind();
       require(['views/newinstance/index'], function(wizardFactory) {
         var View = wizardFactory(thisObj.options);
         var view = new View({el: thisObj.element});
       	view.render();
-        if(thisObj.options.image != null) 
+        if(thisObj.options.image != null) {
           view.jump(1);
-          thisObj.options.image = null;
+        }
+        thisObj.options.image = null;
+        var launcherHelp = $('#launch-wizard-help');
+        //launcherHelp.load();
+        thisObj._addHelp(launcherHelp);
       });
+    },
+
+    _addHelp : function(help){
+      var thisObj = this;
+      var $target = $('.wizard-wrapper');
+      $('#launch-wizard-header div.help-link a').click( function(evt){
+        console.log("HELP", help, help_launcher.landing_content_url, $target);
+        thisObj._flipToHelp(evt,{content: help_launcher.landing_content, url: help_launcher.landing_content_url}, $target);
+      });
+      return $('#launch-wizard-header');
     },
 
     _create : function() { 

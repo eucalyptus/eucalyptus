@@ -35,7 +35,7 @@
       $wrapper.appendTo(this.element);
       this._addHelp($help);
       var needs = ['zones', 'images', 'instances', 'keypairs', 'groups', 'addresses', 'volumes', 'snapshots', 'tags'];
-      //setDataInterest(needs);
+      setDataInterest(needs);
       $('html body').eucadata('setDataNeeds', ['dash', 'zones']);
     },
 

@@ -45,21 +45,11 @@
               "mData": function(source) { return '<input type="checkbox"/>' },
               "sClass": "checkbox-cell"
             },
-            {
-	      // Display the name of the image in eucatable
-	      // Allow the name to be clickable
-	      // Use 'twist' in CSS
-	      "aTargets":[1], 
-              "mRender" : function(data) { 
-		return eucatableDisplayColumnTypeTwist (data, data, 255);
-              },
-              "mData": "name",
-            },
             { 
 	      // Display the id of the image in eucatable
-	      "aTargets":[2], 
+	      "aTargets":[1], 
               "mRender": function(data){
-                 return DefaultEncoder().encodeForHTML(data);
+		return eucatableDisplayColumnTypeTwist (data, data, 255);
               },
               "mData": function(source){
                  if(source.display_id)
@@ -67,9 +57,29 @@
                  return source.id;
               },
             },
+            {
+	      // Display the name of the image in eucatable
+	      // Allow the name to be clickable
+	      // Use 'twist' in CSS
+	      "aTargets":[2], 
+              "mRender" : function(data) { 
+                 return DefaultEncoder().encodeForHTML(data);
+              },
+              "mData": "name",
+            }, 
+            {
+	      // Display the name of the image in eucatable
+	      // Allow the name to be clickable
+	      // Use 'twist' in CSS
+	      "aTargets":[3], 
+              "mRender" : function(data) { 
+                 return DefaultEncoder().encodeForHTML(data);
+              },
+              "mData": "id",
+            }, 
             { 
 	      // Display the artitecture of the image in eucatable
-	      "aTargets":[3],
+	      "aTargets":[4],
 	      "mRender": function(data) {
                 return DefaultEncoder().encodeForHTML(data);
               },
@@ -77,7 +87,7 @@
 	    },
             {
 	      // Display the description of the image in eucatable
-	      "aTargets":[4],
+	      "aTargets":[5],
 	      "mRender": function(data) {
                 return eucatableDisplayColumnTypeText (data, data, 30);
               },
@@ -85,7 +95,7 @@
 	    },
             { 
 	      // Display the root device type of the image in eucatable
-	      "aTargets":[5],
+	      "aTargets":[6],
 	      "mRender": function(data) {
                 return DefaultEncoder().encodeForHTML(data);
               },
@@ -94,7 +104,7 @@
             {
               // Display the launch instance button for the image in eucatable
               "bSortable": false,
-              "aTargets":[6],
+              "aTargets":[7],
               "sClass": "centered-cell",
               "mRender": function(data) {
 	        return eucatableDisplayColumnTypeLaunchInstanceButton (data); 
@@ -105,7 +115,7 @@
             {
               // Hidden column for the state of the image
               "bVisible": false,
-              "aTargets":[7],
+              "aTargets":[8],
 	      "mRender": function(data) {
                 return DefaultEncoder().encodeForHTML(data);
               },
@@ -114,7 +124,7 @@
             {
               // Hidden column for the type of the image
               "bVisible": false,
-              "aTargets":[8],
+              "aTargets":[9],
 	      "mRender": function(data) {
                 return DefaultEncoder().encodeForHTML(data);
               },
@@ -123,7 +133,7 @@
             { 
               // Hidden column for the id of the image
               "bVisible": false,
-              "aTargets":[9],
+              "aTargets":[10],
 	      "mRender": function(data) {
                 return DefaultEncoder().encodeForHTML(data);
               },
@@ -133,7 +143,7 @@
               // Hidden column for the platform/OS of the image
               // idx = 9
               "bVisible" : false,
-              "aTargets":[10],
+              "aTargets":[11],
               "mData" : function(source) {
                 return source.platform ? DefaultEncoder().encodeForHTML(source.platform) : 'linux';
               },
@@ -141,7 +151,7 @@
             {
               // Hidden column for the location of the image
               "bVisible" : false,
-              "aTargets":[11],
+              "aTargets":[12],
 	      "mRender": function(data) {
                 return DefaultEncoder().encodeForHTML(data);
               },
@@ -150,7 +160,7 @@
             {
               // Hidden column for the ownership of the image ?
               "bVisible": false,
-              "aTargets":[12],
+              "aTargets":[13],
               "mData": function(source){
                 var results = describe('sgroup');
                 var group = null;
@@ -186,13 +196,13 @@
         help_click : function(evt) {
           thisObj._flipToHelp(evt, {content:$imgHelp, url: help_image.landing_content_url});
         },
-        show_only : [{filter_value: 'machine', filter_col: 8},{filter_value: 'available', filter_col: 7}],
+        show_only : [{filter_value: 'machine', filter_col: 9},{filter_value: 'available', filter_col: 8}],
         filters : [
-          {name:"img_ownership", options: ['all','self'], text: [launch_instance_image_table_owner_all, launch_instance_image_table_owner_me], filter_col:12}, 
+          {name:"img_ownership", options: ['all','self'], text: [launch_instance_image_table_owner_all, launch_instance_image_table_owner_me], filter_col:13}, 
           {name:"img_platform", options: ['all', 'linux', 'windows'], text: [launch_instance_image_table_platform_all,
-launch_instance_image_table_platform_linux, launch_instance_image_table_platform_windows], filter_col:10},
-          {name:"img_architect", options: ['all', 'i386','x86_64'], text: ['32 and 64 bit', '32 bit', '64 bit'], filter_col:3},
-          {name:"img_type", options: ['all', 'ebs','instance-store'], text: [instance_type_selector_all, instance_type_selector_ebs, instance_type_selector_instancestore], filter_col:5},
+launch_instance_image_table_platform_linux, launch_instance_image_table_platform_windows], filter_col:11},
+          {name:"img_architect", options: ['all', 'i386','x86_64'], text: ['32 and 64 bit', '32 bit', '64 bit'], filter_col:4},
+          {name:"img_type", options: ['all', 'ebs','instance-store'], text: [instance_type_selector_all, instance_type_selector_ebs, instance_type_selector_instancestore], filter_col:6},
           ],
       });
       this.tableWrapper.appendTo(this.element);
@@ -222,7 +232,7 @@ launch_instance_image_table_platform_linux, launch_instance_image_table_platform
     _expandCallback : function(row){ 
       var $el = $('<div />');
       require(['app', 'views/expandos/image'], function(app, expando) {
-         new expando({el: $el, model: app.data.images.get(row[9])});
+         new expando({el: $el, model: app.data.images.get(row[10])});
       });
       return $el;
     },
@@ -244,7 +254,7 @@ launch_instance_image_table_platform_linux, launch_instance_image_table_platform
     },
 
     _tagResourceAction : function(){
-      var selected = this.tableWrapper.eucatable('getSelectedRows', 9);
+      var selected = this.tableWrapper.eucatable('getSelectedRows', 10);
       if ( selected.length > 0 ) {
         require(['app'], function(app) {
            app.dialog('edittags', app.data.image.get(selected[0]));
