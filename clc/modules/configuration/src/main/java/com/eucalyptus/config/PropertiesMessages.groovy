@@ -62,6 +62,7 @@
 
 package com.eucalyptus.config
 
+import com.eucalyptus.binding.HttpParameterMapping
 import com.eucalyptus.component.ComponentId.ComponentMessage
 import com.eucalyptus.empyrean.Empyrean.PropertiesService
 import edu.ucsb.eucalyptus.msgs.BaseMessage
@@ -81,6 +82,7 @@ public class Property extends EucalyptusData {
 @ComponentMessage(PropertiesService.class)
 public class PropertiesMessage extends BaseMessage {}
 public class DescribePropertiesType extends PropertiesMessage {
+  @HttpParameterMapping (parameter = "Property")
   ArrayList<String> properties = new ArrayList<String>();
 }
 public class DescribePropertiesResponseType extends PropertiesMessage {

@@ -100,8 +100,8 @@
 
 #define MAX_OUTPUT                               4096
 
-#define CONNECT_TIMEOUT                           120
-#define DISCONNECT_TIMEOUT                        120
+#define CONNECT_TIMEOUT                           600
+#define DISCONNECT_TIMEOUT                        600
 #define GET_TIMEOUT                                60
 
 /*----------------------------------------------------------------------------*\

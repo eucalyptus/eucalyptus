@@ -232,7 +232,7 @@ public class MetricManager {
     }
     String hash = hash(dimensions);
     Class metricEntityClass = MetricEntityFactory.getClassForEntitiesGet(metricType, hash);
-    Map<GetMetricStatisticsAggregationKey, MetricStatistics> aggregationMap = Maps.newLinkedHashMap(); 
+    Map<GetMetricStatisticsAggregationKey, MetricStatistics> aggregationMap = new TreeMap<GetMetricStatisticsAggregationKey, MetricStatistics>(GetMetricStatisticsAggregationKey.COMPARATOR_WITH_NULLS.INSTANCE);
     EntityTransaction db = Entities.get(metricEntityClass);
     try {
       Criteria criteria = Entities.createCriteria(metricEntityClass);
@@ -250,8 +250,10 @@ public class MetricManager {
       Collection results = criteria.list();
       for (Object o: results) {
         MetricEntity me = (MetricEntity) o;
-        GetMetricStatisticsAggregationKey key = new GetMetricStatisticsAggregationKey(me, startTime, period);
-        MetricStatistics item = new MetricStatistics(me, startTime, period);
+        // Note: dimensions from metric entity are the actual dimensions for the point.  dimensions passed in are from the
+        // hash (used for aggregation).  The hash dimensions are what we want.
+        GetMetricStatisticsAggregationKey key = new GetMetricStatisticsAggregationKey(me, startTime, period, hash);
+        MetricStatistics item = new MetricStatistics(me, startTime, period, dimensions);
         if (!aggregationMap.containsKey(key)) {
           aggregationMap.put(key, item);
         } else {

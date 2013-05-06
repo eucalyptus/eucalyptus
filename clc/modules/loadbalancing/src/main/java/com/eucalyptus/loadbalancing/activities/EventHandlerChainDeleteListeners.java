@@ -23,7 +23,7 @@ import java.util.Collection;
 import org.apache.log4j.Logger;
 
 import com.eucalyptus.loadbalancing.LoadBalancer;
-import com.eucalyptus.loadbalancing.LoadBalancerSecurityGroup;
+import com.eucalyptus.loadbalancing.LoadBalancerSecurityGroup.LoadBalancerSecurityGroupCoreView;
 import com.eucalyptus.loadbalancing.LoadBalancers;
 /**
  * @author Sang-Min Park (spark@eucalyptus.com)
@@ -51,7 +51,7 @@ public class EventHandlerChainDeleteListeners extends EventHandlerChain<DeleteLi
 			String groupName = null;
 			try{
 				lb = LoadBalancers.getLoadbalancer(evt.getContext(), evt.getLoadBalancer());
-				final LoadBalancerSecurityGroup group = lb.getGroup();
+				final LoadBalancerSecurityGroupCoreView group = lb.getGroup();
 				if(group!=null)
 					groupName = group.getName();
 			}catch(Exception ex){

@@ -21,16 +21,20 @@ package com.eucalyptus.loadbalancing;
 
 import static com.eucalyptus.loadbalancing.LoadBalancingMetadata.LoadBalancerMetadata;
 import java.util.Collection;
+import java.util.Date;
 import java.util.NoSuchElementException;
 
+import javax.annotation.Nullable;
 import javax.persistence.CascadeType;
 import javax.persistence.Column;
 import javax.persistence.Embeddable;
 import javax.persistence.Embedded;
+import javax.persistence.EntityTransaction;
 import javax.persistence.FetchType;
 import javax.persistence.OneToMany;
 import javax.persistence.OneToOne;
 import javax.persistence.PersistenceContext;
+import javax.persistence.PostLoad;
 import javax.persistence.Table;
 import javax.persistence.Transient;
 
@@ -43,10 +47,26 @@ import org.hibernate.annotations.Parent;
 import com.eucalyptus.cloud.UserMetadata;
 import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.id.Eucalyptus;
+import com.eucalyptus.entities.Entities;
+import com.eucalyptus.loadbalancing.LoadBalancerBackendInstance.LoadBalancerBackendInstanceCoreView;
+import com.eucalyptus.loadbalancing.LoadBalancerBackendInstance.LoadBalancerBackendInstanceCoreViewTransform;
+import com.eucalyptus.loadbalancing.LoadBalancerDnsRecord.LoadBalancerDnsRecordCoreView;
+import com.eucalyptus.loadbalancing.LoadBalancerListener.LoadBalancerListenerCoreView;
+import com.eucalyptus.loadbalancing.LoadBalancerListener.LoadBalancerListenerCoreViewTransform;
+import com.eucalyptus.loadbalancing.LoadBalancerSecurityGroup.LoadBalancerSecurityGroupCoreView;
+import com.eucalyptus.loadbalancing.LoadBalancerZone.LoadBalancerZoneCoreView;
+import com.eucalyptus.loadbalancing.LoadBalancerZone.LoadBalancerZoneCoreViewTransform;
 import com.eucalyptus.loadbalancing.activities.LoadBalancerAutoScalingGroup;
+import com.eucalyptus.loadbalancing.activities.LoadBalancerAutoScalingGroup.LoadBalancerAutoScalingGroupCoreView;
+import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.FullName;
 import com.eucalyptus.util.OwnerFullName;
+import com.eucalyptus.util.TypeMapper;
+import com.eucalyptus.util.TypeMappers;
+import com.google.common.base.Function;
 import com.google.common.base.Predicate;
+import com.google.common.collect.Collections2;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 
 /**
@@ -61,6 +81,15 @@ import com.google.common.collect.Iterables;
 public class LoadBalancer extends UserMetadata<LoadBalancer.STATE> implements LoadBalancerMetadata {
 	private static Logger    LOG     = Logger.getLogger( LoadBalancer.class );
 
+	@Transient
+	private LoadBalancerRelationView relationView = null;
+	
+	@PostLoad
+	private void onLoad(){
+		if(this.relationView==null)
+			this.relationView = new LoadBalancerRelationView(this);
+	}
+	
 	@Transient
 	private static final long serialVersionUID = 1L;
 	
@@ -103,11 +132,14 @@ public class LoadBalancer extends UserMetadata<LoadBalancer.STATE> implements Lo
 	@Column( name = "loadbalancer_scheme", nullable=true)
 	private String scheme = null; // only available for LoadBalancers attached to an Amazon VPC
 	
-	@OneToMany(fetch = FetchType.LAZY, cascade = CascadeType.ALL, orphanRemoval = true, mappedBy = "loadbalancer")
-    @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
+//	@OneToMany(fetch = FetchType.LAZY, cascade = CascadeType.ALL, orphanRemoval = true, mappedBy = "loadbalancer")
+//	@OneToMany(fetch = FetchType.LAZY, mappedBy = "loadbalancer")
+	@OneToMany(fetch = FetchType.LAZY, cascade = CascadeType.REMOVE, mappedBy = "loadbalancer")
+	@Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
 	private Collection<LoadBalancerBackendInstance> backendInstances = null;
 	
-	@OneToMany(fetch = FetchType.LAZY, cascade = CascadeType.ALL, orphanRemoval = true, mappedBy = "loadbalancer")
+//	@OneToMany(fetch = FetchType.LAZY, cascade = CascadeType.ALL, orphanRemoval = true, mappedBy = "loadbalancer")
+	@OneToMany(fetch = FetchType.LAZY, cascade = CascadeType.REMOVE, mappedBy = "loadbalancer")
 	@Cache( usage= CacheConcurrencyStrategy.TRANSACTIONAL )
 	private Collection<LoadBalancerListener> listeners = null;
 	
@@ -135,71 +167,47 @@ public class LoadBalancer extends UserMetadata<LoadBalancer.STATE> implements Lo
 		return this.scheme;
 	}
 	
-	public LoadBalancerBackendInstance findBackendInstance(final String instanceId){
-		if(this.backendInstances!=null){
-			try{
-				return Iterables.find(this.backendInstances, new Predicate<LoadBalancerBackendInstance>(){
-					  @Override
-					  public boolean apply(final LoadBalancerBackendInstance input){
-						return input.getInstanceId().contentEquals(instanceId);
-					}
-				});
-			}catch(NoSuchElementException ex){
-				return null;
-			}
-		}
-		return null;
+	public LoadBalancerBackendInstanceCoreView findBackendInstance(final String instanceId){
+		return this.relationView.findBackendInstance(instanceId);
 	}
 	
 	public boolean hasBackendInstance(final String instanceId){
-		return this.findBackendInstance(instanceId) != null;
+		return this.relationView.hasBackendInstance(instanceId);
 	}
 	
-	public Collection<LoadBalancerBackendInstance> getBackendInstances(){
-		return this.backendInstances;
+	public Collection<LoadBalancerBackendInstanceCoreView> getBackendInstances(){
+		return this.relationView.getBackendInstances();
 	}
 	
-	public LoadBalancerListener findListener(final int lbPort){
-		if(this.listeners!=null){
-			try{
-				return Iterables.find(this.listeners, new Predicate<LoadBalancerListener>(){
-					@Override
-					public boolean apply(final LoadBalancerListener input){
-						return input.getLoadbalancerPort() == lbPort;
-					}
-				});
-			}catch(NoSuchElementException ex){
-				return null;
-			}
-		}
-		return null;
+	public LoadBalancerListenerCoreView findListener(final int lbPort){
+		return this.relationView.findListener(lbPort);
 	}
 	
 	public boolean hasListener(final int lbPort){
-		return this.findListener(lbPort)!=null;
+		return this.relationView.hasListener(lbPort);
 	}
 	
 	public void setDns(final LoadBalancerDnsRecord dns){
 		this.dns = dns;
 	}
 	
-	public LoadBalancerDnsRecord getDns(){
-		return this.dns;
+	public LoadBalancerDnsRecordCoreView getDns(){
+		return this.relationView.getDns();
 	}
-	public Collection<LoadBalancerListener> getListeners(){
-		return this.listeners;
-	}
-	
-	public Collection<LoadBalancerZone> getZones(){
-		return this.zones;
+	public Collection<LoadBalancerListenerCoreView> getListeners(){
+		return this.relationView.getListeners();
 	}
 	
-	public LoadBalancerSecurityGroup getGroup(){
-		return this.group;
+	public Collection<LoadBalancerZoneCoreView> getZones(){
+		return this.relationView.getZones();
 	}
 	
-	public LoadBalancerAutoScalingGroup getAutoScaleGroup(){
-		return this.autoscale_group;
+	public LoadBalancerSecurityGroupCoreView getGroup(){
+		return this.relationView.getGroup();
+	}
+	
+	public LoadBalancerAutoScalingGroupCoreView getAutoScaleGroup(){
+		return this.relationView.getAutoScaleGroup();
 	}
 	
 	public void setHealthCheck(int healthyThreshold, int interval, String target, int timeout, int unhealthyThreshold)
@@ -344,4 +352,178 @@ public class LoadBalancer extends UserMetadata<LoadBalancer.STATE> implements Lo
                        .namespace( this.getOwnerAccountNumber( ) )
                        .relativeId( "loadbalancer", this.getDisplayName( ) );
 	} 
+	
+	public static class LoadBalancerRelationView {
+		private LoadBalancer loadbalancer = null;
+		private LoadBalancerSecurityGroupCoreView group = null;
+		private LoadBalancerAutoScalingGroupCoreView autoscale_group = null;
+		private LoadBalancerDnsRecordCoreView dns = null;
+		
+		private ImmutableList<LoadBalancerBackendInstanceCoreView> backendInstances = null;
+		private ImmutableList<LoadBalancerListenerCoreView> listeners = null;
+		private ImmutableList<LoadBalancerZoneCoreView> zones = null;
+		LoadBalancerRelationView(final LoadBalancer lb){
+			this.loadbalancer = lb;
+			
+			if(lb.group!=null)
+				this.group = TypeMappers.transform(lb.group, LoadBalancerSecurityGroupCoreView.class);
+			if(lb.autoscale_group!=null)
+				this.autoscale_group = TypeMappers.transform(lb.autoscale_group, LoadBalancerAutoScalingGroupCoreView.class);
+			if(lb.dns != null)
+				this.dns = TypeMappers.transform(lb.dns,  LoadBalancerDnsRecordCoreView.class);
+			if(lb.backendInstances!=null)
+				this.backendInstances = ImmutableList.copyOf(Collections2.transform(lb.backendInstances, LoadBalancerBackendInstanceCoreViewTransform.INSTANCE));
+			if(lb.listeners!=null)
+				this.listeners = ImmutableList.copyOf(Collections2.transform(lb.listeners, LoadBalancerListenerCoreViewTransform.INSTANCE));
+			if(lb.zones!=null)
+				this.zones = ImmutableList.copyOf(Collections2.transform(lb.zones,  LoadBalancerZoneCoreViewTransform.INSTANCE));
+		}
+		
+
+		public LoadBalancerBackendInstanceCoreView findBackendInstance(final String instanceId){
+			  if(this.backendInstances!=null){
+				  try{
+					  return Iterables.find(this.backendInstances, new Predicate<LoadBalancerBackendInstanceCoreView>(){
+					  @Override
+					  public boolean apply(final LoadBalancerBackendInstanceCoreView input){
+						  return input.getInstanceId().contentEquals(instanceId);
+				 	  }
+				  	});
+				  }catch(NoSuchElementException ex){
+					  return null;
+					  }
+				  }
+			  return null;
+
+		}
+		
+		public boolean hasBackendInstance(final String instanceId){
+			 return this.findBackendInstance(instanceId) != null;
+		}
+		
+		public Collection<LoadBalancerBackendInstanceCoreView> getBackendInstances(){
+			return this.backendInstances;
+		}
+		
+		public LoadBalancerListenerCoreView findListener(final int lbPort){
+			if(this.listeners!=null){
+				try{
+					return Iterables.find(this.listeners, new Predicate<LoadBalancerListenerCoreView>(){
+				  @Override
+				  	public boolean apply(final LoadBalancerListenerCoreView input){
+					  return input.getLoadbalancerPort() == lbPort;
+				  	}
+				  });
+				}catch(NoSuchElementException ex){
+				 	return null;
+				}
+			}
+			return null;
+		}
+		
+		public boolean hasListener(final int lbPort){
+			return this.findListener(lbPort)!=null;
+		}
+		
+		public LoadBalancerDnsRecordCoreView getDns(){
+			return this.dns;
+		}
+		public Collection<LoadBalancerListenerCoreView> getListeners(){
+			return this.listeners;
+		}
+		
+		public Collection<LoadBalancerZoneCoreView> getZones(){
+			return this.zones;
+		}
+		
+		public LoadBalancerSecurityGroupCoreView getGroup(){
+			return this.group;
+		}
+		
+		public LoadBalancerAutoScalingGroupCoreView getAutoScaleGroup(){
+			return this.autoscale_group;
+		}
+	}
+	
+	public static class LoadBalancerCoreView {
+		private LoadBalancer loadbalancer = null;
+		LoadBalancerCoreView(final LoadBalancer lb){
+			this.loadbalancer = lb;
+		}
+		
+		public String getDisplayName(){
+			return this.loadbalancer.getDisplayName();
+		}
+		
+		public String getOwnerUserId(){
+			return this.loadbalancer.getOwnerUserId();
+		}
+		
+		public String getOwnerUserName(){
+			return this.loadbalancer.getOwnerUserName();
+		}
+		
+		public Date getCreationTimestamp(){
+			return this.loadbalancer.getCreationTimestamp();
+		}
+		
+		public String getScheme(){
+			return this.loadbalancer.getScheme();
+		}
+		
+		public boolean isHealthcheckConfigured(){
+			return this.loadbalancer.isHealthcheckConfigured();
+		}
+		
+		public int getHealthyThreshold() {	
+			return this.loadbalancer.getHealthyThreshold();
+		}
+		
+		public int getHealthCheckInterval(){
+			return this.loadbalancer.getHealthCheckInterval();
+		}
+		
+		public String getHealthCheckTarget(){
+			return this.loadbalancer.getHealthCheckTarget();
+		}
+		
+		public int getHealthCheckTimeout(){
+			return this.loadbalancer.getHealthCheckTimeout();
+		}
+		
+		public int getHealthCheckUnhealthyThreshold(){
+			return this.loadbalancer.getHealthCheckUnhealthyThreshold();
+		}
+		
+	}
+
+	@TypeMapper
+	public enum LoadBalancerCoreViewTransform implements Function<LoadBalancer, LoadBalancerCoreView> {
+		INSTANCE;
+
+		@Override
+		public LoadBalancerCoreView apply( final LoadBalancer lb ) {
+			return new LoadBalancerCoreView( lb );
+		}
+	}
+	
+	public enum LoadBalancerEntityTransform implements Function<LoadBalancerCoreView, LoadBalancer> {
+		INSTANCE;
+		@Override
+		@Nullable
+		public LoadBalancer apply(@Nullable LoadBalancerCoreView arg0) {
+			final EntityTransaction db = Entities.get(LoadBalancer.class);
+			try{
+				final LoadBalancer lb = Entities.uniqueResult(arg0.loadbalancer);
+				db.commit();
+				return lb;
+			}catch(final Exception ex){
+				db.rollback();
+				throw Exceptions.toUndeclared(ex);
+			}finally{
+				if(db.isActive())
+					db.rollback();
+			}
+		}
+	}
 }
