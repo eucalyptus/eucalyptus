@@ -38,6 +38,7 @@ import com.eucalyptus.cloudwatch.MetricDatum;
 import com.eucalyptus.cloudwatch.StatisticSet;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.loadbalancing.LoadBalancer.LoadBalancerCoreView;
+import com.eucalyptus.loadbalancing.LoadBalancer.LoadBalancerEntityTransform;
 import com.eucalyptus.loadbalancing.LoadBalancerZone.LoadBalancerZoneCoreView;
 import com.eucalyptus.loadbalancing.LoadBalancerZone.LoadBalancerZoneEntityTransform;
 import com.eucalyptus.loadbalancing.activities.EucalyptusActivityTasks;
@@ -56,8 +57,11 @@ public class LoadBalancerCwatchMetrics {
 
 	private static LoadBalancerCwatchMetrics _instance = new LoadBalancerCwatchMetrics();
 	private Map<ElbDimension, ElbAggregate> metricsMap = new ConcurrentHashMap<ElbDimension, ElbAggregate>();
-	private Map<String, Boolean> instanceHealthMap = new ConcurrentHashMap<String, Boolean>();
-	private Map<String, ElbDimension> instanceToDimensionMap = new ConcurrentHashMap<String, ElbDimension>();
+	
+	private Map<BackendInstance, Boolean> instanceHealthMap = new ConcurrentHashMap<BackendInstance, Boolean>();
+	private Map<BackendInstance, ElbDimension> instanceToDimensionMap = new ConcurrentHashMap<BackendInstance, ElbDimension>();
+	
+	
 	private Map<String, Date> lastReported = new ConcurrentHashMap<String, Date>();
 	
 	private final int CLOUDWATCH_REPORTING_INTERVAL_SEC = 60;// http://docs.aws.amazon.com/ElasticLoadBalancing/latest/DeveloperGuide/US_MonitoringLoadBalancerWithCW.html
@@ -107,31 +111,35 @@ public class LoadBalancerCwatchMetrics {
 		}
 		
 		try{
-			maybeReport(lb.getOwnerUserId());
+			maybeReport(userId);
 		}catch(Exception ex){
 			LOG.error(String.format("Failed to report cloudwatch metrics: %s-%s", lb.getOwnerUserName(), lb.getDisplayName()));
 		}
 	}
 	
-	public void updateHealthy(final String userId, final String loadbalancer, final String zone, final String instanceId){
-		final ElbDimension dim = new ElbDimension(userId, loadbalancer, zone);
+	public void updateHealthy(final LoadBalancerCoreView lb, final String zone, final String instanceId){
+		final ElbDimension dim = new ElbDimension(lb.getOwnerUserId(), lb.getDisplayName(), zone);
+		final BackendInstance key = new BackendInstance(lb, instanceId);
 		synchronized(lock){
-			if(!this.instanceToDimensionMap.containsKey(instanceId))
-				this.instanceToDimensionMap.put(instanceId, dim);
-			this.instanceHealthMap.put(instanceId, Boolean.TRUE);
+			if(!this.instanceToDimensionMap.containsKey(key))
+				this.instanceToDimensionMap.put(key, dim);
+			
+			this.instanceHealthMap.put(key, Boolean.TRUE);
 			if(!metricsMap.containsKey(dim))
-				metricsMap.put(dim, new ElbAggregate(loadbalancer, zone));
+				metricsMap.put(dim, new ElbAggregate(lb.getDisplayName(), zone)); 
 		}
 	}
 	
-	public void updateUnHealthy(final String userId, final String loadbalancer, final String zone, final String instanceId){
-		final ElbDimension dim = new ElbDimension(userId, loadbalancer, zone);
+	public void updateUnHealthy(final LoadBalancerCoreView lb, final String zone, final String instanceId){
+		final ElbDimension dim = new ElbDimension(lb.getOwnerUserId(), lb.getDisplayName(), zone);
+		final BackendInstance key = new BackendInstance(lb, instanceId);
+		
 		synchronized(lock){
-			if(!this.instanceToDimensionMap.containsKey(instanceId))
-				this.instanceToDimensionMap.put(instanceId, dim);
-			this.instanceHealthMap.put(instanceId, Boolean.FALSE);
+			if(!this.instanceToDimensionMap.containsKey(key))
+				this.instanceToDimensionMap.put(key, dim);
+			this.instanceHealthMap.put(key, Boolean.FALSE);
 			if(!metricsMap.containsKey(dim))
-				metricsMap.put(dim, new ElbAggregate(loadbalancer, zone));
+				metricsMap.put(dim, new ElbAggregate(lb.getDisplayName(), zone));
 		}
 	}
 	
@@ -169,11 +177,17 @@ public class LoadBalancerCwatchMetrics {
 		final Map<ElbDimension, Integer> healthyCountMap = new HashMap<ElbDimension, Integer>();
     	final Map<ElbDimension, Integer> unhealthyCountMap = new HashMap<ElbDimension, Integer>();
     	
-    	final List<String> candidates = Lists.newArrayList(Iterables.filter(this.instanceHealthMap.keySet(), new Predicate<String>(){
+    	final List<BackendInstance> candidates = Lists.newArrayList(Iterables.filter(this.instanceHealthMap.keySet(), new Predicate<BackendInstance>(){
 			@Override
-			public boolean apply(@Nullable String instanceId) {
+			public boolean apply(@Nullable BackendInstance instance) {
 				try{
-					final LoadBalancerBackendInstance be = LoadBalancers.lookupBackendInstance(instanceId);
+					if(instance.getLoadBalancer()==null)
+						return false;
+					if(!userId.equals(instance.getLoadBalancer().getOwnerUserId()))
+						return false; // only for the requested user
+					
+					final LoadBalancer lb = LoadBalancerEntityTransform.INSTANCE.apply(instance.getLoadBalancer());
+					final LoadBalancerBackendInstance be = LoadBalancers.lookupBackendInstance(lb, instance.getInstanceId());
 					if(be==null)
 						return false;
 					if(be.getAvailabilityZone()==null || ! LoadBalancerZone.STATE.InService.equals(be.getAvailabilityZone().getState()))
@@ -189,9 +203,9 @@ public class LoadBalancerCwatchMetrics {
     	
     	synchronized(lock){
 			/// add HealthyHostCount and UnHealthyHostCount
-        	for(final String instanceId : candidates){
-        		final ElbDimension thisDim = this.instanceToDimensionMap.get(instanceId);
-        		if(this.instanceHealthMap.get(instanceId).booleanValue()){ // healthy	
+        	for(final BackendInstance instance : candidates){
+        		final ElbDimension thisDim = this.instanceToDimensionMap.get(instance);
+        		if(this.instanceHealthMap.get(instance).booleanValue()){ // healthy	
         			if(!healthyCountMap.containsKey(thisDim))
         				healthyCountMap.put(thisDim, 0);
         			healthyCountMap.put(thisDim, healthyCountMap.get(thisDim)+1);
@@ -257,12 +271,16 @@ public class LoadBalancerCwatchMetrics {
 				toCleanup.add(dim);
 			}
 			
-			for(ElbDimension cleanup : toCleanup){
+			for(final ElbDimension cleanup : toCleanup){
 				this.metricsMap.remove(cleanup);
 				healthyCountMap.remove(cleanup);
 				unhealthyCountMap.remove(cleanup);
 			}
-		}
+			for(final BackendInstance instance : candidates){
+				this.instanceHealthMap.remove(instance);
+				this.instanceToDimensionMap.remove(instance);
+			}
+		}// end of lock
 		
 		return data;
 	}
@@ -437,7 +455,73 @@ public class LoadBalancerCwatchMetrics {
         }
 	}
 	
-	public static class ElbDimension{
+	private static class BackendInstance{
+		private String instanceId = null;
+		private LoadBalancerCoreView loadbalancer = null;
+		private String userId = null;
+		private String loadbalancerName = null;
+		
+		private BackendInstance(final LoadBalancerCoreView lb, final String instanceId){
+			this.loadbalancer = lb;
+			this.instanceId = instanceId;
+			this.userId = lb.getOwnerUserId();
+			this.loadbalancerName = lb.getDisplayName();
+		}
+		
+		@Override 
+		public boolean equals(Object obj){
+			if(obj==null)
+				return false;
+			if(obj.getClass() != BackendInstance.class)
+				return false;
+			BackendInstance other = (BackendInstance) obj;
+			
+			if(this.userId == null){
+				if(other.userId != null)
+					return false;
+			}else if(! this.userId.equals(other.userId))
+				return false;
+			
+			if(this.loadbalancerName == null){
+				if(other.loadbalancerName!=null)
+					return false;
+			}else if(! this.loadbalancerName.equals(other.loadbalancerName))
+				return false;
+		
+			if(this.instanceId == null){
+				if(other.instanceId !=null)
+					return false;
+			}else if(! this.instanceId.equals(other.instanceId))
+				return false;
+			
+			return true;
+		}
+		
+		public String getInstanceId(){
+			return this.instanceId;
+		}
+		
+		public LoadBalancerCoreView getLoadBalancer(){
+			return this.loadbalancer;
+		}
+	
+		@Override
+		public int hashCode(){
+			final int prime = 31;
+			int result = 1;
+			result = prime * result + ((this.userId == null) ? 0 : this.userId.hashCode());
+			result = prime * result + ((this.loadbalancerName == null) ? 0 : this.loadbalancerName.hashCode());
+			result = prime * result + ((this.instanceId == null) ? 0 : this.instanceId.hashCode());
+			return result;
+		}
+		
+		@Override
+		public String toString(){
+			return String.format("backend instance-%s-%s-%s", this.userId, this.loadbalancerName, this.instanceId);
+		}
+	}
+	
+	private static class ElbDimension{
 		private String userId=null;
 		private String loadbalancer=null;
 		private String availabilityZone=null;

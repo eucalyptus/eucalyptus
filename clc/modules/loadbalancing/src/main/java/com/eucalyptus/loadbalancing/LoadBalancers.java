@@ -390,10 +390,10 @@ public class LoadBalancers {
 		}
 	}
 	
-	public static LoadBalancerBackendInstance lookupBackendInstance(final String instanceId) {
+	public static LoadBalancerBackendInstance lookupBackendInstance(final LoadBalancer lb, final String instanceId) {
 		final EntityTransaction db = Entities.get( LoadBalancerBackendInstance.class ) ;
 		try{
-			final LoadBalancerBackendInstance found = Entities.uniqueResult(LoadBalancerBackendInstance.named(instanceId));
+			final LoadBalancerBackendInstance found = Entities.uniqueResult(LoadBalancerBackendInstance.named(lb, instanceId));
 			db.commit();
 			return found;
 		}catch(final NoSuchElementException ex){
@@ -405,10 +405,10 @@ public class LoadBalancers {
 		}
 	}
 	
-	public static void deleteBackendInstance(final String instanceId) {
+	public static void deleteBackendInstance(final LoadBalancer lb, final String instanceId) {
 		final EntityTransaction db = Entities.get(  LoadBalancerBackendInstance.class );
 		try {
-			final LoadBalancerBackendInstance toDelete = Entities.uniqueResult(LoadBalancerBackendInstance.named(instanceId));
+			final LoadBalancerBackendInstance toDelete = Entities.uniqueResult(LoadBalancerBackendInstance.named(lb, instanceId));
 		    Entities.delete(toDelete);
 		    db.commit();
 		}catch(final NoSuchElementException ex){

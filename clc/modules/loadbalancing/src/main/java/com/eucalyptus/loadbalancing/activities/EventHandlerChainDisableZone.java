@@ -482,7 +482,7 @@ public class EventHandlerChainDisableZone extends EventHandlerChain<DisabledZone
 							final EntityTransaction db = Entities.get( LoadBalancerBackendInstanceCoreView.class );
 							try{
 								final LoadBalancerBackendInstance update = Entities.uniqueResult(
-										LoadBalancerBackendInstance.named(instance.getInstanceId()));
+										LoadBalancerBackendInstance.named(lb, instance.getInstanceId()));
 								update.setState(LoadBalancerBackendInstance.STATE.OutOfService);
 								Entities.persist(update);
 								db.commit();

@@ -26,7 +26,6 @@ import java.util.Map;
 import java.util.NoSuchElementException;
 
 import javax.annotation.Nullable;
-import javax.persistence.CascadeType;
 import javax.persistence.Column;
 import javax.persistence.EntityTransaction;
 import javax.persistence.JoinColumn;
@@ -105,7 +104,7 @@ public class LoadBalancerBackendInstance extends UserMetadata<LoadBalancerBacken
 	
 	@Column( name = "description", nullable=true)
 	private String description = null;
-
+	
     private LoadBalancerBackendInstance(){
     	super(null,null);
     }
@@ -152,21 +151,14 @@ public class LoadBalancerBackendInstance extends UserMetadata<LoadBalancerBacken
 		return instance;
 	}
 	
-	
-	public static LoadBalancerBackendInstance named(final String vmId){
+	public static LoadBalancerBackendInstance named(final LoadBalancer lb, final String vmId){
 		LoadBalancerBackendInstance instance = new LoadBalancerBackendInstance();
 		instance.setOwner(null);
 		instance.setDisplayName(vmId);
+		instance.setLoadBalancer(lb);
 		instance.setState(null);
 		instance.setStateChangeStack(null);
-		
-		return instance;
-	}
-	
-	private static LoadBalancerBackendInstance named(final STATE state){
-		final LoadBalancerBackendInstance instance = new LoadBalancerBackendInstance();
-		instance.setBackendState(state);
-		instance.setStateChangeStack(null);
+		instance.getUniqueName();
 		return instance;
 	}
 	
@@ -197,6 +189,10 @@ public class LoadBalancerBackendInstance extends UserMetadata<LoadBalancerBacken
 		return this.vmInstance;
 	}
 
+	private void setLoadBalancer(final LoadBalancer lb){
+		this.loadbalancer = lb;
+	}
+	
 	public LoadBalancerCoreView getLoadBalancer(){
 		return this.view.getLoadBalancer();
     }
@@ -270,10 +266,11 @@ public class LoadBalancerBackendInstance extends UserMetadata<LoadBalancerBacken
 		return String.format("%s backend instance - %s", this.loadbalancer, this.getDisplayName());
 	}
 	
+	
 	@Override
 	protected String createUniqueName( ) {
-	    return ( this.getOwnerAccountNumber( ) != null && this.getDisplayName( ) != null && this.loadbalancer != null)
-	      ? this.getOwnerAccountNumber( ) + ":" + this.loadbalancer.getDisplayName()+":"+this.getDisplayName( )
+	    return ( this.loadbalancer != null && this.getDisplayName( ) != null)
+	      ? this.loadbalancer.getOwnerAccountNumber( ) + ":" + this.loadbalancer.getDisplayName()+":"+this.getDisplayName( )
 	      : null;
 	}
 	

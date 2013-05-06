@@ -43,6 +43,7 @@ import com.eucalyptus.context.Contexts;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.event.EventFailedException;
 import com.eucalyptus.loadbalancing.LoadBalancer.LoadBalancerCoreView;
+import com.eucalyptus.loadbalancing.LoadBalancer.LoadBalancerCoreViewTransform;
 import com.eucalyptus.loadbalancing.LoadBalancer.LoadBalancerEntityTransform;
 import com.eucalyptus.loadbalancing.LoadBalancerBackendInstance.LoadBalancerBackendInstanceCoreView;
 import com.eucalyptus.loadbalancing.LoadBalancerBackendInstance.LoadBalancerBackendInstanceEntityTransform;
@@ -289,7 +290,7 @@ public class LoadBalancingService {
 					  final EntityTransaction db = Entities.get( LoadBalancerBackendInstance.class );
 				 	  try{
 				 		 LoadBalancerBackendInstance update = Entities.uniqueResult(
-				 				 LoadBalancerBackendInstance.named(found.getInstanceId())
+				 				 LoadBalancerBackendInstance.named(lb, found.getInstanceId())
 				 				 );
 				 		  if (state.equals(LoadBalancerBackendInstance.STATE.InService.name()) || 
 				 				  state.equals(LoadBalancerBackendInstance.STATE.OutOfService.name())){
@@ -321,12 +322,12 @@ public class LoadBalancingService {
 		  final EntityTransaction db = Entities.get( LoadBalancerBackendInstance.class );
 	 	  try{
 	 		  final LoadBalancerBackendInstance found = Entities.uniqueResult(
-	 				  LoadBalancerBackendInstance.named(sample.getInstanceId()));
+	 				  LoadBalancerBackendInstance.named(lb, sample.getInstanceId()));
 	 		  final String zoneName = found.getAvailabilityZone().getName();
 	 		  if(found.getState().equals(LoadBalancerBackendInstance.STATE.InService)){
-	 			  LoadBalancerCwatchMetrics.getInstance().updateHealthy(lb.getOwnerUserId(), lb.getDisplayName(), zoneName, found.getInstanceId());
+	 			  LoadBalancerCwatchMetrics.getInstance().updateHealthy(LoadBalancerCoreViewTransform.INSTANCE.apply(lb), zoneName, found.getInstanceId());
 	 		  }else if (found.getState().equals(LoadBalancerBackendInstance.STATE.OutOfService)){
-	 			  LoadBalancerCwatchMetrics.getInstance().updateUnHealthy(lb.getOwnerUserId(), lb.getDisplayName(), zoneName, found.getInstanceId());
+	 			  LoadBalancerCwatchMetrics.getInstance().updateUnHealthy(LoadBalancerCoreViewTransform.INSTANCE.apply(lb), zoneName, found.getInstanceId());
 	 		  }
 	 		  db.commit();
 	 	  }catch(NoSuchElementException ex){
