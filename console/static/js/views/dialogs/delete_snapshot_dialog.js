@@ -8,6 +8,14 @@ define([
 ], function(EucaDialogView, template, template_registered, Snapshot, App, Backbone) {
   return EucaDialogView.extend({
 
+    createIdNameTagString: function(resource_id, name_tag){
+      var this_string = resource_id;
+      if( name_tag != null ){
+        this_string += " (" + name_tag + ")";
+      }
+      return this_string;
+    },
+
     findNameTag: function(model){
       var nameTag = null;
       model.get('tags').each(function(tag){
@@ -40,10 +48,7 @@ define([
       var snapshot_list = [];
       _.each(args.items, function(snapshot_id){
         var nameTag = self.findNameTag(App.data.snapshot.get(snapshot_id));
-        var snapshot_string = snapshot_id;
-        if( nameTag != null ){
-          snapshot_string = nameTag;
-        }
+        var snapshot_string = self.createIdNameTagString(snapshot_id, nameTag);
         snapshot_list.push(snapshot_string);
 
         matrix.push([snapshot_string, image_hashmap[snapshot_id] != undefined ? 'Yes' : 'No']);
