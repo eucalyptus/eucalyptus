@@ -15,8 +15,8 @@ define([
       var mappings = [];
       var bdm = tmp.get('block_device_mapping');
       if (bdm) {
-        if (bdm['/dev/sda1']) {
-          this.model.set('snapshot_id', bdm['/dev/sda1'].snapshot_id);
+        if (bdm['/dev/sda']) {
+          this.model.set('snapshot_id', bdm['/dev/sda'].snapshot_id);
         }
         for (var device in bdm) {
           var tmp = bdm[device];
