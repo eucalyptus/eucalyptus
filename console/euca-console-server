@@ -85,8 +85,7 @@ def sessionChecker():
 
 def start_console():
     settings = {
-      "xsrf_cookies": True,
-      "debug": True
+      "xsrf_cookies": True
     }
 
     ssl_settings = {

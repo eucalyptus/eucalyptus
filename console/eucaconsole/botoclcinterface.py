@@ -27,6 +27,7 @@ import boto
 import ConfigParser
 import json
 import random
+import time
 from boto.ec2.snapshot import Snapshot
 from boto.ec2.connection import EC2Connection
 from boto.ec2.regioninfo import RegionInfo
@@ -291,7 +292,10 @@ class BotoClcInterface(ClcInterface):
 
     # returs True if successful
     def deregister_image(self, image_id):
-        return self.conn.deregister_image(image_id)
+        result = self.conn.deregister_image(image_id)
+        time.sleep(.5)
+        result = self.conn.deregister_image(image_id)
+        return result
 
     def register_image(self, name, image_location=None, description=None, architecture=None, kernel_id=None, ramdisk_id=None, root_dev_name=None, block_device_map=None):
 #        if is_windows:
