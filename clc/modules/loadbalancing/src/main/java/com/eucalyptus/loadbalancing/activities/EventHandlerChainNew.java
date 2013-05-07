@@ -485,6 +485,9 @@ public class EventHandlerChainNew extends EventHandlerChain<NewLoadbalancerEvent
 				db.rollback();
 			}catch(Exception ex){
 				db.rollback();
+			}finally {
+				if(db.isActive())
+					db.rollback();
 			}
 			
 			// check if there's an existing group with the same name
@@ -537,6 +540,9 @@ public class EventHandlerChainNew extends EventHandlerChain<NewLoadbalancerEvent
 			}catch(Exception ex){
 				db.rollback();
 				throw new EventHandlerException("Error while persisting security group", ex);
+			}finally {
+				if(db.isActive())
+					db.rollback();
 			}
 		}
 
@@ -575,6 +581,9 @@ public class EventHandlerChainNew extends EventHandlerChain<NewLoadbalancerEvent
 			}catch(Exception ex){
 				db.rollback();
 				LOG.error("failed to mark the security group OutOfService", ex);
+			}finally {
+				if(db.isActive())
+					db.rollback();
 			}
 		}
 
@@ -663,6 +672,9 @@ public class EventHandlerChainNew extends EventHandlerChain<NewLoadbalancerEvent
 					db.rollback();
 				}catch(Exception ex){
 					db.rollback();
+				}finally {
+					if(db.isActive())
+						db.rollback();
 				}
 				
 				Map<String, LoadBalancerAutoScalingGroup> groupToQuery = new ConcurrentHashMap<String, LoadBalancerAutoScalingGroup>();
@@ -683,6 +695,9 @@ public class EventHandlerChainNew extends EventHandlerChain<NewLoadbalancerEvent
 							db.rollback();
 						}catch(Exception ex){
 							db.rollback();
+						}finally {
+							if(db.isActive())
+								db.rollback();
 						}
 						groupToQuery.put(group.getName(), group);
 					}
@@ -718,6 +733,9 @@ public class EventHandlerChainNew extends EventHandlerChain<NewLoadbalancerEvent
 					db.rollback();
 				}catch(Exception ex){
 					db.rollback();
+				}finally {
+					if(db.isActive())
+						db.rollback();
 				}
 				 
 				/// for all found instances that's not in the servo instance DB
@@ -794,6 +812,9 @@ public class EventHandlerChainNew extends EventHandlerChain<NewLoadbalancerEvent
 					}catch(Exception ex){
 						db.rollback();
 						LOG.error("Failed to persist the servo instance record", ex);
+					}finally {
+						if(db.isActive())
+							db.rollback();
 					}
 				}
 				
@@ -826,6 +847,9 @@ public class EventHandlerChainNew extends EventHandlerChain<NewLoadbalancerEvent
 							db.rollback();
 						}catch(Exception ex){
 							db.rollback();
+						}finally {
+							if(db.isActive())
+								db.rollback();
 						}
 					}else{/// CASE 3: INSTANCE STATE UPDATED
 						Instance instanceCurrent = foundInstances.get(instanceView.getInstanceId());
@@ -870,6 +894,9 @@ public class EventHandlerChainNew extends EventHandlerChain<NewLoadbalancerEvent
 								db.rollback();
 							}catch(Exception ex){
 								db.rollback();
+							}finally {
+								if(db.isActive())
+									db.rollback();
 							}
 						}
 					}
@@ -917,6 +944,9 @@ public class EventHandlerChainNew extends EventHandlerChain<NewLoadbalancerEvent
 					}catch(Exception ex){
 						db.rollback();
 						LOG.warn("failed to update servo instance's ip address", ex);
+					}finally {
+						if(db.isActive())
+							db.rollback();
 					}
 				}
 			}	

@@ -28,11 +28,15 @@ import javax.persistence.EntityTransaction;
 
 import org.apache.log4j.Logger;
 
+import com.eucalyptus.bootstrap.Bootstrap;
+import com.eucalyptus.component.Topology;
+import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.event.ClockTick;
 import com.eucalyptus.event.EventListener;
 import com.eucalyptus.event.Listeners;
 import com.eucalyptus.loadbalancing.LoadBalancer;
+import com.eucalyptus.loadbalancing.LoadBalancing;
 import com.eucalyptus.loadbalancing.LoadBalancerDnsRecord.LoadBalancerDnsRecordCoreView;
 import com.eucalyptus.loadbalancing.LoadBalancerSecurityGroup;
 import com.eucalyptus.loadbalancing.LoadBalancerSecurityGroup.LoadBalancerSecurityGroupCoreView;
@@ -200,6 +204,9 @@ public class EventHandlerChainDelete extends EventHandlerChain<DeleteLoadbalance
 			}catch(final Exception ex){
 				db.rollback();
 				LOG.error("Failed to update servo instance record", ex);
+			}finally {
+				if(db.isActive())
+					db.rollback();
 			}
 		
 			// AutoScalingGroup record will be deleted as a result of cascaded delete
@@ -251,6 +258,9 @@ public class EventHandlerChainDelete extends EventHandlerChain<DeleteLoadbalance
 				}catch(Exception ex){
 					db.rollback();
 					LOG.warn("Could not disassociate the group from loadbalancer");
+				}finally {
+					if(db.isActive())
+						db.rollback();
 				}
 			}
 		}
@@ -269,6 +279,11 @@ public class EventHandlerChainDelete extends EventHandlerChain<DeleteLoadbalance
 
 		@Override
 		public void fireEvent(ClockTick event) {
+			if (!( Bootstrap.isFinished() &&
+			          Topology.isEnabledLocally( LoadBalancing.class ) &&
+			          Topology.isEnabled( Eucalyptus.class ) )) 
+				return;
+		
 			/// find all security group whose member instances are empty
 			final EntityTransaction db = Entities.get( LoadBalancerSecurityGroup.class );
 			List<LoadBalancerSecurityGroup> allGroups = null;
@@ -279,6 +294,9 @@ public class EventHandlerChainDelete extends EventHandlerChain<DeleteLoadbalance
 				db.rollback();
 			}catch(Exception ex){
 				db.rollback();
+			}finally {
+				if(db.isActive())
+					db.rollback();
 			}
 			if(allGroups==null || allGroups.size()<=0)
 				return;
@@ -311,6 +329,9 @@ public class EventHandlerChainDelete extends EventHandlerChain<DeleteLoadbalance
 			}catch(Exception ex){
 				LOG.warn("failed to delete the securty group from entity", ex);
 				db2.rollback();
+			}finally {
+				if(db2.isActive())
+					db2.rollback();
 			}
 		}
 	}
@@ -323,6 +344,11 @@ public class EventHandlerChainDelete extends EventHandlerChain<DeleteLoadbalance
 
 		@Override
 		public void fireEvent(ClockTick event) {
+			if (!( Bootstrap.isFinished() &&
+			          Topology.isEnabledLocally( LoadBalancing.class ) &&
+			          Topology.isEnabled( Eucalyptus.class ) )) 
+				return;
+	
 			// find all OutOfService instances
 			List<LoadBalancerServoInstance> retired=null;
 			final EntityTransaction db = Entities.get( LoadBalancerServoInstance.class );
@@ -336,6 +362,9 @@ public class EventHandlerChainDelete extends EventHandlerChain<DeleteLoadbalance
 			}catch(Exception ex){
 				db.rollback();
 				LOG.warn("failed to query loadbalancer servo instance", ex);
+			}finally {
+				if(db.isActive())
+					db.rollback();
 			}
 
 			if(retired == null || retired.size()<=0)
@@ -379,6 +408,9 @@ public class EventHandlerChainDelete extends EventHandlerChain<DeleteLoadbalance
 	    				db2.commit();
 	    			}catch(Exception ex){
 	    				db2.rollback();
+	    			}finally {
+	    				if(db2.isActive())
+	    					db2.rollback();
 	    			}
 	    		}
 	    	}

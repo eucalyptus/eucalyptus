@@ -88,6 +88,9 @@ public class LoadBalancerCwatchMetrics {
 		}catch(Exception ex){
 			db.rollback();
 			throw Exceptions.toUndeclared("database error while querying "+servoId);
+		}finally{
+			if(db.isActive())
+				db.rollback();
 		}
 		
 		LoadBalancerZone zone = null;

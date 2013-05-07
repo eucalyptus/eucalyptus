@@ -81,17 +81,18 @@ import com.google.common.net.HostSpecifier;
 public class LoadBalancingService {
   private static Logger    LOG     = Logger.getLogger( LoadBalancingService.class );
   
-  private boolean isValidServoRequest(String instanceId){
+  private void isValidServoRequest(String instanceId) throws LoadBalancingException{
       final Context ctx = Contexts.lookup( );
 	  try{
 		  final LoadBalancerServoInstance instance = LoadBalancers.lookupServoInstance(instanceId);
 		  InetSocketAddress remoteAddr = ( ( InetSocketAddress ) ctx.getChannel( ).getRemoteAddress( ) );
 		  String remoteHost = remoteAddr.getAddress( ).getHostAddress( );
 		  if(! (remoteHost.equals(instance.getAddress()) || remoteHost.equals(instance.getPrivateIp())))
-				  return false;
-		  return true;
+				  throw new LoadBalancingException(String.format("IP address (%s) not match with record (%s-%s)",remoteHost, instance.getAddress(), instance.getPrivateIp()));
+	  }catch(final LoadBalancingException ex){
+		  throw ex;
 	  }catch(Exception ex){
-		  return false;
+		  throw new LoadBalancingException("unknown error", ex);
 	  }
   }
   
@@ -103,17 +104,14 @@ public class LoadBalancingService {
 	  LoadBalancerZoneCoreView zoneView = null;
 	  LoadBalancerZone zone = null;
 	  try{
-	  	  if(isValidServoRequest(instanceId)){
-	  		  final LoadBalancerServoInstance instance = LoadBalancers.lookupServoInstance(instanceId);
-	  		  zoneView = instance.getAvailabilityZone();
-	  		  zone = LoadBalancerZoneEntityTransform.INSTANCE.apply(zoneView);
-	  	  }else{
-			  LOG.warn("invalid servo request found");
-	  	  }
+	  	  isValidServoRequest(instanceId);
+  		  final LoadBalancerServoInstance instance = LoadBalancers.lookupServoInstance(instanceId);
+  		  zoneView = instance.getAvailabilityZone();
+  		  zone = LoadBalancerZoneEntityTransform.INSTANCE.apply(zoneView);
 	  }catch(NoSuchElementException ex){
   		;
   	  }catch(Exception ex){
-  		LOG.warn("failed to query loadbalancer for servo instance: "+instanceId);
+  		LOG.warn("failed to find loadbalancer for servo instance: "+instanceId, ex);
   	  }
 	  
 	  
@@ -238,8 +236,10 @@ public class LoadBalancingService {
 	  PutServoStatesResponseType reply = request.getReply();
 	  final String servoId = request.getInstanceId();
 
-	  if(! isValidServoRequest(servoId)){
-		  LOG.warn("invalid servo request found");
+	  try{
+		  isValidServoRequest(servoId);
+	  }catch(final Exception ex){
+		  LOG.warn("invalid servo request", ex);
 		  return reply;
 	  }
 	  
@@ -288,39 +288,31 @@ public class LoadBalancingService {
 				  }  
 			  }
 			  if(found!=null){
-				  LoadBalancerBackendInstance sample = null;
+			 	  final EntityTransaction db = Entities.get( LoadBalancerBackendInstance.class );
 				  try{
-					  sample=LoadBalancerBackendInstanceEntityTransform.INSTANCE.apply(found);
-				  }catch(final Exception ex){
-					  LOG.error("unable to find the loadbancer backend instance", ex);
-				  }
-				  if(sample!=null){
-					  final EntityTransaction db = Entities.get( LoadBalancerBackendInstance.class );
-					  try{
-						  final LoadBalancerBackendInstance update = Entities.uniqueResult(sample);
-						  if(! state.equals( found.getBackendState().toString())){ // state changed
-							  update.setState(Enum.valueOf(LoadBalancerBackendInstance.STATE.class, state));
-							  if(state.equals(LoadBalancerBackendInstance.STATE.OutOfService.name())){
-								  update.setReasonCode("Instance");
-								  update.setDescription("Instance has failed at least the UnhealthyThreshold number of health checks consecutively.");
-							  }else{
-								  update.setReasonCode(null);
-								  update.setDescription(null);
-							  }
-						  }
-						  update.updateInstanceStateTimestamp();
-						  Entities.persist(update);
-						  db.commit();
-					  }catch(final NoSuchElementException ex){
-						  db.rollback();
-						  LOG.error("unable to find the loadbancer backend instance", ex);
-					  }catch(final Exception ex){
-						  db.rollback();
-						  LOG.error("unable to update the state of loadbalancer backend instance", ex);
-					  }finally{
-						  if(db.isActive())
-							  db.rollback();
+					  final LoadBalancerBackendInstance update = Entities.uniqueResult(
+							  LoadBalancerBackendInstance.named(lb, found.getInstanceId()));
+				
+					  update.setState(Enum.valueOf(LoadBalancerBackendInstance.STATE.class, state));
+					  if(state.equals(LoadBalancerBackendInstance.STATE.OutOfService.name())){
+						  update.setReasonCode("Instance");
+						  update.setDescription("Instance has failed at least the UnhealthyThreshold number of health checks consecutively.");
+					  }else{
+						  update.setReasonCode("");
+						  update.setDescription("");
 					  }
+					  update.updateInstanceStateTimestamp();
+					  Entities.persist(update);
+					  db.commit();
+				  }catch(final NoSuchElementException ex){
+					  db.rollback();
+					  LOG.error("unable to find the loadbancer backend instance", ex);
+				  }catch(final Exception ex){
+					  db.rollback();
+					  LOG.error("unable to update the state of loadbalancer backend instance", ex);
+				  }finally{
+					  if(db.isActive())
+						  db.rollback();
 				  }
 			  }
 		  }
@@ -344,6 +336,9 @@ public class LoadBalancingService {
 	 	  }catch(Exception ex){
 	 		  db.rollback();
 	 		  LOG.warn("Failed to query loadbalancer backend instance", ex);
+	 	  }finally {
+	 		  if(db.isActive())
+	 			  db.rollback();
 	 	  }
 	  }
 	  
@@ -399,16 +394,24 @@ public class LoadBalancingService {
     } catch ( Exception e ) {
       handleException( e );
     }
+    final Collection<String> zones = request.getAvailabilityZones().getMember();
+
 
     Function<String, Boolean> rollback = new Function<String, Boolean>(){
     	@Override
     	public Boolean apply(String lbName){
     		try{
     			LoadBalancers.unsetForeignKeys(ctx, lbName);
-    		}catch(Exception ex){
+    		}catch(final Exception ex){
     			LOG.warn("unable to unset foreign keys", ex);
     		}
 
+    		try{
+    			LoadBalancers.removeZone(lbName, ctx, zones);
+    		}catch(final Exception ex){
+    			LOG.error("unable to delete availability zones during rollback", ex);
+    		}
+    	
     		try{
         		LoadBalancers.deleteLoadbalancer(ownerFullName, lbName);
         	}catch(LoadBalancingException ex){
@@ -426,7 +429,6 @@ public class LoadBalancingService {
     }
     
   
-    Collection<String> zones = request.getAvailabilityZones().getMember();
     if(zones != null && zones.size()>0){
     	try{
     		LoadBalancers.addZone(lbName, ctx, zones);
@@ -1235,7 +1237,10 @@ public class LoadBalancingService {
     	db.rollback();
     	LOG.error("failed to persist health check config", ex);
     	throw new InternalFailure400Exception("Failed to persist the health check config", ex);
-    }
+    }finally {
+		if(db.isActive())
+			db.rollback();
+	}
     ConfigureHealthCheckResult result = new ConfigureHealthCheckResult();
     result.setHealthCheck(hc);
     reply.setConfigureHealthCheckResult(result);
@@ -1300,7 +1305,8 @@ public class LoadBalancingService {
  		state.setInstanceId(instance.getDisplayName());
  		if(outdated){
  			state.setState(LoadBalancerBackendInstance.STATE.OutOfService.toString());
-			state.setReasonCode("Internal error: instance health not updated for extended period of time");
+			state.setReasonCode("ELB");
+ 			state.setDescription("Internal error: instance health not updated for extended period of time");
  		}else{
  			state.setState(instance.getState().name());
  			if(instance.getState().equals(LoadBalancerBackendInstance.STATE.OutOfService) && instance.getReasonCode()!=null)
@@ -1319,7 +1325,8 @@ public class LoadBalancingService {
 	 			final LoadBalancerBackendInstance sample = LoadBalancerBackendInstanceEntityTransform.INSTANCE.apply(instanceView);
 	 			final LoadBalancerBackendInstance update = Entities.uniqueResult(sample);
 	 			update.setState(LoadBalancerBackendInstance.STATE.OutOfService);
-	 			update.setReasonCode("Internal error: instance health not updated for extended period of time");
+	 			update.setReasonCode("ELB");
+	 			update.setDescription("Internal error: instance health not updated for extended period of time");
 	 			Entities.persist(update);
 	 		}
 	 		db.commit();

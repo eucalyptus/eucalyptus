@@ -132,13 +132,10 @@ public class LoadBalancer extends UserMetadata<LoadBalancer.STATE> implements Lo
 	@Column( name = "loadbalancer_scheme", nullable=true)
 	private String scheme = null; // only available for LoadBalancers attached to an Amazon VPC
 	
-//	@OneToMany(fetch = FetchType.LAZY, cascade = CascadeType.ALL, orphanRemoval = true, mappedBy = "loadbalancer")
-//	@OneToMany(fetch = FetchType.LAZY, mappedBy = "loadbalancer")
 	@OneToMany(fetch = FetchType.LAZY, cascade = CascadeType.REMOVE, mappedBy = "loadbalancer")
 	@Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
 	private Collection<LoadBalancerBackendInstance> backendInstances = null;
 	
-//	@OneToMany(fetch = FetchType.LAZY, cascade = CascadeType.ALL, orphanRemoval = true, mappedBy = "loadbalancer")
 	@OneToMany(fetch = FetchType.LAZY, cascade = CascadeType.REMOVE, mappedBy = "loadbalancer")
 	@Cache( usage= CacheConcurrencyStrategy.TRANSACTIONAL )
 	private Collection<LoadBalancerListener> listeners = null;
