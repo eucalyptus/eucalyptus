@@ -170,13 +170,19 @@
 	      // Invisible column for storing the description variable, used for sorting 
 	      "bVisible": false,
               "aTargets":[6],
-               "mData": "description",
+              "mRender": function(data) {
+                return DefaultEncoder().encodeForHTML(data);
+              },
+              "mData": "description",
 	    },
 	    { 
 	      // Invisible column for storing the name variable, used for sorting
 	      "bVisible": false,
               "aTargets":[7],
-               "mData": "name",
+              "mRender": function(data) {
+                return DefaultEncoder().encodeForHTML(data);
+              },
+              "mData": "name",
 	    },
           ],
         },
