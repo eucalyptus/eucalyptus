@@ -26,28 +26,36 @@ define([
 
             model.on('confirm', function() {
                 self.scope.create();
-                tags.each(function(t) {
-                   if (t.get('_new') && !t.get('_deleted')) { 
-                       // CANNOT CALL .SAVE() WHEN THERE EXISTS A TEMP ID   --- KYO 043013
-                       t.save();
-                       //t.sync('create', t);
-                   } else if (t.get('_deleted')) {
-                       // STRANGE CASE: CANNOT USE .DESTORY(); IT SKIPS THE NEXT TAG IN THE LOOP   --- KYO 042613
-                       if (t.get('_backup')) {
-                           t.get('_backup').destroy();
-                       } else {
-                           t.destroy();
+                _.chain(tags.models).clone().each(function(t) {
+                   var backup = t.get('_backup');
+                   console.log('TAG',t);
+                   if (t.get('_deleted')) {
+                       // If the tag is new and then deleted, do nothing.
+                       if (!t.get('_new')) {
+                           // If there is a backup then this was edited and we really want to destroy the original
+                           if (backup != null) {
+                               console.log('delete', backup);
+                               backup.destroy();
+                           } else {
+                               console.log('delete', t);
+                               t.destroy();
+                           }
                        }
                    } else if (t.get('_edited')) {
-                       if( (t.get('_backup') != null) && (t.get('_backup').get('name') != t.get('name')) ){
+                       // If the tag is new then it should only be saved, even if it was edited.
+                       if (t.get('_new')) {
+                         t.save();
+                       } else if( (backup != null) && (backup.get('name') !== t.get('name')) ){
                          // CASE OF KEY CHANGE
+                         console.log("Edited, with previous value: " + t.get('name') + ":" + t.get('value'));
                          t.get('_backup').destroy();
                          t.save();
-                         console.log("Deleted a Tag: " + t.get('name') + ":" + t.get('value'));
                        }else{
                          // CASE OF VALUE CHANGE
                          t.save();
                        } 
+                   } else if (t.get('_new')) {
+                       t.save();
                    }
                 });
                 // THE OPERATION BELOW MIGHT NOT WORK WHEN .SYNC() CALLS ARE USED   --- KYO 042913
@@ -58,9 +66,6 @@ define([
             model.on('add_tag', function(this_tag) {
               self.scope.tags.add(this_tag);
             });
-
-            // BACKUP COLLECTION TO STORE ORIGINAL TAGS IN CASE OF EDIT AND DELETE
-            var backup = new Backbone.Collection();
 
             this.scope = {
                 newtag: new Tag(),
@@ -116,7 +121,6 @@ define([
                 },
 
                 restore: function(element, scope) {
-                    scope.tag.set(scope.tag.get('_backup').pick('name','value'));
                     scope.tag.set({_clean: true, _deleted: false, _edit: false});
                     self.render();
                 },
