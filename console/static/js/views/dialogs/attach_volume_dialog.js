@@ -164,16 +164,20 @@ define([
             this.scope = {
                 status: '',
                 volume: new Volume({volume_id: args.volume_id, instance_id: args.instance_id, device: args.device}),
+
+               
                 error: new Backbone.Model({}),
                 help: { content: help_volume.dialog_attach_content, url: help_volume.dialog_attach_content_url },
 
                 cancelButton: {
                   click: function() {
                     self.close();
+                    self.cleanup();
                   }
                 },
 
-                attachButton: {
+                attachButton: new Backbone.Model({
+                  disabled: true,
                   click: function() {
                     // GET THE INPUT FROM THE HTML VIEW
                     var volumeId = self.scope.volume.get('volume_id');
@@ -211,14 +215,34 @@ define([
 
 	          // CLOSE THE DIALOG
 	          self.close();
+            self.cleanup();
                 }
-              }
+              })
 
             };
+
+            // override the volume model's normal validation rules for this instance,
+            // to enforce required fields in the dialog.
+            this.scope.volume.validation.volume_id.required = true;
+            this.scope.volume.validation.instance_id.required = true;
+            this.scope.volume.validation.device.required = true;
+            this.scope.volume.validation.size.required = false;
+
+            this.scope.volume.on('validated', function() {
+              self.scope.attachButton.set('disabled', !self.scope.volume.isValid());
+            });
 
             this._do_init();
 
             this.setupAutoComplete(args);
         },
+
+        cleanup: function() {
+            // undo validation overrides -  they leak into other dialogs
+            this.scope.volume.validation.volume_id.required = false;
+            this.scope.volume.validation.instance_id.required = false;
+            this.scope.volume.validation.device.required = false;
+            this.scope.volume.validation.size.required = true;
+        }
     });
 });

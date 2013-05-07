@@ -10,6 +10,8 @@ define([
             this.$el.replaceWith($wrk);
             $wrk.append($el);
             $wrk.wrapInner($tmpl);
+            var adp = rivets.config.adapter;
+            if (adp.read(args.model, 'disabled') == undefined) adp.publish(args.model, 'disabled', false);
 			this.rview = rivets.bind($wrk, args.model);
             return $tmpl;
 		},

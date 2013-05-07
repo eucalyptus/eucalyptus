@@ -605,10 +605,11 @@
     },
     "class-*": function(el, value) {
       var classOrder, firstArg, i;
-      classOrder = el.className.split();
+      classOrder = el.className.split(' ');
       firstArg = this.args[0];
-      i = __indexOf.call(classOrder, firstArg) >= 0;
-      if (!value === !i) {
+      i = __indexOf.call(classOrder, firstArg);
+      var tagexists = (i >= 0);
+      if (!(value === tagexists)) {
         if (value) {
           classOrder.push(firstArg);
         } else {
