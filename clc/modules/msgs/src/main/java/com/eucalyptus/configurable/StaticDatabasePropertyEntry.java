@@ -224,7 +224,7 @@ public class StaticDatabasePropertyEntry extends AbstractPersistent {
     
   }
 
-  @EntityUpgrade( entities = { StaticPropertyEntry.class }, since = Version.v3_2_2, value = Empyrean.class )
+  @EntityUpgrade( entities = { StaticPropertyEntry.class }, since = Version.v3_3_0, value = Empyrean.class )
   public enum StaticPropertyEntryRenamePropertyUpgrade implements Predicate<Class> {
     INSTANCE;
     private static Logger LOG = Logger.getLogger( StaticDatabasePropertyEntry.StaticPropertyEntryUpgrade.class );
