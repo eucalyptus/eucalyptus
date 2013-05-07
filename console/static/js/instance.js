@@ -1073,6 +1073,7 @@
         sgroup = sgroup.val();  
       
       // good time to save those tags
+      thisObj.launchMoreDialog.rscope.model.trigger('confirm');
       var tags = thisObj.launchMoreDialog.rscope.model.get('tags');
       $('html body').find(DOM_BINDING['hidden']).launcher('setTags', tags);
 

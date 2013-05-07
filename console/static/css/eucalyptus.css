@@ -2024,6 +2024,10 @@ div.sgroup-expanded .expanded-table thead th {
   line-height: 1;  
 }
 
+button.ui-button:focus::-moz-focus-inner {
+      border: 1px dotted;
+}
+
 .ui-widget-content a {
   color: #73a434;
 }

@@ -178,11 +178,6 @@ define([
                       }
                   });
 
-	           // DISPLAY THE VOLUME'S STATUS -- FOR DEBUG
-		   App.data.volume.each(function(item){
-		     console.log("Volume After create: " + item.toJSON().id +":"+ item.toJSON().size);
-	           });
-
 	          // CLOSE THE DIALOG
 	          self.close();
                 }
