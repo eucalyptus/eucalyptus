@@ -84,6 +84,14 @@ define([
                 edit: function(element, scope) {
                     console.log('edit');
 
+                    // Abort existing edits
+                    tags.each(function(t) {
+                        if (t.get('_edit')) {
+                            t.set(t.get('_backup').pick('name','value'));
+                            t.set({_clean: true, _deleted: false, _edit: false});
+                        }
+                    });
+
                     // RETREIVE THE ID OF THE TAG
                     var tagID = scope.tag.get('id');
                     console.log("TAG ID: " + tagID);
@@ -108,7 +116,7 @@ define([
                 },
 
                 restore: function(element, scope) {
-                    console.log('restore');
+                    scope.tag.set(scope.tag.get('_backup').pick('name','value'));
                     scope.tag.set({_clean: true, _deleted: false, _edit: false});
                     self.render();
                 },
