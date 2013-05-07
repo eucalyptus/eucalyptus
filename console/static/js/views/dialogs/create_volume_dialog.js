@@ -189,14 +189,16 @@ define([
               })
             }
 
+
             this.scope.volume.on('validated', function() {
                 self.scope.createButton.set('disabled', !self.scope.volume.isValid());
-                self.render();
+               // self.render();
             });
 
             this._do_init();
 
             this.setupSelectOptions(args);
+            this.scope.volume.validate();
         },
 	});
 });

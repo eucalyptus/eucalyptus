@@ -34,7 +34,8 @@ define([
           }
         },
 
-        registerButton: {
+        registerButton: new Backbone.Model({
+          disabled: true,
           click: function() {
             // GET THE INPUT FROM THE HTML VIEW
             var snapshotId = self.scope.snapshot.get('snapshot_id');
@@ -64,9 +65,13 @@ define([
 	          // CLOSE THE DIALOG
 	          self.close();
           }
-        }
+        })
       };
       this._do_init();
+
+      this.scope.snapshot.on('validated', function() {
+        self.scope.registerButton.set('disabled', !self.scope.snapshot.isValid());
+      });
 
       this.setupInputValidation(args);
     },
