@@ -235,7 +235,9 @@ public class ServiceContextHandler implements ChannelUpstreamHandler, ChannelDow
       }
     }
     try {
-      Logs.extreme( ).debug( EventRecord.here( this.messageType.getClass( ), EventClass.MESSAGE, EventType.MSG_SERVICED, "rtt-ms", Long.toString( System.currentTimeMillis( ) - this.openTime.get( ctx.getChannel( ) ) ) ) );
+      if ( ctx.getChannel() != null ) {
+        Logs.extreme( ).debug( EventRecord.here( this.messageType.getClass( ), EventClass.MESSAGE, EventType.MSG_SERVICED, "rtt-ms", Long.toString( System.currentTimeMillis( ) - this.openTime.get( ctx.getChannel( ) ) ) ) );
+      }
     } catch ( Exception ex ) {
       Logs.extreme( ).trace( ex, ex );
     }
