@@ -223,4 +223,44 @@ public class StaticDatabasePropertyEntry extends AbstractPersistent {
     }
     
   }
+
+  @EntityUpgrade( entities = { StaticPropertyEntry.class }, since = Version.v3_2_2, value = Empyrean.class )
+  public enum StaticPropertyEntryRenamePropertyUpgrade implements Predicate<Class> {
+    INSTANCE;
+    private static Logger LOG = Logger.getLogger( StaticDatabasePropertyEntry.StaticPropertyEntryUpgrade.class );
+    @Override
+    public boolean apply( Class arg0 ) {
+      final String REPORTING_MONITOR_DEFAULT_POLL_INTERVAL_MINS = "reporting.monitor.default_poll_interval_mins";
+      final String CLOUD_MONITOR_DEFAULT_POLL_INTERVAL_MINS = "cloud.monitor.default_poll_interval_mins";
+      EntityTransaction db = Entities.get( StaticDatabasePropertyEntry.class );
+      try {
+        List<StaticDatabasePropertyEntry> entities = Entities.query( new StaticDatabasePropertyEntry( ) );
+        StaticDatabasePropertyEntry reportingMonitorDefaultPollIntervalMinsEntry = null;
+        StaticDatabasePropertyEntry cloudMonitorDefaultPollIntervalMinsEntry = null;
+        for ( StaticDatabasePropertyEntry entry : entities ) {
+          if (REPORTING_MONITOR_DEFAULT_POLL_INTERVAL_MINS.equals(entry.getFieldName())) {
+            reportingMonitorDefaultPollIntervalMinsEntry = entry;
+          }
+          if (CLOUD_MONITOR_DEFAULT_POLL_INTERVAL_MINS.equals(entry.getFieldName())) {
+            cloudMonitorDefaultPollIntervalMinsEntry = entry;
+          }
+        }
+        if (reportingMonitorDefaultPollIntervalMinsEntry != null && cloudMonitorDefaultPollIntervalMinsEntry == null) {
+          // change reporting.monitor.default_poll_interval_mins -> cloud.monitor.default_poll_interval_mins
+          cloudMonitorDefaultPollIntervalMinsEntry = new StaticDatabasePropertyEntry( CLOUD_MONITOR_DEFAULT_POLL_INTERVAL_MINS, 
+              reportingMonitorDefaultPollIntervalMinsEntry.getPropName(), reportingMonitorDefaultPollIntervalMinsEntry.getValue() );
+          Entities.persist(cloudMonitorDefaultPollIntervalMinsEntry);
+          Entities.delete(reportingMonitorDefaultPollIntervalMinsEntry);
+          LOG.debug( "Upgrading: Changing property '"+REPORTING_MONITOR_DEFAULT_POLL_INTERVAL_MINS+"' to '"+CLOUD_MONITOR_DEFAULT_POLL_INTERVAL_MINS+"'");
+        }
+        db.commit( );
+        return true;
+      } catch ( Exception ex ) {
+        throw Exceptions.toUndeclared( ex );
+      }
+    }
+    
+  }
+
+
 }
