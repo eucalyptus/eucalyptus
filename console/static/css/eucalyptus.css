@@ -758,6 +758,11 @@ input[type='text'].medium-textinput {
     margin-bottom: 1em;
 }
 
+#finishButton {
+  float: right;
+  margin-bottom: .5em;
+}
+
 #wizardNav {
     margin-left: 1em;
 }
@@ -1308,43 +1313,20 @@ tr.odd + tr.expanded td {
 .expanded ul li {
   float: left;
   margin: 0;
-  width: 120px;
+  width: 175px;
 }
 
-.expanded ul li:last-child {
-  width: 320px;
+ul.volume-expanded li { 
 }
 
-ul.volume-expanded li,
+ul.eip-expanded li {
+}
+
+ul.image-expanded li {
+}
+
 ul.snapshot-expanded li {
-  width: 180px;
-}
-
-ul.volume-expanded li:last-child,
-ul.snapshot-expanded li:last-child {
-  width: 180px;
-}
-
-ul.rule-expanded li:last-child {
-  width: 250px;
-}
-
-ul.image-expanded li:nth-child(3),
-ul.kernel-expanded li:nth-child(3),
-ul.ramdisk-expanded li:nth-child(3) {
-  width: 130px;
-}
-
-ul.image-expanded li:nth-child(4),
-ul.kernel-expanded li:nth-child(4),
-ul.ramdisk-expanded li:nth-child(4) {
-  width: 320px;
-}
-
-ul.image-expanded li:nth-child(5),
-ul.kernel-expanded li:nth-child(5),
-ul.ramdisk-expanded li:nth-child(5) {
-  width: 260px;
+  width: 200px;
 }
 
 .expanded-title {
@@ -1373,6 +1355,12 @@ table.display .expanded-table tbody td {
   padding: 0 18px 8px;
 }
 
+div.sgroup-expanded .expanded-table thead th {
+  /* To fix a specific issue where the header text was running together */
+  min-width: 50px;
+} 
+
+
 /* ======= Help page related ===== */
 
 .help-page-wrapper {
@@ -1393,6 +1381,7 @@ table.display .expanded-table tbody td {
 #eip-table,
 #sgroups-table,
 #instances-table,
+#scaling-table,
 #snapshot-table,
 #images-table,
 .dashboard-wrapper {
@@ -3290,6 +3279,11 @@ filter: progid:DXImageTransform.Microsoft.gradient( startColorstr='#ededed', end
 
 .tag-edit .edit-tags-edit .tag-control {
     visibility: visible;
+}
+
+.edit-tags-deleted {
+  color: #ccc;
+  text-decoration: line-through;
 }
 
 .ui-sortable span {
