@@ -86,6 +86,9 @@ public class LoadBalancers {
 				 return lb;
 			 else
 				 throw Exceptions.toUndeclared(ex);
+		 }finally{
+				if(db.isActive())
+					db.rollback();
 		 }
 	}
 	
@@ -153,12 +156,16 @@ public class LoadBalancers {
 		          	return lb;
 		        }
 		    }catch(LoadBalancingException ex){
+		    	db.rollback();
 		    	throw ex;
 		    }catch ( Exception ex ) {
 		    	db.rollback( );
 		    	LOG.error("failed to persist a new loadbalancer", ex);
 		    	throw new LoadBalancingException("Failed to persist a new load-balancer because of: " + ex.getMessage(), ex);
-		  }
+		    }finally{
+		    	if(db.isActive())
+		    		db.rollback();
+		    }
 		  throw new LoadBalancingException("Failed to create a new load-balancer instance");
 	}
 	
@@ -287,6 +294,9 @@ public class LoadBalancers {
 					db.rollback();
 					LOG.error("failed to persist the zone "+zone, ex);
 					throw ex;
+				}finally{
+					if(db.isActive())
+						db.rollback();
 				}
 			}
     	}catch(Exception ex){
@@ -301,8 +311,8 @@ public class LoadBalancers {
     	}catch(Exception ex){
 	    	throw new AccessPointNotFoundException();
 	    }
-		final EntityTransaction db = Entities.get( LoadBalancerZone.class );
 		for(String zone : zones){
+			final EntityTransaction db = Entities.get( LoadBalancerZone.class );
 			try{
 				final LoadBalancerZone exist = Entities.uniqueResult(LoadBalancerZone.named(lb, zone));
 				Entities.delete(exist);
@@ -313,6 +323,9 @@ public class LoadBalancers {
 			}catch(Exception ex){
 				db.rollback();
 				LOG.error("failed to delete the zone "+zone, ex);
+			}finally {
+				if(db.isActive())
+					db.rollback();
 			}
 		}
 	}
@@ -329,6 +342,9 @@ public class LoadBalancers {
 		}catch(Exception ex){
 			db.rollback();
 			throw Exceptions.toUndeclared(ex);
+		}finally {
+			if(db.isActive())
+				db.rollback();
 		}
 	}
 	
@@ -357,6 +373,9 @@ public class LoadBalancers {
 		}catch(Exception ex){
 			db.rollback();
 			throw new LoadBalancingException("failed to query dns record", ex);
+		}finally {
+			if(db.isActive())
+				db.rollback();
 		}
 	}
 	
@@ -371,6 +390,9 @@ public class LoadBalancers {
 		}catch(Exception ex){
 			db.rollback();
 			throw new LoadBalancingException("failed to delete dns record", ex);
+		}finally {
+			if(db.isActive())
+				db.rollback();
 		}
 	}
 	
@@ -386,14 +408,17 @@ public class LoadBalancers {
 			throw ex;
 		}catch(Exception ex){
 			db.rollback();
-			throw new LoadBalancingException("failed to query servo instances");
+			throw new LoadBalancingException("failed to query servo instances", ex);
+		}finally {
+			if(db.isActive())
+				db.rollback();
 		}
 	}
 	
-	public static LoadBalancerBackendInstance lookupBackendInstance(final String instanceId) {
+	public static LoadBalancerBackendInstance lookupBackendInstance(final LoadBalancer lb, final String instanceId) {
 		final EntityTransaction db = Entities.get( LoadBalancerBackendInstance.class ) ;
 		try{
-			final LoadBalancerBackendInstance found = Entities.uniqueResult(LoadBalancerBackendInstance.named(instanceId));
+			final LoadBalancerBackendInstance found = Entities.uniqueResult(LoadBalancerBackendInstance.named(lb, instanceId));
 			db.commit();
 			return found;
 		}catch(final NoSuchElementException ex){
@@ -402,13 +427,16 @@ public class LoadBalancers {
 		}catch(final Exception ex){
 			db.rollback();
 			throw Exceptions.toUndeclared(ex);
+		}finally {
+			if(db.isActive())
+				db.rollback();
 		}
 	}
 	
-	public static void deleteBackendInstance(final String instanceId) {
+	public static void deleteBackendInstance(final LoadBalancer lb, final String instanceId) {
 		final EntityTransaction db = Entities.get(  LoadBalancerBackendInstance.class );
 		try {
-			final LoadBalancerBackendInstance toDelete = Entities.uniqueResult(LoadBalancerBackendInstance.named(instanceId));
+			final LoadBalancerBackendInstance toDelete = Entities.uniqueResult(LoadBalancerBackendInstance.named(lb, instanceId));
 		    Entities.delete(toDelete);
 		    db.commit();
 		}catch(final NoSuchElementException ex){

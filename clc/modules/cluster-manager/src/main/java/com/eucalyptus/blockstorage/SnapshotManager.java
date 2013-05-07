@@ -256,6 +256,7 @@ public class SnapshotManager {
   
   public DescribeSnapshotsResponseType describe( final DescribeSnapshotsType request ) throws EucalyptusCloudException {
     final DescribeSnapshotsResponseType reply = ( DescribeSnapshotsResponseType ) request.getReply( );
+    if(!request.getRestorableBySet().isEmpty()) { return reply; } //TODO:KEN EUCA-5759 Need to implement RestorableBy, for now ignore
     final Context ctx = Contexts.lookup( );
     final boolean showAll = request.getSnapshotSet( ).remove( "verbose" );
     final AccountFullName ownerFullName = ( ctx.hasAdministrativePrivileges( ) && showAll ) ?

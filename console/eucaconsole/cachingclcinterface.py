@@ -163,9 +163,12 @@ class CachingClcInterface(ClcInterface):
         summary['tag'] = len(self.caches['tags'].values)if self.caches['tags'].values else 0
         return summary
 
-    def __cache_load_callback__(self, resource, kwargs, interval):
-        self.caches[resource].values = self.caches['get_'+resource](kwargs)
-        self.caches['timer_'+resource] = threading.Timer(interval, self.__cache_load_callback__, [resource, kwargs, interval])
+    def __cache_load_callback__(self, resource, kwargs, interval, firstRun=False):
+        if firstRun:
+            self.caches[resource].expireCache()
+        else:
+            self.caches[resource].values = self.caches['get_'+resource](kwargs)
+        self.caches['timer_'+resource] = threading.Timer(interval, self.__cache_load_callback__, [resource, kwargs, interval, False])
         self.caches['timer_'+resource].start()
 
     def set_data_interest(self, resources):
@@ -175,16 +178,17 @@ class CachingClcInterface(ClcInterface):
             if res[:5] == 'timer' and self.caches[res]:
                 self.caches[res].cancel()
                 self.caches[res] = None
-
+        print "timers canceled"
         if self.min_polling:
             # start timers for new list of resources
             for res in resources:
-                self.__cache_load_callback__(res, {}, self.caches[res].updateFreq)
+                self.__cache_load_callback__(res, {}, self.caches[res].updateFreq, True)
         else:
             # start timers for all cached resources
             for vals in self.caches:
                 if isinstance(self.caches[vals], Cache):
-                    self.__cache_load_callback__(vals, {}, self.caches[vals].updateFreq)
+                    self.__cache_load_callback__(vals, {}, self.caches[vals].updateFreq, True)
+            print "timers restarted"
         return True
     
     def __normalize_instances__(self, instances):

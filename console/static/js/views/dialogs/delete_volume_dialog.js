@@ -7,6 +7,14 @@ define([
 ], function(EucaDialogView, template, Volume, App, Backbone) {
   return EucaDialogView.extend({
 
+    createIdNameTagString: function(resource_id, name_tag){
+      var this_string = resource_id;
+      if( name_tag != null ){
+        this_string += " (" + name_tag + ")";
+      }
+      return this_string;
+    },
+
     findNameTag: function(model){
       var nameTag = null;
       model.get('tags').each(function(tag){
@@ -25,11 +33,7 @@ define([
       _.each(args.items, function(vid){
         var nameTag = self.findNameTag(App.data.volume.get(vid));
         console.log("Volume: " + vid + " Name Tag: " + nameTag);
-        if( nameTag == null ){
-          volume_list.push(vid);
-        }else{
-          volume_list.push(nameTag);
-        }
+        volume_list.push(self.createIdNameTagString(vid, nameTag));   // DISPLAY ONLY
       });
 
       this.scope = {

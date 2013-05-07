@@ -23,6 +23,7 @@ package com.eucalyptus.loadbalancing;
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Date;
 import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.Set;
@@ -43,6 +44,7 @@ import com.eucalyptus.context.Contexts;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.event.EventFailedException;
 import com.eucalyptus.loadbalancing.LoadBalancer.LoadBalancerCoreView;
+import com.eucalyptus.loadbalancing.LoadBalancer.LoadBalancerCoreViewTransform;
 import com.eucalyptus.loadbalancing.LoadBalancer.LoadBalancerEntityTransform;
 import com.eucalyptus.loadbalancing.LoadBalancerBackendInstance.LoadBalancerBackendInstanceCoreView;
 import com.eucalyptus.loadbalancing.LoadBalancerBackendInstance.LoadBalancerBackendInstanceEntityTransform;
@@ -79,17 +81,18 @@ import com.google.common.net.HostSpecifier;
 public class LoadBalancingService {
   private static Logger    LOG     = Logger.getLogger( LoadBalancingService.class );
   
-  private boolean isValidServoRequest(String instanceId){
+  private void isValidServoRequest(String instanceId) throws LoadBalancingException{
       final Context ctx = Contexts.lookup( );
 	  try{
 		  final LoadBalancerServoInstance instance = LoadBalancers.lookupServoInstance(instanceId);
 		  InetSocketAddress remoteAddr = ( ( InetSocketAddress ) ctx.getChannel( ).getRemoteAddress( ) );
 		  String remoteHost = remoteAddr.getAddress( ).getHostAddress( );
 		  if(! (remoteHost.equals(instance.getAddress()) || remoteHost.equals(instance.getPrivateIp())))
-				  return false;
-		  return true;
+				  throw new LoadBalancingException(String.format("IP address (%s) not match with record (%s-%s)",remoteHost, instance.getAddress(), instance.getPrivateIp()));
+	  }catch(final LoadBalancingException ex){
+		  throw ex;
 	  }catch(Exception ex){
-		  return false;
+		  throw new LoadBalancingException("unknown error", ex);
 	  }
   }
   
@@ -101,15 +104,14 @@ public class LoadBalancingService {
 	  LoadBalancerZoneCoreView zoneView = null;
 	  LoadBalancerZone zone = null;
 	  try{
-	  	  if(isValidServoRequest(instanceId)){
-	  		  final LoadBalancerServoInstance instance = LoadBalancers.lookupServoInstance(instanceId);
-	  		  zoneView = instance.getAvailabilityZone();
-	  		  zone = LoadBalancerZoneEntityTransform.INSTANCE.apply(zoneView);
-	  	  }
+	  	  isValidServoRequest(instanceId);
+  		  final LoadBalancerServoInstance instance = LoadBalancers.lookupServoInstance(instanceId);
+  		  zoneView = instance.getAvailabilityZone();
+  		  zone = LoadBalancerZoneEntityTransform.INSTANCE.apply(zoneView);
 	  }catch(NoSuchElementException ex){
   		;
   	  }catch(Exception ex){
-  		LOG.warn("failed to query loadbalancer for servo instance: "+instanceId);
+  		LOG.warn("failed to find loadbalancer for servo instance: "+instanceId, ex);
   	  }
 	  
 	  
@@ -234,7 +236,10 @@ public class LoadBalancingService {
 	  PutServoStatesResponseType reply = request.getReply();
 	  final String servoId = request.getInstanceId();
 
-	  if(! isValidServoRequest(servoId)){
+	  try{
+		  isValidServoRequest(servoId);
+	  }catch(final Exception ex){
+		  LOG.warn("invalid servo request", ex);
 		  return reply;
 	  }
 	  
@@ -265,52 +270,49 @@ public class LoadBalancingService {
 	  /// INSTANCE HEALTH CHECK UPDATE
 	  if(instances!= null && instances.getMember()!=null && instances.getMember().size()>0){
 		  final Collection<LoadBalancerBackendInstanceCoreView> lbInstances = lb.getBackendInstances();
-		  if(lb != null && instances.getMember()!=null && instances.getMember().size()>0){
-			  for(Instance instance : instances.getMember()){
-				  String instanceId = instance.getInstanceId();
+		  for(final Instance instance : instances.getMember()){
+			  String instanceId = instance.getInstanceId();
 				  // format: instanceId:state
-				  String[] parts = instanceId.split(":");
-				  if(parts==null || parts.length!= 2){
-					  LOG.warn("instance id is in wrong format:"+ instanceId);
-					  continue;
-				  }
-				  instanceId = parts[0];
-				  String state = parts[1];
-				  
-				  LoadBalancerBackendInstanceCoreView found = null;
-				  for(final LoadBalancerBackendInstanceCoreView lbInstance : lbInstances){
-					  if(instanceId.equals(lbInstance.getInstanceId())){
-						  found = lbInstance;
-						  break;
-					  }  
-				  }
-				  if(found!=null){
-					  String zoneName = found.getZoneName();
-					  final EntityTransaction db = Entities.get( LoadBalancerBackendInstance.class );
-				 	  try{
-				 		 LoadBalancerBackendInstance update = Entities.uniqueResult(
-				 				 LoadBalancerBackendInstance.named(found.getInstanceId())
-				 				 );
-				 		  if (state.equals(LoadBalancerBackendInstance.STATE.InService.name()) || 
-				 				  state.equals(LoadBalancerBackendInstance.STATE.OutOfService.name())){
-				 			 update.setState(Enum.valueOf(LoadBalancerBackendInstance.STATE.class, state));
-				 			 
-				 			  if(state.equals(LoadBalancerBackendInstance.STATE.OutOfService.name())){
-				 				 update.setReasonCode("Instance");
-				 				 update.setDescription("Instance has failed at least the UnhealthyThreshold number of health checks consecutively.");
-				 			  } else{
-				 				 update.setReasonCode(null);
-				 				 update.setDescription(null);
-				 			  }  
-				 			  Entities.persist(update);
-				 		  }
-				 		  db.commit();
-				 	  }catch(NoSuchElementException ex){
-				 		  db.rollback();
-				 	  }catch(Exception ex){
-				 		  db.rollback();
-				 		  LOG.warn("Failed to query loadbalancer backend instance: "+instanceId, ex);
-				 	  }
+			  String[] parts = instanceId.split(":");
+			  if(parts==null || parts.length!= 2){
+				  LOG.warn("instance id is in wrong format:"+ instanceId);
+				  continue;
+			  }
+			  instanceId = parts[0];
+			  final String state = parts[1];
+			  LoadBalancerBackendInstanceCoreView found = null;
+			  for(final LoadBalancerBackendInstanceCoreView lbInstance : lbInstances){
+				  if(instanceId.equals(lbInstance.getInstanceId())){
+					  found = lbInstance;
+					  break;
+				  }  
+			  }
+			  if(found!=null){
+			 	  final EntityTransaction db = Entities.get( LoadBalancerBackendInstance.class );
+				  try{
+					  final LoadBalancerBackendInstance update = Entities.uniqueResult(
+							  LoadBalancerBackendInstance.named(lb, found.getInstanceId()));
+				
+					  update.setState(Enum.valueOf(LoadBalancerBackendInstance.STATE.class, state));
+					  if(state.equals(LoadBalancerBackendInstance.STATE.OutOfService.name())){
+						  update.setReasonCode("Instance");
+						  update.setDescription("Instance has failed at least the UnhealthyThreshold number of health checks consecutively.");
+					  }else{
+						  update.setReasonCode("");
+						  update.setDescription("");
+					  }
+					  update.updateInstanceStateTimestamp();
+					  Entities.persist(update);
+					  db.commit();
+				  }catch(final NoSuchElementException ex){
+					  db.rollback();
+					  LOG.error("unable to find the loadbancer backend instance", ex);
+				  }catch(final Exception ex){
+					  db.rollback();
+					  LOG.error("unable to update the state of loadbalancer backend instance", ex);
+				  }finally{
+					  if(db.isActive())
+						  db.rollback();
 				  }
 			  }
 		  }
@@ -321,12 +323,12 @@ public class LoadBalancingService {
 		  final EntityTransaction db = Entities.get( LoadBalancerBackendInstance.class );
 	 	  try{
 	 		  final LoadBalancerBackendInstance found = Entities.uniqueResult(
-	 				  LoadBalancerBackendInstance.named(sample.getInstanceId()));
+	 				  LoadBalancerBackendInstance.named(lb, sample.getInstanceId()));
 	 		  final String zoneName = found.getAvailabilityZone().getName();
 	 		  if(found.getState().equals(LoadBalancerBackendInstance.STATE.InService)){
-	 			  LoadBalancerCwatchMetrics.getInstance().updateHealthy(lb.getOwnerUserId(), lb.getDisplayName(), zoneName, found.getInstanceId());
+	 			  LoadBalancerCwatchMetrics.getInstance().updateHealthy(LoadBalancerCoreViewTransform.INSTANCE.apply(lb), zoneName, found.getInstanceId());
 	 		  }else if (found.getState().equals(LoadBalancerBackendInstance.STATE.OutOfService)){
-	 			  LoadBalancerCwatchMetrics.getInstance().updateUnHealthy(lb.getOwnerUserId(), lb.getDisplayName(), zoneName, found.getInstanceId());
+	 			  LoadBalancerCwatchMetrics.getInstance().updateUnHealthy(LoadBalancerCoreViewTransform.INSTANCE.apply(lb), zoneName, found.getInstanceId());
 	 		  }
 	 		  db.commit();
 	 	  }catch(NoSuchElementException ex){
@@ -334,6 +336,9 @@ public class LoadBalancingService {
 	 	  }catch(Exception ex){
 	 		  db.rollback();
 	 		  LOG.warn("Failed to query loadbalancer backend instance", ex);
+	 	  }finally {
+	 		  if(db.isActive())
+	 			  db.rollback();
 	 	  }
 	  }
 	  
@@ -389,16 +394,24 @@ public class LoadBalancingService {
     } catch ( Exception e ) {
       handleException( e );
     }
+    final Collection<String> zones = request.getAvailabilityZones().getMember();
+
 
     Function<String, Boolean> rollback = new Function<String, Boolean>(){
     	@Override
     	public Boolean apply(String lbName){
     		try{
     			LoadBalancers.unsetForeignKeys(ctx, lbName);
-    		}catch(Exception ex){
+    		}catch(final Exception ex){
     			LOG.warn("unable to unset foreign keys", ex);
     		}
 
+    		try{
+    			LoadBalancers.removeZone(lbName, ctx, zones);
+    		}catch(final Exception ex){
+    			LOG.error("unable to delete availability zones during rollback", ex);
+    		}
+    	
     		try{
         		LoadBalancers.deleteLoadbalancer(ownerFullName, lbName);
         	}catch(LoadBalancingException ex){
@@ -416,7 +429,6 @@ public class LoadBalancingService {
     }
     
   
-    Collection<String> zones = request.getAvailabilityZones().getMember();
     if(zones != null && zones.size()>0){
     	try{
     		LoadBalancers.addZone(lbName, ctx, zones);
@@ -1164,27 +1176,44 @@ public class LoadBalancingService {
 	  return reply;
   }
   
+  private final int MIN_HEALTHCHECK_INTERVAL_SEC = 5;
+  private final int MIN_HEALTHCHECK_THRESHOLDS = 2;
+  
   public ConfigureHealthCheckResponseType configureHealthCheck(ConfigureHealthCheckType request) throws EucalyptusCloudException {
     ConfigureHealthCheckResponseType reply = request.getReply( );
     final Context ctx = Contexts.lookup( );
 	final String lbName = request.getLoadBalancerName();
 	final HealthCheck hc = request.getHealthCheck();
-	Integer healthyThreshold = hc.getHealthyThreshold();
+	final Integer healthyThreshold = hc.getHealthyThreshold();
 	if (healthyThreshold == null)
 		throw new InvalidConfigurationRequestException("Healthy tresholds must be specified");
-	Integer interval = hc.getInterval();
+	final Integer interval = hc.getInterval();
 	if(interval == null)
 		throw new InvalidConfigurationRequestException("Interval must be specified");
-	String target = hc.getTarget();
+	final String target = hc.getTarget();
 	if(target == null)
 		throw new InvalidConfigurationRequestException("Target must be specified");
 	
-	Integer timeout = hc.getTimeout();
+	final Integer timeout = hc.getTimeout();
     if(timeout==null)
     	throw new InvalidConfigurationRequestException("Timeout must be specified");
-    Integer unhealthyThreshold = hc.getUnhealthyThreshold();
+    final Integer unhealthyThreshold = hc.getUnhealthyThreshold();
     if(unhealthyThreshold == null)
     	throw new InvalidConfigurationRequestException("Unhealthy tresholds must be specified");
+    
+    if(interval < MIN_HEALTHCHECK_INTERVAL_SEC){
+    	throw new InvalidConfigurationRequestException(
+    			String.format("Interval must be longer than %d seconds", MIN_HEALTHCHECK_INTERVAL_SEC));
+    }
+    if(healthyThreshold < MIN_HEALTHCHECK_THRESHOLDS){
+    	throw new InvalidConfigurationRequestException(
+    			String.format("Healthy thresholds must be larger than %d", MIN_HEALTHCHECK_THRESHOLDS));
+    }
+    if(unhealthyThreshold < MIN_HEALTHCHECK_THRESHOLDS) {
+    	throw new InvalidConfigurationRequestException(
+    			String.format("Unhealthy thresholds must be larger than %d", MIN_HEALTHCHECK_THRESHOLDS));
+    }
+    
     LoadBalancer lb = null;
     try{
     	lb = LoadBalancers.getLoadbalancer(ctx, lbName);
@@ -1208,7 +1237,10 @@ public class LoadBalancingService {
     	db.rollback();
     	LOG.error("failed to persist health check config", ex);
     	throw new InternalFailure400Exception("Failed to persist the health check config", ex);
-    }
+    }finally {
+		if(db.isActive())
+			db.rollback();
+	}
     ConfigureHealthCheckResult result = new ConfigureHealthCheckResult();
     result.setHealthCheck(hc);
     reply.setConfigureHealthCheckResult(result);
@@ -1236,6 +1268,11 @@ public class LoadBalancingService {
 
 	List<LoadBalancerBackendInstanceCoreView> lbInstances = Lists.newArrayList(lb.getBackendInstances());
 	List<LoadBalancerBackendInstanceCoreView> instancesFound = null;
+	List<LoadBalancerBackendInstanceCoreView> stateOutdated= Lists.newArrayList();
+	
+	final int healthyTimeoutSec = 3*(lb.getHealthCheckInterval() * lb.getHealthyThreshold());
+	long currentTime = System.currentTimeMillis();
+	
  	if(instances != null && instances.getMember()!= null && instances.getMember().size()>0){
  		instancesFound = Lists.newArrayList();
  		for(Instance inst : instances.getMember()){
@@ -1253,15 +1290,54 @@ public class LoadBalancingService {
  	
  	final ArrayList<InstanceState> stateList = Lists.newArrayList();
  	for(final LoadBalancerBackendInstanceCoreView instance : instancesFound){
+		boolean outdated = false;
+ 		Date lastUpdated = null;
+		if((lastUpdated = instance.instanceStateLastUpdated()) != null){
+			final int diffSec = (int)((currentTime - lastUpdated.getTime())/1000.0);
+			if(LoadBalancerBackendInstance.STATE.InService.equals(instance.getState()) &&
+					diffSec > healthyTimeoutSec){
+				stateOutdated.add(instance);
+				outdated = true;
+			}
+		}
+ 		
  		InstanceState state = new InstanceState();
  		state.setInstanceId(instance.getDisplayName());
- 		state.setState(instance.getState().name());
- 		if(instance.getState().equals(LoadBalancerBackendInstance.STATE.OutOfService) && instance.getReasonCode()!=null)
- 			state.setReasonCode(instance.getReasonCode());
- 		if(instance.getDescription()!=null)
- 			state.setDescription(instance.getDescription());
+ 		if(outdated){
+ 			state.setState(LoadBalancerBackendInstance.STATE.OutOfService.toString());
+			state.setReasonCode("ELB");
+ 			state.setDescription("Internal error: instance health not updated for extended period of time");
+ 		}else{
+ 			state.setState(instance.getState().name());
+ 			if(instance.getState().equals(LoadBalancerBackendInstance.STATE.OutOfService) && instance.getReasonCode()!=null)
+	 			state.setReasonCode(instance.getReasonCode());
+	 		if(instance.getDescription()!=null)
+	 			state.setDescription(instance.getDescription());
+ 		}
  		
  		stateList.add(state);
+ 	}
+ 	
+ 	if(! stateOutdated.isEmpty()){
+ 		final EntityTransaction db = Entities.get(LoadBalancerBackendInstance.class);
+ 		try{
+	 		for(final LoadBalancerBackendInstanceCoreView instanceView : stateOutdated){
+	 			final LoadBalancerBackendInstance sample = LoadBalancerBackendInstanceEntityTransform.INSTANCE.apply(instanceView);
+	 			final LoadBalancerBackendInstance update = Entities.uniqueResult(sample);
+	 			update.setState(LoadBalancerBackendInstance.STATE.OutOfService);
+	 			update.setReasonCode("ELB");
+	 			update.setDescription("Internal error: instance health not updated for extended period of time");
+	 			Entities.persist(update);
+	 		}
+	 		db.commit();
+ 		}catch(final NoSuchElementException ex){
+ 			db.rollback();
+ 		}catch(final Exception ex){
+ 			db.rollback();
+ 		}finally{
+ 			if(db.isActive())
+ 				db.rollback();
+ 		}
  	}
  	
  	final InstanceStates states = new InstanceStates();

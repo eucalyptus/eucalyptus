@@ -250,10 +250,7 @@ static int doInitialize(struct nc_state_t *nc)
 //!
 static void *rebooting_thread(void *arg)
 {
-#define REATTACH_RETRIES      3
-
     int err = 0;
-    int error = 0;
     int rc = 0;
     int log_level_for_devstring = EUCA_LOG_TRACE;
     char *xml = NULL;
@@ -268,33 +265,33 @@ static void *rebooting_thread(void *arg)
     virConnectPtr conn = NULL;
 
     LOGDEBUG("[%s] spawning rebooting thread\n", instance->instanceId);
-    if ((xml = file2str(instance->libvirtFilePath)) == NULL) {
-        LOGERROR("[%s] cannot obtain instance XML file %s\n", instance->instanceId, instance->libvirtFilePath);
-        return NULL;
-    }
 
     if ((conn = lock_hypervisor_conn()) == NULL) {
-        LOGERROR("[%s] cannot restart instance %s, abandoning it\n", instance->instanceId, instance->instanceId);
-        change_state(instance, SHUTOFF);
-        EUCA_FREE(xml);
+        LOGERROR("[%s] cannot connect to hypervisor to restart instance, giving up\n", instance->instanceId);
         return NULL;
     }
     dom = virDomainLookupByName(conn, instance->instanceId);
     if (dom == NULL) {
+        LOGERROR("[%s] cannot locate instance to reboot, giving up\n", instance->instanceId);
         unlock_hypervisor_conn();
-        EUCA_FREE(xml);
         return NULL;
     }
 
-    // for KVM, must stop and restart the instance
-    LOGDEBUG("[%s] destroying domain\n", instance->instanceId);
-    error = virDomainDestroy(dom); // @todo change to Shutdown? is this synchronous?
-    virDomainFree(dom);
-    if (error) {
+    // obtain the most up-to-date XML for domain from libvirt
+    xml = virDomainGetXMLDesc(dom, 0); 
+    if (xml == NULL) {
+        LOGERROR("[%s] cannot obtain metadata for instance to reboot, giving up\n", instance->instanceId);
         unlock_hypervisor_conn();
-        EUCA_FREE(xml);
         return NULL;
     }
+
+    // try shutdown first, then kill it if uncooperative
+    if (shutdown_then_destroy_domain(dom) != EUCA_OK) {
+        LOGERROR("[%s] failed to shutdown and destroy the instance to reboot, giving up\n", instance->instanceId);
+        unlock_hypervisor_conn();
+        return NULL;
+    }
+     
     // Add a shift to values of three of the metrics: ones that
     // drop back to zero after a reboot. The shift, which is based
     // on the latest value, ensures that values sent upstream do
@@ -306,75 +303,18 @@ static void *rebooting_thread(void *arg)
     // domain is now shut down, create a new one with the same XML
     LOGINFO("[%s] rebooting\n", instance->instanceId);
     dom = virDomainCreateLinux(conn, xml, 0);
-    EUCA_FREE(xml);
-    
-    euca_strncpy(resourceName[0], instance->instanceId, MAX_SENSOR_NAME_LEN);
-    sensor_refresh_resources(resourceName, resourceAlias, 1);   // refresh stats so we set base value accurately
-
-    // re-attach each volume previously attached
-    for (int i = 0; i < EUCA_MAX_VOLUMES; ++i) {
-        volume = &instance->volumes[i];
-        if (strcmp(volume->stateName, VOL_STATE_ATTACHED) && strcmp(volume->stateName, VOL_STATE_ATTACHING))
-            continue;                  // skip the entry unless attached or attaching
-
-        LOGDEBUG("[%s] volumes [%d] = '%s'\n", instance->instanceId, i, volume->stateName);
-
-        // get credentials, decrypt them
-        remoteDevStr = get_volume_local_device(volume->connectionString);
-        if (!remoteDevStr || !strstr(remoteDevStr, "/dev")) {
-            LOGERROR("[%s] failed to get local name of host iscsi device when re-attaching\n", instance->instanceId);
-            rc = 1;
-        } else {
-            // set the path
-            snprintf(path, sizeof(path), EUCALYPTUS_VOLUME_XML_PATH_FORMAT, instance->instancePath, volume->volumeId);  // vol-XXX.xml
-            snprintf(lpath, sizeof(lpath), EUCALYPTUS_VOLUME_LIBVIRT_XML_PATH_FORMAT, instance->instancePath, volume->volumeId);    // vol-XXX-libvirt.xml
-
-            // read in libvirt XML, which may have been modified by the hook above
-            if ((xml = file2str(lpath)) == NULL) {
-                LOGERROR("[%s][%s] failed to read volume XML from %s\n", instance->instanceId, volume->volumeId, lpath);
-                rc = 1;
-            }
-        }
-
-        EUCA_FREE(remoteDevStr);
-
-        if (!rc) {
-            // zhill - wrap with retry in case libvirt is dumb.
-            err = 0;
-            for (int j = 1; j < REATTACH_RETRIES; j++) {
-                // protect libvirt calls because we've seen problems during concurrent libvirt invocations
-                err = virDomainAttachDevice(dom, xml);
-
-                if (err) {
-                    LOGERROR("[%s][%s] failed to reattach volume (attempt %d of %d)\n", instance->instanceId, volume->volumeId, j, REATTACH_RETRIES);
-                    LOGDEBUG("[%s][%s] error from virDomainAttachDevice: %d xml: %s\n", instance->instanceId, volume->volumeId, err, xml);
-                    sleep(3);          // sleep a bit and retry
-                } else {
-                    LOGINFO("[%s][%s] volume reattached as '%s'\n", instance->instanceId, volume->volumeId, volume->localDevReal);
-                    break;
-                }
-            }
-
-            log_level_for_devstring = EUCA_LOG_TRACE;
-            if (err)
-                log_level_for_devstring = EUCA_LOG_DEBUG;
-            EUCALOG(log_level_for_devstring, "[%s][%s] remote device connection string: %s\n", instance->instanceId, volume->volumeId, volume->connectionString);
-        }
-
-        EUCA_FREE(xml);
-    }
-
     if (dom == NULL) {
         LOGERROR("[%s] failed to restart instance\n", instance->instanceId);
         change_state(instance, SHUTOFF);
     } else {
+        euca_strncpy(resourceName[0], instance->instanceId, MAX_SENSOR_NAME_LEN);
+        sensor_refresh_resources(resourceName, resourceAlias, 1);   // refresh stats so we set base value accurately
         virDomainFree(dom);
     }
+    EUCA_FREE(xml);
 
     unlock_hypervisor_conn();
     return NULL;
-    
-#undef REATTACH_RETRIES
 }
 
 //!

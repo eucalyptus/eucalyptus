@@ -31,7 +31,9 @@ import org.apache.log4j.Logger;
 
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.loadbalancing.LoadBalancer;
+import com.eucalyptus.loadbalancing.LoadBalancerBackendInstance;
 import com.eucalyptus.loadbalancing.LoadBalancerZone;
+import com.eucalyptus.loadbalancing.LoadBalancerBackendInstance.LoadBalancerBackendInstanceCoreView;
 import com.eucalyptus.loadbalancing.LoadBalancerZone.LoadBalancerZoneCoreView;
 import com.eucalyptus.loadbalancing.LoadBalancers;
 import com.eucalyptus.loadbalancing.activities.LoadBalancerAutoScalingGroup.LoadBalancerAutoScalingGroupCoreView;
@@ -56,6 +58,7 @@ public class EventHandlerChainEnableZone extends EventHandlerChain<EnabledZoneEv
 		this.insert(new CheckAndModifyRequest(this));
 		this.insert(new CreateOrUpdateAutoscalingGroup(this));
 		this.insert(new PersistUpdatedZones(this));
+		this.insert(new PersistBackendInstanceState(this));
 		return this;
 	}
 	
@@ -233,6 +236,9 @@ public class EventHandlerChainEnableZone extends EventHandlerChain<EnabledZoneEv
 						}catch(Exception ex){
 							db.rollback();
 							LOG.error("failed to update the autoscaling group record", ex);
+						}finally {
+							if(db.isActive())
+								db.rollback();
 						}
 						
 						this.newZones = Lists.newArrayList(newZones);
@@ -273,6 +279,9 @@ public class EventHandlerChainEnableZone extends EventHandlerChain<EnabledZoneEv
 					}catch(Exception ex){
 						db.rollback();
 						LOG.error("failed to update the autoscaling group record", ex);
+					}finally {
+						if(db.isActive())
+							db.rollback();
 					}
 				}catch(Exception ex){
 					throw new EventHandlerException("failed to update the zone to the original list", ex);
@@ -322,6 +331,9 @@ public class EventHandlerChainEnableZone extends EventHandlerChain<EnabledZoneEv
 						persistedZones.add(newZone);
 					}catch(Exception ex){
 						db.rollback();
+					}finally {
+						if(db.isActive())
+							db.rollback();
 					}
 				}
 			}
@@ -339,8 +351,65 @@ public class EventHandlerChainEnableZone extends EventHandlerChain<EnabledZoneEv
 				}catch(final Exception ex){
 					db.rollback();
 					LOG.error("could not mark out of state for the zone", ex);
+				}finally {
+					if(db.isActive())
+						db.rollback();
 				}
 			}
+		}
+	}
+	
+	private static class PersistBackendInstanceState extends AbstractEventHandler<EnabledZoneEvent>  {
+		protected PersistBackendInstanceState(
+				EventHandlerChain<EnabledZoneEvent> chain) {
+			super(chain);
+		}
+
+		@Override
+		public void apply(EnabledZoneEvent evt) throws EventHandlerException {
+			LoadBalancer lb = null;
+			try{
+				lb = LoadBalancers.getLoadbalancer(evt.getContext(), evt.getLoadBalancer());
+			}catch(NoSuchElementException ex){
+				LOG.warn("Could not find the loadbalancer with name="+evt.getLoadBalancer(), ex);
+				return;
+			}catch(Exception ex){
+				LOG.warn("Error while looking for loadbalancer with name="+evt.getLoadBalancer(), ex);
+				return;
+			}
+	
+			try{
+				for(final String enabledZone : evt.getZones()){
+					final LoadBalancerZone zone = LoadBalancers.findZone(lb, enabledZone);
+					for(final LoadBalancerBackendInstanceCoreView instance : zone.getBackendInstances()){
+						final EntityTransaction db = Entities.get( LoadBalancerBackendInstance.class );
+						try{
+							final LoadBalancerBackendInstance update = Entities.uniqueResult(
+									LoadBalancerBackendInstance.named(lb, instance.getInstanceId()));
+							update.setReasonCode("");
+							update.setDescription("");
+							Entities.persist(update);
+							db.commit();
+						}catch(final NoSuchElementException ex){
+							db.rollback();
+							LOG.warn("failed to find the backend instance");
+						}catch(final Exception ex){
+							db.rollback();
+							LOG.warn("failed to query the backend instance", ex);
+						}finally {
+							if(db.isActive())
+								db.rollback();
+						}
+					}
+				}
+			}catch(final Exception ex){
+				LOG.warn("unable to update backend instances after enabling zone", ex);
+			}
+		}
+
+		@Override
+		public void rollback() throws EventHandlerException {
+			;
 		}
 		
 	}
