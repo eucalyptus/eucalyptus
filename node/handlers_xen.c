@@ -293,7 +293,7 @@ static int doRebootInstance(struct nc_state_t *nc, ncMetadata * pMeta, char *ins
             if (err == 0) {
                 LOGINFO("[%s] rebooting Xen domain for instance\n", instanceId);
             }
-            virDomainFree(dom); //! @todo is this necessary?
+            virDomainFree(dom);        //! @todo is this necessary?
 
             // Add a shift to values of three of the metrics: ones that
             // drop back to zero after a reboot. The shift, which is based

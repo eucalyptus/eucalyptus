@@ -135,13 +135,14 @@ const char *euca_client_component_name = "nc";  //!< The client component name
 \*----------------------------------------------------------------------------*/
 
 static sem *vol_sem = NULL;            //!< Semaphore to protect volume operations
-static int cleanup_volume_attachment (char *sc_url, int use_ws_sec, char *ws_sec_policy_file, ebs_volume_data *vol_data, char *connect_string, char *local_ip, char *local_iqn, int norescan);
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |
  |                              STATIC PROTOTYPES                             |
  |                                                                            |
 \*----------------------------------------------------------------------------*/
+
+static int cleanup_volume_attachment(char *sc_url, int use_ws_sec, char *ws_sec_policy_file, ebs_volume_data *vol_data, char *connect_string, char *local_ip, char *local_iqn, int norescan);
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |
@@ -229,7 +230,6 @@ int replace_sc_url(const char *volume_string, const char *scUrl, char *restrict 
         EUCA_FREE(vol_prefix);
         return EUCA_ERROR;
     }
-
     // We're done with the prefix...
     EUCA_FREE(vol_prefix);
 
@@ -525,7 +525,8 @@ int disconnect_ebs_volume_with_struct(char *sc_url, int use_ws_sec, char *ws_sec
 //!
 //! @note should be invoked only by functions in this file that acquired the necessary lock.
 //!
-static int cleanup_volume_attachment (char *sc_url, int use_ws_sec, char *ws_sec_policy_file, ebs_volume_data *vol_data, char *connect_string, char *local_ip, char *local_iqn, int norescan) {
+static int cleanup_volume_attachment (char *sc_url, int use_ws_sec, char *ws_sec_policy_file, ebs_volume_data *vol_data, char *connect_string, char *local_ip, char *local_iqn, int norescan) 
+{
        int rc = 0;
 
        LOGDEBUG("[%s] attempting to disconnect iscsi target\n", vol_data->volumeId);

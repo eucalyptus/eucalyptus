@@ -1715,9 +1715,8 @@ int vnetGenerateNetworkParams(vnetConfig * vnetconfig, char *instId, int vlan, i
         for (i = vnetconfig->addrIndexMin; ((i < vnetconfig->addrIndexMax) && !found); i++) {
 #if 0
             LOGDEBUG("HELLO: %d outmac:%s inip:%s ip:%s mac:%d match:%d\n", i, outmac, hex2dot(inip), hex2dot(vnetconfig->networks[0].addrs[i].ip), machexcmp(outmac,
-                                                                                                                                                              vnetconfig->
-                                                                                                                                                              networks[0].addrs[i].
-                                                                                                                                                              mac),
+                                                                                                                                                              vnetconfig->networks
+                                                                                                                                                              [0].addrs[i].mac),
                      (vnetconfig->networks[0].addrs[i].ip == inip));
 #endif // 0
 

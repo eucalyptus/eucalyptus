@@ -410,7 +410,6 @@ int doGetKeys(char *service, char **outCCCert, char **outNCCert)
             lseek(fd, -1 * bufsize, SEEK_END);
             // make sure that buf is NULL terminated
             if ((rc = read(fd, buf, bufsize - 1)) > 0) {
-                buf[rc] = '\0';
                 *outNCCert = base64_enc(((unsigned char *)buf), strlen(buf));
             }
             close(fd);
