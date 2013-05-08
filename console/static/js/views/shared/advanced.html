@@ -71,7 +71,7 @@
           </td>
           <td data-text="volume.volume_size"></td>
           <td class="centered-cell"><input data-disabled=":checkDisabledIf" data-checked="volume.delete_on_termination" class="launch-wizard-advanced-storage-delOnTerm" type="checkbox"></td>
-          <td><div data-on-click=":delStorageVol" data-addclass=":deleteButtonIf"><div></td>
+          <td><div data-on-click=":delStorageVol" data-addclass=":deleteButtonIf" data-tooltip="launch_instance_advanced_delblockdev"><div></td>
         </tr> 
 
 
@@ -97,7 +97,7 @@
          <td class="centered-cell">
           <input class="launch-wizard-advanced-storage-delOnTerm" type="checkbox" checked>
         </td>
-        <td><div class="icon_approve" data-on-click=":setStorageVolume"></div></td>
+        <td><div class="icon_add" data-on-click=":setStorageVolume" data-tooltip="launch_instance_advanced_addblockdev"></div></td>
       </tr>
     </tbody>
 </table>

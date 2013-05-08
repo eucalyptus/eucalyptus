@@ -105,7 +105,7 @@ define([
         },
 
         getVolLabel: function(obj) {
-          if (obj.volume.get('device_name') == '/dev/sda1') {
+          if (obj.volume.get('device_name') == '/dev/sda') {
               return 'Root';
           } else {
               return 'EBS';
@@ -128,11 +128,17 @@ define([
         mapName: function() {
           var model = this.blockDeviceMappings.at(this.blockDeviceMappings.length - 1);
           if(undefined !== model && undefined != model.get('device_name')) {
-            var drive = model.get('device_name').replace(/\/dev\/([a-z]*)([0-9]{1,2})/, '$1');
-            var partition = model.get('device_name').replace(/\/dev\/([a-z]*)([0-9]{1,2})/, '$2');
-            return drive + (++partition);
+            // not sure what I was thinking here - partitions are not involved! Mock data have them?
+            //var drive = model.get('device_name').replace(/\/dev\/([a-z]*)([0-9]{1,2})/, '$1');
+            //var partition = model.get('device_name').replace(/\/dev\/([a-z]*)([0-9]{1,2})/, '$2');
+            //return drive + (++partition);
+            
+            var device = model.get('device_name');
+            var suffix = device.substring(device.length-1).charCodeAt(0);
+            var newdev = device.substring(5, device.length-1) + String.fromCharCode(suffix+1);
+            return newdev;
           } else {
-            return 'sda1';
+            return 'sda';
           }
         },
 
