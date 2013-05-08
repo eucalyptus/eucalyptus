@@ -19,6 +19,7 @@
  ************************************************************************/
 package com.eucalyptus.cloudwatch.domain.metricdata;
 
+import java.util.Comparator;
 import java.util.Date;
 
 import com.eucalyptus.cloudwatch.domain.metricdata.MetricEntity.MetricType;
@@ -26,6 +27,73 @@ import com.eucalyptus.cloudwatch.domain.metricdata.MetricEntity.Units;
 
 public class GetMetricStatisticsAggregationKey {
 
+  public static enum COMPARATOR_WITH_NULLS implements Comparator<GetMetricStatisticsAggregationKey> {
+    INSTANCE {
+
+      @Override
+      public int compare(GetMetricStatisticsAggregationKey a, GetMetricStatisticsAggregationKey b) {
+        if (a == b) return 0;
+        if (a == null && b == null) return 0;
+        if (a == null && b != null) return -1;
+        if (a != null && b == null) return 1;
+        // otherwise do it by fields...
+        if (compare(a.accountId, b.accountId) != 0) {
+          return compare(a.accountId, b.accountId);
+        }
+        if (compare(a.timestamp, b.timestamp) != 0) {
+          return compare(a.timestamp, b.timestamp);
+        }
+        if (compare(a.namespace, b.namespace) != 0) {
+          return compare(a.namespace, b.namespace);
+        }
+        if (compare(a.metricType, b.metricType) != 0) {
+          return compare(a.metricType, b.metricType);
+        }
+        if (compare(a.metricName, b.metricName) != 0) {
+          return compare(a.metricName, b.metricName);
+        }
+        if (compare(a.dimensionHash, b.dimensionHash) != 0) {
+          return compare(a.dimensionHash, b.dimensionHash);
+        }
+        return compare(a.units, b.units);
+      
+      }
+      
+      private int compare(Units a, Units b) {
+        // "null" is considered "less"
+        if (a == null && b == null) return 0;
+        if (a == null && b != null) return -1;
+        if (a != null && b == null) return 1;
+        return a.compareTo(b);
+      }
+
+      private int compare(Date a, Date b) {
+        // "null" is considered "less"
+        if (a == null && b == null) return 0;
+        if (a == null && b != null) return -1;
+        if (a != null && b == null) return 1;
+        return a.compareTo(b);
+      }
+
+      private int compare(MetricType a, MetricType b) {
+        // "null" is considered "less"
+        if (a == null && b == null) return 0;
+        if (a == null && b != null) return -1;
+        if (a != null && b == null) return 1;
+        return a.compareTo(b);
+      }
+
+      private int compare(String a, String b) {
+        // "null" is considered "less"
+        if (a == null && b == null) return 0;
+        if (a == null && b != null) return -1;
+        if (a != null && b == null) return 1;
+        return a.compareTo(b);
+      }
+    }
+  }
+
+  
   private String accountId;
   private String namespace;
   private String metricName;
@@ -35,14 +103,14 @@ public class GetMetricStatisticsAggregationKey {
   private String dimensionHash;
 
   public GetMetricStatisticsAggregationKey(MetricEntity me, Date startTime,
-      Integer period) {
+      Integer period, String dimensionHash) {
     this.accountId = me.getAccountId();
     this.namespace = me.getNamespace();
     this.metricName = me.getMetricName();
     this.units = me.getUnits();
     this.metricType = me.getMetricType();
     this.timestamp = MetricManager.getPeriodStart(me.getTimestamp(), startTime, period);
-    this.dimensionHash = MetricManager.hash(me.getDimensions());
+    this.dimensionHash = dimensionHash;
   }
 
   @Override
@@ -103,5 +171,4 @@ public class GetMetricStatisticsAggregationKey {
     return true;
   }
 
-  
 }

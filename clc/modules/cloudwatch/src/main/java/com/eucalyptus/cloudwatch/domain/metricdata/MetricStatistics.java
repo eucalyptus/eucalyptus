@@ -150,7 +150,7 @@ public class MetricStatistics {
     this.dimensions = dimensions;
   }
 
-  public MetricStatistics(MetricEntity me, Date startTime, Integer period) {
+  public MetricStatistics(MetricEntity me, Date startTime, Integer period, Collection<DimensionEntity> dimensions) {
     this.accountId = me.getAccountId();
     this.namespace = me.getNamespace();
     this.metricName = me.getMetricName();
@@ -161,7 +161,7 @@ public class MetricStatistics {
     this.sampleMax = me.getSampleMax();
     this.sampleMin = me.getSampleMin();
     this.sampleSum = me.getSampleSum();
-    this.dimensions = me.getDimensions();
+    this.dimensions = dimensions;
   }
 
 }

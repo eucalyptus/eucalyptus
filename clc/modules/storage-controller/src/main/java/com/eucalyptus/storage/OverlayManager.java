@@ -308,9 +308,9 @@ public class OverlayManager extends DASManager {
 		}
 		volumeManager.finish();
 	}
-	
+
 	//NOTE: Overlay, like DASManager does not support host-specific detach.
-	
+
 	/**
 	 * Do the unexport synchronously
 	 * @param volumeId
@@ -330,8 +330,8 @@ public class OverlayManager extends DASManager {
 			volumeManager.finish();
 		}
 	}
-	
-	
+
+
 	public void dupFile(String oldFileName, String newFileName) {
 		FileOutputStream fileOutputStream = null;
 		FileChannel out = null;
@@ -1272,7 +1272,7 @@ public class OverlayManager extends DASManager {
 			throws EucalyptusCloudException {
 		throw new EucalyptusCloudException("Synchronous snapshot points not supported in Overlay storage manager");
 	}	
-	
+
 	private void doUnexport(final String volumeId) throws EucalyptusCloudException {
 		try {
 			VolumeEntityWrapperManager volumeManager = new VolumeEntityWrapperManager();
@@ -1282,7 +1282,12 @@ public class OverlayManager extends DASManager {
 				try {					
 					LOG.info("Cleaning up volume: " + volume.getVolumeId());
 					try {
-						exportManager.cleanup(volume);
+						String path = lvmRootDirectory + PATH_SEPARATOR + volume.getVgName() + PATH_SEPARATOR + volume.getLvName();
+						if(LVMWrapper.logicalVolumeExists(path)) {
+							//guard this. tgt is not happy when you ask it to
+							//get rid of a non existent tid
+							exportManager.cleanup(volume);
+						}
 						volumeManager.finish();
 						volumeManager = new VolumeEntityWrapperManager();
 						volume= volumeManager.getVolumeInfo(volumeId);

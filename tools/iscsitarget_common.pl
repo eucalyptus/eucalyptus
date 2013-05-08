@@ -73,7 +73,8 @@ $SK_HOSTNUMBER = "hostnumber";
 $DELIMITER = ",";
 
 $ERROR_CAUSE = "iscsiadm";
-$ERROR_MESSAGE = "iSCSI driver not found";
+$EM_DRIVER_NOT_FOUND = "iSCSI driver not found";
+$EM_LOGIN_FAILED = "Could not login to";
 $UDEVADM = "udevadm";
 
 sub parse_devstring {
@@ -103,12 +104,15 @@ sub check_and_log_fault {
   my ($command, @output) = @_;
 
   if (!is_null_or_empty($euca_home) && !is_null_or_empty($euca_component) && ($command =~ /\Q$ERROR_CAUSE\E/i)) {
-    my $FAULT_GEN_CMD = $euca_home."/usr/sbin/euca-generate-fault -c ".lc($euca_component)." 2001 component ".$euca_component;
-    
     foreach (@output) {
       chomp;
-      if(/\Q$ERROR_MESSAGE\E/i) {
-        qx($FAULT_GEN_CMD 2>&1);
+      if(/\Q$EM_DRIVER_NOT_FOUND\E/i) {
+      	my $fault_gen_cmd = $euca_home."/usr/sbin/euca-generate-fault -c ".lc($euca_component)." 2001 component ".$euca_component;
+        qx($fault_gen_cmd 2>&1);
+        last;
+      } elsif (/\Q$EM_LOGIN_FAILED\E/i) {
+      	my $fault_gen_cmd = $euca_home."/usr/sbin/euca-generate-fault -c ".lc($euca_component)." 2003 component ".$euca_component." command '".$command."' error '@output'";
+      	qx($fault_gen_cmd 2>&1);
         last;
       }
     }
@@ -301,7 +305,7 @@ sub lookup_session {
 sub get_disk_by_id_path {
   my ($devname) = @_;
   my $disk_by_id_path = "/dev/disk/by-id/";
-  my @output = run_cmd(1, 0, "scsi_id --whitelisted --replace-whitespace --device=$devname");
+  my @output = run_cmd(1, 1, "scsi_id --whitelisted --replace-whitespace --device=$devname");
   my $scsi_id = shift(@output);
   chomp $scsi_id;
   return $devname if (is_null_or_empty($scsi_id));

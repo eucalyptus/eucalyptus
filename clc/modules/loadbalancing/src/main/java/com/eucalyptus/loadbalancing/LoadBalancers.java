@@ -34,9 +34,17 @@ import org.apache.log4j.Logger;
 import com.eucalyptus.auth.principal.UserFullName;
 import com.eucalyptus.context.Context;
 import com.eucalyptus.entities.Entities;
+import com.eucalyptus.loadbalancing.LoadBalancer.LoadBalancerCoreView;
+import com.eucalyptus.loadbalancing.LoadBalancer.LoadBalancerEntityTransform;
+import com.eucalyptus.loadbalancing.LoadBalancerListener.LoadBalancerListenerCoreView;
 import com.eucalyptus.loadbalancing.LoadBalancerListener.PROTOCOL;
+import com.eucalyptus.loadbalancing.LoadBalancerZone.LoadBalancerZoneCoreView;
+import com.eucalyptus.loadbalancing.LoadBalancerZone.LoadBalancerZoneEntityTransform;
+
 import com.eucalyptus.loadbalancing.activities.EucalyptusActivityTasks;
 import com.eucalyptus.loadbalancing.activities.LoadBalancerServoInstance;
+import com.eucalyptus.loadbalancing.activities.LoadBalancerServoInstance.LoadBalancerServoInstanceCoreView;
+import com.eucalyptus.loadbalancing.activities.LoadBalancerServoInstance.LoadBalancerServoInstanceEntityTransform;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.OwnerFullName;
 import com.google.common.base.Function;
@@ -64,8 +72,9 @@ public class LoadBalancers {
 	
 	private static LoadBalancer getLoadbalancer(final String accountName, final String lbName){
 		 final EntityTransaction db = Entities.get( LoadBalancer.class );
+		 LoadBalancer lb = null;
 		 try {
-			 final LoadBalancer lb = Entities.uniqueResult( LoadBalancer.namedByAccount(accountName, lbName)); 
+			 lb = Entities.uniqueResult( LoadBalancer.namedByAccount(accountName, lbName)); 
 			 db.commit();
 			 return lb;
 		 }catch(NoSuchElementException ex){
@@ -73,8 +82,10 @@ public class LoadBalancers {
 			 throw ex;
 		 }catch(Exception ex){
 			 db.rollback( );
-			 LOG.error("failed to get the loadbalancer="+lbName, ex);
-			 throw Exceptions.toUndeclared(ex);
+			 if(lb!=null)
+				 return lb;
+			 else
+				 throw Exceptions.toUndeclared(ex);
 		 }
 	}
 	
@@ -107,15 +118,16 @@ public class LoadBalancers {
 		 try{
 			 final List<LoadBalancerDnsRecord> dnsList = Entities.query(LoadBalancerDnsRecord.named());
 			 db.commit();
-			 LoadBalancer lb = null;
+			 LoadBalancerCoreView lbView = null;
 			 for(final LoadBalancerDnsRecord dns : dnsList){
 				 if(dns.getDnsName()!=null && dns.getDnsName().equals(dnsName))
-					 lb= dns.getLoadBalancer();
+					 lbView= dns.getLoadbalancer();
 			 }
-			 if(lb!=null)
-				 return lb;
-			 else
+			 final LoadBalancer lb = LoadBalancerEntityTransform.INSTANCE.apply(lbView);
+			 if(lb==null)
 				 throw new NoSuchElementException();
+			 else
+				 return lb;
 		 }catch(NoSuchElementException ex){
 			 throw ex;
 		 }catch(Exception ex){
@@ -183,7 +195,7 @@ public class LoadBalancers {
 
     		// check the listener 
 			if(lb!=null && lb.hasListener(listener.getLoadBalancerPort().intValue())){
-				LoadBalancerListener existing = lb.findListener(listener.getLoadBalancerPort().intValue());
+				final LoadBalancerListenerCoreView existing = lb.findListener(listener.getLoadBalancerPort().intValue());
 				if(existing.getInstancePort() == listener.getInstancePort().intValue() &&
 						existing.getProtocol().name().toLowerCase().equals(listener.getProtocol().toLowerCase()) &&
 						(existing.getCertificateId()!=null && existing.getCertificateId().equals(listener.getSslCertificateId())))
@@ -320,9 +332,9 @@ public class LoadBalancers {
 		}
 	}
 	
-	public static List<LoadBalancerZone> findZonesInService(final LoadBalancer lb){
-		final List<LoadBalancerZone> inService = Lists.newArrayList();
-		for(final LoadBalancerZone zone : lb.getZones()){
+	public static List<LoadBalancerZoneCoreView> findZonesInService(final LoadBalancer lb){
+		final List<LoadBalancerZoneCoreView> inService = Lists.newArrayList();
+		for(final LoadBalancerZoneCoreView zone : lb.getZones()){
 			if(zone.getState().equals(LoadBalancerZone.STATE.InService))
 				inService.add(zone);
 		}
@@ -378,10 +390,10 @@ public class LoadBalancers {
 		}
 	}
 	
-	public static LoadBalancerBackendInstance lookupBackendInstance(final String instanceId) {
+	public static LoadBalancerBackendInstance lookupBackendInstance(final LoadBalancer lb, final String instanceId) {
 		final EntityTransaction db = Entities.get( LoadBalancerBackendInstance.class ) ;
 		try{
-			final LoadBalancerBackendInstance found = Entities.uniqueResult(LoadBalancerBackendInstance.named(instanceId));
+			final LoadBalancerBackendInstance found = Entities.uniqueResult(LoadBalancerBackendInstance.named(lb, instanceId));
 			db.commit();
 			return found;
 		}catch(final NoSuchElementException ex){
@@ -390,6 +402,24 @@ public class LoadBalancers {
 		}catch(final Exception ex){
 			db.rollback();
 			throw Exceptions.toUndeclared(ex);
+		}
+	}
+	
+	public static void deleteBackendInstance(final LoadBalancer lb, final String instanceId) {
+		final EntityTransaction db = Entities.get(  LoadBalancerBackendInstance.class );
+		try {
+			final LoadBalancerBackendInstance toDelete = Entities.uniqueResult(LoadBalancerBackendInstance.named(lb, instanceId));
+		    Entities.delete(toDelete);
+		    db.commit();
+		}catch(final NoSuchElementException ex){
+			db.rollback();
+			throw ex;
+		}catch(final Exception ex){
+			db.rollback();
+			throw Exceptions.toUndeclared(ex);
+		}finally{
+			if(db.isActive())
+				db.rollback();
 		}
 	}
 	
@@ -418,10 +448,18 @@ public class LoadBalancers {
 		}
 		if(lb!=null){
 			if(lb.getZones()!=null){
-				for(final LoadBalancerZone zone : lb.getZones()){
-					for(final LoadBalancerServoInstance servo : zone.getServoInstances()){
+				for(final LoadBalancerZoneCoreView zoneView : lb.getZones()){
+					LoadBalancerZone zone = null;
+					try{
+						zone = LoadBalancerZoneEntityTransform.INSTANCE.apply(zoneView);
+					}catch(final Exception ex){
+						continue;
+					}
+					
+					for(LoadBalancerServoInstanceCoreView servo : zone.getServoInstances()){
 						try{
-							Entities.asTransaction(LoadBalancerServoInstance.class, unsetServoInstanceKey).apply(servo);
+							final LoadBalancerServoInstance instance = LoadBalancerServoInstanceEntityTransform.INSTANCE.apply(servo);
+							Entities.asTransaction(LoadBalancerServoInstance.class, unsetServoInstanceKey).apply(instance);
 						}catch(Exception ex){
 							;
 						}

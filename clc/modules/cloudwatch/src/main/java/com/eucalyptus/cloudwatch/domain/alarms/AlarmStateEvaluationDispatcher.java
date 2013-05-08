@@ -27,6 +27,9 @@ import javax.persistence.EntityTransaction;
 import org.apache.log4j.Logger;
 import org.hibernate.Criteria;
 
+import com.eucalyptus.bootstrap.Bootstrap;
+import com.eucalyptus.cloudwatch.CloudWatch;
+import com.eucalyptus.component.Topology;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.records.Logs;
 
@@ -41,22 +44,24 @@ public class AlarmStateEvaluationDispatcher implements Runnable {
 
   @Override
   public void run() {
-    LOG.info("Kicking off AlarmStateEvaluationDispatcher");
-    EntityTransaction db = Entities.get(AlarmEntity.class);
-    try {
-      Criteria criteria = Entities.createCriteria(AlarmEntity.class);
-      List<AlarmEntity> results = (List<AlarmEntity>) criteria.list();
-      for (AlarmEntity alarmEntity: results) {
-        LOG.info("Submitting job for " + alarmEntity.getAlarmName());
-        executorService.submit(new AlarmStateEvaluationWorker(alarmEntity.getAccountId(), alarmEntity.getAlarmName()));
+    if (Bootstrap.isFinished() && Topology.isEnabledLocally(CloudWatch.class)) {
+      LOG.debug("Kicking off AlarmStateEvaluationDispatcher");
+      EntityTransaction db = Entities.get(AlarmEntity.class);
+      try {
+        Criteria criteria = Entities.createCriteria(AlarmEntity.class);
+        List<AlarmEntity> results = (List<AlarmEntity>) criteria.list();
+        for (AlarmEntity alarmEntity: results) {
+          LOG.debug("Submitting job for " + alarmEntity.getAlarmName());
+          executorService.submit(new AlarmStateEvaluationWorker(alarmEntity.getAccountId(), alarmEntity.getAlarmName()));
+        }
+        db.commit();
+      } catch (RuntimeException ex) {
+        Logs.extreme().error(ex, ex); // TODO the exception will be swallowed...
+        throw ex;
+      } finally {
+        if (db.isActive())
+          db.rollback();
       }
-      db.commit();
-    } catch (RuntimeException ex) {
-      Logs.extreme().error(ex, ex); // TODO the exception will be swallowed...
-      throw ex;
-    } finally {
-      if (db.isActive())
-        db.rollback();
     }
   }
 }

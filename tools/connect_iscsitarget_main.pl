@@ -75,6 +75,9 @@ $ISCSIADM = untaint(`which iscsiadm`);
 $MULTIPATH = untaint(`which multipath`);
 
 $CONF_IFACES_KEY = "STORAGE_INTERFACES";
+$LOGIN_TIMEOUT = 10;
+$LOGOUT_TIMEOUT = 10;
+$LOGIN_RETRY_COUNT = 3;
 
 # check binaries
 if (!-x $ISCSIADM) {
@@ -206,13 +209,20 @@ sub login_target {
   }
   # add paths
   run_cmd(1, 1, "$prefix -o new");
+  
+  # set login and logout timeouts and retries
+  run_cmd(1, 1, "$prefix -o update -n node.conn[0].timeo.login_timeout -v $LOGIN_TIMEOUT");
+  run_cmd(1, 1, "$prefix -o update -n node.conn[0].timeo.logout_timeout -v $LOGOUT_TIMEOUT");
+  run_cmd(1, 1, "$prefix -o update -n node.session.initial_login_retry_max -v $LOGIN_RETRY_COUNT");
+  
   # set password if necessary
   if (password ne $NOT_REQUIRED) {
     run_cmd(1, 1, "$prefix -o update -n node.session.auth.username -v $user");
     run_cmd(1, 1, "$prefix -o update -n node.session.auth.password -v $password");
   }
-  # login
-  run_cmd(1, 1, "$prefix -l");
+  
+  # login. Dont error out on login failure. Setup the connection even if one path is up.
+  run_cmd(1, 0, "$prefix -l");
 }
 
 sub ensure_and_get_iface {
