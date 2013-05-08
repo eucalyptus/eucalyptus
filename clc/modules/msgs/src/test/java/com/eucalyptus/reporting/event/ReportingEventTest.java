@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * Copyright 2009-2013 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -31,6 +31,7 @@ import static com.eucalyptus.reporting.event.ResourceAvailabilityEvent.Tag;
 import static com.eucalyptus.reporting.event.ResourceAvailabilityEvent.Type;
 import org.junit.Test;
 import com.eucalyptus.auth.principal.Principals;
+import com.eucalyptus.util.OwnerFullName;
 import com.google.common.base.Charsets;
 import com.google.common.collect.Iterables;
 
@@ -43,80 +44,80 @@ public class ReportingEventTest {
   public void testAddressAllocateEventCreation() {
     final AddressEvent event = AddressEvent.with(
         "127.0.0.1",
-        Principals.systemFullName(),
+        userFullName( "testaccount" ),
         "testaccount",
         AddressEvent.forAllocate()
         );
 
     assertEquals( "address", "127.0.0.1", event.getAddress() );
-    assertEquals( "account number", Principals.systemFullName().getAccountNumber(), event.getAccountId() );
+    assertEquals( "account number", "100000000000", event.getAccountId() );
     assertEquals( "account name", "testaccount", event.getAccountName() );
-    assertEquals( "user number", Principals.systemFullName().getUserId(), event.getUserId() );
-    assertEquals( "user name", Principals.systemFullName().getUserName(), event.getUserName() );
+    assertEquals( "user number", "testaccount", event.getUserId() );
+    assertEquals( "user name", "testaccount", event.getUserName() );
     assertEquals( "action info type", EventActionInfo.class, event.getActionInfo().getClass() );
     assertEquals( "action info action", AddressAction.ALLOCATE, event.getActionInfo().getAction() );
-    assertEquals( "event string", "[address:127.0.0.1,userId:eucalyptus,accountId:000000000000,actionInfo:[action:ALLOCATE]]", event.toString() );
+    assertEquals( "event string", "[address:127.0.0.1,userId:testaccount,accountId:100000000000,actionInfo:[action:ALLOCATE]]", event.toString() );
   }
 
   @Test
   public void testAddressReleaseEventCreation() {
     final AddressEvent event = AddressEvent.with(
         "127.0.0.1",
-        Principals.systemFullName(),
+        userFullName( "testaccount" ),
         "testaccount",
         AddressEvent.forRelease()
     );
 
     assertEquals( "address", "127.0.0.1", event.getAddress() );
-    assertEquals( "account number", Principals.systemFullName().getAccountNumber(), event.getAccountId() );
+    assertEquals( "account number", "100000000000", event.getAccountId() );
     assertEquals( "account name", "testaccount", event.getAccountName() );
-    assertEquals( "user number", Principals.systemFullName().getUserId(), event.getUserId() );
-    assertEquals( "user name", Principals.systemFullName().getUserName(), event.getUserName() );
+    assertEquals( "user number", "testaccount", event.getUserId() );
+    assertEquals( "user name", "testaccount", event.getUserName() );
     assertEquals( "action info type", EventActionInfo.class, event.getActionInfo().getClass() );
     assertEquals( "action info action", AddressAction.RELEASE, event.getActionInfo().getAction() );
-    assertEquals( "event string", "[address:127.0.0.1,userId:eucalyptus,accountId:000000000000,actionInfo:[action:RELEASE]]", event.toString() );
+    assertEquals( "event string", "[address:127.0.0.1,userId:testaccount,accountId:100000000000,actionInfo:[action:RELEASE]]", event.toString() );
   }
 
   @Test
   public void testAddressAssociateEventCreation() {
     final AddressEvent event = AddressEvent.with(
         "127.0.0.1",
-        Principals.systemFullName(),
+        userFullName( "testaccount" ),
         "testaccount",
-        AddressEvent.forAssociate(uuid("instance"), "i-12345678")
+        AddressEvent.forAssociate( uuid( "instance" ), "i-12345678" )
     );
 
     assertEquals( "address", "127.0.0.1", event.getAddress() );
-    assertEquals( "account number", Principals.systemFullName().getAccountNumber(), event.getAccountId() );
+    assertEquals( "account number", "100000000000", event.getAccountId() );
     assertEquals( "account name", "testaccount", event.getAccountName() );
-    assertEquals( "user number", Principals.systemFullName().getUserId(), event.getUserId() );
-    assertEquals( "user name", Principals.systemFullName().getUserName(), event.getUserName() );
+    assertEquals( "user number", "testaccount", event.getUserId() );
+    assertEquals( "user name", "testaccount", event.getUserName() );
     assertEquals( "action info type", InstanceEventActionInfo.class, event.getActionInfo().getClass() );
     assertEquals( "action info action", AddressAction.ASSOCIATE, event.getActionInfo().getAction() );
     assertEquals( "action info instance uuid", uuid("instance"), ((InstanceEventActionInfo)event.getActionInfo()).getInstanceUuid() );
     assertEquals( "action info instance id ", "i-12345678", ((InstanceEventActionInfo)event.getActionInfo()).getInstanceId() );
-    assertEquals( "event string", "[address:127.0.0.1,userId:eucalyptus,accountId:000000000000,actionInfo:[action:ASSOCIATE,instanceUuid:7123a699-d77d-3647-9a1d-8ece2c4f1c16,instanceId:i-12345678]]", event.toString() );
+    assertEquals( "event string", "[address:127.0.0.1,userId:testaccount,accountId:100000000000,actionInfo:[action:ASSOCIATE,instanceUuid:7123a699-d77d-3647-9a1d-8ece2c4f1c16,instanceId:i-12345678]]", event.toString() );
   }
 
   @Test
   public void testAddressDisassociateEventCreation() {
     final AddressEvent event = AddressEvent.with(
         "127.0.0.1",
-        Principals.systemFullName(),
+        userFullName( "testaccount" ),
         "testaccount",
         AddressEvent.forDisassociate(uuid("instance2"), "i-12345678")
     );
 
     assertEquals( "address", "127.0.0.1", event.getAddress() );
-    assertEquals( "account number", Principals.systemFullName().getAccountNumber(), event.getAccountId() );
+    assertEquals( "account number", "100000000000", event.getAccountId() );
     assertEquals( "account name", "testaccount", event.getAccountName() );
-    assertEquals( "user number", Principals.systemFullName().getUserId(), event.getUserId() );
-    assertEquals( "user name", Principals.systemFullName().getUserName(), event.getUserName() );
+    assertEquals( "user number", "testaccount", event.getUserId() );
+    assertEquals( "user name", "testaccount", event.getUserName() );
     assertEquals( "action info type", InstanceEventActionInfo.class, event.getActionInfo().getClass() );
     assertEquals( "action info action", AddressAction.DISASSOCIATE, event.getActionInfo().getAction() );
     assertEquals( "action info instance uuid", uuid("instance2"), ((InstanceEventActionInfo)event.getActionInfo()).getInstanceUuid() );
     assertEquals( "action info instance id", "i-12345678", ((InstanceEventActionInfo)event.getActionInfo()).getInstanceId() );
-    assertEquals( "event string", "[address:127.0.0.1,userId:eucalyptus,accountId:000000000000,actionInfo:[action:DISASSOCIATE,instanceUuid:781e6aca-85f8-3f45-9e1f-58d2fb126bca,instanceId:i-12345678]]", event.toString() );
+    assertEquals( "event string", "[address:127.0.0.1,userId:testaccount,accountId:100000000000,actionInfo:[action:DISASSOCIATE,instanceUuid:781e6aca-85f8-3f45-9e1f-58d2fb126bca,instanceId:i-12345678]]", event.toString() );
   }
 
   @Test
@@ -347,5 +348,24 @@ public class ReportingEventTest {
 
   private String uuid( final String seed ) {
     return UUID.nameUUIDFromBytes( seed.getBytes(Charsets.UTF_8) ).toString();
+  }
+
+  private OwnerFullName userFullName( final String name ) {
+    return new OwnerFullName() {
+      private static final long serialVersionUID = 1L;
+      @Override public String getAccountName() { return name; }
+      @Override public String getAccountNumber() { return "100000000000";  }
+      @Override public String getUserId() { return name; }
+      @Override public String getUserName() { return name; }
+      @Override public boolean isOwner( final String ownerId ) { return false; }
+      @Override public boolean isOwner( final OwnerFullName ownerFullName ) { return false; }
+      @Override public String getUniqueId() { return null; }
+      @Override public String getVendor() { return null; }
+      @Override public String getRegion() { return null; }
+      @Override public String getNamespace() { return null; }
+      @Override public String getAuthority() { return null; }
+      @Override public String getRelativeId() { return null; }
+      @Override public String getPartition() { return null; }
+    };
   }
 }
