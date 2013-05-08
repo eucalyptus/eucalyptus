@@ -152,6 +152,7 @@ public class SslSetup {
   }
   
   static {
+    BCSslSetup.initBouncyCastleDHParams();
     SSLContext serverContext;
     SSLContext clientContext;
     System.setProperty( "javax.net.ssl.trustStore", SubDirectory.KEYS.toString( ) + File.separator + "euca.p12" );
