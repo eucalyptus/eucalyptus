@@ -36,7 +36,7 @@ class DescribeProperties(eucadmin.describerequest.DescribeRequest):
               ptype='string',
               cardinality='+',
               optional=True,
-              doc='[PROPERTY-PREFIX]*')]
+              doc='[PROPERTY-PREFIX] ...')]
 
     def __init__(self, **args):
         eucadmin.describerequest.DescribeRequest.__init__(self, **args)
@@ -47,7 +47,7 @@ class DescribeProperties(eucadmin.describerequest.DescribeRequest):
         if self.connection is None:
             args['path'] = self.ServicePath
             self.connection = self.ServiceClass(**args)
-        for i, value in enumerate(self.request_params.pop('properties'), []):
+        for i, value in enumerate(self.request_params.pop('properties', [])):
             self.request_params['Property.%s' % (i + 1)] = value
         return self.connection
 
