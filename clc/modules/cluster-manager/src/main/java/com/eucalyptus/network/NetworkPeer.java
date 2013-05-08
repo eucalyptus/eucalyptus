@@ -137,6 +137,8 @@ public class NetworkPeer implements Serializable {
     
     final NetworkPeer that = ( NetworkPeer ) o;
 
+    if(this.groupId!=null && that.groupId!=null)
+    	return this.groupId.equals(that.groupId);
     if ( !this.groupName.equals( that.groupName ) ) return false;
     if ( !this.otherAccountId.equals( that.otherAccountId ) ) return false;
     
@@ -146,8 +148,12 @@ public class NetworkPeer implements Serializable {
   @Override
   public int hashCode( ) {
     int result;
-    result = this.otherAccountId.hashCode( );
-    result = 31 * result + this.groupName.hashCode( );
+    if(this.groupId!=null)
+    	result = this.groupId.hashCode();
+    else{
+	    result = this.otherAccountId.hashCode( );
+	    result = 31 * result + this.groupName.hashCode( );
+    }
     return result;
   }
   

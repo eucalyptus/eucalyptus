@@ -204,7 +204,7 @@ public class NetworkGroupManager {
       try {     
         final NetworkGroup ruleGroup = lookupGroup( request.getGroupId(), request.getGroupName() );
         if ( RestrictedTypes.filterPrivileged().apply( ruleGroup ) ) {
-          NetworkGroups.resolvePermissions( ipPermissions );
+          NetworkGroups.resolvePermissions( ipPermissions , true);
           final List<NetworkRule> revokedRuleList = NetworkGroups.ipPermissionsAsNetworkRules( ipPermissions );
           for ( final Iterator<NetworkRule> it = ruleGroup.getNetworkRules().iterator(); it.hasNext() ;) {
             if ( revokedRuleList.contains( it.next() ) ) {
@@ -239,7 +239,7 @@ public class NetworkGroupManager {
         throw new EucalyptusCloudException( "Not authorized to authorize network group " + ruleGroup.getDisplayName() + " for " + ctx.getUser( ) );
       }
       final List<NetworkRule> ruleList = Lists.newArrayList( );
-      NetworkGroups.resolvePermissions( request.getIpPermissions() );
+      NetworkGroups.resolvePermissions( request.getIpPermissions() , false);
       for ( final IpPermissionType ipPerm : request.getIpPermissions( ) ) {
         if ( ipPerm.getCidrIpRanges().isEmpty() && ipPerm.getGroups().isEmpty() ) {
           continue; // see EUCA-5934
