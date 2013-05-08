@@ -142,7 +142,8 @@ static sem *vol_sem = NULL;            //!< Semaphore to protect volume operatio
  |                                                                            |
 \*----------------------------------------------------------------------------*/
 
-static int cleanup_volume_attachment(char *sc_url, int use_ws_sec, char *ws_sec_policy_file, ebs_volume_data *vol_data, char *connect_string, char *local_ip, char *local_iqn, int norescan);
+static int cleanup_volume_attachment(char *sc_url, int use_ws_sec, char *ws_sec_policy_file, ebs_volume_data * vol_data, char *connect_string, char *local_ip, char *local_iqn,
+                                     int norescan);
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |
@@ -525,41 +526,41 @@ int disconnect_ebs_volume_with_struct(char *sc_url, int use_ws_sec, char *ws_sec
 //!
 //! @note should be invoked only by functions in this file that acquired the necessary lock.
 //!
-static int cleanup_volume_attachment (char *sc_url, int use_ws_sec, char *ws_sec_policy_file, ebs_volume_data *vol_data, char *connect_string, char *local_ip, char *local_iqn, int norescan) 
+static int cleanup_volume_attachment(char *sc_url, int use_ws_sec, char *ws_sec_policy_file, ebs_volume_data * vol_data, char *connect_string, char *local_ip, char *local_iqn,
+                                     int norescan)
 {
-       int rc = 0;
+    int rc = 0;
 
-       LOGDEBUG("[%s] attempting to disconnect iscsi target\n", vol_data->volumeId);
-       if (disconnect_iscsi_target(connect_string, norescan) != 0) {
-               LOGERROR("[%s] failed to disconnet iscsi target\n", vol_data->volumeId);
-               LOGDEBUG("Skipping SC Call due to previous errors\n");
-               return EUCA_ERROR;
-       }
+    LOGDEBUG("[%s] attempting to disconnect iscsi target\n", vol_data->volumeId);
+    if (disconnect_iscsi_target(connect_string, norescan) != 0) {
+        LOGERROR("[%s] failed to disconnet iscsi target\n", vol_data->volumeId);
+        LOGDEBUG("Skipping SC Call due to previous errors\n");
+        return EUCA_ERROR;
+    }
+    //TODO: decrypt token using node pk
+    if (sc_url == NULL || strlen(sc_url) <= 0) {
+        LOGERROR("Cannot call UnexportVolume on SC for volume %s, no valid sc URL found\n", vol_data->volumeId);
+        return EUCA_ERROR;
+    }
 
-       //TODO: decrypt token using node pk
-       if(sc_url == NULL || strlen(sc_url) <= 0) {
-    	   LOGERROR("Cannot call UnexportVolume on SC for volume %s, no valid sc URL found\n", vol_data->volumeId);
-    	   return EUCA_ERROR;
-       }
-
-       LOGTRACE("Calling scClientCall with url: %s and token %s\n", sc_url, vol_data->token);
-       rc = scClientCall(NULL, NULL, use_ws_sec, ws_sec_policy_file, DEFAULT_SC_CALL_TIMEOUT, sc_url, "UnexportVolume", vol_data->volumeId, vol_data->token, local_ip, local_iqn);
-       if (rc) {
-               LOGERROR("ERROR unexporting volume %s\n", vol_data->volumeId);
-               return EUCA_ERROR;
-       } else {
-               //Ok, now refresh local session to be sure it's gone.
-               char *refreshedDev = NULL;
-               //Should return error of not found.
-               refreshedDev = get_iscsi_target(connect_string);
-               if (refreshedDev) {
-                       //Failure, should have NULL.
-                       return EUCA_ERROR;
-               } else {
-                       //We're good
-            	   	   return EUCA_OK;
-               }
-       }
+    LOGTRACE("Calling scClientCall with url: %s and token %s\n", sc_url, vol_data->token);
+    rc = scClientCall(NULL, NULL, use_ws_sec, ws_sec_policy_file, DEFAULT_SC_CALL_TIMEOUT, sc_url, "UnexportVolume", vol_data->volumeId, vol_data->token, local_ip, local_iqn);
+    if (rc) {
+        LOGERROR("ERROR unexporting volume %s\n", vol_data->volumeId);
+        return EUCA_ERROR;
+    } else {
+        //Ok, now refresh local session to be sure it's gone.
+        char *refreshedDev = NULL;
+        //Should return error of not found.
+        refreshedDev = get_iscsi_target(connect_string);
+        if (refreshedDev) {
+            //Failure, should have NULL.
+            return EUCA_ERROR;
+        } else {
+            //We're good
+            return EUCA_OK;
+        }
+    }
 }
 
 #ifdef _UNIT_TEST

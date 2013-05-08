@@ -123,6 +123,7 @@ typedef struct scStub_t {
  |                             EXPORTED PROTOTYPES                            |
  |                                                                            |
 \*----------------------------------------------------------------------------*/
+
 scStub *scStubCreate(char *endpoint_uri, char *logfile, char *homedir);
 int scStubDestroy(scStub * pStub);
 int scExportVolumeStub(scStub * pStub, char *correlationId, char *userId, char *volumeId, char *token, char *ip, char *iqn, char **connection_string);

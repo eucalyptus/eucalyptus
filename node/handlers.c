@@ -260,7 +260,7 @@ static void update_log_params(void);
 static void nc_signal_handler(int sig);
 static int init(void);
 static void updateServiceStateInfo(ncMetadata * pMeta);
-static void printNCServiceStateInfo();
+static void printNCServiceStateInfo(void);
 static void printMsgServiceStateInfo(ncMetadata * pMeta);
 
 /*----------------------------------------------------------------------------*\
@@ -290,9 +290,19 @@ static void printMsgServiceStateInfo(ncMetadata * pMeta);
  |                                                                            |
 \*----------------------------------------------------------------------------*/
 
+//!
 //! Copies the url string of the ENABLED service of the requested type into dest_buffer.
 //! dest_buffer MUST be the same size as the services uri array length, 512.
 //! NULL if none exists
+//!
+//! @param[in] service_type
+//! @param[in] nc
+//! @param[in] dest_buffer
+//!
+//! @pre
+//!
+//! @post
+//!
 void get_service_url(const char *service_type, struct nc_state_t *nc, char *dest_buffer)
 {
     int i = 0, j = 0;
@@ -319,7 +329,14 @@ void get_service_url(const char *service_type, struct nc_state_t *nc, char *dest
     }
 }
 
-static void printNCServiceStateInfo()
+//!
+//!
+//!
+//! @pre
+//!
+//! @post
+//!
+static void printNCServiceStateInfo(void)
 {
     int i = 0, j = 0;
     //Don't bother if not at trace logging
@@ -341,6 +358,15 @@ static void printNCServiceStateInfo()
     }
 }
 
+//!
+//!
+//!
+//! @param[in] pMeta
+//!
+//! @pre
+//!
+//! @post
+//!
 static void printMsgServiceStateInfo(ncMetadata * pMeta)
 {
     int i = 0, j = 0;
