@@ -1846,7 +1846,7 @@ static artifact *art_alloc_vbr(virtualBootRecord * vbr, boolean do_make_work_cop
                 goto u_out;
 
             // extract size from the digest
-            long long bb_size_bytes = euca_strtoll(blob_digest, "<size>", "</size>");  // pull size from the digest
+            long long bb_size_bytes = euca_strtoll(blob_digest, "<size>", "</size>");   // pull size from the digest
             if (bb_size_bytes < 1)
                 goto u_out;
             vbr->sizeBytes = bb_size_bytes; // record size in VBR now that we know it
@@ -1870,7 +1870,7 @@ u_out:
                 goto w_out;
             }
             // extract size from the digest
-            long long bb_size_bytes = euca_strtoll(blob_digest, "<size>", "</size>");  // pull size from the digest
+            long long bb_size_bytes = euca_strtoll(blob_digest, "<size>", "</size>");   // pull size from the digest
             if (bb_size_bytes < 1) {
                 LOGERROR("[%s] incorrect image digest or error returned from Walrus\n", current_instanceId);
                 goto w_out;
