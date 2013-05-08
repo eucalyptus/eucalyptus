@@ -98,15 +98,78 @@
 #include "storage-controller.h"
 #include "sc-client-marshal.h"
 
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                                  DEFINES                                   |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                                  TYPEDEFS                                  |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                                ENUMERATIONS                                |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                                 STRUCTURES                                 |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                             EXTERNAL VARIABLES                             |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+/* Should preferably be handled in header file */
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                              GLOBAL VARIABLES                              |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                              STATIC VARIABLES                              |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                              STATIC PROTOTYPES                             |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                                   MACROS                                   |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                               IMPLEMENTATION                               |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+//!
 //! Make a call to the SC as specified with a string and a timeout.
 //!
 //! This implementation is heavily borrowed from the CC's ncClientCall.
 //! Uses fork/exec for client to preserve memory since Axis's destroy/free have issues
 //!
- //! @param[in] correlationId a pointer to the correlationId string to use for the call to the SC
- //! @param[in] userId a pointer to the userId string to use for the call to the SC
- //! @param[in] use_ws_sec an integer/boolean to indicate if WS-Sec should be used
- //! @param[in] ws_sec_policy_file_path a pointer to the string giving the SC client policy file
+//! @param[in] correlationId a pointer to the correlationId string to use for the call to the SC
+//! @param[in] userId a pointer to the userId string to use for the call to the SC
+//! @param[in] use_ws_sec an integer/boolean to indicate if WS-Sec should be used
+//! @param[in] ws_sec_policy_file_path a pointer to the string giving the SC client policy file
 //! @param[in] timeout the timeout for the call in seconds
 //! @param[in] scURL the URL to send the request to
 //! @param[in] scOp the operation to perform (i.e. "ExportVolume", "UnexportVolume",...)

@@ -348,22 +348,19 @@ static void *rebooting_thread(void *arg)
         unlock_hypervisor_conn();
         return NULL;
     }
-
     // obtain the most up-to-date XML for domain from libvirt
-    xml = virDomainGetXMLDesc(dom, 0); 
+    xml = virDomainGetXMLDesc(dom, 0);
     if (xml == NULL) {
         LOGERROR("[%s] cannot obtain metadata for instance to reboot, giving up\n", instance->instanceId);
         unlock_hypervisor_conn();
         return NULL;
     }
-
     // try shutdown first, then kill it if uncooperative
     if (shutdown_then_destroy_domain(dom) != EUCA_OK) {
         LOGERROR("[%s] failed to shutdown and destroy the instance to reboot, giving up\n", instance->instanceId);
         unlock_hypervisor_conn();
         return NULL;
     }
-     
     // Add a shift to values of three of the metrics: ones that
     // drop back to zero after a reboot. The shift, which is based
     // on the latest value, ensures that values sent upstream do
@@ -766,7 +763,8 @@ static int doMigrateInstances(struct nc_state_t *nc, ncMetadata * pMeta, ncInsta
                     migration_rollback(instance);
                     sem_v(inst_sem);
                 } else {
-                    LOGINFO("[%s] ignoring request to roll back migration on source with instance in state %s(%s) -- duplicate rollback request?\n", instance->instanceId, instance->stateName, migration_state_names[instance->migration_state]);
+                    LOGINFO("[%s] ignoring request to roll back migration on source with instance in state %s(%s) -- duplicate rollback request?\n", instance->instanceId,
+                            instance->stateName, migration_state_names[instance->migration_state]);
                 }
             } else {
                 LOGERROR("[%s] action '%s' is not valid\n", instance->instanceId, action);
@@ -796,7 +794,6 @@ static int doMigrateInstances(struct nc_state_t *nc, ncMetadata * pMeta, ncInsta
                 LOGERROR("[%s] action '%s' is not valid or not implemented\n", instance_req->instanceId, action);
                 return (EUCA_INVALID_ERROR);
             }
-
             // Everything from here on is specific to "prepare" on a destination.
 
             // allocate a new instance struct
@@ -813,14 +810,6 @@ static int doMigrateInstances(struct nc_state_t *nc, ncMetadata * pMeta, ncInsta
             euca_strncpy(instance->migration_credentials, credentials, CREDENTIAL_SIZE);
             save_instance_struct(instance);
             sem_v(inst_sem);
-
-            /*
-             * (This is intended for development/testing only!)
-             */
-            /*
-            LOGERROR("[%s] FORCING FAILURE!\n", instance->instanceId);
-            goto failed_dest;
-            */
 
             // Establish migration-credential keys.
             LOGINFO("[%s] migration destination preparing %s > %s [creds=%s]\n", instance->instanceId, SP(instance->migration_src), SP(instance->migration_dst),

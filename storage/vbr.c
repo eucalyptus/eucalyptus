@@ -355,7 +355,7 @@ int vbr_update_hostconfig_scurl(char *new_sc_url)
         sem_v(hostconfig_sem);
         return EUCA_ERROR;
     } else {
-    	LOGTRACE("Updated sc url in VBR hostconfig to %s\n", localhost_config.sc_url);
+        LOGTRACE("Updated sc url in VBR hostconfig to %s\n", localhost_config.sc_url);
         sem_v(hostconfig_sem);
         return EUCA_OK;
     }
@@ -1847,7 +1847,7 @@ static artifact *art_alloc_vbr(virtualBootRecord * vbr, boolean do_make_work_cop
                 goto u_out;
 
             // extract size from the digest
-            long long bb_size_bytes = euca_strtoll(blob_digest, "<size>", "</size>");  // pull size from the digest
+            long long bb_size_bytes = euca_strtoll(blob_digest, "<size>", "</size>");   // pull size from the digest
             if (bb_size_bytes < 1)
                 goto u_out;
             vbr->sizeBytes = bb_size_bytes; // record size in VBR now that we know it
@@ -1871,7 +1871,7 @@ u_out:
                 goto w_out;
             }
             // extract size from the digest
-            long long bb_size_bytes = euca_strtoll(blob_digest, "<size>", "</size>");  // pull size from the digest
+            long long bb_size_bytes = euca_strtoll(blob_digest, "<size>", "</size>");   // pull size from the digest
             if (bb_size_bytes < 1) {
                 LOGERROR("[%s] incorrect image digest or error returned from Walrus\n", current_instanceId);
                 goto w_out;

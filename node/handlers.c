@@ -259,7 +259,7 @@ static void update_log_params(void);
 static void nc_signal_handler(int sig);
 static int init(void);
 static void updateServiceStateInfo(ncMetadata * pMeta);
-static void printNCServiceStateInfo();
+static void printNCServiceStateInfo(void);
 static void printMsgServiceStateInfo(ncMetadata * pMeta);
 
 /*----------------------------------------------------------------------------*\
@@ -289,9 +289,19 @@ static void printMsgServiceStateInfo(ncMetadata * pMeta);
  |                                                                            |
 \*----------------------------------------------------------------------------*/
 
+//!
 //! Copies the url string of the ENABLED service of the requested type into dest_buffer.
 //! dest_buffer MUST be the same size as the services uri array length, 512.
 //! NULL if none exists
+//!
+//! @param[in] service_type
+//! @param[in] nc
+//! @param[in] dest_buffer
+//!
+//! @pre
+//!
+//! @post
+//!
 void get_service_url(const char *service_type, struct nc_state_t *nc, char *dest_buffer)
 {
     int i = 0, j = 0;
@@ -318,26 +328,44 @@ void get_service_url(const char *service_type, struct nc_state_t *nc, char *dest
     }
 }
 
-static void printNCServiceStateInfo()
+//!
+//!
+//!
+//! @pre
+//!
+//! @post
+//!
+static void printNCServiceStateInfo(void)
 {
     int i = 0, j = 0;
     //Don't bother if not at trace logging
     if (log_level_get() <= EUCA_LOG_TRACE) {
-    	sem_p(service_state_sem);
+        sem_p(service_state_sem);
         LOGTRACE("Printing %d services\n", nc_state.servicesLen);
         for (i = 0; i < nc_state.servicesLen; i++) {
             LOGTRACE("Service - %s %s %s %s\n", nc_state.services[i].name, nc_state.services[i].partition, nc_state.services[i].type, nc_state.services[i].uris[0]);
         }
         for (i = 0; i < nc_state.disabledServicesLen; i++) {
-        	LOGTRACE("Disabled Service - %s %s %s %s\n", nc_state.disabledServices[i].name, nc_state.disabledServices[i].partition, nc_state.disabledServices[i].type, nc_state.disabledServices[i].uris[0]);
+            LOGTRACE("Disabled Service - %s %s %s %s\n", nc_state.disabledServices[i].name, nc_state.disabledServices[i].partition, nc_state.disabledServices[i].type,
+                     nc_state.disabledServices[i].uris[0]);
         }
         for (i = 0; i < nc_state.servicesLen; i++) {
-        	LOGTRACE("Notready Service - %s %s %s %s\n", nc_state.notreadyServices[i].name, nc_state.notreadyServices[i].partition, nc_state.notreadyServices[i].type, nc_state.notreadyServices[i].uris[0]);
+            LOGTRACE("Notready Service - %s %s %s %s\n", nc_state.notreadyServices[i].name, nc_state.notreadyServices[i].partition, nc_state.notreadyServices[i].type,
+                     nc_state.notreadyServices[i].uris[0]);
         }
         sem_v(service_state_sem);
     }
 }
 
+//!
+//!
+//!
+//! @param[in] pMeta
+//!
+//! @pre
+//!
+//! @post
+//!
 static void printMsgServiceStateInfo(ncMetadata * pMeta)
 {
     int i = 0, j = 0;
@@ -349,10 +377,12 @@ static void printMsgServiceStateInfo(ncMetadata * pMeta)
             LOGTRACE("Msg-Meta: Service - %s %s %s %s\n", pMeta->services[i].name, pMeta->services[i].partition, pMeta->services[i].type, pMeta->services[i].uris[0]);
         }
         for (i = 0; i < pMeta->disabledServicesLen; i++) {
-        	LOGTRACE("Msg-Meta: Disabled Service - %s %s %s %s\n", pMeta->disabledServices[i].name, pMeta->disabledServices[i].partition, pMeta->disabledServices[i].type, pMeta->disabledServices[i].uris[0]);
+            LOGTRACE("Msg-Meta: Disabled Service - %s %s %s %s\n", pMeta->disabledServices[i].name, pMeta->disabledServices[i].partition, pMeta->disabledServices[i].type,
+                     pMeta->disabledServices[i].uris[0]);
         }
         for (i = 0; i < pMeta->servicesLen; i++) {
-        	LOGTRACE("Msg-Meta: Notready Service - %s %s %s %s\n", pMeta->notreadyServices[i].name, pMeta->notreadyServices[i].partition, pMeta->notreadyServices[i].type, pMeta->notreadyServices[i].uris[0]);
+            LOGTRACE("Msg-Meta: Notready Service - %s %s %s %s\n", pMeta->notreadyServices[i].name, pMeta->notreadyServices[i].partition, pMeta->notreadyServices[i].type,
+                     pMeta->notreadyServices[i].uris[0]);
         }
     }
 }
@@ -846,14 +876,14 @@ static void refresh_instance_info(struct nc_state_t *nc, ncInstance * instance)
     if (old_state == TEARDOWN || old_state == STAGING || old_state == BUNDLING_SHUTOFF || old_state == CREATEIMAGE_SHUTOFF)
         return;
 
-    { // all this is done while holding the hypervisor lock, with a valid connection
+    {                                  // all this is done while holding the hypervisor lock, with a valid connection
         virConnectPtr conn = lock_hypervisor_conn();
         if (conn == NULL)
             return;
 
         virDomainPtr dom = virDomainLookupByName(conn, instance->instanceId);
 
-        if (dom == NULL) {                 // hypervisor doesn't know about it
+        if (dom == NULL) {             // hypervisor doesn't know about it
             if (old_state == BUNDLING_SHUTDOWN) {
                 LOGINFO("[%s] detected disappearance of bundled domain\n", instance->instanceId);
                 change_state(instance, BUNDLING_SHUTOFF);
@@ -1331,7 +1361,7 @@ void *monitoring_thread(void *arg)
 //!
 //! @param[in] instance struct to fill in
 //!
-void set_instance_params(ncInstance *instance)
+void set_instance_params(ncInstance * instance)
 {
     char *s = NULL;
 
@@ -1392,7 +1422,7 @@ void *startup_thread(void *arg)
         LOGERROR("[%s] could not contact the hypervisor, abandoning the instance\n", instance->instanceId);
         goto shutoff;
     }
-    unlock_hypervisor_conn(); // unlock right away, since we are just checking on it
+    unlock_hypervisor_conn();          // unlock right away, since we are just checking on it
 
     // set up networking
     if ((error = vnetStartNetwork(nc_state.vnetconfig, instance->ncnet.vlan, NULL, NULL, NULL, &brname)) != EUCA_OK) {
@@ -1443,9 +1473,9 @@ void *startup_thread(void *arg)
             LOGINFO("[%s] attempt %d of %d to create the instance\n", instance->instanceId, i + 1, MAX_CREATE_TRYS);
         }
 
-        { // all this is done while holding the hypervisor lock, with a valid connection
+        {                              // all this is done while holding the hypervisor lock, with a valid connection
             virConnectPtr conn = lock_hypervisor_conn();
-            if (conn == NULL) { // get a new connection for each loop iteration
+            if (conn == NULL) {        // get a new connection for each loop iteration
                 LOGERROR("[%s] could not contact the hypervisor, abandoning the instance\n", instance->instanceId);
                 goto shutoff;
             }
@@ -1468,11 +1498,11 @@ void *startup_thread(void *arg)
             // #7  0x00007f359f0be70d in clone () from /lib/libc.so.6
             // #8  0x0000000000000000 in ?? ()
 
-            if ((cpid = fork()) < 0) {     // fork error
+            if ((cpid = fork()) < 0) { // fork error
                 LOGERROR("[%s] failed to fork to start instance\n", instance->instanceId);
-            } else if (cpid == 0) {        // child process - creates the domain
+            } else if (cpid == 0) {    // child process - creates the domain
                 if ((dom = virDomainCreateLinux(conn, xml, 0)) != NULL) {
-                    virDomainFree(dom);    // To be safe. Docs are not clear on whether the handle exists outside the process.
+                    virDomainFree(dom); // To be safe. Docs are not clear on whether the handle exists outside the process.
                     exit(0);
                 } else {
                     exit(1);
@@ -1512,7 +1542,7 @@ void *startup_thread(void *arg)
     //! @TODO bring back correlationId
     eventlog("NC", instance->userId, "", "instanceBoot", "begin");
 
-    { // make instance state changes while under lock
+    {                                  // make instance state changes while under lock
         sem_p(inst_sem);
         // check one more time for cancellation
         if (instance->state == TEARDOWN) {
@@ -1565,7 +1595,6 @@ void *restart_thread(void *arg)
         LOGERROR("[%s] start network failed for instance, terminating it\n", instance->instanceId);
         goto shutoff;
     }
-
     // Check the hypervisor connection
     LOGDEBUG("[%s] spawning restart thread\n", instance->instanceId);
     virConnectPtr conn = lock_hypervisor_conn();
@@ -1573,7 +1602,6 @@ void *restart_thread(void *arg)
         LOGERROR("[%s] could not contact the hypervisor, abandoning the instance\n", instance->instanceId);
         goto shutoff;
     }
-
     // Save our instance bridge name for later use
     euca_strncpy(instance->params.guestNicDeviceName, brname, sizeof(instance->params.guestNicDeviceName));
     LOGINFO("[%s] started network\n", instance->instanceId);
@@ -3204,7 +3232,8 @@ int doMigrateInstances(ncMetadata * pMeta, ncInstance ** instances, int instance
                     return (EUCA_UNSUPPORTED_ERROR);
                 } else {
                     // Ignore the fact src & dst are the same if a rollback--it doesn't matter.
-                    LOGDEBUG("[%s] ignoring apparent same-node migration hosts (%s > %s) for action '%s'\n", instances[i]->instanceId, instances[i]->migration_src, instances[i]->migration_dst, action);
+                    LOGDEBUG("[%s] ignoring apparent same-node migration hosts (%s > %s) for action '%s'\n", instances[i]->instanceId, instances[i]->migration_src,
+                             instances[i]->migration_dst, action);
                 }
             }
         }
