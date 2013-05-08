@@ -1339,7 +1339,8 @@ static int buf_to_fd(int fd, const char *buf, int size_buf)
 //!
 static int read_store_metadata(blobstore * bs)
 {
-    char buf[1024] = { 0 };
+    char *val = NULL;
+    char buf[1024] = "";
     int size = fd_to_buf(bs->fd, buf, (sizeof(buf) - 1));
 
     if (size == -1)
@@ -1349,7 +1350,7 @@ static int read_store_metadata(blobstore * bs)
         return -1;
     }
 
-    char *val;
+    buf[size] = '\0';
     if ((val = get_val(buf, "id")) == NULL)
         return -1;
     euca_strncpy(bs->id, val, sizeof(bs->id));
