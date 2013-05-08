@@ -1233,7 +1233,7 @@ void *monitoring_thread(void *arg)
                     LOGDEBUG("[%s] instance has exceeded BOOTING cleanup threshold of %d seconds, but has migration_state=%s, so not terminating\n", instance->instanceId, nc_state.booting_cleanup_threshold, migration_state_names[instance->migration_state]);
                     continue;
                 } else {
-                    LOGDEBUG("[%s] finding and terminating BOOTING instance, which has exceeded cleanup threshold of %d seconds (%d)\n", instance->instanceId,nc_state.booting_cleanup_threshold , find_and_terminate_instance(nc, NULL, instance->instanceId, 1, &tmpInstance, 1));
+                    LOGDEBUG("[%s] finding and terminating BOOTING instance, which has exceeded cleanup threshold of %d seconds (%d)\n", instance->instanceId,nc_state.booting_cleanup_threshold , find_and_terminate_instance(nc, NULL, instance->instanceId, 1, &tmpInstance));
                 }
             }
 
