@@ -4043,7 +4043,7 @@ static char *dm_sort_table(char **pOldTable)
 
         // Split in lines and count
         aLines[count] = strtok((*pOldTable), "\n");
-        while ((aLines[count] != NULL) && (count < DM_MAX_LINES)) {
+        while ((aLines[count] != NULL) && (count < (DM_MAX_LINES - 1))) {
             count++;
             aLines[count] = strtok(NULL, "\n");
         }

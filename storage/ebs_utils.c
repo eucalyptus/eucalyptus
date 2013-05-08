@@ -217,12 +217,12 @@ int replace_sc_url(const char *volume_string, const char *scUrl, char *restrict 
     const char *data_start = NULL;
 
     //Check if this has been done already
-    if ((vol_prefix = EUCA_ZALLOC(prefix_length, sizeof(char))) == NULL) {
+    if ((vol_prefix = EUCA_ZALLOC((prefix_length + 1), sizeof(char))) == NULL) {
         LOGERROR("Could not allocate memory!\n");
         return EUCA_ERROR;
     }
 
-    euca_strncpy(vol_prefix, volume_string, prefix_length + 1);
+    euca_strncpy(vol_prefix, volume_string, (prefix_length + 1));
     if (strcmp(vol_prefix, VOLUME_STRING_PREFIX)) {
         LOGWARN("Cannot insert sc url, already found %s\n", volume_string);
         EUCA_FREE(vol_prefix);
