@@ -4621,6 +4621,13 @@ int doMigrateInstances(ncMetadata * pMeta, char *actionNode, char *instanceId, c
                 dst_index = res_idx;
             }
         }
+
+        if (dst_index < 0) {
+            LOGERROR("failed: request to roll back migration on node. Invalid destination index\n");
+            ret = 1;
+            goto out;
+        }
+
         // Might not have migration_dst in instance struct here if rollback.
         // FIXME: In some cases, such as certain rollback requests to source node, this can put the source node's IP in ->migration_dst. Debug.
         if (!strlen(nc_instances[0]->migration_dst)) {
