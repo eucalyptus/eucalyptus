@@ -143,9 +143,12 @@ define([
                   }
                 },
 
-                createButton: {
+                createButton: new Backbone.Model({
+                  disabled: true,
                   click: function() {
                     // GET THE INPUT FROM THE HTML VIEW
+                    if (!self.scope.volume.isValid()) return;
+
                     var snapshotId = self.scope.volume.get('snapshot_id');          
                     var size = self.scope.volume.get('size');                      
                     var availablity_zone = self.scope.volume.get('availablity_zone');         
@@ -158,7 +161,7 @@ define([
                       self.scope.volume.trigger('add_tag', nametag);
                     }
 
-		    // PERFORM CREATE CALL OM THE MODEL
+        		    // PERFORM CREATE CALL OM THE MODEL
                     self.scope.volume.trigger('confirm');
                     self.scope.volume.save({}, {
                       success: function(model, response, options){   // AJAX CALL SUCCESS OPTION
@@ -175,21 +178,22 @@ define([
                       }
                   });
 
-	           // DISPLAY THE VOLUME'S STATUS -- FOR DEBUG
-		   App.data.volume.each(function(item){
-		     console.log("Volume After create: " + item.toJSON().id +":"+ item.toJSON().size);
-	           });
-
 	          // CLOSE THE DIALOG
 	          self.close();
                 }
-              }
-
+              })
             }
+
+
+            this.scope.volume.on('validated', function() {
+                self.scope.createButton.set('disabled', !self.scope.volume.isValid());
+               // self.render();
+            });
 
             this._do_init();
 
             this.setupSelectOptions(args);
+            this.scope.volume.validate();
         },
 	});
 });

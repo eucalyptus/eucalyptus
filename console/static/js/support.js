@@ -395,7 +395,7 @@ function isRootVolume(instanceId, volumeId) {
 }
 
 function getRootDeviceName(resource){
-  return resource.root_device_name ? resource.root_device_name.replace('&#x2f;','/').replace('&#x2f;','/') : '/dev/sda1';
+  return resource.root_device_name ? resource.root_device_name.replace('&#x2f;','/').replace('&#x2f;','/') : '/dev/sda';
 }
 
 function generateSnapshotToImageMap(){

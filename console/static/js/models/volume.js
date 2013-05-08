@@ -34,7 +34,7 @@ define([
             size: {
               min: 1,
               max: 1024,
-              required: false
+              required: true
             },
             instance_id: {
               required: false

@@ -88,7 +88,8 @@ define([
         },
 
         formatSecGroupRulesString: function() {
-          var msg =  $.i18n.prop('launch_instance_security_group_rule',DefaultEncoder().encodeForHTML(self.model.get('name')));
+          // don't need to escape name here. It's rendered safely.
+          var msg =  $.i18n.prop('launch_instance_security_group_rule',self.model.get('name'));
           return msg;
         }
 

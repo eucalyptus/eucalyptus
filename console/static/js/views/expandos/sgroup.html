@@ -5,36 +5,34 @@
   </ul>
   <div id="tabs-1" class="tab">
       <ul class="sgroup-expanded clearfix">
-		<li><div class="expanded-title" data-msg="sgroup_table_expanded_sgroup_name">SECURITY GROUP NAME</div><div class="expanded-value" data-text="sgroup.name"></div></li> 
-		<li><div class="expanded-title" data-msg="sgroup_table_expanded_description">DESCRIPTION</div><div class="expanded-value" data-text="sgroup.description"></div></li>
-     </ul>
-     <ul class="sgroup-expanded clearfix">
+		    <li><div class="expanded-title" data-msg="sgroup_table_expanded_sgroup_name">SECURITY GROUP NAME</div><div class="expanded-value" data-text="sgroup.name"></div></li> 
+		    <li><div class="expanded-title" data-msg="sgroup_table_expanded_description">DESCRIPTION</div><div class="expanded-value" data-text="sgroup.description"></div></li>
+      </ul>
+      <ul class="sgroup-expanded clearfix">
         <li><div class="expanded-section-label" data-msg="sgroup_table_expanded_ingress_rules">Incoming traffic rules:</div></li>
-     </ul>
-     <ul class="sgroup-expanded clearfix">
-	  	<li>
-		<table>
-			<thead>
-              <tr>
-                <th data-msg="sgroup_table_expanded_protocol"></th>
-                <th data-msg="sgroup_table_expanded_port_type"></th>
-                <th data-msg="sgroup_table_expanded_source"></th>
-              </tr>
-			</thead>
-			<tbody>
-              <tr data-each-item="rules">
-                <td><span data-text="item.protocol"></span></td>
-                <td><span data-text="item.port"></span></td>
-                <td><span data-text="item.source"></span></td>
-              </tr>
-			</tbody>
-		</table>
-		</li>
-	 </ul>
+      </ul>
+      <div class="sgroup-expanded"> 	
+        <table class="expanded-table">
+        	<thead>
+                  <tr>
+                    <th data-msg="sgroup_table_expanded_protocol"></th>
+                    <th data-msg="sgroup_table_expanded_port_type"></th>
+                    <th data-msg="sgroup_table_expanded_source"></th>
+                  </tr>
+        	</thead>
+        	<tbody>
+                  <tr data-each-item="rules">
+                    <td><span data-text="item.protocol"></span></td>
+                    <td><span data-text="item.port"></span></td>
+                    <td><span data-text="item.source"></span></td>
+                  </tr>
+        	</tbody>
+        </table>
+      </div>
   </div>
 
   <div id="tabs-2" class="tab">
-          <div class="expanded-table" data-ui-tags="sgroup.tags"></div>
+    <div class="expanded-table" data-ui-tags="sgroup.tags"></div>
   </div>
 
-<div style="clear:both"></div>
+</div>

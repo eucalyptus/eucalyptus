@@ -126,6 +126,9 @@
 	      // Hidden column for the uncut description of the snapshot
               "bVisible": false,
               "aTargets":[9],
+	      "mRender": function(data) {
+                return DefaultEncoder().encodeForHTML(data);
+              },
               "mData": "description",
             },
             {
