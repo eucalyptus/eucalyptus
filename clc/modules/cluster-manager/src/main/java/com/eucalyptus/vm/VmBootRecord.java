@@ -347,26 +347,4 @@ public boolean isBlockStorage( ) {
   private void setSshKeyString( String sshKeyString ) {
     this.sshKeyString = sshKeyString;
   }
-  
-  @EntityUpgrade( entities = { VmBootRecord.class }, since = Version.v3_2_2, value = com.eucalyptus.component.id.Eucalyptus.class )
-  public enum VmBootRecordUpgrade implements Predicate<Class> {
-    INSTANCE;
-    private static Logger LOG = Logger.getLogger( VmBootRecord.VmBootRecordUpgrade.class );
-    @Override
-    public boolean apply( Class arg0 ) {
-      EntityTransaction db = Entities.get( VmInstance.class );
-      try {
-        List<VmInstance> entities = Entities.query( new VmInstance( ) );
-        for ( VmInstance entry : entities ) {
-          LOG.debug( "Upgrading BootRecord: " + entry.toString() );
-          Entities.persist(entry);
-        }
-        db.commit( );
-        return true;
-      } catch ( Exception ex ) {
-        db.rollback();
-        throw Exceptions.toUndeclared( ex );
-      }
-    }
-  }
 }

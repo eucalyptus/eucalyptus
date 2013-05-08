@@ -320,6 +320,7 @@ int vbr_update_hostconfig_scurl(char *new_sc_url)
         sem_v(hostconfig_sem);
         return EUCA_ERROR;
     } else {
+    	LOGTRACE("Updated sc url in VBR hostconfig to %s\n", localhost_config.sc_url);
         sem_v(hostconfig_sem);
         return EUCA_OK;
     }

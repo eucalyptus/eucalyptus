@@ -135,6 +135,7 @@ const char *euca_client_component_name = "nc";  //!< The client component name
 \*----------------------------------------------------------------------------*/
 
 static sem *vol_sem = NULL;            //!< Semaphore to protect volume operations
+static int cleanup_volume_attachment (char *sc_url, int use_ws_sec, char *ws_sec_policy_file, ebs_volume_data *vol_data, char *connect_string, char *local_ip, char *local_iqn, int norescan);
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |
@@ -450,7 +451,6 @@ int disconnect_ebs_volume(char *sc_url, int use_ws_sec, char *ws_sec_policy_file
     ret = cleanup_volume_attachment(sc_url, use_ws_sec, ws_sec_policy_file, vol_data, connect_string, local_ip, local_iqn, norescan);
     LOGTRACE("cleanup_volume_attachment returned: %d\n", ret);
 
-release:
     LOGTRACE("Releasing volume lock\n");
     //Release the volume lock
     sem_v(vol_sem);
@@ -495,7 +495,6 @@ int disconnect_ebs_volume_with_struct(char *sc_url, int use_ws_sec, char *ws_sec
     ret = cleanup_volume_attachment(sc_url, use_ws_sec, ws_sec_policy_file, vol_data, vol_data->connect_string, local_ip, local_iqn, norescan);
     LOGTRACE("cleanup_volume_attachment returned: %d\n", ret);
 
-release:
     LOGTRACE("Releasing volume lock\n");
     //Release the volume lock
     sem_v(vol_sem);
@@ -533,6 +532,11 @@ static int cleanup_volume_attachment (char *sc_url, int use_ws_sec, char *ws_sec
        }
 
        //TODO: decrypt token using node pk
+       if(sc_url == NULL || strlen(sc_url) <= 0) {
+    	   LOGERROR("Cannot call UnexportVolume on SC for volume %s, no valid sc URL found\n", vol_data->volumeId);
+    	   return EUCA_ERROR;
+       }
+
        LOGTRACE("Calling scClientCall with url: %s and token %s\n", sc_url, vol_data->token);
        rc = scClientCall(NULL, NULL, use_ws_sec, ws_sec_policy_file, DEFAULT_SC_CALL_TIMEOUT, sc_url, "UnexportVolume", vol_data->volumeId, vol_data->token, local_ip, local_iqn);
        if (rc) {
