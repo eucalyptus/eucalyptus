@@ -144,6 +144,7 @@ int connect_ebs_volume(char *sc_url, char *attachment_token, int use_ws_sec, cha
                        ebs_volume_data ** vol_data);
 int disconnect_ebs_volume(char *sc_url, int use_ws_sec, char *ws_sec_policy_file, char *volume_string, char *connect_string, char *local_ip, char *local_iqn);
 int disconnect_ebs_volume_with_struct(char *sc_url, int use_ws_sec, char *ws_sec_policy_file, ebs_volume_data * vol_data, char *local_ip, char *local_iqn);
+static int cleanup_volume_attachment (char *sc_url, int use_ws_sec, char *ws_sec_policy_file, ebs_volume_data *vol_data, char *connect_string, char *local_ip, char *local_iqn, int norescan);
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |

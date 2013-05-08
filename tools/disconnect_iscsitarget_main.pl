@@ -134,7 +134,7 @@ while (@paths > 0) {
       	last if is_null_or_empty(get_iscsi_device($netdev, $ip, $store, $lun));      	
       }
     }
-    print STDERR "Tried deleting lun $i times\n";
+    print STDERR "Tried deleting lun $lun $i times in iSCSI session IP=$ip, IQN=$store\n";
     next if retry_until_true(\&has_device_attached, [$netdev, $ip, $store], 5) == 1;
   }
   # logout
@@ -146,12 +146,12 @@ while (@paths > 0) {
     }
   }
   if (is_null_or_empty($iface)) {
-    run_cmd(1, 1, "$ISCSIADM -m node -p $ip -T $store -u");
+    run_cmd(1, 0, "$ISCSIADM -m node -p $ip -T $store -u");
   } else {
-    run_cmd(1, 1, "$ISCSIADM -m node -p $ip -T $store -I $iface -u");
+    run_cmd(1, 0, "$ISCSIADM -m node -p $ip -T $store -I $iface -u");
   }
  # Delete /var/lib/iscsi/node 
-  run_cmd(1, 1, "$ISCSIADM -m node -p $ip -T $store -o delete");
+  run_cmd(1, 0, "$ISCSIADM -m node -p $ip -T $store -o delete");
 }
 
 # Remove unused mpath device
@@ -191,7 +191,7 @@ sub delete_lun {
     }
   }
   if (is_null_or_empty($sid) || is_null_or_empty($host_number)) {
-    print STDERR "Warning: failed to get SID or Host Number.\n";
+    print STDERR "Warning: failed to get SID or Host Number for session IP=$ip, IQN=$store,lun=$lun.\n";
     return;
   }
   $delete_path = "/sys/class/iscsi_session/session$sid/device/target$host_number:0:0/$host_number:0:0:$lun/delete";

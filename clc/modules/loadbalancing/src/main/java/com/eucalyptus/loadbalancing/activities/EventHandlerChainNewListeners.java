@@ -30,7 +30,7 @@ import org.apache.log4j.Logger;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.loadbalancing.Listener;
 import com.eucalyptus.loadbalancing.LoadBalancer;
-import com.eucalyptus.loadbalancing.LoadBalancerSecurityGroup;
+import com.eucalyptus.loadbalancing.LoadBalancerSecurityGroup.LoadBalancerSecurityGroupCoreView;
 import com.eucalyptus.loadbalancing.LoadBalancers;
 import com.google.common.collect.Lists;
 
@@ -64,7 +64,7 @@ public class EventHandlerChainNewListeners extends EventHandlerChain<CreateListe
 			String groupName = null;
 			try{
 				lb = LoadBalancers.getLoadbalancer(evt.getContext(), evt.getLoadBalancer());
-				LoadBalancerSecurityGroup group = lb.getGroup();
+				final LoadBalancerSecurityGroupCoreView group = lb.getGroup();
 				if(group!=null)
 					groupName = group.getName();
 			}catch(Exception ex){
@@ -94,7 +94,7 @@ public class EventHandlerChainNewListeners extends EventHandlerChain<CreateListe
 			String groupName = null;
 			try{
 				lb = LoadBalancers.getLoadbalancer(this.event.getContext(), this.event.getLoadBalancer());
-				final LoadBalancerSecurityGroup group = lb.getGroup();
+				final LoadBalancerSecurityGroupCoreView group = lb.getGroup();
 				if(group!=null)
 					groupName = group.getName();
 			}catch(Exception ex){

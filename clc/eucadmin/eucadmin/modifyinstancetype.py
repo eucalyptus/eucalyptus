@@ -28,49 +28,9 @@ import os
 from boto.roboto.awsqueryrequest import AWSQueryRequest
 from boto.roboto.param import Param
 import eucadmin
+from eucadmin import EucAdmin
 
-def encode_disk(param, dict, value):
-    t = value.split('=', 1)
-    if len(t) != 2:
-        print "Options must be of the form KEY=VALUE: %s" % value
-        sys.exit(1)
-    dict['Name'] = t[0]
-    dict['Value'] = t[1]
-def encode_prop(param, dict, value):
-    t = value.split('=', 1)
-    if len(t) != 2:
-        print "Options must be of the form KEY=VALUE: %s" % value
-        sys.exit(1)
-    dict['Name'] = t[0]
-    dict['Value'] = t[1]
-
-def encode_prop_from_file(param, dict, value):
-    t = value.split('=', 1)
-    if len(t) != 2:
-        print "Options must be of the form KEY=VALUE: %s" % value
-        sys.exit(1)
-    dict['Name'] = t[0]
-    #TODO - this should be better integrated with boto.roboto
-    path = t[1]
-    if path == '-':
-        value = sys.stdin.read()
-    else:
-        path = os.path.expanduser(path)
-        path = os.path.expandvars(path)
-        if os.path.isfile(path):
-            fp = open(path)
-            value = fp.read()
-            fp.close()
-        else:
-            print 'Error: Unable to read file: %s' % path
-            sys.exit(1)
-    dict['Value'] = value
-
-def reset_prop(param, dict, value):
-    dict['Name'] = value
-    dict['Reset'] = True
-
-class ModifyPropertyValue(AWSQueryRequest):
+class ModifyVmTypeAttribute(AWSQueryRequest):
     ServicePath = '/services/Eucalyptus'
     APIVersion = 'eucalyptus'
     ServiceClass = EucAdmin
@@ -79,38 +39,43 @@ class ModifyPropertyValue(AWSQueryRequest):
     Params = [Param(name='Disk',
                     short_name='d',
                     long_name='disk',
-                    ptype='int',
+                    ptype='integer',
                     optional=True,
                     doc='Gigabytes of disk for the root file system image.'),
-              Param(name='CPU',
+              Param(name='Cpu',
                     short_name='c',
                     long_name='cpu',
-                    ptype='int',
+                    ptype='integer',
                     optional=True,
                     doc='Number of virtual CPUs allocated to this type of instance.'),
               Param(name='Memory',
                     short_name='m',
                     long_name='memory',
-                    ptype='int',
+                    ptype='integer',
                     optional=True,
                     doc='Megabytes of RAM allocated to this instance type..'),
-              Param(name='EphemeralDisk',
-                    short_name='e',
-                    long_name='ephemeral-disk',
-                    ptype='int',
-                    optional=True,
-                    encoder=encode_disk,
-                    doc='''Modify definition of ephemeral disk in the form ephemeralX=[<device-name>][:<size>[:<format>]], where:
-                    \tephemeralX \tX indicates the ephemeral disk index
-                    \tdevice-name\tA device string of the form /dev/sd[b-e]
-                    \tsize       \tSize in gigabytes.
-                    \tformat     \tFormat of the disk (one of: swap, ext3, none)'''),
+#               Param(name='EphemeralDisk',
+#                     short_name='e',
+#                     long_name='ephemeral-disk',
+#                     ptype='integer',
+#                     optional=True,
+#                     encoder=encode_disk,
+#                     doc='''Modify definition of ephemeral disk in the form ephemeralX=[<device-name>][:<size>[:<format>]], where:
+#                     \tephemeralX \tX indicates the ephemeral disk index
+#                     \tdevice-name\tA device string of the form /dev/sd[b-e]
+#                     \tsize       \tSize in gigabytes.
+#                     \tformat     \tFormat of the disk (one of: swap, ext3, none)'''),
               Param(name='Reset',
                     short_name='r',
                     long_name='reset-to-default',
                     ptype='boolean',
                     optional=True,
                     doc='Reset this instance type back to its default values.')]
+    Args = [Param(name='Name',
+                  long_name='name',
+                  ptype='string',
+                  optional=False,
+                  doc='instance type name')]
 
     def get_connection(self, **args):
         if self.connection is None:
@@ -119,11 +84,16 @@ class ModifyPropertyValue(AWSQueryRequest):
         return self.connection
 
     def cli_formatter(self, data):
-        print data
+        previousVmtype = getattr(data, 'euca:previousVmType')
         vmtype = getattr(data, 'euca:vmType')
-        fmt = 'TYPE\t%-10.10s%-10d%-10d%-10d'
-        detail_fmt = '%s%06d / %06d %s'
-        print fmt % (vmtype['euca:name'],
+        fmt = 'TYPE\t%s\t%-10.10s%-10d%-10d%-10d'
+        print fmt % ("OLD",
+                     vmtype['euca:name'],
+                     int(vmtype['euca:cpu']),
+                     int(vmtype['euca:disk']),
+                     int(vmtype['euca:memory']))
+        print fmt % ("NEW",
+                     vmtype['euca:name'],
                      int(vmtype['euca:cpu']),
                      int(vmtype['euca:disk']),
                      int(vmtype['euca:memory']))

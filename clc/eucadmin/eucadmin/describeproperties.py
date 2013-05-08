@@ -25,14 +25,31 @@
 
 import eucadmin.describerequest
 
+from boto.roboto.param import Param
+
 class DescribeProperties(eucadmin.describerequest.DescribeRequest):
     ServiceName = 'Property'
     Description = "Show the cloud's properties or settings"
+
+    Args = [Param(name='properties',
+              long_name='property prefix',
+              ptype='string',
+              cardinality='+',
+              optional=True,
+              doc='[PROPERTY-PREFIX]*')]
 
     def __init__(self, **args):
         eucadmin.describerequest.DescribeRequest.__init__(self, **args)
         self.list_markers = ['euca:properties']
         self.item_markers = ['euca:item']
+
+    def get_connection(self, **args):
+        if self.connection is None:
+            args['path'] = self.ServicePath
+            self.connection = self.ServiceClass(**args)
+        for i,value in enumerate(self.request_params.pop('properties')):
+          self.request_params['Property.%s'%(i+1)]=value
+        return self.connection
 
     def cli_formatter(self, data):
         props = getattr(data, 'euca:properties')
