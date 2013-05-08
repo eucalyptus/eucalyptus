@@ -166,7 +166,7 @@ static void *rebooting_thread(void *arg);
 static int doRebootInstance(struct nc_state_t *nc, ncMetadata * pMeta, char *instanceId);
 static int doGetConsoleOutput(struct nc_state_t *nc, ncMetadata * pMeta, char *instanceId, char **consoleOutput);
 static int doMigrateInstances(struct nc_state_t *nc, ncMetadata * pMeta, ncInstance ** instances, int instancesLen, char *action, char *credentials);
-static int generate_migration_keys(char *host, char *credentials, boolean restart, ncInstance *instance);
+static int generate_migration_keys(char *host, char *credentials, boolean restart, ncInstance * instance);
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |
@@ -216,7 +216,7 @@ struct handlers kvm_libvirt_handlers = {
 //!
 //! @return EUCA_OK, EUCA_INVALID_ERROR, or EUCA_SYSTEM_ERROR
 //!
-static int generate_migration_keys(char *host, char *credentials, boolean restart, ncInstance *instance)
+static int generate_migration_keys(char *host, char *credentials, boolean restart, ncInstance * instance)
 {
     static char *most_recent_credentials = NULL;
     static char *most_recent_host = NULL;
@@ -258,10 +258,10 @@ static int generate_migration_keys(char *host, char *credentials, boolean restar
         most_recent_host = strdup(host);
         LOGDEBUG("[%s] regeneration of migration host information: %s\n", instanceId, most_recent_host);
     }
-
     // FIXME: Add polling around incoming_migrations_in_progress to prevent restarts during migrations.
 
-    snprintf(generate_keys, MAX_PATH, EUCALYPTUS_GENERATE_MIGRATION_KEYS " %s %s %s", euca_base ? euca_base : "", euca_base ? euca_base : "", host, credentials, (restart == TRUE) ? "restart" : "");
+    snprintf(generate_keys, MAX_PATH, EUCALYPTUS_GENERATE_MIGRATION_KEYS " %s %s %s", euca_base ? euca_base : "", euca_base ? euca_base : "", host, credentials,
+             (restart == TRUE) ? "restart" : "");
     LOGDEBUG("[%s] migration key-generator path: '%s'\n", instanceId, generate_keys);
 
     int sysret = system(generate_keys);
@@ -274,7 +274,6 @@ static int generate_migration_keys(char *host, char *credentials, boolean restar
     LOGDEBUG("[%s] migration key generation succeeded\n", instanceId);
     return EUCA_OK;
 }
-
 
 //!
 //! Initialize the NC state structure for the KVM hypervisor.
@@ -740,7 +739,8 @@ static int doMigrateInstances(struct nc_state_t *nc, ncMetadata * pMeta, ncInsta
                 }
                 instance->migration_state = MIGRATION_IN_PROGRESS;
                 outgoing_migrations_in_progress++;
-                LOGINFO("[%s] migration source initiating %s > %s [creds=%s] (1 of %d active outgoing migrations)\n", instance->instanceId, instance->migration_src, instance->migration_dst, (instance->migration_credentials == NULL) ? "unavailable" : "present", outgoing_migrations_in_progress);
+                LOGINFO("[%s] migration source initiating %s > %s [creds=%s] (1 of %d active outgoing migrations)\n", instance->instanceId, instance->migration_src,
+                        instance->migration_dst, (instance->migration_credentials == NULL) ? "unavailable" : "present", outgoing_migrations_in_progress);
                 save_instance_struct(instance);
                 copy_instances();
                 sem_v(inst_sem);

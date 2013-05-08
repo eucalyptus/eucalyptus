@@ -975,7 +975,8 @@ static void refresh_instance_info(struct nc_state_t *nc, ncInstance * instance)
                         bunchOfInstances *head = NULL;
                         for (head = global_instances; head; head = head->next) {
                             if ((head->instance->migration_state == MIGRATION_PREPARING) || (head->instance->migration_state == MIGRATION_READY)) {
-                                LOGINFO("[%s] is pending migration, state=%s, deferring deauthorization of migration keys\n", head->instance->instanceId, migration_state_names[head->instance->migration_state]);
+                                LOGINFO("[%s] is pending migration, state=%s, deferring deauthorization of migration keys\n", head->instance->instanceId,
+                                        migration_state_names[head->instance->migration_state]);
                                 incoming_migrations_pending++;
                             }
                             if ((head->instance->migration_state == MIGRATION_IN_PROGRESS) && !strcmp(nc_state.ip, head->instance->migration_dst)) {
@@ -983,7 +984,8 @@ static void refresh_instance_info(struct nc_state_t *nc, ncInstance * instance)
                             }
                         }
                         if (incoming_migrations_counted != incoming_migrations_in_progress) {
-                            LOGWARN("Possible internal bug detected: incoming_migrations_in_progress=%d, but %d incoming migrations counted\n", incoming_migrations_in_progress, incoming_migrations_counted);
+                            LOGWARN("Possible internal bug detected: incoming_migrations_in_progress=%d, but %d incoming migrations counted\n", incoming_migrations_in_progress,
+                                    incoming_migrations_counted);
                         }
                         if (!incoming_migrations_pending) {
                             LOGINFO("no remaining incoming or pending migrations -- deauthorizing all migration clients\n");
@@ -1009,7 +1011,8 @@ static void refresh_instance_info(struct nc_state_t *nc, ncInstance * instance)
                             }
                         }
                         if (incoming_migrations_counted != incoming_migrations_in_progress) {
-                            LOGWARN("Possible internal bug detected: incoming_migrations_in_progress=%d, but %d incoming migrations counted\n", incoming_migrations_in_progress, incoming_migrations_counted);
+                            LOGWARN("Possible internal bug detected: incoming_migrations_in_progress=%d, but %d incoming migrations counted\n", incoming_migrations_in_progress,
+                                    incoming_migrations_counted);
                         }
                     }
                 } else if (new_state == SHUTOFF || new_state == SHUTDOWN) {
@@ -1190,15 +1193,19 @@ void *monitoring_thread(void *arg)
             refresh_instance_info(nc, instance);
 
             // time out logic for migration-ready instances
-            if (!strcmp(instance->stateName, "Extant") && ((instance->migration_state == MIGRATION_READY) || (instance->migration_state == MIGRATION_PREPARING)) && ((now - instance->migrationTime) > nc_state.migration_ready_threshold)) {
+            if (!strcmp(instance->stateName, "Extant") && ((instance->migration_state == MIGRATION_READY) || (instance->migration_state == MIGRATION_PREPARING))
+                && ((now - instance->migrationTime) > nc_state.migration_ready_threshold)) {
                 if (instance->migrationTime) {
                     if (outgoing_migrations_in_progress) {
-                        LOGINFO("[%s] has been in migration state '%s' on source for %d seconds (threshold is %d), but not rolling back due to %d ongoing outgoing migration[s]\n", instance->instanceId, migration_state_names[instance->migration_state], (int)(now - instance->migrationTime), nc_state.migration_ready_threshold, outgoing_migrations_in_progress);
+                        LOGINFO("[%s] has been in migration state '%s' on source for %d seconds (threshold is %d), but not rolling back due to %d ongoing outgoing migration[s]\n",
+                                instance->instanceId, migration_state_names[instance->migration_state], (int)(now - instance->migrationTime), nc_state.migration_ready_threshold,
+                                outgoing_migrations_in_progress);
                         continue;
                     }
 
                     LOGWARN("[%s] has been in migration state '%s' on source for %d seconds (threshold is %d), rolling back [%d].\n",
-                            instance->instanceId, migration_state_names[instance->migration_state], (int)(now - instance->migrationTime), nc_state.migration_ready_threshold, instance->migrationTime);
+                            instance->instanceId, migration_state_names[instance->migration_state], (int)(now - instance->migrationTime), nc_state.migration_ready_threshold,
+                            instance->migrationTime);
                     migration_rollback(instance);
                     continue;
                 } else {
@@ -1260,10 +1267,12 @@ void *monitoring_thread(void *arg)
             // terminate a booting instance as a special case, though not if it's an incoming migration
             if (instance->state == BOOTING) {
                 if ((instance->migration_state == MIGRATION_PREPARING) || (instance->migration_state == MIGRATION_READY)) {
-                    LOGDEBUG("[%s] instance has exceeded BOOTING cleanup threshold of %d seconds, but has migration_state=%s, so not terminating\n", instance->instanceId, nc_state.booting_cleanup_threshold, migration_state_names[instance->migration_state]);
+                    LOGDEBUG("[%s] instance has exceeded BOOTING cleanup threshold of %d seconds, but has migration_state=%s, so not terminating\n", instance->instanceId,
+                             nc_state.booting_cleanup_threshold, migration_state_names[instance->migration_state]);
                     continue;
                 } else {
-                    LOGDEBUG("[%s] finding and terminating BOOTING instance, which has exceeded cleanup threshold of %d seconds (%d)\n", instance->instanceId,nc_state.booting_cleanup_threshold , find_and_terminate_instance(nc, NULL, instance->instanceId, 1, &tmpInstance));
+                    LOGDEBUG("[%s] finding and terminating BOOTING instance, which has exceeded cleanup threshold of %d seconds (%d)\n", instance->instanceId,
+                             nc_state.booting_cleanup_threshold, find_and_terminate_instance(nc, NULL, instance->instanceId, 1, &tmpInstance));
                 }
             }
 
