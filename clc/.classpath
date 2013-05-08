@@ -1,6 +1,12 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <classpath>
 	<classpathentry kind="src" output="modules/autoscaling/build" path="modules/autoscaling/src/main/java"/>
+	<classpathentry kind="src" path="modules/storage-controller/src/test/java"/>
+	<classpathentry kind="src" path="modules/bootstrap/src/test/java"/>
+	<classpathentry kind="src" path="modules/datawarehouse/src/test/java"/>
+	<classpathentry kind="src" path="modules/authentication/src/main/java"/>
+	<classpathentry kind="src" path="modules/bootstrap/src/main/java"/>
+	<classpathentry kind="src" path="modules/authentication/src/test/java"/>
 	<classpathentry kind="src" output="modules/autoscaling-common/build" path="modules/autoscaling-common/src/main/java"/>
 	<classpathentry kind="src" output="modules/cloud/build" path="modules/cloud/src/main/java"/>
 	<classpathentry kind="src" output="modules/cloudwatch/build" path="modules/cloudwatch/src/main/java"/>
@@ -87,12 +93,6 @@
 	<classpathentry kind="lib" path="lib/groovy-all-1.7.2.jar" sourcepath="/git/third-party/groovy-1.7.1"/>
 	<classpathentry kind="lib" path="lib/guava-14.0.1-gwt.jar"/>
 	<classpathentry kind="lib" path="lib/guava-14.0.1.jar"/>
-	<classpathentry kind="lib" path="lib/gwt-api-checker-2.2.jar"/>
-	<classpathentry kind="lib" path="lib/gwt-dev-2.2.jar"/>
-	<classpathentry kind="lib" path="lib/gwt-servlet-2.2.jar"/>
-	<classpathentry kind="lib" path="lib/gwt-servlet-deps-2.2.jar"/>
-	<classpathentry kind="lib" path="lib/gwt-soyc-vis-2.2.jar"/>
-	<classpathentry kind="lib" path="lib/gwt-user-2.2.jar"/>
 	<classpathentry kind="lib" path="lib/ha-jdbc-2.0.16-rc-1-jdk1.6.jar" sourcepath="/git/third-party/ha-jdbc-2.0.16-rc-1"/>
 	<classpathentry kind="lib" path="lib/hamcrest-all-1.2.jar"/>
 	<classpathentry kind="lib" path="lib/hibernate-3.5.6-Final.jar"/>
@@ -143,7 +143,6 @@
 	<classpathentry kind="lib" path="lib/jul-to-slf4j-1.5.2.jar"/>
 	<classpathentry kind="lib" path="lib/junit-4.11.jar"/>
 	<classpathentry kind="lib" path="lib/kahadb-5.4.1.jar"/>
-	<classpathentry kind="lib" path="lib/log4j-1.2.15.jar"/>
 	<classpathentry kind="lib" path="lib/manageontap.jar"/>
 	<classpathentry kind="lib" path="lib/mule-core-2.0.1.jar"/>
 	<classpathentry kind="lib" path="lib/mule-module-builders-2.0.1.jar"/>
@@ -185,5 +184,13 @@
 	<classpathentry kind="lib" path="lib/xmlsec-1.4.7.jar"/>
 	<classpathentry kind="lib" path="lib/xom-1.2.9.jar"/>
 	<classpathentry kind="lib" path="lib/xpp3-1.1.4c.jar"/>
+	<classpathentry kind="lib" path="lib/gwt-api-checker-2.4.jar"/>
+	<classpathentry kind="lib" path="lib/gwt-dev-2.4.jar"/>
+	<classpathentry kind="lib" path="lib/gwt-servlet-2.4.jar"/>
+	<classpathentry kind="lib" path="lib/gwt-servlet-deps-2.4.jar"/>
+	<classpathentry kind="lib" path="lib/gwt-soyc-vis-2.4.jar"/>
+	<classpathentry kind="lib" path="lib/gwt-user-2.4.jar"/>
+	<classpathentry kind="lib" path="lib/log4j-1.2.17.jar"/>
+	<classpathentry kind="lib" path="lib/validation-api-1.0.0.GA.jar"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>

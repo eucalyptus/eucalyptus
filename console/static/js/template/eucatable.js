@@ -104,17 +104,17 @@
                 valueMatches : thisObj.searchConfig.valueMatches
             }
         });
+        thisObj.bbdata.on('change add remove reset', function() {
+          thisObj.refreshTable.call(thisObj)
+        });
         if(thisObj.options.filters){
           $.each(thisObj.options.filters, function(idx, filter){
             if (filter['default']) {
               thisObj.vsearch.searchBox.value(filter['name']+": "+filter['default'])
+              thisObj.vsearch.searchBox.searchEvent($.Event('keydown'));
             }
           });
         }
-        thisObj.bbdata.on('change add remove reset', function() {
-            console.log('bbdata refresh');
-            thisObj.refreshTable.call(thisObj)
-        });
         thisObj.refreshTable();
       });
     },
@@ -128,6 +128,7 @@
     _getTableParam : function(args){
       var thisObj = this;
       var dt_arg = {};
+      dt_arg["bStateSave"] = true;
       dt_arg["bProcessing"] = true;
       // This was disabling sorting. I'm not sure why this was there to start with, so
       // let's leave this like this for now with this comment. - dak
@@ -558,6 +559,14 @@
         return;
       if(! $('html body').eucadata('isEnabled'))
         return;
+      /* Another hack like the above - don't refresh if we aren't on
+       * page 1. The datatables plugin knows how to maintain state and 
+       * come back to that on a page reload, but something we're doing
+       * isn't allowing it to do that. More investigation needed for a 
+       * real fix. - JP 2013-05-04 EUCA- EUCA-
+       */ 
+      if(this.table.fnSettings()._iDisplayStart > 0)
+        return;
       this.table.fnReloadAjax(undefined, undefined, true);
     },
 
@@ -573,6 +582,7 @@
       var tbody = this.element.find('table tbody'); 
       var selected = tbody.find('tr.selected-row');
       var expanded = tbody.find('tr.expanded');
+
 
       this.table.fnReloadAjax(this.table.oSettings, undefined, function() {
         if (selected != undefined && selected.length > 0) {
@@ -594,7 +604,6 @@
     // Force a refresh of the underlying data source.
     refreshSource : function() {
       // Force a fetch from backbone
-      console.log('Fetch source');
       this.source.fetch();
     },
 

@@ -135,6 +135,7 @@ const char *euca_client_component_name = "nc";  //!< The client component name
 \*----------------------------------------------------------------------------*/
 
 static sem *vol_sem = NULL;            //!< Semaphore to protect volume operations
+static int cleanup_volume_attachment (char *sc_url, int use_ws_sec, char *ws_sec_policy_file, ebs_volume_data *vol_data, char *connect_string, char *local_ip, char *local_iqn, int norescan);
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |
@@ -213,24 +214,29 @@ char *get_volume_local_device(const char *connection_string)
 int replace_sc_url(const char *volume_string, const char *scUrl, char *restrict dest_string)
 {
     int prefix_length = strlen(VOLUME_STRING_PREFIX);
+    char *vol_prefix = NULL;
+    const char *data_start = NULL;
 
     //Check if this has been done already
-    char *vol_prefix = EUCA_ZALLOC(prefix_length, sizeof(char));
-    if (vol_prefix == NULL) {
+    if ((vol_prefix = EUCA_ZALLOC((prefix_length + 1), sizeof(char))) == NULL) {
         LOGERROR("Could not allocate memory!\n");
         return EUCA_ERROR;
     }
 
-    euca_strncpy(vol_prefix, volume_string, prefix_length + 1);
+    euca_strncpy(vol_prefix, volume_string, (prefix_length + 1));
     if (strcmp(vol_prefix, VOLUME_STRING_PREFIX)) {
         LOGWARN("Cannot insert sc url, already found %s\n", volume_string);
         EUCA_FREE(vol_prefix);
         return EUCA_ERROR;
     }
 
-    const char *data_start = volume_string + (sizeof(char) * prefix_length);    //Go past the sc:// prefix
+    // We're done with the prefix...
+    EUCA_FREE(vol_prefix);
 
-    //Prepend the SC URL to the remote device string
+    // Go past the sc:// prefix
+    data_start = volume_string + (sizeof(char) * prefix_length);
+
+    // Prepend the SC URL to the remote device string
     if (data_start > 0) {
         LOGDEBUG("Inserting the SC URL to volume string: %s, %s, using token %s \n", volume_string, scUrl, data_start);
         snprintf(dest_string, EUCA_MAX_PATH, "%s/%s", scUrl, data_start);
@@ -435,26 +441,24 @@ int disconnect_ebs_volume(char *sc_url, int use_ws_sec, char *ws_sec_policy_file
 
     LOGTRACE("Disconnecting an EBS volume\n");
 
-    rc = deserialize_volume(volume_string, &vol_data);
-    if (rc) {
+    if ((rc = deserialize_volume(volume_string, &vol_data)) != 0) {
         LOGERROR("Could not deserialize volume string %s\n", volume_string);
         return EUCA_ERROR;
     }
 
     LOGTRACE("Requesting volume lock\n");
 
-    //Grab a lock.
     sem_p(vol_sem);
-    LOGTRACE("Got volume lock\n");
-
-    ret = cleanup_volume_attachment(sc_url, use_ws_sec, ws_sec_policy_file, vol_data, connect_string, local_ip, local_iqn, norescan);
-    LOGTRACE("cleanup_volume_attachment returned: %d\n", ret);
-
-release:
-    LOGTRACE("Releasing volume lock\n");
-    //Release the volume lock
+    {
+        LOGTRACE("Got volume lock\n");
+        ret = cleanup_volume_attachment(sc_url, use_ws_sec, ws_sec_policy_file, vol_data, connect_string, local_ip, local_iqn, norescan);
+        LOGTRACE("cleanup_volume_attachment returned: %d\n", ret);
+        LOGTRACE("Releasing volume lock\n");
+    }
     sem_v(vol_sem);
+
     LOGTRACE("Released volume lock\n");
+    EUCA_FREE(vol_data);
     return ret;
 }
 
@@ -495,7 +499,6 @@ int disconnect_ebs_volume_with_struct(char *sc_url, int use_ws_sec, char *ws_sec
     ret = cleanup_volume_attachment(sc_url, use_ws_sec, ws_sec_policy_file, vol_data, vol_data->connect_string, local_ip, local_iqn, norescan);
     LOGTRACE("cleanup_volume_attachment returned: %d\n", ret);
 
-release:
     LOGTRACE("Releasing volume lock\n");
     //Release the volume lock
     sem_v(vol_sem);
@@ -533,6 +536,11 @@ static int cleanup_volume_attachment (char *sc_url, int use_ws_sec, char *ws_sec
        }
 
        //TODO: decrypt token using node pk
+       if(sc_url == NULL || strlen(sc_url) <= 0) {
+    	   LOGERROR("Cannot call UnexportVolume on SC for volume %s, no valid sc URL found\n", vol_data->volumeId);
+    	   return EUCA_ERROR;
+       }
+
        LOGTRACE("Calling scClientCall with url: %s and token %s\n", sc_url, vol_data->token);
        rc = scClientCall(NULL, NULL, use_ws_sec, ws_sec_policy_file, DEFAULT_SC_CALL_TIMEOUT, sc_url, "UnexportVolume", vol_data->volumeId, vol_data->token, local_ip, local_iqn);
        if (rc) {

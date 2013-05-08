@@ -119,6 +119,7 @@
 \*----------------------------------------------------------------------------*/
 
 #define VOL_RETRIES 3
+#define SHUTDOWN_GRACE_PERIOD_SEC 60
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |
@@ -417,6 +418,50 @@ static int doGetConsoleOutput(struct nc_state_t *nc, ncMetadata * pMeta, char *i
 }
 
 //!
+//! given a domain pointer, first tries to shut down the domain
+//! gracefully (via ACPI signal to the OS), then, after a timeout,
+//! forecfully shuts it down
+//!
+//! NOTE: this must be called with hyp_sem semaphore held
+//!
+//! @param[in] dom libvirt domain pointer
+//!
+//! @return 0 for success and -1 for failure
+//!
+
+int shutdown_then_destroy_domain(virDomainPtr dom)
+{
+    int error = 0;
+
+    // first give OS a chance to shut down cleanly
+    LOGDEBUG("shutting down instance\n");
+    error = virDomainShutdown(dom);
+
+    if (! error) { // give it time to shut down
+        time_t deadline = time(NULL) + SHUTDOWN_GRACE_PERIOD_SEC;
+        int dom_status = -1;
+        while (time(NULL) < deadline) {
+            dom_status = virDomainIsActive(dom);
+            LOGTRACE("domain status '%d'\n", dom_status);
+            if (dom_status != 1)
+                break;
+            sleep(1);
+        }
+        
+        if (dom_status != 1) { // 0 = not running, -1 = does not exist
+            virDomainFree(dom);
+            return 0;
+        }
+    }
+    
+    LOGDEBUG("destroying instance\n");
+    error = virDomainDestroy(dom);
+    virDomainFree(dom);
+    
+    return error;
+}
+
+//!
 //! finds instance by ID and destroys it on the hypervisor
 //! NOTE: this must be called with inst_sem semaphore held
 //!
@@ -425,11 +470,10 @@ static int doGetConsoleOutput(struct nc_state_t *nc, ncMetadata * pMeta, char *i
 //! @param[in]  instanceId the instance identifier string (i-XXXXXXXX)
 //! @param[in]  force if set to 0 will force the termination of an instance.
 //! @param[out] instance_p a pointer to the instance matching the input instance identifier
-//! @param[in]  destroy if set to 1, the domain will be destroyed. If set to 0, the domain will only be shutdown.
 //!
 //! @return EUCA_OK on success or proper error code. Known error code returned include: EUCA_NOT_FOUND_ERROR.
 //!
-int find_and_terminate_instance(struct nc_state_t *nc_state, ncMetadata * pMeta, char *instanceId, int force, ncInstance ** instance_p, char destroy)
+int find_and_terminate_instance(struct nc_state_t *nc_state, ncMetadata * pMeta, char *instanceId, int force, ncInstance ** instance_p)
 {
     ncInstance *instance = NULL;
     int err = 0;
@@ -474,19 +518,12 @@ int find_and_terminate_instance(struct nc_state_t *nc_state, ncMetadata * pMeta,
     if (conn) {
         virDomainPtr dom = virDomainLookupByName(conn, instanceId);
         if (dom) {
-            // protect 'destroy' commands as we do with 'create' because we've seen problems during concurrent libvirt invocations
-            if (destroy)
-                err = virDomainDestroy(dom);
-            else
-                err = virDomainShutdown(dom);
+            err = shutdown_then_destroy_domain(dom); // the function frees 'dom'
             if (err == 0) {
-                if (destroy) {
-                    LOGINFO("[%s] destroying instance\n", instanceId);
-                } else {
-                    LOGINFO("[%s] shutting down instance\n", instanceId);
-                }
+                LOGINFO("[%s] instance terminated\n", instanceId);
+            } else {
+                LOGERROR("[%s] failed to terminate instance\n", instanceId);
             }
-            virDomainFree(dom);    //! @todo necessary?
         } else {
             if (instance->state != BOOTING && instance->state != STAGING && instance->state != TEARDOWN)
                 LOGWARN("[%s] instance to be terminated not running on hypervisor\n", instanceId);
@@ -523,7 +560,7 @@ static int doTerminateInstance(struct nc_state_t *nc, ncMetadata * pMeta, char *
     sem_v(hyp_sem);
 
     sem_p(inst_sem);
-    err = find_and_terminate_instance(nc, pMeta, instanceId, force, &instance, 1);
+    err = find_and_terminate_instance(nc, pMeta, instanceId, force, &instance);
     if (err != EUCA_OK) {
         copy_instances();
         sem_v(inst_sem);
@@ -1468,7 +1505,7 @@ static int doCreateImage(struct nc_state_t *nc, ncMetadata * pMeta, char *instan
     change_state(instance, CREATEIMAGE_SHUTDOWN);
     change_createImage_state(instance, CREATEIMAGE_IN_PROGRESS);
 
-    int err = find_and_terminate_instance(nc, pMeta, instanceId, 0, &instance, 1);
+    int err = find_and_terminate_instance(nc, pMeta, instanceId, 0, &instance);
     if (err != EUCA_OK) {
         copy_instances();
         sem_v(inst_sem);
@@ -1837,7 +1874,7 @@ static int doBundleInstance(struct nc_state_t *nc, ncMetadata * pMeta, char *ins
     change_state(instance, BUNDLING_SHUTDOWN);
     change_bundling_state(instance, BUNDLING_IN_PROGRESS);
 
-    int err = find_and_terminate_instance(nc, pMeta, instanceId, 0, &instance, 1);
+    int err = find_and_terminate_instance(nc, pMeta, instanceId, 0, &instance);
     copy_instances();
     sem_v(inst_sem);
 

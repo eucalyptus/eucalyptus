@@ -105,7 +105,7 @@ define([
         },
 
         getVolLabel: function(obj) {
-          if (obj.volume.get('device_name') == '/dev/sda1') {
+          if (obj.volume.get('device_name') == '/dev/sda') {
               return 'Root';
           } else {
               return 'EBS';
@@ -132,7 +132,7 @@ define([
             var partition = model.get('device_name').replace(/\/dev\/([a-z]*)([0-9]{1,2})/, '$2');
             return drive + (++partition);
           } else {
-            return 'sda1';
+            return 'sda';
           }
         },
 

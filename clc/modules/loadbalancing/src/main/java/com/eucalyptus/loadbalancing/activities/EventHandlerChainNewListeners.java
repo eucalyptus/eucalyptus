@@ -171,6 +171,9 @@ public class EventHandlerChainNewListeners extends EventHandlerChain<CreateListe
 				}catch(final Exception exx){
 					db.rollback();
 					LOG.warn("Unable to query the loadbalancer", ex);
+				}finally {
+					if(db.isActive())
+						db.rollback();
 				}
 			}
 		}

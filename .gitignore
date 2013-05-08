@@ -52,6 +52,7 @@ clc/modules/www/test-gwt/*
 clc/modules/www/test-gwt/war/*
 clc/modules/www/test-gwt/war/WEB-INF/*
 clc/modules/www/webapps
+clc/modules/www/gwt-unitCache/
 clc/target
 config.log
 config.status

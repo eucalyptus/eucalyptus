@@ -19,6 +19,10 @@
  ************************************************************************/
 package com.eucalyptus.loadbalancing.activities;
 
+import java.util.Date;
+import java.util.List;
+import java.util.NoSuchElementException;
+
 import javax.annotation.Nullable;
 import javax.persistence.Column;
 import javax.persistence.EntityTransaction;
@@ -34,22 +38,35 @@ import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
 import org.hibernate.annotations.Entity;
 
+import com.eucalyptus.bootstrap.Bootstrap;
+import com.eucalyptus.component.Topology;
+import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.entities.AbstractPersistent;
 import com.eucalyptus.entities.Entities;
+import com.eucalyptus.event.ClockTick;
+import com.eucalyptus.event.EventListener;
+import com.eucalyptus.event.Listeners;
 import com.eucalyptus.loadbalancing.LoadBalancer;
+import com.eucalyptus.loadbalancing.LoadBalancerBackendInstance;
 import com.eucalyptus.loadbalancing.LoadBalancerDnsRecord;
+import com.eucalyptus.loadbalancing.LoadBalancing;
 import com.eucalyptus.loadbalancing.LoadBalancer.LoadBalancerEntityTransform;
+import com.eucalyptus.loadbalancing.LoadBalancerBackendInstance.STATE;
 import com.eucalyptus.loadbalancing.LoadBalancerDnsRecord.LoadBalancerDnsRecordCoreView;
 import com.eucalyptus.loadbalancing.LoadBalancerDnsRecord.LoadBalancerDnsRecordEntityTransform;
 import com.eucalyptus.loadbalancing.LoadBalancerSecurityGroup;
 import com.eucalyptus.loadbalancing.LoadBalancerSecurityGroup.LoadBalancerSecurityGroupCoreView;
 import com.eucalyptus.loadbalancing.LoadBalancerZone;
 import com.eucalyptus.loadbalancing.LoadBalancerZone.LoadBalancerZoneCoreView;
+import com.eucalyptus.loadbalancing.activities.EventHandlerChainDelete.SecurityGroupCleanup;
 import com.eucalyptus.loadbalancing.activities.LoadBalancerAutoScalingGroup.LoadBalancerAutoScalingGroupCoreView;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.TypeMapper;
 import com.eucalyptus.util.TypeMappers;
 import com.google.common.base.Function;
+import com.google.common.collect.Lists;
+
+import edu.ucsb.eucalyptus.msgs.RunningInstancesItemType;
 
 /**
  * @author Sang-Min Park (spark@eucalyptus.com)
@@ -75,6 +92,9 @@ public class LoadBalancerServoInstance extends AbstractPersistent {
 	
 	enum STATE {
 		Pending, InService, Error, OutOfService, Retired
+	}
+	enum DNS_STATE {
+		Registered, Deregistered, None
 	}
 	
     @ManyToOne
@@ -108,8 +128,12 @@ public class LoadBalancerServoInstance extends AbstractPersistent {
     @Column(name="metadata_private_ip", nullable=true)
     private String privateIp = null;
     
+    @Column(name="metadata_dns_state", nullable=true)
+    private String dnsState = null;
+    
     private LoadBalancerServoInstance(){
     }
+    
     private LoadBalancerServoInstance(final LoadBalancerZone lbzone){
     	this.state = STATE.Pending.name();
     	this.zone = lbzone;
@@ -148,6 +172,8 @@ public class LoadBalancerServoInstance extends AbstractPersistent {
     	final LoadBalancerServoInstance instance = new LoadBalancerServoInstance(lbzone, group, dns);
     	instance.setInstanceId(instanceId);
     	instance.setAutoScalingGroup(as_group);
+    	instance.dnsState = DNS_STATE.None.name();
+
     	return instance;
     }
     
@@ -165,6 +191,7 @@ public class LoadBalancerServoInstance extends AbstractPersistent {
     public static LoadBalancerServoInstance named(){
     	return new LoadBalancerServoInstance();
     }
+    
     public static LoadBalancerServoInstance withState(String state){
     	final LoadBalancerServoInstance sample = new LoadBalancerServoInstance();
     	sample.state = state;
@@ -231,6 +258,14 @@ public class LoadBalancerServoInstance extends AbstractPersistent {
     
     public void setPrivateIp(final String ipAddr){
     	this.privateIp = ipAddr;
+    }
+    
+    public void setDnsState(final DNS_STATE dnsState){
+    	this.dnsState = dnsState.toString();
+    }
+    
+    public DNS_STATE getDnsState(){
+    	return Enum.valueOf(DNS_STATE.class, this.dnsState);
     }
     
 	@Override
@@ -317,6 +352,152 @@ public class LoadBalancerServoInstance extends AbstractPersistent {
 		
 		public LoadBalancerZoneCoreView getZone(){
 			return this.zone;
+		}
+	}
+	
+	// make sure  InService servo instance has its IP registered to DNS
+	// also make sure Error or OutOfService servo instance has its IP deregistered from DNS
+	public static class ServoInstanceDnsCheck implements EventListener<ClockTick> {
+		static final int CHECK_EVERY_SECONDS = 10;
+		public static void register( ) {
+		      Listeners.register( ClockTick.class, new ServoInstanceDnsCheck() );
+		    }
+
+		@Override
+		public void fireEvent(ClockTick event) {
+			if (!( Bootstrap.isFinished() &&
+			          Topology.isEnabledLocally( LoadBalancing.class ) &&
+			          Topology.isEnabled( Eucalyptus.class ) )) 
+				return;
+			
+			/// determine the BE instances to query
+			final List<LoadBalancerServoInstance> allInstances = Lists.newArrayList();
+			final List<LoadBalancerServoInstance> stateOutdated = Lists.newArrayList();
+			EntityTransaction db = Entities.get(LoadBalancerServoInstance.class);
+			try{
+				allInstances.addAll(
+						Entities.query(LoadBalancerServoInstance.named()));
+				db.commit();
+			}catch(final Exception ex){
+				db.rollback();
+			}finally{
+				if(db.isActive())
+					db.rollback();
+			}
+			final Date current = new Date(System.currentTimeMillis());
+
+			for(final LoadBalancerServoInstance se : allInstances){
+				final Date lastUpdate = se.getLastUpdateTimestamp();
+				int elapsedSec = (int)((current.getTime() - lastUpdate.getTime())/1000.0);
+				if(elapsedSec > CHECK_EVERY_SECONDS){
+					stateOutdated.add(se);
+				}
+			}
+			
+			db = Entities.get(LoadBalancerServoInstance.class);
+			try{
+				for(final LoadBalancerServoInstance se: stateOutdated){
+					final LoadBalancerServoInstance update = Entities.uniqueResult(se);
+					update.setLastUpdateTimestamp(current);
+					Entities.persist(update);
+				}
+				db.commit();
+			}catch(final Exception ex){
+				db.rollback();
+			}finally{
+				if(db.isActive())
+					db.rollback();
+			}
+			
+			for(final LoadBalancerServoInstance instance : stateOutdated){
+				if(LoadBalancerServoInstance.STATE.InService.equals(instance.getState())){
+					if(!LoadBalancerServoInstance.DNS_STATE.Registered.equals(instance.getDnsState())){
+						String ipAddr = null;
+						String privateIpAddr = null;
+						if(instance.getAddress()==null){
+							try{
+								List<RunningInstancesItemType> result = 
+										EucalyptusActivityTasks.getInstance().describeSystemInstances(Lists.newArrayList(instance.getInstanceId()));
+								if(result!=null && result.size()>0){
+									ipAddr = result.get(0).getIpAddress();
+									privateIpAddr = result.get(0).getPrivateIpAddress();
+								}
+							}catch(Exception ex){
+								LOG.warn("failed to run describe-instances", ex);
+								continue;
+							}
+							if(ipAddr == null || ipAddr.length()<=0){
+								LOG.warn("no ipaddress found for instance "+instance.getInstanceId());
+								continue;
+							}
+						}else{
+							ipAddr = instance.getAddress();
+							privateIpAddr = instance.getPrivateIp();
+						}
+						
+						try{
+							final String zone = instance.getDns().getZone();
+							final String name = instance.getDns().getName();
+							EucalyptusActivityTasks.getInstance().addARecord(zone, name, ipAddr);
+						}catch(Exception ex){
+							LOG.warn("failed to register new ipaddress with dns A record", ex);
+							continue;
+						}
+
+						db = Entities.get( LoadBalancerServoInstance.class );
+						try{
+							final LoadBalancerServoInstance update = Entities.uniqueResult(instance);
+							update.setAddress(ipAddr);
+							if(privateIpAddr!=null)
+								update.setPrivateIp(privateIpAddr);
+							update.setDnsState(LoadBalancerServoInstance.DNS_STATE.Registered);
+							Entities.persist(update);
+							db.commit();
+						}catch(NoSuchElementException ex){
+							db.rollback();
+							LOG.warn("failed to find the servo instance named "+instance.getInstanceId(), ex);
+						}catch(Exception ex){
+							db.rollback();
+							LOG.warn("failed to update servo instance's ip address", ex);
+						}finally {
+							if(db.isActive())
+								db.rollback();
+						}
+					}
+				}else if (LoadBalancerServoInstance.STATE.OutOfService.equals(instance.getState()) ||
+						LoadBalancerServoInstance.STATE.Error.equals(instance.getState())
+						){
+					if(!LoadBalancerServoInstance.DNS_STATE.Deregistered.equals(instance.getDnsState())){
+						try{
+							final String ipAddr = instance.getAddress();
+							if(ipAddr==null) // IP address not found yet
+								continue;
+							final String zone = instance.getDns().getZone();
+							final String name = instance.getDns().getName();
+							EucalyptusActivityTasks.getInstance().removeARecord(zone, name, ipAddr);
+						}catch(Exception ex){
+							LOG.warn("failed to remove IP address from the dns A record", ex);
+							continue;
+						}
+						db = Entities.get( LoadBalancerServoInstance.class );
+						try{
+							final LoadBalancerServoInstance update = Entities.uniqueResult(instance);
+							update.setDnsState(LoadBalancerServoInstance.DNS_STATE.Deregistered);
+							Entities.persist(update);
+							db.commit();
+						}catch(NoSuchElementException ex){
+							db.rollback();
+							LOG.warn("failed to find the servo instance named "+instance.getInstanceId(), ex);
+						}catch(Exception ex){
+							db.rollback();
+							LOG.warn("failed to update servo instance's ip address", ex);
+						}finally {
+							if(db.isActive())
+								db.rollback();
+						}
+					}
+				}
+			}
 		}
 	}
 }

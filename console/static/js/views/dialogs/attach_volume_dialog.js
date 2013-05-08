@@ -24,8 +24,6 @@ define([
             }
             var instanceObj = instance.get('block_device_mapping');
             var count = _.size(instanceObj) + 1;
-            console.log("Object device_mapping: " + JSON.stringify(instanceObj));
-            console.log("Next device_mapping Index: " + count);
             possibleNames = this._generateRecommendedDeviceNames(count);
             for(device in instanceObj){
               possibleNames[device] = 0;     // Zero out the hashmap for existing device names
@@ -51,7 +49,6 @@ define([
 
             var vol_ids = [];
             App.data.volume.each(function(item){
-              console.log("Volume ID: " + item.get('id') + ":" + item.get('status'));
               if( item.get('status') === 'available' ){
                 // TRY TO FIND ITS NAME TAG
                 var nameTag = self.findNameTag(item);
@@ -60,10 +57,13 @@ define([
               }
             });
             var sorted = sortArray(vol_ids);
-            console.log("Autocomplete Volume List: " + sorted);
             var $volumeSelector = this.$el.find('#volume-attach-volume-id');
             $volumeSelector.autocomplete({
-              source: sorted
+              source: sorted,
+              select: function(event, ui) {
+                var selected_volume_id = ui.item.value.split(' ')[0];
+                self.scope.volume.set('volume_id', selected_volume_id);
+              }
            });
         },
 
@@ -73,7 +73,6 @@ define([
 
             var inst_ids = [];
             App.data.instance.each(function(item){
-              console.log("Instance ID: " + item.get('id') +":" + item.get('_state').name + ":" + item.get('placement'));
               if( item.get('_state').name === 'running' ){
                 // TRY TO FIND ITS NAME TAG
                 var nameTag = self.findNameTag(item);
@@ -83,7 +82,6 @@ define([
             });
 
             var sorted = sortArray(inst_ids);
-            console.log("Autocomplete Instance List: " + sorted);
 
             var $instanceSelector = this.$el.find('#volume-attach-instance-id');
             $instanceSelector.autocomplete({
@@ -138,7 +136,6 @@ define([
             self.scope.volume.on('change', function() {
               self.scope.error.clear();
               self.scope.error.set(self.scope.volume.validate());
-              console.log("Validation Error: " + JSON.stringify(self.scope.error));
             });
         },
 
@@ -170,40 +167,37 @@ define([
             this.scope = {
                 status: '',
                 volume: new Volume({volume_id: args.volume_id, instance_id: args.instance_id, device: args.device}),
+
+               
                 error: new Backbone.Model({}),
                 help: { content: help_volume.dialog_attach_content, url: help_volume.dialog_attach_content_url },
 
                 cancelButton: {
                   click: function() {
                     self.close();
+                    self.cleanup();
                   }
                 },
 
-                attachButton: {
+                attachButton: new Backbone.Model({
+                  disabled: true,
                   click: function() {
                     // GET THE INPUT FROM THE HTML VIEW
                     var volumeId = self.scope.volume.get('volume_id');
                     var instanceId = self.scope.volume.get('instance_id');
                     var device = self.scope.volume.get('device');
 
-		    console.log("Selected Volume ID: " + volumeId);
-		    console.log("Selected Instance ID: " + instanceId);
-		    console.log("Attach as device: " + device);
-
                     // EXTRACT THE RESOURCE ID IF THE NAME TAG WAS FOLLOWED
                     if( volumeId.match(/^\w+-\w+\s+/) ){
                       volumeId = volumeId.split(" ")[0];
-		      console.log("Volume ID: " + volumeId);
                     }
                     if( instanceId.match(/^\w+-\w+\s+/) ){
                       instanceId = instanceId.split(" ")[0];
-		      console.log("Instance ID: " + instanceId);
                     }
 
                     // CONSTRUCT AJAX CALL RESPONSE OPTIONS
                     var attachAjaxCallResponse = {
 		      success: function(data, response, jqXHR){   // AJAX CALL SUCCESS OPTION
-		        console.log("Callback " + response + " for " + volumeId);
 		        if(data.results){
 		          notifySuccess(null, $.i18n.prop('volume_attach_success', volumeId, instanceId));    // XSS Risk  -- Kyo 040713
 		        }else{
@@ -211,7 +205,6 @@ define([
 		        }
 		      },
 		      error: function(jqXHR, textStatus, errorThrown){  // AJAX CALL ERROR OPTION
-		        console.log("Callback " + textStatus  + " for " + volumeId + " error: " + getErrorMessage(jqXHR));
 		        notifyError($.i18n.prop('volume_attach_error', volumeId, instanceId), getErrorMessage(jqXHR));   // XSS Risk
 		      }
                     };
@@ -221,19 +214,39 @@ define([
 
 	           // DISPLAY THE VOLUME'S STATUS -- FOR DEBUG
 		   App.data.volume.each(function(item){
-		     console.log("Volume After Attach: " + item.toJSON().id +"   Status:"+ item.toJSON().status);
 	           });
 
 	          // CLOSE THE DIALOG
 	          self.close();
+            self.cleanup();
                 }
-              }
+              })
 
             };
+
+            // override the volume model's normal validation rules for this instance,
+            // to enforce required fields in the dialog.
+            this.scope.volume.validation.volume_id.required = true;
+            this.scope.volume.validation.instance_id.required = true;
+            this.scope.volume.validation.device.required = true;
+            this.scope.volume.validation.size.required = false;
+
+            this.scope.volume.on('validated', function() {
+              self.scope.attachButton.set('disabled', !self.scope.volume.isValid());
+              self.render();
+            });
 
             this._do_init();
 
             this.setupAutoComplete(args);
         },
+
+        cleanup: function() {
+            // undo validation overrides -  they leak into other dialogs
+            this.scope.volume.validation.volume_id.required = false;
+            this.scope.volume.validation.instance_id.required = false;
+            this.scope.volume.validation.device.required = false;
+            this.scope.volume.validation.size.required = true;
+        }
     });
 });

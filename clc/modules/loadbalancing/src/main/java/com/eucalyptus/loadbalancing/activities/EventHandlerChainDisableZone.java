@@ -155,6 +155,8 @@ public class EventHandlerChainDisableZone extends EventHandlerChain<DisabledZone
 					}
 					
 					for(final LoadBalancerServoInstanceCoreView instance : zone.getServoInstances()){
+						if(! LoadBalancerServoInstance.STATE.InService.equals(instance.getState()))
+							continue;
 						final String ipAddr = instance.getAddress();
 						ipAddressToRemove.add(ipAddr);
 					}
@@ -240,7 +242,10 @@ public class EventHandlerChainDisableZone extends EventHandlerChain<DisabledZone
 						}catch(final Exception ex){
 							db.rollback();
 							LOG.warn("Failed to update the servo instance's state", ex);
-						}	
+						}finally {
+							if(db.isActive())
+								db.rollback();
+						}
 					}
 				}
 			}
@@ -262,7 +267,10 @@ public class EventHandlerChainDisableZone extends EventHandlerChain<DisabledZone
 					}catch(final Exception ex){
 						db.rollback();
 						LOG.warn("Failed to update the servo instance's state", ex);
-					}	
+					}finally {
+						if(db.isActive())
+							db.rollback();
+					}
 				}
 			}
 		}
@@ -351,6 +359,9 @@ public class EventHandlerChainDisableZone extends EventHandlerChain<DisabledZone
 					}catch(Exception ex){
 						db.rollback();
 						LOG.error("failed to update the autoscaling group record", ex);
+					}finally {
+						if(db.isActive())
+							db.rollback();
 					}
 				}catch(final Exception ex){
 					throw new EventHandlerException("failed to update the autoscaling group", ex);
@@ -389,6 +400,9 @@ public class EventHandlerChainDisableZone extends EventHandlerChain<DisabledZone
 					}catch(Exception ex){
 						db.rollback();
 						LOG.error("failed to update the autoscaling group record", ex);
+					}finally {
+						if(db.isActive())
+							db.rollback();
 					}
 				}catch(Exception ex){
 					throw new EventHandlerException("failed to update the zone to the original list", ex);
@@ -441,6 +455,9 @@ public class EventHandlerChainDisableZone extends EventHandlerChain<DisabledZone
 						db.rollback();
 					}catch(final Exception ex){
 						db.rollback();
+					}finally {
+						if(db.isActive())
+							db.rollback();
 					}
 				}
 			}
@@ -479,11 +496,13 @@ public class EventHandlerChainDisableZone extends EventHandlerChain<DisabledZone
 					for(final String removedZone : updated.getResult()){
 						final LoadBalancerZone zone = LoadBalancers.findZone(lb, removedZone);
 						for(final LoadBalancerBackendInstanceCoreView instance : zone.getBackendInstances()){
-							final EntityTransaction db = Entities.get( LoadBalancerBackendInstanceCoreView.class );
+							final EntityTransaction db = Entities.get( LoadBalancerBackendInstance.class );
 							try{
 								final LoadBalancerBackendInstance update = Entities.uniqueResult(
 										LoadBalancerBackendInstance.named(lb, instance.getInstanceId()));
 								update.setState(LoadBalancerBackendInstance.STATE.OutOfService);
+								update.setReasonCode("ELB");
+								update.setDescription("Zone disabled");
 								Entities.persist(update);
 								db.commit();
 								this.updatedInstances.add(update);
@@ -493,6 +512,9 @@ public class EventHandlerChainDisableZone extends EventHandlerChain<DisabledZone
 							}catch(final Exception ex){
 								db.rollback();
 								LOG.warn("failed to query the backend instance", ex);
+							}finally {
+								if(db.isActive())
+									db.rollback();
 							}
 						}
 					}

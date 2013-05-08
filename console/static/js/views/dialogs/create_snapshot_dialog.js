@@ -84,10 +84,12 @@ define([
                 cancelButton: {
                   click: function() {
                     self.close();
+                    self.cleanup();
                   }
                 },
 
-                createButton: {
+                createButton: new Backbone.Model({
+                  disabled: true,
                   click: function() {
 	            // GET THE INPUT FROM HTML VIEW
 	            var volumeId = self.scope.snapshot.get('volume_id');
@@ -139,13 +141,32 @@ define([
 
 	            // CLOSE THE DIALOG
 	            self.close();
+              self.cleanup();
                   }
-                }
+                })
             };
+
+            // override validation requirements in this model instance
+            // to validate required form fields in the dialog
+            this.scope.snapshot.validation.volume_id.required = true;
+
+
+            this.scope.snapshot.on('validated', function() {
+              self.scope.createButton.set('disabled', !self.scope.snapshot.isValid());
+            });
 
             this._do_init();
 
             this.setupAutoComplete(args);
+
+            // sometimes the volume_id is preloaded, and is the only required field
+            this.scope.snapshot.validate(); 
+        },
+
+        cleanup: function() {
+          // undo the validation override performed in initialize()
+          // it seems to be leaking into other dialogs somehow
+          this.scope.snapshot.validation.volume_id.required = false;
         },
     });
 });

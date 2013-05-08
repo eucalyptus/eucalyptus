@@ -3365,9 +3365,6 @@ public class WalrusManager {
 		Context ctx = Contexts.lookup();
 		Account account = ctx.getAccount();
 		String prefix = request.getPrefix();
-		/*if (prefix == null) {
-			prefix = "";
-		}*/
 
 		String keyMarker = request.getKeyMarker();
 		String versionMarker = request.getVersionIdMarker();

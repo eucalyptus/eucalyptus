@@ -900,7 +900,7 @@ int vnetRefreshHost(vnetConfig * vnetconfig, char *mac, char *ip, int vlan, int 
     int stop = 0;
     boolean done = FALSE;
 
-    if ((vnetconfig == NULL) || ((mac == NULL) && (ip == NULL)) || (vlan < 0) || (vlan > NUMBER_OF_VLANS)) {
+    if ((vnetconfig == NULL) || ((mac == NULL) && (ip == NULL)) || (vlan < 0) || (vlan >= NUMBER_OF_VLANS)) {
         LOGERROR("bad input params: vnetconfig=%p, mac=%s, ip=%s, vlan=%d, idx=%d\n", vnetconfig, SP(mac), SP(ip), vlan, idx);
         return (EUCA_INVALID_ERROR);
     }
@@ -1020,7 +1020,7 @@ int vnetDisableHost(vnetConfig * vnetconfig, char *mac, char *ip, int vlan)
 {
     int i = 0;
 
-    if ((vnetconfig == NULL) || ((mac == NULL) && (ip == NULL)) || (vlan < 0) || (vlan > NUMBER_OF_VLANS)) {
+    if ((vnetconfig == NULL) || ((mac == NULL) && (ip == NULL)) || (vlan < 0) || (vlan >= NUMBER_OF_VLANS)) {
         LOGERROR("bad input params: vnetconfig=%p, mac=%s, ip=%s, vlan=%d\n", vnetconfig, SP(mac), SP(ip), vlan);
         return (EUCA_INVALID_ERROR);
     }
@@ -2630,7 +2630,7 @@ int vnetAttachTunnels(vnetConfig * vnetconfig, int vlan, char *newbrname)
         return (EUCA_OK);
     }
 
-    if ((vlan < 0) || (vlan > NUMBER_OF_VLANS) || !newbrname || check_bridge(newbrname)) {
+    if ((vlan < 0) || (vlan >= NUMBER_OF_VLANS) || !newbrname || check_bridge(newbrname)) {
         LOGERROR("bad input params: vnetconfig=%p, vlan=%d, newbrname=%s\n", vnetconfig, vlan, SP(newbrname));
         return (EUCA_INVALID_ERROR);
     }
@@ -2731,7 +2731,7 @@ int vnetDetachTunnels(vnetConfig * vnetconfig, int vlan, char *newbrname)
     char tunvlandev[32] = "";
     char *network = NULL;
 
-    if ((vnetconfig == NULL) || (vlan < 0) || (vlan > NUMBER_OF_VLANS)) {
+    if ((vnetconfig == NULL) || (vlan < 0) || (vlan >= NUMBER_OF_VLANS)) {
         LOGERROR("bad input params: vnetconfig=%p, vlan=%d, newbrname=%s\n", vnetconfig, vlan, SP(newbrname));
         return (EUCA_INVALID_ERROR);
     }
@@ -2919,7 +2919,7 @@ int vnetAddGatewayIP(vnetConfig * vnetconfig, int vlan, char *devname, int local
     int slashnet = 0;
     char cmd[MAX_PATH] = "";
 
-    if ((vnetconfig == NULL) || (vlan < 0) || (vlan > NUMBER_OF_VLANS)) {
+    if ((vnetconfig == NULL) || (vlan < 0) || (vlan >= NUMBER_OF_VLANS)) {
         LOGERROR("bad input params: vnetconfig=%p vlan=%d, devname=%s, lovalIpId=%d\n", vnetconfig, vlan, SP(devname), localIpId);
         return (EUCA_INVALID_ERROR);
     }
@@ -3095,7 +3095,7 @@ int vnetDelGatewayIP(vnetConfig * vnetconfig, int vlan, char *devname, int local
     char *broadcast = NULL;
     char cmd[MAX_PATH] = "";
 
-    if ((vnetconfig == NULL) || (vlan < 0) || (vlan > NUMBER_OF_VLANS) || (devname == NULL)) {
+    if ((vnetconfig == NULL) || (vlan < 0) || (vlan >= NUMBER_OF_VLANS) || (devname == NULL)) {
         LOGERROR("bad input params: vnetconfig=%p, vlan=%d, devname=%s, localIpId=%d\n", vnetconfig, vlan, SP(devname), localIpId);
         return (EUCA_INVALID_ERROR);
     }
