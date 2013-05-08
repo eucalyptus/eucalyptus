@@ -155,6 +155,8 @@ public class EventHandlerChainDisableZone extends EventHandlerChain<DisabledZone
 					}
 					
 					for(final LoadBalancerServoInstanceCoreView instance : zone.getServoInstances()){
+						if(! LoadBalancerServoInstance.STATE.InService.equals(instance.getState()))
+							continue;
 						final String ipAddr = instance.getAddress();
 						ipAddressToRemove.add(ipAddr);
 					}

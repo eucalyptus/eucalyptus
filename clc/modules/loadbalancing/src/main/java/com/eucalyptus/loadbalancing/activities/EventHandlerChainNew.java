@@ -824,7 +824,7 @@ public class EventHandlerChainNew extends EventHandlerChain<NewLoadbalancerEvent
 					servoRecords.addAll(group.getServos());
 				}
 				
-				List<LoadBalancerServoInstance> registerDnsARec = Lists.newArrayList();
+				//final List<LoadBalancerServoInstance> registerDnsARec = Lists.newArrayList();
 				for(LoadBalancerServoInstanceCoreView instanceView : servoRecords){
 					/// CASE 2: EXISTING SERVO INSTANCES ARE NOT FOUND IN THE QUERY RESPONSE 
 					if(! foundInstances.containsKey(instanceView.getInstanceId()) && 
@@ -879,10 +879,9 @@ public class EventHandlerChainNew extends EventHandlerChain<NewLoadbalancerEvent
 							}catch(final Exception ex){
 								LOG.error("unable to transform servo instance from the view", ex);
 								continue;
-							}
-														
-							if(newState.equals(LoadBalancerServoInstance.STATE.InService))
-								registerDnsARec.add(instance);
+							}							
+						//	if(newState.equals(LoadBalancerServoInstance.STATE.InService))
+							//	registerDnsARec.add(instance);
 							
 							db = Entities.get( LoadBalancerServoInstance.class );
 							try{
@@ -903,7 +902,7 @@ public class EventHandlerChainNew extends EventHandlerChain<NewLoadbalancerEvent
 				}
 				
 				/// for new servo instances, find the IP and register it with DNS
-				for(final LoadBalancerServoInstance instance : registerDnsARec){
+			/*	for(final LoadBalancerServoInstance instance : registerDnsARec){
 					String ipAddr = null;
 					String privateIpAddr = null;
 					try{
@@ -948,7 +947,7 @@ public class EventHandlerChainNew extends EventHandlerChain<NewLoadbalancerEvent
 						if(db.isActive())
 							db.rollback();
 					}
-				}
+				}*/
 			}	
 		}
 	}

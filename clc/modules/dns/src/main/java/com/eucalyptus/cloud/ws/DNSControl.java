@@ -311,7 +311,7 @@ public class DNSControl {
 			addrInfo = Entities.uniqueResult(ARecordAddressInfo.named(nameInfo, address));
 			ARecord arecord = new ARecord(Name.fromString(name), DClass.IN, nameInfo.getTtl(), Address.getByAddress(addrInfo.getAddress()));
 		
-			ZoneManager.deleteRecord(zone, arecord);
+			ZoneManager.deleteARecord(zone, arecord);
 			Entities.delete(addrInfo);
 			db.commit();
 		}catch(NoSuchElementException ex){
@@ -357,7 +357,7 @@ public class DNSControl {
 		for(ARecordAddressInfo addr : addresses){
 			try{
 				ARecord arecord = new ARecord(Name.fromString(name), DClass.IN, nameInfo.getTtl(), Address.getByAddress(addr.getAddress()));
-				ZoneManager.deleteRecord(zone, arecord);
+				ZoneManager.deleteARecord(zone, arecord);
 			}catch(Exception ex){
 				throw new EucalyptusCloudException("Failed to delete the record from zone", ex);
 			}	
