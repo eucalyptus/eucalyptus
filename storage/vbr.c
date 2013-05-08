@@ -1332,14 +1332,17 @@ cleanup:
 #ifndef _NO_EBS
 static int iqn_creator(artifact * a)
 {
+    int rc = EUCA_OK;
+    char *dev = NULL;
+    ebs_volume_data *vol_data = NULL;
+    virtualBootRecord *vbr = NULL;
+
     assert(a);
-    virtualBootRecord *vbr = a->vbr;
+    vbr = a->vbr;
     assert(vbr);
 
-    ebs_volume_data *vol_data = NULL;
-    char *dev = NULL;
-    int rc = connect_ebs_volume(vbr->preparedResourceLocation, vbr->resourceLocation, localhost_config.use_ws_sec, localhost_config.ws_sec_policy_file, localhost_config.ip,
-                                localhost_config.iqn, &dev, &vol_data);
+    rc = connect_ebs_volume(vbr->preparedResourceLocation, vbr->resourceLocation, localhost_config.use_ws_sec, localhost_config.ws_sec_policy_file, localhost_config.ip,
+                            localhost_config.iqn, &dev, &vol_data);
     if (rc) {
         LOGERROR("[%s] failed to attach volume during VBR construction for %s\n", a->instanceId, vbr->guestDeviceName);
         return EUCA_ERROR;
