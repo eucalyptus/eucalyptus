@@ -4580,6 +4580,11 @@ int doMigrateInstances(ncMetadata * pMeta, char *actionNode, char *instanceId, c
                     }
                 }
 
+                if(dst_index < 0) {
+                    LOGERROR("[%s] failed: request to prepare migration on destination %s. Invalid resource index -1.\n", nc_instances[idx]->instanceId, resourceCacheLocal.resources[dst_index].hostname);
+                    exit(1);
+                }
+
                 rc = ncClientCall(pMeta, timeout, resourceCacheLocal.resources[dst_index].lockidx, resourceCacheLocal.resources[dst_index].ncURL, "ncMigrateInstances",
                                   &(nc_instances[idx]), 1, nodeAction, credentials);
                 if (rc) {
