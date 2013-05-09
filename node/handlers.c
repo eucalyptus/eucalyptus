@@ -504,7 +504,12 @@ int convert_dev_names(const char *localDev, char *localDevReal, char *localDevTa
 {
     bzero(localDevReal, 32);
     if (strchr(localDev, '/') != NULL) {
-        sscanf(localDev, "/dev/%s", localDevReal);
+    	if(strncmp(localDev, "unknown,requested:", sizeof("unknown,requested:") - 1) == 0) {
+    		//localDev starts with 'unknown,requested:', this occurs in migration cases. Extract the actual /dev/* value.
+    		sscanf(localDev, "unknown,requested:/dev/%s", localDevReal);
+    	} else {
+    		sscanf(localDev, "/dev/%s", localDevReal);
+    	}
     } else {
         snprintf(localDevReal, 32, "%s", localDev);
     }
@@ -515,8 +520,14 @@ int convert_dev_names(const char *localDev, char *localDevReal, char *localDevTa
     }
 
     if (localDevTag) {
-        bzero(localDevTag, 256);
-        snprintf(localDevTag, 256, "unknown,requested:%s", localDev);
+    	//If localDev already has the unknown,requested...just copy it
+    	if(strncmp(localDev, "unknown,requested:", sizeof("unknown,requested:") - 1) == 0) {
+    		bzero(localDevTag, 256);
+    		snprintf(localDevTag, 256, "%s", localDev);
+    	} else {
+    		bzero(localDevTag, 256);
+    		snprintf(localDevTag, 256, "unknown,requested:%s", localDev);
+    	}
     }
 
     return EUCA_OK;

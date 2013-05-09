@@ -4550,6 +4550,10 @@ int doMigrateInstances(ncMetadata * pMeta, char *actionNode, char *instanceId, c
         timeout = ncGetTimeout(time(NULL), OP_TIMEOUT, 1, 0);
         LOGDEBUG("about to ncClientCall source node '%s' with nc_instances (%s %d) [creds='%s'] %s\n",
                  SP(resourceCacheLocal.resources[src_index].hostname), nodeAction, found_instances, credentials, SP(found_instances == 1 ? nc_instances[0]->instanceId : ""));
+
+        //Populate service metadata in request. Needed for ebs-volume attachment
+        populateOutboundMeta(pMeta);
+
         rc = ncClientCall(pMeta, timeout, resourceCacheLocal.resources[src_index].lockidx, resourceCacheLocal.resources[src_index].ncURL, "ncMigrateInstances",
                           nc_instances, found_instances, nodeAction, credentials);
         if (rc) {
@@ -4601,6 +4605,9 @@ int doMigrateInstances(ncMetadata * pMeta, char *actionNode, char *instanceId, c
                     exit(1);
                 }
 
+                //Populate service metadata in request. Needed for ebs-volume attachment
+                populateOutboundMeta(pMeta);
+
                 rc = ncClientCall(pMeta, timeout, resourceCacheLocal.resources[dst_index].lockidx, resourceCacheLocal.resources[dst_index].ncURL, "ncMigrateInstances",
                                   &(nc_instances[idx]), 1, nodeAction, credentials);
                 if (rc) {
@@ -4622,6 +4629,10 @@ int doMigrateInstances(ncMetadata * pMeta, char *actionNode, char *instanceId, c
         timeout = ncGetTimeout(time(NULL), OP_TIMEOUT, 1, 0);
         LOGDEBUG("about to ncClientCall source node '%s' with nc_instances (%s %d) %s\n",
                  SP(resourceCacheLocal.resources[src_index].hostname), nodeAction, found_instances, SP(found_instances == 1 ? nc_instances[0]->instanceId : ""));
+
+        //Populate service metadata in request. Needed for ebs-volume attachment
+        populateOutboundMeta(pMeta);
+
         // No need to send credentials with commit call: they were already passed to source and destination during prepare call.
         rc = ncClientCall(pMeta, timeout, resourceCacheLocal.resources[src_index].lockidx, resourceCacheLocal.resources[src_index].ncURL, "ncMigrateInstances",
                           nc_instances, found_instances, nodeAction, NULL);
@@ -4655,6 +4666,9 @@ int doMigrateInstances(ncMetadata * pMeta, char *actionNode, char *instanceId, c
         LOGDEBUG("about to ncClientCall node %s (> %s) with nc_instances (%s %d) %s using URL %s\n",
                  SP(resourceCacheLocal.resources[dst_index].hostname), SP(found_instances == 1 ? nc_instances[0]->migration_dst : ""), nodeAction, found_instances,
                  SP(found_instances == 1 ? nc_instances[0]->instanceId : ""), resourceCacheLocal.resources[dst_index].ncURL);
+
+        //Populate service metadata in request. Needed for ebs-volume attachment
+        populateOutboundMeta(pMeta);
 
         rc = ncClientCall(pMeta, timeout, resourceCacheLocal.resources[dst_index].lockidx, resourceCacheLocal.resources[dst_index].ncURL, "ncMigrateInstances",
                           nc_instances, found_instances, nodeAction, NULL);
@@ -4793,10 +4807,10 @@ static int populateOutboundMeta(ncMetadata * pMeta)
         }
 
     } else {
-        return 1;
+        return EUCA_ERROR;
     }
 
-    return 0;
+    return EUCA_OK;
 }
 
 //!
