@@ -59,7 +59,11 @@ define([
             var sorted = sortArray(vol_ids);
             var $volumeSelector = this.$el.find('#volume-attach-volume-id');
             $volumeSelector.autocomplete({
-              source: sorted
+              source: sorted,
+              select: function(event, ui) {
+                var selected_volume_id = ui.item.value.split(' ')[0];
+                self.scope.volume.set('volume_id', selected_volume_id);
+              }
            });
         },
 
@@ -132,7 +136,6 @@ define([
             self.scope.volume.on('change', function() {
               self.scope.error.clear();
               self.scope.error.set(self.scope.volume.validate());
-              console.log("Validation Error: " + JSON.stringify(self.scope.error));
             });
         },
 
@@ -230,6 +233,7 @@ define([
 
             this.scope.volume.on('validated', function() {
               self.scope.attachButton.set('disabled', !self.scope.volume.isValid());
+              self.render();
             });
 
             this._do_init();
