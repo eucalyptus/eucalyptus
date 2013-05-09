@@ -399,7 +399,7 @@ static void updateServiceStateInfo(ncMetadata * pMeta)
 {
     int i = 0;
     char scURL[512];
-    if (pMeta != NULL && pMeta->services != NULL) {
+    if ((pMeta != NULL) && (pMeta->servicesLen > 0)) {
         LOGTRACE("Updating NC's topology/service state info: pMeta: userId=%s correlationId=%s\n", pMeta->userId, pMeta->correlationId);
 
         // store information from CLC that needs to be kept up-to-date in the NC
