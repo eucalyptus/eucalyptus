@@ -31,7 +31,10 @@ import javax.persistence.EntityTransaction;
 import javax.persistence.JoinColumn;
 import javax.persistence.ManyToOne;
 import javax.persistence.PersistenceContext;
+import javax.persistence.PostLoad;
 import javax.persistence.Table;
+import javax.persistence.Temporal;
+import javax.persistence.TemporalType;
 import javax.persistence.Transient;
 
 import org.apache.log4j.Logger;
@@ -39,16 +42,23 @@ import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
 import org.hibernate.annotations.Entity;
 
+import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.cloud.UserMetadata;
 import com.eucalyptus.component.ComponentIds;
+import com.eucalyptus.component.Topology;
 import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.event.ClockTick;
 import com.eucalyptus.event.EventListener;
 import com.eucalyptus.event.Listeners;
+import com.eucalyptus.loadbalancing.LoadBalancer.LoadBalancerCoreView;
+import com.eucalyptus.loadbalancing.LoadBalancerZone.LoadBalancerZoneCoreView;
 import com.eucalyptus.loadbalancing.activities.EucalyptusActivityTasks;
+import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.FullName;
 import com.eucalyptus.util.OwnerFullName;
+import com.eucalyptus.util.TypeMapper;
+import com.eucalyptus.util.TypeMappers;
 import com.google.common.base.Function;
 import com.google.common.collect.Lists;
 
@@ -69,15 +79,24 @@ public class LoadBalancerBackendInstance extends UserMetadata<LoadBalancerBacken
 	@Transient
 	private String partition = null;
 	
+	@Transient
+	private LoadBalancerBackendInstanceRelationView view;
+	
+	@PostLoad
+	private void onLoad(){
+		if(view==null)
+			view = new LoadBalancerBackendInstanceRelationView(this); 
+	}
+	
 	public enum STATE {
 		InService, OutOfService, Error
 	}
 	
-    @ManyToOne
+    @ManyToOne()
     @JoinColumn( name = "metadata_loadbalancer_fk" )
 	private LoadBalancer loadbalancer = null;
 
-    @ManyToOne
+    @ManyToOne()
     @JoinColumn( name = "metadata_zone_fk")
     private LoadBalancerZone zone = null;
         
@@ -90,6 +109,12 @@ public class LoadBalancerBackendInstance extends UserMetadata<LoadBalancerBacken
 	@Column( name = "description", nullable=true)
 	private String description = null;
 
+	
+	@Temporal(TemporalType.TIMESTAMP)
+	@Column(name = "instance_update_timestamp", nullable=true)
+	private Date instanceUpdateTimestamp = null;
+	  
+	  
     private LoadBalancerBackendInstance(){
     	super(null,null);
     }
@@ -117,6 +142,8 @@ public class LoadBalancerBackendInstance extends UserMetadata<LoadBalancerBacken
     		db.rollback();
 			throw new InternalFailure400Exception("unable to find the zone");
     	}finally{
+    		if(db.isActive())
+    			db.rollback();
     		if(this.zone == null)
     			throw new InternalFailure400Exception("unable to find the instance's zone");
     	}
@@ -136,21 +163,14 @@ public class LoadBalancerBackendInstance extends UserMetadata<LoadBalancerBacken
 		return instance;
 	}
 	
-	
-	public static LoadBalancerBackendInstance named(final String vmId){
+	public static LoadBalancerBackendInstance named(final LoadBalancer lb, final String vmId){
 		LoadBalancerBackendInstance instance = new LoadBalancerBackendInstance();
 		instance.setOwner(null);
 		instance.setDisplayName(vmId);
+		instance.setLoadBalancer(lb);
 		instance.setState(null);
 		instance.setStateChangeStack(null);
-		
-		return instance;
-	}
-	
-	private static LoadBalancerBackendInstance named(final STATE state){
-		final LoadBalancerBackendInstance instance = new LoadBalancerBackendInstance();
-		instance.setBackendState(state);
-		instance.setStateChangeStack(null);
+		instance.getUniqueName();
 		return instance;
 	}
 	
@@ -181,8 +201,12 @@ public class LoadBalancerBackendInstance extends UserMetadata<LoadBalancerBacken
 		return this.vmInstance;
 	}
 
-    public LoadBalancer getLoadBalancer(){
-    	return this.loadbalancer;
+	private void setLoadBalancer(final LoadBalancer lb){
+		this.loadbalancer = lb;
+	}
+	
+	public LoadBalancerCoreView getLoadBalancer(){
+		return this.view.getLoadBalancer();
     }
     
     public void setBackendState(final STATE state){
@@ -213,8 +237,13 @@ public class LoadBalancerBackendInstance extends UserMetadata<LoadBalancerBacken
     	this.zone = zone;
     }
    
-    public LoadBalancerZone getAvailabilityZone(){
-    	return this.zone;
+    public LoadBalancerZoneCoreView getAvailabilityZone(){
+    	return this.view.getZone();
+    } 
+    
+    public void updateInstanceStateTimestamp(){
+    	final long currentTime = System.currentTimeMillis();
+    	this.instanceUpdateTimestamp = new Date(currentTime);
     }
     
 	@Override
@@ -234,20 +263,61 @@ public class LoadBalancerBackendInstance extends UserMetadata<LoadBalancerBacken
 
 	@Override
 	public FullName getFullName() {
-		// TODO Auto-generated method stub
 		return FullName.create.vendor( "euca" )
                 .region( ComponentIds.lookup( Eucalyptus.class ).name( ) )
                 .namespace( this.getOwnerAccountNumber( ) )
                 .relativeId( "loadbalancer-backend-instance", this.vmInstance.getInstanceId()!=null ? this.vmInstance.getInstanceId() : "");
 	}
+	
+	@Override 
+	public boolean equals(Object obj){
+		if(obj==null)
+			return false;
+		if(obj.getClass() != LoadBalancerBackendInstance.class)
+			return false;
+		final LoadBalancerBackendInstance other = (LoadBalancerBackendInstance) obj;
+		
+		if(this.loadbalancer == null){
+			if(other.loadbalancer!=null)
+				return false;
+		}else if(this.loadbalancer.getOwnerUserId() == null){
+			if(other.loadbalancer.getOwnerUserId()!=null)
+				return false;
+		}else if(! this.loadbalancer.getOwnerUserId().equals(other.loadbalancer.getOwnerUserId()))
+			return false;
+		
+		if(this.loadbalancer == null){
+			if(other.loadbalancer!=null)
+				return false;
+		}else if(this.loadbalancer.getDisplayName() == null){
+			if(other.loadbalancer.getDisplayName()!=null)
+				return false;
+		}else if(! this.loadbalancer.getDisplayName().equals(other.loadbalancer.getDisplayName()))
+			return false;
+		
+		if(this.displayName == null){
+			if(other.displayName != null)
+				return false;
+		}else if(!this.displayName.equals(other.displayName))
+			return false;
+		
+		return true;
+	}
+	
 	@Override
 	public int hashCode( ) {
 		final int prime = 31;
 		int result = super.hashCode( );
-		result = prime * result + ( ( this.vmInstance == null )
+		result = prime * result + ( ( this.loadbalancer == null || this.loadbalancer.getOwnerUserId() == null )
 	                                                     ? 0
-	                                                     : this.vmInstance.hashCode( ) );
-	    return result;
+	                                                     : this.loadbalancer.getOwnerUserId().hashCode());
+		result = prime * result + ( ( this.loadbalancer == null || this.loadbalancer.getDisplayName() == null )
+											             ? 0
+											             : this.loadbalancer.getDisplayName().hashCode());	
+		result = prime * result + ( ( this.displayName == null )
+										                 ? 0
+										                 : this.displayName.hashCode());	
+		return result;
 	}
 	
 	@Override
@@ -255,10 +325,11 @@ public class LoadBalancerBackendInstance extends UserMetadata<LoadBalancerBacken
 		return String.format("%s backend instance - %s", this.loadbalancer, this.getDisplayName());
 	}
 	
+	
 	@Override
 	protected String createUniqueName( ) {
-	    return ( this.getOwnerAccountNumber( ) != null && this.getDisplayName( ) != null && this.getLoadBalancer() != null)
-	      ? this.getOwnerAccountNumber( ) + ":" + this.getLoadBalancer().getDisplayName()+":"+this.getDisplayName( )
+	    return ( this.loadbalancer != null && this.getDisplayName( ) != null)
+	      ? this.loadbalancer.getOwnerAccountNumber( ) + ":" + this.loadbalancer.getDisplayName()+":"+this.getDisplayName( )
 	      : null;
 	}
 	
@@ -276,6 +347,11 @@ public class LoadBalancerBackendInstance extends UserMetadata<LoadBalancerBacken
 		
 		@Override
 		public void fireEvent(ClockTick event) {
+			if (!( Bootstrap.isFinished() &&
+			          Topology.isEnabledLocally( LoadBalancing.class ) &&
+			          Topology.isEnabled( Eucalyptus.class ) )) 
+				return;
+		
 			/// determine the BE instances to query
 			final List<LoadBalancerBackendInstance> allInstances = Lists.newArrayList();
 			final List<LoadBalancerBackendInstance> stateOutdated = Lists.newArrayList();
@@ -286,8 +362,10 @@ public class LoadBalancerBackendInstance extends UserMetadata<LoadBalancerBacken
 				db.commit();
 			}catch(final Exception ex){
 				db.rollback();
+			}finally{
+				if(db.isActive())
+					db.rollback();
 			}
-			final Map<String, STATE> stateMap = new HashMap<String, STATE>();
 			final Date current = new Date(System.currentTimeMillis());
 			// find the record eligible to check its status
 			for(final LoadBalancerBackendInstance be : allInstances){
@@ -297,7 +375,6 @@ public class LoadBalancerBackendInstance extends UserMetadata<LoadBalancerBacken
 				int elapsedSec = (int)((current.getTime() - lastUpdate.getTime())/1000.0);
 				if(elapsedSec > CHECK_EVERY_SECONDS){
 					stateOutdated.add(be);
-					stateMap.put(be.getInstanceId(), be.getBackendState());
 				}
 			}
 			
@@ -311,6 +388,9 @@ public class LoadBalancerBackendInstance extends UserMetadata<LoadBalancerBacken
 				db.commit();
 			}catch(final Exception ex){
 				db.rollback();
+			}finally{
+				if(db.isActive())
+					db.rollback();
 			}
 			
 			final List<String> instancesToCheck = 
@@ -334,6 +414,7 @@ public class LoadBalancerBackendInstance extends UserMetadata<LoadBalancerBacken
 				return;
 			}
 			
+			final Map<String, STATE> stateMap = new HashMap<String, STATE>();
 			for(final RunningInstancesItemType instance : result){
 				final String state = instance.getStateName();
 				if("pending".equals(state))
@@ -353,8 +434,8 @@ public class LoadBalancerBackendInstance extends UserMetadata<LoadBalancerBacken
 			db = Entities.get(LoadBalancerBackendInstance.class);
 			try{
 				for(final LoadBalancerBackendInstance be : stateOutdated){
-					STATE trueState = stateMap.get(be.getInstanceId());
-					if(! trueState.equals(be.getBackendState())){
+					if(stateMap.containsKey(be.getInstanceId())){ // OutOfService || Error
+						final STATE trueState = stateMap.get(be.getInstanceId());
 						final LoadBalancerBackendInstance update = Entities.uniqueResult(be);
 						update.setBackendState(trueState);
 						Entities.persist(update);
@@ -363,8 +444,117 @@ public class LoadBalancerBackendInstance extends UserMetadata<LoadBalancerBacken
 				db.commit();
 			}catch(final Exception ex){
 				db.rollback();
+			}finally{
+				if(db.isActive())
+					db.rollback();
 			}
 		}
 	}
-	  
+	
+	public static class LoadBalancerBackendInstanceCoreView {
+		private LoadBalancerBackendInstance instance = null;
+		LoadBalancerBackendInstanceCoreView(LoadBalancerBackendInstance instance){
+			this.instance = instance;
+		}
+		
+		public String getDisplayName(){
+			return this.instance.getDisplayName();
+		}
+		
+		public STATE getState(){
+			return this.instance.getState();
+		}
+		
+		public String getInstanceId(){
+			return this.instance.getInstanceId();
+		}
+		
+		public RunningInstancesItemType getVmInstance(){
+			return this.instance.getVmInstance();
+		}
+
+	    public STATE getBackendState(){
+	    	return this.instance.getBackendState();
+	    }
+	    
+	    public String getReasonCode(){
+	    	return this.instance.getReasonCode();
+	    }
+	    
+	    public String getDescription(){
+	    	return this.instance.getDescription();
+	    }
+	    
+		public String getPartition() {
+			return this.instance.getPartition();
+		}
+		
+		public String getIpAddress(){
+			return this.instance.getIpAddress();
+		}
+		
+		public String getZoneName(){
+			return this.instance.zone.getName();
+		}
+		
+		public Date instanceStateLastUpdated(){
+			return this.instance.instanceUpdateTimestamp;
+		}
+	}
+	 
+	@TypeMapper
+	public enum LoadBalancerBackendInstanceCoreViewTransform implements Function<LoadBalancerBackendInstance, LoadBalancerBackendInstanceCoreView> {
+		INSTANCE;
+
+		@Override
+		@Nullable
+		public LoadBalancerBackendInstanceCoreView apply(
+				@Nullable LoadBalancerBackendInstance arg0) {
+			return new LoadBalancerBackendInstanceCoreView(arg0);
+		}
+	}
+	
+	public enum LoadBalancerBackendInstanceEntityTransform implements Function<LoadBalancerBackendInstanceCoreView, LoadBalancerBackendInstance> {
+		INSTANCE;
+
+		@Override
+		@Nullable
+		public LoadBalancerBackendInstance apply(
+				@Nullable LoadBalancerBackendInstanceCoreView arg0) {
+			final EntityTransaction db = Entities.get(LoadBalancerBackendInstance.class);
+			try{
+				final LoadBalancerBackendInstance be = Entities.uniqueResult(arg0.instance);
+				db.commit();
+				return be;
+			}catch(final Exception ex){
+				db.rollback();
+				throw Exceptions.toUndeclared(ex);
+			}finally{
+				if(db.isActive())
+					db.rollback();
+			}
+		}	
+	}
+	
+	private static class LoadBalancerBackendInstanceRelationView  {
+		private LoadBalancerZoneCoreView zone = null;
+		private LoadBalancerCoreView loadbalancer = null;
+		
+		LoadBalancerBackendInstanceRelationView(
+				LoadBalancerBackendInstance instance) {
+			if(instance.zone!=null)
+				zone = TypeMappers.transform(instance.zone, LoadBalancerZoneCoreView.class);
+			if(instance.loadbalancer!=null)
+				loadbalancer = TypeMappers.transform(instance.loadbalancer, LoadBalancerCoreView.class);
+		}
+		
+		public LoadBalancerZoneCoreView getZone(){
+			return this.zone;
+		}
+		
+		public LoadBalancerCoreView getLoadBalancer(){
+			return this.loadbalancer;
+		}
+		
+	}
 }

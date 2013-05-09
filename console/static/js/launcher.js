@@ -1008,8 +1008,8 @@
             }
           }else if (emi){ //root volume
             var image = describe('image', emi);
-            if(image['block_device_mapping'] && image['block_device_mapping']['/dev/sda1']) 
-             snapshotSize = parseInt(image['block_device_mapping']['/dev/sda1']['size']);
+            if(image['block_device_mapping'] && image['block_device_mapping']['/dev/sda']) 
+             snapshotSize = parseInt(image['block_device_mapping']['/dev/sda']['size']);
           }
           if(snapshotSize > size){
             thisObj.element.find('.field-error').remove();
@@ -1190,9 +1190,9 @@
           emi = describe('image', emiId);
           if (emi && emi['root_device_type'] === 'ebs'){
             isEbsBacked = true;
-            if(emi['block_device_mapping']&&emi['block_device_mapping']['/dev/sda1']){
-              snapshotId = emi['block_device_mapping']['/dev/sda1']['snapshot_id'];
-              snapshotSize = emi['block_device_mapping']['/dev/sda1']['size'];
+            if(emi['block_device_mapping']&&emi['block_device_mapping']['/dev/sda']){
+              snapshotId = emi['block_device_mapping']['/dev/sda']['snapshot_id'];
+              snapshotSize = emi['block_device_mapping']['/dev/sda']['size'];
             }
           }
         }
@@ -1218,7 +1218,7 @@
           $tr = addNewRow({
             'emi' : emiId,
             'volume' : ['root', 'Root'],
-            'mapping' : 'sda1',
+            'mapping' : 'sda',
             'snapshot' : [snapshotId, snapshotId],
             'size' : snapshotSize, 
             'delOnTerm' : true,

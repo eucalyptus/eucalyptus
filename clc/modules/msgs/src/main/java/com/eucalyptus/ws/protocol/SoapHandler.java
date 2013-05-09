@@ -101,11 +101,11 @@ public class SoapHandler extends MessageStackHandler {
         message.setOmMessage( env.getBody( ).getFirstElement( ) );
       } else {
         final SOAPHeader header = env.getHeader( );
+        String action = "ProblemAction";
+        String relatesTo = "RelatesTo";
         if ( header != null ) {
           final List<SOAPHeaderBlock> headers = Lists.newArrayList( header.examineAllHeaderBlocks( ) );
           // :: try to get the fault info from the soap header -- hello there? :://
-          String action = "ProblemAction";
-          String relatesTo = "RelatesTo";
           for ( final SOAPHeaderBlock headerBlock : headers ) {
             if ( action.equals( headerBlock.getLocalName( ) ) ) {
               action = headerBlock.getText( );
@@ -113,21 +113,22 @@ public class SoapHandler extends MessageStackHandler {
               relatesTo = headerBlock.getText( );
             }
           }
-          // :: process the real fault :://
-          final SOAPFault fault = env.getBody( ).getFault( );
-          if ( fault != null ) {
-            String faultReason = "";
-            final Iterator children = fault.getChildElements( );
-            while ( children.hasNext( ) ) {
-              final OMElement child = ( OMElement ) children.next( );
-              faultReason += child.getText( );
-            }
-            final String faultCode = fault.getCode( ).getText( );
-            faultReason = faultReason.replaceAll( faultCode, "" );
-            final String faultDetail = fault.getDetail( ).getText( );
-            throw new EucalyptusRemoteFault( action, relatesTo, faultCode, faultReason, faultDetail );
-          }
         }
+        //faults don't need to have a header.
+        // :: process the real fault :://
+        final SOAPFault fault = env.getBody( ).getFault( );
+        if ( fault != null ) {
+          String faultReason = "";
+          final Iterator children = fault.getChildElements( );
+          while ( children.hasNext( ) ) {
+            final OMElement child = ( OMElement ) children.next( );
+            faultReason += child.getText( );
+          }
+          final String faultCode = fault.getCode( ).getText( );
+          faultReason = faultReason.replaceAll( faultCode, "" );
+          final String faultDetail = fault.getDetail( ).getText( );
+          throw new EucalyptusRemoteFault( action, relatesTo, faultCode, faultReason, faultDetail );
+        }        
       }
     }
   }

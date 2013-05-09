@@ -275,6 +275,7 @@ sub lookup_session {
       ### A SAN can expose the same iSCSI target (IQN) over multiple network interfaces (IP addresses). 
       ### In this case the target IQN is the same across all client sessions. 
       $target = $1;
+      
     } elsif (/^\s+Current Portal:\s+([\d\.]+):\d+,(\d+)/) {
       ### For a given target IQN, there cannot be multiple sessions with the same portal (IP Address). 
       ### Making portal the unique identifier for distinguishing between sessions for a given target.

@@ -138,9 +138,10 @@
 /* Should preferably be handled in header file */
 
 // coming from handlers.c
-extern sem *migr_sem;
 extern sem *inst_sem;
+extern sem *hyp_sem;
 extern bunchOfInstances *global_instances;
+extern int outgoing_migrations_in_progress;
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |
@@ -165,6 +166,7 @@ static void *rebooting_thread(void *arg);
 static int doRebootInstance(struct nc_state_t *nc, ncMetadata * pMeta, char *instanceId);
 static int doGetConsoleOutput(struct nc_state_t *nc, ncMetadata * pMeta, char *instanceId, char **consoleOutput);
 static int doMigrateInstances(struct nc_state_t *nc, ncMetadata * pMeta, ncInstance ** instances, int instancesLen, char *action, char *credentials);
+static int generate_migration_keys(char *host, char *credentials, boolean restart, ncInstance * instance);
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |
@@ -203,6 +205,75 @@ struct handlers kvm_libvirt_handlers = {
  |                               IMPLEMENTATION                               |
  |                                                                            |
 \*----------------------------------------------------------------------------*/
+
+//!
+//! Generate migration keys on source and destination host.
+//!
+//! @param[in] host hostname (IP address) for key
+//! @param[in] credentials shared secret for key
+//! @param[in] restart TRUE if libvirtd should be restarted after key generation
+//! @param[in] instance pointer to instance struct for logging information (optional--can be NULL)
+//!
+//! @return EUCA_OK, EUCA_INVALID_ERROR, or EUCA_SYSTEM_ERROR
+//!
+static int generate_migration_keys(char *host, char *credentials, boolean restart, ncInstance * instance)
+{
+    static char *most_recent_credentials = NULL;
+    static char *most_recent_host = NULL;
+    char generate_keys[MAX_PATH];
+    char *euca_base = getenv(EUCALYPTUS_ENV_VAR_NAME);
+    char *instanceId = instance ? instance->instanceId : "UNSET";
+
+    if (!host || !credentials) {
+        LOGERROR("[%s] called with invalid arguments for host and/or credentials: host=%s, creds=%s\n", instanceId, SP(host), credentials ? "present" : "UNSET");
+        return EUCA_INVALID_ERROR;
+    }
+
+    sem_p(hyp_sem);
+
+    if (most_recent_credentials && most_recent_host && !strcmp(most_recent_credentials, credentials) && !strcmp(most_recent_host, host)) {
+        // FIXME: REMOVE PRINTING OF CREDENTIALS BEFORE GOING LIVE.
+        LOGDEBUG("[%s] request to generate key using same information (host='%s', creds='%s') as previous request, skipping\n", instanceId, host, credentials);
+        sem_v(hyp_sem);
+        return EUCA_OK;
+    }
+    if (!most_recent_credentials) {
+        // FIXME: REMOVE PRINTING OF CREDENTIALS BEFORE GOING LIVE.
+        most_recent_credentials = strdup(credentials);
+        LOGDEBUG("[%s] first generation of migration credentials: %s\n", instanceId, most_recent_credentials);
+    }
+    if (!most_recent_host) {
+        most_recent_host = strdup(host);
+        LOGDEBUG("[%s] first generation of migration host information: %s\n", instanceId, most_recent_host);
+    }
+    // So, something has changed.
+    if (strcmp(most_recent_credentials, credentials)) {
+        EUCA_FREE(most_recent_credentials);
+        most_recent_credentials = strdup(credentials);
+        // FIXME: REMOVE PRINTING OF CREDENTIALS BEFORE GOING LIVE.
+        LOGDEBUG("[%s] regeneration of migration credentials: %s\n", instanceId, most_recent_credentials);
+    }
+    if (strcmp(most_recent_host, host)) {
+        EUCA_FREE(most_recent_host);
+        most_recent_host = strdup(host);
+        LOGDEBUG("[%s] regeneration of migration host information: %s\n", instanceId, most_recent_host);
+    }
+    // FIXME: Add polling around incoming_migrations_in_progress to prevent restarts during migrations.
+
+    snprintf(generate_keys, MAX_PATH, EUCALYPTUS_GENERATE_MIGRATION_KEYS " %s %s %s", euca_base ? euca_base : "", euca_base ? euca_base : "", host, credentials,
+             (restart == TRUE) ? "restart" : "");
+    LOGDEBUG("[%s] migration key-generator path: '%s'\n", instanceId, generate_keys);
+
+    int sysret = system(generate_keys);
+    sem_v(hyp_sem);
+
+    if (sysret) {
+        LOGERROR("[%s] '%s' failed with exit code %d\n", instanceId, generate_keys, WEXITSTATUS(sysret));
+        return EUCA_SYSTEM_ERROR;
+    }
+    LOGDEBUG("[%s] migration key generation succeeded\n", instanceId);
+    return EUCA_OK;
+}
 
 //!
 //! Initialize the NC state structure for the KVM hypervisor.
@@ -250,10 +321,7 @@ static int doInitialize(struct nc_state_t *nc)
 //!
 static void *rebooting_thread(void *arg)
 {
-#define REATTACH_RETRIES      3
-
     int err = 0;
-    int error = 0;
     int rc = 0;
     int log_level_for_devstring = EUCA_LOG_TRACE;
     char *xml = NULL;
@@ -268,31 +336,28 @@ static void *rebooting_thread(void *arg)
     virConnectPtr conn = NULL;
 
     LOGDEBUG("[%s] spawning rebooting thread\n", instance->instanceId);
-    if ((xml = file2str(instance->libvirtFilePath)) == NULL) {
-        LOGERROR("[%s] cannot obtain instance XML file %s\n", instance->instanceId, instance->libvirtFilePath);
-        return NULL;
-    }
 
     if ((conn = lock_hypervisor_conn()) == NULL) {
-        LOGERROR("[%s] cannot restart instance %s, abandoning it\n", instance->instanceId, instance->instanceId);
-        change_state(instance, SHUTOFF);
-        EUCA_FREE(xml);
+        LOGERROR("[%s] cannot connect to hypervisor to restart instance, giving up\n", instance->instanceId);
         return NULL;
     }
     dom = virDomainLookupByName(conn, instance->instanceId);
     if (dom == NULL) {
+        LOGERROR("[%s] cannot locate instance to reboot, giving up\n", instance->instanceId);
         unlock_hypervisor_conn();
-        EUCA_FREE(xml);
         return NULL;
     }
-
-    // for KVM, must stop and restart the instance
-    LOGDEBUG("[%s] destroying domain\n", instance->instanceId);
-    error = virDomainDestroy(dom); // @todo change to Shutdown? is this synchronous?
-    virDomainFree(dom);
-    if (error) {
+    // obtain the most up-to-date XML for domain from libvirt
+    xml = virDomainGetXMLDesc(dom, 0);
+    if (xml == NULL) {
+        LOGERROR("[%s] cannot obtain metadata for instance to reboot, giving up\n", instance->instanceId);
         unlock_hypervisor_conn();
-        EUCA_FREE(xml);
+        return NULL;
+    }
+    // try shutdown first, then kill it if uncooperative
+    if (shutdown_then_destroy_domain(dom) != EUCA_OK) {
+        LOGERROR("[%s] failed to shutdown and destroy the instance to reboot, giving up\n", instance->instanceId);
+        unlock_hypervisor_conn();
         return NULL;
     }
     // Add a shift to values of three of the metrics: ones that
@@ -306,75 +371,18 @@ static void *rebooting_thread(void *arg)
     // domain is now shut down, create a new one with the same XML
     LOGINFO("[%s] rebooting\n", instance->instanceId);
     dom = virDomainCreateLinux(conn, xml, 0);
-    EUCA_FREE(xml);
-    
-    euca_strncpy(resourceName[0], instance->instanceId, MAX_SENSOR_NAME_LEN);
-    sensor_refresh_resources(resourceName, resourceAlias, 1);   // refresh stats so we set base value accurately
-
-    // re-attach each volume previously attached
-    for (int i = 0; i < EUCA_MAX_VOLUMES; ++i) {
-        volume = &instance->volumes[i];
-        if (strcmp(volume->stateName, VOL_STATE_ATTACHED) && strcmp(volume->stateName, VOL_STATE_ATTACHING))
-            continue;                  // skip the entry unless attached or attaching
-
-        LOGDEBUG("[%s] volumes [%d] = '%s'\n", instance->instanceId, i, volume->stateName);
-
-        // get credentials, decrypt them
-        remoteDevStr = get_volume_local_device(volume->connectionString);
-        if (!remoteDevStr || !strstr(remoteDevStr, "/dev")) {
-            LOGERROR("[%s] failed to get local name of host iscsi device when re-attaching\n", instance->instanceId);
-            rc = 1;
-        } else {
-            // set the path
-            snprintf(path, sizeof(path), EUCALYPTUS_VOLUME_XML_PATH_FORMAT, instance->instancePath, volume->volumeId);  // vol-XXX.xml
-            snprintf(lpath, sizeof(lpath), EUCALYPTUS_VOLUME_LIBVIRT_XML_PATH_FORMAT, instance->instancePath, volume->volumeId);    // vol-XXX-libvirt.xml
-
-            // read in libvirt XML, which may have been modified by the hook above
-            if ((xml = file2str(lpath)) == NULL) {
-                LOGERROR("[%s][%s] failed to read volume XML from %s\n", instance->instanceId, volume->volumeId, lpath);
-                rc = 1;
-            }
-        }
-
-        EUCA_FREE(remoteDevStr);
-
-        if (!rc) {
-            // zhill - wrap with retry in case libvirt is dumb.
-            err = 0;
-            for (int j = 1; j < REATTACH_RETRIES; j++) {
-                // protect libvirt calls because we've seen problems during concurrent libvirt invocations
-                err = virDomainAttachDevice(dom, xml);
-
-                if (err) {
-                    LOGERROR("[%s][%s] failed to reattach volume (attempt %d of %d)\n", instance->instanceId, volume->volumeId, j, REATTACH_RETRIES);
-                    LOGDEBUG("[%s][%s] error from virDomainAttachDevice: %d xml: %s\n", instance->instanceId, volume->volumeId, err, xml);
-                    sleep(3);          // sleep a bit and retry
-                } else {
-                    LOGINFO("[%s][%s] volume reattached as '%s'\n", instance->instanceId, volume->volumeId, volume->localDevReal);
-                    break;
-                }
-            }
-
-            log_level_for_devstring = EUCA_LOG_TRACE;
-            if (err)
-                log_level_for_devstring = EUCA_LOG_DEBUG;
-            EUCALOG(log_level_for_devstring, "[%s][%s] remote device connection string: %s\n", instance->instanceId, volume->volumeId, volume->connectionString);
-        }
-
-        EUCA_FREE(xml);
-    }
-
     if (dom == NULL) {
         LOGERROR("[%s] failed to restart instance\n", instance->instanceId);
         change_state(instance, SHUTOFF);
     } else {
+        euca_strncpy(resourceName[0], instance->instanceId, MAX_SENSOR_NAME_LEN);
+        sensor_refresh_resources(resourceName, resourceAlias, 1);   // refresh stats so we set base value accurately
         virDomainFree(dom);
     }
+    EUCA_FREE(xml);
 
     unlock_hypervisor_conn();
     return NULL;
-    
-#undef REATTACH_RETRIES
 }
 
 //!
@@ -545,7 +553,6 @@ static void *migrating_thread(void *arg)
 
     LOGTRACE("invoked for %s\n", instance->instanceId);
 
-    sem_p(migr_sem);
     if ((conn = lock_hypervisor_conn()) == NULL) {
         LOGERROR("[%s] cannot migrate instance %s (failed to connect to hypervisor), giving up and rolling back.\n", instance->instanceId, instance->instanceId);
         migration_error++;
@@ -553,7 +560,6 @@ static void *migrating_thread(void *arg)
     } else {
         LOGTRACE("[%s] connected to hypervisor\n", instance->instanceId);
     }
-    sem_v(migr_sem);
 
     dom = virDomainLookupByName(conn, instance->instanceId);
     if (dom == NULL) {
@@ -567,7 +573,6 @@ static void *migrating_thread(void *arg)
 
     virConnectPtr dconn = NULL;
 
-    sem_p(migr_sem);
     LOGDEBUG("[%s] connecting to remote hypervisor at '%s'\n", instance->instanceId, duri);
     dconn = virConnectOpen(duri);
     if (dconn == NULL) {
@@ -578,7 +583,6 @@ static void *migrating_thread(void *arg)
         if (dconn == NULL) {
             LOGERROR("[%s] cannot migrate instance using TLS or SSH (failed to connect to remote), giving up and rolling back.\n", instance->instanceId);
             migration_error++;
-            sem_v(migr_sem);
             goto out;
         }
     }
@@ -591,10 +595,9 @@ static void *migrating_thread(void *arg)
                                        NULL,    // destination URI as seen from source (optional)
                                        0L); // bandwidth limitation (0 => unlimited)
     virConnectClose(dconn);
-    sem_v(migr_sem);
 
     if (ddom == NULL) {
-        LOGERROR("[%s] cannot migrate instance %s, giving up and rolling back.\n", instance->instanceId, instance->instanceId);
+        LOGERROR("[%s] cannot migrate instance, giving up and rolling back.\n", instance->instanceId);
         migration_error++;
         goto out;
     } else {
@@ -610,6 +613,7 @@ out:
         unlock_hypervisor_conn();
 
     sem_p(inst_sem);
+    LOGDEBUG("%d outgoing migrations still active\n", --outgoing_migrations_in_progress);
     if (migration_error) {
         migration_rollback(instance);
     } else {
@@ -700,28 +704,20 @@ static int doMigrateInstances(struct nc_state_t *nc, ncMetadata * pMeta, ncInsta
                 instance->migrationTime = time(NULL);
                 save_instance_struct(instance);
                 copy_instances();
+                sem_v(inst_sem);
 
                 // Establish migration-credential keys if this is the first instance preparation for this host.
                 LOGINFO("[%s] migration source preparing %s > %s [creds=%s]\n", SP(instance->instanceId), SP(instance->migration_src), SP(instance->migration_dst),
                         (instance->migration_credentials == NULL) ? "unavailable" : "present");
                 if (!credentials_prepared) {
-                    char generate_keys[MAX_PATH];
-                    char *euca_base = getenv(EUCALYPTUS_ENV_VAR_NAME);
-                    snprintf(generate_keys, MAX_PATH, EUCALYPTUS_GENERATE_MIGRATION_KEYS " %s %s restart", euca_base ? euca_base : "", euca_base ? euca_base : "", sourceNodeName,
-                             credentials);
-                    LOGDEBUG("instance[0]=%s migration key-generator path: '%s'\n", instance->instanceId, generate_keys);
-                    int sysret = system(generate_keys);
-                    if (sysret) {
-                        LOGERROR("instance[0]=%s '%s' failed with exit code %d\n", instance->instanceId, generate_keys, WEXITSTATUS(sysret));
+                    if (generate_migration_keys(sourceNodeName, credentials, TRUE, instance) != EUCA_OK) {
                         pMeta->replyString = strdup("internal error (migration credentials generation failed)");
-                        sem_v(inst_sem);
                         return (EUCA_SYSTEM_ERROR);
                     } else {
-                        LOGDEBUG("instance[0]=%s migration key generation succeeded\n", instance->instanceId);
                         credentials_prepared++;
                     }
                 }
-
+                sem_p(inst_sem);
                 instance->migration_state = MIGRATION_READY;
                 save_instance_struct(instance);
                 copy_instances();
@@ -742,8 +738,9 @@ static int doMigrateInstances(struct nc_state_t *nc, ncMetadata * pMeta, ncInsta
                     return (EUCA_UNSUPPORTED_ERROR);
                 }
                 instance->migration_state = MIGRATION_IN_PROGRESS;
-                LOGINFO("[%s] migration source initiating %s > %s [creds=%s]\n", instance->instanceId, instance->migration_src, instance->migration_dst,
-                        (instance->migration_credentials == NULL) ? "unavailable" : "present");
+                outgoing_migrations_in_progress++;
+                LOGINFO("[%s] migration source initiating %s > %s [creds=%s] (1 of %d active outgoing migrations)\n", instance->instanceId, instance->migration_src,
+                        instance->migration_dst, (instance->migration_credentials == NULL) ? "unavailable" : "present", outgoing_migrations_in_progress);
                 save_instance_struct(instance);
                 copy_instances();
                 sem_v(inst_sem);
@@ -766,7 +763,8 @@ static int doMigrateInstances(struct nc_state_t *nc, ncMetadata * pMeta, ncInsta
                     migration_rollback(instance);
                     sem_v(inst_sem);
                 } else {
-                    LOGINFO("[%s] ignoring request to roll back migration on source with instance in state %s(%s) -- duplicate rollback request?\n", instance->instanceId, instance->stateName, migration_state_names[instance->migration_state]);
+                    LOGINFO("[%s] ignoring request to roll back migration on source with instance in state %s(%s) -- duplicate rollback request?\n", instance->instanceId,
+                            instance->stateName, migration_state_names[instance->migration_state]);
                 }
             } else {
                 LOGERROR("[%s] action '%s' is not valid\n", instance->instanceId, action);
@@ -796,7 +794,6 @@ static int doMigrateInstances(struct nc_state_t *nc, ncMetadata * pMeta, ncInsta
                 LOGERROR("[%s] action '%s' is not valid or not implemented\n", instance_req->instanceId, action);
                 return (EUCA_INVALID_ERROR);
             }
-
             // Everything from here on is specific to "prepare" on a destination.
 
             // allocate a new instance struct
@@ -812,51 +809,31 @@ static int doMigrateInstances(struct nc_state_t *nc, ncMetadata * pMeta, ncInsta
             euca_strncpy(instance->migration_dst, destNodeName, HOSTNAME_SIZE);
             euca_strncpy(instance->migration_credentials, credentials, CREDENTIAL_SIZE);
             save_instance_struct(instance);
-
-            /*
-             * Uncomment the following three lines to force failures during preparation of destination node.
-             * (This is intended for development/testing only!)
-             */
-            /*
             sem_v(inst_sem);
-            LOGERROR("[%s] FORCING FAILURE!\n", instance->instanceId);
-            goto failed_dest;
-            */
 
             // Establish migration-credential keys.
             LOGINFO("[%s] migration destination preparing %s > %s [creds=%s]\n", instance->instanceId, SP(instance->migration_src), SP(instance->migration_dst),
                     (instance->migration_credentials == NULL) ? "unavailable" : "present");
-            char generate_keys[MAX_PATH];
+            // FIXME: Consolidate this sequence and the sequence in handlers.c into a util function?
+            char authorize_keys[MAX_PATH];
             char *euca_base = getenv(EUCALYPTUS_ENV_VAR_NAME);
 
             // First, call config-file modification script to authorize source node.
-            snprintf(generate_keys, MAX_PATH, EUCALYPTUS_AUTHORIZE_MIGRATION_KEYS " -a %s %s", euca_base ? euca_base : "", euca_base ? euca_base : "", instance->migration_src,
+            snprintf(authorize_keys, MAX_PATH, EUCALYPTUS_AUTHORIZE_MIGRATION_KEYS " -a %s %s", euca_base ? euca_base : "", euca_base ? euca_base : "", instance->migration_src,
                      instance->migration_credentials);
-            LOGDEBUG("instance=%s migration key-authorizer path: '%s'\n", instance->instanceId, generate_keys);
-            int sysret = system(generate_keys);
+            LOGDEBUG("[%s] migration key-authorizer path: '%s'\n", instance->instanceId, authorize_keys);
+            sem_p(hyp_sem);
+            int sysret = system(authorize_keys);
+            sem_v(hyp_sem);
             if (sysret) {
-                LOGERROR("instance=%s '%s' failed with exit code %d\n", instance->instanceId, generate_keys, WEXITSTATUS(sysret));
-                sem_v(inst_sem);
+                LOGERROR("[%s] '%s' failed with exit code %d\n", instance->instanceId, authorize_keys, WEXITSTATUS(sysret));
                 goto failed_dest;
             } else {
-                LOGDEBUG("instance=%s migration key authorization succeeded\n", instance->instanceId);
+                LOGDEBUG("[%s] migration key authorization succeeded\n", instance->instanceId);
             }
-
-            // Now generate the keys we'll need and restart libvirtd to pick up all the changes.
-            snprintf(generate_keys, MAX_PATH, EUCALYPTUS_GENERATE_MIGRATION_KEYS " %s %s restart", euca_base ? euca_base : "", euca_base ? euca_base : "", instance->migration_dst,
-                     instance->migration_credentials);
-            LOGDEBUG("instance=%s migration key-generator path: '%s'\n", instance->instanceId, generate_keys);
-            sysret = system(generate_keys);
-            if (sysret) {
-                LOGERROR("instance=%s '%s' failed with exit code %d\n", instance->instanceId, generate_keys, WEXITSTATUS(sysret));
-                sem_v(inst_sem);
+            if (generate_migration_keys(instance->migration_dst, instance->migration_credentials, TRUE, instance) != EUCA_OK) {
                 goto failed_dest;
-            } else {
-                LOGDEBUG("instance=%s migration key generation succeeded\n", instance->instanceId);
             }
-
-            sem_v(inst_sem);
-
             int error;
 
             if (vbr_parse(&(instance->params), pMeta) != EUCA_OK) {

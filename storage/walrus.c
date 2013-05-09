@@ -154,9 +154,8 @@ struct request {
 };
 
 //! Defines the struct for passing information into curl progress function
-struct progress_data_t
-{
-    char * url;
+struct progress_data_t {
+    char *url;
     time_t last_update;
 };
 
@@ -304,7 +303,7 @@ static int walrus_request_timeout(const char *walrus_op, const char *verb, const
     curl_easy_setopt(curl, CURLOPT_SSL_VERIFYHOST, 0L);
     curl_easy_setopt(curl, CURLOPT_LOW_SPEED_LIMIT, 360L);  // must have at least a 360 baud modem
     curl_easy_setopt(curl, CURLOPT_LOW_SPEED_TIME, 10L);    // abort if below speed limit for this many seconds
-    curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1); //! @todo remove the comment once we want to follow redirects (e.g., on HTTP 407)
+    curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1);  //! @todo remove the comment once we want to follow redirects (e.g., on HTTP 407)
 
     // enable periodic progress statements in the log
     curl_easy_setopt(curl, CURLOPT_NOPROGRESS, 0L); // enable progress function invocation
@@ -458,9 +457,9 @@ static int walrus_request_timeout(const char *walrus_op, const char *verb, const
                 break;
             }
         }
-        
+
         if (code == EUCA_OK || bail == TRUE) {
-            break; // bail out of the retry loop
+            break;                     // bail out of the retry loop
 
         } else if ((attempt + 1) <= TOTAL_ATTEMPTS) {
             LOGWARN("download attempt %d of %d will commence in %d sec for %s\n", (attempt + 1), TOTAL_ATTEMPTS, timeout, url);
@@ -468,8 +467,8 @@ static int walrus_request_timeout(const char *walrus_op, const char *verb, const
             timeout <<= 1;
             if (timeout > MAX_TIMEOUT)
                 timeout = MAX_TIMEOUT;
-            
-            lseek(fd, 0L, SEEK_SET); // move the file pointer to the beginning for the retry
+
+            lseek(fd, 0L, SEEK_SET);   // move the file pointer to the beginning for the retry
         }
     }
     close(fd);
@@ -666,7 +665,7 @@ static size_t write_data(void *buffer, size_t size, size_t nmemb, void *params)
     assert(params != NULL);
 
     int fd = ((struct request *)params)->fd;
-    int wrote = write(fd, buffer, size * nmemb); // any blocking in this call is not subject to connection timeouts
+    int wrote = write(fd, buffer, size * nmemb);    // any blocking in this call is not subject to connection timeouts
     ((struct request *)params)->total_wrote += wrote;
     ((struct request *)params)->total_calls++;
 
@@ -777,7 +776,7 @@ static size_t write_data_zlib(void *buffer, size_t size, size_t nmemb, void *par
 
 static int progress_function(void *clientp, double dltotal, double dlnow, double ultotal, double ulnow)
 {
-    struct progress_data_t * progress_data = (struct progress_data_t *)clientp;
+    struct progress_data_t *progress_data = (struct progress_data_t *)clientp;
     time_t now = time(NULL);
 
     if ((progress_data->last_update + PROGRESS_UPDATE_SEC) <= now) {

@@ -107,6 +107,19 @@ public class LVMVolumeInfo extends AbstractPersistent {
 	@Column(name = "cleanup")
 	private Boolean cleanup;
 
+	public static final String LVM_ROOT_DIRECTORY = "/dev";
+	public static final String PATH_SEPARATOR = "/";
+	
+	/**
+	 * Returns a string representation of the path to this resource. Null if not available.
+	 * @return
+	 */
+	public String getAbsoluteLVPath() {
+		if(this.getVgName() != null && this.getLvName() != null)
+			return LVM_ROOT_DIRECTORY + PATH_SEPARATOR + this.getVgName() + PATH_SEPARATOR + this.getLvName();
+		return null;
+	}
+	
 	public String toString() {
 	  return volumeId + "," + scName + "," + loDevName + "," + loFileName + "," + pvName + "," + vgName + "," + lvName + "," + size + "," + status + "," + snapshotOf + "," + cleanup;
 	}

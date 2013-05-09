@@ -467,7 +467,7 @@ static void sensor_bottom_half(void)
         sensor_refresh_resources(resourceNames, resourceAliases, MAX_SENSOR_RESOURCES);
         if (hyp_sem)
             sem_v(hyp_sem);
-        
+
         useconds_t stop_usec = time_usec();
 
         // adjust the next sleep time to account for how long sensor refresh took

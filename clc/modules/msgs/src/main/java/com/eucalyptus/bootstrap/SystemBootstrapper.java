@@ -182,7 +182,13 @@ public class SystemBootstrapper {
     } );
     OrderedShutdown.initialize( );
     BootstrapArgs.init( );
-    Security.addProvider( new BouncyCastleProvider( ) );
+    if ( Security.getProvider( BouncyCastleProvider.PROVIDER_NAME ) == null ) {
+      if ( Security.getProviders().length > 4 ) {
+        Security.insertProviderAt( new BouncyCastleProvider( ), 4 ); // EUCA-5833
+      } else {
+        Security.addProvider( new BouncyCastleProvider( ) );
+      }
+    }
     try {//GRZE:HACK: need to remove the nss add-on in deb based distros as it breaks ssl.
       Groovyness.eval( "import sun.security.jca.*; Providers.setProviderList( ProviderList.remove( Providers.@providerList,\"SunPKCS11-NSS\") );" );
     } catch ( Exception ex ) {

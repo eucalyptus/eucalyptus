@@ -314,14 +314,15 @@ int wait_state_transition(ncInstance * instance, instance_states from_state, ins
 void adopt_instances();
 int get_instance_xml(const char *gen_libvirt_cmd_path, char *userId, char *instanceId, char *platform, char *ramdiskId, char *kernelId,
                      char *disk_path, virtualMachine * params, char *privMac, char *brname, int use_virtio_net, int use_virtio_root, char **xml);
-void set_instance_params(ncInstance *instance);
+void set_instance_params(ncInstance * instance);
 void *monitoring_thread(void *arg);
 void *startup_thread(void *arg);
 void *restart_thread(void *arg);
 
 int get_instance_stats(virDomainPtr dom, ncInstance * instance);
 ncInstance *find_global_instance(const char *instanceId);
-int find_and_terminate_instance(struct nc_state_t *nc_state, ncMetadata * pMeta, char *instanceId, int force, ncInstance ** instance_p, char destroy);
+int find_and_terminate_instance(struct nc_state_t *nc_state, ncMetadata * pMeta, char *instanceId, int force, ncInstance ** instance_p);
+int shutdown_then_destroy_domain(virDomainPtr dom);
 void copy_instances(void);
 int is_migration_dst(const ncInstance * instance);
 int is_migration_src(const ncInstance * instance);

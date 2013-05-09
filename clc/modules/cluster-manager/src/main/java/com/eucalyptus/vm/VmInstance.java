@@ -62,8 +62,10 @@
 
 package com.eucalyptus.vm;
 
+import static com.eucalyptus.util.Strings.isPrefixOf;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.Date;
 import java.util.HashMap;
@@ -73,7 +75,8 @@ import java.util.NavigableSet;
 import java.util.NoSuchElementException;
 import java.util.Set;
 import java.util.TreeSet;
-import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 
 import javax.annotation.Nonnull;
@@ -152,6 +155,7 @@ import com.eucalyptus.records.Logs;
 import com.eucalyptus.reporting.event.InstanceCreationEvent;
 import com.eucalyptus.tokens.AssumeRoleResponseType;
 import com.eucalyptus.tokens.AssumeRoleType;
+import com.eucalyptus.tokens.CredentialsType;
 import com.eucalyptus.upgrade.Upgrades.EntityUpgrade;
 import com.eucalyptus.upgrade.Upgrades.Version;
 import com.eucalyptus.util.Exceptions;
@@ -167,16 +171,22 @@ import com.eucalyptus.vmtypes.VmType;
 import com.eucalyptus.vmtypes.VmTypes;
 import com.eucalyptus.ws.StackConfiguration;
 import com.google.common.base.Function;
+import com.google.common.base.Functions;
+import com.google.common.base.Joiner;
 import com.google.common.base.Objects;
+import com.google.common.base.Optional;
 import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
+import com.google.common.base.Splitter;
 import com.google.common.base.Strings;
-import com.google.common.base.Supplier;
-import com.google.common.base.Suppliers;
+import com.google.common.cache.CacheBuilder;
 import com.google.common.collect.Collections2;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
+import com.google.common.collect.TreeMultimap;
 
 import edu.ucsb.eucalyptus.cloud.VirtualBootRecord;
 import edu.ucsb.eucalyptus.cloud.VmInfo;
@@ -199,8 +209,10 @@ import edu.ucsb.eucalyptus.msgs.RunningInstancesItemType;
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
 public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetadata {
   private static final long    serialVersionUID = 1L;
+  private static final Logger  LOG              = Logger.getLogger( VmInstance.class );
+  private static final com.google.common.cache.Cache<MetadataKey,ImmutableMap<String,String>> metadataCache =
+      CacheBuilder.newBuilder( ).expireAfterWrite( 5, TimeUnit.MINUTES ).maximumSize( 1000 ).build( );
 
-  private static final Logger        LOG                  = Logger.getLogger( VmInstance.class );
   public static final String         DEFAULT_TYPE         = "m1.small";
   public static final String         ROOT_DEVICE_TYPE_EBS = "ebs";
   public static final String         ROOT_DEVICE_TYPE_INSTANCE_STORE = "instance-store";
@@ -1190,40 +1202,31 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
       }
     }
   }
-  
-  private static Map<String, Supplier< Map<String,String>>> mapOfMetaSupplier = new ConcurrentHashMap<String, Supplier< Map<String,String>>>();
-		  
+
   public String getByKey( final String pathArg ) {
-	  
-	if(!mapOfMetaSupplier.containsKey(this.getInstanceId())){
-		  mapOfMetaSupplier.put(this.getInstanceId(), Suppliers.memoizeWithExpiration(new Supplier< Map<String,String>>( ) {
-				    @Override
-				    public Map<String, String> get() {
-				      return getMetadataMap();
-				    }
-				  }, 5, TimeUnit.SECONDS ));
-	}
-	  
-	Supplier< Map<String,String>> metaSupplier = mapOfMetaSupplier.get(this.getInstanceId());
-    final Map<String, String> m = metaSupplier.get();
-    String path = ( pathArg != null )
-                                     ? pathArg
-                                     : "";
-    LOG.debug( "Servicing metadata request:" + path + " -> " + m.get( path ) );
-    if ( m.containsKey( path + "/" ) ) path += "/";
-    if ( !m.containsKey( path ) ) {
-      throw new NoSuchElementException( "No such key: " + path );
-    } else {
-      return m.get( path ).replaceAll( "\n*\\z", "" );
+    String path = Objects.firstNonNull( pathArg, "" );
+    LOG.debug( "Servicing metadata request:" + path );
+    if ( path.endsWith( "/" ) ) {
+      path = path.substring( 0, path.length() -1 );
     }
+
+    Optional<MetadataGroup> groupOption = Optional.absent();
+    for ( final MetadataGroup metadataGroup : MetadataGroup.values() ) {
+      if ( metadataGroup.providesPath( path ) ) {
+        groupOption = Optional.of( metadataGroup );
+      }
+    }
+    final MetadataGroup group = groupOption.or( MetadataGroup.Core );
+    return Optional.fromNullable( group.apply( this ) )
+        .or( Collections.<String,String>emptyMap( ) ).get( path );
   }
 
-  private Map<String, String> getMetadataMap( ) {
+  private Map<String, String> getCoreMetadataMap( ) {
     final boolean dns = StackConfiguration.USE_INSTANCE_DNS && !ComponentIds.lookup( Dns.class ).runLimitedServices( );
-    final Map<String, String> m = new HashMap<String, String>( );
+    final Map<String, String> m = Maps.newHashMap( );
     m.put( "ami-id", this.getImageId( ) );
     if ( this.bootRecord.getMachine( ) != null && !this.bootRecord.getMachine( ).getProductCodes( ).isEmpty( ) ) {
-      m.put( "product-codes", this.bootRecord.getMachine( ).getProductCodes( ).toString( ).replaceAll( "[\\Q[]\\E]", "" ).replaceAll( ", ", "\n" ) );
+      m.put( "product-codes", Joiner.on( '\n' ).join( this.bootRecord.getMachine( ).getProductCodes( ) ) );
     }
     m.put( "ami-launch-index", "" + this.launchRecord.getLaunchIndex( ) );
 //ASAP: FIXME: GRZE:
@@ -1247,55 +1250,50 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
     }
     m.put( "public-ipv4", this.getPublicAddress( ) );
     m.put( "reservation-id", this.vmId.getReservationId( ) );
-    if ( this.bootRecord.getKernel( ) != null ) {
-      m.put( "kernel-id", this.bootRecord.getKernel( ).getDisplayName( ) );
+    if ( this.getKernelId( ) != null ) {
+      m.put( "kernel-id", this.getKernelId( ) );
     }
-    if ( this.bootRecord.getRamdisk( ) != null ) {
-      m.put( "ramdisk-id", this.bootRecord.getRamdisk( ).getDisplayName( ) );
+    if ( this.getRamdiskId( ) != null ) {
+      m.put( "ramdisk-id", this.getRamdiskId( ) );
     }
-    m.put( "security-groups", this.getNetworkNames( ).toString( ).replaceAll( "[\\Q[]\\E]", "" ).replaceAll( ", ", "\n" ) );
+    m.put( "security-groups", Joiner.on('\n').join( this.getNetworkNames( ) ) );
+    m.put( "placement/availability-zone", this.getPartition( ) );
+    return m;
+  }
 
+  private Map<String, String> getBlockDeviceMappingMetadataMap( ) {
+    final Map<String, String> m = Maps.newHashMap( );
     // Metadata should accurately reflect all the ebs mappings and ephemeral mappings if any.
     // Fixes EUCA-4081, EUCA-3954 and implements EUCA-4786
     if( this.bootRecord.getMachine() instanceof BlockStorageImageInfo ) {
       // Get all the volume attachments and order them in some way (by device name for now)
       Set<VmVolumeAttachment> volAttachments = new TreeSet<VmVolumeAttachment>(VolumeAttachmentComparator.INSTANCE);
       volAttachments.addAll(this.bootRecord.getPersistentVolumes());
-      
+
       // Keep track of all ebs keys for populating block-device-mapping list
-      String ebsKeys = new String();
       int ebsCount = 0;
-      
+
       // Iterate through the list of volume attachments and populate ebs mappings
       for (VmVolumeAttachment attachment : volAttachments ) {
-    	if (attachment.getIsRootDevice()) {
-    	  m.put( "block-device-mapping/ami", attachment.getDevice() );
-    	  m.put( "block-device-mapping/emi", attachment.getDevice() );
-    	  m.put( "block-device-mapping/root", attachment.getDevice() );	
-    	} 
+        if (attachment.getIsRootDevice()) {
+          m.put( "block-device-mapping/ami", attachment.getDevice() );
+          m.put( "block-device-mapping/emi", attachment.getDevice() );
+          m.put( "block-device-mapping/root", attachment.getDevice() );
+        }
         m.put( "block-device-mapping/ebs" + String.valueOf(++ebsCount), attachment.getDevice() );
-    	ebsKeys += "\nebs" + String.valueOf(ebsCount);
       }
-      
+
       // Using ephemeral attachments for bfebs instances only, can be extended to be used by all other instances
       // Get all the ephemeral attachments and order them in some way (by device name for now)
       Set<VmEphemeralAttachment> ephemeralAttachments = new TreeSet<VmEphemeralAttachment>(this.bootRecord.getEphmeralStorage());
-      
-      // Keep track of all ephemeral keys for populating block-device-mapping list
-      String ephemeralKeys = new String();
-      
+
       // Iterate through the list of ephemeral attachments and populate ephemeral mappings
       if (!ephemeralAttachments.isEmpty()) {
-      	for(VmEphemeralAttachment attachment : ephemeralAttachments){
-      	  m.put( "block-device-mapping/" + attachment.getEphemeralId(), attachment.getDevice() );
-      	  ephemeralKeys += "\n" + attachment.getEphemeralId();
-      	}
-      	m.put( "block-device-mapping/", "emi\nroot" + ebsKeys + ephemeralKeys);
-      } else {
-    	m.put( "block-device-mapping/", "emi\nroot" + ebsKeys);
+        for(VmEphemeralAttachment attachment : ephemeralAttachments){
+          m.put( "block-device-mapping/" + attachment.getEphemeralId(), attachment.getDevice() );
+        }
       }
     } else {
-      m.put( "block-device-mapping/", "emi\nephemeral\nephemeral0\nroot\nswap" );        
       m.put( "block-device-mapping/emi", "sda1" );
       m.put( "block-device-mapping/ami", "sda1" );
       m.put( "block-device-mapping/ephemeral", "sda2" );
@@ -1303,91 +1301,75 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
       m.put( "block-device-mapping/swap", "sda3" );
       m.put( "block-device-mapping/root", "/dev/sda1" );
     }
-    
-    if (!this.getNameOrArn().equals("")) {
+    return m;
+  }
 
-      AssumeRoleType assumeRoleType = new AssumeRoleType();
-
-      Account userAccount;
-      String roleArn = null;
+  private Map<String, String> getIamMetadataMap( ) {
+    final Map<String, String> m = new HashMap<String, String>( );
+    final String instanceProfileNameOrArn = this.getNameOrArn( );
+    if ( instanceProfileNameOrArn != null && !instanceProfileNameOrArn.isEmpty() ) {
       InstanceProfile profile = null;
-
       String roleName = null;
+      String roleArn = null;
+      String profileArn = null;
       try {
-        userAccount = Accounts.lookupAccountById(this.getOwnerAccountNumber());
+        final Account userAccount = Accounts.lookupAccountById(this.getOwnerAccountNumber());
         String profileName;
-        if ( this.getNameOrArn().startsWith("arn:") ) {
-          final String rawName = this.getNameOrArn();
-          final int nameIndex = this.getNameOrArn().lastIndexOf('/');
-          profileName = this.getNameOrArn().substring(nameIndex + 1, rawName.length());
+        if ( instanceProfileNameOrArn.startsWith("arn:") ) {
+          profileName = instanceProfileNameOrArn.substring( instanceProfileNameOrArn.lastIndexOf('/') + 1 );
         } else {
-          profileName = this.getNameOrArn();
+          profileName = instanceProfileNameOrArn;
         }
         profile = userAccount.lookupInstanceProfileByName(profileName);
-        Role role = profile.getRole();
-        roleArn = Accounts.getRoleArn(role);
-        role.getRoleId();
-        roleName = role.getName();
+        profileArn = Accounts.getInstanceProfileArn(profile);
+        final Role role = profile.getRole();
+        if ( role != null ) {
+          roleArn = Accounts.getRoleArn( role );
+          roleName = role.getName();
+        }
       } catch (AuthException e) {
         LOG.debug(e);
       }
 
-      assumeRoleType.setRoleArn(roleArn);
-      assumeRoleType.setRoleSessionName(Crypto.generateId(roleArn, this.getOwner().getUserId()));
-      assumeRoleType.setEffectiveUserId(this.ownerUserId);
+      CredentialsType credentials = null;
+      if ( roleArn != null ) {
+        final AssumeRoleType assumeRoleType = new AssumeRoleType( );
+        assumeRoleType.setRoleArn(roleArn);
+        assumeRoleType.setRoleSessionName(Crypto.generateId(roleArn, this.getOwner().getUserId()));
 
-      AssumeRoleResponseType assumeRoleResponseType = null;
-
-      ServiceConfiguration serviceConfiguration = ServiceConfigurations
-          .createEphemeral(ComponentIds.lookup(Tokens.class));
-      try {
-        assumeRoleResponseType = (AssumeRoleResponseType) AsyncRequests.sendSync(serviceConfiguration, assumeRoleType);
-      } catch (Exception e) {
-        LOG.debug("Unable to send assume role request to token service",e);
+        ServiceConfiguration serviceConfiguration = ServiceConfigurations
+            .createEphemeral(ComponentIds.lookup(Tokens.class));
+        try {
+          credentials = ((AssumeRoleResponseType) AsyncRequests.sendSync(serviceConfiguration, assumeRoleType))
+              .getAssumeRoleResult().getCredentials();
+        } catch (Exception e) {
+          LOG.debug("Unable to send assume role request to token service",e);
+        }
       }
 
-
-      final String accessKey = (assumeRoleResponseType != null ? assumeRoleResponseType.getAssumeRoleResult() : null).getCredentials().getAccessKeyId();
-      final Date expiration = (assumeRoleResponseType != null ? assumeRoleResponseType.getAssumeRoleResult() : null).getCredentials().getExpiration();
-      final String secretKey = (assumeRoleResponseType != null ? assumeRoleResponseType.getAssumeRoleResult() : null).getCredentials().getSecretAccessKey();
-      final String sessionToken = (assumeRoleResponseType != null ? assumeRoleResponseType.getAssumeRoleResult() : null).getCredentials().getSessionToken();
-
-      if (profile != null) {
-        m.put("iam/info/", "last-updated-date\ninstance-profile-arn\ninstance-profile-id");
-        m.put("iam/info/last-updated-date",profile.getCreationTimestamp().toString());  //TODO : Need to collection and display the real last updated date.
-        m.put("iam/info/instance-profile-arn", roleArn );
+      if ( profile != null ) {
+        m.put("iam/info/last-updated-date", Timestamps.formatIso8601Timestamp(profile.getCreationTimestamp()));  //TODO : Need to collection and display the real last updated date.
+        m.put("iam/info/instance-profile-arn", profileArn );
         m.put("iam/info/instance-profile-id", profile.getInstanceProfileId() );
       }
 
-      if (roleName != null || accessKey != null || expiration != null || secretKey != null || sessionToken != null ) {
-      m.put("iam/", "security-credentials/" );
-      m.put("iam/security-credentials/", roleName + "/");
-      m.put("iam/security-credentials/" + roleName + "/", "AccessKeyId\nExpiration\nSecretAccessKey\nToken");
-      m.put("iam/security-credentials/" + roleName + "/AccessKeyId/", accessKey);
-      m.put("iam/security-credentials/" + roleName + "/Expiration/",Timestamps.formatIso8601Timestamp(expiration));
-      m.put("iam/security-credentials/" + roleName + "/SecretAccessKey/", secretKey);
-      m.put("iam/security-credentials/" + roleName + "/Token/", sessionToken);
+      if ( roleName != null && credentials != null ) {
+        m.put("iam/security-credentials/" + roleName + "/AccessKeyId", credentials.getAccessKeyId());
+        m.put("iam/security-credentials/" + roleName + "/Expiration",Timestamps.formatIso8601Timestamp(credentials.getExpiration()));
+        m.put("iam/security-credentials/" + roleName + "/SecretAccessKey", credentials.getSecretAccessKey());
+        m.put("iam/security-credentials/" + roleName + "/Token", credentials.getSessionToken());
       }
 
     }
-   
+    return m;
+  }
+
+  private Map<String, String> getPublicKeysMetadataMap( ) {
+    final Map<String, String> m = Maps.newHashMap( );
     if ( this.bootRecord.getSshKeyPair( ) != null ) {
-      m.put( "public-keys/", "0=" + this.bootRecord.getSshKeyPair( ).getName( ) );
-      m.put( "public-keys/0", "openssh-key" );
-      m.put( "public-keys/0/", "openssh-key" );
+      m.put( "public-keys", "0=" + this.bootRecord.getSshKeyPair( ).getName( ) );
       m.put( "public-keys/0/openssh-key", this.bootRecord.getSshKeyPair( ).getPublicKey( ) );
     }
-    m.put( "placement/", "availability-zone" );
-    m.put( "placement/availability-zone", this.getPartition( ) );
-    String dir = "";
-    for ( final String entry : m.keySet( ) ) {
-      if ( ( entry.contains( "/" ) && !entry.endsWith( "/" ) ) ) {
-//          || ( "ramdisk-id".equals(entry) && this.getImageInfo( ).getRamdiskId( ) == null ) ) {
-        continue;
-      }
-      dir += entry + "\n";
-    }
-    m.put( "", dir );
     return m;
   }
   
@@ -1413,7 +1395,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
 
   @Nullable
   public String getRamdiskId( ) {
-    return CloudMetadatas.toDisplayName().apply( this.bootRecord.getRamdisk() );
+    return CloudMetadatas.toDisplayName().apply( this.bootRecord.getRamdisk( ) );
   }
 
   @Nullable
@@ -1455,7 +1437,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
 
   public boolean isUsePrivateAddressing() {
     // allow for null value
-    return Boolean.TRUE.equals( this.getNetworkConfig().getUsePrivateAddressing() );
+    return Boolean.TRUE.equals( this.getNetworkConfig( ).getUsePrivateAddressing( ) );
   }
 
   public String getPrivateAddress( ) {
@@ -2337,7 +2319,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
   }
 
   public Boolean getMonitoring() {
-    return this.getBootRecord().isMonitoring();
+    return this.getBootRecord().isMonitoring( );
   }
 
   public void startMigration( ) {
@@ -2351,7 +2333,143 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
   public VmMigrationTask getMigrationTask( ) {
     return this.runtimeState.getMigrationTask( );
   }
-  
+
+
+  private enum MetadataGroup implements Function<VmInstance,Map<String,String>> {
+    Core {
+      @Override
+      public Map<String, String> apply( final VmInstance instance ) {
+        return addListingEntries( instance, instance.getCoreMetadataMap( ), true );
+      }
+
+    },
+    BlockDeviceMapping( "block-device-mapping" ) {
+      @Override
+      public Map<String, String> apply( final VmInstance instance ) {
+        return addListingEntries( instance.getBlockDeviceMappingMetadataMap( ) );
+      }
+    },
+    Iam( "iam" ) {
+      @Override
+      public Map<String, String> apply( final VmInstance instance ) {
+        try {
+          return metadataCache.get( new MetadataKey( instance.getId(), this ), new Callable<ImmutableMap<String,String>>() {
+            @Override
+            public ImmutableMap<String,String> call( ) throws Exception {
+              return ImmutableMap.copyOf( addListingEntries( instance.getIamMetadataMap( ) ) );
+            }
+          } );
+        } catch ( ExecutionException e ) {
+          throw Exceptions.toUndeclared( e ); // Cache load exception not expected
+        }
+      }
+
+      @Override
+      protected boolean isPresent( final VmInstance instance ) {
+        return !Strings.isNullOrEmpty( instance.getNameOrArn() );
+      }
+    },
+    PublicKeys( "public-keys" ) {
+      @Override
+      public Map<String, String> apply( final VmInstance instance ) {
+        return addListingEntries( instance.getPublicKeysMetadataMap( ) );
+      }
+
+      @Override
+      protected boolean isPresent( final VmInstance instance ) {
+        return instance.bootRecord.getSshKeyPair( ) != null;
+      }
+    };
+
+    private final Optional<String> prefix;
+
+    private MetadataGroup( ) {
+      prefix = Optional.absent( );
+    }
+
+    private MetadataGroup( final String path ) {
+      prefix = Optional.of( path );
+    }
+
+    public boolean providesPath( final String path ) {
+      return
+          prefix.transform( Functions.forPredicate( isPrefixOf( path ) ) )
+              .or( Boolean.FALSE );
+    }
+
+    protected boolean isPresent(  final VmInstance instance   ) {
+      return true;
+    }
+
+    private static Map<String,String> addListingEntries( final Map<String,String> metadataMap ) {
+      return addListingEntries( null, metadataMap, false );
+    }
+
+    private static Map<String,String> addListingEntries( @Nullable final VmInstance instance,
+                                                         final Map<String,String> metadataMap,
+                                                         final boolean addRoots ) {
+      final TreeMultimap<String,String> listingMap = TreeMultimap.create( );
+      final Splitter pathSplitter = Splitter.on( '/' );
+      final Joiner pathJoiner = Joiner.on( '/' );
+      for ( final String path : metadataMap.keySet() ) {
+        final List<String> pathSegments = Lists.newArrayList( pathSplitter.split( path ) );
+        for ( int i=0; i<pathSegments.size(); i++ ) {
+          listingMap.put(
+              pathJoiner.join( pathSegments.subList( 0, i ) ),
+              pathSegments.get( i ) + ( i < pathSegments.size() -1 ? "/" : "" ) );
+        }
+      }
+
+      if ( addRoots && instance != null ) {
+        for ( MetadataGroup group : MetadataGroup.values() ) {
+          if ( group.isPresent( instance ) && group.prefix.isPresent(  ) ) {
+            listingMap.put( "", group.prefix.get() + "/" );
+          }
+        }
+      }
+
+      final Joiner listingJoiner = Joiner.on( "\n" );
+      for ( final String key : listingMap.keySet() ) {
+        if ( !metadataMap.containsKey( key ) ) {
+          metadataMap.put( key, listingJoiner.join( listingMap.get( key ) ) );
+        }
+      }
+
+      return metadataMap;
+    }
+  }
+
+  private static final class MetadataKey {
+    private final String id; // internal id
+    private final MetadataGroup metadataGroup;
+
+    private MetadataKey( final String id, final MetadataGroup metadataGroup ) {
+      this.id = id;
+      this.metadataGroup = metadataGroup;
+    }
+
+    @SuppressWarnings( "RedundantIfStatement" )
+    @Override
+    public boolean equals( final Object o ) {
+      if ( this == o ) return true;
+      if ( o == null || getClass() != o.getClass() ) return false;
+
+      final MetadataKey that = (MetadataKey) o;
+
+      if ( !id.equals( that.id ) ) return false;
+      if ( metadataGroup != that.metadataGroup ) return false;
+
+      return true;
+    }
+
+    @Override
+    public int hashCode() {
+      int result = id.hashCode();
+      result = 31 * result + metadataGroup.hashCode();
+      return result;
+    }
+  }
+
   @EntityUpgrade( entities = { VmInstance.class }, since = Version.v3_3_0, value = com.eucalyptus.component.id.Eucalyptus.class )
   public enum VmInstanceUpgrade_3_3_0 implements Predicate<Class> {
     INSTANCE;
@@ -2402,4 +2520,3 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
     }
   }
 }
-																																																																																																																																																																																																																																																																																																																																																																							

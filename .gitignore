@@ -41,6 +41,7 @@ clc/modules/storage-san-common
 clc/modules/storage-san-emc-libs
 clc/modules/storage-san-emc
 clc/modules/storage-san-equallogic
+clc/modules/storage-san-equallogic-libs
 clc/modules/storage-san-netapp
 clc/modules/storage-san-netapp-libs
 clc/modules/vmware-broker
@@ -52,6 +53,7 @@ clc/modules/www/test-gwt/*
 clc/modules/www/test-gwt/war/*
 clc/modules/www/test-gwt/war/WEB-INF/*
 clc/modules/www/webapps
+clc/modules/www/gwt-unitCache/
 clc/target
 config.log
 config.status
@@ -100,3 +102,4 @@ util/euca-generate-fault
 .groovy/
 *.[ei]ml
 atlassian-ide-plugin.xml
+\#*#

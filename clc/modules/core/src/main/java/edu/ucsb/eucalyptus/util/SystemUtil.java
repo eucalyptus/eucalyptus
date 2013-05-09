@@ -142,7 +142,15 @@ public class SystemUtil {
 	     }
 	     return sb.toString();
 	   }
-	 }
+	   
+	   /**
+	    * True if command returned non-zero return code
+	    * @return
+	    */
+	   public boolean failed() {
+		   return this.returnValue != 0;
+	   }
+	 }	 
 	 
 	 public static CommandOutput runWithRawOutput(String[] command) throws Exception {
 	   //System.out.println(Joiner.on(" ").skipNulls().join(command));

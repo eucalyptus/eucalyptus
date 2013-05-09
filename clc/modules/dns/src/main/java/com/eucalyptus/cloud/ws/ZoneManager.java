@@ -301,6 +301,33 @@ public class ZoneManager {
 			LOG.error(ex);
 		}
 	}
+	
+	public static void deleteARecord(String zoneName, ARecord record){
+		try {
+			Zone zone = getZone(zoneName);
+			if(zone == null)
+				return;
+			RRset rrSet = zone.findExactMatch(record.getName(), record.getDClass());
+			if(rrSet != null) {
+				Iterator<Record> rrIterator = rrSet.rrs();
+				Record recordToRemove = null;
+				while(rrIterator.hasNext()) {
+					final Record rec = rrIterator.next();
+					if(rec instanceof ARecord){
+						ARecord aRec = (ARecord)rec;
+						if(aRec.getName().equals(record.getName()) &&
+								aRec.getAddress().equals(record.getAddress())){
+							recordToRemove = rec;	
+						}
+					}
+				}
+				if(recordToRemove != null)
+					zone.removeRecord(recordToRemove);
+			}
+		} catch(Exception ex) {
+			LOG.error(ex);
+		}    
+	}
 
 	public static void deleteRecord(String zoneName, Record record) {
 		try {

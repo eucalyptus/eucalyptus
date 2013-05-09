@@ -536,6 +536,10 @@ public class ListVersionsType extends WalrusRequestType {
 	String versionIdMarker;
 	String maxKeys;
 	String delimiter;
+	
+	def ListVersionsType() {
+		prefix = "";
+	}
 }
 
 public class ListVersionsResponseType extends WalrusResponseType {
