@@ -290,6 +290,46 @@ static void printMsgServiceStateInfo(ncMetadata * pMeta);
 \*----------------------------------------------------------------------------*/
 
 //!
+//! Authorize (or deauthorize) migration keys on destination host.
+//!
+//! @param[in] options command-line options to pass to the authorization script
+//! @param[in] host hostname (IP address) to authorize
+//! @param[in] credentials shared secret to authorize
+//! @param[in] instance pointer to instance struct for logging information (optional--can be NULL)
+//!
+//! @return EUCA_OK, EUCA_INVALID_ERROR, or EUCA_SYSTEM_ERROR
+//!
+
+int authorize_migration_keys(char *options, char *host, char *credentials, ncInstance *instance, boolean lock_hyp_sem)
+{
+    char authorize_keys[MAX_PATH];
+    char *euca_base = getenv(EUCALYPTUS_ENV_VAR_NAME);
+    char *instanceId = instance ? instance->instanceId : "UNSET";
+
+    if (!options && !host && !credentials) {
+        LOGERROR ("[%s] called with invalid arguments: options=%s, host=%s, creds=%s\n", SP(instanceId), SP(options), SP(host), SP(credentials));
+        return EUCA_INVALID_ERROR;
+    }
+
+    snprintf(authorize_keys, MAX_PATH, EUCALYPTUS_AUTHORIZE_MIGRATION_KEYS " %s %s %s", NP(euca_base), NP(euca_base), NP(options), NP(host), NP(credentials));
+    LOGDEBUG("[%s] migration key authorization command: '%s'\n", SP(instanceId), authorize_keys);
+    if (lock_hyp_sem == TRUE) {
+        sem_p(hyp_sem);
+    }
+    int sysret = system(authorize_keys);
+    if (lock_hyp_sem == TRUE) {
+        sem_v(hyp_sem);
+    }
+    if (sysret) {
+        LOGERROR("[%s] '%s' failed with exit code %d\n", SP(instanceId), authorize_keys, WEXITSTATUS(sysret));
+        return EUCA_SYSTEM_ERROR;
+    } else {
+        LOGDEBUG("[%s] migration key authorization/deauthorization succeeded\n", SP(instanceId));
+    }
+    return EUCA_OK;
+}
+
+//!
 //! Copies the url string of the ENABLED service of the requested type into dest_buffer.
 //! dest_buffer MUST be the same size as the services uri array length, 512.
 //! NULL if none exists
@@ -968,6 +1008,7 @@ static void refresh_instance_info(struct nc_state_t *nc, ncInstance * instance)
                     incoming_migrations_in_progress--;
                     LOGINFO("[%s] incoming migration complete (%d other incoming migration[s] actively in progress)\n", instance->instanceId, incoming_migrations_in_progress);
 
+                    // FIXME: Consolidate with similar sequence in handlers_kvm.c into a utility function?
                     if (!incoming_migrations_in_progress) {
                         int incoming_migrations_pending = 0;
                         int incoming_migrations_counted = 0;
@@ -975,11 +1016,13 @@ static void refresh_instance_info(struct nc_state_t *nc, ncInstance * instance)
                         bunchOfInstances *head = NULL;
                         for (head = global_instances; head; head = head->next) {
                             if ((head->instance->migration_state == MIGRATION_PREPARING) || (head->instance->migration_state == MIGRATION_READY)) {
-                                LOGINFO("[%s] is pending migration, state=%s, deferring deauthorization of migration keys\n", head->instance->instanceId,
+                                LOGINFO("[%s] is pending migration, migration_state='%s', deferring deauthorization of migration keys\n", head->instance->instanceId,
                                         migration_state_names[head->instance->migration_state]);
                                 incoming_migrations_pending++;
                             }
+                            // Belt and suspenders...
                             if ((head->instance->migration_state == MIGRATION_IN_PROGRESS) && !strcmp(nc_state.ip, head->instance->migration_dst)) {
+                                LOGWARN("[%s] Possible internal bug detected: instance migration_state='%s', but incoming_migrations_in_progress=%d\n", head->instance->instanceId, migration_state_names[head->instance->migration_state], incoming_migrations_in_progress);
                                 incoming_migrations_counted++;
                             }
                         }
@@ -988,18 +1031,8 @@ static void refresh_instance_info(struct nc_state_t *nc, ncInstance * instance)
                                     incoming_migrations_counted);
                         }
                         if (!incoming_migrations_pending) {
-                            LOGINFO("no remaining incoming or pending migrations -- deauthorizing all migration clients\n");
-                            // FIXME: Consolidate this sequence and the sequence in handlers_kvm.c into a util function?
-                            char deauthorize_keys[MAX_PATH];
-                            char *euca_base = getenv(EUCALYPTUS_ENV_VAR_NAME);
-                            snprintf(deauthorize_keys, MAX_PATH, EUCALYPTUS_AUTHORIZE_MIGRATION_KEYS " -D -r", euca_base ? euca_base : "", euca_base ? euca_base : "");
-                            LOGDEBUG("migration key-deauthorizer path: '%s'\n", deauthorize_keys);
-                            int sysret = system(deauthorize_keys);
-                            if (sysret) {
-                                LOGWARN("'%s' failed with exit code %d\n", deauthorize_keys, WEXITSTATUS(sysret));
-                            } else {
-                                LOGDEBUG("migration key deauthorization succeeded\n");
-                            }
+                            LOGINFO("no remaining incoming or pending migrations -- deauthorizing all migration client keys\n");
+                            authorize_migration_keys("-D -r", NULL, NULL, NULL, FALSE);
                         }
                     } else {
                         // Verify that our count of incoming_migrations_in_progress matches our version of reality.

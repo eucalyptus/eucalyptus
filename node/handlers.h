@@ -328,6 +328,7 @@ int is_migration_dst(const ncInstance * instance);
 int is_migration_src(const ncInstance * instance);
 int migration_rollback(ncInstance * instance);
 void get_service_url(const char *service_type, struct nc_state_t *nc, char *dest_buffer);
+int authorize_migration_keys(char *options, char *host, char *credentials, ncInstance *instance, boolean lock_hyp_sem);
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |
