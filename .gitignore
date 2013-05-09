@@ -102,3 +102,4 @@ util/euca-generate-fault
 .groovy/
 *.[ei]ml
 atlassian-ide-plugin.xml
+\#*#

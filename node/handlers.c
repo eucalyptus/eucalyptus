@@ -188,8 +188,6 @@ const char *euca_client_component_name = "cc";  //!< Name of this component's cl
 
 /* used by lower level handlers */
 
-// FIXME: This semaphore is probably superfluous and should be removed (with hyp_sem used in its place).
-sem *migr_sem = NULL;                  //!< semaphore for serializing migrations
 sem *hyp_sem = NULL;                   //!< semaphore for serializing domain creation
 sem *inst_sem = NULL;                  //!< guarding access to global instance structs
 sem *inst_copy_sem = NULL;             //!< guarding access to global instance structs
@@ -227,6 +225,7 @@ configEntry configKeysNoRestartNC[] = {
 };
 
 int incoming_migrations_in_progress = 0;
+int outgoing_migrations_in_progress = 0;
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |
@@ -892,9 +891,27 @@ static void refresh_instance_info(struct nc_state_t *nc, ncInstance * instance)
                 LOGINFO("[%s] detected disappearance of createImage domain\n", instance->instanceId);
                 change_state(instance, CREATEIMAGE_SHUTOFF);
             } else if (old_state == RUNNING || old_state == BLOCKED || old_state == PAUSED || old_state == SHUTDOWN) {
-                // if we just finished migration, then this is normal
+                // If we just finished migration, then this is normal.
+                //
+                // FIXME: This could be a bad assumption if the
+                // virDomainLookupByName() call above returns NULL for
+                // some transient reason rather than because hypervisor
+                // doesn't know of the domain any more.
                 if (is_migration_src(instance)) {
-                    LOGINFO("[%s] migration completed, cleaning up\n", instance->instanceId);
+                    if (instance->migration_state == MIGRATION_IN_PROGRESS) {
+                        // This usually occurs when there has been some
+                        // glitch in the migration: an i/o error or
+                        // reset connction.  When that happens, we do
+                        // *not* want to shut off the instance!
+                        //
+                        // It can also happen absent an anomaly, such as
+                        // when refresh_instance_info() is called right
+                        // as the migration is completing (there's a race).
+                        LOGDEBUG("[%s] possible migration anomaly, not yet assuming completion\n", instance->instanceId);
+                        unlock_hypervisor_conn();
+                        return;
+                    }
+                    LOGINFO("[%s] migration completed (state='%s'), cleaning up\n", instance->instanceId, migration_state_names[instance->migration_state]);
                     change_state(instance, SHUTOFF);
                     unlock_hypervisor_conn();
                     return;
@@ -931,7 +948,7 @@ static void refresh_instance_info(struct nc_state_t *nc, ncInstance * instance)
             // migration-related logic
             if (is_migration_dst(instance)) {
                 if (old_state == BOOTING && new_state == PAUSED) {
-                    ++incoming_migrations_in_progress;
+                    incoming_migrations_in_progress++;
                     LOGINFO("[%s] incoming (%s < %s) migration in progress (1 of %d)\n", instance->instanceId, instance->migration_dst, instance->migration_src,
                             incoming_migrations_in_progress);
                     instance->migration_state = MIGRATION_IN_PROGRESS;
@@ -948,21 +965,54 @@ static void refresh_instance_info(struct nc_state_t *nc, ncInstance * instance)
                     instance->migrationTime = 0;
                     save_instance_struct(instance);
                     // copy_intances is called upon return in monitoring_thread().
-                    --incoming_migrations_in_progress;
-                    LOGINFO("[%s] incoming migration complete (%d other migrations currently in progress)\n", instance->instanceId, incoming_migrations_in_progress);
+                    incoming_migrations_in_progress--;
+                    LOGINFO("[%s] incoming migration complete (%d other incoming migration[s] actively in progress)\n", instance->instanceId, incoming_migrations_in_progress);
 
-                    // FIXME: Consolidate this sequence and the sequence in handlers_kvm.c into a util function?
                     if (!incoming_migrations_in_progress) {
-                        LOGINFO("no remaining incoming migrations -- deauthorizing all migration clients\n");
-                        char deauthorize_keys[MAX_PATH];
-                        char *euca_base = getenv(EUCALYPTUS_ENV_VAR_NAME);
-                        snprintf(deauthorize_keys, MAX_PATH, EUCALYPTUS_AUTHORIZE_MIGRATION_KEYS " -D -r", euca_base ? euca_base : "", euca_base ? euca_base : "");
-                        LOGDEBUG("migration key-deauthorizer path: '%s'\n", deauthorize_keys);
-                        int sysret = system(deauthorize_keys);
-                        if (sysret) {
-                            LOGWARN("'%s' failed with exit code %d\n", deauthorize_keys, WEXITSTATUS(sysret));
-                        } else {
-                            LOGDEBUG("migration key deauthorization succeeded\n");
+                        int incoming_migrations_pending = 0;
+                        int incoming_migrations_counted = 0;
+                        LOGINFO("no remaining active incoming migrations -- checking to see if there are any pending migrations\n");
+                        bunchOfInstances *head = NULL;
+                        for (head = global_instances; head; head = head->next) {
+                            if ((head->instance->migration_state == MIGRATION_PREPARING) || (head->instance->migration_state == MIGRATION_READY)) {
+                                LOGINFO("[%s] is pending migration, state=%s, deferring deauthorization of migration keys\n", head->instance->instanceId,
+                                        migration_state_names[head->instance->migration_state]);
+                                incoming_migrations_pending++;
+                            }
+                            if ((head->instance->migration_state == MIGRATION_IN_PROGRESS) && !strcmp(nc_state.ip, head->instance->migration_dst)) {
+                                incoming_migrations_counted++;
+                            }
+                        }
+                        if (incoming_migrations_counted != incoming_migrations_in_progress) {
+                            LOGWARN("Possible internal bug detected: incoming_migrations_in_progress=%d, but %d incoming migrations counted\n", incoming_migrations_in_progress,
+                                    incoming_migrations_counted);
+                        }
+                        if (!incoming_migrations_pending) {
+                            LOGINFO("no remaining incoming or pending migrations -- deauthorizing all migration clients\n");
+                            // FIXME: Consolidate this sequence and the sequence in handlers_kvm.c into a util function?
+                            char deauthorize_keys[MAX_PATH];
+                            char *euca_base = getenv(EUCALYPTUS_ENV_VAR_NAME);
+                            snprintf(deauthorize_keys, MAX_PATH, EUCALYPTUS_AUTHORIZE_MIGRATION_KEYS " -D -r", euca_base ? euca_base : "", euca_base ? euca_base : "");
+                            LOGDEBUG("migration key-deauthorizer path: '%s'\n", deauthorize_keys);
+                            int sysret = system(deauthorize_keys);
+                            if (sysret) {
+                                LOGWARN("'%s' failed with exit code %d\n", deauthorize_keys, WEXITSTATUS(sysret));
+                            } else {
+                                LOGDEBUG("migration key deauthorization succeeded\n");
+                            }
+                        }
+                    } else {
+                        // Verify that our count of incoming_migrations_in_progress matches our version of reality.
+                        bunchOfInstances *head = NULL;
+                        int incoming_migrations_counted = 0;
+                        for (head = global_instances; head; head = head->next) {
+                            if ((head->instance->migration_state == MIGRATION_IN_PROGRESS) && !strcmp(nc_state.ip, head->instance->migration_dst)) {
+                                incoming_migrations_counted++;
+                            }
+                        }
+                        if (incoming_migrations_counted != incoming_migrations_in_progress) {
+                            LOGWARN("Possible internal bug detected: incoming_migrations_in_progress=%d, but %d incoming migrations counted\n", incoming_migrations_in_progress,
+                                    incoming_migrations_counted);
                         }
                     }
                 } else if (new_state == SHUTOFF || new_state == SHUTDOWN) {
@@ -1143,10 +1193,19 @@ void *monitoring_thread(void *arg)
             refresh_instance_info(nc, instance);
 
             // time out logic for migration-ready instances
-            if (!strcmp(instance->stateName, "Extant") && (instance->migration_state == MIGRATION_READY) && ((now - instance->migrationTime) > nc_state.migration_ready_threshold)) {
+            if (!strcmp(instance->stateName, "Extant") && ((instance->migration_state == MIGRATION_READY) || (instance->migration_state == MIGRATION_PREPARING))
+                && ((now - instance->migrationTime) > nc_state.migration_ready_threshold)) {
                 if (instance->migrationTime) {
-                    LOGWARN("[%s] has been in migration-ready state on %s for %d seconds (threshold is %d), rolling back [%d].\n",
-                            instance->instanceId, instance->migration_src, (int)(now - instance->migrationTime), nc_state.migration_ready_threshold, instance->migrationTime);
+                    if (outgoing_migrations_in_progress) {
+                        LOGINFO("[%s] has been in migration state '%s' on source for %d seconds (threshold is %d), but not rolling back due to %d ongoing outgoing migration[s]\n",
+                                instance->instanceId, migration_state_names[instance->migration_state], (int)(now - instance->migrationTime), nc_state.migration_ready_threshold,
+                                outgoing_migrations_in_progress);
+                        continue;
+                    }
+
+                    LOGWARN("[%s] has been in migration state '%s' on source for %d seconds (threshold is %d), rolling back [%d].\n",
+                            instance->instanceId, migration_state_names[instance->migration_state], (int)(now - instance->migrationTime), nc_state.migration_ready_threshold,
+                            instance->migrationTime);
                     migration_rollback(instance);
                     continue;
                 } else {
@@ -1205,10 +1264,16 @@ void *monitoring_thread(void *arg)
                 && (now - instance->createImageTime) < nc_state.createImage_cleanup_threshold)
                 continue;
 
-            // terminate a booting instance as a special case
+            // terminate a booting instance as a special case, though not if it's an incoming migration
             if (instance->state == BOOTING) {
-                LOGDEBUG("[%s] finding and terminating BOOTING instance (%d)\n", instance->instanceId,
-                         find_and_terminate_instance(nc, NULL, instance->instanceId, 1, &tmpInstance));
+                if ((instance->migration_state == MIGRATION_PREPARING) || (instance->migration_state == MIGRATION_READY)) {
+                    LOGDEBUG("[%s] instance has exceeded BOOTING cleanup threshold of %d seconds, but has migration_state=%s, so not terminating\n", instance->instanceId,
+                             nc_state.booting_cleanup_threshold, migration_state_names[instance->migration_state]);
+                    continue;
+                } else {
+                    LOGDEBUG("[%s] finding and terminating BOOTING instance, which has exceeded cleanup threshold of %d seconds (%d)\n", instance->instanceId,
+                             nc_state.booting_cleanup_threshold, find_and_terminate_instance(nc, NULL, instance->instanceId, 1, &tmpInstance));
+                }
             }
 
             if (cleaned_up < nc_state.concurrent_cleanup_ops) {
@@ -3249,8 +3314,11 @@ int migration_rollback(ncInstance * instance)
     if (is_migration_src(instance)) {
         LOGINFO("[%s] starting migration rollback of instance on source %s\n", instance->instanceId, instance->migration_src);
         instance->migration_state = NOT_MIGRATING;
-        bzero(instance->migration_src, HOSTNAME_SIZE);
-        bzero(instance->migration_dst, HOSTNAME_SIZE);
+        // Not zeroing out the src & dst for debugging purposes:
+        // There's a problem with refresh_instances_info() not finding domains
+        // and eventually shutting them down.
+        //bzero(instance->migration_src, HOSTNAME_SIZE);
+        //bzero(instance->migration_dst, HOSTNAME_SIZE);
         bzero(instance->migration_credentials, CREDENTIAL_SIZE);
         instance->migrationTime = 0;
         save_instance_struct(instance);
