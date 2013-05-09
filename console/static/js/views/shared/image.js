@@ -19,6 +19,14 @@ define([
                 view: this,
                 blockmaps: self.options.blockMaps,
 
+                formatName: function(image){
+                  return DefaultEncoder().encodeForHTML(this.image.get('name'));
+                },
+ 
+                formatDescription: function(image){
+                  return DefaultEncoder().encodeForHTML(this.image.get('description'));
+                },
+
                 isOdd: function() {
                     var selected = this.isSelected(arguments);
                     return ((this.view.count++ % 2) ? 'even' : 'odd') + selected;
