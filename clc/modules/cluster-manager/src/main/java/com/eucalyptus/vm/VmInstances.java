@@ -539,9 +539,15 @@ public class VmInstances {
   private static void unassignAddress( final VmInstance vm,
                                        final Address address,
                                        final boolean rollbackNetworkingOnFailure ) {
+    boolean wasPending = address.isPending();
+    if ( wasPending ) try {
+      address.clearPending( );
+    } catch ( IllegalStateException e ) {
+      wasPending = false;
+    }
     RemoteCallback<?,?> callback = address.unassign().getCallback();
     Callback.Failure failureHander;
-    if ( rollbackNetworkingOnFailure ) {
+    if ( rollbackNetworkingOnFailure && !wasPending ) {
       callback = DelegatingRemoteCallback.suppressException( callback );
       failureHander = new Callback.Failure<java.lang.Object>() {
         @Override
