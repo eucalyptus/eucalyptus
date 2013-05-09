@@ -311,10 +311,9 @@ void get_service_url(const char *service_type, struct nc_state_t *nc, char *dest
     for (i = 0; i < 16; i++) {
         if (!strcmp(service_type, nc->services[i].type)) {
             //Winner!
-            for (j = 0; j < nc->services[i].urisLen; j++) {
-                euca_strncpy(dest_buffer, nc->services[i].uris[j], 512);
+            if(nc->services[i].urisLen > 0) {
+                euca_strncpy(dest_buffer, nc->services[i].uris[0], 512);
                 found = 1;
-                break;
             }
         }
     }
@@ -400,7 +399,7 @@ static void updateServiceStateInfo(ncMetadata * pMeta)
 {
     int i = 0;
     char scURL[512];
-    if (pMeta != NULL && pMeta->services != NULL) {
+    if ((pMeta != NULL) && (pMeta->servicesLen > 0)) {
         LOGTRACE("Updating NC's topology/service state info: pMeta: userId=%s correlationId=%s\n", pMeta->userId, pMeta->correlationId);
 
         // store information from CLC that needs to be kept up-to-date in the NC
