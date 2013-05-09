@@ -285,8 +285,10 @@ define([
         parse: function(response) {
             var response = EucaModel.prototype.parse.call(this, response);
             response.state = response.state;
-            if (typeof response.state == undefined) {
+            response.status = response.state;
+            if (response.state == undefined) {
               response.state = response._state.name;
+              response.status = response._state.name;
             }
             return response;
         }
