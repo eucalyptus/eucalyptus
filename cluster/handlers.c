@@ -7073,7 +7073,7 @@ int allocate_ccInstance(ccInstance * out, char *id, char *amiId, char *kernelId,
 
         if (state)
             euca_strncpy(out->state, state, 16);
-        if (state)
+        if (ccState)
             euca_strncpy(out->ccState, ccState, 16);
         if (ownerId)
             euca_strncpy(out->ownerId, ownerId, 48);
