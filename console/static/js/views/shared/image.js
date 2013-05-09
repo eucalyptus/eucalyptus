@@ -66,6 +66,8 @@ define([
                   }
                   if(map !== undefined) {
                     self.options.blockMaps.reset(new BlockMap(map));
+                  } else {
+                    self.options.blockMaps.reset();
                   }
                 },
 
