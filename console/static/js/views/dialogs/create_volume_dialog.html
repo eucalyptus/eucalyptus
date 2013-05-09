@@ -2,6 +2,8 @@
     <div class="title" data-msg="volume_dialog_add_title"></div>
     <div class="body">
     <div id="volumes-add-dialog-wrapper">
+          <div id="volumes-add-dialog" class="euca-dialog">
+            <div class="dialog-inner-content">
       <div data-ui-tabs="">
         <ul>
           <li><a href="#tabs-1">General</a></li>
@@ -9,8 +11,6 @@
         </ul>
         <div id="tabs-1" class="tab">
 
-          <div id="volumes-add-dialog" class="euca-dialog">
-            <div class="dialog-inner-content">
               <p data-msg="volume_dialog_add_text"></p>
               <div class="form-row">
                 <label for="volume-name" data-msg="volume_dialog_name_label"></label>
@@ -34,10 +34,9 @@
                 <span data-text="error.availablity_zone"></span>
               </div>
               <p class="required-hint" data-msg="required_fields"></p>
-            </div>
-          </div>
 
         </div>
+
         <div id="tabs-2" class="tab">
 
           <div class="rules content-section">
@@ -45,7 +44,8 @@
           </div>
 
         </div>
-      </div>
+
+    </div>
 
       <div data-text="status" style="height:20px"></div>
       <div class="ui-dialog-buttonpane ui-widget-content ui-helper-clearfix">
@@ -54,6 +54,9 @@
           <span data-ui-button=":cancelButton" data-msg="dialog_cancel_btn"></span> 
         </div>
       </div>
+
+            </div>
+          </div>
 
     </div>
 </div>
