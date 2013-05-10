@@ -300,14 +300,14 @@ static void printMsgServiceStateInfo(ncMetadata * pMeta);
 //! @return EUCA_OK, EUCA_INVALID_ERROR, or EUCA_SYSTEM_ERROR
 //!
 
-int authorize_migration_keys(char *options, char *host, char *credentials, ncInstance *instance, boolean lock_hyp_sem)
+int authorize_migration_keys(char *options, char *host, char *credentials, ncInstance * instance, boolean lock_hyp_sem)
 {
     char authorize_keys[MAX_PATH];
     char *euca_base = getenv(EUCALYPTUS_ENV_VAR_NAME);
     char *instanceId = instance ? instance->instanceId : "UNSET";
 
     if (!options && !host && !credentials) {
-        LOGERROR ("[%s] called with invalid arguments: options=%s, host=%s, creds=%s\n", SP(instanceId), SP(options), SP(host), SP(credentials));
+        LOGERROR("[%s] called with invalid arguments: options=%s, host=%s, creds=%s\n", SP(instanceId), SP(options), SP(host), SP(credentials));
         return EUCA_INVALID_ERROR;
     }
 
@@ -351,7 +351,7 @@ void get_service_url(const char *service_type, struct nc_state_t *nc, char *dest
     for (i = 0; i < 16; i++) {
         if (!strcmp(service_type, nc->services[i].type)) {
             //Winner!
-            if(nc->services[i].urisLen > 0) {
+            if (nc->services[i].urisLen > 0) {
                 euca_strncpy(dest_buffer, nc->services[i].uris[0], 512);
                 found = 1;
             }
@@ -544,12 +544,12 @@ int convert_dev_names(const char *localDev, char *localDevReal, char *localDevTa
 {
     bzero(localDevReal, 32);
     if (strchr(localDev, '/') != NULL) {
-    	if(strncmp(localDev, "unknown,requested:", sizeof("unknown,requested:") - 1) == 0) {
-    		//localDev starts with 'unknown,requested:', this occurs in migration cases. Extract the actual /dev/* value.
-    		sscanf(localDev, "unknown,requested:/dev/%s", localDevReal);
-    	} else {
-    		sscanf(localDev, "/dev/%s", localDevReal);
-    	}
+        if (strncmp(localDev, "unknown,requested:", sizeof("unknown,requested:") - 1) == 0) {
+            //localDev starts with 'unknown,requested:', this occurs in migration cases. Extract the actual /dev/* value.
+            sscanf(localDev, "unknown,requested:/dev/%s", localDevReal);
+        } else {
+            sscanf(localDev, "/dev/%s", localDevReal);
+        }
     } else {
         snprintf(localDevReal, 32, "%s", localDev);
     }
@@ -560,14 +560,14 @@ int convert_dev_names(const char *localDev, char *localDevReal, char *localDevTa
     }
 
     if (localDevTag) {
-    	//If localDev already has the unknown,requested...just copy it
-    	if(strncmp(localDev, "unknown,requested:", sizeof("unknown,requested:") - 1) == 0) {
-    		bzero(localDevTag, 256);
-    		snprintf(localDevTag, 256, "%s", localDev);
-    	} else {
-    		bzero(localDevTag, 256);
-    		snprintf(localDevTag, 256, "unknown,requested:%s", localDev);
-    	}
+        //If localDev already has the unknown,requested...just copy it
+        if (strncmp(localDev, "unknown,requested:", sizeof("unknown,requested:") - 1) == 0) {
+            bzero(localDevTag, 256);
+            snprintf(localDevTag, 256, "%s", localDev);
+        } else {
+            bzero(localDevTag, 256);
+            snprintf(localDevTag, 256, "unknown,requested:%s", localDev);
+        }
     }
 
     return EUCA_OK;
@@ -1032,7 +1032,8 @@ static void refresh_instance_info(struct nc_state_t *nc, ncInstance * instance)
                             }
                             // Belt and suspenders...
                             if ((head->instance->migration_state == MIGRATION_IN_PROGRESS) && !strcmp(nc_state.ip, head->instance->migration_dst)) {
-                                LOGWARN("[%s] Possible internal bug detected: instance migration_state='%s', but incoming_migrations_in_progress=%d\n", head->instance->instanceId, migration_state_names[head->instance->migration_state], incoming_migrations_in_progress);
+                                LOGWARN("[%s] Possible internal bug detected: instance migration_state='%s', but incoming_migrations_in_progress=%d\n", head->instance->instanceId,
+                                        migration_state_names[head->instance->migration_state], incoming_migrations_in_progress);
                                 incoming_migrations_counted++;
                             }
                         }

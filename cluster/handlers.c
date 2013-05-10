@@ -4604,7 +4604,6 @@ int doMigrateInstances(ncMetadata * pMeta, char *actionNode, char *instanceId, c
                              resourceCacheLocal.resources[dst_index].hostname);
                     exit(1);
                 }
-
                 //Populate service metadata in request. Needed for ebs-volume attachment
                 populateOutboundMeta(pMeta);
 

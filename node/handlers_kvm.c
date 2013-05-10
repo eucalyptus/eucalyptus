@@ -826,10 +826,10 @@ static int doMigrateInstances(struct nc_state_t *nc, ncMetadata * pMeta, ncInsta
              * (This is intended for development/testing only!)
              */
             /*
-            LOGERROR("[%s] FORCING FAILURE!\n", instance->instanceId);
-            sleep(10);
-            goto failed_dest;
-            */
+               LOGERROR("[%s] FORCING FAILURE!\n", instance->instanceId);
+               sleep(10);
+               goto failed_dest;
+             */
 
             // Then, generate keys and restart libvirtd.
             if (generate_migration_keys(instance->migration_dst, instance->migration_credentials, TRUE, instance) != EUCA_OK) {
@@ -1007,7 +1007,8 @@ failed_dest:
                 bunchOfInstances *head = NULL;
                 for (head = global_instances; head; head = head->next) {
                     if ((head->instance->migration_state == MIGRATION_PREPARING) || (head->instance->migration_state == MIGRATION_READY)) {
-                        LOGINFO("[%s] is pending migration, state='%s', deferring deauthorization of migration keys\n", head->instance->instanceId, migration_state_names[head->instance->migration_state]);
+                        LOGINFO("[%s] is pending migration, state='%s', deferring deauthorization of migration keys\n", head->instance->instanceId,
+                                migration_state_names[head->instance->migration_state]);
                         incoming_migrations_pending++;
                     }
                 }
