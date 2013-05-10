@@ -83,6 +83,8 @@ import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
 import org.hibernate.annotations.Parent;
 import org.hibernate.annotations.Type;
+import com.eucalyptus.auth.Accounts;
+import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.cluster.Cluster;
 import com.eucalyptus.cluster.Clusters;
 import com.eucalyptus.component.ServiceConfiguration;
@@ -379,6 +381,11 @@ public class VmRuntimeState {
       {
         this.getTagSet( ).add( new ResourceTag( VM_NC_HOST_TAG, host ) );
         this.getResourcesSet( ).add( vm.getInstanceId( ) );
+        try {
+          this.setEffectiveUserId( Accounts.lookupAccountByName( "eucalyptus" ).lookupAdmin( ).getUserId( ) );
+        } catch ( AuthException ex ) {
+          LOG.error( ex );
+        }
       }
     };
     try {

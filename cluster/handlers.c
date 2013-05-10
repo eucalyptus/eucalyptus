@@ -586,6 +586,7 @@ int ncClientCall(ncMetadata * pMeta, int timeout, int ncLock, char *ncURL, char 
         ncStub *ncs;
         ncMetadata *localmeta = NULL;
 
+        LOGTRACE("forked to service NC invocation: %s\n", ncOp);
         localmeta = EUCA_ZALLOC(1, sizeof(ncMetadata));
         if (!localmeta) {
             LOGFATAL("out of memory! ncOps=%s\n", ncOp);
@@ -775,7 +776,9 @@ int ncClientCall(ncMetadata * pMeta, int timeout, int ncLock, char *ncURL, char 
             ncResource **outRes = va_arg(al, ncResource **);
             char **errMsg = va_arg(al, char **);
 
+            LOGTRACE("\tcalling ncDescribeResourceStub with resourceType=%s outRes=%lx errMsg=%lx\n", resourceType, (unsigned long)outRes, (unsigned long)errMsg);
             rc = ncDescribeResourceStub(ncs, localmeta, resourceType, outRes);
+            LOGTRACE("\tcalled  ncDescribeResourceStub, rc = %d, timeout = %d\n", rc, timeout);
             if (timeout && outRes) {
                 if (!rc && *outRes) {
                     len = sizeof(ncResource);
@@ -785,6 +788,7 @@ int ncClientCall(ncMetadata * pMeta, int timeout, int ncLock, char *ncURL, char 
                     rc = 0;
                 } else {
                     (*errMsg) = (char *)axutil_error_get_message(ncs->env->error);
+                    LOGTRACE("\terrMsg = %s\n", *errMsg);
                     if (*errMsg && (len = strnlen(*errMsg, 1024 - 1))) {
                         len += 1;
                         rc = write(filedes[1], &rc, sizeof(int));   //NOTE: we write back rc as well
@@ -1197,7 +1201,13 @@ int ncClientCall(ncMetadata * pMeta, int timeout, int ncLock, char *ncURL, char 
             if (WIFEXITED(status)) {
                 rc = WEXITSTATUS(status);
             } else {
-                LOGERROR("BUG: child process for making '%s' request did not exit cleanly\n", ncOp);
+                int sig = -1;
+                int dump = 0;
+                if (WIFSIGNALED(status)) {
+                    sig = WTERMSIG(status);
+                    dump = WCOREDUMP(status);
+                }
+                LOGERROR("BUG: child process for making '%s' request did not exit cleanly (sig=%d core dumped=%d)\n", ncOp, sig, dump);
                 rc = 1;
             }
         } else {
@@ -4550,6 +4560,10 @@ int doMigrateInstances(ncMetadata * pMeta, char *actionNode, char *instanceId, c
         timeout = ncGetTimeout(time(NULL), OP_TIMEOUT, 1, 0);
         LOGDEBUG("about to ncClientCall source node '%s' with nc_instances (%s %d) [creds='%s'] %s\n",
                  SP(resourceCacheLocal.resources[src_index].hostname), nodeAction, found_instances, credentials, SP(found_instances == 1 ? nc_instances[0]->instanceId : ""));
+
+        //Populate service metadata in request. Needed for ebs-volume attachment
+        populateOutboundMeta(pMeta);
+
         rc = ncClientCall(pMeta, timeout, resourceCacheLocal.resources[src_index].lockidx, resourceCacheLocal.resources[src_index].ncURL, "ncMigrateInstances",
                           nc_instances, found_instances, nodeAction, credentials);
         if (rc) {
@@ -4600,6 +4614,8 @@ int doMigrateInstances(ncMetadata * pMeta, char *actionNode, char *instanceId, c
                              resourceCacheLocal.resources[dst_index].hostname);
                     exit(1);
                 }
+                //Populate service metadata in request. Needed for ebs-volume attachment
+                populateOutboundMeta(pMeta);
 
                 rc = ncClientCall(pMeta, timeout, resourceCacheLocal.resources[dst_index].lockidx, resourceCacheLocal.resources[dst_index].ncURL, "ncMigrateInstances",
                                   &(nc_instances[idx]), 1, nodeAction, credentials);
@@ -4622,6 +4638,10 @@ int doMigrateInstances(ncMetadata * pMeta, char *actionNode, char *instanceId, c
         timeout = ncGetTimeout(time(NULL), OP_TIMEOUT, 1, 0);
         LOGDEBUG("about to ncClientCall source node '%s' with nc_instances (%s %d) %s\n",
                  SP(resourceCacheLocal.resources[src_index].hostname), nodeAction, found_instances, SP(found_instances == 1 ? nc_instances[0]->instanceId : ""));
+
+        //Populate service metadata in request. Needed for ebs-volume attachment
+        populateOutboundMeta(pMeta);
+
         // No need to send credentials with commit call: they were already passed to source and destination during prepare call.
         rc = ncClientCall(pMeta, timeout, resourceCacheLocal.resources[src_index].lockidx, resourceCacheLocal.resources[src_index].ncURL, "ncMigrateInstances",
                           nc_instances, found_instances, nodeAction, NULL);
@@ -4655,6 +4675,9 @@ int doMigrateInstances(ncMetadata * pMeta, char *actionNode, char *instanceId, c
         LOGDEBUG("about to ncClientCall node %s (> %s) with nc_instances (%s %d) %s using URL %s\n",
                  SP(resourceCacheLocal.resources[dst_index].hostname), SP(found_instances == 1 ? nc_instances[0]->migration_dst : ""), nodeAction, found_instances,
                  SP(found_instances == 1 ? nc_instances[0]->instanceId : ""), resourceCacheLocal.resources[dst_index].ncURL);
+
+        //Populate service metadata in request. Needed for ebs-volume attachment
+        populateOutboundMeta(pMeta);
 
         rc = ncClientCall(pMeta, timeout, resourceCacheLocal.resources[dst_index].lockidx, resourceCacheLocal.resources[dst_index].ncURL, "ncMigrateInstances",
                           nc_instances, found_instances, nodeAction, NULL);
@@ -4793,10 +4816,10 @@ static int populateOutboundMeta(ncMetadata * pMeta)
         }
 
     } else {
-        return 1;
+        return EUCA_ERROR;
     }
 
-    return 0;
+    return EUCA_OK;
 }
 
 //!
@@ -5190,7 +5213,7 @@ int doBrokerPairing(void)
 
         if (strlen(config->notreadyServices[i].type)) {
             if (!strcmp(config->notreadyServices[i].type, "vmwarebroker")) {
-                for (j = 0; j < 8; j++) {
+                for (j = 0; j < MAX_SERVICE_URIS; j++) {
                     if (strlen(config->notreadyServices[i].uris[j])) {
                         LOGDEBUG("found broker - %s\n", config->notreadyServices[i].uris[j]);
 
@@ -6329,7 +6352,7 @@ int init_config(void)
     snprintf(config->ccStatus.serviceId.name, 32, "self");
     snprintf(config->ccStatus.serviceId.partition, 32, "unset");
     config->ccStatus.serviceId.urisLen = 0;
-    for (i = 0; i < 32 && config->ccStatus.serviceId.urisLen < 8; i++) {
+    for (i = 0; i < 32 && config->ccStatus.serviceId.urisLen < MAX_SERVICE_URIS; i++) {
         if (vnetconfig->localIps[i]) {
             char *host;
             host = hex2dot(vnetconfig->localIps[i]);

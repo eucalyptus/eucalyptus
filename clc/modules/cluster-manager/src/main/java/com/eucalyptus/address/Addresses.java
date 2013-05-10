@@ -84,6 +84,7 @@ import com.eucalyptus.event.EventListener;
 import com.eucalyptus.event.ListenerRegistry;
 import com.eucalyptus.event.Listeners;
 import com.eucalyptus.event.SystemConfigurationEvent;
+import com.eucalyptus.records.Logs;
 import com.eucalyptus.reporting.event.ResourceAvailabilityEvent;
 import com.eucalyptus.tags.FilterSupport;
 import com.eucalyptus.util.Classes;
@@ -98,7 +99,6 @@ import com.eucalyptus.vm.VmInstance;
 import com.eucalyptus.vm.VmInstance.VmState;
 import com.eucalyptus.vm.VmInstance.VmStateSet;
 import com.eucalyptus.vm.VmInstances;
-import com.eucalyptus.vm.VmInstances.TerminatedInstanceException;
 import com.google.common.base.Function;
 import com.google.common.base.Functions;
 import com.google.common.base.Predicate;
@@ -240,6 +240,7 @@ public class Addresses extends AbstractNamedRegistry<Address> implements EventLi
     try {
       final String instanceId = addr.getInstanceId( );
       if ( addr.isReallyAssigned() ) {
+        boolean unassign = false;
         try {
           final VmInstance vm = VmInstances.lookup( instanceId );
           if ( VmStateSet.RUN.apply( vm ) ) {
@@ -260,9 +261,16 @@ public class Addresses extends AbstractNamedRegistry<Address> implements EventLi
                   }
               } ), 
               vm.getPartition( ) );
+          } else {
+            unassign = true;
           }
-        } catch ( TerminatedInstanceException ex ) {
-        } catch ( NoSuchElementException ex ) {
+        } catch ( NoSuchElementException e ) {
+          Logs.extreme().debug( e, e );
+          unassign = true;
+        }
+        if ( unassign ) {
+          addr.unassign( ).clearPending( );
+          addr.release( );
         }
       } else {
         addr.release( );
