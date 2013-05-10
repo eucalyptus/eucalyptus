@@ -506,7 +506,7 @@ public class VmInstances {
           }
         } catch ( final NoSuchElementException e ) {
           //PENDING->SHUTTINGDOWN might happen before address info reported in describe instances by CC, need to try finding address
-          if ( VmState.PENDING.equals( vmLastState ) ) {
+          if ( VmState.PENDING.equals( vmLastState ) || VmState.TERMINATED.equals( vmState ) ) {
             for ( Address addr : Addresses.getInstance( ).listValues( ) ) {
               if ( addr.getInstanceId( ).equals( vm.getInstanceId( ) ) ) {
                 unassignAddress( vm, addr, rollbackNetworkingOnFailure );
@@ -547,7 +547,7 @@ public class VmInstances {
     }
     RemoteCallback<?,?> callback = address.unassign().getCallback();
     Callback.Failure failureHander;
-    if ( rollbackNetworkingOnFailure && !wasPending ) {
+    if ( rollbackNetworkingOnFailure && !wasPending && !VmState.TERMINATED.apply( vm ) ) {
       callback = DelegatingRemoteCallback.suppressException( callback );
       failureHander = new Callback.Failure<java.lang.Object>() {
         @Override
