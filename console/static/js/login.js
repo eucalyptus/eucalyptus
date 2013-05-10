@@ -114,14 +114,14 @@
                                     else
                                       popOutPageHelp(help.url);
                                   }
-                                  $login.parent().find('.help-revert-button a').trigger('click');
+                                  $login.parent().find('.help-return a').trigger('click');
                                 })
                               )
                             );
                           }else{
                             $login.help_flipped = false;
-                            $login.parent().find('.help-popout').remove();
-                            $login.parent().find('.help-return').removeClass().addClass('help-link');
+                            $login.find('.help-popout').remove();
+                            $login.find('.help-return').removeClass().addClass('help-link');
                           }
                           
                         }
