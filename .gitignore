@@ -41,6 +41,7 @@ clc/modules/storage-san-common
 clc/modules/storage-san-emc-libs
 clc/modules/storage-san-emc
 clc/modules/storage-san-equallogic
+clc/modules/storage-san-equallogic-libs
 clc/modules/storage-san-netapp
 clc/modules/storage-san-netapp-libs
 clc/modules/vmware-broker

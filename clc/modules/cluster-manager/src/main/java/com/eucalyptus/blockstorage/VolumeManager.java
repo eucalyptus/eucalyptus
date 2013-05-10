@@ -131,8 +131,6 @@ import edu.ucsb.eucalyptus.msgs.DescribeVolumesType;
 import edu.ucsb.eucalyptus.msgs.DetachStorageVolumeType;
 import edu.ucsb.eucalyptus.msgs.DetachVolumeResponseType;
 import edu.ucsb.eucalyptus.msgs.DetachVolumeType;
-import edu.ucsb.eucalyptus.msgs.ExportVolumeResponseType;
-import edu.ucsb.eucalyptus.msgs.ExportVolumeType;
 import edu.ucsb.eucalyptus.msgs.GetVolumeTokenResponseType;
 import edu.ucsb.eucalyptus.msgs.GetVolumeTokenType;
 import edu.ucsb.eucalyptus.msgs.ResourceTag;
@@ -419,9 +417,8 @@ public class VolumeManager {
       throw new EucalyptusCloudException( e.getMessage( ), e );
     }
     
-    //TODO: zhill, this is a messaging change. The SC should not know the format, so the CLC must construct the special format
-    String token = StorageProperties.TOKEN_PREFIX + scGetTokenResponse.getVolumeId() + "," + scGetTokenResponse.getToken();
-    
+    //The SC should not know the format, so the CLC must construct the special format
+    String token = StorageProperties.formatVolumeAttachmentTokenForTransfer(scGetTokenResponse.getToken(), volume.getDisplayName());    
     request.setRemoteDevice(token);
     
     AttachedVolume attachVol = new AttachedVolume( volume.getDisplayName( ), vm.getInstanceId( ), request.getDevice( ), request.getRemoteDevice( ) );

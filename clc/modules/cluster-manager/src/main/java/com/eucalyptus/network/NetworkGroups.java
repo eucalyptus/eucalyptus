@@ -612,20 +612,30 @@ public class NetworkGroups {
    * @param permissions - The permissions to update
    * @throws MetadataException If an error occurs
    */
-  public static void resolvePermissions( final Iterable<IpPermissionType> permissions ) throws MetadataException {
+  public static void resolvePermissions( final Iterable<IpPermissionType> permissions , boolean revoke) throws MetadataException {
     for ( final IpPermissionType ipPermission : permissions ) {
       if ( ipPermission.getGroups() != null ) for ( final UserIdGroupPairType groupInfo : ipPermission.getGroups() ) {
         if ( !Strings.isNullOrEmpty( groupInfo.getSourceGroupId() ) ) {
-          final NetworkGroup networkGroup = NetworkGroups.lookupByGroupId( groupInfo.getSourceGroupId() );
-          groupInfo.setSourceUserId( networkGroup.getOwnerAccountNumber() );
-          groupInfo.setSourceGroupName( networkGroup.getDisplayName() );
+        	try{
+	          final NetworkGroup networkGroup = NetworkGroups.lookupByGroupId( groupInfo.getSourceGroupId() );
+	          groupInfo.setSourceUserId( networkGroup.getOwnerAccountNumber() );
+	          groupInfo.setSourceGroupName( networkGroup.getDisplayName() );
+        	}catch(final NoSuchMetadataException ex){
+        		if(!revoke)
+        			throw ex;
+        	}
         } else if ( Strings.isNullOrEmpty( groupInfo.getSourceUserId() ) ||
             Strings.isNullOrEmpty( groupInfo.getSourceGroupName() )) {
           throw new MetadataException( "Group ID or User ID/Group Name required." );
         } else {
-          final NetworkGroup networkGroup =
-              NetworkGroups.lookup( AccountFullName.getInstance( groupInfo.getSourceUserId() ), groupInfo.getSourceGroupName() );
-          groupInfo.setSourceGroupId( networkGroup.getGroupId() );
+        	try{
+	          final NetworkGroup networkGroup =
+	              NetworkGroups.lookup( AccountFullName.getInstance( groupInfo.getSourceUserId() ), groupInfo.getSourceGroupName() );
+	          groupInfo.setSourceGroupId( networkGroup.getGroupId() );
+        	}catch(final NoSuchMetadataException ex){
+        		if(!revoke)
+        			throw ex;
+        	}
         }
       }
     }

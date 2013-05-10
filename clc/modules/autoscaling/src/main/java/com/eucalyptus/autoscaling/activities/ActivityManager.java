@@ -1923,7 +1923,7 @@ public class ActivityManager {
             new Callback<AutoScalingGroup>(){
               @Override
               public void fire( final AutoScalingGroup autoScalingGroup ) {
-                autoScalingGroup.setCapacity(
+                autoScalingGroup.updateCapacity(
                     Math.max( 0, getCurrentCapacity() - TerminateInstancesScalingProcessTaskSupport.this.terminatedCount ) );
               }
             } );
