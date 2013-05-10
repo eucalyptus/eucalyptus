@@ -106,7 +106,7 @@ public class Strings {
   /**
    * Get a Predicate for matching the start of a String.
    *
-   * @param text The prefix to match
+   * @param text The text to perform a prefix match against
    * @return The predicate
    * @see String#startsWith(String)
    */

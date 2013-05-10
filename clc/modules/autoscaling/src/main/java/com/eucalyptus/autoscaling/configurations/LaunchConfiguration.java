@@ -37,6 +37,7 @@ import org.hibernate.annotations.Entity;
 import org.hibernate.annotations.Type;
 import com.eucalyptus.autoscaling.metadata.AbstractOwnedPersistent;
 import com.eucalyptus.util.OwnerFullName;
+import com.google.common.base.Objects;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 
@@ -319,7 +320,7 @@ public class LaunchConfiguration extends AbstractOwnedPersistent implements Laun
       configuration.setRamdiskId( ramdiskId );
       configuration.setKeyName( keyName );
       configuration.setUserData( userData );
-      configuration.setInstanceMonitoring( instanceMonitoring );
+      configuration.setInstanceMonitoring( Objects.firstNonNull( instanceMonitoring, Boolean.TRUE ) );
       configuration.setIamInstanceProfile( iamInstanceProfile );
       configuration.setSecurityGroups( Lists.newArrayList( securityGroups ) );
       configuration.setBlockDeviceMappings( Lists.newArrayList( blockDeviceMappings ) );

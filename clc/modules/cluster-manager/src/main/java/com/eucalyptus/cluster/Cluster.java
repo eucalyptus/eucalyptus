@@ -278,7 +278,9 @@ public class Cluster implements AvailabilityZoneMetadata, HasFullName<Cluster>, 
       @Override
       public boolean apply( final Cluster input ) {
         try {
-          super.apply( input );
+          if ( Bootstrap.isOperational( ) ) {
+            super.apply( input );
+          }
           ZoneRegistration.DEREGISTER.apply( input );
           return true;
         } catch ( Exception ex ) {

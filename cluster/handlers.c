@@ -2150,7 +2150,8 @@ int refresh_resources(ncMetadata * pMeta, int timeout, int dolock)
                              resourceCacheStage->resources[i].hostname,
                              ncResDst->nodeStatus,
                              ncResDst->memorySizeAvailable, ncResDst->memorySizeMax,
-                             ncResDst->diskSizeAvailable, ncResDst->diskSizeMax, ncResDst->numberOfCoresAvailable, ncResDst->numberOfCoresMax, (ncResDst->migrationCapable == TRUE) ? "TRUE" : "FALSE");
+                             ncResDst->diskSizeAvailable, ncResDst->diskSizeMax, ncResDst->numberOfCoresAvailable, ncResDst->numberOfCoresMax,
+                             (ncResDst->migrationCapable == TRUE) ? "TRUE" : "FALSE");
                     resourceCacheStage->resources[i].maxMemory = ncResDst->memorySizeMax;
                     resourceCacheStage->resources[i].availMemory = ncResDst->memorySizeAvailable;
                     resourceCacheStage->resources[i].maxDisk = ncResDst->diskSizeMax;
@@ -2256,12 +2257,14 @@ static int migration_handler(ccInstance * myInstance, char *host, char *src, cha
 
     if (!strcmp(host, dst)) {
         if ((migration_state == MIGRATION_READY) && !strcmp(myInstance->state, "Extant")) {
-            LOGDEBUG("[%s] destination node %s reports %s(%s), checking source node %s\n", myInstance->instanceId, host, myInstance->state, migration_state_names[myInstance->migration_state], src);
+            LOGDEBUG("[%s] destination node %s reports %s(%s), checking source node %s\n", myInstance->instanceId, host, myInstance->state,
+                     migration_state_names[myInstance->migration_state], src);
             ccInstance *srcInstance = NULL;
             rc = find_instanceCacheId(myInstance->instanceId, &srcInstance);
             if (!rc) {
                 if (srcInstance->migration_state == MIGRATION_READY) {
-                    LOGINFO("[%s] source node %s last reported %s(%s), destination node %s reports %s(%s), preparing to commit migration\n", myInstance->instanceId, src, srcInstance->state, migration_state_names[srcInstance->migration_state], dst, myInstance->state, migration_state_names[myInstance->migration_state]);
+                    LOGINFO("[%s] source node %s last reported %s(%s), destination node %s reports %s(%s), preparing to commit migration\n", myInstance->instanceId, src,
+                            srcInstance->state, migration_state_names[srcInstance->migration_state], dst, myInstance->state, migration_state_names[myInstance->migration_state]);
                     EUCA_FREE(*node);
                     EUCA_FREE(*instance);
                     EUCA_FREE(*action);
@@ -2272,7 +2275,8 @@ static int migration_handler(ccInstance * myInstance, char *host, char *src, cha
                     LOGDEBUG("[%s] source node %s last reported migration to %s in progress\n", myInstance->instanceId, src, dst);
                 } else if (srcInstance->migration_state == NOT_MIGRATING) {
                     LOGINFO("[%s] source node %s last reported %s(%s), destination node %s reports %s(%s), preparing to roll back destination node\n",
-                            myInstance->instanceId, src, srcInstance->state, migration_state_names[srcInstance->migration_state], dst, myInstance->state, migration_state_names[myInstance->migration_state]);
+                            myInstance->instanceId, src, srcInstance->state, migration_state_names[srcInstance->migration_state], dst, myInstance->state,
+                            migration_state_names[myInstance->migration_state]);
                     EUCA_FREE(*node);
                     EUCA_FREE(*instance);
                     EUCA_FREE(*action);
@@ -2288,7 +2292,8 @@ static int migration_handler(ccInstance * myInstance, char *host, char *src, cha
             }
             EUCA_FREE(srcInstance);
         } else if (((migration_state == MIGRATION_CLEANING) || (migration_state == MIGRATION_READY)) && !strcmp(myInstance->state, "Teardown")) {
-            LOGDEBUG("[%s] destination node %s reports %s(%s), checking source node %s\n", myInstance->instanceId, host, myInstance->state, migration_state_names[myInstance->migration_state], src);
+            LOGDEBUG("[%s] destination node %s reports %s(%s), checking source node %s\n", myInstance->instanceId, host, myInstance->state,
+                     migration_state_names[myInstance->migration_state], src);
             ccInstance *srcInstance = NULL;
             rc = find_instanceCacheId(myInstance->instanceId, &srcInstance);
             if (!rc) {
@@ -2304,7 +2309,8 @@ static int migration_handler(ccInstance * myInstance, char *host, char *src, cha
 /*                 if (((srcInstance->migration_state == MIGRATION_PREPARING) || (srcInstance->migration_state == MIGRATION_READY)) && !strcmp(srcInstance->state, "Extant")) { */
                 if ((srcInstance->migration_state == MIGRATION_READY) && !strcmp(srcInstance->state, "Extant")) {
                     LOGINFO("[%s] source node %s last reported %s(%s), destination node %s reports %s(%s), preparing to roll back source node\n",
-                            myInstance->instanceId, src, srcInstance->state, migration_state_names[srcInstance->migration_state], dst, myInstance->state, migration_state_names[myInstance->migration_state]);
+                            myInstance->instanceId, src, srcInstance->state, migration_state_names[srcInstance->migration_state], dst, myInstance->state,
+                            migration_state_names[myInstance->migration_state]);
                     EUCA_FREE(*node);
                     EUCA_FREE(*instance);
                     EUCA_FREE(*action);
@@ -2313,14 +2319,16 @@ static int migration_handler(ccInstance * myInstance, char *host, char *src, cha
                     *action = strdup("rollback");
                 } else {
                     LOGDEBUG("[%s] source node %s last reported %s(%s), destination node %s reports %s(%s), doing nothing\n",
-                        myInstance->instanceId, src, srcInstance->state, migration_state_names[srcInstance->migration_state], dst, myInstance->state, migration_state_names[myInstance->migration_state]);
+                             myInstance->instanceId, src, srcInstance->state, migration_state_names[srcInstance->migration_state], dst, myInstance->state,
+                             migration_state_names[myInstance->migration_state]);
                 }
             } else {
                 LOGDEBUG("[%s] could not find migration source node %s in the instance cache\n", myInstance->instanceId, src);
             }
             EUCA_FREE(srcInstance);
         } else {
-            LOGDEBUG("[%s] ignoring update from destination node %s during migration: %s(%s)\n", myInstance->instanceId, host, myInstance->state, migration_state_names[myInstance->migration_state]);
+            LOGDEBUG("[%s] ignoring update from destination node %s during migration: %s(%s)\n", myInstance->instanceId, host, myInstance->state,
+                     migration_state_names[myInstance->migration_state]);
         }
     } else if (!strcmp(host, src)) {
         LOGDEBUG("[%s] received state %s(%s) from source node %s\n", myInstance->instanceId, myInstance->state, migration_state_names[migration_state], host);
@@ -3120,14 +3128,14 @@ static int schedule_instance_migration(ncInstance * instance, char **includeNode
         LOGINFO("[%s] attempting to schedule migration to specific node: %s\n", instance->instanceId, includeNodes[0]);
         if (!strcmp(instance->migration_src, includeNodes[0])) {
             LOGERROR("[%s] cannot schedule SAME-NODE migration from %s to %s\n", instance->instanceId, instance->migration_src, includeNodes[0]);
-            * replyString = strdup("source and destination cannot be the same");
+            *replyString = strdup("source and destination cannot be the same");
             ret = 1;
             goto out;
         }
         ret = schedule_instance_explicit(&(instance->params), includeNodes[0], outresid, TRUE);
         if (resourceCacheLocal->resources[*outresid].migrationCapable == FALSE) {
             LOGWARN("[%s] cannot schedule migration to node (%s) that is not migration capable\n", instance->instanceId, includeNodes[0]);
-            * replyString = strdup("requested destination is not migration capable");
+            *replyString = strdup("requested destination is not migration capable");
             ret = 1;
             goto out;
         }
@@ -3162,7 +3170,8 @@ static int schedule_instance_migration(ncInstance * instance, char **includeNode
                 LOGDEBUG("[%s] cannot schedule src_index=%d == dst_index=%d (%s > %s), trying again...\n",
                          instance->instanceId, inresid, *outresid, instance->migration_src, resourceCacheLocal->resources[*outresid].hostname);
             } else if (resourceCacheLocal->resources[*outresid].migrationCapable == FALSE) {
-                LOGDEBUG("[%s] cannot schedule src_index=%d, dst_index=%d because node %s is not migration capable\n", instance->instanceId, inresid, *outresid, resourceCacheLocal->resources[*outresid].hostname);
+                LOGDEBUG("[%s] cannot schedule src_index=%d, dst_index=%d because node %s is not migration capable\n", instance->instanceId, inresid, *outresid,
+                         resourceCacheLocal->resources[*outresid].hostname);
             } else if (check_for_string_in_list(resourceCacheLocal->resources[*outresid].hostname, excludeNodes, excludeNodeCount)) {
                 // Exclusion list takes priority over inclusion list.
                 LOGDEBUG("[%s] cannot schedule src_index=%d, dst_index=%d because node %s is in destination-exclusion list\n",
@@ -3193,7 +3202,7 @@ static int schedule_instance_migration(ncInstance * instance, char **includeNode
 out:
     if (ret) {
         LOGERROR("[%s] migration scheduler could not schedule destination node\n", instance->instanceId);
-        * replyString = strdup("not enough resources available for migration");
+        *replyString = strdup("not enough resources available for migration");
         *outresid = -1;
     }
 
@@ -4505,11 +4514,13 @@ int doMigrateInstances(ncMetadata * pMeta, char *actionNode, char *instanceId, c
             if (allowHosts) {
                 // destinationHosts is whitelist, pass as includeNodes.
                 LOGDEBUG("[%s] scheduling instance with a destination-inclusion list\n", nc_instances[idx]->instanceId);
-                rc = schedule_instance_migration(nc_instances[idx], destinationNodes, NULL, destinationNodeCount, 0, src_index, &dst_index, &resourceCacheLocal, &(pMeta->replyString));
+                rc = schedule_instance_migration(nc_instances[idx], destinationNodes, NULL, destinationNodeCount, 0, src_index, &dst_index, &resourceCacheLocal,
+                                                 &(pMeta->replyString));
             } else {
                 LOGDEBUG("[%s] scheduling instance with a destination-exclusion list\n", nc_instances[idx]->instanceId);
                 // destinationHosts is blacklist, pass as excludeNodes.
-                rc = schedule_instance_migration(nc_instances[idx], NULL, destinationNodes, 0, destinationNodeCount, src_index, &dst_index, &resourceCacheLocal, &(pMeta->replyString));
+                rc = schedule_instance_migration(nc_instances[idx], NULL, destinationNodes, 0, destinationNodeCount, src_index, &dst_index, &resourceCacheLocal,
+                                                 &(pMeta->replyString));
             }
 
             if (rc || (dst_index == -1)) {
@@ -4543,7 +4554,7 @@ int doMigrateInstances(ncMetadata * pMeta, char *actionNode, char *instanceId, c
                           nc_instances, found_instances, nodeAction, credentials);
         if (rc) {
             LOGERROR("failed: request to prepare migration[s] from source %s\n", resourceCacheLocal.resources[src_index].hostname);
-            if (pMeta->replyString == NULL) { // NC did not send back an error string
+            if (pMeta->replyString == NULL) {   // NC did not send back an error string
                 pMeta->replyString = strdup("source host was not able to prepare for migration(s)");
             }
             ret = 1;
@@ -4568,7 +4579,11 @@ int doMigrateInstances(ncMetadata * pMeta, char *actionNode, char *instanceId, c
         // (spec says only prepare call to source should block.)
         pid_t pid = fork();
         if (!pid) {
+            int inst_succ = 0;
+            int inst_fail = 0;
+
             timeout = ncGetTimeout(time(NULL), OP_TIMEOUT, 1, 0);
+            LOGDEBUG("about to ncClientCall destination node[s] with nc_instances (%s %d) [creds='%s']\n", nodeAction, found_instances, credentials);
             for (int idx = 0; idx < found_instances; idx++) {
                 LOGDEBUG("[%s] about to ncClientCall destination node '%s' with nc_instances (%s %d) [creds='%s']\n",
                          SP(nc_instances[idx]->instanceId), SP(nc_instances[idx]->migration_dst), nodeAction, 1, credentials);
@@ -4580,14 +4595,23 @@ int doMigrateInstances(ncMetadata * pMeta, char *actionNode, char *instanceId, c
                     }
                 }
 
+                if (dst_index < 0) {
+                    LOGERROR("[%s] failed: request to prepare migration on destination %s. Invalid resource index -1.\n", nc_instances[idx]->instanceId,
+                             resourceCacheLocal.resources[dst_index].hostname);
+                    exit(1);
+                }
+
                 rc = ncClientCall(pMeta, timeout, resourceCacheLocal.resources[dst_index].lockidx, resourceCacheLocal.resources[dst_index].ncURL, "ncMigrateInstances",
                                   &(nc_instances[idx]), 1, nodeAction, credentials);
                 if (rc) {
                     LOGERROR("[%s] failed: request to prepare migration on destination %s\n", nc_instances[idx]->instanceId, resourceCacheLocal.resources[dst_index].hostname);
-                    exit(1);
+                    ++inst_fail;
+                    //exit(1);
+                } else {
+                    ++inst_succ;
                 }
             }
-            LOGDEBUG("called destination nodes[s] to prepare for %d incoming migrations[s]\n", found_instances);
+            LOGDEBUG("called destination nodes[s] to prepare for %d incoming migrations[s], %d call[s] succeeded, %d call[s] failed\n", found_instances, inst_succ, inst_fail);
             exit(0);
         } else {
             // parent
@@ -4616,6 +4640,12 @@ int doMigrateInstances(ncMetadata * pMeta, char *actionNode, char *instanceId, c
                 dst_index = res_idx;
             }
         }
+
+        if (dst_index < 0) {
+            LOGERROR("failed: request to roll back migration on node. Invalid destination index\n");
+            ret = 1;
+            goto out;
+        }
         // Might not have migration_dst in instance struct here if rollback.
         // FIXME: In some cases, such as certain rollback requests to source node, this can put the source node's IP in ->migration_dst. Debug.
         if (!strlen(nc_instances[0]->migration_dst)) {
@@ -4639,6 +4669,7 @@ int doMigrateInstances(ncMetadata * pMeta, char *actionNode, char *instanceId, c
         ret = 1;
         goto out;
     }
+
 out:
     for (int z = 0; z < found_instances; z++) {
         EUCA_FREE(cc_instances[z]);

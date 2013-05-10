@@ -22,12 +22,19 @@ define([
         ramdisks: new Backbone.Collection(dataholder.images.where({type: 'ramdisk'})),
         enableMonitoring: true,
         privateNetwork: false,
-        snapshots: dataholder.snapshot,
         blockDeviceMappings: self.options.blockMaps,
         enableStorageVolume: true,
         enableMapping: true,
         enableSnapshot: true,
         deleteOnTerm: true,
+
+        snapshots: function() {
+            var ret = [{name:'None', id:null}];
+            dataholder.snapshots.each(function(s) {
+              ret.push({id:s.get('id'), name:s.get('id')+' ('+s.get('volume_size')+' GB)'});
+            });
+            return ret;
+        },
 
         setKernel: function(e, obj) {
           self.model.set('kernel_id', e.target.value);

@@ -274,13 +274,26 @@ static void dummy_err_fn(const char *msg);
  |                                                                            |
 \*----------------------------------------------------------------------------*/
 
+//!
 //! Initializes the global host config
+//!
+//! @param[in] hostIqn
+//! @param[in] hostIp
+//! @param[in] ws_sec_policy_file
+//! @param[in] use_ws_sec
+//!
+//! @return EUCA_OK
+//!
+//! @pre
+//!
+//! @note
+//!
 int vbr_init_hostconfig(char *hostIqn, char *hostIp, char *ws_sec_policy_file, int use_ws_sec)
 {
     LOGDEBUG("Initializing host config for VBR. Setting IP, IQN, and security policy\n");
-    euca_strncpy(localhost_config.iqn, hostIqn, MAX_PATH);
-    euca_strncpy(localhost_config.ip, hostIp, MAX_PATH);
-    euca_strncpy(localhost_config.ws_sec_policy_file, ws_sec_policy_file, MAX_PATH);
+    euca_strncpy(localhost_config.iqn, hostIqn, CHAR_BUFFER_SIZE);
+    euca_strncpy(localhost_config.ip, hostIp, HOSTNAME_SIZE);
+    euca_strncpy(localhost_config.ws_sec_policy_file, ws_sec_policy_file, EUCA_MAX_PATH);
     localhost_config.use_ws_sec = use_ws_sec;
     LOGDEBUG("VBR host config set to ip: %s iqn: %s, use_sec = %d, policy file = %s\n", localhost_config.ip, localhost_config.iqn, localhost_config.use_ws_sec,
              localhost_config.ws_sec_policy_file);
@@ -288,30 +301,52 @@ int vbr_init_hostconfig(char *hostIqn, char *hostIp, char *ws_sec_policy_file, i
     return EUCA_OK;
 }
 
+//!
 //! Semaphore protected read of the sc_url from the config
 //! Destination buffer must be at least 512 in size
+//!
+//! @param[in] dest
+//!
+//! @return EUCA_OK on success or EUCA_ERROR on failure
+//!
+//! @pre
+//!
+//! @note
+//!
 int get_localhost_sc_url(char *dest)
 {
     int ret = 0;
     sem_p(hostconfig_sem);
-    if (strlen(localhost_config.sc_url) == 0) {
-        LOGERROR("No sc url found in localhost_config.\n");
-        ret = EUCA_ERROR;
-        goto release;
+    {
+        if (strlen(localhost_config.sc_url) == 0) {
+            LOGERROR("No sc url found in localhost_config.\n");
+            ret = EUCA_ERROR;
+        } else {
+            if (!euca_strncpy(dest, localhost_config.sc_url, 512)) {
+                LOGERROR("Failed up copy VBR hostconfig SC URL %s to destination buffer\n", localhost_config.sc_url);
+                ret = EUCA_ERROR;
+            } else {
+                ret = EUCA_OK;
+            }
+        }
     }
-    if (!euca_strncpy(dest, localhost_config.sc_url, 512)) {
-        LOGERROR("Failed up copy VBR hostconfig SC URL %s to destination buffer\n", localhost_config.sc_url);
-        ret = EUCA_ERROR;
-    } else {
-        ret = EUCA_OK;
-    }
-
-release:
     sem_v(hostconfig_sem);
     return ret;
 }
 
+//!
 //! Semaphore protected hostconfig update.
+//!
+//! @param[in] vbr
+//! @param[in] pMeta a pointer to the node controller (NC) metadata structure
+//! @param[in] typeName
+//!
+//! @return
+//!
+//! @pre
+//!
+//! @note
+//!
 int vbr_update_hostconfig_scurl(char *new_sc_url)
 {
     sem_p(hostconfig_sem);
@@ -320,6 +355,7 @@ int vbr_update_hostconfig_scurl(char *new_sc_url)
         sem_v(hostconfig_sem);
         return EUCA_ERROR;
     } else {
+        LOGTRACE("Updated sc url in VBR hostconfig to %s\n", localhost_config.sc_url);
         sem_v(hostconfig_sem);
         return EUCA_OK;
     }
@@ -1332,14 +1368,17 @@ cleanup:
 #ifndef _NO_EBS
 static int iqn_creator(artifact * a)
 {
+    int rc = EUCA_OK;
+    char *dev = NULL;
+    ebs_volume_data *vol_data = NULL;
+    virtualBootRecord *vbr = NULL;
+
     assert(a);
-    virtualBootRecord *vbr = a->vbr;
+    vbr = a->vbr;
     assert(vbr);
 
-    ebs_volume_data *vol_data = NULL;
-    char *dev = NULL;
-    int rc = connect_ebs_volume(vbr->preparedResourceLocation, vbr->resourceLocation, localhost_config.use_ws_sec, localhost_config.ws_sec_policy_file, localhost_config.ip,
-                                localhost_config.iqn, &dev, &vol_data);
+    rc = connect_ebs_volume(vbr->preparedResourceLocation, vbr->resourceLocation, localhost_config.use_ws_sec, localhost_config.ws_sec_policy_file, localhost_config.ip,
+                            localhost_config.iqn, &dev, &vol_data);
     if (rc) {
         LOGERROR("[%s] failed to attach volume during VBR construction for %s\n", a->instanceId, vbr->guestDeviceName);
         return EUCA_ERROR;
@@ -1808,7 +1847,7 @@ static artifact *art_alloc_vbr(virtualBootRecord * vbr, boolean do_make_work_cop
                 goto u_out;
 
             // extract size from the digest
-            long long bb_size_bytes = euca_strtoll(blob_digest, "<size>", "</size>");  // pull size from the digest
+            long long bb_size_bytes = euca_strtoll(blob_digest, "<size>", "</size>");   // pull size from the digest
             if (bb_size_bytes < 1)
                 goto u_out;
             vbr->sizeBytes = bb_size_bytes; // record size in VBR now that we know it
@@ -1832,7 +1871,7 @@ u_out:
                 goto w_out;
             }
             // extract size from the digest
-            long long bb_size_bytes = euca_strtoll(blob_digest, "<size>", "</size>");  // pull size from the digest
+            long long bb_size_bytes = euca_strtoll(blob_digest, "<size>", "</size>");   // pull size from the digest
             if (bb_size_bytes < 1) {
                 LOGERROR("[%s] incorrect image digest or error returned from Walrus\n", current_instanceId);
                 goto w_out;

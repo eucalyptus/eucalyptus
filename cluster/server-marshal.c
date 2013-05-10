@@ -2013,7 +2013,7 @@ adb_MigrateInstancesResponse_t *MigrateInstancesMarshal(adb_MigrateInstances_t *
             snprintf(statusMessage, 255, "ERROR");
         }
     }
-    if (ccMeta.replyString != NULL) { // if replyString is set, we have a more detailed status/error message
+    if (ccMeta.replyString != NULL) {  // if replyString is set, we have a more detailed status/error message
         snprintf(statusMessage, sizeof(statusMessage), ccMeta.replyString);
         EUCA_FREE(ccMeta.replyString); // the caller must free
     }

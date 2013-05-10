@@ -21,14 +21,14 @@ package com.eucalyptus.reporting.modules.address
 
 import com.eucalyptus.reporting.domain.ReportingAccountCrud
 import com.eucalyptus.reporting.domain.ReportingUserCrud
+import com.eucalyptus.reporting.event.AddressEvent
 import com.eucalyptus.reporting.event_store.ReportingElasticIpEventStore
 import com.eucalyptus.reporting.event_store.ReportingElasticIpCreateEvent
 import com.eucalyptus.reporting.event_store.ReportingElasticIpDeleteEvent
 import com.eucalyptus.reporting.event_store.ReportingElasticIpAttachEvent
 import com.eucalyptus.reporting.event_store.ReportingElasticIpDetachEvent
+import com.eucalyptus.util.OwnerFullName
 import com.google.common.base.Charsets
-import com.eucalyptus.reporting.event.AddressEvent
-import com.eucalyptus.auth.principal.Principals
 
 import static org.junit.Assert.*
 import org.junit.Test
@@ -49,14 +49,14 @@ class AddressUsageEventListenerTest {
 
     Object persisted = testEvent( AddressEvent.with(
         "127.0.0.1",
-        Principals.systemFullName(),
+        userFullName( "testaccount" ),
         "testaccount",
         AddressEvent.forAllocate()
     ), timestamp )
 
     assertTrue( "Persisted event is ReportingElasticIpCreateEvent", persisted instanceof ReportingElasticIpCreateEvent )
     ReportingElasticIpCreateEvent event = persisted
-    assertEquals( "Event user id", "eucalyptus", event.getUserId() )
+    assertEquals( "Event user id", "testaccount", event.getUserId() )
     assertEquals( "Event ip", "127.0.0.1", event.getIp() )
     assertEquals( "Event timestamp", timestamp, event.getTimestampMs() )
   }
@@ -67,7 +67,7 @@ class AddressUsageEventListenerTest {
 
     Object persisted = testEvent( AddressEvent.with(
         "127.0.0.1",
-        Principals.systemFullName(),
+        userFullName( "testaccount" ),
         "testaccount",
         AddressEvent.forRelease()
     ), timestamp )
@@ -84,7 +84,7 @@ class AddressUsageEventListenerTest {
 
     Object persisted = testEvent( AddressEvent.with(
         "127.0.0.1",
-        Principals.systemFullName(),
+        userFullName( "testaccount" ),
         "testaccount",
         AddressEvent.forAssociate(uuid("instance"), "i-12345678")
     ), timestamp )
@@ -102,7 +102,7 @@ class AddressUsageEventListenerTest {
 
     Object persisted = testEvent( AddressEvent.with(
         "127.0.0.1",
-        Principals.systemFullName(),
+        userFullName( "testaccount" ),
         "testaccount",
         AddressEvent.forDisassociate(uuid("instance2"), "i-12345678")
     ), timestamp )
@@ -147,15 +147,33 @@ class AddressUsageEventListenerTest {
     listener.fireEvent( event )
 
     assertNotNull( "Persisted event", persisted )
-    assertEquals( "Account Id", "000000000000", updatedAccountId  )
+    assertEquals( "Account Id", "100000000000", updatedAccountId  )
     assertEquals( "Account Name", "testaccount", updatedAccountName )
-    assertEquals( "User Id", "eucalyptus", updatedUserId )
-    assertEquals( "User Name", "eucalyptus", updatedUserName )
+    assertEquals( "User Id", "testaccount", updatedUserId )
+    assertEquals( "User Name", "testaccount", updatedUserName )
 
     persisted
   }
 
   private String uuid( String seed ) {
     return UUID.nameUUIDFromBytes( seed.getBytes(Charsets.UTF_8) ).toString()
+  }
+
+  private OwnerFullName userFullName( final String name ) {
+    return new OwnerFullName() {
+      @Override public String getAccountName() { return name; }
+      @Override public String getAccountNumber() { return "100000000000";  }
+      @Override public String getUserId() { return name; }
+      @Override public String getUserName() { return name; }
+      @Override public boolean isOwner( final String ownerId ) { return false; }
+      @Override public boolean isOwner( final OwnerFullName ownerFullName ) { return false; }
+      @Override public String getUniqueId() { return null; }
+      @Override public String getVendor() { return null; }
+      @Override public String getRegion() { return null; }
+      @Override public String getNamespace() { return null; }
+      @Override public String getAuthority() { return null; }
+      @Override public String getRelativeId() { return null; }
+      @Override public String getPartition() { return null; }
+    };
   }
 }

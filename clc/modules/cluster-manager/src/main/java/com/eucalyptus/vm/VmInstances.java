@@ -588,9 +588,9 @@ public class VmInstances {
             }
             
             try {
-            	//TODO: zhill - still send a cleanup to SC to guarantee cleanup?
-              final ServiceConfiguration sc = Topology.lookup( Storage.class, vm.lookupPartition( ) );
-              AsyncRequests.sendSync( sc, new DetachStorageVolumeType( arg0.getVolumeId( ) ) );
+            	//Send forcible detach. Detach is idempotent so calling on already detached volume should be no problem
+              //final ServiceConfiguration sc = Topology.lookup( Storage.class, vm.lookupPartition( ) );
+              //AsyncRequests.sendSync( sc, new DetachStorageVolumeType( arg0.getVolumeId( ) ) );
             } catch ( Exception ex ) {
               LOG.debug( ex );
               Logs.extreme( ).debug( ex, ex );
