@@ -64,6 +64,8 @@ package com.eucalyptus.vm;
 
 import javax.annotation.Nullable;
 import org.apache.log4j.Logger;
+import com.eucalyptus.auth.Accounts;
+import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.component.Topology;
 import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.util.async.AsyncRequests;
@@ -91,6 +93,11 @@ enum MigrationTags implements Predicate<VmInstance> {
     deleteTags.getTagSet( ).add( MigrationTags.SOURCE.deleteTag( ) );
     deleteTags.getTagSet( ).add( MigrationTags.DESTINATION.deleteTag( ) );
     deleteTags.getResourcesSet( ).add( vm.getInstanceId( ) );
+    try {
+      deleteTags.setEffectiveUserId( Accounts.lookupAccountByName( "eucalyptus" ).lookupAdmin( ).getUserId( ) );
+    } catch ( AuthException ex ) {
+      LOG.error( ex );
+    }
     dispatch( deleteTags );
   }
   
@@ -113,6 +120,11 @@ enum MigrationTags implements Predicate<VmInstance> {
       createTags.getTagSet( ).add( MigrationTags.DESTINATION.getTag( migrationTask.getDestinationHost( ) ) );
     }
     createTags.getResourcesSet( ).add( vm.getInstanceId( ) );
+    try {
+      createTags.setEffectiveUserId( Accounts.lookupAccountByName( "eucalyptus" ).lookupAdmin( ).getUserId( ) );
+    } catch ( AuthException ex ) {
+      LOG.error( ex );
+    }
     dispatch( createTags );
   }
   
