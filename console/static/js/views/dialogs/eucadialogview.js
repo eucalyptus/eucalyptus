@@ -14,7 +14,7 @@ define([
             this.scope.help_icon_class = 'help-link',
 
             this.$el.append($('.body', $tmpl).children());
-            this.$el.children().last().append($('<div class="dialog-help"><div class="dialog-help-content">help content</div><div class="help-revert-button"><a href="#">Revert</a></div></div>'));
+            this.$help = $('<div class="dialog-help"><div class="dialog-help-content">help content</div><div class="help-revert-button"><a href="#">' + revert_button + '</a></div></div>');
             this.$el.appendTo('body');
 
 
@@ -71,6 +71,7 @@ define([
         setHelp : function($dialog, title) {
           var self = this;
           var $help = this.scope.help;
+          var help = this.scope.help;
           var $titleBar = $dialog.find('.ui-dialog-titlebar');
           var $helpLink = $titleBar.find('.'+this.scope.help_icon_class+' a');
           if(!$help || !$help.content || $help.content.length <= 0){
@@ -81,8 +82,8 @@ define([
           var $buttonPane = $dialog.find('.ui-dialog-buttonpane');
           var $thedialog = $dialog.find('.euca-dialog');
           var helpContent = this.scope.help ? this.scope.help.content : '';
-          this.$el.find('.dialog-help-content').html(helpContent);
-          var $helpPane = this.$el.find('.dialog-help');
+          this.$help.find('.dialog-help-content').html(helpContent);
+          var $helpPane = this.$help;
           $helpLink.click(function(evt) {
             if(!self.scope.help_flipped){ 
               self.$el.data('dialog').option('closeOnEscape', false);
@@ -123,6 +124,8 @@ define([
                   
                 }
               });
+            } else {
+              self.scope.$el.parent().find('.help-revert-button a').trigger('click');
             }
           });
           self.$el.find('.help-revert-button a').click( function(evt) {
