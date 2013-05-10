@@ -41,6 +41,7 @@
         async:"false", // async option deprecated as of jQuery 1.8
         success: function(out, textStatus, jqXHR){ 
           eucalyptus.i18n({'language':out.language});
+          eucalyptus.help({'language':out.language}); // loads help files
           support_url = out.support_url;
           admin_url = out.admin_url;
           if(out.ipaddr && out.ipaddr.length>0 && isValidIPv4Address(out.ipaddr)){
@@ -86,7 +87,6 @@
 	    async:"false",
 	    success: function(out, textStatus, jqXHR){
 	      $.extend($.eucaData, {'g_session':out.global_session, 'u_session':out.user_session});
-              eucalyptus.help({'language':out.global_session.language}); // loads help files
               eucalyptus.main($.eucaData);
             },
 	    error: function(jqXHR, textStatus, errorThrown){

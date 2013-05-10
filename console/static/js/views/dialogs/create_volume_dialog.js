@@ -182,7 +182,16 @@ define([
 	          // CLOSE THE DIALOG
 	          self.close();
                 }
-              })
+              }),
+
+              activateButton: function(e) {
+                // need to activate the button when 
+                // the required size field is typed in, instead of having to tab
+                // out of it or click another optional field - EUCA-6106
+                // button click will still validate and disallow weird input.
+                self.scope.createButton.set('disabled', false);
+              }
+
             }
 
 

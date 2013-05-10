@@ -57,10 +57,19 @@
                 isValid = false;
                 thisObj.changepwdDialog.eucadialog('showError', login_change_passwd_dont_match);
               }
+              if (current == newpwd) {
+                isValid = false;
+                thisObj.changepwdDialog.eucadialog('showError', login_change_passwd_needs_to_change);
+              }
+              // compare username to password like back-end (account and username, I presume)
+              var account = $.eucaData.u_session['account'];
+              var user = $.eucaData.u_session['username']
+              if (account == newpwd || user == newpwd) {
+                isValid = false;
+                thisObj.changepwdDialog.eucadialog('showError', login_change_passwd_cant_match);
+              }
               
               if (isValid) {
-                var account = $.eucaData.u_session['account'];
-                var user = $.eucaData.u_session['username']
                 thisObj._changePassword(account, user, current, newpwd);
               }
               return false;
@@ -257,10 +266,10 @@
         async:"false",
         success: function(out, textStatus, jqXHR) {
           thisObj.changepwdDialog.eucadialog("close");
-	        $.extend($.eucaData, {'g_session':out.global_session, 'u_session':out.user_session});
-          eucalyptus.help({'language':out.global_session.language}); // loads help files
+	      $.extend($.eucaData, {'g_session':out.global_session, 'u_session':out.user_session});
           thisObj.loginDialog.remove();
           eucalyptus.main($.eucaData);
+          notifySuccess(null, login_change_passwd_done);
         },
         error: function(jqXHR, textStatus, errorThrown){
           thisObj.changepwdDialog.eucadialog("close");
