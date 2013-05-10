@@ -60,12 +60,16 @@ define([
 
         min_count: {
           required: true,
-          pattern: 'number'
+          pattern: 'digits',
+          min: 1,
+          max: 99
         },
 
         max_count: {
           required: true,
-          pattern: 'number'
+          pattern: 'digits',
+          min: 1,
+          max: 99
         },
 
         instance_type: {

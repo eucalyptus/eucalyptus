@@ -1042,7 +1042,7 @@
       this.launchMoreDialog.eucadialog('open');
     },
 
-    _launchMore : function(){
+    _launchMore : function() {
       var thisObj = this;
       var id = this.tableWrapper.eucatable('getSelectedRows', 17)[0];
 //      id = $(id).html();    // After dataTable 1.9 integration, this operaiton is no longer needed. 030413
@@ -1064,6 +1064,22 @@
       var zone = thisObj.launchMoreDialog.find('#summary-type-zone').children().last().text();
       var inst_num = thisObj.launchMoreDialog.find('input#launch-more-num-instance').val();
       var keyname = thisObj.launchMoreDialog.find('#summary-security-keypair').children().last().text();
+      var iModel = null;
+
+      require(['models/instance'], function(Instance) {
+        iModel = new Instance({
+           image_id: emi,
+           min_count: inst_num,
+           max_count: inst_num 
+        });
+        console.log('MODEL', iModel, iModel.isValid());
+        iModel.validate();
+        if (!iModel.isValid()) {
+          console.log("MODEL INVALID");
+          return false;
+        }
+      });
+
       if (keyname==='None')
         keyname = null;
       var sgroup = thisObj.launchMoreDialog.find('#launch-more-sgroup-input');
@@ -1211,10 +1227,13 @@
       }
       $summary = $('<div>').append(
           $('<div>').attr('id','summary-type-insttype').append($('<div>').text(launch_instance_summary_type), $('<span>').text(selectedType)),
+          
           $('<div>').attr('id','summary-type-zone').append($('<div>').text(launch_instance_summary_zone), $('<span>').text(zone)),
           $('<div>').attr('id','summary-type-numinst').addClass('form-row').addClass('clearfix').append(
             $('<label>').attr('for','launch-more-num-instance').text(launch_instance_summary_instances),
-            $('<input>').attr('type','text').attr('id','launch-more-num-instance').val('1')));
+            $('<input>').attr('type','text').attr('id','launch-more-num-instance').val('1'),
+            $('<div>').attr('id', 'summary_type_numinst_error').attr('class', 'error')
+            ));
       var $type = thisObj.launchMoreDialog.find('#launch-more-summary-type');
       $type.addClass(selectedType);
       $type.children().detach();
