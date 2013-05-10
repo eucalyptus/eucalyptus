@@ -125,11 +125,22 @@ echo "Key generation complete."
 echo "Installing keys ..."
 
 mkdir -p /etc/pki/libvirt/private
-chown root.root /etc/pki/libvirt/private
 cp -f $KEYDIR/$NCCERT /etc/pki/CA/cacert.pem
 cp -f $WORKD/clientcert.pem $WORKD/servercert.pem /etc/pki/libvirt/
 cp -f $WORKD/clientkey.pem $WORKD/serverkey.pem /etc/pki/libvirt/private/
-chmod 600 /etc/pki/libvirt/private/serverkey.pem
+
+# Do this in a subshell due to the sourcing of the eucalyptus.conf file.
+(
+if [ -r $EUCALYPTUS/etc/eucalyptus/eucalyptus.conf ] ; then
+    . $EUCALYPTUS/etc/eucalyptus/eucalyptus.conf
+fi
+if [ -z "$EUCA_USER" ] ; then
+    EUCA_USER=root
+fi
+chmod 700 /etc/pki/libvirt/private
+chmod 600 /etc/pki/libvirt/private/clientkey.pem  /etc/pki/libvirt/private/serverkey.pem
+chown -R $EUCA_USER /etc/pki/libvirt/private/ || true
+)
 
 # Despite what the documentation says, sending a SIGHUP to libvirtd does
 # not appear to update its access list of DNs. So we're doing a full restart.
@@ -138,7 +149,7 @@ chmod 600 /etc/pki/libvirt/private/serverkey.pem
 if [ "$RESTART" == "yes" ] ; then
     echo "Key installation complete, reloading libvirtd."
     /sbin/service libvirtd restart
-else 
+else
     echo "Key installation complete, libvirtd will require manual restart."
 fi
 
