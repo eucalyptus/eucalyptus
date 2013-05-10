@@ -586,6 +586,7 @@ int ncClientCall(ncMetadata * pMeta, int timeout, int ncLock, char *ncURL, char 
         ncStub *ncs;
         ncMetadata *localmeta = NULL;
 
+        LOGTRACE("forked to service NC invocation: %s\n", ncOp);
         localmeta = EUCA_ZALLOC(1, sizeof(ncMetadata));
         if (!localmeta) {
             LOGFATAL("out of memory! ncOps=%s\n", ncOp);
@@ -775,7 +776,9 @@ int ncClientCall(ncMetadata * pMeta, int timeout, int ncLock, char *ncURL, char 
             ncResource **outRes = va_arg(al, ncResource **);
             char **errMsg = va_arg(al, char **);
 
+            LOGTRACE("\tcalling ncDescribeResourceStub with resourceType=%s outRes=%lx errMsg=%lx\n", resourceType, (unsigned long)outRes, (unsigned long)errMsg);
             rc = ncDescribeResourceStub(ncs, localmeta, resourceType, outRes);
+            LOGTRACE("\tcalled  ncDescribeResourceStub, rc = %d, timeout = %d\n", rc, timeout);
             if (timeout && outRes) {
                 if (!rc && *outRes) {
                     len = sizeof(ncResource);
@@ -785,6 +788,7 @@ int ncClientCall(ncMetadata * pMeta, int timeout, int ncLock, char *ncURL, char 
                     rc = 0;
                 } else {
                     (*errMsg) = (char *)axutil_error_get_message(ncs->env->error);
+                    LOGTRACE("\terrMsg = %s\n", *errMsg);
                     if (*errMsg && (len = strnlen(*errMsg, 1024 - 1))) {
                         len += 1;
                         rc = write(filedes[1], &rc, sizeof(int));   //NOTE: we write back rc as well
@@ -1197,7 +1201,13 @@ int ncClientCall(ncMetadata * pMeta, int timeout, int ncLock, char *ncURL, char 
             if (WIFEXITED(status)) {
                 rc = WEXITSTATUS(status);
             } else {
-                LOGERROR("BUG: child process for making '%s' request did not exit cleanly\n", ncOp);
+                int sig = -1;
+                int dump = 0;
+                if (WIFSIGNALED(status)) {
+                    sig = WTERMSIG(status);
+                    dump = WCOREDUMP(status);
+                }
+                LOGERROR("BUG: child process for making '%s' request did not exit cleanly (sig=%d core dumped=%d)\n", ncOp, sig, dump);
                 rc = 1;
             }
         } else {
@@ -5203,7 +5213,7 @@ int doBrokerPairing(void)
 
         if (strlen(config->notreadyServices[i].type)) {
             if (!strcmp(config->notreadyServices[i].type, "vmwarebroker")) {
-                for (j = 0; j < 8; j++) {
+                for (j = 0; j < MAX_SERVICE_URIS; j++) {
                     if (strlen(config->notreadyServices[i].uris[j])) {
                         LOGDEBUG("found broker - %s\n", config->notreadyServices[i].uris[j]);
 
@@ -6342,7 +6352,7 @@ int init_config(void)
     snprintf(config->ccStatus.serviceId.name, 32, "self");
     snprintf(config->ccStatus.serviceId.partition, 32, "unset");
     config->ccStatus.serviceId.urisLen = 0;
-    for (i = 0; i < 32 && config->ccStatus.serviceId.urisLen < 8; i++) {
+    for (i = 0; i < 32 && config->ccStatus.serviceId.urisLen < MAX_SERVICE_URIS; i++) {
         if (vnetconfig->localIps[i]) {
             char *host;
             host = hex2dot(vnetconfig->localIps[i]);

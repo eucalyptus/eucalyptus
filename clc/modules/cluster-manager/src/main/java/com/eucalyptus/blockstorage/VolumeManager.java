@@ -146,6 +146,7 @@ public class VolumeManager {
                                              ? Long.parseLong( request.getSize( ) )
                                              : null;
     final String snapId = request.getSnapshotId( );
+    Integer snapSize = 0;
     String partition = request.getAvailabilityZone( );
     
     if ( ( request.getSnapshotId( ) == null && request.getSize( ) == null ) ) {
@@ -155,6 +156,7 @@ public class VolumeManager {
     if ( snapId != null ) {
       try {
         Snapshot snap = Transactions.find( Snapshot.named( null, snapId ) );
+        snapSize = snap.getVolumeSize( );
         if ( !RestrictedTypes.filterPrivileged( ).apply( snap ) ) {
           throw new EucalyptusCloudException( "Not authorized to use snapshot " + snapId + " by " + ctx.getUser( ).getName( ) );
         }
@@ -166,9 +168,10 @@ public class VolumeManager {
         throw new EucalyptusCloudException( "Failed to create volume because the referenced snapshot id is invalid: " + snapId );
       }
     }
-    final Integer newSize = new Integer( request.getSize( ) != null
-                                                                   ? request.getSize( )
-                                                                   : "-1" );
+    final Integer newSize = ( snapId != null
+      ? snapSize
+      : new Integer( request.getSize( ) != null
+        ? request.getSize( ) : "-1" ) );
     Exception lastEx = null;
     for ( int i = 0; i < VOL_CREATE_RETRIES; i++ ) {
       try {

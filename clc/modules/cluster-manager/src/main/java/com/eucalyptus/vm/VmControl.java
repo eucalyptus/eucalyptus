@@ -406,6 +406,7 @@ public class VmControl {
     try {
         ArrayList <String> instanceSet = request.getInstancesSet();
         ArrayList <String> noAccess = new ArrayList<String>();
+        ArrayList <String> migrating = new ArrayList<String>();
         ArrayList <String> noSuchElement = new ArrayList<String>();
         for( int i = 0; i < instanceSet.size(); i++) {
           String currentInstance = instanceSet.get(i);
@@ -413,6 +414,9 @@ public class VmControl {
             final VmInstance v = VmInstances.lookup(  currentInstance );
             if( !RestrictedTypes.filterPrivileged( ).apply( v ) ) {
               noAccess.add( currentInstance );
+            }
+            if( MigrationState.isMigrating( v ) ) {
+              migrating.add( currentInstance );
             }
           } catch (NoSuchElementException nse) {
             if( !( nse instanceof TerminatedInstanceException ) ) {
@@ -427,6 +431,9 @@ public class VmControl {
           } else if( ( i == instanceSet.size( ) - 1 ) && ( !noAccess.isEmpty( ) ) ) {
             String outList = noAccess.toString( );
             throw new EucalyptusCloudException( "Permission denied for vm(s): " + outList.substring( 1, outList.length( ) - 1 ) );
+          } else if( ( i == instanceSet.size( ) - 1 ) && ( !migrating.isEmpty( ) ) ) {
+            String outList = noAccess.toString( );
+            throw new EucalyptusCloudException( "Cannot reboot an instances which is currently migrating: " + outList.substring( 1, outList.length( ) - 1 ) );
           }
         }
         final boolean result = Iterables.all( instanceSet , new Predicate<String>( ) {
