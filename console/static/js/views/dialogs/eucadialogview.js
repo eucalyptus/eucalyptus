@@ -13,12 +13,15 @@ define([
             this.scope.help_flipped = false,
             this.scope.help_icon_class = 'help-link',
 
-            this.$el.append($('.body', $tmpl));
+            this.$el.append($('.body', $tmpl).children());
+            this.$help = $('<div class="dialog-help"><div class="dialog-help-content">help content</div><div class="help-revert-button"><a href="#">' + revert_button + '</a></div></div>');
             this.$el.appendTo('body');
+
 
             var title = $.i18n.prop($('.title', $tmpl).attr('data-msg'));
             this.$el.dialog({
                 title: title,
+                help: this.scope.help,
                 autoOpen: false,  // assume the three params are fixed for all dialogs
                 modal: true,
                 width: this.scope.width ? this.scope.width : 600,
@@ -46,6 +49,8 @@ define([
             this.rivetsView = rivets.bind(this.$el, this.scope);
             this.render();
 
+//            $('.help-link', this.$el).append('<a href="#">?</a>');
+
             $titleBar = this.scope.$el.parent().find('.ui-dialog-titlebar');
             if($titleBar.find('.' + this.scope.help_icon_class).length <= 0)
               $titleBar.append($('<div>')
@@ -66,6 +71,7 @@ define([
         setHelp : function($dialog, title) {
           var self = this;
           var $help = this.scope.help;
+          var help = this.scope.help;
           var $titleBar = $dialog.find('.ui-dialog-titlebar');
           var $helpLink = $titleBar.find('.'+this.scope.help_icon_class+' a');
           if(!$help || !$help.content || $help.content.length <= 0){
@@ -76,12 +82,12 @@ define([
           var $buttonPane = $dialog.find('.ui-dialog-buttonpane');
           var $thedialog = $dialog.find('.euca-dialog');
           var helpContent = this.scope.help ? this.scope.help.content : '';
-          this.$el.find('.dialog-help-content').html(helpContent);
-          var $helpPane = this.$el.find('dialog-help');
+          this.$help.find('.dialog-help-content').html(helpContent);
+          var $helpPane = this.$help;
           $helpLink.click(function(evt) {
             if(!self.scope.help_flipped){ 
               self.$el.data('dialog').option('closeOnEscape', false);
-              $buttonPane.hide();
+//              $buttonPane.hide();
               $thedialog.flippy({
                 verso:$helpPane,
                 direction:"LEFT",
@@ -96,7 +102,7 @@ define([
                   });       
                   if(!self.scope.help_flipped){
                     self.scope.help_flipped = true;
-                    self.scope.$el.find('.help-link').removeClass().addClass('help-return').before(
+                    self.scope.$el.parent().find('.help-link').removeClass().addClass('help-return').before(
                       $('<div>').addClass('help-popout').append(
                         $('<a>').attr('href','#').text('popout').click(function(e){
                           if(help.url){
@@ -105,19 +111,21 @@ define([
                             else
                               popOutPageHelp(help.url);
                           }
-                          self.scope.$el.find('.help-revert-button a').trigger('click');
+                          self.scope.$el.parent().find('.help-revert-button a').trigger('click');
                         })
                       )
                     );
                   }else{
                     self.scope.help_flipped = false;
-                    self.scope.element.find('.help-return').removeClass().addClass('help-link');
-                    self.scope.element.find('.help-popout').detach();
+                    self.scope.$el.parent().find('.help-return').removeClass().addClass('help-link');
+//                    self.scope.$el.parent().find('.help-popout').detach();
                     $buttonPane.show();
                   }
                   
                 }
               });
+            } else {
+              self.scope.$el.parent().find('.help-revert-button a').trigger('click');
             }
           });
           self.$el.find('.help-revert-button a').click( function(evt) {

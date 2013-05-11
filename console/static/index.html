@@ -47,7 +47,7 @@
     <script type="text/javascript" language="javascript" src="lib/jquery.datatables-1.9.4.js "></script>
     <script type="text/javascript" language="javascript" src="lib/jquery.i18n.properties-min-1.0.9.js"></script>
     <script type="text/javascript" language="javascript" src="lib/jsrender.js"></script>
-    <script type="text/javascript" language="javascript" src="lib/jquery.flippy.min.js"></script>
+    <script type="text/javascript" language="javascript" src="lib/jquery.flippy.js"></script>
     <script type="text/javascript" language="javascript" src="lib/jquery.cookie.js"></script>
     <script type="text/javascript" language="javascript" src="lib/jquery.iframe-transport.js"></script>
     <script type="text/javascript" language="javascript" src="lib/jquery.fileupload.js"></script>
@@ -156,6 +156,7 @@
       <script id="loginTmpl" type="text/x-jsrender">
         <div id="login" class="content-box">
           <div id="title" class="box-header"><span>{{!>login_title}}</span></div>
+          <div class="effects-box">
           <form action="/" method="post" name="loginform">
             
             <div class="form-row">
@@ -186,6 +187,7 @@
             </div>
 
           </form>        
+          </div>
         </div>
       </script>
 
