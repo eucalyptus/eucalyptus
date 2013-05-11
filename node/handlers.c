@@ -630,7 +630,18 @@ int update_disk_aliases(ncInstance * instance)
             }
 
             if (volumeId) {
+                ebs_volume_data *vol_data = NULL;
+
+                if (strcmp("root", volumeId)==0) {
+                    if (instance->params.root->locationType==NC_LOCATION_SC) {
+                        if (deserialize_volume(instance->params.root->resourceLocation, & vol_data)==0) {
+                            volumeId = vol_data->volumeId;
+                        }
+                    }
+                }
                 sensor_set_volume(instance->instanceId, volumeId, devs[i]);
+
+                EUCA_FREE(vol_data);
             }
             EUCA_FREE(devs[i]);
         }
