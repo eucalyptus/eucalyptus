@@ -159,7 +159,6 @@ ensure_listen ()
     LV=`set|grep ^LIBVIRTD_ARGS=`
 
     if [ $? -ne 0 ] ; then
-        echo no var defined
         # Variable not present
         NEWVAR=1
     fi
@@ -176,12 +175,10 @@ ensure_listen ()
     done
 
     if [ -n "${LVS['--listen']}" ] ; then
-        echo already have --listen, doing nothing
         return
     fi
 
     if [ "${#LVS[@]}" -eq 0 -a -n "$NEWVAR" ] ; then
-        echo adding
         LVS['--listen']=1
         echo >> $LIBVIRTD_SYSCONFIG
         echo "#" >> $LIBVIRTD_SYSCONFIG
@@ -189,7 +186,6 @@ ensure_listen ()
         echo "#" >> $LIBVIRTD_SYSCONFIG
         echo LIBVIRTD_ARGS="\"${!LVS[@]}\"" >> $LIBVIRTD_SYSCONFIG
     else
-        echo subbing
         LVS['--listen']=1
         ARGLIST="\"${!LVS[@]}\""
         sed -i.euca "s/^\s*LIBVIRTD_ARGS=.*/LIBVIRTD_ARGS=$ARGLIST/" $LIBVIRTD_SYSCONFIG
