@@ -57,10 +57,19 @@
                 isValid = false;
                 thisObj.changepwdDialog.eucadialog('showError', login_change_passwd_dont_match);
               }
+              if (current == newpwd) {
+                isValid = false;
+                thisObj.changepwdDialog.eucadialog('showError', login_change_passwd_needs_to_change);
+              }
+              // compare username to password like back-end (account and username, I presume)
+              var account = $.eucaData.u_session['account'];
+              var user = $.eucaData.u_session['username']
+              if (account == newpwd || user == newpwd) {
+                isValid = false;
+                thisObj.changepwdDialog.eucadialog('showError', login_change_passwd_cant_match);
+              }
               
               if (isValid) {
-                var account = $.eucaData.u_session['account'];
-                var user = $.eucaData.u_session['username']
                 thisObj._changePassword(account, user, current, newpwd);
               }
               return false;
@@ -70,6 +79,57 @@
         },
         help: { content: $cp_dialog_help, url: help_changepwd.dialog_attach_content_url },
       });
+
+
+      var userLang = (navigator.language) ? navigator.language : navigator.userLanguage;
+      var language = userLang.split('-')[0];
+      var help = {pop_height: 600, url: help_login.dialog_content_url};
+              eucalyptus.help({'language':language}); // loads help files
+                  $login.find('#title').append('<div class="help-link"><a href="#">?</a></div>');
+
+                  $effectsBox = $login.find('.effects-box');
+                  eucalyptus.help({'language':language}); // loads help files
+                  $login.find('.help-link a').click(function(evt) {
+                    if(!$login.help_flipped){ 
+                      $effectsBox.flippy({
+                        verso: '<div class="help-content">'+help_login.dialog_content+'</div>',
+                        direction:"LEFT",
+                        duration:"300",
+                        depth:"1.0",
+                        onFinish : function() {
+                          $login.find('.help-revert-button a').click( function(evt) {
+                            $effectsBox.flippyReverse();
+                          });
+                          $login.find('.help-link a').click( function(evt) {
+                            $effectsBox.flippyReverse();
+                          });       
+                          if(!$login.help_flipped){
+                            $login.help_flipped = true;
+                            $login.find('.help-link').removeClass().addClass('help-return').before(
+                              $('<div>').addClass('help-popout').append(
+                                $('<a>').attr('href','#').text('popout').click(function(e){
+                                  if(help.url){
+                                    if(help.pop_height)
+                                      popOutPageHelp(help.url, help.pop_height);
+                                    else
+                                      popOutPageHelp(help.url);
+                                  }
+                                  $login.parent().find('.help-return a').trigger('click');
+                                })
+                              )
+                            );
+                          }else{
+                            $login.help_flipped = false;
+                            $login.find('.help-popout').remove();
+                            $login.find('.help-return').removeClass().addClass('help-link');
+                          }
+                          
+                        }
+                      });
+                    } else {
+                      $login.parent().find('.help-revert-button a').trigger('click');
+                    }
+                  });
 
       // set the login event handler
       $cp_form.find('input[type=password]').keyup( function(evt) {
@@ -206,10 +266,10 @@
         async:"false",
         success: function(out, textStatus, jqXHR) {
           thisObj.changepwdDialog.eucadialog("close");
-	        $.extend($.eucaData, {'g_session':out.global_session, 'u_session':out.user_session});
-          eucalyptus.help({'language':out.global_session.language}); // loads help files
+	      $.extend($.eucaData, {'g_session':out.global_session, 'u_session':out.user_session});
           thisObj.loginDialog.remove();
           eucalyptus.main($.eucaData);
+          notifySuccess(null, login_change_passwd_done);
         },
         error: function(jqXHR, textStatus, errorThrown){
           thisObj.changepwdDialog.eucadialog("close");

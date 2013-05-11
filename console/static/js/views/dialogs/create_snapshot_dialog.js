@@ -32,7 +32,12 @@ define([
 
               var $volumeSelector = this.$el.find('#snapshot-create-volume-id');
               $volumeSelector.autocomplete({
-                source: sorted
+                source: sorted,
+                select: function(event, ui) {
+                  var selected_volume_id = ui.item.value.split(' ')[0];
+                  self.scope.snapshot.set('volume_id', selected_volume_id);
+                }
+
               });
             }else{
               // CASE: CALLED FROM THE VOLUME LANDING PAGE

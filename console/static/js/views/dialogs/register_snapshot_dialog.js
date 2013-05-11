@@ -65,7 +65,12 @@ define([
 	          // CLOSE THE DIALOG
 	          self.close();
           }
-        })
+        }),
+
+        // EUCA-6106
+        activateButton: function() {
+          self.scope.registerButton.set('disabled', false);
+        }
       };
       this._do_init();
 

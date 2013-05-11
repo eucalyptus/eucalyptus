@@ -36,6 +36,7 @@
       load(help_dashboard, language);
       load(help_about, language);
       load(help_changepwd, language);
+      load(help_login, language);
     }catch(e){
       ;
     }
@@ -269,6 +270,15 @@ var help_about = {
   load : function(arg){
     help_about.dialog_content_url = 'help/'+arg.language+'/console_about.html';
     loadHtml(help_about.dialog_content_url, function(data){help_about.dialog_content=data})
+  },
+  dialog_content: '',
+  dialog_content_url: '',
+}
+
+var help_login = {
+  load : function(arg){
+    help_login.dialog_content_url = 'help/'+arg.language+'/console_login.html';
+    loadHtml(help_login.dialog_content_url, function(data){help_login.dialog_content=data})
   },
   dialog_content: '',
   dialog_content_url: '',

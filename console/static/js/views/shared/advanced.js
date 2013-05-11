@@ -22,12 +22,19 @@ define([
         ramdisks: new Backbone.Collection(dataholder.images.where({type: 'ramdisk'})),
         enableMonitoring: true,
         privateNetwork: false,
-        snapshots: dataholder.snapshot,
         blockDeviceMappings: self.options.blockMaps,
         enableStorageVolume: true,
         enableMapping: true,
         enableSnapshot: true,
         deleteOnTerm: true,
+
+        snapshots: function() {
+            var ret = [{name:'None', id:null}];
+            dataholder.snapshots.each(function(s) {
+              ret.push({id:s.get('id'), name:s.get('id')+' ('+s.get('volume_size')+' GB)'});
+            });
+            return ret;
+        },
 
         setKernel: function(e, obj) {
           self.model.set('kernel_id', e.target.value);
@@ -128,9 +135,15 @@ define([
         mapName: function() {
           var model = this.blockDeviceMappings.at(this.blockDeviceMappings.length - 1);
           if(undefined !== model && undefined != model.get('device_name')) {
-            var drive = model.get('device_name').replace(/\/dev\/([a-z]*)([0-9]{1,2})/, '$1');
-            var partition = model.get('device_name').replace(/\/dev\/([a-z]*)([0-9]{1,2})/, '$2');
-            return drive + (++partition);
+            // not sure what I was thinking here - partitions are not involved! Mock data have them?
+            //var drive = model.get('device_name').replace(/\/dev\/([a-z]*)([0-9]{1,2})/, '$1');
+            //var partition = model.get('device_name').replace(/\/dev\/([a-z]*)([0-9]{1,2})/, '$2');
+            //return drive + (++partition);
+            
+            var device = model.get('device_name');
+            var suffix = device.substring(device.length-1).charCodeAt(0);
+            var newdev = device.substring(5, device.length-1) + String.fromCharCode(suffix+1);
+            return newdev;
           } else {
             return 'sda';
           }
