@@ -1990,6 +1990,11 @@ div.sgroup-expanded .expanded-table thead th {
 
 .euca-dialog {
   /* This doesn't appear on every dialog */
+  background-color: white;
+}
+
+.dialog-help, .dialog-help-content {
+  background-color: white;
 }
 
 .ui-dialog .ui-dialog-content {
@@ -3293,4 +3298,8 @@ filter: progid:DXImageTransform.Microsoft.gradient( startColorstr='#ededed', end
 .ui-sortable span {
     vertical-align: top;
     line-height: 27px;
+}
+
+.effects-box {
+    background-color: white;
 }

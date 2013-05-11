@@ -4357,7 +4357,7 @@ int doModifyNode(ncMetadata * pMeta, char *nodeName, char *stateName)
                 } else if (!strcmp(res->nodeStatus, "disabled")) {
                     res->ncState = STOPPED;
                 }
-                strcpy(res->nodeStatus, stateName);
+                euca_strncpy(res->nodeStatus, stateName, 24);
                 break;
             }
         }

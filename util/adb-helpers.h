@@ -395,7 +395,7 @@ static inline adb_virtualMachineType_t *copy_vm_type_to_adb(const axutil_env_t *
 static inline adb_serviceInfoType_t *copy_service_info_type_to_adb(const axutil_env_t * env, serviceInfoType * input)
 {
     int i = 0;
-    adb_serviceInfoType_t *sit = adb_serviceInfoType_create(env);
+    adb_serviceInfoType_t *sit = NULL;
 
     if ((env != NULL) && (input != NULL)) {
         if ((sit = adb_serviceInfoType_create(env)) != NULL) {
