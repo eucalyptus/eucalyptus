@@ -141,6 +141,7 @@ import com.eucalyptus.util.async.RemoteCallback;
 import com.eucalyptus.vm.VmInstance.Transitions;
 import com.eucalyptus.vm.VmInstance.VmState;
 import com.eucalyptus.vm.VmInstance.VmStateSet;
+import com.eucalyptus.vm.VmVolumeAttachment.NonTransientVolumeException;
 import com.eucalyptus.vmtypes.VmType;
 import com.eucalyptus.vmtypes.VmTypes;
 import com.google.common.base.Enums;
@@ -419,6 +420,37 @@ public class VmInstances {
       if ( db.isActive() ) db.rollback();
     }
   }
+  
+  public static VmVolumeAttachment lookupTransientVolumeAttachment( final String volumeId ) {
+	 VmVolumeAttachment ret = null;
+	 final EntityTransaction db = Entities.get( VmInstance.class );
+	 try {
+	   List<VmInstance> vms = Entities.query( VmInstance.create( ) );
+	   for ( VmInstance vm : vms ) {
+	     try {
+	       ret = vm.lookupTransientVolumeAttachment( volumeId );
+	       if ( ret.getVmInstance( ) == null ) {
+	         ret.setVmInstance( vm );
+	       }
+	     } catch (NonTransientVolumeException nex) {
+	   	   throw nex;
+	     } catch ( NoSuchElementException ex ) {
+	       continue;
+	     }
+	   }
+	   if ( ret == null ) {
+	     throw new NoSuchElementException( "VmVolumeAttachment: no volume attachment for " + volumeId );
+	   }
+	   db.commit( );
+	   return ret;
+	 } catch (NonTransientVolumeException nex) {
+	   throw nex;
+	 } catch ( Exception ex ) {
+	   throw new NoSuchElementException( ex.getMessage( ) );
+	 } finally {
+	   if ( db.isActive() ) db.rollback();
+   }
+ }
   
   public static VmVolumeAttachment lookupVolumeAttachment( final String volumeId , final List<VmInstance> vms ) {
     VmVolumeAttachment ret = null;
