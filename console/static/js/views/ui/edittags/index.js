@@ -67,12 +67,23 @@ define([
               self.scope.tags.add(this_tag);
             });
 
+
             this.scope = {
                 newtag: new Tag(),
 
                 tags: tags,
 
                 status: '',
+
+                // Abort existing edits
+                deactivateEdits: function() {
+                    self.scope.tags.each(function(t) {
+                        if (t.get('_edit')) {
+                            t.set(t.get('_backup').pick('name','value'));
+                            t.set({_clean: true, _deleted: false, _edit: false});
+                        }
+                    });
+                },
 
                 create: function() {
                     var newt = new Tag(self.scope.newtag.toJSON());
@@ -89,14 +100,8 @@ define([
                 edit: function(element, scope) {
                     console.log('edit');
 
-                    // Abort existing edits
-                    tags.each(function(t) {
-                        if (t.get('_edit')) {
-                            t.set(t.get('_backup').pick('name','value'));
-                            t.set({_clean: true, _deleted: false, _edit: false});
-                        }
-                    });
-
+                    self.scope.deactivateEdits();
+                    
                     // RETREIVE THE ID OF THE TAG
                     var tagID = scope.tag.get('id');
                     console.log("TAG ID: " + tagID);
