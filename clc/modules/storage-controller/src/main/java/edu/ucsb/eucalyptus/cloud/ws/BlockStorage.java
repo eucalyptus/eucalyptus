@@ -615,7 +615,6 @@ public class BlockStorage {
 		volumeInfo.setVolumeId(volumeId);
 		List<VolumeInfo> volumeList = db.query(volumeInfo);
 
-		reply.set_return(Boolean.FALSE);
 		if(volumeList.size() > 0) {
 			VolumeInfo foundVolume = volumeList.get(0);
 			//check its status
@@ -623,10 +622,13 @@ public class BlockStorage {
 			if(status.equals(StorageProperties.Status.available.toString()) || 
 					status.equals(StorageProperties.Status.failed.toString())) {
 				foundVolume.setStatus(StorageProperties.Status.deleting.toString());
-				reply.set_return(Boolean.TRUE);
 			}
 		} 
 		db.commit();
+		// Always set the response element to true as multiple delete requests may be received here. Its okay to allow multiple delete requests when
+		// 1. Volume to be deleted does not exist, it might have already been deleted.
+		// 2. Volume to be deleted is already marked for deletion
+		reply.set_return(Boolean.TRUE);
 		return reply;
 	}
 
