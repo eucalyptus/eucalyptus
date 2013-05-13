@@ -17,11 +17,16 @@ define([
         'ownerId', 'platform', 'root_device_type']
 
       , localize: {
-        ownerId: 'Owner',
-        i386 : '32-bit',
-        x86_64 : '64-bit',
-        root_device_type : 'Root Device',
-        ebs : 'EBS'
+        ownerId: app.msg('search_facet_image_owner'), //'Owner',
+        i386 : app.msg('search_facet_image_i386'), //'32-bit',
+        x86_64 : app.msg('search_facet_image_x86_64'), //'64-bit',
+        root_device_type : app.msg('search_facet_image_root_device'), //'Root Device',
+        ebs : app.msg('search_facet_image_ebs'), //'EBS',
+        platform: app.msg('search_facet_image_platform'), //'Platform'
+        architecture: app.msg('search_facet_image_arch'), //'Architecture'
+        description: app.msg('search_facet_image_desc'), //'Description'
+        name: app.msg('search_facet_image_name'),
+        all_text: app.msg('search_facet_alltext')
       }
 
       , match: {

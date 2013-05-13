@@ -1,7 +1,8 @@
 define([
+  'app',
   'views/searches/generic',
   'views/searches/tagsearch'
-], function(Search, TagSearch) {
+], function(app, Search, TagSearch) {
   
     var config = {
       facets : ['all_text', 'attach_data'],
@@ -11,7 +12,9 @@ define([
       localize : function(what) {
         switch (what) {
           case 'attach_data' : 
-            return 'Attachment';
+            return app.msg('search_facet_volumes_attachment'); //'Attachment';
+          case 'all_text':
+            return app.msg('search_facet_alltext');
         }
         // 'Attached' is actually an object
         // of some sort

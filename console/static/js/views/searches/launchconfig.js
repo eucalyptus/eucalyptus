@@ -27,8 +27,8 @@ define([
     var config = {
       facets: ['all_text', 'os', 'instance_type', 'root_device_type'],
       localize: {
-        state: 'Status',
-        'os': 'Operating System'
+        state: app.msg('search_facet_launchconfig_status'), //'Status',
+        'os': app.msg('search_facet_launchconfig_os') //'Operating System'
       },
       match: {
         os: function(search, item, add) {
