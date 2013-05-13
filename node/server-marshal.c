@@ -292,37 +292,40 @@ adb_ncStartNetworkResponse_t *ncStartNetworkMarshal(adb_ncStartNetwork_t * ncSta
         uuid = adb_ncStartNetworkType_get_uuid(input, env);
         port = adb_ncStartNetworkType_get_remoteHostPort(input, env);
         vlan = adb_ncStartNetworkType_get_vlan(input, env);
-        peersLen = adb_ncStartNetworkType_sizeof_remoteHosts(input, env);
-        peers = EUCA_ZALLOC(peersLen, sizeof(char *));
-        for (i = 0; i < peersLen; i++) {
-            peers[i] = adb_ncStartNetworkType_get_remoteHosts_at(input, env, i);
-        }
+        if((peersLen = adb_ncStartNetworkType_sizeof_remoteHosts(input, env)) > 0) {
+            peers = EUCA_ZALLOC(peersLen, sizeof(char *));
+            for (i = 0; i < peersLen; i++) {
+                peers[i] = adb_ncStartNetworkType_get_remoteHosts_at(input, env, i);
+            }
 
-        // do it
-        EUCA_MESSAGE_UNMARSHAL(ncStartNetworkType, input, (&meta));
+            // do it
+            EUCA_MESSAGE_UNMARSHAL(ncStartNetworkType, input, (&meta));
 
-        if ((error = doStartNetwork(&meta, uuid, peers, peersLen, port, vlan)) != EUCA_OK) {
-            LOGERROR("failed error=%d\n", error);
-            adb_ncStartNetworkResponseType_set_return(output, env, AXIS2_FALSE);
+            if ((error = doStartNetwork(&meta, uuid, peers, peersLen, port, vlan)) != EUCA_OK) {
+                LOGERROR("failed error=%d\n", error);
+                adb_ncStartNetworkResponseType_set_return(output, env, AXIS2_FALSE);
 
-            // set operation-specific fields in output
-            adb_ncStartNetworkResponseType_set_networkStatus(output, env, "FAIL");
-            adb_ncStartNetworkResponseType_set_statusMessage(output, env, "2");
+                // set operation-specific fields in output
+                adb_ncStartNetworkResponseType_set_networkStatus(output, env, "FAIL");
+                adb_ncStartNetworkResponseType_set_statusMessage(output, env, "2");
+            } else {
+                // set standard fields in output
+                adb_ncStartNetworkResponseType_set_return(output, env, AXIS2_TRUE);
+                adb_ncStartNetworkResponseType_set_correlationId(output, env, meta.correlationId);
+                adb_ncStartNetworkResponseType_set_userId(output, env, meta.userId);
+
+                // set operation-specific fields in output
+                adb_ncStartNetworkResponseType_set_networkStatus(output, env, "SUCCESS");
+                adb_ncStartNetworkResponseType_set_statusMessage(output, env, "0");
+            }
+
+            EUCA_FREE(peers);
+
+            // set response to output
+            adb_ncStartNetworkResponse_set_ncStartNetworkResponse(response, env, output);
         } else {
-            // set standard fields in output
-            adb_ncStartNetworkResponseType_set_return(output, env, AXIS2_TRUE);
-            adb_ncStartNetworkResponseType_set_correlationId(output, env, meta.correlationId);
-            adb_ncStartNetworkResponseType_set_userId(output, env, meta.userId);
-
-            // set operation-specific fields in output
-            adb_ncStartNetworkResponseType_set_networkStatus(output, env, "SUCCESS");
-            adb_ncStartNetworkResponseType_set_statusMessage(output, env, "0");
+            LOGERROR("failed. peersLen=%d\n", peersLen);
         }
-
-        EUCA_FREE(peers);
-
-        // set response to output
-        adb_ncStartNetworkResponse_set_ncStartNetworkResponse(response, env, output);
     }
     pthread_mutex_unlock(&ncHandlerLock);
     return (response);

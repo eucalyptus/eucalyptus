@@ -615,7 +615,6 @@ public class BlockStorage {
 		volumeInfo.setVolumeId(volumeId);
 		List<VolumeInfo> volumeList = db.query(volumeInfo);
 
-		reply.set_return(Boolean.FALSE);
 		if(volumeList.size() > 0) {
 			VolumeInfo foundVolume = volumeList.get(0);
 			//check its status
@@ -623,10 +622,13 @@ public class BlockStorage {
 			if(status.equals(StorageProperties.Status.available.toString()) || 
 					status.equals(StorageProperties.Status.failed.toString())) {
 				foundVolume.setStatus(StorageProperties.Status.deleting.toString());
-				reply.set_return(Boolean.TRUE);
 			}
 		} 
 		db.commit();
+		// Always set the response element to true as multiple delete requests may be received here. Its okay to allow multiple delete requests when
+		// 1. Volume to be deleted does not exist, it might have already been deleted.
+		// 2. Volume to be deleted is already marked for deletion
+		reply.set_return(Boolean.TRUE);
 		return reply;
 	}
 
@@ -1859,35 +1861,71 @@ public class BlockStorage {
 		@Override
 		public void run() {
 			EntityWrapper<VolumeInfo> db = StorageProperties.getEntityWrapper();
-			VolumeInfo searchVolume = new VolumeInfo();
-			searchVolume.setStatus(StorageProperties.Status.deleting.toString());
-			List<VolumeInfo> volumes = db.query(searchVolume);
-			db.commit();
-			for (VolumeInfo vol : volumes) {
-				String volumeId = vol.getVolumeId();
-				LOG.info("Volume: " + volumeId + " was marked for deletion. Cleaning up...");
-				try {
-					blockManager.deleteVolume(volumeId);
-				} catch (EucalyptusCloudException e) {
-					LOG.error(e, e);
-					continue;
+			try {
+				VolumeInfo searchVolume = new VolumeInfo();
+				searchVolume.setStatus(StorageProperties.Status.deleting.toString());
+				List<VolumeInfo> volumes = db.query(searchVolume);
+				db.commit();
+				for (VolumeInfo vol : volumes) {
+					//Do separate transaction for each volume so we don't
+					// keep the transaction open for a long time					
+					db = StorageProperties.getEntityWrapper();
+					try {
+						vol = db.getUnique(vol);
+						final String volumeId = vol.getVolumeId();
+						LOG.info("Volume: " + volumeId + " marked for deletion. Checking export status");
+						if(Iterables.any(vol.getAttachmentTokens(), new Predicate<VolumeToken>() {					
+							@Override
+							public boolean apply(VolumeToken token) {
+								//Return true if attachment is valid or export exists.
+								try {
+									return token.hasActiveExports();
+								} catch(EucalyptusCloudException e) {
+									LOG.warn("Failure checking for active exports for volume " + volumeId);
+									return false;
+								}
+							}
+						})) {
+							//Exports exists... don't delete.
+							LOG.warn("Volume " + volumeId + " found to be exported. Cannot delete. Skipping and will retry later");
+							continue;
+						}
+						
+						LOG.info("Volume: " + volumeId + " was marked for deletion with no exports found. Cleaning up...");
+						try {
+							blockManager.deleteVolume(volumeId);
+						} catch (EucalyptusCloudException e) {
+							LOG.error(e, e);
+							continue;
+						}
+						//db = StorageProperties.getEntityWrapper();
+						//VolumeInfo foundVolume;
+						//try {
+						//foundVolume = db.getUnique(new VolumeInfo(volumeId));
+						vol.setStatus(StorageProperties.Status.deleted.toString());
+						//db.commit();
+						EucaSemaphoreDirectory.removeSemaphore(volumeId);
+						//} catch (EucalyptusCloudException e) {
+						//db.rollback();
+						//}
+						db.commit();
+					} catch(Exception e) {
+						
+					} finally {
+						db.rollback();
+					}
 				}
-				db = StorageProperties.getEntityWrapper();
-				VolumeInfo foundVolume;
-				try {
-					foundVolume = db.getUnique(new VolumeInfo(volumeId));
-					foundVolume.setStatus(StorageProperties.Status.deleted.toString());
-					db.commit();
-					EucaSemaphoreDirectory.removeSemaphore(volumeId);
-				} catch (EucalyptusCloudException e) {
-					db.rollback();
-				}
+				//db.commit();
+			} catch(Exception e) {
+				LOG.error("Failed during delete task.",e);				
+			} finally {
+				//db.rollback();
 			}
 		}
 	}
-
+	
 	public static class SnapshotDeleterTask extends CheckerTask {
-
+		
 		public SnapshotDeleterTask() {
 			this.name = "SnapshotDeleter";
 		}

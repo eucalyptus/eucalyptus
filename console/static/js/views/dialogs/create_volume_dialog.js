@@ -136,6 +136,7 @@ define([
                 status: '',
                 volume: new Volume({snapshot_id: args.snapshot_id, size: args.size, availablity_zone: args.zone}),
                 error: new Backbone.Model({}),
+                help: {title: null, content: help_instance.dialog_launchmore_content, url: help_instance.dialog_launchmore_content_url, pop_height: 600},
 
                 cancelButton: {
                   click: function() {
@@ -181,7 +182,16 @@ define([
 	          // CLOSE THE DIALOG
 	          self.close();
                 }
-              })
+              }),
+
+              activateButton: function(e) {
+                // need to activate the button when 
+                // the required size field is typed in, instead of having to tab
+                // out of it or click another optional field - EUCA-6106
+                // button click will still validate and disallow weird input.
+                self.scope.createButton.set('disabled', false);
+              }
+
             }
 
 

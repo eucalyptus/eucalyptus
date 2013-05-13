@@ -61,7 +61,7 @@ define([
             $volumeSelector.autocomplete({
               source: sorted,
               select: function(event, ui) {
-                var selected_volume_id = ui.item.value.split(' ')[0];
+                var selected_volume_id = ui.item.value;
                 self.scope.volume.set('volume_id', selected_volume_id);
               }
            });
@@ -87,6 +87,7 @@ define([
             $instanceSelector.autocomplete({
               source: sorted,
               select: function(event, ui){
+                self.scope.volume.set({instance_id: ui.item.value});
                 var selected_instance_id = ui.item.value.split(" ")[0];
                 var deviceName = self._suggestNextDeviceName(selected_instance_id);
                 self.scope.volume.set({device: deviceName});

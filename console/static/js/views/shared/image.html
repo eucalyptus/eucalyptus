@@ -20,11 +20,11 @@
             <tr data-each-image="images" data-addclass=":isOdd" data-on-click=":select">
               <td>
                 <div class="image-type" data-addclass=":setClass">
-                  <div class="image-name" data-text="image.name"></div>
+                  <div class="image-name" data-entitytext=":formatName"></div>
                   <div class="image-id-arch">
                     <span data-text="image.id"></span>
                     <span data-text="image.architecture"></span><br/>
-                    <span data-entitytext="image.description"></span>
+                    <span data-entitytext=":formatDescription"></span>
                   </div>
                 </div>
               </td>

@@ -1294,37 +1294,50 @@ public class Cluster implements AvailabilityZoneMetadata, HasFullName<Cluster>, 
     }
   }
   
-  public void check( ) throws Faults.CheckException, IllegalStateException {
-    final Cluster.State currentState = this.stateMachine.getState( );
-    final List<Throwable> currentErrors = Lists.newArrayList( this.pendingErrors );
-    this.pendingErrors.clear( );
-    try {
-      if ( Component.State.ENABLED.equals( this.configuration.lookupState( ) ) ) {
-        enabledTransition( ).call( ).get( );
-      } else if ( Component.State.DISABLED.equals( this.configuration.lookupState( ) ) ) {
-        disabledTransition( ).call( ).get( );
-      } else if ( Component.State.NOTREADY.equals( this.configuration.lookupState( ) ) ) {
-        notreadyTransition( ).call( ).get( );
-      } else {
-        Refresh.SERVICEREADY.fire( this );
+  public void check( ) throws Faults.CheckException, IllegalStateException, InterruptedException, ServiceStateException {
+    if ( this.gateLock.tryLock( 30, TimeUnit.SECONDS ) ) {
+      try {    	
+        final Cluster.State currentState = this.stateMachine.getState( );
+        final List<Throwable> currentErrors = Lists.newArrayList( this.pendingErrors );
+        this.pendingErrors.clear( );
+        try {
+          Component.State state = this.configuration.lookupState();
+          if ( Component.State.ENABLED.equals( this.configuration.lookupState( ) ) ) {
+            enabledTransition( ).call( ).get( );
+          } else if ( Component.State.DISABLED.equals( this.configuration.lookupState( ) ) ) {
+            disabledTransition( ).call( ).get( );
+          } else if ( Component.State.NOTREADY.equals( this.configuration.lookupState( ) ) ) {
+            notreadyTransition( ).call( ).get( );
+          } else {
+            Refresh.SERVICEREADY.fire( this );
+          }
+        } catch ( Exception ex ) {
+          if ( ex.getCause( ) instanceof CancellationException ) {
+            //ignore cancellation errors.
+          } else {
+            currentErrors.add( ex );
+          }
+        } 
+        final Component.State externalState = this.configuration.lookupState( );
+        if ( !currentErrors.isEmpty( ) ) {
+          throw Faults.failure( this.configuration, currentErrors );
+        } else if ( Component.State.ENABLED.equals( externalState ) && ( Cluster.State.ENABLING.ordinal( ) >= currentState.ordinal( ) ) ) {
+          final IllegalStateException ex = new IllegalStateException( "Cluster is currently reported as " + externalState
+                                                                      + " but is really "
+                                                                      + currentState
+                                                                      + ":  please see logs for additional information." );
+          currentErrors.add( ex );
+          throw Faults.failure( this.configuration, currentErrors );
+        }
+      } catch ( Exception ex ) {
+        LOG.error( ex );
+        throw ex;
+      } finally {
+        //#6 Unmark this cluster as gated.
+        this.gateLock.unlock( );
       }
-    } catch ( Exception ex ) {
-      if ( ex.getCause( ) instanceof CancellationException ) {
-        //ignore cancellation errors.
-      } else {
-        currentErrors.add( ex );
-      }
-    }
-    final Component.State externalState = this.configuration.lookupState( );
-    if ( !currentErrors.isEmpty( ) ) {
-      throw Faults.failure( this.configuration, currentErrors );
-    } else if ( Component.State.ENABLED.equals( externalState ) && ( Cluster.State.ENABLING.ordinal( ) >= currentState.ordinal( ) ) ) {
-      final IllegalStateException ex = new IllegalStateException( "Cluster is currently reported as " + externalState
-                                                                  + " but is really "
-                                                                  + currentState
-                                                                  + ":  please see logs for additional information." );
-      currentErrors.add( ex );
-      throw Faults.failure( this.configuration, currentErrors );
+    } else {
+      throw new ServiceStateException( "Failed to check state in the zone " + this.getPartition( ) + ", it is currently locked for maintenance." );
     }
   }
   

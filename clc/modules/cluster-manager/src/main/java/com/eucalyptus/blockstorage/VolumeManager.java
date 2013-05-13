@@ -112,6 +112,7 @@ import com.eucalyptus.vm.VmInstance.VmState;
 import com.eucalyptus.vm.VmInstances;
 import com.eucalyptus.vm.VmVolumeAttachment;
 import com.eucalyptus.vm.VmVolumeAttachment.AttachmentState;
+import com.eucalyptus.vm.VmVolumeAttachment.NonTransientVolumeException;
 import com.google.common.base.Function;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
@@ -454,10 +455,13 @@ public class VolumeManager {
     VmInstance vm = null;
     AttachedVolume volume = null;
     try {
-      VmVolumeAttachment vmVolAttach = VmInstances.lookupVolumeAttachment( request.getVolumeId( ) );
+      VmVolumeAttachment vmVolAttach = VmInstances.lookupTransientVolumeAttachment( request.getVolumeId( ) );
       volume = VmVolumeAttachment.asAttachedVolume( vmVolAttach.getVmInstance( ) ).apply( vmVolAttach );
       vm = vmVolAttach.getVmInstance( );
     } catch ( NoSuchElementException ex ) {
+      if(ex instanceof NonTransientVolumeException){
+    	throw new EucalyptusCloudException(ex.getMessage() + " Cannot be detached");
+      }
       /** no such attachment **/
     }
     if ( vm != null && MigrationState.isMigrating( vm ) ) {

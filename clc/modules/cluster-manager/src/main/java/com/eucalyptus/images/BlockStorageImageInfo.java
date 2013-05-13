@@ -179,9 +179,9 @@ public class BlockStorageImageInfo extends ImageInfo implements BootableImageInf
   }
   
   @EntityUpgrade( entities = { BlockStorageImageInfo.class }, since = Version.v3_3_0, value = com.eucalyptus.component.id.Eucalyptus.class )
-  public enum BlockStorageImageInfoUpgrade_3_3_0 implements Predicate<Class> {
+  public enum BlockStorageImageInfo330Upgrade implements Predicate<Class> {
     INSTANCE;
-    private static Logger LOG = Logger.getLogger( BlockStorageImageInfo.BlockStorageImageInfoUpgrade_3_3_0.class );
+    private static Logger LOG = Logger.getLogger( BlockStorageImageInfo.BlockStorageImageInfo330Upgrade.class );
     @Override
     public boolean apply( Class arg0 ) {
       EntityTransaction db = Entities.get( BlockStorageImageInfo.class );
