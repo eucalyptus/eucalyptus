@@ -201,7 +201,7 @@ int doDescribeServices(ncMetadata * pMeta, serviceInfoType * serviceIds, int ser
     int do_report_all = 0;
     char *my_partition = NULL;
 
-    rc = initialize(pMeta);
+    rc = initialize(pMeta, TRUE); // DescribeServices is the only authoritative source of epoch
     if (rc) {
         return (1);
     }
@@ -412,7 +412,7 @@ int doStartService(ncMetadata * pMeta, serviceInfoType * serviceIds, int service
     int rc = 0;
     int ret = 0;
 
-    rc = initialize(pMeta);
+    rc = initialize(pMeta, FALSE);
     if (rc) {
         return (1);
     }
@@ -476,7 +476,7 @@ int doStopService(ncMetadata * pMeta, serviceInfoType * serviceIds, int serviceI
     int rc = 0;
     int ret = 0;
 
-    rc = initialize(pMeta);
+    rc = initialize(pMeta, FALSE);
     if (rc) {
         return (1);
     }
@@ -541,7 +541,7 @@ int doEnableService(ncMetadata * pMeta, serviceInfoType * serviceIds, int servic
     int ret = 0;
     int done = 0;
 
-    rc = initialize(pMeta);
+    rc = initialize(pMeta, FALSE);
     if (rc) {
         return (1);
     }
@@ -625,7 +625,7 @@ int doDisableService(ncMetadata * pMeta, serviceInfoType * serviceIds, int servi
     int rc = 0;
     int ret = 0;
 
-    rc = initialize(pMeta);
+    rc = initialize(pMeta, FALSE);
     if (rc) {
         return (1);
     }
@@ -684,7 +684,7 @@ int doShutdownService(ncMetadata * pMeta)
     int rc = 0;
     int ret = 0;
 
-    rc = initialize(pMeta);
+    rc = initialize(pMeta, FALSE);
     if (rc) {
         return (1);
     }

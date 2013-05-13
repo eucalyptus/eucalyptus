@@ -276,7 +276,7 @@ static int populateOutboundMeta(ncMetadata * pMeta);
 //!
 void doInitCC(void)
 {
-    initialize(NULL);
+    initialize(NULL, FALSE);
 }
 
 //!
@@ -309,7 +309,7 @@ int doBundleInstance(ncMetadata * pMeta, char *instanceId, char *bucketName, cha
     myInstance = NULL;
     op_start = time(NULL);
 
-    rc = initialize(pMeta);
+    rc = initialize(pMeta, FALSE);
     if (rc || ccIsEnabled()) {
         return (1);
     }
@@ -398,7 +398,7 @@ int doBundleRestartInstance(ncMetadata * pMeta, char *instanceId)
     time_t op_start = time(NULL);
     ccResourceCache resourceCacheLocal;
 
-    rc = initialize(pMeta);
+    rc = initialize(pMeta, FALSE);
     if (rc || ccIsEnabled())
         return (1);
 
@@ -468,7 +468,7 @@ int doCancelBundleTask(ncMetadata * pMeta, char *instanceId)
     myInstance = NULL;
     op_start = time(NULL);
 
-    rc = initialize(pMeta);
+    rc = initialize(pMeta, FALSE);
     if (rc || ccIsEnabled()) {
         return (1);
     }
@@ -1287,7 +1287,7 @@ int doAttachVolume(ncMetadata * pMeta, char *volumeId, char *instanceId, char *r
     myInstance = NULL;
     op_start = time(NULL);
 
-    rc = initialize(pMeta);
+    rc = initialize(pMeta, FALSE);
     if (rc || ccIsEnabled()) {
         return (1);
     }
@@ -1367,7 +1367,7 @@ int doDetachVolume(ncMetadata * pMeta, char *volumeId, char *instanceId, char *r
     myInstance = NULL;
     op_start = time(NULL);
 
-    rc = initialize(pMeta);
+    rc = initialize(pMeta, FALSE);
     if (rc || ccIsEnabled()) {
         return (1);
     }
@@ -1445,7 +1445,7 @@ int doConfigureNetwork(ncMetadata * pMeta, char *accountId, char *type, int name
 {
     int rc, i, fail;
 
-    rc = initialize(pMeta);
+    rc = initialize(pMeta, FALSE);
     if (rc || ccIsEnabled()) {
         return (1);
     }
@@ -1519,7 +1519,7 @@ int doFlushNetwork(ncMetadata * pMeta, char *accountId, char *destName)
 {
     int rc;
 
-    rc = initialize(pMeta);
+    rc = initialize(pMeta, FALSE);
     if (rc || ccIsEnabled()) {
         return (1);
     }
@@ -1554,7 +1554,7 @@ int doAssignAddress(ncMetadata * pMeta, char *uuid, char *src, char *dst)
     ccInstance *myInstance = NULL;
     ccResourceCache resourceCacheLocal;
 
-    rc = initialize(pMeta);
+    rc = initialize(pMeta, FALSE);
     if (rc || ccIsEnabled()) {
         return (1);
     }
@@ -1650,7 +1650,7 @@ int doDescribePublicAddresses(ncMetadata * pMeta, publicip ** outAddresses, int 
 {
     int rc, ret;
 
-    rc = initialize(pMeta);
+    rc = initialize(pMeta, FALSE);
     if (rc || ccIsEnabled()) {
         return (1);
     }
@@ -1695,7 +1695,7 @@ int doUnassignAddress(ncMetadata * pMeta, char *src, char *dst)
     ccInstance *myInstance = NULL;
     ccResourceCache resourceCacheLocal;
 
-    rc = initialize(pMeta);
+    rc = initialize(pMeta, FALSE);
     if (rc || ccIsEnabled()) {
         return (1);
     }
@@ -1781,7 +1781,7 @@ int doStopNetwork(ncMetadata * pMeta, char *accountId, char *netName, int vlan)
 {
     int rc, ret;
 
-    rc = initialize(pMeta);
+    rc = initialize(pMeta, FALSE);
     if (rc || ccIsEnabled()) {
         return (1);
     }
@@ -1830,7 +1830,7 @@ int doDescribeNetworks(ncMetadata * pMeta, char *nameserver, char **ccs, int ccs
 {
     int rc;
 
-    rc = initialize(pMeta);
+    rc = initialize(pMeta, FALSE);
     if (rc || ccIsEnabled()) {
         return (1);
     }
@@ -1884,7 +1884,7 @@ int doStartNetwork(ncMetadata * pMeta, char *accountId, char *uuid, char *netNam
     int rc, ret;
     char *brname;
 
-    rc = initialize(pMeta);
+    rc = initialize(pMeta, FALSE);
     if (rc || ccIsEnabled()) {
         return (1);
     }
@@ -1953,7 +1953,7 @@ int doDescribeResources(ncMetadata * pMeta, virtualMachine ** ccvms, int vmLen, 
 
     LOGDEBUG("invoked: userId=%s, vmLen=%d\n", SP(pMeta ? pMeta->userId : "UNSET"), vmLen);
 
-    rc = initialize(pMeta);
+    rc = initialize(pMeta, FALSE);
     if (rc || ccIsEnabled()) {
         return (1);
     }
@@ -2714,7 +2714,7 @@ int doDescribeInstances(ncMetadata * pMeta, char **instIds, int instIdsLen, ccIn
 
     op_start = time(NULL);
 
-    rc = initialize(pMeta);
+    rc = initialize(pMeta, FALSE);
     if (rc || ccIsEnabled()) {
         return (1);
     }
@@ -3533,7 +3533,7 @@ int doRunInstances(ncMetadata * pMeta, char *amiId, char *kernelId, char *ramdis
     virtualMachine ncvm;
     netConfig ncnet;
 
-    rc = initialize(pMeta);
+    rc = initialize(pMeta, FALSE);
     if (rc || ccIsEnabled()) {
         return (1);
     }
@@ -3874,7 +3874,7 @@ int doGetConsoleOutput(ncMetadata * pMeta, char *instanceId, char **consoleOutpu
     op_start = time(NULL);
     *consoleOutput = NULL;
 
-    rc = initialize(pMeta);
+    rc = initialize(pMeta, FALSE);
     if (rc || ccIsEnabled()) {
         return (EUCA_ERROR);
     }
@@ -3968,7 +3968,7 @@ int doRebootInstances(ncMetadata * pMeta, char **instIds, int instIdsLen)
     myInstance = NULL;
     op_start = time(NULL);
 
-    rc = initialize(pMeta);
+    rc = initialize(pMeta, FALSE);
     if (rc || ccIsEnabled()) {
         return (1);
     }
@@ -4039,7 +4039,7 @@ int doTerminateInstances(ncMetadata * pMeta, char **instIds, int instIdsLen, int
     instId = NULL;
     myInstance = NULL;
 
-    rc = initialize(pMeta);
+    rc = initialize(pMeta, FALSE);
     if (rc || ccIsEnabled()) {
         return (1);
     }
@@ -4146,7 +4146,7 @@ int doCreateImage(ncMetadata * pMeta, char *instanceId, char *volumeId, char *re
     myInstance = NULL;
     op_start = time(NULL);
 
-    rc = initialize(pMeta);
+    rc = initialize(pMeta, FALSE);
     if (rc || ccIsEnabled()) {
         return (1);
     }
@@ -4216,7 +4216,7 @@ int doCreateImage(ncMetadata * pMeta, char *instanceId, char *volumeId, char *re
 int doDescribeSensors(ncMetadata * pMeta, int historySize, long long collectionIntervalTimeMs, char **instIds, int instIdsLen, char **sensorIds,
                       int sensorIdsLen, sensorResource *** outResources, int *outResourcesLen)
 {
-    int rc = initialize(pMeta);
+    int rc = initialize(pMeta, FALSE);
     if (rc || ccIsEnabled()) {
         return 1;
     }
@@ -4311,7 +4311,7 @@ int doModifyNode(ncMetadata * pMeta, char *nodeName, char *stateName)
     int src_index = -1;
     ccResourceCache resourceCacheLocal;
 
-    // no need to call initialize(pMeta) because we call doModifyNode internally, from doEnable/DisableService
+    // no need to call initialize(pMeta, FALSE) because we call doModifyNode internally, from doEnable/DisableService
     if (ccIsEnabled()) {
         return (1);
     }
@@ -4404,7 +4404,7 @@ int doMigrateInstances(ncMetadata * pMeta, char *actionNode, char *instanceId, c
 
     LOGTRACE("invoked\n");
 
-    rc = initialize(pMeta);
+    rc = initialize(pMeta, FALSE);
     if (rc || ccIsEnabled()) {
         return (1);
     }
@@ -4823,17 +4823,25 @@ static int populateOutboundMeta(ncMetadata * pMeta)
 }
 
 //!
-//!
+//! Initialization function called by all handlers. Each handler call may 
+//! go to a new process (as decided by apache), so this function does a lot
+//! to set up shared memory, logging, fault subsystem, etc, for the process.
+//! Since it is called for every request from CLC, this is also where we 
+//! update state based on the latest values from CLC:
+//! 
+//!   * cloudIp
+//!   * epoch
+//!   * services (enabled / disabled / not ready)
 //!
 //! @param[in] pMeta a pointer to the node controller (NC) metadata structure
-//!
+//! @param[in] authoritative indicates whether this request is allowed to reset epoch
 //! @return
 //!
 //! @pre
 //!
 //! @note
 //!
-int initialize(ncMetadata * pMeta)
+int initialize(ncMetadata * pMeta, boolean authoritative)
 {
     int rc, ret;
 
@@ -4875,16 +4883,18 @@ int initialize(ncMetadata * pMeta)
     }
 
     if (pMeta != NULL) {
-        LOGDEBUG("pMeta: userId=%s correlationId=%s\n", SP(pMeta->userId), pMeta->correlationId);
+        LOGTRACE("pMeta: userId=%s correlationId=%s\n", SP(pMeta->userId), pMeta->correlationId);
     }
 
     if (!ret) {
         // store information from CLC that needs to be kept up-to-date in the CC
         if (pMeta != NULL) {
             int i;
-            LOGTRACE("Initializing ncMeta: enabled %d, disabled %d, notready %d\n", pMeta->servicesLen, pMeta->disabledServicesLen, pMeta->notreadyServicesLen);
             sem_mywait(CONFIG);
-            if (pMeta->epoch >= config->ccStatus.localEpoch) {
+            LOGTRACE("pMeta: epoch=%d (vs %d) enabled %d, disabled %d, notready %d\n", 
+                     pMeta->epoch, config->ccStatus.localEpoch, pMeta->servicesLen, pMeta->disabledServicesLen, pMeta->notreadyServicesLen);
+            if (pMeta->epoch >= config->ccStatus.localEpoch || // we missed some updates, so let us catch up
+                authoritative) { // trust the authoritative requests and always take their services info
                 memcpy(config->services, pMeta->services, sizeof(serviceInfoType) * 16);
                 memcpy(config->disabledServices, pMeta->disabledServices, sizeof(serviceInfoType) * 16);
                 memcpy(config->notreadyServices, pMeta->notreadyServices, sizeof(serviceInfoType) * 16);
