@@ -3299,3 +3299,7 @@ filter: progid:DXImageTransform.Microsoft.gradient( startColorstr='#ededed', end
     vertical-align: top;
     line-height: 27px;
 }
+
+.effects-box {
+    background-color: white;
+}

@@ -9,23 +9,24 @@
 <meta name="abstract" content="This screen allows you to view a list of your security groups and create, modify and delete security groups. You can page through the list of security groups by clicking the navigation buttons at the bottom of the screen."/>
 <meta name="description" content="This screen allows you to view a list of your security groups and create, modify and delete security groups. You can page through the list of security groups by clicking the navigation buttons at the bottom of the screen."/>
 <meta name="prodname" content="Eucalyptus"/>
-<meta name="version" content="3.2"/>
-<meta name="copyright" content="Eucalyptus Systems 2012" type="primary"/>
-<meta name="DC.Rights.Owner" content="Eucalyptus Systems 2012" type="primary"/>
+<meta name="version" content="3.3"/>
+<meta name="copyright" content="Eucalyptus Systems 2013" type="primary"/>
+<meta name="DC.Rights.Owner" content="Eucalyptus Systems 2013" type="primary"/>
 <meta name="DC.Format" content="XHTML"/>
 <meta name="DC.Identifier" content="manage_security_group_ui_context"/>
 <link rel="stylesheet" type="text/css" href="/css/eucalyptus.css"/>
 <title>Manage Security Groups</title>
 </head>
-<body id="manage_security_group_ui_context" class="help-page-body">
+<body id="manage_security_group_ui_context">
 
 
     <h1 class="title topictitle1">Manage Security Groups</h1>
 
     
-    <div class="body taskbody"><p class="shortdesc"> This screen allows you to view a list of your security groups and create, modify and delete 
-        security groups. You can page through the list of security groups by clicking the
-        navigation buttons at the bottom of the screen. </p>
+    <div class="body taskbody"><p class="shortdesc"> This screen allows you to view a list of your security groups
+        and create, modify and delete security groups. You can page through the
+        list of security groups by clicking the navigation buttons at the bottom
+        of the screen. </p>
 </div>
 
     <div class="topic task nested1" id="manage_security_group_ui_sorting_steps">
@@ -35,8 +36,9 @@
         <div class="body taskbody"><p class="shortdesc"/>
 
             <div class="li step p">
-                    <span class="ph cmd">Click on any column header to toggle sorting the list of security groups in
-                        ascending or descending order by the selected column.</span>
+                    <span class="ph cmd">Click on any column header to toggle sorting the list
+                        of security groups in ascending or descending order by
+                        the selected column.</span>
                 </div>
 
         </div>
@@ -50,8 +52,9 @@
         <div class="body taskbody"><p class="shortdesc"/>
 
             <div class="li step p">
-                    <span class="ph cmd">Type some search text into the <span class="ph uicontrol">Search</span> text box to
-                        filter the list of security groups. </span>
+                    <span class="ph cmd">Type some search text into the
+                            <span class="ph uicontrol">Search</span> text box to filter the
+                        list of security groups. </span>
                 </div>
 
         </div>
@@ -65,17 +68,44 @@
         <div class="body taskbody"><p class="shortdesc"/>
 
             <div class="li step p">
-                    <span class="ph cmd">Click the <span class="ph uicontrol">Create new security group</span> button. The <span class="ph uicontrol">Create
-                        Security Group</span> dialog box will appear.</span>
+                    <span class="ph cmd">Click the <span class="ph uicontrol">Create new security
+                            group</span> button. The <span class="ph uicontrol">Create
+                            Security Group</span> dialog box will
+                        appear.</span>
                 </div>
 
         </div>
 
     </div>
 
-    
-    
-    
+
+    <div class="topic task nested1" id="manage_security_group_ui_view_details_steps">
+        <h2 class="title topictitle2">Viewing Details of a Security Group</h2>
+
+        
+        <div class="body taskbody"><p class="shortdesc">You can expand a security group in the list to see details about the security group, including tags and rules associated with the security group.</p>
+
+           
+            <ol class="ol steps"><li class="li step">
+                    <span class="ph cmd">Click the name of the security group in the list of security groups.</span>
+                     The area beneath the security group name will expand to a tabbed interface.
+                </li>
+<li class="li step">
+                    <span class="ph cmd">Click the <span class="ph uicontrol">General</span> tab to see a panel of detailed information about the security group, include the list of incoming traffic rules.</span>
+                </li>
+<li class="li step">
+                    <span class="ph cmd">
+                        Click the <span class="ph uicontrol">Tags</span> tab to see a list of tags associated with the security group.
+                    </span>
+                </li>
+</ol>
+
+        </div>
+
+    </div>
+
+
+
     <div class="topic task nested1" id="manage_security_group_ui_delete_steps">
         <h2 class="title topictitle2">Deleting Security Groups</h2>
 
@@ -83,12 +113,14 @@
         <div class="body taskbody"><p class="shortdesc"/>
 
             <ol class="ol steps"><li class="li step">
-                    <span class="ph cmd">Click the checkbox next to the security group you wish to delete.</span>
+                    <span class="ph cmd">Click the checkbox next to the security group you wish
+                        to delete.</span>
                 </li>
 <li class="li step">
-                    <span class="ph cmd"> Right-click in the security group list and select <span class="ph uicontrol">Delete</span>
-                        from the context menu. The <span class="ph uicontrol">Delete Security Group</span> dialog box
-                        will appear. </span>
+                    <span class="ph cmd"> Right-click in the security group list and select
+                            <span class="ph uicontrol">Delete</span> from the context menu.
+                        The <span class="ph uicontrol">Delete Security Group</span> dialog
+                        box will appear. </span>
                 </li>
 </ol>
 
