@@ -69,7 +69,7 @@
 	      "mRender": function(data) {
                 return DefaultEncoder().encodeForHTML(data);
               },
-              "mData": "instance_id",
+              "mData": "display_instance_id",
 	    },
             {
 	      // Invisible Column for storing the status of the IP
