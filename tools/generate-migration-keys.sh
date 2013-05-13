@@ -21,11 +21,12 @@
 # Additional Information Or Have Any Questions.
 #
 #
-# Run on NC with three arguments:
+# Run on NC with 2-4 arguments:
 #
-# 0. "source", "destination", or "both" to indicate role in migration(s).
-# 1. IP address of this host.
-# 2. Unique token for migration(s).
+# 0. -v (for verbose mode) [optional]
+# 1. IP address of this host
+# 2. Unique token for migration(s)
+# 3. 'restart' (if post-generation restart of libvirtd is desired) [optional]
 
 # Bail on error
 set -e
@@ -196,9 +197,11 @@ ensure_listen ()
 # Despite what the documentation says, sending a SIGHUP to libvirtd does
 # not appear to update its access list of DNs. So we're doing a full restart.
 # Ugh.
+
 #kill -HUP `cat $LIBVIRTPID`
+
 if [ "$RESTART" == "yes" ] ; then
-    echo "Key installation complete, reloading libvirtd."
+    echo "Key installation complete, restarting libvirtd."
 
     # Ensure libvirtd is run with --listen arg.
     ensure_listen
