@@ -4,7 +4,7 @@ define([
   'text!./advanced.html!strip',
   'rivets',
   './model/blockmap'
-	], function( app, dataholder, template, rivets, blockmap ) {
+], function( app, dataholder, template, rivets, blockmap ) {
 	return Backbone.View.extend({
     tpl: template,
     title: app.msg("launch_instance_section_header_advanced"),
@@ -12,10 +12,12 @@ define([
     optionLinkText: app.msg('launch_instance_btn_next_advanced'),
 
     launchConfigErrors: new Backbone.Model({volume_size: ''}),
+    theImage: null,
     
-		initialize : function() {
+    initialize : function() {
 
       var self = this;
+      self.theImage = self.options.image;
       var scope = {
         advancedModel: self.model,
         kernels: new Backbone.Collection(dataholder.images.where({type: 'kernel'})), 
@@ -184,14 +186,24 @@ define([
         self.model.set('files', this.files);
        });
        this.model.set('fileinput', function() { return fileinputel; });
-		},
+    },
 
     render: function() {
+      this.$el.find('#launch-wizard-advanced-storage').hide();
+      if (this.theImage != null) {
+        if (this.theImage.get('root_device_type') != undefined) {
+          root_device_type = this.theImage.get('root_device_type');
+          if (root_device_type == 'ebs') {
+            this.$el.find('#launch-wizard-advanced-storage').show();
+          }
+        }
+      }
+
       this.rView.sync();
     },
 
     focus: function() {
       this.model.set('advanced_show', true);
     }
-});
+  });
 });

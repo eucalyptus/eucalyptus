@@ -5,8 +5,10 @@ define(['./blockmap'], function(blockmap) {
     },
 
     finish: function(outputModel) {
-      outputModel.set('block_device_mappings', this.toJSON());
+      var outputMappings = this.reduce(function(c, m) {
+        return m.get('device_name') == '/dev/sda' ? c.add(m) : c;
+      }, new Backbone.Collection());
+      outputModel.set('block_device_mappings', JSON.stringify(outputMappings));
     }
-
   });
 });
