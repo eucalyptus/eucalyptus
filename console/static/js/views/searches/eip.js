@@ -1,7 +1,8 @@
 define([
+  'app',
   'views/searches/generic',
   'views/searches/tagsearch'
-], function(Search, TagSearch) {
+], function(app, Search, TagSearch) {
   return function(addresses) {
 
     var config = {
@@ -19,8 +20,10 @@ define([
         }
       },
       localize: {
-        assigned : 'Assigned',
-        unassigned: 'Unassigned'
+        assigned : app.msg('search_facet_eip_assigned'), //'Assigned',
+        unassigned: app.msg('search_facet_eip_unassigned'), //'Unassigned'
+        all_text: app.msg('search_facet_alltext'),
+        assignment: app.msg('search_facet_eio_assignment')
       },
       search: {
         assignment: function(search, facetSearch, item, itemsFacetValue, hit) {

@@ -65,11 +65,13 @@ function(EucaModel) {
             },
             max_size: {
               min: 0,
-              required: true
+              required: true,
+              pattern: 'digits'
             },
             min_size: {
               min: 0,
-              required: true
+              required: true,
+              pattern: 'digits'
             },
             placement_group: {
               rangeLength: [1, 255],

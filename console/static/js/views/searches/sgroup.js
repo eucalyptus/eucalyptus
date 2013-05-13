@@ -18,7 +18,8 @@ define([
       facets: ['all_text', 'owner_id']
       
       ,localize: {
-        owner_id: 'Owner'
+        owner_id: app.msg('search_facet_securitygroup_owner'), //'Owner'
+        all_text: app.msg('search_facet_alltext')
       }
       ,match : {
         owner_id : function(search, item, add) {

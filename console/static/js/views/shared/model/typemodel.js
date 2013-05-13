@@ -8,7 +8,7 @@ define(['app'], function(app) {
     validation: {
       type_number: {
         required: true,
-        pattern: 'number',
+        pattern: 'digits',
         min: 1,
         max: 99,
         msg: app.msg("launch_instance_error_number_required")
