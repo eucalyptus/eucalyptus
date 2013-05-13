@@ -19,8 +19,10 @@ define([
         }
       },
       localize: {
-        assigned : 'Assigned',
-        unassigned: 'Unassigned'
+        all_text: all_text_facet,
+        assignment: assignment_facet,
+        assigned: assigned_facet,
+        unassigned: unassigned_facet
       },
       search: {
         assignment: function(search, facetSearch, item, itemsFacetValue, hit) {

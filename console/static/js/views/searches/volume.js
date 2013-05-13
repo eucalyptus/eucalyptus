@@ -11,7 +11,9 @@ define([
       localize : function(what) {
         switch (what) {
           case 'attach_data' : 
-            return 'Attachment';
+            return attach_data_facet;
+          case 'all_text' :
+            return all_text_facet;
         }
         // 'Attached' is actually an object
         // of some sort

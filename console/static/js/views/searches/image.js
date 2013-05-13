@@ -17,11 +17,16 @@ define([
         'ownerId', 'platform', 'root_device_type']
 
       , localize: {
-        ownerId: 'Owner',
-        i386 : '32-bit',
-        x86_64 : '64-bit',
-        root_device_type : 'Root Device',
-        ebs : 'EBS'
+        all_text: all_text_facet,
+        ownerId: owner_facet,
+        i386: '32-bit',
+        x86_64: '64-bit',
+        root_device_type: root_device_type_facet,
+        ebs: ebs_type_facet,
+        architecture: architecture_facet,
+        platform: platform_facet,
+        name: name_facet,
+        description: description_facet
       }
 
       , match: {

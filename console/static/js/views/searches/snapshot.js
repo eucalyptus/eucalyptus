@@ -15,8 +15,10 @@ define([
         }
       }
       , localize: {
-        'in-progress': 'In-Progress',
-        completed: 'Completed'
+        all_text: all_text_facet,
+        'in-progress': in_progress_facet,
+        'completed': completed_facet,
+        'progress': progress_facet
       }
       , search: {
         progress: function(search, facetSearch, item, itemsFacetValue, hit) {

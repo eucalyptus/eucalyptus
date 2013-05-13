@@ -18,7 +18,8 @@ define([
       facets: ['all_text', 'owner_id']
       
       ,localize: {
-        owner_id: 'Owner'
+        all_text: all_text_facet,
+        owner_id: owner_facet
       }
       ,match : {
         owner_id : function(search, item, add) {
