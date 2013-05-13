@@ -88,6 +88,7 @@ import com.eucalyptus.entities.Entities;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.google.common.base.Function;
 import com.google.common.base.Predicate;
+import com.google.common.collect.Iterables;
 import com.google.common.collect.Iterators;
 
 @Entity 
@@ -224,6 +225,30 @@ public class VolumeToken extends AbstractPersistent {
 			}
 		}
 		return null;
+	}
+	
+	/**
+	 * Does this token have any associated active export records
+	 * @return
+	 * @throws EucalyptusCloudException
+	 */
+	public boolean hasActiveExports() throws EucalyptusCloudException {
+		//EntityTransaction db = Entities.get(VolumeToken.class);
+		try {
+			//VolumeToken tokenEntity = Entities.merge(this);
+			return Iterables.any(this.getExportRecords(), new Predicate<VolumeExportRecord>() {
+				@Override
+				public boolean apply(VolumeExportRecord rec) {
+					return rec.getIsActive();
+				}
+			});
+		} catch(Exception e) {
+			LOG.error("Error when checking for active exports volume " + this.getVolume().getVolumeId() + " and token " + this.getToken());
+			throw new EucalyptusCloudException("Failed to check for valid export",e);
+		} 
+//		finally {
+//			db.rollback();
+//		}
 	}
 	
 	/**
