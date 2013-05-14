@@ -1113,12 +1113,12 @@ release:
         int err = 0;
         if (dom != NULL) {
             err = virDomainDetachDevice(dom, xml);
-            unlock_hypervisor_conn();
         }
         if (err) {
             LOGERROR("[%s][%s] failed to detach as part of aborting\n", instanceId, volumeId);
             LOGDEBUG("[%s][%s] virDomainDetachDevice() failed (err=%d) XML='%s'\n", instanceId, volumeId, err, xml);
         }
+        unlock_hypervisor_conn();
         ret = EUCA_ERROR;
     }
     // if iSCSI and there were problems, try to disconnect the target

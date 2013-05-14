@@ -623,12 +623,15 @@ public class BlockStorage {
 					status.equals(StorageProperties.Status.failed.toString())) {
 				foundVolume.setStatus(StorageProperties.Status.deleting.toString());
 			}
-		} 
+			// Delete operation should be idempotent as multiple attempts can be made to delete the same volume 
+			// Set the response element to true if the volume entity is found. EUCA-6093
+			reply.set_return(Boolean.TRUE);
+		} else {
+			// Set the response element to false if the volume entity does not exist in the SC database
+			LOG.error("Unable to find volume in SC database: " + volumeId);
+			reply.set_return(Boolean.FALSE);
+		}
 		db.commit();
-		// Always set the response element to true as multiple delete requests may be received here. Its okay to allow multiple delete requests when
-		// 1. Volume to be deleted does not exist, it might have already been deleted.
-		// 2. Volume to be deleted is already marked for deletion
-		reply.set_return(Boolean.TRUE);
 		return reply;
 	}
 
