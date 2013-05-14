@@ -880,6 +880,8 @@ int ncClientCall(ncMetadata * pMeta, int timeout, int ncLock, char *ncURL, char 
             ret = 0;
         }
         close(filedes[1]);
+        EUCA_FREE(localmeta->correlationId);
+        EUCA_FREE(localmeta->userId);
         EUCA_FREE(localmeta);
         exit(ret);
     } else {
