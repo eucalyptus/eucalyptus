@@ -392,7 +392,15 @@
          id: 'launch-more-instances',
          title: instance_dialog_launch_more_title,
          buttons: {
-           'launch': {text: instance_dialog_launch_btn, domid: 'btn-launch-more', click: function() { thisObj._launchMore(); $launchmore_dialog.eucadialog("close");}},
+           'launch': {
+              text: instance_dialog_launch_btn, 
+              domid: 'btn-launch-more', 
+              click: function() { thisObj._launchMore( function() { 
+                      // callback and close the window if it passes validation
+                      $launchmore_dialog.eucadialog("close");
+                  }); 
+              }
+           },
            'cancel': {text: dialog_cancel_btn, focus:true, click: function() { $launchmore_dialog.eucadialog("close");}} 
          },
          help: {title: null, content: $launchmore_help, url: help_instance.dialog_launchmore_content_url, pop_height: 600},
@@ -1042,7 +1050,7 @@
       this.launchMoreDialog.eucadialog('open');
     },
 
-    _launchMore : function() {
+    _launchMore : function( callback ) {
       var thisObj = this;
       var id = this.tableWrapper.eucatable('getSelectedRows', 17)[0];
 //      id = $(id).html();    // After dataTable 1.9 integration, this operaiton is no longer needed. 030413
@@ -1064,21 +1072,23 @@
       var zone = thisObj.launchMoreDialog.find('#summary-type-zone').children().last().text();
       var inst_num = thisObj.launchMoreDialog.find('input#launch-more-num-instance').val();
       var keyname = thisObj.launchMoreDialog.find('#summary-security-keypair').children().last().text();
-      var iModel = null;
+      var isValid = true;
 
-      require(['models/instance'], function(Instance) {
-        iModel = new Instance({
-           image_id: emi,
-           min_count: inst_num,
-           max_count: inst_num 
-        });
-        console.log('MODEL', iModel, iModel.isValid());
-        iModel.validate();
-        if (!iModel.isValid()) {
-          console.log("MODEL INVALID");
-          return false;
-        }
+      // validation stuff
+      var Instance = require('models/instance');
+      var iModel = new Instance({
+         image_id: emi,
+         min_count: inst_num,
+         max_count: inst_num 
       });
+      
+      iModel.validate();
+      if (!iModel.isValid()) {
+        $('#summary_type_numinst_error').text(require('app').msg('launch_instance_error_number_required'));
+        return false;  // stop here with error displayed
+      }
+      // end validation
+
 
       if (keyname==='None')
         keyname = null;
@@ -1141,6 +1151,8 @@
       if(deviceMap.length > 0)
         $('html body').find(DOM_BINDING['hidden']).launcher('updateLaunchParam', 'device_map', deviceMap);
       $('html body').find(DOM_BINDING['hidden']).launcher('launch');
+
+      callback();
     },
 
     _initLaunchMoreDialog : function(){
