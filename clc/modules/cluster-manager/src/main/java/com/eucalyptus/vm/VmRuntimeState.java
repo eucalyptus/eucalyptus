@@ -98,6 +98,7 @@ import com.eucalyptus.records.EventType;
 import com.eucalyptus.records.Logs;
 import com.eucalyptus.system.Threads;
 import com.eucalyptus.util.Exceptions;
+import com.eucalyptus.util.StorageProperties;
 import com.eucalyptus.util.async.AsyncRequests;
 import com.eucalyptus.util.async.CheckedListenableFuture;
 import com.eucalyptus.vm.Bundles.BundleCallback;
@@ -278,8 +279,9 @@ public class VmRuntimeState {
                 try {
                   LOG.debug( vmId + ": waiting for storage volume: " + volumeId );
                   GetVolumeTokenResponseType scReply = scGetTokenReplyFuture.get();
+                  String token = StorageProperties.formatVolumeAttachmentTokenForTransfer(scReply.getToken(), volumeId);
                   LOG.debug( vmId + ": " + volumeId + " => " + scGetTokenReplyFuture.get( ) );
-                  AsyncRequests.dispatch( ccConfig, new AttachVolumeType( volumeId, vmId, vmDevice, scReply.getToken() ) );
+                  AsyncRequests.dispatch( ccConfig, new AttachVolumeType( volumeId, vmId, vmDevice, token));
 //                  final EntityTransaction db = Entities.get( VmInstance.class );
 //                  try {
 //                    final VmInstance entity = Entities.merge( vm );
