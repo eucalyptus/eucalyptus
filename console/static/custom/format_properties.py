@@ -34,14 +34,22 @@ def build_map (file_path, key_arr=None):
         exit(-1)
 
     if f:
+        warning = False
         for line in f.readlines():
             try:
-                (lkey,rval) = line.split('=', 1)
-                lkey = lkey.strip()
-                rval = rval.strip()
-                if key_arr != None:
-                    key_arr.append(lkey)
-                new_map[lkey]=rval
+                if line.startswith('#warning'):
+                    warning = True
+                    continue
+                # don't add lines that are preceded by #warning
+                if warning == False:
+                    (lkey,rval) = line.split('=', 1)
+                    lkey = lkey.strip()
+                    rval = rval.strip()
+                    if key_arr != None:
+                        key_arr.append(lkey)
+                    new_map[lkey]=rval
+                else:
+                    warning = False
             except Exception, err:
                 if key_arr != None:
                     key_arr.append(line)
