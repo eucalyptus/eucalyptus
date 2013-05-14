@@ -16,12 +16,39 @@ define(['app'], function(app) {
     },
 
     validation: {
-      volume_size: {
-        required: false,
-        pattern: 'number',
-        min: 1,
-        max: 1000,
-        msg: app.msg("launch_instance_error_volume_size_number")
+      volume_size: function(value) {
+        if (this.get('snapshot_id') != undefined) {
+          if (value.length <= 0 || (parseInt(value)<=0 || isNaN(value))){
+            return app.msg("launch_instance_error_volume_size_number");
+          }
+        }
+        /*
+        var snapshotSize = -1;
+          if(volume==='ebs'){
+          //find the size of the chosen snapshot;
+            var result = describe('snapshot');
+            for (i in result){
+              var s = result[i]; 
+              if(s.id === snapshot){
+                snapshotSize = s.volume_size;
+                break;
+              }
+            }
+          }else if (emi){ //root volume
+            var image = describe('image', emi);
+            if(image['block_device_mapping'] && image['block_device_mapping']['/dev/sda']) 
+             snapshotSize = parseInt(image['block_device_mapping']['/dev/sda']['size']);
+          }
+          if(snapshotSize > size){
+            thisObj.element.find('.field-error').remove();
+            $($cells[3]).append($('<div>').addClass('field-error').html(launch_instance_advanced_error_dev_size));
+            return false;
+          }
+          */
+      },
+      snapshot_id: function(value) {
+        if (this.get('volume_size') != undefined) {
+        }
       }
     },
 
