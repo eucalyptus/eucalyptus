@@ -2135,7 +2135,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
             runningInstance.getBlockDevices( ).add( new InstanceBlockDeviceMapping( attachedVol.getDevice( ), attachedVol.getVolumeId( ),
                                                                                     attachedVol.getStatus( ),
                                                                                     attachedVol.getAttachTime( ),
-                                                                                    Boolean.TRUE ) );
+                                                                                    attachedVol.getDeleteOnTerminate( ) ) );
           }
           return runningInstance;
         } catch ( final NoSuchElementException ex ) {
