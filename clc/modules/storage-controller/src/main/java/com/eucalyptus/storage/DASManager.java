@@ -1259,7 +1259,6 @@ public class DASManager implements LogicalStorageManager {
 	public List<CheckerTask> getCheckers() {
 		List<CheckerTask> checkers = new ArrayList<CheckerTask>();
 		//Volume cleanup is now synchronous, no need for background tasks
-		//checkers.add(new VolumeCleanup());
 		return checkers;
 	}
 
