@@ -60,7 +60,7 @@ define([], function() {
 
           // FIXME Whoa, WTF - the search parameter is a *string* like
           // '"Name (tag)" : "foo"'
-          var extractSearchText = /"(.*?) _tag":\s?"(.*)"/
+          var extractSearchText = /.*"(.*?) _tag":\s?"(.+)"/
           if (extractSearchText.test(search)) {
             var sreg = extractSearchText.exec(search);
             var tagStr = sreg[1];
