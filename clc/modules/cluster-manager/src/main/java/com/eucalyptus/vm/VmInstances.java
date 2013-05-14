@@ -616,7 +616,7 @@ public class VmInstances {
         public boolean apply( final VmVolumeAttachment arg0 ) {
           try {
             
-            if ( VmStateSet.TERM.apply( vm ) && !"/dev/sda1".equals( arg0.getDevice( ) ) ) {
+            if ( VmStateSet.DONE.apply( vm ) && !"/dev/sda1".equals( arg0.getDevice( ) ) ) {
               try {
             	VmInstance vmInstance = Entities.merge( arg0.getVmInstance( ) );
                 vmInstance.getTransientVolumeState( ).removeVolumeAttachment( arg0.getVolumeId( ) );
@@ -639,7 +639,7 @@ public class VmInstances {
             
             try {
               //ebs with either default deleteOnTerminate or user specified deleteOnTerminate and TERMINATING
-              if ( ( VmStateSet.TERM.apply( vm ) ) && arg0.getDeleteOnTerminate( ) ) {
+              if ( ( VmStateSet.DONE.apply( vm ) ) && arg0.getDeleteOnTerminate( ) ) {
                 final ServiceConfiguration sc = Topology.lookup( Storage.class, vm.lookupPartition( ) );
                 AsyncRequests.dispatch( sc, new DeleteStorageVolumeType( arg0.getVolumeId( ) ) );
                 Volume volume = Volumes.lookup( null, arg0.getVolumeId( ) );
