@@ -169,11 +169,9 @@ define(['app', 'dataholder'], function(app, dh) {
       switch (typeof obj) {
         case 'string' :
           result = rex.test(obj);
-          if (result) console.log('SEARCH regex string ' + obj);
           break;
         case 'number' :
           result = rex.test('' + obj)
-          if (result) console.log('SEARCH regex number ' + obj);
           break;
         case 'object' :
           if (isArray(obj)) {
@@ -217,10 +215,7 @@ define(['app', 'dataholder'], function(app, dh) {
               isMatch = true;
             }
             var doneSearching = config.search[facet.category].apply(self, [search, facet.value, model.toJSON(), curr, hit]);
-            // doneSearching seems to always return true, blocking subsequent searches. 
             if (doneSearching || isMatch) {
-            // if (isMatch) {
-              console.log('SEARCH: '+facet.category+' doneSearching:'+doneSearching+' isMatch:' + isMatch);
               return isMatch;
             }
           }
@@ -228,20 +223,6 @@ define(['app', 'dataholder'], function(app, dh) {
           // Otherwise try recursive RegExp search
           var rex = new RegExp('.*' + facet.value + '.*', 'img');
           return drillThrough(model, rex, 0);
-
-          /*
-          if ('all_text' === facet.category || 'text' === facet.category) {
-            return drillThrough(model, rex, 0);
-          } else {
-            if (typeof curr === 'object') {
-              // Allow for searching inside tags and such
-              return drillThrough(curr, rex, 0);
-            } else {
-              console.log('SEARCH(regex): ' + facet.category + ' = ' + rex.test(curr));
-              return rex.test(curr);
-            }
-          }
-          */
         });
         return testAll;
       }).map(function(model) {
