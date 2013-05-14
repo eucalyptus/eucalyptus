@@ -475,7 +475,7 @@ define([], function() {
       var templates = [];
 
       function titler(position) {
-        var result = "Next";
+        var result = next_label;
         if (self.position < pages.length && templates[position + 1]) {
           result += ': ' + templates[position + 1].titleStr;
         }
