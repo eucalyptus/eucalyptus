@@ -1,7 +1,8 @@
 define([
+  'app',
   'views/searches/generic',
   'views/searches/tagsearch'
-], function(Search, TagSearch) {
+], function(app, Search, TagSearch) {
   return function(snapshots) {
 
     var config = {
@@ -15,10 +16,10 @@ define([
         }
       }
       , localize: {
-        all_text: all_text_facet,
-        'in-progress': in_progress_facet,
-        'completed': completed_facet,
-        'progress': progress_facet
+        'in-progress': app.msg('search_facet_snapshots_inprogress'), //'In-Progress',
+        completed: app.msg('search_facet_snapshots_completed'), //'Completed'
+        progress: app.msg('search_facet_snapshots_progress'),
+        all_text: app.msg('search_facet_alltext')
       }
       , search: {
         progress: function(search, facetSearch, item, itemsFacetValue, hit) {

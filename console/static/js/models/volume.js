@@ -10,6 +10,7 @@ define([
             var tmp = self.get('attach_data');
             if (tmp) self.set('instance_id', tmp.instance_id?tmp.instance_id:"");
           },
+          
           validation: {
 
             // ====================
@@ -32,9 +33,11 @@ define([
               required: false
             },
             size: {
+              pattern: 'digits',
               min: 1,
               max: 1024,
-              required: true
+              required: true,
+              msg: window['volume_create_invalid_size']
             },
             instance_id: {
               required: false

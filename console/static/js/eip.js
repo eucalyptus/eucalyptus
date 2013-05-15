@@ -69,7 +69,7 @@
 	      "mRender": function(data) {
                 return DefaultEncoder().encodeForHTML(data);
               },
-              "mData": "instance_id",
+              "mData": "display_instance_id",
 	    },
             {
 	      // Invisible Column for storing the status of the IP
@@ -594,7 +594,6 @@
       var thisObj = this;
       if ( addresses.length > 0 ) {
         var matrix = [];
-//        console.log("Addresses Data: " + JSON.stringify(addresses));
         // FIX TO DISPLAY THE NAME TAG FOR THE INSTANCES   ---   Kyo 041513
         $.each(addresses, function(idx, ip){
           var nameTag = null;
@@ -602,9 +601,8 @@
           if( this_instance ){
             var this_tags = this_instance.get('tags');
             this_tags.each(function(tag){
-//              console.log("Tag: " + JSON.stringify(tag.toJSON()));
               if( tag.get('name') == 'Name' || tag.get('name') == 'name' ){
-                nameTag = tag.get('value');
+                nameTag = this_instance.get('id') + " (" + tag.get('value') + ")";
               };
             });
           }; 

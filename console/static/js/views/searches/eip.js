@@ -1,7 +1,8 @@
 define([
+  'app',
   'views/searches/generic',
   'views/searches/tagsearch'
-], function(Search, TagSearch) {
+], function(app, Search, TagSearch) {
   return function(addresses) {
 
     var config = {
@@ -19,16 +20,16 @@ define([
         }
       },
       localize: {
-        all_text: all_text_facet,
-        assignment: assignment_facet,
-        assigned: assigned_facet,
-        unassigned: unassigned_facet
+        assigned : app.msg('search_facet_eip_assigned'), //'Assigned',
+        unassigned: app.msg('search_facet_eip_unassigned'), //'Unassigned'
+        all_text: app.msg('search_facet_alltext'),
+        assignment: app.msg('search_facet_eio_assignment')
       },
       search: {
         assignment: function(search, facetSearch, item, itemsFacetValue, hit) {
-          if (facetSearch === 'unassigned' && !item.instanceId) {
+          if (facetSearch === 'unassigned' && !item.instance_id) {
             hit();
-          } else if (facetSearch === 'assigned' && item.instanceId) {
+          } else if (facetSearch === 'assigned' && item.instance_id) {
             hit();
           }
           // Return true so the standard search code 
@@ -37,7 +38,6 @@ define([
         }
       }
     }
-
     return new Search(addresses, new TagSearch(config, addresses));
   }
 });
