@@ -255,33 +255,22 @@ public class VmType extends AbstractPersistent implements VmTypeMetadata, HasFul
   @Override
   public int compareTo( final VmTypeMetadata that ) {
     if ( this.equals( that ) ) return 0;
-    if ( this.getDisk( ) <= that.getDisk( ) ) {
+    if ( this.getDisk( ) < that.getDisk( ) ) {
       return -1;
     } else if ( this.getDisk( ) > that.getDisk( ) ) {
       return 1;
     }
-    if ( this.getMemory( ) <= that.getMemory( ) ) {
+    if ( this.getMemory( ) < that.getMemory( ) ) {
       return -1;
     } else if ( this.getMemory( ) > that.getMemory( ) ) {
       return 1;
     }
-    if ( this.getCpu( ) <= that.getCpu( ) ) {
+    if ( this.getCpu( ) < that.getCpu( ) ) {
       return -1;
     } else if ( this.getCpu( ) > that.getCpu( ) ) {
       return 1;
     }
     return this.getDisplayName( ).compareTo( that.getDisplayName( ) );
-  }
-  
-  public enum OrderingComparator implements Comparator<VmTypeMetadata> {
-    INSTANCE;
-    @Override
-    public int compare( final VmTypeMetadata one, final VmTypeMetadata two ) { 
-      if ( one.equals( two ) ) return 0;
-      if ( ( one.getCpu( ) <= two.getCpu( ) ) && ( one.getDisk( ) <= two.getDisk( ) ) && ( one.getMemory( ) <= two.getMemory( ) ) ) return -1; 
-      if ( ( one.getCpu( ) >= two.getCpu( ) ) && ( one.getDisk( ) >= two.getDisk( ) ) && ( one.getMemory( ) >= two.getMemory( ) ) ) return 1;
-      return 0;
-    }       
   }
   
   @Override
@@ -425,4 +414,26 @@ public class VmType extends AbstractPersistent implements VmTypeMetadata, HasFul
     return new VmType( name );
   }
   
+  
+  public Predicate<VmType> orderedPredicate( ) {
+    return new Predicate<VmType>( ) {
+      
+      @Override
+      public boolean apply( VmType vm ) {
+        boolean gtcpu = vm.cpu > VmType.this.cpu, eqcpu = vm.cpu == VmType.this.cpu, ltcpu = vm.cpu < VmType.this.cpu;
+        boolean gtdisk = vm.disk > VmType.this.disk, eqdisk = vm.disk == VmType.this.disk, ltdisk = vm.disk < VmType.this.disk;
+        boolean gtmemory = vm.memory > VmType.this.memory, eqmem = vm.memory == VmType.this.memory, ltmem = vm.memory < VmType.this.memory;
+        
+        boolean singleOrder = ( gtcpu && gtdisk && ltmem ) ||
+                              ( gtcpu && gtmemory && ltdisk ) ||
+                              ( gtdisk && gtmemory && ltcpu );
+        
+        boolean doubleOrder = ( gtmemory && ltcpu && ltdisk ) ||
+                              ( gtdisk && ltcpu && ltmem ) ||
+                              ( gtcpu && ltdisk && ltmem );
+        
+        return !this.equals( vm ) && ( singleOrder || doubleOrder );
+      }
+    };
+  }
 }

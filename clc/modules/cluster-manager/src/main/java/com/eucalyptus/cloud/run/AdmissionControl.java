@@ -103,6 +103,7 @@ import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.HasName;
 import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.util.RestrictedTypes;
+import com.eucalyptus.vmtypes.VmTypes;
 import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
 import com.google.common.base.Supplier;
@@ -223,6 +224,24 @@ public class AdmissionControl {
       if ( cluster.getGateLock( ).tryLock( 30, TimeUnit.SECONDS ) ) {
         try {
           final ResourceState state = cluster.getNodeState( );
+          /**
+           * NOTE: If the defined instance type has an ordering conflict w/ some other type then it
+           * isn't safe to service TWO requests which use differing types during the same resource refresh
+           * duty cycle.
+           * This determines whether or not an asynchronous allocation is safe to do for the
+           * request instance type or whether a synchronous resource availability refresh is needed.
+           * 
+           */
+          boolean unorderedType = VmTypes.isUnorderedType( allocInfo.getVmType( ) );
+          boolean forceResourceRefresh = state.hasUnorderedTokens( ) || unorderedType;
+          /**
+           * GRZE: if the vm type is not "nicely" ordered then we force a refresh of the actual
+           * cluster state. Note: we already hold the cluster gating lock here so this update will
+           * be mutual exclusive wrt both resource allocations and cluster state updates.
+           */
+          if ( forceResourceRefresh ) {
+            cluster.refreshResources( );
+          }
           final List<ResourceToken> tokens = state.requestResourceAllocation( allocInfo, tryAmount, maxAmount );
           final Iterator<ResourceToken> tokenIterator = tokens.iterator( );
           try {

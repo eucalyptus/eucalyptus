@@ -137,6 +137,16 @@ public class VmRunCallback extends MessageCallback<VmRunType, VmRunResponseType>
   @Override
   public void fire( final VmRunResponseType reply ) {
     Logs.extreme( ).error( reply );
+    /**
+     * NOTE: Here we need to do another resource refresh.
+     * After an unordered instance type is run it is uncertain what the current resource
+     * availability is.
+     * This is the point at which the backing cluster would correctly respond w/ updated resource
+     * counts.
+     */
+    if ( this.token.isUnorderedType( ) ) {
+      this.token.getCluster( ).refreshResources( );
+    }
     try {
       this.token.redeem( );
     } catch ( Exception ex ) {
