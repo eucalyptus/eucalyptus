@@ -24,6 +24,11 @@ define([
 
             loadTags();
 
+            model.on('createTag', function() {
+                self.scope.create();
+                model.set('tags', tags.toJSON());
+            });
+
             model.on('confirm', function() {
                 self.scope.create();
                 _.chain(tags.models).clone().each(function(t) {
