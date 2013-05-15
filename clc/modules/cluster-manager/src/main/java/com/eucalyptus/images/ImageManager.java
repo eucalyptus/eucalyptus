@@ -79,6 +79,7 @@ import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.principal.AccountFullName;
 import com.eucalyptus.cloud.CloudMetadatas;
 import com.eucalyptus.cloud.ImageMetadata;
+import com.eucalyptus.cloud.ImageMetadata.DeviceMappingType;
 import com.eucalyptus.cluster.Cluster;
 import com.eucalyptus.cluster.Clusters;
 import com.eucalyptus.component.ServiceConfiguration;
@@ -110,6 +111,7 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 
+import edu.ucsb.eucalyptus.msgs.BlockDeviceMappingItemType;
 import edu.ucsb.eucalyptus.msgs.ConfirmProductInstanceResponseType;
 import edu.ucsb.eucalyptus.msgs.ConfirmProductInstanceType;
 import edu.ucsb.eucalyptus.msgs.CreateImageResponseType;
@@ -120,6 +122,7 @@ import edu.ucsb.eucalyptus.msgs.DescribeImageAttributeResponseType;
 import edu.ucsb.eucalyptus.msgs.DescribeImageAttributeType;
 import edu.ucsb.eucalyptus.msgs.DescribeImagesResponseType;
 import edu.ucsb.eucalyptus.msgs.DescribeImagesType;
+import edu.ucsb.eucalyptus.msgs.EbsDeviceMapping;
 import edu.ucsb.eucalyptus.msgs.ImageDetails;
 import edu.ucsb.eucalyptus.msgs.LaunchPermissionItemType;
 import edu.ucsb.eucalyptus.msgs.ModifyImageAttributeResponseType;
@@ -333,11 +336,40 @@ public class ImageManager {
         reply.setRealResponse( reply.getProductCodes( ) );
         reply.getProductCodes( ).addAll( imgInfo.getProductCodes( ) );
       } else if ( request.getBlockDeviceMapping( ) != null ) {
-        reply.setRealResponse( reply.getBlockDeviceMapping( ) );
-        reply.getBlockDeviceMapping( ).add( ImageUtil.EMI );
-        reply.getBlockDeviceMapping( ).add( ImageUtil.EPHEMERAL );
-        reply.getBlockDeviceMapping( ).add( ImageUtil.SWAP );
-        reply.getBlockDeviceMapping( ).add( ImageUtil.ROOT );
+    	reply.setRealResponse( reply.getBlockDeviceMapping( ) );
+    	if ( imgInfo instanceof BlockStorageImageInfo ) {
+    	  BlockStorageImageInfo bfebsImage = (BlockStorageImageInfo) imgInfo;
+    	  reply.getBlockDeviceMapping( ).add( new BlockDeviceMappingItemType( "emi", bfebsImage.getRootDeviceName( ) ) );
+    	  reply.getBlockDeviceMapping( ).add( new BlockDeviceMappingItemType( "root", bfebsImage.getRootDeviceName( ) ) );
+    	  int i = 0;
+    	  for ( DeviceMapping mapping : bfebsImage.getDeviceMappings() ) {
+    	    if ( mapping.getDeviceName( ).equalsIgnoreCase( bfebsImage.getRootDeviceName( ) ) ) {
+    		  continue;
+    		}
+    	    switch ( mapping.getDeviceMappingType( ) ) {
+			  case blockstorage:
+				BlockStorageDeviceMapping bsdm = ( BlockStorageDeviceMapping ) mapping;
+	    		BlockDeviceMappingItemType bdmItem = new BlockDeviceMappingItemType( "ebs" + (++i), mapping.getDeviceName( ) );
+	    		EbsDeviceMapping ebsItem = new EbsDeviceMapping( );
+	    		ebsItem.setSnapshotId( bsdm.getSnapshotId( ) );
+	    		ebsItem.setVolumeSize( bsdm.getSize( ) );
+	    		ebsItem.setDeleteOnTermination( bsdm.getDelete( ) );
+	    		bdmItem.setEbs( ebsItem );
+	    		reply.getBlockDeviceMapping( ).add( bdmItem );
+				break;
+			  case ephemeral:
+				reply.getBlockDeviceMapping( ).add( new BlockDeviceMappingItemType( mapping.getVirtualName() , mapping.getDeviceName( ) ) ); 
+				break;
+		      default:
+				break;
+    	    }
+    	  }
+    	} else {
+          reply.getBlockDeviceMapping( ).add( ImageUtil.EMI );
+          reply.getBlockDeviceMapping( ).add( ImageUtil.EPHEMERAL );
+          reply.getBlockDeviceMapping( ).add( ImageUtil.SWAP );
+          reply.getBlockDeviceMapping( ).add( ImageUtil.ROOT );
+    	}
       } else if ( request.getDescription( ) != null ) {
         reply.setRealResponse( reply.getDescription( ) );
         if ( imgInfo.getDescription() != null ) {
