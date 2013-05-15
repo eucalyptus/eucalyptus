@@ -555,11 +555,11 @@ public class VmControl {
               vm.setNetworkIndex( vmIdx );
             }
             vm.setState( VmState.PENDING );
+            db.commit( );
             ClusterAllocator.get( ).apply( allocInfo );
             final int oldCode = vm.getState( ).getCode( ), newCode = VmState.PENDING.getCode( );
             final String oldState = vm.getState( ).getName( ), newState = VmState.PENDING.getName( );
             reply.getInstancesSet( ).add( new TerminateInstancesItemType( vm.getInstanceId( ), oldCode, oldState, newCode, newState ) );
-            db.commit( );
           } catch ( Exception ex ) {
             db.rollback( );
             allocInfo.abort( );

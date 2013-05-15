@@ -63,10 +63,12 @@
 package com.eucalyptus.network;
 
 import java.util.Collection;
+import java.util.List;
 import java.util.Set;
 import javax.persistence.CollectionTable;
 import javax.persistence.Column;
 import javax.persistence.ElementCollection;
+import javax.persistence.EntityTransaction;
 import javax.persistence.EnumType;
 import javax.persistence.Enumerated;
 import javax.persistence.PersistenceContext;
@@ -75,7 +77,19 @@ import javax.persistence.Transient;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
 import org.hibernate.annotations.Entity;
+import org.apache.log4j.Logger;
+
+import com.eucalyptus.auth.Accounts;
+import com.eucalyptus.auth.DatabaseAuthProvider;
+import com.eucalyptus.auth.principal.AccountFullName;
+import com.eucalyptus.cloud.util.NoSuchMetadataException;
+import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.entities.AbstractPersistent;
+import com.eucalyptus.entities.Entities;
+import com.eucalyptus.upgrade.Upgrades.EntityUpgrade;
+import com.eucalyptus.upgrade.Upgrades.Version;
+import com.eucalyptus.util.Exceptions;
+import com.google.common.base.Predicate;
 import com.google.common.collect.Sets;
 
 @Entity
@@ -152,6 +166,10 @@ public class NetworkRule extends AbstractPersistent {
                                     final Collection<NetworkPeer> peers,
                                     final Collection<String> ipRanges ) {
     return create( Protocol.valueOf( protocol ), lowPort, highPort, peers, ipRanges );
+  }
+  
+  public static NetworkRule named() {
+	  return new NetworkRule();
   }
   
   public Protocol getProtocol( ) {

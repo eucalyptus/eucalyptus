@@ -219,12 +219,15 @@
       var menuItems = {};
       (function(){
          menuItems['edit'] = {"name":sgroup_action_edit, callback: function(key, opt) { ; }, disabled: function(){ return true; }};
-         menuItems['delete'] = {"name":sgroup_action_delete, callback: function(key, opt) { thisObj._deleteAction(); }};
-         menuItems['tag'] = {"name":table_menu_edit_tags_action, callback: function(key, opt) { thisObj._tagResourceAction(); }};
+         menuItems['delete'] = {"name":sgroup_action_delete, callback: function(key, opt) { ; }, disabled: function(){ return true; }};
+         menuItems['tag'] = {"name":table_menu_edit_tags_action, callback: function(key, opt) { ; }, disabled: function(){ return true; }};
       })();
       if(numSelected == 1){
         menuItems['edit'] = {"name":sgroup_action_edit, callback: function(key, opt) { thisObj._editAction(); }}
         menuItems['tag'] = {"name":table_menu_edit_tags_action, callback: function(key, opt) { thisObj._tagResourceAction(); }}
+      }
+      if(numSelected >= 1){
+         menuItems['delete'] = {"name":sgroup_action_delete, callback: function(key, opt) { thisObj._deleteAction(); }};
       }
       return menuItems;
     },

@@ -92,8 +92,13 @@ import org.hibernate.annotations.CacheConcurrencyStrategy;
 import org.hibernate.annotations.Entity;
 import org.hibernate.annotations.NotFound;
 import org.hibernate.annotations.NotFoundAction;
+
+import com.eucalyptus.auth.Accounts;
+import com.eucalyptus.auth.DatabaseAuthProvider;
+import com.eucalyptus.auth.principal.AccountFullName;
 import com.eucalyptus.cloud.CloudMetadata.NetworkGroupMetadata;
 import com.eucalyptus.cloud.UserMetadata;
+import com.eucalyptus.cloud.util.NoSuchMetadataException;
 import com.eucalyptus.cloud.util.NotEnoughResourcesException;
 import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.id.Eucalyptus;
@@ -104,6 +109,9 @@ import com.eucalyptus.util.FullName;
 import com.eucalyptus.util.Numbers;
 import com.eucalyptus.util.OwnerFullName;
 import com.google.common.base.Function;
+import com.google.common.collect.Lists;
+import com.google.common.collect.Sets;
+
 import edu.ucsb.eucalyptus.msgs.PacketFilterRule;
 
 @Entity
@@ -361,6 +369,50 @@ public class NetworkGroup extends UserMetadata<NetworkGroup.State> implements Ne
             networkGroup.setGroupId(Crypto.generateId( Integer.toHexString(networkGroup.getDisplayName().hashCode()), "sg" ));
           }
         }
+        db.commit();
+      } catch (Exception ex ) {
+        db.rollback();
+        throw Exceptions.toUndeclared(ex);
+      }
+      
+      db = Entities.get( NetworkRule.class );
+      try {
+        List<NetworkRule> networkRuleList = Entities.query(NetworkRule.named());
+        
+        for (final NetworkRule networkRule : networkRuleList) {
+          LOG.debug("Upgrading " + networkRule);
+          if(networkRule.getNetworkPeers()!=null && networkRule.getNetworkPeers().size()>0){
+        	  final Set<NetworkPeer> updatedPeers = Sets.newHashSet();
+        	  for(final NetworkPeer networkPeer : networkRule.getNetworkPeers()){
+		          if (networkPeer.getGroupId() == null ) {
+		        	  // find the corresponding network group from network groups
+		        	  String groupId = null;
+		        	  try{
+		        		  	if(Accounts.getAccountProvider()==null){
+		        		  		DatabaseAuthProvider dbAuth = new DatabaseAuthProvider( );
+		        		  	  	Accounts.setAccountProvider( dbAuth );
+		        		  	}
+		    	          	final NetworkGroup networkGroup =
+		    	              NetworkGroups.lookup( AccountFullName.getInstance( networkPeer.getUserQueryKey() ), networkPeer.getGroupName() );
+		    	          	groupId = networkGroup.getGroupId();
+		        	  }catch(final NoSuchMetadataException ex){
+		        	  		LOG.error(String.format("unable to find the network group (%s-%s)", networkPeer.getUserQueryKey(), networkPeer.getGroupName()));
+		        	  }catch(final Exception ex){
+		            		LOG.error("failed to query network group", ex);
+		              }
+		        	  if(groupId!=null){
+		        		  networkPeer.setGroupId(groupId);
+		        		  LOG.debug("network peer upgraded: "+networkPeer);
+		        	  }	
+		          }
+		          updatedPeers.add(networkPeer);
+        	  }
+        	  
+        	  networkRule.getNetworkPeers().clear();
+        	  networkRule.setNetworkPeers(updatedPeers);
+          }
+        }
+        
         db.commit();
         return true;
       } catch (Exception ex ) {

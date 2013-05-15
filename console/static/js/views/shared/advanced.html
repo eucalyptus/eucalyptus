@@ -63,7 +63,7 @@
 
 
         <tr data-each-volume="blockDeviceMappings">
-          <td data-text=":getVolLabel" data-msg="launch_instance_root">
+          <td data-text=":getVolLabel" data-msg="launch_instance_ebs">
           </td>
           <td data-text="volume.device_name">
           </td>
@@ -78,10 +78,7 @@
 
         <tr>
           <td>
-            <select data-enabled="enableStorageVolume" class="launch-wizard-advanced-storage-volume-selector" data-tooltip="launch_instance_volume_select_tip">
-              <option value="EBS" data-msg="launch_instance_ebs"></option>
-              <option value="root" data-msg="launch_instance_root"></option>
-            </select>
+            <span data-text="launch_instance_ebs"/>
           </td>
           <td>
             /dev/<input data-enabled="enableMapping" data-value=":mapName" class="launch-wizard-advanced-storage-mapping-input" data-tooltip="launch_wizard_advanced_storage_mapping_input_tip" type="text">
