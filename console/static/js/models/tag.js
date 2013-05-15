@@ -52,14 +52,14 @@ define([
         success:
           function(data, textStatus, jqXHR){
             if ( data.results ) {
-	      notifySuccess(null, $.i18n.prop('tag_create_success', DefaultEncoder().encodeForHTML(model.get('name'))));
+              notifySuccess(null, $.i18n.prop('tag_create_success', DefaultEncoder().encodeForHTML(model.get('name')), model.get('res_id')));
             } else {
-	      notifyError($.i18n.prop('tag_create_error', DefaultEncoder().encodeForHTML(model.get('name'))), undefined_error);
+              notifyError($.i18n.prop('tag_create_error', DefaultEncoder().encodeForHTML(model.get('name')), model.get('res_id')), undefined_error);
             } 
           },
         error:
           function(jqXHR, textStatus, errorThrown){
-            notifyError($.i18n.prop('tag_create_error', DefaultEncoder().encodeForHTML(model.get('name')), getErrorMessage(jqXHR)));
+            notifyError($.i18n.prop('tag_create_error', DefaultEncoder().encodeForHTML(model.get('name')), model.get('res_id')), getErrorMessage(jqXHR));
           }
       });
     },
@@ -77,14 +77,14 @@ define([
         success:
           function(data, textStatus, jqXHR){
             if ( data.results ) {
-              notifySuccess(null, $.i18n.prop('tag_delete_success', DefaultEncoder().encodeForHTML(model.get('name'))));
+              notifySuccess(null, $.i18n.prop('tag_delete_success', DefaultEncoder().encodeForHTML(model.get('name')), model.get('res_id')));
             } else {
-              notifyError($.i18n.prop('tag_delete_error', DefaultEncoder().encodeForHTML(model.get('name'))), undefined_error);
+              notifyError($.i18n.prop('tag_delete_error', DefaultEncoder().encodeForHTML(model.get('name')), model.get('res_id')), undefined_error);
             }
           },
         error:
           function(jqXHR, textStatus, errorThrown){
-            notifyError($.i18n.prop('tag_delete_error', DefaultEncoder().encodeForHTML(model.get('name'))), getErrorMessage(jqXHR));
+            notifyError($.i18n.prop('tag_delete_error', DefaultEncoder().encodeForHTML(model.get('name')), model.get('res_id')), getErrorMessage(jqXHR));
           }
       });
     }
