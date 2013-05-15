@@ -27,9 +27,9 @@ define([
       },
       search: {
         assignment: function(search, facetSearch, item, itemsFacetValue, hit) {
-          if (facetSearch === 'unassigned' && !item.instanceId) {
+          if (facetSearch === 'unassigned' && !item.instance_id) {
             hit();
-          } else if (facetSearch === 'assigned' && item.instanceId) {
+          } else if (facetSearch === 'assigned' && item.instance_id) {
             hit();
           }
           // Return true so the standard search code 
@@ -38,7 +38,6 @@ define([
         }
       }
     }
-
     return new Search(addresses, new TagSearch(config, addresses));
   }
 });

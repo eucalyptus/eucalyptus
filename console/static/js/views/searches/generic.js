@@ -7,7 +7,7 @@ define(['app', 'dataholder'], function(app, dh) {
             && typeof o.length === 'number';
   }
   
-  return function(images, config /*, allowedFacetNames, localizer, explicitFacets, searchers, propertyMapping*/) {
+  return function(records, config /*, allowedFacetNames, localizer, explicitFacets, searchers, propertyMapping*/) {
     var self = this;
     searchContext = self;
     
@@ -23,7 +23,7 @@ define(['app', 'dataholder'], function(app, dh) {
     if (!config.facets) {
       config.facets = [];
       var done = {};
-      images.forEach(function(img) {
+      records.forEach(function(img) {
         for (var key in img) {
           if (!isIgnored(key, img, done)) {
             config.facets.push(key);
@@ -147,7 +147,7 @@ define(['app', 'dataholder'], function(app, dh) {
     function deriveMatches(facet, searchTerm) {
       var result = [];
       var found = [];
-      images.toJSON().forEach(function(img) {
+      records.toJSON().forEach(function(img) {
         img.tags = img.tags.toJSON();
         findMatches(facet, searchTerm, img, function(val, label){
           if (found.indexOf(val) < 0) {
@@ -193,18 +193,22 @@ define(['app', 'dataholder'], function(app, dh) {
       return result;
     }
     
-    this.images = images;
-    this.filtered = images.clone();
+    this.records = records;
+    this.filtered = records.clone();
     this.lastSearch = '';
     this.lastFacets = new Backbone.Model({});
+
     this.search = function(search, facets) {
         self.lastSearch = search;
         self.lastFacets = facets;
         var jfacets = facets.toJSON();
-        var results = self.images.filter(function(model) {
-        return _.every(jfacets, function(facet) {
+        var results = self.records.filter(function(model) {
+        var testAll = _.every(jfacets, function(facet) {
           var curr = model.get(facet.category);
+          // If the test is on the tags model, convert it to JSON.
           if (facet.category.indexOf('_tag') != -1) curr = model.get('tags').toJSON();
+
+          // If there is a customer search configured for this facet, run it.
           if (config.search && config.search[facet.category]) {
             var isMatch = false;
             function hit() {
@@ -215,23 +219,18 @@ define(['app', 'dataholder'], function(app, dh) {
               return isMatch;
             }
           }
+
+          // Otherwise try recursive RegExp search
           var rex = new RegExp('.*' + facet.value + '.*', 'img');
-          if ('all_text' === facet.category || 'text' === facet.category) {
-            return drillThrough(model, rex, 0);
-          } else {
-            if (typeof curr === 'object' || typeof curr === 'array') {
-              // Allow for searching inside tags and such
-              return drillThrough(curr, rex, 0);
-            } else {
-              return rex.test(curr);
-            }
-          }
+          return drillThrough(model, rex, 0);
         });
+        return testAll;
       }).map(function(model) {
         return model.toJSON();
       });
       self.filtered.set(results);
     }
+
     this.facetMatches = function(callback) {
       callback(deriveFacets(), searchOptions);
     }
@@ -244,8 +243,8 @@ define(['app', 'dataholder'], function(app, dh) {
       self.search(self.lastSearch, self.lastFacets);
     }
     
-    images.on('add remove destroy change', up);
-    images.on('sync reset', function() { /*console.log('upstream data was reset');*/ });
+    records.on('add remove destroy change', up);
+    records.on('sync reset', function() { /*console.log('upstream data was reset');*/ });
     up();
   }
 });
