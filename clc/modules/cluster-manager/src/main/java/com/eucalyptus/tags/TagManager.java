@@ -131,7 +131,7 @@ public class TagManager {
       try {
         reply.set_return( Entities.asTransaction( Tag.class, creator ).apply( null ) );
       } catch ( TagLimitException e ) {
-        reply.set_return( false );
+        throw new TagLimitExceededException( );
       }
     }
     
