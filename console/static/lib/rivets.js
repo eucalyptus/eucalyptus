@@ -151,7 +151,7 @@ rivets.binders["msg"] = {
 rivets.binders["tooltip"] = {
     tokenizes: true,
     routine: function(el, keyname) {
-      var value = window[this.keypath];
+      var value = $.i18n.prop(this.keypath);
 
       if (value == null) return;
 

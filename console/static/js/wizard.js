@@ -1,4 +1,4 @@
-define([], function() {
+define(['rivets'], function(rivets) {
 // Wizard (Constructor)
 // ====================
 // Creates a new wizard.  Pages is an optional pre-populated array of views.
@@ -366,6 +366,7 @@ define([], function() {
           self.show();
           this.animate = true;
           this.$el.html(template);
+          this.rivetsView = rivets.bind(this.$el);
           this.optionLink = this.$el.find(mapping.optionLink);
           this.nextButton = this.$el.find(mapping.nextButton);
           this.prevButton = this.$el.find(mapping.prevButton);
@@ -384,6 +385,7 @@ define([], function() {
         }, 
 
         render: function() {
+          this.rivetsView.sync();
           // Make sure there is something there
           var shouldAnimate = this.animate && self.position !== this.lastRendered;
           this.lastRendered = self.position;
@@ -514,6 +516,7 @@ define([], function() {
         });
       }
 
+// this is not called from launch wizard
       this.add = function(template) {
         CaegoryTest.php(template, genericTitle(self.scrapeTitle(template), pages.length));
         // templates.push(template);
