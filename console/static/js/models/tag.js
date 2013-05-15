@@ -41,8 +41,8 @@ define([
     syncMethod_Create: function(model, options){
       var data = "_xsrf="+$.cookie('_xsrf');
       data += "&ResourceId.1="+model.get('res_id');
-      data += "&Tag.1.Key="+model.get('name');
-      data += "&Tag.1.Value="+model.get('value');
+      data += "&Tag.1.Key="+encodeURIComponent(model.get('name'));
+      data += "&Tag.1.Value="+encodeURIComponent(model.get('value'));
       $.ajax({
         type:"POST",
         url:"/ec2?Action=CreateTags",
