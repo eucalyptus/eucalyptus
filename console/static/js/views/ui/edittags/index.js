@@ -25,14 +25,7 @@ define([
 
             loadTags();
 
-            model.on('createTag', function() {
-                self.scope.create();
-                model.set('tags', tags.filter(function(t) {
-                    return !t.get('_deleted');
-                }));
-            });
-
-            model.on('confirm', function() {
+            model.on('confirm', function(defer) {
                 self.scope.create();
                 _.chain(tags.models).clone().each(function(t) {
                    var backup = t.get('_backup');
@@ -52,18 +45,18 @@ define([
                    } else if (t.get('_edited')) {
                        // If the tag is new then it should only be saved, even if it was edited.
                        if (t.get('_new')) {
-                         t.save();
+                         if(!defer) t.save() ;
                        } else if( (backup != null) && (backup.get('name') !== t.get('name')) ){
                          // CASE OF KEY CHANGE
                          console.log("Edited, with previous value: " + t.get('name') + ":" + t.get('value'));
                          t.get('_backup').destroy();
-                         t.save();
+                         if(!defer) t.save();
                        }else{
                          // CASE OF VALUE CHANGE
-                         t.save();
+                        if(!defer) t.save();
                        } 
                    } else if (t.get('_new')) {
-                       t.save();
+                       if(!defer) t.save();
                    }
                 });
                 // THE OPERATION BELOW MIGHT NOT WORK WHEN .SYNC() CALLS ARE USED   --- KYO 042913

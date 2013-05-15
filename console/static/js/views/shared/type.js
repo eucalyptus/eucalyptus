@@ -159,7 +159,7 @@ define([
     },
 
     blur: function() {
-      this.model.trigger('confirm');
+      this.model.trigger('confirm', true);
     },
 
   });
