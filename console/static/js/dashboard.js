@@ -74,13 +74,13 @@
     _resetInstances : function($instObj){
       $instObj.find('#dashboard-instance-running div span').text('');
       $instObj.find('#dashboard-instance-stopped div span').text('');
-      //$instObj.find('#dashboard-scaling-groups div span').text('');
+      $instObj.find('#dashboard-scaling-groups div span').text('');
       $instObj.find('#dashboard-instance-running div').prepend(
         $('<img>').attr('src','images/dots32.gif'));
       $instObj.find('#dashboard-instance-stopped div').prepend(
         $('<img>').attr('src','images/dots32.gif'));
-      //$instObj.find('#dashboard-scaling-groups div').prepend(
-      //  $('<img>').attr('src','images/dots32.gif'));
+      $instObj.find('#dashboard-scaling-groups div').prepend(
+        $('<img>').attr('src','images/dots32.gif'));
       // set filter on eucadata for summary
       var az=$instObj.find('#dashboard-instance-az select').val();
       $('html body').eucadata('setDataFilter', 'dash', {'AvailabilityZone':az});
@@ -93,8 +93,8 @@
         $('<img>').attr('src','images/dots32.gif'));
       $instObj.find('#dashboard-instance-stopped div').prepend(
         $('<img>').attr('src','images/dots32.gif'));
-      //$instObj.find('#dashboard-scaling-groups div').prepend(
-      //  $('<img>').attr('src','images/dots32.gif'));
+      $instObj.find('#dashboard-scaling-groups div').prepend(
+        $('<img>').attr('src','images/dots32.gif'));
       $storageObj.find('#dashboard-storage-volume').prepend(
         $('<img>').attr('src','images/dots32.gif'));
       $storageObj.find('#dashboard-storage-snapshot').prepend(
@@ -130,12 +130,12 @@
             $('html body').trigger('click', 'navigator:instance');
             return false;
       }));
-      //$instObj.find('#dashboard-scaling-groups').wrapAll(
-      //  $('<a>').attr('href','#').click( function(evt){
-      //      thisObj._trigger('select', evt, {selected:'scaling'});
-      //      $('html body').trigger('click', 'navigator:scaling');
-      //      return false;
-      //}));
+      $instObj.find('#dashboard-scaling-groups').wrapAll(
+        $('<a>').attr('href','#').click( function(evt){
+            thisObj._trigger('select', evt, {selected:'scaling'});
+            $('html body').trigger('click', 'navigator:scaling');
+            return false;
+      }));
       $storageObj.find('#dashboard-storage-volume').wrapAll(
         $('<a>').attr('href','#').click( function(evt){
           thisObj._trigger('select', evt, {selected:'volume'});
@@ -191,7 +191,7 @@
         // remove busy indicators when data arrives
         $instObj.find('#dashboard-instance-running div img').remove();
         $instObj.find('#dashboard-instance-stopped div img').remove();
-        //$instObj.find('#dashboard-scaling-groups div img').remove();
+        $instObj.find('#dashboard-scaling-groups div img').remove();
         $storageObj.find('#dashboard-storage-volume img').remove();
         $storageObj.find('#dashboard-storage-snapshot img').remove();
 //        $storageObj.find('#dashboard-storage-buckets img').remove();
@@ -204,9 +204,9 @@
 
         $instObj.find('#dashboard-instance-running span').text(results.inst_running);
         $instObj.find('#dashboard-instance-stopped span').text(results.inst_stopped);
-        //var scalinginsts = describe('scalinginst');
-        //if (scalinginsts == null) scalinginsts = [];
-        //$instObj.find('#dashboard-scaling-groups span').text(scalinginsts.length);
+        var scalinginsts = describe('scalinginst');
+        if (scalinginsts == null) scalinginsts = [];
+        $instObj.find('#dashboard-scaling-groups span').text(scalinginsts.length);
         $storageObj.find('#dashboard-storage-volume span').text(results.volume);
         $storageObj.find('#dashboard-storage-snapshot span').text(results.snapshot);
 //        $storageObj.find('#dashboard-storage-buckets span').text(0);
