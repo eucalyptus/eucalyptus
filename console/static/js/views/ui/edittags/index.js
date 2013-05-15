@@ -73,6 +73,10 @@ define([
 
                 tags: tags,
 
+                isTagValid: true,
+
+                error: new Backbone.Model({}),
+
                 status: '',
 
                 // Abort existing edits
@@ -86,6 +90,12 @@ define([
                 },
 
                 create: function() {
+
+                    // NO-OP IF NOT VALID
+                    if( !self.scope.isTagValid ){
+                      return;
+                    }
+
                     var newt = new Tag(self.scope.newtag.toJSON());
                     newt.set({_clean: true, _deleted: false, _edited: false, _edit: false, _new: true});
                     newt.set('res_id', model.get('id'));
@@ -93,6 +103,8 @@ define([
                         console.log('create', newt);
                         self.scope.tags.add(newt);
                         self.scope.newtag.clear();
+                        self.scope.isTagValid = true;
+                        self.scope.error.clear();
                         self.render();
                     }
                 },
@@ -113,9 +125,28 @@ define([
 
                     // MARK THE STATE AS _EDIT
                     scope.tag.set({_clean: false, _deleted: false, _edited: false, _edit: true});
+
+                    // SET UP VALIDATE ON THIS TAG
+                    scope.tag.on('change', function() {
+                      scope.error.clear();
+                      scope.error.set(scope.tag.validate());
+                    });
+
+                    // VERIFY THE VALIDATION STATUS
+                    scope.tag.on('validated', function() {
+                      scope.isTagValid = scope.tag.isValid();
+                    });
+
+
                 },
 
                 confirm: function(element, scope) {
+                   
+                    // NO-OP IF NOT VALID 
+                    if( !scope.isTagValid ){
+                      return;
+                    }
+
                     if (scope.tag.get('name') != scope.tag.get('_backup').get('name')) {
                         scope.tag.set('id', undefined);
                     } else {
@@ -127,6 +158,7 @@ define([
 
                 restore: function(element, scope) {
                     scope.tag.set({_clean: true, _deleted: false, _edit: false});
+                    scope.error.clear();
                     self.render();
                 },
 
@@ -135,6 +167,18 @@ define([
                     scope.tag.set({_clean: false, _deleted: true, _edit: false});
                 },
             } // end of scope
+
+            self.scope.newtag.validation.res_id.required = false;
+
+            self.scope.newtag.on('change', function() {
+              self.scope.error.clear();
+              self.scope.error.set(self.scope.newtag.validate());
+            });
+
+            self.scope.newtag.on('validated', function() {
+              self.scope.isTagValid = self.scope.newtag.isValid();
+              console.log("isTagValid: " + self.scope.newtag.isValid());
+            });
 
             this.$el.html(template);
             this.rview = rivets.bind(this.$el, this.scope);
