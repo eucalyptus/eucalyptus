@@ -1795,7 +1795,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
    *
    */
   public boolean eachVolumeAttachment( final Predicate<VmVolumeAttachment> predicate ) {
-    if ( VmStateSet.DONE.contains( this.getState( ) ) && !VmStateSet.STOP.contains( this.getLastState( ) ) ) {
+    if ( VmStateSet.DONE.contains( this.getState( ) ) && !VmStateSet.EXPECTING_TEARDOWN.contains( this.getLastState( ) ) ) {
       return false;
     } else {
       final EntityTransaction db = Entities.get( VmInstance.class );
