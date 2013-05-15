@@ -37,7 +37,7 @@ def build_map (file_path, key_arr=None):
         warning = False
         for line in f.readlines():
             try:
-                if line.startswith('#warning'):
+                if line.startswith('#warning - translation not found'):
                     warning = True
                     continue
                 # don't add lines that are preceded by #warning
