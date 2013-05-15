@@ -690,6 +690,15 @@ function getTagForResource(res_id) {
 //----------------------------------------------------------------------------
 
 
+// For displaying the clous resource , which has a name and an id
+function eucatableDisplayResource (id, name, limit) {
+	if( name == null ){
+		return "";
+        }
+	$html = $('<span>').attr('title', id).text(name);
+	return asHTML($html); 
+}
+
 // For displaying the type 'twist', which is defined in CSS, in eucatable
 function eucatableDisplayColumnTypeTwist (title, str, limit) {
 	if( str == null ){
@@ -706,7 +715,7 @@ function eucatableDisplayColumnTypeText (title, str, limit){
 		return "";
 	}
 	shortStr = addEllipsis(str, limit); 
-	$html = $('<span>').attr('title', title).text(shortStr);
+	$html = $('<span>').text(shortStr);
         return asHTML($html);
 }
 

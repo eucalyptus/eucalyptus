@@ -56,10 +56,11 @@
             {
               // Display the id of the volume in the main table
               "aTargets":[1], 
-              "mRender": function(data){
-                return eucatableDisplayColumnTypeTwist(data, data, 255);
+              "mData": function(source){
+                this_mouseover = source.id;
+                this_value = source.display_id;
+                return eucatableDisplayColumnTypeTwist(this_mouseover, this_value, 256);
               },
-              "mData": "display_id",
             },
             {
               // Display the status of the volume in the main table
@@ -87,19 +88,20 @@
             { 
               // Display the instance id of the attached volume in the main table
               "aTargets":[4],
-              "mRender": function(data) {
-                return DefaultEncoder().encodeForHTML(data);
+              "mData": function(source){
+                this_mouseover = source.instance_id;
+                this_value = source.display_instance_id;
+                return eucatableDisplayResource(this_mouseover, this_value, 256);
               },
-              "mData": "display_instance_id",
-              //"mData": "attach_data.instance_id",
             },
             { 
               // Display the snapshot id of the volume in the main table
               "aTargets":[5],
-              "mRender": function(data) {
-                return DefaultEncoder().encodeForHTML(data);
+              "mData": function(source){
+                this_mouseover = source.snapshot_id;
+                this_value = source.display_snapshot_id;
+                return eucatableDisplayResource(this_mouseover, this_value, 256);
               },
-              "mData": "display_snapshot_id",
             },
             { 
               // Display the availibility zone of the volume in the main table
