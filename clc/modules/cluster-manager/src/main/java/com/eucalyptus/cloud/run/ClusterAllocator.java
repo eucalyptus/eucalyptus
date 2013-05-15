@@ -257,7 +257,7 @@ public class ClusterAllocator implements Runnable {
     	}
       } 
     	  
-      int rootVolSizeInGb = ( int ) Math.ceil( volSizeBytes / BYTES_PER_GB );
+      int rootVolSizeInGb = ( int ) Math.ceil( ( ( double ) volSizeBytes ) / BYTES_PER_GB );
     	        
       for ( final ResourceToken token : this.allocInfo.getAllocationTokens( ) ) {
     	final VmInstance vm = VmInstances.lookup( token.getInstanceId( ) );
