@@ -26,7 +26,9 @@ define([
 
             model.on('createTag', function() {
                 self.scope.create();
-                model.set('tags', tags.toJSON());
+                model.set('tags', tags.filter(function(t) {
+                    return !t.get('_deleted');
+                }));
             });
 
             model.on('confirm', function() {
