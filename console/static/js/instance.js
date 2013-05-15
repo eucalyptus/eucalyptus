@@ -677,7 +677,7 @@
     _stopAction : function(){
       var thisObj = this;
       var instances = thisObj.tableWrapper.eucatable('getSelectedRows', 17);
-      var instances = thisObj.tableWrapper.eucatable('getSelectedRows', 18);
+      var display_ids = thisObj.tableWrapper.eucatable('getSelectedRows', 18);
       if ( instances.length > 0 ) {
         var matrix = [];
         $.each(instances, function(idx,id){
@@ -686,7 +686,7 @@
             this_display_id = display_ids[idx];
           matrix.push([id, this_display_id]);
         });
-        thisObj.rebootDialog.eucadialog('setSelectedResources', {title: [instance_label], contents: matrix, included_display_id: true});
+        thisObj.stopDialog.eucadialog('setSelectedResources', {title: [instance_label], contents: matrix, included_display_id: true});
         thisObj.stopDialog.eucadialog('open');
        }
     },
