@@ -711,6 +711,7 @@ int ncClientCall(ncMetadata * pMeta, int timeout, int ncLock, char *ncURL, char 
                     rc = 1;
                 }
             }
+            EUCA_FREE(*outStatus);
         } else if (!strcmp(ncOp, "ncRunInstance")) {
             char *uuid = va_arg(al, char *);
             char *instId = va_arg(al, char *);
@@ -748,6 +749,7 @@ int ncClientCall(ncMetadata * pMeta, int timeout, int ncLock, char *ncURL, char 
                     rc = 1;
                 }
             }
+            EUCA_FREE(*outInst);
         } else if (!strcmp(ncOp, "ncDescribeInstances")) {
             char **instIds = va_arg(al, char **);
             int instIdsLen = va_arg(al, int);
@@ -771,6 +773,11 @@ int ncClientCall(ncMetadata * pMeta, int timeout, int ncLock, char *ncURL, char 
                     rc = 1;
                 }
             }
+
+            for (i = 0; i < len; i++) {
+                EUCA_FREE((*ncOutInsts)[i]);
+            }
+            EUCA_FREE(*ncOutInsts);
         } else if (!strcmp(ncOp, "ncDescribeResource")) {
             char *resourceType = va_arg(al, char *);
             ncResource **outRes = va_arg(al, ncResource **);
@@ -802,6 +809,7 @@ int ncClientCall(ncMetadata * pMeta, int timeout, int ncLock, char *ncURL, char 
                     rc = 1;
                 }
             }
+            EUCA_FREE(*outRes);
         } else if (!strcmp(ncOp, "ncDescribeSensors")) {
             int history_size = va_arg(al, int);
             long long collection_interval_time_ms = va_arg(al, long long);
@@ -813,7 +821,6 @@ int ncClientCall(ncMetadata * pMeta, int timeout, int ncLock, char *ncURL, char 
             int *srsLen = va_arg(al, int *);
 
             rc = ncDescribeSensorsStub(ncs, localmeta, history_size, collection_interval_time_ms, instIds, instIdsLen, sensorIds, sensorIdsLen, srs, srsLen);
-
             if (timeout && srs && srsLen) {
                 if (!rc) {
                     len = *srsLen;
@@ -831,6 +838,10 @@ int ncClientCall(ncMetadata * pMeta, int timeout, int ncLock, char *ncURL, char 
                 }
             }
 
+            for (i = 0; i < len; i++) {
+                EUCA_FREE((*srs)[i]);
+            }
+            EUCA_FREE(*srs);
         } else if (!strcmp(ncOp, "ncBundleInstance")) {
             char *instanceId = va_arg(al, char *);
             char *bucketName = va_arg(al, char *);
@@ -880,9 +891,18 @@ int ncClientCall(ncMetadata * pMeta, int timeout, int ncLock, char *ncURL, char 
             ret = 0;
         }
         close(filedes[1]);
+
+        // Free our local meta data structure and associated memory
+        EUCA_FREE(localmeta->replyString);
         EUCA_FREE(localmeta->correlationId);
         EUCA_FREE(localmeta->userId);
         EUCA_FREE(localmeta);
+
+        // ditch our stub
+        if (ncs != NULL) {
+            ncStubDestroy(ncs);
+            ncs = NULL;
+        }
         exit(ret);
     } else {
         // returns for each client call
