@@ -6,6 +6,7 @@ define([
 	], function( app, dataholder, template, rivets ) {
 	return Backbone.View.extend({
     title: app.msg("launch_instance_section_header_security"),
+    next: app.msg('launch_instance_btn_next_advanced'),
 
 		initialize : function() {
 

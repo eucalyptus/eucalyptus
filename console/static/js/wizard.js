@@ -477,10 +477,7 @@ define(['rivets'], function(rivets) {
       var templates = [];
 
       function titler(position) {
-        var result = "Next";
-        if (self.position < pages.length && templates[position + 1]) {
-          result += ': ' + templates[position + 1].titleStr;
-        }
+        var result = templates[position].next;
         return result;
       }
       var options = {titler: titler};

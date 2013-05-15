@@ -7,6 +7,7 @@ define([
   return Backbone.View.extend({
     tpl: template,
     title: app.msg("launch_instance_section_header_type"),
+    next: app.msg('launch_instance_btn_next_security'),
 
     initialize : function() {
 
