@@ -65,6 +65,8 @@ define([
         snapshots: snapshot_list,
         matrix : matrix,
         images: images,
+    	help: {title: null, content: help_snapshot.dialog_delete_content, url: help_snapshot.dialog_delete_content_url, pop_height: 600},
+
 
         cancelButton: {
           click: function() {

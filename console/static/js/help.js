@@ -37,6 +37,7 @@
       load(help_about, language);
       load(help_changepwd, language);
       load(help_login, language);
+      load(help_edittags, language);
     }catch(e){
       ;
     }
@@ -128,8 +129,10 @@ var help_snapshot = {
     help_snapshot.landing_content_url = 'help/'+arg.language+'/console_manage_snapshots.html';
     help_snapshot.dialog_create_content_url = 'help/'+arg.language+'/console_create_snapshot.html';
     help_snapshot.dialog_delete_content_url  = 'help/'+arg.language+'/console_delete_snapshot.html';
+    help_snapshot.dialog_register_content_url  = 'help/'+arg.language+'/console_register_snapshot_as_image.html';
     loadHtml(help_snapshot.landing_content_url, function(data){help_snapshot.landing_content=data})
     loadHtml(help_snapshot.dialog_create_content_url, function(data){help_snapshot.dialog_create_content=data})
+    loadHtml(help_snapshot.dialog_register_content_url, function(data){help_snapshot.dialog_register_content=data})
     loadHtml(help_snapshot.dialog_delete_content_url, function(data){help_snapshot.dialog_delete_content=data})
   },
   landing_content: '',
@@ -300,5 +303,14 @@ var help_launcher = {
   },
   landing_content: '',
   landing_content_url: '',
+}
+
+var help_edittags = {
+  load : function(arg){
+    help_edittags.dialog_content_url = 'help/'+arg.language+'/console_add_edit_tags.html';
+    loadHtml(help_edittags.dialog_content_url, function(data){help_edittags.dialog_content=data})
+  },
+  dialog_content: '',
+  dialog_content_url: '',
 }
 
