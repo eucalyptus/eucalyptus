@@ -33,12 +33,9 @@
           view.jump(1);
         }
         thisObj.options.image = null;
-        var $tmpl = $('html body').find('.templates #launchWizardTmpl').clone();
-        var $wrapper = $($tmpl.render($.extend($.i18n.map, help_launcher)));
-        var $launcher = $wrapper.children().first();
-        var $launcherHelp = $wrapper.children().last();
-        $launcherHelp.load();
-        thisObj._addHelp($launcherHelp);
+        var launcherHelp = $('#launch-wizard-help');
+        //launcherHelp.load();
+        thisObj._addHelp(launcherHelp);
       });
     },
 
@@ -46,6 +43,7 @@
       var thisObj = this;
       var $target = $('.wizard-wrapper');
       $('#launch-wizard-header div.help-link a').click( function(evt){
+        console.log("HELP", help, help_launcher.landing_content_url, $target);
         thisObj._flipToHelp(evt,{content: help_launcher.landing_content, url: help_launcher.landing_content_url}, $target);
       });
       return $('#launch-wizard-header');
