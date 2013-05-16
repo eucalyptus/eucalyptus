@@ -355,10 +355,11 @@ static void *rebooting_thread(void *arg)
         unlock_hypervisor_conn();
         return NULL;
     }
+    unlock_hypervisor_conn();
+
     // try shutdown first, then kill it if uncooperative
-    if (shutdown_then_destroy_domain(dom) != EUCA_OK) {
+    if (shutdown_then_destroy_domain(instance->instanceId) != EUCA_OK) {
         LOGERROR("[%s] failed to shutdown and destroy the instance to reboot, giving up\n", instance->instanceId);
-        unlock_hypervisor_conn();
         return NULL;
     }
     // Add a shift to values of three of the metrics: ones that
@@ -368,6 +369,11 @@ static void *rebooting_thread(void *arg)
     sensor_shift_metric(instance->instanceId, "CPUUtilization");
     sensor_shift_metric(instance->instanceId, "NetworkIn");
     sensor_shift_metric(instance->instanceId, "NetworkOut");
+
+    if ((conn = lock_hypervisor_conn()) == NULL) {
+        LOGERROR("[%s] cannot connect to hypervisor to restart instance, giving up\n", instance->instanceId);
+        return NULL;
+    }
 
     // domain is now shut down, create a new one with the same XML
     LOGINFO("[%s] rebooting\n", instance->instanceId);
