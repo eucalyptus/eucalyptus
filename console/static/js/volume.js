@@ -61,6 +61,7 @@
                 this_value = source.display_id;
                 return eucatableDisplayColumnTypeTwist(this_mouseover, this_value, 256);
               },
+              "sClass": "wrap-content",
             },
             {
               // Display the status of the volume in the main table
