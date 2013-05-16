@@ -142,6 +142,7 @@ extern sem *inst_sem;
 extern sem *hyp_sem;
 extern bunchOfInstances *global_instances;
 extern int outgoing_migrations_in_progress;
+extern int incoming_migrations_in_progress;
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |
@@ -216,6 +217,7 @@ struct handlers kvm_libvirt_handlers = {
 //!
 //! @return EUCA_OK, EUCA_INVALID_ERROR, or EUCA_SYSTEM_ERROR
 //!
+
 static int generate_migration_keys(char *host, char *credentials, boolean restart, ncInstance * instance)
 {
     static char *most_recent_credentials = NULL;
@@ -225,7 +227,7 @@ static int generate_migration_keys(char *host, char *credentials, boolean restar
     char *instanceId = instance ? instance->instanceId : "UNSET";
 
     if (!host || !credentials) {
-        LOGERROR("[%s] called with invalid arguments for host and/or credentials: host=%s, creds=%s\n", instanceId, SP(host), credentials ? "present" : "UNSET");
+        LOGERROR("[%s] called with invalid arguments for host and/or credentials: host=%s, creds=%s\n", SP(instanceId), SP(host), credentials ? "present" : "UNSET");
         return EUCA_INVALID_ERROR;
     }
 
@@ -258,8 +260,7 @@ static int generate_migration_keys(char *host, char *credentials, boolean restar
         most_recent_host = strdup(host);
         LOGDEBUG("[%s] regeneration of migration host information: %s\n", instanceId, most_recent_host);
     }
-    // FIXME: Add polling around incoming_migrations_in_progress to prevent restarts during migrations.
-
+    // FIXME: Add polling around incoming_migrations_in_progress to prevent restarts during migrations?
     snprintf(generate_keys, MAX_PATH, EUCALYPTUS_GENERATE_MIGRATION_KEYS " %s %s %s", euca_base ? euca_base : "", euca_base ? euca_base : "", host, credentials,
              (restart == TRUE) ? "restart" : "");
     LOGDEBUG("[%s] migration key-generator path: '%s'\n", instanceId, generate_keys);
@@ -814,23 +815,23 @@ static int doMigrateInstances(struct nc_state_t *nc, ncMetadata * pMeta, ncInsta
             // Establish migration-credential keys.
             LOGINFO("[%s] migration destination preparing %s > %s [creds=%s]\n", instance->instanceId, SP(instance->migration_src), SP(instance->migration_dst),
                     (instance->migration_credentials == NULL) ? "unavailable" : "present");
-            // FIXME: Consolidate this sequence and the sequence in handlers.c into a util function?
-            char authorize_keys[MAX_PATH];
-            char *euca_base = getenv(EUCALYPTUS_ENV_VAR_NAME);
-
             // First, call config-file modification script to authorize source node.
-            snprintf(authorize_keys, MAX_PATH, EUCALYPTUS_AUTHORIZE_MIGRATION_KEYS " -a %s %s", euca_base ? euca_base : "", euca_base ? euca_base : "", instance->migration_src,
-                     instance->migration_credentials);
-            LOGDEBUG("[%s] migration key-authorizer path: '%s'\n", instance->instanceId, authorize_keys);
-            sem_p(hyp_sem);
-            int sysret = system(authorize_keys);
-            sem_v(hyp_sem);
-            if (sysret) {
-                LOGERROR("[%s] '%s' failed with exit code %d\n", instance->instanceId, authorize_keys, WEXITSTATUS(sysret));
+            LOGDEBUG("[%s] authorizing migration source node %s\n", instance->instanceId, instance->migration_src);
+            if (authorize_migration_keys("-a", instance->migration_src, instance->migration_credentials, instance, TRUE) != EUCA_OK) {
                 goto failed_dest;
-            } else {
-                LOGDEBUG("[%s] migration key authorization succeeded\n", instance->instanceId);
             }
+
+            /*
+             * Uncomment this section to force a preparation failure on the destination.
+             * (This is intended for development/testing only!)
+             */
+            /*
+               LOGERROR("[%s] FORCING FAILURE!\n", instance->instanceId);
+               sleep(10);
+               goto failed_dest;
+             */
+
+            // Then, generate keys and restart libvirtd.
             if (generate_migration_keys(instance->migration_dst, instance->migration_credentials, TRUE, instance) != EUCA_OK) {
                 goto failed_dest;
             }
@@ -998,22 +999,34 @@ failed_dest:
                 add_instance(&global_instances, instance);  // OK if this fails--that should mean it's already been added.
                 copy_instances();
             }
+            // If no remaining incoming or pending migrations, deauthorize all clients.
+            // FIXME: Consolidate with similar sequence in handlers.c into a utility function?
+            if (!incoming_migrations_in_progress) {
+                int incoming_migrations_pending = 0;
+                LOGINFO("[%s] no remaining active incoming migrations -- checking to see if there are any pending migrations\n", instance->instanceId);
+                bunchOfInstances *head = NULL;
+                for (head = global_instances; head; head = head->next) {
+                    if ((head->instance->migration_state == MIGRATION_PREPARING) || (head->instance->migration_state == MIGRATION_READY)) {
+                        LOGINFO("[%s] is pending migration, state='%s', deferring deauthorization of migration keys\n", head->instance->instanceId,
+                                migration_state_names[head->instance->migration_state]);
+                        incoming_migrations_pending++;
+                    }
+                }
+                // FIXME: Add belt and suspenders?
+                if (!incoming_migrations_pending) {
+                    LOGINFO("[%s] no remaining incoming or pending migrations -- deauthorizing all migration client keys\n", instance->instanceId);
+                    authorize_migration_keys("-D -r", NULL, NULL, NULL, FALSE);
+                }
+            }
             sem_v(inst_sem);
-
             // Set to generic EUCA_ERROR unless already set to a more-specific error.
             if (ret == EUCA_OK) {
                 ret = EUCA_ERROR;
             }
-            //EUCA_FREE(instance);
-            goto out;
-
         } else {
             LOGERROR("unexpected migration request (node %s is neither source nor destination)\n", pMeta->nodeName);
             ret = EUCA_ERROR;
         }
     }
-
-out:
-
     return ret;
 }

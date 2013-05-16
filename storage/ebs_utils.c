@@ -287,7 +287,15 @@ int deserialize_volume(char *volume_string, ebs_volume_data ** dest)
     }
 
     char *volume_start = strrchr(volume_string, '/') + sizeof(char);    //Go 1 past so token_start points to beginning of token
+    if(volume_start == NULL) {
+    	LOGERROR("Failed parsing token string: %s\n",volume_string);
+    	return EUCA_ERROR;
+    }
     char *token_start = strchr(volume_start, ',') + sizeof(char);   //Go 1 past the comma delimiter
+    if(token_start == NULL) {
+    	LOGERROR("Failed parsing token string: %s\n",volume_string);
+    	return EUCA_ERROR;
+    }
 
     euca_strncpy(vol_data->volumeId, volume_start, token_start - volume_start);
     LOGTRACE("Parsed volume: %s\n", vol_data->volumeId);

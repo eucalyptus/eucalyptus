@@ -21,6 +21,7 @@
 package com.eucalyptus.cluster.callback;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.Date;
 import java.util.List;
@@ -151,7 +152,148 @@ public class DescribeSensorCallback extends
       return eventMap.get(mapKey(sensorData, dimensionType, value));
     }
   }
-  
+  private static class EC2DiskMetricCacheKey {
+    private String resourceUuid;
+    private String resourceName;
+    private Long currentTimeStamp;
+    private String metricName;
+    private EC2DiskMetricCacheKey(String resourceUuid, String resourceName,
+        Long currentTimeStamp, String metricName) {
+      super();
+      this.resourceUuid = resourceUuid;
+      this.resourceName = resourceName;
+      this.currentTimeStamp = currentTimeStamp;
+      this.metricName = metricName;
+    }
+    @Override
+    public int hashCode() {
+      final int prime = 31;
+      int result = 1;
+      result = prime * result
+          + ((currentTimeStamp == null) ? 0 : currentTimeStamp.hashCode());
+      result = prime * result
+          + ((metricName == null) ? 0 : metricName.hashCode());
+      result = prime * result
+          + ((resourceName == null) ? 0 : resourceName.hashCode());
+      result = prime * result
+          + ((resourceUuid == null) ? 0 : resourceUuid.hashCode());
+      return result;
+    }
+    public String getResourceUuid() {
+      return resourceUuid;
+    }
+    public String getResourceName() {
+      return resourceName;
+    }
+    public Long getCurrentTimeStamp() {
+      return currentTimeStamp;
+    }
+    public String getMetricName() {
+      return metricName;
+    }
+    @Override
+    public boolean equals(Object obj) {
+      if (this == obj)
+        return true;
+      if (obj == null)
+        return false;
+      if (getClass() != obj.getClass())
+        return false;
+      EC2DiskMetricCacheKey other = (EC2DiskMetricCacheKey) obj;
+      if (currentTimeStamp == null) {
+        if (other.currentTimeStamp != null)
+          return false;
+      } else if (!currentTimeStamp.equals(other.currentTimeStamp))
+        return false;
+      if (metricName == null) {
+        if (other.metricName != null)
+          return false;
+      } else if (!metricName.equals(other.metricName))
+        return false;
+      if (resourceName == null) {
+        if (other.resourceName != null)
+          return false;
+      } else if (!resourceName.equals(other.resourceName))
+        return false;
+      if (resourceUuid == null) {
+        if (other.resourceUuid != null)
+          return false;
+      } else if (!resourceUuid.equals(other.resourceUuid))
+        return false;
+      return true;
+    }
+    
+  }
+
+  private static class EC2DiskMetricCacheValue {
+    private EC2DiskMetricCacheKey key;
+    private Double value;
+    public EC2DiskMetricCacheValue(EC2DiskMetricCacheKey key, Double value) {
+      this.key = key;
+      this.value = value;
+    }
+    public void addValue(Double currentValue) {
+      this.value += currentValue;
+    }
+    public String getMetricName() {
+      return key.getMetricName();
+    }
+    public Double getValue() {
+      return value;
+    }
+    public Long getTimeStamp() {
+      return key.getCurrentTimeStamp();
+    }
+    public String getResourceName() {
+      return key.getResourceName();
+    }
+    public String getResourceUuid() {
+      return key.getResourceUuid();
+    }
+    
+  }
+  private static class EC2DiskMetricCache {
+    private ConcurrentMap<EC2DiskMetricCacheKey, EC2DiskMetricCacheValue> cacheMap = Maps.newConcurrentMap();
+
+    public void addToMetric(String resourceUuid, String resourceName,
+        String metricName, Double currentValue, Long currentTimeStamp) {
+      EC2DiskMetricCacheKey key = new EC2DiskMetricCacheKey(resourceUuid, resourceName, currentTimeStamp, metricName);
+      EC2DiskMetricCacheValue value = cacheMap.get(key);
+      if (value == null) {
+        cacheMap.put(key, new EC2DiskMetricCacheValue(key, currentValue));
+      } else {
+        value.addValue(currentValue);
+      }
+    }
+
+    public void initializeMetrics(String resourceUuid,
+        String resourceName, Long currentTimeStamp) {
+      for (String metricName: EC2_DISK_METRICS) {
+        addToMetric(resourceUuid, resourceName, metricName, 0.0, currentTimeStamp);
+      }
+    }
+
+    public Collection<Supplier<InstanceUsageEvent>> getMetrics() {
+      ArrayList<Supplier<InstanceUsageEvent>> suppliers = Lists.newArrayList();
+      for (final EC2DiskMetricCacheValue value: cacheMap.values()) {
+        suppliers.add(new Supplier<InstanceUsageEvent>() {
+          @Override
+          public InstanceUsageEvent get() {
+            return new InstanceUsageEvent(
+              value.getResourceUuid(),
+              value.getResourceName(),
+              value.getMetricName(),
+              0L, // TODO: deal with sequence numbers?
+              "Ephemeral",
+              value.getValue(),
+              value.getTimeStamp());
+          }
+        });
+      }
+      return suppliers;
+    }
+    
+  }
   @Override
   public void fire(final DescribeSensorsResponse msg) {
     try {
@@ -161,9 +303,9 @@ public class DescribeSensorCallback extends
 
       // cloudwatch metric caches
       final ConcurrentMap<String, DiskReadWriteMetricTypeCache> metricCacheMap = Maps.newConcurrentMap();
+      
+      final EC2DiskMetricCache ec2DiskMetricCache = new EC2DiskMetricCache();
 
-      
-      
       for (final SensorsResourceType sensorData : msg.getSensorsResources()) {
         if (!RESOURCE_TYPE_INSTANCE.equals(sensorData.getResourceType()) ||
             !Iterables.contains(uuidList, sensorData.getResourceUuid()))
@@ -192,10 +334,15 @@ public class DescribeSensorCallback extends
                   LOG.debug("Value: " + value.getValue());
                   final Long currentTimeStamp = value.getTimestamp().getTime();
                   final Double currentValue = value.getValue();
-                  sendSystemMetric(new Supplier<InstanceUsageEvent>() {
-                    @Override
-                    public InstanceUsageEvent get() {
-                      return new InstanceUsageEvent(
+                  ec2DiskMetricCache.initializeMetrics(sensorData.getResourceUuid(), sensorData.getResourceName(), currentTimeStamp); // Put a place holder in in case we don't have any non-EBS volumes
+                  boolean isEbsMetric = dimensionType.getDimensionName().startsWith("vol-");
+                  boolean isEc2DiskMetric = !isEbsMetric && EC2_DISK_METRICS.contains(metricType.getMetricName().replace("Volume", "Disk"));
+                  
+                  if (isEbsMetric || isEc2DiskMetric) {
+                    sendSystemMetric(new Supplier<InstanceUsageEvent>() {
+                      @Override
+                      public InstanceUsageEvent get() {
+                        return new InstanceUsageEvent(
                           sensorData.getResourceUuid(),
                           sensorData.getResourceName(),
                           metricType.getMetricName(),
@@ -203,19 +350,26 @@ public class DescribeSensorCallback extends
                           dimensionType.getDimensionName(),
                           currentValue,
                           currentTimeStamp);
-                    }
-                  });
+                      }
+                    });
 
-                  // special case to calculate VolumeConsumedReadWriteOps
-                  // As it is (VolumeThroughputPercentage / 100) * (VolumeReadOps + VolumeWriteOps), and we are hard coding
-                  // VolumeThroughputPercentage as 100%, we will just use VolumeReadOps + VolumeWriteOps
+                    if (isEbsMetric) {
+                      // special case to calculate VolumeConsumedReadWriteOps
+                      // As it is (VolumeThroughputPercentage / 100) * (VolumeReadOps + VolumeWriteOps), and we are hard coding
+                      // VolumeThroughputPercentage as 100%, we will just use VolumeReadOps + VolumeWriteOps
                   
-                  // And just in case VolumeReadOps is called DiskReadOps we do both cases...
-                  combineReadWriteDiskMetric("DiskReadOps", "DiskWriteOps", metricCacheMap, "DiskConsumedReadWriteOps", metricType, sensorData, dimensionType, value);
-                  combineReadWriteDiskMetric("VolumeReadOps", "VolumeWriteOps", metricCacheMap, "VolumeConsumedReadWriteOps", metricType, sensorData, dimensionType, value);
+                      // And just in case VolumeReadOps is called DiskReadOps we do both cases...
+                      combineReadWriteDiskMetric("DiskReadOps", "DiskWriteOps", metricCacheMap, "DiskConsumedReadWriteOps", metricType, sensorData, dimensionType, value);
+                      combineReadWriteDiskMetric("VolumeReadOps", "VolumeWriteOps", metricCacheMap, "VolumeConsumedReadWriteOps", metricType, sensorData, dimensionType, value);
 
-                  // Also need VolumeTotalReadWriteTime to compute VolumeIdleTime
-                  combineReadWriteDiskMetric("VolumeTotalReadTime", "VolumeTotalWriteTime", metricCacheMap, "VolumeTotalReadWriteTime", metricType, sensorData, dimensionType, value);
+                      // Also need VolumeTotalReadWriteTime to compute VolumeIdleTime
+                      combineReadWriteDiskMetric("VolumeTotalReadTime", "VolumeTotalWriteTime", metricCacheMap, "VolumeTotalReadWriteTime", metricType, sensorData, dimensionType, value);
+                    }
+                  } else {
+                    // see if it is a volume metric
+                    String metricName = metricType.getMetricName().replace("Volume", "Disk"); 
+                      ec2DiskMetricCache.addToMetric(sensorData.getResourceUuid(), sensorData.getResourceName(), metricName, currentValue, currentTimeStamp);
+                  }
                 }
               }
 
@@ -244,6 +398,9 @@ public class DescribeSensorCallback extends
             }
           }
         }
+      }
+      for (Supplier<InstanceUsageEvent> ec2DiskMetric: ec2DiskMetricCache.getMetrics()) {
+        sendSystemMetric(ec2DiskMetric);
       }
     } catch (Exception ex) {
       LOG.debug("Unable to fire describe sensors call back", ex);
@@ -320,6 +477,13 @@ public class DescribeSensorCallback extends
       return metricDimensionsValuesType.getTimestamp();
     }
   }
+
+  private static final Set<String> EC2_DISK_METRICS = ImmutableSet.of(
+      "DiskReadOps",
+      "DiskWriteOps",
+      "DiskReadBytes",
+      "DiskWriteBytes"
+  );
 
   private static final Set<String> UNSUPPORTED_EC2_METRICS = ImmutableSet.of(
       "VolumeQueueLength", 

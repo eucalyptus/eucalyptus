@@ -62,6 +62,8 @@
 
 package com.eucalyptus.network;
 
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -108,6 +110,7 @@ import edu.ucsb.eucalyptus.msgs.ResourceTag;
 import edu.ucsb.eucalyptus.msgs.RevokeSecurityGroupIngressResponseType;
 import edu.ucsb.eucalyptus.msgs.RevokeSecurityGroupIngressType;
 import edu.ucsb.eucalyptus.msgs.SecurityGroupItemType;
+import edu.ucsb.eucalyptus.msgs.UserIdGroupPairType;
 
 public class NetworkGroupManager {
   private static Logger LOG = Logger.getLogger( NetworkGroupManager.class );
@@ -198,10 +201,13 @@ public class NetworkGroupManager {
       final Context ctx = Contexts.lookup( );
       final RevokeSecurityGroupIngressResponseType reply = request.getReply( );
       reply.markFailed( );
-      final List<IpPermissionType> ipPermissions = request.getIpPermissions();
 
       final EntityTransaction db = Entities.get( NetworkGroup.class );
       try {     
+        final List<IpPermissionType> ipPermissions = handleOldAndNewIpPermissions(
+            request.getCidrIp(), request.getIpProtocol(), request.getFromPort(), request.getToPort(), 
+            request.getSourceSecurityGroupName(), request.getSourceSecurityGroupOwnerId(), 
+            request.getIpPermissions());
         final NetworkGroup ruleGroup = lookupGroup( request.getGroupId(), request.getGroupName() );
         if ( RestrictedTypes.filterPrivileged().apply( ruleGroup ) ) {
           NetworkGroups.resolvePermissions( ipPermissions , true);
@@ -239,8 +245,12 @@ public class NetworkGroupManager {
         throw new EucalyptusCloudException( "Not authorized to authorize network group " + ruleGroup.getDisplayName() + " for " + ctx.getUser( ) );
       }
       final List<NetworkRule> ruleList = Lists.newArrayList( );
-      NetworkGroups.resolvePermissions( request.getIpPermissions() , false);
-      for ( final IpPermissionType ipPerm : request.getIpPermissions( ) ) {
+      List<IpPermissionType> ipPermissions = handleOldAndNewIpPermissions(
+          request.getCidrIp(), request.getIpProtocol(), request.getFromPort(), request.getToPort(), 
+          request.getSourceSecurityGroupName(), request.getSourceSecurityGroupOwnerId(), 
+          request.getIpPermissions());
+      NetworkGroups.resolvePermissions( ipPermissions , false);
+      for ( final IpPermissionType ipPerm : ipPermissions ) {
         if ( ipPerm.getCidrIpRanges().isEmpty() && ipPerm.getGroups().isEmpty() ) {
           continue; // see EUCA-5934
         }
@@ -275,6 +285,102 @@ public class NetworkGroupManager {
     } finally {
       if ( db.isActive() ) db.rollback();
     }
+  }
+
+  private List<IpPermissionType> handleOldAndNewIpPermissions(String cidrIp, String ipProtocol,
+      Integer fromPort, Integer toPort, String sourceSecurityGroupName, String sourceSecurityGroupOwnerId,
+      ArrayList<IpPermissionType> ipPermissions) throws MetadataException {
+
+    // TODO: match AWS error messages (whenever possible)
+    
+    // Due to old api calls there are three possible (allowed) scenarios
+    // 1) cidrIp, ip protocol, from port, to port must all be set
+    // 2) sourceSecurityGroupName and sourceSecurityGroupOwnerId must be set
+    // 3) ipPermissions must be set (size at least 1.
+    // Exactly one of the above must be set, and no fields from any other condition must be set.
+    // Easiest to start with condition 3
+    
+    HashMap<String, Object> condition1Params = new HashMap<String, Object>();
+    condition1Params.put("cidrIp", cidrIp);
+    condition1Params.put("ipProtocol", ipProtocol);
+    condition1Params.put("ipProtocol", ipProtocol);
+    condition1Params.put("fromPort", fromPort);
+    condition1Params.put("toPort", toPort);
+
+    HashMap<String, Object> condition2Params = new HashMap<String, Object>();
+    condition2Params.put("sourceSecurityGroupName", sourceSecurityGroupName);
+    condition2Params.put("sourceSecurityGroupOwnerId", sourceSecurityGroupOwnerId);
+
+    if (ipPermissions != null && ipPermissions.size() > 0) {
+      for (String key: condition1Params.keySet()) {
+        Object value = condition1Params.get(key);
+        if (value != null) {
+          throw new MetadataException("InvalidParameterCombination: " + key + " and ipPermissions must not both be set");
+        }
+      }
+      for (String key: condition2Params.keySet()) {
+        Object value = condition2Params.get(key);
+        if (value != null) {
+          throw new MetadataException("InvalidParameterCombination: " + key + " and ipPermissions must not both be set");
+        }
+      }
+      return ipPermissions;
+    }
+    // now check 2
+    String unsetCondition2Key = null;
+    String setCondition2Key = null;
+    for (String key: condition2Params.keySet()) {
+      Object value = condition2Params.get(key);
+      if (value == null && unsetCondition2Key == null) {
+        unsetCondition2Key = key;
+      } else if (value != null && setCondition2Key == null) {
+        setCondition2Key = key;
+      }
+    }
+    if (setCondition2Key != null) { 
+      if (unsetCondition2Key != null) {
+        throw new MetadataException("MissingParameter: " + unsetCondition2Key + " must be set if " + setCondition2Key + " is set.");
+      } else {
+        // both conditions are set, make sure no condition 1 items are set...
+        for (String key: condition1Params.keySet()) {
+          Object value = condition1Params.get(key);
+          if (value != null) {
+            throw new MetadataException("InvalidParameterCombination: " + key + " and " + setCondition2Key + " must not both be set");
+          }
+        }
+        // set a rule for tcp:1-65535, udp:1-65535, icmp: -1
+        IpPermissionType tcpPermission = new IpPermissionType("tcp", 1, 65535);
+        tcpPermission.setGroups(Lists.newArrayList(new UserIdGroupPairType(sourceSecurityGroupOwnerId, sourceSecurityGroupName, null)));
+        IpPermissionType udpPermission = new IpPermissionType("udp", 1, 65535); 
+        udpPermission.setGroups(Lists.newArrayList(new UserIdGroupPairType(sourceSecurityGroupOwnerId, sourceSecurityGroupName, null)));
+        IpPermissionType icmpPermission = new IpPermissionType("icmp", -1, -1); 
+        icmpPermission.setGroups(Lists.newArrayList(new UserIdGroupPairType(sourceSecurityGroupOwnerId, sourceSecurityGroupName, null)));
+        return Lists.newArrayList(tcpPermission, udpPermission, icmpPermission);
+      }
+    }
+    // now in condition 1.  make sure all fields set.
+    // now check 2
+    String unsetCondition1Key = null;
+    String setCondition1Key = null;
+    for (String key: condition1Params.keySet()) {
+      Object value = condition1Params.get(key);
+      if (value == null && unsetCondition1Key == null) {
+        unsetCondition1Key = key;
+      } else if (value != null && setCondition1Key == null) {
+        setCondition1Key = key;
+      }
+    }
+    if (setCondition1Key != null) { 
+      if (unsetCondition1Key != null) {
+        throw new MetadataException("MissingParameter: " + unsetCondition1Key + " must be set if " + setCondition1Key + " is set.");
+      } else {
+        // we have everything we need
+        IpPermissionType permission = new IpPermissionType(ipProtocol, fromPort, toPort);
+        permission.setCidrIpRanges(Lists.newArrayList(cidrIp));
+        return Lists.newArrayList(permission);
+      }
+    }
+    throw new MetadataException("Missing source specification: include source security group or CIDR information");
   }
 
   private static NetworkGroup lookupGroup( final String groupId,

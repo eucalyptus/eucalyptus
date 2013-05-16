@@ -292,37 +292,40 @@ adb_ncStartNetworkResponse_t *ncStartNetworkMarshal(adb_ncStartNetwork_t * ncSta
         uuid = adb_ncStartNetworkType_get_uuid(input, env);
         port = adb_ncStartNetworkType_get_remoteHostPort(input, env);
         vlan = adb_ncStartNetworkType_get_vlan(input, env);
-        peersLen = adb_ncStartNetworkType_sizeof_remoteHosts(input, env);
-        peers = EUCA_ZALLOC(peersLen, sizeof(char *));
-        for (i = 0; i < peersLen; i++) {
-            peers[i] = adb_ncStartNetworkType_get_remoteHosts_at(input, env, i);
-        }
+        if((peersLen = adb_ncStartNetworkType_sizeof_remoteHosts(input, env)) > 0) {
+            peers = EUCA_ZALLOC(peersLen, sizeof(char *));
+            for (i = 0; i < peersLen; i++) {
+                peers[i] = adb_ncStartNetworkType_get_remoteHosts_at(input, env, i);
+            }
 
-        // do it
-        EUCA_MESSAGE_UNMARSHAL(ncStartNetworkType, input, (&meta));
+            // do it
+            EUCA_MESSAGE_UNMARSHAL(ncStartNetworkType, input, (&meta));
 
-        if ((error = doStartNetwork(&meta, uuid, peers, peersLen, port, vlan)) != EUCA_OK) {
-            LOGERROR("failed error=%d\n", error);
-            adb_ncStartNetworkResponseType_set_return(output, env, AXIS2_FALSE);
+            if ((error = doStartNetwork(&meta, uuid, peers, peersLen, port, vlan)) != EUCA_OK) {
+                LOGERROR("failed error=%d\n", error);
+                adb_ncStartNetworkResponseType_set_return(output, env, AXIS2_FALSE);
 
-            // set operation-specific fields in output
-            adb_ncStartNetworkResponseType_set_networkStatus(output, env, "FAIL");
-            adb_ncStartNetworkResponseType_set_statusMessage(output, env, "2");
+                // set operation-specific fields in output
+                adb_ncStartNetworkResponseType_set_networkStatus(output, env, "FAIL");
+                adb_ncStartNetworkResponseType_set_statusMessage(output, env, "2");
+            } else {
+                // set standard fields in output
+                adb_ncStartNetworkResponseType_set_return(output, env, AXIS2_TRUE);
+                adb_ncStartNetworkResponseType_set_correlationId(output, env, meta.correlationId);
+                adb_ncStartNetworkResponseType_set_userId(output, env, meta.userId);
+
+                // set operation-specific fields in output
+                adb_ncStartNetworkResponseType_set_networkStatus(output, env, "SUCCESS");
+                adb_ncStartNetworkResponseType_set_statusMessage(output, env, "0");
+            }
+
+            EUCA_FREE(peers);
+
+            // set response to output
+            adb_ncStartNetworkResponse_set_ncStartNetworkResponse(response, env, output);
         } else {
-            // set standard fields in output
-            adb_ncStartNetworkResponseType_set_return(output, env, AXIS2_TRUE);
-            adb_ncStartNetworkResponseType_set_correlationId(output, env, meta.correlationId);
-            adb_ncStartNetworkResponseType_set_userId(output, env, meta.userId);
-
-            // set operation-specific fields in output
-            adb_ncStartNetworkResponseType_set_networkStatus(output, env, "SUCCESS");
-            adb_ncStartNetworkResponseType_set_statusMessage(output, env, "0");
+            LOGERROR("failed. peersLen=%d\n", peersLen);
         }
-
-        EUCA_FREE(peers);
-
-        // set response to output
-        adb_ncStartNetworkResponse_set_ncStartNetworkResponse(response, env, output);
     }
     pthread_mutex_unlock(&ncHandlerLock);
     return (response);
@@ -1371,9 +1374,6 @@ adb_ncMigrateInstancesResponse_t *ncMigrateInstancesMarshal(adb_ncMigrateInstanc
 {
     int error = EUCA_OK;
     ncMetadata meta = { 0 };
-    axis2_char_t *correlationId = NULL;
-    axis2_char_t *userId = NULL;
-    axis2_char_t *nodeName = NULL;
     ncInstance **instances = NULL;
     int instancesLen = 0;
     axis2_char_t *action = NULL;
@@ -1387,11 +1387,6 @@ adb_ncMigrateInstancesResponse_t *ncMigrateInstancesMarshal(adb_ncMigrateInstanc
         input = adb_ncMigrateInstances_get_ncMigrateInstances(ncMigrateInstances, env);
         response = adb_ncMigrateInstancesResponse_create(env);
         output = adb_ncMigrateInstancesResponseType_create(env);
-
-        // get standard fields from input
-        correlationId = adb_ncMigrateInstancesType_get_correlationId(input, env);
-        userId = adb_ncMigrateInstancesType_get_userId(input, env);
-        nodeName = adb_ncMigrateInstancesType_get_nodeName(input, env);
 
         // get operation-specific fields from input
         instancesLen = adb_ncMigrateInstancesType_sizeof_instances(input, env);
@@ -1411,14 +1406,13 @@ adb_ncMigrateInstancesResponse_t *ncMigrateInstancesMarshal(adb_ncMigrateInstanc
         action = adb_ncMigrateInstancesType_get_action(input, env);
         credentials = adb_ncMigrateInstancesType_get_credentials(input, env);
 
-        eventlog("NC", userId, correlationId, "MigrateInstances", "begin");
+        // get standard fields from input
+        EUCA_MESSAGE_UNMARSHAL(ncMigrateInstancesType, input, (&meta));
+        meta.nodeName = adb_ncMigrateInstancesType_get_nodeName(input, env);
+
+        eventlog("NC", meta.userId, meta.correlationId, "MigrateInstances", "begin");
 
         // do it
-        bzero((void *)&meta, sizeof(meta));
-        meta.correlationId = correlationId;
-        meta.userId = userId;
-        meta.nodeName = nodeName;
-
         error = doMigrateInstances(&meta, instances, instancesLen, action, credentials);
         if (error != EUCA_OK) {
             LOGERROR("failed error=%d\n", error);
@@ -1431,8 +1425,8 @@ mi_error:
         } else {
             // set standard fields in output
             adb_ncMigrateInstancesResponseType_set_return(output, env, AXIS2_TRUE);
-            adb_ncMigrateInstancesResponseType_set_correlationId(output, env, correlationId);
-            adb_ncMigrateInstancesResponseType_set_userId(output, env, userId);
+            adb_ncMigrateInstancesResponseType_set_correlationId(output, env, meta.correlationId);
+            adb_ncMigrateInstancesResponseType_set_userId(output, env, meta.userId);
             // no operation-specific fields in output
         }
 
@@ -1447,7 +1441,7 @@ mi_error:
     }
     pthread_mutex_unlock(&ncHandlerLock);
 
-    eventlog("NC", userId, correlationId, "MigrateInstances", "end");
+    eventlog("NC", meta.userId, meta.correlationId, "MigrateInstances", "end");
     return (response);
 }
 

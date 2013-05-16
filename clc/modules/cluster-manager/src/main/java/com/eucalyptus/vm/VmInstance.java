@@ -167,6 +167,7 @@ import com.eucalyptus.vm.VmBundleTask.BundleState;
 import com.eucalyptus.vm.VmInstance.VmState;
 import com.eucalyptus.vm.VmInstances.Timeout;
 import com.eucalyptus.vm.VmVolumeAttachment.AttachmentState;
+import com.eucalyptus.vm.VmVolumeAttachment.NonTransientVolumeException;
 import com.eucalyptus.vmtypes.VmType;
 import com.eucalyptus.vmtypes.VmTypes;
 import com.eucalyptus.ws.StackConfiguration;
@@ -1687,6 +1688,31 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
     }
   }
   
+  public VmVolumeAttachment lookupTransientVolumeAttachment( final String volumeId ) {
+	final EntityTransaction db = Entities.get( VmInstance.class );
+	try {
+	  final VmInstance entity = Entities.merge( this );
+	  VmVolumeAttachment volumeAttachment;
+      try {
+        volumeAttachment = entity.getTransientVolumeState( ).lookupVolumeAttachment( volumeId );
+        db.commit( );
+      } catch ( final NoSuchElementException ex ) {
+        volumeAttachment = Iterables.find( entity.getBootRecord( ).getPersistentVolumes( ), VmVolumeAttachment.volumeIdFilter( volumeId ) );
+        db.commit( );
+        if(volumeAttachment != null) {
+  		  throw new NonTransientVolumeException( volumeId + " is associated with boot from EBS instance " + entity.getInstanceId() + " at launch time.");
+  		}
+      }
+	  return volumeAttachment;
+	} catch (NonTransientVolumeException nex) {
+	  throw nex;	
+	} catch ( final Exception ex ) {
+	  throw new NoSuchElementException( "Failed to lookup volume: " + volumeId );
+    } finally {
+	  if ( db.isActive() ) db.rollback();
+	}
+  }
+  
   /**
    *
    */
@@ -2109,7 +2135,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
             runningInstance.getBlockDevices( ).add( new InstanceBlockDeviceMapping( attachedVol.getDevice( ), attachedVol.getVolumeId( ),
                                                                                     attachedVol.getStatus( ),
                                                                                     attachedVol.getAttachTime( ),
-                                                                                    Boolean.TRUE ) );
+                                                                                    attachedVol.getDeleteOnTerminate( ) ) );
           }
           return runningInstance;
         } catch ( final NoSuchElementException ex ) {

@@ -110,23 +110,12 @@ class EucalyptusQueryBindingTest extends QueryBindingTestSupport {
     bindAndAssertParameters( eb, AuthorizeSecurityGroupIngressType.class, "AuthorizeSecurityGroupIngress", new AuthorizeSecurityGroupIngressType(
         groupUserId: 'AAAAAAAAAAAAAAAAAAAAA',
         groupName: 'default',
-        ipPermissions: [
-            new IpPermissionType(
-                ipProtocol: 'tcp',
-                fromPort: 7,
-                toPort: 12,
-                groups: [
-                    new UserIdGroupPairType(
-                        sourceUserId: 'BBBBBBBBBBBBBBBBBBBB',
-                        sourceGroupName: 'userb-group'
-                    )
-                ],
-                cidrIpRanges: [
-                    '0.0.0.0/0'
-                ]
-            )
-        ],
-
+        ipProtocol: 'tcp',
+        fromPort: 7,
+        toPort: 12,
+        sourceSecurityGroupOwnerId: 'BBBBBBBBBBBBBBBBBBBB',
+        sourceSecurityGroupName: 'userb-group',
+        cidrIp: '0.0.0.0/0'
     ), [
         UserId: 'AAAAAAAAAAAAAAAAAAAAA',
         GroupName: 'default',

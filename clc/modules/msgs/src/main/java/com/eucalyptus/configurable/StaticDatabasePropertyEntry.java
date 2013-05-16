@@ -223,4 +223,34 @@ public class StaticDatabasePropertyEntry extends AbstractPersistent {
     }
     
   }
+
+  @EntityUpgrade( entities = { StaticPropertyEntry.class }, since = Version.v3_3_0, value = Empyrean.class )
+  public enum StaticPropertyEntryRenamePropertyUpgrade implements Predicate<Class> {
+    INSTANCE;
+    private static Logger LOG = Logger.getLogger( StaticDatabasePropertyEntry.StaticPropertyEntryUpgrade.class );
+    @Override
+    public boolean apply( Class arg0 ) {
+      final String REPORTING_DEFAULT_POLL_INTERVAL_MINS_FIELD_NAME = "com.eucalyptus.reporting.modules.backend.DescribeSensorsListener.default_poll_interval_mins";
+      final String REPORTING_DEFAULT_POLL_INTERVAL_MINS = "reporting.default_poll_interval_mins";
+      final String CLOUD_MONITOR_DEFAULT_POLL_INTERVAL_MINS = "cloud.monitor.default_poll_interval_mins";
+      EntityTransaction db = Entities.get( StaticDatabasePropertyEntry.class );
+      try {
+        List<StaticDatabasePropertyEntry> entities = Entities.query( new StaticDatabasePropertyEntry( ) );
+        for ( StaticDatabasePropertyEntry entry : entities ) {
+          if (REPORTING_DEFAULT_POLL_INTERVAL_MINS_FIELD_NAME.equals(entry.getFieldName()) && 
+              REPORTING_DEFAULT_POLL_INTERVAL_MINS.equals(entry.getPropName())) {
+            entry.setPropName(CLOUD_MONITOR_DEFAULT_POLL_INTERVAL_MINS);
+            LOG.debug( "Upgrading: Changing property '"+REPORTING_DEFAULT_POLL_INTERVAL_MINS+"' to '"+CLOUD_MONITOR_DEFAULT_POLL_INTERVAL_MINS+"'");
+          }
+        }
+        db.commit( );
+        return true;
+      } catch ( Exception ex ) {
+        throw Exceptions.toUndeclared( ex );
+      }
+    }
+    
+  }
+
+
 }
