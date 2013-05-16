@@ -974,7 +974,7 @@ int logcat(int debug_level, const char *file_path)
             buf[l] = '\0';
         }
 
-        EUCALOG(debug_level, buf);
+        EUCALOG(debug_level, "%s", buf);
         got += l;
     }
 

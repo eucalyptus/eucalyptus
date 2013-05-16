@@ -217,15 +217,15 @@
               <form action="/" method="post" name="changepasswordform">
                 <div class="form-row">
                   <label for="current" class="required-label">{{!>login_change_passwd_current}}</label>
-                  <input type="password" id="current" class="input-field" maxlength="128" value=""/>
+                  <input type="password" id="current" class="input-field" maxlength="128" title="{{!: login_change_passwd_current_tip }}" value=""/>
                 </div>
                 <div class="form-row">
                   <label for="newpwd" class="required-label">{{!>login_change_passwd_new}}</label>
-                  <input type="password" id="newpwd" class="input-field" maxlength="128" value=""/>
+                  <input type="password" id="newpwd" class="input-field" maxlength="128" title="{{!: login_change_passwd_new_tip }}" value=""/>
                 </div>
                 <div class="form-row">
                   <label for="confirmpwd" class="required-label">{{!>login_change_passwd_confirm}}</label>
-                  <input type="password" id="confirmpwd" class="input-field" maxlength="128" value=""/>
+                  <input type="password" id="confirmpwd" class="input-field" maxlength="128" title="{{!: login_change_passwd_confirm_tip }}" value=""/>
                 </div>
               </form>        
               <p class="required-hint">{{!: required_fields }}</p>

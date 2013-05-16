@@ -39,6 +39,7 @@ define([
       this.scope = {
         status: '',
         volumes: volume_list, 
+		help: {title: null, content: help_volume.dialog_delete_content, url: help_volume.dialog_delete_content_url, pop_height: 600},
 
         cancelButton: {
           click: function() {

@@ -136,7 +136,7 @@ define([
                 status: '',
                 volume: new Volume({snapshot_id: args.snapshot_id, size: args.size, availablity_zone: args.zone}),
                 error: new Backbone.Model({}),
-                help: {title: null, content: help_volume.landing_content, url: help_volume.landing_content_url, pop_height: 600},
+                help: {title: null, content: help_volume.dialog_add_content, url: help_volume.dialog_add_content_url, pop_height: 600},
 
                 cancelButton: {
                   click: function() {

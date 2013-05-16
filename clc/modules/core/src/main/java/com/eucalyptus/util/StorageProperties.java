@@ -113,12 +113,15 @@ public class StorageProperties {
 	public static final String DEFAULT_EBS_MANAGER = "OverlayManager";
 	public static String DAS_DEVICE = "/dev/blockdev";
 	public static final String STORAGE_CLASS_PREFIX = "com.eucalyptus.storage.";
-  public static final long SNAP_POINT_MAX_TIME_MS = 15000; //15 sec turnaround
-	public static final String TOKEN_PREFIX = "sc://"; //Used to indicate a token should be resolved to an SC. The holder shoul replace 'sc://' with the service url for the enabled SC
+	public static final long SNAP_POINT_MAX_TIME_MS = 15000; //15 sec turnaround
+	public static final String TOKEN_PREFIX = "sc://"; //Used to indicate a token should be resolved to an SC
 	public static final String COMMON_IQN = "ALL";
 
 	static { Groovyness.loadConfig("storageprops.groovy"); }
 
+	public static String formatVolumeAttachmentTokenForTransfer(String token, String volumeId) {
+		return TOKEN_PREFIX + volumeId + "," + token;
+	}
 
 	private static String getSCIqn() {
 		try {

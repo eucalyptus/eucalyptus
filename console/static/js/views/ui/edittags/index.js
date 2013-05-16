@@ -2,8 +2,9 @@ define([
    'underscore',
    'text!./template.html!strip',
    'backbone',
-   'models/tag'
-], function(_, template, Backbone, Tag) {
+   'models/tag',
+   'app'
+], function(_, template, Backbone, Tag, app) {
     return Backbone.View.extend({
         initialize : function(args) {
             var self = this;
@@ -24,7 +25,7 @@ define([
 
             loadTags();
 
-            model.on('confirm', function() {
+            model.on('confirm', function(defer) {
                 self.scope.create();
                 _.chain(tags.models).clone().each(function(t) {
                    var backup = t.get('_backup');
@@ -44,18 +45,18 @@ define([
                    } else if (t.get('_edited')) {
                        // If the tag is new then it should only be saved, even if it was edited.
                        if (t.get('_new')) {
-                         t.save();
+                         if(!defer) t.save() ;
                        } else if( (backup != null) && (backup.get('name') !== t.get('name')) ){
                          // CASE OF KEY CHANGE
                          console.log("Edited, with previous value: " + t.get('name') + ":" + t.get('value'));
                          t.get('_backup').destroy();
-                         t.save();
+                         if(!defer) t.save();
                        }else{
                          // CASE OF VALUE CHANGE
-                         t.save();
+                        if(!defer) t.save();
                        } 
                    } else if (t.get('_new')) {
-                       t.save();
+                       if(!defer) t.save();
                    }
                 });
                 // THE OPERATION BELOW MIGHT NOT WORK WHEN .SYNC() CALLS ARE USED   --- KYO 042913
@@ -94,6 +95,22 @@ define([
                     // NO-OP IF NOT VALID
                     if( !self.scope.isTagValid ){
                       return;
+                    }
+
+                    // only allow ten tags
+                    if( self.scope.tags.length >= 10 ) {
+                      var limit = self.scope.tags.length;
+                      // length limit, but have any been deleted?
+                      self.scope.tags.each( function(t, idx) {
+                        if (t.get('_deleted')) {
+                          limit--;
+                        }
+                      });
+                      if (limit >=  10) {
+                        self.scope.error.set('name', app.msg('tag_limit_error_name'));
+                        self.scope.error.set('value', app.msg('tag_limit_error_value'));
+                        return;
+                      }
                     }
 
                     var newt = new Tag(self.scope.newtag.toJSON());

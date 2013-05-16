@@ -49,7 +49,7 @@ import com.google.common.collect.Lists;
 public class DescribeSensorsListener implements EventListener<Hertz> {
 
   @ConfigurableField(initial = "5", description = "How often the reporting system requests information from the cluster controller")
-  public static long DEFAULT_POLL_INTERVAL_MINS = 5;
+  public static Long DEFAULT_POLL_INTERVAL_MINS = 5L;
   
   private Integer COLLECTION_INTERVAL_TIME_MS;
 

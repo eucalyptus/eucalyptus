@@ -141,6 +141,7 @@ import com.eucalyptus.util.async.RemoteCallback;
 import com.eucalyptus.vm.VmInstance.Transitions;
 import com.eucalyptus.vm.VmInstance.VmState;
 import com.eucalyptus.vm.VmInstance.VmStateSet;
+import com.eucalyptus.vm.VmVolumeAttachment.NonTransientVolumeException;
 import com.eucalyptus.vmtypes.VmType;
 import com.eucalyptus.vmtypes.VmTypes;
 import com.google.common.base.Enums;
@@ -420,6 +421,37 @@ public class VmInstances {
     }
   }
   
+  public static VmVolumeAttachment lookupTransientVolumeAttachment( final String volumeId ) {
+	 VmVolumeAttachment ret = null;
+	 final EntityTransaction db = Entities.get( VmInstance.class );
+	 try {
+	   List<VmInstance> vms = Entities.query( VmInstance.create( ) );
+	   for ( VmInstance vm : vms ) {
+	     try {
+	       ret = vm.lookupTransientVolumeAttachment( volumeId );
+	       if ( ret.getVmInstance( ) == null ) {
+	         ret.setVmInstance( vm );
+	       }
+	     } catch (NonTransientVolumeException nex) {
+	   	   throw nex;
+	     } catch ( NoSuchElementException ex ) {
+	       continue;
+	     }
+	   }
+	   if ( ret == null ) {
+	     throw new NoSuchElementException( "VmVolumeAttachment: no volume attachment for " + volumeId );
+	   }
+	   db.commit( );
+	   return ret;
+	 } catch (NonTransientVolumeException nex) {
+	   throw nex;
+	 } catch ( Exception ex ) {
+	   throw new NoSuchElementException( ex.getMessage( ) );
+	 } finally {
+	   if ( db.isActive() ) db.rollback();
+   }
+ }
+  
   public static VmVolumeAttachment lookupVolumeAttachment( final String volumeId , final List<VmInstance> vms ) {
     VmVolumeAttachment ret = null;
     try {
@@ -506,7 +538,7 @@ public class VmInstances {
           }
         } catch ( final NoSuchElementException e ) {
           //PENDING->SHUTTINGDOWN might happen before address info reported in describe instances by CC, need to try finding address
-          if ( VmState.PENDING.equals( vmLastState ) ) {
+          if ( VmState.PENDING.equals( vmLastState ) || VmState.TERMINATED.equals( vmState ) ) {
             for ( Address addr : Addresses.getInstance( ).listValues( ) ) {
               if ( addr.getInstanceId( ).equals( vm.getInstanceId( ) ) ) {
                 unassignAddress( vm, addr, rollbackNetworkingOnFailure );
@@ -539,9 +571,15 @@ public class VmInstances {
   private static void unassignAddress( final VmInstance vm,
                                        final Address address,
                                        final boolean rollbackNetworkingOnFailure ) {
+    boolean wasPending = address.isPending();
+    if ( wasPending ) try {
+      address.clearPending( );
+    } catch ( IllegalStateException e ) {
+      wasPending = false;
+    }
     RemoteCallback<?,?> callback = address.unassign().getCallback();
     Callback.Failure failureHander;
-    if ( rollbackNetworkingOnFailure ) {
+    if ( rollbackNetworkingOnFailure && !wasPending && !VmState.TERMINATED.apply( vm ) ) {
       callback = DelegatingRemoteCallback.suppressException( callback );
       failureHander = new Callback.Failure<java.lang.Object>() {
         @Override

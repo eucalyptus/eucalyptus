@@ -309,6 +309,16 @@ public class AutoScalingGroup extends AbstractOwnedPersistent implements AutoSca
     return instances;
   }
 
+  /**
+   * Update the capacity of the group, flag scaling required if necessary.
+   *
+   * @param capacity The new capacity.
+   */
+  public void updateCapacity( final int capacity ) {
+    this.scalingRequired = scalingRequired || desiredCapacity == null || capacity != desiredCapacity;
+    this.capacity = capacity;
+  }
+
   public void updateDesiredCapacity( final int desiredCapacity,
                                      final String reason ) {
     if ( !this.desiredCapacity.equals( desiredCapacity ) ) {

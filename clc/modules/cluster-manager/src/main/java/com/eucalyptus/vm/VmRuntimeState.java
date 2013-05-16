@@ -83,6 +83,8 @@ import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
 import org.hibernate.annotations.Parent;
 import org.hibernate.annotations.Type;
+import com.eucalyptus.auth.Accounts;
+import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.cluster.Cluster;
 import com.eucalyptus.cluster.Clusters;
 import com.eucalyptus.component.ServiceConfiguration;
@@ -96,6 +98,7 @@ import com.eucalyptus.records.EventType;
 import com.eucalyptus.records.Logs;
 import com.eucalyptus.system.Threads;
 import com.eucalyptus.util.Exceptions;
+import com.eucalyptus.util.StorageProperties;
 import com.eucalyptus.util.async.AsyncRequests;
 import com.eucalyptus.util.async.CheckedListenableFuture;
 import com.eucalyptus.vm.Bundles.BundleCallback;
@@ -276,8 +279,9 @@ public class VmRuntimeState {
                 try {
                   LOG.debug( vmId + ": waiting for storage volume: " + volumeId );
                   GetVolumeTokenResponseType scReply = scGetTokenReplyFuture.get();
+                  String token = StorageProperties.formatVolumeAttachmentTokenForTransfer(scReply.getToken(), volumeId);
                   LOG.debug( vmId + ": " + volumeId + " => " + scGetTokenReplyFuture.get( ) );
-                  AsyncRequests.dispatch( ccConfig, new AttachVolumeType( volumeId, vmId, vmDevice, scReply.getToken() ) );
+                  AsyncRequests.dispatch( ccConfig, new AttachVolumeType( volumeId, vmId, vmDevice, token));
 //                  final EntityTransaction db = Entities.get( VmInstance.class );
 //                  try {
 //                    final VmInstance entity = Entities.merge( vm );
@@ -379,6 +383,11 @@ public class VmRuntimeState {
       {
         this.getTagSet( ).add( new ResourceTag( VM_NC_HOST_TAG, host ) );
         this.getResourcesSet( ).add( vm.getInstanceId( ) );
+        try {
+          this.setEffectiveUserId( Accounts.lookupAccountByName( "eucalyptus" ).lookupAdmin( ).getUserId( ) );
+        } catch ( AuthException ex ) {
+          LOG.error( ex );
+        }
       }
     };
     try {

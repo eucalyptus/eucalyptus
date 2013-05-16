@@ -9,93 +9,225 @@
 <meta name="abstract" content="Eucalyptus enables you to control access to your cloud using security groups. A security group contains a group of rules that control inbound traffic to instances in the group for the specified protocols and ports."/>
 <meta name="description" content="Eucalyptus enables you to control access to your cloud using security groups. A security group contains a group of rules that control inbound traffic to instances in the group for the specified protocols and ports."/>
 <meta name="prodname" content="Eucalyptus"/>
-<meta name="version" content="3.2"/>
-<meta name="copyright" content="Eucalyptus Systems 2012" type="primary"/>
-<meta name="DC.Rights.Owner" content="Eucalyptus Systems 2012" type="primary"/>
+<meta name="version" content="3.3"/>
+<meta name="copyright" content="Eucalyptus Systems 2013" type="primary"/>
+<meta name="DC.Rights.Owner" content="Eucalyptus Systems 2013" type="primary"/>
 <meta name="DC.Format" content="XHTML"/>
 <meta name="DC.Identifier" content="create_sgroup_ui_help_context"/>
 <link rel="stylesheet" type="text/css" href="/css/eucalyptus.css"/>
 <title>Create a Security Group</title>
 </head>
-<body id="create_sgroup_ui_help_context" class="help-page-body">
+<body id="create_sgroup_ui_help_context">
 
 
     <h1 class="title topictitle1">Create a Security Group</h1>
 
     
-    <div class="body taskbody"><p class="shortdesc"> Eucalyptus enables you to control access to your cloud using security groups. A
-        security group contains a group of rules that control inbound traffic to instances in the
-        group for the specified protocols and ports. </p>
+    <div class="body taskbody"><p class="shortdesc"> Eucalyptus enables you to control access to your cloud using
+        security groups. A security group contains a group of rules that control
+        inbound traffic to instances in the group for the specified protocols
+        and ports. </p>
 </div>
 
-    <div class="topic task nested1" id="create_sgroup_ui_help_steps">
-        <h2 class="title topictitle2">Create a Security Group with the Console</h2>
+    <div class="topic task nested1" id="create_sgroup_ui_help_steps_general">
+        <h2 class="title topictitle2">Group tab</h2>
 
         
         <div class="body taskbody"><p class="shortdesc"/>
 
             <ol class="ol steps"><li class="li step">
-                    <span class="ph cmd"> Enter a name for your security group in the <span class="ph uicontrol">Name</span>
-                        text box. </span>
+                    <span class="ph cmd"> Enter a name for your security group in the
+                            <span class="ph uicontrol">Name</span> text box. </span>
                 </li>
 <li class="li step">
                     <span class="ph cmd"> Enter a description for your security group in the
                             <span class="ph uicontrol">Description</span> text box. </span>
                 </li>
+</ol>
+
+        </div>
+
+    </div>
+
+    <div class="topic task nested1" id="create_sgroup_ui_help_steps_rules">
+        <h2 class="title topictitle2">Rules tab</h2>
+
+        
+        <div class="body taskbody"><p class="shortdesc"/>
+
+            <ol class="ol steps"><li class="li step">
+                    <span class="ph cmd"> Enter a name for your security group in the
+                        <span class="ph uicontrol">Name</span> text box. </span>
+                </li>
 <li class="li step">
-                    <span class="ph cmd">You can optionally create one or more rules for the security group. A
-                            <dfn class="term">rule</dfn> grants a specified range of IP addresses inbound
-                        access to your instances for a protocol or custom port range. Rules for many of the most
-                        popular protocols are pre-defined and available for selection in the
-                        drop-down list box, or you can define your own rule. </span>
+                    <span class="ph cmd"> Enter a description for your security group in the
+                        <span class="ph uicontrol">Description</span> text box. </span>
+                </li>
+<li class="li step">
+                    <span class="ph cmd">You can optionally create one or more rules for the
+                        security group. A <dfn class="term">rule</dfn> grants a specified
+                        range of IP addresses inbound access to your instances
+                        for a protocol or custom port range. Rules for many of
+                        the most popular protocols are pre-defined and available
+                        for selection in the drop-down list box, or you can
+                        define your own rule. </span>
                      
-                        <div class="note important"><span class="importanttitle">Important:</span> You should specify at least one rule for your security group.</div>
+                        <div class="note important"><span class="importanttitle">Important:</span> You should specify at least one
+                            rule for your security group.</div>
 
                     
                     <ol type="a" class="ol substeps">
                         <li class="li substep">
                             <span class="ph cmd"> Select a protocol for the rule from the
-                                    <span class="ph uicontrol">Protocol</span> drop-down list box, or select a custom protocol. </span>
+                                <span class="ph uicontrol">Protocol</span> drop-down
+                                list box, or select a custom protocol. </span>
                         </li>
 
                         <li class="li substep">
-                            <span class="ph cmd"> If you've selected a custom protocol, enter a port range for the rule in the <span class="ph uicontrol">Port
+                            <span class="ph cmd"> If you've selected a custom protocol, enter a
+                                port range for the rule in the <span class="ph uicontrol">Port
                                     range</span> text box. </span>
                         </li>
 
                         <li class="li substep">
-
-                            <span class="ph cmd"> Select the type of inbound traffic for the rule using the radio
-                                buttons: </span>
+                            
+                            <span class="ph cmd"> Select the type of inbound traffic for the
+                                rule using the radio buttons: </span>
                              
-                                <p class="p">To grant access to an IP address or range of IP addresses, select
-                                    the <span class="ph uicontrol">IP Address</span> radio button and enter a
-                                    CIDR range in the text box.</p>
+                                <p class="p">To grant access to an IP address or range of
+                                    IP addresses, select the <span class="ph uicontrol">IP
+                                        Address</span> radio button and
+                                    enter a CIDR range in the text box.</p>
 
-                                <div class="note note"><span class="notetitle">Note:</span> For more information on CIDR notation, please see the <a class="xref" href="http://en.wikipedia.org/wiki/CIDR_notation" target="_blank">CIDR notation Wikipedia
+                                <div class="note note"><span class="notetitle">Note:</span> For more information on CIDR notation,
+                                    please see the <a class="xref" href="http://en.wikipedia.org/wiki/CIDR_notation" target="_blank">CIDR
+                                        notation Wikipedia
                                         article</a>.</div>
 
-                                <p class="p">To grant access to another security group, select the
-                                        <span class="ph uicontrol">Other security group</span> radio button and
-                                    enter the name of the security group in the text box.</p>
+                                <p class="p">To grant access to another security group,
+                                    select the <span class="ph uicontrol">Other security
+                                        group</span> radio button and enter
+                                    the name of the security group in the text
+                                    box.</p>
 
-                                <div class="note note"><span class="notetitle">Note:</span>  To specify a security group in another account, use the
-                                    format "userid/groupname". </div>
+                                <div class="note note"><span class="notetitle">Note:</span>  To specify a security group in another
+                                    account, use the format "userid/groupname".
+                                </div>
 
                             
                         </li>
 
                         <li class="li substep">
-                            <span class="ph cmd">Click the <span class="ph uicontrol">Add another rule</span> button.</span>
+                            <span class="ph cmd">You can click the <span class="ph uicontrol">Add another
+                                rule</span> button if you want to add more rules.</span>
                         </li>
 
                     </ol>
 
                 </li>
+</ol>
+
+        </div>
+
+    </div>
+
+    <div class="topic task nested1" id="tags">
+    <h2 class="title topictitle2">Tags tab</h2>
+
+    
+    <div class="body taskbody"><p class="shortdesc"> You can optionally tag this resource by performing the following steps:</p>
+</div>
+
+    <div class="topic task nested2" id="d13e13">
+        <h3 class="title topictitle3"/>
+
+        
+        <div class="body taskbody"><p class="shortdesc"/>
+
+            <div class="section context">To add new tags:</div>
+
+            <ol class="ol steps"><li class="li step">
+                    <span class="ph cmd">Type the key name for your tag into the <span class="ph uicontrol">Key</span> text
+                        box.</span>
+                </li>
 <li class="li step">
-                    <span class="ph cmd">Click the <span class="ph uicontrol">Create group</span> button.</span>
+                    <span class="ph cmd">Type the value for your tag into the <span class="ph uicontrol">Value</span> text
+                        box.</span>
+                </li>
+<li class="li step">
+                    <span class="ph cmd">If you wish to add additional tags, click the <strong class="ph b">+</strong> button to the right
+                        of the <span class="ph uicontrol">Value</span> text box.</span>
                 </li>
 </ol>
+
+        </div>
+
+    </div>
+
+    <div class="topic task nested2" id="d13e59">
+        <h3 class="title topictitle3"/>
+
+        
+        <div class="body taskbody"><p class="shortdesc"/>
+
+            <div class="section context">To edit one or more tags:</div>
+
+            <div class="li step p">
+                    <span class="ph cmd">Move your mouse over the tag you wish to edit and click the pencil button
+                        to the right of the <span class="ph uicontrol">Value</span> text box.</span>
+                </div>
+
+        </div>
+
+    </div>
+
+    <div class="topic task nested2" id="d13e85">
+        <h3 class="title topictitle3"/>
+
+        
+        <div class="body taskbody"><p class="shortdesc"/>
+
+            <div class="section context">To delete one or more tags:</div>
+
+            <div class="li step p">
+                    <span class="ph cmd">Move your mouse over the tag you wish to delete and click the minus button
+                        to the right of the <span class="ph uicontrol">Value</span> text box.</span>
+                </div>
+
+        </div>
+
+    </div>
+
+    <div class="topic task nested2" id="d13e110">
+        <h3 class="title topictitle3"/>
+
+        
+        <div class="body taskbody"><p class="shortdesc"/>
+
+            <div class="section context">To undelete one or more tags:</div>
+
+            <div class="li step p">
+                    <span class="ph cmd">Move your mouse over the tag you wish to undelete and click the X button
+                        to the right of the <span class="ph uicontrol">Value</span> text box.</span>
+                </div>
+
+        </div>
+
+    </div>
+
+</div>
+
+    <div class="topic task nested1" id="create_sgroup_ui_help_steps_finish">
+        <h2 class="title topictitle2">Save Your Work</h2>
+
+        
+        <div class="body taskbody"><p class="shortdesc"/>
+
+            <div class="li step p">
+                    <span class="ph cmd">Click the <span class="ph uicontrol">Create</span> button to save your work,
+                        or click the <span class="ph uicontrol">Cancel</span> button to cancel the
+                        operation.</span>
+                </div>
 
         </div>
 

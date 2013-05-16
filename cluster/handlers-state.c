@@ -201,7 +201,7 @@ int doDescribeServices(ncMetadata * pMeta, serviceInfoType * serviceIds, int ser
     int do_report_all = 0;
     char *my_partition = NULL;
 
-    rc = initialize(pMeta);
+    rc = initialize(pMeta, TRUE); // DescribeServices is the only authoritative source of epoch
     if (rc) {
         return (1);
     }
@@ -266,7 +266,7 @@ int doDescribeServices(ncMetadata * pMeta, serviceInfoType * serviceIds, int ser
             if (!strcmp(config->services[i].type, "cluster")) {
                 my_partition = config->services[i].partition;
             }
-            for (j = 0; j < 8; j++) {
+            for (j = 0; j < MAX_SERVICE_URIS; j++) {
                 if (strlen(config->services[i].uris[j])) {
                     LOGDEBUG("internal serviceInfos\t uri[%d]:%s\n", j, config->services[i].uris[j]);
                 }
@@ -278,7 +278,7 @@ int doDescribeServices(ncMetadata * pMeta, serviceInfoType * serviceIds, int ser
         if (strlen(config->disabledServices[i].type)) {
             LOGDEBUG("internal disabled serviceInfos type=%s name=%s partition=%s urisLen=%d\n", config->disabledServices[i].type,
                      config->disabledServices[i].name, config->disabledServices[i].partition, config->disabledServices[i].urisLen);
-            for (j = 0; j < 8; j++) {
+            for (j = 0; j < MAX_SERVICE_URIS; j++) {
                 if (strlen(config->disabledServices[i].uris[j])) {
                     LOGDEBUG("internal disabled serviceInfos\t uri[%d]:%s\n", j, config->disabledServices[i].uris[j]);
                 }
@@ -290,7 +290,7 @@ int doDescribeServices(ncMetadata * pMeta, serviceInfoType * serviceIds, int ser
         if (strlen(config->notreadyServices[i].type)) {
             LOGDEBUG("internal not ready serviceInfos type=%s name=%s partition=%s urisLen=%d\n", config->notreadyServices[i].type,
                      config->notreadyServices[i].name, config->notreadyServices[i].partition, config->notreadyServices[i].urisLen);
-            for (j = 0; j < 8; j++) {
+            for (j = 0; j < MAX_SERVICE_URIS; j++) {
                 if (strlen(config->notreadyServices[i].uris[j])) {
                     LOGDEBUG("internal not ready serviceInfos\t uri[%d]:%s\n", j, config->notreadyServices[i].uris[j]);
                 }
@@ -302,7 +302,7 @@ int doDescribeServices(ncMetadata * pMeta, serviceInfoType * serviceIds, int ser
     *outStatuses = NULL;
 
     if (do_report_cluster) {
-        *outStatusesLen = 1;
+        (*outStatusesLen) += 1;
         *outStatuses = EUCA_ZALLOC(1, sizeof(serviceStatusType));
         if (!*outStatuses) {
             LOGFATAL("out of memory!\n");
@@ -315,7 +315,7 @@ int doDescribeServices(ncMetadata * pMeta, serviceInfoType * serviceIds, int ser
         myStatus->localEpoch = config->ccStatus.localEpoch;
         memcpy(&(myStatus->serviceId), &(config->ccStatus.serviceId), sizeof(serviceInfoType));
         LOGDEBUG("external services\t uri[%d]: %s %s %s %s %s\n",
-                 1, myStatus->serviceId.type, myStatus->serviceId.partition, myStatus->serviceId.name, myStatus->localState, myStatus->serviceId.uris[0]);
+                 0, myStatus->serviceId.type, myStatus->serviceId.partition, myStatus->serviceId.name, myStatus->localState, myStatus->serviceId.uris[0]);
     }
 
     if (do_report_nodes) {
@@ -327,25 +327,20 @@ int doDescribeServices(ncMetadata * pMeta, serviceInfoType * serviceIds, int ser
         sem_mypost(RESCACHE);
 
         if (resourceCacheLocal.numResources > 0 && my_partition != NULL) {  // parition is unknown at early stages of CC initialization
-
-            if (do_report_all) {
-                *outStatusesLen += resourceCacheLocal.numResources;
-            } else if (do_report_nodes) {
-                *outStatusesLen += do_report_nodes;
-            }
-            *outStatuses = EUCA_REALLOC(*outStatuses, *outStatusesLen, sizeof(serviceStatusType));
-            if (!*outStatuses) {
-                LOGFATAL("out of memory!\n");
-                unlock_exit(1);
-            }
-
-            for (int idIdx = 0; idIdx < *outStatusesLen; idIdx++) {
+            for (int idIdx = 0; idIdx < serviceIdsLen; idIdx++) {
                 if (do_report_all || !strcmp(serviceIds[idIdx].type, "node")) {
-                    for (int rIdx = 0; idIdx < *outStatusesLen && rIdx < resourceCacheLocal.numResources; rIdx++) {
+                    for (int rIdx = 0; rIdx < resourceCacheLocal.numResources; rIdx++) {
                         ccResource *r = resourceCacheLocal.resources + rIdx;
                         if (do_report_all || (strlen(serviceIds[idIdx].name) && strlen(r->ip) && !strcmp(serviceIds[idIdx].name, r->ip))) {
-                            myStatus = *outStatuses + do_report_cluster + idIdx;
-                            idIdx += do_report_all;
+
+                            // we have a node that we want to report about
+                            (*outStatusesLen) += 1;
+                            *outStatuses = EUCA_REALLOC(*outStatuses, *outStatusesLen, sizeof(serviceStatusType));
+                            if (*outStatuses == NULL) {
+                                LOGFATAL("out of memory! (outStatusesLen=%d)\n", *outStatusesLen);
+                                unlock_exit(1);
+                            }
+                            myStatus = *outStatuses + *outStatusesLen - 1;
                             {
                                 int resState = r->state;
                                 int resNcState = r->ncState;
@@ -417,7 +412,7 @@ int doStartService(ncMetadata * pMeta, serviceInfoType * serviceIds, int service
     int rc = 0;
     int ret = 0;
 
-    rc = initialize(pMeta);
+    rc = initialize(pMeta, FALSE);
     if (rc) {
         return (1);
     }
@@ -481,7 +476,7 @@ int doStopService(ncMetadata * pMeta, serviceInfoType * serviceIds, int serviceI
     int rc = 0;
     int ret = 0;
 
-    rc = initialize(pMeta);
+    rc = initialize(pMeta, FALSE);
     if (rc) {
         return (1);
     }
@@ -546,7 +541,7 @@ int doEnableService(ncMetadata * pMeta, serviceInfoType * serviceIds, int servic
     int ret = 0;
     int done = 0;
 
-    rc = initialize(pMeta);
+    rc = initialize(pMeta, FALSE);
     if (rc) {
         return (1);
     }
@@ -630,7 +625,7 @@ int doDisableService(ncMetadata * pMeta, serviceInfoType * serviceIds, int servi
     int rc = 0;
     int ret = 0;
 
-    rc = initialize(pMeta);
+    rc = initialize(pMeta, FALSE);
     if (rc) {
         return (1);
     }
@@ -689,7 +684,7 @@ int doShutdownService(ncMetadata * pMeta)
     int rc = 0;
     int ret = 0;
 
-    rc = initialize(pMeta);
+    rc = initialize(pMeta, FALSE);
     if (rc) {
         return (1);
     }

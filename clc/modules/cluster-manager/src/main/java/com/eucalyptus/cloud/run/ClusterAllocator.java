@@ -104,6 +104,7 @@ import com.eucalyptus.system.Threads;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.LogUtil;
+import com.eucalyptus.util.StorageProperties;
 import com.eucalyptus.util.async.AsyncRequests;
 import com.eucalyptus.util.async.Request;
 import com.eucalyptus.util.async.StatefulMessageSet;
@@ -129,7 +130,6 @@ import edu.ucsb.eucalyptus.msgs.VmTypeInfo;
 
 public class ClusterAllocator implements Runnable {
   private static final long BYTES_PER_GB = ( 1024L * 1024L * 1024L );
-  private static final String VOLUME_TOKEN_PREFIX = "sc://"; //Used for designating EBS volumes in the VBR
   
   private static Logger     LOG          = Logger.getLogger( ClusterAllocator.class );
   
@@ -257,7 +257,7 @@ public class ClusterAllocator implements Runnable {
     	}
       } 
     	  
-      int rootVolSizeInGb = ( int ) Math.ceil( volSizeBytes / BYTES_PER_GB );
+      int rootVolSizeInGb = ( int ) Math.ceil( ( ( double ) volSizeBytes ) / BYTES_PER_GB );
     	        
       for ( final ResourceToken token : this.allocInfo.getAllocationTokens( ) ) {
     	final VmInstance vm = VmInstances.lookup( token.getInstanceId( ) );
@@ -388,12 +388,11 @@ public class ClusterAllocator implements Runnable {
     			throw new EucalyptusCloudException( "Failed to get remote device string for " + volumeId + " while running instance " + token.getInstanceId( ) );
     		} else {
     			//Do formatting here since formatting is for messaging only.
-    			//sc://vol-X,<token>
-        	volumeToken = VOLUME_TOKEN_PREFIX + volumeId + "," + volumeToken;
-        	rootVbr.setResourceLocation(volumeToken);
-        	rootVbr.setSize(rootVolume.getSize() * BYTES_PER_GB);
-    			//vm.updatePersistantVolume(remoteDeviceString, rootVolume); Skipping this step for now as no one seems to be using it
+    			volumeToken = StorageProperties.formatVolumeAttachmentTokenForTransfer(volumeToken, volumeId);
     		}
+    		rootVbr.setResourceLocation(volumeToken);
+    		rootVbr.setSize(rootVolume.getSize() * BYTES_PER_GB);
+    		//vm.updatePersistantVolume(remoteDeviceString, rootVolume); Skipping this step for now as no one seems to be using it
     	} catch (final Exception ex) {
     		LOG.error(ex);
     		Logs.extreme().error(ex, ex);
@@ -428,8 +427,7 @@ public class ClusterAllocator implements Runnable {
     				throw new EucalyptusCloudException( "Failed to get remote device string for " + volumeId + " while running instance " + token.getInstanceId( ) );
     			} else {
     				//Do formatting here since formatting is for messaging only.
-    				//sc://vol-X,<token>
-    				volumeToken = VOLUME_TOKEN_PREFIX + volumeId + "," + volumeToken;          	
+    				volumeToken = StorageProperties.formatVolumeAttachmentTokenForTransfer(volumeToken, volumeId);
     				VirtualBootRecord vbr = new VirtualBootRecord(volumeId, volumeToken, "ebs", mapping.getKey(), (volume.getSize() * BYTES_PER_GB), "none");
     				childVmInfo.getVirtualBootRecord().add(vbr);
     				//vm.updatePersistantVolume(remoteDeviceString, volume); Skipping this step for now as no one seems to be using it

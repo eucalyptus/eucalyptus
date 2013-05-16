@@ -85,6 +85,8 @@ define([
                 status: '',
                 snapshot: new Snapshot({volume_id: args.volume_id, description: ''}),
                 error: new Backbone.Model({}),
+                help: {title: null, content: help_snapshot.dialog_create_content, url: help_snapshot.dialog_create_content_url, pop_height: 600},
+
 
                 cancelButton: {
                   click: function() {

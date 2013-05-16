@@ -66,10 +66,11 @@
             { 
 	      // Display the instance ID in eucatable
 	      "aTargets":[2],
-	      "mRender": function(data) {
-                return DefaultEncoder().encodeForHTML(data);
+              "mData": function(source){
+                this_mouseover = source.instance_id;
+                this_value = source.display_instance_id;
+                return eucatableDisplayResource(this_mouseover, this_value, 256);
               },
-              "mData": "display_instance_id",
 	    },
             {
 	      // Invisible Column for storing the status of the IP

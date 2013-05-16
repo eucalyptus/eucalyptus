@@ -211,7 +211,7 @@ public class VmMigrationTask {
   }
   
   protected void setState( MigrationState state ) {
-    if ( !this.equals( state ) ) {
+    if ( !this.state.equals( state ) ) {
       this.updateRefreshTimer( );
       this.state = state;
     }

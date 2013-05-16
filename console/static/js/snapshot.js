@@ -48,13 +48,10 @@
             { 
 	      // Display the id of the snapshot in the main table
 	      "aTargets":[1],
-              "mRender": function(data){
-                 return eucatableDisplayColumnTypeTwist(data, data, 255);
-              },
               "mData": function(source){
-                 if(source.display_id)
-                   return source.display_id;
-                 return source.id;
+                this_mouseover = source.id;
+                this_value = source.display_id;
+                return eucatableDisplayColumnTypeTwist(this_mouseover, this_value, 256);
               },
             },
             {
@@ -82,11 +79,11 @@
             {
 	      // Display the volume id of the snapshot in the main table
 	      "aTargets":[4],
-	      "mRender": function(data) {
-                return DefaultEncoder().encodeForHTML(data);
+              "mData": function(source){
+                this_mouseover = source.volume_id;
+                this_value = source.display_volume_id;
+                return eucatableDisplayResource(this_mouseover, this_value, 256);
               },
-              "mData": "display_volume_id",
-	      "mDataProp": "display_volume_id"
 	    },
             {
 	      // Display the description of the snapshot in the main table

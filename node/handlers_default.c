@@ -1113,18 +1113,18 @@ release:
         int err = 0;
         if (dom != NULL) {
             err = virDomainDetachDevice(dom, xml);
-            unlock_hypervisor_conn();
         }
         if (err) {
             LOGERROR("[%s][%s] failed to detach as part of aborting\n", instanceId, volumeId);
             LOGDEBUG("[%s][%s] virDomainDetachDevice() failed (err=%d) XML='%s'\n", instanceId, volumeId, err, xml);
         }
+        unlock_hypervisor_conn();
         ret = EUCA_ERROR;
     }
     // if iSCSI and there were problems, try to disconnect the target
     if (ret != EUCA_OK && have_remote_device) {
         LOGDEBUG("[%s][%s] attempting to disconnect iscsi target due to attachment failure\n", instanceId, volumeId);
-        if (vol_data != NULL && vol_data->connect_string != NULL) {
+        if (vol_data != NULL && vol_data->connect_string[0] != '\0') {
             rc = disconnect_ebs_volume(scUrl, nc->config_use_ws_sec, nc->config_sc_policy_file, attachmentToken, vol_data->connect_string, nc->ip, nc->iqn);
             if (rc) {
                 LOGERROR("[%s][%s] Error disconnecting ebs volume on error rollback.\n", instanceId, volumeId);
@@ -1243,7 +1243,7 @@ static int doDetachVolume(struct nc_state_t *nc, ncMetadata * pMeta, char *insta
         return EUCA_ERROR;
     }
     //Lookup the volume info locally for detachment
-    if (volume->connectionString == NULL) {
+    if (volume->connectionString[0] == '\0') {
         LOGERROR("[%s][%s] failed to find the local volume attachment record, aborting volume detachment\n", instanceId, volumeId);
         unlock_hypervisor_conn();
         return EUCA_ERROR;
