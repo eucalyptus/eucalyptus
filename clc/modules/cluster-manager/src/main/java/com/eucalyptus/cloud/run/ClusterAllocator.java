@@ -143,7 +143,7 @@ public class ClusterAllocator implements Runnable {
     ATTACH_VOLS,
     ASSIGN_ADDRESSES,
     FINISHED,
-    ROLLBACK;
+    ROLLBACK,
   }
   
   public static Boolean             SPLIT_REQUESTS = true; //TODO:GRZE:@Configurable
@@ -180,7 +180,7 @@ public class ClusterAllocator implements Runnable {
       }
     }
     
-  };
+  }
   
   public static Predicate<Allocation> get( ) {
     return SubmitAllocation.INSTANCE;
@@ -197,23 +197,7 @@ public class ClusterAllocator implements Runnable {
       db.commit( );
     } catch ( final Exception e ) {
       db.rollback( );
-      LOG.error( e );
-      Logs.extreme( ).error( e, e );
-      this.allocInfo.abort( );
-      for ( final ResourceToken token : allocInfo.getAllocationTokens( ) ) {
-        try {
-          final VmInstance vm = VmInstances.lookup( token.getInstanceId( ) );
-          if ( VmState.STOPPED.equals( vm.getLastState( ) ) ) {
-            VmInstances.stopped( vm );
-          } else {
-            VmInstances.terminated( vm );
-            VmInstances.terminated( vm );
-          }
-        } catch ( final Exception e1 ) {
-          LOG.error( e1 );
-          Logs.extreme( ).error( e1, e1 );
-        }
-      }
+      cleanupOnFailure( allocInfo, e );
       return;
     }
     
@@ -222,22 +206,30 @@ public class ClusterAllocator implements Runnable {
         this.setupVmMessages( token );
       }
     } catch ( final Exception e ) {
-      LOG.error( e );
-      Logs.extreme( ).error( e, e );
-      this.allocInfo.abort( );
-      for ( final ResourceToken token : allocInfo.getAllocationTokens( ) ) {
-        try {
-          final VmInstance vm = VmInstances.lookup( token.getInstanceId( ) );
+      cleanupOnFailure( allocInfo, e );
+    }
+  }
+
+  private void cleanupOnFailure( final Allocation allocInfo, final Exception e ) {
+    LOG.error( e );
+    Logs.extreme().error( e, e );
+    this.allocInfo.abort( );
+    for ( final ResourceToken token : allocInfo.getAllocationTokens( ) ) {
+      try {
+        final VmInstance vm = VmInstances.lookup( token.getInstanceId() );
+        if ( VmState.STOPPED.equals( vm.getLastState( ) ) ) {
+          VmInstances.stopped( vm );
+        } else {
           VmInstances.terminated( vm );
           VmInstances.terminated( vm );
-        } catch ( final Exception e1 ) {
-          LOG.error( e1 );
-          Logs.extreme( ).error( e1, e1 );
         }
+      } catch ( final Exception e1 ) {
+        LOG.error( e1 );
+        Logs.extreme( ).error( e1, e1 );
       }
     }
   }
-  
+
   // Modifying the logic to enable multiple block device mappings for boot from ebs. Fixes EUCA-3254 and implements EUCA-4786
   private void setupVolumeMessages( ) throws NoSuchElementException, MetadataException, ExecutionException {
     
