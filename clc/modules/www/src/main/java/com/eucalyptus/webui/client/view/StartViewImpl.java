@@ -86,9 +86,6 @@ public class StartViewImpl extends Composite implements StartView {
   SimplePanel iamSnippet;
 
   @UiField
-  SimplePanel cloudRegSnippet;
-
-  @UiField
   SimplePanel downloadSnippet;
 
   @UiField
@@ -96,9 +93,6 @@ public class StartViewImpl extends Composite implements StartView {
 
   @UiField
   Anchor iamHeader;
-
-  @UiField
-  Anchor cloudRegHeader;
 
   @UiField
   Anchor downloadHeader;
@@ -118,19 +112,9 @@ public class StartViewImpl extends Composite implements StartView {
     iamSnippet.setVisible( !iamSnippet.isVisible( ) );
   }
 
-  @UiHandler( "cloudRegHeader" )
-  void handlecloudRegHeaderClick( ClickEvent e ) {
-    cloudRegSnippet.setVisible( !cloudRegSnippet.isVisible( ) );
-  }
-
   @UiHandler( "downloadHeader" )
   void handleDownloadHeaderClick( ClickEvent e ) {
     downloadSnippet.setVisible( !downloadSnippet.isVisible( ) );
-  }
-
-  @Override
-  public AcceptsOneWidget getCloudRegSnippetDisplay( ) {
-    return cloudRegSnippet;
   }
 
   @Override
