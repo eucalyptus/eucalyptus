@@ -31,6 +31,8 @@ import javax.persistence.EntityTransaction;
 
 import org.apache.log4j.Logger;
 
+import com.eucalyptus.auth.Accounts;
+import com.eucalyptus.auth.policy.ern.Ern;
 import com.eucalyptus.auth.principal.UserFullName;
 import com.eucalyptus.context.Context;
 import com.eucalyptus.entities.Entities;
@@ -93,7 +95,7 @@ public class LoadBalancers {
 	}
 	
 	///
-	public static LoadBalancer getLoadBalancerByName(final String lbName) throws LoadBalancingException{
+	public static LoadBalancer getLoadBalancerByName(final String lbName) throws LoadBalancingException {
 		 final EntityTransaction db = Entities.get( LoadBalancer.class );
 		 try {
 			 final List<LoadBalancer> lbs = Entities.query( LoadBalancer.named( null, lbName )); 
@@ -126,6 +128,8 @@ public class LoadBalancers {
 				 if(dns.getDnsName()!=null && dns.getDnsName().equals(dnsName))
 					 lbView= dns.getLoadbalancer();
 			 }
+			 if(lbView == null)
+				 throw new NoSuchElementException();
 			 final LoadBalancer lb = LoadBalancerEntityTransform.INSTANCE.apply(lbView);
 			 if(lb==null)
 				 throw new NoSuchElementException();
