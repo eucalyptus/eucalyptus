@@ -547,6 +547,7 @@ int convert_dev_names(const char *localDev, char *localDevReal, char *localDevTa
         if (strncmp(localDev, "unknown,requested:", sizeof("unknown,requested:") - 1) == 0) {
             //localDev starts with 'unknown,requested:', this occurs in migration cases. Extract the actual /dev/* value.
             sscanf(localDev, "unknown,requested:/dev/%s", localDevReal);
+            snprintf(localDev, strlen(localDev), "/dev/%s",localDevReal); //Restore localDev to /dev/xxx instead of 'unknown,requested:...' This case is used in migration
         } else {
             sscanf(localDev, "/dev/%s", localDevReal);
         }
