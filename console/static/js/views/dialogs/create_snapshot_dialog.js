@@ -23,7 +23,7 @@ define([
               App.data.volume.each(function(v){
                 console.log("Volume ID: " + v.get('id') + "  Status:" + v.get('status'));
                 var nameTag = self.findNameTag(v);
-                var autocomplete_string = String(self.createIdNameTagString(v.get('id'), nameTag));
+                var autocomplete_string = String(self.createIdNameTagString(v.get('id'), addEllipsis(nameTag, 15)));
                 vol_ids.push(autocomplete_string);
               });
 
@@ -45,7 +45,7 @@ define([
               this.disableVolumeInputBox();
               // DISPLAY ITS NAME TAG FOR VOLUME ID
               var foundNameTag = self.findNameTag(App.data.volume.get(args.volume_id));
-              self.scope.snapshot.set({volume_id: String(self.createIdNameTagString(args.volume_id, foundNameTag))});
+              self.scope.snapshot.set({volume_id: String(self.createIdNameTagString(args.volume_id, addEllipsis(foundNameTag, 15)))});
             }
 
             // SETUP INPUT VALIDATOR
