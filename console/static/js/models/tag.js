@@ -43,6 +43,13 @@ define([
       data += "&ResourceId.1="+model.get('res_id');
       data += "&Tag.1.Key="+encodeURIComponent(model.get('name'));
       data += "&Tag.1.Value="+encodeURIComponent(model.get('value'));
+
+      // EUCA-6181 - must have a resource ID first
+      // this avoids displaying an error to the user unnecessarily
+      if (model.get('res_id') == undefined) {
+        return;
+      }
+
       $.ajax({
         type:"POST",
         url:"/ec2?Action=CreateTags",
