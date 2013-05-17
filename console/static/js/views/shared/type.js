@@ -57,6 +57,7 @@ define([
                   var trimmed = names[i].replace(/^\s\s*/, '').replace(/\s\s*$/, '');
                   self.t_names.add({name: "Name", value: trimmed});
                 }
+                self.model.trigger('addTag', new Backbone.Model({name: 'Name', value: target.value}), true);
               }
               break;
             default:
@@ -86,7 +87,8 @@ define([
         launchConfigErrors: {
           type_number: '',
           instance_type: '',
-          type_names_count: ''
+          type_names_count: '',
+          tag_limit_reached: ''
         }
     };
 
@@ -94,6 +96,7 @@ define([
       scope.launchConfigErrors.type_number = errors.type_number;
       scope.launchConfigErrors.instance_type = errors.instance_type;
       scope.launchConfigErrors.type_names_count = errors.type_names_count;
+      scope.launchConfigErrors.tag_limit_reached = errors.tag_limit_reached;
       self.render();
     });
 
@@ -101,6 +104,7 @@ define([
       scope.launchConfigErrors.type_number = null;
       scope.launchConfigErrors.instance_type = null;
       scope.launchConfigErrors.type_names_count = null;
+      scope.launchConfigErrors.tag_limit_reached = null;
       self.render();
     });
   

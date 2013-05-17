@@ -13,17 +13,38 @@ define([
             var model = args.model;
             var tags = new Backbone.Collection();
 
+            var prepareTag = function(t) {
+              if (!/^euca:/.test(t.get('name'))) {
+                  var nt = new Tag(t.pick('id','name','value','res_id'));
+                  nt.set({_clean: true, _deleted: false, _edited: false, _edit: false, _new: false});
+                  return nt;
+              }
+            };
+
             var loadTags = function() {
                 model.get('tags').each(function(t) {
-                    if (!/^euca:/.test(t.get('name'))) {
-                        var nt = new Tag(t.pick('id','name','value','res_id'));
-                        nt.set({_clean: true, _deleted: false, _edited: false, _edit: false, _new: false});
-                        tags.add(nt);
-                    }
+                  prepareTag(t);
+                  tags.add(t);
                 });
             }
 
             loadTags();
+
+            model.on('reload', function() {
+              tags.reset();
+              loadTags();
+              self.render();
+            });
+
+            model.on('addTag', function(tag, unique_keys) {
+              var name = tag.get('name');
+              if(unique_keys) {
+                var duplicates = tags.where({name: name});
+                tags.remove(duplicates, {silent: true});
+              }
+              tags.add(prepareTag(tag));
+              self.render();  
+            });
 
             model.on('confirm', function(defer) {
                 self.scope.create();
@@ -41,6 +62,9 @@ define([
                                console.log('delete', t);
                                t.destroy();
                            }
+                       } else {
+                         // remove _new _delete tags
+                         tags.remove(t);
                        }
                    } else if (t.get('_edited')) {
                        // If the tag is new then it should only be saved, even if it was edited.
