@@ -1188,7 +1188,15 @@ public class Topology {
       } finally {
         enabledEndState |= Component.State.ENABLED.equals( endResult.lookupState( ) );
         if ( Bootstrap.isFinished( ) && !enabledEndState && Topology.getInstance( ).services.containsValue( input ) ) {
-          Topology.guard( ).tryDisable( endResult );
+        	Topology.guard( ).tryDisable( endResult );
+        }else if(Bootstrap.isFinished( ) && enabledEndState && ! Topology.getInstance( ).services.containsValue( input )){
+            // EUCA-6198 
+        	LOG.error("service enabled but lookup failed: " + endResult );
+            final ServiceKey serviceKey = ServiceKey.create( endResult );
+            final ServiceConfiguration curr = Topology.getInstance().getServices( ).putIfAbsent( serviceKey, endResult );
+            if(curr != null){
+            	LOG.error(String.format("old value mapped from {0}: {1}", serviceKey, curr));
+            }
         }
       }
     }
