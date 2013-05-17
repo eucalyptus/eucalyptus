@@ -493,7 +493,7 @@
               }
               var this_string = instance.id;
               if( nameTag != null ){
-                this_string += " (" + nameTag + ")";
+                this_string += " (" + addEllipsis(nameTag, 15) + ")";
               }
               inst_ids.push(this_string);
             }
@@ -577,7 +577,7 @@
           var this_tags = this_instance.get('tags');
           this_tags.each(function(tag){
             if( tag.get('name') == 'Name' || tag.get('name') == 'name' ){
-              nameTag = tag.get('value');
+              nameTag = addEllipsis(tag.get('value'), 15);
             };
           });
         }
@@ -603,7 +603,7 @@
             var this_tags = this_instance.get('tags');
             this_tags.each(function(tag){
               if( tag.get('name') == 'Name' || tag.get('name') == 'name' ){
-                nameTag = this_instance.get('id') + " (" + tag.get('value') + ")";
+                nameTag = this_instance.get('id') + " (" + addEllipsis(tag.get('value'), 15) + ")";
               };
             });
           }; 
