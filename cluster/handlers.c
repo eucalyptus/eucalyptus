@@ -2329,7 +2329,7 @@ static int migration_handler(ccInstance * myInstance, char *host, char *src, cha
             ccInstance *srcInstance = NULL;
             rc = find_instanceCacheId(myInstance->instanceId, &srcInstance);
             if (!rc) {
-                // FIXME: State matrix says also to roll back if source
+                // TO-DO: State matrix says also to roll back if source
                 // is Extant(preparing), but that's causing some odd
                 // (though benign?) effects right now. So only rolling
                 // back if Extant(ready).
@@ -2338,7 +2338,6 @@ static int migration_handler(ccInstance * myInstance, char *host, char *src, cha
                 // we can pass it when requesting a rollback to a source
                 // that has not yet reported ready during a polling
                 // cycle.
-/*                 if (((srcInstance->migration_state == MIGRATION_PREPARING) || (srcInstance->migration_state == MIGRATION_READY)) && !strcmp(srcInstance->state, "Extant")) { */
                 if ((srcInstance->migration_state == MIGRATION_READY) && !strcmp(srcInstance->state, "Extant")) {
                     LOGINFO("[%s] source node %s last reported %s(%s), destination node %s reports %s(%s), preparing to roll back source node\n",
                             myInstance->instanceId, src, srcInstance->state, migration_state_names[srcInstance->migration_state], dst, myInstance->state,
@@ -2485,7 +2484,7 @@ int refresh_instances(ncMetadata * pMeta, int timeout, int dolock)
                             // instance info that the CC maintains
                             myInstance->ncHostIdx = i;
 
-                            // FIXME: Is this redundant?
+                            // Is this redundant?
                             myInstance->migration_state = ncOutInsts[j]->migration_state;
 
                             euca_strncpy(myInstance->serviceTag, resourceCacheStage->resources[i].ncURL, 384);
@@ -2757,7 +2756,7 @@ int doDescribeInstances(ncMetadata * pMeta, char **instIds, int instIdsLen, ccIn
             if (instanceCache->cacheState[i] == INSTVALID) {
                 if (count >= instanceCache->numInsts) {
                     LOGWARN("found more instances than reported by numInsts, will only report a subset of instances\n");
-                    count = 0;         // FIXME: I'm not sure I understand this...
+                    count = 0;
                 }
                 memcpy(&((*outInsts)[count]), &(instanceCache->instances[i]), sizeof(ccInstance));
                 // We only report a subset of possible migration statuses upstream to the CLC.
@@ -4497,7 +4496,7 @@ int doMigrateInstances(ncMetadata * pMeta, char *actionNode, char *instanceId, c
                         LOGDEBUG("[%s] found instance running on node %s\n", instanceId, resourceCacheLocal.resources[src_index].hostname);
                     }
                 }
-                // FIXME: Wrap alloc()'s
+                // TO-DO: Wrap alloc()'s
                 cc_instances = EUCA_REALLOC(cc_instances, found_instances + 1, sizeof(ccInstance *));
                 cc_instances[found_instances] = EUCA_ZALLOC(1, sizeof(ccInstance));
                 memcpy(cc_instances[found_instances], &(instanceCache->instances[i]), sizeof(ccInstance));
@@ -4530,7 +4529,7 @@ int doMigrateInstances(ncMetadata * pMeta, char *actionNode, char *instanceId, c
     }
 
     for (int idx = 0; idx < found_instances; idx++) {
-        // FIXME: Wrap alloc()'s.
+        // TO-DO: Wrap alloc()'s.
         nc_instances = EUCA_REALLOC(nc_instances, idx + 1, sizeof(ncInstance *));
         nc_instances[idx] = EUCA_ZALLOC(1, sizeof(ncInstance));
         LOGTRACE("[%s] converting cc_instances[%d] -> nc_instances[%d]\n", cc_instances[idx]->instanceId, idx, idx);
@@ -4689,7 +4688,7 @@ int doMigrateInstances(ncMetadata * pMeta, char *actionNode, char *instanceId, c
             goto out;
         }
         // Might not have migration_dst in instance struct here if rollback.
-        // FIXME: In some cases, such as certain rollback requests to source node, this can put the source node's IP in ->migration_dst. Debug.
+        // TO-DO: In some cases, such as certain rollback requests to source node, this can put the source node's IP in ->migration_dst. Debug.
         if (!strlen(nc_instances[0]->migration_dst)) {
             strncpy(nc_instances[0]->migration_dst, resourceCacheLocal.resources[dst_index].hostname, HOSTNAME_SIZE);
         }
@@ -4845,12 +4844,12 @@ static int populateOutboundMeta(ncMetadata * pMeta)
 }
 
 //!
-//! Initialization function called by all handlers. Each handler call may 
+//! Initialization function called by all handlers. Each handler call may
 //! go to a new process (as decided by apache), so this function does a lot
 //! to set up shared memory, logging, fault subsystem, etc, for the process.
-//! Since it is called for every request from CLC, this is also where we 
+//! Since it is called for every request from CLC, this is also where we
 //! update state based on the latest values from CLC:
-//! 
+//!
 //!   * cloudIp
 //!   * epoch
 //!   * services (enabled / disabled / not ready)
@@ -4913,7 +4912,7 @@ int initialize(ncMetadata * pMeta, boolean authoritative)
         if (pMeta != NULL) {
             int i;
             sem_mywait(CONFIG);
-            LOGTRACE("pMeta: epoch=%d (vs %d) enabled %d, disabled %d, notready %d\n", 
+            LOGTRACE("pMeta: epoch=%d (vs %d) enabled %d, disabled %d, notready %d\n",
                      pMeta->epoch, config->ccStatus.localEpoch, pMeta->servicesLen, pMeta->disabledServicesLen, pMeta->notreadyServicesLen);
             if (pMeta->epoch >= config->ccStatus.localEpoch || // we missed some updates, so let us catch up
                 authoritative) { // trust the authoritative requests and always take their services info
@@ -7628,7 +7627,7 @@ int find_instanceCacheId(char *instanceId, ccInstance ** out)
             LOGTRACE("found instance in cache '%s/%s/%s'\n", instanceCache->instances[i].instanceId,
                      instanceCache->instances[i].ccnet.publicIp, instanceCache->instances[i].ccnet.privateIp);
             // migration-related
-            // FIXME: move to allocate_ccInstance() ?
+            // TO-DO: move to allocate_ccInstance() ?
             (*out)->migration_state = instanceCache->instances[i].migration_state;
             LOGTRACE("instance %s migration state=%s\n", instanceCache->instances[i].instanceId, migration_state_names[(*out)->migration_state]);
             done++;
