@@ -62,6 +62,9 @@ define([
                                console.log('delete', t);
                                t.destroy();
                            }
+                       } else {
+                         // remove _new _delete tags
+                         tags.remove(t);
                        }
                    } else if (t.get('_edited')) {
                        // If the tag is new then it should only be saved, even if it was edited.
