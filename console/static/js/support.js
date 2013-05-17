@@ -118,12 +118,12 @@ function addEllipsis(input, maxLen){
   if (input == undefined)
     return input;
 //  input = DefaultEncoder().encodeForHTML(input);
-  if (input.length < maxLen)
+  if (input.length <= maxLen)
     return input;
   input = input.substring(0, maxLen);
-  i = input.lastIndexOf(" ");
-  if ( i > 0)
-    input = input.substring(0, i);
+//  i = input.lastIndexOf(" ");
+//  if ( i > 0)
+//    input = input.substring(0, i);
   return input + '...';
 }
 
