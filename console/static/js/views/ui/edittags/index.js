@@ -23,8 +23,7 @@ define([
 
             var loadTags = function() {
                 model.get('tags').each(function(t) {
-                  prepareTag(t);
-                  tags.add(t);
+                  tags.add(prepareTag(t));
                 });
             }
 
