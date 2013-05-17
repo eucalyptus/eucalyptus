@@ -81,6 +81,8 @@ import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.vmtypes.VmType;
 import com.eucalyptus.vmtypes.VmTypes;
 import com.google.common.base.Joiner;
+import com.google.common.base.Predicate;
+import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import edu.ucsb.eucalyptus.msgs.ResourceType;
 import edu.ucsb.eucalyptus.msgs.VmTypeInfo;
@@ -113,10 +115,17 @@ public class ResourceState {
     this.redeemedTokens = new ConcurrentSkipListSet<ResourceToken>( );
   }
   
+  public boolean hasUnorderedTokens( ) {
+    return Iterables.any( this.pendingTokens, new Predicate<ResourceToken>( ) {
+      
+      @Override
+      public boolean apply( ResourceToken arg0 ) {
+        return arg0.isUnorderedType( );
+      }
+    } );
+  }
+  
   public synchronized List<ResourceToken> requestResourceAllocation( Allocation allocInfo, int minAmount, int maxAmount ) throws NotEnoughResourcesException {
-    /**
-     * TODO:GRZE: this method needs try obtaining the cluster gate lock.
-     */
     VmTypeAvailability vmTypeStatus = this.typeMap.get( allocInfo.getVmType( ).getName( ) );
     Integer available = vmTypeStatus.getAvailable( );
     NavigableSet<VmTypeAvailability> sorted = this.sorted( );

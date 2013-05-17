@@ -547,6 +547,7 @@ int convert_dev_names(const char *localDev, char *localDevReal, char *localDevTa
         if (strncmp(localDev, "unknown,requested:", sizeof("unknown,requested:") - 1) == 0) {
             //localDev starts with 'unknown,requested:', this occurs in migration cases. Extract the actual /dev/* value.
             sscanf(localDev, "unknown,requested:/dev/%s", localDevReal);
+            snprintf(localDev, strlen(localDev), "/dev/%s",localDevReal); //Restore localDev to /dev/xxx instead of 'unknown,requested:...' This case is used in migration
         } else {
             sscanf(localDev, "/dev/%s", localDevReal);
         }
@@ -2100,6 +2101,8 @@ static int init(void)
     GET_VAR_INT(nc_state.concurrent_disk_ops, CONFIG_CONCURRENT_DISK_OPS, 4);
     GET_VAR_INT(nc_state.concurrent_cleanup_ops, CONFIG_CONCURRENT_CLEANUP_OPS, 30);
     GET_VAR_INT(nc_state.disable_snapshots, CONFIG_DISABLE_SNAPSHOTS, 0);
+    GET_VAR_INT(nc_state.shutdown_grace_period_sec, CONFIG_SHUTDOWN_GRACE_PERIOD_SEC, 60);
+
     int disable_injection;
     GET_VAR_INT(disable_injection, CONFIG_DISABLE_KEY_INJECTION, 0);
     nc_state.do_inject_key = !disable_injection;

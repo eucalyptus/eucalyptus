@@ -75,8 +75,6 @@ import com.eucalyptus.webui.client.view.ActionResultView;
 import com.eucalyptus.webui.client.view.ActionResultViewImpl;
 import com.eucalyptus.webui.client.view.CertView;
 import com.eucalyptus.webui.client.view.CertViewImpl;
-import com.eucalyptus.webui.client.view.CloudRegistrationView;
-import com.eucalyptus.webui.client.view.CloudRegistrationViewImpl;
 import com.eucalyptus.webui.client.view.ConfirmationView;
 import com.eucalyptus.webui.client.view.ConfirmationViewImpl;
 import com.eucalyptus.webui.client.view.DownloadView;
@@ -166,7 +164,6 @@ public class ClientFactoryImpl implements ClientFactory {
 	private InputView inputView;
 	
 	// Snippets
-	private CloudRegistrationView cloudRegView;
 	private DownloadView downloadView;
 	
   @Override
@@ -403,12 +400,4 @@ public class ClientFactoryImpl implements ClientFactory {
     return new ItemViewImpl( );
   }
 
-  @Override
-  public CloudRegistrationView getCloudRegistrationView() {
-    if ( cloudRegView == null ) {
-      cloudRegView = new CloudRegistrationViewImpl( );
-    }
-    return cloudRegView;
-  }
-  
 }

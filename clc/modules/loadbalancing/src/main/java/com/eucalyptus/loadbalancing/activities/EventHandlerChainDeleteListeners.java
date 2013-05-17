@@ -68,8 +68,9 @@ public class EventHandlerChainDeleteListeners extends EventHandlerChain<DeleteLi
 				for(Integer port : ports){
 					try{
 						EucalyptusActivityTasks.getInstance().revokeSecurityGroup(groupName, protocol, port);
+						LOG.debug(String.format("rule revoked (%s-%d)", groupName, port));
 					}catch(Exception ex){
-						;
+						LOG.warn("Unable to revoke the security group", ex);
 					}
 				}
 			}

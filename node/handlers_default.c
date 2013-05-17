@@ -418,45 +418,69 @@ static int doGetConsoleOutput(struct nc_state_t *nc, ncMetadata * pMeta, char *i
 }
 
 //!
-//! given a domain pointer, first tries to shut down the domain
+//! given instance ID, first tries to shut down the domain
 //! gracefully (via ACPI signal to the OS), then, after a timeout,
 //! forecfully shuts it down
 //!
-//! NOTE: this must be called with hyp_sem semaphore held
-//!
-//! @param[in] dom libvirt domain pointer
+//! @param[in] instanceId pointer to string containing instance ID
 //!
 //! @return 0 for success and -1 for failure
 //!
 
-int shutdown_then_destroy_domain(virDomainPtr dom)
+int shutdown_then_destroy_domain(const char * instanceId)
 {
+    time_t deadline = 0;
     int error = 0;
 
-    // first give OS a chance to shut down cleanly
-    LOGDEBUG("shutting down instance\n");
-    error = virDomainShutdown(dom);
+    for (boolean done = FALSE; (! done); ) {
 
-    if (!error) {                      // give it time to shut down
-        time_t deadline = time(NULL) + SHUTDOWN_GRACE_PERIOD_SEC;
-        int dom_status = -1;
-        while (time(NULL) < deadline) {
-            dom_status = virDomainIsActive(dom);
+        virConnectPtr conn = lock_hypervisor_conn();
+        if (conn==NULL) {
+            LOGERROR("[%s] cannot connect to hypervisor to shut down instance\n", instanceId);
+            return -1;
+        }
+
+        virDomainPtr dom = virDomainLookupByName(conn, instanceId);
+        if (dom==NULL) { // domain is gone, so we are done
+            LOGTRACE("[%s] domain not found\n", instanceId);
+            unlock_hypervisor_conn();
+            break;
+        }
+    
+        boolean do_destroy = FALSE;
+
+        if (deadline == 0) { // first time through the loop
+            deadline = time(NULL) + SHUTDOWN_GRACE_PERIOD_SEC;
+
+            // give OS a chance to shut down cleanly
+            LOGDEBUG("shutting down instance\n");
+            error = virDomainShutdown(dom);
+            if (error) {
+                do_destroy = TRUE;
+            }
+
+        } else if (time(NULL) < deadline) { // within grace period - check on domain
+            int dom_status = virDomainIsActive(dom);
             LOGTRACE("domain status '%d'\n", dom_status);
-            if (dom_status != 1)
-                break;
-            sleep(1);
-        }
+            if (dom_status != 1) // 1 if running, 0 if inactive, -1 on error
+                done = TRUE;
 
-        if (dom_status != 1) {         // 0 = not running, -1 = does not exist
-            virDomainFree(dom);
-            return 0;
+        } else { // deadline exceeded
+            do_destroy = TRUE;
+        }        
+
+        if (do_destroy) {
+            LOGDEBUG("destroying instance\n");
+            error = virDomainDestroy(dom);
+            done = TRUE;
         }
+        
+        virDomainFree(dom);
+        unlock_hypervisor_conn();        
+
+        if (! done)
+            sleep(2); // sleep outside the hypervisor lock
     }
-
-    LOGDEBUG("destroying instance\n");
-    error = virDomainDestroy(dom);
-    virDomainFree(dom);
 
     return error;
 }
@@ -517,8 +541,9 @@ int find_and_terminate_instance(struct nc_state_t *nc_state, ncMetadata * pMeta,
     virConnectPtr conn = lock_hypervisor_conn();
     if (conn) {
         virDomainPtr dom = virDomainLookupByName(conn, instanceId);
+        unlock_hypervisor_conn();
         if (dom) {
-            err = shutdown_then_destroy_domain(dom);    // the function frees 'dom'
+            err = shutdown_then_destroy_domain(instanceId);    // the function frees 'dom'
             if (err == 0) {
                 LOGINFO("[%s] instance terminated\n", instanceId);
             } else {
@@ -528,7 +553,6 @@ int find_and_terminate_instance(struct nc_state_t *nc_state, ncMetadata * pMeta,
             if (instance->state != BOOTING && instance->state != STAGING && instance->state != TEARDOWN)
                 LOGWARN("[%s] instance to be terminated not running on hypervisor\n", instanceId);
         }
-        unlock_hypervisor_conn();
     }
     return EUCA_OK;
 }
