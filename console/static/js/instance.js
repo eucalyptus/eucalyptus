@@ -582,8 +582,12 @@
         // Push the instance id and its display_id into the matrix
         $.each(instances, function(idx,id){
           this_display_id = id;
-          if( display_ids[idx] != null )
+          if( display_ids[idx] != null ) {
             this_display_id = display_ids[idx];
+            if (id !== display_ids[idx]) {
+              this_display_id = id + ' (' + display_ids[idx] + ')';
+            }
+          }
           matrix.push([id, this_display_id]);
         });
         if ($.inArray('ebs',rootType)>=0){
