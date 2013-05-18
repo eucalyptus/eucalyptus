@@ -352,9 +352,11 @@ static void *rebooting_thread(void *arg)
     xml = virDomainGetXMLDesc(dom, 0);
     if (xml == NULL) {
         LOGERROR("[%s] cannot obtain metadata for instance to reboot, giving up\n", instance->instanceId);
+        virDomainFree(dom);            // release libvirt resource
         unlock_hypervisor_conn();
         return NULL;
     }
+    virDomainFree(dom);            // release libvirt resource
     unlock_hypervisor_conn();
 
     // try shutdown first, then kill it if uncooperative
@@ -601,8 +603,6 @@ static void *migrating_thread(void *arg)
                                        NULL,    // new name on destination (optional)
                                        NULL,    // destination URI as seen from source (optional)
                                        0L); // bandwidth limitation (0 => unlimited)
-    virConnectClose(dconn);
-
     if (ddom == NULL) {
         LOGERROR("[%s] cannot migrate instance, giving up and rolling back.\n", instance->instanceId);
         migration_error++;
@@ -611,6 +611,7 @@ static void *migrating_thread(void *arg)
         LOGINFO("[%s] instance migrated\n", instance->instanceId);
     }
     virDomainFree(ddom);
+    virConnectClose(dconn);
 
 out:
     if (dom)

@@ -980,6 +980,7 @@ static int doAttachVolume(struct nc_state_t *nc, ncMetadata * pMeta, char *insta
             unlock_hypervisor_conn();
             return EUCA_HYPERVISOR_ERROR;
         }
+        virDomainFree(dom);            // release libvirt resource
         unlock_hypervisor_conn();
     }
 
@@ -1137,6 +1138,7 @@ release:
         int err = 0;
         if (dom != NULL) {
             err = virDomainDetachDevice(dom, xml);
+            virDomainFree(dom);            // release libvirt resource
         }
         if (err) {
             LOGERROR("[%s][%s] failed to detach as part of aborting\n", instanceId, volumeId);
@@ -1263,12 +1265,14 @@ static int doDetachVolume(struct nc_state_t *nc, ncMetadata * pMeta, char *insta
         sem_v(inst_sem);
     if (!volume) {
         LOGERROR("[%s][%s] failed to update the volume record, aborting volume detachment\n", instanceId, volumeId);
+        virDomainFree(dom);            // release libvirt resource
         unlock_hypervisor_conn();
         return EUCA_ERROR;
     }
     //Lookup the volume info locally for detachment
     if (volume->connectionString[0] == '\0') {
         LOGERROR("[%s][%s] failed to find the local volume attachment record, aborting volume detachment\n", instanceId, volumeId);
+        virDomainFree(dom);            // release libvirt resource
         unlock_hypervisor_conn();
         return EUCA_ERROR;
     }
