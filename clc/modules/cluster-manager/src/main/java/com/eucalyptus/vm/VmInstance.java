@@ -159,9 +159,11 @@ import com.eucalyptus.tokens.AssumeRoleType;
 import com.eucalyptus.tokens.CredentialsType;
 import com.eucalyptus.upgrade.Upgrades.EntityUpgrade;
 import com.eucalyptus.upgrade.Upgrades.Version;
+import com.eucalyptus.util.CollectionUtils;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.FullName;
 import com.eucalyptus.util.OwnerFullName;
+import com.eucalyptus.util.RestrictedTypes;
 import com.eucalyptus.util.TypeMapper;
 import com.eucalyptus.util.async.AsyncRequests;
 import com.eucalyptus.vm.VmBundleTask.BundleState;
@@ -2168,11 +2170,14 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
 
     @Override
     public ReservationInfoType apply( final VmInstance instance ) {
-
       return new ReservationInfoType(
           instance.getReservationId( ),
           instance.getOwner( ).getAccountNumber( ),
-          instance.getNetworkGroups());
+          CollectionUtils.putAll(
+              instance.getNetworkGroups(),
+              Maps.<String, String>newTreeMap(),
+              NetworkGroups.groupId(),
+              RestrictedTypes.toDisplayName() ) );
     }
   }
 

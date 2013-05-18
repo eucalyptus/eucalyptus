@@ -46,10 +46,12 @@
             <structure name="item" map-as="edu.ucsb.eucalyptus.msgs.RunningInstancesItemType" />
         </collection>
     </mapping>
+
     <mapping class="edu.ucsb.eucalyptus.msgs.GroupItemType" abstract="true">
-        <value name="groupId" field="groupId" usage="required"/>
-        <value name="groupName" field="groupName" usage="required"/>
+        <value name="groupId" field="groupId" usage="optional"/>
+        <value name="groupName" field="groupName" usage="optional"/>
     </mapping>
+
     <mapping class="edu.ucsb.eucalyptus.msgs.TerminateInstancesItemType" abstract="true">
         <value name="instanceId" field="instanceId" usage="required" />
         <structure name="currentState">
@@ -124,10 +126,8 @@
         <value name="maxCount" field="maxCount" usage="required" />
         <value name="keyName" field="keyName" usage="optional" />
         <structure name="groupSet" usage="optional">
-            <collection field="groupSet" factory="org.jibx.runtime.Utility.arrayListFactory" item-type="java.lang.String">
-                <structure name="item">
-                    <value name="groupId" />
-                </structure>
+            <collection field="groupSet" usage="optional" factory="org.jibx.runtime.Utility.arrayListFactory">
+                <structure name="item" map-as="edu.ucsb.eucalyptus.msgs.GroupItemType" />
             </collection>
         </structure>
         <!--2006-10-01 -->
