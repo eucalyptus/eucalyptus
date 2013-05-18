@@ -258,7 +258,7 @@ static void refresh_instance_info(struct nc_state_t *nc, ncInstance * instance);
 static void update_log_params(void);
 static void nc_signal_handler(int sig);
 static int init(void);
-static void updateServiceStateInfo(ncMetadata * pMeta);
+static void updateServiceStateInfo(ncMetadata * pMeta, boolean authoritative);
 static void printNCServiceStateInfo(void);
 static void printMsgServiceStateInfo(ncMetadata * pMeta);
 
@@ -381,6 +381,7 @@ static void printNCServiceStateInfo(void)
     if (log_level_get() <= EUCA_LOG_TRACE) {
         sem_p(service_state_sem);
         LOGTRACE("Printing %d services\n", nc_state.servicesLen);
+        LOGTRACE("Epoch %d\n", nc_state.ncStatus.localEpoch);
         for (i = 0; i < nc_state.servicesLen; i++) {
             LOGTRACE("Service - %s %s %s %s\n", nc_state.services[i].name, nc_state.services[i].partition, nc_state.services[i].type, nc_state.services[i].uris[0]);
         }
@@ -430,12 +431,12 @@ static void printMsgServiceStateInfo(ncMetadata * pMeta)
 //! Update the state of the services and topology as received from the CC
 //!
 //! @param[in] pMeta a pointer to the node controller (NC) metadata structure
-//!
+//! @param[in] authoritative indicates whether this request is allowed to reset epoch
 //! @pre
 //!
 //! @note
 //!
-static void updateServiceStateInfo(ncMetadata * pMeta)
+static void updateServiceStateInfo(ncMetadata * pMeta, boolean authoritative)
 {
     int i = 0;
     char scURL[512];
@@ -444,8 +445,9 @@ static void updateServiceStateInfo(ncMetadata * pMeta)
 
         // store information from CLC that needs to be kept up-to-date in the NC
         sem_p(service_state_sem);
-        //Update if this is as new as what we have...added = because CC doesn't seem to bump epoch numbers, stays at 0
-        if (pMeta->epoch >= nc_state.ncStatus.localEpoch) {
+        if (pMeta->epoch >= nc_state.ncStatus.localEpoch || // we have updates ('=' is there in case CC does not bump epoch numbers)
+            authoritative // trust the authoritative requests and always take their services info, even if epoch goes backward
+            ) {
             //Update the epoch first
             nc_state.ncStatus.localEpoch = pMeta->epoch;
 
@@ -2640,11 +2642,9 @@ int doDescribeInstances(ncMetadata * pMeta, char **instIds, int instIdsLen, ncIn
     if (init())
         return (EUCA_ERROR);
 
-    LOGTRACE("updating service state infos\n");
-    updateServiceStateInfo(pMeta);
-
     LOGTRACE("invoked\n");             // response will be at INFO, so this is TRACE
 
+    updateServiceStateInfo(pMeta, FALSE);
     if (nc_state.H->doDescribeInstances)
         ret = nc_state.H->doDescribeInstances(&nc_state, pMeta, instIds, instIdsLen, outInsts, outInstsLen);
     else
@@ -2963,9 +2963,7 @@ int doDescribeResource(ncMetadata * pMeta, char *resourceType, ncResource ** out
     if (init())
         return (EUCA_ERROR);
 
-    LOGTRACE("updating service state infos\n");
-    updateServiceStateInfo(pMeta);
-
+    updateServiceStateInfo(pMeta, TRUE);
     if (nc_state.H->doDescribeResource)
         ret = nc_state.H->doDescribeResource(&nc_state, pMeta, resourceType, outRes);
     else
