@@ -573,7 +573,7 @@ ol li {
 }
 
 .form-row label.extra-long-label {
-  width: auto;
+  width: 270px;
 }
 
 .form-row label.mega-long-label {
@@ -1487,6 +1487,11 @@ div.sgroup-expanded .expanded-table thead th {
 .help-content p,
 .help-page-body p {
   margin: 0 0 1em;
+}
+
+.uicontrol {
+  font-weight: bold;
+  color: #111;
 }  
 
 .dialog-help-content h1 {

@@ -33,7 +33,7 @@ define([
       _.each(args.items, function(vid){
         var nameTag = self.findNameTag(App.data.volume.get(vid));
         console.log("Volume: " + vid + " Name Tag: " + nameTag);
-        volume_list.push(self.createIdNameTagString(vid, nameTag));   // DISPLAY ONLY
+        volume_list.push(self.createIdNameTagString(vid, addEllipsis(nameTag, 15)));   // DISPLAY ONLY
       });
 
       this.scope = {

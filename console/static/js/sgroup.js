@@ -998,6 +998,7 @@
       thisObj.addDialog.find('a[href="#tabs-1"]').click();
 
       thisObj.addDialog.rscope.securityGroup.get('tags').reset([]);
+      thisObj.addDialog.rscope.securityGroup.trigger('reload');
       thisObj.addDialog.rview.sync();
 
       gAddDialog = thisObj.addDialog;

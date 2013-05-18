@@ -113,8 +113,8 @@ import com.eucalyptus.util.RestrictedTypes;
 import com.eucalyptus.util.TypeMappers;
 import com.eucalyptus.util.async.CheckedListenableFuture;
 import com.eucalyptus.util.async.Futures;
-import com.eucalyptus.vmtypes.DescribeVmTypesResponseType;
-import com.eucalyptus.vmtypes.DescribeVmTypesType;
+import com.eucalyptus.vmtypes.DescribeInstanceTypesType;
+import com.eucalyptus.vmtypes.DescribeInstanceTypesResponseType;
 import com.google.common.base.Function;
 import com.google.common.base.Functions;
 import com.google.common.base.Joiner;
@@ -2614,7 +2614,7 @@ public class ActivityManager {
     }
   }
 
-  private class InstanceTypeValidationScalingActivityTask extends ValidationScalingActivityTask<DescribeVmTypesResponseType> {
+  private class InstanceTypeValidationScalingActivityTask extends ValidationScalingActivityTask<DescribeInstanceTypesResponseType> {
     final String instanceType;
 
     private InstanceTypeValidationScalingActivityTask( final AutoScalingGroupCoreView group,
@@ -2626,15 +2626,15 @@ public class ActivityManager {
 
     @Override
     void dispatchInternal( final ActivityContext context,
-                           final Callback.Checked<DescribeVmTypesResponseType> callback ) {
+                           final Callback.Checked<DescribeInstanceTypesResponseType> callback ) {
       final VmTypesClient client = context.getVmTypesClient( );
-      client.dispatch( new DescribeVmTypesType( Collections.singleton( instanceType ) ), callback );
+      client.dispatch( new DescribeInstanceTypesType( Collections.singleton( instanceType ) ), callback );
     }
 
     @Override
     void dispatchSuccess( final ActivityContext context,
-                          final DescribeVmTypesResponseType response ) {
-      if ( response.getVmTypeDetails() == null || response.getVmTypeDetails().size() != 1 ) {
+                          final DescribeInstanceTypesResponseType response ) {
+      if ( response.getInstanceTypeDetails() == null || response.getInstanceTypeDetails().size() != 1 ) {
         setValidationError( "Invalid instance type: " + instanceType );
       }
 

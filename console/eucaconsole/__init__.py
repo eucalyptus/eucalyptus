@@ -113,7 +113,7 @@ class UserSession(object):
 
 class GlobalSession(object):
     def __init__(self):
-        self.vmtypes = ""
+        self.instancetypes = ""
 
     def get_value(self, scope, key, default_val = None):
         value = None
@@ -129,13 +129,13 @@ class GlobalSession(object):
             items[k] = v
         return items
 
-    def parse_vmtypes(self, vmtypes):
-        self.vmtypes = {}
-        for vmt in vmtypes:
+    def parse_instancetypes(self, instancetypes):
+        self.instancetypes = {}
+        for vmt in instancetypes:
             if isinstance(vmt, dict):
-                self.vmtypes[vmt['name']] = [vmt['cores'], vmt['memory'], vmt['disk']]
+                self.instancetypes[vmt['name']] = [vmt['cores'], vmt['memory'], vmt['disk']]
             else:
-                self.vmtypes[vmt.name] = [vmt.cores, vmt.memory, vmt.disk]
+                self.instancetypes[vmt.name] = [vmt.cores, vmt.memory, vmt.disk]
 
     @property
     def language(self):
@@ -163,7 +163,7 @@ class GlobalSession(object):
 
     @property
     def instance_type(self):
-        return self.vmtypes
+        return self.instancetypes
 
     # return the collection of global session info
     def get_session(self):
@@ -458,34 +458,34 @@ class LoginResponse(ProxyResponse):
         if not global_session:
             global_session = GlobalSession()
 
-        vmtypes = []
-        # TODO: should trigger canned vmtypes for mock as well
+        instancetypes = []
+        # TODO: should trigger canned instancetypes for mock as well
         #if True:
         if self.user_session.host_override:
-            vmtypes.append(dict(name='t1.micro', cores='1', memory='256', disk='5'))
-            vmtypes.append(dict(name='m1.small', cores='1', memory='256', disk='5'))
-            vmtypes.append(dict(name='m1.medium', cores='1', memory='512', disk='10'))
-            vmtypes.append(dict(name='m1.large', cores='2', memory='512', disk='10'))
-            vmtypes.append(dict(name='c1.medium', cores='2', memory='512', disk='10'))
-            vmtypes.append(dict(name='m1.xlarge', cores='2', memory='1024', disk='10'))
-            vmtypes.append(dict(name='c1.xlarge', cores='2', memory='2048', disk='10'))
-            vmtypes.append(dict(name='m2.xlarge', cores='2', memory='2048', disk='10'))
-            vmtypes.append(dict(name='m3.xlarge', cores='4', memory='2048', disk='15'))
-            vmtypes.append(dict(name='m3.2xlarge', cores='4', memory='4096', disk='30'))
-            vmtypes.append(dict(name='m2.4xlarge', cores='8', memory='4096', disk='60'))
-            vmtypes.append(dict(name='hi1.4xlarge', cores='8', memory='6144', disk='120'))
-            vmtypes.append(dict(name='cc2.8xlarge', cores='16', memory='6144', disk='120'))
-            vmtypes.append(dict(name='cg1.4xlarge', cores='16', memory='12288', disk='200'))
-            vmtypes.append(dict(name='cr1.8xlarge', cores='16', memory='16384', disk='240'))
-            vmtypes.append(dict(name='hs1.8xlarge', cores='48', memory='119808', disk='24000'))
+            instancetypes.append(dict(name='t1.micro', cores='1', memory='256', disk='5'))
+            instancetypes.append(dict(name='m1.small', cores='1', memory='256', disk='5'))
+            instancetypes.append(dict(name='m1.medium', cores='1', memory='512', disk='10'))
+            instancetypes.append(dict(name='m1.large', cores='2', memory='512', disk='10'))
+            instancetypes.append(dict(name='c1.medium', cores='2', memory='512', disk='10'))
+            instancetypes.append(dict(name='m1.xlarge', cores='2', memory='1024', disk='10'))
+            instancetypes.append(dict(name='c1.xlarge', cores='2', memory='2048', disk='10'))
+            instancetypes.append(dict(name='m2.xlarge', cores='2', memory='2048', disk='10'))
+            instancetypes.append(dict(name='m3.xlarge', cores='4', memory='2048', disk='15'))
+            instancetypes.append(dict(name='m3.2xlarge', cores='4', memory='4096', disk='30'))
+            instancetypes.append(dict(name='m2.4xlarge', cores='8', memory='4096', disk='60'))
+            instancetypes.append(dict(name='hi1.4xlarge', cores='8', memory='6144', disk='120'))
+            instancetypes.append(dict(name='cc2.8xlarge', cores='16', memory='6144', disk='120'))
+            instancetypes.append(dict(name='cg1.4xlarge', cores='16', memory='12288', disk='200'))
+            instancetypes.append(dict(name='cr1.8xlarge', cores='16', memory='16384', disk='240'))
+            instancetypes.append(dict(name='hs1.8xlarge', cores='48', memory='119808', disk='24000'))
         else:
             #boto.set_stream_logger('foo')
             host = config.get('server', 'clchost')
             clc = BotoClcInterface(host, self.user_session.access_key,
                                    self.user_session.secret_key,
                                    self.user_session.session_token, debug=0)
-            vmtypes = clc.get_all_vmtypes()
-        global_session.parse_vmtypes(vmtypes)
+            instancetypes = clc.get_all_instancetypes()
+        global_session.parse_instancetypes(instancetypes)
 
         return {'global_session': global_session.get_session(),
                 'user_session': self.user_session.get_session()}

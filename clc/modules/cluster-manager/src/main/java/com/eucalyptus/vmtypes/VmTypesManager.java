@@ -66,12 +66,15 @@ package com.eucalyptus.vmtypes;
 import javax.annotation.Nullable;
 import com.eucalyptus.cloud.CloudMetadatas;
 import com.eucalyptus.cloud.util.NoSuchMetadataException;
+import com.eucalyptus.cluster.Cluster;
 import com.eucalyptus.cluster.Clusters;
 import com.eucalyptus.cluster.ResourceState.VmTypeAvailability;
+import com.eucalyptus.component.Faults.CheckException;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.Topology;
 import com.eucalyptus.component.id.ClusterController;
 import com.eucalyptus.context.Contexts;
+import com.eucalyptus.context.ServiceStateException;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.Exceptions;
@@ -96,9 +99,9 @@ public class VmTypesManager {
     }
   }
   
-  public DescribeVmTypesResponseType DescribeVmTypes( final DescribeVmTypesType request ) {
-    DescribeVmTypesResponseType reply = request.getReply( );
-    for ( final VmType v : Iterables.filter( VmTypes.list( ), CloudMetadatas.filterById( request.getVmTypes( ) ) ) ) {
+  public DescribeInstanceTypesResponseType DescribeInstanceTypes( final DescribeInstanceTypesType request ) {
+    DescribeInstanceTypesResponseType reply = request.getReply( );
+    for ( final VmType v : Iterables.filter( VmTypes.list( ), CloudMetadatas.filterPrivilegesById( request.getInstanceTypes( ) ) ) ) {
       VmTypeDetails vmTypeDetails = new VmTypeDetails( ) {
         {
           this.setName( v.getName( ) );
@@ -120,13 +123,13 @@ public class VmTypesManager {
           }
         }
       };
-      reply.getVmTypeDetails( ).add( vmTypeDetails );
+      reply.getInstanceTypeDetails( ).add( vmTypeDetails );
     }
     return reply;
   }
   
-  public ModifyVmTypeAttributeResponseType modifyVmType( final ModifyVmTypeAttributeType request ) throws EucalyptusCloudException {
-    final ModifyVmTypeAttributeResponseType reply = request.getReply( );
+  public ModifyInstanceTypeAttributeResponseType modifyVmType( final ModifyInstanceTypeAttributeType request ) throws EucalyptusCloudException {
+    final ModifyInstanceTypeAttributeResponseType reply = request.getReply( );
     if ( Contexts.lookup( ).hasAdministrativePrivileges( ) ) {
       final Function<String, VmType> modifyFunc = new Function<String, VmType>( ) {
         
@@ -145,6 +148,7 @@ public class VmTypesManager {
               vmType.setMemory( Objects.firstNonNull( request.getMemory( ), vmType.getMemory( ) ) );
             }
             //GRZE:TODO:EUCA-3500 do the appropriate sanity checks here.
+            VmTypes.update( vmType );
             return vmType;
           } catch ( NoSuchMetadataException ex ) {
             throw Exceptions.toUndeclared( ex );
@@ -170,8 +174,8 @@ public class VmTypesManager {
             this.setMemory( after.getMemory( ) );
           }
         };
-        reply.setPreviousVmType( beforeDetails );
-        reply.setVmType( afterDetails );
+        reply.setPreviousInstanceType( beforeDetails );
+        reply.setInstanceType( afterDetails );
       } catch ( NoSuchMetadataException ex ) {
         throw new EucalyptusCloudException( "Failed to lookup the requested instance type: " + request.getName( ), ex );
       }

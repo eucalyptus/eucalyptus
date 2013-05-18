@@ -316,6 +316,6 @@ class BotoClcInterface(ClcInterface):
     def delete_tags(self, resourceIds, tags):
         return self.conn.delete_tags(resourceIds, tags)
 
-    def get_all_vmtypes(self):
-        return self.conn.get_list('DescribeVmTypes', {}, [('euca:item', VmType)], verb='POST')
+    def get_all_instancetypes(self):
+        return self.conn.get_list('DescribeInstanceTypes', {}, [('euca:item', VmType)], verb='POST')
 
