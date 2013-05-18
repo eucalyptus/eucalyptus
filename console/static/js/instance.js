@@ -496,7 +496,6 @@
 
      if(numSelected === 1 && 'running' in stateMap && $.inArray(instIds[0], stateMap['running']>=0)){
        menuItems['console'] = {"name":instance_action_console, callback: function(key, opt) { thisObj._consoleAction(); }}
-//       menuItems['attach'] = {"name":instance_action_attach, callback: function(key, opt) { thisObj._attachAction(); }}
        menuItems['attach'] = {"name":instance_action_attach, callback: function(key, opt) { thisObj._newAttachAction(); }}
      }
  
@@ -585,7 +584,7 @@
           if( display_ids[idx] != null ) {
             this_display_id = display_ids[idx];
             if (id !== display_ids[idx]) {
-              this_display_id = id + ' (' + display_ids[idx] + ')';
+              this_display_id = id + ' (' + addEllipsis(display_ids[idx], 15) + ')';
             }
           }
           matrix.push([id, this_display_id]);
@@ -644,7 +643,7 @@
         $.each(instances, function(idx,id){
           this_display_id = id;
           if( display_ids[idx] != null )
-            this_display_id = display_ids[idx];
+            this_display_id = id + ' (' + addEllipsis(display_ids[idx], 15) + ')';
           matrix.push([id, this_display_id]);
         });
         thisObj.rebootDialog.eucadialog('setSelectedResources', {title: [instance_label], contents: matrix, included_display_id: true});
@@ -846,7 +845,7 @@
             instance = display_id;
           }
           if(data && data.results){
-            var newTitle = $.i18n.prop('instance_dialog_console_title',  DefaultEncoder().encodeForHTML(instance));
+            var newTitle = $.i18n.prop('instance_dialog_console_title',  DefaultEncoder().encodeForHTML(addEllipsis(instance, 15)));
             thisObj.consoleDialog.data('eucadialog').option('title', newTitle);
             thisObj.consoleDialog.find('#instance-console-output').children().detach();
             thisObj.consoleDialog.find('#instance-console-output').append(
@@ -897,7 +896,7 @@
       if( nameTag == null ){
         $msg.html($.i18n.prop('inst_volume_dialog_detach_text', DefaultEncoder().encodeForHTML(instance)));
       }else{ 
-       $msg.html($.i18n.prop('inst_volume_dialog_detach_text', DefaultEncoder().encodeForHTML(nameTag)));
+       $msg.html($.i18n.prop('inst_volume_dialog_detach_text', DefaultEncoder().encodeForHTML(addEllipsis(nameTag, 15))));
       }
 
       var $p = this.detachDialog.find('#volume-detach-select-all');
@@ -919,8 +918,9 @@
           var state = volume.attach_data['status'];
           if( state === 'attached' && inst === instance && !isRootVolume(inst, volume.id) ){
             // FIX TO DISPLAY THE NAME TAG OF THE VOLUME  --- Kyo 041513
-            if( volume.display_id != null ){
-              volumes.push(volume.display_id);   // PASS THE DISPLAY ID IF EXISTS
+            if( volume.display_id != volume.id ){
+              volume_label = volume.id + " (" + addEllipsis(volume.display_id, 15) + ")";
+              volumes.push(volume_label);   // PASS THE DISPLAY ID IF EXISTS
             }else{
               volumes.push(volume.id);   // OR USE THE VOLUME ID
             }
