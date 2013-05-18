@@ -18,7 +18,7 @@ define([
              var selected_snapshot_id = snapshot_model.get('id');
              var selected_snapshot_size = snapshot_model.get('volume_size');
              var nameTag = self.findNameTag(snapshot_model);
-             var snapshot_name_string = self.createIdNameTagString(selected_snapshot_id, nameTag);
+             var snapshot_name_string = self.createIdNameTagString(selected_snapshot_id, addEllipsis(nameTag, 15));
              $snapshotSelector.append($('<option>', {
                  value: selected_snapshot_id,
                  text : snapshot_name_string
@@ -45,7 +45,7 @@ define([
              }));
              App.data.snapshot.each(function (model, index) {
                var nameTag = self.findNameTag(model);
-               var snapshot_name_string = self.createIdNameTagString(model.get('id'), nameTag);
+               var snapshot_name_string = self.createIdNameTagString(model.get('id'), addEllipsis(nameTag, 15));
                $snapshotSelector.append($('<option>', { 
                  value: model.get('id'),
                  text : snapshot_name_string 

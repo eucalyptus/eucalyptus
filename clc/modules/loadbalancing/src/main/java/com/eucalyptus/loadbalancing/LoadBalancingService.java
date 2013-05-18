@@ -637,7 +637,7 @@ public class LoadBalancingService {
 
   public DeleteLoadBalancerResponseType deleteLoadBalancer( DeleteLoadBalancerType request ) throws EucalyptusCloudException {
     DeleteLoadBalancerResponseType reply = request.getReply();
-    final String lbToDelete = request.getLoadBalancerName();
+    final String candidateLB = request.getLoadBalancerName();
     final Context ctx = Contexts.lookup();
     Function<String, LoadBalancer> findLoadBalancer = new Function<String, LoadBalancer>(){
 		@Override
@@ -649,13 +649,13 @@ public class LoadBalancingService {
 			}catch(NoSuchElementException ex){
 				if(ctx.hasAdministrativePrivileges()){
 					try{
-						LoadBalancer lb = LoadBalancers.getLoadBalancerByName(lbName);		
+						final LoadBalancer lb = LoadBalancers.getLoadBalancerByDnsName(lbName);		
 						final User owner = Accounts.lookupUserById(lb.getOwnerUserId());
 						ctx.setUser(owner);
 						return lb;
-					}catch(LoadBalancingException ex2){
-						throw Exceptions.toUndeclared(ex2);
 					}catch(Exception ex2){
+						if(ex2 instanceof NoSuchElementException)
+							throw Exceptions.toUndeclared(new LoadBalancingException("Unable to find the loadbalancer (use DNS name if you are Cloud admin)"));
 						throw Exceptions.toUndeclared(ex2);
 					}
 				}
@@ -665,10 +665,12 @@ public class LoadBalancingService {
     };
     
     try {
-      if ( lbToDelete != null ) {
+      if ( candidateLB != null ) {
+    	String lbToDelete = null;
         LoadBalancer lb = null;
         try {
-          lb = findLoadBalancer.apply(lbToDelete);
+          lb = findLoadBalancer.apply(candidateLB);
+          lbToDelete = lb.getDisplayName();
         } catch ( NoSuchElementException ex ) {
         	;
         } catch ( Exception ex){
@@ -719,7 +721,7 @@ public class LoadBalancingService {
     	final String reason = e.getCause() != null && e.getCause().getMessage()!=null ? e.getCause().getMessage() : "internal error";
     	throw new InternalFailure400Exception( String.format("Failed to delete the loadbalancer: %s", reason), e );
     }catch (LoadBalancingException e){
-    	throw e;
+    	throw new InternalFailure400Exception(e.getMessage());
     }catch ( Exception e ) {
       // success if the lb is not found in the system
       if ( !(e.getCause() instanceof NoSuchElementException) ) {

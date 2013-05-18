@@ -197,6 +197,10 @@ define([
               paramName: "user_data_file",
             });
 
+            // remove name tags from tags model - they're set elsewhere below
+            var extra_name_tags = model.get('tags').where({name: 'Name'});
+            model.get('tags').remove(extra_name_tags, {silent:true});
+
             var the_tags = model.get('tags').toJSON();
             var name_tags = model.get('names').toJSON();
             $(model.get('fileinput')()).fileupload("send", {

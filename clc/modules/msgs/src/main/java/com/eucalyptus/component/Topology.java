@@ -1188,7 +1188,11 @@ public class Topology {
       } finally {
         enabledEndState |= Component.State.ENABLED.equals( endResult.lookupState( ) );
         if ( Bootstrap.isFinished( ) && !enabledEndState && Topology.getInstance( ).services.containsValue( input ) ) {
-          Topology.guard( ).tryDisable( endResult );
+        	Topology.guard( ).tryDisable( endResult );
+        }else if(Bootstrap.isFinished( ) && enabledEndState && ! Topology.getInstance( ).services.containsValue( input )){
+            // EUCA-6198 
+        	LOG.error("service enabled but lookup failed: " + endResult );
+        	Topology.guard( ).tryEnable( endResult );
         }
       }
     }

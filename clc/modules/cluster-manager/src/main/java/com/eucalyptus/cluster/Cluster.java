@@ -1294,6 +1294,15 @@ public class Cluster implements AvailabilityZoneMetadata, HasFullName<Cluster>, 
     }
   }
   
+  public void refreshResources( ) {
+    try {
+      Refresh.RESOURCES.fire( this );
+    } catch ( Exception ex ) {
+      LOG.error( ex );
+      LOG.debug(  ex, ex );
+    }
+  }
+  
   public void check( ) throws Faults.CheckException, IllegalStateException, InterruptedException, ServiceStateException {
     if ( this.gateLock.tryLock( 30, TimeUnit.SECONDS ) ) {
       try {    	
@@ -1329,9 +1338,6 @@ public class Cluster implements AvailabilityZoneMetadata, HasFullName<Cluster>, 
           currentErrors.add( ex );
           throw Faults.failure( this.configuration, currentErrors );
         }
-      } catch ( Exception ex ) {
-        LOG.error( ex );
-        throw ex;
       } finally {
         //#6 Unmark this cluster as gated.
         this.gateLock.unlock( );

@@ -227,22 +227,20 @@ static int generate_migration_keys(char *host, char *credentials, boolean restar
     char *instanceId = instance ? instance->instanceId : "UNSET";
 
     if (!host || !credentials) {
-        LOGERROR("[%s] called with invalid arguments for host and/or credentials: host=%s, creds=%s\n", SP(instanceId), SP(host), credentials ? "present" : "UNSET");
+        LOGERROR("[%s] called with invalid arguments for host and/or credentials: host=%s, creds=%s\n", SP(instanceId), SP(host), (credentials == NULL) ? "UNSET" : "present");
         return EUCA_INVALID_ERROR;
     }
 
     sem_p(hyp_sem);
 
     if (most_recent_credentials && most_recent_host && !strcmp(most_recent_credentials, credentials) && !strcmp(most_recent_host, host)) {
-        // FIXME: REMOVE PRINTING OF CREDENTIALS BEFORE GOING LIVE.
-        LOGDEBUG("[%s] request to generate key using same information (host='%s', creds='%s') as previous request, skipping\n", instanceId, host, credentials);
+        LOGDEBUG("[%s] request to generate key using same information (host='%s', creds=%s) as previous request, skipping\n", instanceId, host, (credentials == NULL) ? "UNSET" : "present");
         sem_v(hyp_sem);
         return EUCA_OK;
     }
     if (!most_recent_credentials) {
-        // FIXME: REMOVE PRINTING OF CREDENTIALS BEFORE GOING LIVE.
         most_recent_credentials = strdup(credentials);
-        LOGDEBUG("[%s] first generation of migration credentials: %s\n", instanceId, most_recent_credentials);
+        LOGDEBUG("[%s] first generation of migration credentials\n", instanceId);
     }
     if (!most_recent_host) {
         most_recent_host = strdup(host);
@@ -252,15 +250,14 @@ static int generate_migration_keys(char *host, char *credentials, boolean restar
     if (strcmp(most_recent_credentials, credentials)) {
         EUCA_FREE(most_recent_credentials);
         most_recent_credentials = strdup(credentials);
-        // FIXME: REMOVE PRINTING OF CREDENTIALS BEFORE GOING LIVE.
-        LOGDEBUG("[%s] regeneration of migration credentials: %s\n", instanceId, most_recent_credentials);
+        LOGDEBUG("[%s] regeneration of migration credentials\n", instanceId);
     }
     if (strcmp(most_recent_host, host)) {
         EUCA_FREE(most_recent_host);
         most_recent_host = strdup(host);
         LOGDEBUG("[%s] regeneration of migration host information: %s\n", instanceId, most_recent_host);
     }
-    // FIXME: Add polling around incoming_migrations_in_progress to prevent restarts during migrations?
+    // TO-DO: Add polling around incoming_migrations_in_progress to prevent restarts during migrations?
     snprintf(generate_keys, MAX_PATH, EUCALYPTUS_GENERATE_MIGRATION_KEYS " %s %s %s", euca_base ? euca_base : "", euca_base ? euca_base : "", host, credentials,
              (restart == TRUE) ? "restart" : "");
     LOGDEBUG("[%s] migration key-generator path: '%s'\n", instanceId, generate_keys);
@@ -670,7 +667,7 @@ static int doMigrateInstances(struct nc_state_t *nc, ncMetadata * pMeta, ncInsta
         if (instances[inst_idx]) {
             ncInstance *instance_idx = instances[inst_idx];
             LOGDEBUG("[%s] proposed migration action '%s' (%s > %s) [creds=%s]\n", SP(instance_idx->instanceId), SP(action), SP(instance_idx->migration_src),
-                     SP(instance_idx->migration_dst), (instance_idx->migration_credentials == NULL) ? "unavailable" : "present");
+                     SP(instance_idx->migration_dst), (instance_idx->migration_credentials == NULL) ? "UNSET" : "present");
         } else {
             pMeta->replyString = strdup("internal error (instance count mismatch)");
             LOGERROR("Mismatch between migration instance count (%d) and length of instance list\n", instancesLen);
@@ -678,7 +675,7 @@ static int doMigrateInstances(struct nc_state_t *nc, ncMetadata * pMeta, ncInsta
         }
     }
 
-    // FIXME: Optimize the location of this loop, placing it inside various conditionals below?
+    // TO-DO: Optimize the location of this loop, placing it inside various conditionals below?
     for (int inst_idx = 0; inst_idx < instancesLen; inst_idx++) {
         ncInstance *instance_req = instances[inst_idx];
         char *sourceNodeName = instance_req->migration_src;
@@ -715,7 +712,7 @@ static int doMigrateInstances(struct nc_state_t *nc, ncMetadata * pMeta, ncInsta
 
                 // Establish migration-credential keys if this is the first instance preparation for this host.
                 LOGINFO("[%s] migration source preparing %s > %s [creds=%s]\n", SP(instance->instanceId), SP(instance->migration_src), SP(instance->migration_dst),
-                        (instance->migration_credentials == NULL) ? "unavailable" : "present");
+                        (instance->migration_credentials == NULL) ? "UNSET" : "present");
                 if (!credentials_prepared) {
                     if (generate_migration_keys(sourceNodeName, credentials, TRUE, instance) != EUCA_OK) {
                         pMeta->replyString = strdup("internal error (migration credentials generation failed)");
@@ -747,7 +744,7 @@ static int doMigrateInstances(struct nc_state_t *nc, ncMetadata * pMeta, ncInsta
                 instance->migration_state = MIGRATION_IN_PROGRESS;
                 outgoing_migrations_in_progress++;
                 LOGINFO("[%s] migration source initiating %s > %s [creds=%s] (1 of %d active outgoing migrations)\n", instance->instanceId, instance->migration_src,
-                        instance->migration_dst, (instance->migration_credentials == NULL) ? "unavailable" : "present", outgoing_migrations_in_progress);
+                        instance->migration_dst, (instance->migration_credentials == NULL) ? "UNSET" : "present", outgoing_migrations_in_progress);
                 save_instance_struct(instance);
                 copy_instances();
                 sem_v(inst_sem);
@@ -820,23 +817,12 @@ static int doMigrateInstances(struct nc_state_t *nc, ncMetadata * pMeta, ncInsta
 
             // Establish migration-credential keys.
             LOGINFO("[%s] migration destination preparing %s > %s [creds=%s]\n", instance->instanceId, SP(instance->migration_src), SP(instance->migration_dst),
-                    (instance->migration_credentials == NULL) ? "unavailable" : "present");
+                    (instance->migration_credentials == NULL) ? "UNSET" : "present");
             // First, call config-file modification script to authorize source node.
             LOGDEBUG("[%s] authorizing migration source node %s\n", instance->instanceId, instance->migration_src);
             if (authorize_migration_keys("-a", instance->migration_src, instance->migration_credentials, instance, TRUE) != EUCA_OK) {
                 goto failed_dest;
             }
-
-            /*
-             * Uncomment this section to force a preparation failure on the destination.
-             * (This is intended for development/testing only!)
-             */
-            /*
-               LOGERROR("[%s] FORCING FAILURE!\n", instance->instanceId);
-               sleep(10);
-               goto failed_dest;
-             */
-
             // Then, generate keys and restart libvirtd.
             if (generate_migration_keys(instance->migration_dst, instance->migration_credentials, TRUE, instance) != EUCA_OK) {
                 goto failed_dest;
@@ -972,7 +958,6 @@ unroll:
             sem_v(inst_sem);
             if (error) {
                 if (error == EUCA_DUPLICATE_ERROR) {
-                    // FIXME: Ensure deletion after migration, or replace (remove and re-add)?
                     LOGINFO("[%s] instance struct already exists (from previous migration?), deleting and re-adding...\n", instance->instanceId);
                     error = remove_instance(&global_instances, instance);
                     if (error) {
@@ -1006,7 +991,7 @@ failed_dest:
                 copy_instances();
             }
             // If no remaining incoming or pending migrations, deauthorize all clients.
-            // FIXME: Consolidate with similar sequence in handlers.c into a utility function?
+            // TO-DO: Consolidate with similar sequence in handlers.c into a utility function?
             if (!incoming_migrations_in_progress) {
                 int incoming_migrations_pending = 0;
                 LOGINFO("[%s] no remaining active incoming migrations -- checking to see if there are any pending migrations\n", instance->instanceId);
@@ -1018,7 +1003,7 @@ failed_dest:
                         incoming_migrations_pending++;
                     }
                 }
-                // FIXME: Add belt and suspenders?
+                // TO-DO: Add belt and suspenders?
                 if (!incoming_migrations_pending) {
                     LOGINFO("[%s] no remaining incoming or pending migrations -- deauthorizing all migration client keys\n", instance->instanceId);
                     authorize_migration_keys("-D -r", NULL, NULL, NULL, FALSE);

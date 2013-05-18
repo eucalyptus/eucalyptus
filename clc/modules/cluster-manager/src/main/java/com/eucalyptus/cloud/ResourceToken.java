@@ -85,6 +85,7 @@ import com.eucalyptus.network.ExtantNetwork;
 import com.eucalyptus.network.PrivateNetworkIndex;
 import com.eucalyptus.util.OwnerFullName;
 import com.eucalyptus.vm.VmInstance;
+import com.eucalyptus.vmtypes.VmTypes;
 import com.google.common.collect.Maps;
 
 public class ResourceToken implements VmInstanceMetadata, Comparable<ResourceToken> {
@@ -112,6 +113,7 @@ public class ResourceToken implements VmInstanceMetadata, Comparable<ResourceTok
   private VmInstance          vmInst;
   private final Cluster       cluster;
   private boolean             aborted;
+  private final boolean       unorderedType;
   
   public ResourceToken( final Allocation allocInfo, final int resourceAllocationSequenceNumber, final int launchIndex ) {
     this.allocation = allocInfo;
@@ -125,6 +127,7 @@ public class ResourceToken implements VmInstanceMetadata, Comparable<ResourceTok
     this.creationTime = Calendar.getInstance( ).getTime( );
     ServiceConfiguration config = Topology.lookup( ClusterController.class, this.getAllocationInfo( ).getPartition( ) );
     this.cluster = Clusters.lookup( config );
+    this.unorderedType = VmTypes.isUnorderedType( allocInfo.getVmType( ) );
   }
   
   public Allocation getAllocationInfo( ) {
@@ -334,6 +337,14 @@ public class ResourceToken implements VmInstanceMetadata, Comparable<ResourceTok
 
   public void setEphemeralDisks(Map<String, String> ephemeralDisks) {
 	this.ephemeralDisks = ephemeralDisks;
+  }
+
+  public boolean isUnorderedType( ) {
+    return this.unorderedType;
+  }
+
+  public Cluster getCluster( ) {
+    return this.cluster;
   }
 
 }
