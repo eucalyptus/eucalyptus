@@ -95,6 +95,7 @@
 #include <curl/curl.h>
 #include <pthread.h>
 #include <regex.h>
+#include <arpa/inet.h>
 
 #include "eucalyptus.h"
 #include "misc.h"
@@ -149,6 +150,8 @@
 static boolean initialized = FALSE;    //!< Boolean to make sure we have initialized this module
 static char sCertFileName[FILENAME] = "";   //!< Certificate file name
 static char sPrivKeyFileName[FILENAME] = "";    //!< Private key file name
+static char sCloudCertFileName[FILENAME] = "";    //!< Cloud public cert file name
+
 static char hex_digits[16] = { '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'a', 'b', 'c', 'd', 'e', 'f' };
 
 static regex_t *uri_regex = NULL;
@@ -229,12 +232,20 @@ int euca_init_cert(void)
 
     snprintf(sCertFileName, FILENAME, EUCALYPTUS_KEYS_DIR "/node-cert.pem", euca_home);
     snprintf(sPrivKeyFileName, FILENAME, EUCALYPTUS_KEYS_DIR "/node-pk.pem", euca_home);
+    snprintf(sCloudCertFileName, FILENAME, EUCALYPTUS_KEYS_DIR "/cloud-cert.pem", euca_home);
 
     CHK_FILE(sCertFileName);
     CHK_FILE(sPrivKeyFileName);
+    CHK_FILE(sCloudCertFileName);
 
     // initialize OpenSSL, must ONLY be called once. Not reentrant
     SSL_load_error_strings();
+
+    //Not sure if these are necessary...likely not
+    OpenSSL_add_all_algorithms();
+    ERR_load_BIO_strings();
+    ERR_load_crypto_strings();
+
     if (!SSL_library_init()) {
         LOGERROR("ssl library init failed\n");
         initialized = FALSE;
@@ -249,6 +260,283 @@ int euca_init_cert(void)
 #undef ERR_MSG
 #undef OK_MSG
 #undef CHK_FILE
+}
+
+//! Decrypt the buffer using the private key in the pk_file. in_buffer must be a null-terminated string
+//! Result is placed in *out_buffer on the heap and caller is responsible for freeing.
+//!
+//! @param[in] in_buffer - String that is base64 encoded and encrypted cipher-text
+//! @param[in] pk_file - The private key file that should be used to decrypt. Must be a RSA PKCS1 1024,2048, or 4096 bit key in PEM format
+//! @param[out] out_buffer - Pointer to pointer where the result will be placed. Caller is responsible for freeing
+//!
+//! @return EUCA_OK if operation was successful and *out_buffer has a value. EUCA_ERROR otherwise.
+//!
+//! @pre in_buffer contains a valid null-terminated string that is a Base-64 encoded cipher-text from an asymmetric encryption using the public key
+//!		That corresponds to the private key in pk_file
+//!
+//! @post *out_buffer points to the base64 decoded, decrypted string in plain text
+//!
+int decrypt_string(char *in_buffer, char *pk_file, char **out_buffer)
+{
+	FILE *PKFP = NULL;
+	RSA *pr = NULL;
+	char *dec64 = NULL;
+	int rc = -1;
+	int ret = -1;
+	int in_buffer_str_size = -1;
+
+	// Make sure we have valid parameters
+	if ((in_buffer == NULL) || (pk_file == NULL) || (*pk_file == '\0') || (out_buffer == NULL)) {
+		LOGERROR("Cannot decrypt buffer: invalid parameters\n");
+		ret = EUCA_ERROR;
+		goto cleanup;
+	}
+
+	in_buffer_str_size = (int)strlen(in_buffer); //! the length of the string, not including the null-terminator
+
+	// Open the private key file in read mode
+	if ((PKFP = fopen(pk_file, "r")) == NULL) {
+		LOGERROR("Cannot open key file: open failed on %s\n", pk_file);
+		ret = EUCA_ERROR;
+		goto cleanup;
+	}
+
+
+	// Get the key
+	if (PEM_read_RSAPrivateKey(PKFP, &pr, NULL, NULL) == NULL) {
+		LOGERROR("Private key file read failed\n");
+		fclose(PKFP);
+		PKFP = NULL;
+		ret = EUCA_ERROR;
+		goto cleanup;
+	}
+
+	// No longer need the file handler
+	fclose(PKFP);
+	PKFP = NULL;
+
+	//Base64 decode the string, null terminator deducted from buffer size
+	dec64 = base64_dec((unsigned char *)in_buffer, in_buffer_str_size);
+	if(dec64 == NULL) {
+		LOGERROR("Base64 decrypt failed\n");
+		ret = EUCA_ERROR;
+		goto cleanup;
+	}
+
+	//Add the extra to ensure allocation for null-char
+	if ((*out_buffer = EUCA_ZALLOC(in_buffer_str_size + 1, sizeof(char))) == NULL) {
+		printf("Calloc failed\n");
+		ret = EUCA_ERROR;
+		goto cleanup;
+	} else {
+		bzero(*out_buffer, in_buffer_str_size + 1);
+	}
+
+	int out_size = RSA_private_decrypt(RSA_size(pr), ((unsigned char *)dec64), ((unsigned char *)*out_buffer), pr, RSA_PKCS1_PADDING);
+
+	if (out_size == -1) {
+		LOGERROR("private decrypt failed\n");
+		ret = EUCA_ERROR;
+		goto cleanup;
+	}
+
+	ret = EUCA_OK;
+
+cleanup:
+	if(dec64 != NULL) {
+		EUCA_FREE(dec64);
+	}
+
+	if(ret == EUCA_ERROR && *out_buffer != NULL) {
+		EUCA_FREE(*out_buffer);
+	}
+
+	if(pr != NULL) {
+		RSA_free(pr);
+	}
+
+	return ret;
+}
+
+
+//! Encrypts and base64 encodes the buffer using the public key in the cert_file certificate.
+//! in_buffer must be a null-terminated string
+//! Result is placed in *out_buffer on the heap and caller is responsible for freeing.
+//!
+//! @param[in] in_buffer - String that is null-terminated and <= block size used for key (typically 512 bytes)
+//! @param[in] cert_file - The x590 cert file that should be used to decrypt. Must be a RSA PKCS1 1024,2048, or 4096 bit public key in PEM format cert
+//! @param[out] out_buffer - Pointer to pointer where the result will be placed. Caller is responsible for freeing
+//!
+//! @return EUCA_OK if operation was successful and *out_buffer has a value. EUCA_ERROR otherwise.
+//!
+int encrypt_string(char *in_buffer, char *cert_file, char **out_buffer)
+{
+	char *enc64 = NULL;
+	int rc = -1;
+	RSA *pr = NULL;
+	BIO *cert_bio = NULL;
+	BIO *out_bio = NULL;
+	X509 *cert = NULL;
+	int key_bits = -1;
+	int ret = -1;
+	int in_buffer_str_size = -1;
+	int encrypt_size = -1;
+
+	// Make sure we have valid parameters
+	if ((in_buffer == NULL) || (cert_file == NULL) || (*cert_file == '\0') || (out_buffer == NULL)) {
+		LOGERROR("Invalid input\n");
+		ret = EUCA_ERROR;
+		goto cleanup;
+	}
+
+	in_buffer_str_size = (int)strlen(in_buffer);
+
+	// create a BIO buffer for the cert contents
+	cert_bio = BIO_new(BIO_s_file());
+	out_bio = BIO_new(BIO_s_file());
+	out_bio = BIO_new_fp(stdout, BIO_NOCLOSE);
+
+	//Read cert
+	rc = BIO_read_filename(cert_bio, cert_file);
+	if(!rc) {
+		LOGERROR("read file return error\n");
+		ret = EUCA_ERROR;
+		goto cleanup;
+	}
+
+	if(! (cert = PEM_read_bio_X509(cert_bio, NULL, 0, NULL))) {
+		LOGERROR("Error loading cert into memory..\n");
+		ret = EUCA_ERROR;
+		goto cleanup;
+	}
+
+	//Get the public key and populate the RSA struct
+	EVP_PKEY *pubkey = X509_get_pubkey(cert);
+	if(pubkey == NULL) {
+		LOGERROR("ERROR getting pub key\n");
+		ret = EUCA_ERROR;
+		goto cleanup;
+	} else {
+		switch(pubkey->type) {
+		case EVP_PKEY_RSA:
+			key_bits = EVP_PKEY_bits(pubkey);
+			if(key_bits != 1024 && key_bits != 2048 && key_bits != 4096) {
+				LOGERROR("Invalid RSA key length found in %s. Requires 1024, 2048, or 4096. Found %d\n", cert_file, key_bits);
+				ret = EUCA_ERROR;
+				goto cleanup;
+			}
+			break;
+		case EVP_PKEY_DSA:
+			LOGERROR("Invalid DSA key found. Only RSA supported.\n");
+			ret = EUCA_ERROR;
+			goto cleanup;
+		default:
+			LOGERROR("Unsupported %d bit non-RSA/DSA Key found", EVP_PKEY_bits(pubkey));
+			ret = EUCA_ERROR;
+			goto cleanup;
+		}
+	}
+
+	pr = EVP_PKEY_get1_RSA(pubkey);
+	if(pr == NULL) {
+		LOGERROR("Could not get public RSA key for encrypting\n");
+		ret = EUCA_ERROR;
+		goto cleanup;
+	}
+
+	encrypt_size = RSA_size(pr);
+	if(encrypt_size <= 0) {
+		LOGERROR("Failed to read expected encryption size from RSA based on key\n");
+		ret = EUCA_ERROR;
+		goto cleanup;
+	}
+
+	if ((enc64 = EUCA_ZALLOC(encrypt_size + 1, sizeof(char))) == NULL) {
+		LOGERROR("Failed mem alloc end64\n");
+		ret = EUCA_ERROR;
+		goto cleanup;
+	}
+
+	rc = RSA_public_encrypt(in_buffer_str_size, ((unsigned char *)in_buffer), ((unsigned char *)enc64), pr, RSA_PKCS1_PADDING);
+	if (rc == -1) {
+		LOGERROR("Failed encrypt op\n");
+		ret = EUCA_ERROR;
+		goto cleanup;
+	}
+
+	if ((*out_buffer = base64_enc((unsigned char*)enc64, encrypt_size)) == NULL) {
+		LOGERROR("Failed b64 decode\n");
+		ret = EUCA_ERROR;
+		goto cleanup;
+	}
+
+	ret = EUCA_OK;
+
+cleanup:
+	if(pr != NULL) {
+		RSA_free(pr);
+	}
+
+	if(cert_bio != NULL) {
+		BIO_free(cert_bio);
+	}
+
+	if(enc64 != NULL){
+		EUCA_FREE(enc64);
+	}
+
+	if(cert != NULL) {
+		X509_free(cert);
+	}
+
+	if(pr != NULL) {
+		RSA_free(pr);
+	}
+
+	return ret;
+
+}
+
+
+//! Encrypts and base64 encodes the buffer using the public key in the cloud certificate.
+//! Result is placed in *out_buffer on the heap and caller is responsible for freeing.
+//!
+//! @param[in] in_buffer - String that is null-terminated and <= block size used for key (typically 512 bytes)
+//! @param[out] out_buffer - Pointer to pointer where the result will be placed. Caller is responsible for freeing
+//!
+//! @return EUCA_OK if operation was successful and *out_buffer has a value. EUCA_ERROR otherwise.
+//!
+int encrypt_string_with_cloud(char *in_str, char **out_buffer) {
+	return encrypt_string(in_str, sCloudCertFileName, out_buffer);
+}
+
+//! Encrypts and base64 encodes the buffer using the public key in the node certificate
+//! Result is placed in *out_buffer on the heap and caller is responsible for freeing.
+//!
+//! @param[in] in_buffer - String that is null-terminated and <= block size used for key (typically 512 bytes)
+//! @param[out] out_buffer - Pointer to pointer where the result will be placed. Caller is responsible for freeing
+//!
+//! @return EUCA_OK if operation was successful and *out_buffer has a value. EUCA_ERROR otherwise.
+//!
+int encrypt_string_with_node(char *in_str, char **out_buffer) {
+	return encrypt_string(in_str, sCertFileName, out_buffer);
+}
+
+
+//! Decrypt the buffer using the private key in the node private key file. in_buffer must be a null-terminated string
+//! Result is placed in *out_buffer on the heap and caller is responsible for freeing.
+//!
+//! @param[in] in_buffer - String that is base64 encoded and encrypted cipher-text
+//! @param[out] out_buffer - Pointer to pointer where the result will be placed. Caller is responsible for freeing
+//!
+//! @return EUCA_OK if operation was successful and *out_buffer has a value. EUCA_ERROR otherwise.
+//!
+//! @pre in_buffer contains a valid null-terminated string that is a Base-64 encoded cipher-text from an asymmetric encryption using the node cert
+//!
+//! @post *out_buffer points to the base64 decoded, decrypted string in plain text
+//!
+int decrypt_string_with_node(char *in_str, char **out_buffer) {
+	return decrypt_string(in_str, sPrivKeyFileName, out_buffer);
 }
 
 //!
@@ -1533,7 +1821,7 @@ void print_key_value_pair_array(const struct key_value_pair_array *kv_array)
 //!
 int main(int argc, char **argv)
 {
-#define TEST_COUNT     100000
+#define TEST_COUNT     0
 #define REGEX_COUNT         5
 #define URL_COUNT          20
 
@@ -1593,7 +1881,8 @@ int main(int argc, char **argv)
     } else {
         test_count = TEST_COUNT;
     }
-
+    printf("Initializing certs\n");
+    euca_init_cert();
     printf("Running auth tests for %d iterations.\n", test_count);
 
     for (; test_count > 0; test_count--) {
@@ -1663,6 +1952,62 @@ int main(int argc, char **argv)
         }
         curl_slist_free_all(list);
         list = NULL;
+    }
+
+    //Test encrypt/decrypt buffers!
+    char *testbuffer = "testing123";
+    //This is a good test token value because it with b64 decode to have nulls, so it tests any bad strlen() calls
+    char *test_token = "fJJ5MnKbxOMItSLBdPlRUJQH6iJTgMQFXxf3/B9xvVfrNACNM9Fm41Ya1o5bdhLni+xG7Zj/z8kYcDp0Uwp2QS8e2qVPaeRoHQRf4PWvPuuT7SibmEVfKCH1Wh+L6Ja99HhgQtebVd4UEGLmaMVGshyANW0Rniz95iPwqxbXVpXbPV+2s865A1JjREQEnCm9LInJ/vpq5/CD+Em3jnASSQ97Nd0vR0G7AGTIEdTvA83jXVk6pSszl2FQjS2LGJ1+D3nSxZBTUMJxZ2ebL3v7E6eEsY7p8GqqWlxa27a/Ry5aWZttSPGWprBL1quK3dbo9MadQanVgwiW5VGyt1OifQ==";
+    char *out_buffer = NULL;
+    char *out_buffer2 = NULL;
+
+    printf("Encryption test with %s cert\n", sCertFileName);
+    printf("\tEncrypting test buffer: %s\n",testbuffer);
+    int rc = encrypt_string(testbuffer, sCertFileName, &out_buffer);
+    if(rc != EUCA_OK || out_buffer == NULL) {
+    	printf("\tEncrypt buffer failed!\n");
+    	return 1;
+    } else {
+    	printf("\tEncrypting finished\n");
+    }
+
+    printf("\tPlaintext: %s\n\tCiphertext:%s\n", testbuffer, out_buffer);
+    printf("Decrypting ciphertext wth private key %s\n", sPrivKeyFileName);
+    rc = decrypt_string(out_buffer, sPrivKeyFileName,&out_buffer2);
+    if(rc != EUCA_OK) {
+    	printf("\tDecryption failed!\n");
+    	return 1;
+    } else {
+    	printf("\tDecrypting finished\n");
+    }
+
+    printf("\tSource plaintext: %s\n\tCiphertext: %s\n\tDecrypted plaintext: %s\n", testbuffer, out_buffer, out_buffer2);
+    EUCA_FREE(out_buffer);
+    EUCA_FREE(out_buffer2);
+
+    printf("Testing token decryption with node PK using test token: %s\n",test_token);
+    rc = decrypt_string_with_node(test_token, &out_buffer);
+    if(rc != EUCA_OK) {
+    	printf("\tFailed decrypt of token\n");
+    } else {
+    	printf("\tDecrypt token succeeded. Decrypted value: %s\n", out_buffer);
+    	EUCA_FREE(out_buffer);
+    }
+
+    printf("Testing cloud-cert encryption\n");
+    rc = encrypt_string_with_cloud(testbuffer, &out_buffer);
+    if(rc != EUCA_OK) {
+        	printf("\tFailed encrypt with cloud\n");
+    } else {
+    	printf("\tEncrypt succeeded.\nEncrypted value of size %d: %s\n", (int)strlen(out_buffer), out_buffer);
+    }
+
+    printf("Testing decrypt with cloud pk if found %s\n",out_buffer);
+    rc = decrypt_string(out_buffer, "/opt/eucalyptus/var/lib/eucalyptus/keys/cloud-pk.pem", &out_buffer2);
+    if(rc != EUCA_OK) {
+    	printf("\tFailed decrypt with cloud pk\n");
+    } else {
+    	printf("\tDecrypt succeeded.\n\tDecrypted value of size %d: %s\n", (int)strlen(out_buffer2), out_buffer2);
     }
 
     return (0);

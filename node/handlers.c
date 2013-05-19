@@ -332,20 +332,25 @@ int authorize_migration_keys(char *options, char *host, char *credentials, ncIns
 //!
 //! Copies the url string of the ENABLED service of the requested type into dest_buffer.
 //! dest_buffer MUST be the same size as the services uri array length, 512.
-//! NULL if none exists
 //!
 //! @param[in] service_type
 //! @param[in] nc
 //! @param[in] dest_buffer
-//!
+//! @return EUCA_OK on success, EUCA_ERROR on failure.
 //! @pre
 //!
 //! @post
 //!
-void get_service_url(const char *service_type, struct nc_state_t *nc, char *dest_buffer)
+int get_service_url(const char *service_type, struct nc_state_t *nc, char *dest_buffer)
 {
     int i = 0, j = 0;
     int found = 0;
+
+    if(service_type == NULL || nc == NULL || dest_buffer == NULL) {
+    	LOGERROR("Invalid input parameters. At least one is NULL.\n");
+    	return EUCA_ERROR;
+    }
+
     sem_p(service_state_sem);
 
     for (i = 0; i < 16; i++) {
@@ -361,9 +366,11 @@ void get_service_url(const char *service_type, struct nc_state_t *nc, char *dest
 
     if (found) {
         LOGTRACE("Found enabled service URI for service type %s as %s\n", service_type, dest_buffer);
+        return EUCA_OK;
     } else {
         dest_buffer[0] = '\0';         //Ensure 0 length string
         LOGTRACE("No enabled service found for service type %s\n", service_type);
+        return EUCA_ERROR;
     }
 }
 
@@ -445,6 +452,7 @@ static void updateServiceStateInfo(ncMetadata * pMeta, boolean authoritative)
 
         // store information from CLC that needs to be kept up-to-date in the NC
         sem_p(service_state_sem);
+
         if (pMeta->epoch >= nc_state.ncStatus.localEpoch || // we have updates ('=' is there in case CC does not bump epoch numbers)
             authoritative // trust the authoritative requests and always take their services info, even if epoch goes backward
             ) {
@@ -2964,6 +2972,7 @@ int doDescribeResource(ncMetadata * pMeta, char *resourceType, ncResource ** out
         return (EUCA_ERROR);
 
     updateServiceStateInfo(pMeta, TRUE);
+
     if (nc_state.H->doDescribeResource)
         ret = nc_state.H->doDescribeResource(&nc_state, pMeta, resourceType, outRes);
     else

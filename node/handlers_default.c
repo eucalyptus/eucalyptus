@@ -997,10 +997,8 @@ static int doAttachVolume(struct nc_state_t *nc, ncMetadata * pMeta, char *insta
     }
     //Do the ebs connect.
     LOGTRACE("[%s][%s] Connecting EBS volume to local host\n", instanceId, volumeId);
-    get_service_url("storage", nc, scUrl);
-
-    if (strlen(scUrl) == 0) {
-        LOGERROR("[%s][%s] Failed to lookup enabled Storage Controller. Cannot attach volume %s\n", instanceId, volumeId, scUrl);
+    if(get_service_url("storage", nc, scUrl) != EUCA_OK || strlen(scUrl) == 0) {
+        LOGERROR("[%s][%s] Failed to lookup enabled Storage Controller. Cannot attach volume: %s\n", instanceId, volumeId, volumeId);
         have_remote_device = 0;
         ret = EUCA_ERROR;
         goto release;
@@ -1008,8 +1006,7 @@ static int doAttachVolume(struct nc_state_t *nc, ncMetadata * pMeta, char *insta
         LOGTRACE("[%s][%s] Using SC URL: %s\n", instanceId, volumeId, scUrl);
     }
 
-    int rc = connect_ebs_volume(scUrl, attachmentToken, nc->config_use_ws_sec, nc->config_sc_policy_file, nc->ip, nc->iqn, &remoteDevStr, &vol_data);
-    if (rc) {
+    if(connect_ebs_volume(scUrl, attachmentToken, nc->config_use_ws_sec, nc->config_sc_policy_file, nc->ip, nc->iqn, &remoteDevStr, &vol_data) != EUCA_OK) {
         LOGERROR("Error connecting ebs volume %s\n", attachmentToken);
         have_remote_device = 0;
         ret = EUCA_ERROR;
@@ -1151,8 +1148,7 @@ release:
     if (ret != EUCA_OK && have_remote_device) {
         LOGDEBUG("[%s][%s] attempting to disconnect iscsi target due to attachment failure\n", instanceId, volumeId);
         if (vol_data != NULL && vol_data->connect_string[0] != '\0') {
-            rc = disconnect_ebs_volume(scUrl, nc->config_use_ws_sec, nc->config_sc_policy_file, attachmentToken, vol_data->connect_string, nc->ip, nc->iqn);
-            if (rc) {
+            if(disconnect_ebs_volume(scUrl, nc->config_use_ws_sec, nc->config_sc_policy_file, attachmentToken, vol_data->connect_string, nc->ip, nc->iqn) != EUCA_OK) {
                 LOGERROR("[%s][%s] Error disconnecting ebs volume on error rollback.\n", instanceId, volumeId);
             }
         }
@@ -1363,13 +1359,18 @@ release:
     if (have_remote_device) {
         //Do the ebs disconnect.
         LOGTRACE("[%s][%s] Disconnecting EBS volume to local host\n", instanceId, volumeId);
-        get_service_url("storage", nc, scUrl);
-        LOGTRACE("[%s][%s] Using SC Url: %s\n", instanceId, volumeId, scUrl);
+        if(get_service_url("storage", nc, scUrl) != EUCA_OK || strlen(scUrl) == 0) {
+        	LOGERROR("Could not find SC URL for making unexport call.\n");
+        	ret = EUCA_ERROR;
+        } else {
+        	LOGTRACE("[%s][%s] Using SC Url: %s\n", instanceId, volumeId, scUrl);
 
-        if (disconnect_ebs_volume(scUrl, nc->config_use_ws_sec, nc->config_sc_policy_file, attachmentToken, volume->connectionString, nc->ip, nc->iqn) != 0) {
-            LOGERROR("[%s][%s] failed to disconnect iscsi target\n", instanceId, volumeId);
-            if (!force)
-                ret = EUCA_ERROR;
+        	if (disconnect_ebs_volume(scUrl, nc->config_use_ws_sec, nc->config_sc_policy_file, attachmentToken, volume->connectionString, nc->ip, nc->iqn) != EUCA_OK) {
+        		LOGERROR("[%s][%s] failed to disconnect iscsi target\n", instanceId, volumeId);
+        		if (!force)
+        			ret = EUCA_ERROR;
+
+        	}
         }
     }
 

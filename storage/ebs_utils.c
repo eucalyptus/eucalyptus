@@ -82,6 +82,7 @@
 #include <eucalyptus.h>
 #include <iscsi.h>
 #include <log.h>
+#include <euca_auth.h>
 #include "storage-controller.h"
 #include "ebs_utils.h"
 
@@ -142,8 +143,9 @@ static sem *vol_sem = NULL;            //!< Semaphore to protect volume operatio
  |                                                                            |
 \*----------------------------------------------------------------------------*/
 
-static int cleanup_volume_attachment(char *sc_url, int use_ws_sec, char *ws_sec_policy_file, ebs_volume_data * vol_data, char *connect_string, char *local_ip, char *local_iqn,
-                                     int norescan);
+static int cleanup_volume_attachment(char *sc_url, int use_ws_sec, char *ws_sec_policy_file, ebs_volume_data * vol_data, char *connect_string, char *local_ip, char *local_iqn, int do_rescan);
+static int redact_token(char *src_token, char *redacted); //! Returns a redacted version of the token (eg. 'advaoiaavae' -> '*****avae'
+static int re_encrypt_token(char *in_token, char **out_token); //! Decrypts token with NC cert and re-encrypts with the cloud public cert
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |
@@ -171,20 +173,20 @@ static int cleanup_volume_attachment(char *sc_url, int use_ws_sec, char *ws_sec_
 //!
 int init_ebs_utils(void)
 {
-    LOGINFO("Initializing EBS utils\n");
+    LOGDEBUG("Initializing EBS utils\n");
     if (vol_sem == NULL) {
         vol_sem = sem_alloc(1, IPC_MUTEX_SEMAPHORE);
     }
-    LOGINFO("Completed EBS util initialization\n");
+    LOGDEBUG("Completed EBS util initialization\n");
     return EUCA_OK;
 }
 
 //!
-//! Gets the local device for the volume (i.e. /dev/sdf)
+//! Gets the local device for the volume connection string
 //!
 //! @param[in] connection_string
 //!
-//! @return
+//! @return the device name string for the local device associated with connection_string (e.g. '/dev/sdd')
 //!
 //! @pre
 //!
@@ -194,60 +196,13 @@ int init_ebs_utils(void)
 //!
 char *get_volume_local_device(const char *connection_string)
 {
+	if(connection_string == NULL) {
+		LOGERROR("Cannot get local device for NULL connection string\n");
+		return NULL;
+	}
+
     // Invoke the iscsi stuff.
     return get_iscsi_target(connection_string);
-}
-
-//!
-//! Replaces "sc://" with the actual url of the storage service. Caller must provide the sc-url
-//!
-//! @param[in] volume_string containing the encoded volume information
-//! @param[in] scUrl
-//! @param[in] dest_string place to write modified string
-//!
-//! @return ok|fail
-//!
-//! @pre
-//!
-//! @post
-//!
-//! @note
-//!
-int replace_sc_url(const char *volume_string, const char *scUrl, char *restrict dest_string)
-{
-    int prefix_length = strlen(VOLUME_STRING_PREFIX);
-    char *vol_prefix = NULL;
-    const char *data_start = NULL;
-
-    //Check if this has been done already
-    if ((vol_prefix = EUCA_ZALLOC((prefix_length + 1), sizeof(char))) == NULL) {
-        LOGERROR("Could not allocate memory!\n");
-        return EUCA_ERROR;
-    }
-
-    euca_strncpy(vol_prefix, volume_string, (prefix_length + 1));
-    if (strcmp(vol_prefix, VOLUME_STRING_PREFIX)) {
-        LOGWARN("Cannot insert sc url, already found %s\n", volume_string);
-        EUCA_FREE(vol_prefix);
-        return EUCA_ERROR;
-    }
-    // We're done with the prefix...
-    EUCA_FREE(vol_prefix);
-
-    // Go past the sc:// prefix
-    data_start = volume_string + (sizeof(char) * prefix_length);
-
-    // Prepend the SC URL to the remote device string
-    if (data_start > 0) {
-        LOGDEBUG("Inserting the SC URL to volume string: %s, %s, using token %s \n", volume_string, scUrl, data_start);
-        snprintf(dest_string, EUCA_MAX_PATH, "%s/%s", scUrl, data_start);
-        LOGDEBUG("Adjusted remote dev string: %s\n", dest_string);
-    } else {
-        LOGERROR("Error parsing volume string: %s\n", volume_string);
-        return EUCA_ERROR;
-    }
-
-    return EUCA_OK;
 }
 
 //!
@@ -271,37 +226,41 @@ int replace_sc_url(const char *volume_string, const char *scUrl, char *restrict 
 //!
 int deserialize_volume(char *volume_string, ebs_volume_data ** dest)
 {
-    if (volume_string == NULL) {
+    if (volume_string == NULL || strlen(volume_string) <= strlen(VOLUME_STRING_PREFIX)) {
         *dest = NULL;
         return EUCA_ERROR;
     }
-    //Create working copy
-    char working_string[EUCA_MAX_PATH];
-    euca_strncpy(working_string, volume_string, EUCA_MAX_PATH);
 
     ebs_volume_data *vol_data = EUCA_ZALLOC(1, sizeof(ebs_volume_data));
-    if (!vol_data) {
+    if (vol_data == NULL) {
         LOGERROR("Cannot allocate memory!\n");
         *dest = NULL;
         return EUCA_ERROR;
     }
 
-    char *volume_start = strrchr(volume_string, '/') + sizeof(char);    //Go 1 past so token_start points to beginning of token
+    char *volume_start = volume_string + strlen(VOLUME_STRING_PREFIX); //skip the prefix.
     if(volume_start == NULL) {
     	LOGERROR("Failed parsing token string: %s\n",volume_string);
+    	EUCA_FREE(vol_data);
     	return EUCA_ERROR;
     }
-    char *token_start = strchr(volume_start, ',') + sizeof(char);   //Go 1 past the comma delimiter
+    char *token_start = strchr(volume_start, ',');
     if(token_start == NULL) {
     	LOGERROR("Failed parsing token string: %s\n",volume_string);
+    	EUCA_FREE(vol_data);
+    	return EUCA_ERROR;
+    }
+    token_start += sizeof(char);   //Go 1 past the comma delimiter
+
+    if(euca_strncpy(vol_data->volumeId, volume_start, token_start - volume_start) == NULL) {
+    	EUCA_FREE(vol_data);
     	return EUCA_ERROR;
     }
 
-    euca_strncpy(vol_data->volumeId, volume_start, token_start - volume_start);
-    LOGTRACE("Parsed volume: %s\n", vol_data->volumeId);
-
-    euca_strncpy(vol_data->token, token_start, strlen(token_start) + 1);
-    LOGTRACE("Parse token: %s\n", vol_data->token);
+    if(euca_strncpy(vol_data->token, token_start, strlen(token_start) + 1) == NULL) {
+    	EUCA_FREE(vol_data);
+    	return EUCA_ERROR;
+    }
 
     *dest = vol_data;
     return EUCA_OK;
@@ -324,20 +283,27 @@ int deserialize_volume(char *volume_string, ebs_volume_data ** dest)
 //!
 int serialize_volume(ebs_volume_data * vol_data, char **dest)
 {
+	int out_size = -1;
+    char *working_string = NULL;
+    int working_size = -1;
+
     if (vol_data == NULL) {
         LOGTRACE("Cannot serialize a NULL to volume string\n");
         return EUCA_ERROR;
     }
 
-    char *working_string = NULL;
-    int working_size = strlen(vol_data->token) + 1 + strlen(vol_data->volumeId) + 1;
+    working_size = strlen(vol_data->token) + 1 + strlen(vol_data->volumeId) + 1;
     working_string = EUCA_ZALLOC(1, working_size);
     if (working_string == NULL) {
         LOGERROR("Cannot allocate memory!\n");
         return EUCA_ERROR;
     }
     //Ensure / at end of scURL
-    snprintf(working_string, working_size, "%s%s,%s", VOLUME_STRING_PREFIX, vol_data->volumeId, vol_data->token);
+    out_size = snprintf(working_string, working_size, "%s%s,%s", VOLUME_STRING_PREFIX, vol_data->volumeId, vol_data->token);
+    if(out_size <= 0 || out_size > working_size) {
+    	EUCA_FREE(working_string);
+    	return EUCA_ERROR;
+    }
 
     LOGTRACE("Serialized volume struct into %s\n", working_string);
     *dest = working_string;
@@ -345,18 +311,18 @@ int serialize_volume(ebs_volume_data * vol_data, char **dest)
 }
 
 //!
-//! New version, uses external sc url...likely derived from service info
+//! Connects an EBS volume to the local host as an ISCSI block device. The resulting device is placed in *result_device
 //!
-//! @param[in] sc_url
-//! @param[in] attachment_token
-//! @param[in] use_ws_sec
-//! @param[in] ws_sec_policy_file
-//! @param[in] local_ip
-//! @param[in] local_iqn
-//! @param[in] result_device
-//! @param[in] vol_data
+//! @param[in] sc_url - The URL to reach the cluster's SC at.
+//! @param[in] attachment_token - The attachment token/volume string received in the attach request (or vbr)
+//! @param[in] use_ws_sec - Boolean to use WS-SEC on SC call.
+//! @param[in] ws_sec_policy_file - Policy file for WS-SEC on SC call.
+//! @param[in] local_ip - External IP of the local host. Will be used to send to SC for authorization
+//! @param[in] local_iqn - IQN of local host for sending to SC for authorization.
+//! @param[out] result_device - The block device that is the EBS volume connected to local host, will be populated on success.
+//! @param[out] vol_data - The populated ebs_volume_data struct that hold volume info (id, connect string, token, etc)
 //!
-//! @return
+//! @return EUCA_OK on success, EUCA_ERROR on failure.
 //!
 //! @pre
 //!
@@ -368,47 +334,64 @@ int connect_ebs_volume(char *sc_url, char *attachment_token, int use_ws_sec, cha
                        ebs_volume_data ** vol_data)
 {
     int rc = 0;
-    int ret = 0;
+    int ret = EUCA_OK;
+    char *reencrypted_token = NULL;
+    char *connect_string = NULL;
+    char *dev = NULL;
+    int do_rescan = 1;
 
-    LOGTRACE("Parsing volume information from: %s\n", attachment_token);
-    rc = deserialize_volume(attachment_token, vol_data);
-    if (rc) {
-        LOGERROR("Failed parsing volume string %s\n", attachment_token);
-        ret = EUCA_ERROR;
-        goto release;
+    if(sc_url == NULL || strlen(sc_url) == 0 || attachment_token == NULL || local_ip == NULL || local_iqn == NULL) {
+    	LOGERROR("Cannont connect ebs volume. Got NULL input parameters.\n");
+    	return EUCA_ERROR;
     }
 
-    LOGTRACE("Parsed volume info: volumeId=%s, scURL=%s, encrypted token=%s\n", (*vol_data)->volumeId, sc_url, (*vol_data)->token);
+    if (deserialize_volume(attachment_token, vol_data) != EUCA_OK || *vol_data == NULL) {
+        LOGERROR("Failed parsing volume string %s\n", attachment_token);
+        ret = EUCA_ERROR;
+        return ret;
+    }
+
+    if((*vol_data)->volumeId == NULL || strlen((*vol_data)->volumeId) == 0 || (*vol_data)->token == NULL || strlen((*vol_data)->token) == 0) {
+    	LOGERROR("After deserializing volume string, still found null or empty volumeId or token");
+    	ret = EUCA_ERROR;
+    	return ret;
+    }
+
+    LOGTRACE("Parsed volume info: volumeId=%s, encrypted token=%s\n", (*vol_data)->volumeId, (*vol_data)->token);
+    if(re_encrypt_token((*vol_data)->token, &reencrypted_token) != EUCA_OK || reencrypted_token == NULL || strlen(reencrypted_token) <= 0) {
+    	LOGERROR("Failed on re-encryption of token for call to SC\n");
+    	if(reencrypted_token != NULL) {
+    		EUCA_FREE(reencrypted_token);
+    	}
+    	return EUCA_ERROR;
+    }
 
     LOGTRACE("Requesting volume lock\n");
-    sem_p(vol_sem);                    //Acquire the lock
+    sem_p(vol_sem);                    //Acquire the lock, after this, failure requires 'goto release' for release of lock
     LOGTRACE("Got volume lock\n");
 
     LOGTRACE("Calling ExportVolume on SC at %s\n", sc_url);
-    char *connect_string = NULL;
-    rc = scClientCall(NULL, NULL, use_ws_sec, ws_sec_policy_file, DEFAULT_SC_CALL_TIMEOUT, sc_url, "ExportVolume", (*vol_data)->volumeId, (*vol_data)->token, local_ip, local_iqn,
-                      &connect_string);
-    if (rc) {
+    if(scClientCall(NULL, NULL, use_ws_sec, ws_sec_policy_file, DEFAULT_SC_CALL_TIMEOUT, sc_url, "ExportVolume", (*vol_data)->volumeId, reencrypted_token, local_ip, local_iqn,
+                      &connect_string) != EUCA_OK) {
         LOGERROR("Failed to get connection information for volume %s from storage controller at: %s\n", (*vol_data)->volumeId, sc_url);
         ret = EUCA_ERROR;
         goto release;
     } else {
-        if (euca_strncpy((*vol_data)->connect_string, connect_string, EBS_CONNECT_STRING_MAX_LENGTH)) {
-            ret = EUCA_OK;
-        } else {
+        if (euca_strncpy((*vol_data)->connect_string, connect_string, EBS_CONNECT_STRING_MAX_LENGTH) == NULL) {
             LOGERROR("Failed to copy connect string from SC response: %s\n", connect_string);
             ret = EUCA_ERROR;
+            goto release;
         }
-
     }
 
     //copy the connection info from the SC return to the resourceLocation.
-    char *dev = connect_iscsi_target((*vol_data)->connect_string);
+    dev = connect_iscsi_target((*vol_data)->connect_string);
     if (!dev || !strstr(dev, "/dev")) {
         LOGERROR("Failed to connect to iSCSI target: %s\n", (*vol_data)->connect_string);
         //disconnect the volume
-        ret = cleanup_volume_attachment(sc_url, use_ws_sec, ws_sec_policy_file, (*vol_data), (*vol_data)->connect_string, local_ip, local_iqn, 0);
-        LOGTRACE("cleanup_volume_attachment returned: %d\n", ret);
+        if(cleanup_volume_attachment(sc_url, use_ws_sec, ws_sec_policy_file, (*vol_data), (*vol_data)->connect_string, local_ip, local_iqn, do_rescan) != EUCA_OK) {
+        	LOGTRACE("cleanup_volume_attachment returned failure on cleanup from connection failure\n");
+        }
         ret = EUCA_ERROR;
         goto release;
     }
@@ -419,19 +402,29 @@ release:
     LOGTRACE("Releasing volume lock\n");
     sem_v(vol_sem);
     LOGTRACE("Released volume lock\n");
+
+    if(reencrypted_token != NULL) {
+    	EUCA_FREE(reencrypted_token);
+    }
+
+    if(ret != EUCA_OK && (*vol_data) != NULL) {
+    	//Free the vol data struct too
+    	EUCA_FREE(*vol_data);
+    }
+
     return ret;
 }
 
 //!
 //! Detach a local device that is iSCSI and disconnect the session.
 //!
-//! @param[in] sc_url
-//! @param[in] use_ws_sec
-//! @param[in] ws_sec_policy_file
-//! @param[in] volume_string
-//! @param[in] connect_string
-//! @param[in] local_ip
-//! @param[in] local_iqn
+//! @param[in] sc_url - The URL to reach the cluster's SC at.
+//! @param[in] use_ws_sec - boolean to determine use of WS-SEC.
+//! @param[in] ws_sec_policy_file - Policy file path for WS-SEC
+//! @param[in] volume_string - The volume/token string received in the request that will be used
+//! @param[in] connect_string - The connect string used for attachment, to be re-used on disconnect
+//! @param[in] local_ip - The local host's external IP
+//! @param[in] local_iqn - The local host's IQN
 //!
 //! @return
 //!
@@ -441,22 +434,26 @@ release:
 //!
 //! @note should only be invoked after detachment from the guest
 //!
-int disconnect_ebs_volume(char *sc_url, int use_ws_sec, char *ws_sec_policy_file, char *volume_string, char *connect_string, char *local_ip, char *local_iqn)
+int disconnect_ebs_volume(char *sc_url, int use_ws_sec, char *ws_sec_policy_file, char *attachment_token, char *connect_string, char *local_ip, char *local_iqn)
 {
-    int ret = 0;
+    int ret = EUCA_ERROR;
     int rc = 0;
     int norescan = 0;                  //send a 0 to indicate no rescan requested
     ebs_volume_data *vol_data = NULL;
 
+    if(sc_url == NULL || strlen(sc_url) == 0 || attachment_token == NULL || connect_string == NULL ||  local_ip == NULL || local_iqn == NULL) {
+    	LOGERROR("Cannont disconnect ebs volume. Got NULL input parameters.\n");
+    	return EUCA_ERROR;
+    }
+
     LOGTRACE("Disconnecting an EBS volume\n");
 
-    if ((rc = deserialize_volume(volume_string, &vol_data)) != 0) {
-        LOGERROR("Could not deserialize volume string %s\n", volume_string);
+    if (deserialize_volume(attachment_token, &vol_data) != EUCA_OK) {
+        LOGERROR("Could not deserialize attachment token string %s\n", attachment_token);
         return EUCA_ERROR;
     }
 
     LOGTRACE("Requesting volume lock\n");
-
     sem_p(vol_sem);
     {
         LOGTRACE("Got volume lock\n");
@@ -465,8 +462,8 @@ int disconnect_ebs_volume(char *sc_url, int use_ws_sec, char *ws_sec_policy_file
         LOGTRACE("Releasing volume lock\n");
     }
     sem_v(vol_sem);
-
     LOGTRACE("Released volume lock\n");
+
     EUCA_FREE(vol_data);
     return ret;
 }
@@ -474,14 +471,14 @@ int disconnect_ebs_volume(char *sc_url, int use_ws_sec, char *ws_sec_policy_file
 //!
 //! Assumes that the vol_data struct is populated, including the connection_string
 //!
-//! @param[in] sc_url
-//! @param[in] use_ws_sec
-//! @param[in] ws_sec_policy_file
-//! @param[in] vol_data
-//! @param[in] local_ip
-//! @param[in] local_iqn
+//! @param[in] sc_url - The URL to reach the cluster's SC at.
+//! @param[in] use_ws_sec - boolean to determine use of WS-SEC.
+//! @param[in] ws_sec_policy_file - Policy file path for WS-SEC
+//! @param[in] vol_data - The ebs_volume_data struct pointer
+//! @param[in] local_ip - The local host's external IP
+//! @param[in] local_iqn - The local host's IQN
 //!
-//! @return
+//! @return EUCA_OK on success, EUCA_ERROR on failure
 //!
 //! @pre
 //!
@@ -491,9 +488,9 @@ int disconnect_ebs_volume(char *sc_url, int use_ws_sec, char *ws_sec_policy_file
 //!
 int disconnect_ebs_volume_with_struct(char *sc_url, int use_ws_sec, char *ws_sec_policy_file, ebs_volume_data * vol_data, char *local_ip, char *local_iqn)
 {
-    int ret = 0;
+    int ret = EUCA_ERROR;
     int rc = 0;
-    int norescan = 0;
+    int do_rescan = 0; // don't do rescan
 
     if (vol_data == NULL) {
         LOGERROR("Could not disconnect volume, got null volume data struct\n");
@@ -505,7 +502,7 @@ int disconnect_ebs_volume_with_struct(char *sc_url, int use_ws_sec, char *ws_sec
     sem_p(vol_sem);
     LOGTRACE("Got volume lock\n");
 
-    ret = cleanup_volume_attachment(sc_url, use_ws_sec, ws_sec_policy_file, vol_data, vol_data->connect_string, local_ip, local_iqn, norescan);
+    ret = cleanup_volume_attachment(sc_url, use_ws_sec, ws_sec_policy_file, vol_data, vol_data->connect_string, local_ip, local_iqn, do_rescan);
     LOGTRACE("cleanup_volume_attachment returned: %d\n", ret);
 
     LOGTRACE("Releasing volume lock\n");
@@ -518,15 +515,16 @@ int disconnect_ebs_volume_with_struct(char *sc_url, int use_ws_sec, char *ws_sec
 //!
 //! Refactored logic for detaching a local iSCSI device and unexporting the volume. To be invoked only by other functions in this file after acquiring the necessary lock.
 //!
-//! @param[in] sc_url
-//! @param[in] use_ws_sec
-//! @param[in] ws_sec_policy_file
-//! @param[in] vol_data
-//! @param[in] connect_string
-//! @param[in] local_ip
-//! @param[in] local_iqn
+//! @param[in] sc_url - The URL to reach the cluster's SC at.
+//! @param[in] use_ws_sec - boolean to determine use of WS-SEC.
+//! @param[in] ws_sec_policy_file - Policy file path for WS-SEC
+//! @param[in] vol_data - The ebs_volume_data struct pointer
+//! @param[in] connect_string - The connection string to use for local connection
+//! @param[in] local_ip - The local host's external IP
+//! @param[in] local_iqn - The local host's IQN
+//! @param[in] do_rescan - Set to false to indicate no rescan should be done on disconnect, or true to use rescan
 //!
-//! @return
+//! @return EUCA_OK on success, EUCA_ERROR on failure
 //!
 //! @pre
 //!
@@ -534,31 +532,49 @@ int disconnect_ebs_volume_with_struct(char *sc_url, int use_ws_sec, char *ws_sec
 //!
 //! @note should be invoked only by functions in this file that acquired the necessary lock.
 //!
-static int cleanup_volume_attachment(char *sc_url, int use_ws_sec, char *ws_sec_policy_file, ebs_volume_data * vol_data, char *connect_string, char *local_ip, char *local_iqn,
-                                     int norescan)
+static int cleanup_volume_attachment(char *sc_url, int use_ws_sec, char *ws_sec_policy_file, ebs_volume_data * vol_data, char *connect_string, char *local_ip, char *local_iqn, int do_rescan)
 {
     int rc = 0;
+    char *reencrypted_token = NULL;
+    char *refreshedDev = NULL;
+
+
+    if(sc_url == NULL || strlen(sc_url) == 0 || vol_data == NULL || connect_string == NULL ||  local_ip == NULL || local_iqn == NULL) {
+       	LOGERROR("Cannot cleanup volume attachment. Got NULL input parameters.\n");
+       	return EUCA_ERROR;
+    }
 
     LOGDEBUG("[%s] attempting to disconnect iscsi target\n", vol_data->volumeId);
-    if (disconnect_iscsi_target(connect_string, norescan) != 0) {
-        LOGERROR("[%s] failed to disconnet iscsi target\n", vol_data->volumeId);
+    if (disconnect_iscsi_target(connect_string, do_rescan) != 0) {
+        LOGERROR("[%s] failed to disconnect iscsi target\n", vol_data->volumeId);
         LOGDEBUG("Skipping SC Call due to previous errors\n");
         return EUCA_ERROR;
     }
-    //TODO: decrypt token using node pk
+
     if (sc_url == NULL || strlen(sc_url) <= 0) {
         LOGERROR("Cannot call UnexportVolume on SC for volume %s, no valid sc URL found\n", vol_data->volumeId);
         return EUCA_ERROR;
     }
 
+    rc = re_encrypt_token(vol_data->token, &reencrypted_token);
+    if(rc != EUCA_OK || reencrypted_token == NULL || strlen(reencrypted_token) <= 0) {
+    	LOGERROR("Failed on re-encryption of token for call to SC\n");
+    	if(reencrypted_token != NULL) {
+    		EUCA_FREE(reencrypted_token);
+    	}
+    	return EUCA_ERROR;
+    } else {
+    	LOGTRACE("Re-encrypted token for %s is %s\n", vol_data->volumeId, reencrypted_token);
+    }
+
     LOGTRACE("Calling scClientCall with url: %s and token %s\n", sc_url, vol_data->token);
-    rc = scClientCall(NULL, NULL, use_ws_sec, ws_sec_policy_file, DEFAULT_SC_CALL_TIMEOUT, sc_url, "UnexportVolume", vol_data->volumeId, vol_data->token, local_ip, local_iqn);
-    if (rc) {
+    if(scClientCall(NULL, NULL, use_ws_sec, ws_sec_policy_file, DEFAULT_SC_CALL_TIMEOUT, sc_url, "UnexportVolume", vol_data->volumeId, reencrypted_token, local_ip, local_iqn) != EUCA_OK) {
+    	EUCA_FREE(reencrypted_token);
         LOGERROR("ERROR unexporting volume %s\n", vol_data->volumeId);
         return EUCA_ERROR;
     } else {
+    	EUCA_FREE(reencrypted_token);
         //Ok, now refresh local session to be sure it's gone.
-        char *refreshedDev = NULL;
         //Should return error of not found.
         refreshedDev = get_iscsi_target(connect_string);
         if (refreshedDev) {
@@ -570,6 +586,76 @@ static int cleanup_volume_attachment(char *sc_url, int use_ws_sec, char *ws_sec_
         }
     }
 }
+
+//! Decrypts the encrypted token and re-encrypts with the public cloud cert.
+//! Used for preparation for request to SC for Export/Unexport.
+//!
+//! @param[in] in_token - the token encrypted with the NC public key
+//! @param[in] out_token - the same token encrypted with CLC public key
+//!
+//! @return
+//!
+static int re_encrypt_token(char *in_token, char **out_token) {
+	int rc = 1;
+	char *tmp_token = NULL;
+	char redacted_token[512];
+
+	if(in_token == NULL) {
+		LOGERROR("Cannot re-encrypt NULL token\n");
+		*out_token = NULL;
+		return EUCA_ERROR;
+	}
+
+	if(decrypt_string_with_node(in_token, &tmp_token) != EUCA_OK || tmp_token == NULL) {
+		LOGERROR("Failed decryption of token %s\n", in_token);
+		*out_token = NULL;
+		return EUCA_ERROR;
+	}
+
+	if(redact_token(tmp_token, redacted_token) != EUCA_OK) {
+		LOGTRACE("Error redacting token value for log output. Continuing.");
+	} else {
+		LOGTRACE("Decrypted, redacted token: %s\n",redacted_token);
+	}
+
+	if(encrypt_string_with_cloud(tmp_token, out_token) != EUCA_OK || *out_token == NULL) {
+		LOGERROR("Failed re-encryption of token %s\n", in_token);
+		EUCA_FREE(tmp_token);
+		*out_token = NULL;
+		return EUCA_ERROR;
+	}
+
+	return EUCA_OK;
+}
+
+//!
+//! Take the token plaintext and redact it to: '*********aaavds'
+//! Replaces all but the last 4 chars with '*'. Will return failure
+//! and do no-op if either param is NULL or strlen(src_token) <= 4
+//!
+//! @param[in] src_token - the token to redact
+//! @param[in] redacted - the buffer to copy the redacted value into, must be
+//!  be the same size as src_token
+//!
+//! @return EUCA_OK on success, EUCA_ERROR on fail
+static int redact_token(char *src_token, char *redacted) {
+	int i = 0;
+	if(src_token == NULL || redacted == NULL || strlen(src_token) <= 4) {
+		return EUCA_ERROR;
+	}
+
+	for(i = 0; i < strlen(src_token) - 4; i++) {
+		redacted[i] = '*';
+	}
+
+	//Include the null char at end of src_token
+	for(; i < strlen(src_token) + 1; i++) {
+		redacted[i] = src_token[i];
+	}
+	return EUCA_OK;
+}
+
+
 
 #ifdef _UNIT_TEST
 //!
