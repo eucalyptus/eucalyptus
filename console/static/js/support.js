@@ -570,7 +570,7 @@ function doMultiAction(itemList, collection, opFunction, progressMessage, doneMe
         else {
           var $msg = $('<div>').addClass('multiop-summary').append(
                      $('<div>').addClass('multiop-summary-success').
-                         html($.i18n.prop(doneMsg, (errorList.length), all)));
+                         html($.i18n.prop(doneMsg, done, all)));
           if (errorList.length > 0)
               $msg.append($('<div>').addClass('multiop-summary-failure').
                          html($.i18n.prop(failMsg, errorList.length)));
