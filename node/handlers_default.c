@@ -538,12 +538,13 @@ int find_and_terminate_instance(struct nc_state_t *nc_state, ncMetadata * pMeta,
     }
 
     // try stopping the domain
-    virConnectPtr conn = lock_hypervisor_conn();
+    virConnectPtr conn = lock_hypervisor_conn(); //! @TODO get rid of this check, since shutdown_then_destroy_domain() implements it, too
     if (conn) {
         virDomainPtr dom = virDomainLookupByName(conn, instanceId);
+        virDomainFree(dom);
         unlock_hypervisor_conn();
         if (dom) {
-            err = shutdown_then_destroy_domain(instanceId);    // the function frees 'dom'
+            err = shutdown_then_destroy_domain(instanceId);
             if (err == 0) {
                 LOGINFO("[%s] instance terminated\n", instanceId);
             } else {
