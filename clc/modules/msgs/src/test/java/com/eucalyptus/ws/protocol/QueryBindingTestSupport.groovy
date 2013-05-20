@@ -122,14 +122,15 @@ class QueryBindingTestSupport {
   }
 
   boolean isSimpleType( final Class clazz ) {
-    ( clazz != null &&   
+    ( clazz != null && (
         String.class.equals( clazz ) ||
         Boolean.class.equals( clazz ) ||
         Integer.class.equals( clazz ) ||
         Integer.TYPE.equals( clazz ) ||
         Long.class.equals( clazz ) ||
         Double.class.equals( clazz ) ||
-        Date.class.equals( clazz ))
+        Date.class.equals( clazz ) ||
+        clazz.isEnum() ) )
   }
 
   def <T> T bindAndAssertParameters( BaseQueryBinding binding, Class<T> messageClass, String action, Object bean, Map<String,String> parameters ) {
