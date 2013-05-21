@@ -53,6 +53,7 @@
                 this_value = source.display_id;
                 return eucatableDisplayColumnTypeTwist(this_mouseover, this_value, 256);
               },
+              "sClass": "wrap-content",
             },
             {
 	      // Display the status of the snapshot in the main table
@@ -84,6 +85,7 @@
                 this_value = source.display_volume_id;
                 return eucatableDisplayResource(this_mouseover, this_value, 256);
               },
+              "sClass": "wrap-content",
 	    },
             {
 	      // Display the description of the snapshot in the main table
@@ -92,6 +94,7 @@
 	         return eucatableDisplayColumnTypeText(data, data, 75);
 	      },
               "mData": "description",
+              "sClass": "wrap-content",
               "iDataSort": 9,
             },
             {

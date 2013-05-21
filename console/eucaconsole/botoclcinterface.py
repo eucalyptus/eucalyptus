@@ -53,7 +53,7 @@ class BotoClcInterface(ClcInterface):
         self.conn = EC2Connection(access_id, secret_key, region=reg,
                                   port=port, path=path,
                                   is_secure=True, security_token=token, debug=debug)
-        self.conn.APIVersion = '2012-03-01'
+        self.conn.APIVersion = '2012-12-01'
         self.conn.https_validate_certificates = False
         self.conn.http_connection_kwargs['timeout'] = 30
 

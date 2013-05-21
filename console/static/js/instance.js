@@ -80,6 +80,7 @@
                   this_id = source.display_id;
                 return eucatableDisplayColumnTypeTwist(this_title, this_id, 255);
               },
+              "sClass": "wrap-content",
             },
             { 
 	      // Display the status of the instance in the main table
@@ -111,6 +112,7 @@
                 }
                 return DefaultEncoder().encodeForHTML(zone);
               },
+              "sClass": "wrap-content",
 	    }, 
             {
 	      // Display the public dns name of the instance in the main table
@@ -137,6 +139,7 @@
                 return DefaultEncoder().encodeForHTML(data);
               },
               "mData": "key_name",
+              "sClass": "wrap-content",
 	    },
             {
 	      // Display the group name of the instance in the main table
@@ -145,6 +148,7 @@
                 return DefaultEncoder().encodeForHTML(data);
               },
               "mData": "group_name",
+              "sClass": "wrap-content",
 	    },
             { 
 	      // Display the launch time of the instance in the main table
