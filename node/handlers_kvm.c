@@ -234,7 +234,8 @@ static int generate_migration_keys(char *host, char *credentials, boolean restar
     sem_p(hyp_sem);
 
     if (most_recent_credentials && most_recent_host && !strcmp(most_recent_credentials, credentials) && !strcmp(most_recent_host, host)) {
-        LOGDEBUG("[%s] request to generate key using same information (host='%s', creds=%s) as previous request, skipping\n", instanceId, host, (credentials == NULL) ? "UNSET" : "present");
+        LOGDEBUG("[%s] request to generate key using same information (host='%s', creds=%s) as previous request, skipping\n", instanceId, host,
+                 (credentials == NULL) ? "UNSET" : "present");
         sem_v(hyp_sem);
         return EUCA_OK;
     }
@@ -353,7 +354,7 @@ static void *rebooting_thread(void *arg)
         unlock_hypervisor_conn();
         return NULL;
     }
-    virDomainFree(dom);            // release libvirt resource
+    virDomainFree(dom);                // release libvirt resource
     unlock_hypervisor_conn();
 
     // try shutdown first, then kill it if uncooperative
@@ -373,7 +374,6 @@ static void *rebooting_thread(void *arg)
         LOGERROR("[%s] cannot connect to hypervisor to restart instance, giving up\n", instance->instanceId);
         return NULL;
     }
-
     // domain is now shut down, create a new one with the same XML
     LOGINFO("[%s] rebooting\n", instance->instanceId);
     dom = virDomainCreateLinux(conn, xml, 0);

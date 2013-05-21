@@ -346,9 +346,9 @@ int get_service_url(const char *service_type, struct nc_state_t *nc, char *dest_
     int i = 0, j = 0;
     int found = 0;
 
-    if(service_type == NULL || nc == NULL || dest_buffer == NULL) {
-    	LOGERROR("Invalid input parameters. At least one is NULL.\n");
-    	return EUCA_ERROR;
+    if (service_type == NULL || nc == NULL || dest_buffer == NULL) {
+        LOGERROR("Invalid input parameters. At least one is NULL.\n");
+        return EUCA_ERROR;
     }
 
     sem_p(service_state_sem);
@@ -454,7 +454,7 @@ static void updateServiceStateInfo(ncMetadata * pMeta, boolean authoritative)
         sem_p(service_state_sem);
 
         if (pMeta->epoch >= nc_state.ncStatus.localEpoch || // we have updates ('=' is there in case CC does not bump epoch numbers)
-            authoritative // trust the authoritative requests and always take their services info, even if epoch goes backward
+            authoritative              // trust the authoritative requests and always take their services info, even if epoch goes backward
             ) {
             //Update the epoch first
             nc_state.ncStatus.localEpoch = pMeta->epoch;
@@ -552,42 +552,42 @@ void libvirt_err_handler(void *userData, virErrorPtr error)
 //!
 int convert_dev_names(char *localDev, char *localDevReal, char *localDevTag)
 {
-	printf("Got: %s, %s, %s\n", localDev, localDevReal, localDevTag);
-	bzero(localDevReal, 32);
-	if (strchr(localDev, '/') != NULL) {
-		//Path-style device.../dev/xxx
-		if (strncmp(localDev, "unknown,requested:/dev/", sizeof("unknown,requested:/dev/") - 1) == 0) {
-			//The case on migration, where attachment on source was done
-			sscanf(localDev, "unknown,requested:/dev/%s", localDevReal);
-			snprintf(localDev, strlen(localDev), "/dev/%s",localDevReal);
-		} else {
-			sscanf(localDev, "/dev/%s", localDevReal);
-		}
-	} else {
-		//No /dev/' prefix, just xxx
-		if (strncmp(localDev, "unknown,requested:", sizeof("unknown,requested:") - 1) == 0) {
-			//The case on migration, where attachment on source was done
-			sscanf(localDev, "unknown,requested:%s", localDevReal);
-			snprintf(localDev, strlen(localDev), "%s",localDevReal);
-		}
-		snprintf(localDevReal, 32, "%s", localDev);
-	}
+    printf("Got: %s, %s, %s\n", localDev, localDevReal, localDevTag);
+    bzero(localDevReal, 32);
+    if (strchr(localDev, '/') != NULL) {
+        //Path-style device.../dev/xxx
+        if (strncmp(localDev, "unknown,requested:/dev/", sizeof("unknown,requested:/dev/") - 1) == 0) {
+            //The case on migration, where attachment on source was done
+            sscanf(localDev, "unknown,requested:/dev/%s", localDevReal);
+            snprintf(localDev, strlen(localDev), "/dev/%s", localDevReal);
+        } else {
+            sscanf(localDev, "/dev/%s", localDevReal);
+        }
+    } else {
+        //No /dev/' prefix, just xxx
+        if (strncmp(localDev, "unknown,requested:", sizeof("unknown,requested:") - 1) == 0) {
+            //The case on migration, where attachment on source was done
+            sscanf(localDev, "unknown,requested:%s", localDevReal);
+            snprintf(localDev, strlen(localDev), "%s", localDevReal);
+        }
+        snprintf(localDevReal, 32, "%s", localDev);
+    }
 
-	if (localDevReal[0] == 0) {
-		printf("bad input parameter for localDev (should be /dev/XXX): '%s'\n", localDev);
-		return (EUCA_ERROR);
-	}
+    if (localDevReal[0] == 0) {
+        printf("bad input parameter for localDev (should be /dev/XXX): '%s'\n", localDev);
+        return (EUCA_ERROR);
+    }
 
-	if (localDevTag) {
-		//If localDev already has the unknown,requested...just copy it
-		if (strncmp(localDev, "unknown,requested:", sizeof("unknown,requested:") - 1) == 0) {
-			bzero(localDevTag, 256);
-			snprintf(localDevTag, 256, "%s", localDev);
-		} else {
-			bzero(localDevTag, 256);
-			snprintf(localDevTag, 256, "unknown,requested:%s", localDev);
-		}
-	}
+    if (localDevTag) {
+        //If localDev already has the unknown,requested...just copy it
+        if (strncmp(localDev, "unknown,requested:", sizeof("unknown,requested:") - 1) == 0) {
+            bzero(localDevTag, 256);
+            snprintf(localDevTag, 256, "%s", localDev);
+        } else {
+            bzero(localDevTag, 256);
+            snprintf(localDevTag, 256, "unknown,requested:%s", localDev);
+        }
+    }
     return EUCA_OK;
 }
 
@@ -650,9 +650,9 @@ int update_disk_aliases(ncInstance * instance)
             if (volumeId) {
                 ebs_volume_data *vol_data = NULL;
 
-                if (strcmp("root", volumeId)==0) {
-                    if (instance->params.root->locationType==NC_LOCATION_SC) {
-                        if (deserialize_volume(instance->params.root->resourceLocation, & vol_data)==0) {
+                if (strcmp("root", volumeId) == 0) {
+                    if (instance->params.root->locationType == NC_LOCATION_SC) {
+                        if (deserialize_volume(instance->params.root->resourceLocation, &vol_data) == 0) {
                             volumeId = vol_data->volumeId;
                         }
                     }

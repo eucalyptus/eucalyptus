@@ -171,7 +171,6 @@ int encrypt_string_with_cloud(char *in_str, char **out_buffer);
 int encrypt_string_with_node(char *in_str, char **out_buffer);
 int decrypt_string_with_node(char *in_str, char **out_buffer);
 
-
 #ifdef _UNIT_TEST
 void print_key_value_pair_array(const struct key_value_pair_array *kv_array);
 #endif // _UNIT_TEST

@@ -292,7 +292,7 @@ adb_ncStartNetworkResponse_t *ncStartNetworkMarshal(adb_ncStartNetwork_t * ncSta
         uuid = adb_ncStartNetworkType_get_uuid(input, env);
         port = adb_ncStartNetworkType_get_remoteHostPort(input, env);
         vlan = adb_ncStartNetworkType_get_vlan(input, env);
-        if((peersLen = adb_ncStartNetworkType_sizeof_remoteHosts(input, env)) > 0) {
+        if ((peersLen = adb_ncStartNetworkType_sizeof_remoteHosts(input, env)) > 0) {
             peers = EUCA_ZALLOC(peersLen, sizeof(char *));
             for (i = 0; i < peersLen; i++) {
                 peers[i] = adb_ncStartNetworkType_get_remoteHosts_at(input, env, i);

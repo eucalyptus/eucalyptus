@@ -4914,8 +4914,8 @@ int initialize(ncMetadata * pMeta, boolean authoritative)
             sem_mywait(CONFIG);
             LOGTRACE("pMeta: epoch=%d (vs %d) enabled %d, disabled %d, notready %d\n",
                      pMeta->epoch, config->ccStatus.localEpoch, pMeta->servicesLen, pMeta->disabledServicesLen, pMeta->notreadyServicesLen);
-            if (pMeta->epoch >= config->ccStatus.localEpoch || // we missed some updates, so let us catch up
-                authoritative) { // trust the authoritative requests and always take their services info
+            if (pMeta->epoch >= config->ccStatus.localEpoch ||  // we missed some updates, so let us catch up
+                authoritative) {       // trust the authoritative requests and always take their services info
                 memcpy(config->services, pMeta->services, sizeof(serviceInfoType) * 16);
                 memcpy(config->disabledServices, pMeta->disabledServices, sizeof(serviceInfoType) * 16);
                 memcpy(config->notreadyServices, pMeta->notreadyServices, sizeof(serviceInfoType) * 16);
