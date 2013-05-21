@@ -22,13 +22,7 @@ define([
         advancedModel: self.model,
         kernels: new Backbone.Collection(dataholder.images.where({type: 'kernel'})), 
         ramdisks: new Backbone.Collection(dataholder.images.where({type: 'ramdisk'})),
-        enableMonitoring: true,
-        privateNetwork: false,
         blockDeviceMappings: self.options.blockMaps,
-        enableStorageVolume: true,
-        enableMapping: true,
-        enableSnapshot: true,
-        deleteOnTerm: true,
 
         snapshots: function() {
             var ret = [{name:'None', id:null}];
@@ -36,10 +30,6 @@ define([
               ret.push({id:s.get('id'), name:s.get('id')+' ('+s.get('volume_size')+' GB)'});
             });
             return ret;
-        },
-
-        setKernel: function(e, obj) {
-          self.model.set('kernel_id', e.target.value);
         },
 
         isKernelSelected: function(obj) { 
@@ -56,18 +46,6 @@ define([
           return false;
         },
 
-
-        setPrivateNetwork: function(e, item) {
-          self.model.set('private_network', e.target.value);
-        },
-
-        setMonitoring: function(e, item) {
-            self.model.set('instance_monitoring', e.target.value);
-        },
-
-        setRamDisk: function(e, item) {
-          self.model.set('ramdisk_id', e.target.value);
-        },
 
         setStorageVolume: function(e, obj) {
           var m = new blockmap();
@@ -105,12 +83,16 @@ define([
           m.validate();
           if (m.isValid()) {
             this.blockDeviceMappings.add(m);
+            this.model.set('bdmaps_configured', true);
           }
 
         },
 
         delStorageVol: function(e, obj) {
           this.blockDeviceMappings.remove(obj.volume); 
+          if(this.blockDeviceMappings.length == 0) {
+            this.model.set('bdmaps_configured', false);
+          }
         },
 
         getVolLabel: function(obj) {
@@ -156,17 +138,13 @@ define([
       };
 
       scope.blockDeviceMappings.on('change add reset remove', function() {
-          self.model.set('bdmaps_configured', true);
+          //self.model.set('bdmaps_configured', true);
           self.render();
       });
 
       dataholder.images.on('reset', function() {
         scope.kernels.add(dataholder.images.where({type: 'kernel'}));
         scope.ramdisks.add(dataholder.images.where({type: 'ramdisk'}));
-      });
-
-      this.model.on('change', function() {
-//        self.model.set('advanced_show', true);
       });
 
       this.model.on('change:user_data_text', function(e) {
@@ -186,6 +164,8 @@ define([
         self.model.set('files', this.files);
        });
        this.model.set('fileinput', function() { return fileinputel; });
+
+       this.model.set('instance_monitoring', true); //default
     },
 
     render: function() {
@@ -195,6 +175,7 @@ define([
           root_device_type = this.theImage.get('root_device_type');
           if (root_device_type == 'ebs') {
             this.$el.find('#launch-wizard-advanced-storage').show();
+            //this.model.set('bdmaps_configured', true);
           }
         }
       }
