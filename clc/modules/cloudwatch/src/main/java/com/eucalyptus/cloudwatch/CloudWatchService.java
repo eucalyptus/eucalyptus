@@ -143,6 +143,7 @@ public class CloudWatchService {
     final Context ctx = Contexts.lookup();
 
     try {
+      LOG.trace("put metric data called");
       // IAM Action Check
       checkActionPermission(PolicySpec.CLOUDWATCH_PUTMETRICDATA, ctx);
 
@@ -150,6 +151,8 @@ public class CloudWatchService {
       final List<MetricDatum> metricData = validateMetricData(request.getMetricData());
       final String namespace = validateNamespace(request.getNamespace(), true);
       final Boolean isUserAccountAdmin = Principals.isSameUser( Principals.systemUser(), Wrappers.unwrap( Context.class, Contexts.lookup() ).getUser() );
+      LOG.trace("Namespace=" + namespace);
+      LOG.trace("metricData="+metricData);
       MetricType metricType = getMetricTypeFromNamespace(namespace);
       if (metricType == MetricType.System && !isUserAccountAdmin) {
         throw new InvalidParameterValueException("The value AWS/ for parameter Namespace is invalid.");

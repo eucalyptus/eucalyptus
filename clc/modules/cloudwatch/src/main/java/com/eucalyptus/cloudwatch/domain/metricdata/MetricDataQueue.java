@@ -146,6 +146,7 @@ public class MetricDataQueue {
     Date now = new Date();
     for (final MetricDatum datum : metricDatum) {
       LOG.debug("Received metric datum: " + nameSpace + " " + datum.getMetricName() + " " + datum.getTimestamp());
+      LOG.trace("Received metric datum: " + nameSpace + " " + datum.getMetricName() + " " + datum.getTimestamp());
       // Deal with the absolute metrics
       // CPUUtilization
       // VolumeReadOps
