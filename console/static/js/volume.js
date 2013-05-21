@@ -90,6 +90,7 @@
                 this_value = source.display_instance_id;
                 return eucatableDisplayResource(this_mouseover, this_value, 256);
               },
+              "sClass": "wrap-content",
             },
             { 
               // Display the snapshot id of the volume in the main table
@@ -99,6 +100,7 @@
                 this_value = source.display_snapshot_id;
                 return eucatableDisplayResource(this_mouseover, this_value, 256);
               },
+              "sClass": "wrap-content",
             },
             { 
               // Display the availibility zone of the volume in the main table
@@ -107,6 +109,7 @@
                 return DefaultEncoder().encodeForHTML(data);
               },
               "mData": "zone",
+              "sClass": "wrap-content",
             },
             { 
               // Display the creation time of the volume in the main table

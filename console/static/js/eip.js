@@ -61,6 +61,7 @@
                  return eucatableDisplayColumnTypeTwist(data, data, 255);
 	          },
               "mData": "public_ip",
+              "sClass": "wrap-content",
               "iDataSort": 4
             },
             { 
@@ -71,6 +72,7 @@
                 this_value = source.display_instance_id;
                 return eucatableDisplayResource(this_mouseover, this_value, 256);
               },
+              "sClass": "wrap-content",
 	    },
             {
 	      // Invisible Column for storing the status of the IP
