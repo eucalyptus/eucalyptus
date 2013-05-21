@@ -552,35 +552,42 @@ void libvirt_err_handler(void *userData, virErrorPtr error)
 //!
 int convert_dev_names(const char *localDev, char *localDevReal, char *localDevTag)
 {
-    bzero(localDevReal, 32);
-    if (strchr(localDev, '/') != NULL) {
-        if (strncmp(localDev, "unknown,requested:", sizeof("unknown,requested:") - 1) == 0) {
-            //localDev starts with 'unknown,requested:', this occurs in migration cases. Extract the actual /dev/* value.
-            sscanf(localDev, "unknown,requested:/dev/%s", localDevReal);
-            snprintf(localDev, strlen(localDev), "/dev/%s",localDevReal); //Restore localDev to /dev/xxx instead of 'unknown,requested:...' This case is used in migration
-        } else {
-            sscanf(localDev, "/dev/%s", localDevReal);
-        }
-    } else {
-        snprintf(localDevReal, 32, "%s", localDev);
-    }
+	printf("Got: %s, %s, %s\n", localDev, localDevReal, localDevTag);
+	bzero(localDevReal, 32);
+	if (strchr(localDev, '/') != NULL) {
+		//Path-style device.../dev/xxx
+		if (strncmp(localDev, "unknown,requested:/dev/", sizeof("unknown,requested:/dev/") - 1) == 0) {
+			//The case on migration, where attachment on source was done
+			sscanf(localDev, "unknown,requested:/dev/%s", localDevReal);
+			snprintf(localDev, strlen(localDev), "/dev/%s",localDevReal);
+		} else {
+			sscanf(localDev, "/dev/%s", localDevReal);
+		}
+	} else {
+		//No /dev/' prefix, just xxx
+		if (strncmp(localDev, "unknown,requested:", sizeof("unknown,requested:") - 1) == 0) {
+			//The case on migration, where attachment on source was done
+			sscanf(localDev, "unknown,requested:%s", localDevReal);
+			snprintf(localDev, strlen(localDev), "%s",localDevReal);
+		}
+		snprintf(localDevReal, 32, "%s", localDev);
+	}
 
-    if (localDevReal[0] == 0) {
-        LOGERROR("bad input parameter for localDev (should be /dev/XXX): '%s'\n", localDev);
-        return (EUCA_ERROR);
-    }
+	if (localDevReal[0] == 0) {
+		printf("bad input parameter for localDev (should be /dev/XXX): '%s'\n", localDev);
+		return (EUCA_ERROR);
+	}
 
-    if (localDevTag) {
-        //If localDev already has the unknown,requested...just copy it
-        if (strncmp(localDev, "unknown,requested:", sizeof("unknown,requested:") - 1) == 0) {
-            bzero(localDevTag, 256);
-            snprintf(localDevTag, 256, "%s", localDev);
-        } else {
-            bzero(localDevTag, 256);
-            snprintf(localDevTag, 256, "unknown,requested:%s", localDev);
-        }
-    }
-
+	if (localDevTag) {
+		//If localDev already has the unknown,requested...just copy it
+		if (strncmp(localDev, "unknown,requested:", sizeof("unknown,requested:") - 1) == 0) {
+			bzero(localDevTag, 256);
+			snprintf(localDevTag, 256, "%s", localDev);
+		} else {
+			bzero(localDevTag, 256);
+			snprintf(localDevTag, 256, "unknown,requested:%s", localDev);
+		}
+	}
     return EUCA_OK;
 }
 
@@ -2206,7 +2213,7 @@ static int init(void)
         if (strstr(caps_xml, "<live/>") != NULL) {
             nc_state.migration_capable = 1;
         }
-        free(caps_xml);
+        EUCA_FREE(caps_xml);
     }
     LOGINFO("hypervisor %scapable of live migration\n", nc_state.migration_capable ? "" : "not ");
 
