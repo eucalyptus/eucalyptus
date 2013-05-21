@@ -20,6 +20,7 @@
 package com.eucalyptus.autoscaling.configurations;
 
 import static com.eucalyptus.autoscaling.common.AutoScalingMetadata.LaunchConfigurationMetadata;
+import java.util.ArrayList;
 import java.util.List;
 import javax.persistence.EntityTransaction;
 import com.eucalyptus.autoscaling.metadata.AutoScalingMetadataException;
@@ -35,6 +36,7 @@ import com.eucalyptus.util.TypeMapper;
 import com.google.common.base.Function;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Collections2;
+import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import edu.ucsb.eucalyptus.msgs.BlockDeviceMappingItemType;
 import edu.ucsb.eucalyptus.msgs.EbsDeviceMapping;
@@ -62,6 +64,10 @@ public abstract class LaunchConfigurations {
                                    final String imageId,
                                    final String instanceType ) {
     return new PersistingBuilder( this, ownerFullName, launchConfigurationName, imageId, instanceType );
+  }
+
+  public static boolean containsSecurityGroupIdentifiers( final Iterable<String> groups ) {
+    return !Iterables.isEmpty( groups ) && Iterables.get( groups, 0 ).matches( "sg-[0-9A-Fa-f]{8}" );
   }
 
   public static class PersistingBuilder extends LaunchConfiguration.BaseBuilder<PersistingBuilder> {
@@ -180,7 +186,13 @@ public abstract class LaunchConfigurations {
         runInstances.getBlockDeviceMapping().add( type );
       }
       runInstances.setKeyName( launchConfiguration.getKeyName() );
-      runInstances.setGroupSet( Lists.newArrayList( launchConfiguration.getSecurityGroups() ) );
+      final ArrayList<String> securityGroups =
+          Lists.newArrayList( launchConfiguration.getSecurityGroups() );
+      if ( containsSecurityGroupIdentifiers( securityGroups ) ) {
+        runInstances.setGroupIdSet( securityGroups );
+      } else {
+        runInstances.setGroupSet( securityGroups );
+      }
       runInstances.setMonitoring( launchConfiguration.getInstanceMonitoring() );
       if ( launchConfiguration.getIamInstanceProfile() != null ) {
         runInstances.setInstanceProfileNameOrArn( launchConfiguration.getIamInstanceProfile() );

@@ -200,7 +200,7 @@ public class VmControl {
 
       ReservationInfoType reservation = new ReservationInfoType( allocInfo.getReservationId( ),
                                                                  allocInfo.getOwnerFullName( ).getAccountNumber( ),
-                                                                 Lists.transform( allocInfo.getNetworkGroups( ), CloudMetadatas.toDisplayName( ) ) );
+                                                                 allocInfo.getNetworkGroupsMap() );
       reply.setRsvInfo( reservation );
       for ( ResourceToken allocToken : allocInfo.getAllocationTokens( ) ) {
         VmInstance entity = Entities.merge( allocToken.getVmInstance( ) );
@@ -252,7 +252,7 @@ public class VmControl {
         try {
           VmInstance v = VmState.TERMINATED.apply( vm ) ? vm : Entities.merge( vm );
           if ( instanceMap.put( v.getReservationId( ), VmInstances.transform( v ) ) && !reservations.containsKey( v.getReservationId( ) ) ) {
-            reservations.put( v.getReservationId( ), new ReservationInfoType( v.getReservationId( ), v.getOwner( ).getAccountNumber( ), v.getNetworkNames( ) ) );
+            reservations.put( v.getReservationId( ), new ReservationInfoType( v.getReservationId( ), v.getOwner( ).getAccountNumber( ), v.getNetworkMap( ) ) );
           }
         } catch ( Exception ex ) {
           Logs.exhaust( ).error( ex, ex );

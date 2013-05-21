@@ -95,8 +95,8 @@ test_sensor: sensor.c sensor.h misc.o euca_string.o log.o ipc.o ../storage/disku
 ../storage/diskutil.o:
 	make -C ../storage
 
-test_auth: euca_auth.c log.o misc.o ipc.o ../storage/diskutil.o
-	$(CC) $(CFLAGS) $(INCLUDES) $(DEBUGS) -trigraphs -D_UNIT_TEST -o test_auth euca_auth.c log.o misc.o ../storage/diskutil.o ipc.o $(LIBS) $(LDFLAGS) $(EFENCE)
+test_auth: euca_auth.c euca_string.o log.o misc.o ipc.o ../storage/diskutil.o
+	$(CC) $(CFLAGS) $(INCLUDES) $(DEBUGS) -trigraphs -D_UNIT_TEST -o test_auth euca_auth.c euca_string.o log.o misc.o ../storage/diskutil.o ipc.o $(LIBS) $(LDFLAGS) $(EFENCE) -lcurl
 
 %.o: %.c %.h
 	$(CC) -c $(CPPFLAGS) $(CFLAGS) $(INCLUDES) $(DEBUGS) -trigraphs `xslt-config --cflags` $<

@@ -64,6 +64,9 @@ public class LaunchConfiguration extends AbstractOwnedPersistent implements Laun
   @Column( name = "metadata_key_name" )
   private String keyName;
 
+  /**
+   * Security groups can be names or identifiers, but not a mix.
+   */
   @ElementCollection
   @CollectionTable( name = "metadata_launch_configuration_security_groups" )
   @Column( name = "metadata_security_group" )

@@ -38,8 +38,32 @@ import edu.ucsb.eucalyptus.msgs.LaunchPermissionItemType
 class EucalyptusQueryBindingTest extends QueryBindingTestSupport {
 
   @Test
-  void testValidBinding() {
+  void testValidBinding2009_10_31() {
+    URL resource = EucalyptusQueryBindingTest.class.getResource( '/2009-10-31-binding.xml' )
+    assertValidBindingXml( resource )
+  }
+
+  @Test
+  void testValidBinding2010_08_31() {
+    URL resource = EucalyptusQueryBindingTest.class.getResource( '/2010-08-31-binding.xml' )
+    assertValidBindingXml( resource )
+  }
+
+  @Test
+  void testValidBinding2011_11_01() {
     URL resource = EucalyptusQueryBindingTest.class.getResource( '/2011-11-01-binding.xml' )
+    assertValidBindingXml( resource )
+  }
+
+  @Test
+  void testValidBinding2012_06_01() {
+    URL resource = EucalyptusQueryBindingTest.class.getResource( '/2012-06-01-binding.xml' )
+    assertValidBindingXml( resource )
+  }
+
+  @Test
+  void testValidBinding2013_02_01() {
+    URL resource = EucalyptusQueryBindingTest.class.getResource( '/2013-02-01-binding.xml' )
     assertValidBindingXml( resource )
   }
 
@@ -58,6 +82,36 @@ class EucalyptusQueryBindingTest extends QueryBindingTestSupport {
   @Test
   void testValidQueryBindingSecurity2011_01_01() {
     URL resource = EucalyptusQueryBindingTest.class.getResource( '/aws-security-11-01-01.xml' )
+    assertValidQueryBinding( resource )
+  }
+
+  @Test
+  void testValidQueryBindingInstances() {
+    URL resource = EucalyptusQueryBindingTest.class.getResource( '/aws-instances.xml' )
+    assertValidQueryBinding( resource )
+  }
+
+  @Test
+  void testValidQueryBindingInstances2009_10_31() {
+    URL resource = EucalyptusQueryBindingTest.class.getResource( '/aws-instances-09-10-31.xml' )
+    assertValidQueryBinding( resource )
+  }
+
+  @Test
+  void testValidQueryBindingInstances2010_08_31() {
+    URL resource = EucalyptusQueryBindingTest.class.getResource( '/aws-instances-10-08-31.xml' )
+    assertValidQueryBinding( resource )
+  }
+
+  @Test
+  void testValidQueryBindingInstances2011_11_01() {
+    URL resource = EucalyptusQueryBindingTest.class.getResource( '/aws-instances-11-11-01.xml' )
+    assertValidQueryBinding( resource )
+  }
+
+  @Test
+  void testValidQueryBindingInstances2012_06_01() {
+    URL resource = EucalyptusQueryBindingTest.class.getResource( '/aws-instances-12-06-01.xml' )
     assertValidQueryBinding( resource )
   }
 

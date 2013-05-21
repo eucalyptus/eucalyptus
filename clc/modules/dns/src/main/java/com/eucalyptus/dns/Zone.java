@@ -104,6 +104,7 @@ import org.xbill.DNS.SOARecord;
 import org.xbill.DNS.ARecord;
 import org.xbill.DNS.Name;
 import org.xbill.DNS.NSRecord;
+import org.xbill.DNS.SetResponse;
 import org.xbill.DNS.Type;
 import org.xbill.DNS.ZoneTransferException;
 import org.xbill.DNS.ZoneTransferIn;

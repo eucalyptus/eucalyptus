@@ -71,6 +71,7 @@ import com.eucalyptus.crypto.Crypto;
 import com.eucalyptus.entities.AbstractPersistent;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.TransactionException;
+import com.eucalyptus.util.BlockStorageUtil;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.StorageProperties;
 import com.google.common.base.Function;
@@ -221,6 +222,32 @@ public class VolumeInfo extends AbstractPersistent {
 		this.attachmentTokens = attachmentTokens;
 	}
 
+	private static String decryptToken(String tokenCipher) throws EucalyptusCloudException { 	
+		//Decrypt the token with the Cloud's private key.
+		try {
+			return BlockStorageUtil.decryptWithCloud(tokenCipher);
+		} catch(EucalyptusCloudException e) {
+			LOG.error("Failed to decrypt token: " + tokenCipher);
+			throw e;
+		}
+	}
+	
+	/**
+	 * Returns the last 4 chars prefixed by '*' to meet the same length as rawToken.
+	 * For printing the token in the logs. Just shows '**********ad4e'
+	 * @param rawToken
+	 * @return
+	 */
+	private static String redactToken(String rawToken) {
+		String tokenSuffix = new String(rawToken).substring(rawToken.length() - 4);
+		StringBuilder redact = new StringBuilder();
+		for(int i = 0; i < rawToken.length() - 4; i++) {
+			redact.append('*');
+		}
+		redact.append(tokenSuffix);
+		return redact.toString();
+	}
+	
 	/**
 	 * Returns either the single valid attachment token for the volume, or null
 	 * if none exists. Throws an exception if multiple valid tokens are found
@@ -228,15 +255,16 @@ public class VolumeInfo extends AbstractPersistent {
 	 * @return
 	 * @throws EucalyptusCloudException
 	 */
-	public VolumeToken getAttachmentTokenIfValid(String tokenValue) throws EucalyptusCloudException {				
+	public VolumeToken getAttachmentTokenIfValid(final String encryptedTokenValue) throws EucalyptusCloudException {				
 		try {
+			String decryptedToken = decryptToken(encryptedTokenValue);
 			VolumeToken tok = getCurrentValidToken();
 			if(tok == null) {
 				LOG.warn("Got request for attachment token, no valid token found for volume  " + this.getVolumeId());
 				throw new EucalyptusCloudException("No valid token found");
 			} else {
-				if(!tokenValue.equals(tok.getToken())){
-					LOG.warn("Token requested is not the current valid token for volume " + this.getVolumeId() + " request token: " + tokenValue + " current token: " + tok.getToken());
+				if(!decryptedToken.equals(tok.getToken())){
+					LOG.error("Token requested is not valid token for volume " + this.getVolumeId() + " request token: " + redactToken(decryptedToken) + " current token: " + redactToken(tok.getToken()));
 					throw new EucalyptusCloudException("Requested token is not the current valid token");
 				} else {
 					return tok;

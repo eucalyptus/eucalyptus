@@ -220,9 +220,13 @@ public class RunInstancesType extends VmControlMessage {
   int minCount;
   int maxCount;
   String keyName;
-  ArrayList<String> instanceIds = new ArrayList<String>();
+  ArrayList<String> instanceIds = [];
   @HttpParameterMapping (parameter = "SecurityGroup")
-  ArrayList<String> groupSet = new ArrayList<String>();
+  ArrayList<String> groupSet = [] // Query binding
+  @HttpParameterMapping (parameter = "SecurityGroupId")
+  ArrayList<String> groupIdSet = []  // Query binding and also SOAP binding before 2011-01-01
+  @HttpEmbedded
+  ArrayList<GroupItemType> securityGroups = [] // Used in SOAP binding since 2011-01-01
   String additionalInfo;
   String userData;
   String version;
@@ -236,7 +240,7 @@ public class RunInstancesType extends VmControlMessage {
   @HttpParameterMapping (parameter = "Placement.GroupName")
   String placementGroup = "default"; //** added 2010-02-01  **/
   @HttpEmbedded (multiple = true)
-  ArrayList<BlockDeviceMappingItemType> blockDeviceMapping = new ArrayList<BlockDeviceMappingItemType>(); //** added 2008-02-01  **/
+  ArrayList<BlockDeviceMappingItemType> blockDeviceMapping = []; //** added 2008-02-01  **/
   @HttpParameterMapping (parameter = "Monitoring.Enabled")
   Boolean monitoring = false;
   String subnetId;
@@ -249,27 +253,47 @@ public class RunInstancesType extends VmControlMessage {
   String iamInstanceProfileArn = "";
   @HttpParameterMapping(parameter = "IamInstanceProfile.Name")
   String iamInstanceProfileName = "";
-  ArrayList<Integer> networkIndexList = new ArrayList<Integer>();
+  ArrayList<Integer> networkIndexList = [];
   String privateMacBase;
   String publicMacBase;
   int macLimit;
   int vlan;
+  @HttpEmbedded
   VmTypeInfo vmType = new VmTypeInfo();
-  
-  
+
+  Set<String> securityGroupNames() {
+    Set<String> names = []
+    names.addAll( groupSet )
+    names.addAll( groupIdSet.findAll{ !it.startsWith( "sg-" ) } ) // ID was historically the name
+    names.addAll( securityGroups.findAll{ it.groupName != null }.collect{ it.groupName } )
+    names.addAll( securityGroups.findAll{ it.groupId != null && !it.groupId.startsWith( "sg-" ) }.collect{ it.groupId } )
+    names
+  }
+
+  Set<String> securityGroupsIds() {
+    Set<String> names = []
+    names.addAll( groupIdSet.findAll{ it.startsWith( "sg-" ) } ) // ID was historically the name
+    names.addAll( securityGroups.findAll{ it.groupId != null && it.groupId.startsWith( "sg-" ) }.collect{ it.groupId } )
+    names
+  }
+
   public Object clone() {
     RunInstancesType c = (RunInstancesType) super.clone();
-    c.instanceIds = new ArrayList<String>();
-    if ( this.instanceIds != null )
-      for ( String b: this.instanceIds )
-        c.instanceIds.add((String) b.clone());
-    c.blockDeviceMapping = new ArrayList<BlockDeviceMappingItemType>();
+    c.instanceIds = (ArrayList<String>)this.instanceIds.clone()
+    c.groupSet = (ArrayList<String>)this.groupSet.clone()
+    c.groupIdSet = (ArrayList<String>)this.groupIdSet.clone()
+    c.securityGroups = []
+    if ( this.securityGroups != null )
+      for ( GroupItemType groupItemType: this.securityGroups )
+        c.securityGroups.add((GroupItemType) groupItemType.clone());
+    c.blockDeviceMapping = []
     if ( this.blockDeviceMapping != null )
       for ( BlockDeviceMappingItemType b: this.blockDeviceMapping )
         c.blockDeviceMapping.add((BlockDeviceMappingItemType) b.clone());
     if ( this.vmType != null )
       c.vmType = (VmTypeInfo) this.vmType.clone();
-    c.networkIndexList = this.networkIndexList.clone( );
+    c.networkIndexList = (ArrayList<Integer>)this.networkIndexList.clone( );
+    c.vmType = (VmTypeInfo) this.vmType.clone()
     return c;
   }
 
@@ -307,16 +331,29 @@ public class GetPasswordDataResponseType extends VmControlMessage {
 public class ReservationInfoType extends EucalyptusData {
   String reservationId;
   String ownerId;
-  ArrayList<String> groupSet = new ArrayList<String>();
-  ArrayList<RunningInstancesItemType> instancesSet = new ArrayList<RunningInstancesItemType>();
-  
-  def ReservationInfoType(final reservationId, final ownerId, final groupSet) {
-    this.reservationId = reservationId;
-    this.ownerId = ownerId;
-    this.groupSet.addAll( groupSet );
+  ArrayList<GroupItemType> groupSet = []
+  ArrayList<RunningInstancesItemType> instancesSet = []
+
+  def ReservationInfoType( String reservationId, String ownerId, Map<String,String> groupIdsToNames ) {
+      this.reservationId = reservationId;
+      this.ownerId = ownerId
+      this.groupSet.addAll( groupIdsToNames.entrySet().collect{
+        entry -> new GroupItemType( entry.key, entry.value ) } );
   }
   
   def ReservationInfoType() {
+  }
+}
+
+public class GroupItemType extends EucalyptusData {
+  String groupId;
+  String groupName;
+
+  GroupItemType() {}
+
+  def GroupItemType( String groupId, String groupName ) {
+    this.groupId = groupId;
+    this.groupName = groupName;
   }
 }
 public class RunningInstancesItemType extends EucalyptusData implements Comparable<RunningInstancesItemType> {
@@ -543,6 +580,7 @@ public class ModifyInstanceAttributeType extends VmControlMessage {
   Attr element;
   String value;
   enum Attr { instanceType, kernel, ramdisk, userData, disableApiTermination, instanceInitiatedShutdownBehavior };
+  @HttpEmbedded(multiple=true)
   ArrayList<BlockDeviceMappingItemType> blockDeviceMapping = new ArrayList<BlockDeviceMappingItemType>();
   public ModifyInstanceAttributeType() {  }
   public void instanceType( String value ) { this.element = Attr.instanceType; this.value = value; }

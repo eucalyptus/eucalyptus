@@ -89,6 +89,7 @@ import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.OwnerFullName;
 import com.eucalyptus.util.RestrictedTypes;
+import com.eucalyptus.util.Strings;
 import com.eucalyptus.util.TypeMappers;
 import com.google.common.base.Function;
 import com.google.common.base.Predicate;
@@ -97,6 +98,7 @@ import com.google.common.base.Supplier;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
+import edu.ucsb.eucalyptus.cloud.InvalidParameterValueException;
 import edu.ucsb.eucalyptus.msgs.AuthorizeSecurityGroupIngressResponseType;
 import edu.ucsb.eucalyptus.msgs.AuthorizeSecurityGroupIngressType;
 import edu.ucsb.eucalyptus.msgs.CreateSecurityGroupResponseType;
@@ -117,7 +119,12 @@ public class NetworkGroupManager {
   
   public CreateSecurityGroupResponseType create( final CreateSecurityGroupType request ) throws EucalyptusCloudException, MetadataException {
     final Context ctx = Contexts.lookup( );
-    
+
+    final String groupName = request.getGroupName();
+    if ( Strings.startsWith( "sg-" ).apply( groupName ) ) {
+      throw new InvalidParameterValueException( "Value ("+groupName+") for parameter GroupName is invalid. Group names may not be in the format sg-*" );
+    }
+
     final CreateSecurityGroupResponseType reply = ( CreateSecurityGroupResponseType ) request.getReply( );
     try {
       Supplier<NetworkGroup> allocator = new Supplier<NetworkGroup>( ) {
@@ -125,7 +132,7 @@ public class NetworkGroupManager {
         @Override
         public NetworkGroup get( ) {
           try {
-            return NetworkGroups.create( ctx.getUserFullName( ), request.getGroupName( ), request.getGroupDescription( ) );
+            return NetworkGroups.create( ctx.getUserFullName( ), groupName, request.getGroupDescription( ) );
           } catch ( MetadataException ex ) {
             throw new RuntimeException( ex );
           }

@@ -60,58 +60,66 @@
  *   NEEDED TO COMPLY WITH ANY SUCH LICENSES OR RIGHTS.
  ************************************************************************/
 
-package com.eucalyptus.cloud.ws;
+package com.eucalyptus.dns.resolvers;
 
-import com.eucalyptus.util.DNSProperties;
-import org.apache.log4j.Logger;
-import org.xbill.DNS.Message;
+import java.net.InetAddress;
+import java.util.Iterator;
+import org.xbill.DNS.Credibility;
+import org.xbill.DNS.DClass;
+import org.xbill.DNS.Lookup;
+import org.xbill.DNS.NSRecord;
+import org.xbill.DNS.Name;
+import org.xbill.DNS.RRset;
+import org.xbill.DNS.Record;
+import org.xbill.DNS.Section;
+import org.xbill.DNS.SetResponse;
+import org.xbill.DNS.Type;
+import com.eucalyptus.configurable.ConfigurableClass;
+import com.eucalyptus.configurable.ConfigurableField;
+import com.eucalyptus.records.Logs;
+import com.eucalyptus.util.Subnets;
+import com.eucalyptus.util.dns.DomainNames;
+import com.eucalyptus.util.dns.DnsResolvers.DnsResolver;
+import com.eucalyptus.util.dns.DnsResolvers.DnsResponse;
 
-import java.io.DataInputStream;
-import java.io.DataOutputStream;
-import java.io.IOException;
-import java.net.Socket;
-
-
-public class TCPHandler extends ConnectionHandler {
-	private static Logger LOG = Logger.getLogger( TCPHandler.class );
-	Socket socket;
-	public TCPHandler(Socket s) {
-		this.socket = s;
-	}
-
-	public void run() {
-		try {
-			int inputLength;
-			DataInputStream inStream = new DataInputStream(socket.getInputStream());
-			DataOutputStream outStream = new DataOutputStream(socket.getOutputStream());
-			inputLength = inStream.readUnsignedShort();
-			if(inputLength > DNSProperties.MAX_MESSAGE_SIZE) {
-				LOG.error("Maximum message size exceeded. Ignoring request.");
-			}
-			byte[] inBytes = new byte[inputLength];
-			inStream.readFully(inBytes);
-			Message query;
-			byte [] response = null;
-			try {
-				query = new Message(inBytes);
-        ConnectionHandler.setRemoteInetAddress( socket.getInetAddress( ) );
-        try {
-          response = generateReply(query, inBytes, inBytes.length, socket);
-        } finally {
-          ConnectionHandler.removeRemoteInetAddress( );
-        }
-				if (response == null)
-					return;
-			}
-			catch (IOException exception) {
-				LOG.error(exception);
-			}
-			outStream.writeShort(response.length);
-			outStream.write(response);
-		} catch(IOException ex) {
-			LOG.error(ex);
-		}
-	}
-
-
+@ConfigurableClass( root = "system.dns.recursive",
+                    description = "Options controlling recursive DNS resolution and caching." )
+public class RecursiveDnsResolver implements DnsResolver {
+  @ConfigurableField( description = "Enable the recursive DNS resolver.  Note: system.dns.resolvers.enable must also be 'true'" )
+  public static Boolean                    enabled         = Boolean.TRUE;
+  @ConfigurableField( description = "Period (in seconds) after which the recursive response cache is completely flushed." )
+  public static Long                       cacheExpiration = 30 * 60L;
+  
+  /**
+   * Cache of results from recursive DNS queries.
+   */
+  private static final org.xbill.DNS.Cache cache           = new org.xbill.DNS.Cache( DClass.IN );
+  
+  @Override
+  public DnsResponse lookupRecords( final Record query ) {
+    final Name name = query.getName( );
+    final int type = query.getType( );
+    Lookup aLookup = new Lookup( name, type );
+    aLookup.setCache( cache );
+    aLookup.run( );
+    return DnsResponse.forName( query.getName( ) ).answer( aLookup.run( ) );
+  }
+  
+  /**
+   * This resolver works when it is:
+   * 1. Enabled
+   * 2. The name is absolute
+   * 3. The name is not in a Eucalyptus controlled subdomain
+   * 4. The source address is under control of the system
+   * 
+   * @see com.eucalyptus.util.dns.DnsResolvers.DnsResolver#checkAccepts(Record, org.xbill.DNS.Name,
+   *      InetAddress)
+   */
+  @Override
+  public boolean checkAccepts( Record query, InetAddress source ) {
+    return enabled
+           && query.getName( ).isAbsolute( )
+           && !DomainNames.isSystemSubdomain( query.getName( ) )
+           && Subnets.isSystemSourceAddress( source );
+  }
 }

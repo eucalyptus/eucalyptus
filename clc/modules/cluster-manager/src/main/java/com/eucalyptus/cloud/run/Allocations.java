@@ -66,6 +66,7 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.TreeMap;
 import java.util.Map.Entry;
 import java.util.Set;
 import javax.annotation.Nullable;
@@ -292,7 +293,19 @@ public class Allocations {
     public List<NetworkGroup> getNetworkGroups( ) {
       return Lists.newArrayList( this.networkGroups.values( ) );
     }
-    
+
+    public TreeMap<String, String> getNetworkGroupsMap( ) {
+
+      TreeMap<String,String> networkGroupMap = Maps.newTreeMap();
+
+      for (NetworkGroup network : this.getNetworkGroups() ){
+        networkGroupMap.put(network.getGroupId(), network.getDisplayName());
+      }
+
+      return networkGroupMap;
+
+    }
+
     public VmType getVmType( ) {
       return this.vmType;
     }

@@ -111,6 +111,7 @@ import org.xbill.DNS.Rcode;
 import org.xbill.DNS.Record;
 import org.xbill.DNS.SOARecord;
 import org.xbill.DNS.Section;
+import org.xbill.DNS.SetResponse;
 import org.xbill.DNS.Type;
 
 /**
