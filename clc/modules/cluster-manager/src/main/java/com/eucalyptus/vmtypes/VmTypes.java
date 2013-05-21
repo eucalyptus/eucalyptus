@@ -89,6 +89,7 @@ import com.eucalyptus.configurable.ConfigurableField;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.images.BlockStorageImageInfo;
 import com.eucalyptus.images.BootableImageInfo;
+import com.eucalyptus.records.Logs;
 import com.eucalyptus.util.Classes;
 import com.eucalyptus.util.RestrictedTypes.Resolver;
 import com.google.common.base.Function;
@@ -98,6 +99,7 @@ import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
 import com.google.common.collect.ForwardingConcurrentMap;
 import com.google.common.collect.Iterables;
+import com.google.common.collect.Iterators;
 import com.google.common.collect.Sets;
 import edu.ucsb.eucalyptus.msgs.VmTypeInfo;
 
@@ -175,17 +177,19 @@ public class VmTypes {
 
     @Override
     public VmType apply( @Nullable String input ) {
-      EntityTransaction tx = Entities.get( VmType.class );
+      Entities.registerClose( VmType.class );
       try {
         VmType vmType = Entities.uniqueResult( VmType.named( input ) );
-        tx.commit( );
+        Iterators.size( vmType.getEpehemeralDisks().iterator() ); // Ensure materialized
         return vmType;
       } catch ( Exception ex ) {
         LOG.error( ex );
         LOG.debug( ex, ex );
         PredefinedTypes t = PredefinedTypes.valueOf( input.toUpperCase( ).replace( ".", "" ) );
         VmType vmType = VmType.create( input, t.getCpu( ), t.getDisk( ), t.getMemory( ) );
-        return Entities.persist( vmType );
+        vmType = Entities.persist( vmType );
+        Iterators.size( vmType.getEpehemeralDisks().iterator() ); // Ensure materialized
+        return vmType;
       }
     }
   }
@@ -201,7 +205,7 @@ public class VmTypes {
         }
       }
     }
-    
+
     private static class Deleter<V> implements Predicate<V> {
       @Override
       public boolean apply( @Nullable V input ) {
@@ -310,7 +314,7 @@ public class VmTypes {
       } else if ( this.ref.compareAndSet( vmTypeMap, vmTypeMap, true, true ) ) {
         if ( this.vmTypeMap.size( ) != PredefinedTypes.values( ).length ) {
           for ( PredefinedTypes preDefVmType : PredefinedTypes.values( ) ) {
-            if ( !this.vmTypeMap.containsKey( preDefVmType ) ) {
+            if ( !this.vmTypeMap.containsKey( preDefVmType.getName() ) ) {
               this.vmTypeMap.putIfAbsent(
                 preDefVmType.getName( ),
                 VmType.create( preDefVmType.getName( ), preDefVmType.getCpu( ), preDefVmType.getDisk( ), preDefVmType.getMemory( ) ) );
