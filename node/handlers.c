@@ -2206,7 +2206,7 @@ static int init(void)
         if (strstr(caps_xml, "<live/>") != NULL) {
             nc_state.migration_capable = 1;
         }
-        free(caps_xml);
+        EUCA_FREE(caps_xml);
     }
     LOGINFO("hypervisor %scapable of live migration\n", nc_state.migration_capable ? "" : "not ");
 

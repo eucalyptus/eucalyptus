@@ -733,7 +733,7 @@ char *hexify(unsigned char *data, int data_len)
         return (NULL);
 
     //2 hex digit chars for each byte plus one null
-    if ((hex_str = (char *)malloc(data_len * 2 + 1)) == NULL) {
+    if ((hex_str = (char *)EUCA_ALLOC((data_len * 2 + 1), sizeof(char))) == NULL) {
         LOGERROR("hexify: cannot allocate memory for the hex string. Returing null.");
         return (NULL);
     }
@@ -1381,7 +1381,7 @@ char *construct_signed_headers(struct key_value_pair_array *hdr_array)
     }
 
     signed_size++;                     // add one for null-terminated
-    if ((signed_header_str = (char *)calloc(signed_size, sizeof(char))) == NULL) {
+    if ((signed_header_str = (char *)EUCA_ZALLOC(signed_size, sizeof(char))) == NULL) {
         LOGERROR("construct_signed_headers: Could not allocate memory for signed header string. Returning null");
         return (NULL);
     }
