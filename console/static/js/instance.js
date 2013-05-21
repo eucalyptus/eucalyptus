@@ -196,6 +196,9 @@
 	      // Hidden column for the image location of the instance
               "bVisible": false,
               "aTargets":[14],
+              "mRender": function(data) {
+                return DefaultEncoder().encodeForHTML(data);
+              }, 
               "mData": function(source) {
 			var image = null;
               		var result = describe('image', source.image_id);
