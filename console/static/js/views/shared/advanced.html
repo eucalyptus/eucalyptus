@@ -61,6 +61,18 @@
        </thead>
        <tbody>
 
+        <tr>
+          <td data-msg="launch_instance_root">
+          </td>
+          <td data-text="root.device_name">
+          </td>
+          <td data-text="root.snapshot_id">
+          </td>
+          <td>
+            <input class="launch-wizard-advanced-storage-size-input" data-tooltip="launch_wizard_advanced_storage_size_input_tip" data-value=":root.volume_size" type="text">
+          </td>
+          <td class="centered-cell"><input data-checked=":root.delete_on_termination" class="launch-wizard-advanced-storage-delOnTerm" type="checkbox"></td>
+        </tr> 
 
         <tr data-each-volume="blockDeviceMappings">
           <td data-text=":getVolLabel" data-msg="launch_instance_ebs">

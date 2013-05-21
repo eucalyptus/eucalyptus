@@ -23,8 +23,8 @@ define([
         kernels: new Backbone.Collection(dataholder.images.where({type: 'kernel'})), 
         ramdisks: new Backbone.Collection(dataholder.images.where({type: 'ramdisk'})),
         enableMonitoring: true,
-        privateNetwork: false,
         blockDeviceMappings: self.options.blockMaps,
+        privateNetwork: false,
         enableStorageVolume: true,
         enableMapping: true,
         enableSnapshot: true,
@@ -122,13 +122,13 @@ define([
         },
 
         deleteButtonIf: function(obj) {
-          if(this.getVolLabel(obj) != 'Root') {
+          if (obj.volume.get('device_name') != '/dev/sda') {
             return 'icon_delete';
           }
         },
 
         checkDisabledIf: function(obj) {
-          if(this.getVolLabel(obj) != 'Root') {
+          if (obj.volume.get('device_name') != '/dev/sda') {
             return false;
           }
           return true;
@@ -147,7 +147,7 @@ define([
             var newdev = device.substring(5, device.length-1) + String.fromCharCode(suffix+1);
             return newdev;
           } else {
-            return 'sda';
+            return 'sdb';
           }
         },
 
@@ -167,6 +167,14 @@ define([
 
       this.model.on('change', function() {
 //        self.model.set('advanced_show', true);
+        var tmp = scope.blockDeviceMappings.findWhere({device_name: '/dev/sda'});
+        if (scope.root == undefined) scope.root = tmp;
+        else if (tmp != undefined) scope.root = tmp;
+        if (scope.blockDeviceMappings.length > 0) {
+          scope.blockDeviceMappings = scope.blockDeviceMappings.reduce(function(c, v) {
+              return v.get('device_name') == '/dev/sda' ? c : c.add(v);
+            }, new Backbone.Collection());
+        }
       });
 
       this.model.on('change:user_data_text', function(e) {
