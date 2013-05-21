@@ -550,7 +550,7 @@ void libvirt_err_handler(void *userData, virErrorPtr error)
 //!
 //! @todo chuck make sure localDevTag passed is at least 256 char
 //!
-int convert_dev_names(const char *localDev, char *localDevReal, char *localDevTag)
+int convert_dev_names(char *localDev, char *localDevReal, char *localDevTag)
 {
     bzero(localDevReal, 32);
     if (strchr(localDev, '/') != NULL) {

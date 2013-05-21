@@ -306,7 +306,7 @@ int callBundleInstanceHelper(struct nc_state_t *nc, char *instanceId, char *buck
 
 // helper functions used by the low level handlers
 int get_value(char *s, const char *name, long long *valp);
-int convert_dev_names(const char *localDev, char *localDevReal, char *localDevTag);
+int convert_dev_names(char *localDev, char *localDevReal, char *localDevTag);
 void print_running_domains(void);
 virConnectPtr lock_hypervisor_conn(void);
 void unlock_hypervisor_conn(void);
