@@ -53,6 +53,7 @@
                 this_value = source.display_id;
                 return eucatableDisplayColumnTypeTwist(this_mouseover, this_value, 256);
               },
+              "sClass": "wrap-content",
             },
             {
 	      // Display the name of the image in eucatable
@@ -63,6 +64,7 @@
                  return DefaultEncoder().encodeForHTML(data);
               },
               "mData": "name",
+              "sClass": "wrap-content",
             }, 
             {
 	      // Display the name of the image in eucatable
@@ -89,6 +91,7 @@
                 return eucatableDisplayColumnTypeText (data, data, 30);
               },
               "mData": "description",
+              "sClass": "wrap-content",
 	    },
             { 
 	      // Display the root device type of the image in eucatable

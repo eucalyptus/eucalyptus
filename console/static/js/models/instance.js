@@ -121,7 +121,7 @@ define([
                     data.push({name: "BlockDeviceMapping."+(idx+1)+".Ebs.VolumeSize", value: mapping.ebs.volume_size});
                     data.push({name: "BlockDeviceMapping."+(idx+1)+".Ebs.DeleteOnTermination", value: mapping.ebs.delete_on_termination});
                 }
-                else if (mapping.ebs.snapshot_id == 'ephemeral0') { // ephemeral device, folks!
+                else if (mapping.ephemeral_name == 'ephemeral0') { // ephemeral device, folks!
                     data.push({name: "BlockDeviceMapping."+(idx+1)+".VirtualName", value: mapping.ephemeral_name});
                 }
                 else { // or, normal mappings

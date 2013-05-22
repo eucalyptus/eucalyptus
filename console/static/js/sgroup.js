@@ -58,6 +58,7 @@
                 return eucatableDisplayColumnTypeTwist(data, data, 75);
               },
               "mData": "name",
+              "sClass": "wrap-content",
               "iDataSort": 7,
             },
             { 
@@ -67,6 +68,7 @@
 		 return eucatableDisplayColumnTypeText(data, data, 50);
 	      },
               "mData": "description",
+              "sClass": "wrap-content",
               "iDataSort": 6,
             },
             { 
