@@ -66,6 +66,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 import org.apache.log4j.Logger;
+import com.eucalyptus.cloud.util.NoSuchMetadataException;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.vmtypes.VmType;
 import com.eucalyptus.vmtypes.VmTypes;
@@ -135,8 +136,16 @@ public class VmTypeWebBackend {
       }
     }
     try {
-      VmTypes.update( newVms );
-    } catch ( EucalyptusCloudException e ) {
+      for ( VmType newVm : newVms ) {
+        VmType vmType = VmTypes.lookup( newVm.getName( ) );
+        if ( !vmType.equals( newVm ) ) {
+          vmType.setDisk( newVm.getDisk( ) );
+          vmType.setCpu( newVm.getCpu( ) );
+          vmType.setMemory( newVm.getMemory( ) );
+          VmTypes.update( vmType );
+        }
+      }
+    } catch ( NoSuchMetadataException e ) {
       LOG.error( "Failed to update VmType for row " + row, e );
       throw new EucalyptusServiceException( e.getMessage( ), e );
     }

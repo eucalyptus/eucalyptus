@@ -347,7 +347,7 @@
       $(filterArr).each(function(){$(this).remove();});
 
       $wrapper.empty();
-      $wrapper.prepend('<div class="dataTables_filter" id="images_filter"><a class="table-refresh" href="#">Refresh</a></div>');
+      $wrapper.prepend('<div class="dataTables_filter" id="images_filter"><a class="table-refresh" style="text-decoration: none;" href="#">&nbsp;</a></div>');
       $wrapper.find('.table-refresh').click(function(){
         thisObj.refreshSource();
       });

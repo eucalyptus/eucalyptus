@@ -62,42 +62,51 @@
 
 package com.eucalyptus.vmtypes;
 
+import java.util.Comparator;
 import java.util.NavigableSet;
-import java.util.NoSuchElementException;
 import java.util.Set;
+import java.util.SortedSet;
 import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.ConcurrentNavigableMap;
+import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.atomic.AtomicMarkableReference;
-
 import javax.annotation.Nullable;
-
+import javax.persistence.EntityTransaction;
+import org.apache.log4j.Logger;
 import com.eucalyptus.cloud.CloudMetadata.VmTypeMetadata;
 import com.eucalyptus.cloud.ImageMetadata;
 import com.eucalyptus.cloud.ImageMetadata.StaticDiskImage;
 import com.eucalyptus.cloud.util.InvalidMetadataException;
 import com.eucalyptus.cloud.util.MetadataException;
 import com.eucalyptus.cloud.util.NoSuchMetadataException;
+import com.eucalyptus.cluster.Cluster;
+import com.eucalyptus.cluster.Clusters;
+import com.eucalyptus.component.ServiceConfiguration;
+import com.eucalyptus.component.Topology;
+import com.eucalyptus.component.id.ClusterController;
 import com.eucalyptus.configurable.ConfigurableClass;
 import com.eucalyptus.configurable.ConfigurableField;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.images.BlockStorageImageInfo;
 import com.eucalyptus.images.BootableImageInfo;
+import com.eucalyptus.records.Logs;
 import com.eucalyptus.util.Classes;
-import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.RestrictedTypes.Resolver;
 import com.google.common.base.Function;
+import com.google.common.base.Joiner;
 import com.google.common.base.Predicate;
-import com.google.common.base.Strings;
-import com.google.common.cache.CacheBuilder;
-import com.google.common.cache.CacheLoader;
-import com.google.common.cache.LoadingCache;
+import com.google.common.base.Supplier;
+import com.google.common.base.Suppliers;
 import com.google.common.collect.ForwardingConcurrentMap;
+import com.google.common.collect.Iterables;
+import com.google.common.collect.Iterators;
 import com.google.common.collect.Sets;
-
 import edu.ucsb.eucalyptus.msgs.VmTypeInfo;
 
 @ConfigurableClass( root = "cloud.vmtypes",
                     description = "Parameters controlling the definition of virtual machine types." )
 public class VmTypes {
+  private static Logger LOG = Logger.getLogger( VmTypes.class );
   @ConfigurableField( description = "Default type used when no instance type is specified for run instances.",
                       initial = "m1.small" )
   public static String         DEFAULT_TYPE_NAME        = "m1.small";         //TODO:GRZE:@Configurable
@@ -110,14 +119,46 @@ public class VmTypes {
   private static final Integer GB                       = 1024;
   private static final Integer ROOTFS                   = 10;
   
-  public static synchronized void update( Set<VmType> newVmTypes ) throws EucalyptusCloudException {
-    NavigableSet<VmType> newList = VmTypes.list( );
-    if ( newVmTypes.size( ) != newList.size( ) ) throw new EucalyptusCloudException( "Proposed VmTypes fail to satisfy well-ordering requirement." );
-    for ( VmType newVm : newVmTypes ) {
-      Registry.INSTANCE.update( newVm );
+  private enum ClusterAvailability implements Predicate<ServiceConfiguration> {
+    INSTANCE;
+
+    @Override
+    public boolean apply( ServiceConfiguration input ) {
+      try {
+        Cluster cluster = Clusters.lookup( input );
+        cluster.check( );
+      } catch ( Exception ex ) {
+        LOG.error( "Failed to reset availability for cluster: " + input + " because of " + ex.getMessage( ) );
+        LOG.debug( "Failed to reset availability for cluster: " + input + " because of " + ex.getMessage( ), ex );
+      }
+      return true;
     }
+
+    public static void reset( ) {
+      Iterables.all( Topology.enabledServices( ClusterController.class ), ClusterAvailability.INSTANCE );
+    }
+    
+  }
+
+  public static boolean isUnorderedType( VmType vmType ) {
+    return Iterables.any( VmTypes.list( ), vmType.orderedPredicate( ) );
   }
   
+  public static VmType update( VmType newVmType ) throws NoSuchMetadataException {
+    VmType vmType = VmTypes.lookup( newVmType.getName( ) );
+    VmType resultType = vmType;
+    if ( vmType != null ) {
+      Registry.INSTANCE.replace( newVmType );
+      //return canonical map reference of vm type
+      resultType = Registry.INSTANCE.get( newVmType.getDisplayName( ) );
+    } else {
+      Registry.INSTANCE.putIfAbsent( newVmType );
+      resultType = Registry.INSTANCE.get( newVmType.getDisplayName( ) );
+    }
+    ClusterAvailability.reset( );
+    return resultType;
+  }
+
   public static synchronized VmType lookup( String name ) throws NoSuchMetadataException {
     return Registry.get( name );
   }
@@ -131,18 +172,24 @@ public class VmTypes {
   }
   
   @Resolver( VmTypeMetadata.class )
-  private enum VmResolver implements Function<String, VmType> {
+  private enum VmTypeResolver implements Function<String, VmType> {
     INSTANCE;
+
     @Override
     public VmType apply( @Nullable String input ) {
+      Entities.registerClose( VmType.class );
       try {
-        return Entities.uniqueResult( VmType.named( input ) );
-      } catch ( NoSuchElementException ex ) {
+        VmType vmType = Entities.uniqueResult( VmType.named( input ) );
+        Iterators.size( vmType.getEpehemeralDisks().iterator() ); // Ensure materialized
+        return vmType;
+      } catch ( Exception ex ) {
+        LOG.error( ex );
+        LOG.debug( ex, ex );
         PredefinedTypes t = PredefinedTypes.valueOf( input.toUpperCase( ).replace( ".", "" ) );
         VmType vmType = VmType.create( input, t.getCpu( ), t.getDisk( ), t.getMemory( ) );
-        return Entities.persist( vmType );
-      } catch ( Exception ex ) {
-        return null;
+        vmType = Entities.persist( vmType );
+        Iterators.size( vmType.getEpehemeralDisks().iterator() ); // Ensure materialized
+        return vmType;
       }
     }
   }
@@ -152,55 +199,84 @@ public class VmTypes {
       @Override
       public V apply( @Nullable V input ) {
         try {
-          return Entities.merge( input );
+          return Entities.mergeDirect( input );
         } catch ( Exception ex ) {
           return null;
         }
       }
     }
-    
+
     private static class Deleter<V> implements Predicate<V> {
       @Override
       public boolean apply( @Nullable V input ) {
-        Entities.delete( input );
-        return true;
+        try {
+          Entities.delete( input );
+          return true;
+        } catch ( Exception ex ) {
+          return false;
+        }
       }
     }
     
-    private final ConcurrentMap<K, V> backingMap;
-    private final Function<K, V>      getFunction;
-    private final Function<V, V>      putFunction;
-    private final Predicate<V>        removeFunction;
+    private final ConcurrentNavigableMap<K, V> backingMap = new ConcurrentSkipListMap<K, V>( );
+    private final Function<K, V>               getFunction;
+    private final Function<V, V>               putFunction;
+    private final Predicate<V>                 removeFunction;
     
     private PersistentMap( Function<K, V> getFunction ) {
       super( );
-      LoadingCache<K, V> map = CacheBuilder.newBuilder().build(CacheLoader.from(getFunction));
-      this.backingMap = map.asMap();
       Class valueType = Classes.genericsToClasses( getFunction ).get( 1 );
       this.getFunction = Entities.asTransaction( getFunction );
       this.putFunction = Entities.asTransaction( valueType, new Persister<V>( ) );
       this.removeFunction = Entities.asTransaction( valueType, new Deleter<V>( ) );
     }
-    
+
+    public static <K, V> ConcurrentMap<K, V> create( Function<K, V> getFunction ) {
+      return new PersistentMap<K, V>( getFunction );
+    }
+
     @Override
     protected ConcurrentMap<K, V> delegate( ) {
       return this.backingMap;
     }
     
-    public static <K, V> ConcurrentMap<K, V> create( Function<K, V> getFunction ) {
-      return new PersistentMap<K, V>( getFunction );
+    @Override
+    public V remove( Object object ) {
+      V ret = null;
+      if ( ( ret = this.delegate( ).remove( object ) ) != null ) {
+        this.removeFunction.apply( ( V ) object );
+      }
+      return ret;
+    }
+
+    @Override
+    public boolean remove( Object key, Object value ) {
+      if ( this.delegate( ).containsKey( key ) && this.delegate( ).get( key ).equals( value ) && this.removeFunction.apply( ( V ) value ) ) {
+        return this.delegate( ).remove( key, value );
+      } else {
+        return false;
+      }
     }
     
     @Override
+    public V get( Object key ) {
+      if ( !this.delegate( ).containsKey( key ) ) {
+        V value = this.getFunction.apply( ( K ) key );
+        this.delegate( ).put( ( K ) key, value );
+      }
+      return this.delegate( ).get( key );
+    }
+
+    @Override
     public V put( K key, V value ) {
       value = this.putFunction.apply( value );
-      V oldValue = delegate( ).put( key, value );
+      V oldValue = this.delegate( ).put( key, value );
       return oldValue;
     }
     
     @Override
     public V putIfAbsent( K key, V value ) {
-      if ( !delegate( ).containsKey( key ) ) {
+      if ( !this.delegate( ).containsKey( key ) ) {
         return this.put( key, value );
       } else {
         return this.get( key );
@@ -209,7 +285,7 @@ public class VmTypes {
     
     @Override
     public V replace( K key, V value ) {
-      if ( this.containsKey( key ) ) {
+      if ( this.delegate( ).containsKey( key ) ) {
         return this.put( key, value );
       } else return null;
     }
@@ -226,27 +302,11 @@ public class VmTypes {
   
   private enum Registry {
     INSTANCE;
-    private final ConcurrentMap<String, VmType>                          vmTypeMap = PersistentMap.create( VmResolver.INSTANCE );
+    private final ConcurrentMap<String, VmType>                          vmTypeMap = PersistentMap.create( VmTypeResolver.INSTANCE );
     private final AtomicMarkableReference<ConcurrentMap<String, VmType>> ref       = new AtomicMarkableReference<ConcurrentMap<String, VmType>>( null, false );
     
-//  .expireAfterAccess( 10, TimeUnit.SECONDS )
-    
-    private VmType update( VmType vmType ) {
-      Registry.INSTANCE.initialize( );
-      VmType oldVmType = this.vmTypeMap.get( vmType.getDisplayName( ) );
-      if ( oldVmType == null ) {//except to save new vm type
-        return this.vmTypeMap.putIfAbsent( vmType.getDisplayName( ), vmType );
-      } else if ( vmType.equals( oldVmType ) ) {//return canonical map reference of vm type
-        return this.vmTypeMap.get( vmType.getDisplayName( ) );
-      } else if ( this.vmTypeMap.replace( vmType.getDisplayName( ), oldVmType, vmType ) ) {//expect to replace old vm type with new
-        return this.vmTypeMap.get( vmType.getDisplayName( ) );
-      } else {//noop
-        return this.vmTypeMap.get( vmType.getDisplayName( ) );
-      }
-    }
-    
     private void initialize( ) {
-      if ( this.ref.compareAndSet( null, vmTypeMap, false, true ) ) {
+      if ( this.ref.compareAndSet( null, vmTypeMap, false, true ) || vmTypeMap.size( ) != PredefinedTypes.values( ).length ) {
         for ( PredefinedTypes preDefVmType : PredefinedTypes.values( ) ) {
           VmType vmType = this.vmTypeMap.get( preDefVmType.getName( ) );
         }
@@ -254,7 +314,7 @@ public class VmTypes {
       } else if ( this.ref.compareAndSet( vmTypeMap, vmTypeMap, true, true ) ) {
         if ( this.vmTypeMap.size( ) != PredefinedTypes.values( ).length ) {
           for ( PredefinedTypes preDefVmType : PredefinedTypes.values( ) ) {
-            if ( !this.vmTypeMap.containsKey( preDefVmType ) ) {
+            if ( !this.vmTypeMap.containsKey( preDefVmType.getName() ) ) {
               this.vmTypeMap.putIfAbsent(
                 preDefVmType.getName( ),
                 VmType.create( preDefVmType.getName( ), preDefVmType.getCpu( ), preDefVmType.getDisk( ), preDefVmType.getMemory( ) ) );
@@ -264,6 +324,16 @@ public class VmTypes {
       }
     }
     
+    public VmType putIfAbsent( VmType vmType ) {
+      INSTANCE.initialize( );
+      return INSTANCE.vmTypeMap.putIfAbsent( vmType.getDisplayName( ), vmType );
+    }
+
+    public void replace( VmType newVmType ) {
+      INSTANCE.initialize( );
+      INSTANCE.vmTypeMap.replace( newVmType.getDisplayName( ), newVmType );
+    }
+
     static VmType get( String name ) throws NoSuchMetadataException {
       INSTANCE.initialize( );
       name = ( name == null ? VmTypes.DEFAULT_TYPE_NAME : name );

@@ -738,8 +738,7 @@ public class ConfigurationWebBackend {
 
 	}
 
-	private static String getExternalIpAddress ( ) {
-		String ipAddr = null;
+	private static void getExternalIpAddress ( ) {
 		HttpClient httpClient = new HttpClient( );
 
 		//set User-Agent
@@ -770,55 +769,8 @@ public class ConfigurationWebBackend {
 				httpClient.getHostConfiguration( ).setProxyHost( new ProxyHost( proxyHost ) );
 			}
 		}
-		// Use Rightscale's "whoami" service
-		String whoamiUrl = WebProperties.getProperty( WebProperties.RIGHTSCALE_WHOAMI_URL, WebProperties.RIGHTSCALE_WHOAMI_URL_DEFAULT );
-		GetMethod method = new GetMethod( whoamiUrl );
-		Integer timeoutMs = new Integer( 3 * 1000 ); // TODO: is this working?
-		method.getParams( ).setSoTimeout( timeoutMs );
-
-		try {
-			httpClient.executeMethod( method );
-			String str = "";
-			InputStream in = method.getResponseBodyAsStream( );
-			byte[] readBytes = new byte[1024];
-			int bytesRead = -1;
-			while ( ( bytesRead = in.read( readBytes ) ) > 0) {
-				str += new String( readBytes, 0, bytesRead );
-			}
-			Matcher matcher = Pattern.compile( ".*your ip is (.*)" ).matcher( str );
-			if ( matcher.find( ) ) {
-				ipAddr = matcher.group( 1 );
-			}
-
-		} catch ( MalformedURLException e ) {
-			LOG.warn( "Malformed URL exception: " + e.getMessage( ) );
-			LOG.debug( e, e );
-		} catch ( IOException e ) {
-			LOG.warn( "I/O exception: " + e.getMessage( ) );
-			LOG.debug( e, e );
-		} finally {
-			method.releaseConnection( );
-		}
-
-		return ipAddr;
 	}
 
 	public static final String CLOUD_PORT = "8443";
-
-	public static CloudInfo getCloudInfo( boolean setExternalHostPort ) throws EucalyptusServiceException {
-		String cloudRegisterId = null;
-		cloudRegisterId = SystemConfiguration.getSystemConfiguration().getRegistrationId( );
-		CloudInfo cloudInfo = new CloudInfo( );
-		cloudInfo.setInternalHostPort (Internets.localHostInetAddress( ).getHostAddress( ) + ":" + HttpServerBootstrapper.HTTPS_PORT );
-		if ( setExternalHostPort ) {
-			String ipAddr = getExternalIpAddress( );
-			if ( ipAddr != null ) {
-				cloudInfo.setExternalHostPort ( ipAddr + ":" + CLOUD_PORT );
-			}
-		}
-		cloudInfo.setServicePath( "/register" ); // TODO: what is the actual cloud registration service?
-		cloudInfo.setCloudId( cloudRegisterId ); // TODO: what is the actual cloud registration ID?
-		return cloudInfo;
-	}
 
 }

@@ -96,9 +96,8 @@
 #define BIG_CHAR_BUFFER_SIZE                     1024   //!< Large string buffer size
 #define VERY_BIG_CHAR_BUFFER_SIZE				 4096   //!< Extra large string buffer size
 #define HOSTNAME_SIZE                             255   //!< Hostname buffer size
-// FIXME: only using 16 chars + NULL right now.
 #define CREDENTIAL_SIZE                            17   //!< Migration-credential buffer size (16 chars + NULL)
-
+#define MAX_SERVICE_URIS                            8   //!< Maximum number of serivce URIs Euca message can carry
 //! @}
 
 //! @{
@@ -225,7 +224,7 @@ typedef struct serviceInfoType_t {
     char type[32];                     //!< Service type string field
     char name[32];                     //!< Service name string field
     char partition[32];                //!< Assigned partition name
-    char uris[8][512];                 //!< Service URI list
+    char uris[MAX_SERVICE_URIS][512];  //!< Service URI list
     int urisLen;                       //!< Number of service URI in the list (a value of -1 indicates an error with the URIS)
 } serviceInfoType;
 

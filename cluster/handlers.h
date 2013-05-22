@@ -414,7 +414,7 @@ int doDescribeSensors(ncMetadata * pMeta, int historySize, long long collectionI
 int doModifyNode(ncMetadata * pMeta, char *nodeName, char *nodeState);
 int doMigrateInstances(ncMetadata * pMeta, char *sourceNode, char *instanceId, char **destinationNodes, int destinationNodeCount, int allowHosts, char *nodeAction);
 int setup_shared_buffer(void **buf, char *bufname, size_t bytes, sem_t ** lock, char *lockname, int mode);
-int initialize(ncMetadata * pMeta);
+int initialize(ncMetadata * pMeta, boolean authoritative);
 int ccIsEnabled(void);
 int ccIsDisabled(void);
 int ccChangeState(int newstate);

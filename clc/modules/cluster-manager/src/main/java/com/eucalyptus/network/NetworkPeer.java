@@ -63,11 +63,25 @@
 package com.eucalyptus.network;
 
 import java.io.Serializable;
+import java.util.List;
+
 import javax.annotation.Nullable;
 import javax.persistence.Column;
 import javax.persistence.Embeddable;
+import javax.persistence.EntityTransaction;
 import javax.persistence.Transient;
+
 import org.hibernate.annotations.Parent;
+
+import com.eucalyptus.auth.principal.AccountFullName;
+import com.eucalyptus.cloud.util.NoSuchMetadataException;
+import com.eucalyptus.component.id.Eucalyptus;
+import com.eucalyptus.crypto.Crypto;
+import com.eucalyptus.entities.Entities;
+import com.eucalyptus.upgrade.Upgrades.EntityUpgrade;
+import com.eucalyptus.upgrade.Upgrades.Version;
+import com.eucalyptus.util.Exceptions;
+import com.google.common.base.Predicate;
 
 @Embeddable
 public class NetworkPeer implements Serializable {
@@ -169,5 +183,4 @@ public class NetworkPeer implements Serializable {
   private void setNetworkRule( final NetworkRule networkRule ) {
     this.networkRule = networkRule;
   }
-  
 }

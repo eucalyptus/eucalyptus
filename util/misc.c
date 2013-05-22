@@ -2713,7 +2713,7 @@ int get_remoteDevForNC(const char *the_iqn, const char *remoteDev, char *remoteD
             strncat(remoteDevForNC, DEV_STR_DELIMITER, remoteDevForNCLen);
         }
     }
-    free(remoteDevCopy);
+    EUCA_FREE(remoteDevCopy);
 
     return ret;
 }

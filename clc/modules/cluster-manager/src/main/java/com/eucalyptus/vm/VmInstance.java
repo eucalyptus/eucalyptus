@@ -75,6 +75,7 @@ import java.util.NavigableSet;
 import java.util.NoSuchElementException;
 import java.util.Set;
 import java.util.TreeSet;
+import java.util.TreeMap;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
@@ -158,15 +159,18 @@ import com.eucalyptus.tokens.AssumeRoleType;
 import com.eucalyptus.tokens.CredentialsType;
 import com.eucalyptus.upgrade.Upgrades.EntityUpgrade;
 import com.eucalyptus.upgrade.Upgrades.Version;
+import com.eucalyptus.util.CollectionUtils;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.FullName;
 import com.eucalyptus.util.OwnerFullName;
+import com.eucalyptus.util.RestrictedTypes;
 import com.eucalyptus.util.TypeMapper;
 import com.eucalyptus.util.async.AsyncRequests;
 import com.eucalyptus.vm.VmBundleTask.BundleState;
 import com.eucalyptus.vm.VmInstance.VmState;
 import com.eucalyptus.vm.VmInstances.Timeout;
 import com.eucalyptus.vm.VmVolumeAttachment.AttachmentState;
+import com.eucalyptus.vm.VmVolumeAttachment.NonTransientVolumeException;
 import com.eucalyptus.vmtypes.VmType;
 import com.eucalyptus.vmtypes.VmTypes;
 import com.eucalyptus.ws.StackConfiguration;
@@ -1435,6 +1439,18 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
     } ) );
   }
 
+  public TreeMap<String,String> getNetworkMap( ) { //A map that contains the security group name and id
+
+    TreeMap<String,String> networkGroupMap = Maps.newTreeMap();
+
+    for (NetworkGroup networkGroup : this.getNetworkGroups( ) ) {
+      networkGroupMap.put(networkGroup.getGroupId(), networkGroup.getDisplayName());
+    }
+
+    return networkGroupMap;
+  }
+
+
   public boolean isUsePrivateAddressing() {
     // allow for null value
     return Boolean.TRUE.equals( this.getNetworkConfig( ).getUsePrivateAddressing( ) );
@@ -1687,6 +1703,31 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
     }
   }
   
+  public VmVolumeAttachment lookupTransientVolumeAttachment( final String volumeId ) {
+	final EntityTransaction db = Entities.get( VmInstance.class );
+	try {
+	  final VmInstance entity = Entities.merge( this );
+	  VmVolumeAttachment volumeAttachment;
+      try {
+        volumeAttachment = entity.getTransientVolumeState( ).lookupVolumeAttachment( volumeId );
+        db.commit( );
+      } catch ( final NoSuchElementException ex ) {
+        volumeAttachment = Iterables.find( entity.getBootRecord( ).getPersistentVolumes( ), VmVolumeAttachment.volumeIdFilter( volumeId ) );
+        db.commit( );
+        if(volumeAttachment != null) {
+  		  throw new NonTransientVolumeException( volumeId + " is associated with boot from EBS instance " + entity.getInstanceId() + " at launch time.");
+  		}
+      }
+	  return volumeAttachment;
+	} catch (NonTransientVolumeException nex) {
+	  throw nex;	
+	} catch ( final Exception ex ) {
+	  throw new NoSuchElementException( "Failed to lookup volume: " + volumeId );
+    } finally {
+	  if ( db.isActive() ) db.rollback();
+	}
+  }
+  
   /**
    *
    */
@@ -1769,13 +1810,14 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
    *
    */
   public boolean eachVolumeAttachment( final Predicate<VmVolumeAttachment> predicate ) {
-    if ( VmStateSet.DONE.contains( this.getState( ) ) && !VmStateSet.STOP.contains( this.getLastState( ) ) ) {
+    if ( VmStateSet.DONE.contains( this.getState( ) ) && !VmStateSet.EXPECTING_TEARDOWN.contains( this.getLastState( ) ) ) {
       return false;
     } else {
       final EntityTransaction db = Entities.get( VmInstance.class );
       try {
         final VmInstance entity = Entities.merge( this );
-    	boolean ret = Iterables.all( entity.getBootRecord( ).getPersistentVolumes( ), new Predicate<VmVolumeAttachment>( ) {
+        Set<VmVolumeAttachment> persistentAttachments = Sets.newHashSet( entity.getBootRecord( ).getPersistentVolumes( ) );
+    	boolean ret = Iterables.all( persistentAttachments, new Predicate<VmVolumeAttachment>( ) {
             
             @Override
             public boolean apply( final VmVolumeAttachment arg0 ) {
@@ -2109,7 +2151,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
             runningInstance.getBlockDevices( ).add( new InstanceBlockDeviceMapping( attachedVol.getDevice( ), attachedVol.getVolumeId( ),
                                                                                     attachedVol.getStatus( ),
                                                                                     attachedVol.getAttachTime( ),
-                                                                                    Boolean.TRUE ) );
+                                                                                    attachedVol.getDeleteOnTerminate( ) ) );
           }
           return runningInstance;
         } catch ( final NoSuchElementException ex ) {
@@ -2132,7 +2174,11 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
       return new ReservationInfoType(
           instance.getReservationId( ),
           instance.getOwner( ).getAccountNumber( ),
-          instance.getNetworkNames( ) );
+          CollectionUtils.putAll(
+              instance.getNetworkGroups(),
+              Maps.<String, String>newTreeMap(),
+              NetworkGroups.groupId(),
+              RestrictedTypes.toDisplayName() ) );
     }
   }
 

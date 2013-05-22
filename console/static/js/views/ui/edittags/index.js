@@ -2,8 +2,9 @@ define([
    'underscore',
    'text!./template.html!strip',
    'backbone',
-   'models/tag'
-], function(_, template, Backbone, Tag) {
+   'models/tag',
+   'app'
+], function(_, template, Backbone, Tag, app) {
     return Backbone.View.extend({
         initialize : function(args) {
             var self = this;
@@ -12,19 +13,39 @@ define([
             var model = args.model;
             var tags = new Backbone.Collection();
 
+            var prepareTag = function(t) {
+              if (!/^euca:/.test(t.get('name'))) {
+                  var nt = new Tag(t.pick('id','name','value','res_id'));
+                  nt.set({_clean: true, _deleted: false, _edited: false, _edit: false, _new: false});
+                  return nt;
+              }
+            };
+
             var loadTags = function() {
                 model.get('tags').each(function(t) {
-                    if (!/^euca:/.test(t.get('name'))) {
-                        var nt = new Tag(t.pick('id','name','value','res_id'));
-                        nt.set({_clean: true, _deleted: false, _edited: false, _edit: false, _new: false});
-                        tags.add(nt);
-                    }
+                  tags.add(prepareTag(t));
                 });
             }
 
             loadTags();
 
-            model.on('confirm', function() {
+            model.on('reload', function() {
+              tags.reset();
+              loadTags();
+              self.render();
+            });
+
+            model.on('addTag', function(tag, unique_keys) {
+              var name = tag.get('name');
+              if(unique_keys) {
+                var duplicates = tags.where({name: name});
+                tags.remove(duplicates, {silent: true});
+              }
+              tags.add(prepareTag(tag));
+              self.render();  
+            });
+
+            model.on('confirm', function(defer) {
                 self.scope.create();
                 _.chain(tags.models).clone().each(function(t) {
                    var backup = t.get('_backup');
@@ -40,22 +61,25 @@ define([
                                console.log('delete', t);
                                t.destroy();
                            }
+                       } else {
+                         // remove _new _delete tags
+                         tags.remove(t);
                        }
                    } else if (t.get('_edited')) {
                        // If the tag is new then it should only be saved, even if it was edited.
                        if (t.get('_new')) {
-                         t.save();
+                         if(!defer) t.save() ;
                        } else if( (backup != null) && (backup.get('name') !== t.get('name')) ){
                          // CASE OF KEY CHANGE
                          console.log("Edited, with previous value: " + t.get('name') + ":" + t.get('value'));
                          t.get('_backup').destroy();
-                         t.save();
+                         if(!defer) t.save();
                        }else{
                          // CASE OF VALUE CHANGE
-                         t.save();
+                        if(!defer) t.save();
                        } 
                    } else if (t.get('_new')) {
-                       t.save();
+                       if(!defer) t.save();
                    }
                 });
                 // THE OPERATION BELOW MIGHT NOT WORK WHEN .SYNC() CALLS ARE USED   --- KYO 042913
@@ -94,6 +118,22 @@ define([
                     // NO-OP IF NOT VALID
                     if( !self.scope.isTagValid ){
                       return;
+                    }
+
+                    // only allow ten tags
+                    if( self.scope.tags.length >= 10 ) {
+                      var limit = self.scope.tags.length;
+                      // length limit, but have any been deleted?
+                      self.scope.tags.each( function(t, idx) {
+                        if (t.get('_deleted')) {
+                          limit--;
+                        }
+                      });
+                      if (limit >=  10) {
+                        self.scope.error.set('name', app.msg('tag_limit_error_name'));
+                        self.scope.error.set('value', app.msg('tag_limit_error_value'));
+                        return;
+                      }
                     }
 
                     var newt = new Tag(self.scope.newtag.toJSON());

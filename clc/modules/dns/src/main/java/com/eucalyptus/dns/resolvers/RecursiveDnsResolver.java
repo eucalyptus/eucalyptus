@@ -60,37 +60,66 @@
  *   NEEDED TO COMPLY WITH ANY SUCH LICENSES OR RIGHTS.
  ************************************************************************/
 
-package com.eucalyptus.webui.client.view;
+package com.eucalyptus.dns.resolvers;
 
-import com.google.gwt.core.client.GWT;
-import com.google.gwt.event.dom.client.ClickEvent;
-import com.google.gwt.uibinder.client.UiBinder;
-import com.google.gwt.uibinder.client.UiField;
-import com.google.gwt.uibinder.client.UiHandler;
-import com.google.gwt.user.client.ui.Composite;
-import com.google.gwt.user.client.ui.Label;
-import com.google.gwt.user.client.ui.Widget;
+import java.net.InetAddress;
+import java.util.Iterator;
+import org.xbill.DNS.Credibility;
+import org.xbill.DNS.DClass;
+import org.xbill.DNS.Lookup;
+import org.xbill.DNS.NSRecord;
+import org.xbill.DNS.Name;
+import org.xbill.DNS.RRset;
+import org.xbill.DNS.Record;
+import org.xbill.DNS.Section;
+import org.xbill.DNS.SetResponse;
+import org.xbill.DNS.Type;
+import com.eucalyptus.configurable.ConfigurableClass;
+import com.eucalyptus.configurable.ConfigurableField;
+import com.eucalyptus.records.Logs;
+import com.eucalyptus.util.Subnets;
+import com.eucalyptus.util.dns.DomainNames;
+import com.eucalyptus.util.dns.DnsResolvers.DnsResolver;
+import com.eucalyptus.util.dns.DnsResolvers.DnsResponse;
 
-public class CloudRegistrationViewImpl extends Composite implements CloudRegistrationView {
+@ConfigurableClass( root = "system.dns.recursive",
+                    description = "Options controlling recursive DNS resolution and caching." )
+public class RecursiveDnsResolver implements DnsResolver {
+  @ConfigurableField( description = "Enable the recursive DNS resolver.  Note: system.dns.resolvers.enable must also be 'true'" )
+  public static Boolean                    enabled         = Boolean.TRUE;
+  @ConfigurableField( description = "Period (in seconds) after which the recursive response cache is completely flushed." )
+  public static Long                       cacheExpiration = 30 * 60L;
   
-  private static CloudRegistrationViewImplUiBinder uiBinder = GWT.create( CloudRegistrationViewImplUiBinder.class );
+  /**
+   * Cache of results from recursive DNS queries.
+   */
+  private static final org.xbill.DNS.Cache cache           = new org.xbill.DNS.Cache( DClass.IN );
   
-  interface CloudRegistrationViewImplUiBinder extends UiBinder<Widget, CloudRegistrationViewImpl> {}
-  
-  @UiField
-  Label cloudUrl;
-  
-  @UiField
-  Label cloudId;
-    
-  public CloudRegistrationViewImpl( ) {
-    initWidget( uiBinder.createAndBindUi( this ) );
-  }
-
   @Override
-  public void display( String cloudUrl, String cloudId ) {
-    this.cloudUrl.setText( cloudUrl );
-    this.cloudId.setText( cloudId );
+  public DnsResponse lookupRecords( final Record query ) {
+    final Name name = query.getName( );
+    final int type = query.getType( );
+    Lookup aLookup = new Lookup( name, type );
+    aLookup.setCache( cache );
+    aLookup.run( );
+    return DnsResponse.forName( query.getName( ) ).answer( aLookup.run( ) );
   }
   
+  /**
+   * This resolver works when it is:
+   * 1. Enabled
+   * 2. The name is absolute
+   * 3. The name is not in a Eucalyptus controlled subdomain
+   * 4. The source address is under control of the system
+   * 
+   * @see com.eucalyptus.util.dns.DnsResolvers.DnsResolver#checkAccepts(Record, org.xbill.DNS.Name,
+   *      InetAddress)
+   */
+  @Override
+  public boolean checkAccepts( Record query, InetAddress source ) {
+    return enabled
+           && query.getName( ).isAbsolute( )
+           && !DomainNames.isSystemSubdomain( query.getName( ) )
+           && Subnets.isSystemSourceAddress( source );
+  }
 }

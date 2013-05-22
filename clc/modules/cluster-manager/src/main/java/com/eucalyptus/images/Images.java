@@ -428,7 +428,7 @@ public class Images {
 	    if( !bdmset.add( bdm ) ) {
 	      throw Exceptions.toUndeclared( new MetadataException( bdm.getDeviceName() + " is assigned multiple times" ) );	
 	    } else if( bdm.getDeviceName().matches(".*\\d\\Z") ) {
-		  throw Exceptions.toUndeclared( new MetadataException( "Device name cannot be a partition" ) );  
+		  throw Exceptions.toUndeclared( new MetadataException( bdm.getDeviceName() + " is not supported. Device name cannot be a partition") );  
 	    } else if ( bdm.getNoDevice() != null && bdm.getNoDevice() ) {
 		  if ( isSuppressMappingValid != null && isSuppressMappingValid ) {
 		    continue;

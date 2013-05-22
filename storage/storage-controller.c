@@ -183,19 +183,26 @@
 //!
 int scClientCall(char *correlationId, char *userId, int use_ws_sec, char *ws_sec_policy_file_path, int timeout, char *scURL, char *scOp, ...)
 {
-    va_list al;
-    int pid, rc = 0, ret = 0, status = 0, opFail = 0, len, rbytes, i;
-    int filedes[2];
-    char *localCorrelationId;
-    char *localUserId;
+    int pid = 0;
+    int rc = 0;
+    int ret = 0;
+    int status = 0;
+    int opFail = 0;
+    int len = 0;
+    int rbytes = 0;
+    int i = 0;
+    int filedes[2] = { 0 };
+    char *localCorrelationId = NULL;
+    char *localUserId = NULL;
+    scStub *scs = NULL;
+    va_list al = { {0} };
 
     LOGTRACE("invoked: scOps=%s scURL=%s timeout=%d\n", scOp, scURL, timeout);  // these are common
 
     if (timeout <= 0)
         timeout = DEFAULT_SC_CALL_TIMEOUT;
 
-    rc = pipe(filedes);
-    if (rc) {
+    if ((rc = pipe(filedes)) != 0) {
         LOGERROR("cannot create pipe scOps=%s\n", scOp);
         return (1);
     }
@@ -206,8 +213,6 @@ int scClientCall(char *correlationId, char *userId, int use_ws_sec, char *ws_sec
     pid = fork();
     if (!pid) {
         //I'm the child, do the call.
-        scStub *scs;
-
         if (correlationId) {
             localCorrelationId = strdup(correlationId);
         } else {
@@ -244,7 +249,7 @@ int scClientCall(char *correlationId, char *userId, int use_ws_sec, char *ws_sec
 
             LOGTRACE("Calling Export Volume Stub\n");
             rc = scExportVolumeStub(scs, localCorrelationId, localUserId, volumeId, token, ip, iqn, connectInfo);
-            if (timeout && connectInfo) {
+            if (connectInfo) {
                 if (!rc && *connectInfo) {
                     len = strlen(*connectInfo) + 1;
                     LOGTRACE("SC Client child received output %d in length: %s\n", len, *connectInfo);
@@ -303,7 +308,7 @@ int scClientCall(char *correlationId, char *userId, int use_ws_sec, char *ws_sec
                 *connectInfo = NULL;
             }
 
-            if (timeout && connectInfo) {
+            if (connectInfo) {
                 rbytes = timeread(filedes[0], &len, sizeof(int), timeout);
                 if (rbytes <= 0) {
                     LOGTRACE("SC Client received output length of %d, not writing data\n", rbytes);
@@ -329,12 +334,8 @@ int scClientCall(char *correlationId, char *userId, int use_ws_sec, char *ws_sec
         }
 
         close(filedes[0]);
-        if (timeout) {
-            rc = timewait(pid, &status, timeout);
-            rc = WEXITSTATUS(status);
-        } else {
-            rc = 0;
-        }
+        rc = timewait(pid, &status, timeout);
+        rc = WEXITSTATUS(status);
     }
 
     LOGDEBUG("\tdone scOps=%s clientrc=%d opFail=%d\n", scOp, rc, opFail);

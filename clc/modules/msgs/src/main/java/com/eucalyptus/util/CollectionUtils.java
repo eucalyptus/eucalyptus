@@ -21,6 +21,7 @@ package com.eucalyptus.util;
 
 import java.util.Comparator;
 import java.util.List;
+import java.util.Map;
 import javax.annotation.Nullable;
 import com.google.common.base.Function;
 import com.google.common.base.Functions;
@@ -120,6 +121,16 @@ public class CollectionUtils {
       value = reducer.apply( value ).apply( item );      
     }    
     return value;
+  }
+
+  public static <I,K,V> Map<K,V> putAll( final Iterable<? extends I> iterable,
+                                         final Map<K,V> targetMap,
+                                         final Function<? super I, K> keyFunction,
+                                         final Function<? super I, V> valueFunction ) {
+    if ( iterable != null ) for ( final I item : iterable ) {
+      targetMap.put( keyFunction.apply( item ), valueFunction.apply( item ) );
+    }
+    return targetMap;
   }
 
   /**

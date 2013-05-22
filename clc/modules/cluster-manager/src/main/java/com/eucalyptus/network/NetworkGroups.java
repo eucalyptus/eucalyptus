@@ -503,7 +503,7 @@ public class NetworkGroups {
     }
     final EntityTransaction db = Entities.get( NetworkGroup.class );
     try {
-      final NetworkGroup ret = Entities.uniqueResult( new NetworkGroup( ownerFullName, groupName ) );
+      NetworkGroup ret = Entities.uniqueResult( new NetworkGroup( ownerFullName, groupName ) );
       db.commit( );
       return ret;
     } catch ( final Exception ex ) {

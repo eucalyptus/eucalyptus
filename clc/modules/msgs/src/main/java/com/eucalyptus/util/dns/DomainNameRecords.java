@@ -60,54 +60,44 @@
  *   NEEDED TO COMPLY WITH ANY SUCH LICENSES OR RIGHTS.
  ************************************************************************/
 
-package com.eucalyptus.webui.client.activity;
+package com.eucalyptus.util.dns;
 
-import java.util.logging.Level;
-import java.util.logging.Logger;
-import com.eucalyptus.webui.client.ClientFactory;
-import com.eucalyptus.webui.client.service.CloudInfo;
-import com.eucalyptus.webui.client.view.CloudRegistrationView;
-import com.google.gwt.activity.shared.AbstractActivity;
-import com.google.gwt.event.shared.EventBus;
-import com.google.gwt.user.client.rpc.AsyncCallback;
-import com.google.gwt.user.client.ui.AcceptsOneWidget;
+import java.io.IOException;
+import java.net.InetAddress;
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
+import java.util.Date;
+import org.xbill.DNS.ARecord;
+import org.xbill.DNS.DClass;
+import org.xbill.DNS.Name;
+import org.xbill.DNS.Record;
+import org.xbill.DNS.SOARecord;
+import org.xbill.DNS.Type;
+import com.eucalyptus.util.dns.DnsResolvers.ResponseType;
 
-public class CloudRegistrationActivity extends AbstractActivity {
-
-  private static final Logger LOG = Logger.getLogger( CloudRegistrationActivity.class.getName( ) );
-    
-  private ClientFactory clientFactory;
-    
-  public CloudRegistrationActivity( ClientFactory clientFactory ) {
-    this.clientFactory = clientFactory;
+/**
+ * @todo doc
+ * @author chris grzegorczyk <grze@eucalyptus.com>
+ */
+public class DomainNameRecords {
+  private final static long ttl = 604800;
+  
+  public static SOARecord sourceOfAuthority( Name name ) {
+    final Name soa = DomainNames.sourceOfAuthority( name );
+    SOARecord soaRecord = new SOARecord( name, DClass.IN, ttl, soa,
+                                         Name.fromConstantString( "root." + soa ),
+                                         DomainNameRecords.serial( ), 1200L, 180L, 2419200L, ttl );
+    return soaRecord;
   }
   
-  @Override
-  public void start( AcceptsOneWidget container, EventBus eventBus ) {
-    CloudRegistrationView view = clientFactory.getCloudRegistrationView( );
-    container.setWidget( view );
-    doLoad( view );
+  public static ARecord addressRecord( Name name, InetAddress ip ) {
+    return new ARecord( name, DClass.IN, ttl, ip );
   }
 
-  private void doLoad( final CloudRegistrationView view ) {
-    clientFactory.getBackendService( ).getCloudInfo( clientFactory.getLocalSession( ).getSession( ), false, new AsyncCallback<CloudInfo>( ) {
-
-      @Override
-      public void onFailure( Throwable caught ) {
-        ActivityUtil.logoutForInvalidSession( clientFactory, caught );
-        LOG.log( Level.WARNING, "Failed to load cloud info", caught );
-      }
-
-      @Override
-      public void onSuccess( CloudInfo cloudInfo ) {
-        if ( cloudInfo != null ) {
-          String url = "https://" + cloudInfo.getInternalHostPort( ) + cloudInfo.getServicePath( );
-          String id = cloudInfo.getCloudId( );
-          view.display( url, id );
-        }
-      }
-      
-    } );
+  static long serial( ) {
+    return Long.parseLong( DomainNameRecords.SERIALFORMATTER.format( new Date( ) ) );
   }
 
+  static final DateFormat SERIALFORMATTER = new SimpleDateFormat( "yyMMddHHmm" );
+  
 }

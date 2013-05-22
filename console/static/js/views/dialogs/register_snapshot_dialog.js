@@ -27,6 +27,8 @@ define([
         status: '',
         snapshot: new Snapshot({snapshot_id: args.item}),
         error: new Backbone.Model({}),
+        help: {title: null, content: help_snapshot.dialog_register_content, url: help_snapshot.dialog_register_content_url, pop_height: 600},
+
 
         cancelButton: {
           click: function() {

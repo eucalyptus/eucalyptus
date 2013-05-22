@@ -116,22 +116,32 @@ define([
             if (model.get('block_device_mappings') != undefined) {
               var mappings = model.get('block_device_mappings');
               $.each(mappings, function(idx, mapping) {
-                if(mapping.device_name != undefined)
-                  data.push({name: "BlockDeviceMapping."+(idx+1)+".DeviceName", value: mapping.device_name});
-
-                if(mapping.no_device != undefined) {
-                  data.push({name: "BlockDeviceMapping."+(idx+1)+".NoDevice", value: mapping.no_device});
+                if (mapping.device_name == '/dev/sda') { // root, folks!
+                    data.push({name: "BlockDeviceMapping."+(idx+1)+".DeviceName", value: mapping.device_name});
+                    data.push({name: "BlockDeviceMapping."+(idx+1)+".Ebs.VolumeSize", value: mapping.ebs.volume_size});
+                    data.push({name: "BlockDeviceMapping."+(idx+1)+".Ebs.DeleteOnTermination", value: mapping.ebs.delete_on_termination});
                 }
-                if (mapping.virtual_name != undefined) {
-                  data.push({name: "BlockDeviceMapping."+(idx+1)+".VirtualName", value: mapping.virtual_name});
-                } else if (mapping.ebs != undefined) {
-                  data.push({name: "BlockDeviceMapping."+(idx+1)+".Ebs.SnapshotId", value: mapping.ebs.snapshot_id});
-                  data.push({name: "BlockDeviceMapping."+(idx+1)+".Ebs.VolumeSize", value: mapping.ebs.volume_size});
-                  data.push({name: "BlockDeviceMapping."+(idx+1)+".Ebs.DeleteOnTermination", value: mapping.ebs.delete_on_termination});
-                  if(mapping.ebs.volume_type != undefined)
-                  data.push({name: "BlockDeviceMapping."+(idx+1)+".Ebs.VolumeType", value: mapping.ebs.volume_type});
-                  if(mapping.ebs.iopts != undefined) 
-                    data.push({name: "BlockDeviceMapping."+(idx+1)+".Ebs.Iopts", value: mapping.ebs.iopts});
+                else if (mapping.ephemeral_name == 'ephemeral0') { // ephemeral device, folks!
+                    data.push({name: "BlockDeviceMapping."+(idx+1)+".VirtualName", value: mapping.ephemeral_name});
+                }
+                else { // or, normal mappings
+                  if(mapping.device_name != undefined)
+                    data.push({name: "BlockDeviceMapping."+(idx+1)+".DeviceName", value: mapping.device_name});
+
+                  if(mapping.no_device != undefined) {
+                    data.push({name: "BlockDeviceMapping."+(idx+1)+".NoDevice", value: mapping.no_device});
+                  }
+                  if (mapping.virtual_name != undefined) {
+                    data.push({name: "BlockDeviceMapping."+(idx+1)+".VirtualName", value: mapping.virtual_name});
+                  } else if (mapping.ebs != undefined) {
+                    data.push({name: "BlockDeviceMapping."+(idx+1)+".Ebs.SnapshotId", value: mapping.ebs.snapshot_id});
+                    data.push({name: "BlockDeviceMapping."+(idx+1)+".Ebs.VolumeSize", value: mapping.ebs.volume_size});
+                    data.push({name: "BlockDeviceMapping."+(idx+1)+".Ebs.DeleteOnTermination", value: mapping.ebs.delete_on_termination});
+                    if(mapping.ebs.volume_type != undefined)
+                    data.push({name: "BlockDeviceMapping."+(idx+1)+".Ebs.VolumeType", value: mapping.ebs.volume_type});
+                    if(mapping.ebs.iopts != undefined) 
+                      data.push({name: "BlockDeviceMapping."+(idx+1)+".Ebs.Iopts", value: mapping.ebs.iopts});
+                  }
                 }
               });
             }
@@ -196,6 +206,10 @@ define([
               fileInput: null,
               paramName: "user_data_file",
             });
+
+            // remove name tags from tags model - they're set elsewhere below
+            var extra_name_tags = model.get('tags').where({name: 'Name'});
+            model.get('tags').remove(extra_name_tags, {silent:true});
 
             var the_tags = model.get('tags').toJSON();
             var name_tags = model.get('names').toJSON();

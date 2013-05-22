@@ -52,7 +52,7 @@ define([
               if( item.get('status') === 'available' ){
                 // TRY TO FIND ITS NAME TAG
                 var nameTag = self.findNameTag(item);
-                var autocomplete_string = String(self.createIdNameTagString(item.get('id'), nameTag));
+                var autocomplete_string = String(self.createIdNameTagString(item.get('id'), addEllipsis(nameTag, 15)));
                 vol_ids.push(autocomplete_string);
               }
             });
@@ -76,7 +76,7 @@ define([
               if( item.get('_state').name === 'running' ){
                 // TRY TO FIND ITS NAME TAG
                 var nameTag = self.findNameTag(item);
-                var autocomplete_string = String(self.createIdNameTagString(item.get('id'), nameTag));
+                var autocomplete_string = String(self.createIdNameTagString(item.get('id'), addEllipsis(nameTag, 15)));
                 inst_ids.push(autocomplete_string);
               }
             });
@@ -119,7 +119,7 @@ define([
               this.disableInstanceInputBox();
               // DISPLAY ITS NAME TAG FOR INSTANCE ID
               var foundNameTag = self.findNameTag(App.data.instance.get(args.instance_id));
-              self.scope.volume.set({instance_id: String(self.createIdNameTagString(args.instance_id, foundNameTag))});
+              self.scope.volume.set({instance_id: String(self.createIdNameTagString(args.instance_id, addEllipsis(foundNameTag, 15)))});
             };
 
             // CASE: WHEN CALLED FROM THE VOLUME PAGE
@@ -130,7 +130,7 @@ define([
               this.disableVolumeInputBox();
               // DISPLAY ITS NAME TAG FOR VOLUME ID
               var foundNameTag = self.findNameTag(App.data.volume.get(args.volume_id));
-              self.scope.volume.set({volume_id: String(self.createIdNameTagString(args.volume_id, foundNameTag))});
+              self.scope.volume.set({volume_id: String(self.createIdNameTagString(args.volume_id, addEllipsis(foundNameTag, 15)))});
             };
  
             // SETUP INPUT VALIDATOR

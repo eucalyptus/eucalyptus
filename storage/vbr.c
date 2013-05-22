@@ -2947,7 +2947,7 @@ int main(int argc, char **argv)
         CHECK_BLOBS;
 
         for (int i = 0; i < 2; i++) {
-            if (i % 1) {
+            if (i == 1) {
                 do_fork = 0;
             } else {
                 do_fork = 1;

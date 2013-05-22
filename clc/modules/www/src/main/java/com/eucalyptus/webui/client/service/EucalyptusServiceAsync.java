@@ -167,8 +167,6 @@ public interface EucalyptusServiceAsync {
 
   void resetPassword( String confirmationCode, String password, AsyncCallback<Void> callback );
 
-  void getCloudInfo( Session session, boolean setExternalHostPort, AsyncCallback<CloudInfo> callback );
-
   void getToolDownloads( Session session, AsyncCallback<ArrayList<DownloadInfo>> callback );
 
   void getGuide( Session session, String snippet, AsyncCallback<ArrayList<GuideItem>> callback );

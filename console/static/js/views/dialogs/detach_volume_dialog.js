@@ -36,10 +36,10 @@ define([
          var instance_id = App.data.volume.get(vid).get('attach_data').instance_id;
          // FIND THE NAME TAG FOR THE VOLUME
          var volNameTag = self.findNameTag(App.data.volume.get(vid));
-         volNameTag = self.createIdNameTagString(vid, volNameTag);
+         volNameTag = self.createIdNameTagString(vid, addEllipsis(volNameTag, 15));
          // FIND THE NAME TAG FOR THE INSTANCE
          var instanceNameTag = self.findNameTag(App.data.instance.get(instance_id));
-         instanceNameTag = self.createIdNameTagString(instance_id, instanceNameTag);
+         instanceNameTag = self.createIdNameTagString(instance_id, addEllipsis(instanceNameTag, 15));
          // CREATE A LIST WITH THE NAME TAGS
          volume_list.push(new Volume({volume_id: volNameTag, instance_id: instanceNameTag}));
          // volume_id and instance_id are not in the ID format above, however it ok since they are display only   --- KYO 050313 

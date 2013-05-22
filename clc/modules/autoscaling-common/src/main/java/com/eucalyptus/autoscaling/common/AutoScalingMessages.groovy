@@ -30,6 +30,8 @@ import javax.annotation.Nonnull
 import com.eucalyptus.system.Ats
 import com.google.common.collect.Maps
 import com.google.common.base.Function
+import com.eucalyptus.util.CollectionUtils
+import com.google.common.base.Predicates
 
 public class DescribeMetricCollectionTypesType extends AutoScalingMessage {
   public DescribeMetricCollectionTypesType() {  }
@@ -1105,6 +1107,22 @@ public class CreateLaunchConfigurationType extends AutoScalingMessage {
   String iamInstanceProfile
   Boolean ebsOptimized
   public CreateLaunchConfigurationType() {  }
+
+  @Override
+  Map<String, String> validate() {
+    Map<String,String> errors = super.validate()
+    // Validate security group identifiers or names used consistently
+    if ( securityGroups != null && securityGroups.member != null ) {
+      int idCount = (int) securityGroups.member.inject( 0 ){
+        int total, String group -> total + ( group.matches( "sg-[0-9A-Fa-f]{8}" ) ? 1 : 0 ) }
+      if ( idCount != 0 && idCount != securityGroups.member.size() ) {
+        errors.put(
+            "SecurityGroups.member",
+            "Must use either use group-id or group-name for all the security groups, not both at the same time"  )
+      }
+    }
+    errors
+  }
 }
 public class MetricCollectionType extends EucalyptusData {
   String metric

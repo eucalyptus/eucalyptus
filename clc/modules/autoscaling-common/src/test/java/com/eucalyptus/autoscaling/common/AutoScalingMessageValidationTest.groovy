@@ -84,4 +84,48 @@ class AutoScalingMessageValidationTest {
 
     assertEquals( "Embedded validation result", ["Tags.member.1.Key": "Tags.member.1.Key is required"], createTags.validate() );
   }
+
+  @Test
+  void testCreateLaunchConfigurationValidation() {
+    new CreateLaunchConfigurationType(
+        imageId: "emi-00000000",
+        instanceType: "m1.small",
+        securityGroups: new SecurityGroups(
+            member: [ "MyGroup", "sg-00000001" ]
+        ),
+        launchConfigurationName: "MyLaunchConfiguration"
+    ).with { createLaunchConfiguration ->
+      assertEquals( "Create launch config invalid groups validation result", ["SecurityGroups.member": "Must use either use group-id or group-name for all the security groups, not both at the same time"], createLaunchConfiguration.validate() );
+    }
+
+    new CreateLaunchConfigurationType(
+        imageId: "emi-00000000",
+        instanceType: "m1.small",
+        launchConfigurationName: "MyLaunchConfiguration"
+    ).with { createLaunchConfiguration ->
+      assertEquals( "Create launch config no groups validation result", [:], createLaunchConfiguration.validate() );
+    }
+
+    new CreateLaunchConfigurationType(
+        imageId: "emi-00000000",
+        instanceType: "m1.small",
+        securityGroups: new SecurityGroups(
+            member: [ "MyGroup1", "MyGroup2", "MyGroup3", "MyGroup4" ]
+        ),
+        launchConfigurationName: "MyLaunchConfiguration"
+    ).with { createLaunchConfiguration ->
+      assertEquals( "Create launch config groups by name validation result", [:], createLaunchConfiguration.validate() );
+    }
+
+    new CreateLaunchConfigurationType(
+        imageId: "emi-00000000",
+        instanceType: "m1.small",
+        securityGroups: new SecurityGroups(
+            member: [ "sg-00000001", "sg-00000002" ]
+        ),
+        launchConfigurationName: "MyLaunchConfiguration"
+    ).with { createLaunchConfiguration ->
+      assertEquals( "Create launch config groups by id validation result", [:], createLaunchConfiguration.validate() );
+    }
+  }
 }

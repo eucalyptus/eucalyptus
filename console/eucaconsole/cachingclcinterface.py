@@ -202,7 +202,7 @@ class CachingClcInterface(ClcInterface):
                     inst.owner_id = res.owner_id
                     inst.groups = res.groups
                     if res.groups:
-                        inst.group_name = res.groups[0].id
+                        inst.group_name = res.groups[0].name
                     ret.append(inst)
             else:
                 for inst in res['instances']:

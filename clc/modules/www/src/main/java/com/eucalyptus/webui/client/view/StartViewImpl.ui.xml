@@ -114,9 +114,6 @@
             <div class="{style.block}"><div class="{style.header}"><g:Anchor ui:field="serviceHeader">MANAGE CLOUD SERVICES AND RESOURCES</g:Anchor></div>
                 <g:SimplePanel ui:field="serviceSnippet"></g:SimplePanel>
             </div>
-            <div class="{style.block}"><div class="{style.header}"><g:Anchor ui:field="cloudRegHeader">REGISTER YOUR CLOUD</g:Anchor></div>
-                <g:SimplePanel ui:field="cloudRegSnippet"></g:SimplePanel>
-            </div>
             <div class="{style.block}"><div class="{style.header}"><g:Anchor ui:field="downloadHeader">DOWNLOAD TOOLS FROM EUCALYPTUS</g:Anchor></div>
                 <g:SimplePanel ui:field="downloadSnippet"></g:SimplePanel>
             </div>            

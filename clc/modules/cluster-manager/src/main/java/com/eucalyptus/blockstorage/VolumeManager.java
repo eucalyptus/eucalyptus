@@ -112,6 +112,7 @@ import com.eucalyptus.vm.VmInstance.VmState;
 import com.eucalyptus.vm.VmInstances;
 import com.eucalyptus.vm.VmVolumeAttachment;
 import com.eucalyptus.vm.VmVolumeAttachment.AttachmentState;
+import com.eucalyptus.vm.VmVolumeAttachment.NonTransientVolumeException;
 import com.google.common.base.Function;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
@@ -131,8 +132,6 @@ import edu.ucsb.eucalyptus.msgs.DescribeVolumesType;
 import edu.ucsb.eucalyptus.msgs.DetachStorageVolumeType;
 import edu.ucsb.eucalyptus.msgs.DetachVolumeResponseType;
 import edu.ucsb.eucalyptus.msgs.DetachVolumeType;
-import edu.ucsb.eucalyptus.msgs.ExportVolumeResponseType;
-import edu.ucsb.eucalyptus.msgs.ExportVolumeType;
 import edu.ucsb.eucalyptus.msgs.GetVolumeTokenResponseType;
 import edu.ucsb.eucalyptus.msgs.GetVolumeTokenType;
 import edu.ucsb.eucalyptus.msgs.ResourceTag;
@@ -148,6 +147,7 @@ public class VolumeManager {
                                              ? Long.parseLong( request.getSize( ) )
                                              : null;
     final String snapId = request.getSnapshotId( );
+    Integer snapSize = 0;
     String partition = request.getAvailabilityZone( );
     
     if ( ( request.getSnapshotId( ) == null && request.getSize( ) == null ) ) {
@@ -157,6 +157,7 @@ public class VolumeManager {
     if ( snapId != null ) {
       try {
         Snapshot snap = Transactions.find( Snapshot.named( null, snapId ) );
+        snapSize = snap.getVolumeSize( );
         if ( !RestrictedTypes.filterPrivileged( ).apply( snap ) ) {
           throw new EucalyptusCloudException( "Not authorized to use snapshot " + snapId + " by " + ctx.getUser( ).getName( ) );
         }
@@ -168,9 +169,10 @@ public class VolumeManager {
         throw new EucalyptusCloudException( "Failed to create volume because the referenced snapshot id is invalid: " + snapId );
       }
     }
-    final Integer newSize = new Integer( request.getSize( ) != null
-                                                                   ? request.getSize( )
-                                                                   : "-1" );
+    final Integer newSize = ( snapId != null
+      ? snapSize
+      : new Integer( request.getSize( ) != null
+        ? request.getSize( ) : "-1" ) );
     Exception lastEx = null;
     for ( int i = 0; i < VOL_CREATE_RETRIES; i++ ) {
       try {
@@ -419,9 +421,8 @@ public class VolumeManager {
       throw new EucalyptusCloudException( e.getMessage( ), e );
     }
     
-    //TODO: zhill, this is a messaging change. The SC should not know the format, so the CLC must construct the special format
-    String token = StorageProperties.TOKEN_PREFIX + scGetTokenResponse.getVolumeId() + "," + scGetTokenResponse.getToken();
-    
+    //The SC should not know the format, so the CLC must construct the special format
+    String token = StorageProperties.formatVolumeAttachmentTokenForTransfer(scGetTokenResponse.getToken(), volume.getDisplayName());    
     request.setRemoteDevice(token);
     
     AttachedVolume attachVol = new AttachedVolume( volume.getDisplayName( ), vm.getInstanceId( ), request.getDevice( ), request.getRemoteDevice( ) );
@@ -454,10 +455,13 @@ public class VolumeManager {
     VmInstance vm = null;
     AttachedVolume volume = null;
     try {
-      VmVolumeAttachment vmVolAttach = VmInstances.lookupVolumeAttachment( request.getVolumeId( ) );
+      VmVolumeAttachment vmVolAttach = VmInstances.lookupTransientVolumeAttachment( request.getVolumeId( ) );
       volume = VmVolumeAttachment.asAttachedVolume( vmVolAttach.getVmInstance( ) ).apply( vmVolAttach );
       vm = vmVolAttach.getVmInstance( );
     } catch ( NoSuchElementException ex ) {
+      if(ex instanceof NonTransientVolumeException){
+    	throw new EucalyptusCloudException(ex.getMessage() + " Cannot be detached");
+      }
       /** no such attachment **/
     }
     if ( vm != null && MigrationState.isMigrating( vm ) ) {
