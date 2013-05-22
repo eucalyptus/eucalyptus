@@ -88,16 +88,16 @@
 
         <tr>
           <td>
-            <select data-enabled="enableStorageVolume" class="launch-wizard-advanced-storage-volume-selector" data-tooltip="launch_instance_volume_select_tip">
+            <select class="launch-wizard-advanced-storage-volume-selector" data-tooltip="launch_instance_volume_select_tip">
               <option value="EBS" data-msg="launch_instance_ebs"></option>
               <option value="ephemeral" data-msg="launch_instance_ephemeral0"></option>
             </select>
           </td>
           <td>
-            <input data-enabled="enableMapping" data-value=":newMapping.device_name" class="launch-wizard-advanced-storage-mapping-input" data-tooltip="launch_wizard_advanced_storage_mapping_input_tip" type="text">
+            <input data-value=":newMapping.device_name" class="launch-wizard-advanced-storage-mapping-input" data-tooltip="launch_wizard_advanced_storage_mapping_input_tip" type="text">
           </td>
           <td>
-            <select data-on-change=":setSnapshot" data-enabled="enableSnapshot" class="launch-wizard-advanced-storage-snapshot-input" data-tooltip="launch_instance_snapshot_select_tip">
+            <select data-on-change=":setSnapshot" class="launch-wizard-advanced-storage-snapshot-input" data-tooltip="launch_instance_snapshot_select_tip">
               <option data-each-snapshot="snapshots" data-value="snapshot.id" data-text="snapshot.name"></option>
             </select>
           </td>
