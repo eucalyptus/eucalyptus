@@ -10,7 +10,6 @@ define([
     title: app.msg("launch_instance_section_header_advanced"),
     isOptional: true,
     optionLinkText: app.msg('launch_instance_btn_next_advanced'),
-
     launchConfigErrors: new Backbone.Model({volume_size: ''}),
     theImage: null,
     
@@ -23,6 +22,7 @@ define([
         kernels: new Backbone.Collection(dataholder.images.where({type: 'kernel'})), 
         ramdisks: new Backbone.Collection(dataholder.images.where({type: 'ramdisk'})),
         blockDeviceMappings: self.options.blockMaps,
+        newMapping: new blockmap(),
 
         snapshots: function() {
             var ret = [{name:'None', id:null}];
@@ -54,7 +54,7 @@ define([
 
           var tr = $(e.target).closest('tr');
           var vol = tr.find('.launch-wizard-advanced-storage-volume-selector').val();
-          var dev = "/dev/" + tr.find('.launch-wizard-advanced-storage-mapping-input').val();
+          var dev = tr.find('.launch-wizard-advanced-storage-mapping-input').val();
           var snap = tr.find('.launch-wizard-advanced-storage-snapshot-input').val();
           var size = tr.find('.launch-wizard-advanced-storage-size-input').val();
           var del = tr.find('.launch-wizard-advanced-storage-delOnTerm').prop('checked');
@@ -104,13 +104,13 @@ define([
         },
 
         deleteButtonIf: function(obj) {
-          if(this.getVolLabel(obj) != 'Root') {
+          if (obj.volume.get('device_name') != '/dev/sda') {
             return 'icon_delete';
           }
         },
 
         checkDisabledIf: function(obj) {
-          if(this.getVolLabel(obj) != 'Root') {
+          if (obj.volume.get('device_name') != '/dev/sda') {
             return false;
           }
           return true;
@@ -127,10 +127,16 @@ define([
             var device = model.get('device_name');
             var suffix = device.substring(device.length-1).charCodeAt(0);
             var newdev = device.substring(5, device.length-1) + String.fromCharCode(suffix+1);
-            return newdev;
+            return '/dev/'+newdev;
           } else {
-            return 'sda';
+            return '/dev/sdb';
           }
+        },
+
+        setSnapshot: function(e, obj) {
+          console.log('setting snapshot id to :'+obj);
+          scope.newMapping.snapshot_id = obj;
+          // now, set size to snapshot size (only if no size already there??)
         },
 
         launchConfigErrors: self.launchConfigErrors
@@ -145,6 +151,17 @@ define([
       dataholder.images.on('reset', function() {
         scope.kernels.add(dataholder.images.where({type: 'kernel'}));
         scope.ramdisks.add(dataholder.images.where({type: 'ramdisk'}));
+      });
+
+      this.model.on('change', function() {
+        var tmp = scope.blockDeviceMappings.findWhere({device_name: '/dev/sda'});
+        if (scope.root == undefined) scope.root = tmp;
+        else if (tmp != undefined) scope.root = tmp;
+        if (scope.blockDeviceMappings.length > 0) {
+          scope.blockDeviceMappings = scope.blockDeviceMappings.reduce(function(c, v) {
+              return v.get('device_name') == '/dev/sda' ? c : c.add(v);
+            }, new Backbone.Collection());
+        }
       });
 
       this.model.on('change:user_data_text', function(e) {

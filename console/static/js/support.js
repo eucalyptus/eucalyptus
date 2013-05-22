@@ -715,7 +715,7 @@ function eucatableDisplayColumnTypeText (title, str, limit){
 		return "";
 	}
 	shortStr = addEllipsis(str, limit); 
-	$html = $('<span>').text(shortStr);
+	$html = $('<span>').text(shortStr).attr('title', title);
         return asHTML($html);
 }
 

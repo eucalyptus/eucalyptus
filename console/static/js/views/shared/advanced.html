@@ -61,6 +61,18 @@
        </thead>
        <tbody>
 
+        <tr>
+          <td data-msg="launch_instance_root">
+          </td>
+          <td data-text="root.device_name">
+          </td>
+          <td data-text="root.snapshot_id">
+          </td>
+          <td>
+            <input class="launch-wizard-advanced-storage-size-input" data-tooltip="launch_wizard_advanced_storage_size_input_tip" data-value=":root.volume_size" type="text">
+          </td>
+          <td class="centered-cell"><input data-checked=":root.delete_on_termination" class="launch-wizard-advanced-storage-delOnTerm" type="checkbox"></td>
+        </tr> 
 
         <tr data-each-volume="blockDeviceMappings">
           <td data-text=":getVolLabel" data-msg="launch_instance_ebs">
@@ -74,25 +86,26 @@
           <td><div data-on-click=":delStorageVol" data-addclass=":deleteButtonIf" data-tooltip="launch_instance_advanced_delblockdev"><div></td>
         </tr> 
 
-
-
         <tr>
           <td>
-            <span data-text="launch_instance_ebs"/>
+            <select class="launch-wizard-advanced-storage-volume-selector" data-tooltip="launch_instance_volume_select_tip">
+              <option value="EBS" data-msg="launch_instance_ebs"></option>
+              <option value="ephemeral" data-msg="launch_instance_ephemeral0"></option>
+            </select>
           </td>
           <td>
-            /dev/<input data-enabled="enableMapping" data-value=":mapName" class="launch-wizard-advanced-storage-mapping-input" data-tooltip="launch_wizard_advanced_storage_mapping_input_tip" type="text">
+            <input data-value=":newMapping.device_name" class="launch-wizard-advanced-storage-mapping-input" data-tooltip="launch_wizard_advanced_storage_mapping_input_tip" type="text">
           </td>
           <td>
-            <select data-enabled="enableSnapshot" class="launch-wizard-advanced-storage-snapshot-input" data-tooltip="launch_instance_snapshot_select_tip">
+            <select data-on-change=":setSnapshot" class="launch-wizard-advanced-storage-snapshot-input" data-tooltip="launch_instance_snapshot_select_tip">
               <option data-each-snapshot="snapshots" data-value="snapshot.id" data-text="snapshot.name"></option>
             </select>
           </td>
           <td>
-            <input class="launch-wizard-advanced-storage-size-input" data-tooltip="launch_wizard_advanced_storage_size_input_tip" type="text">
+            <input class="launch-wizard-advanced-storage-size-input" data-tooltip="launch_wizard_advanced_storage_size_input_tip" data-value=":newMapping.volume_size" type="text">
          </td>
          <td class="centered-cell">
-          <input class="launch-wizard-advanced-storage-delOnTerm" type="checkbox" checked>
+          <input class="launch-wizard-advanced-storage-delOnTerm" type="checkbox" data-value="newMapping.delete_on_termination" checked>
         </td>
         <td><div class="icon_add" data-on-click=":setStorageVolume" data-tooltip="launch_instance_advanced_addblockdev"></div></td>
       </tr>
