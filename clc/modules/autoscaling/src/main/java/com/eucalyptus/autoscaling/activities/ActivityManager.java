@@ -52,6 +52,7 @@ import com.eucalyptus.auth.principal.AccountFullName;
 import com.eucalyptus.autoscaling.common.AutoScaling;
 import com.eucalyptus.autoscaling.config.AutoScalingConfiguration;
 import com.eucalyptus.autoscaling.configurations.LaunchConfigurationCoreView;
+import com.eucalyptus.autoscaling.configurations.LaunchConfigurations;
 import com.eucalyptus.autoscaling.groups.AutoScalingGroup;
 import com.eucalyptus.autoscaling.groups.AutoScalingGroupCoreView;
 import com.eucalyptus.autoscaling.groups.AutoScalingGroupMetricsView;
@@ -889,7 +890,7 @@ public class ActivityManager {
     describeInstanceStatusType.getInstancesSet().addAll( instanceIds );
     describeInstanceStatusType.getFilterSet().add( filter( "instance-state-name", "pending", "running" ) );
     describeInstanceStatusType.getFilterSet().add( filter( "system-status.status", "not-applicable", "initializing", "ok" ) );
-    describeInstanceStatusType.getFilterSet().add( filter( "instance-status.status", "not-applicable", "initializing", "ok"  ) );
+    describeInstanceStatusType.getFilterSet().add( filter( "instance-status.status", "not-applicable", "initializing", "ok" ) );
     return describeInstanceStatusType;
   }
 
@@ -2676,13 +2677,15 @@ public class ActivityManager {
   }
 
   private class SecurityGroupValidationScalingActivityTask extends ValidationScalingActivityTask<DescribeSecurityGroupsResponseType> {
-    final List<String> groupNames;
+    private final List<String> groups;
+    private final boolean identifiers; // true if security group identifiers, false if names
 
     private SecurityGroupValidationScalingActivityTask( final AutoScalingGroupCoreView group,
                                                         final ScalingActivity activity,
-                                                        final List<String> groupNames ) {
+                                                        final List<String> groups ) {
       super( group, activity, "security group(s)" );
-      this.groupNames = groupNames;
+      this.groups = groups;
+      this.identifiers = LaunchConfigurations.containsSecurityGroupIdentifiers( groups );
     }
 
     @Override
@@ -2692,7 +2695,8 @@ public class ActivityManager {
 
       final DescribeSecurityGroupsType describeSecurityGroupsType
           = new DescribeSecurityGroupsType();
-      describeSecurityGroupsType.getFilterSet().add( filter( "group-name", groupNames ) );
+      describeSecurityGroupsType.getFilterSet().add(
+          filter( identifiers ? "group-id" : "group-name", groups ) );
 
       client.dispatch( describeSecurityGroupsType, callback );
     }
@@ -2701,14 +2705,16 @@ public class ActivityManager {
     void dispatchSuccess( final ActivityContext context,
                           final DescribeSecurityGroupsResponseType response ) {
       if ( response.getSecurityGroupInfo() == null ) {
-        setValidationError( "Invalid security group(s): " + groupNames );
-      } else if ( response.getSecurityGroupInfo().size() != groupNames.size() ) {
-        final Set<String> groups = Sets.newHashSet();
+        setValidationError( "Invalid security group(s): " + groups );
+      } else if ( response.getSecurityGroupInfo().size() != groups.size() ) {
+        final Set<String> foundGroups = Sets.newHashSet();
         for ( final SecurityGroupItemType securityGroupItemType : response.getSecurityGroupInfo() ) {
-          groups.add( securityGroupItemType.getGroupName() );
+          foundGroups.add( identifiers ?
+              securityGroupItemType.getGroupId() :
+              securityGroupItemType.getGroupName() );
         }
-        final Set<String> invalidGroups = Sets.newTreeSet( groupNames );
-        invalidGroups.removeAll( groups );
+        final Set<String> invalidGroups = Sets.newTreeSet( this.groups );
+        invalidGroups.removeAll( foundGroups );
         setValidationError( "Invalid security group(s): " + invalidGroups );
       }
 

@@ -75,6 +75,7 @@ util/euca_rootwrap
 util/test_misc
 util/test_fault
 util/test_wc
+util/test_auth
 util/euca-generate-fault
 clc/.settings/org.eclipse.jdt.core.prefs
 clc/eucadmin/eucadmin/__init__.py

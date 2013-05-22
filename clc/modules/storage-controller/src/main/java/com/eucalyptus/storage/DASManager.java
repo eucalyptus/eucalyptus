@@ -1113,6 +1113,12 @@ public class DASManager implements LogicalStorageManager {
 	@Override
 	public String exportVolume(String volumeId, String nodeIqn)
 			throws EucalyptusCloudException {
+                try {
+                        updateVolumeGroup();
+                } catch (EucalyptusCloudException e) {
+                        LOG.error(e);
+			throw e;
+                }
 		LVMVolumeInfo lvmVolumeInfo = null;
 		{
 			final VolumeEntityWrapperManager volumeManager = new VolumeEntityWrapperManager();
@@ -1130,8 +1136,11 @@ public class DASManager implements LogicalStorageManager {
 				try {
 					lvmVolumeInfo = volumeManager.getVolumeInfo(volumeId);
 					String lvName = lvmVolumeInfo.getLvName();
+					if (lvmVolumeInfo.getVgName() == null) {
+						lvmVolumeInfo.setVgName(volumeGroup);
+					}
 					try {
-						// export logical volume
+						// export logical volume						
 						volumeManager.exportVolume(lvmVolumeInfo, volumeGroup, lvName);
 					} catch (EucalyptusCloudException ex) {
 						LOG.error("Unable to export volume " + volumeId, ex);

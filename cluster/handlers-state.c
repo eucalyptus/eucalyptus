@@ -201,7 +201,7 @@ int doDescribeServices(ncMetadata * pMeta, serviceInfoType * serviceIds, int ser
     int do_report_all = 0;
     char *my_partition = NULL;
 
-    rc = initialize(pMeta, TRUE); // DescribeServices is the only authoritative source of epoch
+    rc = initialize(pMeta, TRUE);      // DescribeServices is the only authoritative source of epoch
     if (rc) {
         return (1);
     }

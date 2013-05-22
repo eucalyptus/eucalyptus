@@ -60,58 +60,44 @@
  *   NEEDED TO COMPLY WITH ANY SUCH LICENSES OR RIGHTS.
  ************************************************************************/
 
-package com.eucalyptus.cloud.ws;
+package com.eucalyptus.util.dns;
 
-import com.eucalyptus.util.DNSProperties;
-import org.apache.log4j.Logger;
-import org.xbill.DNS.Message;
-
-import java.io.DataInputStream;
-import java.io.DataOutputStream;
 import java.io.IOException;
-import java.net.Socket;
+import java.net.InetAddress;
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
+import java.util.Date;
+import org.xbill.DNS.ARecord;
+import org.xbill.DNS.DClass;
+import org.xbill.DNS.Name;
+import org.xbill.DNS.Record;
+import org.xbill.DNS.SOARecord;
+import org.xbill.DNS.Type;
+import com.eucalyptus.util.dns.DnsResolvers.ResponseType;
 
+/**
+ * @todo doc
+ * @author chris grzegorczyk <grze@eucalyptus.com>
+ */
+public class DomainNameRecords {
+  private final static long ttl = 604800;
+  
+  public static SOARecord sourceOfAuthority( Name name ) {
+    final Name soa = DomainNames.sourceOfAuthority( name );
+    SOARecord soaRecord = new SOARecord( name, DClass.IN, ttl, soa,
+                                         Name.fromConstantString( "root." + soa ),
+                                         DomainNameRecords.serial( ), 1200L, 180L, 2419200L, ttl );
+    return soaRecord;
+  }
+  
+  public static ARecord addressRecord( Name name, InetAddress ip ) {
+    return new ARecord( name, DClass.IN, ttl, ip );
+  }
 
-public class TCPHandler extends ConnectionHandler {
-	private static Logger LOG = Logger.getLogger( TCPHandler.class );
-	Socket socket;
-	public TCPHandler(Socket s) {
-		this.socket = s;
-	}
+  static long serial( ) {
+    return Long.parseLong( DomainNameRecords.SERIALFORMATTER.format( new Date( ) ) );
+  }
 
-	public void run() {
-		try {
-			int inputLength;
-			DataInputStream inStream = new DataInputStream(socket.getInputStream());
-			DataOutputStream outStream = new DataOutputStream(socket.getOutputStream());
-			inputLength = inStream.readUnsignedShort();
-			if(inputLength > DNSProperties.MAX_MESSAGE_SIZE) {
-				LOG.error("Maximum message size exceeded. Ignoring request.");
-			}
-			byte[] inBytes = new byte[inputLength];
-			inStream.readFully(inBytes);
-			Message query;
-			byte [] response = null;
-			try {
-				query = new Message(inBytes);
-        ConnectionHandler.setRemoteInetAddress( socket.getInetAddress( ) );
-        try {
-          response = generateReply(query, inBytes, inBytes.length, socket);
-        } finally {
-          ConnectionHandler.removeRemoteInetAddress( );
-        }
-				if (response == null)
-					return;
-			}
-			catch (IOException exception) {
-				LOG.error(exception);
-			}
-			outStream.writeShort(response.length);
-			outStream.write(response);
-		} catch(IOException ex) {
-			LOG.error(ex);
-		}
-	}
-
-
+  static final DateFormat SERIALFORMATTER = new SimpleDateFormat( "yyMMddHHmm" );
+  
 }

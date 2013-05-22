@@ -42,6 +42,7 @@
       var $rendered = $($tmpl.render($.extend($.i18n.map, help_changepwd)));
       var $cp_dialog = $rendered.children().first();
       var $cp_dialog_help = $rendered.children().last();
+      $cp_dialog_help.find('.dialog-help-content').append($(help_changepwd.dialog_content));
       var $cp_form = $cp_dialog.find('form');
       this.changepwdDialog = $cp_dialog.eucadialog({
         id: 'change-passwd',
@@ -77,7 +78,7 @@
           },
           'cancel': { text: dialog_cancel_btn, focus:false, click: function() { $cp_dialog.eucadialog("close"); } }
         },
-        help: { content: $cp_dialog_help, url: help_changepwd.dialog_attach_content_url },
+        help: {title: null, content: $cp_dialog_help, url: help_changepwd.dialog_content_url, pop_height: 600},
       });
 
 
