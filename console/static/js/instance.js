@@ -199,12 +199,12 @@
                 return DefaultEncoder().encodeForHTML(data);
               }, 
               "mData": function(source) {
-			var image = null;
-              		var result = describe('image', source.image_id);
-			if( result ){
-				image = result;
-			};
-                 	return image ? image.location : '';		
+                var image = null;
+                var result = require('app').data.images.get(source.image_id);
+ 		if( result ){
+ 		  image = result;
+ 		};
+                return image ? image.get('location') : ''; 
               },
             },
             {
