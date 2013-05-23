@@ -314,7 +314,6 @@ public class DescribeSensorCallback extends
         for (final MetricsResourceType metricType : sensorData.getMetrics()) {
           for (final MetricCounterType counterType : metricType.getCounters()) {
             for (final MetricDimensionsType dimensionType : counterType.getDimensions()) {
-
               // find and fire most recent value for metric/dimension
               final List<MetricDimensionsValuesType> values =
                   Lists.newArrayList(dimensionType.getValues());
@@ -334,6 +333,9 @@ public class DescribeSensorCallback extends
                   LOG.debug("Value: " + value.getValue());
                   final Long currentTimeStamp = value.getTimestamp().getTime();
                   final Double currentValue = value.getValue();
+                  if (currentValue == null) {
+                    LOG.debug("Event received with null 'value', skipping for cloudwatch");
+                  }
                   ec2DiskMetricCache.initializeMetrics(sensorData.getResourceUuid(), sensorData.getResourceName(), currentTimeStamp); // Put a place holder in in case we don't have any non-EBS volumes
                   boolean isEbsMetric = dimensionType.getDimensionName().startsWith("vol-");
                   boolean isEc2DiskMetric = !isEbsMetric && EC2_DISK_METRICS.contains(metricType.getMetricName().replace("Volume", "Disk"));
@@ -379,6 +381,9 @@ public class DescribeSensorCallback extends
               if (!values.isEmpty()) {
                 final MetricDimensionsValuesType latestValue = Iterables.getLast(values);
                 final Double usageValue = latestValue.getValue();
+                if (usageValue == null) {
+                  LOG.debug("Event received with null 'value', skipping for reporting");
+                }
                 final Long usageTimestamp = latestValue.getTimestamp().getTime();
                 final long sequenceNumber = dimensionType.getSequenceNum() + (values.size() - 1);
                 fireUsageEvent( new Supplier<InstanceUsageEvent>(){
