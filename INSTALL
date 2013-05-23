@@ -420,6 +420,11 @@ node2# rsync -a {user}@{front-end}:$EUCALYPTUS/ $EUCALYPTUS/
 ...
 
 NOTE: Installing Eucalyptus in the same directory on all nodes will make it easier to manage it, so we strongly advise you to do so.
+
+NOTE: For the system running the NC you will also need to install the policykit
+configuration. Copy the file './tools/eucalyptus-nc-libvirt.pkla' to the NC and
+put it under the directory '/var/lib/polkit-1/localauthority/10-vendor.d/'
+
 6. Configure Hosts
 
 a. Set up a 'eucalyptus' user on all machines
