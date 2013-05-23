@@ -61,10 +61,10 @@
               "bVisible": false,
               "aTargets":[1],
               "mData": function(source) { 
-			var result = describe('image', source.image_id);
-               		if(result && result.platform) 
-				return result.platform;
-			return "linux";
+                var result = require('app').data.images.get(source.image_id);
+                if(result && result.get('platform')) 
+                  return result.get('platform');
+                return "linux";
               },
             },
             { 
