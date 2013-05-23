@@ -10,7 +10,6 @@ define([
     title: app.msg("launch_instance_section_header_advanced"),
     isOptional: true,
     optionLinkText: app.msg('launch_instance_btn_next_advanced'),
-
     launchConfigErrors: new Backbone.Model({volume_size: ''}),
     theImage: null,
     
@@ -22,13 +21,8 @@ define([
         advancedModel: self.model,
         kernels: new Backbone.Collection(dataholder.images.where({type: 'kernel'})), 
         ramdisks: new Backbone.Collection(dataholder.images.where({type: 'ramdisk'})),
-        enableMonitoring: true,
-        privateNetwork: false,
         blockDeviceMappings: self.options.blockMaps,
-        enableStorageVolume: true,
-        enableMapping: true,
-        enableSnapshot: true,
-        deleteOnTerm: true,
+        newMapping: new blockmap(),
 
         snapshots: function() {
             var ret = [{name:'None', id:null}];
@@ -36,10 +30,6 @@ define([
               ret.push({id:s.get('id'), name:s.get('id')+' ('+s.get('volume_size')+' GB)'});
             });
             return ret;
-        },
-
-        setKernel: function(e, obj) {
-          self.model.set('kernel_id', e.target.value);
         },
 
         isKernelSelected: function(obj) { 
@@ -57,18 +47,6 @@ define([
         },
 
 
-        setPrivateNetwork: function(e, item) {
-          self.model.set('private_network', e.target.value);
-        },
-
-        setMonitoring: function(e, item) {
-            self.model.set('instance_monitoring', e.target.value);
-        },
-
-        setRamDisk: function(e, item) {
-          self.model.set('ramdisk_id', e.target.value);
-        },
-
         setStorageVolume: function(e, obj) {
           var m = new blockmap();
           self.launchConfigErrors.clear();
@@ -76,7 +54,7 @@ define([
 
           var tr = $(e.target).closest('tr');
           var vol = tr.find('.launch-wizard-advanced-storage-volume-selector').val();
-          var dev = "/dev/" + tr.find('.launch-wizard-advanced-storage-mapping-input').val();
+          var dev = tr.find('.launch-wizard-advanced-storage-mapping-input').val();
           var snap = tr.find('.launch-wizard-advanced-storage-snapshot-input').val();
           var size = tr.find('.launch-wizard-advanced-storage-size-input').val();
           var del = tr.find('.launch-wizard-advanced-storage-delOnTerm').prop('checked');
@@ -105,12 +83,16 @@ define([
           m.validate();
           if (m.isValid()) {
             this.blockDeviceMappings.add(m);
+            this.model.set('bdmaps_configured', true);
           }
 
         },
 
         delStorageVol: function(e, obj) {
           this.blockDeviceMappings.remove(obj.volume); 
+          if(this.blockDeviceMappings.length == 0) {
+            this.model.set('bdmaps_configured', false);
+          }
         },
 
         getVolLabel: function(obj) {
@@ -122,13 +104,13 @@ define([
         },
 
         deleteButtonIf: function(obj) {
-          if(this.getVolLabel(obj) != 'Root') {
+          if (obj.volume.get('device_name') != '/dev/sda') {
             return 'icon_delete';
           }
         },
 
         checkDisabledIf: function(obj) {
-          if(this.getVolLabel(obj) != 'Root') {
+          if (obj.volume.get('device_name') != '/dev/sda') {
             return false;
           }
           return true;
@@ -145,10 +127,16 @@ define([
             var device = model.get('device_name');
             var suffix = device.substring(device.length-1).charCodeAt(0);
             var newdev = device.substring(5, device.length-1) + String.fromCharCode(suffix+1);
-            return newdev;
+            return '/dev/'+newdev;
           } else {
-            return 'sda';
+            return '/dev/sdb';
           }
+        },
+
+        setSnapshot: function(e, obj) {
+          console.log('setting snapshot id to :'+obj);
+          scope.newMapping.snapshot_id = obj;
+          // now, set size to snapshot size (only if no size already there??)
         },
 
         launchConfigErrors: self.launchConfigErrors
@@ -156,7 +144,7 @@ define([
       };
 
       scope.blockDeviceMappings.on('change add reset remove', function() {
-          self.model.set('bdmaps_configured', true);
+          //self.model.set('bdmaps_configured', true);
           self.render();
       });
 
@@ -166,7 +154,14 @@ define([
       });
 
       this.model.on('change', function() {
-//        self.model.set('advanced_show', true);
+        var tmp = scope.blockDeviceMappings.findWhere({device_name: '/dev/sda'});
+        if (scope.root == undefined) scope.root = tmp;
+        else if (tmp != undefined) scope.root = tmp;
+        if (scope.blockDeviceMappings.length > 0) {
+          scope.blockDeviceMappings = scope.blockDeviceMappings.reduce(function(c, v) {
+              return v.get('device_name') == '/dev/sda' ? c : c.add(v);
+            }, new Backbone.Collection());
+        }
       });
 
       this.model.on('change:user_data_text', function(e) {
@@ -186,6 +181,8 @@ define([
         self.model.set('files', this.files);
        });
        this.model.set('fileinput', function() { return fileinputel; });
+
+       this.model.set('instance_monitoring', true); //default
     },
 
     render: function() {
@@ -195,6 +192,7 @@ define([
           root_device_type = this.theImage.get('root_device_type');
           if (root_device_type == 'ebs') {
             this.$el.find('#launch-wizard-advanced-storage').show();
+            //this.model.set('bdmaps_configured', true);
           }
         }
       }

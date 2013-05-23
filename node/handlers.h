@@ -142,6 +142,7 @@ struct nc_state_t {
     int createImage_cleanup_threshold;
     int teardown_state_duration;
     int migration_ready_threshold;
+    int shutdown_grace_period_sec;
     boolean migration_capable;
     //! @}
 
@@ -305,7 +306,7 @@ int callBundleInstanceHelper(struct nc_state_t *nc, char *instanceId, char *buck
 
 // helper functions used by the low level handlers
 int get_value(char *s, const char *name, long long *valp);
-int convert_dev_names(const char *localDev, char *localDevReal, char *localDevTag);
+int convert_dev_names(char *localDev, char *localDevReal, char *localDevTag);
 void print_running_domains(void);
 virConnectPtr lock_hypervisor_conn(void);
 void unlock_hypervisor_conn(void);
@@ -322,12 +323,13 @@ void *restart_thread(void *arg);
 int get_instance_stats(virDomainPtr dom, ncInstance * instance);
 ncInstance *find_global_instance(const char *instanceId);
 int find_and_terminate_instance(struct nc_state_t *nc_state, ncMetadata * pMeta, char *instanceId, int force, ncInstance ** instance_p);
-int shutdown_then_destroy_domain(virDomainPtr dom);
+int shutdown_then_destroy_domain(const char *instanceId);
 void copy_instances(void);
 int is_migration_dst(const ncInstance * instance);
 int is_migration_src(const ncInstance * instance);
 int migration_rollback(ncInstance * instance);
-void get_service_url(const char *service_type, struct nc_state_t *nc, char *dest_buffer);
+int get_service_url(const char *service_type, struct nc_state_t *nc, char *dest_buffer);
+int authorize_migration_keys(char *options, char *host, char *credentials, ncInstance * instance, boolean lock_hyp_sem);
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |

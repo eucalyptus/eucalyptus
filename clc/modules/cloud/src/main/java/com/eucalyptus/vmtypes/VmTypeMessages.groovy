@@ -66,6 +66,7 @@
 
 package com.eucalyptus.vmtypes
 
+import com.eucalyptus.binding.HttpParameterMapping;
 import com.eucalyptus.component.ComponentId.ComponentMessage;
 import com.eucalyptus.component.id.Eucalyptus;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
@@ -102,7 +103,7 @@ public class VmTypeEphemeralDisk extends EucalyptusData {
     this.format = format;
   }
 }
-public class ModifyVmTypeAttributeType extends VmTypeMessage {
+public class ModifyInstanceTypeAttributeType extends VmTypeMessage {
   Boolean reset = false;
   Boolean force = false;
   String name;
@@ -110,9 +111,22 @@ public class ModifyVmTypeAttributeType extends VmTypeMessage {
   Integer disk;
   Integer memory;
 }
-public class ModifyVmTypeAttributeResponseType extends VmTypeMessage {
-  VmTypeDetails vmType;
-  VmTypeDetails previousVmType;
+public class ModifyInstanceTypeAttributeResponseType extends VmTypeMessage {
+  VmTypeDetails instanceType;
+  VmTypeDetails previousInstanceType;
+}
+public class DescribeInstanceTypesType extends VmTypeMessage {
+  Boolean verbose = false;
+  Boolean availability = false;
+  @HttpParameterMapping(parameter="InstanceType")
+  ArrayList<String> instanceTypes = new ArrayList<String>();
+  DescribeInstanceTypesType () { }
+  DescribeInstanceTypesType ( Collection<String> instanceTypes ) {
+    this.instanceTypes.addAll( instanceTypes )
+  }
+}
+public class DescribeInstanceTypesResponseType extends VmTypeMessage  {
+  ArrayList<VmTypeDetails> instanceTypeDetails = new ArrayList<String>();
 }
 public class DescribeVmTypesType extends VmTypeMessage {
   Boolean verbose = false;

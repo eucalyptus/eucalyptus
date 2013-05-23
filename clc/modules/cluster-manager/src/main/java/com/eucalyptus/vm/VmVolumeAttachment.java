@@ -396,4 +396,13 @@ public class VmVolumeAttachment implements Comparable<VmVolumeAttachment> {
     }
     return true;
   }
+  
+  public static class NonTransientVolumeException extends NoSuchElementException {
+
+	private static final long serialVersionUID = 1L;
+
+	public NonTransientVolumeException(String s) {
+		super(s);
+	}
+  }
 }

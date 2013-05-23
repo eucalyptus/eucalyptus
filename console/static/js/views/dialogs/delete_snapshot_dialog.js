@@ -48,7 +48,7 @@ define([
       var snapshot_list = [];
       _.each(args.items, function(snapshot_id){
         var nameTag = self.findNameTag(App.data.snapshot.get(snapshot_id));
-        var snapshot_string = self.createIdNameTagString(snapshot_id, nameTag);
+        var snapshot_string = self.createIdNameTagString(snapshot_id, addEllipsis(nameTag, 15));
         snapshot_list.push(snapshot_string);
 
         matrix.push([snapshot_string, image_hashmap[snapshot_id] != undefined ? 'Yes' : 'No']);
@@ -65,6 +65,8 @@ define([
         snapshots: snapshot_list,
         matrix : matrix,
         images: images,
+    	help: {title: null, content: help_snapshot.dialog_delete_content, url: help_snapshot.dialog_delete_content_url, pop_height: 600},
+
 
         cancelButton: {
           click: function() {

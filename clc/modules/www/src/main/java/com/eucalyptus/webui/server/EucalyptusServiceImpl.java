@@ -600,12 +600,6 @@ public class EucalyptusServiceImpl extends RemoteServiceServlet implements Eucal
   }
 
   @Override
-  public CloudInfo getCloudInfo( Session session, boolean setExternalHostPort ) throws EucalyptusServiceException {
-    verifySession( session );
-    return ConfigurationWebBackend.getCloudInfo( setExternalHostPort );
-  }
-
-  @Override
   public ArrayList<DownloadInfo> getToolDownloads( Session session ) throws EucalyptusServiceException {
     verifySession( session );
     String version;

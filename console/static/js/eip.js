@@ -61,15 +61,18 @@
                  return eucatableDisplayColumnTypeTwist(data, data, 255);
 	          },
               "mData": "public_ip",
+              "sClass": "wrap-content",
               "iDataSort": 4
             },
             { 
 	      // Display the instance ID in eucatable
 	      "aTargets":[2],
-	      "mRender": function(data) {
-                return DefaultEncoder().encodeForHTML(data);
+              "mData": function(source){
+                this_mouseover = source.instance_id;
+                this_value = source.display_instance_id;
+                return eucatableDisplayResource(this_mouseover, this_value, 256);
               },
-              "mData": "display_instance_id",
+              "sClass": "wrap-content",
 	    },
             {
 	      // Invisible Column for storing the status of the IP
@@ -492,7 +495,7 @@
               }
               var this_string = instance.id;
               if( nameTag != null ){
-                this_string += " (" + nameTag + ")";
+                this_string += " (" + addEllipsis(nameTag, 15) + ")";
               }
               inst_ids.push(this_string);
             }
@@ -576,7 +579,7 @@
           var this_tags = this_instance.get('tags');
           this_tags.each(function(tag){
             if( tag.get('name') == 'Name' || tag.get('name') == 'name' ){
-              nameTag = tag.get('value');
+              nameTag = addEllipsis(tag.get('value'), 15);
             };
           });
         }
@@ -602,7 +605,7 @@
             var this_tags = this_instance.get('tags');
             this_tags.each(function(tag){
               if( tag.get('name') == 'Name' || tag.get('name') == 'name' ){
-                nameTag = this_instance.get('id') + " (" + tag.get('value') + ")";
+                nameTag = this_instance.get('id') + " (" + addEllipsis(tag.get('value'), 15) + ")";
               };
             });
           }; 

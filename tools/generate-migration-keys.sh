@@ -21,16 +21,20 @@
 # Additional Information Or Have Any Questions.
 #
 #
-# Run on NC with three arguments:
+# Run on NC with 2-4 arguments:
 #
-# 0. "source", "destination", or "both" to indicate role in migration(s).
-# 1. IP address of this host.
-# 2. Unique token for migration(s).
+# 0. -v (for verbose mode) [optional]
+# 1. IP address of this host
+# 2. Unique token for migration(s)
+# 3. 'restart' (if post-generation restart of libvirtd is desired) [optional]
 
 # Bail on error
 set -e
 
 LIBVIRTPID=/var/run/libvirtd.pid
+
+EUCA_CONF=$EUCALYPTUS/etc/eucalyptus/eucalyptus.conf
+LIBVIRTD_SYSCONFIG=/etc/sysconfig/libvirtd
 
 KEYDIR=$EUCALYPTUS/var/lib/eucalyptus/keys
 NCKEY=node-pk.pem
@@ -125,20 +129,85 @@ echo "Key generation complete."
 echo "Installing keys ..."
 
 mkdir -p /etc/pki/libvirt/private
-chown root.root /etc/pki/libvirt/private
 cp -f $KEYDIR/$NCCERT /etc/pki/CA/cacert.pem
 cp -f $WORKD/clientcert.pem $WORKD/servercert.pem /etc/pki/libvirt/
 cp -f $WORKD/clientkey.pem $WORKD/serverkey.pem /etc/pki/libvirt/private/
-chmod 600 /etc/pki/libvirt/private/serverkey.pem
+
+# Do this in a subshell due to the sourcing of the eucalyptus.conf file.
+(
+if [ -r "$EUCA_CONF" ] ; then
+    . $EUCA_CONF
+fi
+if [ -z "$EUCA_USER" ] ; then
+    EUCA_USER=root
+fi
+chmod 700 /etc/pki/libvirt/private
+chmod 600 /etc/pki/libvirt/private/clientkey.pem  /etc/pki/libvirt/private/serverkey.pem
+chown -R $EUCA_USER /etc/pki/libvirt/private/ || true
+)
+
+ensure_listen ()
+{
+    # Do this in a subshell due to the sourcing of the libvirtd sysconfig file.
+    (
+    if [ -r "$LIBVIRTD_SYSCONFIG" ] ; then
+        . $LIBVIRTD_SYSCONFIG
+    fi
+
+    # Disable errexit in case following grep exits nonzero.
+    set +e
+
+    LV=`set|grep ^LIBVIRTD_ARGS=`
+
+    if [ $? -ne 0 ] ; then
+        # Variable not present
+        NEWVAR=1
+    fi
+
+    # Re-enable errexit
+    set -e
+
+    eval $LV
+
+    declare -A LVS
+
+    for i in `echo $LIBVIRTD_ARGS` ; do
+        LVS[$i]=1
+    done
+
+    if [ -n "${LVS['--listen']}" ] ; then
+        return
+    fi
+
+    if [ "${#LVS[@]}" -eq 0 -a -n "$NEWVAR" ] ; then
+        LVS['--listen']=1
+        echo >> $LIBVIRTD_SYSCONFIG
+        echo "#" >> $LIBVIRTD_SYSCONFIG
+        echo "# Added by Eucalyptus to enable automatic migration between NC nodes" >> $LIBVIRTD_SYSCONFIG
+        echo "#" >> $LIBVIRTD_SYSCONFIG
+        echo LIBVIRTD_ARGS="\"${!LVS[@]}\"" >> $LIBVIRTD_SYSCONFIG
+    else
+        LVS['--listen']=1
+        ARGLIST="\"${!LVS[@]}\""
+        sed -i.euca "s/^\s*LIBVIRTD_ARGS=.*/LIBVIRTD_ARGS=$ARGLIST/" $LIBVIRTD_SYSCONFIG
+    fi
+    )
+}
 
 # Despite what the documentation says, sending a SIGHUP to libvirtd does
 # not appear to update its access list of DNs. So we're doing a full restart.
 # Ugh.
+
 #kill -HUP `cat $LIBVIRTPID`
+
 if [ "$RESTART" == "yes" ] ; then
-    echo "Key installation complete, reloading libvirtd."
+    echo "Key installation complete, restarting libvirtd."
+
+    # Ensure libvirtd is run with --listen arg.
+    ensure_listen
+
     /sbin/service libvirtd restart
-else 
+else
     echo "Key installation complete, libvirtd will require manual restart."
 fi
 

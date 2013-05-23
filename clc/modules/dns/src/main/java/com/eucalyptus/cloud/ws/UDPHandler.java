@@ -95,6 +95,7 @@ package com.eucalyptus.cloud.ws;
 
 import org.apache.log4j.Logger;
 import org.xbill.DNS.Message;
+import com.eucalyptus.bootstrap.Bootstrap;
 
 import java.io.IOException;
 import java.io.InterruptedIOException;
@@ -106,7 +107,7 @@ public class UDPHandler extends ConnectionHandler {
     private static Logger LOG = Logger.getLogger( UDPHandler.class );
 
     DatagramSocket socket;
-    public UDPHandler(DatagramSocket s) {
+    UDPHandler(DatagramSocket s) {
         this.socket = s;
     }
 
@@ -116,7 +117,7 @@ public class UDPHandler extends ConnectionHandler {
             byte [] in = new byte[udpLength];
             DatagramPacket indp = new DatagramPacket(in, in.length);
             DatagramPacket outdp = null;
-            while (true) {
+            while (Bootstrap.isOperational( )) {
                 indp.setLength(in.length);
                 try {
                     socket.receive(indp);
@@ -128,13 +129,17 @@ public class UDPHandler extends ConnectionHandler {
                 byte [] response = null;
                 try {
                     query = new Message(in);
-                    response = generateReply(query, in,
-                            indp.getLength(),
-                            null);
+                    ConnectionHandler.setRemoteInetAddress( indp.getAddress( ) );
+                    try {
+                      response = generateReply( query, in,
+                        indp.getLength( ),
+                        null );
+                    } finally {
+                      ConnectionHandler.removeRemoteInetAddress( );
+                    }
                     if (response == null)
                         continue;
-                }
-                catch (IOException e) {
+                } catch (Exception e) {
                     response = formerrMessage(in);
                 }
                 if (outdp == null)

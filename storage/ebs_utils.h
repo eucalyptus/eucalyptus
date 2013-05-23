@@ -119,7 +119,6 @@
 typedef struct ebs_volume_data {
     char volumeId[128];
     char token[EBS_TOKEN_MAX_LENGTH];
-    //char scUrl[EUCA_MAX_PATH]; //!< @TODO Remove this eventually, should be orthogonal to volume info
     char connect_string[EBS_CONNECT_STRING_MAX_LENGTH]; //! @TODO: Remove this?
 } ebs_volume_data;
 
@@ -137,7 +136,6 @@ typedef struct ebs_volume_data {
 
 int init_ebs_utils();
 char *get_volume_local_device(const char *connection_string);
-int replace_sc_url(const char *volume_string, const char *scUrl, char *restrict dest_string);
 int deserialize_volume(char *volume_string, ebs_volume_data ** dest);
 int serialize_volume(ebs_volume_data * vol_data, char **dest);
 int connect_ebs_volume(char *sc_url, char *attachment_token, int use_ws_sec, char *ws_sec_policy_file, char *local_ip, char *local_iqn, char **result_device,

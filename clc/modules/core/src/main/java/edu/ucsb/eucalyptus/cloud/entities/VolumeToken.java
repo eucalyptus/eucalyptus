@@ -88,6 +88,7 @@ import com.eucalyptus.entities.Entities;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.google.common.base.Function;
 import com.google.common.base.Predicate;
+import com.google.common.collect.Iterables;
 import com.google.common.collect.Iterators;
 
 @Entity 
@@ -225,6 +226,54 @@ public class VolumeToken extends AbstractPersistent {
 		}
 		return null;
 	}
+	
+	/**
+	 * Does this token have any associated active export records
+	 * @return
+	 * @throws EucalyptusCloudException
+	 */
+	public boolean hasActiveExports() throws EucalyptusCloudException {
+		try {
+			return Iterables.any(this.getExportRecords(), new Predicate<VolumeExportRecord>() {
+				@Override
+				public boolean apply(VolumeExportRecord rec) {
+					return rec.getIsActive();
+				}
+			});
+		} catch(Exception e) {
+			LOG.error("Error when checking for active exports volume " + this.getVolume().getVolumeId() + " and token " + this.getToken());
+			throw new EucalyptusCloudException("Failed to check for valid export",e);
+		} 
+	}
+	
+	/**
+	 * Return true if and only if this token's only active export is for the given ip/iqn pair.
+	 * Does not restrict to a single export record, but if multiple exist for same ip/iqn it will
+	 * still return true 
+	 * @param ip
+	 * @param iqn
+	 * @return
+	 * @throws EucalyptusCloudException
+	 */
+	public boolean hasOnlyExport(final String ip, final String iqn) throws EucalyptusCloudException {
+		try {
+			return Iterables.all(this.getExportRecords(), new Predicate<VolumeExportRecord>() {
+				@Override
+				public boolean apply(VolumeExportRecord rec) {
+					if(rec.getIsActive()) {
+						return rec.getHostIp().equals(ip) && rec.getHostIqn().equals(iqn);
+					} else {
+						//Return true if not an active export, since we don't care which host it is for.
+						return true;
+					}
+				}
+			});
+		} catch(Exception e) {
+			LOG.error("Error checking for only export on " + ip + " : " + iqn + ". Error:" + e.getMessage());
+			throw new EucalyptusCloudException(e);
+		}
+	}
+	
 	
 	/**
 	 * Invalidate the export for this token for the given ip and iqn

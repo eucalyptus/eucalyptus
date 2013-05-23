@@ -80,6 +80,7 @@
                   this_id = source.display_id;
                 return eucatableDisplayColumnTypeTwist(this_title, this_id, 255);
               },
+              "sClass": "wrap-content",
             },
             { 
 	      // Display the status of the instance in the main table
@@ -111,6 +112,7 @@
                 }
                 return DefaultEncoder().encodeForHTML(zone);
               },
+              "sClass": "wrap-content",
 	    }, 
             {
 	      // Display the public dns name of the instance in the main table
@@ -137,6 +139,7 @@
                 return DefaultEncoder().encodeForHTML(data);
               },
               "mData": "key_name",
+              "sClass": "wrap-content",
 	    },
             {
 	      // Display the group name of the instance in the main table
@@ -145,6 +148,7 @@
                 return DefaultEncoder().encodeForHTML(data);
               },
               "mData": "group_name",
+              "sClass": "wrap-content",
 	    },
             { 
 	      // Display the launch time of the instance in the main table
@@ -192,6 +196,9 @@
 	      // Hidden column for the image location of the instance
               "bVisible": false,
               "aTargets":[14],
+              "mRender": function(data) {
+                return DefaultEncoder().encodeForHTML(data);
+              }, 
               "mData": function(source) {
 			var image = null;
               		var result = describe('image', source.image_id);
@@ -496,7 +503,6 @@
 
      if(numSelected === 1 && 'running' in stateMap && $.inArray(instIds[0], stateMap['running']>=0)){
        menuItems['console'] = {"name":instance_action_console, callback: function(key, opt) { thisObj._consoleAction(); }}
-//       menuItems['attach'] = {"name":instance_action_attach, callback: function(key, opt) { thisObj._attachAction(); }}
        menuItems['attach'] = {"name":instance_action_attach, callback: function(key, opt) { thisObj._newAttachAction(); }}
      }
  
@@ -582,8 +588,12 @@
         // Push the instance id and its display_id into the matrix
         $.each(instances, function(idx,id){
           this_display_id = id;
-          if( display_ids[idx] != null )
+          if( display_ids[idx] != null ) {
             this_display_id = display_ids[idx];
+            if (id !== display_ids[idx]) {
+              this_display_id = id + ' (' + addEllipsis(display_ids[idx], 15) + ')';
+            }
+          }
           matrix.push([id, this_display_id]);
         });
         if ($.inArray('ebs',rootType)>=0){
@@ -640,7 +650,7 @@
         $.each(instances, function(idx,id){
           this_display_id = id;
           if( display_ids[idx] != null )
-            this_display_id = display_ids[idx];
+            this_display_id = id + ' (' + addEllipsis(display_ids[idx], 15) + ')';
           matrix.push([id, this_display_id]);
         });
         thisObj.rebootDialog.eucadialog('setSelectedResources', {title: [instance_label], contents: matrix, included_display_id: true});
@@ -677,7 +687,7 @@
     _stopAction : function(){
       var thisObj = this;
       var instances = thisObj.tableWrapper.eucatable('getSelectedRows', 17);
-      var instances = thisObj.tableWrapper.eucatable('getSelectedRows', 18);
+      var display_ids = thisObj.tableWrapper.eucatable('getSelectedRows', 18);
       if ( instances.length > 0 ) {
         var matrix = [];
         $.each(instances, function(idx,id){
@@ -686,7 +696,7 @@
             this_display_id = display_ids[idx];
           matrix.push([id, this_display_id]);
         });
-        thisObj.rebootDialog.eucadialog('setSelectedResources', {title: [instance_label], contents: matrix, included_display_id: true});
+        thisObj.stopDialog.eucadialog('setSelectedResources', {title: [instance_label], contents: matrix, included_display_id: true});
         thisObj.stopDialog.eucadialog('open');
        }
     },
@@ -842,7 +852,7 @@
             instance = display_id;
           }
           if(data && data.results){
-            var newTitle = $.i18n.prop('instance_dialog_console_title',  DefaultEncoder().encodeForHTML(instance));
+            var newTitle = $.i18n.prop('instance_dialog_console_title',  DefaultEncoder().encodeForHTML(addEllipsis(instance, 15)));
             thisObj.consoleDialog.data('eucadialog').option('title', newTitle);
             thisObj.consoleDialog.find('#instance-console-output').children().detach();
             thisObj.consoleDialog.find('#instance-console-output').append(
@@ -893,7 +903,7 @@
       if( nameTag == null ){
         $msg.html($.i18n.prop('inst_volume_dialog_detach_text', DefaultEncoder().encodeForHTML(instance)));
       }else{ 
-       $msg.html($.i18n.prop('inst_volume_dialog_detach_text', DefaultEncoder().encodeForHTML(nameTag)));
+       $msg.html($.i18n.prop('inst_volume_dialog_detach_text', DefaultEncoder().encodeForHTML(addEllipsis(nameTag, 15))));
       }
 
       var $p = this.detachDialog.find('#volume-detach-select-all');
@@ -915,8 +925,9 @@
           var state = volume.attach_data['status'];
           if( state === 'attached' && inst === instance && !isRootVolume(inst, volume.id) ){
             // FIX TO DISPLAY THE NAME TAG OF THE VOLUME  --- Kyo 041513
-            if( volume.display_id != null ){
-              volumes.push(volume.display_id);   // PASS THE DISPLAY ID IF EXISTS
+            if( volume.display_id != volume.id ){
+              volume_label = volume.id + " (" + addEllipsis(volume.display_id, 15) + ")";
+              volumes.push(volume_label);   // PASS THE DISPLAY ID IF EXISTS
             }else{
               volumes.push(volume.id);   // OR USE THE VOLUME ID
             }

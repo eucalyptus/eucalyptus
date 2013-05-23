@@ -1,12 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <classpath>
+	<classpathentry kind="src" output="modules/authentication/build" path="modules/authentication/src/main/java"/>
 	<classpathentry kind="src" output="modules/autoscaling/build" path="modules/autoscaling/src/main/java"/>
-	<classpathentry kind="src" path="modules/storage-controller/src/test/java"/>
-	<classpathentry kind="src" path="modules/bootstrap/src/test/java"/>
-	<classpathentry kind="src" path="modules/datawarehouse/src/test/java"/>
-	<classpathentry kind="src" path="modules/authentication/src/main/java"/>
-	<classpathentry kind="src" path="modules/bootstrap/src/main/java"/>
-	<classpathentry kind="src" path="modules/authentication/src/test/java"/>
 	<classpathentry kind="src" output="modules/autoscaling-common/build" path="modules/autoscaling-common/src/main/java"/>
 	<classpathentry kind="src" output="modules/cloud/build" path="modules/cloud/src/main/java"/>
 	<classpathentry kind="src" output="modules/cloudwatch/build" path="modules/cloudwatch/src/main/java"/>
@@ -42,8 +37,9 @@
 	<classpathentry kind="src" path="modules/wsstack/conf/scripts"/>
 	<classpathentry kind="src" output="modules/www/build" path="modules/www/src/main/java"/>
 	<classpathentry kind="src" path="modules/www/conf/www"/>
+	<classpathentry kind="src" path="scripts"/>
 	<classpathentry kind="con" path="GROOVY_SUPPORT"/>
-	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER"/>
+	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER/org.eclipse.jdt.internal.debug.ui.launcher.StandardVMType/JavaSE-1.7"/>
 	<classpathentry kind="lib" path="lib/activemq-core-5.4.1.jar"/>
 	<classpathentry kind="lib" path="lib/ant-1.7.jar"/>
 	<classpathentry kind="lib" path="lib/antlr-3.0.1.jar"/>
@@ -74,7 +70,7 @@
 	<classpathentry kind="lib" path="lib/com.noelios.restlet-1.1.5.jar"/>
 	<classpathentry kind="lib" path="lib/com.noelios.restlet.ext.servlet-1.1.5.jar"/>
 	<classpathentry kind="lib" path="lib/com.noelios.restlet.ext.simple-1.1.5.jar"/>
-	<classpathentry kind="lib" path="lib/dnsjava-2.1.4.jar"/>
+	<classpathentry kind="lib" path="lib/dnsjava-2.1.4.jar" sourcepath="/git/3rd-party-src/dnsjava-2.1.4"/>
 	<classpathentry kind="lib" path="lib/dom4j-1.6.1.jar"/>
 	<classpathentry kind="lib" path="lib/ehcache-core-1.7.2.jar"/>
 	<classpathentry kind="lib" path="lib/el-api-2.2.4.jar"/>
@@ -90,10 +86,16 @@
 	<classpathentry kind="lib" path="lib/geronimo-jpa_2.0_spec-1.1.jar"/>
 	<classpathentry kind="lib" path="lib/geronimo-jta_1.1_spec-1.1.1.jar"/>
 	<classpathentry kind="lib" path="lib/geronimo-stax-1.0-spec-1.0.1.jar"/>
-	<classpathentry kind="lib" path="lib/groovy-all-1.7.2.jar" sourcepath="/git/third-party/groovy-1.7.1"/>
+	<classpathentry kind="lib" path="lib/groovy-all-1.7.2.jar"/>
 	<classpathentry kind="lib" path="lib/guava-14.0.1-gwt.jar"/>
-	<classpathentry kind="lib" path="lib/guava-14.0.1.jar"/>
-	<classpathentry kind="lib" path="lib/ha-jdbc-2.0.16-rc-1-jdk1.6.jar" sourcepath="/git/third-party/ha-jdbc-2.0.16-rc-1"/>
+	<classpathentry kind="lib" path="lib/guava-14.0.1.jar" sourcepath="/home/decker/.m2/repository/com/google/guava/guava/14.0.1/guava-14.0.1-sources.jar"/>
+	<classpathentry kind="lib" path="lib/gwt-api-checker-2.4.jar"/>
+	<classpathentry kind="lib" path="lib/gwt-dev-2.4.jar"/>
+	<classpathentry kind="lib" path="lib/gwt-servlet-2.4.jar"/>
+	<classpathentry kind="lib" path="lib/gwt-servlet-deps-2.4.jar"/>
+	<classpathentry kind="lib" path="lib/gwt-soyc-vis-2.4.jar"/>
+	<classpathentry kind="lib" path="lib/gwt-user-2.4.jar"/>
+	<classpathentry kind="lib" path="lib/ha-jdbc-2.0.16-rc-1-jdk1.6.jar"/>
 	<classpathentry kind="lib" path="lib/hamcrest-all-1.2.jar"/>
 	<classpathentry kind="lib" path="lib/hibernate-3.5.6-Final.jar"/>
 	<classpathentry kind="lib" path="lib/infinispan-core-4.2.1.CR4.jar"/>
@@ -143,7 +145,7 @@
 	<classpathentry kind="lib" path="lib/jul-to-slf4j-1.5.2.jar"/>
 	<classpathentry kind="lib" path="lib/junit-4.11.jar"/>
 	<classpathentry kind="lib" path="lib/kahadb-5.4.1.jar"/>
-	<classpathentry kind="lib" path="lib/manageontap.jar"/>
+	<classpathentry kind="lib" path="lib/log4j-1.2.17.jar"/>
 	<classpathentry kind="lib" path="lib/mule-core-2.0.1.jar"/>
 	<classpathentry kind="lib" path="lib/mule-module-builders-2.0.1.jar"/>
 	<classpathentry kind="lib" path="lib/mule-module-client-2.0.1.jar"/>
@@ -151,10 +153,7 @@
 	<classpathentry kind="lib" path="lib/mule-module-spring-config-2.0.1.jar"/>
 	<classpathentry kind="lib" path="lib/mule-module-xml-2.0.1.jar"/>
 	<classpathentry kind="lib" path="lib/mule-transport-vm-2.0.1.jar"/>
-	<classpathentry kind="lib" path="lib/mysql-connector-java-commercial-5.1.18-bin.jar"/>
 	<classpathentry kind="lib" path="lib/netty-3.1.0.CR1.jar"/>
-	<classpathentry kind="lib" path="lib/nmsdk-runtime-5.0.jar"/>
-	<classpathentry kind="lib" path="lib/ontap-api-8.1.jar"/>
 	<classpathentry kind="lib" path="lib/openjdk-crypto.jar"/>
 	<classpathentry kind="lib" path="lib/org.restlet-1.1.5.jar"/>
 	<classpathentry kind="lib" path="lib/org.restlet.ext.velocity-1.1.5.jar"/>
@@ -174,8 +173,9 @@
 	<classpathentry kind="lib" path="lib/spring-core-2.5.1.jar"/>
 	<classpathentry kind="lib" path="lib/spring-web-2.5.1.jar"/>
 	<classpathentry kind="lib" path="lib/stax2-api-3.1.1.jar"/>
+	<classpathentry kind="lib" path="lib/validation-api-1.0.0.GA.jar"/>
+	<classpathentry kind="lib" path="lib/validation-api-1.0.0.GA-sources.jar"/>
 	<classpathentry kind="lib" path="lib/velocity-1.7.jar"/>
-	<classpathentry kind="lib" path="lib/vijava-2.1-euca-1316109169.jar"/>
 	<classpathentry kind="lib" path="lib/woodstox-core-asl-4.2.0.jar"/>
 	<classpathentry kind="lib" path="lib/wss4j-1.5.12.jar"/>
 	<classpathentry kind="lib" path="lib/xalan2.jar"/>
@@ -184,13 +184,5 @@
 	<classpathentry kind="lib" path="lib/xmlsec-1.4.7.jar"/>
 	<classpathentry kind="lib" path="lib/xom-1.2.9.jar"/>
 	<classpathentry kind="lib" path="lib/xpp3-1.1.4c.jar"/>
-	<classpathentry kind="lib" path="lib/gwt-api-checker-2.4.jar"/>
-	<classpathentry kind="lib" path="lib/gwt-dev-2.4.jar"/>
-	<classpathentry kind="lib" path="lib/gwt-servlet-2.4.jar"/>
-	<classpathentry kind="lib" path="lib/gwt-servlet-deps-2.4.jar"/>
-	<classpathentry kind="lib" path="lib/gwt-soyc-vis-2.4.jar"/>
-	<classpathentry kind="lib" path="lib/gwt-user-2.4.jar"/>
-	<classpathentry kind="lib" path="lib/log4j-1.2.17.jar"/>
-	<classpathentry kind="lib" path="lib/validation-api-1.0.0.GA.jar"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>

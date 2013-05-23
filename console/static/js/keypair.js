@@ -54,7 +54,8 @@
 		return eucatableDisplayColumnTypeText (data, data, 75);
 	      },
               "iDataSort": 3,
-              "mData": "name", 
+              "mData": "name",
+              "sClass": "wrap-content", 
             },
             { 
 	      // Display the fingerprint of the keypair in the main table

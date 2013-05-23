@@ -18,7 +18,7 @@ define([
              var selected_snapshot_id = snapshot_model.get('id');
              var selected_snapshot_size = snapshot_model.get('volume_size');
              var nameTag = self.findNameTag(snapshot_model);
-             var snapshot_name_string = self.createIdNameTagString(selected_snapshot_id, nameTag);
+             var snapshot_name_string = self.createIdNameTagString(selected_snapshot_id, addEllipsis(nameTag, 15));
              $snapshotSelector.append($('<option>', {
                  value: selected_snapshot_id,
                  text : snapshot_name_string
@@ -45,7 +45,7 @@ define([
              }));
              App.data.snapshot.each(function (model, index) {
                var nameTag = self.findNameTag(model);
-               var snapshot_name_string = self.createIdNameTagString(model.get('id'), nameTag);
+               var snapshot_name_string = self.createIdNameTagString(model.get('id'), addEllipsis(nameTag, 15));
                $snapshotSelector.append($('<option>', { 
                  value: model.get('id'),
                  text : snapshot_name_string 
@@ -136,7 +136,7 @@ define([
                 status: '',
                 volume: new Volume({snapshot_id: args.snapshot_id, size: args.size, availablity_zone: args.zone}),
                 error: new Backbone.Model({}),
-                help: {title: null, content: help_volume.landing_content, url: help_volume.landing_content_url, pop_height: 600},
+                help: {title: null, content: help_volume.dialog_add_content, url: help_volume.dialog_add_content_url, pop_height: 600},
 
                 cancelButton: {
                   click: function() {

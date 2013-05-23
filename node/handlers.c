@@ -258,7 +258,7 @@ static void refresh_instance_info(struct nc_state_t *nc, ncInstance * instance);
 static void update_log_params(void);
 static void nc_signal_handler(int sig);
 static int init(void);
-static void updateServiceStateInfo(ncMetadata * pMeta);
+static void updateServiceStateInfo(ncMetadata * pMeta, boolean authoritative);
 static void printNCServiceStateInfo(void);
 static void printMsgServiceStateInfo(ncMetadata * pMeta);
 
@@ -290,31 +290,75 @@ static void printMsgServiceStateInfo(ncMetadata * pMeta);
 \*----------------------------------------------------------------------------*/
 
 //!
+//! Authorize (or deauthorize) migration keys on destination host.
+//!
+//! @param[in] options command-line options to pass to the authorization script
+//! @param[in] host hostname (IP address) to authorize
+//! @param[in] credentials shared secret to authorize
+//! @param[in] instance pointer to instance struct for logging information (optional--can be NULL)
+//!
+//! @return EUCA_OK, EUCA_INVALID_ERROR, or EUCA_SYSTEM_ERROR
+//!
+
+int authorize_migration_keys(char *options, char *host, char *credentials, ncInstance * instance, boolean lock_hyp_sem)
+{
+    char authorize_keys[MAX_PATH];
+    char *euca_base = getenv(EUCALYPTUS_ENV_VAR_NAME);
+    char *instanceId = instance ? instance->instanceId : "UNSET";
+
+    if (!options && !host && !credentials) {
+        LOGERROR("[%s] called with invalid arguments: options=%s, host=%s, creds=%s\n", SP(instanceId), SP(options), SP(host), (credentials == NULL) ? "UNSET" : "present");
+        return EUCA_INVALID_ERROR;
+    }
+
+    snprintf(authorize_keys, MAX_PATH, EUCALYPTUS_AUTHORIZE_MIGRATION_KEYS " %s %s %s", NP(euca_base), NP(euca_base), NP(options), NP(host), NP(credentials));
+    LOGDEBUG("[%s] migration key authorization command: '%s'\n", SP(instanceId), authorize_keys);
+    if (lock_hyp_sem == TRUE) {
+        sem_p(hyp_sem);
+    }
+    int sysret = system(authorize_keys);
+    if (lock_hyp_sem == TRUE) {
+        sem_v(hyp_sem);
+    }
+    if (sysret) {
+        LOGERROR("[%s] '%s' failed with exit code %d\n", SP(instanceId), authorize_keys, WEXITSTATUS(sysret));
+        return EUCA_SYSTEM_ERROR;
+    } else {
+        LOGDEBUG("[%s] migration key authorization/deauthorization succeeded\n", SP(instanceId));
+    }
+    return EUCA_OK;
+}
+
+//!
 //! Copies the url string of the ENABLED service of the requested type into dest_buffer.
 //! dest_buffer MUST be the same size as the services uri array length, 512.
-//! NULL if none exists
 //!
 //! @param[in] service_type
 //! @param[in] nc
 //! @param[in] dest_buffer
-//!
+//! @return EUCA_OK on success, EUCA_ERROR on failure.
 //! @pre
 //!
 //! @post
 //!
-void get_service_url(const char *service_type, struct nc_state_t *nc, char *dest_buffer)
+int get_service_url(const char *service_type, struct nc_state_t *nc, char *dest_buffer)
 {
     int i = 0, j = 0;
     int found = 0;
+
+    if (service_type == NULL || nc == NULL || dest_buffer == NULL) {
+        LOGERROR("Invalid input parameters. At least one is NULL.\n");
+        return EUCA_ERROR;
+    }
+
     sem_p(service_state_sem);
 
     for (i = 0; i < 16; i++) {
         if (!strcmp(service_type, nc->services[i].type)) {
             //Winner!
-            for (j = 0; j < nc->services[i].urisLen; j++) {
-                euca_strncpy(dest_buffer, nc->services[i].uris[j], 512);
+            if (nc->services[i].urisLen > 0) {
+                euca_strncpy(dest_buffer, nc->services[i].uris[0], 512);
                 found = 1;
-                break;
             }
         }
     }
@@ -322,9 +366,11 @@ void get_service_url(const char *service_type, struct nc_state_t *nc, char *dest
 
     if (found) {
         LOGTRACE("Found enabled service URI for service type %s as %s\n", service_type, dest_buffer);
+        return EUCA_OK;
     } else {
         dest_buffer[0] = '\0';         //Ensure 0 length string
         LOGTRACE("No enabled service found for service type %s\n", service_type);
+        return EUCA_ERROR;
     }
 }
 
@@ -342,6 +388,7 @@ static void printNCServiceStateInfo(void)
     if (log_level_get() <= EUCA_LOG_TRACE) {
         sem_p(service_state_sem);
         LOGTRACE("Printing %d services\n", nc_state.servicesLen);
+        LOGTRACE("Epoch %d\n", nc_state.ncStatus.localEpoch);
         for (i = 0; i < nc_state.servicesLen; i++) {
             LOGTRACE("Service - %s %s %s %s\n", nc_state.services[i].name, nc_state.services[i].partition, nc_state.services[i].type, nc_state.services[i].uris[0]);
         }
@@ -391,22 +438,24 @@ static void printMsgServiceStateInfo(ncMetadata * pMeta)
 //! Update the state of the services and topology as received from the CC
 //!
 //! @param[in] pMeta a pointer to the node controller (NC) metadata structure
-//!
+//! @param[in] authoritative indicates whether this request is allowed to reset epoch
 //! @pre
 //!
 //! @note
 //!
-static void updateServiceStateInfo(ncMetadata * pMeta)
+static void updateServiceStateInfo(ncMetadata * pMeta, boolean authoritative)
 {
     int i = 0;
     char scURL[512];
-    if (pMeta != NULL && pMeta->services != NULL) {
+    if ((pMeta != NULL) && (pMeta->servicesLen > 0)) {
         LOGTRACE("Updating NC's topology/service state info: pMeta: userId=%s correlationId=%s\n", pMeta->userId, pMeta->correlationId);
 
         // store information from CLC that needs to be kept up-to-date in the NC
         sem_p(service_state_sem);
-        //Update if this is as new as what we have...added = because CC doesn't seem to bump epoch numbers, stays at 0
-        if (pMeta->epoch >= nc_state.ncStatus.localEpoch) {
+
+        if (pMeta->epoch >= nc_state.ncStatus.localEpoch || // we have updates ('=' is there in case CC does not bump epoch numbers)
+            authoritative              // trust the authoritative requests and always take their services info, even if epoch goes backward
+            ) {
             //Update the epoch first
             nc_state.ncStatus.localEpoch = pMeta->epoch;
 
@@ -501,25 +550,44 @@ void libvirt_err_handler(void *userData, virErrorPtr error)
 //!
 //! @todo chuck make sure localDevTag passed is at least 256 char
 //!
-int convert_dev_names(const char *localDev, char *localDevReal, char *localDevTag)
+int convert_dev_names(char *localDev, char *localDevReal, char *localDevTag)
 {
+    printf("Got: %s, %s, %s\n", localDev, localDevReal, localDevTag);
     bzero(localDevReal, 32);
     if (strchr(localDev, '/') != NULL) {
-        sscanf(localDev, "/dev/%s", localDevReal);
+        //Path-style device.../dev/xxx
+        if (strncmp(localDev, "unknown,requested:/dev/", sizeof("unknown,requested:/dev/") - 1) == 0) {
+            //The case on migration, where attachment on source was done
+            sscanf(localDev, "unknown,requested:/dev/%s", localDevReal);
+            snprintf(localDev, strlen(localDev), "/dev/%s", localDevReal);
+        } else {
+            sscanf(localDev, "/dev/%s", localDevReal);
+        }
     } else {
+        //No /dev/' prefix, just xxx
+        if (strncmp(localDev, "unknown,requested:", sizeof("unknown,requested:") - 1) == 0) {
+            //The case on migration, where attachment on source was done
+            sscanf(localDev, "unknown,requested:%s", localDevReal);
+            snprintf(localDev, strlen(localDev), "%s", localDevReal);
+        }
         snprintf(localDevReal, 32, "%s", localDev);
     }
 
     if (localDevReal[0] == 0) {
-        LOGERROR("bad input parameter for localDev (should be /dev/XXX): '%s'\n", localDev);
+        printf("bad input parameter for localDev (should be /dev/XXX): '%s'\n", localDev);
         return (EUCA_ERROR);
     }
 
     if (localDevTag) {
-        bzero(localDevTag, 256);
-        snprintf(localDevTag, 256, "unknown,requested:%s", localDev);
+        //If localDev already has the unknown,requested...just copy it
+        if (strncmp(localDev, "unknown,requested:", sizeof("unknown,requested:") - 1) == 0) {
+            bzero(localDevTag, 256);
+            snprintf(localDevTag, 256, "%s", localDev);
+        } else {
+            bzero(localDevTag, 256);
+            snprintf(localDevTag, 256, "unknown,requested:%s", localDev);
+        }
     }
-
     return EUCA_OK;
 }
 
@@ -580,7 +648,18 @@ int update_disk_aliases(ncInstance * instance)
             }
 
             if (volumeId) {
+                ebs_volume_data *vol_data = NULL;
+
+                if (strcmp("root", volumeId) == 0) {
+                    if (instance->params.root->locationType == NC_LOCATION_SC) {
+                        if (deserialize_volume(instance->params.root->resourceLocation, &vol_data) == 0) {
+                            volumeId = vol_data->volumeId;
+                        }
+                    }
+                }
                 sensor_set_volume(instance->instanceId, volumeId, devs[i]);
+
+                EUCA_FREE(vol_data);
             }
             EUCA_FREE(devs[i]);
         }
@@ -893,10 +972,10 @@ static void refresh_instance_info(struct nc_state_t *nc, ncInstance * instance)
             } else if (old_state == RUNNING || old_state == BLOCKED || old_state == PAUSED || old_state == SHUTDOWN) {
                 // If we just finished migration, then this is normal.
                 //
-                // FIXME: This could be a bad assumption if the
+                // Could this be a bad assumption if the
                 // virDomainLookupByName() call above returns NULL for
                 // some transient reason rather than because hypervisor
-                // doesn't know of the domain any more.
+                // doesn't know of the domain any more?
                 if (is_migration_src(instance)) {
                     if (instance->migration_state == MIGRATION_IN_PROGRESS) {
                         // This usually occurs when there has been some
@@ -967,7 +1046,8 @@ static void refresh_instance_info(struct nc_state_t *nc, ncInstance * instance)
                     // copy_intances is called upon return in monitoring_thread().
                     incoming_migrations_in_progress--;
                     LOGINFO("[%s] incoming migration complete (%d other incoming migration[s] actively in progress)\n", instance->instanceId, incoming_migrations_in_progress);
-
+                    // If no remaining incoming or pending migrations, deauthorize all clients.
+                    // TO-DO: Consolidate with similar sequence in handlers_kvm.c into a utility function?
                     if (!incoming_migrations_in_progress) {
                         int incoming_migrations_pending = 0;
                         int incoming_migrations_counted = 0;
@@ -975,11 +1055,14 @@ static void refresh_instance_info(struct nc_state_t *nc, ncInstance * instance)
                         bunchOfInstances *head = NULL;
                         for (head = global_instances; head; head = head->next) {
                             if ((head->instance->migration_state == MIGRATION_PREPARING) || (head->instance->migration_state == MIGRATION_READY)) {
-                                LOGINFO("[%s] is pending migration, state=%s, deferring deauthorization of migration keys\n", head->instance->instanceId,
+                                LOGINFO("[%s] is pending migration, migration_state='%s', deferring deauthorization of migration keys\n", head->instance->instanceId,
                                         migration_state_names[head->instance->migration_state]);
                                 incoming_migrations_pending++;
                             }
+                            // Belt and suspenders...
                             if ((head->instance->migration_state == MIGRATION_IN_PROGRESS) && !strcmp(nc_state.ip, head->instance->migration_dst)) {
+                                LOGWARN("[%s] Possible internal bug detected: instance migration_state='%s', but incoming_migrations_in_progress=%d\n", head->instance->instanceId,
+                                        migration_state_names[head->instance->migration_state], incoming_migrations_in_progress);
                                 incoming_migrations_counted++;
                             }
                         }
@@ -988,18 +1071,8 @@ static void refresh_instance_info(struct nc_state_t *nc, ncInstance * instance)
                                     incoming_migrations_counted);
                         }
                         if (!incoming_migrations_pending) {
-                            LOGINFO("no remaining incoming or pending migrations -- deauthorizing all migration clients\n");
-                            // FIXME: Consolidate this sequence and the sequence in handlers_kvm.c into a util function?
-                            char deauthorize_keys[MAX_PATH];
-                            char *euca_base = getenv(EUCALYPTUS_ENV_VAR_NAME);
-                            snprintf(deauthorize_keys, MAX_PATH, EUCALYPTUS_AUTHORIZE_MIGRATION_KEYS " -D -r", euca_base ? euca_base : "", euca_base ? euca_base : "");
-                            LOGDEBUG("migration key-deauthorizer path: '%s'\n", deauthorize_keys);
-                            int sysret = system(deauthorize_keys);
-                            if (sysret) {
-                                LOGWARN("'%s' failed with exit code %d\n", deauthorize_keys, WEXITSTATUS(sysret));
-                            } else {
-                                LOGDEBUG("migration key deauthorization succeeded\n");
-                            }
+                            LOGINFO("no remaining incoming or pending migrations -- deauthorizing all migration client keys\n");
+                            authorize_migration_keys("-D -r", NULL, NULL, NULL, FALSE);
                         }
                     } else {
                         // Verify that our count of incoming_migrations_in_progress matches our version of reality.
@@ -1213,9 +1286,6 @@ void *monitoring_thread(void *arg)
                         // Assume destination node. (Is this a safe assumption?)
                         LOGDEBUG("[%s] destination node ready: instance in booting state with no migrationTime.\n", instance->instanceId);
                     } else {
-                        // FIXME: Can't safely assume active source node--this can apparently occur post-successful-migration to a destination node
-                        // after an inconveniently timed NC restart on the destination. (I've seen this at least once, though I think I have fixed
-                        // the migration-completed code on the destination to avoid this in the future.)
                         LOGWARN("[%s] in instance state '%s' is ready to migrate but has a zero instance migrationTime.\n",
                                 instance->instanceId, instance_state_names[instance->state]);
                         migration_rollback(instance);
@@ -2045,6 +2115,8 @@ static int init(void)
     GET_VAR_INT(nc_state.concurrent_disk_ops, CONFIG_CONCURRENT_DISK_OPS, 4);
     GET_VAR_INT(nc_state.concurrent_cleanup_ops, CONFIG_CONCURRENT_CLEANUP_OPS, 30);
     GET_VAR_INT(nc_state.disable_snapshots, CONFIG_DISABLE_SNAPSHOTS, 0);
+    GET_VAR_INT(nc_state.shutdown_grace_period_sec, CONFIG_SHUTDOWN_GRACE_PERIOD_SEC, 60);
+
     int disable_injection;
     GET_VAR_INT(disable_injection, CONFIG_DISABLE_KEY_INJECTION, 0);
     nc_state.do_inject_key = !disable_injection;
@@ -2141,7 +2213,7 @@ static int init(void)
         if (strstr(caps_xml, "<live/>") != NULL) {
             nc_state.migration_capable = 1;
         }
-        free(caps_xml);
+        EUCA_FREE(caps_xml);
     }
     LOGINFO("hypervisor %scapable of live migration\n", nc_state.migration_capable ? "" : "not ");
 
@@ -2585,11 +2657,9 @@ int doDescribeInstances(ncMetadata * pMeta, char **instIds, int instIdsLen, ncIn
     if (init())
         return (EUCA_ERROR);
 
-    LOGTRACE("updating service state infos\n");
-    updateServiceStateInfo(pMeta);
-
     LOGTRACE("invoked\n");             // response will be at INFO, so this is TRACE
 
+    updateServiceStateInfo(pMeta, FALSE);
     if (nc_state.H->doDescribeInstances)
         ret = nc_state.H->doDescribeInstances(&nc_state, pMeta, instIds, instIdsLen, outInsts, outInstsLen);
     else
@@ -2908,8 +2978,7 @@ int doDescribeResource(ncMetadata * pMeta, char *resourceType, ncResource ** out
     if (init())
         return (EUCA_ERROR);
 
-    LOGTRACE("updating service state infos\n");
-    updateServiceStateInfo(pMeta);
+    updateServiceStateInfo(pMeta, TRUE);
 
     if (nc_state.H->doDescribeResource)
         ret = nc_state.H->doDescribeResource(&nc_state, pMeta, resourceType, outRes);
@@ -3233,7 +3302,7 @@ int doMigrateInstances(ncMetadata * pMeta, ncInstance ** instances, int instance
         LOGDEBUG("verifying instance # %d...\n", i);
         if (instances[i]) {
             LOGDEBUG("invoked (action=%s instance[%d].{id=%s src=%s dst=%s) creds=%s\n",
-                     action, i, instances[i]->instanceId, instances[i]->migration_src, instances[i]->migration_dst, (credentials == NULL) ? "unset" : "present");
+                     action, i, instances[i]->instanceId, instances[i]->migration_src, instances[i]->migration_dst, (credentials == NULL) ? "UNSET" : "present");
             if (!strcmp(instances[i]->migration_src, instances[i]->migration_dst)) {
                 if (strcmp(action, "rollback")) {
                     // Anything but rollback.
@@ -3310,7 +3379,7 @@ int is_migration_src(const ncInstance * instance)
 //!
 int migration_rollback(ncInstance * instance)
 {
-    // FIXME: duplicated code in two parts of conditional. Refactor.
+    // TO-DO: duplicated code in two parts of conditional. Refactor.
     if (is_migration_src(instance)) {
         LOGINFO("[%s] starting migration rollback of instance on source %s\n", instance->instanceId, instance->migration_src);
         instance->migration_state = NOT_MIGRATING;
@@ -3326,7 +3395,7 @@ int migration_rollback(ncInstance * instance)
         LOGINFO("[%s] migration source rolled back\n", instance->instanceId);
         return TRUE;
     } else if (is_migration_dst(instance)) {
-        // FIXME: Do I want to protect this functionality by requiring something like a 'force' option be passed to this function?
+        // TO-DO: Do I want to protect this functionality by requiring something like a 'force' option be passed to this function?
         LOGWARN("[%s] resetting migration state '%s' to 'none' for an already-migrated (%s < %s) instance. Something went wrong somewhere...\n",
                 instance->instanceId, migration_state_names[instance->migration_state], instance->migration_dst, instance->migration_src);
         instance->migration_state = NOT_MIGRATING;

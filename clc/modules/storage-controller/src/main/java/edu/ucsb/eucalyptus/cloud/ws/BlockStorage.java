@@ -170,8 +170,6 @@ public class BlockStorage {
 	static SnapshotService snapshotService;
 	static StorageCheckerService checkerService;
 	
-	private static final boolean ENCRYPT_TOKEN = false;
-	
 	//TODO: zhill, this can be added later for snapshot abort capabilities
 	//static ConcurrentHashMap<String,HttpTransfer> httpTransferMap; //To keep track of current transfers to support aborting
 
@@ -323,13 +321,9 @@ public class BlockStorage {
 			VolumeInfo vol = Entities.uniqueResult(new VolumeInfo(volumeId));				
 			VolumeToken token = vol.getOrCreateAttachmentToken();
 			
-			if(ENCRYPT_TOKEN) {
-				//Encrypt the token with the NC's private key. token.getToken();
-				String encryptedToken = BlockStorageUtil.encryptForNode(token.getToken());    
-				reply.setToken(encryptedToken);
-			} else {
-				reply.setToken(token.getToken());
-			}
+			//Encrypt the token with the NC's private key
+			String encryptedToken = BlockStorageUtil.encryptForNode(token.getToken());    
+			reply.setToken(encryptedToken);			
 			reply.setVolumeId(volumeId);
 			return reply;
 		} catch(NoSuchElementException e) {
@@ -353,106 +347,75 @@ public class BlockStorage {
 	 */
 	public UnexportVolumeResponseType UnexportVolume(UnexportVolumeType request) throws EucalyptusCloudException {
 		UnexportVolumeResponseType reply = request.getReply();
-		String token = request.getToken();
+		final String token = request.getToken();
 		final String volumeId = request.getVolumeId();
 		final String nodeIqn = request.getIqn();
 		final String nodeIp = request.getIp();
 
 		LOG.info("Processing UnexportVolume request for volume " + volumeId + " from node " + nodeIp + " with iqn " + nodeIqn);
 		
-		if(token.startsWith(StorageProperties.TOKEN_PREFIX)) {
-			//Strip off prefix if not already done.
-			token = token.substring(StorageProperties.TOKEN_PREFIX.length(), token.length());
-		}
-		
-		if(ENCRYPT_TOKEN) {
-			//Decrypt the token with the Cloud's private key. token.getToken();
-			token = BlockStorageUtil.decryptWithCloud(token);
-		}
-		
-		final String tokenValue = token;
-		
-		final Function<String, VolumeInfo> unexport = new Function<String, VolumeInfo>() {
-			@Override
-			public VolumeInfo apply(String volumeId) {
-				VolumeInfo volumeEntity = null;
-				try {
-					VolumeInfo foundVolume = Entities.uniqueResult(new VolumeInfo(volumeId));
-					volumeEntity = Entities.merge(foundVolume);
-					volumeEntity.invalidateExport(tokenValue, nodeIp, nodeIqn);
-					//Entities.flush(volumeEntity); //Sync state
-				} catch(Exception e) {
-					LOG.error("Could not remove export for volume " + volumeId + " due to: " + e.getMessage(), e);
-					return null;
-				}
-				return volumeEntity;
-			}
-		};
-
-		final Function<String, VolumeInfo> tearDown = new Function<String, VolumeInfo>() {
-			@Override
-			public VolumeInfo apply(String volumeId) {
-				VolumeInfo volumeEntity = null;
-				try {
-					VolumeInfo foundVolume = Entities.uniqueResult(new VolumeInfo(volumeId));
-					volumeEntity = Entities.merge(foundVolume);
-					
-					VolumeToken validToken = null;
-					validToken = volumeEntity.getCurrentValidToken();
-					if(validToken == null) {
-						//There are no active exports, so unexport all.
-						blockManager.unexportVolumeFromAll(volumeId);
-					} else {
-						try {
-							blockManager.unexportVolume(volumeEntity.getVolumeId(), nodeIqn);
-						} catch(UnsupportedOperationException e) {
-							//The backend doesn't support unexport to just one host... this is a noop.
-							LOG.debug("UnexportVolume for single host not supported by backend. Treating as no-op");
-						} catch(Exception e) {
-							LOG.error("Could not detach volume " + volumeEntity.getVolumeId(), e);
-							throw e;
-						}
-					}
-				} catch(Exception e) {
-					LOG.error("Could not remove export for volume " + volumeId + " due to: " + e.getMessage(), e);
-					return null;
-				}
-				return volumeEntity;
-			}
-		};
-		
+		VolumeInfo volumeEntity = null;
+		VolumeToken validToken = null;
+		EntityTransaction db = Entities.get(VolumeInfo.class);
 		try {
-			//Use two transactions to isolate the db updates so we don't roll those back without rolling-back the teardown
-			Entities.asTransaction(VolumeInfo.class, unexport).apply(volumeId);
-			Entities.asTransaction(VolumeInfo.class, tearDown).apply(volumeId);
+			VolumeInfo foundVolume = Entities.uniqueResult(new VolumeInfo(volumeId));
+			volumeEntity = Entities.merge(foundVolume);
+			
+			try {
+				validToken = volumeEntity.getAttachmentTokenIfValid(token);
+				//volumeEntity.invalidateExport(tokenValue, nodeIp, nodeIqn);				
+				//Entities.flush(volumeEntity); //Sync state -- not needed.... same transaction
+			} catch(Exception e) {
+				LOG.error("Invalid token in request for volume " + volumeId + ". Encrypted token: " + token);					
+				throw new EucalyptusCloudException(e);
+			}
+			
+			
+			if(validToken.hasOnlyExport(nodeIp, nodeIqn)) {
+				//There are no active exports, so unexport all.
+				blockManager.unexportVolumeFromAll(volumeId);
+			} else {
+				try {
+					blockManager.unexportVolume(volumeEntity.getVolumeId(), nodeIqn);
+				} catch(UnsupportedOperationException e) {
+					//The backend doesn't support unexport to just one host... this is a noop.
+					LOG.info("Volume " + volumeId + ": UnexportVolume for single host not supported by backend. Treating as no-op and continuing normally.");
+				} catch(Exception e) {
+					LOG.error("Could not detach volume: " + volumeId, e);
+					throw e;
+				}
+			}
+			
+			//Do the actual invalidation. Handle retries, but only on the DB part.
+			if(!Entities.asTransaction(VolumeInfo.class, new Function<VolumeInfo, Boolean>() {
+				@Override
+				public Boolean apply(VolumeInfo vol) {
+					VolumeInfo entity = Entities.merge(vol);
+					try {
+						entity.invalidateExport(token, nodeIp, nodeIqn);
+						return true;
+					} catch(Exception e) {
+						LOG.error("Error invalidating export: " + e.getMessage());
+						return false;
+					}					
+				}
+			}).apply(volumeEntity)) {
+				//Transaction failed after retries...
+				LOG.error("Error invalidating the export record in the DB for volume " + volumeId);
+			}
+			
+			db.commit();
 			reply.set_return(true);
 		} catch(NoSuchElementException e) {
-			LOG.error("No volume found",e);			
-			throw new EucalyptusCloudException("Volume not found " + volumeId);			
+			LOG.error("Volume " + volumeId + " not found in DB",e);			
+			throw new EucalyptusCloudException("Volume " + volumeId + " not found");			
 		} catch(Exception e) {
-			LOG.error("Failed unexportAndDetach transaction due to: " + e.getMessage(), e);
+			LOG.error("Failed UnexportVolume due to: " + e.getMessage(), e);
 			throw new EucalyptusCloudException(e);
-		}		
+		} finally {
+			db.rollback();
+		}
 		return reply;
-	}
-	
-	private String cleanupTokenString(String rawToken) throws EucalyptusCloudException {
-		String token = rawToken;
-		if(rawToken.startsWith(StorageProperties.TOKEN_PREFIX)) {
-			//Strip off prefix if not already done.
-			token = rawToken.substring(StorageProperties.TOKEN_PREFIX.length(), rawToken.length());
-		}
-		
-		if(ENCRYPT_TOKEN) {
-			//Decrypt the token with the Cloud's private key.
-			try {
-			token = BlockStorageUtil.decryptWithCloud(token);
-			} catch(EucalyptusCloudException e) {
-				LOG.error("Failed to decrypt token: " + token);
-				throw e;
-			}
-		}
-		return token;
 	}
 	
 	/**
@@ -469,14 +432,12 @@ public class BlockStorage {
 	public ExportVolumeResponseType ExportVolume(ExportVolumeType request) throws EucalyptusCloudException {
 		final ExportVolumeResponseType reply = (ExportVolumeResponseType) request.getReply();		
 		final String volumeId = request.getVolumeId();
-		String token = request.getToken();
+		final String token = request.getToken();
 		final String ip = request.getIp();
 		final String iqn = request.getIqn();
 		reply.setVolumeId(volumeId);
 
 		LOG.info("Processing ExportVolume request for volume " + volumeId);
-
-		final String tokenValue = cleanupTokenString(token);
 		
 		final Function<VolumeInfo, String> exportAndAttach = new Function<VolumeInfo, String>() {
 			@Override
@@ -484,7 +445,7 @@ public class BlockStorage {
 				VolumeToken tokenInfo = null;
 				VolumeInfo volEntity = Entities.merge(volume);
 				try {
-					tokenInfo = volEntity.getAttachmentTokenIfValid(tokenValue);
+					tokenInfo = volEntity.getAttachmentTokenIfValid(token);
 					if(tokenInfo == null) {
 						throw new Exception("Cannot export, due to invalid token");
 					}
@@ -615,7 +576,6 @@ public class BlockStorage {
 		volumeInfo.setVolumeId(volumeId);
 		List<VolumeInfo> volumeList = db.query(volumeInfo);
 
-		reply.set_return(Boolean.FALSE);
 		if(volumeList.size() > 0) {
 			VolumeInfo foundVolume = volumeList.get(0);
 			//check its status
@@ -623,9 +583,15 @@ public class BlockStorage {
 			if(status.equals(StorageProperties.Status.available.toString()) || 
 					status.equals(StorageProperties.Status.failed.toString())) {
 				foundVolume.setStatus(StorageProperties.Status.deleting.toString());
-				reply.set_return(Boolean.TRUE);
 			}
-		} 
+			// Delete operation should be idempotent as multiple attempts can be made to delete the same volume 
+			// Set the response element to true if the volume entity is found. EUCA-6093
+			reply.set_return(Boolean.TRUE);
+		} else {
+			// Set the response element to false if the volume entity does not exist in the SC database
+			LOG.error("Unable to find volume in SC database: " + volumeId);
+			reply.set_return(Boolean.FALSE);
+		}
 		db.commit();
 		return reply;
 	}
@@ -1859,35 +1825,71 @@ public class BlockStorage {
 		@Override
 		public void run() {
 			EntityWrapper<VolumeInfo> db = StorageProperties.getEntityWrapper();
-			VolumeInfo searchVolume = new VolumeInfo();
-			searchVolume.setStatus(StorageProperties.Status.deleting.toString());
-			List<VolumeInfo> volumes = db.query(searchVolume);
-			db.commit();
-			for (VolumeInfo vol : volumes) {
-				String volumeId = vol.getVolumeId();
-				LOG.info("Volume: " + volumeId + " was marked for deletion. Cleaning up...");
-				try {
-					blockManager.deleteVolume(volumeId);
-				} catch (EucalyptusCloudException e) {
-					LOG.error(e, e);
-					continue;
+			try {
+				VolumeInfo searchVolume = new VolumeInfo();
+				searchVolume.setStatus(StorageProperties.Status.deleting.toString());
+				List<VolumeInfo> volumes = db.query(searchVolume);
+				db.commit();
+				for (VolumeInfo vol : volumes) {
+					//Do separate transaction for each volume so we don't
+					// keep the transaction open for a long time					
+					db = StorageProperties.getEntityWrapper();
+					try {
+						vol = db.getUnique(vol);
+						final String volumeId = vol.getVolumeId();
+						LOG.info("Volume: " + volumeId + " marked for deletion. Checking export status");
+						if(Iterables.any(vol.getAttachmentTokens(), new Predicate<VolumeToken>() {					
+							@Override
+							public boolean apply(VolumeToken token) {
+								//Return true if attachment is valid or export exists.
+								try {
+									return token.hasActiveExports();
+								} catch(EucalyptusCloudException e) {
+									LOG.warn("Failure checking for active exports for volume " + volumeId);
+									return false;
+								}
+							}
+						})) {
+							//Exports exists... don't delete.
+							LOG.warn("Volume " + volumeId + " found to be exported. Cannot delete. Skipping and will retry later");
+							continue;
+						}
+						
+						LOG.info("Volume: " + volumeId + " was marked for deletion with no exports found. Cleaning up...");
+						try {
+							blockManager.deleteVolume(volumeId);
+						} catch (EucalyptusCloudException e) {
+							LOG.error(e, e);
+							continue;
+						}
+						//db = StorageProperties.getEntityWrapper();
+						//VolumeInfo foundVolume;
+						//try {
+						//foundVolume = db.getUnique(new VolumeInfo(volumeId));
+						vol.setStatus(StorageProperties.Status.deleted.toString());
+						//db.commit();
+						EucaSemaphoreDirectory.removeSemaphore(volumeId);
+						//} catch (EucalyptusCloudException e) {
+						//db.rollback();
+						//}
+						db.commit();
+					} catch(Exception e) {
+						
+					} finally {
+						db.rollback();
+					}
 				}
-				db = StorageProperties.getEntityWrapper();
-				VolumeInfo foundVolume;
-				try {
-					foundVolume = db.getUnique(new VolumeInfo(volumeId));
-					foundVolume.setStatus(StorageProperties.Status.deleted.toString());
-					db.commit();
-					EucaSemaphoreDirectory.removeSemaphore(volumeId);
-				} catch (EucalyptusCloudException e) {
-					db.rollback();
-				}
+				//db.commit();
+			} catch(Exception e) {
+				LOG.error("Failed during delete task.",e);				
+			} finally {
+				//db.rollback();
 			}
 		}
 	}
-
+	
 	public static class SnapshotDeleterTask extends CheckerTask {
-
+		
 		public SnapshotDeleterTask() {
 			this.name = "SnapshotDeleter";
 		}

@@ -68,7 +68,6 @@ import com.eucalyptus.webui.client.session.SessionData;
 import com.eucalyptus.webui.client.view.AccountView;
 import com.eucalyptus.webui.client.view.ActionResultView;
 import com.eucalyptus.webui.client.view.CertView;
-import com.eucalyptus.webui.client.view.CloudRegistrationView;
 import com.eucalyptus.webui.client.view.ConfirmationView;
 import com.eucalyptus.webui.client.view.DownloadView;
 import com.eucalyptus.webui.client.view.ErrorSinkView;
@@ -191,7 +190,5 @@ public interface ClientFactory {
   DownloadView getDownloadView( );
   
   ItemView createItemView( );
-  
-  CloudRegistrationView getCloudRegistrationView( );
   
 }

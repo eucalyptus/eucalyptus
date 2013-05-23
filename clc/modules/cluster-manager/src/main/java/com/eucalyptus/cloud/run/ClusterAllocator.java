@@ -104,6 +104,7 @@ import com.eucalyptus.system.Threads;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.LogUtil;
+import com.eucalyptus.util.StorageProperties;
 import com.eucalyptus.util.async.AsyncRequests;
 import com.eucalyptus.util.async.Request;
 import com.eucalyptus.util.async.StatefulMessageSet;
@@ -129,7 +130,6 @@ import edu.ucsb.eucalyptus.msgs.VmTypeInfo;
 
 public class ClusterAllocator implements Runnable {
   private static final long BYTES_PER_GB = ( 1024L * 1024L * 1024L );
-  private static final String VOLUME_TOKEN_PREFIX = "sc://"; //Used for designating EBS volumes in the VBR
   
   private static Logger     LOG          = Logger.getLogger( ClusterAllocator.class );
   
@@ -143,7 +143,7 @@ public class ClusterAllocator implements Runnable {
     ATTACH_VOLS,
     ASSIGN_ADDRESSES,
     FINISHED,
-    ROLLBACK;
+    ROLLBACK,
   }
   
   public static Boolean             SPLIT_REQUESTS = true; //TODO:GRZE:@Configurable
@@ -180,7 +180,7 @@ public class ClusterAllocator implements Runnable {
       }
     }
     
-  };
+  }
   
   public static Predicate<Allocation> get( ) {
     return SubmitAllocation.INSTANCE;
@@ -197,23 +197,7 @@ public class ClusterAllocator implements Runnable {
       db.commit( );
     } catch ( final Exception e ) {
       db.rollback( );
-      LOG.error( e );
-      Logs.extreme( ).error( e, e );
-      this.allocInfo.abort( );
-      for ( final ResourceToken token : allocInfo.getAllocationTokens( ) ) {
-        try {
-          final VmInstance vm = VmInstances.lookup( token.getInstanceId( ) );
-          if ( VmState.STOPPED.equals( vm.getLastState( ) ) ) {
-            VmInstances.stopped( vm );
-          } else {
-            VmInstances.terminated( vm );
-            VmInstances.terminated( vm );
-          }
-        } catch ( final Exception e1 ) {
-          LOG.error( e1 );
-          Logs.extreme( ).error( e1, e1 );
-        }
-      }
+      cleanupOnFailure( allocInfo, e );
       return;
     }
     
@@ -222,22 +206,30 @@ public class ClusterAllocator implements Runnable {
         this.setupVmMessages( token );
       }
     } catch ( final Exception e ) {
-      LOG.error( e );
-      Logs.extreme( ).error( e, e );
-      this.allocInfo.abort( );
-      for ( final ResourceToken token : allocInfo.getAllocationTokens( ) ) {
-        try {
-          final VmInstance vm = VmInstances.lookup( token.getInstanceId( ) );
+      cleanupOnFailure( allocInfo, e );
+    }
+  }
+
+  private void cleanupOnFailure( final Allocation allocInfo, final Exception e ) {
+    LOG.error( e );
+    Logs.extreme().error( e, e );
+    this.allocInfo.abort( );
+    for ( final ResourceToken token : allocInfo.getAllocationTokens( ) ) {
+      try {
+        final VmInstance vm = VmInstances.lookup( token.getInstanceId() );
+        if ( VmState.STOPPED.equals( vm.getLastState( ) ) ) {
+          VmInstances.stopped( vm );
+        } else {
           VmInstances.terminated( vm );
           VmInstances.terminated( vm );
-        } catch ( final Exception e1 ) {
-          LOG.error( e1 );
-          Logs.extreme( ).error( e1, e1 );
         }
+      } catch ( final Exception e1 ) {
+        LOG.error( e1 );
+        Logs.extreme( ).error( e1, e1 );
       }
     }
   }
-  
+
   // Modifying the logic to enable multiple block device mappings for boot from ebs. Fixes EUCA-3254 and implements EUCA-4786
   private void setupVolumeMessages( ) throws NoSuchElementException, MetadataException, ExecutionException {
     
@@ -257,7 +249,7 @@ public class ClusterAllocator implements Runnable {
     	}
       } 
     	  
-      int rootVolSizeInGb = ( int ) Math.ceil( volSizeBytes / BYTES_PER_GB );
+      int rootVolSizeInGb = ( int ) Math.ceil( ( ( double ) volSizeBytes ) / BYTES_PER_GB );
     	        
       for ( final ResourceToken token : this.allocInfo.getAllocationTokens( ) ) {
     	final VmInstance vm = VmInstances.lookup( token.getInstanceId( ) );
@@ -388,12 +380,11 @@ public class ClusterAllocator implements Runnable {
     			throw new EucalyptusCloudException( "Failed to get remote device string for " + volumeId + " while running instance " + token.getInstanceId( ) );
     		} else {
     			//Do formatting here since formatting is for messaging only.
-    			//sc://vol-X,<token>
-        	volumeToken = VOLUME_TOKEN_PREFIX + volumeId + "," + volumeToken;
-        	rootVbr.setResourceLocation(volumeToken);
-        	rootVbr.setSize(rootVolume.getSize() * BYTES_PER_GB);
-    			//vm.updatePersistantVolume(remoteDeviceString, rootVolume); Skipping this step for now as no one seems to be using it
+    			volumeToken = StorageProperties.formatVolumeAttachmentTokenForTransfer(volumeToken, volumeId);
     		}
+    		rootVbr.setResourceLocation(volumeToken);
+    		rootVbr.setSize(rootVolume.getSize() * BYTES_PER_GB);
+    		//vm.updatePersistantVolume(remoteDeviceString, rootVolume); Skipping this step for now as no one seems to be using it
     	} catch (final Exception ex) {
     		LOG.error(ex);
     		Logs.extreme().error(ex, ex);
@@ -428,8 +419,7 @@ public class ClusterAllocator implements Runnable {
     				throw new EucalyptusCloudException( "Failed to get remote device string for " + volumeId + " while running instance " + token.getInstanceId( ) );
     			} else {
     				//Do formatting here since formatting is for messaging only.
-    				//sc://vol-X,<token>
-    				volumeToken = VOLUME_TOKEN_PREFIX + volumeId + "," + volumeToken;          	
+    				volumeToken = StorageProperties.formatVolumeAttachmentTokenForTransfer(volumeToken, volumeId);
     				VirtualBootRecord vbr = new VirtualBootRecord(volumeId, volumeToken, "ebs", mapping.getKey(), (volume.getSize() * BYTES_PER_GB), "none");
     				childVmInfo.getVirtualBootRecord().add(vbr);
     				//vm.updatePersistantVolume(remoteDeviceString, volume); Skipping this step for now as no one seems to be using it

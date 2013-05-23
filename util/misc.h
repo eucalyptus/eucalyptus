@@ -212,8 +212,11 @@ int check_for_string_in_list(char *string, char **list, int count);
  |                                                                            |
 \*----------------------------------------------------------------------------*/
 
-//! Macro to print a string that might be NULL. If NULL the string "UNSET" is returned.
+//! Macro to print a string that might be NULL. If NULL, the string "UNSET" is returned.
 #define SP(_a)                                   (((_a) != NULL) ? (_a) : "UNSET")
+
+//! Macro to print a string that might be NULL. If NULL, the string "" is returned.
+#define NP(_a)                                   (((_a) != NULL) ? (_a) : "")
 
 //! Macro to generate a randum alphanumeric number.
 #define RANDALPHANUM()                           ((rand() % 2) ? (rand() % 26 + 97) : ((rand() % 2) ? (rand() % 26 + 65) : (rand() % 10 + 48)))

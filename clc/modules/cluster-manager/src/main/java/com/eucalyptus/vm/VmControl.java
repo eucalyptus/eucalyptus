@@ -200,7 +200,7 @@ public class VmControl {
 
       ReservationInfoType reservation = new ReservationInfoType( allocInfo.getReservationId( ),
                                                                  allocInfo.getOwnerFullName( ).getAccountNumber( ),
-                                                                 Lists.transform( allocInfo.getNetworkGroups( ), CloudMetadatas.toDisplayName( ) ) );
+                                                                 allocInfo.getNetworkGroupsMap() );
       reply.setRsvInfo( reservation );
       for ( ResourceToken allocToken : allocInfo.getAllocationTokens( ) ) {
         VmInstance entity = Entities.merge( allocToken.getVmInstance( ) );
@@ -252,7 +252,7 @@ public class VmControl {
         try {
           VmInstance v = VmState.TERMINATED.apply( vm ) ? vm : Entities.merge( vm );
           if ( instanceMap.put( v.getReservationId( ), VmInstances.transform( v ) ) && !reservations.containsKey( v.getReservationId( ) ) ) {
-            reservations.put( v.getReservationId( ), new ReservationInfoType( v.getReservationId( ), v.getOwner( ).getAccountNumber( ), v.getNetworkNames( ) ) );
+            reservations.put( v.getReservationId( ), new ReservationInfoType( v.getReservationId( ), v.getOwner( ).getAccountNumber( ), v.getNetworkMap( ) ) );
           }
         } catch ( Exception ex ) {
           Logs.exhaust( ).error( ex, ex );
@@ -406,6 +406,7 @@ public class VmControl {
     try {
         ArrayList <String> instanceSet = request.getInstancesSet();
         ArrayList <String> noAccess = new ArrayList<String>();
+        ArrayList <String> migrating = new ArrayList<String>();
         ArrayList <String> noSuchElement = new ArrayList<String>();
         for( int i = 0; i < instanceSet.size(); i++) {
           String currentInstance = instanceSet.get(i);
@@ -413,6 +414,9 @@ public class VmControl {
             final VmInstance v = VmInstances.lookup(  currentInstance );
             if( !RestrictedTypes.filterPrivileged( ).apply( v ) ) {
               noAccess.add( currentInstance );
+            }
+            if( MigrationState.isMigrating( v ) ) {
+              migrating.add( currentInstance );
             }
           } catch (NoSuchElementException nse) {
             if( !( nse instanceof TerminatedInstanceException ) ) {
@@ -427,6 +431,9 @@ public class VmControl {
           } else if( ( i == instanceSet.size( ) - 1 ) && ( !noAccess.isEmpty( ) ) ) {
             String outList = noAccess.toString( );
             throw new EucalyptusCloudException( "Permission denied for vm(s): " + outList.substring( 1, outList.length( ) - 1 ) );
+          } else if( ( i == instanceSet.size( ) - 1 ) && ( !migrating.isEmpty( ) ) ) {
+            String outList = noAccess.toString( );
+            throw new EucalyptusCloudException( "Cannot reboot an instances which is currently migrating: " + outList.substring( 1, outList.length( ) - 1 ) );
           }
         }
         final boolean result = Iterables.all( instanceSet , new Predicate<String>( ) {
@@ -548,11 +555,11 @@ public class VmControl {
               vm.setNetworkIndex( vmIdx );
             }
             vm.setState( VmState.PENDING );
+            db.commit( );
             ClusterAllocator.get( ).apply( allocInfo );
             final int oldCode = vm.getState( ).getCode( ), newCode = VmState.PENDING.getCode( );
             final String oldState = vm.getState( ).getName( ), newState = VmState.PENDING.getName( );
             reply.getInstancesSet( ).add( new TerminateInstancesItemType( vm.getInstanceId( ), oldCode, oldState, newCode, newState ) );
-            db.commit( );
           } catch ( Exception ex ) {
             db.rollback( );
             allocInfo.abort( );

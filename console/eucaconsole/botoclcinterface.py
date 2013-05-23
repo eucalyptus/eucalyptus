@@ -53,7 +53,7 @@ class BotoClcInterface(ClcInterface):
         self.conn = EC2Connection(access_id, secret_key, region=reg,
                                   port=port, path=path,
                                   is_secure=True, security_token=token, debug=debug)
-        self.conn.APIVersion = '2012-03-01'
+        self.conn.APIVersion = '2012-12-01'
         self.conn.https_validate_certificates = False
         self.conn.http_connection_kwargs['timeout'] = 30
 
@@ -316,6 +316,6 @@ class BotoClcInterface(ClcInterface):
     def delete_tags(self, resourceIds, tags):
         return self.conn.delete_tags(resourceIds, tags)
 
-    def get_all_vmtypes(self):
-        return self.conn.get_list('DescribeVmTypes', {}, [('euca:item', VmType)], verb='POST')
+    def get_all_instancetypes(self):
+        return self.conn.get_list('DescribeInstanceTypes', {}, [('euca:item', VmType)], verb='POST')
 

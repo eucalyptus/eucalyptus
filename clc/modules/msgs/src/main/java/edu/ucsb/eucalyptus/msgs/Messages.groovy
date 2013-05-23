@@ -75,6 +75,7 @@ import com.eucalyptus.system.Threads
 import com.eucalyptus.util.Exceptions
 
 import edu.ucsb.eucalyptus.cloud.VirtualBootRecord
+import com.eucalyptus.binding.HttpEmbedded
 
 
 public class ComponentType extends EucalyptusData {
@@ -360,8 +361,9 @@ public class VmTypeInfo extends EucalyptusData implements Cloneable {
   Integer disk;
   Integer cores;
   String rootDeviceName;
-  
+  @HttpEmbedded(multiple=true)
   ArrayList<BlockDeviceMappingItemType> deviceMappings = new ArrayList<BlockDeviceMappingItemType>();
+  @HttpEmbedded(multiple=true)
   ArrayList<VirtualBootRecord> virtualBootRecord = new ArrayList<VirtualBootRecord>();
   def VmTypeInfo(){
   }

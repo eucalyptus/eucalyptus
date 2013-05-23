@@ -83,8 +83,6 @@ import javax.persistence.PreUpdate;
 import javax.persistence.Table;
 import javax.persistence.Transient;
 
-import com.eucalyptus.upgrade.Upgrades;
-import com.eucalyptus.util.Exceptions;
 import com.google.common.base.Predicate;
 import org.apache.log4j.Logger;
 import org.hibernate.annotations.Cache;
@@ -92,18 +90,27 @@ import org.hibernate.annotations.CacheConcurrencyStrategy;
 import org.hibernate.annotations.Entity;
 import org.hibernate.annotations.NotFound;
 import org.hibernate.annotations.NotFoundAction;
+
+import com.eucalyptus.auth.Accounts;
+import com.eucalyptus.auth.DatabaseAuthProvider;
+import com.eucalyptus.auth.principal.AccountFullName;
 import com.eucalyptus.cloud.CloudMetadata.NetworkGroupMetadata;
 import com.eucalyptus.cloud.UserMetadata;
+import com.eucalyptus.cloud.util.NoSuchMetadataException;
 import com.eucalyptus.cloud.util.NotEnoughResourcesException;
 import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.crypto.Crypto;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.TransientEntityException;
+import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.FullName;
 import com.eucalyptus.util.Numbers;
 import com.eucalyptus.util.OwnerFullName;
+import com.eucalyptus.util.RestrictedTypes;
 import com.google.common.base.Function;
+import com.google.common.collect.Iterables;
+import com.google.common.collect.Sets;
 import edu.ucsb.eucalyptus.msgs.PacketFilterRule;
 
 @Entity
@@ -133,7 +140,7 @@ public class NetworkGroup extends UserMetadata<NetworkGroup.State> implements Ne
   @OneToMany( cascade = CascadeType.ALL, orphanRemoval = true ) //, fetch = FetchType.EAGER )
   @JoinColumn( name = "metadata_network_group_rule_fk" )
   @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
-  private Set<NetworkRule> networkRules = new HashSet<NetworkRule>( );
+  private Set<NetworkRule> networkRules = new HashSet<>( );
   
   @OneToOne( cascade = { CascadeType.ALL }, fetch = FetchType.EAGER, optional = true, orphanRemoval = true )
   @NotFound( action = NotFoundAction.IGNORE )
@@ -177,9 +184,6 @@ public class NetworkGroup extends UserMetadata<NetworkGroup.State> implements Ne
       return networkGroupWithGroupId(ownerFullName, groupId);
   }
   
-  /**
-   * @param naturalId
-   */
   private NetworkGroup( final String naturalId ) {
     this.setNaturalId( naturalId );
   }
@@ -352,20 +356,80 @@ public class NetworkGroup extends UserMetadata<NetworkGroup.State> implements Ne
     private static Logger LOG = Logger.getLogger( NetworkGroup.NetworkGroupUpgrade.class );
     @Override
     public boolean apply( Class arg0 ) {
-      EntityTransaction db = Entities.get( NetworkGroup.class );
+      addSecurityGroupIdentifiers( );
+      addSecurityGroupIdentifiersToRules( );
+      return true;
+    }
+
+    private void addSecurityGroupIdentifiers( ) {
+      final EntityTransaction db = Entities.get( NetworkGroup.class );
       try {
-        List<NetworkGroup> networkGroupList = Entities.query(new NetworkGroup());
-        for (NetworkGroup networkGroup : networkGroupList) {
-          LOG.debug("Upgrading " + networkGroup.getDisplayName());
-          if (networkGroup.getGroupId() == null ) {
-            networkGroup.setGroupId(Crypto.generateId( Integer.toHexString(networkGroup.getDisplayName().hashCode()), "sg" ));
+        final List<NetworkGroup> networkGroupList = Entities.query( new NetworkGroup( ) );
+        final Set<String> generatedIdentifiers = // ensure identifiers and names do not collide
+            Sets.newHashSet( Iterables.transform( networkGroupList, RestrictedTypes.toDisplayName() ) );
+        for ( final NetworkGroup networkGroup : networkGroupList ) {
+          LOG.debug( "Upgrading " + networkGroup.getDisplayName( ) );
+          if ( networkGroup.getGroupId( ) == null ) {
+            String networkGroupId = null;
+            while ( networkGroupId == null || generatedIdentifiers.contains( networkGroupId ) ) {
+              networkGroupId =
+                  Crypto.generateId( Integer.toHexString( networkGroup.getDisplayName().hashCode() ), "sg" );
+            }
+            generatedIdentifiers.add( networkGroupId );
+            networkGroup.setGroupId( networkGroupId );
           }
         }
         db.commit();
-        return true;
       } catch (Exception ex ) {
-        db.rollback();
-        throw Exceptions.toUndeclared(ex);
+        throw Exceptions.toUndeclared( ex );
+      } finally {
+        if ( db.isActive() ) db.rollback();
+      }
+    }
+
+    private void addSecurityGroupIdentifiersToRules( ) {
+      final EntityTransaction db = Entities.get( NetworkRule.class );
+      try {
+        final List<NetworkRule> networkRuleList = Entities.query( NetworkRule.named() );
+        for ( final NetworkRule networkRule : networkRuleList ) {
+          LOG.debug( "Upgrading " + networkRule );
+          if ( networkRule.getNetworkPeers() != null && networkRule.getNetworkPeers().size() > 0 ) {
+            final Set<NetworkPeer> updatedPeers = Sets.newHashSet();
+            for ( final NetworkPeer networkPeer : networkRule.getNetworkPeers() ) {
+              if ( networkPeer.getGroupId() == null ) {
+                // find the corresponding network group from network groups
+                String groupId = null;
+                try {
+                  if ( Accounts.getAccountProvider() == null ) {
+                    DatabaseAuthProvider dbAuth = new DatabaseAuthProvider();
+                    Accounts.setAccountProvider( dbAuth );
+                  }
+                  final NetworkGroup networkGroup =
+                      NetworkGroups.lookup( AccountFullName.getInstance( networkPeer.getUserQueryKey() ), networkPeer.getGroupName() );
+                  groupId = networkGroup.getGroupId();
+                } catch ( final NoSuchMetadataException ex ) {
+                  LOG.error( String.format( "unable to find the network group (%s-%s)", networkPeer.getUserQueryKey(), networkPeer.getGroupName() ) );
+                } catch ( final Exception ex ) {
+                  LOG.error( "failed to query network group", ex );
+                }
+                if ( groupId != null ) {
+                  networkPeer.setGroupId( groupId );
+                  LOG.debug( "network peer upgraded: " + networkPeer );
+                }
+              }
+              updatedPeers.add( networkPeer );
+            }
+
+            networkRule.getNetworkPeers().clear();
+            networkRule.setNetworkPeers( updatedPeers );
+          }
+        }
+
+        db.commit();
+      } catch (Exception ex ) {
+        throw Exceptions.toUndeclared( ex );
+      } finally {
+        if ( db.isActive() ) db.rollback();
       }
     }
   }

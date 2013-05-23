@@ -352,7 +352,7 @@ static int walrus_request_timeout(const char *walrus_op, const char *verb, const
     gmtime_r(&t, &tmp_t);
 
     //Format for time
-    if (strftime(date_str, 17, "%Y%m%dT%H%M%SZ", &tmp_t) < 0) {
+    if (strftime(date_str, 17, "%Y%m%dT%H%M%SZ", &tmp_t) == 0) {
         close(fd);
         pthread_mutex_unlock(&wreq_mutex);
         return (EUCA_ERROR);

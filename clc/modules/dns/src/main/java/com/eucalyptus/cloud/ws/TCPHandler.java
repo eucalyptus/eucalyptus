@@ -94,7 +94,12 @@ public class TCPHandler extends ConnectionHandler {
 			byte [] response = null;
 			try {
 				query = new Message(inBytes);
-				response = generateReply(query, inBytes, inBytes.length, socket);
+        ConnectionHandler.setRemoteInetAddress( socket.getInetAddress( ) );
+        try {
+          response = generateReply(query, inBytes, inBytes.length, socket);
+        } finally {
+          ConnectionHandler.removeRemoteInetAddress( );
+        }
 				if (response == null)
 					return;
 			}
