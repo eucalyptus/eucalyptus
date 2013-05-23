@@ -97,6 +97,7 @@ public class Context {
   private BaseMessage                  request   = null;
   private final MappingHttpRequest     httpRequest;
   private final Channel                channel;
+  private final boolean                channelManaged;
   private WeakReference<MuleEvent>     muleEvent = new WeakReference<MuleEvent>( null );
   private User                         user      = null;
   private Subject                      subject   = null;
@@ -106,6 +107,7 @@ public class Context {
     this.correlationId = null;
     this.httpRequest = null;
     this.channel = null;
+    this.channelManaged = false;
   }
 
   protected Context( String dest, final BaseMessage msg ) {
@@ -118,6 +120,7 @@ public class Context {
       }
     };
     this.channel = new DefaultLocalClientChannelFactory( ).newChannel( Channels.pipeline( ) );
+    this.channelManaged = true;
     this.user = Principals.systemUser( );
     EventRecord.caller( Context.class, EventType.CONTEXT_CREATE, this.correlationId, this.channel.toString( ) ).debug( );
   }
@@ -129,6 +132,7 @@ public class Context {
     this.creationTime = System.nanoTime( );
     this.httpRequest = httpRequest;
     this.channel = channel;
+    this.channelManaged = false;
     EventRecord.caller( Context.class, EventType.CONTEXT_CREATE, this.correlationId, this.channel.toString( ) ).debug( );
   }
   
@@ -218,6 +222,9 @@ public class Context {
     if ( this.muleEvent != null ) {
       this.muleEvent.clear( );
       this.muleEvent = null;
+    }
+    if ( this.channelManaged ) {
+      this.channel.close( );
     }
     this.contracts = null;
   }

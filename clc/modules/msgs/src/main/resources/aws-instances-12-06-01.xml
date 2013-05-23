@@ -126,7 +126,7 @@
         <value name="maxCount" field="maxCount" usage="required" />
         <value name="keyName" field="keyName" usage="optional" />
         <structure name="groupSet" usage="optional">
-            <collection field="groupSet" usage="optional" factory="org.jibx.runtime.Utility.arrayListFactory">
+            <collection field="securityGroups" usage="optional" factory="org.jibx.runtime.Utility.arrayListFactory">
                 <structure name="item" map-as="edu.ucsb.eucalyptus.msgs.GroupItemType" />
             </collection>
         </structure>
