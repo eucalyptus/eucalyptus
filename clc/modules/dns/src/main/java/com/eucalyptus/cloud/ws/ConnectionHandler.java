@@ -182,7 +182,7 @@ public class ConnectionHandler extends Thread {
 		Message response = new Message(query.getHeader().getID());
 		response.getHeader().setFlag(Flags.QR);
 		if (query.getHeader().getFlag(Flags.RD))
-			response.getHeader().setFlag(Flags.RA);
+			response.getHeader().setFlag(Flags.RD);
 		if(queryRecord != null) {
 			response.addRecord(queryRecord, Section.QUESTION);
 

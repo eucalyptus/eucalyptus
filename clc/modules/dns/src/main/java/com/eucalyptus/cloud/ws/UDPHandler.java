@@ -95,6 +95,7 @@ package com.eucalyptus.cloud.ws;
 
 import org.apache.log4j.Logger;
 import org.xbill.DNS.Message;
+import org.xbill.DNS.Rcode;
 import com.eucalyptus.bootstrap.Bootstrap;
 
 import java.io.IOException;
@@ -134,13 +135,18 @@ public class UDPHandler extends ConnectionHandler {
                       response = generateReply( query, in,
                         indp.getLength( ),
                         null );
+                    } catch ( RuntimeException ex ) {
+                      response = errorMessage(query, Rcode.SERVFAIL);
+                      throw ex;
                     } finally {
                       ConnectionHandler.removeRemoteInetAddress( );
                     }
                     if (response == null)
                         continue;
                 } catch (Exception e) {
+                  if ( response != null ) {
                     response = formerrMessage(in);
+                  }
                 }
                 if (outdp == null)
                     outdp = new DatagramPacket(response,
