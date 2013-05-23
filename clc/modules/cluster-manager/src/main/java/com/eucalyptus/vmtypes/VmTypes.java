@@ -64,6 +64,7 @@ package com.eucalyptus.vmtypes;
 
 import java.util.Comparator;
 import java.util.NavigableSet;
+import java.util.NoSuchElementException;
 import java.util.Set;
 import java.util.SortedSet;
 import java.util.concurrent.ConcurrentMap;
@@ -183,7 +184,7 @@ public class VmTypes {
         Iterators.size( vmType.getEpehemeralDisks().iterator() ); // Ensure materialized
         return vmType;
       } catch ( Exception ex ) {
-        LOG.error( ex );
+        if ( !(ex instanceof NoSuchElementException) ) LOG.error( ex );
         LOG.debug( ex, ex );
         PredefinedTypes t = PredefinedTypes.valueOf( input.toUpperCase( ).replace( ".", "" ) );
         VmType vmType = VmType.create( input, t.getCpu( ), t.getDisk( ), t.getMemory( ) );
