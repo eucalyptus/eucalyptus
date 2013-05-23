@@ -5,7 +5,6 @@ define([], function() {
     user_data: null,
     instance_monitoring: true,
     private_network: false,
-    //block_device_mappings: [],
 
     initialize: function() {
 
