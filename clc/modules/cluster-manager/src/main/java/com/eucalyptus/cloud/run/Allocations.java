@@ -151,13 +151,13 @@ public class Allocations {
         this.request.setInstanceType( VmTypes.defaultTypeName( ) );
       }
 
-      final String iamInstanceProfileArn =  this.request.getIamInstanceProfileArn();
-      final String iamInstanceProfileName = this.request.getIamInstanceProfileName();
+      @Nullable final String iamInstanceProfileArn =  this.request.getIamInstanceProfileArn();
+      @Nullable final String iamInstanceProfileName = this.request.getIamInstanceProfileName();
 
-      if (!iamInstanceProfileArn.equals("")) {
+      if ( !Strings.isNullOrEmpty( iamInstanceProfileArn ) ) {
         this.nameOrArn = iamInstanceProfileArn;
         this.request.setInstanceProfileNameOrArn(this.nameOrArn);
-      } else if (!iamInstanceProfileName.equals("")) {
+      } else if ( !Strings.isNullOrEmpty( iamInstanceProfileName ) ) {
         this.nameOrArn = iamInstanceProfileName;
         this.request.setInstanceProfileNameOrArn(this.nameOrArn);
       } else {
