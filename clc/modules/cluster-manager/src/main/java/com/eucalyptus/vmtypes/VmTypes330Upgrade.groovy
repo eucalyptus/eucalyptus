@@ -240,6 +240,7 @@ WHERE constraint_type = 'FOREIGN KEY' AND tc.table_name='metadata_instances' AND
         vmType.setCpu( oldVmTypeInfo.getCpu( ) )
         vmType.setDisk( oldVmTypeInfo.getDisk( ) )
         vmType.setMemory( oldVmTypeInfo.getMemory( ) )
+        VmTypes.update( vmType )
         LOG.info( "Upgraded vm type info:    " + vmType.dump( ) )
       } else {
         LOG.info( "Defined new vm type info: " + vmType.dump( ) )
