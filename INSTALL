@@ -1,9 +1,11 @@
 These are build instructions for the development version of Eucalyptus.
 =======================================================================
 
-***NOTE*** The following install instructions are still under development and may be INCOMPLETE. Contributions encouraged! :)
+***NOTE*** The following install instructions are still under development and
+may be INCOMPLETE. Contributions encouraged! :)
 
-What follows are instructions to build and install Eucalyptus from source on CentOS/RHEL 5/6 and Ubuntu 10.04 LTS/12.04 LTS.
+What follows are instructions to build and install Eucalyptus from source on
+CentOS/RHEL 5/6 and Ubuntu 10.04 LTS/12.04 LTS.
 
 You must install all dependencies to be able to build and install Eucalyptus.
 
@@ -15,7 +17,8 @@ git clone git://github.com/eucalyptus/eucalyptus --recursive
 2. Install dependencies
 =======================
 
-Please follow the following instructions to install required build and run-time dependencies.
+Please follow the following instructions to install required build and run-time
+dependencies.
 
 CentOS/RHEL 6
 -------------
@@ -30,17 +33,21 @@ yum install http://elrepo.org/linux/elrepo/el6/x86_64/RPMS/elrepo-release-6-4.el
 
 Use the following repository baseurl to get extra dependencies:
 
-http://downloads.eucalyptus.com/software/eucalyptus/build-deps/3.2/rhel/$releasever/$basearch
+http://downloads.eucalyptus.com/software/eucalyptus/build-deps/3.3/rhel/$releasever/$basearch
 
-Install the following build and runtime dependencies (this is the superset of all dependencies. Not all may be required for every component).
+Install the following build and runtime dependencies (this is the superset of
+all dependencies. Not all may be required for every component).
 
-yum install gcc make ant ant-nodeps apache-ivy axis2-adb-codegen axis2-codegen axis2c-devel jpackage-utils libvirt-devel \
-libxml2-devel libxslt-devel python-devel python-setuptools rampartc-devel swig velocity xalan-j2-xsltc gawk \
-java-devel java-devel openssl-devel curl-devel axis2c dhcp dhcp-common postgresql91 postgresql91-server \
-python-boto rampartc iscsi-initiator-utils perl-Crypt-OpenSSL-RSA perl-Crypt-OpenSSL-Random \
-sudo which jpackage-utils java lvm2 velocity drbd83 drbd83-kmod drbd-utils drbd euca2ools bitstream-vera-fonts \
-dejavu-serif-fonts  bridge-utils iptables vtun device-mapper coreutils e2fsprogs file parted util-linux rsync \
-PyGreSQL libcurl4 curl apache2 httpd libvirt tgt scsi-target-utils vconfig wget kvm dhcp-server iputils
+yum install gcc make ant ant-nodeps apache-ivy axis2-adb-codegen axis2-codegen \
+    axis2c-devel jpackage-utils libvirt-devel libxml2-devel libxslt-devel \
+    python-devel python-setuptools rampartc-devel swig velocity xalan-j2-xsltc gawk \
+    java-devel java-devel openssl-devel curl-devel axis2c dhcp dhcp-common \
+    postgresql91 postgresql91-server python-boto rampartc iscsi-initiator-utils \
+    perl-Crypt-OpenSSL-RSA perl-Crypt-OpenSSL-Random sudo which jpackage-utils java \
+    lvm2 velocity drbd83 drbd83-kmod drbd-utils drbd euca2ools bitstream-vera-fonts \
+    dejavu-serif-fonts  bridge-utils iptables vtun device-mapper coreutils \
+    e2fsprogs file parted util-linux rsync PyGreSQL libcurl4 curl apache2 httpd \
+    libvirt tgt scsi-target-utils vconfig wget kvm dhcp-server iputils
 
 Package-name & availability notes for CentOS 6.2 (and possibly earlier?):
 
@@ -51,9 +58,11 @@ Package-name & availability notes for CentOS 6.2 (and possibly earlier?):
 - tgt was replaced by scsi-target-utils.
 - bitstream-vera-fonts is no longer available.
 
-Download and save the following file https://raw.github.com/eucalyptus/eucalyptus-rpmspec/master/euca-WSDL2C.sh
+Download and save the following file:
 
-to /opt/euca-WSDL2C.sh and make it executable
+https://raw.github.com/eucalyptus/eucalyptus-rpmspec/master/euca-WSDL2C.sh
+
+Copy it to /opt/euca-WSDL2C.sh and make it executable.
 
 CentOS/RHEL 5
 -------------
@@ -66,28 +75,30 @@ rpm -Uvh epel-release-5-4.noarch.rpm
 
 Use the following repository baseurl to get extra dependencies:
 
-http://downloads.eucalyptus.com/software/eucalyptus/build-deps/3.2/rhel/$releasever/$basearch
+http://downloads.eucalyptus.com/software/eucalyptus/build-deps/3.3/rhel/$releasever/$basearch
 
 Install the following build dependencies:
 
 ant ant-nodeps apache-ivy axis2-adb-codegen axis2-codegen axis2c-devel
 jpackage-utils libvirt-devel libxml2-devel libxslt-devel python-devel
-python-setuptools rampartc-devel swig velocity xalan-j2-xsltc gawk
-xen-tools java-devel libopenssl-devel java-devel openssl-devel curl-devel
+python-setuptools rampartc-devel swig velocity xalan-j2-xsltc gawk xen-tools
+java-devel libopenssl-devel java-devel openssl-devel curl-devel
 
-Install the following runtime dependencies (this is the superset of all dependencies. Not all may be required for every component):
+Install the following runtime dependencies (this is the superset of all
+dependencies. Not all may be required for every component):
 
 axis2c dhcp41 dhcp41-common postgresql91 postgresql91-libs postgresql91-server
 python-boto rampartc open-iscsi iscsi-initiator-utils perl-Crypt-OpenSSL-RSA
 perl-Crypt-OpenSSL-Random sudo which jpackage-utils java lvm2 velocity drbd83
 drbd83-kmod drbd-utils drbd euca2ools bitstream-vera-fonts dejavu-serif-fonts
 bridge-utils iptables vtun device-mapper coreutils e2fsprogs file parted
-util-linux rsync PyGreSQL libcurl4 curl apache2 httpd libvirt tgt scsi-target-utils
-vconfig wget xen dhcp-server iputils
+util-linux rsync PyGreSQL libcurl4 curl apache2 httpd libvirt tgt
+scsi-target-utils vconfig wget xen dhcp-server iputils
 
-Download and save the following file https://raw.github.com/eucalyptus/eucalyptus-rpmspec/master/euca-WSDL2C.sh
+Download and save the following file:
+https://raw.github.com/eucalyptus/eucalyptus-rpmspec/master/euca-WSDL2C.sh
 
-to /opt/euca-WSDL2C.sh and make it executable
+Copy it to /opt/euca-WSDL2C.sh and make it executable.
 
 
 Ubuntu 12.04 LTS
@@ -101,48 +112,97 @@ libssl-dev ant-optional zlib1g-dev pkg-config swig python \
 python-setuptools rsync wget open-iscsi libxslt1-dev gengetopt ant \
 groovy postgresql-server-dev-9.1 iputils-arping
 
-Download axis2-1.4 from http://archive.apache.org/dist/ws/axis2/1_4/axis2-1.4-bin.zip and unzip it in /opt, so /opt/axis2-1.4 exists
+Download axis2-1.4 from:
+http://archive.apache.org/dist/ws/axis2/1_4/axis2-1.4-bin.zip
 
-Install the following runtime dependencies. Dependencies are broken down by Eucalyptus component.
+Then unzip it in /opt, so /opt/axis2-1.4 exists.
 
-CLC: libc6, adduser, openssh-server, openssh-client, sudo, rsync, postgresql-client-9.1, python2.7, python (>= 2.5), rsync, python-boto, python-psutil, python-pygresql, lvm2, libgetargs-long-perl, postgresql-9.1, vblade, dmsetup, default-jre-headless | java6-runtime-headless, velocity, libpostgresql-jdbc-java (>= 9.1), libjboss-common-java, libhibernate-commons-annotations-java
+Install the following runtime dependencies. Dependencies are broken down by
+Eucalyptus component.
 
-Walrus: libc6, adduser, openssh-server, openssh-client, sudo, rsync, postgresql-client-9.1, python (>= 2.5), python2.7, python-boto (>= 2.1), python-psutil, python-pygresql, drbd8-utils
+CLC: libc6, adduser, openssh-server, openssh-client, sudo, rsync,
+postgresql-client-9.1, python2.7, python (>= 2.5), rsync, python-boto,
+python-psutil, python-pygresql, lvm2, libgetargs-long-perl, postgresql-9.1,
+vblade, dmsetup, default-jre-headless | java6-runtime-headless, velocity,
+libpostgresql-jdbc-java (>= 9.1), libjboss-common-java,
+libhibernate-commons-annotations-java
 
-SC: libc6, adduser, openssh-server, openssh-client, sudo, rsync, postgresql-client-9.1, python, python2.7, python-boto (>= 2.1), python-psutil, tgt, open-iscsi, libcrypt-openssl-random-perl, libcrypt-openssl-rsa-perl, libcrypt-x509-perl, lvm2, vblade
+Walrus: libc6, adduser, openssh-server, openssh-client, sudo, rsync,
+postgresql-client-9.1, python (>= 2.5), python2.7, python-boto (>= 2.1),
+python-psutil, python-pygresql, drbd8-utils
 
-CC: libaxis2c0, libc6 (>= 2.14), libcurl3 (>= 7.16.2-1), librampart0 (>= 1.3.0-1euca2), libssl1.0.0 (>= 1.0.0), adduser, openssh-server, openssh-client, sudo, rsync, python (>= 2.5), python2.7, python-boto (>= 2.1), python-psutil (>= 0.1.2), apache2, libapache2-mod-axis2c, libssl1.0.0 (>= 1.0.0), bridge-utils, vlan, dhcp3-server, iptables, vtun, libpam-modules (>= 1.0.1-9ubuntu3), iputils-arping
+SC: libc6, adduser, openssh-server, openssh-client, sudo, rsync,
+postgresql-client-9.1, python, python2.7, python-boto (>= 2.1), python-psutil,
+tgt, open-iscsi, libcrypt-openssl-random-perl, libcrypt-openssl-rsa-perl,
+libcrypt-x509-perl, lvm2, vblade
 
-NC: libaxis2c0, libc6 (>= 2.14), libcurl3 (>= 7.16.2-1), librampart0 (>= 1.3.0-1euca2), libssl1.0.0 (>= 1.0.0), libvirt0 (>= 0.3.0), libxml2 (>= 2.7.4), libxslt1.1 (>= 1.1.25), apache2-mpm-worker | apache2-mpm-prefork, libapache2-mod-axis2c, apache2, libc6 (>= 2.2.5), adduser, openssh-server, openssh-client, sudo, adduser, parted, libvirt-bin, open-iscsi, libcrypt-openssl-random-perl, libcrypt-openssl-rsa-perl, libcrypt-x509-perl, euca2ools (>= 1.4~), libdevmapper, python (>= 2.5), python2.7, python-boto (>= 2.1), python-psutil (>= 0.1.2), file, rsync
+CC: libaxis2c0, libc6 (>= 2.14), libcurl3 (>= 7.16.2-1), librampart0 (>=
+1.3.0-1euca2), libssl1.0.0 (>= 1.0.0), adduser, openssh-server, openssh-client,
+sudo, rsync, python (>= 2.5), python2.7, python-boto (>= 2.1), python-psutil
+(>= 0.1.2), apache2, libapache2-mod-axis2c, libssl1.0.0 (>= 1.0.0),
+bridge-utils, vlan, dhcp3-server, iptables, vtun, libpam-modules (>=
+1.0.1-9ubuntu3), iputils-arping
+
+NC: libaxis2c0, libc6 (>= 2.14), libcurl3 (>= 7.16.2-1), librampart0 (>=
+1.3.0-1euca2), libssl1.0.0 (>= 1.0.0), libvirt0 (>= 0.3.0), libxml2 (>= 2.7.4),
+libxslt1.1 (>= 1.1.25), apache2-mpm-worker | apache2-mpm-prefork,
+libapache2-mod-axis2c, apache2, libc6 (>= 2.2.5), adduser, openssh-server,
+openssh-client, sudo, adduser, parted, libvirt-bin, open-iscsi,
+libcrypt-openssl-random-perl, libcrypt-openssl-rsa-perl, libcrypt-x509-perl,
+euca2ools (>= 1.4~), libdevmapper, python (>= 2.5), python2.7, python-boto (>=
+2.1), python-psutil (>= 0.1.2), file, rsync
 
 Ubuntu 10.04 LTS
 ----------------
 
 Add Martin Pitt's PPA to get postgreSQL 9.1
 
-sudo add-apt-repository ppa:pitti/postgresql (You might need to install python-software-properties)
+sudo add-apt-repository ppa:pitti/postgresql (You might need to install
+python-software-properties)
 
 Run "apt-get update"
 
 Install the following build dependencies.
 
-cdbs debhelper libaxis2c-dev librampart-dev \
-default-jdk libvirt-dev libfuse-dev libfuse2 libcurl4-openssl-dev \
-libssl-dev ant-optional zlib1g-dev pkg-config swig python \
-python-setuptools rsync wget open-iscsi libxslt1-dev gengetopt ant \
+cdbs debhelper libaxis2c-dev librampart-dev default-jdk libvirt-dev libfuse-dev
+libfuse2 libcurl4-openssl-dev libssl-dev ant-optional zlib1g-dev pkg-config
+swig python python-setuptools rsync wget open-iscsi libxslt1-dev gengetopt ant
 groovy postgresql-server-dev-9.1 iputils-arping
 
-Install the following runtime dependencies. Dependencies are broken down by Eucalyptus component.
+Install the following runtime dependencies. Dependencies are broken down by
+Eucalyptus component.
 
-CLC: libc6, adduser, openssh-server, openssh-client, sudo, rsync, postgresql-client-9.1, python2.6, python (>= 2.5), rsync, python-boto, python-psutil, python-pygresql, lvm2, libgetargs-long-perl, postgresql-9.1, vblade, dmsetup, default-jre-headless | java6-runtime-headless, velocity, libpostgresql-jdbc-java (>= 9.1), libjboss-common-java, libhibernate-commons-annotations-java
+CLC: libc6, adduser, openssh-server, openssh-client, sudo, rsync,
+postgresql-client-9.1, python2.6, python (>= 2.5), rsync, python-boto,
+python-psutil, python-pygresql, lvm2, libgetargs-long-perl, postgresql-9.1,
+vblade, dmsetup, default-jre-headless | java6-runtime-headless, velocity,
+libpostgresql-jdbc-java (>= 9.1), libjboss-common-java,
+libhibernate-commons-annotations-java
 
-Walrus: libc6, adduser, openssh-server, openssh-client, sudo, rsync, postgresql-client-9.1, python (>= 2.5), python2.7, python-boto (>= 2.1), python-psutil, python-pygresql, drbd8-utils
+Walrus: libc6, adduser, openssh-server, openssh-client, sudo, rsync,
+postgresql-client-9.1, python (>= 2.5), python2.7, python-boto (>= 2.1),
+python-psutil, python-pygresql, drbd8-utils
 
-SC: libc6, adduser, openssh-server, openssh-client, sudo, rsync, postgresql-client-9.1, python, python2.7, python-boto (>= 2.1), python-psutil, tgt, open-iscsi, libcrypt-openssl-random-perl, libcrypt-openssl-rsa-perl, libcrypt-x509-perl, lvm2, vblade
+SC: libc6, adduser, openssh-server, openssh-client, sudo, rsync,
+postgresql-client-9.1, python, python2.7, python-boto (>= 2.1), python-psutil,
+tgt, open-iscsi, libcrypt-openssl-random-perl, libcrypt-openssl-rsa-perl,
+libcrypt-x509-perl, lvm2, vblade
 
-CC: libaxis2c0, libc6 (>= 2.14), libcurl3 (>= 7.16.2-1), librampart0 (>= 1.3.0-1euca2), libssl1.0.0 (>= 1.0.0), adduser, openssh-server, openssh-client, sudo, rsync, python (>= 2.5), python2.7, python-boto (>= 2.1), python-psutil (>= 0.1.2), apache2, libapache2-mod-axis2c, libssl1.0.0 (>= 1.0.0), bridge-utils, vlan, dhcp3-server, iptables, vtun, libpam-modules (>= 1.0.1-9ubuntu3), iputils-arping
+CC: libaxis2c0, libc6 (>= 2.14), libcurl3 (>= 7.16.2-1), librampart0 (>=
+1.3.0-1euca2), libssl1.0.0 (>= 1.0.0), adduser, openssh-server, openssh-client,
+sudo, rsync, python (>= 2.5), python2.7, python-boto (>= 2.1), python-psutil
+(>= 0.1.2), apache2, libapache2-mod-axis2c, libssl1.0.0 (>= 1.0.0),
+bridge-utils, vlan, dhcp3-server, iptables, vtun, libpam-modules (>=
+1.0.1-9ubuntu3), iputils-arping
 
-NC: libaxis2c0, libc6 (>= 2.14), libcurl3 (>= 7.16.2-1), librampart0 (>= 1.3.0-1euca2), libssl1.0.0 (>= 1.0.0), libvirt0 (>= 0.3.0), libxml2 (>= 2.7.4), libxslt1.1 (>= 1.1.25), apache2-mpm-worker | apache2-mpm-prefork, libapache2-mod-axis2c, apache2, libc6 (>= 2.2.5), adduser, openssh-server, openssh-client, sudo, adduser, parted, libvirt-bin, open-iscsi, libcrypt-openssl-random-perl, libcrypt-openssl-rsa-perl, libcrypt-x509-perl, euca2ools (>= 1.4~), libdevmapper, python (>= 2.5), python2.7, python-boto (>= 2.1), python-psutil (>= 0.1.2), file, rsync
+NC: libaxis2c0, libc6 (>= 2.14), libcurl3 (>= 7.16.2-1), librampart0 (>=
+1.3.0-1euca2), libssl1.0.0 (>= 1.0.0), libvirt0 (>= 0.3.0), libxml2 (>= 2.7.4),
+libxslt1.1 (>= 1.1.25), apache2-mpm-worker | apache2-mpm-prefork,
+libapache2-mod-axis2c, apache2, libc6 (>= 2.2.5), adduser, openssh-server,
+openssh-client, sudo, adduser, parted, libvirt-bin, open-iscsi,
+libcrypt-openssl-random-perl, libcrypt-openssl-rsa-perl, libcrypt-x509-perl,
+euca2ools (>= 1.4~), libdevmapper, python (>= 2.5), python2.7, python-boto (>=
+2.1), python-psutil (>= 0.1.2), file, rsync
 
 
 3. Build Eucalyptus
@@ -174,24 +234,36 @@ make clean ; make ; make install
 
 4. Deploy Eucalyptus
 ====================
-At this point, if you plan to use Eucalyptus on more than one system, you're ready to push the software out to the other systems (although not all software components are required on all systems, it is simpler to just mirror everything and selectively enable components via start-up scripts). If you installed Eucalyptus in its own directory, you can just sync the entire package to all of the hosts listed above using whatever mechanism you typically use to push changes to systems (rsync, for instance).
+At this point, if you plan to use Eucalyptus on more than one system, you're
+ready to push the software out to the other systems (although not all software
+components are required on all systems, it is simpler to just mirror everything
+and selectively enable components via start-up scripts). If you installed
+Eucalyptus in its own directory, you can just sync the entire package to all of
+the hosts listed above using whatever mechanism you typically use to push
+changes to systems (rsync, for instance).
 
 rsync -a $EUCALYPTUS/ root@{host-2}:$EUCALYPTUS/
 rsync -a $EUCALYPTUS/ root@{host-3}:$EUCALYPTUS/
 ...
 
-On installations without a root user that can log in, such as Ubuntu, it may be easier to pull the software from each system one at a time:
+On installations without a root user that can log in, such as Ubuntu, it may be
+easier to pull the software from each system one at a time:
 
 host-2# rsync -a {user}@{host-1}:$EUCALYPTUS/ $EUCALYPTUS/
 host-3# rsync -a {user}@{host-1}:$EUCALYPTUS/ $EUCALYPTUS/
 
+NOTE: For the system running the NC you will also need to install the policykit
+configuration. Copy the file './tools/eucalyptus-nc-libvirt.pkla' to the NC and
+put it under the directory '/var/lib/polkit-1/localauthority/10-vendor.d/'
+
 5. Configure and Use Eucalyptus
 ===============================
 
-At this point forward, please follow instructions from the "Configuring Eucalyptus" section of the Installation Guide.
+At this point forward, please follow instructions from the "Configuring
+Eucalyptus" section of the Installation Guide.
 
-You can access Eucalyptus Documentation here (under construction): http://www.eucalyptus.com/eucalyptus-cloud/documentation
-
+You can access Eucalyptus Documentation here (under construction):
+http://www.eucalyptus.com/eucalyptus-cloud/documentation
 
 
 ****************************************************************
@@ -202,12 +274,19 @@ http://open.eucalyptus.com/wiki/EucalyptusInstallationSource_v2.0
 
 1. Prerequisites
 ================
-What follows is a comprehensive list of dependencies that must be satisfied before building Eucalyptus or running it. While we provide distribution-specific installation instructions that help satisfy these dependencies, this list should be useful if you are installing or building Eucalyptus on an unsupported distribution. NOTE - If you are upgrading from a Eucalyptus 1.6.2 or older installation, please consult the Upgrade Documentation for instructions that will explain how to preserve user account information, images, volumes and snapshots.
+What follows is a comprehensive list of dependencies that must be satisfied
+before building Eucalyptus or running it. While we provide
+distribution-specific installation instructions that help satisfy these
+dependencies, this list should be useful if you are installing or building
+Eucalyptus on an unsupported distribution. NOTE - If you are upgrading from a
+Eucalyptus 1.6.2 or older installation, please consult the Upgrade
+Documentation for instructions that will explain how to preserve user account
+information, images, volumes and snapshots.
 
-Prerequisites for compiling from source
+Prerequisites for compiling from source:
 
     * C compilers
-    * Java Developer Kit (SDK) version 1.7 or above
+    * Java Developer Kit (SDK) version 1.6 or above
     * Apache ant 1.6.5 or above
     * libc development files
     * pthreads development files
@@ -217,16 +296,33 @@ Prerequisites for compiling from source
     * openssl development files
     * Optional: zlib development files 
 
-Prerequisites for running Eucalyptus
+Prerequisites for running Eucalyptus:
 
-There are a few different Eucalyptus components that run on either the 'front-end or 'node'. There are different run-time dependencies for 'front-end' and 'node' components. One physical machine can play the role of the front-end and the node.
+There are a few different Eucalyptus components that run on either the
+'front-end or 'node'. There are different run-time dependencies for 'front-end'
+and 'node' components. One physical machine can play the role of the front-end
+and the node.
 
-Front-end run-time dependencies
+Front-end run-time dependencies:
 
-    * Java 7 is needed by the Eucalyptus components running on the front end. Note that GNU Compiler for Java (gcj), included by default with some Linux distributions, is not sufficient. Make sure that your JAVA_HOME environment variable is set to the location of your JDK.
+    * Java 6 is needed by the Eucalyptus components running on the front end.
+      Note that GNU Compiler for Java (gcj), included by default with some Linux
+      distributions, is not sufficient. Make sure that your JAVA_HOME environment
+      variable is set to the location of your JDK.
+
     * Perl is used by helper scripts
-    * The head node must run a server on port 25 that can deliver or relay email messages to cloud users' email addresses. This can be Sendmail, Exim, or postfix, or even something simpler, given that this server does not have to be able to receive incoming mail. Many Linux distributions satisfy this requirement out of the box. To test whether you have a properly functioning mail relay for localhost, try to send email to yourself from the terminal using "mail".
-    * Dependencies for network support differ depending on the mode used (see Eucalyptus Network Configuration for details). For full functionality satisfy all of them:
+    
+    * The head node must run a server on port 25 that can deliver or relay email
+      messages to cloud users' email addresses. This can be Sendmail, Exim, or
+      postfix, or even something simpler, given that this server does not have to
+      be able to receive incoming mail. Many Linux distributions satisfy this
+      requirement out of the box. To test whether you have a properly functioning
+      mail relay for localhost, try to send email to yourself from the terminal
+      using "mail".
+
+    * Dependencies for network support differ depending on the mode used (see
+      Eucalyptus Network Configuration for details). For full functionality
+      satisfy all of them:
           o For all modes:
                 + iproute and iptables packages (ip and iptables commands must work) 
           o For all modes except SYSTEM:
@@ -236,19 +332,24 @@ Front-end run-time dependencies
                 + vtun package, for multi-cluster configurations 
           o Additionally, for MANAGED mode:
                 + vlan package (vconfig command must work) 
-    * For persistent dynamic block storage (aka EBS) to work, the front end will need to have the following software packages installed:
+    * For persistent dynamic block storage (aka EBS) to work, the front end will
+      need to have the following software packages installed:
           o lvm2 package (e.g., command lvm should work)
-          o aoetools package. The aoe module needs to be loaded on the front end as well as all nodes (modprobe aoe). If your kernel does not have ATA-over-Ethernet support, you will have to add that.
+          o aoetools package. The aoe module needs to be loaded on the front end
+            as well as all nodes (modprobe aoe). If your kernel does not have
+            ATA-over-Ethernet support, you will have to add that.
           o vblade package 
 
-Node run-time dependencies
+Node run-time dependencies:
 
     * Perl scripts are invoked by the Node Controller
     * Two hypervisors are supported:
          1. Xen (version >= 3.0.x)
                 o Furthermore, xen-utils package is needed (xm command must work) 
          2. KVM 
-    * Dependencies for network support differ depending on the mode used (see Eucalyptus Network configuration for details). For full functionality satisfy all of them:
+    * Dependencies for network support differ depending on the mode used (see
+      Eucalyptus Network configuration for details). For full functionality
+      satisfy all of them:
           o For all modes:
                 + iproute and iptables packages (ip and iptables commands must work) 
           o For MANAGED and MANAGED-NOVLAN modes:
@@ -257,27 +358,42 @@ Node run-time dependencies
                 + vlan package (vconfig command must work) 
     * libvirt package (potentially with libvirtd, depending on hypervisor configuration) 
 
-All Eucalyptus components
+All Eucalyptus components:
 
-    * You must be root to install and start Eucalyptus components (by default they will run under a different user after start). This document assumes that all commands will be executed as root. 
+    * You must be root to install and start Eucalyptus components (by default
+      they will run under a different user after start). This document assumes
+      that all commands will be executed as root. 
 
-Attention CentOS users:The version of OpenJDK that is bundled with CentOS-5 cannot compile the version of GWT that comes with Eucalyptus as a dependency. You will need to install JDK 1.6.0 "manually". We use Sun's JDK, which can be found at http://java.sun.com/javase/downloads/index.jsp. Be sure to set your JAVA_HOME and PATH properly before running the Eucalyptus 'configure' script.
+Attention CentOS users:The version of OpenJDK that is bundled with CentOS-5
+cannot compile the version of GWT that comes with Eucalyptus as a dependency.
+You will need to install JDK 1.6.0 "manually". We use Sun's JDK, which can be
+found at http://java.sun.com/javase/downloads/index.jsp. Be sure to set your
+JAVA_HOME and PATH properly before running the Eucalyptus 'configure' script.
 
-Distribution-specific examples
+Distribution-specific examples:
 
-What follows is a superset of all packages necessary for building and running Eucalyptus on each supported distribution:
+What follows is a superset of all packages necessary for building and running
+Eucalyptus on each supported distribution:
 
-    * For Opensuse 11.2, download and install RPMs the appropriate OpenSUSE RPM dependency package from the Eucalyptus website, then run the following command to install all required dependency packages: 
+    * For Opensuse 11.2, download and install RPMs the appropriate OpenSUSE RPM
+      dependency package from the Eucalyptus website, then run the following
+      command to install all required dependency packages: 
 
-zypper -n install curl bzr python-paramiko make gcc ant apache-ivy apache2 apache2-prefork apache2-devel java-1_7_0-openjdk java-1_7_0-openjdk-devel libvirt-devel libcurl-devel vlan dhcp-server bridge-utils ant-contrib ant-nodeps openssl libvirt libcurl-devel vlan apache2 perl-Crypt-OpenSSL-Random perl-Crypt-OpenSSL-RSA libfuse2 tgt swig
+zypper -n install curl bzr python-paramiko make gcc ant apache-ivy apache2 \
+    apache2-prefork apache2-devel java-1_7_0-openjdk java-1_7_0-openjdk-devel \
+    libvirt-devel libcurl-devel vlan dhcp-server bridge-utils ant-contrib \
+    ant-nodeps openssl libvirt libcurl-devel vlan apache2 perl-Crypt-OpenSSL-Random \
+    perl-Crypt-OpenSSL-RSA libfuse2 tgt swig
 
     * For Ubuntu 10.04, run the following command to install all required dependency packages: 
 
-apt-get install bzr gcc make apache2-threaded-dev ant openjdk-7-jdk\
-   libvirt-dev libcurl4-openssl-dev dhcp3-server vblade apache2 unzip curl vlan\
-   bridge-utils libvirt-bin kvm vtun
+apt-get install bzr gcc make apache2-threaded-dev ant openjdk-7-jdk libvirt-dev \
+    libcurl4-openssl-dev dhcp3-server vblade apache2 unzip curl vlan bridge-utils \
+    libvirt-bin kvm vtun
 
-    * For CentOS 5 and Fedora 12, download and install RPMs the appropriate CentOS or Fedora RPM dependency package from the Eucalyptus website, then run the following command to install all required dependency packages: 
+    * For CentOS 5 and Fedora 12, download and install RPMs the appropriate
+      CentOS or Fedora RPM dependency package from the Eucalyptus website, then
+      run the following command to install all required dependency packages: 
 
 yum install -y java-1.7.0-openjdk-devel ant ant-nodeps apache-ivy libvirt-devel curl-devel httpd httpd-devel apr-devel openssl-devel dhcp libxml2 libxml2-devel gnutls gnutls-devel xen-devel libgcrypt-devel zlib-devel perl-Convert-ASN1 perl-Crypt-OpenSSL-RSA perl-Crypt-OpenSSL-Random chkfontpath scsi-target-utils fuse-libs swig gcc
 
@@ -289,13 +405,18 @@ apt-get install gcc make apache2-threaded-dev ant openjdk-7-jdk\
 
 Please, consult the distribution-specific pages for detailed installation instructions.
 
-Tools for interacting with Eucalyptus
+Tools for interacting with Eucalyptus:
 
-To interact with Eucalyptus, you need to install EC2-compatible command-line tools. The instructions in Eucalyptus documentation rely on the euca2ools command-line tools distributed by the Eucalyptus Team. Many other third-party tools can also be used for some of the tasks, as described on the ecosystem page.
+To interact with Eucalyptus, you need to install EC2-compatible command-line
+tools. The instructions in Eucalyptus documentation rely on the euca2ools
+command-line tools distributed by the Eucalyptus Team. Many other third-party
+tools can also be used for some of the tasks, as described on the ecosystem
+page.
 
 2. Download Eucalyptus and supplied dependencies
 ================================================
-In what follows substitute the desired version (e.g., 2.0.1) for $VERSION either manually or by setting a shell variable.
+In what follows substitute the desired version (e.g., 2.0.1) for $VERSION
+either manually or by setting a shell variable.
 
 Download either
 
@@ -317,7 +438,11 @@ Unpack the Eucalyptus source:
 
 tar zvxf eucalyptus-$VERSION-src.tar.gz
 
-Now you should have a directory eucalyptus-$VERSION. To simplify the remainder of the installation, define EUCALYPTUS_SRC environment variable to be the top of the source tree of eucalyptus and the variable EUCALYPTUS to be the directory where eucalyptus will be installed (we recommend using /opt/eucalyptus/):
+Now you should have a directory eucalyptus-$VERSION. To simplify the remainder
+of the installation, define EUCALYPTUS_SRC environment variable to be the top
+of the source tree of eucalyptus and the variable EUCALYPTUS to be the
+directory where eucalyptus will be installed (we recommend using
+/opt/eucalyptus/):
 
 cd eucalyptus-$VERSION
 export EUCALYPTUS_SRC=`pwd`
@@ -325,7 +450,12 @@ export EUCALYPTUS=/opt/eucalyptus
 
 3. Build Dependencies
 =====================
-To install Eucalyptus, you need to build packages that Eucalyptus depends on, which we provide in the above-mentioned package eucalyptus-$VERSION-src-deps.tar.gz. For the sake of this discussion, we are going to assume that all packages have been untarred inside "$EUCALYPTUS_SRC/eucalyptus-src-deps/" as above and will be installed in "$EUCALYPTUS/packages".
+To install Eucalyptus, you need to build packages that Eucalyptus depends on,
+which we provide in the above-mentioned package
+eucalyptus-$VERSION-src-deps.tar.gz. For the sake of this discussion, we are
+going to assume that all packages have been untarred inside
+"$EUCALYPTUS_SRC/eucalyptus-src-deps/" as above and will be installed in
+"$EUCALYPTUS/packages".
 
 Unpack the dependencies and create the directory you'll use to install them:
 
@@ -333,7 +463,9 @@ cd $EUCALYPTUS_SRC
 tar zvxf ../eucalyptus-$VERSION-src-deps.tar.gz
 mkdir -p $EUCALYPTUS/packages/
 
-Build and install the dependencies. The following instructions work on some Linux distributions, but aren't universal. Please, consult the documentation for the specific packages for help with building them on your distribution.
+Build and install the dependencies. The following instructions work on some
+Linux distributions, but aren't universal. Please, consult the documentation
+for the specific packages for help with building them on your distribution.
 
 a. Axis2
 --------
@@ -342,7 +474,9 @@ tar zxvf $EUCALYPTUS_SRC/eucalyptus-src-deps/axis2-1.4.tgz
 
 b. Axis2/C
 ----------
-To compile Axis2/C, you will need to locate development headers for Apache and for APR. On some distributions (e.g., Ubuntu and Debian) the following values should work:
+To compile Axis2/C, you will need to locate development headers for Apache and
+for APR. On some distributions (e.g., Ubuntu and Debian) the following values
+    should work:
 
 export APACHE_INCLUDES=/usr/include/apache2
 export APR_INCLUDES=/usr/include/apr-1.0
@@ -363,7 +497,8 @@ export AXIS2C_HOME=$EUCALYPTUS/packages/axis2c-1.6.0
 cd $EUCALYPTUS_SRC/eucalyptus-src-deps/
 tar zvxf axis2c-src-1.6.0.tar.gz
 cd axis2c-src-1.6.0
-CFLAGS="-w" ./configure --prefix=${AXIS2C_HOME} --with-apache2=$APACHE_INCLUDES --with-apr=$APR_INCLUDES --enable-multi-thread=no
+CFLAGS="-w" ./configure --prefix=${AXIS2C_HOME} --with-apache2=$APACHE_INCLUDES \
+    --with-apr=$APR_INCLUDES --enable-multi-thread=no
 make ; make install
 
 c. Rampart/C
@@ -402,34 +537,42 @@ export JAVA="$JAVA_HOME/JRE/bin/java"
 then, build Eucalyptus:
 
 cd $EUCALYPTUS_SRC
-./configure --with-axis2=$EUCALYPTUS/packages/axis2-1.4 --with-axis2c=$EUCALYPTUS/packages/axis2c-1.6.0 --enable-debug --prefix=$EUCALYPTUS
+./configure --with-axis2=$EUCALYPTUS/packages/axis2-1.4 \
+    --with-axis2c=$EUCALYPTUS/packages/axis2c-1.6.0 \
+    --enable-debug --prefix=$EUCALYPTUS
 make ; make install
 
 5. Deploying Eucalyptus
 =======================
-At this point, if you plan to use Eucalyptus on more than one node, you're ready to push the software out to the other nodes (although not all software components are required on all nodes, it is simpler to just mirror everything and selectively enable components via start-up scripts). If you installed Eucalyptus in its own directory, you can just sync the entire package to all of the hosts listed above using whatever mechanism you typically use to push changes to nodes (rsync, for instance).
+At this point, if you plan to use Eucalyptus on more than one node, you're
+ready to push the software out to the other nodes (although not all software
+components are required on all nodes, it is simpler to just mirror everything
+and selectively enable components via start-up scripts). If you installed
+Eucalyptus in its own directory, you can just sync the entire package to all of
+the hosts listed above using whatever mechanism you typically use to push
+changes to nodes (rsync, for instance).
 
 rsync -a $EUCALYPTUS/ root@{node-host-1}:$EUCALYPTUS/
 rsync -a $EUCALYPTUS/ root@{node-host-1}:$EUCALYPTUS/
 ...
 
-On installations without a root user, such as Ubuntu, it may be easier to pull the software from each node one at a time:
+On installations without a root user, such as Ubuntu, it may be easier to pull
+the software from each node one at a time:
 
 node1# rsync -a {user}@{front-end}:$EUCALYPTUS/ $EUCALYPTUS/
 node2# rsync -a {user}@{front-end}:$EUCALYPTUS/ $EUCALYPTUS/
 ...
 
-NOTE: Installing Eucalyptus in the same directory on all nodes will make it easier to manage it, so we strongly advise you to do so.
-
-NOTE: For the system running the NC you will also need to install the policykit
-configuration. Copy the file './tools/eucalyptus-nc-libvirt.pkla' to the NC and
-put it under the directory '/var/lib/polkit-1/localauthority/10-vendor.d/'
+NOTE: Installing Eucalyptus in the same directory on all nodes will make it
+easier to manage it, so we strongly advise you to do so.
 
 6. Configure Hosts
 
 a. Set up a 'eucalyptus' user on all machines
 ---------------------------------------------
-Eucalyptus will run as regular user on your systems, which you'll need to add before running Eucalyptus (we will use eucalyptus) on all machines. For most distributions, this task is accomplished by running the command:
+Eucalyptus will run as regular user on your systems, which you'll need to add
+before running Eucalyptus (we will use eucalyptus) on all machines. For most
+distributions, this task is accomplished by running the command:
 
 useradd eucalyptus
 
@@ -440,17 +583,36 @@ useradd eucalyptus -m -g eucalyptus
 
 b. Configure your hypervisor
 ----------------------------
-Ensure that this user can control your hypervisor through libvirt on all compute nodes. On some distributions, this can be accomplished by adding eucalyptus to group libvirt or libvirtd in file /etc/group. Please consult the documentation for libvirt on your distribution for instructions. See Hypervisor Configuration for more detailed information.
+Ensure that this user can control your hypervisor through libvirt on all
+compute nodes. On some distributions, this can be accomplished by adding
+eucalyptus to group libvirt or libvirtd in file /etc/group. Please consult the
+documentation for libvirt on your distribution for instructions. See Hypervisor
+Configuration for more detailed information.
 
 c. Configure your network
 -------------------------
-Eucalyptus provides several networking modes from which to choose, depending on your local network setup, capabilities, and the networking features that you wish to take advantage of within Eucalyptus. Most networking options require that, on your node controllers, the primary interface is configured to be a bridge (this is the default configuration with some distribution's Xen hypervisor configuration). See Network Configuration for more information and set-up instructions. Once you have decided which network mode you will be using, you may be required to set up ethernet bridges on Eucalyptus component machines. Example bridge configuration steps can be found here.
+Eucalyptus provides several networking modes from which to choose, depending on
+your local network setup, capabilities, and the networking features that you
+wish to take advantage of within Eucalyptus. Most networking options require
+that, on your node controllers, the primary interface is configured to be a
+bridge (this is the default configuration with some distribution's Xen
+hypervisor configuration). See Network Configuration for more information and
+set-up instructions. Once you have decided which network mode you will be
+using, you may be required to set up ethernet bridges on Eucalyptus component
+machines. Example bridge configuration steps can be found here.
 
 d. Configure Eucalyptus components
 ----------------------------------
-On your compute nodes, create a local directory where VM images are to be placed temporarily while VMs are running (images will be cached under the same path, too). It is important that the directory is empty as everything in it will be removed. Be sure to pick a partition with ample disk space as VM images can be large. We use /usr/local/eucalyptus in the example below.
+On your compute nodes, create a local directory where VM images are to be
+placed temporarily while VMs are running (images will be cached under the same
+path, too). It is important that the directory is empty as everything in it
+will be removed. Be sure to pick a partition with ample disk space as VM images
+can be large. We use /usr/local/eucalyptus in the example below.
 
-Place the mandatory parameters (including the type of hypervisor you plan to use) into the configuration file and set up the permissions on Eucalyptus files appropriately on all nodes. Both tasks can be accomplished with flags to euca_conf tool:
+Place the mandatory parameters (including the type of hypervisor you plan to
+use) into the configuration file and set up the permissions on Eucalyptus files
+appropriately on all nodes. Both tasks can be accomplished with flags to
+euca_conf tool:
 
     * -d specifies the root of Eucalyptus installation ($EUCALYPTUS)
     * --hypervisor specifies the hypervisor ('xen' or 'kvm')
@@ -458,13 +620,16 @@ Place the mandatory parameters (including the type of hypervisor you plan to use
     * --user specifies the user that you created for running Eucalyptus
     * --setup invokes the first-time setup tasks 
 
-$EUCALYPTUS/usr/sbin/euca_conf -d $EUCALYPTUS --hypervisor kvm --instances /usr/local/eucalyptus --user eucalyptus --setup
+$EUCALYPTUS/usr/sbin/euca_conf -d $EUCALYPTUS --hypervisor kvm \
+    --instances /usr/local/eucalyptus --user eucalyptus --setup
 
 e. Distribution-specific post configuration steps
 -------------------------------------------------
-Some linux distributions require that the admin perform a few extra steps before bringing up Eucalyptus. This section details some of these steps:
+Some linux distributions require that the admin perform a few extra steps
+before bringing up Eucalyptus. This section details some of these steps:
 
-For Ubuntu, apparmor needs to be configured to allow dhcpd3 to write to the filesystem. Add the following lines to '/etc/apparmor.d/usr.sbin.dhcp3':
+For Ubuntu, apparmor needs to be configured to allow dhcpd3 to write to the
+filesystem. Add the following lines to '/etc/apparmor.d/usr.sbin.dhcp3':
 
 /opt/eucalyptus/var/run/eucalyptus/net/ r,
 /opt/eucalyptus/var/run/eucalyptus/net/** r,
@@ -472,27 +637,38 @@ For Ubuntu, apparmor needs to be configured to allow dhcpd3 to write to the file
 /opt/eucalyptus/var/run/eucalyptus/net/*.leases* lrw,
 /opt/eucalyptus/var/run/eucalyptus/net/*.trace lrw,
 
-where you substitute '/opt/eucalyptus' with the path to where you have chosen to install Eucalyptus. Then, restart apparmor (NOTE: sometimes changes don't take effect right away - either wait or reboot the system to be sure):
+where you substitute '/opt/eucalyptus' with the path to where you have chosen
+to install Eucalyptus. Then, restart apparmor (NOTE: sometimes changes don't
+take effect right away - either wait or reboot the system to be sure):
 
 /etc/init.d/apparmor stop
 /etc/init.d/apparmor start
 
-Also, since Ubuntu DHCP daemon is configured to run as 'dhcpd' and not root, ensure that the following two variables are set as follows in the $EUCALYPTUS/etc/eucalyptus/eucalyptus.conf file on the Cluster head-node:
+Also, since Ubuntu DHCP daemon is configured to run as 'dhcpd' and not root,
+ensure that the following two variables are set as follows in the
+$EUCALYPTUS/etc/eucalyptus/eucalyptus.conf file on the Cluster head-node:
 
 VNET_DHCPDAEMON="/usr/sbin/dhcpd3"
 VNET_DHCPUSER="dhcpd"
 
-At this point you should be ready to start Eucalyptus processes on all nodes but before doing so you may want to configure the Eucalyptus network: you can read more about it at Network Configuration.
+At this point you should be ready to start Eucalyptus processes on all nodes
+but before doing so you may want to configure the Eucalyptus network: you can
+read more about it at Network Configuration.
 
 f. Configure your startup scripts
 ---------------------------------
-If you want to have eucalyptus started automatically when your machines are (re)booted, you can add the following symlinks on the appropriate hosts: add eucalyptus-cloud on the Cloud head-node, add eucalyptus-cc on the Cluster head-node(s), and add eucalyptus-nc on the compute node(s)
+If you want to have eucalyptus started automatically when your machines are
+(re)booted, you can add the following symlinks on the appropriate hosts: add
+eucalyptus-cloud on the Cloud head-node, add eucalyptus-cc on the Cluster
+head-node(s), and add eucalyptus-nc on the compute node(s)
 
 ln -sf $EUCALYPTUS/etc/init.d/eucalyptus-cloud /etc/init.d/eucalyptus-cloud
 ln -sf $EUCALYPTUS/etc/init.d/eucalyptus-cc /etc/init.d/eucalyptus-cc
 ln -sf $EUCALYPTUS/etc/init.d/eucalyptus-nc /etc/init.d/eucalyptus-nc
 
-and then add the symlinks to the distribution's booting process. This process differs from distribution to distribution. For example if you have update-rc.d available you can run:
+and then add the symlinks to the distribution's booting process. This process
+differs from distribution to distribution. For example if you have update-rc.d
+available you can run:
 
 update-rc.d eucalyptus-cloud defaults
 
@@ -502,21 +678,47 @@ chkconfig eucalyptus-cloud on
 
 7. Running Eucalyptus
 =====================
-Eucalyptus comes with the euca_conf script for configuring Eucalyptus. For some requests it modifies the configuration file located in '$EUCALYPTUS/etc/eucalyptus/eucalyptus.conf' (which can also be edited manually), for other requests it modifies the database maintained by the Cloud Controller (much of that functionality is duplicated in the Web interface, to be described later).
+Eucalyptus comes with the euca_conf script for configuring Eucalyptus. For some
+requests it modifies the configuration file located in
+'$EUCALYPTUS/etc/eucalyptus/eucalyptus.conf' (which can also be edited
+manually), for other requests it modifies the database maintained by the Cloud
+Controller (much of that functionality is duplicated in the Web interface, to
+be described later).
 
-In addition to modifying the configuration, euca_conf attempts to synchronize x509 credentials across the nodes of a Eucalyptus installation by relying on rsync and scp. We highly recommend setting up password-less SSH access for the root user across all nodes of your Eucalyptus installation (otherwise, euca_conf will prompt you for remote system passwords).
+In addition to modifying the configuration, euca_conf attempts to synchronize
+x509 credentials across the nodes of a Eucalyptus installation by relying on
+rsync and scp. We highly recommend setting up password-less SSH access for the
+root user across all nodes of your Eucalyptus installation (otherwise,
+euca_conf will prompt you for remote system passwords).
 
-As explained in the overview, a Eucalyptus installation consists of five types of components: cloud controller (CLC), Walrus, cluster controller (CC), storage controller (SC), and the node controller(s) (NCs). In following instructions we assume that all components except the NCs are co-located on one machine that we refer to as the front end and that NCs run on one or more other machines referred to ascompute nodes.
+As explained in the overview, a Eucalyptus installation consists of five types
+of components: cloud controller (CLC), Walrus, cluster controller (CC), storage
+controller (SC), and the node controller(s) (NCs). In following instructions we
+assume that all components except the NCs are co-located on one machine that we
+refer to as the front end and that NCs run on one or more other machines
+referred to ascompute nodes.
 
-To run Eucalyptus, first, make sure that you have all of the runtime dependencies of Eucalyptus installed, based on your chosen set of configuration parameters. If there is a problem with runtime dependencies (for instance, if Eucalyptus cannot find/interact with them), all errors will be reported in log files located in $EUCALYPTUS/var/log/eucalyptus. For more information on Eucalyptus log files and error reports, please see Troubleshooting Eucalyptus.
+To run Eucalyptus, first, make sure that you have all of the runtime
+dependencies of Eucalyptus installed, based on your chosen set of configuration
+parameters. If there is a problem with runtime dependencies (for instance, if
+Eucalyptus cannot find/interact with them), all errors will be reported in log
+files located in $EUCALYPTUS/var/log/eucalyptus. For more information on
+Eucalyptus log files and error reports, please see Troubleshooting Eucalyptus.
 
-Next, inspect the contents of $EUCALYPTUS/etc/eucalyptus/eucalyptus.conf carefully, on each machine, to make sure that the settings are appropriate for your environment. Once you have confirmed that everything is configured properly, enable the cloud services on the front-end:
+Next, inspect the contents of $EUCALYPTUS/etc/eucalyptus/eucalyptus.conf
+carefully, on each machine, to make sure that the settings are appropriate for
+your environment. Once you have confirmed that everything is configured
+properly, enable the cloud services on the front-end:
 
 # enable services on the front-end
 $EUCALYPTUS/usr/sbin/euca_conf -d $EUCALYPTUS --setup
 $EUCALYPTUS/usr/sbin/euca_conf -d $EUCALYPTUS --enable cloud --enable walrus --enable sc
 
-BEFORE STARTING EUCALYPTUS SERVICES! If you are upgrading from Eucalyptus 1.6.2 to Eucalyptus 2.0, return now to the Upgrade Instructions, and proceed with running the upgrade commands for the front-end and nodes as specified. If you are performing a first-time installation, you may proceed with the following steps and start Eucalyptus services:
+BEFORE STARTING EUCALYPTUS SERVICES! If you are upgrading from Eucalyptus 1.6.2
+to Eucalyptus 2.0, return now to the Upgrade Instructions, and proceed with
+running the upgrade commands for the front-end and nodes as specified. If you
+are performing a first-time installation, you may proceed with the following
+steps and start Eucalyptus services:
 
 Start each component on the appropriate host.
 
@@ -532,5 +734,10 @@ $EUCALYPTUS/etc/init.d/eucalyptus-nc start
 
 To stop them you call the script with stop instead of start.
 
-NOTE: if you later decide to make changes to $EUCALYPTUS/etc/eucalyptus/eucalyptus.conf that will effect the cluster-controller, make sure to use the 'cleanstart', 'cleanstop', and/or 'cleanrestart' directives to the init scripts (as opposed to start/stop/restart). This will both remove all existing CC state, and will cause it to re-read the configuration file.
+NOTE: if you later decide to make changes to
+$EUCALYPTUS/etc/eucalyptus/eucalyptus.conf that will effect the
+cluster-controller, make sure to use the 'cleanstart', 'cleanstop', and/or
+'cleanrestart' directives to the init scripts (as opposed to
+start/stop/restart). This will both remove all existing CC state, and will
+cause it to re-read the configuration file.
 
