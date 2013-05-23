@@ -1,0 +1,83 @@
+<div class="wizard-step">
+<div class="wizardTitle"><h3 class="required-label" data-msg="launch_instance_section_header_type">Type</h3></div>
+<div id="launch-wizard-type-main-contents">
+
+<!-- ##Number of Instances -->
+<!--
+  <div id="launch-wizard-type-option-num-instance" class="form-row clearfix">
+    <label for="launch-instance-type-num-instance" class="required-label">Number of instances</label>
+    <input data-on-change=":setField" class="short-textinput" id="launch-instance-type-num-instance" title="Enter the number of instances you want to create" type="text">
+    <div class="field-error" data-text="launchConfigErrors.type_number"></div>
+  </div>
+-->
+
+  <div class="form-row clearfix">
+    <label class="required-label" for="launch-instance-names" data-msg="create_launch_config_general_name">Launch configuration name</label>
+    <input data-value="typeModel.type_names" id="launch-instance-names" title="Instance name(s)" type="text">
+  </div>
+  <div class="field-error" data-text="launchConfigErrors.type_names"></div>
+<div id="launch-wizard-type-size">
+<div class="launch-wizard-select form-row">
+        <label for="launch-instance-type-size" data-msg="launch_instance_type_size_header">Instance size</label>
+        <select  data-value="typeModel.instance_type" id="launch-instance-type-size" class="wizard-selection-content">
+          <!--
+            <option value="m1.small" selected>m1.small: 1 CPUs, 256 memory (MB), 5 disk (GB,root device)</option>
+            <option value="t1.micro">t1.micro: 1 CPUs, 256 memory (MB), 5 disk (GB,root device)</option>
+            <option value="m1.medium">m1.medium: 1 CPUs, 512 memory (MB), 10 disk (GB,root device)</option>
+            <option value="m1.large">m1.large: 2 CPUs, 512 memory (MB), 10 disk (GB,root device)</option>
+            <option value="c1.medium">c1.medium: 2 CPUs, 512 memory (MB), 10 disk (GB,root device)</option>
+            <option value="m1.xlarge">m1.xlarge: 2 CPUs, 1024 memory (MB), 10 disk (GB,root device)</option>
+            <option value="c1.xlarge">c1.xlarge: 2 CPUs, 2048 memory (MB), 10 disk (GB,root device)</option>
+            <option value="m2.xlarge">m2.xlarge: 2 CPUs, 2048 memory (MB), 10 disk (GB,root device)</option>
+            <option value="m3.xlarge">m3.xlarge: 4 CPUs, 2048 memory (MB), 15 disk (GB,root device)</option>
+            <option value="m3.2xlarge">m3.2xlarge: 4 CPUs, 4096 memory (MB), 30 disk (GB,root device)</option>
+            <option value="m2.4xlarge">m2.4xlarge: 8 CPUs, 4096 memory (MB), 60 disk (GB,root device)</option>
+            <option value="hi1.4xlarge">hi1.4xlarge: 8 CPUs, 6144 memory (MB), 120 disk (GB,root device)</option>
+            <option value="cc2.8xlarge">cc2.8xlarge: 16 CPUs, 6144 memory (MB), 120 disk (GB,root device)</option>
+            <option value="cg1.4xlarge">cg1.4xlarge: 16 CPUs, 12288 memory (MB), 200 disk (GB,root device)</option>
+            <option value="cr1.8xlarge">cr1.8xlarge: 16 CPUs, 16384 memory (MB), 240 disk (GB,root device)</option>
+            <option value="hs1.8xlarge">hs1.8xlarge: 48 CPUs, 119808 memory (MB), 24000 disk (GB,root device)</option>
+          -->  
+            <option data-each-type="typeModel.types" data-value="type.name" data-text=":formatType"></option>
+         </select>
+</div>
+</div>
+<div id="launch-wizard-type-options"> <!-- <div class="wizard-section-label">Select launch options:</div> -->
+<!-- ##Zone -->
+<!--
+<div class="launch-wizard-type-option">
+<div id="launch-wizard-type-option-az" class="form-row clearfix">
+  <label for="launch-instance-type-az">Availability zone</label>
+  <select data-on-change=":setField" id="launch-instance-type-az" title="Select the availability zone for your new instance(s)">
+    <option value="Any">No Preference</option>
+    <option value="PARTI00">PARTI00</option></select>
+</div>
+</div>
+-->
+
+<!-- ## Load balancer -->
+<!--
+<div class="launch-wizard-type-option">
+  <div id="launch-wizard-type-option-lb" class="form-row clearfix">
+    <label for="launch-instance-type-lb">Add to load balancer</label>
+    <select id="launch-instance-type-lb" title="Select the load balancer for your new instance(s)">
+      <option value="None">None</option>
+    </select>
+  </div>  
+</div>
+-->
+
+<!-- ## TAGS -->
+<!--
+<div class="launch-wizard-type-option">
+<div id="launch-wizard-tags" class="form-row clearfix">
+  <label>Instance Tags</label>
+  <div data-ui-row-lister="tags"></div>
+  <div data-ui-row-adder="tags"></div>
+</div>
+</div>
+-->
+
+<!-- <div id="launch-wizard-buttons-type" class="launch-wizard-buttons"><button class="button" id="launch-wizard-buttons-type-next">Next: Select security</button></div> -->
+</div>
+</div>
