@@ -115,16 +115,20 @@ define([
             }
             if (model.get('block_device_mappings') != undefined) {
               var mappings = model.get('block_device_mappings');
-              $.each(mappings, function(idx, mapping) {
+              $.each(eval(mappings), function(idx, mapping) {
                 if (mapping.device_name == '/dev/sda') { // root, folks!
-                    data.push({name: "BlockDeviceMapping."+(idx+1)+".DeviceName", value: mapping.device_name});
-                    data.push({name: "BlockDeviceMapping."+(idx+1)+".Ebs.VolumeSize", value: mapping.ebs.volume_size});
-                    data.push({name: "BlockDeviceMapping."+(idx+1)+".Ebs.DeleteOnTermination", value: mapping.ebs.delete_on_termination});
+                  console.log("adding root device mapping vol_size="+mapping.ebs.volume_size);
+                  data.push({name: "BlockDeviceMapping."+(idx+1)+".DeviceName", value: mapping.device_name});
+                  data.push({name: "BlockDeviceMapping."+(idx+1)+".Ebs.VolumeSize", value: mapping.volume_size});
+                  data.push({name: "BlockDeviceMapping."+(idx+1)+".Ebs.DeleteOnTermination", value: mapping.delete_on_termination});
                 }
                 else if (mapping.ephemeral_name == 'ephemeral0') { // ephemeral device, folks!
-                    data.push({name: "BlockDeviceMapping."+(idx+1)+".VirtualName", value: mapping.ephemeral_name});
+                  console.log("adding ephemeral mapping :"+mapping.ephemeral_name);
+                  data.push({name: "BlockDeviceMapping."+(idx+1)+".DeviceName", value: mapping.device_name});
+                  data.push({name: "BlockDeviceMapping."+(idx+1)+".VirtualName", value: mapping.ephemeral_name});
                 }
                 else { // or, normal mappings
+                  console.log("adding ebs mapping snapshot="+mapping.ebs.snapshot_id+" vol_size="+mapping.ebs.volume_size);
                   if(mapping.device_name != undefined)
                     data.push({name: "BlockDeviceMapping."+(idx+1)+".DeviceName", value: mapping.device_name});
 

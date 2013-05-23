@@ -185,10 +185,12 @@ define([
 
       this.model.on('change', function() {
         var tmp = scope.blockDeviceMappings.findWhere({device_name: '/dev/sda'});
-        if (scope.root == undefined) scope.root = tmp;
-        else if (tmp != undefined) scope.root = tmp;
+        if (scope.advancedModel.root == undefined) scope.advancedModel.root = tmp;
+        else if (tmp != undefined) scope.advancedModel.root = tmp;
+        // give rivets access as well since it doesn't do nested well
+        scope.root = scope.advancedModel.root;
         if (scope.blockDeviceMappings.length > 0) {
-          scope.blockDeviceMappings.remove(scope.root);
+          scope.blockDeviceMappings.remove(scope.advancedModel.root);
         }
       });
 
