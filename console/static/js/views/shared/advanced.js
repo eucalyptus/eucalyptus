@@ -22,7 +22,6 @@ define([
         kernels: new Backbone.Collection(dataholder.images.where({type: 'kernel'})), 
         ramdisks: new Backbone.Collection(dataholder.images.where({type: 'ramdisk'})),
         blockDeviceMappings: self.options.blockMaps,
-        newMapping: new blockmap(),
 
         snapshots: function() {
             var ret = [{name:'None', id:null}];
@@ -55,9 +54,18 @@ define([
           var tr = $(e.target).closest('tr');
           var vol = tr.find('.launch-wizard-advanced-storage-volume-selector').val();
           var dev = tr.find('.launch-wizard-advanced-storage-mapping-input').val();
-          var snap = tr.find('.launch-wizard-advanced-storage-snapshot-input').val();
-          var size = tr.find('.launch-wizard-advanced-storage-size-input').val();
-          var del = tr.find('.launch-wizard-advanced-storage-delOnTerm').prop('checked');
+          var ephemeral = null;
+          var snap = null;
+          var size = null;
+          var del = null;
+          if (vol == 'ephemeral') {
+            ephemeral = 'ephemeral0';
+          }
+          else {
+            snap = tr.find('.launch-wizard-advanced-storage-snapshot-input').val();
+            size = tr.find('.launch-wizard-advanced-storage-size-input').val();
+            del = tr.find('.launch-wizard-advanced-storage-delOnTerm').prop('checked');
+          }
 
           m.set({
               device_name: dev,
@@ -77,13 +85,13 @@ define([
                 iopts: null 
               },
               delete_on_termination: del,
-              ephemeral_name: null    
+              ephemeral_name: ephemeral    
           });
 
           m.validate();
           if (m.isValid()) {
             this.blockDeviceMappings.add(m);
-            this.model.set('bdmaps_configured', true);
+            scope.advancedModel.set('bdmaps_configured', true);
           }
 
         },
@@ -91,15 +99,19 @@ define([
         delStorageVol: function(e, obj) {
           this.blockDeviceMappings.remove(obj.volume); 
           if(this.blockDeviceMappings.length == 0) {
-            this.model.set('bdmaps_configured', false);
+            scope.advancedModel.set('bdmaps_configured', false);
           }
         },
 
         getVolLabel: function(obj) {
           if (obj.volume.get('device_name') == '/dev/sda') {
-              return 'Root';
+            return app.msg('launch_instance_root');
           } else {
-              return 'EBS';
+            if (obj.volume.get('ephemeral_name') == null) {
+              return app.msg('launch_instance_ebs');
+            } else {
+              return app.msg('launch_instance_ephemeral0');
+            }
           }
         },
 
@@ -134,9 +146,27 @@ define([
         },
 
         setSnapshot: function(e, obj) {
-          console.log('setting snapshot id to :'+obj);
-          scope.newMapping.snapshot_id = obj;
+          var tr = $(e.target).closest('tr');
+          var snap = tr.find('.launch-wizard-advanced-storage-snapshot-input').val();
           // now, set size to snapshot size (only if no size already there??)
+          dataholder.snapshots.each(function(s) {
+            if (s.get('id') == snap)
+              tr.find('.launch-wizard-advanced-storage-size-input').val(s.get('volume_size'));
+          });
+        },
+
+        typeSelected: function(e, obj) {
+          var tr = $(e.target).closest('tr');
+          var vol = tr.find('.launch-wizard-advanced-storage-volume-selector').val();
+          if (vol == 'ephemeral') { // disable snapshot, size, del_on_term
+              tr.find('.launch-wizard-advanced-storage-snapshot-input').hide();
+              tr.find('.launch-wizard-advanced-storage-size-input').hide();
+              tr.find('.launch-wizard-advanced-storage-delOnTerm').hide();
+          } else { // ensure rest is enabled
+              tr.find('.launch-wizard-advanced-storage-snapshot-input').show();
+              tr.find('.launch-wizard-advanced-storage-size-input').show();
+              tr.find('.launch-wizard-advanced-storage-delOnTerm').show();
+          }
         },
 
         launchConfigErrors: self.launchConfigErrors
@@ -155,12 +185,12 @@ define([
 
       this.model.on('change', function() {
         var tmp = scope.blockDeviceMappings.findWhere({device_name: '/dev/sda'});
-        if (scope.root == undefined) scope.root = tmp;
-        else if (tmp != undefined) scope.root = tmp;
+        if (scope.advancedModel.root == undefined) scope.advancedModel.root = tmp;
+        else if (tmp != undefined) scope.advancedModel.root = tmp;
+        // give rivets access as well since it doesn't do nested well
+        scope.root = scope.advancedModel.root;
         if (scope.blockDeviceMappings.length > 0) {
-          scope.blockDeviceMappings = scope.blockDeviceMappings.reduce(function(c, v) {
-              return v.get('device_name') == '/dev/sda' ? c : c.add(v);
-            }, new Backbone.Collection());
+          scope.blockDeviceMappings.remove(scope.advancedModel.root);
         }
       });
 

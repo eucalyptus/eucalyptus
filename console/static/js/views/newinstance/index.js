@@ -43,6 +43,9 @@ define([
       securityModel.finish(instanceModel);
       advancedModel.finish(instanceModel);
       keyModel.finish(instanceModel);
+      if (advancedModel.root != undefined) {
+        blockMaps.add(advancedModel.root);
+      }
       blockMaps.finish(instanceModel);
 
       instanceModel.on('validated:invalid', function(e, errors) {

@@ -104,7 +104,7 @@ try {
           "hibernate.format_sql": "false",
           "hibernate.connection.autocommit": "true",
           "hibernate.hbm2ddl.auto": "update",
-          "hibernate.generate_statistics": "true",
+          "hibernate.generate_statistics": "false",
           "hibernate.connection.driver_class": Databases.getDriverName( ),
           "hibernate.connection.username": "eucalyptus",
           "hibernate.connection.password": Databases.getPassword( ),

@@ -17,10 +17,15 @@ define(['app'], function(app) {
 
     validation: {
       volume_size: function(value) {
-        if (this.get('snapshot_id') != undefined) {
-          if (value.length <= 0 || (parseInt(value)<=0 || isNaN(value))){
-            return app.msg("launch_instance_error_volume_size_number");
+        if (this.get('ephemeral_name') == undefined) {
+          // ebs vol validation
+          if (this.get('snapshot_id') != undefined) {
+            if (value.length <= 0 || (parseInt(value)<=0 || isNaN(value))){
+              return app.msg("launch_instance_error_volume_size_number");
+            }
           }
+        } else {
+          // ephemeral validation
         }
         /*
         var snapshotSize = -1;
