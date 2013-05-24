@@ -23,6 +23,10 @@ define(['app'], function(app) {
             if (value.length <= 0 || (parseInt(value)<=0 || isNaN(value))){
               return app.msg("launch_instance_error_volume_size_number");
             }
+            var snap_size = app.data.snapshots.get(this.get('snapshot_id')).get('volume_size');
+            if (parseInt(snap_size) > parseInt(value)) {
+              return $.i18n.prop("launch_instance_error_volume_size_small", snap_size);
+            }
           }
         } else {
           // ephemeral validation
