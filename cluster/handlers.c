@@ -4244,83 +4244,111 @@ int doCreateImage(ncMetadata * pMeta, char *instanceId, char *volumeId, char *re
 //!
 //! @note
 //!
-int doDescribeSensors(ncMetadata * pMeta, int historySize, long long collectionIntervalTimeMs, char **instIds, int instIdsLen, char **sensorIds,
-                      int sensorIdsLen, sensorResource *** outResources, int *outResourcesLen)
+int doDescribeSensors(ncMetadata * pMeta, int historySize, long long collectionIntervalTimeMs, char **instIds, int instIdsLen, char **sensorIds, int sensorIdsLen,
+                      sensorResource *** outResources, int *outResourcesLen)
 {
-    int rc = initialize(pMeta, FALSE);
+    int i = 0;
+    int rc = 0;
+    int err = 0;
+    int num_results = 0;
+    int num_instances = 0;
+    int num_resources = 0;
+    int col_interval_sec = 0;
+    int nc_poll_interval_sec = 0;
+
+    rc = initialize(pMeta, FALSE);
     if (rc || ccIsEnabled()) {
-        return 1;
+        return (1);
     }
 
     LOGDEBUG("invoked: historySize=%d collectionIntervalTimeMs=%lld instIdsLen=%d i[0]='%s' sensorIdsLen=%d s[0]='%s'\n",
-             historySize, collectionIntervalTimeMs, instIdsLen, instIdsLen > 0 ? instIds[0] : "*", sensorIdsLen, sensorIdsLen > 0 ? sensorIds[0] : "*");
-    int err = sensor_config(historySize, collectionIntervalTimeMs); // update the config parameters if they are different
-    if (err != 0)
+             historySize, collectionIntervalTimeMs, instIdsLen, ((instIdsLen > 0) ? instIds[0] : "*"), sensorIdsLen, ((sensorIdsLen > 0) ? sensorIds[0] : "*"));
+
+    // update the config parameters if they are different
+    if ((err = sensor_config(historySize, collectionIntervalTimeMs)) != 0)
         LOGWARN("failed to update sensor configuration (err=%d)\n", err);
-    if (historySize > 0 && collectionIntervalTimeMs > 0) {
-        int col_interval_sec = collectionIntervalTimeMs / 1000;
-        int nc_poll_interval_sec = col_interval_sec * historySize - POLL_INTERVAL_SAFETY_MARGIN_SEC;
-        if (nc_poll_interval_sec < POLL_INTERVAL_MINIMUM_SEC)
-            nc_poll_interval_sec = POLL_INTERVAL_MINIMUM_SEC;
+
+    if ((historySize > 0) && (collectionIntervalTimeMs > 0)) {
+        col_interval_sec = collectionIntervalTimeMs / 1000;
+        nc_poll_interval_sec = ((col_interval_sec * historySize) - POLL_INTERVAL_SAFETY_MARGIN_SEC);
+        nc_poll_interval_sec = ((nc_poll_interval_sec < POLL_INTERVAL_MINIMUM_SEC) ? POLL_INTERVAL_MINIMUM_SEC : nc_poll_interval_sec);
+
         if (config->ncSensorsPollingInterval != nc_poll_interval_sec) {
             config->ncSensorsPollingInterval = nc_poll_interval_sec;
             LOGDEBUG("changed NC sensors poll interval to %d (col_interval_sec=%d historySize=%d)\n", nc_poll_interval_sec, col_interval_sec, historySize);
         }
     }
 
-    int num_resources = sensor_get_num_resources();
-    if (num_resources < 0) {
+    if ((num_resources = sensor_get_num_resources()) < 0) {
         LOGERROR("failed to determine number of available sensor resources\n");
-        return 1;
+        return (1);
     }
     // oddly, an empty set of instanceIds or sensorIds in XML is presented
     // by Axis as an array of size 1 with an empty string as the only element
-    int num_instances = instIdsLen;
-    if (instIdsLen == 1 && strlen(instIds[0]) == 0)
+    num_instances = instIdsLen;
+    if ((instIdsLen == 1) && (strlen(instIds[0]) == 0))
         num_instances = 0;             // which is to say all instances
 
-    *outResources = NULL;
-    *outResourcesLen = 0;
+    (*outResources) = NULL;
+    (*outResourcesLen) = 0;
 
     if (num_resources > 0) {
-
-        int num_slots = num_resources; // report on all instances
-        if (num_instances > 0)
-            num_slots = num_instances; // report on specific instances
-
-        *outResources = EUCA_ZALLOC(num_slots, sizeof(sensorResource *));
-        if ((*outResources) == NULL) {
-            return OUT_OF_MEMORY;
-        }
-        for (int i = 0; i < num_slots; i++) {
-            (*outResources)[i] = EUCA_ZALLOC(1, sizeof(sensorResource));
-            if (((*outResources)[i]) == NULL) {
-                return OUT_OF_MEMORY;
+        if (num_instances == 0) {
+            // report on all instances
+            if (((*outResources) = EUCA_ZALLOC(num_resources, sizeof(sensorResource *))) == NULL) {
+                return (OUT_OF_MEMORY);
             }
-        }
 
-        int num_results = 0;
-        if (num_instances == 0) {      // report on all instances
+            for (i = 0; i < num_resources; i++) {
+                if (((*outResources)[i] = EUCA_ZALLOC(1, sizeof(sensorResource))) == NULL) {
+                    // We may return out of memory but the caller may ignore the error type, in this case, we should
+                    // let the caller know that 'i' amount of memory was allocated so he can free
+                    (*outResourcesLen) = i;
+                    return (OUT_OF_MEMORY);
+                }
+            }
             // if number of resources has changed since the call to sensor_get_num_resources(),
             // then we may not report on everything (ok, since we'll get it next time)
             // or we may have fewer records in outResrouces[] (ok, since empty ones will be ignored)
-            if (sensor_get_instance_data(NULL, NULL, 0, *outResources, num_slots) == 0)
-                num_results = num_slots;    // actually num_results <= num_slots, but that's OK
-
-        } else {                       // report on specific instances
+            if (sensor_get_instance_data(NULL, NULL, 0, *outResources, num_resources) == 0) {
+                (*outResourcesLen) = num_resources; // actually (*outResourcesLen) <= num_resources, but that's OK
+            } else {
+                // Ok, we had a failure, lets make sure we free our resources so the caller isn't confused
+                for (i = 0; i < num_resources; i++) {
+                    EUCA_FREE((*outResources)[i]);
+                }
+                EUCA_FREE(*outResources);
+            }
+        } else {
+            // report on specific instances
+            if (((*outResources) = EUCA_ZALLOC(num_instances, sizeof(sensorResource *))) == NULL) {
+                return (OUT_OF_MEMORY);
+            }
             // if some instances requested by ID were not found on this CC,
             // we will have fewer records in outResources[] (ok, since empty ones will be ignored)
-            for (int i = 0; i < num_instances; i++) {
-                if (sensor_get_instance_data(instIds[i], NULL, 0, (*outResources + num_results), 1) == 0)
+            for (i = 0, num_results = 0; i < num_instances; i++) {
+                if ((*outResources)[num_results] == NULL) {
+                    if (((*outResources)[num_results] = EUCA_ZALLOC(1, sizeof(sensorResource))) == NULL) {
+                        // We may return out of memory but the caller may ignore the error type, in this case, we should
+                        // let the caller know that 'num_results' amount of memory was allocated so he can free
+                        (*outResourcesLen) = num_results;
+                        return (OUT_OF_MEMORY);
+                    }
+                }
+
+                if (sensor_get_instance_data(instIds[i], NULL, 0, (*outResources + num_results), 1) == 0) {
                     num_results++;
+                } else {
+                    EUCA_FREE((*outResources)[num_results]);
+                }
             }
+
+            (*outResourcesLen) = num_results;
         }
-        *outResourcesLen = num_results;
     }
 
-    LOGTRACE("returning (outResourcesLen=%d)\n", *outResourcesLen);
-
-    return 0;
+    LOGTRACE("returning (outResourcesLen=%d)\n", (*outResourcesLen));
+    return (0);
 }
 
 //!
@@ -5517,6 +5545,9 @@ void *monitor_thread(void *in)
         ncRefresh = clcRefresh = 0;
         sleep(1);
     }
+
+    EUCA_FREE(pMeta.correlationId);
+    EUCA_FREE(pMeta.userId);
     return (NULL);
 }
 
