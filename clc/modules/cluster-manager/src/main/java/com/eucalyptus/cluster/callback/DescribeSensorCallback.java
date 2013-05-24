@@ -335,6 +335,7 @@ public class DescribeSensorCallback extends
                   final Double currentValue = value.getValue();
                   if (currentValue == null) {
                     LOG.debug("Event received with null 'value', skipping for cloudwatch");
+                    continue;
                   }
                   ec2DiskMetricCache.initializeMetrics(sensorData.getResourceUuid(), sensorData.getResourceName(), currentTimeStamp); // Put a place holder in in case we don't have any non-EBS volumes
                   boolean isEbsMetric = dimensionType.getDimensionName().startsWith("vol-");
@@ -383,6 +384,7 @@ public class DescribeSensorCallback extends
                 final Double usageValue = latestValue.getValue();
                 if (usageValue == null) {
                   LOG.debug("Event received with null 'value', skipping for reporting");
+                  continue;
                 }
                 final Long usageTimestamp = latestValue.getTimestamp().getTime();
                 final long sequenceNumber = dimensionType.getSequenceNum() + (values.size() - 1);
