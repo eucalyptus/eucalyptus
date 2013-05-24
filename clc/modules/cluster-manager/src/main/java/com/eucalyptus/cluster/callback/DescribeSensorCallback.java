@@ -303,7 +303,6 @@ public class DescribeSensorCallback extends
       final Iterable<String> uuidList =
           Iterables.transform(VmInstances.list(VmState.RUNNING), VmInstances.toInstanceUuid());
       LOG.trace("DescribeSensorCallback (fire) called at " + new Date());
-      LOG.debug("DescribeSensorCallback (fire) called at " + new Date());
 
       // cloudwatch metric caches
       final ConcurrentMap<String, DiskReadWriteMetricTypeCache> metricCacheMap = Maps.newConcurrentMap();
@@ -329,14 +328,12 @@ public class DescribeSensorCallback extends
                 Collections.sort(values, Ordering.natural().onResultOf(GetTimestamp.INSTANCE));
 
                 for (MetricDimensionsValuesType value : values) {
-                  LOG.trace(sensorData.getResourceUuid() + "|" + sensorData.getResourceName() + "|" + metricType.getMetricName() 
-                     + "|" + dimensionType.getDimensionName() + "|" + value.getTimestamp() + "|" + value.getValue());
-                  LOG.debug("ResourceUUID: " + sensorData.getResourceUuid());
-                  LOG.debug("ResourceName: " + sensorData.getResourceName());
-                  LOG.debug("Metric: " + metricType.getMetricName());
-                  LOG.debug("Dimension: " + dimensionType.getDimensionName());
-                  LOG.debug("Timestamp: " + value.getTimestamp());
-                  LOG.debug("Value: " + value.getValue());
+                  LOG.trace("ResourceUUID: " + sensorData.getResourceUuid());
+                  LOG.trace("ResourceName: " + sensorData.getResourceName());
+                  LOG.trace("Metric: " + metricType.getMetricName());
+                  LOG.trace("Dimension: " + dimensionType.getDimensionName());
+                  LOG.trace("Timestamp: " + value.getTimestamp());
+                  LOG.trace("Value: " + value.getValue());
                   final Long currentTimeStamp = value.getTimestamp().getTime();
                   final Double currentValue = value.getValue();
                   if (currentValue == null) {
