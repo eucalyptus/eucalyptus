@@ -61,10 +61,10 @@
               "bVisible": false,
               "aTargets":[1],
               "mData": function(source) { 
-			var result = describe('image', source.image_id);
-               		if(result && result.platform) 
-				return result.platform;
-			return "linux";
+                var result = require('app').data.images.get(source.image_id);
+                if(result && result.get('platform')) 
+                  return result.get('platform');
+                return "linux";
               },
             },
             { 
@@ -77,10 +77,9 @@
                 this_title = source.id;
                 this_id = source.id;
                 if(source.display_id)
-                  this_id = source.display_id;
+                  this_id = addEllipsis(source.display_id, 20);
                 return eucatableDisplayColumnTypeTwist(this_title, this_id, 255);
               },
-              "sClass": "wrap-content",
             },
             { 
 	      // Display the status of the instance in the main table
@@ -200,12 +199,12 @@
                 return DefaultEncoder().encodeForHTML(data);
               }, 
               "mData": function(source) {
-			var image = null;
-              		var result = describe('image', source.image_id);
-			if( result ){
-				image = result;
-			};
-                 	return image ? image.location : '';		
+                var image = null;
+                var result = require('app').data.images.get(source.image_id);
+ 		if( result ){
+ 		  image = result;
+ 		};
+                return image ? image.get('location') : ''; 
               },
             },
             {
