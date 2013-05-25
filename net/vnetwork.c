@@ -2054,7 +2054,13 @@ int vnetGenerateDHCP(vnetConfig * vnetconfig, int *numHosts)
 
             if (vnetconfig->euca_ns != 0) {
                 euca_nameserver = hex2dot(vnetconfig->euca_ns);
-                snprintf(nameservers, 1024, "%s, %s", nameserver, euca_nameserver);
+                char cmd[128];
+                snprintf(cmd, 128, "ip -o addr show  | grep -q 'inet %s/'", euca_nameserver);
+                if (system(cmd)) {
+                    snprintf(nameservers, 1024, "%s, %s", euca_nameserver, nameserver);
+                } else {
+                    snprintf(nameservers, 1024, "%s, %s", router, nameserver);
+                }
             } else {
                 snprintf(nameservers, 1024, "%s", nameserver);
             }
