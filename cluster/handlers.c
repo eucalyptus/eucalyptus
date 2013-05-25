@@ -690,7 +690,7 @@ int ncClientCall(ncMetadata * pMeta, int timeout, int ncLock, char *ncURL, char 
                     rc = 1;
                 }
             }
-        } else if (!strcmp(ncOp, "ncStartNetwork")) {
+        } else if (!strcmp(ncOp, "ncStartNetwork")) { //! @TODO remove this NC call logic, since it is not used any more
             char *uuid = va_arg(al, char *);
             char **peers = va_arg(al, char **);
             int peersLen = va_arg(al, int);
@@ -976,7 +976,7 @@ int ncClientCall(ncMetadata * pMeta, int timeout, int ncLock, char *ncURL, char 
                     }
                 }
             }
-        } else if (!strcmp(ncOp, "ncStartNetwork")) {
+        } else if (!strcmp(ncOp, "ncStartNetwork")) { //! @TODO remove this NC call logic, since it is not used any more
             char *uuid = NULL;
             char **peers = NULL;
             int peersLen = 0;
@@ -1239,7 +1239,11 @@ int ncClientCall(ncMetadata * pMeta, int timeout, int ncLock, char *ncURL, char 
                     sig = WTERMSIG(status);
                     dump = WCOREDUMP(status);
                 }
-                LOGERROR("BUG: child process for making '%s' request did not exit cleanly (sig=%d core dumped=%d)\n", ncOp, sig, dump);
+                if (sig == SIGTERM || sig == SIGKILL) { // our killwait() first tries SIGTERM and then SIGKILL
+                    LOGDEBUG("child process %d handling '%s' was terminated with %d\n", pid, ncOp, sig);
+                } else {
+                    LOGERROR("BUG: child process %d handling '%s' was terminated with %d (core=%d)\n", pid, ncOp, sig, dump);
+                }
                 rc = 1;
             }
         } else {
@@ -3777,10 +3781,6 @@ int doRunInstances(ncMetadata * pMeta, char *amiId, char *kernelId, char *ramdis
                                 }
                             }
                         }
-                        // call StartNetwork client
-
-                        rc = ncClientCall(pMeta, OP_TIMEOUT_PERNODE, res->lockidx, res->ncURL, "ncStartNetwork", uuid, NULL, 0, 0, vlan, NULL);
-                        LOGDEBUG("sent network start request for network idx '%d' on resource '%s' uuid '%s': result '%s'\n", vlan, res->ncURL, uuid, rc ? "FAIL" : "SUCCESS");
                         rc = ncClientCall(pMeta, OP_TIMEOUT_PERNODE, res->lockidx, res->ncURL, "ncRunInstance", uuid, instId, reservationId, &ncvm,
                                           amiId, amiURL, kernelId, kernelURL, ramdiskId, ramdiskURL, ownerId, accountId, keyName, &ncnet, userData,
                                           launchIndex, platform, expiryTime, netNames, netNamesLen, &outInst);

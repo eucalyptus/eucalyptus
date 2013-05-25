@@ -4491,9 +4491,13 @@ int check_bridge(char *brname)
 {
     char file[MAX_PATH] = "";
 
-    if (!brname || check_device(brname)) {
+    if (!brname) {
         LOGERROR("bad input params: brname=%s\n", SP(brname));
         return (EUCA_INVALID_ERROR);
+    }
+
+    if (check_device(brname)) {
+        return (EUCA_NOT_FOUND_ERROR);
     }
 
     snprintf(file, MAX_PATH, "/sys/class/net/%s/bridge/", brname);

@@ -319,10 +319,11 @@ void set_instance_params(ncInstance * instance);
 void *monitoring_thread(void *arg);
 void *startup_thread(void *arg);
 void *restart_thread(void *arg);
+void *terminating_thread(void *arg);
 
 int get_instance_stats(virDomainPtr dom, ncInstance * instance);
 ncInstance *find_global_instance(const char *instanceId);
-int find_and_terminate_instance(char *instanceId, ncInstance ** instance_p);
+int find_and_terminate_instance(char *instanceId);
 int shutdown_then_destroy_domain(const char *instanceId);
 void copy_instances(void);
 int is_migration_dst(const ncInstance * instance);

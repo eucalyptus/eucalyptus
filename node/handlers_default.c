@@ -190,7 +190,6 @@ static int doRunInstance(struct nc_state_t *nc, ncMetadata * pMeta, char *uuid, 
 static int doRebootInstance(struct nc_state_t *nc, ncMetadata * pMeta, char *instanceId);
 static int doGetConsoleOutput(struct nc_state_t *nc, ncMetadata * pMeta, char *instanceId, char **consoleOutput);
 static int doTerminateInstance(struct nc_state_t *nc, ncMetadata * pMeta, char *instanceId, int force, int *shutdownState, int *previousState);
-static void *terminating_thread(void *arg);
 static int doDescribeInstances(struct nc_state_t *nc, ncMetadata * pMeta, char **instIds, int instIdsLen, ncInstance *** outInsts, int *outInstsLen);
 static int doDescribeResource(struct nc_state_t *nc, ncMetadata * pMeta, char *resourceType, ncResource ** outRes);
 static int doAssignAddress(struct nc_state_t *nc, ncMetadata * pMeta, char *instanceId, char *publicIp);
@@ -488,30 +487,35 @@ int shutdown_then_destroy_domain(const char *instanceId)
 
 //!
 //! finds instance by ID and destroys it on the hypervisor
-//! NOTE: this must be called with inst_sem semaphore held
 //!
 //! @param[in]  instanceId the instance identifier string (i-XXXXXXXX)
-//! @param[out] instance_p a pointer to the instance matching the input instance identifier
 //!
 //! @return EUCA_OK on success or proper error code. Known error code returned include: EUCA_NOT_FOUND_ERROR.
 //!
-int find_and_terminate_instance(char *instanceId, ncInstance **instance_p)
+int find_and_terminate_instance(char *instanceId)
 {
-    ncInstance *instance = NULL;
+    char state = 0;
     int err = 0;
-    int i = 0;
-    
-    instance = find_instance(&global_instances, instanceId);
-    if (instance == NULL)
-        return EUCA_NOT_FOUND_ERROR;
-    *instance_p = instance;
-    
+
+    { // ensure the instance is known and save its last state on the stack
+        sem_p(inst_sem);
+        ncInstance * instance = find_instance(&global_instances, instanceId);
+        if (instance == NULL) {
+            sem_v(inst_sem);
+            return EUCA_NOT_FOUND_ERROR;
+        }
+        state = instance->state;
+        sem_v(inst_sem);
+    }
+
     // try stopping the domain
     err = shutdown_then_destroy_domain(instanceId);
+
+    // log the outcome at the appropriate log level
     if (err == 0) {
         LOGINFO("[%s] instance terminated\n", instanceId);
     } else {
-        if (instance->state != BOOTING && instance->state != STAGING && instance->state != TEARDOWN) {
+        if (state != BOOTING && state != STAGING && state != TEARDOWN) {
             LOGERROR("[%s] failed to terminate instance\n", instanceId);
         } else {
             LOGDEBUG("[%s] failed to terminate instance\n", instanceId);
@@ -528,10 +532,10 @@ int find_and_terminate_instance(char *instanceId, ncInstance **instance_p)
 //! @param[in]  pMeta a pointer to the node controller (NC) metadata structure
 //! @param[in]  instanceId the instance identifier string (i-XXXXXXXX)
 //! @param[in]  force if set to 1 will force the termination of the instance
-//! @param[out] shutdownState the instance state code after the call to find_and_terminate_instance() if successful
-//! @param[out] previousState the instance state code after the call to find_and_terminate_instance() if successful
+//! @param[out] shutdownState hard-coded to 0 on success
+//! @param[out] previousState hard-coded to 0 on success
 //!
-//! @return EUCA_OK on success or proper error code from find_and_terminate_instance().
+//! @return EUCA_OK if instanceId is valid and the termination thread could be spawned
 //!
 //! @see find_and_terminate_instance()
 //!
@@ -573,53 +577,6 @@ static int doTerminateInstance(struct nc_state_t *nc, ncMetadata * pMeta, char *
     }
 
     return err;
-}
-
-//!
-//! Defines the termination thread.
-//!
-//! @param[in] arg a transparent pointer to the argument passed to this thread handler
-//!
-//! @return Always return NULL
-//!
-static void *terminating_thread(void *arg)
-{
-    char * instanceId = (char *)arg;
-    ncInstance * instance = NULL;
-    int rc;
-
-    LOGDEBUG("[%s] spawning terminating thread\n", instanceId);
-
-    sem_p(inst_sem);
-    instance = find_instance(&global_instances, instanceId);
-    if (instance == NULL) {
-        sem_v(inst_sem);
-        EUCA_FREE(arg);
-        return NULL;
-    }
-    
-    int err = find_and_terminate_instance(instanceId, &instance);
-    if (err != EUCA_OK) {
-        copy_instances();
-        sem_v(inst_sem);
-        EUCA_FREE(arg);
-        return NULL;
-    }
-    
-    // change the state and let the monitoring_thread clean up state
-    if (instance->state != TEARDOWN && instance->state != CANCELED) {
-        // do not leave TEARDOWN (cleaned up) or CANCELED (already trying to terminate)
-        if (instance->state == STAGING) {
-            change_state(instance, CANCELED);
-        } else {
-            change_state(instance, SHUTOFF);
-        }
-    }
-    copy_instances();
-    sem_v(inst_sem);
-    EUCA_FREE(arg);
-
-    return NULL;
 }
 
 //!
@@ -1554,7 +1511,7 @@ static int doCreateImage(struct nc_state_t *nc, ncMetadata * pMeta, char *instan
     if (params == NULL)
         return cleanup_createImage_task(instance, params, NO_STATE, CREATEIMAGE_FAILED);
 
-    params->instance = instance;
+    params->instance = instance; //! @TODO pass instanceId instead
     params->volumeId = strdup(volumeId);
     params->remoteDev = strdup(remoteDev);
 
@@ -1563,14 +1520,15 @@ static int doCreateImage(struct nc_state_t *nc, ncMetadata * pMeta, char *instan
     instance->createImageTime = time(NULL);
     change_state(instance, CREATEIMAGE_SHUTDOWN);
     change_createImage_state(instance, CREATEIMAGE_IN_PROGRESS);
+    sem_v(inst_sem);
 
-    int err = find_and_terminate_instance(instanceId, &instance);
+    int err = find_and_terminate_instance(instanceId);
     if (err != EUCA_OK) {
-        copy_instances();
-        sem_v(inst_sem);
         EUCA_FREE(params);
         return err;
     }
+    
+    sem_p(inst_sem);
     copy_instances();
     sem_v(inst_sem);
 
@@ -1932,8 +1890,11 @@ static int doBundleInstance(struct nc_state_t *nc, ncMetadata * pMeta, char *ins
     instance->bundlingTime = time(NULL);
     change_state(instance, BUNDLING_SHUTDOWN);
     change_bundling_state(instance, BUNDLING_IN_PROGRESS);
+    sem_v(inst_sem);
 
-    int err = find_and_terminate_instance(instanceId, &instance);
+    int err = find_and_terminate_instance(instanceId);
+
+    sem_p(inst_sem);
     copy_instances();
     sem_v(inst_sem);
 

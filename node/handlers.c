@@ -1237,7 +1237,6 @@ void *monitoring_thread(void *arg)
     bunchOfInstances *vnhead = NULL;
     ncInstance *instance = NULL;
     ncInstance *vninstance = NULL;
-    ncInstance *tmpInstance = NULL;
 
     LOGINFO("spawning monitoring thread\n");
     if (arg == NULL) {
@@ -1341,8 +1340,18 @@ void *monitoring_thread(void *arg)
                              nc_state.booting_cleanup_threshold, migration_state_names[instance->migration_state]);
                     continue;
                 } else {
-                    LOGDEBUG("[%s] finding and terminating BOOTING instance, which has exceeded cleanup threshold of %d seconds (%d)\n", instance->instanceId,
-                             nc_state.booting_cleanup_threshold, find_and_terminate_instance(instance->instanceId, &tmpInstance));
+                    LOGDEBUG("[%s] finding and terminating BOOTING instance, which has exceeded cleanup threshold of %d seconds\n", instance->instanceId,
+                             nc_state.booting_cleanup_threshold);
+
+                    // do the shutdown in a thread
+                    pthread_attr_t tattr;
+                    pthread_t tid;
+                    pthread_attr_init(&tattr);
+                    pthread_attr_setdetachstate(&tattr, PTHREAD_CREATE_DETACHED);
+                    void * param = (void *)strdup(instance->instanceId);
+                    if (pthread_create(&tid, &tattr, terminating_thread, (void *)param) != 0) {
+                        LOGERROR("[%s] failed to start VM termination thread\n", instance->instanceId);
+                    }
                 }
             }
 
@@ -1789,6 +1798,51 @@ done:
     EUCA_FREE(xml);
     EUCA_FREE(brname);
     return (NULL);
+}
+
+//!
+//! Defines the termination thread.
+//!
+//! @param[in] arg a transparent pointer to the argument passed to this thread handler
+//!
+//! @return Always return NULL
+//!
+void *terminating_thread(void *arg)
+{
+    char * instanceId = (char *)arg;
+
+    LOGDEBUG("[%s] spawning terminating thread\n", instanceId);
+
+    int err = find_and_terminate_instance(instanceId);
+    if (err != EUCA_OK) {
+        EUCA_FREE(arg);
+        return NULL;
+    }
+
+    {
+        sem_p(inst_sem);
+        ncInstance * instance = find_instance(&global_instances, instanceId);
+        if (instance == NULL) {
+            sem_v(inst_sem);
+            EUCA_FREE(arg);
+            return NULL;
+        }
+    
+        // change the state and let the monitoring_thread clean up state
+        if (instance->state != TEARDOWN && instance->state != CANCELED) {
+            // do not leave TEARDOWN (cleaned up) or CANCELED (already trying to terminate)
+            if (instance->state == STAGING) {
+                change_state(instance, CANCELED);
+            } else {
+                change_state(instance, SHUTOFF);
+            }
+        }
+        copy_instances();
+        sem_v(inst_sem);
+    }
+
+    EUCA_FREE(arg);    
+    return NULL;
 }
 
 //!

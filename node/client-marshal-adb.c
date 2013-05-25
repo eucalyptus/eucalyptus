@@ -264,7 +264,7 @@ ncStub *ncStubCreate(char *endpoint_uri, char *logfile, char *homedir)
 int ncStubDestroy(ncStub * pStub)
 {
     if (pStub) {
-        //axis2_stub_free(pStub->stub, pStub->env);
+        axis2_stub_free(pStub->stub, pStub->env);
         axutil_env_free(pStub->env);
 
         EUCA_FREE(pStub->client_home);
