@@ -175,10 +175,14 @@ public class TopologyDnsResolver implements DnsResolver {
             String componentName = name.getLabelString( 1 );
             return Components.lookup( componentName ).lookup( serviceName );
           } catch ( Exception ex ) {
-            throw new IllegalArgumentException( "Cannot resolve service for "
-                                                + name
-                                                + " because of: "
-                                                + ex.getMessage( ) );
+            try {
+              return ServiceConfigurations.lookupByName( name.getLabelString( 0 ) );
+            } catch ( Exception ex1 ) {
+              throw new IllegalArgumentException( "Cannot resolve service for "
+                                                  + name
+                                                  + " because of: "
+                                                  + ex.getMessage( ) );
+            }
           }
         }
       }

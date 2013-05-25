@@ -453,8 +453,8 @@ public class DnsResolvers extends ServiceJarDiscovery {
           return SetResponse.ofType( SetResponse.SUCCESSFUL );
         }
       } catch ( final Exception ex ) {
-        LOG.error( ex );
-        LOG.debug( ex, ex );
+        LOG.error( ex.getMessage( ) );
+        LOG.trace( ex, ex );
       }
     }
     return SetResponse.ofType( SetResponse.UNKNOWN );//no dice, return unknown
