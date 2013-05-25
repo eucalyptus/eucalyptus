@@ -37,7 +37,6 @@
 	<classpathentry kind="src" path="modules/wsstack/conf/scripts"/>
 	<classpathentry kind="src" output="modules/www/build" path="modules/www/src/main/java"/>
 	<classpathentry kind="src" path="modules/www/conf/www"/>
-	<classpathentry kind="src" path="scripts"/>
 	<classpathentry kind="con" path="GROOVY_SUPPORT"/>
 	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER/org.eclipse.jdt.internal.debug.ui.launcher.StandardVMType/JavaSE-1.7"/>
 	<classpathentry kind="lib" path="lib/activemq-core-5.4.1.jar"/>
