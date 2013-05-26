@@ -65,6 +65,7 @@ package com.eucalyptus.cloud.ws;
 import com.eucalyptus.util.DNSProperties;
 import org.apache.log4j.Logger;
 import org.xbill.DNS.Message;
+import org.xbill.DNS.Rcode;
 
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
@@ -97,6 +98,9 @@ public class TCPHandler extends ConnectionHandler {
         ConnectionHandler.setRemoteInetAddress( socket.getInetAddress( ) );
         try {
           response = generateReply(query, inBytes, inBytes.length, socket);
+        } catch ( RuntimeException ex ) {
+          response = errorMessage(query, Rcode.SERVFAIL);
+          throw ex;
         } finally {
           ConnectionHandler.removeRemoteInetAddress( );
         }
