@@ -116,11 +116,9 @@ if ($multipath == 1) {
 # Remove unused mpath device
 if ($multipath == 1 && !is_null_or_empty($mpath)) {
   sleep(1);
-  # change to "fail_if_no_path" to clear up queue
-  #run_cmd(1, 0, "$DMSETUP message $mpath 0 'fail_if_no_path'") if (-x $DMSETUP);
-  #sleep(1);
   # flush device map
-  run_cmd(1, 0, "$MULTIPATH -f $mpath") if (-x $MULTIPATH);
+  run_cmd(1, 1, "$MULTIPATH -f $mpath") if (-x $MULTIPATH);
+  sleep(1);
 }
 
 while (@paths > 0) {
