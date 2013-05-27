@@ -1181,6 +1181,8 @@ static int doDetachVolume(struct nc_state_t *nc, ncMetadata * pMeta, char *insta
     char scUrl[512];
     char *connectionString = NULL;
     instance_states lastState = NO_STATE;
+    char *remoteDevStr = NULL;
+    ncVolume *volume = NULL;
 
     if (!strcmp(nc->H->name, "xen")) {
         tagBuf = NULL;
@@ -1216,8 +1218,8 @@ static int doDetachVolume(struct nc_state_t *nc, ncMetadata * pMeta, char *insta
         // save current state on the stack
         lastState = instance->state;
 
-        // mark volume as 'detaching'
-        ncVolume *volume = save_volume(instance, volumeId, attachmentToken, NULL, localDevName, localDevReal, VOL_STATE_DETACHING);
+        // mark volume as 'detaching', do not over-write the attachment token used for
+        volume = save_volume(instance, volumeId, NULL, NULL, localDevName, localDevReal, VOL_STATE_DETACHING);
         if (!volume) {
             LOGERROR("[%s][%s] failed to update the volume record, aborting volume detachment\n", instanceId, volumeId);
             if (grab_inst_sem)
@@ -1228,15 +1230,13 @@ static int doDetachVolume(struct nc_state_t *nc, ncMetadata * pMeta, char *insta
         copy_instances();
 
         // lookup the volume info locally for detachment
-        if (volume->connectionString[0] == '\0') {
+        if (volume->connectionString[0] == '\0' || volume->attachmentToken == NULL || volume->attachmentToken[0] == '\0') {
             LOGERROR("[%s][%s] failed to find the local volume attachment record, aborting volume detachment\n", instanceId, volumeId);
             if (grab_inst_sem)
                 sem_v(inst_sem);
             return EUCA_ERROR;
         }
         // do iscsi connect shellout if remoteDev is an iSCSI target
-        char *remoteDevStr = NULL;
-
         // get credentials, decrypt them
         // (used to have check if iscsi here, not necessary with AOE deprecation.)
         remoteDevStr = get_volume_local_device(volume->connectionString);
@@ -1356,8 +1356,8 @@ disconnect:
             ret = EUCA_ERROR;
         } else {
             LOGTRACE("[%s][%s] Using SC Url: %s\n", instanceId, volumeId, scUrl);
-
-            if (disconnect_ebs_volume(scUrl, nc->config_use_ws_sec, nc->config_sc_policy_file, attachmentToken, connectionString, nc->ip, nc->iqn) != EUCA_OK) {
+            //Use the volume attachment token from the initial attachment instead of the one that came over the wire. This ensures parity between attach/detach.
+            if (disconnect_ebs_volume(scUrl, nc->config_use_ws_sec, nc->config_sc_policy_file, volume->attachmentToken, connectionString, nc->ip, nc->iqn) != EUCA_OK) {
                 LOGERROR("[%s][%s] failed to disconnect iscsi target\n", instanceId, volumeId);
                 if (!force)
                     ret = EUCA_ERROR;
