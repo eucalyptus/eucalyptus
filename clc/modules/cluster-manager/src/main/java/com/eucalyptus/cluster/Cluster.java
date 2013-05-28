@@ -363,6 +363,8 @@ public class Cluster implements AvailabilityZoneMetadata, HasFullName<Cluster>, 
       LOG.debug( "DescribeServices for " + parent.getFullName( ) );
       if ( serviceStatuses.isEmpty( ) ) {
         throw new NoSuchElementException( "Failed to find service info for cluster: " + parent.getFullName( ) );
+      } else if ( !Bootstrap.isOperational( ) ) {
+        return;
       } else {
         ServiceConfiguration config = parent.getConfiguration( );
         for ( ServiceStatusType status : serviceStatuses ) {
