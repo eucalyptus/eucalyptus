@@ -64,11 +64,10 @@ package com.eucalyptus.util.dns;
 
 import java.lang.reflect.Modifier;
 import java.net.InetAddress;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Map.Entry;
-import java.util.Set;
 import org.apache.log4j.Logger;
 import org.xbill.DNS.Flags;
 import org.xbill.DNS.Message;
@@ -88,11 +87,8 @@ import com.google.common.collect.ClassToInstanceMap;
 import com.google.common.collect.Collections2;
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Iterables;
-import com.google.common.collect.Maps;
 import com.google.common.collect.Multimap;
 import com.google.common.collect.MutableClassToInstanceMap;
-import com.google.common.collect.Sets;
-import edu.emory.mathcs.backport.java.util.Arrays;
 
 @ConfigurableClass( root = "experimental.dns",
                     description = "Configuration options controlling the behaviour of DNS features." )
@@ -308,7 +304,7 @@ public class DnsResolvers extends ServiceJarDiscovery {
   }
   
   public static class DnsResponse {
-    Multimap<ResponseSection, Record> sections = HashMultimap.create( );
+    Multimap<ResponseSection, Record> sections = ArrayListMultimap.create( );
     private final Name name;
     private boolean recursive = false;
     

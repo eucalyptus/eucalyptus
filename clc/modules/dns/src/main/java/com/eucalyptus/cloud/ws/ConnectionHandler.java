@@ -197,7 +197,7 @@ public class ConnectionHandler extends Thread {
 
 			 byte rcode = addAnswer(response, name, type, dclass, 0, flags);
 			 if (rcode != Rcode.NOERROR && rcode != Rcode.NXDOMAIN)
-				 return errorMessage(query, rcode);
+				 return null;
 
 			 addAdditional(response, type, flags);
 
@@ -309,7 +309,7 @@ public class ConnectionHandler extends Thread {
 		}
 
 		if (sr.isUnknown()) {
-			addCacheNS(response, getCache(dclass), name);
+      return (Rcode.SERVFAIL);
 		}
 		if (sr.isNXDOMAIN()) {
 			response.getHeader().setRcode(Rcode.NXDOMAIN);
