@@ -64,10 +64,10 @@ package com.eucalyptus.dns.resolvers;
 
 import java.net.InetAddress;
 import java.util.Arrays;
+import java.util.Iterator;
 import java.util.List;
 import org.xbill.DNS.Cache;
 import org.xbill.DNS.Credibility;
-import org.xbill.DNS.DClass;
 import org.xbill.DNS.Lookup;
 import org.xbill.DNS.NSRecord;
 import org.xbill.DNS.Name;
@@ -80,7 +80,6 @@ import com.eucalyptus.configurable.ConfigurableField;
 import com.eucalyptus.util.Subnets;
 import com.eucalyptus.util.dns.DnsResolvers.DnsResolver;
 import com.eucalyptus.util.dns.DnsResolvers.DnsResponse;
-import com.eucalyptus.util.dns.DnsResolvers.DnsResponse.Builder;
 import com.eucalyptus.util.dns.DomainNames;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Lists;
@@ -100,11 +99,10 @@ import com.google.common.collect.Lists;
  * 
  * @author chris grzegorczyk <grze@eucalyptus.com>
  */
-@ConfigurableClass( root = "experimental.dns.resolvers",
+@ConfigurableClass( root = "experimental.dns.recursive",
                     description = "Options controlling recursive DNS resolution and caching." )
 public class RecursiveDnsResolver implements DnsResolver {
-  @ConfigurableField( displayName = "recursive",
-                      description = "Enable the recursive DNS resolver.  Note: experimental.dns.enable must also be 'true'" )
+  @ConfigurableField( description = "Enable the recursive DNS resolver.  Note: experimental.dns.enable must also be 'true'" )
   public static Boolean enabled = Boolean.TRUE;
   
   private static List<Name> subdomainsForName( Name name ) {
@@ -154,8 +152,9 @@ public class RecursiveDnsResolver implements DnsResolver {
       SetResponse sr = cache.lookupRecords( cnameRec, Type.CNAME, Credibility.ANY );
       if ( sr != null && sr.isSuccessful( ) && sr.answers( ) != null ) {
         for ( RRset result : sr.answers( ) ) {
-          if ( result.rrs( ) != null ) {
-            for ( Object record : ImmutableSet.copyOf( result.rrs( ) ) ) {
+          Iterator rrs = result.rrs( false );
+          if ( rrs != null ) {
+            for ( Object record : ImmutableSet.copyOf( rrs ) ) {
               answer.add( ( Record ) record );
             }
           }
@@ -168,25 +167,24 @@ public class RecursiveDnsResolver implements DnsResolver {
         Credibility.ANY );
       if ( sr != null && sr.isSuccessful( ) && sr.answers( ) != null ) {
         for ( RRset result : sr.answers( ) ) {
-          if ( result.rrs( ) != null ) {
-            for ( Object record : ImmutableSet.copyOf( result.rrs( ) ) ) {
+          Iterator rrs = result.rrs( false );
+          if ( rrs != null ) {
+            for ( Object record : ImmutableSet.copyOf( rrs ) ) {
               answer.add( ( Record ) record );
             }
           }
         }
       }
     }
-    if ( !cnames.isEmpty( ) ) {
-      for ( Record aRec : queriedrrs ) {
-        List<Record> nsRecs = lookupNSRecords( aRec.getName( ), cache );
-        for ( Record nsRec : nsRecs ) {
-          authority.add( nsRec );
-          Lookup nsLookup = new Lookup( ( ( NSRecord ) nsRec ).getTarget( ), Type.A );
-          nsLookup.setCache( cache );
-          Record[] nsAnswers = nsLookup.run( );
-          if ( nsAnswers != null ) {
-            additional.addAll( Arrays.asList( nsAnswers ) );
-          }
+    for ( Record aRec : queriedrrs ) {
+      List<Record> nsRecs = lookupNSRecords( aRec.getName( ), cache );
+      for ( Record nsRec : nsRecs ) {
+        authority.add( nsRec );
+        Lookup nsLookup = new Lookup( ( ( NSRecord ) nsRec ).getTarget( ), Type.A );
+        nsLookup.setCache( cache );
+        Record[] nsAnswers = nsLookup.run( );
+        if ( nsAnswers != null ) {
+          additional.addAll( Arrays.asList( nsAnswers ) );
         }
       }
     }

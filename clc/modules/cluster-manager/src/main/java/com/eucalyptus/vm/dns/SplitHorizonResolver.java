@@ -103,12 +103,11 @@ import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
 import com.google.common.net.InetAddresses;
 
-@ConfigurableClass( root = "experimental.dns.resolvers",
+@ConfigurableClass( root = "experimental.dns.split_horizon",
                     description = "Options controlling Split-Horizon DNS resolution." )
 public abstract class SplitHorizonResolver implements DnsResolver {
   private static final Logger LOG              = Logger.getLogger( SplitHorizonResolver.class );
-  @ConfigurableField( displayName = "split_horizon",
-                      description = "Enable the split-horizon DNS resolution for internal instance public DNS name queries.  "
+  @ConfigurableField( description = "Enable the split-horizon DNS resolution for internal instance public DNS name queries.  "
                                     + "Note: experimental.dns.enable must also be 'true'" )
   public static Boolean       enabled          = Boolean.TRUE;
   

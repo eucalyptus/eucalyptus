@@ -1,63 +1,63 @@
 /*************************************************************************
  * Copyright 2009-2012 Eucalyptus Systems, Inc.
- *
+ * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation; version 3 of the License.
- *
+ * 
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
  * GNU General Public License for more details.
- *
+ * 
  * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see http://www.gnu.org/licenses/.
- *
+ * along with this program. If not, see http://www.gnu.org/licenses/.
+ * 
  * Please contact Eucalyptus Systems, Inc., 6755 Hollister Ave., Goleta
  * CA 93117, USA or visit http://www.eucalyptus.com/licenses/ if you need
  * additional information or have any questions.
- *
+ * 
  * This file may incorporate work covered under the following copyright
  * and permission notice:
- *
- *   Software License Agreement (BSD License)
- *
- *   Copyright (c) 2008, Regents of the University of California
- *   All rights reserved.
- *
- *   Redistribution and use of this software in source and binary forms,
- *   with or without modification, are permitted provided that the
- *   following conditions are met:
- *
- *     Redistributions of source code must retain the above copyright
- *     notice, this list of conditions and the following disclaimer.
- *
- *     Redistributions in binary form must reproduce the above copyright
- *     notice, this list of conditions and the following disclaimer
- *     in the documentation and/or other materials provided with the
- *     distribution.
- *
- *   THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
- *   "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
- *   LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
- *   FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE
- *   COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
- *   INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
- *   BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
- *   LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
- *   CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
- *   LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN
- *   ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
- *   POSSIBILITY OF SUCH DAMAGE. USERS OF THIS SOFTWARE ACKNOWLEDGE
- *   THE POSSIBLE PRESENCE OF OTHER OPEN SOURCE LICENSED MATERIAL,
- *   COPYRIGHTED MATERIAL OR PATENTED MATERIAL IN THIS SOFTWARE,
- *   AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
- *   IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA,
- *   SANTA BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY,
- *   WHICH IN THE REGENTS' DISCRETION MAY INCLUDE, WITHOUT LIMITATION,
- *   REPLACEMENT OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO
- *   IDENTIFIED, OR WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT
- *   NEEDED TO COMPLY WITH ANY SUCH LICENSES OR RIGHTS.
+ * 
+ * Software License Agreement (BSD License)
+ * 
+ * Copyright (c) 2008, Regents of the University of California
+ * All rights reserved.
+ * 
+ * Redistribution and use of this software in source and binary forms,
+ * with or without modification, are permitted provided that the
+ * following conditions are met:
+ * 
+ * Redistributions of source code must retain the above copyright
+ * notice, this list of conditions and the following disclaimer.
+ * 
+ * Redistributions in binary form must reproduce the above copyright
+ * notice, this list of conditions and the following disclaimer
+ * in the documentation and/or other materials provided with the
+ * distribution.
+ * 
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+ * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+ * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
+ * FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE
+ * COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
+ * INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
+ * BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+ * LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+ * CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+ * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN
+ * ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+ * POSSIBILITY OF SUCH DAMAGE. USERS OF THIS SOFTWARE ACKNOWLEDGE
+ * THE POSSIBLE PRESENCE OF OTHER OPEN SOURCE LICENSED MATERIAL,
+ * COPYRIGHTED MATERIAL OR PATENTED MATERIAL IN THIS SOFTWARE,
+ * AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
+ * IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA,
+ * SANTA BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY,
+ * WHICH IN THE REGENTS' DISCRETION MAY INCLUDE, WITHOUT LIMITATION,
+ * REPLACEMENT OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO
+ * IDENTIFIED, OR WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT
+ * NEEDED TO COMPLY WITH ANY SUCH LICENSES OR RIGHTS.
  ************************************************************************/
 
 package com.eucalyptus.util.dns;
@@ -83,6 +83,7 @@ import com.eucalyptus.configurable.ConfigurableField;
 import com.google.common.base.Predicate;
 import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
+import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.ClassToInstanceMap;
 import com.google.common.collect.Collections2;
 import com.google.common.collect.HashMultimap;
@@ -96,12 +97,12 @@ import edu.emory.mathcs.backport.java.util.Arrays;
 @ConfigurableClass( root = "experimental.dns",
                     description = "Configuration options controlling the behaviour of DNS features." )
 public class DnsResolvers extends ServiceJarDiscovery {
-  private static Logger                                LOG       = Logger.getLogger( DnsResolvers.class );
+  private static Logger LOG = Logger.getLogger( DnsResolvers.class );
   @ConfigurableField( description = "Enable pluggable DNS resolvers.  "
                                     + "Note: This must be 'true' for any pluggable resolver to work.  "
                                     + "Also, each resolver may need to be separately enabled."
                                     + "See 'euca-describe-properties experimental.dns'." )
-  public static Boolean                                enabled   = Boolean.TRUE;
+  public static Boolean enabled = Boolean.TRUE;
   private static final ClassToInstanceMap<DnsResolver> resolvers = MutableClassToInstanceMap.create( );
   
   public enum RequestType implements Predicate<Record> {
@@ -167,20 +168,20 @@ public class DnsResolvers extends ServiceJarDiscovery {
     DLV( 32769 );
     
     private static final Supplier<Map<Integer, RequestType>> backingMap = new Supplier( ) {
-                                                                          
-                                                                          @Override
-                                                                          public Map<Integer, RequestType> get( ) {
-                                                                            return new HashMap( ) {
-                                                                              {
-                                                                                for ( RequestType t : RequestType.values( ) ) {
-                                                                                  this.put( t.getType( ), t );
-                                                                                }
-                                                                              }
-                                                                            };
-                                                                          }
-                                                                        };
-    private static final Supplier<Map<Integer, RequestType>> typeMap    = Suppliers.memoize( backingMap );
-    private final int                                        type;
+      
+      @Override
+      public Map<Integer, RequestType> get( ) {
+        return new HashMap( ) {
+          {
+            for ( RequestType t : RequestType.values( ) ) {
+              this.put( t.getType( ), t );
+            }
+          }
+        };
+      }
+    };
+    private static final Supplier<Map<Integer, RequestType>> typeMap = Suppliers.memoize( backingMap );
+    private final int type;
     
     private RequestType( int type ) {
       this.type = type;
@@ -275,16 +276,13 @@ public class DnsResolvers extends ServiceJarDiscovery {
   }
   
   @SuppressWarnings( "unchecked" )
-  private static void addRRset( Name name, final Message response, Record[] records, final int section ) {
-    Map<RequestType, Set<Record>> rrsets = Maps.newHashMap( );
+  private static void addRRset( Name name,
+                                final Message response,
+                                Record[] records,
+                                final int section ) {
+    Multimap<RequestType, Record> rrsets = ArrayListMultimap.create( );
     for ( Record r : records ) {
       RequestType type = RequestType.typeOf( r.getType( ) );
-      if ( !rrsets.containsKey( type ) ) {
-        Set<Record> rrset = Sets.newHashSet( );
-        rrsets.put( type, rrset );
-      }
-    }
-    for ( RequestType type : rrsets.keySet( ) ) {
       rrsets.get( type ).addAll( Collections2.filter( Arrays.asList( records ), type ) );
     }
     Predicate<Record> checkNewRecord = new Predicate<Record>( ) {
@@ -300,21 +298,19 @@ public class DnsResolvers extends ServiceJarDiscovery {
       }
     };
     if ( rrsets.containsKey( RequestType.CNAME ) ) {
-      for ( Record cnames : Iterables.filter( rrsets.remove( RequestType.CNAME ), checkNewRecord ) ) {
+      for ( Record cnames : Iterables.filter( rrsets.removeAll( RequestType.CNAME ), checkNewRecord ) ) {
         response.addRecord( cnames, section );
       }
     }
-    for ( Entry<RequestType, Set<Record>> sectionRecords : rrsets.entrySet( ) ) {
-      for ( Record r : Iterables.filter( sectionRecords.getValue( ), checkNewRecord ) ) {
-        response.addRecord( r, section );
-      }
+    for ( Record sectionRecord : Iterables.filter( rrsets.values( ), checkNewRecord ) ) {
+      response.addRecord( sectionRecord, section );
     }
   }
   
   public static class DnsResponse {
-    Multimap<ResponseSection, Record> sections  = HashMultimap.create( );
-    private final Name                name;
-    private boolean                   recursive = false;
+    Multimap<ResponseSection, Record> sections = HashMultimap.create( );
+    private final Name name;
+    private boolean recursive = false;
     
     public static class Builder {
       private final DnsResponse response;
@@ -394,7 +390,7 @@ public class DnsResolvers extends ServiceJarDiscovery {
         return null;
       }
     }
-
+    
     public boolean isAuthoritative( ) {
       return !this.recursive;
     }
@@ -432,15 +428,18 @@ public class DnsResolvers extends ServiceJarDiscovery {
     } );
   }
   
-  private static SetResponse lookupRecords( final Message response, final Record query, final InetAddress source ) {
+  private static SetResponse lookupRecords( final Message response,
+                                            final Record query,
+                                            final InetAddress source ) {
     final Name name = query.getName( );
     final int type = query.getType( );
-    response.getHeader( ).setFlag( Flags.RA );//always mark the response w/ the recursion available bit
+    response.getHeader( ).setFlag( Flags.RA );// always mark the response w/ the recursion available
+// bit
     for ( final DnsResolver r : DnsResolvers.resolversFor( query, source ) ) {
       try {
-        LOG.debug( "DnsResolver: " + RequestType.typeOf( type ) + name );
+        LOG.debug( "DnsResolver: " + RequestType.typeOf( type ) + " " + name );
         final DnsResponse reply = r.lookupRecords( query );
-        if ( reply.isAuthoritative( ) ) {//mark
+        if ( reply.isAuthoritative( ) ) {// mark
           response.getHeader( ).setFlag( Flags.AA );
         }
         if ( reply.hasAnswer( ) ) {
@@ -457,19 +456,23 @@ public class DnsResolvers extends ServiceJarDiscovery {
         LOG.trace( ex, ex );
       }
     }
-    return SetResponse.ofType( SetResponse.UNKNOWN );//no dice, return unknown
+    return SetResponse.ofType( SetResponse.UNKNOWN );// no dice, return unknown
   }
   
   @SuppressWarnings( "unchecked" )
   @Override
   public boolean processClass( final Class candidate ) throws Exception {
-    if ( DnsResolver.class.isAssignableFrom( candidate ) && !Modifier.isAbstract( candidate.getModifiers( ) ) ) {
+    if ( DnsResolver.class.isAssignableFrom( candidate )
+         && !Modifier.isAbstract( candidate.getModifiers( ) ) ) {
       try {
         final DnsResolver resolver = ( DnsResolver ) candidate.newInstance( );
         resolvers.putInstance( candidate, resolver );
         return true;
       } catch ( final Exception ex ) {
-        LOG.error( "Failed to create instance of DnsResolver: " + candidate + " because of: " + ex.getMessage( ) );
+        LOG.error( "Failed to create instance of DnsResolver: "
+                   + candidate
+                   + " because of: "
+                   + ex.getMessage( ) );
       }
     }
     return false;
@@ -480,7 +483,9 @@ public class DnsResolvers extends ServiceJarDiscovery {
     return 0.5d;
   }
   
-  public static SetResponse findRecords( final Message response, final Record queryRecord, final InetAddress source ) {
+  public static SetResponse findRecords( final Message response,
+                                         final Record queryRecord,
+                                         final InetAddress source ) {
     final Name name = queryRecord.getName( );
     final int type = queryRecord.getType( );
     try {

@@ -56,8 +56,8 @@ class DescribeProperties(eucadmin.describerequest.DescribeRequest):
         if self.connection is None:
             args['path'] = self.ServicePath
             self.connection = self.ServiceClass(**args)
-        if 'verbose' in self.request_params:
-          self.verbose = self.request_params.pop('verbose')
+        if 'verbose' in self.request_params and self.request_params.pop('verbose') == 'true':
+          self.verbose = True
         if 'properties' in self.request_params:
           for i, value in enumerate(self.request_params.pop('properties', [])):
               self.request_params['Property.%s' % (i + 1)] = value
@@ -67,5 +67,5 @@ class DescribeProperties(eucadmin.describerequest.DescribeRequest):
         props = getattr(data, 'euca:properties')
         for prop in props:
             print 'PROPERTY\t%s\t%s' % (prop['euca:name'], prop['euca:value'])
-            if prop['euca:description']:
+            if self.verbose and prop['euca:description']:
               print 'DESCRIPTION\t%s\t%s' % (prop['euca:name'], prop['euca:description'])

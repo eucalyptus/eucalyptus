@@ -105,11 +105,10 @@ import com.google.common.cache.LoadingCache;
  * 
  * @note the current implementation does not support service names which have '.'s in them.
  */
-@ConfigurableClass( root = "experimental.dns.resolvers",
+@ConfigurableClass( root = "experimental.dns.services",
                     description = "Options controlling DNS name resolution for Eucalyptus services." )
 public class TopologyDnsResolver implements DnsResolver {
-  @ConfigurableField( displayName = "services",
-                      description = "Enable the service topology resolver.  Note: experimental.dns.enable must also be 'true'" )
+  @ConfigurableField( description = "Enable the service topology resolver.  Note: experimental.dns.enable must also be 'true'" )
   public static Boolean enabled = Boolean.TRUE;
   
   enum ResolverSupport implements Predicate<Name> {
