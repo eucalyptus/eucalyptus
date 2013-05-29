@@ -550,7 +550,57 @@ class UIProxyClient(object):
             unit=unit, dimensions=dimensions, statistics=statistics)
 
         return self.__make_cw_request__('PutMetricData', params) 
+
+    def describe_alarms(self, action_prefix=None, alarm_name_prefix=None, alarm_names=None, max_records=None, state_value=None, next_token=None):
+        params = {}
+        if action_prefix:
+            params['ActionPrefix'] = action_prefix
+        if alarm_name_prefix:
+            params['AlarmNamePrefix'] = alarm_name_prefix
+        if alarm_names:
+            self.__build_list_params__(params, alarm_names, 'AlarmNames.member.%d')
+        if max_records:
+            params['MaxRecords'] = max_records
+        if next_token:
+            params['NextToken'] = next_token
+        if state_value:
+            params['StateValue'] = state_value
+        return self.__make_cw_request__('DescribeAlarms', params)
+
+    def delete_alarms(self, alarm_names):
+        params = {}
+        self.__build_list_params__(params, alarm_names, 'AlarmNames.member.%d')
+        return self.__make_cw_request__('DeleteAlarms', params)
+
+    def enable_alarm_actions(self, alarm_names):
+        params = {}
+        self.__build_list_params__(params, alarm_names, 'AlarmNames.member.%d')
+        return self.__make_cw_request__('EnableAlarmActions', params)
+
+    def disable_alarm_actions(self, alarm_names):
+        params = {}
+        self.__build_list_params__(params, alarm_names, 'AlarmNames.member.%d')
+        return self.__make_cw_request__('DisableAlarmActions', params)
     
+    def put_metric_alarm(self, alarm_name, metric_name, namespace, period, threshold, comparison_op, eval_periods, statistic,
+                         actions_enabled=None, alarm_actions=[], alarm_desc=None, dimensions=[], insufficient_data_actions=[], ok_actions=[], unit=None):
+        params = {'AlarmName': alarm_name, 'MetricName': metric_name, 'Namespace': namespace, 'Period': period, 'Threshold': threshold, 'ComparisonOperator': comparison_op, 'EvaluationPeriods': eval_periods, 'Statistic': statistic}
+        if actions_enabled:
+            params['ActionsEnabled'] = actions_enabled
+        if alarm_actions:
+            self.__build_list_params__(params, alarm_actions, 'AlarmActions.member.%d')
+        if alarm_desc:
+            params['AlarmDescription'] = alarm_desc
+        if dimensions:
+            self.__build_list_params__(params, dimensions, 'Dimensions.member.%d')
+        if insufficient_data_actions:
+            self.__build_list_params__(params, insufficient_data_actions, 'InsufficientDataActions.member.%d')
+        if ok_actions:
+            self.__build_list_params__(params, ok_actions, 'OKActions.member.%d')
+        if unit:
+            params['Unit'] = unit
+        return self.__make_cw_request__('PutMetricAlarm', params)
+
     ##
     # Auto Scaling methods
     ##

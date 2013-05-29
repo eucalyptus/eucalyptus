@@ -227,6 +227,10 @@ class BotoJsonWatchEncoder(JSONEncoder):
             values = copy.copy(obj.__dict__)
             values['__obj_name__'] = 'Dimension'
             return (values)
+        elif isinstance(obj, MetricAlarm):
+            values = copy.copy(obj.__dict__)
+            values['__obj_name__'] = 'MetricAlarm'
+            return (values)
         elif isinstance(obj, Metric):
             values = copy.copy(obj.__dict__)
             values['__obj_name__'] = 'Metric'

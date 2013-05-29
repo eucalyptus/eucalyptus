@@ -40,6 +40,7 @@ from M2Crypto import RSA
 from boto.ec2.blockdevicemapping import BlockDeviceMapping, BlockDeviceType
 from boto.ec2.autoscale.launchconfig import LaunchConfiguration
 from boto.ec2.autoscale.group import AutoScalingGroup
+from boto.ec2.cloudwatch.alarm import MetricAlarm
 from boto.ec2.elb.healthcheck import HealthCheck
 from boto.ec2.elb.listener import Listener
 from boto.exception import EC2ResponseError
@@ -408,6 +409,7 @@ class WatchHandler(BaseAPIHandler):
     ISO_FORMAT = "%Y-%m-%dT%H:%M:%S.%f"
     json_encoder = BotoJsonWatchEncoder
 
+
     ##
     # This is the main entry point for API calls for CloudWatch from the browser
     # other calls are delegated to handler methods based on resource type
@@ -456,8 +458,65 @@ class WatchHandler(BaseAPIHandler):
                 self.user_session.cw.list_metrics(next_token, dimensions, metric_name, namespace, self.callback)
             elif action == 'PutMetricData':
                 namespace = self.get_argument('Namespace')
-                # TODO: more args, reconcile api docs and boto
-                self.user_session.cw.put_metric_data(namespace, name, value, timestamp, unit, dimensions, statistics, self.callback)
+                data = []
+                metric_name = self.get_argument('MetricData.member.1.MetricName')
+                idx = 1
+                while metric_name:
+                    value = self.get_argument("MetricData.member.%d.Value" % idx, None)
+                    timestamp = self.get_argument("MetricData.member.%d.Timestamp" % idx, None)
+                    unit = self.get_argument("MetricData.member.%d.Unit" % idx, None)
+                    dimensions = self.get_argument("MetricData.member.%d.Dimensions" % idx, None)
+                    statistics = self.get_argument("MetricData.member.%d.StatisticValues" % idx, None)
+                    data.append({'name':name, 'value':value, 'timestamp':timestamp, 'unit':unit, 'dimensions':dimensions, 'statistics':statistics})
+                    idx += 1
+                    metric_name = self.get_argument("MetricData.member.%d.MetricName" % idx, None)
+                self.user_session.cw.put_metric_data(namespace, data, self.callback)
+            elif action == 'DescribeAlarms':
+                action_prefix = self.get_argument('ActionPrefix', None)
+                alarm_name_prefix = self.get_argument('AlarmNamePrefix', None)
+                alarm_names = self.get_argument_list('AlarmNames.member')
+                max_records = self.get_argument('MaxRecords', None)
+                state_value = self.get_argument('StateValue', None)
+                next_token = self.get_argument('NextToken', None)
+                self.user_session.cw.describe_alarms(action_prefix, alarm_name_prefix, alarm_names, max_records, state_value, next_token, self.callback)
+            elif action == 'DeleteAlarms':
+                alarm_names = self.get_argument_list('AlarmNames.member')
+                self.user_session.cw.delete_alarms(alarm_names, self.callback)
+            elif action == 'EnableAlarmActions':
+                alarm_names = self.get_argument_list('AlarmNames.member')
+                self.user_session.cw.enable_alarm_actions(alarm_names, self.callback)
+            elif action == 'DisableAlarmActions':
+                alarm_names = self.get_argument_list('AlarmNames.member')
+                self.user_session.cw.disable_alarm_actions(alarm_names, self.callback)
+            elif action == 'PutMetricAlarm':
+                actions_enabled = self.get_argument('ActionsEnabled', None)
+                alarm_actions = self.get_argument_list('AlarmActions.member')
+                alarm_desc = self.get_argument('AlarmDescription', None)
+                alarm_name = self.get_argument('AlarmName')
+                comparison_op = self.get_argument('ComparisonOperator')
+                dimensions = self.get_argument_list('Dimensions.member')
+                eval_periods = self.get_argument('EvaluationPeriods')
+                insufficient_data_actions = self.get_argument_list('InsufficientDataActions.member')
+                metric_name = self.get_argument('MetricName')
+                namespace = self.get_argument('Namespace')
+                ok_actions = self.get_argument_list('OKActions.member')
+                period = self.get_argument('Period')
+                statistic = self.get_argument('Statistic')
+                threshold = self.get_argument('Threshold')
+                unit = self.get_argument('Unit', None)
+                if comparison_op == "GreaterThanOrEqualToThreshold":
+                  comparison_op = ">="
+                elif comparison_op == "GreaterThanThreshold":
+                  comparison_op = ">"
+                elif comparison_op == "LessThanOrEqualToThreshold":
+                  comparison_op = "<="
+                elif comparison_op == "LessThanThreshold":
+                  comparison_op = "<"
+                alarm = MetricAlarm(name=alarm_name, metric=metric_name, namespace=namespace, statistic=statistic, comparison=comparison_op,
+                                    threshold=threshold, period=period, evaluation_periods=eval_periods, unit=unit, description=alarm_desc,
+                                    dimensions=dimensions, alarm_actions=alarm_actions, insufficient_data_actions=insufficient_data_actions,
+                                    ok_actions=ok_actions)
+                self.user_session.cw.put_metric_alarm(alarm, self.callback)
 
         except Exception as ex:
             logging.error("Could not fulfill request, exception to follow")

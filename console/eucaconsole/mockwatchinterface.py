@@ -65,5 +65,17 @@ class MockWatchInterface(WatchInterface):
         return self.metrics
 
     def put_metric_data(self, namespace, name, value=None, timestamp=None, unit=None, dimensions=None, statistics=None, callbcack=None):
-        return None
+        return True
+
+    def delete_alarms(self, alarm_names):
+        return True
+
+    def enable_alarm_actions(self, alarm_names):
+        return True
+
+    def disable_alarm_actions(self, alarm_names):
+        return True
+
+    def put_metric_alarm(self, alarm):
+        return True
 

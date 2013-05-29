@@ -39,7 +39,7 @@ class BotoWatchInterface(WatchInterface):
     saveclcdata = False
 
     def __init__(self, clc_host, access_id, secret_key, token):
-        #boto.set_stream_logger('foo')
+        boto.set_stream_logger('foo')
         path='/services/CloudWatch'
         port=8773
         if clc_host[len(clc_host)-13:] == 'amazonaws.com':
@@ -50,7 +50,7 @@ class BotoWatchInterface(WatchInterface):
         reg = RegionInfo(name='eucalyptus', endpoint=clc_host)
         self.conn = CloudWatchConnection(access_id, secret_key, region=reg,
                                   port=port, path=path,
-                                  is_secure=True, security_token=token, debug=0)
+                                  is_secure=True, security_token=token, debug=2)
         self.conn.https_validate_certificates = False
         self.conn.http_connection_kwargs['timeout'] = 30
 
@@ -73,4 +73,23 @@ class BotoWatchInterface(WatchInterface):
 
     def put_metric_data(self, namespace, name, value, timestamp, unit, dimensions, statistics):
         return self.conn.put_metric_data(namespace, name, value, timestamp, unit, dimensions, statistics)
+
+    def describe_alarms(self, action_prefix=None, alarm_name_prefix=None, alarm_names=None, max_records=None,
+                        state_value=None, next_token=None):
+        obj = self.conn.describe_alarms(action_prefix, alarm_name_prefix, alarm_names, max_records, state_value, next_token)
+        if self.saveclcdata:
+            self.__save_json__(obj, "mockdata/CW_Alarms.json")
+        return obj
+
+    def delete_alarms(self, alarm_names):
+        return self.conn.delete_alarms(alarm_names)
+
+    def enable_alarm_actions(self, alarm_names):
+        return self.conn.enable_alarm_actions(alarm_names)
+
+    def disable_alarm_actions(self, alarm_names):
+        return self.conn.disable_alarm_actions(alarm_names)
+
+    def put_metric_alarm(self, alarm):
+        return self.conn.put_metric_alarm(alarm)
 
