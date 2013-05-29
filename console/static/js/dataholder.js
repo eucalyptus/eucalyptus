@@ -16,7 +16,8 @@ define([
 	'models/insthealths',
 	'models/summarys',
 	'models/zones',
-	'models/buckets'
+	'models/buckets',
+	'models/alarms'
 	], 
 function(_, Backbone, tags) {
     var self = this;
@@ -36,6 +37,7 @@ function(_, Backbone, tags) {
 	['summary'],
 	['zone'],
 	['bucket'],
+	['alarm'],
     ];
 
     var shared = {};
