@@ -89,8 +89,7 @@
         <tr>
           <td>
             <select data-on-change=":typeSelected" class="launch-wizard-advanced-storage-volume-selector" data-tooltip="launch_instance_volume_select_tip">
-              <option value="EBS" data-msg="launch_instance_ebs"></option>
-              <option value="ephemeral" data-msg="launch_instance_ephemeral0"></option>
+              <option data-each-type="storageTypes" data-value="type.id" data-text="type.name"></option>
             </select>
           </td>
           <td>

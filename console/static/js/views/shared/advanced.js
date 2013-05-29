@@ -31,6 +31,15 @@ define([
             return ret;
         },
 
+        storageTypes: function() {
+            var ret = [{name:app.msg('launch_instance_ebs'), id:'EBS'}];
+            var map = scope.blockDeviceMappings.findWhere({ephemeral_name: 'ephemeral0'});
+            if (map == undefined) {
+              ret.push({name:app.msg('launch_instance_ephemeral0'), id:'ephemeral'});
+            }
+            return ret;
+        },
+
         isKernelSelected: function(obj) { 
           if (self.model.get('kernel_id') == obj.kernel.get('id')) {
             return true;
@@ -94,6 +103,11 @@ define([
             scope.advancedModel.set('bdmaps_configured', true);
           }
 
+          // hack to re-enable input fields
+          var tr = $(e.target).closest('tr');
+          tr.find('.launch-wizard-advanced-storage-snapshot-input').show();
+          tr.find('.launch-wizard-advanced-storage-size-input').show();
+          tr.find('.launch-wizard-advanced-storage-delOnTerm').show();
         },
 
         delStorageVol: function(e, obj) {

@@ -2789,7 +2789,7 @@ span.on-error {
 }
 
 #launch-wizard-advanced-storage input[type='text']{
-  width: 30px;
+  width: 50px;
 }
 
 #launch-wizard-advanced-storage input[type='checkbox'] {
