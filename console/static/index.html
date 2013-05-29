@@ -84,6 +84,9 @@
     <script type="text/javascript" language="javascript" src="js/snapshot.js"></script>
     <script type="text/javascript" language="javascript" src="js/sgroup.js"></script>
     <script type="text/javascript" language="javascript" src="js/eip.js"></script>
+    <script type="text/javascript" language="javascript" src="js/scaling.js"></script>
+    <script type="text/javascript" language="javascript" src="js/newlaunchconfig.js"></script>
+    <script type="text/javascript" language="javascript" src="js/newscalinggroup.js"></script>
     <script type="text/javascript" language="javascript" src="js/balancing.js"></script>
     <script type="text/javascript" language="javascript" src="js/eucaevent.js"></script>
     <script type="text/javascript" language="javascript" src="js/notification.js"></script>
@@ -1201,7 +1204,7 @@
                </tbody>
             </table>
           </div>
-          <div id="scaling-topselector"><div class="scalingtab active"><a href="#scaling">Auto-scaling</a></div> <div class="scalingtab "><a href="#launchconfig">Launch configs</a></div></div>
+          <div id="scaling-topselector"><div class="scalingtab active"><a href="#scaling">{{!>scaling_section_tab}}</a></div> <div class="scalingtab "><a href="#launchconfig">{{!>launch_config_section_tab}}</a></div></div>
           <div id="scaling-help">
             <div class="help-content">
               {{!: landing_content }}
@@ -1849,7 +1852,7 @@
                </tbody>
             </table>
           </div>
-          <div id="scaling-topselector"><div class="scalingtab "><a href="#scaling">Auto-scaling</a></div> <div class="scalingtab active"><a href="#launchconfig">Launch configs</a></div></div>
+          <div id="scaling-topselector"><div class="scalingtab"><a href="#scaling">{{!>scaling_section_tab}}</a></div> <div class="scalingtab active"><a href="#launchconfig">{{!>launch_config_section_tab}}</a></div></div>
           <div id="scaling-help">
             <div class="help-content">
               {{!: landing_content }}
