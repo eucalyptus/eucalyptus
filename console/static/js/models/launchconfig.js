@@ -74,45 +74,54 @@ define([
       var collection = this;
         if (method == 'create') {
           var name = model.get('name');
-          var data = "_xsrf="+$.cookie('_xsrf');
-          data += "&LaunchConfigurationName="+name;
+          var data = new Array();
+          data.push({name: "_xsrf", value: $.cookie('_xsrf')});
+          data.push({name: 'LaunchConfigurationName', value: name});
           if (model.get('image_id') != undefined)
-            data += "&ImageId="+model.get('image_id');
+            data.push({name: "ImageId", value: model.get('image_id')});
           if (model.get('key_name') != undefined)
-            data += "&KeyName="+model.get('key_name');
+            data.push({name: "KeyName", value: model.get('key_name')});
           if (model.get('user_data') != undefined)
-            data += "&UserData="+model.get('user_data');
+            data.push({name: "UserData", value: model.get('user_data')});
           if (model.get('instance_type') != undefined)
-            data += "&InstanceType="+model.get('instance_type');
+            data.push({name: "InstanceType", value: model.get('instance_type')});
           if (model.get('kernel_id') != undefined)
-            data += "&KernelId="+model.get('kernel_id');
+            data.push({name: "KernelId", value: model.get('kernel_id')});
           if (model.get('ramdisk_id') != undefined)
-            data += "&RamdiskId="+model.get('ramdisk_id');
+            data.push({name: "RamdiskId", value: model.get('ramdisk_id')});
           if (model.get('block_device_mappings') != undefined) {
             var mappings = model.get('block_device_mappings');
             $.each(mappings, function(idx, mapping) {
-              data += "&BlockDeviceMapping."+(idx)+".DeviceName="+mapping.device_name;
+              data.push({name: "BlockDeviceMapping."+(idx+1)+".DeviceName", value: mapping.device_name});
               if (mapping.virtual_name != undefined) {
-                data += "&BlockDeviceMapping."+(idx)+".VirtualName="+mapping.virtual_name;
+                data.push({name: "BlockDeviceMapping."+(idx+1)+".VirtualName", value: mapping.virtual_name});
               }
               else {
-                data += "&BlockDeviceMapping."+(idx)+".Ebs.SnapshotId="+mapping.snapshot_id;
-                data += "&BlockDeviceMapping."+(idx)+".Ebs.VolumeSize="+mapping.volume_size;
+                data.push({name: "BlockDeviceMapping."+(idx+1)+".Ebs.SnapshotId", value: mapping.snapshot_id});
+                data.push({name: "BlockDeviceMapping."+(idx+1)+".Ebs.VolumeSize", value: mapping.volume_size});
               }
             });
           }
           if (model.get('instance_monitoring') != undefined)
-            data += "&InstanceMonitoring="+model.get('instance_monitoring');
+            data.push({name: "InstanceMonitoring", value: model.get('instance_monitoring')});
           if (model.get('spot_price') != undefined)
-            data += "&SpotPrice="+model.get('spot_price');
+            data.push({name: "SpotPrice", value: model.get('spot_price')});
           if (model.get('instance_profile_name') != undefined)
-            data += "&IamInstanceProfile="+model.get('instance_profile_name');
-          $.ajax({
-            type:"POST",
+            data.push({name: "IamInstanceProfile", value: model.get('instance_profile_name')});
+
+          var user_file = model.get('files') == undefined ? "none" : model.get('files');
+          var self = this;
+
+          $(model.get('fileinput')()).fileupload({
             url:"/autoscaling?Action=CreateLaunchConfiguration",
-            data:data,
+            formData: data,
             dataType:"json",
-            async:true,
+            fileInput: null,
+            paramName: "user_data_file",
+          });
+
+          $(model.get('fileinput')()).fileupload("send", {
+            files: user_file,
             success:
               function(data, textStatus, jqXHR){
                 if ( data.results ) {
