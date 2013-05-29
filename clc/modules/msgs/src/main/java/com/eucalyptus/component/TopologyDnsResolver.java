@@ -109,7 +109,7 @@ import com.google.common.cache.LoadingCache;
                     description = "Options controlling DNS name resolution for Eucalyptus services." )
 public class TopologyDnsResolver implements DnsResolver {
   @ConfigurableField( description = "Enable the service topology resolver.  Note: experimental.dns.enable must also be 'true'" )
-  public static Boolean enabled = Boolean.TRUE;
+  public static Boolean enabled = Boolean.FALSE;
   
   enum ResolverSupport implements Predicate<Name> {
     COMPONENT {
