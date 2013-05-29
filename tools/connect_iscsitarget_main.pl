@@ -75,9 +75,9 @@ $ISCSIADM = untaint(`which iscsiadm`);
 $MULTIPATH = untaint(`which multipath`);
 
 $CONF_IFACES_KEY = "STORAGE_INTERFACES";
-$LOGIN_TIMEOUT = 10;
-$LOGOUT_TIMEOUT = 10;
-$LOGIN_RETRY_COUNT = 3;
+$LOGIN_TIMEOUT = 5;
+$LOGOUT_TIMEOUT = 5;
+$LOGIN_RETRY_COUNT = 1;
 
 # check binaries
 if (!-x $ISCSIADM) {
