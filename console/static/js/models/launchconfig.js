@@ -6,6 +6,7 @@ define([
 ], function(EucaModel) {
   var model = EucaModel.extend({
     idAttribute: 'name',
+    namedColumns: ['image_id'],
 
     validation: {
 
