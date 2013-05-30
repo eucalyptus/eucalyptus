@@ -95,7 +95,7 @@ blacklist {
 	devnode "^(ram|raw|loop|fd|md|dm-|sr|scd|st)[0-9]*"
 	devnode "^hd[a-z]"
 	devnode "^cciss!c[0-9]d[0-9]*"
-	devnode "^sda[0-9]*"
+	devnode "^sda[0-9]*$"
 }
 
 devices {
