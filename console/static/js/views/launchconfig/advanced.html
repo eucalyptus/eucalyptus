@@ -1,69 +1,73 @@
 <div class="wizard-step">
-  <div class="wizardTitle"><h3 data-msg="launch_instance_section_header_advanced">Advanced</h3></div>
+  <div class="wizardTitle"><h3 data-msg="launch_instance_section_header_advanced"></h3></div>
   <div id="launch-wizard-advanced-main-contents">
-    <div class="wizard-section-label" data-msg="launch_instance_advanced_header">Select advanced options:</div>
+    <div class="wizard-section-label" data-msg="launch_instance_advanced_header"></div>
 
       <div id="launch-wizard-advanced-userdata"> 
         <div class="form-row clearfix upper-sibling">
-           <label for="launch-wizard-advanced-input-userdata" data-msg="launch_instance_advanced_userdata">User data</label>
-          <textarea data-on-change=":userdata" data-text="user_data" class="description" data-tooltip="launch_wizard_advanced_input_userdata_tip" id="launch-wizard-advanced-input-userdata"></textarea>
+           <label for="launch-wizard-advanced-input-userdata" data-msg="launch_instance_advanced_userdata"></label>
+          <textarea data-value="advancedModel.user_data_text" class="description" data-tooltip="launch_wizard_advanced_input_userdata_tip" id="launch-wizard-advanced-input-userdata"></textarea>
       </div>
-      <div class="form-row clearfix lower-sibling">
-        <label for="launch-wizard-advanced-input-userfile" data-msg="launch_instance_advanced_attachfile">Or:</label>
-        <input data-value="user_filename" id="launch-wizard-advanced-input-userfile" type="file">
+      <div class="form-row clearfix">
+        <label for="launch-wizard-advanced-input-userfile" data-msg="launch_instance_advanced_attachfile"></label>
+        <input id="launch-wizard-advanced-input-userfile" type="file">
       </div>
     </div>
 
     <div id="launch-wizard-advanced-kernelramdisk"> 
       <div id="launch-wizard-advanced-kernel" class="form-row clearfix">
-        <label for="launch-wizard-advanced-kernel-selector" data-msg="launch_instance_advanced_kernel">Kernel ID</label>
-        <select data-on-change=":setKernel" id="launch-wizard-advanced-kernel-selector" data-tooltip="launch_instance_kernel_select_tip">
-          <option value="default" data-msg="launch_instance_advanced_usedefault">Use default from image</option>
+        <label for="launch-wizard-advanced-kernel-selector" data-msg="launch_instance_advanced_kernel"></label>
+        <select data-value="advancedModel.kernel_id" id="launch-wizard-advanced-kernel-selector" data-tooltip="launch_instance_kernel_select_tip">
+          <option value="" data-msg="launch_instance_advanced_usedefault"></option>
           <option data-each-kernel="kernels" data-value="kernel.id" data-text="kernel.id" data-selected=":isKernelSelected"></option>
         </select>
       </div>
       <div id="launch-wizard-advanced-ramdisk" class="form-row clearfix">
-        <label for="launch-wizard-advanced-ramdisk-selector" data-msg="launch_instance_advanced_ramdisk">RAM disk ID</label>
-        <select data-on-change=":setRamDisk" id="launch-wizard-advanced-ramdisk-selector" data-tooltip="launch_instance_ramdisk_select_tip">
-          <option value="default" data-msg="launch_instance_advanced_usedefault">Use default from image</option>
+        <label for="launch-wizard-advanced-ramdisk-selector" data-msg="launch_instance_advanced_ramdisk"></label>
+        <select data-value="advancedModel.ramdisk_id" id="launch-wizard-advanced-ramdisk-selector" data-tooltip="launch_instance_ramdisk_select_tip">
+          <option value="" data-msg="launch_instance_advanced_usedefault"></option>
           <option data-each-ramdisk="ramdisks" data-value="ramdisk.id" data-text="ramdisk.id" data-selected=":isRamdiskSelected"></option></select>
       </div>
    </div>
 
    <div class="form-row clearfix orphan-row" id="launch-wizard-advanced-monitoring"> 
-     <label for="launch-wizard-advanced-input-monitoring" data-msg="monitoring_label">Monitoring</label>
-     <input data-on-change=:setMonitoring" data-checked="enableMonitoring" id="launch-wizard-advanced-input-monitoring" title="" type="checkbox">
-     <label for="launch-wizard-advanced-input-network" class="plaintext-label">Enable detailed monitoring</label>
+     <label for="launch-wizard-advanced-input-monitoring" data-msg="monitoring_label"></label>
+     <input data-checked="advancedModel.instance_monitoring" id="launch-wizard-advanced-input-monitoring" title="" type="checkbox">
+     <label for="launch-wizard-advanced-input-monitoring" class="plaintext-label" data-msg="launch_wizard_advanced_enable_monitoring"></label>
    </div>
 
-<!-- ## Network -->
-<!--   
-   <div class="form-row clearfix orphan-row" id="launch-wizard-advanced-network"> 
-     <label for="launch-wizard-advanced-input-network">Network</label>
-     <input data-checked="privateNetwork" id="launch-wizard-advanced-input-network" title="Select this to prevent a public IP address from being assigned to your instance(s). They will only be accessible from other instances in the same security group." type="checkbox">
-     <label for="launch-wizard-advanced-input-network" class="plaintext-label">Use private addressing only</label>
-   </div>
--->
 
   <div id="launch-wizard-advanced-storage"> 
-    <div class="wizard-section-label" data-msg="storage_label">Storage</div>
+    <div class="wizard-section-label" data-msg="storage_label"></div>
     <div id="launch-wizard-advanced-storage-table-wrapper">
       <table class="device-map-table">
         <thead>
           <tr>
-            <th data-msg="launch_instance_advanced_th_volume">Volume</th>
-            <th data-msg="launch_instance_advanced_th_mapping">Mapping</th>
-            <th data-msg="launch_instance_advanced_th_create">Create From Snapshot</th>
-            <th data-msg="launch_instance_advanced_th_size">Size (GB)</th>
-            <th data-msg="launch_instance_advanced_th_delete">Delete on Termination</th>
+            <th data-msg="launch_instance_advanced_th_volume"></th>
+            <th data-msg="launch_instance_advanced_th_mapping"></th>
+            <th data-msg="launch_instance_advanced_th_create"></th>
+            <th data-msg="launch_instance_advanced_th_size"></th>
+            <th data-msg="launch_instance_advanced_th_delete"></th>
             <th></th>
          </tr>
        </thead>
        <tbody>
 
+        <tr>
+          <td data-msg="launch_instance_root">
+          </td>
+          <td data-text="root.device_name">
+          </td>
+          <td data-text="root.snapshot_id">
+          </td>
+          <td>
+            <input class="launch-wizard-advanced-storage-size-input" data-tooltip="launch_wizard_advanced_storage_size_input_tip" data-value=":root.volume_size" type="text">
+          </td>
+          <td class="centered-cell"><input data-checked=":root.delete_on_termination" class="launch-wizard-advanced-storage-delOnTerm" type="checkbox"></td>
+        </tr> 
 
         <tr data-each-volume="blockDeviceMappings">
-          <td data-text=":getVolLabel" data-msg="launch_instance_root">Root
+          <td data-text=":getVolLabel" data-msg="launch_instance_ebs">
           </td>
           <td data-text="volume.device_name">
           </td>
@@ -71,33 +75,30 @@
           </td>
           <td data-text="volume.volume_size"></td>
           <td class="centered-cell"><input data-disabled=":checkDisabledIf" data-checked="volume.delete_on_termination" class="launch-wizard-advanced-storage-delOnTerm" type="checkbox"></td>
-          <td><div data-on-click=":delStorageVol" data-addclass=":deleteButtonIf"><div></td>
+          <td><div data-on-click=":delStorageVol" data-addclass=":deleteButtonIf" data-tooltip="launch_instance_advanced_delblockdev"><div></td>
         </tr> 
-
-
 
         <tr>
           <td>
-            <select data-enabled="enableStorageVolume" class="launch-wizard-advanced-storage-volume-selector" data-tooltip="launch_instance_volume_select_tip">
-              <option value="EBS" data-msg="launch_instance_ebs">EBS</option>
-              <option value="root" data-msg="launch_instance_root">Root</option>
+            <select data-on-change=":typeSelected" class="launch-wizard-advanced-storage-volume-selector" data-tooltip="launch_instance_volume_select_tip">
+              <option data-each-type="storageTypes" data-value="type.id" data-text="type.name"></option>
             </select>
           </td>
           <td>
-            /dev/<input data-enabled="enableMapping" data-value=":mapName" class="launch-wizard-advanced-storage-mapping-input" data-tooltip="launch_wizard_advanced_storage_mapping_input_tip" type="text">
+            <input data-value=":mapName" class="launch-wizard-advanced-storage-mapping-input" data-tooltip="launch_wizard_advanced_storage_mapping_input_tip" type="text" size="9">
           </td>
           <td>
-            <select data-enabled="enableSnapshot" class="launch-wizard-advanced-storage-snapshot-input" data-tooltip="launch_instance_snapshot_select_tip">
-              <option data-each-snapshot="snapshots" data-value="snapshot.id" data-text="snapshot.id"></option>
+            <select data-on-change=":setSnapshot" class="launch-wizard-advanced-storage-snapshot-input" data-tooltip="launch_instance_snapshot_select_tip">
+              <option data-each-snapshot="snapshots" data-value="snapshot.id" data-text="snapshot.name"></option>
             </select>
           </td>
           <td>
-            <input class="launch-wizard-advanced-storage-size-input" data-tooltip="launch_wizard_advanced_storage_size_input_tip" type="text">
+            <input class="launch-wizard-advanced-storage-size-input" data-tooltip="launch_wizard_advanced_storage_size_input_tip" data-value=":newMapping.volume_size" type="text">
          </td>
          <td class="centered-cell">
-          <input class="launch-wizard-advanced-storage-delOnTerm" type="checkbox" checked>
+          <input class="launch-wizard-advanced-storage-delOnTerm" type="checkbox" data-value="newMapping.delete_on_termination" checked>
         </td>
-        <td><div class="icon_approve" data-on-click=":setStorageVolume"></div></td>
+        <td><div class="icon_add" data-on-click=":setStorageVolume" data-tooltip="launch_instance_advanced_addblockdev"></div></td>
       </tr>
     </tbody>
 </table>
