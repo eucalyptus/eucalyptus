@@ -197,8 +197,12 @@ define([
                 },
 
                 restore: function(element, scope) {
-                    //scope.tag.set({_clean: true, _deleted: false, _edit: false});
-                    scope.tag.set( scope.tag.get('_backup').toJSON() );
+                    if ( scope.tag.get('_backup') != null) {
+                        scope.tag.set( scope.tag.get('_backup').toJSON() );
+                    } else {
+                        scope.tag.set({_clean: true, _deleted: false, _edit: false});
+                    }
+
                     scope.error.clear();
                     self.render();
                 },
