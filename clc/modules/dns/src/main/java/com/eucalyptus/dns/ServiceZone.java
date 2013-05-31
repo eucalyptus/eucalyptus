@@ -134,7 +134,12 @@ public class ServiceZone extends Zone {
 	if(type == Type.AAAA)
 		return(SetResponse.ofType(SetResponse.SUCCESSFUL));
 
-    if (name.toString().startsWith("eucalyptus.") || (name.toString().startsWith("euare."))) {
+    if (name.toString().startsWith("eucalyptus.") || 
+    	    (name.toString().startsWith("euare.")) || 
+    		(name.toString().startsWith("tokens.")) ||
+    		(name.toString().startsWith("autoscaling.")) ||
+    		(name.toString().startsWith("cloudwatch.")) ||
+    		(name.toString().startsWith("loadbalancing."))) {
         SetResponse resp = new SetResponse(SetResponse.SUCCESSFUL);        
 		try {
 			InetAddress cloudIp = Topology.lookup( Eucalyptus.class ).getInetAddress( );
