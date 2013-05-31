@@ -734,7 +734,61 @@ class UIProxyClient(object):
 
         return self.__make_scale_request__('DescribeLaunchConfigurations', params) 
     
+    def delete_policy(self, policy_name, autoscale_group=None):
+        params = {'PolicyName':policy_name}
+        if autoscale_group != None:
+            params['AutoScalingGroupName'] = autoscale_group
+
+        return self.__make_scale_request__('DeletePolicy', params) 
+
+    def get_all_policies(self, as_group=None, policy_names=None, max_records=None, next_token=None):
+        params = {}
+        if as_group:
+            params['AutoScalingGroupName'] = as_group
+        if policy_names:
+            self.__build_list_params__(params, names, 'PolicyNames.member.%d')
+        if max_records:
+            params['MaxRecords'] = max_records
+        if next_token:
+            params['NextToken'] = next_token
+
+        return self.__make_scale_request__('DescribePolicies', params) 
+
+    def execute_policy(self, policy_name, as_group=None, honor_cooldown=None):
+        params = {'PolicyName':policy_name}
+        if as_group != None:
+            params['AutoScalingGroupName'] = as_group
+
+        return self.__make_scale_request__('ExecutePolicy', params) 
+
+    def put_scaling_policy(self, policy):
+        params = {'AdjustmentType':policy['adjustment_type'],
+                  'AutoScalingGroupName':policy['as_name'],
+                  'PolicyName':policy['name'],
+                  'ScalingAdjustment':policy['scaling_adjustment']}
+        if policy['cooldown'] != None:
+            params['Cooldown'] = policy['cooldown']
+
+        return self.__make_scale_request__('PutScalingPolicy', params) 
+
+    def get_all_adjustment_types(self):
+        return self.__make_scale_request__('DescribeAdjustmentTypes', {}) 
+
     
+    # not used for 3.3.1, so not completing tag support
+    def delete_tags(self, tags):
+        params = {}
+        # this isn't right for autoscaling tags. propagate value missing
+        i = 1
+        for key in tags.keys():
+            value = tags[key]
+            params['Tag.%d.Key'%i] = key
+            if value is not None:
+                params['Tag.%d.Value'%(i)] = value
+            i += 1
+
+        return self.__make_scale_request__('DeleteTags', params) 
+
     ##
     # elb methods
     ##

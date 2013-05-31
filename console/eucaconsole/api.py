@@ -39,6 +39,8 @@ from xml.sax.saxutils import unescape
 from M2Crypto import RSA
 from boto.ec2.blockdevicemapping import BlockDeviceMapping, BlockDeviceType
 from boto.ec2.autoscale.launchconfig import LaunchConfiguration
+from boto.ec2.autoscale.policy import ScalingPolicy
+from boto.ec2.autoscale.tag import Tag
 from boto.ec2.autoscale.group import AutoScalingGroup
 from boto.ec2.cloudwatch.alarm import MetricAlarm
 from boto.ec2.elb.healthcheck import HealthCheck
@@ -147,6 +149,31 @@ class BaseAPIHandler(eucaconsole.BaseHandler):
 
 class ScaleHandler(BaseAPIHandler):
     json_encoder = BotoJsonScaleEncoder
+
+    def get_tags(self):
+        ret = []
+        index = 1
+        name_p = 'Tag.%d.Key'
+        value_p = 'Tag.%d.Value'
+        prop_p = 'Tag.%d.PropagateAtLaunch'
+        id_p = 'Tag.%d.ResourceId'
+        type_p = 'Tag.%d.ResourceType'
+        done = False
+        while not(done):
+            name = self.get_argument(name_p % (index), None)
+            if not(name):
+                done = True
+                break
+            val = self.get_argument(value_p % (index), None)
+            if val:
+                prop = self.get_argument(prop_p % (index), 'false')
+                prop = True if (prop == 'true') else False
+                id = self.get_argument(id_p % (index), None)
+                type = self.get_argument(type_p % (index), 'auto-scaling-group')
+                ret.append(Tag(key=name, value=value, propagate_at_launch=prop, resource_id=id, resource_type=type))
+            index += 1
+            
+        return ret
 
     ##
     # This is the main entry point for API calls for AutoScaling from the browser
@@ -292,6 +319,44 @@ class ScaleHandler(BaseAPIHandler):
                 max_records = self.get_argument("MaxRecords", None)
                 next_token = self.get_argument("NextToken", None)
                 self.user_session.scaling.get_all_launch_configurations(config_names, max_records, next_token, self.callback)
+            elif action == 'DeletePolicy':
+                policy_name = self.get_argument("PolicyName")
+                as_group = self.get_argument("AutoScalingGroupName", None)
+                self.user_session.scaling.delete_policy(policy_name, as_group, self.callback)
+            elif action == 'DescribePolicies':
+                as_group = self.get_argument("AutoScalingGroupName", None)
+                policy_names = self.get_argument_list('PolicyNames.member')
+                max_records = self.get_argument("MaxRecords", None)
+                next_token = self.get_argument("NextToken", None)
+                self.user_session.scaling.get_all_policies(as_group, policy_names, max_records, next_token, self.callback)
+            elif action == 'ExecutePolicy':
+                policy_name = self.get_argument("PolicyName")
+                as_group = self.get_argument("AutoScalingGroupName", None)
+                honor_cooldown = self.get_argument("HonorCooldown", None)
+                self.user_session.scaling.execute_policy(policy_name, as_group, honor_cooldown, self.callback)
+            elif action == 'PutScalingPolicy':
+                policy_name = self.get_argument("PolicyName")
+                adjustment_type = self.get_argument("AdjustmentType")
+                as_group = self.get_argument("AutoScalingGroupName")
+                scaling_adjustment = self.get_argument("ScalingAdjustment")
+                cooldown = self.get_argument("Cooldown", None)
+                min_adjustment_step = self.get_argument("MinAdjustmentStep", None)
+                policy = ScalingPolicy(name=policy_name, adjustment_type=adjustment_type, as_name=as_group, scaling_adjustment=scaling_adjustment, cooldown=cooldown, min_adjustment_step=min_adjustment_step)
+                print "policy = "+str(policy.__dict__)
+                self.user_session.scaling.create_scaling_policy(policy, self.callback)
+            elif action == 'DescribeAdjustmentTypes':
+                self.user_session.scaling.get_all_adjustment_types(self.callback)
+            elif action == 'DeleteTags':
+                tags = self.get_tags()
+                self.user_session.scaling.delete_tags(tags, self.callback)
+            elif action == 'DescribeTags':
+                filters = self.get_argument_list("Filters.member")
+                max_records = self.get_argument("MaxRecords", None)
+                next_token = self.get_argument("NextToken", None)
+                self.user_session.scaling.get_all_tags(filters, max_records, next_token, self.callback)
+            elif action == 'CreateOrUpdateTags':
+                tags = self.get_tags()
+                self.user_session.scaling.create_or_update_tags(tags, self.callback)
 
         except Exception as ex:
             logging.error("Could not fulfill request, exception to follow")

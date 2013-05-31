@@ -97,4 +97,29 @@ class MockScaleInterface(ScaleInterface):
     def get_all_launch_configurations(self, configuration_names=None, max_records=None, next_token=None, callback=None):
         return self.configs
 
+    # policy related
+    def delete_policy(self, policy_name, autoscale_group=None):
+        return None
+
+    def get_all_policies(self, as_group=None, policy_names=None, max_records=None, next_token=None):
+        return []
+
+    def execute_policy(self, policy_name, as_group=None, honor_cooldown=None):
+        return None
+
+    def create_scaling_policy(self, scaling_policy):
+        return None
+
+    def get_all_adjustment_types(self):
+        return self.conn.get_all_adjustment_types()
+
+    # tag related
+    def delete_tags(self, tags):
+        return None
+
+    def get_all_tags(self, filters=None, max_records=None, next_token=None):
+        return []
+
+    def create_or_update_tags(self, tags):
+        return None
 

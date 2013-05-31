@@ -39,7 +39,7 @@ class BotoWatchInterface(WatchInterface):
     saveclcdata = False
 
     def __init__(self, clc_host, access_id, secret_key, token):
-        boto.set_stream_logger('foo')
+        #boto.set_stream_logger('foo')
         path='/services/CloudWatch'
         port=8773
         if clc_host[len(clc_host)-13:] == 'amazonaws.com':
@@ -50,7 +50,7 @@ class BotoWatchInterface(WatchInterface):
         reg = RegionInfo(name='eucalyptus', endpoint=clc_host)
         self.conn = CloudWatchConnection(access_id, secret_key, region=reg,
                                   port=port, path=path,
-                                  is_secure=True, security_token=token, debug=2)
+                                  is_secure=True, security_token=token, debug=0)
         self.conn.https_validate_certificates = False
         self.conn.http_connection_kwargs['timeout'] = 30
 
