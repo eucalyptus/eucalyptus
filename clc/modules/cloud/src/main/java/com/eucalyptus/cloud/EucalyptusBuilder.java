@@ -77,7 +77,6 @@ import com.eucalyptus.component.AbstractServiceBuilder;
 import com.eucalyptus.component.ComponentId;
 import com.eucalyptus.component.ComponentId.ComponentPart;
 import com.eucalyptus.component.Faults;
-import com.eucalyptus.component.Faults.CheckException;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.ServiceRegistrationException;
 import com.eucalyptus.component.Topology;
@@ -130,12 +129,10 @@ public class EucalyptusBuilder extends AbstractServiceBuilder<EucalyptusConfigur
           return;
         }
       }
-      CheckException ex = Faults.failure( config, Exceptions.error( "There is no host in the system (yet) for the given cloud controller configuration: "
+      throw Faults.failure( config, Exceptions.error( "There is no host in the system (yet) for the given cloud controller configuration: "
         + config.getFullName( )
         + ".\nHosts are: "
         + Hosts.list( ) ) );
-      System.exit( 123 );
-      throw ex;
     } else if ( config.isVmLocal( ) && !Hosts.isCoordinator( ) ) {
       throw Faults.failure( config, Exceptions.error( "This cloud controller "
         + config.getFullName( )
