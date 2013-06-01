@@ -270,7 +270,7 @@ public class Hosts {
       }
 
     },
-    PRUNING( 5 ) {
+    PRUNING( 10 ) {
 
       @Override
       public void run( ) {
@@ -422,6 +422,13 @@ public class Hosts {
     @Override
     public void contentsSet( final Map<String, Host> input ) {
       LOG.info( this.printMap( "Hosts.contentsSet():" ) );
+      if ( Bootstrap.isShuttingDown( ) ) {
+        return;
+      } else {
+        for ( final Host host : input.values( ) ) {
+          HostMapStateListener.updateHostEntry( host );
+        }
+      }
     }
 
     @Override
@@ -445,41 +452,46 @@ public class Hosts {
       if ( Bootstrap.isShuttingDown( ) ) {
         return;
       } else {
-        Logs.extreme().debug( "Hosts.entrySet(): " + hostKey + " => " + host );
-        try {
-          if ( host.isLocalHost( ) && host.hasDatabase( ) && Bootstrap.isLoaded( ) ) {
-            final boolean wasSynched = Databases.isSynchronized( );
-            final boolean wasVolatile = Databases.isVolatile( );
-            dbActivation.submit( new Runnable( ) {
+        LOG.debug( "Hosts.entrySet(): " + hostKey + " => " + host );
+        HostMapStateListener.updateHostEntry( host );
+        LOG.info( "Hosts.entrySet(): " + hostKey + " finished." );
+      }
+    }
 
-              @Override
-              public void run( ) {
-                if ( !wasSynched && !Databases.SyncState.SYNCING.isCurrent( ) && !Databases.isSynchronized( ) ) {
-                  if ( Databases.enable( host ) && Databases.isSynchronized( ) ) {
-                    UpdateEntry.INSTANCE.apply( Hosts.lookup( hostKey ) );
-                  }
-                } else if ( wasVolatile && Bootstrap.isLoaded( ) && !Databases.ActiveHostSet.ACTIVATED.get( ).contains( hostKey ) ) {
-                  if ( Databases.enable( host ) && !Databases.isVolatile( ) ) {
-                    UpdateEntry.INSTANCE.apply( Hosts.lookup( hostKey ) );
-                  }
-                } else if ( wasVolatile && Bootstrap.isLoaded( ) && !Databases.isVolatile( ) ) {
+    private static void updateHostEntry( final Host host ) {
+      try {
+        final String hostKey = host.getDisplayName( );
+        if ( host.isLocalHost( ) && host.hasDatabase( ) && Bootstrap.isLoaded( ) ) {
+          final boolean wasSynched = Databases.isSynchronized( );
+          final boolean wasVolatile = Databases.isVolatile( );
+          dbActivation.submit( new Runnable( ) {
+
+            @Override
+            public void run( ) {
+              if ( !wasSynched && !Databases.SyncState.SYNCING.isCurrent( ) && !Databases.isSynchronized( ) ) {
+                if ( Databases.enable( host ) && Databases.isSynchronized( ) ) {
                   UpdateEntry.INSTANCE.apply( Hosts.lookup( hostKey ) );
-                } else if ( Bootstrap.isFinished( ) && !Databases.isVolatile( ) ) {
-                  BootstrapComponent.SETUP.apply( Hosts.lookup( hostKey ) );
                 }
+              } else if ( wasVolatile && Bootstrap.isLoaded( ) && !Databases.ActiveHostSet.ACTIVATED.get( ).contains( hostKey ) ) {
+                if ( Databases.enable( host ) && !Databases.isVolatile( ) ) {
+                  UpdateEntry.INSTANCE.apply( Hosts.lookup( hostKey ) );
+                }
+              } else if ( wasVolatile && Bootstrap.isLoaded( ) && !Databases.isVolatile( ) ) {
+                UpdateEntry.INSTANCE.apply( Hosts.lookup( hostKey ) );
+              } else if ( Bootstrap.isFinished( ) && !Databases.isVolatile( ) ) {
+                BootstrapComponent.SETUP.apply( Hosts.lookup( hostKey ) );
               }
-            } );
-          } else if ( Bootstrap.isFinished( ) && !host.isLocalHost( ) && host.hasSynced( ) ) {
-            BootstrapComponent.REMOTESETUP.apply( host );
-          } else if ( InitializeAsCloudController.INSTANCE.apply( host ) ) {
-            LOG.info( "Hosts.entrySet(): INITIALIZED CLC => " + host );
-          } else {
-            Logs.extreme( ).debug( "Hosts.entrySet(): UPDATED HOST => " + host );
-          }
-        } catch ( Exception ex ) {
-          LOG.error( ex, ex );
+            }
+          } );
+        } else if ( Bootstrap.isFinished( ) && !host.isLocalHost( ) && host.hasSynced( ) ) {
+          BootstrapComponent.REMOTESETUP.apply( host );
+        } else if ( InitializeAsCloudController.INSTANCE.apply( host ) ) {
+          LOG.info( "Hosts.entrySet(): INITIALIZED CLC => " + host );
+        } else {
+          Logs.extreme( ).debug( "Hosts.updateHostEntry(): UPDATED HOST => " + host );
         }
-        Logs.extreme( ).info( "Hosts.entrySet(): " + hostKey + " finished." );
+      } catch ( Exception ex ) {
+        LOG.error( ex, ex );
       }
     }
 
@@ -496,6 +508,9 @@ public class Hosts {
       Collection<Address> partedHosts = Collections2.filter( allHostAddresses, Predicates.in( partMembers ) );
       for ( final Address hostAddress : partedHosts ) {
         LOG.info( "Hosts.viewChange(): -> removed  => " + hostAddress );
+      }
+      if ( !partMembers.isEmpty( ) ) {
+        Threads.lookup( Empyrean.class, Hosts.class, "viewChange" ).submit( PeriodicMembershipChecks.PRUNING );
       }
       Collection<Address> joinedHosts = Collections2.filter( allHostAddresses, Predicates.in( joinMembers ) );
       for ( final Address hostAddress : joinedHosts ) {
@@ -550,15 +565,14 @@ public class Hosts {
                * If this subgroup/partiton is not one we are a member of then sync the state from the coordinator, i.e. {@code org.jgroups.View#getMembers()#firstElement()} is the coordinator.
                */
               Address viewCoordinator = v.getMembers().firstElement();
-              if ( !viewCoordinator.equals( Hosts.getLocalGroupAddress( ) ) ) {
-                try {
-                  HostManager.getMembershipChannel().getState( v.getMembers().firstElement(), 0L );
-                } catch ( Exception e ) {
-                  LOG.error( logPrefix( v ) + " failed to merge partition state: " + e.getMessage() );
-                  Logs.extreme().error( e, e );
-                }
-              } else {
+              if ( viewCoordinator.equals( Hosts.getLocalGroupAddress( ) ) ) {
                 localView = v;
+              }
+              try {
+                HostManager.getMembershipChannel().getState( v.getMembers().firstElement(), 0L );
+              } catch ( Exception e ) {
+                LOG.error( logPrefix( v ) + " failed to merge partition state: " + e.getMessage() );
+                Logs.extreme().error( e, e );
               }
 
               /**
