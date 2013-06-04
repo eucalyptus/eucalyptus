@@ -48,7 +48,6 @@
 	<classpathentry exported="true" kind="lib" path="lib/axiom-api-1.2.8.jar"/>
 	<classpathentry exported="true" kind="lib" path="lib/axiom-dom-1.2.8.jar"/>
 	<classpathentry exported="true" kind="lib" path="lib/axiom-impl-1.2.8.jar"/>
-	<classpathentry exported="true" kind="lib" path="lib/backport-util-concurrent-2.2.jar"/>
 	<classpathentry exported="true" kind="lib" path="lib/bcel-5.2.jar"/>
 	<classpathentry exported="true" kind="lib" path="lib/bcprov.jar"/>
 	<classpathentry exported="true" kind="lib" path="lib/bsf-2.4.0.jar"/>
