@@ -11,7 +11,6 @@ define([
 
       if (method == 'read') {
           $.ajax({
-            type:"POST",
             url: collection.url,
             data:"_xsrf="+$.cookie('_xsrf'),
             dataType:"json",

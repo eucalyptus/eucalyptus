@@ -39,7 +39,7 @@ class BotoScaleInterface(ScaleInterface):
     saveclcdata = False
 
     def __init__(self, clc_host, access_id, secret_key, token):
-        #boto.set_stream_logger('foo')
+        boto.set_stream_logger('foo')
         path='/services/AutoScaling'
         port=8773
         if clc_host[len(clc_host)-13:] == 'amazonaws.com':
@@ -50,7 +50,7 @@ class BotoScaleInterface(ScaleInterface):
         reg = RegionInfo(name='eucalyptus', endpoint=clc_host)
         self.conn = AutoScaleConnection(access_id, secret_key, region=reg,
                                   port=port, path=path,
-                                  is_secure=True, security_token=token, debug=0)
+                                  is_secure=True, security_token=token, debug=2)
         self.conn.https_validate_certificates = False
         self.conn.http_connection_kwargs['timeout'] = 30
 
@@ -108,3 +108,37 @@ class BotoScaleInterface(ScaleInterface):
             self.__save_json__(obj, "mockdata/AS_LaunchConfigs.json")
         return obj
 
+    # policy related
+    def delete_policy(self, policy_name, autoscale_group=None):
+        return self.conn.delete_policy(policy_name, autoscale_group)
+
+    def get_all_policies(self, as_group=None, policy_names=None, max_records=None, next_token=None):
+        return self.conn.get_all_policies(as_group, policy_names, max_records, next_token)
+
+    def execute_policy(self, policy_name, as_group=None, honor_cooldown=None):
+        return self.conn.execute_policy(policy_name, as_group, honor_cooldown)
+
+    def create_scaling_policy(self, scaling_policy):
+        return self.conn.create_scaling_policy(scaling_policy)
+
+    def get_all_adjustment_types(self):
+        return self.conn.get_all_adjustment_types()
+
+    # tag related
+    def delete_tags(self, tags):
+        return self.conn.delete_tags(tags)
+
+    def get_all_tags(self, filters=None, max_records=None, next_token=None):
+        return self.conn.get_all_tags(filters, max_records, next_token)
+
+    def create_or_update_tags(self, tags):
+        return self.conn.create_or_update_tags(tags)
+
+# stuff to be added later
+#  describe_metric_collection_types
+#  describe_scaling_activities
+#  describe_scaling_process_types
+#  describe_metrics_collection
+#  enable_metrics_collection
+#  resume_processes
+#  suspend_processes

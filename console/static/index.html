@@ -84,6 +84,9 @@
     <script type="text/javascript" language="javascript" src="js/snapshot.js"></script>
     <script type="text/javascript" language="javascript" src="js/sgroup.js"></script>
     <script type="text/javascript" language="javascript" src="js/eip.js"></script>
+    <script type="text/javascript" language="javascript" src="js/scaling.js"></script>
+    <script type="text/javascript" language="javascript" src="js/newlaunchconfig.js"></script>
+    <script type="text/javascript" language="javascript" src="js/newscalinggroup.js"></script>
     <script type="text/javascript" language="javascript" src="js/balancing.js"></script>
     <script type="text/javascript" language="javascript" src="js/eucaevent.js"></script>
     <script type="text/javascript" language="javascript" src="js/notification.js"></script>
@@ -269,13 +272,11 @@
                   <span></span> {{!>dashboard_instance_stopped}}
                 </div>
               </div>
-              <!--
               <div id="dashboard-scaling-groups" class="db-instances-scaling clearfix" title="{{!: dashboard_instances_scaling_tip }}">
                 <div class="status-readout">
                   <span></span> {{!>dashboard_instance_scaling}}
                 </div>
               </div>
-              -->
               <div id="dashboard-instance-launch">
                 <a href="#" class="xlarge-button" title="{{!: dashboard_instance_launch_tip }}">{{!>dashboard_launch_new_instance}}</a>
               </div> 
@@ -1203,7 +1204,7 @@
                </tbody>
             </table>
           </div>
-          <div id="scaling-topselector"><div class="scalingtab active"><a href="#scaling">Auto-scaling</a></div> <div class="scalingtab "><a href="#launchconfig">Launch configs</a></div></div>
+          <div id="scaling-topselector"><div class="scalingtab active"><a href="#scaling">{{!>scaling_section_tab}}</a></div> <div class="scalingtab "><a href="#launchconfig">{{!>launch_config_section_tab}}</a></div></div>
           <div id="scaling-help">
             <div class="help-content">
               {{!: landing_content }}
@@ -1840,18 +1841,18 @@
                   <th>
                     <input type="checkbox" id="launchconfig-check-all">
                   </th>
-                  <th>{{!>launchconfig_tbl_hdr_name}}</th>
-                  <th>{{!>launchconfig_tbl_hdr_image_id}}</th>
-                  <th>{{!>launchconfig_tbl_hdr_key_name}}</th>
-                  <th>{{!>launchconfig_tbl_hdr_security_group}}</th>
-                  <th>{{!>launchconfig_tbl_hdr_created_time}}</th>
+                  <th>{{!>launch_config_tbl_hdr_name}}</th>
+                  <th>{{!>launch_config_tbl_hdr_image}}</th>
+                  <th>{{!>launch_config_tbl_hdr_key}}</th>
+                  <th>{{!>launch_config_tbl_hdr_security_group}}</th>
+                  <th>{{!>launch_config_tbl_hdr_created_time}}</th>
                 </tr>
                </thead>
                <tbody>
                </tbody>
             </table>
           </div>
-          <div id="scaling-topselector"><div class="scalingtab "><a href="#scaling">Auto-scaling</a></div> <div class="scalingtab active"><a href="#launchconfig">Launch configs</a></div></div>
+          <div id="scaling-topselector"><div class="scalingtab"><a href="#scaling">{{!>scaling_section_tab}}</a></div> <div class="scalingtab active"><a href="#launchconfig">{{!>launch_config_section_tab}}</a></div></div>
           <div id="scaling-help">
             <div class="help-content">
               {{!: landing_content }}
