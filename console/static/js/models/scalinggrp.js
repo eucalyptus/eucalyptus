@@ -32,13 +32,15 @@ function(EucaModel) {
               required: true
             },
             desired_capacity: {
+              pattern: 'digits',
               fn:  function(value, attr, customValue){
                 if(parseInt(value) < parseInt(customValue.min_size)){
-                  return attr + ' must to be greater than or equal to ' + customValue.min_size;
+                  return attr + ' ' + $.i18n.prop('quick_scale_gt_or_eq') + ' ' + customValue.min_size;
                 }else if(parseInt(value) > parseInt(customValue.max_size)){
-                  return attr + ' needs to be less than or equal to ' + customValue.max_size;
+                  return attr + ' ' + $.i18n.prop('quick_scale_lt_or_eq') + ' ' + customValue.max_size;
                 }
               },
+              //msg: $.i18n.prop('quick_scale_mustbe_number'),
               required: true
             },
             enabled_metrics: {
