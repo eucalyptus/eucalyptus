@@ -2276,6 +2276,10 @@ static int init(void)
     if (nc_state.config_max_mem && nc_state.config_max_mem < nc_state.mem_max)
         nc_state.mem_max = nc_state.config_max_mem;
 
+    if (nc_state.config_max_mem && nc_state.config_max_mem > nc_state.mem_max)
+        nc_state.mem_max = nc_state.config_max_mem;
+        LOGWARN("MAX_MEM is now greater than the amount of physical memory: %lldMB\n", nc_state.mem_max);
+
     if (nc_state.config_max_cores) {
         nc_state.cores_max = nc_state.config_max_cores;
         if (nc_state.cores_max > MAXINSTANCES_PER_NC) {
