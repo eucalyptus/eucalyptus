@@ -354,18 +354,10 @@ public class Topology {
       @Override
       public Future<ServiceConfiguration> apply( final ServiceConfiguration input ) {
         final Callable<ServiceConfiguration> call = Topology.callable( input, Topology.get( toState ) );
-        if ( Bootstrap.isOperational( ) ) {
-          if ( this.serializedStates.contains( toState ) || this.serializedStates.contains( input.lookupState( ) ) ) {
-            return Threads.enqueue( input.getComponentId( ).getClass( ), Topology.class, 1, call );
-          } else {
-            return Queue.EXTERNAL.enqueue( call );
-          }
+        if ( this.serializedStates.contains( toState ) || this.serializedStates.contains( input.lookupState( ) ) ) {
+          return Threads.enqueue( input.getComponentId( ).getClass( ), Topology.class, 1, call );
         } else {
-          try {
-            return Futures.predestinedFuture( input );
-          } catch ( Exception ex ) {
-            return Futures.predestinedFuture( input );
-          }
+          return Queue.EXTERNAL.enqueue( call );
         }
       }
     };
