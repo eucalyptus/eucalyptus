@@ -1,15 +1,15 @@
 console.log('WIZARD:start');
 define([
   'rivets',
-  'dataholder',
+  'app',
   'text!./page2.html',
-], function(rivets, dh, template) {
+], function(rivets, app, template) {
         return Backbone.View.extend({
           title: 'Membership', 
 
           loadBalancers: {
             name: 'loadBalancers',
-            collection: dh.loadBalancers,
+            collection: app.data.loadBalancers,
             itrLabel: function() {
               return this.itr.get('name');
             } 

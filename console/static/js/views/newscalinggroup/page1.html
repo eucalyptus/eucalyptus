@@ -6,7 +6,7 @@
             
             <div class="form-row clearfix">
                 <label class="required-label" for="scalingGroupName" data-msg="create_scaling_group_general_name">Name</label>
-                <input type="text" name="name" id="scalingGroupName" data-value="scalingGroup.name" data-tooltip="create_scaling_group_general_name_tip"></input>
+                <input type="text" name="name" id="scalingGroupName" data-value="scalingGroup.name" data-tooltip="create_scaling_group_general_name_tip" data-on-keydown="change" data-on-blur="change"></input>
                 <div class="field-error" data-text="scalingGroupErrors.name"></div>
             </div>
 
@@ -21,17 +21,18 @@
 
                 <div class="form-row clearfix scale-max">
                     <label class="required-label" for="maximum" data-msg="create_scaling_group_general_instances_max">Maximum</label>
-                    <input class="smallNumber" name="maximum" id="maximum" type="number" value="1" data-value="scalingGroup.max_size" data-tooltip="create_scaling_group_general_instances_max_tip"></input><span data-text="scalingGroupErrors.max_size"></span>
+                    <input class="smallNumber" name="maximum" id="maximum" type="number" value="1" data-value="scalingGroup.max_size" data-tooltip="create_scaling_group_general_instances_max_tip" data-on-keydown="change" data-on-blur="change"></input><span data-text="scalingGroupErrors.max_size"></span>
                 </div>
 
                 <div class="form-row clearfix scale-desired">
                     <label for="desired" data-msg="create_scaling_group_general_instances_desired">Desired</label>
-                    <input class="smallNumber" name="desired" id="desired" type="number" value="1" data-tooltip="create_scaling_group_general_instances_desired_tip"></input>
+                    <input class="smallNumber" name="desired" id="desired" type="number" value="1" data-value="scalingGroup.desired_capacity" data-tooltip="create_scaling_group_general_instances_desired_tip" data-on-keydown="change" data-on-blur="change"></input>
+                    <span data-text="scalingGroupErrors.desired_capacity"></span>
                 </div>
 
                 <div class="form-row clearfix scale-min">
                     <label class="required-label" for="minimum" data-msg="create_scaling_group_general_instances_min">Minimum</label>
-                    <input class="smallNumber" name="minimum" id="minimum" type="number" value="1" data-value="scalingGroup.min_size" data-tooltip="create_scaling_group_general_instances_min_tip"></input><span data-text="scalingGroupErrors.min_size"></span>
+                    <input class="smallNumber" name="minimum" id="minimum" type="number" value="1" data-value="scalingGroup.min_size" data-tooltip="create_scaling_group_general_instances_min_tip" data-on-keydown="change" data-on-blur="change"></input><span data-text="scalingGroupErrors.min_size"></span>
                 </div>
             </div>
 
