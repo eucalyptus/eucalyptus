@@ -13,7 +13,6 @@ define([], function() {
     finish: function(outputModel) {
       this.set('monitoring_enabled', this.get('instance_monitoring'));
       this.set('addressing_type', (this.get('private_network')) ? 'private' : 'public');
-      this.set('placement', {availability_zone: this.get('zone'), group_name: null, tenancy: null});
       outputModel.set(this.toJSON());
     }
   });
