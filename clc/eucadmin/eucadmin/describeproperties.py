@@ -30,7 +30,15 @@ from boto.roboto.param import Param
 class DescribeProperties(eucadmin.describerequest.DescribeRequest):
     ServiceName = 'Property'
     Description = "Show the cloud's properties or settings"
-
+    Params = [
+              Param(name='verbose',
+                    short_name='v',
+                    long_name='verbose',
+                    ptype='boolean',
+                    default=False,
+                    optional=True,
+                    doc='Include description information for properties in the returned response.'),
+              ]
     Args = [Param(name='properties',
               long_name='property prefix',
               ptype='string',
@@ -42,16 +50,22 @@ class DescribeProperties(eucadmin.describerequest.DescribeRequest):
         eucadmin.describerequest.DescribeRequest.__init__(self, **args)
         self.list_markers = ['euca:properties']
         self.item_markers = ['euca:item']
+        self.verbose = False 
 
     def get_connection(self, **args):
         if self.connection is None:
             args['path'] = self.ServicePath
             self.connection = self.ServiceClass(**args)
-        for i, value in enumerate(self.request_params.pop('properties', [])):
-            self.request_params['Property.%s' % (i + 1)] = value
+        if 'verbose' in self.request_params and self.request_params.pop('verbose') == 'true':
+          self.verbose = True
+        if 'properties' in self.request_params:
+          for i, value in enumerate(self.request_params.pop('properties', [])):
+              self.request_params['Property.%s' % (i + 1)] = value
         return self.connection
 
     def cli_formatter(self, data):
         props = getattr(data, 'euca:properties')
         for prop in props:
             print 'PROPERTY\t%s\t%s' % (prop['euca:name'], prop['euca:value'])
+            if self.verbose and prop['euca:description']:
+              print 'DESCRIPTION\t%s\t%s' % (prop['euca:name'], prop['euca:description'])

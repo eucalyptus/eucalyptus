@@ -81,7 +81,7 @@ ClassLoader.getSystemClassLoader().loadClass('net.sf.hajdbc.local.LocalStateMana
 
 String real_jdbc_driver = Databases.getDriverName( );
 String pool_db_driver = 'net.sf.hajdbc.sql.Driver';
-String pool_db_url = 'jdbc:ha-jdbc:eucalyptus';
+String pool_db_url = 'jdbc:ha-jdbc';
 String db_pass = Databases.getPassword();
 
 default_pool_props = [
@@ -98,9 +98,9 @@ default_pool_props = [
       'password': db_pass,
     ]
 
-PersistenceContexts.list( ).each { String ctx_simplename ->
+def setupDbPool = { String ctx_simplename ->
   String context_name = ctx_simplename.replaceAll("eucalyptus_","")
-  String context_pool_alias = "eucalyptus_${context_name}";
+  String context_pool_alias = ctx_simplename;
   String ha_jdbc_config_file_name = SubDirectory.TX.toString( ) + "/ha_jdbc_${context_name}.xml";
   LogUtil.logHeader( "${ctx_simplename} Setting up database connection pool -> ${ha_jdbc_config_file_name}" )
   
@@ -145,12 +145,11 @@ PersistenceContexts.list( ).each { String ctx_simplename ->
   }
   
   
-  
   // Setup proxool
   proxool_config = new Properties();
   proxool_config.putAll(default_pool_props);
   proxool_config.put('config',"file://"+ha_jdbc_config_file_name);
-  String url = "proxool.${context_pool_alias}:${pool_db_driver}:${pool_db_url}_${context_name}";
+  String url = "proxool.${context_pool_alias}:${pool_db_driver}:${pool_db_url}:${ctx_simplename}";
   LOG.info( "${ctx_simplename} Preparing connection pool:     ${url}" )
   
   // Register proxool
@@ -158,3 +157,6 @@ PersistenceContexts.list( ).each { String ctx_simplename ->
   ProxoolFacade.registerConnectionPool(url, proxool_config);
   ProxoolFacade.disableShutdownHook();
 }
+
+PersistenceContexts.list( ).each{ setupDbPool(it) }
+setupDbPool("database_events");

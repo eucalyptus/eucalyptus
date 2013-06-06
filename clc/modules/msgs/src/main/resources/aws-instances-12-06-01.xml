@@ -110,7 +110,7 @@
                 <structure name="item" map-as="edu.ucsb.eucalyptus.msgs.ResourceTag" />
             </collection>
         </structure>
-        <!--2013-02-01 -->
+        <!--2012-06-01 -->
         <structure name="iamInstanceProfile" field="iamInstanceProfile" map-as="edu.ucsb.eucalyptus.msgs.IamInstanceProfile" />
     </mapping>
 
@@ -126,7 +126,7 @@
         <value name="maxCount" field="maxCount" usage="required" />
         <value name="keyName" field="keyName" usage="optional" />
         <structure name="groupSet" usage="optional">
-            <collection field="groupSet" usage="optional" factory="org.jibx.runtime.Utility.arrayListFactory">
+            <collection field="securityGroups" usage="optional" factory="org.jibx.runtime.Utility.arrayListFactory">
                 <structure name="item" map-as="edu.ucsb.eucalyptus.msgs.GroupItemType" />
             </collection>
         </structure>
@@ -162,9 +162,11 @@
         <value name="instanceInitiatedShutdownBehavior" field="shutdownAction" usage="optional" />
         <!-- 2010-08-31 -->
         <value name="clientToken" field="clientToken" usage="optional" />
-        <!--2013-02-01 -->
-        <value name="iamInstanceProfileArn" field="iamInstanceProfileArn" usage="optional" />
-        <value name="iamInstanceProfileName"  field="iamInstanceProfileName" usage="optional" />
+        <!--2012-06-01 -->
+        <structure name="iamInstanceProfile" usage="optional">
+            <value name="arn" field="iamInstanceProfileArn" usage="optional" />
+            <value name="name" field="iamInstanceProfileName" usage="optional" />
+        </structure>
     </mapping>
 
 

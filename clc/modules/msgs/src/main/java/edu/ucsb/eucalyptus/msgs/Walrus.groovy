@@ -508,7 +508,11 @@ public class ListBucketResponseType extends WalrusResponseType {
 	boolean isTruncated;
 	ArrayList<MetaDataEntry> metaData;
 	ArrayList<ListEntry> contents;
-	ArrayList<PrefixEntry> commonPrefixes;
+	ArrayList<PrefixEntry> commonPrefixes = new ArrayList<PrefixEntry>();
+	
+	private boolean isCommonPrefixesPresent() {
+	  return commonPrefixes.size() > 0 ? true : false;
+	}
 }
 
 public class ListEntry extends EucalyptusData {

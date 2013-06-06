@@ -280,7 +280,7 @@ public class Hosts {
       }
 
     },
-    INITIALIZE( 5 ) {
+    INITIALIZE( 10 ) {
 
       @Override
       public void run( ) {
@@ -409,24 +409,42 @@ public class Hosts {
     INSTANCE;
     private static final ExecutorService dbActivation = Executors.newFixedThreadPool( 32 );
 
-    private String printMap( ) {
-      return "\n" + Joiner.on( "\nHosts.values(): " ).join( hostMap.values( ) );
+    private String printMap( String prefix ) {
+      String currentView = HostManager.getMembershipChannel( ).getViewAsString( );
+      return "\n" + prefix + " " + currentView + "\n" + prefix + " " + Joiner.on( "\n" + prefix + " " ).join( hostMap.values( ) );
     }
 
     @Override
     public void contentsCleared( ) {
-      LOG.info( "Hosts.contentsCleared(): " + this.printMap( ) );
+      LOG.info( this.printMap( "Hosts.contentsCleared():" ) );
     }
 
     @Override
     public void contentsSet( final Map<String, Host> input ) {
-      LOG.info( "Hosts.contentsSet(): " + this.printMap( ) );
+      LOG.info( this.printMap( "Hosts.contentsSet():" ) );
+      if ( Bootstrap.isShuttingDown( ) ) {
+        return;
+      } else {
+        for ( final Host host : input.values( ) ) {
+          HostMapStateListener.updateHostEntry( host );
+        }
+      }
     }
 
     @Override
     public void entryRemoved( final String input ) {
       LOG.info( "Hosts.entryRemoved(): " + input );
-      Databases.disable( input );
+      dbActivation.submit( new Runnable( ) {
+
+        @Override
+        public void run( ) {
+          try {
+            Databases.disable( input );
+          } catch ( Exception ex ) {
+            LOG.error( ex , ex );
+          }
+        }
+      } );
     }
 
     @Override
@@ -434,41 +452,46 @@ public class Hosts {
       if ( Bootstrap.isShuttingDown( ) ) {
         return;
       } else {
-        Logs.extreme().debug( "Hosts.entrySet(): " + hostKey + " => " + host );
-        try {
-          if ( host.isLocalHost( ) && host.hasDatabase( ) && Bootstrap.isLoaded( ) ) {
-            final boolean wasSynched = Databases.isSynchronized( );
-            final boolean wasVolatile = Databases.isVolatile( );
-            dbActivation.submit( new Runnable( ) {
+        LOG.debug( "Hosts.entrySet(): " + hostKey + " => " + host );
+        HostMapStateListener.updateHostEntry( host );
+        LOG.info( "Hosts.entrySet(): " + hostKey + " finished." );
+      }
+    }
 
-              @Override
-              public void run( ) {
-                if ( !wasSynched && !Databases.SyncState.SYNCING.isCurrent( ) && !Databases.isSynchronized( ) ) {
-                  if ( Databases.enable( host ) && Databases.isSynchronized( ) ) {
-                    UpdateEntry.INSTANCE.apply( Hosts.lookup( hostKey ) );
-                  }
-                } else if ( wasVolatile && Bootstrap.isLoaded( ) && !Databases.ActiveHostSet.ACTIVATED.get( ).contains( hostKey ) ) {
-                  if ( Databases.enable( host ) && !Databases.isVolatile( ) ) {
-                    UpdateEntry.INSTANCE.apply( Hosts.lookup( hostKey ) );
-                  }
-                } else if ( wasVolatile && Bootstrap.isLoaded( ) && !Databases.isVolatile( ) ) {
+    private static void updateHostEntry( final Host host ) {
+      try {
+        final String hostKey = host.getDisplayName( );
+        if ( host.isLocalHost( ) && host.hasDatabase( ) && Bootstrap.isLoaded( ) ) {
+          final boolean wasSynched = Databases.isSynchronized( );
+          final boolean wasVolatile = Databases.isVolatile( );
+          dbActivation.submit( new Runnable( ) {
+
+            @Override
+            public void run( ) {
+              if ( !wasSynched && !Databases.SyncState.SYNCING.isCurrent( ) && !Databases.isSynchronized( ) ) {
+                if ( Databases.enable( host ) && Databases.isSynchronized( ) ) {
                   UpdateEntry.INSTANCE.apply( Hosts.lookup( hostKey ) );
-                } else if ( Bootstrap.isFinished( ) && !Databases.isVolatile( ) ) {
-                  BootstrapComponent.SETUP.apply( Hosts.lookup( hostKey ) );
                 }
+              } else if ( wasVolatile && Bootstrap.isLoaded( ) && !Databases.ActiveHostSet.ACTIVATED.get( ).contains( hostKey ) ) {
+                if ( Databases.enable( host ) && !Databases.isVolatile( ) ) {
+                  UpdateEntry.INSTANCE.apply( Hosts.lookup( hostKey ) );
+                }
+              } else if ( wasVolatile && Bootstrap.isLoaded( ) && !Databases.isVolatile( ) ) {
+                UpdateEntry.INSTANCE.apply( Hosts.lookup( hostKey ) );
+              } else if ( Bootstrap.isFinished( ) && !Databases.isVolatile( ) ) {
+                BootstrapComponent.SETUP.apply( Hosts.lookup( hostKey ) );
               }
-            } );
-          } else if ( Bootstrap.isFinished( ) && !host.isLocalHost( ) && host.hasSynced( ) ) {
-            BootstrapComponent.REMOTESETUP.apply( host );
-          } else if ( InitializeAsCloudController.INSTANCE.apply( host ) ) {
-            LOG.info( "Hosts.entrySet(): INITIALIZED CLC => " + host );
-          } else {
-            Logs.extreme( ).debug( "Hosts.entrySet(): UPDATED HOST => " + host );
-          }
-        } catch ( Exception ex ) {
-          LOG.error( ex, ex );
+            }
+          } );
+        } else if ( Bootstrap.isFinished( ) && !host.isLocalHost( ) && host.hasSynced( ) ) {
+          BootstrapComponent.REMOTESETUP.apply( host );
+        } else if ( InitializeAsCloudController.INSTANCE.apply( host ) ) {
+          LOG.info( "Hosts.entrySet(): INITIALIZED CLC => " + host );
+        } else {
+          Logs.extreme( ).debug( "Hosts.updateHostEntry(): UPDATED HOST => " + host );
         }
-        Logs.extreme( ).info( "Hosts.entrySet(): " + hostKey + " finished." );
+      } catch ( Exception ex ) {
+        LOG.error( ex, ex );
       }
     }
 
@@ -476,7 +499,7 @@ public class Hosts {
     public void viewChange( final View currentView, final Vector<Address> joinMembers, final Vector<Address> partMembers ) {
       LOG.info( "Hosts.viewChange(): new view [" + currentView.getViewId().getId() + ":" + currentView.getViewId().getCoordAddress() + "]=> "
                 + Joiner.on( ", " ).join( currentView.getMembers( ) ) );
-      LOG.info( "Hosts.viewChange(): " + printMap( ) );
+      LOG.info(  printMap( "Hosts.viewChange(before):" ) );
       if ( !joinMembers.isEmpty( ) ) LOG.info( "Hosts.viewChange(): joined   [" + currentView.getViewId().getId() + ":" + currentView.getViewId().getCoordAddress() + "]=> "
                                                + Joiner.on( ", " ).join( joinMembers ) );
       if ( !partMembers.isEmpty( ) ) LOG.info( "Hosts.viewChange(): parted   [" + currentView.getViewId().getId() + ":" + currentView.getViewId().getCoordAddress() + "]=> "
@@ -486,7 +509,17 @@ public class Hosts {
       for ( final Address hostAddress : partedHosts ) {
         LOG.info( "Hosts.viewChange(): -> removed  => " + hostAddress );
       }
-      if ( currentView instanceof MergeView ) this.handleMergeView( ( MergeView ) currentView );
+      if ( !partMembers.isEmpty( ) ) {
+        Threads.lookup( Empyrean.class, Hosts.class, "viewChange" ).submit( PeriodicMembershipChecks.PRUNING );
+      }
+      Collection<Address> joinedHosts = Collections2.filter( allHostAddresses, Predicates.in( joinMembers ) );
+      for ( final Address hostAddress : joinedHosts ) {
+        LOG.info( "Hosts.viewChange(): -> added    => " + hostAddress );
+      }
+      if ( currentView instanceof MergeView ) {
+        this.handleMergeView( ( MergeView ) currentView );
+      } 
+      LOG.info(  printMap( "Hosts.viewChange(after):" ) );
       LOG.info( "Hosts.viewChange(): new view finished." );
     }
 
@@ -518,81 +551,85 @@ public class Hosts {
 
         @Override
         public void run( ) {
-          Map<String, View> partitions = Maps.newHashMap( );
-          View localView = null;
-          for ( View v : ( ( MergeView ) mergeView ).getSubgroups( ) ) {
-            LOG.info( logPrefix( v ) + " localhost-member=" + v.containsMember( Hosts.getLocalGroupAddress( ) )
-                      + "coordinator=[ group=" + v.getViewId( ).getCoordAddress( )
-                      + ", system=" + this.coordinatorAddress
-                      + ", localhost=" + this.coordinator + "]" );
-            LOG.info( logPrefix( v ) + Joiner.on( ", " ).join( v.getMembers( ) ) );
+          try {
+            Map<String, View> partitions = Maps.newHashMap( );
+            View localView = null;
+            for ( View v : ( ( MergeView ) mergeView ).getSubgroups( ) ) {
+              LOG.info( logPrefix( v ) + " localhost-member=" + v.containsMember( Hosts.getLocalGroupAddress( ) )
+                        + ", coordinator=[ group=" + v.getViewId( ).getCoordAddress( )
+                        + ", system=" + this.coordinatorAddress
+                        + ", localhost=" + this.coordinator + "]" );
+              LOG.info( logPrefix( v ) + Joiner.on( ", " ).join( v.getMembers( ) ) );
 
-            /**
-             * If this subgroup/partiton is not one we are a member of then sync the state from the coordinator, i.e. {@code org.jgroups.View#getMembers()#firstElement()} is the coordinator.
-             */
-            if ( !v.containsMember( Hosts.getLocalGroupAddress( ) ) ) {
+              /**
+               * If this subgroup/partiton is not one we are a member of then sync the state from the coordinator, i.e. {@code org.jgroups.View#getMembers()#firstElement()} is the coordinator.
+               */
+              Address viewCoordinator = v.getMembers().firstElement();
+              if ( viewCoordinator.equals( Hosts.getLocalGroupAddress( ) ) ) {
+                localView = v;
+              }
               try {
                 HostManager.getMembershipChannel().getState( v.getMembers().firstElement(), 0L );
               } catch ( Exception e ) {
                 LOG.error( logPrefix( v ) + " failed to merge partition state: " + e.getMessage() );
                 Logs.extreme().error( e, e );
               }
-            } else {
-              localView = v;
-            }
 
-            /**
-             * Make a map of all group members and their views
-             */
-            for ( Address addr : v.getMembers() ) {
-              partitions.put( addr.toString(), v );
+              /**
+               * Make a map of all group members and their views
+               */
+              for ( Address addr : v.getMembers() ) {
+                partitions.put( addr.toString(), v );
+              }
             }
-          }
-          /**
-           * At this point local state is up-to-date and only CLCs need to proceed
-           */
-          if ( BootstrapArgs.isCloudController( ) ) {
-            boolean partitioned = false;
             /**
-             * Check if any DB was partitioned from the local view.
+             * At this point local state is up-to-date and only CLCs need to proceed
              */
-            Set<View> dbViews = Sets.newHashSet( );//used only for logging
-            for ( Host db : Hosts.listDatabases() ) {
-              View dbView = partitions.get( db.getDisplayName( ) );
-              if ( !dbView.equals( localView ) ) {
+            if ( BootstrapArgs.isCloudController( ) ) {
+              boolean partitioned = false;
+              /**
+               * Check if any DB was partitioned from the local view.
+               */
+              Set<View> dbViews = Sets.newHashSet( );//used only for logging
+              for ( Host db : Hosts.listDatabases() ) {
+                View dbView = partitions.get( db.getDisplayName( ) );
+                if ( !dbView.equals( localView ) ) {
+                  partitioned = true;
+                }
+                dbViews.add( dbView );
+              }
+              /**
+               * Check to ensure that if this host was not the original coordinator it isn't restarted as the coordinator.
+               */
+              Host newCoordinator = Coordinator.INSTANCE.get( );
+              if ( !coordinatorAddress.equals( newCoordinator.getDisplayName() ) ) {
                 partitioned = true;
               }
-              dbViews.add( dbView );
-            }
-            /**
-             * Check to ensure that if this host was not the original coordinator it isn't restarted as the coordinator.
-             */
-            Host newCoordinator = Coordinator.INSTANCE.get( );
-            if ( !coordinatorAddress.equals( newCoordinator.getDisplayName() ) ) {
-              partitioned = true;
-            }
-            
-            if ( !partitioned ) {//no partition, keep going ==> happy time.
-              return;
-            } else if ( !newCoordinator.isLocalHost( ) && this.coordinator ) {//was coordinator, am not now ==> failstop
-              LOG.error( "PARTITION FAIL-STOP:  Possibility for inconsistency detected for Host: " + Hosts.localHost() );
-              LOG.error( "PARTITION FAIL-STOP: " + printMap( ) );
-              Databases.Locks.PARTITIONED.create( logPrefix( localView ) + " found partitioned database in subgroup views: " + Joiner.on( ", " ).join( dbViews ) );
-              Databases.Locks.PARTITIONED.failStop( );
-            } else if ( newCoordinator.isLocalHost( ) && this.coordinator ) {//was coordinator and continue to be ==> backup and keep going
-              LOG.error( "PARTITION CONTINUE:  Possibility for inconsistency detected for hosts in the following views: " + Joiner.on( ", " ).join( dbViews ) );
-            } else if ( !newCoordinator.isLocalHost( ) && !this.coordinator ) {//wasn't coordinator, still am not AND someone else is ==> restart to resync data
-              LOG.error( "PARTITION RESTART:  Possibility for stale data copy detected for Host: " + Hosts.localHost() );
-              LOG.error( "PARTITION RESTART: " + printMap( ) );
-              Databases.Locks.PARTITIONED.create( logPrefix( localView ) + " found different coordinator " + newCoordinator );
-              Databases.Locks.PARTITIONED.failStop( );
+              
+              if ( !partitioned ) {//no partition, keep going ==> happy time.
+                return;
+              } else if ( !newCoordinator.isLocalHost( ) && this.coordinator ) {//was coordinator, am not now ==> failstop
+                LOG.error( "PARTITION FAIL-STOP:  Possibility for inconsistency detected for Host: " + Hosts.localHost() );
+                LOG.error( "PARTITION FAIL-STOP: " + printMap( "Hosts.handleMergeView():" ) );
+                Databases.Locks.PARTITIONED.create( logPrefix( localView ) + " found partitioned database in subgroup views: " + Joiner.on( ", " ).join( dbViews ) );
+                Databases.Locks.PARTITIONED.failStop( );
+              } else if ( newCoordinator.isLocalHost( ) && this.coordinator ) {//was coordinator and continue to be ==> backup and keep going
+                LOG.error( "PARTITION CONTINUE:  Possibility for inconsistency detected for hosts in the following views: " + Joiner.on( ", " ).join( dbViews ) );
+              } else if ( !newCoordinator.isLocalHost( ) && !this.coordinator ) {//wasn't coordinator, still am not AND someone else is ==> restart to resync data
+                LOG.error( "PARTITION RESTART:  Possibility for stale data copy detected for Host: " + Hosts.localHost() );
+                LOG.error( "PARTITION RESTART: " + printMap( "Hosts.handleMergeView():" ) );
+                Databases.Locks.PARTITIONED.create( logPrefix( localView ) + " found different coordinator " + newCoordinator );
+                Databases.Locks.PARTITIONED.failStop( );
 //              SystemBootstrapper.restart( );
-            } else if ( newCoordinator.isLocalHost( ) && !this.coordinator ) {//wasn't coordinator, but somehow am now (wtf?) ==> pretty sure this is badness ==> failstop
-              LOG.error( "PARTITION FAIL-STOP:  Possibility for inconsistency detected for Host: " + Hosts.localHost() );
-              LOG.error( "PARTITION FAIL-STOP: " + printMap( ) );
-              Databases.Locks.PARTITIONED.create( logPrefix( localView ) + " found partitioned database in subgroup views: " + Joiner.on( ", " ).join( dbViews ) );
-              Databases.Locks.PARTITIONED.failStop( );
+              } else if ( newCoordinator.isLocalHost( ) && !this.coordinator ) {//wasn't coordinator, but somehow am now (wtf?) ==> pretty sure this is badness ==> failstop
+                LOG.error( "PARTITION FAIL-STOP:  Possibility for inconsistency detected for Host: " + Hosts.localHost() );
+                LOG.error( "PARTITION FAIL-STOP: " + printMap( "Hosts.handleMergeView():" ) );
+                Databases.Locks.PARTITIONED.create( logPrefix( localView ) + " found partitioned database in subgroup views: " + Joiner.on( ", " ).join( dbViews ) );
+                Databases.Locks.PARTITIONED.failStop( );
+              }
             }
+          } catch ( Exception ex ) {
+            LOG.error( ex , ex );
           }
         }
 
@@ -1005,7 +1042,7 @@ public class Hosts {
         Timers.loggingWrapper( runMap, hostMap ).call( );
 
         /** initialize distributed system host state **/
-        LOG.info( "Initial view: " + HostMapStateListener.INSTANCE.printMap( ) );
+        LOG.info( "Initial view: " + HostMapStateListener.INSTANCE.printMap( "Hosts.load():" ) );
         LOG.info( "Searching for potential coordinator: " + Hosts.getCoordinator( ) );
         Hosts.Coordinator.INSTANCE.await( );
         Coordinator.INSTANCE.initialize( hostMap.values( ) );
@@ -1014,7 +1051,7 @@ public class Hosts {
         /** create host entry for localhost **/
         LOG.info( "Created local host entry: " + Hosts.localHost( ) );
         hostMap.addNotifier( HostMapStateListener.INSTANCE );
-        LOG.info( "System view: " + HostMapStateListener.INSTANCE.printMap( ) );
+        LOG.info( "System view: " + HostMapStateListener.INSTANCE.printMap( "Hosts.load():" ) );
         UpdateEntry.INSTANCE.apply( Hosts.localHost( ) );
         LOG.info( "System coordinator: " + Hosts.getCoordinator( ) );
         //TODO:GRZE:enable this
@@ -1460,6 +1497,7 @@ public class Hosts {
       while ( list( FILTER_BOOTED_SYNCED_DBS ).isEmpty( ) ) {
         TimeUnit.SECONDS.sleep( 3 );//GRZE: db state check sleep time
         LOG.info( "Waiting for system view with database..." );
+        LOG.info( HostMapStateListener.INSTANCE.printMap( "Hosts.awaitDatabases():" ) );
       }
       if ( Databases.shouldInitialize( ) ) {
         doInitialize( );

@@ -487,74 +487,41 @@ int shutdown_then_destroy_domain(const char *instanceId)
 
 //!
 //! finds instance by ID and destroys it on the hypervisor
-//! NOTE: this must be called with inst_sem semaphore held
 //!
-//! @param[in]  nc_state a pointer to the NC state structure
-//! @param[in]  pMeta a pointer to the node controller (NC) metadata structure
 //! @param[in]  instanceId the instance identifier string (i-XXXXXXXX)
-//! @param[in]  force if set to 0 will force the termination of an instance.
-//! @param[out] instance_p a pointer to the instance matching the input instance identifier
 //!
 //! @return EUCA_OK on success or proper error code. Known error code returned include: EUCA_NOT_FOUND_ERROR.
 //!
-int find_and_terminate_instance(struct nc_state_t *nc_state, ncMetadata * pMeta, char *instanceId, int force, ncInstance ** instance_p)
+int find_and_terminate_instance(char *instanceId)
 {
-    ncInstance *instance = NULL;
+    char state = 0;
     int err = 0;
-    int i = 0;
 
-    instance = find_instance(&global_instances, instanceId);
-    if (instance == NULL)
-        return EUCA_NOT_FOUND_ERROR;
-    *instance_p = instance;
-
-    // detach all attached volumes
-    for (i = 0; i < EUCA_MAX_VOLUMES; ++i) {
-        ncVolume *volume = &instance->volumes[i];
-        if (!is_volume_used(volume))
-            continue;
-
-        int ret;
-        LOGINFO("[%s] detaching volume %s, force=%d on termination\n", instanceId, volume->volumeId, force);
-        if (nc_state->H->doDetachVolume) {
-            ret = nc_state->H->doDetachVolume(nc_state, pMeta, instanceId, volume->volumeId, volume->attachmentToken, volume->localDevReal, 0, 0);
-        } else {
-            ret = nc_state->D->doDetachVolume(nc_state, pMeta, instanceId, volume->volumeId, volume->attachmentToken, volume->localDevReal, 0, 0);
+    { // ensure the instance is known and save its last state on the stack
+        sem_p(inst_sem);
+        ncInstance * instance = find_instance(&global_instances, instanceId);
+        if (instance == NULL) {
+            sem_v(inst_sem);
+            return EUCA_NOT_FOUND_ERROR;
         }
-
-        // do our best to detach, then proceed
-        if ((ret != EUCA_OK)) {
-            if (nc_state->H->doDetachVolume) {
-                ret = nc_state->H->doDetachVolume(nc_state, pMeta, instanceId, volume->volumeId, volume->attachmentToken, volume->localDevReal, 1, 0);
-            } else {
-                ret = nc_state->D->doDetachVolume(nc_state, pMeta, instanceId, volume->volumeId, volume->attachmentToken, volume->localDevReal, 1, 0);
-            }
-        }
-
-        if ((ret != EUCA_OK) && (force == 0)) {
-            LOGWARN("[%s] detaching of volume on terminate failed\n", instanceId);
-            // return ret;
-        }
+        state = instance->state;
+        sem_v(inst_sem);
     }
 
     // try stopping the domain
-    virConnectPtr conn = lock_hypervisor_conn();    //! @TODO get rid of this check, since shutdown_then_destroy_domain() implements it, too
-    if (conn) {
-        virDomainPtr dom = virDomainLookupByName(conn, instanceId);
-        virDomainFree(dom);
-        unlock_hypervisor_conn();
-        if (dom) {
-            err = shutdown_then_destroy_domain(instanceId);
-            if (err == 0) {
-                LOGINFO("[%s] instance terminated\n", instanceId);
-            } else {
-                LOGERROR("[%s] failed to terminate instance\n", instanceId);
-            }
+    err = shutdown_then_destroy_domain(instanceId);
+
+    // log the outcome at the appropriate log level
+    if (err == 0) {
+        LOGINFO("[%s] instance terminated\n", instanceId);
+    } else {
+        if (state != BOOTING && state != STAGING && state != TEARDOWN) {
+            LOGERROR("[%s] failed to terminate instance\n", instanceId);
         } else {
-            if (instance->state != BOOTING && instance->state != STAGING && instance->state != TEARDOWN)
-                LOGWARN("[%s] instance to be terminated not running on hypervisor\n", instanceId);
+            LOGDEBUG("[%s] failed to terminate instance\n", instanceId);
         }
     }
+    
     return EUCA_OK;
 }
 
@@ -565,10 +532,10 @@ int find_and_terminate_instance(struct nc_state_t *nc_state, ncMetadata * pMeta,
 //! @param[in]  pMeta a pointer to the node controller (NC) metadata structure
 //! @param[in]  instanceId the instance identifier string (i-XXXXXXXX)
 //! @param[in]  force if set to 1 will force the termination of the instance
-//! @param[out] shutdownState the instance state code after the call to find_and_terminate_instance() if successful
-//! @param[out] previousState the instance state code after the call to find_and_terminate_instance() if successful
+//! @param[out] shutdownState hard-coded to 0 on success
+//! @param[out] previousState hard-coded to 0 on success
 //!
-//! @return EUCA_OK on success or proper error code from find_and_terminate_instance().
+//! @return EUCA_OK if instanceId is valid and the termination thread could be spawned
 //!
 //! @see find_and_terminate_instance()
 //!
@@ -579,35 +546,37 @@ static int doTerminateInstance(struct nc_state_t *nc, ncMetadata * pMeta, char *
     char resourceName[1][MAX_SENSOR_NAME_LEN] = { {0} };
     char resourceAlias[1][MAX_SENSOR_NAME_LEN] = { {0} };
 
-    sem_p(hyp_sem);                    // we serialize all hypervisor calls and sensor_refresh_resources() may ultimately call the hypervisor
+    { // find the instance to ensure we know about it
+        sem_p(inst_sem);
+        instance = find_instance(&global_instances, instanceId);
+        sem_v(inst_sem);
+    }
+
+    if (instance == NULL)
+        return EUCA_NOT_FOUND_ERROR;
+
+    // refresh stats so latest instance measurements are captured before it disappears
     euca_strncpy(resourceName[0], instanceId, MAX_SENSOR_NAME_LEN);
-    sensor_refresh_resources(resourceName, resourceAlias, 1);   // refresh stats so latest instance measurements are captured before it disappears
+    sem_p(hyp_sem);                    // we serialize all hypervisor calls and sensor_refresh_resources() may ultimately call the hypervisor
+    sensor_refresh_resources(resourceName, resourceAlias, 1);
     sem_v(hyp_sem);
 
-    sem_p(inst_sem);
-    err = find_and_terminate_instance(nc, pMeta, instanceId, force, &instance);
-    if (err != EUCA_OK) {
-        copy_instances();
-        sem_v(inst_sem);
-        return err;
+    // do the shutdown in a thread
+    pthread_attr_t tattr;
+    pthread_t tid;
+    pthread_attr_init(&tattr);
+    pthread_attr_setdetachstate(&tattr, PTHREAD_CREATE_DETACHED);
+    void * param = (void *)strdup(instanceId);
+    if (pthread_create(&tid, &tattr, terminating_thread, (void *)param) != 0) {
+        LOGERROR("[%s] failed to start VM termination thread\n", instanceId);
+    } else {
+        // previous and shutdown state are ignored by CC anyway
+        *previousState = 0;
+        *shutdownState = 0;
+        err = EUCA_OK;
     }
-    // change the state and let the monitoring_thread clean up state
-    if (instance->state != TEARDOWN && instance->state != CANCELED) {
-        // do not leave TEARDOWN (cleaned up) or CANCELED (already trying to terminate)
-        if (instance->state == STAGING) {
-            change_state(instance, CANCELED);
-        } else {
-            change_state(instance, SHUTOFF);
-        }
-    }
-    copy_instances();
-    sem_v(inst_sem);
 
-    //! @todo Chuck needs to find out if this should be moved at the begining.
-    *previousState = instance->stateCode;
-    *shutdownState = instance->stateCode;
-
-    return EUCA_OK;
+    return err;
 }
 
 //!
@@ -1212,6 +1181,8 @@ static int doDetachVolume(struct nc_state_t *nc, ncMetadata * pMeta, char *insta
     char scUrl[512];
     char *connectionString = NULL;
     instance_states lastState = NO_STATE;
+    char *remoteDevStr = NULL;
+    ncVolume *volume = NULL;
 
     if (!strcmp(nc->H->name, "xen")) {
         tagBuf = NULL;
@@ -1247,8 +1218,8 @@ static int doDetachVolume(struct nc_state_t *nc, ncMetadata * pMeta, char *insta
         // save current state on the stack
         lastState = instance->state;
 
-        // mark volume as 'detaching'
-        ncVolume *volume = save_volume(instance, volumeId, attachmentToken, NULL, localDevName, localDevReal, VOL_STATE_DETACHING);
+        // mark volume as 'detaching', do not over-write the attachment token used for
+        volume = save_volume(instance, volumeId, NULL, NULL, localDevName, localDevReal, VOL_STATE_DETACHING);
         if (!volume) {
             LOGERROR("[%s][%s] failed to update the volume record, aborting volume detachment\n", instanceId, volumeId);
             if (grab_inst_sem)
@@ -1259,15 +1230,13 @@ static int doDetachVolume(struct nc_state_t *nc, ncMetadata * pMeta, char *insta
         copy_instances();
 
         // lookup the volume info locally for detachment
-        if (volume->connectionString[0] == '\0') {
+        if (volume->connectionString[0] == '\0' || volume->attachmentToken == NULL || volume->attachmentToken[0] == '\0') {
             LOGERROR("[%s][%s] failed to find the local volume attachment record, aborting volume detachment\n", instanceId, volumeId);
             if (grab_inst_sem)
                 sem_v(inst_sem);
             return EUCA_ERROR;
         }
         // do iscsi connect shellout if remoteDev is an iSCSI target
-        char *remoteDevStr = NULL;
-
         // get credentials, decrypt them
         // (used to have check if iscsi here, not necessary with AOE deprecation.)
         remoteDevStr = get_volume_local_device(volume->connectionString);
@@ -1387,8 +1356,8 @@ disconnect:
             ret = EUCA_ERROR;
         } else {
             LOGTRACE("[%s][%s] Using SC Url: %s\n", instanceId, volumeId, scUrl);
-
-            if (disconnect_ebs_volume(scUrl, nc->config_use_ws_sec, nc->config_sc_policy_file, attachmentToken, connectionString, nc->ip, nc->iqn) != EUCA_OK) {
+            //Use the volume attachment token from the initial attachment instead of the one that came over the wire. This ensures parity between attach/detach.
+            if (disconnect_ebs_volume(scUrl, nc->config_use_ws_sec, nc->config_sc_policy_file, volume->attachmentToken, connectionString, nc->ip, nc->iqn) != EUCA_OK) {
                 LOGERROR("[%s][%s] failed to disconnect iscsi target\n", instanceId, volumeId);
                 if (!force)
                     ret = EUCA_ERROR;
@@ -1542,7 +1511,7 @@ static int doCreateImage(struct nc_state_t *nc, ncMetadata * pMeta, char *instan
     if (params == NULL)
         return cleanup_createImage_task(instance, params, NO_STATE, CREATEIMAGE_FAILED);
 
-    params->instance = instance;
+    params->instance = instance; //! @TODO pass instanceId instead
     params->volumeId = strdup(volumeId);
     params->remoteDev = strdup(remoteDev);
 
@@ -1551,14 +1520,15 @@ static int doCreateImage(struct nc_state_t *nc, ncMetadata * pMeta, char *instan
     instance->createImageTime = time(NULL);
     change_state(instance, CREATEIMAGE_SHUTDOWN);
     change_createImage_state(instance, CREATEIMAGE_IN_PROGRESS);
+    sem_v(inst_sem);
 
-    int err = find_and_terminate_instance(nc, pMeta, instanceId, 0, &instance);
+    int err = find_and_terminate_instance(instanceId);
     if (err != EUCA_OK) {
-        copy_instances();
-        sem_v(inst_sem);
         EUCA_FREE(params);
         return err;
     }
+    
+    sem_p(inst_sem);
     copy_instances();
     sem_v(inst_sem);
 
@@ -1920,8 +1890,11 @@ static int doBundleInstance(struct nc_state_t *nc, ncMetadata * pMeta, char *ins
     instance->bundlingTime = time(NULL);
     change_state(instance, BUNDLING_SHUTDOWN);
     change_bundling_state(instance, BUNDLING_IN_PROGRESS);
+    sem_v(inst_sem);
 
-    int err = find_and_terminate_instance(nc, pMeta, instanceId, 0, &instance);
+    int err = find_and_terminate_instance(instanceId);
+
+    sem_p(inst_sem);
     copy_instances();
     sem_v(inst_sem);
 

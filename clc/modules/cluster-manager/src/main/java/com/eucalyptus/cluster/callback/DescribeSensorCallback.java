@@ -29,6 +29,9 @@ import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Set;
 import java.util.concurrent.ConcurrentMap;
+
+import javax.annotation.Nullable;
+
 import com.eucalyptus.cloudwatch.CloudWatch;
 import com.eucalyptus.cloudwatch.Dimension;
 import com.eucalyptus.cloudwatch.Dimensions;
@@ -299,7 +302,7 @@ public class DescribeSensorCallback extends
     try {
       final Iterable<String> uuidList =
           Iterables.transform(VmInstances.list(VmState.RUNNING), VmInstances.toInstanceUuid());
-      LOG.debug("DescribeSensorCallback (fire) called at " + new Date());
+      LOG.trace("DescribeSensorCallback (fire) called at " + new Date());
 
       // cloudwatch metric caches
       final ConcurrentMap<String, DiskReadWriteMetricTypeCache> metricCacheMap = Maps.newConcurrentMap();
@@ -314,7 +317,6 @@ public class DescribeSensorCallback extends
         for (final MetricsResourceType metricType : sensorData.getMetrics()) {
           for (final MetricCounterType counterType : metricType.getCounters()) {
             for (final MetricDimensionsType dimensionType : counterType.getDimensions()) {
-
               // find and fire most recent value for metric/dimension
               final List<MetricDimensionsValuesType> values =
                   Lists.newArrayList(dimensionType.getValues());
@@ -326,19 +328,23 @@ public class DescribeSensorCallback extends
                 Collections.sort(values, Ordering.natural().onResultOf(GetTimestamp.INSTANCE));
 
                 for (MetricDimensionsValuesType value : values) {
-                  LOG.debug("ResourceUUID: " + sensorData.getResourceUuid());
-                  LOG.debug("ResourceName: " + sensorData.getResourceName());
-                  LOG.debug("Metric: " + metricType.getMetricName());
-                  LOG.debug("Dimension: " + dimensionType.getDimensionName());
-                  LOG.debug("Timestamp: " + value.getTimestamp());
-                  LOG.debug("Value: " + value.getValue());
+                  LOG.trace("ResourceUUID: " + sensorData.getResourceUuid());
+                  LOG.trace("ResourceName: " + sensorData.getResourceName());
+                  LOG.trace("Metric: " + metricType.getMetricName());
+                  LOG.trace("Dimension: " + dimensionType.getDimensionName());
+                  LOG.trace("Timestamp: " + value.getTimestamp());
+                  LOG.trace("Value: " + value.getValue());
                   final Long currentTimeStamp = value.getTimestamp().getTime();
                   final Double currentValue = value.getValue();
+                  if (currentValue == null) {
+                    LOG.debug("Event received with null 'value', skipping for cloudwatch");
+                    continue;
+                  }
                   ec2DiskMetricCache.initializeMetrics(sensorData.getResourceUuid(), sensorData.getResourceName(), currentTimeStamp); // Put a place holder in in case we don't have any non-EBS volumes
                   boolean isEbsMetric = dimensionType.getDimensionName().startsWith("vol-");
                   boolean isEc2DiskMetric = !isEbsMetric && EC2_DISK_METRICS.contains(metricType.getMetricName().replace("Volume", "Disk"));
                   
-                  if (isEbsMetric || isEc2DiskMetric) {
+                  if (isEbsMetric || !isEc2DiskMetric) {
                     sendSystemMetric(new Supplier<InstanceUsageEvent>() {
                       @Override
                       public InstanceUsageEvent get() {
@@ -379,6 +385,10 @@ public class DescribeSensorCallback extends
               if (!values.isEmpty()) {
                 final MetricDimensionsValuesType latestValue = Iterables.getLast(values);
                 final Double usageValue = latestValue.getValue();
+                if (usageValue == null) {
+                  LOG.debug("Event received with null 'value', skipping for reporting");
+                  continue;
+                }
                 final Long usageTimestamp = latestValue.getTimestamp().getTime();
                 final long sequenceNumber = dimensionType.getSequenceNum() + (values.size() - 1);
                 fireUsageEvent( new Supplier<InstanceUsageEvent>(){
@@ -399,8 +409,20 @@ public class DescribeSensorCallback extends
           }
         }
       }
-      for (Supplier<InstanceUsageEvent> ec2DiskMetric: ec2DiskMetricCache.getMetrics()) {
-        sendSystemMetric(ec2DiskMetric);
+      Collection<Supplier<InstanceUsageEvent>> ec2DiskMetrics = ec2DiskMetricCache.getMetrics();
+      List<Supplier<InstanceUsageEvent>> ec2DiskMetricsSorted = Lists.newArrayList(ec2DiskMetrics);
+      Collections.sort(ec2DiskMetricsSorted, Ordering.natural().onResultOf(new Function<Supplier<InstanceUsageEvent>, Long>() {
+        @Override
+        @Nullable
+        public Long apply(@Nullable Supplier<InstanceUsageEvent> supplier) {
+          return supplier.get().getValueTimestamp();
+        }}));
+      for (Supplier<InstanceUsageEvent> ec2DiskMetric: ec2DiskMetricsSorted) {
+        try {
+          sendSystemMetric(ec2DiskMetric);
+        } catch (Exception ex) {
+          LOG.debug("Unable to send system metric " +ec2DiskMetric, ex);
+        }
       }
     } catch (Exception ex) {
       LOG.debug("Unable to fire describe sensors call back", ex);
@@ -519,6 +541,7 @@ public class DescribeSensorCallback extends
   private void sendSystemMetric(Supplier<InstanceUsageEvent> cloudWatchSupplier) {
     InstanceUsageEvent event = null;
     event = cloudWatchSupplier.get();
+    LOG.trace(event);
 
     final VmInstance instance = VmInstances.lookup(event.getInstanceId());
 

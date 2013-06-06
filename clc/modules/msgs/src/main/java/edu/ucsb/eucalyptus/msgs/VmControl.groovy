@@ -250,9 +250,9 @@ public class RunInstancesType extends VmControlMessage {
   String privateIpAddress = "";
   String clientToken;
   @HttpParameterMapping(parameter = "IamInstanceProfile.Arn")
-  String iamInstanceProfileArn = "";
+  String iamInstanceProfileArn
   @HttpParameterMapping(parameter = "IamInstanceProfile.Name")
-  String iamInstanceProfileName = "";
+  String iamInstanceProfileName
   ArrayList<Integer> networkIndexList = [];
   String privateMacBase;
   String publicMacBase;

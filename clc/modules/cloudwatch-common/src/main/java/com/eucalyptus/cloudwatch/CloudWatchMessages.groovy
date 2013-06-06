@@ -60,6 +60,10 @@ public class Dimensions extends EucalyptusData {
   public Dimensions( Dimension dimension ) {
     member.add( dimension  )
   }
+  @Override
+  public String toString() {
+    return "Dimensions [member=" + member + "]";
+  }
 }
 public class PutMetricDataType extends CloudWatchMessage {
   String namespace;
@@ -132,6 +136,10 @@ public class Dimension extends EucalyptusData {
     this.name = name
     this.value = value
   }
+  @Override
+  public String toString() {
+    return "Dimension [name=" + name + ", value=" + value + "]";
+  }
 }
 public class SetAlarmStateResponseType extends CloudWatchMessage {
   public SetAlarmStateResponseType() {  }
@@ -202,6 +210,13 @@ public class MetricDatum extends EucalyptusData {
   StatisticSet statisticValues;
   String unit;
   public MetricDatum() {  }
+  @Override
+  public String toString() {
+    return "MetricDatum [metricName=" + metricName + ", dimensions="
+        + dimensions + ", timestamp=" + timestamp + ", value=" + value
+        + ", statisticValues=" + statisticValues + ", unit=" + unit + "]";
+  }
+
 }
 
 public class StatisticSet extends EucalyptusData {
@@ -210,6 +225,11 @@ public class StatisticSet extends EucalyptusData {
   Double minimum;
   Double maximum;
   public StatisticSet() {  }
+  @Override
+  public String toString() {
+    return "StatisticSet [sampleCount=" + sampleCount + ", sum=" + sum
+        + ", minimum=" + minimum + ", maximum=" + maximum + "]";
+  }
 }
 public class Datapoints extends EucalyptusData {
   public Datapoints() {  }

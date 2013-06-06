@@ -574,25 +574,39 @@ public class BlockStorage {
 		EntityWrapper<VolumeInfo> db = StorageProperties.getEntityWrapper();
 		VolumeInfo volumeInfo = new VolumeInfo();
 		volumeInfo.setVolumeId(volumeId);
-		List<VolumeInfo> volumeList = db.query(volumeInfo);
-
-		if(volumeList.size() > 0) {
-			VolumeInfo foundVolume = volumeList.get(0);
+		try {
+			VolumeInfo foundVolume = db.getUnique(volumeInfo);			
 			//check its status
 			String status = foundVolume.getStatus();
-			if(status.equals(StorageProperties.Status.available.toString()) || 
+			if(status == null) {			
+				throw new EucalyptusCloudException("Invalid volume status: null");
+			} else if(status.equals(StorageProperties.Status.available.toString()) || 
 					status.equals(StorageProperties.Status.failed.toString())) {
+				//Set status, for cleanup thread to find.
+				LOG.trace("Marking volume " + volumeId + " for deletion");
 				foundVolume.setStatus(StorageProperties.Status.deleting.toString());
+			} else if(status.equals(StorageProperties.Status.deleting) || status.equals(StorageProperties.Status.deleted.toString()) ) {
+				LOG.debug("Volume " + volumeId + " already in deleting/deleted. No-op for delete request.");
+			} else {
+				throw new EucalyptusCloudException("Cannot delete volume in state: " +  status + ". Please retry later");
 			}
 			// Delete operation should be idempotent as multiple attempts can be made to delete the same volume 
 			// Set the response element to true if the volume entity is found. EUCA-6093
 			reply.set_return(Boolean.TRUE);
-		} else {
+			db.commit();
+		} catch(NoSuchElementException e) {
 			// Set the response element to false if the volume entity does not exist in the SC database
 			LOG.error("Unable to find volume in SC database: " + volumeId);
-			reply.set_return(Boolean.FALSE);
+			throw new EucalyptusCloudException("Volume record not found",e);
+		} catch(EucalyptusCloudException e) {
+			LOG.error("Error marking volume " + volumeId + " for deletion: " + e.getMessage());
+			throw e;
+		} catch(final Throwable e) {
+			LOG.error("Exception looking up volume: " + volumeId, e);
+			throw new EucalyptusCloudException(e);
+		} finally {
+			db.rollback();
 		}
-		db.commit();
 		return reply;
 	}
 
@@ -1106,7 +1120,7 @@ public class BlockStorage {
 		for(VolumeInfo volumeInfo: volumeInfos) {
 			volumes.add(convertVolumeInfo(volumeInfo));
 			if(volumeInfo.getStatus().equals(StorageProperties.Status.failed.toString())) {
-				LOG.warn( "Failed volume, removing it: " + volumeInfo.getVolumeId() );
+				LOG.warn( "Failed volume, cleaning it: " + volumeInfo.getVolumeId() );
 				checker.cleanFailedVolume(volumeInfo.getVolumeId());
 			} 
 		}
@@ -1248,8 +1262,7 @@ public class BlockStorage {
 		volume.setSnapshotId(volInfo.getSnapshotId());
 		VolumeToken tok = volInfo.getCurrentValidToken();
 		if(tok != null) {
-			//TODO: zhill, encrypt token here? with cloud cert?
-			volume.setActualDeviceName(tok.getToken());
+			volume.setActualDeviceName(BlockStorageUtil.encryptForNode(tok.getToken())); 
 		}else{
 			//use 'invalid' to indicate no export? invalid seems okay since there is no valid device unless a token is valid
 			volume.setActualDeviceName("invalid");			
@@ -1862,29 +1875,19 @@ public class BlockStorage {
 							LOG.error(e, e);
 							continue;
 						}
-						//db = StorageProperties.getEntityWrapper();
-						//VolumeInfo foundVolume;
-						//try {
-						//foundVolume = db.getUnique(new VolumeInfo(volumeId));
 						vol.setStatus(StorageProperties.Status.deleted.toString());
-						//db.commit();
 						EucaSemaphoreDirectory.removeSemaphore(volumeId);
-						//} catch (EucalyptusCloudException e) {
-						//db.rollback();
-						//}
 						db.commit();
 					} catch(Exception e) {
-						
+						LOG.error("Error deleting volume " + vol.getVolumeId() + ": " + e.getMessage());
+						LOG.debug("Exception during deleting volume " + vol.getVolumeId() + ".", e);
 					} finally {
 						db.rollback();
 					}
 				}
-				//db.commit();
 			} catch(Exception e) {
 				LOG.error("Failed during delete task.",e);				
-			} finally {
-				//db.rollback();
-			}
+			} 
 		}
 	}
 	

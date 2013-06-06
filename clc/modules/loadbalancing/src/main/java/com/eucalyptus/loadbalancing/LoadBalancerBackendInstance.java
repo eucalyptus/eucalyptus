@@ -348,7 +348,7 @@ public class LoadBalancerBackendInstance extends UserMetadata<LoadBalancerBacken
 		@Override
 		public void fireEvent(ClockTick event) {
 			if (!( Bootstrap.isFinished() &&
-			          Topology.isEnabledLocally( LoadBalancing.class ) &&
+			          Topology.isEnabledLocally( Eucalyptus.class ) &&  // TODO should be LoadBalancing.class
 			          Topology.isEnabled( Eucalyptus.class ) )) 
 				return;
 		
