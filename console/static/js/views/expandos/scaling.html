@@ -42,15 +42,26 @@
   </div>
   <div id="tabs-3" class="tab">
     <ul class="scaling-group-policies-expanded clearfix">
-		  <li><div class="expanded-label" data-msg="scaling_table_expanded_scaling_policy_default_cooldown"><span class="expanded-value" data-text="group.default_cooldown"></span></div></li>
+      <li><div class="expanded-label" data-msg="scaling_table_expanded_scaling_policy_default_cooldown"><div class="expanded-value" data-text="group.default_cooldown"></div></div></li>
     </ul>
     <ul class="scaling-group-policies-expanded clearfix">
 		<li>
 		<table>
-			<thead><tr><th data-msg="scaling_table_expanded_scaling_policy_name"></th><th data-msg="scaling_table_expanded_scaling_policy_amount"></th><th data-msg="scaling_table_expanded_scaling_policy_measure"></th><th data-msg="scaling_table_expanded_scaling_policy_trigger_metric"></th><th data-msg="scaling_table_expanded_scaling_policy_trigger_threshold"></th></tr>
-			</thead>
+			<thead><tr>
+              <th data-msg="scaling_table_expanded_scaling_policy_name"></th>
+              <th data-msg="scaling_table_expanded_scaling_policy_action"></th>
+              <th data-msg="scaling_table_expanded_scaling_policy_amount"></th>
+              <th data-msg="scaling_table_expanded_scaling_policy_measure"></th>
+              <th data-msg="scaling_table_expanded_scaling_policy_alarm"></th>
+            </tr></thead>
 			<tbody>
-				<tr data-each-item="items"><td><span _data-text="item.unknownVariable"></span></td><td><span _data-text="item.unknownVariable"></span><td><span _data-text="item.unknownVariable"></span></td><td><span _data-text="item.unknownVariable"></span></td><td><span _data-text="item.unknownVariable"></span></td></tr>
+              <tr data-each-item="policies">
+                <td><span data-text="item.name"></span></td>
+                <td><span data-text="item.adjustment_type"></span></td>
+                <td><span data-text="item.scaling_adjustment"></span></td>
+                <td><span data-text="item.cooldown"></span></td>
+                <td><span data-text="item.alarms.0.alarm_name"></span></td>
+              </tr>
 			</tbody>
 		</table>
 		</li>

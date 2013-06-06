@@ -4,6 +4,7 @@ define([
     'sharedtags',
     'models/scalinggrps',
 	'models/scalinginsts',
+	'models/scalingpolicys',
 	'models/volumes',
 	'models/images',
 	'models/launchconfigs',
@@ -25,6 +26,7 @@ function(_, Backbone, tags) {
     var sconfs = [
     ['scalinggrp', 'scalinggroup', 'scalingGroup', 'scalingGroups'],
 	['scalinginst', 'scalinginsts'],
+	['scalingpolicy', 'scalingpolicys'],
 	['volume', 'volumes'],
 	['image', 'images'],
 	['launchconfig', 'launchconfigs', 'launchConfigs'],
