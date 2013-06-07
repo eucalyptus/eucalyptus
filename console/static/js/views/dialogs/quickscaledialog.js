@@ -15,6 +15,10 @@ define([
 
             model.set('size', model.get('instances').length);
 
+            // uncomment to turn min and max into form fields for testing the model bindings
+            // that make min and max accomodating to the value of desired_capacity and so on
+            //model.set('enable_formfields', true);
+
             this.scope = {
                 errors: new Backbone.Model(),
 
@@ -31,7 +35,8 @@ define([
                     click: function() {
                        if (model.isValid()) {
                          original.set(model.toJSON());
-                         original.setDesiredCapacity(original.get('desired_capacity'));
+                         //original.setDesiredCapacity(original.get('desired_capacity'));
+                         original.save();
                          self.close();
                        }
                     }
@@ -54,6 +59,7 @@ define([
                 });
                 self.scope.submitButton.set('disabled', !self.scope.qscale.isValid());
             });
+
 
             this._do_init();
         },
