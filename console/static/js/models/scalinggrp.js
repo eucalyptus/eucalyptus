@@ -6,6 +6,37 @@ define([
 function(EucaModel) {
   var model = EucaModel.extend({
     idAttribute: 'name',
+
+    initialize: function() {
+
+      // bump min and max to contain wherever dc lands
+      this.on('change:desired_capacity', function() {
+        var dc = +this.get('desired_capacity');
+        var min = +this.get('min_size');
+        var max = +this.get('max_size');
+        if (dc > max)
+          this.set('max_size', dc);
+        if (dc < min &&  dc >= 0) 
+          this.set('min_size', dc);
+      });
+
+      // bump dc to within new max
+      this.on('change:max_size', function() {
+        var dc = +this.get('desired_capacity');
+        var max = +this.get('max_size');
+        if (dc > max)
+          this.set('desired_capacity', max);
+      });
+
+      // bump dc to within new min
+      this.on('change:min_size', function() {
+        var dc = +this.get('desired_capacity');
+        var min = +this.get('min_size');
+        if (dc < min && dc >= 0)
+          this.set('desired_capacity', min);
+      });
+ }, 
+
     validation: {
            
             // ====================
@@ -33,13 +64,15 @@ function(EucaModel) {
             },
             desired_capacity: {
               pattern: 'digits',
-              fn:  function(value, attr, customValue){
+              // Commented out because of the above bindings that change min and max to suit desired_capacity.
+              // Essentially there is no more min/max bounds to stay within.
+              /*fn:  function(value, attr, customValue){
                 if(parseInt(value) < parseInt(customValue.min_size)){
                   return attr + ' ' + $.i18n.prop('quick_scale_gt_or_eq') + ' ' + customValue.min_size;
                 }else if(parseInt(value) > parseInt(customValue.max_size)){
                   return attr + ' ' + $.i18n.prop('quick_scale_lt_or_eq') + ' ' + customValue.max_size;
                 }
-              },
+              },*/
               //msg: $.i18n.prop('quick_scale_mustbe_number'),
               required: true
             },
@@ -104,7 +137,8 @@ function(EucaModel) {
 
     sync: function(method, model, options) {
       var collection = this;
-      if (method == 'create') {
+      if (method == 'create' || method == 'update') {
+        var url = method=='create' ? "/autoscaling?Action=CreateAutoScalingGroup" : "/autoscaling?Action=UpdateAutoScalingGroup";
         var name = model.get('name');
         var data = "_xsrf="+$.cookie('_xsrf');
         data += "&AutoScalingGroupName="+name+
@@ -129,16 +163,18 @@ function(EucaModel) {
           data += build_list_params("TerminationPolicies.member.", model.get('termination_policies'));
         $.ajax({
           type:"POST",
-          url:"/autoscaling?Action=CreateAutoScalingGroup",
+          url: url,
           data:data,
           dataType:"json",
           async:true,
           success:
             function(data, textStatus, jqXHR){
               if ( data.results ) {
-                notifySuccess(null, $.i18n.prop('create_scaling_group_run_success', DefaultEncoder().encodeForHTML(name)));
+                var msg = method=='create' ? $.i18n.prop('create_scaling_group_run_success', DefaultEncoder().encodeForHTML(name)) : $.i18n.prop('update_scaling_group_run_success', DefaultEncoder().encodeForHTML(name));
+                notifySuccess(null, msg);
               } else {
-                notifyError($.i18n.prop('create_scaling_group_run_error', DefaultEncoder().encodeForHTML(name)), undefined_error);
+                var msg = method=='create' ? $.i18n.prop('create_scaling_group_run_error', DefaultEncoder().encodeForHTML(name)) : $.i18n.prop('update_scaling_group_run_error', DefaultEncoder().encodeForHTML(name));
+                notifyError(msg, undefined_error);
               }
             },
           error:
