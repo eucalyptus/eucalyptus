@@ -79,7 +79,9 @@ public enum SecurityParameter {
   X_Amz_Algorithm( true ),
   X_Amz_Credential( true ),
   X_Amz_Signature( true ),
-  X_Amz_SignedHeaders( true );
+  X_Amz_SignedHeaders( true ),
+  X_Amz_Security_Token( true ),
+  ;
 
   private final String parameter;
 
