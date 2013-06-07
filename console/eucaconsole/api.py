@@ -273,7 +273,7 @@ class ScaleHandler(BaseAPIHandler):
                                 health_check_type=hc_type, health_check_period=hc_period,
                                 desired_capacity=desired_capacity,
                                 min_size=min_size, max_size=max_size,
-                                termination_policies=termination_policies)
+                                termination_policies=termination_policy)
                 self.user_session.scaling.update_autoscaling_group(group, self.callback)
             elif action == 'CreateLaunchConfiguration':
                 image_id = self.get_argument('ImageId')

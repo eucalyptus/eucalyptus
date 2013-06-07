@@ -164,7 +164,7 @@ class CachingScaleInterface(ScaleInterface):
 
     def update_autoscaling_group(self, as_group, callback=None):
         self.groups.expireCache()
-        params = {'as_group':as_groupaunch_config_name}
+        params = {'as_group':as_group}
         Threads.instance().runThread(self.__update_autoscaling_group_cb__, (params, callback))
 
     def __update_autoscaling_group_cb__(self, kwargs, callback):

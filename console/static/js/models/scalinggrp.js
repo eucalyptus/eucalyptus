@@ -142,7 +142,7 @@ function(EucaModel) {
         var name = model.get('name');
         var data = "_xsrf="+$.cookie('_xsrf');
         data += "&AutoScalingGroupName="+name+
-                "&LaunchConfigurationName="+model.get('launch_config')+
+                "&LaunchConfigurationName="+model.get('launch_config_name')+
                 "&MinSize="+model.get('min_size')+
                 "&MaxSize="+model.get('max_size');
         if (model.get('default_cooldown') != undefined)
