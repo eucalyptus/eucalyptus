@@ -878,6 +878,7 @@ class ComputeHandler(BaseAPIHandler):
             return clc.get_all_security_groups(filters, callback)
         elif action == 'CreateSecurityGroup':
             name = self.get_argument('GroupName')
+            name = base64.b64decode(name)
             desc = self.get_argument('GroupDescription')
             desc = base64.b64decode(desc)
             return clc.create_security_group(name, desc, callback)
