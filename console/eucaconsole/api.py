@@ -125,6 +125,8 @@ class BaseAPIHandler(eucaconsole.BaseHandler):
                     ret = ClcError(500, err.message, None)
                     self.set_status(500);
             self.set_header("Content-Type", "application/json;charset=UTF-8")
+            self.set_header("Cache-control", "no-store")
+            self.set_header("Pragma", "no-cache")
             self.write(json.dumps(ret, cls=self.json_encoder))
             self.finish()
             logging.exception(err)
@@ -142,6 +144,8 @@ class BaseAPIHandler(eucaconsole.BaseHandler):
                     ret = Response(response.data) # wrap all responses in an object for security purposes
                 data = json.dumps(ret, cls=self.json_encoder, indent=2)
                 self.set_header("Content-Type", "application/json;charset=UTF-8")
+                self.set_header("Cache-control", "no-store")
+                self.set_header("Pragma", "no-cache")
                 self.write(data)
                 self.finish()
             except Exception, err:
