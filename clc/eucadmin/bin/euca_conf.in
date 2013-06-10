@@ -812,7 +812,8 @@ class EucaConf(object):
                             'eucadmin.deregistervmwarebroker',
                             'DeregisterVMwareBroker')
         # Make some changes in eucalyptus.conf file
-        self.config.update(ConfigBrokerDereg)
+        if hasattr(self.options, 'deregister_vmwarebroker'):
+            self.config.update(ConfigBrokerDereg)
 
 
     def _sync_node(self, node):

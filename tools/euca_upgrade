@@ -173,7 +173,8 @@ upgrade_db() {
   # This is to deal with possible database connection leaks in the upgrade script
   ulimit -n 65536
 
-  if ! ${UPGRADE_CMD} | tee -a ${UP_LOG} 2>&1; then
+  ${UPGRADE_CMD} | tee -a ${UP_LOG} 2>&1
+  if [ ${PIPESTATUS[0]} -ne 0 ]; then
     echo "Database upgrade failed! Please ${UP_LOG} for details and contact Eucalyptus support for assistance."
     exit 1
   fi

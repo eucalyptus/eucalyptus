@@ -37,7 +37,7 @@ define([
               min: 1,
               max: 1024,
               required: true,
-              msg: window['volume_create_invalid_size']
+              msg: $.i18n.prop('volume_create_invalid_size')
             },
             instance_id: {
               required: false

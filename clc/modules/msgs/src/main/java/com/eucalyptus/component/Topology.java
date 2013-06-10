@@ -198,13 +198,13 @@ public class Topology {
       };
       if ( Hosts.isCoordinator( ) && busy.compareAndSet( false, true ) ) {
         try {
-          Queue.EXTERNAL.enqueue( call );
+          Queue.INTERNAL.enqueue( call );
         } catch ( Exception ex ) {
           busy.set( false );
         }
       } else if ( counter.incrementAndGet( ) % 5 == 0 && busy.compareAndSet( false, true ) ) {
         try {
-          Queue.EXTERNAL.enqueue( call );
+          Queue.INTERNAL.enqueue( call );
         } catch ( Exception ex ) {
           busy.set( false );
         }
@@ -354,17 +354,10 @@ public class Topology {
       @Override
       public Future<ServiceConfiguration> apply( final ServiceConfiguration input ) {
         final Callable<ServiceConfiguration> call = Topology.callable( input, Topology.get( toState ) );
-        if ( Bootstrap.isOperational( ) ) {
-          final Queue workQueue = ( this.serializedStates.contains( toState )
-                                                                             ? Queue.INTERNAL
-                                                                             : Queue.EXTERNAL );
-          return workQueue.enqueue( call );
+        if ( this.serializedStates.contains( toState ) || this.serializedStates.contains( input.lookupState( ) ) ) {
+          return Threads.enqueue( input.getComponentId( ).getClass( ), Topology.class, 1, call );
         } else {
-          try {
-            return Futures.predestinedFuture( input );
-          } catch ( Exception ex ) {
-            return Futures.predestinedFuture( input );
-          }
+          return Queue.EXTERNAL.enqueue( call );
         }
       }
     };
@@ -478,15 +471,17 @@ public class Topology {
       @Override
       public boolean tryEnable( final ServiceConfiguration config ) {
         final ServiceKey serviceKey = ServiceKey.create( config );
-        Logs.extreme( ).info( config );
         final ServiceConfiguration curr = Topology.this.getServices( ).putIfAbsent( serviceKey, config );
-        Logs.extreme( ).info( "Current ENABLED: " + curr );
+        LOG.debug( "tryEnable():before " + Topology.this.toString( ) + " => " + config );
         if ( ( curr != null ) && !curr.equals( config ) ) {
+          LOG.debug( "tryEnable():false  " + Topology.this.toString( ) + " => " + config );
           return false;
         } else if ( ( curr != null ) && curr.equals( config ) ) {
+          LOG.debug( "tryEnable():true   " + Topology.this.toString( ) + " => " + config );
           return true;
         } else {
           Topology.this.currentEpoch++;
+          LOG.debug( "tryEnable():true   " + Topology.this.toString( ) + " => " + config );
           return true;
         }
       }
@@ -494,9 +489,10 @@ public class Topology {
       @Override
       public boolean tryDisable( final ServiceConfiguration config ) {
         final ServiceKey serviceKey = ServiceKey.create( config );
-        Logs.extreme( ).info( config );
-        return !config.equals( Topology.this.getServices( ).get( serviceKey ) )
+        boolean tryDisable = !config.equals( Topology.this.getServices( ).get( serviceKey ) )
                || ( Topology.this.getServices( ).remove( serviceKey, config ) && this.nextEpoch( ) );
+        LOG.debug( "tryDisable():" + tryDisable + " " + Topology.this.toString( ) + " => " + config );
+        return tryDisable;
       }
       
     };
@@ -513,15 +509,18 @@ public class Topology {
       @Override
       public boolean tryEnable( final ServiceConfiguration config ) {
         final ServiceKey serviceKey = ServiceKey.create( config );
-        Logs.extreme( ).info( config );
+        LOG.debug( "tryEnable():before " + Topology.this.toString( ) + " => " + config );
         final ServiceConfiguration curr = Topology.this.getServices( ).put( serviceKey, config );
         Logs.extreme( ).info( "Current ENABLED: " + curr );
         if ( ( curr != null ) && !curr.equals( config ) ) {
           transition( State.DISABLED ).apply( curr );
+          LOG.debug( "tryEnable():false  " + Topology.this.toString( ) + " => " + config );
           return false;
         } else if ( ( curr != null ) && curr.equals( config ) ) {
+          LOG.debug( "tryEnable():true   " + Topology.this.toString( ) + " => " + config );
           return true;
         } else {
+          LOG.debug( "tryEnable():true   " + Topology.this.toString( ) + " => " + config );
           return true;
         }
       }
@@ -529,7 +528,7 @@ public class Topology {
       @Override
       public boolean tryDisable( final ServiceConfiguration config ) {
         final ServiceKey serviceKey = ServiceKey.create( config );
-        Logs.extreme( ).info( config );
+        LOG.debug( "tryDisable():true   " + Topology.this.toString( ) + " => " + config );
         return ( Topology.this.getServices( ).remove( serviceKey, config ) || !config.equals( Topology.this.getServices( ).get( serviceKey ) ) )
                && this.nextEpoch( );
       }
@@ -703,7 +702,7 @@ public class Topology {
     @Override
     public Future<ServiceConfiguration> apply( final ServiceConfiguration input ) {
       final Callable<ServiceConfiguration> call = Topology.callable( input, Topology.get( State.ENABLED ) );
-      final Future<ServiceConfiguration> future = Queue.INTERNAL.enqueue( call );
+      final Future<ServiceConfiguration> future = Queue.EXTERNAL.enqueue( call );
       return future;
     }
     
@@ -1169,9 +1168,7 @@ public class Topology {
       ServiceConfiguration endResult = input;
       try {
         endResult = ServiceTransitions.pathTo( input, nextState ).get( );
-        if ( !nextState.equals( initialState ) ) {
-          LOG.info( this.toString( endResult, initialState, nextState ) );
-        }
+        Logs.extreme( ).debug( this.toString( endResult, initialState, nextState ) );
         return endResult;
       } catch ( final Exception ex ) {
         if ( Exceptions.isCausedBy( ex, ExistingTransitionException.class ) ) {
@@ -1188,11 +1185,7 @@ public class Topology {
       } finally {
         enabledEndState |= Component.State.ENABLED.equals( endResult.lookupState( ) );
         if ( Bootstrap.isFinished( ) && !enabledEndState && Topology.getInstance( ).services.containsValue( input ) ) {
-        	Topology.guard( ).tryDisable( endResult );
-        }else if(Bootstrap.isFinished( ) && enabledEndState && ! Topology.getInstance( ).services.containsValue( input )){
-            // EUCA-6198 
-        	LOG.error("service enabled but lookup failed: " + endResult );
-        	Topology.guard( ).tryEnable( endResult );
+          Topology.guard( ).tryDisable( endResult );
         }
       }
     }

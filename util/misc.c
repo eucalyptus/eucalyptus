@@ -679,16 +679,19 @@ int check_block(const char *file)
     struct stat mystat = { 0 };
 
     if (!file) {
+    	LOGERROR("Invalid file name");
         return (1);
     }
 
     if ((rpath = realpath(file, NULL)) == NULL) {
+    	LOGERROR("No canonical file found for %s", file);
         return (1);
     }
 
     rc = lstat(rpath, &mystat);
     EUCA_FREE(rpath);
     if ((rc < 0) || !S_ISBLK(mystat.st_mode)) {
+    	LOGERROR("No stat information found for %s", rpath);
         return (1);
     }
 

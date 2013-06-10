@@ -75,7 +75,7 @@ default_hiber_config = [
       'hibernate.connection.autocommit': 'false',
       'hibernate.connection.release_mode': 'after_statement',
       'hibernate.hbm2ddl.auto': 'update',
-      'hibernate.generate_statistics': 'true',
+      'hibernate.generate_statistics': 'false',
       'hibernate.bytecode.use_reflection_optimizer': 'true',
       'hibernate.cglib.use_reflection_optimizer': 'true',
     ]

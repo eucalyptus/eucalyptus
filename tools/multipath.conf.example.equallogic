@@ -6,8 +6,8 @@ blacklist {
         devnode "^hd[a-z]"
         devnode "^(ram|raw|loop|fd|md|dm-|sr|scd|st)[0-9]*"
         devnode "^cciss.*"
-        devnode "^sda[0-9]*"
-        devnode "^sdb[0-9]*"
+        devnode "^sda[0-9]*$"
+        devnode "^sdb[0-9]*$"
 }
 
 devices {

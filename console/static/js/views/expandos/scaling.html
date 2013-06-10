@@ -24,7 +24,7 @@
       <li><div class="expanded-title" data-msg="scaling_table_expanded_instances_max"></div><div class="expanded-value" data-text="group.max_size"></div></li>
       <li><div class="expanded-title" data-msg="scaling_table_expanded_instances_min"></div><div class="expanded-value" data-text="group.min_size"></div></li>
 	  </ul>
-	  <table>
+        <table class="expanded-table">
 			<thead><tr><th data-msg="scaling_table_expanded_instance_id"></th><th data-msg="scaling_table_expanded_instance_health_status"></th><th data-msg="scaling_table_expanded_instance_zone"></th><th data-msg="scaling_table_expanded_instance_launch_config"></th><th data-msg="scaling_table_expanded_instance_state"></th></tr>
 			</thead>
 			<tbody>
@@ -42,15 +42,26 @@
   </div>
   <div id="tabs-3" class="tab">
     <ul class="scaling-group-policies-expanded clearfix">
-		  <li><div class="expanded-label" data-msg="scaling_table_expanded_scaling_policy_default_cooldown"><span class="expanded-value" data-text="group.default_cooldown"></span></div></li>
+      <li><div class="expanded-label" data-msg="scaling_table_expanded_scaling_policy_default_cooldown"><div class="expanded-value" data-text="group.default_cooldown"></div></div></li>
     </ul>
     <ul class="scaling-group-policies-expanded clearfix">
 		<li>
-		<table>
-			<thead><tr><th data-msg="scaling_table_expanded_scaling_policy_name"></th><th data-msg="scaling_table_expanded_scaling_policy_amount"></th><th data-msg="scaling_table_expanded_scaling_policy_measure"></th><th data-msg="scaling_table_expanded_scaling_policy_trigger_metric"></th><th data-msg="scaling_table_expanded_scaling_policy_trigger_threshold"></th></tr>
-			</thead>
+        <table class="expanded-table">
+			<thead><tr>
+              <th data-msg="scaling_table_expanded_scaling_policy_name"></th>
+              <th data-msg="scaling_table_expanded_scaling_policy_action"></th>
+              <th data-msg="scaling_table_expanded_scaling_policy_amount"></th>
+              <th data-msg="scaling_table_expanded_scaling_policy_measure"></th>
+              <th data-msg="scaling_table_expanded_scaling_policy_alarm"></th>
+            </tr></thead>
 			<tbody>
-				<tr data-each-item="items"><td><span _data-text="item.unknownVariable"></span></td><td><span _data-text="item.unknownVariable"></span><td><span _data-text="item.unknownVariable"></span></td><td><span _data-text="item.unknownVariable"></span></td><td><span _data-text="item.unknownVariable"></span></td></tr>
+              <tr data-each-item="policies">
+                <td><span data-text="item.name"></span></td>
+                <td><span data-text="item.action"></span></td>
+                <td><span data-text="item.amount"></span></td>
+                <td><span data-text="item.measure"></span></td>
+                <td><span data-text="item.alarms.0.alarm_name"></span></td>
+              </tr>
 			</tbody>
 		</table>
 		</li>
@@ -60,7 +71,7 @@
   <div id="tabs-4" class="tab">
       <ul class="scaling-group-processes-expanded clearfix">
 	    <li>
-		<table>
+        <table class="expanded-table">
 			<thead><tr><th data-msg="scaling_table_expanded_process"></th><th data-msg="scaling_table_expanded_suspended_state"></th></tr>
 			</thead>
 			<tbody>

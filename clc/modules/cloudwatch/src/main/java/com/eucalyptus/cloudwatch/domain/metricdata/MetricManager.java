@@ -53,6 +53,18 @@ public class MetricManager {
       String metricName, String namespace, Map<String, String> dimensionMap,
       MetricType metricType, Units units, Date timestamp, Double sampleSize,
       Double sampleMax, Double sampleMin, Double sampleSum) {
+    LOG.trace("accountId="+accountId); 
+    LOG.trace("metricName="+metricName);
+    LOG.trace("namespace="+namespace);
+    LOG.trace("dimensionMap="+dimensionMap);
+    LOG.trace("metricType="+metricType);
+    LOG.trace("units="+units);
+    LOG.trace("timestamp="+timestamp);
+    LOG.trace("sampleSize="+sampleSize);
+    LOG.trace("sampleMax="+sampleMax);
+    LOG.trace("sampleMin="+sampleMin);
+    LOG.trace("sampleSum="+sampleSum);
+    
     if (dimensionMap == null) {
       dimensionMap = new HashMap<String, String>();
     } else if (dimensionMap.size() > MetricEntity.MAX_DIM_NUM) {

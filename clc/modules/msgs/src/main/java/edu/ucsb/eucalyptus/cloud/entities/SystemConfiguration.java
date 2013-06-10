@@ -90,17 +90,21 @@ import com.eucalyptus.util.EucalyptusCloudException;
 @Table( name = "system_info" )
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
 @ConfigurableClass( root = "system.dns", description = "Basic system configuration." )
+@Deprecated  //GRZE: this class will FINALLY be superceded by new DNS support in 3.4: DO NOT USE IT!
 public class SystemConfiguration extends AbstractPersistent {
   private static Logger LOG = Logger.getLogger( SystemConfiguration.class );
   @ConfigurableField( description = "Unique ID of this cloud installation.", readonly = false )
   @Column( name = "system_registration_id" )
   private String  registrationId;
+  @Deprecated  //GRZE: this class will FINALLY be superceded by new DNS support in 3.4: DO NOT USE IT!
   @ConfigurableField( description = "Domain name to use for DNS." )
   @Column( name = "dns_domain" )
   private String  dnsDomain;
+  @Deprecated  //GRZE: this class will FINALLY be superceded by new DNS support in 3.4: DO NOT USE IT!
   @ConfigurableField( description = "Nameserver hostname." )
   @Column( name = "nameserver" )
   private String  nameserver;
+  @Deprecated  //GRZE: this class will FINALLY be superceded by new DNS support in 3.4: DO NOT USE IT!
   @ConfigurableField( description = "Nameserver ip address." )
   @Column( name = "ns_address" )
   private String  nameserverAddress;
@@ -122,26 +126,32 @@ public class SystemConfiguration extends AbstractPersistent {
     this.registrationId = registrationId;
   }
     
+  @Deprecated  //GRZE: this class will FINALLY be superceded by new DNS support in 3.4: DO NOT USE IT!
   public String getDnsDomain( ) {
     return dnsDomain;
   }
   
+  @Deprecated  //GRZE: this class will FINALLY be superceded by new DNS support in 3.4: DO NOT USE IT!
   public void setDnsDomain( String dnsDomain ) {
     this.dnsDomain = dnsDomain;
   }
   
+  @Deprecated  //GRZE: this class will FINALLY be superceded by new DNS support in 3.4: DO NOT USE IT!
   public String getNameserver( ) {
     return nameserver;
   }
   
+  @Deprecated  //GRZE: this class will FINALLY be superceded by new DNS support in 3.4: DO NOT USE IT!
   public void setNameserver( String nameserver ) {
     this.nameserver = nameserver;
   }
   
+  @Deprecated  //GRZE: this class will FINALLY be superceded by new DNS support in 3.4: DO NOT USE IT!
   public String getNameserverAddress( ) {
     return nameserverAddress;
   }
   
+  @Deprecated  //GRZE: this class will FINALLY be superceded by new DNS support in 3.4: DO NOT USE IT!
   public void setNameserverAddress( String nameserverAddress ) {
     this.nameserverAddress = nameserverAddress;
   }

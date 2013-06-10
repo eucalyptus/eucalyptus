@@ -68,6 +68,7 @@ import edu.ucsb.eucalyptus.cloud.entities.*;
 import org.apache.log4j.Logger;
 
 import com.eucalyptus.bootstrap.Bootstrap;
+import com.eucalyptus.dns.ServiceZone;
 import com.eucalyptus.dns.TransientZone;
 import com.eucalyptus.dns.Zone;
 import com.eucalyptus.entities.EntityWrapper;
@@ -113,6 +114,8 @@ public class ZoneManager {
 						ZoneManager.registerZone(TransientZone.getExternalName( ),TransientZone.getInstanceExternalZone());
 					} else if(!ZoneManager.zones.containsKey(TransientZone.getInternalName())){
 						ZoneManager.registerZone(TransientZone.getInternalName(),TransientZone.getInstanceInternalZone());
+					} else if(!ZoneManager.zones.containsKey(ServiceZone.getName())){
+						ZoneManager.registerZone(ServiceZone.getName(),ServiceZone.getZone());
 					}	
 				} catch(Exception e) {
 					LOG.debug( e, e );

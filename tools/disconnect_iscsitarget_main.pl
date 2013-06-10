@@ -113,6 +113,14 @@ if ($multipath == 1) {
   $mpath = get_mpath_device_by_paths(@paths);
 }
 
+# Remove unused mpath device
+if ($multipath == 1 && !is_null_or_empty($mpath)) {
+  sleep(1);
+  # flush device map
+  run_cmd(1, 1, "$MULTIPATH -f $mpath") if (-x $MULTIPATH);
+  sleep(1);
+}
+
 while (@paths > 0) {
   $conf_iface = shift(@paths);
   $ip = shift(@paths);
@@ -152,16 +160,6 @@ while (@paths > 0) {
   }
  # Delete /var/lib/iscsi/node 
   run_cmd(1, 0, "$ISCSIADM -m node -p $ip -T $store -o delete");
-}
-
-# Remove unused mpath device
-if ($multipath == 1 && !is_null_or_empty($mpath)) {
-  sleep(1);
-  # change to "fail_if_no_path" to clear up queue
-  run_cmd(1, 0, "$DMSETUP message $mpath 0 'fail_if_no_path'") if (-x $DMSETUP);
-  sleep(1);
-  # flush device map
-  run_cmd(1, 0, "$MULTIPATH -f $mpath") if (-x $MULTIPATH);
 }
 
 #####################################################
