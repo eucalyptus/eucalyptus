@@ -112,7 +112,6 @@
                 async:"false",
                 success: function(out, textStatus, jqXHR) {
                   $.extend($.eucaData, {'g_session':out.global_session, 'u_session':out.user_session});
-                  eucalyptus.help({'language':out.global_session.language}); // loads help files
                   args.onSuccess($.eucaData); // call back to login UI
                   if (args.param.account.substring(args.param.account.length-13) == 'amazonaws.com') {
                     IMG_OPT_PARAMS = '&Owner=self';
@@ -124,7 +123,6 @@
                   args.onError(errorThrown);
                   if (errorThrown.search("Forbidden")>-1) {
                     $.extend($.eucaData, {'g_session':jqXHR.global_session, 'u_session':jqXHR.user_session});
-                    eucalyptus.help({'language':jqXHR.global_session.language}); // loads help files
                   }
                 }
  	     });
