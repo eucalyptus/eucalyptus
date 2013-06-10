@@ -112,14 +112,14 @@ def start_console():
         server_port = eucaconsole.config.getint('server', 'uiport')
 
     application = tornado.web.Application([
-            (r"/(favicon\.ico)", tornado.web.StaticFileHandler, {'path': os.path.join(webroot, 'images')}),
-            (r"/css/(.*)", tornado.web.StaticFileHandler, {'path': os.path.join(webroot, 'css')}),
-            (r"/lib/(.*)", tornado.web.StaticFileHandler, {'path': os.path.join(webroot, 'lib')}),
-            (r"/js/(.*)", tornado.web.StaticFileHandler, {'path': os.path.join(webroot, 'js')}),
-            (r"/custom/(.*)", tornado.web.StaticFileHandler, {'path': os.path.join(webroot, 'custom')}),
-            (r"/images/(.*)", tornado.web.StaticFileHandler, {'path': os.path.join(webroot, 'images')}),
-            (r"/help/(.*)", tornado.web.StaticFileHandler, {'path': os.path.join(webroot, 'help')}),
-            (r"/fonts/(.*)", tornado.web.StaticFileHandler, {'path': os.path.join(webroot, 'fonts')}),
+            (r"/(favicon\.ico)", EucaStaticHandler, {'path': os.path.join(webroot, 'images')}),
+            (r"/css/(.*)", EucaStaticHandler, {'path': os.path.join(webroot, 'css')}),
+            (r"/lib/(.*)", EucaStaticHandler, {'path': os.path.join(webroot, 'lib')}),
+            (r"/js/(.*)", EucaStaticHandler, {'path': os.path.join(webroot, 'js')}),
+            (r"/custom/(.*)", EucaStaticHandler, {'path': os.path.join(webroot, 'custom')}),
+            (r"/images/(.*)", EucaStaticHandler, {'path': os.path.join(webroot, 'images')}),
+            (r"/help/(.*)", EucaStaticHandler, {'path': os.path.join(webroot, 'help')}),
+            (r"/fonts/(.*)", EucaStaticHandler, {'path': os.path.join(webroot, 'fonts')}),
             (r"/ec2", api.ComputeHandler),
             (r"/s3", api.StorageHandler),
             (r"/monitor", api.WatchHandler),
@@ -155,6 +155,10 @@ def killThreads(signal, frame):
     print "attempting to kill threads and exit"
     Threads.instance().killEmAll()
     sys.exit(0)
+
+class EucaStaticHandler(tornado.web.StaticFileHandler):
+    def set_extra_headers(self, path):
+        self.set_header("X-Frame-Options", "SAMEORIGIN")
 
 if __name__ == "__main__":
 #    (hostname, alt_host, ipaddrs) = socket.gethostbyaddr(socket.gethostname())
