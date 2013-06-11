@@ -2273,12 +2273,10 @@ static int init(void)
 
     // now that hypervisor-specific initializers have discovered mem_max and cores_max,
     // adjust the values based on configuration parameters, if any
-    if (nc_state.config_max_mem && nc_state.config_max_mem < nc_state.mem_max)
+    if (nc_state.config_max_mem && nc_state.config_max_mem > nc_state.mem_max){
         nc_state.mem_max = nc_state.config_max_mem;
-
-    if (nc_state.config_max_mem && nc_state.config_max_mem > nc_state.mem_max)
-        nc_state.mem_max = nc_state.config_max_mem;
-        LOGWARN("MAX_MEM value is now greater than the amount of physical memory: %lldMB\n", nc_state.mem_max);
+        LOGWARN("MAX_MEM value is greater than the amount of physical memory: %lldMB\n", nc_state.mem_max);
+    }
 
     if (nc_state.config_max_cores) {
         nc_state.cores_max = nc_state.config_max_cores;
