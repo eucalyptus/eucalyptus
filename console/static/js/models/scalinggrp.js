@@ -174,7 +174,7 @@ function(EucaModel, ScalingInst, ScalingInstances, Tag, Tags) {
         var name = model.get('name');
         var data = "_xsrf="+$.cookie('_xsrf');
         data += "&AutoScalingGroupName="+name+
-                "&LaunchConfigurationName="+model.get('launch_config')+
+                "&LaunchConfigurationName="+model.get('launch_config_name')+
                 "&MinSize="+model.get('min_size')+
                 "&MaxSize="+model.get('max_size');
         if (model.get('default_cooldown') != undefined)
@@ -193,80 +193,26 @@ function(EucaModel, ScalingInst, ScalingInstances, Tag, Tags) {
           data += build_list_params("Tags.member.", model.get('tags'));
         if (model.get('termination_policies') != undefined)
           data += build_list_params("TerminationPolicies.member.", model.get('termination_policies'));
-        $.ajax({
-          type:"POST",
-          url: url,
-          data:data,
-          dataType:"json",
-          async:true,
-          success:
-            function(data, textStatus, jqXHR){
-              if ( data.results ) {
-                var msg = method=='create' ? $.i18n.prop('create_scaling_group_run_success', DefaultEncoder().encodeForHTML(name)) : $.i18n.prop('update_scaling_group_run_success', DefaultEncoder().encodeForHTML(name));
-                notifySuccess(null, msg);
-              } else {
-                var msg = method=='create' ? $.i18n.prop('create_scaling_group_run_error', DefaultEncoder().encodeForHTML(name)) : $.i18n.prop('update_scaling_group_run_error', DefaultEncoder().encodeForHTML(name));
-                notifyError(msg, undefined_error);
-              }
-            },
-          error:
-            function(jqXHR, textStatus, errorThrown){
-              notifyError($.i18n.prop('create_scaling_group_run_error', DefaultEncoder().encodeForHTML(name)), getErrorMessage(jqXHR));
-            }
-        });
+        return this.makeAjaxCall(url, data, options);
       }
       else if (method == 'delete') {
+        var url = "/autoscaling?Action=DeleteAutoScalingGroup";
         var name = model.get('name');
         var data = "_xsrf="+$.cookie('_xsrf')+"&AutoScalingGroupName="+name;
         if (model.get('force_delete') != undefined)
           data += "&ForceDelete=true";
-        $.ajax({
-          type:"POST",
-          url:"/autoscaling?Action=DeleteAutoScalingGroup",
-          data:data,
-          dataType:"json",
-          async:true,
-          success:
-            function(data, textStatus, jqXHR){
-              if ( data.results ) {
-                notifySuccess(null, $.i18n.prop('delete_scaling_group_success', DefaultEncoder().encodeForHTML(name)));
-              } else {
-                notifyError($.i18n.prop('delete_scaling_group_error', DefaultEncoder().encodeForHTML(name)), undefined_error);
-              }
-            },
-          error:
-            function(jqXHR, textStatus, errorThrown){
-              notifyError($.i18n.prop('delete_scaling_group_error', DefaultEncoder().encodeForHTML(name)), getErrorMessage(jqXHR));
-            }
-        });
+        return this.makeAjaxCall(url, data, options);
       }
     },
 
     setDesiredCapacity: function (desired_capacity, honor_cooldown) {
+      var url = "/autoscaling?Action=SetDesiredCapacity";
       var name = this.get('name');
       var data = "_xsrf="+$.cookie('_xsrf')+"&AutoScalingGroupName="+this.get('name')+
                  "&DesiredCapacity="+desired_capacity;
       if (honor_cooldown != undefined)
         data += "&HonorCooldown=true";
-      $.ajax({
-        type:"POST",
-        url:"/autoscaling?Action=SetDesiredCapacity",
-        data:data,
-        dataType:"json",
-        async:true,
-        success:
-          function(data, textStatus, jqXHR){
-            if ( data.results ) {
-              notifySuccess(null, $.i18n.prop('quick_scale_success', DefaultEncoder().encodeForHTML(name)));
-            } else {
-              notifyError($.i18n.prop('quick_scale_error', DefaultEncoder().encodeForHTML(name)), undefined_error);
-            }
-          },
-        error:
-          function(jqXHR, textStatus, errorThrown){
-            notifyError($.i18n.prop('quick_scale_error', DefaultEncoder().encodeForHTML(name)), getErrorMessage(jqXHR));
-          },
-      });
+      this.makeAjaxCall(url, data, options);
     }
   });
   return model;

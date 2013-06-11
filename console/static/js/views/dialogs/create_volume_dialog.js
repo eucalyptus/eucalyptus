@@ -167,7 +167,6 @@ define([
                         }
                       },
                       error: function(model, jqXHR, options){  // AJAX CALL ERROR OPTION
-                        console.log("Error: " + getErrorMessage(jqXHR));
                         notifyError($.i18n.prop('volume_create_error'), getErrorMessage(jqXHR));
                       }
                   });

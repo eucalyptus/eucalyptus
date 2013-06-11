@@ -125,6 +125,8 @@ class BaseAPIHandler(eucaconsole.BaseHandler):
                     ret = ClcError(500, err.message, None)
                     self.set_status(500);
             self.set_header("Content-Type", "application/json;charset=UTF-8")
+            self.set_header("Cache-control", "no-store")
+            self.set_header("Pragma", "no-cache")
             self.write(json.dumps(ret, cls=self.json_encoder))
             self.finish()
             logging.exception(err)
@@ -142,6 +144,8 @@ class BaseAPIHandler(eucaconsole.BaseHandler):
                     ret = Response(response.data) # wrap all responses in an object for security purposes
                 data = json.dumps(ret, cls=self.json_encoder, indent=2)
                 self.set_header("Content-Type", "application/json;charset=UTF-8")
+                self.set_header("Cache-control", "no-store")
+                self.set_header("Pragma", "no-cache")
                 self.write(data)
                 self.finish()
             except Exception, err:
@@ -269,7 +273,7 @@ class ScaleHandler(BaseAPIHandler):
                                 health_check_type=hc_type, health_check_period=hc_period,
                                 desired_capacity=desired_capacity,
                                 min_size=min_size, max_size=max_size,
-                                termination_policies=termination_policies)
+                                termination_policies=termination_policy)
                 self.user_session.scaling.update_autoscaling_group(group, self.callback)
             elif action == 'CreateLaunchConfiguration':
                 image_id = self.get_argument('ImageId')
@@ -874,6 +878,7 @@ class ComputeHandler(BaseAPIHandler):
             return clc.get_all_security_groups(filters, callback)
         elif action == 'CreateSecurityGroup':
             name = self.get_argument('GroupName')
+            name = base64.b64decode(name)
             desc = self.get_argument('GroupDescription')
             desc = base64.b64decode(desc)
             return clc.create_security_group(name, desc, callback)

@@ -10,7 +10,7 @@ define([
     title: app.msg("launch_instance_section_header_advanced"),
     isOptional: true,
     optionLinkText: app.msg('launch_instance_btn_next_advanced'),
-    launchConfigErrors: new Backbone.Model({volume_size: ''}),
+    launchConfigErrors: new Backbone.Model({volume_size: '', user_data: ''}),
     theImage: null,
     
     initialize : function() {
@@ -208,8 +208,11 @@ define([
         }
       });
 
+      self.model.on('validated:invalid', function(o, errors) { self.launchConfigErrors.set('user_data', errors.user_data)});
       this.model.on('change:user_data_text', function(e) {
+          self.launchConfigErrors.clear();
           self.model.set('user_data', $.base64.encode(e.get('user_data_text')));
+          self.model.validate();
       });
 
       scope.kernels.on('reset change', self.render);
@@ -222,7 +225,8 @@ define([
       // this.model.set('fileinput', this.$el.find('#launch-wizard-advanced-input-userfile'));
        var fileinputel = this.$el.find('#launch-wizard-advanced-input-userfile');
        $(fileinputel).change(function(e) {
-        self.model.set('files', this.files);
+         self.model.set('files', this.files);
+         self.model.validate();
        });
        this.model.set('fileinput', function() { return fileinputel; });
 

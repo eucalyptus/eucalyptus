@@ -36,7 +36,19 @@ define([
                        if (model.isValid()) {
                          original.set(model.toJSON());
                          //original.setDesiredCapacity(original.get('desired_capacity'));
-                         original.save();
+                         original.save({}, {
+                           success: function(model, response, options){
+                             if(model != null){
+                               var name = model.get('name');
+                               notifySuccess(null, $.i18n.prop('quick_scale_success', name));
+                             }else{
+                               notifyError($.i18n.prop('quick_scale_error', name), undefined_error);
+                             }
+                           },
+                           error: function(model, jqXHR, options){
+                             notifyError($.i18n.prop('quick_scale_error', name), getErrorMessage(jqXHR));
+                           }
+                         });
                          self.close();
                        }
                     }

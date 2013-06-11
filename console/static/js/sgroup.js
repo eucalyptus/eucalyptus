@@ -271,7 +271,7 @@
               var name = $add_dialog.eucadialog("get_validate_value", "sgroup-name",
                                                 SGROUP_NAME_PATTERN, alphanum_warning);
               if (name == null) return;
-              var desc = toBase64($add_dialog.eucadialog("getValue", "#sgroup-description"));
+              var desc = $add_dialog.eucadialog("getValue", "#sgroup-description");
               if (desc == null) return;
 
               if (thisObj._storeRule(thisObj.addDialog) == false) {    // flush rule from form into array
@@ -310,7 +310,7 @@
               $.ajax({
                   type:"POST",
                   url:"/ec2?Action=CreateSecurityGroup",
-                  data:"_xsrf="+$.cookie('_xsrf') + "&GroupName=" + name + "&GroupDescription=" + desc,
+                  data:"_xsrf="+$.cookie('_xsrf') + "&GroupName=" + toBase64(name) + "&GroupDescription=" + toBase64(desc),
                   dataType:"json",
                   async:"false",
                   success: function (data, textstatus, jqXHR) {
