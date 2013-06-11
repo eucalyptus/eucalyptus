@@ -74,7 +74,7 @@
             {
               "aTargets" : [3],
               "mData": function(oObj) { 
-                return "";
+                return oObj.instances.length;
               }
             },
             { 
@@ -136,7 +136,7 @@
     _expandCallback : function(row){ 
       var $el = $('<div />');
       require(['app', 'views/expandos/scaling'], function(app, expando) {
-         new expando({el: $el, model: app.data.scalingGroups.get(row[7]) });
+         new expando({el: $el, model: app.data.scalingGroups.get(row[6]) });
       });
       return $el;
     },
