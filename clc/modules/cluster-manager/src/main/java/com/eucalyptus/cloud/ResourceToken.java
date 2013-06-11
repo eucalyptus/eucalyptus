@@ -119,10 +119,10 @@ public class ResourceToken implements VmInstanceMetadata, Comparable<ResourceTok
     this.allocation = allocInfo;
     this.launchIndex = launchIndex;
     this.instanceId = allocInfo.getInstanceId( launchIndex );
-    if ( this.instanceId == null ) {
-      throw new IllegalArgumentException( "Cannot create resource token with null instance id: " + allocInfo );
+    this.instanceUuid = allocInfo.getInstanceUuid( launchIndex );
+    if ( this.instanceId == null || this.instanceUuid == null ) {
+      throw new IllegalArgumentException( "Cannot create resource token with null instance id or uuid: " + allocInfo );
     }
-    this.instanceUuid = UUID.randomUUID( ).toString( );
     this.resourceAllocationSequenceNumber = resourceAllocationSequenceNumber;
     this.creationTime = Calendar.getInstance( ).getTime( );
     ServiceConfiguration config = Topology.lookup( ClusterController.class, this.getAllocationInfo( ).getPartition( ) );

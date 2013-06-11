@@ -1,10 +1,24 @@
-define([], function() {
+define(['app'], function(app) {
   return Backbone.Model.extend({
     kernel_id: null,
     ramdisk_id: null,
     user_data: null,
     instance_monitoring: true,
     private_network: false,
+
+    validation: {
+      user_data: {
+        required: false,
+        max: 65536,
+        msg: app.msg('launch_instance_error_user_data_big')
+      },
+      fileinput: function(value) {
+        console.log("file obj = "+JSON.stringify(value));
+        if (value.size > 10) {
+            return app.msg('launch_instance_error_user_data_big');
+        }
+      }
+    },
 
     initialize: function() {
 
@@ -13,7 +27,6 @@ define([], function() {
     finish: function(outputModel) {
       this.set('monitoring_enabled', this.get('instance_monitoring'));
       this.set('addressing_type', (this.get('private_network')) ? 'private' : 'public');
-      this.set('placement', {availability_zone: this.get('zone'), group_name: null, tenancy: null});
       outputModel.set(this.toJSON());
     }
   });

@@ -90,8 +90,8 @@ var help_dashboard = {
     help_dashboard.landing_content_url = 'help/'+arg.language+'/console_dashboard.html',
     loadHtml(help_dashboard.landing_content_url, function(data){help_dashboard.landing_content=data})
    },
-   landing_content: '',
    landing_content_url : '', 
+   landing_content: ''
 }
 var help_keypair = {
   load : function(arg){
@@ -261,12 +261,11 @@ var help_scaling = {
 
 var help_balancing = {
   load : function(arg){
-    help_balancing.landing_content_url = 'help/'+arg.language+'/console_manage_balancing.html';
-
+    help_balancing.landing_content_url = 'help/'+arg.language+'/console_manage_balancing.html',
     loadHtml(help_balancing.landing_content_url, function(data){help_balancing.landing_content=data})
   },
-  landing_content: '',
   landing_content_url: '',
+  landing_content: '',
 }
 
 var help_about = {

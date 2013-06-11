@@ -23,10 +23,15 @@
     options : { },
     _init : function() {
       var thisObj = this;
+      $(thisObj.element).unbind();
       require(['views/launchconfig/index'], function(WizardFactory) {
-        var View = WizardFactory();
+        var View = WizardFactory(thisObj.options);
         var view = new View({el: thisObj.element});
       	view.render();
+        if(thisObj.options.image != null) {
+          view.jump(1);
+        }
+        thisObj.options.image = null;
       });
     },
 

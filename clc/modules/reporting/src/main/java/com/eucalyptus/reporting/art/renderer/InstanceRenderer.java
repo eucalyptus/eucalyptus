@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * Copyright 2009-2013 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -65,14 +65,12 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.io.OutputStreamWriter;
 import java.util.Date;
-import java.util.Map;
 
 import com.eucalyptus.reporting.art.entity.AccountArtEntity;
 import com.eucalyptus.reporting.art.entity.AvailabilityZoneArtEntity;
 import com.eucalyptus.reporting.art.entity.InstanceArtEntity;
 import com.eucalyptus.reporting.art.entity.InstanceUsageArtEntity;
 import com.eucalyptus.reporting.art.entity.ReportArtEntity;
-import com.eucalyptus.reporting.art.entity.UsageTotalsArtEntity;
 import com.eucalyptus.reporting.art.entity.UserArtEntity;
 import com.eucalyptus.reporting.art.renderer.document.Document;
 import com.eucalyptus.reporting.units.SizeUnit;
@@ -143,38 +141,6 @@ class InstanceRenderer
 			}
 		}
 		doc.tableClose();
-
-		doc.textLine("Instance Running Times Section", 3);
-
-		doc.tableOpen();
-		doc.newRow()
-				.addValCol("m1.small", 2, "center")
-				.addValCol("c1.medium", 2, "center")
-				.addValCol("m1.large", 2, "center")
-				.addValCol("c1.large", 2, "center")
-				.addValCol("m1.xlarge", 2, "center");
-		doc.newRow()
-				.addValCol("num", 1, "center").addValCol(units.getTimeUnit().toString(), 1, "center")
-				.addValCol("num", 1, "center").addValCol(units.getTimeUnit().toString(), 1, "center")
-				.addValCol("num", 1, "center").addValCol(units.getTimeUnit().toString(), 1, "center")
-				.addValCol("num", 1, "center").addValCol(units.getTimeUnit().toString(), 1, "center")
-				.addValCol("num", 1, "center").addValCol(units.getTimeUnit().toString(), 1, "center");
-		for(String zoneName : report.getZones().keySet()) {
-			AvailabilityZoneArtEntity zone = report.getZones().get(zoneName);
-			doc.newRow().addLabelCol(0, "Zone: " + zoneName);
-			addTimeCols(doc, zone.getUsageTotals(), units);
-			for (String accountName: zone.getAccounts().keySet()) {
-				AccountArtEntity account = zone.getAccounts().get(accountName);
-				doc.newRow().addLabelCol(1, "Account: " + accountName);
-				addTimeCols(doc, account.getUsageTotals(),units);
-				for (String userName: account.getUsers().keySet()) {
-					UserArtEntity user = account.getUsers().get(userName);
-					doc.newRow().addLabelCol(2, "User: " + userName);
-					addTimeCols(doc, user.getUsageTotals(),units);
-				}
-			}
-		}
-		doc.tableClose();
 		doc.close();
 	}
 
@@ -203,21 +169,4 @@ class InstanceRenderer
 
 		return doc;
 	}
-
-	public static Document addTimeCols(Document doc, UsageTotalsArtEntity totals, Units units)
-			throws IOException
-	{
-		final Map<String,InstanceUsageArtEntity> typeTotals = totals.getTypeTotals();
-		for (String type : new String[] {"m1.small", "c1.medium", "m1.large", "c1.large", "m1.xlarge"}) {
-			if (typeTotals.containsKey(type)) {
-				doc.addValCol((long)typeTotals.get(type).getInstanceCnt());
-				doc.addValCol(UnitUtil.convertTime(typeTotals.get(type).getDurationMs(), TimeUnit.MS, units.getTimeUnit()));
-			} else {
-				doc.addValCol("0");
-				doc.addValCol("0");
-			}
-		}
-		return doc;
-	}
-
 }

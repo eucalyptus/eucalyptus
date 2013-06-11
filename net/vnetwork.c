@@ -2054,7 +2054,8 @@ int vnetGenerateDHCP(vnetConfig * vnetconfig, int *numHosts)
 
             if (vnetconfig->euca_ns != 0) {
                 euca_nameserver = hex2dot(vnetconfig->euca_ns);
-                snprintf(nameservers, 1024, "%s, %s", nameserver, euca_nameserver);
+                char cmd[128];
+                snprintf(nameservers, 1024, "%s, %s", euca_nameserver, nameserver);
             } else {
                 snprintf(nameservers, 1024, "%s", nameserver);
             }
@@ -4491,9 +4492,13 @@ int check_bridge(char *brname)
 {
     char file[MAX_PATH] = "";
 
-    if (!brname || check_device(brname)) {
+    if (!brname) {
         LOGERROR("bad input params: brname=%s\n", SP(brname));
         return (EUCA_INVALID_ERROR);
+    }
+
+    if (check_device(brname)) {
+        return (EUCA_NOT_FOUND_ERROR);
     }
 
     snprintf(file, MAX_PATH, "/sys/class/net/%s/bridge/", brname);

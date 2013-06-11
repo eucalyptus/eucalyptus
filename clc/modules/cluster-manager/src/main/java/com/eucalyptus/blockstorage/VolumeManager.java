@@ -236,8 +236,6 @@ public class VolumeManager {
           if ( State.FAIL.equals( vol.getState( ) ) || State.ANNIHILATED.equals( vol.getState( ) ) ) {
             Entities.delete( vol );
             return vol;
-          } else if ( State.ANNIHILATING.equals( vol.getState( ) ) ) {
-            return vol;
           } else {
             try {
               ServiceConfiguration sc = Topology.lookup( Storage.class, Partitions.lookupByName( vol.getPartition( ) ) );
@@ -249,7 +247,7 @@ public class VolumeManager {
                 throw Exceptions.toUndeclared( "Storage Controller returned false:  Contact the administrator to report the problem." );
               }
             } catch ( Exception ex ) {
-              throw Exceptions.toUndeclared( "Storage Controller request failed:  Contact the administrator to report the problem.", ex );
+              throw Exceptions.toUndeclared( "Delete volume request failed because of: " + ex.getMessage(), ex);
             }
           }
         } catch ( NoSuchElementException ex ) {

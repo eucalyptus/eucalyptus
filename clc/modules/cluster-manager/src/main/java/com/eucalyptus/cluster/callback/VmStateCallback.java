@@ -235,7 +235,9 @@ public class VmStateCallback extends StateUpdateMessageCallback<Cluster, VmDescr
             VmInstances.shutDown( vm );
           }
         } else if ( VmState.SHUTTING_DOWN.equals( runVmState ) ) {
+          db.rollback();
           VmStateCallback.handleReportedTeardown( vm, runVm );
+          return;
         } else if ( VmStateSet.RUN.apply( vm ) ) {
           vm.doUpdate( ).apply( runVm );
         } else if ( !VmStateSet.RUN.apply( vm ) && VmStateSet.RUN.contains( runVmState )

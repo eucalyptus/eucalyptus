@@ -37,7 +37,7 @@ define([
               min: 1,
               max: 1024,
               required: true,
-              msg: window['volume_create_invalid_size']
+              msg: $.i18n.prop('volume_create_invalid_size')
             },
             instance_id: {
               required: false
@@ -87,7 +87,7 @@ define([
             var snapshot_id = model.get('snapshot_id');
             var parameter = "_xsrf="+$.cookie('_xsrf');
             parameter += "&Size="+size+"&AvailabilityZone="+availability_zone;
-            if(snapshot_id != undefined){
+            if(snapshot_id != undefined && snapshot_id != 'None'){
               parameter += "&SnapshotId="+snapshot_id;
             }
             return this.makeAjaxCall(url, parameter, options);

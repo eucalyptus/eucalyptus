@@ -90,6 +90,6 @@
 	<mapping class="edu.ucsb.eucalyptus.msgs.MetricDimensionsValuesType"
 		abstract="true">
 		<value name="timestamp" field="timestamp" />
-		<value name="value" field="value" optional="true" />
+		<value name="value" field="value" usage="optional" />
 	</mapping>
 </binding>

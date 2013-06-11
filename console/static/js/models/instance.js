@@ -21,7 +21,7 @@ define([
       security_group_id: null,
       user_data: null,
       instance_type: null,
-      placement: {availability_zone: null, group_name: null, tenancy: null},
+      placement: null,
       kernel_id: null,
       ramdisk_id: null,
       block_device_mappings: {
@@ -102,16 +102,11 @@ define([
               data.push({name: "InstanceType", value: model.get('instance_type')});
             if (model.get('kernel_id') != undefined)
               data.push({name: "KernelId", value: model.get('kernel_id')});
-            if (model.get('RamdiskId') != undefined)
+            if (model.get('ramdisk_id') != undefined)
               data.push({name: "RamdiskId", value: model.get('ramdisk_id')});
             if (model.get('placement') != undefined) {
               var placement = model.get('placement');
-              if(placement.availability_zone != undefined) 
-                data.push({name: "Placement.AvailabilityZone", value: placement.availability_zone});
-              if(placement.group_name != undefined)
-                data.push({name: "Placement.GroupName", value: placement.group_name});
-              if(placement.tenancy != undefined)
-                data.push({name: "Placement.Tenancy", value: placement.tenancy});
+              data.push({name: "Placement.AvailabilityZone", value: placement});
             }
             if (model.get('block_device_mappings') != undefined) {
               var mappings = model.get('block_device_mappings');

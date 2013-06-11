@@ -56,9 +56,6 @@ define([
         instanceModel.sync('create', instanceModel);
         var $container = $('html body').find(DOM_BINDING['main']);
         $container.maincontainer("changeSelected", null, {selected:'instance'});
-      } else {
-        alert('Final checklist was invalid.');
-
       }
     }
     

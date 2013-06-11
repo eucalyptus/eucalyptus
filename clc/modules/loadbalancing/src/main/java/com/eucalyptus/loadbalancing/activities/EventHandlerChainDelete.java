@@ -36,7 +36,6 @@ import com.eucalyptus.event.ClockTick;
 import com.eucalyptus.event.EventListener;
 import com.eucalyptus.event.Listeners;
 import com.eucalyptus.loadbalancing.LoadBalancer;
-import com.eucalyptus.loadbalancing.LoadBalancing;
 import com.eucalyptus.loadbalancing.LoadBalancerDnsRecord.LoadBalancerDnsRecordCoreView;
 import com.eucalyptus.loadbalancing.LoadBalancerSecurityGroup;
 import com.eucalyptus.loadbalancing.LoadBalancerSecurityGroup.LoadBalancerSecurityGroupCoreView;
@@ -280,7 +279,7 @@ public class EventHandlerChainDelete extends EventHandlerChain<DeleteLoadbalance
 		@Override
 		public void fireEvent(ClockTick event) {
 			if (!( Bootstrap.isFinished() &&
-			          Topology.isEnabledLocally( LoadBalancing.class ) &&
+			          Topology.isEnabledLocally( Eucalyptus.class ) && // TODO should be LoadBalancing.class
 			          Topology.isEnabled( Eucalyptus.class ) )) 
 				return;
 		
@@ -345,7 +344,7 @@ public class EventHandlerChainDelete extends EventHandlerChain<DeleteLoadbalance
 		@Override
 		public void fireEvent(ClockTick event) {
 			if (!( Bootstrap.isFinished() &&
-			          Topology.isEnabledLocally( LoadBalancing.class ) &&
+			          Topology.isEnabledLocally( Eucalyptus.class ) && // TODO should be LoadBalancing.class
 			          Topology.isEnabled( Eucalyptus.class ) )) 
 				return;
 	

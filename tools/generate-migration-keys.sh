@@ -143,6 +143,7 @@ if [ -z "$EUCA_USER" ] ; then
 fi
 chmod 700 /etc/pki/libvirt/private
 chmod 600 /etc/pki/libvirt/private/clientkey.pem  /etc/pki/libvirt/private/serverkey.pem
+chmod 644 /etc/pki/CA/cacert.pem /etc/pki/libvirt/clientcert.pem /etc/pki/libvirt/servercert.pem
 chown -R $EUCA_USER /etc/pki/libvirt/private/ || true
 )
 
