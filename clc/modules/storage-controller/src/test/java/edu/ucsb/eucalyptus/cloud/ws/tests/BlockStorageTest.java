@@ -20,6 +20,9 @@
 
 package edu.ucsb.eucalyptus.cloud.ws.tests;
 
+import org.junit.Ignore;
+
+@Ignore("Manual development test")
 public class BlockStorageTest {
 
 }
