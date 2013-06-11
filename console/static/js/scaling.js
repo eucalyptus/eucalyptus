@@ -150,6 +150,7 @@
         itemsList['resume'] = { "name": scaling_action_resume, callback: function(key, opt) {;}, disabled: function(){ return true;} }
         itemsList['edit'] = { "name": scaling_action_edit, callback: function(key, opt) {;}, disabled: function(){ return true;} }
         itemsList['delete'] = { "name": scaling_action_delete, callback: function(key, opt) {;}, disabled: function(){ return true;} }
+        itemsList['manage_instances'] = { "name": scaling_action_manage, callback: function(key, opt) {;}, disabled: function(){ return true;} }
       })();
 
       if ( selectedScaling.length === 1) {
@@ -157,6 +158,7 @@
         itemsList['suspend'] = {"name":scaling_action_suspend, callback: function(key, opt){ thisObj._dialogAction('suspendscalinggroup', selectedScaling); }}
         itemsList['resume'] = {"name":scaling_action_resume, callback: function(key, opt){ thisObj._dialogAction('resumescalinggroup', selectedScaling); }}
         itemsList['edit'] = {"name":scaling_action_edit, callback: function(key, opt){ thisObj._dialogAction('editscalinggroup', selectedScaling); }}
+        itemsList['manage_instances'] = { "name": scaling_action_manage, callback: function(key, opt) { thisObj._dialogAction('scalinggroupmanageinstances', selectedScaling);}}
       }
 
       if ( selectedScaling.length >= 1) {
