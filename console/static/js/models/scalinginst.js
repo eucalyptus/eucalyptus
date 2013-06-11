@@ -4,7 +4,7 @@
 define([
     './eucamodel'
 ], function(EucaModel) {
-  var model = EucaModel.extend({
+  var model = Backbone.RelationalModel.extend({
     idAttribute: 'instance_id',
     setInstanceHealth: function (health_status, should_respect_grace_period) {
       var id = this.get('instance_id');

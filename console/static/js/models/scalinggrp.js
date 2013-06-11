@@ -2,9 +2,13 @@
 //
 define([
     './eucamodel',
+    './scalinginst',
+    './scalinginsts',
+    './astag',
+    './astags',
 ],
-function(EucaModel) {
-  var model = EucaModel.extend({
+function(EucaModel, ScalingInst, ScalingInstances, Tag, Tags) {
+  var model = Backbone.RelationalModel.extend({
     idAttribute: 'name',
 
     initialize: function() {
@@ -35,7 +39,35 @@ function(EucaModel) {
         if (dc < min && dc >= 0)
           this.set('desired_capacity', min);
       });
- }, 
+
+      this.fetchRelated();
+      console.log('scaling', this);
+      console.log('related instances:', this.get('instances'));
+      console.log('related tags:', this.get('tags'));
+    }, 
+
+    relations: [
+      {
+        type: 'HasMany',
+        key: 'instances',
+        relatedModel: ScalingInst,
+        collectionType: ScalingInstances,
+        reverseRelation: {
+          key: 'scalinggroup',
+        }
+      },
+      {
+        type: 'HasMany',
+        key: 'tags',
+        relatedModel: Tag,
+        collectionType: Tags,
+        autoFetch: true,
+        reverseRelation: {
+          key: 'resource_id',
+          includeInJSON: 'name'
+        }
+      }
+    ],
 
     validation: {
            
