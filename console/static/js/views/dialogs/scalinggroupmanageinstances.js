@@ -2,12 +2,14 @@ define([
     './eucadialogview', 
     'app', 
     'text!./scalinggroupmanageinstances.html',
-    'models/scalinginst'
+    'models/scalinginst',
+    'views/searches/scalinginst'
   ], 
-  function(EucaDialogView, app, tpl, ScalingInst) {
+  function(EucaDialogView, app, tpl, ScalingInst, Search) {
     return EucaDialogView.extend({
       initialize: function(args) {
         var self = this;
+        var me = this;
         this.template = tpl;
         this.model = args.model.at(0);
         // health state label choices
@@ -74,9 +76,7 @@ define([
             obj.instance.unset('hasFocus');
           },
 
-          activateButton: function() {
-
-          }
+          search: new Search(clone.get('instances')),
         };
 
         this._do_init();

@@ -4,6 +4,8 @@ define([], function() {
 
     function getTags() {
       return _.groupBy(data.reduce(function(tags, m) { 
+
+          if(!m.get('tags')) return;
           return _.union(tags, _.map(m.get('tags').models, function(m) { return m.toJSON(); })); 
       }, []), function(t) { 
           return t.name; 
