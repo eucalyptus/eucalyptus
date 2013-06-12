@@ -50,7 +50,13 @@ define([
           },
 
           delete: function(e, obj) {
+            e.stopPropagation();
             obj.instance.set("_deleted", true);
+          },
+
+          undoDelete: function(e, obj) {
+            e.stopPropagation();
+            obj.instance.unset("_deleted");
           },
 
           switchToQScale: function() {
