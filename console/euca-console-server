@@ -12,6 +12,8 @@ import ConfigParser
 import tornado.httpserver
 import tornado.ioloop
 import eucaconsole
+import BaseHTTPServer
+from BaseHTTPServer import BaseHTTPRequestHandler
 from eucaconsole import api
 from eucaconsole.threads import Threads
 from eucaconsole.configloader import ConfigLoader
@@ -85,8 +87,7 @@ def sessionChecker():
 
 def start_console():
     settings = {
-      "xsrf_cookies": True,
-      "debug": True
+      "xsrf_cookies": True
     }
 
     ssl_settings = {
@@ -110,6 +111,11 @@ def start_console():
 
     if eucaconsole.config.has_option('server', 'uiport'):
         server_port = eucaconsole.config.getint('server', 'uiport')
+
+    if eucaconsole.config.has_option('server', 'http.redirect'):
+        if eucaconsole.config.getboolean('server', 'http.redirect'):
+            Threads.instance().runThread(start_redirector,
+                ({'port': server_port, 'use_ssl':(len(ssl_settings.keys()) > 0)}, None))
 
     application = tornado.web.Application([
             (r"/(favicon\.ico)", EucaStaticHandler, {'path': os.path.join(webroot, 'images')}),
@@ -142,6 +148,27 @@ def start_console():
     checker.start()
     main_loop.start()
 
+def start_redirector(kwargs, callback):
+    # can't use tornado for this (not threadsafe). Must use something else, something simpler!
+    http_port = 8888
+    if eucaconsole.config.has_option('server', 'http.port'):
+        http_port = eucaconsole.config.getint('server', 'http.port')
+    server = BaseHTTPServer.HTTPServer(('localhost', http_port),
+                    lambda *args: RedirectHandler(kwargs, *args))
+    server.serve_forever()
+
+class RedirectHandler(BaseHTTPRequestHandler):
+    def __init__(self, kwargs, *args):
+        self._url = 'https' if kwargs['use_ssl'] else 'http'
+        self._url += '://localhost:'+str(kwargs['port'])+'/'
+        BaseHTTPServer.BaseHTTPRequestHandler.__init__(self, *args)
+
+    def do_GET(self):
+        self.send_response(301)
+        self.send_header("Location", self._url)
+        self.end_headers()
+        logging.info("Redirected http request")
+        return
 
 def usage():
     print """

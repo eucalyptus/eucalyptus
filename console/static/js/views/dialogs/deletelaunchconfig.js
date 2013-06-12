@@ -29,7 +29,6 @@ define([
                                     'delete_launch_config_done',
                                     'delete_launch_config_fail');
                       self.close();
-                    });
                   }
                 }
             }

@@ -4,7 +4,7 @@
 define([
     './eucamodel'
 ], function(EucaModel) {
-  var model = EucaModel.extend({
+  var model = Backbone.RelationalModel.extend({
     idAttribute: 'instance_id',
     setInstanceHealth: function (health_status, should_respect_grace_period) {
       var url = "/autoscaling?Action=SetInstanceHealth";
@@ -24,6 +24,14 @@ define([
         data += 'true';
       else data += 'false';
       this.makeAjaxCall(url, data, options);
+    },
+
+    sync: function(method, model) {
+      if(method == 'update') {
+        this.setInstanceHealth(model.get('health_status'), model.get('should_respect_grace_period'));
+      } else if (method=="delete") {
+        this.terminateInstance(model.get('decrement_capacity'));
+      }
     }
   });
   return model;

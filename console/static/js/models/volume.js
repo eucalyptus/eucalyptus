@@ -87,7 +87,7 @@ define([
             var snapshot_id = model.get('snapshot_id');
             var parameter = "_xsrf="+$.cookie('_xsrf');
             parameter += "&Size="+size+"&AvailabilityZone="+availability_zone;
-            if(snapshot_id != undefined){
+            if(snapshot_id != undefined && snapshot_id != 'None'){
               parameter += "&SnapshotId="+snapshot_id;
             }
             return this.makeAjaxCall(url, parameter, options);

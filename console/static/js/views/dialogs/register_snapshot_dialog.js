@@ -28,6 +28,7 @@ define([
         snapshot: new Snapshot({snapshot_id: args.item}),
         error: new Backbone.Model({}),
         help: {title: null, content: help_snapshot.dialog_register_content, url: help_snapshot.dialog_register_content_url, pop_height: 600},
+        del: 'true',
 
 
         cancelButton: {
@@ -43,10 +44,12 @@ define([
             var snapshotId = self.scope.snapshot.get('snapshot_id');
             var name = self.scope.snapshot.get('name');
             var description = self.scope.snapshot.get('description');
+            var delOnTerm = self.scope.del;
             var isWindows = self.scope.snapshot.get('os') ? true : false;
 
             var imgOpts = {name: name, description: description};
-            imgOpts['block_device_mapping'] = {'/dev/sda': {'snapshot_id':snapshotId}};
+            imgOpts['block_device_mapping'] = {'/dev/sda': {'snapshot_id':snapshotId,
+                              'delete_on_termination':(delOnTerm?'true':'false')}};
             if (isWindows) imgOpts['platform'] = 'windows';
             var image = new Image(imgOpts);
             image.save({}, {

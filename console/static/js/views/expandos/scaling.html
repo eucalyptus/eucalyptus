@@ -5,8 +5,8 @@
     <li><a href="#tabs-3" data-msg="tab_policies"></a></li>
     <!--
     <li><a href="#tabs-4" data-msg="tab_processes"></a></li>
-    -->
     <li><a href="#tabs-5" data-msg="tab_tags"></a></li>
+    -->
   </ul>
   <div id="tabs-1" class="tab">
       <ul class="scaling-group-expanded clearfix">
@@ -14,12 +14,17 @@
 	    <li><div class="expanded-title" data-msg="scaling_table_expanded_launch_configs"></div><div class="expanded-value" data-text="group.launch_config_name"></div></li>
 	    <li><div class="expanded-title" data-msg="scaling_table_expanded_zones"></div><div class="expanded-value" data-text="group.availability_zones.0"></div></li>
 	    <li><div class="expanded-title" data-msg="scaling_table_expanded_lb"></div><div class="expanded-value" data-text="group.load_balancers.0"></div></li>
-	    <li><div class="expanded-title" data-msg="scaling_table_expanded_health"></div><div class="expanded-label" data-msg="scaling_table_expanded_health_check_type"><span class="expanded-value" data-text="group.health_check_type"></span></div><div class="expanded-label" data-msg="scaling_table_expanded_health_check_grace_period"><span class="expanded-value" data-text="group.health_check_period"></span></div></li>
+	    <li><div class="expanded-title" data-msg="scaling_table_expanded_health"></div>
+          <div class="expanded-label" data-msg="scaling_table_expanded_health_check_type"></div>
+          <span class="expanded-value" data-text="group.health_check_type"></span>
+          <div class="expanded-label" data-msg="scaling_table_expanded_health_check_grace_period"></div>
+          <span class="expanded-value" data-text="group.health_check_period"></span>
+        </li>
 	  </ul>
   </div>
   <div id="tabs-2" class="tab">
     <ul class="scaling-group-expanded clearfix">
-	    <li><div class="expanded-title" data-msg="scaling_tbl_hdr_current"></div><div class="expanded-value" data-text="current"></div></li>
+	    <li><div class="expanded-title" data-msg="scaling_table_expanded_instances_current"></div><div class="expanded-value" data-text="current"></div></li>
       <li><div class="expanded-title" data-msg="scaling_table_expanded_instances_desired"></div><div class="expanded-value" data-text="group.desired_capacity"></div></li>
       <li><div class="expanded-title" data-msg="scaling_table_expanded_instances_max"></div><div class="expanded-value" data-text="group.max_size"></div></li>
       <li><div class="expanded-title" data-msg="scaling_table_expanded_instances_min"></div><div class="expanded-value" data-text="group.min_size"></div></li>
@@ -42,7 +47,13 @@
   </div>
   <div id="tabs-3" class="tab">
     <ul class="scaling-group-policies-expanded clearfix">
-      <li><div class="expanded-label" data-msg="scaling_table_expanded_scaling_policy_default_cooldown"><div class="expanded-value" data-text="group.default_cooldown"></div></div></li>
+      <li><div class="expanded-section-label" data-msg="scaling_table_expanded_scaling_policies"></div></li>		
+    </ul>	  
+    <ul class="scaling-group-policies-expanded clearfix">
+      <li>
+        <div class="expanded-label" data-msg="scaling_table_expanded_scaling_policy_default_cooldown"></div>
+        <div class="expanded-value" data-text="group.default_cooldown"></div>
+      </li>
     </ul>
     <ul class="scaling-group-policies-expanded clearfix">
 		<li>
@@ -86,8 +97,8 @@
 		</li>
 	  </ul>
   </div>
-  -->
   <div id="tabs-5" class="tab">
     <div class="expanded-table" data-ui-tags="instance.tags"></div>
   </div>
+  -->
 <div style="clear:both"></div>
