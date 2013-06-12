@@ -48,7 +48,6 @@ class Threads(object):
         self.counter.acquire(True)
         t = threading.Thread(target=self.__thread_done_callback__, \
                              args=(target, args))
-        #t = Thread(target=target, args=args)
         t.start()
 
     def __thread_done_callback__(self, target, args):

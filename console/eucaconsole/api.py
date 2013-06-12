@@ -804,7 +804,6 @@ class ComputeHandler(BaseAPIHandler):
             kernel_id = self.get_argument('KernelId', None)
             ramdisk_id = self.get_argument('RamdiskId', None)
             root_dev_name = self.get_argument('RootDeviceName', None)
-            snapshot_id = self.get_argument('SnapshotId', None)
             # get block device mappings
             bdm = BlockDeviceMapping()
             mapping = self.get_argument('BlockDeviceMapping.1.DeviceName', None)
@@ -826,10 +825,6 @@ class ComputeHandler(BaseAPIHandler):
                 bdm[dev_name] = block_dev_type
                 idx += 1
                 mapping = self.get_argument('BlockDeviceMapping.%d.DeviceName' % idx, None)
-            if snapshot_id:
-                rootbdm = BlockDeviceType()
-                rootbdm.snapshot_id = snapshot_id
-                bdm['/dev/sda'] = rootbdm
             if len(bdm) == 0:
                 bdm = None
             return clc.register_image(name, image_location, description, architecture, kernel_id, ramdisk_id, root_dev_name, bdm, callback)
