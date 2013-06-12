@@ -2,7 +2,7 @@
     <div class="title" data-msg="manage_scaling_group_instances_dialog_title"></div>
     <div class="body">
 		<p><span data-msg="manage_scaling_group_instances_dialog_text"></span><span>&nbsp;</span>
-        <a data-on-click=":close" data-msg="manage_scaling_group_instances_dialog_link_label"></a>
+        <a data-on-click=":switchToQScale" data-msg="manage_scaling_group_instances_dialog_link_label"></a>
         </p>
         <p></p>
     <div>
@@ -21,10 +21,11 @@
             <th data-msg="scaling_table_expanded_instance_zone"></th>
             <th data-msg="scaling_table_expanded_instance_launch_config"></th>
             <th data-msg="scaling_table_expanded_instance_state"></th>
+            <th></th>
           </tr>
         </thead>
         <tbody>
-          <tr data-each-instance="sgroup.instances">
+          <tr data-each-instance="sgroup.instances" data-on-mouseover=":showControls" data-on-mouseout=":hideControls" data-hide="instance._deleted">
             <td data-text="instance.instance_id"></td>
             <td>
               <select data-value="instance.health_status"> 
@@ -34,6 +35,7 @@
             <td data-text="instance.availability_zone"></td>
             <td data-text="instance.launch_config_name"></td>
             <td data-text="instance.lifecycle_state"></td>
+            <td><div class="icon_delete" data-show="instance.hasFocus" data-on-click=":delete" data-tooltip="tag_icon_delete_tip"></td>
           </tr>
         </tbody>
       </table>

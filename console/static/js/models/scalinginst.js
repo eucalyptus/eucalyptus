@@ -4,9 +4,9 @@
 define([
     './eucamodel'
 ], function(EucaModel) {
-  var model = Backbone.RelationalModel.extend({
+  var model = EucaModel.extend({
     idAttribute: 'instance_id',
-    setInstanceHealth: function (health_status, should_respect_grace_period) {
+    setInstanceHealth: function (health_status, should_respect_grace_period, options) {
       var url = "/autoscaling?Action=SetInstanceHealth";
       var id = this.get('instance_id');
       var data = "_xsrf="+$.cookie('_xsrf')+"&InstanceId="+id+
@@ -15,7 +15,7 @@ define([
         data += "&ShouldRespectGracePeriod=true";
       this.makeAjaxCall(url, data, options);
     },
-    terminateInstance: function (decrement_capacity) {
+    terminateInstance: function (decrement_capacity, options) {
       var url = "/autoscaling?Action=TerminateInstanceInAutoScalingGroup";
       var id = this.get('instance_id');
       var data = "_xsrf="+$.cookie('_xsrf')+"&InstanceId="+id+
@@ -26,11 +26,11 @@ define([
       this.makeAjaxCall(url, data, options);
     },
 
-    sync: function(method, model) {
+    sync: function(method, model, options) {
       if(method == 'update') {
-        this.setInstanceHealth(model.get('health_status'), model.get('should_respect_grace_period');
+        this.setInstanceHealth(model.get('health_status'), model.get('should_respect_grace_period'), options);
       } else if (method=="delete") {
-        this.terminateInstance(model.get('decrement_capacity');
+        this.terminateInstance(model.get('decrement_capacity'), options);
       }
     }
   });
