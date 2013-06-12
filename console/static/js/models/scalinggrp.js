@@ -2,12 +2,16 @@
 //
 define([
     './eucamodel',
+    './astags',
 ],
-function(EucaModel) {
+function(EucaModel, tags) {
   var model = EucaModel.extend({
     idAttribute: 'name',
 
     initialize: function() {
+      // this doesn't properly deal with scaling group tags, but keeps
+      // tagsearch from breaking
+      this.set('tags', new tags());
 
       // bump min and max to contain wherever dc lands
       this.on('change:desired_capacity', function() {
