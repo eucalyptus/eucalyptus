@@ -79,6 +79,10 @@ define([
           search: new Search(clone.get('instances')),
         };
 
+        this.scope.instances = this.scope.search.filtered;
+        this.scope.search.filtered.on('add remove sync change reset', function() {
+          self.render();
+        });
         this._do_init();
       },
 
