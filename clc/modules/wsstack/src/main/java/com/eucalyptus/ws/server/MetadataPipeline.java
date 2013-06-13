@@ -128,10 +128,10 @@ public class MetadataPipeline extends FilteredPipeline implements ChannelUpstrea
       String newUri = null;
       String uri = request.getUri( );
       InetSocketAddress remoteAddr = ( ( InetSocketAddress ) ctx.getChannel( ).getRemoteAddress( ) );
-      String remoteHost = remoteAddr.getAddress( ).getHostAddress( );//"10.1.1.2";//
+      String remoteHost = remoteAddr.getAddress( ).getHostAddress( );
       if ( uri.startsWith( "/latest/" ) )
-        newUri = uri.replaceAll( "/latest/", remoteHost + ":" );
-      else newUri = uri.replaceAll( "/\\d\\d\\d\\d-\\d\\d-\\d\\d/", remoteHost + ":" );
+        newUri = uri.replaceAll( "/latest[/]+", remoteHost + ":" );
+      else newUri = uri.replaceAll( "/\\d\\d\\d\\d-\\d\\d-\\d\\d[/]+", remoteHost + ":" );
       
       HttpResponse response = null;
       LOG.trace( "Trying to get metadata: " + newUri );
@@ -145,9 +145,6 @@ public class MetadataPipeline extends FilteredPipeline implements ChannelUpstrea
         } else {
           reply = ServiceContext.send( "VmMetadata", newUri );
         }
-      } catch ( ServiceDispatchException e1 ) {
-        Logs.extreme( ).debug( e1, e1 );
-        replyEx = e1;
       } catch ( Exception e1 ) {
         Logs.extreme( ).debug( e1, e1 );
         replyEx = e1;
