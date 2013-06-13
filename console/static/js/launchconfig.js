@@ -62,7 +62,12 @@
             },
             {
               "aTargets" : [2],
-              "mData": "image_id",
+              "mData": function(source){
+                this_mouseover = source.image_id;
+                this_value = source.display_image_id;
+                return eucatableDisplayColumnTypeText(this_mouseover, this_value, 256);
+              },
+              "sClass": "wrap-content",
             },
             {
               "aTargets" : [3],

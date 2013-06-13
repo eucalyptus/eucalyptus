@@ -67,3 +67,29 @@ class ScaleInterface(object):
     def get_all_launch_configurations(self, configuration_names=None, max_records=None, next_token=None, callback=None):
         raise NotImplementedError("Are you sure you're using the right class?")
 
+    # policy related
+    def delete_policy(self, policy_name, autoscale_group=None, callback=None):
+        raise NotImplementedError("Are you sure you're using the right class?")
+
+    def get_all_policies(self, as_group=None, policy_names=None, max_records=None, next_token=None, callback=None):
+        raise NotImplementedError("Are you sure you're using the right class?")
+
+    def execute_policy(self, policy_name, as_group=None, honor_cooldown=None, callback=None):
+        raise NotImplementedError("Are you sure you're using the right class?")
+
+    def create_scaling_policy(self, scaling_policy, callback=None):
+        raise NotImplementedError("Are you sure you're using the right class?")
+
+    def get_all_adjustment_types(self, callback=None):
+        raise NotImplementedError("Are you sure you're using the right class?")
+
+    # tag related
+    def delete_tags(self, tags, callback=None):
+        raise NotImplementedError("Are you sure you're using the right class?")
+
+    def get_all_tags(self, filters=None, max_records=None, next_token=None):
+        raise NotImplementedError("Are you sure you're using the right class?")
+
+    def create_or_update_tags(self, tags, callback=None):
+        raise NotImplementedError("Are you sure you're using the right class?")
+

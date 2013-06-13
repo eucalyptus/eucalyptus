@@ -90,7 +90,6 @@ define([
     },
     makeAjaxCall: function(url, param, options){
       var xhr = options.xhr = $.ajax({
-        type: "POST",
         url: url,
         data: param,
         dataType: "json",

@@ -1,0 +1,59 @@
+<div class="wizard-step">
+    <div class="wizardTitle"><h3 data-msg="create_scaling_group_section_header_membership">Membership</h3></div>
+    <div class="launch-wizard-type-main-contents">
+        <div class="launch-wizard-type-option">
+            <div class="form-row clearfix">
+                <div class="form-row-section">
+                    <label for="availabilityZone" data-msg="create_scaling_group_memb_az">Availability Zone</label>
+                    <div>
+                        <select name="availabilityZone" id="availabilityZone">
+                            <option>ABC</option>
+                            <option>DEF</option>
+                        </select>
+                        <button>+</button>
+                    </div>
+                </div>
+                <div class="form-row-section">
+                    <div data-ui-selector=":loadBalancers">
+                        <label data-msg="create_scaling_group_memb_lb">Load Balancers</label>
+                    </div>
+                </div>
+                <div class="form-row-section-wide form-row-section">
+                    <label class="wizard-section-label" data-msg="create_scaling_group_memb_health_check">Health Check</label>
+                    <div>
+                        <span>
+                            <label for="healthCheckType" data-msg="create_scaling_group_memb_health_check_type">Type</label>
+                            <select name="healthCheckType" id="healthCheckType">
+                                <option>aaa</option>
+                                <option>PQR</option>
+                            </select>
+                        </span>
+                        <span>
+                            <label for="healthCheckSeconds" data-msg="create_scaling_group_memb_health_check_grace_period">Grace Period (secs)</label>
+                            <input value="1" type="number" class="smallNumber" id="healthCheckSeconds" name="healthCheckSeconds"></input>
+                        </span>
+                    </div>
+                </div>
+            </div>
+            <div class="wizard-section-label" data-msg="create_scaling_group_memb_tags">Scaling Group Tags</div>
+            <div class="form-row clearfix">
+                <div>
+                    <span class="form-row-section">
+                        <label class="centerLabel" for="key" data-msg="tag_display_hdr_key">KEY</label>
+                        <input name="key" id="key" type="text" placeholder="key"></input>
+                    </span>
+                    <span class="form-row-section">
+                        <label for="value" data-msg="tag_display_hdr_value">VALUE</label>
+                        <input name="value" id="key" type="text" placeholder="value"></input>
+                    </span>
+                </div>
+            </div>
+            <div class="clearfix">
+                <div class="form-longrow">
+                    <input type="checkbox" id="applyTags" name="applyTags"></input>
+                    <label for="applyTags" data-msg="create_scaling_group_memb_apply_tags_to_instances">Also apply tags to instances in the scaling group</label>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

@@ -148,6 +148,7 @@ define(['app', 'dataholder'], function(app, dh) {
       var result = [];
       var found = [];
       records.toJSON().forEach(function(img) {
+        if(!img.tags) return;
         img.tags = img.tags.toJSON();
         findMatches(facet, searchTerm, img, function(val, label){
           if (found.indexOf(val) < 0) {
