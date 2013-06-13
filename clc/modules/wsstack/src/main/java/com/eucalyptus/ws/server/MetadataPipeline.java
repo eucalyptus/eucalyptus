@@ -131,6 +131,8 @@ public class MetadataPipeline extends FilteredPipeline implements ChannelUpstrea
       String remoteHost = remoteAddr.getAddress( ).getHostAddress( );
       if ( uri.startsWith( "/latest/" ) )
         newUri = uri.replaceAll( "/latest[/]+", remoteHost + ":" );
+      else if ( uri.startsWith( "/1.0/" ) )
+        newUri = uri.replaceAll( "/1.0[/]+", remoteHost + ":" );
       else newUri = uri.replaceAll( "/\\d\\d\\d\\d-\\d\\d-\\d\\d[/]+", remoteHost + ":" );
       
       HttpResponse response = null;
