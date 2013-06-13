@@ -47,9 +47,10 @@ define([
         setupAutoCompleteForVolumeInputBox: function(args){
             var self = this;
 
+	    var this_instance_zone = App.data.instance.get(args.instance_id).get('placement');
             var vol_ids = [];
             App.data.volume.each(function(item){
-              if( item.get('status') === 'available' ){
+              if( item.get('status') === 'available' && item.get('zone') === this_instance_zone ){
                 // TRY TO FIND ITS NAME TAG
                 var nameTag = self.findNameTag(item);
                 var autocomplete_string = String(self.createIdNameTagString(item.get('id'), addEllipsis(nameTag, 15)));
@@ -71,9 +72,10 @@ define([
         setupAutoCompleteForInstanceInputBox: function(args){
             var self = this;
 
+	    var this_volume_zone = App.data.volume.get(args.volume_id).get('zone');
             var inst_ids = [];
             App.data.instance.each(function(item){
-              if( item.get('_state').name === 'running' ){
+              if( item.get('_state').name === 'running' && item.get('placement') === this_volume_zone ){
                 // TRY TO FIND ITS NAME TAG
                 var nameTag = self.findNameTag(item);
                 var autocomplete_string = String(self.createIdNameTagString(item.get('id'), addEllipsis(nameTag, 15)));

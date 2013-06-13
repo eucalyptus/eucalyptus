@@ -2,12 +2,14 @@ define([
     './eucadialogview', 
     'app', 
     'text!./scalinggroupmanageinstances.html',
-    'models/scalinginst'
+    'models/scalinginst',
+    'views/searches/scalinginst'
   ], 
-  function(EucaDialogView, app, tpl, ScalingInst) {
+  function(EucaDialogView, app, tpl, ScalingInst, Search) {
     return EucaDialogView.extend({
       initialize: function(args) {
         var self = this;
+        var me = this;
         this.template = tpl;
         this.model = args.model.at(0);
         // health state label choices
@@ -50,7 +52,13 @@ define([
           },
 
           delete: function(e, obj) {
+            e.stopPropagation();
             obj.instance.set("_deleted", true);
+          },
+
+          undoDelete: function(e, obj) {
+            e.stopPropagation();
+            obj.instance.unset("_deleted");
           },
 
           switchToQScale: function() {
@@ -68,11 +76,13 @@ define([
             obj.instance.unset('hasFocus');
           },
 
-          activateButton: function() {
-
-          }
+          search: new Search(clone.get('instances')),
         };
 
+        this.scope.instances = this.scope.search.filtered;
+        this.scope.search.filtered.on('add remove sync change reset', function() {
+          self.render();
+        });
         this._do_init();
       },
 
