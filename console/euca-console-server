@@ -160,12 +160,15 @@ def start_redirector(kwargs, callback):
 class RedirectHandler(BaseHTTPRequestHandler):
     def __init__(self, kwargs, *args):
         self._url = 'https' if kwargs['use_ssl'] else 'http'
-        self._url += '://localhost:'+str(kwargs['port'])+'/'
+        self._url += '://%s:'+str(kwargs['port'])+'/'
         BaseHTTPServer.BaseHTTPRequestHandler.__init__(self, *args)
 
     def do_GET(self):
         self.send_response(301)
-        self.send_header("Location", self._url)
+        host = self.headers.dict['host']
+        if host.find(':') > -1:
+          host = host.split(':')[0]
+        self.send_header("Location", self._url % host)
         self.end_headers()
         logging.info("Redirected http request")
         return

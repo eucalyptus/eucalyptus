@@ -10,7 +10,7 @@ define(['views/shared/model/typemodel'], function(Type) {
     },
 
     finish: function(outputModel) {
-      outputModel.set('name', this.get('instance_names'));
+      outputModel.set('name', this.get('lc_name'));
       outputModel.set('instance_type', this.get('instance_type'));
     }
 

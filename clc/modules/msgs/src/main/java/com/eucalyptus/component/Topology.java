@@ -349,7 +349,7 @@ public class Topology {
   
   public static Function<ServiceConfiguration, Future<ServiceConfiguration>> transition( final Component.State toState ) {
     final Function<ServiceConfiguration, Future<ServiceConfiguration>> transition = new Function<ServiceConfiguration, Future<ServiceConfiguration>>( ) {
-      private final List<Component.State> serializedStates = Lists.newArrayList( Component.State.ENABLED, Component.State.STOPPED );
+      private final List<Component.State> serializedStates = Lists.newArrayList( Component.State.ENABLED, Component.State.DISABLED, Component.State.STOPPED );
       
       @Override
       public Future<ServiceConfiguration> apply( final ServiceConfiguration input ) {

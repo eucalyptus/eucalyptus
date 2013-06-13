@@ -2,16 +2,20 @@
     <div class="title" data-msg="manage_scaling_group_instances_dialog_title"></div>
     <div class="body">
 		<p><span data-msg="manage_scaling_group_instances_dialog_text"></span><span>&nbsp;</span>
-        <a data-on-click=":close" data-msg="manage_scaling_group_instances_dialog_link_label"></a>
+        <a data-on-click=":switchToQScale" data-msg="manage_scaling_group_instances_dialog_link_label"></a>
+        <span>&nbsp;</span><span data-msg="manage_scaling_group_instances_dialog_text_suffix"></span>
         </p>
         <p></p>
+   <!-- decided we didn't need these at this time: EUCA-5501      
     <div>
       <input type="checkbox" name="launch-new-on-term" id="launch-new-on-term"><label for="launch-new-on-term" data-msg="scaling_table_expanded_launch_instance_on_term"></label>
     </div>
     <div>
       <input type="checkbox" name="begin-checking-health" id="begin-checking-health"><label for="begin-checking-health" data-msg="scaling_table_expanded_check_health_on_launch"></label>
     </div>
+  -->
 		<!-- <div data-text=":status" style="height:20px"></div> Not sure what this is for -->
+    <div data-ui-vsearch="search"></div>
     <div>
       <table>
         <thead>
@@ -21,10 +25,11 @@
             <th data-msg="scaling_table_expanded_instance_zone"></th>
             <th data-msg="scaling_table_expanded_instance_launch_config"></th>
             <th data-msg="scaling_table_expanded_instance_state"></th>
+            <th></th>
           </tr>
         </thead>
         <tbody>
-          <tr data-each-instance="sgroup.instances">
+          <tr data-each-instance="instances" data-on-mouseover=":showControls" data-on-mouseout=":hideControls" data-class-edit-tags-deleted="instance._deleted">
             <td data-text="instance.instance_id"></td>
             <td>
               <select data-value="instance.health_status"> 
@@ -34,6 +39,10 @@
             <td data-text="instance.availability_zone"></td>
             <td data-text="instance.launch_config_name"></td>
             <td data-text="instance.lifecycle_state"></td>
+            <td>
+              <div class="icon_delete" data-show="instance.hasFocus" data-on-click=":delete" data-tooltip="instance_dialog_term_title">
+              <div class="icon_cancel" data-show="instance._deleted" data-on-click=":undoDelete" data-tooltip="instance_dialog_undo_title">
+            </td>
           </tr>
         </tbody>
       </table>

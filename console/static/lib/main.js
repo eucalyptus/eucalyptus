@@ -8,7 +8,7 @@ alert = function() {
 require.config({
         baseUrl: '../js',
         paths: {
-		'underscore': '../lib/underscore-1.4.4',
+		'underscore': '../lib/underscore-1.4.3',
 		'backbone': '../lib/backbone-1.0',
 		'backbone-validation': '../lib/backbone-validation',
         'visualsearch' : '../lib/visualsearch',
@@ -17,7 +17,6 @@ require.config({
         'text' : '../lib/text',
         'order' : '../lib/order',
         'domReady' : '../lib/domReady',
-        'backbone-relational': '../lib/backbone-relational',
         },
         shim: {
                 underscore : {
@@ -30,7 +29,6 @@ require.config({
                     deps: ['underscore'],
                 	exports: 'Backbone',
                 },
-                'backbone-relational': ['backbone'],
                 'backbone-validation' : {
                     deps: ['backbone'],
                 	exports: 'Backbone.Validation',
@@ -45,9 +43,8 @@ require.config({
 	}
 });
 
-require(['underscore', 'backbone', 'backbone-validation', 'backbone-relational'], function(_, Backbone) {
+require(['underscore', 'backbone', 'backbone-validation'], function(_, Backbone) {
     _.extend(Backbone.Model.prototype, Backbone.Validation.mixin);
-    //_.extend(Backbone.Model.prototype, BackboneRelational.mixin);
 });
 
 var oldClean = jQuery.cleanData;

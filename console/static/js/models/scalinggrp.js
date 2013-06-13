@@ -2,16 +2,16 @@
 //
 define([
     './eucamodel',
-    './scalinginst',
-    './scalinginsts',
-    './astag',
     './astags',
 ],
-function(EucaModel, ScalingInst, ScalingInstances, Tag, Tags) {
-  var model = Backbone.RelationalModel.extend({
+function(EucaModel, tags) {
+  var model = EucaModel.extend({
     idAttribute: 'name',
 
     initialize: function() {
+      // this doesn't properly deal with scaling group tags, but keeps
+      // tagsearch from breaking
+      this.set('tags', new tags());
 
       // bump min and max to contain wherever dc lands
       this.on('change:desired_capacity', function() {
@@ -39,35 +39,7 @@ function(EucaModel, ScalingInst, ScalingInstances, Tag, Tags) {
         if (dc < min && dc >= 0)
           this.set('desired_capacity', min);
       });
-
-      this.fetchRelated();
-      console.log('scaling', this);
-      console.log('related instances:', this.get('instances'));
-      console.log('related tags:', this.get('tags'));
-    }, 
-
-    relations: [
-      {
-        type: 'HasMany',
-        key: 'instances',
-        relatedModel: ScalingInst,
-        collectionType: ScalingInstances,
-        reverseRelation: {
-          key: 'scalinggroup',
-        }
-      },
-      {
-        type: 'HasMany',
-        key: 'tags',
-        relatedModel: Tag,
-        collectionType: Tags,
-        autoFetch: true,
-        reverseRelation: {
-          key: 'resource_id',
-          includeInJSON: 'name'
-        }
-      }
-    ],
+ }, 
 
     validation: {
            

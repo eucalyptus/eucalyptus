@@ -38,7 +38,7 @@ function(_, Backbone, tags) {
 	['balancer'],
 	['insthealth', 'instHealths'],
 	['summary'],
-	['zone'],
+	['zone', 'zones'],
 	['bucket'],
 	['alarm'],
 	['availabilityzone']

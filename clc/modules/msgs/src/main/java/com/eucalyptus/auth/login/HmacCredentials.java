@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * Copyright 2009-2013 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -82,7 +82,8 @@ public class HmacCredentials extends WrappedCredentials<String> {
   private final String body;
   private String headerHost;
   private String headerPort;
-  private String queryId;
+  private final String queryId;
+  private final String securityToken;
   private Hmac signatureMethod;
 
   public HmacCredentials( final String correlationId,
@@ -111,6 +112,7 @@ public class HmacCredentials extends WrappedCredentials<String> {
       }
     }
     this.queryId = variant.getAccessKeyId( headerLookup, parameterLookup );
+    this.securityToken = variant.getSecurityToken( headerLookup, parameterLookup );
     this.signatureMethod = variant.getSignatureMethod( headerLookup, parameterLookup );
   }
 
@@ -128,6 +130,10 @@ public class HmacCredentials extends WrappedCredentials<String> {
 
   public QueryIdCredential getQueryIdCredential() {
     return new QueryIdCredential( getQueryId() );
+  }
+
+  public String getSecurityToken( ) {
+    return securityToken;
   }
 
   public String getSignature( ) {

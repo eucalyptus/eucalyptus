@@ -1,5 +1,5 @@
-define(['./astag'], function(ASTag) {
-  return Backbone.Collection.extend({
+define(['./astag', './eucacollection'], function(ASTag, EucaCollection) {
+  return EucaCollection.extend({
     //url: '/autoscaling?Action=DescribeTags',
     model: ASTag,
     url: function(models) {
