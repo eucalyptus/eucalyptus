@@ -63,6 +63,7 @@
 package com.eucalyptus.vm;
 
 import static com.eucalyptus.util.Strings.isPrefixOf;
+import static com.eucalyptus.util.Strings.upper;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -1247,6 +1248,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
       m.put( "local-hostname", this.getNetworkConfig( ).getPrivateAddress( ) );
     }
     m.put( "local-ipv4", this.getNetworkConfig( ).getPrivateAddress( ) );
+    m.put( "mac", upper( ).apply( this.getNetworkConfig().getMacAddress() ) );
     if ( dns ) {
       m.put( "public-hostname", this.getNetworkConfig( ).getPublicDnsName( ) );
     } else {
