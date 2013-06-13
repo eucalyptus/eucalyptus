@@ -5,6 +5,7 @@ define([
   './eucamodel'
 ], function(EucaModel) {
   var model = EucaModel.extend({
+
     idAttribute: 'name',
     namedColumns: ['image_id'],
 
@@ -73,7 +74,7 @@ define([
 
     sync: function(method, model, options) {
       var collection = this;
-        if (method == 'create') {
+        if (method == 'create' || options.overrideUpdate == true) {
           var name = model.get('name');
           var data = new Array();
           data.push({name: "_xsrf", value: $.cookie('_xsrf')});
@@ -95,6 +96,7 @@ define([
             var mappings = model.get('block_device_mappings');
             $.each(eval(mappings), function(idx, mapping) {
               if (mapping.device_name == '/dev/sda') { // root, folks!
+                r
                 console.log("adding root device mapping vol_size="+mapping.ebs.volume_size);
                 data.push({name: "BlockDeviceMapping."+(idx+1)+".DeviceName", value: mapping.device_name});
                 data.push({name: "BlockDeviceMapping."+(idx+1)+".Ebs.VolumeSize", value: mapping.volume_size});

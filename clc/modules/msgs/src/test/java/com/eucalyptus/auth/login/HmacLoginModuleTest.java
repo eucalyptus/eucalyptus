@@ -606,7 +606,6 @@ public class HmacLoginModuleTest {
     assertTrue("Authentication successful", hmacV1LoginModule().authenticate(creds));
   }
 
-
   /**
    * Typica 1.7.2
    *
@@ -906,8 +905,8 @@ public class HmacLoginModuleTest {
   private Hmacv4LoginModule hmacV4LoginModule( final String secret ) {
     return new Hmacv4LoginModule(){
       @Override
-      protected AccessKey lookupAccessKey( final String accessKeyId, final Map<String,List<String>> parameters ) throws AuthException {
-        return accessKey( secret );//"OjTtPSslWdTKCMjOXRsAHJ0aG30ASHjNfLwIidR5" );
+      protected AccessKey lookupAccessKey( final HmacCredentials credentials ) throws AuthException {
+        return accessKey( secret );
       }
 
       @Override

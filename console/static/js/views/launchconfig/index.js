@@ -44,12 +44,26 @@ define([
       keyModel.finish(launchConfigModel);
       blockMaps.finish(launchConfigModel);
 
-      launchConfigModel.on('validated.invalid', function(e, errors) {
+      launchConfigModel.on('validated:invalid', function(e, errors) {
+        console.log('INVALID MODEL', arguments);
       });
 
       launchConfigModel.validate();
       if(launchConfigModel.isValid()) {
-        launchConfigModel.sync('create', launchConfigModel);
+        launchConfigModel.save({}, {
+            overrideUpdate: true,
+            success: function(model, response, options){  
+              if(model != null){
+                var name = model.get('name');
+                notifySuccess(null, $.i18n.prop('create_launch_config_run_success', name));  
+              }else{
+                notifyError($.i18n.prop('create_launch_config_run_error'), undefined_error);
+              }
+            },
+            error: function(model, jqXHR, options){  
+              notifyError($.i18n.prop('create_launch_config_run_error'), getErrorMessage(jqXHR));
+            }
+        });
         var $container = $('html body').find(DOM_BINDING['main']);
           $container.maincontainer("changeSelected", null, {selected:'launchconfig'});
         //alert("Wizard complete. Check the console log for debug info.");
