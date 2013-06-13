@@ -83,7 +83,7 @@ define([
           syncMethod_Create: function(model, options){
             var url = "/ec2?Action=CreateVolume";
             var size = model.get('size');
-            var availability_zone = model.get('availablity_zone');
+            var availability_zone = model.get('availability_zone');
             var snapshot_id = model.get('snapshot_id');
             var parameter = "_xsrf="+$.cookie('_xsrf');
             parameter += "&Size="+size+"&AvailabilityZone="+availability_zone;

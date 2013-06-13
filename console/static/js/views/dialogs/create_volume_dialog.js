@@ -8,99 +8,6 @@ define([
 ], function(EucaDialogView, template, Volume, Tag, App, Backbone) {
     return EucaDialogView.extend({
 
-
-         setupSelectOptionsForSnapshotBoxDisabled: function(args){
-             var self = this;
-   
-             var $snapshotSelector = this.$el.find("#volume-add-snapshot-selector");
-
-             var snapshot_model = App.data.snapshot.get(args.snapshot_id);
-             var selected_snapshot_id = snapshot_model.get('id');
-             var selected_snapshot_size = snapshot_model.get('volume_size');
-             var nameTag = self.findNameTag(snapshot_model);
-             var snapshot_name_string = self.createIdNameTagString(selected_snapshot_id, addEllipsis(nameTag, 15));
-             $snapshotSelector.append($('<option>', {
-                 value: selected_snapshot_id,
-                 text : snapshot_name_string
-             }));
-             self.scope.volume.set({snapshot_id: selected_snapshot_id});
-             self.scope.volume.set({size: selected_snapshot_size});
-             $snapshotSelector.attr('disabled', 'disabled');
-         },
-
-         setupSelectOptionsForSnapshotBox: function(args){
-             var self = this;
-   
-             // CASE: CALLED FROM THE SNAPSHOT LANDING PAGE
-             if( args.snapshot_id != undefined ){
-               this.setupSelectOptionsForSnapshotBoxDisabled(args);
-               return;
-             }
-
-             var $snapshotSelector = this.$el.find("#volume-add-snapshot-selector");
-               
-             $snapshotSelector.append($('<option>', { 
-                 value: undefined,
-                 text : "None" 
-             }));
-             App.data.snapshot.each(function (model, index) {
-               var nameTag = self.findNameTag(model);
-               var snapshot_name_string = self.createIdNameTagString(model.get('id'), addEllipsis(nameTag, 15));
-               $snapshotSelector.append($('<option>', { 
-                 value: model.get('id'),
-                 text : snapshot_name_string 
-               }));
-             });
-
-             $snapshotSelector.change( function(){
-               snapshotId = $snapshotSelector.val();
-               if(snapshotId && snapshotId != "None") {
-                 var snapshot_size = App.data.snapshot.get(snapshotId).get('volume_size');
-                 self.scope.volume.set({snapshot_id: snapshotId}); 
-                 self.scope.volume.set({size: snapshot_size});
-               }
-             });
-        },
-
-        setupSelectOptionsForAzoneBox: function(args){
-            var self = this;
-
-            var $azSelector = this.$el.find("#volume-add-az-selector");
-
-            if( _.size(App.data.zone) == 0 ){    // NOT TESTED --- Kyo 041013
-              $azSelector.append($('<option>').attr('value', '').text($.i18n.map['volume_dialog_zone_select']));
-            };
-
-            App.data.zone.each(function(model, index){
-              var aZoneName = model.get('name');
-              if( index == 0 ){
-                self.scope.volume.set({availablity_zone: aZoneName});   // Set the first avail. zone as default
-              }
-              $azSelector.append($('<option>', {
-                 value: aZoneName,
-                 text : aZoneName
-              }));
-            });
-
-            $azSelector.change( function(){
-              azone = $azSelector.val();
-              if(azone) {
-                self.scope.volume.set({availablity_zone: azone});
-              }
-            });
-        },
-
-        setupSelectOptions: function(args){
-           var self = this;
-           this.template = template;
-
-           // SETUP THE SNAPSHOT SELECT OPTIONS
-           this.setupSelectOptionsForSnapshotBox(args);
-
-           // SETUP THE AVAILABILITY ZONE SELECT OPTIONS
-           this.setupSelectOptionsForAzoneBox(args);
-        },
-
         // CONSTRUCT A STRING THAT DISPLAY BOTH RESOURCE ID AND ITS NAME TAG
         createIdNameTagString: function(resource_id, name_tag){
           var this_string = resource_id;
@@ -128,13 +35,20 @@ define([
             this.scope = {
                 status: '',
                 volume: new Volume({snapshot_id: args.snapshot_id, size: args.size, availablity_zone: args.zone}),
+                zones: App.data.zones,
                 error: new Backbone.Model({}),
+
                 help: {title: null, content: help_volume.dialog_add_content, url: help_volume.dialog_add_content_url, pop_height: 600},
 
                 cancelButton: {
                   click: function() {
                     self.close();
                   }
+                },
+
+                setZone: function(e, obj) {
+                  var zone = e.target.value;
+                  self.scope.volume.set('availablity_zone', zone);
                 },
 
                 createButton: new Backbone.Model({
@@ -183,9 +97,26 @@ define([
                 // button click will still validate and disallow weird input.
                 setTimeout(function() { $(e.target).change(); }, 0);
                 self.scope.createButton.set('disabled', !self.scope.volume.isValid());
+              },
+
+              isSnapSelected: function(val) {
+                return (val.item.id == self.scope.volume.get('snapshot_id'));
               }
 
             }
+
+            if (args.zone == undefined) {
+              var zone = App.data.zones.at(0).get('name');
+              this.scope.volume.set('availability_zone', zone);
+            }
+
+            this.scope.snapshots = [];
+            App.data.snapshots.each(function(snap) {
+              var nameTag = self.findNameTag(snap);
+              var name_string = self.createIdNameTagString(snap.get('id'),
+                                                addEllipsis(nameTag, 15));
+              self.scope.snapshots.push({id:snap.get('id'), name:name_string});
+            });
 
             this.scope.volume.on('change', function(model) {
                 console.log('CHANGE', arguments);
@@ -202,7 +133,21 @@ define([
 
             this._do_init();
 
-            this.setupSelectOptions(args);
+            var $snapshotSelector = this.$el.find("#volume-add-snapshot-selector");
+            $snapshotSelector.change( function(){
+              snapshotId = $snapshotSelector.val();
+              if(snapshotId && snapshotId != "None") {
+                var snapshot_size = App.data.snapshot.get(snapshotId).get('volume_size');
+                self.scope.volume.set({snapshot_id: snapshotId}); 
+                self.scope.volume.set({size: snapshot_size});
+              }
+            });
+            if( args.snapshot_id != undefined ){
+              var snap = App.data.snapshot.get(args.snapshot_id);
+              self.scope.volume.set({snapshot_id: snap.get('id')});
+              self.scope.volume.set({size: snap.get('volume_size')});
+              $snapshotSelector.prop('disabled', true);
+            }
             this.scope.volume.validate();
         },
 	});
