@@ -11,23 +11,49 @@ define([
             this.template = template;
             var model = args.model;
 
-            this.scope = {
-                available: new Backbone.Collection([]);
-                selected: new Backbone.Collection([]);
-                error: new Backbone.Model({}),
+            var available = model.get('available');
+            var selected = model.get('selected');
+            var getId = model.get('getId')
+            var getValue = model.get('getValue')
+
+            var scope = new Backbone.Model({
+                available: available,
+                selected: selected,
+                error: model.get('error'),
+                toAdd: null,
+
+                getId: function() {
+                    return getId(this.item);
+                },
+                getValue: function() {
+                    return getValue(this.item);
+                },
 
                 add: function(element, scope) {
-                    console.log('add');
+                    var toAdd = scope.get('toAdd');
+                    if (selected.filter(function(it) {
+                            return getId(it) == toAdd;
+                        }).length == 0) {
+                        selected.add(available.filter(function(it) {
+                            return getId(it) == toAdd;
+                        }));
+                        self.render();
+                    }
+                    console.log('add - selected:', selected);
                 },
 
                 delete: function(element, scope) {
-                    console.log('delete');
+                    console.log('delete - selected:', selected);
                 },
-            } // end of scope
+            }); // end of scope
 
             this.$el.html(template);
-            this.rview = rivets.bind(this.$el, this.scope);
-            this.render(this.scope);
+            this.rview = rivets.bind(this.$el, scope);
+
+            scope.get('available').on('sync', function() {
+                console.log('SYNC');
+                self.render();
+            });
         },
         render : function() {
           this.rview.sync();
