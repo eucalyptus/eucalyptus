@@ -72,7 +72,7 @@ rivets.configure({
                  //   console.log('unsubscribe ', keypath, callback);
                     obj.off('change:' + keypath, callback);
                 } else if (obj instanceof Backbone.Collection) {
-                    obj.off('add remove reset change', callback);
+                    obj.off('sync add remove reset change', callback);
                 } else {
                     // No easy portable way to observe plain objects.
                     // console.log('plain object');
