@@ -1239,7 +1239,11 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
     if ( this.bootRecord.getMachine( ) instanceof MachineImageInfo ) {
       m.put( "ami-manifest-path", ( ( MachineImageInfo ) this.bootRecord.getMachine( ) ).getManifestLocation( ) );
     }
-    m.put( "hostname", this.getPublicAddress( ) );
+    if ( dns ) {
+      m.put( "hostname", this.getNetworkConfig( ).getPrivateDnsName( ) );
+    } else {
+      m.put( "hostname", this.getNetworkConfig( ).getPrivateAddress( ) );
+    }
     m.put( "instance-id", this.getInstanceId( ) );
     m.put( "instance-type", this.getVmType( ).getName( ) );
     if ( dns ) {
