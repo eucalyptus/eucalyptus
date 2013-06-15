@@ -25,6 +25,7 @@ import java.util.NoSuchElementException;
 import javax.persistence.EntityTransaction;
 
 import org.apache.log4j.Logger;
+import org.junit.Ignore;
 
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.TransactionException;
@@ -34,6 +35,7 @@ import com.google.common.base.Function;
 /**
  * Tests for Volume-related entities
  */
+@Ignore("Manual development test")
 public class VolumeEntitiesTest {
 	private static final Logger LOG = Logger.getLogger(VolumeEntitiesTest.class);
 	private static final String fakeSC = "testing_non_sc";
