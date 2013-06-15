@@ -17,7 +17,7 @@
  * CA 93117, USA or visit http://www.eucalyptus.com/licenses/ if you need
  * additional information or have any questions.
  ************************************************************************/
-package com.eucalyptus.autoscaling.activities;
+package com.eucalyptus.util;
 
 import java.util.NoSuchElementException;
 import java.util.concurrent.ExecutionException;
@@ -29,7 +29,6 @@ import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.ServiceConfigurations;
 import com.eucalyptus.component.Topology;
-import com.eucalyptus.util.Callback;
 import com.eucalyptus.util.async.AsyncRequests;
 import com.eucalyptus.util.concurrent.ListenableFuture;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;

@@ -69,7 +69,6 @@ import org.xbill.DNS.ARecord;
 import org.xbill.DNS.DClass;
 import org.xbill.DNS.NSRecord;
 import org.xbill.DNS.Name;
-import org.xbill.DNS.PTRRecord;
 import org.xbill.DNS.RRset;
 import org.xbill.DNS.Record;
 import org.xbill.DNS.SOARecord;
@@ -82,9 +81,6 @@ import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.Internets;
 import com.eucalyptus.util.WalrusProperties;
-import com.eucalyptus.vm.VmInstance;
-import com.eucalyptus.vm.VmInstances;
-import com.eucalyptus.ws.StackConfiguration;
 
 import edu.ucsb.eucalyptus.cloud.entities.SystemConfiguration;
 import edu.ucsb.eucalyptus.cloud.ws.WalrusManager;
