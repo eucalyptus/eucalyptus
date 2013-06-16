@@ -43,6 +43,8 @@ define([
                 },
 
                 delete: function(element, scope) {
+                    selected.remove(getId(this.item));
+                    self.render();
                     console.log('delete - selected:', selected);
                 },
             }); // end of scope
