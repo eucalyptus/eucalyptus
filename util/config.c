@@ -415,13 +415,14 @@ int readConfigFile(char asConfigFiles[][MAX_PATH], int numFiles)
 void configReadLogParams(int *pLogLevel, int *pLogRollNumber, long *pLogMaxSizeBytes, char **psLogPrefix)
 {
     long l = 0;
-    char *sLogLevel = configFileValue("LOGLEVEL");
+    char *sLogLevel = NULL;
 
     sLogLevel = configFileValue("LOGLEVEL");
     assert(sLogLevel != NULL);
 
     if (pLogLevel)
         (*pLogLevel) = log_level_int(sLogLevel);
+    EUCA_FREE(sLogLevel);
 
     if (pLogRollNumber) {
         configFileValueLong("LOGROLLNUMBER", &l);

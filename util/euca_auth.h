@@ -165,6 +165,11 @@ char *construct_signed_headers(struct key_value_pair_array *hdr_array);
 char *eucav2_sign_request(const char *verb, const char *url, const struct curl_slist *headers);
 char *euca_sign_url(const char *sVerb, const char *sDate, const char *sURL);
 char *process_url(const char *content, int url_component);
+int decrypt_string(char *in_buffer, char *pk_file, char **out_buffer);
+int encrypt_string(char *in_buffer, char *cert_file, char **out_buffer);
+int encrypt_string_with_cloud(char *in_str, char **out_buffer);
+int encrypt_string_with_node(char *in_str, char **out_buffer);
+int decrypt_string_with_node(char *in_str, char **out_buffer);
 
 #ifdef _UNIT_TEST
 void print_key_value_pair_array(const struct key_value_pair_array *kv_array);

@@ -18,7 +18,7 @@ define([
              var selected_snapshot_id = snapshot_model.get('id');
              var selected_snapshot_size = snapshot_model.get('volume_size');
              var nameTag = self.findNameTag(snapshot_model);
-             var snapshot_name_string = self.createIdNameTagString(selected_snapshot_id, nameTag);
+             var snapshot_name_string = self.createIdNameTagString(selected_snapshot_id, addEllipsis(nameTag, 15));
              $snapshotSelector.append($('<option>', {
                  value: selected_snapshot_id,
                  text : snapshot_name_string
@@ -45,7 +45,7 @@ define([
              }));
              App.data.snapshot.each(function (model, index) {
                var nameTag = self.findNameTag(model);
-               var snapshot_name_string = self.createIdNameTagString(model.get('id'), nameTag);
+               var snapshot_name_string = self.createIdNameTagString(model.get('id'), addEllipsis(nameTag, 15));
                $snapshotSelector.append($('<option>', { 
                  value: model.get('id'),
                  text : snapshot_name_string 
@@ -99,13 +99,6 @@ define([
 
            // SETUP THE AVAILABILITY ZONE SELECT OPTIONS
            this.setupSelectOptionsForAzoneBox(args);
-
-           // SETUP INPUT VALIDATOR
-           self.scope.volume.on('change', function() {
-             self.scope.error.clear();
-             self.scope.error.set(self.scope.volume.validate());
-             console.log("Validation Error: " + JSON.stringify(self.scope.error));
-           });
         },
 
         // CONSTRUCT A STRING THAT DISPLAY BOTH RESOURCE ID AND ITS NAME TAG
@@ -136,7 +129,7 @@ define([
                 status: '',
                 volume: new Volume({snapshot_id: args.snapshot_id, size: args.size, availablity_zone: args.zone}),
                 error: new Backbone.Model({}),
-                help: {title: null, content: help_instance.dialog_launchmore_content, url: help_instance.dialog_launchmore_content_url, pop_height: 600},
+                help: {title: null, content: help_volume.dialog_add_content, url: help_volume.dialog_add_content_url, pop_height: 600},
 
                 cancelButton: {
                   click: function() {
@@ -189,15 +182,23 @@ define([
                 // the required size field is typed in, instead of having to tab
                 // out of it or click another optional field - EUCA-6106
                 // button click will still validate and disallow weird input.
-                self.scope.createButton.set('disabled', false);
+                setTimeout(function() { $(e.target).change(); }, 0);
+                self.scope.createButton.set('disabled', !self.scope.volume.isValid());
               }
 
             }
 
+            this.scope.volume.on('change', function(model) {
+                console.log('CHANGE', arguments);
+                self.scope.volume.validate(model.changed);
+            });
 
-            this.scope.volume.on('validated', function() {
+            this.scope.volume.on('validated', function(valid, model, errors) {
+                _.each(_.keys(model.changed), function(key) { 
+                    self.scope.error.set(key, errors[key]); 
+                });
+
                 self.scope.createButton.set('disabled', !self.scope.volume.isValid());
-               // self.render();
             });
 
             this._do_init();

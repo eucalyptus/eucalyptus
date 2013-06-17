@@ -71,6 +71,7 @@ import org.apache.commons.lang.StringUtils;
 import org.apache.log4j.Logger;
 
 import com.eucalyptus.auth.AuthException;
+import com.eucalyptus.auth.principal.AccountFullName;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.cloud.ImageMetadata;
 import com.eucalyptus.cloud.ImageMetadata.Platform;
@@ -95,8 +96,10 @@ import com.eucalyptus.keys.KeyPairs;
 import com.eucalyptus.keys.SshKeyPair;
 import com.eucalyptus.network.NetworkGroup;
 import com.eucalyptus.network.NetworkGroups;
+import com.eucalyptus.util.CollectionUtils;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.RestrictedTypes;
+import com.eucalyptus.util.Strings;
 import com.eucalyptus.vm.VmInstances;
 import com.eucalyptus.vmtypes.VmType;
 import com.eucalyptus.vmtypes.VmTypes;
@@ -255,28 +258,40 @@ public class VerifyMetadata {
     
     @Override
     public boolean apply( Allocation allocInfo ) throws MetadataException {
-      Context ctx = allocInfo.getContext( );
-      NetworkGroups.lookup( ctx.getUserFullName( ).asAccountFullName( ), NetworkGroups.defaultNetworkName( ) );
-      
-      Set<String> networkNames = Sets.newHashSet( allocInfo.getRequest( ).getGroupSet( ) );
-      if ( networkNames.isEmpty( ) ) {
+      final Context ctx = allocInfo.getContext( );
+      final AccountFullName accountFullName = ctx.getUserFullName().asAccountFullName();
+      NetworkGroups.lookup( accountFullName, NetworkGroups.defaultNetworkName( ) );
+
+
+      final Set<String> networkNames = Sets.newLinkedHashSet( allocInfo.getRequest( ).securityGroupNames( ) );
+      final Set<String> networkIds = Sets.newLinkedHashSet( allocInfo.getRequest().securityGroupsIds() );
+      if ( networkNames.isEmpty( ) && networkIds.isEmpty() ) {
         networkNames.add( NetworkGroups.defaultNetworkName( ) );
       }
-      
-      Map<String, NetworkGroup> networkRuleGroups = Maps.newHashMap( );
+
+      final List<NetworkGroup> groups = Lists.newArrayList( );
+      // AWS EC2 lets you pass a name as an ID, but not an ID as a name.
       for ( String groupName : networkNames ) {
-        NetworkGroup group = NetworkGroups.lookup( ctx.getUserFullName( ).asAccountFullName( ), groupName );
-        if ( !ctx.hasAdministrativePrivileges( ) && !RestrictedTypes.filterPrivileged( ).apply( group ) ) {
-          throw new IllegalMetadataAccessException( "Not authorized to use network group " + groupName + " for " + ctx.getUser( ).getName( ) );
+        if ( !Iterables.tryFind( groups, CollectionUtils.propertyPredicate( groupName, RestrictedTypes.toDisplayName() ) ).isPresent() ) {
+          groups.add( NetworkGroups.lookup( accountFullName, groupName ) );
         }
-        networkRuleGroups.put( groupName, group );
       }
-      Set<String> missingNets = Sets.difference( networkNames, networkRuleGroups.keySet( ) );
-      if ( !missingNets.isEmpty( ) ) {
-        throw new NoSuchMetadataException( "Failed to find security group info for: " + missingNets );
-      } else {
-        allocInfo.setNetworkRules( networkRuleGroups );
+      for ( String groupId : networkIds ) {
+        if ( !Iterables.tryFind( groups, CollectionUtils.propertyPredicate( groupId, NetworkGroups.groupId() ) ).isPresent() ) {
+          groups.add( NetworkGroups.lookupByGroupId( accountFullName, groupId ) );
+        }
       }
+
+      final Map<String, NetworkGroup> networkRuleGroups = Maps.newHashMap( );
+      for ( final NetworkGroup group : groups ) {
+        if ( !ctx.hasAdministrativePrivileges( ) && !RestrictedTypes.filterPrivileged( ).apply( group ) ) {
+          throw new IllegalMetadataAccessException( "Not authorized to use network group " +group.getGroupId()+ "/" + group.getDisplayName() + " for " + ctx.getUser( ).getName( ) );
+        }
+        networkRuleGroups.put( group.getDisplayName(), group );
+      }
+
+      allocInfo.setNetworkRules( networkRuleGroups );
+
       return true;
     }
   }

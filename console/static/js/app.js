@@ -7,7 +7,7 @@ define(['dataholder'], function(dataholder) {
             });
         },
         msg: function(keypath) {
-          var value = window[keypath];
+          var value = $.i18n.prop(keypath);
           return value ? value : '';
         }
     }

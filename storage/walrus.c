@@ -778,6 +778,9 @@ static int progress_function(void *clientp, double dltotal, double dlnow, double
 {
     struct progress_data_t *progress_data = (struct progress_data_t *)clientp;
     time_t now = time(NULL);
+    
+    if (dltotal<=0.0) // can't do anything with that
+        return 0;
 
     if ((progress_data->last_update + PROGRESS_UPDATE_SEC) <= now) {
         double percent = (dlnow / dltotal) * 100.0;

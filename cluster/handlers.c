@@ -201,7 +201,7 @@ configEntry configKeysRestartCC[] = {
     {"VNET_DHCPDAEMON", "/usr/sbin/dhcpd3"},
     {"VNET_DHCPUSER", "dhcpd"},
     {"VNET_DNS", NULL},
-    {"VNET_DOMAINNAME", "eucalyptus"},
+    {"VNET_DOMAINNAME", "eucalyptus.internal"},
     {"VNET_LOCALIP", NULL},
     {"VNET_MACMAP", NULL},
     {"VNET_MODE", "SYSTEM"},
@@ -690,7 +690,7 @@ int ncClientCall(ncMetadata * pMeta, int timeout, int ncLock, char *ncURL, char 
                     rc = 1;
                 }
             }
-        } else if (!strcmp(ncOp, "ncStartNetwork")) {
+        } else if (!strcmp(ncOp, "ncStartNetwork")) { //! @TODO remove this NC call logic, since it is not used any more
             char *uuid = va_arg(al, char *);
             char **peers = va_arg(al, char **);
             int peersLen = va_arg(al, int);
@@ -711,6 +711,9 @@ int ncClientCall(ncMetadata * pMeta, int timeout, int ncLock, char *ncURL, char 
                     rc = 1;
                 }
             }
+
+            if (outStatus)
+                EUCA_FREE(*outStatus);
         } else if (!strcmp(ncOp, "ncRunInstance")) {
             char *uuid = va_arg(al, char *);
             char *instId = va_arg(al, char *);
@@ -748,6 +751,9 @@ int ncClientCall(ncMetadata * pMeta, int timeout, int ncLock, char *ncURL, char 
                     rc = 1;
                 }
             }
+
+            if (outInst)
+                EUCA_FREE(*outInst);
         } else if (!strcmp(ncOp, "ncDescribeInstances")) {
             char **instIds = va_arg(al, char **);
             int instIdsLen = va_arg(al, int);
@@ -770,6 +776,13 @@ int ncClientCall(ncMetadata * pMeta, int timeout, int ncLock, char *ncURL, char 
                     rc = write(filedes[1], &len, sizeof(int));
                     rc = 1;
                 }
+            }
+
+            if (ncOutInsts) {
+                for (i = 0; i < len; i++) {
+                    EUCA_FREE((*ncOutInsts)[i]);
+                }
+                EUCA_FREE(*ncOutInsts);
             }
         } else if (!strcmp(ncOp, "ncDescribeResource")) {
             char *resourceType = va_arg(al, char *);
@@ -802,6 +815,9 @@ int ncClientCall(ncMetadata * pMeta, int timeout, int ncLock, char *ncURL, char 
                     rc = 1;
                 }
             }
+
+            if (outRes)
+                EUCA_FREE(*outRes);
         } else if (!strcmp(ncOp, "ncDescribeSensors")) {
             int history_size = va_arg(al, int);
             long long collection_interval_time_ms = va_arg(al, long long);
@@ -813,7 +829,6 @@ int ncClientCall(ncMetadata * pMeta, int timeout, int ncLock, char *ncURL, char 
             int *srsLen = va_arg(al, int *);
 
             rc = ncDescribeSensorsStub(ncs, localmeta, history_size, collection_interval_time_ms, instIds, instIdsLen, sensorIds, sensorIdsLen, srs, srsLen);
-
             if (timeout && srs && srsLen) {
                 if (!rc) {
                     len = *srsLen;
@@ -831,6 +846,12 @@ int ncClientCall(ncMetadata * pMeta, int timeout, int ncLock, char *ncURL, char 
                 }
             }
 
+            if (srs) {
+                for (i = 0; i < len; i++) {
+                    EUCA_FREE((*srs)[i]);
+                }
+                EUCA_FREE(*srs);
+            }
         } else if (!strcmp(ncOp, "ncBundleInstance")) {
             char *instanceId = va_arg(al, char *);
             char *bucketName = va_arg(al, char *);
@@ -880,7 +901,18 @@ int ncClientCall(ncMetadata * pMeta, int timeout, int ncLock, char *ncURL, char 
             ret = 0;
         }
         close(filedes[1]);
+
+        // Free our local meta data structure and associated memory
+        EUCA_FREE(localmeta->replyString);
+        EUCA_FREE(localmeta->correlationId);
+        EUCA_FREE(localmeta->userId);
         EUCA_FREE(localmeta);
+
+        // ditch our stub
+        if (ncs != NULL) {
+            ncStubDestroy(ncs);
+            ncs = NULL;
+        }
         exit(ret);
     } else {
         // returns for each client call
@@ -944,7 +976,7 @@ int ncClientCall(ncMetadata * pMeta, int timeout, int ncLock, char *ncURL, char 
                     }
                 }
             }
-        } else if (!strcmp(ncOp, "ncStartNetwork")) {
+        } else if (!strcmp(ncOp, "ncStartNetwork")) { //! @TODO remove this NC call logic, since it is not used any more
             char *uuid = NULL;
             char **peers = NULL;
             int peersLen = 0;
@@ -1207,7 +1239,11 @@ int ncClientCall(ncMetadata * pMeta, int timeout, int ncLock, char *ncURL, char 
                     sig = WTERMSIG(status);
                     dump = WCOREDUMP(status);
                 }
-                LOGERROR("BUG: child process for making '%s' request did not exit cleanly (sig=%d core dumped=%d)\n", ncOp, sig, dump);
+                if (sig == SIGTERM || sig == SIGKILL) { // our killwait() first tries SIGTERM and then SIGKILL
+                    LOGDEBUG("child process %d handling '%s' was terminated with %d\n", pid, ncOp, sig);
+                } else {
+                    LOGERROR("BUG: child process %d handling '%s' was terminated with %d (core=%d)\n", pid, ncOp, sig, dump);
+                }
                 rc = 1;
             }
         } else {
@@ -2307,7 +2343,7 @@ static int migration_handler(ccInstance * myInstance, char *host, char *src, cha
             ccInstance *srcInstance = NULL;
             rc = find_instanceCacheId(myInstance->instanceId, &srcInstance);
             if (!rc) {
-                // FIXME: State matrix says also to roll back if source
+                // TO-DO: State matrix says also to roll back if source
                 // is Extant(preparing), but that's causing some odd
                 // (though benign?) effects right now. So only rolling
                 // back if Extant(ready).
@@ -2316,7 +2352,6 @@ static int migration_handler(ccInstance * myInstance, char *host, char *src, cha
                 // we can pass it when requesting a rollback to a source
                 // that has not yet reported ready during a polling
                 // cycle.
-/*                 if (((srcInstance->migration_state == MIGRATION_PREPARING) || (srcInstance->migration_state == MIGRATION_READY)) && !strcmp(srcInstance->state, "Extant")) { */
                 if ((srcInstance->migration_state == MIGRATION_READY) && !strcmp(srcInstance->state, "Extant")) {
                     LOGINFO("[%s] source node %s last reported %s(%s), destination node %s reports %s(%s), preparing to roll back source node\n",
                             myInstance->instanceId, src, srcInstance->state, migration_state_names[srcInstance->migration_state], dst, myInstance->state,
@@ -2463,7 +2498,7 @@ int refresh_instances(ncMetadata * pMeta, int timeout, int dolock)
                             // instance info that the CC maintains
                             myInstance->ncHostIdx = i;
 
-                            // FIXME: Is this redundant?
+                            // Is this redundant?
                             myInstance->migration_state = ncOutInsts[j]->migration_state;
 
                             euca_strncpy(myInstance->serviceTag, resourceCacheStage->resources[i].ncURL, 384);
@@ -2735,7 +2770,7 @@ int doDescribeInstances(ncMetadata * pMeta, char **instIds, int instIdsLen, ccIn
             if (instanceCache->cacheState[i] == INSTVALID) {
                 if (count >= instanceCache->numInsts) {
                     LOGWARN("found more instances than reported by numInsts, will only report a subset of instances\n");
-                    count = 0;         // FIXME: I'm not sure I understand this...
+                    count = 0;
                 }
                 memcpy(&((*outInsts)[count]), &(instanceCache->instances[i]), sizeof(ccInstance));
                 // We only report a subset of possible migration statuses upstream to the CLC.
@@ -3746,10 +3781,6 @@ int doRunInstances(ncMetadata * pMeta, char *amiId, char *kernelId, char *ramdis
                                 }
                             }
                         }
-                        // call StartNetwork client
-
-                        rc = ncClientCall(pMeta, OP_TIMEOUT_PERNODE, res->lockidx, res->ncURL, "ncStartNetwork", uuid, NULL, 0, 0, vlan, NULL);
-                        LOGDEBUG("sent network start request for network idx '%d' on resource '%s' uuid '%s': result '%s'\n", vlan, res->ncURL, uuid, rc ? "FAIL" : "SUCCESS");
                         rc = ncClientCall(pMeta, OP_TIMEOUT_PERNODE, res->lockidx, res->ncURL, "ncRunInstance", uuid, instId, reservationId, &ncvm,
                                           amiId, amiURL, kernelId, kernelURL, ramdiskId, ramdiskURL, ownerId, accountId, keyName, &ncnet, userData,
                                           launchIndex, platform, expiryTime, netNames, netNamesLen, &outInst);
@@ -4213,83 +4244,111 @@ int doCreateImage(ncMetadata * pMeta, char *instanceId, char *volumeId, char *re
 //!
 //! @note
 //!
-int doDescribeSensors(ncMetadata * pMeta, int historySize, long long collectionIntervalTimeMs, char **instIds, int instIdsLen, char **sensorIds,
-                      int sensorIdsLen, sensorResource *** outResources, int *outResourcesLen)
+int doDescribeSensors(ncMetadata * pMeta, int historySize, long long collectionIntervalTimeMs, char **instIds, int instIdsLen, char **sensorIds, int sensorIdsLen,
+                      sensorResource *** outResources, int *outResourcesLen)
 {
-    int rc = initialize(pMeta, FALSE);
+    int i = 0;
+    int rc = 0;
+    int err = 0;
+    int num_results = 0;
+    int num_instances = 0;
+    int num_resources = 0;
+    int col_interval_sec = 0;
+    int nc_poll_interval_sec = 0;
+
+    rc = initialize(pMeta, FALSE);
     if (rc || ccIsEnabled()) {
-        return 1;
+        return (1);
     }
 
     LOGDEBUG("invoked: historySize=%d collectionIntervalTimeMs=%lld instIdsLen=%d i[0]='%s' sensorIdsLen=%d s[0]='%s'\n",
-             historySize, collectionIntervalTimeMs, instIdsLen, instIdsLen > 0 ? instIds[0] : "*", sensorIdsLen, sensorIdsLen > 0 ? sensorIds[0] : "*");
-    int err = sensor_config(historySize, collectionIntervalTimeMs); // update the config parameters if they are different
-    if (err != 0)
+             historySize, collectionIntervalTimeMs, instIdsLen, ((instIdsLen > 0) ? instIds[0] : "*"), sensorIdsLen, ((sensorIdsLen > 0) ? sensorIds[0] : "*"));
+
+    // update the config parameters if they are different
+    if ((err = sensor_config(historySize, collectionIntervalTimeMs)) != 0)
         LOGWARN("failed to update sensor configuration (err=%d)\n", err);
-    if (historySize > 0 && collectionIntervalTimeMs > 0) {
-        int col_interval_sec = collectionIntervalTimeMs / 1000;
-        int nc_poll_interval_sec = col_interval_sec * historySize - POLL_INTERVAL_SAFETY_MARGIN_SEC;
-        if (nc_poll_interval_sec < POLL_INTERVAL_MINIMUM_SEC)
-            nc_poll_interval_sec = POLL_INTERVAL_MINIMUM_SEC;
+
+    if ((historySize > 0) && (collectionIntervalTimeMs > 0)) {
+        col_interval_sec = collectionIntervalTimeMs / 1000;
+        nc_poll_interval_sec = ((col_interval_sec * historySize) - POLL_INTERVAL_SAFETY_MARGIN_SEC);
+        nc_poll_interval_sec = ((nc_poll_interval_sec < POLL_INTERVAL_MINIMUM_SEC) ? POLL_INTERVAL_MINIMUM_SEC : nc_poll_interval_sec);
+
         if (config->ncSensorsPollingInterval != nc_poll_interval_sec) {
             config->ncSensorsPollingInterval = nc_poll_interval_sec;
             LOGDEBUG("changed NC sensors poll interval to %d (col_interval_sec=%d historySize=%d)\n", nc_poll_interval_sec, col_interval_sec, historySize);
         }
     }
 
-    int num_resources = sensor_get_num_resources();
-    if (num_resources < 0) {
+    if ((num_resources = sensor_get_num_resources()) < 0) {
         LOGERROR("failed to determine number of available sensor resources\n");
-        return 1;
+        return (1);
     }
     // oddly, an empty set of instanceIds or sensorIds in XML is presented
     // by Axis as an array of size 1 with an empty string as the only element
-    int num_instances = instIdsLen;
-    if (instIdsLen == 1 && strlen(instIds[0]) == 0)
+    num_instances = instIdsLen;
+    if ((instIdsLen == 1) && (strlen(instIds[0]) == 0))
         num_instances = 0;             // which is to say all instances
 
-    *outResources = NULL;
-    *outResourcesLen = 0;
+    (*outResources) = NULL;
+    (*outResourcesLen) = 0;
 
     if (num_resources > 0) {
-
-        int num_slots = num_resources; // report on all instances
-        if (num_instances > 0)
-            num_slots = num_instances; // report on specific instances
-
-        *outResources = EUCA_ZALLOC(num_slots, sizeof(sensorResource *));
-        if ((*outResources) == NULL) {
-            return OUT_OF_MEMORY;
-        }
-        for (int i = 0; i < num_slots; i++) {
-            (*outResources)[i] = EUCA_ZALLOC(1, sizeof(sensorResource));
-            if (((*outResources)[i]) == NULL) {
-                return OUT_OF_MEMORY;
+        if (num_instances == 0) {
+            // report on all instances
+            if (((*outResources) = EUCA_ZALLOC(num_resources, sizeof(sensorResource *))) == NULL) {
+                return (OUT_OF_MEMORY);
             }
-        }
 
-        int num_results = 0;
-        if (num_instances == 0) {      // report on all instances
+            for (i = 0; i < num_resources; i++) {
+                if (((*outResources)[i] = EUCA_ZALLOC(1, sizeof(sensorResource))) == NULL) {
+                    // We may return out of memory but the caller may ignore the error type, in this case, we should
+                    // let the caller know that 'i' amount of memory was allocated so he can free
+                    (*outResourcesLen) = i;
+                    return (OUT_OF_MEMORY);
+                }
+            }
             // if number of resources has changed since the call to sensor_get_num_resources(),
             // then we may not report on everything (ok, since we'll get it next time)
             // or we may have fewer records in outResrouces[] (ok, since empty ones will be ignored)
-            if (sensor_get_instance_data(NULL, NULL, 0, *outResources, num_slots) == 0)
-                num_results = num_slots;    // actually num_results <= num_slots, but that's OK
-
-        } else {                       // report on specific instances
+            if (sensor_get_instance_data(NULL, NULL, 0, *outResources, num_resources) == 0) {
+                (*outResourcesLen) = num_resources; // actually (*outResourcesLen) <= num_resources, but that's OK
+            } else {
+                // Ok, we had a failure, lets make sure we free our resources so the caller isn't confused
+                for (i = 0; i < num_resources; i++) {
+                    EUCA_FREE((*outResources)[i]);
+                }
+                EUCA_FREE(*outResources);
+            }
+        } else {
+            // report on specific instances
+            if (((*outResources) = EUCA_ZALLOC(num_instances, sizeof(sensorResource *))) == NULL) {
+                return (OUT_OF_MEMORY);
+            }
             // if some instances requested by ID were not found on this CC,
             // we will have fewer records in outResources[] (ok, since empty ones will be ignored)
-            for (int i = 0; i < num_instances; i++) {
-                if (sensor_get_instance_data(instIds[i], NULL, 0, (*outResources + num_results), 1) == 0)
+            for (i = 0, num_results = 0; i < num_instances; i++) {
+                if ((*outResources)[num_results] == NULL) {
+                    if (((*outResources)[num_results] = EUCA_ZALLOC(1, sizeof(sensorResource))) == NULL) {
+                        // We may return out of memory but the caller may ignore the error type, in this case, we should
+                        // let the caller know that 'num_results' amount of memory was allocated so he can free
+                        (*outResourcesLen) = num_results;
+                        return (OUT_OF_MEMORY);
+                    }
+                }
+
+                if (sensor_get_instance_data(instIds[i], NULL, 0, (*outResources + num_results), 1) == 0) {
                     num_results++;
+                } else {
+                    EUCA_FREE((*outResources)[num_results]);
+                }
             }
+
+            (*outResourcesLen) = num_results;
         }
-        *outResourcesLen = num_results;
     }
 
-    LOGTRACE("returning (outResourcesLen=%d)\n", *outResourcesLen);
-
-    return 0;
+    LOGTRACE("returning (outResourcesLen=%d)\n", (*outResourcesLen));
+    return (0);
 }
 
 //!
@@ -4475,7 +4534,7 @@ int doMigrateInstances(ncMetadata * pMeta, char *actionNode, char *instanceId, c
                         LOGDEBUG("[%s] found instance running on node %s\n", instanceId, resourceCacheLocal.resources[src_index].hostname);
                     }
                 }
-                // FIXME: Wrap alloc()'s
+                // TO-DO: Wrap alloc()'s
                 cc_instances = EUCA_REALLOC(cc_instances, found_instances + 1, sizeof(ccInstance *));
                 cc_instances[found_instances] = EUCA_ZALLOC(1, sizeof(ccInstance));
                 memcpy(cc_instances[found_instances], &(instanceCache->instances[i]), sizeof(ccInstance));
@@ -4508,7 +4567,7 @@ int doMigrateInstances(ncMetadata * pMeta, char *actionNode, char *instanceId, c
     }
 
     for (int idx = 0; idx < found_instances; idx++) {
-        // FIXME: Wrap alloc()'s.
+        // TO-DO: Wrap alloc()'s.
         nc_instances = EUCA_REALLOC(nc_instances, idx + 1, sizeof(ncInstance *));
         nc_instances[idx] = EUCA_ZALLOC(1, sizeof(ncInstance));
         LOGTRACE("[%s] converting cc_instances[%d] -> nc_instances[%d]\n", cc_instances[idx]->instanceId, idx, idx);
@@ -4667,7 +4726,7 @@ int doMigrateInstances(ncMetadata * pMeta, char *actionNode, char *instanceId, c
             goto out;
         }
         // Might not have migration_dst in instance struct here if rollback.
-        // FIXME: In some cases, such as certain rollback requests to source node, this can put the source node's IP in ->migration_dst. Debug.
+        // TO-DO: In some cases, such as certain rollback requests to source node, this can put the source node's IP in ->migration_dst. Debug.
         if (!strlen(nc_instances[0]->migration_dst)) {
             strncpy(nc_instances[0]->migration_dst, resourceCacheLocal.resources[dst_index].hostname, HOSTNAME_SIZE);
         }
@@ -4823,12 +4882,12 @@ static int populateOutboundMeta(ncMetadata * pMeta)
 }
 
 //!
-//! Initialization function called by all handlers. Each handler call may 
+//! Initialization function called by all handlers. Each handler call may
 //! go to a new process (as decided by apache), so this function does a lot
 //! to set up shared memory, logging, fault subsystem, etc, for the process.
-//! Since it is called for every request from CLC, this is also where we 
+//! Since it is called for every request from CLC, this is also where we
 //! update state based on the latest values from CLC:
-//! 
+//!
 //!   * cloudIp
 //!   * epoch
 //!   * services (enabled / disabled / not ready)
@@ -4891,10 +4950,10 @@ int initialize(ncMetadata * pMeta, boolean authoritative)
         if (pMeta != NULL) {
             int i;
             sem_mywait(CONFIG);
-            LOGTRACE("pMeta: epoch=%d (vs %d) enabled %d, disabled %d, notready %d\n", 
+            LOGTRACE("pMeta: epoch=%d (vs %d) enabled %d, disabled %d, notready %d\n",
                      pMeta->epoch, config->ccStatus.localEpoch, pMeta->servicesLen, pMeta->disabledServicesLen, pMeta->notreadyServicesLen);
-            if (pMeta->epoch >= config->ccStatus.localEpoch || // we missed some updates, so let us catch up
-                authoritative) { // trust the authoritative requests and always take their services info
+            if (pMeta->epoch >= config->ccStatus.localEpoch ||  // we missed some updates, so let us catch up
+                authoritative) {       // trust the authoritative requests and always take their services info
                 memcpy(config->services, pMeta->services, sizeof(serviceInfoType) * 16);
                 memcpy(config->disabledServices, pMeta->disabledServices, sizeof(serviceInfoType) * 16);
                 memcpy(config->notreadyServices, pMeta->notreadyServices, sizeof(serviceInfoType) * 16);
@@ -5486,6 +5545,9 @@ void *monitor_thread(void *in)
         ncRefresh = clcRefresh = 0;
         sleep(1);
     }
+
+    EUCA_FREE(pMeta.correlationId);
+    EUCA_FREE(pMeta.userId);
     return (NULL);
 }
 
@@ -7606,7 +7668,7 @@ int find_instanceCacheId(char *instanceId, ccInstance ** out)
             LOGTRACE("found instance in cache '%s/%s/%s'\n", instanceCache->instances[i].instanceId,
                      instanceCache->instances[i].ccnet.publicIp, instanceCache->instances[i].ccnet.privateIp);
             // migration-related
-            // FIXME: move to allocate_ccInstance() ?
+            // TO-DO: move to allocate_ccInstance() ?
             (*out)->migration_state = instanceCache->instances[i].migration_state;
             LOGTRACE("instance %s migration state=%s\n", instanceCache->instances[i].instanceId, migration_state_names[(*out)->migration_state]);
             done++;

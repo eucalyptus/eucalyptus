@@ -60,7 +60,11 @@ define([], function() {
 
           // FIXME Whoa, WTF - the search parameter is a *string* like
           // '"Name (tag)" : "foo"'
-          var extractSearchText = /"(.*?) _tag":\s?"(.*)"/
+          //var extractSearchText = /.*"(.*?) _tag":\s?"(.+)"/
+          // JP - 20130532 - EUCA-6378 - catch tag values with double quotes in them, as part of the name.
+          var extractSearchText = /['"](.*?) _tag['"]:\s?['"](.+)['"]/
+          //console.log('TEST', search, extractSearchText.test(search));
+          //console.log('EXEC', search, extractSearchText.exec(search));
           if (extractSearchText.test(search)) {
             var sreg = extractSearchText.exec(search);
             var tagStr = sreg[1];

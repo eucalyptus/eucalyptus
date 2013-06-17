@@ -544,8 +544,22 @@ static int stale_blob_examiner(const blockblob * bb)
     inst_id = strtok(NULL, "/");
     file = strtok(NULL, "/");
 
-    if ((instance = find_instance(instances, inst_id)) == NULL) {
-        // not found among running instances => stale
+    if (((instance = find_instance(instances, inst_id)) == NULL)    // not found among instances => stale
+        || instance->state == TEARDOWN) {   // found among instances, but is already marked as terminated
+
+        // if this instance is not among those we know about,
+        // load it into memory and report it in Teardown state
+        //! @TODO technically, disk state for this instance is not gone, 
+        //! but it soon will be, once this examiner function returns error
+        if ((instance == NULL) && ((instance = load_instance_struct(inst_id)) != NULL)) {
+            LOGINFO("marking non-running instance %s as terminated\n", inst_id);
+            instance->terminationTime = time(NULL); // set time to now, so record won't get expired immediately
+            change_state(instance, TEARDOWN);
+            int err = add_instance(instances, instance);    // we are not using locks because we assume the caller does
+            if (err) {
+                free_instance(&instance);
+            }
+        }
         // while we're here, try to delete extra files that aren't managed by the blobstore
         //! @TODO ensure we catch any other files - perhaps by performing this cleanup after all blobs are deleted
         DEL_FILE(INSTANCE_FILE_NAME);

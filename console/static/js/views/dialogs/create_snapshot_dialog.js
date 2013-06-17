@@ -23,7 +23,7 @@ define([
               App.data.volume.each(function(v){
                 console.log("Volume ID: " + v.get('id') + "  Status:" + v.get('status'));
                 var nameTag = self.findNameTag(v);
-                var autocomplete_string = String(self.createIdNameTagString(v.get('id'), nameTag));
+                var autocomplete_string = String(self.createIdNameTagString(v.get('id'), addEllipsis(nameTag, 15)));
                 vol_ids.push(autocomplete_string);
               });
 
@@ -45,15 +45,8 @@ define([
               this.disableVolumeInputBox();
               // DISPLAY ITS NAME TAG FOR VOLUME ID
               var foundNameTag = self.findNameTag(App.data.volume.get(args.volume_id));
-              self.scope.snapshot.set({volume_id: String(self.createIdNameTagString(args.volume_id, foundNameTag))});
+              self.scope.snapshot.set({volume_id: String(self.createIdNameTagString(args.volume_id, addEllipsis(foundNameTag, 15)))});
             }
-
-            // SETUP INPUT VALIDATOR
-            self.scope.snapshot.on('change', function() {
-              self.scope.error.clear();
-              self.scope.error.set(self.scope.snapshot.validate());
-              console.log("Validation Error: " + JSON.stringify(self.scope.error));
-            });
 
         },
 
@@ -85,6 +78,12 @@ define([
                 status: '',
                 snapshot: new Snapshot({volume_id: args.volume_id, description: ''}),
                 error: new Backbone.Model({}),
+                help: {title: null, content: help_snapshot.dialog_create_content, url: help_snapshot.dialog_create_content_url, pop_height: 600},
+
+              activateButton: function(e) {
+                $(e.target).change();
+                self.scope.createButton.set('disabled', !self.scope.snapshot.isValid());
+              },
 
                 cancelButton: {
                   click: function() {
@@ -151,13 +150,22 @@ define([
                 })
             };
 
+
             // override validation requirements in this model instance
             // to validate required form fields in the dialog
             this.scope.snapshot.validation.volume_id.required = true;
 
+            this.scope.snapshot.on('change', function(model) {
+                console.log('CHANGE', arguments);
+                self.scope.snapshot.validate(model.changed);
+            });
 
-            this.scope.snapshot.on('validated', function() {
-              self.scope.createButton.set('disabled', !self.scope.snapshot.isValid());
+            this.scope.snapshot.on('validated', function(valid, model, errors) {
+                _.each(_.keys(model.changed), function(key) { 
+                    self.scope.error.set(key, errors[key]); 
+                });
+
+                self.scope.createButton.set('disabled', !self.scope.snapshot.isValid());
             });
 
             this._do_init();

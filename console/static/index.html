@@ -23,6 +23,7 @@
     --> 
     <title>Eucalyptus</title>
     <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=Edge" />
     <style type="text/css" title="currentStyle">
       @import "lib/jquery.datatables-1.9.4.css";
       @import "lib/jquery-ui-1.9.1.custom.css";
@@ -84,7 +85,6 @@
     <script type="text/javascript" language="javascript" src="js/sgroup.js"></script>
     <script type="text/javascript" language="javascript" src="js/eip.js"></script>
     <script type="text/javascript" language="javascript" src="js/balancing.js"></script>
-    <script type="text/javascript" language="javascript" src="js/scaling.js"></script>
     <script type="text/javascript" language="javascript" src="js/eucaevent.js"></script>
     <script type="text/javascript" language="javascript" src="js/notification.js"></script>
     <script type="text/javascript" language="javascript" src="js/help.js"></script>
@@ -96,11 +96,8 @@
     <script type="text/javascript" language="javascript" src="js/template/euca_resource_tag.js"></script>
 
     <script type="text/javascript" language="javascript" src="js/rivetstest.js"></script>
-    <script type="text/javascript" language="javascript" src="js/scalinggroup.js"></script>
     <script type="text/javascript" language="javascript" src="js/jpvols.js"></script>
-    <script type="text/javascript" language="javascript" src="js/newscalinggroup.js"></script>
     <script type="text/javascript" language="javascript" src="js/launchconfig.js"></script>
-    <script type="text/javascript" language="javascript" src="js/newlaunchconfig.js"></script>
     <script type="text/javascript" language="javascript" src="js/newinstance.js"></script>
   </head> 
 
@@ -233,7 +230,7 @@
           </div>
           <div id="changepwd-euca-dialog-help" class="dialog-help">
             <div class="dialog-help-content">
-              {{!: dialog_create_content}}
+              {{!: dialog_content}}
             </div>
             <div class="help-revert-button">
               <a href="#">{{!>revert_button}}</a>

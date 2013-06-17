@@ -129,34 +129,67 @@ public class BlockStorageUtil {
 	
 	//Encrypt data using the node public key
 	public static String encryptForNode(String data) throws EucalyptusCloudException {
-    try {
-      List<ServiceConfiguration> clusterList = ServiceConfigurations.listPartition( ClusterController.class, StorageProperties.NAME );
-      if( clusterList.size() < 1 ) {
-        String msg = "Failed to find a cluster with the corresponding partition name for this SC: " + StorageProperties.NAME + "\nFound: " + clusterList.toString( ).replaceAll( ", ", ",\n" );
-        throw new EucalyptusCloudException(msg);
-      } else {
-        ServiceConfiguration clusterConfig = clusterList.get( 0 );
-        PublicKey ncPublicKey = Partitions.lookup( clusterConfig ).getNodeCertificate( ).getPublicKey();
-        Cipher cipher = Ciphers.RSA_PKCS1.get();
-        cipher.init(Cipher.ENCRYPT_MODE, ncPublicKey);
-        return new String(Base64.encode(cipher.doFinal(data.getBytes())));
-      }
-    } catch ( Exception e ) {
-			LOG.error( "Unable to encrypt storage target password: " + e.getMessage( ), e );
-			throw new EucalyptusCloudException("Unable to encrypt storage target password: " + e.getMessage(), e);
+		try {
+			List<ServiceConfiguration> clusterList = ServiceConfigurations.listPartition( ClusterController.class, StorageProperties.NAME );
+			if( clusterList.size() < 1 ) {
+				String msg = "Failed to find a cluster with the corresponding partition name for this SC: " + StorageProperties.NAME + "\nFound: " + clusterList.toString( ).replaceAll( ", ", ",\n" );
+				throw new EucalyptusCloudException(msg);
+			} else {
+				ServiceConfiguration clusterConfig = clusterList.get( 0 );
+				PublicKey ncPublicKey = Partitions.lookup( clusterConfig ).getNodeCertificate( ).getPublicKey();
+				Cipher cipher = Ciphers.RSA_PKCS1.get();
+				cipher.init(Cipher.ENCRYPT_MODE, ncPublicKey);
+				return new String(Base64.encode(cipher.doFinal(data.getBytes())));
+			}
+		} catch ( Exception e ) {
+			LOG.error( "Unable to encrypt data: " + e.getMessage( ), e );
+			throw new EucalyptusCloudException("Unable to encrypt data: " + e.getMessage(), e);
+		}
+	}
+	
+	//Decrypt data using the node private key. Primarly for VMwareBroker
+	public static String decryptForNode(String data) throws EucalyptusCloudException {
+		try {
+			List<ServiceConfiguration> clusterList = ServiceConfigurations.listPartition( ClusterController.class, StorageProperties.NAME );
+			if( clusterList.size() < 1 ) {
+				String msg = "Failed to find a cluster with the corresponding partition name for this SC: " + StorageProperties.NAME + "\nFound: " + clusterList.toString( ).replaceAll( ", ", ",\n" );
+				throw new EucalyptusCloudException(msg);
+			} else {
+				ServiceConfiguration clusterConfig = clusterList.get( 0 );
+				PrivateKey ncPrivateKey = Partitions.lookup( clusterConfig ).getNodePrivateKey();
+				Cipher cipher = Ciphers.RSA_PKCS1.get();
+				cipher.init(Cipher.DECRYPT_MODE, ncPrivateKey);
+				return new String(cipher.doFinal(Base64.decode(data)));
+			}
+		} catch ( Exception e ) {
+			LOG.error( "Unable to dencrypt data with node private key: " + e.getMessage( ), e );
+			throw new EucalyptusCloudException("Unable to encrypt data with node private key: " + e.getMessage(), e);
+		}
+	}
+	
+	//Encrypt data using the cloud public key
+	public static String encryptForCloud(String data) throws EucalyptusCloudException {
+		try {
+			PublicKey clcPublicKey = SystemCredentials.lookup(Eucalyptus.class).getCertificate().getPublicKey();
+			Cipher cipher = Ciphers.RSA_PKCS1.get();
+			cipher.init(Cipher.ENCRYPT_MODE, clcPublicKey);
+			return new String(Base64.encode(cipher.doFinal(data.getBytes())));	      
+		} catch ( Exception e ) {
+			LOG.error( "Unable to encrypt data: " + e.getMessage( ), e );
+			throw new EucalyptusCloudException("Unable to encrypt data: " + e.getMessage(), e);
 		}
 	}
 	
 	//Decrypt data encrypted with the Cloud public key
 	public static String decryptWithCloud(String data) throws EucalyptusCloudException {
-		PrivateKey scPrivateKey = SystemCredentials.lookup(Eucalyptus.class).getPrivateKey();
+		PrivateKey clcPrivateKey = SystemCredentials.lookup(Eucalyptus.class).getPrivateKey();
 		try {
 			Cipher cipher = Ciphers.RSA_PKCS1.get();
-			cipher.init(Cipher.DECRYPT_MODE, scPrivateKey);
+			cipher.init(Cipher.DECRYPT_MODE, clcPrivateKey);
 			return new String(cipher.doFinal(Base64.decode(data)));
 		} catch(Exception ex) {
 			LOG.error(ex);
-			throw new EucalyptusCloudException("Unable to decrypt storage target password", ex);
+			throw new EucalyptusCloudException("Unable to decrypt data with cloud private key", ex);
 		}
 	}
 }

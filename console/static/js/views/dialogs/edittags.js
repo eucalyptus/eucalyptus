@@ -13,6 +13,7 @@ define([
 
             this.scope = {
                 model: args.model.clone(),
+				help: {title: null, content: help_edittags.dialog_content, url: help_edittags.dialog_content_url, pop_height: 600},
 
                 cancelButton: {
                     click: function() {

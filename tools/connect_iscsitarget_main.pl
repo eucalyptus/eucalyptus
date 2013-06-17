@@ -75,9 +75,9 @@ $ISCSIADM = untaint(`which iscsiadm`);
 $MULTIPATH = untaint(`which multipath`);
 
 $CONF_IFACES_KEY = "STORAGE_INTERFACES";
-$LOGIN_TIMEOUT = 10;
-$LOGOUT_TIMEOUT = 10;
-$LOGIN_RETRY_COUNT = 3;
+$LOGIN_TIMEOUT = 5;
+$LOGOUT_TIMEOUT = 5;
+$LOGIN_RETRY_COUNT = 1;
 
 # check binaries
 if (!-x $ISCSIADM) {
@@ -184,11 +184,16 @@ if (is_null_or_empty($localdev)) {
   print STDERR "Unable to get attached target device.\n";
   do_exit(1);
 }
-# get the /dev/disk/by-id path
 if ($multipath == 0) {
-  $localdev = get_disk_by_id_path("/dev/$localdev");
+  $localdev = "/dev/$localdev";
 } else {
-  $localdev = get_disk_by_id_path("/dev/mapper/$localdev");
+  $localdev = "/dev/mapper/$localdev";
+}
+# get the /dev/disk/by-id path
+$localdev = retry_until_exists(\&get_disk_by_id_path, [$localdev], 5);
+if (is_null_or_empty($localdev)) {
+  print STDERR "Unable to get /dev/disk/by-id path for attached target device.\n";
+  do_exit(1);
 }
 # make sure device exists on the filesystem
 for ($i = 0; $i < 12; $i++) { 

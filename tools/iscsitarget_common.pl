@@ -306,10 +306,10 @@ sub lookup_session {
 sub get_disk_by_id_path {
   my ($devname) = @_;
   my $disk_by_id_path = "/dev/disk/by-id/";
-  my @output = run_cmd(1, 1, "scsi_id --whitelisted --replace-whitespace --device=$devname");
+  my @output = run_cmd(1, 0, "scsi_id --whitelisted --replace-whitespace --device=$devname");
   my $scsi_id = shift(@output);
   chomp $scsi_id;
-  return $devname if (is_null_or_empty($scsi_id));
+  return $scsi_id if (is_null_or_empty($scsi_id));
   if ($multipath == 0) {
     $disk_by_id_path = $disk_by_id_path."scsi-".$scsi_id;
   } else {

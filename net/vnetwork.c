@@ -1568,10 +1568,17 @@ int vnetSetVlan(vnetConfig * vnetconfig, int vlan, char *uuid, char *user, char 
         LOGERROR("bad input params: vnetconfig=%p, vlan=%d, user=%p, network=%p\n", vnetconfig, vlan, user, network);
         return (EUCA_INVALID_ERROR);
     }
+    
+    // Lets make sure both our pointers aren't the same... 'restrict'
+    if (user && (user != vnetconfig->users[vlan].userName))
+        euca_strncpy(vnetconfig->users[vlan].userName, user, 48);
 
-    euca_strncpy(vnetconfig->users[vlan].userName, user, 48);
-    euca_strncpy(vnetconfig->users[vlan].netName, network, 64);
-    if (uuid)
+    // Lets make sure both our pointers aren't the same... 'restrict'
+    if (network && (network != vnetconfig->users[vlan].netName))
+        euca_strncpy(vnetconfig->users[vlan].netName, network, 64);
+
+    // Lets make sure both our pointers aren't the same... 'restrict'
+    if (uuid && (uuid != vnetconfig->users[vlan].uuid))
         euca_strncpy(vnetconfig->users[vlan].uuid, uuid, 48);
     return (EUCA_OK);
 }
@@ -2047,7 +2054,8 @@ int vnetGenerateDHCP(vnetConfig * vnetconfig, int *numHosts)
 
             if (vnetconfig->euca_ns != 0) {
                 euca_nameserver = hex2dot(vnetconfig->euca_ns);
-                snprintf(nameservers, 1024, "%s, %s", nameserver, euca_nameserver);
+                char cmd[128];
+                snprintf(nameservers, 1024, "%s, %s", euca_nameserver, nameserver);
             } else {
                 snprintf(nameservers, 1024, "%s", nameserver);
             }
@@ -4484,9 +4492,13 @@ int check_bridge(char *brname)
 {
     char file[MAX_PATH] = "";
 
-    if (!brname || check_device(brname)) {
+    if (!brname) {
         LOGERROR("bad input params: brname=%s\n", SP(brname));
         return (EUCA_INVALID_ERROR);
+    }
+
+    if (check_device(brname)) {
+        return (EUCA_NOT_FOUND_ERROR);
     }
 
     snprintf(file, MAX_PATH, "/sys/class/net/%s/bridge/", brname);

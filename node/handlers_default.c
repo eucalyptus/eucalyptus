@@ -418,118 +418,110 @@ static int doGetConsoleOutput(struct nc_state_t *nc, ncMetadata * pMeta, char *i
 }
 
 //!
-//! given a domain pointer, first tries to shut down the domain
+//! given instance ID, first tries to shut down the domain
 //! gracefully (via ACPI signal to the OS), then, after a timeout,
 //! forecfully shuts it down
 //!
-//! NOTE: this must be called with hyp_sem semaphore held
-//!
-//! @param[in] dom libvirt domain pointer
+//! @param[in] instanceId pointer to string containing instance ID
 //!
 //! @return 0 for success and -1 for failure
 //!
 
-int shutdown_then_destroy_domain(virDomainPtr dom)
+int shutdown_then_destroy_domain(const char *instanceId)
 {
+    time_t deadline = 0;
     int error = 0;
 
-    // first give OS a chance to shut down cleanly
-    LOGDEBUG("shutting down instance\n");
-    error = virDomainShutdown(dom);
+    for (boolean done = FALSE; (!done);) {
 
-    if (!error) {                      // give it time to shut down
-        time_t deadline = time(NULL) + SHUTDOWN_GRACE_PERIOD_SEC;
-        int dom_status = -1;
-        while (time(NULL) < deadline) {
-            dom_status = virDomainIsActive(dom);
+        virConnectPtr conn = lock_hypervisor_conn();
+        if (conn == NULL) {
+            LOGERROR("[%s] cannot connect to hypervisor to shut down instance\n", instanceId);
+            return -1;
+        }
+
+        virDomainPtr dom = virDomainLookupByName(conn, instanceId);
+        if (dom == NULL) {             // domain is gone, so we are done
+            LOGTRACE("[%s] domain not found\n", instanceId);
+            unlock_hypervisor_conn();
+            break;
+        }
+
+        boolean do_destroy = FALSE;
+
+        if (deadline == 0) {           // first time through the loop
+            deadline = time(NULL) + SHUTDOWN_GRACE_PERIOD_SEC;
+
+            // give OS a chance to shut down cleanly
+            LOGDEBUG("shutting down instance\n");
+            error = virDomainShutdown(dom);
+            if (error) {
+                do_destroy = TRUE;
+            }
+
+        } else if (time(NULL) < deadline) { // within grace period - check on domain
+            int dom_status = virDomainIsActive(dom);
             LOGTRACE("domain status '%d'\n", dom_status);
-            if (dom_status != 1)
-                break;
-            sleep(1);
+            if (dom_status != 1)       // 1 if running, 0 if inactive, -1 on error
+                done = TRUE;
+
+        } else {                       // deadline exceeded
+            do_destroy = TRUE;
         }
 
-        if (dom_status != 1) {         // 0 = not running, -1 = does not exist
-            virDomainFree(dom);
-            return 0;
+        if (do_destroy) {
+            LOGDEBUG("destroying instance\n");
+            error = virDomainDestroy(dom);
+            done = TRUE;
         }
+
+        virDomainFree(dom);
+        unlock_hypervisor_conn();
+
+        if (!done)
+            sleep(2);                  // sleep outside the hypervisor lock
     }
-
-    LOGDEBUG("destroying instance\n");
-    error = virDomainDestroy(dom);
-    virDomainFree(dom);
 
     return error;
 }
 
 //!
 //! finds instance by ID and destroys it on the hypervisor
-//! NOTE: this must be called with inst_sem semaphore held
 //!
-//! @param[in]  nc_state a pointer to the NC state structure
-//! @param[in]  pMeta a pointer to the node controller (NC) metadata structure
 //! @param[in]  instanceId the instance identifier string (i-XXXXXXXX)
-//! @param[in]  force if set to 0 will force the termination of an instance.
-//! @param[out] instance_p a pointer to the instance matching the input instance identifier
 //!
 //! @return EUCA_OK on success or proper error code. Known error code returned include: EUCA_NOT_FOUND_ERROR.
 //!
-int find_and_terminate_instance(struct nc_state_t *nc_state, ncMetadata * pMeta, char *instanceId, int force, ncInstance ** instance_p)
+int find_and_terminate_instance(char *instanceId)
 {
-    ncInstance *instance = NULL;
+    char state = 0;
     int err = 0;
-    int i = 0;
 
-    instance = find_instance(&global_instances, instanceId);
-    if (instance == NULL)
-        return EUCA_NOT_FOUND_ERROR;
-    *instance_p = instance;
-
-    // detach all attached volumes
-    for (i = 0; i < EUCA_MAX_VOLUMES; ++i) {
-        ncVolume *volume = &instance->volumes[i];
-        if (!is_volume_used(volume))
-            continue;
-
-        int ret;
-        LOGINFO("[%s] detaching volume %s, force=%d on termination\n", instanceId, volume->volumeId, force);
-        if (nc_state->H->doDetachVolume) {
-            ret = nc_state->H->doDetachVolume(nc_state, pMeta, instanceId, volume->volumeId, volume->attachmentToken, volume->localDevReal, 0, 0);
-        } else {
-            ret = nc_state->D->doDetachVolume(nc_state, pMeta, instanceId, volume->volumeId, volume->attachmentToken, volume->localDevReal, 0, 0);
+    { // ensure the instance is known and save its last state on the stack
+        sem_p(inst_sem);
+        ncInstance * instance = find_instance(&global_instances, instanceId);
+        if (instance == NULL) {
+            sem_v(inst_sem);
+            return EUCA_NOT_FOUND_ERROR;
         }
-
-        // do our best to detach, then proceed
-        if ((ret != EUCA_OK)) {
-            if (nc_state->H->doDetachVolume) {
-                ret = nc_state->H->doDetachVolume(nc_state, pMeta, instanceId, volume->volumeId, volume->attachmentToken, volume->localDevReal, 1, 0);
-            } else {
-                ret = nc_state->D->doDetachVolume(nc_state, pMeta, instanceId, volume->volumeId, volume->attachmentToken, volume->localDevReal, 1, 0);
-            }
-        }
-
-        if ((ret != EUCA_OK) && (force == 0)) {
-            LOGWARN("[%s] detaching of volume on terminate failed\n", instanceId);
-            // return ret;
-        }
+        state = instance->state;
+        sem_v(inst_sem);
     }
 
     // try stopping the domain
-    virConnectPtr conn = lock_hypervisor_conn();
-    if (conn) {
-        virDomainPtr dom = virDomainLookupByName(conn, instanceId);
-        if (dom) {
-            err = shutdown_then_destroy_domain(dom);    // the function frees 'dom'
-            if (err == 0) {
-                LOGINFO("[%s] instance terminated\n", instanceId);
-            } else {
-                LOGERROR("[%s] failed to terminate instance\n", instanceId);
-            }
+    err = shutdown_then_destroy_domain(instanceId);
+
+    // log the outcome at the appropriate log level
+    if (err == 0) {
+        LOGINFO("[%s] instance terminated\n", instanceId);
+    } else {
+        if (state != BOOTING && state != STAGING && state != TEARDOWN) {
+            LOGERROR("[%s] failed to terminate instance\n", instanceId);
         } else {
-            if (instance->state != BOOTING && instance->state != STAGING && instance->state != TEARDOWN)
-                LOGWARN("[%s] instance to be terminated not running on hypervisor\n", instanceId);
+            LOGDEBUG("[%s] failed to terminate instance\n", instanceId);
         }
-        unlock_hypervisor_conn();
     }
+    
     return EUCA_OK;
 }
 
@@ -540,10 +532,10 @@ int find_and_terminate_instance(struct nc_state_t *nc_state, ncMetadata * pMeta,
 //! @param[in]  pMeta a pointer to the node controller (NC) metadata structure
 //! @param[in]  instanceId the instance identifier string (i-XXXXXXXX)
 //! @param[in]  force if set to 1 will force the termination of the instance
-//! @param[out] shutdownState the instance state code after the call to find_and_terminate_instance() if successful
-//! @param[out] previousState the instance state code after the call to find_and_terminate_instance() if successful
+//! @param[out] shutdownState hard-coded to 0 on success
+//! @param[out] previousState hard-coded to 0 on success
 //!
-//! @return EUCA_OK on success or proper error code from find_and_terminate_instance().
+//! @return EUCA_OK if instanceId is valid and the termination thread could be spawned
 //!
 //! @see find_and_terminate_instance()
 //!
@@ -554,35 +546,37 @@ static int doTerminateInstance(struct nc_state_t *nc, ncMetadata * pMeta, char *
     char resourceName[1][MAX_SENSOR_NAME_LEN] = { {0} };
     char resourceAlias[1][MAX_SENSOR_NAME_LEN] = { {0} };
 
-    sem_p(hyp_sem);                    // we serialize all hypervisor calls and sensor_refresh_resources() may ultimately call the hypervisor
+    { // find the instance to ensure we know about it
+        sem_p(inst_sem);
+        instance = find_instance(&global_instances, instanceId);
+        sem_v(inst_sem);
+    }
+
+    if (instance == NULL)
+        return EUCA_NOT_FOUND_ERROR;
+
+    // refresh stats so latest instance measurements are captured before it disappears
     euca_strncpy(resourceName[0], instanceId, MAX_SENSOR_NAME_LEN);
-    sensor_refresh_resources(resourceName, resourceAlias, 1);   // refresh stats so latest instance measurements are captured before it disappears
+    sem_p(hyp_sem);                    // we serialize all hypervisor calls and sensor_refresh_resources() may ultimately call the hypervisor
+    sensor_refresh_resources(resourceName, resourceAlias, 1);
     sem_v(hyp_sem);
 
-    sem_p(inst_sem);
-    err = find_and_terminate_instance(nc, pMeta, instanceId, force, &instance);
-    if (err != EUCA_OK) {
-        copy_instances();
-        sem_v(inst_sem);
-        return err;
+    // do the shutdown in a thread
+    pthread_attr_t tattr;
+    pthread_t tid;
+    pthread_attr_init(&tattr);
+    pthread_attr_setdetachstate(&tattr, PTHREAD_CREATE_DETACHED);
+    void * param = (void *)strdup(instanceId);
+    if (pthread_create(&tid, &tattr, terminating_thread, (void *)param) != 0) {
+        LOGERROR("[%s] failed to start VM termination thread\n", instanceId);
+    } else {
+        // previous and shutdown state are ignored by CC anyway
+        *previousState = 0;
+        *shutdownState = 0;
+        err = EUCA_OK;
     }
-    // change the state and let the monitoring_thread clean up state
-    if (instance->state != TEARDOWN && instance->state != CANCELED) {
-        // do not leave TEARDOWN (cleaned up) or CANCELED (already trying to terminate)
-        if (instance->state == STAGING) {
-            change_state(instance, CANCELED);
-        } else {
-            change_state(instance, SHUTOFF);
-        }
-    }
-    copy_instances();
-    sem_v(inst_sem);
 
-    //! @todo Chuck needs to find out if this should be moved at the begining.
-    *previousState = instance->stateCode;
-    *shutdownState = instance->stateCode;
-
-    return EUCA_OK;
+    return err;
 }
 
 //!
@@ -956,6 +950,7 @@ static int doAttachVolume(struct nc_state_t *nc, ncMetadata * pMeta, char *insta
             unlock_hypervisor_conn();
             return EUCA_HYPERVISOR_ERROR;
         }
+        virDomainFree(dom);            // release libvirt resource
         unlock_hypervisor_conn();
     }
 
@@ -972,10 +967,8 @@ static int doAttachVolume(struct nc_state_t *nc, ncMetadata * pMeta, char *insta
     }
     //Do the ebs connect.
     LOGTRACE("[%s][%s] Connecting EBS volume to local host\n", instanceId, volumeId);
-    get_service_url("storage", nc, scUrl);
-
-    if (strlen(scUrl) == 0) {
-        LOGERROR("[%s][%s] Failed to lookup enabled Storage Controller. Cannot attach volume %s\n", instanceId, volumeId, scUrl);
+    if (get_service_url("storage", nc, scUrl) != EUCA_OK || strlen(scUrl) == 0) {
+        LOGERROR("[%s][%s] Failed to lookup enabled Storage Controller. Cannot attach volume: %s\n", instanceId, volumeId, volumeId);
         have_remote_device = 0;
         ret = EUCA_ERROR;
         goto release;
@@ -983,8 +976,7 @@ static int doAttachVolume(struct nc_state_t *nc, ncMetadata * pMeta, char *insta
         LOGTRACE("[%s][%s] Using SC URL: %s\n", instanceId, volumeId, scUrl);
     }
 
-    int rc = connect_ebs_volume(scUrl, attachmentToken, nc->config_use_ws_sec, nc->config_sc_policy_file, nc->ip, nc->iqn, &remoteDevStr, &vol_data);
-    if (rc) {
+    if (connect_ebs_volume(scUrl, attachmentToken, nc->config_use_ws_sec, nc->config_sc_policy_file, nc->ip, nc->iqn, &remoteDevStr, &vol_data) != EUCA_OK) {
         LOGERROR("Error connecting ebs volume %s\n", attachmentToken);
         have_remote_device = 0;
         ret = EUCA_ERROR;
@@ -1113,20 +1105,20 @@ release:
         int err = 0;
         if (dom != NULL) {
             err = virDomainDetachDevice(dom, xml);
-            unlock_hypervisor_conn();
+            virDomainFree(dom);        // release libvirt resource
         }
         if (err) {
             LOGERROR("[%s][%s] failed to detach as part of aborting\n", instanceId, volumeId);
             LOGDEBUG("[%s][%s] virDomainDetachDevice() failed (err=%d) XML='%s'\n", instanceId, volumeId, err, xml);
         }
+        unlock_hypervisor_conn();
         ret = EUCA_ERROR;
     }
     // if iSCSI and there were problems, try to disconnect the target
     if (ret != EUCA_OK && have_remote_device) {
         LOGDEBUG("[%s][%s] attempting to disconnect iscsi target due to attachment failure\n", instanceId, volumeId);
         if (vol_data != NULL && vol_data->connect_string[0] != '\0') {
-            rc = disconnect_ebs_volume(scUrl, nc->config_use_ws_sec, nc->config_sc_policy_file, attachmentToken, vol_data->connect_string, nc->ip, nc->iqn);
-            if (rc) {
+            if (disconnect_ebs_volume(scUrl, nc->config_use_ws_sec, nc->config_sc_policy_file, attachmentToken, vol_data->connect_string, nc->ip, nc->iqn) != EUCA_OK) {
                 LOGERROR("[%s][%s] Error disconnecting ebs volume on error rollback.\n", instanceId, volumeId);
             }
         }
@@ -1181,12 +1173,16 @@ static int doDetachVolume(struct nc_state_t *nc, ncMetadata * pMeta, char *insta
     char *xml = NULL;
     char resourceName[1][MAX_SENSOR_NAME_LEN] = { {0} };
     char resourceAlias[1][MAX_SENSOR_NAME_LEN] = { {0} };
-
+    char volpath[MAX_PATH];
+    char lvolpath[MAX_PATH];
     char *tagBuf;
     char *localDevName;
     char localDevReal[32], localDevTag[256], remoteDevReal[132];
     char scUrl[512];
-    ncVolume *volume;
+    char *connectionString = NULL;
+    instance_states lastState = NO_STATE;
+    char *remoteDevStr = NULL;
+    ncVolume *volume = NULL;
 
     if (!strcmp(nc->H->name, "xen")) {
         tagBuf = NULL;
@@ -1204,144 +1200,169 @@ static int doDetachVolume(struct nc_state_t *nc, ncMetadata * pMeta, char *insta
     if (ret)
         return ret;
 
-    // find the instance record
-    if (grab_inst_sem)
-        sem_p(inst_sem);
-    ncInstance *instance = find_instance(&global_instances, instanceId);
-    if (grab_inst_sem)
-        sem_v(inst_sem);
-    if (instance == NULL)
-        return EUCA_NOT_FOUND_ERROR;
+    {                                  // find the instance record and work with it
+        if (grab_inst_sem)
+            sem_p(inst_sem);
 
-    // try attaching to hypervisor
-    virConnectPtr conn = lock_hypervisor_conn();
-    if (conn == NULL) {
-        LOGERROR("[%s][%s] cannot get connection to hypervisor\n", instanceId, volumeId);
-        return EUCA_HYPERVISOR_ERROR;
-    }
-    // find domain on hypervisor
-    virDomainPtr dom = virDomainLookupByName(conn, instanceId);
-    if (dom == NULL) {
-        if (instance->state != BOOTING && instance->state != STAGING) {
-            LOGWARN("[%s][%s] domain not running on hypervisor, cannot attach device\n", instanceId, volumeId);
+        ncInstance *instance = find_instance(&global_instances, instanceId);
+        if (instance == NULL) {
+            LOGERROR("[%s][%s] failed to find instance for volume detachment\n", instanceId, volumeId);
+            if (grab_inst_sem)
+                sem_v(inst_sem);
+            return EUCA_NOT_FOUND_ERROR;
         }
-        unlock_hypervisor_conn();
-        return EUCA_HYPERVISOR_ERROR;
-    }
-    // mark volume as 'detaching'
-    if (grab_inst_sem)
-        sem_p(inst_sem);
+        // set up paths for later
+        snprintf(volpath, sizeof(volpath), EUCALYPTUS_VOLUME_XML_PATH_FORMAT, instance->instancePath, volumeId);    // vol-XXX.xml
+        snprintf(lvolpath, sizeof(lvolpath), EUCALYPTUS_VOLUME_LIBVIRT_XML_PATH_FORMAT, instance->instancePath, volumeId);  // vol-XXX-libvirt.xml
 
-    volume = save_volume(instance, volumeId, attachmentToken, NULL, localDevName, localDevReal, VOL_STATE_DETACHING);
-    save_instance_struct(instance);
-    copy_instances();
-    if (grab_inst_sem)
-        sem_v(inst_sem);
-    if (!volume) {
-        LOGERROR("[%s][%s] failed to update the volume record, aborting volume detachment\n", instanceId, volumeId);
-        unlock_hypervisor_conn();
-        return EUCA_ERROR;
-    }
-    //Lookup the volume info locally for detachment
-    if (volume->connectionString[0] == '\0') {
-        LOGERROR("[%s][%s] failed to find the local volume attachment record, aborting volume detachment\n", instanceId, volumeId);
-        unlock_hypervisor_conn();
-        return EUCA_ERROR;
-    }
-    // do iscsi connect shellout if remoteDev is an iSCSI target
-    char *remoteDevStr = NULL;
+        // save current state on the stack
+        lastState = instance->state;
 
-    // get credentials, decrypt them
-    //Used to have check if iscsi here, not necessary with AOE deprecation.
-    remoteDevStr = get_volume_local_device(volume->connectionString);
-    if (!remoteDevStr || !strstr(remoteDevStr, "/dev")) {
-        LOGERROR("[%s][%s] failed to get local name of host iscsi device\n", instanceId, volumeId);
-        remoteDevReal[0] = '\0';
-    } else {
-        snprintf(remoteDevReal, sizeof(remoteDevReal), "%s", remoteDevStr);
-        have_remote_device = 1;
+        // mark volume as 'detaching', do not over-write the attachment token used for
+        volume = save_volume(instance, volumeId, NULL, NULL, localDevName, localDevReal, VOL_STATE_DETACHING);
+        if (!volume) {
+            LOGERROR("[%s][%s] failed to update the volume record, aborting volume detachment\n", instanceId, volumeId);
+            if (grab_inst_sem)
+                sem_v(inst_sem);
+            return EUCA_ERROR;
+        }
+        save_instance_struct(instance);
+        copy_instances();
+
+        // lookup the volume info locally for detachment
+        if (volume->connectionString[0] == '\0' || volume->attachmentToken == NULL || volume->attachmentToken[0] == '\0') {
+            LOGERROR("[%s][%s] failed to find the local volume attachment record, aborting volume detachment\n", instanceId, volumeId);
+            if (grab_inst_sem)
+                sem_v(inst_sem);
+            return EUCA_ERROR;
+        }
+        // do iscsi connect shellout if remoteDev is an iSCSI target
+        // get credentials, decrypt them
+        // (used to have check if iscsi here, not necessary with AOE deprecation.)
+        remoteDevStr = get_volume_local_device(volume->connectionString);
+        if (!remoteDevStr || !strstr(remoteDevStr, "/dev")) {
+            LOGERROR("[%s][%s] failed to get local name of host iscsi device\n", instanceId, volumeId);
+            remoteDevReal[0] = '\0';
+        } else {
+            snprintf(remoteDevReal, sizeof(remoteDevReal), "%s", remoteDevStr);
+            have_remote_device = 1;
+        }
+        EUCA_FREE(remoteDevStr);
+
+        if (grab_inst_sem)
+            sem_v(inst_sem);
     }
-    EUCA_FREE(remoteDevStr);
 
     // something went wrong above, abort
     if (!have_remote_device) {
         ret = EUCA_ERROR;
-        goto release;
+        goto disconnect;
     }
     // make sure there is a block device
     if (check_block(remoteDevReal)) {
         LOGERROR("[%s][%s] cannot verify that host device '%s' is available for hypervisor detach\n", instanceId, volumeId, remoteDevReal);
         if (!force)
             ret = EUCA_ERROR;
-        goto release;
+        goto disconnect;
     }
-
-    euca_strncpy(resourceName[0], instance->instanceId, MAX_SENSOR_NAME_LEN);
-    sensor_refresh_resources(resourceName, resourceAlias, 1);   // refresh stats so volume measurements are captured before it disappears
-
-    char path[MAX_PATH];
-    char lpath[MAX_PATH];
-    snprintf(path, sizeof(path), EUCALYPTUS_VOLUME_XML_PATH_FORMAT, instance->instancePath, volumeId);  // vol-XXX.xml
-    snprintf(lpath, sizeof(lpath), EUCALYPTUS_VOLUME_LIBVIRT_XML_PATH_FORMAT, instance->instancePath, volumeId);    // vol-XXX-libvirt.xml
-
     // read in libvirt XML
-    xml = file2str(lpath);
+    xml = file2str(lvolpath);
     if (xml == NULL) {
-        LOGERROR("[%s][%s] failed to read volume XML from %s\n", instance->instanceId, volumeId, lpath);
+        LOGERROR("[%s][%s] failed to read volume XML from %s\n", instanceId, volumeId, lvolpath);
         ret = EUCA_ERROR;
-        goto release;
-    }
-    // protect libvirt calls because we've seen problems during concurrent libvirt invocation
-    int err = virDomainDetachDevice(dom, xml);
-    if (!strcmp(nc->H->name, "xen")) {
-        err = xen_detach_helper(nc, instanceId, localDevReal, xml);
+        goto disconnect;
     }
 
-    if (err) {
-        LOGERROR("[%s][%s] failed to detach host device '%s' from guest device '%s'\n", instanceId, volumeId, remoteDevReal, localDevReal);
-        LOGERROR("[%s][%s] virDomainDetachDevice() or 'virsh detach' failed (err=%d) XML='%s'\n", instanceId, volumeId, err, xml);
-        if (!force)
+    {                                  // connect to hypervisor and do
+        virConnectPtr conn = lock_hypervisor_conn();
+        if (conn == NULL) {
+            LOGERROR("[%s][%s] cannot get connection to hypervisor\n", instanceId, volumeId);
             ret = EUCA_HYPERVISOR_ERROR;
-    } else {
-        call_hooks(NC_EVENT_POST_DETACH, path); // invoke hooks, but do not do anything if they return error
-        unlink(lpath);                 // remove vol-XXX-libvirt.xml
-        unlink(path);                  // remove vol-XXXX.xml file
+            goto disconnect;
+        }
+        // refresh stats so volume measurements are captured before it disappears
+        euca_strncpy(resourceName[0], instanceId, MAX_SENSOR_NAME_LEN);
+        sensor_refresh_resources(resourceName, resourceAlias, 1);
+
+        // find domain on hypervisor
+        virDomainPtr dom = virDomainLookupByName(conn, instanceId);
+        if (dom == NULL) {
+            if (lastState != BOOTING && lastState != STAGING) {
+                LOGWARN("[%s][%s] domain not running on hypervisor, will not try to detach device\n", instanceId, volumeId);
+            }
+            unlock_hypervisor_conn();
+            goto disconnect;
+        }
+        // protect libvirt calls because we've seen problems during concurrent libvirt invocation
+        int err = virDomainDetachDevice(dom, xml);
+        if (!strcmp(nc->H->name, "xen")) {
+            err = xen_detach_helper(nc, instanceId, localDevReal, xml);
+        }
+
+        if (err) {
+            LOGERROR("[%s][%s] failed to detach host device '%s' from guest device '%s'\n", instanceId, volumeId, remoteDevReal, localDevReal);
+            LOGERROR("[%s][%s] virDomainDetachDevice() or 'virsh detach' failed (err=%d) XML='%s'\n", instanceId, volumeId, err, xml);
+            if (!force)
+                ret = EUCA_HYPERVISOR_ERROR;
+        } else {
+            call_hooks(NC_EVENT_POST_DETACH, volpath);  // invoke hooks, but do not do anything if they return error
+            unlink(lvolpath);          // remove vol-XXX-libvirt.xml
+            unlink(volpath);           // remove vol-XXXX.xml file
+        }
+
+        virDomainFree(dom);            // release libvirt resource
+        unlock_hypervisor_conn();      // unlock the connection to the hypervisor
     }
 
-release:
-    virDomainFree(dom);                // release libvirt resource
-    unlock_hypervisor_conn();          // unlock the connection to the hypervisor
+disconnect:
 
-    // record volume state in memory and on disk
-    char *next_vol_state;
-    if (ret == EUCA_OK) {
-        next_vol_state = VOL_STATE_DETACHED;
-    } else {
-        next_vol_state = VOL_STATE_DETACHING_FAILED;
+    {                                  // update the instance structure while under a lock
+        if (grab_inst_sem)
+            sem_p(inst_sem);
+
+        ncInstance *instance = find_instance(&global_instances, instanceId);
+        if (instance == NULL) {
+            LOGWARN("[%s][%s] failed to find the instance to update volume state\n", instanceId, volumeId);
+        } else {
+            // record volume state in memory and on disk
+            char *next_vol_state;
+            if (ret == EUCA_OK) {
+                next_vol_state = VOL_STATE_DETACHED;
+            } else {
+                next_vol_state = VOL_STATE_DETACHING_FAILED;
+            }
+            ncVolume *volume = save_volume(instance, volumeId, NULL, NULL, NULL, NULL, next_vol_state);
+            if (volume == NULL) {
+                LOGWARN("[%s][%s] failed to save the volume record\n", instanceId, volumeId);
+                ret = EUCA_ERROR;
+            } else {
+                connectionString = strdup(volume->connectionString);
+            }
+            save_instance_struct(instance);
+            copy_instances();
+            update_disk_aliases(instance);  // ask sensor subsystem to stop tracking the volume
+        }
+
+        if (grab_inst_sem)
+            sem_v(inst_sem);
     }
-    if (grab_inst_sem)
-        sem_p(inst_sem);
-    volume = save_volume(instance, volumeId, NULL, NULL, NULL, NULL, next_vol_state);
-    save_instance_struct(instance);
-    copy_instances();
-    update_disk_aliases(instance);     // ask sensor subsystem to stop tracking the volume
-    if (grab_inst_sem)
-        sem_v(inst_sem);
-    if (volume == NULL) {
-        LOGWARN("[%s][%s] failed to save the volume record\n", instanceId, volumeId);
-        ret = EUCA_ERROR;
-    }
+
     // if iSCSI, try to disconnect the target
     if (have_remote_device) {
         //Do the ebs disconnect.
         LOGTRACE("[%s][%s] Disconnecting EBS volume to local host\n", instanceId, volumeId);
-        get_service_url("storage", nc, scUrl);
-        LOGTRACE("[%s][%s] Using SC Url: %s\n", instanceId, volumeId, scUrl);
+        if (get_service_url("storage", nc, scUrl) != EUCA_OK || strlen(scUrl) == 0) {
+            LOGERROR("Could not find SC URL for making unexport call.\n");
+            ret = EUCA_ERROR;
+        } else {
+            LOGTRACE("[%s][%s] Using SC Url: %s\n", instanceId, volumeId, scUrl);
+            //Use the volume attachment token from the initial attachment instead of the one that came over the wire. This ensures parity between attach/detach.
+            if (disconnect_ebs_volume(scUrl, nc->config_use_ws_sec, nc->config_sc_policy_file, volume->attachmentToken, connectionString, nc->ip, nc->iqn) != EUCA_OK) {
+                LOGERROR("[%s][%s] failed to disconnect iscsi target\n", instanceId, volumeId);
+                if (!force)
+                    ret = EUCA_ERROR;
 
-        if (disconnect_ebs_volume(scUrl, nc->config_use_ws_sec, nc->config_sc_policy_file, attachmentToken, volume->connectionString, nc->ip, nc->iqn) != 0) {
-            LOGERROR("[%s][%s] failed to disconnect iscsi target\n", instanceId, volumeId);
-            if (!force)
-                ret = EUCA_ERROR;
+            }
         }
     }
 
@@ -1351,8 +1372,8 @@ release:
     int log_level_for_devstring = EUCA_LOG_TRACE;
     if (ret != EUCA_OK)
         log_level_for_devstring = EUCA_LOG_DEBUG;
-    EUCALOG(log_level_for_devstring, "[%s][%s] remote device string: %s\n", instanceId, volumeId, volume->connectionString);
-
+    EUCALOG(log_level_for_devstring, "[%s][%s] remote device string: %s\n", instanceId, volumeId, connectionString);
+    EUCA_FREE(connectionString);
     EUCA_FREE(xml);
 
     if (force) {
@@ -1490,7 +1511,7 @@ static int doCreateImage(struct nc_state_t *nc, ncMetadata * pMeta, char *instan
     if (params == NULL)
         return cleanup_createImage_task(instance, params, NO_STATE, CREATEIMAGE_FAILED);
 
-    params->instance = instance;
+    params->instance = instance; //! @TODO pass instanceId instead
     params->volumeId = strdup(volumeId);
     params->remoteDev = strdup(remoteDev);
 
@@ -1499,14 +1520,15 @@ static int doCreateImage(struct nc_state_t *nc, ncMetadata * pMeta, char *instan
     instance->createImageTime = time(NULL);
     change_state(instance, CREATEIMAGE_SHUTDOWN);
     change_createImage_state(instance, CREATEIMAGE_IN_PROGRESS);
+    sem_v(inst_sem);
 
-    int err = find_and_terminate_instance(nc, pMeta, instanceId, 0, &instance);
+    int err = find_and_terminate_instance(instanceId);
     if (err != EUCA_OK) {
-        copy_instances();
-        sem_v(inst_sem);
         EUCA_FREE(params);
         return err;
     }
+    
+    sem_p(inst_sem);
     copy_instances();
     sem_v(inst_sem);
 
@@ -1868,8 +1890,11 @@ static int doBundleInstance(struct nc_state_t *nc, ncMetadata * pMeta, char *ins
     instance->bundlingTime = time(NULL);
     change_state(instance, BUNDLING_SHUTDOWN);
     change_bundling_state(instance, BUNDLING_IN_PROGRESS);
+    sem_v(inst_sem);
 
-    int err = find_and_terminate_instance(nc, pMeta, instanceId, 0, &instance);
+    int err = find_and_terminate_instance(instanceId);
+
+    sem_p(inst_sem);
     copy_instances();
     sem_v(inst_sem);
 

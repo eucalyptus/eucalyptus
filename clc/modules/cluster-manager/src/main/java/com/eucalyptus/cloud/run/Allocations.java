@@ -66,8 +66,10 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.TreeMap;
 import java.util.Map.Entry;
 import java.util.Set;
+import java.util.UUID;
 import javax.annotation.Nullable;
 import javax.persistence.EntityTransaction;
 import org.apache.log4j.Logger;
@@ -133,11 +135,13 @@ public class Allocations {
     private final List<ResourceToken>  allocationTokens  = Lists.newArrayList( );
     private final Long                 reservationIndex;
     private final Map<Integer, String> instanceIds;
+    private final Map<Integer, String> instanceUuids;
     private Date                       expiration;
     
     private Allocation( final RunInstancesType request ) {
       this.context = Contexts.lookup( );
       this.instanceIds = Maps.newHashMap( );
+      this.instanceUuids = Maps.newHashMap( );
       this.request = request;
       this.minCount = request.getMinCount( );
       this.maxCount = request.getMaxCount( );
@@ -150,13 +154,13 @@ public class Allocations {
         this.request.setInstanceType( VmTypes.defaultTypeName( ) );
       }
 
-      final String iamInstanceProfileArn =  this.request.getIamInstanceProfileArn();
-      final String iamInstanceProfileName = this.request.getIamInstanceProfileName();
+      @Nullable final String iamInstanceProfileArn =  this.request.getIamInstanceProfileArn();
+      @Nullable final String iamInstanceProfileName = this.request.getIamInstanceProfileName();
 
-      if (!iamInstanceProfileArn.equals("")) {
+      if ( !Strings.isNullOrEmpty( iamInstanceProfileArn ) ) {
         this.nameOrArn = iamInstanceProfileArn;
         this.request.setInstanceProfileNameOrArn(this.nameOrArn);
-      } else if (!iamInstanceProfileName.equals("")) {
+      } else if ( !Strings.isNullOrEmpty( iamInstanceProfileName ) ) {
         this.nameOrArn = iamInstanceProfileName;
         this.request.setInstanceProfileNameOrArn(this.nameOrArn);
       } else {
@@ -182,6 +186,7 @@ public class Allocations {
     
     private Allocation( final String reservationId,
                         final String instanceId,
+                        final String instanceUuid,
                         final byte[] userData,
                         final Date expiration,
                         final Partition partition,
@@ -194,7 +199,6 @@ public class Allocations {
                         final String clientToken,
                         final String nameOrArn
                         ) {
-      super( );
       this.context = Contexts.lookup( );
       this.minCount = 1;
       this.maxCount = 1;
@@ -204,6 +208,8 @@ public class Allocations {
       this.reservationIndex = UniqueIds.nextIndex( VmInstance.class, ( long ) this.maxCount );
       this.instanceIds = Maps.newHashMap( );
       this.instanceIds.put( 0, instanceId );
+      this.instanceUuids = Maps.newHashMap();
+      this.instanceUuids.put( 0, instanceUuid );
       this.userData = userData;
       this.partition = partition;
       this.sshKeyPair = ( sshKeyPair != null ? sshKeyPair : KeyPairs.noKey( ) );
@@ -292,7 +298,19 @@ public class Allocations {
     public List<NetworkGroup> getNetworkGroups( ) {
       return Lists.newArrayList( this.networkGroups.values( ) );
     }
-    
+
+    public TreeMap<String, String> getNetworkGroupsMap( ) {
+
+      TreeMap<String,String> networkGroupMap = Maps.newTreeMap();
+
+      for (NetworkGroup network : this.getNetworkGroups() ){
+        networkGroupMap.put(network.getGroupId(), network.getDisplayName());
+      }
+
+      return networkGroupMap;
+
+    }
+
     public VmType getVmType( ) {
       return this.vmType;
     }
@@ -393,10 +411,17 @@ public class Allocations {
     }
 
     public String getInstanceId( int index ) {
-      while ( this.instanceIds.size( ) < index + 1 ) {
+      while ( this.instanceIds.size( ) <= index ) {
         this.instanceIds.put( index, VmInstances.getId( ( long ) this.getReservationIndex( ), index ) );
       }
       return this.instanceIds.get( index );
+    }
+
+    public String getInstanceUuid( int index ) {
+      while ( this.instanceUuids.size( ) <= index ) {
+        this.instanceUuids.put( index, UUID.randomUUID( ).toString( ) );
+      }
+      return this.instanceUuids.get( index );
     }
     
     public Date getExpiration( ) {
@@ -416,6 +441,7 @@ public class Allocations {
     BootableSet bootSet = Emis.recreateBootableSet( vm );
     return new Allocation( vm.getReservationId( ),
                            vm.getInstanceId( ),
+                           vm.getInstanceUuid( ),
                            vm.getUserData( ),
                            vm.getExpiration( ),
                            vm.lookupPartition( ),

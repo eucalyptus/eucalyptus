@@ -135,9 +135,9 @@ public class BlockStorageChecker {
 		List<VolumeInfo> volumeInfos = db.query(volumeInfo);
 		for(VolumeInfo volInfo : volumeInfos) {
 			String volumeId = volInfo.getVolumeId();
-			LOG.info("Cleaning failed volume " + volumeId);
+			LOG.info("Cleaning stuck volume " + volumeId);
 			blockManager.cleanVolume(volumeId);
-			db.delete(volInfo);
+			volumeInfo.setStatus(StorageProperties.Status.failed.toString());
 		}
 		db.commit();
 	}
@@ -151,7 +151,6 @@ public class BlockStorageChecker {
 			String volumeId = volInfo.getVolumeId();
 			LOG.info("Cleaning failed volume " + volumeId);
 			blockManager.cleanVolume(volumeId);
-			db.delete(volInfo);
 		}
 		db.commit();
 	}
@@ -164,7 +163,6 @@ public class BlockStorageChecker {
 			VolumeInfo volInfo = volumeInfos.get(0);
 			LOG.info("Cleaning failed volume " + volumeId);
 			blockManager.cleanVolume(volumeId);
-			db.delete(volInfo);
 		}
 		db.commit();
 	}

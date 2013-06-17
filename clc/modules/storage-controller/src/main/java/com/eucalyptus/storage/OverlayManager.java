@@ -1282,7 +1282,7 @@ public class OverlayManager extends DASManager {
 									LOG.info("Snapshot in progress. Not detaching loop device.");
 									//volumeManager.abort();
 								}
-						}
+							}
 						}
 					} catch (EucalyptusCloudException e) {
 						LOG.error(e, e);

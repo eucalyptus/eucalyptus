@@ -48,7 +48,8 @@ class DescribeNodes(eucadmin.EucadminRequest):
                                        'details': service['euca:details'],
                                        'instances': {}}
 
-        obj = DescribeInstances(debug=self.args.get('debug'))
+        obj = DescribeInstances(InstanceId=['verbose'],
+                                debug=self.args.get('debug'))
         inst_response = obj.main(**args)
         reservations = inst_response['DescribeInstancesResponse'] \
             ['reservationSet']

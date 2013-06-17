@@ -74,7 +74,7 @@ import com.eucalyptus.ws.stages.UnrollableStage;
 
 @ComponentPart( Eucalyptus.class )
 public class EucalyptusSoapPipeline extends FilteredPipeline {
-  private static final String DEFAULT_EC2_SOAP_NAMESPACE = "http://ec2.amazonaws.com/doc/2011-02-28/";//GRZE:TODO: @Configurable
+  private static final String DEFAULT_EC2_SOAP_NAMESPACE = "http://ec2.amazonaws.com/doc/2013-02-01/";//GRZE:TODO: @Configurable
   private final UnrollableStage auth = new SoapUserAuthenticationStage( );
 
   @Override

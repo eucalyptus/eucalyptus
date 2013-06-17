@@ -34,14 +34,22 @@ def build_map (file_path, key_arr=None):
         exit(-1)
 
     if f:
+        warning = False
         for line in f.readlines():
             try:
-                (lkey,rval) = line.split('=', 1)
-                lkey = lkey.strip()
-                rval = rval.strip()
-                if key_arr != None:
-                    key_arr.append(lkey)
-                new_map[lkey]=rval
+                if line.startswith('#warning - translation not found'):
+                    warning = True
+                    continue
+                # don't add lines that are preceded by #warning
+                if warning == False:
+                    (lkey,rval) = line.split('=', 1)
+                    lkey = lkey.strip()
+                    rval = rval.strip()
+                    if key_arr != None:
+                        key_arr.append(lkey)
+                    new_map[lkey]=rval
+                else:
+                    warning = False
             except Exception, err:
                 if key_arr != None:
                     key_arr.append(line)
@@ -52,6 +60,7 @@ if __name__ == "__main__":
     import sys
     import os
     import commands
+    import re
     from optparse import OptionParser
     from argparse import ArgumentParser
 
@@ -62,10 +71,11 @@ if __name__ == "__main__":
     if not options.language or len(options.language) <= 0:
         parser.print_help()
         exit(-1)
+
+    # open en_US properties file and build a map
     source_arr = []
     source_map= build_map('./Messages.properties', source_arr);
     
-    # open en_US properties file and build a map
     for lang in options.language:
         print "Processing lanugage: %s" % lang
         dest_path = 'Messages_%s.properties' % lang
@@ -75,6 +85,11 @@ if __name__ == "__main__":
         contents.append('#auto-formatted from Messages_en_US.properties\n')
         for k in source_arr:
             if dest_map.has_key(k):
+                # check if there are any special chars in the destination that do not exist in the source
+                ds = re.sub('[^{}<>]','',dest_map[k])
+                ss = re.sub('[^{}<>]','',source_map[k])
+                if ds != ss:
+                    contents.append('#warning - special characters <> {} mismatch. Original: %s\n' % source_map[k])
                 contents.append('%s = %s\n' % (k, dest_map[k]))
             elif source_map.has_key(k):
                 contents.append('#warning - translation not found\n')

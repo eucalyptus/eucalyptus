@@ -61,10 +61,10 @@
               "bVisible": false,
               "aTargets":[1],
               "mData": function(source) { 
-			var result = describe('image', source.image_id);
-               		if(result && result.platform) 
-				return result.platform;
-			return "linux";
+                var result = require('app').data.images.get(source.image_id);
+                if(result && result.get('platform')) 
+                  return result.get('platform');
+                return "linux";
               },
             },
             { 
@@ -77,7 +77,7 @@
                 this_title = source.id;
                 this_id = source.id;
                 if(source.display_id)
-                  this_id = source.display_id;
+                  this_id = addEllipsis(source.display_id, 20);
                 return eucatableDisplayColumnTypeTwist(this_title, this_id, 255);
               },
             },
@@ -111,6 +111,7 @@
                 }
                 return DefaultEncoder().encodeForHTML(zone);
               },
+              "sClass": "wrap-content",
 	    }, 
             {
 	      // Display the public dns name of the instance in the main table
@@ -137,6 +138,7 @@
                 return DefaultEncoder().encodeForHTML(data);
               },
               "mData": "key_name",
+              "sClass": "wrap-content",
 	    },
             {
 	      // Display the group name of the instance in the main table
@@ -145,6 +147,7 @@
                 return DefaultEncoder().encodeForHTML(data);
               },
               "mData": "group_name",
+              "sClass": "wrap-content",
 	    },
             { 
 	      // Display the launch time of the instance in the main table
@@ -192,13 +195,16 @@
 	      // Hidden column for the image location of the instance
               "bVisible": false,
               "aTargets":[14],
+              "mRender": function(data) {
+                return DefaultEncoder().encodeForHTML(data);
+              }, 
               "mData": function(source) {
-			var image = null;
-              		var result = describe('image', source.image_id);
-			if( result ){
-				image = result;
-			};
-                 	return image ? image.location : '';		
+                var image = null;
+                var result = require('app').data.images.get(source.image_id);
+ 		if( result ){
+ 		  image = result;
+ 		};
+                return image ? image.get('location') : ''; 
               },
             },
             {
@@ -392,7 +398,15 @@
          id: 'launch-more-instances',
          title: instance_dialog_launch_more_title,
          buttons: {
-           'launch': {text: instance_dialog_launch_btn, domid: 'btn-launch-more', click: function() { thisObj._launchMore(); $launchmore_dialog.eucadialog("close");}},
+           'launch': {
+              text: instance_dialog_launch_btn, 
+              domid: 'btn-launch-more', 
+              click: function() { thisObj._launchMore( function() { 
+                      // callback and close the window if it passes validation
+                      $launchmore_dialog.eucadialog("close");
+                  }); 
+              }
+           },
            'cancel': {text: dialog_cancel_btn, focus:true, click: function() { $launchmore_dialog.eucadialog("close");}} 
          },
          help: {title: null, content: $launchmore_help, url: help_instance.dialog_launchmore_content_url, pop_height: 600},
@@ -488,7 +502,6 @@
 
      if(numSelected === 1 && 'running' in stateMap && $.inArray(instIds[0], stateMap['running']>=0)){
        menuItems['console'] = {"name":instance_action_console, callback: function(key, opt) { thisObj._consoleAction(); }}
-//       menuItems['attach'] = {"name":instance_action_attach, callback: function(key, opt) { thisObj._attachAction(); }}
        menuItems['attach'] = {"name":instance_action_attach, callback: function(key, opt) { thisObj._newAttachAction(); }}
      }
  
@@ -574,8 +587,12 @@
         // Push the instance id and its display_id into the matrix
         $.each(instances, function(idx,id){
           this_display_id = id;
-          if( display_ids[idx] != null )
+          if( display_ids[idx] != null ) {
             this_display_id = display_ids[idx];
+            if (id !== display_ids[idx]) {
+              this_display_id = id + ' (' + addEllipsis(display_ids[idx], 15) + ')';
+            }
+          }
           matrix.push([id, this_display_id]);
         });
         if ($.inArray('ebs',rootType)>=0){
@@ -632,7 +649,7 @@
         $.each(instances, function(idx,id){
           this_display_id = id;
           if( display_ids[idx] != null )
-            this_display_id = display_ids[idx];
+            this_display_id = id + ' (' + addEllipsis(display_ids[idx], 15) + ')';
           matrix.push([id, this_display_id]);
         });
         thisObj.rebootDialog.eucadialog('setSelectedResources', {title: [instance_label], contents: matrix, included_display_id: true});
@@ -669,7 +686,7 @@
     _stopAction : function(){
       var thisObj = this;
       var instances = thisObj.tableWrapper.eucatable('getSelectedRows', 17);
-      var instances = thisObj.tableWrapper.eucatable('getSelectedRows', 18);
+      var display_ids = thisObj.tableWrapper.eucatable('getSelectedRows', 18);
       if ( instances.length > 0 ) {
         var matrix = [];
         $.each(instances, function(idx,id){
@@ -678,7 +695,7 @@
             this_display_id = display_ids[idx];
           matrix.push([id, this_display_id]);
         });
-        thisObj.rebootDialog.eucadialog('setSelectedResources', {title: [instance_label], contents: matrix, included_display_id: true});
+        thisObj.stopDialog.eucadialog('setSelectedResources', {title: [instance_label], contents: matrix, included_display_id: true});
         thisObj.stopDialog.eucadialog('open');
        }
     },
@@ -834,7 +851,7 @@
             instance = display_id;
           }
           if(data && data.results){
-            var newTitle = $.i18n.prop('instance_dialog_console_title',  DefaultEncoder().encodeForHTML(instance));
+            var newTitle = $.i18n.prop('instance_dialog_console_title',  DefaultEncoder().encodeForHTML(addEllipsis(instance, 15)));
             thisObj.consoleDialog.data('eucadialog').option('title', newTitle);
             thisObj.consoleDialog.find('#instance-console-output').children().detach();
             thisObj.consoleDialog.find('#instance-console-output').append(
@@ -885,7 +902,7 @@
       if( nameTag == null ){
         $msg.html($.i18n.prop('inst_volume_dialog_detach_text', DefaultEncoder().encodeForHTML(instance)));
       }else{ 
-       $msg.html($.i18n.prop('inst_volume_dialog_detach_text', DefaultEncoder().encodeForHTML(nameTag)));
+       $msg.html($.i18n.prop('inst_volume_dialog_detach_text', DefaultEncoder().encodeForHTML(addEllipsis(nameTag, 15))));
       }
 
       var $p = this.detachDialog.find('#volume-detach-select-all');
@@ -907,8 +924,9 @@
           var state = volume.attach_data['status'];
           if( state === 'attached' && inst === instance && !isRootVolume(inst, volume.id) ){
             // FIX TO DISPLAY THE NAME TAG OF THE VOLUME  --- Kyo 041513
-            if( volume.display_id != null ){
-              volumes.push(volume.display_id);   // PASS THE DISPLAY ID IF EXISTS
+            if( volume.display_id != volume.id ){
+              volume_label = volume.id + " (" + addEllipsis(volume.display_id, 15) + ")";
+              volumes.push(volume_label);   // PASS THE DISPLAY ID IF EXISTS
             }else{
               volumes.push(volume.id);   // OR USE THE VOLUME ID
             }
@@ -1042,7 +1060,7 @@
       this.launchMoreDialog.eucadialog('open');
     },
 
-    _launchMore : function(){
+    _launchMore : function( callback ) {
       var thisObj = this;
       var id = this.tableWrapper.eucatable('getSelectedRows', 17)[0];
 //      id = $(id).html();    // After dataTable 1.9 integration, this operaiton is no longer needed. 030413
@@ -1064,6 +1082,24 @@
       var zone = thisObj.launchMoreDialog.find('#summary-type-zone').children().last().text();
       var inst_num = thisObj.launchMoreDialog.find('input#launch-more-num-instance').val();
       var keyname = thisObj.launchMoreDialog.find('#summary-security-keypair').children().last().text();
+      var isValid = true;
+
+      // validation stuff
+      var Instance = require('models/instance');
+      var iModel = new Instance({
+         image_id: emi,
+         min_count: inst_num,
+         max_count: inst_num 
+      });
+      
+      iModel.validate();
+      if (!iModel.isValid()) {
+        $('#summary_type_numinst_error').text(require('app').msg('launch_instance_error_number_required'));
+        return false;  // stop here with error displayed
+      }
+      // end validation
+
+
       if (keyname==='None')
         keyname = null;
       var sgroup = thisObj.launchMoreDialog.find('#launch-more-sgroup-input');
@@ -1125,6 +1161,8 @@
       if(deviceMap.length > 0)
         $('html body').find(DOM_BINDING['hidden']).launcher('updateLaunchParam', 'device_map', deviceMap);
       $('html body').find(DOM_BINDING['hidden']).launcher('launch');
+
+      callback();
     },
 
     _initLaunchMoreDialog : function(){
@@ -1211,10 +1249,13 @@
       }
       $summary = $('<div>').append(
           $('<div>').attr('id','summary-type-insttype').append($('<div>').text(launch_instance_summary_type), $('<span>').text(selectedType)),
+          
           $('<div>').attr('id','summary-type-zone').append($('<div>').text(launch_instance_summary_zone), $('<span>').text(zone)),
           $('<div>').attr('id','summary-type-numinst').addClass('form-row').addClass('clearfix').append(
             $('<label>').attr('for','launch-more-num-instance').text(launch_instance_summary_instances),
-            $('<input>').attr('type','text').attr('id','launch-more-num-instance').val('1')));
+            $('<input>').attr('type','text').attr('id','launch-more-num-instance').val('1'),
+            $('<div>').attr('id', 'summary_type_numinst_error').attr('class', 'error')
+            ));
       var $type = thisObj.launchMoreDialog.find('#launch-more-summary-type');
       $type.addClass(selectedType);
       $type.children().detach();

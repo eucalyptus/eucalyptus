@@ -292,7 +292,7 @@ adb_ncStartNetworkResponse_t *ncStartNetworkMarshal(adb_ncStartNetwork_t * ncSta
         uuid = adb_ncStartNetworkType_get_uuid(input, env);
         port = adb_ncStartNetworkType_get_remoteHostPort(input, env);
         vlan = adb_ncStartNetworkType_get_vlan(input, env);
-        if((peersLen = adb_ncStartNetworkType_sizeof_remoteHosts(input, env)) > 0) {
+        if ((peersLen = adb_ncStartNetworkType_sizeof_remoteHosts(input, env)) > 0) {
             peers = EUCA_ZALLOC(peersLen, sizeof(char *));
             for (i = 0; i < peersLen; i++) {
                 peers[i] = adb_ncStartNetworkType_get_remoteHosts_at(input, env, i);
@@ -302,7 +302,7 @@ adb_ncStartNetworkResponse_t *ncStartNetworkMarshal(adb_ncStartNetwork_t * ncSta
             EUCA_MESSAGE_UNMARSHAL(ncStartNetworkType, input, (&meta));
 
             if ((error = doStartNetwork(&meta, uuid, peers, peersLen, port, vlan)) != EUCA_OK) {
-                LOGERROR("failed error=%d\n", error);
+                LOGERROR("StartNetwork() invocation failed (error=%d)\n", error);
                 adb_ncStartNetworkResponseType_set_return(output, env, AXIS2_FALSE);
 
                 // set operation-specific fields in output
@@ -324,7 +324,7 @@ adb_ncStartNetworkResponse_t *ncStartNetworkMarshal(adb_ncStartNetwork_t * ncSta
             // set response to output
             adb_ncStartNetworkResponse_set_ncStartNetworkResponse(response, env, output);
         } else {
-            LOGERROR("failed. peersLen=%d\n", peersLen);
+            LOGERROR("invalid parameters to StartNetwork (peersLen=%d must be greater than 0)\n", peersLen);
         }
     }
     pthread_mutex_unlock(&ncHandlerLock);

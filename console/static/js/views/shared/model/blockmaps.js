@@ -5,8 +5,7 @@ define(['./blockmap'], function(blockmap) {
     },
 
     finish: function(outputModel) {
-      outputModel.set('block_device_mappings', this.toJSON());
+      outputModel.set('block_device_mappings', JSON.stringify(this));
     }
-
   });
 });

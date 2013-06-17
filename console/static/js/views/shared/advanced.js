@@ -4,29 +4,24 @@ define([
   'text!./advanced.html!strip',
   'rivets',
   './model/blockmap'
-	], function( app, dataholder, template, rivets, blockmap ) {
+], function( app, dataholder, template, rivets, blockmap ) {
 	return Backbone.View.extend({
     tpl: template,
     title: app.msg("launch_instance_section_header_advanced"),
     isOptional: true,
     optionLinkText: app.msg('launch_instance_btn_next_advanced'),
-
     launchConfigErrors: new Backbone.Model({volume_size: ''}),
+    theImage: null,
     
-		initialize : function() {
+    initialize : function() {
 
       var self = this;
+      self.theImage = self.options.image;
       var scope = {
         advancedModel: self.model,
         kernels: new Backbone.Collection(dataholder.images.where({type: 'kernel'})), 
         ramdisks: new Backbone.Collection(dataholder.images.where({type: 'ramdisk'})),
-        enableMonitoring: true,
-        privateNetwork: false,
         blockDeviceMappings: self.options.blockMaps,
-        enableStorageVolume: true,
-        enableMapping: true,
-        enableSnapshot: true,
-        deleteOnTerm: true,
 
         snapshots: function() {
             var ret = [{name:'None', id:null}];
@@ -36,8 +31,13 @@ define([
             return ret;
         },
 
-        setKernel: function(e, obj) {
-          self.model.set('kernel_id', e.target.value);
+        storageTypes: function() {
+            var ret = [{name:app.msg('launch_instance_ebs'), id:'EBS'}];
+            var map = scope.blockDeviceMappings.findWhere({ephemeral_name: 'ephemeral0'});
+            if (map == undefined) {
+              ret.push({name:app.msg('launch_instance_ephemeral0'), id:'ephemeral'});
+            }
+            return ret;
         },
 
         isKernelSelected: function(obj) { 
@@ -55,18 +55,6 @@ define([
         },
 
 
-        setPrivateNetwork: function(e, item) {
-          self.model.set('private_network', e.target.value);
-        },
-
-        setMonitoring: function(e, item) {
-            self.model.set('instance_monitoring', e.target.value);
-        },
-
-        setRamDisk: function(e, item) {
-          self.model.set('ramdisk_id', e.target.value);
-        },
-
         setStorageVolume: function(e, obj) {
           var m = new blockmap();
           self.launchConfigErrors.clear();
@@ -74,10 +62,19 @@ define([
 
           var tr = $(e.target).closest('tr');
           var vol = tr.find('.launch-wizard-advanced-storage-volume-selector').val();
-          var dev = "/dev/" + tr.find('.launch-wizard-advanced-storage-mapping-input').val();
-          var snap = tr.find('.launch-wizard-advanced-storage-snapshot-input').val();
-          var size = tr.find('.launch-wizard-advanced-storage-size-input').val();
-          var del = tr.find('.launch-wizard-advanced-storage-delOnTerm').prop('checked');
+          var dev = tr.find('.launch-wizard-advanced-storage-mapping-input').val();
+          var ephemeral = null;
+          var snap = null;
+          var size = null;
+          var del = null;
+          if (vol == 'ephemeral') {
+            ephemeral = 'ephemeral0';
+          }
+          else {
+            snap = tr.find('.launch-wizard-advanced-storage-snapshot-input').val();
+            size = tr.find('.launch-wizard-advanced-storage-size-input').val();
+            del = tr.find('.launch-wizard-advanced-storage-delOnTerm').prop('checked');
+          }
 
           m.set({
               device_name: dev,
@@ -97,36 +94,49 @@ define([
                 iopts: null 
               },
               delete_on_termination: del,
-              ephemeral_name: null    
+              ephemeral_name: ephemeral    
           });
 
           m.validate();
           if (m.isValid()) {
             this.blockDeviceMappings.add(m);
+            scope.advancedModel.set('bdmaps_configured', true);
           }
 
+          // hack to re-enable input fields
+          var tr = $(e.target).closest('tr');
+          tr.find('.launch-wizard-advanced-storage-snapshot-input').show();
+          tr.find('.launch-wizard-advanced-storage-size-input').show();
+          tr.find('.launch-wizard-advanced-storage-delOnTerm').show();
         },
 
         delStorageVol: function(e, obj) {
           this.blockDeviceMappings.remove(obj.volume); 
+          if(this.blockDeviceMappings.length == 0) {
+            scope.advancedModel.set('bdmaps_configured', false);
+          }
         },
 
         getVolLabel: function(obj) {
           if (obj.volume.get('device_name') == '/dev/sda') {
-              return 'Root';
+            return app.msg('launch_instance_root');
           } else {
-              return 'EBS';
+            if (obj.volume.get('ephemeral_name') == null) {
+              return app.msg('launch_instance_ebs');
+            } else {
+              return app.msg('launch_instance_ephemeral0');
+            }
           }
         },
 
         deleteButtonIf: function(obj) {
-          if(this.getVolLabel(obj) != 'Root') {
+          if (obj.volume.get('device_name') != '/dev/sda') {
             return 'icon_delete';
           }
         },
 
         checkDisabledIf: function(obj) {
-          if(this.getVolLabel(obj) != 'Root') {
+          if (obj.volume.get('device_name') != '/dev/sda') {
             return false;
           }
           return true;
@@ -143,9 +153,33 @@ define([
             var device = model.get('device_name');
             var suffix = device.substring(device.length-1).charCodeAt(0);
             var newdev = device.substring(5, device.length-1) + String.fromCharCode(suffix+1);
-            return newdev;
+            return '/dev/'+newdev;
           } else {
-            return 'sda';
+            return '/dev/sdb';
+          }
+        },
+
+        setSnapshot: function(e, obj) {
+          var tr = $(e.target).closest('tr');
+          var snap = tr.find('.launch-wizard-advanced-storage-snapshot-input').val();
+          // now, set size to snapshot size (only if no size already there??)
+          dataholder.snapshots.each(function(s) {
+            if (s.get('id') == snap)
+              tr.find('.launch-wizard-advanced-storage-size-input').val(s.get('volume_size'));
+          });
+        },
+
+        typeSelected: function(e, obj) {
+          var tr = $(e.target).closest('tr');
+          var vol = tr.find('.launch-wizard-advanced-storage-volume-selector').val();
+          if (vol == 'ephemeral') { // disable snapshot, size, del_on_term
+              tr.find('.launch-wizard-advanced-storage-snapshot-input').hide();
+              tr.find('.launch-wizard-advanced-storage-size-input').hide();
+              tr.find('.launch-wizard-advanced-storage-delOnTerm').hide();
+          } else { // ensure rest is enabled
+              tr.find('.launch-wizard-advanced-storage-snapshot-input').show();
+              tr.find('.launch-wizard-advanced-storage-size-input').show();
+              tr.find('.launch-wizard-advanced-storage-delOnTerm').show();
           }
         },
 
@@ -154,7 +188,7 @@ define([
       };
 
       scope.blockDeviceMappings.on('change add reset remove', function() {
-          self.model.set('bdmaps_configured', true);
+          //self.model.set('bdmaps_configured', true);
           self.render();
       });
 
@@ -164,7 +198,14 @@ define([
       });
 
       this.model.on('change', function() {
-//        self.model.set('advanced_show', true);
+        var tmp = scope.blockDeviceMappings.findWhere({device_name: '/dev/sda'});
+        if (scope.advancedModel.root == undefined) scope.advancedModel.root = tmp;
+        else if (tmp != undefined) scope.advancedModel.root = tmp;
+        // give rivets access as well since it doesn't do nested well
+        scope.root = scope.advancedModel.root;
+        if (scope.blockDeviceMappings.length > 0) {
+          scope.blockDeviceMappings.remove(scope.advancedModel.root);
+        }
       });
 
       this.model.on('change:user_data_text', function(e) {
@@ -184,14 +225,27 @@ define([
         self.model.set('files', this.files);
        });
        this.model.set('fileinput', function() { return fileinputel; });
-		},
+
+       this.model.set('instance_monitoring', true); //default
+    },
 
     render: function() {
+      this.$el.find('#launch-wizard-advanced-storage').hide();
+      if (this.theImage != null) {
+        if (this.theImage.get('root_device_type') != undefined) {
+          root_device_type = this.theImage.get('root_device_type');
+          if (root_device_type == 'ebs') {
+            this.$el.find('#launch-wizard-advanced-storage').show();
+            //this.model.set('bdmaps_configured', true);
+          }
+        }
+      }
+
       this.rView.sync();
     },
 
     focus: function() {
       this.model.set('advanced_show', true);
     }
-});
+  });
 });

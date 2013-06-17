@@ -641,6 +641,19 @@ public class Entities {
     return count.longValue();
   }
 
+  /**
+   * TODO REMOVE THIS, DO NOT USE
+   * @deprecated
+   */
+  @Deprecated
+  public static void registerClose( final Class<?> emClass ) {
+    final EntityManager entityManager = getTransaction( emClass ).getTxState( ).getEntityManager();
+    Entities.registerSynchronization( emClass, new Synchronization( ){
+      @Override public void afterCompletion( final int i ) { entityManager.close(); }
+      @Override public void beforeCompletion( ) { }
+    } );
+  }
+
   public static <T> void registerSynchronization( final Class<T> syncClass,
                                                   final Synchronization synchronization ) {
     final Session session = getTransaction( syncClass ).getTxState().getSession();

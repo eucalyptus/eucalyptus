@@ -62,26 +62,53 @@
 
 package com.eucalyptus.cloud.ws;
 
-import com.eucalyptus.context.Contexts;
-import com.eucalyptus.entities.Entities;
-import com.eucalyptus.entities.EntityWrapper;
-import com.eucalyptus.util.DNSProperties;
-
-import edu.ucsb.eucalyptus.cloud.AccessDeniedException;
-import com.eucalyptus.util.EucalyptusCloudException;
-import com.google.common.collect.Lists;
-
-import edu.ucsb.eucalyptus.cloud.entities.*;
-import edu.ucsb.eucalyptus.msgs.*;
-import org.apache.log4j.Logger;
-import org.xbill.DNS.*;
-
+import java.net.SocketException;
 import java.net.UnknownHostException;
 import java.util.Collection;
 import java.util.List;
 import java.util.NoSuchElementException;
-
 import javax.persistence.EntityTransaction;
+import org.apache.log4j.Logger;
+import org.xbill.DNS.ARecord;
+import org.xbill.DNS.Address;
+import org.xbill.DNS.CNAMERecord;
+import org.xbill.DNS.DClass;
+import org.xbill.DNS.Name;
+import com.eucalyptus.context.Contexts;
+import com.eucalyptus.entities.Entities;
+import com.eucalyptus.entities.EntityWrapper;
+import com.eucalyptus.util.DNSProperties;
+import com.eucalyptus.util.EucalyptusCloudException;
+import com.eucalyptus.util.Internets;
+import com.google.common.collect.Lists;
+import edu.ucsb.eucalyptus.cloud.AccessDeniedException;
+import edu.ucsb.eucalyptus.cloud.entities.ARecordAddressInfo;
+import edu.ucsb.eucalyptus.cloud.entities.ARecordInfo;
+import edu.ucsb.eucalyptus.cloud.entities.ARecordNameInfo;
+import edu.ucsb.eucalyptus.cloud.entities.CNAMERecordInfo;
+import edu.ucsb.eucalyptus.cloud.entities.NSRecordInfo;
+import edu.ucsb.eucalyptus.cloud.entities.SOARecordInfo;
+import edu.ucsb.eucalyptus.cloud.entities.ZoneInfo;
+import edu.ucsb.eucalyptus.msgs.AddMultiARecordResponseType;
+import edu.ucsb.eucalyptus.msgs.AddMultiARecordType;
+import edu.ucsb.eucalyptus.msgs.AddZoneResponseType;
+import edu.ucsb.eucalyptus.msgs.AddZoneType;
+import edu.ucsb.eucalyptus.msgs.CreateMultiARecordResponseType;
+import edu.ucsb.eucalyptus.msgs.CreateMultiARecordType;
+import edu.ucsb.eucalyptus.msgs.DeleteZoneResponseType;
+import edu.ucsb.eucalyptus.msgs.DeleteZoneType;
+import edu.ucsb.eucalyptus.msgs.RemoveARecordResponseType;
+import edu.ucsb.eucalyptus.msgs.RemoveARecordType;
+import edu.ucsb.eucalyptus.msgs.RemoveCNAMERecordResponseType;
+import edu.ucsb.eucalyptus.msgs.RemoveCNAMERecordType;
+import edu.ucsb.eucalyptus.msgs.RemoveMultiANameResponseType;
+import edu.ucsb.eucalyptus.msgs.RemoveMultiANameType;
+import edu.ucsb.eucalyptus.msgs.RemoveMultiARecordResponseType;
+import edu.ucsb.eucalyptus.msgs.RemoveMultiARecordType;
+import edu.ucsb.eucalyptus.msgs.UpdateARecordResponseType;
+import edu.ucsb.eucalyptus.msgs.UpdateARecordType;
+import edu.ucsb.eucalyptus.msgs.UpdateCNAMERecordResponseType;
+import edu.ucsb.eucalyptus.msgs.UpdateCNAMERecordType;
 
 public class DNSControl {
 
@@ -92,10 +119,10 @@ public class DNSControl {
 	private static void initializeUDP() throws Exception {
 		try {
 			if (udpListener == null) {
-				udpListener = new UDPListener(Address.getByAddress(DNSProperties.ADDRESS), DNSProperties.PORT);
+				udpListener = new UDPListener(Internets.localHostInetAddress( ), DNSProperties.PORT);
 				udpListener.start();
 			}
-		} catch(UnknownHostException ex) {
+		} catch(SocketException ex) {
 			LOG.error(ex);
 			throw ex;
 		}
@@ -104,7 +131,7 @@ public class DNSControl {
 	private static void initializeTCP() throws Exception {
 		try {
 			if (tcpListener == null) {
-				tcpListener = new TCPListener(Address.getByAddress(DNSProperties.ADDRESS), DNSProperties.PORT);
+				tcpListener = new TCPListener(Internets.localHostInetAddress( ), DNSProperties.PORT);
 				tcpListener.start();
 			}
 		} catch(UnknownHostException ex) {

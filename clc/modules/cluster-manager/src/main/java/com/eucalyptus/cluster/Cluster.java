@@ -266,7 +266,9 @@ public class Cluster implements AvailabilityZoneMetadata, HasFullName<Cluster>, 
       @Override
       public boolean apply( final Cluster input ) {
         try {
-          super.apply( input );
+          if ( Bootstrap.isOperational( ) ) {
+            super.apply( input );
+          }
           ZoneRegistration.REGISTER.apply( input );
           return true;
         } catch ( final Exception t ) {
@@ -361,6 +363,8 @@ public class Cluster implements AvailabilityZoneMetadata, HasFullName<Cluster>, 
       LOG.debug( "DescribeServices for " + parent.getFullName( ) );
       if ( serviceStatuses.isEmpty( ) ) {
         throw new NoSuchElementException( "Failed to find service info for cluster: " + parent.getFullName( ) );
+      } else if ( !Bootstrap.isOperational( ) ) {
+        return;
       } else {
         ServiceConfiguration config = parent.getConfiguration( );
         for ( ServiceStatusType status : serviceStatuses ) {
@@ -1294,6 +1298,15 @@ public class Cluster implements AvailabilityZoneMetadata, HasFullName<Cluster>, 
     }
   }
   
+  public void refreshResources( ) {
+    try {
+      Refresh.RESOURCES.fire( this );
+    } catch ( Exception ex ) {
+      LOG.error( ex );
+      LOG.debug(  ex, ex );
+    }
+  }
+  
   public void check( ) throws Faults.CheckException, IllegalStateException, InterruptedException, ServiceStateException {
     if ( this.gateLock.tryLock( 30, TimeUnit.SECONDS ) ) {
       try {    	
@@ -1329,9 +1342,6 @@ public class Cluster implements AvailabilityZoneMetadata, HasFullName<Cluster>, 
           currentErrors.add( ex );
           throw Faults.failure( this.configuration, currentErrors );
         }
-      } catch ( Exception ex ) {
-        LOG.error( ex );
-        throw ex;
       } finally {
         //#6 Unmark this cluster as gated.
         this.gateLock.unlock( );

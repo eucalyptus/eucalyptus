@@ -41,10 +41,12 @@
     <!-- tags -->
     <div class="launch-wizard-type-option">
       <div class="form-row clearfix">
-        <div class="wizard-section-label" data-msg="launch_instance_type_instance_tags"></div>
-        <div data-ui-edittags="tags" id="instance-wizard-tags"></div>
+        <label for="instance-wizard-tags" class="wizard-tags-label" data-msg="launch_instance_type_instance_tags"></label>
+        <div class="wizard-tags-wrapper" data-ui-edittags="tags" id="instance-wizard-tags"></div>
       </div>
     </div>
+    <div class="field-error" data-text="launchConfigErrors.tag_limit_reached"></div>
+
   </div>
 
 </div>

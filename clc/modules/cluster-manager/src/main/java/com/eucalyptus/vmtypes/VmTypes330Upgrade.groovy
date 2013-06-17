@@ -207,6 +207,8 @@ WHERE constraint_type = 'FOREIGN KEY' AND tc.table_name='metadata_instances' AND
           sql.execute(dropSql)
         })
       }
+
+      true
     }
   }
   
@@ -227,16 +229,18 @@ WHERE constraint_type = 'FOREIGN KEY' AND tc.table_name='metadata_instances' AND
   @EntityUpgrade( entities = [ VmType.class ], since = Version.v3_3_0, value = Eucalyptus.class )
   public static class ENTITY implements Predicate<Class> {
     private static Logger LOG = Logger.getLogger( VmTypes330Upgrade.ENTITY.class );
-    
+
     /**
      * Copy over any settings from previous {@link VmType}s.
      */
     def upgradeVmTypes = TX( VmType.class, { VmType vmType ->
-      if ( PRE.oldVmTypes.containsKey( vmType.getDisplayName( ) ) ) {
-        def oldVmTypeInfo = PRE.oldVmTypes.get( vmType.getDisplayName( ) );
+      vmType = Groovyness.expandoMetaClass( vmType );
+      if ( PRE.oldVmTypes.containsKey( vmType.getName( ) ) ) {
+        def oldVmTypeInfo = PRE.oldVmTypes.get( vmType.getName( ) );
         vmType.setCpu( oldVmTypeInfo.getCpu( ) )
         vmType.setDisk( oldVmTypeInfo.getDisk( ) )
         vmType.setMemory( oldVmTypeInfo.getMemory( ) )
+        VmTypes.update( vmType )
         LOG.info( "Upgraded vm type info:    " + vmType.dump( ) )
       } else {
         LOG.info( "Defined new vm type info: " + vmType.dump( ) )

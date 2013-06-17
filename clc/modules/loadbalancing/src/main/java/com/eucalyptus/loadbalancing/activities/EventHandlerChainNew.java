@@ -60,7 +60,6 @@ import com.eucalyptus.loadbalancing.LoadBalancerZone;
 import com.eucalyptus.loadbalancing.LoadBalancerZone.LoadBalancerZoneCoreView;
 import com.eucalyptus.loadbalancing.LoadBalancerZone.LoadBalancerZoneEntityTransform;
 import com.eucalyptus.loadbalancing.LoadBalancers;
-import com.eucalyptus.loadbalancing.LoadBalancing;
 import com.eucalyptus.loadbalancing.activities.LoadBalancerServoInstance.LoadBalancerServoInstanceCoreView;
 import com.eucalyptus.loadbalancing.activities.LoadBalancerServoInstance.LoadBalancerServoInstanceEntityTransform;
 import com.google.common.collect.Lists;
@@ -68,7 +67,6 @@ import com.google.common.collect.Lists;
 import edu.ucsb.eucalyptus.msgs.ClusterInfoType;
 import edu.ucsb.eucalyptus.msgs.DescribeKeyPairsResponseItemType;
 import edu.ucsb.eucalyptus.msgs.ImageDetails;
-import edu.ucsb.eucalyptus.msgs.RunningInstancesItemType;
 import edu.ucsb.eucalyptus.msgs.SecurityGroupItemType;
 
 /**
@@ -655,7 +653,7 @@ public class EventHandlerChainNew extends EventHandlerChain<NewLoadbalancerEvent
 		public void fireEvent(ClockTick event) {
 			
 			if ( Bootstrap.isFinished() &&
-			          Topology.isEnabledLocally( LoadBalancing.class ) &&
+			          Topology.isEnabledLocally( Eucalyptus.class ) && // TODO should be LoadBalancing.class
 			          Topology.isEnabled( Eucalyptus.class ) ) {
 				
 				// lookup all LoadBalancerAutoScalingGroup records
@@ -879,10 +877,8 @@ public class EventHandlerChainNew extends EventHandlerChain<NewLoadbalancerEvent
 							}catch(final Exception ex){
 								LOG.error("unable to transform servo instance from the view", ex);
 								continue;
-							}							
-						//	if(newState.equals(LoadBalancerServoInstance.STATE.InService))
-							//	registerDnsARec.add(instance);
-							
+							}	
+
 							db = Entities.get( LoadBalancerServoInstance.class );
 							try{
 								final LoadBalancerServoInstance update = Entities.uniqueResult(instance);
@@ -900,54 +896,6 @@ public class EventHandlerChainNew extends EventHandlerChain<NewLoadbalancerEvent
 						}
 					}
 				}
-				
-				/// for new servo instances, find the IP and register it with DNS
-			/*	for(final LoadBalancerServoInstance instance : registerDnsARec){
-					String ipAddr = null;
-					String privateIpAddr = null;
-					try{
-						List<RunningInstancesItemType> result = 
-								EucalyptusActivityTasks.getInstance().describeSystemInstances(Lists.newArrayList(instance.getInstanceId()));
-						if(result!=null && result.size()>0){
-							ipAddr = result.get(0).getIpAddress();
-							privateIpAddr = result.get(0).getPrivateIpAddress();
-						}
-					}catch(Exception ex){
-						LOG.warn("failed to run describe-instances", ex);
-						continue;
-					}
-					if(ipAddr == null || ipAddr.length()<=0){
-						LOG.warn("no ipaddress found for instance "+instance.getInstanceId());
-						continue;
-					}
-					try{
-						String zone = instance.getDns().getZone();
-						String name = instance.getDns().getName();
-						EucalyptusActivityTasks.getInstance().addARecord(zone, name, ipAddr);
-					}catch(Exception ex){
-						LOG.warn("failed to register new ipaddress with dns A record", ex);
-						continue;
-					}
-
-					db = Entities.get( LoadBalancerServoInstance.class );
-					try{
-						final LoadBalancerServoInstance update = Entities.uniqueResult(instance);
-						update.setAddress(ipAddr);
-						if(privateIpAddr!=null)
-							update.setPrivateIp(privateIpAddr);
-						Entities.persist(update);
-						db.commit();
-					}catch(NoSuchElementException ex){
-						db.rollback();
-						LOG.warn("failed to find the servo instance named "+instance.getInstanceId(), ex);
-					}catch(Exception ex){
-						db.rollback();
-						LOG.warn("failed to update servo instance's ip address", ex);
-					}finally {
-						if(db.isActive())
-							db.rollback();
-					}
-				}*/
 			}	
 		}
 	}

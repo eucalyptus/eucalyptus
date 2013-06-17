@@ -550,16 +550,6 @@ public interface EucalyptusService extends RemoteService {
   void resetPassword( String confirmationCode, String password ) throws EucalyptusServiceException;
   
   /**
-   * Get cloud info for RightScale registration.
-   * 
-   * @param session
-   * @param setExternalHostport
-   * @return
-   * @throws EucalyptusServiceException
-   */
-  public CloudInfo getCloudInfo( Session session, boolean setExternalHostPort ) throws EucalyptusServiceException;
-  
-  /**
    * Get the list of tool downloads.
    * 
    * @param session

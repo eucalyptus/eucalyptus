@@ -10,6 +10,7 @@ define([
 	], function( _, Backbone, app, dataholder, template, rivets, imageSearch, BlockMap ) {
 	return Backbone.View.extend({
             title: app.msg('launch_instance_section_header_image'),
+            next: app.msg('launch_instance_btn_next_type'),
             count: 0,
             image_selected: null,
 

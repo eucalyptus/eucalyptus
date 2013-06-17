@@ -193,7 +193,7 @@ VS.ui.SearchBox = Backbone.View.extend({
     initialQuery = VS.utils.inflector.trim(initialQuery || '');
     if (!category) return;
     
-    this.app.categoryLabels[category] = label;
+    this.app.categoryLabels[category] = DefaultEncoder().encodeForHTML(label);
     var model = new VS.model.SearchFacet({
       category : category,
       value    : initialQuery || '',

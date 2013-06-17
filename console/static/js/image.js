@@ -48,14 +48,12 @@
             { 
 	      // Display the id of the image in eucatable
 	      "aTargets":[1], 
-              "mRender": function(data){
-		return eucatableDisplayColumnTypeTwist (data, data, 255);
-              },
               "mData": function(source){
-                 if(source.display_id)
-                   return source.display_id;
-                 return source.id;
+                this_mouseover = source.id;
+                this_value = source.display_id;
+                return eucatableDisplayColumnTypeTwist(this_mouseover, this_value, 256);
               },
+              "sClass": "wrap-content",
             },
             {
 	      // Display the name of the image in eucatable
@@ -66,6 +64,7 @@
                  return DefaultEncoder().encodeForHTML(data);
               },
               "mData": "name",
+              "sClass": "wrap-content",
             }, 
             {
 	      // Display the name of the image in eucatable
@@ -92,6 +91,7 @@
                 return eucatableDisplayColumnTypeText (data, data, 30);
               },
               "mData": "description",
+              "sClass": "wrap-content",
 	    },
             { 
 	      // Display the root device type of the image in eucatable

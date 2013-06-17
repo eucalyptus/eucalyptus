@@ -275,41 +275,41 @@ public class DASManager implements LogicalStorageManager {
 	public void cleanVolume(String volumeId) {
 		try {
 			updateVolumeGroup();
-		} catch (EucalyptusCloudException e) {
-			LOG.error(e);
-			return;
-		}
-		VolumeEntityWrapperManager volumeManager = new VolumeEntityWrapperManager();
-		LVMVolumeInfo lvmVolInfo = volumeManager.getVolumeInfo(volumeId);
-		if(lvmVolInfo != null) {
-			volumeManager.unexportVolume(lvmVolInfo);
-			String lvName = lvmVolInfo.getLvName();
-			String absoluteLVName = lvmRootDirectory + PATH_SEPARATOR + volumeGroup + PATH_SEPARATOR + lvName;
-			try {
-				String returnValue = LVMWrapper.removeLogicalVolume(absoluteLVName);
-			} catch(EucalyptusCloudException ex) {
-				volumeManager.abort();
-				String error = "Unable to run command: " + ex.getMessage();
-				LOG.error(error);
+			VolumeEntityWrapperManager volumeManager = new VolumeEntityWrapperManager();
+			LVMVolumeInfo lvmVolInfo = volumeManager.getVolumeInfo(volumeId);
+			if(lvmVolInfo != null) {
+				volumeManager.unexportVolume(lvmVolInfo);
+				String lvName = lvmVolInfo.getLvName();
+				String absoluteLVName = lvmRootDirectory + PATH_SEPARATOR + volumeGroup + PATH_SEPARATOR + lvName;
+				try {
+					String returnValue = LVMWrapper.removeLogicalVolume(absoluteLVName);
+				} catch(EucalyptusCloudException ex) {
+					volumeManager.abort();
+					String error = "Unable to run command: " + ex.getMessage();
+					LOG.error(error);
+				}
+				volumeManager.remove(lvmVolInfo);
+				volumeManager.finish();
 			}
-			volumeManager.remove(lvmVolInfo);
-			volumeManager.finish();
+		} catch (EucalyptusCloudException e) {
+			LOG.debug("Failed to clean volume: " + volumeId, e);
+			return;
 		}
 	}
 
 	public void cleanSnapshot(String snapshotId) {
 		try {
 			updateVolumeGroup();
+			VolumeEntityWrapperManager volumeManager = new VolumeEntityWrapperManager();
+			LVMVolumeInfo lvmVolInfo = volumeManager.getVolumeInfo(snapshotId);
+			if(lvmVolInfo != null) {
+				volumeManager.remove(lvmVolInfo);
+			}
+			volumeManager.finish();
 		} catch (EucalyptusCloudException e) {
-			LOG.error(e);
+			LOG.debug("Failed to clean snapshotId: " + snapshotId, e);
 			return;
 		}
-		VolumeEntityWrapperManager volumeManager = new VolumeEntityWrapperManager();
-		LVMVolumeInfo lvmVolInfo = volumeManager.getVolumeInfo(snapshotId);
-		if(lvmVolInfo != null) {
-			volumeManager.remove(lvmVolInfo);
-		}
-		volumeManager.finish();
 	}
 
 	public native void registerSignals();
@@ -1113,6 +1113,12 @@ public class DASManager implements LogicalStorageManager {
 	@Override
 	public String exportVolume(String volumeId, String nodeIqn)
 			throws EucalyptusCloudException {
+                try {
+                        updateVolumeGroup();
+                } catch (EucalyptusCloudException e) {
+                        LOG.error(e);
+			throw e;
+                }
 		LVMVolumeInfo lvmVolumeInfo = null;
 		{
 			final VolumeEntityWrapperManager volumeManager = new VolumeEntityWrapperManager();
@@ -1130,8 +1136,11 @@ public class DASManager implements LogicalStorageManager {
 				try {
 					lvmVolumeInfo = volumeManager.getVolumeInfo(volumeId);
 					String lvName = lvmVolumeInfo.getLvName();
+					if (lvmVolumeInfo.getVgName() == null) {
+						lvmVolumeInfo.setVgName(volumeGroup);
+					}
 					try {
-						// export logical volume
+						// export logical volume						
 						volumeManager.exportVolume(lvmVolumeInfo, volumeGroup, lvName);
 					} catch (EucalyptusCloudException ex) {
 						LOG.error("Unable to export volume " + volumeId, ex);

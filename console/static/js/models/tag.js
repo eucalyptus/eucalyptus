@@ -41,8 +41,15 @@ define([
     syncMethod_Create: function(model, options){
       var data = "_xsrf="+$.cookie('_xsrf');
       data += "&ResourceId.1="+model.get('res_id');
-      data += "&Tag.1.Key="+model.get('name');
-      data += "&Tag.1.Value="+model.get('value');
+      data += "&Tag.1.Key="+encodeURIComponent(model.get('name'));
+      data += "&Tag.1.Value="+encodeURIComponent(model.get('value'));
+
+      // EUCA-6181 - must have a resource ID first
+      // this avoids displaying an error to the user unnecessarily
+      if (model.get('res_id') == undefined) {
+        return;
+      }
+
       $.ajax({
         type:"POST",
         url:"/ec2?Action=CreateTags",
@@ -52,14 +59,14 @@ define([
         success:
           function(data, textStatus, jqXHR){
             if ( data.results ) {
-	      notifySuccess(null, $.i18n.prop('tag_create_success', DefaultEncoder().encodeForHTML(model.get('name'))));
+              notifySuccess(null, $.i18n.prop('tag_create_success', DefaultEncoder().encodeForHTML(model.get('name')), model.get('res_id')));
             } else {
-	      notifyError($.i18n.prop('tag_create_error', DefaultEncoder().encodeForHTML(model.get('name'))), undefined_error);
+              notifyError($.i18n.prop('tag_create_error', DefaultEncoder().encodeForHTML(model.get('name')), model.get('res_id')), undefined_error);
             } 
           },
         error:
           function(jqXHR, textStatus, errorThrown){
-            notifyError($.i18n.prop('tag_create_error', DefaultEncoder().encodeForHTML(model.get('name')), getErrorMessage(jqXHR)));
+            notifyError($.i18n.prop('tag_create_error', DefaultEncoder().encodeForHTML(model.get('name')), model.get('res_id')), getErrorMessage(jqXHR));
           }
       });
     },
@@ -77,14 +84,14 @@ define([
         success:
           function(data, textStatus, jqXHR){
             if ( data.results ) {
-              notifySuccess(null, $.i18n.prop('tag_delete_success', DefaultEncoder().encodeForHTML(model.get('name'))));
+              notifySuccess(null, $.i18n.prop('tag_delete_success', DefaultEncoder().encodeForHTML(model.get('name')), model.get('res_id')));
             } else {
-              notifyError($.i18n.prop('tag_delete_error', DefaultEncoder().encodeForHTML(model.get('name'))), undefined_error);
+              notifyError($.i18n.prop('tag_delete_error', DefaultEncoder().encodeForHTML(model.get('name')), model.get('res_id')), undefined_error);
             }
           },
         error:
           function(jqXHR, textStatus, errorThrown){
-            notifyError($.i18n.prop('tag_delete_error', DefaultEncoder().encodeForHTML(model.get('name'))), getErrorMessage(jqXHR));
+            notifyError($.i18n.prop('tag_delete_error', DefaultEncoder().encodeForHTML(model.get('name')), model.get('res_id')), getErrorMessage(jqXHR));
           }
       });
     }

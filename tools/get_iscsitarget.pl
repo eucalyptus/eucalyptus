@@ -148,14 +148,13 @@ if (is_null_or_empty($localdev)) {
   print STDERR "Unable to get attached target device.\n";
   do_exit(1);
 }
-# get the /dev/disk/by-id path
 if ($multipath == 0) {
-  $localdev = get_disk_by_id_path("/dev/$localdev");
+  $localdev = "/dev/$localdev";
 } else {
   # TODO(wenye): temporary measure to allow safe volume detaching due to "queue_if_no_path"
   run_cmd(1, 0, "$DMSETUP message $localdev 0 'fail_if_no_path'");
   sleep(2);
-  $localdev = get_disk_by_id_path("/dev/mapper/$localdev");
+  $localdev = "/dev/mapper/$localdev";
 }
 
 print "$localdev";

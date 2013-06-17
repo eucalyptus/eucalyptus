@@ -1339,7 +1339,7 @@ int sensor_merge_records(sensorResource * srs[], int srsLen, boolean fail_on_oom
 bail:
 
     sem_v(state_sem);
-    LOGDEBUG("completed: merged %d values, ret=%d\n", num_merged, ret);
+    LOGTRACE("completed: merged %d values, ret=%d\n", num_merged, ret);
 
     return (ret);
 }

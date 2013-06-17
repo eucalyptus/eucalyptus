@@ -519,16 +519,15 @@ adb_DescribeSensorsResponse_t *DescribeSensorsMarshal(adb_DescribeSensors_t * de
         sensorResource **outResources = NULL;
         int outResourcesLen = 0;
 
-        int error = doDescribeSensors(&meta, historySize, collectionIntervalTimeMs, instIds, instIdsLen, sensorIds, sensorIdsLen, &outResources,
-                                      &outResourcesLen);
+        int error = doDescribeSensors(&meta, historySize, collectionIntervalTimeMs, instIds, instIdsLen, sensorIds, sensorIdsLen, &outResources, &outResourcesLen);
         if (error) {
             LOGERROR("doDescribeSensors() failed error=%d\n", error);
             if (outResourcesLen > 0 && outResources != NULL) {
                 for (int i = 0; i < outResourcesLen; i++) {
                     EUCA_FREE(outResources[i]);
                 }
-                EUCA_FREE(outResources);
             }
+            EUCA_FREE(outResources);
         } else {
             LOGTRACE("marshalling results outResourcesLen=%d\n", outResourcesLen);
 
@@ -1665,8 +1664,9 @@ adb_RunInstancesResponse_t *RunInstancesMarshal(adb_RunInstances_t * runInstance
             rc = ccInstanceUnmarshal(it, myInstance, env);
             adb_runInstancesResponseType_add_instances(rirt, env, it);
         }
-        EUCA_FREE(outInsts);
     }
+
+    EUCA_FREE(outInsts);
 
     adb_runInstancesResponseType_set_correlationId(rirt, env, ccMeta.correlationId);
     adb_runInstancesResponseType_set_userId(rirt, env, ccMeta.userId);

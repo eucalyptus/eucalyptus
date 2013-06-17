@@ -10,7 +10,7 @@ define([
       if(method == 'create'){
         var url = "/ec2?Action=RegisterImage";
         var parameter = "_xsrf="+$.cookie('_xsrf');
-        parameter += "&Name="+this.get('name');
+        parameter += "&Name="+encodeURIComponent(this.get('name'));
         if (this.get('description')) {
           parameter += "&Description="+toBase64($.trim(this.get('description')));
         }

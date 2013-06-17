@@ -21,7 +21,7 @@ define([
       security_group_id: null,
       user_data: null,
       instance_type: null,
-      placement: {availability_zone: null, group_name: null, tenancy: null},
+      placement: null,
       kernel_id: null,
       ramdisk_id: null,
       block_device_mappings: {
@@ -60,12 +60,16 @@ define([
 
         min_count: {
           required: true,
-          pattern: 'number'
+          pattern: 'digits',
+          min: 1,
+          max: 99
         },
 
         max_count: {
           required: true,
-          pattern: 'number'
+          pattern: 'digits',
+          min: 1,
+          max: 99
         },
 
         instance_type: {
@@ -98,36 +102,45 @@ define([
               data.push({name: "InstanceType", value: model.get('instance_type')});
             if (model.get('kernel_id') != undefined)
               data.push({name: "KernelId", value: model.get('kernel_id')});
-            if (model.get('RamdiskId') != undefined)
+            if (model.get('ramdisk_id') != undefined)
               data.push({name: "RamdiskId", value: model.get('ramdisk_id')});
             if (model.get('placement') != undefined) {
               var placement = model.get('placement');
-              if(placement.availability_zone != undefined) 
-                data.push({name: "Placement.AvailabilityZone", value: placement.availability_zone});
-              if(placement.group_name != undefined)
-                data.push({name: "Placement.GroupName", value: placement.group_name});
-              if(placement.tenancy != undefined)
-                data.push({name: "Placement.Tenancy", value: placement.tenancy});
+              data.push({name: "Placement.AvailabilityZone", value: placement});
             }
             if (model.get('block_device_mappings') != undefined) {
               var mappings = model.get('block_device_mappings');
-              $.each(mappings, function(idx, mapping) {
-                if(mapping.device_name != undefined)
+              $.each(eval(mappings), function(idx, mapping) {
+                if (mapping.device_name == '/dev/sda') { // root, folks!
+                  console.log("adding root device mapping vol_size="+mapping.ebs.volume_size);
                   data.push({name: "BlockDeviceMapping."+(idx+1)+".DeviceName", value: mapping.device_name});
-
-                if(mapping.no_device != undefined) {
-                  data.push({name: "BlockDeviceMapping."+(idx+1)+".NoDevice", value: mapping.no_device});
+                  data.push({name: "BlockDeviceMapping."+(idx+1)+".Ebs.VolumeSize", value: mapping.volume_size});
+                  data.push({name: "BlockDeviceMapping."+(idx+1)+".Ebs.DeleteOnTermination", value: mapping.delete_on_termination});
                 }
-                if (mapping.virtual_name != undefined) {
-                  data.push({name: "BlockDeviceMapping."+(idx+1)+".VirtualName", value: mapping.virtual_name});
-                } else if (mapping.ebs != undefined) {
-                  data.push({name: "BlockDeviceMapping."+(idx+1)+".Ebs.SnapshotId", value: mapping.ebs.snapshot_id});
-                  data.push({name: "BlockDeviceMapping."+(idx+1)+".Ebs.VolumeSize", value: mapping.ebs.volume_size});
-                  data.push({name: "BlockDeviceMapping."+(idx+1)+".Ebs.DeleteOnTermination", value: mapping.ebs.delete_on_termination});
-                  if(mapping.ebs.volume_type != undefined)
-                  data.push({name: "BlockDeviceMapping."+(idx+1)+".Ebs.VolumeType", value: mapping.ebs.volume_type});
-                  if(mapping.ebs.iopts != undefined) 
-                    data.push({name: "BlockDeviceMapping."+(idx+1)+".Ebs.Iopts", value: mapping.ebs.iopts});
+                else if (mapping.ephemeral_name == 'ephemeral0') { // ephemeral device, folks!
+                  console.log("adding ephemeral mapping :"+mapping.ephemeral_name);
+                  data.push({name: "BlockDeviceMapping."+(idx+1)+".DeviceName", value: mapping.device_name});
+                  data.push({name: "BlockDeviceMapping."+(idx+1)+".VirtualName", value: mapping.ephemeral_name});
+                }
+                else { // or, normal mappings
+                  console.log("adding ebs mapping snapshot="+mapping.ebs.snapshot_id+" vol_size="+mapping.ebs.volume_size);
+                  if(mapping.device_name != undefined)
+                    data.push({name: "BlockDeviceMapping."+(idx+1)+".DeviceName", value: mapping.device_name});
+
+                  if(mapping.no_device != undefined) {
+                    data.push({name: "BlockDeviceMapping."+(idx+1)+".NoDevice", value: mapping.no_device});
+                  }
+                  if (mapping.virtual_name != undefined) {
+                    data.push({name: "BlockDeviceMapping."+(idx+1)+".VirtualName", value: mapping.virtual_name});
+                  } else if (mapping.ebs != undefined) {
+                    data.push({name: "BlockDeviceMapping."+(idx+1)+".Ebs.SnapshotId", value: mapping.ebs.snapshot_id});
+                    data.push({name: "BlockDeviceMapping."+(idx+1)+".Ebs.VolumeSize", value: mapping.ebs.volume_size});
+                    data.push({name: "BlockDeviceMapping."+(idx+1)+".Ebs.DeleteOnTermination", value: mapping.ebs.delete_on_termination});
+                    if(mapping.ebs.volume_type != undefined)
+                    data.push({name: "BlockDeviceMapping."+(idx+1)+".Ebs.VolumeType", value: mapping.ebs.volume_type});
+                    if(mapping.ebs.iopts != undefined) 
+                      data.push({name: "BlockDeviceMapping."+(idx+1)+".Ebs.Iopts", value: mapping.ebs.iopts});
+                  }
                 }
               });
             }
@@ -192,6 +205,10 @@ define([
               fileInput: null,
               paramName: "user_data_file",
             });
+
+            // remove name tags from tags model - they're set elsewhere below
+            var extra_name_tags = model.get('tags').where({name: 'Name'});
+            model.get('tags').remove(extra_name_tags, {silent:true});
 
             var the_tags = model.get('tags').toJSON();
             var name_tags = model.get('names').toJSON();

@@ -95,11 +95,13 @@ package com.eucalyptus.cloud.ws;
 
 import java.io.DataOutputStream;
 import java.io.IOException;
+import java.net.InetAddress;
 import java.net.Socket;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
+import org.apache.log4j.Logger;
 import org.xbill.DNS.CNAMERecord;
 import org.xbill.DNS.Credibility;
 import org.xbill.DNS.DClass;
@@ -116,13 +118,14 @@ import org.xbill.DNS.RRset;
 import org.xbill.DNS.Rcode;
 import org.xbill.DNS.Record;
 import org.xbill.DNS.Section;
+import org.xbill.DNS.SetResponse;
 import org.xbill.DNS.TSIG;
 import org.xbill.DNS.TSIGRecord;
 import org.xbill.DNS.Type;
 
-import com.eucalyptus.dns.SetResponse;
 import com.eucalyptus.dns.Zone;
 import com.eucalyptus.dns.Cache;
+import com.eucalyptus.util.dns.DnsResolvers;
 
 public class ConnectionHandler extends Thread {
 
@@ -144,8 +147,8 @@ public class ConnectionHandler extends Thread {
 		int flags = 0;
 
 		header = query.getHeader();
-		if (header.getFlag(Flags.QR))
-			return null;
+//		if (header.getFlag(Flags.QR))
+//			return null;
 		if (header.getRcode() != Rcode.NOERROR)
 			return errorMessage(query, Rcode.FORMERR);
 		if (header.getOpcode() != Opcode.QUERY)
@@ -194,7 +197,7 @@ public class ConnectionHandler extends Thread {
 
 			 byte rcode = addAnswer(response, name, type, dclass, 0, flags);
 			 if (rcode != Rcode.NOERROR && rcode != Rcode.NXDOMAIN)
-				 return errorMessage(query, rcode);
+				 return null;
 
 			 addAdditional(response, type, flags);
 
@@ -283,6 +286,14 @@ public class ConnectionHandler extends Thread {
 			flags |= FLAG_SIGONLY;
 		}
 
+    try {
+      sr = DnsResolvers.findRecords(response, response.getQuestion( ), ConnectionHandler.getRemoteInetAddress( ) );
+      if ( sr != null && !sr.isUnknown( ) ) {
+        return Rcode.NOERROR;
+      }
+    } catch ( Exception ex ) {
+      Logger.getLogger( DnsResolvers.class ).error( ex );
+    }
 		Zone zone = findBestZone(name);
 		if (zone != null) {
 			if (type == Type.AAAA) {
@@ -290,7 +301,6 @@ public class ConnectionHandler extends Thread {
 				response.getHeader().setFlag(Flags.AA);
 				return (Rcode.NOERROR);
 			}
-			
 			sr = zone.findRecords(name, type);
 		}
 		else {
@@ -299,7 +309,7 @@ public class ConnectionHandler extends Thread {
 		}
 
 		if (sr.isUnknown()) {
-			addCacheNS(response, getCache(dclass), name);
+      return (Rcode.SERVFAIL);
 		}
 		if (sr.isNXDOMAIN()) {
 			response.getHeader().setRcode(Rcode.NXDOMAIN);
@@ -497,4 +507,14 @@ public class ConnectionHandler extends Thread {
 		}
 		return c;
 	}
+  private static ThreadLocal<InetAddress> remoteInetAddress = new ThreadLocal<InetAddress>();
+  static InetAddress getRemoteInetAddress( ) {
+    return remoteInetAddress.get( );
+  }
+  static void setRemoteInetAddress( InetAddress inetAddress ) {
+    ConnectionHandler.remoteInetAddress.set( inetAddress );
+  }
+  static void removeRemoteInetAddress( ) {
+    ConnectionHandler.remoteInetAddress.remove( );
+  }
 }

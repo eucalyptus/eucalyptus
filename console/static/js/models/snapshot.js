@@ -41,7 +41,8 @@ define([
             volume_size: {
               min: 1,
               max: 1024,
-              required: false
+              required: false,
+              pattern: 'digits'
             },
             description: {
               rangeLength: [0, 255],

@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * Copyright 2009-2013 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -17,35 +17,17 @@
  * CA 93117, USA or visit http://www.eucalyptus.com/licenses/ if you need
  * additional information or have any questions.
  ************************************************************************/
+package com.eucalyptus.tags;
 
-(function($, eucalyptus) {
-  $.widget('eucalyptus.newscalinggroup', $.eucalyptus.eucawidget, {
-    options : { },
-    _init : function() {
-      var thisObj = this;
-      require(['views/newscalinggroup/index'], function(View) {
-        var view = new View({el: thisObj.element});
-	view.render();
-      });
-    },
+import com.eucalyptus.util.EucalyptusCloudException;
 
-    _create : function() { 
-    },
+/**
+ * This exception should have the error code: TagLimitExceeded
+ */
+public class TagLimitExceededException extends EucalyptusCloudException {
+  private static final long serialVersionUID = 1L;
 
-    _destroy : function() {
-    },
-
-    _expandCallback : function(row){ 
-       var $wrapper = $('');
-      return $wrapper;
-    },
-
-/**** Public Methods ****/
-    close: function() {
-      cancelRepeat(tableRefreshCallback);
-      this._super('close');
-    },
-/**** End of Public Methods ****/
-  });
-})
-(jQuery, window.eucalyptus ? window.eucalyptus : window.eucalyptus = {});
+  public TagLimitExceededException( ) {
+    super( "The maximum number of Tags for a resource has been reached" );
+  }
+}
