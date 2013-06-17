@@ -64,6 +64,7 @@ package com.eucalyptus.ws.server;
 
 import java.net.InetSocketAddress;
 import java.util.NoSuchElementException;
+import java.util.Set;
 import org.apache.log4j.Logger;
 import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.buffer.ChannelBuffers;
@@ -85,10 +86,12 @@ import com.eucalyptus.component.ComponentId.ComponentPart;
 import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.context.ServiceContext;
-import com.eucalyptus.context.ServiceDispatchException;
 import com.eucalyptus.http.MappingHttpRequest;
 import com.eucalyptus.records.Logs;
 import com.eucalyptus.util.Exceptions;
+import com.google.common.base.Charsets;
+import com.google.common.base.Joiner;
+import com.google.common.collect.ImmutableSet;
 
 @ChannelPipelineCoverage( "one" )
 @ComponentPart( Eucalyptus.class )
@@ -105,6 +108,12 @@ public class MetadataPipeline extends FilteredPipeline implements ChannelUpstrea
                                              "  <pre>%s</pre>\n" +
                                              " </body>\n" +
                                              "</html>\n";
+  /**
+   * Metadata versions are not necessarily API versions
+   */
+  private static final Set<String> VERSION = ImmutableSet.of( "1.0", "2007-01-19", "2007-03-01", "2007-08-29",
+                                               "2007-10-10", "2007-12-15", "2008-02-01", "2008-09-01", "2009-04-04",
+                                               "2011-01-01", "2011-05-01", "2012-01-12", "latest" );
   private static Logger       LOG          = Logger.getLogger( MetadataPipeline.class );
   
   public MetadataPipeline( ) {
@@ -113,7 +122,9 @@ public class MetadataPipeline extends FilteredPipeline implements ChannelUpstrea
   
   @Override
   public boolean checkAccepts( HttpRequest message ) {
-    return message.getUri( ).matches( "/latest(/.*)*" ) || message.getUri( ).matches( "/\\d\\d\\d\\d-\\d\\d-\\d\\d/.*" );
+    return
+        message.getUri( ).matches( "/latest(/.*)*|/\\d\\d\\d\\d-\\d\\d-\\d\\d/.*|/1.0/.*" ) ||
+        ("/".equals( message.getUri( ) ) && "169.254.169.254".equals( message.getHeader( HttpHeaders.Names.HOST ) ) );
   }
   
   @Override
@@ -128,33 +139,41 @@ public class MetadataPipeline extends FilteredPipeline implements ChannelUpstrea
       String newUri = null;
       String uri = request.getUri( );
       InetSocketAddress remoteAddr = ( ( InetSocketAddress ) ctx.getChannel( ).getRemoteAddress( ) );
-      String remoteHost = remoteAddr.getAddress( ).getHostAddress( );//"10.1.1.2";//
-      if ( uri.startsWith( "/latest/" ) )
-        newUri = uri.replaceAll( "/latest/", remoteHost + ":" );
-      else newUri = uri.replaceAll( "/\\d\\d\\d\\d-\\d\\d-\\d\\d/", remoteHost + ":" );
-      
-      HttpResponse response = null;
+      String remoteHost = remoteAddr.getAddress( ).getHostAddress( );
+      if ( uri.startsWith( "/latest/" ) ) {
+        newUri = uri.replaceAll( "/latest[/]+", remoteHost + ":" );
+      } else if ( uri.startsWith( "/1.0/" ) ) {
+        newUri = uri.replaceAll( "/1.0[/]+", remoteHost + ":" );
+      } else if ( uri.startsWith( "/\\d\\d\\d\\d-\\d\\d-\\d\\d/" ) ) {
+        newUri = uri.replaceAll( "/\\d\\d\\d\\d-\\d\\d-\\d\\d[/]+", remoteHost + ":" );
+      } else {
+        newUri = uri;
+      }
+
       LOG.trace( "Trying to get metadata: " + newUri );
       Object reply = "".getBytes( );
       Exception replyEx = null;
-      try {
-        if ( Bootstrap.isShuttingDown( ) ) {
-          reply = "System shutting down".getBytes( );
-        } else if ( !Bootstrap.isFinished( ) ) {
-          reply = "System is still starting up".getBytes( );
-        } else {
-          reply = ServiceContext.send( "VmMetadata", newUri );
+      if ( uri.equals( "/" ) || uri.isEmpty( ) ){
+        reply = Joiner.on('\n').join( VERSION).getBytes( Charsets.UTF_8 );
+      } else {
+        try {
+          if ( Bootstrap.isShuttingDown( ) ) {
+            reply = "System shutting down".getBytes( );
+          } else if ( !Bootstrap.isFinished( ) ) {
+            reply = "System is still starting up".getBytes( );
+          } else {
+            reply = ServiceContext.send( "VmMetadata", newUri );
+          }
+        } catch ( Exception e1 ) {
+          Logs.extreme( ).debug( e1, e1 );
+          replyEx = e1;
+        } finally {
+          Contexts.clear( request.getCorrelationId( ) );
         }
-      } catch ( ServiceDispatchException e1 ) {
-        Logs.extreme( ).debug( e1, e1 );
-        replyEx = e1;
-      } catch ( Exception e1 ) {
-        Logs.extreme( ).debug( e1, e1 );
-        replyEx = e1;
-      } finally {
-        Contexts.clear( request.getCorrelationId( ) );
       }
+
       Logs.extreme( ).debug( "VmMetadata reply info: " + reply + " " + replyEx );
+      HttpResponse response = null;
       if ( replyEx != null || reply == null || reply instanceof NullPayload ) {
         response = new DefaultHttpResponse( request.getProtocolVersion( ), HttpResponseStatus.NOT_FOUND );
         String errorMessage = String.format(
