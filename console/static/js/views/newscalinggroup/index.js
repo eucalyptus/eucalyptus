@@ -23,6 +23,7 @@ define([
       }
 
       var scope = new Backbone.Model({
+        availabilityZones: new Backbone.Collection(),
         toggletest: new Backbone.Model({value: false}),
         scalingGroup: new ScalingGroup({}),
         change: function(e) {

@@ -8,7 +8,7 @@
                     <div data-ui-subset="zoneSelect"></div>
                 </div>
                 <div class="form-row-section">
-                    <div data-ui-selector=":loadBalancers">
+                    <div data-ui-selector="loadBalancers">
                         <label data-msg="create_scaling_group_memb_lb">Load Balancers</label>
                     </div>
                 </div>
@@ -30,18 +30,7 @@
                 </div>
             </div>
             <div class="wizard-section-label" data-msg="create_scaling_group_memb_tags">Scaling Group Tags</div>
-            <div class="form-row clearfix">
-                <div>
-                    <span class="form-row-section">
-                        <label class="centerLabel" for="key" data-msg="tag_display_hdr_key">KEY</label>
-                        <input name="key" id="key" type="text" placeholder="key"></input>
-                    </span>
-                    <span class="form-row-section">
-                        <label for="value" data-msg="tag_display_hdr_value">VALUE</label>
-                        <input name="value" id="key" type="text" placeholder="value"></input>
-                    </span>
-                </div>
-            </div>
+            <div data-ui-edittags="scalingGroup"></div>
             <div class="clearfix">
                 <div class="form-longrow">
                     <input type="checkbox" id="applyTags" name="applyTags"></input>

@@ -1,16 +1,19 @@
 console.log('WIZARD:start');
 define([
+  'backbone',
   'rivets',
   'dataholder',
   'text!./page3.html',
-], function(rivets, dh, template) {
+], function(Backbone, rivets, dh, template) {
         return Backbone.View.extend({
           title: 'Policies', 
 
           initialize: function() {
-            $(this.el).html(template)
-            this.rview = rivets.bind(this.$el, this.model);
-            this.render();
+            var scope = new Backbone.Model({
+                policies: new Backbone.Collection()
+            });
+            $(this.el).html(template);
+            this.rview = rivets.bind(this.$el, scope);
           },
 
           render: function() {
