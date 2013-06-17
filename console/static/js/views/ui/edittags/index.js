@@ -103,15 +103,45 @@ define([
 
                 status: '',
 
-                // Abort existing edits
+
+                // Abort other edit-in-progress
                 deactivateEdits: function() {
                     self.scope.tags.each(function(t) {
                         if (t.get('_edit')) {
                             t.set(t.get('_backup').pick('name','value'));
                             t.set({_clean: true, _deleted: false, _edit: false});
-                        }
-                    });
+                    	}
+		    });
                 },
+
+                // Disable all buttons while editing a tag
+                disableButtons: function() {
+                    self.scope.tags.each(function(t) {
+			if( !t.get('_deleted') ){
+                    	    t.set({_clean: false, _displayonly: true});
+                    	}
+		    });
+                },
+
+                // Restore the buttons to be clickable
+                enableButtons: function() {
+                    self.scope.tags.each(function(t) {
+			if( !t.get('_deleted') ){
+                    	   t.set({_clean: true, _displayonly: false});
+                    	}
+		    });
+                },
+
+		// Entering the Tag-Edit mode
+		enterTagEditMode: function() {
+		    self.scope.deactivateEdits();
+		    self.scope.disableButtons();	
+		},
+
+		// Entering the Clean mode
+		enterCleanMode: function() {
+		    self.scope.enableButtons();	
+		},
 
                 create: function() {
 
@@ -152,7 +182,7 @@ define([
                 edit: function(element, scope) {
                     console.log('edit');
 
-                    self.scope.deactivateEdits();
+		    self.scope.enterTagEditMode();
                     
                     // RETREIVE THE ID OF THE TAG
                     var tagID = scope.tag.get('id');
@@ -164,7 +194,7 @@ define([
                     } 
 
                     // MARK THE STATE AS _EDIT
-                    scope.tag.set({_clean: false, _deleted: false, _edited: false, _edit: true});
+                    scope.tag.set({_clean: false, _deleted: false, _edited: false, _edit: true, _displayonly: false});
 
                     // SET UP VALIDATE ON THIS TAG
                     scope.tag.on('change', function() {
@@ -176,8 +206,6 @@ define([
                     scope.tag.on('validated', function() {
                       scope.isTagValid = scope.tag.isValid();
                     });
-
-
                 },
 
                 confirm: function(element, scope) {
@@ -193,6 +221,7 @@ define([
                         scope.tag.set('_backup', undefined);
                     }
                     scope.tag.set({_clean: true, _deleted: false, _edited: true, _edit: false});
+		    self.scope.enterCleanMode();
                     self.render();
                 },
 
@@ -204,6 +233,7 @@ define([
                     }
 
                     scope.error.clear();
+		    self.scope.enterCleanMode();
                     self.render();
                 },
 

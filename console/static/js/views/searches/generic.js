@@ -67,8 +67,10 @@ define(['app', 'dataholder'], function(app, dh) {
     }
 
     var siftKeyList = function(list, search) {
+      // first: filter items that match the regex
       return _.chain(list).filter(function(item) {
         return RegExp('.*' + search + '.*', 'i').test(item.value);
+      // next: map 'None' values to empty string, or keep the original
       }).map(function(item) {
         return item === '' ? {value: item, label: 'None'} : item
       }).value();
@@ -84,6 +86,7 @@ define(['app', 'dataholder'], function(app, dh) {
       preserveOrder : true
     };
 
+    // finds facet names from the data
     function deriveFacets() {
       var derivedFacets = [];
       config.facets.forEach(function(facet) {
@@ -144,6 +147,7 @@ define(['app', 'dataholder'], function(app, dh) {
 
     }
 
+    // looks for matches based on the facet selection
     function deriveMatches(facet, searchTerm) {
       var result = [];
       var found = [];
@@ -203,29 +207,36 @@ define(['app', 'dataholder'], function(app, dh) {
         self.lastSearch = search;
         self.lastFacets = facets;
         var jfacets = facets.toJSON();
+        // for each record
         var results = self.records.filter(function(model) {
-        var testAll = _.every(jfacets, function(facet) {
-          var curr = model.get(facet.category);
-          // If the test is on the tags model, convert it to JSON.
-          if (facet.category.indexOf('_tag') != -1) curr = model.get('tags').toJSON();
+          // test each facet (and pass values that match every facet)
+          var testAll = _.every(jfacets, function(facet) {
+            var curr = model.get(facet.category);
+            // If the test is on the tags model, convert it to JSON.
+            if (facet.category.indexOf('_tag') != -1) curr = model.get('tags').toJSON();
 
-          // If there is a customer search configured for this facet, run it.
-          if (config.search && config.search[facet.category]) {
-            var isMatch = false;
-            function hit() {
-              isMatch = true;
+            // If there is a customer search configured for this facet, run it.
+            if (config.search && config.search[facet.category]) {
+              var isMatch = false;
+              function hit() {
+                isMatch = true;
+              }
+              // assemble search string that reflects this facet only
+              var thisSearch = "\""+facet.category+"\": \""+facet.value+"\"";
+              var doneSearching = config.search[facet.category].apply(self, [thisSearch, facet.value, model.toJSON(), curr, hit]);
+              if (doneSearching || isMatch) {
+                //console.log("model("+model.get('id')+") facet "+facet.value+" matches "+isMatch);
+                return isMatch;
+              }
             }
-            var doneSearching = config.search[facet.category].apply(self, [search, facet.value, model.toJSON(), curr, hit]);
-            if (doneSearching || isMatch) {
-              return isMatch;
-            }
-          }
 
-          // Otherwise try recursive RegExp search
-          var rex = new RegExp('.*' + facet.value + '.*', 'img');
-          return drillThrough(model, rex, 0);
-        });
-        return testAll;
+            // Otherwise try recursive RegExp search
+            var rex = new RegExp('.*' + facet.value + '.*', 'img');
+            var isMatch = drillThrough(model, rex, 0);
+            //console.log("model("+model.get('id')+") facet "+facet.value+" matches "+isMatch);
+            return isMatch;
+          });
+          return testAll;
       }).map(function(model) {
         return model.toJSON();
       });
