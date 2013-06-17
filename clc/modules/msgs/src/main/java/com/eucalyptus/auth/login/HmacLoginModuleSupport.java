@@ -63,6 +63,7 @@
 package com.eucalyptus.auth.login;
 
 import java.net.URLDecoder;
+import java.util.BitSet;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -84,7 +85,32 @@ import com.google.common.collect.Iterables;
 abstract class HmacLoginModuleSupport extends BaseLoginModule<HmacCredentials> {
 
   private final int signatureVersion;
-  private final URLCodec codec = new URLCodec();
+
+  /**
+   * Safe characters for URL parameters
+   */
+  protected static final BitSet URL_SAFE_CHARACTERS = new BitSet( 256 );
+
+  /**
+   * Do not URL-encode any of the unreserved characters that RFC 3986 defines:
+   *
+   *   A-Z, a-z, 0-9, hyphen ( - ), underscore ( _ ), period ( . ), and tilde ( ~ ).
+   */
+  static {
+    for ( int i = 'A'; i <= 'Z'; i++ ) {
+      URL_SAFE_CHARACTERS.set( i );
+    }
+    for ( int i = 'a'; i <= 'z'; i++ ) {
+      URL_SAFE_CHARACTERS.set( i );
+    }
+    for ( int i = '0'; i <= '9'; i++ ) {
+      URL_SAFE_CHARACTERS.set( i );
+    }
+    URL_SAFE_CHARACTERS.set( '-' );
+    URL_SAFE_CHARACTERS.set( '_' );
+    URL_SAFE_CHARACTERS.set( '.' );
+    URL_SAFE_CHARACTERS.set( '~' );
+  }
 
   protected HmacLoginModuleSupport( final int signatureVersion ) {
     this.signatureVersion = signatureVersion;
@@ -120,7 +146,7 @@ abstract class HmacLoginModuleSupport extends BaseLoginModule<HmacCredentials> {
   
   protected String urlencode( final String text ) {
     final byte[] textBytes = Strings.nullToEmpty( text ).getBytes( Charsets.UTF_8 );
-    return new String( codec.encode( textBytes ), Charsets.US_ASCII ).replace( "+", "%20" );    
+    return new String( URLCodec.encodeUrl( URL_SAFE_CHARACTERS, textBytes ), Charsets.US_ASCII );
   }
 
   protected String sanitize( final String b64text ) {
