@@ -73,19 +73,21 @@ define([], function() {
             var actualSearchTerm = sreg[2];
 
             var currSet = tags[tagStr];
-            for (var i = 0; i < currSet.length; i++) {
-              var oneItem = currSet[i];
-              var theTags = item.tags;
-              if (typeof theTags.toJSON === 'function') {
-                theTags = theTags.toJSON();
-              }
-              theTags.forEach(function(oneTag) {
-                if (oneItem.id === oneTag.id) {
-                  if (searchMatch(actualSearchTerm, oneTag)) {
-                    hit();
-                  }
+            if (currSet != undefined) {
+              for (var i = 0; i < currSet.length; i++) {
+                var oneItem = currSet[i];
+                var theTags = item.tags;
+                if (typeof theTags.toJSON === 'function') {
+                  theTags = theTags.toJSON();
                 }
-              });
+                theTags.forEach(function(oneTag) {
+                  if (oneItem.id === oneTag.id) {
+                    if (searchMatch(actualSearchTerm, oneTag)) {
+                      hit();
+                    }
+                  }
+                });
+              }
             }
 
           }
