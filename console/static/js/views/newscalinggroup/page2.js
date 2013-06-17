@@ -16,12 +16,29 @@ define([
           },
 
           initialize: function() {
-            this.render();
+            $(this.el).html(template)
+
+            var scope = new Backbone.Model({
+                zoneSelect: new Backbone.Model({
+                    available: app.data.availabilityzone,
+                    selected: new Backbone.Collection(),
+                    getId: function(item) {
+                        console.log('VALUE', arguments);
+                        return item.get('name');
+                    },
+                    getValue: function(item) {
+                        console.log('VALUE', arguments);
+                        return item.get('name');
+                    }
+                })
+            });
+            this.rview = rivets.bind(this.$el, scope);
+
+            scope.get('zoneSelect').get('available').fetch();
           },
 
           render: function() {
-            $(this.el).html(template)
-            rivets.bind(this.$el, this);
+            this.rview.sync();
           }
         });
 });
