@@ -258,7 +258,7 @@ var help_scaling = {
   landing_content: '',
   landing_content_url: '',
   dialog_add_content: '',
-  dialog_add_content_url: ''
+  dialog_add_content_url: '',
   dialog_delete_content: '',
   dialog_delete_content_url: ''
 }
