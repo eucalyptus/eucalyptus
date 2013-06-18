@@ -98,7 +98,7 @@ public class VmMetadata {
                                                                                               final VmInstance instance = Entities.merge( arg0.getVmInstance() );
                                                                                               String res = instance.getByKey( arg0.getLocalPath( ) );
                                                                                               if ( res == null ) {
-                                                                                                throw new NullPointerException( "Failed to lookup path: " + arg0.getLocalPath( ) );
+                                                                                                throw new NoSuchElementException( "Failed to lookup path: " + arg0.getLocalPath( ) );
                                                                                               } else {
                                                                                                 return ByteArray.newInstance( res );
                                                                                               }
