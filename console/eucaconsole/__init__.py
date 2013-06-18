@@ -165,6 +165,11 @@ class GlobalSession(object):
     def instance_type(self):
         return self.instancetypes
 
+    @property
+    def ajax_timeout(self):
+        timeout = self.get_value('server', 'ajax.timeout', '30000')
+        return timeout
+
     # return the collection of global session info
     def get_session(self):
         return {
@@ -174,6 +179,7 @@ class GlobalSession(object):
                 'help_url': self.help_url,
                 'admin_support_url' : self.admin_support_url,
                 'instance_type': self.instance_type,
+                'ajax_timeout': self.ajax_timeout,
                }
 
 class EuiException(BaseException):
