@@ -459,9 +459,8 @@ class LoginResponse(ProxyResponse):
             global_session = GlobalSession()
 
         instancetypes = []
-        # TODO: should trigger canned instancetypes for mock as well
-        #if True:
-        if self.user_session.host_override:
+        use_mock = config.getboolean('test', 'usemock')
+        if self.user_session.host_override or use_mock:
             instancetypes.append(dict(name='t1.micro', cores='1', memory='256', disk='5'))
             instancetypes.append(dict(name='m1.small', cores='1', memory='256', disk='5'))
             instancetypes.append(dict(name='m1.medium', cores='1', memory='512', disk='10'))
