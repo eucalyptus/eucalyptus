@@ -208,7 +208,12 @@ define([
         }
       });
 
-      self.model.on('validated:invalid', function(o, errors) { self.launchConfigErrors.set('user_data', errors.user_data)});
+      self.model.on('validated:invalid', function(o, errors) {
+        if (errors.user_data)
+          self.launchConfigErrors.set('user_data', errors.user_data)
+        if (errors.fileinput)
+          self.launchConfigErrors.set('user_data', errors.fileinput)
+      });
       this.model.on('change:user_data_text', function(e) {
           self.launchConfigErrors.clear();
           self.model.set('user_data', $.base64.encode(e.get('user_data_text')));

@@ -12,16 +12,15 @@ define(['app'], function(app) {
         max: 65536,
         msg: app.msg('launch_instance_error_user_data_big')
       },
-      fileinput: function(value) {
+      fileinput: function(value, attr, computedState) {
         console.log("file obj = "+JSON.stringify(value));
-        if (value.size > 10) {
-            return app.msg('launch_instance_error_user_data_big');
+        if (computedState.files[0].size > 65536) {
+          return app.msg('launch_instance_error_user_data_big');
         }
       }
     },
 
     initialize: function() {
-
     },
 
     finish: function(outputModel) {
