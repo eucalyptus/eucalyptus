@@ -36,7 +36,8 @@ define([
       facets: ['all_text', 'instance_type', 'availability_zone', 'root_device_type', 'scaling_group'],
       localize: {
         state: app.msg('search_facet_launchconfig_status'), //'Status',
-        'os': app.msg('search_facet_launchconfig_os') //'Operating System'
+        'os': app.msg('search_facet_launchconfig_os'), //'Operating System'
+        ebs : app.msg('search_facet_image_ebs') //'EBS'
       },
       match: {
         availability_zone: function(search, item, add) {

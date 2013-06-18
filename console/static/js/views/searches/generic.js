@@ -207,7 +207,9 @@ define(['app', 'dataholder'], function(app, dh) {
         self.lastSearch = search;
         self.lastFacets = facets;
         var jfacets = facets.toJSON();
+        // for each record
         var results = self.records.filter(function(model) {
+          // test each facet (and pass values that match every facet)
           var testAll = _.every(jfacets, function(facet) {
             var curr = model.get(facet.category);
             // If the test is on the tags model, convert it to JSON.
@@ -219,15 +221,20 @@ define(['app', 'dataholder'], function(app, dh) {
               function hit() {
                 isMatch = true;
               }
-              var doneSearching = config.search[facet.category].apply(self, [search, facet.value, model.toJSON(), curr, hit]);
+              // assemble search string that reflects this facet only
+              var thisSearch = "\""+facet.category+"\": \""+facet.value+"\"";
+              var doneSearching = config.search[facet.category].apply(self, [thisSearch, facet.value, model.toJSON(), curr, hit]);
               if (doneSearching || isMatch) {
+                //console.log("model("+model.get('id')+") facet "+facet.value+" matches "+isMatch);
                 return isMatch;
               }
             }
 
             // Otherwise try recursive RegExp search
             var rex = new RegExp('.*' + facet.value + '.*', 'img');
-            return drillThrough(model, rex, 0);
+            var isMatch = drillThrough(model, rex, 0);
+            //console.log("model("+model.get('id')+") facet "+facet.value+" matches "+isMatch);
+            return isMatch;
           });
           return testAll;
       }).map(function(model) {
