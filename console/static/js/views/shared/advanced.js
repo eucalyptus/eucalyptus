@@ -1,10 +1,9 @@
 define([
   'app',
-	'dataholder',
   'text!./advanced.html!strip',
   'rivets',
   './model/blockmap'
-], function( app, dataholder, template, rivets, blockmap ) {
+], function( app, template, rivets, blockmap ) {
 	return Backbone.View.extend({
     tpl: template,
     title: app.msg("launch_instance_section_header_advanced"),
@@ -19,13 +18,13 @@ define([
       self.theImage = self.options.image;
       var scope = {
         advancedModel: self.model,
-        kernels: new Backbone.Collection(dataholder.images.where({type: 'kernel'})), 
-        ramdisks: new Backbone.Collection(dataholder.images.where({type: 'ramdisk'})),
+        kernels: new Backbone.Collection(app.data.images.where({type: 'kernel'})), 
+        ramdisks: new Backbone.Collection(app.data.images.where({type: 'ramdisk'})),
         blockDeviceMappings: self.options.blockMaps,
 
         snapshots: function() {
             var ret = [{name:'None', id:null}];
-            dataholder.snapshots.each(function(s) {
+            app.data.snapshots.each(function(s) {
               ret.push({id:s.get('id'), name:s.get('id')+' ('+s.get('volume_size')+' GB)'});
             });
             return ret;
@@ -163,7 +162,7 @@ define([
           var tr = $(e.target).closest('tr');
           var snap = tr.find('.launch-wizard-advanced-storage-snapshot-input').val();
           // now, set size to snapshot size (only if no size already there??)
-          dataholder.snapshots.each(function(s) {
+          app.data.snapshots.each(function(s) {
             if (s.get('id') == snap)
               tr.find('.launch-wizard-advanced-storage-size-input').val(s.get('volume_size'));
           });
@@ -192,9 +191,9 @@ define([
           self.render();
       });
 
-      dataholder.images.on('reset', function() {
-        scope.kernels.add(dataholder.images.where({type: 'kernel'}));
-        scope.ramdisks.add(dataholder.images.where({type: 'ramdisk'}));
+      app.data.images.on('reset', function() {
+        scope.kernels.add(app.data.images.where({type: 'kernel'}));
+        scope.ramdisks.add(app.data.images.where({type: 'ramdisk'}));
       });
 
       this.model.on('change', function() {
