@@ -189,6 +189,8 @@ def killThreads(signal, frame):
 class EucaStaticHandler(tornado.web.StaticFileHandler):
     def set_extra_headers(self, path):
         self.set_header("X-Frame-Options", "SAMEORIGIN")
+        self.set_header("Cache-control", "no-cache")
+        self.set_header("Pragma", "no-cache")
 
 if __name__ == "__main__":
 #    (hostname, alt_host, ipaddrs) = socket.gethostbyaddr(socket.gethostname())
