@@ -47,9 +47,9 @@ define([
         setupAutoCompleteForVolumeInputBox: function(args){
             var self = this;
 
-	    var this_instance_zone = App.data.instance.get(args.instance_id).get('placement');
+            var this_instance_zone = App.data.instance.get(args.instance_id).get('placement');
             var vol_ids = [];
-	    var vol_count = 0;
+            var vol_count = 0;
             App.data.volume.each(function(item){
               if( item.get('status') === 'available' && item.get('zone') === this_instance_zone ){
                 // TRY TO FIND ITS NAME TAG
@@ -78,20 +78,28 @@ define([
         setupAutoCompleteForInstanceInputBox: function(args){
             var self = this;
 
-	    var this_volume_zone = App.data.volume.get(args.volume_id).get('zone');
+            var this_volume_zone = App.data.volume.get(args.volume_id).get('zone');
             var inst_ids = [];
-	    var inst_count = 0;
+            var inst_count = 0;
             App.data.instance.each(function(item){
-              if( item.get('_state').name === 'running' && item.get('placement') === this_volume_zone ){
+              var state = item.get('state');
+              if (state == undefined) {
+                state = item.get('_state').name;
+              }
+              var zone = item.get('placement');
+              if (zone == undefined) {
+                zone = item.get('_placement').zone;
+              }
+              if( state === 'running' && zone === this_volume_zone ){
                 // TRY TO FIND ITS NAME TAG
                 var nameTag = self.findNameTag(item);
                 var autocomplete_string = String(self.createIdNameTagString(item.get('id'), addEllipsis(nameTag, 15)));
                 inst_ids.push(autocomplete_string);
-	        inst_count++;
+                inst_count++;
               }
             });
             if( inst_count == 0 ){
-	       self.scope.error.set("instance_id", "You have no available instances");
+              self.scope.error.set("instance_id", "You have no available instances");
             }
 
             var sorted = sortArray(inst_ids);
@@ -179,63 +187,58 @@ define([
             this.template = template;
 
             this.scope = {
-                status: '',
-                volume: new Volume({volume_id: args.volume_id, instance_id: args.instance_id, device: args.device}),
+              status: '',
+              volume: new Volume({volume_id: args.volume_id, instance_id: args.instance_id, device: args.device}),
 
-               
-                error: new Backbone.Model({}),
-                help: { content: help_volume.dialog_attach_content, url: help_volume.dialog_attach_content_url },
+             
+              error: new Backbone.Model({}),
+              help: { content: help_volume.dialog_attach_content, url: help_volume.dialog_attach_content_url },
 
-                cancelButton: {
-                  click: function() {
-                    self.close();
-                    self.cleanup();
+              cancelButton: {
+                click: function() {
+                  self.close();
+                  self.cleanup();
+                }
+              },
+
+              attachButton: new Backbone.Model({
+                disabled: true,
+                click: function() {
+                  // GET THE INPUT FROM THE HTML VIEW
+                  var volumeId = self.scope.volume.get('volume_id');
+                  var instanceId = self.scope.volume.get('instance_id');
+                  var device = self.scope.volume.get('device');
+
+                  // EXTRACT THE RESOURCE ID IF THE NAME TAG WAS FOLLOWED
+                  if( volumeId.match(/^\w+-\w+\s+/) ){
+                    volumeId = volumeId.split(" ")[0];
                   }
-                },
+                  if( instanceId.match(/^\w+-\w+\s+/) ){
+                    instanceId = instanceId.split(" ")[0];
+                  }
 
-                attachButton: new Backbone.Model({
-                  disabled: true,
-                  click: function() {
-                    // GET THE INPUT FROM THE HTML VIEW
-                    var volumeId = self.scope.volume.get('volume_id');
-                    var instanceId = self.scope.volume.get('instance_id');
-                    var device = self.scope.volume.get('device');
-
-                    // EXTRACT THE RESOURCE ID IF THE NAME TAG WAS FOLLOWED
-                    if( volumeId.match(/^\w+-\w+\s+/) ){
-                      volumeId = volumeId.split(" ")[0];
+                  // CONSTRUCT AJAX CALL RESPONSE OPTIONS
+                  var attachAjaxCallResponse = {
+                    success: function(data, response, jqXHR){   // AJAX CALL SUCCESS OPTION
+                      if(data.results){
+                        notifySuccess(null, $.i18n.prop('volume_attach_success', volumeId, instanceId));    // XSS Risk  -- Kyo 040713
+                      }else{
+                        notifyError($.i18n.prop('volume_attach_error', volumeId, instanceId), undefined_error);   // XSS Risk
+                      }
+                    },
+                    error: function(jqXHR, textStatus, errorThrown){  // AJAX CALL ERROR OPTION
+                      notifyError($.i18n.prop('volume_attach_error', volumeId, instanceId), getErrorMessage(jqXHR));   // XSS Risk
                     }
-                    if( instanceId.match(/^\w+-\w+\s+/) ){
-                      instanceId = instanceId.split(" ")[0];
-                    }
+                  };
 
-                    // CONSTRUCT AJAX CALL RESPONSE OPTIONS
-                    var attachAjaxCallResponse = {
-		      success: function(data, response, jqXHR){   // AJAX CALL SUCCESS OPTION
-		        if(data.results){
-		          notifySuccess(null, $.i18n.prop('volume_attach_success', volumeId, instanceId));    // XSS Risk  -- Kyo 040713
-		        }else{
-		          notifyError($.i18n.prop('volume_attach_error', volumeId, instanceId), undefined_error);   // XSS Risk
-		        }
-		      },
-		      error: function(jqXHR, textStatus, errorThrown){  // AJAX CALL ERROR OPTION
-		        notifyError($.i18n.prop('volume_attach_error', volumeId, instanceId), getErrorMessage(jqXHR));   // XSS Risk
-		      }
-                    };
+                  // PERFORM ATTACH CALL OM THE MODEL
+                  App.data.volume.get(volumeId).attach(instanceId, device, attachAjaxCallResponse);
 
-		    // PERFORM ATTACH CALL OM THE MODEL
-                    App.data.volume.get(volumeId).attach(instanceId, device, attachAjaxCallResponse);
-
-	           // DISPLAY THE VOLUME'S STATUS -- FOR DEBUG
-		   App.data.volume.each(function(item){
-	           });
-
-	          // CLOSE THE DIALOG
-	          self.close();
-            self.cleanup();
+                  // CLOSE THE DIALOG
+                  self.close();
+                  self.cleanup();
                 }
               })
-
             };
 
             // override the volume model's normal validation rules for this instance,
