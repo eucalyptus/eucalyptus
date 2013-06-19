@@ -49,14 +49,20 @@ define([
 
 	    var this_instance_zone = App.data.instance.get(args.instance_id).get('placement');
             var vol_ids = [];
+	    var vol_count = 0;
             App.data.volume.each(function(item){
               if( item.get('status') === 'available' && item.get('zone') === this_instance_zone ){
                 // TRY TO FIND ITS NAME TAG
                 var nameTag = self.findNameTag(item);
                 var autocomplete_string = String(self.createIdNameTagString(item.get('id'), addEllipsis(nameTag, 15)));
                 vol_ids.push(autocomplete_string);
+                vol_count++;
               }
             });
+            if( vol_count == 0 ){
+	       self.scope.error.set("volume_id", "You have no available volumes");
+            }
+
             var sorted = sortArray(vol_ids);
             var $volumeSelector = this.$el.find('#volume-attach-volume-id');
             $volumeSelector.autocomplete({
@@ -74,14 +80,19 @@ define([
 
 	    var this_volume_zone = App.data.volume.get(args.volume_id).get('zone');
             var inst_ids = [];
+	    var inst_count = 0;
             App.data.instance.each(function(item){
               if( item.get('_state').name === 'running' && item.get('placement') === this_volume_zone ){
                 // TRY TO FIND ITS NAME TAG
                 var nameTag = self.findNameTag(item);
                 var autocomplete_string = String(self.createIdNameTagString(item.get('id'), addEllipsis(nameTag, 15)));
                 inst_ids.push(autocomplete_string);
+	        inst_count++;
               }
             });
+            if( inst_count == 0 ){
+	       self.scope.error.set("instance_id", "You have no available instances");
+            }
 
             var sorted = sortArray(inst_ids);
 

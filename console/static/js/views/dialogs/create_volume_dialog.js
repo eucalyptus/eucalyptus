@@ -48,7 +48,7 @@ define([
 
                 setZone: function(e, obj) {
                   var zone = e.target.value;
-                  self.scope.volume.set('availablity_zone', zone);
+                  self.scope.volume.set('availability_zone', zone);
                 },
 
                 createButton: new Backbone.Model({
@@ -59,7 +59,7 @@ define([
 
                     var snapshotId = self.scope.volume.get('snapshot_id');          
                     var size = self.scope.volume.get('size');                      
-                    var availablity_zone = self.scope.volume.get('availablity_zone');         
+                    var availability_zone = self.scope.volume.get('availability_zone');         
                     var name = self.scope.volume.get('name');
 
                     // CREATE A NAME TAG
