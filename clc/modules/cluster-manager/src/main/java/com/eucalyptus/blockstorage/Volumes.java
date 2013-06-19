@@ -415,8 +415,10 @@ public class Volumes {
 
   static State transformStorageState( final State volumeState, final String storageState ) {
     if ( State.GENERATING.equals( volumeState ) ) {
-      if ("failed".equals(storageState) ) {
+      if ( "failed".equals( storageState ) ) {
         return State.FAIL;
+      } else if ( "error".equals( storageState ) ) {
+    	return State.ERROR;
       } else if ("available".equals(storageState) ) {
         return State.EXTANT;
       } else {
@@ -429,22 +431,34 @@ public class Volumes {
         return State.ANNIHILATING;
       }
     } else if ( !State.ANNIHILATING.equals( volumeState ) && !State.BUSY.equals( volumeState ) ) {
-      if ("failed".equals(storageState) ) {
+      if ( "failed".equals(storageState) ) {
         return State.FAIL;
-      } else if ("creating".equals(storageState) ) {
+      } else if ( "creating".equals(storageState) ) {
         return State.GENERATING;
-      } else if ("available".equals(storageState) ) {
+      } else if ( "available".equals(storageState) ) {
         return State.EXTANT;
       } else if ( "in-use".equals( storageState ) ) {
         return State.BUSY;
+      } else if ( "error".equals( storageState ) ) {
+    	return State.ERROR;
       } else {
         return State.ANNIHILATED;
       }
     } else if ( State.BUSY.equals( volumeState ) ) {
       return State.BUSY;
+    } else if ( State.ERROR.equals( volumeState ) ) {
+      if ( "available".equals(storageState) ) {
+        return State.EXTANT;
+      } else if ( "deleted".equals(storageState) ) {
+        return State.ANNIHILATED;
+      } else {
+    	return State.ERROR; 
+      }
     } else {
       if ("failed".equals(storageState) ) {
         return State.FAIL;
+      } else if( "error".equals(storageState) ) {
+    	return State.ERROR;  
       } else {
         return State.ANNIHILATED;
       }

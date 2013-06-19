@@ -159,6 +159,8 @@ public class Volume extends UserMetadata<State> implements VolumeMetadata {
         return "failed";
       case BUSY:
         return "in-use";
+      case ERROR:
+          return "error";
       default:
         return "unavailable";
     }
