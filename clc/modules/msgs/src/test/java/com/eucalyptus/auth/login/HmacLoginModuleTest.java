@@ -821,6 +821,29 @@ public class HmacLoginModuleTest {
     assertTrue("Authentication successful", hmacV4LoginModule("ea9nMgw6353ANsJeylVkNIIzuCU0hz0xtErRbcj0").authenticate(creds));
   }
 
+  /**
+   * EUCA-4748 sig v2
+   */
+  @Test
+  public void testSpecialCharacters_Sigv2() throws Exception {
+    final HmacCredentials creds = creds(
+        "J8+AGPWqWNL8n7n/rjvyb+vQlKtiF+Bl4e/1rO/bUHU=",
+        Maps.newHashMap(ImmutableMap.<String,String>builder()
+            .put( "Version", "2013-02-01" )
+            .put( "Action", "CreateSecurityGroup" )
+            .put( "GroupDescription", "!@$$%^^&&*()*&&^%{}\":?><|][~" )
+            .put( "GroupName", "group1" )
+            .put( "SignatureVersion", "2" )
+            .put( "SignatureMethod", "HmacSHA256" )
+            .put( "Timestamp", "2013-06-17T21:55:32Z" )
+            .put( "AWSAccessKeyId", "YHZWRDQW0LZMFRPWWHS6F" )
+            .build()),
+        "POST", "/services/Eucalyptus", "10.20.10.61:8773",
+        2,
+        Hmac.HmacSHA256);
+    assertTrue("Authentication successful", hmacV2LoginModule("K8VKG93wNXV9i3P6hgSUPMiK40CAfBMmntBCb4bs").authenticate(creds));
+  }
+
   private TestHmacLoginModule loginModule() {
     return new TestHmacLoginModule();
   }
