@@ -63,13 +63,10 @@
 package com.eucalyptus.cloud.util;
 
 import javax.annotation.Nullable;
-import javax.persistence.EntityTransaction;
 import javax.persistence.MappedSuperclass;
 import org.apache.log4j.Logger;
-import com.eucalyptus.cloud.UserMetadata;
 import com.eucalyptus.entities.Entities;
-import com.eucalyptus.records.Logs;
-import com.eucalyptus.system.Threads;
+import com.eucalyptus.entities.UserMetadata;
 import com.eucalyptus.util.HasNaturalId;
 import com.eucalyptus.util.OwnerFullName;
 

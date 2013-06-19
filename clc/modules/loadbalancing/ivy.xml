@@ -3,8 +3,8 @@
     <dependencies>
         <dependency org="com.eucalyptus" name="eucalyptus-loadbalancing-common" rev="latest.integration"/>
         <dependency org="com.eucalyptus" name="eucalyptus-ws" rev="latest.integration"/>
-        <dependency org="com.eucalyptus" name="eucalyptus-cluster-manager" rev="latest.integration"/>
-        <dependency org="com.eucalyptus" name="eucalyptus-autoscaling" rev="latest.integration"/>
+        <dependency org="com.eucalyptus" name="eucalyptus-cloud" rev="latest.integration"/>
+        <dependency org="com.eucalyptus" name="eucalyptus-autoscaling-common" rev="latest.integration"/>
     </dependencies>
 </ivy-module>
 
