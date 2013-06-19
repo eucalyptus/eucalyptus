@@ -1,8 +1,8 @@
 define([
+  'app',
   'rivets',
-  'dataholder',
   'text!./page1.html',
-], function(rivets, dh, template) {
+], function(app, rivets, template) {
     return Backbone.View.extend({
       title: 'General', 
 
@@ -12,7 +12,7 @@ define([
 
         scope.set('launchConfigs', {
             name: 'launchConfig',
-            collection: dh.launchConfigs,
+            collection: app.data.launchConfigs,
             itrLabel: function() {
                 return this.itr.get('name');
             }

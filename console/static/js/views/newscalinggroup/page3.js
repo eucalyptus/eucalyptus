@@ -1,9 +1,7 @@
-console.log('WIZARD:start');
 define([
   'rivets',
-  'dataholder',
   'text!./page3.html',
-], function(rivets, dh, template) {
+], function(rivets, template) {
         return Backbone.View.extend({
           title: 'Policies', 
 

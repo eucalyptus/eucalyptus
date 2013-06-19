@@ -2,12 +2,11 @@ define([
     'underscore',
     'backbone',
     'app',
-	'dataholder',
   'text!./image.html!strip',
   'rivets',
   'views/searches/image',
   './model/blockmap'
-	], function( _, Backbone, app, dataholder, template, rivets, imageSearch, BlockMap ) {
+	], function( _, Backbone, app, template, rivets, imageSearch, BlockMap ) {
 	return Backbone.View.extend({
             title: app.msg('launch_instance_section_header_image'),
             next: app.msg('launch_instance_btn_next_type'),

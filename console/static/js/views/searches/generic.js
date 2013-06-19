@@ -1,4 +1,4 @@
-define(['app', 'dataholder'], function(app, dh) {
+define(['app'], function(app) {
   var self = this;
   
   function isArray(o) {
