@@ -153,6 +153,12 @@ rivets.binders["tooltip"] = {
     routine: function(el, keyname) {
       var value = $.i18n.prop(this.keypath);
 
+      if (value == '['+this.keypath+']') {
+        // I think this would be better, than going directly to the method
+        //value = getAdapter().read(this.model, this.keypath);
+        value = diveIntoObject(this.model, this.keypath, doObjectRead);
+      }
+
       if (value == null) return;
 
       return $(el).attr('title', value);

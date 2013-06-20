@@ -346,7 +346,6 @@ class ScaleHandler(BaseAPIHandler):
                 cooldown = self.get_argument("Cooldown", None)
                 min_adjustment_step = self.get_argument("MinAdjustmentStep", None)
                 policy = ScalingPolicy(name=policy_name, adjustment_type=adjustment_type, as_name=as_group, scaling_adjustment=scaling_adjustment, cooldown=cooldown, min_adjustment_step=min_adjustment_step)
-                print "policy = "+str(policy.__dict__)
                 self.user_session.scaling.create_scaling_policy(policy, self.callback)
             elif action == 'DescribeAdjustmentTypes':
                 self.user_session.scaling.get_all_adjustment_types(self.callback)
