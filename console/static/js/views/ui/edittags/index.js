@@ -48,12 +48,12 @@ define([
             model.on('confirm', function(defer) {
                 self.scope.create();
                 _.chain(tags.models).clone().each(function(t) {
-                   var backup = t.get('_backup');
+                   var backup = t.get('_firstbackup');		// _firstbackup: the original tag to begin edit with
                    console.log('TAG',t);
                    if (t.get('_deleted')) {
                        // If the tag is new and then deleted, do nothing.
                        if (!t.get('_new')) {
-                           // If there is a backup then this was edited and we really want to destroy the original
+                           // If this was edited, we really want to destroy the original
                            if (backup != null) {
                                console.log('delete', backup);
                                backup.destroy();
@@ -68,21 +68,28 @@ define([
                    } else if (t.get('_edited')) {
                        // If the tag is new then it should only be saved, even if it was edited.
                        if (t.get('_new')) {
-                         if(!defer) t.save() ;
+                         if(!defer){
+			   t.save();
+			 }
                        } else if( (backup != null) && (backup.get('name') !== t.get('name')) ){
                          // CASE OF KEY CHANGE
-                         console.log("Edited, with previous value: " + t.get('name') + ":" + t.get('value'));
-                         t.get('_backup').destroy();
-                         if(!defer) t.save();
+                         console.log("EDITED TAG TO: " + t.get('name') + ":" + t.get('value'));
+                         backup.destroy();
+                         if(!defer){
+			   t.save();
+			 }
                        }else{
                          // CASE OF VALUE CHANGE
-                        if(!defer) t.save();
+                        if(!defer){
+			  t.save();
+			}
                        } 
                    } else if (t.get('_new')) {
-                       if(!defer) t.save();
+                       if(!defer){
+		         t.save();
+		       }
                    }
                 });
-                // THE OPERATION BELOW MIGHT NOT WORK WHEN .SYNC() CALLS ARE USED   --- KYO 042913
                 model.get('tags').set(tags.models);
             });
 
@@ -94,15 +101,10 @@ define([
 
             this.scope = {
                 newtag: new Tag(),
-
                 tags: tags,
-
                 isTagValid: true,
-
                 error: new Backbone.Model({}),
-
                 status: '',
-
 
                 // Abort other edit-in-progress
                 deactivateEdits: function() {
@@ -188,10 +190,12 @@ define([
                     var tagID = scope.tag.get('id');
                     console.log("TAG ID: " + tagID);
 
-                    // NEW METHOD: STORE THE ORIGINAL KEY-VALUE WHEN FIRST EDITED
-                    if( scope.tag.get('_backup') == undefined ){
-                      scope.tag.set('_backup', scope.tag.clone());
-                    } 
+                    // STORE THE ORIGINAL KEY-VALUE WHEN FIRST EDITED: _FIRSTBACKUP
+                    if( scope.tag.get('_firstbackup') == undefined ){
+                      scope.tag.set('_firstbackup', scope.tag.clone());
+                    }
+		    // KEEP THE PREVIOUS TAG AS _BACKUP 
+                    scope.tag.set('_backup', scope.tag.clone());
 
                     // MARK THE STATE AS _EDIT
                     scope.tag.set({_clean: false, _deleted: false, _edited: false, _edit: true, _displayonly: false});
@@ -226,7 +230,7 @@ define([
                 },
 
                 restore: function(element, scope) {
-                    if ( scope.tag.get('_backup') != null) {
+                    if ( scope.tag.get('_backup') != null ) {
                         scope.tag.set( scope.tag.get('_backup').toJSON() );
                     } else {
                         scope.tag.set({_clean: true, _deleted: false, _edit: false});
@@ -239,6 +243,8 @@ define([
 
                 delete: function(element, scope) {
                     console.log('delete');
+		    // ALWAYS BACKUP BEFORE DELETE
+                    scope.tag.set( '_backup', scope.tag.clone() );
                     scope.tag.set({_clean: false, _deleted: true, _edit: false});
                 },
             } // end of scope

@@ -5,6 +5,7 @@
         <div class="dialog-inner-content">
 
 		<p>Alarm message text</p>
+
 		<div class="selected-resources">
           <div class="form-row">
             <label for="alarm-name">Name *</label>
@@ -13,46 +14,67 @@
           </div>
 
           <div class="form-row">
-            <label for="alarm-name">Description</label>
-            <input class="focus-here" type="text" id="alarm-name" data-tooltip="volume_dialog_name_tip" data-value="alarm.name"/>
-            <span data-text="error.name"></span>
+            <label for="alarm-description">Description</label>
+            <textarea type="text" id="alarm-description" data-tooltip="volume_dialog_name_tip" data-value="alarm.description"></textarea>
+            <span data-text="error.description"></span>
           </div>
 
           <div class="form-row">
-            <label for="alarm-name">Trigger metric</label>
-            <input class="focus-here" type="text" id="alarm-name" data-tooltip="volume_dialog_name_tip" data-value="alarm.name"/>
-            <span data-text="error.name"></span>
+            <label for="alarm-trigger">Trigger metric</label>
+            <select type="text" id="alarm-trigger" data-tooltip="volume_dialog_name_tip" data-value="alarm.triggerMetric">
+                <option data-each-item="metrics" data-text="item"></option>
+            </select>
+            <span data-text="error.triggerMetric"></span><br />
+            <a data-on-click="createMetric">Enter custom metric</a>
           </div>
 
           <div class="form-row">
-            <label for="alarm-name">Statistic</label>
-            <input class="focus-here" type="text" id="alarm-name" data-tooltip="volume_dialog_name_tip" data-value="alarm.name"/>
-            <span data-text="error.name"></span>
-          </div>
-         
-          <div class="form-row">
-            <label for="alarm-name">Comparison</label>
-            <input class="focus-here" type="text" id="alarm-name" data-tooltip="volume_dialog_name_tip" data-value="alarm.name"/>
-            <span data-text="error.name"></span>
+            <label for="alarm-statistic">Statistic</label>
+            <select type="text" id="alarm-statistic" data-tooltip="volume_dialog_name_tip" data-value="alarm.statistic">
+                <option data-each-item="statistic" data-text="item"></option>
+            </select>
+            <span data-text="error.statistic"></span>
           </div>
 
+          <table>
+          <tr>
+          <td>
+          <div class="form-row">
+            <label for="alarm-comparison">Comparison</label>
+            <select type="text" id="alarm-comparison" data-tooltip="volume_dialog_name_tip" data-value="alarm.comparison">
+                <option data-each-item="comparison" data-text="item"></option>
+            </select>
+            <span data-text="error.comparison"></span>
+          </div>
+          </td>
+
+          <td>
           <div class="form-row">
             <label for="alarm-name">Trigger threshold</label>
-            <input class="focus-here" type="text" id="alarm-name" data-tooltip="volume_dialog_name_tip" data-value="alarm.name"/>
+            <input type="text" id="alarm-name" class="short-textinput" data-tooltip="volume_dialog_name_tip" data-value="alarm.name"/>
             <span data-text="error.name"></span>
           </div>
+          </td>
+          </tr>
 
+          <tr>
+          <td>
           <div class="form-row">
             <label for="alarm-name">Measurement periods</label>
-            <input class="focus-here" type="text" id="alarm-name" data-tooltip="volume_dialog_name_tip" data-value="alarm.name"/>
+            <input type="text" class="short-textinput" id="alarm-name" data-tooltip="volume_dialog_name_tip" data-value="alarm.name"/>
             <span data-text="error.name"></span>
           </div>
+          </td>
 
+          <td>
           <div class="form-row">
             <label for="alarm-name">Period length (secs)*</label>
-            <input class="focus-here" type="text" id="alarm-name" data-tooltip="volume_dialog_name_tip" data-value="alarm.name"/>
+            <input type="text" class="short-textinput" id="alarm-name" data-tooltip="volume_dialog_name_tip" data-value="alarm.name"/>
             <span data-text="error.name"></span>
           </div>
+          </td>
+          </tr>
+          </table>
 		</div>
 		<div data-text="status" style="height:20px"></div>
         <div class="ui-dialog-buttonpane ui-widget-content ui-helper-clearfix">

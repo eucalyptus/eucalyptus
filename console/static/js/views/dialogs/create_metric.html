@@ -1,0 +1,48 @@
+<div>
+    <div class="title">Enter custom metric</div>
+    <div class="body">
+        <div class="euca-dialog">
+        <div class="dialog-inner-content">
+
+        <p></p>
+
+		<div class="selected-resources">
+          <div class="form-row">
+            <label for="metric-namespace">Namespace*</label>
+            <input class="focus-here" type="text" id="metric-namespace" data-tooltip="volume_dialog_name_tip" data-value="metric.namespace"/>
+            <span data-text="error.namespace"></span>
+          </div>
+
+          <div class="form-row">
+            <label for="metric-name">Metric name*</label>
+            <input type="text" id="metric-name" data-tooltip="volume_dialog_name_tip" data-value="metric.name"/>
+            <span data-text="error.name"></span>
+          </div>
+
+          <div class="form-row">
+
+            <label for="metric-dimension-key">Dimension key</label>
+            <input type="text" id="metric-dimension-key" data-tooltip="volume_dialog_name_tip" data-value="metric.dimensionKey"/>
+            <span data-text="error.dimensionKey"></span>
+          </div>
+
+          <div class="form-row">
+            <label for="metric-dimension-value">Dimension value</label>
+            <input type="text" id="metric-dimension-value" data-tooltip="volume_dialog_name_tip" data-value="metric.dimensionValue"/>
+            <span data-text="error.dimensionValue"></span>
+          </div>
+
+		</div>
+        <p>* Required fields</p>
+		<div data-text="status" style="height:20px"></div>
+        <div class="ui-dialog-buttonpane ui-widget-content ui-helper-clearfix">
+            <div class="ui-dialog-buttonset">
+                <span data-ui-button="confirmButton" data-msg="dialog_save_btn"></span>
+                <span data-ui-button="cancelButton" data-msg="dialog_cancel_btn"></span> 
+            </div>
+        </div>
+
+        </div>
+        </div>
+    </div>
+</div>
