@@ -30,7 +30,6 @@
     consoleDialog : null,
     detachDialog : null,
     launchMoreDialog : null,
-    tagDialog : null,
     instVolMap : {},// {i-123456: {vol-123456:attached,vol-234567:attaching,...}}
     instIpMap : {}, // {i-123456: 192.168.0.1}
     instPassword : {}, // only windows instances
@@ -299,18 +298,6 @@
         },
         help: {content: $term_help, url: help_instance.dialog_terminate_content_url},
       });
-
-     // TEMP LOCATION FOR TAG RESOURCE DIALOG
-      $tmpl = $('html body').find('.templates #resourceTagWidgetTmpl').clone();
-      $rendered = $($tmpl.render($.extend($.i18n.map, help_instance)));
-      var $tag_dialog = $rendered.children().first();
-      var $tag_help = $rendered.children().last();
-      this.tagDialog = $tag_dialog.eucadialog({
-        id: 'instances-tag-resource',
-        title: 'Add/Edit tags',
-        help: {content: $tag_help, url: help_instance.dialog_terminate_content_url},
-      });
-     // END OF TEMP LOCATION
 
       $tmpl = $('html body').find('.templates #instanceRebootDlgTmpl').clone();
       $rendered = $($tmpl.render($.extend($.i18n.map, help_instance)));

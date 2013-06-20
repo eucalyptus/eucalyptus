@@ -28,7 +28,6 @@
     //forceDetachDialog : null, // forceDetach is not supported
     addDialog : null,
     attachDialog : null,
-    tagDialog : null,
     attachButtonId : 'scalinggrp-attach-btn',
     createButtonId : 'scalinggrps-add-btn',
     _init : function() {
@@ -227,17 +226,6 @@
           return null;
       });
       // volume create dialog end
-      // tag dialog begins
-      $tmpl = $('html body').find('.templates #resourceTagWidgetTmpl').clone();
-      $rendered = $($tmpl.render($.extend($.i18n.map, help_instance)));
-      var $tag_dialog = $rendered.children().first();
-      var $tag_help = $rendered.children().last();
-      this.tagDialog = $tag_dialog.eucadialog({
-        id: 'volumes-tag-resource',
-        title: 'Add/Edit tags',
-        help: {content: $tag_help, url: help_instance.dialog_terminate_content_url},
-      });
-      // tag dialog ends
     },
 
     _destroy : function() {
@@ -579,18 +567,6 @@
       addSnapshot(volumeToUse);
     },
 
-    _tagResourceAction : function(){
-      var thisObj = this;
-      var volume = thisObj.tableWrapper.eucatable('getSelectedRows', 1)[0];
-      if ( volume.length > 0 ) {
-        // Create a widget object for displaying the resource tag information
-        var $tagInfo = $('<div>').addClass('resource-tag-table-expanded-volume').addClass('clearfix').euca_resource_tag({resource: 'volume', resource_id: volume, cancelButtonCallback: function(){ thisObj.tagDialog.eucadialog("close"); }, widgetMode: 'edit' });
-        thisObj.tagDialog.eucadialog('addNote','tag-modification-display-box', $tagInfo);   // This line should be adjusted once the right template is created for the resource tag.  030713
-        thisObj.tagDialog.eucadialog('open');
-      }
-    },
-
-
     _createMenuActions : function() {
       var thisObj = this;
       var volumes = thisObj.baseTable.eucatable('getSelectedRows');
@@ -642,11 +618,6 @@
         }
         if (addOption)
           itemsList['delete'] = { "name": volume_action_delete, callback: function(key, opt) { thisObj._deleteAction(); } }
-      }
-
-      // add resource tag option	031913
-      if ( volumes.length === 1) {
-        itemsList['tag'] = {"name":table_menu_edit_tags_action, callback: function(key, opt){ thisObj._tagResourceAction(); }}
       }
 
       return itemsList;
