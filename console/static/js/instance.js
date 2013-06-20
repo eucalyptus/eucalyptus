@@ -459,6 +459,7 @@
        menuItems['associate'] = {"name":instance_action_associate, callback: function(key, opt){; }, disabled: function(){ return true; }};
        menuItems['disassociate'] = {"name":instance_action_disassociate, callback: function(key, opt){;}, disabled: function(){ return true; }};
        menuItems['tag'] = {"name":table_menu_edit_tags_action, callback: function(key, opt){;}, disabled: function(){ return true; }};
+       menuItems['launchconfig'] = {"name":instance_action_launchconfig, callback: function(key, opt){ thisObj._launchConfigAction(); }}
      })();
 
      if(numSelected === 1 && 'running' in stateMap && $.inArray(instIds[0], stateMap['running']>=0)){
@@ -481,6 +482,7 @@
 
      if(numSelected == 1){
        menuItems['launchmore'] = {"name":instance_action_launch_more, callback: function(key, opt){ thisObj._launchMoreAction(); }}
+       menuItems['launchconfig'] = {"name":instance_action_launchconfig, callback: function(key, opt){ thisObj._launchConfigAction(); }}
      }
   
      if(numSelected >= 1){ // TODO: no state check for terminate? A: terminating terminated instances will delete records
@@ -1045,6 +1047,9 @@
 
     _launchMoreAction : function(){
       this.launchMoreDialog.eucadialog('open');
+    },
+
+    _launchConfigAction : function(){
     },
 
     _launchMore : function( callback ) {
