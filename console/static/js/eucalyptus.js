@@ -77,55 +77,55 @@
         if (!supportedBrowser)
           alert($.i18n.map.unsupported_browser);
 
-        setupAjax();
+        setupAjax(30000);
         // check cookie
         if ($.cookie('session-id')) {
-          $.ajax({
-  	    type:"POST",
-	    data:"action=session&_xsrf="+$.cookie('_xsrf'),
-	    dataType:"json",
-	    async:"false",
-	    success: function(out, textStatus, jqXHR){
-	      $.extend($.eucaData, {'g_session':out.global_session, 'u_session':out.user_session});
+          $.ajax({ type:"POST",
+            data:"action=session&_xsrf="+$.cookie('_xsrf'),
+            dataType:"json",
+            async:"false",
+            success: function(out, textStatus, jqXHR){
+              $.extend($.eucaData, {'g_session':out.global_session, 'u_session':out.user_session});
               eucalyptus.main($.eucaData);
             },
-	    error: function(jqXHR, textStatus, errorThrown){
+            error: function(jqXHR, textStatus, errorThrown){
               logout();
-	    }
+            }
           });
         } else{
           var $main = $('html body').find('.euca-main-outercontainer .inner-container');
           $main.login({ 'support_url' : support_url, 'admin_url' : admin_url, doLogin : function(evt, args) {
-              var tok = args.param.account+':'+args.param.username+':'+args.param.password;
-              var hash = toBase64(tok);
-              var remember = (args.param.remember!=null)?"yes":"no";
-              $.ajax({
-                type:"POST",
-                data:"action=login&remember="+remember+"&Authorization="+hash, 
-                beforeSend: function (xhr) { 
-                  $main.find('#euca-main-container').append(
-                     $('<div>').addClass('spin-wheel').append( 
-                      $('<img>').attr('src','images/dots32.gif'))); // spinwheel
-                   $main.find('#euca-main-container').show();
-                },
-    	        dataType:"json",
-                async:"false",
-                success: function(out, textStatus, jqXHR) {
-                  $.extend($.eucaData, {'g_session':out.global_session, 'u_session':out.user_session});
-                  args.onSuccess($.eucaData); // call back to login UI
-                  if (args.param.account.substring(args.param.account.length-13) == 'amazonaws.com') {
-                    IMG_OPT_PARAMS = '&Owner=self';
-                  }
-                },
-                error: function(jqXHR, textStatus, errorThrown){
-                  var $container = $('html body').find(DOM_BINDING['main']);
-                  $container.children().detach(); // remove spinwheel
-                  args.onError(errorThrown);
-                  if (errorThrown.search("Forbidden")>-1) {
-                    $.extend($.eucaData, {'g_session':jqXHR.global_session, 'u_session':jqXHR.user_session});
-                  }
+            var tok = args.param.account+':'+args.param.username+':'+args.param.password;
+            var hash = toBase64(tok);
+            var remember = (args.param.remember!=null)?"yes":"no";
+            $.ajax({
+              type:"POST",
+              data:"action=login&remember="+remember+"&Authorization="+hash, 
+              beforeSend: function (xhr) { 
+                $main.find('#euca-main-container').append(
+                   $('<div>').addClass('spin-wheel').append( 
+                    $('<img>').attr('src','images/dots32.gif'))); // spinwheel
+                 $main.find('#euca-main-container').show();
+              },
+              dataType:"json",
+              async:"false",
+              success: function(out, textStatus, jqXHR) {
+                setupAjax(out.global_session.ajax_timeout);
+                $.extend($.eucaData, {'g_session':out.global_session, 'u_session':out.user_session});
+                args.onSuccess($.eucaData); // call back to login UI
+                if (args.param.account.substring(args.param.account.length-13) == 'amazonaws.com') {
+                  IMG_OPT_PARAMS = '&Owner=self';
                 }
- 	     });
+              },
+              error: function(jqXHR, textStatus, errorThrown){
+                var $container = $('html body').find(DOM_BINDING['main']);
+                $container.children().detach(); // remove spinwheel
+                args.onError(errorThrown);
+                if (errorThrown.search("Forbidden")>-1) {
+                  $.extend($.eucaData, {'g_session':jqXHR.global_session, 'u_session':jqXHR.user_session});
+                }
+              }
+           });
          }});
        } // end of else
     }); // end of done

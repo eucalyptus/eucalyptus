@@ -105,7 +105,20 @@ define([
             var volume_id = this.get('id');            // Need consistency in ID label  -- Kyo 040813
             var parameter = "_xsrf="+$.cookie('_xsrf');
             parameter += "&VolumeId="+volume_id+"&InstanceId="+instance_id+"&Device="+device;
-            this.makeAjaxCall(url, parameter, options);
+            // use this to capture response and forward to original handlers after tweaking model
+            var thisModel = this;
+            var local_options = {
+              success: function(data, response, jqXHR){
+                if(data.results){
+                  thisModel.set('status', 'attaching');
+                }
+                options.success(data, response, jqXHR);
+              },
+              error: function(jqXHR, textStatus, errorThrown){
+                options.error(jqXHR, textStatus, errorThrown);
+              }
+            };
+            this.makeAjaxCall(url, parameter, local_options);
           },
           detach: function(options){
             var url = "/ec2?Action=DetachVolume";

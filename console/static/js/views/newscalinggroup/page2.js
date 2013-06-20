@@ -7,21 +7,39 @@ define([
         return Backbone.View.extend({
           title: 'Membership', 
 
-          loadBalancers: {
-            name: 'loadBalancers',
-            collection: app.data.loadBalancers,
-            itrLabel: function() {
-              return this.itr.get('name');
-            } 
-          },
-
           initialize: function() {
-            this.render();
+            var self = this;
+            $(this.el).html(template)
+
+            var scope = new Backbone.Model({
+                scalingGroup: this.model.get('scalingGroup'),
+                loadBalancers: {
+                    name: 'loadBalancers',
+                    collection: app.data.loadBalancers,
+                    itrLabel: function() {
+                      return this.itr.get('name');
+                    } 
+                },
+                zoneSelect: new Backbone.Model({
+                    available: app.data.availabilityzone,
+                    selected: self.model.get('availabilityZones'),
+                    getId: function(item) {
+                        console.log('VALUE', arguments);
+                        return item.get('name');
+                    },
+                    getValue: function(item) {
+                        console.log('VALUE', arguments);
+                        return item.get('name');
+                    }
+                })
+            });
+            this.rview = rivets.bind(this.$el, scope);
+
+            scope.get('zoneSelect').get('available').fetch();
           },
 
           render: function() {
-            $(this.el).html(template)
-            rivets.bind(this.$el, this);
+            this.rview.sync();
           }
         });
 });

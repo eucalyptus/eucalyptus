@@ -1,11 +1,10 @@
 define([
     'underscore',
     'app',
-	'dataholder',
   'text!./tags.html!strip',
   'rivets',
   ],
-  function(_, app, dataholder, template, rivets) {
+  function(_, app, template, rivets) {
   return Backbone.View.extend({
     tpl: template,
     title: 'Tags',

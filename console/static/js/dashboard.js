@@ -187,7 +187,7 @@
     _reloadSummaries : function($instObj, $storageObj, $netsecObj){
       var thisObj = this;
       $('html body').eucadata('addCallback', 'summary', 'dashboard-summary', function(){
-        var results = describe('summary')[0];
+
         // remove busy indicators when data arrives
         $instObj.find('#dashboard-instance-running div img').remove();
         $instObj.find('#dashboard-instance-stopped div img').remove();
@@ -202,19 +202,44 @@
 
         var az=$instObj.find('#dashboard-instance-az select').val();
 
-        $instObj.find('#dashboard-instance-running span').text(results.inst_running);
-        $instObj.find('#dashboard-instance-stopped span').text(results.inst_stopped);
-        var scalinginsts = describe('scalinginst');
-        if (scalinginsts == null) scalinginsts = [];
-        $instObj.find('#dashboard-scaling-groups span').text(scalinginsts.length);
-        $storageObj.find('#dashboard-storage-volume span').text(results.volume);
-        $storageObj.find('#dashboard-storage-snapshot span').text(results.snapshot);
+        // KYO: THE FILTER ABOVE HAS BEEN DISABLED DURING BACKBONE INTEGRATION
+        // THE BELOW IS THE NEW APPROACH            --- 06/17/2013
+//        var results = describe('summary')[0];
+        require(['app'], function(app) {
+	  var results = app.data.summary.first();
+          var inst_running_count = 0;
+	  var inst_stopped_count = 0;
+          if( az !== "all" ){
+	    // NEED TO SCAN THE INSTANCE COLLECITON TO CAPTURE PER ZONE COUNT
+	    // TODO: NEED TO HAVE THE SUMMARY COLLECTION UPDATE AUTOMATICALLY PER ZONE
+	    app.data.instance.each(function(instance){
+		if( instance.get('placement') === az && instance.get('state') === "running" ){
+		   inst_running_count++;
+		}else if( instance.get('placement') === az && instance.get('state') === "stopped" ){
+		   inst_stopped_count++;
+		}
+	    });
+	  }else{
+	    // GET THE COUNTS FROM THE SUMMARY COLLECTION
+            inst_running_count = results.get('inst_running');
+	    inst_stopped_count = results.get('inst_stopped');
+	  };
+
+          $instObj.find('#dashboard-instance-running span').text(inst_running_count);
+          $instObj.find('#dashboard-instance-stopped span').text(inst_stopped_count);
+          var scalinginsts = describe('scalinginst');
+          if (scalinginsts == null) scalinginsts = [];
+          $instObj.find('#dashboard-scaling-groups span').text(scalinginsts.length);
+          $storageObj.find('#dashboard-storage-volume span').text(results.get('volume'));
+          $storageObj.find('#dashboard-storage-snapshot span').text(results.get('snapshot'));
 //        $storageObj.find('#dashboard-storage-buckets span').text(0);
 //        $netsecObj.find('#dashboard-netsec-load-balancer span').text(0);
-        $netsecObj.find('#dashboard-netsec-sgroup span').text(results.sgroup);
-        $netsecObj.find('#dashboard-netsec-eip span').text(results.eip);
-        $netsecObj.find('#dashboard-netsec-keypair span').text(results.keypair);
-      }); 
+          $netsecObj.find('#dashboard-netsec-sgroup span').text(results.get('sgroup'));
+          $netsecObj.find('#dashboard-netsec-eip span').text(results.get('eip'));
+          $netsecObj.find('#dashboard-netsec-keypair span').text(results.get('keypair'));
+	});
+      });
+ 
       $('html body').eucadata('refresh','summary');// pass zone?
 
     },

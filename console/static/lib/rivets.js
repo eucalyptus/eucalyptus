@@ -72,7 +72,7 @@ rivets.configure({
                  //   console.log('unsubscribe ', keypath, callback);
                     obj.off('change:' + keypath, callback);
                 } else if (obj instanceof Backbone.Collection) {
-                    obj.off('add remove reset change', callback);
+                    obj.off('sync add remove reset change', callback);
                 } else {
                     // No easy portable way to observe plain objects.
                     // console.log('plain object');
@@ -152,6 +152,12 @@ rivets.binders["tooltip"] = {
     tokenizes: true,
     routine: function(el, keyname) {
       var value = $.i18n.prop(this.keypath);
+
+      if (value == '['+this.keypath+']') {
+        // I think this would be better, than going directly to the method
+        //value = getAdapter().read(this.model, this.keypath);
+        value = diveIntoObject(this.model, this.keypath, doObjectRead);
+      }
 
       if (value == null) return;
 
