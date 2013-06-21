@@ -459,7 +459,7 @@
        menuItems['associate'] = {"name":instance_action_associate, callback: function(key, opt){; }, disabled: function(){ return true; }};
        menuItems['disassociate'] = {"name":instance_action_disassociate, callback: function(key, opt){;}, disabled: function(){ return true; }};
        menuItems['tag'] = {"name":table_menu_edit_tags_action, callback: function(key, opt){;}, disabled: function(){ return true; }};
-       menuItems['launchconfig'] = {"name":instance_action_launchconfig, callback: function(key, opt){ thisObj._launchConfigAction(); }}
+       menuItems['launchconfig'] = {"name":instance_action_launchconfig, callback: function(key, opt){;}, disabled: function(){ return true; }}
      })();
 
      if(numSelected === 1 && 'running' in stateMap && $.inArray(instIds[0], stateMap['running']>=0)){
@@ -1050,6 +1050,8 @@
     },
 
     _launchConfigAction : function(){
+      var instance = this.tableWrapper.eucatable('getSelectedRows', 17)[0];
+      this.element.newlaunchconfig({instance:instance});
     },
 
     _launchMore : function( callback ) {

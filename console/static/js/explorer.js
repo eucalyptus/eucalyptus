@@ -41,7 +41,6 @@
           $ul.append(this.createResourceMenu(i, this.options.menus[i]));
         }
         this.element.append($ul);
- 
       },
 
       createUserMenu : function () {
@@ -104,6 +103,7 @@
         }
         return $menu;
       },
+
       _destroy : function() { },
 
       // called when the explorer is slide down
