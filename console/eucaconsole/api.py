@@ -115,7 +115,7 @@ class BaseAPIHandler(eucaconsole.BaseHandler):
             err = response.error
             ret = '[]'
             if isinstance(err, BotoServerError):
-                ret = ClcError(err.status, err.reason, err.message)
+                ret = ClcError(err.status, err.reason, err.error_message)
                 self.set_status(err.status);
             elif issubclass(err.__class__, Exception):
                 if isinstance(err, socket.timeout):
