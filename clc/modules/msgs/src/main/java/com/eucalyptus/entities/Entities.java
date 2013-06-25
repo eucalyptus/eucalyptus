@@ -62,7 +62,6 @@
 
 package com.eucalyptus.entities;
 
-import groovy.lang.Closure;
 import java.lang.ref.WeakReference;
 import java.util.Collections;
 import java.util.List;
@@ -72,6 +71,7 @@ import java.util.NoSuchElementException;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.TimeUnit;
+import javax.annotation.Nullable;
 import javax.persistence.EntityManager;
 import javax.persistence.EntityManagerFactory;
 import javax.persistence.EntityTransaction;
@@ -81,18 +81,21 @@ import javax.persistence.PersistenceContext;
 import javax.persistence.Query;
 import javax.transaction.Synchronization;
 import org.apache.log4j.Logger;
-import org.codehaus.groovy.runtime.MethodClosure;
 import org.hibernate.Criteria;
+import org.hibernate.Hibernate;
 import org.hibernate.HibernateException;
 import org.hibernate.Session;
 import org.hibernate.Transaction;
+import org.hibernate.collection.AbstractPersistentCollection;
 import org.hibernate.criterion.Criterion;
 import org.hibernate.criterion.Example;
 import org.hibernate.criterion.MatchMode;
 import org.hibernate.criterion.Projections;
 import org.hibernate.criterion.Restrictions;
+import org.hibernate.engine.SessionImplementor;
 import org.hibernate.exception.ConstraintViolationException;
 import org.hibernate.exception.LockAcquisitionException;
+import org.hibernate.proxy.HibernateProxy;
 import com.eucalyptus.bootstrap.Databases;
 import com.eucalyptus.configurable.ConfigurableClass;
 import com.eucalyptus.configurable.ConfigurableField;
@@ -121,6 +124,7 @@ public class Entities {
   @ConfigurableField( description = "Maximum number of times a transaction may be retried before giving up.",
                       initial = "5" )
   public static Integer                                          CONCURRENT_UPDATE_RETRIES = 10;
+  private static final boolean                                   CLEANUP_TX_SESSION        = Boolean.valueOf( System.getProperty( "com.eucalyptus.entities.cleanupTxSession", "true" ) );
   private static Cache<String, String>                           txLog                     = CacheBuilder.newBuilder().weakKeys().softValues().build(); // No softKeys available for CacheBuilder
   private static Logger                                          LOG                       = Logger.getLogger( Entities.class );
   private static ThreadLocal<String>                             txRootThreadLocal         = new ThreadLocal<String>( );
@@ -539,13 +543,49 @@ public class Entities {
    * {@inheritDoc Session}
    */
   public static boolean isPersistent( final Object obj ) {
-    if ( !hasTransaction( ) ) {
+    if ( !hasTransaction( obj ) ) {
       return false;
     } else {
       return getTransaction( obj ).getTxState( ).getSession( ).contains( obj );
     }
   }
-  
+
+  /**
+   * Check if a collection or proxy is initialized.
+   *
+   * @param obj The object to test
+   * @return True if initialized
+   */
+  public static boolean isInitialized( @Nullable final Object obj ) {
+    return obj != null && Hibernate.isInitialized( obj );
+  }
+
+  /**
+   * Check if a collection or proxy is readable.
+   *
+   * <p>A lazy object is readable if it has an active transaction or if it is
+   * already initialized.</p>
+   *
+   * @param obj The object to test
+   * @return True if readable
+   */
+  public static boolean isReadable( @Nullable final Object obj ) {
+    final SessionImplementor sessionImplementor = getSession( obj );
+    return obj != null && (
+        ( sessionImplementor != null && sessionImplementor.isOpen( ) ) ||
+            isInitialized( obj ) );
+  }
+
+  private static SessionImplementor getSession( @Nullable final Object obj ) {
+    SessionImplementor session = null;
+    if ( obj instanceof AbstractPersistentCollection ) {
+      session = ((AbstractPersistentCollection) obj).getSession( );
+    } else if ( obj instanceof HibernateProxy ) {
+      session = ((HibernateProxy) obj).getHibernateLazyInitializer( ).getSession( );
+    }
+    return session;
+  }
+
   /**
    *
    */
@@ -817,19 +857,21 @@ public class Entities {
         }
         this.transaction = null;
 
-        // sessionRef
-        if ( this.sessionRef != null && ( this.sessionRef.get( ) != null ) ) {
-          this.sessionRef.clear( );
-        }
+        if ( CLEANUP_TX_SESSION ) {
+          // sessionRef
+          if ( this.sessionRef != null && ( this.sessionRef.get( ) != null ) ) {
+            this.sessionRef.clear( );
+          }
 
-        //em
-        if ( this.em != null && this.em.isOpen( ) ) try {
-          this.em.close( );
-        } catch ( final RuntimeException ex ) {
-          LOG.warn( ex );
-          Logs.extreme( ).warn( ex, ex );
+          //em
+          if ( this.em != null && this.em.isOpen( ) ) try {
+            this.em.close( );
+          } catch ( final RuntimeException ex ) {
+            LOG.warn( ex );
+            Logs.extreme( ).warn( ex, ex );
+          }
+          this.em = null;
         }
-        this.em = null;
       }
       
       EntityManager getEntityManager( ) {
