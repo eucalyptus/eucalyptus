@@ -554,11 +554,13 @@ public class VmControl {
               vmIdx.set( vm );
               vm.setNetworkIndex( vmIdx );
             }
+            final int oldCode = vm.getState( ).getCode( );
+            final int newCode = VmState.PENDING.getCode( );
+            final String oldState = vm.getState( ).getName( );
+            final String newState = VmState.PENDING.getName( );
             vm.setState( VmState.PENDING );
             db.commit( );
             ClusterAllocator.get( ).apply( allocInfo );
-            final int oldCode = vm.getState( ).getCode( ), newCode = VmState.PENDING.getCode( );
-            final String oldState = vm.getState( ).getName( ), newState = VmState.PENDING.getName( );
             reply.getInstancesSet( ).add( new TerminateInstancesItemType( vm.getInstanceId( ), oldCode, oldState, newCode, newState ) );
           } catch ( Exception ex ) {
             db.rollback( );
