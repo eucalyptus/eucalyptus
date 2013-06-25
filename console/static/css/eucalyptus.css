@@ -3412,3 +3412,11 @@ background: transparent url(../images/table-header-bg.png) repeat-x left center;
 }
 
 .deletearea {width:30px;}
+
+.eucasubset {
+    display: inline-block;
+}
+
+.create-alarm .form-row {
+    white-space: nowrap;
+}

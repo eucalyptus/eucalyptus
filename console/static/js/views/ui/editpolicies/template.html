@@ -35,8 +35,7 @@
                     </td>
                     <td style="position:relative">
                         <select data-value="toAdd.alarm">
-                            <option value="alarm1">Alarm 1</option>
-                            <option value="alarm2">Alarm 2</option>
+                            <option data-each-item="alarms" value="item.name" data-text="item.name"></option>
                         </select><br />
                         <a style="position:absolute; white-space: nowrap; left: 0px" data-on-click="createAlarm">Create alarm</a>
                     </td>
