@@ -162,6 +162,8 @@ public class ClusterEndpoint implements Startable {
           }
         } catch ( EucalyptusCloudException ex ) {
           throw ex;
+        } catch ( NoSuchElementException ex ) {
+        	// Ignore and continue
         } catch ( Exception ex ) {
           LOG.error( ex );
           throw new EucalyptusCloudException( "Migrating off of node " + request.getSourceHost( ) + " failed because of: " + ex.getMessage( ), ex );
