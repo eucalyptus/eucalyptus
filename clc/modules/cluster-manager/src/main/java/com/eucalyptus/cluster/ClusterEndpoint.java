@@ -162,8 +162,6 @@ public class ClusterEndpoint implements Startable {
           }
         } catch ( EucalyptusCloudException ex ) {
           throw ex;
-        } catch ( NoSuchElementException ex ) {
-          throw new EucalyptusCloudException( "Failed to find ENABLED cluster for node " + request.getSourceHost( ), ex );
         } catch ( Exception ex ) {
           LOG.error( ex );
           throw new EucalyptusCloudException( "Migrating off of node " + request.getSourceHost( ) + " failed because of: " + ex.getMessage( ), ex );
