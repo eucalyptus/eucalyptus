@@ -1237,7 +1237,6 @@ void *monitoring_thread(void *arg)
     bunchOfInstances *vnhead = NULL;
     ncInstance *instance = NULL;
     ncInstance *vninstance = NULL;
-    ncInstance *tmpInstance = NULL;
 
     LOGINFO("spawning monitoring thread\n");
     if (arg == NULL) {
@@ -1341,8 +1340,18 @@ void *monitoring_thread(void *arg)
                              nc_state.booting_cleanup_threshold, migration_state_names[instance->migration_state]);
                     continue;
                 } else {
-                    LOGDEBUG("[%s] finding and terminating BOOTING instance, which has exceeded cleanup threshold of %d seconds (%d)\n", instance->instanceId,
-                             nc_state.booting_cleanup_threshold, find_and_terminate_instance(nc, NULL, instance->instanceId, 1, &tmpInstance));
+                    LOGDEBUG("[%s] finding and terminating BOOTING instance, which has exceeded cleanup threshold of %d seconds\n", instance->instanceId,
+                             nc_state.booting_cleanup_threshold);
+
+                    // do the shutdown in a thread
+                    pthread_attr_t tattr;
+                    pthread_t tid;
+                    pthread_attr_init(&tattr);
+                    pthread_attr_setdetachstate(&tattr, PTHREAD_CREATE_DETACHED);
+                    void * param = (void *)strdup(instance->instanceId);
+                    if (pthread_create(&tid, &tattr, terminating_thread, (void *)param) != 0) {
+                        LOGERROR("[%s] failed to start VM termination thread\n", instance->instanceId);
+                    }
                 }
             }
 
@@ -1792,6 +1801,51 @@ done:
 }
 
 //!
+//! Defines the termination thread.
+//!
+//! @param[in] arg a transparent pointer to the argument passed to this thread handler
+//!
+//! @return Always return NULL
+//!
+void *terminating_thread(void *arg)
+{
+    char * instanceId = (char *)arg;
+
+    LOGDEBUG("[%s] spawning terminating thread\n", instanceId);
+
+    int err = find_and_terminate_instance(instanceId);
+    if (err != EUCA_OK) {
+        EUCA_FREE(arg);
+        return NULL;
+    }
+
+    {
+        sem_p(inst_sem);
+        ncInstance * instance = find_instance(&global_instances, instanceId);
+        if (instance == NULL) {
+            sem_v(inst_sem);
+            EUCA_FREE(arg);
+            return NULL;
+        }
+    
+        // change the state and let the monitoring_thread clean up state
+        if (instance->state != TEARDOWN && instance->state != CANCELED) {
+            // do not leave TEARDOWN (cleaned up) or CANCELED (already trying to terminate)
+            if (instance->state == STAGING) {
+                change_state(instance, CANCELED);
+            } else {
+                change_state(instance, SHUTOFF);
+            }
+        }
+        copy_instances();
+        sem_v(inst_sem);
+    }
+
+    EUCA_FREE(arg);    
+    return NULL;
+}
+
+//!
 //! On startup, adopt instance found running on the hypervisor.
 //!
 void adopt_instances()
@@ -2219,15 +2273,21 @@ static int init(void)
 
     // now that hypervisor-specific initializers have discovered mem_max and cores_max,
     // adjust the values based on configuration parameters, if any
-    if (nc_state.config_max_mem && nc_state.config_max_mem < nc_state.mem_max)
+    if (nc_state.config_max_mem){
+        if (nc_state.config_max_mem > nc_state.mem_max)
+            LOGWARN("MAX_MEM value is set to %lldMB that is greater than the amount of physical memory: %lldMB\n", nc_state.config_max_mem, nc_state.mem_max);
         nc_state.mem_max = nc_state.config_max_mem;
+    }
 
     if (nc_state.config_max_cores) {
+        int cores = nc_state.cores_max;
         nc_state.cores_max = nc_state.config_max_cores;
         if (nc_state.cores_max > MAXINSTANCES_PER_NC) {
             nc_state.cores_max = MAXINSTANCES_PER_NC;
             LOGWARN("ignoring excessive MAX_CORES value (leaving at %lld)\n", nc_state.cores_max);
         }
+        if (nc_state.cores_max > cores)
+            LOGWARN("MAX_CORES value is set to %d that is greater than the amount of physical cores: %d\n", nc_state.cores_max, cores);
     }
 
     LOGINFO("physical memory available for instances: %lldMB\n", nc_state.mem_max);

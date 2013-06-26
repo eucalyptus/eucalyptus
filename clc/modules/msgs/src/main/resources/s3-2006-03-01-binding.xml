@@ -513,8 +513,8 @@
 				<structure map-as="edu.ucsb.eucalyptus.msgs.ListEntry" />
 			</collection>
 			<collection name="CommonPrefixes" field="commonPrefixes"
-				factory="org.jibx.runtime.Utility.arrayListFactory" usage="optional">
-				<structure map-as="edu.ucsb.eucalyptus.msgs.PrefixEntry" />
+				factory="org.jibx.runtime.Utility.arrayListFactory" test-method="isCommonPrefixesPresent" usage="optional">
+				<structure map-as="edu.ucsb.eucalyptus.msgs.PrefixEntry"/>
 			</collection>
 	</mapping>
 

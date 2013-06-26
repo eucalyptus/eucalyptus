@@ -29,6 +29,10 @@ define(['app'], function(app) {
     finish: function(outputModel) {
       outputModel.set('names', this.get('type_names'));
       outputModel.set('instance_type', this.get('instance_type'));
+      var zone = this.get('zone');
+      if (zone != 'Any') {
+        outputModel.set('placement', zone);
+      }
       outputModel.set('tags', this.get('tags'));
 
       // presently the UI doesn't accept two numbers - setting them the same for now

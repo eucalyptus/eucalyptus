@@ -60,7 +60,7 @@
  *   NEEDED TO COMPLY WITH ANY SUCH LICENSES OR RIGHTS.
  ************************************************************************/
 
-package com.eucalyptus.cloud;
+package com.eucalyptus.entities;
 
 import static com.eucalyptus.util.Parameters.checkParam;
 import static org.hamcrest.Matchers.notNullValue;

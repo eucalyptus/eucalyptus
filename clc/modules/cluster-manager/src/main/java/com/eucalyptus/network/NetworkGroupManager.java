@@ -142,7 +142,11 @@ public class NetworkGroupManager {
       reply.setGroupId( group.getGroupId() );
       return reply;
     } catch ( final Exception ex ) {
-      throw new EucalyptusCloudException( "CreateSecurityGroup failed because: " + Exceptions.causeString( ex ), ex );
+      String cause = Exceptions.causeString( ex );
+      if ( cause.contains( "DuplicateMetadataException" ) )
+          throw new EucalyptusCloudException( "The security group '" + groupName + "' already exists" );
+      else
+          throw new EucalyptusCloudException( "CreateSecurityGroup failed because: " + cause, ex );
     }
   }
 

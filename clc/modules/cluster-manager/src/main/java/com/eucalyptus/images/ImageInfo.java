@@ -96,11 +96,11 @@ import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.principal.Account;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.cloud.ImageMetadata;
-import com.eucalyptus.cloud.UserMetadata;
 import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.Transactions;
+import com.eucalyptus.entities.UserMetadata;
 import com.eucalyptus.records.Logs;
 import com.eucalyptus.util.Callback;
 import com.eucalyptus.util.FullName;
@@ -336,7 +336,7 @@ public class ImageInfo extends UserMetadata<ImageMetadata.State> implements Imag
   
   /**
    * @see com.eucalyptus.util.Mappable#getName()
-   * @see com.eucalyptus.cloud.UserMetadata#equals(java.lang.Object)
+   * @see com.eucalyptus.entities.UserMetadata#equals(java.lang.Object)
    * @param o
    * @return
    */
@@ -353,7 +353,7 @@ public class ImageInfo extends UserMetadata<ImageMetadata.State> implements Imag
   }
   
   /**
-   * @see com.eucalyptus.cloud.UserMetadata#hashCode()
+   * @see com.eucalyptus.entities.UserMetadata#hashCode()
    * @see com.eucalyptus.util.Mappable#hashCode()
    * @return
    */

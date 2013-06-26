@@ -47,18 +47,14 @@ import com.eucalyptus.event.ClockTick;
 import com.eucalyptus.event.EventListener;
 import com.eucalyptus.event.Listeners;
 import com.eucalyptus.loadbalancing.LoadBalancer;
-import com.eucalyptus.loadbalancing.LoadBalancerBackendInstance;
 import com.eucalyptus.loadbalancing.LoadBalancerDnsRecord;
-import com.eucalyptus.loadbalancing.LoadBalancing;
 import com.eucalyptus.loadbalancing.LoadBalancer.LoadBalancerEntityTransform;
-import com.eucalyptus.loadbalancing.LoadBalancerBackendInstance.STATE;
 import com.eucalyptus.loadbalancing.LoadBalancerDnsRecord.LoadBalancerDnsRecordCoreView;
 import com.eucalyptus.loadbalancing.LoadBalancerDnsRecord.LoadBalancerDnsRecordEntityTransform;
 import com.eucalyptus.loadbalancing.LoadBalancerSecurityGroup;
 import com.eucalyptus.loadbalancing.LoadBalancerSecurityGroup.LoadBalancerSecurityGroupCoreView;
 import com.eucalyptus.loadbalancing.LoadBalancerZone;
 import com.eucalyptus.loadbalancing.LoadBalancerZone.LoadBalancerZoneCoreView;
-import com.eucalyptus.loadbalancing.activities.EventHandlerChainDelete.SecurityGroupCleanup;
 import com.eucalyptus.loadbalancing.activities.LoadBalancerAutoScalingGroup.LoadBalancerAutoScalingGroupCoreView;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.TypeMapper;
@@ -366,7 +362,7 @@ public class LoadBalancerServoInstance extends AbstractPersistent {
 		@Override
 		public void fireEvent(ClockTick event) {
 			if (!( Bootstrap.isFinished() &&
-			          Topology.isEnabledLocally( LoadBalancing.class ) &&
+			          Topology.isEnabledLocally( Eucalyptus.class ) && // TODO should be LoadBalancing.class
 			          Topology.isEnabled( Eucalyptus.class ) )) 
 				return;
 			

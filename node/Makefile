@@ -71,6 +71,7 @@ NCWSDL=$(WSDLPATH)/$(NCWSDLNAME)
 SCWSDLNAME=eucalyptus_sc.wsdl
 SCWSDL=$(WSDLPATH)/$(SCWSDLNAME)
 SERVICE_SO=libEucalyptusNC.so
+SERVICE_SO_FAKE=libEucalyptusNCFake.so
 SERVICE_NAME=EucalyptusNC
 CLIENT=NCclient
 GFLAGS=$(patsubst -Werror,,$(CFLAGS))
@@ -178,8 +179,8 @@ client: $(CLIENT) $(CLIENT)_local
 
 fake: $(CLIENT)_fake
 
-$(CLIENT): generated/stubs $(STORAGE_OBJS) ../util/log.o ../util/misc.o ../util/euca_string.o ../util/sensor.o ../util/data.o client-marshal-adb.o client-marshal-local.o $(CLIENT).c ../storage/vbr.o
-	$(CC) -o $(CLIENT) $(CPPFLAGS) $(CFLAGS) $(INCLUDES) -shared generated/adb_*.o generated/axis2_stub_*.o $(AXIOM_LIBS) client-marshal-adb.o ../util/*.o $(AXIOM_LIBS) $(OPENSSL_LIBS) ../storage/diskutil.o ../net/*.o -lm $(CLIENT).c ../storage/http.o -lcurl ../storage/storage-windows.o $(NC_LIBS)
+$(CLIENT): generated/stubs $(CLIENT).c $(STORAGE_OBJS) ../util/log.o ../util/misc.o ../util/euca_string.o ../util/sensor.o ../util/data.o client-marshal-adb.o client-marshal-local.o $(CLIENT).c ../storage/vbr.o
+	$(CC) -o $(CLIENT) $(CPPFLAGS) $(CFLAGS) $(INCLUDES) $(CLIENT).c client-marshal-adb.c generated/adb_*.o generated/axis2_stub_*.o ../util/*.o ../storage/diskutil.o ../net/*.o ../storage/http.o -lcurl ../storage/storage-windows.o -lm $(AXIOM_LIBS) $(OPENSSL_LIBS) $(NC_LIBS)
 
 $(CLIENT)_fake: generated/stubs $(STORAGE_OBJS) ../util/log.o ../util/misc.o ../util/euca_string.o ../util/sensor.o ../util/data.o client-marshal-adb.o client-marshal-local.o client-marshal-fake.o $(CLIENT).c ../storage/vbr.o
 

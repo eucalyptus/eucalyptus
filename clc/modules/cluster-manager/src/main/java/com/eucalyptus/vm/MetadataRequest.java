@@ -80,14 +80,14 @@ public class MetadataRequest {
   private final VmInstance vm;
   
   public MetadataRequest( String requestIp, String requestUrl ) {
-    super( );
     try {
       this.requestIp = requestIp;
-      String[] path = requestUrl.replaceFirst( "/", "?" ).split( "\\?" );
+      requestUrl = requestUrl.replaceAll( "[/]+", "/" );
+      String[] path = requestUrl.split( "/", 2 );
       if ( path.length > 0 ) {
         this.metadataName = path[0];
         if ( path.length > 1 ) {
-          this.localPath = path[1].replaceFirst( "^[/]*", "" ).replaceAll( "[/]+", "/" );
+          this.localPath = path[1].replaceFirst( "^[/]*", "" );
         } else {
           this.localPath = "";
         }
@@ -95,19 +95,7 @@ public class MetadataRequest {
         this.metadataName = "";
         this.localPath = "";
       }
-      VmInstance findVm = null;
-      if ( !Databases.isVolatile( ) ) {
-        try {
-          findVm = VmInstances.lookupByPublicIp( requestIp );
-        } catch ( Exception ex2 ) {
-          try {
-            findVm = VmInstances.lookupByPrivateIp( requestIp );
-          } catch ( Exception ex ) {
-            Logs.exhaust( ).error( ex );
-          }
-        }
-      } 
-      this.vm = findVm;
+      this.vm = resolveVm( requestIp );
     } finally {
       LOG.debug( ( this.vm != null
                                   ? "Instance"
@@ -118,7 +106,7 @@ public class MetadataRequest {
                  + " requestUrl=" + requestUrl );
     }
   }
-  
+
   public boolean isInstance( ) {
     return vm != null;
   }
@@ -176,5 +164,21 @@ public class MetadataRequest {
       }
     }
     return false;
+  }
+
+  protected VmInstance resolveVm( final String requestIp ) {
+    VmInstance findVm = null;
+    if ( !Databases.isVolatile() ) {
+      try {
+        findVm = VmInstances.lookupByPublicIp( requestIp );
+      } catch ( Exception ex2 ) {
+        try {
+          findVm = VmInstances.lookupByPrivateIp( requestIp );
+        } catch ( Exception ex ) {
+          Logs.exhaust().error( ex );
+        }
+      }
+    }
+    return findVm;
   }
 }

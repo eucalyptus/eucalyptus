@@ -77,9 +77,9 @@ public class TransformationFunctions {
     INSTANCE {
       @Override
       public MetricAlarm apply(@Nullable AlarmEntity alarmEntity) {
-        LOG.debug("OK_ACTIONS=" + alarmEntity.getOkActions());
-        LOG.debug("ALARM_ACTIONS=" + alarmEntity.getAlarmActions());
-        LOG.debug("INSUFFICIENT_DATA_ACTIONS="
+        LOG.trace("OK_ACTIONS=" + alarmEntity.getOkActions());
+        LOG.trace("ALARM_ACTIONS=" + alarmEntity.getAlarmActions());
+        LOG.trace("INSUFFICIENT_DATA_ACTIONS="
             + alarmEntity.getInsufficientDataActions());
         MetricAlarm metricAlarm = new MetricAlarm();
         metricAlarm.setActionsEnabled(alarmEntity.getActionsEnabled());

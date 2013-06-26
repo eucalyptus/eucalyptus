@@ -99,13 +99,6 @@ define([
 
            // SETUP THE AVAILABILITY ZONE SELECT OPTIONS
            this.setupSelectOptionsForAzoneBox(args);
-
-           // SETUP INPUT VALIDATOR
-           self.scope.volume.on('change', function() {
-             self.scope.error.clear();
-             self.scope.error.set(self.scope.volume.validate());
-             console.log("Validation Error: " + JSON.stringify(self.scope.error));
-           });
         },
 
         // CONSTRUCT A STRING THAT DISPLAY BOTH RESOURCE ID AND ITS NAME TAG
@@ -189,15 +182,23 @@ define([
                 // the required size field is typed in, instead of having to tab
                 // out of it or click another optional field - EUCA-6106
                 // button click will still validate and disallow weird input.
-                self.scope.createButton.set('disabled', false);
+                setTimeout(function() { $(e.target).change(); }, 0);
+                self.scope.createButton.set('disabled', !self.scope.volume.isValid());
               }
 
             }
 
+            this.scope.volume.on('change', function(model) {
+                console.log('CHANGE', arguments);
+                self.scope.volume.validate(model.changed);
+            });
 
-            this.scope.volume.on('validated', function() {
+            this.scope.volume.on('validated', function(valid, model, errors) {
+                _.each(_.keys(model.changed), function(key) { 
+                    self.scope.error.set(key, errors[key]); 
+                });
+
                 self.scope.createButton.set('disabled', !self.scope.volume.isValid());
-               // self.render();
             });
 
             this._do_init();

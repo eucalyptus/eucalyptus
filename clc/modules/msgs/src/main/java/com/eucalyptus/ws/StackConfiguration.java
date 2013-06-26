@@ -202,33 +202,40 @@ public class StackConfiguration extends AbstractPersistent {
   public static Integer       HTTP_MAX_HEADER_BYTES             = 8 * 1024;
   
   @ConfigurableField( description = "Use DNS delegation for eucarc." )
+  @Deprecated  //GRZE: this field will be superceded by new DNS and eucarc support in 3.4: DO NOT USE IT!
   public static Boolean       USE_DNS_DELEGATION                = Boolean.FALSE;
-  
   @ConfigurableField( description = "Use DNS names for instances." )
+  @Deprecated  //GRZE: this field will be superceded by new DNS support in 3.4: DO NOT USE IT!
   public static Boolean       USE_INSTANCE_DNS                = Boolean.FALSE;
 
   @ConfigurableField( description = "Default scheme prefix in eucarc.",
                       changeListener = TemporarySchemeUpdater.class )
+  @Deprecated  //GRZE: this field will be superceded by new eucarc support in 3.4: DO NOT USE IT!
   public static Boolean       DEFAULT_HTTPS_ENABLED             = Boolean.FALSE;
   
   @ConfigurableField( description = "Default scheme for EC2_URL in eucarc.",
                       changeListener = UriChangeListener.class )
+  @Deprecated  //GRZE: this field will be superceded by new eucarc support in 3.4: DO NOT USE IT!
   public static String        DEFAULT_EC2_URI_SCHEME            = "http";                                      //GRZE: there references to specific services are not in the right scope here. 
                                                                                                                 
   @ConfigurableField( description = "Default scheme for S3_URL in eucarc.",
                       changeListener = UriChangeListener.class )
+  @Deprecated  //GRZE: this field will be superceded by new eucarc support in 3.4: DO NOT USE IT!
   public static String        DEFAULT_S3_URI_SCHEME             = "http";                                      //GRZE: there references to specific services are not in the right scope here.
                                                                                                                 
   @ConfigurableField( description = "Default scheme for AWS_SNS_URL in eucarc.",
                       changeListener = UriChangeListener.class )
+  @Deprecated  //GRZE: this field will be superceded by new eucarc support in 3.4: DO NOT USE IT!
   public static String        DEFAULT_AWS_SNS_URI_SCHEME        = "http";                                      //GRZE: there references to specific services are not in the right scope here.
                                                                                                                 
   @ConfigurableField( description = "Default scheme for EUARE_URL in eucarc.",
                       changeListener = UriChangeListener.class )
+  @Deprecated  //GRZE: this field will be superceded by new eucarc support in 3.4: DO NOT USE IT!
   public static String        DEFAULT_EUARE_URI_SCHEME          = "http";                                      //GRZE: there references to specific services are not in the right scope here.
 
   @ConfigurableField( description = "Default EUSTORE_URL in eucarc.",
                       changeListener = UriChangeListener.class )
+  @Deprecated  //GRZE: this field will be superceded by new eucarc support in 3.4: DO NOT USE IT!
   public static String        DEFAULT_EUSTORE_URL          = "http://emis.eucalyptus.com/";                                      //GRZE: there references to specific services are not in the right scope here.
 
   private static Logger       LOG                               = Logger.getLogger( StackConfiguration.class );
@@ -276,6 +283,7 @@ public class StackConfiguration extends AbstractPersistent {
     public abstract String getSecureScheme( );
   }
   
+  @Deprecated  //GRZE: this field will be superceded by new DNS support in 3.4: DO NOT USE IT!
   public static String lookupDnsDomain( ) {
     return SystemConfiguration.getSystemConfiguration( ).getDnsDomain( );//TODO:GRZE: sigh. 
   }

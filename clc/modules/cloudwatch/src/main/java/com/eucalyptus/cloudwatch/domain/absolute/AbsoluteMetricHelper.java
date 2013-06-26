@@ -51,6 +51,7 @@ public class AbsoluteMetricHelper {
     
   }
   public static MetricDifferenceInfo calculateDifferenceSinceLastEvent(String namespace, String metricName, String dimensionName, String dimensionValue, Date newTimestamp, Double newMetricValue) {
+    LOG.trace("namespace="+namespace+",metricName="+metricName+",dimensionName="+dimensionName+",dimensionValue="+dimensionValue+",newTimestamp="+newTimestamp+",newMetricValue="+newMetricValue);
     MetricDifferenceInfo returnValue = null;
     EntityTransaction db = Entities.get(AbsoluteMetricHistory.class);
     try {
@@ -62,6 +63,7 @@ public class AbsoluteMetricHelper {
       AbsoluteMetricHistory lastEntity = (AbsoluteMetricHistory) criteria.uniqueResult();
       if (lastEntity == null) {
         // first data point, add it and return null (nothing to diff against)
+        LOG.trace("First entry");
         lastEntity = new AbsoluteMetricHistory();
         lastEntity.setNamespace(namespace);
         lastEntity.setMetricName(metricName);
@@ -74,8 +76,10 @@ public class AbsoluteMetricHelper {
       } else {
         double TOLERANCE = 0.0000001; // arbitrary to check double "equality"
         long elapsedTimeInMillis = newTimestamp.getTime() - lastEntity.getTimestamp().getTime();
+        LOG.trace("lastTimestamp="+lastEntity.getTimestamp());
         double valueDifference = newMetricValue - lastEntity.getLastMetricValue();
         if (elapsedTimeInMillis < 0) {
+          LOG.trace("earlier point, kicking out");
           // a negative value of elapsedTimeInMillis means this data point is not useful
           return null;
         } else if (elapsedTimeInMillis == 0) {
@@ -98,6 +102,7 @@ public class AbsoluteMetricHelper {
             }
           }
         }
+        LOG.trace("new values=valueDifference="+valueDifference+",elapsedTimeInMillis="+elapsedTimeInMillis);
         returnValue = new MetricDifferenceInfo(valueDifference, elapsedTimeInMillis);
       }
       db.commit();

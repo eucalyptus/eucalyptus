@@ -1223,7 +1223,6 @@ public class OverlayManager extends DASManager {
 	@Override
 	public List<CheckerTask> getCheckers() {
 		List<CheckerTask> checkers = new ArrayList<CheckerTask>();
-		//checkers.add(new OverlayVolumeCleanup());
 		return checkers;
 	}
 
@@ -1283,7 +1282,7 @@ public class OverlayManager extends DASManager {
 									LOG.info("Snapshot in progress. Not detaching loop device.");
 									//volumeManager.abort();
 								}
-						}
+							}
 						}
 					} catch (EucalyptusCloudException e) {
 						LOG.error(e, e);
@@ -1301,4 +1300,5 @@ public class OverlayManager extends DASManager {
 			throw new EucalyptusCloudException(ex);
 		}
 	}
+	
 }

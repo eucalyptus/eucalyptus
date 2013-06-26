@@ -60,7 +60,7 @@
  *   NEEDED TO COMPLY WITH ANY SUCH LICENSES OR RIGHTS.
  ************************************************************************/
 
-package com.eucalyptus.cloud;
+package com.eucalyptus.entities;
 
 import javax.persistence.Column;
 import javax.persistence.MappedSuperclass;
@@ -68,7 +68,6 @@ import javax.persistence.PrePersist;
 import javax.persistence.Transient;
 import com.eucalyptus.auth.principal.AccountFullName;
 import com.eucalyptus.auth.principal.Principals;
-import com.eucalyptus.entities.AbstractStatefulPersistent;
 import com.eucalyptus.util.HasFullName;
 import com.eucalyptus.util.OwnerFullName;
 import com.eucalyptus.util.RestrictedType.AccountRestrictedType;

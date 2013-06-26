@@ -95,14 +95,14 @@ import com.eucalyptus.vm.VmInstance.VmState;
 import com.eucalyptus.vm.VmInstance.VmStateSet;
 import com.eucalyptus.vm.VmInstances;
 import com.google.common.base.Predicate;
-import edu.ucsb.eucalyptus.cloud.exceptions.ExceptionList;
 import edu.ucsb.eucalyptus.msgs.ClusterAddressInfo;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 
 public abstract class AbstractSystemAddressManager {
   private final static Logger                                              LOG     = Logger.getLogger( AbstractSystemAddressManager.class );
   private static final ConcurrentNavigableMap<ClusterAddressInfo, Integer> orphans = new ConcurrentSkipListMap<ClusterAddressInfo, Integer>( );
-  
+  private static final String ERR_SYS_INSUFFICIENT_ADDRESS_CAPACITY                = "InsufficientAddressCapacity";
+
   public static void clearOrphan( ClusterAddressInfo address ) {
     Integer delay = orphans.remove( address );
     delay = ( delay == null
@@ -174,16 +174,16 @@ public abstract class AbstractSystemAddressManager {
 		  numSystemReserved=0;
 	  }
 	  if ( (Addresses.getInstance( ).listDisabledValues( ).size( ) - numSystemReserved ) < 1 ) {
-		  throw new NotEnoughResourcesException( ExceptionList.ERR_SYS_INSUFFICIENT_ADDRESS_CAPACITY );
+		  throw new NotEnoughResourcesException( ERR_SYS_INSUFFICIENT_ADDRESS_CAPACITY );
 	  }	    
 
 	  Predicate<Address> predicate = RestrictedTypes.filterPrivileged( );    
 	  final Address addr = Addresses.getInstance( ).enableFirst( predicate ).allocate( userId );   
 
-	  LOG.debug( "Allocated address for public addressing: " + addr.toString( ) );
+	  LOG.debug( "Allocated address for public addressing: " + String.valueOf( addr ) );
 	  if ( addr == null ) {
 		  LOG.debug( LogUtil.header( Addresses.getInstance( ).toString( ) ) );
-		  throw new NotEnoughResourcesException( ExceptionList.ERR_SYS_INSUFFICIENT_ADDRESS_CAPACITY );
+		  throw new NotEnoughResourcesException( ERR_SYS_INSUFFICIENT_ADDRESS_CAPACITY );
 	  }
 	  return addr;
   }

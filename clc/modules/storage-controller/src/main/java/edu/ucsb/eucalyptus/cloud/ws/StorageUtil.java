@@ -27,8 +27,8 @@ import org.hibernate.criterion.Restrictions;
 import com.eucalyptus.blockstorage.Snapshot;
 import com.eucalyptus.blockstorage.State;
 import com.eucalyptus.blockstorage.Volume;
-import com.eucalyptus.cloud.UserMetadata;
 import com.eucalyptus.entities.Entities;
+import com.eucalyptus.entities.UserMetadata;
 import com.google.common.base.Objects;
 
 /**

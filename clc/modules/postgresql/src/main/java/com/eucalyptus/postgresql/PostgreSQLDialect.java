@@ -17,18 +17,16 @@
  * CA 93117, USA or visit http://www.eucalyptus.com/licenses/ if you need
  * additional information or have any questions.
  ************************************************************************/
-package com.eucalyptus.loadbalancing.activities;
-
-import com.eucalyptus.autoscaling.activities.DispatchingClient;
-import com.eucalyptus.cloudwatch.CloudWatch;
-import com.eucalyptus.cloudwatch.CloudWatchMessage;
+package com.eucalyptus.postgresql;
 
 /**
- * @author Sang-Min Park
- *
+ * Customized HA-JDBC PostgreSQL dialect that avoids use of truncate table.
  */
-public class CloudWatchClient extends DispatchingClient<CloudWatchMessage, CloudWatch> {
-	public CloudWatchClient(String userId){
-		super(userId, CloudWatch.class);
-	}
+@SuppressWarnings("nls")
+public class PostgreSQLDialect extends net.sf.hajdbc.dialect.PostgreSQLDialect
+{
+  @Override
+  protected String truncateTableFormat( ) {
+    return "DELETE FROM {0}";
+  }
 }

@@ -43,11 +43,11 @@ import org.hibernate.annotations.CacheConcurrencyStrategy;
 import org.hibernate.annotations.Entity;
 
 import com.eucalyptus.bootstrap.Bootstrap;
-import com.eucalyptus.cloud.UserMetadata;
 import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.Topology;
 import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.entities.Entities;
+import com.eucalyptus.entities.UserMetadata;
 import com.eucalyptus.event.ClockTick;
 import com.eucalyptus.event.EventListener;
 import com.eucalyptus.event.Listeners;
@@ -348,7 +348,7 @@ public class LoadBalancerBackendInstance extends UserMetadata<LoadBalancerBacken
 		@Override
 		public void fireEvent(ClockTick event) {
 			if (!( Bootstrap.isFinished() &&
-			          Topology.isEnabledLocally( LoadBalancing.class ) &&
+			          Topology.isEnabledLocally( Eucalyptus.class ) &&  // TODO should be LoadBalancing.class
 			          Topology.isEnabled( Eucalyptus.class ) )) 
 				return;
 		

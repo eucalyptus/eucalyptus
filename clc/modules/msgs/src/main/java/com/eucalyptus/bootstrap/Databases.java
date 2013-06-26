@@ -83,6 +83,7 @@
 
 package com.eucalyptus.bootstrap;
 
+import com.google.common.collect.Lists;
 import groovy.sql.Sql;
 import java.io.File;
 import java.io.IOException;
@@ -95,6 +96,7 @@ import java.sql.SQLException;
 import java.sql.Statement;
 import java.sql.Types;
 import java.text.MessageFormat;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
@@ -399,10 +401,11 @@ public class Databases {
     try {
       Logs.extreme( ).info( "Attempting to acquire db state lock: " + runnableFunction );
       if ( canHas.writeLock( ).tryLock( 5, TimeUnit.MINUTES ) ) {
+
         try {
           Logs.extreme( ).info( "Acquired db state lock: " + runnableFunction );
           Map<Runnable, Future<Runnable>> runnables = Maps.newHashMap( );
-          for ( final String ctx : PersistenceContexts.list( ) ) {
+          for ( final String ctx : initializeDB() ) {
             Runnable run = runnableFunction.apply( ctx );
             runnables.put( run, ExecuteRunnable.INSTANCE.apply( run ) );
           }
@@ -437,9 +440,8 @@ public class Databases {
       return new Function<String, Runnable>( ) {
         @Override
         public Runnable apply( final String ctx ) {
-          final String contextName = ctx.startsWith( "eucalyptus_" )
-            ? ctx
-            : "eucalyptus_" + ctx;
+          final String contextName = ctx;
+
           Runnable removeRunner = new Runnable( ) {
             @Override
             public void run( ) {
@@ -470,9 +472,8 @@ public class Databases {
       return new Function<String, Runnable>( ) {
         @Override
         public Runnable apply( final String ctx ) {
-          final String contextName = ctx.startsWith( "eucalyptus_" )
-            ? ctx
-            : "eucalyptus_" + ctx;
+          final String contextName = ctx;
+
           Runnable removeRunner = new Runnable( ) {
             @Override
             public void run( ) {
@@ -565,9 +566,7 @@ public class Databases {
         @Override
         public Runnable apply( final String ctx ) {
           final String hostName = host.getBindAddress( ).getHostAddress( );
-          final String contextName = ctx.startsWith( "eucalyptus_" )
-            ? ctx
-            : "eucalyptus_" + ctx;
+          final String contextName = ctx;
           Runnable removeRunner = new Runnable( ) {
             @Override
             public void run( ) {
@@ -817,9 +816,7 @@ public class Databases {
     INSTANCE;
     @Override
     public DriverDatabaseClusterMBean apply( String ctx ) {
-      final String contextName = ctx.startsWith( "eucalyptus_" )
-        ? ctx
-        : "eucalyptus_" + ctx;
+      final String contextName = ctx;
       final DriverDatabaseClusterMBean cluster = lookup( contextName );
       return cluster;
     }
@@ -848,7 +845,49 @@ public class Databases {
     }
     return false;
   }
-  
+
+  static List<String> initializeDB( ) {
+
+    List<String> dbNames = Lists.newArrayList();
+    for ( final Host h : Hosts.listActiveDatabases( ) ) {
+      final String url = String.format( "jdbc:%s", ServiceUris.remote( Database.class, h.getBindAddress( ), "postgres" ) );
+      try {
+        final Connection conn = DriverManager.getConnection( url, Databases.getUserName( ), Databases.getPassword( ) );
+        try {
+          final PreparedStatement statement = conn.prepareStatement( "select datname from pg_database" );
+          final ResultSet result = statement.executeQuery( );
+
+          while ( result.next( ) ) {
+            dbNames.add(result.getString("datname"));
+          }
+        } finally {
+          conn.close( );
+        }
+      } catch ( final Exception ex ) {
+        LOG.error( ex, ex );
+      }
+    }
+
+    final List<String> finalDbNames = Lists.newArrayList();
+
+    Iterables.removeIf(dbNames, new Predicate<String>(){
+      @Override
+      public boolean apply(final String input) {
+        if (input.startsWith("eucalyptus_") || input.equals("database_events")) {
+          finalDbNames.add(input);
+          return true;
+        } else {
+          return false;
+        }
+      }
+    });
+
+
+    return finalDbNames;
+
+  }
+
+
   /**
    * @return
    *         LockTimeoutException
