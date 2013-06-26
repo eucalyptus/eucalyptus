@@ -4,6 +4,7 @@ define([
     'sharedtags',
     'models/scalinggrps',
 	'models/scalinginsts',
+	'models/scalingpolicys',
 	'models/volumes',
 	'models/images',
 	'models/launchconfigs',
@@ -16,26 +17,31 @@ define([
 	'models/insthealths',
 	'models/summarys',
 	'models/zones',
-	'models/buckets'
+	'models/buckets',
+	'models/alarms',
+    'models/availabilityzones'
 	], 
 function(_, Backbone, tags) {
     var self = this;
     var sconfs = [
     ['scalinggrp', 'scalinggroup', 'scalingGroup', 'scalingGroups'],
 	['scalinginst', 'scalinginsts'],
+	['scalingpolicy', 'scalingpolicys'],
 	['volume', 'volumes'],
 	['image', 'images'],
 	['launchconfig', 'launchconfigs', 'launchConfigs'],
 	['instance', 'instances'],
 	['eip'],
-	['keypair'],
-	['sgroup'],
+	['keypair', 'keypairs'],
+	['sgroup', 'sgroups'],
 	['snapshot', 'snapshots'],
 	['balancer'],
 	['insthealth', 'instHealths'],
 	['summary'],
-	['zone'],
+	['zone', 'zones'],
 	['bucket'],
+	['alarm'],
+	['availabilityzone']
     ];
 
     var shared = {};

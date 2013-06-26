@@ -44,10 +44,11 @@ from .clcinterface import ClcInterface
 # some things will need to be re-written.
 class CachingClcInterface(ClcInterface):
     clc = None
-    caches = {}
+    caches = None
 
     # load saved state to simulate CLC
     def __init__(self, clcinterface, config):
+        self.caches = {}
         self.clc = clcinterface
         pollfreq = config.getint('server', 'pollfreq')
         if pollfreq < 5:    # let's say min frequency is 5
@@ -178,7 +179,6 @@ class CachingClcInterface(ClcInterface):
             if res[:5] == 'timer' and self.caches[res]:
                 self.caches[res].cancel()
                 self.caches[res] = None
-        print "timers canceled"
         if self.min_polling:
             # start timers for new list of resources
             for res in resources:
@@ -188,7 +188,6 @@ class CachingClcInterface(ClcInterface):
             for vals in self.caches:
                 if isinstance(self.caches[vals], Cache):
                     self.__cache_load_callback__(vals, {}, self.caches[vals].updateFreq, True)
-            print "timers restarted"
         return True
     
     def __normalize_instances__(self, instances):

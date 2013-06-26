@@ -22,7 +22,11 @@ define([
         else {
           var mappings = this.get('block_device_mapping');
           if (mappings['/dev/sda']) {
-            parameter += "&SnapshotId="+mappings['/dev/sda'].snapshot_id;
+            parameter += "&BlockDeviceMapping.1.DeviceName=/dev/sda";
+            parameter += "&BlockDeviceMapping.1.Ebs.SnapshotId="+mappings['/dev/sda'].snapshot_id;
+            if (mappings['/dev/sda'].delete_on_termination) {
+              parameter += "&BlockDeviceMapping.1.Ebs.DeleteOnTermination="+mappings['/dev/sda'].delete_on_termination;
+            }
           }
         }
         if(this.get('platform') == 'windows'){

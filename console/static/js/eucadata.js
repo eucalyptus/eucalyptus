@@ -37,10 +37,11 @@
                   {name:'balancer', type:'balancers', collection: 'balancers'},
                   {name:'scalinggrp', type:'scalinggrps', collection: 'scalinggrps'},
                   {name:'scalinginst', type:'scalinginsts', collection: 'scalinginsts'},
+                  {name:'scalingpolicy', type:'scalingpolicys', collection: 'scalingpolicys'},
                   {name:'launchconfig', type:'launchconfigs', collection: 'launchconfigs'}
       ], 
     },
-    _data : {summary:[], instance:null, image:null, volume:null, snapshot:null, eip:null, keypair: null, sgroup: null, zone: null, tag: null, bucket: null, balancer: null, scalinggrp: null, scalinginst: null},
+    _data : {summary:[], instance:null, image:null, volume:null, snapshot:null, eip:null, keypair: null, sgroup: null, zone: null, tag: null, bucket: null, balancer: null, scalinggrp: null, scalinginst: null, scalingpolicy: null, launchconfig: null},
 //    _data : {summary:[], instance:null, image:null, volume:null, snapshot:null, eip:null, keypair: null, sgroup: null, zone: null, tag: null, bucket:null},
     _callbacks : {}, 
     _listeners : {},

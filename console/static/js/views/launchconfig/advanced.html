@@ -1,0 +1,111 @@
+<div class="wizard-step">
+  <div class="wizardTitle"><h3 data-msg="launch_instance_section_header_advanced"></h3></div>
+  <div id="launch-wizard-advanced-main-contents">
+    <div class="wizard-section-label" data-msg="launch_instance_advanced_header"></div>
+
+      <div id="launch-wizard-advanced-userdata"> 
+        <div class="form-row clearfix upper-sibling">
+           <label for="launch-wizard-advanced-input-userdata" data-msg="launch_instance_advanced_userdata"></label>
+          <textarea data-value="advancedModel.user_data_text" class="description" data-tooltip="launch_wizard_advanced_input_userdata_tip" id="launch-wizard-advanced-input-userdata"></textarea>
+      </div>
+      <div class="form-row clearfix">
+        <label for="launch-wizard-advanced-input-userfile" data-msg="launch_instance_advanced_attachfile"></label>
+        <input id="launch-wizard-advanced-input-userfile" type="file">
+      </div>
+    </div>
+
+    <div id="launch-wizard-advanced-kernelramdisk"> 
+      <div id="launch-wizard-advanced-kernel" class="form-row clearfix">
+        <label for="launch-wizard-advanced-kernel-selector" data-msg="launch_instance_advanced_kernel"></label>
+        <select data-value="advancedModel.kernel_id" id="launch-wizard-advanced-kernel-selector" data-tooltip="launch_instance_kernel_select_tip">
+          <option value="" data-msg="launch_instance_advanced_usedefault"></option>
+          <option data-each-kernel="kernels" data-value="kernel.id" data-text="kernel.id" data-selected=":isKernelSelected"></option>
+        </select>
+      </div>
+      <div id="launch-wizard-advanced-ramdisk" class="form-row clearfix">
+        <label for="launch-wizard-advanced-ramdisk-selector" data-msg="launch_instance_advanced_ramdisk"></label>
+        <select data-value="advancedModel.ramdisk_id" id="launch-wizard-advanced-ramdisk-selector" data-tooltip="launch_instance_ramdisk_select_tip">
+          <option value="" data-msg="launch_instance_advanced_usedefault"></option>
+          <option data-each-ramdisk="ramdisks" data-value="ramdisk.id" data-text="ramdisk.id" data-selected=":isRamdiskSelected"></option></select>
+      </div>
+   </div>
+
+   <div class="form-row clearfix orphan-row" id="launch-wizard-advanced-monitoring"> 
+     <label for="launch-wizard-advanced-input-monitoring" data-msg="monitoring_label"></label>
+     <input data-checked="advancedModel.instance_monitoring" id="launch-wizard-advanced-input-monitoring" title="" type="checkbox">
+     <label for="launch-wizard-advanced-input-monitoring" class="plaintext-label" data-msg="launch_wizard_advanced_enable_monitoring"></label>
+   </div>
+
+
+  <div id="launch-wizard-advanced-storage"> 
+    <div class="wizard-section-label" data-msg="storage_label"></div>
+    <div id="launch-wizard-advanced-storage-table-wrapper">
+      <table class="device-map-table">
+        <thead>
+          <tr>
+            <th data-msg="launch_instance_advanced_th_volume"></th>
+            <th data-msg="launch_instance_advanced_th_mapping"></th>
+            <th data-msg="launch_instance_advanced_th_create"></th>
+            <th data-msg="launch_instance_advanced_th_size"></th>
+            <th data-msg="launch_instance_advanced_th_delete"></th>
+            <th></th>
+         </tr>
+       </thead>
+       <tbody>
+
+        <tr>
+          <td data-msg="launch_instance_root">
+          </td>
+          <td data-text="root.device_name">
+          </td>
+          <td data-text="root.snapshot_id">
+          </td>
+          <td>
+            <input class="launch-wizard-advanced-storage-size-input" data-tooltip="launch_wizard_advanced_storage_size_input_tip" data-value=":root.volume_size" type="text">
+          </td>
+          <td class="centered-cell"><input data-checked=":root.delete_on_termination" class="launch-wizard-advanced-storage-delOnTerm" type="checkbox"></td>
+        </tr> 
+
+        <tr data-each-volume="blockDeviceMappings">
+          <td data-text=":getVolLabel" data-msg="launch_instance_ebs">
+          </td>
+          <td data-text="volume.device_name">
+          </td>
+          <td data-text="volume.snapshot_id">
+          </td>
+          <td data-text="volume.volume_size"></td>
+          <td class="centered-cell"><input data-disabled=":checkDisabledIf" data-checked="volume.delete_on_termination" class="launch-wizard-advanced-storage-delOnTerm" type="checkbox"></td>
+          <td><div data-on-click=":delStorageVol" data-addclass=":deleteButtonIf" data-tooltip="launch_instance_advanced_delblockdev"><div></td>
+        </tr> 
+
+        <tr>
+          <td>
+            <select data-on-change=":typeSelected" class="launch-wizard-advanced-storage-volume-selector" data-tooltip="launch_instance_volume_select_tip">
+              <option data-each-type="storageTypes" data-value="type.id" data-text="type.name"></option>
+            </select>
+          </td>
+          <td>
+            <input data-value=":mapName" class="launch-wizard-advanced-storage-mapping-input" data-tooltip="launch_wizard_advanced_storage_mapping_input_tip" type="text" size="9">
+          </td>
+          <td>
+            <select data-on-change=":setSnapshot" class="launch-wizard-advanced-storage-snapshot-input" data-tooltip="launch_instance_snapshot_select_tip">
+              <option data-each-snapshot="snapshots" data-value="snapshot.id" data-text="snapshot.name"></option>
+            </select>
+          </td>
+          <td>
+            <input class="launch-wizard-advanced-storage-size-input" data-tooltip="launch_wizard_advanced_storage_size_input_tip" data-value=":newMapping.volume_size" type="text">
+         </td>
+         <td class="centered-cell">
+          <input class="launch-wizard-advanced-storage-delOnTerm" type="checkbox" data-value="newMapping.delete_on_termination" checked>
+        </td>
+        <td><div class="icon_add" data-on-click=":setStorageVolume" data-tooltip="launch_instance_advanced_addblockdev"></div></td>
+      </tr>
+    </tbody>
+</table>
+<div class="field-error" data-text="launchConfigErrors.volume_size"></div>
+</div>
+</div>
+<!-- <input value="emi-EDBA3EEA" id="launch-wizard-image-emi" type="hidden"> -->
+</div>
+<!-- <div id="launch-wizard-buttons-advanced" class="launch-wizard-buttons"> <button class="button" id="launch-wizard-buttons-advanced-launch">Create launch configuration</button> -->
+</div>

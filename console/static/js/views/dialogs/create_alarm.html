@@ -1,0 +1,94 @@
+<div>
+    <div class="title">Create alarm</div>
+    <div class="body">
+        <div class="euca-dialog create-alarm">
+        <div class="dialog-inner-content">
+
+		<p>Alarm message text</p>
+
+		<div class="selected-resources">
+          <div class="form-row">
+            <label for="alarm-name">Name *</label>
+            <input class="focus-here" type="text" id="alarm-name" data-tooltip="volume_dialog_name_tip" data-value="alarm.AlarmName"/>
+            <span data-text="error.AlarmName"></span>
+          </div>
+
+          <div class="form-row">
+            <label for="alarm-description">Description</label>
+            <textarea type="text" id="alarm-description" data-tooltip="volume_dialog_name_tip" data-value="alarm.AlarmDescription"></textarea>
+            <span data-text="error.AlarmDescription"></span>
+          </div>
+
+          <div class="form-row">
+            <label for="alarm-trigger">Trigger metric</label>
+            <select type="text" id="alarm-trigger" data-tooltip="volume_dialog_name_tip" data-value="selectedMetric">
+                <option data-each-item="metrics" data-text="item.label" data-value="item.label"></option>
+            </select>
+            <span data-text="error.MetricName"></span><br />
+            <a data-on-click="createMetric">Enter custom metric</a>
+          </div>
+
+          <div class="form-row">
+            <label for="alarm-statistic">Statistic</label>
+            <select type="text" id="alarm-statistic" data-tooltip="volume_dialog_name_tip" data-value="alarm.Statistic">
+                <option data-each-item="statistic" data-text="item.label" data-value="item.value"></option>
+            </select>
+            <span data-text="error.Statistic"></span>
+          </div>
+
+          <table>
+          <tr>
+          <td>
+          <div class="form-row">
+            <label for="alarm-comparison">Comparison</label>
+            <select type="text" id="alarm-comparison" data-tooltip="volume_dialog_name_tip" data-value="alarm.ComparisonOperator">
+                <option data-each-item="comparison" data-text="item.label" data-value="item.value"></option>
+            </select>
+            <span data-text="error.ComparisonOperator"></span>
+          </div>
+          </td>
+
+          <td>
+          <div class="form-row">
+            <label for="alarm-trigger">Trigger threshold</label>
+            <input type="text" id="alarm-trigger" class="short-textinput" data-tooltip="volume_dialog_name_tip" data-value="alarm.Threshold"/>
+            <span data-text="error.Threshold"></span>
+          </div>
+          </td>
+          </tr>
+
+          <tr>
+          <td>
+          <div class="form-row">
+            <label for="alarm-measurement">Measurement periods</label>
+            <input type="text" class="short-textinput" id="alarm-measurement" data-tooltip="volume_dialog_name_tip" data-value="alarm.EvaluationPeriods"/>
+            <span data-text="error.EvaluationPeriods"></span>
+          </div>
+          </td>
+
+          <td>
+          <div class="form-row">
+            <label for="alarm-period">Period length*</label>
+            <input type="text" class="short-textinput" id="alarm-period" data-tooltip="volume_dialog_name_tip" data-value="alarm.Period"/>
+            <select type="text" id="alarm-timeunit" data-tooltip="volume_dialog_name_tip" data-value="timeunit">
+                <option value="SECS">Secs</option>
+                <option value="MINS">Minutes</option>
+            </select>
+            <span data-text="error.Period"></span>
+          </div>
+          </td>
+          </tr>
+          </table>
+		</div>
+		<div data-text="status" style="height:20px"></div>
+        <div class="ui-dialog-buttonpane ui-widget-content ui-helper-clearfix">
+            <div class="ui-dialog-buttonset">
+                <span data-ui-button="submitButton" data-msg="dialog_save_btn"></span>
+                <span data-ui-button="cancelButton" data-msg="dialog_cancel_btn"></span> 
+            </div>
+        </div>
+
+        </div>
+        </div>
+    </div>
+</div>

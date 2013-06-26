@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * Copyright 2009-2013 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -73,11 +73,8 @@ import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.api.BaseLoginModule;
 import com.eucalyptus.auth.principal.AccessKey;
 import com.eucalyptus.crypto.util.B64;
-import com.eucalyptus.crypto.util.SecurityParameter;
 import com.google.common.base.Charsets;
-import com.google.common.base.Objects;
 import com.google.common.base.Strings;
-import com.google.common.collect.Iterables;
 
 /**
  * Support class for HMAC login modules
@@ -126,12 +123,8 @@ abstract class HmacLoginModuleSupport extends BaseLoginModule<HmacCredentials> {
   }
 
   protected AccessKey lookupAccessKey( final HmacCredentials credentials ) throws AuthException {
-    return lookupAccessKey( credentials.getQueryId( ), credentials.getParameters() );
-  }
-
-  protected AccessKey lookupAccessKey( final String accessKeyId, final Map<String,List<String>> parameters ) throws AuthException {
-    final String token = Iterables.getFirst( Objects.firstNonNull( parameters.get( SecurityParameter.SecurityToken.parameter() ), Collections.<String>emptyList()), null);
-    final AccessKey key =  AccessKeys.lookupAccessKey( accessKeyId, token );
+    final AccessKey key =
+        AccessKeys.lookupAccessKey( credentials.getQueryId( ), credentials.getSecurityToken( ) );
     if ( !key.isActive() ) throw new AuthException( "Invalid access key or token" );
     return key;
   }

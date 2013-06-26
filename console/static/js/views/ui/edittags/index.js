@@ -48,12 +48,12 @@ define([
             model.on('confirm', function(defer) {
                 self.scope.create();
                 _.chain(tags.models).clone().each(function(t) {
-                   var backup = t.get('_backup');
+                   var backup = t.get('_firstbackup');		// _firstbackup: the original tag to begin edit with
                    console.log('TAG',t);
                    if (t.get('_deleted')) {
                        // If the tag is new and then deleted, do nothing.
                        if (!t.get('_new')) {
-                           // If there is a backup then this was edited and we really want to destroy the original
+                           // If this was edited, we really want to destroy the original
                            if (backup != null) {
                                console.log('delete', backup);
                                backup.destroy();
@@ -68,21 +68,28 @@ define([
                    } else if (t.get('_edited')) {
                        // If the tag is new then it should only be saved, even if it was edited.
                        if (t.get('_new')) {
-                         if(!defer) t.save() ;
+                         if(!defer){
+			   t.save();
+			 }
                        } else if( (backup != null) && (backup.get('name') !== t.get('name')) ){
                          // CASE OF KEY CHANGE
-                         console.log("Edited, with previous value: " + t.get('name') + ":" + t.get('value'));
-                         t.get('_backup').destroy();
-                         if(!defer) t.save();
+                         console.log("EDITED TAG TO: " + t.get('name') + ":" + t.get('value'));
+                         backup.destroy();
+                         if(!defer){
+			   t.save();
+			 }
                        }else{
                          // CASE OF VALUE CHANGE
-                        if(!defer) t.save();
+                        if(!defer){
+			  t.save();
+			}
                        } 
                    } else if (t.get('_new')) {
-                       if(!defer) t.save();
+                       if(!defer){
+		         t.save();
+		       }
                    }
                 });
-                // THE OPERATION BELOW MIGHT NOT WORK WHEN .SYNC() CALLS ARE USED   --- KYO 042913
                 model.get('tags').set(tags.models);
             });
 
@@ -94,24 +101,49 @@ define([
 
             this.scope = {
                 newtag: new Tag(),
-
                 tags: tags,
-
                 isTagValid: true,
-
                 error: new Backbone.Model({}),
-
                 status: '',
 
-                // Abort existing edits
+                // Abort other edit-in-progress
                 deactivateEdits: function() {
                     self.scope.tags.each(function(t) {
                         if (t.get('_edit')) {
                             t.set(t.get('_backup').pick('name','value'));
                             t.set({_clean: true, _deleted: false, _edit: false});
-                        }
-                    });
+                    	}
+		    });
                 },
+
+                // Disable all buttons while editing a tag
+                disableButtons: function() {
+                    self.scope.tags.each(function(t) {
+			if( !t.get('_deleted') ){
+                    	    t.set({_clean: false, _displayonly: true});
+                    	}
+		    });
+                },
+
+                // Restore the buttons to be clickable
+                enableButtons: function() {
+                    self.scope.tags.each(function(t) {
+			if( !t.get('_deleted') ){
+                    	   t.set({_clean: true, _displayonly: false});
+                    	}
+		    });
+                },
+
+		// Entering the Tag-Edit mode
+		enterTagEditMode: function() {
+		    self.scope.deactivateEdits();
+		    self.scope.disableButtons();	
+		},
+
+		// Entering the Clean mode
+		enterCleanMode: function() {
+		    self.scope.enableButtons();	
+		},
 
                 create: function() {
 
@@ -152,19 +184,21 @@ define([
                 edit: function(element, scope) {
                     console.log('edit');
 
-                    self.scope.deactivateEdits();
+		    self.scope.enterTagEditMode();
                     
                     // RETREIVE THE ID OF THE TAG
                     var tagID = scope.tag.get('id');
                     console.log("TAG ID: " + tagID);
 
-                    // NEW METHOD: STORE THE ORIGINAL KEY-VALUE WHEN FIRST EDITED
-                    if( scope.tag.get('_backup') == undefined ){
-                      scope.tag.set('_backup', scope.tag.clone());
-                    } 
+                    // STORE THE ORIGINAL KEY-VALUE WHEN FIRST EDITED: _FIRSTBACKUP
+                    if( scope.tag.get('_firstbackup') == undefined ){
+                      scope.tag.set('_firstbackup', scope.tag.clone());
+                    }
+		    // KEEP THE PREVIOUS TAG AS _BACKUP 
+                    scope.tag.set('_backup', scope.tag.clone());
 
                     // MARK THE STATE AS _EDIT
-                    scope.tag.set({_clean: false, _deleted: false, _edited: false, _edit: true});
+                    scope.tag.set({_clean: false, _deleted: false, _edited: false, _edit: true, _displayonly: false});
 
                     // SET UP VALIDATE ON THIS TAG
                     scope.tag.on('change', function() {
@@ -176,8 +210,6 @@ define([
                     scope.tag.on('validated', function() {
                       scope.isTagValid = scope.tag.isValid();
                     });
-
-
                 },
 
                 confirm: function(element, scope) {
@@ -193,22 +225,26 @@ define([
                         scope.tag.set('_backup', undefined);
                     }
                     scope.tag.set({_clean: true, _deleted: false, _edited: true, _edit: false});
+		    self.scope.enterCleanMode();
                     self.render();
                 },
 
                 restore: function(element, scope) {
-                    if ( scope.tag.get('_backup') != null) {
+                    if ( scope.tag.get('_backup') != null ) {
                         scope.tag.set( scope.tag.get('_backup').toJSON() );
                     } else {
                         scope.tag.set({_clean: true, _deleted: false, _edit: false});
                     }
 
                     scope.error.clear();
+		    self.scope.enterCleanMode();
                     self.render();
                 },
 
                 delete: function(element, scope) {
                     console.log('delete');
+		    // ALWAYS BACKUP BEFORE DELETE
+                    scope.tag.set( '_backup', scope.tag.clone() );
                     scope.tag.set({_clean: false, _deleted: true, _edit: false});
                 },
             } // end of scope
