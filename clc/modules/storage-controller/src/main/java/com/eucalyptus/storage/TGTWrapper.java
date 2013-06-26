@@ -68,6 +68,8 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+import java.util.concurrent.locks.ReadWriteLock;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -98,7 +100,8 @@ public class TGTWrapper {
 	final private static Logger LOG = Logger.getLogger(TGTWrapper.class);
 	final private static String ROOT_WRAP = StorageProperties.EUCA_ROOT_WRAPPER;
 
-	private static ExecutorService service = Executors.newFixedThreadPool(10);
+	private static final ReadWriteLock serviceLock = new ReentrantReadWriteLock();
+	private static ExecutorService service; // do not access directly, use getExecutor / getExecutorWithInit
 	final private static int RESOURCE_NOT_FOUND = 22; //The tgt return code for resource not found.
 	
 	// TODO define fault IDs in a enum
@@ -188,14 +191,55 @@ public class TGTWrapper {
 			super("Call timed for " + command);
 		}
 	}
-	
-	//Should there be a start to initiate a new thread pool?
-	public static void stop() {
+
+	/**
+	 * Idempotent start
+	 */
+	public static void start( ) {
+		serviceLock.writeLock( ).lock( );
 		try {
-			service.shutdownNow();
+			if ( service == null ) {
+				service = Executors.newFixedThreadPool(10);
+			}
+		} finally {
+			serviceLock.writeLock( ).unlock();
+		}
+	}
+
+	public static void stop( ) {
+		serviceLock.writeLock( ).lock( );
+		try {
+			ExecutorService toShutdown = service;
+			service = null;
+			toShutdown.shutdownNow( );
 		} catch (Exception e) {
 			LOG.warn("Unable to shutdown thread pool", e);
+		} finally {
+			serviceLock.writeLock( ).unlock( );
 		}
+	}
+
+	private static ExecutorService getExecutor( ) {
+		serviceLock.readLock( ).lock( );
+		try {
+			if ( service == null ) {
+				throw new IllegalStateException( "Not started" );
+			}
+			return service;
+		} finally {
+			serviceLock.readLock( ).unlock( );
+		}
+	}
+
+	private static ExecutorService getExecutorWithInit( ) {
+		ExecutorService service;
+		try {
+			service = getExecutor( );
+		} catch ( IllegalStateException e ) {
+			start( );
+			service = getExecutor( );
+		}
+		return service;
 	}
 		
 	/**
@@ -239,7 +283,7 @@ public class TGTWrapper {
 			error.start();
 			output.start();
 			Callable<Integer> processMonitor = new ProcessMonitor(process);
-			Future<Integer> processController = service.submit(processMonitor);
+			Future<Integer> processController = getExecutorWithInit( ).submit(processMonitor);
 			try {
 				returnValue = processController.get(timeout, TimeUnit.MILLISECONDS);
 			} catch (TimeoutException tex) {
