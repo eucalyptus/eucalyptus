@@ -193,7 +193,7 @@
           this.element.launchconfig();
           break;
         case 'newlaunchconfig':
-          this.element.newlaunchconfig();
+          this.element.newlaunchconfig({instance:null});
           break;
       }
       if (options !== KEEP_VIEW) {

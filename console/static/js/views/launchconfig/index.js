@@ -84,7 +84,7 @@ define([
 
     var viewBuilder = wizard.viewBuilder(wizardTemplate)
             .add(new page1({model: imageModel, blockMaps: blockMaps, image: options.image}))
-            .add(new page2({model: typeModel, type: options.type}))
+            .add(new page2({model: typeModel, instance_type: options.type}))
             .add(new page3({model: securityModel, keymodel: keyModel, group: options.sgroup, key: options.keypair}))
             .add(new page4({model: advancedModel, blockMaps: blockMaps, snapshots: snapShots}))
             .setHideDisabledButtons(true)
