@@ -763,7 +763,7 @@ ${hostOrHostSSL}\tall\tall\t::/0\tpassword
   
   @Override
   public String getJdbcDialect( ) {
-    return "net.sf.hajdbc.dialect.PostgreSQLDialect"
+    return "com.eucalyptus.postgresql.PostgreSQLDialect"
   }
   
   @Override

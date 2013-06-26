@@ -20,7 +20,9 @@
 
 (function($, eucalyptus) {
   $.widget('eucalyptus.newlaunchconfig', $.eucalyptus.eucawidget, {
-    options : { },
+    options : {
+      instance: null,
+    },
     _init : function() {
       var thisObj = this;
       $(thisObj.element).unbind();
@@ -28,7 +30,7 @@
         var View = WizardFactory(thisObj.options);
         var view = new View({el: thisObj.element});
       	view.render();
-        if(thisObj.options.image != null) {
+        if(thisObj.options.instance != null) {
           view.jump(1);
         }
         thisObj.options.image = null;

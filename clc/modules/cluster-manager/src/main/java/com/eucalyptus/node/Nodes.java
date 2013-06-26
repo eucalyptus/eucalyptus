@@ -204,7 +204,8 @@ public class Nodes {
       }
       DescribeServicesResponseType reply = Nodes.send( ncConfig, new DescribeServicesType( ) );
       for ( ServiceStatusType status : reply.getServiceStatuses( ) ) {
-        if ( ncConfig.getName( ).equals( status.getServiceId( ).getName( ) ) ) {
+        if ( !ncConfig.lookupStateMachine( ).isBusy( ) //skip the state update if it would clobber an in-flight state change 
+            && ncConfig.getName( ).equals( status.getServiceId( ).getName( ) ) ) {
           Component.State reportedState = Component.State.ENABLED;
           final String lastMessage = Joiner.on( "," ).join( status.getDetails() );
           nodeInfo.setLastMessage( lastMessage );

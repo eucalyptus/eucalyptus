@@ -1,7 +1,7 @@
 <div data-ui-tabs="" id="tabs" >
   <ul>
     <li><a href="#tabs-1" data-msg="tab_instance"></a></li>
-    <li><a href="#tabs-2" data-msg="tab_volumes"></a></li>
+    <li><a href="#tabs-2" data-msg="tab_mappings"></a></li>
   </ul>
   <div id="tabs-1" class="tab">
     <ul class="launch-config-expanded clearfix">
@@ -22,24 +22,24 @@
 	</ul>
   </div>
   <div id="tabs-2" class="tab">
-      <ul class="volume-table-expanded clearfix">
-		<li>
-		<table>
-			<thead><tr>
-        <th data-msg="volume_table_expanded_volume_id"></th>
-        <th data-msg="volume_table_expanded_device_mapping"></th>
-        <th data-msg="volume_table_expanded_creation_time"></th></tr>
+		<table class="expanded-table">
+			<thead>
+              <tr>
+                <th data-msg="images_table_expand_mapping_device"></th>
+                <th data-msg="images_table_expand_mapping_snapshot"></th>
+                <th data-msg="images_table_expand_mapping_size"></th>
+                <th data-msg="images_table_expand_mapping_dot"></th>
+              </tr>
 			</thead>
 			<tbody>
-				<tr data-each-item="config.block_device_mappings">
-                  <td><span _data-text="item.unknownVariable"></span></td>
-                  <td><span _data-text="item.unknownVariable"></span></td>
-                  <td><span _data-text="item.unknownVariable"></span></td>
-                </tr>
+              <tr data-each-item="bdm">
+                <td><span data-text="item.device"></span></td>
+                <td><span data-text="item.snapshot_id"></span></td>
+                <td><span data-text="item.size"></span></td>
+                <td><span data-text="item.delete_on_terminate"></span></td>
+              </tr>
 			</tbody>
 		</table>
-		</li>
-      </ul>
   </div>
 </div>
 

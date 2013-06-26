@@ -161,7 +161,6 @@ import com.eucalyptus.autoscaling.tags.AutoScalingGroupTag;
 import com.eucalyptus.autoscaling.tags.Tag;
 import com.eucalyptus.autoscaling.tags.TagSupport;
 import com.eucalyptus.autoscaling.tags.Tags;
-import com.eucalyptus.cloud.util.NoSuchMetadataException;
 import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.entities.Entities;
@@ -614,7 +613,7 @@ public class AutoScalingService {
       if ( !tagDescriptions.getMember().isEmpty() ) {
         reply.getDescribeTagsResult().setTags( tagDescriptions );
       }
-    } catch ( NoSuchMetadataException e ) {
+    } catch ( AutoScalingMetadataNotFoundException e ) {
       handleException( e );
     }
 
@@ -709,7 +708,7 @@ public class AutoScalingService {
                   context.getUser() ) ) {
                 Tags.delete( example );
               }
-            } catch ( NoSuchMetadataException e ) {
+            } catch ( AutoScalingMetadataNotFoundException e ) {
               logger.debug( e, e );
             } catch ( TransactionException e ) {
               throw Exceptions.toUndeclared(e);

@@ -22,7 +22,6 @@ define([
           var tmp = bdm[device];
           mappings.push({device:device, snapshot_id:tmp.snapshot_id, size:tmp.size, delete_on_terminate:tmp.delete_on_termination});
         }
-        console.log("mappings = "+JSON.stringify(mappings));
       }
       this.model.set('bdm', mappings);
       this.model.set('kernel', app.data.images.get(this.model.get('image').get('kernel_id')));

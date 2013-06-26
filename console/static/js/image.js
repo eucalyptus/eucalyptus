@@ -23,7 +23,6 @@
     options : { },
     baseTable : null,
     tableWrapper : null,
-    tagDialog : null,
     _init : function() {
       var thisObj = this;
       var $tmpl = $('html body').find('.templates #imageTblTmpl').clone();
@@ -212,18 +211,6 @@ launch_instance_image_table_platform_linux, launch_instance_image_table_platform
     },
 
     _create : function() {
-      var thisObj = this;
-      // tag dialog starts
-      $tmpl = $('html body').find('.templates #resourceTagWidgetTmpl').clone();
-      $rendered = $($tmpl.render($.extend($.i18n.map, help_instance)));
-      var $tag_dialog = $rendered.children().first();
-      var $tag_help = $rendered.children().last();
-      this.tagDialog = $tag_dialog.eucadialog({
-        id: 'images-tag-resource',
-        title: 'Add/Edit tags',
-        help: {content: $tag_help, url: help_instance.dialog_terminate_content_url},
-      });
-      // tag dialog ends
     },
 
     _destroy : function() {

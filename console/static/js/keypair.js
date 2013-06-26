@@ -187,7 +187,7 @@
                         $import_dialog.eucadialog("close"); 
                       }
                       else{
-                        thisObj.addDialog.eucadialog('showError', keypair_dialog_error_msg);
+                        thisObj.importDialog.eucadialog('showError', keypair_dialog_error_msg);
                       }
                     }
                   },
@@ -198,6 +198,15 @@
       $import_dialog.find("#key-name").watermark(keypair_dialog_add_name_watermark);
       $import_dialog.find("#key-import-contents").watermark(keypair_dialog_import_contents_watermark);
       $import_dialog.eucadialog('buttonOnKeyup', $import_dialog.find('#key-name'), createButtonId); 
+      $import_dialog.eucadialog('validateOnType', '#key-name', function(val) {
+        keyName = $.trim(asText(val));
+        if (keyName == '')
+          return null;
+        if (!KEY_PATTERN.test(keyName))
+          return keypair_dialog_error_msg;
+        else
+          return null;
+      });
       $import_dialog.find("input[type=file]").on('change', function(evt) {
             var file = evt.target.files[0];
             var reader = new FileReader();

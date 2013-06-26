@@ -21,6 +21,7 @@ package com.eucalyptus.autoscaling.activities;
 
 import com.eucalyptus.loadbalancing.LoadBalancing;
 import com.eucalyptus.loadbalancing.LoadBalancingMessage;
+import com.eucalyptus.util.DispatchingClient;
 
 /**
  *

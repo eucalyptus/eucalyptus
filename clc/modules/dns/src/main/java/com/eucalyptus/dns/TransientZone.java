@@ -191,17 +191,6 @@ public class TransientZone extends Zone {
       } catch ( Exception e ) {
         return super.findRecords( name, type );
       }
-    } else if (name.toString().startsWith("eucalyptus.") || (name.toString().startsWith("euare."))) {
-        SetResponse resp = new SetResponse(SetResponse.SUCCESSFUL);        
-		try {
-			InetAddress cloudIp = Topology.lookup( Eucalyptus.class ).getInetAddress( );
-	        if (cloudIp != null) {
-	          resp.addRRset( new RRset( new ARecord( name, 1, 20/*ttl*/, cloudIp ) ) );
-	        }
-	        return resp;
-		} catch (Exception e) {
-            return super.findRecords( name, type );
-		}
     } else if (StackConfiguration.USE_INSTANCE_DNS && name.toString().endsWith(".in-addr.arpa.")) {
       int index = name.toString().indexOf(".in-addr.arpa.");
   	  Name target;
@@ -235,31 +224,7 @@ public class TransientZone extends Zone {
 	  } else {
 	    return super.findRecords( name, type );
 	  }
-    } else if (name.toString().matches(".*\\.walrus\\..*")) {
-    	//Walrus
-    	String bucket = name.toString().substring(0, name.toString().indexOf(".walrus"));
-    	InetAddress ip;
-    	try {
-			ip = WalrusManager.getBucketIp(bucket);
-		} catch (EucalyptusCloudException e1) {
-        	LOG.error(e1);
-			return super.findRecords(name, type);
-		}
-        SetResponse resp = new SetResponse(SetResponse.SUCCESSFUL);
-        resp.addRRset( new RRset( new ARecord( name, 1, ttl, ip ) ) );
-        return resp;
-    } else if (name.toString().startsWith("walrus.")) {
-    	SetResponse resp = new SetResponse(SetResponse.SUCCESSFUL);
-        InetAddress walrusIp = null;
-          try {
-		    walrusIp = WalrusProperties.getWalrusAddress();
-          } catch (EucalyptusCloudException e) {
-        	LOG.error(e);
-        	return super.findRecords( name, type );
-          }
-		  resp.addRRset( new RRset( new ARecord( name, 1, 20/*ttl*/, walrusIp ) ) );
-		  return resp;
-	} else {
+    } else {
       return super.findRecords( name, type );
     }
   }

@@ -1,0 +1,47 @@
+<div>
+	<div class="selected-resources">
+            <table>
+            <tbody>
+                <tr>
+                    <th>Name</th>
+                    <th>Action</th>
+                    <th>Amount</th>
+                    <th>Measure</th>
+                    <th>Alarm</th>
+                    <th></th>
+                </tr>
+                <tr data-each-item="selected">
+                    <td><span data-text="item.name"></span></td>
+                    <td><span data-text="item.action"></span></td>
+                    <td><span data-text="item.amount"></span></td>
+                    <td><span data-text="item.measure"></span></td>
+                    <td><span data-text="item.alarm"></span></td>
+                    <td><div class="icon_delete tag-control" data-on-click="delete" data-tooltip="tag_icon_delete_tip"></div></td>
+                </tr>
+                <tr>
+                    <td><input data-value="toAdd.name"></td>
+                    <td>
+                        <select data-value="toAdd.action">
+                            <option value="action1">Action 1</option>
+                            <option value="action2">Action 2</option>
+                        </select>
+                    </td>
+                    <td><input data-value="toAdd.amount"></td>
+                    <td>
+                        <select data-value="toAdd.measure">
+                            <option value="percent">%</option>
+                            <option value="instances">Instance(s)</option>
+                        </select>
+                    </td>
+                    <td style="position:relative">
+                        <select data-value="toAdd.alarm">
+                            <option data-each-item="alarms" value="item.name" data-text="item.name"></option>
+                        </select><br />
+                        <a style="position:absolute; white-space: nowrap; left: 0px" data-on-click="createAlarm">Create alarm</a>
+                    </td>
+                    <td><div class="icon_add" data-on-click="add"></div></td>
+                </tr>
+            </tbody>
+            </table>
+		</div>
+</div>

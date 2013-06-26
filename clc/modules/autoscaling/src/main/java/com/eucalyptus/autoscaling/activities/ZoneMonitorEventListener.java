@@ -20,9 +20,9 @@
 package com.eucalyptus.autoscaling.activities;
 
 import org.apache.log4j.Logger;
-import com.eucalyptus.autoscaling.common.AutoScaling;
 import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.component.Topology;
+import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.event.ClockTick;
 import com.eucalyptus.event.EventListener;
 import com.eucalyptus.event.Listeners;
@@ -39,7 +39,7 @@ public class ZoneMonitorEventListener implements EventListener<ClockTick> {
 
   @Override
   public void fireEvent( final ClockTick event ) {
-    if ( Topology.isEnabledLocally( AutoScaling.class ) && Bootstrap.isFinished() ) {
+    if ( Topology.isEnabledLocally( Eucalyptus.class ) && Bootstrap.isFinished() ) {  // TODO should be AutoScaling.class
       try {
         ZoneMonitor.checkZones();
       } catch ( Exception ex ) {

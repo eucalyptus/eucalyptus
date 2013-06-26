@@ -5,7 +5,6 @@
         <dependency name="eucalyptus-cloudwatch-common" rev="latest.integration"/>
         <dependency name="eucalyptus-loadbalancing-common" rev="latest.integration"/>
         <dependency name="eucalyptus-ws" rev="latest.integration"/>
-        <dependency name="eucalyptus-cluster-manager" rev="latest.integration"/>
     </dependencies>
 </ivy-module>
 

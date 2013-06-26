@@ -24,7 +24,6 @@
     baseTable : null,
     tableWrapper : null,
     attachDialog : null,
-    tagDialog : null,
     attachButtonId : 'volume-attach-btn',
     createButtonId : 'volumes-add-btn',
     _init : function() {
@@ -218,18 +217,6 @@
          help: { content: $add_help , url: help_volume.dialog_add_content_url, pop_height: 500}
        };
       // volume create dialog end
-      // tag dialog begins
-      $tmpl = $('html body').find('.templates #resourceTagWidgetTmpl').clone();
-      $rendered = $($tmpl.render($.extend($.i18n.map, help_instance)));
-      var $tag_dialog = $rendered.children().first();
-      var $tag_help = $rendered.children().last();
-      this.tagDialog = $tag_dialog.eucadialog({
-        id: 'volumes-tag-resource',
-        title: 'Add/Edit tags',
-        help: {content: $tag_help, url: help_instance.dialog_terminate_content_url},
-      });
-      // tag dialog ends
-
     },
 
     _destroy : function() {

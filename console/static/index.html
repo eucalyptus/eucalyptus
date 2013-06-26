@@ -1194,7 +1194,7 @@
                   </th>
                   <th>{{!>scaling_tbl_hdr_name}}</th>
                   <th>{{!>scaling_tbl_hdr_config}}</th>
-                  <th>{{!>scaling_tbl_hdr_activity}}</th>
+                  <!--<th>{{!>scaling_tbl_hdr_activity}}</th>-->
                   <th>{{!>scaling_tbl_hdr_current}}</th>
                   <th>{{!>scaling_tbl_hdr_desired}}</th>
                   <th>{{!>scaling_tbl_hdr_health}}</th>
@@ -1807,29 +1807,6 @@
         </div>
       </script>
       <!-- END Launch Wizard & Help --> 
-
-      <!-- Resource Tag Template -->
-      <script id="resourceTagWidgetTmpl" type="text/x-jsrender">
-        <div id="resource-tag-widget-wrapper">
-          <div id="resource-tag-widget" class="euca-dialog">
-            <div class="widget-inner-content">
-              {{!: resource_tag_widget_head_text }}
-              <div id="tag-modification-display-box"> </div>
-              <div class="selected-resources"> </div>
-            </div>
-          </div>
-
-          <div id="resource-tag-widget-help" class="dialog-help">
-            <div class="dialog-help-content">
-              {{!: dialog_terminate_content}}
-            </div>
-            <div class="help-revert-button"> 
-              <a href="#">{{!>revert_button}}</a>
-            </div>
-          </div>
-
-        </div>
-      </script>
 
       <!-- Launch Config Template -->
       <script id="launchConfigTblTmpl" type="text/x-jsrender">

@@ -56,8 +56,6 @@ import com.eucalyptus.auth.euare.PutRolePolicyType;
 import com.eucalyptus.auth.euare.RoleType;
 import com.eucalyptus.auth.principal.AccountFullName;
 import com.eucalyptus.auth.principal.Principals;
-import com.eucalyptus.autoscaling.activities.DispatchingClient;
-import com.eucalyptus.autoscaling.activities.EucalyptusClient;
 import com.eucalyptus.autoscaling.common.AutoScaling;
 import com.eucalyptus.autoscaling.common.AutoScalingGroupNames;
 import com.eucalyptus.autoscaling.common.AutoScalingMessage;
@@ -79,7 +77,6 @@ import com.eucalyptus.autoscaling.common.TagType;
 import com.eucalyptus.autoscaling.common.Tags;
 import com.eucalyptus.autoscaling.common.UpdateAutoScalingGroupResponseType;
 import com.eucalyptus.autoscaling.common.UpdateAutoScalingGroupType;
-import com.eucalyptus.autoscaling.configurations.LaunchConfiguration;
 import com.eucalyptus.cloudwatch.CloudWatch;
 import com.eucalyptus.cloudwatch.CloudWatchMessage;
 import com.eucalyptus.cloudwatch.MetricData;
@@ -96,9 +93,9 @@ import com.eucalyptus.empyrean.EmpyreanMessage;
 import com.eucalyptus.empyrean.ServiceStatusType;
 import com.eucalyptus.util.Callback;
 import com.eucalyptus.util.Callback.Checked;
+import com.eucalyptus.util.DispatchingClient;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.OwnerFullName;
-import com.eucalyptus.util.TypeMappers;
 import com.eucalyptus.util.async.CheckedListenableFuture;
 import com.eucalyptus.util.async.Futures;
 import com.google.common.base.Function;
@@ -135,6 +132,7 @@ import edu.ucsb.eucalyptus.msgs.DescribeSecurityGroupsResponseType;
 import edu.ucsb.eucalyptus.msgs.DescribeSecurityGroupsType;
 import edu.ucsb.eucalyptus.msgs.DnsMessage;
 import edu.ucsb.eucalyptus.msgs.EucalyptusMessage;
+import edu.ucsb.eucalyptus.msgs.GroupItemType;
 import edu.ucsb.eucalyptus.msgs.ImageDetails;
 import edu.ucsb.eucalyptus.msgs.IpPermissionType;
 import edu.ucsb.eucalyptus.msgs.RemoveMultiANameResponseType;
@@ -184,7 +182,8 @@ public class EucalyptusActivityTasks {
 		@Override
 		public DispatchingClient<EuareMessage, Euare> getClient() {
 			try{
-				final EuareClient client = new EuareClient(this.getUserId());
+				final DispatchingClient<EuareMessage, Euare> client =
+					new DispatchingClient<>( this.getUserId(), Euare.class );
 				client.init();
 				return client;
 			}catch(Exception ex){
@@ -208,7 +207,8 @@ public class EucalyptusActivityTasks {
 		@Override
 		public DispatchingClient<AutoScalingMessage, AutoScaling> getClient() {
 			try{
-				final AutoScalingClient client = new AutoScalingClient(this.getUserId());
+				final DispatchingClient<AutoScalingMessage, AutoScaling> client =
+					new DispatchingClient<>( this.getUserId(),AutoScaling.class );
 				client.init();
 				return client;
 			}catch(Exception ex){
@@ -232,7 +232,8 @@ public class EucalyptusActivityTasks {
 		@Override
 		public DispatchingClient<CloudWatchMessage, CloudWatch> getClient() {
 			try{
-				final CloudWatchClient client = new CloudWatchClient(this.getUserId());
+				final DispatchingClient<CloudWatchMessage, CloudWatch> client =
+					new DispatchingClient<>(this.getUserId(), CloudWatch.class);
 				client.init();
 				return client;
 			}catch(Exception ex){
@@ -255,7 +256,8 @@ public class EucalyptusActivityTasks {
 		@Override
 		public DispatchingClient<DnsMessage, Dns> getClient() {
 			try{
-				final DnsClient client = new DnsClient(this.getUserId());
+				final DispatchingClient<DnsMessage, Dns> client
+					= new DispatchingClient<>(this.getUserId(), Dns.class);
 				client.init();
 				return client;
 			}catch(Exception e){
@@ -278,10 +280,9 @@ public class EucalyptusActivityTasks {
 
 		@Override
 		public DispatchingClient<EmpyreanMessage, Empyrean> getClient() {
-			// TODO Auto-generated method stub
 			try{
-				final EmpyreanClient client = 
-						new EmpyreanClient(this.getUserId());
+				final DispatchingClient<EmpyreanMessage, Empyrean> client =
+						new DispatchingClient<>(this.getUserId(),Empyrean.class);
 				client.init();
 				return client;
 			}catch(Exception e){
@@ -304,9 +305,8 @@ public class EucalyptusActivityTasks {
 		@Override
 		public DispatchingClient<EucalyptusMessage, Eucalyptus> getClient(){
 			 try {
-			     // final DispatchingClient<BaseMessage, ComponentId> client = 
-				 final EucalyptusClient client = 
-			    		  new EucalyptusClient( this.getUserId() );
+				 final DispatchingClient<EucalyptusMessage, Eucalyptus> client =
+			    		  new DispatchingClient<>( this.getUserId( ), Eucalyptus.class );
 			      client.init();
 			      return client;
 			    } catch ( Exception e ) {
@@ -331,7 +331,8 @@ public class EucalyptusActivityTasks {
 		public DispatchingClient<EucalyptusMessage, Eucalyptus> getClient() {
 			// TODO Auto-generated method stub
 			try{
-				EucalyptusClient client = new EucalyptusClient(this.userId);
+				final DispatchingClient<EucalyptusMessage, Eucalyptus> client =
+					new DispatchingClient<>( this.getUserId( ), Eucalyptus.class );
 				client.init();
 				return client;
 			}catch(Exception e){
@@ -2201,8 +2202,8 @@ public class EucalyptusActivityTasks {
 		private final String availabilityZone;
 		private final String imageId;
 		private final String instanceType;
-		private String userData = null;
-		private String groupName = null;
+		private String userData;
+		private String groupName;
 		private int numInstances = 1;
 		private final AtomicReference<List<String>> instanceIds = new AtomicReference<List<String>>(
 		    Collections.<String>emptyList()
@@ -2216,31 +2217,22 @@ public class EucalyptusActivityTasks {
 			this.numInstances = numInstances;
 		}
 
-	    private RunInstancesType runInstances( 
-	    		final String availabilityZone,
-	            final int attemptToLaunch ) 
+	    private RunInstancesType runInstances( )
 	    {
 	    	OwnerFullName systemAcct = AccountFullName.getInstance(Principals.systemAccount( ));
 	     	LOG.info("runInstances with zone="+availabilityZone+", account="+systemAcct);
 	     		       	
-		    final LaunchConfiguration launchConfiguration = 
-	    		  LaunchConfiguration.create(systemAcct, "launch_config_loadbalacing", 
-	    		  this.imageId, this.instanceType);
-		    if(groupName != null){
-		    	List<String> groups = Lists.newArrayList();
-		    	groups.add(groupName);
-		    	launchConfiguration.setSecurityGroups(groups);
+		    final RunInstancesType runInstances = new RunInstancesType( );
+		    runInstances.setImageId( imageId );
+		    runInstances.setInstanceType( instanceType );
+		    if( groupName != null ) {
+		    	runInstances.setSecurityGroups( Lists.newArrayList( new GroupItemType(groupName,null) ) ); // Name or ID can be passed as ID
 		    }
-		    final RunInstancesType runInstances = TypeMappers.transform( launchConfiguration, RunInstancesType.class );
 		    if(availabilityZone != null)
 		    	runInstances.setAvailabilityZone( availabilityZone );
-		    
-		    if(numInstances>1){
-		    	runInstances.setMinCount(numInstances);
-		    	runInstances.setMaxCount(numInstances);
-		    }
-		    if(this.userData!=null)
-		    	runInstances.setUserData(this.userData);
+		    runInstances.setMinCount( Math.max( 1, numInstances ) );
+		    runInstances.setMaxCount( Math.max( 1, numInstances ) );
+		    runInstances.setUserData( userData );
 		    return runInstances;
 	    }
 	    
@@ -2248,7 +2240,7 @@ public class EucalyptusActivityTasks {
 	    void dispatchInternal( final ActivityContext<EucalyptusMessage, Eucalyptus> context,
 	                           final Callback.Checked<EucalyptusMessage> callback ) {
 	      final DispatchingClient<EucalyptusMessage,Eucalyptus> client = context.getClient();
-	      client.dispatch( runInstances( availabilityZone, 1 ), callback );
+	      client.dispatch( runInstances( ), callback );
 	    }
 
 	    @Override

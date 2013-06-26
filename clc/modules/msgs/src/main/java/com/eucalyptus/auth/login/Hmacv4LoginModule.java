@@ -70,7 +70,7 @@ public class Hmacv4LoginModule extends HmacLoginModuleSupport {
     final Function<String,List<String>> parameterLookup = parameterLookup( credentials.getParameters() );
     final Map<String,String> authorizationParameters = credentials.getVariant().getAuthorizationParameters( headerLookup, parameterLookup );
     final SignatureCredential signatureCredential = new SignatureCredential( authorizationParameters.get("Credential") );    
-    final AccessKey accessKey = lookupAccessKey( signatureCredential.getAccessKeyId(), credentials.getParameters() );
+    final AccessKey accessKey = lookupAccessKey( credentials );
     final Date date = HmacUtils.getSignatureDate( EnumSet.of(HmacUtils.SignatureVersion.SignatureV4), headerLookup, parameterLookup );
     signatureCredential.verify( date, null, null, V4_TERMINATOR ); //TODO Do we want to validate region and service name?
     final User user = accessKey.getUser( );

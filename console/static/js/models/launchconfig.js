@@ -5,6 +5,7 @@ define([
   './eucamodel'
 ], function(EucaModel) {
   var model = EucaModel.extend({
+
     idAttribute: 'name',
     namedColumns: ['image_id'],
 
@@ -73,7 +74,7 @@ define([
 
     sync: function(method, model, options) {
       var collection = this;
-        if (method == 'create') {
+        if (method == 'create' || options.overrideUpdate == true) {
           var name = model.get('name');
           var data = new Array();
           data.push({name: "_xsrf", value: $.cookie('_xsrf')});
@@ -95,6 +96,7 @@ define([
             var mappings = model.get('block_device_mappings');
             $.each(eval(mappings), function(idx, mapping) {
               if (mapping.device_name == '/dev/sda') { // root, folks!
+                r
                 console.log("adding root device mapping vol_size="+mapping.ebs.volume_size);
                 data.push({name: "BlockDeviceMapping."+(idx+1)+".DeviceName", value: mapping.device_name});
                 data.push({name: "BlockDeviceMapping."+(idx+1)+".Ebs.VolumeSize", value: mapping.volume_size});
@@ -149,39 +151,19 @@ define([
             files: user_file,
             success:
               function(data, textStatus, jqXHR){
-                if ( data.results ) {
-                  notifySuccess(null, $.i18n.prop('create_launch_config_run_success', DefaultEncoder().encodeForHTML(model.name), DefaultEncoder().encodeForHTML(data.results.request_id)));
-                } else {
-                  notifyError($.i18n.prop('create_launch_config_run_error', DefaultEncoder().encodeForHTML(model.name), DefaultEncoder().encodeForHTML(model.name)), undefined_error);
-                }
+                options.success(data, textStatus, jqXHR);
               },
             error:
               function(jqXHR, textStatus, errorThrown){
-                notifyError($.i18n.prop('create_launch_config_run_error', DefaultEncoder().encodeForHTML(model.name), DefaultEncoder().encodeForHTML(model.name)), getErrorMessage(jqXHR));
+                options.error(data, textStatus, jqXHR);
               }
           });
         }
         else if (method == 'delete') {
+          var url = "/autoscaling?Action=DeleteLaunchConfiguration";
           var name = model.get('name');
-          $.ajax({
-            type:"POST",
-            url:"/autoscaling?Action=DeleteLaunchConfiguration",
-            data:"_xsrf="+$.cookie('_xsrf')+"&LaunchConfigurationName="+name,
-            dataType:"json",
-            async:true,
-            success:
-              function(data, textStatus, jqXHR){
-                if ( data.results ) {
-                  notifySuccess(null, $.i18n.prop('delete_launch_config_success', DefaultEncoder().encodeForHTML(name)));
-                } else {
-                  notifyError($.i18n.prop('delete_launch_config_error', DefaultEncoder().encodeForHTML(name)), undefined_error);
-                }
-              },
-            error:
-              function(jqXHR, textStatus, errorThrown){
-                notifyError($.i18n.prop('delete_launch_config_error', DefaultEncoder().encodeForHTML(name)), getErrorMessage(jqXHR));
-              }
-          });
+          var data = "_xsrf="+$.cookie('_xsrf')+"&LaunchConfigurationName="+name;
+          return this.makeAjaxCall(url, data, options);
         }
       }
   });

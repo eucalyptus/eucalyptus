@@ -539,11 +539,11 @@ function popOutPageHelp(url, height){
   window.open(url, '_blank', option,true);
 }
 
-var PROXY_TIMEOUT = 120000;
-function setupAjax(){
+// value no longer hard-code here. Look on server side in the console.ini file: ajax.timeout
+function setupAjax(timeout){
  $.ajaxSetup({
    type: "POST",
-   timeout: 30000
+   timeout: parseInt(timeout)
  });
 }
 

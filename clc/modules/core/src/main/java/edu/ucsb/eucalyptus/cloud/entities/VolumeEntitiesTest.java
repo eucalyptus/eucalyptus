@@ -1,3 +1,23 @@
+/*************************************************************************
+ * Copyright 2013 Eucalyptus Systems, Inc.
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; version 3 of the License.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see http://www.gnu.org/licenses/.
+ *
+ * Please contact Eucalyptus Systems, Inc., 6755 Hollister Ave., Goleta
+ * CA 93117, USA or visit http://www.eucalyptus.com/licenses/ if you need
+ * additional information or have any questions.
+ ************************************************************************/
+
 package edu.ucsb.eucalyptus.cloud.entities;
 
 import java.util.NoSuchElementException;
@@ -5,6 +25,7 @@ import java.util.NoSuchElementException;
 import javax.persistence.EntityTransaction;
 
 import org.apache.log4j.Logger;
+import org.junit.Ignore;
 
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.TransactionException;
@@ -13,9 +34,8 @@ import com.google.common.base.Function;
 
 /**
  * Tests for Volume-related entities
- * @author zhill
- *
  */
+@Ignore("Manual development test")
 public class VolumeEntitiesTest {
 	private static final Logger LOG = Logger.getLogger(VolumeEntitiesTest.class);
 	private static final String fakeSC = "testing_non_sc";

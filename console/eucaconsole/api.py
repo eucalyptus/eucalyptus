@@ -115,7 +115,7 @@ class BaseAPIHandler(eucaconsole.BaseHandler):
             err = response.error
             ret = '[]'
             if isinstance(err, BotoServerError):
-                ret = ClcError(err.status, err.reason, err.message)
+                ret = ClcError(err.status, err.reason, err.error_message)
                 self.set_status(err.status);
             elif issubclass(err.__class__, Exception):
                 if isinstance(err, socket.timeout):
@@ -125,6 +125,8 @@ class BaseAPIHandler(eucaconsole.BaseHandler):
                     ret = ClcError(500, err.message, None)
                     self.set_status(500);
             self.set_header("Content-Type", "application/json;charset=UTF-8")
+            self.set_header("Cache-control", "no-store")
+            self.set_header("Pragma", "no-cache")
             self.write(json.dumps(ret, cls=self.json_encoder))
             self.finish()
             logging.exception(err)
@@ -142,6 +144,8 @@ class BaseAPIHandler(eucaconsole.BaseHandler):
                     ret = Response(response.data) # wrap all responses in an object for security purposes
                 data = json.dumps(ret, cls=self.json_encoder, indent=2)
                 self.set_header("Content-Type", "application/json;charset=UTF-8")
+                self.set_header("Cache-control", "no-store")
+                self.set_header("Pragma", "no-cache")
                 self.write(data)
                 self.finish()
             except Exception, err:
@@ -269,7 +273,7 @@ class ScaleHandler(BaseAPIHandler):
                                 health_check_type=hc_type, health_check_period=hc_period,
                                 desired_capacity=desired_capacity,
                                 min_size=min_size, max_size=max_size,
-                                termination_policies=termination_policies)
+                                termination_policies=termination_policy)
                 self.user_session.scaling.update_autoscaling_group(group, self.callback)
             elif action == 'CreateLaunchConfiguration':
                 image_id = self.get_argument('ImageId')
@@ -342,7 +346,6 @@ class ScaleHandler(BaseAPIHandler):
                 cooldown = self.get_argument("Cooldown", None)
                 min_adjustment_step = self.get_argument("MinAdjustmentStep", None)
                 policy = ScalingPolicy(name=policy_name, adjustment_type=adjustment_type, as_name=as_group, scaling_adjustment=scaling_adjustment, cooldown=cooldown, min_adjustment_step=min_adjustment_step)
-                print "policy = "+str(policy.__dict__)
                 self.user_session.scaling.create_scaling_policy(policy, self.callback)
             elif action == 'DescribeAdjustmentTypes':
                 self.user_session.scaling.get_all_adjustment_types(self.callback)
@@ -800,7 +803,6 @@ class ComputeHandler(BaseAPIHandler):
             kernel_id = self.get_argument('KernelId', None)
             ramdisk_id = self.get_argument('RamdiskId', None)
             root_dev_name = self.get_argument('RootDeviceName', None)
-            snapshot_id = self.get_argument('SnapshotId', None)
             # get block device mappings
             bdm = BlockDeviceMapping()
             mapping = self.get_argument('BlockDeviceMapping.1.DeviceName', None)
@@ -822,10 +824,6 @@ class ComputeHandler(BaseAPIHandler):
                 bdm[dev_name] = block_dev_type
                 idx += 1
                 mapping = self.get_argument('BlockDeviceMapping.%d.DeviceName' % idx, None)
-            if snapshot_id:
-                rootbdm = BlockDeviceType()
-                rootbdm.snapshot_id = snapshot_id
-                bdm['/dev/sda'] = rootbdm
             if len(bdm) == 0:
                 bdm = None
             return clc.register_image(name, image_location, description, architecture, kernel_id, ramdisk_id, root_dev_name, bdm, callback)
@@ -874,6 +872,7 @@ class ComputeHandler(BaseAPIHandler):
             return clc.get_all_security_groups(filters, callback)
         elif action == 'CreateSecurityGroup':
             name = self.get_argument('GroupName')
+            name = base64.b64decode(name)
             desc = self.get_argument('GroupDescription')
             desc = base64.b64decode(desc)
             return clc.create_security_group(name, desc, callback)

@@ -38,7 +38,7 @@
       this.baseTable = $scalingTable;
       this.tableWrapper = $scalingTable.eucatable({
         id : 'scaling', // user of this widget should customize these options,
-        data_deps: ['scalinggrps'],
+        data_deps: ['scalinggrps', 'scalingpolicys'],
         hidden: thisObj.options['hidden'],
         dt_arg : {
           "sAjaxSource": 'scalinggrp',
@@ -63,31 +63,33 @@
               "aTargets" : [2],
               "mData": "launch_config_name" 
             },
+            /*
             {
               "aTargets" : [3],
               "mData": function(oObj) { 
                 return 'some graph';
               }
             },
+            */
             {
-              "aTargets" : [4],
+              "aTargets" : [3],
               "mData": function(oObj) { 
-                return "";
+                return oObj.instances.length;
               }
             },
             { 
-              "aTargets" : [5],
+              "aTargets" : [4],
               "mData": "desired_capacity" 
             },
             {
-              "aTargets" : [6],
+              "aTargets" : [5],
               "mData": function(oObj) { 
                 return 'All healthy';
               }
             },
             {
               "bVisible": false,
-              "aTargets":[7],
+              "aTargets":[6],
 	          "mRender": function(data) {
                 return DefaultEncoder().encodeForHTML(data);
               },
@@ -134,7 +136,7 @@
     _expandCallback : function(row){ 
       var $el = $('<div />');
       require(['app', 'views/expandos/scaling'], function(app, expando) {
-         new expando({el: $el, model: app.data.scalingGroups.get(row[7]) });
+         new expando({el: $el, model: app.data.scalingGroups.get(row[6]) });
       });
       return $el;
     },
@@ -146,17 +148,19 @@
 
       (function(){
         itemsList['quick'] = { "name": scaling_action_quick, callback: function(key, opt) {;}, disabled: function(){ return true;} } 
-        itemsList['suspend'] = { "name": scaling_action_suspend, callback: function(key, opt) {;}, disabled: function(){ return true;} }
-        itemsList['resume'] = { "name": scaling_action_resume, callback: function(key, opt) {;}, disabled: function(){ return true;} }
+//        itemsList['suspend'] = { "name": scaling_action_suspend, callback: function(key, opt) {;}, disabled: function(){ return true;} }
+//        itemsList['resume'] = { "name": scaling_action_resume, callback: function(key, opt) {;}, disabled: function(){ return true;} }
         itemsList['edit'] = { "name": scaling_action_edit, callback: function(key, opt) {;}, disabled: function(){ return true;} }
         itemsList['delete'] = { "name": scaling_action_delete, callback: function(key, opt) {;}, disabled: function(){ return true;} }
+        itemsList['manage_instances'] = { "name": scaling_action_manage, callback: function(key, opt) {;}, disabled: function(){ return true;} }
       })();
 
       if ( selectedScaling.length === 1) {
         itemsList['quick'] = {"name":scaling_action_quick, callback: function(key, opt){ thisObj._dialogAction('quickscaledialog', selectedScaling); }}
-        itemsList['suspend'] = {"name":scaling_action_suspend, callback: function(key, opt){ thisObj._dialogAction('suspendscalinggroup', selectedScaling); }}
-        itemsList['resume'] = {"name":scaling_action_resume, callback: function(key, opt){ thisObj._dialogAction('resumescalinggroup', selectedScaling); }}
+//        itemsList['suspend'] = {"name":scaling_action_suspend, callback: function(key, opt){ thisObj._dialogAction('suspendscalinggroup', selectedScaling); }}
+//        itemsList['resume'] = {"name":scaling_action_resume, callback: function(key, opt){ thisObj._dialogAction('resumescalinggroup', selectedScaling); }}
         itemsList['edit'] = {"name":scaling_action_edit, callback: function(key, opt){ thisObj._dialogAction('editscalinggroup', selectedScaling); }}
+        itemsList['manage_instances'] = { "name": scaling_action_manage, callback: function(key, opt) { thisObj._dialogAction('scalinggroupmanageinstances', selectedScaling);}}
       }
 
       if ( selectedScaling.length >= 1) {

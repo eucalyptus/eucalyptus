@@ -1,8 +1,8 @@
 define([
+  'app',
   'rivets',
-  'dataholder',
   'text!./page1.html',
-], function(rivets, dh, template) {
+], function(app, rivets, template) {
     return Backbone.View.extend({
       title: 'General', 
 
@@ -10,24 +10,24 @@ define([
         var self = this;
         var scope = this.model;
 
-        scope.launchConfigs = {
+        scope.set('launchConfigs', {
             name: 'launchConfig',
-            collection: dh.launchConfigs,
+            collection: app.data.launchConfigs,
             itrLabel: function() {
-              return this.itr.get('name');
-            } 
-        }
+                return this.itr.get('name');
+            }
+       });
 
-        scope.scalingGroupErrors = new Backbone.Model();
+        scope.set('scalingGroupErrors', new Backbone.Model());
 
-        scope.scalingGroup.on('change', function(model) {
+        scope.get('scalingGroup').on('change', function(model) {
             console.log('CHANGE', arguments);
-            scope.scalingGroup.validate(model.changed);
+            scope.get('scalingGroup').validate(model.changed);
         });
 
-        scope.scalingGroup.on('validated', function(valid, model, errors) {
+        scope.get('scalingGroup').on('validated', function(valid, model, errors) {
             _.each(_.keys(model.changed), function(key) { 
-                scope.scalingGroupErrors.set(key, errors[key]); 
+                scope.get('scalingGroupErrors').set(key, errors[key]); 
             });
         });
 

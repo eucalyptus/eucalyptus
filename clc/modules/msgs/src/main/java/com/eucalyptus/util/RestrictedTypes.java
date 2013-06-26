@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * Copyright 2009-2013 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -642,16 +642,7 @@ public class RestrictedTypes {
       return this;
     }
 
-//TODO:JDK7:Restore the original code for this (does not compile with OpenJDK 1.6.0_24)
-//    public Predicate<? super T> buildPredicate() {
-//      return Predicates.and( predicates );
-//    }
-
     public Predicate<? super T> buildPredicate() {
-      return buildPredicate( predicates );
-    }
-
-    private static <ST> Predicate<ST> buildPredicate( final List<Predicate<? super ST>> predicates ) {
       return Predicates.and( predicates );
     }
   }
