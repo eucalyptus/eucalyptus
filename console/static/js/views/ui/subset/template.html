@@ -1,21 +1,19 @@
 <div>
-	<div class="selected-resources">
-            <table>
-            <tbody>
-                <tr data-each-item="selected">
-                    <td class="wrap-content"><span data-text="getValue"></span></td>
-                    <td><div class="icon_delete tag-control" data-on-click="delete" data-tooltip="tag_icon_delete_tip"></div></td>
-                </tr>
-                <tr>
-                    <td>
-                        <select data-value="toAdd">
-                            <option value="">--</option>
-                            <option data-each-item="available" data-value="getId" data-text="getValue"></option>
-                        </select>
-                    </td>
-                    <td><div class="icon_add" data-on-click="add"></div></td>
-                </tr>
-            </tbody>
-            </table>
-		</div>
+    <table>
+    <tbody>
+        <tr data-each-item="selected">
+            <td class="wrap-content"><span data-text="getValue"></span></td>
+            <td><div class="icon_delete tag-control" data-on-click="delete" data-tooltip="tag_icon_delete_tip"></div></td>
+        </tr>
+        <tr>
+            <td>
+                <select data-value="toAdd">
+                    <option value="">--</option>
+                    <option data-each-item="available" data-value="getId" data-text="getValue"></option>
+                </select>
+            </td>
+            <td><div class="icon_add" data-on-click="add"></div></td>
+        </tr>
+    </tbody>
+    </table>
 </div>
