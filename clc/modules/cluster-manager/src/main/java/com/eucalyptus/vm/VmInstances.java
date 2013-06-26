@@ -691,6 +691,10 @@ public class VmInstances {
     return PersistentLookup.INSTANCE;
   }
 
+  public static Predicate<VmInstance> initialize() {
+    return InstanceInitialize.INSTANCE;
+  }
+
   public static VmInstance register( final VmInstance vm ) {
     if ( !terminateDescribeCache.containsKey( vm.getInstanceId( ) ) ) {
       return Transitions.REGISTER.apply( vm );
@@ -860,8 +864,9 @@ public class VmInstances {
     final EntityTransaction db = Entities.get( VmInstance.class );
     try {
       final Iterable<VmInstance> vms = Iterables.filter( instancesSupplier.get(), predicate );
+      final List<VmInstance> instances = Lists.newArrayList( vms );
       db.commit( );
-      return Lists.newArrayList( vms );
+      return instances;
     } catch ( final Exception ex ) {
       LOG.error( ex );
       Logs.extreme( ).error( ex, ex );
@@ -944,7 +949,20 @@ public class VmInstances {
     }
     
   }
-  
+
+  private enum InstanceInitialize implements Predicate<VmInstance> {
+    INSTANCE;
+
+    @Override
+    public boolean apply( final VmInstance input ) {
+      Entities.initialize( input.getNetworkGroups( ) );
+      input.getRuntimeState( ).getReason( ); // Initializes reason details
+      Entities.initialize( input.getBootRecord( ).getPersistentVolumes( ) );
+      Entities.initialize( input.getTransientVolumeState( ).getAttachments( ) );
+      return true;
+    }
+  }
+
   /**
    *
    */

@@ -587,6 +587,19 @@ public class Entities {
   }
 
   /**
+   * Initialize a lazy proxy / collection, etc.
+   *
+   * <p>Force loading of a lazy object.</p>
+   *
+   * <p>This WILL NOT initialize an entity.</p>
+   *
+   * @param obj The proxy / collection to initialize.
+   */
+  public static void initialize( @Nullable final Object obj ) {
+    Hibernate.initialize( obj );
+  }
+
+  /**
    *
    */
   public static <T> void delete( final T deleteObject ) {
