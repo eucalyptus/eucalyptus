@@ -255,6 +255,7 @@ class RootHandler(BaseHandler):
             print "root action = "+action
             if (action == 'awslogin'):
                 access_token = self.get_argument("access_token")
+                print "access token = "+access_token
                 req = urllib2.Request("https://api.amazon.com/auth/o2/tokeninfo?access_token=" + urllib.quote_plus(access_token))
                 print "requesting token auth"
                 response = urllib2.urlopen(req, timeout=15)
@@ -280,8 +281,8 @@ class RootHandler(BaseHandler):
                 # Client ID : amzn1.application-oa2-client.02dc0d9e787e49359fde3cf87cee14d9
                 # Client Secret : 8fe1c4994cc193e9239340af51004d8ed246932281870b8bf854821ce6f6f1fc
                 creds = sts.assume_role_with_web_identity(role_arn='arn:aws:iam::365812321051:role/authRole',
-                                              role_session_name='eucalyptusconsoleuser',
-                                              web_identity_token=token_info['aud'],
+                                              role_session_name='eucalyptusconsole',
+                                              web_identity_token=access_token,
                                               provider_id='www.amazon.com')
                 # parse AccessKeyId, SecretAccessKey and SessionToken
                 creds = Credentials(None)
