@@ -94,6 +94,13 @@
         thisObj.source = source;
         thisObj.searchConfig = new searchConfig(source);
         thisObj.bbdata = thisObj.searchConfig.filtered;
+
+        // for displaying loader message on initial page load
+        thisObj.bbdata.isLoaded = thisObj.source.hasLoaded();
+        thisObj.bbdata.listenTo(thisObj.source, 'initialized', function() {
+          thisObj.bbdata.trigger('initialized');
+        });
+
         thisObj.vsearch = VS.init({
             container : thisObj.$vel,
             showFacets : true,
@@ -156,12 +163,22 @@
 	    });
          }
       */
+
       dt_arg['fnServerData'] = function (sSource, aoData, fnCallback) {
         var data = {};
         data.aaData = thisObj.bbdata ? thisObj.bbdata.toJSON() : [];
         data.iTotalRecords = data.aaData.length;
         data.iTotalDisplayRecords = data.aaData.length;
-        fnCallback(data);
+
+        if(thisObj.bbdata) {
+          if (thisObj.bbdata.hasLoaded()) {
+            fnCallback(data);
+          } else {
+            thisObj.bbdata.on('initialized', function() {
+              fnCallback(data);
+            });
+          }
+        }
       }
 
       dt_arg['fnInitComplete'] = function( oSettings ) {
