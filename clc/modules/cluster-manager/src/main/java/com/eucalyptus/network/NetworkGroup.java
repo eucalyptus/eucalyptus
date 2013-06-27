@@ -272,7 +272,7 @@ public class NetworkGroup extends UserMetadata<NetworkGroup.State> implements Ne
   
   @Override
   public String toString( ) {
-    return String.format( "NetworkRulesGroup:%s:description=%s:networkRules=%s", this.getUniqueName( ), this.description, this.networkRules );
+    return String.format( "NetworkRulesGroup:%s:description=%s:networkRules=%s", this.getUniqueName( ), this.description, Entities.isReadable( this.networkRules ) ? this.networkRules : "<Not loaded>" );
   }
   
   @Transient

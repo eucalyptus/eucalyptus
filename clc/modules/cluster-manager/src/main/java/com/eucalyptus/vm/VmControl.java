@@ -239,7 +239,7 @@ public class VmControl {
       : ctx.getUserFullName( ).asAccountFullName( );
     try {
       final List<VmInstance> instances =
-          VmInstances.list( ownerFullName, filter.asCriterion(), filter.getAliases(), requestedAndAccessible );
+          VmInstances.list( ownerFullName, filter.asCriterion(), filter.getAliases(), Predicates.and( requestedAndAccessible, VmInstances.initialize( ) ) );
       final Map<String,List<Tag>> tagsMap = TagSupport.forResourceClass( VmInstance.class )
           .getResourceTagMap( AccountFullName.getInstance( ctx.getAccount() ),
               Iterables.transform( instances, CloudMetadatas.toDisplayName() ) );
