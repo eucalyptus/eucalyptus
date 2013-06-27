@@ -76,6 +76,10 @@ from .response import Response
 class BaseAPIHandler(eucaconsole.BaseHandler):
     json_encoder = None
 
+    def initialize(self, list):
+        list[self.__class__.__name__] = self
+        self.list = list
+
     def get_argument_list(self, name, name_suffix=None, another_suffix=None, size=None):
         ret = []
         index = 1
@@ -1031,7 +1035,7 @@ class ComputeHandler(BaseAPIHandler):
                                                          self.user_session.secret_key,
                                                          self.user_session.session_token)
             # could make this conditional, but add caching always for now
-            self.user_session.clc = CachingClcInterface(self.user_session.clc, eucaconsole.config)
+            self.user_session.clc = CachingClcInterface(self.user_session.clc, eucaconsole.config, self.list['PushHandler'])
 
         self.user_session.session_lifetime_requests += 1
 

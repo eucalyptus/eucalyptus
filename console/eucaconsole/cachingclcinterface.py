@@ -47,9 +47,10 @@ class CachingClcInterface(ClcInterface):
     caches = None
 
     # load saved state to simulate CLC
-    def __init__(self, clcinterface, config):
+    def __init__(self, clcinterface, config, pusher):
         self.caches = {}
         self.clc = clcinterface
+        self.pusher = pusher
         pollfreq = config.getint('server', 'pollfreq')
         if pollfreq < 5:    # let's say min frequency is 5
             pollfreq = 5
@@ -169,6 +170,7 @@ class CachingClcInterface(ClcInterface):
             self.caches[resource].expireCache()
         else:
             self.caches[resource].values = self.caches['get_'+resource](kwargs)
+            self.pusher.write_message("updated cache for "+resource)
         self.caches['timer_'+resource] = threading.Timer(interval, self.__cache_load_callback__, [resource, kwargs, interval, False])
         self.caches['timer_'+resource].start()
 
