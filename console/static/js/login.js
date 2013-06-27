@@ -163,6 +163,13 @@
         this.element.append($cookies_dialog);
         return;
       }
+      $login.find('#LoginWithAmazon').click(function(evt) {
+        options = { scope : 'profile' };
+        // TODO: needs to come from config!
+        amazon.Login.setClientId('amzn1.application-oa2-client.02dc0d9e787e49359fde3cf87cee14d9');
+        amazon.Login.authorize(options, 'https://localhost:8888?action=awslogin');
+        return false;
+      });
       // set the login event handler
       $form.find('input[type=text]').change( function(evt) {
         if($(this).val() != null && $(this).val()!='')

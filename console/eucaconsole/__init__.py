@@ -25,6 +25,7 @@
 
 import base64
 import binascii
+import boto
 import ConfigParser
 import io
 import json
@@ -37,9 +38,12 @@ import traceback
 import socket
 import logging
 import uuid
+import urllib
+import urllib2
 from datetime import datetime
 from datetime import timedelta
 
+from boto.sts.credentials import Credentials
 from .botoclcinterface import BotoClcInterface
 from token import TokenAuthenticator
 
@@ -247,7 +251,55 @@ class BaseHandler(tornado.web.RequestHandler):
 class RootHandler(BaseHandler):
     def get(self, path):
         try:
-            path = os.path.join(config.get('paths', 'staticpath'), "index.html")
+            action = self.get_argument("action", default='')
+            print "root action = "+action
+            if (action == 'awslogin'):
+                access_token = self.get_argument("access_token")
+                req = urllib2.Request("https://api.amazon.com/auth/o2/tokeninfo?access_token=" + urllib.quote_plus(access_token))
+                print "requesting token auth"
+                response = urllib2.urlopen(req, timeout=15)
+                body = response.read()
+                print "here's the response from the token auth:"+body
+                token_info = json.loads(body)
+                 
+                if token_info['aud'] != 'amzn1.application-oa2-client.02dc0d9e787e49359fde3cf87cee14d9' :
+                    # the access token does not belong to us
+                    raise BaseException("Invalid Token")
+                 
+                print "requesting user profile"
+                req = urllib2.Request("https://api.amazon.com/user/profile")
+                req.add_header("Authorization", "bearer " + access_token)
+                response = urllib2.urlopen(req, timeout=15)
+                body = response.read()
+                print "here's the response for user profile:"+body
+                profile = json.loads(body)
+                print "%s %s %s"%(profile['name'], profile['email'], profile['user_id'])
+                 
+                sts = boto.sts.connect_to_region('us-east-1')
+                # App ID : amzn1.application.d1df650f67aa4f389776fc46ce7eeab1
+                # Client ID : amzn1.application-oa2-client.02dc0d9e787e49359fde3cf87cee14d9
+                # Client Secret : 8fe1c4994cc193e9239340af51004d8ed246932281870b8bf854821ce6f6f1fc
+                creds = sts.assume_role_with_web_identity(role_arn='arn:aws:iam::365812321051:role/authRole',
+                                              role_session_name='eucalyptusconsoleuser',
+                                              web_identity_token=token_info['aud'],
+                                              provider_id='www.amazon.com')
+                # parse AccessKeyId, SecretAccessKey and SessionToken
+                creds = Credentials(None)
+                h = boto.handler.XmlHandler(creds, None)
+                xml.sax.parseString(body, h)
+                session_token = creds.session_token
+                access_id = creds.access_key
+                secret_key = creds.secret_key
+                while True:
+                    sid = os.urandom(16).encode('hex')
+                    if sid in sessions:
+                        continue
+                    break
+                sessions[sid] = UserSession(account, user, session_token, access_id, secret_key)
+                sessions[sid].host_override = 'ec2.us-east-1.amazonaws.com'
+                return LoginResponse(sessions[sid])
+            else:
+                path = os.path.join(config.get('paths', 'staticpath'), "index.html")
         except ConfigParser.Error:
             logging.info("Caught url path exception :"+path)
             path = '../static/index.html'
@@ -361,28 +413,18 @@ class LoginProcessor(ProxyProcessor):
             account, user, passwd = auth_decoded.split(':', 2);
             remember = web_req.get_argument("remember")
 
-        # this hack allows login with AWS creds if account is set to aws endpoint
-        ec2_endpoint = None
-        if account[len(account)-13:] == 'amazonaws.com':
-            if action == 'changepwd':
-                raise eucaconsole.EuiException(501, 'Cannot change password on AWS account.')
-            ec2_endpoint = account
-            access_id = user
-            secret_key = passwd
-            session_token = None
-        if ec2_endpoint == None:
-            if config.getboolean('test', 'usemock') == False:
-                auth = TokenAuthenticator(config.get('server', 'clchost'),
-                                config.getint('server', 'session.abs.timeout')+60)
-                creds = auth.authenticate(account, user, passwd, newpwd)
-                session_token = creds.session_token
-                access_id = creds.access_key
-                secret_key = creds.secret_key
-            else:
-                # assign bogus values so we never mistake them for the real thing (who knows?)
-                session_token = "Larry"
-                access_id = "Moe"
-                secret_key = "Curly"
+        if config.getboolean('test', 'usemock') == False:
+            auth = TokenAuthenticator(config.get('server', 'clchost'),
+                            config.getint('server', 'session.abs.timeout')+60)
+            creds = auth.authenticate(account, user, passwd, newpwd)
+            session_token = creds.session_token
+            access_id = creds.access_key
+            secret_key = creds.secret_key
+        else:
+            # assign bogus values so we never mistake them for the real thing (who knows?)
+            session_token = "Larry"
+            access_id = "Moe"
+            secret_key = "Curly"
 
         # create session and store info there, set session id in cookie
         while True:
@@ -404,7 +446,7 @@ class LoginProcessor(ProxyProcessor):
             web_req.clear_cookie("username")
             web_req.clear_cookie("remember")
         sessions[sid] = UserSession(account, user, session_token, access_id, secret_key)
-        sessions[sid].host_override = ec2_endpoint
+        sessions[sid].host_override = None
 
         return LoginResponse(sessions[sid])
 

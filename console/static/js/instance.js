@@ -1239,7 +1239,7 @@
       var selectedType = instance.instance_type;
       var zone = instance.placement;
       if (zone == undefined) {
-        zone = oObj.aData._placement.zone;
+        zone = instance._placement.zone;
       }
       $summary = $('<div>').append(
           $('<div>').attr('id','summary-type-insttype').append($('<div>').text(launch_instance_summary_type), $('<span>').text(selectedType)),

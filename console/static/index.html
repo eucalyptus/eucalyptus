@@ -58,6 +58,7 @@
     <script type="text/javascript" language="javascript" src="lib/jquery.base64.js"></script>
     <script type="text/javascript" language="javascript" src="lib/jquery.ba-hashchange.js"></script>
     <script type="text/javascript" language="javascript" src="lib/jquery.md5.js"></script>
+    <script type="text/javascript" language="javascript" src="lib/aws_login.js"></script>
 
     <!-- Backbone support -->
     <script data-main="lib/main" type="text/javascript" language="javascript" src="lib/require.js"></script>
@@ -105,6 +106,7 @@
   </head> 
 
   <body>
+    <div id="amazon-root"></div>
     <div class="euca-container">
       <div class="euca-header-container">
         <div class="inner-container clearfix">
@@ -184,6 +186,14 @@
             
             <div class="button-bar">
               <input type="submit" name="login" class="large-button" value="{{!>login_btn}}" disabled="disabled" />
+                <br/> - OR -
+                <div>
+                    <a href="#" id="LoginWithAmazon">
+                      <img border="0" alt="Login with Amazon"
+                        src="https://images-na.ssl-images-amazon.com/images/G/01/lwa/btnLWA_gold_156x32.png"
+                        width="156" height="32" />
+                    </a>
+                <div>
             </div>
 
           </form>        
