@@ -24,6 +24,7 @@
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 import base64
+import boto
 import ConfigParser
 from datetime import datetime
 import functools
@@ -291,14 +292,14 @@ class ScaleHandler(BaseAPIHandler):
                 while mapping:
                     pre = 'BlockDeviceMapping.%d' % idx
                     dev_name = mapping
-                    block_dev_type = boto.ec2.autoscale.launchconfig.BlockDeviceMapping()
-                    block_dev_type.ephemeral_name = self.get_argument('%s.VirtualName' % pre, None)
-                    if not(block_dev_type.ephemeral_name):
-                        block_dev_type.snapshot_id = \
-                                self.get_argument('%s.Ebs.SnapshotId' % pre, None)
-                        block_dev_type.size = \
-                                self.get_argument('%s.Ebs.VolumeSize' % pre, None)
-                    bdm[dev_name] = block_dev_type
+                    virt_name = self.get_argument('%s.VirtualName' % pre, None)
+                    block_dev_type = boto.ec2.autoscale.launchconfig.BlockDeviceMapping(device_name=dev_name, virtual_name=virt_name)
+                    if not(virt_name):
+                        snapshot_id = self.get_argument('%s.Ebs.SnapshotId' % pre, None)
+                        size = self.get_argument('%s.Ebs.VolumeSize' % pre, None)
+                        ebs = boto.ec2.autoscale.launchconfig.Ebs(snapshot_id=snapshot_id, volume_size=size)
+                        block_dev_type.ebs = ebs
+                    bdm.append(block_dev_type)
                     idx += 1
                     mapping = self.get_argument('BlockDeviceMapping.%d.DeviceName' % idx, None)
                 if len(bdm) == 0:
