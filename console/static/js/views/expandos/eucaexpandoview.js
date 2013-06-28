@@ -1,7 +1,8 @@
 define([
   'backbone',
   'rivets',
-], function(Backbone, rivets) {
+  'plugins',
+], function(Backbone, rivets, plugIns) {
   return Backbone.View.extend({
     _do_init : function() {
       var self = this;
