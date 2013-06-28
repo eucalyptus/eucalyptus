@@ -30,7 +30,7 @@
         var View = WizardFactory(thisObj.options);
         var view = new View({el: thisObj.element});
       	view.render();
-        if(thisObj.options.instance != null) {
+        if(thisObj.options.image != null) {
           view.jump(1);
         }
         thisObj.options.image = null;

@@ -181,7 +181,7 @@
 	        this.element.jpvols();
           break;
 	      case 'newscalinggroup':
-	        this.element.newscalinggroup();
+      	  this.element.newscalinggroup();
           break;
           case 'scalinggroup':
             this.element.scalinggroup();
@@ -193,7 +193,10 @@
           this.element.launchconfig();
           break;
         case 'newlaunchconfig':
-          this.element.newlaunchconfig({instance:null});
+          var options = {};
+          if(filter && filter['image'])
+            options['image'] = filter['image'].get('id');
+          this.element.newlaunchconfig(options);
           break;
       }
       if (options !== KEEP_VIEW) {
