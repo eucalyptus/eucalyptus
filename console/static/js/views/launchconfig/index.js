@@ -20,7 +20,6 @@ define([
     var wizard = new Wizard();
 
     if (options && options.instance) {
-      console.log("populating model with "+options.instance);
       var instance = app.data.instances.get(options.instance);
       options.image = instance.get('image_id');
       options.sgroup = instance.get('group_name');
@@ -86,7 +85,7 @@ define([
             .add(new page1({model: imageModel, blockMaps: blockMaps, image: options.image}))
             .add(new page2({model: typeModel, instance_type: options.type}))
             .add(new page3({model: securityModel, keymodel: keyModel, group: options.sgroup, key: options.keypair}))
-            .add(new page4({model: advancedModel, blockMaps: blockMaps, snapshots: snapShots}))
+            .add(new page4({model: advancedModel, blockMaps: blockMaps, snapshots: snapShots, image: imageModel}))
             .setHideDisabledButtons(true)
             .setFinishText(app.msg('create_launch_config_btn_create')).setFinishChecker(canFinish)
             .map('optionLink', '#optionLink')

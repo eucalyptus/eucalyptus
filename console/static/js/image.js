@@ -230,11 +230,13 @@ launch_instance_image_table_platform_linux, launch_instance_image_table_platform
       var itemsList = {};
 
       (function(){
-        itemsList['tag'] = {"name":table_menu_edit_tags_action, callback: function(key, opt) {;}, disabled: function(){ return true;} }
+        itemsList['tag'] = {"name":table_menu_edit_tags_action, callback: function(key, opt) {;}, disabled: function(){ return true;} };
+        itemsList['launchconfig'] = {"name":images_menu_create_scaling_group_launch_config, callback: function(key,opt){;}, disabled: function() {return true;}};
       })();
 
       if ( images.length === 1) {
-        itemsList['tag'] = {"name":table_menu_edit_tags_action, callback: function(key, opt){ thisObj._tagResourceAction(); }}
+        itemsList['tag'] = {"name":table_menu_edit_tags_action, callback: function(key, opt){ thisObj._tagResourceAction(); }};
+        itemsList['launchconfig'] = {"name":images_menu_create_scaling_group_launch_config, callback: function(key,opt){thisObj._startLaunchConfigWiz();} };
       };
 
       return itemsList;
@@ -247,6 +249,16 @@ launch_instance_image_table_platform_linux, launch_instance_image_table_platform
            app.dialog('edittags', app.data.image.get(selected[0]));
         });
        }
+    },
+
+    _startLaunchConfigWiz: function(e) {
+      var selected = this.tableWrapper.eucatable('getSelectedRows', 10);
+      var $container = $('html body').find(DOM_BINDING['main']);
+      if (selected.length == 1) {
+        require(['app'], function(app) {
+          $container.maincontainer("changeSelected", e, {selected:'newlaunchconfig', filter:{image:app.data.image.get(selected[0])}});
+        });
+      }
     },
 
 
