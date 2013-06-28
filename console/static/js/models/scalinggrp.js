@@ -13,6 +13,11 @@ function(EucaModel, tags) {
       // tagsearch from breaking
       this.set('tags', new tags());
 
+      // default to empty array
+      if(!this.get('instances')) {
+        this.set('instances', []);
+      }
+
       // bump min and max to contain wherever dc lands
       this.on('change:desired_capacity', function() {
         var dc = +this.get('desired_capacity');
