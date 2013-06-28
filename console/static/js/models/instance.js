@@ -5,7 +5,6 @@ define([
     './eucamodel'
 ], function(EucaModel) {
     var model = EucaModel.extend({
-
       //
       // API Reference: http://docs.aws.amazon.com/AWSSDKforPHP/latest/index.html#m=AmazonEC2/run_instances
       //
