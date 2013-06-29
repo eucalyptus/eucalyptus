@@ -30,6 +30,13 @@
 		    <td><div class="icon_cancel tag-control" style="visibility:hidden"></div></td>
 		    <td></td>
                 </tr>
+                <!-- errors -->
+                <tr data-show="tag.tag_is_invalid">
+                    <td><span class="error" data-text="error.name"></span></td>
+                    <td><span class="error" data-text="error.value"></span></td>
+                    <td></td>
+                    <td></td>
+                </tr>
             </tbody>
             <tbody class="tag-edit">
                 <tr>
@@ -37,11 +44,6 @@
                     <td><input  data-on-focus=":deactivateEdits" data-value="newtag.value" data-tooltip="tag_text_value_tip"></input></td>
                     <td><div class="icon_add" data-class-enabled="isTagValid" data-on-click=":create" data-tooltip="tag_icon_add_another_tip"></div></td>
                     <td style="width:27px"></td>
-                </tr>
-                <tr>
-                    <td><span data-text="error.name"></input></td><td><span data-text="error.value"></span></td>
-                    <td></td>
-                    <td></td>
                 </tr>
             </tbody>
             </table>

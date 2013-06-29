@@ -201,13 +201,14 @@ define([
                     scope.tag.set({_clean: false, _deleted: false, _edited: false, _edit: true, _displayonly: false});
 
                     // SET UP VALIDATE ON THIS TAG
-                    scope.tag.on('change', function() {
+                    scope.tag.on('change', function(thisTag) {
                       scope.error.clear();
                       scope.error.set(scope.tag.validate());
+                      thisTag.set('tag_is_invalid', !scope.tag.isValid());
                     });
 
                     // VERIFY THE VALIDATION STATUS
-                    scope.tag.on('validated', function() {
+                    scope.tag.on('validated', function(model) {
                       scope.isTagValid = scope.tag.isValid();
                     });
                 },
