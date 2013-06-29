@@ -21,6 +21,7 @@
   $.widget('eucalyptus.instance', $.eucalyptus.eucawidget, {
     options : {
       state_filter : null,
+      az_filter : null,
     },
     tableWrapper : null,
     termDialog : null,
@@ -274,6 +275,7 @@
           return thisObj._expandCallback(row);
         },
         filters : [{name:"status", default: thisObj.options.state_filter, options: ['all','running','pending','stopped','terminated'], text: [instance_state_selector_all,instance_state_selector_running,instance_state_selector_pending,instance_state_selector_stopped,instance_state_selector_terminated], filter_col:12}, 
+                   {name:"availability_zone", default: thisObj.options.az_filter, options: ['all','running','pending','stopped','terminated'], text: [instance_state_selector_all,instance_state_selector_running,instance_state_selector_pending,instance_state_selector_stopped,instance_state_selector_terminated], filter_col:12}, 
                    {name:"inst_type", options: ['all', 'ebs','instance-store'], text: [instance_type_selector_all, instance_type_selector_ebs, instance_type_selector_instancestore], filter_col:11}],
         legend : ['running','pending','stopping','stopped','shuttingdown','terminated']
       }) //end of eucatable

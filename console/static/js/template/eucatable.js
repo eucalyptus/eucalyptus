@@ -107,15 +107,22 @@
         thisObj.bbdata.on('change add remove reset', function() {
           thisObj.refreshTable.call(thisObj)
         });
+
         if(thisObj.options.filters){
+          var filterstring = '';
           $.each(thisObj.options.filters, function(idx, filter){
             if (filter['default']) {
-              //thisObj.vsearch.searchBox.value(filter['name']+": "+filter['default'])
-              thisObj.vsearch.searchBox.setQuery(filter['name']+": "+filter['default'])
-              thisObj.vsearch.searchBox.searchEvent($.Event('keydown'));
-            }
+              // concat filters to search on multiple facets at once
+              filterstring += ' ' + filter['name'] + ': ' + filter['default'];
+            } // not sure what to do if !default - this seems to work for everything we want 
           });
+          if(filterstring != '') {
+            filterstring.replace(/^\s+|\s+$/g,'');
+            thisObj.vsearch.searchBox.setQuery(filterstring);
+            thisObj.vsearch.searchBox.searchEvent($.Event('keydown'));
+          }
         }
+
         thisObj.refreshTable();
       });
     },
