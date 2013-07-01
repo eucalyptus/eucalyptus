@@ -71,6 +71,7 @@ from .mockbalanceinterface import MockBalanceInterface
 from .mockwatchinterface import MockWatchInterface
 from .mockscaleinterface import MockScaleInterface
 from .mockwalrusinterface import MockWalrusInterface
+from .cache import CacheManager
 from .response import ClcError
 from .response import Response
 
@@ -1057,12 +1058,12 @@ class ComputeHandler(BaseAPIHandler):
                 ret = ""
                 zone = self.get_argument('AvailabilityZone', 'all')
                 if isinstance(self.user_session.clc, CachingClcInterface):
-                    ret = self.user_session.clc.get_cache_summary(zone)
+                    ret = CacheManager().get_cache_summary(self.user_session, zone)
                 self.callback(eucaconsole.cachingclcinterface.Response(data=ret))
             elif action == 'SetDataInterest':
                 resources = self.get_argument_list('Resources.member')
                 if isinstance(self.user_session.clc, CachingClcInterface):
-                    ret = self.user_session.clc.set_data_interest(resources)
+                    ret = CacheManager().set_data_interest(self.user_session, resources)
                 self.callback(eucaconsole.cachingclcinterface.Response(data=ret))
             elif action == 'RunInstances':
                 user_data_file = []
