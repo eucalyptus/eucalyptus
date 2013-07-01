@@ -493,7 +493,18 @@ public class VmControl {
         throw new EucalyptusCloudException( "Failed to find cluster info for '" + v.getPartition( ) + "' related to vm: " + request.getInstanceId( ) );
       }
       RequestContext.getEventContext( ).setStopFurtherProcessing( true );
-      AsyncRequests.newRequest( new ConsoleOutputCallback( request ) ).dispatch( cluster.getConfiguration( ) );
+      ConsoleOutputCallback messageCallback = new ConsoleOutputCallback( request );
+      try {
+        AsyncRequests.newRequest( messageCallback ).sendSync( cluster.getConfiguration( ) );
+      } catch(Exception e) {
+    	/* The synchronous call failed, lets make sure we empty the output and fire our callback to answer the tool */
+        GetConsoleOutputResponseType reply = request.getReply();
+        reply.setTimestamp( new Date( ) );
+        reply.setOutput( " " );
+        reply.set_return(false);
+        reply.setStatusMessage("ERROR");
+        messageCallback.fire( reply );
+      }
     }
   }
   
