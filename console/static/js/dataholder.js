@@ -19,6 +19,7 @@ define([
 	'models/zones',
 	'models/buckets',
 	'models/alarms',
+	'models/metrics',
     'models/availabilityzones'
 	], 
 function(_, Backbone, tags) {
@@ -40,7 +41,8 @@ function(_, Backbone, tags) {
 	['summary'],
 	['zone', 'zones'],
 	['bucket'],
-	['alarm'],
+	['alarm', 'alarms'],
+	['metrics'],
 	['availabilityzone']
     ];
 
