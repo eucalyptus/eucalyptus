@@ -38,11 +38,12 @@
                   {name:'scalinggrp', type:'scalinggrps', collection: 'scalinggrps'},
                   {name:'scalinginst', type:'scalinginsts', collection: 'scalinginsts'},
                   {name:'scalingpolicy', type:'scalingpolicys', collection: 'scalingpolicys'},
-                  {name:'launchconfig', type:'launchconfigs', collection: 'launchconfigs'}
+                  {name:'launchconfig', type:'launchconfigs', collection: 'launchconfigs'},
+                  {name:'metrics', type:'metrics', collection: 'metrics'},
+                  {name:'alarms', type:'alarms', collection: 'alarms'}
       ], 
     },
-    _data : {summary:[], instance:null, image:null, volume:null, snapshot:null, eip:null, keypair: null, sgroup: null, zone: null, tag: null, bucket: null, balancer: null, scalinggrp: null, scalinginst: null, scalingpolicy: null, launchconfig: null},
-//    _data : {summary:[], instance:null, image:null, volume:null, snapshot:null, eip:null, keypair: null, sgroup: null, zone: null, tag: null, bucket:null},
+    _data : {summary:[], instance:null, image:null, volume:null, snapshot:null, eip:null, keypair: null, sgroup: null, zone: null, tag: null, bucket: null, balancer: null, scalinggrp: null, scalinginst: null, scalingpolicy: null, launchconfig: null, metrics: null, alarms: null},
     _callbacks : {}, 
     _listeners : {},
     _init : function(){ },

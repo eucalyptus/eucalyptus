@@ -84,6 +84,8 @@ class CacheManager(object):
             caches[res] = session.clc.caches[res]
         for res in session.scaling.caches:
             caches[res] = session.scaling.caches[res]
+        for res in session.cw.caches:
+            caches[res] = session.cw.caches[res]
         # clear previous timers
         for res in caches:
             if res[:5] == 'timer' and caches[res]:
