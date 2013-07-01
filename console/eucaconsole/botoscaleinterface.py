@@ -103,7 +103,7 @@ class BotoScaleInterface(ScaleInterface):
     def delete_launch_configuration(self, launch_config_name):
         return self.conn.delete_launch_configuration(launch_config_name)
 
-    def get_all_launch_configurations(self, config_names, max_records, next_token):
+    def get_all_launch_configurations(self, config_names=None, max_records=None, next_token=None):
         obj = self.conn.get_all_launch_configurations(names=config_names, max_records=max_records, next_token=next_token)
         if self.saveclcdata:
             self.__save_json__(obj, "mockdata/AS_LaunchConfigs.json")

@@ -1,5 +1,6 @@
-define(['dataholder'], function(dataholder) {
+define(['dataholder', 'plugins'], function(dataholder, plugIns) {
     return {
+        plugins: plugIns,
         data: dataholder,
         dialog: function(dialogname, scope) {
             require(['views/dialogs/' + dialogname], function(dialog) { 

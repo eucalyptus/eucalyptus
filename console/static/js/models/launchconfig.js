@@ -96,7 +96,6 @@ define([
             var mappings = model.get('block_device_mappings');
             $.each(eval(mappings), function(idx, mapping) {
               if (mapping.device_name == '/dev/sda') { // root, folks!
-                r
                 console.log("adding root device mapping vol_size="+mapping.ebs.volume_size);
                 data.push({name: "BlockDeviceMapping."+(idx+1)+".DeviceName", value: mapping.device_name});
                 data.push({name: "BlockDeviceMapping."+(idx+1)+".Ebs.VolumeSize", value: mapping.volume_size});

@@ -13,7 +13,12 @@ define([
             // validate straight away, so we can activate the button
             model.validate();
 
-            model.set('size', model.get('instances').length);
+            if (model.get('instances')) {
+                model.set('size', model.get('instances').length);
+            }
+            else {
+                model.set('size', '0');
+            }
 
             // uncomment to turn min and max into form fields for testing the model bindings
             // that make min and max accomodating to the value of desired_capacity and so on
