@@ -81,7 +81,7 @@ define([
           data.push({name: 'LaunchConfigurationName', value: name});
           if (model.get('image_id') != undefined)
             data.push({name: "ImageId", value: model.get('image_id')});
-          if (model.get('key_name') != undefined)
+          if (model.get('key_name') != undefined && model.get('key_name') !== 'none')
             data.push({name: "KeyName", value: model.get('key_name')});
           if (model.get('user_data') != undefined)
             data.push({name: "UserData", value: model.get('user_data')});
