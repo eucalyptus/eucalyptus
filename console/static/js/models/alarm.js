@@ -10,12 +10,10 @@ define([
             var url = "/monitor?Action=PutMetricAlarm";
             var parameter = "_xsrf="+$.cookie('_xsrf');
 
-            console.log('ALARM: store ', model.toJSON());
-
             parameter += "&AlarmName="+encodeURIComponent(this.get('AlarmName'));
 
             if (this.get('AlarmDescription')) {
-              parameter += "&AlarmDescription="+toBase64($.trim(this.get('AlarmDescription')));
+              parameter += "&AlarmDescription="+encodeURIComponent(this.get('AlarmDescription'));
             }
 
             if (this.get('ComparisonOperator')) {
@@ -31,11 +29,11 @@ define([
             }
             
             if (this.get('Namespace')) {
-              parameter += "&Namespace="+encodeURIComponent(this.get('Namespace').namespace);
+              parameter += "&Namespace="+encodeURIComponent(this.get('Namespace'));
             }
 
             if (this.get('MetricName')) {
-              parameter += "&MetricName="+encodeURIComponent(this.get('MetricName').name);
+              parameter += "&MetricName="+encodeURIComponent(this.get('MetricName'));
             }
 
             if (this.get('Period')) {
