@@ -33,7 +33,7 @@ define([
       // ADD THEM INTO THE PASSED ARRAY
      //    return position === 2;
 
-       return imageModel.isValid() & typeModel.isValid(); // & securityModel.isValid();
+       return imageModel.isValid() & typeModel.isValid() & (position == 2 || position == 3); // & securityModel.isValid();
     }
 
     function finish() {
