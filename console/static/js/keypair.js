@@ -165,10 +165,13 @@
         keyName = $.trim(asText(val));
         if (keyName == '')
           return null;
-        if (!KEY_PATTERN.test(keyName))
+        if (!KEY_PATTERN.test(keyName)) {
+          thisObj.setButtonStatus(false, false, $add_dialog, createButtonId);
           return keypair_dialog_error_msg;
-        else
+       }  else {
+          thisObj.setButtonStatus(true, true, $add_dialog, createButtonId);
           return null;
+       }
       });
       $tmpl = $('html body').find('.templates #keypairImportDlgTmpl').clone();
       $rendered = $($tmpl.render($.extend($.i18n.map, help_keypair)));
