@@ -13,8 +13,8 @@
                     <td><div class="icon_delete tag-control" data-on-click=":delete" data-tooltip="tag_icon_delete_tip"></div></td>
                 </tr>
                 <tr class="edit-tags-edit" data-show="tag._edit">
-                    <td><input data-value="tag.name"></input></td>
-                    <td><input data-value="tag.value"></input></td>
+                    <td><input data-value="tag.name" data-on-keyup=":fireChange"></input></td>
+                    <td><input data-value="tag.value" data-on-keyup=":fireChange"></input></td>
                     <td><div class="icon_approve tag-control" data-class-enabled="isTagValid" data-on-click=":confirm" data-tooltip="tag_icon_save_tip"></div></td>
                     <td><div class="icon_cancel tag-control" data-on-click=":restore" data-tooltip="tag_icon_cancel_edit_tip"></div></td>
                 </tr>
@@ -40,8 +40,8 @@
             </tbody>
             <tbody class="tag-edit">
                 <tr>
-                    <td><input class="focus-here" data-on-focus=":deactivateEdits" data-value="newtag.name" data-tooltip="tag_text_name_tip"></input></td>
-                    <td><input  data-on-focus=":deactivateEdits" data-value="newtag.value" data-tooltip="tag_text_value_tip"></input></td>
+                    <td><input class="focus-here" data-on-focus=":deactivateEdits" data-value="newtag.name" data-tooltip="tag_text_name_tip" data-on-keyup=":fireChange"></input></td>
+                    <td><input  data-on-focus=":deactivateEdits" data-value="newtag.value" data-tooltip="tag_text_value_tip" data-on-keyup=":fireChange"></input></td>
                     <td><div class="icon_add" data-class-enabled="isTagValid" data-on-click=":create" data-tooltip="tag_icon_add_another_tip"></div></td>
                     <td style="width:27px"></td>
                 </tr>

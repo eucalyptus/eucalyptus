@@ -269,6 +269,12 @@ define([
               console.log("isTagValid: " + self.scope.newtag.isValid());
             });
 
+           self.scope.fireChange = function(e) {
+             if(e.keyCode != 9) { 
+               $(e.target).change();
+             }
+           }
+
             this.$el.html(template);
             this.rview = rivets.bind(this.$el, this.scope);
             this.render(this.scope);
