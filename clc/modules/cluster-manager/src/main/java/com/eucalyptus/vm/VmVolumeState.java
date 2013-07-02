@@ -76,6 +76,7 @@ import org.apache.log4j.Logger;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
 import org.hibernate.annotations.Parent;
+import com.eucalyptus.entities.Entities;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.vm.VmVolumeAttachment.AttachmentState;
 import com.google.common.base.Function;
@@ -254,7 +255,7 @@ public class VmVolumeState {
   public String toString( ) {
     StringBuilder builder = new StringBuilder( );
     builder.append( "VmVolumeState:" );
-    if ( this.attachments != null ) builder.append( "attachments=" ).append( this.attachments );
+    if ( Entities.isReadable( this.attachments ) ) builder.append( "attachments=" ).append( this.attachments );
     return builder.toString( );
   }
   
