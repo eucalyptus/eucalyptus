@@ -74,7 +74,7 @@ define([
       this.scope.config.set('key_name', this.scope.instance.get('key_name'));
       this.scope.config.set('group_name', this.scope.instance.get('group_name'));
 
-      var adv_page = new advanced({model: this.advancedModel, blockMaps: this.blockMaps});
+      var adv_page = new advanced({model: this.advancedModel, blockMaps: this.blockMaps, hidePrivate: true, removeTitle: true});
 
       self.scope.config.on('change', function() {
         self.scope.error.clear();
