@@ -77,7 +77,7 @@ define([
             .add(new page1({model: imageModel, blockMaps: blockMaps, image: options.image}))
             .add(new page2({model: typeModel}))
             .add(new page3({model: securityModel, keymodel: keyModel}))
-            .add(new page4({model: advancedModel, blockMaps: blockMaps, snapshots: snapShots}))
+            .add(new page4({model: advancedModel, blockMaps: blockMaps, snapshots: snapShots, image: imageModel}))
             .setHideDisabledButtons(true)
             .setFinishText(app.msg('create_launch_config_btn_create')).setFinishChecker(canFinish)
             .map('optionLink', '#optionLink')
