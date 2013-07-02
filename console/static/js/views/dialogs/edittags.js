@@ -10,10 +10,16 @@ define([
         initialize : function(args) {
             var self = this;
             this.template = template;
+            var invalid_tags = new Backbone.Collection();
 
             this.scope = {
                 model: args.model.clone(),
-				help: {title: null, content: help_edittags.dialog_content, url: help_edittags.dialog_content_url, pop_height: 600},
+				        help: {
+                  title: null, 
+                  content: help_edittags.dialog_content, 
+                  url: help_edittags.dialog_content_url, 
+                  pop_height: 600
+                },
 
                 cancelButton: {
                     click: function() {
@@ -21,13 +27,27 @@ define([
                     }
                 },
 
-                confirmButton: {
+                confirmButton: new Backbone.Model({
+                  disabled: false,
                   click: function() {
                        self.scope.model.trigger('confirm');
                        self.close();
                   }
-                }
-            }
+                }),
+
+            },
+            // listen for invalid tag events, don't enable button until they're fixed.
+            this.listenTo(self.scope.model, 'validation_change', function(model) {
+              if(model.get('tag_is_invalid') == true) {
+                invalid_tags.add(model);
+              } else {
+                invalid_tags.remove(model);
+              }
+              if (invalid_tags.length == 0)
+                self.scope.confirmButton.set('disabled', false);
+              else 
+                self.scope.confirmButton.set('disabled', true);
+            });
 
             this._do_init();
         },

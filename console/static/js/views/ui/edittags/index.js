@@ -205,6 +205,7 @@ define([
                       scope.error.clear();
                       scope.error.set(scope.tag.validate());
                       thisTag.set('tag_is_invalid', !scope.tag.isValid());
+                      model.trigger('validation_change', thisTag);
                     });
 
                     // VERIFY THE VALIDATION STATUS
@@ -255,7 +256,12 @@ define([
             self.scope.newtag.on('change', function() {
               self.scope.error.clear();
               self.scope.error.set(self.scope.newtag.validate());
-              self.scope.newtag.set('tag_is_invalid', !self.scope.newtag.isValid());
+              if(self.scope.newtag.get('name') == undefined && self.scope.newtag.get('value') == undefined) {
+                ; // ignore - not a real tag *BUG?*
+              } else {
+                self.scope.newtag.set('tag_is_invalid', !self.scope.newtag.isValid());
+                model.trigger('validation_change', self.scope.newtag);
+              }
             });
 
             self.scope.newtag.on('validated', function() {
