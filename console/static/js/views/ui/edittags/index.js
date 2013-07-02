@@ -255,6 +255,7 @@ define([
             self.scope.newtag.on('change', function() {
               self.scope.error.clear();
               self.scope.error.set(self.scope.newtag.validate());
+              self.scope.newtag.set('tag_is_invalid', !self.scope.newtag.isValid());
             });
 
             self.scope.newtag.on('validated', function() {
