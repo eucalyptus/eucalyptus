@@ -69,14 +69,6 @@ define([
             self.close();
           },
 
-          showControls: function(e, obj) {
-           // obj.instance.set('hasFocus', true);
-          },
-
-          hideControls: function(e, obj) {
-           // obj.instance.unset('hasFocus');
-          },
-
           search: new Search(clone.get('instances')),
         };
 

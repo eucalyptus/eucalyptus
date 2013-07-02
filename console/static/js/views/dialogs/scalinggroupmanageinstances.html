@@ -28,8 +28,8 @@
             <th class="deletearea"></th>
           </tr>
         </thead>
-        <tbody>
-          <tr data-each-instance="instances" data-on-mouseover=":showControls" data-on-mouseout=":hideControls" data-class-edit-tags-deleted="instance._deleted">
+        <tbody class="tag-edit" data-each-instance="instances" >
+          <tr data-class-edit-tags-deleted="instance._deleted">
             <td data-text="instance.instance_id"></td>
             <td>
               <select data-value="instance.health_status"> 
@@ -41,8 +41,8 @@
             <td data-text="instance.launch_config_name"></td>
             <td data-text="instance.lifecycle_state"></td>
             <td>
-              <div class="icon_delete" data-show="instance.hasFocus" data-on-click=":delete" data-tooltip="instance_dialog_term_title">
-              <div class="icon_cancel" data-show="instance._deleted" data-on-click=":undoDelete" data-tooltip="instance_dialog_undo_title">
+              <div class="icon_delete tag-control" data-on-click=":delete" data-tooltip="instance_dialog_term_title" data-hide="instance._deleted"></div>
+              <div class="icon_cancel tag-control" data-on-click=":undoDelete" data-tooltip="instance_dialog_undo_title" data-show="instance._deleted"></div>
             </td>
           </tr>
         </tbody>
