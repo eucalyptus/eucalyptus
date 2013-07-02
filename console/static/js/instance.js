@@ -1051,7 +1051,10 @@
 
     _launchConfigAction : function(){
       var instance = this.tableWrapper.eucatable('getSelectedRows', 17)[0];
-      this.element.newlaunchconfig({instance:instance});
+      var dialog = 'create_launchconfig_dialog';
+      require(['app'], function(app) {
+        app.dialog(dialog, instance);
+      });
     },
 
     _launchMore : function( callback ) {
