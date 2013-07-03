@@ -65,7 +65,6 @@ package com.eucalyptus.component;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
-import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentMap;
@@ -174,7 +173,7 @@ public class Topology {
       return this.apply( call );
     }
     
-  };
+  }
   
   private enum TopologyTimer implements EventListener<ClockTick> {
     INSTANCE;
@@ -185,6 +184,7 @@ public class Topology {
     public void fireEvent( final ClockTick event ) {
       final int backoff = Hosts.isCoordinator( ) ? COORDINATOR_CHECK_BACKOFF_SECS : LOCAL_CHECK_BACKOFF_SECS;
       Callable<Object> call = new Callable<Object>( ) {
+        @Override
         public Object call( ) {
           try {
             TimeUnit.SECONDS.sleep( backoff );
@@ -213,12 +213,7 @@ public class Topology {
     
   }
   
-  private Topology( ) {
-    this( 0 );
-  }
-  
   private Topology( final int i ) {
-    super( );
     this.currentEpoch = i;
     Listeners.register( ClockTick.class, TopologyTimer.INSTANCE );
   }
@@ -258,17 +253,13 @@ public class Topology {
       if ( Hosts.isCoordinator( ) ) {
         msg.set_epoch( Topology.epoch( ) );
         for ( ServiceConfiguration s : Topology.getInstance( ).getServices( ).values( ) ) {
-          if ( !filter.apply( s ) ) {
-            continue;
-          } else {
+          if ( filter.apply( s ) ) {
             msg.get_services( ).add( typeMapper.apply( s ) );
           }
         }
         for ( Component c : Components.list( ) ) {
           for ( ServiceConfiguration s : c.services( ) ) {
-            if ( !filter.apply( s ) ) {
-              continue;
-            } else {
+            if ( filter.apply( s ) ) {
               if ( !msg.get_services( ).contains( s ) && State.DISABLED.apply( s ) ) {
                 msg.get_disabledServices( ).add( typeMapper.apply( s ) );
               } else if ( !msg.get_services( ).contains( s ) && State.NOTREADY.ordinal( ) >= s.getStateMachine( ).getState( ).ordinal( ) ) {
@@ -319,7 +310,7 @@ public class Topology {
   
   public static boolean check( final BaseMessage msg ) {
     if ( !Hosts.isCoordinator( ) && ( msg.get_epoch( ) != null ) ) {
-      return Topology.getInstance( ).epoch( ) <= msg.get_epoch( );
+      return Topology.epoch( ) <= msg.get_epoch( );
     } else {
       return true;
     }
@@ -349,13 +340,13 @@ public class Topology {
   
   public static Function<ServiceConfiguration, Future<ServiceConfiguration>> transition( final Component.State toState ) {
     final Function<ServiceConfiguration, Future<ServiceConfiguration>> transition = new Function<ServiceConfiguration, Future<ServiceConfiguration>>( ) {
-      private final List<Component.State> serializedStates = Lists.newArrayList( Component.State.ENABLED, Component.State.DISABLED, Component.State.STOPPED );
+      private final List<Component.State> serializedStates = Lists.newArrayList( Component.State.ENABLED, Component.State.STOPPED );
       
       @Override
       public Future<ServiceConfiguration> apply( final ServiceConfiguration input ) {
         final Callable<ServiceConfiguration> call = Topology.callable( input, Topology.get( toState ) );
         if ( this.serializedStates.contains( toState ) || this.serializedStates.contains( input.lookupState( ) ) ) {
-          return Threads.enqueue( input.getComponentId( ).getClass( ), Topology.class, 1, call );
+          return Threads.enqueue( input, 1, call );
         } else {
           return Queue.EXTERNAL.enqueue( call );
         }
@@ -701,9 +692,7 @@ public class Topology {
     
     @Override
     public Future<ServiceConfiguration> apply( final ServiceConfiguration input ) {
-      final Callable<ServiceConfiguration> call = Topology.callable( input, Topology.get( State.ENABLED ) );
-      final Future<ServiceConfiguration> future = Queue.EXTERNAL.enqueue( call );
-      return future;
+      return transition( State.ENABLED ).apply( input );
     }
     
     @Override
@@ -717,16 +706,13 @@ public class Topology {
     
     @Override
     public Future<ServiceConfiguration> apply( final ServiceConfiguration input ) {
-      final Callable<ServiceConfiguration> call = Topology.callable( input, Topology.get( State.DISABLED ) );
-      final Future<ServiceConfiguration> future = Queue.EXTERNAL.enqueue( call );
-      return future;
+      return transition( State.DISABLED ).apply( input );
     }
     
     @Override
     public String toString( ) {
       return "DISABLED";
     }
-    
   }
   
   enum SubmitCheck implements Function<ServiceConfiguration, Future<ServiceConfiguration>> {
@@ -763,24 +749,6 @@ public class Topology {
     
   }
   
-  enum FilterErrorResults implements Predicate<Future> {
-    INSTANCE;
-    
-    @Override
-    public boolean apply( final Future input ) {
-      try {
-        final Object conf = input.get( 30, TimeUnit.SECONDS );
-        return false;
-      } catch ( final InterruptedException ex ) {
-        Thread.currentThread( ).interrupt( );
-      } catch ( final Exception ex ) {
-        Logs.extreme( ).trace( ex, ex );
-      }
-      return true;
-    }
-    
-  }
-  
   enum ServiceString implements Function<ServiceConfiguration, String> {
     INSTANCE;
     @Override
@@ -799,22 +767,6 @@ public class Topology {
         Thread.currentThread( ).interrupt( );
       } catch ( final Exception ex ) {
         Logs.extreme( ).trace( ex, ex );
-      }
-      return null;
-    }
-  }
-  
-  enum ExtractErrorFuture implements Function<Future<ServiceConfiguration>, Exception> {
-    INSTANCE;
-    @Override
-    public Exception apply( final Future<ServiceConfiguration> input ) {
-      try {
-        input.get( );
-      } catch ( final InterruptedException ex ) {
-        Thread.currentThread( ).interrupt( );
-      } catch ( final Exception ex ) {
-        Logs.extreme( ).trace( ex, ex );
-        return ex;
       }
       return null;
     }
@@ -1034,7 +986,20 @@ public class Topology {
     };
     return call;
   }
-  
+
+  private static Callable<ServiceConfiguration> perhapsDisable( final ServiceConfiguration input ) {
+
+    return new Callable<ServiceConfiguration>() {
+      @Override
+      public ServiceConfiguration call() throws Exception {
+        if ( !Component.State.ENABLED.equals( input.lookupState( ) ) && Topology.getInstance( ).services.containsValue( input ) ) {
+          Topology.guard( ).tryDisable( input );
+        }
+        return input;
+      }
+    };
+  }
+
   public enum Transitions implements Function<ServiceConfiguration, ServiceConfiguration>, Supplier<Component.State> {
     START( Component.State.DISABLED ),
     STOP( Component.State.STOPPED ) {
@@ -1061,7 +1026,6 @@ public class Topology {
             throw ex;
           }
         } else if ( Topology.guard( ).tryEnable( config ) ) {
-          tryEnable = true;
           try {
             ServiceConfiguration res = super.apply( config );
             return res;
@@ -1091,20 +1055,7 @@ public class Topology {
         }
       }
     },
-    DISABLE( Component.State.DISABLED ) {
-      @Override
-      public ServiceConfiguration apply( final ServiceConfiguration config ) {
-        ServiceKey serviceKey = null;
-        try {
-          serviceKey = ServiceKey.create( config );
-          return super.apply( config );
-        } finally {
-          if ( serviceKey != null ) {
-            Topology.guard( ).tryDisable( config );
-          }
-        }
-      }
-    },
+    DISABLE( Component.State.DISABLED ),
     CHECK {
       @Override
       public ServiceConfiguration apply( final ServiceConfiguration config ) {
@@ -1191,7 +1142,7 @@ public class Topology {
       } finally {
         enabledEndState |= Component.State.ENABLED.equals( endResult.lookupState( ) );
         if ( Bootstrap.isFinished( ) && !enabledEndState && Topology.getInstance( ).services.containsValue( input ) ) {
-          Topology.guard( ).tryDisable( endResult );
+          Threads.enqueue( input, 1, perhapsDisable( input ) );
         }
       }
     }
