@@ -52,7 +52,7 @@ define([
                 if(model != null){
                   var name = model.get('name');
                   notifySuccess(null, $.i18n.prop('create_launch_config_run_success', name)); 
-                  if (checkbox.val()) {
+                  if (checkbox.attr('checked')) {
                     self.createScalingGroup(name)
                   }
                 }else{
