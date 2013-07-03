@@ -25,14 +25,21 @@ define([
 
                 deleteButton: {
                   click: function() {
-                      doMultiAction(args.items, App.data.launchconfigs,
+                      doMultiAction(args.items, app.data.launchconfigs,
                                     function(model, options) {
                                       options['wait'] = true;
                                       model.destroy(options);
                                     },
                                     'delete_launch_config_progress',
                                     'delete_launch_config_done',
-                                    'delete_launch_config_fail');
+                                    'delete_launch_config_fail',
+                                    function(response) {
+                                      if (response.results && response.results.request_id) {
+                                        return; // all good
+                                      } else {
+                                        return undefined_error;
+                                      }
+                                    });
                       self.close();
                   }
                 }

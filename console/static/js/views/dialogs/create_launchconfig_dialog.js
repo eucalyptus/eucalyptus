@@ -45,12 +45,16 @@ define([
             // save
             self.advancedModel.finish(self.scope.config);
             self.blockMaps.finish(self.scope.config);
+            var checkbox = self.$el.find("#launchconfiglike-scaling-group-using");
             self.scope.config.save({}, {
               overrideUpdate: true,
               success: function(model, response, options){
                 if(model != null){
                   var name = model.get('name');
                   notifySuccess(null, $.i18n.prop('create_launch_config_run_success', name)); 
+                  if (checkbox.val()) {
+                    self.createScalingGroup(name)
+                  }
                 }else{
                   notifyError($.i18n.prop('create_launch_config_run_error'), undefined_error);
                 }
@@ -93,6 +97,10 @@ define([
     cleanup: function() {
       // undo validation overrides -  they leak into other dialogs
       this.scope.config.validation.name.required = false;
+    },
+    createScalingGroup: function(name) {
+      console.log("let's create scaling group with launch config named: "+name);
+      this.el.newscalinggroup({launchconfig:name});
     }
   });
 });
