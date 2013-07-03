@@ -100,7 +100,7 @@ define([
     },
     createScalingGroup: function(name) {
       console.log("let's create scaling group with launch config named: "+name);
-      this.el.newscalinggroup({launchconfig:name});
+      $("#euca-main-container").newscalinggroup({launchconfig:name});
     }
   });
 });
