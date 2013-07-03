@@ -32,12 +32,14 @@ define([
 
 
         cancelButton: {
+          id: 'button-dialog-registersnapshot-cancel',
           click: function() {
             self.close();
           }
         },
 
         registerButton: new Backbone.Model({
+          id: 'button-dialog-registersnapshot-save',
           disabled: true,
           click: function() {
             // GET THE INPUT FROM THE HTML VIEW
