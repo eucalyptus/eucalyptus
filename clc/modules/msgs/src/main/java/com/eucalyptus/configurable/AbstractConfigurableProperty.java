@@ -71,11 +71,9 @@ import java.util.NoSuchElementException;
 
 import javax.persistence.EntityTransaction;
 
-import org.apache.activemq.store.jdbc.adapter.TransactDatabaseLocker;
 import org.apache.log4j.Logger;
 import com.eucalyptus.configurable.PropertyDirectory.NoopEventListener;
 import com.eucalyptus.entities.Entities;
-import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.records.Logs;
 
 public abstract class AbstractConfigurableProperty implements ConfigurableProperty {

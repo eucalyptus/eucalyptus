@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Copyright 2009-2013 Eucalyptus Systems, Inc.
+
+  This program is free software: you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation; version 3 of the License.
+
+  This program is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details.
+
+  You should have received a copy of the GNU General Public License
+  along with this program.  If not, see http://www.gnu.org/licenses/.
+
+  Please contact Eucalyptus Systems, Inc., 6755 Hollister Ave., Goleta
+  CA 93117, USA or visit http://www.eucalyptus.com/licenses/ if you need
+  additional information or have any questions.
+  -->
+<infinispan xmlns="urn:infinispan:config:5.2" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="urn:infinispan:config:5.2 http://infinispan.org/schemas/infinispan-config-5.2.xsd">
+    <global>
+        <transport>
+            <properties>
+                <property
+                        name="configurationFile"
+                        value="eucalyptus_cache_jgroups.xml" />
+            </properties>
+        </transport>
+    </global>
+
+    <default>
+        <locking
+                isolationLevel="REPEATABLE_READ"
+                lockAcquisitionTimeout="20000"/>
+
+        <transaction
+                transactionManagerLookupClass="com.eucalyptus.empyrean.EmpyreanTransactionManager"
+                transactionMode="TRANSACTIONAL"
+                lockingMode="OPTIMISTIC"
+                autoCommit="true"
+                useSynchronization="true"
+                />
+
+        <expiration
+                wakeUpInterval="500"
+                lifespan="1000"/>
+
+        <clustering
+                mode="invalidation"/>
+    </default>
+
+    <namedCache name="timestamps">
+        <locking 
+                isolationLevel="READ_COMMITTED" 
+                concurrencyLevel="1000"
+                lockAcquisitionTimeout="15000" 
+                useLockStriping="false"/>
+
+        <eviction 
+                strategy="NONE"/>
+
+        <expiration
+               wakeUpInterval="-1"
+               lifespan="-1"
+               />
+
+        <clustering
+                mode="replication"/>
+      </namedCache>
+
+</infinispan>

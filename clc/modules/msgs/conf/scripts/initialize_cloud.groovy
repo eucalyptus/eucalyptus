@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * Copyright 2009-2013 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -103,7 +103,7 @@ try {
           "hibernate.show_sql": "false",
           "hibernate.format_sql": "false",
           "hibernate.connection.autocommit": "true",
-          "hibernate.hbm2ddl.auto": "update",
+          "hibernate.hbm2ddl.auto": "create",
           "hibernate.generate_statistics": "false",
           "hibernate.connection.driver_class": Databases.getDriverName( ),
           "hibernate.connection.username": "eucalyptus",
@@ -111,13 +111,19 @@ try {
           "hibernate.bytecode.use_reflection_optimizer": "true",
           "hibernate.cglib.use_reflection_optimizer": "true",
           "hibernate.dialect": Databases.getHibernateDialect( ),
-          "hibernate.cache.provider_class": "org.hibernate.cache.TreeCache",
-          "hibernate.cache.region.factory_class": "org.hibernate.cache.jbc2.SharedJBossCacheRegionFactory",
-          "hibernate.cache.region.jbc2.cfg.shared": "eucalyptus_jboss_cache.xml",
+          "hibernate.current_session_context_class": "jta",
+          "hibernate.jndi.class": "bitronix.tm.jndi.BitronixInitialContextFactory",
+          "hibernate.transaction.flush_before_completion":"false",
+          "hibernate.transaction.auto_close_session":"false",
+          "hibernate.transaction.manager_lookup_class": "com.eucalyptus.empyrean.EmpyreanTransactionManager",
           "hibernate.cache.use_second_level_cache": "true",
-          "hibernate.cache.use_query_cache": "true",
+          "hibernate.cache.use_query_cache": "false",
+          "hibernate.cache.default_cache_concurrency_strategy": "transactional",
+          "hibernate.cache.region.factory_class": "com.eucalyptus.bootstrap.CacheRegionFactory",
+          "hibernate.cache.infinispan.cfg": "eucalyptus_cache_infinispan.xml",
+          "hibernate.cache.use_minimal_puts": "true",
           "hibernate.cache.use_structured_entries": "true",
-        ]
+    ]
     for ( String ctx : PersistenceContexts.list( ) ) {
       Properties p = new Properties( );
       p.putAll( props );

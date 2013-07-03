@@ -93,7 +93,7 @@ PersistenceContexts.list( ).each { String ctx_simplename ->
         /** jdbc driver **/
         'hibernate.dialect': Databases.getHibernateDialect( ),
         /** db pools **/
-        'hibernate.connection.provider_class': 'org.hibernate.connection.ProxoolConnectionProvider',
+        'hibernate.connection.provider_class': 'com.eucalyptus.bootstrap.ConfigurableProxoolConnectionProvider',
         'hibernate.proxool.pool_alias': "eucalyptus_${context_name}",
         'hibernate.proxool.existing_pool': 'true',
         /** transactions **/
@@ -104,13 +104,10 @@ PersistenceContexts.list( ).each { String ctx_simplename ->
         'hibernate.transaction.manager_lookup_class': 'com.eucalyptus.empyrean.EmpyreanTransactionManager',
         /** l2 cache **/
         'hibernate.cache.use_second_level_cache': 'true',
-        'hibernate.cache.use_query_cache': 'false',//GRZE: make it false!
-        'hibernate.cache.jbc.query.localonly': 'true',
+        'hibernate.cache.use_query_cache': 'false',
         'hibernate.cache.default_cache_concurrency_strategy': 'transactional',
         'hibernate.cache.region.factory_class': 'com.eucalyptus.bootstrap.CacheRegionFactory',
-        'hibernate.cache.region.jbc2.cfg.shared': 'eucalyptus_jboss_cache.xml',
-        'hibernate.cache.region.jbc2.cfg.multiplexer.stacks': 'eucalyptus_cache_jgroups.xml',
-        'hibernate.cache.jbc.cfg.jgroups.stacks': 'eucalyptus_cache_jgroups.xml',
+        'hibernate.cache.infinispan.cfg': 'eucalyptus_cache_infinispan.xml',
         'hibernate.cache.region_prefix': "eucalyptus_${context_name}_cache",
         'hibernate.cache.use_minimal_puts': 'true',
         'hibernate.cache.use_structured_entries': 'true',

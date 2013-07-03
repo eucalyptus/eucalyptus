@@ -134,7 +134,7 @@ def udpTransport = {
   UDP udp = new UDP( );
   try {
     LOG.info( "Setting membership addres: " + Internets.localHostAddress( ) );
-    udp.setBindAddress( Internets.localHostAddress( ) );
+    udp.setBindAddress( Internets.localHostInetAddress( ) );
     udp.setBindPort( 8773 );
     udp.setBindToAllInterfaces( false );//this sets receive_on_all_interfaces
   } catch ( UnknownHostException ex ) {
@@ -144,7 +144,7 @@ def udpTransport = {
   udp.setMulticastPort( multicastPort );
   udp.setDiscardIncompatiblePackets( true );
   udp.setLogDiscardMessages( false );
-  udp.setMaxBundleSize( 60000 );
+  udp.setMaxBundleSize( 64000 );
   udp.setMaxBundleTimeout( 30 );
   udp
 }
@@ -159,10 +159,11 @@ def udpDiscovery = {
 
 def tcpTransport = {
   TCP tcp = new TCP()
-  tcp.setBindAddress( Internets.localHostAddress( ) )
+  tcp.setBindAddress( Internets.localHostInetAddress( ) )
   tcp.setBindPort( tcpPortBase )
   tcp.setReaperInterval( 30000 )
   tcp.setPortRange( tcpPortRange )//go from 8776-9000
+  tcp.setMaxBundleSize( 64000 )
   tcp
 }
 
@@ -233,7 +234,6 @@ fdSocket.setValue("bind_addr", Internets.localHostInetAddress( ) )
 NAKACK negackBroadcast = new NAKACK( );
 negackBroadcast.setUseMcastXmit( false );
 negackBroadcast.setDiscardDeliveredMsgs( true );
-negackBroadcast.setGcLag( 20 );
 
 UNICAST reliableUnicast = new UNICAST( );
 
@@ -247,7 +247,6 @@ GMS groupMembership = new GMS( );
 //}
 groupMembership.setPrintLocalAddress( true );
 groupMembership.setJoinTimeout( 3000 );
-groupMembership.setShun( false );
 groupMembership.setViewBundling( true );
 
 FC flowControl = new FC( );
@@ -266,6 +265,6 @@ return [
   stableBroadcast,
   groupMembership,
   flowControl,
-  new FRAG2( ),
+  new FRAG2( fragSize: 60000 ),
   new STATE_TRANSFER()
 ];
