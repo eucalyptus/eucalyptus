@@ -66,7 +66,6 @@ import org.logicalcobwebs.proxool.ProxoolFacade
 import com.eucalyptus.bootstrap.Databases
 import com.eucalyptus.bootstrap.Host
 import com.eucalyptus.bootstrap.Hosts
-import com.eucalyptus.bootstrap.SystemIds
 import com.eucalyptus.component.ServiceUris
 import com.eucalyptus.component.id.Eucalyptus.Database
 import com.eucalyptus.entities.PersistenceContexts
@@ -77,7 +76,7 @@ import com.eucalyptus.util.LogUtil
 Logger LOG = Logger.getLogger( "com.eucalyptus.scripts.setup_dbpool" );
 
 ClassLoader.getSystemClassLoader().loadClass('org.logicalcobwebs.proxool.ProxoolDriver');
-ClassLoader.getSystemClassLoader().loadClass('net.sf.hajdbc.local.LocalStateManager');
+ClassLoader.getSystemClassLoader().loadClass('net.sf.hajdbc.state.simple.SimpleStateManager');
 
 String real_jdbc_driver = Databases.getDriverName( );
 String pool_db_driver = 'net.sf.hajdbc.sql.Driver';
@@ -108,17 +107,19 @@ def setupDbPool = { String ctx_simplename ->
   LOG.info( "${ctx_simplename} Preparing jdbc cluster:        ${ha_jdbc_config_file_name}" )
   new File( ha_jdbc_config_file_name ).withWriter{ writer ->
     def xml = new MarkupBuilder(writer);
-    xml.'ha-jdbc'() {
-      sync('class':'com.eucalyptus.bootstrap.Databases\$FullSynchronizationStrategy', id:'full') {
+    xml.'ha-jdbc'(xmlns: 'urn:ha-jdbc:cluster:2.1') {
+      sync(id:'full') {
         'property'(name:'fetchSize', '1000')
         'property'(name:'maxBatchSize', '1000')
       }
-      sync('class':'com.eucalyptus.bootstrap.Databases\$PassiveSynchronizationStrategy', id:'passive');
-      cluster(id:context_pool_alias,
+      sync(id:'passive');
+      state(id:'simple');
+      cluster(
 //          'auto-activate-schedule':'0 * * ? * *',
           balancer:'simple', //(simple|random|round-robin|load)
           'default-sync': 'passive',
           dialect:Databases.getJdbcDialect( ),
+          durability:'none',//(none|coarse|fine)
           'failure-detect-schedule':'0/15 * * ? * *',
           'meta-data-cache':'none',//(none|lazy|eager)
           'transaction-mode':'serial',//(parallel|serial)
@@ -132,10 +133,9 @@ def setupDbPool = { String ctx_simplename ->
             Hosts.listActiveDatabases( ).each{ Host host ->
               database(id:host.getBindAddress().getHostAddress( ),
                   local:host.isLocalHost( ),
-                  weight:(host.equals(Hosts.getCoordinator())?100:1)
+                  weight:(host.equals(Hosts.getCoordinator())?100:1),
+                  location:("jdbc:${ServiceUris.remote(Database.class,host.getBindAddress( ), context_pool_alias ).toASCIIString( )}")
                   ) {
-                    driver(real_jdbc_driver)
-                    url("jdbc:${ServiceUris.remote(Database.class,host.getBindAddress( ), context_pool_alias ).toASCIIString( )}")
                     user('eucalyptus')
                     password(db_pass)
                   }

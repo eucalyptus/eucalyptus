@@ -19,14 +19,22 @@
  ************************************************************************/
 package com.eucalyptus.postgresql;
 
+import net.sf.hajdbc.dialect.Dialect;
+import net.sf.hajdbc.dialect.DialectFactory;
+
+
 /**
- * Customized HA-JDBC PostgreSQL dialect that avoids use of truncate table.
+ *
  */
-@SuppressWarnings("nls")
-public class PostgreSQLDialect extends net.sf.hajdbc.dialect.postgresql.PostgreSQLDialect
-{
+public class PostgreSQLDialectFactory implements DialectFactory { 
+
   @Override
-  protected String truncateTableFormat( ) {
-    return "DELETE FROM {0}";
+  public String getId( ) {
+    return "eucalyptus-postgresql";
+  }
+
+  @Override
+  public Dialect createDialect() {
+    return new PostgreSQLDialect( );
   }
 }

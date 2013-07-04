@@ -63,6 +63,7 @@
 import org.apache.log4j.Logger
 import org.hibernate.ejb.Ejb3Configuration
 import com.eucalyptus.bootstrap.Databases
+import com.eucalyptus.bootstrap.SystemIds
 import com.eucalyptus.entities.PersistenceContexts
 
 Logger LOG = Logger.getLogger( "com.eucalyptus.scripts.setup_persistence" );
@@ -82,6 +83,9 @@ default_hiber_config = [
 PersistenceContexts.list( ).each { String ctx_simplename ->
   
   String context_name = ctx_simplename.replaceAll("eucalyptus_","")
+  
+  // Set system properties
+  System.setProperty( 'com.eucalyptus.cache.cluster', SystemIds.cacheName( ) )
   
   // Configure the hibernate connection
   hibernate_config = [:]

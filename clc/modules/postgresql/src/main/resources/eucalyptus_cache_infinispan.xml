@@ -20,11 +20,12 @@
   -->
 <infinispan xmlns="urn:infinispan:config:5.2" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="urn:infinispan:config:5.2 http://infinispan.org/schemas/infinispan-config-5.2.xsd">
     <global>
-        <transport>
+        <transport
+                clusterName="${com.eucalyptus.cache.cluster:eucalyptus-infinispan}">
             <properties>
                 <property
                         name="configurationFile"
-                        value="eucalyptus_cache_jgroups.xml" />
+                        value="${com.eucalyptus.cache.jgroups:eucalyptus_cache_jgroups.xml}" />
             </properties>
         </transport>
     </global>
@@ -32,18 +33,18 @@
     <default>
         <locking
                 isolationLevel="REPEATABLE_READ"
-                lockAcquisitionTimeout="20000"/>
+                lockAcquisitionTimeout="${com.eucalyptus.cache.lockTimeout:20000}"/>
 
         <transaction
                 transactionMode="TRANSACTIONAL"
                 lockingMode="OPTIMISTIC"
                 autoCommit="true"
-                useSynchronization="true"
+                useSynchronization="false"
                 />
 
         <expiration
                 wakeUpInterval="500"
-                lifespan="1000"/>
+                lifespan="${com.eucalyptus.cache.lifespan:1000}"/>
 
         <clustering
                 mode="invalidation"/>
@@ -53,7 +54,7 @@
         <locking 
                 isolationLevel="READ_COMMITTED" 
                 concurrencyLevel="1000"
-                lockAcquisitionTimeout="15000" 
+                lockAcquisitionTimeout="${com.eucalyptus.cache.timestamps.lockTimeout:20000}" 
                 useLockStriping="false"/>
 
         <eviction 
