@@ -16,11 +16,11 @@ define([
   '../shared/model/blockmaps',
   '../shared/model/snapshots'
 ], function(app, Wizard, wizardTemplate, page1, page2, page3, page4, summary, launchconfigModel, image, type, security, keyPair, advanced, block, snap) {
-  var config = function() {
+  var config = function(options) {
     var wizard = new Wizard();
 
     var launchConfigModel = new launchconfigModel();
-    var imageModel = new image();
+    var imageModel = new image(options);
     var typeModel = new type();
     var securityModel = new security();
     var keyModel = new keyPair();
@@ -33,7 +33,7 @@ define([
       // ADD THEM INTO THE PASSED ARRAY
      //    return position === 2;
 
-       return imageModel.isValid() & typeModel.isValid(); // & securityModel.isValid();
+       return imageModel.isValid() & typeModel.isValid() & (position == 2 || position == 3); // & securityModel.isValid();
     }
 
     function finish() {
@@ -74,10 +74,10 @@ define([
     }
 
     var viewBuilder = wizard.viewBuilder(wizardTemplate)
-            .add(new page1({model: imageModel, blockMaps: blockMaps}))
+            .add(new page1({model: imageModel, blockMaps: blockMaps, image: options.image}))
             .add(new page2({model: typeModel}))
             .add(new page3({model: securityModel, keymodel: keyModel}))
-            .add(new page4({model: advancedModel, blockMaps: blockMaps, snapshots: snapShots}))
+            .add(new page4({model: advancedModel, blockMaps: blockMaps, snapshots: snapShots, image: imageModel}))
             .setHideDisabledButtons(true)
             .setFinishText(app.msg('create_launch_config_btn_create')).setFinishChecker(canFinish)
             .map('optionLink', '#optionLink')

@@ -4,7 +4,7 @@ define([
 ], function(EucaCollection, Alarm) {
     var collection = EucaCollection.extend({
       model: Alarm,
-      url: '/ec2?Action=DescribeAlarms'
+      url: '/monitor?Action=DescribeAlarms'
     });
     return collection;
 });

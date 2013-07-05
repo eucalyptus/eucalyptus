@@ -69,11 +69,13 @@ define([
 
 
         cancelButton: {
+          id: 'button-dialog-deletesnapshot-cancel',
           click: function() {
             self.close();
           }
         },
         deleteButton: {
+          id: 'button-dialog-deletesnapshot-delete',
           click: function() {
 
               // DEREGISTER IMAGE FIRST

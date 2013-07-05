@@ -31,6 +31,7 @@ define([
           },
 
           submitButton: new Backbone.Model({
+            id: 'button-dialog-scalingmanageinst-save',
             disabled: false, //!this.model.isValid(),
             click: function() {
               self.scope.sgroup.get('instances').each( function(inst) {
@@ -46,6 +47,7 @@ define([
           }),
 
           cancelButton: {
+            id: 'button-dialog-scalingmanageinst-cancel',
             click: function() {
               self.close();
             }

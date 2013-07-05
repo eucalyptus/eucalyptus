@@ -19,6 +19,7 @@ define([
 	'models/zones',
 	'models/buckets',
 	'models/alarms',
+	'models/metrics',
     'models/availabilityzones'
 	], 
 function(_, Backbone, tags) {
@@ -32,15 +33,16 @@ function(_, Backbone, tags) {
 	['launchconfig', 'launchconfigs', 'launchConfigs'],
 	['instance', 'instances'],
 	['eip'],
-	['keypair'],
-	['sgroup'],
+	['keypair', 'keypairs'],
+	['sgroup', 'sgroups'],
 	['snapshot', 'snapshots'],
 	['balancer'],
 	['insthealth', 'instHealths'],
 	['summary'],
 	['zone', 'zones'],
 	['bucket'],
-	['alarm'],
+	['alarm', 'alarms'],
+	['metrics'],
 	['availabilityzone']
     ];
 
