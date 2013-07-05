@@ -22,6 +22,7 @@ define([
                 },
 
                 cancelButton: {
+                    id: 'button-dialog-edittags-cancel',
                     click: function() {
                        self.close();
                     }
@@ -29,9 +30,11 @@ define([
 
                 confirmButton: new Backbone.Model({
                   disabled: false,
+                  id: 'button-dialog-edittags-save',
                   click: function() {
-                       self.scope.model.trigger('confirm');
-                       self.close();
+                    if (this.get('disabled') == true) return;
+                    self.scope.model.trigger('confirm');
+                    self.close();
                   }
                 }),
 

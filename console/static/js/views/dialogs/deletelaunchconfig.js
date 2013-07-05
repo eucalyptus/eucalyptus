@@ -18,12 +18,14 @@ define([
                 
 
                 cancelButton: {
+                    id: 'button-dialog-deletelaunchconfig-cancel',
                     click: function() {
                        self.close();
                     }
                 },
 
                 deleteButton: {
+                  id: 'button-dialog-deletelaunchconfig-delete',
                   click: function() {
                       doMultiAction(args.items, app.data.launchconfigs,
                                     function(model, options) {

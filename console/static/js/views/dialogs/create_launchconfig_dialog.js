@@ -32,6 +32,7 @@ define([
 //        help: {title: null, content help_launchconfig.dialog_newconfig_content, url: help_launchconfig.dialog_newconfig_content_url, pop_height: 600},
 
         cancelButton: {
+          id: 'button-dialog-createlaunchconfig-cancel',
           click: function() {
             self.close();
             self.cleanup();
@@ -39,6 +40,7 @@ define([
         },
 
         createButton: new Backbone.Model({
+          id: 'button-dialog-createlaunchconfig-save',
           disabled: true,
           click: function() {
             // validate

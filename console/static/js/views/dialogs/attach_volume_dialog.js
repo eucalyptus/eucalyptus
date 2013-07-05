@@ -220,6 +220,7 @@ define([
               help: { content: help_volume.dialog_attach_content, url: help_volume.dialog_attach_content_url },
 
               cancelButton: {
+                id: 'button-dialog-attachvolume-cancel',
                 click: function() {
                   self.close();
                   self.cleanup();
@@ -227,6 +228,7 @@ define([
               },
 
               attachButton: new Backbone.Model({
+                id: 'button-dialog-attachvolume-save',
                 disabled: true,
                 click: function() {
                   // GET THE INPUT FROM THE HTML VIEW
