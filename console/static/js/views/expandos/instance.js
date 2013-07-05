@@ -6,7 +6,6 @@ define([
   'text!./instance.html!strip',
 ], function(app, _, Backbone, EucaExpandoView, template) {
   return EucaExpandoView.extend({
-    EUCA_ID : 'expando:instance',
     initialize : function(args) {
       var self =  this;
       this.template = template;
@@ -34,8 +33,6 @@ define([
       tmptags.on('add remove reset sort sync', function() {
         self.render();
       });
-
-      app.plugins.init(this);
     },
     remove : function() {
       this.model.destroy();

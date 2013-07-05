@@ -44,7 +44,10 @@ function(EucaModel, tags) {
         if (dc < min && dc >= 0)
           this.set('desired_capacity', min);
       });
- }, 
+      // thinking this should not call super since super deals with a lot of tag related
+      // stuff and scaling group tags are a different animal
+      //EucaModel.prototype.initialize.call(this);
+    }, 
 
     validation: {
            
