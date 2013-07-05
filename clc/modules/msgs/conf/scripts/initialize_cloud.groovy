@@ -103,7 +103,7 @@ try {
           "hibernate.show_sql": "false",
           "hibernate.format_sql": "false",
           "hibernate.connection.autocommit": "true",
-          "hibernate.hbm2ddl.auto": "create",
+          "hibernate.hbm2ddl.auto": "update",
           "hibernate.generate_statistics": "false",
           "hibernate.connection.driver_class": Databases.getDriverName( ),
           "hibernate.connection.username": "eucalyptus",

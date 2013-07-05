@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * Copyright 2009-2013 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -93,7 +93,7 @@ PersistenceContexts.list( ).each { String ctx_simplename ->
         /** jdbc driver **/
         'hibernate.dialect': Databases.getHibernateDialect( ),
         /** db pools **/
-        'hibernate.connection.provider_class': 'com.eucalyptus.bootstrap.ConfigurableProxoolConnectionProvider',
+        'hibernate.connection.provider_class': 'org.hibernate.service.jdbc.connections.internal.ProxoolConnectionProvider',
         'hibernate.proxool.pool_alias': "eucalyptus_${context_name}",
         'hibernate.proxool.existing_pool': 'true',
         /** transactions **/
