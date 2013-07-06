@@ -63,13 +63,13 @@
 package com.eucalyptus.images;
 
 import javax.persistence.DiscriminatorValue;
+import javax.persistence.Entity;
 import javax.persistence.PersistenceContext;
 import org.hibernate.annotations.Cache;
-import org.hibernate.annotations.Entity;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
 import com.eucalyptus.cloud.ImageMetadata.DeviceMappingType;
 
-@Entity @javax.persistence.Entity
+@Entity
 @PersistenceContext( name = "eucalyptus_cloud" )
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
 @DiscriminatorValue( value = "suppress" )

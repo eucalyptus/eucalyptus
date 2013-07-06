@@ -72,10 +72,10 @@ import java.util.UUID;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentMap;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 import javax.persistence.Column;
+import javax.persistence.Entity;
 import javax.persistence.EnumType;
 import javax.persistence.Enumerated;
 import javax.persistence.GeneratedValue;
@@ -92,7 +92,6 @@ import javax.persistence.Version;
 import org.apache.log4j.Logger;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
-import org.hibernate.annotations.Entity;
 import org.hibernate.annotations.GenericGenerator;
 import org.hibernate.annotations.NaturalId;
 import org.hibernate.annotations.Type;
@@ -163,7 +162,6 @@ public class Faults {
   }
   
   @Entity
-  @javax.persistence.Entity
   @PersistenceContext( name = "eucalyptus_faults" )
   @Table( name = "faults_records" )
   @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )

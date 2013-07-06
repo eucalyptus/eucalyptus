@@ -65,22 +65,18 @@ package edu.ucsb.eucalyptus.cloud.entities;
 import java.util.ArrayList;
 import java.util.List;
 import javax.persistence.Column;
-import org.hibernate.annotations.Entity;
-import javax.persistence.GeneratedValue;
-import javax.persistence.Id;
+import javax.persistence.Entity;
 import javax.persistence.PersistenceContext;
 import javax.persistence.Table;
 import org.apache.log4j.Logger;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
-import com.eucalyptus.auth.Accounts;
-import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.entities.AbstractPersistent;
 import edu.ucsb.eucalyptus.msgs.AccessControlListType;
 import edu.ucsb.eucalyptus.msgs.Grant;
 import edu.ucsb.eucalyptus.msgs.Grantee;
 
-@Entity @javax.persistence.Entity
+@Entity
 @PersistenceContext(name="eucalyptus_walrus")
 @Table( name = "Grants" )
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )

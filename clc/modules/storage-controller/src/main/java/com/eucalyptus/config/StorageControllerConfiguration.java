@@ -70,21 +70,18 @@ import java.util.NoSuchElementException;
 import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-
+import javax.persistence.Column;
+import javax.persistence.Entity;
 import javax.persistence.EntityTransaction;
 import javax.persistence.PersistenceContext;
 import javax.persistence.PrePersist;
 import javax.persistence.Transient;
-import javax.persistence.Column;
-
 import org.apache.log4j.Logger;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
-import org.hibernate.annotations.Entity;
-
+import com.eucalyptus.component.ComponentId.ComponentPart;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.ServiceConfigurations;
-import com.eucalyptus.component.ComponentId.ComponentPart;
 import com.eucalyptus.component.id.Storage;
 import com.eucalyptus.configurable.ConfigurableClass;
 import com.eucalyptus.configurable.ConfigurableField;
@@ -108,7 +105,6 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Sets;
 
 @Entity
-@javax.persistence.Entity
 @PersistenceContext(name="eucalyptus_config")
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
 @ComponentPart(Storage.class)

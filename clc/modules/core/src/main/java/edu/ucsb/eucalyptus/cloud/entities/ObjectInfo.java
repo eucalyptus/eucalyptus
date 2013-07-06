@@ -67,9 +67,7 @@ import java.util.Date;
 import java.util.List;
 import javax.persistence.CascadeType;
 import javax.persistence.Column;
-import org.hibernate.annotations.Entity;
-import javax.persistence.GeneratedValue;
-import javax.persistence.Id;
+import javax.persistence.Entity;
 import javax.persistence.JoinColumn;
 import javax.persistence.JoinTable;
 import javax.persistence.OneToMany;
@@ -78,7 +76,8 @@ import javax.persistence.Table;
 import org.apache.log4j.Logger;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
-
+import org.hibernate.annotations.OptimisticLockType;
+import org.hibernate.annotations.OptimisticLocking;
 import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.principal.User;
@@ -91,8 +90,8 @@ import edu.ucsb.eucalyptus.msgs.Grantee;
 import edu.ucsb.eucalyptus.msgs.Group;
 import edu.ucsb.eucalyptus.msgs.MetaDataEntry;
 
-@Entity(optimisticLock=org.hibernate.annotations.OptimisticLockType.NONE)
-@javax.persistence.Entity
+@Entity
+@OptimisticLocking(type = OptimisticLockType.NONE)
 @PersistenceContext(name="eucalyptus_walrus")
 @Table( name = "Objects" )
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )

@@ -62,15 +62,17 @@
 
 package com.eucalyptus.network;
 
-import static com.eucalyptus.upgrade.Upgrades.*;
-import static com.eucalyptus.util.Parameters.checkParam;
 import static org.hamcrest.Matchers.notNullValue;
+import static com.eucalyptus.upgrade.Upgrades.EntityUpgrade;
+import static com.eucalyptus.upgrade.Upgrades.Version;
+import static com.eucalyptus.util.Parameters.checkParam;
 import java.util.Collection;
-import java.util.List;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 import javax.persistence.CascadeType;
 import javax.persistence.Column;
+import javax.persistence.Entity;
 import javax.persistence.EntityTransaction;
 import javax.persistence.FetchType;
 import javax.persistence.JoinColumn;
@@ -82,15 +84,11 @@ import javax.persistence.PreRemove;
 import javax.persistence.PreUpdate;
 import javax.persistence.Table;
 import javax.persistence.Transient;
-
-import com.google.common.base.Predicate;
 import org.apache.log4j.Logger;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
-import org.hibernate.annotations.Entity;
 import org.hibernate.annotations.NotFound;
 import org.hibernate.annotations.NotFoundAction;
-
 import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.DatabaseAuthProvider;
 import com.eucalyptus.auth.principal.AccountFullName;
@@ -109,12 +107,12 @@ import com.eucalyptus.util.Numbers;
 import com.eucalyptus.util.OwnerFullName;
 import com.eucalyptus.util.RestrictedTypes;
 import com.google.common.base.Function;
+import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Sets;
 import edu.ucsb.eucalyptus.msgs.PacketFilterRule;
 
 @Entity
-@javax.persistence.Entity
 @PersistenceContext( name = "eucalyptus_cloud" )
 @Table( name = "metadata_network_group" )
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )

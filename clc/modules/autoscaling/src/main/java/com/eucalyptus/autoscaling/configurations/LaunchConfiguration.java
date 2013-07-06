@@ -26,6 +26,7 @@ import java.util.Set;
 import javax.persistence.CollectionTable;
 import javax.persistence.Column;
 import javax.persistence.ElementCollection;
+import javax.persistence.Entity;
 import javax.persistence.JoinColumn;
 import javax.persistence.Lob;
 import javax.persistence.OrderColumn;
@@ -33,7 +34,6 @@ import javax.persistence.PersistenceContext;
 import javax.persistence.Table;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
-import org.hibernate.annotations.Entity;
 import org.hibernate.annotations.Type;
 import com.eucalyptus.autoscaling.metadata.AbstractOwnedPersistent;
 import com.eucalyptus.util.OwnerFullName;
@@ -45,7 +45,6 @@ import com.google.common.collect.Sets;
  * 
  */
 @Entity
-@javax.persistence.Entity
 @PersistenceContext( name = "eucalyptus_autoscaling" )
 @Table( name = "metadata_launch_configurations" )
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )

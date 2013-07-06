@@ -62,23 +62,19 @@
 
 package com.eucalyptus.cloud;
 
-import java.io.Serializable;
-import javax.persistence.Transient;
-import org.hibernate.annotations.Entity;
-import java.io.Serializable
-import javax.persistence.PersistenceContext
-import javax.persistence.Table
-import javax.persistence.Transient
-import javax.persistence.DiscriminatorValue
-import org.hibernate.annotations.Cache
-import org.hibernate.annotations.CacheConcurrencyStrategy
-import org.hibernate.annotations.Entity
-import com.eucalyptus.bootstrap.BootstrapArgs
+
 import com.eucalyptus.component.ComponentId.ComponentPart
 import com.eucalyptus.component.id.Eucalyptus
 import com.eucalyptus.config.ComponentConfiguration
+import org.hibernate.annotations.Cache
+import org.hibernate.annotations.CacheConcurrencyStrategy
 
-@Entity @javax.persistence.Entity
+import javax.persistence.Entity
+import javax.persistence.PersistenceContext
+import javax.persistence.Table
+import javax.persistence.Transient
+
+@Entity
 @PersistenceContext(name="eucalyptus_config")
 @Table( name = "config_eucalyptus" )
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )

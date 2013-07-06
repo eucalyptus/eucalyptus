@@ -63,12 +63,12 @@
 package com.eucalyptus.node;
 
 import java.io.Serializable;
+import javax.persistence.Entity;
 import javax.persistence.PersistenceContext;
 import javax.persistence.PostLoad;
 import javax.persistence.Transient;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
-import org.hibernate.annotations.Entity;
 import com.eucalyptus.bootstrap.BootstrapArgs;
 import com.eucalyptus.component.ComponentId.ComponentPart;
 import com.eucalyptus.config.ComponentConfiguration;
@@ -80,7 +80,6 @@ import com.eucalyptus.configurable.ConfigurableIdentifier;
  * @author chris grzegorczyk <grze@eucalyptus.com>
  */
 @Entity
-@javax.persistence.Entity
 @PersistenceContext( name = "eucalyptus_config" )
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
 @ComponentPart( NodeController.class )

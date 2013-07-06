@@ -21,12 +21,11 @@ package com.eucalyptus.reporting.event_store;
 
 import java.util.Set;
 import javax.persistence.Column;
+import javax.persistence.Entity;
 import javax.persistence.PersistenceContext;
 import javax.persistence.Table;
 
-import org.hibernate.annotations.Entity;
-
-@Entity @javax.persistence.Entity
+@Entity
 @PersistenceContext(name="eucalyptus_reporting")
 @Table(name="reporting_elastic_ip_delete_events")
 public class ReportingElasticIpDeleteEvent

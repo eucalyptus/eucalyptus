@@ -67,6 +67,7 @@ import java.lang.reflect.Constructor;
 import java.util.NoSuchElementException;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicMarkableReference;
+import javax.persistence.Entity;
 import javax.persistence.EntityTransaction;
 import javax.persistence.PersistenceContext;
 import javax.persistence.Table;
@@ -74,7 +75,6 @@ import javax.persistence.Transient;
 import org.apache.log4j.Logger;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
-import org.hibernate.annotations.Entity;
 import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.principal.Principals;
 import com.eucalyptus.auth.principal.UserFullName;
@@ -93,6 +93,7 @@ import com.eucalyptus.records.Logs;
 import com.eucalyptus.reporting.event.AddressEvent;
 import com.eucalyptus.reporting.event.EventActionInfo;
 import com.eucalyptus.util.FullName;
+import com.eucalyptus.util.HasFullName;
 import com.eucalyptus.util.OwnerFullName;
 import com.eucalyptus.util.async.NOOP;
 import com.eucalyptus.util.async.RemoteCallback;
@@ -104,7 +105,6 @@ import edu.ucsb.eucalyptus.msgs.AddressInfoType;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 
 @Entity
-@javax.persistence.Entity
 @PersistenceContext( name = "eucalyptus_cloud" )
 @Table( name = "metadata_addresses" )
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
@@ -655,7 +655,7 @@ public class Address extends UserMetadata<Address.State> implements AddressMetad
   }
 
   /**
-   * @see com.eucalyptus.util.HasFullName#getPartition()
+   * @see HasFullName#getPartition()
    */
   @Override
   public String getPartition( ) {

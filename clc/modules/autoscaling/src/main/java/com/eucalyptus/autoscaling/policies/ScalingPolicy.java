@@ -21,6 +21,7 @@ package com.eucalyptus.autoscaling.policies;
 
 import static com.eucalyptus.autoscaling.common.AutoScalingMetadata.ScalingPolicyMetadata;
 import javax.persistence.Column;
+import javax.persistence.Entity;
 import javax.persistence.EnumType;
 import javax.persistence.Enumerated;
 import javax.persistence.JoinColumn;
@@ -31,17 +32,15 @@ import javax.persistence.PreUpdate;
 import javax.persistence.Table;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
-import org.hibernate.annotations.Entity;
-import com.eucalyptus.autoscaling.metadata.AbstractOwnedPersistent;
 import com.eucalyptus.autoscaling.common.AutoScalingMetadatas;
 import com.eucalyptus.autoscaling.groups.AutoScalingGroup;
+import com.eucalyptus.autoscaling.metadata.AbstractOwnedPersistent;
 import com.eucalyptus.util.OwnerFullName;
 
 /**
  *
  */
 @Entity
-@javax.persistence.Entity
 @PersistenceContext( name = "eucalyptus_autoscaling" )
 @Table( name = "metadata_scaling_policies" )
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )

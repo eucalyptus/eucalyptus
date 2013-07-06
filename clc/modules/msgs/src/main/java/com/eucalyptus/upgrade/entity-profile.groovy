@@ -17,27 +17,25 @@
  * CA 93117, USA or visit http://www.eucalyptus.com/licenses/ if you need
  * additional information or have any questions.
  ************************************************************************/
-import java.io.File;
+
+import com.eucalyptus.system.Ats
+import org.hibernate.annotations.Parent
+
 import java.lang.reflect.Field
-import java.lang.reflect.Modifier;
-import java.util.Collections;
-import java.util.List;
-import java.util.jar.JarEntry;
-import java.util.jar.JarFile;
+import java.lang.reflect.Modifier
+import java.util.jar.JarEntry
+import java.util.jar.JarFile
 import javax.persistence.Column
-import javax.persistence.ElementCollection;
-import javax.persistence.Embeddable;
-import javax.persistence.Embedded;
+import javax.persistence.ElementCollection
+import javax.persistence.Embeddable
+import javax.persistence.Embedded
 import javax.persistence.ManyToMany
-import javax.persistence.ManyToOne;
-import javax.persistence.MappedSuperclass;
-import javax.persistence.OneToMany;
+import javax.persistence.ManyToOne
+import javax.persistence.MappedSuperclass
+import javax.persistence.OneToMany
 import javax.persistence.OneToOne
 import javax.persistence.Table
 import javax.persistence.Transient
-import org.hibernate.annotations.Parent
-import com.eucalyptus.system.Ats
-
 
 File libDir = new File( "${System.getProperty("euca.src.dir")}/clc/target" );
 classList = []
@@ -71,7 +69,6 @@ classList.each { Class c ->
     ats = Ats.from( c );
     if ( ats.has( javax.persistence.Entity.class ) 
       || ats.has( javax.persistence.Embeddable.class ) 
-      || ats.has( org.hibernate.annotations.Entity.class ) 
       || ats.has( MappedSuperclass.class ) ) {
       Table table = ats.get( Table.class );
       String tableName = table == null ? c.getName() : table.name();

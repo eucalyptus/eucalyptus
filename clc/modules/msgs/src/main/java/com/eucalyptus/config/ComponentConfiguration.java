@@ -67,6 +67,7 @@ import java.net.InetSocketAddress;
 import java.net.URI;
 import java.util.NoSuchElementException;
 import javax.persistence.Column;
+import javax.persistence.Entity;
 import javax.persistence.Inheritance;
 import javax.persistence.InheritanceType;
 import javax.persistence.PersistenceContext;
@@ -75,7 +76,6 @@ import javax.persistence.Transient;
 import org.apache.log4j.Logger;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
-import org.hibernate.annotations.Entity;
 import org.hibernate.annotations.NaturalId;
 import com.eucalyptus.bootstrap.CanBootstrap;
 import com.eucalyptus.component.Component;
@@ -91,7 +91,6 @@ import com.eucalyptus.component.Partitions;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.ServiceUris;
 import com.eucalyptus.configurable.ConfigurableField;
-import com.eucalyptus.configurable.ConfigurableIdentifier;
 import com.eucalyptus.entities.AbstractPersistent;
 import com.eucalyptus.system.Ats;
 import com.eucalyptus.util.FullName;
@@ -99,7 +98,6 @@ import com.eucalyptus.util.Internets;
 import com.eucalyptus.util.fsm.StateMachine;
 
 @Entity
-@javax.persistence.Entity
 @PersistenceContext( name = "eucalyptus_config" )
 @Table( name = "config_component_base" )
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )

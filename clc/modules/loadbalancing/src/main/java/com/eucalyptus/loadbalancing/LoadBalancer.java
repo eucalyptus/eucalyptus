@@ -23,12 +23,12 @@ import static com.eucalyptus.loadbalancing.LoadBalancingMetadata.LoadBalancerMet
 import java.util.Collection;
 import java.util.Date;
 import java.util.NoSuchElementException;
-
 import javax.annotation.Nullable;
 import javax.persistence.CascadeType;
 import javax.persistence.Column;
 import javax.persistence.Embeddable;
 import javax.persistence.Embedded;
+import javax.persistence.Entity;
 import javax.persistence.EntityTransaction;
 import javax.persistence.FetchType;
 import javax.persistence.OneToMany;
@@ -37,13 +37,10 @@ import javax.persistence.PersistenceContext;
 import javax.persistence.PostLoad;
 import javax.persistence.Table;
 import javax.persistence.Transient;
-
 import org.apache.log4j.Logger;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
-import org.hibernate.annotations.Entity;
 import org.hibernate.annotations.Parent;
-
 import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.entities.Entities;
@@ -74,7 +71,7 @@ import com.google.common.collect.Iterables;
  *
  */
 
-@Entity @javax.persistence.Entity
+@Entity
 @PersistenceContext( name = "eucalyptus_loadbalancing" )
 @Table( name = "metadata_loadbalancer" )
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )

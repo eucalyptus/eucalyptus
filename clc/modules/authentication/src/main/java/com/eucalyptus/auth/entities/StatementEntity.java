@@ -68,7 +68,7 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import javax.persistence.CascadeType;
 import javax.persistence.Column;
-import org.hibernate.annotations.Entity;
+import javax.persistence.Entity;
 import javax.persistence.JoinColumn;
 import javax.persistence.ManyToOne;
 import javax.persistence.OneToMany;
@@ -128,7 +128,7 @@ import com.eucalyptus.entities.AbstractPersistent;
  * When each authorization is evaluated, the corresponding list of conditions
  * are also evaluated.
  */
-@Entity @javax.persistence.Entity
+@Entity
 @PersistenceContext( name = "eucalyptus_auth" )
 @Table( name = "auth_statement" )
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )

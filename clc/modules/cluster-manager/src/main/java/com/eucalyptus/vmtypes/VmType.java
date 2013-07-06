@@ -62,24 +62,18 @@
 
 package com.eucalyptus.vmtypes;
 
-import groovy.sql.Sql;
-import java.util.Comparator;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.Callable;
 import javax.persistence.CollectionTable;
 import javax.persistence.Column;
 import javax.persistence.ElementCollection;
-import javax.persistence.JoinColumn;
+import javax.persistence.Entity;
 import javax.persistence.PersistenceContext;
 import javax.persistence.Table;
 import javax.persistence.Transient;
-import org.apache.log4j.Logger;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
-import org.hibernate.annotations.Entity;
 import com.eucalyptus.auth.principal.Principals;
-import com.eucalyptus.bootstrap.Databases;
 import com.eucalyptus.cloud.CloudMetadata.VmTypeMetadata;
 import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.id.Eucalyptus;
@@ -87,14 +81,9 @@ import com.eucalyptus.crypto.Crypto;
 import com.eucalyptus.crypto.Digest;
 import com.eucalyptus.entities.AbstractPersistent;
 import com.eucalyptus.images.DeviceMapping;
-import com.eucalyptus.upgrade.Upgrades.EntityUpgrade;
-import com.eucalyptus.upgrade.Upgrades.PostUpgrade;
-import com.eucalyptus.upgrade.Upgrades.PreUpgrade;
-import com.eucalyptus.upgrade.Upgrades.Version;
 import com.eucalyptus.util.FullName;
 import com.eucalyptus.util.HasFullName;
 import com.eucalyptus.util.OwnerFullName;
-import com.eucalyptus.vm.VmBootRecord;
 import com.google.common.base.Function;
 import com.google.common.base.Predicate;
 import com.google.common.base.Supplier;
@@ -134,7 +123,6 @@ import com.google.common.collect.Sets;
  * @see DeviceMapping
  */
 @Entity
-@javax.persistence.Entity
 @PersistenceContext( name = "eucalyptus_cloud" )
 @Table( name = "cloud_vm_type" )
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )

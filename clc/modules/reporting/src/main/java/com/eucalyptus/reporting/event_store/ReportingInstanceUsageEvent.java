@@ -19,15 +19,15 @@
  ************************************************************************/
 package com.eucalyptus.reporting.event_store;
 
-import static com.eucalyptus.util.Parameters.checkParam;
 import static org.hamcrest.Matchers.notNullValue;
-
+import static com.eucalyptus.util.Parameters.checkParam;
 import java.util.Set;
-import javax.persistence.*;
+import javax.persistence.Column;
+import javax.persistence.Entity;
+import javax.persistence.PersistenceContext;
+import javax.persistence.Table;
 
-import org.hibernate.annotations.Entity;
-
-@Entity @javax.persistence.Entity
+@Entity
 @PersistenceContext(name="eucalyptus_reporting")
 @Table(name="reporting_instance_usage_events")
 public class ReportingInstanceUsageEvent

@@ -352,13 +352,9 @@ public class Entities {
     @SuppressWarnings( "unchecked" )
     final T ret = ( T ) Entities.getTransaction( example ).getTxState( )
                                 .getSession( )
-                                .createCriteria( example.getClass( ) )
-                                .add( Restrictions.naturalId( ).set( "naturalId", natId ) )
-                                .setCacheable( true )
-                                .setMaxResults( 1 )
-                                .setFetchSize( 1 )
-                                .setFirstResult( 0 )
-                                .uniqueResult( );
+                                .byNaturalId( example.getClass( ) )
+                                .using( "naturalId", natId )
+                                .load( );
     if ( ret == null ) {
       throw new NoSuchElementException( "@NaturalId: " + natId );
     }

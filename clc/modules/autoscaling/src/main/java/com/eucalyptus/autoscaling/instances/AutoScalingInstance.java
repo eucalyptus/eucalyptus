@@ -24,6 +24,7 @@ import java.util.Date;
 import java.util.concurrent.TimeUnit;
 import javax.annotation.Nonnull;
 import javax.persistence.Column;
+import javax.persistence.Entity;
 import javax.persistence.EnumType;
 import javax.persistence.Enumerated;
 import javax.persistence.JoinColumn;
@@ -36,7 +37,6 @@ import javax.persistence.Temporal;
 import javax.persistence.TemporalType;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
-import org.hibernate.annotations.Entity;
 import com.eucalyptus.autoscaling.common.AutoScalingMetadatas;
 import com.eucalyptus.autoscaling.groups.AutoScalingGroup;
 import com.eucalyptus.autoscaling.metadata.AbstractOwnedPersistent;
@@ -47,7 +47,6 @@ import com.google.common.base.Objects;
  *
  */
 @Entity
-@javax.persistence.Entity
 @PersistenceContext( name = "eucalyptus_autoscaling" )
 @Table( name = "metadata_auto_scaling_instances" )
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )

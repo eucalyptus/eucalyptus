@@ -62,21 +62,19 @@
 
 package edu.ucsb.eucalyptus.cloud.entities;
 
-import java.net.InetAddress;
 import java.util.UUID;
 import javax.persistence.Column;
+import javax.persistence.Entity;
 import javax.persistence.PersistenceContext;
 import javax.persistence.Table;
 import org.apache.log4j.Logger;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
-import org.hibernate.annotations.Entity;
 import com.eucalyptus.component.Component;
 import com.eucalyptus.component.Components;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.ServiceUris;
 import com.eucalyptus.component.Topology;
-import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.component.id.Walrus;
 import com.eucalyptus.configurable.ConfigurableClass;
 import com.eucalyptus.configurable.ConfigurableField;
@@ -85,7 +83,7 @@ import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.util.DNSProperties;
 import com.eucalyptus.util.EucalyptusCloudException;
 
-@Entity @javax.persistence.Entity
+@Entity
 @PersistenceContext( name = "eucalyptus_general" )
 @Table( name = "system_info" )
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )

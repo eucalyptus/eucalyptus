@@ -67,9 +67,7 @@ import java.util.Date;
 import java.util.List;
 import javax.persistence.CascadeType;
 import javax.persistence.Column;
-import org.hibernate.annotations.Entity;
-import javax.persistence.GeneratedValue;
-import javax.persistence.Id;
+import javax.persistence.Entity;
 import javax.persistence.JoinColumn;
 import javax.persistence.JoinTable;
 import javax.persistence.OneToMany;
@@ -85,7 +83,7 @@ import edu.ucsb.eucalyptus.msgs.Grantee;
 import edu.ucsb.eucalyptus.msgs.Group;
 import edu.ucsb.eucalyptus.util.UserManagement;
 
-@Entity @javax.persistence.Entity
+@Entity
 @PersistenceContext(name="eucalyptus_walrus")
 @Table( name = "Buckets" )
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )

@@ -63,12 +63,13 @@
 package com.eucalyptus.keys;
 
 import javax.persistence.Column;
+import javax.persistence.Entity;
 import javax.persistence.Lob;
 import javax.persistence.PersistenceContext;
 import javax.persistence.Table;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
-import org.hibernate.annotations.Entity;
+import org.hibernate.annotations.Type;
 import com.eucalyptus.auth.principal.Principals;
 import com.eucalyptus.auth.principal.UserFullName;
 import com.eucalyptus.cloud.CloudMetadata.KeyPairMetadata;
@@ -77,10 +78,8 @@ import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.entities.UserMetadata;
 import com.eucalyptus.util.FullName;
 import com.eucalyptus.util.OwnerFullName;
-import org.hibernate.annotations.Type;
 
 @Entity
-@javax.persistence.Entity
 @PersistenceContext( name = "eucalyptus_cloud" )
 @Table( name = "metadata_keypairs" )
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )

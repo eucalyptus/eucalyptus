@@ -65,19 +65,16 @@ package edu.ucsb.eucalyptus.cloud.entities;
 
 import java.util.List;
 import java.util.TreeMap;
-
 import javax.persistence.Column;
+import javax.persistence.Entity;
 import javax.persistence.Lob;
 import javax.persistence.PersistenceContext;
 import javax.persistence.PostLoad;
 import javax.persistence.PreUpdate;
 import javax.persistence.Table;
-
 import org.apache.log4j.Logger;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
-import org.hibernate.annotations.Entity;
-
 import com.eucalyptus.configurable.ConfigurableClass;
 import com.eucalyptus.configurable.ConfigurableField;
 import com.eucalyptus.configurable.ConfigurableFieldType;
@@ -96,7 +93,7 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.net.HostSpecifier;
 
-@Entity @javax.persistence.Entity
+@Entity
 @PersistenceContext(name="eucalyptus_storage")
 @Table( name = "san_info" )
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )

@@ -63,23 +63,16 @@
 package edu.ucsb.eucalyptus.cloud.entities;
 
 import javax.persistence.Column;
-import javax.persistence.DiscriminatorValue;
-import javax.persistence.Embeddable;
-import javax.persistence.FetchType;
+import javax.persistence.Entity;
 import javax.persistence.JoinColumn;
 import javax.persistence.ManyToOne;
 import javax.persistence.PersistenceContext;
 import javax.persistence.Table;
-
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
-import org.hibernate.annotations.Entity;
-import org.hibernate.annotations.Parent;
-
 import com.eucalyptus.entities.AbstractPersistent;
 
 @Entity 
-@javax.persistence.Entity
 @PersistenceContext(name="eucalyptus_storage")
 @Table( name = "volume_exports" )
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )

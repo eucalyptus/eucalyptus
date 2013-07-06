@@ -62,18 +62,17 @@
 
 package com.eucalyptus.util;
 
-import groovy.sql.Sql;
+import static com.eucalyptus.upgrade.Upgrades.Version.v3_2_0;
 import java.io.Serializable;
-import java.util.Map;
 import java.util.concurrent.Callable;
 import javax.persistence.Column;
+import javax.persistence.Entity;
 import javax.persistence.PersistenceContext;
 import javax.persistence.Table;
 import javax.persistence.Transient;
 import org.apache.log4j.Logger;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
-import org.hibernate.annotations.Entity;
 import com.eucalyptus.bootstrap.Databases;
 import com.eucalyptus.crypto.Crypto;
 import com.eucalyptus.crypto.Digest;
@@ -86,7 +85,7 @@ import com.google.common.base.Function;
 import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
-import static com.eucalyptus.upgrade.Upgrades.Version.v3_2_0;
+import groovy.sql.Sql;
 
 public class UniqueIds implements Serializable {
   private static final long serialVersionUID = 1L;
@@ -94,7 +93,6 @@ public class UniqueIds implements Serializable {
   private static final Long BLOCK_SIZE       = 1000L;
   
   @Entity
-  @javax.persistence.Entity
   @PersistenceContext( name = "eucalyptus_config" )
   @Table( name = "config_unique_ids_sets" )
   @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )

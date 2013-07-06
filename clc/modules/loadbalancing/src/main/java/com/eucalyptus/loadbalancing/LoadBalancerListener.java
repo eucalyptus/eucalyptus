@@ -21,6 +21,7 @@ package com.eucalyptus.loadbalancing;
 
 import javax.annotation.Nullable;
 import javax.persistence.Column;
+import javax.persistence.Entity;
 import javax.persistence.EntityTransaction;
 import javax.persistence.JoinColumn;
 import javax.persistence.ManyToOne;
@@ -32,7 +33,6 @@ import javax.persistence.Transient;
 import org.apache.log4j.Logger;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
-import org.hibernate.annotations.Entity;
 import com.eucalyptus.entities.AbstractPersistent;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.loadbalancing.LoadBalancer.LoadBalancerCoreView;
@@ -46,7 +46,7 @@ import com.google.common.base.Strings;
  * @author Sang-Min Park
  *
  */
-@Entity @javax.persistence.Entity
+@Entity
 @PersistenceContext( name = "eucalyptus_loadbalancing" )
 @Table( name = "metadata_listener" )
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
