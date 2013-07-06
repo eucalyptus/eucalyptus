@@ -35,7 +35,6 @@
                 lockAcquisitionTimeout="20000"/>
 
         <transaction
-                transactionManagerLookupClass="com.eucalyptus.empyrean.EmpyreanTransactionManager"
                 transactionMode="TRANSACTIONAL"
                 lockingMode="OPTIMISTIC"
                 autoCommit="true"

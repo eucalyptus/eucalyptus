@@ -73,14 +73,11 @@ default_hiber_config = [
       'hibernate.show_sql': 'false',
       'hibernate.format_sql': 'false',
       'hibernate.connection.autocommit': 'false',
-      'hibernate.connection.release_mode': 'after_statement',
+      'hibernate.connection.release_mode': 'after_transaction',
       'hibernate.hbm2ddl.auto': 'update',
       'hibernate.generate_statistics': 'false',
       'hibernate.bytecode.use_reflection_optimizer': 'true',
-      'hibernate.cglib.use_reflection_optimizer': 'true',
     ]
-
-ClassLoader.getSystemClassLoader().loadClass('com.eucalyptus.empyrean.EmpyreanTransactionManager');
 
 PersistenceContexts.list( ).each { String ctx_simplename ->
   
@@ -97,11 +94,9 @@ PersistenceContexts.list( ).each { String ctx_simplename ->
         'hibernate.proxool.pool_alias': "eucalyptus_${context_name}",
         'hibernate.proxool.existing_pool': 'true',
         /** transactions **/
-        'hibernate.current_session_context_class': 'jta',
-        'hibernate.jndi.class': 'bitronix.tm.jndi.BitronixInitialContextFactory',
-        'hibernate.transaction.flush_before_completion':'false',
-        'hibernate.transaction.auto_close_session':'false',
-        'hibernate.transaction.manager_lookup_class': 'com.eucalyptus.empyrean.EmpyreanTransactionManager',
+        'hibernate.transaction.auto_close_session': 'false',
+        'hibernate.transaction.flush_before_completion': 'false',
+        'hibernate.transaction.jta.platform': 'org.hibernate.service.jta.platform.internal.BitronixJtaPlatform',
         /** l2 cache **/
         'hibernate.cache.use_second_level_cache': 'true',
         'hibernate.cache.use_query_cache': 'false',
