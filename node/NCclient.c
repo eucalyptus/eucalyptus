@@ -75,16 +75,16 @@
 \*----------------------------------------------------------------------------*/
 
 #include <stdio.h>
-#include <unistd.h>                    /* getopt */
+#include <unistd.h>
 
 #include <data.h>
 
 #include "client-marshal.h"
 
+#include <eucalyptus.h>
 #include <misc.h>
 #include <euca_axis.h>
 #include <sensor.h>
-#include <eucalyptus.h>
 #include <adb-helpers.h>
 #include <euca_string.h>
 
@@ -134,8 +134,6 @@
  |                                                                            |
 \*----------------------------------------------------------------------------*/
 
-boolean debug = FALSE;                 //!< Enables debug mode if set to TRUE
-
 #ifndef NO_COMP
 const char *euca_this_component_name = "nc";    //!< Eucalyptus Component Name
 const char *euca_client_component_name = "user";    //!< The client component name
@@ -147,11 +145,34 @@ const char *euca_client_component_name = "user";    //!< The client component na
  |                                                                            |
 \*----------------------------------------------------------------------------*/
 
+static boolean gDebug = FALSE;                 //!< Enables debug mode if set to TRUE
+
 /*----------------------------------------------------------------------------*\
  |                                                                            |
  |                              STATIC PROTOTYPES                             |
  |                                                                            |
 \*----------------------------------------------------------------------------*/
+
+static void usage(void);
+static int add_vbr(const char *psSpec, virtualMachine * pVirtMachine);
+
+static int ncClientRunInstance(ncStub * pStub, ncMetadata * pMeta, u32 nbInstances, char *psReservationId, char *psInstanceId, char *psMacAddr, char *psUUID,
+                               virtualMachine * pVirtMachine, char *psImageId, char *psImageURL, char *psKernelId, char *psKernelURL, char *psRamdiskId, char *psRamdiskURL,
+                               char *psUserData, char *psLaunchIndex, char **ppsGroupNames, u32 groupNameSize);
+static int ncClientTerminateInstance(ncStub * pStub, ncMetadata * pMeta, char *psInstanceId);
+static int ncClientDescribeInstances(ncStub * pStub, ncMetadata * pMeta);
+static int ncClientBundleInstance(ncStub * pStub, ncMetadata * pMeta, char *psInstanceId);
+static int ncClientBundleRestartInstance(ncStub * pStub, ncMetadata * pMeta, char *psInstanceId);
+static int ncClientDescribeBundleTask(ncStub * pStub, ncMetadata * pMeta);
+static int ncClientPowerDown(ncStub * pStub, ncMetadata * pMeta);
+static int ncClientAssignAddress(ncStub * pStub, ncMetadata * pMeta, char *psInstanceId, char *psPublicIP);
+static int ncClientDescribeResources(ncStub * pStub, ncMetadata * pMeta);
+static int ncClientAttachVolume(ncStub * pStub, ncMetadata * pMeta, char *psInstanceId, char *psVolumeId, char *psRemoteDevice, char *psLocalDevice);
+static int ncClientDetachVolume(ncStub * pStub, ncMetadata * pMeta, char *psInstanceId, char *psVolumeId, char *psRemoteDevice, char *psLocalDevice, boolean force);
+static int ncClientDescribeSensors(ncStub * pStub, ncMetadata * pMeta);
+static int ncClientModifyNode(ncStub * pStub, ncMetadata * pMeta, char *psStateName);
+static int ncClientMigrateInstance(ncStub * pStub, ncMetadata * pMeta, char *psInstanceId, char *psSrcNodeName, char *psDstNodeName, char *psStateName, char *psMigrationCreds);
+static int ncClientConvertTimeStamp(ncStub * pStub, char *psTimeStamp);
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |
@@ -159,7 +180,17 @@ const char *euca_client_component_name = "user";    //!< The client component na
  |                                                                            |
 \*----------------------------------------------------------------------------*/
 
-#define CHECK_PARAM(par, name) if (par==NULL) { fprintf (stderr, "ERROR: no %s specified (try -h)\n", name); exit (1); }
+//! Macro to validate the presence of a required parameter.
+#define CHECK_PARAM(_param, _sName)                                       \
+{                                                                         \
+    if ((_param) == NULL) {                                               \
+        fprintf (stderr, "ERROR: no %s specified (try -h)\n", (_sName));  \
+        exit (1);                                                         \
+    }                                                                     \
+}
+
+//! generate random IDs if they weren't specified
+#define NC_RANDOM()                              ((rand() % 26) + 97)
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |
@@ -170,7 +201,7 @@ const char *euca_client_component_name = "user";    //!< The client component na
 //!
 //! Prints the command help to stderr
 //!
-void usage(void)
+static void usage(void)
 {
     fprintf(stderr, "usage: NCclient [command] [options]\n"
             "\tcommands:\t\t\trequired options:\n"
@@ -228,59 +259,665 @@ void usage(void)
 //!
 //! @return EUCA_OK on success or EUCA_ERROR on failure
 //!
-int add_vbr(const char *spec_str, virtualMachine * vm_type)
+static int add_vbr(const char *psSpec, virtualMachine * pVirtMachine)
 {
-    if (vm_type->virtualBootRecordLen == EUCA_MAX_VBRS) {
+    char *psSpecCopy = NULL;
+    char *psTypeName = NULL;
+    char *psID = NULL;
+    char *psSizeBytes = NULL;
+    char *psFormatName = NULL;
+    char *psGuestDeviceName = NULL;
+    char *psResourceLocation = NULL;
+    virtualBootRecord *pVbr = NULL;
+
+    if (pVirtMachine->virtualBootRecordLen == EUCA_MAX_VBRS) {
         fprintf(stderr, "ERROR: too many -v parameters\n");
-        return EUCA_ERROR;
+        return (EUCA_OVERFLOW_ERROR);
     }
-    virtualBootRecord *vbr = &(vm_type->virtualBootRecord[vm_type->virtualBootRecordLen++]);
 
-    char *spec_copy = strdup(spec_str);
-    char *type_spec = strtok(spec_copy, ":");
-    char *id_spec = strtok(NULL, ":");
-    char *size_spec = strtok(NULL, ":");
-    char *format_spec = strtok(NULL, ":");
-    char *dev_spec = strtok(NULL, ":");
-    char *loc_spec = strtok(NULL, ":");
-    if (type_spec == NULL) {
-        fprintf(stderr, "ERROR: invalid 'type' specification in VBR '%s'\n", spec_str);
-        goto out_error;
-    }
-    euca_strncpy(vbr->typeName, type_spec, sizeof(vbr->typeName));
-    if (id_spec == NULL) {
-        fprintf(stderr, "ERROR: invalid 'id' specification in VBR '%s'\n", spec_str);
-        goto out_error;
-    }
-    euca_strncpy(vbr->id, id_spec, sizeof(vbr->id));
-    if (size_spec == NULL) {
-        fprintf(stderr, "ERROR: invalid 'size' specification in VBR '%s'\n", spec_str);
-        goto out_error;
-    }
-    vbr->sizeBytes = atoi(size_spec);
-    if (format_spec == NULL) {
-        fprintf(stderr, "ERROR: invalid 'format' specification in VBR '%s'\n", spec_str);
-        goto out_error;
-    }
-    euca_strncpy(vbr->formatName, format_spec, sizeof(vbr->formatName));
-    if (dev_spec == NULL) {
-        fprintf(stderr, "ERROR: invalid 'guestDeviceName' specification in VBR '%s'\n", spec_str);
-        goto out_error;
-    }
-    euca_strncpy(vbr->guestDeviceName, dev_spec, sizeof(vbr->guestDeviceName));
-    if (loc_spec == NULL) {
-        fprintf(stderr, "ERROR: invalid 'resourceLocation' specification in VBR '%s'\n", spec_str);
-        goto out_error;
-    }
-    euca_strncpy(vbr->resourceLocation, spec_str + (loc_spec - spec_copy), sizeof(vbr->resourceLocation));
+    pVbr = &(pVirtMachine->virtualBootRecord[pVirtMachine->virtualBootRecordLen++]);
+    psSpecCopy = strdup(psSpec);
+    psTypeName = strtok(psSpecCopy, ":");
+    psID = strtok(NULL, ":");
+    psSizeBytes = strtok(NULL, ":");
+    psFormatName = strtok(NULL, ":");
+    psGuestDeviceName = strtok(NULL, ":");
+    psResourceLocation = strtok(NULL, ":");
 
-    EUCA_FREE(spec_copy);
-    return EUCA_OK;
+    if (psTypeName == NULL) {
+        fprintf(stderr, "ERROR: invalid 'type' specification in VBR '%s'\n", psSpec);
+        goto out_error;
+    }
+
+    euca_strncpy(pVbr->typeName, psTypeName, sizeof(pVbr->typeName));
+
+    if (psID == NULL) {
+        fprintf(stderr, "ERROR: invalid 'id' specification in VBR '%s'\n", psSpec);
+        goto out_error;
+    }
+
+    euca_strncpy(pVbr->id, psID, sizeof(pVbr->id));
+
+    if (psSizeBytes == NULL) {
+        fprintf(stderr, "ERROR: invalid 'size' specification in VBR '%s'\n", psSpec);
+        goto out_error;
+    }
+
+    pVbr->sizeBytes = atoi(psSizeBytes);
+
+    if (psFormatName == NULL) {
+        fprintf(stderr, "ERROR: invalid 'format' specification in VBR '%s'\n", psSpec);
+        goto out_error;
+    }
+
+    euca_strncpy(pVbr->formatName, psFormatName, sizeof(pVbr->formatName));
+
+    if (psGuestDeviceName == NULL) {
+        fprintf(stderr, "ERROR: invalid 'guestDeviceName' specification in VBR '%s'\n", psSpec);
+        goto out_error;
+    }
+
+    euca_strncpy(pVbr->guestDeviceName, psGuestDeviceName, sizeof(pVbr->guestDeviceName));
+
+    if (psResourceLocation == NULL) {
+        fprintf(stderr, "ERROR: invalid 'resourceLocation' specification in VBR '%s'\n", psSpec);
+        goto out_error;
+    }
+
+    euca_strncpy(pVbr->resourceLocation, (psSpec + (psResourceLocation - psSpecCopy)), sizeof(pVbr->resourceLocation));
+
+    EUCA_FREE(psSpecCopy);
+    return (EUCA_OK);
 
 out_error:
-    vm_type->virtualBootRecordLen--;
-    EUCA_FREE(spec_copy);
-    return EUCA_ERROR;
+    pVirtMachine->virtualBootRecordLen--;
+    EUCA_FREE(psSpecCopy);
+    return (EUCA_ERROR);
+}
+
+//!
+//! Builds and execute the "RunInstance" request
+//!
+//! @param[in]  pStub a pointer to the NC stub structure
+//! @param[in]  pMeta a pointer to the node controller (NC) metadata structure
+//! @param[in]  nbInstances number of instances to run
+//! @paran[in]  psReservationId pointer to a string containing the reservation ID for this request
+//! @param[in]  psInstanceId the instance identifier string (i-XXXXXXXX)
+//! @param[in]  psMacAddr the reservation identifier string
+//! @param[in]  psUUID pointer to a string containing the user unique ID.
+//! @param[in]  pVirtMachine a pointer to the virtual machine parameters to use
+//! @param[in]  psImageId UNUSED
+//! @param[in]  psImageURL UNUSED
+//! @param[in]  psKernelId the kernel image identifier (eki-XXXXXXXX)
+//! @param[in]  psKernelURL the kernel image URL address
+//! @param[in]  psRamdiskId the ramdisk image identifier (eri-XXXXXXXX)
+//! @param[in]  psRamdiskURL the ramdisk image URL address
+//! @param[in]  psUserData the user data string
+//! @param[in]  psLaunchIndex the launch index string
+//! @param[in]  ppsGroupNames a list of group name string
+//! @param[in]  groupNameSize the number of group name in the groupNames list
+//!
+//! @return EUCA_OK on success. On failure, the program will terminate
+//!
+//! @see
+//!
+//! @pre None of the provided pointer and string should be NULL.
+//!
+//! @post The request is sent to the NC client and the result of the request will be displayed.
+//!
+//! @note
+//!
+static int ncClientRunInstance(ncStub * pStub, ncMetadata * pMeta, u32 nbInstances, char *psReservationId, char *psInstanceId, char *psMacAddr, char *psUUID,
+                               virtualMachine * pVirtMachine, char *psImageId, char *psImageURL, char *psKernelId, char *psKernelURL, char *psRamdiskId, char *psRamdiskURL,
+                               char *psUserData, char *psLaunchIndex, char **ppsGroupNames, u32 groupNameSize)
+{
+    int i = 0;
+    int rc = EUCA_OK;
+    int vlan = 3;
+    int devMapId = 0;
+    char *psLocalInstanceId = NULL;
+    char *psLocalReservationId = NULL;
+    char *psLocalUUID = NULL;
+    char *psPrivateMac = NULL;
+    char *psPrivateIP = NULL;
+    char *psPlatform = NULL;
+    char sTempBuffer[64] = "";
+    netConfig netParams = { 0 };
+    ncInstance *pOutInst = NULL;
+
+    psPrivateMac = strdup(psMacAddr);
+    psPrivateIP = strdup("10.0.0.202");
+    srand(time(NULL));
+    while (nbInstances--) {
+        if ((psInstanceId == NULL) || (nbInstances > 1)) {
+            snprintf(sTempBuffer, sizeof(sTempBuffer), "i-%c%c%c%c%c", NC_RANDOM(), NC_RANDOM(), NC_RANDOM(), NC_RANDOM(), NC_RANDOM());
+            psLocalInstanceId = sTempBuffer;
+        } else {
+            psLocalInstanceId = psInstanceId;
+        }
+
+        if ((psReservationId == NULL) || (nbInstances > 1)) {
+            snprintf(sTempBuffer, sizeof(sTempBuffer), "r-%c%c%c%c%c", NC_RANDOM(), NC_RANDOM(), NC_RANDOM(), NC_RANDOM(), NC_RANDOM());
+            psLocalReservationId = sTempBuffer;
+        } else {
+            psLocalReservationId = psReservationId;
+        }
+
+        if ((psUUID == NULL) || (nbInstances > 1)) {
+            snprintf(sTempBuffer, sizeof(sTempBuffer), "%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c", NC_RANDOM(), NC_RANDOM(), NC_RANDOM(), NC_RANDOM(),
+                     NC_RANDOM(), NC_RANDOM(), NC_RANDOM(), NC_RANDOM(), NC_RANDOM(), NC_RANDOM(), NC_RANDOM(), NC_RANDOM(), NC_RANDOM(), NC_RANDOM(), NC_RANDOM(), NC_RANDOM(),
+                     NC_RANDOM(), NC_RANDOM(), NC_RANDOM(), NC_RANDOM(), NC_RANDOM(), NC_RANDOM(), NC_RANDOM(), NC_RANDOM(), NC_RANDOM(), NC_RANDOM(), NC_RANDOM(), NC_RANDOM(),
+                     NC_RANDOM(), NC_RANDOM(), NC_RANDOM(), NC_RANDOM());
+            psLocalUUID = sTempBuffer;
+        } else {
+            psLocalUUID = psUUID;
+        }
+
+        bzero(&netParams, sizeof(netParams));
+
+        netParams.vlan = vlan;
+        snprintf(netParams.privateIp, sizeof(netParams.privateIp), "%s", psPrivateIP);
+        snprintf(netParams.privateMac, sizeof(netParams.privateMac), "%s", psPrivateMac);
+
+        rc = ncRunInstanceStub(pStub, pMeta, psLocalUUID, psLocalInstanceId, psLocalReservationId, pVirtMachine, psImageId, psImageURL, psKernelId, psKernelURL, psRamdiskId,
+                               psRamdiskURL, "eucalyptusUser", "eucalyptusAccount", "", &netParams, psUserData, psLaunchIndex, psPlatform, 0, ppsGroupNames, groupNameSize,
+                               &pOutInst);
+        if (rc != EUCA_OK) {
+            printf("ncRunInstanceStub = %d : instanceId=%s\n", rc, psInstanceId);
+            exit(1);
+        }
+        // count device mappings
+        for (i = 0, devMapId = 0; i < EUCA_MAX_VBRS; i++) {
+            if (strlen(pOutInst->params.virtualBootRecord[i].typeName) > 0)
+                devMapId++;
+        }
+
+        printf("ncRunInstanceStub = %d : instanceId=%s stateCode=%d stateName=%s deviceMappings=%d/%d\n", rc, pOutInst->instanceId, pOutInst->stateCode, pOutInst->stateName,
+               devMapId, pOutInst->params.virtualBootRecordLen);
+    }
+
+    return (EUCA_OK);
+}
+
+//!
+//! Builds and execute the "TerminateInstance" request
+//!
+//! @param[in]  pStub a pointer to the NC stub structure
+//! @param[in]  pMeta a pointer to the node controller (NC) metadata structure
+//! @param[in]  psInstanceId a pointer to the string containing the instance identifier (i-XXXXXXXX)
+//!
+//! @return EUCA_OK on success. On failure, the program will terminate
+//!
+//! @see
+//!
+//! @pre None of the provided pointers should be NULL
+//!
+//! @post The request is sent to the NC client and the result of the request will be displayed.
+//!
+//! @note
+//!
+static int ncClientTerminateInstance(ncStub * pStub, ncMetadata * pMeta, char *psInstanceId)
+{
+    int rc = EUCA_OK;
+    int shutdownState = 0;
+    int previousState = 0;
+
+    if ((rc = ncTerminateInstanceStub(pStub, pMeta, psInstanceId, 0, &shutdownState, &previousState)) != EUCA_OK) {
+        printf("ncTerminateInstanceStub = %d\n", rc);
+        exit(1);
+    }
+
+    printf("ncTerminateInstanceStub = %d : shutdownState=%d, previousState=%d\n", rc, shutdownState, previousState);
+    return (rc);
+}
+
+//!
+//! Builds and execute the "DescribeInstances" request
+//!
+//! @param[in]  pStub a pointer to the NC stub structure
+//! @param[in]  pMeta a pointer to the node controller (NC) metadata structure
+//!
+//! @return EUCA_OK on success. On failure, the program will terminate
+//!
+//! @see
+//!
+//! @pre The pStub and pMeta fields must not be NULL
+//!
+//! @post The request is sent to the NC client and the result of the request will be displayed.
+//!
+//! @note
+//!
+static int ncClientDescribeInstances(ncStub * pStub, ncMetadata * pMeta)
+{
+    int i = 0;
+    int j = 0;
+    int rc = EUCA_OK;
+    int volCount = 0;
+    int outInstsLen = 0;
+    ncInstance *pInstance = NULL;
+    ncInstance **ppOutInsts = NULL;
+
+    //! @TODO pull out of argv[] requested instanceIDs
+    if ((rc = ncDescribeInstancesStub(pStub, pMeta, NULL, 0, &ppOutInsts, &outInstsLen)) != EUCA_OK) {
+        printf("ncDescribeInstancesStub = %d\n", rc);
+        exit(1);
+    }
+
+    for (i = 0; i < outInstsLen; i++) {
+        pInstance = ppOutInsts[i];
+        printf("instanceId=%s state=%s time=%d\n", pInstance->instanceId, pInstance->stateName, pInstance->launchTime);
+        if (gDebug) {
+            printf("\t\tuserData=%s launchIndex=%s groupNames=", pInstance->userData, pInstance->launchIndex);
+            if (pInstance->groupNamesSize > 0) {
+                for (j = 0; j < pInstance->groupNamesSize; j++) {
+                    if (j > 0)
+                        printf(":");
+                    printf("%s", pInstance->groupNames[j]);
+                }
+            } else {
+                printf("(none)");
+            }
+            printf("\n");
+
+            printf("\t\tattached volumes: ");
+            for (j = 0, volCount = 0; j < EUCA_MAX_VOLUMES; j++) {
+                if (strlen(pInstance->volumes[j].volumeId) > 0) {
+                    if (volCount > 0)
+                        printf("\t\t                  ");
+                    printf("%s %s %s\n", pInstance->volumes[j].volumeId, pInstance->volumes[j].attachmentToken, pInstance->volumes[j].localDev);
+                    volCount++;
+                }
+            }
+
+            if (volCount > 0)
+                printf("(none)\n");
+        }
+
+        free_instance(&(ppOutInsts[i]));
+    }
+
+    EUCA_FREE(ppOutInsts);
+    return (rc);
+}
+
+//!
+//! Builds and execute the "BundleInstance" request
+//!
+//! @param[in]  pStub a pointer to the NC stub structure
+//! @param[in]  pMeta a pointer to the node controller (NC) metadata structure
+//! @param[in]  psInstanceId a pointer to the string containing the instance identifier (i-XXXXXXXX)
+//!
+//! @return EUCA_OK on success. On failure, the program will terminate
+//!
+//! @see
+//!
+//! @pre The pStub, pMeta and psInstanceId fields must not be NULL
+//!
+//! @post The request is sent to the NC client and the result of the request will be displayed.
+//!
+//! @note
+//!
+static int ncClientBundleInstance(ncStub * pStub, ncMetadata * pMeta, char *psInstanceId)
+{
+    int rc = EUCA_OK;
+    rc = ncBundleInstanceStub(pStub, pMeta, psInstanceId, "bucket-foo", "prefix-foo", "s3-url-foo", "user-key-foo", "s3policy-foo", "s3policy-sig");
+    printf("ncBundleInstanceStub = %d\n", rc);
+    return (rc);
+}
+
+//!
+//! Builds and execute the "BundleRestartInstance" request
+//!
+//! @param[in]  pStub a pointer to the NC stub structure
+//! @param[in]  pMeta a pointer to the node controller (NC) metadata structure
+//! @param[in]  psInstanceId a pointer to the string containing the instance identifier (i-XXXXXXXX)
+//!
+//! @return EUCA_OK on success. On failure, the program will terminate
+//!
+//! @see
+//!
+//! @pre The pStub, pMeta and psInstanceId fields must not be NULL
+//!
+//! @post The request is sent to the NC client and the result of the request will be displayed.
+//!
+//! @note
+//!
+static int ncClientBundleRestartInstance(ncStub * pStub, ncMetadata * pMeta, char *psInstanceId)
+{
+    int rc = EUCA_OK;
+    rc = ncBundleRestartInstanceStub(pStub, pMeta, psInstanceId);
+    printf("ncBundleRestartInstanceStub = %d\n", rc);
+    return (rc);
+}
+
+//!
+//! Builds and execute the "DescribeBundleTask" request
+//!
+//! @param[in]  pStub a pointer to the NC stub structure
+//! @param[in]  pMeta a pointer to the node controller (NC) metadata structure
+//!
+//! @return EUCA_OK on success. On failure, the program will terminate
+//!
+//! @see
+//!
+//! @pre The pStub and pMeta fields must not be NULL
+//!
+//! @post The request is sent to the NC client and the result of the request will be displayed.
+//!
+//! @note
+//!
+static int ncClientDescribeBundleTask(ncStub * pStub, ncMetadata * pMeta)
+{
+    int rc = EUCA_OK;
+    int instIdsLen = 4;
+    int outBundleTasksLen = 0;
+    char *ppInstIds[4] = { NULL };
+    bundleTask **ppOutBundleTasks = NULL;
+
+    ppInstIds[0] = EUCA_ZALLOC(32, sizeof(char));
+    ppInstIds[1] = EUCA_ZALLOC(32, sizeof(char));
+    ppInstIds[2] = EUCA_ZALLOC(32, sizeof(char));
+    ppInstIds[3] = EUCA_ZALLOC(32, sizeof(char));
+
+    snprintf(ppInstIds[0], 32, "i-12345675");
+    snprintf(ppInstIds[1], 32, "i-12345674");
+    snprintf(ppInstIds[2], 32, "i-12345673");
+    snprintf(ppInstIds[3], 32, "i-12345672");
+
+    rc = ncDescribeBundleTasksStub(pStub, pMeta, ppInstIds, instIdsLen, &ppOutBundleTasks, &outBundleTasksLen);
+    printf("ncDescribeBundleTasksStub = %d\n", rc);
+    for (int i = 0; i < outBundleTasksLen; i++) {
+        printf("\tBUNDLE %d: %s %s\n", i, ppOutBundleTasks[i]->instanceId, ppOutBundleTasks[i]->state);
+    }
+
+    return (rc);
+}
+
+//!
+//! Builds and execute the "PowerDown" request
+//!
+//! @param[in]  pStub a pointer to the NC stub structure
+//! @param[in]  pMeta a pointer to the node controller (NC) metadata structure
+//!
+//! @return EUCA_OK on success. On failure, the program will terminate
+//!
+//! @see
+//!
+//! @pre The pStub and pMeta fields must not be NULL
+//!
+//! @post The request is sent to the NC client and the result of the request will be displayed.
+//!
+//! @note
+//!
+static int ncClientPowerDown(ncStub * pStub, ncMetadata * pMeta)
+{
+    int rc = EUCA_OK;
+    rc = ncPowerDownStub(pStub, pMeta);
+    printf("ncPowerDownStub = %d\n", rc);
+    return (rc);
+}
+
+//!
+//! Builds and execute the "AssignAddress" request
+//!
+//! @param[in]  pStub a pointer to the NC stub structure
+//! @param[in]  pMeta a pointer to the node controller (NC) metadata structure
+//! @param[in]  psInstanceId a pointer to the string containing the instance identifier (i-XXXXXXXX)
+//! @param[in]  psPublicIP a pointer to the string containing the public IP to assign
+//!
+//! @return EUCA_OK on success. On failure, the program will terminate
+//!
+//! @see
+//!
+//! @pre None of the provided pointers should be NULL
+//!
+//! @post The request is sent to the NC client and the result of the request will be displayed.
+//!
+//! @note
+//!
+static int ncClientAssignAddress(ncStub * pStub, ncMetadata * pMeta, char *psInstanceId, char *psPublicIP)
+{
+    int rc = EUCA_OK;
+    rc = ncAssignAddressStub(pStub, pMeta, psInstanceId, psPublicIP);
+    printf("ncAssignAddressStub = %d\n", rc);
+    return (rc);
+}
+
+//!
+//! Builds and execute the "DescribeResources" request
+//!
+//! @param[in]  pStub a pointer to the NC stub structure
+//! @param[in]  pMeta a pointer to the node controller (NC) metadata structure
+//!
+//! @return EUCA_OK on success. On failure, the program will terminate
+//!
+//! @see
+//!
+//! @pre The pStub and pMeta fields must not be NULL
+//!
+//! @post The request is sent to the NC client and the result of the request will be displayed.
+//!
+//! @note
+//!
+static int ncClientDescribeResources(ncStub * pStub, ncMetadata * pMeta)
+{
+    int rc = EUCA_OK;
+    char *psType = strdup("TYPE");
+    ncResource *pOutRes = NULL;
+
+    if ((rc = ncDescribeResourceStub(pStub, pMeta, psType, &pOutRes)) != EUCA_OK) {
+        printf("ncDescribeResourceStub = %d\n", rc);
+        exit(1);
+    }
+
+    printf("ncDescribeResourceStub = %d : node status=[%s] memory=%d/%d disk=%d/%d cores=%d/%d subnets=[%s]\n", rc, pOutRes->nodeStatus, pOutRes->memorySizeMax,
+           pOutRes->memorySizeAvailable, pOutRes->diskSizeMax, pOutRes->diskSizeAvailable, pOutRes->numberOfCoresMax, pOutRes->numberOfCoresAvailable, pOutRes->publicSubnets);
+    return (rc);
+}
+
+//!
+//! Builds and execute the "AttachVolume" request
+//!
+//! @param[in]  pStub a pointer to the NC stub structure
+//! @param[in]  pMeta a pointer to the node controller (NC) metadata structure
+//! @param[in]  psInstanceId a pointer to the string containing the instance identifier (i-XXXXXXXX)
+//! @param[in]  psVolumeId a pointer to the string containing the volume identifier (vol-XXXXXXXX)
+//! @param[in]  psRemoteDevice a pointer to the string containing the remote device name to attach to
+//! @param[in]  psLocalDevice a pointer to the string containing the local device name on the host
+//!
+//! @return EUCA_OK on success. On failure, the program will terminate
+//!
+//! @see
+//!
+//! @pre None of the provided pointers should be NULL
+//!
+//! @post The request is sent to the NC client and the result of the request will be displayed.
+//!
+//! @note
+//!
+static int ncClientAttachVolume(ncStub * pStub, ncMetadata * pMeta, char *psInstanceId, char *psVolumeId, char *psRemoteDevice, char *psLocalDevice)
+{
+    int rc = EUCA_OK;
+
+    if ((rc = ncAttachVolumeStub(pStub, pMeta, psInstanceId, psVolumeId, psRemoteDevice, psLocalDevice)) != EUCA_OK) {
+        printf("ncAttachVolumeStub = %d\n", rc);
+        exit(1);
+    }
+
+    printf("ncAttachVolumeStub = %d\n", rc);
+    return (rc);
+}
+
+//!
+//! Builds and execute the "DetachVolume" request
+//!
+//! @param[in]  pStub a pointer to the NC stub structure
+//! @param[in]  pMeta a pointer to the node controller (NC) metadata structure
+//! @param[in]  psInstanceId a pointer to the string containing the instance identifier (i-XXXXXXXX)
+//! @param[in]  psVolumeId a pointer to the string containing the volume identifier (vol-XXXXXXXX)
+//! @param[in]  psRemoteDevice a pointer to the string containing the remote device name to attach to
+//! @param[in]  psLocalDevice a pointer to the string containing the local device name on the host
+//! @param[in]  force set to TRUE to force detach a volume
+//!
+//! @return EUCA_OK on success. On failure, the program will terminate
+//!
+//! @see
+//!
+//! @pre None of the provided pointers should be NULL
+//!
+//! @post The request is sent to the NC client and the result of the request will be displayed.
+//!
+//! @note
+//!
+static int ncClientDetachVolume(ncStub * pStub, ncMetadata * pMeta, char *psInstanceId, char *psVolumeId, char *psRemoteDevice, char *psLocalDevice, boolean force)
+{
+    int rc = EUCA_OK;
+
+    if ((rc = ncDetachVolumeStub(pStub, pMeta, psInstanceId, psVolumeId, psRemoteDevice, psLocalDevice, force)) != EUCA_OK) {
+        printf("ncDetachVolumeStub = %d\n", rc);
+        exit(1);
+    }
+
+    printf("ncDetachVolumeStub = %d\n", rc);
+    return (rc);
+}
+
+//!
+//! Builds and execute the "DescribeSensors" request
+//!
+//! @param[in]  pStub a pointer to the NC stub structure
+//! @param[in]  pMeta a pointer to the node controller (NC) metadata structure
+//!
+//! @return EUCA_OK on success. On failure, the program will terminate
+//!
+//! @see
+//!
+//! @pre The pStub and pMeta fields must not be NULL
+//!
+//! @post The request is sent to the NC client and the result of the request will be displayed.
+//!
+//! @note
+//!
+static int ncClientDescribeSensors(ncStub * pStub, ncMetadata * pMeta)
+{
+    int rc = EUCA_OK;
+    int nbResources;
+    char sBuffer[102400] = "";
+    sensorResource **ppResources = NULL;
+
+    if ((rc = ncDescribeSensorsStub(pStub, pMeta, 20, 5000, NULL, 0, NULL, 0, &ppResources, &nbResources)) != EUCA_OK) {
+        printf("ncDescribeSensorsStub = %d\n", rc);
+        exit(1);
+    }
+
+    printf("ncDescribeSensorsStub = %d\n", rc);
+    sensor_res2str(sBuffer, sizeof(sBuffer), ppResources, nbResources);
+    printf("\tresources: %d\n%s\n", nbResources, sBuffer);
+    return (rc);
+}
+
+//!
+//! Builds and execute the "ModifyNode" request
+//!
+//! @param[in]  pStub a pointer to the NC stub structure
+//! @param[in]  pMeta a pointer to the node controller (NC) metadata structure
+//! @param[in]  psStateName a pointer to the string containing the new state name
+//!
+//! @return EUCA_OK on success. On failure, the program will terminate
+//!
+//! @see
+//!
+//! @pre None of the provided pointers should be NULL
+//!
+//! @post The request is sent to the NC client and the result of the request will be displayed.
+//!
+//! @note
+//!
+static int ncClientModifyNode(ncStub * pStub, ncMetadata * pMeta, char *psStateName)
+{
+    int rc = EUCA_OK;
+
+    if ((rc = ncModifyNodeStub(pStub, pMeta, psStateName)) != EUCA_OK) {
+        printf("ncModifyNodeStub = %d\n", rc);
+        exit(1);
+    }
+
+    printf("ncModifyNodeStub = %d\n", rc);
+    return (rc);
+}
+
+//!
+//! Builds and execute the "RunInstance" request
+//!
+//! @param[in]  pStub a pointer to the NC stub structure
+//! @param[in]  pMeta a pointer to the node controller (NC) metadata structure
+//! @param[in]  psInstanceId a pointer to the string containing the instance identifier (i-XXXXXXXX)
+//! @param[in]  psSrcNodeName a pointer to the source node name
+//! @param[in]  psDstNodeName a pointer to the destination node name
+//! @param[in]  psStateName a pointer to the migration state name
+//! @param[in]  psMigrationCreds a pointer to the migration credentials
+//!
+//! @return EUCA_OK on success. On failure, the program will terminate
+//!
+//! @see
+//!
+//! @pre None of the provided pointers should be NULL
+//!
+//! @post The request is sent to the NC client and the result of the request will be displayed.
+//!
+//! @note
+//!
+static int ncClientMigrateInstance(ncStub * pStub, ncMetadata * pMeta, char *psInstanceId, char *psSrcNodeName, char *psDstNodeName, char *psStateName, char *psMigrationCreds)
+{
+    int rc = EUCA_OK;
+    ncInstance instance = { {0} };
+    ncInstance *pInstance = &instance;
+
+    bzero(&instance, sizeof(instance));
+
+    strncpy(instance.instanceId, psInstanceId, sizeof(instance.instanceId));
+    strncpy(instance.migration_src, psSrcNodeName, sizeof(instance.migration_src));
+    strncpy(instance.migration_dst, psDstNodeName, sizeof(instance.migration_dst));
+    if ((rc = ncMigrateInstancesStub(pStub, pMeta, &pInstance, 1, psStateName, psMigrationCreds)) != EUCA_OK) {
+        printf("ncMigrateInstancesStub = %d\n", rc);
+        exit(1);
+    }
+
+    printf("ncMigrateInstancesStub = %d\n", rc);
+    return (rc);
+}
+
+//!
+//! Converts a timestanp value
+//!
+//! @param[in]  pStub a pointer to the NC stub structure
+//! @param[in]  psTimeStamp a pointer to the timestamp to convert
+//!
+//! @return Always returns EUCA_OK.
+//!
+//! @see
+//!
+//! @pre Both pointers must not be NULL
+//!
+//! @post The converted value is displayed on the console.
+//!
+//! @note
+//!
+static int ncClientConvertTimeStamp(ncStub * pStub, char *psTimeStamp)
+{
+    s64 tsIn = 0;
+    s64 tsOut = 0;
+    char *psDateTimeIn = NULL;
+    axutil_date_time_t *pDateTime = NULL;
+
+    tsIn = atoll(psTimeStamp);
+    pDateTime = unixms_to_datetime(pStub->env, tsIn);
+    psDateTimeIn = axutil_date_time_serialize_date_time(pDateTime, pStub->env);
+    tsOut = datetime_to_unixms(pDateTime, pStub->env);
+
+    printf("timestamp:  in = %ld %s\n", tsIn, psDateTimeIn);
+    printf("           out = %ld\n", tsOut);
+    return (EUCA_OK);
 }
 
 //!
@@ -291,160 +928,176 @@ out_error:
 //!
 //! @return Always return 0 or exit(1) on failure
 //!
-int main(int argc, char **argv)
+int main(int argc, char *argv[])
 {
-    ncMetadata meta = { "correlate-me-please", "eucalyptus" };
-    virtualMachine params = { 64, 1, 1, "m1.small", NULL, NULL, NULL, NULL, NULL, NULL, {}, 0 };
-    char *nc_hostport = DEFAULT_NC_HOSTPORT;
-    char *walrus_hostport = DEFAULT_WALRUS_HOSTPORT;
-    char *nc_endpoint = NC_ENDPOINT;
-    char *instance_id = NULL;
-    char *image_id = NULL;
-    char *image_manifest = NULL;
-    char *kernel_id = NULL;
-    char *kernel_manifest = NULL;
-    char *ramdisk_id = NULL;
-    char *ramdisk_manifest = NULL;
-    char *reservation_id = NULL;
-    char *uu_id = NULL;
-    char *mac_addr = strdup(DEFAULT_MAC_ADDR);
-    char *public_ip = strdup(DEFAULT_PUBLIC_IP);
-    char *volume_id = NULL;
-    char *remote_dev = NULL;
-    char *local_dev = NULL;
-    int force = 0;
-    char *user_data = NULL;
-    char *launch_index = NULL;
-    char **group_names = NULL;
-    int group_names_size = 0;
-    char *state_name = NULL;
-    char *src_node_name = NULL;
-    char *dst_node_name = NULL;
-    char *migration_creds = NULL;
-    char *timestamp_str = NULL;
-    char *command = NULL;
-    int local = 0;
-    int count = 1;
     int ch = 0;
     int rc = 0;
+    int useWSSEC = 0;
+    int groupNameSize = 0;
+    int nbInstances = 1;
+    char *psEucaHomePath = NULL;
+    char *psTmpBuffer = NULL;
+    char *psImageURL = NULL;
+    char *psKernelURL = NULL;
+    char *psRamdiskURL = NULL;
+    char *psNcHostPort = DEFAULT_NC_HOSTPORT;
+    char *psWsHostPort = DEFAULT_WALRUS_HOSTPORT;
+    char *psNcEndpoint = NC_ENDPOINT;
+    char *psInstanceId = NULL;
+    char *psImageId = NULL;
+    char *psImageManifest = NULL;
+    char *psKernelId = NULL;
+    char *psKernelManifest = NULL;
+    char *psRamdiskId = NULL;
+    char *psRamdiskManifest = NULL;
+    char *psReservationId = NULL;
+    char *psUUID = NULL;
+    char *psMacAddr = strdup(DEFAULT_MAC_ADDR);
+    char *psPublicIP = strdup(DEFAULT_PUBLIC_IP);
+    char *psVolumeId = NULL;
+    char *psRemoteDevice = NULL;
+    char *psLocalDevice = NULL;
+    char *psUserData = NULL;
+    char *psLaunchIndex = NULL;
+    char *psStateName = NULL;
+    char *psSrcNodeName = NULL;
+    char *psDstNodeName = NULL;
+    char *psMigrationCreds = NULL;
+    char *psTimeStamp = NULL;
+    char *psCommand = NULL;
+    char *psEucaHome = NULL;
+    char **ppsGroupNames = NULL;
+    char sConfigFile[BUFSIZE] = "";
+    char sPolicyFile[BUFSIZE] = "";
+    char sNcURL[BUFSIZE] = "";
+    char sWsURL[BUFSIZE] = "";
+    char sTemp[BUFSIZE] = "";
+    char sLogFile[MAX_PATH] = "";
+    boolean force = FALSE;
+    boolean local = FALSE;
+    ncStub *pStub = NULL;
+    ncMetadata meta = { 0 };
+    serviceInfoType *pServInfo = NULL;
+    virtualMachine virtMachine = { 64, 1, 1, "m1.small", NULL, NULL, NULL, NULL, NULL, NULL, {}, 0 };
 
     while ((ch = getopt(argc, argv, "lhdn:w:i:m:k:r:e:a:c:h:u:p:V:R:L:FU:I:G:v:t:s:M:B")) != -1) {
         switch (ch) {
         case 'c':
-            count = atoi(optarg);
+            nbInstances = atoi(optarg);
             break;
         case 'd':
-            debug = 1;
+            gDebug = TRUE;
             break;
         case 'l':
-            local = 1;
+            local = TRUE;
             break;
         case 'n':
-            nc_hostport = optarg;
+            psNcHostPort = optarg;
             break;
         case 'w':
-            walrus_hostport = optarg;
+            psWsHostPort = optarg;
             break;
         case 'i':
-            instance_id = optarg;
+            psInstanceId = optarg;
             break;
         case 'p':
-            public_ip = optarg;
+            psPublicIP = optarg;
             break;
         case 'm':
-            image_id = strtok(optarg, ":");
-            image_manifest = strtok(NULL, ":");
-            if (image_id == NULL || image_manifest == NULL) {
+            psImageId = strtok(optarg, ":");
+            psImageManifest = strtok(NULL, ":");
+            if ((psImageId == NULL) || (psImageManifest == NULL)) {
                 fprintf(stderr, "ERROR: could not parse image [id:manifest] paramters (try -h)\n");
                 exit(1);
             }
             break;
         case 'k':
-            kernel_id = strtok(optarg, ":");
-            kernel_manifest = strtok(NULL, ":");
-            if (kernel_id == NULL || kernel_manifest == NULL) {
+            psKernelId = strtok(optarg, ":");
+            psKernelManifest = strtok(NULL, ":");
+            if ((psKernelId == NULL) || (psKernelManifest == NULL)) {
                 fprintf(stderr, "ERROR: could not parse kernel [id:manifest] paramters (try -h)\n");
                 exit(1);
             }
             break;
         case 'r':
-            ramdisk_id = strtok(optarg, ":");
-            ramdisk_manifest = strtok(NULL, ":");
-            if (ramdisk_id == NULL || ramdisk_manifest == NULL) {
+            psRamdiskId = strtok(optarg, ":");
+            psRamdiskManifest = strtok(NULL, ":");
+            if (psRamdiskId == NULL || psRamdiskManifest == NULL) {
                 fprintf(stderr, "ERROR: could not parse ramdisk [id:manifest] paramters (try -h)\n");
                 exit(1);
             }
             break;
         case 'e':
-            reservation_id = optarg;
+            psReservationId = optarg;
             break;
         case 'u':
-            uu_id = optarg;
+            psUUID = optarg;
             break;
         case 'a':
-            mac_addr = optarg;
+            psMacAddr = optarg;
             break;
         case 'V':
-            volume_id = optarg;
+            psVolumeId = optarg;
             break;
         case 'R':
-            remote_dev = optarg;
+            psRemoteDevice = optarg;
             break;
         case 'L':
-            local_dev = optarg;
+            psLocalDevice = optarg;
             break;
         case 'F':
-            force = 1;
+            force = TRUE;
             break;
         case 'U':
-            user_data = optarg;
+            psUserData = optarg;
             break;
         case 'I':
-            launch_index = optarg;
+            psLaunchIndex = optarg;
             break;
         case 'G':
             {
-                int i;
-                group_names_size = 1;
-                for (i = 0; optarg[i]; i++)
+                groupNameSize = 1;
+                for (int i = 0; optarg[i]; i++) {
                     if (optarg[i] == ':')
-                        group_names_size++;
-                group_names = EUCA_ZALLOC(group_names_size, sizeof(char *));
-                if (group_names == NULL) {
+                        groupNameSize++;
+                }
+
+                if ((ppsGroupNames = EUCA_ZALLOC(groupNameSize, sizeof(char *))) == NULL) {
                     fprintf(stderr, "ERROR: out of memory for group_names[]\n");
                     exit(1);
                 }
-                group_names[0] = strtok(optarg, ":");
-                for (i = 1; i < group_names_size; i++)
-                    group_names[i] = strtok(NULL, ":");
+
+                ppsGroupNames[0] = strtok(optarg, ":");
+                for (int i = 1; i < groupNameSize; i++)
+                    ppsGroupNames[i] = strtok(NULL, ":");
                 break;
             }
         case 's':
-            state_name = optarg;
+            psStateName = optarg;
             break;
         case 'M':
-            src_node_name = strtok(optarg, ":");
-            dst_node_name = strtok(NULL, ":");
-            migration_creds = strtok(NULL, ":");
-            if (src_node_name == NULL || dst_node_name == NULL) {
+            psSrcNodeName = strtok(optarg, ":");
+            psDstNodeName = strtok(NULL, ":");
+            psMigrationCreds = strtok(NULL, ":");
+            if ((psSrcNodeName == NULL) || (psDstNodeName == NULL)) {
                 fprintf(stderr, "ERROR: could not parse migration [src:dst:cr] paramters (try -h)\n");
                 exit(1);
             }
             break;
         case 'v':
-            if (add_vbr(optarg, &params)) {
+            if (add_vbr(optarg, &virtMachine)) {
                 fprintf(stderr, "ERROR: could not parse the virtual boot record (try -h)\n");
                 exit(1);
             }
             break;
         case 't':
-            timestamp_str = optarg;
+            psTimeStamp = optarg;
             break;
         case 'h':
             usage();                   // will exit
             break;
         case 'B':
-            nc_endpoint = "/services/EucalyptusBroker";
+            psNcEndpoint = "/services/EucalyptusBroker";
             break;
         case '?':
         default:
@@ -456,7 +1109,7 @@ int main(int argc, char **argv)
     argv += optind;
 
     if (argc > 0) {
-        command = argv[0];
+        psCommand = argv[0];
         if (argc > 1) {
             fprintf(stderr, "WARNING: too many parameters, using first one as command\n");
         }
@@ -465,346 +1118,135 @@ int main(int argc, char **argv)
         exit(1);
     }
 
-    ncStub *stub;
-    char configFile[1024], policyFile[1024];
-    char *euca_home;
-    int use_wssec;
-    char *tmpstr;
-
-    euca_home = getenv("EUCALYPTUS");
-    if (!euca_home) {
-        euca_home = "";
+    if ((psEucaHomePath = getenv("EUCALYPTUS")) == NULL) {
+        psEucaHomePath = "";
     }
-    snprintf(configFile, 1024, EUCALYPTUS_CONF_LOCATION, euca_home);
-    snprintf(policyFile, 1024, EUCALYPTUS_KEYS_DIR "/nc-client-policy.xml", euca_home);
-    rc = get_conf_var(configFile, "ENABLE_WS_SECURITY", &tmpstr);
-    if (rc != 1) {
-/* Default to enabled */
-        use_wssec = 1;
+
+    snprintf(sConfigFile, sizeof(sConfigFile), EUCALYPTUS_CONF_LOCATION, psEucaHomePath);
+    snprintf(sPolicyFile, sizeof(sPolicyFile), EUCALYPTUS_KEYS_DIR "/nc-client-policy.xml", psEucaHomePath);
+    if ((rc = get_conf_var(sConfigFile, "ENABLE_WS_SECURITY", &psTmpBuffer)) != 1) {
+        // Default to enabled
+        useWSSEC = 1;
     } else {
-        if (!strcmp(tmpstr, "Y")) {
-            use_wssec = 1;
+        if (!strcmp(psTmpBuffer, "Y")) {
+            useWSSEC = 1;
         } else {
-            use_wssec = 0;
+            useWSSEC = 0;
         }
     }
 
-    char nc_url[BUFSIZE];
-    snprintf(nc_url, BUFSIZE, "http://%s%s", nc_hostport, nc_endpoint);
-    if (debug)
-        printf("connecting to NC at %s\n", nc_url);
-    stub = ncStubCreate(nc_url, "NCclient.log", NULL);
-    if (!stub) {
+    snprintf(sNcURL, sizeof(sNcURL), "http://%s%s", psNcHostPort, psNcEndpoint);
+    if (gDebug)
+        printf("connecting to NC at %s\n", sNcURL);
+
+    if ((psEucaHome = getenv(EUCALYPTUS_ENV_VAR_NAME)) == NULL) {
+        snprintf(sLogFile, MAX_PATH, EUCALYPTUS_LOG_DIR "/NCclient.log", "/");
+    } else {
+        snprintf(sLogFile, MAX_PATH, EUCALYPTUS_LOG_DIR "/NCclient.log", psEucaHome);
+    }
+
+    if ((pStub = ncStubCreate(sNcURL, sLogFile, NULL)) == NULL) {
         fprintf(stderr, "ERROR: failed to connect to Web service\n");
         exit(2);
     }
 
-    char walrus_url[BUFSIZE];
-    snprintf(walrus_url, BUFSIZE, "http://%s%s", walrus_hostport, WALRUS_ENDPOINT);
-    serviceInfoType *si = &(meta.services[meta.servicesLen++]);
-    euca_strncpy(si->type, "walrus", sizeof(si->type));
-    euca_strncpy(si->name, "walrus", sizeof(si->name));
-    euca_strncpy(si->uris[0], walrus_url, sizeof(si->uris[0]));
-    si->urisLen = 1;
+    if (useWSSEC && !local) {
+        if (gDebug)
+            printf("using policy file %s\n", sPolicyFile);
 
-    if (use_wssec && !local) {
-        if (debug)
-            printf("using policy file %s\n", policyFile);
-        rc = InitWSSEC(stub->env, stub->stub, policyFile);
-        if (rc) {
-            fprintf(stderr, "ERROR: cannot initialize WS-SEC policy from %s\n", policyFile);
+        if ((rc = InitWSSEC(pStub->env, pStub->stub, sPolicyFile)) != 0) {
+            fprintf(stderr, "ERROR: cannot initialize WS-SEC policy from %s\n", sPolicyFile);
             exit(1);
         }
     }
 
-    char *image_url = NULL;
-    if (image_manifest) {
-        char t[BUFSIZE];
-        snprintf(t, BUFSIZE, "http://%s%s/%s", walrus_hostport, WALRUS_ENDPOINT, image_manifest);
-        image_url = strdup(t);
+    snprintf(sWsURL, sizeof(sWsURL), "http://%s%s", psWsHostPort, WALRUS_ENDPOINT);
+    pServInfo = &(meta.services[meta.servicesLen++]);
+    euca_strncpy(pServInfo->type, "walrus", sizeof(pServInfo->type));
+    euca_strncpy(pServInfo->name, "walrus", sizeof(pServInfo->name));
+    euca_strncpy(pServInfo->uris[0], sWsURL, sizeof(pServInfo->uris[0]));
+    pServInfo->urisLen = 1;
+
+    if (psImageManifest) {
+        snprintf(sTemp, sizeof(sTemp), "http://%s%s/%s", psWsHostPort, WALRUS_ENDPOINT, psImageManifest);
+        psImageURL = strdup(sTemp);
     }
 
-    char *kernel_url = NULL;
-    if (kernel_manifest) {
-        char t[BUFSIZE];
-        snprintf(t, BUFSIZE, "http://%s%s/%s", walrus_hostport, WALRUS_ENDPOINT, kernel_manifest);
-        kernel_url = strdup(t);
+    if (psKernelManifest) {
+        snprintf(sTemp, sizeof(sTemp), "http://%s%s/%s", psWsHostPort, WALRUS_ENDPOINT, psKernelManifest);
+        psKernelURL = strdup(sTemp);
     }
 
-    char *ramdisk_url = NULL;
-    if (ramdisk_manifest) {
-        char t[BUFSIZE];
-        snprintf(t, BUFSIZE, "http://%s%s/%s", walrus_hostport, WALRUS_ENDPOINT, ramdisk_manifest);
-        ramdisk_url = strdup(t);
+    if (psRamdiskManifest) {
+        snprintf(sTemp, sizeof(sTemp), "http://%s%s/%s", psWsHostPort, WALRUS_ENDPOINT, psRamdiskManifest);
+        psRamdiskURL = strdup(sTemp);
     }
 
-    /***********************************************************/
-    if (!strcmp(command, "runInstance")) {
-        if (params.virtualBootRecordLen < 1) {
-            CHECK_PARAM(image_id, "image ID and manifest path");
-            CHECK_PARAM(kernel_id, "kernel ID and manifest path");
+    meta.correlationId = strdup("correlate-me-please");
+    meta.userId = strdup("eucalyptus");
+
+    if (!strcmp(psCommand, "runInstance")) {
+        if (virtMachine.virtualBootRecordLen < 1) {
+            CHECK_PARAM(psImageId, "image ID and manifest path");
+            CHECK_PARAM(psKernelId, "kernel ID and manifest path");
         }
 
-        char *privMac, *privIp;
-        char *platform = NULL;
-        int vlan = 3;
-        privMac = strdup(mac_addr);
-        mac_addr[0] = 'b';
-        mac_addr[1] = 'b';
-        privIp = strdup("10.0.0.202");
-        srand(time(NULL));
-
-/* generate random IDs if they weren't specified */
-#define C rand()%26 + 97
-
-        while (count--) {
-            char *iid, *rid, *uuid;
-
-            char ibuf[8];
-            if (instance_id == NULL || count > 1) {
-                snprintf(ibuf, 8, "i-%c%c%c%c%c", C, C, C, C, C);
-                iid = ibuf;
-            } else {
-                iid = instance_id;
-            }
-
-            char rbuf[8];
-            if (reservation_id == NULL || count > 1) {
-                snprintf(rbuf, 8, "r-%c%c%c%c%c", C, C, C, C, C);
-                rid = rbuf;
-            } else {
-                rid = reservation_id;
-            }
-
-            char ubuf[48];
-            if (uu_id == NULL || count > 1) {
-                snprintf(ubuf, 48, "%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c", C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C,
-                         C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C);
-                uuid = ubuf;
-            } else {
-                uuid = uu_id;
-            }
-
-            netConfig netparams;
-            ncInstance *outInst;
-            bzero(&netparams, sizeof(netparams));
-            netparams.vlan = vlan;
-            snprintf(netparams.privateIp, 24, "%s", privIp);
-            snprintf(netparams.privateMac, 24, "%s", privMac);
-
-            rc = ncRunInstanceStub(stub, &meta, uuid, iid, rid, &params, image_id, image_url, kernel_id, kernel_url, ramdisk_id, ramdisk_url, "eucalyptusUser", "eucalyptusAccount", "",    /* key */
-                                   &netparams,
-                                   //                                       privMac, privIp, vlan,
-                                   user_data, launch_index, platform, 0, group_names, group_names_size, /* CC stuff */
-                                   &outInst);
-            if (rc != 0) {
-                printf("ncRunInstance() failed: instanceId=%s error=%d\n", instance_id, rc);
-                exit(1);
-            }
-// count device mappings
-            int i, count = 0;
-            for (i = 0; i < EUCA_MAX_VBRS; i++) {
-                if (strlen(outInst->params.virtualBootRecord[i].typeName) > 0)
-                    count++;
-            }
-            printf("instanceId=%s stateCode=%d stateName=%s deviceMappings=%d/%d\n", outInst->instanceId, outInst->stateCode, outInst->stateName,
-                   count, outInst->params.virtualBootRecordLen);
-        }
-
-    /***********************************************************/
-    } else if (!strcmp(command, "bundleInstance")) {
-        CHECK_PARAM(instance_id, "instance id");
-        rc = ncBundleInstanceStub(stub, &meta, instance_id, "bucket-foo", "prefix-foo", "s3-url-foo", "user-key-foo", "s3policy-foo", "s3policy-sig");
-        printf("ncBundleInstanceStub = %d\n", rc);
-
-    } else if (!strcmp(command, "bundleRestartInstance")) {
-        CHECK_PARAM(instance_id, "instance id");
-        rc = ncBundleRestartInstanceStub(stub, &meta, instance_id);
-        printf("ncBundleRestartInstanceStub = %d\n", rc);
-    } else if (!strcmp(command, "powerDown")) {
-        rc = ncPowerDownStub(stub, &meta);
-    } else if (!strcmp(command, "describeBundleTasks")) {
-        char *instIds[4];
-        int instIdsLen;
-        instIds[0] = EUCA_ZALLOC(32, sizeof(char));
-        instIds[1] = EUCA_ZALLOC(32, sizeof(char));
-        instIds[2] = EUCA_ZALLOC(32, sizeof(char));
-        instIds[3] = EUCA_ZALLOC(32, sizeof(char));
-        snprintf(instIds[0], 32, "i-12345675");
-        snprintf(instIds[1], 32, "i-12345674");
-        snprintf(instIds[2], 32, "i-12345673");
-        snprintf(instIds[3], 32, "i-12345672");
-        instIdsLen = 4;
-        bundleTask **outBundleTasks = NULL;
-        int outBundleTasksLen = 0;
-        rc = ncDescribeBundleTasksStub(stub, &meta, instIds, instIdsLen, &outBundleTasks, &outBundleTasksLen);
-        for (int i = 0; i < outBundleTasksLen; i++) {
-            printf("BUNDLE %d: %s %s\n", i, outBundleTasks[i]->instanceId, outBundleTasks[i]->state);
-        }
-    } else if (!strcmp(command, "assignAddress")) {
-        rc = ncAssignAddressStub(stub, &meta, instance_id, public_ip);
-    } else if (!strcmp(command, "terminateInstance")) {
-        CHECK_PARAM(instance_id, "instance ID");
-
-        int shutdownState, previousState;
-        rc = ncTerminateInstanceStub(stub, &meta, instance_id, 0, &shutdownState, &previousState);
-        if (rc != 0) {
-            printf("ncTerminateInstance() failed: error=%d\n", rc);
-            exit(1);
-        }
-        printf("shutdownState=%d, previousState=%d\n", shutdownState, previousState);
-
-    /***********************************************************/
-    } else if (!strcmp(command, "describeInstances")) {
-        //! @TODO pull out of argv[] requested instanceIDs */
-        ncInstance **outInsts;
-        int outInstsLen, i;
-        rc = ncDescribeInstancesStub(stub, &meta, NULL, 0, &outInsts, &outInstsLen);
-        if (rc != 0) {
-            printf("ncDescribeInstances() failed: error=%d\n", rc);
-            exit(1);
-        }
-        for (i = 0; i < outInstsLen; i++) {
-            ncInstance *inst = outInsts[i];
-            printf("instanceId=%s state=%s time=%d\n", inst->instanceId, inst->stateName, inst->launchTime);
-            if (debug) {
-                printf("              userData=%s launchIndex=%s groupNames=", inst->userData, inst->launchIndex);
-                if (inst->groupNamesSize > 0) {
-                    int j;
-                    for (j = 0; j < inst->groupNamesSize; j++) {
-                        if (j > 0)
-                            printf(":");
-                        printf("%s", inst->groupNames[j]);
-                    }
-                } else {
-                    printf("(none)");
-                }
-                printf("\n");
-
-                printf("              attached volumes: ");
-                int vol_count = 0;
-                for (int j = 0; j < EUCA_MAX_VOLUMES; j++) {
-                    if (strlen(inst->volumes[j].volumeId) > 0) {
-                        if (vol_count > 0)
-                            printf("                                ");
-                        printf("%s %s %s\n", inst->volumes[j].volumeId, inst->volumes[j].attachmentToken, inst->volumes[j].localDev);
-                    }
-                }
-                if (vol_count)
-                    printf("(none)\n");
-
-                free_instance(&(outInsts[i]));
-            }
-        }
-        //! @TODO: fix free(outInsts);
-
-    /***********************************************************/
-    } else if (!strcmp(command, "describeResource")) {
-        char *type = NULL;
-        ncResource *outRes;
-
-        rc = ncDescribeResourceStub(stub, &meta, type, &outRes);
-        if (rc != 0) {
-            printf("ncDescribeResource() failed: error=%d\n", rc);
-            exit(1);
-        }
-        printf("node status=[%s] memory=%d/%d disk=%d/%d cores=%d/%d subnets=[%s]\n",
-               outRes->nodeStatus,
-               outRes->memorySizeMax, outRes->memorySizeAvailable, outRes->diskSizeMax, outRes->diskSizeAvailable, outRes->numberOfCoresMax,
-               outRes->numberOfCoresAvailable, outRes->publicSubnets);
-
-    /***********************************************************/
-    } else if (!strcmp(command, "attachVolume")) {
-        CHECK_PARAM(instance_id, "instance ID");
-        CHECK_PARAM(volume_id, "volume ID");
-        CHECK_PARAM(remote_dev, "remote dev");
-        CHECK_PARAM(local_dev, "local dev");
-
-        rc = ncAttachVolumeStub(stub, &meta, instance_id, volume_id, remote_dev, local_dev);
-        if (rc != 0) {
-            printf("ncAttachVolume() failed: error=%d\n", rc);
-            exit(1);
-        }
-
-    /***********************************************************/
-    } else if (!strcmp(command, "detachVolume")) {
-        CHECK_PARAM(instance_id, "instance ID");
-        CHECK_PARAM(volume_id, "volume ID");
-        CHECK_PARAM(remote_dev, "remote dev");
-        CHECK_PARAM(local_dev, "local dev");
-
-        rc = ncDetachVolumeStub(stub, &meta, instance_id, volume_id, remote_dev, local_dev, force);
-        if (rc != 0) {
-            printf("ncDetachVolume() failed: error=%d\n", rc);
-            exit(1);
-        }
-
-    /***********************************************************/
-    } else if (!strcmp(command, "describeSensors")) {
-
-        sensorResource **res;
-        int resSize;
-
-        rc = ncDescribeSensorsStub(stub, &meta, 20, 5000, NULL, 0, NULL, 0, &res, &resSize);
-        if (rc != 0) {
-            printf("ncDescribeSensors() failed: error=%d\n", rc);
-            exit(1);
-        }
-        char buf[102400];
-        sensor_res2str(buf, sizeof(buf), res, resSize);
-        printf("resources: %d\n%s\n", resSize, buf);
-
-    /***********************************************************/
-    } else if (!strcmp(command, "modifyNode")) {
-        CHECK_PARAM(state_name, "state name");
-
-        rc = ncModifyNodeStub(stub, &meta, state_name);
-        if (rc != 0) {
-            printf("ncModifyNode() failed: error=%d\n", rc);
-            exit(1);
-        }
-
-    /***********************************************************/
-    } else if (!strcmp(command, "migrateInstances")) {
-        CHECK_PARAM(instance_id, "instance ID");
-        CHECK_PARAM(src_node_name, "source node name");
-        CHECK_PARAM(dst_node_name, "destination node name");
-        CHECK_PARAM(state_name, "state name");
+        ncClientRunInstance(pStub, &meta, nbInstances, psReservationId, psInstanceId, psMacAddr, psUUID, &virtMachine, psImageId, psImageURL, psKernelId, psKernelURL, psRamdiskId,
+                            psRamdiskURL, psUserData, psLaunchIndex, ppsGroupNames, groupNameSize);
+    } else if (!strcmp(psCommand, "bundleInstance")) {
+        CHECK_PARAM(psInstanceId, "instance id");
+        ncClientBundleInstance(pStub, &meta, psInstanceId);
+    } else if (!strcmp(psCommand, "bundleRestartInstance")) {
+        CHECK_PARAM(psInstanceId, "instance id");
+        ncClientBundleRestartInstance(pStub, &meta, psInstanceId);
+    } else if (!strcmp(psCommand, "powerDown")) {
+        ncClientPowerDown(pStub, &meta);
+    } else if (!strcmp(psCommand, "describeBundleTasks")) {
+        ncClientDescribeBundleTask(pStub, &meta);
+    } else if (!strcmp(psCommand, "assignAddress")) {
+        ncClientAssignAddress(pStub, &meta, psInstanceId, psPublicIP);
+    } else if (!strcmp(psCommand, "terminateInstance")) {
+        CHECK_PARAM(psInstanceId, "instance ID");
+        ncClientTerminateInstance(pStub, &meta, psInstanceId);
+    } else if (!strcmp(psCommand, "describeInstances")) {
+        ncClientDescribeInstances(pStub, &meta);
+    } else if (!strcmp(psCommand, "describeResource")) {
+        ncClientDescribeResources(pStub, &meta);
+    } else if (!strcmp(psCommand, "attachVolume")) {
+        CHECK_PARAM(psInstanceId, "instance ID");
+        CHECK_PARAM(psVolumeId, "volume ID");
+        CHECK_PARAM(psRemoteDevice, "remote dev");
+        CHECK_PARAM(psLocalDevice, "local dev");
+        ncClientAttachVolume(pStub, &meta, psInstanceId, psVolumeId, psRemoteDevice, psLocalDevice);
+    } else if (!strcmp(psCommand, "detachVolume")) {
+        CHECK_PARAM(psInstanceId, "instance ID");
+        CHECK_PARAM(psVolumeId, "volume ID");
+        CHECK_PARAM(psRemoteDevice, "remote dev");
+        CHECK_PARAM(psLocalDevice, "local dev");
+        ncClientDetachVolume(pStub, &meta, psInstanceId, psVolumeId, psRemoteDevice, psLocalDevice, force);
+    } else if (!strcmp(psCommand, "describeSensors")) {
+        ncClientDescribeSensors(pStub, &meta);
+    } else if (!strcmp(psCommand, "modifyNode")) {
+        CHECK_PARAM(psStateName, "state name");
+        ncClientModifyNode(pStub, &meta, psStateName);
+    } else if (!strcmp(psCommand, "migrateInstances")) {
         // migration creds can be NULL
-
-        ncInstance instance;
-        bzero(&instance, sizeof(ncInstance));
-        ncInstance *instances = &instance;
-        strncpy(instance.instanceId, instance_id, sizeof(instance.instanceId));
-        strncpy(instance.migration_src, src_node_name, sizeof(instance.migration_src));
-        strncpy(instance.migration_dst, dst_node_name, sizeof(instance.migration_dst));
-        rc = ncMigrateInstancesStub(stub, &meta, &instances, 1, state_name, migration_creds);
-        if (rc != 0) {
-            printf("ncMigrateInstances() failed: error=%d\n", rc);
-            exit(1);
-        }
-
-    /***********************************************************/
-    } else if (!strcmp(command, "_convertTimestamp")) {
-        CHECK_PARAM(timestamp_str, "timestamp");
-        long long ts_in = atoll(timestamp_str);
-
-        axutil_date_time_t *dt = unixms_to_datetime(stub->env, ts_in);
-        char *dt_in = axutil_date_time_serialize_date_time(dt, stub->env);
-
-        long long ts_out = datetime_to_unixms(dt, stub->env);
-        printf("timestamp:  in = %lld %s\n", ts_in, dt_in);
-        printf("           out = %lld\n", ts_out);
-
-    /***********************************************************/
+        CHECK_PARAM(psInstanceId, "instance ID");
+        CHECK_PARAM(psSrcNodeName, "source node name");
+        CHECK_PARAM(psDstNodeName, "destination node name");
+        CHECK_PARAM(psStateName, "state name");
+        ncClientMigrateInstance(pStub, &meta, psInstanceId, psSrcNodeName, psDstNodeName, psStateName, psMigrationCreds);
+    } else if (!strcmp(psCommand, "_convertTimestamp")) {
+        CHECK_PARAM(psTimeStamp, "timestamp");
+        ncClientConvertTimeStamp(pStub, psTimeStamp);
     } else {
-        fprintf(stderr, "ERROR: command %s unknown (try -h)\n", command);
+        fprintf(stderr, "ERROR: command %s unknown (try -h)\n", psCommand);
         exit(1);
     }
 
     if (local) {
         pthread_exit(NULL);
-    } else {
-        _exit(0);
     }
+
+    _exit(0);
 }

@@ -92,10 +92,12 @@ public class PasswordDataCallback extends MessageCallback<GetConsoleOutputType,G
   @Override
   public void fire( GetConsoleOutputResponseType reply )  {
     VmInstance vm = VmInstances.lookup( this.getRequest( ).getInstanceId( ) );
-    String output = null;
     try {
-      output = new String( Base64.decode( reply.getOutput( ).getBytes( ) ) );
-      if ( !"EMPTY".equals( output ) ) vm.setConsoleOutput( new StringBuffer().append( output ) );
+      if ( reply.getOutput( ) != null ) {
+        String output = new String( Base64.decode( reply.getOutput( ).getBytes( ) ) );
+        if ( !"EMPTY".equals( output ) ) 
+          vm.setConsoleOutput( new StringBuffer().append( output ) );
+      }
     } catch ( ArrayIndexOutOfBoundsException e1 ) {}
     GetPasswordDataResponseType rep = this.msg.getReply( );
     rep.setInstanceId( this.getRequest( ).getInstanceId( ) );
