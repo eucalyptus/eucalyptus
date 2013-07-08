@@ -1,7 +1,0 @@
-<ivy-module version="2.0">
-    <info organisation="com.eucalyptus" module="eucalyptus-storage-san-common"/>
-    <dependencies>
-    	<dependency org="com.eucalyptus" name="eucalyptus-storage-controller" rev="latest.integration"/>
-    </dependencies>
-</ivy-module>
-

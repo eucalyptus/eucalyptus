@@ -78,12 +78,12 @@ import org.xbill.DNS.Type;
 
 import com.eucalyptus.component.Topology;
 import com.eucalyptus.component.id.Eucalyptus;
+import com.eucalyptus.objectstorage.WalrusManager;
+import com.eucalyptus.objectstorage.util.WalrusProperties;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.Internets;
-import com.eucalyptus.util.WalrusProperties;
 
 import edu.ucsb.eucalyptus.cloud.entities.SystemConfiguration;
-import edu.ucsb.eucalyptus.cloud.ws.WalrusManager;
 
 public class ServiceZone extends Zone {
   private static Logger LOG = Logger.getLogger( ServiceZone.class );

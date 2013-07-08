@@ -64,6 +64,9 @@ package com.eucalyptus.cluster.callback;
 
 import java.util.NoSuchElementException;
 import org.apache.log4j.Logger;
+
+import com.eucalyptus.blockstorage.Storage;
+import com.eucalyptus.blockstorage.msgs.DetachStorageVolumeType;
 import com.eucalyptus.cluster.Cluster;
 import com.eucalyptus.cluster.Clusters;
 import com.eucalyptus.component.Dispatcher;
@@ -71,7 +74,6 @@ import com.eucalyptus.component.Partition;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.Topology;
 import com.eucalyptus.component.id.ClusterController;
-import com.eucalyptus.component.id.Storage;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.records.Logs;
 import com.eucalyptus.util.EucalyptusCloudException;
@@ -85,7 +87,6 @@ import com.google.common.base.Function;
 import edu.ucsb.eucalyptus.msgs.AttachVolumeResponseType;
 import edu.ucsb.eucalyptus.msgs.AttachVolumeType;
 import edu.ucsb.eucalyptus.msgs.AttachedVolume;
-import edu.ucsb.eucalyptus.msgs.DetachStorageVolumeType;
 
 public class VolumeAttachCallback extends MessageCallback<AttachVolumeType, AttachVolumeResponseType> {
   private static Logger        LOG = Logger.getLogger( VolumeAttachCallback.class );

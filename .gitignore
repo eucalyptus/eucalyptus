@@ -35,8 +35,7 @@ clc/modules/bootstrap/src/main/resources/version.properties
 clc/modules/*/build
 clc/modules/msgs/src/main/resources/msgs-binding.xml
 clc/modules/postgresql/src/main/resources/postgresql-binaries.properties
-clc/modules/storage-controller/include/**
-clc/modules/storage-controller/lib
+clc/modules/storage-san-common
 clc/modules/storage-san-emc-libs
 clc/modules/storage-san-emc
 clc/modules/storage-san-equallogic
@@ -82,6 +81,7 @@ storage/euca-blobs
 storage/test_blobstore
 storage/test_vbr
 storage/test_ebs
+storage/sc-client-policy.xml
 TAGS
 cluster/CCclient_full
 cluster/cc-client-policy.xml

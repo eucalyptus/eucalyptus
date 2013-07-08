@@ -73,19 +73,20 @@ import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.ServiceConfigurations;
 import com.eucalyptus.component.ServiceUris;
 import com.eucalyptus.component.Topology;
-import com.eucalyptus.component.id.Walrus;
 import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.context.IllegalContextAccessException;
 import com.eucalyptus.context.ServiceStateException;
 import com.eucalyptus.entities.Entities;
+import com.eucalyptus.objectstorage.Walrus;
+import com.eucalyptus.objectstorage.msgs.CreateBucketType;
+import com.eucalyptus.objectstorage.msgs.DeleteBucketType;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
 import com.eucalyptus.records.Logs;
 import com.eucalyptus.util.async.AsyncRequests;
 import com.eucalyptus.util.async.MessageCallback;
-import edu.ucsb.eucalyptus.msgs.CreateBucketType;
-import edu.ucsb.eucalyptus.msgs.DeleteBucketType;
+
 
 public class Bundles {
   private static Logger LOG = Logger.getLogger( Bundles.class );

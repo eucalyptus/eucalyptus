@@ -155,7 +155,6 @@ public class WalrusStateType extends BaseMessage{
   }
 }
 
-
 /**
  * GRZE:WARN: anything inheriting from this is (and /should be/) treated as in the 'ec2' vendor namespace as far as the IAM implementation is concerned. 
  * There is no reason to annotate /any/ message which inherits from this class:

@@ -75,8 +75,15 @@ import javax.persistence.EntityTransaction;
 
 import org.apache.log4j.Logger;
 
+import com.eucalyptus.blockstorage.Storage;
 import com.eucalyptus.blockstorage.Volume;
 import com.eucalyptus.blockstorage.Volumes;
+import com.eucalyptus.blockstorage.msgs.DescribeStorageVolumesResponseType;
+import com.eucalyptus.blockstorage.msgs.DescribeStorageVolumesType;
+import com.eucalyptus.blockstorage.msgs.GetVolumeTokenResponseType;
+import com.eucalyptus.blockstorage.msgs.GetVolumeTokenType;
+import com.eucalyptus.blockstorage.msgs.StorageVolume;
+import com.eucalyptus.blockstorage.util.StorageProperties;
 import com.eucalyptus.cloud.ResourceToken;
 import com.eucalyptus.cloud.VmRunType;
 import com.eucalyptus.cloud.run.Allocations.Allocation;
@@ -90,7 +97,6 @@ import com.eucalyptus.component.Partitions;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.Topology;
 import com.eucalyptus.component.id.ClusterController;
-import com.eucalyptus.component.id.Storage;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.images.BlockStorageImageInfo;
 import com.eucalyptus.images.Images;
@@ -104,7 +110,6 @@ import com.eucalyptus.system.Threads;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.LogUtil;
-import com.eucalyptus.util.StorageProperties;
 import com.eucalyptus.util.async.AsyncRequests;
 import com.eucalyptus.util.async.Request;
 import com.eucalyptus.util.async.StatefulMessageSet;
@@ -121,11 +126,6 @@ import edu.ucsb.eucalyptus.cloud.VirtualBootRecord;
 import edu.ucsb.eucalyptus.cloud.VmKeyInfo;
 import edu.ucsb.eucalyptus.cloud.VmRunResponseType;
 import edu.ucsb.eucalyptus.msgs.BlockDeviceMappingItemType;
-import edu.ucsb.eucalyptus.msgs.DescribeStorageVolumesResponseType;
-import edu.ucsb.eucalyptus.msgs.DescribeStorageVolumesType;
-import edu.ucsb.eucalyptus.msgs.GetVolumeTokenResponseType;
-import edu.ucsb.eucalyptus.msgs.GetVolumeTokenType;
-import edu.ucsb.eucalyptus.msgs.StorageVolume;
 import edu.ucsb.eucalyptus.msgs.VmTypeInfo;
 
 public class ClusterAllocator implements Runnable {

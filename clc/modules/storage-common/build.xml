@@ -61,17 +61,10 @@
   -->
 
 <project name="eucalyptus-storage-common" basedir=".">
+        <property name="builder.suffix" value="groovy" />
 	<import file="../module-inc.xml"/>
-	<property name="euca.udev.dir" value="${euca.home}/usr/share/eucalyptus/udev" />
 	<target name="indent-module">
 	</target>
 	<target name="install-module">
-		<!-- copy udev config over -->
-		<mkdir dir="${DESTDIR}${euca.udev.dir}" />
-		<copy todir="${DESTDIR}${euca.udev.dir}" overwrite="true">
-			<fileset dir="${basedir}/udev">
-				<include name="**/*" />
-			</fileset>
-		</copy>
 	</target>
 </project>

@@ -44,6 +44,8 @@ import com.eucalyptus.blockstorage.Volume;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.TransactionException;
 import com.eucalyptus.entities.Transactions;
+import com.eucalyptus.objectstorage.entities.ObjectInfo;
+import com.eucalyptus.objectstorage.util.WalrusProperties;
 import com.eucalyptus.reporting.domain.ReportingAccountCrud;
 import com.eucalyptus.reporting.domain.ReportingUserCrud;
 import com.eucalyptus.reporting.event_store.ReportingElasticIpAttachEvent;
@@ -66,7 +68,6 @@ import com.eucalyptus.reporting.event_store.ReportingVolumeSnapshotEventStore;
 import com.eucalyptus.util.Callback;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.HasNaturalId;
-import com.eucalyptus.util.WalrusProperties;
 import com.eucalyptus.vm.VmInstances;
 import com.google.common.base.Function;
 import com.google.common.base.Predicate;
@@ -77,7 +78,6 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
-import edu.ucsb.eucalyptus.cloud.entities.ObjectInfo;
 
 /**
  * Class to verify / create reporting data.
