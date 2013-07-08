@@ -13,12 +13,14 @@ define([
                 items: args.items, 
 
                 cancelButton: {
+                    id: 'button-dialog-createmetric-cancel',
                     click: function() {
                        self.close();
                     }
                 },
 
                 submitButton: {
+                  id: 'button-dialog-createmetric-save',
                   click: function() {
                       self.close();
                   }

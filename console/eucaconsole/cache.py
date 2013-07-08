@@ -62,7 +62,8 @@ class CacheManager(object):
         summary['volume'] = len(session.clc.caches['volumes'].values)if session.clc.caches['volumes'].values else 0
         summary['snapshot'] = len(session.clc.caches['snapshots'].values)if session.clc.caches['snapshots'].values else 0
         summary['eip'] = len(session.clc.caches['addresses'].values)if session.clc.caches['addresses'].values else 0
-        summary['scalinginst'] = len(session.scaling.caches['scalinginsts'].values)if session.scaling.caches['scalinginsts'].values else 0
+        if session.scaling != None:
+            summary['scalinginst'] = len(session.scaling.caches['scalinginsts'].values)if session.scaling.caches['scalinginsts'].values else 0
         return summary
 
     def __cache_load_callback__(self, caches, resource, kwargs, interval, firstRun=False):

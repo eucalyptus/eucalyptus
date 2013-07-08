@@ -14,12 +14,14 @@ define([
                 items: args.model, 
 
                 cancelButton: {
+                  id: 'button-dialog-deletescalinggroup-cancel',
                   click: function() {
                     self.close();
                   }
                 },
 
                 deleteButton: {
+                  id: 'button-dialog-deletescalinggroup-delete',
                   click: function() {
                       doMultiAction(args.items, App.data.scalinggrps,
                                     function(model, options) {

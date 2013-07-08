@@ -30,12 +30,14 @@ define([
                 qscale: model,
 
                 cancelButton: {
+                    id: 'button-dialog-quickscale-cancel',
                     click: function() {
                        self.close();
                     }
                 },
 
                 submitButton: new Backbone.Model({
+                    id: 'button-dialog-quickscale-save',
                     disabled: !model.isValid(),
                     click: function() {
                        if (model.isValid()) {

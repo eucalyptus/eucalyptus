@@ -138,7 +138,12 @@ public class EucalyptusServiceImpl extends RemoteServiceServlet implements Eucal
       throw new EucalyptusServiceException( "Empty login or password" );
     }
     User user = EuareWebBackend.getUser( userName, accountName );
-    EuareWebBackend.checkPassword( user, password );
+    try {
+      EuareWebBackend.checkPassword( user, password );
+    } catch ( EucalyptusServiceException e ) {
+      // see LoginUserProfile.getLoginAction for expiry handling
+      if ( !EucalyptusServiceException.EXPIRED_PASSWORD.equals( e.getMessage() ) ) throw e;
+    }
     return new Session( WebSessionManager.getInstance( ).newSession( user.getUserId( ) ) );
   }
 

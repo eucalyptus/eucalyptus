@@ -82,8 +82,9 @@ class ModifyPropertyValue(AWSQueryRequest):
                     ptype='string',
                     optional=True,
                     encoder=encode_prop_from_file,
-                    doc=('set a property using the contents of a file as its '
-                         'value (format: PROPERTY=FILE)')),
+                    doc=('read the contents of the given file as the value '
+                         'component of a PROPERTY=VALUE property (format: '
+                         'PROPERTY=FILE)')),
               Param(name='Reset',
                     short_name='r',
                     long_name='property-to-reset',

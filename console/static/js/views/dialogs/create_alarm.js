@@ -69,12 +69,14 @@ define([
                 ]),
 
                 cancelButton: {
+                    id: 'button-dialog-createalarm-cancel',
                     click: function() {
                        self.close();
                     }
                 },
 
                 submitButton: {
+                  id: 'button-dialog-createalarm-save',
                   click: function() {
                       console.log('Time to create the alarm!');
                       alarm.save({

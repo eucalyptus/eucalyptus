@@ -35,14 +35,18 @@ public class PasswordAuthentication {
 
   public static void authenticate( final User user,
                                    final String password ) throws AuthException, CredentialExpiredException {
+    boolean checkExpiration = true;
     if ( authenticateWithLdap( user ) ) try {
       LdapSync.authenticate(user, password);
+      checkExpiration = false;
     } catch ( LdapException e ) {
       throw new AuthException(INVALID_USERNAME_OR_PASSWORD);
     } else if ( !Crypto.verifyPassword(password, user.getPassword()) ) {
       throw new AuthException(INVALID_USERNAME_OR_PASSWORD);
     }
-    checkPasswordExpiration( user );
+    if ( checkExpiration ) {
+      checkPasswordExpiration( user );
+    }
   }
 
   public static boolean authenticateWithLdap( final User user ) {
