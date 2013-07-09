@@ -105,8 +105,7 @@ define([
         },
     
         launchConfigErrors: {
-          min_count: '',
-          max_count: '',
+          type_number: '',
           instance_type: '',
           type_names_count: '',
           tag_limit_reached: ''
@@ -114,8 +113,10 @@ define([
     };
 
     self.model.on('validated:invalid', function(model, errors) {
-      scope.launchConfigErrors.min_count = errors.min_count;
-      scope.launchConfigErrors.max_count = errors.max_count;
+      if(errors.min_count||errors.max_count) {
+        scope.launchConfigErrors.type_number = errors.min_count;
+        scope.launchConfigErrors.type_number = errors.max_count;
+      }
       scope.launchConfigErrors.instance_type = errors.instance_type;
       scope.launchConfigErrors.type_names_count = errors.type_names_count;
       scope.launchConfigErrors.tag_limit_reached = errors.tag_limit_reached;
@@ -125,6 +126,7 @@ define([
     self.model.on('validated:valid change', function(model, errors) {
       scope.launchConfigErrors.min_count = null;
       scope.launchConfigErrors.max_count = null;
+      scope.launchConfigErrors.type_number = null;
       scope.launchConfigErrors.instance_type = null;
       scope.launchConfigErrors.type_names_count = null;
       scope.launchConfigErrors.tag_limit_reached = null;
