@@ -46,6 +46,7 @@ import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.Topology;
 import com.eucalyptus.component.id.Eucalyptus;
+import com.eucalyptus.entities.UserMetadata;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.UserMetadata;
 import com.eucalyptus.event.ClockTick;

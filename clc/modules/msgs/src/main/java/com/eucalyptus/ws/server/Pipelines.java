@@ -78,6 +78,8 @@ import org.jboss.netty.channel.ChannelPipeline;
 import org.jboss.netty.channel.ChannelPipelineCoverage;
 import org.jboss.netty.channel.ChannelPipelineFactory;
 import org.jboss.netty.channel.ChannelUpstreamHandler;
+import org.jboss.netty.channel.Channels;
+import org.jboss.netty.handler.codec.http.HttpHeaders;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.jboss.netty.handler.codec.http.HttpRequest;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
@@ -89,6 +91,7 @@ import com.eucalyptus.bootstrap.RunDuring;
 import com.eucalyptus.bootstrap.ServiceJarDiscovery;
 import com.eucalyptus.component.ComponentId;
 import com.eucalyptus.component.ComponentIds;
+import com.eucalyptus.component.annotation.AwsServiceName;
 import com.eucalyptus.component.annotation.ComponentPart;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.empyrean.Empyrean;
@@ -148,6 +151,27 @@ public class Pipelines {
     for ( final FilteredPipeline f : pipelines ) {
       if ( f.checkAccepts( request ) ) {
         return f;
+      }
+    }
+    if ( request.getHeader(HttpHeaders.Names.HOST).contains( "amazonaws.com" ) ) {
+      String hostHeader = request.getHeader(HttpHeaders.Names.HOST);
+      LOG.debug( "Trying to intercept request for " + hostHeader );
+      for ( final FilteredPipeline f : pipelines ) {
+        if ( Ats.from( f ).has( ComponentPart.class ) ) {
+          Class<? extends ComponentId> compIdClass = Ats.from( f ).get( ComponentPart.class ).value( );
+          if ( Ats.from( compIdClass ).has( AwsServiceName.class ) ) {
+            String awsServiceName = Ats.from( compIdClass ).get( AwsServiceName.class ).value( );
+            if ( request.getHeader(HttpHeaders.Names.HOST).startsWith( awsServiceName ) ) {
+              if ( request.getHeaderNames().contains( "SOAPAction" ) && f.addHandlers( Channels.pipeline( ) ).get( SoapHandler.class ) != null ) {
+                LOG.debug( "Intercepting request for " + hostHeader + " using " + f.getClass( ) );
+                return f;
+              } else if ( !request.getHeaderNames().contains( "SOAPAction" ) && f.addHandlers( Channels.pipeline( ) ).get( SoapHandler.class ) == null ) {
+                return f;
+              }
+                
+            }
+          }
+        }
       }
     }
     if ( candidate == null ) {

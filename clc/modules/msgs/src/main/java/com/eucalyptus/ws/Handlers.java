@@ -135,6 +135,7 @@ import com.eucalyptus.ws.handlers.http.NioHttpDecoder;
 import com.eucalyptus.ws.protocol.AddressingHandler;
 import com.eucalyptus.ws.protocol.SoapHandler;
 import com.eucalyptus.ws.server.NioServerHandler;
+import com.eucalyptus.ws.server.ServiceAccessLoggingHandler;
 import com.eucalyptus.ws.server.ServiceContextHandler;
 import com.eucalyptus.ws.server.ServiceHackeryHandler;
 import com.google.common.cache.CacheBuilder;
@@ -530,6 +531,7 @@ public class Handlers {
     if ( StackConfiguration.ASYNC_OPERATIONS ) {
       pipeline.addLast( "async-operations-execution-handler", serviceExecutionHandler( ) );
     }
+    pipeline.addLast( "service-request-handler", ServiceAccessLoggingHandler.INSTANCE  );
     pipeline.addLast( "service-sink", new ServiceContextHandler( ) );
   }
   

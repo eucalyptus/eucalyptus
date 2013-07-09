@@ -63,6 +63,7 @@
 package com.eucalyptus.component;
 
 import java.net.InetAddress;
+import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.concurrent.TimeUnit;
 import org.xbill.DNS.Name;
@@ -79,6 +80,9 @@ import com.google.common.base.Predicate;
 import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
+import com.google.common.collect.Iterables;
+import com.google.common.collect.Lists;
+import edu.emory.mathcs.backport.java.util.Collections;
 
 /**
  * DNS Resolver which bases replies on the current system topology.
@@ -109,7 +113,7 @@ import com.google.common.cache.LoadingCache;
                     description = "Options controlling DNS name resolution for Eucalyptus services." )
 public class TopologyDnsResolver implements DnsResolver {
   @ConfigurableField( description = "Enable the service topology resolver.  Note: experimental.dns.enable must also be 'true'" )
-  public static Boolean enabled = Boolean.FALSE;
+  public static Boolean enabled = Boolean.TRUE;
   
   enum ResolverSupport implements Predicate<Name> {
     COMPONENT {
@@ -122,6 +126,7 @@ public class TopologyDnsResolver implements DnsResolver {
           exists |= compId.isPublicService( );
           exists |= compId.isAdminService( );
           exists |= compId.isRegisterable( );
+          exists |= compId.isInternal( );//GRZE:HACK:TEMPORARY!
           if ( exists && compId.isPartitioned( ) ) {
             exists &= Partitions.exists( input.getLabelString( 1 ) );
           }
@@ -158,72 +163,75 @@ public class TopologyDnsResolver implements DnsResolver {
       
     };
     public static final//
-    Function<Name, ServiceConfiguration>//
-    SERVICE_FUNCTION = new Function<Name, ServiceConfiguration>( ) {
-      @Override
-      public ServiceConfiguration apply( final Name name ) {
-        if ( !DomainNames.isSystemSubdomain( name ) ) {
-          throw new IllegalArgumentException( "Cannot resolve service for "
-                                              + name
-                                              + "because it is outside the system domains" );
-        } else {
-          try {
-            // Strip off the first label and use that as the service configuration name
-            String serviceName = name.getLabelString( 0 );
-            // Strip off the second label and use that as the component type
-            String componentName = name.getLabelString( 1 );
-            return Components.lookup( componentName ).lookup( serviceName );
-          } catch ( Exception ex ) {
-            try {
-              return ServiceConfigurations.lookupByName( name.getLabelString( 0 ) );
-            } catch ( Exception ex1 ) {
-              throw new IllegalArgumentException( "Cannot resolve service for "
-                                                  + name
-                                                  + " because of: "
-                                                  + ex.getMessage( ) );
-            }
-          }
-        }
-      }
-    };
+    Function<Name, ServiceConfiguration>        //
+                                                 SERVICE_FUNCTION   = new Function<Name, ServiceConfiguration>( ) {
+                                                                      @Override
+                                                                      public ServiceConfiguration apply( final Name name ) {
+                                                                        if ( !DomainNames.isSystemSubdomain( name ) ) {
+                                                                          throw new IllegalArgumentException( "Cannot resolve service for "
+                                                                                                              + name
+                                                                                                              + "because it is outside the system domains" );
+                                                                        } else {
+                                                                          try {
+                                                                            // Strip off the first
+// label and use that as the service configuration name
+                                                                            String serviceName = name.getLabelString( 0 );
+                                                                            // Strip off the second
+// label and use that as the component type
+                                                                            String componentName = name.getLabelString( 1 );
+                                                                            return Components.lookup( componentName ).lookup( serviceName );
+                                                                          } catch ( Exception ex ) {
+                                                                            try {
+                                                                              return ServiceConfigurations.lookupByName( name.getLabelString( 0 ) );
+                                                                            } catch ( Exception ex1 ) {
+                                                                              throw new IllegalArgumentException( "Cannot resolve service for "
+                                                                                                                  + name
+                                                                                                                  + " because of: "
+                                                                                                                  + ex.getMessage( ) );
+                                                                            }
+                                                                          }
+                                                                        }
+                                                                      }
+                                                                    };
     public static final//
-    Function<Name, Class<? extends ComponentId>>//
-    COMPONENT_FUNCTION = new Function<Name, Class<? extends ComponentId>>( ) {
-      @Override
-      public Class<? extends ComponentId> apply( final Name name ) {
-        if ( !DomainNames.isSystemSubdomain( name ) ) {
-          throw new IllegalArgumentException( "Cannot resolve a component type for "
-                                              + name
-                                              + "which is outside the system domains" );
-        } else {
-          try {
-            // Strip off the first label and use that as the component type
-            String componentName = name.getLabelString( 0 );
-            return ComponentIds.lookup( componentName ).getClass( );
-          } catch ( Exception ex ) {
-            throw new IllegalArgumentException( "Cannot resolve a component type for "
-                                                + name
-                                                + " because of: "
-                                                + ex.getMessage( ) );
-          }
-        }
-      }
-    };
+    Function<Name, Class<? extends ComponentId>> //
+                                                 COMPONENT_FUNCTION = new Function<Name, Class<? extends ComponentId>>( ) {
+                                                                      @Override
+                                                                      public Class<? extends ComponentId> apply( final Name name ) {
+                                                                        if ( !DomainNames.isSystemSubdomain( name ) ) {
+                                                                          throw new IllegalArgumentException( "Cannot resolve a component type for "
+                                                                                                              + name
+                                                                                                              + "which is outside the system domains" );
+                                                                        } else {
+                                                                          try {
+                                                                            // Strip off the first
+// label and use that as the component type
+                                                                            String componentName = name.getLabelString( 0 );
+                                                                            return ComponentIds.lookup( componentName ).getClass( );
+                                                                          } catch ( Exception ex ) {
+                                                                            throw new IllegalArgumentException( "Cannot resolve a component type for "
+                                                                                                                + name
+                                                                                                                + " because of: "
+                                                                                                                + ex.getMessage( ) );
+                                                                          }
+                                                                        }
+                                                                      }
+                                                                    };
     
     @Override
     public abstract boolean apply( Name input );
     
   }
   
-  private static final LoadingCache<Name, ServiceConfiguration>//
-  serviceNameMap = CacheBuilder.newBuilder( )
-                               .refreshAfterWrite( 30, TimeUnit.SECONDS )
-                               .build( CacheLoader.from( ResolverSupport.SERVICE_FUNCTION ) );
+  private static final LoadingCache<Name, ServiceConfiguration> //
+                                                                serviceNameMap = CacheBuilder.newBuilder( )
+                                                                                             .refreshAfterWrite( 30, TimeUnit.SECONDS )
+                                                                                             .build( CacheLoader.from( ResolverSupport.SERVICE_FUNCTION ) );
   
   @Override
   public boolean checkAccepts( Record query, InetAddress source ) {
     return enabled
-           && ( RequestType.A.apply( query ) || RequestType.CNAME.apply( query ) )
+           && RequestType.A.apply( query )
            && DomainNames.isSystemSubdomain( query.getName( ) )
            && ( ResolverSupport.COMPONENT.apply( query.getName( ) )
            || ResolverSupport.SERVICE.apply( query.getName( ) ) );
@@ -233,27 +241,39 @@ public class TopologyDnsResolver implements DnsResolver {
   public DnsResponse lookupRecords( Record query ) {
     final Name name = query.getName( );
     if ( ResolverSupport.COMPONENT.apply( name ) ) {
-      Class<? extends ComponentId> compId = ResolverSupport.COMPONENT_FUNCTION.apply( name );
-      Component comp = Components.lookup( compId );
-      ServiceConfiguration config = null;
-      if ( comp.getComponentId( ).isPartitioned( ) ) {
+      Class<? extends ComponentId> compIdType = ResolverSupport.COMPONENT_FUNCTION.apply( name );
+      Component comp = Components.lookup( compIdType );
+      List<ServiceConfiguration> configs = Lists.newArrayList( );
+      final ComponentId componentId = comp.getComponentId( );
+      if ( componentId.isPartitioned( ) ) {
         String partitionName = name.getLabelString( 1 );
         Partition partition = Partitions.lookupByName( partitionName );
-        config = Topology.lookup( compId, partition );
+        if ( componentId.isManyToOnePartition( ) ) {
+          for ( ServiceConfiguration conf : Iterables.filter( Components.lookup( compIdType ).services( ),
+                                                              ServiceConfigurations.filterByPartition( partition ) ) ) {
+            configs.add( conf );
+          }
+          Collections.shuffle( configs );
+        } else {
+          configs.add( Topology.lookup( compIdType, partition ) );
+        }
       } else {
-        config = Topology.lookup( compId );
+        if ( componentId.isManyToOnePartition( ) ) {
+          for ( ServiceConfiguration conf : Components.lookup( compIdType ).services( ) ) {
+            configs.add( conf );
+          }
+          Collections.shuffle( configs );
+        } else {
+          configs.add( Topology.lookup( compIdType ) );
+        }
       }
-      Name serviceLabel = Name.fromConstantString( config.getName( ) );
-      Name canonicalName = DomainNames.concatenateConstant( serviceLabel, name );
-      Record cName = DomainNameRecords.canonicalName( name, canonicalName );
-      if ( RequestType.CNAME.apply( query ) ) {
-        return DnsResponse.forName( query.getName( ) )
-                          .answer( cName );
-      } else {
-        Record aRecord = DomainNameRecords.addressRecord( canonicalName, config.getInetAddress( ) );
-        return DnsResponse.forName( query.getName( ) )
-                          .answer( cName, aRecord );
+      List<Record> answers = Lists.newArrayList( );
+      for ( ServiceConfiguration config : configs ) {
+        Record aRecord = DomainNameRecords.addressRecord( name, config.getInetAddress( ) );
+        answers.add( aRecord );
       }
+      return DnsResponse.forName( query.getName( ) )
+                        .answer( answers );
     } else if ( ResolverSupport.SERVICE.apply( name ) ) {
       ServiceConfiguration config = ResolverSupport.SERVICE_FUNCTION.apply( name );
       return DnsResponse.forName( query.getName( ) )

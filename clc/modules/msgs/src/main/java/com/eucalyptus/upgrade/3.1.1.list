@@ -477,11 +477,11 @@ storage_stats_info edu.ucsb.eucalyptus.cloud.entities.StorageStatsInfo total_spa
 storage_usage_snapshot com.eucalyptus.reporting.modules.storage.StorageUsageSnapshot is_all_snapshot
 storage_usage_snapshot com.eucalyptus.reporting.modules.storage.StorageUsageSnapshot key EMBEDDED
 storage_usage_snapshot com.eucalyptus.reporting.modules.storage.StorageUsageSnapshot usageData EMBEDDED
-superclass com.eucalyptus.cloud.AccountMetadata metadata_account_id
-superclass com.eucalyptus.cloud.AccountMetadata metadata_account_name
-superclass com.eucalyptus.cloud.AccountMetadata metadata_unique_name
-superclass com.eucalyptus.cloud.UserMetadata metadata_user_id
-superclass com.eucalyptus.cloud.UserMetadata metadata_user_name
+superclass com.eucalyptus.compute.entities.AccountMetadata metadata_account_id
+superclass com.eucalyptus.compute.entities.AccountMetadata metadata_account_name
+superclass com.eucalyptus.compute.entities.AccountMetadata metadata_unique_name
+superclass com.eucalyptus.compute.entities.UserMetadata metadata_user_id
+superclass com.eucalyptus.compute.entities.UserMetadata metadata_user_name
 superclass com.eucalyptus.entities.AbstractPersistent creation_timestamp
 superclass com.eucalyptus.entities.AbstractPersistent id
 superclass com.eucalyptus.entities.AbstractPersistent last_update_timestamp

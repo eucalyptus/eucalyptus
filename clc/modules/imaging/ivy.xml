@@ -1,0 +1,10 @@
+<ivy-module version="2.0">
+    <info organisation="com.eucalyptus" module="eucalyptus-imaging-service"/>
+    <dependencies>
+        <dependency name="eucalyptus-msgs" rev="latest.integration"/>
+        <dependency name="eucalyptus-core" rev="latest.integration"/>
+        <dependency name="eucalyptus-imaging-common" rev="latest.integration"/>
+        <dependency name="eucalyptus-cluster-manager" rev="latest.integration"/>
+    </dependencies>
+</ivy-module>
+

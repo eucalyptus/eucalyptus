@@ -62,24 +62,18 @@
 
 package com.eucalyptus.images;
 
-import static com.eucalyptus.util.Parameters.checkParam;
-import static org.hamcrest.Matchers.notNullValue;
-
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Set;
-
+import javax.persistence.EntityTransaction;
 import javax.persistence.PersistenceException;
-
 import org.apache.log4j.Logger;
-
 import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.principal.AccountFullName;
 import com.eucalyptus.cloud.CloudMetadatas;
 import com.eucalyptus.cloud.ImageMetadata;
-import com.eucalyptus.cloud.ImageMetadata.DeviceMappingType;
 import com.eucalyptus.cluster.Cluster;
 import com.eucalyptus.cluster.Clusters;
 import com.eucalyptus.component.ServiceConfiguration;
@@ -88,6 +82,7 @@ import com.eucalyptus.component.id.ClusterController;
 import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.context.IllegalContextAccessException;
+import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.entities.TransactionException;
 import com.eucalyptus.entities.Transactions;
@@ -110,7 +105,6 @@ import com.google.common.base.Supplier;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
-
 import edu.ucsb.eucalyptus.msgs.BlockDeviceMappingItemType;
 import edu.ucsb.eucalyptus.msgs.ConfirmProductInstanceResponseType;
 import edu.ucsb.eucalyptus.msgs.ConfirmProductInstanceType;
@@ -132,6 +126,8 @@ import edu.ucsb.eucalyptus.msgs.RegisterImageType;
 import edu.ucsb.eucalyptus.msgs.ResetImageAttributeResponseType;
 import edu.ucsb.eucalyptus.msgs.ResetImageAttributeType;
 import edu.ucsb.eucalyptus.msgs.ResourceTag;
+import static com.eucalyptus.util.Parameters.checkParam;
+import static org.hamcrest.Matchers.notNullValue;
 
 public class ImageManager {
   
@@ -171,7 +167,6 @@ public class ImageManager {
     }
 
     reply.getImagesSet( ).addAll( imageDetailsList );
-    ImageUtil.cleanDeregistered();
     return reply;
   }
   
@@ -201,7 +196,7 @@ public class ImageManager {
         @Override
         public ImageInfo get( ) {
           try {
-            return Images.createFromManifest( ctx.getUserFullName( ), request.getName( ), request.getDescription( ), arch, eki, eri, manifest );
+            return Images.registerFromManifest( ctx.getUserFullName( ), request.getName( ), request.getDescription( ), arch, eki, eri, manifest );
           } catch ( Exception ex ) {
             LOG.error( ex );
             Logs.extreme( ).error( ex, ex );
@@ -246,15 +241,15 @@ public class ImageManager {
     final Context ctx = Contexts.lookup( );
     final String requestAccountId = ctx.getUserFullName( ).getAccountNumber( );
 
-    EntityWrapper<ImageInfo> db = EntityWrapper.get( ImageInfo.class );
+    EntityTransaction tx = Entities.get( ImageInfo.class );
     try {
-      ImageInfo imgInfo = db.getUnique( Images.exampleWithImageId( imageIdentifier( request.getImageId( ) ) ) );
+      ImageInfo imgInfo = Entities.uniqueResult( Images.exampleWithImageId( imageIdentifier( request.getImageId( ) ) ) );
       if ( !ctx.hasAdministrativePrivileges( ) &&
            ( !imgInfo.getOwnerAccountNumber( ).equals( requestAccountId ) ||
                !RestrictedTypes.filterPrivileged( ).apply( imgInfo ) ) ) {
         throw new EucalyptusCloudException( "Not authorized to deregister image" );
       }
-      Images.deregisterImage( imgInfo.getDisplayName( ) );
+      Images.deregister( imgInfo.getDisplayName( ) );
       return reply;
     } catch ( NoSuchImageException ex ) {
       LOG.trace( ex );
@@ -270,8 +265,10 @@ public class ImageManager {
       if ( ex.getCause() instanceof NoSuchElementException )
         throw new EucalyptusCloudException( "The image id '[" +  request.getImageId( ) + "]' does not exist");
       else throw ex;
+    } catch ( Exception ex ) {
+      throw new EucalyptusCloudException( "The image id '[" +  request.getImageId( ) + "]' does not exist");
     } finally {
-      db.commit( );
+      tx.commit( );
     }
   }
   
@@ -297,7 +294,12 @@ public class ImageManager {
     return reply;
   }
 
-  public DescribeImageAttributeResponseType describeImageAttribute( final DescribeImageAttributeType request ) throws EucalyptusCloudException {
+  private static BlockDeviceMappingItemType EMI       = new BlockDeviceMappingItemType( "emi", "sda1" );
+  private static BlockDeviceMappingItemType EPHEMERAL = new BlockDeviceMappingItemType( "ephemeral0", "sda2" );
+  private static BlockDeviceMappingItemType SWAP      = new BlockDeviceMappingItemType( "swap", "sda3" );
+  private static BlockDeviceMappingItemType ROOT      = new BlockDeviceMappingItemType( "root", "/dev/sda1" );
+  
+  public DescribeImageAttributeResponseType describeImageAttribute( final DescribeImageAttributeType request ) throws Exception {
     DescribeImageAttributeResponseType reply = ( DescribeImageAttributeResponseType ) request.getReply( );
     reply.setImageId( request.getImageId( ) );
     final Context ctx = Contexts.lookup();
@@ -305,9 +307,9 @@ public class ImageManager {
 
     if ( request.getAttribute( ) != null ) request.applyAttribute( );
     
-    final EntityWrapper<ImageInfo> db = EntityWrapper.get( ImageInfo.class );
+    final EntityTransaction db = Entities.get( ImageInfo.class );
     try {
-      final ImageInfo imgInfo = db.getUnique( Images.exampleWithImageId( imageIdentifier( request.getImageId( ) ) ) );
+      final ImageInfo imgInfo = Entities.uniqueResult( Images.exampleWithImageId( imageIdentifier( request.getImageId( ) ) ) );
       if ( !ctx.hasAdministrativePrivileges( ) &&
            ( !imgInfo.getOwnerAccountNumber( ).equals( requestAccountId ) || !RestrictedTypes.filterPrivileged( ).apply( imgInfo ) ) ) {
         throw new EucalyptusCloudException( "Not authorized to describe image attribute" );
@@ -366,10 +368,10 @@ public class ImageManager {
     	    }
     	  }
     	} else {
-          reply.getBlockDeviceMapping( ).add( ImageUtil.EMI );
-          reply.getBlockDeviceMapping( ).add( ImageUtil.EPHEMERAL );
-          reply.getBlockDeviceMapping( ).add( ImageUtil.SWAP );
-          reply.getBlockDeviceMapping( ).add( ImageUtil.ROOT );
+          reply.getBlockDeviceMapping( ).add( EMI );
+          reply.getBlockDeviceMapping( ).add( EPHEMERAL );
+          reply.getBlockDeviceMapping( ).add( SWAP );
+          reply.getBlockDeviceMapping( ).add( ROOT );
     	}
       } else if ( request.getDescription( ) != null ) {
         reply.setRealResponse( reply.getDescription( ) );
@@ -405,14 +407,14 @@ public class ImageManager {
     return Lists.newArrayList( validUserIds );
   }
 
-  public ModifyImageAttributeResponseType modifyImageAttribute( final ModifyImageAttributeType request ) throws EucalyptusCloudException {
+  public ModifyImageAttributeResponseType modifyImageAttribute( final ModifyImageAttributeType request ) throws Exception {
     final ModifyImageAttributeResponseType reply = ( ModifyImageAttributeResponseType ) request.getReply( );
     final Context ctx = Contexts.lookup();
     final String requestAccountId = ctx.getUserFullName( ).getAccountNumber();
 
-    final EntityWrapper<ImageInfo> db = EntityWrapper.get( ImageInfo.class );
+    final EntityTransaction db = Entities.get( ImageInfo.class );
     try {
-      final ImageInfo imgInfo = db.getUnique( Images.exampleWithImageId( imageIdentifier( request.getImageId( ) ) ) );
+      final ImageInfo imgInfo = Entities.uniqueResult( Images.exampleWithImageId( imageIdentifier( request.getImageId( ) ) ) );
       if ( !ctx.hasAdministrativePrivileges( ) &&
            ( !imgInfo.getOwnerAccountNumber( ).equals( requestAccountId ) ||
                !RestrictedTypes.filterPrivileged( ).apply( imgInfo ) ) ) {
@@ -459,9 +461,9 @@ public class ImageManager {
     reply.set_return( true );
     final Context ctx = Contexts.lookup( );
     final String requestAccountId = ctx.getUserFullName( ).getAccountNumber( );
-    EntityWrapper<ImageInfo> db = EntityWrapper.get( ImageInfo.class );
+    EntityTransaction db = Entities.get( ImageInfo.class );
     try {
-      ImageInfo imgInfo = db.getUnique( Images.exampleWithImageId( imageIdentifier( request.getImageId( ) ) ) );
+      ImageInfo imgInfo = Entities.uniqueResult( Images.exampleWithImageId( imageIdentifier( request.getImageId( ) ) ) );
       if ( ctx.hasAdministrativePrivileges( ) ||
            ( imgInfo.getOwnerAccountNumber( ).equals( requestAccountId ) &&
                RestrictedTypes.filterPrivileged( ).apply( imgInfo ) ) ) {
@@ -471,7 +473,7 @@ public class ImageManager {
         db.rollback( );
         reply.set_return( false );
       }
-    } catch ( EucalyptusCloudException e ) {
+    } catch ( EucalyptusCloudException | TransactionException | NoSuchElementException e ) {
       LOG.error( e, e );
       db.rollback( );
       reply.set_return( false );

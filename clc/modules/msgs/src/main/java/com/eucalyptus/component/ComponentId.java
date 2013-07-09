@@ -81,6 +81,7 @@ import org.jboss.netty.channel.ChannelPipelineFactory;
 import org.jboss.netty.channel.Channels;
 import com.eucalyptus.bootstrap.BootstrapArgs;
 import com.eucalyptus.component.annotation.AdminService;
+import com.eucalyptus.component.annotation.AwsServiceName;
 import com.eucalyptus.component.annotation.FaultLogPrefix;
 import com.eucalyptus.component.annotation.GenerateKeys;
 import com.eucalyptus.component.annotation.InternalService;
@@ -222,7 +223,7 @@ public abstract class ComponentId implements HasName<ComponentId>, HasFullName<C
     }
   }
   
-  public final boolean isPartitioned( ) {
+  public boolean isPartitioned( ) {
     return this.isRegisterable( ) && !this.equals( this.partitionParent( ) );
   }
   
@@ -429,6 +430,14 @@ public abstract class ComponentId implements HasName<ComponentId>, HasFullName<C
   public Boolean isAvailableLocally( ) {
     return this.isAlwaysLocal( ) || ( this.isCloudLocal( ) && BootstrapArgs.isCloudController( ) )
            || this.checkComponentParts( );
+  }
+  
+  public String getAwsServiceName( ) {
+    if ( this.ats.has( AwsServiceName.class ) ) {
+      return this.ats.get( AwsServiceName.class ).value( );
+    } else {
+      return "eucalyptus";
+    }
   }
   
   public Boolean isManyToOnePartition( ) {

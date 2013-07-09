@@ -76,6 +76,7 @@
         <spring:import resource="classpath:eucalyptus-runtime.xml"/>
         <spring:import resource="classpath:eucalyptus-storage.xml"/>
         <spring:import resource="classpath:eucalyptus-system.xml"/>
+        <spring:import resource="classpath:eucalyptus-import-export.xml"/>
     </spring:beans>
 
     <model name="eucalyptus">
@@ -88,6 +89,14 @@
       </inbound>
       <bridge-component/>
       <outbound>
+        <filtering-router>
+          <outbound-endpoint ref="ImageImportWS" />
+          <payload-type-filter expectedType="edu.ucsb.eucalyptus.msgs.VmImportMessage" />
+        </filtering-router>
+        <filtering-router>
+          <outbound-endpoint ref="ImageExportWS" />
+          <payload-type-filter expectedType="edu.ucsb.eucalyptus.msgs.VmExportMessage" />
+        </filtering-router>
         <filtering-router>
           <outbound-endpoint ref="PrivateNetworksWS" />
           <payload-type-filter expectedType="edu.ucsb.eucalyptus.msgs.VirtualNetworkingMessage" />

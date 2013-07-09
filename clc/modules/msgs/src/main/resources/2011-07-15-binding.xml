@@ -68,6 +68,7 @@
   <include path="classpath:aws-bundling.xml" />
   <include path="classpath:aws-images-10-08-31.xml" />
   <include path="classpath:aws-image-attr.xml" />
+  <include path="classpath:aws-import-10-11-15.xml" />
   <include path="classpath:aws-ips-11-01-01.xml" />
   <include path="classpath:aws-keypairs-10-08-31.xml" />
   <include path="classpath:aws-security-11-01-01.xml" />

@@ -91,5 +91,7 @@
   <endpoint name="VmMetadataWS" address="vm://VmMetadata" synchronous="true" />
   <endpoint name="VmControlWS" address="vm://VmControl" synchronous="false" />
   <endpoint name="AddressWS" address="vm://Address" synchronous="false" />
-
+  <!-- import/export services -->
+  <endpoint name="ImageImportWS" address="vm://ImageImport" synchronous="false" />
+  <endpoint name="ImageExportWS" address="vm://ImageExport" synchronous="false" />
 </mule>
