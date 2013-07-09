@@ -24,8 +24,13 @@ define([
 
       var scope = new Backbone.Model({
         availabilityZones: new Backbone.Collection(),
+        loadBalancers: new Backbone.Collection(),
         toggletest: new Backbone.Model({value: false}),
-        scalingGroup: new ScalingGroup({}),
+        scalingGroup: new ScalingGroup({
+                min_size: 0,
+                desired_capacity: 0,
+                max_size: 0
+            }),
         change: function(e) {
             setTimeout(function() { $(e.target).change(); }, 0);
         }

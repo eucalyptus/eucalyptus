@@ -13,22 +13,24 @@ define([
 
             var scope = new Backbone.Model({
                 scalingGroup: this.model.get('scalingGroup'),
-                loadBalancers: {
+                loadBalancers: new Backbone.Model({
                     name: 'loadBalancers',
-                    collection: app.data.loadBalancers,
-                    itrLabel: function() {
-                      return this.itr.get('name');
-                    } 
-                },
+                    available: app.data.loadbalancer,
+                    selected: self.model.get('loadBalancers'),
+                    getId: function(item) {
+                        return item.get('name');
+                    },
+                    getValue: function(item) {
+                        return item.get('name');
+                    }
+                }),
                 zoneSelect: new Backbone.Model({
                     available: app.data.availabilityzone,
                     selected: self.model.get('availabilityZones'),
                     getId: function(item) {
-                        console.log('VALUE', arguments);
                         return item.get('name');
                     },
                     getValue: function(item) {
-                        console.log('VALUE', arguments);
                         return item.get('name');
                     }
                 })

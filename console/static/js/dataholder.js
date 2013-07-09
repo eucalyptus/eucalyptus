@@ -20,7 +20,8 @@ define([
 	'models/buckets',
 	'models/alarms',
 	'models/metrics',
-    'models/availabilityzones'
+    'models/availabilityzones',
+    'models/loadbalancers'
 	], 
 function(_, Backbone, tags) {
     var self = this;
@@ -43,7 +44,8 @@ function(_, Backbone, tags) {
 	['bucket'],
 	['alarm', 'alarms'],
 	['metrics'],
-	['availabilityzone']
+	['availabilityzone'],
+	['loadbalancer']
     ];
 
     var shared = {};

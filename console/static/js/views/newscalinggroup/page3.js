@@ -11,7 +11,10 @@ define([
             var self = this;
 
             var scope = new Backbone.Model({
-                policies: new Backbone.Collection()
+                policies: new Backbone.Model({
+                    available: new Backbone.Collection(),
+                    selected: new Backbone.Collection(),
+                    })
             });
             $(this.el).html(template);
             this.rview = rivets.bind(this.$el, scope);
