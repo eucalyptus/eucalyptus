@@ -295,7 +295,9 @@ VS.ui.SearchBox = Backbone.View.extend({
       this.value('');
       this.flags.allSelected = false;
       this.searchEvent(e);
-      this.focusSearch(e);
+      // commented this out to prevent search from popping up facet list clear pressed
+      // UX per jmolo (EUCA-6499)
+      //this.focusSearch(e);
     }, this);
 
     if (this.app.options.callbacks.clearSearch) {
