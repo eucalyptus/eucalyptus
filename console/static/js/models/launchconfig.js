@@ -91,6 +91,12 @@ define([
             data.push({name: "KernelId", value: model.get('kernel_id')});
           if (model.get('ramdisk_id') != undefined)
             data.push({name: "RamdiskId", value: model.get('ramdisk_id')});
+          if (model.get('security_groups') != undefined) {
+            var groups = model.get('security_groups');
+            $.each(groups, function(idx, group) {
+              data.push({name: "SecurityGroups.member." + (idx+1) , value: group.id});
+            });
+          }
 
           if (model.get('block_device_mappings') != undefined) {
             var mappings = model.get('block_device_mappings');
