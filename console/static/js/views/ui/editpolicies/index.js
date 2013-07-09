@@ -17,6 +17,7 @@ define([
             var getValue = model.get('getValue')
 
             var scope = new Backbone.Model({
+                alarms: app.data.alarm,
                 selected: selected,
                 error: model.get('error'),
                 toAdd: null,
@@ -51,6 +52,9 @@ define([
                 console.log('SYNC');
                 self.render();
             });
+
+            app.data.alarm.on('sync', function() { self.render(); });
+            app.data.alarm.fetch();
         },
         render : function() {
           this.rview.sync();

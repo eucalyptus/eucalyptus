@@ -22,10 +22,10 @@ uiport=8888
 #sslkey=/Users/dkavanagh/eucalyptus/ssl/server.key
 
 # Set to true to enable a redirect server for http
-http.redirect=True
+#http.redirect=True
 # Set to port 80 if run as root, or higher number port
 # (requires http.redirect set to True)
-http.port=8080
+#http.port=8080
 
 # session timeout (in seconds, 30 minutes -> 1800 seconds)
 session.idle.timeout=1800

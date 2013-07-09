@@ -1,12 +1,15 @@
 define([
+  'app',
   'backbone',
   'rivets',
   'text!./page3.html',
-], function(Backbone, rivets, template) {
+], function(app, Backbone, rivets, template) {
         return Backbone.View.extend({
           title: 'Policies', 
 
           initialize: function() {
+            var self = this;
+
             var scope = new Backbone.Model({
                 policies: new Backbone.Collection()
             });
