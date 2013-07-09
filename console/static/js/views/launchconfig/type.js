@@ -7,6 +7,10 @@ define([
 	], function( app, dataholder, template, rivets, Type) {
   return Type.extend({
     tpl: template,
+    initialize: function() {
+      Type.prototype.initialize.call(this);
+      this.model.set('lc_name', null);
+    },
 
     isValid: function() {
       if (this.model.get('errors') == undefined) {
