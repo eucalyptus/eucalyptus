@@ -66,7 +66,7 @@ import org.jboss.netty.channel.ChannelPipeline;
 import org.jboss.netty.handler.codec.http.HttpRequest;
 import com.eucalyptus.binding.BindingManager;
 import com.eucalyptus.blockstorage.Storage;
-import com.eucalyptus.component.ComponentId.ComponentPart;
+import com.eucalyptus.component.annotation.ComponentPart;
 import com.eucalyptus.ws.Handlers;
 import com.eucalyptus.ws.handlers.BindingHandler;
 import com.eucalyptus.ws.server.FilteredPipeline;

@@ -61,8 +61,8 @@
  ************************************************************************/
 
 package com.eucalyptus.blockstorage.msgs;
-import com.eucalyptus.component.ComponentId.ComponentMessage;
 
+import com.eucalyptus.component.annotation.ComponentMessage;
 import com.eucalyptus.blockstorage.Storage;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 import edu.ucsb.eucalyptus.msgs.ComponentMessageResponseType;

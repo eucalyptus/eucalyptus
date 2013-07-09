@@ -68,7 +68,7 @@ import com.eucalyptus.bootstrap.Host
 import com.eucalyptus.bootstrap.Hosts
 import com.eucalyptus.bootstrap.SystemIds
 import com.eucalyptus.component.ServiceUris
-import com.eucalyptus.component.id.Eucalyptus.Database
+import com.eucalyptus.component.id.Database
 import com.eucalyptus.entities.PersistenceContexts
 import com.eucalyptus.system.SubDirectory
 import com.eucalyptus.util.LogUtil

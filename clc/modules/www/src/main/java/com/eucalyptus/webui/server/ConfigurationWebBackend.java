@@ -100,7 +100,7 @@ import com.eucalyptus.component.ServiceConfigurations;
 import com.eucalyptus.component.id.ClusterController;
 import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.config.ArbitratorConfiguration;
-import com.eucalyptus.empyrean.Empyrean.Arbitrator;
+import com.eucalyptus.empyrean.Arbitrator;
 import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.entities.Transactions;
 import com.eucalyptus.event.EventFailedException;

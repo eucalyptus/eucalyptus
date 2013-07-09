@@ -66,7 +66,7 @@ import java.util.ArrayList;
 import java.util.Date;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.jboss.netty.channel.Channel;
-import com.eucalyptus.component.ComponentId.ComponentMessage;
+import com.eucalyptus.component.annotation.ComponentMessage;
 import com.eucalyptus.objectstorage.BucketLogData;
 import com.eucalyptus.objectstorage.Walrus;
 
@@ -77,7 +77,6 @@ import edu.ucsb.eucalyptus.msgs.ComponentMessageType;
 import edu.ucsb.eucalyptus.msgs.ComponentProperty;
 import edu.ucsb.eucalyptus.msgs.EucalyptusData;
 import edu.ucsb.eucalyptus.msgs.StatEventRecord;
-
 
 public class WalrusResponseType extends BaseMessage {
 	BucketLogData logData;

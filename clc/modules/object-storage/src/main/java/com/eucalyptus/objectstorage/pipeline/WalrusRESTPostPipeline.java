@@ -66,7 +66,7 @@ import org.apache.log4j.Logger;
 import org.jboss.netty.channel.ChannelPipeline;
 import org.jboss.netty.handler.codec.http.HttpHeaders;
 import org.jboss.netty.handler.codec.http.HttpRequest;
-import com.eucalyptus.component.ComponentId.ComponentPart;
+import com.eucalyptus.component.annotation.ComponentPart;
 import com.eucalyptus.objectstorage.Walrus;
 import com.eucalyptus.objectstorage.pipeline.stages.WalrusOutboundStage;
 import com.eucalyptus.objectstorage.pipeline.stages.WalrusPOSTUserAuthenticationStage;

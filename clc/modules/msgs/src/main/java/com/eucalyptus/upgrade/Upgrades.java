@@ -55,7 +55,7 @@ import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.Components;
 import com.eucalyptus.component.ServiceUris;
 import com.eucalyptus.component.id.Eucalyptus;
-import com.eucalyptus.component.id.Eucalyptus.Database;
+import com.eucalyptus.component.id.Database;
 import com.eucalyptus.empyrean.Empyrean;
 import com.eucalyptus.entities.PersistenceContexts;
 import com.eucalyptus.system.Ats;

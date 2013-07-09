@@ -64,7 +64,7 @@ package com.eucalyptus.auth.ws;
 
 import java.util.EnumSet;
 import org.jboss.netty.channel.ChannelPipeline;
-import com.eucalyptus.component.ComponentId.ComponentPart;
+import com.eucalyptus.component.annotation.ComponentPart;
 import com.eucalyptus.component.id.Euare;
 import com.eucalyptus.ws.protocol.RequiredQueryParams;
 import com.eucalyptus.ws.server.QueryPipeline;

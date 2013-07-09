@@ -118,7 +118,7 @@ import org.jibx.util.ClasspathUrlExtender;
 import com.eucalyptus.bootstrap.BillOfMaterials;
 import com.eucalyptus.bootstrap.ServiceJarDiscovery;
 import com.eucalyptus.component.ComponentId;
-import com.eucalyptus.component.ComponentId.ComponentMessage;
+import com.eucalyptus.component.annotation.ComponentMessage;
 import com.eucalyptus.crypto.Digest;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
@@ -551,8 +551,8 @@ public class BindingCache {
 
     private String getNamespaceSuffix( final Class klass ) {
       String namespace = "";
-      final ComponentId.ComponentMessage componentMessage =
-        Ats.inClassHierarchy( klass ).get( ComponentId.ComponentMessage.class );
+      final ComponentMessage componentMessage =
+        Ats.inClassHierarchy( klass ).get( ComponentMessage.class );
       if ( componentMessage != null ) {
         namespace += Classes.newInstance( componentMessage.value( ) ).name( );
       } else {

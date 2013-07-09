@@ -66,8 +66,9 @@ import java.util.ArrayList;
 import java.util.List;
 import org.jboss.netty.channel.ChannelPipelineFactory;
 import com.eucalyptus.component.ComponentId;
-import com.eucalyptus.component.ComponentId.FaultLogPrefix;
-import com.eucalyptus.component.ComponentId.Partition;
+import com.eucalyptus.component.annotation.FaultLogPrefix;
+import com.eucalyptus.component.annotation.InternalService;
+import com.eucalyptus.component.annotation.Partition;
 import com.eucalyptus.component.ServiceUris;
 import com.eucalyptus.util.Internets;
 

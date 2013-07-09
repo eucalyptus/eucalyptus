@@ -62,7 +62,6 @@
 
 package com.eucalyptus.ws;
 
-import static com.eucalyptus.component.ComponentId.ComponentMessage;
 import java.net.URI;
 import java.util.HashMap;
 import java.util.List;
@@ -110,13 +109,14 @@ import com.eucalyptus.binding.BindingManager;
 import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.bootstrap.Hosts;
 import com.eucalyptus.component.ComponentId;
-import com.eucalyptus.component.ComponentId.ServiceOperation;
 import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.ComponentMessages;
 import com.eucalyptus.component.Components;
 import com.eucalyptus.component.ServiceOperations;
 import com.eucalyptus.component.ServiceUris;
 import com.eucalyptus.component.Topology;
+import com.eucalyptus.component.annotation.ComponentMessage;
+import com.eucalyptus.component.annotation.ServiceOperation;
 import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.context.ServiceStateException;

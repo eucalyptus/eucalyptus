@@ -68,7 +68,7 @@ import com.eucalyptus.binding.HttpParameterMapping
 import com.eucalyptus.component.ComponentId
 import com.eucalyptus.component.ServiceConfiguration
 import com.eucalyptus.component.ServiceConfigurations
-import com.eucalyptus.component.ComponentId.ComponentMessage
+import com.eucalyptus.component.annotation.ComponentMessage
 import com.eucalyptus.component.id.ComponentService
 import com.eucalyptus.component.id.Eucalyptus
 import com.eucalyptus.system.Threads

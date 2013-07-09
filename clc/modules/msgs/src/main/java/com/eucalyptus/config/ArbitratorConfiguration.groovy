@@ -64,19 +64,19 @@ package com.eucalyptus.config
 
 import java.io.Serializable
 
-import javax.persistence.Column;
+import javax.persistence.Column
 import javax.persistence.PersistenceContext
-import javax.persistence.PostLoad;
+import javax.persistence.PostLoad
 import javax.persistence.Table
 import javax.persistence.Transient
 import org.hibernate.annotations.Cache
 import org.hibernate.annotations.CacheConcurrencyStrategy
 import org.hibernate.annotations.Entity
-import com.eucalyptus.component.ComponentId.ComponentPart
-import com.eucalyptus.configurable.ConfigurableClass;
-import com.eucalyptus.configurable.ConfigurableField;
-import com.eucalyptus.configurable.ConfigurableIdentifier;
-import com.eucalyptus.empyrean.Empyrean.Arbitrator
+import com.eucalyptus.component.annotation.ComponentPart
+import com.eucalyptus.configurable.ConfigurableClass
+import com.eucalyptus.configurable.ConfigurableField
+import com.eucalyptus.configurable.ConfigurableIdentifier
+import com.eucalyptus.empyrean.Arbitrator
 
 @Entity @javax.persistence.Entity
 @PersistenceContext(name="eucalyptus_config")
