@@ -151,6 +151,7 @@
 //!
 //! @return A pointer to the response structure
 //!
+/*
 adb_GetLogsResponse_t *GetLogsMarshal(adb_GetLogs_t * getLogs, const axutil_env_t * env)
 {
     int rc = EUCA_OK;
@@ -210,7 +211,7 @@ adb_GetLogsResponse_t *GetLogsMarshal(adb_GetLogs_t * getLogs, const axutil_env_
     adb_GetLogsResponse_set_GetLogsResponse(ret, env, response);
     return (ret);
 }
-
+*/
 //!
 //! Server side of the get keys service request
 //!
