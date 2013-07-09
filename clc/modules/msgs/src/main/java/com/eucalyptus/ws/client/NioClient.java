@@ -71,12 +71,12 @@ import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 import org.apache.log4j.Logger;
+import org.jboss.netty.bootstrap.ClientBootstrap;
 import org.jboss.netty.channel.ChannelFactory;
 import org.jboss.netty.channel.ChannelFuture;
 import org.jboss.netty.channel.ChannelFutureListener;
 import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.ChannelPipeline;
-import org.jboss.netty.channel.ChannelPipelineCoverage;
 import org.jboss.netty.channel.ChannelPipelineFactory;
 import org.jboss.netty.channel.ChannelStateEvent;
 import org.jboss.netty.channel.ExceptionEvent;
@@ -96,7 +96,6 @@ import com.eucalyptus.util.EucalyptusClusterException;
 import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.ws.Client;
 import com.eucalyptus.ws.handlers.ResponseHandler;
-import com.eucalyptus.ws.util.NioBootstrap;
 import com.google.common.base.Supplier;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 
@@ -126,7 +125,7 @@ public class NioClient implements Client {
     }
     
   }
-  @ChannelPipelineCoverage( "one" )
+
   public class NioResponseHandler extends SimpleChannelHandler implements ResponseHandler {
     private Lock canHas = new ReentrantLock();
     private Condition ready = canHas.newCondition( );
@@ -243,12 +242,12 @@ public class NioClient implements Client {
   private static OrderedMemoryAwareThreadPoolExecutor clientBossPool;
 
   private static OrderedMemoryAwareThreadPoolExecutor clientWorkerPool;
-  public static NioBootstrap getClientBootstrap( ChannelPipelineFactory factory ) {
-    final NioBootstrap bootstrap = new NioBootstrap( getClientChannelFactory( ) );//TODO: pass port host, etc here.
+  public static ClientBootstrap getClientBootstrap( ChannelPipelineFactory factory ) {
+    final ClientBootstrap bootstrap = new ClientBootstrap( getClientChannelFactory( ) );//TODO: pass port host, etc here.
     bootstrap.setPipelineFactory( factory );
-    bootstrap.setOption( "tcpNoDelay", false );
-    bootstrap.setOption( "keepAlive", false );
-    bootstrap.setOption( "reuseAddress", false );
+    bootstrap.setOption( "tcpNoDelay", true );
+    bootstrap.setOption( "keepAlive", true );
+    bootstrap.setOption( "reuseAddress", true );
     bootstrap.setOption( "connectTimeoutMillis", 3000 );
     return bootstrap;
   }
@@ -299,7 +298,7 @@ public class NioClient implements Client {
   
   private static Logger     LOG = Logger.getLogger( NioClient.class );
   
-  private NioBootstrap      clientBootstrap;
+  private ClientBootstrap   clientBootstrap;
   
   private String            hostname;
   private int               port;

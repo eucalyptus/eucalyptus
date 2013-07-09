@@ -76,8 +76,8 @@ import org.apache.ws.security.WSSecurityException;
 import org.apache.ws.security.message.WSSecHeader;
 import org.apache.ws.security.message.WSSecSignature;
 import org.apache.ws.security.message.WSSecTimestamp;
+import org.jboss.netty.channel.ChannelHandler;
 import org.jboss.netty.channel.ChannelHandlerContext;
-import org.jboss.netty.channel.ChannelPipelineCoverage;
 import org.jboss.netty.channel.Channels;
 import org.jboss.netty.channel.MessageEvent;
 import org.w3c.dom.Document;
@@ -87,7 +87,7 @@ import com.eucalyptus.crypto.util.WSSecurity;
 import com.eucalyptus.http.MappingHttpMessage;
 import com.eucalyptus.ws.util.CredentialProxy;
 
-@ChannelPipelineCoverage( "all" )
+@ChannelHandler.Sharable
 public abstract class WsSecHandler extends MessageStackHandler {
   private static Logger         LOG    = Logger.getLogger( WsSecHandler.class );
   private final CredentialProxy credentials;

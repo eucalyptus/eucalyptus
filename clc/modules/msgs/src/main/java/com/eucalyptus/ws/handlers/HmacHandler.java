@@ -64,17 +64,12 @@ package com.eucalyptus.ws.handlers;
 
 import java.util.List;
 import java.util.Map;
-import javax.security.auth.login.LoginException;
 import org.apache.commons.io.output.ByteArrayOutputStream;
 import org.apache.log4j.Logger;
-import org.jboss.netty.channel.ChannelPipelineCoverage;
 import org.jboss.netty.channel.MessageEvent;
-import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.login.AuthenticationException;
 import com.eucalyptus.auth.login.HmacCredentials;
 import com.eucalyptus.auth.login.SecurityContext;
-import com.eucalyptus.auth.principal.User;
-import com.eucalyptus.context.Contexts;
 import com.eucalyptus.crypto.util.SecurityParameter;
 import com.eucalyptus.http.MappingHttpRequest;
 import com.eucalyptus.util.CollectionUtils;
@@ -82,7 +77,6 @@ import com.eucalyptus.ws.util.HmacUtils;
 import com.google.common.base.Function;
 import com.google.common.collect.Maps;
 
-@ChannelPipelineCoverage( "one" )
 public class HmacHandler extends MessageStackHandler {
   private static Logger LOG = Logger.getLogger( HmacHandler.class );
   private boolean internal = false;

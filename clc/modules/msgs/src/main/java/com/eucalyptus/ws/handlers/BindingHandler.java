@@ -66,8 +66,8 @@ import java.util.regex.Pattern;
 import org.apache.axiom.om.OMElement;
 import org.apache.axiom.om.OMNamespace;
 import org.apache.log4j.Logger;
+import org.jboss.netty.channel.ChannelHandler;
 import org.jboss.netty.channel.ChannelHandlerContext;
-import org.jboss.netty.channel.ChannelPipelineCoverage;
 import org.jboss.netty.channel.MessageEvent;
 import com.eucalyptus.binding.Binding;
 import com.eucalyptus.binding.BindingException;
@@ -82,7 +82,7 @@ import edu.ucsb.eucalyptus.msgs.BaseMessage;
 import edu.ucsb.eucalyptus.msgs.EucalyptusErrorMessageType;
 import edu.ucsb.eucalyptus.msgs.ExceptionResponseType;
 
-@ChannelPipelineCoverage( "all" )
+@ChannelHandler.Sharable
 public class BindingHandler extends MessageStackHandler {
   private static Logger LOG = Logger.getLogger( BindingHandler.class );
   

@@ -66,14 +66,12 @@ import java.io.IOException;
 import org.apache.log4j.Logger;
 import org.jboss.netty.channel.ChannelEvent;
 import org.jboss.netty.channel.ChannelHandlerContext;
-import org.jboss.netty.channel.ChannelPipelineCoverage;
 import org.jboss.netty.channel.ExceptionEvent;
 import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.channel.UpstreamMessageEvent;
 import org.jboss.netty.handler.codec.http.DefaultHttpChunk;
 import com.eucalyptus.http.MappingHttpRequest;
 
-@ChannelPipelineCoverage("one")
 public class WalrusPOSTIncomingHandler extends MessageStackHandler {
 	private static Logger LOG = Logger.getLogger( WalrusPOSTIncomingHandler.class );
 	private final static long EXPIRATION_LIMIT = 900000;

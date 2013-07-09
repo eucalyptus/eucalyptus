@@ -65,7 +65,6 @@ package com.eucalyptus.ws.stages;
 import java.util.ArrayList;
 
 import org.jboss.netty.channel.ChannelHandlerContext;
-import org.jboss.netty.channel.ChannelPipelineCoverage;
 import org.jboss.netty.channel.MessageEvent;
 
 import com.eucalyptus.http.MappingHttpRequest;
@@ -85,7 +84,6 @@ import edu.ucsb.eucalyptus.msgs.ResetImageAttributeType;
 import edu.ucsb.eucalyptus.msgs.RunInstancesType;
 import edu.ucsb.eucalyptus.msgs.RunningInstancesItemType;
 
-@ChannelPipelineCoverage("one")
 public class ElasticFoxMangleHandler extends MessageStackHandler {
 
   @Override

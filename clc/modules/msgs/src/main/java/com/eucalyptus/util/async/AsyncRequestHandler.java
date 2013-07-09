@@ -66,35 +66,23 @@ import java.io.IOException;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
-import java.util.concurrent.locks.Lock;
-import java.util.concurrent.locks.ReentrantLock;
 import org.apache.log4j.Logger;
+import org.jboss.netty.bootstrap.ClientBootstrap;
 import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelEvent;
-import org.jboss.netty.channel.ChannelFactory;
 import org.jboss.netty.channel.ChannelFuture;
 import org.jboss.netty.channel.ChannelFutureListener;
 import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.ChannelPipeline;
-import org.jboss.netty.channel.ChannelPipelineCoverage;
 import org.jboss.netty.channel.ChannelPipelineFactory;
 import org.jboss.netty.channel.ChannelStateEvent;
 import org.jboss.netty.channel.ExceptionEvent;
 import org.jboss.netty.channel.MessageEvent;
-import org.jboss.netty.channel.socket.nio.NioClientSocketChannelFactory;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.jboss.netty.handler.codec.http.HttpRequest;
 import org.jboss.netty.handler.codec.http.HttpVersion;
-import org.jboss.netty.handler.execution.OrderedMemoryAwareThreadPoolExecutor;
-import org.jboss.netty.handler.timeout.IdleStateHandler;
-import org.jboss.netty.handler.timeout.ReadTimeoutHandler;
-import org.jboss.netty.handler.timeout.WriteTimeoutHandler;
-import org.jboss.netty.util.HashedWheelTimer;
-import com.eucalyptus.bootstrap.Hosts;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.Topology;
 import com.eucalyptus.http.MappingHttpRequest;
@@ -104,11 +92,8 @@ import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
 import com.eucalyptus.records.Logs;
 import com.eucalyptus.util.Exceptions;
-import com.eucalyptus.util.LogUtil;
-import com.eucalyptus.util.TypeMappers;
 import com.eucalyptus.ws.EucalyptusRemoteFault;
 import com.eucalyptus.ws.WebServices;
-import com.eucalyptus.ws.util.NioBootstrap;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 
 /**
@@ -116,11 +101,10 @@ import edu.ucsb.eucalyptus.msgs.BaseMessage;
  * @param <Q>
  * @param <R>
  */
-@ChannelPipelineCoverage( "one" )
 public class AsyncRequestHandler<Q extends BaseMessage, R extends BaseMessage> implements RequestHandler<Q, R> {
   private static Logger                LOG           = Logger.getLogger( AsyncRequestHandler.class );
   
-  private NioBootstrap                 clientBootstrap;
+  private ClientBootstrap              clientBootstrap;
   private ChannelFuture                connectFuture;
   
   private final AtomicBoolean          writeComplete = new AtomicBoolean( false );
@@ -133,7 +117,7 @@ public class AsyncRequestHandler<Q extends BaseMessage, R extends BaseMessage> i
   }
   
   /**
-   * @see com.eucalyptus.util.async.RequestHandler#fire(com.eucalyptus.component.ServiceEndpoint)
+   * @see RequestHandler#fire(com.eucalyptus.component.ServiceEndpoint)
    * @param serviceEndpoint
    * @return
    */

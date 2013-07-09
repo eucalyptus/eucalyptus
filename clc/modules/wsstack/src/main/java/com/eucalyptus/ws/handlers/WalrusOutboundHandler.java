@@ -65,7 +65,6 @@ package com.eucalyptus.ws.handlers;
 import org.apache.log4j.Logger;
 import org.jboss.netty.channel.ChannelFutureListener;
 import org.jboss.netty.channel.ChannelHandlerContext;
-import org.jboss.netty.channel.ChannelPipelineCoverage;
 import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.handler.codec.http.HttpHeaders;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
@@ -86,7 +85,6 @@ import edu.ucsb.eucalyptus.msgs.WalrusDeleteResponseType;
 import edu.ucsb.eucalyptus.msgs.WalrusErrorMessageType;
 import edu.ucsb.eucalyptus.msgs.WalrusHeadResponseType;
 
-@ChannelPipelineCoverage("one")
 public class WalrusOutboundHandler extends MessageStackHandler {
 	private static Logger LOG = Logger.getLogger( WalrusOutboundHandler.class );
 

@@ -71,7 +71,6 @@ import java.util.Map;
 import java.util.TimeZone;
 import java.util.concurrent.TimeUnit;
 import org.apache.log4j.Logger;
-import org.jboss.netty.channel.ChannelPipelineCoverage;
 import org.jboss.netty.channel.MessageEvent;
 import com.eucalyptus.auth.login.AuthenticationException;
 import com.eucalyptus.crypto.util.SecurityHeader;
@@ -82,7 +81,6 @@ import com.eucalyptus.ws.StackConfiguration;
 import com.eucalyptus.ws.util.HmacUtils;
 import com.google.common.base.Function;
 
-@ChannelPipelineCoverage( "one" )
 public class QueryTimestampHandler extends MessageStackHandler {
   private static final Logger LOG = Logger.getLogger( QueryTimestampHandler.class );
   private static final EnumSet<HmacUtils.SignatureVersion> SIGNATURE_VERSIONS = EnumSet.allOf(HmacUtils.SignatureVersion.class);

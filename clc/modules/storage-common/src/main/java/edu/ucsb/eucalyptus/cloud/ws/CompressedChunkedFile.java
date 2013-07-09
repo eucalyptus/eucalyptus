@@ -117,6 +117,11 @@ public class CompressedChunkedFile implements ChunkedInput, IsData {
 		zip.write(chunk);
 		zip.close();
 		return ChannelBuffers.wrappedBuffer(out.toByteArray());
-	}	
+	}
+
+	@Override
+	public boolean isEndOfInput() throws Exception {
+		return !hasNextChunk( );
+	}
 }
 
