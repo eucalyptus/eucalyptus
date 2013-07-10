@@ -242,9 +242,8 @@ define(['app'], function(app) {
             return isMatch;
           });
           return testAll;
-      }).map(function(model) {
-        return model.toJSON();
       });
+
       self.filtered.set(results);
     }
 
