@@ -168,10 +168,13 @@
         keyName = $.trim(asText(val));
         if (keyName == '')
           return null;
-        if (!KEY_PATTERN.test(keyName))
+        if (!KEY_PATTERN.test(keyName)) {
+          thisObj.setButtonStatus(false, false, $add_dialog, createButtonId);
           return keypair_dialog_error_msg;
-        else
+       }  else {
+          thisObj.setButtonStatus(true, true, $add_dialog, createButtonId);
           return null;
+       }
       });
       $tmpl = $('html body').find('.templates #keypairImportDlgTmpl').clone();
       $rendered = $($tmpl.render($.extend($.i18n.map, help_keypair)));
@@ -200,29 +203,58 @@
       });
       $import_dialog.find("#key-name").watermark(keypair_dialog_add_name_watermark);
       $import_dialog.find("#key-import-contents").watermark(keypair_dialog_import_contents_watermark);
-      $import_dialog.eucadialog('buttonOnKeyupNew', $import_dialog.find('#key-name'), createButtonId, function(val){
-	var keyName = $.trim($import_dialog.find('#key-name').val());
-	return KEY_PATTERN.test(keyName);
-      }); 
+      $import_dialog.eucadialog('buttonOnKeyup', $import_dialog.find('#key-name'), createButtonId); 
+
+      var condition_1 = false;
+      var condition_2 = false;
+
       $import_dialog.eucadialog('validateOnType', '#key-name', function(val) {
         keyName = $.trim(asText(val));
-        if (keyName == '')
+        if (keyName == '') {
+          condition_1 = false;
+          thisObj.setButtonStatus(condition_1, condition_2, $import_dialog, createButtonId);
           return null;
-        if (!KEY_PATTERN.test(keyName))
+        }
+        if (!KEY_PATTERN.test(keyName)) {
+          condition_1 = false;
+          thisObj.setButtonStatus(condition_1, condition_2, $import_dialog, createButtonId);
           return keypair_dialog_error_msg;
-        else
+        } else {
+          condition_1 = true;
+          thisObj.setButtonStatus(condition_1, condition_2, $import_dialog, createButtonId);
           return null;
+        }
+      });
+
+      $import_dialog.eucadialog('validateOnType', '#key-import-contents', function(val) {
+        keyName = $.trim(asText(val));
+        if (keyName == '') {
+          condition_2 = false;
+          thisObj.setButtonStatus(condition_1, condition_2, $import_dialog, createButtonId);
+          return null;
+        } else {
+          condition_2 = true;
+          thisObj.setButtonStatus(condition_1, condition_2, $import_dialog, createButtonId);
+          return null;
+        }
       });
       $import_dialog.find("input[type=file]").on('change', function(evt) {
             var file = evt.target.files[0];
             var reader = new FileReader();
             reader.onloadend = function(evt) {
                 if (evt.target.readyState == FileReader.DONE) {
-                    $import_dialog.find("#key-import-contents").val(evt.target.result);
+                    $import_dialog.find("#key-import-contents").val(evt.target.result).trigger('keyup');
                 }
             }
             reader.readAsText(file);
         });
+    },
+
+    setButtonStatus: function(a, b, dialog, buttonId) {
+      if (a && b)
+        dialog.eucadialog('enableButton', buttonId);
+      else 
+        dialog.eucadialog('disableButton', buttonId);
     },
 
     _destroy : function() {
