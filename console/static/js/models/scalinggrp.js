@@ -193,6 +193,10 @@ function(EucaModel, tags) {
       if (honor_cooldown != undefined)
         data += "&HonorCooldown=true";
       this.makeAjaxCall(url, data, options);
+    },
+
+    isNew: function() {
+        return this.get('autoscaling_group_arn') == null;
     }
   });
   return model;

@@ -12,16 +12,6 @@ define([
   var config = function() {
       var wizard = new Wizard();
 
-      function canFinish(position, problems) {
-        // VALIDATE THE MODEL HERE AND IF THERE ARE PROBLEMS,
-        // ADD THEM INTO THE PASSED ARRAY
-        return position === 2;
-      }
-
-      function finish() {
-          window.location = '#scaling';
-      }
-
       var scope = new Backbone.Model({
         availabilityZones: new Backbone.Collection(),
         loadBalancers: new Backbone.Collection(),
@@ -35,7 +25,31 @@ define([
             setTimeout(function() { $(e.target).change(); }, 0);
         }
       });
-      scalescope = scope;
+
+      function canFinish(position, problems) {
+        // VALIDATE THE MODEL HERE AND IF THERE ARE PROBLEMS,
+        // ADD THEM INTO THE PASSED ARRAY
+        return position === 2;
+      }
+
+      function finish() {
+          console.log('CREATING SCALING GROUP!');
+          scope.get('scalingGroup').save();
+          window.location = '#scaling';
+      }
+
+      // Sync changes to the availability zones collection into the scaling group
+      scope.get('availabilityZones').on('add remove', function() {
+        scope.get('scalingGroup').set('zones', 
+            scope.get('availabilityZones').pluck('name'));
+      });
+
+      // Sync changes to the load balancers collection into the scaling group
+      scope.get('loadBalancers').on('add remove', function() {
+        scope.get('scalingGroup').set('load_balancers', 
+            scope.get('loadBalancers').pluck('name'));
+      });
+
       var p1 = new page1({model: scope});
       var p2 = new page2({model: scope});
       var p3 = new page3({model: scope});
