@@ -3338,6 +3338,24 @@ outline: 0 none;
   color: #02405f;
 }
 
+.new-scaling-group-general .scaling-group-instances {
+  position: relative;
+}
+
+.new-scaling-group-general .scaling_group_thermometer {
+  position: absolute;
+  top: 67px;
+  left: 226px;
+}
+
+.new-scaling-group-general .form-row.scale-desired {
+    padding-top: 22px;
+}
+
+.new-scaling-group-general .form-row.scale-min {
+    padding-top: 22px;
+}
+
 #scaling-topselector { 
   margin: 0 14px;
 }
