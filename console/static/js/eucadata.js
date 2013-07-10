@@ -90,6 +90,9 @@
                 return;
               }
               ep.model.fetch({merge: true, add: true, remove: true,
+                              //success: function(col, resp, options) {
+                              //  col.trigger('initialized');
+                              //},
                               error:function(textStatus, jqXHR, options) {
                                 thisObj._errorCode = jqXHR.status;
                                 thisObj._numPending--;
