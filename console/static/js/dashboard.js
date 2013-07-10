@@ -120,7 +120,8 @@
       });
       $instObj.find('#dashboard-instance-running').wrapAll(
         $('<a>').attr('href','#').click( function(evt){
-          thisObj._trigger('select', evt, {selected:'instance', filter:'running'});
+          var az=$instObj.find('#dashboard-instance-az select').val();
+          thisObj._trigger('select', evt, {selected:'instance', filter:{state_filter:'running', az_filter:az}});
           $('html body').trigger('click', 'navigator:instance');
           return false;
         }));

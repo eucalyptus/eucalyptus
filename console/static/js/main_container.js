@@ -119,7 +119,11 @@
              this.element.dashboard({select: function(evt, ui){$container.maincontainer("changeSelected", evt, ui)}});
              break;
          case 'instance':
-             this.element.instance({'state_filter': filter});
+             if(typeof filter == 'object') {
+              this.element.instance(filter);
+             } else {
+              this.element.instance({'state_filter': filter});
+             }
              break;
          case 'scaling':
              this.element.scaling();
