@@ -6,6 +6,12 @@ define([
 ], function(EucaModel) {
   var model = EucaModel.extend({
     namedColumns: ['id', 'image'], 
+    initialize: function() {
+      if(!this.get('platform')) {
+        this.set('platform', 'linux');
+      }
+      EucaModel.prototype.initialize.call(this);
+    },
     sync: function(method, model, options){
       if(method == 'create'){
         var url = "/ec2?Action=RegisterImage";

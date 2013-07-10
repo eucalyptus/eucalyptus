@@ -34,7 +34,7 @@
       $dashboard.appendTo($wrapper);
       $wrapper.appendTo(this.element);
       this._addHelp($help);
-      var needs = ['zones', 'images', 'instances', 'keypairs', 'groups', 'addresses', 'volumes', 'snapshots', 'tags'];
+      var needs = ['zones', 'instances', 'keypairs', 'groups', 'addresses', 'volumes', 'snapshots', 'scalinginst'];
       setDataInterest(needs);
       $('html body').eucadata('setDataNeeds', ['dash', 'zones']);
     },
@@ -120,7 +120,8 @@
       });
       $instObj.find('#dashboard-instance-running').wrapAll(
         $('<a>').attr('href','#').click( function(evt){
-          thisObj._trigger('select', evt, {selected:'instance', filter:'running'});
+          var az=$instObj.find('#dashboard-instance-az select').val();
+          thisObj._trigger('select', evt, {selected:'instance', filter:{state_filter:'running', az_filter:az}});
           $('html body').trigger('click', 'navigator:instance');
           return false;
         }));
@@ -227,9 +228,7 @@
 
           $instObj.find('#dashboard-instance-running span').text(inst_running_count);
           $instObj.find('#dashboard-instance-stopped span').text(inst_stopped_count);
-          var scalinginsts = describe('scalinginst');
-          if (scalinginsts == null) scalinginsts = [];
-          $instObj.find('#dashboard-scaling-groups span').text(scalinginsts.length);
+          $instObj.find('#dashboard-scaling-groups span').text(results.get('scalinginst'));
           $storageObj.find('#dashboard-storage-volume span').text(results.get('volume'));
           $storageObj.find('#dashboard-storage-snapshot span').text(results.get('snapshot'));
 //        $storageObj.find('#dashboard-storage-buckets span').text(0);

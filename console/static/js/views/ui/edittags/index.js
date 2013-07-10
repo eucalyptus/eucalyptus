@@ -201,13 +201,15 @@ define([
                     scope.tag.set({_clean: false, _deleted: false, _edited: false, _edit: true, _displayonly: false});
 
                     // SET UP VALIDATE ON THIS TAG
-                    scope.tag.on('change', function() {
+                    scope.tag.on('change', function(thisTag) {
                       scope.error.clear();
                       scope.error.set(scope.tag.validate());
+                      thisTag.set('tag_is_invalid', !scope.tag.isValid());
+                      model.trigger('validation_change', thisTag);
                     });
 
                     // VERIFY THE VALIDATION STATUS
-                    scope.tag.on('validated', function() {
+                    scope.tag.on('validated', function(model) {
                       scope.isTagValid = scope.tag.isValid();
                     });
                 },
@@ -254,12 +256,24 @@ define([
             self.scope.newtag.on('change', function() {
               self.scope.error.clear();
               self.scope.error.set(self.scope.newtag.validate());
+              if(self.scope.newtag.get('name') == undefined && self.scope.newtag.get('value') == undefined) {
+                ; // ignore - not a real tag *BUG?*
+              } else {
+                self.scope.newtag.set('tag_is_invalid', !self.scope.newtag.isValid());
+                model.trigger('validation_change', self.scope.newtag);
+              }
             });
 
             self.scope.newtag.on('validated', function() {
               self.scope.isTagValid = self.scope.newtag.isValid();
               console.log("isTagValid: " + self.scope.newtag.isValid());
             });
+
+           self.scope.fireChange = function(e) {
+             if(e.keyCode != 9) { 
+               $(e.target).change();
+             }
+           }
 
             this.$el.html(template);
             this.rview = rivets.bind(this.$el, this.scope);

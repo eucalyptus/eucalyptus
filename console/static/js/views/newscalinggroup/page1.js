@@ -10,14 +10,7 @@ define([
         var self = this;
         var scope = this.model;
 
-        scope.set('launchConfigs', {
-            name: 'launchConfig',
-            collection: app.data.launchConfigs,
-            itrLabel: function() {
-                return this.itr.get('name');
-            }
-       });
-
+        scope.set('launchConfigs', app.data.launchConfigs);
         scope.set('scalingGroupErrors', new Backbone.Model());
 
         scope.get('scalingGroup').on('change', function(model) {
@@ -29,6 +22,10 @@ define([
             _.each(_.keys(model.changed), function(key) { 
                 scope.get('scalingGroupErrors').set(key, errors[key]); 
             });
+        });
+
+        scope.get('launchConfigs').on('add remove sync reset change', function(model) {
+            self.render();
         });
 
         $(this.el).html(template);

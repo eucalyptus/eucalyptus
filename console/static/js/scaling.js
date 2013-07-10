@@ -74,7 +74,7 @@
             {
               "aTargets" : [3],
               "mData": function(oObj) { 
-                return oObj.instances.length;
+                return oObj.instances?oObj.instances.length:0;
               }
             },
             { 

@@ -119,7 +119,11 @@
              this.element.dashboard({select: function(evt, ui){$container.maincontainer("changeSelected", evt, ui)}});
              break;
          case 'instance':
-             this.element.instance({'state_filter': filter});
+             if(typeof filter == 'object') {
+              this.element.instance(filter);
+             } else {
+              this.element.instance({'state_filter': filter});
+             }
              break;
          case 'scaling':
              this.element.scaling();
@@ -181,7 +185,7 @@
 	        this.element.jpvols();
           break;
 	      case 'newscalinggroup':
-	        this.element.newscalinggroup();
+      	  this.element.newscalinggroup();
           break;
           case 'scalinggroup':
             this.element.scalinggroup();
@@ -193,7 +197,10 @@
           this.element.launchconfig();
           break;
         case 'newlaunchconfig':
-          this.element.newlaunchconfig();
+          var options = {};
+          if(filter && filter['image'])
+            options['image'] = filter['image'].get('id');
+          this.element.newlaunchconfig(options);
           break;
       }
       if (options !== KEEP_VIEW) {

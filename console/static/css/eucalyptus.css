@@ -2133,6 +2133,10 @@ div.sgroup-expanded .expanded-table thead th {
   padding-left: 2px;
 }
 
+.wizard-required-footer-text {
+  margin: 3px 0 3px 26px;
+}
+
 #launch-wizard-image-table {
   padding-top: 15px;  
 } 
@@ -3332,6 +3336,24 @@ outline: 0 none;
 
 .scalingtab.active a {
   color: #02405f;
+}
+
+.new-scaling-group-general .scaling-group-instances {
+  position: relative;
+}
+
+.new-scaling-group-general .scaling_group_thermometer {
+  position: absolute;
+  top: 67px;
+  left: 226px;
+}
+
+.new-scaling-group-general .form-row.scale-desired {
+    padding-top: 22px;
+}
+
+.new-scaling-group-general .form-row.scale-min {
+    padding-top: 22px;
 }
 
 #scaling-topselector { 
