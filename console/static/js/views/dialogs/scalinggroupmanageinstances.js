@@ -1,11 +1,12 @@
 define([
     './eucadialogview', 
+    'underscore',
     'app', 
     'text!./scalinggroupmanageinstances.html',
     'models/scalinginst',
     'views/searches/scalinginst'
   ], 
-  function(EucaDialogView, app, tpl, ScalingInst, Search) {
+  function(EucaDialogView, _, app, tpl, ScalingInst, Search) {
     return EucaDialogView.extend({
       initialize: function(args) {
         var self = this;
@@ -70,20 +71,12 @@ define([
             self.close();
           },
 
-          showControls: function(e, obj) {
-            obj.instance.set('hasFocus', true);
-          },
-
-          hideControls: function(e, obj) {
-            obj.instance.unset('hasFocus');
-          },
-
           search: new Search(clone.get('instances')),
         };
 
         this.scope.instances = this.scope.search.filtered;
-        this.scope.search.filtered.on('add remove sync change reset', function() {
-          self.render();
+        this.scope.search.filtered.on('add remove sync reset', function() {
+            self.render();
         });
         this._do_init();
       },
