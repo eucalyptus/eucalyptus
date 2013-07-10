@@ -75,7 +75,7 @@ $ISCSIADM = untaint(`which iscsiadm`);
 $MULTIPATH = untaint(`which multipath`);
 
 $CONF_IFACES_KEY = "STORAGE_INTERFACES";
-$LOGIN_TIMEOUT = 5;
+$LOGIN_TIMEOUT = 12;
 $LOGOUT_TIMEOUT = 5;
 $LOGIN_RETRY_COUNT = 1;
 
