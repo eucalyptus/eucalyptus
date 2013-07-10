@@ -2221,8 +2221,8 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
     if ( this.transientVolumeState != null ) builder2.append( "transientVolumeState=" ).append( this.transientVolumeState ).append( ":" );
     if ( this.placement != null ) builder2.append( "placement=" ).append( this.placement ).append( ":" );
     if ( this.privateNetwork != null ) builder2.append( "privateNetwork=" ).append( this.privateNetwork ).append( ":" );
-    if ( this.networkGroups != null ) builder2.append( "networkGroups=" ).append( this.networkGroups ).append( ":" );
-    if ( this.networkIndex != null ) builder2.append( "networkIndex=" ).append( this.networkIndex );
+    if ( Entities.isReadable( this.networkGroups ) ) builder2.append( "networkGroups=" ).append( this.networkGroups ).append( ":" );
+    if ( Entities.isReadable( this.networkIndex ) ) builder2.append( "networkIndex=" ).append( this.networkIndex );
     return builder2.toString( );
   }
   

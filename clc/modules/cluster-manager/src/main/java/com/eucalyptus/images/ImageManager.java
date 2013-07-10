@@ -230,9 +230,10 @@ public class ImageManager {
       };
       imageInfo = RestrictedTypes.allocateUnitlessResource( allocator );
     } else {
-      throw new EucalyptusCloudException( "Malformed registration. A request must specify either " +
-                                          "a manifest path or a snapshot to use for BFE. Provided values are: imageLocation="
-                                          + request.getImageLocation( ) + " blockDeviceMappings=" + request.getBlockDeviceMappings( ) );
+      throw new EucalyptusCloudException( "Invalid request:  the request must specify either ImageLocation for an " +
+                                          "instance-store image or a snapshot for the root device for an EBS image.  " +
+                                          "Provided values were: ImageLocation=" + request.getImageLocation( ) +
+                                          " BlockDeviceMappings=" + request.getBlockDeviceMappings( ) );
     }
     
     RegisterImageResponseType reply = ( RegisterImageResponseType ) request.getReply( );
