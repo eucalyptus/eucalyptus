@@ -38,7 +38,8 @@ var DOM_BINDING = {header:'.euca-container .euca-header-container .inner-contain
                    hidden:'.euca-hidden-container'
                   };
 
-var SGROUP_NAME_PATTERN = new RegExp('^[ A-Za-z0-9_\-]{1,242}$');
+// this sgroup name pattern conforms with EC2-VPC standards
+var SGROUP_NAME_PATTERN = new RegExp('^[ A-Za-z0-9_.\-:/()#,@[\\]+=&;{}!$\\*]{1,242}$');
 var KEY_PATTERN = new RegExp('^[ A-Za-z0-9_\-]{1,242}$');
 var VOL_ID_PATTERN = new RegExp('^vol-[A-Za-z0-9]{8}$');
 var IP_PATTER = new RegExp('[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}$');
