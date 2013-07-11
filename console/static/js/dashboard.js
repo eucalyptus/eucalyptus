@@ -83,7 +83,13 @@
         $('<img>').attr('src','images/dots32.gif'));
       // set filter on eucadata for summary
       var az=$instObj.find('#dashboard-instance-az select').val();
-      $('html body').eucadata('setDataFilter', 'dash', {'AvailabilityZone':az});
+      require(['app'], function(app) {
+        if (az == 'all') {
+          app.data.summary.params = undefined;
+        } else {
+          app.data.summary.params = {zone: az};
+        }
+      });
     },
 
     _setTotals : function($instObj, $storageObj, $netsecObj){
@@ -195,52 +201,31 @@
         $instObj.find('#dashboard-scaling-groups div img').remove();
         $storageObj.find('#dashboard-storage-volume img').remove();
         $storageObj.find('#dashboard-storage-snapshot img').remove();
-//        $storageObj.find('#dashboard-storage-buckets img').remove();
-//        $netsecObj.find('#dashboard-netsec-load-balancer img').remove();
+//      $storageObj.find('#dashboard-storage-buckets img').remove();
+//      $netsecObj.find('#dashboard-netsec-load-balancer img').remove();
         $netsecObj.find('#dashboard-netsec-sgroup img').remove();
         $netsecObj.find('#dashboard-netsec-eip img').remove();
         $netsecObj.find('#dashboard-netsec-keypair img').remove();
 
         var az=$instObj.find('#dashboard-instance-az select').val();
 
-        // KYO: THE FILTER ABOVE HAS BEEN DISABLED DURING BACKBONE INTEGRATION
-        // THE BELOW IS THE NEW APPROACH            --- 06/17/2013
-//        var results = describe('summary')[0];
-        require(['app'], function(app) {
-	  var results = app.data.summary.first();
-          var inst_running_count = 0;
-	  var inst_stopped_count = 0;
-          if( az !== "all" ){
-	    // NEED TO SCAN THE INSTANCE COLLECITON TO CAPTURE PER ZONE COUNT
-	    // TODO: NEED TO HAVE THE SUMMARY COLLECTION UPDATE AUTOMATICALLY PER ZONE
-	    app.data.instance.each(function(instance){
-		if( instance.get('placement') === az && instance.get('state') === "running" ){
-		   inst_running_count++;
-		}else if( instance.get('placement') === az && instance.get('state') === "stopped" ){
-		   inst_stopped_count++;
-		}
-	    });
-	  }else{
-	    // GET THE COUNTS FROM THE SUMMARY COLLECTION
-            inst_running_count = results.get('inst_running');
-	    inst_stopped_count = results.get('inst_stopped');
-	  };
+        var results = describe('summary')[0];
+        inst_running_count = results.inst_running;
+	    inst_stopped_count = results.inst_stopped;
 
-          $instObj.find('#dashboard-instance-running span').text(inst_running_count);
-          $instObj.find('#dashboard-instance-stopped span').text(inst_stopped_count);
-          $instObj.find('#dashboard-scaling-groups span').text(results.get('scalinginst'));
-          $storageObj.find('#dashboard-storage-volume span').text(results.get('volume'));
-          $storageObj.find('#dashboard-storage-snapshot span').text(results.get('snapshot'));
-//        $storageObj.find('#dashboard-storage-buckets span').text(0);
-//        $netsecObj.find('#dashboard-netsec-load-balancer span').text(0);
-          $netsecObj.find('#dashboard-netsec-sgroup span').text(results.get('sgroup'));
-          $netsecObj.find('#dashboard-netsec-eip span').text(results.get('eip'));
-          $netsecObj.find('#dashboard-netsec-keypair span').text(results.get('keypair'));
-	});
-      });
+        $instObj.find('#dashboard-instance-running span').text(inst_running_count);
+        $instObj.find('#dashboard-instance-stopped span').text(inst_stopped_count);
+        $instObj.find('#dashboard-scaling-groups span').text(results.scalinginst);
+        $storageObj.find('#dashboard-storage-volume span').text(results.volume);
+        $storageObj.find('#dashboard-storage-snapshot span').text(results.snapshot);
+//      $storageObj.find('#dashboard-storage-buckets span').text(0);
+//      $netsecObj.find('#dashboard-netsec-load-balancer span').text(0);
+        $netsecObj.find('#dashboard-netsec-sgroup span').text(results.sgroup);
+        $netsecObj.find('#dashboard-netsec-eip span').text(results.eip);
+        $netsecObj.find('#dashboard-netsec-keypair span').text(results.keypair);
+	  });
  
       $('html body').eucadata('refresh','summary');// pass zone?
-
     },
 
     _addHelp : function(help){
