@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8" standalone="no"?>
 <!--
-  Copyright 2009-2012 Eucalyptus Systems, Inc.
+  Copyright 2009-2013 Eucalyptus Systems, Inc.
 
   This program is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
@@ -60,17 +60,16 @@
     IDENTIFIED, OR WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT
     NEEDED TO COMPLY WITH ANY SUCH LICENSES OR RIGHTS.
   -->
-
-<xsd:schema xmlns="http://www.eucalyptus.com/schema/cloud/1.6"
+<xsd:schema xmlns="http://www.eucalyptus.com/schema/cloud/3.4"
             xmlns:xsd="http://www.w3.org/2001/XMLSchema"
-            xmlns:mule="http://www.mulesource.org/schema/mule/core/2.0"
-            targetNamespace="http://www.eucalyptus.com/schema/cloud/1.6"
+            xmlns:mule="http://www.mulesoft.org/schema/mule/core"
+            targetNamespace="http://www.eucalyptus.com/schema/cloud/3.4"
             elementFormDefault="qualified"
             attributeFormDefault="unqualified">
 
   <xsd:import namespace="http://www.w3.org/XML/1998/namespace"/>
-  <xsd:import namespace="http://www.springframework.org/schema/beans" schemaLocation="http://www.springframework.org/schema/beans"/>
-  <xsd:import namespace="http://www.mulesource.org/schema/mule/core/2.0" schemaLocation="http://www.mulesource.org/schema/mule/core/2.0/mule.xsd"/>
+  <xsd:import namespace="http://www.springframework.org/schema/beans" schemaLocation="http://www.springframework.org/schema/beans/spring-beans-3.2.xsd"/>
+  <xsd:import namespace="http://www.mulesoft.org/schema/mule/core" schemaLocation="http://www.mulesoft.org/schema/mule/core/3.4/mule.xsd"/>
 
   <xsd:element name="connector" type="eucaConnectorType" substitutionGroup="mule:abstract-connector">
     <xsd:annotation>

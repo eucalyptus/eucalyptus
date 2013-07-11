@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * Copyright 2009-2013 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -47,7 +47,7 @@ public class TokensErrorHandler {
     if ( exception instanceof MessagingException && exception.getCause( ) instanceof EucalyptusCloudException ) {
       try {
         final EucalyptusCloudException cloudException = (EucalyptusCloudException) exception.getCause( );
-        final BaseMessage payload = parsePayload( ( ( MessagingException ) exception ).getUmoMessage( ).getPayload( ) );
+        final BaseMessage payload = parsePayload( exMsg.getPayload( ) );
         final TokensErrorResponseType errorResp = new TokensErrorResponseType( );
         final HttpResponseStatus status;
         final String code;

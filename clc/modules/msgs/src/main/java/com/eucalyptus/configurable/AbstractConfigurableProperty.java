@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * Copyright 2009-2013 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -71,11 +71,9 @@ import java.util.NoSuchElementException;
 
 import javax.persistence.EntityTransaction;
 
-import org.apache.activemq.store.jdbc.adapter.TransactDatabaseLocker;
 import org.apache.log4j.Logger;
 import com.eucalyptus.configurable.PropertyDirectory.NoopEventListener;
 import com.eucalyptus.entities.Entities;
-import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.records.Logs;
 
 public abstract class AbstractConfigurableProperty implements ConfigurableProperty {

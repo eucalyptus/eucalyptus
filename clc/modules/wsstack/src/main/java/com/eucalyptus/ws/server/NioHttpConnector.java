@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * Copyright 2009-2013 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -62,8 +62,8 @@
 
 package com.eucalyptus.ws.server;
 
-import java.util.concurrent.atomic.AtomicReference;
 import org.apache.log4j.Logger;
+import org.mule.api.MuleContext;
 import org.mule.api.MuleException;
 import org.mule.api.lifecycle.Initialisable;
 import org.mule.api.lifecycle.InitialisationException;
@@ -75,9 +75,12 @@ public class NioHttpConnector extends AbstractConnector implements Initialisable
 
   public static String  PROTOCOL = "euca";
 
-  public NioHttpConnector( ) {
+  public NioHttpConnector( final MuleContext context ) {
+    super( context );
     super.registerSupportedProtocol( "http" );
     super.registerSupportedProtocol( "https" );
+    super.registerSupportedProtocolWithoutPrefix( "http" );
+    super.registerSupportedProtocolWithoutPrefix( "https" );
   }
 
   public void doConnect( ) throws MuleException {}

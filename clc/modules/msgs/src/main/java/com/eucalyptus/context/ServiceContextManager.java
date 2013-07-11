@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * Copyright 2009-2013 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -84,6 +84,7 @@ import org.mule.config.ConfigResource;
 import org.mule.config.spring.SpringXmlConfigurationBuilder;
 import org.mule.context.DefaultMuleContextFactory;
 import org.mule.module.client.MuleClient;
+import org.mule.service.ServiceCompositeMessageSource;
 import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.bootstrap.Bootstrapper;
 import com.eucalyptus.bootstrap.OrderedShutdown;
@@ -186,12 +187,11 @@ public class ServiceContextManager {
           this.client = new MuleClient( this.context );
           this.endpointToService.clear( );
           this.serviceToEndpoint.clear( );
-          for ( final Object o : this.context.getRegistry( ).lookupServices( ) ) {
-            final Service s = ( Service ) o;
-            for ( final Object p : s.getInboundRouter( ).getEndpoints( ) ) {
-              final InboundEndpoint in = ( InboundEndpoint ) p;
-              this.endpointToService.put( in.getEndpointURI( ).toString( ), s.getName( ) );
-              this.serviceToEndpoint.put( s.getName( ), in.getEndpointURI( ).toString( ) );
+          for ( final Service service : this.context.getRegistry( ).lookupObjects( Service.class ) ) {
+            final ServiceCompositeMessageSource source = (ServiceCompositeMessageSource)service.getMessageSource( );
+            for ( final InboundEndpoint in : source.getEndpoints( ) ) {
+              this.endpointToService.put( in.getEndpointURI( ).toString( ), service.getName( ) );
+              this.serviceToEndpoint.put( service.getName( ), in.getEndpointURI( ).toString( ) );
             }
           }
         } catch ( final Exception e ) {
@@ -203,26 +203,14 @@ public class ServiceContextManager {
       }
     }
   }
-  
-  private static final String EMPTY_MODEL = "  <mule xmlns=\"http://www.mulesource.org/schema/mule/core/2.0\"\n"
+                                 
+  private static final String EMPTY_MODEL = "<mule xmlns=\"http://www.mulesoft.org/schema/mule/core\"\n"
                                             +
                                             "      xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\"\n"
                                             +
-                                            "      xmlns:spring=\"http://www.springframework.org/schema/beans\"\n"
-                                            +
-                                            "      xmlns:vm=\"http://www.mulesource.org/schema/mule/vm/2.0\"\n"
-                                            +
-                                            "      xmlns:euca=\"http://www.eucalyptus.com/schema/cloud/1.6\"\n"
-                                            +
                                             "      xsi:schemaLocation=\"\n"
                                             +
-                                            "       http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-2.0.xsd\n"
-                                            +
-                                            "       http://www.mulesource.org/schema/mule/core/2.0 http://www.mulesource.org/schema/mule/core/2.0/mule.xsd\n"
-                                            +
-                                            "       http://www.mulesource.org/schema/mule/vm/2.0 http://www.mulesource.org/schema/mule/vm/2.0/mule-vm.xsd\n"
-                                            +
-                                            "       http://www.eucalyptus.com/schema/cloud/1.6 http://www.eucalyptus.com/schema/cloud/1.6/euca.xsd\">\n"
+                                            "       http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/3.4/mule.xsd\">\n"
                                             +
                                             "</mule>\n";
   

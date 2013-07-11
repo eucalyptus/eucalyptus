@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * Copyright 2009-2013 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -101,7 +101,7 @@ public class NioMessageDispatcher extends AbstractMessageDispatcher {
     MuleMessage muleMsg = muleEvent.getMessage( );
     BaseMessage request = ( BaseMessage ) muleMsg.getPayload( );
     BaseMessage response = client.send( request );
-    return new DefaultMuleMessage( response );
+    return new DefaultMuleMessage( response, muleEvent.getMuleContext( ) );
   }
 
   @Override

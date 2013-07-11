@@ -63,23 +63,29 @@
 package com.eucalyptus.context;
 
 import java.util.concurrent.Callable;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 import org.apache.log4j.Logger;
 import org.mule.DefaultMuleEvent;
-import org.mule.DefaultMuleMessage;
-import org.mule.DefaultMuleSession;
 import org.mule.RequestContext;
 import org.mule.api.MuleContext;
 import org.mule.api.MuleEvent;
 import org.mule.api.MuleException;
 import org.mule.api.MuleMessage;
 import org.mule.api.MuleSession;
+import org.mule.api.construct.FlowConstruct;
 import org.mule.api.endpoint.OutboundEndpoint;
+import org.mule.api.transport.Connector;
+import org.mule.api.transport.ConnectorException;
 import org.mule.api.transport.DispatchException;
+import org.mule.api.transport.MessageDispatcher;
+import org.mule.config.i18n.MessageFactory;
 import org.mule.config.spring.SpringXmlConfigurationBuilder;
 import org.mule.module.client.MuleClient;
-import org.mule.transport.AbstractConnector;
+import org.mule.session.DefaultMuleSession;
+import org.mule.transport.vm.VMConnector;
 import org.mule.transport.vm.VMMessageDispatcherFactory;
 import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.bootstrap.BootstrapException;
@@ -104,6 +110,8 @@ public class ServiceContext {
   public static Integer                        WORKERS_PER_STAGE        = 16;                                      //TODO:GRZE: finish this thought later.
   @ConfigurableField( initial = "0", description = "Do a soft reset.", changeListener = HupListener.class )
   public static Integer                        HUP                      = 0;
+  @ConfigurableField( initial = "64", description = "Internal connector core pool size." )
+  public static Integer                        MIN_SCHEDULER_CORE_SIZE  = 64;
   
   public static class HupListener implements PropertyChangeListener {
     @Override
@@ -131,38 +139,35 @@ public class ServiceContext {
     }
     OutboundEndpoint endpoint;
     try {
-      endpoint = muleCtx.getRegistry( ).lookupEndpointFactory( ).getOutboundEndpoint( dest );
-      if ( !endpoint.getConnector( ).isStarted( ) ) {
-        endpoint.getConnector( ).start( );
-      }
+      endpoint = muleCtx.getEndpointFactory( ).getOutboundEndpoint( dest );
+      perhapsConfigureConnector( endpoint.getConnector( ) );
     } catch ( MuleException ex ) {
       LOG.error( ex, ex );
       throw new ServiceDispatchException( "Failed to dispatch message to " + dest + " caused by failure to obtain service endpoint reference: "
                                           + ex.getMessage( ), ex );
     }
-    MuleMessage muleMsg = new DefaultMuleMessage( msg );
-    MuleSession muleSession;
-    try {
-      muleSession = new DefaultMuleSession( muleMsg, ( ( AbstractConnector ) endpoint.getConnector( ) ).getSessionHandler( ),
-                                                          ServiceContextManager.getContext( ) );
-    } catch ( MuleException ex ) {
-      LOG.error( ex, ex );
-      throw new ServiceDispatchException( "Failed to dispatch message to " + dest + " caused by failure to contruct session: " + ex.getMessage( ), ex );
-    }
-    MuleEvent muleEvent = new DefaultMuleEvent( muleMsg, endpoint, muleSession, false );
+    MuleSession muleSession = new DefaultMuleSession( );
     final Context ctx = msg instanceof BaseMessage
       ? Contexts.createWrapped( dest, ( BaseMessage ) msg )
       : null;
+    MessageDispatcher dispatcher = null;
     try {
-      dispatcherFactory.create( endpoint ).dispatch( muleEvent );
+      dispatcher = dispatcherFactory.create( endpoint );
+      dispatcher.initialise( );
+      dispatcher.start( );
+      MuleMessage muleMsg = dispatcher.createMuleMessage( msg );
+      MuleEvent muleEvent = new DefaultMuleEvent( muleMsg, endpoint.getExchangePattern(), (FlowConstruct) null, muleSession );
+      dispatcher.process( muleEvent );
     } catch ( DispatchException ex ) {
       LOG.error( ex, ex );
-      throw new ServiceDispatchException( "Error while dispatching message (" + msg + ")t o " + dest + " caused by: " + ex.getMessage( ), ex );
+      throw new ServiceDispatchException( "Error while dispatching message (" + msg + ") to " + dest + " caused by: " + ex.getMessage( ), ex );
     } catch ( MuleException ex ) {
       LOG.error( ex, ex );
       throw new ServiceDispatchException( "Failed to dispatch message to " + dest + " caused by failure to obtain service dispatcher reference: "
                                           + ex.getMessage( ), ex );
-    } 
+    } finally {
+      if ( dispatcher != null ) dispatcher.dispose( );
+    }
     Threads.enqueue( Empyrean.class, ServiceContext.class, new Callable<Boolean>( ) {
       @Override
       public Boolean call( ) {
@@ -189,7 +194,7 @@ public class ServiceContext {
       ctx = Contexts.createWrapped( dest, ( BaseMessage ) msg );
     }
     try {
-      MuleMessage reply = ServiceContextManager.getClient( ).sendDirect( dest, null, new DefaultMuleMessage( msg ) );
+      MuleMessage reply = ServiceContextManager.getClient( ).sendDirect( dest, null, msg, null );
       
       if ( reply.getExceptionPayload( ) != null ) {
         throw Exceptions.trace( new ServiceDispatchException( reply.getExceptionPayload( ).getRootException( ).getMessage( ),
@@ -208,4 +213,25 @@ public class ServiceContext {
     }
   }
   
+  private static void perhapsConfigureConnector( final Connector connector ) throws MuleException {
+    if ( !connector.isStarted( ) ) try {
+      connector.start( );
+    } catch ( IllegalArgumentException e ) {
+      if ( !connector.isStarted( ) ) {
+        throw new ConnectorException( MessageFactory.createStaticMessage( "Error starting connector" ), connector,  e );  
+      }
+    }
+    
+    if ( connector instanceof VMConnector ) {
+      final VMConnector vmConnector = (VMConnector) connector;
+      final ScheduledExecutorService scheduledExecutorService = vmConnector.getScheduler();
+      if ( scheduledExecutorService instanceof ScheduledThreadPoolExecutor ) {
+        final ScheduledThreadPoolExecutor threadPoolExecutor = 
+            (ScheduledThreadPoolExecutor) scheduledExecutorService;  
+        if ( threadPoolExecutor.getCorePoolSize( ) < MIN_SCHEDULER_CORE_SIZE  ) {
+          threadPoolExecutor.setCorePoolSize( MIN_SCHEDULER_CORE_SIZE );   
+        }
+      }
+    }
+  }
 }

@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * Copyright 2009-2013 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -864,8 +864,7 @@ public class VmControl {
         ServiceContext.dispatch( "ReplyQueue", reply );
       }
     } catch ( final NoSuchElementException e ) {
-      ServiceContext.dispatch( "ReplyQueue", new EucalyptusErrorMessageType( RequestContext.getEventContext( ).getService( ).getComponent( ).getClass( )
-                                                                                           .getSimpleName( ), request, e.getMessage( ) ) );
+      ServiceContext.dispatch( "ReplyQueue", new EucalyptusErrorMessageType( "VmControl", request, e.getMessage( ) ) );
     }
   }
 

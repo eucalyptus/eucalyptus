@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * Copyright 2009-2013 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -67,11 +67,9 @@ import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.mule.RequestContext;
 import org.mule.api.MessagingException;
 import org.mule.api.MuleException;
-import org.mule.api.MuleMessage;
 import org.mule.message.ExceptionMessage;
 import com.eucalyptus.binding.BindingManager;
 import com.eucalyptus.context.Contexts;
-import com.eucalyptus.context.IllegalContextAccessException;
 import com.eucalyptus.ws.WebServicesException;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 import edu.ucsb.eucalyptus.msgs.ExceptionResponseType;
@@ -90,8 +88,7 @@ public class ReplyQueue {
     if ( cause instanceof MessagingException ) {
       MessagingException messagingEx = ( ( MessagingException ) cause );
       cause = messagingEx.getCause( );
-      MuleMessage muleMsg = messagingEx.getUmoMessage( );
-      Object payload = muleMsg.getPayload( );
+      Object payload = exMsg.getPayload( );
       BaseMessage msg = convert( payload );
       if( msg != null ) {
         Contexts.response( new ExceptionResponseType( msg, cause.getMessage( ), HttpResponseStatus.NOT_ACCEPTABLE, cause )  );

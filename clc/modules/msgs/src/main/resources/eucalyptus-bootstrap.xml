@@ -1,5 +1,5 @@
 <!--
-  Copyright 2009-2012 Eucalyptus Systems, Inc.
+  Copyright 2009-2013 Eucalyptus Systems, Inc.
 
   This program is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
@@ -59,35 +59,37 @@
     IDENTIFIED, OR WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT
     NEEDED TO COMPLY WITH ANY SUCH LICENSES OR RIGHTS.
   -->
-
-<mule xmlns="http://www.mulesource.org/schema/mule/core/2.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-  xmlns:spring="http://www.springframework.org/schema/beans" xmlns:euca="http://www.eucalyptus.com/schema/cloud/1.6"
-  xmlns:vm="http://www.mulesource.org/schema/mule/vm/2.0" xmlns:mule="http://www.mulesource.org/schema/mule/core/2.0"
-  xmlns:management="http://www.mulesource.org/schema/mule/management/2.0"
-  xsi:schemaLocation="
-       http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-2.0.xsd
-       http://www.mulesource.org/schema/mule/core/2.0 http://www.mulesource.org/schema/mule/core/2.0/mule.xsd
-       http://www.mulesource.org/schema/mule/vm/2.0 http://www.mulesource.org/schema/mule/vm/2.0/mule-vm.xsd
-       http://www.mulesource.org/schema/mule/management/2.0 http://www.mulesource.org/schema/mule/management/2.0/mule-management.xsd
-       http://www.eucalyptus.com/schema/cloud/1.6 http://www.eucalyptus.com/schema/cloud/1.6/euca.xsd">
-  <mule:configuration>
-    <mule:default-threading-profile doThreading="true" maxThreadsActive="16"
-      poolExhaustedAction="RUN" />
-  </mule:configuration>
+<mule xmlns="http://www.mulesoft.org/schema/mule/core"
+      xmlns:management="http://www.mulesoft.org/schema/mule/management"
+      xmlns:vm="http://www.mulesoft.org/schema/mule/vm"
+      xmlns:spring="http://www.springframework.org/schema/beans"
+      xmlns:euca="http://www.eucalyptus.com/schema/cloud/3.4"
+      xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+      xsi:schemaLocation="
+        http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-3.2.xsd
+        http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/3.4/mule.xsd
+        http://www.mulesoft.org/schema/mule/management http://www.mulesoft.org/schema/mule/management/3.4/mule-management.xsd
+        http://www.mulesoft.org/schema/mule/vm http://www.mulesoft.org/schema/mule/vm/3.4/mule-vm.xsd
+        http://www.eucalyptus.com/schema/cloud/3.4 http://www.eucalyptus.com/schema/cloud/3.4/euca.xsd">
+  <configuration>
+    <default-threading-profile 
+            doThreading="true" 
+            maxThreadsActive="16"
+            poolExhaustedAction="RUN" />
+  </configuration>
   <management:jmx-server/>
   <euca:connector name="eucaws" />
-  <vm:connector name="internal-async" queueEvents="false">
-    <mule:service-overrides inboundTransformer="org.mule.transformer.NoActionTransformer" outboundTransformer="org.mule.transformer.NoActionTransformer" responseTransformer="org.mule.transformer.NoActionTransformer" />
-    <vm:queueProfile persistent="false" maxOutstandingMessages="256" />
+  <vm:connector name="internal-async">
+    <vm:queue-profile maxOutstandingMessages="256" />
   </vm:connector>
-  <endpoint name="ReplyQueueEndpoint" address="vm://ReplyQueue" synchronous="false" />
-  <endpoint name="RequestQueueEndpoint" address="vm://RequestQueue" synchronous="false" />
-  <endpoint name="EmpyreanRequestQueueEndpoint" address="vm://EmpyreanRequestQueue" synchronous="false" />
+  <endpoint name="ReplyQueueEndpoint" address="vm://ReplyQueue" exchange-pattern="one-way" />
+  <endpoint name="RequestQueueEndpoint" address="vm://RequestQueue" exchange-pattern="one-way" />
+  <endpoint name="EmpyreanRequestQueueEndpoint" address="vm://EmpyreanRequestQueue" exchange-pattern="one-way" />
   <spring:beans>
     <spring:import resource="classpath:empyrean-model.xml" />
   </spring:beans>
   #foreach( $component in $components )
-      <endpoint name="${component.getEntryPoint()}" address="vm://${component.getEntryPoint()}" synchronous="false" />
+      <endpoint name="${component.getEntryPoint()}" address="vm://${component.getEntryPoint()}" exchange-pattern="one-way" />
   #end 
   <model name="eucalyptus-bootstrap">
     <default-service-exception-strategy>
@@ -106,23 +108,26 @@
       <component class="com.eucalyptus.ws.util.RequestQueue" />
       <outbound>
         <filtering-router>
-          <outbound-endpoint ref="EmpyreanRequestQueueEndpoint" synchronous="false" />
+          <outbound-endpoint ref="EmpyreanRequestQueueEndpoint" 
+                             exchange-pattern="one-way" 
+                             disableTransportTransformer="true"/>
           <payload-type-filter expectedType="com.eucalyptus.empyrean.EmpyreanMessage" />
-          <mule:no-action-transformer/>
         </filtering-router>
         #foreach( $component in $components )
           #foreach( $msgType in ${ComponentMessages.forComponent( $component )} )
-          <filtering-router>
-            <outbound-endpoint ref="${component.getEntryPoint()}" synchronous="false" />
+          <filtering-router >
+            <outbound-endpoint ref="${component.getEntryPoint()}" 
+                               exchange-pattern="one-way"
+                               disableTransportTransformer="true"/>
             <payload-type-filter expectedType="${msgType.getCanonicalName()}" />
-            <mule:no-action-transformer/>
           </filtering-router>
           #end
         #end
         <filtering-router>
-          <outbound-endpoint ref="EmpyreanRequestQueueEndpoint" synchronous="false" />
+          <outbound-endpoint ref="EmpyreanRequestQueueEndpoint" 
+                             exchange-pattern="one-way"
+                             disableTransportTransformer="true"/>
           <payload-type-filter expectedType="edu.ucsb.eucalyptus.msgs.BaseMessage" />
-          <mule:no-action-transformer/>
         </filtering-router>
       </outbound>
     </service>
