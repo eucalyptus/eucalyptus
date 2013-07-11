@@ -23,7 +23,7 @@ define([
                 deleteButton: {
                   id: 'button-dialog-deletescalinggroup-delete',
                   click: function() {
-                      doMultiAction(args.items, App.data.scalinggrps,
+                      doMultiAction(self.scope.items, app.data.scalinggrp,
                                     function(model, options) {
                                       options['wait'] = true;
                                       model.destroy(options);
