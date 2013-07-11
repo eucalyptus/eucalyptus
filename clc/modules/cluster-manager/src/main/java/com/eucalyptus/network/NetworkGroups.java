@@ -1,63 +1,61 @@
 /*************************************************************************
  * Copyright 2009-2013 Eucalyptus Systems, Inc.
- *
+ * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation; version 3 of the License.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * 
+ * This program is distributed in the hope that it will be useful, * but WITHOUT ANY WARRANTY;
+ * without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
  * GNU General Public License for more details.
- *
+ * 
  * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see http://www.gnu.org/licenses/.
- *
+ * along with this program. If not, see http://www.gnu.org/licenses/.
+ * 
  * Please contact Eucalyptus Systems, Inc., 6755 Hollister Ave., Goleta
  * CA 93117, USA or visit http://www.eucalyptus.com/licenses/ if you need
  * additional information or have any questions.
- *
+ * 
  * This file may incorporate work covered under the following copyright
  * and permission notice:
- *
- *   Software License Agreement (BSD License)
- *
- *   Copyright (c) 2008, Regents of the University of California
- *   All rights reserved.
- *
- *   Redistribution and use of this software in source and binary forms,
- *   with or without modification, are permitted provided that the
- *   following conditions are met:
- *
- *     Redistributions of source code must retain the above copyright
- *     notice, this list of conditions and the following disclaimer.
- *
- *     Redistributions in binary form must reproduce the above copyright
- *     notice, this list of conditions and the following disclaimer
- *     in the documentation and/or other materials provided with the
- *     distribution.
- *
- *   THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
- *   "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
- *   LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
- *   FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE
- *   COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
- *   INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
- *   BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
- *   LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
- *   CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
- *   LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN
- *   ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
- *   POSSIBILITY OF SUCH DAMAGE. USERS OF THIS SOFTWARE ACKNOWLEDGE
- *   THE POSSIBLE PRESENCE OF OTHER OPEN SOURCE LICENSED MATERIAL,
- *   COPYRIGHTED MATERIAL OR PATENTED MATERIAL IN THIS SOFTWARE,
- *   AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
- *   IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA,
- *   SANTA BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY,
- *   WHICH IN THE REGENTS' DISCRETION MAY INCLUDE, WITHOUT LIMITATION,
- *   REPLACEMENT OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO
- *   IDENTIFIED, OR WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT
- *   NEEDED TO COMPLY WITH ANY SUCH LICENSES OR RIGHTS.
+ * 
+ * Software License Agreement (BSD License)
+ * 
+ * Copyright (c) 2008, Regents of the University of California
+ * All rights reserved.
+ * 
+ * Redistribution and use of this software in source and binary forms, * with or without
+ * modification, are permitted provided that the
+ * following conditions are met:
+ * 
+ * Redistributions of source code must retain the above copyright
+ * notice, this list of conditions and the following disclaimer.
+ * 
+ * Redistributions in binary form must reproduce the above copyright
+ * notice, this list of conditions and the following disclaimer
+ * in the documentation and/or other materials provided with the
+ * distribution.
+ * 
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+ * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+ * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
+ * FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE
+ * COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, * INCIDENTAL, SPECIAL, *
+ * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, * BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE
+ * GOODS OR SERVICES; * LOSS OF USE, DATA, OR PROFITS;
+ * OR BUSINESS INTERRUPTION) HOWEVER
+ * CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+ * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN
+ * ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+ * POSSIBILITY OF SUCH DAMAGE. USERS OF THIS SOFTWARE ACKNOWLEDGE
+ * THE POSSIBLE PRESENCE OF OTHER OPEN SOURCE LICENSED MATERIAL, * COPYRIGHTED MATERIAL OR PATENTED
+ * MATERIAL IN THIS SOFTWARE, * AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
+ * IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA, * SANTA BARBARA WHO WILL THEN
+ * ASCERTAIN THE MOST APPROPRIATE REMEDY, * WHICH IN THE REGENTS' DISCRETION MAY INCLUDE, WITHOUT
+ * LIMITATION, * REPLACEMENT OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO
+ * IDENTIFIED, OR WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT
+ * NEEDED TO COMPLY WITH ANY SUCH LICENSES OR RIGHTS.
  ************************************************************************/
 
 package com.eucalyptus.network;
@@ -124,10 +122,57 @@ import edu.ucsb.eucalyptus.msgs.UserIdGroupPairType;
 @ConfigurableClass( root = "cloud.network",
                     description = "Default values used to bootstrap networking state discovery." )
 public class NetworkGroups {
-  private static final String DEFAULT_NETWORK_NAME          = "default";
-  private static Logger       LOG                           = Logger.getLogger( NetworkGroups.class );
-  private static String       NETWORK_DEFAULT_NAME          = "default";
+  private enum NetworkMode {
+    SYSTEM( false, false ),
+    STATIC( false, false ),
+    MANAGED( true, true ),
+    MANAGED_NOVLAN( true, true ),
+    EDGE( false, true ),
+    STATICDYNMAC( true, true );
+    private final boolean privateAddressing;
+    private final boolean publicAddressing;
+    
+    private NetworkMode( boolean privateAddressing, boolean publicAddressing ) {
+      this.privateAddressing = privateAddressing;
+      this.publicAddressing = publicAddressing;
+    }
+    
+    public boolean hasPrivateAddressing( ) {
+      return this.privateAddressing;
+    }
+    
+    public boolean hasPublicAddressing( ) {
+      return this.publicAddressing;
+    }
+    
+    public String toString( ) {
+      return this.name( )
+             + "[private="
+             + this.privateAddressing
+             + "/public="
+             + this.publicAddressing
+             + "]";
+    }
+
+    /**
+     * @param networkMode
+     * @return
+     */
+    public static NetworkMode parseMode( String networkModeName ) {
+      NetworkMode networkMode = NetworkMode.SYSTEM;
+      try {
+        if ( networkModeName != null ) {
+          networkMode = NetworkMode.valueOf( networkModeName.replace( "-", "_" ).toUpperCase( ) );
+        }
+      } catch ( Exception ex ) {
+        LOG.debug( ex );
+      }
+      return networkMode;
+    }
+  }
   
+  private static Logger       LOG                           = Logger.getLogger( NetworkGroups.class );
+  private static final String NETWORK_DEFAULT_NAME          = "default";
   @ConfigurableField( description = "Default max network index." )
   public static Long          GLOBAL_MAX_NETWORK_INDEX      = 4096l;
   @ConfigurableField( description = "Default min network index." )
@@ -142,22 +187,27 @@ public class NetworkGroups {
   public static Integer       NETWORK_INDEX_PENDING_TIMEOUT = 35;
   
   public static class NetworkRangeConfiguration {
-    private Boolean useNetworkTags  = Boolean.TRUE;
-    private Integer minNetworkTag   = GLOBAL_MIN_NETWORK_TAG;
-    private Integer maxNetworkTag   = GLOBAL_MAX_NETWORK_TAG;
-    private Long    minNetworkIndex = GLOBAL_MIN_NETWORK_INDEX;
-    private Long    maxNetworkIndex = GLOBAL_MAX_NETWORK_INDEX;
+    private NetworkMode mode;
+    private boolean     useTags         = false;
+    private Integer     minNetworkTag   = GLOBAL_MIN_NETWORK_TAG;
+    private Integer     maxNetworkTag   = GLOBAL_MAX_NETWORK_TAG;
+    private Long        minNetworkIndex = GLOBAL_MIN_NETWORK_INDEX;
+    private Long        maxNetworkIndex = GLOBAL_MAX_NETWORK_INDEX;
     
-    public Boolean hasNetworking( ) {
-      return this.useNetworkTags;
+    public void markAsUsingTags( ) {
+      this.useTags = true;
     }
     
-    public Boolean getUseNetworkTags( ) {
-      return this.useNetworkTags;
+    public boolean isUsingTags( ) {
+      return this.useTags;
     }
     
-    public void setUseNetworkTags( final Boolean useNetworkTags ) {
-      this.useNetworkTags = useNetworkTags;
+    public Boolean hasPublicAddressing( ) {
+      return this.mode.hasPublicAddressing( );
+    }
+    
+    public Boolean hasPrivateAddressing( ) {
+      return this.mode.hasPrivateAddressing( ) || this.useTags;
     }
     
     public Integer getMinNetworkTag( ) {
@@ -193,19 +243,30 @@ public class NetworkGroups {
       this.minNetworkIndex = minNetworkIndex;
     }
     
+    public NetworkMode getMode( ) {
+      return this.mode;
+    }
+    
+    public void setMode( NetworkMode mode ) {
+      this.mode = mode;
+    }
+    
     @Override
     public String toString( ) {
       StringBuilder builder = new StringBuilder( );
       builder.append( "NetworkRangeConfiguration:" );
-      if ( this.useNetworkTags != null ) builder.append( "useNetworkTags=" ).append( this.useNetworkTags ).append( ":" );
+      if ( this.mode != null ) builder.append( "mode=" ).append( this.mode ).append( ":" );
       if ( this.minNetworkTag != null ) builder.append( "minNetworkTag=" ).append( this.minNetworkTag ).append( ":" );
       if ( this.maxNetworkTag != null ) builder.append( "maxNetworkTag=" ).append( this.maxNetworkTag ).append( ":" );
-      if ( this.minNetworkIndex != null ) builder.append( "minNetworkIndex=" ).append( this.minNetworkIndex ).append( ":" );
+      if ( this.minNetworkIndex != null ) builder.append( "minNetworkIndex=" )
+                                                 .append( this.minNetworkIndex )
+                                                 .append( ":" );
       if ( this.maxNetworkIndex != null ) builder.append( "maxNetworkIndex=" ).append( this.maxNetworkIndex );
       return builder.toString( );
     }
     
-  }  
+  }
+  
   private enum ActiveTags implements Function<NetworkInfoType, Integer> {
     INSTANCE;
     private final SetMultimap<String, Integer> backingMap            = HashMultimap.create( );
@@ -274,13 +335,20 @@ public class NetworkGroups {
         if ( net.hasExtantNetwork( ) ) {
           ExtantNetwork exNet = net.extantNetwork( );
           if ( Reference.State.PENDING.equals( exNet.getState( ) ) ) {
-            LOG.debug( "Found PENDING extant network for " + net.getFullName( ) + " updating to EXTANT." );
+            LOG.debug( "Found PENDING extant network for "
+                       + net.getFullName( )
+                       + " updating to EXTANT." );
             exNet.setState( Reference.State.EXTANT );
           } else {
-            LOG.debug( "Found " + exNet.getState( ) + " extant network for " + net.getFullName( ) + ": skipped." );
+            LOG.debug( "Found "
+                       + exNet.getState( )
+                       + " extant network for "
+                       + net.getFullName( )
+                       + ": skipped." );
           }
         } else {
-          LOG.warn( "Failed to find extant network for " + net.getFullName( ) );//TODO:GRZE: likely we should be trying to reclaim tag here
+          LOG.warn( "Failed to find extant network for " + net.getFullName( ) );// TODO:GRZE: likely
+// we should be trying to reclaim tag here
         }
         tx.commit( );
       } catch ( Exception ex ) {
@@ -304,7 +372,7 @@ public class NetworkGroups {
      * {@link NetworksGroups#NETWORK_TAG_PENDING_TIMEOUT}
      * </ol>
      * Then the state of the extant network is updated to {@link Reference.State.RELEASING}.
-     */    
+     */
     try {
       final List<NetworkGroup> groups = NetworkGroups.lookupAll( null, null );
       for ( NetworkGroup net : groups ) {
@@ -318,7 +386,7 @@ public class NetworkGroups {
               if ( Reference.State.EXTANT.equals( exNet.getState( ) ) ) {
                 exNet.setState( Reference.State.RELEASING );
               } else if ( Reference.State.PENDING.equals( exNet.getState( ) )
-                              && exNet.lastUpdateMillis( ) > 60L * 1000 * NetworkGroups.NETWORK_TAG_PENDING_TIMEOUT ) {
+                          && exNet.lastUpdateMillis( ) > 60L * 1000 * NetworkGroups.NETWORK_TAG_PENDING_TIMEOUT ) {
                 exNet.setState( Reference.State.RELEASING );
               } else if ( Reference.State.RELEASING.equals( exNet.getState( ) ) ) {
                 exNet.teardown( );
@@ -326,7 +394,7 @@ public class NetworkGroups {
                 net.setExtantNetwork( null );
               }
             }
-          }          
+          }
           tx.commit( );
         } catch ( final Exception ex ) {
           LOG.debug( ex );
@@ -339,8 +407,26 @@ public class NetworkGroups {
       LOG.error( ex );
     }
   }
-
+  
   static NetworkRangeConfiguration netConfig = new NetworkRangeConfiguration( );
+  
+  @TypeMapper
+  public enum ClusterToNetworkConfigTransform implements Function<ClusterConfiguration, NetworkRangeConfiguration> {
+    INSTANCE;
+    @Override
+    public NetworkRangeConfiguration apply( ClusterConfiguration input ) {
+      NetworkRangeConfiguration comparisonConfig = new NetworkRangeConfiguration( );
+      comparisonConfig.setMode( NetworkMode.parseMode( input.getNetworkMode( ) ) );
+      if ( input.getUseNetworkTags( ) ) {
+        comparisonConfig.markAsUsingTags( );
+      }
+      comparisonConfig.setMinNetworkTag( input.getMinNetworkTag( ) );
+      comparisonConfig.setMaxNetworkTag( input.getMaxNetworkTag( ) );
+      comparisonConfig.setMinNetworkIndex( input.getMinNetworkIndex( ) );
+      comparisonConfig.setMaxNetworkIndex( input.getMaxNetworkIndex( ) );
+      return comparisonConfig;
+    }
+  }
   
   public static synchronized void updateNetworkRangeConfiguration( ) {
     final AtomicReference<NetworkRangeConfiguration> equalityCheck = new AtomicReference<NetworkRangeConfiguration>( null );
@@ -349,28 +435,58 @@ public class NetworkGroups {
         
         @Override
         public void fire( final ClusterConfiguration input ) {
-          NetworkRangeConfiguration comparisonConfig = new NetworkRangeConfiguration( );
-          comparisonConfig.setUseNetworkTags( input.getUseNetworkTags( ) );
-          comparisonConfig.setMinNetworkTag( input.getMinNetworkTag( ) );
-          comparisonConfig.setMaxNetworkTag( input.getMaxNetworkTag( ) );
-          comparisonConfig.setMinNetworkIndex( input.getMinNetworkIndex( ) );
-          comparisonConfig.setMaxNetworkIndex( input.getMaxNetworkIndex( ) );
-          Logs.extreme( ).debug( "Updating cluster config: " + input.getName( ) + " " + comparisonConfig.toString( ) );
-          if ( equalityCheck.compareAndSet( null, comparisonConfig ) ) {
-            Logs.extreme( ).debug( "Initialized cluster config check: " + equalityCheck.get( ) );
-          } else {
+          NetworkRangeConfiguration comparisonConfig = TypeMappers.transform( input, NetworkRangeConfiguration.class );
+          LOG.trace( "Updating cluster config: "
+                     + input.getName( )
+                     + " "
+                     + comparisonConfig.toString( ) );
+          if ( !equalityCheck.compareAndSet( null, comparisonConfig ) ) {
             NetworkRangeConfiguration currentConfig = equalityCheck.get( );
             List<String> errors = Lists.newArrayList( );
-            if ( !currentConfig.getUseNetworkTags( ).equals( comparisonConfig.getUseNetworkTags( ) ) ) {
-              errors.add( input.getName( ) + " network config mismatch: vlan tagging  " + currentConfig.getUseNetworkTags( ) + " != " + comparisonConfig.getUseNetworkTags( ) );
+            /**
+             * Check that:
+             * 1. the modes match
+             * 2. whether to allocate network tags matches
+             * 3. the range of network tags match
+             * 4. the range of network indexes match
+             */
+            if ( !currentConfig.getMode( ).equals( comparisonConfig.getMode( ) ) ) {
+              errors.add( input.getName( )
+                          + " network config mismatch: network mode "
+                          + currentConfig.isUsingTags( )
+                          + " != "
+                          + comparisonConfig.isUsingTags( ) );
+            } else if ( currentConfig.isUsingTags( ) == comparisonConfig.isUsingTags( ) ) {
+              errors.add( input.getName( )
+                          + " network config mismatch: vlan tagging  "
+                          + currentConfig.isUsingTags( )
+                          + " != "
+                          + comparisonConfig.isUsingTags( ) );
             } else if ( !currentConfig.getMinNetworkTag( ).equals( comparisonConfig.getMinNetworkTag( ) ) ) {
-              errors.add( input.getName( ) + " network config mismatch: min vlan tag " + currentConfig.getMinNetworkTag( ) + " != " + comparisonConfig.getMinNetworkTag( ) );
+              errors.add( input.getName( )
+                          + " network config mismatch: min vlan tag "
+                          + currentConfig.getMinNetworkTag( )
+                          + " != "
+                          + comparisonConfig.getMinNetworkTag( ) );
             } else if ( !currentConfig.getMaxNetworkTag( ).equals( comparisonConfig.getMaxNetworkTag( ) ) ) {
-              errors.add( input.getName( ) + " network config mismatch: max vlan tag " + currentConfig.getMaxNetworkTag( ) + " != " + comparisonConfig.getMaxNetworkTag( ) );
+              errors.add( input.getName( )
+                          + " network config mismatch: max vlan tag "
+                          + currentConfig.getMaxNetworkTag( )
+                          + " != "
+                          + comparisonConfig.getMaxNetworkTag( ) );
             } else if ( !currentConfig.getMinNetworkIndex( ).equals( comparisonConfig.getMinNetworkIndex( ) ) ) {
-              errors.add( input.getName( ) + " network config mismatch: min net index " + currentConfig.getMinNetworkIndex( ) + " != " + comparisonConfig.getMinNetworkIndex( ) );
-            } else if ( !currentConfig.getMaxNetworkIndex( ).equals( comparisonConfig.getMaxNetworkIndex( ) ) ) {
-              errors.add( input.getName( ) + " network config mismatch: max net index " + currentConfig.getMaxNetworkIndex( ) + " != " + comparisonConfig.getMaxNetworkIndex( ) );
+              errors.add( input.getName( )
+                          + " network config mismatch: min net index "
+                          + currentConfig.getMinNetworkIndex( )
+                          + " != "
+                          + comparisonConfig.getMinNetworkIndex( ) );
+            }
+            if ( !currentConfig.getMaxNetworkIndex( ).equals( comparisonConfig.getMaxNetworkIndex( ) ) ) {
+              errors.add( input.getName( )
+                          + " network config mismatch: max net index "
+                          + currentConfig.getMaxNetworkIndex( )
+                          + " != "
+                          + comparisonConfig.getMaxNetworkIndex( ) );
             }
           }
         }
@@ -382,7 +498,7 @@ public class NetworkGroups {
       LOG.error( ex );
       Logs.extreme( ).error( ex, ex );
     }
-
+    
     netConfig = new NetworkRangeConfiguration( );
     final AtomicBoolean netTagging = new AtomicBoolean( true );
     try {
@@ -391,26 +507,27 @@ public class NetworkGroups {
         @Override
         public void fire( final ClusterConfiguration input ) {
           netTagging.compareAndSet( true, input.getUseNetworkTags( ) );
-          
+          netConfig.setMode( NetworkMode.parseMode( input.getName( ) ) );
           netConfig.setMinNetworkTag( Ints.max( netConfig.getMinNetworkTag( ), input.getMinNetworkTag( ) ) );
           netConfig.setMaxNetworkTag( Ints.min( netConfig.getMaxNetworkTag( ), input.getMaxNetworkTag( ) ) );
-          
           netConfig.setMinNetworkIndex( Longs.max( netConfig.getMinNetworkIndex( ), input.getMinNetworkIndex( ) ) );
           netConfig.setMaxNetworkIndex( Longs.min( netConfig.getMaxNetworkIndex( ), input.getMaxNetworkIndex( ) ) );
-          
         }
       } );
       Logs.extreme( ).debug( "Updated network configuration: " + netConfig.toString( ) );
     } catch ( final TransactionException ex ) {
       Logs.extreme( ).error( ex, ex );
     }
-    netConfig.setUseNetworkTags( netTagging.get( ) );
+    if ( netTagging.get( ) ) {
+      netConfig.markAsUsingTags( );
+    }
     final EntityTransaction db = Entities.get( NetworkGroup.class );
     try {
       final List<NetworkGroup> ret = Entities.query( new NetworkGroup( ) );
       for ( NetworkGroup group : ret ) {
         ExtantNetwork exNet = group.getExtantNetwork( );
-        if ( exNet != null && ( exNet.getTag( ) > netConfig.getMaxNetworkTag( ) || exNet.getTag( ) < netConfig.getMinNetworkTag( ) ) ) {
+        if ( exNet != null
+             && ( exNet.getTag( ) > netConfig.getMaxNetworkTag( ) || exNet.getTag( ) < netConfig.getMinNetworkTag( ) ) ) {
           exNet.teardown( );
           Entities.delete( exNet );
           group.setExtantNetwork( null );
@@ -426,7 +543,8 @@ public class NetworkGroups {
   
   public static List<Long> networkIndexInterval( ) {
     final List<Long> interval = Lists.newArrayList( );
-    for ( Long i = NetworkGroups.networkingConfiguration( ).getMinNetworkIndex( ); i < NetworkGroups.networkingConfiguration( ).getMaxNetworkIndex( ); i++ ) {
+    for ( Long i = NetworkGroups.networkingConfiguration( ).getMinNetworkIndex( ); i < NetworkGroups.networkingConfiguration( )
+                                                                                                    .getMaxNetworkIndex( ); i++ ) {
       interval.add( i );
     }
     return interval;
@@ -434,7 +552,8 @@ public class NetworkGroups {
   
   public static List<Integer> networkTagInterval( ) {
     final List<Integer> interval = Lists.newArrayList( );
-    for ( Integer i = NetworkGroups.networkingConfiguration( ).getMinNetworkTag( ); i < NetworkGroups.networkingConfiguration( ).getMaxNetworkTag( ); i++ ) {
+    for ( Integer i = NetworkGroups.networkingConfiguration( ).getMinNetworkTag( ); i < NetworkGroups.networkingConfiguration( )
+                                                                                                     .getMaxNetworkTag( ); i++ ) {
       interval.add( i );
     }
     return interval;
@@ -457,12 +576,19 @@ public class NetworkGroups {
     } catch ( final ConstraintViolationException ex ) {
       Logs.exhaust( ).error( ex, ex );
       db.rollback( );
-      throw new IllegalMetadataAccessException( "Failed to delete security group: " + groupName + " for " + ownerFullName + " because of: "
+      throw new IllegalMetadataAccessException( "Failed to delete security group: "
+                                                + groupName
+                                                + " for "
+                                                + ownerFullName
+                                                + " because of: "
                                                 + Exceptions.causeString( ex ), ex );
     } catch ( final Exception ex ) {
       Logs.exhaust( ).error( ex, ex );
       db.rollback( );
-      throw new NoSuchMetadataException( "Failed to find security group: " + groupName + " for " + ownerFullName, ex );
+      throw new NoSuchMetadataException( "Failed to find security group: "
+                                         + groupName
+                                         + " for "
+                                         + ownerFullName, ex );
     }
   }
   
@@ -482,20 +608,19 @@ public class NetworkGroups {
   public static NetworkGroup lookupByGroupId( final String groupId ) throws NoSuchMetadataException {
     return lookupByGroupId( null, groupId );
   }
-
-  public static NetworkGroup lookupByGroupId( @Nullable final OwnerFullName ownerFullName,
-                                              final String groupId ) throws NoSuchMetadataException {
-      EntityTransaction db = Entities.get( NetworkGroup.class );
-      try {
-        NetworkGroup entity = Entities.uniqueResult( NetworkGroup.withGroupId(ownerFullName, groupId) );
-        db.commit( );
-        return entity;
-      } catch ( Exception ex ) {
-        Logs.exhaust( ).error( ex, ex );
-        db.rollback( );
-        throw new NoSuchMetadataException( "Failed to find security group: " + groupId, ex );
-      }
+  
+  public static NetworkGroup lookupByGroupId( @Nullable final OwnerFullName ownerFullName, final String groupId ) throws NoSuchMetadataException {
+    EntityTransaction db = Entities.get( NetworkGroup.class );
+    try {
+      NetworkGroup entity = Entities.uniqueResult( NetworkGroup.withGroupId( ownerFullName, groupId ) );
+      db.commit( );
+      return entity;
+    } catch ( Exception ex ) {
+      Logs.exhaust( ).error( ex, ex );
+      db.rollback( );
+      throw new NoSuchMetadataException( "Failed to find security group: " + groupId, ex );
     }
+  }
   
   public static NetworkGroup lookup( final OwnerFullName ownerFullName, final String groupName ) throws MetadataException {
     if ( defaultNetworkName( ).equals( groupName ) ) {
@@ -509,7 +634,10 @@ public class NetworkGroups {
     } catch ( final Exception ex ) {
       Logs.exhaust( ).error( ex, ex );
       db.rollback( );
-      throw new NoSuchMetadataException( "Failed to find security group: " + groupName + " for " + ownerFullName, ex );
+      throw new NoSuchMetadataException( "Failed to find security group: "
+                                         + groupName
+                                         + " for "
+                                         + ownerFullName, ex );
     }
   }
   
@@ -526,18 +654,22 @@ public class NetworkGroups {
     } catch ( final Exception ex ) {
       Logs.exhaust( ).error( ex, ex );
       db.rollback( );
-      throw new NoSuchMetadataException( "Failed to find security group: " + groupNamePattern + " for " + ownerFullName, ex );
+      throw new NoSuchMetadataException( "Failed to find security group: "
+                                         + groupNamePattern
+                                         + " for "
+                                         + ownerFullName, ex );
     }
   }
-
-  public static Function<NetworkGroup,String> groupId() {
+  
+  public static Function<NetworkGroup, String> groupId( ) {
     return FilterFunctions.GROUP_ID;
   }
-
+  
   static void createDefault( final OwnerFullName ownerFullName ) throws MetadataException {
     try {
       try {
-        NetworkGroup net = Transactions.find( new NetworkGroup( AccountFullName.getInstance( ownerFullName.getAccountNumber( ) ), NETWORK_DEFAULT_NAME ) );
+        NetworkGroup net = Transactions.find( new NetworkGroup( AccountFullName.getInstance( ownerFullName.getAccountNumber( ) ),
+                                                                NETWORK_DEFAULT_NAME ) );
         if ( net == null ) {
           create( ownerFullName, NETWORK_DEFAULT_NAME, "default group" );
         }
@@ -554,7 +686,7 @@ public class NetworkGroups {
   }
   
   public static String defaultNetworkName( ) {
-    return DEFAULT_NETWORK_NAME;
+    return NETWORK_DEFAULT_NAME;
   }
   
   public static NetworkGroup create( final OwnerFullName ownerFullName, final String groupName, final String groupDescription ) throws MetadataException {
@@ -580,14 +712,18 @@ public class NetworkGroups {
     
     final EntityTransaction db = Entities.get( NetworkGroup.class );
     try {
-      NetworkGroup net = Entities.uniqueResult( new NetworkGroup( AccountFullName.getInstance( userFullName.getAccountNumber( ) ), groupName ) );
+      NetworkGroup net = Entities.uniqueResult( new NetworkGroup( AccountFullName.getInstance( userFullName.getAccountNumber( ) ),
+                                                                  groupName ) );
       if ( net == null ) {
         final NetworkGroup entity = Entities.persist( new NetworkGroup( userFullName, groupName, groupDescription ) );
         db.commit( );
         return entity;
       } else {
         db.rollback( );
-        throw new DuplicateMetadataException( "Failed to create group: " + groupName + " for " + userFullName.toString( ) );
+        throw new DuplicateMetadataException( "Failed to create group: "
+                                              + groupName
+                                              + " for "
+                                              + userFullName.toString( ) );
       }
     } catch ( final NoSuchElementException ex ) {
       final NetworkGroup entity = Entities.persist( new NetworkGroup( userFullName, groupName, groupDescription ) );
@@ -596,68 +732,72 @@ public class NetworkGroups {
     } catch ( final ConstraintViolationException ex ) {
       Logs.exhaust( ).error( ex );
       db.rollback( );
-      throw new DuplicateMetadataException( "Failed to create group: " + groupName + " for " + userFullName.toString( ), ex );
+      throw new DuplicateMetadataException( "Failed to create group: "
+                                            + groupName
+                                            + " for "
+                                            + userFullName.toString( ), ex );
     } catch ( final Exception ex ) {
       Logs.exhaust( ).error( ex, ex );
       db.rollback( );
-      throw new MetadataException( "Failed to create group: " + groupName + " for " + userFullName.toString( ), PersistenceExceptions.transform( ex ) );
+      throw new MetadataException( "Failed to create group: "
+                                   + groupName
+                                   + " for "
+                                   + userFullName.toString( ), PersistenceExceptions.transform( ex ) );
     }
   }
-
+  
   /**
    * Resolve Group Names / Identifiers for the given permissions.
-   *
-   * <p>Caller must have open transaction.</p>
-   *
+   * 
+   * <p>
+   * Caller must have open transaction.
+   * </p>
+   * 
    * @param permissions - The permissions to update
    * @throws MetadataException If an error occurs
    */
-  public static void resolvePermissions( final Iterable<IpPermissionType> permissions , boolean revoke) throws MetadataException {
+  public static void resolvePermissions( final Iterable<IpPermissionType> permissions, boolean revoke ) throws MetadataException {
     for ( final IpPermissionType ipPermission : permissions ) {
-      if ( ipPermission.getGroups() != null ) for ( final UserIdGroupPairType groupInfo : ipPermission.getGroups() ) {
-        if ( !Strings.isNullOrEmpty( groupInfo.getSourceGroupId() ) ) {
-        	try{
-	          final NetworkGroup networkGroup = NetworkGroups.lookupByGroupId( groupInfo.getSourceGroupId() );
-	          groupInfo.setSourceUserId( networkGroup.getOwnerAccountNumber() );
-	          groupInfo.setSourceGroupName( networkGroup.getDisplayName() );
-        	}catch(final NoSuchMetadataException ex){
-        		if(!revoke)
-        			throw ex;
-        	}
-        } else if ( Strings.isNullOrEmpty( groupInfo.getSourceUserId() ) ||
-            Strings.isNullOrEmpty( groupInfo.getSourceGroupName() )) {
+      if ( ipPermission.getGroups( ) != null ) for ( final UserIdGroupPairType groupInfo : ipPermission.getGroups( ) ) {
+        if ( !Strings.isNullOrEmpty( groupInfo.getSourceGroupId( ) ) ) {
+          try {
+            final NetworkGroup networkGroup = NetworkGroups.lookupByGroupId( groupInfo.getSourceGroupId( ) );
+            groupInfo.setSourceUserId( networkGroup.getOwnerAccountNumber( ) );
+            groupInfo.setSourceGroupName( networkGroup.getDisplayName( ) );
+          } catch ( final NoSuchMetadataException ex ) {
+            if ( !revoke )
+              throw ex;
+          }
+        } else if ( Strings.isNullOrEmpty( groupInfo.getSourceUserId( ) ) ||
+                    Strings.isNullOrEmpty( groupInfo.getSourceGroupName( ) ) ) {
           throw new MetadataException( "Group ID or User ID/Group Name required." );
         } else {
-        	try{
-	          final NetworkGroup networkGroup =
-	              NetworkGroups.lookup( AccountFullName.getInstance( groupInfo.getSourceUserId() ), groupInfo.getSourceGroupName() );
-	          groupInfo.setSourceGroupId( networkGroup.getGroupId() );
-        	}catch(final NoSuchMetadataException ex){
-        		if(!revoke)
-        			throw ex;
-        	}
+          try {
+            final NetworkGroup networkGroup =
+              NetworkGroups.lookup( AccountFullName.getInstance( groupInfo.getSourceUserId( ) ), groupInfo.getSourceGroupName( ) );
+            groupInfo.setSourceGroupId( networkGroup.getGroupId( ) );
+          } catch ( final NoSuchMetadataException ex ) {
+            if ( !revoke )
+              throw ex;
+          }
         }
       }
     }
   }
-
+  
   @TypeMapper
   public enum NetworkPeerAsUserIdGroupPairType implements Function<NetworkPeer, UserIdGroupPairType> {
     INSTANCE;
-    
     @Override
     public UserIdGroupPairType apply( final NetworkPeer peer ) {
       return new UserIdGroupPairType(
-          peer.getUserQueryKey( ),
-          peer.getGroupName( ),
-          peer.getGroupId( ) );
+                                      peer.getUserQueryKey( ), peer.getGroupName( ), peer.getGroupId( ) );
     }
   }
   
   @TypeMapper
   public enum NetworkRuleAsIpPerm implements Function<NetworkRule, IpPermissionType> {
     INSTANCE;
-    
     @Override
     public IpPermissionType apply( final NetworkRule rule ) {
       final IpPermissionType ipPerm = new IpPermissionType( rule.getProtocol( ), rule.getLowPort( ), rule.getHighPort( ) );
@@ -695,12 +835,11 @@ public class NetworkGroups {
   @TypeMapper
   public enum IpPermissionTypeExtractNetworkPeers implements Function<IpPermissionType, Collection<NetworkPeer>> {
     INSTANCE;
-    
     @Override
     public Collection<NetworkPeer> apply( IpPermissionType ipPerm ) {
-      final Collection<NetworkPeer> networkPeers = Lists.newArrayList();
+      final Collection<NetworkPeer> networkPeers = Lists.newArrayList( );
       for ( UserIdGroupPairType peerInfo : ipPerm.getGroups( ) ) {
-        networkPeers.add( new NetworkPeer( peerInfo.getSourceUserId(), peerInfo.getSourceGroupName(), peerInfo.getSourceGroupId() ) );
+        networkPeers.add( new NetworkPeer( peerInfo.getSourceUserId( ), peerInfo.getSourceGroupName( ), peerInfo.getSourceGroupId( ) ) );
       }
       return networkPeers;
     }
@@ -709,7 +848,6 @@ public class NetworkGroups {
   @TypeMapper
   public enum IpPermissionTypeAsNetworkRule implements Function<IpPermissionType, List<NetworkRule>> {
     INSTANCE;
-    
     /**
      * @see com.google.common.base.Function#apply(java.lang.Object)
      */
@@ -720,26 +858,38 @@ public class NetworkGroups {
         if ( ipPerm.getFromPort( ) == 0 && ipPerm.getToPort( ) == 0 ) {
           ipPerm.setToPort( 65535 );
         }
-        List<String> empty = Lists.newArrayList( );
-        //:: fixes handling of under-specified named-network rules sent by some clients :://
+        List<String> empty = Lists.newArrayList( ); // :: fixes handling of under-specified
+// named-network rules sent by some clients :://
         if ( ipPerm.getIpProtocol( ) == null ) {
-          NetworkRule rule = NetworkRule.create( NetworkRule.Protocol.tcp, ipPerm.getFromPort( ), ipPerm.getToPort( ),
-                                                 IpPermissionTypeExtractNetworkPeers.INSTANCE.apply( ipPerm ), empty );
+          NetworkRule rule = NetworkRule.create( NetworkRule.Protocol.tcp,
+                                                 ipPerm.getFromPort( ),
+                                                 ipPerm.getToPort( ),
+                                                 IpPermissionTypeExtractNetworkPeers.INSTANCE.apply( ipPerm ),
+                                                 empty );
           ruleList.add( rule );
-          NetworkRule rule1 = NetworkRule.create( NetworkRule.Protocol.udp, ipPerm.getFromPort( ), ipPerm.getToPort( ),
-                                                  IpPermissionTypeExtractNetworkPeers.INSTANCE.apply( ipPerm ), empty );
+          NetworkRule rule1 = NetworkRule.create( NetworkRule.Protocol.udp,
+                                                  ipPerm.getFromPort( ),
+                                                  ipPerm.getToPort( ),
+                                                  IpPermissionTypeExtractNetworkPeers.INSTANCE.apply( ipPerm ),
+                                                  empty );
           ruleList.add( rule1 );
-          NetworkRule rule2 = NetworkRule.create( NetworkRule.Protocol.tcp, -1, -1,
-                                                  IpPermissionTypeExtractNetworkPeers.INSTANCE.apply( ipPerm ), empty );
+          NetworkRule rule2 = NetworkRule.create( NetworkRule.Protocol.tcp,
+                                                  -1,
+                                                  -1,
+                                                  IpPermissionTypeExtractNetworkPeers.INSTANCE.apply( ipPerm ),
+                                                  empty );
           ruleList.add( rule2 );
         } else {
-          NetworkRule rule = NetworkRule.create( ipPerm.getIpProtocol( ), ipPerm.getFromPort( ), ipPerm.getToPort( ),
-                                                 IpPermissionTypeExtractNetworkPeers.INSTANCE.apply( ipPerm ), empty );
+          NetworkRule rule = NetworkRule.create( ipPerm.getIpProtocol( ),
+                                                 ipPerm.getFromPort( ),
+                                                 ipPerm.getToPort( ),
+                                                 IpPermissionTypeExtractNetworkPeers.INSTANCE.apply( ipPerm ),
+                                                 empty );
           ruleList.add( rule );
         }
-      } else if ( !ipPerm.getCidrIpRanges().isEmpty( ) ) {
+      } else if ( !ipPerm.getCidrIpRanges( ).isEmpty( ) ) {
         List<String> ipRanges = Lists.newArrayList( );
-        for ( String range : ipPerm.getCidrIpRanges() ) {
+        for ( String range : ipPerm.getCidrIpRanges( ) ) {
           String[] rangeParts = range.split( "/" );
           try {
             if ( Integer.parseInt( rangeParts[1] ) > 32 || Integer.parseInt( rangeParts[1] ) < 0 ) continue;
@@ -749,8 +899,11 @@ public class NetworkGroups {
             }
           } catch ( NumberFormatException e ) {} catch ( UnknownHostException e ) {}
         }
-        NetworkRule rule = NetworkRule.create( ipPerm.getIpProtocol( ), ipPerm.getFromPort( ), ipPerm.getToPort( ),
-                                               IpPermissionTypeExtractNetworkPeers.INSTANCE.apply( ipPerm ), ipRanges );
+        NetworkRule rule = NetworkRule.create( ipPerm.getIpProtocol( ),
+                                               ipPerm.getFromPort( ),
+                                               ipPerm.getToPort( ),
+                                               IpPermissionTypeExtractNetworkPeers.INSTANCE.apply( ipPerm ),
+                                               ipRanges );
         ruleList.add( rule );
       } else {
         throw new IllegalArgumentException( "Invalid Ip Permissions:  must specify either a source cidr or user" );
@@ -766,60 +919,65 @@ public class NetworkGroups {
     }
     return ruleList;
   }
-
+  
   public static class NetworkGroupFilterSupport extends FilterSupport<NetworkGroup> {
-    public NetworkGroupFilterSupport() {
-      super( builderFor( NetworkGroup.class )
-          .withTagFiltering( NetworkGroupTag.class, "networkGroup" )
-          .withStringProperty( "description", FilterFunctions.DESCRIPTION )
-          .withStringProperty( "group-id", FilterFunctions.GROUP_ID )
-          .withStringProperty( "group-name", CloudMetadatas.toDisplayName() )
-          .withStringSetProperty( "ip-permission.cidr", FilterSetFunctions.PERMISSION_CIDR )
-          .withStringSetProperty( "ip-permission.from-port", FilterSetFunctions.PERMISSION_FROM_PORT )
-          .withStringSetProperty( "ip-permission.group-name", FilterSetFunctions.PERMISSION_GROUP )
-          .withStringSetProperty( "ip-permission.protocol", FilterSetFunctions.PERMISSION_PROTOCOL )
-          .withStringSetProperty( "ip-permission.to-port", FilterSetFunctions.PERMISSION_TO_PORT )
-          .withStringSetProperty( "ip-permission.user-id", FilterSetFunctions.PERMISSION_ACCOUNT_ID )
-          .withStringProperty( "owner-id", FilterFunctions.ACCOUNT_ID )
-          .withPersistenceAlias( "networkRules", "networkRules" )
-          .withPersistenceFilter( "description" )
-          .withPersistenceFilter( "group-id", "groupId" )
-          .withPersistenceFilter( "group-name", "displayName" )
-          .withPersistenceFilter( "ip-permission.from-port", "networkRules.lowPort", PersistenceFilter.Type.Integer )
-          .withPersistenceFilter( "ip-permission.protocol", "networkRules.protocol", Enums.valueOfFunction( NetworkRule.Protocol.class ) )
-          .withPersistenceFilter( "ip-permission.to-port", "networkRules.highPort", PersistenceFilter.Type.Integer )
-          .withPersistenceFilter( "owner-id", "ownerAccountNumber" ) );
+    public NetworkGroupFilterSupport( ) {
+      super( builderFor( NetworkGroup.class ).withTagFiltering( NetworkGroupTag.class, "networkGroup" )
+                                             .withStringProperty( "description", FilterFunctions.DESCRIPTION )
+                                             .withStringProperty( "group-id", FilterFunctions.GROUP_ID )
+                                             .withStringProperty( "group-name", CloudMetadatas.toDisplayName( ) )
+                                             .withStringSetProperty( "ip-permission.cidr", FilterSetFunctions.PERMISSION_CIDR )
+                                             .withStringSetProperty( "ip-permission.from-port", FilterSetFunctions.PERMISSION_FROM_PORT )
+                                             .withStringSetProperty( "ip-permission.group-name", FilterSetFunctions.PERMISSION_GROUP )
+                                             .withStringSetProperty( "ip-permission.protocol", FilterSetFunctions.PERMISSION_PROTOCOL )
+                                             .withStringSetProperty( "ip-permission.to-port", FilterSetFunctions.PERMISSION_TO_PORT )
+                                             .withStringSetProperty( "ip-permission.user-id", FilterSetFunctions.PERMISSION_ACCOUNT_ID )
+                                             .withStringProperty( "owner-id", FilterFunctions.ACCOUNT_ID )
+                                             .withPersistenceAlias( "networkRules", "networkRules" )
+                                             .withPersistenceFilter( "description" )
+                                             .withPersistenceFilter( "group-id", "groupId" )
+                                             .withPersistenceFilter( "group-name", "displayName" )
+                                             .withPersistenceFilter( "ip-permission.from-port",
+                                                                     "networkRules.lowPort",
+                                                                     PersistenceFilter.Type.Integer )
+                                             .withPersistenceFilter( "ip-permission.protocol",
+                                                                     "networkRules.protocol",
+                                                                     Enums.valueOfFunction( NetworkRule.Protocol.class ) )
+                                             .withPersistenceFilter( "ip-permission.to-port",
+                                                                     "networkRules.highPort",
+                                                                     PersistenceFilter.Type.Integer )
+                                             .withPersistenceFilter( "owner-id", "ownerAccountNumber" ) );
     }
   }
-
-  private enum FilterFunctions implements Function<NetworkGroup,String> {
+  
+  private enum FilterFunctions implements Function<NetworkGroup, String> {
     ACCOUNT_ID {
       @Override
       public String apply( final NetworkGroup group ) {
-        return group.getOwnerAccountNumber();
+        return group.getOwnerAccountNumber( );
       }
     },
     DESCRIPTION {
       @Override
       public String apply( final NetworkGroup group ) {
-        return group.getDescription();
+        return group.getDescription( );
       }
     },
     GROUP_ID {
       @Override
       public String apply( final NetworkGroup group ) {
-        return group.getGroupId();
+        return group.getGroupId( );
       }
     },
   }
-
-  private enum FilterSetFunctions implements Function<NetworkGroup,Set<String>> {
+  
+  private enum FilterSetFunctions implements Function<NetworkGroup, Set<String>> {
     PERMISSION_CIDR {
       @Override
       public Set<String> apply( final NetworkGroup group ) {
-        final Set<String> result = Sets.newHashSet();
-        for ( final NetworkRule rule : group.getNetworkRules() ) {
-          result.addAll( rule.getIpRanges() );
+        final Set<String> result = Sets.newHashSet( );
+        for ( final NetworkRule rule : group.getNetworkRules( ) ) {
+          result.addAll( rule.getIpRanges( ) );
         }
         return result;
       }
@@ -827,9 +985,9 @@ public class NetworkGroups {
     PERMISSION_FROM_PORT {
       @Override
       public Set<String> apply( final NetworkGroup group ) {
-        final Set<String> result = Sets.newHashSet();
-        for ( final NetworkRule rule : group.getNetworkRules() ) {
-          result.add( Integer.toString( rule.getLowPort() ) );
+        final Set<String> result = Sets.newHashSet( );
+        for ( final NetworkRule rule : group.getNetworkRules( ) ) {
+          result.add( Integer.toString( rule.getLowPort( ) ) );
         }
         return result;
       }
@@ -837,10 +995,10 @@ public class NetworkGroups {
     PERMISSION_GROUP {
       @Override
       public Set<String> apply( final NetworkGroup group ) {
-        final Set<String> result = Sets.newHashSet();
-        for ( final NetworkRule rule : group.getNetworkRules() ) {
-          for ( final NetworkPeer peer : rule.getNetworkPeers() ) {
-            if ( peer.getGroupName() != null ) result.add( peer.getGroupName() );
+        final Set<String> result = Sets.newHashSet( );
+        for ( final NetworkRule rule : group.getNetworkRules( ) ) {
+          for ( final NetworkPeer peer : rule.getNetworkPeers( ) ) {
+            if ( peer.getGroupName( ) != null ) result.add( peer.getGroupName( ) );
           }
         }
         return result;
@@ -849,9 +1007,9 @@ public class NetworkGroups {
     PERMISSION_PROTOCOL {
       @Override
       public Set<String> apply( final NetworkGroup group ) {
-        final Set<String> result = Sets.newHashSet();
-        for ( final NetworkRule rule : group.getNetworkRules() ) {
-          if ( rule.getProtocol() != null ) result.add( rule.getProtocol().name() );
+        final Set<String> result = Sets.newHashSet( );
+        for ( final NetworkRule rule : group.getNetworkRules( ) ) {
+          if ( rule.getProtocol( ) != null ) result.add( rule.getProtocol( ).name( ) );
         }
         return result;
       }
@@ -859,9 +1017,9 @@ public class NetworkGroups {
     PERMISSION_TO_PORT {
       @Override
       public Set<String> apply( final NetworkGroup group ) {
-        final Set<String> result = Sets.newHashSet();
-        for ( final NetworkRule rule : group.getNetworkRules() ) {
-          result.add( Integer.toString( rule.getHighPort() ) );
+        final Set<String> result = Sets.newHashSet( );
+        for ( final NetworkRule rule : group.getNetworkRules( ) ) {
+          result.add( Integer.toString( rule.getHighPort( ) ) );
         }
         return result;
       }
@@ -869,10 +1027,10 @@ public class NetworkGroups {
     PERMISSION_ACCOUNT_ID {
       @Override
       public Set<String> apply( final NetworkGroup group ) {
-        final Set<String> result = Sets.newHashSet();
-        for ( final NetworkRule rule : group.getNetworkRules() ) {
-          for ( final NetworkPeer peer : rule.getNetworkPeers() ) {
-            if ( peer.getUserQueryKey() != null ) result.add( peer.getUserQueryKey() );
+        final Set<String> result = Sets.newHashSet( );
+        for ( final NetworkRule rule : group.getNetworkRules( ) ) {
+          for ( final NetworkPeer peer : rule.getNetworkPeers( ) ) {
+            if ( peer.getUserQueryKey( ) != null ) result.add( peer.getUserQueryKey( ) );
           }
         }
         return result;

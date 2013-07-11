@@ -298,7 +298,7 @@ public class NetworkGroup extends UserMetadata<NetworkGroup.State> implements Ne
   }
   
   public ExtantNetwork reclaim( Integer i ) throws NotEnoughResourcesException, TransientEntityException {
-    if ( !NetworkGroups.networkingConfiguration( ).hasNetworking( ) ) {
+    if ( !NetworkGroups.networkingConfiguration( ).hasPrivateAddressing( ) ) {
       return ExtantNetwork.bogus( this );
     } else if ( !Entities.isPersistent( this ) ) {
       throw new TransientEntityException( this.toString( ) );
@@ -310,7 +310,7 @@ public class NetworkGroup extends UserMetadata<NetworkGroup.State> implements Ne
   }
   
   public ExtantNetwork extantNetwork( ) throws NotEnoughResourcesException, TransientEntityException {
-    if ( !NetworkGroups.networkingConfiguration( ).hasNetworking( ) ) {
+    if ( !NetworkGroups.networkingConfiguration( ).hasPrivateAddressing( ) ) {
     	ExtantNetwork bogusNet = ExtantNetwork.bogus( this );
     	if(!this.hasExtantNetwork())
     		this.setExtantNetwork(bogusNet);
