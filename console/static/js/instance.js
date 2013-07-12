@@ -21,6 +21,7 @@
   $.widget('eucalyptus.instance', $.eucalyptus.eucawidget, {
     options : {
       state_filter : null,
+      az_filter : null,
     },
     tableWrapper : null,
     termDialog : null,
@@ -30,7 +31,6 @@
     consoleDialog : null,
     detachDialog : null,
     launchMoreDialog : null,
-    tagDialog : null,
     instVolMap : {},// {i-123456: {vol-123456:attached,vol-234567:attaching,...}}
     instIpMap : {}, // {i-123456: 192.168.0.1}
     instPassword : {}, // only windows instances
@@ -275,6 +275,7 @@
           return thisObj._expandCallback(row);
         },
         filters : [{name:"status", default: thisObj.options.state_filter, options: ['all','running','pending','stopped','terminated'], text: [instance_state_selector_all,instance_state_selector_running,instance_state_selector_pending,instance_state_selector_stopped,instance_state_selector_terminated], filter_col:12}, 
+                   {name:"availability_zone", default: thisObj.options.az_filter, options: ['all','running','pending','stopped','terminated'], text: [instance_state_selector_all,instance_state_selector_running,instance_state_selector_pending,instance_state_selector_stopped,instance_state_selector_terminated], filter_col:12}, 
                    {name:"inst_type", options: ['all', 'ebs','instance-store'], text: [instance_type_selector_all, instance_type_selector_ebs, instance_type_selector_instancestore], filter_col:11}],
         legend : ['running','pending','stopping','stopped','shuttingdown','terminated']
       }) //end of eucatable
@@ -299,18 +300,6 @@
         },
         help: {content: $term_help, url: help_instance.dialog_terminate_content_url},
       });
-
-     // TEMP LOCATION FOR TAG RESOURCE DIALOG
-      $tmpl = $('html body').find('.templates #resourceTagWidgetTmpl').clone();
-      $rendered = $($tmpl.render($.extend($.i18n.map, help_instance)));
-      var $tag_dialog = $rendered.children().first();
-      var $tag_help = $rendered.children().last();
-      this.tagDialog = $tag_dialog.eucadialog({
-        id: 'instances-tag-resource',
-        title: 'Add/Edit tags',
-        help: {content: $tag_help, url: help_instance.dialog_terminate_content_url},
-      });
-     // END OF TEMP LOCATION
 
       $tmpl = $('html body').find('.templates #instanceRebootDlgTmpl').clone();
       $rendered = $($tmpl.render($.extend($.i18n.map, help_instance)));
@@ -472,6 +461,7 @@
        menuItems['associate'] = {"name":instance_action_associate, callback: function(key, opt){; }, disabled: function(){ return true; }};
        menuItems['disassociate'] = {"name":instance_action_disassociate, callback: function(key, opt){;}, disabled: function(){ return true; }};
        menuItems['tag'] = {"name":table_menu_edit_tags_action, callback: function(key, opt){;}, disabled: function(){ return true; }};
+       menuItems['launchconfig'] = {"name":instance_action_launchconfig, callback: function(key, opt){;}, disabled: function(){ return true; }}
      })();
 
      if(numSelected === 1 && 'running' in stateMap && $.inArray(instIds[0], stateMap['running']>=0)){
@@ -494,6 +484,7 @@
 
      if(numSelected == 1){
        menuItems['launchmore'] = {"name":instance_action_launch_more, callback: function(key, opt){ thisObj._launchMoreAction(); }}
+       menuItems['launchconfig'] = {"name":instance_action_launchconfig, callback: function(key, opt){ thisObj._launchConfigAction(); }}
      }
   
      if(numSelected >= 1){ // TODO: no state check for terminate? A: terminating terminated instances will delete records
@@ -1060,6 +1051,14 @@
       this.launchMoreDialog.eucadialog('open');
     },
 
+    _launchConfigAction : function(){
+      var instance = this.tableWrapper.eucatable('getSelectedRows', 17)[0];
+      var dialog = 'create_launchconfig_dialog';
+      require(['app'], function(app) {
+        app.dialog(dialog, instance);
+      });
+    },
+
     _launchMore : function( callback ) {
       var thisObj = this;
       var id = this.tableWrapper.eucatable('getSelectedRows', 17)[0];
@@ -1245,7 +1244,7 @@
       var selectedType = instance.instance_type;
       var zone = instance.placement;
       if (zone == undefined) {
-        zone = oObj.aData._placement.zone;
+        zone = instance._placement.zone;
       }
       $summary = $('<div>').append(
           $('<div>').attr('id','summary-type-insttype').append($('<div>').text(launch_instance_summary_type), $('<span>').text(selectedType)),

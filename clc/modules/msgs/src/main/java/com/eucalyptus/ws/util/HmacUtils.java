@@ -159,6 +159,12 @@ public class HmacUtils {
                                                              @Nonnull final Function<String, List<String>> parameterLookup ) throws AuthenticationException {
         throw new AuthenticationException("Authorization parameters not found");
       }
+
+      @Override
+      public String getSecurityToken( @Nonnull final Function<String, List<String>> headerLookup,
+                                      @Nonnull final Function<String, List<String>> parameterLookup ) throws AuthenticationException {
+        return lookupUnique( parameterLookup, "parameter", SecurityParameter.SecurityToken.parameter() );
+      }
     },
     SignatureV2Standard( SignatureVersion.SignatureV2 ) {
       @Override
@@ -205,6 +211,12 @@ public class HmacUtils {
       public Map<String, String> getAuthorizationParameters( @Nonnull final Function<String, List<String>> headerLookup,
                                                              @Nonnull final Function<String, List<String>> parameterLookup ) throws AuthenticationException {
         return SignatureV1Standard.getAuthorizationParameters( headerLookup, parameterLookup );
+      }
+
+      @Override
+      public String getSecurityToken( @Nonnull final Function<String, List<String>> headerLookup,
+                                      @Nonnull final Function<String, List<String>> parameterLookup ) throws AuthenticationException {
+        return SignatureV1Standard.getSecurityToken( headerLookup, parameterLookup );
       }
     },
     SignatureV4Standard( SignatureVersion.SignatureV4 ) {
@@ -277,6 +289,12 @@ public class HmacUtils {
                                                           @Nonnull final Function<String, List<String>> parameterLookup ) throws AuthenticationException {
         return new SignatureCredential( getAuthorizationParameters( headerLookup, parameterLookup ).get( "Credential" ) );
       }
+
+      @Override
+      public String getSecurityToken( @Nonnull final Function<String, List<String>> headerLookup,
+                                      @Nonnull final Function<String, List<String>> parameterLookup ) throws AuthenticationException {
+        return lookupUnique( headerLookup, "header", SecurityParameter.X_Amz_Security_Token.parameter() );
+      }
     },
     SignatureV4Query( SignatureVersion.SignatureV4 ) {
       @Override
@@ -327,6 +345,12 @@ public class HmacUtils {
             .put( "SignedHeaders", lookupUniqueRequired( parameterLookup, "parameter", SecurityParameter.X_Amz_SignedHeaders.parameter() ) )
             .build();
       }
+
+      @Override
+      public String getSecurityToken( @Nonnull final Function<String, List<String>> headerLookup,
+                                      @Nonnull final Function<String, List<String>> parameterLookup ) throws AuthenticationException {
+        return lookupUnique( parameterLookup, "parameter", SecurityParameter.X_Amz_Security_Token.parameter() );
+      }
     };
 
     private final SignatureVersion version;
@@ -372,7 +396,9 @@ public class HmacUtils {
     public abstract Map<String,String> getAuthorizationParameters( @Nonnull final Function<String, List<String>> headerLookup,
                                                                    @Nonnull final Function<String, List<String>> parameterLookup ) throws AuthenticationException;
 
-    }
+    public abstract String getSecurityToken( @Nonnull final Function<String, List<String>> headerLookup,
+                                             @Nonnull final Function<String, List<String>> parameterLookup ) throws AuthenticationException;
+  }
 
   public static Function<String,List<String>> headerLookup( final Map<String,List<String>> values ) {
     return forMap( values, Strings.lower() );

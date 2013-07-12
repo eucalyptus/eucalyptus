@@ -442,6 +442,7 @@ input[type="radio"] {
     padding: 0; /* 2 */
     *height: 13px; /* 3 */
     *width: 13px; /* 3 */
+    margin:5px 0 5px 6px;
 }
 
 /*

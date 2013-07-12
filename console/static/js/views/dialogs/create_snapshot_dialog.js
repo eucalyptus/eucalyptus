@@ -86,6 +86,7 @@ define([
               },
 
                 cancelButton: {
+                  id: 'button-dialog-createsnapshot-cancel',
                   click: function() {
                     self.close();
                     self.cleanup();
@@ -93,6 +94,7 @@ define([
                 },
 
                 createButton: new Backbone.Model({
+                  id: 'button-dialog-createsnapshot-save',
                   disabled: true,
                   click: function() {
 	            // GET THE INPUT FROM HTML VIEW

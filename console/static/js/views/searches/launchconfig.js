@@ -17,29 +17,45 @@ define([
     // FIXME - app.data.images *has* contents, but
     // the result of toJSON() is empty - not sure
     // what to do here
-    app.data.images.toJSON().forEach(function(launhConfig) {
-      imageForID[launhConfig.id] = {
-        root_device_type: launhConfig.root_device_type,
-        platform: launhConfig.platform
+    app.data.images.toJSON().forEach(function(launchConfig) {
+      imageForID[launchConfig.id] = {
+        root_device_type: launchConfig.root_device_type,
+        platform: launchConfig.platform
+      };
+    });
+    var groupForID = {
+    };
+    app.data.scalinggrp.toJSON().forEach(function(group) {
+      groupForID[group.launch_config_name] = {
+        availability_zone: group.availability_zones[0],
+        scaling_group: group.name
       };
     });
 
     var config = {
-      facets: ['all_text', 'os', 'instance_type', 'root_device_type'],
+      facets: ['all_text', 'instance_type', 'availability_zone', 'root_device_type', 'scaling_group'],
       localize: {
         state: app.msg('search_facet_launchconfig_status'), //'Status',
-        'os': app.msg('search_facet_launchconfig_os') //'Operating System'
+        'os': app.msg('search_facet_launchconfig_os'), //'Operating System'
+        ebs : app.msg('search_facet_image_ebs') //'EBS'
       },
       match: {
-        os: function(search, item, add) {
-          console.log("ITERATE");
+        availability_zone: function(search, item, add) {
           var found = {};
-          for (var key in imageForID) {
-            var val = imageForID[key];
+          for (var key in groupForID) {
+            var val = groupForID[key];
+            if (!found[val.availability_zone]) {
+              found[val.availability_zone] = true;
+              add(val.availability_zone);
+            }
           }
-          if (!found[val.platform]) {
-            found[val.platform] = true;
-            add(val.platform);
+        },
+        scaling_group: function(search, item, add) {
+          var found = {};
+          for (var key in groupForID) {
+            var val = groupForID[key];
+            found[val.scaling_group] = true;
+            add(val.scaling_group);
           }
         },
         root_device_type: function(search, item, add) {
@@ -54,9 +70,16 @@ define([
         }
       },
       search: {
-        os: function(search, facetSearch, item, itemsFacetValue, hit) {
-          var img = imageForID[item.image_id];
-          if (img && facetSearch === img.platform) {
+        availability_zone: function(search, facetSearch, item, itemsFacetValue, hit) {
+          var group = groupForID[item.name];
+          if (group && facetSearch === group.availability_zone) {
+            hit();
+          }
+          return true;
+        },
+        scaling_group: function(search, facetSearch, item, itemsFacetValue, hit) {
+          var group = groupForID[item.name];
+          if (group && facetSearch === group.scaling_group) {
             hit();
           }
           return true;

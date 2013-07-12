@@ -5,7 +5,7 @@ define([
 ], function(Search, TagSearch, app) {
   return function(images) {
 
-    var USER_ID = "601265054777";
+    var USER_ID = "";
     app.data.sgroup.each(function(securityGroup) {
       securityGroup = securityGroup.toJSON();
       if ('default' === securityGroup.name) {

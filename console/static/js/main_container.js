@@ -119,7 +119,17 @@
              this.element.dashboard({select: function(evt, ui){$container.maincontainer("changeSelected", evt, ui)}});
              break;
          case 'instance':
-             this.element.instance({'state_filter': filter});
+             if(typeof filter == 'object') {
+              this.element.instance(filter);
+             } else {
+              this.element.instance({'state_filter': filter});
+             }
+             break;
+         case 'scaling':
+             this.element.scaling();
+             break;
+         case 'balancing':
+             this.element.balancing();
              break;
          case 'keypair':
              this.element.keypair();
@@ -168,7 +178,31 @@
         case 'aboutcloud':
           this._aboutDialog.eucadialog("open");
           break;
-                      }
+        case 'eantest':
+          this.element.eantest();
+          break;
+	      case 'jp_volume':
+	        this.element.jpvols();
+          break;
+	      case 'newscalinggroup':
+      	  this.element.newscalinggroup();
+          break;
+          case 'scalinggroup':
+            this.element.scalinggroup();
+          break;
+        case 'rivetstest':
+          this.element.rivetstest();
+          break;
+        case 'launchconfig':
+          this.element.launchconfig();
+          break;
+        case 'newlaunchconfig':
+          var options = {};
+          if(filter && filter['image'])
+            options['image'] = filter['image'].get('id');
+          this.element.newlaunchconfig(options);
+          break;
+      }
       if (options !== KEEP_VIEW) {
         this._curSelected = selected;
         location.hash = selected;

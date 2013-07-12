@@ -5,13 +5,18 @@ define([
   var EucaCollection = Backbone.Collection.extend({
     initialize: function() {
         var self = this;
+        this.isLoaded = false;
     },
+
+    hasLoaded: function() {
+      return this.isLoaded;
+    },
+
     sync: function(method, model, options) {
       var collection = this;
 
       if (method == 'read') {
           $.ajax({
-            type:"POST",
             url: collection.url,
             data:"_xsrf="+$.cookie('_xsrf'),
             dataType:"json",
@@ -23,6 +28,8 @@ define([
               _.each(results, function(r) {
                 if (r.tags != null) delete r.tags;
               });
+              model.isLoaded = true;
+              model.trigger('initialized');
               options.success && options.success(results);
               //collection.resetTags();
             } else {

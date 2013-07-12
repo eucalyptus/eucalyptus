@@ -37,16 +37,27 @@ from .watchinterface import WatchInterface
 # some things will need to be re-written.
 class CachingWatchInterface(WatchInterface):
     cw = None
+    caches = None
 
     # load saved state to simulate Walrus
     def __init__(self, watchinterface, config):
+        self.caches = {}
         self.cw = watchinterface
         pollfreq = config.getint('server', 'pollfreq')
         try:
             freq = config.getint('server', 'pollfreq.metrics')
         except ConfigParser.NoOptionError:
             freq = pollfreq
-        self.metrics = Cache(freq)
+        self.caches['metrics'] = Cache(freq)
+        self.caches['get_metrics'] = self.cw.list_metrics
+        self.caches['timer_metrics'] = None
+        try:
+            freq = config.getint('server', 'pollfreq.alarms')
+        except ConfigParser.NoOptionError:
+            freq = pollfreq
+        self.caches['alarms'] = Cache(freq)
+        self.caches['get_alarms'] = self.cw.describe_alarms
+        self.caches['timer_alarms'] = None
 
     ##
     # cloud watch methods
@@ -66,34 +77,91 @@ class CachingWatchInterface(WatchInterface):
             Threads.instance().invokeCallback(callback, Response(error=ex))
 
     def list_metrics(self, next_token=None, dimensions=None, metric_name=None, namespace=None, callback=None):
-        if self.metrics.isCacheStale():
+        if self.caches['metrics'].isCacheStale():
             params = {'next_token':next_token, 'dimensions':dimensions, 'metric_name':metric_name, 'namespace':namespace}
             Threads.instance().runThread(self.__list_metrics_cb__, (params, callback))
         else:
-            callback(Response(data=self.metrics.values))
+            callback(Response(data=self.caches['metrics'].values))
 
     def __list_metrics_cb__(self, kwargs, callback):
         try:
-            self.metrics.values = self.cw.list_metrics(kwargs['next_token'], kwargs['dimensions'],
+            self.caches['metrics'].values = self.cw.list_metrics(kwargs['next_token'], kwargs['dimensions'],
                                        kwargs['metric_name'], kwargs['namespace'])
-            Threads.instance().invokeCallback(callback, Response(data=self.metrics.values))
+            Threads.instance().invokeCallback(callback, Response(data=self.caches['metrics'].values))
         except Exception as ex:
             Threads.instance().invokeCallback(callback, Response(error=ex))
 
-    def put_metric_data(self, namespace, name, value=None, timestamp=None, unit=None, dimensions=None, statistics=None, callback=None):
-        params = {'namespace':namespace, 'name':name, 'value':value, 'timestamp':timestamp,
-                  'unit':unit, 'dimensions':dimensions, 'statistics':statistics}
+    def put_metric_data(self, namespace, data, callback=None):
+        params = {'namespace':namespace, 'data':data}
         Threads.instance().runThread(self.__put_metric_data_cb__, (params, callback))
 
     def __put_metric_data_cb__(self, kwargs, callback):
         try:
-            ret = self.cw.put_metric_data(kwargs['namespace'], kwargs['name'], kwargs['value'],
-                                       kwargs['timestamp'], kwargs['unit'], kwargs['dimensions'],
-                                       kwargs['statistics'])
+            data = kwargs['data']
+            for d in data:
+              ret = self.cw.put_metric_data(d['namespace'], d['name'], d['value'],
+                                       d['timestamp'], d['unit'], d['dimensions'],
+                                       d['statistics'])
             Threads.instance().invokeCallback(callback, Response(data=ret))
         except Exception as ex:
             Threads.instance().invokeCallback(callback, Response(error=ex))
 
+    def describe_alarms(self, action_prefix=None, alarm_name_prefix=None, alarm_names=None, max_records=None,
+                        state_value=None, next_token=None, callback=None):
+        if self.caches['alarms'].isCacheStale():
+            params = {'action_prefix':action_prefix, 'alarm_name_prefix':alarm_name_prefix, 'alarm_names':alarm_names,
+                      'max_records':max_records, 'state_value':state_value, 'next_token':next_token}
+            Threads.instance().runThread(self.__describe_alarms_cb__, (params, callback))
+        else:
+            callback(Response(data=self.caches['alarms'].values))
+
+    def __describe_alarms_cb__(self, kwargs, callback):
+        try:
+            self.caches['alarms'].values = self.cw.describe_alarms(kwargs['action_prefix'], kwargs['alarm_name_prefix'], kwargs['alarm_names'],
+                                                         kwargs['max_records'], kwargs['state_value'], kwargs['next_token'])
+            Threads.instance().invokeCallback(callback, Response(data=self.caches['alarms'].values))
+        except Exception as ex:
+            Threads.instance().invokeCallback(callback, Response(error=ex))
+
+    def delete_alarms(self, alarm_names, callback=None):
+        Threads.instance().runThread(self.__delete_alarms_cb__, ({'names':alarm_names}, callback))
+
+    def __delete_alarms_cb__(self, kwargs, callback):
+        try:
+            ret = self.cw.delete_alarms(kwargs['names'])
+            Threads.instance().invokeCallback(callback, Response(data=ret))
+        except Exception as ex:
+            Threads.instance().invokeCallback(callback, Response(error=ex))
+
+    def enable_alarm_actions(self, alarm_names, callback=None):
+        Threads.instance().runThread(self.__enable_alarm_actions_cb__, ({'names':alarm_names}, callback))
+
+    def __enable_alarm_actions_cb__(self, kwargs, callback):
+        try:
+            ret = self.cw.enable_alarm_actions(kwargs['names'])
+            Threads.instance().invokeCallback(callback, Response(data=ret))
+        except Exception as ex:
+            Threads.instance().invokeCallback(callback, Response(error=ex))
+
+    def disable_alarm_actions(self, alarm_names, callback=None):
+        Threads.instance().runThread(self.__disable_alarm_actions_cb__, ({'names':alarm_names}, callback))
+
+    def __disable_alarm_actions_cb__(self, kwargs, callback):
+        try:
+            ret = self.cw.disable_alarm_actions(kwargs['names'])
+            Threads.instance().invokeCallback(callback, Response(data=ret))
+        except Exception as ex:
+            Threads.instance().invokeCallback(callback, Response(error=ex))
+
+    def put_metric_alarm(self, alarm, callback=None):
+        Threads.instance().runThread(self.__put_metric_alarm_cb__, ({'alarm':alarm}, callback))
+
+    def __put_metric_alarm_cb__(self, kwargs, callback):
+        try:
+            ret = self.cw.put_metric_alarm(kwargs['alarm'])
+            Threads.instance().invokeCallback(callback, Response(data=ret))
+        except Exception as ex:
+            Threads.instance().invokeCallback(callback, Response(error=ex))
 
 class Response(object):
     data = None

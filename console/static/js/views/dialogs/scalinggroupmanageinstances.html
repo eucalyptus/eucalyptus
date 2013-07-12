@@ -1,11 +1,53 @@
 <div>
     <div class="title" data-msg="manage_scaling_group_instances_dialog_title"></div>
     <div class="body">
-		<p data-msg="manage_scaling_group_instances_dialog_text"></p>
-        <a data-on-click=":close" data-msg="manage_scaling_group_instances_dialog_link_label"></a>
+		<p><span data-msg="manage_scaling_group_instances_dialog_text"></span><span>&nbsp;</span>
+        <a data-on-click=":switchToQScale" data-msg="manage_scaling_group_instances_dialog_link_label"></a>
+        <span>&nbsp;</span><span data-msg="manage_scaling_group_instances_dialog_text_suffix"></span>
+        </p>
         <p></p>
-		
-		<div data-text=":status" style="height:20px"></div>
+   <!-- decided we didn't need these at this time: EUCA-5501      
+    <div>
+      <input type="checkbox" name="launch-new-on-term" id="launch-new-on-term"><label for="launch-new-on-term" data-msg="scaling_table_expanded_launch_instance_on_term"></label>
+    </div>
+    <div>
+      <input type="checkbox" name="begin-checking-health" id="begin-checking-health"><label for="begin-checking-health" data-msg="scaling_table_expanded_check_health_on_launch"></label>
+    </div>
+  -->
+		<!-- <div data-text=":status" style="height:20px"></div> Not sure what this is for -->
+    <div data-ui-vsearch="search"></div>
+    <div class="managescalinggroup">
+      <table>
+        <thead>
+          <tr>
+            <th data-msg="scaling_table_expanded_instance_id"></th>
+            <th data-msg="scaling_table_expanded_instance_health_status"></th>
+            <th data-msg="scaling_table_expanded_instance_zone"></th>
+            <th data-msg="scaling_table_expanded_instance_launch_config"></th>
+            <th data-msg="scaling_table_expanded_instance_state"></th>
+            <th class="deletearea"></th>
+          </tr>
+        </thead>
+        <tbody class="tag-edit" data-each-instance="instances" >
+          <tr data-class-edit-tags-deleted="instance._deleted">
+            <td data-text="instance.instance_id"></td>
+            <td>
+              <select data-value="instance.health_status"> 
+                <option value="Unhealthy">Unhealthy</option>
+                <option value="Healthy">Healthy</option>
+              </select>
+            </td>
+            <td data-text="instance.availability_zone"></td>
+            <td data-text="instance.launch_config_name"></td>
+            <td data-text="instance.lifecycle_state"></td>
+            <td>
+              <div class="icon_delete tag-control" data-on-click=":delete" data-tooltip="instance_dialog_term_title" data-hide="instance._deleted"></div>
+              <div class="icon_cancel tag-control" data-on-click=":undoDelete" data-tooltip="instance_dialog_undo_title" data-show="instance._deleted"></div>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
         <div class="ui-dialog-buttonpane ui-widget-content ui-helper-clearfix">
             <div class="ui-dialog-buttonset">
                 <span data-ui-button=":submitButton" data-msg="manage_scaling_group_instances_dialog_save_btn"></span>

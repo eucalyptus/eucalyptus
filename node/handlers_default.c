@@ -739,11 +739,10 @@ static int doAssignAddress(struct nc_state_t *nc, ncMetadata * pMeta, char *inst
 
     sem_p(inst_sem);
     {
-        instance = find_instance(&global_instances, instanceId);
-        if (instance) {
+        if ((instance = find_instance(&global_instances, instanceId)) != NULL) {
             snprintf(instance->ncnet.publicIp, 24, "%s", publicIp);
+            save_instance_struct(instance);
         }
-        save_instance_struct(instance);
         copy_instances();
     }
     sem_v(inst_sem);
@@ -932,8 +931,9 @@ static int doAttachVolume(struct nc_state_t *nc, ncMetadata * pMeta, char *insta
     sem_p(inst_sem);
     ncInstance *instance = find_instance(&global_instances, instanceId);
     sem_v(inst_sem);
-    if (instance == NULL)
+    if (instance == NULL) {
         return EUCA_NOT_FOUND_ERROR;
+    }
 
     {                                  // connect to hypervisor and query it
         virConnectPtr conn = lock_hypervisor_conn();
@@ -955,12 +955,14 @@ static int doAttachVolume(struct nc_state_t *nc, ncMetadata * pMeta, char *insta
     }
 
     // mark volume as 'attaching', save token value as we got from the wire
-
     sem_p(inst_sem);
-    volume = save_volume(instance, volumeId, attachmentToken, NULL, localDevName, localDevReal, VOL_STATE_ATTACHING);
-    save_instance_struct(instance);
-    copy_instances();
+    {
+		volume = save_volume(instance, volumeId, attachmentToken, NULL, localDevName, localDevReal, VOL_STATE_ATTACHING);
+		save_instance_struct(instance);
+		copy_instances();
+    }
     sem_v(inst_sem);
+
     if (!volume) {
         LOGERROR("[%s][%s] failed to update the volume record, aborting volume attachment\n", instanceId, volumeId);
         return EUCA_ERROR;
@@ -997,10 +999,13 @@ static int doAttachVolume(struct nc_state_t *nc, ncMetadata * pMeta, char *insta
 
     // Update volume with new connection info
     sem_p(inst_sem);
-    volume = save_volume(instance, volumeId, attachmentToken, vol_data->connect_string, localDevName, localDevReal, VOL_STATE_ATTACHING);
-    save_instance_struct(instance);
-    copy_instances();
+    {
+		volume = save_volume(instance, volumeId, attachmentToken, vol_data->connect_string, localDevName, localDevReal, VOL_STATE_ATTACHING);
+		save_instance_struct(instance);
+		copy_instances();
+    }
     sem_v(inst_sem);
+
     if (!volume) {
         LOGERROR("[%s][%s] failed to update the volume record, aborting volume attachment\n", instanceId, volumeId);
         ret = EUCA_ERROR;
@@ -1083,15 +1088,18 @@ release:
         } else {
             next_vol_state = VOL_STATE_ATTACHING_FAILED;
         }
+
         sem_p(inst_sem);
-        volume = save_volume(instance, volumeId, NULL, NULL, NULL, NULL, next_vol_state);   // now we can record remoteDevReal
-        save_instance_struct(instance);
-        copy_instances();
-        update_disk_aliases(instance); // ask sensor subsystem to track the volume
+        {
+			volume = save_volume(instance, volumeId, NULL, NULL, NULL, NULL, next_vol_state);   // now we can record remoteDevReal
+			save_instance_struct(instance);
+			copy_instances();
+			update_disk_aliases(instance); // ask sensor subsystem to track the volume
+        }
         sem_v(inst_sem);
     }
 
-    if (volume == NULL && xml != NULL) {
+    if ((volume == NULL) && (xml != NULL)) {
         LOGERROR("[%s][%s] failed to save the volume record, aborting volume attachment (detaching)\n", instanceId, volumeId);
 
         // connect to hypervisor, find the domain, detach the volume

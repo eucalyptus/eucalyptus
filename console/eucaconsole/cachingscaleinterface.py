@@ -37,32 +37,47 @@ from .scaleinterface import ScaleInterface
 # some things will need to be re-written.
 class CachingScaleInterface(ScaleInterface):
     scaling = None
+    caches = None
 
     # load saved state to simulate Walrus
     def __init__(self, scaleinterface, config):
+        self.caches = {}
         self.scaling = scaleinterface
         pollfreq = config.getint('server', 'pollfreq')
         try:
             freq = config.getint('server', 'pollfreq.scalinggroups')
         except ConfigParser.NoOptionError:
             freq = pollfreq
-        self.groups = Cache(freq)
+        self.caches['scalinggrps'] = Cache(freq)
+        self.caches['get_scalinggrps'] = self.scaling.get_all_groups
+        self.caches['timer_scalinggrps'] = None
         try:
             freq = config.getint('server', 'pollfreq.scalinginstances')
         except ConfigParser.NoOptionError:
             freq = pollfreq
-        self.instances = Cache(freq)
+        self.caches['scalinginsts'] = Cache(freq)
+        self.caches['get_scalinginsts'] = self.scaling.get_all_autoscaling_instances
+        self.caches['timer_scalinginsts'] = None
         try:
             freq = config.getint('server', 'pollfreq.launchconfigs')
         except ConfigParser.NoOptionError:
             freq = pollfreq
-        self.launchconfigs = Cache(freq)
+        self.caches['launchconfigs'] = Cache(freq)
+        self.caches['get_launchconfigs'] = self.scaling.get_all_launch_configurations
+        self.caches['timer_launchconfigs'] = None
+        try:
+            freq = config.getint('server', 'pollfreq.policies')
+        except ConfigParser.NoOptionError:
+            freq = pollfreq
+        self.caches['policies'] = Cache(freq)
+        self.caches['get_policies'] = self.scaling.get_all_policies
+        self.caches['timer_policies'] = None
 
     ##
     # autoscaling methods
     ##
     def create_auto_scaling_group(self, as_group, callback=None):
-        self.groups.expireCache()
+        self.caches['scalinggrps'].expireCache()
         params = {'as_group':as_group}
         Threads.instance().runThread(self.__create_auto_scaling_group_cb__, (params, callback))
 
@@ -74,7 +89,7 @@ class CachingScaleInterface(ScaleInterface):
             Threads.instance().invokeCallback(callback, Response(error=ex))
 
     def delete_auto_scaling_group(self, name, force_delete=False, callback=None):
-        self.groups.expireCache()
+        self.caches['scalinggrps'].expireCache()
         params = {'name':name, 'force_delete':force_delete}
         Threads.instance().runThread(self.__delete_auto_scaling_group_cb__, (params, callback))
 
@@ -86,40 +101,40 @@ class CachingScaleInterface(ScaleInterface):
             Threads.instance().invokeCallback(callback, Response(error=ex))
 
     def get_all_groups(self, names=None, max_records=None, next_token=None, callback=None):
-        if self.groups.isCacheStale():
+        if self.caches['scalinggrps'].isCacheStale():
             params = {'names':names, 'max_records':max_records, 'next_token':next_token}
             Threads.instance().runThread(self.__get_all_groups_cb__, (params, callback))
         else:
-            callback(Response(data=self.groups.values))
+            callback(Response(data=self.caches['scalinggrps'].values))
 
     def __get_all_groups_cb__(self, kwargs, callback):
         try:
-            self.groups.values = self.scaling.get_all_groups(kwargs['names'],
+            self.caches['scalinggrps'].values = self.scaling.get_all_groups(kwargs['names'],
                                     kwargs['max_records'], kwargs['next_token'])
-            Threads.instance().invokeCallback(callback, Response(data=self.groups.values))
+            Threads.instance().invokeCallback(callback, Response(data=self.caches['scalinggrps'].values))
         except Exception as ex:
             Threads.instance().invokeCallback(callback, Response(error=ex))
 
     def get_all_autoscaling_instances(self, instance_ids=None, max_records=None, next_token=None, callback=None):
-        if self.instances.isCacheStale():
+        if self.caches['scalinginsts'].isCacheStale():
             params = {'instance_ids':instance_ids, 'max_records':max_records,
                       'next_token':next_token}
             Threads.instance().runThread(self.__get_all_autoscaling_instances_cb__,
                                     (params, callback))
         else:
-            callback(Response(data=self.instances.values))
+            callback(Response(data=self.caches['scalinginsts'].values))
 
     def __get_all_autoscaling_instances_cb__(self, kwargs, callback):
         try:
-            self.instances.values = self.scaling.get_all_autoscaling_instances(
+            self.caches['scalinginsts'].values = self.scaling.get_all_autoscaling_instances(
                                             kwargs['instance_ids'],
                                             kwargs['max_records'], kwargs['next_token'])
-            Threads.instance().invokeCallback(callback, Response(data=self.instances.values))
+            Threads.instance().invokeCallback(callback, Response(data=self.caches['scalinginsts'].values))
         except Exception as ex:
             Threads.instance().invokeCallback(callback, Response(error=ex))
 
     def set_desired_capacity(self, group_name, desired_capacity, honor_cooldown=False, callback=None):
-        self.groups.expireCache()
+        self.caches['scalinggrps'].expireCache()
         params = {'group_name':group_name, 'desired_capacity':desired_capacity,
                   'honor_cooldown':honor_cooldown}
         Threads.instance().runThread(self.__set_desired_capacity_cb__, (params, callback))
@@ -158,8 +173,8 @@ class CachingScaleInterface(ScaleInterface):
             Threads.instance().invokeCallback(callback, Response(error=ex))
 
     def update_autoscaling_group(self, as_group, callback=None):
-        self.groups.expireCache()
-        params = {'as_group':as_groupaunch_config_name}
+        self.caches['scalinggrps'].expireCache()
+        params = {'as_group':as_group}
         Threads.instance().runThread(self.__update_autoscaling_group_cb__, (params, callback))
 
     def __update_autoscaling_group_cb__(self, kwargs, callback):
@@ -170,7 +185,7 @@ class CachingScaleInterface(ScaleInterface):
             Threads.instance().invokeCallback(callback, Response(error=ex))
 
     def create_launch_configuration(self, launch_config, callback=None):
-        self.launchconfigs.expireCache()
+        self.caches['launchconfigs'].expireCache()
         params = {'launch_config':launch_config}
         Threads.instance().runThread(self.__create_launch_configuration_cb__, (params, callback))
 
@@ -182,7 +197,7 @@ class CachingScaleInterface(ScaleInterface):
             Threads.instance().invokeCallback(callback, Response(error=ex))
 
     def delete_launch_configuration(self, launch_config_name, callback=None):
-        self.launchconfigs.expireCache()
+        self.caches['launchconfigs'].expireCache()
         params = {'launch_config_name':launch_config_name}
         Threads.instance().runThread(self.__delete_launch_configuration_cb__, (params, callback))
 
@@ -200,11 +215,117 @@ class CachingScaleInterface(ScaleInterface):
 
     def __get_all_launch_configurations_cb__(self, kwargs, callback):
         try:
-            self.launchconfigs.values = self.scaling.get_all_launch_configurations(
+            self.caches['launchconfigs'].values = self.scaling.get_all_launch_configurations(
                                  kwargs['names'], kwargs['max_records'], kwargs['next_token'])
-            Threads.instance().invokeCallback(callback, Response(data=self.launchconfigs.values))
+            Threads.instance().invokeCallback(callback, Response(data=self.caches['launchconfigs'].values))
         except Exception as ex:
             Threads.instance().invokeCallback(callback, Response(error=ex))
+
+    # policy related
+    def delete_policy(self, policy_name, autoscale_group=None, callback=None):
+        self.caches['policies'].expireCache()
+        params = {'policy_name':policy_name, 'autoscale_group':autoscale_group}
+        Threads.instance().runThread(self.__delete_policy_cb__, (params, callback))
+
+    def __delete_policy_cb__(self, kwargs, callback):
+        try:
+            ret = self.scaling.delete_policy(kwargs['policy_name'], kwargs['autoscale_group'])
+            Threads.instance().invokeCallback(callback, Response(data=ret))
+        except Exception as ex:
+            Threads.instance().invokeCallback(callback, Response(error=ex))
+
+    def get_all_policies(self, as_group=None, policy_names=None, max_records=None, next_token=None, callback=None):
+        if self.caches['policies'].isCacheStale():
+            params = {'as_group':as_group, 'policy_names':policy_names,
+                      'max_records':max_records, 'next_token':next_token}
+            Threads.instance().runThread(self.__get_all_policies_cb__, (params, callback))
+        else:
+            callback(Response(data=self.caches['policies'].values))
+
+    def __get_all_policies_cb__(self, kwargs, callback):
+        try:
+            self.caches['policies'].values = self.scaling.get_all_policies(
+                                            kwargs['as_group'], kwargs['policy_names'],
+                                            kwargs['max_records'], kwargs['next_token'])
+            Threads.instance().invokeCallback(callback, Response(data=self.caches['policies'].values))
+        except Exception as ex:
+            Threads.instance().invokeCallback(callback, Response(error=ex))
+
+    def execute_policy(self, policy_name, as_group=None, honor_cooldown=None, callback=None):
+        self.caches['policies'].expireCache()
+        params = {'policy_name':policy_name, 'as_group':as_group, 'honor_cooldown':honor_cooldown}
+        Threads.instance().runThread(self.__execute_policy_cb__, (params, callback))
+
+    def __execute_policy_cb__(self, kwargs, callback):
+        try:
+            ret = self.scaling.execute_policy(kwargs['policy_name'], kwargs['as_group'], kwargs['honor_cooldown'])
+            Threads.instance().invokeCallback(callback, Response(data=ret))
+        except Exception as ex:
+            Threads.instance().invokeCallback(callback, Response(error=ex))
+
+    def create_scaling_policy(self, scaling_policy, callback=None):
+        self.caches['policies'].expireCache()
+        params = {'policy':scaling_policy}
+        Threads.instance().runThread(self.__create_scaling_policy_cb__, (params, callback))
+
+    def __create_scaling_policy_cb__(self, kwargs, callback):
+        try:
+            ret = self.scaling.create_scaling_policy(kwargs['policy'])
+            Threads.instance().invokeCallback(callback, Response(data=ret))
+        except Exception as ex:
+            Threads.instance().invokeCallback(callback, Response(error=ex))
+
+    def get_all_adjustment_types(self, callback=None):
+        Threads.instance().runThread(self.__get_all_adjustment_types_cb__, ({}, callback))
+
+    def __get_all_adjustment_types_cb__(self, kwargs, callback):
+        try:
+            ret = self.scaling.get_all_adjustment_types()
+            Threads.instance().invokeCallback(callback, Response(data=ret))
+        except Exception as ex:
+            Threads.instance().invokeCallback(callback, Response(error=ex))
+
+    # tag related
+    def delete_tags(self, tags, callback=None):
+        self.tags.expireCache()
+        params = {'tags':tags}
+        Threads.instance().runThread(self.__delete_tags_cb__, (params, callback))
+
+    def __delete_tags_cb__(self, kwargs, callback):
+        try:
+            ret = self.scaling.delete_tags(kwargs['tags'])
+            Threads.instance().invokeCallback(callback, Response(data=ret))
+        except Exception as ex:
+            Threads.instance().invokeCallback(callback, Response(error=ex))
+
+    def get_all_tags(self, filters=None, max_records=None, next_token=None, callback=None):
+        if self.tags.isCacheStale():
+            params = {'filters':filters,
+                      'max_records':max_records, 'next_token':next_token}
+            Threads.instance().runThread(self.__get_all_tags_cb__, (params, callback))
+        else:
+            callback(Response(data=self.tags.values))
+
+    def __get_all_tags_cb__(self, kwargs, callback):
+        try:
+            self.tags.values = self.scaling.get_all_tags(kwargs['filters'],
+                                            kwargs['max_records'], kwargs['next_token'])
+            Threads.instance().invokeCallback(callback, Response(data=self.tags.values))
+        except Exception as ex:
+            Threads.instance().invokeCallback(callback, Response(error=ex))
+
+    def create_or_update_tags(self, tags, callback=None):
+        self.tags.expireCache()
+        params = {'tags':tags}
+        Threads.instance().runThread(self.__create_or_update_tags_cb__, (params, callback))
+
+    def __create_or_update_tags_cb__(self, kwargs, callback):
+        try:
+            ret = self.scaling.create_or_update_tags(kwargs['tags'])
+            Threads.instance().invokeCallback(callback, Response(data=ret))
+        except Exception as ex:
+            Threads.instance().invokeCallback(callback, Response(error=ex))
+
 
 class Response(object):
     data = None

@@ -50,12 +50,14 @@ define([
          items: volume_list,
         
          cancelButton: {
+           id: 'button-dialog-detachvolume-cancel',
            click: function() {
              self.close();
            }
          },
 
          detachButton: {
+           id: 'button-dialog-detachvolume-detach',
            click: function() {
               doMultiAction(args.volume_ids, App.data.volumes,
                             function(model, options) {

@@ -14,16 +14,23 @@ define([
                 items: args.model, 
 
                 cancelButton: {
+                  id: 'button-dialog-deletescalinggroup-cancel',
                   click: function() {
                     self.close();
                   }
                 },
 
                 deleteButton: {
+                  id: 'button-dialog-deletescalinggroup-delete',
                   click: function() {
-                      self.scope.items.each(function(item) {
-                        app.data.scalingGroup.get(item).destroy({wait: true});
-                      });
+                      doMultiAction(args.items, App.data.scalinggrps,
+                                    function(model, options) {
+                                      options['wait'] = true;
+                                      model.destroy(options);
+                                    },
+                                    'delete_scaling_group_progress',
+                                    'delete_scaling_group_done',
+                                    'delete_scaling_group_fail');
                       self.close();
                   }
                 }

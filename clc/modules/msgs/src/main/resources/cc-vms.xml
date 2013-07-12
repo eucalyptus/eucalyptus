@@ -247,6 +247,6 @@
   <mapping name="GetConsoleOutputResponse" class="edu.ucsb.eucalyptus.msgs.GetConsoleOutputResponseType"
     extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
     <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage" />
-    <value name="consoleOutput" field="output" />
+    <value name="consoleOutput" field="output" usage="optional" />
   </mapping>
 </binding>

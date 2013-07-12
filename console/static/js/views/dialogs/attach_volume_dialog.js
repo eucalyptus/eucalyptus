@@ -47,15 +47,22 @@ define([
         setupAutoCompleteForVolumeInputBox: function(args){
             var self = this;
 
+            var this_instance_zone = App.data.instance.get(args.instance_id).get('placement');
             var vol_ids = [];
+            var vol_count = 0;
             App.data.volume.each(function(item){
-              if( item.get('status') === 'available' ){
+              if( item.get('status') === 'available' && item.get('zone') === this_instance_zone ){
                 // TRY TO FIND ITS NAME TAG
                 var nameTag = self.findNameTag(item);
                 var autocomplete_string = String(self.createIdNameTagString(item.get('id'), addEllipsis(nameTag, 15)));
                 vol_ids.push(autocomplete_string);
+                vol_count++;
               }
             });
+            if( vol_count == 0 ){
+	       self.scope.error.set("volume_id", "You have no available volumes");
+            }
+
             var sorted = sortArray(vol_ids);
             var $volumeSelector = this.$el.find('#volume-attach-volume-id');
             $volumeSelector.autocomplete({
@@ -64,28 +71,55 @@ define([
                 var selected_volume_id = ui.item.value;
                 self.scope.volume.set('volume_id', selected_volume_id);
               }
-           });
+            });
+	    // ALLOW THE VOLUME ID TO BE PASTED IN THE INPUT BOX - KYO 070213
+	    $volumeSelector.keyup(function(e){
+	      self.scope.attachButton.set('disabled', true);
+	      var volumeID = $.trim($volumeSelector.val());
+	      self.scope.volume.set('volume_id', volumeID);
+              self.scope.error.clear();
+              self.scope.error.set(self.scope.volume.validate());
+	    });
         },
 
         // SET UP AUTOCOMPLETE FOR THE INSTANCE INPUT BOX
         setupAutoCompleteForInstanceInputBox: function(args){
             var self = this;
 
+            var this_volume_zone = App.data.volume.get(args.volume_id).get('zone');
             var inst_ids = [];
+            var inst_count = 0;
             App.data.instance.each(function(item){
-              if( item.get('_state').name === 'running' ){
+              var state = item.get('state');
+              if (state == undefined) {
+                state = item.get('_state').name;
+              }
+              var zone = item.get('placement');
+              if (zone == undefined) {
+                zone = item.get('_placement').zone;
+              }
+              if( state === 'running' && zone === this_volume_zone ){
                 // TRY TO FIND ITS NAME TAG
                 var nameTag = self.findNameTag(item);
                 var autocomplete_string = String(self.createIdNameTagString(item.get('id'), addEllipsis(nameTag, 15)));
                 inst_ids.push(autocomplete_string);
+                inst_count++;
               }
             });
+            if( inst_count == 0 ){
+              self.scope.error.set("instance_id", "You have no available instances");
+            }
 
             var sorted = sortArray(inst_ids);
 
             var $instanceSelector = this.$el.find('#volume-attach-instance-id');
             $instanceSelector.autocomplete({
               source: sorted,
+	      open: function(event, ui){
+		var instanceID = $.trim($instanceSelector.val());
+		self.scope.volume.set({instance_id: instanceID});
+	        self.scope.volume.set({device: undefined});
+	      },
               select: function(event, ui){
                 self.scope.volume.set({instance_id: ui.item.value});
                 var selected_instance_id = ui.item.value.split(" ")[0];
@@ -93,7 +127,19 @@ define([
                 self.scope.volume.set({device: deviceName});
               }
             });
-        },
+	    // KEYUP IS NEEDED TO ALLOW THE INSTANCE ID TO BE DIRECTLY PASTED IN THE INPUT BOX: KYO 070213
+	    $instanceSelector.keyup(function(e){
+		var instanceID = $.trim($instanceSelector.val());
+		if( App.data.instance.get(instanceID) !== undefined ){
+		   $instanceSelector.autocomplete( "option", "disabled", true );
+		   self.scope.volume.set({instance_id: instanceID});
+		   var deviceName = self._suggestNextDeviceName(instanceID);
+		   self.scope.volume.set({device: deviceName});
+		}else{
+		  $instanceSelector.autocomplete( "option", "disabled", false );
+		}
+	    });
+      },
 
         disableVolumeInputBox: function(){
           var $volumeSelector = this.$el.find('#volume-attach-volume-id');
@@ -166,63 +212,60 @@ define([
             this.template = template;
 
             this.scope = {
-                status: '',
-                volume: new Volume({volume_id: args.volume_id, instance_id: args.instance_id, device: args.device}),
+              status: '',
+              volume: new Volume({volume_id: args.volume_id, instance_id: args.instance_id, device: args.device}),
 
-               
-                error: new Backbone.Model({}),
-                help: { content: help_volume.dialog_attach_content, url: help_volume.dialog_attach_content_url },
+             
+              error: new Backbone.Model({}),
+              help: { content: help_volume.dialog_attach_content, url: help_volume.dialog_attach_content_url },
 
-                cancelButton: {
-                  click: function() {
-                    self.close();
-                    self.cleanup();
+              cancelButton: {
+                id: 'button-dialog-attachvolume-cancel',
+                click: function() {
+                  self.close();
+                  self.cleanup();
+                }
+              },
+
+              attachButton: new Backbone.Model({
+                id: 'button-dialog-attachvolume-save',
+                disabled: true,
+                click: function() {
+                  // GET THE INPUT FROM THE HTML VIEW
+                  var volumeId = self.scope.volume.get('volume_id');
+                  var instanceId = self.scope.volume.get('instance_id');
+                  var device = self.scope.volume.get('device');
+
+                  // EXTRACT THE RESOURCE ID IF THE NAME TAG WAS FOLLOWED
+                  if( volumeId.match(/^\w+-\w+\s+/) ){
+                    volumeId = volumeId.split(" ")[0];
                   }
-                },
+                  if( instanceId.match(/^\w+-\w+\s+/) ){
+                    instanceId = instanceId.split(" ")[0];
+                  }
 
-                attachButton: new Backbone.Model({
-                  disabled: true,
-                  click: function() {
-                    // GET THE INPUT FROM THE HTML VIEW
-                    var volumeId = self.scope.volume.get('volume_id');
-                    var instanceId = self.scope.volume.get('instance_id');
-                    var device = self.scope.volume.get('device');
-
-                    // EXTRACT THE RESOURCE ID IF THE NAME TAG WAS FOLLOWED
-                    if( volumeId.match(/^\w+-\w+\s+/) ){
-                      volumeId = volumeId.split(" ")[0];
+                  // CONSTRUCT AJAX CALL RESPONSE OPTIONS
+                  var attachAjaxCallResponse = {
+                    success: function(data, response, jqXHR){   // AJAX CALL SUCCESS OPTION
+                      if(data.results){
+                        notifySuccess(null, $.i18n.prop('volume_attach_success', volumeId, instanceId));    // XSS Risk  -- Kyo 040713
+                      }else{
+                        notifyError($.i18n.prop('volume_attach_error', volumeId, instanceId), undefined_error);   // XSS Risk
+                      }
+                    },
+                    error: function(jqXHR, textStatus, errorThrown){  // AJAX CALL ERROR OPTION
+                      notifyError($.i18n.prop('volume_attach_error', volumeId, instanceId), getErrorMessage(jqXHR));   // XSS Risk
                     }
-                    if( instanceId.match(/^\w+-\w+\s+/) ){
-                      instanceId = instanceId.split(" ")[0];
-                    }
+                  };
 
-                    // CONSTRUCT AJAX CALL RESPONSE OPTIONS
-                    var attachAjaxCallResponse = {
-		      success: function(data, response, jqXHR){   // AJAX CALL SUCCESS OPTION
-		        if(data.results){
-		          notifySuccess(null, $.i18n.prop('volume_attach_success', volumeId, instanceId));    // XSS Risk  -- Kyo 040713
-		        }else{
-		          notifyError($.i18n.prop('volume_attach_error', volumeId, instanceId), undefined_error);   // XSS Risk
-		        }
-		      },
-		      error: function(jqXHR, textStatus, errorThrown){  // AJAX CALL ERROR OPTION
-		        notifyError($.i18n.prop('volume_attach_error', volumeId, instanceId), getErrorMessage(jqXHR));   // XSS Risk
-		      }
-                    };
+                  // PERFORM ATTACH CALL OM THE MODEL
+                  App.data.volume.get(volumeId).attach(instanceId, device, attachAjaxCallResponse);
 
-		    // PERFORM ATTACH CALL OM THE MODEL
-                    App.data.volume.get(volumeId).attach(instanceId, device, attachAjaxCallResponse);
-
-	           // DISPLAY THE VOLUME'S STATUS -- FOR DEBUG
-		   App.data.volume.each(function(item){
-	           });
-
-	          // CLOSE THE DIALOG
-	          self.close();
-            self.cleanup();
+                  // CLOSE THE DIALOG
+                  self.close();
+                  self.cleanup();
                 }
               })
-
             };
 
             // override the volume model's normal validation rules for this instance,
@@ -233,8 +276,13 @@ define([
             this.scope.volume.validation.size.required = false;
 
             this.scope.volume.on('validated', function() {
-              self.scope.attachButton.set('disabled', !self.scope.volume.isValid());
-              self.render();
+	      var volumeID = self.scope.volume.get('volume_id');
+              if( App.data.volume.get(volumeID) !== undefined ){
+              	self.scope.attachButton.set('disabled', !self.scope.volume.isValid());
+              }else{
+		self.scope.error.set("volume_id", "Invalid volume id");
+	      }
+	      self.render();
             });
 
             this._do_init();

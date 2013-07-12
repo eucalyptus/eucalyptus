@@ -37,7 +37,7 @@ define([
               min: 1,
               max: 1024,
               required: true,
-              msg: window['volume_create_invalid_size']
+              msg: $.i18n.prop('volume_create_invalid_size')
             },
             instance_id: {
               required: false
@@ -83,11 +83,11 @@ define([
           syncMethod_Create: function(model, options){
             var url = "/ec2?Action=CreateVolume";
             var size = model.get('size');
-            var availability_zone = model.get('availablity_zone');
+            var availability_zone = model.get('availability_zone');
             var snapshot_id = model.get('snapshot_id');
             var parameter = "_xsrf="+$.cookie('_xsrf');
             parameter += "&Size="+size+"&AvailabilityZone="+availability_zone;
-            if(snapshot_id != undefined){
+            if(snapshot_id != undefined && snapshot_id != 'None'){
               parameter += "&SnapshotId="+snapshot_id;
             }
             return this.makeAjaxCall(url, parameter, options);
@@ -105,7 +105,20 @@ define([
             var volume_id = this.get('id');            // Need consistency in ID label  -- Kyo 040813
             var parameter = "_xsrf="+$.cookie('_xsrf');
             parameter += "&VolumeId="+volume_id+"&InstanceId="+instance_id+"&Device="+device;
-            this.makeAjaxCall(url, parameter, options);
+            // use this to capture response and forward to original handlers after tweaking model
+            var thisModel = this;
+            var local_options = {
+              success: function(data, response, jqXHR){
+                if(data.results){
+                  thisModel.set('status', 'attaching');
+                }
+                options.success(data, response, jqXHR);
+              },
+              error: function(jqXHR, textStatus, errorThrown){
+                options.error(jqXHR, textStatus, errorThrown);
+              }
+            };
+            this.makeAjaxCall(url, parameter, local_options);
           },
           detach: function(options){
             var url = "/ec2?Action=DetachVolume";
